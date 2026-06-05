@@ -1,0 +1,47 @@
+import { initializeApp } from 'firebase/app'
+import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore'
+
+const firebaseConfig = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+}
+
+// Avvisa chiaramente in console se la configurazione manca, così l'app
+// non fallisce in modo silenzioso quando le variabili non sono impostate.
+export const isFirebaseConfigured = Boolean(
+  firebaseConfig.apiKey && firebaseConfig.projectId
+)
+
+if (!isFirebaseConfigured) {
+  console.warn(
+    '[Firebase] Variabili VITE_FIREBASE_API_KEY / VITE_FIREBASE_PROJECT_ID mancanti. ' +
+      'Copia .env.example in .env e inserisci i valori del tuo progetto.'
+  )
+}
+
+// Usa valori placeholder così l'inizializzazione non lancia eccezioni quando
+// la configurazione manca (le chiamate falliranno comunque, ma in modo gestito).
+const app = initializeApp({
+  apiKey: firebaseConfig.apiKey || 'placeholder-api-key',
+  authDomain: firebaseConfig.authDomain || 'placeholder.firebaseapp.com',
+  projectId: firebaseConfig.projectId || 'placeholder',
+  storageBucket: firebaseConfig.storageBucket || 'placeholder.appspot.com',
+  messagingSenderId: firebaseConfig.messagingSenderId || '0',
+  appId: firebaseConfig.appId || 'placeholder-app-id',
+})
+
+export const db = getFirestore(app)
+
+// In sviluppo/testing (es. con Docker) ci si può collegare all'emulatore
+// Firestore invece che al progetto reale. Attivalo impostando
+// VITE_USE_FIREBASE_EMULATOR=true (vedi docker-compose.yml e .env.example).
+if (import.meta.env.VITE_USE_FIREBASE_EMULATOR === 'true') {
+  const host = import.meta.env.VITE_FIRESTORE_EMULATOR_HOST || 'localhost'
+  const port = Number(import.meta.env.VITE_FIRESTORE_EMULATOR_PORT) || 8080
+  connectFirestoreEmulator(db, host, port)
+  console.info(`[Firebase] Connesso all'emulatore Firestore su ${host}:${port}`)
+}
