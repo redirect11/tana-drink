@@ -12,6 +12,11 @@ dist-ssr
 .idea
 .DS_Store
 
+# Firebase
+.firebase
+firebase-debug.log
+*-debug.log
+
 # Logs
 npm-debug.log*
 yarn-debug.log*

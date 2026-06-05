@@ -5,7 +5,7 @@ Web app (React + Vite) per la **prenotazione dei drink** del cocktail bar
 menù, ordinano e seguono lo stato del proprio ordine **in tempo reale** —
 come un “Deliveroo dei drink”, con **numero progressivo tipo salumeria**.
 
-Backend: **Firebase** (Cloud Firestore + realtime via `onSnapshot`). Deploy: **GitHub Pages**.
+Backend: **Firebase** (Cloud Firestore + realtime via `onSnapshot`). Deploy: **Firebase Hosting**.
 
 ## Funzionalità
 
@@ -50,27 +50,33 @@ Backend: **Firebase** (Cloud Firestore + realtime via `onSnapshot`). Deploy: **G
 
 ## Percorsi (routing)
 
-L’app usa `HashRouter` (compatibile con GitHub Pages):
+L’app usa `BrowserRouter` (URL puliti, serviti da Firebase Hosting tramite
+rewrite SPA su `index.html`):
 
-- `#/` — menù cliente (accetta `?tavolo=12` dal QR code).
-- `#/ordine/:id` — stato di un ordine (realtime).
-- `#/ordini` — gli ordini di questo dispositivo.
-- `#/bar` — backoffice bartender (PIN).
+- `/` — menù cliente (accetta `?tavolo=12` dal QR code).
+- `/ordine/:id` — stato di un ordine (realtime).
+- `/ordini` — gli ordini di questo dispositivo.
+- `/bar` — backoffice bartender (PIN).
 
 ### QR code
 
 Genera un QR che punti all’URL pubblico dell’app, eventualmente con il tavolo:
 
 ```
-https://<utente>.github.io/karaoke-drink/#/?tavolo=12
+https://<il-tuo-progetto>.web.app/?tavolo=12
 ```
 
-## Deploy su GitHub Pages
+## Deploy su Firebase Hosting
 
-Il workflow [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)
-builda e pubblica su GitHub Pages a ogni push su `main`.
+Il workflow
+[`.github/workflows/firebase-hosting.yml`](.github/workflows/firebase-hosting.yml)
+builda e pubblica su Firebase Hosting a ogni push su `main`.
 
-1. In **Settings → Pages**, imposta *Source* = **GitHub Actions**.
+### Configurazione una tantum
+
+1. Imposta il progetto in [`.firebaserc`](.firebaserc): sostituisci
+   `il-tuo-progetto` con l'**ID del tuo progetto Firebase** (lo stesso che usi
+   per Firestore).
 2. In **Settings → Secrets and variables → Actions**, aggiungi i secret:
    - `VITE_FIREBASE_API_KEY`
    - `VITE_FIREBASE_AUTH_DOMAIN`
@@ -79,11 +85,25 @@ builda e pubblica su GitHub Pages a ogni push su `main`.
    - `VITE_FIREBASE_MESSAGING_SENDER_ID`
    - `VITE_FIREBASE_APP_ID`
    - `VITE_BARTENDER_PIN`
+   - `FIREBASE_SERVICE_ACCOUNT` → il JSON di un **service account** con permesso
+     di deploy su Hosting. Lo ottieni con
+     `firebase init hosting:github`, oppure dalla *Google Cloud Console →
+     IAM e amministrazione → Account di servizio* (ruolo *Firebase Hosting
+     Admin*). Incolla l'intero contenuto del file JSON come valore del secret.
 3. Esegui il push su `main`: il sito sarà su
-   `https://<utente>.github.io/karaoke-drink/`.
+   `https://<il-tuo-progetto>.web.app/`.
 
-> Il `base` path di Vite è impostato automaticamente a `/<nome-repo>/` durante
-> la build CI tramite la variabile `BASE_PATH`.
+### Deploy manuale (facoltativo)
+
+```bash
+npm install -g firebase-tools
+firebase login
+npm run build
+firebase deploy --only hosting
+```
+
+> Il `base` path di Vite è `/` (radice). Per un eventuale deploy su GitHub
+> Pages di progetto puoi sovrascriverlo in build con `BASE_PATH=/<nome-repo>/`.
 
 ## Note sulle notifiche
 
