@@ -15,6 +15,7 @@ import {
   getDocs,
   addDoc,
   serverTimestamp,
+  connectFirestoreEmulator,
 } from 'firebase/firestore'
 
 // Carica le variabili da `.env` (semplice parser, nessuna dipendenza extra).
@@ -41,7 +42,10 @@ const firebaseConfig = {
   appId: process.env.VITE_FIREBASE_APP_ID,
 }
 
-if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+const useEmulator = process.env.VITE_USE_FIREBASE_EMULATOR === 'true'
+
+// Con l'emulatore basta il projectId (anche un "demo-*"): la apiKey non serve.
+if (!firebaseConfig.projectId || (!useEmulator && !firebaseConfig.apiKey)) {
   console.error(
     '[seed] Configurazione Firebase mancante. Imposta le variabili VITE_FIREBASE_* in .env.'
   )
@@ -94,6 +98,16 @@ const SEED_DRINKS = [
 async function main() {
   const app = initializeApp(firebaseConfig)
   const db = getFirestore(app)
+
+  // In modalità emulatore (es. dentro Docker) si scrive sull'emulatore
+  // invece che sul progetto reale. Imposta VITE_USE_FIREBASE_EMULATOR=true.
+  if (process.env.VITE_USE_FIREBASE_EMULATOR === 'true') {
+    const host = process.env.VITE_FIRESTORE_EMULATOR_HOST || 'localhost'
+    const port = Number(process.env.VITE_FIRESTORE_EMULATOR_PORT) || 8080
+    connectFirestoreEmulator(db, host, port)
+    console.log(`[seed] Emulatore Firestore: ${host}:${port}`)
+  }
+
   const drinksCol = collection(db, 'drinks')
 
   const existing = await getDocs(drinksCol)
