@@ -48,6 +48,40 @@ Backend: **Firebase** (Cloud Firestore + realtime via `onSnapshot`). Deploy: **F
    npm run dev
    ```
 
+## Sviluppo/testing con Docker
+
+In alternativa all'avvio locale puoi usare un ambiente **Docker** che include
+già **Node.js** e la **Firebase CLI** (con gli **emulatori**), così non servono
+né Firebase installato in locale né un progetto Firebase reale.
+
+```bash
+docker compose up --build
+```
+
+Si avviano due servizi:
+
+| Servizio    | URL / Porta                     | Descrizione                          |
+| ----------- | ------------------------------- | ------------------------------------ |
+| `web`       | http://localhost:5173           | Vite dev server (hot reload)         |
+| `emulators` | http://localhost:4000           | Firebase **Emulator UI**             |
+|             | `localhost:8080`                | Emulatore **Firestore**              |
+
+Il client si collega **automaticamente** all'emulatore Firestore (variabili
+`VITE_USE_FIREBASE_EMULATOR` / `VITE_FIRESTORE_*` impostate in
+[`docker-compose.yml`](docker-compose.yml)). Si usa un progetto `demo-tana-drink`
+che gira **completamente offline**, senza credenziali Firebase reali.
+
+Popola l'emulatore con i drink di esempio (l'host dell'emulatore, visto dal
+container `web`, è il nome del servizio `emulators`):
+
+```bash
+docker compose exec -e VITE_FIRESTORE_EMULATOR_HOST=emulators web npm run seed
+```
+
+> I dati dell'emulatore sono **effimeri**: si azzerano a ogni riavvio.
+> Per eseguire gli emulatori senza Docker (richiede una JRE installata):
+> `npm run emulators`.
+
 ## Percorsi (routing)
 
 L’app usa `BrowserRouter` (URL puliti, serviti da Firebase Hosting tramite

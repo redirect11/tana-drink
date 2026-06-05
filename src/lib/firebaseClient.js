@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app'
-import { getFirestore } from 'firebase/firestore'
+import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore'
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -35,3 +35,13 @@ const app = initializeApp({
 })
 
 export const db = getFirestore(app)
+
+// In sviluppo/testing (es. con Docker) ci si può collegare all'emulatore
+// Firestore invece che al progetto reale. Attivalo impostando
+// VITE_USE_FIREBASE_EMULATOR=true (vedi docker-compose.yml e .env.example).
+if (import.meta.env.VITE_USE_FIREBASE_EMULATOR === 'true') {
+  const host = import.meta.env.VITE_FIRESTORE_EMULATOR_HOST || 'localhost'
+  const port = Number(import.meta.env.VITE_FIRESTORE_EMULATOR_PORT) || 8080
+  connectFirestoreEmulator(db, host, port)
+  console.info(`[Firebase] Connesso all'emulatore Firestore su ${host}:${port}`)
+}

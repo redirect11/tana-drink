@@ -9,7 +9,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint .",
-    "seed": "node scripts/seed.js"
+    "seed": "node scripts/seed.js",
+    "emulators": "firebase emulators:start --project demo-tana-drink --only firestore"
   },
   "dependencies": {
     "firebase": "^12.14.0",
