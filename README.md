@@ -1,2 +1,101 @@
-# karaoke-drink
-Web app, in react.js per l'ordinazione dei drink del cocktail bar la Tana del Coniglio
+# 🍸 Karaoke Drink — La Tana del Coniglio
+
+Web app (React + Vite) per la **prenotazione dei drink** del cocktail bar
+*La Tana del Coniglio*. I clienti scansionano un **QR code**, sfogliano il
+menù, ordinano e seguono lo stato del proprio ordine **in tempo reale** —
+come un “Deliveroo dei drink”, con **numero progressivo tipo salumeria**.
+
+Backend: **Supabase** (Postgres + Realtime). Deploy: **GitHub Pages**.
+
+## Funzionalità
+
+- **Lato cliente**
+  - Menù drink per categoria + carrello.
+  - Invio ordine con assegnazione di un **numero progressivo giornaliero**.
+  - **Tracciamento dello stato in realtime**: `Ricevuto → In preparazione →
+    Pronto → Ritirato`.
+  - **Notifiche** (in-app e di sistema) quando il drink è **pronto**.
+  - “I miei ordini”: ritrova gli ordini fatti da questo dispositivo.
+  - PWA installabile (manifest + service worker).
+- **Lato bartender (backoffice, protetto da PIN)**
+  - **Coda ordini in realtime**, con avanzamento di stato a un tap.
+  - Notifica all’arrivo di un **nuovo ordine**.
+  - **Gestione menù/ricette**: aggiungi, modifica, rimuovi drink e cambia la
+    disponibilità.
+
+## Avvio in locale
+
+1. Installa le dipendenze:
+   ```bash
+   npm install
+   ```
+2. Crea un progetto su [Supabase](https://supabase.com) e, nell’editor SQL,
+   esegui il file [`supabase/schema.sql`](supabase/schema.sql). Crea tabelle,
+   numerazione progressiva, Row Level Security e abilita il Realtime.
+3. Copia `.env.example` in `.env` e inserisci i valori del tuo progetto:
+   ```bash
+   cp .env.example .env
+   ```
+   - `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` → da *Project Settings →
+     API* su Supabase.
+   - `VITE_BARTENDER_PIN` → il PIN per accedere al backoffice bartender.
+4. Avvia:
+   ```bash
+   npm run dev
+   ```
+
+## Percorsi (routing)
+
+L’app usa `HashRouter` (compatibile con GitHub Pages):
+
+- `#/` — menù cliente (accetta `?tavolo=12` dal QR code).
+- `#/ordine/:id` — stato di un ordine (realtime).
+- `#/ordini` — gli ordini di questo dispositivo.
+- `#/bar` — backoffice bartender (PIN).
+
+### QR code
+
+Genera un QR che punti all’URL pubblico dell’app, eventualmente con il tavolo:
+
+```
+https://<utente>.github.io/karaoke-drink/#/?tavolo=12
+```
+
+## Deploy su GitHub Pages
+
+Il workflow [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)
+builda e pubblica su GitHub Pages a ogni push su `main`.
+
+1. In **Settings → Pages**, imposta *Source* = **GitHub Actions**.
+2. In **Settings → Secrets and variables → Actions**, aggiungi i secret:
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
+   - `VITE_BARTENDER_PIN`
+3. Esegui il push su `main`: il sito sarà su
+   `https://<utente>.github.io/karaoke-drink/`.
+
+> Il `base` path di Vite è impostato automaticamente a `/<nome-repo>/` durante
+> la build CI tramite la variabile `BASE_PATH`.
+
+## Note sulle notifiche
+
+- Le notifiche di sistema usano la **Web Notifications API**. Su iOS funzionano
+  solo se l’app è **installata come PWA**.
+- Gli aggiornamenti **in-app** sono sempre realtime grazie a Supabase Realtime,
+  anche senza permesso notifiche.
+
+## Sicurezza
+
+Per semplicità (locale senza login) le policy RLS sono permissive e usano la
+chiave `anon` (pubblica per design). In produzione si consiglia di restringere
+`UPDATE`/`DELETE` degli ordini e la scrittura del menù a un ruolo bartender
+autenticato. Vedi i commenti in [`supabase/schema.sql`](supabase/schema.sql).
+
+## Script
+
+| Comando           | Descrizione                          |
+| ----------------- | ------------------------------------ |
+| `npm run dev`     | Avvio in sviluppo                    |
+| `npm run build`   | Build di produzione in `dist/`       |
+| `npm run preview` | Anteprima della build                |
+| `npm run lint`    | Lint del codice                      |
