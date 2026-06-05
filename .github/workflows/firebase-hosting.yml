@@ -5,6 +5,10 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Permessi minimi per il GITHUB_TOKEN.
+permissions:
+  contents: read
+
 # Una sola deploy alla volta.
 concurrency:
   group: firebase-hosting
