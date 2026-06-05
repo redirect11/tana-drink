@@ -31,12 +31,13 @@ export default [
       ],
     },
   },
-  // File di configurazione (Node).
+  // File di configurazione e script (Node).
   {
-    files: ['*.config.js'],
+    files: ['*.config.js', 'scripts/**/*.js'],
     languageOptions: {
       ecmaVersion: 2021,
       globals: globals.node,
+      parserOptions: { ecmaVersion: 'latest' },
       sourceType: 'module',
     },
     rules: { ...js.configs.recommended.rules },

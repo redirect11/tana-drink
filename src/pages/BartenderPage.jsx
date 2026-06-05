@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { fetchActiveOrders, updateOrderStatus } from '../lib/api.js'
-import { supabase } from '../lib/supabaseClient.js'
+import { updateOrderStatus, subscribeActiveOrders } from '../lib/api.js'
 import {
   ORDER_STATUSES,
   STATUS_LABELS,
@@ -86,43 +85,37 @@ function OrderQueue() {
 
   useEffect(() => {
     let active = true
+    let primed = false
     ensureNotificationPermission()
 
-    async function load() {
-      try {
-        const data = await fetchActiveOrders()
+    // Realtime: la coda si aggiorna ad ogni nuovo ordine o cambio di stato.
+    const unsubscribe = subscribeActiveOrders(
+      (data) => {
         if (!active) return
+        // Notifica solo i nuovi ordini comparsi dopo il primo caricamento.
+        if (primed) {
+          for (const o of data) {
+            if (!knownIds.current.has(o.id)) {
+              notify('🆕 Nuovo ordine', `Ordine #${o.daily_number} ricevuto.`)
+            }
+          }
+        }
         knownIds.current = new Set(data.map((o) => o.id))
         setOrders(data)
-      } catch (e) {
-        if (active) setError(e.message)
-      } finally {
-        if (active) setLoading(false)
-      }
-    }
-    load()
-
-    // Realtime: nuovi ordini e cambi di stato ricaricano la coda.
-    const channel = supabase
-      .channel('bar-orders')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'orders' },
-        (payload) => {
-          if (
-            payload.eventType === 'INSERT' &&
-            !knownIds.current.has(payload.new.id)
-          ) {
-            notify('🆕 Nuovo ordine', `Ordine #${payload.new.daily_number} ricevuto.`)
-          }
-          load()
+        setLoading(false)
+        primed = true
+      },
+      (e) => {
+        if (active) {
+          setError(e.message)
+          setLoading(false)
         }
-      )
-      .subscribe()
+      }
+    )
 
     return () => {
       active = false
-      supabase.removeChannel(channel)
+      unsubscribe()
     }
   }, [])
 

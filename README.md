@@ -5,7 +5,7 @@ Web app (React + Vite) per la **prenotazione dei drink** del cocktail bar
 menù, ordinano e seguono lo stato del proprio ordine **in tempo reale** —
 come un “Deliveroo dei drink”, con **numero progressivo tipo salumeria**.
 
-Backend: **Supabase** (Postgres + Realtime). Deploy: **GitHub Pages**.
+Backend: **Firebase** (Cloud Firestore + realtime via `onSnapshot`). Deploy: **GitHub Pages**.
 
 ## Funzionalità
 
@@ -29,17 +29,21 @@ Backend: **Supabase** (Postgres + Realtime). Deploy: **GitHub Pages**.
    ```bash
    npm install
    ```
-2. Crea un progetto su [Supabase](https://supabase.com) e, nell’editor SQL,
-   esegui il file [`supabase/schema.sql`](supabase/schema.sql). Crea tabelle,
-   numerazione progressiva, Row Level Security e abilita il Realtime.
+2. Crea un progetto su [Firebase](https://console.firebase.google.com),
+   aggiungi un'app **Web** e abilita **Cloud Firestore**. Pubblica le regole
+   di sicurezza del file [`firestore.rules`](firestore.rules).
 3. Copia `.env.example` in `.env` e inserisci i valori del tuo progetto:
    ```bash
    cp .env.example .env
    ```
-   - `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` → da *Project Settings →
-     API* su Supabase.
+   - `VITE_FIREBASE_*` → da *Firebase Console → Impostazioni progetto → Le tue
+     app → Web app* (apiKey, authDomain, projectId, ecc.).
    - `VITE_BARTENDER_PIN` → il PIN per accedere al backoffice bartender.
-4. Avvia:
+4. (Facoltativo) Popola il menù con alcuni drink di esempio:
+   ```bash
+   npm run seed
+   ```
+5. Avvia:
    ```bash
    npm run dev
    ```
@@ -68,8 +72,12 @@ builda e pubblica su GitHub Pages a ogni push su `main`.
 
 1. In **Settings → Pages**, imposta *Source* = **GitHub Actions**.
 2. In **Settings → Secrets and variables → Actions**, aggiungi i secret:
-   - `VITE_SUPABASE_URL`
-   - `VITE_SUPABASE_ANON_KEY`
+   - `VITE_FIREBASE_API_KEY`
+   - `VITE_FIREBASE_AUTH_DOMAIN`
+   - `VITE_FIREBASE_PROJECT_ID`
+   - `VITE_FIREBASE_STORAGE_BUCKET`
+   - `VITE_FIREBASE_MESSAGING_SENDER_ID`
+   - `VITE_FIREBASE_APP_ID`
    - `VITE_BARTENDER_PIN`
 3. Esegui il push su `main`: il sito sarà su
    `https://<utente>.github.io/karaoke-drink/`.
@@ -81,15 +89,16 @@ builda e pubblica su GitHub Pages a ogni push su `main`.
 
 - Le notifiche di sistema usano la **Web Notifications API**. Su iOS funzionano
   solo se l’app è **installata come PWA**.
-- Gli aggiornamenti **in-app** sono sempre realtime grazie a Supabase Realtime,
-  anche senza permesso notifiche.
+- Gli aggiornamenti **in-app** sono sempre realtime grazie a Firestore
+  (`onSnapshot`), anche senza permesso notifiche.
 
 ## Sicurezza
 
-Per semplicità (locale senza login) le policy RLS sono permissive e usano la
-chiave `anon` (pubblica per design). In produzione si consiglia di restringere
-`UPDATE`/`DELETE` degli ordini e la scrittura del menù a un ruolo bartender
-autenticato. Vedi i commenti in [`supabase/schema.sql`](supabase/schema.sql).
+Per semplicità (locale senza login) le regole Firestore sono permissive e la
+`apiKey` è pubblica per design (l'accesso è protetto dalle Firestore Rules). In
+produzione si consiglia di restringere `update`/`delete` degli ordini e la
+scrittura del menù a un ruolo bartender autenticato (Firebase Auth). Vedi i
+commenti in [`firestore.rules`](firestore.rules).
 
 ## Script
 
@@ -99,3 +108,4 @@ autenticato. Vedi i commenti in [`supabase/schema.sql`](supabase/schema.sql).
 | `npm run build`   | Build di produzione in `dist/`       |
 | `npm run preview` | Anteprima della build                |
 | `npm run lint`    | Lint del codice                      |
+| `npm run seed`    | Popola Firestore con drink di esempio |
