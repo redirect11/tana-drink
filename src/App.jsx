@@ -3,7 +3,7 @@ import MenuPage from './pages/MenuPage.jsx'
 import OrderStatusPage from './pages/OrderStatusPage.jsx'
 import MyOrdersPage from './pages/MyOrdersPage.jsx'
 import BartenderPage from './pages/BartenderPage.jsx'
-import { isSupabaseConfigured } from './lib/supabaseClient.js'
+import { isFirebaseConfigured } from './lib/firebaseClient.js'
 
 export default function App() {
   const location = useLocation()
@@ -28,11 +28,11 @@ export default function App() {
         </nav>
       </header>
 
-      {!isSupabaseConfigured && (
+      {!isFirebaseConfigured && (
         <div className="banner">
-          ⚠️ Supabase non è configurato. Imposta <code>VITE_SUPABASE_URL</code> e{' '}
-          <code>VITE_SUPABASE_ANON_KEY</code> (vedi <code>.env.example</code> e{' '}
-          <code>supabase/schema.sql</code>).
+          ⚠️ Firebase non è configurato. Imposta <code>VITE_FIREBASE_API_KEY</code> e{' '}
+          <code>VITE_FIREBASE_PROJECT_ID</code> (vedi <code>.env.example</code> e{' '}
+          <code>firestore.rules</code>).
         </div>
       )}
 

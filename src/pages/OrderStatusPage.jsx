@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { fetchOrder } from '../lib/api.js'
-import { supabase } from '../lib/supabaseClient.js'
+import { fetchOrder, subscribeOrder } from '../lib/api.js'
 import {
   ORDER_STATUSES,
   STATUS_FLOW,
@@ -29,36 +28,28 @@ export default function OrderStatusPage() {
       .catch((e) => active && setError(e.message))
 
     // Realtime: ascolta gli aggiornamenti di QUESTO ordine.
-    const channel = supabase
-      .channel(`order-${id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'orders',
-          filter: `id=eq.${id}`,
-        },
-        (payload) => {
-          const updated = payload.new
-          setOrder((prev) => ({ ...prev, ...updated }))
-          if (
-            prevStatus.current !== updated.status &&
-            updated.status === ORDER_STATUSES.PRONTO
-          ) {
-            notify(
-              '🔔 Il tuo drink è pronto!',
-              `Ordine #${updated.daily_number} pronto al ritiro.`
-            )
-          }
-          prevStatus.current = updated.status
+    const unsubscribe = subscribeOrder(
+      id,
+      (updated) => {
+        if (!active || !updated) return
+        setOrder((prev) => ({ ...prev, ...updated }))
+        if (
+          prevStatus.current !== updated.status &&
+          updated.status === ORDER_STATUSES.PRONTO
+        ) {
+          notify(
+            '🔔 Il tuo drink è pronto!',
+            `Ordine #${updated.daily_number} pronto al ritiro.`
+          )
         }
-      )
-      .subscribe()
+        prevStatus.current = updated.status
+      },
+      (e) => active && setError(e.message)
+    )
 
     return () => {
       active = false
-      supabase.removeChannel(channel)
+      unsubscribe()
     }
   }, [id])
 

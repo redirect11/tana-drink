@@ -4,7 +4,7 @@ import { fetchDrinks } from '../lib/api.js'
 import { createOrder } from '../lib/api.js'
 import { useCart, rememberOrderId } from '../lib/cart.js'
 import { formatPrice } from '../lib/orderStatus.js'
-import { isSupabaseConfigured } from '../lib/supabaseClient.js'
+import { isFirebaseConfigured } from '../lib/firebaseClient.js'
 
 export default function MenuPage() {
   const [drinks, setDrinks] = useState([])
@@ -20,7 +20,7 @@ export default function MenuPage() {
 
   useEffect(() => {
     let active = true
-    if (!isSupabaseConfigured) {
+    if (!isFirebaseConfigured) {
       setLoading(false)
       return
     }
