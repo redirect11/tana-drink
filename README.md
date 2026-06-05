@@ -120,7 +120,7 @@ produzione si consiglia di restringere `update`/`delete` degli ordini e la
 scrittura del menù a un ruolo bartender autenticato (Firebase Auth). Vedi i
 commenti in [`firestore.rules`](firestore.rules).
 
-## Script
+## Scripts
 
 | Comando           | Descrizione                          |
 | ----------------- | ------------------------------------ |
