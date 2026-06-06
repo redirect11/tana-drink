@@ -43,17 +43,6 @@ jobs:
           VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
         run: npm run build
 
-      - name: Deploy Firestore rules
-        env:
-          PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
-          SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-        run: |
-          echo "$SA_JSON" > /tmp/sa.json
-          GOOGLE_APPLICATION_CREDENTIALS=/tmp/sa.json \
-            npx firebase-tools deploy --only firestore:rules \
-            --project "$PROJECT_ID" --force
-          rm /tmp/sa.json
-
       - name: Deploy Firebase Functions
         env:
           PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
