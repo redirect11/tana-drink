@@ -1,4 +1,4 @@
-# 🍸 Karaoke Drink — La Tana del Coniglio
+# 🍸 Tana Drink — La Tana del Coniglio
 
 Web app (React + Vite) per la **prenotazione dei drink** del cocktail bar
 *La Tana del Coniglio*. I clienti scansionano un **QR code**, sfogliano il
