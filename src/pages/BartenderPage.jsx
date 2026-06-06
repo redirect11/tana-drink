@@ -1,4 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
+import {
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+} from 'firebase/auth'
+import { auth } from '../lib/firebaseClient.js'
 import { updateOrderStatus, subscribeActiveOrders } from '../lib/api.js'
 import {
   ORDER_STATUSES,
@@ -8,15 +14,19 @@ import {
   nextStatus,
 } from '../lib/orderStatus.js'
 import { ensureNotificationPermission, notify } from '../lib/notify.js'
+import { syncSumUpProducts } from '../lib/sumupApi.js'
 import MenuManager from '../components/MenuManager.jsx'
 
 export default function BartenderPage() {
-  const [authed, setAuthed] = useState(
-    () => sessionStorage.getItem('tana_bar_ok') === '1'
-  )
+  const [user, setUser] = useState(undefined) // undefined = caricamento, null = non loggato
   const [tab, setTab] = useState('coda')
 
-  if (!authed) return <PinGate onOk={() => setAuthed(true)} />
+  useEffect(() => {
+    return onAuthStateChanged(auth, (u) => setUser(u ?? null))
+  }, [])
+
+  if (user === undefined) return <div className="empty">Verifica accesso…</div>
+  if (!user) return <LoginForm />
 
   return (
     <div>
@@ -33,48 +43,130 @@ export default function BartenderPage() {
         >
           🍸 Menù
         </div>
+        <button
+          className="btn ghost small"
+          style={{ marginLeft: 'auto', alignSelf: 'center', marginRight: 8 }}
+          onClick={() => signOut(auth)}
+        >
+          Esci
+        </button>
       </div>
-      {tab === 'coda' ? <OrderQueue /> : <MenuManager />}
+      {tab === 'coda' ? <OrderQueue /> : <MenuTab />}
     </div>
   )
 }
 
-function PinGate({ onOk }) {
-  const [pin, setPin] = useState('')
-  const [err, setErr] = useState(false)
-  const expected = import.meta.env.VITE_BARTENDER_PIN || '2468'
+function MenuTab() {
+  const [syncing, setSyncing] = useState(false)
+  const [syncResult, setSyncResult] = useState(null)
 
-  function submit(e) {
+  async function handleSync() {
+    setSyncing(true)
+    setSyncResult(null)
+    try {
+      const res = await syncSumUpProducts()
+      if (res.skipped) {
+        setSyncResult({ ok: false, msg: res.message || 'SumUp non abilitato.' })
+      } else {
+        setSyncResult({ ok: true, msg: `Sincronizzati ${res.synced} prodotti da SumUp POS Pro.` })
+      }
+    } catch (e) {
+      setSyncResult({ ok: false, msg: `Errore: ${e.message}` })
+    } finally {
+      setSyncing(false)
+    }
+  }
+
+  return (
+    <div>
+      <div className="card" style={{ marginBottom: 8 }}>
+        <div className="row between" style={{ alignItems: 'center' }}>
+          <div>
+            <strong>SumUp POS Pro</strong>
+            <div className="muted" style={{ fontSize: '0.85rem' }}>
+              Importa il catalogo drink direttamente da SumUp POS Pro.
+            </div>
+          </div>
+          <button
+            className="btn small"
+            disabled={syncing}
+            onClick={handleSync}
+            style={{ marginLeft: 12, flexShrink: 0 }}
+          >
+            {syncing ? 'Sync…' : '↻ Sync catalogo'}
+          </button>
+        </div>
+        {syncResult && (
+          <div
+            className={syncResult.ok ? '' : 'banner'}
+            style={syncResult.ok ? { marginTop: 8, color: 'var(--green, #4caf50)', fontSize: '0.9rem' } : { marginTop: 8 }}
+          >
+            {syncResult.msg}
+          </div>
+        )}
+      </div>
+      <MenuManager />
+    </div>
+  )
+}
+
+function LoginForm() {
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [err, setErr] = useState(null)
+
+  async function submit(e) {
     e.preventDefault()
-    if (pin === String(expected)) {
-      sessionStorage.setItem('tana_bar_ok', '1')
-      onOk()
-    } else {
-      setErr(true)
+    setLoading(true)
+    setErr(null)
+    try {
+      await signInWithEmailAndPassword(auth, email, password)
+    } catch (e) {
+      setErr(loginError(e.code))
+    } finally {
+      setLoading(false)
     }
   }
 
   return (
     <form className="card" onSubmit={submit}>
       <h2 style={{ marginTop: 0 }}>Accesso bartender</h2>
-      <label htmlFor="pin">PIN</label>
+      <label htmlFor="email">Email</label>
       <input
-        id="pin"
-        type="password"
-        inputMode="numeric"
-        value={pin}
-        onChange={(e) => {
-          setPin(e.target.value)
-          setErr(false)
-        }}
-        placeholder="••••"
+        id="email"
+        type="email"
+        autoComplete="username"
+        value={email}
+        onChange={(e) => { setEmail(e.target.value); setErr(null) }}
+        placeholder="bartender@example.com"
+        required
       />
-      {err && <div className="banner">PIN non corretto.</div>}
-      <button className="btn block" style={{ marginTop: 12 }} type="submit">
-        Entra
+      <label htmlFor="password" style={{ marginTop: 10 }}>Password</label>
+      <input
+        id="password"
+        type="password"
+        autoComplete="current-password"
+        value={password}
+        onChange={(e) => { setPassword(e.target.value); setErr(null) }}
+        placeholder="••••••••"
+        required
+      />
+      {err && <div className="banner" style={{ marginTop: 10 }}>{err}</div>}
+      <button className="btn block" style={{ marginTop: 14 }} type="submit" disabled={loading}>
+        {loading ? 'Accesso…' : 'Entra'}
       </button>
     </form>
   )
+}
+
+function loginError(code) {
+  if (code === 'auth/invalid-credential' || code === 'auth/wrong-password' || code === 'auth/user-not-found') {
+    return 'Email o password non corretti.'
+  }
+  if (code === 'auth/too-many-requests') return 'Troppi tentativi. Riprova tra qualche minuto.'
+  if (code === 'auth/network-request-failed') return 'Errore di rete. Controlla la connessione.'
+  return 'Errore di accesso. Riprova.'
 }
 
 function OrderQueue() {

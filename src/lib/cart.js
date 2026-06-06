@@ -38,7 +38,13 @@ export function useCart() {
       }
       return [
         ...prev,
-        { drink_id: drink.id, name: drink.name, price: drink.price, qty: 1 },
+        {
+          drink_id: drink.id,
+          name: drink.name,
+          price: drink.price,
+          qty: 1,
+          sumup_product_id: drink.sumup_product_id ?? null,
+        },
       ]
     })
   }, [])
