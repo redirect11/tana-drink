@@ -16,6 +16,7 @@ import {
 } from 'firebase/firestore'
 import { db } from './firebaseClient.js'
 import { ORDER_STATUSES } from './orderStatus.js'
+import { createSumUpSale, updateSumUpSaleStatus, toSumUpStatus } from './sumupApi.js'
 
 const drinksCol = collection(db, 'drinks')
 const ordersCol = collection(db, 'orders')
@@ -44,9 +45,6 @@ function mapDrink(snap) {
   }
 }
 
-// Mappa un documento "order" alla forma usata dalla UI: gli item sono salvati
-// come array nel documento, ma vengono esposti come `order_items` (con un id)
-// per mantenere invariate le pagine.
 function mapOrder(snap) {
   const o = snap.data() || {}
   const items = Array.isArray(o.items) ? o.items : []
@@ -59,12 +57,14 @@ function mapOrder(snap) {
     status: o.status,
     total: o.total ?? 0,
     created_at: toIso(o.created_at),
+    sumup_sale_id: o.sumup_sale_id ?? null,
     order_items: items.map((i, idx) => ({
       id: `${snap.id}-${idx}`,
       drink_id: i.drink_id ?? null,
       name: i.name,
       unit_price: i.unit_price ?? 0,
       qty: i.qty ?? 1,
+      sumup_product_id: i.sumup_product_id ?? null,
     })),
   }
 }
@@ -146,12 +146,28 @@ export async function createOrder({ table_label, note, items }) {
         name: i.name,
         unit_price: i.price,
         qty: i.qty,
+        sumup_product_id: i.sumup_product_id ?? null,
       })),
     })
   })
 
   const snap = await getDoc(newOrderRef)
-  return mapOrder(snap)
+  const order = mapOrder(snap)
+
+  // Invia l'ordine a SumUp POS Pro in background (non blocca il flusso cliente).
+  createSumUpSale({
+    orderId: order.id,
+    tableLabel: table_label,
+    note,
+    items: order.order_items.map((i) => ({
+      sumup_product_id: i.sumup_product_id,
+      name: i.name,
+      qty: i.qty,
+      unit_price: i.unit_price,
+    })),
+  }).catch((e) => console.error('[SumUp] createSale failed:', e))
+
+  return order
 }
 
 export async function fetchOrder(id) {
@@ -194,6 +210,15 @@ export async function updateOrderStatus(id, status) {
   const ref = doc(db, 'orders', id)
   await updateDoc(ref, { status })
   const snap = await getDoc(ref)
+
+  // Sync stato verso SumUp POS Pro in background (fire-and-forget).
+  const sumupStatus = toSumUpStatus(status)
+  if (sumupStatus) {
+    const sumupSaleId = snap.data()?.sumup_sale_id ?? null
+    updateSumUpSaleStatus(sumupSaleId, sumupStatus)
+      .catch((e) => console.error('[SumUp] updateStatus failed:', e))
+  }
+
   return mapOrder(snap)
 }
 
