@@ -5,7 +5,7 @@ import {
   updateDrink,
   deleteDrink,
 } from '../lib/api.js'
-import { fileToDataUrl } from '../lib/image.js'
+import { uploadDrinkImage, deleteDrinkImageByUrl } from '../lib/storage.js'
 import { formatPrice } from '../lib/orderStatus.js'
 
 const EMPTY = {
@@ -41,8 +41,12 @@ export default function MenuManager() {
 
   async function handleSave(form) {
     setError(null)
-    // La foto è già un data URL compresso salvato nel campo image_url
-    // (vedi DrinkForm): viene persistito direttamente nel documento Firestore.
+    // Carica la foto su Storage se ne è stata selezionata una nuova.
+    let imageUrl = form.image_url ?? null
+    const previousUrl = editing && editing !== 'new' ? editing.image_url ?? null : null
+    if (form._file) {
+      imageUrl = await uploadDrinkImage(form._file)
+    }
     const payload = {
       name: form.name.trim(),
       description: form.description.trim() || null,
@@ -50,13 +54,17 @@ export default function MenuManager() {
       recipe: form.recipe.trim() || null,
       price: Number(form.price || 0),
       available: !!form.available,
-      image_url: form.image_url ?? null,
+      image_url: imageUrl,
     }
     try {
       if (editing && editing !== 'new') {
         await updateDrink(editing.id, payload)
       } else {
         await createDrink(payload)
+      }
+      // Se la foto è stata sostituita o rimossa, elimina quella vecchia (best-effort).
+      if (previousUrl && previousUrl !== imageUrl) {
+        deleteDrinkImageByUrl(previousUrl)
       }
       setEditing(null)
       await load()
@@ -80,6 +88,7 @@ export default function MenuManager() {
     if (!confirm(`Eliminare “${d.name}” dal menù?`)) return
     try {
       await deleteDrink(d.id)
+      if (d.image_url) deleteDrinkImageByUrl(d.image_url)
       setDrinks((prev) => prev.filter((x) => x.id !== d.id))
     } catch (e) {
       setError(e.message)
@@ -153,36 +162,25 @@ export default function MenuManager() {
 }
 
 function DrinkForm({ initial, onCancel, onSave }) {
-  const [form, setForm] = useState(initial)
+  const [form, setForm] = useState(() => ({ ...initial, _file: null }))
+  const [preview, setPreview] = useState(initial.image_url || null)
   const [saving, setSaving] = useState(false)
-  const [processing, setProcessing] = useState(false)
-  const [photoError, setPhotoError] = useState(null)
   const set = (k) => (e) =>
     setForm((f) => ({
       ...f,
       [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value,
     }))
 
-  async function onPickFile(e) {
+  function onPickFile(e) {
     const file = e.target.files && e.target.files[0]
-    e.target.value = '' // consente di riselezionare lo stesso file
     if (!file) return
-    setPhotoError(null)
-    setProcessing(true)
-    try {
-      // Comprime la foto in un data URL e la salva direttamente nel campo.
-      const dataUrl = await fileToDataUrl(file)
-      setForm((f) => ({ ...f, image_url: dataUrl }))
-    } catch (err) {
-      setPhotoError(err.message || 'Impossibile elaborare l’immagine.')
-    } finally {
-      setProcessing(false)
-    }
+    setForm((f) => ({ ...f, _file: file }))
+    setPreview(URL.createObjectURL(file))
   }
 
   function removePhoto() {
-    setForm((f) => ({ ...f, image_url: null }))
-    setPhotoError(null)
+    setForm((f) => ({ ...f, _file: null, image_url: null }))
+    setPreview(null)
   }
 
   async function submit(e) {
@@ -206,9 +204,9 @@ function DrinkForm({ initial, onCancel, onSave }) {
       <input id="name" value={form.name} onChange={set('name')} required />
 
       <label htmlFor="photo">Foto</label>
-      {form.image_url && (
+      {preview && (
         <div style={{ marginBottom: 8 }}>
-          <img className="drink-preview" src={form.image_url} alt="Anteprima drink" />
+          <img className="drink-preview" src={preview} alt="Anteprima drink" />
           <button type="button" className="btn ghost small" onClick={removePhoto}>
             Rimuovi foto
           </button>
@@ -219,10 +217,7 @@ function DrinkForm({ initial, onCancel, onSave }) {
         type="file"
         accept="image/*"
         onChange={onPickFile}
-        disabled={processing}
       />
-      {processing && <div className="muted" style={{ fontSize: '0.85rem' }}>Elaboro l’immagine…</div>}
-      {photoError && <div className="banner" style={{ marginTop: 6 }}>{photoError}</div>}
 
       <label htmlFor="category">Categoria</label>
       <input
@@ -272,7 +267,7 @@ function DrinkForm({ initial, onCancel, onSave }) {
         <button type="button" className="btn ghost" onClick={onCancel} disabled={saving}>
           Annulla
         </button>
-        <button type="submit" className="btn" disabled={saving || processing}>
+        <button type="submit" className="btn" disabled={saving}>
           {saving ? 'Salvataggio…' : 'Salva'}
         </button>
       </div>

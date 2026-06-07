@@ -43,11 +43,8 @@ jobs:
           VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
         run: npm run build
 
-      # Deploy delle Functions disabilitato di default: richiede la Cloud Build API
-      # attiva sul progetto. Per abilitarlo, imposta la variabile di repository
-      # DEPLOY_FUNCTIONS a "true" (Settings → Secrets and variables → Actions → Variables).
+      # Deploy delle Functions (richiede la Cloud Build API, attiva col piano Blaze).
       - name: Deploy Firebase Functions
-        if: ${{ vars.DEPLOY_FUNCTIONS == 'true' }}
         env:
           PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
           SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
@@ -56,6 +53,22 @@ jobs:
           GOOGLE_APPLICATION_CREDENTIALS=/tmp/sa.json \
             npx firebase-tools deploy --only functions \
             --project "$PROJECT_ID" --force
+          rm /tmp/sa.json
+
+      # Deploy delle Storage rules (foto drink: lettura pubblica, scrittura auth).
+      # Best-effort: se il service account non ha i permessi sulle Firebase Rules
+      # lo step non blocca il workflow — in tal caso pubblica storage.rules a mano
+      # dalla console Firebase (Storage → Rules).
+      - name: Deploy Storage rules
+        continue-on-error: true
+        env:
+          PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+          SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          echo "$SA_JSON" > /tmp/sa.json
+          GOOGLE_APPLICATION_CREDENTIALS=/tmp/sa.json \
+            npx firebase-tools deploy --only storage \
+            --project "$PROJECT_ID"
           rm /tmp/sa.json
 
       - name: Deploy to Firebase Hosting (live)
