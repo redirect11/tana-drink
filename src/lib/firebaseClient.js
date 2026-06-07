@@ -2,7 +2,6 @@ import { initializeApp } from 'firebase/app'
 import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore'
 import { getFunctions, connectFunctionsEmulator } from 'firebase/functions'
 import { getAuth, connectAuthEmulator } from 'firebase/auth'
-import { getStorage, connectStorageEmulator } from 'firebase/storage'
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -40,7 +39,6 @@ const app = initializeApp({
 export const db = getFirestore(app)
 export const functions = getFunctions(app, 'europe-west1')
 export const auth = getAuth(app)
-export const storage = getStorage(app)
 
 // In sviluppo/testing (es. con Docker) ci si può collegare agli emulatori
 // invece che al progetto reale. Attivalo con VITE_USE_FIREBASE_EMULATOR=true.
@@ -50,6 +48,5 @@ if (import.meta.env.VITE_USE_FIREBASE_EMULATOR === 'true') {
   connectFirestoreEmulator(db, host, port)
   connectFunctionsEmulator(functions, host, 5001)
   connectAuthEmulator(auth, `http://${host}:9099`)
-  connectStorageEmulator(storage, host, 9199)
-  console.info(`[Firebase] Connesso agli emulatori su ${host} (Firestore: ${port}, Auth: 9099, Functions: 5001, Storage: 9199)`)
+  console.info(`[Firebase] Connesso agli emulatori su ${host} (Firestore: ${port}, Auth: 9099, Functions: 5001)`)
 }
