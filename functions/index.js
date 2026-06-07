@@ -16,7 +16,6 @@
 const { onCall, onRequest, HttpsError } = require('firebase-functions/v2/https')
 const { initializeApp } = require('firebase-admin/app')
 const { getFirestore, FieldValue } = require('firebase-admin/firestore')
-const { defineString } = require('firebase-functions/params')
 
 const { buildSumupHeaders, buildSumupUrl } = require('./lib/sumup-core')
 const { syncProducts, createSale, updateSaleStatus, handleWebhook } = require('./lib/sumup-service')
@@ -24,8 +23,13 @@ const { syncProducts, createSale, updateSaleStatus, handleWebhook } = require('.
 initializeApp()
 const db = getFirestore()
 
-const SUMUP_VENDOR_ID = defineString('SUMUP_VENDOR_ID', { default: '' })
-const SUMUP_OUTLET_ID = defineString('SUMUP_OUTLET_ID', { default: '' })
+// Configurazione SumUp via variabili d'ambiente della function (vuote = no-op).
+// Si usano variabili d'ambiente e non i param (defineString) perché un default
+// vuoto non viene serializzato nel manifest e bloccherebbe il deploy
+// non-interattivo. Per attivare SumUp: valorizza SUMUP_VENDOR_ID / SUMUP_OUTLET_ID
+// (es. in functions/.env oppure come secret) e ridepl.
+const SUMUP_VENDOR_ID = process.env.SUMUP_VENDOR_ID || ''
+const SUMUP_OUTLET_ID = process.env.SUMUP_OUTLET_ID || ''
 
 // URL base da confermare con SumUp support al momento del rilascio del Vendor-Id.
 // Goodtill (il sistema dietro SumUp POS Pro) usa tipicamente:
@@ -36,12 +40,12 @@ const SUMUP_API_BASE = process.env.SUMUP_API_BASE || 'https://api.thegoodtill.co
 const OPTS = { region: 'europe-west1' }
 
 function isSumUpConfigured() {
-  return Boolean(SUMUP_VENDOR_ID.value() && SUMUP_OUTLET_ID.value())
+  return Boolean(SUMUP_VENDOR_ID && SUMUP_OUTLET_ID)
 }
 
 async function sumupFetch(path, options = {}) {
   const url = buildSumupUrl(SUMUP_API_BASE, path)
-  const headers = buildSumupHeaders(SUMUP_VENDOR_ID.value(), SUMUP_OUTLET_ID.value())
+  const headers = buildSumupHeaders(SUMUP_VENDOR_ID, SUMUP_OUTLET_ID)
   const res = await fetch(url, {
     ...options,
     headers: { ...headers, ...(options.headers || {}) },
