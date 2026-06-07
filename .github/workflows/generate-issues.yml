@@ -1,0 +1,45 @@
+name: Generate Issues from Requirements
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run (non crea issue, mostra solo cosa verrebbe creato)"
+        required: false
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+  push:
+    branches:
+      - main
+    paths:
+      - "requirements/requirements.yaml"
+
+jobs:
+  generate-issues:
+    name: Generate issues from requirements.yaml
+    runs-on: ubuntu-latest
+
+    permissions:
+      issues: write
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Generate GitHub Issues
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPO: ${{ github.repository }}
+          # Su push automatico crea le issue; su run manuale rispetta la scelta dry_run.
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || 'false' }}
+        run: node scripts/generate-issues.mjs

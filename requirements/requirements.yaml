@@ -1,0 +1,118 @@
+# requirements/requirements.yaml
+#
+# Requisiti funzionali strutturati — Tana Drink (Firebase Functions)
+#
+# Copre le Cloud Functions attualmente in `functions/index.js` (integrazione
+# SumUp POS Pro). La logica è implementata in functions/lib/sumup-core.js (puro)
+# e functions/lib/sumup-service.js (servizio) ed è coperta da test in tests/.
+#
+# Formato:
+#   id:             Identificatore stabile (es. REQ-SUMUP-SYNC-001)
+#   title:          Titolo breve
+#   area:           Area del codice (file o modulo)
+#   description:    Descrizione del requisito
+#   status:         implemented | partial | todo | deprecated
+#   generate_issue: true per creare automaticamente un'issue GitHub
+#                   (utile per requisiti nuovi o da implementare)
+#   labels:         Lista di label GitHub da applicare all'issue
+#   test_cases:     Lista di ID test case associati
+#
+# Per generare issue GitHub da questo file:
+#   node scripts/generate-issues.mjs --dry-run     # anteprima
+#   GITHUB_TOKEN=<token> node scripts/generate-issues.mjs
+#
+# Oppure, tramite workflow:
+#   GitHub → Actions → "Generate Issues from Requirements" → Run workflow
+
+requirements:
+
+  # ── Configurazione / gating ───────────────────────────────────────────────────
+
+  - id: REQ-SUMUP-CONFIG-001
+    title: "Le functions SumUp sono no-op se non configurate"
+    area: "functions/index.js isSumUpConfigured, functions/lib/sumup-service.js"
+    description: >
+      Se SUMUP_VENDOR_ID o SUMUP_OUTLET_ID non sono impostati, tutte le callable
+      (syncSumUpProducts, createSumUpSale, updateSumUpSaleStatus) devono ritornare
+      un esito { skipped: true } senza effettuare alcuna chiamata di rete verso
+      SumUp né scritture su Firestore.
+    status: implemented
+    generate_issue: false
+    labels: [sumup, config, functions]
+    test_cases: [TC-SYNC-001, TC-SALE-001, TC-STATUS-001]
+
+  # ── syncSumUpProducts ─────────────────────────────────────────────────────────
+
+  - id: REQ-SUMUP-SYNC-001
+    title: "Sincronizzazione catalogo SumUp → Firestore drinks"
+    area: "functions/index.js syncSumUpProducts, functions/lib/sumup-service.js syncProducts"
+    description: >
+      syncSumUpProducts scarica il catalogo da GET /products e aggiorna la
+      collezione `drinks`. I prodotti già presenti (identificati da
+      sumup_product_id) vengono aggiornati; i nuovi vengono creati con un
+      timestamp created_at. Ritorna { synced, total }.
+    status: implemented
+    generate_issue: false
+    labels: [sumup, sync, functions]
+    test_cases: [TC-SYNC-002, TC-SYNC-003, TC-SYNC-004]
+
+  - id: REQ-SUMUP-SYNC-002
+    title: "Normalizzazione robusta della risposta prodotti SumUp"
+    area: "functions/lib/sumup-core.js extractProducts, mapProductToDrink"
+    description: >
+      La risposta di /products può essere un array diretto o un oggetto con chiave
+      "products"/"items"; input nullo o non valido produce zero prodotti. Ogni
+      prodotto viene mappato sui campi drink (name, price numerico, category,
+      description, available) con fallback sui nomi di campo alternativi; i prodotti
+      privi di id vengono saltati. available è true salvo p.active===false o
+      p.available===false.
+    status: implemented
+    generate_issue: false
+    labels: [sumup, sync, functions]
+    test_cases: [TC-CORE-001, TC-CORE-002, TC-CORE-003]
+
+  # ── createSumUpSale ───────────────────────────────────────────────────────────
+
+  - id: REQ-SUMUP-SALE-001
+    title: "Invio ordine a SumUp come External Sale"
+    area: "functions/index.js createSumUpSale, functions/lib/sumup-service.js createSale"
+    description: >
+      createSumUpSale costruisce il payload External Sale dall'ordine (customer_name
+      derivato dal tavolo, note, sale_items con product_id/quantity/unit_price e
+      total_price arrotondato a 2 decimali) e lo invia in POST a /external_sales.
+      Se la vendita ha un id e l'ordine ha un orderId, persiste sumup_sale_id
+      sull'ordine Firestore. Ritorna { saleId }.
+    status: implemented
+    generate_issue: false
+    labels: [sumup, sale, functions]
+    test_cases: [TC-SALE-002, TC-SALE-003, TC-CORE-004]
+
+  # ── updateSumUpSaleStatus ─────────────────────────────────────────────────────
+
+  - id: REQ-SUMUP-STATUS-001
+    title: "Aggiornamento stato vendita su SumUp"
+    area: "functions/index.js updateSumUpSaleStatus, functions/lib/sumup-service.js updateSaleStatus"
+    description: >
+      updateSumUpSaleStatus invia in PUT a /external_sales/{saleId}/status il nuovo
+      stato. Se saleId è assente ritorna { skipped: true, reason } senza chiamare
+      SumUp. Ritorna { updated: true } in caso di successo.
+    status: implemented
+    generate_issue: false
+    labels: [sumup, status, functions]
+    test_cases: [TC-STATUS-002, TC-STATUS-003]
+
+  # ── sumupWebhook ──────────────────────────────────────────────────────────────
+
+  - id: REQ-SUMUP-WEBHOOK-001
+    title: "Webhook SumUp → aggiornamento stato ordine Firestore"
+    area: "functions/index.js sumupWebhook, functions/lib/sumup-service.js handleWebhook"
+    description: >
+      sumupWebhook accetta solo richieste POST (altrimenti 405). Estrae sale_id (o id)
+      e status dal corpo; senza sale_id risponde 400. Mappa lo stato SumUp su quello
+      Tana Drink (ACCEPTED→in_preparazione, COMPLETED/CANCELLED→ritirato); stati non
+      mappati rispondono 200 OK senza modifiche. Per stati mappati aggiorna lo status
+      dell'ordine con sumup_sale_id corrispondente, rispondendo sempre 200 OK.
+    status: implemented
+    generate_issue: false
+    labels: [sumup, webhook, functions]
+    test_cases: [TC-HOOK-001, TC-HOOK-002, TC-HOOK-003, TC-HOOK-004, TC-HOOK-005]
