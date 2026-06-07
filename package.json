@@ -9,6 +9,10 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "requirements:issues": "node scripts/generate-issues.mjs",
     "seed": "node scripts/seed.js",
     "emulators": "firebase emulators:start --project demo-tana-drink --only firestore"
   },
@@ -27,6 +31,8 @@
     "eslint-plugin-react-hooks": "^5.1.0-rc.0",
     "eslint-plugin-react-refresh": "^0.4.12",
     "globals": "^15.9.0",
-    "vite": "^5.4.8"
+    "vite": "^5.4.8",
+    "vitest": "^2.1.8",
+    "@vitest/coverage-v8": "^2.1.8"
   }
 }
