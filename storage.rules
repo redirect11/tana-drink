@@ -1,0 +1,23 @@
+rules_version = '2';
+
+// Regole Firebase Storage per Tana Drink.
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Foto dei drink: lettura pubblica (mostrate nel menù cliente),
+    // scrittura/eliminazione solo da utenti autenticati (backoffice bartender).
+    match /drinks/{file} {
+      allow read: if true;
+      // Eliminazione: solo autenticati.
+      allow delete: if request.auth != null;
+      // Caricamento/aggiornamento: solo autenticati, solo immagini < 5 MB.
+      allow create, update: if request.auth != null
+                            && request.resource.size < 5 * 1024 * 1024
+                            && request.resource.contentType.matches('image/.*');
+    }
+
+    // Tutto il resto è negato di default.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

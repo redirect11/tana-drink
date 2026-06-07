@@ -91,6 +91,9 @@ export default function MenuPage() {
             return (
               <div className="card menu-item" key={d.id}>
                 <div className="row between">
+                  {d.image_url && (
+                    <img className="drink-thumb" src={d.image_url} alt={d.name} />
+                  )}
                   <div className="grow">
                     <h3>{d.name}</h3>
                     {d.description && (

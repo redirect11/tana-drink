@@ -41,6 +41,7 @@ function mapDrink(snap) {
     recipe: d.recipe ?? null,
     price: d.price ?? 0,
     available: d.available ?? true,
+    image_url: d.image_url ?? null,
     created_at: toIso(d.created_at),
   }
 }
