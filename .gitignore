@@ -5,6 +5,9 @@ dist-ssr
 .env
 .env.*
 !.env.example
+# Config (vuota) delle Functions: serve in CI per il deploy non-interattivo.
+# NON contiene segreti (i valori reali SumUp vanno nei secret Firebase).
+!functions/.env
 
 # Editor
 .vscode/*
