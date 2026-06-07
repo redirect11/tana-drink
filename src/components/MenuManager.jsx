@@ -5,6 +5,7 @@ import {
   updateDrink,
   deleteDrink,
 } from '../lib/api.js'
+import { uploadDrinkImage, deleteDrinkImageByUrl } from '../lib/storage.js'
 import { formatPrice } from '../lib/orderStatus.js'
 
 const EMPTY = {
@@ -14,6 +15,7 @@ const EMPTY = {
   price: '',
   recipe: '',
   available: true,
+  image_url: null,
 }
 
 export default function MenuManager() {
@@ -39,6 +41,12 @@ export default function MenuManager() {
 
   async function handleSave(form) {
     setError(null)
+    // Carica la foto su Storage se ne è stata selezionata una nuova.
+    let imageUrl = form.image_url ?? null
+    const previousUrl = editing && editing !== 'new' ? editing.image_url ?? null : null
+    if (form._file) {
+      imageUrl = await uploadDrinkImage(form._file)
+    }
     const payload = {
       name: form.name.trim(),
       description: form.description.trim() || null,
@@ -46,12 +54,17 @@ export default function MenuManager() {
       recipe: form.recipe.trim() || null,
       price: Number(form.price || 0),
       available: !!form.available,
+      image_url: imageUrl,
     }
     try {
       if (editing && editing !== 'new') {
         await updateDrink(editing.id, payload)
       } else {
         await createDrink(payload)
+      }
+      // Se la foto è stata sostituita o rimossa, elimina quella vecchia (best-effort).
+      if (previousUrl && previousUrl !== imageUrl) {
+        deleteDrinkImageByUrl(previousUrl)
       }
       setEditing(null)
       await load()
@@ -75,6 +88,7 @@ export default function MenuManager() {
     if (!confirm(`Eliminare “${d.name}” dal menù?`)) return
     try {
       await deleteDrink(d.id)
+      if (d.image_url) deleteDrinkImageByUrl(d.image_url)
       setDrinks((prev) => prev.filter((x) => x.id !== d.id))
     } catch (e) {
       setError(e.message)
@@ -103,6 +117,9 @@ export default function MenuManager() {
       {drinks.map((d) => (
         <div className="card" key={d.id}>
           <div className="row between">
+            {d.image_url && (
+              <img className="drink-thumb" src={d.image_url} alt={d.name} />
+            )}
             <div className="grow">
               <strong>{d.name}</strong>{' '}
               {!d.available && <span className="pill ritirato">non disp.</span>}
@@ -145,17 +162,36 @@ export default function MenuManager() {
 }
 
 function DrinkForm({ initial, onCancel, onSave }) {
-  const [form, setForm] = useState(initial)
+  const [form, setForm] = useState(() => ({ ...initial, _file: null }))
+  const [preview, setPreview] = useState(initial.image_url || null)
+  const [saving, setSaving] = useState(false)
   const set = (k) => (e) =>
     setForm((f) => ({
       ...f,
       [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value,
     }))
 
-  function submit(e) {
+  function onPickFile(e) {
+    const file = e.target.files && e.target.files[0]
+    if (!file) return
+    setForm((f) => ({ ...f, _file: file }))
+    setPreview(URL.createObjectURL(file))
+  }
+
+  function removePhoto() {
+    setForm((f) => ({ ...f, _file: null, image_url: null }))
+    setPreview(null)
+  }
+
+  async function submit(e) {
     e.preventDefault()
     if (!form.name.trim()) return
-    onSave(form)
+    setSaving(true)
+    try {
+      await onSave(form)
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -166,6 +202,22 @@ function DrinkForm({ initial, onCancel, onSave }) {
 
       <label htmlFor="name">Nome *</label>
       <input id="name" value={form.name} onChange={set('name')} required />
+
+      <label htmlFor="photo">Foto</label>
+      {preview && (
+        <div style={{ marginBottom: 8 }}>
+          <img className="drink-preview" src={preview} alt="Anteprima drink" />
+          <button type="button" className="btn ghost small" onClick={removePhoto}>
+            Rimuovi foto
+          </button>
+        </div>
+      )}
+      <input
+        id="photo"
+        type="file"
+        accept="image/*"
+        onChange={onPickFile}
+      />
 
       <label htmlFor="category">Categoria</label>
       <input
@@ -212,11 +264,11 @@ function DrinkForm({ initial, onCancel, onSave }) {
       </label>
 
       <div className="grid-2" style={{ marginTop: 16 }}>
-        <button type="button" className="btn ghost" onClick={onCancel}>
+        <button type="button" className="btn ghost" onClick={onCancel} disabled={saving}>
           Annulla
         </button>
-        <button type="submit" className="btn">
-          Salva
+        <button type="submit" className="btn" disabled={saving}>
+          {saving ? 'Salvataggio…' : 'Salva'}
         </button>
       </div>
     </form>
