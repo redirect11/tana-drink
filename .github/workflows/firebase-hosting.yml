@@ -45,6 +45,7 @@ jobs:
 
       # Deploy delle Functions (richiede la Cloud Build API, attiva col piano Blaze).
       - name: Deploy Firebase Functions
+        if: ${{ vars.DEPLOY_FUNCTIONS == 'true' }}
         env:
           PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
           SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
