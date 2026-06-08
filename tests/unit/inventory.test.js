@@ -9,6 +9,8 @@ import {
   stockStatus,
   computeConsumption,
   bottleBreakdown,
+  inventorySummary,
+  filterItems,
 } from '../../src/lib/inventory.js'
 
 describe('toBaseQty', () => {
@@ -69,6 +71,47 @@ describe('bottleBreakdown', () => {
   it('null per prodotti a pezzi o senza confezione', () => {
     expect(bottleBreakdown({ unit: 'pz', stock: 10 })).toBeNull()
     expect(bottleBreakdown({ unit: 'ml', package_size: 0, stock: 10 })).toBeNull()
+  })
+})
+
+describe('inventorySummary', () => {
+  const items = [
+    { stock: 100, low_threshold: 10 }, // ok
+    { stock: 5, low_threshold: 10 }, // low
+    { stock: 0, low_threshold: 10 }, // empty
+    { stock: 8, low_threshold: 10 }, // low
+  ]
+  it('conta totale, low e empty', () => {
+    expect(inventorySummary(items)).toEqual({ total: 4, low: 2, empty: 1 })
+  })
+  it('lista vuota', () => {
+    expect(inventorySummary([])).toEqual({ total: 0, low: 0, empty: 0 })
+  })
+})
+
+describe('filterItems', () => {
+  const items = [
+    { name: 'Rum Zacapa', category_id: 'distillati', stock: 100, low_threshold: 10 },
+    { name: 'Rum Bianco', category_id: 'distillati', stock: 5, low_threshold: 10 },
+    { name: 'Birra IPA', category_id: 'birre', stock: 0, low_threshold: 6 },
+    { name: 'Sciroppo', category_id: null, stock: 50, low_threshold: 5 },
+  ]
+  it('ricerca per nome (case-insensitive)', () => {
+    expect(filterItems(items, { query: 'rum' }).map((i) => i.name)).toEqual(['Rum Bianco', 'Rum Zacapa'])
+  })
+  it('filtra per categoria', () => {
+    expect(filterItems(items, { categoryId: 'birre' }).map((i) => i.name)).toEqual(['Birra IPA'])
+  })
+  it('filtra i senza categoria', () => {
+    expect(filterItems(items, { categoryId: 'none' }).map((i) => i.name)).toEqual(['Sciroppo'])
+  })
+  it('filtra per stato', () => {
+    expect(filterItems(items, { status: 'empty' }).map((i) => i.name)).toEqual(['Birra IPA'])
+    expect(filterItems(items, { status: 'low' }).map((i) => i.name)).toEqual(['Rum Bianco'])
+  })
+  it('combina ricerca + categoria + stato e ordina per nome', () => {
+    const res = filterItems(items, { query: 'rum', categoryId: 'distillati', status: 'ok' })
+    expect(res.map((i) => i.name)).toEqual(['Rum Zacapa'])
   })
 })
 

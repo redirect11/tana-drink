@@ -229,6 +229,116 @@ a {
   color: #ff8a80;
 }
 
+/* ── Inventario: vista compatta ─────────────────────────────── */
+.small {
+  font-size: 0.8rem;
+}
+
+.inv-summary {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.inv-summary .chip {
+  flex: 1;
+  text-align: center;
+}
+
+.chips-row {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  margin-bottom: 8px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text, #fff);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.chip.active {
+  background: var(--accent, #1f6feb);
+  border-color: var(--accent, #1f6feb);
+  color: #fff;
+}
+.chip.warn strong {
+  color: #ffd54f;
+}
+.chip.danger strong {
+  color: #ff8a80;
+}
+.chip.warn.active,
+.chip.danger.active {
+  color: #fff;
+}
+
+.inv-search {
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.inv-list {
+  margin-top: 8px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.inv-item {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.02);
+}
+.inv-item:last-child {
+  border-bottom: none;
+}
+.inv-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+.inv-name {
+  font-weight: 600;
+}
+.inv-qty {
+  text-align: right;
+  white-space: nowrap;
+}
+.chev {
+  color: var(--muted);
+  width: 14px;
+  text-align: center;
+}
+.inv-detail {
+  padding: 0 12px 12px 32px;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.dot-ok {
+  background: #4caf50;
+}
+.dot-low {
+  background: #ffc107;
+}
+.dot-empty {
+  background: #f44336;
+}
+
 .price {
   font-weight: 700;
   color: var(--accent-2);
