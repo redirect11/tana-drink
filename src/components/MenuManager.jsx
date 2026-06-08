@@ -4,30 +4,49 @@ import {
   createDrink,
   updateDrink,
   deleteDrink,
+  fetchCategories,
+  createCategory,
+  updateCategory,
+  deleteCategory,
+  fetchInventoryItems,
 } from '../lib/api.js'
 import { uploadDrinkImage, deleteDrinkImageByUrl } from '../lib/storage.js'
 import { formatPrice } from '../lib/orderStatus.js'
+import { toBaseQty, formatQty, ENTRY_UNITS } from '../lib/inventory.js'
 
 const EMPTY = {
   name: '',
   description: '',
-  category: '',
+  category_id: '',
   price: '',
   recipe: '',
   available: true,
   image_url: null,
+  recipe_items: [],
 }
 
 export default function MenuManager() {
   const [drinks, setDrinks] = useState([])
+  const [categories, setCategories] = useState([])
+  const [inventory, setInventory] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [editing, setEditing] = useState(null) // null | 'new' | drink object
+  const [showCats, setShowCats] = useState(false)
+
+  const catName = (id) => categories.find((c) => c.id === id)?.name
 
   async function load() {
     setLoading(true)
     try {
-      setDrinks(await fetchDrinks())
+      const [d, c, inv] = await Promise.all([
+        fetchDrinks(),
+        fetchCategories(),
+        fetchInventoryItems().catch(() => []), // l'inventario richiede auth: in caso fallisca, lista vuota
+      ])
+      setDrinks(d)
+      setCategories(c)
+      setInventory(inv)
     } catch (e) {
       setError(e.message)
     } finally {
@@ -39,6 +58,13 @@ export default function MenuManager() {
     load()
   }, [])
 
+  // Crea una categoria al volo dal form drink e la restituisce.
+  async function handleCreateCategory(name) {
+    const cat = await createCategory({ name, sort_order: categories.length })
+    setCategories((prev) => [...prev, cat].sort((a, b) => a.sort_order - b.sort_order))
+    return cat
+  }
+
   async function handleSave(form) {
     setError(null)
     // Carica la foto su Storage se ne è stata selezionata una nuova.
@@ -47,11 +73,27 @@ export default function MenuManager() {
     if (form._file) {
       imageUrl = await uploadDrinkImage(form._file)
     }
+
+    // Converte le righe ricetta in recipe_items (quantità in unità base).
+    const recipe_items = (form.recipe_rows || [])
+      .filter((r) => r.inventory_item_id && Number(r.qty) > 0)
+      .map((r) => {
+        const inv = inventory.find((i) => i.id === r.inventory_item_id)
+        return {
+          inventory_item_id: r.inventory_item_id,
+          name: inv?.name ?? '',
+          unit: inv?.unit ?? 'pz',
+          qty: toBaseQty(r.qty, r.unit),
+        }
+      })
+
     const payload = {
       name: form.name.trim(),
       description: form.description.trim() || null,
-      category: form.category.trim() || null,
+      category_id: form.category_id || null,
+      category: catName(form.category_id) || null, // denormalizzato per compat/fallback
       recipe: form.recipe.trim() || null,
+      recipe_items,
       price: Number(form.price || 0),
       available: !!form.available,
       image_url: imageUrl,
@@ -62,7 +104,6 @@ export default function MenuManager() {
       } else {
         await createDrink(payload)
       }
-      // Se la foto è stata sostituita o rimossa, elimina quella vecchia (best-effort).
       if (previousUrl && previousUrl !== imageUrl) {
         deleteDrinkImageByUrl(previousUrl)
       }
@@ -99,6 +140,9 @@ export default function MenuManager() {
     return (
       <DrinkForm
         initial={editing === 'new' ? EMPTY : editing}
+        categories={categories}
+        inventory={inventory}
+        onCreateCategory={handleCreateCategory}
         onCancel={() => setEditing(null)}
         onSave={handleSave}
       />
@@ -110,6 +154,20 @@ export default function MenuManager() {
       <button className="btn block" onClick={() => setEditing('new')}>
         + Aggiungi drink
       </button>
+
+      <button
+        className="btn ghost small block"
+        style={{ marginTop: 8 }}
+        onClick={() => setShowCats((v) => !v)}
+      >
+        {showCats ? 'Nascondi categorie' : '🏷 Gestisci categorie'}
+      </button>
+      {showCats && (
+        <CategoryManager
+          categories={categories}
+          onChange={async () => setCategories(await fetchCategories())}
+        />
+      )}
 
       {error && <div className="banner">Errore: {error}</div>}
       {loading && <div className="empty">Carico il menù…</div>}
@@ -124,23 +182,21 @@ export default function MenuManager() {
               <strong>{d.name}</strong>{' '}
               {!d.available && <span className="pill ritirato">non disp.</span>}
               <div className="muted">
-                {d.category || 'Senza categoria'} · {formatPrice(d.price)}
+                {catName(d.category_id) || d.category || 'Senza categoria'} ·{' '}
+                {formatPrice(d.price)}
               </div>
             </div>
           </div>
-          {d.recipe && (
-            <p className="muted" style={{ fontSize: '0.85rem' }}>
-              Ricetta: {d.recipe}
+          {d.recipe_items && d.recipe_items.length > 0 && (
+            <p className="muted" style={{ fontSize: '0.85rem', margin: '6px 0 0' }}>
+              {d.recipe_items.map((r) => `${r.name} ${formatQty(r.qty, r.unit)}`).join(' · ')}
             </p>
           )}
           <div className="grid-2" style={{ marginTop: 8 }}>
             <button className="btn secondary small" onClick={() => setEditing(d)}>
               Modifica
             </button>
-            <button
-              className="btn ghost small"
-              onClick={() => toggleAvailable(d)}
-            >
+            <button className="btn ghost small" onClick={() => toggleAvailable(d)}>
               {d.available ? 'Rendi non disp.' : 'Rendi disponibile'}
             </button>
           </div>
@@ -161,10 +217,100 @@ export default function MenuManager() {
   )
 }
 
-function DrinkForm({ initial, onCancel, onSave }) {
-  const [form, setForm] = useState(() => ({ ...initial, _file: null }))
+// --- Gestione categorie -------------------------------------------------
+
+function CategoryManager({ categories, onChange }) {
+  const [name, setName] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  async function add() {
+    if (!name.trim()) return
+    setBusy(true)
+    try {
+      await createCategory({ name: name.trim(), sort_order: categories.length })
+      setName('')
+      await onChange()
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function rename(cat) {
+    const n = prompt('Nuovo nome categoria:', cat.name)
+    if (n == null || !n.trim()) return
+    await updateCategory(cat.id, { name: n.trim() })
+    await onChange()
+  }
+
+  async function remove(cat) {
+    if (!confirm(`Eliminare la categoria “${cat.name}”? I drink resteranno, ma senza categoria.`)) return
+    await deleteCategory(cat.id)
+    await onChange()
+  }
+
+  // Scambia l'ordine con il vicino (su/giù).
+  async function move(idx, dir) {
+    const j = idx + dir
+    if (j < 0 || j >= categories.length) return
+    const a = categories[idx]
+    const b = categories[j]
+    await Promise.all([
+      updateCategory(a.id, { sort_order: b.sort_order }),
+      updateCategory(b.id, { sort_order: a.sort_order }),
+    ])
+    await onChange()
+  }
+
+  return (
+    <div className="card" style={{ marginTop: 8 }}>
+      <div className="row" style={{ gap: 8 }}>
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Nuova categoria"
+        />
+        <button className="btn small" onClick={add} disabled={busy}>
+          Aggiungi
+        </button>
+      </div>
+      {categories.length === 0 && (
+        <div className="muted" style={{ marginTop: 8, fontSize: '0.85rem' }}>
+          Nessuna categoria.
+        </div>
+      )}
+      {categories.map((c, idx) => (
+        <div className="row between" key={c.id} style={{ marginTop: 8 }}>
+          <span>{c.name}</span>
+          <span className="row" style={{ gap: 4 }}>
+            <button className="btn ghost small" onClick={() => move(idx, -1)} disabled={idx === 0}>↑</button>
+            <button className="btn ghost small" onClick={() => move(idx, 1)} disabled={idx === categories.length - 1}>↓</button>
+            <button className="btn ghost small" onClick={() => rename(c)}>✏️</button>
+            <button className="btn ghost small" onClick={() => remove(c)}>🗑</button>
+          </span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// --- Form drink ---------------------------------------------------------
+
+function DrinkForm({ initial, categories, inventory, onCreateCategory, onCancel, onSave }) {
+  const [form, setForm] = useState(() => ({
+    ...initial,
+    _file: null,
+    // righe ricetta editabili (qty nell'unità base salvata)
+    recipe_rows: (initial.recipe_items || []).map((r) => ({
+      inventory_item_id: r.inventory_item_id,
+      qty: r.qty,
+      unit: r.unit,
+    })),
+  }))
   const [preview, setPreview] = useState(initial.image_url || null)
   const [saving, setSaving] = useState(false)
+  const [newCat, setNewCat] = useState('')
+  const [addingCat, setAddingCat] = useState(false)
+
   const set = (k) => (e) =>
     setForm((f) => ({
       ...f,
@@ -181,6 +327,45 @@ function DrinkForm({ initial, onCancel, onSave }) {
   function removePhoto() {
     setForm((f) => ({ ...f, _file: null, image_url: null }))
     setPreview(null)
+  }
+
+  // --- categoria ---
+  function onCategoryChange(e) {
+    if (e.target.value === '__new__') {
+      setAddingCat(true)
+      return
+    }
+    setForm((f) => ({ ...f, category_id: e.target.value }))
+  }
+  async function confirmNewCat() {
+    if (!newCat.trim()) return
+    const cat = await onCreateCategory(newCat.trim())
+    setForm((f) => ({ ...f, category_id: cat.id }))
+    setNewCat('')
+    setAddingCat(false)
+  }
+
+  // --- ricetta ---
+  function addRow() {
+    setForm((f) => ({
+      ...f,
+      recipe_rows: [...f.recipe_rows, { inventory_item_id: '', qty: '', unit: '' }],
+    }))
+  }
+  function setRow(idx, patch) {
+    setForm((f) => ({
+      ...f,
+      recipe_rows: f.recipe_rows.map((r, i) => (i === idx ? { ...r, ...patch } : r)),
+    }))
+  }
+  function removeRow(idx) {
+    setForm((f) => ({ ...f, recipe_rows: f.recipe_rows.filter((_, i) => i !== idx) }))
+  }
+  function onItemChange(idx, itemId) {
+    const inv = inventory.find((i) => i.id === itemId)
+    // unità di inserimento di default per l'item scelto (cl per i volumi, ecc.)
+    const unit = inv ? (ENTRY_UNITS[inv.unit]?.[0] ?? inv.unit) : ''
+    setRow(idx, { inventory_item_id: itemId, unit })
   }
 
   async function submit(e) {
@@ -212,20 +397,29 @@ function DrinkForm({ initial, onCancel, onSave }) {
           </button>
         </div>
       )}
-      <input
-        id="photo"
-        type="file"
-        accept="image/*"
-        onChange={onPickFile}
-      />
+      <input id="photo" type="file" accept="image/*" onChange={onPickFile} />
 
       <label htmlFor="category">Categoria</label>
-      <input
-        id="category"
-        value={form.category}
-        onChange={set('category')}
-        placeholder="Es. Cocktail, Analcolici, Birre"
-      />
+      {addingCat ? (
+        <div className="row" style={{ gap: 8 }}>
+          <input
+            value={newCat}
+            onChange={(e) => setNewCat(e.target.value)}
+            placeholder="Nome nuova categoria"
+            autoFocus
+          />
+          <button type="button" className="btn small" onClick={confirmNewCat}>OK</button>
+          <button type="button" className="btn ghost small" onClick={() => setAddingCat(false)}>✕</button>
+        </div>
+      ) : (
+        <select id="category" value={form.category_id || ''} onChange={onCategoryChange}>
+          <option value="">— Nessuna —</option>
+          {categories.map((c) => (
+            <option key={c.id} value={c.id}>{c.name}</option>
+          ))}
+          <option value="__new__">➕ Nuova categoria…</option>
+        </select>
+      )}
 
       <label htmlFor="price">Prezzo (€)</label>
       <input
@@ -238,20 +432,63 @@ function DrinkForm({ initial, onCancel, onSave }) {
       />
 
       <label htmlFor="description">Descrizione</label>
-      <input
-        id="description"
-        value={form.description}
-        onChange={set('description')}
-      />
+      <input id="description" value={form.description} onChange={set('description')} />
 
-      <label htmlFor="recipe">Ricetta / ingredienti</label>
-      <textarea
-        id="recipe"
-        rows={3}
-        value={form.recipe}
-        onChange={set('recipe')}
-        placeholder="Es. 5cl rum, 2cl lime, menta, zucchero, soda"
-      />
+      {/* Ricetta strutturata: ingredienti collegati all'inventario (usata per
+          lo scarico automatico e per mostrare gli ingredienti nel menù). */}
+      <label style={{ marginTop: 12 }}>Ricetta / ingredienti</label>
+      {inventory.length === 0 && (
+        <div className="muted" style={{ fontSize: '0.85rem' }}>
+          Nessun prodotto in inventario: aggiungili nella tab “Inventario” per
+          comporre la ricetta.
+        </div>
+      )}
+      {form.recipe_rows.map((r, idx) => {
+        const inv = inventory.find((i) => i.id === r.inventory_item_id)
+        const units = inv ? (ENTRY_UNITS[inv.unit] ?? [inv.unit]) : []
+        return (
+          <div className="row" style={{ gap: 6, marginTop: 6 }} key={idx}>
+            <select
+              value={r.inventory_item_id}
+              onChange={(e) => onItemChange(idx, e.target.value)}
+              style={{ flex: 2 }}
+            >
+              <option value="">— Ingrediente —</option>
+              {inventory.map((i) => (
+                <option key={i.id} value={i.id}>{i.name}</option>
+              ))}
+            </select>
+            <input
+              type="number"
+              step="any"
+              min="0"
+              value={r.qty}
+              onChange={(e) => setRow(idx, { qty: e.target.value })}
+              placeholder="Qta"
+              style={{ flex: 1 }}
+            />
+            <select
+              value={r.unit}
+              onChange={(e) => setRow(idx, { unit: e.target.value })}
+              style={{ width: 70 }}
+            >
+              {units.map((u) => (
+                <option key={u} value={u}>{u}</option>
+              ))}
+            </select>
+            <button type="button" className="btn ghost small" onClick={() => removeRow(idx)}>✕</button>
+          </div>
+        )
+      })}
+      <button
+        type="button"
+        className="btn ghost small"
+        style={{ marginTop: 6 }}
+        onClick={addRow}
+        disabled={inventory.length === 0}
+      >
+        + Ingrediente
+      </button>
 
       <label className="row" style={{ marginTop: 12 }}>
         <input

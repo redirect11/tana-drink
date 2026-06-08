@@ -202,6 +202,33 @@ a {
   background: rgba(255, 255, 255, 0.06);
 }
 
+/* Ingredienti nel menù */
+.ingredients {
+  margin: 0 0 6px;
+  font-size: 0.82rem;
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* Badge stato scorte (inventario) */
+.badge-low,
+.badge-empty {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  vertical-align: middle;
+}
+.badge-low {
+  background: rgba(255, 193, 7, 0.18);
+  color: #ffd54f;
+}
+.badge-empty {
+  background: rgba(244, 67, 54, 0.2);
+  color: #ff8a80;
+}
+
 .price {
   font-weight: 700;
   color: var(--accent-2);

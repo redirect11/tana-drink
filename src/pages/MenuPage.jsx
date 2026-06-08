@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { fetchDrinks } from '../lib/api.js'
+import { fetchDrinks, fetchCategories } from '../lib/api.js'
 import { createOrder } from '../lib/api.js'
 import { useCart, rememberOrderId } from '../lib/cart.js'
 import { formatPrice } from '../lib/orderStatus.js'
+import { formatQty } from '../lib/inventory.js'
 import { isFirebaseConfigured } from '../lib/firebaseClient.js'
 
 export default function MenuPage() {
   const [drinks, setDrinks] = useState([])
+  const [cats, setCats] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [sending, setSending] = useState(false)
@@ -24,8 +26,15 @@ export default function MenuPage() {
       setLoading(false)
       return
     }
-    fetchDrinks({ onlyAvailable: true })
-      .then((d) => active && setDrinks(d))
+    Promise.all([
+      fetchDrinks({ onlyAvailable: true }),
+      fetchCategories().catch(() => []),
+    ])
+      .then(([d, c]) => {
+        if (!active) return
+        setDrinks(d)
+        setCats(c)
+      })
       .catch((e) => active && setError(e.message))
       .finally(() => active && setLoading(false))
     return () => {
@@ -34,14 +43,19 @@ export default function MenuPage() {
   }, [])
 
   const categories = useMemo(() => {
-    const map = new Map()
+    const byId = new Map(cats.map((c) => [c.id, c]))
+    const groups = new Map() // key -> { name, sort, list }
     for (const d of drinks) {
-      const cat = d.category || 'Altro'
-      if (!map.has(cat)) map.set(cat, [])
-      map.get(cat).push(d)
+      const cat = byId.get(d.category_id)
+      const name = cat?.name || d.category || 'Altro'
+      const sort = cat ? cat.sort_order : 9999
+      if (!groups.has(name)) groups.set(name, { name, sort, list: [] })
+      groups.get(name).list.push(d)
     }
-    return [...map.entries()]
-  }, [drinks])
+    return [...groups.values()]
+      .sort((a, b) => (a.sort - b.sort) || a.name.localeCompare(b.name))
+      .map((g) => [g.name, g.list])
+  }, [drinks, cats])
 
   async function handleSend() {
     if (cart.items.length === 0) return
@@ -99,6 +113,13 @@ export default function MenuPage() {
                     {d.description && (
                       <p className="muted" style={{ margin: '0 0 6px' }}>
                         {d.description}
+                      </p>
+                    )}
+                    {d.recipe_items && d.recipe_items.length > 0 && (
+                      <p className="ingredients">
+                        {d.recipe_items
+                          .map((r) => `${r.name} ${formatQty(r.qty, r.unit)}`)
+                          .join(' · ')}
                       </p>
                     )}
                     <span className="price">{formatPrice(d.price)}</span>

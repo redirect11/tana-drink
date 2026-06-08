@@ -9,6 +9,8 @@ import {
   query,
   where,
   documentId,
+  orderBy,
+  limit as fbLimit,
   onSnapshot,
   runTransaction,
   serverTimestamp,
@@ -17,9 +19,14 @@ import {
 import { db } from './firebaseClient.js'
 import { ORDER_STATUSES } from './orderStatus.js'
 import { createSumUpSale, updateSumUpSaleStatus, toSumUpStatus } from './sumupApi.js'
+import { computeConsumption, formatQty } from './inventory.js'
+import { notify } from './notify.js'
 
 const drinksCol = collection(db, 'drinks')
 const ordersCol = collection(db, 'orders')
+const categoriesCol = collection(db, 'categories')
+const inventoryCol = collection(db, 'inventory_items')
+const movementsCol = collection(db, 'stock_movements')
 
 // --- Helpers ------------------------------------------------------------
 
@@ -38,11 +45,54 @@ function mapDrink(snap) {
     name: d.name,
     description: d.description ?? null,
     category: d.category ?? null,
+    category_id: d.category_id ?? null,
     recipe: d.recipe ?? null,
+    recipe_items: Array.isArray(d.recipe_items) ? d.recipe_items : [],
     price: d.price ?? 0,
     available: d.available ?? true,
     image_url: d.image_url ?? null,
     created_at: toIso(d.created_at),
+  }
+}
+
+// Mappa una categoria.
+function mapCategory(snap) {
+  const c = snap.data() || {}
+  return {
+    id: snap.id,
+    name: c.name ?? '',
+    sort_order: c.sort_order ?? 0,
+    created_at: toIso(c.created_at),
+  }
+}
+
+// Mappa un item di inventario.
+function mapItem(snap) {
+  const i = snap.data() || {}
+  return {
+    id: snap.id,
+    name: i.name ?? '',
+    unit: i.unit ?? 'pz',
+    stock: Number(i.stock) || 0,
+    package_size: i.package_size ?? null,
+    low_threshold: Number(i.low_threshold) || 0,
+    category_id: i.category_id ?? null,
+    created_at: toIso(i.created_at),
+  }
+}
+
+function mapMovement(snap) {
+  const m = snap.data() || {}
+  return {
+    id: snap.id,
+    item_id: m.item_id ?? null,
+    item_name: m.item_name ?? '',
+    type: m.type ?? 'unload',
+    qty: Number(m.qty) || 0,
+    unit: m.unit ?? null,
+    reason: m.reason ?? null,
+    order_id: m.order_id ?? null,
+    created_at: toIso(m.created_at),
   }
 }
 
@@ -115,6 +165,110 @@ export async function updateDrink(id, patch) {
 
 export async function deleteDrink(id) {
   await deleteDoc(doc(db, 'drinks', id))
+}
+
+// --- CATEGORIES ---
+
+export async function fetchCategories() {
+  const snap = await getDocs(categoriesCol)
+  const cats = snap.docs.map(mapCategory)
+  cats.sort((a, b) => (a.sort_order - b.sort_order) || (a.name || '').localeCompare(b.name || ''))
+  return cats
+}
+
+export async function createCategory({ name, sort_order = 0 }) {
+  const ref = await addDoc(categoriesCol, { name, sort_order, created_at: serverTimestamp() })
+  return mapCategory(await getDoc(ref))
+}
+
+export async function updateCategory(id, patch) {
+  const ref = doc(db, 'categories', id)
+  await updateDoc(ref, patch)
+  return mapCategory(await getDoc(ref))
+}
+
+export async function deleteCategory(id) {
+  await deleteDoc(doc(db, 'categories', id))
+}
+
+// --- INVENTORY ---
+
+export async function fetchInventoryItems() {
+  const snap = await getDocs(inventoryCol)
+  const items = snap.docs.map(mapItem)
+  items.sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+  return items
+}
+
+export async function createInventoryItem(item) {
+  const ref = await addDoc(inventoryCol, {
+    ...item,
+    stock: Number(item.stock) || 0,
+    low_threshold: Number(item.low_threshold) || 0,
+    created_at: serverTimestamp(),
+  })
+  return mapItem(await getDoc(ref))
+}
+
+export async function updateInventoryItem(id, patch) {
+  const ref = doc(db, 'inventory_items', id)
+  await updateDoc(ref, patch)
+  return mapItem(await getDoc(ref))
+}
+
+export async function deleteInventoryItem(id) {
+  await deleteDoc(doc(db, 'inventory_items', id))
+}
+
+// Carico merce: incrementa lo stock e registra un movimento (atomico).
+// `qty` è già in unità base; può essere negativo per uno scarico manuale.
+export async function loadStock(itemId, qty, { reason = 'carico' } = {}) {
+  const ref = doc(db, 'inventory_items', itemId)
+  await runTransaction(db, async (tx) => {
+    const s = await tx.get(ref)
+    if (!s.exists()) throw new Error('Prodotto non trovato')
+    const cur = s.data()
+    tx.update(ref, { stock: (Number(cur.stock) || 0) + qty })
+    tx.set(doc(movementsCol), {
+      item_id: itemId,
+      item_name: cur.name,
+      type: qty >= 0 ? 'load' : 'unload',
+      qty: Math.abs(qty),
+      unit: cur.unit ?? null,
+      reason,
+      created_at: serverTimestamp(),
+    })
+  })
+  return mapItem(await getDoc(ref))
+}
+
+// Rettifica: imposta lo stock a un valore assoluto e registra il delta.
+export async function adjustStock(itemId, newStock) {
+  const ref = doc(db, 'inventory_items', itemId)
+  await runTransaction(db, async (tx) => {
+    const s = await tx.get(ref)
+    if (!s.exists()) throw new Error('Prodotto non trovato')
+    const cur = s.data()
+    const delta = newStock - (Number(cur.stock) || 0)
+    tx.update(ref, { stock: newStock })
+    if (delta !== 0) {
+      tx.set(doc(movementsCol), {
+        item_id: itemId,
+        item_name: cur.name,
+        type: delta > 0 ? 'load' : 'unload',
+        qty: Math.abs(delta),
+        unit: cur.unit ?? null,
+        reason: 'rettifica',
+        created_at: serverTimestamp(),
+      })
+    }
+  })
+  return mapItem(await getDoc(ref))
+}
+
+export async function fetchStockMovements({ limit = 50 } = {}) {
+  const snap = await getDocs(query(movementsCol, orderBy('created_at', 'desc'), fbLimit(limit)))
+  return snap.docs.map(mapMovement)
 }
 
 // --- ORDERS ---
@@ -209,7 +363,14 @@ export async function fetchActiveOrders() {
 
 export async function updateOrderStatus(id, status) {
   const ref = doc(db, 'orders', id)
-  await updateDoc(ref, { status })
+
+  if (status === ORDER_STATUSES.IN_PREPARAZIONE) {
+    // Allo "sta preparando" scala l'inventario (una sola volta per ordine).
+    await applyDepletionAndAdvance(id, status)
+  } else {
+    await updateDoc(ref, { status })
+  }
+
   const snap = await getDoc(ref)
 
   // Sync stato verso SumUp POS Pro in background (fire-and-forget).
@@ -221,6 +382,75 @@ export async function updateOrderStatus(id, status) {
   }
 
   return mapOrder(snap)
+}
+
+// Avanza lo stato e, se non già fatto, scala l'inventario in base alle ricette
+// dei drink dell'ordine. Tutto in una transazione (letture prima delle scritture).
+// Dopo il commit notifica gli item scesi sotto soglia.
+async function applyDepletionAndAdvance(id, status) {
+  const orderRef = doc(db, 'orders', id)
+  let lowStock = []
+
+  await runTransaction(db, async (tx) => {
+    lowStock = []
+    const orderSnap = await tx.get(orderRef)
+    if (!orderSnap.exists()) throw new Error('Ordine non trovato')
+    const order = orderSnap.data()
+
+    // Già scalato in precedenza: aggiorna solo lo stato.
+    if (order.inventory_applied === true) {
+      tx.update(orderRef, { status })
+      return
+    }
+
+    const items = Array.isArray(order.items) ? order.items : []
+
+    // --- LETTURE ---
+    const drinkIds = [...new Set(items.map((i) => i.drink_id).filter(Boolean))]
+    const drinkSnaps = await Promise.all(drinkIds.map((d) => tx.get(doc(db, 'drinks', d))))
+    const drinksById = {}
+    drinkSnaps.forEach((s, idx) => {
+      drinksById[drinkIds[idx]] = s.exists() ? s.data() : null
+    })
+
+    const consumption = computeConsumption(items, drinksById)
+    const itemSnaps = await Promise.all(
+      consumption.map((c) => tx.get(doc(db, 'inventory_items', c.inventory_item_id)))
+    )
+
+    // --- SCRITTURE ---
+    consumption.forEach((c, idx) => {
+      const s = itemSnaps[idx]
+      if (!s.exists()) return
+      const cur = s.data()
+      const newStock = (Number(cur.stock) || 0) - c.qty
+      tx.update(doc(db, 'inventory_items', c.inventory_item_id), { stock: newStock })
+      tx.set(doc(movementsCol), {
+        item_id: c.inventory_item_id,
+        item_name: cur.name,
+        type: 'unload',
+        qty: c.qty,
+        unit: cur.unit ?? null,
+        reason: 'ordine',
+        order_id: id,
+        created_at: serverTimestamp(),
+      })
+      if (newStock <= (Number(cur.low_threshold) || 0)) {
+        lowStock.push({ name: cur.name, stock: newStock, unit: cur.unit })
+      }
+    })
+
+    tx.update(orderRef, { status, inventory_applied: true })
+  })
+
+  // Notifica scorte basse/finite (fuori dalla transazione).
+  for (const it of lowStock) {
+    const stato = it.stock <= 0 ? 'esaurito' : 'in esaurimento'
+    notify(
+      `⚠️ Scorta ${stato}`,
+      `${it.name}: rimasti ${formatQty(it.stock, it.unit)}`
+    )
+  }
 }
 
 // --- REALTIME ---
