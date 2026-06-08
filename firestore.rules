@@ -46,6 +46,11 @@ service cloud.firestore {
       allow read, write: if request.auth != null;
     }
 
+    // CATEGORIE INVENTARIO — dedicate ai prodotti di magazzino, solo bartender.
+    match /inventory_categories/{categoryId} {
+      allow read, write: if request.auth != null;
+    }
+
     // STOCK MOVEMENTS — registro carico/scarico, solo bartender autenticato.
     match /stock_movements/{movementId} {
       allow read, write: if request.auth != null;

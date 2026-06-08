@@ -26,6 +26,7 @@ const drinksCol = collection(db, 'drinks')
 const ordersCol = collection(db, 'orders')
 const categoriesCol = collection(db, 'categories')
 const inventoryCol = collection(db, 'inventory_items')
+const inventoryCategoriesCol = collection(db, 'inventory_categories')
 const movementsCol = collection(db, 'stock_movements')
 const serateCol = collection(db, 'serate')
 
@@ -201,6 +202,29 @@ export async function fetchInventoryItems() {
   const items = snap.docs.map(mapItem)
   items.sort((a, b) => (a.name || '').localeCompare(b.name || ''))
   return items
+}
+
+// Categorie dedicate ai prodotti di magazzino (distinte da quelle del menù).
+export async function fetchInventoryCategories() {
+  const snap = await getDocs(inventoryCategoriesCol)
+  const cats = snap.docs.map(mapCategory)
+  cats.sort((a, b) => (a.sort_order - b.sort_order) || (a.name || '').localeCompare(b.name || ''))
+  return cats
+}
+
+export async function createInventoryCategory({ name, sort_order = 0 }) {
+  const ref = await addDoc(inventoryCategoriesCol, { name, sort_order, created_at: serverTimestamp() })
+  return mapCategory(await getDoc(ref))
+}
+
+export async function updateInventoryCategory(id, patch) {
+  const ref = doc(db, 'inventory_categories', id)
+  await updateDoc(ref, patch)
+  return mapCategory(await getDoc(ref))
+}
+
+export async function deleteInventoryCategory(id) {
+  await deleteDoc(doc(db, 'inventory_categories', id))
 }
 
 export async function createInventoryItem(item) {

@@ -69,6 +69,38 @@ export function stockStatus(item) {
   return 'ok'
 }
 
+// Conteggi per i chip di riepilogo: totale prodotti, in esaurimento, esauriti.
+export function inventorySummary(items) {
+  let total = 0
+  let low = 0
+  let empty = 0
+  for (const it of items || []) {
+    total += 1
+    const st = stockStatus(it)
+    if (st === 'low') low += 1
+    else if (st === 'empty') empty += 1
+  }
+  return { total, low, empty }
+}
+
+// Filtra/ordina la lista inventario per ricerca (nome), categoria e stato.
+//   filters: { query?, categoryId? ('all'|id|'none'), status? ('all'|'ok'|'low'|'empty') }
+export function filterItems(items, { query = '', categoryId = 'all', status = 'all' } = {}) {
+  const q = query.trim().toLowerCase()
+  const out = (items || []).filter((it) => {
+    if (q && !(it.name || '').toLowerCase().includes(q)) return false
+    if (categoryId === 'none') {
+      if (it.category_id) return false
+    } else if (categoryId !== 'all') {
+      if (it.category_id !== categoryId) return false
+    }
+    if (status !== 'all' && stockStatus(it) !== status) return false
+    return true
+  })
+  out.sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+  return out
+}
+
 // Calcola il consumo totale per ingrediente da una lista di order_items.
 //   orderItems: [{ drink_id, qty }]
 //   drinksById: { [drinkId]: { recipe_items: [{ inventory_item_id, name, unit, qty }] } }
