@@ -16,6 +16,7 @@ import {
 import { ensureNotificationPermission, notify } from '../lib/notify.js'
 import { syncSumUpProducts } from '../lib/sumupApi.js'
 import MenuManager from '../components/MenuManager.jsx'
+import InventoryManager from '../components/InventoryManager.jsx'
 
 export default function BartenderPage() {
   const [user, setUser] = useState(undefined) // undefined = caricamento, null = non loggato
@@ -43,6 +44,12 @@ export default function BartenderPage() {
         >
           🍸 Menù
         </div>
+        <div
+          className={`tab ${tab === 'inventario' ? 'active' : ''}`}
+          onClick={() => setTab('inventario')}
+        >
+          📦 Inventario
+        </div>
         <button
           className="btn ghost small"
           style={{ marginLeft: 'auto', alignSelf: 'center', marginRight: 8 }}
@@ -51,7 +58,9 @@ export default function BartenderPage() {
           Esci
         </button>
       </div>
-      {tab === 'coda' ? <OrderQueue /> : <MenuTab />}
+      {tab === 'coda' && <OrderQueue />}
+      {tab === 'menu' && <MenuTab />}
+      {tab === 'inventario' && <InventoryManager />}
     </div>
   )
 }
