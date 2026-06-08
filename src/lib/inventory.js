@@ -42,6 +42,25 @@ export function formatQty(qty, unit) {
   return `${n} pz`
 }
 
+// Scompone la giacenza (in unità base) nelle bottiglie/confezioni:
+//   - full:      bottiglie piene sigillate
+//   - openRemaining: contenuto della bottiglia attualmente in uso (0 se nessuna)
+//   - finished:  bottiglie ormai vuote (di quelle totali caricate)
+// Esempio: bottiglia 1 L, 4 totali, stock 2,5 L → full 2, openRemaining 0,5 L, finished 1.
+// Ritorna null per i prodotti a pezzi o senza confezione.
+export function bottleBreakdown(item) {
+  const size = Number(item?.package_size) || 0
+  if (item?.unit === 'pz' || !size) return null
+  const stock = Math.max(0, Number(item?.stock) || 0)
+  const total = Number(item?.bottles_total) || 0
+  const full = Math.floor(stock / size)
+  const openRemaining = stock - full * size
+  const hasOpen = openRemaining > 1e-9
+  const withContent = full + (hasOpen ? 1 : 0)
+  const finished = Math.max(0, total - withContent)
+  return { full, openRemaining, hasOpen, finished, total }
+}
+
 // Stato scorta di un item: 'empty' (≤0), 'low' (≤ soglia), 'ok'.
 export function stockStatus(item) {
   const stock = Number(item?.stock) || 0

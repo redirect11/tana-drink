@@ -8,6 +8,7 @@ import {
   formatQty,
   stockStatus,
   computeConsumption,
+  bottleBreakdown,
 } from '../../src/lib/inventory.js'
 
 describe('toBaseQty', () => {
@@ -49,6 +50,25 @@ describe('stockStatus', () => {
   })
   it('ok quando sopra soglia', () => {
     expect(stockStatus({ stock: 100, low_threshold: 5 })).toBe('ok')
+  })
+})
+
+describe('bottleBreakdown', () => {
+  it('esempio: bottiglia 1L, 4 totali, stock 2,5L → 2 piene, 0,5L aperta, 1 finita', () => {
+    const bd = bottleBreakdown({ unit: 'ml', package_size: 1000, bottles_total: 4, stock: 2500 })
+    expect(bd).toEqual({ full: 2, openRemaining: 500, hasOpen: true, finished: 1, total: 4 })
+  })
+  it('tutte piene: nessuna aperta, nessuna finita', () => {
+    const bd = bottleBreakdown({ unit: 'ml', package_size: 1000, bottles_total: 3, stock: 3000 })
+    expect(bd).toMatchObject({ full: 3, hasOpen: false, finished: 0 })
+  })
+  it('stock 0: tutte finite', () => {
+    const bd = bottleBreakdown({ unit: 'ml', package_size: 1000, bottles_total: 4, stock: 0 })
+    expect(bd).toMatchObject({ full: 0, hasOpen: false, finished: 4 })
+  })
+  it('null per prodotti a pezzi o senza confezione', () => {
+    expect(bottleBreakdown({ unit: 'pz', stock: 10 })).toBeNull()
+    expect(bottleBreakdown({ unit: 'ml', package_size: 0, stock: 10 })).toBeNull()
   })
 })
 

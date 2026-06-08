@@ -4,22 +4,13 @@ import {
   createInventoryItem,
   deleteInventoryItem,
   loadStock,
+  receiveBottles,
   adjustStock,
   fetchStockMovements,
 } from '../lib/api.js'
-import { BASE_UNITS, formatQty, stockStatus } from '../lib/inventory.js'
+import { BASE_UNITS, formatQty, stockStatus, bottleBreakdown } from '../lib/inventory.js'
 
 const STATUS_LABEL = { ok: '', low: 'in esaurimento', empty: 'esaurito' }
-
-// Per prodotti con confezione (bottiglie), descrive lo stock come
-// "N conf. + resto". Per i pezzi resta semplice.
-function bottlesInfo(item) {
-  const size = Number(item.package_size)
-  if (item.unit === 'pz' || !size) return null
-  const full = Math.floor(item.stock / size)
-  const rem = Math.round(item.stock - full * size)
-  return { full, rem }
-}
 
 export default function InventoryManager() {
   const [items, setItems] = useState([])
@@ -60,10 +51,14 @@ export default function InventoryManager() {
     }
   }
 
-  async function doCarico(item, qty) {
+  async function doCarico(item, { count, open }) {
     setError(null)
     try {
-      await loadStock(item.id, qty)
+      if (item.unit === 'pz') {
+        await loadStock(item.id, count)
+      } else {
+        await receiveBottles(item.id, count, open)
+      }
       setCaricoFor(null)
       await load()
     } catch (e) {
@@ -110,7 +105,7 @@ export default function InventoryManager() {
 
       {items.map((it) => {
         const st = stockStatus(it)
-        const bi = bottlesInfo(it)
+        const bd = bottleBreakdown(it)
         return (
           <div className="card" key={it.id}>
             <div className="row between">
@@ -122,13 +117,26 @@ export default function InventoryManager() {
                   </span>
                 )}
                 <div className="muted">
-                  Giacenza: {formatQty(it.stock, it.unit)}
-                  {bi && ` · ${bi.full} conf.${bi.rem > 0 ? ` + ${formatQty(bi.rem, it.unit)}` : ''}`}
+                  Giacenza totale: {formatQty(it.stock, it.unit)}
                 </div>
-                {Number(it.package_size) > 0 && (
+                {bd ? (
+                  <div className="muted" style={{ fontSize: '0.85rem' }}>
+                    🍾 {bd.full} piene
+                    {bd.hasOpen && ` · 1 aperta (${formatQty(bd.openRemaining, it.unit)})`}
+                    {bd.finished > 0 && ` · ${bd.finished} finite`}
+                    {' · '}1 conf. = {formatQty(it.package_size, it.unit)}
+                  </div>
+                ) : (
+                  it.unit !== 'pz' &&
+                  Number(it.package_size) > 0 && (
+                    <div className="muted" style={{ fontSize: '0.8rem' }}>
+                      1 conf. = {formatQty(it.package_size, it.unit)}
+                    </div>
+                  )
+                )}
+                {Number(it.low_threshold) > 0 && (
                   <div className="muted" style={{ fontSize: '0.8rem' }}>
-                    1 conf. = {formatQty(it.package_size, it.unit)}
-                    {Number(it.low_threshold) > 0 && ` · soglia ${formatQty(it.low_threshold, it.unit)}`}
+                    Soglia avviso: {formatQty(it.low_threshold, it.unit)}
                   </div>
                 )}
               </div>
@@ -138,7 +146,7 @@ export default function InventoryManager() {
               <CaricoForm
                 item={it}
                 onCancel={() => setCaricoFor(null)}
-                onConfirm={(qty) => doCarico(it, qty)}
+                onConfirm={(payload) => doCarico(it, payload)}
               />
             ) : (
               <>
@@ -198,13 +206,12 @@ function CaricoForm({ item, onCancel, onConfirm }) {
     const n = Number(String(count).replace(',', '.')) || 0
     if (isPz) {
       if (n <= 0) return
-      onConfirm(n)
+      onConfirm({ count: n, open: 0 })
       return
     }
     const openQty = Number(String(open).replace(',', '.')) || 0
-    const qty = n * size + openQty
-    if (qty <= 0) return
-    onConfirm(qty)
+    if (n <= 0 && openQty <= 0) return
+    onConfirm({ count: n, open: openQty })
   }
 
   return (
@@ -262,18 +269,22 @@ function ItemForm({ onCancel, onSave }) {
       const n = Number(form.bottles) || 0
       let stock
       let package_size = null
+      let bottles_total = 0
       if (isPz) {
         stock = n
       } else {
         const size = Number(form.package_size) || 0
+        const open = Number(form.open_content) || 0
         package_size = size || null
-        stock = n * size + (Number(form.open_content) || 0)
+        stock = n * size + open
+        bottles_total = n + (open > 0 ? 1 : 0)
       }
       await onSave({
         name: form.name.trim(),
         unit: form.unit,
         stock,
         package_size,
+        bottles_total,
         low_threshold: Number(form.low_threshold) || 0,
       })
     } finally {

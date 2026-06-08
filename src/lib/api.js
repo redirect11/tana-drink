@@ -75,6 +75,7 @@ function mapItem(snap) {
     unit: i.unit ?? 'pz',
     stock: Number(i.stock) || 0,
     package_size: i.package_size ?? null,
+    bottles_total: Number(i.bottles_total) || 0,
     low_threshold: Number(i.low_threshold) || 0,
     category_id: i.category_id ?? null,
     created_at: toIso(i.created_at),
@@ -242,6 +243,39 @@ export async function loadStock(itemId, qty, { reason = 'carico' } = {}) {
   return mapItem(await getDoc(ref))
 }
 
+// Carico a confezioni: aggiunge `count` bottiglie piene (+ eventuale bottiglia
+// aperta con `openQty` di contenuto). Aggiorna giacenza e numero totale di
+// bottiglie, scartando le vuote accumulate (al riassortimento si buttano).
+export async function receiveBottles(itemId, count, openQty = 0) {
+  const ref = doc(db, 'inventory_items', itemId)
+  await runTransaction(db, async (tx) => {
+    const s = await tx.get(ref)
+    if (!s.exists()) throw new Error('Prodotto non trovato')
+    const cur = s.data()
+    const size = Number(cur.package_size) || 0
+    const stock = Number(cur.stock) || 0
+    const full = size ? Math.floor(stock / size) : 0
+    const hasOpen = size ? stock - full * size > 1e-9 : false
+    const withContent = full + (hasOpen ? 1 : 0)
+
+    const addQty = count * size + openQty
+    const newStock = stock + addQty
+    const newTotal = withContent + count + (openQty > 0 ? 1 : 0)
+
+    tx.update(ref, { stock: newStock, bottles_total: newTotal })
+    tx.set(doc(movementsCol), {
+      item_id: itemId,
+      item_name: cur.name,
+      type: 'load',
+      qty: addQty,
+      unit: cur.unit ?? null,
+      reason: 'carico',
+      created_at: serverTimestamp(),
+    })
+  })
+  return mapItem(await getDoc(ref))
+}
+
 // Rettifica: imposta lo stock a un valore assoluto e registra il delta.
 export async function adjustStock(itemId, newStock) {
   const ref = doc(db, 'inventory_items', itemId)
@@ -250,7 +284,12 @@ export async function adjustStock(itemId, newStock) {
     if (!s.exists()) throw new Error('Prodotto non trovato')
     const cur = s.data()
     const delta = newStock - (Number(cur.stock) || 0)
-    tx.update(ref, { stock: newStock })
+    const size = Number(cur.package_size) || 0
+    // Mantieni coerente il numero totale di bottiglie con la nuova giacenza.
+    const minTotal = size ? Math.ceil(newStock / size) : 0
+    const patch = { stock: newStock }
+    if (minTotal > (Number(cur.bottles_total) || 0)) patch.bottles_total = minTotal
+    tx.update(ref, patch)
     if (delta !== 0) {
       tx.set(doc(movementsCol), {
         item_id: itemId,
