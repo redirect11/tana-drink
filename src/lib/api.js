@@ -27,6 +27,7 @@ const ordersCol = collection(db, 'orders')
 const categoriesCol = collection(db, 'categories')
 const inventoryCol = collection(db, 'inventory_items')
 const movementsCol = collection(db, 'stock_movements')
+const serateCol = collection(db, 'serate')
 
 // --- Helpers ------------------------------------------------------------
 
@@ -110,6 +111,7 @@ function mapOrder(snap) {
     total: o.total ?? 0,
     created_at: toIso(o.created_at),
     sumup_sale_id: o.sumup_sale_id ?? null,
+    serata_id: o.serata_id ?? null,
     order_items: items.map((i, idx) => ({
       id: `${snap.id}-${idx}`,
       drink_id: i.drink_id ?? null,
@@ -310,15 +312,85 @@ export async function fetchStockMovements({ limit = 50 } = {}) {
   return snap.docs.map(mapMovement)
 }
 
+// --- SERATE (sessioni / conto) ---
+
+function mapSerata(snap) {
+  const s = snap.data() || {}
+  return {
+    id: snap.id,
+    status: s.status ?? 'open',
+    opened_at: toIso(s.opened_at),
+    closed_at: toIso(s.closed_at),
+    orders_count: s.orders_count ?? null,
+    total: s.total ?? null,
+  }
+}
+
+// La serata attualmente aperta (o null).
+export async function getOpenSerata() {
+  const snap = await getDocs(query(serateCol, where('status', '==', 'open'), fbLimit(1)))
+  return snap.empty ? null : mapSerata(snap.docs[0])
+}
+
+// Apre una nuova serata (errore se ce n'è già una aperta).
+export async function openSerata() {
+  const existing = await getOpenSerata()
+  if (existing) return existing
+  const ref = await addDoc(serateCol, { status: 'open', opened_at: serverTimestamp() })
+  return mapSerata(await getDoc(ref))
+}
+
+// Chiude la serata salvando il riepilogo (n. ordini e totale dei non annullati).
+export async function closeSerata(id) {
+  const snap = await getDocs(query(ordersCol, where('serata_id', '==', id)))
+  const orders = snap.docs.map(mapOrder).filter((o) => o.status !== ORDER_STATUSES.ANNULLATO)
+  const total = orders.reduce((s, o) => s + (Number(o.total) || 0), 0)
+  const ref = doc(db, 'serate', id)
+  await updateDoc(ref, {
+    status: 'closed',
+    closed_at: serverTimestamp(),
+    orders_count: orders.length,
+    total,
+  })
+  return mapSerata(await getDoc(ref))
+}
+
+// Realtime sulla serata aperta (per il menù cliente e l'header bartender).
+export function subscribeOpenSerata(onChange, onError) {
+  const q = query(serateCol, where('status', '==', 'open'), fbLimit(1))
+  return onSnapshot(
+    q,
+    (snap) => onChange(snap.empty ? null : mapSerata(snap.docs[0])),
+    onError
+  )
+}
+
+// Realtime su tutti gli ordini di una serata (tutti gli stati).
+export function subscribeSerataOrders(serataId, onChange, onError) {
+  const q = query(ordersCol, where('serata_id', '==', serataId))
+  return onSnapshot(
+    q,
+    (snap) => {
+      const orders = snap.docs.map(mapOrder)
+      orders.sort((a, b) =>
+        String(a.created_at || '').localeCompare(String(b.created_at || ''))
+      )
+      onChange(orders)
+    },
+    onError
+  )
+}
+
 // --- ORDERS ---
 
-// Crea un ordine con i relativi item. Il numero progressivo giornaliero
-// ("salumeria") viene assegnato in modo atomico tramite una transazione su un
-// documento contatore per data (counters/{YYYY-MM-DD}).
-export async function createOrder({ table_label, note, items }) {
+// Crea un ordine con i relativi item. Il numero progressivo riparte ad ogni
+// serata: è assegnato in modo atomico da un contatore per serata
+// (counters/{serataId}). Richiede una serata aperta.
+export async function createOrder({ table_label, note, items, serata_id }) {
+  if (!serata_id) throw new Error('Nessuna serata aperta: ordini non disponibili.')
   const total = items.reduce((s, i) => s + i.qty * Number(i.price || 0), 0)
   const orderDate = romeDateKey()
-  const counterRef = doc(db, 'counters', orderDate)
+  const counterRef = doc(db, 'counters', serata_id)
   const newOrderRef = doc(ordersCol)
 
   await runTransaction(db, async (tx) => {
@@ -330,6 +402,7 @@ export async function createOrder({ table_label, note, items }) {
     tx.set(newOrderRef, {
       daily_number: dailyNumber,
       order_date: orderDate,
+      serata_id,
       table_label: table_label || null,
       note: note || null,
       status: ORDER_STATUSES.RICEVUTO,
