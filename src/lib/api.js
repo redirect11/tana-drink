@@ -350,9 +350,11 @@ export async function fetchOrdersByIds(ids) {
 }
 
 // Coda del bartender: ordini attivi (non ancora ritirati).
+const INACTIVE_STATUSES = [ORDER_STATUSES.RITIRATO, ORDER_STATUSES.ANNULLATO]
+
 export async function fetchActiveOrders() {
   const snap = await getDocs(
-    query(ordersCol, where('status', '!=', ORDER_STATUSES.RITIRATO))
+    query(ordersCol, where('status', 'not-in', INACTIVE_STATUSES))
   )
   const orders = snap.docs.map(mapOrder)
   orders.sort((a, b) =>
@@ -440,7 +442,9 @@ async function applyDepletionAndAdvance(id, status) {
       }
     })
 
-    tx.update(orderRef, { status, inventory_applied: true })
+    // Salva lo snapshot del consumo: serve a ripristinare lo stock se l'ordine
+    // viene annullato (ripristino esatto, indipendente da modifiche alle ricette).
+    tx.update(orderRef, { status, inventory_applied: true, inventory_consumption: consumption })
   })
 
   // Notifica scorte basse/finite (fuori dalla transazione).
@@ -451,6 +455,74 @@ async function applyDepletionAndAdvance(id, status) {
       `${it.name}: rimasti ${formatQty(it.stock, it.unit)}`
     )
   }
+}
+
+// Modifica gli item di un ordine (solo finché è 'ricevuto', prima della
+// preparazione). Ricalcola il totale. Usato dal cliente dalla pagina ordine.
+export async function updateOrderItems(id, items) {
+  const ref = doc(db, 'orders', id)
+  const total = items.reduce((s, i) => s + i.qty * Number(i.unit_price ?? i.price ?? 0), 0)
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref)
+    if (!snap.exists()) throw new Error('Ordine non trovato')
+    if (snap.data().status !== ORDER_STATUSES.RICEVUTO) {
+      throw new Error('Ordine già in preparazione: non più modificabile')
+    }
+    tx.update(ref, {
+      items: items.map((i) => ({
+        drink_id: i.drink_id,
+        name: i.name,
+        unit_price: i.unit_price ?? i.price ?? 0,
+        qty: i.qty,
+        sumup_product_id: i.sumup_product_id ?? null,
+      })),
+      total,
+    })
+  })
+  return mapOrder(await getDoc(ref))
+}
+
+// Annulla un ordine. Se lo stock era già stato scalato (ordine in preparazione,
+// annullato dal bartender) lo ripristina dallo snapshot del consumo. Se annullato
+// dal cliente prima della preparazione, non c'è nulla da ripristinare.
+export async function cancelOrder(id) {
+  const orderRef = doc(db, 'orders', id)
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(orderRef)
+    if (!snap.exists()) throw new Error('Ordine non trovato')
+    const order = snap.data()
+    if (order.status === ORDER_STATUSES.ANNULLATO) return
+
+    const consumption = Array.isArray(order.inventory_consumption) ? order.inventory_consumption : []
+    if (order.inventory_applied === true && consumption.length > 0) {
+      // --- letture ---
+      const itemSnaps = await Promise.all(
+        consumption.map((c) => tx.get(doc(db, 'inventory_items', c.inventory_item_id)))
+      )
+      // --- scritture: ripristino stock ---
+      consumption.forEach((c, idx) => {
+        const s = itemSnaps[idx]
+        if (!s.exists()) return
+        const cur = s.data()
+        tx.update(doc(db, 'inventory_items', c.inventory_item_id), {
+          stock: (Number(cur.stock) || 0) + c.qty,
+        })
+        tx.set(doc(movementsCol), {
+          item_id: c.inventory_item_id,
+          item_name: cur.name,
+          type: 'load',
+          qty: c.qty,
+          unit: cur.unit ?? null,
+          reason: 'storno',
+          order_id: id,
+          created_at: serverTimestamp(),
+        })
+      })
+    }
+
+    tx.update(orderRef, { status: ORDER_STATUSES.ANNULLATO, inventory_applied: false })
+  })
+  return mapOrder(await getDoc(orderRef))
 }
 
 // --- REALTIME ---
@@ -468,7 +540,7 @@ export function subscribeOrder(id, onChange, onError) {
 // Ascolta in tempo reale gli ordini attivi (coda bartender). Restituisce una
 // funzione di disiscrizione. `onChange` riceve la lista ordinata di ordini.
 export function subscribeActiveOrders(onChange, onError) {
-  const q = query(ordersCol, where('status', '!=', ORDER_STATUSES.RITIRATO))
+  const q = query(ordersCol, where('status', 'not-in', INACTIVE_STATUSES))
   return onSnapshot(
     q,
     (snap) => {
