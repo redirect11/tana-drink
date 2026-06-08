@@ -5,7 +5,7 @@ import {
   onAuthStateChanged,
 } from 'firebase/auth'
 import { auth } from '../lib/firebaseClient.js'
-import { updateOrderStatus, subscribeActiveOrders } from '../lib/api.js'
+import { updateOrderStatus, subscribeActiveOrders, cancelOrder } from '../lib/api.js'
 import {
   ORDER_STATUSES,
   STATUS_LABELS,
@@ -236,6 +236,17 @@ function OrderQueue() {
     }
   }
 
+  async function cancel(order) {
+    if (!confirm(`Annullare l'ordine #${order.daily_number}? Le scorte usate verranno ripristinate.`)) return
+    // Aggiornamento ottimistico: rimuovi dalla coda.
+    setOrders((prev) => prev.filter((o) => o.id !== order.id))
+    try {
+      await cancelOrder(order.id)
+    } catch (e) {
+      setError(e.message)
+    }
+  }
+
   if (loading) return <div className="empty">Carico la coda…</div>
   if (error) return <div className="banner">Errore: {error}</div>
   if (orders.length === 0)
@@ -275,6 +286,13 @@ function OrderQueue() {
                 Segna come “{STATUS_LABELS[ns]}”
               </button>
             )}
+            <button
+              className="btn ghost small block"
+              style={{ marginTop: 8 }}
+              onClick={() => cancel(o)}
+            >
+              ✖️ Annulla ordine
+            </button>
           </div>
         )
       })}

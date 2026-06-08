@@ -5,6 +5,7 @@ export const ORDER_STATUSES = {
   IN_PREPARAZIONE: 'in_preparazione',
   PRONTO: 'pronto',
   RITIRATO: 'ritirato',
+  ANNULLATO: 'annullato',
 }
 
 export const STATUS_FLOW = [
@@ -19,6 +20,7 @@ export const STATUS_LABELS = {
   [ORDER_STATUSES.IN_PREPARAZIONE]: 'In preparazione',
   [ORDER_STATUSES.PRONTO]: 'Pronto al ritiro',
   [ORDER_STATUSES.RITIRATO]: 'Ritirato',
+  [ORDER_STATUSES.ANNULLATO]: 'Annullato',
 }
 
 export const STATUS_EMOJI = {
@@ -26,6 +28,7 @@ export const STATUS_EMOJI = {
   [ORDER_STATUSES.IN_PREPARAZIONE]: '🍹',
   [ORDER_STATUSES.PRONTO]: '🔔',
   [ORDER_STATUSES.RITIRATO]: '✅',
+  [ORDER_STATUSES.ANNULLATO]: '✖️',
 }
 
 export function nextStatus(status) {

@@ -55,11 +55,11 @@ jobs:
             --project "$PROJECT_ID" --force
           rm /tmp/sa.json
 
-      # Deploy delle Storage rules (foto drink: lettura pubblica, scrittura auth).
-      # Best-effort: se il service account non ha i permessi sulle Firebase Rules
-      # lo step non blocca il workflow — in tal caso pubblica storage.rules a mano
-      # dalla console Firebase (Storage → Rules).
-      - name: Deploy Storage rules
+      # Deploy delle regole Firestore + Storage (categorie/inventario/ordini e
+      # foto drink). Best-effort: se il service account non ha i permessi sulle
+      # Firebase Rules lo step non blocca il workflow — in tal caso pubblica le
+      # regole a mano dalla console (Firestore → Regole, Storage → Regole).
+      - name: Deploy Firestore & Storage rules
         continue-on-error: true
         env:
           PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
@@ -67,7 +67,7 @@ jobs:
         run: |
           echo "$SA_JSON" > /tmp/sa.json
           GOOGLE_APPLICATION_CREDENTIALS=/tmp/sa.json \
-            npx firebase-tools deploy --only storage \
+            npx firebase-tools deploy --only firestore,storage \
             --project "$PROJECT_ID"
           rm /tmp/sa.json
 
