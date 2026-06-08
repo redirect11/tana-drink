@@ -11,12 +11,23 @@ import { BASE_UNITS, formatQty, stockStatus } from '../lib/inventory.js'
 
 const STATUS_LABEL = { ok: '', low: 'in esaurimento', empty: 'esaurito' }
 
+// Per prodotti con confezione (bottiglie), descrive lo stock come
+// "N conf. + resto". Per i pezzi resta semplice.
+function bottlesInfo(item) {
+  const size = Number(item.package_size)
+  if (item.unit === 'pz' || !size) return null
+  const full = Math.floor(item.stock / size)
+  const rem = Math.round(item.stock - full * size)
+  return { full, rem }
+}
+
 export default function InventoryManager() {
   const [items, setItems] = useState([])
   const [movements, setMovements] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [adding, setAdding] = useState(false)
+  const [caricoFor, setCaricoFor] = useState(null) // id dell'item in carico
 
   async function load() {
     setLoading(true)
@@ -49,26 +60,20 @@ export default function InventoryManager() {
     }
   }
 
-  async function carico(item) {
-    const hasPkg = Number(item.package_size) > 0
-    const msg = hasPkg
-      ? `Quante confezioni carichi? (1 confezione = ${item.package_size} ${item.unit})`
-      : `Quanto carichi? (${item.unit})`
-    const v = prompt(msg)
-    if (v == null) return
-    const n = Number(v.replace(',', '.'))
-    if (!n || n <= 0) return
-    const qty = hasPkg ? n * Number(item.package_size) : n
+  async function doCarico(item, qty) {
+    setError(null)
     try {
       await loadStock(item.id, qty)
+      setCaricoFor(null)
       await load()
     } catch (e) {
       setError(e.message)
     }
   }
 
+  // Imposta il contenuto effettivo della scorta (es. bottiglia aperta/smezzata).
   async function rettifica(item) {
-    const v = prompt(`Giacenza reale di "${item.name}" (${item.unit}):`, String(item.stock))
+    const v = prompt(`Contenuto effettivo di "${item.name}" (${item.unit}):`, String(item.stock))
     if (v == null) return
     const n = Number(v.replace(',', '.'))
     if (Number.isNaN(n)) return
@@ -105,6 +110,7 @@ export default function InventoryManager() {
 
       {items.map((it) => {
         const st = stockStatus(it)
+        const bi = bottlesInfo(it)
         return (
           <div className="card" key={it.id}>
             <div className="row between">
@@ -117,26 +123,42 @@ export default function InventoryManager() {
                 )}
                 <div className="muted">
                   Giacenza: {formatQty(it.stock, it.unit)}
-                  {Number(it.low_threshold) > 0 &&
-                    ` · soglia ${formatQty(it.low_threshold, it.unit)}`}
+                  {bi && ` · ${bi.full} conf.${bi.rem > 0 ? ` + ${formatQty(bi.rem, it.unit)}` : ''}`}
                 </div>
+                {Number(it.package_size) > 0 && (
+                  <div className="muted" style={{ fontSize: '0.8rem' }}>
+                    1 conf. = {formatQty(it.package_size, it.unit)}
+                    {Number(it.low_threshold) > 0 && ` · soglia ${formatQty(it.low_threshold, it.unit)}`}
+                  </div>
+                )}
               </div>
             </div>
-            <div className="grid-2" style={{ marginTop: 8 }}>
-              <button className="btn small" onClick={() => carico(it)}>
-                ⬆ Carico
-              </button>
-              <button className="btn secondary small" onClick={() => rettifica(it)}>
-                Rettifica
-              </button>
-            </div>
-            <button
-              className="btn ghost small block"
-              style={{ marginTop: 8 }}
-              onClick={() => remove(it)}
-            >
-              🗑 Elimina
-            </button>
+
+            {caricoFor === it.id ? (
+              <CaricoForm
+                item={it}
+                onCancel={() => setCaricoFor(null)}
+                onConfirm={(qty) => doCarico(it, qty)}
+              />
+            ) : (
+              <>
+                <div className="grid-2" style={{ marginTop: 8 }}>
+                  <button className="btn small" onClick={() => setCaricoFor(it.id)}>
+                    ⬆ Carico
+                  </button>
+                  <button className="btn secondary small" onClick={() => rettifica(it)}>
+                    Contenuto reale
+                  </button>
+                </div>
+                <button
+                  className="btn ghost small block"
+                  style={{ marginTop: 8 }}
+                  onClick={() => remove(it)}
+                >
+                  🗑 Elimina
+                </button>
+              </>
+            )}
           </div>
         )
       })}
@@ -165,27 +187,93 @@ export default function InventoryManager() {
   )
 }
 
+// Form di carico: quante bottiglie/confezioni + eventuale bottiglia aperta.
+function CaricoForm({ item, onCancel, onConfirm }) {
+  const [count, setCount] = useState('')
+  const [open, setOpen] = useState('') // contenuto bottiglia aperta (smezzata)
+  const isPz = item.unit === 'pz'
+  const size = Number(item.package_size) || 0
+
+  function confirm() {
+    const n = Number(String(count).replace(',', '.')) || 0
+    if (isPz) {
+      if (n <= 0) return
+      onConfirm(n)
+      return
+    }
+    const openQty = Number(String(open).replace(',', '.')) || 0
+    const qty = n * size + openQty
+    if (qty <= 0) return
+    onConfirm(qty)
+  }
+
+  return (
+    <div style={{ marginTop: 8 }}>
+      {isPz ? (
+        <>
+          <label>Quanti pezzi aggiungi?</label>
+          <input type="number" step="1" min="0" value={count} onChange={(e) => setCount(e.target.value)} autoFocus />
+        </>
+      ) : (
+        <>
+          <label>Quante confezioni piene? (1 conf. = {formatQty(size, item.unit)})</label>
+          <input type="number" step="1" min="0" value={count} onChange={(e) => setCount(e.target.value)} autoFocus />
+          <label style={{ marginTop: 8 }}>
+            Bottiglia aperta — contenuto effettivo ({item.unit}) — opzionale
+          </label>
+          <input
+            type="number"
+            step="any"
+            min="0"
+            value={open}
+            onChange={(e) => setOpen(e.target.value)}
+            placeholder="Es. 400 se ne aggiungi una già aperta"
+          />
+        </>
+      )}
+      <div className="grid-2" style={{ marginTop: 10 }}>
+        <button className="btn ghost small" onClick={onCancel}>Annulla</button>
+        <button className="btn small" onClick={confirm}>Conferma carico</button>
+      </div>
+    </div>
+  )
+}
+
+// Form nuovo prodotto: definito da contenuto per confezione + numero di
+// confezioni (+ eventuale bottiglia aperta). Nessuna "giacenza iniziale" grezza.
 function ItemForm({ onCancel, onSave }) {
   const [form, setForm] = useState({
     name: '',
     unit: 'ml',
-    stock: '',
     package_size: '',
+    bottles: '',
+    open_content: '',
     low_threshold: '',
   })
   const [saving, setSaving] = useState(false)
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
+  const isPz = form.unit === 'pz'
 
   async function submit(e) {
     e.preventDefault()
     if (!form.name.trim()) return
     setSaving(true)
     try {
+      const n = Number(form.bottles) || 0
+      let stock
+      let package_size = null
+      if (isPz) {
+        stock = n
+      } else {
+        const size = Number(form.package_size) || 0
+        package_size = size || null
+        stock = n * size + (Number(form.open_content) || 0)
+      }
       await onSave({
         name: form.name.trim(),
         unit: form.unit,
-        stock: Number(form.stock) || 0,
-        package_size: form.package_size ? Number(form.package_size) : null,
+        stock,
+        package_size,
         low_threshold: Number(form.low_threshold) || 0,
       })
     } finally {
@@ -200,18 +288,32 @@ function ItemForm({ onCancel, onSave }) {
       <label htmlFor="iname">Nome *</label>
       <input id="iname" value={form.name} onChange={set('name')} placeholder="Es. Rum Zacapa" required />
 
-      <label htmlFor="iunit">Unità di misura</label>
+      <label htmlFor="iunit">Tipo</label>
       <select id="iunit" value={form.unit} onChange={set('unit')}>
         {BASE_UNITS.map((u) => (
-          <option key={u} value={u}>{u === 'ml' ? 'ml (volume)' : u === 'g' ? 'g (peso)' : 'pz (pezzi)'}</option>
+          <option key={u} value={u}>
+            {u === 'ml' ? 'Liquido (ml)' : u === 'g' ? 'Peso (g)' : 'Pezzi (es. birre)'}
+          </option>
         ))}
       </select>
 
-      <label htmlFor="istock">Giacenza iniziale ({form.unit})</label>
-      <input id="istock" type="number" step="any" min="0" value={form.stock} onChange={set('stock')} />
+      {isPz ? (
+        <>
+          <label htmlFor="ibottles">Quantità iniziale (pezzi)</label>
+          <input id="ibottles" type="number" step="1" min="0" value={form.bottles} onChange={set('bottles')} />
+        </>
+      ) : (
+        <>
+          <label htmlFor="ipkg">Contenuto per confezione ({form.unit})</label>
+          <input id="ipkg" type="number" step="any" min="0" value={form.package_size} onChange={set('package_size')} placeholder="Es. 1000 per una bottiglia da 1 L" />
 
-      <label htmlFor="ipkg">Confezione ({form.unit} per confezione) — opzionale</label>
-      <input id="ipkg" type="number" step="any" min="0" value={form.package_size} onChange={set('package_size')} placeholder="Es. 1000 per una bottiglia da 1 L" />
+          <label htmlFor="ibottles">Numero di confezioni piene</label>
+          <input id="ibottles" type="number" step="1" min="0" value={form.bottles} onChange={set('bottles')} placeholder="Es. 3" />
+
+          <label htmlFor="iopen">Bottiglia aperta — contenuto ({form.unit}) — opzionale</label>
+          <input id="iopen" type="number" step="any" min="0" value={form.open_content} onChange={set('open_content')} placeholder="Es. 400 se ne hai una già aperta" />
+        </>
+      )}
 
       <label htmlFor="ithr">Soglia di avviso ({form.unit})</label>
       <input id="ithr" type="number" step="any" min="0" value={form.low_threshold} onChange={set('low_threshold')} placeholder="Es. 500" />
