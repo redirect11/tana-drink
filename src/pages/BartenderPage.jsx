@@ -5,7 +5,14 @@ import {
   onAuthStateChanged,
 } from 'firebase/auth'
 import { auth } from '../lib/firebaseClient.js'
-import { updateOrderStatus, subscribeActiveOrders, cancelOrder } from '../lib/api.js'
+import {
+  updateOrderStatus,
+  cancelOrder,
+  subscribeOpenSerata,
+  subscribeSerataOrders,
+  openSerata,
+  closeSerata,
+} from '../lib/api.js'
 import {
   ORDER_STATUSES,
   STATUS_LABELS,
@@ -13,6 +20,7 @@ import {
   formatPrice,
   nextStatus,
 } from '../lib/orderStatus.js'
+import { bucketByStatus, serataRecap, openOrdersCount } from '../lib/serata.js'
 import { ensureNotificationPermission, notify } from '../lib/notify.js'
 import { syncSumUpProducts } from '../lib/sumupApi.js'
 import MenuManager from '../components/MenuManager.jsx'
@@ -178,57 +186,93 @@ function loginError(code) {
   return 'Errore di accesso. Riprova.'
 }
 
+const STATUS_TABS = [
+  ORDER_STATUSES.RICEVUTO,
+  ORDER_STATUSES.IN_PREPARAZIONE,
+  ORDER_STATUSES.PRONTO,
+  ORDER_STATUSES.RITIRATO,
+]
+
 function OrderQueue() {
+  const [serata, setSerata] = useState(undefined) // undefined=caricamento, null=nessuna
   const [orders, setOrders] = useState([])
   const [error, setError] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [busy, setBusy] = useState(false)
+  const [statusTab, setStatusTab] = useState(ORDER_STATUSES.RICEVUTO)
   const knownIds = useRef(new Set())
 
+  // Osserva la serata aperta.
   useEffect(() => {
-    let active = true
-    let primed = false
     ensureNotificationPermission()
+    const unsub = subscribeOpenSerata(
+      (s) => setSerata(s),
+      (e) => setError(e.message)
+    )
+    return unsub
+  }, [])
 
-    // Realtime: la coda si aggiorna ad ogni nuovo ordine o cambio di stato.
-    const unsubscribe = subscribeActiveOrders(
+  // Osserva gli ordini della serata aperta.
+  const serataId = serata?.id
+  useEffect(() => {
+    if (!serataId) {
+      setOrders([])
+      knownIds.current = new Set()
+      return
+    }
+    let primed = false
+    const unsub = subscribeSerataOrders(
+      serataId,
       (data) => {
-        if (!active) return
-        // Notifica solo i nuovi ordini comparsi dopo il primo caricamento.
+        // Notifica i nuovi ordini "ricevuti" comparsi dopo il primo caricamento.
         if (primed) {
           for (const o of data) {
-            if (!knownIds.current.has(o.id)) {
+            if (!knownIds.current.has(o.id) && o.status === ORDER_STATUSES.RICEVUTO) {
               notify('🆕 Nuovo ordine', `Ordine #${o.daily_number} ricevuto.`)
             }
           }
         }
         knownIds.current = new Set(data.map((o) => o.id))
         setOrders(data)
-        setLoading(false)
         primed = true
       },
-      (e) => {
-        if (active) {
-          setError(e.message)
-          setLoading(false)
-        }
-      }
+      (e) => setError(e.message)
     )
+    return unsub
+  }, [serataId])
 
-    return () => {
-      active = false
-      unsubscribe()
+  async function apri() {
+    setBusy(true)
+    setError(null)
+    try {
+      await openSerata()
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setBusy(false)
     }
-  }, [])
+  }
+
+  async function chiudi() {
+    const aperti = openOrdersCount(orders)
+    const recap = serataRecap(orders)
+    const msg = aperti > 0
+      ? `Ci sono ancora ${aperti} ordini non ritirati. Chiudere comunque la serata?\n\nRiepilogo: ${recap.count} ordini · ${formatPrice(recap.total)}`
+      : `Chiudere la serata?\n\nRiepilogo: ${recap.count} ordini · ${formatPrice(recap.total)}`
+    if (!confirm(msg)) return
+    setBusy(true)
+    setError(null)
+    try {
+      await closeSerata(serata.id)
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setBusy(false)
+    }
+  }
 
   async function advance(order) {
     const ns = nextStatus(order.status)
     if (!ns) return
-    // Aggiornamento ottimistico.
-    setOrders((prev) =>
-      prev
-        .map((o) => (o.id === order.id ? { ...o, status: ns } : o))
-        .filter((o) => o.status !== ORDER_STATUSES.RITIRATO)
-    )
     try {
       await updateOrderStatus(order.id, ns)
     } catch (e) {
@@ -238,8 +282,6 @@ function OrderQueue() {
 
   async function cancel(order) {
     if (!confirm(`Annullare l'ordine #${order.daily_number}? Le scorte usate verranno ripristinate.`)) return
-    // Aggiornamento ottimistico: rimuovi dalla coda.
-    setOrders((prev) => prev.filter((o) => o.id !== order.id))
     try {
       await cancelOrder(order.id)
     } catch (e) {
@@ -247,14 +289,57 @@ function OrderQueue() {
     }
   }
 
-  if (loading) return <div className="empty">Carico la coda…</div>
-  if (error) return <div className="banner">Errore: {error}</div>
-  if (orders.length === 0)
-    return <div className="empty">Nessun ordine in coda. 🎉</div>
+  if (serata === undefined) return <div className="empty">Carico la serata…</div>
+
+  // Nessuna serata aperta: invito ad aprire il conto.
+  if (!serata) {
+    return (
+      <div>
+        {error && <div className="banner">Errore: {error}</div>}
+        <div className="empty">Nessuna serata aperta.</div>
+        <button className="btn block" onClick={apri} disabled={busy}>
+          {busy ? 'Apro…' : '▶️ Apri serata'}
+        </button>
+      </div>
+    )
+  }
+
+  const recap = serataRecap(orders)
+  const buckets = bucketByStatus(orders)
+  const list = buckets[statusTab] || []
 
   return (
     <div>
-      {orders.map((o) => {
+      {error && <div className="banner">Errore: {error}</div>}
+
+      <div className="card row between" style={{ alignItems: 'center' }}>
+        <div>
+          <strong>Serata aperta</strong>
+          <div className="muted">
+            {recap.count} ordini · {formatPrice(recap.total)}
+          </div>
+        </div>
+        <button className="btn ghost small" onClick={chiudi} disabled={busy}>
+          ⏹ Chiudi serata
+        </button>
+      </div>
+
+      {/* Sotto-tab per stato */}
+      <div className="tabs" style={{ marginTop: 8 }}>
+        {STATUS_TABS.map((s) => (
+          <div
+            key={s}
+            className={`tab ${statusTab === s ? 'active' : ''}`}
+            onClick={() => setStatusTab(s)}
+          >
+            {STATUS_EMOJI[s]} {STATUS_LABELS[s]} ({(buckets[s] || []).length})
+          </div>
+        ))}
+      </div>
+
+      {list.length === 0 && <div className="empty">Nessun ordine in questo stato.</div>}
+
+      {list.map((o) => {
         const ns = nextStatus(o.status)
         return (
           <div className="card" key={o.id}>
@@ -286,13 +371,15 @@ function OrderQueue() {
                 Segna come “{STATUS_LABELS[ns]}”
               </button>
             )}
-            <button
-              className="btn ghost small block"
-              style={{ marginTop: 8 }}
-              onClick={() => cancel(o)}
-            >
-              ✖️ Annulla ordine
-            </button>
+            {o.status !== ORDER_STATUSES.RITIRATO && (
+              <button
+                className="btn ghost small block"
+                style={{ marginTop: 8 }}
+                onClick={() => cancel(o)}
+              >
+                ✖️ Annulla ordine
+              </button>
+            )}
           </div>
         )
       })}

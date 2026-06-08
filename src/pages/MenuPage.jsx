@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { fetchDrinks, fetchCategories } from '../lib/api.js'
+import { fetchDrinks, fetchCategories, subscribeOpenSerata } from '../lib/api.js'
 import { createOrder } from '../lib/api.js'
 import { useCart, rememberOrderId } from '../lib/cart.js'
 import { formatPrice } from '../lib/orderStatus.js'
@@ -10,6 +10,7 @@ import { isFirebaseConfigured } from '../lib/firebaseClient.js'
 export default function MenuPage() {
   const [drinks, setDrinks] = useState([])
   const [cats, setCats] = useState([])
+  const [serata, setSerata] = useState(undefined) // undefined=caricamento, null=chiuso
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [sending, setSending] = useState(false)
@@ -42,6 +43,16 @@ export default function MenuPage() {
     }
   }, [])
 
+  // Osserva la serata aperta: senza serata gli ordini sono bloccati.
+  useEffect(() => {
+    if (!isFirebaseConfigured) return
+    const unsub = subscribeOpenSerata(
+      (s) => setSerata(s),
+      () => setSerata(null)
+    )
+    return unsub
+  }, [])
+
   const categories = useMemo(() => {
     const byId = new Map(cats.map((c) => [c.id, c]))
     const groups = new Map() // key -> { name, sort, list }
@@ -59,12 +70,17 @@ export default function MenuPage() {
 
   async function handleSend() {
     if (cart.items.length === 0) return
+    if (!serata) {
+      setError('Il servizio è chiuso: nessuna serata aperta.')
+      return
+    }
     setSending(true)
     setError(null)
     try {
       const order = await createOrder({
         table_label: tableLabel,
         items: cart.items,
+        serata_id: serata.id,
       })
       rememberOrderId(order.id)
       cart.clear()
@@ -78,6 +94,8 @@ export default function MenuPage() {
 
   if (loading) return <div className="empty">Carico il menù…</div>
 
+  const closed = serata === null
+
   return (
     <div>
       <div className="card">
@@ -88,6 +106,12 @@ export default function MenuPage() {
             : 'Scegli i tuoi drink e invia l’ordine al bancone.'}
         </p>
       </div>
+
+      {closed && (
+        <div className="banner">
+          🔒 Servizio chiuso: gli ordini non sono disponibili al momento.
+        </div>
+      )}
 
       {error && <div className="banner">Errore: {error}</div>}
 
@@ -170,10 +194,10 @@ export default function MenuPage() {
             </div>
             <button
               className="btn"
-              disabled={sending}
+              disabled={sending || closed}
               onClick={handleSend}
             >
-              {sending ? 'Invio…' : 'Invia ordine'}
+              {closed ? 'Chiuso' : sending ? 'Invio…' : 'Invia ordine'}
             </button>
           </div>
         </div>
