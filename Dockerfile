@@ -6,12 +6,16 @@
 FROM node:22-bookworm-slim
 
 # Java 21+ richiesto dagli emulatori Firebase (firebase-tools >= 13).
-# openjdk-21 è in bookworm-backports, non nel repo principale.
-RUN echo "deb http://deb.debian.org/debian bookworm-backports main" \
-      > /etc/apt/sources.list.d/backports.list \
+# Usa il repo Temurin (Adoptium) perché openjdk-21 non è disponibile
+# nei repo Debian Bookworm standard né nei backports dell'immagine slim.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends wget gnupg \
+    && wget -qO - https://packages.adoptium.net/artifactory/api/gpg/key/public \
+       | gpg --dearmor -o /usr/share/keyrings/adoptium.gpg \
+    && echo "deb [signed-by=/usr/share/keyrings/adoptium.gpg] https://packages.adoptium.net/artifactory/deb bookworm main" \
+       > /etc/apt/sources.list.d/adoptium.list \
     && apt-get update \
-    && apt-get install -y --no-install-recommends \
-         -t bookworm-backports openjdk-21-jre-headless curl \
+    && apt-get install -y --no-install-recommends temurin-21-jre curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Firebase CLI globale: rende "firebase" disponibile nel container.
