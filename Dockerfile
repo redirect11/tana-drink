@@ -3,11 +3,11 @@
 #  Include Node.js, la Firebase CLI (firebase-tools) e una JRE
 #  necessaria per gli emulatori Firebase (Firestore + UI).
 # =====================================================================
-FROM node:20-bookworm-slim
+FROM node:22-bookworm-slim
 
-# La JRE serve agli emulatori Firebase; curl è utile per gli health check.
+# Java 21+ richiesto dagli emulatori Firebase (firebase-tools >= 13).
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends default-jre-headless curl \
+    && apt-get install -y --no-install-recommends openjdk-21-jre-headless curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Firebase CLI globale: rende "firebase" disponibile nel container.
