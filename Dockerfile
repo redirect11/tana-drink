@@ -6,8 +6,12 @@
 FROM node:22-bookworm-slim
 
 # Java 21+ richiesto dagli emulatori Firebase (firebase-tools >= 13).
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends openjdk-21-jre-headless curl \
+# openjdk-21 è in bookworm-backports, non nel repo principale.
+RUN echo "deb http://deb.debian.org/debian bookworm-backports main" \
+      > /etc/apt/sources.list.d/backports.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+         -t bookworm-backports openjdk-21-jre-headless curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Firebase CLI globale: rende "firebase" disponibile nel container.
