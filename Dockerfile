@@ -1,21 +1,15 @@
 # =====================================================================
 #  Immagine di sviluppo/testing per La Tana del Coniglio.
-#  Include Node.js, la Firebase CLI (firebase-tools) e una JRE
-#  necessaria per gli emulatori Firebase (Firestore + UI).
+#  Base: eclipse-temurin:21-jre-jammy (Java 21 già incluso).
+#  Node.js 22 aggiunto via NodeSource.
 # =====================================================================
-FROM node:22-bookworm-slim
+FROM eclipse-temurin:21-jre-jammy
 
-# Java 21+ richiesto dagli emulatori Firebase (firebase-tools >= 13).
-# Usa il repo Temurin (Adoptium) perché openjdk-21 non è disponibile
-# nei repo Debian Bookworm standard né nei backports dell'immagine slim.
+# Node.js 22 via NodeSource
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends wget gnupg \
-    && wget -qO - https://packages.adoptium.net/artifactory/api/gpg/key/public \
-       | gpg --dearmor -o /usr/share/keyrings/adoptium.gpg \
-    && echo "deb [signed-by=/usr/share/keyrings/adoptium.gpg] https://packages.adoptium.net/artifactory/deb bookworm main" \
-       > /etc/apt/sources.list.d/adoptium.list \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends temurin-21-jre curl \
+    && apt-get install -y --no-install-recommends ca-certificates curl \
+    && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
     && rm -rf /var/lib/apt/lists/*
 
 # Firebase CLI globale: rende "firebase" disponibile nel container.
@@ -23,9 +17,9 @@ RUN npm install -g firebase-tools
 
 WORKDIR /app
 
-# Porte: 5173 Vite dev server, 8080 Firestore emulator, 4000 Emulator UI,
-# 4400 Emulator hub, 5000 Hosting emulator.
-EXPOSE 5173 8080 4000 4400 5000
+# Porte: 5173 Vite dev server, 9099 Auth emulator, 8080 Firestore emulator,
+# 4000 Emulator UI, 4400 Emulator hub.
+EXPOSE 5173 9099 8080 4000 4400
 
 # Comando di default: avvia il dev server (sovrascritto in docker-compose).
 CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
