@@ -28,7 +28,7 @@ if (!isFirebaseConfigured) {
 
 // Usa valori placeholder così l'inizializzazione non lancia eccezioni quando
 // la configurazione manca (le chiamate falliranno comunque, ma in modo gestito).
-const app = initializeApp({
+export const app = initializeApp({
   apiKey: firebaseConfig.apiKey || 'placeholder-api-key',
   authDomain: firebaseConfig.authDomain || 'placeholder.firebaseapp.com',
   projectId: firebaseConfig.projectId || 'placeholder',
@@ -45,7 +45,11 @@ export const storage = getStorage(app)
 // In sviluppo/testing (es. con Docker) ci si può collegare agli emulatori
 // invece che al progetto reale. Attivalo con VITE_USE_FIREBASE_EMULATOR=true.
 if (import.meta.env.VITE_USE_FIREBASE_EMULATOR === 'true') {
-  const host = import.meta.env.VITE_FIRESTORE_EMULATOR_HOST || 'localhost'
+  // Usa l'hostname da cui è servita la pagina: così l'app funziona anche
+  // da altri dispositivi della rete locale (es. http://192.168.1.x:5173),
+  // dove "localhost" punterebbe al dispositivo stesso e non agli emulatori.
+  const envHost = import.meta.env.VITE_FIRESTORE_EMULATOR_HOST || 'localhost'
+  const host = envHost === 'localhost' ? window.location.hostname : envHost
   const port = Number(import.meta.env.VITE_FIRESTORE_EMULATOR_PORT) || 8080
   connectFirestoreEmulator(db, host, port)
   connectFunctionsEmulator(functions, host, 5001)

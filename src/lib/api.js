@@ -4,6 +4,7 @@ import {
   addDoc,
   getDoc,
   getDocs,
+  setDoc,
   updateDoc,
   deleteDoc,
   query,
@@ -14,6 +15,7 @@ import {
   onSnapshot,
   runTransaction,
   serverTimestamp,
+  increment,
   Timestamp,
 } from 'firebase/firestore'
 import { db } from './firebaseClient.js'
@@ -28,6 +30,7 @@ const categoriesCol = collection(db, 'categories')
 const inventoryCol = collection(db, 'inventory_items')
 const inventoryCategoriesCol = collection(db, 'inventory_categories')
 const movementsCol = collection(db, 'stock_movements')
+const settingsDoc = doc(db, 'settings', 'bar')
 const serateCol = collection(db, 'serate')
 
 // --- Helpers ------------------------------------------------------------
@@ -110,6 +113,17 @@ function mapOrder(snap) {
     note: o.note ?? null,
     status: o.status,
     total: o.total ?? 0,
+    coperto_persons: o.coperto_persons ?? 0,
+    coperto_amount: o.coperto_amount ?? 0,
+    service_charge_amount: o.service_charge_amount ?? 0,
+    tip_amount: o.tip_amount ?? 0,
+    service_mode: o.service_mode ?? null,
+    status_times: o.status_times ?? {},
+    cancelled_by: o.cancelled_by ?? null,
+    cancel_kind: o.cancel_kind ?? null,
+    cancel_phrase: o.cancel_phrase ?? null,
+    cancel_message: o.cancel_message ?? null,
+    cancel_notify: o.cancel_notify ?? false,
     created_at: toIso(o.created_at),
     sumup_sale_id: o.sumup_sale_id ?? null,
     serata_id: o.serata_id ?? null,
@@ -347,6 +361,11 @@ function mapSerata(snap) {
     closed_at: toIso(s.closed_at),
     orders_count: s.orders_count ?? null,
     total: s.total ?? null,
+    // Statistiche tempi: prep_stats (attesa+preparazione, tutti gli ordini),
+    // eta_stats (ciclo completo, solo ordini serviti al tavolo).
+    prep_stats: s.prep_stats ?? null,
+    eta_stats: s.eta_stats ?? null,
+    report: s.report ?? null,
   }
 }
 
@@ -365,7 +384,7 @@ export async function openSerata() {
 }
 
 // Chiude la serata salvando il riepilogo (n. ordini e totale dei non annullati).
-export async function closeSerata(id) {
+export async function closeSerata(id, report = null) {
   const snap = await getDocs(query(ordersCol, where('serata_id', '==', id)))
   const orders = snap.docs.map(mapOrder).filter((o) => o.status !== ORDER_STATUSES.ANNULLATO)
   const total = orders.reduce((s, o) => s + (Number(o.total) || 0), 0)
@@ -375,6 +394,7 @@ export async function closeSerata(id) {
     closed_at: serverTimestamp(),
     orders_count: orders.length,
     total,
+    ...(report ? { report } : {}),
   })
   return mapSerata(await getDoc(ref))
 }
@@ -410,9 +430,21 @@ export function subscribeSerataOrders(serataId, onChange, onError) {
 // Crea un ordine con i relativi item. Il numero progressivo riparte ad ogni
 // serata: è assegnato in modo atomico da un contatore per serata
 // (counters/{serataId}). Richiede una serata aperta.
-export async function createOrder({ table_label, note, items, serata_id }) {
+export async function createOrder({
+  table_label,
+  note,
+  items,
+  serata_id,
+  coperto_persons = 0,
+  coperto_amount = 0,
+  service_charge_amount = 0,
+  tip_amount = 0,
+  service_mode = null, // 'tavolo' | 'banco' | null (scelta non attiva)
+  push_token = null, // token FCM del dispositivo (per le notifiche push)
+}) {
   if (!serata_id) throw new Error('Nessuna serata aperta: ordini non disponibili.')
-  const total = items.reduce((s, i) => s + i.qty * Number(i.price || 0), 0)
+  const itemsTotal = items.reduce((s, i) => s + i.qty * Number(i.price || 0), 0)
+  const total = itemsTotal + coperto_amount + service_charge_amount + tip_amount
   const orderDate = romeDateKey()
   const counterRef = doc(db, 'counters', serata_id)
   const newOrderRef = doc(ordersCol)
@@ -431,6 +463,12 @@ export async function createOrder({ table_label, note, items, serata_id }) {
       note: note || null,
       status: ORDER_STATUSES.RICEVUTO,
       total,
+      coperto_persons,
+      coperto_amount,
+      service_charge_amount,
+      tip_amount,
+      service_mode,
+      push_token,
       created_at: serverTimestamp(),
       items: items.map((i) => ({
         drink_id: i.drink_id,
@@ -501,15 +539,23 @@ export async function fetchActiveOrders() {
 
 export async function updateOrderStatus(id, status) {
   const ref = doc(db, 'orders', id)
+  const nowIso = new Date().toISOString()
 
   if (status === ORDER_STATUSES.IN_PREPARAZIONE) {
     // Allo "sta preparando" scala l'inventario (una sola volta per ordine).
     await applyDepletionAndAdvance(id, status)
   } else {
-    await updateDoc(ref, { status })
+    await updateDoc(ref, { status, [`status_times.${status}`]: nowIso })
   }
 
   const snap = await getDoc(ref)
+
+  // Statistiche tempi sulla serata (per ETA cliente e resoconto).
+  // - al "pronto": attesa+preparazione, su tutti gli ordini
+  // - al "ritirato": ciclo completo, solo per ordini serviti al tavolo
+  updateSerataTimeStats(snap, status).catch((e) =>
+    console.error('[eta] aggiornamento statistiche fallito:', e)
+  )
 
   // Sync stato verso SumUp POS Pro in background (fire-and-forget).
   const sumupStatus = toSumUpStatus(status)
@@ -522,11 +568,54 @@ export async function updateOrderStatus(id, status) {
   return mapOrder(snap)
 }
 
+// Incrementa le statistiche tempi della serata quando un ordine raggiunge
+// "pronto" (attesa+preparazione, tutti gli ordini) o "ritirato" (ciclo
+// completo, solo servizio al tavolo: il ritiro al banco dipende dal cliente).
+async function updateSerataTimeStats(orderSnap, status) {
+  const o = orderSnap.data()
+  if (!o?.serata_id) return
+  const ms = (v) => {
+    if (!v) return null
+    if (typeof v?.toMillis === 'function') return v.toMillis()
+    const t = Date.parse(v)
+    return Number.isFinite(t) ? t : null
+  }
+  const t0 = ms(o.created_at)
+  const t1 = ms(o.status_times?.[ORDER_STATUSES.IN_PREPARAZIONE])
+  const t2 = ms(o.status_times?.[ORDER_STATUSES.PRONTO])
+  const t3 = ms(o.status_times?.[ORDER_STATUSES.RITIRATO])
+  const serataRef = doc(db, 'serate', o.serata_id)
+
+  if (status === ORDER_STATUSES.PRONTO && t0 && t1 && t2 && t2 >= t1 && t1 >= t0) {
+    await updateDoc(serataRef, {
+      'prep_stats.count': increment(1),
+      'prep_stats.attesa_ms': increment(t1 - t0),
+      'prep_stats.prep_ms': increment(t2 - t1),
+      'prep_stats.total_ms': increment(t2 - t0),
+    })
+  }
+
+  if (
+    status === ORDER_STATUSES.RITIRATO &&
+    o.service_mode === 'tavolo' &&
+    t0 && t1 && t2 && t3 && t3 >= t2 && t2 >= t1 && t1 >= t0
+  ) {
+    await updateDoc(serataRef, {
+      'eta_stats.count': increment(1),
+      'eta_stats.attesa_ms': increment(t1 - t0),
+      'eta_stats.prep_ms': increment(t2 - t1),
+      'eta_stats.ritiro_ms': increment(t3 - t2),
+      'eta_stats.total_ms': increment(t3 - t0),
+    })
+  }
+}
+
 // Avanza lo stato e, se non già fatto, scala l'inventario in base alle ricette
 // dei drink dell'ordine. Tutto in una transazione (letture prima delle scritture).
 // Dopo il commit notifica gli item scesi sotto soglia.
 async function applyDepletionAndAdvance(id, status) {
   const orderRef = doc(db, 'orders', id)
+  const nowIso = new Date().toISOString()
   let lowStock = []
 
   await runTransaction(db, async (tx) => {
@@ -537,7 +626,7 @@ async function applyDepletionAndAdvance(id, status) {
 
     // Già scalato in precedenza: aggiorna solo lo stato.
     if (order.inventory_applied === true) {
-      tx.update(orderRef, { status })
+      tx.update(orderRef, { status, [`status_times.${status}`]: nowIso })
       return
     }
 
@@ -580,7 +669,12 @@ async function applyDepletionAndAdvance(id, status) {
 
     // Salva lo snapshot del consumo: serve a ripristinare lo stock se l'ordine
     // viene annullato (ripristino esatto, indipendente da modifiche alle ricette).
-    tx.update(orderRef, { status, inventory_applied: true, inventory_consumption: consumption })
+    tx.update(orderRef, {
+      status,
+      [`status_times.${status}`]: nowIso,
+      inventory_applied: true,
+      inventory_consumption: consumption,
+    })
   })
 
   // Notifica scorte basse/finite (fuori dalla transazione).
@@ -597,13 +691,20 @@ async function applyDepletionAndAdvance(id, status) {
 // preparazione). Ricalcola il totale. Usato dal cliente dalla pagina ordine.
 export async function updateOrderItems(id, items) {
   const ref = doc(db, 'orders', id)
-  const total = items.reduce((s, i) => s + i.qty * Number(i.unit_price ?? i.price ?? 0), 0)
+  const itemsTotal = items.reduce((s, i) => s + i.qty * Number(i.unit_price ?? i.price ?? 0), 0)
   await runTransaction(db, async (tx) => {
     const snap = await tx.get(ref)
     if (!snap.exists()) throw new Error('Ordine non trovato')
-    if (snap.data().status !== ORDER_STATUSES.RICEVUTO) {
+    const cur = snap.data()
+    if (cur.status !== ORDER_STATUSES.RICEVUTO) {
       throw new Error('Ordine già in preparazione: non più modificabile')
     }
+    // Il totale conserva coperto/servizio/mancia già applicati alla creazione.
+    const extras =
+      Number(cur.coperto_amount || 0) +
+      Number(cur.service_charge_amount || 0) +
+      Number(cur.tip_amount || 0)
+    const total = itemsTotal + extras
     tx.update(ref, {
       items: items.map((i) => ({
         drink_id: i.drink_id,
@@ -618,10 +719,18 @@ export async function updateOrderItems(id, items) {
   return mapOrder(await getDoc(ref))
 }
 
-// Annulla un ordine. Se lo stock era già stato scalato (ordine in preparazione,
-// annullato dal bartender) lo ripristina dallo snapshot del consumo. Se annullato
-// dal cliente prima della preparazione, non c'è nulla da ripristinare.
-export async function cancelOrder(id) {
+// Annulla un ordine. Se lo stock era già stato scalato lo ripristina dallo
+// snapshot del consumo — TRANNE per kind 'non_ritirato': il drink è stato
+// preparato (e sprecato), quindi le scorte restano consumate.
+// opts: { by: 'cliente'|'bartender', kind, phrase, message, notify }
+export async function cancelOrder(id, opts = {}) {
+  const {
+    by = 'cliente',
+    kind = null,
+    phrase = null,
+    message = null,
+    notify: notifyClient = false,
+  } = opts
   const orderRef = doc(db, 'orders', id)
   await runTransaction(db, async (tx) => {
     const snap = await tx.get(orderRef)
@@ -630,7 +739,8 @@ export async function cancelOrder(id) {
     if (order.status === ORDER_STATUSES.ANNULLATO) return
 
     const consumption = Array.isArray(order.inventory_consumption) ? order.inventory_consumption : []
-    if (order.inventory_applied === true && consumption.length > 0) {
+    const restoreStock = kind !== 'non_ritirato'
+    if (restoreStock && order.inventory_applied === true && consumption.length > 0) {
       // --- letture ---
       const itemSnaps = await Promise.all(
         consumption.map((c) => tx.get(doc(db, 'inventory_items', c.inventory_item_id)))
@@ -656,7 +766,16 @@ export async function cancelOrder(id) {
       })
     }
 
-    tx.update(orderRef, { status: ORDER_STATUSES.ANNULLATO, inventory_applied: false })
+    tx.update(orderRef, {
+      status: ORDER_STATUSES.ANNULLATO,
+      inventory_applied: restoreStock ? false : order.inventory_applied === true,
+      [`status_times.${ORDER_STATUSES.ANNULLATO}`]: new Date().toISOString(),
+      cancelled_by: by,
+      cancel_kind: kind,
+      cancel_phrase: phrase,
+      cancel_message: message || null,
+      cancel_notify: !!notifyClient,
+    })
   })
   return mapOrder(await getDoc(orderRef))
 }
@@ -688,4 +807,97 @@ export function subscribeActiveOrders(onChange, onError) {
     },
     onError
   )
+}
+
+// Coda attiva di una serata (solo ricevuto/in_preparazione): usata per la
+// stima personalizzata dei tempi. `onChange` riceve [{daily_number, status}]
+// — dati minimi, gli altri ordini non vengono mostrati al cliente.
+export function subscribeQueue(serataId, onChange, onError) {
+  const q = query(
+    ordersCol,
+    where('serata_id', '==', serataId),
+    where('status', 'in', [ORDER_STATUSES.RICEVUTO, ORDER_STATUSES.IN_PREPARAZIONE])
+  )
+  return onSnapshot(
+    q,
+    (snap) => {
+      onChange(
+        snap.docs.map((d) => ({
+          daily_number: d.data().daily_number ?? 0,
+          status: d.data().status,
+        }))
+      )
+    },
+    onError ?? (() => {})
+  )
+}
+
+// Ordini "pronti" della serata, in tempo reale: alimenta il tabellone
+// "stiamo servendo / pronti al ritiro" nel menù cliente. Espone solo
+// numero e modalità di consegna.
+export function subscribeReadyOrders(serataId, onChange, onError) {
+  const q = query(
+    ordersCol,
+    where('serata_id', '==', serataId),
+    where('status', '==', ORDER_STATUSES.PRONTO)
+  )
+  return onSnapshot(
+    q,
+    (snap) => {
+      const ready = snap.docs
+        .map((d) => ({
+          daily_number: d.data().daily_number ?? 0,
+          service_mode: d.data().service_mode ?? null,
+        }))
+        .sort((a, b) => a.daily_number - b.daily_number)
+      onChange(ready)
+    },
+    onError ?? (() => {})
+  )
+}
+
+// --- SETTINGS ---
+
+export const DEFAULT_SETTINGS = {
+  menu_only: false,
+  coperto_enabled: false,
+  coperto_amount: 2,
+  service_charge_enabled: false,
+  service_charge_percent: 10,
+  tip_enabled: false,
+  show_ingredient_quantities: true,
+  // Modalità di consegna: 'tavolo' (servizio), 'banco' (ritiro) o 'entrambi'
+  // (sceglie il cliente all'ordine). Il ritiro al banco azzera coperto e
+  // costo di servizio.
+  service_mode: 'tavolo',
+  // Tempo stimato di servizio mostrato ai clienti: parte dal tempo base e si
+  // raffina con i tempi reali della serata.
+  eta_enabled: false,
+  eta_base_minutes: 10,
+  // Frase di default mostrata al cliente quando il bartender annulla un
+  // ordine: 'bancone' o 'staff' (vedi CANCEL_PHRASES).
+  cancel_phrase_default: 'bancone',
+  // Tabellone "stiamo servendo / pronti al ritiro" nel menù cliente.
+  show_serving_board: true,
+}
+
+export function subscribeSettings(onChange, onError) {
+  return onSnapshot(
+    settingsDoc,
+    (snap) => {
+      if (!snap.exists()) return onChange({ ...DEFAULT_SETTINGS })
+      const data = snap.data()
+      const merged = { ...DEFAULT_SETTINGS, ...data }
+      // Retrocompatibilità col vecchio flag booleano della scelta consegna.
+      if (!data.service_mode && data.service_mode_choice_enabled) {
+        merged.service_mode = 'entrambi'
+      }
+      onChange(merged)
+    },
+    onError ?? (() => {})
+  )
+}
+
+export async function updateSettings(data) {
+  await setDoc(settingsDoc, { ...data, updated_at: serverTimestamp() }, { merge: true })
 }
