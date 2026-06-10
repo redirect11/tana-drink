@@ -14,11 +14,14 @@
 // (puro) e lib/sumup-service.js (servizio), entrambi coperti da test.
 
 const { onCall, onRequest, HttpsError } = require('firebase-functions/v2/https')
+const { onDocumentUpdated } = require('firebase-functions/v2/firestore')
 const { initializeApp } = require('firebase-admin/app')
 const { getFirestore, FieldValue } = require('firebase-admin/firestore')
+const { getMessaging } = require('firebase-admin/messaging')
 
 const { buildSumupHeaders, buildSumupUrl } = require('./lib/sumup-core')
 const { syncProducts, createSale, updateSaleStatus, handleWebhook } = require('./lib/sumup-service')
+const { decideOrderPush } = require('./lib/push-core')
 
 initializeApp()
 const db = getFirestore()
@@ -86,4 +89,35 @@ exports.updateSumUpSaleStatus = onCall(OPTS, (request) => updateSaleStatus(deps,
 exports.sumupWebhook = onRequest({ ...OPTS, cors: false }, async (req, res) => {
   const { status, body } = await handleWebhook(deps, { method: req.method, body: req.body })
   res.status(status).send(body)
+})
+
+// ── Notifiche push al cliente (FCM) ───────────────────────────────────────────
+// Quando un ordine passa a "pronto" (drink pronto) o ad "annullato" da parte
+// del bartender con notifica richiesta, invia una push al dispositivo del
+// cliente (token salvato sull'ordine alla creazione). La decisione su cosa
+// inviare vive in lib/push-core.js (pura, testata).
+exports.notifyOrderUpdate = onDocumentUpdated({ ...OPTS, document: 'orders/{orderId}' }, async (event) => {
+  const before = event.data?.before?.data()
+  const after = event.data?.after?.data()
+  const msg = decideOrderPush(before, after)
+  if (!msg) return
+
+  try {
+    await getMessaging().send({
+      token: after.push_token,
+      notification: { title: msg.title, body: msg.body },
+      data: { url: `/ordine/${event.params.orderId}` },
+      webpush: {
+        fcmOptions: { link: `/ordine/${event.params.orderId}` },
+        notification: { icon: '/logo.png', badge: '/logo.png' },
+      },
+    })
+  } catch (e) {
+    // Token scaduto/non valido: rimuovilo dall'ordine, niente retry.
+    if (e?.code === 'messaging/registration-token-not-registered') {
+      await event.data.after.ref.update({ push_token: null }).catch(() => {})
+    } else {
+      console.error('[push] invio fallito:', e?.message || e)
+    }
+  }
 })
