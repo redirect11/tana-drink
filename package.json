@@ -14,7 +14,8 @@
     "test:coverage": "vitest run --coverage",
     "requirements:issues": "node scripts/generate-issues.mjs",
     "seed": "node scripts/seed.js",
-    "emulators": "firebase emulators:start --project demo-tana-drink --only firestore"
+    "seed:dev": "VITE_USE_FIREBASE_EMULATOR=true VITE_FIREBASE_PROJECT_ID=demo-tana-drink VITE_FIRESTORE_EMULATOR_HOST=localhost VITE_FIRESTORE_EMULATOR_PORT=8080 node scripts/seed.js",
+    "emulators": "firebase emulators:start --project demo-tana-drink --only auth,firestore,storage"
   },
   "dependencies": {
     "firebase": "^12.14.0",
