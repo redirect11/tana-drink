@@ -111,6 +111,7 @@ export default function MenuManager() {
       await load()
     } catch (e) {
       setError(e.message)
+      throw e
     }
   }
 
@@ -308,6 +309,7 @@ function DrinkForm({ initial, categories, inventory, onCreateCategory, onCancel,
   }))
   const [preview, setPreview] = useState(initial.image_url || null)
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState(null)
   const [newCat, setNewCat] = useState('')
   const [addingCat, setAddingCat] = useState(false)
 
@@ -372,8 +374,11 @@ function DrinkForm({ initial, categories, inventory, onCreateCategory, onCancel,
     e.preventDefault()
     if (!form.name.trim()) return
     setSaving(true)
+    setSaveError(null)
     try {
       await onSave(form)
+    } catch (e) {
+      setSaveError(e.message)
     } finally {
       setSaving(false)
     }
@@ -499,6 +504,10 @@ function DrinkForm({ initial, categories, inventory, onCreateCategory, onCancel,
         />
         <span>Disponibile nel menù</span>
       </label>
+
+      {saveError && (
+        <div className="banner" style={{ marginTop: 12 }}>Errore: {saveError}</div>
+      )}
 
       <div className="grid-2" style={{ marginTop: 16 }}>
         <button type="button" className="btn ghost" onClick={onCancel} disabled={saving}>
