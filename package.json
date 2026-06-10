@@ -15,13 +15,15 @@
     "requirements:issues": "node scripts/generate-issues.mjs",
     "seed": "node scripts/seed.js",
     "seed:dev": "VITE_USE_FIREBASE_EMULATOR=true VITE_FIREBASE_PROJECT_ID=demo-tana-drink VITE_FIRESTORE_EMULATOR_HOST=localhost VITE_FIRESTORE_EMULATOR_PORT=8080 node scripts/seed.js",
+    "mock:orders": "VITE_FIREBASE_PROJECT_ID=demo-tana-drink VITE_FIRESTORE_EMULATOR_HOST=localhost VITE_FIRESTORE_EMULATOR_PORT=8080 node scripts/mock-orders.js",
     "emulators": "firebase emulators:start --project demo-tana-drink --only auth,firestore,storage"
   },
   "dependencies": {
     "firebase": "^12.14.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^6.26.2"
+    "react-router-dom": "^6.26.2",
+    "vanilla-cookieconsent": "^3.1.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.11.1",

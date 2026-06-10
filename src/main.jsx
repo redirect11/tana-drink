@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import App from './App.jsx'
 import './index.css'
+import { initCookieConsent } from './lib/cookieConsent.js'
 
 // basename per il router: ricavato dalla base di Vite (BASE_URL).
 // Su Firebase Hosting il sito è servito dalla radice ("/"); su GitHub Pages
@@ -10,15 +11,25 @@ import './index.css'
 const basename = import.meta.env.BASE_URL.replace(/\/$/, '') || '/'
 
 // Registra il service worker per la PWA (installabilità + notifiche).
-// Il path è relativo alla base del sito (BASE_URL).
+// Solo in produzione: in sviluppo la cache del SW interferisce con Vite
+// e con gli emulatori. In dev rimuove anche eventuali SW registrati prima.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    const swUrl = `${import.meta.env.BASE_URL}sw.js`
-    navigator.serviceWorker.register(swUrl).catch(() => {
-      /* registrazione service worker non disponibile: non bloccante */
-    })
+    if (import.meta.env.PROD) {
+      const swUrl = `${import.meta.env.BASE_URL}sw.js`
+      navigator.serviceWorker.register(swUrl).catch(() => {
+        /* registrazione service worker non disponibile: non bloccante */
+      })
+    } else {
+      navigator.serviceWorker.getRegistrations().then((regs) => {
+        regs.forEach((r) => r.unregister())
+      })
+    }
   })
 }
+
+// Banner informativo cookie (solo cookie tecnici, nessun consenso richiesto).
+initCookieConsent().catch((e) => console.error('[CookieConsent]', e))
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

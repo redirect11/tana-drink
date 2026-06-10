@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/png" href="logo.png" />
+  <title>Cookie Policy – La Tana del Coniglio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&display=swap"
+    rel="stylesheet"
+  />
+  <style>
+    :root {
+      --bg: #0e0e15;
+      --bg2: #15151f;
+      --card: #1a1a26;
+      --gold: #e8a32e;
+      --gold-soft: #f5b94a;
+      --text: #f5f5f7;
+      --muted: #9b9ba8;
+      --radius: 16px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      background:
+        radial-gradient(900px 500px at 85% -10%, rgba(245, 185, 74, 0.07), transparent 60%),
+        linear-gradient(170deg, var(--bg), var(--bg2));
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 32px 16px 64px;
+    }
+
+    header { text-align: center; margin-bottom: 32px; }
+    header img.logo {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      margin-bottom: 12px;
+      box-shadow: 0 0 0 2px rgba(245, 185, 74, 0.6), 0 4px 18px rgba(0, 0, 0, 0.55);
+    }
+    header h1 {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--gold-soft);
+      letter-spacing: 0.03em;
+    }
+    header p.sub { font-size: 0.82rem; color: var(--muted); margin-top: 4px; }
+
+    .content {
+      width: 100%;
+      max-width: 680px;
+      background: var(--card);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: var(--radius);
+      padding: 32px 28px;
+      box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+      line-height: 1.65;
+    }
+
+    h2 {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 1.05rem;
+      color: var(--gold-soft);
+      margin: 28px 0 10px;
+    }
+    h2:first-child { margin-top: 0; }
+
+    p { font-size: 0.88rem; color: var(--text); margin-bottom: 12px; }
+    p:last-child { margin-bottom: 0; }
+
+    code {
+      background: rgba(255, 255, 255, 0.07);
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-size: 0.82em;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0 20px;
+      font-size: 0.83rem;
+    }
+    th {
+      text-align: left;
+      padding: 8px 10px;
+      background: var(--bg2);
+      color: var(--gold-soft);
+      font-weight: 600;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    td {
+      padding: 8px 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      color: var(--text);
+      vertical-align: top;
+    }
+    tr:last-child td { border-bottom: none; }
+
+    a { color: var(--gold-soft); text-decoration: underline; }
+    a:hover { color: var(--gold); }
+
+    .back-link { margin-top: 28px; font-size: 0.85rem; }
+    .back-link a { color: var(--muted); text-decoration: none; }
+    .back-link a:hover { color: var(--text); }
+
+    footer {
+      margin-top: 40px;
+      margin-bottom: 24px;
+      font-size: 0.72rem;
+      color: var(--muted);
+      text-align: center;
+      opacity: 0.6;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <img class="logo" src="logo.png" alt="La Tana del Coniglio" />
+    <h1>Cookie Policy</h1>
+    <p class="sub">La Tana del Coniglio · Ordinazione drink</p>
+  </header>
+
+  <div class="content">
+
+    <h2>1. Cosa sono i cookie</h2>
+    <p>
+      I cookie sono piccoli file di testo che i siti web salvano nel browser dell'utente.
+      Tecnologie simili, come il <em>localStorage</em>, permettono all'applicazione di
+      ricordare preferenze e azioni dell'utente durante una sessione o tra sessioni successive.
+    </p>
+
+    <h2>2. Dati utilizzati da questa applicazione</h2>
+    <p>
+      Questa applicazione utilizza esclusivamente cookie e storage tecnici strettamente
+      necessari al funzionamento del servizio di ordinazione. Non vengono usati cookie di
+      profilazione, di tracciamento o di marketing.
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Nome</th>
+          <th>Scopo</th>
+          <th>Durata</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>tana_cart_v1</code></td>
+          <td>Memorizza il carrello (drink selezionati e quantità) per non perderlo
+            ricaricando la pagina.</td>
+          <td>localStorage: fino allo svuotamento del carrello o alla cancellazione
+            dei dati del browser.</td>
+        </tr>
+        <tr>
+          <td><code>tana_my_orders_v1</code></td>
+          <td>Memorizza gli identificativi degli ordini effettuati da questo dispositivo,
+            per permettere di ritrovarli nella sezione «I miei ordini».</td>
+          <td>localStorage: massimo 20 ordini, fino alla cancellazione dei dati del browser.</td>
+        </tr>
+        <tr>
+          <td><code>cc_cookie</code></td>
+          <td>Memorizza la presa visione del banner informativo sui cookie
+            (libreria Vanilla CookieConsent).</td>
+          <td>6 mesi</td>
+        </tr>
+        <tr>
+          <td>Firebase Authentication</td>
+          <td>Solo per lo staff del locale: mantiene la sessione di accesso del bartender
+            al gestionale (IndexedDB). Non riguarda i clienti.</td>
+          <td>Fino al logout.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>3. Servizi di terze parti</h2>
+    <p>
+      L'applicazione è ospitata su Google Firebase (Hosting, Firestore, Authentication,
+      Storage). Google può trattare dati tecnici di connessione (es. indirizzo IP) come
+      autonomo titolare per finalità di sicurezza ed erogazione del servizio. Per
+      maggiori informazioni:
+      <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Privacy
+      Policy di Google</a>.
+    </p>
+    <p>
+      I caratteri tipografici sono caricati da Google Fonts; la richiesta comporta la
+      trasmissione dell'indirizzo IP a Google.
+    </p>
+
+    <h2>4. Gestione delle preferenze</h2>
+    <p>
+      Poiché vengono usati esclusivamente cookie tecnici, non è richiesto alcun consenso:
+      il banner mostrato al primo accesso è puramente informativo. È comunque possibile
+      cancellare i dati salvati in qualsiasi momento dalle impostazioni del proprio browser
+      (cancellazione dati di navigazione / dati dei siti).
+    </p>
+
+    <h2>5. Titolare</h2>
+    <p>
+      La Tana del Coniglio. Per qualsiasi richiesta relativa al trattamento dei dati è
+      possibile rivolgersi al personale del locale.
+    </p>
+
+    <div class="back-link">
+      <a href="./">← Torna al menù</a>
+    </div>
+  </div>
+
+  <footer>La Tana del Coniglio — solo cookie tecnici, nessuna profilazione.</footer>
+</body>
+</html>

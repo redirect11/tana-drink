@@ -1,14 +1,17 @@
 :root {
-  --bg: #1a1a2e;
-  --bg-2: #16213e;
-  --card: #0f3460;
-  --accent: #e94560;
-  --accent-2: #f5d442;
+  /* Palette speakeasy: nero profondo, cremisi e oro. */
+  --bg: #0e0e15;
+  --bg-2: #15151f;
+  --card: #1a1a26;
+  --accent: #e52e71;
+  --accent-2: #f5b94a;
+  --grad: linear-gradient(90deg, rgba(245, 185, 74, 0.9), rgba(245, 185, 74, 0.12));
   --text: #f5f5f7;
-  --muted: #a9b3c1;
+  --muted: #9b9ba8;
   --ok: #2ecc71;
   --warn: #f39c12;
-  --radius: 14px;
+  --radius: 16px;
+  --serif: 'Playfair Display', Georgia, 'Times New Roman', serif;
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial,
     sans-serif;
   color-scheme: dark;
@@ -26,9 +29,21 @@ body,
 }
 
 body {
-  background: linear-gradient(160deg, var(--bg), var(--bg-2));
+  background:
+    radial-gradient(900px 500px at 85% -10%, rgba(245, 185, 74, 0.07), transparent 60%),
+    radial-gradient(700px 420px at -10% 25%, rgba(229, 46, 113, 0.06), transparent 60%),
+    linear-gradient(170deg, var(--bg), var(--bg-2));
+  background-attachment: fixed;
   color: var(--text);
   -webkit-font-smoothing: antialiased;
+}
+
+/* Titoli con serif elegante (stile cocktail bar). */
+h1,
+h2,
+h3 {
+  font-family: var(--serif);
+  letter-spacing: 0.2px;
 }
 
 a {
@@ -49,9 +64,10 @@ a {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 14px 4px;
-  background: linear-gradient(160deg, var(--bg), rgba(22, 33, 62, 0.92));
-  backdrop-filter: blur(6px);
+  padding: 12px 4px;
+  background: rgba(14, 14, 21, 0.88);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .brand {
@@ -60,11 +76,15 @@ a {
   gap: 10px;
   font-weight: 700;
   letter-spacing: 0.3px;
+  font-family: var(--serif);
+  font-size: 1.05rem;
 }
 
 .brand img {
-  width: 34px;
-  height: 34px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1.5px rgba(245, 185, 74, 0.55), 0 2px 10px rgba(0, 0, 0, 0.4);
 }
 
 .muted {
@@ -72,11 +92,12 @@ a {
 }
 
 .card {
-  background: var(--card);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 50%), var(--card);
+  border: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: var(--radius);
   padding: 16px;
   margin: 12px 0;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25);
 }
 
 .row {
@@ -101,9 +122,10 @@ a {
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
-  background: var(--accent);
-  color: white;
-  transition: transform 0.05s ease, opacity 0.2s ease;
+  background: linear-gradient(135deg, #f7c45e, #e8a32e);
+  color: #1c1305;
+  transition: transform 0.05s ease, opacity 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 4px 14px rgba(245, 185, 74, 0.25);
 }
 
 .btn:active {
@@ -117,15 +139,38 @@ a {
 
 .btn.secondary {
   background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+  box-shadow: none;
 }
 
 .btn.ghost {
   background: transparent;
   border: 1px solid rgba(255, 255, 255, 0.18);
+  color: var(--text);
+  box-shadow: none;
 }
 
 .btn.block {
+  display: block;
   width: 100%;
+}
+
+/* Link usati come pulsanti (es. "Torna al menù") */
+a.btn {
+  display: inline-block;
+  text-align: center;
+  text-decoration: none;
+  color: #1c1305;
+}
+
+a.btn.ghost,
+a.btn.secondary {
+  color: var(--text);
+}
+
+a.btn.block {
+  display: block;
+  margin: 12px 0;
 }
 
 .btn.small {
@@ -186,11 +231,20 @@ a {
 .drink-thumb {
   width: 64px;
   height: 64px;
-  border-radius: 10px;
+  border-radius: 12px;
   object-fit: cover;
   flex-shrink: 0;
   margin-right: 12px;
   background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Drink senza foto: logo come segnaposto, leggermente attenuato. */
+.drink-thumb.placeholder {
+  object-fit: contain;
+  padding: 8px;
+  opacity: 0.8;
+  background: radial-gradient(circle at 50% 40%, rgba(255, 255, 255, 0.07), transparent 70%);
 }
 .drink-preview {
   display: block;
@@ -342,6 +396,8 @@ a {
 .price {
   font-weight: 700;
   color: var(--accent-2);
+  font-family: var(--serif);
+  font-size: 1.05em;
 }
 
 .cartbar {
@@ -349,9 +405,21 @@ a {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(15, 52, 96, 0.97);
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 12px 16px;
+  background: rgba(14, 14, 21, 0.94);
+  backdrop-filter: blur(10px);
+  border-top: none;
+  padding: 13px 16px 12px;
+}
+
+/* Linea gradiente firma (come l'anello del logo) sopra la barra carrello. */
+.cartbar::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--grad);
 }
 
 .cartbar .inner {
@@ -383,8 +451,9 @@ a {
 }
 
 .step.active {
-  background: var(--accent);
-  color: white;
+  background: linear-gradient(135deg, #f7c45e, #e8a32e);
+  color: #1c1305;
+  font-weight: 700;
 }
 
 .step.done {
@@ -428,7 +497,8 @@ label {
 }
 
 .tabs .tab.active {
-  background: var(--accent);
+  background: linear-gradient(135deg, #f7c45e, #e8a32e);
+  color: #1c1305;
 }
 
 .empty {
@@ -465,4 +535,460 @@ label {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
+}
+
+.app-footer {
+  text-align: center;
+  padding: 24px 0 8px;
+}
+
+.app-footer a {
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-decoration: none;
+  opacity: 0.8;
+}
+
+.app-footer a:hover {
+  color: var(--text);
+}
+
+.footer-social {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 14px;
+}
+
+.footer-social a {
+  color: var(--muted);
+  opacity: 0.7;
+  display: flex;
+  align-items: center;
+  transition: color 0.15s ease, opacity 0.15s ease;
+}
+
+.footer-social a:hover {
+  color: var(--accent-2);
+  opacity: 1;
+}
+
+.footer-social svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* ── Hero (home cliente) ─────────────────────────────────────── */
+.hero {
+  position: relative;
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin: 12px 0 20px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+
+/* Cornice oro sottile attorno all'hero. */
+.hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius);
+  padding: 1.5px;
+  background: linear-gradient(135deg, rgba(245, 185, 74, 0.8), rgba(245, 185, 74, 0.2));
+  opacity: 0.7;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.hero-img {
+  width: 100%;
+  height: 230px;
+  object-fit: cover;
+  display: block;
+  filter: brightness(0.6);
+}
+
+.hero-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 20px;
+  background: linear-gradient(180deg, transparent 35%, rgba(10, 10, 18, 0.88));
+}
+
+.hero-logo {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  margin-bottom: 10px;
+  box-shadow: 0 0 0 2px rgba(245, 185, 74, 0.6), 0 4px 18px rgba(0, 0, 0, 0.55);
+}
+
+.hero-title {
+  font-family: var(--serif);
+  font-size: 2rem;
+  font-weight: 800;
+  margin: 0;
+  letter-spacing: 0.3px;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
+}
+
+.hero-sub {
+  color: rgba(255, 255, 255, 0.78);
+  margin: 4px 0 0;
+  font-size: 0.95rem;
+}
+
+/* ── Box ordine attivo nel menù ──────────────────────────────── */
+a.order-mini {
+  display: flex;
+  text-decoration: none;
+  color: inherit;
+  border-color: rgba(245, 185, 74, 0.45);
+  background: linear-gradient(135deg, var(--card), rgba(245, 185, 74, 0.08));
+}
+
+.order-mini .pill {
+  display: inline-flex;
+}
+
+.order-mini-chev {
+  font-size: 1.6rem;
+  color: var(--muted);
+  line-height: 1;
+}
+
+/* Nota dell'ordine sulla card del bartender */
+.order-note {
+  background: rgba(245, 185, 74, 0.1);
+  border: 1px solid rgba(245, 185, 74, 0.3);
+  border-radius: 10px;
+  padding: 8px 12px;
+  margin: 0 0 10px;
+  font-size: 0.9rem;
+}
+
+/* Tabellone "stiamo servendo / pronti al ritiro" */
+.serving-box {
+  text-align: center;
+  border-color: rgba(245, 185, 74, 0.35);
+}
+
+.serving-nums {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 18px;
+  margin-top: 6px;
+}
+
+.serving-num {
+  font-family: var(--serif);
+  font-size: 2.2rem;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--accent-2);
+}
+
+/* Riga tempo stimato nel menù */
+.eta-line {
+  margin: 0 0 4px;
+  padding: 8px 14px;
+  font-size: 0.88rem;
+  color: var(--accent-2);
+  background: rgba(245, 185, 74, 0.08);
+  border: 1px solid rgba(245, 185, 74, 0.25);
+  border-radius: 12px;
+  text-align: center;
+}
+
+/* ── Navigazione categorie (chips scorrevoli) ─────────────────── */
+.cat-nav {
+  position: sticky;
+  top: 64px;
+  z-index: 5;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 8px 0 12px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  -webkit-overflow-scrolling: touch;
+  background: rgba(14, 14, 21, 0.92);
+  backdrop-filter: blur(8px);
+}
+
+.cat-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.cat-chip {
+  padding: 7px 16px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  color: var(--text);
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.cat-chip:hover,
+.cat-chip:active {
+  background: linear-gradient(135deg, #f7c45e, #e8a32e);
+  border-color: transparent;
+  color: #1c1305;
+}
+
+/* ── Intestazione categoria ──────────────────────────────────── */
+.cat-header {
+  font-family: var(--serif);
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-style: italic;
+  letter-spacing: 0.4px;
+  color: var(--text);
+  margin: 30px 0 10px;
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  scroll-margin-top: 120px;
+}
+
+.cat-header::after {
+  content: '';
+  flex: 1;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--grad);
+  opacity: 0.55;
+  align-self: center;
+}
+
+/* ── Riepilogo ordine (bottom sheet) ─────────────────────────── */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 200;
+}
+
+.summary-sheet {
+  background: var(--bg-2);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: none;
+  border-radius: 20px 20px 0 0;
+  width: 100%;
+  max-width: 760px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 24px 20px calc(20px + env(safe-area-inset-bottom));
+}
+
+.summary-sheet h2 {
+  margin: 0 0 4px;
+}
+
+.summary-head {
+  text-align: center;
+  margin-bottom: 4px;
+}
+
+.summary-head img {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  margin-bottom: 8px;
+  box-shadow: 0 0 0 1.5px rgba(245, 185, 74, 0.55), 0 4px 14px rgba(0, 0, 0, 0.45);
+}
+
+.summary-rows {
+  margin: 16px 0;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  font-size: 0.95rem;
+}
+
+.summary-row .qty-x {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.summary-total {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--accent-2);
+  border-top: 2px solid rgba(245, 185, 74, 0.55);
+  border-bottom: none;
+  margin-top: 6px;
+  padding-top: 14px;
+}
+
+.tip-input {
+  width: 100px;
+  padding: 7px 10px;
+  font-size: 0.95rem;
+  text-align: right;
+}
+
+/* Conferma in-app (sostituisce window.confirm) */
+.confirm-overlay {
+  align-items: center;
+  padding: 24px;
+}
+
+.confirm-box {
+  background: var(--bg-2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius);
+  padding: 20px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55);
+}
+
+.btn.danger {
+  background: linear-gradient(135deg, #c0392b, #e74c3c);
+  color: white;
+  box-shadow: 0 4px 14px rgba(231, 76, 60, 0.25);
+}
+
+/* Scelta servizio al tavolo / ritiro al banco */
+.mode-choice {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.mode-option {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  padding: 11px 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.mode-option.active {
+  background: linear-gradient(135deg, #f7c45e, #e8a32e);
+  border-color: transparent;
+  color: #1c1305;
+}
+
+.persons-counter {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.persons-counter button {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: none;
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text);
+  font-size: 1.05rem;
+  cursor: pointer;
+}
+
+/* ── Impostazioni (tab bartender) ────────────────────────────── */
+.settings-section {
+  margin-bottom: 8px;
+}
+
+.settings-section h3 {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--muted);
+  margin: 0 0 4px;
+}
+
+.toggle-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.toggle-row:last-child {
+  border-bottom: none;
+}
+
+.toggle-row .desc {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.toggle {
+  appearance: none;
+  width: 46px;
+  height: 26px;
+  min-width: 46px;
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.15);
+  cursor: pointer;
+  position: relative;
+  transition: background 0.2s ease;
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+.toggle:checked {
+  background: linear-gradient(135deg, #f7c45e, #e8a32e);
+}
+
+.toggle::before {
+  content: '';
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border-radius: 10px;
+  background: white;
+  top: 3px;
+  left: 3px;
+  transition: transform 0.2s ease;
+}
+
+.toggle:checked::before {
+  transform: translateX(20px);
+}
+
+.toggle:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.setting-amount {
+  width: 90px;
+  padding: 7px 10px;
+  font-size: 0.95rem;
+  text-align: right;
 }
