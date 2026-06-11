@@ -1,9 +1,9 @@
 // =====================================================================
 //  Assegna un ruolo a un utente staff (custom claim "role" su Firebase
-//  Auth). Ruoli: bartender (default per chi non ha claim) | cameriera.
+//  Auth). Ruoli: bartender (default per chi non ha claim) | staff.
 //
-//    node scripts/set-role.js --email cameriera@bar.it --role cameriera
-//    node scripts/set-role.js --email x@y.it --role cameriera --emulator
+//    node scripts/set-role.js --email cameriera@bar.it --role staff
+//    node scripts/set-role.js --email x@y.it --role staff --emulator
 //
 //  Produzione: usa la sessione del Firebase CLI (firebase login).
 //  NB: l'utente deve già esistere (Console → Authentication → Add user).
@@ -22,8 +22,8 @@ const ROLE = getArg('role')
 const EMULATOR = args.includes('--emulator')
 const PROJECT = getArg('project') || (EMULATOR ? 'demo-tana-drink' : 'tana-drink')
 
-if (!EMAIL || !['bartender', 'cameriera'].includes(ROLE)) {
-  console.error('Uso: node scripts/set-role.js --email <email> --role bartender|cameriera [--emulator]')
+if (!EMAIL || !['bartender', 'staff'].includes(ROLE)) {
+  console.error('Uso: node scripts/set-role.js --email <email> --role bartender|staff [--emulator]')
   process.exit(1)
 }
 

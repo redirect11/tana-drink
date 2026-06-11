@@ -5,8 +5,8 @@ service cloud.firestore {
 
     // ── Ruoli ─────────────────────────────────────────────────────────
     // Il ruolo vive nei custom claims del token ("role"). Gli account
-    // senza claim sono bartender (retrocompatibilità). La cameriera
-    // ("cameriera") può SOLO segnare come serviti gli ordini pronti.
+    // senza claim sono bartender (retrocompatibilità). Lo staff
+    // ("staff") può SOLO segnare come serviti gli ordini pronti.
     function isSignedIn() {
       return request.auth != null;
     }
@@ -22,7 +22,7 @@ service cloud.firestore {
     }
 
     // ORDERS — i clienti creano e leggono; il bartender aggiorna qualsiasi
-    // cosa; la cameriera può solo portare un ordine da "pronto" a
+    // cosa; lo staff può solo portare un ordine da "pronto" a
     // "ritirato" (servizio al tavolo). Il cliente (non autenticato, in
     // possesso dell'id ordine) può modificare o annullare l'ordine SOLO
     // finché è "ricevuto": può lasciarlo "ricevuto" (modifica item) o
@@ -69,7 +69,7 @@ service cloud.firestore {
       allow write: if isBartender();
     }
 
-    // INVENTORY — solo bartender (non serve al cliente né alla cameriera).
+    // INVENTORY — solo bartender (non serve al cliente né allo staff).
     match /inventory_items/{itemId} {
       allow read, write: if isBartender();
     }

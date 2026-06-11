@@ -21,7 +21,8 @@ import { formatQty } from '../lib/inventory.js'
 import { etaForMode } from '../lib/eta.js'
 import { ensureNotificationPermission } from '../lib/notify.js'
 import { getPushToken } from '../lib/push.js'
-import { isFirebaseConfigured } from '../lib/firebaseClient.js'
+import { isFirebaseConfigured, auth } from '../lib/firebaseClient.js'
+import { onAuthStateChanged } from 'firebase/auth'
 import OrderSummary from '../components/OrderSummary.jsx'
 
 const NOTIF_PROMPT_KEY = 'tana_notif_prompt_v1'
@@ -37,6 +38,22 @@ export default function MenuPage() {
   const [showSummary, setShowSummary] = useState(false)
   const [myOrders, setMyOrders] = useState([])
   const [readyOrders, setReadyOrders] = useState([])
+  // Staff loggato (bartender/cameriera): gli ordini fatti da qui vengono
+  // marcati come manuali con chi li ha inseriti.
+  const [staff, setStaff] = useState(null) // { email, role } | null
+
+  useEffect(() => {
+    if (!isFirebaseConfigured) return
+    return onAuthStateChanged(auth, async (u) => {
+      if (!u) return setStaff(null)
+      try {
+        const token = await u.getIdTokenResult()
+        setStaff({ email: u.email, role: token.claims.role ?? 'bartender' })
+      } catch {
+        setStaff({ email: u.email, role: 'bartender' })
+      }
+    })
+  }, [])
   // Opt-in notifiche al primo accesso: mostrato una sola volta, se il
   // permesso non è già stato concesso o negato.
   const [showNotifPrompt, setShowNotifPrompt] = useState(
@@ -176,12 +193,16 @@ export default function MenuPage() {
     try {
       // Token push del dispositivo (se le notifiche sono attive): permette
       // alla Cloud Function di notificare anche ad app chiusa.
-      const push_token = await getPushToken()
+      // Niente token push per gli ordini manuali: le notifiche andrebbero
+      // al telefono dello staff, non al cliente (che aggancia l'ordine
+      // scansionando il QR dalla pagina ordine).
+      const push_token = staff ? null : await getPushToken()
       const order = await createOrder({
         table_label: tableLabel,
         items: cart.items,
         serata_id: serata.id,
         push_token,
+        placed_by: staff, // null per i clienti
         ...extraCharges,
       })
       rememberOrderId(order.id)
@@ -201,7 +222,8 @@ export default function MenuPage() {
   const menuOnly = settings.menu_only
   // Si può ordinare solo con serata aperta e modalità ordinazione attiva:
   // a serata chiusa spariscono anche i pulsanti "Aggiungi" e il carrello.
-  const canOrder = !menuOnly && !closed
+  // Lo staff loggato può inserire ordini manuali anche in modalità solo menu.
+  const canOrder = (!menuOnly || !!staff) && !closed
 
   // Tempo stimato mostrato nel menù: per la modalità "entrambi" usa la stima
   // fino al "pronto" (parte comune); il riepilogo ordine poi la adatta alla
@@ -240,6 +262,13 @@ export default function MenuPage() {
           </p>
         </div>
       </div>
+
+      {staff && !menuOnly && (
+        <div className="banner">
+          ✍️ Ordine manuale: verrà registrato come inserito da{' '}
+          <strong>{staff.email}</strong> ({staff.role}).
+        </div>
+      )}
 
       {menuOnly && (
         <div className="banner">
@@ -442,6 +471,7 @@ export default function MenuPage() {
           settings={settings}
           serata={serata}
           tableLabel={tableLabel}
+          staff={staff}
           sending={sending}
           onConfirm={handleConfirmOrder}
           onCancel={() => !sending && setShowSummary(false)}

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { signOut } from 'firebase/auth'
 import { auth } from '../lib/firebaseClient.js'
 import {
@@ -62,9 +63,14 @@ export default function ServiceQueue() {
                 : 'Nessuna serata aperta'}
           </div>
         </div>
-        <button className="btn ghost small" onClick={() => signOut(auth)}>
-          Esci
-        </button>
+        <div className="row" style={{ gap: 6 }}>
+          <Link className="btn small" to="/">
+            ✍️ Nuovo ordine
+          </Link>
+          <button className="btn ghost small" onClick={() => signOut(auth)}>
+            Esci
+          </button>
+        </div>
       </div>
 
       {error && <div className="banner">Errore: {error}</div>}
@@ -91,6 +97,11 @@ export default function ServiceQueue() {
               </div>
             ))}
           </div>
+          {o.placed_by && (
+            <p className="muted small" style={{ margin: '0 0 8px' }}>
+              ✍️ Inserito da {o.placed_by.email}
+            </p>
+          )}
           {o.note && <div className="order-note">📝 {o.note}</div>}
           <button
             className="btn block"

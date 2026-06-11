@@ -1,9 +1,9 @@
 'use strict'
 
-// Gestione utenze staff (bartender/cameriera) — logica con dipendenze
+// Gestione utenze staff (bartender/staff) — logica con dipendenze
 // iniettate (adminAuth) per essere testabile senza Firebase reale.
 
-const ROLES = ['bartender', 'cameriera']
+const ROLES = ['bartender', 'staff']
 
 // Ruolo effettivo del chiamante: i token senza claim sono bartender
 // (retrocompatibilità con gli account creati prima dei ruoli).

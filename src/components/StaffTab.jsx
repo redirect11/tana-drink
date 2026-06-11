@@ -3,7 +3,7 @@ import { auth } from '../lib/firebaseClient.js'
 import { listStaff, createStaff, setStaffRole, removeStaff } from '../lib/staffApi.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
 
-const ROLE_LABELS = { bartender: '🍸 Bartender', cameriera: '🫱 Cameriera' }
+const ROLE_LABELS = { bartender: '🍸 Bartender', staff: '🫱 Staff' }
 
 // Backoffice utenze staff: il bartender crea e gestisce gli account dei
 // collaboratori (cameriere ecc.) col relativo ruolo.
@@ -16,7 +16,7 @@ export default function StaffTab() {
   // Form nuovo utente
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [role, setRole] = useState('cameriera')
+  const [role, setRole] = useState('staff')
 
   async function reload() {
     try {
@@ -97,7 +97,7 @@ export default function StaffTab() {
           ))}
         </div>
         <p className="muted small" style={{ margin: '8px 0 0' }}>
-          La cameriera vede solo gli ordini pronti da servire e può segnarli
+          Lo staff vede solo gli ordini pronti da servire e può segnarli
           come serviti. Il bartender ha accesso completo al gestionale.
         </p>
         <button className="btn block" style={{ marginTop: 12 }} type="submit" disabled={busy}>
@@ -120,7 +120,7 @@ export default function StaffTab() {
                   disabled={busy}
                   title="Cambia ruolo"
                   onClick={() => {
-                    const next = u.role === 'cameriera' ? 'bartender' : 'cameriera'
+                    const next = u.role === 'bartender' ? 'staff' : 'bartender'
                     setConfirm({
                       title: `Cambiare ruolo a ${u.email}?`,
                       message: `Nuovo ruolo: ${ROLE_LABELS[next]}. Attivo al prossimo login.`,
@@ -128,7 +128,7 @@ export default function StaffTab() {
                     })
                   }}
                 >
-                  ⇄ {u.role === 'cameriera' ? 'Bartender' : 'Cameriera'}
+                  ⇄ {u.role === 'bartender' ? 'Staff' : 'Bartender'}
                 </button>
                 <button
                   className="btn ghost small"

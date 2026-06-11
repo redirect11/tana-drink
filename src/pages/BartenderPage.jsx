@@ -49,7 +49,7 @@ const NAV_ITEMS = [
 
 export default function BartenderPage() {
   const [user, setUser] = useState(undefined) // undefined = caricamento, null = non loggato
-  const [role, setRole] = useState(null) // 'bartender' | 'cameriera'
+  const [role, setRole] = useState(null) // 'bartender' | 'staff'
   const [tab, setTab] = useState('coda')
   const [navOpen, setNavOpen] = useState(false)
 
@@ -76,8 +76,8 @@ export default function BartenderPage() {
   }
   if (!user) return <LoginForm />
 
-  // La cameriera vede SOLO la lista da servire: niente menu laterale.
-  if (role === 'cameriera') return <ServiceQueue />
+  // Lo staff (non bartender) vede SOLO la lista da servire.
+  if (role !== 'bartender') return <ServiceQueue />
 
   const items = isDevEnvironment ? [...NAV_ITEMS, ['dev', '🛠', 'Dev']] : NAV_ITEMS
 
@@ -478,6 +478,11 @@ function OrderQueue() {
                 </div>
               ))}
             </div>
+            {o.placed_by && (
+              <p className="muted small" style={{ margin: '0 0 8px' }}>
+                ✍️ Ordine manuale inserito da <strong>{o.placed_by.email}</strong> ({o.placed_by.role})
+              </p>
+            )}
             {o.note && (
               <div className="order-note">📝 {o.note}</div>
             )}
