@@ -56,7 +56,6 @@ export default function StaffTab() {
 
   useEffect(() => {
     reload()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   async function run(fn) {

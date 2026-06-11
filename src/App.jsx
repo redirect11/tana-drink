@@ -40,7 +40,7 @@ export default function App() {
 
   return (
     <div className="app">
-      <header className={`topbar${onBackoffice ? ' backoffice' : ''}`}>
+      <header className={`topbar${onBackoffice || staffRole ? ' backoffice' : ''}`}>
         <Link to="/" className="brand" style={{ textDecoration: 'none', color: 'inherit' }}>
           <img src={`${import.meta.env.BASE_URL}logo.png`} alt="" />
           <span>La Tana del Coniglio</span>

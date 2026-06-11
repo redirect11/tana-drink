@@ -42,7 +42,6 @@ export const app = initializeApp({
 // la chiave è configurata; in sviluppo usa il debug token dell'emulatore.
 const recaptchaKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY
 if (import.meta.env.VITE_USE_FIREBASE_EMULATOR === 'true') {
-  // eslint-disable-next-line no-restricted-globals
   self.FIREBASE_APPCHECK_DEBUG_TOKEN = true
 }
 if (recaptchaKey) {

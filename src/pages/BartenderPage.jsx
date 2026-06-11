@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import {
   signInWithEmailAndPassword,
   signOut,
@@ -37,22 +37,15 @@ import ServiceQueue from '../components/ServiceQueue.jsx'
 import ConfirmDialog from '../components/ConfirmDialog.jsx'
 import CancelOrderDialog from '../components/CancelOrderDialog.jsx'
 import DevTools from '../components/DevTools.jsx'
+import StaffDrawer from '../components/StaffDrawer.jsx'
 import { isDevEnvironment } from '../dev/devActions.js'
-
-const NAV_ITEMS = [
-  ['coda', '🧾', 'Coda ordini'],
-  ['stats', '📊', 'Statistiche'],
-  ['menu', '🍸', 'Menù'],
-  ['inventario', '📦', 'Inventario'],
-  ['staff', '👥', 'Staff'],
-  ['impostazioni', '⚙️', 'Impostazioni'],
-]
 
 export default function BartenderPage() {
   const [user, setUser] = useState(undefined) // undefined = caricamento, null = non loggato
   const [role, setRole] = useState(null) // 'bartender' | 'staff'
-  const [tab, setTab] = useState('coda')
-  const [navOpen, setNavOpen] = useState(false)
+  // Tab iniziale anche da query (?tab=stats): usato dal drawer nel menu.
+  const [params] = useSearchParams()
+  const [tab, setTab] = useState(() => params.get('tab') || 'coda')
 
   useEffect(() => {
     return onAuthStateChanged(auth, async (u) => {
@@ -94,49 +87,9 @@ export default function BartenderPage() {
   // Lo staff (non bartender) vede SOLO la lista da servire.
   if (role !== 'bartender') return <ServiceQueue />
 
-  const items = isDevEnvironment ? [...NAV_ITEMS, ['dev', '🛠', 'Dev']] : NAV_ITEMS
-
-  function go(id) {
-    setTab(id)
-    setNavOpen(false)
-  }
-
   return (
     <div>
-      <button className="bar-burger" aria-label="Menu" onClick={() => setNavOpen(true)}>
-        ☰
-      </button>
-      <div
-        className={`bar-nav-overlay${navOpen ? ' open' : ''}`}
-        onClick={() => setNavOpen(false)}
-      />
-      <nav className={`bar-sidebar${navOpen ? ' open' : ''}`}>
-        <div className="brand-mini">
-          <img src={`${import.meta.env.BASE_URL}logo.png`} alt="" />
-          Gestionale
-        </div>
-        {items.map(([id, icon, label]) => (
-          <div
-            key={id}
-            className={`bar-nav-item${tab === id ? ' active' : ''}`}
-            onClick={() => go(id)}
-          >
-            <span>{icon}</span> {label}
-          </div>
-        ))}
-        <div className="bar-nav-sep" />
-        <Link
-          to="/"
-          className="bar-nav-item"
-          style={{ textDecoration: 'none' }}
-          onClick={() => setNavOpen(false)}
-        >
-          <span>✍️</span> Nuovo ordine
-        </Link>
-        <div className="bar-nav-item" onClick={() => signOut(auth)}>
-          <span>🚪</span> Esci
-        </div>
-      </nav>
+      <StaffDrawer role="bartender" active={tab} onSelect={setTab} />
 
       <div className="bar-content">
         {tab === 'coda' && <OrderQueue />}
