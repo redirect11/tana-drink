@@ -105,19 +105,17 @@ export default function ServiceQueue() {
 
   return (
     <div>
-      <div className="card row between" style={{ alignItems: 'center' }}>
-        <div>
-          <strong>🫱 Servizio ai tavoli</strong>
-          <div className="muted">
-            {serata === undefined
-              ? 'Carico…'
-              : serata
-                ? `${daServire.length} da servire`
-                : 'Nessuna serata aperta'}
-          </div>
+      <div className="card">
+        <strong>🫱 Servizio ai tavoli</strong>
+        <div className="muted">
+          {serata === undefined
+            ? 'Carico…'
+            : serata
+              ? `${daServire.length} da servire`
+              : 'Nessuna serata aperta'}
         </div>
-        <Link className="btn small" to="/">
-          ✍️ Nuovo ordine
+        <Link className="btn block" style={{ marginTop: 12 }} to="/">
+          ✍️ Nuovo ordine dal menù
         </Link>
       </div>
 

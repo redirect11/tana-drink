@@ -41,19 +41,17 @@ export default function StaffMyOrders() {
 
   return (
     <div>
-      <div className="card row between" style={{ alignItems: 'center' }}>
-        <div>
-          <strong>🧾 I miei ordini</strong>
-          <div className="muted">
-            {serata === undefined
-              ? 'Carico…'
-              : serata
-                ? `${miei.length} inseriti da te in questa serata`
-                : 'Nessuna serata aperta'}
-          </div>
+      <div className="card">
+        <strong>🧾 I miei ordini</strong>
+        <div className="muted">
+          {serata === undefined
+            ? 'Carico…'
+            : serata
+              ? `${miei.length} inseriti da te in questa serata`
+              : 'Nessuna serata aperta'}
         </div>
-        <Link className="btn small" to="/">
-          ✍️ Nuovo ordine
+        <Link className="btn block" style={{ marginTop: 12 }} to="/">
+          ✍️ Nuovo ordine dal menù
         </Link>
       </div>
 
