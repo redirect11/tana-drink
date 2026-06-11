@@ -43,6 +43,8 @@ jobs:
           VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
           # Chiave VAPID per le notifiche push (Console → Cloud Messaging → Web Push certificates)
           VITE_FIREBASE_VAPID_KEY: ${{ secrets.VITE_FIREBASE_VAPID_KEY }}
+          # Chiave reCAPTCHA v3 per App Check (captcha ordini)
+          VITE_RECAPTCHA_SITE_KEY: ${{ secrets.VITE_RECAPTCHA_SITE_KEY }}
         run: npm run build
 
       # Deploy delle Functions (richiede la Cloud Build API, attiva col piano Blaze).

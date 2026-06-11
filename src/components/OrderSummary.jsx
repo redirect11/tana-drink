@@ -6,13 +6,14 @@ import { queueEtaMinutes } from '../lib/eta.js'
 // Riepilogo ordine in stile scontrino, mostrato prima della conferma.
 // Calcola coperto (per persona), costo di servizio (percentuale) o mancia
 // (importo libero) in base alle impostazioni del bar.
-export default function OrderSummary({ cart, settings, serata, tableLabel, staff, sending, onConfirm, onCancel }) {
+export default function OrderSummary({ cart, settings, serata, tableLabel, staff, customerProfile, sending, onConfirm, onCancel }) {
   const [persons, setPersons] = useState(1)
   const [tip, setTip] = useState('')
   const [note, setNote] = useState('')
   const [tavolo, setTavolo] = useState(tableLabel || '')
-  const [nome, setNome] = useState('')
-  const [cognome, setCognome] = useState('')
+  // Precompilati dal profilo per i clienti con account.
+  const [nome, setNome] = useState(customerProfile?.nome || '')
+  const [cognome, setCognome] = useState(customerProfile?.cognome || '')
   const [mode, setMode] = useState(() =>
     settings.service_mode === 'banco' ? 'banco' : 'tavolo'
   )

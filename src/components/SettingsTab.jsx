@@ -186,6 +186,91 @@ export default function SettingsTab() {
       <CatalogImport />
 
       <div className="card settings-section">
+        <h3>Account clienti</h3>
+        <ToggleRow
+          label="Login e registrazione clienti"
+          desc="Se disattivato, il link «Accedi» e la registrazione spariscono dal lato cliente; lo staff continua ad accedere da /bar."
+          checked={settings.customer_accounts_enabled}
+          onChange={(v) => save({ customer_accounts_enabled: v })}
+        />
+      </div>
+
+      <div className="card settings-section">
+        <h3>Posizione locale</h3>
+        <ToggleRow
+          label="Posizione obbligatoria per ordinare"
+          desc="Il cliente deve trovarsi nei pressi del locale: senza localizzazione attiva non può ordinare. Lo staff è esente."
+          checked={settings.geofence_enabled}
+          onChange={(v) => save({ geofence_enabled: v })}
+        />
+        {settings.geofence_enabled && (
+          <>
+            <label htmlFor="venue-addr">Indirizzo del locale</label>
+            <input
+              id="venue-addr"
+              type="text"
+              placeholder="es. Via Roma 1, Nola"
+              defaultValue={settings.venue_address}
+              onBlur={(e) => save({ venue_address: e.target.value.trim() })}
+            />
+            <div className="grid-2" style={{ marginTop: 10 }}>
+              <div>
+                <label htmlFor="venue-lat">Latitudine</label>
+                <input
+                  id="venue-lat"
+                  type="number"
+                  step="0.000001"
+                  defaultValue={settings.venue_lat ?? ''}
+                  onBlur={(e) => save({ venue_lat: e.target.value === '' ? null : Number(e.target.value) })}
+                />
+              </div>
+              <div>
+                <label htmlFor="venue-lng">Longitudine</label>
+                <input
+                  id="venue-lng"
+                  type="number"
+                  step="0.000001"
+                  defaultValue={settings.venue_lng ?? ''}
+                  onBlur={(e) => save({ venue_lng: e.target.value === '' ? null : Number(e.target.value) })}
+                />
+              </div>
+            </div>
+            <div className="toggle-row">
+              <span>Raggio consentito (metri)</span>
+              <AmountInput
+                value={settings.venue_radius_m}
+                min={10}
+                max={5000}
+                step={10}
+                onCommit={(v) => save({ venue_radius_m: v })}
+              />
+            </div>
+            <button
+              className="btn secondary block"
+              type="button"
+              onClick={() => {
+                navigator.geolocation?.getCurrentPosition(
+                  (pos) =>
+                    save({
+                      venue_lat: Number(pos.coords.latitude.toFixed(6)),
+                      venue_lng: Number(pos.coords.longitude.toFixed(6)),
+                    }),
+                  () => setError('Posizione non disponibile: inserisci le coordinate a mano.')
+                )
+              }}
+            >
+              📍 Usa la mia posizione attuale
+            </button>
+            {settings.venue_lat == null && (
+              <p className="muted small" style={{ margin: '8px 0 0' }}>
+                ⚠️ Senza coordinate il controllo non è attivo.
+              </p>
+            )}
+          </>
+        )}
+      </div>
+
+      <div className="card settings-section">
         <h3>Annullamenti</h3>
         <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
           Frase proposta di default quando annulli un ordine (modificabile di

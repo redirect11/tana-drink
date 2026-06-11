@@ -25,12 +25,14 @@ const call = (data) => httpsCallable(functions, 'staffAdmin')(data).then((r) => 
 export async function listStaff() {
   if (!isEmulator) return (await call({ action: 'list' })).users
   const res = await emulatorRequest('accounts:query', {})
-  return (res.userInfo || []).map((u) => ({
-    uid: u.localId,
-    email: u.email,
-    role: safeRole(u.customAttributes),
-    disabled: !!u.disabled,
-  }))
+  return (res.userInfo || [])
+    .map((u) => ({
+      uid: u.localId,
+      email: u.email,
+      role: safeRole(u.customAttributes),
+      disabled: !!u.disabled,
+    }))
+    .filter((u) => u.role === 'bartender' || u.role === 'staff')
 }
 
 export async function createStaff({ email, password, role }) {
@@ -58,8 +60,8 @@ export async function removeStaff(uid) {
 
 function safeRole(customAttributes) {
   try {
-    return JSON.parse(customAttributes || '{}').role || 'bartender'
+    return JSON.parse(customAttributes || '{}').role || 'cliente'
   } catch {
-    return 'bartender'
+    return 'cliente'
   }
 }

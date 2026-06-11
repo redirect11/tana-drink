@@ -19,9 +19,11 @@ import {
 } from '../lib/orderStatus.js'
 import { formatQty } from '../lib/inventory.js'
 import { etaForMode } from '../lib/eta.js'
+import { checkGeofence, geofenceConfigured } from '../lib/geo.js'
 import { ensureNotificationPermission } from '../lib/notify.js'
 import { getPushToken } from '../lib/push.js'
 import { isFirebaseConfigured, auth } from '../lib/firebaseClient.js'
+import { useCustomer } from '../lib/customerAuth.js'
 import { onAuthStateChanged } from 'firebase/auth'
 import OrderSummary from '../components/OrderSummary.jsx'
 
@@ -41,6 +43,8 @@ export default function MenuPage() {
   // Staff loggato (bartender/cameriera): gli ordini fatti da qui vengono
   // marcati come manuali con chi li ha inseriti.
   const [staff, setStaff] = useState(null) // { email, role } | null
+  // Account cliente (null per anonimi e staff): ordini legati al profilo.
+  const { user: customer, profile: customerProfile } = useCustomer()
 
   useEffect(() => {
     if (!isFirebaseConfigured) return
@@ -48,9 +52,11 @@ export default function MenuPage() {
       if (!u) return setStaff(null)
       try {
         const token = await u.getIdTokenResult()
-        setStaff({ email: u.email, role: token.claims.role ?? 'bartender' })
+        const role = token.claims.role
+        // Solo bartender/staff: i clienti registrati ordinano come clienti.
+        setStaff(role === 'bartender' || role === 'staff' ? { email: u.email, role } : null)
       } catch {
-        setStaff({ email: u.email, role: 'bartender' })
+        setStaff(null)
       }
     })
   }, [])
@@ -177,13 +183,35 @@ export default function MenuPage() {
       .map((g) => [g.name, g.list])
   }, [drinks, cats])
 
-  function handleReviewOrder() {
+  const [checkingGeo, setCheckingGeo] = useState(false)
+
+  async function handleReviewOrder() {
     if (cart.items.length === 0) return
     if (!serata) {
       setError('Il servizio è chiuso: nessuna serata aperta.')
       return
     }
     setError(null)
+
+    // Verifica di prossimità al locale (lo staff è esente).
+    if (!staff && geofenceConfigured(settings)) {
+      setCheckingGeo(true)
+      const geo = await checkGeofence(settings)
+      setCheckingGeo(false)
+      if (geo.status === 'denied' || geo.status === 'unsupported') {
+        setError(
+          '📍 Attiva la localizzazione per ordinare: serve a verificare che sei al locale.'
+        )
+        return
+      }
+      if (geo.status === 'out_of_range') {
+        setError(
+          `📍 Devi essere al locale per ordinare (sei a ~${geo.distance} m, massimo ${geo.radius} m).`
+        )
+        return
+      }
+    }
+
     setShowSummary(true)
   }
 
@@ -203,6 +231,7 @@ export default function MenuPage() {
         serata_id: serata.id,
         push_token,
         placed_by: staff, // null per i clienti
+        customer_uid: customer?.uid ?? null,
         ...extraCharges,
       })
       rememberOrderId(order.id)
@@ -436,10 +465,10 @@ export default function MenuPage() {
             </div>
             <button
               className="btn"
-              disabled={sending || closed}
+              disabled={sending || closed || checkingGeo}
               onClick={handleReviewOrder}
             >
-              {closed ? 'Chiuso' : 'Rivedi ordine'}
+              {closed ? 'Chiuso' : checkingGeo ? '📍 Verifico…' : 'Rivedi ordine'}
             </button>
           </div>
         </div>
@@ -472,6 +501,7 @@ export default function MenuPage() {
           serata={serata}
           tableLabel={tableLabel}
           staff={staff}
+          customerProfile={customerProfile}
           sending={sending}
           onConfirm={handleConfirmOrder}
           onCancel={() => !sending && setShowSummary(false)}

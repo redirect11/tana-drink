@@ -5,11 +5,11 @@
 
 const ROLES = ['bartender', 'staff']
 
-// Ruolo effettivo del chiamante: i token senza claim sono bartender
-// (retrocompatibilità con gli account creati prima dei ruoli).
+// Ruolo effettivo del chiamante: senza claim è un cliente registrato
+// (nessun privilegio gestionale).
 function callerRole(auth) {
   if (!auth) return null
-  return auth.token?.role ?? 'bartender'
+  return auth.token?.role ?? 'cliente'
 }
 
 // Esegue un'azione di amministrazione staff. Lancia { code, message }
@@ -23,13 +23,17 @@ async function staffAdmin(adminAuth, auth, data) {
   if (action === 'list') {
     const res = await adminAuth.listUsers(1000)
     return {
-      users: res.users.map((u) => ({
-        uid: u.uid,
-        email: u.email,
-        role: u.customClaims?.role ?? 'bartender',
-        disabled: u.disabled,
-        created_at: u.metadata?.creationTime ?? null,
-      })),
+      // Solo membri dello staff: i clienti registrati (senza claim) non
+      // compaiono nel backoffice.
+      users: res.users
+        .map((u) => ({
+          uid: u.uid,
+          email: u.email,
+          role: u.customClaims?.role ?? 'cliente',
+          disabled: u.disabled,
+          created_at: u.metadata?.creationTime ?? null,
+        }))
+        .filter((u) => ROLES.includes(u.role)),
     }
   }
 

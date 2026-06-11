@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { fetchOrdersByIds } from '../lib/api.js'
+import { fetchOrdersByIds, fetchOrdersByCustomer } from '../lib/api.js'
 import { getMyOrderIds } from '../lib/cart.js'
+import { useCustomer } from '../lib/customerAuth.js'
 import {
   STATUS_LABELS,
   STATUS_EMOJI,
@@ -12,18 +13,36 @@ export default function MyOrdersPage() {
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const { user, loading: authLoading } = useCustomer()
 
   useEffect(() => {
+    if (authLoading) return
     const ids = getMyOrderIds()
-    if (ids.length === 0) {
+    if (ids.length === 0 && !user) {
       setLoading(false)
       return
     }
-    fetchOrdersByIds(ids)
-      .then(setOrders)
+    // Con account: unione tra gli ordini del profilo (tutti i dispositivi)
+    // e quelli salvati su questo dispositivo.
+    Promise.all([
+      ids.length ? fetchOrdersByIds(ids) : Promise.resolve([]),
+      user ? fetchOrdersByCustomer(user.uid).catch(() => []) : Promise.resolve([]),
+    ])
+      .then(([byId, byAccount]) => {
+        const seen = new Set()
+        const merged = [...byAccount, ...byId].filter((o) => {
+          if (seen.has(o.id)) return false
+          seen.add(o.id)
+          return true
+        })
+        merged.sort((a, b) =>
+          String(b.created_at || '').localeCompare(String(a.created_at || ''))
+        )
+        setOrders(merged)
+      })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false))
-  }, [])
+  }, [authLoading, user])
 
   if (loading) return <div className="empty">Carico i tuoi ordini…</div>
   if (error) return <div className="banner">Errore: {error}</div>
