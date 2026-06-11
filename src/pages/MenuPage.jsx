@@ -345,7 +345,8 @@ export default function MenuPage() {
                         {d.description}
                       </p>
                     )}
-                    {d.recipe_items && d.recipe_items.length > 0 && (
+                    {/* Con un solo ingrediente la lista è ridondante (es. shot). */}
+                    {d.recipe_items && d.recipe_items.length > 1 && (
                       <p className="ingredients">
                         {d.recipe_items
                           .map((r) =>
