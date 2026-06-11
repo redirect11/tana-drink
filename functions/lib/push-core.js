@@ -15,10 +15,11 @@ function decideOrderPush(before, after) {
   if (!before || before.status === after.status) return null
 
   if (after.status === 'pronto') {
-    return {
-      title: '🔔 Il tuo drink è pronto!',
-      body: `Ordine #${after.daily_number ?? '—'} pronto al ritiro.`,
-    }
+    // Al tavolo non si ritira nulla: arriva il servizio.
+    const body = after.service_mode === 'tavolo'
+      ? `Ordine #${after.daily_number ?? '—'}: il drink verrà servito il prima possibile.`
+      : `Ordine #${after.daily_number ?? '—'} pronto al ritiro.`
+    return { title: '🔔 Il tuo drink è pronto!', body }
   }
 
   if (

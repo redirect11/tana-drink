@@ -58,7 +58,9 @@ export default function OrderStatusPage() {
         ) {
           notify(
             '🔔 Il tuo drink è pronto!',
-            `Ordine #${updated.daily_number} pronto al ritiro.`
+            updated.service_mode === 'tavolo'
+              ? `Ordine #${updated.daily_number}: il drink verrà servito il prima possibile.`
+              : `Ordine #${updated.daily_number} pronto al ritiro.`
           )
         }
         // Annullamento da parte del bartender con notifica richiesta.

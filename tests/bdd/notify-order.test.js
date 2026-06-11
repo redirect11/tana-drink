@@ -23,10 +23,17 @@ describe('decideOrderPush', () => {
     expect(decideOrderPush({ ...base, status: 'pronto' }, { ...base, status: 'pronto' })).toBeNull()
   })
 
-  it('notifica quando il drink è pronto', () => {
-    const msg = decideOrderPush(base, { ...base, status: 'pronto' })
+  it('notifica quando il drink è pronto (ritiro al banco)', () => {
+    const msg = decideOrderPush(base, { ...base, status: 'pronto', service_mode: 'banco' })
     expect(msg.title).toContain('pronto')
     expect(msg.body).toContain('#7')
+    expect(msg.body).toContain('ritiro')
+  })
+
+  it('al tavolo annuncia il servizio, non il ritiro', () => {
+    const msg = decideOrderPush(base, { ...base, status: 'pronto', service_mode: 'tavolo' })
+    expect(msg.body).toContain('servito il prima possibile')
+    expect(msg.body).not.toContain('ritiro')
   })
 
   it('non notifica il passaggio a in_preparazione o ritirato', () => {
