@@ -291,6 +291,7 @@ function OrderQueue() {
   const [slowLoad, setSlowLoad] = useState(false)
   const [confirmAction, setConfirmAction] = useState(null) // { title, message, danger, run }
   const [cancelTarget, setCancelTarget] = useState(null) // { order, kind }
+  const [search, setSearch] = useState('')
   const [report, setReport] = useState(null) // resoconto mostrato dopo la chiusura
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   const knownIds = useRef(new Set())
@@ -454,7 +455,19 @@ function OrderQueue() {
   }
 
   const recap = serataRecap(orders)
-  const buckets = bucketByStatus(orders)
+  // Ricerca rapida: numero, cliente, tavolo, drink, chi ha inserito.
+  const q = search.trim().toLowerCase()
+  const visibleOrders = q
+    ? orders.filter(
+        (o) =>
+          String(o.daily_number ?? '').includes(q) ||
+          o.customer_name?.toLowerCase().includes(q) ||
+          o.table_label?.toLowerCase().includes(q) ||
+          o.placed_by?.email?.toLowerCase().includes(q) ||
+          (o.order_items || []).some((i) => i.name?.toLowerCase().includes(q))
+      )
+    : orders
+  const buckets = bucketByStatus(visibleOrders)
   const listView = settings.queue_view === 'lista'
   const list = buckets[statusTab] || []
   // Vista a lista unica: ordini in corso (per numero) + evasi.
@@ -578,6 +591,15 @@ function OrderQueue() {
           ⏹ Chiudi serata
         </button>
       </div>
+
+      <input
+        type="search"
+        className="menu-search"
+        placeholder="🔍 Cerca per numero, cliente, tavolo, drink…"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        style={{ marginTop: 8 }}
+      />
 
       {listView ? (
         <>

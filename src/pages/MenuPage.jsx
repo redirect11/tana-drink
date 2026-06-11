@@ -168,10 +168,23 @@ export default function MenuPage() {
     }
   }, [serataId])
 
+  // Ricerca rapida (solo staff: utile sul catalogo grande per gli ordini manuali).
+  const [search, setSearch] = useState('')
+
   const categories = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    const filtered = q
+      ? drinks.filter(
+          (d) =>
+            d.name?.toLowerCase().includes(q) ||
+            d.category?.toLowerCase().includes(q) ||
+            d.description?.toLowerCase().includes(q) ||
+            d.recipe_items?.some((r) => r.name?.toLowerCase().includes(q))
+        )
+      : drinks
     const byId = new Map(cats.map((c) => [c.id, c]))
     const groups = new Map() // key -> { name, sort, list }
-    for (const d of drinks) {
+    for (const d of filtered) {
       const cat = byId.get(d.category_id)
       const name = cat?.name || d.category || 'Altro'
       const sort = cat ? cat.sort_order : 9999
@@ -181,7 +194,7 @@ export default function MenuPage() {
     return [...groups.values()]
       .sort((a, b) => (a.sort - b.sort) || a.name.localeCompare(b.name))
       .map((g) => [g.name, g.list])
-  }, [drinks, cats])
+  }, [drinks, cats, search])
 
   const [checkingGeo, setCheckingGeo] = useState(false)
 
@@ -374,6 +387,20 @@ export default function MenuPage() {
         <div className="empty">
           Nessun drink disponibile al momento.
         </div>
+      )}
+
+      {staff && (
+        <input
+          type="search"
+          className="menu-search"
+          placeholder="🔍 Cerca drink, categoria, ingrediente…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      )}
+
+      {staff && search && categories.length === 0 && (
+        <div className="empty">Nessun risultato per «{search}».</div>
       )}
 
       {categories.length > 1 && (
