@@ -22,16 +22,25 @@ const fmtQty = (u) =>
   u.unit === 'pz' ? `${u.qty} pz` : u.qty >= 1000 ? `${(u.qty / 1000).toFixed(1)} L` : `${Math.round(u.qty)} ml`
 
 // Statistiche del locale: calcolate dagli ordini delle serate chiuse.
+const PERIOD_PRESETS = [7, 10, 20, 30, 60]
+
 export default function StatsTab() {
   const [serate, setSerate] = useState(null)
   const [orders, setOrders] = useState([])
   const [drinks, setDrinks] = useState([])
   const [error, setError] = useState(null)
-  const [period, setPeriod] = useState(10) // ultime N serate (0 = tutte)
+  const [period, setPeriod] = useState(10) // ultime N serate
+  const [custom, setCustom] = useState(false)
+  const [customInput, setCustomInput] = useState('15')
+  const effective = custom ? Math.max(1, Number(customInput) || 1) : period
+  // Carica abbastanza serate da coprire il periodo scelto (min 60).
+  const [loadLimit, setLoadLimit] = useState(60)
+  if (effective > loadLimit) setLoadLimit(Math.ceil(effective / 30) * 30)
 
   useEffect(() => {
     let active = true
-    Promise.all([fetchClosedSerate(60), fetchDrinks({}).catch(() => [])])
+    setSerate(null)
+    Promise.all([fetchClosedSerate(loadLimit), fetchDrinks({}).catch(() => [])])
       .then(async ([s, d]) => {
         if (!active) return
         setSerate(s)
@@ -43,11 +52,11 @@ export default function StatsTab() {
     return () => {
       active = false
     }
-  }, [])
+  }, [loadLimit])
 
   const view = useMemo(() => {
     if (!serate) return null
-    const sel = period > 0 ? serate.slice(0, period) : serate
+    const sel = serate.slice(0, effective)
     const ids = new Set(sel.map((s) => s.id))
     const ord = orders.filter((o) => ids.has(o.serata_id))
     const drinksById = Object.fromEntries(drinks.map((d) => [d.id, d]))
@@ -63,7 +72,7 @@ export default function StatsTab() {
       split: serviceModeSplit(ord),
       extras: extrasBreakdown(ord),
     }
-  }, [serate, orders, drinks, period])
+  }, [serate, orders, drinks, effective])
 
   if (error) return <div className="banner">Errore: {error}</div>
   if (!serate) return <div className="empty">Carico le statistiche…</div>
@@ -79,17 +88,41 @@ export default function StatsTab() {
 
   return (
     <div>
-      <div className="mode-choice" style={{ marginBottom: 14 }}>
-        {[[10, 'Ultime 10 serate'], [0, `Tutte (${serate.length})`]].map(([v, label]) => (
+      <div className="chips-row" style={{ marginBottom: 6 }}>
+        {PERIOD_PRESETS.map((v) => (
           <button
             key={v}
-            className={`mode-option${period === v ? ' active' : ''}`}
-            onClick={() => setPeriod(v)}
+            className={`chip${!custom && period === v ? ' active' : ''}`}
+            onClick={() => {
+              setCustom(false)
+              setPeriod(v)
+            }}
           >
-            {label}
+            Ultime {v}
           </button>
         ))}
+        <button
+          className={`chip${custom ? ' active' : ''}`}
+          onClick={() => setCustom(true)}
+        >
+          Personalizzato
+        </button>
+        {custom && (
+          <input
+            className="setting-amount"
+            type="number"
+            min="1"
+            value={customInput}
+            onChange={(e) => setCustomInput(e.target.value)}
+            style={{ width: 80 }}
+            aria-label="Numero di serate"
+          />
+        )}
       </div>
+      <p className="muted small" style={{ margin: '0 0 12px' }}>
+        Statistiche sulle ultime {Math.min(effective, serate.length)} serate
+        {serate.length < effective ? ` (${serate.length} disponibili)` : ''}.
+      </p>
 
       {/* KPI */}
       <div className="kpi-grid">
