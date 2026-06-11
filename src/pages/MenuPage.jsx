@@ -199,7 +199,9 @@ export default function MenuPage() {
 
   const closed = serata === null
   const menuOnly = settings.menu_only
-  const canOrder = !menuOnly
+  // Si può ordinare solo con serata aperta e modalità ordinazione attiva:
+  // a serata chiusa spariscono anche i pulsanti "Aggiungi" e il carrello.
+  const canOrder = !menuOnly && !closed
 
   // Tempo stimato mostrato nel menù: per la modalità "entrambi" usa la stima
   // fino al "pronto" (parte comune); il riepilogo ordine poi la adatta alla
