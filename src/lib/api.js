@@ -119,6 +119,7 @@ function mapOrder(snap) {
     service_charge_amount: o.service_charge_amount ?? 0,
     tip_amount: o.tip_amount ?? 0,
     service_mode: o.service_mode ?? null,
+    placed_by: o.placed_by ?? null,
     status_times: o.status_times ?? {},
     cancelled_by: o.cancelled_by ?? null,
     cancel_kind: o.cancel_kind ?? null,
@@ -442,6 +443,7 @@ export async function createOrder({
   tip_amount = 0,
   service_mode = null, // 'tavolo' | 'banco' | null (scelta non attiva)
   push_token = null, // token FCM del dispositivo (per le notifiche push)
+  placed_by = null, // { email, role } se inserito manualmente dallo staff
 }) {
   if (!serata_id) throw new Error('Nessuna serata aperta: ordini non disponibili.')
   const itemsTotal = items.reduce((s, i) => s + i.qty * Number(i.price || 0), 0)
@@ -470,6 +472,7 @@ export async function createOrder({
       tip_amount,
       service_mode,
       push_token,
+      placed_by,
       created_at: serverTimestamp(),
       items: items.map((i) => ({
         drink_id: i.drink_id,

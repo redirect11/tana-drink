@@ -21,7 +21,9 @@ import {
 } from '../lib/orderStatus.js'
 import { queueEtaMinutes } from '../lib/eta.js'
 import { ensureNotificationPermission, notify } from '../lib/notify.js'
+import { rememberOrderId } from '../lib/cart.js'
 import ConfirmDialog from '../components/ConfirmDialog.jsx'
+import QRCode from 'qrcode'
 
 export default function OrderStatusPage() {
   const { id } = useParams()
@@ -92,6 +94,27 @@ export default function OrderStatusPage() {
       setEdits(order.order_items.map((i) => ({ ...i })))
     }
   }, [order, edits])
+
+  // Chi apre questa pagina (es. il cliente che scansiona il QR di un
+  // ordine manuale) se la ritrova in «I miei ordini».
+  useEffect(() => {
+    if (order?.id) rememberOrderId(order.id)
+  }, [order?.id])
+
+  // QR dell'ordine: per gli ordini manuali lo staff lo mostra al cliente,
+  // che scansionandolo aggancia l'ordine sul proprio telefono.
+  const [qr, setQr] = useState(null)
+  const [showQr, setShowQr] = useState(false)
+  useEffect(() => {
+    if (!showQr || qr) return
+    QRCode.toDataURL(window.location.href, {
+      width: 260,
+      margin: 1,
+      color: { dark: '#1c1305', light: '#f5f5f7' },
+    })
+      .then(setQr)
+      .catch(() => {})
+  }, [showQr, qr])
 
   // Impostazioni + serata aperta (per il tempo stimato personalizzato).
   useEffect(() => subscribeSettings((s) => setSettings(s)), [])
@@ -322,6 +345,28 @@ export default function OrderStatusPage() {
           <button className="btn" onClick={saveEdits} disabled={saving}>
             {saving ? 'Salvo…' : 'Salva modifiche'}
           </button>
+        </div>
+      )}
+
+      {order.placed_by && (
+        <div className="card" style={{ textAlign: 'center' }}>
+          <p className="muted" style={{ marginTop: 0, fontSize: '0.85rem' }}>
+            ✍️ Ordine inserito da {order.placed_by.email}
+          </p>
+          {!showQr ? (
+            <button className="btn secondary block" onClick={() => setShowQr(true)}>
+              📲 Mostra QR al cliente
+            </button>
+          ) : qr ? (
+            <>
+              <img src={qr} alt="QR ordine" style={{ borderRadius: 12, maxWidth: 260 }} />
+              <p className="muted" style={{ fontSize: '0.82rem', margin: '8px 0 0' }}>
+                Il cliente scansiona e segue l’ordine dal suo telefono.
+              </p>
+            </>
+          ) : (
+            <p className="muted">Genero il QR…</p>
+          )}
         </div>
       )}
 

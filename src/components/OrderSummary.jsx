@@ -6,10 +6,11 @@ import { queueEtaMinutes } from '../lib/eta.js'
 // Riepilogo ordine in stile scontrino, mostrato prima della conferma.
 // Calcola coperto (per persona), costo di servizio (percentuale) o mancia
 // (importo libero) in base alle impostazioni del bar.
-export default function OrderSummary({ cart, settings, serata, tableLabel, sending, onConfirm, onCancel }) {
+export default function OrderSummary({ cart, settings, serata, tableLabel, staff, sending, onConfirm, onCancel }) {
   const [persons, setPersons] = useState(1)
   const [tip, setTip] = useState('')
   const [note, setNote] = useState('')
+  const [tavolo, setTavolo] = useState(tableLabel || '')
   const [mode, setMode] = useState(() =>
     settings.service_mode === 'banco' ? 'banco' : 'tavolo'
   )
@@ -65,6 +66,8 @@ export default function OrderSummary({ cart, settings, serata, tableLabel, sendi
       tip_amount: tipAmount,
       service_mode: effectiveMode,
       note: note.trim() || null,
+      // Ordine manuale dello staff: il tavolo si indica qui.
+      ...(staff ? { table_label: tavolo.trim() || null } : {}),
     })
   }
 
@@ -74,8 +77,24 @@ export default function OrderSummary({ cart, settings, serata, tableLabel, sendi
         <div className="summary-head">
           <img src={`${import.meta.env.BASE_URL}logo.png`} alt="" />
           <h2>Riepilogo ordine</h2>
-          {tableLabel && <p className="muted" style={{ margin: 0 }}>Tavolo {tableLabel}</p>}
+          {!staff && tableLabel && <p className="muted" style={{ margin: 0 }}>Tavolo {tableLabel}</p>}
         </div>
+
+        {staff && (
+          <div className="row" style={{ gap: 10, marginTop: 8 }}>
+            <label htmlFor="tavolo-staff" style={{ margin: 0, whiteSpace: 'nowrap' }}>
+              Tavolo
+            </label>
+            <input
+              id="tavolo-staff"
+              type="text"
+              inputMode="numeric"
+              placeholder="es. 5 (vuoto = banco)"
+              value={tavolo}
+              onChange={(e) => setTavolo(e.target.value)}
+            />
+          </div>
+        )}
 
         {modeChoice && (
           <div className="mode-choice">
