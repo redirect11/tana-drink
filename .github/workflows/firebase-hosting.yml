@@ -57,12 +57,10 @@ jobs:
             --project "$PROJECT_ID" --force
           rm /tmp/sa.json
 
-      # Deploy delle regole Firestore + Storage (categorie/inventario/ordini e
-      # foto drink). Best-effort: se il service account non ha i permessi sulle
-      # Firebase Rules lo step non blocca il workflow — in tal caso pubblica le
-      # regole a mano dalla console (Firestore → Regole, Storage → Regole).
-      - name: Deploy Firestore & Storage rules
-        continue-on-error: true
+      # Deploy di regole Firestore (+ indici da firestore.indexes.json) e
+      # regole Storage. Il service account ha i ruoli necessari
+      # (firebaserules.admin, datastore.indexAdmin, serviceUsageConsumer).
+      - name: Deploy Firestore rules & indexes + Storage rules
         env:
           PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
           SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
