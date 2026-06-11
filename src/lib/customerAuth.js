@@ -1,7 +1,8 @@
 // Account clienti: registrazione con verifica email, login (email o
 // Google) e profilo su Firestore (customers/{uid}). Gli account cliente
 // NON hanno claim di ruolo: nessun privilegio gestionale.
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -15,6 +16,8 @@ import {
 } from 'firebase/auth'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { auth, db } from './firebaseClient.js'
+import { getMyOrderIds } from './cart.js'
+import { fetchOrdersByCustomer } from './api.js'
 
 const customerDoc = (uid) => doc(db, 'customers', uid)
 
@@ -100,6 +103,36 @@ export function useCustomer() {
   }, [])
 
   return state
+}
+
+// Hook: true se il cliente ha almeno un ordine — su questo dispositivo
+// (localStorage) o sul proprio account. Serve a mostrare «I miei ordini»
+// solo quando c'è davvero qualcosa da rivedere.
+export function useHasOrders() {
+  const { user, loading } = useCustomer()
+  const { pathname } = useLocation()
+  // Riletto a ogni navigazione: dopo un ordine si passa a /ordine/:id.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const hasLocal = useMemo(() => getMyOrderIds().length > 0, [pathname])
+  const [accountHas, setAccountHas] = useState(false)
+
+  useEffect(() => {
+    if (loading || !user) {
+      setAccountHas(false)
+      return
+    }
+    let active = true
+    fetchOrdersByCustomer(user.uid, 1)
+      .then((list) => {
+        if (active) setAccountHas(list.length > 0)
+      })
+      .catch(() => {})
+    return () => {
+      active = false
+    }
+  }, [loading, user])
+
+  return hasLocal || accountHas
 }
 
 // Messaggi di errore Firebase Auth in italiano.

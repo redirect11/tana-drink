@@ -11,6 +11,7 @@ import {
   logoutCustomer,
   updateCustomerProfile,
   useCustomer,
+  useHasOrders,
   authError,
 } from '../lib/customerAuth.js'
 
@@ -204,6 +205,7 @@ export function RegistratiPage() {
 // ── /profilo ──────────────────────────────────────────────────────────
 export function ProfiloPage() {
   const { user, profile, loading } = useCustomer()
+  const hasOrders = useHasOrders()
   const navigate = useNavigate()
   const [birth, setBirth] = useState('')
   const [info, setInfo] = useState(null)
@@ -270,7 +272,9 @@ export function ProfiloPage() {
         {info && <p className="muted small" style={{ marginTop: 10 }}>{info}</p>}
       </div>
 
-      <Link className="btn secondary block" to="/ordini">🧾 I miei ordini</Link>
+      {hasOrders && (
+        <Link className="btn secondary block" to="/ordini">🧾 I miei ordini</Link>
+      )}
       <button
         className="btn ghost block"
         style={{ marginTop: 8 }}

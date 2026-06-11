@@ -4,7 +4,7 @@ import OrderStatusPage from './pages/OrderStatusPage.jsx'
 import MyOrdersPage from './pages/MyOrdersPage.jsx'
 import BartenderPage from './pages/BartenderPage.jsx'
 import { AccediPage, RegistratiPage, ProfiloPage } from './pages/AccountPages.jsx'
-import { useCustomer } from './lib/customerAuth.js'
+import { useCustomer, useHasOrders } from './lib/customerAuth.js'
 import { isFirebaseConfigured, auth } from './lib/firebaseClient.js'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
 import { subscribeSettings, DEFAULT_SETTINGS } from './lib/api.js'
@@ -14,6 +14,7 @@ export default function App() {
   const location = useLocation()
   const onBackoffice = location.pathname.startsWith('/bar')
   const { user, profile } = useCustomer()
+  const hasOrders = useHasOrders()
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   useEffect(() => {
     if (!isFirebaseConfigured) return
@@ -50,7 +51,9 @@ export default function App() {
             <Link className="btn ghost small" to="/">Vista cliente</Link>
           ) : (
             <>
-              <Link className="btn ghost small" to="/ordini">I miei ordini</Link>
+              {hasOrders && (
+                <Link className="btn ghost small" to="/ordini">I miei ordini</Link>
+              )}
               {staffRole ? (
                 <>
                   <Link className="btn ghost small" to="/bar">
