@@ -1033,17 +1033,22 @@ a.order-mini {
 }
 
 /* Menu in modalità staff: ricerca e categorie restano fisse sotto la
-   topbar durante lo scroll (sfondo opaco: il contenuto ci passa sotto). */
-.menu-staff .menu-search {
+   topbar durante lo scroll. Il wrapper opaco dà aria attorno al campo
+   e copre il contenuto che scorre sotto. */
+.menu-staff .menu-search-wrap {
   position: sticky;
   top: 64px;
   z-index: 6;
+  padding: 10px 0;
+  background: #0e0e15;
+}
+
+.menu-staff .menu-search {
   margin-bottom: 0;
-  background: #1c1c23;
 }
 
 .menu-staff .cat-nav {
-  top: 105px;
+  top: 125px;
   padding-top: 10px;
 }
 
