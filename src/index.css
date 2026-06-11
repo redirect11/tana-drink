@@ -663,6 +663,254 @@ a.order-mini {
   line-height: 1;
 }
 
+/* ── Statistiche: KPI e grafici ──────────────────────────────── */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.kpi-card {
+  background: var(--card);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: var(--radius);
+  padding: 14px;
+  text-align: center;
+}
+
+.kpi-value {
+  font-family: var(--serif);
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: var(--accent-2);
+  line-height: 1.2;
+}
+
+.kpi-label {
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.kpi-sub {
+  font-size: 0.72rem;
+  color: var(--muted);
+  opacity: 0.8;
+}
+
+/* Barre verticali (trend serate / fasce orarie) */
+.vbars {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.vbar-col {
+  flex: 1;
+  min-width: 34px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.vbar-value {
+  font-size: 0.62rem;
+  color: var(--muted);
+  white-space: nowrap;
+  margin-bottom: 4px;
+}
+
+.vbar-track {
+  width: 100%;
+  max-width: 34px;
+  height: 110px;
+  display: flex;
+  align-items: flex-end;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.vbar-fill {
+  width: 100%;
+  background: linear-gradient(180deg, #f7c45e, #b9821f);
+  border-radius: 6px 6px 0 0;
+  min-height: 2px;
+}
+
+.vbar-label {
+  font-size: 0.62rem;
+  color: var(--muted);
+  margin-top: 6px;
+  white-space: nowrap;
+}
+
+/* Barre orizzontali (classifiche) */
+.hbars {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.hbar-row {
+  display: grid;
+  grid-template-columns: minmax(90px, 36%) 1fr auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.hbar-label {
+  font-size: 0.82rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hbar-track {
+  height: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.hbar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #b9821f, #f7c45e);
+  border-radius: 6px;
+  min-width: 2px;
+}
+
+.hbar-text {
+  font-size: 0.76rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* ── Navigazione laterale bartender ──────────────────────────── */
+.bar-burger {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 120;
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  background: rgba(14, 14, 21, 0.92);
+  color: var(--text);
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bar-nav-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 130;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s ease;
+}
+
+.bar-nav-overlay.open {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.bar-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 250px;
+  background: linear-gradient(170deg, var(--bg-2), var(--bg));
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  z-index: 140;
+  transform: translateX(-100%);
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  padding: 18px 0;
+  overflow-y: auto;
+}
+
+.bar-sidebar.open {
+  transform: translateX(0);
+}
+
+.bar-sidebar .brand-mini {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 18px 16px;
+  font-family: var(--serif);
+  font-weight: 700;
+}
+
+.bar-sidebar .brand-mini img {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1.5px rgba(245, 185, 74, 0.5);
+}
+
+.bar-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 18px;
+  color: var(--text);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  transition: background 0.15s ease;
+}
+
+.bar-nav-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.bar-nav-item.active {
+  border-left-color: var(--accent-2);
+  color: var(--accent-2);
+  background: rgba(245, 185, 74, 0.07);
+}
+
+.bar-nav-sep {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 10px 18px;
+}
+
+.bar-content {
+  padding-top: 46px;
+}
+
+@media (min-width: 900px) {
+  .bar-burger,
+  .bar-nav-overlay {
+    display: none;
+  }
+
+  .bar-sidebar {
+    transform: none;
+  }
+
+  /* L'app è centrata (max 760px): sposta il contenuto solo di quanto
+     serve perché non finisca sotto la sidebar. */
+  .bar-content {
+    margin-left: max(0px, calc(250px - (100vw - 760px) / 2));
+    padding-top: 0;
+  }
+}
+
 /* Card ordine: lo stato è leggibile dal bordo/tinta oltre che dalla pill */
 .order-card {
   border-left: 4px solid transparent;

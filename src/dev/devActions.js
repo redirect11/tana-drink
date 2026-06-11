@@ -13,7 +13,7 @@ import {
   DRINK_IMAGES,
   SEED_SETTINGS,
 } from './seedData.js'
-import { generateMockOrders } from './mockData.js'
+import { generateMockOrders, generateMockHistory } from './mockData.js'
 
 export const isDevEnvironment =
   String(import.meta.env.VITE_USE_FIREBASE_EMULATOR) === 'true'
@@ -126,6 +126,29 @@ export async function createMockSerata(onProgress = () => {}) {
   await setDoc(doc(db, 'counters', serataRef.id), { last: lastNumber }, { merge: true })
   await setDoc(serataRef, { prep_stats: prepStats, eta_stats: etaStats }, { merge: true })
   return orders.length
+}
+
+// Genera lo storico di serate passate chiuse (per le statistiche).
+export async function createMockHistory(onProgress = () => {}, nights = 12) {
+  const drinksSnap = await getDocs(collection(db, 'drinks'))
+  const drinks = drinksSnap.docs.map((d) => ({ id: d.id, ...d.data() }))
+  if (drinks.length === 0) throw new Error('Nessun drink nel database: esegui prima il seed o l\'import.')
+
+  const history = generateMockHistory(drinks, { nights })
+  let done = 0
+  for (const { serata, orders, lastNumber } of history) {
+    const { id, ...serataData } = serata
+    // closed_at come Date → Timestamp (stesso tipo di closeSerata reale).
+    serataData.closed_at = new Date(serata.closed_at)
+    await setDoc(doc(db, 'serate', id), serataData)
+    await setDoc(doc(db, 'counters', id), { last: lastNumber })
+    for (const o of orders) {
+      await addDoc(collection(db, 'orders'), o)
+    }
+    done++
+    onProgress(`Serata ${done}/${history.length} (${serata.opened_at.slice(0, 10)}, ${orders.length} ordini)…`)
+  }
+  return history.length
 }
 
 // Reset completo: svuota tutto e ripopola con seed + serata mock.
