@@ -5,7 +5,8 @@ import MyOrdersPage from './pages/MyOrdersPage.jsx'
 import BartenderPage from './pages/BartenderPage.jsx'
 import { AccediPage, RegistratiPage, ProfiloPage } from './pages/AccountPages.jsx'
 import { useCustomer } from './lib/customerAuth.js'
-import { isFirebaseConfigured } from './lib/firebaseClient.js'
+import { isFirebaseConfigured, auth } from './lib/firebaseClient.js'
+import { onAuthStateChanged, signOut } from 'firebase/auth'
 import { subscribeSettings, DEFAULT_SETTINGS } from './lib/api.js'
 import { useEffect, useState } from 'react'
 
@@ -20,6 +21,23 @@ export default function App() {
   }, [])
   const accountsOn = settings.customer_accounts_enabled
 
+  // Staff loggato (bartender o collaboratore): nel topbar lato cliente
+  // mostra il ruolo ed «Esci» al posto di «Accedi».
+  const [staffRole, setStaffRole] = useState(null)
+  useEffect(() => {
+    if (!isFirebaseConfigured) return
+    return onAuthStateChanged(auth, async (u) => {
+      if (!u) return setStaffRole(null)
+      try {
+        const token = await u.getIdTokenResult()
+        const role = token.claims.role
+        setStaffRole(role === 'bartender' || role === 'staff' ? role : null)
+      } catch {
+        setStaffRole(null)
+      }
+    })
+  }, [])
+
   return (
     <div className="app">
       <header className={`topbar${onBackoffice ? ' backoffice' : ''}`}>
@@ -33,7 +51,16 @@ export default function App() {
           ) : (
             <>
               <Link className="btn ghost small" to="/ordini">I miei ordini</Link>
-              {user ? (
+              {staffRole ? (
+                <>
+                  <Link className="btn ghost small" to="/bar">
+                    {staffRole === 'bartender' ? '🍸 Bartender' : '🫱 Staff'}
+                  </Link>
+                  <button className="btn ghost small" onClick={() => signOut(auth)}>
+                    Esci
+                  </button>
+                </>
+              ) : user ? (
                 <Link className="btn ghost small" to="/profilo">
                   👤 {profile?.nome || 'Profilo'}
                 </Link>
