@@ -28,7 +28,8 @@ import { onAuthStateChanged } from 'firebase/auth'
 import OrderSummary from '../components/OrderSummary.jsx'
 import StaffDrawer from '../components/StaffDrawer.jsx'
 
-const NOTIF_PROMPT_KEY = 'tana_notif_prompt_v1'
+const NOTIF_PROMPT_KEY = 'tana_notif_prompt_v1' // chiave storica
+const WELCOME_KEY = 'tana_welcome_v1'
 
 export default function MenuPage() {
   const [drinks, setDrinks] = useState([])
@@ -61,21 +62,18 @@ export default function MenuPage() {
       }
     })
   }, [])
-  // Opt-in notifiche al primo accesso: mostrato una sola volta, se il
-  // permesso non è già stato concesso o negato.
-  const [showNotifPrompt, setShowNotifPrompt] = useState(
-    () =>
-      'Notification' in window &&
-      Notification.permission === 'default' &&
-      !localStorage.getItem(NOTIF_PROMPT_KEY)
+  // Benvenuto al primo accesso: spiega come si ordina, il geofence e
+  // propone le notifiche. Una sola volta per dispositivo.
+  const [showWelcome, setShowWelcome] = useState(
+    () => !localStorage.getItem(WELCOME_KEY) && !localStorage.getItem(NOTIF_PROMPT_KEY)
   )
 
-  function dismissNotifPrompt(enable) {
+  function dismissWelcome(enableNotifications) {
     try {
-      localStorage.setItem(NOTIF_PROMPT_KEY, '1')
+      localStorage.setItem(WELCOME_KEY, '1')
     } catch { /* storage non disponibile */ }
-    setShowNotifPrompt(false)
-    if (enable) ensureNotificationPermission()
+    setShowWelcome(false)
+    if (enableNotifications) ensureNotificationPermission()
   }
   const [params] = useSearchParams()
   const navigate = useNavigate()
@@ -555,21 +553,56 @@ export default function MenuPage() {
         </div>
       )}
 
-      {showNotifPrompt && (
-        <div className="overlay confirm-overlay" onClick={() => dismissNotifPrompt(false)}>
-          <div className="confirm-box" onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginTop: 0 }}>🔔 Resta aggiornato</h3>
-            <p className="muted" style={{ marginTop: 0 }}>
-              Vuoi sapere quando il tuo drink è pronto o se c’è un problema con
-              il tuo ordine? Attiva le notifiche.
+      {showWelcome && !staff && (
+        <div className="overlay confirm-overlay" onClick={() => dismissWelcome(false)}>
+          <div className="confirm-box welcome-modal" onClick={(e) => e.stopPropagation()}>
+            <img
+              src={`${import.meta.env.BASE_URL}logo.png`}
+              alt=""
+              style={{ width: 56, height: 56, borderRadius: '50%', display: 'block', margin: '0 auto 8px' }}
+            />
+            <h3 style={{ margin: '0 0 4px', textAlign: 'center' }}>
+              Benvenuto alla Tana del Coniglio
+            </h3>
+            <p className="muted" style={{ margin: '0 0 14px', textAlign: 'center', fontSize: '0.88rem' }}>
+              Ecco come funziona l’ordinazione:
             </p>
+            <div className="welcome-steps">
+              <div className="welcome-step">
+                <span>🍸</span>
+                <span>Scegli i drink dal menù e aggiungili al carrello.</span>
+              </div>
+              <div className="welcome-step">
+                <span>🧾</span>
+                <span>Tocca «Rivedi ordine», lascia il tuo nome e conferma: l’ordine arriva dritto al bancone.</span>
+              </div>
+              {settings.geofence_enabled && (
+                <div className="welcome-step">
+                  <span>📍</span>
+                  <span>
+                    Per ordinare devi trovarti <strong>al locale</strong>: ti
+                    chiederemo la posizione solo per verificare che sei nei
+                    paraggi — non viene salvata.
+                  </span>
+                </div>
+              )}
+              <div className="welcome-step">
+                <span>🔔</span>
+                <span>
+                  Segui lo stato in tempo reale: con le notifiche attive ti
+                  avvisiamo noi quando il drink è pronto.
+                </span>
+              </div>
+            </div>
             <div className="row" style={{ gap: 10, marginTop: 16 }}>
-              <button className="btn ghost grow" onClick={() => dismissNotifPrompt(false)}>
-                Non ora
+              <button className="btn ghost grow" onClick={() => dismissWelcome(false)}>
+                Inizia
               </button>
-              <button className="btn grow" onClick={() => dismissNotifPrompt(true)}>
-                Attiva notifiche
-              </button>
+              {'Notification' in window && Notification.permission === 'default' && (
+                <button className="btn grow" onClick={() => dismissWelcome(true)}>
+                  🔔 Attiva notifiche
+                </button>
+              )}
             </div>
           </div>
         </div>

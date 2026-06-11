@@ -1189,6 +1189,26 @@ a.order-mini {
   box-shadow: 0 4px 14px rgba(231, 76, 60, 0.25);
 }
 
+/* Modal di benvenuto al primo accesso */
+.welcome-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.welcome-step {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.welcome-step > span:first-child {
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+
 /* Cerca-persone: chiamata in arrivo */
 .pager-call {
   text-align: center;
