@@ -18,7 +18,6 @@ import {
 } from '../lib/stats.js'
 
 const fmtMin = (m) => (m == null ? '—' : `${Math.round(m * 10) / 10} min`)
-const fmtHour = (h) => (h == null ? '—' : `${String(h).padStart(2, '0')}:00`)
 const fmtQty = (u) =>
   u.unit === 'pz' ? `${u.qty} pz` : u.qty >= 1000 ? `${(u.qty / 1000).toFixed(1)} L` : `${Math.round(u.qty)} ml`
 
@@ -99,7 +98,7 @@ export default function StatsTab() {
         <Kpi label="Scontrino medio" value={formatPrice(kpi.scontrinoMedio)} />
         <Kpi label="Drink venduti" value={kpi.drinkVenduti} sub={`${kpi.drinkPerOrdine.toFixed(1)}/ordine`} />
         <Kpi label="Incasso / serata" value={formatPrice(kpi.incassoPerSerata)} />
-        <Kpi label="Ora di punta" value={fmtHour(byHour.peakHour)} />
+        <Kpi label="Ora di punta" value={byHour.peakLabel ?? '—'} />
         <Kpi label="Attesa media" value={fmtMin(prep.attesaMedia)} />
         <Kpi label="Preparazione media" value={fmtMin(prep.prepMedia)} />
       </div>
@@ -118,7 +117,7 @@ export default function StatsTab() {
       <ChartCard title="🕙 Incasso per fascia oraria">
         <VBars
           data={byHour.buckets.map((b) => ({
-            label: fmtHour(b.hour),
+            label: b.label,
             value: b.incasso,
             sub: `${b.ordini} ordini`,
           }))}
