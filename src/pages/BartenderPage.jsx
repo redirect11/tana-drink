@@ -524,8 +524,8 @@ function OrderQueue() {
           {inCorso.length === 0 && <div className="empty">Nessun ordine in corso.</div>}
           {inCorso.map(renderCard)}
 
-          <h3 className="cat-header">Evasi ({evasi.length})</h3>
-          {evasi.length === 0 && <div className="empty">Ancora nessun ordine evaso.</div>}
+          <h3 className="cat-header">Serviti/Ritirati ({evasi.length})</h3>
+          {evasi.length === 0 && <div className="empty">Ancora nessun ordine servito o ritirato.</div>}
           {evasi.map(renderCard)}
         </>
       ) : (
