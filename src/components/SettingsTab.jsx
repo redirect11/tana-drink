@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react'
-import { subscribeSettings, updateSettings } from '../lib/api.js'
+import { useEffect, useRef, useState } from 'react'
+import { subscribeSettings, updateSettings, replaceCatalog } from '../lib/api.js'
 import { CANCEL_PHRASES } from '../lib/orderStatus.js'
+import { parseCarteCsv, decodeCsvBuffer } from '../lib/carteImport.js'
+import ConfirmDialog from './ConfirmDialog.jsx'
 
 // Impostazioni del bar (documento settings/bar). Ogni modifica viene salvata
 // subito; le pagine cliente le ricevono in tempo reale via subscribeSettings.
@@ -158,6 +160,8 @@ export default function SettingsTab() {
         />
       </div>
 
+      <CatalogImport />
+
       <div className="card settings-section">
         <h3>Annullamenti</h3>
         <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
@@ -176,6 +180,93 @@ export default function SettingsTab() {
           ))}
         </div>
       </div>
+    </div>
+  )
+}
+
+// Import del catalogo prodotti da un export CSV di SumUp ("carte").
+// Sostituisce drinks e categories dopo conferma con riepilogo.
+function CatalogImport() {
+  const fileRef = useRef(null)
+  const [parsed, setParsed] = useState(null) // { products, categories, skipped }
+  const [busy, setBusy] = useState(false)
+  const [log, setLog] = useState(null)
+  const [error, setError] = useState(null)
+
+  async function onPickFile(e) {
+    const file = e.target.files?.[0]
+    e.target.value = '' // permette di riselezionare lo stesso file
+    if (!file) return
+    setError(null)
+    setLog(null)
+    try {
+      const text = decodeCsvBuffer(await file.arrayBuffer())
+      setParsed(parseCarteCsv(text))
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  async function doImport() {
+    const data = parsed
+    setParsed(null)
+    setBusy(true)
+    setError(null)
+    try {
+      await replaceCatalog(data, (msg) => setLog(msg))
+      setLog(`✓ Importati ${data.products.length} prodotti in ${data.categories.length} categorie.`)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="card settings-section">
+      <h3>Catalogo prodotti</h3>
+      <div className="toggle-row" style={{ borderBottom: 'none' }}>
+        <div>
+          <div>Importa da CSV SumUp</div>
+          <div className="desc">
+            Carica l&apos;export prodotti («carte») di SumUp: sostituisce
+            l&apos;intero menù e le categorie. Foto e ricette esistenti
+            vengono perse.
+          </div>
+        </div>
+        <button
+          className="btn small"
+          disabled={busy}
+          onClick={() => fileRef.current?.click()}
+        >
+          {busy ? 'Importo…' : 'Carica CSV'}
+        </button>
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".csv,text/csv"
+          style={{ display: 'none' }}
+          onChange={onPickFile}
+        />
+      </div>
+      {error && <div className="banner">Errore: {error}</div>}
+      {log && <p className="muted small" style={{ margin: '6px 0 0' }}>{log}</p>}
+
+      {parsed && (
+        <ConfirmDialog
+          title="📦 Importare il catalogo?"
+          message={
+            `${parsed.products.length} prodotti in ${parsed.categories.length} categorie:\n` +
+            parsed.categories.join(', ') +
+            (parsed.skipped ? `\n\n(${parsed.skipped} righe non valide saltate)` : '') +
+            '\n\nIl menù attuale verrà sostituito.'
+          }
+          confirmLabel="Importa"
+          danger
+          onCancel={() => setParsed(null)}
+          onConfirm={doImport}
+        />
+      )}
     </div>
   )
 }

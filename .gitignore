@@ -28,3 +28,6 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+
+# Export CSV del POS (snapshot dati, non vanno in git)
+carte_*.csv
