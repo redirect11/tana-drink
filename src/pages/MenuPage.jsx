@@ -293,9 +293,13 @@ export default function MenuPage() {
       </div>
 
       {staff && !menuOnly && (
-        <div className="banner">
-          ✍️ Ordine manuale: verrà registrato come inserito da{' '}
-          <strong>{staff.email}</strong> ({staff.role}).
+        <div className="banner row between" style={{ alignItems: 'center', gap: 10 }}>
+          <span>
+            ✍️ Ordine manuale: inserito da <strong>{staff.email}</strong> ({staff.role}).
+          </span>
+          <Link className="btn ghost small" to="/bar" style={{ flexShrink: 0 }}>
+            🧾 Coda
+          </Link>
         </div>
       )}
 

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   signInWithEmailAndPassword,
   signOut,
@@ -124,6 +125,14 @@ export default function BartenderPage() {
           </div>
         ))}
         <div className="bar-nav-sep" />
+        <Link
+          to="/"
+          className="bar-nav-item"
+          style={{ textDecoration: 'none' }}
+          onClick={() => setNavOpen(false)}
+        >
+          <span>✍️</span> Nuovo ordine
+        </Link>
         <div className="bar-nav-item" onClick={() => signOut(auth)}>
           <span>🚪</span> Esci
         </div>

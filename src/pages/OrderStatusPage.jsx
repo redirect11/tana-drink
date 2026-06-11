@@ -369,6 +369,9 @@ export default function OrderStatusPage() {
           ) : (
             <p className="muted">Genero il QR…</p>
           )}
+          <Link className="btn block" style={{ marginTop: 10 }} to="/bar">
+            🧾 Torna al gestionale
+          </Link>
         </div>
       )}
 
