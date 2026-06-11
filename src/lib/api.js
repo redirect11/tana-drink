@@ -810,6 +810,28 @@ export function subscribeActiveOrders(onChange, onError) {
   )
 }
 
+// Serate chiuse più recenti (per le statistiche).
+export async function fetchClosedSerate(limitN = 30) {
+  const snap = await getDocs(
+    query(serateCol, where('status', '==', 'closed'), orderBy('closed_at', 'desc'), fbLimit(limitN))
+  )
+  return snap.docs.map(mapSerata)
+}
+
+// Tutti gli ordini di un insieme di serate (per le statistiche).
+// Firestore: massimo 30 valori per clausola "in" → suddivisione in blocchi.
+export async function fetchOrdersForSerate(serataIds) {
+  if (!serataIds || serataIds.length === 0) return []
+  const chunks = []
+  for (let i = 0; i < serataIds.length; i += 30) chunks.push(serataIds.slice(i, i + 30))
+  const results = []
+  for (const chunk of chunks) {
+    const snap = await getDocs(query(ordersCol, where('serata_id', 'in', chunk)))
+    results.push(...snap.docs.map(mapOrder))
+  }
+  return results
+}
+
 // Coda attiva di una serata (solo ricevuto/in_preparazione): usata per la
 // stima personalizzata dei tempi. `onChange` riceve [{daily_number, status}]
 // — dati minimi, gli altri ordini non vengono mostrati al cliente.

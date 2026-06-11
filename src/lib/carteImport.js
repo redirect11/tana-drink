@@ -154,8 +154,8 @@ export function recipeLinkFor(product) {
       return { invName: name, qty: 1, unit: 'pz' }
     case 'BIBITE':
       if (MIXERS.test(product.name)) {
-        const big = /^SUCCO/i.test(product.name)
-        return { invName: name, qty: 200, unit: 'ml' } // bottiglietta intera / bicchiere
+        // Bottiglietta intera o bicchiere di succo: ~200 ml.
+        return { invName: name, qty: 200, unit: 'ml' }
       }
       return { invName: name, qty: 1, unit: 'pz' }
     case 'VINO': {

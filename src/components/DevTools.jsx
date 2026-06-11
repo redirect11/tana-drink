@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import ConfirmDialog from './ConfirmDialog.jsx'
-import { clearDatabase, resetWithMockData } from '../dev/devActions.js'
+import { clearDatabase, resetWithMockData, createMockHistory } from '../dev/devActions.js'
 
 // Opzioni sviluppatore: visibili SOLO in ambiente emulatore (Docker locale
 // o ambiente di test). Permettono di svuotare il db o resettarlo coi mock.
@@ -62,6 +62,32 @@ export default function DevTools() {
             }
           >
             {busy ? '…' : 'Reset'}
+          </button>
+        </div>
+        <div className="toggle-row">
+          <div>
+            <div>Genera storico serate</div>
+            <div className="desc">
+              Aggiunge 12 serate passate chiuse con ordini, incassi e tempi
+              realistici: alimenta la sezione Statistiche.
+            </div>
+          </div>
+          <button
+            className="btn small"
+            disabled={busy}
+            onClick={() =>
+              setConfirm({
+                title: '📊 Generare lo storico?',
+                message: 'Verranno aggiunte 12 serate chiuse con ordini mock (i dati esistenti restano).',
+                run: () =>
+                  run(async (progress) => {
+                    const n = await createMockHistory(progress)
+                    progress(`Storico creato: ${n} serate.`)
+                  }),
+              })
+            }
+          >
+            Genera
           </button>
         </div>
         <div className="toggle-row">

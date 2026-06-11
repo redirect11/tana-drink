@@ -30,14 +30,24 @@ import { syncSumUpProducts, isSumUpEnabled } from '../lib/sumupApi.js'
 import MenuManager from '../components/MenuManager.jsx'
 import InventoryManager from '../components/InventoryManager.jsx'
 import SettingsTab from '../components/SettingsTab.jsx'
+import StatsTab from '../components/StatsTab.jsx'
 import ConfirmDialog from '../components/ConfirmDialog.jsx'
 import CancelOrderDialog from '../components/CancelOrderDialog.jsx'
 import DevTools from '../components/DevTools.jsx'
 import { isDevEnvironment } from '../dev/devActions.js'
 
+const NAV_ITEMS = [
+  ['coda', '🧾', 'Coda ordini'],
+  ['stats', '📊', 'Statistiche'],
+  ['menu', '🍸', 'Menù'],
+  ['inventario', '📦', 'Inventario'],
+  ['impostazioni', '⚙️', 'Impostazioni'],
+]
+
 export default function BartenderPage() {
   const [user, setUser] = useState(undefined) // undefined = caricamento, null = non loggato
   const [tab, setTab] = useState('coda')
+  const [navOpen, setNavOpen] = useState(false)
 
   useEffect(() => {
     return onAuthStateChanged(auth, (u) => setUser(u ?? null))
@@ -46,54 +56,50 @@ export default function BartenderPage() {
   if (user === undefined) return <div className="empty">Verifica accesso…</div>
   if (!user) return <LoginForm />
 
+  const items = isDevEnvironment ? [...NAV_ITEMS, ['dev', '🛠', 'Dev']] : NAV_ITEMS
+
+  function go(id) {
+    setTab(id)
+    setNavOpen(false)
+  }
+
   return (
     <div>
-      <div className="tabs">
-        <div
-          className={`tab ${tab === 'coda' ? 'active' : ''}`}
-          onClick={() => setTab('coda')}
-        >
-          🧾 Coda ordini
+      <button className="bar-burger" aria-label="Menu" onClick={() => setNavOpen(true)}>
+        ☰
+      </button>
+      <div
+        className={`bar-nav-overlay${navOpen ? ' open' : ''}`}
+        onClick={() => setNavOpen(false)}
+      />
+      <nav className={`bar-sidebar${navOpen ? ' open' : ''}`}>
+        <div className="brand-mini">
+          <img src={`${import.meta.env.BASE_URL}logo.png`} alt="" />
+          Gestionale
         </div>
-        <div
-          className={`tab ${tab === 'menu' ? 'active' : ''}`}
-          onClick={() => setTab('menu')}
-        >
-          🍸 Menù
-        </div>
-        <div
-          className={`tab ${tab === 'inventario' ? 'active' : ''}`}
-          onClick={() => setTab('inventario')}
-        >
-          📦 Inventario
-        </div>
-        <div
-          className={`tab ${tab === 'impostazioni' ? 'active' : ''}`}
-          onClick={() => setTab('impostazioni')}
-        >
-          ⚙️ Impostazioni
-        </div>
-        {isDevEnvironment && (
+        {items.map(([id, icon, label]) => (
           <div
-            className={`tab ${tab === 'dev' ? 'active' : ''}`}
-            onClick={() => setTab('dev')}
+            key={id}
+            className={`bar-nav-item${tab === id ? ' active' : ''}`}
+            onClick={() => go(id)}
           >
-            🛠 Dev
+            <span>{icon}</span> {label}
           </div>
-        )}
-        <button
-          className="btn ghost small"
-          style={{ marginLeft: 'auto', alignSelf: 'center', marginRight: 8 }}
-          onClick={() => signOut(auth)}
-        >
-          Esci
-        </button>
+        ))}
+        <div className="bar-nav-sep" />
+        <div className="bar-nav-item" onClick={() => signOut(auth)}>
+          <span>🚪</span> Esci
+        </div>
+      </nav>
+
+      <div className="bar-content">
+        {tab === 'coda' && <OrderQueue />}
+        {tab === 'stats' && <StatsTab />}
+        {tab === 'menu' && <MenuTab />}
+        {tab === 'inventario' && <InventoryManager />}
+        {tab === 'impostazioni' && <SettingsTab />}
+        {tab === 'dev' && isDevEnvironment && <DevTools />}
       </div>
-      {tab === 'coda' && <OrderQueue />}
-      {tab === 'menu' && <MenuTab />}
-      {tab === 'inventario' && <InventoryManager />}
-      {tab === 'impostazioni' && <SettingsTab />}
-      {tab === 'dev' && isDevEnvironment && <DevTools />}
     </div>
   )
 }
