@@ -1,4 +1,5 @@
 import { initializeApp } from 'firebase/app'
+import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check'
 import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore'
 import { getFunctions, connectFunctionsEmulator } from 'firebase/functions'
 import { getAuth, connectAuthEmulator } from 'firebase/auth'
@@ -36,6 +37,24 @@ export const app = initializeApp({
   messagingSenderId: firebaseConfig.messagingSenderId || '0',
   appId: firebaseConfig.appId || 'placeholder-app-id',
 })
+
+// App Check (anti-bot/captcha): reCAPTCHA v3 invisibile. Attivo solo se
+// la chiave è configurata; in sviluppo usa il debug token dell'emulatore.
+const recaptchaKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY
+if (import.meta.env.VITE_USE_FIREBASE_EMULATOR === 'true') {
+  // eslint-disable-next-line no-restricted-globals
+  self.FIREBASE_APPCHECK_DEBUG_TOKEN = true
+}
+if (recaptchaKey) {
+  try {
+    initializeAppCheck(app, {
+      provider: new ReCaptchaV3Provider(recaptchaKey),
+      isTokenAutoRefreshEnabled: true,
+    })
+  } catch (e) {
+    console.warn('[AppCheck] inizializzazione fallita:', e?.message)
+  }
+}
 
 export const db = getFirestore(app)
 export const functions = getFunctions(app, 'europe-west1')

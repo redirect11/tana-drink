@@ -4,15 +4,22 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // ── Ruoli ─────────────────────────────────────────────────────────
-    // Il ruolo vive nei custom claims del token ("role"). Gli account
-    // senza claim sono bartender (retrocompatibilità). Lo staff
-    // ("staff") può SOLO segnare come serviti gli ordini pronti.
+    // Il ruolo vive nei custom claims del token ("role"): 'bartender' o
+    // 'staff', assegnati esplicitamente. Gli account SENZA claim sono
+    // CLIENTI registrati (nessun privilegio gestionale). Lo staff può
+    // SOLO segnare come serviti gli ordini pronti.
     function isSignedIn() {
       return request.auth != null;
     }
     function isBartender() {
       return isSignedIn()
-        && (!('role' in request.auth.token) || request.auth.token.role == 'bartender');
+        && 'role' in request.auth.token
+        && request.auth.token.role == 'bartender';
+    }
+    function isStaffMember() {
+      return isSignedIn()
+        && 'role' in request.auth.token
+        && request.auth.token.role in ['bartender', 'staff'];
     }
 
     // DRINKS — lettura pubblica (clienti vedono il menù), scrittura solo bartender.
@@ -31,7 +38,7 @@ service cloud.firestore {
       allow read: if true;
       allow create: if true;
       allow update: if isBartender()
-        || (isSignedIn()
+        || (isStaffMember()
             && resource.data.status == 'pronto'
             && request.resource.data.status == 'ritirato')
         || (resource.data.status == 'ricevuto'
@@ -52,7 +59,7 @@ service cloud.firestore {
       allow read: if true;
       allow create, delete: if isBartender();
       allow update: if isBartender()
-        || (isSignedIn()
+        || (isStaffMember()
             && request.resource.data.diff(resource.data).affectedKeys()
                  .hasOnly(['eta_stats', 'prep_stats']));
     }
@@ -86,9 +93,16 @@ service cloud.firestore {
 
     // STAFF CALLS — cerca-persone: il bartender chiama, lo staff risponde.
     match /staff_calls/{callId} {
-      allow read: if isSignedIn();
+      allow read: if isStaffMember();
       allow create, delete: if isBartender();
-      allow update: if isSignedIn();
+      allow update: if isStaffMember();
+    }
+
+    // CUSTOMERS — profilo del cliente registrato: solo il proprietario
+    // (e il bartender in lettura).
+    match /customers/{uid} {
+      allow read: if isBartender() || (isSignedIn() && request.auth.uid == uid);
+      allow write: if isSignedIn() && request.auth.uid == uid;
     }
   }
 }

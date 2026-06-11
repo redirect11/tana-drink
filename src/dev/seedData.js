@@ -444,4 +444,10 @@ export const SEED_SETTINGS = {
   cancel_phrase_default: 'bancone',
   show_serving_board: true,
   queue_view: 'tabs',
+  customer_accounts_enabled: true,
+  geofence_enabled: false,
+  venue_address: '',
+  venue_lat: null,
+  venue_lng: null,
+  venue_radius_m: 150,
 }

@@ -60,12 +60,13 @@ export default function BartenderPage() {
         setRole(null)
         return
       }
-      // Ruolo dai custom claims: gli account senza claim sono bartender.
+      // Ruolo dai custom claims: senza claim è un CLIENTE registrato
+      // (nessun accesso al gestionale).
       try {
         const token = await u.getIdTokenResult()
-        setRole(token.claims.role ?? 'bartender')
+        setRole(token.claims.role ?? 'cliente')
       } catch {
-        setRole('bartender')
+        setRole('cliente')
       }
       setUser(u)
     })
@@ -75,6 +76,19 @@ export default function BartenderPage() {
     return <div className="empty">Verifica accesso…</div>
   }
   if (!user) return <LoginForm />
+
+  // Cliente registrato: nessun accesso al gestionale.
+  if (role === 'cliente') {
+    return (
+      <div className="empty">
+        🔒 Quest’area è riservata allo staff.
+        <br />
+        <button className="btn ghost" style={{ marginTop: 14 }} onClick={() => signOut(auth)}>
+          Esci e accedi come staff
+        </button>
+      </div>
+    )
+  }
 
   // Lo staff (non bartender) vede SOLO la lista da servire.
   if (role !== 'bartender') return <ServiceQueue />
@@ -206,7 +220,7 @@ function LoginForm() {
 
   return (
     <form className="card" onSubmit={submit}>
-      <h2 style={{ marginTop: 0 }}>Accesso bartender</h2>
+      <h2 style={{ marginTop: 0 }}>Accesso staff</h2>
       <label htmlFor="email">Email</label>
       <input
         id="email"

@@ -121,6 +121,7 @@ function mapOrder(snap) {
     service_mode: o.service_mode ?? null,
     placed_by: o.placed_by ?? null,
     customer_name: o.customer_name ?? null,
+    customer_uid: o.customer_uid ?? null,
     status_times: o.status_times ?? {},
     cancelled_by: o.cancelled_by ?? null,
     cancel_kind: o.cancel_kind ?? null,
@@ -446,6 +447,7 @@ export async function createOrder({
   push_token = null, // token FCM del dispositivo (per le notifiche push)
   placed_by = null, // { email, role } se inserito manualmente dallo staff
   customer_name = null, // nome/pseudonimo (+ cognome) del cliente
+  customer_uid = null, // uid dell'account cliente (null per anonimi)
 }) {
   if (!serata_id) throw new Error('Nessuna serata aperta: ordini non disponibili.')
   const itemsTotal = items.reduce((s, i) => s + i.qty * Number(i.price || 0), 0)
@@ -476,6 +478,7 @@ export async function createOrder({
       push_token,
       placed_by,
       customer_name,
+      customer_uid,
       created_at: serverTimestamp(),
       items: items.map((i) => ({
         drink_id: i.drink_id,
@@ -510,6 +513,18 @@ export async function fetchOrder(id) {
   const snap = await getDoc(doc(db, 'orders', id))
   if (!snap.exists()) throw new Error('Ordine non trovato')
   return mapOrder(snap)
+}
+
+// Ordini dell'account cliente (su qualunque dispositivo).
+export async function fetchOrdersByCustomer(uid, limitN = 30) {
+  const snap = await getDocs(
+    query(ordersCol, where('customer_uid', '==', uid), fbLimit(limitN))
+  )
+  const orders = snap.docs.map(mapOrder)
+  orders.sort((a, b) =>
+    String(b.created_at || '').localeCompare(String(a.created_at || ''))
+  )
+  return orders
 }
 
 export async function fetchOrdersByIds(ids) {
@@ -1012,6 +1027,15 @@ export const DEFAULT_SETTINGS = {
   cancel_phrase_default: 'bancone',
   // Tabellone "stiamo servendo / pronti al ritiro" nel menù cliente.
   show_serving_board: true,
+  // Account clienti: se disattivato, login/registrazione clienti nascosti
+  // (lo staff continua ad accedere da /bar).
+  customer_accounts_enabled: true,
+  // Geolocalizzazione obbligatoria per ordinare (verifica di prossimità).
+  geofence_enabled: false,
+  venue_address: '',
+  venue_lat: null,
+  venue_lng: null,
+  venue_radius_m: 150,
   // Coda ordini bartender: 'tabs' (schede per stato) o 'lista' (lista unica
   // con stato indicato da colore/etichetta sulla card).
   queue_view: 'tabs',

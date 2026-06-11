@@ -3,11 +3,22 @@ import MenuPage from './pages/MenuPage.jsx'
 import OrderStatusPage from './pages/OrderStatusPage.jsx'
 import MyOrdersPage from './pages/MyOrdersPage.jsx'
 import BartenderPage from './pages/BartenderPage.jsx'
+import { AccediPage, RegistratiPage, ProfiloPage } from './pages/AccountPages.jsx'
+import { useCustomer } from './lib/customerAuth.js'
 import { isFirebaseConfigured } from './lib/firebaseClient.js'
+import { subscribeSettings, DEFAULT_SETTINGS } from './lib/api.js'
+import { useEffect, useState } from 'react'
 
 export default function App() {
   const location = useLocation()
   const onBackoffice = location.pathname.startsWith('/bar')
+  const { user, profile } = useCustomer()
+  const [settings, setSettings] = useState(DEFAULT_SETTINGS)
+  useEffect(() => {
+    if (!isFirebaseConfigured) return
+    return subscribeSettings(setSettings)
+  }, [])
+  const accountsOn = settings.customer_accounts_enabled
 
   return (
     <div className="app">
@@ -20,7 +31,16 @@ export default function App() {
           {onBackoffice ? (
             <Link className="btn ghost small" to="/">Vista cliente</Link>
           ) : (
-            <Link className="btn ghost small" to="/ordini">I miei ordini</Link>
+            <>
+              <Link className="btn ghost small" to="/ordini">I miei ordini</Link>
+              {user ? (
+                <Link className="btn ghost small" to="/profilo">
+                  👤 {profile?.nome || 'Profilo'}
+                </Link>
+              ) : accountsOn ? (
+                <Link className="btn ghost small" to="/accedi">Accedi</Link>
+              ) : null}
+            </>
           )}
         </nav>
       </header>
@@ -38,6 +58,9 @@ export default function App() {
           <Route path="/" element={<MenuPage />} />
           <Route path="/ordini" element={<MyOrdersPage />} />
           <Route path="/ordine/:id" element={<OrderStatusPage />} />
+          <Route path="/accedi" element={<AccediPage />} />
+          <Route path="/registrati" element={<RegistratiPage />} />
+          <Route path="/profilo" element={<ProfiloPage />} />
           <Route path="/bar" element={<BartenderPage />} />
           <Route path="*" element={<MenuPage />} />
         </Routes>
