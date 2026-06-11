@@ -20,6 +20,7 @@ const getArg = (name, fallback = null) => {
 const CSV_PATH = getArg('csv', 'carte_202606100711.csv')
 const PROJECT = getArg('project', 'tana-drink')
 const APPLY = args.includes('--apply')
+const EMULATOR = args.includes('--emulator')
 
 const { products } = parseCarteCsv(readFileSync(CSV_PATH, 'latin1'))
 const { categories, items } = extractInventory(products)
@@ -37,8 +38,10 @@ if (!APPLY) {
 }
 
 // ── Autenticazione via sessione Firebase CLI ──────────────────────────
-const cfg = JSON.parse(readFileSync(`${homedir()}/.config/configstore/firebase-tools.json`, 'utf8'))
-const tok = await (await fetch('https://oauth2.googleapis.com/token', {
+const cfg = EMULATOR
+  ? null
+  : JSON.parse(readFileSync(`${homedir()}/.config/configstore/firebase-tools.json`, 'utf8'))
+const tok = EMULATOR ? { access_token: 'owner' } : await (await fetch('https://oauth2.googleapis.com/token', {
   method: 'POST',
   headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
   body: new URLSearchParams({
@@ -53,8 +56,8 @@ if (!tok.access_token) {
   process.exit(1)
 }
 const auth = { Authorization: `Bearer ${tok.access_token}`, 'Content-Type': 'application/json' }
-const DOC_ROOT = `projects/${PROJECT}/databases/(default)/documents`
-const BASE = `https://firestore.googleapis.com/v1/${DOC_ROOT}`
+const DOC_ROOT = `projects/${EMULATOR ? 'demo-tana-drink' : PROJECT}/databases/(default)/documents`
+const BASE = `${EMULATOR ? 'http://localhost:8080' : 'https://firestore.googleapis.com'}/v1/${DOC_ROOT}`
 
 async function listAll(col) {
   const out = []
