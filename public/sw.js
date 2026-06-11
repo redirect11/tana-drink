@@ -48,17 +48,30 @@ self.addEventListener('fetch', (event) => {
 })
 
 // Web Push (FCM): mostra la notifica quando l'app è chiusa o in background.
-// Se una finestra dell'app è visibile, non mostra nulla: ci pensa già il
-// listener realtime della pagina (evita notifiche doppie).
+// La salta SOLO se il cliente sta già guardando la pagina di quell'ordine
+// (lì ci pensa il listener realtime: evita la notifica doppia). Se sta
+// guardando un'altra pagina — ad es. il menù — la notifica arriva comunque.
 self.addEventListener('push', (event) => {
   event.waitUntil(
     (async () => {
-      const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
-      if (wins.some((w) => w.visibilityState === 'visible')) return
       let payload = {}
       try {
         payload = event.data ? event.data.json() : {}
       } catch { /* payload non JSON */ }
+      const orderUrl = payload.data?.url || null
+
+      if (orderUrl) {
+        const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+        const onOrderPage = wins.some((w) => {
+          try {
+            return w.visibilityState === 'visible' && new URL(w.url).pathname.endsWith(orderUrl)
+          } catch {
+            return false
+          }
+        })
+        if (onOrderPage) return
+      }
+
       const n = payload.notification || {}
       await self.registration.showNotification(n.title || 'La Tana del Coniglio', {
         body: n.body || '',

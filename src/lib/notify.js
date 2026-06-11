@@ -12,18 +12,33 @@ export async function ensureNotificationPermission() {
   }
 }
 
-export function notify(title, body) {
+export async function notify(title, body) {
   if (!('Notification' in window)) return
   if (Notification.permission !== 'granted') return
+
+  const opts = {
+    body,
+    icon: `${import.meta.env.BASE_URL}logo.png`,
+    badge: `${import.meta.env.BASE_URL}logo.png`,
+  }
+
+  // Via service worker quando disponibile: su Android Chrome il
+  // costruttore `new Notification` è vietato (lancia eccezione).
   try {
-    const n = new Notification(title, {
-      body,
-      icon: `${import.meta.env.BASE_URL}favicon.svg`,
-      badge: `${import.meta.env.BASE_URL}favicon.svg`,
-    })
+    const reg = await navigator.serviceWorker?.getRegistration?.()
+    if (reg?.showNotification) {
+      await reg.showNotification(title, opts)
+      return
+    }
+  } catch {
+    /* tenta il fallback sotto */
+  }
+
+  try {
+    const n = new Notification(title, opts)
     // Chiudi automaticamente dopo qualche secondo.
     setTimeout(() => n.close(), 8000)
   } catch {
-    /* alcuni browser richiedono il service worker: non bloccante */
+    /* né SW né costruttore disponibili: non bloccante */
   }
 }
