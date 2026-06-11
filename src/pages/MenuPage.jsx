@@ -307,29 +307,32 @@ export default function MenuPage() {
   return (
     <div className={staff ? 'bar-content' : ''}>
       {staff && <StaffDrawer role={staff.role} active="ordine" />}
-      <div className="hero">
-        <img
-          className="hero-img"
-          src="/cocktail-hero.jpg"
-          alt="La Tana del Coniglio"
-          onError={(e) => (e.target.style.display = 'none')}
-        />
-        <div className="hero-overlay">
+      {/* Hero d'intestazione solo per i clienti: allo staff serve spazio. */}
+      {!staff && (
+        <div className="hero">
           <img
-            className="hero-logo"
-            src={`${import.meta.env.BASE_URL}logo.png`}
-            alt=""
+            className="hero-img"
+            src="/cocktail-hero.jpg"
+            alt="La Tana del Coniglio"
+            onError={(e) => (e.target.style.display = 'none')}
           />
-          <h1 className="hero-title">La Tana del Coniglio</h1>
-          <p className="hero-sub">
-            {tableLabel
-              ? `Tavolo ${tableLabel}`
-              : menuOnly
-                ? 'Cocktail Bar · Menù'
-                : 'Scegli i tuoi drink e invia l’ordine al bancone.'}
-          </p>
+          <div className="hero-overlay">
+            <img
+              className="hero-logo"
+              src={`${import.meta.env.BASE_URL}logo.png`}
+              alt=""
+            />
+            <h1 className="hero-title">La Tana del Coniglio</h1>
+            <p className="hero-sub">
+              {tableLabel
+                ? `Tavolo ${tableLabel}`
+                : menuOnly
+                  ? 'Cocktail Bar · Menù'
+                  : 'Scegli i tuoi drink e invia l’ordine al bancone.'}
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
       {staff && !menuOnly && (
         <div className="banner row between" style={{ alignItems: 'center', gap: 10 }}>
