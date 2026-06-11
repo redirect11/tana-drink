@@ -85,11 +85,14 @@ describe('kpiSummary', () => {
 })
 
 describe('revenueByHour', () => {
-  it('raggruppa per ora locale e trova il picco', () => {
-    const { buckets, peakHour } = revenueByHour(orders)
+  it('raggruppa in fasce orarie allineate alle 18:30 e trova il picco', () => {
+    const { buckets, peakHour, peakLabel } = revenueByHour(orders)
     expect(buckets.reduce((s, b) => s + b.ordini, 0)).toBe(2)
     expect(buckets.reduce((s, b) => s + b.incasso, 0)).toBe(28)
     expect(peakHour).not.toBeNull()
+    expect(peakLabel).toMatch(/^\d{2}:30$/)
+    // un ordine alle 20:15 UTC… le fasce iniziano alla mezz'ora
+    for (const b of buckets) expect(b.label).toMatch(/^\d{2}:30$/)
   })
 })
 

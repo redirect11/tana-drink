@@ -38,17 +38,19 @@ export function kpiSummary(orders, serate) {
 }
 
 // ── Incasso e ordini per fascia oraria ────────────────────────────────
-// Le ore sono riordinate dalla apertura tipica (17) fino a notte fonda,
-// così il grafico segue l'andamento della serata.
-const HOUR_ORDER = [17, 18, 19, 20, 21, 22, 23, 0, 1, 2, 3]
+// Fasce di un'ora allineate all'apertura del locale (18:30): la fascia
+// "18:30" copre 18:30–19:29, e così via fino a notte fonda.
+const SHIFT_MIN = 30
+const HOUR_ORDER = [18, 19, 20, 21, 22, 23, 0, 1, 2, 3]
+const hourLabel = (h) => `${String(h).padStart(2, '0')}:30`
 
 export function revenueByHour(orders) {
   const buckets = new Map()
   for (const o of valid(orders)) {
     const t = ms(o.created_at)
     if (t == null) continue
-    const h = new Date(t).getHours()
-    const b = buckets.get(h) || { hour: h, incasso: 0, ordini: 0 }
+    const h = new Date(t - SHIFT_MIN * 60000).getHours()
+    const b = buckets.get(h) || { hour: h, label: hourLabel(h), incasso: 0, ordini: 0 }
     b.incasso += Number(o.total) || 0
     b.ordini += 1
     buckets.set(h, b)
@@ -59,7 +61,7 @@ export function revenueByHour(orders) {
     .sort((a, b) => a.hour - b.hour)
   const out = [...known, ...rest]
   const peak = out.reduce((best, b) => (!best || b.ordini > best.ordini ? b : best), null)
-  return { buckets: out, peakHour: peak?.hour ?? null }
+  return { buckets: out, peakHour: peak?.hour ?? null, peakLabel: peak?.label ?? null }
 }
 
 // ── Trend per serata ──────────────────────────────────────────────────
