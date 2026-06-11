@@ -934,6 +934,9 @@ export const DEFAULT_SETTINGS = {
   cancel_phrase_default: 'bancone',
   // Tabellone "stiamo servendo / pronti al ritiro" nel menù cliente.
   show_serving_board: true,
+  // Coda ordini bartender: 'tabs' (schede per stato) o 'lista' (lista unica
+  // con stato indicato da colore/etichetta sulla card).
+  queue_view: 'tabs',
 }
 
 export function subscribeSettings(onChange, onError) {
