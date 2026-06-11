@@ -321,9 +321,9 @@ a.btn.block {
   cursor: pointer;
 }
 .chip.active {
-  background: var(--accent, #1f6feb);
-  border-color: var(--accent, #1f6feb);
-  color: #fff;
+  background: linear-gradient(135deg, #f7c45e, #e8a32e);
+  border-color: transparent;
+  color: #1c1305;
 }
 .chip.warn strong {
   color: #ffd54f;
