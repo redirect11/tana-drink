@@ -197,6 +197,31 @@ export default function MenuPage() {
       .map((g) => [g.name, g.list])
   }, [drinks, cats, search])
 
+  // ── Geofence: verificato AL CARICAMENTO del menu (lo staff è esente).
+  // Finché la posizione non risulta nel raggio, i controlli per ordinare
+  // restano disattivati. null = gate non attivo.
+  const [geoGate, setGeoGate] = useState(null) // null|'checking'|'ok'|'denied'|'out_of_range'
+  const [geoInfo, setGeoInfo] = useState(null) // { distance, radius }
+  const geoActive = !staff && geofenceConfigured(settings)
+
+  async function runGeoCheck() {
+    setGeoGate('checking')
+    const geo = await checkGeofence(settings)
+    setGeoInfo(geo.distance != null ? { distance: geo.distance, radius: geo.radius } : null)
+    if (geo.status === 'ok') setGeoGate('ok')
+    else if (geo.status === 'out_of_range') setGeoGate('out_of_range')
+    else setGeoGate('denied')
+  }
+
+  useEffect(() => {
+    if (!geoActive) {
+      setGeoGate(null)
+      return
+    }
+    runGeoCheck()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [geoActive, settings.venue_lat, settings.venue_lng, settings.venue_radius_m])
+
   const [checkingGeo, setCheckingGeo] = useState(false)
 
   async function handleReviewOrder() {
@@ -207,23 +232,17 @@ export default function MenuPage() {
     }
     setError(null)
 
-    // Verifica di prossimità al locale (lo staff è esente).
-    if (!staff && geofenceConfigured(settings)) {
+    // Ri-verifica di prossimità appena prima dell'ordine.
+    if (geoActive) {
       setCheckingGeo(true)
       const geo = await checkGeofence(settings)
       setCheckingGeo(false)
-      if (geo.status === 'denied' || geo.status === 'unsupported') {
-        setError(
-          '📍 Attiva la localizzazione per ordinare: serve a verificare che sei al locale.'
-        )
+      if (geo.status !== 'ok') {
+        setGeoGate(geo.status === 'out_of_range' ? 'out_of_range' : 'denied')
+        setGeoInfo(geo.distance != null ? { distance: geo.distance, radius: geo.radius } : null)
         return
       }
-      if (geo.status === 'out_of_range') {
-        setError(
-          `📍 Devi essere al locale per ordinare (sei a ~${geo.distance} m, massimo ${geo.radius} m).`
-        )
-        return
-      }
+      setGeoGate('ok')
     }
 
     setShowSummary(true)
@@ -266,7 +285,9 @@ export default function MenuPage() {
   // Si può ordinare solo con serata aperta e modalità ordinazione attiva:
   // a serata chiusa spariscono anche i pulsanti "Aggiungi" e il carrello.
   // Lo staff loggato può inserire ordini manuali anche in modalità solo menu.
-  const canOrder = (!menuOnly || !!staff) && !closed
+  // Con geofence attivo si ordina solo a posizione verificata.
+  const geoOk = !geoActive || geoGate === 'ok'
+  const canOrder = (!menuOnly || !!staff) && !closed && geoOk
 
   // Tempo stimato mostrato nel menù: per la modalità "entrambi" usa la stima
   // fino al "pronto" (parte comune); il riepilogo ordine poi la adatta alla
@@ -362,6 +383,33 @@ export default function MenuPage() {
       {closed && !menuOnly && (
         <div className="banner">
           🔒 Servizio chiuso: gli ordini non sono disponibili al momento.
+        </div>
+      )}
+
+      {/* Gate geolocalizzazione: stato della verifica al caricamento */}
+      {geoActive && !closed && geoGate === 'checking' && (
+        <div className="banner">📍 Verifico che sei al locale…</div>
+      )}
+      {geoActive && !closed && geoGate === 'denied' && (
+        <div className="banner row between" style={{ alignItems: 'center', gap: 10 }}>
+          <span>
+            📍 Per ordinare serve la tua posizione: attiva la localizzazione e
+            consenti l’accesso (verifichiamo solo che sei al locale).
+          </span>
+          <button className="btn small" style={{ flexShrink: 0 }} onClick={runGeoCheck}>
+            Riprova
+          </button>
+        </div>
+      )}
+      {geoActive && !closed && geoGate === 'out_of_range' && (
+        <div className="banner row between" style={{ alignItems: 'center', gap: 10 }}>
+          <span>
+            📍 Devi essere al locale per ordinare
+            {geoInfo ? ` (sei a ~${geoInfo.distance} m, massimo ${geoInfo.radius} m)` : ''}.
+          </span>
+          <button className="btn small" style={{ flexShrink: 0 }} onClick={runGeoCheck}>
+            Riprova
+          </button>
         </div>
       )}
 
