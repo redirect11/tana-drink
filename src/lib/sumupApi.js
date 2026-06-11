@@ -5,6 +5,9 @@ import { functions } from './firebaseClient.js'
 // Quando non configurato, tutte le chiamate sono no-op silenziosi.
 const enabled = import.meta.env.VITE_SUMUP_ENABLED === 'true'
 
+// Esposto alla UI: il box di sync nel gestionale appare solo se attivo.
+export const isSumUpEnabled = enabled
+
 function call(name) {
   return httpsCallable(functions, name)
 }

@@ -26,7 +26,7 @@ import {
 import { bucketByStatus, serataRecap, openOrdersCount } from '../lib/serata.js'
 import { aggregateProducts, serataFinance, longestPrep, phaseAverages } from '../lib/eta.js'
 import { ensureNotificationPermission, notify } from '../lib/notify.js'
-import { syncSumUpProducts } from '../lib/sumupApi.js'
+import { syncSumUpProducts, isSumUpEnabled } from '../lib/sumupApi.js'
 import MenuManager from '../components/MenuManager.jsx'
 import InventoryManager from '../components/InventoryManager.jsx'
 import SettingsTab from '../components/SettingsTab.jsx'
@@ -121,6 +121,8 @@ function MenuTab() {
 
   return (
     <div>
+      {/* Box sync visibile solo con l'integrazione SumUp abilitata. */}
+      {isSumUpEnabled && (
       <div className="card" style={{ marginBottom: 8 }}>
         <div className="row between" style={{ alignItems: 'center' }}>
           <div>
@@ -147,6 +149,7 @@ function MenuTab() {
           </div>
         )}
       </div>
+      )}
       <MenuManager />
     </div>
   )
