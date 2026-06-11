@@ -25,6 +25,7 @@ export default function App() {
   // Staff loggato (bartender o collaboratore): nel topbar lato cliente
   // mostra il ruolo ed «Esci» al posto di «Accedi».
   const [staffRole, setStaffRole] = useState(null)
+  const [staffName, setStaffName] = useState('')
   useEffect(() => {
     if (!isFirebaseConfigured) return
     return onAuthStateChanged(auth, async (u) => {
@@ -33,6 +34,7 @@ export default function App() {
         const token = await u.getIdTokenResult()
         const role = token.claims.role
         setStaffRole(role === 'bartender' || role === 'staff' ? role : null)
+        setStaffName(u.displayName || String(u.email || '').split('@')[0])
       } catch {
         setStaffRole(null)
       }
@@ -42,16 +44,24 @@ export default function App() {
   return (
     <div className="app">
       <header className={`topbar${onBackoffice || staffRole ? ' backoffice' : ''}`}>
-        <Link to="/" className="brand" style={{ textDecoration: 'none', color: 'inherit' }}>
+        {/* Nel gestionale il logo non porta al menu: resta sugli ordini. */}
+        <Link
+          to={onBackoffice ? '/bar' : '/'}
+          className="brand"
+          style={{ textDecoration: 'none', color: 'inherit' }}
+        >
           <img src={`${import.meta.env.BASE_URL}logo.png`} alt="" />
           <span>La Tana del Coniglio</span>
         </Link>
         <nav className="row">
           {onBackoffice ? (
-            // Per lo staff «Nuovo ordine» porta già al menu: niente doppione.
-            staffRole !== 'staff' && (
-              <Link className="btn ghost small" to="/">Vista cliente</Link>
-            )
+            <>
+              {staffRole && <span className="topbar-hello">Ciao, {staffName}</span>}
+              {/* Per lo staff «Nuovo ordine» porta già al menu: niente doppione. */}
+              {staffRole !== 'staff' && (
+                <Link className="btn ghost small" to="/">Vista cliente</Link>
+              )}
+            </>
           ) : (
             <>
               {hasOrders && (
@@ -60,7 +70,7 @@ export default function App() {
               {staffRole ? (
                 <>
                   <Link className="btn ghost small" to="/bar">
-                    {staffRole === 'bartender' ? '🍸 Bartender' : '🫱 Staff'}
+                    {staffRole === 'bartender' ? '🍸' : '🫱'} Ciao, {staffName}
                   </Link>
                   <button className="btn ghost small" onClick={() => signOut(auth)}>
                     Esci
@@ -68,7 +78,7 @@ export default function App() {
                 </>
               ) : user ? (
                 <Link className="btn ghost small" to="/profilo">
-                  👤 {profile?.nome || 'Profilo'}
+                  👤 Ciao, {profile?.nome || user.displayName?.split(' ')[0] || 'Profilo'}
                 </Link>
               ) : accountsOn ? (
                 <Link className="btn ghost small" to="/accedi">Accedi</Link>

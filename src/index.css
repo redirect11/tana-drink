@@ -91,6 +91,13 @@ a {
   color: var(--muted);
 }
 
+/* Saluto nel topbar del gestionale */
+.topbar-hello {
+  color: var(--muted);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
 .card {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 50%), var(--card);
   border: 1px solid rgba(255, 255, 255, 0.07);
