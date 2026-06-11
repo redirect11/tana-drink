@@ -62,6 +62,12 @@ export default function App() {
                 <Link className="btn ghost small" to="/">Vista cliente</Link>
               )}
             </>
+          ) : staffRole === 'staff' ? (
+            // Staff nel menu (ordine manuale): solo il ritorno al servizio.
+            // Saluto ed Esci stanno nel gestionale e nel drawer.
+            <Link className="btn small" to="/bar">
+              🫱 Torna al servizio
+            </Link>
           ) : (
             <>
               {hasOrders && (
@@ -70,7 +76,7 @@ export default function App() {
               {staffRole ? (
                 <>
                   <Link className="btn ghost small" to="/bar">
-                    {staffRole === 'bartender' ? '🍸' : '🫱'} Ciao, {staffName}
+                    🍸 Ciao, {staffName}
                   </Link>
                   <button className="btn ghost small" onClick={() => signOut(auth)}>
                     Esci
