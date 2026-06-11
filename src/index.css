@@ -1002,6 +1002,18 @@ a.order-mini {
   color: var(--accent-2);
 }
 
+/* Barra di ricerca rapida (menu staff e coda ordini) */
+.menu-search {
+  margin: 0 0 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.menu-search:focus {
+  outline: none;
+  border-color: rgba(245, 185, 74, 0.5);
+}
+
 /* Riga tempo stimato nel menù */
 .eta-line {
   margin: 0 0 4px;
