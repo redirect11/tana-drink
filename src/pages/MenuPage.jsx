@@ -335,14 +335,9 @@ export default function MenuPage() {
       )}
 
       {staff && !menuOnly && (
-        <div className="banner row between" style={{ alignItems: 'center', gap: 10 }}>
-          <span>
-            ✍️ Ordine manuale: inserito da <strong>{placedByName(staff)}</strong> ({staff.role}).
-          </span>
-          <Link className="btn ghost small" to="/bar" style={{ flexShrink: 0 }}>
-            🧾 Coda
-          </Link>
-        </div>
+        <p className="muted" style={{ margin: '4px 4px 10px' }}>
+          ✍️ Inserimento ordine da <strong>{placedByName(staff)}</strong>
+        </p>
       )}
 
       {menuOnly && (
