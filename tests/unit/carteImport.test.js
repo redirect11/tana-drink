@@ -3,7 +3,7 @@
 // Unit test del parser dell'export CSV SumUp (src/lib/carteImport.js).
 
 import { describe, it, expect } from 'vitest'
-import { parseCsv, cleanText, parseCarteCsv, extractInventory } from '../../src/lib/carteImport.js'
+import { parseCsv, cleanText, parseCarteCsv, extractInventory, recipeLinkFor } from '../../src/lib/carteImport.js'
 
 describe('parseCsv', () => {
   it('gestisce campi quotati con virgole e virgolette escapate', () => {
@@ -108,5 +108,30 @@ describe('extractInventory', () => {
       P('VINO', 'PROSECCO BOTTIGLIA'),
     ])
     expect(items).toHaveLength(1)
+  })
+})
+
+describe('recipeLinkFor', () => {
+  it('collega distillati, birre e bibite con le quantità giuste', () => {
+    expect(recipeLinkFor({ category: 'DISTILLATI', name: 'JIM BEAM', price: 5 }))
+      .toEqual({ invName: 'Jim Beam', qty: 40, unit: 'ml' })
+    expect(recipeLinkFor({ category: 'BIRRE', name: 'CERES', price: 4 }))
+      .toEqual({ invName: 'Ceres', qty: 1, unit: 'pz' })
+    expect(recipeLinkFor({ category: 'BIBITE', name: 'FEVER TREE', price: 3 }))
+      .toEqual({ invName: 'Fever Tree', qty: 200, unit: 'ml' })
+  })
+
+  it('vino: calice vs bottiglia (per nome o prezzo)', () => {
+    expect(recipeLinkFor({ category: 'VINO', name: 'CALICE PROSECCO', price: 5 }).qty).toBe(150)
+    expect(recipeLinkFor({ category: 'VINO', name: 'PROSECCO BOTTIGLIA', price: 30 }).qty).toBe(750)
+    expect(recipeLinkFor({ category: 'VINO', name: 'CALICE GRECO DI TUFO', price: 6 }))
+      .toEqual({ invName: 'Greco Di Tufo', qty: 150, unit: 'ml' })
+    expect(recipeLinkFor({ category: 'VINO', name: 'FALANGHINA', price: 20 }).qty).toBe(750)
+  })
+
+  it('non collega preparazioni e fasce prezzo', () => {
+    expect(recipeLinkFor({ category: 'GIN & VODKA', name: 'GIN TONIC', price: 6 })).toBeNull()
+    expect(recipeLinkFor({ category: 'DISTILLATI', name: 'SHOT 3,50', price: 3.5 })).toBeNull()
+    expect(recipeLinkFor({ category: 'COCKTAIL', name: 'NEGRONI', price: 6 })).toBeNull()
   })
 })
