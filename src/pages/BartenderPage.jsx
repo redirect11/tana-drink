@@ -31,6 +31,8 @@ import MenuManager from '../components/MenuManager.jsx'
 import InventoryManager from '../components/InventoryManager.jsx'
 import SettingsTab from '../components/SettingsTab.jsx'
 import StatsTab from '../components/StatsTab.jsx'
+import StaffTab from '../components/StaffTab.jsx'
+import ServiceQueue from '../components/ServiceQueue.jsx'
 import ConfirmDialog from '../components/ConfirmDialog.jsx'
 import CancelOrderDialog from '../components/CancelOrderDialog.jsx'
 import DevTools from '../components/DevTools.jsx'
@@ -41,20 +43,41 @@ const NAV_ITEMS = [
   ['stats', '📊', 'Statistiche'],
   ['menu', '🍸', 'Menù'],
   ['inventario', '📦', 'Inventario'],
+  ['staff', '👥', 'Staff'],
   ['impostazioni', '⚙️', 'Impostazioni'],
 ]
 
 export default function BartenderPage() {
   const [user, setUser] = useState(undefined) // undefined = caricamento, null = non loggato
+  const [role, setRole] = useState(null) // 'bartender' | 'cameriera'
   const [tab, setTab] = useState('coda')
   const [navOpen, setNavOpen] = useState(false)
 
   useEffect(() => {
-    return onAuthStateChanged(auth, (u) => setUser(u ?? null))
+    return onAuthStateChanged(auth, async (u) => {
+      if (!u) {
+        setUser(null)
+        setRole(null)
+        return
+      }
+      // Ruolo dai custom claims: gli account senza claim sono bartender.
+      try {
+        const token = await u.getIdTokenResult()
+        setRole(token.claims.role ?? 'bartender')
+      } catch {
+        setRole('bartender')
+      }
+      setUser(u)
+    })
   }, [])
 
-  if (user === undefined) return <div className="empty">Verifica accesso…</div>
+  if (user === undefined || (user && role === null)) {
+    return <div className="empty">Verifica accesso…</div>
+  }
   if (!user) return <LoginForm />
+
+  // La cameriera vede SOLO la lista da servire: niente menu laterale.
+  if (role === 'cameriera') return <ServiceQueue />
 
   const items = isDevEnvironment ? [...NAV_ITEMS, ['dev', '🛠', 'Dev']] : NAV_ITEMS
 
@@ -97,6 +120,7 @@ export default function BartenderPage() {
         {tab === 'stats' && <StatsTab />}
         {tab === 'menu' && <MenuTab />}
         {tab === 'inventario' && <InventoryManager />}
+        {tab === 'staff' && <StaffTab />}
         {tab === 'impostazioni' && <SettingsTab />}
         {tab === 'dev' && isDevEnvironment && <DevTools />}
       </div>
