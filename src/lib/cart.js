@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 
 const CART_KEY = 'tana_cart_v1'
 const ORDERS_KEY = 'tana_my_orders_v1'
@@ -20,16 +20,25 @@ function write(key, value) {
   }
 }
 
-// Carrello persistito in localStorage.
+// Carrello persistito in localStorage. La scrittura avviene SUBITO,
+// prima dell'aggiornamento di stato: se affidata a un useEffect (o
+// all'updater di setState), navigando subito dopo clear() — invio
+// ordine — React smonta il componente prima che giri e il vecchio
+// carrello "risorgerebbe" al ritorno sul menù.
 export function useCart() {
   const [items, setItems] = useState(() => read(CART_KEY, []))
+  const itemsRef = useRef(items)
+  itemsRef.current = items
 
-  useEffect(() => {
-    write(CART_KEY, items)
-  }, [items])
+  const update = useCallback((updater) => {
+    const next = updater(itemsRef.current)
+    itemsRef.current = next
+    write(CART_KEY, next)
+    setItems(next)
+  }, [])
 
   const add = useCallback((drink) => {
-    setItems((prev) => {
+    update((prev) => {
       const found = prev.find((i) => i.drink_id === drink.id)
       if (found) {
         return prev.map((i) =>
@@ -47,17 +56,17 @@ export function useCart() {
         },
       ]
     })
-  }, [])
+  }, [update])
 
   const setQty = useCallback((drinkId, qty) => {
-    setItems((prev) =>
+    update((prev) =>
       prev
         .map((i) => (i.drink_id === drinkId ? { ...i, qty } : i))
         .filter((i) => i.qty > 0)
     )
-  }, [])
+  }, [update])
 
-  const clear = useCallback(() => setItems([]), [])
+  const clear = useCallback(() => update(() => []), [update])
 
   const count = items.reduce((s, i) => s + i.qty, 0)
   const total = items.reduce((s, i) => s + i.qty * Number(i.price || 0), 0)
