@@ -1177,6 +1177,29 @@ a.order-mini {
   box-shadow: 0 4px 14px rgba(231, 76, 60, 0.25);
 }
 
+/* Cerca-persone: chiamata in arrivo */
+.pager-call {
+  text-align: center;
+  animation: pager-pulse 1s ease-in-out infinite;
+  border: 2px solid var(--accent-2);
+}
+
+.pager-icon {
+  font-size: 3rem;
+  animation: pager-shake 0.6s ease-in-out infinite;
+}
+
+@keyframes pager-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245, 185, 74, 0.5); }
+  50% { box-shadow: 0 0 0 16px rgba(245, 185, 74, 0); }
+}
+
+@keyframes pager-shake {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-12deg); }
+  75% { transform: rotate(12deg); }
+}
+
 /* Scelta servizio al tavolo / ritiro al banco */
 .mode-choice {
   display: grid;

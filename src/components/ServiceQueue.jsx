@@ -1,13 +1,18 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { signOut } from 'firebase/auth'
 import { auth } from '../lib/firebaseClient.js'
 import {
   subscribeOpenSerata,
   subscribeSerataOrders,
+  subscribeSettings,
+  subscribeMyCalls,
+  ackStaffCall,
   updateOrderStatus,
+  DEFAULT_SETTINGS,
 } from '../lib/api.js'
 import { ORDER_STATUSES, formatPrice } from '../lib/orderStatus.js'
+import { notify } from '../lib/notify.js'
 
 // Vista cameriera: SOLO gli ordini pronti da servire ai tavoli, con il
 // tasto per segnarli come serviti. Nessun'altra funzione del gestionale.
@@ -33,6 +38,49 @@ export default function ServiceQueue() {
     return subscribeSerataOrders(serataId, setOrders, (e) => setError(e.message))
   }, [serataId])
 
+  // Impostazioni (per il numero di membri dello staff → divisione mance).
+  const [settings, setSettings] = useState(DEFAULT_SETTINGS)
+  useEffect(() => subscribeSettings(setSettings), [])
+
+  // ── Cerca-persone: chiamate in arrivo dal bancone ───────────────────
+  const [calls, setCalls] = useState([])
+  const vibrateTimer = useRef(null)
+  useEffect(() => {
+    const uid = auth.currentUser?.uid
+    if (!uid) return
+    return subscribeMyCalls(uid, setCalls)
+  }, [])
+
+  const incoming = calls[0] ?? null
+  useEffect(() => {
+    if (!incoming) {
+      if (vibrateTimer.current) {
+        clearInterval(vibrateTimer.current)
+        vibrateTimer.current = null
+        navigator.vibrate?.(0) // ferma la vibrazione in corso
+      }
+      return
+    }
+    // Notifica + vibrazione forte e continua finché non si risponde.
+    notify('📟 Chiamata dal bancone', incoming.message || 'Rispondi sul telefono.')
+    const pattern = [500, 200, 500, 200, 900]
+    navigator.vibrate?.(pattern)
+    vibrateTimer.current = setInterval(() => navigator.vibrate?.(pattern), 2600)
+    return () => {
+      clearInterval(vibrateTimer.current)
+      vibrateTimer.current = null
+      navigator.vibrate?.(0)
+    }
+  }, [incoming?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function rispondi() {
+    try {
+      await ackStaffCall(incoming.id)
+    } catch (e) {
+      setError(e.message)
+    }
+  }
+
   async function servito(o) {
     setBusyId(o.id)
     setError(null)
@@ -49,6 +97,12 @@ export default function ServiceQueue() {
   const daServire = orders
     .filter((o) => o.status === ORDER_STATUSES.PRONTO && o.service_mode !== 'banco')
     .sort((a, b) => (a.daily_number || 0) - (b.daily_number || 0))
+
+  // Mance della serata, divise equamente tra i membri dello staff.
+  const mance = orders
+    .filter((o) => o.status !== ORDER_STATUSES.ANNULLATO)
+    .reduce((s, o) => s + (Number(o.tip_amount) || 0), 0)
+  const membri = Math.max(1, Number(settings.staff_count) || 1)
 
   return (
     <div>
@@ -75,6 +129,18 @@ export default function ServiceQueue() {
 
       {error && <div className="banner">Errore: {error}</div>}
 
+      {serata && mance > 0 && (
+        <div className="card row between" style={{ alignItems: 'center' }}>
+          <span className="muted">💶 Mance serata</span>
+          <span>
+            <strong className="price">{formatPrice(mance)}</strong>{' '}
+            <span className="muted small">
+              · {formatPrice(mance / membri)} a testa ({membri} membri)
+            </span>
+          </span>
+        </div>
+      )}
+
       {serata && daServire.length === 0 && (
         <div className="empty">Nessun drink pronto da servire. 🎉</div>
       )}
@@ -86,6 +152,7 @@ export default function ServiceQueue() {
               <span className="bignum" style={{ fontSize: '2rem' }}>
                 #{o.daily_number ?? '—'}
               </span>{' '}
+              {o.customer_name && <strong>{o.customer_name}</strong>}{' '}
               {o.table_label && <span className="muted">· Tavolo {o.table_label}</span>}
             </div>
             <span className="price">{formatPrice(o.total)}</span>
@@ -112,6 +179,26 @@ export default function ServiceQueue() {
           </button>
         </div>
       ))}
+
+      {incoming && (
+        <div className="overlay confirm-overlay">
+          <div className="confirm-box pager-call">
+            <div className="pager-icon">📟</div>
+            <h3 style={{ margin: '8px 0' }}>Chiamata dal bancone</h3>
+            {incoming.from_email && (
+              <p className="muted" style={{ margin: 0 }}>da {incoming.from_email}</p>
+            )}
+            {incoming.message && (
+              <p style={{ fontSize: '1.05rem', margin: '12px 0 0' }}>
+                «{incoming.message}»
+              </p>
+            )}
+            <button className="btn block" style={{ marginTop: 18 }} onClick={rispondi}>
+              ✓ Rispondo
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -11,6 +11,8 @@ export default function OrderSummary({ cart, settings, serata, tableLabel, staff
   const [tip, setTip] = useState('')
   const [note, setNote] = useState('')
   const [tavolo, setTavolo] = useState(tableLabel || '')
+  const [nome, setNome] = useState('')
+  const [cognome, setCognome] = useState('')
   const [mode, setMode] = useState(() =>
     settings.service_mode === 'banco' ? 'banco' : 'tavolo'
   )
@@ -58,8 +60,12 @@ export default function OrderSummary({ cart, settings, serata, tableLabel, staff
     [subtotal, copertoAmount, serviceAmount, tipAmount]
   )
 
+  const nomeValido = nome.trim().length > 0
+
   function confirm() {
+    if (!nomeValido) return
     onConfirm({
+      customer_name: `${nome.trim()} ${cognome.trim()}`.trim(),
       coperto_persons: settings.coperto_enabled && atTable ? persons : 0,
       coperto_amount: copertoAmount,
       service_charge_amount: serviceAmount,
@@ -95,6 +101,34 @@ export default function OrderSummary({ cart, settings, serata, tableLabel, staff
             />
           </div>
         )}
+
+        <div className="grid-2" style={{ marginTop: 10 }}>
+          <div>
+            <label htmlFor="ord-nome" style={{ margin: '0 0 4px' }}>
+              Nome/Pseudonimo *
+            </label>
+            <input
+              id="ord-nome"
+              type="text"
+              required
+              placeholder="es. Mario"
+              value={nome}
+              onChange={(e) => setNome(e.target.value)}
+            />
+          </div>
+          <div>
+            <label htmlFor="ord-cognome" style={{ margin: '0 0 4px' }}>
+              Cognome <span className="muted">(opz.)</span>
+            </label>
+            <input
+              id="ord-cognome"
+              type="text"
+              placeholder="es. Rossi"
+              value={cognome}
+              onChange={(e) => setCognome(e.target.value)}
+            />
+          </div>
+        </div>
 
         {modeChoice && (
           <div className="mode-choice">
@@ -209,8 +243,8 @@ export default function OrderSummary({ cart, settings, serata, tableLabel, staff
           <button className="btn ghost grow" onClick={onCancel} disabled={sending}>
             Modifica
           </button>
-          <button className="btn grow" onClick={confirm} disabled={sending}>
-            {sending ? 'Invio…' : 'Conferma ordine'}
+          <button className="btn grow" onClick={confirm} disabled={sending || !nomeValido}>
+            {sending ? 'Invio…' : nomeValido ? 'Conferma ordine' : 'Inserisci il nome'}
           </button>
         </div>
       </div>

@@ -270,8 +270,10 @@ export default function OrderStatusPage() {
 
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Riepilogo</h3>
-        {(order.table_label || order.service_mode) && (
+        {(order.customer_name || order.table_label || order.service_mode) && (
           <p className="muted" style={{ marginTop: 0 }}>
+            {order.customer_name ? `${order.customer_name}` : ''}
+            {order.customer_name && (order.table_label || order.service_mode) ? ' · ' : ''}
             {order.table_label ? `Tavolo ${order.table_label}` : ''}
             {order.table_label && order.service_mode ? ' · ' : ''}
             {order.service_mode === 'banco'

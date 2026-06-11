@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { auth } from '../lib/firebaseClient.js'
 import { listStaff, createStaff, setStaffRole, removeStaff } from '../lib/staffApi.js'
+import { createStaffCall, subscribePendingCalls, updateSettings } from '../lib/api.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
 
 const ROLE_LABELS = { bartender: '🍸 Bartender', staff: '🫱 Staff' }
@@ -18,9 +19,36 @@ export default function StaffTab() {
   const [password, setPassword] = useState('')
   const [role, setRole] = useState('staff')
 
+  const [pendingCalls, setPendingCalls] = useState([])
+  const [callTarget, setCallTarget] = useState(null) // utente da chiamare
+  const [callMessage, setCallMessage] = useState('')
+
+  useEffect(() => subscribePendingCalls(setPendingCalls), [])
+
   async function reload() {
     try {
-      setUsers(await listStaff())
+      const list = await listStaff()
+      setUsers(list)
+      // Numero membri attivi: serve per la divisione delle mance
+      // (visibile allo staff via settings, lettura pubblica).
+      updateSettings({ staff_count: list.filter((u) => !u.disabled).length }).catch(() => {})
+    } catch (e) {
+      setError(e.message)
+    }
+  }
+
+  async function sendCall() {
+    const target = callTarget
+    setCallTarget(null)
+    setError(null)
+    try {
+      await createStaffCall({
+        to_uid: target.uid,
+        to_email: target.email,
+        message: callMessage.trim() || null,
+        from_email: auth.currentUser?.email ?? null,
+      })
+      setCallMessage('')
     } catch (e) {
       setError(e.message)
     }
@@ -115,6 +143,18 @@ export default function StaffTab() {
             </div>
             {u.uid !== myUid && (
               <div className="row" style={{ gap: 6 }}>
+                {pendingCalls.some((c) => c.to_uid === u.uid) ? (
+                  <span className="pill in_preparazione">📟 In chiamata…</span>
+                ) : (
+                  <button
+                    className="btn small"
+                    disabled={busy}
+                    title="Chiama (cerca-persone)"
+                    onClick={() => setCallTarget(u)}
+                  >
+                    📟
+                  </button>
+                )}
                 <button
                   className="btn ghost small"
                   disabled={busy}
@@ -163,6 +203,31 @@ export default function StaffTab() {
             fn()
           }}
         />
+      )}
+
+      {callTarget && (
+        <div className="overlay confirm-overlay" onClick={() => setCallTarget(null)}>
+          <div className="confirm-box" onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ marginTop: 0 }}>📟 Chiama {callTarget.email}</h3>
+            <p className="muted" style={{ marginTop: 0 }}>
+              Il dispositivo vibrerà con insistenza finché non risponde.
+            </p>
+            <textarea
+              rows={2}
+              placeholder="Messaggio (facoltativo): es. «Vieni al bancone»"
+              value={callMessage}
+              onChange={(e) => setCallMessage(e.target.value)}
+            />
+            <div className="row" style={{ gap: 10, marginTop: 12 }}>
+              <button className="btn ghost grow" onClick={() => setCallTarget(null)}>
+                Annulla
+              </button>
+              <button className="btn grow" onClick={sendCall}>
+                📟 Chiama
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

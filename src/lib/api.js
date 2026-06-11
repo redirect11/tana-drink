@@ -120,6 +120,7 @@ function mapOrder(snap) {
     tip_amount: o.tip_amount ?? 0,
     service_mode: o.service_mode ?? null,
     placed_by: o.placed_by ?? null,
+    customer_name: o.customer_name ?? null,
     status_times: o.status_times ?? {},
     cancelled_by: o.cancelled_by ?? null,
     cancel_kind: o.cancel_kind ?? null,
@@ -444,6 +445,7 @@ export async function createOrder({
   service_mode = null, // 'tavolo' | 'banco' | null (scelta non attiva)
   push_token = null, // token FCM del dispositivo (per le notifiche push)
   placed_by = null, // { email, role } se inserito manualmente dallo staff
+  customer_name = null, // nome/pseudonimo (+ cognome) del cliente
 }) {
   if (!serata_id) throw new Error('Nessuna serata aperta: ordini non disponibili.')
   const itemsTotal = items.reduce((s, i) => s + i.qty * Number(i.price || 0), 0)
@@ -473,6 +475,7 @@ export async function createOrder({
       service_mode,
       push_token,
       placed_by,
+      customer_name,
       created_at: serverTimestamp(),
       items: items.map((i) => ({
         drink_id: i.drink_id,
@@ -934,6 +937,56 @@ export async function replaceCatalog({ categories, products }, onProgress = () =
     await batch.commit()
     onProgress(`Importati ${Math.min(i + 400, products.length)}/${products.length} prodotti`)
   }
+}
+
+// --- STAFF CALLS (cerca-persone) ---
+
+const staffCallsCol = collection(db, 'staff_calls')
+
+// Il bartender chiama un membro dello staff (con messaggio opzionale).
+export async function createStaffCall({ to_uid, to_email, message, from_email }) {
+  const ref = await addDoc(staffCallsCol, {
+    to_uid,
+    to_email,
+    from_email: from_email ?? null,
+    message: message || null,
+    status: 'pending',
+    created_at: serverTimestamp(),
+    acked_at: null,
+  })
+  return ref.id
+}
+
+// Chiamate in attesa per un membro dello staff (realtime).
+export function subscribeMyCalls(uid, onChange, onError) {
+  const q = query(
+    staffCallsCol,
+    where('to_uid', '==', uid),
+    where('status', '==', 'pending')
+  )
+  return onSnapshot(
+    q,
+    (snap) => onChange(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+    onError ?? (() => {})
+  )
+}
+
+// Tutte le chiamate in attesa (per il feedback del bartender).
+export function subscribePendingCalls(onChange, onError) {
+  const q = query(staffCallsCol, where('status', '==', 'pending'))
+  return onSnapshot(
+    q,
+    (snap) => onChange(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+    onError ?? (() => {})
+  )
+}
+
+// Lo staff risponde alla chiamata.
+export async function ackStaffCall(id) {
+  await updateDoc(doc(db, 'staff_calls', id), {
+    status: 'acked',
+    acked_at: serverTimestamp(),
+  })
 }
 
 // --- SETTINGS ---
