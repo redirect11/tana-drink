@@ -399,43 +399,20 @@ function OrderQueue() {
 
   const recap = serataRecap(orders)
   const buckets = bucketByStatus(orders)
+  const listView = settings.queue_view === 'lista'
   const list = buckets[statusTab] || []
+  // Vista a lista unica: ordini in corso (per numero) + evasi.
+  const inCorso = [
+    ...(buckets[ORDER_STATUSES.RICEVUTO] || []),
+    ...(buckets[ORDER_STATUSES.IN_PREPARAZIONE] || []),
+    ...(buckets[ORDER_STATUSES.PRONTO] || []),
+  ].sort((a, b) => (a.daily_number || 0) - (b.daily_number || 0))
+  const evasi = buckets[ORDER_STATUSES.RITIRATO] || []
 
-  return (
-    <div>
-      {error && <div className="banner">Errore: {error}</div>}
-
-      <div className="card row between" style={{ alignItems: 'center' }}>
-        <div>
-          <strong>Serata aperta</strong>
-          <div className="muted">
-            {recap.count} ordini · {formatPrice(recap.total)}
-          </div>
-        </div>
-        <button className="btn ghost small" onClick={chiudi} disabled={busy}>
-          ⏹ Chiudi serata
-        </button>
-      </div>
-
-      {/* Sotto-tab per stato */}
-      <div className="tabs" style={{ marginTop: 8 }}>
-        {STATUS_TABS.map((s) => (
-          <div
-            key={s}
-            className={`tab ${statusTab === s ? 'active' : ''}`}
-            onClick={() => setStatusTab(s)}
-          >
-            {STATUS_EMOJI[s]} {STATUS_LABELS[s]} ({(buckets[s] || []).length})
-          </div>
-        ))}
-      </div>
-
-      {list.length === 0 && <div className="empty">Nessun ordine in questo stato.</div>}
-
-      {list.map((o) => {
+  const renderCard = (o) => {
         const ns = nextStatus(o.status)
         return (
-          <div className="card" key={o.id}>
+          <div className={`card order-card ${o.status}`} key={o.id}>
             <div className="row between">
               <div>
                 <span className="bignum" style={{ fontSize: '2rem' }}>
@@ -522,7 +499,54 @@ function OrderQueue() {
             )}
           </div>
         )
-      })}
+  }
+
+  return (
+    <div>
+      {error && <div className="banner">Errore: {error}</div>}
+
+      <div className="card row between" style={{ alignItems: 'center' }}>
+        <div>
+          <strong>Serata aperta</strong>
+          <div className="muted">
+            {recap.count} ordini · {formatPrice(recap.total)}
+          </div>
+        </div>
+        <button className="btn ghost small" onClick={chiudi} disabled={busy}>
+          ⏹ Chiudi serata
+        </button>
+      </div>
+
+      {listView ? (
+        <>
+          {/* Lista unica: stato indicato dal colore/etichetta della card */}
+          <h3 className="cat-header">In corso ({inCorso.length})</h3>
+          {inCorso.length === 0 && <div className="empty">Nessun ordine in corso.</div>}
+          {inCorso.map(renderCard)}
+
+          <h3 className="cat-header">Evasi ({evasi.length})</h3>
+          {evasi.length === 0 && <div className="empty">Ancora nessun ordine evaso.</div>}
+          {evasi.map(renderCard)}
+        </>
+      ) : (
+        <>
+          {/* Sotto-tab per stato */}
+          <div className="tabs" style={{ marginTop: 8 }}>
+            {STATUS_TABS.map((s) => (
+              <div
+                key={s}
+                className={`tab ${statusTab === s ? 'active' : ''}`}
+                onClick={() => setStatusTab(s)}
+              >
+                {STATUS_EMOJI[s]} {STATUS_LABELS[s]} ({(buckets[s] || []).length})
+              </div>
+            ))}
+          </div>
+
+          {list.length === 0 && <div className="empty">Nessun ordine in questo stato.</div>}
+          {list.map(renderCard)}
+        </>
+      )}
 
       {confirmAction && (
         <ConfirmDialog

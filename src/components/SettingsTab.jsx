@@ -160,6 +160,29 @@ export default function SettingsTab() {
         />
       </div>
 
+      <div className="card settings-section">
+        <h3>Coda ordini</h3>
+        <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
+          Come visualizzare gli ordini nel gestionale: schede separate per
+          stato, oppure un&apos;unica lista (in corso + evasi) dove lo stato è
+          indicato dal colore e dall&apos;etichetta sulla card.
+        </p>
+        <div className="mode-choice">
+          {[
+            ['tabs', '🗂 Schede per stato'],
+            ['lista', '📋 Lista unica'],
+          ].map(([value, label]) => (
+            <button
+              key={value}
+              className={`mode-option${settings.queue_view === value ? ' active' : ''}`}
+              onClick={() => save({ queue_view: value })}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <CatalogImport />
 
       <div className="card settings-section">

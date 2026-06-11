@@ -443,4 +443,5 @@ export const SEED_SETTINGS = {
   eta_base_minutes: 10,
   cancel_phrase_default: 'bancone',
   show_serving_board: true,
+  queue_view: 'tabs',
 }

@@ -663,6 +663,31 @@ a.order-mini {
   line-height: 1;
 }
 
+/* Card ordine: lo stato è leggibile dal bordo/tinta oltre che dalla pill */
+.order-card {
+  border-left: 4px solid transparent;
+}
+
+.order-card.ricevuto {
+  border-left-color: #f39c12;
+  background: linear-gradient(90deg, rgba(243, 156, 18, 0.08), transparent 35%), var(--card);
+}
+
+.order-card.in_preparazione {
+  border-left-color: #3498db;
+  background: linear-gradient(90deg, rgba(52, 152, 219, 0.1), transparent 35%), var(--card);
+}
+
+.order-card.pronto {
+  border-left-color: #2ecc71;
+  background: linear-gradient(90deg, rgba(46, 204, 113, 0.1), transparent 35%), var(--card);
+}
+
+.order-card.ritirato {
+  border-left-color: rgba(255, 255, 255, 0.25);
+  opacity: 0.75;
+}
+
 /* Nota dell'ordine sulla card del bartender */
 .order-note {
   background: rgba(245, 185, 74, 0.1);
