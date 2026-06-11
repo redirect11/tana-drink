@@ -441,13 +441,15 @@ export default function MenuPage() {
       )}
 
       {staff && (
-        <input
-          type="search"
-          className="menu-search"
-          placeholder="🔍 Cerca drink, categoria, ingrediente…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+        <div className="menu-search-wrap">
+          <input
+            type="search"
+            className="menu-search"
+            placeholder="🔍 Cerca drink, categoria, ingrediente…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
       )}
 
       {staff && search && categories.length === 0 && (
