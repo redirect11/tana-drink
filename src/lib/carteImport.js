@@ -52,6 +52,85 @@ export function decodeCsvBuffer(buffer) {
   }
 }
 
+// ── Estrazione inventario dal catalogo ────────────────────────────────
+// Individua i prodotti che sono bottiglie/ingredienti (serviti senza
+// preparazione) e li trasforma in voci di inventario con default sensati.
+
+// Voci che sono fasce di prezzo o preparazioni, non prodotti fisici.
+const NON_PRODUCT = /^(SHOT\b|LAVORAZIONE|GIN TONIC|GIN LEMON|VODKA TONIC|VODKA LEMON|LEMON \d|JOHN COLLINS|RECUPERO|CALICE \d|VINO \d|DRINK \d|SPECIAL|SOUR\b|PREMIUM \d|COCKTAIL \d|GRANITA)/i
+
+// Mixer in bottiglietta (ml) dentro la categoria BIBITE.
+const MIXERS = /TONICA|FEVER TREE|THOMAS HENRY|SCHWEPPES|FENTIMANS|TASSONI|GINGER BEER|^SUCCO/i
+
+const titleCase = (s) =>
+  s.toLowerCase().replace(/(^|[\s'\-./])\p{L}/gu, (m) => m.toUpperCase())
+
+// Restituisce { categories: [{key,name,sort_order}], items: [{cat,name,unit,package_size,stock,low_threshold}] }
+export function extractInventory(products) {
+  const items = []
+  const seen = new Set()
+  const push = (item) => {
+    const k = item.name.toLowerCase()
+    if (seen.has(k)) return
+    seen.add(k)
+    items.push(item)
+  }
+
+  for (const p of products) {
+    if (NON_PRODUCT.test(p.name)) continue
+    const name = titleCase(p.name)
+
+    switch (p.category) {
+      case 'DISTILLATI':
+        push({ cat: 'distillati', name, unit: 'ml', package_size: 700, stock: 700, low_threshold: 140 })
+        break
+      case 'GIN & VODKA':
+        push({ cat: 'gin_vodka', name, unit: 'ml', package_size: 700, stock: 700, low_threshold: 140 })
+        break
+      case 'AMARI':
+        push({ cat: 'liquori', name, unit: 'ml', package_size: 700, stock: 700, low_threshold: 140 })
+        break
+      case 'BIRRE':
+        push({ cat: 'birre', name, unit: 'pz', package_size: null, stock: 12, low_threshold: 4 })
+        break
+      case 'BIBITE':
+        if (MIXERS.test(p.name)) {
+          const big = /^SUCCO/i.test(p.name)
+          push({ cat: 'mixer', name, unit: 'ml', package_size: big ? 1000 : 200, stock: big ? 2000 : 2000, low_threshold: big ? 500 : 400 })
+        } else {
+          push({ cat: 'soft', name, unit: 'pz', package_size: null, stock: 24, low_threshold: 6 })
+        }
+        break
+      case 'VINO':
+        if (/PROSECCO/i.test(p.name)) {
+          push({ cat: 'bollicine', name: 'Prosecco', unit: 'ml', package_size: 750, stock: 1500, low_threshold: 750 })
+        } else if (/^CALICE|BOTTIGLIA|SANGRIA|PORTO/i.test(p.name) === false) {
+          push({ cat: 'bollicine', name, unit: 'ml', package_size: 750, stock: 750, low_threshold: 750 })
+        }
+        break
+      default:
+        break // cocktail, signature, food… non sono ingredienti
+    }
+  }
+
+  const CATS = [
+    ['distillati', 'Distillati'],
+    ['gin_vodka', 'Gin e Vodka'],
+    ['liquori', 'Liquori e Amari'],
+    ['bollicine', 'Vini e Bollicine'],
+    ['birre', 'Birre'],
+    ['mixer', 'Mixer'],
+    ['soft', 'Soft Drink'],
+  ]
+  const used = new Set(items.map((i) => i.cat))
+  const categories = CATS.filter(([key]) => used.has(key)).map(([key, name], i) => ({
+    key,
+    name,
+    sort_order: i,
+  }))
+  return { categories, items }
+}
+
 // Parsa l'export "carte" di SumUp.
 // Restituisce { products, categories, skipped } o lancia se il file non
 // sembra un export valido.

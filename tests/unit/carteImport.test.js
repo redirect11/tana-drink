@@ -3,7 +3,7 @@
 // Unit test del parser dell'export CSV SumUp (src/lib/carteImport.js).
 
 import { describe, it, expect } from 'vitest'
-import { parseCsv, cleanText, parseCarteCsv } from '../../src/lib/carteImport.js'
+import { parseCsv, cleanText, parseCarteCsv, extractInventory } from '../../src/lib/carteImport.js'
 
 describe('parseCsv', () => {
   it('gestisce campi quotati con virgole e virgolette escapate', () => {
@@ -69,5 +69,44 @@ describe('parseCarteCsv', () => {
       '3,,BIRRE,#fff,PRODUCT,PILS,,,#000,4,0,0,0,22,0,Bar,,,FALSE,,FALSE,FALSE',
     ].join('\n')
     expect(parseCarteCsv(csv).categories).toEqual(['BIRRE', 'BIBITE'])
+  })
+})
+
+describe('extractInventory', () => {
+  const P = (category, name) => ({ category, name, price: 5 })
+
+  it('include bottiglie e prodotti pronti, esclude fasce prezzo e preparazioni', () => {
+    const { items } = extractInventory([
+      P('DISTILLATI', 'JIM BEAM'),
+      P('DISTILLATI', 'SHOT 3,50'),
+      P('GIN & VODKA', 'HENDRIKS'),
+      P('GIN & VODKA', 'GIN TONIC'),
+      P('GIN & VODKA', 'LEMON 8'),
+      P('COCKTAIL', 'NEGRONI'),
+    ])
+    expect(items.map((i) => i.name)).toEqual(['Jim Beam', 'Hendriks'])
+  })
+
+  it('assegna unità e categorie corrette', () => {
+    const { items, categories } = extractInventory([
+      P('BIRRE', 'CERES'),
+      P('BIBITE', 'FEVER TREE'),
+      P('BIBITE', 'RED BULL'),
+      P('VINO', 'CALICE PROSECCO'),
+    ])
+    const byName = Object.fromEntries(items.map((i) => [i.name, i]))
+    expect(byName['Ceres'].unit).toBe('pz')
+    expect(byName['Fever Tree'].unit).toBe('ml')
+    expect(byName['Red Bull'].unit).toBe('pz')
+    expect(byName['Prosecco'].package_size).toBe(750)
+    expect(categories.map((c) => c.key)).toContain('mixer')
+  })
+
+  it('deduplica per nome', () => {
+    const { items } = extractInventory([
+      P('VINO', 'CALICE PROSECCO'),
+      P('VINO', 'PROSECCO BOTTIGLIA'),
+    ])
+    expect(items).toHaveLength(1)
   })
 })
