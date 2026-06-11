@@ -710,7 +710,7 @@ a.order-mini {
 
 .vbar-col {
   flex: 1;
-  min-width: 34px;
+  min-width: 54px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -721,6 +721,9 @@ a.order-mini {
   color: var(--muted);
   white-space: nowrap;
   margin-bottom: 4px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .vbar-track {
@@ -790,6 +793,14 @@ a.order-mini {
 }
 
 /* ── Navigazione laterale bartender ──────────────────────────── */
+/* Sul backoffice mobile l'hamburger è fisso in alto a sinistra:
+   sposta il brand per non farlo coprire. */
+@media (max-width: 899px) {
+  .topbar.backoffice .brand {
+    padding-left: 50px;
+  }
+}
+
 .bar-burger {
   position: fixed;
   top: 12px;

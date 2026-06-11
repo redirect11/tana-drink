@@ -18,6 +18,8 @@ import {
 } from '../lib/stats.js'
 
 const fmtMin = (m) => (m == null ? '—' : `${Math.round(m * 10) / 10} min`)
+// Prezzo compatto per le etichette dei grafici (niente centesimi).
+const fmtShort = (v) => `${Math.round(v).toLocaleString('it-IT')} €`
 const fmtQty = (u) =>
   u.unit === 'pz' ? `${u.qty} pz` : u.qty >= 1000 ? `${(u.qty / 1000).toFixed(1)} L` : `${Math.round(u.qty)} ml`
 
@@ -143,7 +145,7 @@ export default function StatsTab() {
             value: s.incasso,
             sub: `${s.ordini} ordini`,
           }))}
-          format={formatPrice}
+          format={fmtShort}
         />
       </ChartCard>
 
@@ -154,7 +156,7 @@ export default function StatsTab() {
             value: b.incasso,
             sub: `${b.ordini} ordini`,
           }))}
-          format={formatPrice}
+          format={fmtShort}
         />
       </ChartCard>
 
