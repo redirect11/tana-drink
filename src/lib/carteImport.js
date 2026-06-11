@@ -131,6 +131,50 @@ export function extractInventory(products) {
   return { categories, items }
 }
 
+// ── Collegamento 1:1 menu → inventario ────────────────────────────────
+// Per le voci di menu che non sono preparazioni, individua l'ingrediente
+// corrispondente e la quantità consumata per vendita.
+// Restituisce { invName, qty, unit } oppure null (voce non collegabile).
+export function recipeLinkFor(product) {
+  if (NON_PRODUCT.test(product.name)) {
+    // Eccezione: i calici di vino nominati restano collegabili.
+    if (!/^CALICE \p{L}/iu.test(product.name)) return null
+  }
+  const name = titleCase(product.name)
+
+  switch (product.category) {
+    case 'DISTILLATI':
+      return { invName: name, qty: 40, unit: 'ml' } // servito liscio/shot
+    case 'AMARI':
+      return { invName: name, qty: 40, unit: 'ml' }
+    case 'GIN & VODKA':
+      // Gin tonic col gin premium indicato: scala il distillato.
+      return { invName: name, qty: 50, unit: 'ml' }
+    case 'BIRRE':
+      return { invName: name, qty: 1, unit: 'pz' }
+    case 'BIBITE':
+      if (MIXERS.test(product.name)) {
+        const big = /^SUCCO/i.test(product.name)
+        return { invName: name, qty: 200, unit: 'ml' } // bottiglietta intera / bicchiere
+      }
+      return { invName: name, qty: 1, unit: 'pz' }
+    case 'VINO': {
+      if (/PROSECCO/i.test(product.name)) {
+        const qty = /BOTTIGLIA/i.test(product.name) ? 750 : 150
+        return { invName: 'Prosecco', qty, unit: 'ml' }
+      }
+      const calice = product.name.match(/^CALICE (\p{L}.+)/iu)
+      if (calice) return { invName: titleCase(calice[1]), qty: 150, unit: 'ml' }
+      if (/^CALICE|BOTTIGLIA|SANGRIA|PORTO/i.test(product.name)) return null
+      // Vino nominato: sopra ~15€ è la bottiglia, altrimenti il calice.
+      const qty = product.price >= 15 ? 750 : 150
+      return { invName: name, qty, unit: 'ml' }
+    }
+    default:
+      return null
+  }
+}
+
 // Parsa l'export "carte" di SumUp.
 // Restituisce { products, categories, skipped } o lancia se il file non
 // sembra un export valido.
