@@ -26,6 +26,7 @@ import { isFirebaseConfigured, auth } from '../lib/firebaseClient.js'
 import { useCustomer } from '../lib/customerAuth.js'
 import { onAuthStateChanged } from 'firebase/auth'
 import OrderSummary from '../components/OrderSummary.jsx'
+import StaffDrawer from '../components/StaffDrawer.jsx'
 
 const NOTIF_PROMPT_KEY = 'tana_notif_prompt_v1'
 
@@ -280,7 +281,8 @@ export default function MenuPage() {
       : null
 
   return (
-    <div>
+    <div className={staff ? 'bar-content' : ''}>
+      {staff && <StaffDrawer role={staff.role} active="ordine" />}
       <div className="hero">
         <img
           className="hero-img"
