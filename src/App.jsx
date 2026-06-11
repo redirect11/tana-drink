@@ -48,7 +48,10 @@ export default function App() {
         </Link>
         <nav className="row">
           {onBackoffice ? (
-            <Link className="btn ghost small" to="/">Vista cliente</Link>
+            // Per lo staff «Nuovo ordine» porta già al menu: niente doppione.
+            staffRole !== 'staff' && (
+              <Link className="btn ghost small" to="/">Vista cliente</Link>
+            )
           ) : (
             <>
               {hasOrders && (
