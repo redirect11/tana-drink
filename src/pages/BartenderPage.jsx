@@ -85,8 +85,18 @@ export default function BartenderPage() {
     )
   }
 
-  // Lo staff (non bartender) vede SOLO la lista da servire.
-  if (role !== 'bartender') return <ServiceQueue />
+  // Lo staff (non bartender) vede SOLO la lista da servire,
+  // col drawer laterale (Nuovo ordine, Esci).
+  if (role !== 'bartender') {
+    return (
+      <div>
+        <StaffDrawer role="staff" active="servizio" />
+        <div className="bar-content">
+          <ServiceQueue />
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div>

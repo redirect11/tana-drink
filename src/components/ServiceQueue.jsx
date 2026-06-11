@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { signOut } from 'firebase/auth'
 import { auth } from '../lib/firebaseClient.js'
 import {
   subscribeOpenSerata,
@@ -117,14 +116,9 @@ export default function ServiceQueue() {
                 : 'Nessuna serata aperta'}
           </div>
         </div>
-        <div className="row" style={{ gap: 6 }}>
-          <Link className="btn small" to="/">
-            ✍️ Nuovo ordine
-          </Link>
-          <button className="btn ghost small" onClick={() => signOut(auth)}>
-            Esci
-          </button>
-        </div>
+        <Link className="btn small" to="/">
+          ✍️ Nuovo ordine
+        </Link>
       </div>
 
       {error && <div className="banner">Errore: {error}</div>}
