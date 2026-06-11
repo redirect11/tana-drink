@@ -18,10 +18,12 @@ const { onDocumentUpdated } = require('firebase-functions/v2/firestore')
 const { initializeApp } = require('firebase-admin/app')
 const { getFirestore, FieldValue } = require('firebase-admin/firestore')
 const { getMessaging } = require('firebase-admin/messaging')
+const { getAuth } = require('firebase-admin/auth')
 
 const { buildSumupHeaders, buildSumupUrl } = require('./lib/sumup-core')
 const { syncProducts, createSale, updateSaleStatus, handleWebhook } = require('./lib/sumup-service')
 const { decideOrderPush } = require('./lib/push-core')
+const { staffAdmin } = require('./lib/staff-service')
 
 initializeApp()
 const db = getFirestore()
@@ -89,6 +91,18 @@ exports.updateSumUpSaleStatus = onCall(OPTS, (request) => updateSaleStatus(deps,
 exports.sumupWebhook = onRequest({ ...OPTS, cors: false }, async (req, res) => {
   const { status, body } = await handleWebhook(deps, { method: req.method, body: req.body })
   res.status(status).send(body)
+})
+
+// ── Gestione utenze staff (solo bartender) ────────────────────────────────────
+// Crea/elenca/modifica/elimina gli account dello staff con il ruolo
+// (custom claim). La logica vive in lib/staff-service.js (testata).
+exports.staffAdmin = onCall(OPTS, async (request) => {
+  try {
+    return await staffAdmin(getAuth(), request.auth, request.data)
+  } catch (e) {
+    if (e?.code && e?.message) throw new HttpsError(e.code, e.message)
+    throw new HttpsError('internal', e?.message || 'Errore interno.')
+  }
 })
 
 // ── Notifiche push al cliente (FCM) ───────────────────────────────────────────
