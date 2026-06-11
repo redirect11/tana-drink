@@ -35,6 +35,7 @@ import SettingsTab from '../components/SettingsTab.jsx'
 import StatsTab from '../components/StatsTab.jsx'
 import StaffTab from '../components/StaffTab.jsx'
 import ServiceQueue from '../components/ServiceQueue.jsx'
+import StaffMyOrders from '../components/StaffMyOrders.jsx'
 import ConfirmDialog from '../components/ConfirmDialog.jsx'
 import CancelOrderDialog from '../components/CancelOrderDialog.jsx'
 import DevTools from '../components/DevTools.jsx'
@@ -85,14 +86,16 @@ export default function BartenderPage() {
     )
   }
 
-  // Lo staff (non bartender) vede SOLO la lista da servire,
-  // col drawer laterale (Nuovo ordine, Esci).
+  // Lo staff (non bartender) vede la lista da servire e i propri ordini,
+  // col drawer laterale (Nuovo ordine, Esci). Il tab segue la query
+  // string, così la navigazione dal drawer funziona anche dal menu.
   if (role !== 'bartender') {
+    const staffTab = params.get('tab') === 'miei-ordini' ? 'miei-ordini' : 'servizio'
     return (
       <div>
-        <StaffDrawer role="staff" active="servizio" />
+        <StaffDrawer role="staff" active={staffTab} />
         <div className="bar-content">
-          <ServiceQueue />
+          {staffTab === 'miei-ordini' ? <StaffMyOrders /> : <ServiceQueue />}
         </div>
       </div>
     )

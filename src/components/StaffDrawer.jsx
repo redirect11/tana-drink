@@ -13,7 +13,10 @@ const BARTENDER_NAV = [
   ['impostazioni', '⚙️', 'Impostazioni'],
 ]
 
-const STAFF_NAV = [['servizio', '🫱', 'Da servire']]
+const STAFF_NAV = [
+  ['servizio', '🫱', 'Da servire'],
+  ['miei-ordini', '🧾', 'I miei ordini'],
+]
 
 // Menu laterale dello staff: usato nel gestionale (onSelect cambia tab)
 // e nella vista menu per l'ordinazione manuale (naviga a /bar?tab=…).
