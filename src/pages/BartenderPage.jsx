@@ -451,6 +451,7 @@ function OrderQueue() {
                 <span className="bignum" style={{ fontSize: '2rem' }}>
                   #{o.daily_number ?? '—'}
                 </span>{' '}
+                {o.customer_name && <strong>{o.customer_name}</strong>}{' '}
                 {o.table_label && (
                   <span className="muted">· Tavolo {o.table_label}</span>
                 )}

@@ -83,5 +83,12 @@ service cloud.firestore {
     match /stock_movements/{movementId} {
       allow read, write: if isBartender();
     }
+
+    // STAFF CALLS — cerca-persone: il bartender chiama, lo staff risponde.
+    match /staff_calls/{callId} {
+      allow read: if isSignedIn();
+      allow create, delete: if isBartender();
+      allow update: if isSignedIn();
+    }
   }
 }
