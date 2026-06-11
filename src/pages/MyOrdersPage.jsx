@@ -42,6 +42,9 @@ export default function MyOrdersPage() {
   return (
     <div>
       <h2 style={{ margin: '8px 4px' }}>I miei ordini</h2>
+      <Link className="btn ghost block" to="/">
+        ← Torna al menù
+      </Link>
       {orders.map((o) => (
         <Link
           key={o.id}
