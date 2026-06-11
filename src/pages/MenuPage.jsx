@@ -305,7 +305,7 @@ export default function MenuPage() {
       : null
 
   return (
-    <div className={staff ? 'bar-content' : ''}>
+    <div className={staff ? 'bar-content menu-staff' : ''}>
       {staff && <StaffDrawer role={staff.role} active="ordine" />}
       {/* Hero d'intestazione solo per i clienti: allo staff serve spazio. */}
       {!staff && (
