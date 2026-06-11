@@ -16,6 +16,7 @@ import {
   runTransaction,
   serverTimestamp,
   increment,
+  writeBatch,
   Timestamp,
 } from 'firebase/firestore'
 import { db } from './firebaseClient.js'
@@ -854,6 +855,60 @@ export function subscribeReadyOrders(serataId, onChange, onError) {
     },
     onError ?? (() => {})
   )
+}
+
+// Sostituisce l'intero catalogo (drinks + categories) con i prodotti
+// importati da un CSV. Usato dal pannello admin; richiede bartender
+// autenticato (rules). `onProgress(msg)` per il feedback in UI.
+export async function replaceCatalog({ categories, products }, onProgress = () => {}) {
+  const now = new Date().toISOString()
+
+  // 1. Svuota il catalogo esistente (a blocchi: writeBatch max 500 op).
+  for (const [col, ref] of [['drinks', drinksCol], ['categories', categoriesCol]]) {
+    const snap = await getDocs(ref)
+    const docs = snap.docs
+    for (let i = 0; i < docs.length; i += 400) {
+      const batch = writeBatch(db)
+      docs.slice(i, i + 400).forEach((d) => batch.delete(d.ref))
+      await batch.commit()
+    }
+    if (docs.length) onProgress(`Svuotata "${col}" (${docs.length})`)
+  }
+
+  // 2. Categorie (id pre-generati per collegare i drink nello stesso giro).
+  const catIds = {}
+  {
+    const batch = writeBatch(db)
+    categories.forEach((name, i) => {
+      const ref = doc(categoriesCol)
+      catIds[name] = ref.id
+      batch.set(ref, { name, sort_order: i, created_at: now })
+    })
+    await batch.commit()
+    onProgress(`Create ${categories.length} categorie`)
+  }
+
+  // 3. Prodotti.
+  for (let i = 0; i < products.length; i += 400) {
+    const batch = writeBatch(db)
+    for (const p of products.slice(i, i + 400)) {
+      batch.set(doc(drinksCol), {
+        name: p.name,
+        description: p.description ?? null,
+        category: p.category,
+        category_id: catIds[p.category] ?? null,
+        recipe: null,
+        recipe_items: [],
+        price: p.price,
+        available: true,
+        image_url: null,
+        sumup_product_id: p.sumup_product_id ?? null,
+        created_at: now,
+      })
+    }
+    await batch.commit()
+    onProgress(`Importati ${Math.min(i + 400, products.length)}/${products.length} prodotti`)
+  }
 }
 
 // --- SETTINGS ---
