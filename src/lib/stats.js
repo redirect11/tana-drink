@@ -37,31 +37,83 @@ export function kpiSummary(orders, serate) {
   }
 }
 
-// ── Incasso e ordini per fascia oraria ────────────────────────────────
-// Fasce di un'ora allineate all'apertura del locale (18:30): la fascia
-// "18:30" copre 18:30–19:29, e così via fino a notte fonda.
-const SHIFT_MIN = 30
-const HOUR_ORDER = [18, 19, 20, 21, 22, 23, 0, 1, 2, 3]
-const hourLabel = (h) => `${String(h).padStart(2, '0')}:30`
+// ── Fasce orarie configurabili ────────────────────────────────────────
+// Le fasce sono slot di un'ora allineati all'inizio del range scelto
+// ("da" → "a", anche a cavallo della mezzanotte, es. 18:30 → 03:30).
+// Le fasce vuote compaiono comunque, a zero.
 
-export function revenueByHour(orders) {
-  const buckets = new Map()
+export const DEFAULT_HOUR_RANGE = { from: '18:30', to: '03:30' }
+
+// "HH:MM" → minuti da mezzanotte.
+export function parseHM(s) {
+  const m = String(s || '').match(/^(\d{1,2}):(\d{2})$/)
+  if (!m) return null
+  return Math.min(23, Number(m[1])) * 60 + Math.min(59, Number(m[2]))
+}
+
+const DAY = 1440
+const fmtHM = (min) => {
+  const m = ((min % DAY) + DAY) % DAY
+  return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
+}
+
+// Ampiezza del range in minuti, con wrap oltre mezzanotte (0 = giornata intera).
+function rangeSpan(fromMin, toMin) {
+  const span = (toMin - fromMin + DAY) % DAY
+  return span === 0 ? DAY : span
+}
+
+// Minuti-da-mezzanotte (ora locale) di un timestamp ordine.
+const minuteOfDay = (t) => {
+  const d = new Date(t)
+  return d.getHours() * 60 + d.getMinutes()
+}
+
+// L'orario `m` cade nel range? Restituisce l'offset dal "da", o null.
+function offsetInRange(m, fromMin, span) {
+  const off = (m - fromMin + DAY) % DAY
+  return off < span ? off : null
+}
+
+export function revenueByHour(orders, range = DEFAULT_HOUR_RANGE) {
+  const fromMin = parseHM(range.from) ?? parseHM(DEFAULT_HOUR_RANGE.from)
+  const toMin = parseHM(range.to) ?? parseHM(DEFAULT_HOUR_RANGE.to)
+  const span = rangeSpan(fromMin, toMin)
+  const nSlots = Math.ceil(span / 60)
+
+  const buckets = Array.from({ length: nSlots }, (_, i) => ({
+    label: fmtHM(fromMin + i * 60),
+    incasso: 0,
+    ordini: 0,
+  }))
+
   for (const o of valid(orders)) {
     const t = ms(o.created_at)
     if (t == null) continue
-    const h = new Date(t - SHIFT_MIN * 60000).getHours()
-    const b = buckets.get(h) || { hour: h, label: hourLabel(h), incasso: 0, ordini: 0 }
+    const off = offsetInRange(minuteOfDay(t), fromMin, span)
+    if (off == null) continue
+    const b = buckets[Math.floor(off / 60)]
     b.incasso += Number(o.total) || 0
     b.ordini += 1
-    buckets.set(h, b)
   }
-  const known = HOUR_ORDER.filter((h) => buckets.has(h)).map((h) => buckets.get(h))
-  const rest = [...buckets.values()]
-    .filter((b) => !HOUR_ORDER.includes(b.hour))
-    .sort((a, b) => a.hour - b.hour)
-  const out = [...known, ...rest]
-  const peak = out.reduce((best, b) => (!best || b.ordini > best.ordini ? b : best), null)
-  return { buckets: out, peakHour: peak?.hour ?? null, peakLabel: peak?.label ?? null }
+
+  const peak = buckets.reduce(
+    (best, b) => (b.ordini > 0 && (!best || b.ordini > best.ordini) ? b : best),
+    null
+  )
+  return { buckets, peakLabel: peak?.label ?? null }
+}
+
+// Incasso per serata considerando SOLO gli ordini in una fascia oraria.
+export function revenueBySerataInRange(orders, serate, range) {
+  const fromMin = parseHM(range.from) ?? 0
+  const toMin = parseHM(range.to) ?? 0
+  const span = rangeSpan(fromMin, toMin)
+  const filtered = orders.filter((o) => {
+    const t = ms(o.created_at)
+    return t != null && offsetInRange(minuteOfDay(t), fromMin, span) != null
+  })
+  return revenueBySerata(filtered, serate)
 }
 
 // ── Trend per serata ──────────────────────────────────────────────────

@@ -9,12 +9,14 @@ import {
   kpiSummary,
   revenueByHour,
   revenueBySerata,
+  revenueBySerataInRange,
   topProducts,
   revenueByCategory,
   ingredientUsage,
   prepTimeStats,
   serviceModeSplit,
   extrasBreakdown,
+  DEFAULT_HOUR_RANGE,
 } from '../lib/stats.js'
 
 const fmtMin = (m) => (m == null ? '—' : `${Math.round(m * 10) / 10} min`)
@@ -38,6 +40,9 @@ export default function StatsTab() {
   // Carica abbastanza serate da coprire il periodo scelto (min 60).
   const [loadLimit, setLoadLimit] = useState(60)
   if (effective > loadLimit) setLoadLimit(Math.ceil(effective / 30) * 30)
+  // Range orari configurabili dei grafici.
+  const [hourRange, setHourRange] = useState(DEFAULT_HOUR_RANGE)
+  const [dayRange, setDayRange] = useState({ from: '22:00', to: '00:00' })
 
   useEffect(() => {
     let active = true
@@ -65,8 +70,9 @@ export default function StatsTab() {
     return {
       sel,
       kpi: kpiSummary(ord, sel),
-      byHour: revenueByHour(ord),
+      byHour: revenueByHour(ord, hourRange),
       bySerata: revenueBySerata(ord, sel),
+      bySerataRange: revenueBySerataInRange(ord, sel, dayRange),
       top: topProducts(ord),
       byCategory: revenueByCategory(ord, drinksById).slice(0, 10),
       ingredients: ingredientUsage(ord, drinksById),
@@ -74,7 +80,7 @@ export default function StatsTab() {
       split: serviceModeSplit(ord),
       extras: extrasBreakdown(ord),
     }
-  }, [serate, orders, drinks, effective])
+  }, [serate, orders, drinks, effective, hourRange, dayRange])
 
   if (error) return <div className="banner">Errore: {error}</div>
   if (!serate) return <div className="empty">Carico le statistiche…</div>
@@ -86,7 +92,7 @@ export default function StatsTab() {
     )
   }
 
-  const { kpi, byHour, bySerata, top, byCategory, ingredients, prep, split, extras } = view
+  const { kpi, byHour, bySerata, bySerataRange, top, byCategory, ingredients, prep, split, extras } = view
 
   return (
     <div>
@@ -150,11 +156,24 @@ export default function StatsTab() {
       </ChartCard>
 
       <ChartCard title="🕙 Incasso per fascia oraria">
+        <TimeRange value={hourRange} onChange={setHourRange} />
         <VBars
           data={byHour.buckets.map((b) => ({
             label: b.label,
             value: b.incasso,
             sub: `${b.ordini} ordini`,
+          }))}
+          format={fmtShort}
+        />
+      </ChartCard>
+
+      <ChartCard title="📅 Incasso per serata nella fascia scelta">
+        <TimeRange value={dayRange} onChange={setDayRange} />
+        <VBars
+          data={bySerataRange.map((s) => ({
+            label: `${s.weekday} ${s.label}`,
+            value: s.incasso,
+            sub: `${s.ordini} ordini`,
           }))}
           format={fmtShort}
         />
@@ -208,6 +227,30 @@ export default function StatsTab() {
           <Row k="Non ritirati/serviti" v={`${kpi.pctNonRitirati.toFixed(1)}%`} />
         </div>
       </div>
+    </div>
+  )
+}
+
+// Selettore di fascia oraria (da → a, anche oltre la mezzanotte).
+function TimeRange({ value, onChange }) {
+  return (
+    <div className="time-range">
+      <label>
+        Dalle
+        <input
+          type="time"
+          value={value.from}
+          onChange={(e) => e.target.value && onChange({ ...value, from: e.target.value })}
+        />
+      </label>
+      <label>
+        alle
+        <input
+          type="time"
+          value={value.to}
+          onChange={(e) => e.target.value && onChange({ ...value, to: e.target.value })}
+        />
+      </label>
     </div>
   )
 }
