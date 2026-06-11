@@ -699,6 +699,29 @@ a.order-mini {
   opacity: 0.8;
 }
 
+/* Selettore fascia oraria dei grafici */
+.time-range {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.time-range label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.time-range input[type='time'] {
+  width: auto;
+  padding: 6px 8px;
+  font-size: 0.9rem;
+}
+
 /* Barre verticali (trend serate / fasce orarie) */
 .vbars {
   display: flex;

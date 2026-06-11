@@ -7,6 +7,7 @@ import {
   kpiSummary,
   revenueByHour,
   revenueBySerata,
+  revenueBySerataInRange,
   topProducts,
   revenueByCategory,
   ingredientUsage,
@@ -85,14 +86,34 @@ describe('kpiSummary', () => {
 })
 
 describe('revenueByHour', () => {
-  it('raggruppa in fasce orarie allineate alle 18:30 e trova il picco', () => {
-    const { buckets, peakHour, peakLabel } = revenueByHour(orders)
+  it('fasce allineate al range di default (18:30) con vuote a zero', () => {
+    const { buckets, peakLabel } = revenueByHour(orders)
     expect(buckets.reduce((s, b) => s + b.ordini, 0)).toBe(2)
     expect(buckets.reduce((s, b) => s + b.incasso, 0)).toBe(28)
-    expect(peakHour).not.toBeNull()
     expect(peakLabel).toMatch(/^\d{2}:30$/)
-    // un ordine alle 20:15 UTC… le fasce iniziano alla mezz'ora
+    // range 18:30 → 03:30 = 9 fasce, sempre presenti (anche vuote)
+    expect(buckets).toHaveLength(9)
+    expect(buckets[0].label).toBe('18:30')
     for (const b of buckets) expect(b.label).toMatch(/^\d{2}:30$/)
+  })
+
+  it('range personalizzato, anche a cavallo della mezzanotte', () => {
+    const { buckets } = revenueByHour(orders, { from: '23:00', to: '01:00' })
+    expect(buckets.map((b) => b.label)).toEqual(['23:00', '00:00'])
+    // l'ordine delle 22:40 UTC (00:40 locali) cade nella fascia 00:00
+    expect(buckets[1].ordini).toBe(1)
+    expect(buckets[1].incasso).toBe(8)
+    expect(buckets[0].ordini).toBe(0)
+  })
+})
+
+describe('revenueBySerataInRange', () => {
+  it('conta per serata solo gli ordini nella fascia', () => {
+    // 20:15Z = 22:15 locali → dentro 22:00-23:00; 22:40Z = 00:40 → fuori
+    const t = revenueBySerataInRange(orders, serate, { from: '22:00', to: '23:00' })
+    expect(t).toHaveLength(2)
+    expect(t[0].incasso).toBe(20)
+    expect(t[1].incasso).toBe(0)
   })
 })
 
