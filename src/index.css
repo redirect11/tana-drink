@@ -61,23 +61,39 @@ a {
   top: 0;
   z-index: 10;
   display: flex;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 12px 4px;
+  /* A tutta larghezza: esce dal padding orizzontale di .app. */
+  margin: 0 -16px;
+  padding: 12px 16px;
   background: rgba(14, 14, 21, 0.88);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.topbar nav {
+  flex-shrink: 0;
 }
 
 .brand {
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
   font-weight: 700;
   letter-spacing: 0.3px;
   font-family: var(--serif);
   font-size: 1.05rem;
+}
+
+/* Su una riga sola: il titolo si tronca, l'altezza resta fissa
+   (le barre sticky sotto contano su questa quota). */
+.brand span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .brand img {
@@ -1014,6 +1030,21 @@ a.order-mini {
   margin: 0 0 10px;
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.06);
+}
+
+/* Menu in modalità staff: ricerca e categorie restano fisse sotto la
+   topbar durante lo scroll (sfondo opaco: il contenuto ci passa sotto). */
+.menu-staff .menu-search {
+  position: sticky;
+  top: 64px;
+  z-index: 6;
+  margin-bottom: 0;
+  background: #1c1c23;
+}
+
+.menu-staff .cat-nav {
+  top: 105px;
+  padding-top: 10px;
 }
 
 .menu-search:focus {
