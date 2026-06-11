@@ -11,7 +11,7 @@ import {
   updateOrderStatus,
   DEFAULT_SETTINGS,
 } from '../lib/api.js'
-import { ORDER_STATUSES, formatPrice } from '../lib/orderStatus.js'
+import { ORDER_STATUSES, formatPrice, placedByName } from '../lib/orderStatus.js'
 import { notify } from '../lib/notify.js'
 
 // Vista cameriera: SOLO gli ordini pronti da servire ai tavoli, con il
@@ -166,7 +166,7 @@ export default function ServiceQueue() {
           </div>
           {o.placed_by && (
             <p className="muted small" style={{ margin: '0 0 8px' }}>
-              ✍️ Inserito da {o.placed_by.email}
+              ✍️ Inserito da {placedByName(o.placed_by)}
             </p>
           )}
           {o.note && <div className="order-note">📝 {o.note}</div>}
@@ -185,8 +185,10 @@ export default function ServiceQueue() {
           <div className="confirm-box pager-call">
             <div className="pager-icon">📟</div>
             <h3 style={{ margin: '8px 0' }}>Chiamata dal bancone</h3>
-            {incoming.from_email && (
-              <p className="muted" style={{ margin: 0 }}>da {incoming.from_email}</p>
+            {(incoming.from_name || incoming.from_email) && (
+              <p className="muted" style={{ margin: 0 }}>
+                da {incoming.from_name || incoming.from_email}
+              </p>
             )}
             {incoming.message && (
               <p style={{ fontSize: '1.05rem', margin: '12px 0 0' }}>

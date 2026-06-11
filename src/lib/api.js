@@ -959,11 +959,12 @@ export async function replaceCatalog({ categories, products }, onProgress = () =
 const staffCallsCol = collection(db, 'staff_calls')
 
 // Il bartender chiama un membro dello staff (con messaggio opzionale).
-export async function createStaffCall({ to_uid, to_email, message, from_email }) {
+export async function createStaffCall({ to_uid, to_email, message, from_email, from_name }) {
   const ref = await addDoc(staffCallsCol, {
     to_uid,
     to_email,
     from_email: from_email ?? null,
+    from_name: from_name ?? null,
     message: message || null,
     status: 'pending',
     created_at: serverTimestamp(),

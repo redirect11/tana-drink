@@ -29,6 +29,7 @@ async function staffAdmin(adminAuth, auth, data) {
         .map((u) => ({
           uid: u.uid,
           email: u.email,
+          name: u.displayName ?? null,
           role: u.customClaims?.role ?? 'cliente',
           disabled: u.disabled,
           created_at: u.metadata?.creationTime ?? null,
@@ -38,16 +39,20 @@ async function staffAdmin(adminAuth, auth, data) {
   }
 
   if (action === 'create') {
-    const { email, password, role } = data
+    const { email, password, role, name } = data
     if (!email || !password || password.length < 6) {
       throw { code: 'invalid-argument', message: 'Email e password (min 6 caratteri) obbligatorie.' }
     }
     if (!ROLES.includes(role)) {
       throw { code: 'invalid-argument', message: `Ruolo non valido: ${role}` }
     }
-    const user = await adminAuth.createUser({ email, password })
+    const user = await adminAuth.createUser({
+      email,
+      password,
+      displayName: (name || '').trim() || undefined,
+    })
     await adminAuth.setCustomUserClaims(user.uid, { role })
-    return { uid: user.uid, email, role }
+    return { uid: user.uid, email, name: user.displayName ?? null, role }
   }
 
   if (action === 'setRole') {

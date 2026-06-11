@@ -16,6 +16,7 @@ import {
   STATUS_LABELS,
   STATUS_EMOJI,
   formatPrice,
+  placedByName,
 } from '../lib/orderStatus.js'
 import { formatQty } from '../lib/inventory.js'
 import { etaForMode } from '../lib/eta.js'
@@ -44,7 +45,7 @@ export default function MenuPage() {
   const [readyOrders, setReadyOrders] = useState([])
   // Staff loggato (bartender/cameriera): gli ordini fatti da qui vengono
   // marcati come manuali con chi li ha inseriti.
-  const [staff, setStaff] = useState(null) // { email, role } | null
+  const [staff, setStaff] = useState(null) // { email, name, role } | null
   // Account cliente (null per anonimi e staff): ordini legati al profilo.
   const { user: customer, profile: customerProfile } = useCustomer()
 
@@ -56,7 +57,11 @@ export default function MenuPage() {
         const token = await u.getIdTokenResult()
         const role = token.claims.role
         // Solo bartender/staff: i clienti registrati ordinano come clienti.
-        setStaff(role === 'bartender' || role === 'staff' ? { email: u.email, role } : null)
+        setStaff(
+          role === 'bartender' || role === 'staff'
+            ? { email: u.email, name: u.displayName || null, role }
+            : null
+        )
       } catch {
         setStaff(null)
       }
@@ -329,7 +334,7 @@ export default function MenuPage() {
       {staff && !menuOnly && (
         <div className="banner row between" style={{ alignItems: 'center', gap: 10 }}>
           <span>
-            ✍️ Ordine manuale: inserito da <strong>{staff.email}</strong> ({staff.role}).
+            ✍️ Ordine manuale: inserito da <strong>{placedByName(staff)}</strong> ({staff.role}).
           </span>
           <Link className="btn ghost small" to="/bar" style={{ flexShrink: 0 }}>
             🧾 Coda

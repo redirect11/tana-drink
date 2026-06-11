@@ -15,6 +15,7 @@ export default function StaffTab() {
   const [confirm, setConfirm] = useState(null) // { title, message, run }
 
   // Form nuovo utente
+  const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [role, setRole] = useState('staff')
@@ -47,6 +48,7 @@ export default function StaffTab() {
         to_email: target.email,
         message: callMessage.trim() || null,
         from_email: auth.currentUser?.email ?? null,
+        from_name: auth.currentUser?.displayName ?? null,
       })
       setCallMessage('')
     } catch (e) {
@@ -74,7 +76,8 @@ export default function StaffTab() {
   async function handleCreate(e) {
     e.preventDefault()
     await run(async () => {
-      await createStaff({ email: email.trim(), password, role })
+      await createStaff({ email: email.trim(), password, role, name: name.trim() })
+      setName('')
       setEmail('')
       setPassword('')
     })
@@ -91,6 +94,15 @@ export default function StaffTab() {
 
       <form className="card settings-section" onSubmit={handleCreate}>
         <h3>Nuovo collaboratore</h3>
+        <label htmlFor="staff-name">Nome</label>
+        <input
+          id="staff-name"
+          type="text"
+          required
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="es. Giulia"
+        />
         <label htmlFor="staff-email">Email</label>
         <input
           id="staff-email"
@@ -137,8 +149,14 @@ export default function StaffTab() {
         {users.map((u) => (
           <div className="toggle-row" key={u.uid}>
             <div>
-              <div>{u.email}{u.uid === myUid && <span className="muted"> (tu)</span>}</div>
-              <div className="desc">{ROLE_LABELS[u.role] ?? u.role}</div>
+              <div>
+                {u.name || u.email}
+                {u.uid === myUid && <span className="muted"> (tu)</span>}
+              </div>
+              <div className="desc">
+                {ROLE_LABELS[u.role] ?? u.role}
+                {u.name ? ` · ${u.email}` : ''}
+              </div>
             </div>
             {u.uid !== myUid && (
               <div className="row" style={{ gap: 6 }}>
@@ -207,7 +225,7 @@ export default function StaffTab() {
       {callTarget && (
         <div className="overlay confirm-overlay" onClick={() => setCallTarget(null)}>
           <div className="confirm-box" onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginTop: 0 }}>📟 Chiama {callTarget.email}</h3>
+            <h3 style={{ marginTop: 0 }}>📟 Chiama {callTarget.name || callTarget.email}</h3>
             <p className="muted" style={{ marginTop: 0 }}>
               Il dispositivo vibrerà con insistenza finché non risponde.
             </p>

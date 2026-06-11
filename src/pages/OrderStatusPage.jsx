@@ -18,7 +18,10 @@ import {
   ritiratoLabel,
   CANCEL_PHRASES,
   formatPrice,
+  placedByName,
 } from '../lib/orderStatus.js'
+import { onAuthStateChanged } from 'firebase/auth'
+import { auth } from '../lib/firebaseClient.js'
 import { queueEtaMinutes } from '../lib/eta.js'
 import { ensureNotificationPermission, notify } from '../lib/notify.js'
 import { rememberOrderId } from '../lib/cart.js'
@@ -37,6 +40,22 @@ export default function OrderStatusPage() {
   const [serata, setSerata] = useState(null)
   const [queue, setQueue] = useState([])
   const prevStatus = useRef(null)
+  // Chi sta guardando la pagina è staff? Il QR per agganciare l'ordine
+  // va mostrato solo allo staff, non al cliente che lo ha già scansionato.
+  const [viewerIsStaff, setViewerIsStaff] = useState(false)
+
+  useEffect(() => {
+    return onAuthStateChanged(auth, async (u) => {
+      if (!u) return setViewerIsStaff(false)
+      try {
+        const token = await u.getIdTokenResult()
+        const role = token.claims.role
+        setViewerIsStaff(role === 'bartender' || role === 'staff')
+      } catch {
+        setViewerIsStaff(false)
+      }
+    })
+  }, [])
 
   useEffect(() => {
     let active = true
@@ -353,25 +372,29 @@ export default function OrderStatusPage() {
       {order.placed_by && (
         <div className="card" style={{ textAlign: 'center' }}>
           <p className="muted" style={{ marginTop: 0, fontSize: '0.85rem' }}>
-            ✍️ Ordine inserito da {order.placed_by.email}
+            ✍️ Ordine inserito da {placedByName(order.placed_by)}
           </p>
-          {!showQr ? (
-            <button className="btn secondary block" onClick={() => setShowQr(true)}>
-              📲 Mostra QR al cliente
-            </button>
-          ) : qr ? (
+          {viewerIsStaff && (
             <>
-              <img src={qr} alt="QR ordine" style={{ borderRadius: 12, maxWidth: 260 }} />
-              <p className="muted" style={{ fontSize: '0.82rem', margin: '8px 0 0' }}>
-                Il cliente scansiona e segue l’ordine dal suo telefono.
-              </p>
+              {!showQr ? (
+                <button className="btn secondary block" onClick={() => setShowQr(true)}>
+                  📲 Mostra QR al cliente
+                </button>
+              ) : qr ? (
+                <>
+                  <img src={qr} alt="QR ordine" style={{ borderRadius: 12, maxWidth: 260 }} />
+                  <p className="muted" style={{ fontSize: '0.82rem', margin: '8px 0 0' }}>
+                    Il cliente scansiona e segue l’ordine dal suo telefono.
+                  </p>
+                </>
+              ) : (
+                <p className="muted">Genero il QR…</p>
+              )}
+              <Link className="btn block" style={{ marginTop: 10 }} to="/bar">
+                🧾 Torna al gestionale
+              </Link>
             </>
-          ) : (
-            <p className="muted">Genero il QR…</p>
           )}
-          <Link className="btn block" style={{ marginTop: 10 }} to="/bar">
-            🧾 Torna al gestionale
-          </Link>
         </div>
       )}
 
