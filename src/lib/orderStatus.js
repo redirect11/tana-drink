@@ -54,3 +54,11 @@ export function formatPrice(value) {
   const n = Number(value || 0)
   return n.toLocaleString('it-IT', { style: 'currency', currency: 'EUR' })
 }
+
+// Nome leggibile di chi ha inserito un ordine manuale: il nome dello
+// staff se impostato, altrimenti la parte locale dell'email.
+export function placedByName(placedBy) {
+  if (!placedBy) return ''
+  if (placedBy.name) return placedBy.name
+  return String(placedBy.email || '').split('@')[0]
+}

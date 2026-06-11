@@ -23,6 +23,7 @@ import {
   ritiratoLabel,
   formatPrice,
   nextStatus,
+  placedByName,
 } from '../lib/orderStatus.js'
 import { bucketByStatus, serataRecap, openOrdersCount } from '../lib/serata.js'
 import { aggregateProducts, serataFinance, longestPrep, phaseAverages } from '../lib/eta.js'
@@ -417,6 +418,7 @@ function OrderQueue() {
           o.customer_name?.toLowerCase().includes(q) ||
           o.table_label?.toLowerCase().includes(q) ||
           o.placed_by?.email?.toLowerCase().includes(q) ||
+          o.placed_by?.name?.toLowerCase().includes(q) ||
           (o.order_items || []).some((i) => i.name?.toLowerCase().includes(q))
       )
     : orders
@@ -470,7 +472,7 @@ function OrderQueue() {
             </div>
             {o.placed_by && (
               <p className="muted small" style={{ margin: '0 0 8px' }}>
-                ✍️ Ordine manuale inserito da <strong>{o.placed_by.email}</strong> ({o.placed_by.role})
+                ✍️ Ordine manuale inserito da <strong>{placedByName(o.placed_by)}</strong> ({o.placed_by.role})
               </p>
             )}
             {o.note && (

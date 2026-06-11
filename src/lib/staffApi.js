@@ -29,20 +29,22 @@ export async function listStaff() {
     .map((u) => ({
       uid: u.localId,
       email: u.email,
+      name: u.displayName || null,
       role: safeRole(u.customAttributes),
       disabled: !!u.disabled,
     }))
     .filter((u) => u.role === 'bartender' || u.role === 'staff')
 }
 
-export async function createStaff({ email, password, role }) {
-  if (!isEmulator) return call({ action: 'create', email, password, role })
+export async function createStaff({ email, password, role, name }) {
+  if (!isEmulator) return call({ action: 'create', email, password, role, name })
   const created = await emulatorRequest('accounts', { email, password })
   await emulatorRequest('accounts:update', {
     localId: created.localId,
+    displayName: (name || '').trim() || undefined,
     customAttributes: JSON.stringify({ role }),
   })
-  return { uid: created.localId, email, role }
+  return { uid: created.localId, email, name: (name || '').trim() || null, role }
 }
 
 export async function setStaffRole(uid, role) {
