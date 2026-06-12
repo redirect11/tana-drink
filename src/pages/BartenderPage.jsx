@@ -36,6 +36,7 @@ import StatsTab from '../components/StatsTab.jsx'
 import StaffTab from '../components/StaffTab.jsx'
 import ServiceQueue from '../components/ServiceQueue.jsx'
 import StaffMyOrders from '../components/StaffMyOrders.jsx'
+import StaffCallPanel from '../components/StaffCallPanel.jsx'
 import ConfirmDialog from '../components/ConfirmDialog.jsx'
 import CancelOrderDialog from '../components/CancelOrderDialog.jsx'
 import DevTools from '../components/DevTools.jsx'
@@ -259,6 +260,7 @@ function OrderQueue() {
   const [confirmAction, setConfirmAction] = useState(null) // { title, message, danger, run }
   const [cancelTarget, setCancelTarget] = useState(null) // { order, kind }
   const [search, setSearch] = useState('')
+  const [showCalls, setShowCalls] = useState(false) // pannello cerca-persone
   const [report, setReport] = useState(null) // resoconto mostrato dopo la chiusura
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   const knownIds = useRef(new Set())
@@ -555,10 +557,21 @@ function OrderQueue() {
             {recap.count} ordini · {formatPrice(recap.total)}
           </div>
         </div>
-        <button className="btn ghost small" onClick={chiudi} disabled={busy}>
-          ⏹ Chiudi serata
-        </button>
+        <div className="row" style={{ gap: 6 }}>
+          <button
+            className="btn small"
+            title="Chiama un membro dello staff (cerca-persone)"
+            onClick={() => setShowCalls(true)}
+          >
+            📟 Chiama staff
+          </button>
+          <button className="btn ghost small" onClick={chiudi} disabled={busy}>
+            ⏹ Chiudi serata
+          </button>
+        </div>
       </div>
+
+      {showCalls && <StaffCallPanel onClose={() => setShowCalls(false)} />}
 
       <input
         type="search"
