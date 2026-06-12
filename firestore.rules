@@ -98,6 +98,12 @@ service cloud.firestore {
       allow update: if isStaffMember();
     }
 
+    // STAFF_TOKENS — token push del dispositivo di ciascun membro dello
+    // staff (per la chiamata cerca-persone): solo il proprietario.
+    match /staff_tokens/{uid} {
+      allow read, write: if isStaffMember() && request.auth.uid == uid;
+    }
+
     // CUSTOMERS — profilo del cliente registrato: solo il proprietario
     // (e il bartender in lettura).
     match /customers/{uid} {

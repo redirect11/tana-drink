@@ -958,6 +958,17 @@ export async function replaceCatalog({ categories, products }, onProgress = () =
 
 const staffCallsCol = collection(db, 'staff_calls')
 
+// Token push del dispositivo di un membro dello staff: la Cloud Function
+// lo usa per recapitare la chiamata cerca-persone anche quando l'app è
+// in background o chiusa.
+export async function saveStaffToken(uid, token) {
+  await setDoc(
+    doc(db, 'staff_tokens', uid),
+    { token, updated_at: serverTimestamp() },
+    { merge: true }
+  )
+}
+
 // Il bartender chiama un membro dello staff (con messaggio opzionale).
 export async function createStaffCall({ to_uid, to_email, message, from_email, from_name }) {
   const ref = await addDoc(staffCallsCol, {

@@ -38,4 +38,27 @@ function decideOrderPush(before, after) {
   return null
 }
 
-module.exports = { decideOrderPush, CANCEL_PHRASES }
+// Pattern di vibrazione "cerca-persone": forte e riconoscibile.
+// Lo stesso pattern è usato dal service worker e dalla pagina.
+const STAFF_CALL_VIBRATION = [500, 200, 500, 200, 900]
+
+// Documento staff_calls appena creato → messaggio push per il membro
+// dello staff chiamato, o null se non c'è nulla da inviare.
+function decideStaffCallPush(call) {
+  if (!call || !call.to_uid) return null
+  if (call.status && call.status !== 'pending') return null
+  const da = call.from_name || call.from_email || 'il bancone'
+  return {
+    title: '📟 Chiamata dal bancone',
+    body: call.message
+      ? `${da}: «${call.message}»`
+      : `${da} ti sta chiamando. Rispondi sul telefono.`,
+  }
+}
+
+module.exports = {
+  decideOrderPush,
+  decideStaffCallPush,
+  CANCEL_PHRASES,
+  STAFF_CALL_VIBRATION,
+}

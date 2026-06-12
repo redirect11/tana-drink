@@ -58,6 +58,26 @@ self.addEventListener('push', (event) => {
       try {
         payload = event.data ? event.data.json() : {}
       } catch { /* payload non JSON */ }
+
+      // Chiamata cerca-persone allo staff (messaggio data-only): notifica
+      // insistente con vibrazione forte, anche ad app chiusa o in
+      // background. Mostrata sempre: la vibrazione è il punto.
+      if (payload.data?.kind === 'staff_call') {
+        return self.registration.showNotification(
+          payload.data.title || '📟 Chiamata dal bancone',
+          {
+            body: payload.data.body || 'Rispondi sul telefono.',
+            icon: './logo.png',
+            badge: './logo.png',
+            vibrate: [500, 200, 500, 200, 900],
+            tag: 'staff-call',
+            renotify: true,
+            requireInteraction: true,
+            data: { url: payload.data.url || '/bar' },
+          }
+        )
+      }
+
       const orderUrl = payload.data?.url || null
 
       if (orderUrl) {
