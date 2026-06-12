@@ -14,7 +14,7 @@
 // (puro) e lib/sumup-service.js (servizio), entrambi coperti da test.
 
 const { onCall, onRequest, HttpsError } = require('firebase-functions/v2/https')
-const { onDocumentUpdated } = require('firebase-functions/v2/firestore')
+const { onDocumentUpdated, onDocumentCreated } = require('firebase-functions/v2/firestore')
 const { initializeApp } = require('firebase-admin/app')
 const { getFirestore, FieldValue } = require('firebase-admin/firestore')
 const { getMessaging } = require('firebase-admin/messaging')
@@ -22,7 +22,7 @@ const { getAuth } = require('firebase-admin/auth')
 
 const { buildSumupHeaders, buildSumupUrl } = require('./lib/sumup-core')
 const { syncProducts, createSale, updateSaleStatus, handleWebhook } = require('./lib/sumup-service')
-const { decideOrderPush } = require('./lib/push-core')
+const { decideOrderPush, decideStaffCallPush } = require('./lib/push-core')
 const { staffAdmin } = require('./lib/staff-service')
 
 initializeApp()
@@ -132,6 +132,44 @@ exports.notifyOrderUpdate = onDocumentUpdated({ ...OPTS, document: 'orders/{orde
       await event.data.after.ref.update({ push_token: null }).catch(() => {})
     } else {
       console.error('[push] invio fallito:', e?.message || e)
+    }
+  }
+})
+
+// ── Push cerca-persone allo staff (FCM) ───────────────────────────────────────
+// Quando il bartender crea una chiamata, invia una push al dispositivo del
+// membro dello staff chiamato (token in staff_tokens/{uid}, registrato
+// quando lo staff apre il gestionale). Messaggio data-only: la notifica
+// con vibrazione la costruisce il service worker, così arriva anche con
+// l'app in background o chiusa.
+exports.notifyStaffCall = onDocumentCreated({ ...OPTS, document: 'staff_calls/{callId}' }, async (event) => {
+  const call = event.data?.data()
+  const msg = decideStaffCallPush(call)
+  if (!msg) return
+
+  const tokenSnap = await db.doc(`staff_tokens/${call.to_uid}`).get()
+  const token = tokenSnap.get('token')
+  if (!token) return
+
+  try {
+    await getMessaging().send({
+      token,
+      data: {
+        kind: 'staff_call',
+        title: msg.title,
+        body: msg.body,
+        url: '/bar',
+      },
+      webpush: {
+        // Consegna immediata: la chiamata ha senso solo nel momento.
+        headers: { Urgency: 'high', TTL: '180' },
+      },
+    })
+  } catch (e) {
+    if (e?.code === 'messaging/registration-token-not-registered') {
+      await db.doc(`staff_tokens/${call.to_uid}`).delete().catch(() => {})
+    } else {
+      console.error('[push staff] invio fallito:', e?.message || e)
     }
   }
 })

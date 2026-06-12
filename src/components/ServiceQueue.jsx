@@ -7,11 +7,13 @@ import {
   subscribeSettings,
   subscribeMyCalls,
   ackStaffCall,
+  saveStaffToken,
   updateOrderStatus,
   DEFAULT_SETTINGS,
 } from '../lib/api.js'
+import { getPushToken } from '../lib/push.js'
 import { ORDER_STATUSES, formatPrice, placedByName } from '../lib/orderStatus.js'
-import { notify } from '../lib/notify.js'
+import { notify, ensureNotificationPermission } from '../lib/notify.js'
 
 // Vista cameriera: SOLO gli ordini pronti da servire ai tavoli, con il
 // tasto per segnarli come serviti. Nessun'altra funzione del gestionale.
@@ -50,6 +52,18 @@ export default function ServiceQueue() {
     return subscribeMyCalls(uid, setCalls)
   }, [])
 
+  // Registra il token push del dispositivo: così la chiamata arriva
+  // come notifica di sistema anche con l'app in background o chiusa.
+  useEffect(() => {
+    const uid = auth.currentUser?.uid
+    if (!uid) return
+    ensureNotificationPermission().then(async (ok) => {
+      if (!ok) return
+      const token = await getPushToken()
+      if (token) saveStaffToken(uid, token).catch(() => {})
+    })
+  }, [])
+
   const incoming = calls[0] ?? null
   useEffect(() => {
     if (!incoming) {
@@ -58,10 +72,22 @@ export default function ServiceQueue() {
         vibrateTimer.current = null
         navigator.vibrate?.(0) // ferma la vibrazione in corso
       }
+      // Chiudi anche la notifica di sistema della chiamata, se presente.
+      navigator.serviceWorker
+        ?.getRegistration?.()
+        .then((reg) => reg?.getNotifications?.({ tag: 'staff-call' }))
+        .then((ns) => ns?.forEach((n) => n.close()))
+        .catch(() => {})
       return
     }
     // Notifica + vibrazione forte e continua finché non si risponde.
-    notify('📟 Chiamata dal bancone', incoming.message || 'Rispondi sul telefono.')
+    // Stesso tag della push FCM: se arrivano entrambe, una sola notifica.
+    notify('📟 Chiamata dal bancone', incoming.message || 'Rispondi sul telefono.', {
+      vibrate: [500, 200, 500, 200, 900],
+      tag: 'staff-call',
+      renotify: true,
+      requireInteraction: true,
+    })
     const pattern = [500, 200, 500, 200, 900]
     navigator.vibrate?.(pattern)
     vibrateTimer.current = setInterval(() => navigator.vibrate?.(pattern), 2600)

@@ -12,14 +12,17 @@ export async function ensureNotificationPermission() {
   }
 }
 
-export async function notify(title, body) {
+export async function notify(title, body, extra = {}) {
   if (!('Notification' in window)) return
   if (Notification.permission !== 'granted') return
 
+  // `extra`: opzioni Notification aggiuntive (vibrate, tag, renotify,
+  // requireInteraction…) — usate ad es. dalla chiamata cerca-persone.
   const opts = {
     body,
     icon: `${import.meta.env.BASE_URL}logo.png`,
     badge: `${import.meta.env.BASE_URL}logo.png`,
+    ...extra,
   }
 
   // Via service worker quando disponibile: su Android Chrome il
