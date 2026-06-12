@@ -159,3 +159,31 @@ export async function resetWithMockData(onProgress = () => {}) {
   const n = await createMockSerata(onProgress)
   onProgress(`Fatto: serata aperta con ${n} ordini mock.`)
 }
+
+// Simula l'esito di un pagamento (online o lettore) su un ordine: in dev
+// non ci sono Cloud Functions, quindi il webhook lo "recitiamo" noi
+// scrivendo da bartender. Replica anche l'auto-chiusura ritirato→pagato.
+export async function simulatePaymentResult(orderId, ok) {
+  const { getDoc, updateDoc } = await import('firebase/firestore')
+  const ref = doc(db, 'orders', orderId)
+  const snap = await getDoc(ref)
+  if (!snap.exists()) throw new Error('Ordine non trovato')
+  const o = snap.data()
+  const nowIso = new Date().toISOString()
+  if (!ok) {
+    await updateDoc(ref, { payment_status: 'fallito' })
+    return
+  }
+  const patch = {
+    payment_status: 'pagato',
+    paid_at: nowIso,
+    sumup_transaction_id: 'dev-sim',
+  }
+  if (o.status === 'annullato') {
+    patch.payment_after_cancel = true
+  } else if (o.status === 'ritirato') {
+    patch.status = 'pagato'
+    patch['status_times.pagato'] = nowIso
+  }
+  await updateDoc(ref, patch)
+}
