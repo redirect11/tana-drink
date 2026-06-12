@@ -203,10 +203,8 @@ export default function ServiceQueue() {
           <div className="confirm-box pager-call">
             <div className="pager-icon">📟</div>
             <h3 style={{ margin: '8px 0' }}>Chiamata dal bancone</h3>
-            {(incoming.from_name || incoming.from_email) && (
-              <p className="muted" style={{ margin: 0 }}>
-                da {incoming.from_name || incoming.from_email}
-              </p>
+            {incoming.from_name && (
+              <p className="muted" style={{ margin: 0 }}>da {incoming.from_name}</p>
             )}
             {incoming.message && (
               <p style={{ fontSize: '1.05rem', margin: '12px 0 0' }}>
