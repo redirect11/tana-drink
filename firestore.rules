@@ -35,8 +35,21 @@ service cloud.firestore {
     // finché è "ricevuto": può lasciarlo "ricevuto" (modifica item) o
     // portarlo ad "annullato". Non può farlo avanzare di stato.
     match /orders/{orderId} {
+      // Campi di pagamento: scritti da Cloud Functions (Admin SDK) e da
+      // bartender/staff — mai dal cliente anonimo, che altrimenti
+      // potrebbe auto-marcarsi "pagato".
+      function paymentKeys() {
+        return ['payment_status', 'payment_method', 'payment_required',
+                'paid_at', 'sumup_checkout_id', 'sumup_checkout_attempts',
+                'sumup_transaction_id', 'sumup_client_transaction_id',
+                'payment_after_cancel'];
+      }
       allow read: if true;
-      allow create: if true;
+      // Alla creazione il pagamento può solo essere assente, non
+      // richiesto o in attesa (mai già "pagato").
+      allow create: if isStaffMember()
+        || !('payment_status' in request.resource.data)
+        || request.resource.data.payment_status in ['non_richiesto', 'in_attesa'];
       allow update: if isBartender()
         || (isStaffMember()
             && resource.data.status == 'pronto'
@@ -46,7 +59,9 @@ service cloud.firestore {
             && resource.data.status == 'ritirato'
             && request.resource.data.status == 'pagato')
         || (resource.data.status == 'ricevuto'
-            && request.resource.data.status in ['ricevuto', 'annullato']);
+            && request.resource.data.status in ['ricevuto', 'annullato']
+            && !request.resource.data.diff(resource.data)
+                 .affectedKeys().hasAny(paymentKeys().toSet()));
       allow delete: if false;
     }
 

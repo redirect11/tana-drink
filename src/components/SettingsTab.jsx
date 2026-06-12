@@ -67,6 +67,44 @@ export default function SettingsTab() {
       </div>
 
       <div className="card settings-section">
+        <h3>Pagamenti</h3>
+        <ToggleRow
+          label="Pagamento online (SumUp)"
+          desc="Il cliente può pagare con carta dal suo telefono al momento dell'ordine."
+          checked={settings.payments_online_enabled}
+          onChange={(v) => save({ payments_online_enabled: v })}
+        />
+        {settings.payments_online_enabled && (
+          <>
+            <ToggleRow
+              label="Pagamento obbligatorio"
+              desc="L'ordine entra in coda solo dopo il pagamento online."
+              checked={settings.payments_online_required}
+              onChange={(v) => save({ payments_online_required: v })}
+            />
+            {!settings.payments_online_required && (
+              <ToggleRow
+                label="Senza pagamento, ritiro al banco"
+                desc={
+                  settings.service_mode === 'tavolo'
+                    ? 'Con servizio solo al tavolo non si applica: chi non paga online paga allo staff alla consegna.'
+                    : 'Chi sceglie di pagare al bancone deve ritirare al banco (niente servizio al tavolo).'
+                }
+                checked={settings.banco_required_if_unpaid}
+                onChange={(v) => save({ banco_required_if_unpaid: v })}
+              />
+            )}
+          </>
+        )}
+        <ToggleRow
+          label="Lettore SumUp Solo"
+          desc="Incasso col lettore di carte direttamente dalla coda ordini (Cloud API, lettore in Wi-Fi)."
+          checked={settings.payments_reader_enabled}
+          onChange={(v) => save({ payments_reader_enabled: v })}
+        />
+      </div>
+
+      <div className="card settings-section">
         <h3>Tempi di servizio</h3>
         <ToggleRow
           label="Mostra tempo stimato ai clienti"
