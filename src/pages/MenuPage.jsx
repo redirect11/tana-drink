@@ -533,6 +533,18 @@ export default function MenuPage() {
 
       {canOrder && cart.count > 0 && (
         <div className="cartbar">
+          <div className="inner">
+            <div className="cartbar-items">
+              {cart.items.map((i) => (
+                <div className="row between" key={i.drink_id}>
+                  <span>
+                    <strong>{i.qty}×</strong> {i.name}
+                  </span>
+                  <span className="muted">{formatPrice(i.qty * Number(i.price || 0))}</span>
+                </div>
+              ))}
+            </div>
+          </div>
           <div className="inner row between">
             <div>
               <div>

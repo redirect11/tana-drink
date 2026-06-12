@@ -450,6 +450,20 @@ a.btn.block {
   margin: 0 auto;
 }
 
+/* Riepilogo compatto degli item selezionati sopra «Rivedi ordine». */
+.cartbar-items {
+  max-height: 96px;
+  overflow-y: auto;
+  font-size: 0.85rem;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.cartbar-items .row {
+  padding: 2px 0;
+}
+
 .bignum {
   font-size: 3.4rem;
   font-weight: 800;
