@@ -711,6 +711,14 @@ async function applyDepletionAndAdvance(id, status) {
 
 // Modifica gli item di un ordine (solo finché è 'ricevuto', prima della
 // preparazione). Ricalcola il totale. Usato dal cliente dalla pagina ordine.
+// Aggancia (o aggiorna) il token push del dispositivo a un ordine già
+// creato: utile quando il cliente attiva le notifiche dalla pagina
+// dell'ordine, o dopo la scansione del QR di un ordine manuale.
+// Consentito dalle regole solo finché l'ordine è in stato "ricevuto".
+export async function updateOrderPushToken(id, token) {
+  await updateDoc(doc(db, 'orders', id), { push_token: token })
+}
+
 export async function updateOrderItems(id, items) {
   const ref = doc(db, 'orders', id)
   const itemsTotal = items.reduce((s, i) => s + i.qty * Number(i.unit_price ?? i.price ?? 0), 0)
