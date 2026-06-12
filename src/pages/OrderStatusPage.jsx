@@ -28,6 +28,7 @@ import { queueEtaMinutes } from '../lib/eta.js'
 import { ensureNotificationPermission, notify } from '../lib/notify.js'
 import { rememberOrderId } from '../lib/cart.js'
 import ConfirmDialog from '../components/ConfirmDialog.jsx'
+import PaymentPanel from '../components/PaymentPanel.jsx'
 import QRCode from 'qrcode'
 
 export default function OrderStatusPage() {
@@ -232,7 +233,20 @@ export default function OrderStatusPage() {
   if (!order) return <div className="empty">Carico l’ordine…</div>
 
   const currentIdx = STATUS_FLOW.indexOf(order.status)
-  const editable = order.status === ORDER_STATUSES.RICEVUTO
+  // Con un pagamento online avviato/completato gli item non si toccano
+  // (l'importo del checkout deve restare allineato all'ordine); dopo un
+  // pagamento fallito si può di nuovo modificare.
+  const paymentLocked =
+    order.payment_method === 'online' && order.payment_status !== 'fallito'
+  const editable = order.status === ORDER_STATUSES.RICEVUTO && !paymentLocked
+  // Annullabile dal cliente finché ricevuto e non pagato.
+  const cancellable =
+    order.status === ORDER_STATUSES.RICEVUTO && order.payment_status !== 'pagato'
+  // Pannello di pagamento online: in attesa o fallito, mai sugli annullati.
+  const showPayment =
+    order.payment_method === 'online' &&
+    ['in_attesa', 'fallito'].includes(order.payment_status) &&
+    order.status !== ORDER_STATUSES.ANNULLATO
 
   // Tempo stimato personalizzato: tiene conto degli ordini attivi davanti a
   // questo (la coda non viene mostrata, conta solo la posizione).
@@ -403,7 +417,14 @@ export default function OrderStatusPage() {
           <strong>Totale</strong>
           <strong className="price">{formatPrice(editable ? editTotal : order.total)}</strong>
         </div>
+        {order.payment_status === 'pagato' && (
+          <p className="muted small" style={{ margin: '8px 0 0', textAlign: 'right' }}>
+            💳 Pagato{order.payment_method === 'online' ? ' online' : ''}
+          </p>
+        )}
       </div>
+
+      {showPayment && <PaymentPanel order={order} />}
 
       {editable && (
         <div className="grid-2" style={{ marginTop: 8 }}>
@@ -414,6 +435,16 @@ export default function OrderStatusPage() {
             {saving ? 'Salvo…' : 'Salva modifiche'}
           </button>
         </div>
+      )}
+      {!editable && cancellable && (
+        <button
+          className="btn ghost block"
+          style={{ marginTop: 8 }}
+          onClick={() => setConfirmCancel(true)}
+          disabled={saving}
+        >
+          ✖️ Annulla ordine
+        </button>
       )}
 
       {order.placed_by && (
@@ -452,7 +483,11 @@ export default function OrderStatusPage() {
       {confirmCancel && (
         <ConfirmDialog
           title="✖️ Annullare il tuo ordine?"
-          message="L'ordine verrà annullato definitivamente."
+          message={
+            order.payment_status === 'in_attesa'
+              ? "L'ordine verrà annullato definitivamente. Un pagamento non completato non viene addebitato."
+              : "L'ordine verrà annullato definitivamente."
+          }
           confirmLabel="Annulla ordine"
           cancelLabel="Indietro"
           danger
