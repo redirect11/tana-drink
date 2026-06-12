@@ -88,12 +88,16 @@ a {
   font-size: 1.05rem;
 }
 
-/* Su una riga sola: il titolo si tronca, l'altezza resta fissa
-   (le barre sticky sotto contano su questa quota). */
+/* Titolo più piccolo, al massimo su due righe dentro l'altezza del
+   logo: l'header non cresce mai (le barre sticky contano su 65px). */
 .brand span {
-  white-space: nowrap;
+  font-size: 0.92rem;
+  line-height: 1.15;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
+  max-height: 2.3em;
 }
 
 .brand img {
