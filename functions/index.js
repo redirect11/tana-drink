@@ -22,7 +22,7 @@ const { getAuth } = require('firebase-admin/auth')
 
 const { buildSumupHeaders, buildSumupUrl } = require('./lib/sumup-core')
 const { syncProducts, createSale, updateSaleStatus, handleWebhook } = require('./lib/sumup-service')
-const { decideOrderPush, decideStaffCallPush } = require('./lib/push-core')
+const { decideOrderPush, decideStaffCallPush, decideStaffServePush } = require('./lib/push-core')
 const { staffAdmin } = require('./lib/staff-service')
 
 initializeApp()
@@ -113,27 +113,58 @@ exports.staffAdmin = onCall(OPTS, async (request) => {
 exports.notifyOrderUpdate = onDocumentUpdated({ ...OPTS, document: 'orders/{orderId}' }, async (event) => {
   const before = event.data?.before?.data()
   const after = event.data?.after?.data()
-  const msg = decideOrderPush(before, after)
-  if (!msg) return
 
-  try {
-    await getMessaging().send({
-      token: after.push_token,
-      notification: { title: msg.title, body: msg.body },
-      data: { url: `/ordine/${event.params.orderId}` },
-      webpush: {
-        fcmOptions: { link: `/ordine/${event.params.orderId}` },
-        notification: { icon: '/logo.png', badge: '/logo.png' },
-      },
-    })
-  } catch (e) {
-    // Token scaduto/non valido: rimuovilo dall'ordine, niente retry.
-    if (e?.code === 'messaging/registration-token-not-registered') {
-      await event.data.after.ref.update({ push_token: null }).catch(() => {})
-    } else {
-      console.error('[push] invio fallito:', e?.message || e)
+  // 1) Push al cliente (drink pronto / ordine annullato).
+  const msg = decideOrderPush(before, after)
+  if (msg) {
+    try {
+      await getMessaging().send({
+        token: after.push_token,
+        notification: { title: msg.title, body: msg.body },
+        data: { url: `/ordine/${event.params.orderId}` },
+        webpush: {
+          fcmOptions: { link: `/ordine/${event.params.orderId}` },
+          notification: { icon: '/logo.png', badge: '/logo.png' },
+        },
+      })
+    } catch (e) {
+      // Token scaduto/non valido: rimuovilo dall'ordine, niente retry.
+      if (e?.code === 'messaging/registration-token-not-registered') {
+        await event.data.after.ref.update({ push_token: null }).catch(() => {})
+      } else {
+        console.error('[push] invio fallito:', e?.message || e)
+      }
     }
   }
+
+  // 2) Push allo staff di sala quando c'è un ordine pronto da servire
+  //    al tavolo (tutti i dispositivi registrati in staff_tokens).
+  const serveMsg = decideStaffServePush(before, after)
+  if (!serveMsg) return
+
+  const tokensSnap = await db.collection('staff_tokens').get()
+  const docs = tokensSnap.docs.filter((d) => d.get('token'))
+  if (docs.length === 0) return
+
+  const res = await getMessaging().sendEachForMulticast({
+    tokens: docs.map((d) => d.get('token')),
+    data: {
+      kind: 'staff_serve',
+      title: serveMsg.title,
+      body: serveMsg.body,
+      url: '/bar',
+    },
+    webpush: { headers: { Urgency: 'high', TTL: '600' } },
+  })
+
+  // Token scaduti: rimuovili, niente retry.
+  await Promise.all(
+    res.responses.map((r, i) =>
+      r.error?.code === 'messaging/registration-token-not-registered'
+        ? docs[i].ref.delete().catch(() => {})
+        : null
+    )
+  )
 })
 
 // ── Push cerca-persone allo staff (FCM) ───────────────────────────────────────

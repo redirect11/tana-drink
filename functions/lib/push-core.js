@@ -61,9 +61,24 @@ function decideStaffCallPush(call) {
   }
 }
 
+// Ordine passato a "pronto" da servire al tavolo → notifica per lo
+// staff di sala (il ritiro al banco lo gestisce il cliente).
+function decideStaffServePush(before, after) {
+  if (!before || !after || before.status === after.status) return null
+  if (after.status !== 'pronto') return null
+  if (after.service_mode === 'banco') return null
+  const tavolo = after.table_label ? ` · Tavolo ${after.table_label}` : ''
+  const nome = after.customer_name ? ` — ${after.customer_name}` : ''
+  return {
+    title: '🫱 Drink pronti da servire',
+    body: `Ordine #${after.daily_number ?? '—'}${tavolo}${nome}`,
+  }
+}
+
 module.exports = {
   decideOrderPush,
   decideStaffCallPush,
+  decideStaffServePush,
   CANCEL_PHRASES,
   STAFF_CALL_VIBRATION,
 }
