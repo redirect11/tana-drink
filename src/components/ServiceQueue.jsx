@@ -61,8 +61,12 @@ export default function ServiceQueue() {
       if (document.visibilityState !== 'visible') return
       navigator.serviceWorker
         ?.getRegistration?.()
-        .then((reg) => reg?.getNotifications?.({ tag: 'staff-serve' }))
-        .then((ns) => ns?.forEach((n) => n.close()))
+        .then((reg) => reg?.getNotifications?.())
+        .then((ns) =>
+          ns
+            ?.filter((n) => (n.tag || '').startsWith('staff-serve'))
+            .forEach((n) => n.close())
+        )
         .catch(() => {})
     }
     closeServeNotifications()

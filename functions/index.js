@@ -150,6 +150,7 @@ exports.notifyOrderUpdate = onDocumentUpdated({ ...OPTS, document: 'orders/{orde
     tokens: docs.map((d) => d.get('token')),
     data: {
       kind: 'staff_serve',
+      order_id: event.params.orderId,
       title: serveMsg.title,
       body: serveMsg.body,
       url: '/bar',
