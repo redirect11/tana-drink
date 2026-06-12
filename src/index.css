@@ -218,6 +218,19 @@ a.btn.block {
   cursor: pointer;
 }
 
+/* Item modificabili nel riepilogo ordine: un po' d'aria tra le righe
+   e tasti +/− leggermente più piccoli, così non si toccano. */
+.order-edit-row {
+  align-items: center;
+  margin: 9px 0;
+}
+
+.order-edit-row .qty button {
+  width: 30px;
+  height: 30px;
+  font-size: 1.05rem;
+}
+
 .pill {
   display: inline-flex;
   align-items: center;
