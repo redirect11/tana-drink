@@ -52,6 +52,28 @@ export default function ServiceQueue() {
     return subscribeMyCalls(uid, setCalls)
   }, [])
 
+  // Cintura di sicurezza lato pagina: se il gestionale è sotto gli
+  // occhi, le notifiche «da servire» sono rumore — chiudile appena la
+  // lista si aggiorna o si torna sull'app (il service worker prova già
+  // a non mostrarle, ma il controllo di visibilità non è infallibile).
+  useEffect(() => {
+    function closeServeNotifications() {
+      if (document.visibilityState !== 'visible') return
+      navigator.serviceWorker
+        ?.getRegistration?.()
+        .then((reg) => reg?.getNotifications?.({ tag: 'staff-serve' }))
+        .then((ns) => ns?.forEach((n) => n.close()))
+        .catch(() => {})
+    }
+    closeServeNotifications()
+    document.addEventListener('visibilitychange', closeServeNotifications)
+    window.addEventListener('focus', closeServeNotifications)
+    return () => {
+      document.removeEventListener('visibilitychange', closeServeNotifications)
+      window.removeEventListener('focus', closeServeNotifications)
+    }
+  }, [orders])
+
   // Registra il token push del dispositivo: così la chiamata arriva
   // come notifica di sistema anche con l'app in background o chiusa.
   useEffect(() => {

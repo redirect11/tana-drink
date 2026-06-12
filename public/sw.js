@@ -84,7 +84,10 @@ self.addEventListener('push', (event) => {
         const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
         const onBar = wins.some((w) => {
           try {
-            return w.visibilityState === 'visible' && new URL(w.url).pathname.startsWith('/bar')
+            return (
+              (w.focused || w.visibilityState === 'visible') &&
+              new URL(w.url).pathname.startsWith('/bar')
+            )
           } catch {
             return false
           }
