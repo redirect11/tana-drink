@@ -229,6 +229,10 @@ exports.notifyStaffCall = onDocumentCreated({ ...OPTS, document: 'staff_calls/{c
 const SUMUP_API_KEY = defineSecret('SUMUP_API_KEY')
 const SUMUP_MERCHANT_CODE = process.env.SUMUP_MERCHANT_CODE || ''
 const SUMUP_PAYMENTS_BASE = process.env.SUMUP_PAYMENTS_BASE || 'https://api.sumup.com'
+// Affiliate key: obbligatoria per il checkout sul lettore (Cloud API).
+// Non è un segreto (identifica l'app, non autentica): vive in .env.
+const SUMUP_AFFILIATE_KEY = process.env.SUMUP_AFFILIATE_KEY || ''
+const SUMUP_AFFILIATE_APP_ID = process.env.SUMUP_AFFILIATE_APP_ID || 'it.latanadelconiglio.drink'
 
 function paymentDeps() {
   const apiKey = SUMUP_API_KEY.value() || ''
@@ -239,6 +243,10 @@ function paymentDeps() {
     now: () => new Date().toISOString(),
     webhookUrl: () =>
       `https://${OPTS.region}-${process.env.GCLOUD_PROJECT}.cloudfunctions.net/paymentWebhook`,
+    affiliate: () =>
+      SUMUP_AFFILIATE_KEY
+        ? { app_id: SUMUP_AFFILIATE_APP_ID, key: SUMUP_AFFILIATE_KEY }
+        : null,
     paymentsFetch: async (path, options = {}) => {
       const res = await fetch(`${SUMUP_PAYMENTS_BASE}${path}`, {
         ...options,

@@ -45,6 +45,21 @@ describe('buildReaderCheckoutPayload', () => {
     const p = buildReaderCheckoutPayload({ total: 8.5, description: 'Ordine #3', returnUrl: 'https://x/wh' })
     expect(p.total_amount).toEqual({ currency: 'EUR', minor_unit: 2, value: 850 })
     expect(p.return_url).toBe('https://x/wh')
+    expect(p.affiliate).toBeUndefined()
+  })
+
+  it('con affiliate key: app_id, key e foreign_transaction_id', () => {
+    const p = buildReaderCheckoutPayload({
+      total: 5,
+      returnUrl: 'https://x/wh',
+      affiliate: { app_id: 'it.tana.app', key: 'aff-1' },
+      orderId: 'o9',
+    })
+    expect(p.affiliate).toEqual({
+      app_id: 'it.tana.app',
+      key: 'aff-1',
+      foreign_transaction_id: 'o9',
+    })
   })
 })
 

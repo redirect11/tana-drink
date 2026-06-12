@@ -216,6 +216,8 @@ async function readerCheckout(deps, auth, { orderId } = {}) {
     total: order.total,
     description: `Ordine #${order.daily_number ?? '—'} — La Tana del Coniglio`,
     returnUrl: webhookUrl(),
+    affiliate: typeof deps.affiliate === 'function' ? deps.affiliate() : null,
+    orderId,
   })
 
   let res

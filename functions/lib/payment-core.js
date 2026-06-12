@@ -22,7 +22,10 @@ function buildCheckoutPayload({ orderId, attempts = 0, total, merchantCode, desc
 }
 
 // Payload per POST /readers/{id}/checkout (pagamento sul lettore).
-function buildReaderCheckoutPayload({ total, description, returnUrl }) {
+// L'affiliate key è OBBLIGATORIA per le integrazioni card-present via
+// Cloud API (identifica l'applicazione, non autentica); il
+// foreign_transaction_id lega la transazione SumUp all'ordine.
+function buildReaderCheckoutPayload({ total, description, returnUrl, affiliate = null, orderId = null }) {
   return {
     total_amount: {
       currency: 'EUR',
@@ -31,6 +34,15 @@ function buildReaderCheckoutPayload({ total, description, returnUrl }) {
     },
     description: description || undefined,
     return_url: returnUrl,
+    ...(affiliate
+      ? {
+          affiliate: {
+            app_id: affiliate.app_id,
+            key: affiliate.key,
+            ...(orderId ? { foreign_transaction_id: orderId } : {}),
+          },
+        }
+      : {}),
   }
 }
 
