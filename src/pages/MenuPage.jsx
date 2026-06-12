@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
-  fetchDrinks,
-  fetchCategories,
+  subscribeDrinks,
+  subscribeCategories,
   subscribeOpenSerata,
   subscribeSettings,
   subscribeOrder,
@@ -87,25 +87,30 @@ export default function MenuPage() {
   // Il QR può contenere ?tavolo=12 per identificare il tavolo.
   const tableLabel = params.get('tavolo') || params.get('table') || ''
 
+  // Menù in tempo reale: il listener ritenta da solo (al primo accesso
+  // App Check/permessi possono rallentare la prima richiesta — niente
+  // più menù vuoto da ricaricare) e si aggiorna live.
   useEffect(() => {
-    let active = true
     if (!isFirebaseConfigured) {
       setLoading(false)
       return
     }
-    Promise.all([
-      fetchDrinks({ onlyAvailable: true }),
-      fetchCategories().catch(() => []),
-    ])
-      .then(([d, c]) => {
-        if (!active) return
+    const unsubDrinks = subscribeDrinks(
+      { onlyAvailable: true },
+      (d) => {
         setDrinks(d)
-        setCats(c)
-      })
-      .catch((e) => active && setError(e.message))
-      .finally(() => active && setLoading(false))
+        setLoading(false)
+        setError(null)
+      },
+      (e) => {
+        setError(e.message)
+        setLoading(false)
+      }
+    )
+    const unsubCats = subscribeCategories(setCats)
     return () => {
-      active = false
+      unsubDrinks()
+      unsubCats()
     }
   }, [])
 
