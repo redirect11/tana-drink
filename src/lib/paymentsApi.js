@@ -18,3 +18,25 @@ export async function getPaymentStatus(orderId) {
   if (isEmulator) return { unavailable: true }
   return call('getPaymentStatus')({ orderId })
 }
+
+// ── Lettore SumUp (Cloud API) — ruoli bartender/staff ─────────────────
+
+export async function pairSumUpReader(pairingCode) {
+  if (isEmulator) return { unavailable: true }
+  return call('pairSumUpReader')({ pairing_code: pairingCode })
+}
+
+export async function unpairSumUpReader() {
+  if (isEmulator) return { unavailable: true }
+  return call('unpairSumUpReader')({})
+}
+
+export async function readerCheckout(orderId) {
+  if (isEmulator) return { unavailable: true }
+  return call('readerCheckout')({ orderId })
+}
+
+export async function readerTerminate(orderId) {
+  if (isEmulator) return { unavailable: true }
+  return call('readerTerminate')({ orderId })
+}

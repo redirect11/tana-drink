@@ -29,6 +29,11 @@ const {
   createCheckout,
   verifyCheckoutStatus,
   handleOnlineWebhook,
+  pairReader,
+  unpairReader,
+  readerCheckout: readerCheckoutSvc,
+  readerTerminate: readerTerminateSvc,
+  handleReaderWebhook,
 } = require('./lib/payment-service')
 const {
   decideAutoAdvance,
@@ -232,6 +237,8 @@ function paymentDeps() {
     isConfigured: () => Boolean(apiKey && SUMUP_MERCHANT_CODE),
     merchantCode: () => SUMUP_MERCHANT_CODE,
     now: () => new Date().toISOString(),
+    webhookUrl: () =>
+      `https://${OPTS.region}-${process.env.GCLOUD_PROJECT}.cloudfunctions.net/paymentWebhook`,
     paymentsFetch: async (path, options = {}) => {
       const res = await fetch(`${SUMUP_PAYMENTS_BASE}${path}`, {
         ...options,
@@ -286,10 +293,7 @@ exports.paymentWebhook = onRequest({ ...OPTS, secrets: [SUMUP_API_KEY], cors: fa
     const deps = paymentDeps()
     const reader = parseReaderWebhookBody(req.body)
     if (reader.clientTransactionId) {
-      const { handleReaderWebhook } = require('./lib/payment-service')
-      if (typeof handleReaderWebhook === 'function') {
-        await handleReaderWebhook(deps, reader)
-      }
+      await handleReaderWebhook(deps, reader)
     } else {
       const online = parseCheckoutWebhookBody(req.body)
       await handleOnlineWebhook(deps, online)
@@ -311,4 +315,37 @@ exports.autoAdvancePaid = onDocumentUpdated({ ...OPTS, document: 'orders/{orderI
   await event.data.after.ref
     .update({ status: advance, [`status_times.${advance}`]: nowIso })
     .catch((e) => console.error('[payments] auto-advance:', e?.message || e))
+})
+
+// ── Lettore SumUp Solo (Cloud API): pairing e incasso dalla coda ──────────────
+exports.pairSumUpReader = onCall({ ...OPTS, secrets: [SUMUP_API_KEY] }, async (request) => {
+  try {
+    return await pairReader(paymentDeps(), request.auth, request.data || {})
+  } catch (e) {
+    throw toHttpsError(e)
+  }
+})
+
+exports.unpairSumUpReader = onCall({ ...OPTS, secrets: [SUMUP_API_KEY] }, async (request) => {
+  try {
+    return await unpairReader(paymentDeps(), request.auth)
+  } catch (e) {
+    throw toHttpsError(e)
+  }
+})
+
+exports.readerCheckout = onCall({ ...OPTS, secrets: [SUMUP_API_KEY] }, async (request) => {
+  try {
+    return await readerCheckoutSvc(paymentDeps(), request.auth, request.data || {})
+  } catch (e) {
+    throw toHttpsError(e)
+  }
+})
+
+exports.readerTerminate = onCall({ ...OPTS, secrets: [SUMUP_API_KEY] }, async (request) => {
+  try {
+    return await readerTerminateSvc(paymentDeps(), request.auth, request.data || {})
+  } catch (e) {
+    throw toHttpsError(e)
+  }
 })

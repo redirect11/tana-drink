@@ -37,6 +37,12 @@ function createFakeFirestore(seed = {}) {
         calls.updates.push({ collection: colName, id, patch })
         return undefined
       },
+      async set(data, opts = {}) {
+        const col = ensureCol(colName)
+        col[id] = opts.merge ? { ...(col[id] || {}), ...data } : { ...data }
+        calls.updates.push({ collection: colName, id, patch: data, set: true })
+        return undefined
+      },
       async get() {
         const col = ensureCol(colName)
         const exists = Object.prototype.hasOwnProperty.call(col, id)

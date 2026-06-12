@@ -28,6 +28,7 @@ import {
 } from '../lib/orderStatus.js'
 import { bucketByStatus, serataRecap, openOrdersCount } from '../lib/serata.js'
 import { isAwaitingPayment } from '../lib/payments.js'
+import { readerCheckout, readerTerminate } from '../lib/paymentsApi.js'
 import { aggregateProducts, serataFinance, longestPrep, phaseAverages } from '../lib/eta.js'
 import { ensureNotificationPermission, notify } from '../lib/notify.js'
 import { syncSumUpProducts, isSumUpEnabled } from '../lib/sumupApi.js'
@@ -463,9 +464,39 @@ function OrderQueue() {
     ...(buckets[ORDER_STATUSES.PAGATO] || []),
   ]
 
+  async function incassaSuLettore(o) {
+    setError(null)
+    try {
+      const res = await readerCheckout(o.id)
+      if (res.unavailable) {
+        setError('Lettore non disponibile in ambiente di sviluppo: simula dai DevTools.')
+      }
+    } catch (e) {
+      setError(e.message)
+    }
+  }
+
+  async function annullaSuLettore(o) {
+    setError(null)
+    try {
+      await readerTerminate(o.id)
+    } catch (e) {
+      setError(e.message)
+    }
+  }
+
   const renderCard = (o) => {
         const ns = nextStatus(o.status)
         const awaiting = isAwaitingPayment(o) && o.status === ORDER_STATUSES.RICEVUTO
+        // Incasso col lettore: ordini non pagati in mano al cliente
+        // (pronto/ritirato), col lettore associato e attivo.
+        const readerReady =
+          settings.payments_reader_enabled && settings.sumup_reader_id
+        const readerPending =
+          o.payment_method === 'lettore' && o.payment_status === 'in_attesa'
+        const canCollect =
+          o.payment_status !== 'pagato' &&
+          [ORDER_STATUSES.PRONTO, ORDER_STATUSES.RITIRATO].includes(o.status)
         return (
           <div
             className={`card order-card ${o.status}`}
@@ -561,10 +592,34 @@ function OrderQueue() {
                 Segna come “{STATUS_LABELS[ns]}”
               </button>
             )}
+            {/* Incasso sul lettore SumUp (pronto/ritirato non pagati). */}
+            {readerPending ? (
+              <div style={{ marginTop: 8 }}>
+                <p className="muted small" style={{ margin: '0 0 6px', textAlign: 'center' }}>
+                  📟 In corso sul lettore… carta del cliente sul Solo.
+                </p>
+                <button className="btn ghost small block" onClick={() => annullaSuLettore(o)}>
+                  ✖️ Annulla sul lettore
+                </button>
+              </div>
+            ) : (
+              canCollect &&
+              readerReady && (
+                <button
+                  className="btn secondary block"
+                  style={{ marginTop: o.status === ORDER_STATUSES.PRONTO ? 8 : 0 }}
+                  onClick={() => incassaSuLettore(o)}
+                >
+                  📟 Incassa sul lettore
+                </button>
+              )
+            )}
             {/* Ritirato/servito ma non pagato: l'incasso chiude l'ordine. */}
             {o.status === ORDER_STATUSES.RITIRATO && o.payment_status !== 'pagato' && (
               <button
                 className="btn block"
+                style={{ marginTop: 8 }}
+                disabled={readerPending}
                 onClick={() => markOrderPaid(o.id, 'banco').catch((e) => setError(e.message))}
               >
                 💶 Incassato (contanti)

@@ -10,9 +10,13 @@
 
 const {
   buildCheckoutPayload,
+  buildReaderCheckoutPayload,
   mapCheckoutStatus,
+  mapTransactionStatus,
   decidePaymentPatch,
 } = require('./payment-core')
+
+const STAFF_ROLES = ['bartender', 'staff']
 
 function err(code, message) {
   return { code, message }
@@ -124,4 +128,184 @@ async function handleOnlineWebhook(deps, { checkoutId } = {}) {
   return { status: 200 }
 }
 
-module.exports = { createCheckout, verifyCheckoutStatus, handleOnlineWebhook }
+// ── Lettore SumUp Solo (Cloud API) ──────────────────────────────────
+
+function requireRole(auth, roles) {
+  const role = auth?.token?.role
+  if (!roles.includes(role)) {
+    throw err('permission-denied', 'Operazione riservata allo staff.')
+  }
+}
+
+async function readerSettings(db) {
+  const snap = await db.collection('settings').doc('bar').get()
+  return snap.exists ? snap.data() : {}
+}
+
+// Associa il lettore: il codice si genera dal menu API del lettore Solo.
+async function pairReader(deps, auth, { pairing_code } = {}) {
+  const { db, paymentsFetch, isConfigured, merchantCode } = deps
+  requireRole(auth, ['bartender'])
+  if (!isConfigured()) return { unavailable: true }
+  const code = String(pairing_code || '').trim().toUpperCase()
+  if (!code) throw err('invalid-argument', 'Inserisci il codice di pairing.')
+
+  let reader
+  try {
+    reader = await paymentsFetch(`/v0.1/merchants/${merchantCode()}/readers`, {
+      method: 'POST',
+      body: JSON.stringify({ pairing_code: code }),
+    })
+  } catch (e) {
+    if (e?.status === 422 || e?.status === 400 || e?.status === 404) {
+      throw err('invalid-argument', 'Codice non valido o scaduto: rigeneralo dal lettore.')
+    }
+    throw e
+  }
+  if (!reader?.id) throw err('internal', 'SumUp non ha restituito un lettore valido.')
+
+  await db.collection('settings').doc('bar').set(
+    {
+      sumup_reader_id: reader.id,
+      sumup_reader_name: reader.name || 'Lettore SumUp',
+    },
+    { merge: true }
+  )
+  return { id: reader.id, name: reader.name || 'Lettore SumUp' }
+}
+
+// Dissocia il lettore (best-effort lato SumUp, azzera sempre i settings).
+async function unpairReader(deps, auth) {
+  const { db, paymentsFetch, isConfigured, merchantCode } = deps
+  requireRole(auth, ['bartender'])
+  const settings = await readerSettings(db)
+  if (settings.sumup_reader_id && isConfigured()) {
+    await paymentsFetch(
+      `/v0.1/merchants/${merchantCode()}/readers/${settings.sumup_reader_id}`,
+      { method: 'DELETE' }
+    ).catch(() => {})
+  }
+  await db.collection('settings').doc('bar').set(
+    { sumup_reader_id: null, sumup_reader_name: null },
+    { merge: true }
+  )
+  return { ok: true }
+}
+
+// Sveglia il lettore con l'importo dell'ordine: il cliente paga lì,
+// l'esito arriva via webhook (return_url) e viene verificato via API.
+async function readerCheckout(deps, auth, { orderId } = {}) {
+  const { db, paymentsFetch, isConfigured, merchantCode, webhookUrl } = deps
+  requireRole(auth, STAFF_ROLES)
+  if (!isConfigured()) return { unavailable: true }
+
+  const settings = await readerSettings(db)
+  if (!settings.sumup_reader_id) {
+    throw err('failed-precondition', 'Nessun lettore associato: fai il pairing dalle impostazioni.')
+  }
+
+  const { ref, order } = await getOrder(db, orderId)
+  if (order.status === 'annullato') {
+    throw err('failed-precondition', 'Ordine annullato: niente da incassare.')
+  }
+  if (order.payment_status === 'pagato') {
+    throw err('failed-precondition', 'Ordine già pagato.')
+  }
+
+  const payload = buildReaderCheckoutPayload({
+    total: order.total,
+    description: `Ordine #${order.daily_number ?? '—'} — La Tana del Coniglio`,
+    returnUrl: webhookUrl(),
+  })
+
+  let res
+  try {
+    res = await paymentsFetch(
+      `/v0.1/merchants/${merchantCode()}/readers/${settings.sumup_reader_id}/checkout`,
+      { method: 'POST', body: JSON.stringify(payload) }
+    )
+  } catch (e) {
+    if (e?.status === 404) {
+      throw err('not-found', 'Lettore non associato: rifai il pairing dalle impostazioni.')
+    }
+    if (e?.status === 422) {
+      throw err('unavailable', 'Lettore spento o senza Wi-Fi: controllalo e riprova.')
+    }
+    throw e
+  }
+
+  const clientTransactionId = res?.data?.client_transaction_id || null
+  if (!clientTransactionId) {
+    throw err('internal', 'SumUp non ha avviato la transazione sul lettore.')
+  }
+
+  await ref.update({
+    payment_method: 'lettore',
+    payment_status: 'in_attesa',
+    sumup_client_transaction_id: clientTransactionId,
+  })
+  return { clientTransactionId }
+}
+
+// Annulla la transazione in corso sul lettore.
+async function readerTerminate(deps, auth, { orderId } = {}) {
+  const { db, paymentsFetch, isConfigured, merchantCode } = deps
+  requireRole(auth, STAFF_ROLES)
+  if (!isConfigured()) return { unavailable: true }
+
+  const settings = await readerSettings(db)
+  const { ref, order } = await getOrder(db, orderId)
+
+  if (settings.sumup_reader_id) {
+    await paymentsFetch(
+      `/v0.1/merchants/${merchantCode()}/readers/${settings.sumup_reader_id}/terminate`,
+      { method: 'POST' }
+    ).catch(() => {})
+  }
+  if (order.payment_status === 'in_attesa' && order.payment_method === 'lettore') {
+    await ref.update({ payment_status: 'fallito', payment_method: null })
+  }
+  return { ok: true }
+}
+
+// Webhook del lettore: dal payload SOLO il client_transaction_id;
+// l'esito si legge dalla Transactions API.
+async function handleReaderWebhook(deps, { clientTransactionId } = {}) {
+  const { db, paymentsFetch, isConfigured, now } = deps
+  if (!isConfigured() || !clientTransactionId) return { status: 200 }
+
+  const snap = await db
+    .collection('orders')
+    .where('sumup_client_transaction_id', '==', clientTransactionId)
+    .limit(1)
+    .get()
+  if (snap.empty) return { status: 200 }
+
+  const tx = await paymentsFetch(
+    `/v0.1/me/transactions?client_transaction_id=${encodeURIComponent(clientTransactionId)}`
+  ).catch(() => null)
+  if (!tx) return { status: 200 }
+
+  const status = mapTransactionStatus(tx.status)
+  if (status === 'in_attesa') return { status: 200 }
+
+  const orderSnap = snap.docs[0]
+  const patch = decidePaymentPatch(orderSnap.data(), {
+    status,
+    transactionId: tx.id || tx.transaction_code || null,
+    now: now(),
+  })
+  if (patch) await orderSnap.ref.update(patch)
+  return { status: 200 }
+}
+
+module.exports = {
+  createCheckout,
+  verifyCheckoutStatus,
+  handleOnlineWebhook,
+  pairReader,
+  unpairReader,
+  readerCheckout,
+  readerTerminate,
+  handleReaderWebhook,
+}

@@ -3,6 +3,7 @@ import { subscribeSettings, updateSettings, replaceCatalog } from '../lib/api.js
 import { CANCEL_PHRASES } from '../lib/orderStatus.js'
 import { parseCarteCsv, decodeCsvBuffer } from '../lib/carteImport.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
+import { pairSumUpReader, unpairSumUpReader } from '../lib/paymentsApi.js'
 
 // Impostazioni del bar (documento settings/bar). Ogni modifica viene salvata
 // subito; le pagine cliente le ricevono in tempo reale via subscribeSettings.
@@ -102,6 +103,7 @@ export default function SettingsTab() {
           checked={settings.payments_reader_enabled}
           onChange={(v) => save({ payments_reader_enabled: v })}
         />
+        {settings.payments_reader_enabled && <ReaderPairing settings={settings} />}
       </div>
 
       <div className="card settings-section">
@@ -411,6 +413,97 @@ function CatalogImport() {
           danger
           onCancel={() => setParsed(null)}
           onConfirm={doImport}
+        />
+      )}
+    </div>
+  )
+}
+
+// Pairing del lettore SumUp Solo: il codice si genera dal lettore
+// (Menu → Connessioni → API). L'associazione la fa una Cloud Function
+// (la chiave API non passa mai dal client); lo stato arriva dai settings.
+function ReaderPairing({ settings }) {
+  const [code, setCode] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState(null)
+  const [confirmUnpair, setConfirmUnpair] = useState(false)
+
+  async function associa() {
+    setBusy(true)
+    setError(null)
+    try {
+      const res = await pairSumUpReader(code.trim())
+      if (res.unavailable) {
+        setError('Non disponibile in ambiente di sviluppo (nessuna Cloud Function).')
+      } else {
+        setCode('')
+      }
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function dissocia() {
+    setConfirmUnpair(false)
+    setBusy(true)
+    setError(null)
+    try {
+      await unpairSumUpReader()
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div style={{ marginTop: 10 }}>
+      {error && <div className="banner">Errore: {error}</div>}
+      {settings.sumup_reader_id ? (
+        <div className="toggle-row">
+          <div>
+            <div>📟 {settings.sumup_reader_name || 'Lettore SumUp'}</div>
+            <div className="desc">Lettore associato e pronto all&apos;incasso.</div>
+          </div>
+          <button className="btn ghost small" disabled={busy} onClick={() => setConfirmUnpair(true)}>
+            Dissocia
+          </button>
+        </div>
+      ) : (
+        <>
+          <p className="muted small" style={{ margin: '0 0 8px' }}>
+            Sul lettore: Menu → Connessioni → API → genera il codice di
+            pairing e inseriscilo qui (vale 5 minuti).
+          </p>
+          <div className="row" style={{ gap: 8 }}>
+            <input
+              type="text"
+              placeholder="Codice di pairing"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              style={{ textTransform: 'uppercase' }}
+            />
+            <button
+              className="btn small"
+              disabled={busy || !code.trim()}
+              onClick={associa}
+              style={{ flexShrink: 0 }}
+            >
+              {busy ? 'Associo…' : '🔗 Associa'}
+            </button>
+          </div>
+        </>
+      )}
+      {confirmUnpair && (
+        <ConfirmDialog
+          title="Dissociare il lettore?"
+          message="Per usarlo di nuovo servirà un nuovo codice di pairing."
+          confirmLabel="Dissocia"
+          danger
+          onCancel={() => setConfirmUnpair(false)}
+          onConfirm={dissocia}
         />
       )}
     </div>
