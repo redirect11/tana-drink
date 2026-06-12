@@ -187,3 +187,15 @@ export async function simulatePaymentResult(orderId, ok) {
   }
   await updateDoc(ref, patch)
 }
+
+// Simula l'intero incasso sul lettore (senza pairing né Cloud API):
+// marca l'ordine come "in corso sul lettore" e poi applica l'esito.
+export async function simulateReaderPayment(orderId, ok) {
+  const { updateDoc } = await import('firebase/firestore')
+  await updateDoc(doc(db, 'orders', orderId), {
+    payment_method: 'lettore',
+    payment_status: 'in_attesa',
+    sumup_client_transaction_id: 'dev-sim-reader',
+  })
+  await simulatePaymentResult(orderId, ok)
+}
