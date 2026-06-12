@@ -27,6 +27,7 @@ import {
   placedByName,
 } from '../lib/orderStatus.js'
 import { bucketByStatus, serataRecap, openOrdersCount } from '../lib/serata.js'
+import { isAwaitingPayment } from '../lib/payments.js'
 import { aggregateProducts, serataFinance, longestPrep, phaseAverages } from '../lib/eta.js'
 import { ensureNotificationPermission, notify } from '../lib/notify.js'
 import { syncSumUpProducts, isSumUpEnabled } from '../lib/sumupApi.js'
@@ -298,13 +299,23 @@ function OrderQueue() {
       return
     }
     let primed = false
+    const awaiting = new Set() // ordini in attesa di pagamento obbligatorio
     const unsub = subscribeSerataOrders(
       serataId,
       (data) => {
-        // Notifica i nuovi ordini "ricevuti" comparsi dopo il primo caricamento.
+        // Notifica i nuovi ordini "ricevuti" comparsi dopo il primo
+        // caricamento. Quelli con pagamento obbligatorio vengono
+        // notificati solo QUANDO risultano pagati (prima non si preparano).
         if (primed) {
           for (const o of data) {
-            if (!knownIds.current.has(o.id) && o.status === ORDER_STATUSES.RICEVUTO) {
+            const isNew = !knownIds.current.has(o.id)
+            if (o.status !== ORDER_STATUSES.RICEVUTO) continue
+            if (isAwaitingPayment(o)) {
+              if (isNew) awaiting.add(o.id)
+              continue
+            }
+            if (isNew || awaiting.has(o.id)) {
+              awaiting.delete(o.id)
               notify('🆕 Nuovo ordine', `Ordine #${o.daily_number} ricevuto.`)
             }
           }
@@ -454,8 +465,13 @@ function OrderQueue() {
 
   const renderCard = (o) => {
         const ns = nextStatus(o.status)
+        const awaiting = isAwaitingPayment(o) && o.status === ORDER_STATUSES.RICEVUTO
         return (
-          <div className={`card order-card ${o.status}`} key={o.id}>
+          <div
+            className={`card order-card ${o.status}`}
+            key={o.id}
+            style={awaiting ? { opacity: 0.55 } : undefined}
+          >
             <div className="row between">
               <div>
                 <span className="bignum" style={{ fontSize: '2rem' }}>
@@ -470,6 +486,27 @@ function OrderQueue() {
                 )}
                 {o.service_mode === 'tavolo' && (
                   <span className="pill" style={{ marginLeft: 6 }}>🍸 Al tavolo</span>
+                )}
+                {/* Stato pagamento */}
+                {o.payment_status === 'pagato' && o.status !== ORDER_STATUSES.PAGATO && (
+                  <span className="pill pagato" style={{ marginLeft: 6 }}>
+                    💳 Pagato{o.payment_method === 'online' ? ' online' : ''}
+                  </span>
+                )}
+                {awaiting && (
+                  <span className="pill ricevuto" style={{ marginLeft: 6 }}>
+                    ⏳ In attesa di pagamento
+                  </span>
+                )}
+                {o.payment_status === 'fallito' && (
+                  <span className="pill" style={{ marginLeft: 6, background: 'rgba(231,76,60,0.25)', color: '#ffb3a7' }}>
+                    ❌ Pagamento fallito
+                  </span>
+                )}
+                {o.payment_after_cancel && (
+                  <span className="pill" style={{ marginLeft: 6, background: 'rgba(231,76,60,0.25)', color: '#ffb3a7' }}>
+                    ⚠️ Pagato dopo annullo
+                  </span>
                 )}
               </div>
               <span className={`pill ${o.status}`}>
@@ -514,7 +551,12 @@ function OrderQueue() {
                 </p>
               )
             })()}
-            {ns && o.status !== ORDER_STATUSES.RITIRATO && (
+            {awaiting && (
+              <p className="muted small" style={{ margin: '0 0 8px' }}>
+                ⏳ Entra in coda al pagamento: non preparare.
+              </p>
+            )}
+            {ns && o.status !== ORDER_STATUSES.RITIRATO && !awaiting && (
               <button className="btn block" onClick={() => advance(o)}>
                 Segna come “{STATUS_LABELS[ns]}”
               </button>

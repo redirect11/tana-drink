@@ -919,10 +919,15 @@ export function subscribeQueue(serataId, onChange, onError) {
     q,
     (snap) => {
       onChange(
-        snap.docs.map((d) => ({
-          daily_number: d.data().daily_number ?? 0,
-          status: d.data().status,
-        }))
+        snap.docs
+          .map((d) => ({
+            daily_number: d.data().daily_number ?? 0,
+            status: d.data().status,
+            payment_required: d.data().payment_required ?? false,
+            payment_status: d.data().payment_status ?? 'non_richiesto',
+          }))
+          // In attesa di pagamento obbligatorio: non è in coda di lavorazione.
+          .filter((o) => !(o.payment_required && o.payment_status !== 'pagato'))
       )
     },
     onError ?? (() => {})

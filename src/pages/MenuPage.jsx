@@ -251,7 +251,7 @@ export default function MenuPage() {
     setShowSummary(true)
   }
 
-  async function handleConfirmOrder(extraCharges) {
+  async function handleConfirmOrder({ pay_online, payment_required, ...extraCharges }) {
     setSending(true)
     setError(null)
     try {
@@ -268,6 +268,10 @@ export default function MenuPage() {
         push_token,
         placed_by: staff, // null per i clienti
         customer_uid: customer?.uid ?? null,
+        // Pagamento online: il checkout avviene sulla pagina ordine.
+        payment_method: pay_online ? 'online' : null,
+        payment_status: pay_online ? 'in_attesa' : 'non_richiesto',
+        payment_required: !!payment_required,
         ...extraCharges,
       })
       rememberOrderId(order.id)

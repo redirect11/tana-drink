@@ -1,6 +1,12 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import ConfirmDialog from './ConfirmDialog.jsx'
-import { clearDatabase, resetWithMockData, createMockHistory } from '../dev/devActions.js'
+import {
+  clearDatabase,
+  resetWithMockData,
+  createMockHistory,
+  simulatePaymentResult,
+} from '../dev/devActions.js'
+import { subscribeOpenSerata, subscribeSerataOrders } from '../lib/api.js'
 
 // Opzioni sviluppatore: visibili SOLO in ambiente emulatore (Docker locale
 // o ambiente di test). Permettono di svuotare il db o resettarlo coi mock.
@@ -9,6 +15,21 @@ export default function DevTools() {
   const [log, setLog] = useState([])
   const [error, setError] = useState(null)
   const [confirm, setConfirm] = useState(null) // { title, message, run }
+
+  // Pagamenti da simulare: in dev non ci sono Cloud Functions, quindi
+  // l'esito del checkout SumUp si "recita" da qui.
+  const [serata, setSerata] = useState(null)
+  const [pending, setPending] = useState([])
+  useEffect(() => subscribeOpenSerata(setSerata, () => setSerata(null)), [])
+  useEffect(() => {
+    if (!serata?.id) {
+      setPending([])
+      return
+    }
+    return subscribeSerataOrders(serata.id, (orders) =>
+      setPending(orders.filter((o) => o.payment_status === 'in_attesa'))
+    )
+  }, [serata?.id])
 
   function pushLog(msg) {
     setLog((l) => [...l, msg])
@@ -117,6 +138,41 @@ export default function DevTools() {
             Svuota
           </button>
         </div>
+      </div>
+
+      <div className="card settings-section">
+        <h3>Pagamenti (simulazione)</h3>
+        <p className="muted small" style={{ marginTop: 0 }}>
+          In dev non ci sono Cloud Functions: simula qui l&apos;esito del
+          checkout SumUp per gli ordini in attesa.
+        </p>
+        {pending.length === 0 && (
+          <div className="muted small">Nessun ordine con pagamento in attesa.</div>
+        )}
+        {pending.map((o) => (
+          <div className="toggle-row" key={o.id}>
+            <div>
+              <div>#{o.daily_number} {o.customer_name || ''}</div>
+              <div className="desc">
+                {o.payment_method} · {o.status} · {o.payment_required ? 'obbligatorio' : 'opzionale'}
+              </div>
+            </div>
+            <div className="row" style={{ gap: 6 }}>
+              <button
+                className="btn small"
+                onClick={() => simulatePaymentResult(o.id, true).catch((e) => setError(e.message))}
+              >
+                ✓ Pagato
+              </button>
+              <button
+                className="btn ghost small"
+                onClick={() => simulatePaymentResult(o.id, false).catch((e) => setError(e.message))}
+              >
+                ✗ Fallito
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
 
       {log.length > 0 && (

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { ORDER_STATUSES, formatPrice } from '../lib/orderStatus.js'
 import { subscribeQueue } from '../lib/api.js'
 import { queueEtaMinutes } from '../lib/eta.js'
+import { paymentOptions } from '../lib/payments.js'
 
 // Riepilogo ordine in stile scontrino, mostrato prima della conferma.
 // Calcola coperto (per persona), costo di servizio (percentuale) o mancia
@@ -20,11 +21,26 @@ export default function OrderSummary({ cart, settings, serata, tableLabel, staff
 
   const subtotal = cart.total
 
+  // Pagamento online (solo clienti): obbligatorio, oppure scelta
+  // «paga ora» / «paga al bancone (o allo staff)». Se chi non paga
+  // deve ritirare al banco, la scelta forza la modalità di consegna.
+  const payOpts = paymentOptions(settings)
+  const customerPay = !staff && payOpts.enabled
+  const [payChoice, setPayChoice] = useState('online')
+  const payOnline = customerPay && (payOpts.required || payChoice === 'online')
+  const forceBanco = customerPay && !payOnline && payOpts.counterForcesBanco
+
   // Modalità di consegna: fissata dalle impostazioni oppure scelta dal
   // cliente ('entrambi'). Il ritiro al banco azzera coperto e costo di
   // servizio; la mancia resta sempre facoltativa.
   const modeChoice = settings.service_mode === 'entrambi'
-  const effectiveMode = modeChoice ? mode : settings.service_mode === 'banco' ? 'banco' : 'tavolo'
+  const effectiveMode = forceBanco
+    ? 'banco'
+    : modeChoice
+      ? mode
+      : settings.service_mode === 'banco'
+        ? 'banco'
+        : 'tavolo'
   const atTable = effectiveMode === 'tavolo'
 
   // Coda attiva: il nuovo ordine andrà dopo tutti gli ordini in corso, quindi
@@ -73,6 +89,8 @@ export default function OrderSummary({ cart, settings, serata, tableLabel, staff
       tip_amount: tipAmount,
       service_mode: effectiveMode,
       note: note.trim() || null,
+      pay_online: payOnline,
+      payment_required: customerPay && payOpts.required,
       // Ordine manuale dello staff: il tavolo si indica qui.
       ...(staff ? { table_label: tavolo.trim() || null } : {}),
     })
@@ -131,23 +149,56 @@ export default function OrderSummary({ cart, settings, serata, tableLabel, staff
           </div>
         </div>
 
+        {customerPay && !payOpts.required && (
+          <>
+            <label style={{ margin: '12px 0 4px' }}>Pagamento</label>
+            <div className="mode-choice">
+              <button
+                className={`mode-option${payChoice === 'online' ? ' active' : ''}`}
+                onClick={() => setPayChoice('online')}
+              >
+                💳 Paga ora
+              </button>
+              <button
+                className={`mode-option${payChoice === 'counter' ? ' active' : ''}`}
+                onClick={() => setPayChoice('counter')}
+              >
+                {payOpts.counterLabel}
+              </button>
+            </div>
+          </>
+        )}
+        {customerPay && payOpts.required && (
+          <p className="muted" style={{ margin: '10px 0 0', fontSize: '0.85rem', textAlign: 'center' }}>
+            💳 Per ordinare è richiesto il pagamento online: ti chiederemo
+            la carta dopo la conferma.
+          </p>
+        )}
+
         {modeChoice && (
           <div className="mode-choice">
             <button
-              className={`mode-option${mode === 'tavolo' ? ' active' : ''}`}
+              className={`mode-option${effectiveMode === 'tavolo' ? ' active' : ''}`}
+              disabled={forceBanco}
               onClick={() => setMode('tavolo')}
             >
               🍸 Servito al tavolo
             </button>
             <button
-              className={`mode-option${mode === 'banco' ? ' active' : ''}`}
+              className={`mode-option${effectiveMode === 'banco' ? ' active' : ''}`}
               onClick={() => setMode('banco')}
             >
               🚶 Ritiro al banco
             </button>
           </div>
         )}
-        {modeChoice && mode === 'banco' && (
+        {forceBanco && (
+          <p className="muted" style={{ margin: '8px 0 0', fontSize: '0.82rem', textAlign: 'center' }}>
+            Pagando al bancone il ritiro è al banco. Per il servizio al
+            tavolo paga online.
+          </p>
+        )}
+        {modeChoice && !forceBanco && effectiveMode === 'banco' && (
           <p className="muted" style={{ margin: '8px 0 0', fontSize: '0.82rem', textAlign: 'center' }}>
             Ritirando al banco non paghi coperto né costo di servizio.
           </p>
@@ -245,7 +296,13 @@ export default function OrderSummary({ cart, settings, serata, tableLabel, staff
             Modifica
           </button>
           <button className="btn grow" onClick={confirm} disabled={sending || !nomeValido}>
-            {sending ? 'Invio…' : nomeValido ? 'Conferma ordine' : 'Inserisci il nome'}
+            {sending
+              ? 'Invio…'
+              : !nomeValido
+                ? 'Inserisci il nome'
+                : payOnline
+                  ? 'Conferma e paga 💳'
+                  : 'Conferma ordine'}
           </button>
         </div>
       </div>
