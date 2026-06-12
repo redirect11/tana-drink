@@ -100,7 +100,12 @@ self.addEventListener('push', (event) => {
             icon: './logo.png',
             badge: './logo.png',
             vibrate: [300, 150, 300],
-            tag: 'staff-serve',
+            // Tag per ordine: ogni ordine pronto ha la sua notifica nel
+            // pannello (il sistema le raggruppa per app), senza che la
+            // nuova sostituisca la precedente.
+            tag: payload.data.order_id
+              ? `staff-serve-${payload.data.order_id}`
+              : 'staff-serve',
             renotify: true,
             data: { url: payload.data.url || '/bar' },
           }
