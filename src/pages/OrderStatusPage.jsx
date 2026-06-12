@@ -307,7 +307,9 @@ export default function OrderStatusPage() {
       </div>
 
       <div className="steps">
-        {STATUS_FLOW.filter((s) => s !== ORDER_STATUSES.RITIRATO).map((s) => {
+        {STATUS_FLOW.filter(
+          (s) => s !== ORDER_STATUSES.RITIRATO && s !== ORDER_STATUSES.PAGATO
+        ).map((s) => {
           const idx = STATUS_FLOW.indexOf(s)
           const cls =
             idx < currentIdx ? 'done' : idx === currentIdx ? 'active' : ''

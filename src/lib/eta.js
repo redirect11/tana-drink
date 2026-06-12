@@ -57,7 +57,12 @@ export function avgPrepPerOrderMinutes(prepStats, baseMinutes) {
 // attivi davanti vengono preparati prima del suo (modello sequenziale).
 // `position` = numero di ordini attivi (ricevuto/in_preparazione) davanti.
 export function queueEtaMinutes({ status, position, prepStats, etaStats, baseMinutes, mode }) {
-  if (status === ORDER_STATUSES.PRONTO || status === ORDER_STATUSES.RITIRATO) return 0
+  if (
+    status === ORDER_STATUSES.PRONTO ||
+    status === ORDER_STATUSES.RITIRATO ||
+    status === ORDER_STATUSES.PAGATO
+  )
+    return 0
 
   const prepAvg = avgPrepPerOrderMinutes(prepStats, baseMinutes)
   let remaining

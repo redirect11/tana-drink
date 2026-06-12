@@ -8,6 +8,7 @@ import {
 import { auth } from '../lib/firebaseClient.js'
 import {
   updateOrderStatus,
+  markOrderPaid,
   cancelOrder,
   subscribeOpenSerata,
   subscribeSerataOrders,
@@ -240,6 +241,7 @@ const STATUS_TABS = [
   ORDER_STATUSES.IN_PREPARAZIONE,
   ORDER_STATUSES.PRONTO,
   ORDER_STATUSES.RITIRATO,
+  ORDER_STATUSES.PAGATO,
 ]
 
 // Minuti (1 decimale) tra due timestamp ISO, o null se mancanti.
@@ -445,7 +447,10 @@ function OrderQueue() {
     ...(buckets[ORDER_STATUSES.IN_PREPARAZIONE] || []),
     ...(buckets[ORDER_STATUSES.PRONTO] || []),
   ].sort((a, b) => (a.daily_number || 0) - (b.daily_number || 0))
-  const evasi = buckets[ORDER_STATUSES.RITIRATO] || []
+  const evasi = [
+    ...(buckets[ORDER_STATUSES.RITIRATO] || []),
+    ...(buckets[ORDER_STATUSES.PAGATO] || []),
+  ]
 
   const renderCard = (o) => {
         const ns = nextStatus(o.status)
@@ -509,9 +514,18 @@ function OrderQueue() {
                 </p>
               )
             })()}
-            {ns && (
+            {ns && o.status !== ORDER_STATUSES.RITIRATO && (
               <button className="btn block" onClick={() => advance(o)}>
                 Segna come “{STATUS_LABELS[ns]}”
+              </button>
+            )}
+            {/* Ritirato/servito ma non pagato: l'incasso chiude l'ordine. */}
+            {o.status === ORDER_STATUSES.RITIRATO && o.payment_status !== 'pagato' && (
+              <button
+                className="btn block"
+                onClick={() => markOrderPaid(o.id, 'banco').catch((e) => setError(e.message))}
+              >
+                💶 Incassato (contanti)
               </button>
             )}
             {o.status === ORDER_STATUSES.RICEVUTO && (

@@ -3,13 +3,14 @@
 
 import { ORDER_STATUSES } from './orderStatus.js'
 
-// Smista gli ordini nei quattro stati di lavorazione (esclude gli annullati).
+// Smista gli ordini negli stati di lavorazione (esclude gli annullati).
 export function bucketByStatus(orders) {
   const buckets = {
     [ORDER_STATUSES.RICEVUTO]: [],
     [ORDER_STATUSES.IN_PREPARAZIONE]: [],
     [ORDER_STATUSES.PRONTO]: [],
     [ORDER_STATUSES.RITIRATO]: [],
+    [ORDER_STATUSES.PAGATO]: [],
   }
   for (const o of orders || []) {
     if (o.status === ORDER_STATUSES.ANNULLATO) continue
@@ -30,10 +31,13 @@ export function serataRecap(orders) {
   return { count, total }
 }
 
-// Ordini ancora "aperti" (non ritirati né annullati): usato per avvisare alla
-// chiusura della serata.
+// Ordini ancora "aperti" (non ritirati, pagati né annullati): usato per
+// avvisare alla chiusura della serata.
 export function openOrdersCount(orders) {
   return (orders || []).filter(
-    (o) => o.status !== ORDER_STATUSES.RITIRATO && o.status !== ORDER_STATUSES.ANNULLATO
+    (o) =>
+      o.status !== ORDER_STATUSES.RITIRATO &&
+      o.status !== ORDER_STATUSES.PAGATO &&
+      o.status !== ORDER_STATUSES.ANNULLATO
   ).length
 }

@@ -131,6 +131,15 @@ function mapOrder(snap) {
     created_at: toIso(o.created_at),
     sumup_sale_id: o.sumup_sale_id ?? null,
     serata_id: o.serata_id ?? null,
+    payment_method: o.payment_method ?? null,
+    payment_status: o.payment_status ?? 'non_richiesto',
+    payment_required: o.payment_required ?? false,
+    sumup_checkout_id: o.sumup_checkout_id ?? null,
+    sumup_checkout_attempts: o.sumup_checkout_attempts ?? 0,
+    sumup_client_transaction_id: o.sumup_client_transaction_id ?? null,
+    sumup_transaction_id: o.sumup_transaction_id ?? null,
+    paid_at: o.paid_at ?? null,
+    payment_after_cancel: o.payment_after_cancel ?? false,
     order_items: items.map((i, idx) => ({
       id: `${snap.id}-${idx}`,
       drink_id: i.drink_id ?? null,
@@ -545,8 +554,12 @@ export async function fetchOrdersByIds(ids) {
   return results
 }
 
-// Coda del bartender: ordini attivi (non ancora ritirati).
-const INACTIVE_STATUSES = [ORDER_STATUSES.RITIRATO, ORDER_STATUSES.ANNULLATO]
+// Coda del bartender: ordini attivi (non ancora ritirati/pagati).
+const INACTIVE_STATUSES = [
+  ORDER_STATUSES.RITIRATO,
+  ORDER_STATUSES.PAGATO,
+  ORDER_STATUSES.ANNULLATO,
+]
 
 export async function fetchActiveOrders() {
   const snap = await getDocs(
@@ -557,6 +570,19 @@ export async function fetchActiveOrders() {
     String(a.created_at || '').localeCompare(String(b.created_at || ''))
   )
   return orders
+}
+
+// Chiude definitivamente l'ordine come pagato, registrando il metodo
+// d'incasso ('banco' per contanti/POS esterno, 'lettore', 'online').
+export async function markOrderPaid(id, method) {
+  const nowIso = new Date().toISOString()
+  await updateDoc(doc(db, 'orders', id), {
+    status: ORDER_STATUSES.PAGATO,
+    [`status_times.${ORDER_STATUSES.PAGATO}`]: nowIso,
+    payment_method: method,
+    payment_status: 'pagato',
+    paid_at: nowIso,
+  })
 }
 
 export async function updateOrderStatus(id, status) {
@@ -570,7 +596,20 @@ export async function updateOrderStatus(id, status) {
     await updateDoc(ref, { status, [`status_times.${status}`]: nowIso })
   }
 
-  const snap = await getDoc(ref)
+  let snap = await getDoc(ref)
+
+  // Ordine già pagato (online o lettore) che viene ritirato/servito:
+  // si chiude da solo come "pagato" (c'è anche la cintura lato server).
+  if (
+    status === ORDER_STATUSES.RITIRATO &&
+    snap.data()?.payment_status === 'pagato'
+  ) {
+    await updateDoc(ref, {
+      status: ORDER_STATUSES.PAGATO,
+      [`status_times.${ORDER_STATUSES.PAGATO}`]: new Date().toISOString(),
+    })
+    snap = await getDoc(ref)
+  }
 
   // Statistiche tempi sulla serata (per ETA cliente e resoconto).
   // - al "pronto": attesa+preparazione, su tutti gli ordini
