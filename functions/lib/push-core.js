@@ -47,12 +47,17 @@ const STAFF_CALL_VIBRATION = [500, 200, 500, 200, 900]
 function decideStaffCallPush(call) {
   if (!call || !call.to_uid) return null
   if (call.status && call.status !== 'pending') return null
-  const da = call.from_name || call.from_email || 'il bancone'
+  // Mai l'email del chiamante: al massimo il nome.
+  const da = call.from_name || null
   return {
     title: '📟 Chiamata dal bancone',
     body: call.message
-      ? `${da}: «${call.message}»`
-      : `${da} ti sta chiamando. Rispondi sul telefono.`,
+      ? da
+        ? `${da}: «${call.message}»`
+        : `«${call.message}»`
+      : da
+        ? `${da} ti sta chiamando. Rispondi sul telefono.`
+        : 'Rispondi sul telefono.',
   }
 }
 
