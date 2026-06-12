@@ -39,6 +39,7 @@ function makeDeps({ configured = true, seed = {}, responses = {}, errors = {} } 
       merchantCode: () => 'MC123',
       now: () => NOW,
       webhookUrl: () => 'https://fn/paymentWebhook',
+      affiliate: () => ({ app_id: 'it.tana.app', key: 'aff-1' }),
     },
     store,
     paymentsFetch,
@@ -118,6 +119,11 @@ describe('Feature: incasso sul lettore', () => {
     const payload = JSON.parse(options.body)
     expect(payload.total_amount).toEqual({ currency: 'EUR', minor_unit: 2, value: 1250 })
     expect(payload.return_url).toBe('https://fn/paymentWebhook')
+    expect(payload.affiliate).toEqual({
+      app_id: 'it.tana.app',
+      key: 'aff-1',
+      foreign_transaction_id: 'o1',
+    })
     expect(store.orders.o1.payment_method).toBe('lettore')
     expect(store.orders.o1.payment_status).toBe('in_attesa')
     expect(store.orders.o1.sumup_client_transaction_id).toBe('ctx1')
