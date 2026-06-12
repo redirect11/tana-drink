@@ -5,6 +5,7 @@ import {
   resetWithMockData,
   createMockHistory,
   simulatePaymentResult,
+  simulateReaderPayment,
 } from '../dev/devActions.js'
 import { subscribeOpenSerata, subscribeSerataOrders } from '../lib/api.js'
 
@@ -21,14 +22,26 @@ export default function DevTools() {
   const [serata, setSerata] = useState(null)
   const [pending, setPending] = useState([])
   useEffect(() => subscribeOpenSerata(setSerata, () => setSerata(null)), [])
+  const [unpaid, setUnpaid] = useState([])
   useEffect(() => {
     if (!serata?.id) {
       setPending([])
+      setUnpaid([])
       return
     }
-    return subscribeSerataOrders(serata.id, (orders) =>
+    return subscribeSerataOrders(serata.id, (orders) => {
       setPending(orders.filter((o) => o.payment_status === 'in_attesa'))
-    )
+      // Candidati alla simulazione del lettore: non pagati, in mano al
+      // cliente (pronto/ritirato), senza pagamento già in corso.
+      setUnpaid(
+        orders.filter(
+          (o) =>
+            o.payment_status !== 'pagato' &&
+            o.payment_status !== 'in_attesa' &&
+            ['pronto', 'ritirato'].includes(o.status)
+        )
+      )
+    })
   }, [serata?.id])
 
   function pushLog(msg) {
@@ -173,6 +186,36 @@ export default function DevTools() {
             </div>
           </div>
         ))}
+
+        {unpaid.length > 0 && (
+          <>
+            <p className="muted small" style={{ margin: '12px 0 4px' }}>
+              📟 Simulazione lettore (ordini non pagati pronti/ritirati):
+            </p>
+            {unpaid.map((o) => (
+              <div className="toggle-row" key={o.id}>
+                <div>
+                  <div>#{o.daily_number} {o.customer_name || ''}</div>
+                  <div className="desc">{o.status}</div>
+                </div>
+                <div className="row" style={{ gap: 6 }}>
+                  <button
+                    className="btn small"
+                    onClick={() => simulateReaderPayment(o.id, true).catch((e) => setError(e.message))}
+                  >
+                    📟 ✓ Carta OK
+                  </button>
+                  <button
+                    className="btn ghost small"
+                    onClick={() => simulateReaderPayment(o.id, false).catch((e) => setError(e.message))}
+                  >
+                    ✗ Rifiutata
+                  </button>
+                </div>
+              </div>
+            ))}
+          </>
+        )}
       </div>
 
       {log.length > 0 && (
