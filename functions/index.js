@@ -15,6 +15,7 @@
 
 const { onCall, onRequest, HttpsError } = require('firebase-functions/v2/https')
 const { onDocumentUpdated, onDocumentCreated } = require('firebase-functions/v2/firestore')
+const { defineSecret } = require('firebase-functions/params')
 const { initializeApp } = require('firebase-admin/app')
 const { getFirestore, FieldValue } = require('firebase-admin/firestore')
 const { getMessaging } = require('firebase-admin/messaging')
@@ -24,6 +25,16 @@ const { buildSumupHeaders, buildSumupUrl } = require('./lib/sumup-core')
 const { syncProducts, createSale, updateSaleStatus, handleWebhook } = require('./lib/sumup-service')
 const { decideOrderPush, decideStaffCallPush, decideStaffServePush } = require('./lib/push-core')
 const { staffAdmin } = require('./lib/staff-service')
+const {
+  createCheckout,
+  verifyCheckoutStatus,
+  handleOnlineWebhook,
+} = require('./lib/payment-service')
+const {
+  decideAutoAdvance,
+  parseCheckoutWebhookBody,
+  parseReaderWebhookBody,
+} = require('./lib/payment-core')
 
 initializeApp()
 const db = getFirestore()
@@ -204,4 +215,100 @@ exports.notifyStaffCall = onDocumentCreated({ ...OPTS, document: 'staff_calls/{c
       console.error('[push staff] invio fallito:', e?.message || e)
     }
   }
+})
+
+// ── Pagamenti SumUp (checkout online + lettore) ───────────────────────────────
+// La chiave API è un secret runtime (firebase functions:secrets:set
+// SUMUP_API_KEY); il merchant code non è segreto e vive in functions/.env.
+// Senza configurazione le funzioni rispondono { unavailable: true }.
+const SUMUP_API_KEY = defineSecret('SUMUP_API_KEY')
+const SUMUP_MERCHANT_CODE = process.env.SUMUP_MERCHANT_CODE || ''
+const SUMUP_PAYMENTS_BASE = process.env.SUMUP_PAYMENTS_BASE || 'https://api.sumup.com'
+
+function paymentDeps() {
+  const apiKey = SUMUP_API_KEY.value() || ''
+  return {
+    db,
+    isConfigured: () => Boolean(apiKey && SUMUP_MERCHANT_CODE),
+    merchantCode: () => SUMUP_MERCHANT_CODE,
+    now: () => new Date().toISOString(),
+    paymentsFetch: async (path, options = {}) => {
+      const res = await fetch(`${SUMUP_PAYMENTS_BASE}${path}`, {
+        ...options,
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+          ...(options.headers || {}),
+        },
+      })
+      const text = await res.text()
+      if (!res.ok) {
+        const e = new Error(`SumUp ${res.status} su ${path}: ${text}`)
+        e.status = res.status
+        throw e
+      }
+      return text ? JSON.parse(text) : null
+    },
+  }
+}
+
+function toHttpsError(e) {
+  if (e?.code && e?.message && typeof e.code === 'string') {
+    return new HttpsError(e.code, e.message)
+  }
+  return new HttpsError('internal', e?.message || 'Errore interno.')
+}
+
+// Checkout online: chiamabile anche da clienti anonimi (l'id ordine fa
+// da capability token, come per la pagina ordine pubblica).
+exports.createPaymentCheckout = onCall({ ...OPTS, secrets: [SUMUP_API_KEY] }, async (request) => {
+  try {
+    return await createCheckout(paymentDeps(), request.data || {})
+  } catch (e) {
+    throw toHttpsError(e)
+  }
+})
+
+exports.getPaymentStatus = onCall({ ...OPTS, secrets: [SUMUP_API_KEY] }, async (request) => {
+  try {
+    return await verifyCheckoutStatus(paymentDeps(), request.data || {})
+  } catch (e) {
+    throw toHttpsError(e)
+  }
+})
+
+// Webhook esiti di pagamento (checkout online + return_url del lettore).
+// Smista per forma del payload; l'esito viene SEMPRE ri-verificato via
+// API SumUp, quindi un payload malformato è innocuo.
+exports.paymentWebhook = onRequest({ ...OPTS, secrets: [SUMUP_API_KEY], cors: false }, async (req, res) => {
+  if (req.method !== 'POST') return res.status(405).send('')
+  try {
+    const deps = paymentDeps()
+    const reader = parseReaderWebhookBody(req.body)
+    if (reader.clientTransactionId) {
+      const { handleReaderWebhook } = require('./lib/payment-service')
+      if (typeof handleReaderWebhook === 'function') {
+        await handleReaderWebhook(deps, reader)
+      }
+    } else {
+      const online = parseCheckoutWebhookBody(req.body)
+      await handleOnlineWebhook(deps, online)
+    }
+  } catch (e) {
+    console.error('[payments] webhook:', e?.message || e)
+  }
+  // Sempre 200: gli esiti veri si leggono dall'API, niente retry storm.
+  res.status(200).json({ ok: true })
+})
+
+// Cintura server: ordine ritirato + pagato (in qualunque ordine) → chiuso.
+exports.autoAdvancePaid = onDocumentUpdated({ ...OPTS, document: 'orders/{orderId}' }, async (event) => {
+  const before = event.data?.before?.data()
+  const after = event.data?.after?.data()
+  const advance = decideAutoAdvance(before, after)
+  if (!advance) return
+  const nowIso = new Date().toISOString()
+  await event.data.after.ref
+    .update({ status: advance, [`status_times.${advance}`]: nowIso })
+    .catch((e) => console.error('[payments] auto-advance:', e?.message || e))
 })

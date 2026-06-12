@@ -37,6 +37,17 @@ function createFakeFirestore(seed = {}) {
         calls.updates.push({ collection: colName, id, patch })
         return undefined
       },
+      async get() {
+        const col = ensureCol(colName)
+        const exists = Object.prototype.hasOwnProperty.call(col, id)
+        return {
+          id,
+          exists,
+          ref: makeDocRef(colName, id),
+          data: () => (exists ? { ...col[id] } : undefined),
+          get: (field) => (exists ? col[id][field] : undefined),
+        }
+      },
     }
   }
 
