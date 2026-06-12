@@ -78,6 +78,32 @@ self.addEventListener('push', (event) => {
         )
       }
 
+      // Ordine pronto da servire (push allo staff di sala): saltata solo
+      // se il gestionale è già visibile (lì la lista si aggiorna da sola).
+      if (payload.data?.kind === 'staff_serve') {
+        const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+        const onBar = wins.some((w) => {
+          try {
+            return w.visibilityState === 'visible' && new URL(w.url).pathname.startsWith('/bar')
+          } catch {
+            return false
+          }
+        })
+        if (onBar) return
+        return self.registration.showNotification(
+          payload.data.title || '🫱 Drink pronti da servire',
+          {
+            body: payload.data.body || '',
+            icon: './logo.png',
+            badge: './logo.png',
+            vibrate: [300, 150, 300],
+            tag: 'staff-serve',
+            renotify: true,
+            data: { url: payload.data.url || '/bar' },
+          }
+        )
+      }
+
       const orderUrl = payload.data?.url || null
 
       if (orderUrl) {
