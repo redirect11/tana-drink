@@ -7,9 +7,11 @@ import {
   subscribeOpenSerata,
   subscribeQueue,
   updateOrderItems,
+  updateOrderPushToken,
   cancelOrder,
   DEFAULT_SETTINGS,
 } from '../lib/api.js'
+import { getPushToken } from '../lib/push.js'
 import {
   ORDER_STATUSES,
   STATUS_FLOW,
@@ -32,7 +34,10 @@ export default function OrderStatusPage() {
   const { id } = useParams()
   const [order, setOrder] = useState(null)
   const [error, setError] = useState(null)
-  const [notifOn, setNotifOn] = useState(false)
+  const [notifOn, setNotifOn] = useState(
+    () => 'Notification' in window && Notification.permission === 'granted'
+  )
+  const [notifMsg, setNotifMsg] = useState(null)
   const [edits, setEdits] = useState(null) // copia editabile degli item (prima della preparazione)
   const [saving, setSaving] = useState(false)
   const [confirmCancel, setConfirmCancel] = useState(false)
@@ -43,10 +48,15 @@ export default function OrderStatusPage() {
   // Chi sta guardando la pagina è staff? Il QR per agganciare l'ordine
   // va mostrato solo allo staff, non al cliente che lo ha già scansionato.
   const [viewerIsStaff, setViewerIsStaff] = useState(false)
+  const [viewerChecked, setViewerChecked] = useState(false)
 
   useEffect(() => {
     return onAuthStateChanged(auth, async (u) => {
-      if (!u) return setViewerIsStaff(false)
+      if (!u) {
+        setViewerIsStaff(false)
+        setViewerChecked(true)
+        return
+      }
       try {
         const token = await u.getIdTokenResult()
         const role = token.claims.role
@@ -54,8 +64,21 @@ export default function OrderStatusPage() {
       } catch {
         setViewerIsStaff(false)
       }
+      setViewerChecked(true)
     })
   }, [])
+
+  // Permesso notifiche già concesso ma ordine senza token (es. QR di un
+  // ordine manuale scansionato dal cliente): aggancia il token di questo
+  // dispositivo in automatico. Mai per lo staff: la push andrebbe a loro.
+  useEffect(() => {
+    if (!viewerChecked || viewerIsStaff) return
+    if (!order?.id || order.push_token || order.status !== ORDER_STATUSES.RICEVUTO) return
+    if (!('Notification' in window) || Notification.permission !== 'granted') return
+    getPushToken().then(
+      (t) => t && updateOrderPushToken(order.id, t).catch(() => {})
+    )
+  }, [viewerChecked, viewerIsStaff, order?.id, order?.push_token, order?.status])
 
   useEffect(() => {
     let active = true
@@ -151,7 +174,24 @@ export default function OrderStatusPage() {
   async function enableNotifications() {
     const ok = await ensureNotificationPermission()
     setNotifOn(ok)
-    if (ok) notify('Notifiche attive', 'Ti avviseremo quando il drink è pronto.')
+    if (!ok) {
+      // Permesso negato (ora o in passato): senza un messaggio il tasto
+      // sembrerebbe rotto — il browser non rimostra il prompt.
+      setNotifMsg(
+        '🔕 Le notifiche sono bloccate dal browser: abilitale dalle impostazioni del sito e riprova.'
+      )
+      return
+    }
+    setNotifMsg('🔔 Notifiche attive: ti avviseremo quando è pronto.')
+    notify('Notifiche attive', 'Ti avviseremo quando il drink è pronto.')
+    // Aggancia il token push a QUESTO ordine (se manca): così l'avviso
+    // arriva anche con la pagina chiusa. Possibile solo finché l'ordine
+    // è "ricevuto"; utile anche dopo la scansione del QR di un ordine
+    // manuale (il token dello staff non viene salvato apposta).
+    if (!order?.push_token && order?.status === ORDER_STATUSES.RICEVUTO) {
+      const token = await getPushToken()
+      if (token) await updateOrderPushToken(order.id, token).catch(() => {})
+    }
   }
 
   function changeQty(idx, delta) {
@@ -285,6 +325,11 @@ export default function OrderStatusPage() {
         <button className="btn secondary block" onClick={enableNotifications}>
           🔔 Avvisami quando è pronto
         </button>
+      )}
+      {notifMsg && (
+        <p className="muted" style={{ textAlign: 'center', margin: '8px 0 0' }}>
+          {notifMsg}
+        </p>
       )}
 
       <div className="card">
