@@ -41,6 +41,10 @@ service cloud.firestore {
         || (isStaffMember()
             && resource.data.status == 'pronto'
             && request.resource.data.status == 'ritirato')
+        // Lo staff incassa al tavolo: chiude l'ordine come pagato.
+        || (isStaffMember()
+            && resource.data.status == 'ritirato'
+            && request.resource.data.status == 'pagato')
         || (resource.data.status == 'ricevuto'
             && request.resource.data.status in ['ricevuto', 'annullato']);
       allow delete: if false;

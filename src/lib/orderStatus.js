@@ -5,6 +5,7 @@ export const ORDER_STATUSES = {
   IN_PREPARAZIONE: 'in_preparazione',
   PRONTO: 'pronto',
   RITIRATO: 'ritirato',
+  PAGATO: 'pagato',
   ANNULLATO: 'annullato',
 }
 
@@ -13,6 +14,7 @@ export const STATUS_FLOW = [
   ORDER_STATUSES.IN_PREPARAZIONE,
   ORDER_STATUSES.PRONTO,
   ORDER_STATUSES.RITIRATO,
+  ORDER_STATUSES.PAGATO,
 ]
 
 export const STATUS_LABELS = {
@@ -20,6 +22,7 @@ export const STATUS_LABELS = {
   [ORDER_STATUSES.IN_PREPARAZIONE]: 'In preparazione',
   [ORDER_STATUSES.PRONTO]: 'Pronto al servizio',
   [ORDER_STATUSES.RITIRATO]: 'Ritirato/Servito',
+  [ORDER_STATUSES.PAGATO]: 'Pagato',
   [ORDER_STATUSES.ANNULLATO]: 'Annullato',
 }
 
@@ -41,7 +44,15 @@ export const STATUS_EMOJI = {
   [ORDER_STATUSES.IN_PREPARAZIONE]: '🍹',
   [ORDER_STATUSES.PRONTO]: '🔔',
   [ORDER_STATUSES.RITIRATO]: '✅',
+  [ORDER_STATUSES.PAGATO]: '💶',
   [ORDER_STATUSES.ANNULLATO]: '✖️',
+}
+
+// Etichette leggibili del metodo di pagamento di un ordine.
+export const PAYMENT_METHOD_LABELS = {
+  online: '💳 Online',
+  lettore: '📟 Lettore',
+  banco: '💶 Al banco',
 }
 
 export function nextStatus(status) {
