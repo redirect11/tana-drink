@@ -457,6 +457,9 @@ export async function createOrder({
   placed_by = null, // { email, role } se inserito manualmente dallo staff
   customer_name = null, // nome/pseudonimo (+ cognome) del cliente
   customer_uid = null, // uid dell'account cliente (null per anonimi)
+  payment_method = null, // 'online' se il cliente sceglie di pagare subito
+  payment_status = 'non_richiesto', // 'in_attesa' per i pagamenti online
+  payment_required = false, // fotografa l'impostazione alla creazione
 }) {
   if (!serata_id) throw new Error('Nessuna serata aperta: ordini non disponibili.')
   const itemsTotal = items.reduce((s, i) => s + i.qty * Number(i.price || 0), 0)
@@ -488,6 +491,9 @@ export async function createOrder({
       placed_by,
       customer_name,
       customer_uid,
+      payment_method,
+      payment_status,
+      payment_required,
       created_at: serverTimestamp(),
       items: items.map((i) => ({
         drink_id: i.drink_id,
@@ -1098,6 +1104,14 @@ export const DEFAULT_SETTINGS = {
   // Coda ordini bartender: 'tabs' (schede per stato) o 'lista' (lista unica
   // con stato indicato da colore/etichetta sulla card).
   queue_view: 'tabs',
+  // Pagamenti: online (SumUp Checkout) e lettore Solo (Cloud API).
+  payments_online_enabled: false,
+  payments_online_required: false,
+  payments_reader_enabled: false,
+  sumup_reader_id: null,
+  sumup_reader_name: null,
+  // Chi non paga online deve ritirare al banco (dove c'è un banco).
+  banco_required_if_unpaid: false,
 }
 
 export function subscribeSettings(onChange, onError) {
