@@ -96,6 +96,9 @@ export default function OrderStatusPage() {
       id,
       (updated) => {
         if (!active || !updated) return
+        // Il listener ritenta da solo: se il fetch iniziale era fallito
+        // (primo accesso, App Check non pronto), qui si recupera.
+        setError(null)
         setOrder((prev) => ({ ...prev, ...updated }))
         if (
           prevStatus.current !== updated.status &&

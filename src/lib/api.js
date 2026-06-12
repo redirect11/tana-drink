@@ -178,6 +178,43 @@ export async function fetchDrinks({ onlyAvailable = false } = {}) {
   return drinks
 }
 
+// Menù in tempo reale: i listener Firestore ritentano da soli con
+// backoff — al primo accesso (token App Check non ancora pronto, rete
+// lenta, prompt permessi in corso) il menù arriva appena possibile,
+// senza dover ricaricare la pagina. E si aggiorna live se il bartender
+// modifica il catalogo.
+export function subscribeDrinks({ onlyAvailable = false } = {}, onChange, onError) {
+  const constraints = []
+  if (onlyAvailable) constraints.push(where('available', '==', true))
+  return onSnapshot(
+    query(drinksCol, ...constraints),
+    (snap) => {
+      const drinks = snap.docs.map(mapDrink)
+      drinks.sort((a, b) => {
+        const ca = (a.category || '').localeCompare(b.category || '')
+        if (ca !== 0) return ca
+        return (a.name || '').localeCompare(b.name || '')
+      })
+      onChange(drinks)
+    },
+    onError ?? (() => {})
+  )
+}
+
+export function subscribeCategories(onChange, onError) {
+  return onSnapshot(
+    categoriesCol,
+    (snap) => {
+      const cats = snap.docs.map(mapCategory)
+      cats.sort(
+        (a, b) => (a.sort_order - b.sort_order) || (a.name || '').localeCompare(b.name || '')
+      )
+      onChange(cats)
+    },
+    onError ?? (() => {})
+  )
+}
+
 export async function createDrink(drink) {
   const ref = await addDoc(drinksCol, {
     ...drink,
