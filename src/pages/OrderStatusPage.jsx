@@ -359,7 +359,7 @@ export default function OrderStatusPage() {
         )}
         {editable
           ? editItems.map((i, idx) => (
-              <div className="row between" key={i.id} style={{ alignItems: 'center' }}>
+              <div className="row between order-edit-row" key={i.id}>
                 <span>{i.name}</span>
                 <span className="qty">
                   <button aria-label="Riduci" onClick={() => changeQty(idx, -1)}>−</button>
