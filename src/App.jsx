@@ -1,4 +1,5 @@
-import { Routes, Route, Link, useLocation } from 'react-router-dom'
+import { Routes, Route, Link, Navigate, useLocation } from 'react-router-dom'
+import LandingPage from './pages/LandingPage.jsx'
 import MenuPage from './pages/MenuPage.jsx'
 import OrderStatusPage from './pages/OrderStatusPage.jsx'
 import MyOrdersPage from './pages/MyOrdersPage.jsx'
@@ -73,7 +74,7 @@ export default function App() {
               )}
               {/* Per lo staff «Nuovo ordine» porta già al menu: niente doppione. */}
               {staffRole !== 'staff' && (
-                <Link className="btn ghost small" to="/">Vista cliente</Link>
+                <Link className="btn ghost small" to="/menu">Vista cliente</Link>
               )}
             </>
           ) : staffRole === 'staff' ? (
@@ -118,7 +119,8 @@ export default function App() {
 
       <main>
         <Routes>
-          <Route path="/" element={<MenuPage />} />
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/menu" element={<MenuPage />} />
           <Route path="/ordini" element={<MyOrdersPage />} />
           <Route path="/ordine/:id" element={<OrderStatusPage />} />
           <Route path="/accedi" element={<AccediPage />} />
@@ -126,7 +128,7 @@ export default function App() {
           <Route path="/profilo" element={<ProfiloPage />} />
           <Route path="/profilo-staff" element={<StaffProfilePage />} />
           <Route path="/bar" element={<BartenderPage />} />
-          <Route path="*" element={<MenuPage />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
 

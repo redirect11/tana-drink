@@ -1494,3 +1494,23 @@ a.order-mini {
 .menu-admin-cat:hover {
   opacity: 0.85;
 }
+
+/* Landing page pubblica */
+.landing-nav {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin: 14px 0 4px;
+}
+.landing-nav a {
+  color: var(--accent-2);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+.landing-nav a:hover { color: var(--text); }
+.landing section.card h2 {
+  font-family: var(--serif);
+  color: var(--accent-2);
+}
