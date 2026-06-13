@@ -1437,3 +1437,22 @@ a.order-mini {
   font-size: 0.95rem;
   text-align: right;
 }
+
+/* Nastro d'ambiente non-produzione (test/locale): sempre visibile in alto. */
+.env-ribbon {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 0.5px;
+  padding: 5px 8px;
+  color: #1c1305;
+}
+.env-ribbon.env-test {
+  background: repeating-linear-gradient(45deg, #f5b94a, #f5b94a 12px, #e8a32e 12px, #e8a32e 24px);
+}
+.env-ribbon.env-locale {
+  background: repeating-linear-gradient(45deg, #9ad0ff, #9ad0ff 12px, #6fb8f5 12px, #6fb8f5 24px);
+}

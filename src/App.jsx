@@ -8,6 +8,7 @@ import { useCustomer, useHasOrders } from './lib/customerAuth.js'
 import { isFirebaseConfigured, auth } from './lib/firebaseClient.js'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
 import { subscribeSettings, DEFAULT_SETTINGS } from './lib/api.js'
+import { envLabel } from './dev/devActions.js'
 import { useEffect, useState } from 'react'
 
 export default function App() {
@@ -43,6 +44,13 @@ export default function App() {
 
   return (
     <div className="app">
+      {/* Nastro d'ambiente: distingue a colpo d'occhio test/locale da
+          produzione (i siti sono identici). In produzione non compare. */}
+      {envLabel && (
+        <div className={`env-ribbon env-${envLabel.toLowerCase()}`}>
+          ⚠️ AMBIENTE {envLabel} — non è la produzione
+        </div>
+      )}
       <header className={`topbar${onBackoffice || staffRole ? ' backoffice' : ''}`}>
         {/* Nel gestionale il logo non porta al menu: resta sugli ordini. */}
         <Link

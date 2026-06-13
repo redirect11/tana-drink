@@ -15,8 +15,21 @@ import {
 } from './seedData.js'
 import { generateMockOrders, generateMockHistory } from './mockData.js'
 
+// Emulatore locale (Docker): qui funzionano anche le azioni distruttive
+// sul database (endpoint dedicato dell'emulatore, assente in produzione).
 export const isDevEnvironment =
   String(import.meta.env.VITE_USE_FIREBASE_EMULATOR) === 'true'
+
+// Ambiente di test deployato (progetto tana-drink-test): build con
+// VITE_APP_ENV=test. Qui i DevTools servono (es. simulare i pagamenti),
+// ma NON le azioni che usano l'endpoint dell'emulatore.
+export const isTestEnvironment = import.meta.env.VITE_APP_ENV === 'test'
+
+// I DevTools si mostrano sia in locale (emulatore) sia sul test deployato.
+export const devToolsEnabled = isDevEnvironment || isTestEnvironment
+
+// Etichetta dell'ambiente non-produzione (per il nastro in alto).
+export const envLabel = isDevEnvironment ? 'LOCALE' : isTestEnvironment ? 'TEST' : null
 
 const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID
 // Come in firebaseClient: dalla rete locale "localhost" non punterebbe
