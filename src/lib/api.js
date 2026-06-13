@@ -545,6 +545,26 @@ export async function renameGroup(id, name) {
   await updateDoc(doc(groupsCol, id), { name: name.trim() })
 }
 
+// Annida `childId` dentro `parentId` (il padre diventa contenitore).
+export async function nestGroup(childId, parentId) {
+  await updateDoc(doc(groupsCol, childId), { parent_group_id: parentId })
+  await updateDoc(doc(groupsCol, parentId), { has_child_groups: true })
+}
+
+// Sgancia un gruppo dal padre; se il padre resta senza figli, non è più
+// un contenitore (torna a poter ricevere ordini diretti).
+export async function unnestGroup(childId) {
+  const childSnap = await getDoc(doc(groupsCol, childId))
+  const parentId = childSnap.exists() ? childSnap.data().parent_group_id : null
+  await updateDoc(doc(groupsCol, childId), { parent_group_id: null })
+  if (parentId) {
+    const rest = await getDocs(query(groupsCol, where('parent_group_id', '==', parentId)))
+    if (rest.empty) {
+      await updateDoc(doc(groupsCol, parentId), { has_child_groups: false }).catch(() => {})
+    }
+  }
+}
+
 export async function setGroupPinned(id, pinned) {
   await updateDoc(doc(groupsCol, id), { pinned: !!pinned })
 }
@@ -613,6 +633,13 @@ export async function createOrder({
     await ensureCustomerGroup(customer_uid, customer_name || 'Cliente', serata_id).catch(
       (e) => console.error('[groups] ensureCustomerGroup:', e?.message || e)
     )
+  }
+  // Un gruppo-contenitore (con sottogruppi) non può avere ordini diretti.
+  if (group_id) {
+    const gSnap = await getDoc(doc(groupsCol, group_id))
+    if (gSnap.exists() && gSnap.data().has_child_groups) {
+      throw new Error('Questo gruppo contiene altri gruppi: aggiungi l’ordine a un sottogruppo.')
+    }
   }
   const itemsTotal = items.reduce((s, i) => s + i.qty * Number(i.price || 0), 0)
   const total = itemsTotal + coperto_amount + service_charge_amount + tip_amount

@@ -4,6 +4,7 @@ import { auth } from '../lib/firebaseClient.js'
 import { subscribeSerataGroups, createManualGroup } from '../lib/api.js'
 import { buildGroupTree, groupTotal, groupSettlement } from '../lib/groups.js'
 import { formatPrice } from '../lib/orderStatus.js'
+import GroupView from './GroupView.jsx'
 
 // Pannello a scomparsa nella coda: panoramica dei gruppi della serata con
 // totale e stato del conto, creazione rapida e avvio ordine per gruppo.
@@ -11,6 +12,7 @@ export default function GroupsPanel({ serataId, orders, role }) {
   const [open, setOpen] = useState(false)
   const [groups, setGroups] = useState([])
   const [newName, setNewName] = useState('')
+  const [viewGroupId, setViewGroupId] = useState(null)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -52,7 +54,10 @@ export default function GroupsPanel({ serataId, orders, role }) {
             const s = groupSettlement(node)
             return (
               <div className="group-row" key={node.group.id}>
-                <div style={{ minWidth: 0 }}>
+                <div
+                  style={{ minWidth: 0, cursor: 'pointer', flex: 1 }}
+                  onClick={() => setViewGroupId(node.group.id)}
+                >
                   <div>
                     {node.group.kind === 'customer' ? '👤 ' : '🏷 '}
                     <strong>{node.group.name}</strong>
@@ -92,6 +97,10 @@ export default function GroupsPanel({ serataId, orders, role }) {
             </button>
           </div>
         </div>
+      )}
+
+      {viewGroupId && (
+        <GroupView serataId={serataId} groupId={viewGroupId} onClose={() => setViewGroupId(null)} />
       )}
     </div>
   )

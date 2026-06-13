@@ -117,3 +117,10 @@ export function canNest(child, parent, groupsById) {
 export function canAddDirectOrder(group) {
   return !!group && !group.has_child_groups
 }
+
+// Tutti gli ordini del sottoalbero (ordini diretti + dei sottogruppi).
+export function flattenOrders(node) {
+  const out = [...(node.directOrders || [])]
+  for (const child of node.childGroups || []) out.push(...flattenOrders(child))
+  return out
+}
