@@ -44,7 +44,7 @@ import ConfirmDialog from '../components/ConfirmDialog.jsx'
 import CancelOrderDialog from '../components/CancelOrderDialog.jsx'
 import DevTools from '../components/DevTools.jsx'
 import StaffDrawer from '../components/StaffDrawer.jsx'
-import { isDevEnvironment } from '../dev/devActions.js'
+import { devToolsEnabled } from '../dev/devActions.js'
 
 export default function BartenderPage() {
   const [user, setUser] = useState(undefined) // undefined = caricamento, null = non loggato
@@ -116,7 +116,7 @@ export default function BartenderPage() {
         {tab === 'inventario' && <InventoryManager />}
         {tab === 'staff' && <StaffTab />}
         {tab === 'impostazioni' && <SettingsTab />}
-        {tab === 'dev' && isDevEnvironment && <DevTools />}
+        {tab === 'dev' && devToolsEnabled && <DevTools />}
       </div>
     </div>
   )
@@ -671,6 +671,10 @@ function OrderQueue() {
           ⏹ Chiudi serata
         </button>
       </div>
+
+      <Link className="btn block" to="/" style={{ marginBottom: 4 }}>
+        ✍️ Inserisci nuovo ordine
+      </Link>
 
       <StaffCallList />
 

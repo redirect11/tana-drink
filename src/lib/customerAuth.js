@@ -8,13 +8,18 @@ import {
   signInWithEmailAndPassword,
   signInWithPopup,
   GoogleAuthProvider,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  reauthenticateWithPopup,
+  updatePassword,
+  deleteUser,
   sendEmailVerification,
   sendPasswordResetEmail,
   updateProfile,
   onAuthStateChanged,
   signOut,
 } from 'firebase/auth'
-import { doc, getDoc, setDoc } from 'firebase/firestore'
+import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore'
 import { auth, db } from './firebaseClient.js'
 import { getMyOrderIds } from './cart.js'
 import { fetchOrdersByCustomer } from './api.js'
@@ -78,6 +83,46 @@ export async function fetchCustomerProfile(uid) {
 
 export async function updateCustomerProfile(uid, data) {
   await setDoc(customerDoc(uid), data, { merge: true })
+}
+
+// ── Profilo: helper validi per qualunque account (cliente o staff) ──────
+
+// Aggiorna il nome visualizzato (displayName) dell'utente loggato.
+export async function updateDisplayName(name) {
+  if (!auth.currentUser) throw new Error('Non autenticato.')
+  await updateProfile(auth.currentUser, { displayName: name })
+}
+
+// Cambia la password: richiede la password attuale per ri-autenticarsi
+// (Firebase lo impone per le operazioni sensibili). Solo account
+// email/password (i Google non hanno password).
+export async function changePassword(currentPassword, newPassword) {
+  const u = auth.currentUser
+  if (!u || !u.email) throw new Error('Non autenticato.')
+  const cred = EmailAuthProvider.credential(u.email, currentPassword)
+  await reauthenticateWithCredential(u, cred)
+  await updatePassword(u, newPassword)
+}
+
+// L'utente loggato ha una password (provider email/password)?
+export function hasPasswordProvider(user) {
+  return !!user?.providerData?.some((p) => p.providerId === 'password')
+}
+
+// Cancella l'account cliente: ri-autentica (password o Google), elimina il
+// documento profilo e infine l'utenza di accesso (diritto alla cancellazione).
+// `currentPassword` serve solo per gli account email/password.
+export async function deleteCustomerAccount(currentPassword) {
+  const u = auth.currentUser
+  if (!u) throw new Error('Non autenticato.')
+  if (hasPasswordProvider(u)) {
+    const cred = EmailAuthProvider.credential(u.email, currentPassword || '')
+    await reauthenticateWithCredential(u, cred)
+  } else {
+    await reauthenticateWithPopup(u, new GoogleAuthProvider())
+  }
+  await deleteDoc(customerDoc(u.uid)).catch(() => {})
+  await deleteUser(u)
 }
 
 // Hook: utente CLIENTE corrente (null per anonimi e per lo staff).
