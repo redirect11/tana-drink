@@ -10,10 +10,15 @@ import {
   resendVerification,
   logoutCustomer,
   updateCustomerProfile,
+  updateDisplayName,
+  hasPasswordProvider,
+  deleteCustomerAccount,
   useCustomer,
   useHasOrders,
   authError,
 } from '../lib/customerAuth.js'
+import PasswordChanger from '../components/PasswordChanger.jsx'
+import ConfirmDialog from '../components/ConfirmDialog.jsx'
 
 // Hook: gli account clienti sono attivi? (impostazione del bartender)
 function useAccountsEnabled() {
@@ -209,6 +214,22 @@ export function ProfiloPage() {
   const navigate = useNavigate()
   const [birth, setBirth] = useState('')
   const [info, setInfo] = useState(null)
+  // Modifica nome/cognome (sincronizzati su profilo + displayName).
+  const [nome, setNome] = useState('')
+  const [cognome, setCognome] = useState('')
+  const [editName, setEditName] = useState(false)
+  const [savingName, setSavingName] = useState(false)
+  // Cancellazione account.
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [delPwd, setDelPwd] = useState('')
+  const [delErr, setDelErr] = useState(null)
+
+  useEffect(() => {
+    if (profile) {
+      setNome(profile.nome || '')
+      setCognome(profile.cognome || '')
+    }
+  }, [profile])
 
   if (loading) return <div className="empty">Carico il profilo…</div>
   if (!user) {
@@ -227,6 +248,31 @@ export function ProfiloPage() {
     setInfo('Data di nascita salvata.')
   }
 
+  async function doDelete() {
+    setDelErr(null)
+    try {
+      await deleteCustomerAccount(delPwd)
+      navigate('/')
+    } catch (e) {
+      setDelErr(authError(e.code) || e.message)
+    }
+  }
+
+  async function saveName() {
+    if (!nome.trim()) return
+    setSavingName(true)
+    try {
+      await updateCustomerProfile(user.uid, { nome: nome.trim(), cognome: cognome.trim() })
+      await updateDisplayName(`${nome.trim()} ${cognome.trim()}`.trim())
+      setEditName(false)
+      setInfo('Nome aggiornato.')
+    } catch (e) {
+      setInfo(e.message)
+    } finally {
+      setSavingName(false)
+    }
+  }
+
   return (
     <div>
       <div className="card">
@@ -234,7 +280,12 @@ export function ProfiloPage() {
         <div className="summary-rows" style={{ margin: 0 }}>
           <div className="summary-row">
             <span className="muted">Nome</span>
-            <span>{profile ? `${profile.nome} ${profile.cognome}`.trim() : user.displayName || '—'}</span>
+            <span>
+              {profile ? `${profile.nome} ${profile.cognome}`.trim() : user.displayName || '—'}{' '}
+              <button className="btn ghost small" style={{ marginLeft: 6 }} onClick={() => setEditName((v) => !v)}>
+                {editName ? 'Chiudi' : '✏️'}
+              </button>
+            </span>
           </div>
           <div className="summary-row">
             <span className="muted">Email</span>
@@ -245,6 +296,22 @@ export function ProfiloPage() {
             <span>{profile?.birth_date || '—'}</span>
           </div>
         </div>
+
+        {editName && (
+          <div className="grid-2" style={{ marginTop: 12 }}>
+            <div>
+              <label htmlFor="prof-nome" style={{ margin: '0 0 4px' }}>Nome</label>
+              <input id="prof-nome" value={nome} onChange={(e) => setNome(e.target.value)} />
+            </div>
+            <div>
+              <label htmlFor="prof-cognome" style={{ margin: '0 0 4px' }}>Cognome</label>
+              <input id="prof-cognome" value={cognome} onChange={(e) => setCognome(e.target.value)} />
+            </div>
+            <button className="btn small" style={{ gridColumn: '1 / -1' }} onClick={saveName} disabled={savingName}>
+              {savingName ? 'Salvo…' : 'Salva nome'}
+            </button>
+          </div>
+        )}
 
         {!user.emailVerified && (
           <div className="banner" style={{ marginTop: 12 }}>
@@ -272,6 +339,8 @@ export function ProfiloPage() {
         {info && <p className="muted small" style={{ marginTop: 10 }}>{info}</p>}
       </div>
 
+      {hasPasswordProvider(user) && <PasswordChanger />}
+
       {hasOrders && (
         <Link className="btn secondary block" to="/ordini">🧾 I miei ordini</Link>
       )}
@@ -282,7 +351,42 @@ export function ProfiloPage() {
       >
         Esci dall’account
       </button>
+
+      {/* Cancellazione account (diritto alla cancellazione GDPR). */}
+      <div className="card settings-section" style={{ marginTop: 16 }}>
+        <h3 style={{ marginTop: 0 }}>🗑 Elimina account</h3>
+        <p className="muted small" style={{ marginTop: 0 }}>
+          Rimuove i dati del tuo profilo e l’utenza di accesso. Operazione irreversibile.
+        </p>
+        {hasPasswordProvider(user) && (
+          <>
+            <label htmlFor="del-pwd">Conferma la password</label>
+            <input id="del-pwd" type="password" value={delPwd} onChange={(e) => setDelPwd(e.target.value)} autoComplete="current-password" />
+          </>
+        )}
+        {delErr && <div className="banner" style={{ marginTop: 10 }}>{delErr}</div>}
+        <button
+          className="btn ghost block"
+          style={{ marginTop: 12 }}
+          onClick={() => { setDelErr(null); setConfirmDelete(true) }}
+        >
+          Elimina il mio account
+        </button>
+      </div>
+
       <Link className="btn ghost block" to="/">← Torna al menù</Link>
+
+      {confirmDelete && (
+        <ConfirmDialog
+          title="Eliminare l’account?"
+          message="Verranno cancellati i dati del profilo e l’accesso. L’operazione non è reversibile."
+          confirmLabel="Elimina account"
+          cancelLabel="Annulla"
+          danger
+          onCancel={() => setConfirmDelete(false)}
+          onConfirm={() => { setConfirmDelete(false); doDelete() }}
+        />
+      )}
     </div>
   )
 }

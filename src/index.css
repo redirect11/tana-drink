@@ -88,16 +88,28 @@ a {
   font-size: 1.05rem;
 }
 
-/* Titolo più piccolo, al massimo su due righe dentro l'altezza del
-   logo: l'header non cresce mai (le barre sticky contano su 65px). */
+/* Titolo su una riga sola: se non c'è spazio si tronca, e sotto certe
+   larghezze sparisce del tutto lasciando solo il logo (header compatto). */
 .brand span {
-  font-size: 0.92rem;
-  line-height: 1.15;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  font-size: 0.95rem;
+  line-height: 1.2;
+  white-space: nowrap;
   overflow: hidden;
-  max-height: 2.3em;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+/* Nel gestionale (saluto + pulsanti a destra) lo spazio è poco: sotto i
+   560px mostra solo il logo. Lato cliente, solo su schermi molto stretti. */
+@media (max-width: 560px) {
+  .topbar.backoffice .brand span {
+    display: none;
+  }
+}
+@media (max-width: 360px) {
+  .brand span {
+    display: none;
+  }
 }
 
 .brand img {
@@ -608,6 +620,22 @@ label {
 }
 
 .app-footer a:hover {
+  color: var(--text);
+}
+
+/* "Preferenze cookie": stesso aspetto dei link del footer. */
+.footer-link-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.78rem;
+  opacity: 0.8;
+  margin-left: 14px;
+  padding: 0;
+  font-family: inherit;
+}
+.footer-link-btn:hover {
   color: var(--text);
 }
 
@@ -1436,4 +1464,33 @@ a.order-mini {
   padding: 7px 10px;
   font-size: 0.95rem;
   text-align: right;
+}
+
+/* Nastro d'ambiente non-produzione (test/locale): sempre visibile in alto. */
+.env-ribbon {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 0.5px;
+  padding: 5px 8px;
+  color: #1c1305;
+}
+.env-ribbon.env-test {
+  background: repeating-linear-gradient(45deg, #f5b94a, #f5b94a 12px, #e8a32e 12px, #e8a32e 24px);
+}
+.env-ribbon.env-locale {
+  background: repeating-linear-gradient(45deg, #9ad0ff, #9ad0ff 12px, #6fb8f5 12px, #6fb8f5 24px);
+}
+
+/* Intestazione categoria cliccabile nella gestione menù (collassa/espande). */
+.menu-admin-cat {
+  cursor: pointer;
+  user-select: none;
+  margin-top: 18px;
+}
+.menu-admin-cat:hover {
+  opacity: 0.85;
 }

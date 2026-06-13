@@ -57,6 +57,11 @@ jobs:
         env:
           # Su Firebase Hosting il sito è servito dalla radice.
           BASE_PATH: /
+          # Ambiente (dal ramo): abilita DevTools + nastro "TEST" sul test.
+          VITE_APP_ENV: ${{ github.ref_name == 'main' && 'production' || 'test' }}
+          # Google Analytics measurement ID per ambiente (pubblico, non segreto).
+          # Attivato in app solo dietro consenso cookie (categoria statistiche).
+          VITE_FIREBASE_MEASUREMENT_ID: ${{ github.ref_name == 'main' && 'G-3Y4TH7G346' || 'G-FX9GGRW06Y' }}
           VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
           VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
           VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}

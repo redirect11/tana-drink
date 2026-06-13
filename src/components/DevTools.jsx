@@ -6,6 +6,7 @@ import {
   createMockHistory,
   simulatePaymentResult,
   simulateReaderPayment,
+  isDevEnvironment,
 } from '../dev/devActions.js'
 import { subscribeOpenSerata, subscribeSerataOrders } from '../lib/api.js'
 
@@ -67,12 +68,15 @@ export default function DevTools() {
   return (
     <div>
       <div className="banner">
-        🛠 Strumenti di sviluppo — disponibili solo nell&apos;ambiente di test
-        (emulatore). Le operazioni sono irreversibili sul database locale.
+        🛠 Strumenti di sviluppo — visibili solo in ambiente di sviluppo
+        (emulatore locale) e di test, mai in produzione.
       </div>
 
       {error && <div className="banner">Errore: {error}</div>}
 
+      {/* Azioni distruttive sul database: solo emulatore locale (usano un
+          endpoint che sul progetto reale di test non esiste). */}
+      {isDevEnvironment && (
       <div className="card settings-section">
         <h3>Database</h3>
         <div className="toggle-row">
@@ -152,12 +156,14 @@ export default function DevTools() {
           </button>
         </div>
       </div>
+      )}
 
       <div className="card settings-section">
         <h3>Pagamenti (simulazione)</h3>
         <p className="muted small" style={{ marginTop: 0 }}>
-          In dev non ci sono Cloud Functions: simula qui l&apos;esito del
-          checkout SumUp per gli ordini in attesa.
+          Simula qui l&apos;esito del pagamento SumUp per gli ordini in
+          attesa (utile finché SumUp non è configurato con le credenziali
+          sandbox).
         </p>
         {pending.length === 0 && (
           <div className="muted small">Nessun ordine con pagamento in attesa.</div>
