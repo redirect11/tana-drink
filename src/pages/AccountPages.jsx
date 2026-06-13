@@ -12,11 +12,13 @@ import {
   updateCustomerProfile,
   updateDisplayName,
   hasPasswordProvider,
+  deleteCustomerAccount,
   useCustomer,
   useHasOrders,
   authError,
 } from '../lib/customerAuth.js'
 import PasswordChanger from '../components/PasswordChanger.jsx'
+import ConfirmDialog from '../components/ConfirmDialog.jsx'
 
 // Hook: gli account clienti sono attivi? (impostazione del bartender)
 function useAccountsEnabled() {
@@ -217,6 +219,10 @@ export function ProfiloPage() {
   const [cognome, setCognome] = useState('')
   const [editName, setEditName] = useState(false)
   const [savingName, setSavingName] = useState(false)
+  // Cancellazione account.
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [delPwd, setDelPwd] = useState('')
+  const [delErr, setDelErr] = useState(null)
 
   useEffect(() => {
     if (profile) {
@@ -240,6 +246,16 @@ export function ProfiloPage() {
     if (!birth) return
     await updateCustomerProfile(user.uid, { birth_date: birth })
     setInfo('Data di nascita salvata.')
+  }
+
+  async function doDelete() {
+    setDelErr(null)
+    try {
+      await deleteCustomerAccount(delPwd)
+      navigate('/')
+    } catch (e) {
+      setDelErr(authError(e.code) || e.message)
+    }
   }
 
   async function saveName() {
@@ -335,7 +351,42 @@ export function ProfiloPage() {
       >
         Esci dall’account
       </button>
+
+      {/* Cancellazione account (diritto alla cancellazione GDPR). */}
+      <div className="card settings-section" style={{ marginTop: 16 }}>
+        <h3 style={{ marginTop: 0 }}>🗑 Elimina account</h3>
+        <p className="muted small" style={{ marginTop: 0 }}>
+          Rimuove i dati del tuo profilo e l’utenza di accesso. Operazione irreversibile.
+        </p>
+        {hasPasswordProvider(user) && (
+          <>
+            <label htmlFor="del-pwd">Conferma la password</label>
+            <input id="del-pwd" type="password" value={delPwd} onChange={(e) => setDelPwd(e.target.value)} autoComplete="current-password" />
+          </>
+        )}
+        {delErr && <div className="banner" style={{ marginTop: 10 }}>{delErr}</div>}
+        <button
+          className="btn ghost block"
+          style={{ marginTop: 12 }}
+          onClick={() => { setDelErr(null); setConfirmDelete(true) }}
+        >
+          Elimina il mio account
+        </button>
+      </div>
+
       <Link className="btn ghost block" to="/">← Torna al menù</Link>
+
+      {confirmDelete && (
+        <ConfirmDialog
+          title="Eliminare l’account?"
+          message="Verranno cancellati i dati del profilo e l’accesso. L’operazione non è reversibile."
+          confirmLabel="Elimina account"
+          cancelLabel="Annulla"
+          danger
+          onCancel={() => setConfirmDelete(false)}
+          onConfirm={() => { setConfirmDelete(false); doDelete() }}
+        />
+      )}
     </div>
   )
 }

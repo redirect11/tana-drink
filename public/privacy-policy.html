@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/png" href="logo.png" />
+  <title>Informativa Privacy – La Tana del Coniglio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&display=swap"
+    rel="stylesheet"
+  />
+  <style>
+    :root {
+      --bg: #0e0e15;
+      --bg2: #15151f;
+      --card: #1a1a26;
+      --gold: #e8a32e;
+      --gold-soft: #f5b94a;
+      --text: #f5f5f7;
+      --muted: #9b9ba8;
+      --radius: 16px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      background:
+        radial-gradient(900px 500px at 85% -10%, rgba(245, 185, 74, 0.07), transparent 60%),
+        linear-gradient(170deg, var(--bg), var(--bg2));
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 32px 16px 64px;
+    }
+    header { text-align: center; margin-bottom: 32px; }
+    header img.logo {
+      width: 72px; height: 72px; border-radius: 50%; margin-bottom: 12px;
+      box-shadow: 0 0 0 2px rgba(245, 185, 74, 0.6), 0 4px 18px rgba(0, 0, 0, 0.55);
+    }
+    header h1 {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 1.6rem; font-weight: 800; color: var(--gold-soft); letter-spacing: 0.03em;
+    }
+    header p.sub { font-size: 0.82rem; color: var(--muted); margin-top: 4px; }
+    .content {
+      width: 100%; max-width: 680px; background: var(--card);
+      border: 1px solid rgba(255, 255, 255, 0.07); border-radius: var(--radius);
+      padding: 32px 28px; box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5); line-height: 1.65;
+    }
+    h2 {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 1.05rem; color: var(--gold-soft); margin: 28px 0 10px;
+    }
+    h2:first-child { margin-top: 0; }
+    p, li { font-size: 0.88rem; color: var(--text); margin-bottom: 12px; }
+    ul { margin: 0 0 12px 20px; }
+    li { margin-bottom: 6px; }
+    code { background: rgba(255,255,255,0.07); border-radius: 4px; padding: 1px 5px; font-size: 0.82em; }
+    table { width: 100%; border-collapse: collapse; margin: 12px 0 20px; font-size: 0.83rem; }
+    th { text-align: left; padding: 8px 10px; background: var(--bg2); color: var(--gold-soft); font-weight: 600; border-bottom: 1px solid rgba(255,255,255,0.1); }
+    td { padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.06); color: var(--text); vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    a { color: var(--gold-soft); text-decoration: underline; }
+    a:hover { color: var(--gold); }
+    .note { background: var(--bg2); border-left: 3px solid var(--gold); border-radius: 8px; padding: 10px 14px; font-size: 0.82rem; color: var(--muted); margin: 8px 0 16px; }
+    .back-link { margin-top: 28px; font-size: 0.85rem; }
+    .back-link a { color: var(--muted); text-decoration: none; }
+    .back-link a:hover { color: var(--text); }
+    footer { margin-top: 40px; margin-bottom: 24px; font-size: 0.72rem; color: var(--muted); text-align: center; opacity: 0.6; }
+  </style>
+</head>
+<body>
+  <header>
+    <img class="logo" src="logo.png" alt="La Tana del Coniglio" />
+    <h1>Informativa Privacy</h1>
+    <p class="sub">La Tana del Coniglio · App di ordinazione</p>
+  </header>
+
+  <div class="content">
+    <p class="note">
+      ⚠️ Bozza precompilata sul funzionamento dell'app: prima della pubblicazione
+      definitiva va completata con i dati legali del titolare (ragione sociale, P.IVA,
+      sede) e fatta verificare da un consulente privacy.
+    </p>
+
+    <h2>1. Titolare del trattamento</h2>
+    <p>
+      Titolare è <strong>La Tana del Coniglio</strong> (Nola). Per qualsiasi richiesta
+      relativa ai tuoi dati puoi scrivere a
+      <a href="mailto:info@latanadelconiglio.it">info@latanadelconiglio.it</a>.
+    </p>
+
+    <h2>2. Quali dati trattiamo e perché</h2>
+    <table>
+      <thead><tr><th>Dati</th><th>Finalità</th><th>Base giuridica</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Nome/pseudonimo (e cognome facoltativo) indicato nell'ordine</td>
+          <td>Identificare e consegnare l'ordine</td>
+          <td>Esecuzione del servizio richiesto</td>
+        </tr>
+        <tr>
+          <td>Account cliente: nome, cognome, data di nascita, email</td>
+          <td>Creare un profilo, ritrovare i propri ordini, verificare la maggiore età
+            per la somministrazione di alcolici</td>
+          <td>Esecuzione del contratto · obbligo di legge (età)</td>
+        </tr>
+        <tr>
+          <td>Ordini effettuati (drink, importi, orari)</td>
+          <td>Gestione delle ordinazioni e adempimenti amministrativo-contabili</td>
+          <td>Contratto · obbligo di legge</td>
+        </tr>
+        <tr>
+          <td>Posizione (geolocalizzazione), se attiva</td>
+          <td>Verificare che ti trovi presso il locale al momento dell'ordine. La
+            posizione viene usata solo per il controllo e <strong>non viene memorizzata</strong></td>
+          <td>Consenso (puoi negarlo dal browser)</td>
+        </tr>
+        <tr>
+          <td>Token di notifica del dispositivo</td>
+          <td>Avvisarti quando l'ordine è pronto</td>
+          <td>Consenso (attivi tu le notifiche)</td>
+        </tr>
+        <tr>
+          <td>Dati statistici di utilizzo (Google Analytics)</td>
+          <td>Capire come viene usata l'app e migliorarla</td>
+          <td>Consenso (banner cookie)</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>3. Pagamenti</h2>
+    <p>
+      I pagamenti con carta sono gestiti da <strong>SumUp</strong> come titolare autonomo:
+      i dati della carta vengono inseriti e trattati direttamente da SumUp e
+      <strong>non transitano né vengono conservati</strong> dai nostri sistemi. Noi
+      registriamo solo l'esito (pagato/non pagato) e un identificativo della transazione.
+      <a href="https://www.sumup.com/it-it/informativa-sulla-privacy/" target="_blank" rel="noopener">Privacy
+      Policy di SumUp</a>.
+    </p>
+
+    <h2>4. Fornitori e terze parti</h2>
+    <ul>
+      <li><strong>Google Firebase</strong> (Google Ireland): hosting, database, autenticazione,
+        archiviazione, notifiche e analytics. Agisce come responsabile/titolare autonomo per
+        i dati tecnici. <a href="https://firebase.google.com/support/privacy" target="_blank" rel="noopener">Dettagli</a>.</li>
+      <li><strong>Google reCAPTCHA</strong>: protezione anti-bot degli ordini (misura di sicurezza).</li>
+      <li><strong>SumUp</strong>: pagamenti (vedi punto 3).</li>
+    </ul>
+    <p>
+      Alcuni fornitori possono trattare dati al di fuori dell'UE: i trasferimenti avvengono
+      con le garanzie previste dal GDPR (clausole contrattuali standard).
+    </p>
+
+    <h2>5. Conservazione</h2>
+    <p>
+      I dati dell'account sono conservati finché mantieni il profilo; puoi cancellarlo in
+      qualsiasi momento (vedi punto 7). I dati degli ordini sono conservati per il tempo
+      necessario alla gestione del servizio e agli obblighi amministrativo-contabili. La
+      posizione non viene conservata. I dati statistici sono in forma aggregata.
+    </p>
+
+    <h2>6. I tuoi diritti</h2>
+    <p>
+      Hai diritto di accedere ai tuoi dati, rettificarli, cancellarli, limitarne o opporti
+      al trattamento, e alla portabilità. Puoi esercitarli scrivendo a
+      <a href="mailto:info@latanadelconiglio.it">info@latanadelconiglio.it</a> o, per i dati
+      dell'account, direttamente dall'app. Hai inoltre diritto di reclamo al
+      <a href="https://www.garanteprivacy.it" target="_blank" rel="noopener">Garante per la
+      protezione dei dati personali</a>.
+    </p>
+
+    <h2>7. Cancellazione dell'account</h2>
+    <p>
+      Dalla pagina <strong>Profilo</strong> dell'app puoi eliminare il tuo account: vengono
+      rimossi i dati del profilo (nome, cognome, data di nascita) e l'utenza di accesso.
+      Puoi anche richiederlo via email.
+    </p>
+
+    <h2>8. Cookie</h2>
+    <p>
+      Per i cookie e le tecnologie simili vedi la
+      <a href="./cookie-policy.html">Cookie Policy</a>: usiamo cookie tecnici (sempre attivi)
+      e cookie di statistica solo previo consenso.
+    </p>
+
+    <div class="back-link"><a href="./">← Torna al menù</a></div>
+  </div>
+
+  <footer>La Tana del Coniglio — informativa privacy</footer>
+</body>
+</html>

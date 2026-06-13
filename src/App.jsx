@@ -140,7 +140,8 @@ export default function App() {
             </a>
           ))}
         </div>
-        <a href={`${import.meta.env.BASE_URL}cookie-policy.html`}>Cookie Policy</a>
+        <a href={`${import.meta.env.BASE_URL}privacy-policy.html`}>Privacy</a>
+        <a href={`${import.meta.env.BASE_URL}cookie-policy.html`} style={{ marginLeft: 14 }}>Cookie Policy</a>
         <button type="button" className="footer-link-btn" onClick={openCookiePreferences}>
           Preferenze cookie
         </button>
