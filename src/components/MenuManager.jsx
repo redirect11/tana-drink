@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   fetchDrinks,
   createDrink,
@@ -33,6 +33,11 @@ export default function MenuManager() {
   const [error, setError] = useState(null)
   const [editing, setEditing] = useState(null) // null | 'new' | drink object
   const [showCats, setShowCats] = useState(false)
+  // Filtri della lista (catalogo grande: ricerca + categoria + disponibilità).
+  const [search, setSearch] = useState('')
+  const [catFilter, setCatFilter] = useState('all') // 'all' | 'none' | categoryId
+  const [availFilter, setAvailFilter] = useState('all') // 'all' | 'yes' | 'no'
+  const [collapsed, setCollapsed] = useState(() => new Set()) // categorie chiuse
 
   const catName = (id) => categories.find((c) => c.id === id)?.name
 
@@ -137,6 +142,64 @@ export default function MenuManager() {
     }
   }
 
+  // Drink che passano ricerca + disponibilità (la categoria filtra a parte,
+  // così i chip possono mostrare i conteggi reali per ogni categoria).
+  const searched = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    return drinks.filter((d) => {
+      if (availFilter === 'yes' && !d.available) return false
+      if (availFilter === 'no' && d.available) return false
+      if (!q) return true
+      return (
+        d.name?.toLowerCase().includes(q) ||
+        d.description?.toLowerCase().includes(q) ||
+        (catName(d.category_id) || d.category || '').toLowerCase().includes(q) ||
+        d.recipe_items?.some((r) => r.name?.toLowerCase().includes(q))
+      )
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [drinks, categories, search, availFilter])
+
+  // Conteggi per i chip (su `searched`, prima del filtro categoria).
+  const counts = useMemo(() => {
+    const m = { all: searched.length, none: 0 }
+    for (const d of searched) {
+      const key = d.category_id || 'none'
+      m[key] = (m[key] || 0) + 1
+    }
+    return m
+  }, [searched])
+
+  // Applica il filtro categoria e raggruppa per categoria (ordine categorie).
+  const groups = useMemo(() => {
+    const inCat = searched.filter((d) => {
+      if (catFilter === 'all') return true
+      if (catFilter === 'none') return !d.category_id
+      return d.category_id === catFilter
+    })
+    const byCat = new Map()
+    for (const d of inCat) {
+      const cat = categories.find((c) => c.id === d.category_id)
+      const name = cat?.name || d.category || 'Senza categoria'
+      const sort = cat ? cat.sort_order : 9998
+      const id = d.category_id || 'none'
+      if (!byCat.has(id)) byCat.set(id, { id, name, sort, list: [] })
+      byCat.get(id).list.push(d)
+    }
+    return [...byCat.values()].sort(
+      (a, b) => (a.sort - b.sort) || a.name.localeCompare(b.name)
+    )
+  }, [searched, categories, catFilter])
+
+  function toggleCollapse(id) {
+    setCollapsed((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
   if (editing) {
     return (
       <DrinkForm
@@ -150,6 +213,9 @@ export default function MenuManager() {
     )
   }
 
+  const searching = search.trim().length > 0
+  const availCount = drinks.filter((d) => d.available).length
+
   return (
     <div>
       <button className="btn block" onClick={() => setEditing('new')}>
@@ -161,7 +227,7 @@ export default function MenuManager() {
         style={{ marginTop: 8 }}
         onClick={() => setShowCats((v) => !v)}
       >
-        {showCats ? 'Nascondi categorie' : '🏷 Gestisci categorie'}
+        {showCats ? 'Nascondi categorie' : `🏷 Gestisci categorie (${categories.length})`}
       </button>
       {showCats && (
         <CategoryManager
@@ -173,43 +239,119 @@ export default function MenuManager() {
       {error && <div className="banner">Errore: {error}</div>}
       {loading && <div className="empty">Carico il menù…</div>}
 
-      {drinks.map((d) => (
-        <div className="card" key={d.id}>
-          <div className="row between">
-            {d.image_url && (
-              <img className="drink-thumb" src={d.image_url} alt={d.name} />
+      {!loading && drinks.length > 0 && (
+        <>
+          <input
+            type="search"
+            className="menu-search"
+            placeholder="🔍 Cerca drink, ingrediente, categoria…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{ marginTop: 10 }}
+          />
+
+          {/* Filtro disponibilità */}
+          <div className="mode-choice" style={{ marginBottom: 8 }}>
+            {[
+              ['all', `Tutti (${drinks.length})`],
+              ['yes', `Disponibili (${availCount})`],
+              ['no', `Non disp. (${drinks.length - availCount})`],
+            ].map(([v, label]) => (
+              <button
+                key={v}
+                type="button"
+                className={`mode-option${availFilter === v ? ' active' : ''}`}
+                onClick={() => setAvailFilter(v)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {/* Filtro categoria a chip con conteggi */}
+          <div className="chips-row">
+            <button
+              className={`chip${catFilter === 'all' ? ' active' : ''}`}
+              onClick={() => setCatFilter('all')}
+            >
+              Tutte ({counts.all})
+            </button>
+            {categories.map((c) =>
+              counts[c.id] ? (
+                <button
+                  key={c.id}
+                  className={`chip${catFilter === c.id ? ' active' : ''}`}
+                  onClick={() => setCatFilter(c.id)}
+                >
+                  {c.name} ({counts[c.id]})
+                </button>
+              ) : null
             )}
-            <div className="grow">
-              <strong>{d.name}</strong>{' '}
-              {!d.available && <span className="pill ritirato">non disp.</span>}
-              <div className="muted">
-                {catName(d.category_id) || d.category || 'Senza categoria'} ·{' '}
-                {formatPrice(d.price)}
-              </div>
-            </div>
+            {counts.none ? (
+              <button
+                className={`chip${catFilter === 'none' ? ' active' : ''}`}
+                onClick={() => setCatFilter('none')}
+              >
+                Senza categoria ({counts.none})
+              </button>
+            ) : null}
           </div>
-          {d.recipe_items && d.recipe_items.length > 0 && (
-            <p className="muted" style={{ fontSize: '0.85rem', margin: '6px 0 0' }}>
-              {d.recipe_items.map((r) => `${r.name} ${formatQty(r.qty, r.unit)}`).join(' · ')}
-            </p>
-          )}
-          <div className="grid-2" style={{ marginTop: 8 }}>
-            <button className="btn secondary small" onClick={() => setEditing(d)}>
-              Modifica
-            </button>
-            <button className="btn ghost small" onClick={() => toggleAvailable(d)}>
-              {d.available ? 'Rendi non disp.' : 'Rendi disponibile'}
-            </button>
-          </div>
-          <button
-            className="btn ghost small block"
-            style={{ marginTop: 8 }}
-            onClick={() => handleDelete(d)}
-          >
-            🗑 Elimina
-          </button>
-        </div>
-      ))}
+        </>
+      )}
+
+      {!loading && drinks.length > 0 && groups.length === 0 && (
+        <div className="empty">Nessun drink per «{search}».</div>
+      )}
+
+      {groups.map((g) => {
+        const isCollapsed = collapsed.has(g.id) && !searching
+        return (
+          <section key={g.id} style={{ marginTop: 12 }}>
+            <h3
+              className="cat-header menu-admin-cat"
+              onClick={() => toggleCollapse(g.id)}
+            >
+              <span>{isCollapsed ? '▸' : '▾'} {g.name}</span>
+              <span className="muted small">{g.list.length}</span>
+            </h3>
+            {!isCollapsed &&
+              g.list.map((d) => (
+                <div className="card" key={d.id}>
+                  <div className="row between">
+                    {d.image_url && (
+                      <img className="drink-thumb" src={d.image_url} alt={d.name} />
+                    )}
+                    <div className="grow">
+                      <strong>{d.name}</strong>{' '}
+                      {!d.available && <span className="pill ritirato">non disp.</span>}
+                      <div className="muted">{formatPrice(d.price)}</div>
+                    </div>
+                  </div>
+                  {d.recipe_items && d.recipe_items.length > 0 && (
+                    <p className="muted" style={{ fontSize: '0.85rem', margin: '6px 0 0' }}>
+                      {d.recipe_items.map((r) => `${r.name} ${formatQty(r.qty, r.unit)}`).join(' · ')}
+                    </p>
+                  )}
+                  <div className="grid-2" style={{ marginTop: 8 }}>
+                    <button className="btn secondary small" onClick={() => setEditing(d)}>
+                      Modifica
+                    </button>
+                    <button className="btn ghost small" onClick={() => toggleAvailable(d)}>
+                      {d.available ? 'Rendi non disp.' : 'Rendi disponibile'}
+                    </button>
+                  </div>
+                  <button
+                    className="btn ghost small block"
+                    style={{ marginTop: 8 }}
+                    onClick={() => handleDelete(d)}
+                  >
+                    🗑 Elimina
+                  </button>
+                </div>
+              ))}
+          </section>
+        )
+      })}
 
       {!loading && drinks.length === 0 && (
         <div className="empty">Nessun drink nel menù. Aggiungine uno!</div>

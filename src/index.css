@@ -1456,3 +1456,13 @@ a.order-mini {
 .env-ribbon.env-locale {
   background: repeating-linear-gradient(45deg, #9ad0ff, #9ad0ff 12px, #6fb8f5 12px, #6fb8f5 24px);
 }
+
+/* Intestazione categoria cliccabile nella gestione menù (collassa/espande). */
+.menu-admin-cat {
+  cursor: pointer;
+  user-select: none;
+  margin-top: 18px;
+}
+.menu-admin-cat:hover {
+  opacity: 0.85;
+}
