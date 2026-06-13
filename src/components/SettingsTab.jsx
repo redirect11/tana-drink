@@ -107,6 +107,32 @@ export default function SettingsTab() {
       </div>
 
       <div className="card settings-section">
+        <h3>Gruppi di ordini</h3>
+        <ToggleRow
+          label="Abilita i gruppi"
+          desc="Raggruppa gli ordini in contenitori (es. tavolata, cliente): ogni cliente registrato ha il suo gruppo."
+          checked={settings.groups_enabled}
+          onChange={(v) => save({ groups_enabled: v })}
+        />
+        {settings.groups_enabled && (
+          <>
+            <ToggleRow
+              label="Mostra nel menu laterale"
+              desc="Quadratini dei gruppi nel drawer per avviare un ordine già associato."
+              checked={settings.groups_in_drawer}
+              onChange={(v) => save({ groups_in_drawer: v })}
+            />
+            <ToggleRow
+              label="Pannello gruppi nella coda"
+              desc="Pannello a scomparsa nella coda ordini con i gruppi e i loro conti."
+              checked={settings.groups_in_queue}
+              onChange={(v) => save({ groups_in_queue: v })}
+            />
+          </>
+        )}
+      </div>
+
+      <div className="card settings-section">
         <h3>Tempi di servizio</h3>
         <ToggleRow
           label="Mostra tempo stimato ai clienti"

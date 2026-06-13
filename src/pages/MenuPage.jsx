@@ -7,6 +7,8 @@ import {
   subscribeSettings,
   subscribeOrder,
   subscribeReadyOrders,
+  subscribeSerataGroups,
+  subscribeRecentGroups,
   createOrder,
   DEFAULT_SETTINGS,
 } from '../lib/api.js'
@@ -86,6 +88,7 @@ export default function MenuPage() {
 
   // Il QR può contenere ?tavolo=12 per identificare il tavolo.
   const tableLabel = params.get('tavolo') || params.get('table') || ''
+  const groupParam = params.get('group') || ''
 
   // Menù in tempo reale: il listener ritenta da solo (al primo accesso
   // App Check/permessi possono rallentare la prima richiesta — niente
@@ -129,6 +132,27 @@ export default function MenuPage() {
     if (!isFirebaseConfigured) return
     return subscribeSettings((s) => setSettings(s))
   }, [])
+
+  // Gruppi disponibili per l'associazione (solo staff, con gruppi attivi):
+  // gruppi manuali della serata + gruppi-cliente recenti.
+  const [serataGroups, setSerataGroups] = useState([])
+  const [recentGroups, setRecentGroups] = useState([])
+  const groupsActive = !!staff && settings.groups_enabled
+  const serataIdForGroups = serata?.id
+  useEffect(() => {
+    if (!groupsActive || !serataIdForGroups) {
+      setSerataGroups([])
+      return
+    }
+    return subscribeSerataGroups(serataIdForGroups, setSerataGroups, () => {})
+  }, [groupsActive, serataIdForGroups])
+  useEffect(() => {
+    if (!groupsActive) {
+      setRecentGroups([])
+      return
+    }
+    return subscribeRecentGroups(setRecentGroups, () => {})
+  }, [groupsActive])
 
   // Ordini attivi di questo dispositivo (serata corrente): mostrati come box
   // cliccabili in cima al menù, aggiornati in tempo reale.
@@ -644,6 +668,10 @@ export default function MenuPage() {
           staff={staff}
           customerProfile={customerProfile}
           sending={sending}
+          groupsActive={groupsActive}
+          groups={[...serataGroups, ...recentGroups]}
+          initialGroupId={groupParam}
+          serataId={serata?.id}
           onConfirm={handleConfirmOrder}
           onCancel={() => !sending && setShowSummary(false)}
         />
