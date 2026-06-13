@@ -351,7 +351,8 @@ export default function MenuPage() {
 
       {menuOnly && (
         <div className="banner">
-          📖 Solo consultazione: l’ordinazione dal tavolo non è attiva, ordina al bancone.
+          📖 Solo consultazione: le ordinazioni sono momentaneamente sospese.
+          Rivolgersi allo staff per ordinare.
         </div>
       )}
 
