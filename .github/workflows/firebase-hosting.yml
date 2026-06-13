@@ -1,22 +1,31 @@
-name: Deploy to Firebase Hosting
+name: Deploy to Firebase
 
+# Due ambienti, stessa pipeline:
+#   push su main    → PRODUZIONE (progetto tana-drink)
+#   push su develop → TEST       (progetto tana-drink-test)
+# I segreti per-ambiente vivono nelle GitHub Environments "production" e
+# "test" (stessi NOMI, valori diversi). La produzione, senza segreti
+# d'ambiente, usa i segreti a livello repo già esistenti: invariata.
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   workflow_dispatch:
 
-# Permessi minimi per il GITHUB_TOKEN.
 permissions:
   contents: read
 
-# Una sola deploy alla volta.
+# Un deploy alla volta per ramo (prod e test non si annullano a vicenda).
 concurrency:
-  group: firebase-hosting
+  group: firebase-deploy-${{ github.ref_name }}
   cancel-in-progress: true
 
 jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
+    environment: ${{ github.ref_name == 'main' && 'production' || 'test' }}
+    env:
+      # ID di progetto per ramo (pubblici, non segreti).
+      TARGET_PROJECT: ${{ github.ref_name == 'main' && 'tana-drink' || 'tana-drink-test' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -30,6 +39,19 @@ jobs:
 
       - name: Install Functions dependencies
         run: npm ci --prefix functions
+
+      # SICUREZZA: la config del build deve corrispondere al progetto del
+      # ramo. Se i segreti dell'ambiente test mancassero, qui si fallisce
+      # invece di deployare codice di test sul progetto di produzione.
+      - name: Guardia ambiente
+        env:
+          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+        run: |
+          if [ "$VITE_FIREBASE_PROJECT_ID" != "$TARGET_PROJECT" ]; then
+            echo "::error::Config ($VITE_FIREBASE_PROJECT_ID) ≠ progetto del ramo ($TARGET_PROJECT). Configura i segreti dell'environment GitHub."
+            exit 1
+          fi
+          echo "Deploy su $TARGET_PROJECT (ramo ${GITHUB_REF_NAME})."
 
       - name: Build
         env:
@@ -50,13 +72,12 @@ jobs:
       # Deploy delle Functions (richiede la Cloud Build API, attiva col piano Blaze).
       - name: Deploy Firebase Functions
         env:
-          PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
           SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
         run: |
           echo "$SA_JSON" > /tmp/sa.json
           GOOGLE_APPLICATION_CREDENTIALS=/tmp/sa.json \
             npx firebase-tools deploy --only functions \
-            --project "$PROJECT_ID" --force
+            --project "$TARGET_PROJECT" --force
           rm /tmp/sa.json
 
       # Deploy di regole Firestore (+ indici da firestore.indexes.json) e
@@ -64,13 +85,12 @@ jobs:
       # (firebaserules.admin, datastore.indexAdmin, serviceUsageConsumer).
       - name: Deploy Firestore rules & indexes + Storage rules
         env:
-          PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
           SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
         run: |
           echo "$SA_JSON" > /tmp/sa.json
           GOOGLE_APPLICATION_CREDENTIALS=/tmp/sa.json \
             npx firebase-tools deploy --only firestore,storage \
-            --project "$PROJECT_ID"
+            --project "$TARGET_PROJECT"
           rm /tmp/sa.json
 
       - name: Deploy to Firebase Hosting (live)
@@ -78,5 +98,5 @@ jobs:
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          projectId: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+          projectId: ${{ env.TARGET_PROJECT }}
           channelId: live
