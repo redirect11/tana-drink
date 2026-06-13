@@ -12,6 +12,8 @@ const firebaseConfig = {
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  // Google Analytics: attivato solo dietro consenso (vedi lib/analytics.js).
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 }
 
 // Avvisa chiaramente in console se la configurazione manca, così l'app
@@ -36,6 +38,7 @@ export const app = initializeApp({
   storageBucket: firebaseConfig.storageBucket || 'placeholder.appspot.com',
   messagingSenderId: firebaseConfig.messagingSenderId || '0',
   appId: firebaseConfig.appId || 'placeholder-app-id',
+  ...(firebaseConfig.measurementId ? { measurementId: firebaseConfig.measurementId } : {}),
 })
 
 // App Check (anti-bot/captcha): reCAPTCHA v3 invisibile. Attivo solo se
