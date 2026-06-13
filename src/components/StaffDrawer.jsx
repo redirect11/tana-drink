@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { signOut } from 'firebase/auth'
 import { auth } from '../lib/firebaseClient.js'
-import { isDevEnvironment } from '../dev/devActions.js'
+import { devToolsEnabled } from '../dev/devActions.js'
 
 const BARTENDER_NAV = [
   ['coda', '🧾', 'Coda ordini'],
@@ -25,7 +25,7 @@ export default function StaffDrawer({ role, active = null, onSelect = null }) {
   const navigate = useNavigate()
 
   const base = role === 'bartender' ? BARTENDER_NAV : STAFF_NAV
-  const items = role === 'bartender' && isDevEnvironment ? [...base, ['dev', '🛠', 'Dev']] : base
+  const items = role === 'bartender' && devToolsEnabled ? [...base, ['dev', '🛠', 'Dev']] : base
 
   function go(id) {
     setOpen(false)
