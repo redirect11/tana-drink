@@ -1,7 +1,8 @@
 {
   "projects": {
-    "default": "il-tuo-progetto",
-    "staging": "tana-drink"
+    "default": "tana-drink",
+    "prod": "tana-drink",
+    "test": "tana-drink-test"
   },
   "targets": {},
   "etags": {}
