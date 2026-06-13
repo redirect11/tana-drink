@@ -10,14 +10,16 @@ import {
   GoogleAuthProvider,
   EmailAuthProvider,
   reauthenticateWithCredential,
+  reauthenticateWithPopup,
   updatePassword,
+  deleteUser,
   sendEmailVerification,
   sendPasswordResetEmail,
   updateProfile,
   onAuthStateChanged,
   signOut,
 } from 'firebase/auth'
-import { doc, getDoc, setDoc } from 'firebase/firestore'
+import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore'
 import { auth, db } from './firebaseClient.js'
 import { getMyOrderIds } from './cart.js'
 import { fetchOrdersByCustomer } from './api.js'
@@ -105,6 +107,22 @@ export async function changePassword(currentPassword, newPassword) {
 // L'utente loggato ha una password (provider email/password)?
 export function hasPasswordProvider(user) {
   return !!user?.providerData?.some((p) => p.providerId === 'password')
+}
+
+// Cancella l'account cliente: ri-autentica (password o Google), elimina il
+// documento profilo e infine l'utenza di accesso (diritto alla cancellazione).
+// `currentPassword` serve solo per gli account email/password.
+export async function deleteCustomerAccount(currentPassword) {
+  const u = auth.currentUser
+  if (!u) throw new Error('Non autenticato.')
+  if (hasPasswordProvider(u)) {
+    const cred = EmailAuthProvider.credential(u.email, currentPassword || '')
+    await reauthenticateWithCredential(u, cred)
+  } else {
+    await reauthenticateWithPopup(u, new GoogleAuthProvider())
+  }
+  await deleteDoc(customerDoc(u.uid)).catch(() => {})
+  await deleteUser(u)
 }
 
 // Hook: utente CLIENTE corrente (null per anonimi e per lo staff).
