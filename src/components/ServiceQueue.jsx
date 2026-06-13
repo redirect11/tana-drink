@@ -166,7 +166,7 @@ export default function ServiceQueue() {
               ? `${daServire.length} da servire`
               : 'Nessuna serata aperta'}
         </div>
-        <Link className="btn block" style={{ marginTop: 12 }} to="/">
+        <Link className="btn block" style={{ marginTop: 12 }} to="/menu">
           ✍️ Nuovo ordine dal menù
         </Link>
       </div>

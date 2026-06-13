@@ -35,7 +35,7 @@ export default function StaffDrawer({ role, active = null, onSelect = null }) {
 
   function nuovoOrdine() {
     setOpen(false)
-    navigate('/')
+    navigate('/menu')
   }
 
   return (

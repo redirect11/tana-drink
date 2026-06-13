@@ -296,7 +296,7 @@ export default function OrderStatusPage() {
             <div className="banner" style={{ marginTop: 12 }}>✖️ Ordine annullato</div>
           )}
         </div>
-        <Link className="btn ghost block" to="/">
+        <Link className="btn ghost block" to="/menu">
           ← Torna al menù
         </Link>
       </div>
@@ -479,7 +479,7 @@ export default function OrderStatusPage() {
         </div>
       )}
 
-      <Link className="btn ghost block" to="/">
+      <Link className="btn ghost block" to="/menu">
         ← Torna al menù
       </Link>
 

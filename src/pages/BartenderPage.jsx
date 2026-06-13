@@ -672,7 +672,7 @@ function OrderQueue() {
         </button>
       </div>
 
-      <Link className="btn block" to="/" style={{ marginBottom: 4 }}>
+      <Link className="btn block" to="/menu" style={{ marginBottom: 4 }}>
         ✍️ Inserisci nuovo ordine
       </Link>
 
