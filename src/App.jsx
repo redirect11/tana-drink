@@ -4,6 +4,7 @@ import OrderStatusPage from './pages/OrderStatusPage.jsx'
 import MyOrdersPage from './pages/MyOrdersPage.jsx'
 import BartenderPage from './pages/BartenderPage.jsx'
 import { AccediPage, RegistratiPage, ProfiloPage } from './pages/AccountPages.jsx'
+import StaffProfilePage from './pages/StaffProfilePage.jsx'
 import { useCustomer, useHasOrders } from './lib/customerAuth.js'
 import { isFirebaseConfigured, auth } from './lib/firebaseClient.js'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
@@ -64,7 +65,11 @@ export default function App() {
         <nav className="row">
           {onBackoffice ? (
             <>
-              {staffRole && <span className="topbar-hello">Ciao, {staffName}</span>}
+              {staffRole && (
+                <Link className="topbar-hello" to="/profilo-staff" style={{ textDecoration: 'none' }}>
+                  Ciao, {staffName} ⚙️
+                </Link>
+              )}
               {/* Per lo staff «Nuovo ordine» porta già al menu: niente doppione. */}
               {staffRole !== 'staff' && (
                 <Link className="btn ghost small" to="/">Vista cliente</Link>
@@ -118,6 +123,7 @@ export default function App() {
           <Route path="/accedi" element={<AccediPage />} />
           <Route path="/registrati" element={<RegistratiPage />} />
           <Route path="/profilo" element={<ProfiloPage />} />
+          <Route path="/profilo-staff" element={<StaffProfilePage />} />
           <Route path="/bar" element={<BartenderPage />} />
           <Route path="*" element={<MenuPage />} />
         </Routes>
