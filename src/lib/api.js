@@ -33,6 +33,7 @@ const inventoryCategoriesCol = collection(db, 'inventory_categories')
 const movementsCol = collection(db, 'stock_movements')
 const settingsDoc = doc(db, 'settings', 'bar')
 const serateCol = collection(db, 'serate')
+const groupsCol = collection(db, 'groups')
 
 // --- Helpers ------------------------------------------------------------
 
@@ -140,6 +141,9 @@ function mapOrder(snap) {
     sumup_transaction_id: o.sumup_transaction_id ?? null,
     paid_at: o.paid_at ?? null,
     payment_after_cancel: o.payment_after_cancel ?? false,
+    group_id: o.group_id ?? null,
+    group_name_snapshot: o.group_name_snapshot ?? null,
+    payment_id: o.payment_id ?? null,
     order_items: items.map((i, idx) => ({
       id: `${snap.id}-${idx}`,
       drink_id: i.drink_id ?? null,
@@ -475,6 +479,106 @@ export function subscribeSerataOrders(serataId, onChange, onError) {
   )
 }
 
+// --- GROUPS (contenitori di ordini) ---
+
+function mapGroup(snap) {
+  const g = snap.data() || {}
+  return {
+    id: snap.id,
+    name: g.name ?? '',
+    kind: g.kind ?? 'manual',
+    customer_uid: g.customer_uid ?? null,
+    parent_group_id: g.parent_group_id ?? null,
+    has_child_groups: g.has_child_groups ?? false,
+    serata_id: g.serata_id ?? null,
+    status: g.status ?? 'aperto',
+    split_count: g.split_count ?? null,
+    pinned: g.pinned ?? false,
+    last_order_at: toIso(g.last_order_at),
+    created_at: toIso(g.created_at),
+    created_by: g.created_by ?? null,
+    closed_at: toIso(g.closed_at),
+  }
+}
+
+// Gruppo-cliente: id == uid, idempotente. Aggiorna nome e ultimo ordine.
+export async function ensureCustomerGroup(uid, name, serata_id = null) {
+  await setDoc(
+    doc(groupsCol, uid),
+    {
+      kind: 'customer',
+      customer_uid: uid,
+      name: name || 'Cliente',
+      parent_group_id: null,
+      has_child_groups: false,
+      serata_id: serata_id ?? null,
+      status: 'aperto',
+      last_order_at: serverTimestamp(),
+    },
+    { merge: true }
+  )
+}
+
+// Gruppo manuale creato dallo staff (eventualmente annidato in un padre).
+export async function createManualGroup({ name, serata_id, parent_group_id = null, created_by = null }) {
+  const ref = await addDoc(groupsCol, {
+    kind: 'manual',
+    name: name?.trim() || 'Gruppo',
+    customer_uid: null,
+    parent_group_id: parent_group_id || null,
+    has_child_groups: false,
+    serata_id: serata_id ?? null,
+    status: 'aperto',
+    split_count: null,
+    pinned: true,
+    last_order_at: serverTimestamp(),
+    created_at: serverTimestamp(),
+    created_by: created_by ?? null,
+  })
+  if (parent_group_id) {
+    await updateDoc(doc(groupsCol, parent_group_id), { has_child_groups: true }).catch(() => {})
+  }
+  return mapGroup(await getDoc(ref))
+}
+
+export async function renameGroup(id, name) {
+  await updateDoc(doc(groupsCol, id), { name: name.trim() })
+}
+
+export async function setGroupPinned(id, pinned) {
+  await updateDoc(doc(groupsCol, id), { pinned: !!pinned })
+}
+
+export async function fetchGroup(id) {
+  const snap = await getDoc(doc(groupsCol, id))
+  return snap.exists() ? mapGroup(snap) : null
+}
+
+// Gruppi della serata (manuali) — per drawer e coda.
+export function subscribeSerataGroups(serataId, onChange, onError) {
+  const q = query(groupsCol, where('serata_id', '==', serataId))
+  return onSnapshot(
+    q,
+    (snap) => onChange(snap.docs.map(mapGroup)),
+    onError ?? (() => {})
+  )
+}
+
+// Gruppi-cliente recenti (hanno ordinato): per "richiamare" il cliente.
+export function subscribeRecentGroups(onChange, onError, limitN = 20) {
+  const q = query(
+    groupsCol,
+    where('kind', '==', 'customer'),
+    orderBy('last_order_at', 'desc'),
+    fbLimit(limitN)
+  )
+  return onSnapshot(
+    q,
+    (snap) => onChange(snap.docs.map(mapGroup)),
+    onError ?? (() => {})
+  )
+}
+
 // --- ORDERS ---
 
 // Crea un ordine con i relativi item. Il numero progressivo riparte ad ogni
@@ -497,8 +601,19 @@ export async function createOrder({
   payment_method = null, // 'online' se il cliente sceglie di pagare subito
   payment_status = 'non_richiesto', // 'in_attesa' per i pagamenti online
   payment_required = false, // fotografa l'impostazione alla creazione
+  group_id = null, // gruppo a cui associare l'ordine (null = nessuno)
+  group_name_snapshot = null, // nome gruppo al momento dell'ordine (storico)
 }) {
   if (!serata_id) throw new Error('Nessuna serata aperta: ordini non disponibili.')
+  // Cliente registrato senza gruppo esplicito → gruppo-cliente automatico
+  // (id == uid). Il documento è idempotente (merge).
+  if (!group_id && customer_uid) {
+    group_id = customer_uid
+    if (!group_name_snapshot) group_name_snapshot = customer_name || null
+    await ensureCustomerGroup(customer_uid, customer_name || 'Cliente', serata_id).catch(
+      (e) => console.error('[groups] ensureCustomerGroup:', e?.message || e)
+    )
+  }
   const itemsTotal = items.reduce((s, i) => s + i.qty * Number(i.price || 0), 0)
   const total = itemsTotal + coperto_amount + service_charge_amount + tip_amount
   const orderDate = romeDateKey()
@@ -531,6 +646,9 @@ export async function createOrder({
       payment_method,
       payment_status,
       payment_required,
+      group_id: group_id || null,
+      group_name_snapshot: group_name_snapshot || null,
+      payment_id: null,
       created_at: serverTimestamp(),
       items: items.map((i) => ({
         drink_id: i.drink_id,
