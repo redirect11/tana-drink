@@ -1,18 +1,26 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ORDER_STATUSES, formatPrice } from '../lib/orderStatus.js'
-import { subscribeQueue } from '../lib/api.js'
+import { subscribeQueue, createManualGroup } from '../lib/api.js'
+import { auth } from '../lib/firebaseClient.js'
 import { queueEtaMinutes } from '../lib/eta.js'
 import { paymentOptions } from '../lib/payments.js'
 
 // Riepilogo ordine in stile scontrino, mostrato prima della conferma.
 // Calcola coperto (per persona), costo di servizio (percentuale) o mancia
 // (importo libero) in base alle impostazioni del bar.
-export default function OrderSummary({ cart, settings, serata, tableLabel, staff, customerProfile, sending, onConfirm, onCancel }) {
+export default function OrderSummary({ cart, settings, serata, tableLabel, staff, customerProfile, sending, groupsActive = false, groups = [], initialGroupId = '', serataId = null, onConfirm, onCancel }) {
   const [persons, setPersons] = useState(1)
   const [tip, setTip] = useState('')
   const [note, setNote] = useState('')
   const [tavolo, setTavolo] = useState(tableLabel || '')
-  // Precompilati dal profilo per i clienti con account.
+  // Gruppo a cui associare l'ordine (solo staff con gruppi attivi).
+  // Esclude i contenitori (che non possono avere ordini diretti).
+  const selectableGroups = groups.filter((g) => !g.has_child_groups)
+  const [groupId, setGroupId] = useState(initialGroupId || '')
+  const [newGroupName, setNewGroupName] = useState('')
+  const [creatingGroup, setCreatingGroup] = useState(false)
+  const selectedGroup = selectableGroups.find((g) => g.id === groupId) || null
+  // Precompilati dal profilo per i clienti con account, o dal nome gruppo.
   const [nome, setNome] = useState(customerProfile?.nome || '')
   const [cognome, setCognome] = useState(customerProfile?.cognome || '')
   const [mode, setMode] = useState(() =>
@@ -79,6 +87,35 @@ export default function OrderSummary({ cart, settings, serata, tableLabel, staff
 
   const nomeValido = nome.trim().length > 0
 
+  // Selezionando un gruppo, prepopola il nome con quello del gruppo.
+  useEffect(() => {
+    if (groupsActive && selectedGroup) {
+      setNome(selectedGroup.name || '')
+      setCognome('')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groupId])
+
+  async function createAndSelectGroup() {
+    const name = newGroupName.trim()
+    if (!name || !serataId) return
+    setCreatingGroup(true)
+    try {
+      const u = auth.currentUser
+      const g = await createManualGroup({
+        name,
+        serata_id: serataId,
+        created_by: u ? { uid: u.uid, email: u.email, role: staff?.role } : null,
+      })
+      setGroupId(g.id)
+      setNewGroupName('')
+    } catch {
+      /* errori non bloccanti: lo staff può procedere senza gruppo */
+    } finally {
+      setCreatingGroup(false)
+    }
+  }
+
   function confirm() {
     if (!nomeValido) return
     onConfirm({
@@ -93,6 +130,10 @@ export default function OrderSummary({ cart, settings, serata, tableLabel, staff
       payment_required: customerPay && payOpts.required,
       // Ordine manuale dello staff: il tavolo si indica qui.
       ...(staff ? { table_label: tavolo.trim() || null } : {}),
+      // Gruppo scelto dallo staff (i clienti hanno il gruppo automatico).
+      ...(groupsActive && groupId
+        ? { group_id: groupId, group_name_snapshot: selectedGroup?.name || null }
+        : {}),
     })
   }
 
@@ -118,6 +159,48 @@ export default function OrderSummary({ cart, settings, serata, tableLabel, staff
               value={tavolo}
               onChange={(e) => setTavolo(e.target.value)}
             />
+          </div>
+        )}
+
+        {staff && groupsActive && (
+          <div style={{ marginTop: 10 }}>
+            <label style={{ margin: '0 0 4px' }}>Gruppo</label>
+            <div className="chips-row">
+              <button
+                type="button"
+                className={`chip${!groupId ? ' active' : ''}`}
+                onClick={() => setGroupId('')}
+              >
+                Nessuno
+              </button>
+              {selectableGroups.map((g) => (
+                <button
+                  key={g.id}
+                  type="button"
+                  className={`chip${groupId === g.id ? ' active' : ''}`}
+                  onClick={() => setGroupId(g.id)}
+                >
+                  {g.kind === 'customer' ? '👤 ' : '🏷 '}{g.name}
+                </button>
+              ))}
+            </div>
+            <div className="row" style={{ gap: 8, marginTop: 6 }}>
+              <input
+                type="text"
+                placeholder="+ Nuovo gruppo (es. Tavolo 5)"
+                value={newGroupName}
+                onChange={(e) => setNewGroupName(e.target.value)}
+              />
+              <button
+                type="button"
+                className="btn small"
+                style={{ flexShrink: 0 }}
+                disabled={creatingGroup || !newGroupName.trim()}
+                onClick={createAndSelectGroup}
+              >
+                {creatingGroup ? '…' : 'Crea'}
+              </button>
+            </div>
           </div>
         )}
 

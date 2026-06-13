@@ -1272,6 +1272,10 @@ export const DEFAULT_SETTINGS = {
   sumup_reader_name: null,
   // Chi non paga online deve ritirare al banco (dove c'è un banco).
   banco_required_if_unpaid: false,
+  // Gruppi di ordini (contenitori associabili ai clienti).
+  groups_enabled: false,
+  groups_in_drawer: true,
+  groups_in_queue: true,
 }
 
 export function subscribeSettings(onChange, onError) {

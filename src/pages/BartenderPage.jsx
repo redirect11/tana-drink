@@ -40,6 +40,7 @@ import StaffTab from '../components/StaffTab.jsx'
 import ServiceQueue from '../components/ServiceQueue.jsx'
 import StaffMyOrders from '../components/StaffMyOrders.jsx'
 import StaffCallList from '../components/StaffCallList.jsx'
+import GroupsPanel from '../components/GroupsPanel.jsx'
 import ConfirmDialog from '../components/ConfirmDialog.jsx'
 import CancelOrderDialog from '../components/CancelOrderDialog.jsx'
 import DevTools from '../components/DevTools.jsx'
@@ -677,6 +678,10 @@ function OrderQueue() {
       </Link>
 
       <StaffCallList />
+
+      {settings.groups_enabled && settings.groups_in_queue && (
+        <GroupsPanel serataId={serata?.id} orders={orders} role="bartender" />
+      )}
 
       <input
         type="search"

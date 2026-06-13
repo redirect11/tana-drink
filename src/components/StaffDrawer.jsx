@@ -1,8 +1,15 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { signOut } from 'firebase/auth'
 import { auth } from '../lib/firebaseClient.js'
 import { devToolsEnabled } from '../dev/devActions.js'
+import {
+  subscribeSettings,
+  subscribeOpenSerata,
+  subscribeSerataGroups,
+  createManualGroup,
+  DEFAULT_SETTINGS,
+} from '../lib/api.js'
 
 const BARTENDER_NAV = [
   ['coda', '🧾', 'Coda ordini'],
@@ -24,6 +31,25 @@ export default function StaffDrawer({ role, active = null, onSelect = null }) {
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
 
+  // Gruppi nel drawer (quadratini): attivi se l'impostazione lo prevede.
+  const [settings, setSettings] = useState(DEFAULT_SETTINGS)
+  const [serata, setSerata] = useState(null)
+  const [groups, setGroups] = useState([])
+  const [newName, setNewName] = useState('')
+  useEffect(() => subscribeSettings(setSettings, () => {}), [])
+  useEffect(() => subscribeOpenSerata((s) => setSerata(s), () => setSerata(null)), [])
+  const serataId = serata?.id
+  const showGroups = settings.groups_enabled && settings.groups_in_drawer
+  useEffect(() => {
+    if (!showGroups || !serataId) {
+      setGroups([])
+      return
+    }
+    return subscribeSerataGroups(serataId, setGroups, () => {})
+  }, [showGroups, serataId])
+  // Solo gruppi che possono ricevere ordini diretti (no contenitori).
+  const groupTiles = groups.filter((g) => !g.has_child_groups)
+
   const base = role === 'bartender' ? BARTENDER_NAV : STAFF_NAV
   const items = role === 'bartender' && devToolsEnabled ? [...base, ['dev', '🛠', 'Dev']] : base
 
@@ -36,6 +62,24 @@ export default function StaffDrawer({ role, active = null, onSelect = null }) {
   function nuovoOrdine() {
     setOpen(false)
     navigate('/menu')
+  }
+
+  function ordineGruppo(id) {
+    setOpen(false)
+    navigate(`/menu?group=${id}`)
+  }
+
+  async function creaGruppo() {
+    const name = newName.trim()
+    if (!name || !serataId) return
+    const u = auth.currentUser
+    const g = await createManualGroup({
+      name,
+      serata_id: serataId,
+      created_by: u ? { uid: u.uid, email: u.email, role } : null,
+    }).catch(() => null)
+    setNewName('')
+    if (g) ordineGruppo(g.id)
   }
 
   return (
@@ -65,6 +109,39 @@ export default function StaffDrawer({ role, active = null, onSelect = null }) {
         >
           <span>✍️</span> Nuovo ordine
         </div>
+
+        {showGroups && (
+          <div className="drawer-groups">
+            <div className="drawer-groups-title">Gruppi</div>
+            <div className="group-tiles">
+              {groupTiles.map((g) => (
+                <button
+                  key={g.id}
+                  className="group-tile"
+                  title={g.name}
+                  onClick={() => ordineGruppo(g.id)}
+                >
+                  <span className="group-tile-ic">{g.kind === 'customer' ? '👤' : '🏷'}</span>
+                  <span className="group-tile-name">{g.name}</span>
+                </button>
+              ))}
+            </div>
+            <div className="row" style={{ gap: 6, padding: '0 14px', marginTop: 8 }}>
+              <input
+                type="text"
+                placeholder="+ Nuovo gruppo"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && creaGruppo()}
+              />
+              <button className="btn small" style={{ flexShrink: 0 }} onClick={creaGruppo} disabled={!newName.trim()}>
+                Crea
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="bar-nav-sep" />
         <div className="bar-nav-item" onClick={() => signOut(auth)}>
           <span>🚪</span> Esci
         </div>
