@@ -42,7 +42,7 @@ service cloud.firestore {
         return ['payment_status', 'payment_method', 'payment_required',
                 'paid_at', 'sumup_checkout_id', 'sumup_checkout_attempts',
                 'sumup_transaction_id', 'sumup_client_transaction_id',
-                'payment_after_cancel'];
+                'payment_after_cancel', 'payment_id'];
       }
       allow read: if true;
       // Alla creazione il pagamento può solo essere assente, non
@@ -128,6 +128,31 @@ service cloud.firestore {
     match /customers/{uid} {
       allow read: if isBartender() || (isSignedIn() && request.auth.uid == uid);
       allow write: if isSignedIn() && request.auth.uid == uid;
+    }
+
+    // GROUPS — contenitori di ordini. Lo staff gestisce tutto; il cliente
+    // registrato può creare/aggiornare SOLO il proprio gruppo-cliente
+    // (id == uid, kind 'customer', radice, senza sottogruppi).
+    match /groups/{groupId} {
+      allow read: if isStaffMember()
+        || (isSignedIn() && resource.data.customer_uid == request.auth.uid);
+      allow create: if isStaffMember()
+        || (isSignedIn()
+            && groupId == request.auth.uid
+            && request.resource.data.kind == 'customer'
+            && request.resource.data.customer_uid == request.auth.uid
+            && request.resource.data.parent_group_id == null
+            && request.resource.data.has_child_groups == false);
+      allow update: if isBartender()
+        || (isStaffMember()
+            && !request.resource.data.diff(resource.data).affectedKeys()
+                 .hasAny(['kind', 'customer_uid'].toSet()))
+        || (isSignedIn()
+            && resource.data.kind == 'customer'
+            && resource.data.customer_uid == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['name', 'status', 'last_order_at'].toSet()));
+      allow delete: if isBartender();
     }
   }
 }
