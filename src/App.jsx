@@ -10,6 +10,7 @@ import { isFirebaseConfigured, auth } from './lib/firebaseClient.js'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
 import { subscribeSettings, DEFAULT_SETTINGS } from './lib/api.js'
 import { envLabel } from './dev/devActions.js'
+import { openCookiePreferences } from './lib/cookieConsent.js'
 import { useEffect, useState } from 'react'
 
 export default function App() {
@@ -140,6 +141,9 @@ export default function App() {
           ))}
         </div>
         <a href={`${import.meta.env.BASE_URL}cookie-policy.html`}>Cookie Policy</a>
+        <button type="button" className="footer-link-btn" onClick={openCookiePreferences}>
+          Preferenze cookie
+        </button>
       </footer>
     </div>
   )

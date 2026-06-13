@@ -7,6 +7,7 @@
  */
 import * as CookieConsent from 'vanilla-cookieconsent'
 import 'vanilla-cookieconsent/dist/cookieconsent.css'
+import { enableAnalytics, disableAnalytics } from './analytics.js'
 
 // Tema scuro/oro del sito applicato alle variabili CSS di CookieConsent.
 const theme = `
@@ -59,12 +60,20 @@ export function initCookieConsent() {
 
   const policyUrl = `${import.meta.env.BASE_URL}cookie-policy.html`
 
+  // Attiva/disattiva Google Analytics in base alla scelta dell'utente.
+  // Chiamata sia al primo consenso sia a ogni modifica successiva.
+  function applyConsent() {
+    if (CookieConsent.acceptedCategory('analytics')) enableAnalytics()
+    else disableAnalytics()
+  }
+
   return CookieConsent.run({
     guiOptions: {
       consentModal: {
         layout: 'bar',
         position: 'bottom',
-        equalWeightButtons: false,
+        // Rifiuta e Accetta con uguale evidenza (richiesto dal Garante).
+        equalWeightButtons: true,
         flipButtons: false,
       },
       preferencesModal: {
@@ -74,11 +83,17 @@ export function initCookieConsent() {
       },
     },
 
+    // GA parte solo dopo il consenso e si ferma se revocato.
+    onConsent: applyConsent,
+    onChange: applyConsent,
+
     categories: {
       necessary: {
         enabled: true,
         readOnly: true,
       },
+      // Statistiche (Google Analytics): spenta di default → opt-in.
+      analytics: {},
     },
 
     language: {
@@ -88,27 +103,37 @@ export function initCookieConsent() {
           consentModal: {
             title: '🍪 Questo sito usa i cookie',
             description:
-              'Utilizziamo solo cookie e storage tecnici strettamente necessari al ' +
-              'funzionamento del servizio (carrello, ordini effettuati, accesso staff). ' +
-              'Non raccogliamo dati per profilazione o marketing. ' +
-              `<a href="${policyUrl}" class="cc__link">Leggi la Cookie Policy</a>.`,
-            acceptAllBtn: 'Accetto',
+              'Usiamo cookie tecnici necessari al funzionamento (carrello, ordini, ' +
+              'accesso staff) e, solo col tuo consenso, cookie di statistica ' +
+              '(Google Analytics) per capire come viene usato il servizio. ' +
+              `<a href="${policyUrl}" class="cc__link">Cookie Policy</a>.`,
+            acceptAllBtn: 'Accetta tutti',
+            acceptNecessaryBtn: 'Rifiuta',
+            showPreferencesBtn: 'Personalizza',
             footer: `<a href="${policyUrl}" class="cc__link">Cookie Policy</a>`,
           },
           preferencesModal: {
             title: 'Impostazioni cookie',
-            acceptAllBtn: 'Accetto tutto',
+            acceptAllBtn: 'Accetta tutti',
+            acceptNecessaryBtn: 'Rifiuta tutti',
             savePreferencesBtn: 'Salva impostazioni',
             closeIconLabel: 'Chiudi',
             sections: [
               {
                 title: 'Cookie strettamente necessari',
                 description:
-                  'Questi cookie e dati locali sono indispensabili per il corretto ' +
-                  'funzionamento dell’app (carrello, stato degli ordini, sessione ' +
-                  'bartender) e non possono essere disattivati. ' +
-                  `<a href="${policyUrl}" class="cc__link">Cookie Policy completa</a>.`,
+                  'Indispensabili per il funzionamento dell’app (carrello, stato ' +
+                  'degli ordini, sessione staff): non possono essere disattivati.',
                 linkedCategory: 'necessary',
+              },
+              {
+                title: 'Cookie di statistica',
+                description:
+                  'Google Analytics, in forma aggregata, per capire come viene usata ' +
+                  'l’app e migliorarla. Attivi solo se acconsenti; puoi cambiare idea ' +
+                  'in qualsiasi momento. ' +
+                  `<a href="${policyUrl}" class="cc__link">Dettagli nella Cookie Policy</a>.`,
+                linkedCategory: 'analytics',
               },
             ],
           },
@@ -116,4 +141,9 @@ export function initCookieConsent() {
       },
     },
   })
+}
+
+// Riapre il pannello delle preferenze (link "Preferenze cookie" nel footer).
+export function openCookiePreferences() {
+  CookieConsent.showPreferences()
 }
