@@ -11,6 +11,10 @@ import {
   groupDepth,
   canNest,
   canAddDirectOrder,
+  flattenOrders,
+  subtreeGroupIds,
+  unpaidOrders,
+  splitAmounts,
   MAX_GROUP_DEPTH,
 } from '../../src/lib/groups.js'
 
@@ -99,5 +103,24 @@ describe('nesting', () => {
   it('canAddDirectOrder: no se contenitore', () => {
     expect(canAddDirectOrder(byId.get('cli1'))).toBe(true)
     expect(canAddDirectOrder(byId.get('tavolata'))).toBe(false)
+  })
+})
+
+describe('pagamenti — helper', () => {
+  const { byId } = buildGroupTree(groups, orders)
+  it('flattenOrders e subtreeGroupIds sul contenitore', () => {
+    const tav = byId.get('tavolata')
+    expect(flattenOrders(tav).map((o) => o.id).sort()).toEqual(['o1', 'o2', 'o3', 'o4'])
+    expect(subtreeGroupIds(tav).sort()).toEqual(['cli1', 'manualeB', 'tavolata'])
+  })
+  it('unpaidOrders esclude pagati e annullati', () => {
+    const tav = byId.get('tavolata')
+    expect(unpaidOrders(tav).map((o) => o.id).sort()).toEqual(['o1', 'o3']) // o2 pagato, o4 annullato
+  })
+  it('splitAmounts: somma esatta, resto sull’ultima quota', () => {
+    expect(splitAmounts(10, 3)).toEqual([3.33, 3.33, 3.34])
+    expect(splitAmounts(10, 3).reduce((s, x) => s + x, 0)).toBeCloseTo(10, 5)
+    expect(splitAmounts(20, 4)).toEqual([5, 5, 5, 5])
+    expect(splitAmounts(0, 3)).toEqual([0, 0, 0])
   })
 })

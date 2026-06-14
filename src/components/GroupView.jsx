@@ -7,12 +7,17 @@ import {
   nestGroup,
   unnestGroup,
   renameGroup,
+  payGroupCash,
 } from '../lib/api.js'
+import { auth } from '../lib/firebaseClient.js'
 import {
   buildGroupTree,
   groupTotal,
   groupSettlement,
   flattenOrders,
+  unpaidOrders,
+  subtreeGroupIds,
+  splitAmounts,
   canNest,
 } from '../lib/groups.js'
 import { formatPrice, STATUS_LABELS, STATUS_EMOJI } from '../lib/orderStatus.js'
@@ -27,6 +32,10 @@ export default function GroupView({ serataId, groupId, onClose }) {
   const [currentId, setCurrentId] = useState(groupId)
   const [picking, setPicking] = useState(false)
   const [error, setError] = useState(null)
+  const [paying, setPaying] = useState(false)
+  const [splitN, setSplitN] = useState(2)
+  const [showSplit, setShowSplit] = useState(false)
+  const [perOrder, setPerOrder] = useState(false)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -98,6 +107,33 @@ export default function GroupView({ serataId, groupId, onClose }) {
     await renameGroup(node.group.id, n.trim()).catch((e) => setError(e.message))
   }
 
+  function payBy() {
+    const u = auth.currentUser
+    return u ? { uid: u.uid, email: u.email } : null
+  }
+
+  async function pay(orderIds, split = null) {
+    if (!orderIds.length) return
+    setPaying(true)
+    setError(null)
+    try {
+      await payGroupCash({
+        serataId,
+        orderIds,
+        by: payBy(),
+        group_id: node.group.id,
+        group_ids: subtreeGroupIds(node),
+        split,
+      })
+      setShowSplit(false)
+      setPerOrder(false)
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setPaying(false)
+    }
+  }
+
   return (
     <div className="overlay" onClick={onClose}>
       <div className="summary-sheet" onClick={(e) => e.stopPropagation()}>
@@ -161,6 +197,76 @@ export default function GroupView({ serataId, groupId, onClose }) {
             </div>
           ))}
         </div>
+
+        {/* Conto: azioni di pagamento in contanti */}
+        {!s.settled && s.remaining > 0 && (() => {
+          const unpaid = unpaidOrders(node)
+          const ids = unpaid.map((o) => o.id)
+          const defaultN = node.childGroups.length > 1 ? node.childGroups.length : Math.max(2, unpaid.length)
+          return (
+            <div className="card" style={{ marginTop: 14, background: 'rgba(245,185,74,0.06)' }}>
+              <div className="row between">
+                <strong>Conto: {formatPrice(s.remaining)}</strong>
+                <span className="muted small">{ids.length} da pagare</span>
+              </div>
+              <div className="grid-2" style={{ marginTop: 10 }}>
+                <button className="btn" disabled={paying} onClick={() => pay(ids)}>
+                  💶 Paga tutto
+                </button>
+                <button
+                  className="btn secondary"
+                  disabled={paying}
+                  onClick={() => { setSplitN(defaultN); setShowSplit((v) => !v); setPerOrder(false) }}
+                >
+                  ➗ Dividi
+                </button>
+              </div>
+              {!isContainer && ids.length > 1 && (
+                <button
+                  className="btn ghost small block"
+                  style={{ marginTop: 8 }}
+                  disabled={paying}
+                  onClick={() => { setPerOrder((v) => !v); setShowSplit(false) }}
+                >
+                  Paga per singolo ordine
+                </button>
+              )}
+
+              {showSplit && (
+                <div style={{ marginTop: 10 }}>
+                  <div className="row between" style={{ alignItems: 'center' }}>
+                    <span className="muted small">Dividi per</span>
+                    <span className="persons-counter">
+                      <button onClick={() => setSplitN((n) => Math.max(2, n - 1))}>−</button>
+                      <strong>{splitN}</strong>
+                      <button onClick={() => setSplitN((n) => n + 1)}>+</button>
+                    </span>
+                  </div>
+                  <p className="muted small" style={{ margin: '6px 0' }}>
+                    {splitN} quote da {formatPrice(splitAmounts(s.remaining, splitN)[0])}
+                    {' '}(l’ultima {formatPrice(splitAmounts(s.remaining, splitN).at(-1))})
+                  </p>
+                  <button className="btn block" disabled={paying} onClick={() => pay(ids, { count: splitN })}>
+                    💶 Incassa {splitN} quote
+                  </button>
+                </div>
+              )}
+
+              {perOrder && (
+                <div style={{ marginTop: 10 }}>
+                  {unpaid.map((o) => (
+                    <div className="row between" key={o.id} style={{ padding: '4px 0' }}>
+                      <span>#{o.daily_number} · {formatPrice(o.total)}</span>
+                      <button className="btn ghost small" disabled={paying} onClick={() => pay([o.id])}>
+                        Paga
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )
+        })()}
 
         {/* Gestione annidamento (solo gruppi manuali) */}
         {node.group.kind === 'manual' && (

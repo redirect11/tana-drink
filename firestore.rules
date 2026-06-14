@@ -154,5 +154,13 @@ service cloud.firestore {
                  .hasOnly(['name', 'status', 'last_order_at'].toSet()));
       allow delete: if isBartender();
     }
+
+    // PAYMENTS — registro incassi (ledger). Scrivibile dallo staff e dalle
+    // Cloud Functions (Admin SDK, per i pagamenti online). Mai dal cliente.
+    match /payments/{paymentId} {
+      allow read: if isStaffMember();
+      allow create, update: if isStaffMember();
+      allow delete: if false;
+    }
   }
 }
