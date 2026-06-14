@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
-  subscribeDrinks,
-  subscribeCategories,
   subscribeOpenSerata,
   subscribeSettings,
   subscribeOrder,
@@ -28,6 +26,7 @@ import { getPushToken } from '../lib/push.js'
 import { isFirebaseConfigured, auth } from '../lib/firebaseClient.js'
 import { useCustomer } from '../lib/customerAuth.js'
 import { onAuthStateChanged } from 'firebase/auth'
+import { useMenu } from '../lib/menuCache.js'
 import OrderSummary from '../components/OrderSummary.jsx'
 import StaffDrawer from '../components/StaffDrawer.jsx'
 
@@ -35,11 +34,11 @@ const NOTIF_PROMPT_KEY = 'tana_notif_prompt_v1' // chiave storica
 const WELCOME_KEY = 'tana_welcome_v1'
 
 export default function MenuPage() {
-  const [drinks, setDrinks] = useState([])
-  const [cats, setCats] = useState([])
+  // Menù dalla cache di modulo: una sola sottoscrizione viva, niente
+  // re-fetch a ogni navigazione (solo un refresh forzato ricarica).
+  const { drinks, cats, loading } = useMenu()
   const [serata, setSerata] = useState(undefined) // undefined=caricamento, null=chiuso
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
-  const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [sending, setSending] = useState(false)
   const [showSummary, setShowSummary] = useState(false)
@@ -90,32 +89,6 @@ export default function MenuPage() {
   const tableLabel = params.get('tavolo') || params.get('table') || ''
   const groupParam = params.get('group') || ''
 
-  // Menù in tempo reale: il listener ritenta da solo (al primo accesso
-  // App Check/permessi possono rallentare la prima richiesta — niente
-  // più menù vuoto da ricaricare) e si aggiorna live.
-  useEffect(() => {
-    if (!isFirebaseConfigured) {
-      setLoading(false)
-      return
-    }
-    const unsubDrinks = subscribeDrinks(
-      { onlyAvailable: true },
-      (d) => {
-        setDrinks(d)
-        setLoading(false)
-        setError(null)
-      },
-      (e) => {
-        setError(e.message)
-        setLoading(false)
-      }
-    )
-    const unsubCats = subscribeCategories(setCats)
-    return () => {
-      unsubDrinks()
-      unsubCats()
-    }
-  }, [])
 
   // Osserva la serata aperta: senza serata gli ordini sono bloccati.
   useEffect(() => {
@@ -203,6 +176,8 @@ export default function MenuPage() {
 
   // Ricerca rapida (solo staff: utile sul catalogo grande per gli ordini manuali).
   const [search, setSearch] = useState('')
+  // Categoria selezionata nella vista staff a 2 colonne.
+  const [selectedCat, setSelectedCat] = useState(null)
 
   const categories = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -490,7 +465,59 @@ export default function MenuPage() {
         <div className="empty">Nessun risultato per «{search}».</div>
       )}
 
-      {categories.length > 1 && (
+      {/* Vista staff: 2 colonne compatte (categorie sx, prodotti dx) per
+          inserire ordini velocemente. */}
+      {staff && categories.length > 0 && (() => {
+        const activeCat = search.trim()
+          ? null
+          : categories.find(([c]) => c === selectedCat)?.[0] || categories[0][0]
+        const shown = search.trim()
+          ? categories.flatMap(([, list]) => list)
+          : categories.find(([c]) => c === activeCat)?.[1] || []
+        return (
+          <div className="staff-menu">
+            {!search.trim() && (
+              <div className="staff-cats">
+                {categories.map(([cat, list]) => (
+                  <button
+                    key={cat}
+                    className={`staff-cat${cat === activeCat ? ' active' : ''}`}
+                    onClick={() => setSelectedCat(cat)}
+                  >
+                    <span className="staff-cat-name">{cat}</span>
+                    <span className="staff-cat-count">{list.length}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="staff-products">
+              {shown.map((d) => {
+                const inCart = cart.items.find((i) => i.drink_id === d.id)
+                return (
+                  <div className="staff-product" key={d.id}>
+                    <div className="staff-product-info">
+                      <span className="staff-product-name">{d.name}</span>
+                      <span className="price">{formatPrice(d.price)}</span>
+                    </div>
+                    {canOrder &&
+                      (inCart ? (
+                        <div className="qty">
+                          <button aria-label="Riduci" onClick={() => cart.setQty(d.id, inCart.qty - 1)}>−</button>
+                          <strong>{inCart.qty}</strong>
+                          <button aria-label="Aumenta" onClick={() => cart.setQty(d.id, inCart.qty + 1)}>+</button>
+                        </div>
+                      ) : (
+                        <button className="btn small" onClick={() => cart.add(d)}>+</button>
+                      ))}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )
+      })()}
+
+      {!staff && categories.length > 1 && (
         <nav className="cat-nav">
           {categories.map(([cat]) => (
             <a key={cat} href={`#cat-${encodeURIComponent(cat)}`} className="cat-chip">
@@ -500,7 +527,7 @@ export default function MenuPage() {
         </nav>
       )}
 
-      {categories.map(([cat, list]) => (
+      {!staff && categories.map(([cat, list]) => (
         <section key={cat}>
           <h3 className="cat-header" id={`cat-${encodeURIComponent(cat)}`}>{cat}</h3>
           {list.map((d) => {
