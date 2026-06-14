@@ -85,6 +85,24 @@ function decidePaymentPatch(order, { status, transactionId = null, now }) {
   return patch
 }
 
+// Patch per un singolo ordine saldato da un pagamento di GRUPPO: marca
+// pagato (metodo del pagamento, payment_id) e chiude lo status solo se
+// l'ordine era già ritirato. `null` se l'ordine è già pagato/da saltare.
+function groupOrderPaidPatch(order, { method, paymentId, now }) {
+  if (!order || order.payment_status === 'pagato' || order.status === 'annullato') return null
+  const patch = {
+    payment_status: 'pagato',
+    payment_method: method || 'online',
+    paid_at: now,
+    payment_id: paymentId,
+  }
+  if (order.status === 'ritirato') {
+    patch.status = 'pagato'
+    patch['status_times.pagato'] = now
+  }
+  return patch
+}
+
 // Cintura server (trigger onDocumentUpdated): un ordine ritirato e
 // pagato — in qualunque ordine siano arrivate le due cose — si chiude.
 function decideAutoAdvance(before, after) {
@@ -122,6 +140,7 @@ module.exports = {
   mapCheckoutStatus,
   mapTransactionStatus,
   decidePaymentPatch,
+  groupOrderPaidPatch,
   decideAutoAdvance,
   parseReaderWebhookBody,
   parseCheckoutWebhookBody,

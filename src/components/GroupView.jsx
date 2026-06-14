@@ -8,7 +8,14 @@ import {
   unnestGroup,
   renameGroup,
   payGroupCash,
+  createPendingGroupPayment,
 } from '../lib/api.js'
+import {
+  createGroupCheckout,
+  getGroupPaymentStatus,
+  groupReaderCheckout,
+} from '../lib/paymentsApi.js'
+import { mountCardWidget } from '../lib/sumupWidget.js'
 import { auth } from '../lib/firebaseClient.js'
 import {
   buildGroupTree,
@@ -36,6 +43,8 @@ export default function GroupView({ serataId, groupId, onClose }) {
   const [splitN, setSplitN] = useState(2)
   const [showSplit, setShowSplit] = useState(false)
   const [perOrder, setPerOrder] = useState(false)
+  const [sumupMsg, setSumupMsg] = useState(null)
+  const [checkoutId, setCheckoutId] = useState(null)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -134,6 +143,78 @@ export default function GroupView({ serataId, groupId, onClose }) {
     }
   }
 
+  // Crea il pagamento "in attesa" del conto intero (per SumUp).
+  async function createPending(method) {
+    const unpaid = unpaidOrders(node)
+    return createPendingGroupPayment({
+      serataId,
+      orderIds: unpaid.map((o) => o.id),
+      amount: groupSettlement(node).remaining,
+      method,
+      group_id: node.group.id,
+      group_ids: subtreeGroupIds(node),
+      items: unpaid.flatMap((o) =>
+        (o.order_items || []).map((it) => ({ order_id: o.id, name: it.name, qty: it.qty, unit_price: it.unit_price }))
+      ),
+      by: payBy(),
+    })
+  }
+
+  // Online: crea il checkout e monta il widget SumUp.
+  async function payOnline() {
+    setPaying(true)
+    setError(null)
+    setSumupMsg(null)
+    try {
+      const pid = await createPending('online')
+      const res = await createGroupCheckout(pid)
+      if (res.unavailable) {
+        setSumupMsg('Pagamento online non disponibile (SumUp non configurato su questo ambiente).')
+        return
+      }
+      if (res.alreadyPaid) return
+      setCheckoutId(res.checkoutId)
+      requestAnimationFrame(async () => {
+        const el = document.getElementById('group-sumup-card')
+        if (!el) return
+        await mountCardWidget({
+          checkoutId: res.checkoutId,
+          el,
+          onResponse: async (type) => {
+            if (type !== 'sent') {
+              await getGroupPaymentStatus(pid).catch(() => {})
+              setCheckoutId(null)
+            }
+          },
+        }).catch((e) => setSumupMsg(e.message))
+      })
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setPaying(false)
+    }
+  }
+
+  // Lettore: crea il pagamento e avvia il checkout sul Solo.
+  async function payReader() {
+    setPaying(true)
+    setError(null)
+    setSumupMsg(null)
+    try {
+      const pid = await createPending('lettore')
+      const res = await groupReaderCheckout(pid)
+      if (res.unavailable) {
+        setSumupMsg('Lettore non disponibile su questo ambiente.')
+        return
+      }
+      setSumupMsg('📟 In corso sul lettore: carta del cliente sul Solo.')
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setPaying(false)
+    }
+  }
+
   return (
     <div className="overlay" onClick={onClose}>
       <div className="summary-sheet" onClick={(e) => e.stopPropagation()}>
@@ -211,7 +292,7 @@ export default function GroupView({ serataId, groupId, onClose }) {
               </div>
               <div className="grid-2" style={{ marginTop: 10 }}>
                 <button className="btn" disabled={paying} onClick={() => pay(ids)}>
-                  💶 Paga tutto
+                  💶 Contanti
                 </button>
                 <button
                   className="btn secondary"
@@ -220,7 +301,17 @@ export default function GroupView({ serataId, groupId, onClose }) {
                 >
                   ➗ Dividi
                 </button>
+                <button className="btn secondary" disabled={paying} onClick={payOnline}>
+                  💳 Online
+                </button>
+                <button className="btn secondary" disabled={paying} onClick={payReader}>
+                  📟 Lettore
+                </button>
               </div>
+              {sumupMsg && (
+                <p className="muted small" style={{ marginTop: 8 }}>{sumupMsg}</p>
+              )}
+              <div id="group-sumup-card" style={{ display: checkoutId ? 'block' : 'none', marginTop: 8 }} />
               {!isContainer && ids.length > 1 && (
                 <button
                   className="btn ghost small block"

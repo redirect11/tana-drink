@@ -14,6 +14,7 @@ const {
   mapCheckoutStatus,
   mapTransactionStatus,
   decidePaymentPatch,
+  groupOrderPaidPatch,
 } = require('./payment-core')
 
 const STAFF_ROLES = ['bartender', 'staff']
@@ -122,9 +123,20 @@ async function handleOnlineWebhook(deps, { checkoutId } = {}) {
     .where('sumup_checkout_id', '==', checkoutId)
     .limit(1)
     .get()
-  if (snap.empty) return { status: 200 }
+  if (!snap.empty) {
+    await verifyCheckoutStatus(deps, { orderId: snap.docs[0].id })
+    return { status: 200 }
+  }
 
-  await verifyCheckoutStatus(deps, { orderId: snap.docs[0].id })
+  // Non è un ordine singolo: forse è un pagamento di gruppo.
+  const psnap = await db
+    .collection('payments')
+    .where('sumup_checkout_id', '==', checkoutId)
+    .limit(1)
+    .get()
+  if (!psnap.empty) {
+    await verifyGroupPayment(deps, { paymentId: psnap.docs[0].id })
+  }
   return { status: 200 }
 }
 
@@ -281,24 +293,160 @@ async function handleReaderWebhook(deps, { clientTransactionId } = {}) {
     .where('sumup_client_transaction_id', '==', clientTransactionId)
     .limit(1)
     .get()
-  if (snap.empty) return { status: 200 }
 
+  // Verifica l'esito reale dalla Transactions API (mai dal payload).
   const tx = await paymentsFetch(
     `/v0.1/me/transactions?client_transaction_id=${encodeURIComponent(clientTransactionId)}`
   ).catch(() => null)
   if (!tx) return { status: 200 }
-
   const status = mapTransactionStatus(tx.status)
   if (status === 'in_attesa') return { status: 200 }
+  const txId = tx.id || tx.transaction_code || null
 
-  const orderSnap = snap.docs[0]
-  const patch = decidePaymentPatch(orderSnap.data(), {
-    status,
-    transactionId: tx.id || tx.transaction_code || null,
-    now: now(),
-  })
-  if (patch) await orderSnap.ref.update(patch)
+  if (!snap.empty) {
+    const orderSnap = snap.docs[0]
+    const patch = decidePaymentPatch(orderSnap.data(), { status, transactionId: txId, now: now() })
+    if (patch) await orderSnap.ref.update(patch)
+    return { status: 200 }
+  }
+
+  // Non è un ordine singolo: forse un pagamento di gruppo sul lettore.
+  const psnap = await db
+    .collection('payments')
+    .where('sumup_client_transaction_id', '==', clientTransactionId)
+    .limit(1)
+    .get()
+  if (!psnap.empty && status === 'pagato') {
+    await settleGroupPayment(deps, psnap.docs[0].id, { transactionId: txId })
+  }
   return { status: 200 }
+}
+
+// ── Pagamento di un GRUPPO (multi-ordine) via SumUp ──────────────────
+// Il documento `payments` (pre-creato dal client, status 'in_attesa')
+// porta l'importo e gli order_ids: il checkout SumUp è su quell'importo
+// e alla conferma si saldano tutti gli ordini elencati.
+
+async function getPaymentDoc(db, paymentId) {
+  if (!paymentId) throw err('invalid-argument', 'paymentId obbligatorio.')
+  const ref = db.collection('payments').doc(paymentId)
+  const snap = await ref.get()
+  if (!snap.exists) throw err('not-found', 'Pagamento non trovato.')
+  return { ref, payment: snap.data() }
+}
+
+// Salda un pagamento di gruppo: marca pagato il payment e tutti i suoi
+// ordini (sequenziale, idempotente: salta quelli già pagati).
+async function settleGroupPayment(deps, paymentId, { transactionId = null } = {}) {
+  const { db, now } = deps
+  const { ref, payment } = await getPaymentDoc(db, paymentId)
+  if (payment.status === 'pagato') return
+  const nowIso = now()
+  for (const oid of payment.order_ids || []) {
+    const oref = db.collection('orders').doc(oid)
+    const osnap = await oref.get()
+    if (!osnap.exists) continue
+    const patch = groupOrderPaidPatch(osnap.data(), {
+      method: payment.method || 'online',
+      paymentId,
+      now: nowIso,
+    })
+    if (patch) await oref.update(patch)
+  }
+  await ref.update({
+    status: 'pagato',
+    paid_at: nowIso,
+    ...(transactionId ? { sumup_transaction_id: transactionId } : {}),
+  })
+}
+
+// Checkout online sull'importo del pagamento di gruppo. Idempotente.
+async function createGroupCheckout(deps, { paymentId } = {}) {
+  const { db, paymentsFetch, isConfigured, merchantCode } = deps
+  if (!isConfigured()) return { unavailable: true }
+  const { ref, payment } = await getPaymentDoc(db, paymentId)
+  if (payment.status === 'pagato') return { alreadyPaid: true }
+
+  if (payment.sumup_checkout_id) {
+    const existing = await paymentsFetch(`/v0.1/checkouts/${payment.sumup_checkout_id}`)
+    if (existing?.status === 'PAID') {
+      await settleGroupPayment(deps, paymentId, { transactionId: existing.transaction_id || null })
+      return { alreadyPaid: true }
+    }
+    if (existing?.status === 'PENDING') return { checkoutId: payment.sumup_checkout_id }
+  }
+
+  const created = await paymentsFetch('/v0.1/checkouts', {
+    method: 'POST',
+    body: JSON.stringify(
+      buildCheckoutPayload({
+        orderId: paymentId,
+        total: payment.amount,
+        merchantCode: merchantCode(),
+        description: 'Conto gruppo — La Tana del Coniglio',
+      })
+    ),
+  })
+  if (!created?.id) throw err('internal', 'SumUp non ha restituito un checkout valido.')
+  await ref.update({ sumup_checkout_id: created.id })
+  return { checkoutId: created.id }
+}
+
+// Verifica via API lo stato del checkout di gruppo e salda se PAID.
+async function verifyGroupPayment(deps, { paymentId } = {}) {
+  const { db, paymentsFetch, isConfigured } = deps
+  if (!isConfigured()) return { unavailable: true }
+  const { payment } = await getPaymentDoc(db, paymentId)
+  if (payment.status === 'pagato') return { status: 'pagato' }
+  if (!payment.sumup_checkout_id) return { status: payment.status }
+  const checkout = await paymentsFetch(`/v0.1/checkouts/${payment.sumup_checkout_id}`)
+  const status = mapCheckoutStatus(checkout?.status)
+  if (status === 'pagato') {
+    await settleGroupPayment(deps, paymentId, {
+      transactionId: checkout?.transaction_id || checkout?.transaction_code || null,
+    })
+  }
+  return { status }
+}
+
+// Incasso del conto di gruppo sul lettore SumUp.
+async function groupReaderCheckout(deps, auth, { paymentId } = {}) {
+  const { db, paymentsFetch, isConfigured, merchantCode, webhookUrl } = deps
+  requireRole(auth, STAFF_ROLES)
+  if (!isConfigured()) return { unavailable: true }
+  const settings = await readerSettings(db)
+  if (!settings.sumup_reader_id) {
+    throw err('failed-precondition', 'Nessun lettore associato: fai il pairing dalle impostazioni.')
+  }
+  const { ref, payment } = await getPaymentDoc(db, paymentId)
+  if (payment.status === 'pagato') throw err('failed-precondition', 'Conto già pagato.')
+
+  let res
+  try {
+    res = await paymentsFetch(
+      `/v0.1/merchants/${merchantCode()}/readers/${settings.sumup_reader_id}/checkout`,
+      {
+        method: 'POST',
+        body: JSON.stringify(
+          buildReaderCheckoutPayload({
+            total: payment.amount,
+            description: 'Conto gruppo — La Tana del Coniglio',
+            returnUrl: webhookUrl(),
+            affiliate: typeof deps.affiliate === 'function' ? deps.affiliate() : null,
+            orderId: paymentId,
+          })
+        ),
+      }
+    )
+  } catch (e) {
+    if (e?.status === 404) throw err('not-found', 'Lettore non associato: rifai il pairing.')
+    if (e?.status === 422) throw err('unavailable', 'Lettore spento o senza Wi-Fi.')
+    throw e
+  }
+  const clientTransactionId = res?.data?.client_transaction_id || null
+  if (!clientTransactionId) throw err('internal', 'SumUp non ha avviato la transazione sul lettore.')
+  await ref.update({ payment_method: 'lettore', sumup_client_transaction_id: clientTransactionId })
+  return { clientTransactionId }
 }
 
 module.exports = {
@@ -310,4 +458,9 @@ module.exports = {
   readerCheckout,
   readerTerminate,
   handleReaderWebhook,
+  createGroupCheckout,
+  verifyGroupPayment,
+  groupReaderCheckout,
+  settleGroupPayment,
+  getPaymentDoc,
 }

@@ -686,6 +686,42 @@ export async function payGroupCash({
   return settlementId
 }
 
+// Crea un pagamento "in attesa" per un gruppo (usato dai pagamenti SumUp:
+// il documento porta importo e order_ids; il checkout SumUp lo salda via
+// Cloud Function/webhook). Restituisce il paymentId.
+export async function createPendingGroupPayment({
+  serataId,
+  orderIds,
+  amount,
+  method, // 'online' | 'lettore'
+  group_id = null,
+  group_ids = [],
+  items = [],
+  by = null,
+}) {
+  const ref = await addDoc(paymentsCol, {
+    serata_id: serataId,
+    created_at: serverTimestamp(),
+    by,
+    direction: 'incasso',
+    method,
+    status: 'in_attesa',
+    amount: Math.round((Number(amount) || 0) * 100) / 100,
+    group_id: group_id || null,
+    group_ids: group_ids || [],
+    order_ids: orderIds || [],
+    items,
+    split_count: null,
+    split_index: null,
+    settlement_id: null,
+    sumup_checkout_id: null,
+    sumup_client_transaction_id: null,
+    sumup_transaction_id: null,
+    paid_at: null,
+  })
+  return ref.id
+}
+
 function mapPayment(snap) {
   const p = snap.data() || {}
   return {
