@@ -34,6 +34,9 @@ const {
   readerCheckout: readerCheckoutSvc,
   readerTerminate: readerTerminateSvc,
   handleReaderWebhook,
+  createGroupCheckout,
+  verifyGroupPayment,
+  groupReaderCheckout: groupReaderCheckoutSvc,
 } = require('./lib/payment-service')
 const {
   decideAutoAdvance,
@@ -353,6 +356,31 @@ exports.readerCheckout = onCall({ ...OPTS, secrets: [SUMUP_API_KEY] }, async (re
 exports.readerTerminate = onCall({ ...OPTS, secrets: [SUMUP_API_KEY] }, async (request) => {
   try {
     return await readerTerminateSvc(paymentDeps(), request.auth, request.data || {})
+  } catch (e) {
+    throw toHttpsError(e)
+  }
+})
+
+// ── Pagamento di un GRUPPO via SumUp (online + lettore) ───────────────────────
+exports.createGroupCheckout = onCall({ ...OPTS, secrets: [SUMUP_API_KEY] }, async (request) => {
+  try {
+    return await createGroupCheckout(paymentDeps(), request.data || {})
+  } catch (e) {
+    throw toHttpsError(e)
+  }
+})
+
+exports.getGroupPaymentStatus = onCall({ ...OPTS, secrets: [SUMUP_API_KEY] }, async (request) => {
+  try {
+    return await verifyGroupPayment(paymentDeps(), request.data || {})
+  } catch (e) {
+    throw toHttpsError(e)
+  }
+})
+
+exports.groupReaderCheckout = onCall({ ...OPTS, secrets: [SUMUP_API_KEY] }, async (request) => {
+  try {
+    return await groupReaderCheckoutSvc(paymentDeps(), request.auth, request.data || {})
   } catch (e) {
     throw toHttpsError(e)
   }

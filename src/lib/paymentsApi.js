@@ -40,3 +40,20 @@ export async function readerTerminate(orderId) {
   if (isEmulator) return { unavailable: true }
   return call('readerTerminate')({ orderId })
 }
+
+// ── Pagamento di un GRUPPO via SumUp ──────────────────────────────────
+
+export async function createGroupCheckout(paymentId) {
+  if (isEmulator) return { unavailable: true }
+  return call('createGroupCheckout')({ paymentId })
+}
+
+export async function getGroupPaymentStatus(paymentId) {
+  if (isEmulator) return { unavailable: true }
+  return call('getGroupPaymentStatus')({ paymentId })
+}
+
+export async function groupReaderCheckout(paymentId) {
+  if (isEmulator) return { unavailable: true }
+  return call('groupReaderCheckout')({ paymentId })
+}
