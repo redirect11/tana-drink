@@ -124,3 +124,33 @@ export function flattenOrders(node) {
   for (const child of node.childGroups || []) out.push(...flattenOrders(child))
   return out
 }
+
+// Id di tutti i gruppi del sottoalbero (incluso il nodo stesso).
+export function subtreeGroupIds(node) {
+  const out = [node.group.id]
+  for (const child of node.childGroups || []) out.push(...subtreeGroupIds(child))
+  return out
+}
+
+// Ordini ancora da pagare nel sottoalbero (non pagati, non annullati).
+export function unpaidOrders(node) {
+  return flattenOrders(node).filter(
+    (o) => o.status !== ORDER_STATUSES.ANNULLATO && o.payment_status !== 'pagato'
+  )
+}
+
+// Divide un totale in `n` quote uguali in centesimi; il resto va sull'ultima
+// quota, così la somma è esattamente uguale al totale.
+export function splitAmounts(total, n) {
+  const count = Math.max(1, Math.floor(n))
+  const cents = Math.round((Number(total) || 0) * 100)
+  const base = Math.floor(cents / count)
+  const out = []
+  let acc = 0
+  for (let i = 0; i < count; i++) {
+    const c = i === count - 1 ? cents - acc : base
+    acc += c
+    out.push(Math.round(c) / 100)
+  }
+  return out
+}

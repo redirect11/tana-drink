@@ -21,6 +21,7 @@ import {
 } from 'firebase/firestore'
 import { db } from './firebaseClient.js'
 import { ORDER_STATUSES } from './orderStatus.js'
+import { splitAmounts } from './groups.js'
 import { createSumUpSale, updateSumUpSaleStatus, toSumUpStatus } from './sumupApi.js'
 import { computeConsumption, formatQty } from './inventory.js'
 import { notify } from './notify.js'
@@ -34,6 +35,7 @@ const movementsCol = collection(db, 'stock_movements')
 const settingsDoc = doc(db, 'settings', 'bar')
 const serateCol = collection(db, 'serate')
 const groupsCol = collection(db, 'groups')
+const paymentsCol = collection(db, 'payments')
 
 // --- Helpers ------------------------------------------------------------
 
@@ -595,6 +597,126 @@ export function subscribeRecentGroups(onChange, onError, limitN = 20) {
   return onSnapshot(
     q,
     (snap) => onChange(snap.docs.map(mapGroup)),
+    onError ?? (() => {})
+  )
+}
+
+// --- PAGAMENTI DI GRUPPO (contanti) + ledger ---
+
+// Incassa in contanti un insieme di ordini (un (sotto)gruppo o una sua
+// quota). In un'unica transazione: marca pagati gli ordini non ancora
+// saldati e scrive nel ledger `payments` (1 documento, o N se diviso per
+// N). `split` = { count } per il conto diviso. Restituisce settlement_id.
+export async function payGroupCash({
+  serataId,
+  orderIds,
+  by = null,
+  group_id = null,
+  group_ids = [],
+  split = null,
+}) {
+  if (!orderIds || orderIds.length === 0) return null
+  const nowIso = new Date().toISOString()
+  const settlementId = doc(paymentsCol).id
+
+  await runTransaction(db, async (tx) => {
+    const refs = orderIds.map((id) => doc(ordersCol, id))
+    const snaps = await Promise.all(refs.map((r) => tx.get(r)))
+    let total = 0
+    const covered = []
+    const items = []
+    snaps.forEach((s, i) => {
+      if (!s.exists()) return
+      const o = s.data()
+      if (o.status === ORDER_STATUSES.ANNULLATO || o.payment_status === 'pagato') return
+      total += Number(o.total) || 0
+      covered.push({ ref: refs[i], status: o.status })
+      for (const it of o.items || []) {
+        items.push({ order_id: refs[i].id, name: it.name, qty: it.qty, unit_price: it.unit_price })
+      }
+    })
+    if (covered.length === 0) return
+
+    for (const { ref, status } of covered) {
+      const patch = {
+        payment_status: 'pagato',
+        payment_method: 'banco',
+        paid_at: nowIso,
+        payment_id: settlementId,
+      }
+      // Chiude l'ordine come "pagato" solo se è già stato ritirato/servito;
+      // altrimenti resta nel suo stato di preparazione (l'auto-avanzamento
+      // lo chiuderà al ritiro).
+      if (status === ORDER_STATUSES.RITIRATO) {
+        patch.status = ORDER_STATUSES.PAGATO
+        patch[`status_times.${ORDER_STATUSES.PAGATO}`] = nowIso
+      }
+      tx.update(ref, patch)
+    }
+
+    const orderIdsCovered = covered.map((c) => c.ref.id)
+    const baseDoc = {
+      serata_id: serataId,
+      created_at: serverTimestamp(),
+      by,
+      direction: 'incasso',
+      method: 'banco',
+      status: 'pagato',
+      group_id: group_id || null,
+      group_ids: group_ids || [],
+      order_ids: orderIdsCovered,
+      items,
+      settlement_id: settlementId,
+      paid_at: nowIso,
+    }
+    if (split && split.count > 1) {
+      const amounts = splitAmounts(total, split.count)
+      amounts.forEach((amt, idx) => {
+        tx.set(doc(paymentsCol), {
+          ...baseDoc,
+          amount: amt,
+          split_count: split.count,
+          split_index: idx + 1,
+        })
+      })
+    } else {
+      tx.set(doc(paymentsCol), { ...baseDoc, amount: Math.round(total * 100) / 100, split_count: null, split_index: null })
+    }
+  })
+  return settlementId
+}
+
+function mapPayment(snap) {
+  const p = snap.data() || {}
+  return {
+    id: snap.id,
+    serata_id: p.serata_id ?? null,
+    created_at: toIso(p.created_at),
+    by: p.by ?? null,
+    method: p.method ?? 'banco',
+    status: p.status ?? 'pagato',
+    amount: p.amount ?? 0,
+    group_id: p.group_id ?? null,
+    group_ids: p.group_ids ?? [],
+    order_ids: p.order_ids ?? [],
+    items: p.items ?? [],
+    split_count: p.split_count ?? null,
+    split_index: p.split_index ?? null,
+    settlement_id: p.settlement_id ?? null,
+    paid_at: toIso(p.paid_at),
+  }
+}
+
+// Storico pagamenti della serata (realtime, più recenti prima).
+export function subscribePayments(serataId, onChange, onError) {
+  const q = query(paymentsCol, where('serata_id', '==', serataId))
+  return onSnapshot(
+    q,
+    (snap) => {
+      const list = snap.docs.map(mapPayment)
+      list.sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')))
+      onChange(list)
+    },
     onError ?? (() => {})
   )
 }
