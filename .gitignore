@@ -31,3 +31,7 @@ pnpm-debug.log*
 
 # Export CSV del POS (snapshot dati, non vanno in git)
 carte_*.csv
+
+# Pacchetto SDK Epson estratto (committiamo solo public/epos-2.27.0.js)
+ePOS_SDK_JavaScript_v*/
+ePOS_SDK_JavaScript_v*.zip
