@@ -16,7 +16,9 @@ import {
   openSerata,
   closeSerata,
   DEFAULT_SETTINGS,
+  saveStaffToken,
 } from '../lib/api.js'
+import { getPushToken } from '../lib/push.js'
 import {
   ORDER_STATUSES,
   STATUS_LABELS,
@@ -287,8 +289,15 @@ function OrderQueue() {
   // Osserva la serata aperta. In caso di errore esce comunque dal
   // caricamento (serata=null) così l'errore è visibile in pagina.
   useEffect(() => {
-    ensureNotificationPermission()
     installAudioUnlock() // sblocca il bip al primo tocco (richiesto da iOS)
+    // Registra il token push del dispositivo del bartender: senza questo la
+    // push "nuovo ordine" non arriverebbe a chi sta solo sul gestionale.
+    const uid = auth.currentUser?.uid
+    ensureNotificationPermission().then(async (ok) => {
+      if (!ok || !uid) return
+      const token = await getPushToken()
+      if (token) saveStaffToken(uid, token).catch(() => {})
+    })
     const unsub = subscribeOpenSerata(
       (s) => setSerata(s),
       (e) => {
