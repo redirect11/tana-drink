@@ -4,7 +4,11 @@
 // Feature: decidere se e cosa notificare quando un ordine cambia stato.
 
 import { describe, it, expect } from 'vitest'
-import { decideOrderPush, CANCEL_PHRASES } from '../../functions/lib/push-core.js'
+import {
+  decideOrderPush,
+  decideNewOrderStaffPush,
+  CANCEL_PHRASES,
+} from '../../functions/lib/push-core.js'
 
 const base = {
   daily_number: 7,
@@ -76,5 +80,48 @@ describe('decideOrderPush', () => {
     expect(
       decideOrderPush(base, { ...base, status: 'annullato', cancelled_by: 'bartender', cancel_notify: false })
     ).toBeNull()
+  })
+})
+
+describe('decideNewOrderStaffPush', () => {
+  const ricevuto = { daily_number: 12, status: 'ricevuto' }
+
+  it('notifica un ordine appena creato in stato ricevuto', () => {
+    const msg = decideNewOrderStaffPush(null, ricevuto)
+    expect(msg.title).toContain('Nuovo ordine')
+    expect(msg.body).toContain('#12')
+  })
+
+  it('include tavolo e nome cliente quando presenti', () => {
+    const msg = decideNewOrderStaffPush(null, {
+      ...ricevuto,
+      table_label: '5',
+      customer_name: 'Anna',
+    })
+    expect(msg.body).toContain('Tavolo 5')
+    expect(msg.body).toContain('Anna')
+  })
+
+  it('NON notifica un ordine con pagamento obbligatorio non ancora saldato', () => {
+    expect(
+      decideNewOrderStaffPush(null, { ...ricevuto, payment_required: true, payment_status: 'in_attesa' })
+    ).toBeNull()
+  })
+
+  it('notifica quando un ordine obbligatorio passa da non pagato a pagato', () => {
+    const before = { ...ricevuto, payment_required: true, payment_status: 'in_attesa' }
+    const after = { ...ricevuto, payment_required: true, payment_status: 'pagato' }
+    expect(decideNewOrderStaffPush(before, after)).not.toBeNull()
+  })
+
+  it('non notifica due volte: era già in coda (ricevuto→pronto non ri-notifica)', () => {
+    expect(decideNewOrderStaffPush(ricevuto, { ...ricevuto, status: 'pronto' })).toBeNull()
+    // già ricevuto e pagato prima → nessuna nuova notifica
+    expect(decideNewOrderStaffPush(ricevuto, ricevuto)).toBeNull()
+  })
+
+  it('non notifica stati diversi da ricevuto', () => {
+    expect(decideNewOrderStaffPush(null, { ...ricevuto, status: 'in_preparazione' })).toBeNull()
+    expect(decideNewOrderStaffPush(null, { ...ricevuto, status: 'pronto' })).toBeNull()
   })
 })

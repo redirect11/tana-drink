@@ -75,10 +75,37 @@ function decideStaffServePush(before, after) {
   }
 }
 
+// L'ordine è "ricevuto" ed entrato in coda di preparazione? È la stessa
+// regola del gestionale (src/lib/payments.js → isAwaitingPayment): un ordine
+// con pagamento OBBLIGATORIO non si prepara — e quindi non si notifica —
+// finché non risulta pagato.
+function isPayableReceived(o) {
+  if (!o || o.status !== 'ricevuto') return false
+  if (o.payment_required && o.payment_status !== 'pagato') return false
+  return true
+}
+
+// Nuovo ordine da preparare → notifica allo staff al bancone. Vale sia alla
+// creazione (before assente) sia quando un ordine fermo in attesa di pagamento
+// obbligatorio viene saldato (e solo allora entra in coda). Restituisce il
+// messaggio { title, body } o null se non c'è nulla di nuovo da notificare.
+function decideNewOrderStaffPush(before, after) {
+  if (!isPayableReceived(after)) return null
+  if (isPayableReceived(before)) return null // era già in coda: già notificato
+  const tavolo = after.table_label ? ` · Tavolo ${after.table_label}` : ''
+  const nome = after.customer_name ? ` — ${after.customer_name}` : ''
+  return {
+    title: '🆕 Nuovo ordine',
+    body: `Ordine #${after.daily_number ?? '—'} ricevuto.${tavolo}${nome}`,
+  }
+}
+
 module.exports = {
   decideOrderPush,
   decideStaffCallPush,
   decideStaffServePush,
+  decideNewOrderStaffPush,
+  isPayableReceived,
   CANCEL_PHRASES,
   STAFF_CALL_VIBRATION,
 }

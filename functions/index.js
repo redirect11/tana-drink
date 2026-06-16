@@ -23,7 +23,12 @@ const { getAuth } = require('firebase-admin/auth')
 
 const { buildSumupHeaders, buildSumupUrl } = require('./lib/sumup-core')
 const { syncProducts, createSale, updateSaleStatus, handleWebhook } = require('./lib/sumup-service')
-const { decideOrderPush, decideStaffCallPush, decideStaffServePush } = require('./lib/push-core')
+const {
+  decideOrderPush,
+  decideStaffCallPush,
+  decideStaffServePush,
+  decideNewOrderStaffPush,
+} = require('./lib/push-core')
 const { staffAdmin } = require('./lib/staff-service')
 const {
   createCheckout,
@@ -156,28 +161,36 @@ exports.notifyOrderUpdate = onDocumentUpdated({ ...OPTS, document: 'orders/{orde
     }
   }
 
-  // 2) Push allo staff di sala quando c'è un ordine pronto da servire
+  // 2) Push allo staff al bancone quando un ordine in attesa di pagamento
+  //    obbligatorio viene saldato ed entra in coda (è "nuovo" per la cucina).
+  const newOrderMsg = decideNewOrderStaffPush(before, after)
+  if (newOrderMsg) {
+    await pushToStaff({ kind: 'new_order', orderId: event.params.orderId, msg: newOrderMsg })
+  }
+
+  // 3) Push allo staff di sala quando c'è un ordine pronto da servire
   //    al tavolo (tutti i dispositivi registrati in staff_tokens).
   const serveMsg = decideStaffServePush(before, after)
-  if (!serveMsg) return
+  if (serveMsg) {
+    await pushToStaff({ kind: 'staff_serve', orderId: event.params.orderId, msg: serveMsg })
+  }
+})
 
+// Invia una push data-only a TUTTI i dispositivi staff registrati
+// (staff_tokens). La notifica vera (titolo/corpo/vibrazione) la costruisce il
+// service worker dal campo `kind`, così arriva anche ad app in background o
+// chiusa. Rimuove in automatico i token scaduti.
+async function pushToStaff({ kind, orderId, msg, url = '/bar' }) {
   const tokensSnap = await db.collection('staff_tokens').get()
   const docs = tokensSnap.docs.filter((d) => d.get('token'))
   if (docs.length === 0) return
 
   const res = await getMessaging().sendEachForMulticast({
     tokens: docs.map((d) => d.get('token')),
-    data: {
-      kind: 'staff_serve',
-      order_id: event.params.orderId,
-      title: serveMsg.title,
-      body: serveMsg.body,
-      url: '/bar',
-    },
+    data: { kind, order_id: orderId, title: msg.title, body: msg.body, url },
     webpush: { headers: { Urgency: 'high', TTL: '600' } },
   })
 
-  // Token scaduti: rimuovili, niente retry.
   await Promise.all(
     res.responses.map((r, i) =>
       r.error?.code === 'messaging/registration-token-not-registered'
@@ -185,6 +198,19 @@ exports.notifyOrderUpdate = onDocumentUpdated({ ...OPTS, document: 'orders/{orde
         : null
     )
   )
+}
+
+// ── Push nuovo ordine allo staff (FCM) ────────────────────────────────────────
+// Quando arriva un ordine, avvisa tutti i dispositivi al bancone: è l'unico
+// modo per ricevere l'avviso a schermo bloccato / app in background su iPad
+// (lì il listener realtime della pagina è sospeso dal sistema). Gli ordini con
+// pagamento obbligatorio non ancora saldato NON si notificano qui: lo farà
+// notifyOrderUpdate quando risulteranno pagati.
+exports.notifyNewOrder = onDocumentCreated({ ...OPTS, document: 'orders/{orderId}' }, async (event) => {
+  const after = event.data?.data()
+  const msg = decideNewOrderStaffPush(null, after)
+  if (!msg) return
+  await pushToStaff({ kind: 'new_order', orderId: event.params.orderId, msg })
 })
 
 // ── Push cerca-persone allo staff (FCM) ───────────────────────────────────────
