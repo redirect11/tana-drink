@@ -18,6 +18,7 @@ const BARTENDER_NAV = [
   ['menu', '🍸', 'Menù'],
   ['inventario', '📦', 'Inventario'],
   ['staff', '👥', 'Staff'],
+  ['stampante', '🖨️', 'Stampante'],
   ['impostazioni', '⚙️', 'Impostazioni'],
 ]
 

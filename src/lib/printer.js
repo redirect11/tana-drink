@@ -137,11 +137,6 @@ function line(char = '-', width = COL) {
   return char.repeat(width) + '\n'
 }
 
-function center(text, width = COL) {
-  const pad = Math.max(0, Math.floor((width - text.length) / 2))
-  return ' '.repeat(pad) + text + '\n'
-}
-
 function italianDateTime(iso) {
   const d = new Date(iso || Date.now())
   const date = d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: '2-digit' })

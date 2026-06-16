@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { createOrder, subscribeOpenSerata } from '../lib/api.js'
 import { useMenu } from '../lib/menuCache.js'
 import { useCart, rememberOrderId } from '../lib/cart.js'
@@ -15,7 +14,6 @@ import { onAuthStateChanged } from 'firebase/auth'
 export default function PosPage() {
   const { drinks, cats, loading } = useMenu()
   const cart = useCart()
-  const navigate = useNavigate()
   const [selectedCat, setSelectedCat] = useState(null)
   const [serata, setSerata] = useState(undefined)
   const [staff, setStaff] = useState(null)
