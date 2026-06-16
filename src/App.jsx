@@ -6,6 +6,7 @@ import MyOrdersPage from './pages/MyOrdersPage.jsx'
 import BartenderPage from './pages/BartenderPage.jsx'
 import { AccediPage, RegistratiPage, ProfiloPage } from './pages/AccountPages.jsx'
 import StaffProfilePage from './pages/StaffProfilePage.jsx'
+import PosPage from './pages/PosPage.jsx'
 import { useCustomer, useHasOrders } from './lib/customerAuth.js'
 import { isFirebaseConfigured, auth } from './lib/firebaseClient.js'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
@@ -72,6 +73,7 @@ export default function App() {
                   Ciao, {staffName} ⚙️
                 </Link>
               )}
+              <Link className="btn ghost small" to="/pos">🍸 POS</Link>
               {/* Per lo staff «Nuovo ordine» porta già al menu: niente doppione. */}
               {staffRole !== 'staff' && (
                 <Link className="btn ghost small" to="/menu">Vista cliente</Link>
@@ -128,6 +130,7 @@ export default function App() {
           <Route path="/profilo" element={<ProfiloPage />} />
           <Route path="/profilo-staff" element={<StaffProfilePage />} />
           <Route path="/bar" element={<BartenderPage />} />
+          <Route path="/pos" element={<PosPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
