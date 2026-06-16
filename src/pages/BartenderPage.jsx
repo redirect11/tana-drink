@@ -31,6 +31,7 @@ import { isAwaitingPayment } from '../lib/payments.js'
 import { readerCheckout, readerTerminate } from '../lib/paymentsApi.js'
 import { aggregateProducts, serataFinance, longestPrep, phaseAverages } from '../lib/eta.js'
 import { ensureNotificationPermission, notify } from '../lib/notify.js'
+import { beep, installAudioUnlock } from '../lib/beep.js'
 import { syncSumUpProducts, isSumUpEnabled } from '../lib/sumupApi.js'
 import { printComanda, printScontrino, loadPrinterSettings } from '../lib/printer.js'
 import MenuManager from '../components/MenuManager.jsx'
@@ -287,6 +288,7 @@ function OrderQueue() {
   // caricamento (serata=null) così l'errore è visibile in pagina.
   useEffect(() => {
     ensureNotificationPermission()
+    installAudioUnlock() // sblocca il bip al primo tocco (richiesto da iOS)
     const unsub = subscribeOpenSerata(
       (s) => setSerata(s),
       (e) => {
@@ -324,6 +326,7 @@ function OrderQueue() {
             }
             if (isNew || awaiting.has(o.id)) {
               awaiting.delete(o.id)
+              beep() // avviso sonoro: su iPad in primo piano il banner è soppresso
               notify('🆕 Nuovo ordine', `Ordine #${o.daily_number} ricevuto.`)
               // Auto-stampa comanda se abilitata nelle impostazioni stampante.
               if (printerSettings.autoPrintComanda) {
