@@ -17,6 +17,10 @@
   </head>
   <body>
     <div id="root"></div>
+    <!-- Epson ePOS SDK: scarica epos-2.27.0.js da https://developer.epson.com/
+         e salvalo in public/epos-2.27.0.js. Non è su npm: deve essere un tag
+         <script> sincrono perché usa window.epson (non-ESM). -->
+    <script src="/epos-2.27.0.js" onerror="console.warn('[printer] ePOS SDK non trovato in public/. Stampa termica non disponibile.')"></script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

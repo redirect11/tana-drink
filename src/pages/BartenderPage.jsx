@@ -32,7 +32,9 @@ import { readerCheckout, readerTerminate } from '../lib/paymentsApi.js'
 import { aggregateProducts, serataFinance, longestPrep, phaseAverages } from '../lib/eta.js'
 import { ensureNotificationPermission, notify } from '../lib/notify.js'
 import { syncSumUpProducts, isSumUpEnabled } from '../lib/sumupApi.js'
+import { printComanda, printScontrino, loadPrinterSettings } from '../lib/printer.js'
 import MenuManager from '../components/MenuManager.jsx'
+import PrinterSetup from '../components/PrinterSetup.jsx'
 import InventoryManager from '../components/InventoryManager.jsx'
 import SettingsTab from '../components/SettingsTab.jsx'
 import StatsTab from '../components/StatsTab.jsx'
@@ -119,6 +121,7 @@ export default function BartenderPage() {
         {tab === 'inventario' && <InventoryManager />}
         {tab === 'staff' && <StaffTab />}
         {tab === 'impostazioni' && <SettingsTab />}
+        {tab === 'stampante' && <PrinterSetup />}
         {tab === 'dev' && devToolsEnabled && <DevTools />}
       </div>
     </div>
@@ -311,6 +314,7 @@ function OrderQueue() {
         // caricamento. Quelli con pagamento obbligatorio vengono
         // notificati solo QUANDO risultano pagati (prima non si preparano).
         if (primed) {
+          const printerSettings = loadPrinterSettings()
           for (const o of data) {
             const isNew = !knownIds.current.has(o.id)
             if (o.status !== ORDER_STATUSES.RICEVUTO) continue
@@ -321,6 +325,19 @@ function OrderQueue() {
             if (isNew || awaiting.has(o.id)) {
               awaiting.delete(o.id)
               notify('🆕 Nuovo ordine', `Ordine #${o.daily_number} ricevuto.`)
+              // Auto-stampa comanda se abilitata nelle impostazioni stampante.
+              if (printerSettings.autoPrintComanda) {
+                printComanda(o).catch((e) => console.warn('[printer] auto-comanda:', e.message))
+              }
+            }
+          }
+          // Auto-stampa scontrino quando un ordine diventa "pronto".
+          if (printerSettings.autoPrintScontrino) {
+            for (const o of data) {
+              if (o.status === ORDER_STATUSES.PRONTO && !knownIds.current.has(o.id + '_pronto')) {
+                knownIds.current.add(o.id + '_pronto')
+                printScontrino(o).catch((e) => console.warn('[printer] auto-scontrino:', e.message))
+              }
             }
           }
         }
@@ -628,6 +645,21 @@ function OrderQueue() {
                 💶 Incassato (contanti)
               </button>
             )}
+            {/* Bottoni stampa manuale */}
+            <div className="grid-2" style={{ marginTop: 8 }}>
+              <button
+                className="btn ghost small"
+                onClick={() => printComanda(o).catch((e) => setError(`Stampa: ${e.message}`))}
+              >
+                🖨 Comanda
+              </button>
+              <button
+                className="btn ghost small"
+                onClick={() => printScontrino(o).catch((e) => setError(`Stampa: ${e.message}`))}
+              >
+                🧾 Scontrino
+              </button>
+            </div>
             {o.status === ORDER_STATUSES.RICEVUTO && (
               <button
                 className="btn ghost small block"
@@ -675,9 +707,14 @@ function OrderQueue() {
         </button>
       </div>
 
-      <Link className="btn block" to="/menu" style={{ marginBottom: 4 }}>
-        ✍️ Inserisci nuovo ordine
-      </Link>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
+        <Link className="btn" to="/pos" style={{ flex: 1 }}>
+          🍸 POS cassa
+        </Link>
+        <Link className="btn ghost" to="/menu" style={{ flex: 1 }}>
+          ✍️ Vista cliente
+        </Link>
+      </div>
 
       <StaffCallList />
 
