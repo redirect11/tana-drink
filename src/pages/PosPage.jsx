@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { createOrder, subscribeOpenSerata } from '../lib/api.js'
 import { useMenu } from '../lib/menuCache.js'
 import { useCart, rememberOrderId } from '../lib/cart.js'
-import { formatPrice } from '../lib/orderStatus.js'
+import { formatPrice, ORDER_STATUSES } from '../lib/orderStatus.js'
 import { printComanda, loadPrinterSettings } from '../lib/printer.js'
 import { auth } from '../lib/firebaseClient.js'
 import { onAuthStateChanged } from 'firebase/auth'
@@ -75,6 +76,9 @@ export default function PosPage() {
         note: note || null,
         items: cart.items,
         placed_by: staff ? { email: staff.email, name: staff.name, role: staff.role } : undefined,
+        // Ordine battuto al banco dal POS: salta la coda «ricevuto» e va
+        // direttamente in preparazione (lo prepara chi lo sta inserendo).
+        status: ORDER_STATUSES.IN_PREPARAZIONE,
       })
       rememberOrderId(order.id)
 
@@ -97,7 +101,14 @@ export default function PosPage() {
   const cartCount = cart.items.reduce((s, i) => s + i.qty, 0)
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 56px)', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', overflow: 'hidden' }}>
+
+      {/* ── Barra in alto: indietro + titolo ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', flexShrink: 0,
+        borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+        <Link className="btn ghost small" to="/bar" aria-label="Torna agli ordini">← Ordini</Link>
+        <strong style={{ fontFamily: 'var(--serif)' }}>POS cassa</strong>
+      </div>
 
       {/* ── Banner errori ── */}
       {error && <div className="banner" style={{ margin: '8px 8px 0', flexShrink: 0 }}>{error}</div>}

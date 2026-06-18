@@ -781,6 +781,7 @@ export async function createOrder({
   payment_required = false, // fotografa l'impostazione alla creazione
   group_id = null, // gruppo a cui associare l'ordine (null = nessuno)
   group_name_snapshot = null, // nome gruppo al momento dell'ordine (storico)
+  status = ORDER_STATUSES.RICEVUTO, // stato iniziale (il POS lo crea già in preparazione)
 }) {
   if (!serata_id) throw new Error('Nessuna serata aperta: ordini non disponibili.')
   // Cliente registrato senza gruppo esplicito → gruppo-cliente automatico
@@ -817,7 +818,7 @@ export async function createOrder({
       serata_id,
       table_label: table_label || null,
       note: note || null,
-      status: ORDER_STATUSES.RICEVUTO,
+      status,
       total,
       coperto_persons,
       coperto_amount,

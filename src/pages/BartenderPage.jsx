@@ -273,6 +273,7 @@ function OrderQueue() {
   const [confirmAction, setConfirmAction] = useState(null) // { title, message, danger, run }
   const [cancelTarget, setCancelTarget] = useState(null) // { order, kind }
   const [search, setSearch] = useState('')
+  const [showPanels, setShowPanels] = useState(false) // pannelli (chiamate/gruppi) nella griglia
   const [report, setReport] = useState(null) // resoconto mostrato dopo la chiusura
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   const knownIds = useRef(new Set())
@@ -505,6 +506,13 @@ function OrderQueue() {
     ...(buckets[ORDER_STATUSES.RITIRATO] || []),
     ...(buckets[ORDER_STATUSES.PAGATO] || []),
   ]
+  // Vista a griglia: tutti gli ordini tranne quelli chiusi (pagati) o
+  // annullati, ordinati per numero.
+  const boardOrders = visibleOrders
+    .filter(
+      (o) => o.status !== ORDER_STATUSES.PAGATO && o.status !== ORDER_STATUSES.ANNULLATO
+    )
+    .sort((a, b) => (a.daily_number || 0) - (b.daily_number || 0))
 
   async function incassaSuLettore(o) {
     setError(null)
@@ -733,8 +741,14 @@ function OrderQueue() {
             onChange={(e) => setSearch(e.target.value)}
           />
           <div className="board-actions">
-            <Link className="btn ghost small" to="/menu">✍️ Cliente</Link>
             <button className="btn ghost small" onClick={chiudi} disabled={busy}>⏹ Chiudi</button>
+            <button
+              className={`btn ghost small${showPanels ? ' active' : ''}`}
+              onClick={() => setShowPanels((v) => !v)}
+              title="Chiamate staff e gruppi"
+            >
+              {showPanels ? '▴' : '▾'} Pannelli
+            </button>
             <Link className="btn board-add" to="/pos" aria-label="Nuovo ordine" title="Nuovo ordine">＋</Link>
           </div>
         </div>
@@ -763,10 +777,15 @@ function OrderQueue() {
         </>
       )}
 
-      <StaffCallList />
-
-      {settings.groups_enabled && settings.groups_in_queue && (
-        <GroupsPanel serataId={serata?.id} orders={orders} role="bartender" />
+      {/* Pannelli chiamate/gruppi: nella griglia compaiono solo col toggle
+          «Pannelli»; nelle altre viste restano sempre visibili. */}
+      {(!gridView || showPanels) && (
+        <>
+          <StaffCallList />
+          {settings.groups_enabled && settings.groups_in_queue && (
+            <GroupsPanel serataId={serata?.id} orders={orders} role="bartender" />
+          )}
+        </>
       )}
 
       {!gridView && (
@@ -782,14 +801,9 @@ function OrderQueue() {
 
       {gridView ? (
         <>
-          {/* Griglia a tutto schermo: card affiancate, stato dal colore */}
-          <h3 className="cat-header">In corso ({inCorso.length})</h3>
-          {inCorso.length === 0 && <div className="empty">Nessun ordine in corso.</div>}
-          <div className="order-grid">{inCorso.map(renderCard)}</div>
-
-          <h3 className="cat-header">Serviti/Ritirati ({evasi.length})</h3>
-          {evasi.length === 0 && <div className="empty">Ancora nessun ordine servito o ritirato.</div>}
-          <div className="order-grid">{evasi.map(renderCard)}</div>
+          {/* Griglia a tutto schermo: tutti gli ordini tranne i chiusi */}
+          {boardOrders.length === 0 && <div className="empty">Nessun ordine attivo.</div>}
+          <div className="order-grid">{boardOrders.map(renderCard)}</div>
         </>
       ) : listView ? (
         <>
