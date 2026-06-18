@@ -34,6 +34,36 @@ export default function LandingPage() {
         </div>
       </div>
 
+      {/* ── Box novità: evento Karaoke sponsorizzato Ceres ── */}
+      <section className="news-ceres" aria-label="Novità: Karaoke Night">
+        <div className="news-ceres-rays" aria-hidden="true" />
+        <span className="news-ceres-badge">NOVITÀ</span>
+        <div className="news-ceres-content">
+          <p className="news-ceres-sponsor">
+            in collaborazione con <span className="ceres-wordmark">CERES</span> 🍺
+          </p>
+          <h2 className="news-ceres-title">🎤 KARAOKE NIGHT</h2>
+          <p className="news-ceres-lead">
+            Sali sul palco, canta a squarciagola e divertiti: una serata all’insegna
+            della musica e della birra <strong>Ceres</strong>.
+          </p>
+          <ul className="news-ceres-list">
+            <li>🎶 Karaoke aperto a tutti</li>
+            <li>🎲 Giochi durante la serata</li>
+            <li>🎁 Gadget Ceres in palio, estratti durante la serata tra chi partecipa al karaoke</li>
+          </ul>
+          <img
+            className="news-ceres-img"
+            src="/ceres-karaoke.jpg"
+            alt="Karaoke Night sponsorizzato Ceres"
+            onError={(e) => (e.target.style.display = 'none')}
+          />
+          <Link className="btn news-ceres-cta" to="/menu">
+            🍺 Prenota il tuo posto al microfono
+          </Link>
+        </div>
+      </section>
+
       <nav className="landing-nav">
         <a href="#chi-siamo">Chi siamo</a>
         <a href="#contatti">Contatti</a>
