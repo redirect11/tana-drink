@@ -1189,9 +1189,32 @@ body.fullbleed .bar-content {
   font-family: var(--serif);
 }
 
-.grid-card-actions {
-  padding: 10px 14px 14px;
+/* Pulsante che apre/chiude i tasti azione della card */
+.grid-card-toggle {
+  width: 100%;
+  border: none;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--muted, #9aa);
+  padding: 7px;
+  font-size: 0.78rem;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+}
+
+.grid-card-toggle:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.grid-card-actions {
+  padding: 10px 12px 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Tasti azione più compatti dentro la card-griglia */
+.grid-card-actions .btn {
+  font-size: 0.76rem;
+  padding: 7px 8px;
 }
 
 /* Card ordine: lo stato è leggibile dal bordo/tinta oltre che dalla pill */

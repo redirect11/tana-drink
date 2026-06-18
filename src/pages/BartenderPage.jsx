@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   signInWithEmailAndPassword,
   signOut,
@@ -278,6 +278,7 @@ function OrderQueue() {
   const [report, setReport] = useState(null) // resoconto mostrato dopo la chiusura
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   const knownIds = useRef(new Set())
+  const navigate = useNavigate()
 
   useEffect(() => subscribeSettings((s) => setSettings(s)), [])
 
@@ -649,11 +650,12 @@ function OrderQueue() {
         key={o.id}
         style={awaiting ? { opacity: 0.55 } : undefined}
       >
+        {/* Corpo: click → dettaglio ordine */}
         <div
           className="grid-card-main"
           role="button"
           tabIndex={0}
-          onClick={() => toggleCard(o.id)}
+          onClick={() => navigate(`/ordine/${o.id}`)}
         >
           <div className="row between">
             <span className="bignum">#{o.daily_number ?? '—'}</span>
@@ -676,6 +678,15 @@ function OrderQueue() {
             <span className="grid-card-tot">{formatPrice(o.total)}</span>
           </div>
         </div>
+        {/* Pulsante separato: apre/chiude i tasti azione (non va al dettaglio) */}
+        <button
+          type="button"
+          className="grid-card-toggle"
+          onClick={() => toggleCard(o.id)}
+          aria-expanded={open}
+        >
+          {open ? '▴ Chiudi' : '⋯ Azioni'}
+        </button>
         {open && <div className="grid-card-actions">{orderActions(o)}</div>}
       </div>
     )
