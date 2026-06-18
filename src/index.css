@@ -1062,6 +1062,13 @@ body.fullbleed .bar-burger {
   display: flex;
 }
 
+/* Overlay per chiudere il menu cliccando fuori: di norma è nascosto sopra i
+   900px (la sidebar è sempre aperta), ma in fullbleed la sidebar è a
+   scomparsa, quindi serve anche su schermi larghi. */
+body.fullbleed .bar-nav-overlay {
+  display: block;
+}
+
 body.fullbleed .bar-content {
   margin-left: 0;
   padding-top: 0;
@@ -1102,26 +1109,38 @@ body.fullbleed .bar-content {
   flex-shrink: 0;
 }
 
-/* «+» nuovo ordine, in alto a destra */
+/* «+» nuovo ordine, in alto a destra. Il «+» è disegnato con due barre
+   (pseudo-elementi) così è centrato in modo matematicamente perfetto,
+   senza dipendere dalle metriche del glifo. */
 .board-add {
+  position: relative;
   width: 46px;
   height: 46px;
   padding: 0;
   border-radius: 50%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   flex-shrink: 0;
   margin-right: 4px;
 }
 
-.board-add span {
-  display: block;
-  font-size: 2rem;
-  font-weight: 300;
-  line-height: 1;
-  /* centratura ottica perfetta del segno «+» nel cerchio */
-  margin-top: -2px;
+.board-add::before,
+.board-add::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  background: currentColor;
+  border-radius: 2px;
+  transform: translate(-50%, -50%);
+}
+
+.board-add::before {
+  width: 20px;
+  height: 3px;
+}
+
+.board-add::after {
+  width: 3px;
+  height: 20px;
 }
 
 /* Griglia delle card ordine: si adatta da sola a 1/2/3/4+ colonne. */

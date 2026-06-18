@@ -806,9 +806,7 @@ function OrderQueue() {
             >
               {showPanels ? '▴' : '▾'} Pannelli
             </button>
-            <Link className="btn board-add" to="/pos" aria-label="Nuovo ordine" title="Nuovo ordine">
-              <span aria-hidden="true">+</span>
-            </Link>
+            <Link className="btn board-add" to="/pos" aria-label="Nuovo ordine" title="Nuovo ordine" />
           </div>
         </div>
       ) : (
