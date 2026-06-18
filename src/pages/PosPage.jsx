@@ -24,6 +24,13 @@ export default function PosPage() {
   const [note, setNote] = useState('')
   const gridRef = useRef(null)
 
+  // POS a tutto schermo: esce dal contenitore centrato .app (max 760px) così
+  // la griglia prodotti riempie tutta la larghezza (utile su tablet).
+  useEffect(() => {
+    document.body.classList.add('fullbleed')
+    return () => document.body.classList.remove('fullbleed')
+  }, [])
+
   useEffect(() => subscribeOpenSerata((s) => setSerata(s), () => setSerata(null)), [])
 
   useEffect(() => {

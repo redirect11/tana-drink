@@ -1448,7 +1448,7 @@ export const DEFAULT_SETTINGS = {
   venue_radius_m: 150,
   // Coda ordini bartender: 'tabs' (schede per stato) o 'lista' (lista unica
   // con stato indicato da colore/etichetta sulla card).
-  queue_view: 'tabs',
+  queue_view: 'griglia',
   // Pagamenti: online (SumUp Checkout) e lettore Solo (Cloud API).
   payments_online_enabled: false,
   payments_online_required: false,

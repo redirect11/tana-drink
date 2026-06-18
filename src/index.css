@@ -1031,6 +1031,91 @@ a.order-mini {
   }
 }
 
+/* ── Modalità a tutto schermo (griglia ordini / POS) ───────────────────────
+   Toglie il limite di 760px e i padding di .app, così la pagina riempie
+   larghezza e altezza. Il body riceve la classe `fullbleed` dalle pagine
+   che la usano (OrderQueue griglia, PosPage). */
+body.fullbleed .app {
+  max-width: none;
+  padding-left: 0;
+  padding-right: 0;
+  padding-bottom: 0;
+}
+
+/* La topbar usa margini negativi per bordare il padding di .app: senza
+   padding li azzeriamo per non sforare in orizzontale. */
+body.fullbleed .topbar {
+  margin-left: 0;
+  margin-right: 0;
+}
+
+@media (min-width: 900px) {
+  /* A schermo intero il contenuto parte subito dopo la sidebar fissa (250px),
+     non più con l'offset calcolato sul layout centrato. */
+  body.fullbleed .bar-content {
+    margin-left: 250px;
+  }
+}
+
+/* Board ordini a griglia */
+.queue-board {
+  min-height: calc(100vh - 56px);
+  padding: 10px 12px 24px;
+}
+
+.board-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.board-title {
+  font-family: var(--serif);
+  white-space: nowrap;
+}
+
+.board-search {
+  flex: 1;
+  min-width: 180px;
+  margin: 0;
+}
+
+.board-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* «+» nuovo ordine, in alto a destra */
+.board-add {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 1.6rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Griglia delle card ordine: si adatta da sola a 1/2/3/4+ colonne. */
+.order-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 12px;
+  align-items: start;
+  margin-bottom: 8px;
+}
+
+.order-grid .card {
+  margin: 0; /* lo spazio lo dà il gap della griglia */
+}
+
 /* Card ordine: lo stato è leggibile dal bordo/tinta oltre che dalla pill */
 .order-card {
   border-left: 4px solid transparent;
