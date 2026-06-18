@@ -1104,22 +1104,30 @@ body.fullbleed .bar-content {
 
 /* «+» nuovo ordine, in alto a destra */
 .board-add {
-  width: 44px;
-  height: 44px;
+  width: 46px;
+  height: 46px;
   padding: 0;
   border-radius: 50%;
-  font-size: 1.6rem;
-  line-height: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  margin-right: 4px;
+}
+
+.board-add span {
+  display: block;
+  font-size: 2rem;
+  font-weight: 300;
+  line-height: 1;
+  /* centratura ottica perfetta del segno «+» nel cerchio */
+  margin-top: -2px;
 }
 
 /* Griglia delle card ordine: si adatta da sola a 1/2/3/4+ colonne. */
 .order-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 12px;
   align-items: start;
   margin-bottom: 8px;
@@ -1127,6 +1135,44 @@ body.fullbleed .bar-content {
 
 .order-grid .card {
   margin: 0; /* lo spazio lo dà il gap della griglia */
+}
+
+/* Card-griglia compatta: tutte uguali, più larghe che alte. */
+.grid-card {
+  padding: 0;
+}
+
+.grid-card-main {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 6px;
+  height: 118px;
+  padding: 12px 14px;
+  cursor: pointer;
+}
+
+.grid-card .bignum {
+  font-size: 1.7rem;
+}
+
+.grid-card-sub {
+  font-size: 0.95rem;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.grid-card-tot {
+  font-size: 1.3rem;
+  font-weight: 800;
+  font-family: var(--serif);
+}
+
+.grid-card-actions {
+  padding: 10px 14px 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 /* Card ordine: lo stato è leggibile dal bordo/tinta oltre che dalla pill */
