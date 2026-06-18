@@ -274,6 +274,7 @@ function OrderQueue() {
   const [cancelTarget, setCancelTarget] = useState(null) // { order, kind }
   const [search, setSearch] = useState('')
   const [showPanels, setShowPanels] = useState(false) // pannelli (chiamate/gruppi) nella griglia
+  const [openCards, setOpenCards] = useState(() => new Set()) // card-griglia coi tasti aperti
   const [report, setReport] = useState(null) // resoconto mostrato dopo la chiusura
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   const knownIds = useRef(new Set())
@@ -535,18 +536,153 @@ function OrderQueue() {
     }
   }
 
+  const toggleCard = (id) =>
+    setOpenCards((s) => {
+      const n = new Set(s)
+      n.has(id) ? n.delete(id) : n.add(id)
+      return n
+    })
+
+  // Pulsanti azione di un ordine (avanza stato, incasso, stampe, annullo).
+  // Condivisi dalla card piena (liste) e dalla card-griglia (a scomparsa).
+  const orderActions = (o) => {
+    const ns = nextStatus(o.status)
+    const awaiting = isAwaitingPayment(o) && o.status === ORDER_STATUSES.RICEVUTO
+    const readerReady = settings.payments_reader_enabled && settings.sumup_reader_id
+    const readerPending = o.payment_method === 'lettore' && o.payment_status === 'in_attesa'
+    const canCollect =
+      o.payment_status !== 'pagato' &&
+      [ORDER_STATUSES.PRONTO, ORDER_STATUSES.RITIRATO].includes(o.status)
+    return (
+      <>
+        {ns && o.status !== ORDER_STATUSES.RITIRATO && !awaiting && (
+          <button className="btn block" onClick={() => advance(o)}>
+            Segna come “{STATUS_LABELS[ns]}”
+          </button>
+        )}
+        {readerPending ? (
+          <div style={{ marginTop: 8 }}>
+            <p className="muted small" style={{ margin: '0 0 6px', textAlign: 'center' }}>
+              📟 In corso sul lettore… carta del cliente sul Solo.
+            </p>
+            <button className="btn ghost small block" onClick={() => annullaSuLettore(o)}>
+              ✖️ Annulla sul lettore
+            </button>
+          </div>
+        ) : (
+          canCollect &&
+          readerReady && (
+            <button
+              className="btn secondary block"
+              style={{ marginTop: o.status === ORDER_STATUSES.PRONTO ? 8 : 0 }}
+              onClick={() => incassaSuLettore(o)}
+            >
+              📟 Incassa sul lettore
+            </button>
+          )
+        )}
+        {o.status === ORDER_STATUSES.RITIRATO && o.payment_status !== 'pagato' && (
+          <button
+            className="btn block"
+            style={{ marginTop: 8 }}
+            disabled={readerPending}
+            onClick={() => markOrderPaid(o.id, 'banco').catch((e) => setError(e.message))}
+          >
+            💶 Incassato (contanti)
+          </button>
+        )}
+        <div className="grid-2" style={{ marginTop: 8 }}>
+          <button
+            className="btn ghost small"
+            onClick={() => printComanda(o).catch((e) => setError(`Stampa: ${e.message}`))}
+          >
+            🖨 Comanda
+          </button>
+          <button
+            className="btn ghost small"
+            onClick={() => printScontrino(o).catch((e) => setError(`Stampa: ${e.message}`))}
+          >
+            🧾 Scontrino
+          </button>
+        </div>
+        {o.status === ORDER_STATUSES.RICEVUTO && (
+          <button
+            className="btn ghost small block"
+            style={{ marginTop: 8 }}
+            onClick={() => setCancelTarget({ order: o, kind: 'ordine' })}
+          >
+            ✖️ Annulla ordine
+          </button>
+        )}
+        {o.status === ORDER_STATUSES.IN_PREPARAZIONE && (
+          <button
+            className="btn ghost small block"
+            style={{ marginTop: 8 }}
+            onClick={() => setCancelTarget({ order: o, kind: 'preparazione' })}
+          >
+            ✖️ Annulla preparazione
+          </button>
+        )}
+        {o.status === ORDER_STATUSES.PRONTO && (
+          <button
+            className="btn ghost small block"
+            style={{ marginTop: 8 }}
+            onClick={() => setCancelTarget({ order: o, kind: 'non_ritirato' })}
+          >
+            🚫 {o.service_mode === 'tavolo' ? 'Non servito' : 'Non ritirato'}
+          </button>
+        )}
+      </>
+    )
+  }
+
+  // Card-griglia compatta: tutte uguali, più larghe che alte. Mostra solo
+  // numero, cliente/tavolo, stato, n° prodotti e subtotale. I tasti sono a
+  // scomparsa: nascosti di default, compaiono toccando la card.
+  const renderGridCard = (o) => {
+    const awaiting = isAwaitingPayment(o) && o.status === ORDER_STATUSES.RICEVUTO
+    const count = (o.order_items || []).reduce((s, i) => s + i.qty, 0)
+    const open = openCards.has(o.id)
+    return (
+      <div
+        className={`card order-card grid-card ${o.status}`}
+        key={o.id}
+        style={awaiting ? { opacity: 0.55 } : undefined}
+      >
+        <div
+          className="grid-card-main"
+          role="button"
+          tabIndex={0}
+          onClick={() => toggleCard(o.id)}
+        >
+          <div className="row between">
+            <span className="bignum">#{o.daily_number ?? '—'}</span>
+            <span className={`pill ${o.status}`}>
+              {STATUS_EMOJI[o.status]}{' '}
+              {o.status === ORDER_STATUSES.RITIRATO
+                ? ritiratoLabel(o.service_mode)
+                : STATUS_LABELS[o.status]}
+            </span>
+          </div>
+          <div className="grid-card-sub">
+            {o.customer_name && <strong>{o.customer_name}</strong>}
+            {o.table_label && <span className="muted"> · Tavolo {o.table_label}</span>}
+            {o.payment_status === 'pagato' && o.status !== ORDER_STATUSES.PAGATO && (
+              <span className="pill pagato" style={{ marginLeft: 6 }}>💳</span>
+            )}
+          </div>
+          <div className="row between" style={{ alignItems: 'baseline' }}>
+            <span className="muted">{count} prodott{count === 1 ? 'o' : 'i'}</span>
+            <span className="grid-card-tot">{formatPrice(o.total)}</span>
+          </div>
+        </div>
+        {open && <div className="grid-card-actions">{orderActions(o)}</div>}
+      </div>
+    )
+  }
+
   const renderCard = (o) => {
-        const ns = nextStatus(o.status)
         const awaiting = isAwaitingPayment(o) && o.status === ORDER_STATUSES.RICEVUTO
-        // Incasso col lettore: ordini non pagati in mano al cliente
-        // (pronto/ritirato), col lettore associato e attivo.
-        const readerReady =
-          settings.payments_reader_enabled && settings.sumup_reader_id
-        const readerPending =
-          o.payment_method === 'lettore' && o.payment_status === 'in_attesa'
-        const canCollect =
-          o.payment_status !== 'pagato' &&
-          [ORDER_STATUSES.PRONTO, ORDER_STATUSES.RITIRATO].includes(o.status)
         return (
           <div
             className={`card order-card ${o.status}`}
@@ -637,86 +773,7 @@ function OrderQueue() {
                 ⏳ Entra in coda al pagamento: non preparare.
               </p>
             )}
-            {ns && o.status !== ORDER_STATUSES.RITIRATO && !awaiting && (
-              <button className="btn block" onClick={() => advance(o)}>
-                Segna come “{STATUS_LABELS[ns]}”
-              </button>
-            )}
-            {/* Incasso sul lettore SumUp (pronto/ritirato non pagati). */}
-            {readerPending ? (
-              <div style={{ marginTop: 8 }}>
-                <p className="muted small" style={{ margin: '0 0 6px', textAlign: 'center' }}>
-                  📟 In corso sul lettore… carta del cliente sul Solo.
-                </p>
-                <button className="btn ghost small block" onClick={() => annullaSuLettore(o)}>
-                  ✖️ Annulla sul lettore
-                </button>
-              </div>
-            ) : (
-              canCollect &&
-              readerReady && (
-                <button
-                  className="btn secondary block"
-                  style={{ marginTop: o.status === ORDER_STATUSES.PRONTO ? 8 : 0 }}
-                  onClick={() => incassaSuLettore(o)}
-                >
-                  📟 Incassa sul lettore
-                </button>
-              )
-            )}
-            {/* Ritirato/servito ma non pagato: l'incasso chiude l'ordine. */}
-            {o.status === ORDER_STATUSES.RITIRATO && o.payment_status !== 'pagato' && (
-              <button
-                className="btn block"
-                style={{ marginTop: 8 }}
-                disabled={readerPending}
-                onClick={() => markOrderPaid(o.id, 'banco').catch((e) => setError(e.message))}
-              >
-                💶 Incassato (contanti)
-              </button>
-            )}
-            {/* Bottoni stampa manuale */}
-            <div className="grid-2" style={{ marginTop: 8 }}>
-              <button
-                className="btn ghost small"
-                onClick={() => printComanda(o).catch((e) => setError(`Stampa: ${e.message}`))}
-              >
-                🖨 Comanda
-              </button>
-              <button
-                className="btn ghost small"
-                onClick={() => printScontrino(o).catch((e) => setError(`Stampa: ${e.message}`))}
-              >
-                🧾 Scontrino
-              </button>
-            </div>
-            {o.status === ORDER_STATUSES.RICEVUTO && (
-              <button
-                className="btn ghost small block"
-                style={{ marginTop: 8 }}
-                onClick={() => setCancelTarget({ order: o, kind: 'ordine' })}
-              >
-                ✖️ Annulla ordine
-              </button>
-            )}
-            {o.status === ORDER_STATUSES.IN_PREPARAZIONE && (
-              <button
-                className="btn ghost small block"
-                style={{ marginTop: 8 }}
-                onClick={() => setCancelTarget({ order: o, kind: 'preparazione' })}
-              >
-                ✖️ Annulla preparazione
-              </button>
-            )}
-            {o.status === ORDER_STATUSES.PRONTO && (
-              <button
-                className="btn ghost small block"
-                style={{ marginTop: 8 }}
-                onClick={() => setCancelTarget({ order: o, kind: 'non_ritirato' })}
-              >
-                🚫 {o.service_mode === 'tavolo' ? 'Non servito' : 'Non ritirato'}
-              </button>
-            )}
+            {orderActions(o)}
           </div>
         )
   }
@@ -749,7 +806,9 @@ function OrderQueue() {
             >
               {showPanels ? '▴' : '▾'} Pannelli
             </button>
-            <Link className="btn board-add" to="/pos" aria-label="Nuovo ordine" title="Nuovo ordine">＋</Link>
+            <Link className="btn board-add" to="/pos" aria-label="Nuovo ordine" title="Nuovo ordine">
+              <span aria-hidden="true">+</span>
+            </Link>
           </div>
         </div>
       ) : (
@@ -803,7 +862,7 @@ function OrderQueue() {
         <>
           {/* Griglia a tutto schermo: tutti gli ordini tranne i chiusi */}
           {boardOrders.length === 0 && <div className="empty">Nessun ordine attivo.</div>}
-          <div className="order-grid">{boardOrders.map(renderCard)}</div>
+          <div className="order-grid">{boardOrders.map(renderGridCard)}</div>
         </>
       ) : listView ? (
         <>
