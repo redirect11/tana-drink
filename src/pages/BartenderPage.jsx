@@ -34,6 +34,7 @@ import { readerCheckout, readerTerminate } from '../lib/paymentsApi.js'
 import { aggregateProducts, serataFinance, longestPrep, phaseAverages } from '../lib/eta.js'
 import { ensureNotificationPermission, notify } from '../lib/notify.js'
 import { beep, installAudioUnlock } from '../lib/beep.js'
+import { subscribePending, dismissPending, dismissBanner } from '../lib/pendingOrders.js'
 import { syncSumUpProducts, isSumUpEnabled } from '../lib/sumupApi.js'
 import { printComanda, printScontrino, loadPrinterSettings } from '../lib/printer.js'
 import MenuManager from '../components/MenuManager.jsx'
@@ -275,12 +276,14 @@ function OrderQueue() {
   const [search, setSearch] = useState('')
   const [showPanels, setShowPanels] = useState(false) // pannelli (chiamate/gruppi) nella griglia
   const [openCards, setOpenCards] = useState(() => new Set()) // card-griglia coi tasti aperti
+  const [pend, setPend] = useState({ pending: [], banners: [] }) // ordini POS in invio
   const [report, setReport] = useState(null) // resoconto mostrato dopo la chiusura
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   const knownIds = useRef(new Set())
   const navigate = useNavigate()
 
   useEffect(() => subscribeSettings((s) => setSettings(s)), [])
+  useEffect(() => subscribePending(setPend), [])
 
   // Vista a griglia: a tutto schermo. Aggiunge `fullbleed` al body così la
   // pagina esce dal contenitore centrato (.app, max 760px) e riempie larghezza
@@ -515,6 +518,11 @@ function OrderQueue() {
       (o) => o.status !== ORDER_STATUSES.PAGATO && o.status !== ORDER_STATUSES.ANNULLATO
     )
     .sort((a, b) => (a.daily_number || 0) - (b.daily_number || 0))
+  // Ordini POS in invio (placeholder grigi). Finché il placeholder è attivo,
+  // l'ordine reale corrispondente resta nascosto: così resta grigio fino a
+  // fine invio, poi il placeholder sparisce e compare quello reale colorato.
+  const pendingRealIds = new Set(pend.pending.filter((p) => p.realId).map((p) => p.realId))
+  const visibleBoard = boardOrders.filter((o) => !pendingRealIds.has(o.id))
 
   async function incassaSuLettore(o) {
     setError(null)
@@ -688,6 +696,41 @@ function OrderQueue() {
           {open ? '▴ Chiudi' : '⋯ Azioni'}
         </button>
         {open && <div className="grid-card-actions">{orderActions(o)}</div>}
+      </div>
+    )
+  }
+
+  // Placeholder grigio di un ordine POS in invio (creazione/stampa in corso).
+  const renderPendingCard = (p) => {
+    const o = p.order
+    const count = (o.order_items || []).reduce((s, i) => s + i.qty, 0)
+    const isError = p.state === 'error'
+    return (
+      <div
+        className={`card order-card grid-card grid-card-pending${isError ? ' error' : ''}`}
+        key={p.tempId}
+      >
+        <div className="grid-card-main" style={{ cursor: 'default' }}>
+          <div className="row between">
+            <span className="bignum">#{o.daily_number ?? '—'}</span>
+            <span className="pill">{isError ? '⚠️ Errore invio' : '⏳ Invio…'}</span>
+          </div>
+          <div className="grid-card-sub">
+            {o.table_label && <span className="muted">Tavolo {o.table_label}</span>}
+          </div>
+          <div className="row between" style={{ alignItems: 'baseline' }}>
+            <span className="muted">{count} prodott{count === 1 ? 'o' : 'i'}</span>
+            <span className="grid-card-tot">{formatPrice(o.total)}</span>
+          </div>
+        </div>
+        {isError && (
+          <div className="grid-card-actions">
+            <p className="muted small" style={{ margin: '0 0 6px' }}>{p.error}</p>
+            <button className="btn ghost small block" onClick={() => dismissPending(p.tempId)}>
+              Rimuovi
+            </button>
+          </div>
+        )}
       </div>
     )
   }
@@ -869,9 +912,20 @@ function OrderQueue() {
 
       {gridView ? (
         <>
-          {/* Griglia a tutto schermo: tutti gli ordini tranne i chiusi */}
-          {boardOrders.length === 0 && <div className="empty">Nessun ordine attivo.</div>}
-          <div className="order-grid">{boardOrders.map(renderGridCard)}</div>
+          {/* Avvisi (es. comanda non stampata) dagli invii in background */}
+          {pend.banners.map((b) => (
+            <div className="banner" key={b.id} onClick={() => dismissBanner(b.id)} style={{ cursor: 'pointer' }}>
+              🖨 {b.msg} <span className="muted">(tocca per chiudere)</span>
+            </div>
+          ))}
+          {/* Griglia: ordini in invio (grigi) + tutti gli ordini tranne i chiusi */}
+          {pend.pending.length === 0 && visibleBoard.length === 0 && (
+            <div className="empty">Nessun ordine attivo.</div>
+          )}
+          <div className="order-grid">
+            {pend.pending.map(renderPendingCard)}
+            {visibleBoard.map(renderGridCard)}
+          </div>
         </>
       ) : listView ? (
         <>

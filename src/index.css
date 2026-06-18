@@ -1217,6 +1217,25 @@ body.fullbleed .bar-content {
   padding: 7px 8px;
 }
 
+/* Ordine POS in invio: grigio finché creazione/stampa non è completata,
+   poi sparisce e compare l'ordine reale colorato. */
+.grid-card-pending {
+  opacity: 0.5;
+  border-left-color: rgba(255, 255, 255, 0.3);
+  animation: pending-pulse 1.2s ease-in-out infinite;
+}
+
+.grid-card-pending.error {
+  opacity: 1;
+  border-left-color: #e74c3c;
+  animation: none;
+}
+
+@keyframes pending-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.65; }
+}
+
 /* Card ordine: lo stato è leggibile dal bordo/tinta oltre che dalla pill */
 .order-card {
   border-left: 4px solid transparent;

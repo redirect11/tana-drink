@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { createOrder, subscribeOpenSerata } from '../lib/api.js'
+import { Link, useNavigate } from 'react-router-dom'
+import { subscribeOpenSerata } from '../lib/api.js'
+import { submitPosOrder } from '../lib/pendingOrders.js'
 import { useMenu } from '../lib/menuCache.js'
-import { useCart, rememberOrderId } from '../lib/cart.js'
-import { formatPrice, ORDER_STATUSES } from '../lib/orderStatus.js'
-import { printComanda, loadPrinterSettings } from '../lib/printer.js'
+import { useCart } from '../lib/cart.js'
+import { formatPrice } from '../lib/orderStatus.js'
 import { auth } from '../lib/firebaseClient.js'
 import { onAuthStateChanged } from 'firebase/auth'
 
@@ -13,14 +13,13 @@ import { onAuthStateChanged } from 'firebase/auth'
 // Design: categorie come colonna sinistra, prodotti come griglia 2-3 colonne.
 
 export default function PosPage() {
+  const navigate = useNavigate()
   const { drinks, cats, loading } = useMenu()
   const cart = useCart()
   const [selectedCat, setSelectedCat] = useState(null)
   const [serata, setSerata] = useState(undefined)
   const [staff, setStaff] = useState(null)
-  const [sending, setSending] = useState(false)
   const [error, setError] = useState(null)
-  const [printError, setPrintError] = useState(null)
   const [tableLabel, setTableLabel] = useState('')
   const [note, setNote] = useState('')
   const gridRef = useRef(null)
@@ -65,38 +64,26 @@ export default function PosPage() {
     ? drinks.filter((d) => d.available)
     : drinks.filter((d) => d.available && (d.category_id === selectedCat || d.category === selectedCat))
 
-  async function handleSend({ printNow = false } = {}) {
+  function handleSend({ printNow = false } = {}) {
     if (cart.items.length === 0) return
-    setSending(true)
-    setError(null)
-    setPrintError(null)
-    try {
-      const order = await createOrder({
-        serata_id: serata?.id,
-        table_label: tableLabel || null,
-        note: note || null,
-        items: cart.items,
-        placed_by: staff ? { email: staff.email, name: staff.name, role: staff.role } : undefined,
-        // Ordine battuto al banco dal POS: salta la coda «ricevuto» e va
-        // direttamente in preparazione (lo prepara chi lo sta inserendo).
-        status: ORDER_STATUSES.IN_PREPARAZIONE,
-      })
-      rememberOrderId(order.id)
-
-      // Stampa comanda: automatica (da impostazioni) o manuale (pulsante)
-      const ps = loadPrinterSettings()
-      if (ps.autoPrintComanda || printNow) {
-        printComanda(order).catch((e) => setPrintError(e.message))
-      }
-
-      cart.clear()
-      setTableLabel('')
-      setNote('')
-    } catch (e) {
-      setError(e.message)
-    } finally {
-      setSending(false)
+    if (!serata?.id) {
+      setError('Nessuna serata aperta: apri la serata dal gestionale.')
+      return
     }
+    // Invio in background: lo store crea l'ordine (e stampa la comanda) mentre
+    // torniamo subito alla griglia, dove l'ordine appare in caricamento.
+    submitPosOrder({
+      serata_id: serata.id,
+      table_label: tableLabel || null,
+      note: note || null,
+      items: cart.items,
+      placed_by: staff ? { email: staff.email, name: staff.name, role: staff.role } : undefined,
+      printNow,
+    })
+    cart.clear()
+    setTableLabel('')
+    setNote('')
+    navigate('/bar')
   }
 
   const cartCount = cart.items.reduce((s, i) => s + i.qty, 0)
@@ -113,7 +100,6 @@ export default function PosPage() {
 
       {/* ── Banner errori ── */}
       {error && <div className="banner" style={{ margin: '8px 8px 0', flexShrink: 0 }}>{error}</div>}
-      {printError && <div className="banner" style={{ margin: '4px 8px 0', flexShrink: 0 }}>Stampa: {printError}</div>}
       {serata === null && (
         <div className="banner" style={{ margin: '8px 8px 0', flexShrink: 0 }}>
           Nessuna serata aperta. Apri la serata dal gestionale prima di prendere ordini.
@@ -259,21 +245,21 @@ export default function PosPage() {
           {/* Invia + stampa comanda */}
           <button
             className="btn small"
-            disabled={sending || cartCount === 0 || !serata}
+            disabled={cartCount === 0 || !serata}
             onClick={() => handleSend({ printNow: true })}
             style={{ flexShrink: 0 }}
           >
-            {sending ? 'Invio…' : '🖨 Invia + comanda'}
+            🖨 Invia + comanda
           </button>
 
           {/* Invia senza stampa */}
           <button
             className="btn secondary small"
-            disabled={sending || cartCount === 0 || !serata}
+            disabled={cartCount === 0 || !serata}
             onClick={() => handleSend({ printNow: false })}
             style={{ flexShrink: 0 }}
           >
-            {sending ? '…' : 'Invia'}
+            Invia
           </button>
         </div>
       </div>
