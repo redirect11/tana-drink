@@ -72,6 +72,7 @@ export default function PosPage() {
     setPrintError(null)
     try {
       const order = await createOrder({
+        serata_id: serata?.id,
         table_label: tableLabel || null,
         note: note || null,
         items: cart.items,
