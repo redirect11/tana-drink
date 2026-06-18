@@ -279,6 +279,16 @@ function OrderQueue() {
 
   useEffect(() => subscribeSettings((s) => setSettings(s)), [])
 
+  // Vista a griglia: a tutto schermo. Aggiunge `fullbleed` al body così la
+  // pagina esce dal contenitore centrato (.app, max 760px) e riempie larghezza
+  // e altezza. Rimosso quando si lascia la griglia o si smonta la coda.
+  const gridView = settings.queue_view === 'griglia'
+  useEffect(() => {
+    if (!gridView) return undefined
+    document.body.classList.add('fullbleed')
+    return () => document.body.classList.remove('fullbleed')
+  }, [gridView])
+
   // Se dopo 8s la serata non è arrivata, probabilmente il database non è
   // raggiungibile (l'SDK ritenta in silenzio): mostra un suggerimento.
   useEffect(() => {
@@ -704,29 +714,54 @@ function OrderQueue() {
   }
 
   return (
-    <div>
+    <div className={gridView ? 'queue-board' : undefined}>
       {error && <div className="banner">Errore: {error}</div>}
 
-      <div className="card row between" style={{ alignItems: 'center' }}>
-        <div>
-          <strong>Serata aperta</strong>
-          <div className="muted">
-            {recap.count} ordini · {formatPrice(recap.total)}
+      {gridView ? (
+        // Testata compatta della griglia: info serata, ricerca e, in alto a
+        // destra, il «+» per battere un nuovo ordine (apre il POS cassa).
+        <div className="board-head">
+          <div className="board-title">
+            <strong>Serata aperta</strong>
+            <span className="muted"> · {recap.count} ordini · {formatPrice(recap.total)}</span>
+          </div>
+          <input
+            type="search"
+            className="menu-search board-search"
+            placeholder="🔍 Cerca numero, cliente, tavolo, drink…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <div className="board-actions">
+            <Link className="btn ghost small" to="/menu">✍️ Cliente</Link>
+            <button className="btn ghost small" onClick={chiudi} disabled={busy}>⏹ Chiudi</button>
+            <Link className="btn board-add" to="/pos" aria-label="Nuovo ordine" title="Nuovo ordine">＋</Link>
           </div>
         </div>
-        <button className="btn ghost small" onClick={chiudi} disabled={busy}>
-          ⏹ Chiudi serata
-        </button>
-      </div>
+      ) : (
+        <>
+          <div className="card row between" style={{ alignItems: 'center' }}>
+            <div>
+              <strong>Serata aperta</strong>
+              <div className="muted">
+                {recap.count} ordini · {formatPrice(recap.total)}
+              </div>
+            </div>
+            <button className="btn ghost small" onClick={chiudi} disabled={busy}>
+              ⏹ Chiudi serata
+            </button>
+          </div>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
-        <Link className="btn" to="/pos" style={{ flex: 1 }}>
-          🍸 POS cassa
-        </Link>
-        <Link className="btn ghost" to="/menu" style={{ flex: 1 }}>
-          ✍️ Vista cliente
-        </Link>
-      </div>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
+            <Link className="btn" to="/pos" style={{ flex: 1 }}>
+              🍸 POS cassa
+            </Link>
+            <Link className="btn ghost" to="/menu" style={{ flex: 1 }}>
+              ✍️ Vista cliente
+            </Link>
+          </div>
+        </>
+      )}
 
       <StaffCallList />
 
@@ -734,16 +769,29 @@ function OrderQueue() {
         <GroupsPanel serataId={serata?.id} orders={orders} role="bartender" />
       )}
 
-      <input
-        type="search"
-        className="menu-search"
-        placeholder="🔍 Cerca per numero, cliente, tavolo, drink…"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        style={{ marginTop: 8 }}
-      />
+      {!gridView && (
+        <input
+          type="search"
+          className="menu-search"
+          placeholder="🔍 Cerca per numero, cliente, tavolo, drink…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          style={{ marginTop: 8 }}
+        />
+      )}
 
-      {listView ? (
+      {gridView ? (
+        <>
+          {/* Griglia a tutto schermo: card affiancate, stato dal colore */}
+          <h3 className="cat-header">In corso ({inCorso.length})</h3>
+          {inCorso.length === 0 && <div className="empty">Nessun ordine in corso.</div>}
+          <div className="order-grid">{inCorso.map(renderCard)}</div>
+
+          <h3 className="cat-header">Serviti/Ritirati ({evasi.length})</h3>
+          {evasi.length === 0 && <div className="empty">Ancora nessun ordine servito o ritirato.</div>}
+          <div className="order-grid">{evasi.map(renderCard)}</div>
+        </>
+      ) : listView ? (
         <>
           {/* Lista unica: stato indicato dal colore/etichetta della card */}
           <h3 className="cat-header">In corso ({inCorso.length})</h3>

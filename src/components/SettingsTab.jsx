@@ -229,12 +229,14 @@ export default function SettingsTab() {
       <div className="card settings-section">
         <h3>Coda ordini</h3>
         <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
-          Come visualizzare gli ordini nel gestionale: schede separate per
-          stato, oppure un&apos;unica lista (in corso + evasi) dove lo stato è
+          Come visualizzare gli ordini nel gestionale: <strong>griglia</strong> a
+          tutto schermo (card affiancate, ideale su tablet), schede separate per
+          stato, oppure un&apos;unica lista (in corso + evasi). Lo stato è sempre
           indicato dal colore e dall&apos;etichetta sulla card.
         </p>
         <div className="mode-choice">
           {[
+            ['griglia', '🔲 Griglia (schermo intero)'],
             ['tabs', '🗂 Schede per stato'],
             ['lista', '📋 Lista unica'],
           ].map(([value, label]) => (
