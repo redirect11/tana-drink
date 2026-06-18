@@ -1,6 +1,9 @@
 import { useEffect } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 
+// Box novità Karaoke × Ceres: messo a false per nasconderlo (riattivabile).
+const SHOW_KARAOKE_NEWS = false
+
 // Landing pubblica a "/". Il menù vero e proprio è su "/menu".
 // Se si arriva con un QR-tavolo (?tavolo=) o un link gruppo (?group=),
 // si inoltra direttamente al menù preservando i parametri.
@@ -34,7 +37,9 @@ export default function LandingPage() {
         </div>
       </div>
 
-      {/* ── Box novità: evento Karaoke sponsorizzato Ceres ── */}
+      {/* ── Box novità: evento Karaoke sponsorizzato Ceres ──
+          Nascosto: rimetti SHOW_KARAOKE_NEWS=true per riattivarlo. */}
+      {SHOW_KARAOKE_NEWS && (
       <section className="news-ceres" aria-label="Novità: Karaoke Night">
         <div className="news-ceres-rays" aria-hidden="true" />
         <span className="news-ceres-badge">NOVITÀ</span>
@@ -63,6 +68,7 @@ export default function LandingPage() {
           </Link>
         </div>
       </section>
+      )}
 
       <nav className="landing-nav">
         <a href="#chi-siamo">Chi siamo</a>
