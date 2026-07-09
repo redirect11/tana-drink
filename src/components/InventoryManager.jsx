@@ -12,6 +12,10 @@ import {
   createInventoryCategory,
   updateInventoryCategory,
   deleteInventoryCategory,
+  fetchSuppliers,
+  createSupplier,
+  updateSupplier,
+  deleteSupplier,
 } from '../lib/api.js'
 import {
   BASE_UNITS,
@@ -20,24 +24,38 @@ import {
   bottleBreakdown,
   inventorySummary,
   filterItems,
+  costWithVat,
+  stockValue,
+  costPerCl,
+  inventoryTotalValue,
 } from '../lib/inventory.js'
+import { formatPrice } from '../lib/orderStatus.js'
+
+const STATUS_ITEM = [
+  { value: 'linea', label: 'In linea' },
+  { value: 'premium', label: 'Premium' },
+  { value: 'out', label: 'Fuori assortimento' },
+]
 
 const STATUS_LABEL = { ok: '', low: 'in esaurimento', empty: 'esaurito' }
 
 export default function InventoryManager() {
   const [items, setItems] = useState([])
   const [categories, setCategories] = useState([])
+  const [suppliers, setSuppliers] = useState([])
   const [movements, setMovements] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
   const [editing, setEditing] = useState(null) // null | 'new' | item
   const [showCats, setShowCats] = useState(false)
+  const [showSup, setShowSup] = useState(false)
   const [showMovs, setShowMovs] = useState(false)
 
   // Filtri
   const [query, setQuery] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('all')
+  const [supplierFilter, setSupplierFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
 
   // Riga espansa + carico in corso
@@ -45,17 +63,20 @@ export default function InventoryManager() {
   const [caricoFor, setCaricoFor] = useState(null)
 
   const catName = (id) => categories.find((c) => c.id === id)?.name
+  const supName = (id) => suppliers.find((s) => s.id === id)?.name
 
   async function load() {
     setLoading(true)
     try {
-      const [its, cats, movs] = await Promise.all([
+      const [its, cats, sups, movs] = await Promise.all([
         fetchInventoryItems(),
         fetchInventoryCategories().catch(() => []),
+        fetchSuppliers().catch(() => []),
         fetchStockMovements({ limit: 30 }).catch(() => []),
       ])
       setItems(its)
       setCategories(cats)
+      setSuppliers(sups)
       setMovements(movs)
     } catch (e) {
       setError(e.message)
@@ -69,9 +90,10 @@ export default function InventoryManager() {
   }, [])
 
   const summary = useMemo(() => inventorySummary(items), [items])
+  const totalValue = useMemo(() => inventoryTotalValue(items), [items])
   const visible = useMemo(
-    () => filterItems(items, { query, categoryId: categoryFilter, status: statusFilter }),
-    [items, query, categoryFilter, statusFilter]
+    () => filterItems(items, { query, categoryId: categoryFilter, supplierId: supplierFilter, status: statusFilter }),
+    [items, query, categoryFilter, supplierFilter, statusFilter]
   )
 
   async function handleSave(payload) {
@@ -129,6 +151,7 @@ export default function InventoryManager() {
       <ItemForm
         initial={editing === 'new' ? null : editing}
         categories={categories}
+        suppliers={suppliers}
         onCancel={() => setEditing(null)}
         onSave={handleSave}
       />
@@ -152,6 +175,10 @@ export default function InventoryManager() {
         <button className={`chip danger ${statusFilter === 'empty' ? 'active' : ''}`} onClick={() => toggleStatus('empty')}>
           Esauriti <strong>{summary.empty}</strong>
         </button>
+      </div>
+
+      <div className="chip" style={{ width: '100%', justifyContent: 'center', marginBottom: 8, cursor: 'default' }}>
+        💶 Valore magazzino <strong>{formatPrice(totalValue)}</strong>
       </div>
 
       {/* Ricerca */}
@@ -184,15 +211,40 @@ export default function InventoryManager() {
         </div>
       )}
 
+      {/* Filtro fornitori */}
+      {suppliers.length > 0 && (
+        <div className="chips-row">
+          <button className={`chip ${supplierFilter === 'all' ? 'active' : ''}`} onClick={() => setSupplierFilter('all')}>
+            🏭 Tutti
+          </button>
+          {suppliers.map((s) => (
+            <button
+              key={s.id}
+              className={`chip ${supplierFilter === s.id ? 'active' : ''}`}
+              onClick={() => setSupplierFilter(s.id)}
+            >
+              {s.name}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <button className="btn block" onClick={() => setEditing('new')}>+ Nuovo prodotto</button>
       <div className="grid-2" style={{ marginTop: 8 }}>
-        <button className="btn small" onClick={() => setEditing('new')}>+ Nuovo prodotto</button>
         <button className="btn ghost small" onClick={() => setShowCats((v) => !v)}>🏷 Categorie</button>
+        <button className="btn ghost small" onClick={() => setShowSup((v) => !v)}>🏭 Fornitori</button>
       </div>
 
       {showCats && (
         <InvCategoryManager
           categories={categories}
           onChange={async () => setCategories(await fetchInventoryCategories())}
+        />
+      )}
+      {showSup && (
+        <SupplierManager
+          suppliers={suppliers}
+          onChange={async () => setSuppliers(await fetchSuppliers())}
         />
       )}
 
@@ -216,8 +268,14 @@ export default function InventoryManager() {
               >
                 <span className={`dot dot-${st}`} title={STATUS_LABEL[st] || 'ok'} />
                 <div className="grow">
-                  <div className="inv-name">{it.name}</div>
-                  <div className="muted small">{catName(it.category_id) || 'Senza categoria'}</div>
+                  <div className="inv-name">
+                    {it.name}{' '}
+                    {it.status === 'out' && <span className="badge-empty">OUT</span>}
+                  </div>
+                  <div className="muted small">
+                    {catName(it.category_id) || 'Senza categoria'}
+                    {supName(it.supplier_id) && ` · ${supName(it.supplier_id)}`}
+                  </div>
                 </div>
                 <div className="inv-qty">
                   <div>{formatQty(it.stock, it.unit)}</div>
@@ -246,6 +304,13 @@ export default function InventoryManager() {
                   )}
                   {Number(it.low_threshold) > 0 && (
                     <div className="muted small">Soglia avviso: {formatQty(it.low_threshold, it.unit)}</div>
+                  )}
+                  {it.cost != null && (
+                    <div className="muted small">
+                      💶 {formatPrice(it.cost)}/pz (+IVA {formatPrice(costWithVat(it.cost, it.vat))})
+                      {costPerCl(it) != null && ` · ${formatPrice(costPerCl(it))}/cl`}
+                      {' · valore '} <strong>{formatPrice(stockValue(it))}</strong>
+                    </div>
                   )}
 
                   {caricoFor === it.id ? (
@@ -364,6 +429,57 @@ function InvCategoryManager({ categories, onChange }) {
   )
 }
 
+// --- Gestione fornitori --------------------------------------------------
+
+function SupplierManager({ suppliers, onChange }) {
+  const [name, setName] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  async function add() {
+    if (!name.trim()) return
+    setBusy(true)
+    try {
+      await createSupplier({ name: name.trim(), sort_order: suppliers.length })
+      setName('')
+      await onChange()
+    } finally {
+      setBusy(false)
+    }
+  }
+  async function rename(s) {
+    const n = prompt('Nuovo nome fornitore:', s.name)
+    if (n == null || !n.trim()) return
+    await updateSupplier(s.id, { name: n.trim() })
+    await onChange()
+  }
+  async function remove(s) {
+    if (!confirm(`Eliminare il fornitore “${s.name}”? I prodotti resteranno, senza fornitore.`)) return
+    await deleteSupplier(s.id)
+    await onChange()
+  }
+
+  return (
+    <div className="card" style={{ marginTop: 8 }}>
+      <div className="row" style={{ gap: 8 }}>
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nuovo fornitore (es. NOVA)" />
+        <button className="btn small" onClick={add} disabled={busy}>Aggiungi</button>
+      </div>
+      {suppliers.length === 0 && (
+        <div className="muted small" style={{ marginTop: 8 }}>Nessun fornitore.</div>
+      )}
+      {suppliers.map((s) => (
+        <div className="row between" key={s.id} style={{ marginTop: 8 }}>
+          <span>{s.name}</span>
+          <span className="row" style={{ gap: 4 }}>
+            <button className="btn ghost small" onClick={() => rename(s)}>✏️</button>
+            <button className="btn ghost small" onClick={() => remove(s)}>🗑</button>
+          </span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 // --- Form di carico -----------------------------------------------------
 
 function CaricoForm({ item, onCancel, onConfirm }) {
@@ -409,12 +525,16 @@ function CaricoForm({ item, onCancel, onConfirm }) {
 
 // --- Form prodotto (creazione + modifica) -------------------------------
 
-function ItemForm({ initial, categories, onCancel, onSave }) {
+function ItemForm({ initial, categories, suppliers, onCancel, onSave }) {
   const isEdit = !!initial
   const [form, setForm] = useState({
     name: initial?.name ?? '',
     unit: initial?.unit ?? 'ml',
     category_id: initial?.category_id ?? '',
+    supplier_id: initial?.supplier_id ?? '',
+    cost: initial?.cost ?? '',
+    vat: initial?.vat ?? 22,
+    status: initial?.status ?? 'linea',
     package_size: initial?.package_size ?? '',
     low_threshold: initial?.low_threshold ?? '',
     // solo in creazione: giacenza iniziale espressa in confezioni
@@ -424,6 +544,8 @@ function ItemForm({ initial, categories, onCancel, onSave }) {
   const [saving, setSaving] = useState(false)
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
   const isPz = form.unit === 'pz'
+  const costNum = Number(String(form.cost).replace(',', '.')) || 0
+  const clPerConf = !isPz && Number(form.package_size) > 0 ? Number(form.package_size) / 10 : 0
 
   async function submit(e) {
     e.preventDefault()
@@ -434,6 +556,10 @@ function ItemForm({ initial, categories, onCancel, onSave }) {
         name: form.name.trim(),
         unit: form.unit,
         category_id: form.category_id || null,
+        supplier_id: form.supplier_id || null,
+        cost: form.cost === '' ? null : costNum,
+        vat: Number(form.vat) || 0,
+        status: form.status || 'linea',
         package_size: isPz ? null : (Number(form.package_size) || null),
         low_threshold: Number(form.low_threshold) || 0,
       }
@@ -471,6 +597,38 @@ function ItemForm({ initial, categories, onCancel, onSave }) {
         <option value="">— Nessuna —</option>
         {categories.map((c) => (
           <option key={c.id} value={c.id}>{c.name}</option>
+        ))}
+      </select>
+
+      <label htmlFor="isup">Fornitore</label>
+      <select id="isup" value={form.supplier_id || ''} onChange={set('supplier_id')}>
+        <option value="">— Nessuno —</option>
+        {(suppliers || []).map((s) => (
+          <option key={s.id} value={s.id}>{s.name}</option>
+        ))}
+      </select>
+
+      <div className="grid-2">
+        <div>
+          <label htmlFor="icost">Costo €/pz (netto)</label>
+          <input id="icost" type="number" step="any" min="0" value={form.cost} onChange={set('cost')} placeholder="Es. 12,9" />
+        </div>
+        <div>
+          <label htmlFor="ivat">IVA %</label>
+          <input id="ivat" type="number" step="any" min="0" value={form.vat} onChange={set('vat')} />
+        </div>
+      </div>
+      {costNum > 0 && (
+        <div className="muted small">
+          +IVA {formatPrice(costWithVat(costNum, form.vat))}
+          {clPerConf > 0 && ` · ${formatPrice(costWithVat(costNum, form.vat) / clPerConf)}/cl`}
+        </div>
+      )}
+
+      <label htmlFor="istatus">Stato</label>
+      <select id="istatus" value={form.status} onChange={set('status')}>
+        {STATUS_ITEM.map((s) => (
+          <option key={s.value} value={s.value}>{s.label}</option>
         ))}
       </select>
 

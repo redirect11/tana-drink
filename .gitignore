@@ -35,3 +35,7 @@ carte_*.csv
 # Pacchetto SDK Epson estratto (committiamo solo public/epos-2.27.0.js)
 ePOS_SDK_JavaScript_v*/
 ePOS_SDK_JavaScript_v*.zip
+
+# File Excel gestionale (dati aziendali, non versionati)
+*.xlsx
+*.xls
