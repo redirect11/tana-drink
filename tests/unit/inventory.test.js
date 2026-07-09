@@ -191,4 +191,27 @@ describe('computeConsumption', () => {
   it('ignora drink senza ricetta', () => {
     expect(computeConsumption([{ drink_id: 'sconosciuto', qty: 5 }], drinksById)).toEqual([])
   })
+
+  it('item custom: usa la ricetta incorporata (niente lookup catalogo)', () => {
+    const res = computeConsumption(
+      [
+        {
+          drink_id: 'custom-123',
+          custom: true,
+          qty: 2,
+          recipe_items: [{ inventory_item_id: 'rum', name: 'Rum', unit: 'ml', qty: 40 }],
+        },
+      ],
+      {}
+    )
+    expect(res).toEqual([{ inventory_item_id: 'rum', name: 'Rum', unit: 'ml', qty: 80 }])
+  })
+
+  it('la ricetta incorporata ha precedenza su quella del catalogo', () => {
+    const res = computeConsumption(
+      [{ drink_id: 'mojito', qty: 1, recipe_items: [{ inventory_item_id: 'gin', name: 'Gin', unit: 'ml', qty: 50 }] }],
+      drinksById
+    )
+    expect(res).toEqual([{ inventory_item_id: 'gin', name: 'Gin', unit: 'ml', qty: 50 }])
+  })
 })

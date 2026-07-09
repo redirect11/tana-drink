@@ -158,6 +158,7 @@ function mapOrder(snap) {
       unit_price: i.unit_price ?? 0,
       qty: i.qty ?? 1,
       sumup_product_id: i.sumup_product_id ?? null,
+      custom: i.custom ?? false,
     })),
   }
 }
@@ -882,6 +883,10 @@ export async function createOrder({
         unit_price: i.price,
         qty: i.qty,
         sumup_product_id: i.sumup_product_id ?? null,
+        // Drink custom composti al volo dal bartender: la ricetta viaggia
+        // incorporata nell'item (non esiste un doc in `drinks`) e viene
+        // usata per lo scarico inventario alla preparazione.
+        ...(i.custom ? { custom: true, recipe_items: i.recipe_items ?? [] } : {}),
       })),
     })
   })
@@ -1081,7 +1086,8 @@ async function applyDepletionAndAdvance(id, status) {
     const items = Array.isArray(order.items) ? order.items : []
 
     // --- LETTURE ---
-    const drinkIds = [...new Set(items.map((i) => i.drink_id).filter(Boolean))]
+    // Gli item custom hanno la ricetta incorporata: niente lookup su `drinks`.
+    const drinkIds = [...new Set(items.filter((i) => !i.custom).map((i) => i.drink_id).filter(Boolean))]
     const drinkSnaps = await Promise.all(drinkIds.map((d) => tx.get(doc(db, 'drinks', d))))
     const drinksById = {}
     drinkSnaps.forEach((s, idx) => {
@@ -1502,6 +1508,10 @@ export const DEFAULT_SETTINGS = {
   groups_enabled: false,
   groups_in_drawer: true,
   groups_in_queue: true,
+  // Temi: preset + eventuali override colore, separati per gestionale
+  // (staff/bartender) e vista cliente. Vedi src/lib/themes.js.
+  theme_staff: { preset: 'tana-scuro', custom: null },
+  theme_client: { preset: 'tana-scuro', custom: null },
 }
 
 export function subscribeSettings(onChange, onError) {

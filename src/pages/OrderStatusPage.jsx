@@ -8,6 +8,8 @@ import {
   subscribeQueue,
   updateOrderItems,
   updateOrderPushToken,
+  updateOrderStatus,
+  markOrderPaid,
   cancelOrder,
   DEFAULT_SETTINGS,
 } from '../lib/api.js'
@@ -18,6 +20,7 @@ import {
   STATUS_LABELS,
   STATUS_EMOJI,
   ritiratoLabel,
+  nextStatus,
   CANCEL_PHRASES,
   formatPrice,
   placedByName,
@@ -49,12 +52,14 @@ export default function OrderStatusPage() {
   // Chi sta guardando la pagina è staff? Il QR per agganciare l'ordine
   // va mostrato solo allo staff, non al cliente che lo ha già scansionato.
   const [viewerIsStaff, setViewerIsStaff] = useState(false)
+  const [viewerRole, setViewerRole] = useState(null) // 'bartender' | 'staff' | null
   const [viewerChecked, setViewerChecked] = useState(false)
 
   useEffect(() => {
     return onAuthStateChanged(auth, async (u) => {
       if (!u) {
         setViewerIsStaff(false)
+        setViewerRole(null)
         setViewerChecked(true)
         return
       }
@@ -62,8 +67,10 @@ export default function OrderStatusPage() {
         const token = await u.getIdTokenResult()
         const role = token.claims.role
         setViewerIsStaff(role === 'bartender' || role === 'staff')
+        setViewerRole(role === 'bartender' || role === 'staff' ? role : null)
       } catch {
         setViewerIsStaff(false)
+        setViewerRole(null)
       }
       setViewerChecked(true)
     })
@@ -449,6 +456,49 @@ export default function OrderStatusPage() {
           ✖️ Annulla ordine
         </button>
       )}
+
+      {(() => {
+        // Controlli di avanzamento stato per lo staff, direttamente dal
+        // dettaglio (stessa logica della coda; per lo staff semplice le
+        // regole consentono solo pronto→ritirato e ritirato→pagato).
+        if (!viewerIsStaff || order.status === ORDER_STATUSES.ANNULLATO) return null
+        const ns = nextStatus(order.status)
+        if (!ns) return null
+        const staffAllowed =
+          viewerRole === 'bartender' ||
+          order.status === ORDER_STATUSES.PRONTO ||
+          order.status === ORDER_STATUSES.RITIRATO
+        if (!staffAllowed) return null
+        const isPay = ns === ORDER_STATUSES.PAGATO
+        if (isPay && order.payment_status === 'pagato') return null
+        return (
+          <div className="card">
+            <p className="muted" style={{ marginTop: 0, fontSize: '0.85rem' }}>
+              🛠 Gestione ordine
+            </p>
+            <button
+              className="btn block"
+              disabled={saving}
+              onClick={async () => {
+                setSaving(true)
+                setError(null)
+                try {
+                  if (isPay) await markOrderPaid(order.id, 'banco')
+                  else await updateOrderStatus(order.id, ns)
+                } catch (e) {
+                  setError(e.message)
+                } finally {
+                  setSaving(false)
+                }
+              }}
+            >
+              {isPay
+                ? '💶 Segna pagato (al banco)'
+                : `Segna come “${ns === ORDER_STATUSES.RITIRATO ? ritiratoLabel(order.service_mode) : STATUS_LABELS[ns]}”`}
+            </button>
+          </div>
+        )
+      })()}
 
       {order.placed_by && (
         <div className="card" style={{ textAlign: 'center' }}>
