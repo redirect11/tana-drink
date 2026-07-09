@@ -29,6 +29,7 @@ import { onAuthStateChanged } from 'firebase/auth'
 import { useMenu } from '../lib/menuCache.js'
 import OrderSummary from '../components/OrderSummary.jsx'
 import StaffDrawer from '../components/StaffDrawer.jsx'
+import CustomDrinkForm from '../components/CustomDrinkForm.jsx'
 
 const NOTIF_PROMPT_KEY = 'tana_notif_prompt_v1' // chiave storica
 const WELCOME_KEY = 'tana_welcome_v1'
@@ -42,6 +43,7 @@ export default function MenuPage() {
   const [error, setError] = useState(null)
   const [sending, setSending] = useState(false)
   const [showSummary, setShowSummary] = useState(false)
+  const [showCustomDrink, setShowCustomDrink] = useState(false)
   const [myOrders, setMyOrders] = useState([])
   const [readyOrders, setReadyOrders] = useState([])
   // Staff loggato (bartender/cameriera): gli ordini fatti da qui vengono
@@ -346,6 +348,26 @@ export default function MenuPage() {
         <p className="muted" style={{ margin: '4px 4px 10px' }}>
           ✍️ Inserimento ordine da <strong>{placedByName(staff)}</strong>
         </p>
+      )}
+
+      {/* Drink custom: solo il bartender compone voci fuori menù al volo. */}
+      {staff?.role === 'bartender' && !menuOnly && canOrder && (
+        <button
+          className="btn secondary block"
+          style={{ marginBottom: 10 }}
+          onClick={() => setShowCustomDrink(true)}
+        >
+          🍹 Drink custom (fuori menù)
+        </button>
+      )}
+      {showCustomDrink && (
+        <CustomDrinkForm
+          onCancel={() => setShowCustomDrink(false)}
+          onAdd={(item) => {
+            cart.addCustom(item)
+            setShowCustomDrink(false)
+          }}
+        />
       )}
 
       {menuOnly && (

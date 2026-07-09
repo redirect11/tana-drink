@@ -3,6 +3,7 @@ import { subscribeSettings, updateSettings, replaceCatalog } from '../lib/api.js
 import { CANCEL_PHRASES } from '../lib/orderStatus.js'
 import { parseCarteCsv, decodeCsvBuffer } from '../lib/carteImport.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
+import ThemeSettings from './ThemeSettings.jsx'
 import { pairSumUpReader, unpairSumUpReader } from '../lib/paymentsApi.js'
 
 // Impostazioni del bar (documento settings/bar). Ogni modifica viene salvata
@@ -34,6 +35,8 @@ export default function SettingsTab() {
   return (
     <div>
       {error && <div className="banner">Errore: {error}</div>}
+
+      <ThemeSettings settings={settings} onSave={save} />
 
       <div className="card settings-section">
         <h3>Modalità menù</h3>

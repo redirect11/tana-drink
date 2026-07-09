@@ -1,0 +1,130 @@
+import { useState } from 'react'
+import {
+  THEME_FIELDS,
+  THEME_PRESETS,
+  DEFAULT_THEME,
+  resolveThemeVars,
+  applyTheme,
+} from '../lib/themes.js'
+
+// Sezione "Aspetto" delle impostazioni: scelta del tema (preset scuri e
+// chiari) e personalizzazione dei colori principali, separatamente per il
+// gestionale (staff/bartender) e per la vista cliente. Il tema scelto è
+// salvato in settings/bar e arriva a tutti i dispositivi in tempo reale.
+export default function ThemeSettings({ settings, onSave }) {
+  return (
+    <div className="card settings-section">
+      <h3>🎨 Aspetto</h3>
+      <ThemeEditor
+        title="Gestionale (staff)"
+        value={settings.theme_staff}
+        // Anteprima immediata: il gestionale è la vista in cui ci troviamo.
+        livePreview
+        onSave={(t) => onSave({ theme_staff: t })}
+      />
+      <ThemeEditor
+        title="Vista cliente"
+        value={settings.theme_client}
+        onSave={(t) => onSave({ theme_client: t })}
+      />
+    </div>
+  )
+}
+
+function ThemeEditor({ title, value, onSave, livePreview = false }) {
+  const current = value || { preset: DEFAULT_THEME, custom: null }
+  const [customizing, setCustomizing] = useState(false)
+  // Bozza degli override colore mentre si personalizza (non ancora salvata).
+  const [draft, setDraft] = useState(null)
+
+  const resolved = resolveThemeVars(
+    draft ? { ...current, custom: draft } : current
+  )
+  const hasCustom = !!(current.custom && Object.keys(current.custom).length)
+
+  function pickPreset(id) {
+    setDraft(null)
+    setCustomizing(false)
+    const next = { preset: id, custom: null }
+    onSave(next)
+    if (livePreview) applyTheme(resolveThemeVars(next))
+  }
+
+  function startCustomize() {
+    setDraft({ ...(current.custom || {}) })
+    setCustomizing(true)
+  }
+
+  function setColor(key, color) {
+    const next = { ...(draft || {}), [key]: color }
+    setDraft(next)
+    if (livePreview) applyTheme(resolveThemeVars({ ...current, custom: next }))
+  }
+
+  function saveCustom() {
+    onSave({ preset: current.preset || DEFAULT_THEME, custom: draft })
+    setCustomizing(false)
+    setDraft(null)
+  }
+
+  function resetCustom() {
+    setDraft(null)
+    setCustomizing(false)
+    const next = { preset: current.preset || DEFAULT_THEME, custom: null }
+    onSave(next)
+    if (livePreview) applyTheme(resolveThemeVars(next))
+  }
+
+  return (
+    <div style={{ marginTop: 10 }}>
+      <p className="muted" style={{ margin: '0 0 6px', fontSize: '0.9rem' }}>
+        <strong>{title}</strong>
+        {hasCustom && ' · personalizzato'}
+      </p>
+
+      <div className="chips-row">
+        {Object.entries(THEME_PRESETS).map(([id, p]) => (
+          <button
+            key={id}
+            className={`chip ${current.preset === id && !hasCustom ? 'active' : ''}`}
+            onClick={() => pickPreset(id)}
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+
+      {!customizing ? (
+        <button className="btn ghost small" onClick={startCustomize}>
+          🎛 Personalizza colori
+        </button>
+      ) : (
+        <div style={{ marginTop: 8 }}>
+          {THEME_FIELDS.map((f) => (
+            <div
+              className="row between"
+              key={f.key}
+              style={{ alignItems: 'center', marginTop: 6 }}
+            >
+              <span style={{ fontSize: '0.9rem' }}>{f.label}</span>
+              <input
+                type="color"
+                value={resolved[f.key]}
+                onChange={(e) => setColor(f.key, e.target.value)}
+                style={{ width: 52, height: 32, padding: 2, cursor: 'pointer' }}
+              />
+            </div>
+          ))}
+          <div className="grid-2" style={{ marginTop: 10 }}>
+            <button className="btn ghost small" onClick={resetCustom}>
+              ↩︎ Ripristina preset
+            </button>
+            <button className="btn small" onClick={saveCustom}>
+              💾 Salva tema
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}

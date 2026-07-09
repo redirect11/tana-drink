@@ -11,6 +11,7 @@ import { useCustomer, useHasOrders } from './lib/customerAuth.js'
 import { isFirebaseConfigured, auth } from './lib/firebaseClient.js'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
 import { subscribeSettings, DEFAULT_SETTINGS } from './lib/api.js'
+import { resolveThemeVars, applyTheme } from './lib/themes.js'
 import { envLabel } from './dev/devActions.js'
 import { openCookiePreferences } from './lib/cookieConsent.js'
 import { useEffect, useState } from 'react'
@@ -26,6 +27,12 @@ export default function App() {
     return subscribeSettings(setSettings)
   }, [])
   const accountsOn = settings.customer_accounts_enabled
+
+  // Tema: nel gestionale (/bar) vale il tema staff, altrove quello cliente.
+  useEffect(() => {
+    const scope = onBackoffice ? settings.theme_staff : settings.theme_client
+    applyTheme(resolveThemeVars(scope))
+  }, [settings, onBackoffice])
 
   // Staff loggato (bartender o collaboratore): nel topbar lato cliente
   // mostra il ruolo ed «Esci» al posto di «Accedi».

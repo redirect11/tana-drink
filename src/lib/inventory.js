@@ -143,13 +143,17 @@ export function inventoryTotalValue(items, opts) {
 }
 
 // Calcola il consumo totale per ingrediente da una lista di order_items.
-//   orderItems: [{ drink_id, qty }]
+//   orderItems: [{ drink_id, qty, recipe_items? }]
 //   drinksById: { [drinkId]: { recipe_items: [{ inventory_item_id, name, unit, qty }] } }
+// Gli item "custom" (drink composti al volo dal bartender) portano la ricetta
+// incorporata in `recipe_items`: ha la precedenza sulla ricetta del catalogo.
 // Ritorna: [{ inventory_item_id, name, unit, qty }] con qty in unità base.
 export function computeConsumption(orderItems, drinksById) {
   const acc = new Map()
   for (const oi of orderItems || []) {
-    const recipe = drinksById?.[oi.drink_id]?.recipe_items
+    const recipe = Array.isArray(oi.recipe_items)
+      ? oi.recipe_items
+      : drinksById?.[oi.drink_id]?.recipe_items
     if (!Array.isArray(recipe)) continue
     const mult = Number(oi.qty) || 0
     for (const ri of recipe) {

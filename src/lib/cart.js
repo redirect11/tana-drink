@@ -58,6 +58,23 @@ export function useCart() {
     })
   }, [update])
 
+  // Drink custom composto al volo dal bartender: riga a sé (id univoco
+  // locale), con la ricetta incorporata per lo scarico inventario.
+  const addCustom = useCallback(({ name, price, recipe_items = [] }) => {
+    update((prev) => [
+      ...prev,
+      {
+        drink_id: `custom-${Date.now()}-${Math.floor(Math.random() * 1e6)}`,
+        custom: true,
+        name,
+        price,
+        qty: 1,
+        sumup_product_id: null,
+        recipe_items,
+      },
+    ])
+  }, [update])
+
   const setQty = useCallback((drinkId, qty) => {
     update((prev) =>
       prev
@@ -71,7 +88,7 @@ export function useCart() {
   const count = items.reduce((s, i) => s + i.qty, 0)
   const total = items.reduce((s, i) => s + i.qty * Number(i.price || 0), 0)
 
-  return { items, add, setQty, clear, count, total }
+  return { items, add, addCustom, setQty, clear, count, total }
 }
 
 // Memoria locale degli ID degli ordini effettuati da questo dispositivo,
