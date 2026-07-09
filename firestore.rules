@@ -115,6 +115,21 @@ service cloud.firestore {
       allow read, write: if isBartender();
     }
 
+    // CONTE DI MAGAZZINO — inventario periodico (dep/acq/rim→consumo).
+    match /stock_counts/{countId} {
+      allow read, write: if isBartender();
+    }
+
+    // ORDINI FORNITORE — generatore ordini e storico acquisti.
+    match /purchase_orders/{orderId} {
+      allow read, write: if isBartender();
+    }
+
+    // SCADENZARIO FORNITORI — documenti/proforma, pagato, note.
+    match /supplier_invoices/{invoiceId} {
+      allow read, write: if isBartender();
+    }
+
     // STAFF CALLS — cerca-persone: il bartender chiama, lo staff risponde.
     match /staff_calls/{callId} {
       allow read: if isStaffMember();

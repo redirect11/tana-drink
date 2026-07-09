@@ -30,6 +30,9 @@ import {
   inventoryTotalValue,
 } from '../lib/inventory.js'
 import { formatPrice } from '../lib/orderStatus.js'
+import StockCountPanel from './StockCountPanel.jsx'
+import PurchaseOrdersPanel from './PurchaseOrdersPanel.jsx'
+import SupplierInvoicesPanel from './SupplierInvoicesPanel.jsx'
 
 const STATUS_ITEM = [
   { value: 'linea', label: 'In linea' },
@@ -39,7 +42,39 @@ const STATUS_ITEM = [
 
 const STATUS_LABEL = { ok: '', low: 'in esaurimento', empty: 'esaurito' }
 
+// Sezioni del magazzino: prodotti (giacenze), conta periodica, ordini
+// fornitore e scadenzario — la controparte software dei fogli Excel storici.
+const INV_VIEWS = [
+  ['prodotti', '📦 Prodotti'],
+  ['conta', '📋 Conta'],
+  ['ordini', '🛒 Ordini'],
+  ['scadenzario', '📄 Scadenzario'],
+]
+
 export default function InventoryManager() {
+  const [view, setView] = useState('prodotti')
+  return (
+    <div>
+      <div className="chips-row" style={{ marginBottom: 8 }}>
+        {INV_VIEWS.map(([id, label]) => (
+          <button
+            key={id}
+            className={`chip ${view === id ? 'active' : ''}`}
+            onClick={() => setView(id)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {view === 'prodotti' && <ProductsPanel />}
+      {view === 'conta' && <StockCountPanel />}
+      {view === 'ordini' && <PurchaseOrdersPanel />}
+      {view === 'scadenzario' && <SupplierInvoicesPanel />}
+    </div>
+  )
+}
+
+function ProductsPanel() {
   const [items, setItems] = useState([])
   const [categories, setCategories] = useState([])
   const [suppliers, setSuppliers] = useState([])
