@@ -11,6 +11,11 @@ import {
   bottleBreakdown,
   inventorySummary,
   filterItems,
+  costWithVat,
+  unitsInStock,
+  stockValue,
+  costPerCl,
+  inventoryTotalValue,
 } from '../../src/lib/inventory.js'
 
 describe('toBaseQty', () => {
@@ -112,6 +117,36 @@ describe('filterItems', () => {
   it('combina ricerca + categoria + stato e ordina per nome', () => {
     const res = filterItems(items, { query: 'rum', categoryId: 'distillati', status: 'ok' })
     expect(res.map((i) => i.name)).toEqual(['Rum Zacapa'])
+  })
+})
+
+describe('costi e valorizzazione', () => {
+  // Amaro del Capo: 1L (1000ml), costo 12,9 netto, IVA 22 → +IVA 15,738
+  const amaro = { unit: 'ml', package_size: 1000, cost: 12.9, vat: 22, stock: 2500 }
+  const birra = { unit: 'pz', cost: 0.68, vat: 22, stock: 24 }
+
+  it('costWithVat', () => {
+    expect(costWithVat(12.9, 22)).toBeCloseTo(15.738, 3)
+    expect(costWithVat(10, 0)).toBe(10)
+  })
+  it('unitsInStock: bottiglie equivalenti e pezzi', () => {
+    expect(unitsInStock(amaro)).toBe(2.5) // 2500ml / 1000
+    expect(unitsInStock(birra)).toBe(24)
+  })
+  it('stockValue con IVA', () => {
+    // 2,5 bottiglie × 15,738 = 39,345
+    expect(stockValue(amaro)).toBeCloseTo(39.345, 3)
+    // netto: 2,5 × 12,9 = 32,25
+    expect(stockValue(amaro, { gross: false })).toBeCloseTo(32.25, 3)
+  })
+  it('costPerCl (solo volumi)', () => {
+    // 15,738 / 100cl = 0,15738
+    expect(costPerCl(amaro)).toBeCloseTo(0.15738, 5)
+    expect(costPerCl(birra)).toBeNull()
+  })
+  it('inventoryTotalValue somma i valori', () => {
+    const v = inventoryTotalValue([amaro, birra])
+    expect(v).toBeCloseTo(39.345 + 24 * 0.8296, 3)
   })
 })
 

@@ -31,6 +31,7 @@ const ordersCol = collection(db, 'orders')
 const categoriesCol = collection(db, 'categories')
 const inventoryCol = collection(db, 'inventory_items')
 const inventoryCategoriesCol = collection(db, 'inventory_categories')
+const suppliersCol = collection(db, 'suppliers')
 const movementsCol = collection(db, 'stock_movements')
 const settingsDoc = doc(db, 'settings', 'bar')
 const serateCol = collection(db, 'serate')
@@ -87,6 +88,10 @@ function mapItem(snap) {
     bottles_total: Number(i.bottles_total) || 0,
     low_threshold: Number(i.low_threshold) || 0,
     category_id: i.category_id ?? null,
+    supplier_id: i.supplier_id ?? null,
+    cost: i.cost != null ? Number(i.cost) : null,
+    vat: i.vat != null ? Number(i.vat) : 22,
+    status: i.status ?? 'linea',
     created_at: toIso(i.created_at),
   }
 }
@@ -295,6 +300,41 @@ export async function updateInventoryCategory(id, patch) {
 
 export async function deleteInventoryCategory(id) {
   await deleteDoc(doc(db, 'inventory_categories', id))
+}
+
+// --- FORNITORI ---
+
+function mapSupplier(snap) {
+  const s = snap.data() || {}
+  return {
+    id: snap.id,
+    name: s.name ?? '',
+    sort_order: s.sort_order ?? 0,
+    notes: s.notes ?? null,
+    created_at: toIso(s.created_at),
+  }
+}
+
+export async function fetchSuppliers() {
+  const snap = await getDocs(suppliersCol)
+  const list = snap.docs.map(mapSupplier)
+  list.sort((a, b) => (a.sort_order - b.sort_order) || (a.name || '').localeCompare(b.name || ''))
+  return list
+}
+
+export async function createSupplier({ name, sort_order = 0, notes = null }) {
+  const ref = await addDoc(suppliersCol, { name, sort_order, notes, created_at: serverTimestamp() })
+  return mapSupplier(await getDoc(ref))
+}
+
+export async function updateSupplier(id, patch) {
+  const ref = doc(db, 'suppliers', id)
+  await updateDoc(ref, patch)
+  return mapSupplier(await getDoc(ref))
+}
+
+export async function deleteSupplier(id) {
+  await deleteDoc(doc(db, 'suppliers', id))
 }
 
 export async function createInventoryItem(item) {

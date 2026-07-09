@@ -83,9 +83,10 @@ export function inventorySummary(items) {
   return { total, low, empty }
 }
 
-// Filtra/ordina la lista inventario per ricerca (nome), categoria e stato.
-//   filters: { query?, categoryId? ('all'|id|'none'), status? ('all'|'ok'|'low'|'empty') }
-export function filterItems(items, { query = '', categoryId = 'all', status = 'all' } = {}) {
+// Filtra/ordina la lista inventario per ricerca (nome), categoria, fornitore e stato.
+//   filters: { query?, categoryId? ('all'|id|'none'), supplierId? ('all'|id|'none'),
+//              status? ('all'|'ok'|'low'|'empty') }
+export function filterItems(items, { query = '', categoryId = 'all', supplierId = 'all', status = 'all' } = {}) {
   const q = query.trim().toLowerCase()
   const out = (items || []).filter((it) => {
     if (q && !(it.name || '').toLowerCase().includes(q)) return false
@@ -94,11 +95,51 @@ export function filterItems(items, { query = '', categoryId = 'all', status = 'a
     } else if (categoryId !== 'all') {
       if (it.category_id !== categoryId) return false
     }
+    if (supplierId === 'none') {
+      if (it.supplier_id) return false
+    } else if (supplierId !== 'all') {
+      if (it.supplier_id !== supplierId) return false
+    }
     if (status !== 'all' && stockStatus(it) !== status) return false
     return true
   })
   out.sort((a, b) => (a.name || '').localeCompare(b.name || ''))
   return out
+}
+
+// ── Costi e valorizzazione ─────────────────────────────────────────────
+
+// Prezzo con IVA a partire dal netto e dall'aliquota (%).
+export function costWithVat(cost, vat = 22) {
+  return (Number(cost) || 0) * (1 + (Number(vat) || 0) / 100)
+}
+
+// Numero di confezioni/bottiglie equivalenti in giacenza.
+export function unitsInStock(item) {
+  const stock = Number(item?.stock) || 0
+  if (item?.unit === 'pz') return stock
+  const size = Number(item?.package_size) || 0
+  return size > 0 ? stock / size : 0
+}
+
+// Valore della giacenza di un item (default con IVA).
+export function stockValue(item, { gross = true } = {}) {
+  const unit = gross ? costWithVat(item?.cost, item?.vat) : (Number(item?.cost) || 0)
+  return unitsInStock(item) * unit
+}
+
+// Costo per cl (volumi): costo confezione / cl per confezione. null se non applicabile.
+export function costPerCl(item, { gross = true } = {}) {
+  if (item?.unit !== 'ml') return null
+  const size = Number(item?.package_size) || 0
+  if (size <= 0) return null
+  const unit = gross ? costWithVat(item?.cost, item?.vat) : (Number(item?.cost) || 0)
+  return unit / (size / 10)
+}
+
+// Valore totale del magazzino.
+export function inventoryTotalValue(items, opts) {
+  return (items || []).reduce((s, it) => s + stockValue(it, opts), 0)
 }
 
 // Calcola il consumo totale per ingrediente da una lista di order_items.

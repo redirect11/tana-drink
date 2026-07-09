@@ -105,6 +105,11 @@ service cloud.firestore {
       allow read, write: if isBartender();
     }
 
+    // FORNITORI — anagrafica fornitori di magazzino, solo bartender.
+    match /suppliers/{supplierId} {
+      allow read, write: if isBartender();
+    }
+
     // STOCK MOVEMENTS — registro carico/scarico, solo bartender.
     match /stock_movements/{movementId} {
       allow read, write: if isBartender();
