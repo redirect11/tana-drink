@@ -447,6 +447,263 @@ export async function fetchStockMovements({ limit = 50 } = {}) {
   return snap.docs.map(mapMovement)
 }
 
+// Carichi registrati dopo una certa data (per la colonna ACQ della conta).
+// Filtro per tipo lato client: la query resta su un solo campo (niente
+// indici compositi).
+export async function fetchLoadMovementsSince(iso) {
+  const snap = await getDocs(
+    query(movementsCol, where('created_at', '>', Timestamp.fromDate(new Date(iso))))
+  )
+  return snap.docs.map(mapMovement).filter((m) => m.type === 'load')
+}
+
+// --- CONTA DI MAGAZZINO (inventario periodico: DEP → ACQ → RIM → CONS) ---
+
+function mapStockCount(snap) {
+  const c = snap.data() || {}
+  return {
+    id: snap.id,
+    status: c.status ?? 'open',
+    started_at: toIso(c.started_at),
+    closed_at: toIso(c.closed_at),
+    lines: Array.isArray(c.lines) ? c.lines : [],
+    totals: c.totals ?? null,
+  }
+}
+
+// La conta aperta (al più una), o null.
+export async function getOpenStockCount() {
+  const snap = await getDocs(
+    query(collection(db, 'stock_counts'), where('status', '==', 'open'), fbLimit(1))
+  )
+  return snap.empty ? null : mapStockCount(snap.docs[0])
+}
+
+// Apre una nuova conta fotografando la giacenza corrente (DEP) di ogni
+// prodotto; costi/formnum denormalizzati per calcolare i valori alla chiusura.
+export async function startStockCount(items) {
+  const existing = await getOpenStockCount()
+  if (existing) return existing
+  const lines = (items || []).map((it) => ({
+    item_id: it.id,
+    name: it.name,
+    unit: it.unit,
+    package_size: it.package_size ?? null,
+    cost: it.cost ?? null,
+    vat: it.vat ?? 22,
+    dep: it.stock,
+    acq: 0,
+    rim: null,
+  }))
+  const ref = await addDoc(collection(db, 'stock_counts'), {
+    status: 'open',
+    started_at: serverTimestamp(),
+    lines,
+    totals: null,
+  })
+  return mapStockCount(await getDoc(ref))
+}
+
+// Salva le rimanenze inserite (senza chiudere la conta).
+export async function updateStockCountLines(id, lines) {
+  await updateDoc(doc(db, 'stock_counts', id), { lines })
+}
+
+// Chiude la conta salvando righe complete (cons/valori) e totali.
+// Se align=true le giacenze dei prodotti vengono allineate alle rimanenze
+// contate (con movimento di rettifica per la differenza).
+export async function closeStockCount(id, { lines, totals, align = true }) {
+  await runTransaction(db, async (tx) => {
+    const countRef = doc(db, 'stock_counts', id)
+    const countSnap = await tx.get(countRef)
+    if (!countSnap.exists()) throw new Error('Conta non trovata')
+    if (countSnap.data().status !== 'open') throw new Error('Conta già chiusa')
+
+    // --- LETTURE ---
+    const toAlign = align
+      ? lines.filter((l) => l.rim != null && l.rim !== '')
+      : []
+    const itemSnaps = await Promise.all(
+      toAlign.map((l) => tx.get(doc(db, 'inventory_items', l.item_id)))
+    )
+
+    // --- SCRITTURE ---
+    toAlign.forEach((l, idx) => {
+      const s = itemSnaps[idx]
+      if (!s.exists()) return
+      const cur = s.data()
+      const rim = Number(l.rim) || 0
+      const delta = rim - (Number(cur.stock) || 0)
+      if (delta === 0) return
+      tx.update(doc(db, 'inventory_items', l.item_id), { stock: rim })
+      tx.set(doc(movementsCol), {
+        item_id: l.item_id,
+        item_name: cur.name,
+        type: delta > 0 ? 'load' : 'unload',
+        qty: Math.abs(delta),
+        unit: cur.unit ?? null,
+        reason: 'conta',
+        created_at: serverTimestamp(),
+      })
+    })
+
+    tx.update(countRef, {
+      status: 'closed',
+      closed_at: serverTimestamp(),
+      lines,
+      totals,
+    })
+  })
+}
+
+export async function fetchStockCounts({ limit = 20 } = {}) {
+  const snap = await getDocs(
+    query(collection(db, 'stock_counts'), orderBy('started_at', 'desc'), fbLimit(limit))
+  )
+  return snap.docs.map(mapStockCount)
+}
+
+// --- ORDINI FORNITORE (generatore ordini + storico) ---
+
+function mapPurchaseOrder(snap) {
+  const o = snap.data() || {}
+  return {
+    id: snap.id,
+    supplier_id: o.supplier_id ?? null,
+    supplier_name: o.supplier_name ?? '',
+    status: o.status ?? 'inviato', // inviato | ricevuto
+    created_at: toIso(o.created_at),
+    received_at: toIso(o.received_at),
+    lines: Array.isArray(o.lines) ? o.lines : [],
+    total_net: Number(o.total_net) || 0,
+    total_gross: Number(o.total_gross) || 0,
+  }
+}
+
+export async function createPurchaseOrder({ supplier_id, supplier_name, lines, total_net, total_gross }) {
+  const ref = await addDoc(collection(db, 'purchase_orders'), {
+    supplier_id,
+    supplier_name,
+    status: 'inviato',
+    created_at: serverTimestamp(),
+    received_at: null,
+    lines,
+    total_net,
+    total_gross,
+  })
+  return mapPurchaseOrder(await getDoc(ref))
+}
+
+export async function fetchPurchaseOrders({ limit = 30 } = {}) {
+  const snap = await getDocs(
+    query(collection(db, 'purchase_orders'), orderBy('created_at', 'desc'), fbLimit(limit))
+  )
+  return snap.docs.map(mapPurchaseOrder)
+}
+
+export async function deletePurchaseOrder(id) {
+  await deleteDoc(doc(db, 'purchase_orders', id))
+}
+
+// Segna un ordine come ricevuto e carica la merce a magazzino: per ogni riga
+// aumenta la giacenza (confezioni × contenuto, o pezzi) e registra il
+// movimento; le bottiglie totali vengono aggiornate scartando le vuote,
+// come nel carico manuale.
+export async function receivePurchaseOrder(id) {
+  await runTransaction(db, async (tx) => {
+    const orderRef = doc(db, 'purchase_orders', id)
+    const orderSnap = await tx.get(orderRef)
+    if (!orderSnap.exists()) throw new Error('Ordine non trovato')
+    const order = orderSnap.data()
+    if (order.status === 'ricevuto') return
+
+    const lines = (order.lines || []).filter((l) => (Number(l.qty_packages) || 0) > 0)
+
+    // --- LETTURE ---
+    const itemSnaps = await Promise.all(
+      lines.map((l) => tx.get(doc(db, 'inventory_items', l.item_id)))
+    )
+
+    // --- SCRITTURE ---
+    lines.forEach((l, idx) => {
+      const s = itemSnaps[idx]
+      if (!s.exists()) return
+      const cur = s.data()
+      const qty = Number(l.qty_packages) || 0
+      const size = Number(cur.package_size) || 0
+      const stock = Number(cur.stock) || 0
+
+      let addQty
+      const patch = {}
+      if (cur.unit === 'pz' || !size) {
+        addQty = qty
+        patch.stock = stock + addQty
+      } else {
+        addQty = qty * size
+        const full = Math.floor(stock / size)
+        const hasOpen = stock - full * size > 1e-9
+        patch.stock = stock + addQty
+        patch.bottles_total = full + (hasOpen ? 1 : 0) + qty
+      }
+      tx.update(doc(db, 'inventory_items', l.item_id), patch)
+      tx.set(doc(movementsCol), {
+        item_id: l.item_id,
+        item_name: cur.name,
+        type: 'load',
+        qty: addQty,
+        unit: cur.unit ?? null,
+        reason: 'ordine fornitore',
+        created_at: serverTimestamp(),
+      })
+    })
+
+    tx.update(orderRef, { status: 'ricevuto', received_at: serverTimestamp() })
+  })
+}
+
+// --- SCADENZARIO FORNITORI (documenti / pagamenti) ---
+
+function mapInvoice(snap) {
+  const i = snap.data() || {}
+  return {
+    id: snap.id,
+    supplier_id: i.supplier_id ?? null,
+    supplier_name: i.supplier_name ?? '',
+    number: i.number ?? '',
+    doc_type: i.doc_type ?? 'Proforma',
+    date: i.date ?? null, // YYYY-MM-DD
+    amount: Number(i.amount) || 0,
+    paid: !!i.paid,
+    notes: i.notes ?? null,
+    created_at: toIso(i.created_at),
+  }
+}
+
+export async function fetchSupplierInvoices({ limit = 100 } = {}) {
+  const snap = await getDocs(
+    query(collection(db, 'supplier_invoices'), orderBy('date', 'desc'), fbLimit(limit))
+  )
+  return snap.docs.map(mapInvoice)
+}
+
+export async function createSupplierInvoice(invoice) {
+  const ref = await addDoc(collection(db, 'supplier_invoices'), {
+    ...invoice,
+    amount: Number(invoice.amount) || 0,
+    paid: !!invoice.paid,
+    created_at: serverTimestamp(),
+  })
+  return mapInvoice(await getDoc(ref))
+}
+
+export async function updateSupplierInvoice(id, patch) {
+  await updateDoc(doc(db, 'supplier_invoices', id), patch)
+}
+
+export async function deleteSupplierInvoice(id) {
+  await deleteDoc(doc(db, 'supplier_invoices', id))
+}
+
 // --- SERATE (sessioni / conto) ---
 
 function mapSerata(snap) {
