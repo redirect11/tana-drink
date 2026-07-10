@@ -24,6 +24,7 @@ import { ORDER_STATUSES } from './orderStatus.js'
 import { splitAmounts } from './groups.js'
 import { createSumUpSale, updateSumUpSaleStatus, toSumUpStatus } from './sumupApi.js'
 import { computeConsumption, formatQty } from './inventory.js'
+import { consumptionDiff } from './warehouse.js'
 import { notify } from './notify.js'
 
 const drinksCol = collection(db, 'drinks')
@@ -139,6 +140,7 @@ function mapOrder(snap) {
     created_at: toIso(o.created_at),
     sumup_sale_id: o.sumup_sale_id ?? null,
     serata_id: o.serata_id ?? null,
+    inventory_applied: o.inventory_applied ?? false,
     payment_method: o.payment_method ?? null,
     payment_status: o.payment_status ?? 'non_richiesto',
     payment_required: o.payment_required ?? false,
@@ -159,6 +161,7 @@ function mapOrder(snap) {
       qty: i.qty ?? 1,
       sumup_product_id: i.sumup_product_id ?? null,
       custom: i.custom ?? false,
+      recipe_items: i.recipe_items ?? null,
     })),
   }
 }
@@ -1434,6 +1437,87 @@ export async function updateOrderItems(id, items) {
       })),
       total,
     })
+  })
+  return mapOrder(await getDoc(ref))
+}
+
+// Modifica di un ordine da parte del BARTENDER: item (quantità, rimozioni,
+// aggiunte dal catalogo), tavolo e note, finché l'ordine non è pagato o
+// annullato. Se lo scarico scorte era già stato applicato (ordine in
+// preparazione o oltre), l'inventario viene riallineato con la DIFFERENZA
+// tra vecchio e nuovo consumo, aggiornando lo snapshot.
+export async function bartenderUpdateOrder(id, { items, table_label, note }) {
+  const ref = doc(db, 'orders', id)
+  const itemsTotal = items.reduce((s, i) => s + i.qty * Number(i.unit_price ?? i.price ?? 0), 0)
+
+  const newItems = items.map((i) => ({
+    drink_id: i.drink_id,
+    name: i.name,
+    unit_price: i.unit_price ?? i.price ?? 0,
+    qty: i.qty,
+    sumup_product_id: i.sumup_product_id ?? null,
+    ...(i.custom ? { custom: true, recipe_items: i.recipe_items ?? [] } : {}),
+  }))
+
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref)
+    if (!snap.exists()) throw new Error('Ordine non trovato')
+    const cur = snap.data()
+    if (cur.status === ORDER_STATUSES.PAGATO || cur.status === ORDER_STATUSES.ANNULLATO) {
+      throw new Error('Ordine chiuso: non più modificabile')
+    }
+
+    const extras =
+      Number(cur.coperto_amount || 0) +
+      Number(cur.service_charge_amount || 0) +
+      Number(cur.tip_amount || 0)
+    const patch = { items: newItems, total: itemsTotal + extras }
+    if (table_label !== undefined) patch.table_label = table_label || null
+    if (note !== undefined) patch.note = note || null
+
+    // Scarico già applicato: riallinea le scorte con la differenza tra il
+    // consumo vecchio (snapshot) e quello dei nuovi item.
+    if (cur.inventory_applied === true) {
+      // --- LETTURE ---
+      const drinkIds = [...new Set(newItems.filter((i) => !i.custom).map((i) => i.drink_id).filter(Boolean))]
+      const drinkSnaps = await Promise.all(drinkIds.map((d) => tx.get(doc(db, 'drinks', d))))
+      const drinksById = {}
+      drinkSnaps.forEach((s, idx) => {
+        drinksById[drinkIds[idx]] = s.exists() ? s.data() : null
+      })
+
+      const oldCons = Array.isArray(cur.inventory_consumption) ? cur.inventory_consumption : []
+      const newCons = computeConsumption(newItems, drinksById)
+      const diffs = consumptionDiff(oldCons, newCons)
+
+      const invSnaps = await Promise.all(
+        diffs.map((d) => tx.get(doc(db, 'inventory_items', d.inventory_item_id)))
+      )
+
+      // --- SCRITTURE ---
+      diffs.forEach((d, idx) => {
+        const s = invSnaps[idx]
+        if (!s.exists()) return
+        const curItem = s.data()
+        tx.update(doc(db, 'inventory_items', d.inventory_item_id), {
+          stock: (Number(curItem.stock) || 0) - d.delta,
+        })
+        tx.set(doc(movementsCol), {
+          item_id: d.inventory_item_id,
+          item_name: curItem.name,
+          type: d.delta > 0 ? 'unload' : 'load',
+          qty: Math.abs(d.delta),
+          unit: curItem.unit ?? null,
+          reason: 'modifica ordine',
+          order_id: id,
+          created_at: serverTimestamp(),
+        })
+      })
+
+      patch.inventory_consumption = newCons
+    }
+
+    tx.update(ref, patch)
   })
   return mapOrder(await getDoc(ref))
 }
