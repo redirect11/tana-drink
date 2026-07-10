@@ -43,7 +43,7 @@ const addBanner = (msg) => {
 
 // Invia un ordine dal POS in background. Ritorna subito: il chiamante può
 // navigare alla griglia mentre la creazione/stampa procede.
-export function submitPosOrder({ serata_id, table_label, note, items, placed_by, printNow = false }) {
+export function submitPosOrder({ serata_id, table_label, note, items, placed_by, customer_name = null, printNow = false }) {
   const tempId = `tmp${++seq}`
   const order = {
     id: tempId,
@@ -53,7 +53,7 @@ export function submitPosOrder({ serata_id, table_label, note, items, placed_by,
     note: note || null,
     status: ORDER_STATUSES.IN_PREPARAZIONE,
     payment_status: 'non_richiesto',
-    customer_name: null,
+    customer_name: customer_name || null,
     placed_by: placed_by || null,
     total: items.reduce((s, i) => s + i.qty * Number(i.price || 0), 0),
     order_items: items.map((i) => ({
@@ -74,6 +74,7 @@ export function submitPosOrder({ serata_id, table_label, note, items, placed_by,
         note,
         items,
         placed_by,
+        customer_name: customer_name || null,
         status: ORDER_STATUSES.IN_PREPARAZIONE,
       })
     } catch (e) {

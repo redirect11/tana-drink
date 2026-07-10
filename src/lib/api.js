@@ -1446,7 +1446,7 @@ export async function updateOrderItems(id, items) {
 // annullato. Se lo scarico scorte era già stato applicato (ordine in
 // preparazione o oltre), l'inventario viene riallineato con la DIFFERENZA
 // tra vecchio e nuovo consumo, aggiornando lo snapshot.
-export async function bartenderUpdateOrder(id, { items, table_label, note }) {
+export async function bartenderUpdateOrder(id, { items, table_label, note, customer_name }) {
   const ref = doc(db, 'orders', id)
   const itemsTotal = items.reduce((s, i) => s + i.qty * Number(i.unit_price ?? i.price ?? 0), 0)
 
@@ -1474,6 +1474,7 @@ export async function bartenderUpdateOrder(id, { items, table_label, note }) {
     const patch = { items: newItems, total: itemsTotal + extras }
     if (table_label !== undefined) patch.table_label = table_label || null
     if (note !== undefined) patch.note = note || null
+    if (customer_name !== undefined) patch.customer_name = customer_name || null
 
     // Scarico già applicato: riallinea le scorte con la differenza tra il
     // consumo vecchio (snapshot) e quello dei nuovi item.

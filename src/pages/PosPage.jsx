@@ -24,6 +24,7 @@ export default function PosPage() {
   const [error, setError] = useState(null)
   const [tableLabel, setTableLabel] = useState('')
   const [note, setNote] = useState('')
+  const [customerName, setCustomerName] = useState('')
   const gridRef = useRef(null)
 
   // POS a tutto schermo: esce dal contenitore centrato .app (max 760px) così
@@ -78,6 +79,7 @@ export default function PosPage() {
       serata_id: serata.id,
       table_label: tableLabel || null,
       note: note || null,
+      customer_name: customerName.trim() || null,
       items: cart.items,
       placed_by: staff ? { email: staff.email, name: staff.name, role: staff.role } : undefined,
       printNow,
@@ -85,6 +87,7 @@ export default function PosPage() {
     cart.clear()
     setTableLabel('')
     setNote('')
+    setCustomerName('')
     navigate('/bar')
   }
 
@@ -193,14 +196,22 @@ export default function PosPage() {
         boxShadow: '0 -4px 24px rgba(0,0,0,0.4)',
       }}>
 
-        {/* Riga tavolo + nota */}
+        {/* Riga nome + tavolo + nota (come SumUp: l'ordine porta il nome del cliente) */}
         <div style={{ display: 'flex', gap: 8 }}>
+          <input
+            type="text"
+            placeholder="Nome (opz.)"
+            value={customerName}
+            onChange={(e) => setCustomerName(e.target.value)}
+            style={{ flex: 1, minWidth: 90, padding: '6px 10px', borderRadius: 8, fontSize: '0.9rem',
+              background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.15)', color: 'inherit' }}
+          />
           <input
             type="text"
             placeholder="Tavolo (opz.)"
             value={tableLabel}
             onChange={(e) => setTableLabel(e.target.value)}
-            style={{ width: 110, padding: '6px 10px', borderRadius: 8, fontSize: '0.9rem',
+            style={{ width: 100, padding: '6px 10px', borderRadius: 8, fontSize: '0.9rem',
               background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.15)', color: 'inherit' }}
           />
           <input
