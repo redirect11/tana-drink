@@ -139,6 +139,7 @@ export default function OrderPosDetail({ order }) {
         items: draft.items,
         table_label: draft.table_label,
         note: draft.note,
+        customer_name: draft.customer_name,
       })
     })
 
@@ -164,6 +165,7 @@ export default function OrderPosDetail({ order }) {
         <Link className="btn ghost small" to="/bar" aria-label="Torna agli ordini">← Ordini</Link>
         <strong style={{ fontFamily: 'var(--serif)' }}>
           #{order.daily_number ?? '—'}
+          {order.customer_name ? ` · ${order.customer_name}` : ''}
         </strong>
         <span className={`pill ${order.status}`}>
           {STATUS_EMOJI[order.status]}{' '}
@@ -281,6 +283,15 @@ export default function OrderPosDetail({ order }) {
                 🍹 Drink custom
               </button>
             )}
+
+            <label htmlFor="pd-name" style={{ marginTop: 10 }}>Nome</label>
+            <input
+              id="pd-name"
+              placeholder="Es. iole"
+              value={draft.customer_name}
+              disabled={closed}
+              onChange={(e) => setDraft((ed) => ({ ...ed, customer_name: e.target.value }))}
+            />
 
             <div className="grid-2" style={{ marginTop: 10 }}>
               <div>
@@ -435,6 +446,7 @@ function makeDraft(order) {
     })),
     table_label: order.table_label || '',
     note: order.note || '',
+    customer_name: order.customer_name || '',
   }
 }
 
