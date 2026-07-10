@@ -146,12 +146,12 @@ export default function ServiceQueue() {
 
   // Da servire: pronti, al tavolo (il ritiro al banco lo gestisce il bancone).
   const daServire = orders
-    .filter((o) => o.status === ORDER_STATUSES.PRONTO && o.service_mode !== 'banco')
+    .filter((o) => o.workflow_status === ORDER_STATUSES.PRONTO && o.service_mode !== 'banco')
     .sort((a, b) => (a.daily_number || 0) - (b.daily_number || 0))
 
   // Mance della serata, divise equamente tra i membri dello staff.
   const mance = orders
-    .filter((o) => o.status !== ORDER_STATUSES.ANNULLATO)
+    .filter((o) => o.workflow_status !== ORDER_STATUSES.ANNULLATO)
     .reduce((s, o) => s + (Number(o.tip_amount) || 0), 0)
   const membri = Math.max(1, Number(settings.staff_count) || 1)
 

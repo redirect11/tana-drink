@@ -78,8 +78,8 @@ export default function MyOrdersPage() {
                 · {(o.order_items || []).reduce((s, i) => s + i.qty, 0)} drink
               </span>
             </div>
-            <span className={`pill ${o.status}`}>
-              {STATUS_EMOJI[o.status]} {STATUS_LABELS[o.status]}
+            <span className={`pill ${o.workflow_status}`}>
+              {STATUS_EMOJI[o.workflow_status]} {STATUS_LABELS[o.workflow_status]}
             </span>
           </div>
           <span className="price">{formatPrice(o.total)}</span>

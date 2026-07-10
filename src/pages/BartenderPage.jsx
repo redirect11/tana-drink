@@ -344,7 +344,7 @@ function OrderQueue() {
           const printerSettings = loadPrinterSettings()
           for (const o of data) {
             const isNew = !knownIds.current.has(o.id)
-            if (o.status !== ORDER_STATUSES.RICEVUTO) continue
+            if (o.workflow_status !== ORDER_STATUSES.RICEVUTO) continue
             if (isAwaitingPayment(o)) {
               if (isNew) awaiting.add(o.id)
               continue
@@ -355,14 +355,14 @@ function OrderQueue() {
               notify('🆕 Nuovo ordine', `Ordine #${o.daily_number} ricevuto.`)
               // Auto-stampa comanda se abilitata nelle impostazioni stampante.
               if (printerSettings.autoPrintComanda) {
-                printComanda(o).catch((e) => console.warn('[printer] auto-comanda:', e.message))
+                printComanda(o, o.comande?.find((cc) => cc.id === o.active_comanda_id) ?? null).catch((e) => console.warn('[printer] auto-comanda:', e.message))
               }
             }
           }
           // Auto-stampa scontrino quando un ordine diventa "pronto".
           if (printerSettings.autoPrintScontrino) {
             for (const o of data) {
-              if (o.status === ORDER_STATUSES.PRONTO && !knownIds.current.has(o.id + '_pronto')) {
+              if (o.workflow_status === ORDER_STATUSES.PRONTO && !knownIds.current.has(o.id + '_pronto')) {
                 knownIds.current.add(o.id + '_pronto')
                 printScontrino(o).catch((e) => console.warn('[printer] auto-scontrino:', e.message))
               }
@@ -429,7 +429,7 @@ function OrderQueue() {
   }
 
   async function advance(order) {
-    const ns = nextStatus(order.status)
+    const ns = nextStatus(order.workflow_status)
     if (!ns) return
     try {
       await updateOrderStatus(order.id, ns)
@@ -515,7 +515,7 @@ function OrderQueue() {
   // annullati, ordinati per numero.
   const boardOrders = visibleOrders
     .filter(
-      (o) => o.status !== ORDER_STATUSES.PAGATO && o.status !== ORDER_STATUSES.ANNULLATO
+      (o) => o.workflow_status !== ORDER_STATUSES.PAGATO && o.workflow_status !== ORDER_STATUSES.ANNULLATO
     )
     .sort((a, b) => (a.daily_number || 0) - (b.daily_number || 0))
   // Ordini POS in invio (placeholder grigi). Finché il placeholder è attivo,
@@ -555,16 +555,16 @@ function OrderQueue() {
   // Pulsanti azione di un ordine (avanza stato, incasso, stampe, annullo).
   // Condivisi dalla card piena (liste) e dalla card-griglia (a scomparsa).
   const orderActions = (o) => {
-    const ns = nextStatus(o.status)
-    const awaiting = isAwaitingPayment(o) && o.status === ORDER_STATUSES.RICEVUTO
+    const ns = nextStatus(o.workflow_status)
+    const awaiting = isAwaitingPayment(o) && o.workflow_status === ORDER_STATUSES.RICEVUTO
     const readerReady = settings.payments_reader_enabled && settings.sumup_reader_id
     const readerPending = o.payment_method === 'lettore' && o.payment_status === 'in_attesa'
     const canCollect =
       o.payment_status !== 'pagato' &&
-      [ORDER_STATUSES.PRONTO, ORDER_STATUSES.RITIRATO].includes(o.status)
+      [ORDER_STATUSES.PRONTO, ORDER_STATUSES.RITIRATO].includes(o.workflow_status)
     return (
       <>
-        {ns && o.status !== ORDER_STATUSES.RITIRATO && !awaiting && (
+        {ns && o.workflow_status !== ORDER_STATUSES.RITIRATO && !awaiting && (
           <button className="btn block" onClick={() => advance(o)}>
             Segna come “{STATUS_LABELS[ns]}”
           </button>
@@ -583,14 +583,14 @@ function OrderQueue() {
           readerReady && (
             <button
               className="btn secondary block"
-              style={{ marginTop: o.status === ORDER_STATUSES.PRONTO ? 8 : 0 }}
+              style={{ marginTop: o.workflow_status === ORDER_STATUSES.PRONTO ? 8 : 0 }}
               onClick={() => incassaSuLettore(o)}
             >
               📟 Incassa sul lettore
             </button>
           )
         )}
-        {o.status === ORDER_STATUSES.RITIRATO && o.payment_status !== 'pagato' && (
+        {o.workflow_status === ORDER_STATUSES.RITIRATO && o.payment_status !== 'pagato' && (
           <button
             className="btn block"
             style={{ marginTop: 8 }}
@@ -603,7 +603,7 @@ function OrderQueue() {
         <div className="grid-2" style={{ marginTop: 8 }}>
           <button
             className="btn ghost small"
-            onClick={() => printComanda(o).catch((e) => setError(`Stampa: ${e.message}`))}
+            onClick={() => printComanda(o, o.comande?.find((cc) => cc.id === o.active_comanda_id) ?? null).catch((e) => setError(`Stampa: ${e.message}`))}
           >
             🖨 Comanda
           </button>
@@ -614,7 +614,7 @@ function OrderQueue() {
             🧾 Scontrino
           </button>
         </div>
-        {o.status === ORDER_STATUSES.RICEVUTO && (
+        {o.workflow_status === ORDER_STATUSES.RICEVUTO && (
           <button
             className="btn ghost small block"
             style={{ marginTop: 8 }}
@@ -623,7 +623,7 @@ function OrderQueue() {
             ✖️ Annulla ordine
           </button>
         )}
-        {o.status === ORDER_STATUSES.IN_PREPARAZIONE && (
+        {o.workflow_status === ORDER_STATUSES.IN_PREPARAZIONE && (
           <button
             className="btn ghost small block"
             style={{ marginTop: 8 }}
@@ -632,7 +632,7 @@ function OrderQueue() {
             ✖️ Annulla preparazione
           </button>
         )}
-        {o.status === ORDER_STATUSES.PRONTO && (
+        {o.workflow_status === ORDER_STATUSES.PRONTO && (
           <button
             className="btn ghost small block"
             style={{ marginTop: 8 }}
@@ -649,12 +649,12 @@ function OrderQueue() {
   // numero, cliente/tavolo, stato, n° prodotti e subtotale. I tasti sono a
   // scomparsa: nascosti di default, compaiono toccando la card.
   const renderGridCard = (o) => {
-    const awaiting = isAwaitingPayment(o) && o.status === ORDER_STATUSES.RICEVUTO
+    const awaiting = isAwaitingPayment(o) && o.workflow_status === ORDER_STATUSES.RICEVUTO
     const count = (o.order_items || []).reduce((s, i) => s + i.qty, 0)
     const open = openCards.has(o.id)
     return (
       <div
-        className={`card order-card grid-card ${o.status}`}
+        className={`card order-card grid-card ${o.workflow_status}`}
         key={o.id}
         style={awaiting ? { opacity: 0.55 } : undefined}
       >
@@ -667,17 +667,17 @@ function OrderQueue() {
         >
           <div className="row between">
             <span className="bignum">#{o.daily_number ?? '—'}</span>
-            <span className={`pill ${o.status}`}>
-              {STATUS_EMOJI[o.status]}{' '}
-              {o.status === ORDER_STATUSES.RITIRATO
+            <span className={`pill ${o.workflow_status}`}>
+              {STATUS_EMOJI[o.workflow_status]}{' '}
+              {o.workflow_status === ORDER_STATUSES.RITIRATO
                 ? ritiratoLabel(o.service_mode)
-                : STATUS_LABELS[o.status]}
+                : STATUS_LABELS[o.workflow_status]}
             </span>
           </div>
           <div className="grid-card-sub">
             {o.customer_name && <strong>{o.customer_name}</strong>}
             {o.table_label && <span className="muted"> · Tavolo {o.table_label}</span>}
-            {o.payment_status === 'pagato' && o.status !== ORDER_STATUSES.PAGATO && (
+            {o.payment_status === 'pagato' && o.workflow_status !== ORDER_STATUSES.PAGATO && (
               <span className="pill pagato" style={{ marginLeft: 6 }}>💳</span>
             )}
           </div>
@@ -736,10 +736,10 @@ function OrderQueue() {
   }
 
   const renderCard = (o) => {
-        const awaiting = isAwaitingPayment(o) && o.status === ORDER_STATUSES.RICEVUTO
+        const awaiting = isAwaitingPayment(o) && o.workflow_status === ORDER_STATUSES.RICEVUTO
         return (
           <div
-            className={`card order-card ${o.status}`}
+            className={`card order-card ${o.workflow_status}`}
             key={o.id}
             style={awaiting ? { opacity: 0.55 } : undefined}
           >
@@ -759,7 +759,7 @@ function OrderQueue() {
                   <span className="pill" style={{ marginLeft: 6 }}>🍸 Al tavolo</span>
                 )}
                 {/* Stato pagamento */}
-                {o.payment_status === 'pagato' && o.status !== ORDER_STATUSES.PAGATO && (
+                {o.payment_status === 'pagato' && o.workflow_status !== ORDER_STATUSES.PAGATO && (
                   <span className="pill pagato" style={{ marginLeft: 6 }}>
                     💳 Pagato{o.payment_method === 'online' ? ' online' : ''}
                   </span>
@@ -780,11 +780,11 @@ function OrderQueue() {
                   </span>
                 )}
               </div>
-              <span className={`pill ${o.status}`}>
-                {STATUS_EMOJI[o.status]}{' '}
-                {o.status === ORDER_STATUSES.RITIRATO
+              <span className={`pill ${o.workflow_status}`}>
+                {STATUS_EMOJI[o.workflow_status]}{' '}
+                {o.workflow_status === ORDER_STATUSES.RITIRATO
                   ? ritiratoLabel(o.service_mode)
-                  : STATUS_LABELS[o.status]}
+                  : STATUS_LABELS[o.workflow_status]}
               </span>
             </div>
             <div style={{ margin: '8px 0' }}>
@@ -806,7 +806,7 @@ function OrderQueue() {
               <div className="order-note">📝 {o.note}</div>
             )}
             {/* Tempi effettivi: preparazione sui "pronti", servizio sui serviti al tavolo. */}
-            {o.status === ORDER_STATUSES.PRONTO && (() => {
+            {o.workflow_status === ORDER_STATUSES.PRONTO && (() => {
               const m = minutesBetween(o.status_times?.in_preparazione, o.status_times?.pronto)
               return m != null && (
                 <p className="muted small" style={{ margin: '0 0 8px' }}>
@@ -814,7 +814,7 @@ function OrderQueue() {
                 </p>
               )
             })()}
-            {o.status === ORDER_STATUSES.RITIRATO && o.service_mode === 'tavolo' && (() => {
+            {o.workflow_status === ORDER_STATUSES.RITIRATO && o.service_mode === 'tavolo' && (() => {
               const m = minutesBetween(o.status_times?.pronto, o.status_times?.ritirato)
               return m != null && (
                 <p className="muted small" style={{ margin: '0 0 8px' }}>

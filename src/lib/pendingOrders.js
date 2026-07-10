@@ -51,7 +51,8 @@ export function submitPosOrder({ serata_id, table_label, note, items, placed_by,
     serata_id,
     table_label: table_label || null,
     note: note || null,
-    status: ORDER_STATUSES.IN_PREPARAZIONE,
+    status: 'aperto',
+    workflow_status: ORDER_STATUSES.IN_PREPARAZIONE,
     payment_status: 'non_richiesto',
     customer_name: customer_name || null,
     placed_by: placed_by || null,
@@ -87,7 +88,7 @@ export function submitPosOrder({ serata_id, table_label, note, items, placed_by,
     patch(tempId, { realId: created.id, order: { ...order, daily_number: created.daily_number } })
     try {
       const ps = loadPrinterSettings()
-      if (ps.autoPrintComanda || printNow) await printComanda(created)
+      if (ps.autoPrintComanda || printNow) await printComanda(created, created.comande?.[0] ?? null)
     } catch (e) {
       addBanner(`Comanda #${created.daily_number ?? ''} non stampata: ${e.message}`)
     } finally {

@@ -50,16 +50,18 @@ service cloud.firestore {
       allow create: if isStaffMember()
         || !('payment_status' in request.resource.data)
         || request.resource.data.payment_status in ['non_richiesto', 'in_attesa'];
-      allow update: if isBartender()
-        || (isStaffMember()
-            && resource.data.status == 'pronto'
-            && request.resource.data.status == 'ritirato')
-        // Lo staff incassa al tavolo: chiude l'ordine come pagato.
-        || (isStaffMember()
-            && resource.data.status == 'ritirato'
-            && request.resource.data.status == 'pagato')
-        || (resource.data.status == 'ricevuto'
-            && request.resource.data.status in ['ricevuto', 'annullato']
+      // Modello conto/comande: il flusso di lavorazione vive sulle comande
+      // (array nel doc), quindi le transizioni fini sono validate in app.
+      // Lo staff (ruolo fidato via claims) può aggiornare gli ordini
+      // (serve/incassa le comande); il cliente anonimo solo finché il conto
+      // ha la sola prima comanda ancora "ricevuta", senza toccare i campi
+      // di pagamento, e può al più annullare.
+      allow update: if isStaffMember()
+        || (resource.data.status in ['aperto', 'ricevuto']
+            && (!('comande' in resource.data)
+                || (resource.data.comande.size() == 1
+                    && resource.data.comande[0].status == 'ricevuto'))
+            && request.resource.data.status in ['aperto', 'ricevuto', 'annullato']
             && !request.resource.data.diff(resource.data)
                  .affectedKeys().hasAny(paymentKeys().toSet()));
       allow delete: if false;

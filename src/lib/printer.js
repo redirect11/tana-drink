@@ -148,11 +148,14 @@ function italianDateTime(iso) {
 // Ticket per il barista: numero ordine grande, articoli senza prezzi.
 // Formato ispirato al template fotografato (sfondo nero, orario, sezione BAR).
 
-export async function printComanda(order) {
+// `comanda` opzionale: stampa i soli item di quella comanda (aggiunte a un
+// conto aperto); senza, stampa l'aggregato dell'ordine (retrocompatibile).
+export async function printComanda(order, comanda = null) {
   const prn = await getPrinter()
   const now = new Date()
   const hhmm = now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
-  const totalQty = (order.order_items || []).reduce((s, i) => s + (i.qty || 1), 0)
+  const ticketItems = comanda?.items ?? order.order_items ?? []
+  const totalQty = ticketItems.reduce((s, i) => s + (i.qty || 1), 0)
 
   prn.addTextLang('it')
   prn.addTextSmooth(true)
@@ -188,7 +191,7 @@ export async function printComanda(order) {
   prn.addTextAlign(prn.ALIGN_LEFT)
   prn.addText(line())
   prn.addTextSize(1, 2)
-  for (const item of (order.order_items || [])) {
+  for (const item of ticketItems) {
     prn.addText(`${item.qty}  ${item.name.toUpperCase()}\n`)
   }
   prn.addTextSize(1, 1)

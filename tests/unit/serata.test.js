@@ -40,7 +40,9 @@ describe('serataRecap', () => {
 })
 
 describe('openOrdersCount', () => {
-  it('conta gli ordini non ritirati, pagati né annullati', () => {
-    expect(openOrdersCount(orders)).toBe(4) // 1,2,3,4
+  it('conta i CONTI aperti (non pagati né annullati)', () => {
+    // Nel modello conto/comande anche un ordine "ritirato" resta un conto
+    // aperto finché non viene incassato.
+    expect(openOrdersCount(orders)).toBe(5) // 1,2,3,4,5
   })
 })
