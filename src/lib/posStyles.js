@@ -1,0 +1,37 @@
+// Stili condivisi dell'interfaccia POS (cassa e dettaglio ordine).
+// In un modulo separato dai componenti per non rompere il fast refresh.
+
+export function catBtnStyle(active) {
+  return {
+    width: '100%',
+    padding: '10px 6px',
+    borderRadius: 10,
+    border: 'none',
+    background: active
+      ? 'var(--accent, #b47a3c)'
+      : 'rgba(255,255,255,0.05)',
+    color: active ? '#fff' : 'inherit',
+    fontWeight: active ? 700 : 400,
+    fontSize: '0.8rem',
+    textAlign: 'center',
+    cursor: 'pointer',
+    transition: 'background 0.12s',
+    lineHeight: 1.3,
+    wordBreak: 'break-word',
+  }
+}
+
+export const qtyBtnStyle = {
+  width: 28,
+  height: 28,
+  borderRadius: '50%',
+  border: '1px solid rgba(255,255,255,0.2)',
+  background: 'rgba(255,255,255,0.08)',
+  color: 'inherit',
+  fontSize: '1.1rem',
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  lineHeight: 1,
+}
