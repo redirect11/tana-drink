@@ -82,12 +82,12 @@ export default function OrderStatusPage() {
   // dispositivo in automatico. Mai per lo staff: la push andrebbe a loro.
   useEffect(() => {
     if (!viewerChecked || viewerIsStaff) return
-    if (!order?.id || order.push_token || order.status !== ORDER_STATUSES.RICEVUTO) return
+    if (!order?.id || order.push_token || order.workflow_status !== ORDER_STATUSES.RICEVUTO) return
     if (!('Notification' in window) || Notification.permission !== 'granted') return
     getPushToken().then(
       (t) => t && updateOrderPushToken(order.id, t).catch(() => {})
     )
-  }, [viewerChecked, viewerIsStaff, order?.id, order?.push_token, order?.status])
+  }, [viewerChecked, viewerIsStaff, order?.id, order?.push_token, order?.workflow_status])
 
   useEffect(() => {
     let active = true
@@ -95,7 +95,7 @@ export default function OrderStatusPage() {
       .then((o) => {
         if (!active) return
         setOrder(o)
-        prevStatus.current = o.status
+        prevStatus.current = o.workflow_status
       })
       .catch((e) => active && setError(e.message))
 
@@ -109,8 +109,8 @@ export default function OrderStatusPage() {
         setError(null)
         setOrder((prev) => ({ ...prev, ...updated }))
         if (
-          prevStatus.current !== updated.status &&
-          updated.status === ORDER_STATUSES.PRONTO
+          prevStatus.current !== updated.workflow_status &&
+          updated.workflow_status === ORDER_STATUSES.PRONTO
         ) {
           notify(
             '🔔 Il tuo drink è pronto!',
@@ -121,8 +121,8 @@ export default function OrderStatusPage() {
         }
         // Annullamento da parte del bartender con notifica richiesta.
         if (
-          prevStatus.current !== updated.status &&
-          updated.status === ORDER_STATUSES.ANNULLATO &&
+          prevStatus.current !== updated.workflow_status &&
+          updated.workflow_status === ORDER_STATUSES.ANNULLATO &&
           updated.cancelled_by === 'bartender' &&
           updated.cancel_notify
         ) {
@@ -131,7 +131,7 @@ export default function OrderStatusPage() {
             CANCEL_PHRASES[updated.cancel_phrase] || CANCEL_PHRASES.bancone
           )
         }
-        prevStatus.current = updated.status
+        prevStatus.current = updated.workflow_status
       },
       (e) => active && setError(e.message)
     )
@@ -177,7 +177,7 @@ export default function OrderStatusPage() {
   // Coda attiva della serata dell'ordine: serve per la posizione in coda.
   const orderSerataId = order?.serata_id
   const orderActive =
-    order && (order.status === ORDER_STATUSES.RICEVUTO || order.status === ORDER_STATUSES.IN_PREPARAZIONE)
+    order && (order.workflow_status === ORDER_STATUSES.RICEVUTO || order.workflow_status === ORDER_STATUSES.IN_PREPARAZIONE)
   useEffect(() => {
     if (!settings.eta_enabled || !orderSerataId || !orderActive) return
     return subscribeQueue(orderSerataId, setQueue)
@@ -249,21 +249,24 @@ export default function OrderStatusPage() {
     return <OrderPosDetail order={order} />
   }
 
-  const currentIdx = STATUS_FLOW.indexOf(order.status)
+  const currentIdx = STATUS_FLOW.indexOf(order.workflow_status)
   // Con un pagamento online avviato/completato gli item non si toccano
   // (l'importo del checkout deve restare allineato all'ordine); dopo un
   // pagamento fallito si può di nuovo modificare.
   const paymentLocked =
     order.payment_method === 'online' && order.payment_status !== 'fallito'
-  const editable = order.status === ORDER_STATUSES.RICEVUTO && !paymentLocked
+  // Modificabile dal cliente solo finché il conto ha la sola prima comanda
+  // ancora "ricevuta" (dopo le aggiunte del bartender non si tocca più).
+  const singleReceived =
+    (order.comande?.length ?? 1) === 1 && order.workflow_status === ORDER_STATUSES.RICEVUTO
+  const editable = singleReceived && !paymentLocked
   // Annullabile dal cliente finché ricevuto e non pagato.
-  const cancellable =
-    order.status === ORDER_STATUSES.RICEVUTO && order.payment_status !== 'pagato'
+  const cancellable = singleReceived && order.payment_status !== 'pagato'
   // Pannello di pagamento online: in attesa o fallito, mai sugli annullati.
   const showPayment =
     order.payment_method === 'online' &&
     ['in_attesa', 'fallito'].includes(order.payment_status) &&
-    order.status !== ORDER_STATUSES.ANNULLATO
+    order.workflow_status !== ORDER_STATUSES.ANNULLATO
 
   // Tempo stimato personalizzato: tiene conto degli ordini attivi davanti a
   // questo (la coda non viene mostrata, conta solo la posizione).
@@ -273,7 +276,7 @@ export default function OrderStatusPage() {
   ).length
   const myEta = showEta
     ? queueEtaMinutes({
-        status: order.status,
+        status: order.workflow_status,
         position: queueAhead,
         prepStats: serata?.prep_stats,
         etaStats: serata?.eta_stats,
@@ -288,7 +291,7 @@ export default function OrderStatusPage() {
     Number(order.tip_amount || 0)
   const editTotal = editItems.reduce((s, i) => s + i.qty * i.unit_price, 0) + extras
 
-  if (order.status === ORDER_STATUSES.ANNULLATO) {
+  if (order.workflow_status === ORDER_STATUSES.ANNULLATO) {
     const byBartender = order.cancelled_by === 'bartender'
     return (
       <div>
@@ -323,11 +326,11 @@ export default function OrderStatusPage() {
         <div className="muted">Il tuo numero</div>
         <div className="bignum">#{order.daily_number ?? '—'}</div>
         <div style={{ marginTop: 8 }}>
-          <span className={`pill ${order.status}`}>
-            {STATUS_EMOJI[order.status]}{' '}
-            {order.status === ORDER_STATUSES.RITIRATO
+          <span className={`pill ${order.workflow_status}`}>
+            {STATUS_EMOJI[order.workflow_status]}{' '}
+            {order.workflow_status === ORDER_STATUSES.RITIRATO
               ? ritiratoLabel(order.service_mode)
-              : STATUS_LABELS[order.status]}
+              : STATUS_LABELS[order.workflow_status]}
           </span>
         </div>
         {myEta != null && (
@@ -468,11 +471,11 @@ export default function OrderStatusPage() {
         // Controlli di avanzamento per lo STAFF semplice (il bartender apre
         // il dettaglio POS, vedi OrderPosDetail): le regole gli consentono
         // solo pronto→ritirato e ritirato→pagato (incasso al banco).
-        if (!viewerIsStaff || order.status === ORDER_STATUSES.ANNULLATO) return null
-        const ns = nextStatus(order.status)
+        if (!viewerIsStaff || order.workflow_status === ORDER_STATUSES.ANNULLATO) return null
+        const ns = nextStatus(order.workflow_status)
         const staffAllowed =
-          order.status === ORDER_STATUSES.PRONTO ||
-          order.status === ORDER_STATUSES.RITIRATO
+          order.workflow_status === ORDER_STATUSES.PRONTO ||
+          order.workflow_status === ORDER_STATUSES.RITIRATO
         const isPay = ns === ORDER_STATUSES.PAGATO
         if (!ns || !staffAllowed || (isPay && order.payment_status === 'pagato')) return null
         return (

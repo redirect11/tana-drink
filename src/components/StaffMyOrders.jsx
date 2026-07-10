@@ -67,7 +67,7 @@ export default function StaffMyOrders() {
         <Link
           key={o.id}
           to={`/ordine/${o.id}`}
-          className={`card order-card ${o.status}`}
+          className={`card order-card ${o.workflow_status}`}
           style={{ display: 'block', textDecoration: 'none', color: 'inherit' }}
         >
           <div className="row between">
@@ -87,11 +87,11 @@ export default function StaffMyOrders() {
               </div>
             ))}
           </div>
-          <span className={`pill ${o.status}`}>
-            {STATUS_EMOJI[o.status]}{' '}
-            {o.status === ORDER_STATUSES.RITIRATO
+          <span className={`pill ${o.workflow_status}`}>
+            {STATUS_EMOJI[o.workflow_status]}{' '}
+            {o.workflow_status === ORDER_STATUSES.RITIRATO
               ? ritiratoLabel(o.service_mode)
-              : STATUS_LABELS[o.status]}
+              : STATUS_LABELS[o.workflow_status]}
           </span>
         </Link>
       ))}

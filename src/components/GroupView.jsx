@@ -271,7 +271,7 @@ export default function GroupView({ serataId, groupId, onClose }) {
               <span>
                 #{o.daily_number ?? '—'} {o.customer_name ? `· ${o.customer_name}` : ''}{' '}
                 <span className="muted small">
-                  {STATUS_EMOJI[o.status]} {STATUS_LABELS[o.status]}
+                  {STATUS_EMOJI[o.workflow_status]} {STATUS_LABELS[o.workflow_status]}
                 </span>
               </span>
               <span className="price">{formatPrice(o.total)}</span>

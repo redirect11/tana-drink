@@ -161,7 +161,7 @@ export default function MenuPage() {
           setMyOrders((prev) => {
             const others = prev.filter((p) => p.id !== id)
             const isActive =
-              o && o.serata_id === serataId && ACTIVE.includes(o.status)
+              o && o.serata_id === serataId && ACTIVE.includes(o.workflow_status)
             const next = isActive ? [...others, o] : others
             next.sort((a, b) => (b.daily_number || 0) - (a.daily_number || 0))
             return next
@@ -457,8 +457,8 @@ export default function MenuPage() {
                 <span className="price">{formatPrice(o.total)}</span>
               </span>
             </div>
-            <span className={`pill ${o.status}`} style={{ marginTop: 6 }}>
-              {STATUS_EMOJI[o.status]} {STATUS_LABELS[o.status]}
+            <span className={`pill ${o.workflow_status}`} style={{ marginTop: 6 }}>
+              {STATUS_EMOJI[o.workflow_status]} {STATUS_LABELS[o.workflow_status]}
             </span>
           </div>
           <span className="order-mini-chev">›</span>
