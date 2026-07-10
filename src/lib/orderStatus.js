@@ -1,6 +1,9 @@
 // Stati dell'ordine, in ordine di avanzamento.
 // "tipo salumeria": ogni ordine ha un numero progressivo giornaliero.
 export const ORDER_STATUSES = {
+  // Stato dell'ORDINE (conto): aperto finché non viene pagato o annullato.
+  APERTO: 'aperto',
+  // Flusso di lavorazione della COMANDA (ticket) — vedi src/lib/comande.js.
   RICEVUTO: 'ricevuto',
   IN_PREPARAZIONE: 'in_preparazione',
   PRONTO: 'pronto',
@@ -18,6 +21,7 @@ export const STATUS_FLOW = [
 ]
 
 export const STATUS_LABELS = {
+  [ORDER_STATUSES.APERTO]: 'Conto aperto',
   [ORDER_STATUSES.RICEVUTO]: 'Ordine ricevuto',
   [ORDER_STATUSES.IN_PREPARAZIONE]: 'In preparazione',
   [ORDER_STATUSES.PRONTO]: 'Pronto al servizio',
@@ -40,6 +44,7 @@ export const CANCEL_PHRASES = {
 }
 
 export const STATUS_EMOJI = {
+  [ORDER_STATUSES.APERTO]: '🟢',
   [ORDER_STATUSES.RICEVUTO]: '🧾',
   [ORDER_STATUSES.IN_PREPARAZIONE]: '🍹',
   [ORDER_STATUSES.PRONTO]: '🔔',
