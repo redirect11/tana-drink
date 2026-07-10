@@ -8,13 +8,23 @@ const CANCEL_PHRASES = {
   staff: 'Lo staff sarà subito da te.',
 }
 
+// Conta le comande di un ordine in un dato stato. Retrocompatibile: i doc
+// legacy (senza `comande`) valgono come una sola comanda con lo stato
+// dell'ordine.
+function countComande(o, status) {
+  if (!o) return 0
+  if (Array.isArray(o.comande)) return o.comande.filter((c) => c && c.status === status).length
+  return o.status === status ? 1 : 0
+}
+
 // Dati (before, after) di un documento ordine. Restituisce il messaggio da
 // inviare ({ title, body }) oppure null se non va notificato nulla.
 function decideOrderPush(before, after) {
   if (!after || !after.push_token) return null
-  if (!before || before.status === after.status) return null
 
-  if (after.status === 'pronto') {
+  // Una comanda in più è passata a "pronto" (vale anche per le aggiunte
+  // a un conto aperto: ogni comanda pronta notifica il cliente).
+  if (countComande(after, 'pronto') > countComande(before, 'pronto')) {
     // Al tavolo non si ritira nulla: arriva il servizio.
     const body = after.service_mode === 'tavolo'
       ? `Ordine #${after.daily_number ?? '—'}: il drink verrà servito il prima possibile.`
@@ -22,6 +32,7 @@ function decideOrderPush(before, after) {
     return { title: '🔔 Il tuo drink è pronto!', body }
   }
 
+  if (!before || before.status === after.status) return null
   if (
     after.status === 'annullato' &&
     after.cancelled_by === 'bartender' &&
@@ -64,8 +75,8 @@ function decideStaffCallPush(call) {
 // Ordine passato a "pronto" da servire al tavolo → notifica per lo
 // staff di sala (il ritiro al banco lo gestisce il cliente).
 function decideStaffServePush(before, after) {
-  if (!before || !after || before.status === after.status) return null
-  if (after.status !== 'pronto') return null
+  if (!after) return null
+  if (countComande(after, 'pronto') <= countComande(before, 'pronto')) return null
   if (after.service_mode === 'banco') return null
   const tavolo = after.table_label ? ` · Tavolo ${after.table_label}` : ''
   const nome = after.customer_name ? ` — ${after.customer_name}` : ''
@@ -80,9 +91,15 @@ function decideStaffServePush(before, after) {
 // con pagamento OBBLIGATORIO non si prepara — e quindi non si notifica —
 // finché non risulta pagato.
 function isPayableReceived(o) {
-  if (!o || o.status !== 'ricevuto') return false
+  if (!o || countComande(o, 'ricevuto') === 0) return false
   if (o.payment_required && o.payment_status !== 'pagato') return false
   return true
+}
+
+// Numero di comande "in coda" pagabili (0 se il pagamento obbligatorio manca).
+function payableReceivedCount(o) {
+  if (!isPayableReceived(o)) return 0
+  return countComande(o, 'ricevuto')
 }
 
 // Nuovo ordine da preparare → notifica allo staff al bancone. Vale sia alla
@@ -90,17 +107,26 @@ function isPayableReceived(o) {
 // obbligatorio viene saldato (e solo allora entra in coda). Restituisce il
 // messaggio { title, body } o null se non c'è nulla di nuovo da notificare.
 function decideNewOrderStaffPush(before, after) {
-  if (!isPayableReceived(after)) return null
-  if (isPayableReceived(before)) return null // era già in coda: già notificato
+  const now = payableReceivedCount(after)
+  const prev = payableReceivedCount(before)
+  if (now <= prev) return null // niente di nuovo in coda
   const tavolo = after.table_label ? ` · Tavolo ${after.table_label}` : ''
   const nome = after.customer_name ? ` — ${after.customer_name}` : ''
-  return {
-    title: '🆕 Nuovo ordine',
-    body: `Ordine #${after.daily_number ?? '—'} ricevuto.${tavolo}${nome}`,
-  }
+  // Aggiunta a un conto già esistente (seconda comanda in poi) vs primo invio.
+  const isAddition = Array.isArray(after.comande) && after.comande.length > 1
+  return isAddition
+    ? {
+        title: '➕ Aggiunta al conto',
+        body: `Nuova comanda sull'ordine #${after.daily_number ?? '—'}.${tavolo}${nome}`,
+      }
+    : {
+        title: '🆕 Nuovo ordine',
+        body: `Ordine #${after.daily_number ?? '—'} ricevuto.${tavolo}${nome}`,
+      }
 }
 
 module.exports = {
+  countComande,
   decideOrderPush,
   decideStaffCallPush,
   decideStaffServePush,
