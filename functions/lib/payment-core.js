@@ -60,6 +60,17 @@ function mapTransactionStatus(txStatus) {
   return 'in_attesa'
 }
 
+// Tutte le comande servite? (modello conto/comande; i doc legacy valgono
+// come una sola comanda con lo stato dell'ordine)
+function isServed(o) {
+  if (!o) return false
+  if (Array.isArray(o.comande)) {
+    const attive = o.comande.filter((c) => c && c.status !== 'annullato')
+    return attive.length > 0 && attive.every((c) => c.status === 'ritirato')
+  }
+  return o.status === 'ritirato'
+}
+
 // Patch Firestore da applicare all'ordine per un esito di pagamento.
 // - pagato su ordine "ritirato" → chiude anche lo status (auto-avanzamento)
 // - pagato su ordine "annullato" → NON tocca lo status: segna
@@ -78,7 +89,7 @@ function decidePaymentPatch(order, { status, transactionId = null, now }) {
 
   if (order?.status === 'annullato') {
     patch.payment_after_cancel = true
-  } else if (order?.status === 'ritirato') {
+  } else if (isServed(order)) {
     patch.status = 'pagato'
     patch['status_times.pagato'] = now
   }
@@ -96,7 +107,7 @@ function groupOrderPaidPatch(order, { method, paymentId, now }) {
     paid_at: now,
     payment_id: paymentId,
   }
-  if (order.status === 'ritirato') {
+  if (isServed(order)) {
     patch.status = 'pagato'
     patch['status_times.pagato'] = now
   }
@@ -107,9 +118,9 @@ function groupOrderPaidPatch(order, { method, paymentId, now }) {
 // pagato — in qualunque ordine siano arrivate le due cose — si chiude.
 function decideAutoAdvance(before, after) {
   if (!after) return null
-  const nowClosed = after.status === 'ritirato' && after.payment_status === 'pagato'
-  const wasClosed =
-    before && before.status === 'ritirato' && before.payment_status === 'pagato'
+  if (after.status === 'pagato' || after.status === 'annullato') return null
+  const nowClosed = isServed(after) && after.payment_status === 'pagato'
+  const wasClosed = before && isServed(before) && before.payment_status === 'pagato'
   return nowClosed && !wasClosed ? 'pagato' : null
 }
 
@@ -134,6 +145,7 @@ function parseCheckoutWebhookBody(body) {
 }
 
 module.exports = {
+  isServed,
   eurosToCents,
   buildCheckoutPayload,
   buildReaderCheckoutPayload,
