@@ -1944,3 +1944,45 @@ body.fullbleed .bar-content {
 .staff-product-info { display: flex; flex-direction: column; min-width: 0; }
 .staff-product-name { font-weight: 600; font-size: 0.9rem; line-height: 1.15; }
 .staff-product .btn.small { min-width: 40px; flex-shrink: 0; }
+
+/* ── Dettaglio ordine POS (stile SumUp, solo bartender) ─────────────── */
+/* Tablet/desktop: comanda come colonna destra; telefono: pannello in basso. */
+.posd-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+.posd-comanda {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-2);
+  border-left: 1px solid rgba(255, 255, 255, 0.09);
+  width: 320px;
+  flex-shrink: 0;
+}
+@media (max-width: 899px) {
+  .posd-body {
+    flex-direction: column;
+  }
+  .posd-body > aside {
+    /* Categorie in riga orizzontale scorrevole sopra la griglia. */
+    width: 100% !important;
+    flex-direction: row !important;
+    overflow-x: auto;
+    overflow-y: hidden !important;
+    border-right: none !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  }
+  .posd-body > aside button {
+    width: auto !important;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .posd-comanda {
+    width: 100%;
+    max-height: 46dvh;
+    border-left: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.4);
+  }
+}

@@ -10,8 +10,6 @@ import {
   updateOrderPushToken,
   updateOrderStatus,
   markOrderPaid,
-  bartenderUpdateOrder,
-  fetchDrinks,
   cancelOrder,
   DEFAULT_SETTINGS,
 } from '../lib/api.js'
@@ -34,7 +32,7 @@ import { ensureNotificationPermission, notify } from '../lib/notify.js'
 import { rememberOrderId } from '../lib/cart.js'
 import ConfirmDialog from '../components/ConfirmDialog.jsx'
 import PaymentPanel from '../components/PaymentPanel.jsx'
-import CustomDrinkForm from '../components/CustomDrinkForm.jsx'
+import OrderPosDetail from '../components/OrderPosDetail.jsx'
 import QRCode from 'qrcode'
 
 export default function OrderStatusPage() {
@@ -57,10 +55,6 @@ export default function OrderStatusPage() {
   const [viewerIsStaff, setViewerIsStaff] = useState(false)
   const [viewerRole, setViewerRole] = useState(null) // 'bartender' | 'staff' | null
   const [viewerChecked, setViewerChecked] = useState(false)
-  // Modifica ordine (solo bartender): copia editabile di item/tavolo/note.
-  const [bartEdit, setBartEdit] = useState(null)
-  const [catalog, setCatalog] = useState([])
-  const [showCustomAdd, setShowCustomAdd] = useState(false)
 
   useEffect(() => {
     return onAuthStateChanged(auth, async (u) => {
@@ -248,6 +242,12 @@ export default function OrderStatusPage() {
 
   if (error) return <div className="banner">Errore: {error}</div>
   if (!order) return <div className="empty">Carico l’ordine…</div>
+
+  // Il bartender vede il dettaglio in stile POS (come la cassa SumUp):
+  // griglia prodotti per aggiungere alla comanda + gestione completa.
+  if (viewerRole === 'bartender') {
+    return <OrderPosDetail order={order} />
+  }
 
   const currentIdx = STATUS_FLOW.indexOf(order.status)
   // Con un pagamento online avviato/completato gli item non si toccano
@@ -465,228 +465,30 @@ export default function OrderStatusPage() {
       )}
 
       {(() => {
-        // Controlli per lo staff direttamente dal dettaglio: avanzamento di
-        // stato (stessa logica della coda; per lo staff semplice le regole
-        // consentono solo pronto→ritirato e ritirato→pagato) e, per il
-        // bartender, modifica dell'ordine.
+        // Controlli di avanzamento per lo STAFF semplice (il bartender apre
+        // il dettaglio POS, vedi OrderPosDetail): le regole gli consentono
+        // solo pronto→ritirato e ritirato→pagato (incasso al banco).
         if (!viewerIsStaff || order.status === ORDER_STATUSES.ANNULLATO) return null
-        const closed = order.status === ORDER_STATUSES.PAGATO
         const ns = nextStatus(order.status)
         const staffAllowed =
-          viewerRole === 'bartender' ||
           order.status === ORDER_STATUSES.PRONTO ||
           order.status === ORDER_STATUSES.RITIRATO
         const isPay = ns === ORDER_STATUSES.PAGATO
-        const showAdvance =
-          ns && staffAllowed && !(isPay && order.payment_status === 'pagato')
-        const showEdit = viewerRole === 'bartender' && !closed && !bartEdit
-        if (!showAdvance && !showEdit) return null
+        if (!ns || !staffAllowed || (isPay && order.payment_status === 'pagato')) return null
         return (
           <div className="card">
             <p className="muted" style={{ marginTop: 0, fontSize: '0.85rem' }}>
               🛠 Gestione ordine
             </p>
-            {showAdvance && (
-              <button
-                className="btn block"
-                disabled={saving}
-                onClick={async () => {
-                  setSaving(true)
-                  setError(null)
-                  try {
-                    if (isPay) await markOrderPaid(order.id, 'banco')
-                    else await updateOrderStatus(order.id, ns)
-                  } catch (e) {
-                    setError(e.message)
-                  } finally {
-                    setSaving(false)
-                  }
-                }}
-              >
-                {isPay
-                  ? '💶 Segna pagato (al banco)'
-                  : `Segna come “${ns === ORDER_STATUSES.RITIRATO ? ritiratoLabel(order.service_mode) : STATUS_LABELS[ns]}”`}
-              </button>
-            )}
-            {showEdit && (
-              <button
-                className="btn ghost small block"
-                style={{ marginTop: showAdvance ? 8 : 0 }}
-                onClick={() => {
-                  setBartEdit({
-                    items: order.order_items.map((i) => ({ ...i })),
-                    table_label: order.table_label || '',
-                    note: order.note || '',
-                  })
-                  if (catalog.length === 0) {
-                    fetchDrinks({ onlyAvailable: true }).then(setCatalog).catch(() => {})
-                  }
-                }}
-              >
-                ✏️ Modifica ordine
-              </button>
-            )}
-          </div>
-        )
-      })()}
-
-      {bartEdit && (
-        <div className="card">
-          <strong>✏️ Modifica ordine</strong>
-          {order.inventory_applied && (
-            <p className="muted small" style={{ margin: '6px 0 0' }}>
-              Le scorte già scalate verranno riallineate alla differenza.
-            </p>
-          )}
-
-          {bartEdit.items.map((i, idx) => (
-            <div className="row between" key={i.id ?? idx} style={{ alignItems: 'center', marginTop: 8 }}>
-              <span className="grow">
-                {i.custom ? '✨ ' : ''}{i.name}
-                <span className="muted small"> · {formatPrice(i.unit_price)}</span>
-              </span>
-              <span className="qty">
-                <button
-                  aria-label="Riduci"
-                  onClick={() =>
-                    setBartEdit((e) => ({
-                      ...e,
-                      items: e.items
-                        .map((it, j) => (j === idx ? { ...it, qty: it.qty - 1 } : it))
-                        .filter((it) => it.qty > 0),
-                    }))
-                  }
-                >
-                  −
-                </button>
-                <strong>{i.qty}</strong>
-                <button
-                  aria-label="Aumenta"
-                  onClick={() =>
-                    setBartEdit((e) => ({
-                      ...e,
-                      items: e.items.map((it, j) => (j === idx ? { ...it, qty: it.qty + 1 } : it)),
-                    }))
-                  }
-                >
-                  +
-                </button>
-              </span>
-            </div>
-          ))}
-
-          <select
-            value=""
-            style={{ marginTop: 10 }}
-            onChange={(e) => {
-              const d = catalog.find((x) => x.id === e.target.value)
-              if (!d) return
-              setBartEdit((ed) => {
-                const existing = ed.items.findIndex((it) => !it.custom && it.drink_id === d.id)
-                if (existing >= 0) {
-                  return {
-                    ...ed,
-                    items: ed.items.map((it, j) => (j === existing ? { ...it, qty: it.qty + 1 } : it)),
-                  }
-                }
-                return {
-                  ...ed,
-                  items: [
-                    ...ed.items,
-                    {
-                      drink_id: d.id,
-                      name: d.name,
-                      unit_price: d.price,
-                      qty: 1,
-                      sumup_product_id: d.sumup_product_id ?? null,
-                    },
-                  ],
-                }
-              })
-            }}
-          >
-            <option value="">+ Aggiungi drink dal menù…</option>
-            {catalog.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.name} · {formatPrice(d.price)}
-              </option>
-            ))}
-          </select>
-
-          <button
-            className="btn ghost small block"
-            style={{ marginTop: 8 }}
-            onClick={() => setShowCustomAdd(true)}
-          >
-            🍹 Aggiungi drink custom (fuori menù)
-          </button>
-          {showCustomAdd && (
-            <CustomDrinkForm
-              onCancel={() => setShowCustomAdd(false)}
-              onAdd={({ name, price, recipe_items }) => {
-                setBartEdit((ed) => ({
-                  ...ed,
-                  items: [
-                    ...ed.items,
-                    {
-                      drink_id: `custom-${Date.now()}-${Math.floor(Math.random() * 1e6)}`,
-                      custom: true,
-                      name,
-                      unit_price: price,
-                      qty: 1,
-                      sumup_product_id: null,
-                      recipe_items,
-                    },
-                  ],
-                }))
-                setShowCustomAdd(false)
-              }}
-            />
-          )}
-
-          <div className="grid-2" style={{ marginTop: 8 }}>
-            <div>
-              <label htmlFor="be-table">Tavolo</label>
-              <input
-                id="be-table"
-                value={bartEdit.table_label}
-                onChange={(e) => setBartEdit((ed) => ({ ...ed, table_label: e.target.value }))}
-              />
-            </div>
-            <div>
-              <label htmlFor="be-note">Note</label>
-              <input
-                id="be-note"
-                value={bartEdit.note}
-                onChange={(e) => setBartEdit((ed) => ({ ...ed, note: e.target.value }))}
-              />
-            </div>
-          </div>
-
-          <div className="row between" style={{ marginTop: 10 }}>
-            <strong>Totale drink</strong>
-            <strong className="price">
-              {formatPrice(bartEdit.items.reduce((s, i) => s + i.qty * i.unit_price, 0))}
-            </strong>
-          </div>
-
-          <div className="grid-2" style={{ marginTop: 10 }}>
-            <button className="btn ghost" onClick={() => setBartEdit(null)} disabled={saving}>
-              Annulla
-            </button>
             <button
-              className="btn"
-              disabled={saving || bartEdit.items.length === 0}
+              className="btn block"
+              disabled={saving}
               onClick={async () => {
                 setSaving(true)
                 setError(null)
                 try {
-                  await bartenderUpdateOrder(order.id, {
-                    items: bartEdit.items,
-                    table_label: bartEdit.table_label,
-                    note: bartEdit.note,
-                  })
-                  setBartEdit(null)
+                  if (isPay) await markOrderPaid(order.id, 'banco')
+                  else await updateOrderStatus(order.id, ns)
                 } catch (e) {
                   setError(e.message)
                 } finally {
@@ -694,16 +496,13 @@ export default function OrderStatusPage() {
                 }
               }}
             >
-              {saving ? 'Salvo…' : 'Salva modifiche'}
+              {isPay
+                ? '💶 Segna pagato (al banco)'
+                : `Segna come “${ns === ORDER_STATUSES.RITIRATO ? ritiratoLabel(order.service_mode) : STATUS_LABELS[ns]}”`}
             </button>
           </div>
-          {bartEdit.items.length === 0 && (
-            <p className="muted small" style={{ margin: '8px 0 0' }}>
-              Per svuotare del tutto l'ordine usa “Annulla ordine”.
-            </p>
-          )}
-        </div>
-      )}
+        )
+      })()}
 
       {order.placed_by && (
         <div className="card" style={{ textAlign: 'center' }}>
