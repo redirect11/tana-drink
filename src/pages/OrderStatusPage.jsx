@@ -34,6 +34,7 @@ import { ensureNotificationPermission, notify } from '../lib/notify.js'
 import { rememberOrderId } from '../lib/cart.js'
 import ConfirmDialog from '../components/ConfirmDialog.jsx'
 import PaymentPanel from '../components/PaymentPanel.jsx'
+import CustomDrinkForm from '../components/CustomDrinkForm.jsx'
 import QRCode from 'qrcode'
 
 export default function OrderStatusPage() {
@@ -59,6 +60,7 @@ export default function OrderStatusPage() {
   // Modifica ordine (solo bartender): copia editabile di item/tavolo/note.
   const [bartEdit, setBartEdit] = useState(null)
   const [catalog, setCatalog] = useState([])
+  const [showCustomAdd, setShowCustomAdd] = useState(false)
 
   useEffect(() => {
     return onAuthStateChanged(auth, async (u) => {
@@ -610,6 +612,37 @@ export default function OrderStatusPage() {
               </option>
             ))}
           </select>
+
+          <button
+            className="btn ghost small block"
+            style={{ marginTop: 8 }}
+            onClick={() => setShowCustomAdd(true)}
+          >
+            🍹 Aggiungi drink custom (fuori menù)
+          </button>
+          {showCustomAdd && (
+            <CustomDrinkForm
+              onCancel={() => setShowCustomAdd(false)}
+              onAdd={({ name, price, recipe_items }) => {
+                setBartEdit((ed) => ({
+                  ...ed,
+                  items: [
+                    ...ed.items,
+                    {
+                      drink_id: `custom-${Date.now()}-${Math.floor(Math.random() * 1e6)}`,
+                      custom: true,
+                      name,
+                      unit_price: price,
+                      qty: 1,
+                      sumup_product_id: null,
+                      recipe_items,
+                    },
+                  ],
+                }))
+                setShowCustomAdd(false)
+              }}
+            />
+          )}
 
           <div className="grid-2" style={{ marginTop: 8 }}>
             <div>
