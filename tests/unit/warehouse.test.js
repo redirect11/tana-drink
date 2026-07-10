@@ -10,6 +10,7 @@ import {
   stockCountCompute,
   purchaseOrderTotals,
   invoiceTotals,
+  consumptionDiff,
 } from '../../src/lib/warehouse.js'
 
 describe('countLineCons (DEP + ACQ − RIM = CONS, come i fogli INV)', () => {
@@ -68,6 +69,33 @@ describe('purchaseOrderTotals', () => {
   })
   it('ordine vuoto', () => {
     expect(purchaseOrderTotals([])).toEqual({ net: 0, gross: 0, pieces: 0 })
+  })
+})
+
+describe('consumptionDiff (modifica ordine con scorte già scalate)', () => {
+  const oldCons = [
+    { inventory_item_id: 'rum', name: 'Rum', unit: 'ml', qty: 500 },
+    { inventory_item_id: 'lime', name: 'Lime', unit: 'ml', qty: 40 },
+  ]
+  it('quantità aumentata → delta positivo (da scalare)', () => {
+    const d = consumptionDiff(oldCons, [
+      { inventory_item_id: 'rum', name: 'Rum', unit: 'ml', qty: 750 },
+      { inventory_item_id: 'lime', name: 'Lime', unit: 'ml', qty: 40 },
+    ])
+    expect(d).toEqual([{ inventory_item_id: 'rum', name: 'Rum', unit: 'ml', delta: 250 }])
+  })
+  it('ingrediente rimosso → delta negativo (torna a magazzino)', () => {
+    const d = consumptionDiff(oldCons, [
+      { inventory_item_id: 'rum', name: 'Rum', unit: 'ml', qty: 500 },
+    ])
+    expect(d).toEqual([{ inventory_item_id: 'lime', name: 'Lime', unit: 'ml', delta: -40 }])
+  })
+  it('ingrediente nuovo → delta positivo pieno', () => {
+    const d = consumptionDiff([], [{ inventory_item_id: 'gin', name: 'Gin', unit: 'ml', qty: 50 }])
+    expect(d).toEqual([{ inventory_item_id: 'gin', name: 'Gin', unit: 'ml', delta: 50 }])
+  })
+  it('consumi identici → nessun delta', () => {
+    expect(consumptionDiff(oldCons, oldCons)).toEqual([])
   })
 })
 

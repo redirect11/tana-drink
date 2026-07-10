@@ -68,6 +68,38 @@ export function purchaseOrderTotals(lines) {
   )
 }
 
+// ── Modifica ordine con scorte già scalate ────────────────────────────
+
+// Differenza tra due consumi (liste { inventory_item_id, name, unit, qty }):
+// delta > 0 = consumo aggiuntivo da scalare, delta < 0 = quantità da
+// restituire a magazzino. Usato quando il bartender modifica un ordine già
+// in preparazione (scarico già applicato).
+export function consumptionDiff(oldCons, newCons) {
+  const byId = new Map()
+  for (const c of newCons || []) {
+    byId.set(c.inventory_item_id, {
+      inventory_item_id: c.inventory_item_id,
+      name: c.name ?? null,
+      unit: c.unit ?? 'pz',
+      delta: Number(c.qty) || 0,
+    })
+  }
+  for (const c of oldCons || []) {
+    const cur = byId.get(c.inventory_item_id)
+    if (cur) {
+      cur.delta -= Number(c.qty) || 0
+    } else {
+      byId.set(c.inventory_item_id, {
+        inventory_item_id: c.inventory_item_id,
+        name: c.name ?? null,
+        unit: c.unit ?? 'pz',
+        delta: -(Number(c.qty) || 0),
+      })
+    }
+  }
+  return [...byId.values()].filter((d) => d.delta !== 0)
+}
+
 // ── Scadenzario fornitori (FORNITORI REC) ─────────────────────────────
 
 // Totali documenti: da pagare complessivo e per fornitore.
