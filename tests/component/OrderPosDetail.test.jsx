@@ -6,7 +6,7 @@
 // vede e tocca. Firebase/menu/stampante sono mockati.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import '@testing-library/jest-dom/vitest'
@@ -138,12 +138,14 @@ describe('gestione comande esistenti', () => {
     expect(advanceComanda).toHaveBeenCalledWith('ord1', 'c1', 'pronto')
   })
 
-  it('il + su un item della comanda chiama bartenderUpdateComanda con la qty nuova', async () => {
+  it('il + aggiorna la qty e sincronizza in background (debounce)', async () => {
     const user = userEvent.setup()
     mount(baseOrder())
     // il + della riga Mojito nella COMANDA 1 (pannello destro)
     await user.click(screen.getByRole('button', { name: 'Aumenta' }))
-    expect(bartenderUpdateComanda).toHaveBeenCalledTimes(1)
+    // UI subito aggiornata, scrittura remota dopo il debounce
+    expect(screen.getByText('3')).toBeInTheDocument()
+    await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalledTimes(1), { timeout: 2000 })
     const [, comandaId, payload] = bartenderUpdateComanda.mock.calls[0]
     expect(comandaId).toBe('c1')
     expect(payload.items[0]).toMatchObject({ drink_id: 'mojito', qty: 3 })
@@ -166,6 +168,25 @@ describe('gestione comande esistenti', () => {
     )
     expect(screen.queryByRole('button', { name: 'Aumenta' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Segna/ })).not.toBeInTheDocument()
+  })
+})
+
+describe('modifiche ottimistiche (UX istantanea)', () => {
+  it('tap rapidi su +: UI aggiornata SUBITO, una sola scrittura remota (debounce)', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    const plus = screen.getByRole('button', { name: 'Aumenta' })
+    await user.click(plus)
+    await user.click(plus)
+    await user.click(plus)
+    // la quantità è già 5 in UI, senza attendere il server
+    expect(screen.getByText('5')).toBeInTheDocument()
+    expect(bartenderUpdateComanda).not.toHaveBeenCalled()
+    // dopo il debounce parte UNA sola scrittura col valore finale
+    await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalledTimes(1), { timeout: 2000 })
+    const [, comandaId, payload] = bartenderUpdateComanda.mock.calls[0]
+    expect(comandaId).toBe('c1')
+    expect(payload.items[0]).toMatchObject({ drink_id: 'mojito', qty: 5 })
   })
 })
 
