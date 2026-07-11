@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { subscribeOpenSerata } from '../lib/api.js'
 import { submitPosOrder } from '../lib/pendingOrders.js'
@@ -7,25 +7,25 @@ import { useCart } from '../lib/cart.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import { auth } from '../lib/firebaseClient.js'
 import { onAuthStateChanged } from 'firebase/auth'
-import { DrinkTile } from '../components/PosBits.jsx'
-import { catBtnStyle } from '../lib/posStyles.js'
+import PosProductPicker from '../components/PosProductPicker.jsx'
+import CustomDrinkForm from '../components/CustomDrinkForm.jsx'
 
-// ── POS: griglia prodotti + categorie laterali ─────────────────────────────
-// Interfaccia per il bartender/staff che batte ordini direttamente al banco.
-// Design: categorie come colonna sinistra, prodotti come griglia 2-3 colonne.
+// ── POS cassa: creazione ordine in stile SumUp ─────────────────────────────
+// Layout identico al dettaglio ordine: categorie a sinistra, griglia prodotti
+// al centro e, A DESTRA, i prodotti dell'ordine in composizione (la comanda)
+// con nome/tavolo/nota, totale e invio.
 
 export default function PosPage() {
   const navigate = useNavigate()
   const { drinks, cats, loading } = useMenu()
   const cart = useCart()
-  const [selectedCat, setSelectedCat] = useState(null)
   const [serata, setSerata] = useState(undefined)
   const [staff, setStaff] = useState(null)
   const [error, setError] = useState(null)
   const [tableLabel, setTableLabel] = useState('')
   const [note, setNote] = useState('')
   const [customerName, setCustomerName] = useState('')
-  const gridRef = useRef(null)
+  const [showCustom, setShowCustom] = useState(false)
 
   // POS a tutto schermo: esce dal contenitore centrato .app (max 760px) così
   // la griglia prodotti riempie tutta la larghezza (utile su tablet).
@@ -49,23 +49,11 @@ export default function PosPage() {
     })
   }, [])
 
-  // Seleziona la prima categoria al caricamento
-  useEffect(() => {
-    if (cats.length > 0 && selectedCat === null) setSelectedCat(cats[0].id ?? cats[0].name)
-  }, [cats, selectedCat])
-
-  // Cambia categoria e scrolla in cima alla griglia
-  function selectCat(catKey) {
-    setSelectedCat(catKey)
-    gridRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
-  }
-
-  const catKey = (c) => c.id ?? c.name
-
-  // Prodotti della categoria selezionata
-  const visibleDrinks = !selectedCat || selectedCat === '__all__'
-    ? drinks.filter((d) => d.available)
-    : drinks.filter((d) => d.available && (d.category_id === selectedCat || d.category === selectedCat))
+  const qtyByDrink = useMemo(() => {
+    const m = {}
+    for (const i of cart.items) if (!i.custom) m[i.drink_id] = (m[i.drink_id] || 0) + i.qty
+    return m
+  }, [cart.items])
 
   function handleSend({ printNow = false } = {}) {
     if (cart.items.length === 0) return
@@ -93,9 +81,18 @@ export default function PosPage() {
 
   const cartCount = cart.items.reduce((s, i) => s + i.qty, 0)
 
+  const inputStyle = {
+    padding: '6px 10px',
+    borderRadius: 8,
+    fontSize: '0.9rem',
+    background: 'rgba(255,255,255,0.07)',
+    border: '1px solid rgba(255,255,255,0.15)',
+    color: 'inherit',
+    width: '100%',
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', overflow: 'hidden' }}>
-
       {/* ── Barra in alto: indietro + titolo ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', flexShrink: 0,
         borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
@@ -111,171 +108,129 @@ export default function PosPage() {
         </div>
       )}
 
-      {/* ── Layout principale: sidebar + griglia ── */}
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden', gap: 0 }}>
+      {/* ── Corpo a 3 colonne: categorie · griglia · comanda ── */}
+      <div className="posd-body">
+        <PosProductPicker
+          drinks={drinks}
+          cats={cats}
+          loading={loading}
+          qtyByDrink={qtyByDrink}
+          onAdd={(d) => cart.add(d)}
+          onSetQty={(d, q) => cart.setQty(d.id, q)}
+        />
 
-        {/* ── Sidebar categorie ── */}
-        <aside style={{
-          width: 120,
-          flexShrink: 0,
-          overflowY: 'auto',
-          borderRight: '1px solid rgba(255,255,255,0.07)',
-          padding: '8px 6px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 6,
-        }}>
-          {/* "Tutto" shortcut */}
-          <button
-            onClick={() => selectCat('__all__')}
-            style={catBtnStyle(selectedCat === '__all__')}
-          >
-            Tutti
-          </button>
+        {/* ── Pannello destro: la comanda in composizione ── */}
+        <div className="posd-comanda">
+          <div style={{ flex: 1, overflowY: 'auto', padding: '10px 12px' }}>
+            <div className="muted small" style={{ letterSpacing: 0.5 }}>COMANDA</div>
 
-          {cats.map((c) => (
-            <button
-              key={catKey(c)}
-              onClick={() => selectCat(catKey(c))}
-              style={catBtnStyle(selectedCat === catKey(c))}
-            >
-              {c.name}
-            </button>
-          ))}
-        </aside>
-
-        {/* ── Griglia prodotti ── */}
-        <div
-          ref={gridRef}
-          style={{
-            flex: 1,
-            overflowY: 'auto',
-            padding: '10px 8px 140px',
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-            alignContent: 'start',
-            gap: 10,
-          }}
-        >
-          {loading && <div className="empty" style={{ gridColumn: '1/-1' }}>Carico…</div>}
-
-          {!loading && visibleDrinks.length === 0 && (
-            <div className="empty" style={{ gridColumn: '1/-1' }}>
-              Nessun prodotto in questa categoria.
-            </div>
-          )}
-
-          {visibleDrinks.map((d) => {
-            const inCart = cart.items.find((i) => i.drink_id === d.id)
-            return (
-              <DrinkTile
-                key={d.id}
-                drink={d}
-                qty={inCart?.qty ?? 0}
-                onAdd={() => cart.add(d)}
-                onSetQty={(q) => cart.setQty(d.id, q)}
-              />
-            )
-          })}
-        </div>
-      </div>
-
-      {/* ── Barra carrello fissa in basso ── */}
-      <div style={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        background: 'var(--surface, #1a1a2e)',
-        borderTop: '1px solid rgba(255,255,255,0.12)',
-        padding: '10px 12px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 8,
-        zIndex: 100,
-        boxShadow: '0 -4px 24px rgba(0,0,0,0.4)',
-      }}>
-
-        {/* Riga nome + tavolo + nota (come SumUp: l'ordine porta il nome del cliente) */}
-        <div style={{ display: 'flex', gap: 8 }}>
-          <input
-            type="text"
-            placeholder="Nome (opz.)"
-            value={customerName}
-            onChange={(e) => setCustomerName(e.target.value)}
-            style={{ flex: 1, minWidth: 90, padding: '6px 10px', borderRadius: 8, fontSize: '0.9rem',
-              background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.15)', color: 'inherit' }}
-          />
-          <input
-            type="text"
-            placeholder="Tavolo (opz.)"
-            value={tableLabel}
-            onChange={(e) => setTableLabel(e.target.value)}
-            style={{ width: 100, padding: '6px 10px', borderRadius: 8, fontSize: '0.9rem',
-              background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.15)', color: 'inherit' }}
-          />
-          <input
-            type="text"
-            placeholder="Nota (opz.)"
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            style={{ flex: 1, padding: '6px 10px', borderRadius: 8, fontSize: '0.9rem',
-              background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.15)', color: 'inherit' }}
-          />
-        </div>
-
-        {/* Riga totale + azioni */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {/* Riepilogo carrello */}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            {cartCount > 0 ? (
-              <>
-                <div style={{ fontWeight: 700, fontSize: '1.1rem' }}>
-                  {formatPrice(cart.total)}
-                </div>
-                <div className="muted" style={{ fontSize: '0.8rem' }}>
-                  {cartCount} prodott{cartCount === 1 ? 'o' : 'i'}
-                  {cart.items.slice(0, 2).map((i) => ` · ${i.qty}× ${i.name}`).join('')}
-                  {cart.items.length > 2 ? ` +${cart.items.length - 2}` : ''}
-                </div>
-              </>
-            ) : (
-              <div className="muted" style={{ fontSize: '0.9rem' }}>Carrello vuoto</div>
+            {cart.items.length === 0 && (
+              <p className="muted small" style={{ margin: '6px 0 0' }}>
+                Tocca i prodotti per aggiungerli all'ordine.
+              </p>
             )}
+            {cart.items.map((i, idx) => (
+              <div className="row between" key={i.drink_id ?? idx} style={{ alignItems: 'center', marginTop: 6 }}>
+                <span className="grow" style={{ fontSize: '0.92rem' }}>
+                  {i.custom ? '✨ ' : ''}{i.name}
+                  <span className="muted small"> · {formatPrice(i.price)}</span>
+                </span>
+                <span className="qty">
+                  <button aria-label="Riduci" onClick={() => cart.setQty(i.drink_id, i.qty - 1)}>−</button>
+                  <strong>{i.qty}</strong>
+                  <button aria-label="Aumenta" onClick={() => cart.setQty(i.drink_id, i.qty + 1)}>+</button>
+                </span>
+              </div>
+            ))}
+
+            <button
+              className="btn ghost small block"
+              style={{ marginTop: 10 }}
+              onClick={() => setShowCustom(true)}
+            >
+              🍹 Drink custom
+            </button>
+
+            {/* Dati ordine: nome (come SumUp), tavolo, nota */}
+            <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <input
+                type="text"
+                placeholder="Nome (opz.)"
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                style={inputStyle}
+              />
+              <div style={{ display: 'flex', gap: 6 }}>
+                <input
+                  type="text"
+                  placeholder="Tavolo"
+                  value={tableLabel}
+                  onChange={(e) => setTableLabel(e.target.value)}
+                  style={{ ...inputStyle, width: 90 }}
+                />
+                <input
+                  type="text"
+                  placeholder="Nota (opz.)"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  style={inputStyle}
+                />
+              </div>
+            </div>
           </div>
 
-          {/* Svuota */}
-          {cartCount > 0 && (
-            <button
-              className="btn ghost small"
-              onClick={cart.clear}
-              style={{ flexShrink: 0 }}
-            >
-              Svuota
-            </button>
-          )}
-
-          {/* Invia + stampa comanda */}
-          <button
-            className="btn small"
-            disabled={cartCount === 0 || !serata}
-            onClick={() => handleSend({ printNow: true })}
-            style={{ flexShrink: 0 }}
+          {/* Footer: totale + invio */}
+          <div
+            style={{
+              flexShrink: 0,
+              padding: '10px 12px',
+              borderTop: '1px solid rgba(255,255,255,0.1)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 8,
+            }}
           >
-            🖨 Invia + comanda
-          </button>
-
-          {/* Invia senza stampa */}
-          <button
-            className="btn secondary small"
-            disabled={cartCount === 0 || !serata}
-            onClick={() => handleSend({ printNow: false })}
-            style={{ flexShrink: 0 }}
-          >
-            Invia
-          </button>
+            <div className="row between">
+              <span className="muted small">
+                {cartCount > 0 ? `${cartCount} prodott${cartCount === 1 ? 'o' : 'i'}` : 'Comanda vuota'}
+              </span>
+              {cartCount > 0 && (
+                <button className="btn ghost small" onClick={cart.clear}>Svuota</button>
+              )}
+            </div>
+            <div className="row between">
+              <strong>Totale</strong>
+              <strong className="price">{formatPrice(cart.total)}</strong>
+            </div>
+            <div className="grid-2">
+              <button
+                className="btn secondary small"
+                disabled={cartCount === 0 || !serata}
+                onClick={() => handleSend({ printNow: false })}
+              >
+                Invia
+              </button>
+              <button
+                className="btn small"
+                disabled={cartCount === 0 || !serata}
+                onClick={() => handleSend({ printNow: true })}
+              >
+                🖨 Invia + comanda
+              </button>
+            </div>
+          </div>
         </div>
       </div>
+
+      {showCustom && (
+        <CustomDrinkForm
+          onCancel={() => setShowCustom(false)}
+          onAdd={(item) => {
+            cart.addCustom(item)
+            setShowCustom(false)
+          }}
+        />
+      )}
     </div>
   )
 }
