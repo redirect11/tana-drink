@@ -13,6 +13,9 @@ import {
   itemsTotal,
   comandeStatuses,
   normalizeOrderDoc,
+  orderHasContent,
+  initialDetailView,
+  orderIsClosed,
 } from '../../src/lib/comande.js'
 
 const c = (seq, status, items = []) => ({ id: `c${seq}`, seq, status, items })
@@ -72,6 +75,54 @@ describe('comandeStatuses', () => {
       'ricevuto',
       'ritirato',
     ])
+  })
+})
+
+describe('dettaglio POS: il contenuto del conto è visibile', () => {
+  const withContent = {
+    status: ORDER_OPEN,
+    comande: [c(1, 'ritirato', [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 }])],
+  }
+  const empty = { status: ORDER_OPEN, comande: [] }
+  const onlyCancelled = {
+    status: ORDER_OPEN,
+    comande: [c(1, 'annullato', [{ drink_id: 'x', name: 'X', unit_price: 1, qty: 1 }])],
+  }
+
+  it('orderHasContent: vero con item in comande non annullate', () => {
+    expect(orderHasContent(withContent)).toBe(true)
+    expect(orderHasContent(empty)).toBe(false)
+    expect(orderHasContent(onlyCancelled)).toBe(false)
+  })
+
+  it('il dettaglio di un ordine con contenuto si apre sulle Comande', () => {
+    expect(initialDetailView(withContent)).toBe('comande')
+    expect(initialDetailView(empty)).toBe('menu')
+  })
+
+  it('anche un ordine legacy (solo items) mostra il contenuto', () => {
+    const legacy = normalizeOrderDoc({
+      status: 'in_preparazione',
+      items: [{ drink_id: 'gin', name: 'Gin', unit_price: 8, qty: 1 }],
+    })
+    expect(orderHasContent(legacy)).toBe(true)
+    expect(initialDetailView(legacy)).toBe('comande')
+  })
+
+  it('flusso aggiunta: dopo una nuova comanda l’aggregato contiene tutto', () => {
+    const comande = [
+      ...withContent.comande,
+      c(2, 'ricevuto', [{ drink_id: 'gin', name: 'Gin', unit_price: 8, qty: 1 }]),
+    ]
+    const agg = aggregateItems(comande)
+    expect(agg.map((i) => i.drink_id).sort()).toEqual(['gin', 'mojito'])
+    expect(itemsTotal(agg)).toBe(2 * 7 + 8)
+  })
+
+  it('orderIsClosed solo per pagato/annullato', () => {
+    expect(orderIsClosed({ status: 'pagato' })).toBe(true)
+    expect(orderIsClosed({ status: 'annullato' })).toBe(true)
+    expect(orderIsClosed(withContent)).toBe(false)
   })
 })
 

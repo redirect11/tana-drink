@@ -62,6 +62,19 @@ export function orderIsOpen(order) {
   return order?.status === ORDER_OPEN
 }
 
+// Il conto ha contenuto? (almeno un item in una comanda non annullata)
+export function orderHasContent(order) {
+  return (order?.comande || []).some(
+    (c) => c.status !== ORDER_STATUSES.ANNULLATO && (c.items || []).length > 0
+  )
+}
+
+// Vista iniziale del dettaglio POS: se il conto ha già contenuto si apre
+// sulle COMANDE (si vede subito cosa contiene); se è vuoto, sul menù.
+export function initialDetailView(order) {
+  return orderHasContent(order) ? 'comande' : 'menu'
+}
+
 export function orderIsClosed(order) {
   return order?.status === ORDER_STATUSES.PAGATO || order?.status === ORDER_STATUSES.ANNULLATO
 }

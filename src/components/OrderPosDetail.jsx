@@ -17,7 +17,7 @@ import {
   formatPrice,
   placedByName,
 } from '../lib/orderStatus.js'
-import { nextComandaStatus, comandaDone, allServed, orderIsClosed } from '../lib/comande.js'
+import { nextComandaStatus, comandaDone, allServed, orderIsClosed, initialDetailView } from '../lib/comande.js'
 import { printComanda, printScontrino } from '../lib/printer.js'
 import { DrinkTile } from './PosBits.jsx'
 import { catBtnStyle } from '../lib/posStyles.js'
@@ -34,7 +34,8 @@ import ConfirmDialog from './ConfirmDialog.jsx'
 export default function OrderPosDetail({ order }) {
   const { drinks, cats, loading } = useMenu()
   const [selectedCat, setSelectedCat] = useState(null)
-  const [view, setView] = useState('menu') // 'menu' | 'comande'
+  // Si apre sul contenuto del conto (tab Comande) se esiste già.
+  const [view, setView] = useState(() => initialDetailView(order)) // 'menu' | 'comande'
   const [error, setError] = useState(null)
   const [saving, setSaving] = useState(false)
   const [showCustom, setShowCustom] = useState(false)
@@ -355,6 +356,23 @@ export default function OrderPosDetail({ order }) {
                   <button className="btn block" style={{ marginTop: 8 }} disabled={saving || closed} onClick={sendComanda}>
                     📤 Invia comanda · {formatPrice(newTotal)}
                   </button>
+                )}
+
+                {/* Contenuto attuale del conto, sempre visibile anche mentre
+                    si compone una nuova comanda. */}
+                {(order.order_items || []).length > 0 && (
+                  <>
+                    <hr style={{ borderColor: 'rgba(255,255,255,0.1)', margin: '12px 0 6px' }} />
+                    <p className="muted small" style={{ margin: '0 0 4px' }}>Nel conto</p>
+                    {(order.order_items || []).map((i) => (
+                      <div className="row between" key={i.id} style={{ marginTop: 2 }}>
+                        <span className="muted small">
+                          {i.qty}× {i.custom ? '✨ ' : ''}{i.name}
+                        </span>
+                        <span className="muted small">{formatPrice(i.qty * i.unit_price)}</span>
+                      </div>
+                    ))}
+                  </>
                 )}
               </>
             )}
