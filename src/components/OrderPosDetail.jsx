@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   advanceComanda,
@@ -98,12 +98,50 @@ export default function OrderPosDetail({ order }) {
       setNewItems([])
     })
 
-  // ── Comande esistenti ──
+  // ── Comande esistenti: modifiche OTTIMISTICHE ──
+  // La UX deve essere immediata: il tap su +/− aggiorna subito lo stato
+  // locale, la scrittura su Firestore parte in background con un debounce
+  // (tap rapidi = una sola transazione). In caso di errore si torna allo
+  // stato del server. Finché ci sono modifiche in volo, per quella comanda
+  // vale la versione locale (il realtime non la sovrascrive).
+  const [pendingEdits, setPendingEdits] = useState({}) // comandaId -> items
+  const flushTimers = useRef({})
+  const latestPending = useRef({})
+  latestPending.current = pendingEdits
+
+  const flushComanda = useCallback(async (comandaId) => {
+    clearTimeout(flushTimers.current[comandaId])
+    delete flushTimers.current[comandaId]
+    const items = latestPending.current[comandaId]
+    if (!items) return
+    try {
+      await bartenderUpdateComanda(order.id, comandaId, { items })
+      // Rimuovi l'override solo se nel frattempo non ci sono stati altri tap.
+      setPendingEdits((p) => (p[comandaId] === items ? omit(p, comandaId) : p))
+    } catch (e) {
+      setError(e.message)
+      setPendingEdits((p) => omit(p, comandaId)) // revert allo stato server
+    }
+  }, [order.id])
+
+  // Flush di tutte le modifiche in sospeso (prima di azioni "forti").
+  const flushAll = useCallback(async () => {
+    await Promise.all(Object.keys(latestPending.current).map((id) => flushComanda(id)))
+  }, [flushComanda])
+
+  useEffect(() => {
+    const timers = flushTimers.current
+    return () => Object.values(timers).forEach(clearTimeout)
+  }, [])
+
   function comandaQtyChange(comanda, idx, delta) {
-    const items = comanda.items
+    const base = pendingEdits[comanda.id] ?? comanda.items
+    const items = base
       .map((i, j) => (j === idx ? { ...i, qty: i.qty + delta } : i))
       .filter((i) => i.qty > 0)
-    run(() => bartenderUpdateComanda(order.id, comanda.id, { items }))
+    setPendingEdits((p) => ({ ...p, [comanda.id]: items }))
+    clearTimeout(flushTimers.current[comanda.id])
+    flushTimers.current[comanda.id] = setTimeout(() => flushComanda(comanda.id), 600)
   }
 
   // ── Info conto ──
@@ -209,7 +247,7 @@ export default function OrderPosDetail({ order }) {
                       </button>
                     </span>
                   </div>
-                  {(c.items || []).map((i, idx) => (
+                  {(pendingEdits[c.id] ?? c.items ?? []).map((i, idx) => (
                     <div className="row between" key={idx} style={{ alignItems: 'center', marginTop: 6 }}>
                       <span className="grow" style={{ fontSize: '0.92rem' }}>
                         {i.custom ? '✨ ' : ''}{i.name}
@@ -219,9 +257,9 @@ export default function OrderPosDetail({ order }) {
                         <span className="muted">×{i.qty}</span>
                       ) : (
                         <span className="qty">
-                          <button aria-label="Riduci" onClick={() => comandaQtyChange(c, idx, -1)} disabled={saving}>−</button>
+                          <button aria-label="Riduci" onClick={() => comandaQtyChange(c, idx, -1)}>−</button>
                           <strong>{i.qty}</strong>
-                          <button aria-label="Aumenta" onClick={() => comandaQtyChange(c, idx, 1)} disabled={saving}>+</button>
+                          <button aria-label="Aumenta" onClick={() => comandaQtyChange(c, idx, 1)}>+</button>
                         </span>
                       )}
                     </div>
@@ -231,7 +269,7 @@ export default function OrderPosDetail({ order }) {
                       className="btn small block"
                       style={{ marginTop: 6 }}
                       disabled={saving}
-                      onClick={() => run(() => advanceComanda(order.id, c.id, ns))}
+                      onClick={() => run(async () => { await flushAll(); await advanceComanda(order.id, c.id, ns) })}
                     >
                       Segna “{ns === ORDER_STATUSES.RITIRATO ? ritiratoLabel(order.service_mode) : STATUS_LABELS[ns]}”
                     </button>
@@ -359,7 +397,7 @@ export default function OrderPosDetail({ order }) {
                 <button
                   className="btn small"
                   disabled={saving}
-                  onClick={() => (served ? run(() => markOrderPaid(order.id, 'banco')) : setConfirmPay(true))}
+                  onClick={() => (served ? run(async () => { await flushAll(); await markOrderPaid(order.id, 'banco') }) : setConfirmPay(true))}
                 >
                   💶 Incassa e chiudi
                 </button>
@@ -410,7 +448,7 @@ export default function OrderPosDetail({ order }) {
           onCancel={() => setConfirmPay(false)}
           onConfirm={() => {
             setConfirmPay(false)
-            run(() => markOrderPaid(order.id, 'banco'))
+            run(async () => { await flushAll(); await markOrderPaid(order.id, 'banco') })
           }}
         />
       )}
@@ -433,4 +471,11 @@ export default function OrderPosDetail({ order }) {
       )}
     </div>
   )
+}
+
+// Copia di un oggetto senza una chiave (per rimuovere gli override flushati).
+function omit(obj, key) {
+  const next = { ...obj }
+  delete next[key]
+  return next
 }
