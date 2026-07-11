@@ -83,19 +83,23 @@ function mount(order) {
 
 beforeEach(() => vi.clearAllMocks())
 
-describe('apertura del dettaglio', () => {
-  it('un conto con contenuto si apre sulle Comande e MOSTRA gli item', () => {
+describe('layout SumUp: tutto visibile insieme', () => {
+  it('griglia al centro E prodotti del conto a destra, senza tab', () => {
     mount(baseOrder())
     // header: numero + nome
     expect(screen.getByText(/#4/)).toBeInTheDocument()
-    // il contenuto è visibile subito (tab Comande attivo)
-    expect(screen.getByText('Comanda 1')).toBeInTheDocument()
+    // destra: la comanda inviata con i suoi item
+    expect(screen.getByText(/COMANDA 1/)).toBeInTheDocument()
     expect(screen.getAllByText(/Mojito/).length).toBeGreaterThan(0)
+    // centro: la griglia prodotti è visibile CONTEMPORANEAMENTE
+    expect(screen.getByText('Gin Tonic')).toBeInTheDocument()
+    // sinistra: le categorie
+    expect(screen.getByRole('button', { name: 'Cocktail' })).toBeInTheDocument()
   })
 
-  it('un conto vuoto si apre sul menù (griglia prodotti)', () => {
+  it('conto vuoto: griglia + pannello nuova comanda vuoto', () => {
     mount(baseOrder({ comande: [], order_items: [], workflow_status: 'ricevuto' }))
-    expect(screen.getByText('Tocca i prodotti per comporre una nuova comanda.')).toBeInTheDocument()
+    expect(screen.getByText('Tocca i prodotti per aggiungerli.')).toBeInTheDocument()
     expect(screen.getByText('Gin Tonic')).toBeInTheDocument()
   })
 })
@@ -104,9 +108,7 @@ describe('nuova comanda (aggiunte al conto)', () => {
   it('tap sul prodotto → bozza; "Invia comanda" chiama addComanda con gli item', async () => {
     const user = userEvent.setup()
     mount(baseOrder())
-    // vai alla vista menù
-    await user.click(screen.getByRole('button', { name: /Nuova comanda/ }))
-    // aggiungi 2 Gin Tonic dalla griglia
+    // aggiungi 2 Gin Tonic dalla griglia (sempre visibile)
     await user.click(screen.getByText('Gin Tonic'))
     const send1 = screen.getByRole('button', { name: /Invia comanda/ })
     expect(send1).toHaveTextContent('8,00')
@@ -122,12 +124,9 @@ describe('nuova comanda (aggiunte al conto)', () => {
     ])
   })
 
-  it('nel pannello "Nuova comanda" resta visibile il riepilogo "Nel conto"', async () => {
-    const user = userEvent.setup()
+  it('la nuova comanda è numerata dopo quelle esistenti', () => {
     mount(baseOrder())
-    await user.click(screen.getByRole('button', { name: /Nuova comanda/ }))
-    expect(screen.getByText('Nel conto')).toBeInTheDocument()
-    expect(screen.getByText(/2× Mojito/)).toBeInTheDocument()
+    expect(screen.getByText('NUOVA COMANDA (2)')).toBeInTheDocument()
   })
 })
 
@@ -142,8 +141,8 @@ describe('gestione comande esistenti', () => {
   it('il + su un item della comanda chiama bartenderUpdateComanda con la qty nuova', async () => {
     const user = userEvent.setup()
     mount(baseOrder())
-    const card = screen.getByText('Comanda 1').closest('.card')
-    await user.click(within(card).getByRole('button', { name: 'Aumenta' }))
+    // il + della riga Mojito nella COMANDA 1 (pannello destro)
+    await user.click(screen.getByRole('button', { name: 'Aumenta' }))
     expect(bartenderUpdateComanda).toHaveBeenCalledTimes(1)
     const [, comandaId, payload] = bartenderUpdateComanda.mock.calls[0]
     expect(comandaId).toBe('c1')

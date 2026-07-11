@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   advanceComanda,
@@ -17,31 +17,25 @@ import {
   formatPrice,
   placedByName,
 } from '../lib/orderStatus.js'
-import { nextComandaStatus, comandaDone, allServed, orderIsClosed, initialDetailView } from '../lib/comande.js'
+import { nextComandaStatus, comandaDone, allServed, orderIsClosed } from '../lib/comande.js'
 import { printComanda, printScontrino } from '../lib/printer.js'
-import { DrinkTile } from './PosBits.jsx'
-import { catBtnStyle } from '../lib/posStyles.js'
+import PosProductPicker from './PosProductPicker.jsx'
 import CustomDrinkForm from './CustomDrinkForm.jsx'
 import ConfirmDialog from './ConfirmDialog.jsx'
 
-// ── Dettaglio ordine in stile POS (SumUp) — solo bartender ────────────────
-// Il CONTO resta aperto: toccando i prodotti si compone una NUOVA COMANDA
-// (come "aggiungi un ordine" su SumUp) da inviare al bar; nel tab Comande si
-// gestiscono i ticket esistenti (avanzamento stato, quantità, ristampa).
-// Il conto si chiude solo con l'incasso (avviso se restano comande aperte)
-// o con l'annullo.
+// ── Dettaglio ordine in stile POS SumUp — solo bartender ──────────────────
+// Layout identico alla cassa: categorie a sinistra, griglia prodotti al
+// centro e, A DESTRA, i prodotti dell'ordine: le comande già inviate (con
+// stato e quantità) e la NUOVA comanda che si compone toccando la griglia.
+// Il conto si chiude solo con l'incasso o con l'annullo.
 
 export default function OrderPosDetail({ order }) {
   const { drinks, cats, loading } = useMenu()
-  const [selectedCat, setSelectedCat] = useState(null)
-  // Si apre sul contenuto del conto (tab Comande) se esiste già.
-  const [view, setView] = useState(() => initialDetailView(order)) // 'menu' | 'comande'
   const [error, setError] = useState(null)
   const [saving, setSaving] = useState(false)
   const [showCustom, setShowCustom] = useState(false)
   const [confirmCancel, setConfirmCancel] = useState(false)
   const [confirmPay, setConfirmPay] = useState(false)
-  const gridRef = useRef(null)
 
   // NUOVA comanda in composizione (bozza locale, non ancora inviata).
   const [newItems, setNewItems] = useState([])
@@ -51,18 +45,6 @@ export default function OrderPosDetail({ order }) {
     document.body.classList.add('fullbleed')
     return () => document.body.classList.remove('fullbleed')
   }, [])
-
-  useEffect(() => {
-    if (cats.length > 0 && selectedCat === null) setSelectedCat('__all__')
-  }, [cats, selectedCat])
-
-  const catKey = (c) => c.id ?? c.name
-  const visibleDrinks =
-    !selectedCat || selectedCat === '__all__'
-      ? drinks.filter((d) => d.available)
-      : drinks.filter(
-          (d) => d.available && (d.category_id === selectedCat || d.category === selectedCat)
-        )
 
   const closed = orderIsClosed(order)
   const comande = order.comande || []
@@ -114,7 +96,6 @@ export default function OrderPosDetail({ order }) {
     run(async () => {
       await addComanda(order.id, newItems)
       setNewItems([])
-      setView('comande')
     })
 
   // ── Comande esistenti ──
@@ -131,6 +112,7 @@ export default function OrderPosDetail({ order }) {
     table_label: order.table_label || '',
     note: order.note || '',
   })
+  const [showInfo, setShowInfo] = useState(false)
   const orderId = order.id
   useEffect(() => {
     setInfo({
@@ -181,157 +163,96 @@ export default function OrderPosDetail({ order }) {
 
       {error && <div className="banner" style={{ margin: '8px 8px 0', flexShrink: 0 }}>{error}</div>}
 
-      {/* ── Corpo ── */}
+      {/* ── Corpo a 3 colonne: categorie · griglia · prodotti dell'ordine ── */}
       <div className="posd-body">
-        {/* Sidebar categorie (solo vista menù) */}
-        {view === 'menu' && (
-          <aside
-            style={{
-              width: 104,
-              flexShrink: 0,
-              overflowY: 'auto',
-              borderRight: '1px solid rgba(255,255,255,0.07)',
-              padding: '8px 6px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 6,
-            }}
-          >
-            <button onClick={() => setSelectedCat('__all__')} style={catBtnStyle(selectedCat === '__all__')}>
-              Tutti
-            </button>
-            {cats.map((c) => (
-              <button
-                key={catKey(c)}
-                onClick={() => {
-                  setSelectedCat(catKey(c))
-                  gridRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
-                }}
-                style={catBtnStyle(selectedCat === catKey(c))}
-              >
-                {c.name}
-              </button>
-            ))}
-          </aside>
-        )}
+        <PosProductPicker
+          drinks={drinks}
+          cats={cats}
+          loading={loading}
+          qtyByDrink={qtyByDrink}
+          onAdd={addDrink}
+          onSetQty={(d, q) => {
+            const idx = newItems.findIndex((i) => !i.custom && i.drink_id === d.id)
+            if (idx >= 0) setNewQty(idx, q)
+          }}
+          disabled={closed}
+        />
 
-        {/* Centro: griglia prodotti o storico comande */}
-        {view === 'menu' ? (
-          <div
-            ref={gridRef}
-            style={{
-              flex: 1,
-              overflowY: 'auto',
-              padding: '10px 8px',
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
-              alignContent: 'start',
-              gap: 10,
-              opacity: closed ? 0.5 : 1,
-              pointerEvents: closed ? 'none' : 'auto',
-            }}
-          >
-            {loading && <div className="empty" style={{ gridColumn: '1/-1' }}>Carico…</div>}
-            {!loading && visibleDrinks.length === 0 && (
-              <div className="empty" style={{ gridColumn: '1/-1' }}>Nessun prodotto in questa categoria.</div>
-            )}
-            {visibleDrinks.map((d) => (
-              <DrinkTile
-                key={d.id}
-                drink={d}
-                qty={qtyByDrink[d.id] ?? 0}
-                onAdd={() => addDrink(d)}
-                onSetQty={(q) => {
-                  const idx = newItems.findIndex((i) => !i.custom && i.drink_id === d.id)
-                  if (idx >= 0) setNewQty(idx, q)
-                }}
-              />
-            ))}
-          </div>
-        ) : (
+        {/* ── Pannello destro: i prodotti dell'ordine ── */}
+        <div className="posd-comanda">
           <div style={{ flex: 1, overflowY: 'auto', padding: '10px 12px' }}>
+            {/* Comande già inviate */}
             {comande.map((c) => {
               const ns = nextComandaStatus(c.status)
               const done = comandaDone(c)
               return (
-                <div className="card" key={c.id} style={{ margin: '0 0 10px' }}>
+                <div key={c.id} style={{ marginBottom: 12 }}>
                   <div className="row between" style={{ alignItems: 'center' }}>
-                    <strong>Comanda {c.seq}</strong>
-                    <span className={`pill ${c.status}`}>
-                      {STATUS_EMOJI[c.status]}{' '}
-                      {c.status === ORDER_STATUSES.RITIRATO
-                        ? ritiratoLabel(order.service_mode)
-                        : STATUS_LABELS[c.status]}
+                    <span className="muted small" style={{ letterSpacing: 0.5 }}>
+                      COMANDA {c.seq}
+                      {c.created_at ? ` · ${String(c.created_at).slice(11, 16)}` : ''}
+                    </span>
+                    <span className="row" style={{ gap: 4 }}>
+                      <span className={`pill ${c.status}`} style={{ fontSize: '0.7rem' }}>
+                        {STATUS_EMOJI[c.status]}{' '}
+                        {c.status === ORDER_STATUSES.RITIRATO
+                          ? ritiratoLabel(order.service_mode)
+                          : STATUS_LABELS[c.status]}
+                      </span>
+                      <button
+                        className="btn ghost small"
+                        style={{ padding: '2px 8px' }}
+                        aria-label={`Ristampa comanda ${c.seq}`}
+                        onClick={() => printComanda(order, c).catch((e) => setError(`Stampa: ${e.message}`))}
+                      >
+                        🖨
+                      </button>
                     </span>
                   </div>
-                  {c.created_at && (
-                    <div className="muted small">inviata {String(c.created_at).slice(11, 16)}</div>
-                  )}
-                  <div style={{ margin: '8px 0' }}>
-                    {(c.items || []).map((i, idx) => (
-                      <div className="row between" key={idx} style={{ alignItems: 'center', marginTop: 4 }}>
-                        <span style={{ fontSize: '0.92rem' }}>
-                          {i.custom ? '✨ ' : ''}{i.name}
-                          <span className="muted small"> · {formatPrice(i.unit_price)}</span>
+                  {(c.items || []).map((i, idx) => (
+                    <div className="row between" key={idx} style={{ alignItems: 'center', marginTop: 6 }}>
+                      <span className="grow" style={{ fontSize: '0.92rem' }}>
+                        {i.custom ? '✨ ' : ''}{i.name}
+                        <span className="muted small"> · {formatPrice(i.unit_price)}</span>
+                      </span>
+                      {done || closed ? (
+                        <span className="muted">×{i.qty}</span>
+                      ) : (
+                        <span className="qty">
+                          <button aria-label="Riduci" onClick={() => comandaQtyChange(c, idx, -1)} disabled={saving}>−</button>
+                          <strong>{i.qty}</strong>
+                          <button aria-label="Aumenta" onClick={() => comandaQtyChange(c, idx, 1)} disabled={saving}>+</button>
                         </span>
-                        {done || closed ? (
-                          <span className="muted">×{i.qty}</span>
-                        ) : (
-                          <span className="qty">
-                            <button aria-label="Riduci" onClick={() => comandaQtyChange(c, idx, -1)} disabled={saving}>−</button>
-                            <strong>{i.qty}</strong>
-                            <button aria-label="Aumenta" onClick={() => comandaQtyChange(c, idx, 1)} disabled={saving}>+</button>
-                          </span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                  <div className="grid-2">
-                    {ns && !closed ? (
-                      <button
-                        className="btn small"
-                        disabled={saving}
-                        onClick={() => run(() => advanceComanda(order.id, c.id, ns))}
-                      >
-                        Segna “{ns === ORDER_STATUSES.RITIRATO ? ritiratoLabel(order.service_mode) : STATUS_LABELS[ns]}”
-                      </button>
-                    ) : (
-                      <span />
-                    )}
+                      )}
+                    </div>
+                  ))}
+                  {ns && !closed && (
                     <button
-                      className="btn ghost small"
-                      onClick={() => printComanda(order, c).catch((e) => setError(`Stampa: ${e.message}`))}
+                      className="btn small block"
+                      style={{ marginTop: 6 }}
+                      disabled={saving}
+                      onClick={() => run(() => advanceComanda(order.id, c.id, ns))}
                     >
-                      🖨 Ristampa
+                      Segna “{ns === ORDER_STATUSES.RITIRATO ? ritiratoLabel(order.service_mode) : STATUS_LABELS[ns]}”
                     </button>
-                  </div>
+                  )}
                 </div>
               )
             })}
-            {comande.length === 0 && <div className="empty">Nessuna comanda.</div>}
-          </div>
-        )}
 
-        {/* ── Pannello conto ── */}
-        <div className="posd-comanda">
-          {/* Tab interni */}
-          <div className="row" style={{ gap: 6, padding: '8px 10px 0' }}>
-            <button className={`chip ${view === 'menu' ? 'active' : ''}`} onClick={() => setView('menu')}>
-              🍸 Nuova comanda{newItems.length > 0 ? ` (${newItems.reduce((s, i) => s + i.qty, 0)})` : ''}
-            </button>
-            <button className={`chip ${view === 'comande' ? 'active' : ''}`} onClick={() => setView('comande')}>
-              🧾 Comande ({comande.length})
-            </button>
-          </div>
-
-          <div style={{ flex: 1, overflowY: 'auto', padding: '8px 12px' }}>
-            {view === 'menu' && (
-              <>
+            {/* Nuova comanda (come "AGGIUNGI UN ORDINE" su SumUp) */}
+            {!closed && (
+              <div style={{ marginBottom: 12 }}>
+                <div className="muted small" style={{ letterSpacing: 0.5 }}>
+                  {comande.length > 0 ? `NUOVA COMANDA (${comande.length + 1})` : 'NUOVA COMANDA'}
+                </div>
                 {newItems.length === 0 && (
-                  <p className="muted small">Tocca i prodotti per comporre una nuova comanda.</p>
+                  <p className="muted small" style={{ margin: '6px 0 0' }}>
+                    Tocca i prodotti per aggiungerli.
+                  </p>
                 )}
                 {newItems.map((i, idx) => (
-                  <div className="row between" key={idx} style={{ alignItems: 'center', marginTop: 8 }}>
+                  <div className="row between" key={idx} style={{ alignItems: 'center', marginTop: 6 }}>
                     <span className="grow" style={{ fontSize: '0.92rem' }}>
                       {i.custom ? '✨ ' : ''}{i.name}
                       <span className="muted small"> · {formatPrice(i.unit_price)}</span>
@@ -343,43 +264,27 @@ export default function OrderPosDetail({ order }) {
                     </span>
                   </div>
                 ))}
-                {!closed && (
-                  <button
-                    className="btn ghost small block"
-                    style={{ marginTop: 10 }}
-                    onClick={() => setShowCustom(true)}
-                  >
-                    🍹 Drink custom
-                  </button>
-                )}
+                <button
+                  className="btn ghost small block"
+                  style={{ marginTop: 8 }}
+                  onClick={() => setShowCustom(true)}
+                >
+                  🍹 Drink custom
+                </button>
                 {newItems.length > 0 && (
-                  <button className="btn block" style={{ marginTop: 8 }} disabled={saving || closed} onClick={sendComanda}>
+                  <button className="btn block" style={{ marginTop: 6 }} disabled={saving} onClick={sendComanda}>
                     📤 Invia comanda · {formatPrice(newTotal)}
                   </button>
                 )}
-
-                {/* Contenuto attuale del conto, sempre visibile anche mentre
-                    si compone una nuova comanda. */}
-                {(order.order_items || []).length > 0 && (
-                  <>
-                    <hr style={{ borderColor: 'rgba(255,255,255,0.1)', margin: '12px 0 6px' }} />
-                    <p className="muted small" style={{ margin: '0 0 4px' }}>Nel conto</p>
-                    {(order.order_items || []).map((i) => (
-                      <div className="row between" key={i.id} style={{ marginTop: 2 }}>
-                        <span className="muted small">
-                          {i.qty}× {i.custom ? '✨ ' : ''}{i.name}
-                        </span>
-                        <span className="muted small">{formatPrice(i.qty * i.unit_price)}</span>
-                      </div>
-                    ))}
-                  </>
-                )}
-              </>
+              </div>
             )}
 
-            {view === 'comande' && (
-              <>
-                {/* Info conto */}
+            {/* Dati conto (nome/tavolo/note) */}
+            <button className="btn ghost small block" onClick={() => setShowInfo((v) => !v)}>
+              {showInfo ? 'Nascondi dati conto' : '👤 Dati conto (nome, tavolo, note)'}
+            </button>
+            {showInfo && (
+              <div style={{ marginTop: 6 }}>
                 <label htmlFor="pd-name">Nome</label>
                 <input
                   id="pd-name"
@@ -387,7 +292,7 @@ export default function OrderPosDetail({ order }) {
                   disabled={closed}
                   onChange={(e) => setInfo((v) => ({ ...v, customer_name: e.target.value }))}
                 />
-                <div className="grid-2" style={{ marginTop: 8 }}>
+                <div className="grid-2" style={{ marginTop: 6 }}>
                   <div>
                     <label htmlFor="pd-table">Tavolo</label>
                     <input
@@ -410,18 +315,18 @@ export default function OrderPosDetail({ order }) {
                 {infoDirty && (
                   <button
                     className="btn small block"
-                    style={{ marginTop: 8 }}
+                    style={{ marginTop: 6 }}
                     disabled={saving}
                     onClick={() => run(() => updateOrderInfo(order.id, info))}
                   >
                     💾 Salva dati conto
                   </button>
                 )}
-              </>
+              </div>
             )}
           </div>
 
-          {/* Totale + azioni conto */}
+          {/* Footer: totale + azioni conto */}
           <div
             style={{
               flexShrink: 0,
@@ -439,7 +344,7 @@ export default function OrderPosDetail({ order }) {
               </div>
             )}
             <div className="row between">
-              <strong>Totale conto</strong>
+              <strong>Totale</strong>
               <strong className="price">{formatPrice(order.total)}</strong>
             </div>
 
