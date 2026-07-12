@@ -38,8 +38,20 @@ describe('activeComanda / comandeSummary / allServed', () => {
     status: ORDER_OPEN,
     comande: [c(1, 'ritirato'), c(2, 'pronto'), c(3, 'ricevuto'), c(4, 'annullato')],
   }
-  it('attiva = la più vecchia non chiusa', () => {
-    expect(activeComanda(order).seq).toBe(2)
+  it('attiva = quella al passo più indietro (dà lo stato dell\'ordine)', () => {
+    expect(activeComanda(order).seq).toBe(3)
+  })
+
+  it('aggiunta su conto con comanda pronta: l\'ordine TORNA in preparazione', () => {
+    // C1 è pronta al servizio; l'aggiunta C2 nasce in preparazione → è lei
+    // l'attiva: in coda l'ordine risulta di nuovo "in preparazione".
+    const o = { comande: [c(1, 'pronto'), c(2, 'in_preparazione')] }
+    expect(activeComanda(o).seq).toBe(2)
+    expect(activeComanda(o).status).toBe('in_preparazione')
+  })
+
+  it('a parità di passo vince la più vecchia', () => {
+    expect(activeComanda({ comande: [c(1, 'in_preparazione'), c(2, 'in_preparazione')] }).seq).toBe(1)
   })
   it('summary conta attive/pronte/servite (esclude annullate)', () => {
     expect(comandeSummary(order)).toEqual({ attive: 2, pronte: 1, servite: 1, totale: 3 })
