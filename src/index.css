@@ -1986,3 +1986,56 @@ body.fullbleed .bar-content {
     box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.4);
   }
 }
+
+/* ── Varianti per TEMI CHIARI (impostate da applyTheme via data-luma) ──
+   I colori di stato di default sono pensati per fondi scuri (testi
+   pastello): sul chiaro diventano versioni sature e scure, leggibili. */
+:root[data-luma='light'] .pill.ricevuto {
+  background: rgba(243, 156, 18, 0.18);
+  color: #8a5200;
+}
+:root[data-luma='light'] .pill.in_preparazione {
+  background: rgba(52, 152, 219, 0.16);
+  color: #0b5cad;
+}
+:root[data-luma='light'] .pill.pronto {
+  background: rgba(46, 204, 113, 0.18);
+  color: #157347;
+}
+:root[data-luma='light'] .pill.ritirato {
+  background: rgba(0, 0, 0, 0.08);
+}
+:root[data-luma='light'] .pill.pagato {
+  background: rgba(180, 130, 20, 0.15);
+}
+:root[data-luma='light'] .badge-low {
+  background: rgba(255, 193, 7, 0.22);
+  color: #7a5c00;
+}
+:root[data-luma='light'] .badge-empty {
+  background: rgba(244, 67, 54, 0.15);
+  color: #b02a37;
+}
+:root[data-luma='light'] .btn.ghost {
+  border-color: rgba(0, 0, 0, 0.25);
+}
+:root[data-luma='light'] .btn.secondary {
+  background: rgba(0, 0, 0, 0.08);
+}
+:root[data-luma='light'] .chip {
+  border-color: rgba(0, 0, 0, 0.18);
+  background: rgba(0, 0, 0, 0.04);
+}
+:root[data-luma='light'] .qty button {
+  background: rgba(0, 0, 0, 0.08);
+}
+:root[data-luma='light'] .card,
+:root[data-luma='light'] .inv-list,
+:root[data-luma='light'] .inv-item {
+  border-color: rgba(0, 0, 0, 0.1);
+}
+:root[data-luma='light'] input,
+:root[data-luma='light'] select,
+:root[data-luma='light'] textarea {
+  border-color: rgba(0, 0, 0, 0.22);
+}

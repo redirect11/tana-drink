@@ -98,8 +98,21 @@ export function applyTheme(vars) {
       `linear-gradient(90deg, ${hexToRgba(a2, 0.9)}, ${hexToRgba(a2, 0.12)})`
     )
   }
-  // Tema chiaro/scuro per i controlli nativi del browser (scrollbar, input).
-  const bg = vars['--bg'] || ''
-  const light = /^#?[c-f]/i.test(bg.replace('#', '').slice(0, 1))
+  // Tema chiaro/scuro: guida i controlli nativi (color-scheme) e le varianti
+  // CSS dei colori di stato (pill/badge), che altrimenti — pensati per lo
+  // scuro — risulterebbero illeggibili sui temi chiari.
+  const light = isLightColor(vars['--bg'])
   root.style.setProperty('color-scheme', light ? 'light' : 'dark')
+  root.dataset.luma = light ? 'light' : 'dark'
+}
+
+// Un colore esadecimale è "chiaro"? (luminanza percepita > 0.6)
+export function isLightColor(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || '').trim())
+  if (!m) return false
+  const n = parseInt(m[1], 16)
+  const r = (n >> 16) & 255
+  const g = (n >> 8) & 255
+  const b = n & 255
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.6
 }

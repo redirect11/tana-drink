@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { DrinkTile } from './PosBits.jsx'
 import { catBtnStyle } from '../lib/posStyles.js'
+import { categoryColor, drinkCategoryColor } from '../lib/categoryColors.js'
 
 // Colonna categorie + griglia prodotti (il "centro" dell'interfaccia POS,
 // identico su cassa e dettaglio ordine, come nell'app SumUp). Toccando un
@@ -48,6 +49,18 @@ export default function PosProductPicker({ drinks, cats, loading, qtyByDrink, on
             }}
             style={catBtnStyle(selectedCat === catKey(c))}
           >
+            <span
+              aria-hidden
+              style={{
+                display: 'inline-block',
+                width: 10,
+                height: 10,
+                borderRadius: '50%',
+                background: categoryColor(c.id ?? c.name),
+                marginRight: 5,
+                verticalAlign: 'baseline',
+              }}
+            />
             {c.name}
           </button>
         ))}
@@ -77,6 +90,7 @@ export default function PosProductPicker({ drinks, cats, loading, qtyByDrink, on
             key={d.id}
             drink={d}
             qty={qtyByDrink[d.id] ?? 0}
+            color={drinkCategoryColor(d, cats)}
             onAdd={() => onAdd(d)}
             onSetQty={(q) => onSetQty(d, q)}
           />
