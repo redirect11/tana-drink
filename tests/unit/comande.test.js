@@ -7,6 +7,7 @@ import {
   ORDER_OPEN,
   nextComandaStatus,
   activeComanda,
+  serveAllComande,
   comandeSummary,
   allServed,
   aggregateItems,
@@ -52,6 +53,18 @@ describe('activeComanda / comandeSummary / allServed', () => {
 
   it('a parità di passo vince la più vecchia', () => {
     expect(activeComanda({ comande: [c(1, 'in_preparazione'), c(2, 'in_preparazione')] }).seq).toBe(1)
+  })
+
+  it('conto pagato: serveAllComande marca tutto servito (annullate escluse)', () => {
+    const servite = serveAllComande(
+      [c(1, 'ritirato'), c(2, 'in_preparazione'), c(3, 'annullato'), c(4, 'pronto')],
+      'T1'
+    )
+    expect(servite.map((x) => x.status)).toEqual(['ritirato', 'ritirato', 'annullato', 'ritirato'])
+    // orario di servizio stampigliato solo su quelle chiuse adesso
+    expect(servite[1].status_times.ritirato).toBe('T1')
+    expect(servite[3].status_times.ritirato).toBe('T1')
+    expect(allServed({ comande: servite })).toBe(true)
   })
   it('summary conta attive/pronte/servite (esclude annullate)', () => {
     expect(comandeSummary(order)).toEqual({ attive: 2, pronte: 1, servite: 1, totale: 3 })

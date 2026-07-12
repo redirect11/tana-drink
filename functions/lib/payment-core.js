@@ -71,6 +71,16 @@ function isServed(o) {
   return o.status === 'ritirato'
 }
 
+// Conto pagato ⇒ tutte le comande risultano SERVITE ('ritirato'); le
+// annullate restano annullate (specchio di serveAllComande lato client).
+function serveComande(comande, now) {
+  return comande.map((c) =>
+    !c || c.status === 'annullato' || c.status === 'ritirato'
+      ? c
+      : { ...c, status: 'ritirato', status_times: { ...(c.status_times || {}), ritirato: now } }
+  )
+}
+
 // Residuo del conto: totale − sconto − pagamenti parziali già registrati
 // (stessa aritmetica di src/lib/pagamento.js lato client).
 function orderDue(order) {
@@ -129,9 +139,15 @@ function decidePaymentPatch(order, { status, transactionId = null, now }) {
     if (transactionId) patch.sumup_transaction_id = transactionId
     if (order?.status === 'annullato') {
       patch.payment_after_cancel = true
-    } else if (isServed(order)) {
+    } else {
+      // Il saldo dal POS chiude il conto: le comande ancora in lavorazione
+      // risultano SERVITE (stessa regola del pagamento in contanti).
       patch.status = 'pagato'
       patch['status_times.pagato'] = now
+      if (Array.isArray(order?.comande)) {
+        patch.comande = serveComande(order.comande, now)
+        patch.comande_statuses = [...new Set(patch.comande.map((c) => c?.status).filter(Boolean))]
+      }
     }
     return patch
   }
@@ -202,6 +218,7 @@ function parseCheckoutWebhookBody(body) {
 module.exports = {
   isServed,
   orderDue,
+  serveComande,
   eurosToCents,
   buildCheckoutPayload,
   buildReaderCheckoutPayload,
