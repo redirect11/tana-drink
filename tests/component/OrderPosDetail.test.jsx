@@ -18,7 +18,8 @@ vi.mock('../../src/lib/api.js', () => ({
   addComanda: vi.fn(() => Promise.resolve({ comande: [] })),
   bartenderUpdateComanda: vi.fn(() => Promise.resolve()),
   updateOrderInfo: vi.fn(() => Promise.resolve()),
-  markOrderPaid: vi.fn(() => Promise.resolve()),
+  registerPayment: vi.fn(() => Promise.resolve({ closed: true })),
+  setOrderDiscount: vi.fn(() => Promise.resolve()),
   cancelOrder: vi.fn(() => Promise.resolve()),
   fetchInventoryItems: vi.fn(() => Promise.resolve([])),
   DEFAULT_SETTINGS: {},
@@ -50,7 +51,7 @@ import {
   advanceComanda,
   addComanda,
   bartenderUpdateComanda,
-  markOrderPaid,
+  registerPayment,
 } from '../../src/lib/api.js'
 import { readerCheckout } from '../../src/lib/paymentsApi.js'
 import { printComanda } from '../../src/lib/printer.js'
@@ -242,16 +243,21 @@ describe('modifiche ottimistiche (UX istantanea)', () => {
 })
 
 describe('schermata Pagamento', () => {
-  it('"Pagamento" apre la schermata con totale e avviso comande non servite; Contanti incassa', async () => {
+  it('"Pagamento" apre la schermata con residuo e avviso comande non servite; Contanti incassa tutto', async () => {
     const user = userEvent.setup()
     mount(baseOrder())
     await user.click(screen.getByRole('button', { name: /Pagamento/ }))
-    // schermata: totale in evidenza + avviso (c1 è in preparazione)
-    expect(screen.getByRole('heading', { name: '💳 Pagamento' })).toBeInTheDocument()
+    // schermata: articoli a sinistra, residuo in evidenza, avviso (c1 in prep.)
+    expect(screen.getByRole('dialog', { name: 'Pagamento' })).toBeInTheDocument()
+    expect(screen.getByText('Residuo da incassare')).toBeInTheDocument()
     expect(screen.getByText(/comande non ancora servite/)).toBeInTheDocument()
-    expect(markOrderPaid).not.toHaveBeenCalled()
-    await user.click(screen.getByRole('button', { name: /Contanti \/ al banco/ }))
-    expect(markOrderPaid).toHaveBeenCalledWith('ord1', 'banco')
+    expect(registerPayment).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: /Contanti/ }))
+    expect(registerPayment).toHaveBeenCalledWith('ord1', {
+      amount: 14,
+      method: 'banco',
+      items: null,
+    })
   })
 
   it('con tutto servito la schermata non mostra avvisi', async () => {
@@ -272,11 +278,15 @@ describe('schermata Pagamento', () => {
     )
     await user.click(screen.getByRole('button', { name: /Pagamento/ }))
     expect(screen.queryByText(/comande non ancora servite/)).not.toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: /Contanti \/ al banco/ }))
-    expect(markOrderPaid).toHaveBeenCalledWith('ord1', 'banco')
+    await user.click(screen.getByRole('button', { name: /Contanti/ }))
+    expect(registerPayment).toHaveBeenCalledWith('ord1', {
+      amount: 14,
+      method: 'banco',
+      items: null,
+    })
   })
 
-  it('lettore SumUp: visibile solo se configurato, e avvia readerCheckout', async () => {
+  it('lettore SumUp: visibile solo se configurato, e avvia readerCheckout sul residuo', async () => {
     const user = userEvent.setup()
     mockSettings.payments_reader_enabled = true
     mockSettings.sumup_reader_id = 'reader1'
@@ -284,8 +294,8 @@ describe('schermata Pagamento', () => {
       mount(baseOrder())
       await user.click(screen.getByRole('button', { name: /Pagamento/ }))
       await user.click(screen.getByRole('button', { name: /Carta sul lettore SumUp/ }))
-      expect(readerCheckout).toHaveBeenCalledWith('ord1')
-      expect(markOrderPaid).not.toHaveBeenCalled()
+      expect(readerCheckout).toHaveBeenCalledWith('ord1', { amount: 14, items: null })
+      expect(registerPayment).not.toHaveBeenCalled()
     } finally {
       mockSettings.payments_reader_enabled = false
       mockSettings.sumup_reader_id = null

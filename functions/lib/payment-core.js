@@ -71,15 +71,70 @@ function isServed(o) {
   return o.status === 'ritirato'
 }
 
+// Residuo del conto: totale − sconto − pagamenti parziali già registrati
+// (stessa aritmetica di src/lib/pagamento.js lato client).
+function orderDue(order) {
+  const paid = (order?.payments || []).reduce((s, p) => s + (Number(p.amount) || 0), 0)
+  const due = (Number(order?.total) || 0) - (Number(order?.discount_amount) || 0) - paid
+  return Math.max(0, Math.round(due * 100) / 100)
+}
+
 // Patch Firestore da applicare all'ordine per un esito di pagamento.
 // - pagato su ordine "ritirato" → chiude anche lo status (auto-avanzamento)
 // - pagato su ordine "annullato" → NON tocca lo status: segna
 //   payment_after_cancel per la gestione manuale (rimborso dal dashboard)
+// - incasso PARZIALE sul lettore (sumup_pending_amount < residuo): registra
+//   il pagamento nello storico e lascia il conto aperto ('parziale')
 function decidePaymentPatch(order, { status, transactionId = null, now }) {
   if (status === 'fallito') {
-    return { payment_status: 'fallito' }
+    return {
+      payment_status: (order?.payments || []).length ? 'parziale' : 'fallito',
+      sumup_pending_amount: null,
+      sumup_pending_items: null,
+    }
   }
   if (status !== 'pagato') return null
+
+  const pending = Number(order?.sumup_pending_amount)
+  if (pending > 0) {
+    const payments = [
+      ...(order?.payments || []),
+      {
+        id: `pay-${now}`,
+        amount: pending,
+        method: 'lettore',
+        items: order?.sumup_pending_items || null,
+        at: now,
+        ...(transactionId ? { transaction_id: transactionId } : {}),
+      },
+    ]
+    const residuo = orderDue({ ...order, payments })
+    if (residuo > 0.005) {
+      return {
+        payments,
+        payment_status: 'parziale',
+        sumup_pending_amount: null,
+        sumup_pending_items: null,
+        sumup_client_transaction_id: null,
+      }
+    }
+    const patch = {
+      payments,
+      payment_status: 'pagato',
+      payment_method: payments.every((p) => p.method === 'lettore') ? 'lettore' : 'misto',
+      paid_at: now,
+      sumup_pending_amount: null,
+      sumup_pending_items: null,
+    }
+    if (transactionId) patch.sumup_transaction_id = transactionId
+    if (order?.status === 'annullato') {
+      patch.payment_after_cancel = true
+    } else if (isServed(order)) {
+      patch.status = 'pagato'
+      patch['status_times.pagato'] = now
+    }
+    return patch
+  }
 
   const patch = {
     payment_status: 'pagato',
@@ -146,6 +201,7 @@ function parseCheckoutWebhookBody(body) {
 
 module.exports = {
   isServed,
+  orderDue,
   eurosToCents,
   buildCheckoutPayload,
   buildReaderCheckoutPayload,

@@ -31,9 +31,11 @@ export async function unpairSumUpReader() {
   return call('unpairSumUpReader')({})
 }
 
-export async function readerCheckout(orderId) {
+// `amount` (euro) e `items` opzionali per gli incassi PARZIALI (split del
+// conto): il webhook registra il pagamento e chiude solo a residuo zero.
+export async function readerCheckout(orderId, { amount = null, items = null } = {}) {
   if (isEmulator) return { unavailable: true }
-  return call('readerCheckout')({ orderId })
+  return call('readerCheckout')({ orderId, amount, items })
 }
 
 export async function readerTerminate(orderId) {

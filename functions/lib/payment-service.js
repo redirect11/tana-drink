@@ -15,6 +15,7 @@ const {
   mapTransactionStatus,
   decidePaymentPatch,
   groupOrderPaidPatch,
+  orderDue,
 } = require('./payment-core')
 
 const STAFF_ROLES = ['bartender', 'staff']
@@ -206,7 +207,9 @@ async function unpairReader(deps, auth) {
 
 // Sveglia il lettore con l'importo dell'ordine: il cliente paga lì,
 // l'esito arriva via webhook (return_url) e viene verificato via API.
-async function readerCheckout(deps, auth, { orderId } = {}) {
+// `amount` (euro) opzionale per gli incassi PARZIALI (split del conto):
+// se assente si incassa tutto il residuo (totale − sconto − già pagato).
+async function readerCheckout(deps, auth, { orderId, amount = null, items = null } = {}) {
   const { db, paymentsFetch, isConfigured, merchantCode, webhookUrl } = deps
   requireRole(auth, STAFF_ROLES)
   if (!isConfigured()) return { unavailable: true }
@@ -224,8 +227,17 @@ async function readerCheckout(deps, auth, { orderId } = {}) {
     throw err('failed-precondition', 'Ordine già pagato.')
   }
 
+  const due = orderDue(order)
+  if (!(due > 0)) {
+    throw err('failed-precondition', 'Niente da incassare: residuo a zero.')
+  }
+  const toCharge = amount == null ? due : Math.round(Number(amount) * 100) / 100
+  if (!(toCharge > 0) || toCharge > due + 0.005) {
+    throw err('invalid-argument', 'Importo non valido rispetto al residuo del conto.')
+  }
+
   const payload = buildReaderCheckoutPayload({
-    total: order.total,
+    total: toCharge,
     description: `Ordine #${order.daily_number ?? '—'} — La Tana del Coniglio`,
     returnUrl: webhookUrl(),
     affiliate: typeof deps.affiliate === 'function' ? deps.affiliate() : null,
@@ -257,6 +269,10 @@ async function readerCheckout(deps, auth, { orderId } = {}) {
     payment_method: 'lettore',
     payment_status: 'in_attesa',
     sumup_client_transaction_id: clientTransactionId,
+    // Importo in volo sul lettore: il webhook lo registra come pagamento
+    // (parziale o a saldo) quando la transazione va a buon fine.
+    sumup_pending_amount: toCharge,
+    sumup_pending_items: Array.isArray(items) && items.length ? items : null,
   })
   return { clientTransactionId }
 }
@@ -277,7 +293,12 @@ async function readerTerminate(deps, auth, { orderId } = {}) {
     ).catch(() => {})
   }
   if (order.payment_status === 'in_attesa' && order.payment_method === 'lettore') {
-    await ref.update({ payment_status: 'fallito', payment_method: null })
+    await ref.update({
+      payment_status: (order.payments || []).length ? 'parziale' : 'fallito',
+      payment_method: null,
+      sumup_pending_amount: null,
+      sumup_pending_items: null,
+    })
   }
   return { ok: true }
 }

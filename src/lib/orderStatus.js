@@ -58,6 +58,7 @@ export const PAYMENT_METHOD_LABELS = {
   online: '💳 Online',
   lettore: '📟 Lettore',
   banco: '💶 Al banco',
+  misto: '💶+📟 Misto',
 }
 
 export function nextStatus(status) {
