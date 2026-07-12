@@ -16,6 +16,9 @@ import {
   orderHasContent,
   initialDetailView,
   orderIsClosed,
+  comandaEditable,
+  lockedQtyByItem,
+  planDecrement,
 } from '../../src/lib/comande.js'
 
 const c = (seq, status, items = []) => ({ id: `c${seq}`, seq, status, items })
@@ -152,5 +155,36 @@ describe('normalizeOrderDoc (retrocompatibilità)', () => {
     expect(normalizeOrderDoc({ status: 'pagato', items: [] }).status).toBe('pagato')
     expect(normalizeOrderDoc({ status: 'pagato', items: [] }).comande[0].status).toBe('ritirato')
     expect(normalizeOrderDoc({ status: 'annullato', items: [] }).comande[0].status).toBe('annullato')
+  })
+})
+
+describe('vista aggregata: aumenti/diminuzioni gestite internamente', () => {
+  const comande = [
+    { id: 'c1', seq: 1, status: 'ritirato', items: [{ drink_id: 'mojito', qty: 2 }] },
+    { id: 'c2', seq: 2, status: 'in_preparazione', items: [{ drink_id: 'mojito', qty: 1 }, { drink_id: 'gin', qty: 1 }] },
+    { id: 'c3', seq: 3, status: 'pronto', items: [{ drink_id: 'gin', qty: 2 }] },
+  ]
+
+  it('comandaEditable: solo ricevuto/in_preparazione', () => {
+    expect(comandaEditable({ status: 'ricevuto' })).toBe(true)
+    expect(comandaEditable({ status: 'in_preparazione' })).toBe(true)
+    expect(comandaEditable({ status: 'pronto' })).toBe(false)
+    expect(comandaEditable({ status: 'ritirato' })).toBe(false)
+  })
+
+  it('lockedQtyByItem: somma le quantità di pronte/servite', () => {
+    expect(lockedQtyByItem(comande)).toEqual({ mojito: 2, gin: 2 })
+  })
+
+  it('planDecrement: scala dalla comanda modificabile più recente', () => {
+    const plan = planDecrement(comande, 'mojito')
+    expect(plan.comandaId).toBe('c2')
+    expect(plan.items).toEqual([{ drink_id: 'gin', qty: 1 }]) // mojito rimosso (era 1)
+  })
+
+  it('planDecrement: null se l’item vive solo in comande bloccate', () => {
+    expect(planDecrement(comande, 'birra')).toBeNull()
+    const soloServite = [{ id: 'c1', status: 'ritirato', items: [{ drink_id: 'x', qty: 3 }] }]
+    expect(planDecrement(soloServite, 'x')).toBeNull()
   })
 })
