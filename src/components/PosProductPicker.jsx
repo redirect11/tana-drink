@@ -38,7 +38,8 @@ export default function PosProductPicker({ drinks, cats, loading, qtyByDrink, on
         }}
       >
         <button onClick={() => setSelectedCat('__all__')} style={catBtnStyle(selectedCat === '__all__')}>
-          Tutti
+          <span aria-hidden style={catDotStyle(null)} />
+          <span>Tutti</span>
         </button>
         {cats.map((c) => (
           <button
@@ -49,19 +50,8 @@ export default function PosProductPicker({ drinks, cats, loading, qtyByDrink, on
             }}
             style={catBtnStyle(selectedCat === catKey(c))}
           >
-            <span
-              aria-hidden
-              style={{
-                display: 'inline-block',
-                width: 10,
-                height: 10,
-                borderRadius: '50%',
-                background: categoryColor(c.id ?? c.name),
-                marginRight: 5,
-                verticalAlign: 'baseline',
-              }}
-            />
-            {c.name}
+            <span aria-hidden style={catDotStyle(categoryColor(c.id ?? c.name))} />
+            <span style={{ minWidth: 0 }}>{c.name}</span>
           </button>
         ))}
       </aside>
@@ -98,4 +88,17 @@ export default function PosProductPicker({ drinks, cats, loading, qtyByDrink, on
       </div>
     </>
   )
+}
+
+// Pallino colore categoria: dimensione fissa e anello di contrasto, così è
+// visibile anche quando il colore somiglia allo sfondo del tema.
+function catDotStyle(color) {
+  return {
+    width: 10,
+    height: 10,
+    borderRadius: '50%',
+    flexShrink: 0,
+    background: color || 'transparent',
+    boxShadow: color ? '0 0 0 1.5px var(--line)' : 'none',
+  }
 }
