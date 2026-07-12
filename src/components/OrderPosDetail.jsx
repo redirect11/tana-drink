@@ -283,9 +283,12 @@ export default function OrderPosDetail({ order }) {
 
         {/* ── Pannello destro: L'ORDINE (aggregato) ── */}
         <div className="posd-comanda">
-          <div className="row between" style={{ padding: '8px 12px 0', alignItems: 'center' }}>
+          <div
+            className="row between"
+            style={{ padding: '8px 12px 0', alignItems: 'center', flexShrink: 0 }}
+          >
             <span className="muted small" style={{ letterSpacing: 0.5 }}>ORDINE</span>
-            <button className="btn ghost small" onClick={() => setShowComande(true)}>
+            <button className="btn secondary small" onClick={() => setShowComande(true)}>
               🧾 Comande ({comande.length})
             </button>
           </div>
