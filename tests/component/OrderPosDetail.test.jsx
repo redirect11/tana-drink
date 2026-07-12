@@ -84,39 +84,36 @@ function mount(order) {
 
 beforeEach(() => vi.clearAllMocks())
 
-describe('layout SumUp: tutto visibile insieme', () => {
-  it('griglia al centro E prodotti del conto a destra, senza tab', () => {
+describe('vista aggregata: ordine a destra, comande nascoste', () => {
+  it("mostra i prodotti dell'ORDINE aggregato, non le singole comande", () => {
     mount(baseOrder())
     // header: numero + nome
     expect(screen.getByText(/#4/)).toBeInTheDocument()
-    // destra: la comanda inviata con i suoi item
-    expect(screen.getByText(/COMANDA 1/)).toBeInTheDocument()
+    // destra: l'ordine aggregato (niente sezioni COMANDA in vista)
+    expect(screen.getByText('ORDINE')).toBeInTheDocument()
+    expect(screen.queryByText(/COMANDA 1/)).not.toBeInTheDocument()
     expect(screen.getAllByText(/Mojito/).length).toBeGreaterThan(0)
-    // centro: la griglia prodotti è visibile CONTEMPORANEAMENTE
+    // accesso alle comande dal bottone dedicato
+    expect(screen.getByRole('button', { name: /Comande \(1\)/ })).toBeInTheDocument()
+    // centro: griglia visibile contemporaneamente
     expect(screen.getByText('Gin Tonic')).toBeInTheDocument()
-    // sinistra: le categorie
-    expect(screen.getByRole('button', { name: 'Cocktail' })).toBeInTheDocument()
   })
 
-  it('conto vuoto: griglia + pannello nuova comanda vuoto', () => {
+  it('conto vuoto: griglia + ordine vuoto', () => {
     mount(baseOrder({ comande: [], order_items: [], workflow_status: 'ricevuto' }))
-    expect(screen.getByText('Tocca i prodotti per aggiungerli.')).toBeInTheDocument()
+    expect(screen.getByText(/Tocca i prodotti per aggiungerli/)).toBeInTheDocument()
     expect(screen.getByText('Gin Tonic')).toBeInTheDocument()
   })
 })
 
-describe('nuova comanda (aggiunte al conto)', () => {
-  it('tap sul prodotto → bozza; "Invia comanda" chiama addComanda con gli item', async () => {
+describe('aggiunte: la nuova comanda è gestita internamente', () => {
+  it('tap sulla griglia → badge "da inviare"; "Invia aggiunte" chiama addComanda', async () => {
     const user = userEvent.setup()
     mount(baseOrder())
-    // aggiungi 2 Gin Tonic dalla griglia (sempre visibile)
     await user.click(screen.getByText('Gin Tonic'))
-    const send1 = screen.getByRole('button', { name: /Invia comanda/ })
-    expect(send1).toHaveTextContent('8,00')
-    // dopo il primo tap il nome appare anche nella bozza: ritocca la TILE
+    expect(screen.getByText('+1 da inviare')).toBeInTheDocument()
     await user.click(screen.getAllByText('Gin Tonic')[0])
-    // invia
-    await user.click(screen.getByRole('button', { name: /Invia comanda/ }))
+    await user.click(screen.getByRole('button', { name: /Invia aggiunte/ }))
     expect(addComanda).toHaveBeenCalledTimes(1)
     const [orderId, items] = addComanda.mock.calls[0]
     expect(orderId).toBe('ord1')
@@ -125,34 +122,38 @@ describe('nuova comanda (aggiunte al conto)', () => {
     ])
   })
 
-  it('la nuova comanda è numerata dopo quelle esistenti', () => {
+  it("il + su un item esistente è un'aggiunta (non tocca le comande)", async () => {
+    const user = userEvent.setup()
     mount(baseOrder())
-    expect(screen.getByText('NUOVA COMANDA (2)')).toBeInTheDocument()
+    await user.click(screen.getAllByRole('button', { name: 'Aumenta' }).at(-1))
+    expect(screen.getAllByText('3').length).toBeGreaterThan(0)
+    expect(screen.getByText('+1 da inviare')).toBeInTheDocument()
+    expect(bartenderUpdateComanda).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: /Invia aggiunte/ }))
+    expect(addComanda).toHaveBeenCalledTimes(1)
   })
 })
 
-describe('gestione comande esistenti', () => {
-  it('avanza lo stato della comanda (in_preparazione → pronto)', async () => {
+describe('diminuzioni: solo dalle comande ancora modificabili', () => {
+  it('avanza lo stato della comanda ATTIVA dal footer', async () => {
     const user = userEvent.setup()
     mount(baseOrder())
     await user.click(screen.getByRole('button', { name: /Segna “Pronto al servizio”/ }))
     expect(advanceComanda).toHaveBeenCalledWith('ord1', 'c1', 'pronto')
   })
 
-  it('il + aggiorna la qty e sincronizza in background (debounce)', async () => {
+  it('il − scala la comanda modificabile con sync in background (debounce)', async () => {
     const user = userEvent.setup()
     mount(baseOrder())
-    // il + della riga Mojito nella COMANDA 1 (pannello destro)
-    await user.click(screen.getByRole('button', { name: 'Aumenta' }))
-    // UI subito aggiornata, scrittura remota dopo il debounce
-    expect(screen.getByText('3')).toBeInTheDocument()
+    await user.click(screen.getAllByRole('button', { name: 'Riduci' }).at(-1))
+    expect(screen.getAllByText('1').length).toBeGreaterThan(0)
     await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalledTimes(1), { timeout: 2000 })
     const [, comandaId, payload] = bartenderUpdateComanda.mock.calls[0]
     expect(comandaId).toBe('c1')
-    expect(payload.items[0]).toMatchObject({ drink_id: 'mojito', qty: 3 })
+    expect(payload.items[0]).toMatchObject({ drink_id: 'mojito', qty: 1 })
   })
 
-  it('comanda servita: niente +/− né avanzamento', () => {
+  it('comanda servita: il − è disabilitato (quantità bloccate), il + resta', () => {
     mount(
       baseOrder({
         workflow_status: 'ritirato',
@@ -167,13 +168,14 @@ describe('gestione comande esistenti', () => {
         ],
       })
     )
-    expect(screen.queryByRole('button', { name: 'Aumenta' })).not.toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: 'Riduci' }).at(-1)).toBeDisabled()
+    expect(screen.getAllByRole('button', { name: 'Aumenta' }).at(-1)).toBeEnabled()
     expect(screen.queryByRole('button', { name: /Segna/ })).not.toBeInTheDocument()
   })
 })
 
-describe('stampa per comanda', () => {
-  it('ogni comanda ha il suo bottone Stampa: stampa SOLO quella comanda', async () => {
+describe('modale comande: consultazione, avanzamento e stampa', () => {
+  it('le comande si aprono a parte e ognuna si stampa singolarmente', async () => {
     const user = userEvent.setup()
     const order = baseOrder({
       comande: [
@@ -188,32 +190,31 @@ describe('stampa per comanda', () => {
       ],
     })
     mount(order)
-    expect(screen.getByRole('button', { name: 'Stampa comanda 1' })).toBeInTheDocument()
+    // le comande NON sono in vista finché non apro la modale
+    expect(screen.queryByText(/COMANDA 1/)).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /Comande \(2\)/ }))
+    expect(screen.getByText(/COMANDA 1/)).toBeInTheDocument()
+    expect(screen.getByText(/COMANDA 2/)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Stampa comanda 2' }))
     expect(printComanda).toHaveBeenCalledTimes(1)
     const [printedOrder, printedComanda] = printComanda.mock.calls[0]
     expect(printedOrder.id).toBe('ord1')
     expect(printedComanda.id).toBe('c2')
-    expect(printedComanda.items[0].name).toBe('Gin Tonic')
   })
 })
 
 describe('modifiche ottimistiche (UX istantanea)', () => {
-  it('tap rapidi su +: UI aggiornata SUBITO, una sola scrittura remota (debounce)', async () => {
+  it('tap rapidi su +: qty aggregata subito aggiornata, nessuna chiamata finché non invio', async () => {
     const user = userEvent.setup()
     mount(baseOrder())
-    const plus = screen.getByRole('button', { name: 'Aumenta' })
-    await user.click(plus)
-    await user.click(plus)
-    await user.click(plus)
-    // la quantità è già 5 in UI, senza attendere il server
-    expect(screen.getByText('5')).toBeInTheDocument()
+    const plus = () => screen.getAllByRole('button', { name: 'Aumenta' }).at(-1)
+    await user.click(plus())
+    await user.click(plus())
+    await user.click(plus())
+    expect(screen.getAllByText('5').length).toBeGreaterThan(0)
+    expect(screen.getByText('+3 da inviare')).toBeInTheDocument()
     expect(bartenderUpdateComanda).not.toHaveBeenCalled()
-    // dopo il debounce parte UNA sola scrittura col valore finale
-    await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalledTimes(1), { timeout: 2000 })
-    const [, comandaId, payload] = bartenderUpdateComanda.mock.calls[0]
-    expect(comandaId).toBe('c1')
-    expect(payload.items[0]).toMatchObject({ drink_id: 'mojito', qty: 5 })
+    expect(addComanda).not.toHaveBeenCalled()
   })
 })
 

@@ -112,6 +112,47 @@ export function comandeStatuses(comande) {
   return [...new Set((comande || []).map((c) => c.status))]
 }
 
+// ── Vista aggregata dell'ordine (UX senza comande in vista) ────────────
+// Il bartender lavora sull'ordine aggregato: gli AUMENTI diventano una nuova
+// comanda (gestita internamente), le DIMINUZIONI toccano solo le comande
+// ancora modificabili. Una comanda pronta o servita non si tocca più.
+
+// Modificabile = non ancora pronta/servita/annullata.
+export function comandaEditable(c) {
+  return c.status === ORDER_STATUSES.RICEVUTO || c.status === ORDER_STATUSES.IN_PREPARAZIONE
+}
+
+// Quantità per item bloccate (comande pronte/servite): sotto questa soglia
+// l'aggregato non può scendere.
+export function lockedQtyByItem(comande) {
+  const m = {}
+  for (const c of comande || []) {
+    if (c.status === ORDER_STATUSES.ANNULLATO || comandaEditable(c)) continue
+    for (const i of c.items || []) {
+      m[i.drink_id] = (m[i.drink_id] || 0) + (Number(i.qty) || 0)
+    }
+  }
+  return m
+}
+
+// Piano per togliere 1 unità di `drinkId` dall'ordine: sceglie la comanda
+// modificabile PIÙ RECENTE che contiene l'item e restituisce
+// { comandaId, items } con la quantità decrementata (item rimosso a zero).
+// null se l'item vive solo in comande non modificabili.
+export function planDecrement(comande, drinkId) {
+  const editable = (comande || []).filter(comandaEditable)
+  for (let k = editable.length - 1; k >= 0; k--) {
+    const c = editable[k]
+    const idx = (c.items || []).findIndex((i) => i.drink_id === drinkId && (Number(i.qty) || 0) > 0)
+    if (idx === -1) continue
+    const items = c.items
+      .map((i, j) => (j === idx ? { ...i, qty: i.qty - 1 } : i))
+      .filter((i) => i.qty > 0)
+    return { comandaId: c.id, items }
+  }
+  return null
+}
+
 // ── Retrocompatibilità ─────────────────────────────────────────────────
 // Normalizza un doc ordine (raw Firestore) nel nuovo modello. I doc legacy
 // (senza `comande`) diventano un ordine con una comanda sintetica che porta

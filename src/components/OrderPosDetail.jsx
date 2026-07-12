@@ -17,28 +17,38 @@ import {
   formatPrice,
   placedByName,
 } from '../lib/orderStatus.js'
-import { nextComandaStatus, comandaDone, allServed, orderIsClosed } from '../lib/comande.js'
+import {
+  nextComandaStatus,
+  activeComanda,
+  allServed,
+  orderIsClosed,
+  planDecrement,
+  comandaEditable,
+} from '../lib/comande.js'
 import { printComanda, printScontrino } from '../lib/printer.js'
 import PosProductPicker from './PosProductPicker.jsx'
 import CustomDrinkForm from './CustomDrinkForm.jsx'
 import ConfirmDialog from './ConfirmDialog.jsx'
 
 // ── Dettaglio ordine in stile POS SumUp — solo bartender ──────────────────
-// Layout identico alla cassa: categorie a sinistra, griglia prodotti al
-// centro e, A DESTRA, i prodotti dell'ordine: le comande già inviate (con
-// stato e quantità) e la NUOVA comanda che si compone toccando la griglia.
-// Il conto si chiude solo con l'incasso o con l'annullo.
+// Il pannello destro mostra L'ORDINE AGGREGATO (niente comande in vista):
+// gli aumenti (tap sulla griglia o +) compongono aggiunte che al salvataggio
+// diventano una nuova comanda GESTITA INTERNAMENTE; le diminuzioni toccano
+// solo le comande ancora modificabili — una comanda pronta o servita non si
+// tocca più (il − si disabilita al minimo bloccato). Le comande restano
+// consultabili a parte, in una modale dedicata (stati, avanzamento, stampa).
 
 export default function OrderPosDetail({ order }) {
   const { drinks, cats, loading } = useMenu()
   const [error, setError] = useState(null)
   const [saving, setSaving] = useState(false)
   const [showCustom, setShowCustom] = useState(false)
+  const [showComande, setShowComande] = useState(false)
   const [confirmCancel, setConfirmCancel] = useState(false)
   const [confirmPay, setConfirmPay] = useState(false)
 
-  // NUOVA comanda in composizione (bozza locale, non ancora inviata).
-  const [newItems, setNewItems] = useState([])
+  // AGGIUNTE in composizione (bozza locale → nuova comanda all'invio).
+  const [draft, setDraft] = useState([])
 
   // POS a tutto schermo, come la cassa.
   useEffect(() => {
@@ -47,7 +57,7 @@ export default function OrderPosDetail({ order }) {
   }, [])
 
   const closed = orderIsClosed(order)
-  const comande = order.comande || []
+  const comande = useMemo(() => order.comande || [], [order.comande])
   const served = allServed(order)
 
   async function run(fn) {
@@ -62,48 +72,9 @@ export default function OrderPosDetail({ order }) {
     }
   }
 
-  // ── Nuova comanda (bozza) ──
-  function addDrink(d) {
-    if (closed) return
-    setNewItems((items) => {
-      const idx = items.findIndex((i) => !i.custom && i.drink_id === d.id)
-      if (idx >= 0) return items.map((i, j) => (j === idx ? { ...i, qty: i.qty + 1 } : i))
-      return [
-        ...items,
-        {
-          drink_id: d.id,
-          name: d.name,
-          unit_price: d.price,
-          qty: 1,
-          sumup_product_id: d.sumup_product_id ?? null,
-        },
-      ]
-    })
-  }
-  function setNewQty(idx, qty) {
-    setNewItems((items) =>
-      items.map((i, j) => (j === idx ? { ...i, qty } : i)).filter((i) => i.qty > 0)
-    )
-  }
-  const qtyByDrink = useMemo(() => {
-    const m = {}
-    for (const i of newItems) if (!i.custom) m[i.drink_id] = (m[i.drink_id] || 0) + i.qty
-    return m
-  }, [newItems])
-  const newTotal = newItems.reduce((s, i) => s + i.qty * i.unit_price, 0)
-
-  const sendComanda = () =>
-    run(async () => {
-      await addComanda(order.id, newItems)
-      setNewItems([])
-    })
-
-  // ── Comande esistenti: modifiche OTTIMISTICHE ──
-  // La UX deve essere immediata: il tap su +/− aggiorna subito lo stato
-  // locale, la scrittura su Firestore parte in background con un debounce
-  // (tap rapidi = una sola transazione). In caso di errore si torna allo
-  // stato del server. Finché ci sono modifiche in volo, per quella comanda
-  // vale la versione locale (il realtime non la sovrascrive).
+  // ── Diminuzioni OTTIMISTICHE sulle comande modificabili ──
+  // Override locale per-comanda + scrittura debounced (tap rapidi = una
+  // transazione); in errore si torna allo stato server.
   const [pendingEdits, setPendingEdits] = useState({}) // comandaId -> items
   const flushTimers = useRef({})
   const latestPending = useRef({})
@@ -116,15 +87,13 @@ export default function OrderPosDetail({ order }) {
     if (!items) return
     try {
       await bartenderUpdateComanda(order.id, comandaId, { items })
-      // Rimuovi l'override solo se nel frattempo non ci sono stati altri tap.
       setPendingEdits((p) => (p[comandaId] === items ? omit(p, comandaId) : p))
     } catch (e) {
       setError(e.message)
-      setPendingEdits((p) => omit(p, comandaId)) // revert allo stato server
+      setPendingEdits((p) => omit(p, comandaId))
     }
   }, [order.id])
 
-  // Flush di tutte le modifiche in sospeso (prima di azioni "forti").
   const flushAll = useCallback(async () => {
     await Promise.all(Object.keys(latestPending.current).map((id) => flushComanda(id)))
   }, [flushComanda])
@@ -134,15 +103,101 @@ export default function OrderPosDetail({ order }) {
     return () => Object.values(timers).forEach(clearTimeout)
   }, [])
 
-  function comandaQtyChange(comanda, idx, delta) {
-    const base = pendingEdits[comanda.id] ?? comanda.items
-    const items = base
-      .map((i, j) => (j === idx ? { ...i, qty: i.qty + delta } : i))
-      .filter((i) => i.qty > 0)
-    setPendingEdits((p) => ({ ...p, [comanda.id]: items }))
-    clearTimeout(flushTimers.current[comanda.id])
-    flushTimers.current[comanda.id] = setTimeout(() => flushComanda(comanda.id), 600)
+  // Comande "effettive": server + override locali in volo.
+  const effComande = useMemo(
+    () => comande.map((c) => (pendingEdits[c.id] ? { ...c, items: pendingEdits[c.id] } : c)),
+    [comande, pendingEdits]
+  )
+
+  // ── Vista aggregata: righe = item dell'ordine + aggiunte in bozza ──
+  const rows = useMemo(() => {
+    const out = []
+    const byDrink = new Map()
+    for (const c of effComande) {
+      if (c.status === ORDER_STATUSES.ANNULLATO) continue
+      const editable = comandaEditable(c)
+      for (const i of c.items || []) {
+        const key = i.drink_id
+        if (!i.custom && key && byDrink.has(key)) {
+          const ex = byDrink.get(key)
+          ex.qty += i.qty
+          if (editable) ex.editableQty += i.qty
+        } else {
+          const row = { ...i, editableQty: editable ? i.qty : 0, draftQty: 0 }
+          out.push(row)
+          if (key) byDrink.set(key, row)
+        }
+      }
+    }
+    for (const d of draft) {
+      const ex = !d.custom && byDrink.get(d.drink_id)
+      if (ex) {
+        ex.qty += d.qty
+        ex.draftQty += d.qty
+      } else {
+        out.push({ ...d, editableQty: 0, draftQty: d.qty })
+      }
+    }
+    return out
+  }, [effComande, draft])
+
+  const draftCount = draft.reduce((s, i) => s + i.qty, 0)
+  const draftTotal = draft.reduce((s, i) => s + i.qty * i.unit_price, 0)
+  const rowsTotal = rows.reduce((s, i) => s + i.qty * i.unit_price, 0)
+  const qtyByDrink = useMemo(() => {
+    const m = {}
+    for (const r of rows) if (!r.custom) m[r.drink_id] = (m[r.drink_id] || 0) + r.qty
+    return m
+  }, [rows])
+
+  // + : sempre un'aggiunta (andrà in una NUOVA comanda, gestita internamente).
+  function plus(drinkLike) {
+    if (closed) return
+    setDraft((items) => {
+      const idx = items.findIndex((i) => !i.custom && i.drink_id === drinkLike.drink_id)
+      if (idx >= 0) return items.map((i, j) => (j === idx ? { ...i, qty: i.qty + 1 } : i))
+      return [...items, { ...drinkLike, qty: 1 }]
+    })
   }
+  const plusFromCatalog = (d) =>
+    plus({
+      drink_id: d.id,
+      name: d.name,
+      unit_price: d.price,
+      sumup_product_id: d.sumup_product_id ?? null,
+    })
+
+  // − : prima dalla bozza, poi dalle comande MODIFICABILI (mai da pronte/servite).
+  function minus(row) {
+    if (closed) return
+    if (row.draftQty > 0) {
+      setDraft((items) => {
+        const idx = items.findIndex((i) => i.drink_id === row.drink_id)
+        if (idx === -1) return items
+        return items
+          .map((i, j) => (j === idx ? { ...i, qty: i.qty - 1 } : i))
+          .filter((i) => i.qty > 0)
+      })
+      return
+    }
+    const plan = planDecrement(effComande, row.drink_id)
+    if (!plan) return // solo quantità bloccate: il bottone è già disabilitato
+    setPendingEdits((p) => ({ ...p, [plan.comandaId]: plan.items }))
+    clearTimeout(flushTimers.current[plan.comandaId])
+    flushTimers.current[plan.comandaId] = setTimeout(() => flushComanda(plan.comandaId), 600)
+  }
+
+  // Invio delle aggiunte: crea la nuova comanda (internamente).
+  const sendDraft = () =>
+    run(async () => {
+      await flushAll()
+      await addComanda(order.id, draft)
+      setDraft([])
+    })
+
+  // ── Comanda attiva: azione rapida di avanzamento (senza mostrare i dettagli) ──
+  const active = activeComanda({ comande: effComande })
+  const activeNext = active ? nextComandaStatus(active.status) : null
 
   // ── Info conto ──
   const [info, setInfo] = useState({
@@ -201,127 +256,77 @@ export default function OrderPosDetail({ order }) {
 
       {error && <div className="banner" style={{ margin: '8px 8px 0', flexShrink: 0 }}>{error}</div>}
 
-      {/* ── Corpo a 3 colonne: categorie · griglia · prodotti dell'ordine ── */}
+      {/* ── Corpo a 3 colonne: categorie · griglia · ordine ── */}
       <div className="posd-body">
         <PosProductPicker
           drinks={drinks}
           cats={cats}
           loading={loading}
           qtyByDrink={qtyByDrink}
-          onAdd={addDrink}
+          onAdd={plusFromCatalog}
           onSetQty={(d, q) => {
-            const idx = newItems.findIndex((i) => !i.custom && i.drink_id === d.id)
-            if (idx >= 0) setNewQty(idx, q)
+            const row = rows.find((r) => !r.custom && r.drink_id === d.id)
+            if (!row) return
+            if (q > row.qty) plusFromCatalog(d)
+            else if (q < row.qty) minus(row)
           }}
           disabled={closed}
         />
 
-        {/* ── Pannello destro: i prodotti dell'ordine ── */}
+        {/* ── Pannello destro: L'ORDINE (aggregato) ── */}
         <div className="posd-comanda">
-          <div style={{ flex: 1, overflowY: 'auto', padding: '10px 12px' }}>
-            {/* Comande già inviate */}
-            {comande.map((c) => {
-              const ns = nextComandaStatus(c.status)
-              const done = comandaDone(c)
+          <div className="row between" style={{ padding: '8px 12px 0', alignItems: 'center' }}>
+            <span className="muted small" style={{ letterSpacing: 0.5 }}>ORDINE</span>
+            <button className="btn ghost small" onClick={() => setShowComande(true)}>
+              🧾 Comande ({comande.length})
+            </button>
+          </div>
+
+          <div style={{ flex: 1, overflowY: 'auto', padding: '4px 12px 10px' }}>
+            {rows.length === 0 && (
+              <p className="muted small" style={{ margin: '6px 0 0' }}>
+                Tocca i prodotti per aggiungerli all'ordine.
+              </p>
+            )}
+            {rows.map((r, idx) => {
+              // Il − scende fino alle quantità bloccate (comande pronte/servite).
+              const canMinus = !closed && (r.draftQty > 0 || r.editableQty > 0)
               return (
-                <div key={c.id} style={{ marginBottom: 12 }}>
-                  <div className="row between" style={{ alignItems: 'center' }}>
-                    <span className="muted small" style={{ letterSpacing: 0.5, whiteSpace: 'nowrap' }}>
-                      COMANDA {c.seq}
-                      {c.created_at ? ` · ${String(c.created_at).slice(11, 16)}` : ''}
-                    </span>
-                    <span className="row" style={{ gap: 4 }}>
-                      <span className={`pill ${c.status}`} style={{ fontSize: '0.7rem' }}>
-                        {STATUS_EMOJI[c.status]}{' '}
-                        {c.status === ORDER_STATUSES.RITIRATO
-                          ? ritiratoLabel(order.service_mode)
-                          : STATUS_LABELS[c.status]}
-                      </span>
-                    </span>
-                  </div>
-                  {(pendingEdits[c.id] ?? c.items ?? []).map((i, idx) => (
-                    <div className="row between" key={idx} style={{ alignItems: 'center', marginTop: 6 }}>
-                      <span className="grow" style={{ fontSize: '0.92rem' }}>
-                        {i.custom ? '✨ ' : ''}{i.name}
-                        <span className="muted small"> · {formatPrice(i.unit_price)}</span>
-                      </span>
-                      {done || closed ? (
-                        <span className="muted">×{i.qty}</span>
-                      ) : (
-                        <span className="qty">
-                          <button aria-label="Riduci" onClick={() => comandaQtyChange(c, idx, -1)}>−</button>
-                          <strong>{i.qty}</strong>
-                          <button aria-label="Aumenta" onClick={() => comandaQtyChange(c, idx, 1)}>+</button>
-                        </span>
-                      )}
-                    </div>
-                  ))}
-                  {/* Ogni comanda si può (ri)stampare: solo i SUOI item. */}
-                  <div className="grid-2" style={{ marginTop: 6, gap: 6 }}>
-                    <button
-                      className="btn ghost small"
-                      aria-label={`Stampa comanda ${c.seq}`}
-                      onClick={() => printComanda(order, c).catch((e) => setError(`Stampa: ${e.message}`))}
-                    >
-                      🖨 Stampa
-                    </button>
-                    {ns && !closed ? (
-                      <button
-                        className="btn small"
-                        disabled={saving}
-                        onClick={() => run(async () => { await flushAll(); await advanceComanda(order.id, c.id, ns) })}
-                      >
-                        Segna “{ns === ORDER_STATUSES.RITIRATO ? ritiratoLabel(order.service_mode) : STATUS_LABELS[ns]}”
-                      </button>
-                    ) : (
-                      <span />
+                <div className="row between" key={r.drink_id ?? idx} style={{ alignItems: 'center', marginTop: 8 }}>
+                  <span className="grow" style={{ fontSize: '0.92rem' }}>
+                    {r.custom ? '✨ ' : ''}{r.name}
+                    <span className="muted small"> · {formatPrice(r.unit_price)}</span>
+                    {r.draftQty > 0 && (
+                      <span className="badge-low" style={{ marginLeft: 6 }}>+{r.draftQty} da inviare</span>
                     )}
-                  </div>
+                  </span>
+                  <span className="qty">
+                    <button aria-label="Riduci" onClick={() => minus(r)} disabled={!canMinus}>−</button>
+                    <strong>{r.qty}</strong>
+                    <button aria-label="Aumenta" onClick={() => plus(rowToDraft(r))} disabled={closed}>+</button>
+                  </span>
                 </div>
               )
             })}
 
-            {/* Nuova comanda (come "AGGIUNGI UN ORDINE" su SumUp) */}
             {!closed && (
-              <div style={{ marginBottom: 12 }}>
-                <div className="muted small" style={{ letterSpacing: 0.5 }}>
-                  {comande.length > 0 ? `NUOVA COMANDA (${comande.length + 1})` : 'NUOVA COMANDA'}
-                </div>
-                {newItems.length === 0 && (
-                  <p className="muted small" style={{ margin: '6px 0 0' }}>
-                    Tocca i prodotti per aggiungerli.
-                  </p>
-                )}
-                {newItems.map((i, idx) => (
-                  <div className="row between" key={idx} style={{ alignItems: 'center', marginTop: 6 }}>
-                    <span className="grow" style={{ fontSize: '0.92rem' }}>
-                      {i.custom ? '✨ ' : ''}{i.name}
-                      <span className="muted small"> · {formatPrice(i.unit_price)}</span>
-                    </span>
-                    <span className="qty">
-                      <button aria-label="Riduci" onClick={() => setNewQty(idx, i.qty - 1)}>−</button>
-                      <strong>{i.qty}</strong>
-                      <button aria-label="Aumenta" onClick={() => setNewQty(idx, i.qty + 1)}>+</button>
-                    </span>
-                  </div>
-                ))}
-                <button
-                  className="btn ghost small block"
-                  style={{ marginTop: 8 }}
-                  onClick={() => setShowCustom(true)}
-                >
-                  🍹 Drink custom
-                </button>
-                {newItems.length > 0 && (
-                  <button className="btn block" style={{ marginTop: 6 }} disabled={saving} onClick={sendComanda}>
-                    📤 Invia comanda · {formatPrice(newTotal)}
-                  </button>
-                )}
-              </div>
+              <button
+                className="btn ghost small block"
+                style={{ marginTop: 10 }}
+                onClick={() => setShowCustom(true)}
+              >
+                🍹 Drink custom
+              </button>
+            )}
+
+            {draftCount > 0 && (
+              <button className="btn block" style={{ marginTop: 8 }} disabled={saving} onClick={sendDraft}>
+                📤 Invia aggiunte ({draftCount}) · {formatPrice(draftTotal)}
+              </button>
             )}
 
             {/* Dati conto (nome/tavolo/note) */}
-            <button className="btn ghost small block" onClick={() => setShowInfo((v) => !v)}>
+            <button className="btn ghost small block" style={{ marginTop: 10 }} onClick={() => setShowInfo((v) => !v)}>
               {showInfo ? 'Nascondi dati conto' : '👤 Dati conto (nome, tavolo, note)'}
             </button>
             {showInfo && (
@@ -367,7 +372,7 @@ export default function OrderPosDetail({ order }) {
             )}
           </div>
 
-          {/* Footer: totale + azioni conto */}
+          {/* Footer: azione comanda attiva + totale + azioni conto */}
           <div
             style={{
               flexShrink: 0,
@@ -378,6 +383,26 @@ export default function OrderPosDetail({ order }) {
               gap: 8,
             }}
           >
+            {active && activeNext && !closed && (
+              <div className="row between" style={{ alignItems: 'center' }}>
+                <span className={`pill ${active.status}`}>
+                  {STATUS_EMOJI[active.status]} {STATUS_LABELS[active.status]}
+                </span>
+                <button
+                  className="btn small"
+                  disabled={saving}
+                  onClick={() =>
+                    run(async () => {
+                      await flushAll()
+                      await advanceComanda(order.id, active.id, activeNext)
+                    })
+                  }
+                >
+                  Segna “{activeNext === ORDER_STATUSES.RITIRATO ? ritiratoLabel(order.service_mode) : STATUS_LABELS[activeNext]}”
+                </button>
+              </div>
+            )}
+
             {extras > 0 && (
               <div className="row between muted small">
                 <span>Coperto/servizio/mancia</span>
@@ -386,7 +411,7 @@ export default function OrderPosDetail({ order }) {
             )}
             <div className="row between">
               <strong>Totale</strong>
-              <strong className="price">{formatPrice(order.total)}</strong>
+              <strong className="price">{formatPrice(rowsTotal + extras)}</strong>
             </div>
 
             <div className="grid-2">
@@ -422,11 +447,75 @@ export default function OrderPosDetail({ order }) {
         </div>
       </div>
 
+      {/* ── Modale comande: stati, avanzamento, stampa (sola lettura item) ── */}
+      {showComande && (
+        <div className="overlay confirm-overlay" onClick={() => setShowComande(false)}>
+          <div
+            className="confirm-box"
+            style={{ maxHeight: '85vh', overflowY: 'auto', width: 'min(440px, 94vw)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="row between" style={{ alignItems: 'center' }}>
+              <h3 style={{ margin: 0 }}>🧾 Comande</h3>
+              <button className="btn ghost small" onClick={() => setShowComande(false)}>✕ Chiudi</button>
+            </div>
+            {comande.map((c) => {
+              const ns = nextComandaStatus(c.status)
+              return (
+                <div className="card" key={c.id} style={{ margin: '10px 0 0', padding: 12 }}>
+                  <div className="row between" style={{ alignItems: 'center' }}>
+                    <span className="muted small" style={{ whiteSpace: 'nowrap' }}>
+                      COMANDA {c.seq}
+                      {c.created_at ? ` · ${String(c.created_at).slice(11, 16)}` : ''}
+                    </span>
+                    <span className={`pill ${c.status}`} style={{ fontSize: '0.7rem' }}>
+                      {STATUS_EMOJI[c.status]}{' '}
+                      {c.status === ORDER_STATUSES.RITIRATO
+                        ? ritiratoLabel(order.service_mode)
+                        : STATUS_LABELS[c.status]}
+                    </span>
+                  </div>
+                  {(c.items || []).map((i, idx) => (
+                    <div className="row between" key={idx} style={{ marginTop: 4 }}>
+                      <span className="muted small">
+                        {i.qty}× {i.custom ? '✨ ' : ''}{i.name}
+                      </span>
+                      <span className="muted small">{formatPrice(i.qty * i.unit_price)}</span>
+                    </div>
+                  ))}
+                  <div className="grid-2" style={{ marginTop: 8, gap: 6 }}>
+                    <button
+                      className="btn ghost small"
+                      aria-label={`Stampa comanda ${c.seq}`}
+                      onClick={() => printComanda(order, c).catch((e) => setError(`Stampa: ${e.message}`))}
+                    >
+                      🖨 Stampa
+                    </button>
+                    {ns && !closed ? (
+                      <button
+                        className="btn small"
+                        disabled={saving}
+                        onClick={() => run(async () => { await flushAll(); await advanceComanda(order.id, c.id, ns) })}
+                      >
+                        Segna “{ns === ORDER_STATUSES.RITIRATO ? ritiratoLabel(order.service_mode) : STATUS_LABELS[ns]}”
+                      </button>
+                    ) : (
+                      <span />
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+            {comande.length === 0 && <p className="muted small">Nessuna comanda.</p>}
+          </div>
+        </div>
+      )}
+
       {showCustom && (
         <CustomDrinkForm
           onCancel={() => setShowCustom(false)}
           onAdd={({ name, price, recipe_items }) => {
-            setNewItems((items) => [
+            setDraft((items) => [
               ...items,
               {
                 drink_id: `custom-${Date.now()}-${Math.floor(Math.random() * 1e6)}`,
@@ -474,6 +563,17 @@ export default function OrderPosDetail({ order }) {
       )}
     </div>
   )
+}
+
+// Riga aggregata → forma "item da bozza" per il +1.
+function rowToDraft(r) {
+  return {
+    drink_id: r.drink_id,
+    name: r.name,
+    unit_price: r.unit_price,
+    sumup_product_id: r.sumup_product_id ?? null,
+    ...(r.custom ? { custom: true, recipe_items: r.recipe_items ?? [] } : {}),
+  }
 }
 
 // Copia di un oggetto senza una chiave (per rimuovere gli override flushati).
