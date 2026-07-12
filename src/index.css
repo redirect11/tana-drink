@@ -1895,7 +1895,6 @@ body.fullbleed .bar-content {
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 .groups-panel .group-row:last-child { border-bottom: none; }
-.pill.aperto { background: rgba(243, 156, 18, 0.2); color: #ffd591; }
 .pill.chiuso { background: rgba(46, 204, 113, 0.22); color: #9ff5c0; }
 
 /* ── Vista menù staff: 2 colonne compatte ───────────────────── */
