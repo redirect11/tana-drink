@@ -7,7 +7,7 @@ import { qtyBtnStyle } from '../lib/posStyles.js'
 
 // ── Tile prodotto ────────────────────────────────────────────────────────
 
-export function DrinkTile({ drink, qty, onAdd, onSetQty }) {
+export function DrinkTile({ drink, qty, onAdd, onSetQty, color = null }) {
   const inCart = qty > 0
 
   return (
@@ -34,6 +34,23 @@ export function DrinkTile({ drink, qty, onAdd, onSetQty }) {
         minHeight: 100,
       }}
     >
+      {/* Angolo colorato per categoria (come le tile di SumUp POS) */}
+      {color && (
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: 0,
+            height: 0,
+            borderTop: `16px solid ${color}`,
+            borderRight: '16px solid transparent',
+            borderTopLeftRadius: 14,
+          }}
+        />
+      )}
+
       {/* Badge quantità */}
       {inCart && (
         <div style={{
