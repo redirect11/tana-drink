@@ -150,6 +150,23 @@ describe('decidePaymentPatch: incassi PARZIALI sul lettore (split)', () => {
     expect(patch.payments).toHaveLength(2)
   })
 
+  it('saldo con comande NON servite: chiude e le marca tutte servite', () => {
+    const order = {
+      ...base,
+      comande: [
+        { id: 'c1', status: 'pronto', status_times: {} },
+        { id: 'c2', status: 'in_preparazione', status_times: {} },
+        { id: 'c3', status: 'annullato', status_times: {} },
+      ],
+      sumup_pending_amount: 22,
+    }
+    const patch = decidePaymentPatch(order, { status: 'pagato', now: NOW })
+    expect(patch.status).toBe('pagato')
+    expect(patch.comande.map((c) => c.status)).toEqual(['ritirato', 'ritirato', 'annullato'])
+    expect(patch.comande[0].status_times.ritirato).toBe(NOW)
+    expect(patch.comande_statuses.sort()).toEqual(['annullato', 'ritirato'])
+  })
+
   it('saldo con sconto: il residuo tiene conto del discount_amount', () => {
     const order = { ...base, discount_amount: 2, sumup_pending_amount: 20 }
     const patch = decidePaymentPatch(order, { status: 'pagato', now: NOW })

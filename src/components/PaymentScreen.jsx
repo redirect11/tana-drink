@@ -264,7 +264,7 @@ export default function PaymentScreen({ order, settings, onClose, onBeforePay })
           {!served && !closed && (
             <p className="muted small" style={{ margin: '8px 0 0' }}>
               ⚠️ Ci sono comande non ancora servite: saldando tutto, il conto
-              viene chiuso comunque.
+              si chiude e risultano tutte servite.
             </p>
           )}
           {readerStarted && order.payment_status === 'in_attesa' && (

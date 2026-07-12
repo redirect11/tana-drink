@@ -43,6 +43,21 @@ export function activeComanda(order) {
   )
 }
 
+// Un conto PAGATO risulta interamente servito: le comande ancora in
+// lavorazione passano a 'ritirato' (le annullate restano annullate, le
+// già servite non vengono toccate).
+export function serveAllComande(comande, nowIso) {
+  return (comande || []).map((c) =>
+    c.status === ORDER_STATUSES.ANNULLATO || c.status === ORDER_STATUSES.RITIRATO
+      ? c
+      : {
+          ...c,
+          status: ORDER_STATUSES.RITIRATO,
+          status_times: { ...(c.status_times || {}), [ORDER_STATUSES.RITIRATO]: nowIso },
+        }
+  )
+}
+
 // Riepilogo comande per le card della coda: attive / pronte / servite.
 export function comandeSummary(order) {
   const comande = order?.comande || []

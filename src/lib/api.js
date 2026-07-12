@@ -30,6 +30,7 @@ import {
   normalizeOrderDoc,
   activeComanda,
   allServed,
+  serveAllComande,
   aggregateItems,
   comandeStatuses,
   itemsTotal as sumItems,
@@ -951,8 +952,10 @@ export async function payGroupCash({
   if (!orderIds || orderIds.length === 0) return null
   const nowIso = new Date().toISOString()
   const settlementId = doc(paymentsCol).id
+  let lowStock = []
 
   await runTransaction(db, async (tx) => {
+    lowStock = []
     const refs = orderIds.map((id) => doc(ordersCol, id))
     const snaps = await Promise.all(refs.map((r) => tx.get(r)))
     let total = 0
@@ -970,19 +973,28 @@ export async function payGroupCash({
     })
     if (covered.length === 0) return
 
-    for (const { ref, raw } of covered) {
-      const patch = {
+    // Il pagamento chiude i conti: tutte le comande risultano SERVITE e
+    // quelle mai prese in carico si scaricano a magazzino ora (letture di
+    // scarico in blocco PRIMA delle scritture, regola delle transazioni).
+    const served = covered.map(({ ref, raw }) => ({
+      ref,
+      comande: serveAllComande(normalizeOrderDoc(raw).comande, nowIso),
+    }))
+    lowStock = await depleteComandeInventory(
+      tx,
+      served.flatMap(({ ref, comande }) => unappliedEntries(ref.id, comande))
+    )
+    for (const { ref, comande } of served) {
+      tx.update(ref, {
         payment_status: 'pagato',
         payment_method: 'banco',
         paid_at: nowIso,
         payment_id: settlementId,
-      }
-      // Il pagamento chiude il conto: se restano comande non servite,
-      // l'avviso è a monte in UI (modello conto/comande).
-      patch.status = ORDER_STATUSES.PAGATO
-      patch[`status_times.${ORDER_STATUSES.PAGATO}`] = nowIso
-      void raw
-      tx.update(ref, patch)
+        status: ORDER_STATUSES.PAGATO,
+        [`status_times.${ORDER_STATUSES.PAGATO}`]: nowIso,
+        comande,
+        comande_statuses: comandeStatuses(comande),
+      })
     }
 
     const orderIdsCovered = covered.map((c) => c.ref.id)
@@ -1014,6 +1026,7 @@ export async function payGroupCash({
       tx.set(doc(paymentsCol), { ...baseDoc, amount: Math.round(total * 100) / 100, split_count: null, split_index: null })
     }
   })
+  notifyLowStock(lowStock)
   return settlementId
 }
 
@@ -1294,7 +1307,9 @@ export async function registerPayment(id, { amount, method = 'banco', items = nu
   const ref = doc(db, 'orders', id)
   const nowIso = new Date().toISOString()
   let closed = false
+  let lowStock = []
   await runTransaction(db, async (tx) => {
+    lowStock = []
     const snap = await tx.get(ref)
     if (!snap.exists()) throw new Error('Ordine non trovato')
     const o = snap.data()
@@ -1314,6 +1329,14 @@ export async function registerPayment(id, { amount, method = 'banco', items = nu
       },
     ]
     closed = paymentCloses(o, paid)
+    let servedPatch = {}
+    if (closed) {
+      // Conto saldato ⇒ tutte le comande risultano SERVITE; quelle mai
+      // prese in carico vengono scaricate a magazzino adesso.
+      const comande = serveAllComande(normalizeOrderDoc(o).comande, nowIso)
+      lowStock = await depleteComandeInventory(tx, unappliedEntries(id, comande))
+      servedPatch = { comande, comande_statuses: comandeStatuses(comande) }
+    }
     tx.update(ref, {
       payments,
       ...(closed
@@ -1323,24 +1346,40 @@ export async function registerPayment(id, { amount, method = 'banco', items = nu
             payment_status: 'pagato',
             payment_method: summaryMethod(payments),
             paid_at: nowIso,
+            ...servedPatch,
           }
         : { payment_status: 'parziale' }),
     })
   })
+  notifyLowStock(lowStock)
   return { closed }
 }
 
 // Chiude definitivamente l'ordine come pagato, registrando il metodo
 // d'incasso ('banco' per contanti/POS esterno, 'lettore', 'online').
+// Conto pagato ⇒ tutte le comande risultano SERVITE (e quelle mai prese
+// in carico vengono scaricate a magazzino).
 export async function markOrderPaid(id, method) {
+  const ref = doc(db, 'orders', id)
   const nowIso = new Date().toISOString()
-  await updateDoc(doc(db, 'orders', id), {
-    status: ORDER_STATUSES.PAGATO,
-    [`status_times.${ORDER_STATUSES.PAGATO}`]: nowIso,
-    payment_method: method,
-    payment_status: 'pagato',
-    paid_at: nowIso,
+  let lowStock = []
+  await runTransaction(db, async (tx) => {
+    lowStock = []
+    const snap = await tx.get(ref)
+    if (!snap.exists()) throw new Error('Ordine non trovato')
+    const comande = serveAllComande(normalizeOrderDoc(snap.data()).comande, nowIso)
+    lowStock = await depleteComandeInventory(tx, unappliedEntries(id, comande))
+    tx.update(ref, {
+      status: ORDER_STATUSES.PAGATO,
+      [`status_times.${ORDER_STATUSES.PAGATO}`]: nowIso,
+      payment_method: method,
+      payment_status: 'pagato',
+      paid_at: nowIso,
+      comande,
+      comande_statuses: comandeStatuses(comande),
+    })
   })
+  notifyLowStock(lowStock)
 }
 
 // Avanza lo stato di UNA COMANDA (il ticket di lavorazione). È qui che vive
@@ -1348,49 +1387,73 @@ export async function markOrderPaid(id, method) {
 // `aperto` e si chiude solo con pagamento/annullo. Allo "in preparazione"
 // scala l'inventario sugli item della comanda (snapshot per-comanda usato
 // per storni e riallineamenti). I doc legacy vengono convertiti al volo.
-// Scarico inventario di UNA COMANDA dentro una transazione: tutte le
+// Scarico inventario di PIÙ COMANDE dentro una transazione: tutte le
 // LETTURE (ricette drink, giacenze) prima delle SCRITTURE (regola delle
-// transazioni Firestore). Muta la comanda (inventory_applied/snapshot) e
-// ritorna le scorte basse da notificare fuori dalla transazione.
-async function depleteComandaInventory(tx, orderId, comanda) {
-  const items = Array.isArray(comanda.items) ? comanda.items : []
+// transazioni Firestore) — per questo il batch è unico e non un ciclo di
+// scarichi singoli. Muta le comande (inventory_applied/snapshot per
+// comanda) e ritorna le scorte basse da notificare fuori transazione.
+// `entries` = [{ orderId, comanda }].
+async function depleteComandeInventory(tx, entries) {
+  if (!entries.length) return []
   // --- LETTURE ---
-  const drinkIds = [...new Set(items.filter((i) => !i.custom).map((i) => i.drink_id).filter(Boolean))]
-  const drinkSnaps = await Promise.all(drinkIds.map((d) => tx.get(doc(db, 'drinks', d))))
-  const drinksById = {}
-  drinkSnaps.forEach((sn, idx) => {
-    drinksById[drinkIds[idx]] = sn.exists() ? sn.data() : null
-  })
-  const consumption = computeConsumption(items, drinksById)
-  const itemSnaps = await Promise.all(
-    consumption.map((c) => tx.get(doc(db, 'inventory_items', c.inventory_item_id)))
-  )
-  // --- SCRITTURE ---
-  const lowStock = []
-  consumption.forEach((c, idx) => {
-    const sn = itemSnaps[idx]
-    if (!sn.exists()) return
-    const cur = sn.data()
-    const newStock = (Number(cur.stock) || 0) - c.qty
-    tx.update(doc(db, 'inventory_items', c.inventory_item_id), { stock: newStock })
-    tx.set(doc(movementsCol), {
-      item_id: c.inventory_item_id,
-      item_name: cur.name,
-      type: 'unload',
-      qty: c.qty,
-      unit: cur.unit ?? null,
-      reason: 'ordine',
-      order_id: orderId,
-      created_at: serverTimestamp(),
+  const plans = []
+  for (const { orderId, comanda } of entries) {
+    const items = Array.isArray(comanda.items) ? comanda.items : []
+    const drinkIds = [...new Set(items.filter((i) => !i.custom).map((i) => i.drink_id).filter(Boolean))]
+    const drinkSnaps = await Promise.all(drinkIds.map((d) => tx.get(doc(db, 'drinks', d))))
+    const drinksById = {}
+    drinkSnaps.forEach((sn, idx) => {
+      drinksById[drinkIds[idx]] = sn.exists() ? sn.data() : null
     })
+    plans.push({ orderId, comanda, consumption: computeConsumption(items, drinksById) })
+  }
+  const itemIds = [...new Set(plans.flatMap((p) => p.consumption.map((c) => c.inventory_item_id)))]
+  const itemSnaps = await Promise.all(itemIds.map((id) => tx.get(doc(db, 'inventory_items', id))))
+  const itemsById = {}
+  itemSnaps.forEach((sn, idx) => {
+    if (sn.exists()) itemsById[itemIds[idx]] = sn.data()
+  })
+  // --- SCRITTURE ---
+  // Un movimento per comanda/ingrediente; la giacenza si aggiorna UNA volta
+  // per ingrediente con il delta cumulato (due scritture sullo stesso doc
+  // nella stessa transazione si sovrascriverebbero).
+  const delta = {}
+  for (const p of plans) {
+    for (const c of p.consumption) {
+      const cur = itemsById[c.inventory_item_id]
+      if (!cur) continue
+      delta[c.inventory_item_id] = (delta[c.inventory_item_id] || 0) + c.qty
+      tx.set(doc(movementsCol), {
+        item_id: c.inventory_item_id,
+        item_name: cur.name,
+        type: 'unload',
+        qty: c.qty,
+        unit: cur.unit ?? null,
+        reason: 'ordine',
+        order_id: p.orderId,
+        created_at: serverTimestamp(),
+      })
+    }
+    p.comanda.inventory_applied = true
+    p.comanda.inventory_consumption = p.consumption
+  }
+  const lowStock = []
+  for (const [id, qty] of Object.entries(delta)) {
+    const cur = itemsById[id]
+    const newStock = (Number(cur.stock) || 0) - qty
+    tx.update(doc(db, 'inventory_items', id), { stock: newStock })
     if (newStock <= (Number(cur.low_threshold) || 0)) {
       lowStock.push({ name: cur.name, stock: newStock, unit: cur.unit })
     }
-  })
-  comanda.inventory_applied = true
-  comanda.inventory_consumption = consumption
+  }
   return lowStock
 }
+
+// Comande di un conto pagato ancora da scaricare a magazzino.
+const unappliedEntries = (orderId, comande) =>
+  comande
+    .filter((c) => c.status === ORDER_STATUSES.RITIRATO && c.inventory_applied !== true)
+    .map((comanda) => ({ orderId, comanda }))
 
 // Notifica scorte basse/finite (da chiamare fuori dalla transazione).
 function notifyLowStock(lowStock) {
@@ -1420,7 +1483,7 @@ export async function advanceComanda(orderId, comandaId, newStatus) {
 
     // Scarico inventario alla presa in carico della comanda (una volta sola).
     if (newStatus === ORDER_STATUSES.IN_PREPARAZIONE && comanda.inventory_applied !== true) {
-      lowStock = await depleteComandaInventory(tx, orderId, comanda)
+      lowStock = await depleteComandeInventory(tx, [{ orderId, comanda }])
     }
 
     comanda.status = newStatus
@@ -1613,7 +1676,7 @@ export async function addComanda(orderId, items, { note = null } = {}) {
       inventory_consumption: null,
       created_at: nowIso,
     }
-    lowStock = await depleteComandaInventory(tx, orderId, nuova)
+    lowStock = await depleteComandeInventory(tx, [{ orderId, comanda: nuova }])
     comande.push(nuova)
     const agg = aggregateItems(comande)
     const extras =
