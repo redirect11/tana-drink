@@ -180,7 +180,7 @@ export default function OrderPosDetail({ order }) {
           gap: 10,
           padding: '8px 10px',
           flexShrink: 0,
-          borderBottom: '1px solid rgba(255,255,255,0.07)',
+          borderBottom: '1px solid var(--line)',
         }}
       >
         <Link className="btn ghost small" to="/bar" aria-label="Torna agli ordini">← Ordini</Link>
@@ -237,14 +237,6 @@ export default function OrderPosDetail({ order }) {
                           ? ritiratoLabel(order.service_mode)
                           : STATUS_LABELS[c.status]}
                       </span>
-                      <button
-                        className="btn ghost small"
-                        style={{ padding: '2px 8px' }}
-                        aria-label={`Ristampa comanda ${c.seq}`}
-                        onClick={() => printComanda(order, c).catch((e) => setError(`Stampa: ${e.message}`))}
-                      >
-                        🖨
-                      </button>
                     </span>
                   </div>
                   {(pendingEdits[c.id] ?? c.items ?? []).map((i, idx) => (
@@ -264,16 +256,27 @@ export default function OrderPosDetail({ order }) {
                       )}
                     </div>
                   ))}
-                  {ns && !closed && (
+                  {/* Ogni comanda si può (ri)stampare: solo i SUOI item. */}
+                  <div className="grid-2" style={{ marginTop: 6, gap: 6 }}>
                     <button
-                      className="btn small block"
-                      style={{ marginTop: 6 }}
-                      disabled={saving}
-                      onClick={() => run(async () => { await flushAll(); await advanceComanda(order.id, c.id, ns) })}
+                      className="btn ghost small"
+                      aria-label={`Stampa comanda ${c.seq}`}
+                      onClick={() => printComanda(order, c).catch((e) => setError(`Stampa: ${e.message}`))}
                     >
-                      Segna “{ns === ORDER_STATUSES.RITIRATO ? ritiratoLabel(order.service_mode) : STATUS_LABELS[ns]}”
+                      🖨 Stampa
                     </button>
-                  )}
+                    {ns && !closed ? (
+                      <button
+                        className="btn small"
+                        disabled={saving}
+                        onClick={() => run(async () => { await flushAll(); await advanceComanda(order.id, c.id, ns) })}
+                      >
+                        Segna “{ns === ORDER_STATUSES.RITIRATO ? ritiratoLabel(order.service_mode) : STATUS_LABELS[ns]}”
+                      </button>
+                    ) : (
+                      <span />
+                    )}
+                  </div>
                 </div>
               )
             })}
@@ -369,7 +372,7 @@ export default function OrderPosDetail({ order }) {
             style={{
               flexShrink: 0,
               padding: '10px 12px',
-              borderTop: '1px solid rgba(255,255,255,0.1)',
+              borderTop: '1px solid var(--line)',
               display: 'flex',
               flexDirection: 'column',
               gap: 8,

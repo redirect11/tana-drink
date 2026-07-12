@@ -81,21 +81,14 @@ export default function PosPage() {
 
   const cartCount = cart.items.reduce((s, i) => s + i.qty, 0)
 
-  const inputStyle = {
-    padding: '6px 10px',
-    borderRadius: 8,
-    fontSize: '0.9rem',
-    background: 'rgba(255,255,255,0.07)',
-    border: '1px solid rgba(255,255,255,0.15)',
-    color: 'inherit',
-    width: '100%',
-  }
+  // Gli input ereditano lo stile globale (segue il tema); qui solo layout.
+  const inputStyle = { width: '100%' }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', overflow: 'hidden' }}>
       {/* ── Barra in alto: indietro + titolo ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', flexShrink: 0,
-        borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+        borderBottom: '1px solid var(--line)' }}>
         <Link className="btn ghost small" to="/bar" aria-label="Torna agli ordini">← Ordini</Link>
         <strong style={{ fontFamily: 'var(--serif)' }}>POS cassa</strong>
       </div>
@@ -184,7 +177,7 @@ export default function PosPage() {
             style={{
               flexShrink: 0,
               padding: '10px 12px',
-              borderTop: '1px solid rgba(255,255,255,0.1)',
+              borderTop: '1px solid var(--line)',
               display: 'flex',
               flexDirection: 'column',
               gap: 8,

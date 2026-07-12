@@ -43,6 +43,7 @@ import {
   bartenderUpdateComanda,
   markOrderPaid,
 } from '../../src/lib/api.js'
+import { printComanda } from '../../src/lib/printer.js'
 
 const baseOrder = (over = {}) => ({
   id: 'ord1',
@@ -168,6 +169,32 @@ describe('gestione comande esistenti', () => {
     )
     expect(screen.queryByRole('button', { name: 'Aumenta' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Segna/ })).not.toBeInTheDocument()
+  })
+})
+
+describe('stampa per comanda', () => {
+  it('ogni comanda ha il suo bottone Stampa: stampa SOLO quella comanda', async () => {
+    const user = userEvent.setup()
+    const order = baseOrder({
+      comande: [
+        {
+          id: 'c1', seq: 1, status: 'ritirato', status_times: {},
+          items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 }],
+        },
+        {
+          id: 'c2', seq: 2, status: 'ricevuto', status_times: {},
+          items: [{ drink_id: 'gin', name: 'Gin Tonic', unit_price: 8, qty: 1 }],
+        },
+      ],
+    })
+    mount(order)
+    expect(screen.getByRole('button', { name: 'Stampa comanda 1' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Stampa comanda 2' }))
+    expect(printComanda).toHaveBeenCalledTimes(1)
+    const [printedOrder, printedComanda] = printComanda.mock.calls[0]
+    expect(printedOrder.id).toBe('ord1')
+    expect(printedComanda.id).toBe('c2')
+    expect(printedComanda.items[0].name).toBe('Gin Tonic')
   })
 })
 

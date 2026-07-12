@@ -16,10 +16,10 @@ export function DrinkTile({ drink, qty, onAdd, onSetQty, color = null }) {
       style={{
         background: inCart
           ? 'rgba(var(--accent-rgb, 180, 120, 60), 0.18)'
-          : 'rgba(255,255,255,0.04)',
+          : 'var(--tile-bg)',
         border: inCart
           ? '2px solid rgba(var(--accent-rgb, 180, 120, 60), 0.7)'
-          : '1px solid rgba(255,255,255,0.09)',
+          : '1px solid var(--line)',
         borderRadius: 14,
         padding: '14px 10px 10px',
         cursor: 'pointer',

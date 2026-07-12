@@ -9,7 +9,7 @@ export function catBtnStyle(active) {
     border: 'none',
     background: active
       ? 'var(--accent, #b47a3c)'
-      : 'rgba(255,255,255,0.05)',
+      : 'var(--tile-bg)',
     color: active ? '#fff' : 'inherit',
     fontWeight: active ? 700 : 400,
     fontSize: '0.8rem',
@@ -25,8 +25,8 @@ export const qtyBtnStyle = {
   width: 28,
   height: 28,
   borderRadius: '50%',
-  border: '1px solid rgba(255,255,255,0.2)',
-  background: 'rgba(255,255,255,0.08)',
+  border: '1px solid var(--line)',
+  background: 'var(--tile-bg)',
   color: 'inherit',
   fontSize: '1.1rem',
   cursor: 'pointer',
