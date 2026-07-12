@@ -95,14 +95,66 @@ describe('decidePaymentPatch', () => {
     expect(patch.status).toBeUndefined()
   })
 
-  it('fallito: solo payment_status', () => {
+  it('fallito: payment_status fallito e importo in volo azzerato', () => {
     expect(decidePaymentPatch({ status: 'ricevuto' }, { status: 'fallito', now: NOW })).toEqual({
       payment_status: 'fallito',
+      sumup_pending_amount: null,
+      sumup_pending_items: null,
     })
+  })
+
+  it('fallito con acconti già incassati: il conto resta "parziale"', () => {
+    const order = { status: 'aperto', payments: [{ id: 'p1', amount: 5, method: 'banco' }] }
+    expect(decidePaymentPatch(order, { status: 'fallito', now: NOW }).payment_status).toBe('parziale')
   })
 
   it('in_attesa: nessuna patch', () => {
     expect(decidePaymentPatch({ status: 'ricevuto' }, { status: 'in_attesa', now: NOW })).toBeNull()
+  })
+})
+
+describe('decidePaymentPatch: incassi PARZIALI sul lettore (split)', () => {
+  const base = {
+    status: 'aperto',
+    total: 22,
+    discount_amount: 0,
+    comande: [{ status: 'ritirato' }],
+  }
+
+  it('importo in volo sotto il residuo: registra il pagamento, conto aperto', () => {
+    const order = { ...base, sumup_pending_amount: 7, sumup_pending_items: [{ drink_id: 'mojito', qty: 1 }] }
+    const patch = decidePaymentPatch(order, { status: 'pagato', transactionId: 'tx1', now: NOW })
+    expect(patch.payment_status).toBe('parziale')
+    expect(patch.status).toBeUndefined()
+    expect(patch.payments).toHaveLength(1)
+    expect(patch.payments[0]).toMatchObject({
+      amount: 7,
+      method: 'lettore',
+      items: [{ drink_id: 'mojito', qty: 1 }],
+      transaction_id: 'tx1',
+    })
+    expect(patch.sumup_pending_amount).toBeNull()
+    expect(patch.sumup_client_transaction_id).toBeNull()
+  })
+
+  it('importo in volo a saldo del residuo: chiude il conto (servito)', () => {
+    const order = {
+      ...base,
+      payments: [{ id: 'p1', amount: 15, method: 'banco' }],
+      sumup_pending_amount: 7,
+    }
+    const patch = decidePaymentPatch(order, { status: 'pagato', now: NOW })
+    expect(patch.payment_status).toBe('pagato')
+    expect(patch.payment_method).toBe('misto') // banco + lettore
+    expect(patch.status).toBe('pagato')
+    expect(patch.payments).toHaveLength(2)
+  })
+
+  it('saldo con sconto: il residuo tiene conto del discount_amount', () => {
+    const order = { ...base, discount_amount: 2, sumup_pending_amount: 20 }
+    const patch = decidePaymentPatch(order, { status: 'pagato', now: NOW })
+    expect(patch.payment_status).toBe('pagato')
+    expect(patch.payment_method).toBe('lettore')
   })
 })
 

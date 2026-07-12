@@ -5,12 +5,10 @@ import {
   addComanda,
   bartenderUpdateComanda,
   updateOrderInfo,
-  markOrderPaid,
   cancelOrder,
   subscribeSettings,
   DEFAULT_SETTINGS,
 } from '../lib/api.js'
-import { readerCheckout } from '../lib/paymentsApi.js'
 import { useMenu } from '../lib/menuCache.js'
 import {
   ORDER_STATUSES,
@@ -23,15 +21,16 @@ import {
 import {
   nextComandaStatus,
   activeComanda,
-  allServed,
   orderIsClosed,
   planDecrement,
   comandaEditable,
 } from '../lib/comande.js'
+import { paidAmount } from '../lib/pagamento.js'
 import { printComanda, printScontrino } from '../lib/printer.js'
 import PosProductPicker from './PosProductPicker.jsx'
 import CustomDrinkForm from './CustomDrinkForm.jsx'
 import ConfirmDialog from './ConfirmDialog.jsx'
+import PaymentScreen from './PaymentScreen.jsx'
 
 // ── Dettaglio ordine in stile POS SumUp — solo bartender ──────────────────
 // Il pannello destro mostra L'ORDINE AGGREGATO (niente comande in vista):
@@ -63,7 +62,6 @@ export default function OrderPosDetail({ order }) {
 
   const closed = orderIsClosed(order)
   const comande = useMemo(() => order.comande || [], [order.comande])
-  const served = allServed(order)
 
   async function run(fn) {
     setSaving(true)
@@ -428,6 +426,12 @@ export default function OrderPosDetail({ order }) {
               <strong>Totale</strong>
               <strong className="price">{formatPrice(rowsTotal + extras)}</strong>
             </div>
+            {((order.discount_amount || 0) > 0 || (order.payments || []).length > 0) && (
+              <div className="row between muted small">
+                <span>Sconto e acconti già incassati</span>
+                <span>−{formatPrice((order.discount_amount || 0) + paidAmount(order))}</span>
+              </div>
+            )}
 
             <div className="grid-2">
               <button
@@ -543,69 +547,14 @@ export default function OrderPosDetail({ order }) {
         />
       )}
 
-      {/* ── Schermata Pagamento ── */}
+      {/* ── Schermata Pagamento (split, sconto, preconto, metodi) ── */}
       {showPayment && (
-        <div className="overlay confirm-overlay" onClick={() => setShowPayment(false)}>
-          <div
-            className="confirm-box"
-            style={{ width: 'min(420px, 94vw)' }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="row between" style={{ alignItems: 'center' }}>
-              <h3 style={{ margin: 0 }}>💳 Pagamento</h3>
-              <button className="btn ghost small" onClick={() => setShowPayment(false)}>✕</button>
-            </div>
-
-            <div className="row between" style={{ marginTop: 12 }}>
-              <span className="muted">Ordine #{order.daily_number ?? '—'}</span>
-              <strong className="price" style={{ fontSize: '1.4rem' }}>
-                {formatPrice(order.total)}
-              </strong>
-            </div>
-
-            {!served && (
-              <p className="muted small" style={{ margin: '10px 0 0' }}>
-                ⚠️ Ci sono comande non ancora servite: incassando, il conto
-                viene chiuso comunque.
-              </p>
-            )}
-
-            <button
-              className="btn block"
-              style={{ marginTop: 14 }}
-              disabled={saving}
-              onClick={() =>
-                run(async () => {
-                  await flushAll()
-                  await markOrderPaid(order.id, 'banco')
-                  setShowPayment(false)
-                })
-              }
-            >
-              💵 Contanti / al banco
-            </button>
-
-            {settings.payments_reader_enabled && settings.sumup_reader_id && (
-              <button
-                className="btn secondary block"
-                style={{ marginTop: 8 }}
-                disabled={saving}
-                onClick={() =>
-                  run(async () => {
-                    await flushAll()
-                    const res = await readerCheckout(order.id)
-                    if (res?.unavailable) {
-                      setError('Lettore non disponibile in ambiente di sviluppo: simula dai DevTools.')
-                    }
-                    setShowPayment(false)
-                  })
-                }
-              >
-                📟 Carta sul lettore SumUp{settings.sumup_reader_name ? ` (${settings.sumup_reader_name})` : ''}
-              </button>
-            )}
-          </div>
-        </div>
+        <PaymentScreen
+          order={order}
+          settings={settings}
+          onClose={() => setShowPayment(false)}
+          onBeforePay={flushAll}
+        />
       )}
 
       {confirmCancel && (

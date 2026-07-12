@@ -1996,6 +1996,39 @@ body.fullbleed .bar-content {
   }
 }
 
+/* ── Schermata Pagamento (stile POS: articoli a sinistra, azioni a destra) ── */
+.payscreen-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+.payscreen-items {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 14px 14px;
+  min-width: 0;
+}
+.payscreen-actions {
+  display: flex;
+  flex-direction: column;
+  width: 340px;
+  flex-shrink: 0;
+  padding: 12px 14px;
+  background: var(--bg-2);
+  border-left: 1px solid var(--line);
+  overflow-y: auto;
+}
+@media (max-width: 699px) {
+  .payscreen-body {
+    flex-direction: column;
+  }
+  .payscreen-actions {
+    width: 100%;
+    border-left: none;
+    border-top: 1px solid var(--line);
+  }
+}
+
 /* ── Varianti per TEMI CHIARI (impostate da applyTheme via data-luma) ──
    I colori di stato di default sono pensati per fondi scuri (testi
    pastello): sul chiaro diventano versioni sature e scure, leggibili. */

@@ -42,7 +42,9 @@ service cloud.firestore {
         return ['payment_status', 'payment_method', 'payment_required',
                 'paid_at', 'sumup_checkout_id', 'sumup_checkout_attempts',
                 'sumup_transaction_id', 'sumup_client_transaction_id',
-                'payment_after_cancel', 'payment_id'];
+                'payment_after_cancel', 'payment_id',
+                'payments', 'discount', 'discount_amount',
+                'sumup_pending_amount', 'sumup_pending_items'];
       }
       allow read: if true;
       // Alla creazione il pagamento può solo essere assente, non

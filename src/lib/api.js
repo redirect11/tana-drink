@@ -34,6 +34,7 @@ import {
   comandeStatuses,
   itemsTotal as sumItems,
 } from './comande.js'
+import { discountAmount, orderDue, paymentCloses, summaryMethod } from './pagamento.js'
 import { notify } from './notify.js'
 
 const drinksCol = collection(db, 'drinks')
@@ -170,6 +171,10 @@ function mapOrder(snap) {
     inventory_applied: o.inventory_applied ?? false,
     payment_method: o.payment_method ?? null,
     payment_status: o.payment_status ?? 'non_richiesto',
+    // Sconto sul conto e pagamenti parziali (split alla cassa).
+    discount: o.discount ?? null,
+    discount_amount: o.discount_amount ?? 0,
+    payments: (o.payments || []).map((p) => ({ ...p, at: toIso(p.at) })),
     payment_required: o.payment_required ?? false,
     sumup_checkout_id: o.sumup_checkout_id ?? null,
     sumup_checkout_attempts: o.sumup_checkout_attempts ?? 0,
@@ -1258,6 +1263,71 @@ export async function fetchActiveOrders() {
     String(a.created_at || '').localeCompare(String(b.created_at || ''))
   )
   return orders
+}
+
+// Imposta (o rimuove, con null) lo sconto sul conto: percentuale o euro.
+// L'importo in euro viene calcolato e persistito, così residuo e webhook
+// dei pagamenti ragionano sempre sullo stesso numero.
+export async function setOrderDiscount(id, discount) {
+  const ref = doc(db, 'orders', id)
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref)
+    if (!snap.exists()) throw new Error('Ordine non trovato')
+    const o = snap.data()
+    if (o.payment_status === 'pagato') throw new Error('Ordine già pagato')
+    const clean =
+      discount && Number(discount.value) > 0
+        ? { type: discount.type === 'percent' ? 'percent' : 'euro', value: Number(discount.value) }
+        : null
+    tx.update(ref, {
+      discount: clean,
+      discount_amount: discountAmount(o.total ?? 0, clean),
+    })
+  })
+}
+
+// Registra un incasso (anche PARZIALE, per lo split del conto): appende il
+// pagamento e, se il residuo va a zero, chiude il conto come "pagato" —
+// anche con comande non servite (l'avviso sta nella UI, come concordato).
+// `items` è la selezione pagata (null = importo sul residuo, senza dettaglio).
+export async function registerPayment(id, { amount, method = 'banco', items = null } = {}) {
+  const ref = doc(db, 'orders', id)
+  const nowIso = new Date().toISOString()
+  let closed = false
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref)
+    if (!snap.exists()) throw new Error('Ordine non trovato')
+    const o = snap.data()
+    if (o.status === ORDER_STATUSES.ANNULLATO) throw new Error('Ordine annullato')
+    if (o.payment_status === 'pagato') throw new Error('Ordine già pagato')
+    const due = orderDue(o)
+    const paid = Math.min(Number(amount) || 0, due)
+    if (!(paid > 0)) throw new Error('Importo non valido')
+    const payments = [
+      ...(o.payments || []),
+      {
+        id: `pay-${Date.now()}-${(o.payments || []).length + 1}`,
+        amount: paid,
+        method,
+        items: items?.length ? items : null,
+        at: nowIso,
+      },
+    ]
+    closed = paymentCloses(o, paid)
+    tx.update(ref, {
+      payments,
+      ...(closed
+        ? {
+            status: ORDER_STATUSES.PAGATO,
+            [`status_times.${ORDER_STATUSES.PAGATO}`]: nowIso,
+            payment_status: 'pagato',
+            payment_method: summaryMethod(payments),
+            paid_at: nowIso,
+          }
+        : { payment_status: 'parziale' }),
+    })
+  })
+  return { closed }
 }
 
 // Chiude definitivamente l'ordine come pagato, registrando il metodo
