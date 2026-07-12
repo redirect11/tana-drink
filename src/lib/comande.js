@@ -30,9 +30,17 @@ export function comandaDone(c) {
   return c.status === ORDER_STATUSES.RITIRATO || c.status === ORDER_STATUSES.ANNULLATO
 }
 
-// La comanda "attiva": la più vecchia ancora in lavorazione (o null).
+// La comanda "attiva": quella AL PASSO PIÙ INDIETRO tra le aperte (a parità
+// di passo, la più vecchia), o null. È lei a dare lo stato dell'ordine in
+// coda: se su un conto con una comanda già "pronta" arriva un'aggiunta in
+// preparazione, l'ordine TORNA "in preparazione" — c'è di nuovo lavoro al
+// banco (il concetto richiesto: nuova aggiunta ⇒ si riparte a preparare).
 export function activeComanda(order) {
-  return (order?.comande || []).find((c) => !comandaDone(c)) ?? null
+  const aperte = (order?.comande || []).filter((c) => !comandaDone(c))
+  if (aperte.length === 0) return null
+  return aperte.reduce((best, c) =>
+    COMANDA_FLOW.indexOf(c.status) < COMANDA_FLOW.indexOf(best.status) ? c : best
+  )
 }
 
 // Riepilogo comande per le card della coda: attive / pronte / servite.
