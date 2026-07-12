@@ -1990,6 +1990,15 @@ body.fullbleed .bar-content {
 /* ── Varianti per TEMI CHIARI (impostate da applyTheme via data-luma) ──
    I colori di stato di default sono pensati per fondi scuri (testi
    pastello): sul chiaro diventano versioni sature e scure, leggibili. */
+:root {
+  /* Superfici/linee POS: seguono il tema (variante chiara sotto). */
+  --line: rgba(255, 255, 255, 0.1);
+  --tile-bg: rgba(255, 255, 255, 0.05);
+}
+:root[data-luma='light'] {
+  --line: rgba(0, 0, 0, 0.14);
+  --tile-bg: rgba(0, 0, 0, 0.05);
+}
 :root[data-luma='light'] .pill.ricevuto {
   background: rgba(243, 156, 18, 0.18);
   color: #8a5200;

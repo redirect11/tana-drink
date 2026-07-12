@@ -28,12 +28,6 @@ export default function App() {
   }, [])
   const accountsOn = settings.customer_accounts_enabled
 
-  // Tema: nel gestionale (/bar) vale il tema staff, altrove quello cliente.
-  useEffect(() => {
-    const scope = onBackoffice ? settings.theme_staff : settings.theme_client
-    applyTheme(resolveThemeVars(scope))
-  }, [settings, onBackoffice])
-
   // Staff loggato (bartender o collaboratore): nel topbar lato cliente
   // mostra il ruolo ed «Esci» al posto di «Accedi».
   const [staffRole, setStaffRole] = useState(null)
@@ -52,6 +46,18 @@ export default function App() {
       }
     })
   }, [])
+
+  // Tema: le schermate del gestionale (/bar, POS cassa e dettaglio ordine
+  // visto dallo staff) seguono il tema staff; il resto quello cliente.
+  const staffSurface =
+    onBackoffice ||
+    location.pathname.startsWith('/pos') ||
+    (!!staffRole && location.pathname.startsWith('/ordine'))
+  useEffect(() => {
+    const scope = staffSurface ? settings.theme_staff : settings.theme_client
+    applyTheme(resolveThemeVars(scope))
+  }, [settings, staffSurface])
+
 
   return (
     <div className="app">

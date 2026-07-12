@@ -30,7 +30,7 @@ export default function PosProductPicker({ drinks, cats, loading, qtyByDrink, on
           width: 104,
           flexShrink: 0,
           overflowY: 'auto',
-          borderRight: '1px solid rgba(255,255,255,0.07)',
+          borderRight: '1px solid var(--line)',
           padding: '8px 6px',
           display: 'flex',
           flexDirection: 'column',
