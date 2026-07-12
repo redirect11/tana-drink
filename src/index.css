@@ -1058,6 +1058,12 @@ body.fullbleed .topbar {
   display: none;
 }
 
+/* Niente footer con i social sulle schermate di lavoro (POS, creazione e
+   modifica ordine): è roba da vetrina cliente, non da cassa. */
+body.fullbleed .app-footer {
+  display: none;
+}
+
 /* Menu laterale nascosto a qualsiasi larghezza: si apre col burger e si
    sovrappone al contenuto, che così occupa tutta la larghezza. */
 body.fullbleed .bar-sidebar {

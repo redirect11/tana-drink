@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { registerPayment, setOrderDiscount } from '../lib/api.js'
 import { readerCheckout } from '../lib/paymentsApi.js'
 import { formatPrice, PAYMENT_METHOD_LABELS } from '../lib/orderStatus.js'
@@ -18,15 +18,27 @@ import {
 // del preconto e i metodi di pagamento (contanti / carta sul lettore).
 // Il conto si chiude da solo quando il residuo arriva a zero.
 
+// Selezione "tutto il conto": la schermata si apre con ogni articolo già
+// in pagamento; si deseleziona solo per lo split del tavolo.
+const fullSelection = (order) =>
+  Object.fromEntries(remainingItems(order).map((r) => [r.drink_id, r.qty]))
+
 export default function PaymentScreen({ order, settings, onClose, onBeforePay }) {
   const [error, setError] = useState(null)
   const [saving, setSaving] = useState(false)
-  const [sel, setSel] = useState({}) // drink_id -> qty selezionata
+  const [sel, setSel] = useState(() => fullSelection(order)) // drink_id -> qty da pagare ora
   const [disc, setDisc] = useState({
     type: order.discount?.type || 'percent',
     value: order.discount?.value ? String(order.discount.value) : '',
   })
   const [readerStarted, setReaderStarted] = useState(false)
+
+  // Dopo ogni incasso registrato la selezione torna a "tutto il residuo".
+  const paymentsCount = (order.payments || []).length
+  useEffect(() => {
+    setSel(fullSelection(order))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [order.id, paymentsCount])
 
   const remaining = useMemo(() => remainingItems(order), [order])
   const paid = paidAmount(order)
@@ -37,8 +49,13 @@ export default function PaymentScreen({ order, settings, onClose, onBeforePay })
   const selection = remaining
     .filter((r) => (sel[r.drink_id] || 0) > 0)
     .map((r) => ({ ...r, qty: Math.min(sel[r.drink_id], r.qty) }))
-  const splitting = selection.length > 0
-  const toPay = selectionAmount(order, selection)
+  const allSelected =
+    remaining.length > 0 && remaining.every((r) => (sel[r.drink_id] || 0) >= r.qty)
+  // Split solo quando si è tolto qualcosa: a selezione piena si salda il
+  // residuo intero (coperto/servizio compresi), senza dettaglio articoli.
+  const splitting = !allSelected && selection.length > 0
+  const toPay =
+    remaining.length === 0 || allSelected ? due : splitting ? selectionAmount(order, selection) : 0
 
   const readerReady = settings.payments_reader_enabled && settings.sumup_reader_id
 
@@ -74,7 +91,6 @@ export default function PaymentScreen({ order, settings, onClose, onBeforePay })
         method: 'banco',
         items: splitting ? selection : null,
       })
-      setSel({})
       if (done) onClose()
     })
 
@@ -89,7 +105,6 @@ export default function PaymentScreen({ order, settings, onClose, onBeforePay })
         setError('Lettore non disponibile in ambiente di sviluppo: simula dai DevTools.')
         return
       }
-      setSel({})
       setReaderStarted(true)
     })
 
@@ -135,8 +150,8 @@ export default function PaymentScreen({ order, settings, onClose, onBeforePay })
         {/* ── SINISTRA: articoli selezionabili (split del conto) ── */}
         <div className="payscreen-items">
           <p className="muted small" style={{ margin: '10px 0 2px' }}>
-            Seleziona gli articoli da pagare singolarmente (split), oppure
-            incassa tutto il residuo.
+            Tutti gli articoli sono già in pagamento: togli quelli che non
+            vanno incassati adesso per fare lo split del conto.
           </p>
           {remaining.map((r) => {
             const s = Math.min(sel[r.drink_id] || 0, r.qty)
@@ -157,9 +172,13 @@ export default function PaymentScreen({ order, settings, onClose, onBeforePay })
           {remaining.length === 0 && !closed && (
             <p className="muted small">Nessun articolo da pagare{due > 0 ? ': resta il residuo (coperto/servizio).' : '.'}</p>
           )}
-          {splitting && (
-            <button className="btn ghost small block" style={{ marginTop: 10 }} onClick={() => setSel({})}>
-              Azzera selezione
+          {remaining.length > 0 && !allSelected && !closed && (
+            <button
+              className="btn ghost small block"
+              style={{ marginTop: 10 }}
+              onClick={() => setSel(fullSelection(order))}
+            >
+              Rimetti tutto in pagamento
             </button>
           )}
 
@@ -236,7 +255,9 @@ export default function PaymentScreen({ order, settings, onClose, onBeforePay })
           )}
 
           <div className="row between" style={{ marginTop: 10, alignItems: 'baseline' }}>
-            <strong>{splitting ? 'Selezione da incassare' : 'Residuo da incassare'}</strong>
+            <strong>
+              {remaining.length === 0 || allSelected ? 'Residuo da incassare' : 'Selezione da incassare'}
+            </strong>
             <strong className="price" style={{ fontSize: '1.5rem' }}>{formatPrice(toPay)}</strong>
           </div>
 

@@ -58,15 +58,34 @@ function mount(order, settings = noReader) {
 
 beforeEach(() => vi.clearAllMocks())
 
-describe('split: articoli selezionabili e pagabili singolarmente', () => {
-  it('selezionando un articolo si incassa solo quello', async () => {
+describe('split: articoli già in pagamento, si deseleziona per dividere', () => {
+  it('si apre con TUTTO il conto già in pagamento: si incassa senza riselezionare', async () => {
     const user = userEvent.setup()
     mount(baseOrder())
-    // articoli a sinistra con le quantità del conto
+    // articoli a sinistra, già tutti selezionati (2/2 e 1/1)
     expect(screen.getByText('Mojito')).toBeInTheDocument()
     expect(screen.getByText('Gin Tonic')).toBeInTheDocument()
-    // seleziona 1 Mojito → il totale da incassare diventa la selezione
-    await user.click(screen.getByRole('button', { name: 'Paga Mojito' }))
+    expect(screen.getByText('2/2')).toBeInTheDocument()
+    expect(screen.getByText('1/1')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Paga Mojito' })).toBeDisabled()
+    expect(screen.getByText('Residuo da incassare')).toBeInTheDocument()
+    // totale conto + residuo in grande: stesso importo, tutto in pagamento
+    expect(screen.getAllByText('22,00 €')).toHaveLength(2)
+    // un tap sul metodo di pagamento incassa tutto il residuo
+    await user.click(screen.getByRole('button', { name: /Contanti/ }))
+    expect(registerPayment).toHaveBeenCalledWith('ord1', {
+      amount: 22,
+      method: 'banco',
+      items: null,
+    })
+  })
+
+  it('togliendo articoli dal pagamento si incassa solo la selezione (split)', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    // lascia in pagamento solo 1 Mojito: via 1 Mojito e il Gin Tonic
+    await user.click(screen.getByRole('button', { name: 'Togli Mojito dal pagamento' }))
+    await user.click(screen.getByRole('button', { name: 'Togli Gin Tonic dal pagamento' }))
     expect(screen.getByText('Selezione da incassare')).toBeInTheDocument()
     expect(screen.getByText('7,00 €')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /Contanti/ }))
@@ -75,6 +94,16 @@ describe('split: articoli selezionabili e pagabili singolarmente', () => {
       method: 'banco',
       items: [expect.objectContaining({ drink_id: 'mojito', qty: 1 })],
     })
+  })
+
+  it('"Rimetti tutto in pagamento" riporta la selezione al residuo intero', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.click(screen.getByRole('button', { name: 'Togli Gin Tonic dal pagamento' }))
+    expect(screen.getByText('Selezione da incassare')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Rimetti tutto in pagamento' }))
+    expect(screen.getByText('Residuo da incassare')).toBeInTheDocument()
+    expect(screen.getAllByText('22,00 €')).toHaveLength(2)
   })
 
   it('gli articoli già pagati spariscono dalla lista e restano nello storico', () => {
