@@ -210,19 +210,21 @@ export default function PosPage() {
               <strong className="price">{formatPrice(cart.total)}</strong>
             </div>
             <div className="grid-2">
+              {/* Conferma = crea l'ordine SENZA stampare; la stampa della
+                  comanda è esplicita nel bottone accanto. */}
               <button
                 className="btn secondary small"
                 disabled={cartCount === 0 || !serata}
                 onClick={() => handleSend({ printNow: false })}
               >
-                Invia
+                ✅ Conferma
               </button>
               <button
                 className="btn small"
                 disabled={cartCount === 0 || !serata}
                 onClick={() => handleSend({ printNow: true })}
               >
-                🖨 Invia + comanda
+                🖨 Conferma + stampa comanda
               </button>
             </div>
           </div>

@@ -76,17 +76,26 @@ describe('cassa: layout identico al dettaglio ordine', () => {
     expect(screen.getByText('14,00 €')).toBeInTheDocument()
   })
 
-  it('Invia crea l’ordine con gli item e i dati conto', async () => {
+  it('Conferma crea l’ordine con gli item e i dati conto (senza stampa)', async () => {
     const user = userEvent.setup()
     mount()
     await user.click(screen.getByText('Mojito'))
     await user.click(screen.getByRole('button', { name: /Dati conto/ }))
     await user.type(screen.getByLabelText('Nome'), 'iole')
-    await user.click(screen.getByRole('button', { name: 'Invia' }))
+    await user.click(screen.getByRole('button', { name: '✅ Conferma' }))
     expect(submitPosOrder).toHaveBeenCalledTimes(1)
     const arg = submitPosOrder.mock.calls[0][0]
     expect(arg.serata_id).toBe('serata1')
     expect(arg.customer_name).toBe('iole')
     expect(arg.items).toEqual([expect.objectContaining({ drink_id: 'mojito', qty: 1 })])
+    expect(arg.printNow).toBe(false)
+  })
+
+  it('la barra di ricerca filtra la griglia prodotti', async () => {
+    const user = userEvent.setup()
+    mount()
+    await user.type(screen.getByLabelText('Cerca prodotto'), 'gin')
+    expect(screen.getByText('Gin Tonic')).toBeInTheDocument()
+    expect(screen.queryByText('Mojito')).not.toBeInTheDocument()
   })
 })
