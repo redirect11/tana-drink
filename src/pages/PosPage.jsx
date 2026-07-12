@@ -26,6 +26,7 @@ export default function PosPage() {
   const [note, setNote] = useState('')
   const [customerName, setCustomerName] = useState('')
   const [showCustom, setShowCustom] = useState(false)
+  const [showInfo, setShowInfo] = useState(false)
 
   // POS a tutto schermo: esce dal contenitore centrato .app (max 760px) così
   // la griglia prodotti riempie tutta la larghezza (utile su tablet).
@@ -115,7 +116,7 @@ export default function PosPage() {
         {/* ── Pannello destro: la comanda in composizione ── */}
         <div className="posd-comanda">
           <div style={{ flex: 1, overflowY: 'auto', padding: '10px 12px' }}>
-            <div className="muted small" style={{ letterSpacing: 0.5 }}>COMANDA</div>
+            <div className="muted small" style={{ letterSpacing: 0.5 }}>ORDINE</div>
 
             {cart.items.length === 0 && (
               <p className="muted small" style={{ margin: '6px 0 0' }}>
@@ -144,32 +145,45 @@ export default function PosPage() {
               🍹 Drink custom
             </button>
 
-            {/* Dati ordine: nome (come SumUp), tavolo, nota */}
-            <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <input
-                type="text"
-                placeholder="Nome (opz.)"
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-                style={inputStyle}
-              />
-              <div style={{ display: 'flex', gap: 6 }}>
+            {/* Dati conto (nome/tavolo/note), identico al dettaglio ordine */}
+            <button
+              className="btn ghost small block"
+              style={{ marginTop: 10 }}
+              onClick={() => setShowInfo((v) => !v)}
+            >
+              {showInfo ? 'Nascondi dati conto' : '👤 Dati conto (nome, tavolo, note)'}
+            </button>
+            {showInfo && (
+              <div style={{ marginTop: 6 }}>
+                <label htmlFor="pos-name">Nome</label>
                 <input
-                  type="text"
-                  placeholder="Tavolo"
-                  value={tableLabel}
-                  onChange={(e) => setTableLabel(e.target.value)}
-                  style={{ ...inputStyle, width: 90 }}
-                />
-                <input
-                  type="text"
-                  placeholder="Nota (opz.)"
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
+                  id="pos-name"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
                   style={inputStyle}
                 />
+                <div className="grid-2" style={{ marginTop: 6 }}>
+                  <div>
+                    <label htmlFor="pos-table">Tavolo</label>
+                    <input
+                      id="pos-table"
+                      value={tableLabel}
+                      onChange={(e) => setTableLabel(e.target.value)}
+                      style={inputStyle}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="pos-note">Note</label>
+                    <input
+                      id="pos-note"
+                      value={note}
+                      onChange={(e) => setNote(e.target.value)}
+                      style={inputStyle}
+                    />
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Footer: totale + invio */}
