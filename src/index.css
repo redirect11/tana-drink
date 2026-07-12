@@ -279,6 +279,15 @@ a.btn.block {
   background: rgba(245, 185, 74, 0.2);
   color: var(--accent-2);
 }
+/* Stato dell'ORDINE (conto): aperto finché non viene incassato. */
+.pill.aperto {
+  background: rgba(46, 204, 113, 0.18);
+  color: #9ff5c0;
+}
+.pill.annullato {
+  background: rgba(244, 67, 54, 0.18);
+  color: #ff8a80;
+}
 
 .menu-item h3 {
   margin: 0 0 4px;
@@ -1999,6 +2008,14 @@ body.fullbleed .bar-content {
 :root[data-luma='light'] {
   --line: rgba(0, 0, 0, 0.14);
   --tile-bg: rgba(0, 0, 0, 0.05);
+}
+:root[data-luma='light'] .pill.aperto {
+  background: rgba(46, 204, 113, 0.2);
+  color: #12653d;
+}
+:root[data-luma='light'] .pill.annullato {
+  background: rgba(244, 67, 54, 0.14);
+  color: #b02a37;
 }
 :root[data-luma='light'] .pill.ricevuto {
   background: rgba(243, 156, 18, 0.18);
