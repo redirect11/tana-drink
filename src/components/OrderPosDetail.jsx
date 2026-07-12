@@ -226,7 +226,7 @@ export default function OrderPosDetail({ order }) {
               return (
                 <div key={c.id} style={{ marginBottom: 12 }}>
                   <div className="row between" style={{ alignItems: 'center' }}>
-                    <span className="muted small" style={{ letterSpacing: 0.5 }}>
+                    <span className="muted small" style={{ letterSpacing: 0.5, whiteSpace: 'nowrap' }}>
                       COMANDA {c.seq}
                       {c.created_at ? ` · ${String(c.created_at).slice(11, 16)}` : ''}
                     </span>

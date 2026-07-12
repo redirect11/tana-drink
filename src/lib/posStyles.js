@@ -13,11 +13,13 @@ export function catBtnStyle(active) {
     color: active ? '#fff' : 'inherit',
     fontWeight: active ? 700 : 400,
     fontSize: '0.8rem',
-    textAlign: 'center',
+    textAlign: 'left',
     cursor: 'pointer',
     transition: 'background 0.12s',
-    lineHeight: 1.3,
-    wordBreak: 'break-word',
+    lineHeight: 1.25,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6,
   }
 }
 

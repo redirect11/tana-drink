@@ -250,6 +250,7 @@ a.btn.block {
 .pill {
   display: inline-flex;
   align-items: center;
+  white-space: nowrap;
   gap: 6px;
   padding: 4px 10px;
   border-radius: 999px;
@@ -2038,10 +2039,17 @@ body.fullbleed .bar-content {
 :root[data-luma='light'] .qty button {
   background: rgba(0, 0, 0, 0.08);
 }
-:root[data-luma='light'] .card,
+:root[data-luma='light'] .card:not(.order-card),
 :root[data-luma='light'] .inv-list,
 :root[data-luma='light'] .inv-item {
   border-color: rgba(0, 0, 0, 0.1);
+}
+/* Le card ordine mantengono la STRISCIA sinistra colorata per stato:
+   sul chiaro si aggiornano solo gli altri tre lati. */
+:root[data-luma='light'] .order-card {
+  border-top-color: rgba(0, 0, 0, 0.1);
+  border-right-color: rgba(0, 0, 0, 0.1);
+  border-bottom-color: rgba(0, 0, 0, 0.1);
 }
 :root[data-luma='light'] input,
 :root[data-luma='light'] select,
