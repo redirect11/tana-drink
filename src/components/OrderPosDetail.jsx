@@ -7,7 +7,10 @@ import {
   updateOrderInfo,
   markOrderPaid,
   cancelOrder,
+  subscribeSettings,
+  DEFAULT_SETTINGS,
 } from '../lib/api.js'
+import { readerCheckout } from '../lib/paymentsApi.js'
 import { useMenu } from '../lib/menuCache.js'
 import {
   ORDER_STATUSES,
@@ -45,7 +48,9 @@ export default function OrderPosDetail({ order }) {
   const [showCustom, setShowCustom] = useState(false)
   const [showComande, setShowComande] = useState(false)
   const [confirmCancel, setConfirmCancel] = useState(false)
-  const [confirmPay, setConfirmPay] = useState(false)
+  const [showPayment, setShowPayment] = useState(false)
+  const [settings, setSettings] = useState(DEFAULT_SETTINGS)
+  useEffect(() => subscribeSettings(setSettings, () => {}), [])
 
   // AGGIUNTE in composizione (bozza locale → nuova comanda all'invio).
   const [draft, setDraft] = useState([])
@@ -187,12 +192,17 @@ export default function OrderPosDetail({ order }) {
     flushTimers.current[plan.comandaId] = setTimeout(() => flushComanda(plan.comandaId), 600)
   }
 
-  // Invio delle aggiunte: crea la nuova comanda (internamente).
-  const sendDraft = () =>
+  // Conferma delle aggiunte: crea la nuova comanda (internamente).
+  // `printNow` stampa subito la comanda appena creata (stampa esplicita).
+  const sendDraft = (printNow = false) =>
     run(async () => {
       await flushAll()
-      await addComanda(order.id, draft)
+      const updated = await addComanda(order.id, draft)
       setDraft([])
+      if (printNow) {
+        const nuova = updated.comande?.[updated.comande.length - 1]
+        if (nuova) await printComanda(updated, nuova).catch((e) => setError(`Stampa: ${e.message}`))
+      }
     })
 
   // ── Comanda attiva: azione rapida di avanzamento (senza mostrare i dettagli) ──
@@ -320,9 +330,14 @@ export default function OrderPosDetail({ order }) {
             )}
 
             {draftCount > 0 && (
-              <button className="btn block" style={{ marginTop: 8 }} disabled={saving} onClick={sendDraft}>
-                📤 Invia aggiunte ({draftCount}) · {formatPrice(draftTotal)}
-              </button>
+              <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <button className="btn block" disabled={saving} onClick={() => sendDraft(false)}>
+                  ✅ Conferma aggiunte ({draftCount}) · {formatPrice(draftTotal)}
+                </button>
+                <button className="btn secondary small block" disabled={saving} onClick={() => sendDraft(true)}>
+                  🖨 Conferma + stampa comanda
+                </button>
+              </div>
             )}
 
             {/* Dati conto (nome/tavolo/note) */}
@@ -419,15 +434,11 @@ export default function OrderPosDetail({ order }) {
                 className="btn ghost small"
                 onClick={() => printScontrino(order).catch((e) => setError(`Stampa: ${e.message}`))}
               >
-                🧾 Scontrino
+                🧾 Scontrino (non fiscale)
               </button>
               {!closed && order.payment_status !== 'pagato' ? (
-                <button
-                  className="btn small"
-                  disabled={saving}
-                  onClick={() => (served ? run(async () => { await flushAll(); await markOrderPaid(order.id, 'banco') }) : setConfirmPay(true))}
-                >
-                  💶 Incassa e chiudi
+                <button className="btn small" disabled={saving} onClick={() => setShowPayment(true)}>
+                  💳 Pagamento
                 </button>
               ) : (
                 <span />
@@ -532,17 +543,69 @@ export default function OrderPosDetail({ order }) {
         />
       )}
 
-      {confirmPay && (
-        <ConfirmDialog
-          title="💶 Chiudere il conto?"
-          message="Ci sono comande non ancora servite: incassando, il conto viene chiuso comunque."
-          confirmLabel="Incassa e chiudi"
-          onCancel={() => setConfirmPay(false)}
-          onConfirm={() => {
-            setConfirmPay(false)
-            run(async () => { await flushAll(); await markOrderPaid(order.id, 'banco') })
-          }}
-        />
+      {/* ── Schermata Pagamento ── */}
+      {showPayment && (
+        <div className="overlay confirm-overlay" onClick={() => setShowPayment(false)}>
+          <div
+            className="confirm-box"
+            style={{ width: 'min(420px, 94vw)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="row between" style={{ alignItems: 'center' }}>
+              <h3 style={{ margin: 0 }}>💳 Pagamento</h3>
+              <button className="btn ghost small" onClick={() => setShowPayment(false)}>✕</button>
+            </div>
+
+            <div className="row between" style={{ marginTop: 12 }}>
+              <span className="muted">Ordine #{order.daily_number ?? '—'}</span>
+              <strong className="price" style={{ fontSize: '1.4rem' }}>
+                {formatPrice(order.total)}
+              </strong>
+            </div>
+
+            {!served && (
+              <p className="muted small" style={{ margin: '10px 0 0' }}>
+                ⚠️ Ci sono comande non ancora servite: incassando, il conto
+                viene chiuso comunque.
+              </p>
+            )}
+
+            <button
+              className="btn block"
+              style={{ marginTop: 14 }}
+              disabled={saving}
+              onClick={() =>
+                run(async () => {
+                  await flushAll()
+                  await markOrderPaid(order.id, 'banco')
+                  setShowPayment(false)
+                })
+              }
+            >
+              💵 Contanti / al banco
+            </button>
+
+            {settings.payments_reader_enabled && settings.sumup_reader_id && (
+              <button
+                className="btn secondary block"
+                style={{ marginTop: 8 }}
+                disabled={saving}
+                onClick={() =>
+                  run(async () => {
+                    await flushAll()
+                    const res = await readerCheckout(order.id)
+                    if (res?.unavailable) {
+                      setError('Lettore non disponibile in ambiente di sviluppo: simula dai DevTools.')
+                    }
+                    setShowPayment(false)
+                  })
+                }
+              >
+                📟 Carta sul lettore SumUp{settings.sumup_reader_name ? ` (${settings.sumup_reader_name})` : ''}
+              </button>
+            )}
+          </div>
+        </div>
       )}
 
       {confirmCancel && (

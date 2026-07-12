@@ -8,6 +8,7 @@ import { categoryColor, drinkCategoryColor } from '../lib/categoryColors.js'
 // prodotto lo si aggiunge alla comanda nel pannello di destra.
 export default function PosProductPicker({ drinks, cats, loading, qtyByDrink, onAdd, onSetQty, disabled = false }) {
   const [selectedCat, setSelectedCat] = useState(null)
+  const [query, setQuery] = useState('')
   const gridRef = useRef(null)
 
   useEffect(() => {
@@ -15,8 +16,12 @@ export default function PosProductPicker({ drinks, cats, loading, qtyByDrink, on
   }, [cats, selectedCat])
 
   const catKey = (c) => c.id ?? c.name
-  const visibleDrinks =
-    !selectedCat || selectedCat === '__all__'
+  const q = query.trim().toLowerCase()
+  // Con una ricerca attiva si cerca su TUTTO il catalogo (le categorie
+  // servono a sfogliare; al banco la ricerca deve trovare subito).
+  const visibleDrinks = q
+    ? drinks.filter((d) => d.available && d.name?.toLowerCase().includes(q))
+    : !selectedCat || selectedCat === '__all__'
       ? drinks.filter((d) => d.available)
       : drinks.filter(
           (d) => d.available && (d.category_id === selectedCat || d.category === selectedCat)
@@ -56,7 +61,18 @@ export default function PosProductPicker({ drinks, cats, loading, qtyByDrink, on
         ))}
       </aside>
 
-      {/* Griglia prodotti */}
+      {/* Colonna centrale: ricerca + griglia prodotti */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        <div style={{ padding: '8px 8px 0', flexShrink: 0 }}>
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="🔍 Cerca prodotto…"
+            aria-label="Cerca prodotto"
+            style={{ width: '100%' }}
+          />
+        </div>
       <div
         ref={gridRef}
         style={{
@@ -82,9 +98,10 @@ export default function PosProductPicker({ drinks, cats, loading, qtyByDrink, on
             qty={qtyByDrink[d.id] ?? 0}
             color={drinkCategoryColor(d, cats)}
             onAdd={() => onAdd(d)}
-            onSetQty={(q) => onSetQty(d, q)}
+            onSetQty={(nq) => onSetQty(d, nq)}
           />
         ))}
+      </div>
       </div>
     </>
   )

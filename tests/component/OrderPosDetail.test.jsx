@@ -12,14 +12,23 @@ import { MemoryRouter } from 'react-router-dom'
 import '@testing-library/jest-dom/vitest'
 
 // ── Mock dei moduli con dipendenze Firebase/hardware ──
+const mockSettings = { payments_reader_enabled: false, sumup_reader_id: null }
 vi.mock('../../src/lib/api.js', () => ({
   advanceComanda: vi.fn(() => Promise.resolve()),
-  addComanda: vi.fn(() => Promise.resolve()),
+  addComanda: vi.fn(() => Promise.resolve({ comande: [] })),
   bartenderUpdateComanda: vi.fn(() => Promise.resolve()),
   updateOrderInfo: vi.fn(() => Promise.resolve()),
   markOrderPaid: vi.fn(() => Promise.resolve()),
   cancelOrder: vi.fn(() => Promise.resolve()),
   fetchInventoryItems: vi.fn(() => Promise.resolve([])),
+  DEFAULT_SETTINGS: {},
+  subscribeSettings: vi.fn((cb) => {
+    cb(mockSettings)
+    return () => {}
+  }),
+}))
+vi.mock('../../src/lib/paymentsApi.js', () => ({
+  readerCheckout: vi.fn(() => Promise.resolve({})),
 }))
 vi.mock('../../src/lib/menuCache.js', () => ({
   useMenu: () => ({
@@ -43,6 +52,7 @@ import {
   bartenderUpdateComanda,
   markOrderPaid,
 } from '../../src/lib/api.js'
+import { readerCheckout } from '../../src/lib/paymentsApi.js'
 import { printComanda } from '../../src/lib/printer.js'
 
 const baseOrder = (over = {}) => ({
@@ -107,19 +117,32 @@ describe('vista aggregata: ordine a destra, comande nascoste', () => {
 })
 
 describe('aggiunte: la nuova comanda è gestita internamente', () => {
-  it('tap sulla griglia → badge "da inviare"; "Invia aggiunte" chiama addComanda', async () => {
+  it('tap sulla griglia → badge "da inviare"; "Conferma aggiunte" chiama addComanda SENZA stampare', async () => {
     const user = userEvent.setup()
     mount(baseOrder())
     await user.click(screen.getByText('Gin Tonic'))
     expect(screen.getByText('+1 da inviare')).toBeInTheDocument()
     await user.click(screen.getAllByText('Gin Tonic')[0])
-    await user.click(screen.getByRole('button', { name: /Invia aggiunte/ }))
+    await user.click(screen.getByRole('button', { name: /Conferma aggiunte/ }))
     expect(addComanda).toHaveBeenCalledTimes(1)
     const [orderId, items] = addComanda.mock.calls[0]
     expect(orderId).toBe('ord1')
     expect(items).toEqual([
       expect.objectContaining({ drink_id: 'gin', qty: 2, unit_price: 8 }),
     ])
+    expect(printComanda).not.toHaveBeenCalled()
+  })
+
+  it('"Conferma + stampa comanda" invia e stampa la comanda appena creata', async () => {
+    const user = userEvent.setup()
+    const nuova = { id: 'c2', seq: 2, status: 'ricevuto', items: [] }
+    addComanda.mockResolvedValueOnce({ id: 'ord1', comande: [{ id: 'c1' }, nuova] })
+    mount(baseOrder())
+    await user.click(screen.getByText('Gin Tonic'))
+    await user.click(screen.getByRole('button', { name: /Conferma \+ stampa comanda/ }))
+    expect(addComanda).toHaveBeenCalledTimes(1)
+    await waitFor(() => expect(printComanda).toHaveBeenCalledTimes(1))
+    expect(printComanda.mock.calls[0][1].id).toBe('c2')
   })
 
   it("il + su un item esistente è un'aggiunta (non tocca le comande)", async () => {
@@ -129,7 +152,7 @@ describe('aggiunte: la nuova comanda è gestita internamente', () => {
     expect(screen.getAllByText('3').length).toBeGreaterThan(0)
     expect(screen.getByText('+1 da inviare')).toBeInTheDocument()
     expect(bartenderUpdateComanda).not.toHaveBeenCalled()
-    await user.click(screen.getByRole('button', { name: /Invia aggiunte/ }))
+    await user.click(screen.getByRole('button', { name: /Conferma aggiunte/ }))
     expect(addComanda).toHaveBeenCalledTimes(1)
   })
 })
@@ -218,19 +241,20 @@ describe('modifiche ottimistiche (UX istantanea)', () => {
   })
 })
 
-describe('incasso e chiusura del conto', () => {
-  it('con comande NON servite chiede conferma, poi incassa', async () => {
+describe('schermata Pagamento', () => {
+  it('"Pagamento" apre la schermata con totale e avviso comande non servite; Contanti incassa', async () => {
     const user = userEvent.setup()
     mount(baseOrder())
-    await user.click(screen.getByRole('button', { name: /Incassa e chiudi/ }))
-    // avviso: comande non servite
+    await user.click(screen.getByRole('button', { name: /Pagamento/ }))
+    // schermata: totale in evidenza + avviso (c1 è in preparazione)
+    expect(screen.getByRole('heading', { name: '💳 Pagamento' })).toBeInTheDocument()
     expect(screen.getByText(/comande non ancora servite/)).toBeInTheDocument()
     expect(markOrderPaid).not.toHaveBeenCalled()
-    await user.click(screen.getByRole('button', { name: 'Incassa e chiudi' }))
+    await user.click(screen.getByRole('button', { name: /Contanti \/ al banco/ }))
     expect(markOrderPaid).toHaveBeenCalledWith('ord1', 'banco')
   })
 
-  it('con tutto servito incassa direttamente (niente avviso)', async () => {
+  it('con tutto servito la schermata non mostra avvisi', async () => {
     const user = userEvent.setup()
     mount(
       baseOrder({
@@ -246,9 +270,33 @@ describe('incasso e chiusura del conto', () => {
         ],
       })
     )
-    await user.click(screen.getByRole('button', { name: /Incassa e chiudi/ }))
-    expect(markOrderPaid).toHaveBeenCalledWith('ord1', 'banco')
+    await user.click(screen.getByRole('button', { name: /Pagamento/ }))
     expect(screen.queryByText(/comande non ancora servite/)).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /Contanti \/ al banco/ }))
+    expect(markOrderPaid).toHaveBeenCalledWith('ord1', 'banco')
+  })
+
+  it('lettore SumUp: visibile solo se configurato, e avvia readerCheckout', async () => {
+    const user = userEvent.setup()
+    mockSettings.payments_reader_enabled = true
+    mockSettings.sumup_reader_id = 'reader1'
+    try {
+      mount(baseOrder())
+      await user.click(screen.getByRole('button', { name: /Pagamento/ }))
+      await user.click(screen.getByRole('button', { name: /Carta sul lettore SumUp/ }))
+      expect(readerCheckout).toHaveBeenCalledWith('ord1')
+      expect(markOrderPaid).not.toHaveBeenCalled()
+    } finally {
+      mockSettings.payments_reader_enabled = false
+      mockSettings.sumup_reader_id = null
+    }
+  })
+
+  it('lettore NON configurato: il bottone non esiste', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.click(screen.getByRole('button', { name: /Pagamento/ }))
+    expect(screen.queryByRole('button', { name: /lettore SumUp/ })).not.toBeInTheDocument()
   })
 
   it('conto chiuso (pagato): griglia e modifiche disabilitate', () => {
@@ -268,7 +316,19 @@ describe('incasso e chiusura del conto', () => {
         ],
       })
     )
-    expect(screen.queryByRole('button', { name: /Incassa e chiudi/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Pagamento/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Annulla ordine/ })).not.toBeInTheDocument()
+  })
+})
+
+describe('ricerca prodotti', () => {
+  it('digitando nella barra la griglia filtra su tutto il catalogo', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    expect(screen.getByText('Gin Tonic')).toBeInTheDocument()
+    await user.type(screen.getByLabelText('Cerca prodotto'), 'moj')
+    expect(screen.queryByText('Gin Tonic')).not.toBeInTheDocument()
+    // Mojito resta sia in griglia sia nella riga dell'ordine
+    expect(screen.getAllByText('Mojito').length).toBeGreaterThan(0)
   })
 })
