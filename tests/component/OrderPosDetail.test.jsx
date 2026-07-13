@@ -243,16 +243,16 @@ describe('modifiche ottimistiche (UX istantanea)', () => {
 })
 
 describe('schermata Pagamento', () => {
-  it('"Pagamento" apre la schermata con residuo e avviso comande non servite; Contanti incassa tutto', async () => {
+  it('"Pagamento" apre la schermata POS con dovuto e avviso; Riscuotere incassa tutto', async () => {
     const user = userEvent.setup()
     mount(baseOrder())
     await user.click(screen.getByRole('button', { name: /Pagamento/ }))
-    // schermata: articoli a sinistra, residuo in evidenza, avviso (c1 in prep.)
+    // schermata: articoli a sinistra, importo al centro, avviso (c1 in prep.)
     expect(screen.getByRole('dialog', { name: 'Pagamento' })).toBeInTheDocument()
-    expect(screen.getByText('Residuo da incassare')).toBeInTheDocument()
-    expect(screen.getByText(/comande non ancora servite/)).toBeInTheDocument()
+    expect(screen.getByTestId('pay-amount')).toHaveTextContent('14,00')
+    expect(screen.getByText(/[Cc]omande non ancora servite/)).toBeInTheDocument()
     expect(registerPayment).not.toHaveBeenCalled()
-    await user.click(screen.getByRole('button', { name: /Contanti/ }))
+    await user.click(screen.getByRole('button', { name: /Riscuotere/ }))
     expect(registerPayment).toHaveBeenCalledWith('ord1', {
       amount: 14,
       method: 'banco',
@@ -277,8 +277,8 @@ describe('schermata Pagamento', () => {
       })
     )
     await user.click(screen.getByRole('button', { name: /Pagamento/ }))
-    expect(screen.queryByText(/comande non ancora servite/)).not.toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: /Contanti/ }))
+    expect(screen.queryByText(/[Cc]omande non ancora servite/)).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /Riscuotere/ }))
     expect(registerPayment).toHaveBeenCalledWith('ord1', {
       amount: 14,
       method: 'banco',
@@ -286,14 +286,15 @@ describe('schermata Pagamento', () => {
     })
   })
 
-  it('lettore SumUp: visibile solo se configurato, e avvia readerCheckout sul residuo', async () => {
+  it('lettore SumUp: metodo visibile solo se configurato, Riscuotere avvia readerCheckout', async () => {
     const user = userEvent.setup()
     mockSettings.payments_reader_enabled = true
     mockSettings.sumup_reader_id = 'reader1'
     try {
       mount(baseOrder())
       await user.click(screen.getByRole('button', { name: /Pagamento/ }))
-      await user.click(screen.getByRole('button', { name: /Carta sul lettore SumUp/ }))
+      await user.click(screen.getByRole('button', { name: /SumUp \(lettore\)/ }))
+      await user.click(screen.getByRole('button', { name: /Riscuotere/ }))
       expect(readerCheckout).toHaveBeenCalledWith('ord1', { amount: 14, items: null })
       expect(registerPayment).not.toHaveBeenCalled()
     } finally {
@@ -302,11 +303,11 @@ describe('schermata Pagamento', () => {
     }
   })
 
-  it('lettore NON configurato: il bottone non esiste', async () => {
+  it('lettore NON configurato: il metodo non esiste', async () => {
     const user = userEvent.setup()
     mount(baseOrder())
     await user.click(screen.getByRole('button', { name: /Pagamento/ }))
-    expect(screen.queryByRole('button', { name: /lettore SumUp/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /SumUp \(lettore\)/ })).not.toBeInTheDocument()
   })
 
   it('conto chiuso (pagato): griglia e modifiche disabilitate', () => {

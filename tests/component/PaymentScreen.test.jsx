@@ -2,8 +2,8 @@
 'use strict'
 
 // Test di COMPONENTE della schermata Pagamento in stile POS SumUp:
-// articoli selezionabili a SINISTRA (split del conto), sconto/preconto/
-// metodi di pagamento a DESTRA.
+// articoli a SINISTRA (split per deselezione), tastierino calcolatrice e
+// "Riscuotere" al CENTRO, metodi di pagamento e Sconto a DESTRA.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
@@ -23,6 +23,7 @@ vi.mock('../../src/lib/printer.js', () => ({
 
 import PaymentScreen from '../../src/components/PaymentScreen.jsx'
 import { registerPayment, setOrderDiscount } from '../../src/lib/api.js'
+import { readerCheckout } from '../../src/lib/paymentsApi.js'
 import { printScontrino } from '../../src/lib/printer.js'
 
 const baseOrder = (over = {}) => ({
@@ -49,6 +50,7 @@ const baseOrder = (over = {}) => ({
 })
 
 const noReader = { payments_reader_enabled: false, sumup_reader_id: null }
+const withReader = { payments_reader_enabled: true, sumup_reader_id: 'reader1' }
 
 function mount(order, settings = noReader) {
   return render(
@@ -56,23 +58,21 @@ function mount(order, settings = noReader) {
   )
 }
 
+const payAmount = () => screen.getByTestId('pay-amount')
+
 beforeEach(() => vi.clearAllMocks())
 
-describe('split: articoli già in pagamento, si deseleziona per dividere', () => {
-  it('si apre con TUTTO il conto già in pagamento: si incassa senza riselezionare', async () => {
+describe('layout POS: tutto già in pagamento, Riscuotere incassa', () => {
+  it('si apre con il residuo intero e Riscuotere lo incassa in Contante', async () => {
     const user = userEvent.setup()
     mount(baseOrder())
-    // articoli a sinistra, già tutti selezionati (2/2 e 1/1)
+    // sinistra: articoli con selezione piena; centro: importo = dovuto
     expect(screen.getByText('Mojito')).toBeInTheDocument()
-    expect(screen.getByText('Gin Tonic')).toBeInTheDocument()
     expect(screen.getByText('2/2')).toBeInTheDocument()
-    expect(screen.getByText('1/1')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Paga Mojito' })).toBeDisabled()
-    expect(screen.getByText('Residuo da incassare')).toBeInTheDocument()
-    // totale conto + residuo in grande: stesso importo, tutto in pagamento
-    expect(screen.getAllByText('22,00 €')).toHaveLength(2)
-    // un tap sul metodo di pagamento incassa tutto il residuo
-    await user.click(screen.getByRole('button', { name: /Contanti/ }))
+    expect(payAmount()).toHaveTextContent('22,00')
+    // destra: Contante è il metodo di default
+    expect(screen.getByRole('button', { name: /Contante/ })).toHaveAttribute('aria-pressed', 'true')
+    await user.click(screen.getByRole('button', { name: /Riscuotere/ }))
     expect(registerPayment).toHaveBeenCalledWith('ord1', {
       amount: 22,
       method: 'banco',
@@ -80,30 +80,18 @@ describe('split: articoli già in pagamento, si deseleziona per dividere', () =>
     })
   })
 
-  it('togliendo articoli dal pagamento si incassa solo la selezione (split)', async () => {
+  it('split per deselezione: si incassa solo la selezione con il dettaglio articoli', async () => {
     const user = userEvent.setup()
     mount(baseOrder())
-    // lascia in pagamento solo 1 Mojito: via 1 Mojito e il Gin Tonic
     await user.click(screen.getByRole('button', { name: 'Togli Mojito dal pagamento' }))
     await user.click(screen.getByRole('button', { name: 'Togli Gin Tonic dal pagamento' }))
-    expect(screen.getByText('Selezione da incassare')).toBeInTheDocument()
-    expect(screen.getByText('7,00 €')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: /Contanti/ }))
+    expect(payAmount()).toHaveTextContent('7,00')
+    await user.click(screen.getByRole('button', { name: /Riscuotere/ }))
     expect(registerPayment).toHaveBeenCalledWith('ord1', {
       amount: 7,
       method: 'banco',
       items: [expect.objectContaining({ drink_id: 'mojito', qty: 1 })],
     })
-  })
-
-  it('"Rimetti tutto in pagamento" riporta la selezione al residuo intero', async () => {
-    const user = userEvent.setup()
-    mount(baseOrder())
-    await user.click(screen.getByRole('button', { name: 'Togli Gin Tonic dal pagamento' }))
-    expect(screen.getByText('Selezione da incassare')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Rimetti tutto in pagamento' }))
-    expect(screen.getByText('Residuo da incassare')).toBeInTheDocument()
-    expect(screen.getAllByText('22,00 €')).toHaveLength(2)
   })
 
   it('gli articoli già pagati spariscono dalla lista e restano nello storico', () => {
@@ -121,54 +109,118 @@ describe('split: articoli già in pagamento, si deseleziona per dividere', () =>
         ],
       })
     )
-    // il Mojito è saldato: resta solo il Gin Tonic da pagare
     expect(screen.queryByText('Mojito')).not.toBeInTheDocument()
     expect(screen.getByText('Gin Tonic')).toBeInTheDocument()
     expect(screen.getByText('GIÀ PAGATO')).toBeInTheDocument()
-    expect(screen.getByText('Già pagato')).toBeInTheDocument()
     // residuo = 22 − 14
-    expect(screen.getByText('8,00 €')).toBeInTheDocument()
+    expect(payAmount()).toHaveTextContent('8,00')
   })
 })
 
-describe('sconto: percentuale o in euro sul conto', () => {
-  it('digitando 10 e Applica (in %) salva lo sconto', async () => {
+describe('tastierino calcolatrice', () => {
+  it('digitando un importo libero si incassa quello (senza dettaglio articoli)', async () => {
     const user = userEvent.setup()
     mount(baseOrder())
+    // "500" in centesimi → 5,00 €
+    await user.click(screen.getByRole('button', { name: '5' }))
+    await user.click(screen.getByRole('button', { name: '00' }))
+    expect(payAmount()).toHaveTextContent('5,00')
+    await user.click(screen.getByRole('button', { name: /Riscuotere/ }))
+    expect(registerPayment).toHaveBeenCalledWith('ord1', {
+      amount: 5,
+      method: 'banco',
+      items: null,
+    })
+  })
+
+  it('/2 divide l\'importo corrente (split alla romana)', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.click(screen.getByRole('button', { name: '/2' }))
+    expect(payAmount()).toHaveTextContent('11,00')
+  })
+
+  it('oltre il dovuto: mostra il RESTO e incassa solo il residuo', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    // il cliente dà 25,00 €
+    await user.click(screen.getByRole('button', { name: '2' }))
+    await user.click(screen.getByRole('button', { name: '5' }))
+    await user.click(screen.getByRole('button', { name: '00' }))
+    expect(payAmount()).toHaveTextContent('25,00')
+    expect(screen.getByText(/Resto:/)).toBeInTheDocument()
+    expect(screen.getByText('3,00 €')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /Riscuotere/ }))
+    expect(registerPayment).toHaveBeenCalledWith('ord1', {
+      amount: 22,
+      method: 'banco',
+      items: null,
+    })
+  })
+
+  it('C annulla il digitato e torna all\'importo della selezione', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.click(screen.getByRole('button', { name: '5' }))
+    expect(payAmount()).toHaveTextContent('0,05')
+    await user.click(screen.getByRole('button', { name: 'C' }))
+    expect(payAmount()).toHaveTextContent('22,00')
+  })
+})
+
+describe('metodi di pagamento', () => {
+  it('lettore SumUp: selezionandolo, Riscuotere avvia readerCheckout', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder(), withReader)
+    await user.click(screen.getByRole('button', { name: /SumUp \(lettore\)/ }))
+    await user.click(screen.getByRole('button', { name: /Riscuotere/ }))
+    expect(readerCheckout).toHaveBeenCalledWith('ord1', { amount: 22, items: null })
+    expect(registerPayment).not.toHaveBeenCalled()
+  })
+
+  it('lettore NON configurato: il metodo non esiste', () => {
+    mount(baseOrder())
+    expect(screen.queryByRole('button', { name: /SumUp \(lettore\)/ })).not.toBeInTheDocument()
+  })
+})
+
+describe('sconto e preconto', () => {
+  it('lo Sconto si apre a destra e applica percentuale', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.click(screen.getByRole('button', { name: /Sconto/ }))
     await user.type(screen.getByLabelText('Sconto'), '10')
     await user.click(screen.getByRole('button', { name: 'Applica' }))
     expect(setOrderDiscount).toHaveBeenCalledWith('ord1', { type: 'percent', value: 10 })
   })
 
-  it('in euro: il toggle € cambia il tipo di sconto', async () => {
+  it('sconto in euro con il toggle €', async () => {
     const user = userEvent.setup()
     mount(baseOrder())
+    await user.click(screen.getByRole('button', { name: /Sconto/ }))
     await user.type(screen.getByLabelText('Sconto'), '5')
     await user.click(screen.getByRole('button', { name: '€' }))
     await user.click(screen.getByRole('button', { name: 'Applica' }))
     expect(setOrderDiscount).toHaveBeenCalledWith('ord1', { type: 'euro', value: 5 })
   })
 
-  it('lo sconto applicato riduce il residuo mostrato', () => {
+  it('lo sconto applicato riduce il dovuto', () => {
     mount(baseOrder({ discount: { type: 'percent', value: 10 }, discount_amount: 2.2 }))
-    expect(screen.getByText('Sconto applicato')).toBeInTheDocument()
-    expect(screen.getByText('19,80 €')).toBeInTheDocument()
+    expect(payAmount()).toHaveTextContent('19,80')
   })
-})
 
-describe('preconto e stato del conto', () => {
-  it('"Stampa preconto" stampa lo scontrino non fiscale del conto', async () => {
+  it('"Preconto" stampa lo scontrino non fiscale', async () => {
     const user = userEvent.setup()
     const order = baseOrder()
     mount(order)
-    await user.click(screen.getByRole('button', { name: /Stampa preconto/ }))
+    await user.click(screen.getByRole('button', { name: /Preconto/ }))
     expect(printScontrino).toHaveBeenCalledWith(order)
     expect(registerPayment).not.toHaveBeenCalled()
   })
 
-  it('conto pagato: metodi nascosti e conferma visibile', () => {
+  it('conto pagato: niente Riscuotere, conferma visibile', () => {
     mount(baseOrder({ payment_status: 'pagato', status: 'pagato' }))
-    expect(screen.queryByRole('button', { name: /Contanti/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Riscuotere/ })).not.toBeInTheDocument()
     expect(screen.getByText(/Conto pagato e chiuso/)).toBeInTheDocument()
   })
 })
