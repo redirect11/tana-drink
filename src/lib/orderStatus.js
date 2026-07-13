@@ -56,9 +56,10 @@ export const STATUS_EMOJI = {
 // Etichette leggibili del metodo di pagamento di un ordine.
 export const PAYMENT_METHOD_LABELS = {
   online: '💳 Online',
-  lettore: '📟 Lettore',
-  banco: '💶 Al banco',
-  misto: '💶+📟 Misto',
+  lettore: '📟 SumUp (lettore)',
+  banco: '💶 Contante',
+  carta: '💳 Carta di credito',
+  misto: '💶+💳 Misto',
 }
 
 export function nextStatus(status) {
