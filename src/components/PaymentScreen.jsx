@@ -1,9 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
-import { registerPayment, setOrderDiscount } from '../lib/api.js'
+import {
+  registerPayment,
+  setOrderDiscount,
+  setOrderLotteryCode,
+  createInvoice,
+  markInvoiceSent,
+} from '../lib/api.js'
 import { readerCheckout } from '../lib/paymentsApi.js'
 import { formatPrice, PAYMENT_METHOD_LABELS } from '../lib/orderStatus.js'
 import { allServed } from '../lib/comande.js'
-import { printScontrino } from '../lib/printer.js'
+import { printScontrino, printFattura, loadPrinterSettings } from '../lib/printer.js'
 import {
   remainingItems,
   paidAmount,
@@ -39,10 +45,22 @@ export default function PaymentScreen({ order, settings, onClose, onBeforePay })
   const [display, setDisplay] = useState(null)
   const [acc, setAcc] = useState(null)
   const [op, setOp] = useState(null)
+  // Sconto: modale con tastierino (tipo % o €, cifre digitate).
   const [showDiscount, setShowDiscount] = useState(false)
-  const [disc, setDisc] = useState({
-    type: order.discount?.type || 'percent',
-    value: order.discount?.value ? String(order.discount.value) : '',
+  const [discType, setDiscType] = useState(order.discount?.type || 'percent')
+  const [discDigits, setDiscDigits] = useState('')
+  // Lotteria degli scontrini e fattura di cortesia.
+  const [showLottery, setShowLottery] = useState(false)
+  const [lotteryCode, setLotteryCode] = useState(order.lottery_code || '')
+  const [showInvoice, setShowInvoice] = useState(false)
+  const [invoice, setInvoice] = useState(null) // fattura appena emessa
+  const [billing, setBilling] = useState({
+    denominazione: '',
+    piva: '',
+    cf: '',
+    sdi: '',
+    indirizzo: '',
+    email: '',
   })
   const [readerStarted, setReaderStarted] = useState(false)
 
@@ -152,20 +170,71 @@ export default function PaymentScreen({ order, settings, onClose, onBeforePay })
       if (done) onClose()
     })
 
+  // ── Sconto dal tastierino della modale ──
+  // In % le cifre sono la percentuale intera ("10" → 10%); in € sono
+  // centesimi come nel tastierino principale ("350" → 3,50 €).
+  const discValue =
+    discType === 'percent'
+      ? Math.min(parseInt(discDigits || '0', 10) || 0, 100)
+      : digitsToEuro(discDigits)
+  const discPreview = discountAmount(order.total, { type: discType, value: discValue })
+
   const applyDiscount = () =>
     run(async () => {
-      const value = Number(String(disc.value).replace(',', '.'))
-      await setOrderDiscount(order.id, value > 0 ? { type: disc.type, value } : null)
+      await setOrderDiscount(order.id, discValue > 0 ? { type: discType, value: discValue } : null)
       setShowDiscount(false)
+      setDiscDigits('')
     })
 
-  const discPreview = discountAmount(order.total, {
-    type: disc.type,
-    value: Number(String(disc.value).replace(',', '.')),
-  })
-  const discDirty =
-    discPreview !== (order.discount_amount || 0) ||
-    (order.discount?.type || 'percent') !== disc.type
+  const saveLottery = () =>
+    run(async () => {
+      await setOrderLotteryCode(order.id, lotteryCode)
+      setShowLottery(false)
+    })
+
+  const emettiFattura = () =>
+    run(async () => {
+      const inv = await createInvoice({
+        order,
+        customer: billing,
+        ivaRate: loadPrinterSettings().ivaRate ?? 10,
+      })
+      setInvoice(inv)
+    })
+
+  // Invio via email: si apre il client di posta con la fattura già scritta.
+  const invoiceMailto = (inv) => {
+    const s = loadPrinterSettings()
+    const righe = (inv.items || [])
+      .map((i) => `${i.qty}x ${i.name} — ${formatPrice(i.qty * i.unit_price)}`)
+      .join('\n')
+    const c = inv.customer || {}
+    const body = [
+      `Fattura di cortesia n. ${inv.number}`,
+      `${s.businessName || ''}`,
+      '',
+      `Intestata a: ${c.denominazione || ''}`,
+      c.piva ? `P.IVA: ${c.piva}` : null,
+      c.cf ? `CF: ${c.cf}` : null,
+      c.indirizzo ? `Indirizzo: ${c.indirizzo}` : null,
+      '',
+      righe,
+      inv.discount_amount > 0 ? `Sconto: −${formatPrice(inv.discount_amount)}` : null,
+      `Totale: ${formatPrice(inv.total)}`,
+      '',
+      'Documento non fiscale — copia di cortesia.',
+    ]
+      .filter((r) => r !== null)
+      .join('\n')
+    return `mailto:${encodeURIComponent(c.email || '')}?subject=${encodeURIComponent(
+      `Fattura di cortesia n. ${inv.number}`
+    )}&body=${encodeURIComponent(body)}`
+  }
+
+  const sendInvoiceEmail = (inv) => {
+    window.location.href = invoiceMailto(inv)
+    markInvoiceSent(inv.id, inv.customer?.email || null).catch(() => {})
+  }
 
   return (
     <div
@@ -340,13 +409,21 @@ export default function PaymentScreen({ order, settings, onClose, onBeforePay })
             </button>
           )}
 
-          <button
-            className="btn ghost small block"
-            style={{ marginTop: 8, flexShrink: 0 }}
-            onClick={() => printScontrino(order).catch((e) => setError(`Stampa: ${e.message}`))}
-          >
-            🖨 Preconto
-          </button>
+          {/* Come nel POS: Codice Lotteria · Preconto · Invia fattura */}
+          <div style={{ display: 'flex', gap: 6, marginTop: 8, flexShrink: 0 }}>
+            <button className="btn ghost small grow" onClick={() => setShowLottery(true)}>
+              🎟 Codice Lotteria{order.lottery_code ? ' ✓' : ''}
+            </button>
+            <button
+              className="btn ghost small grow"
+              onClick={() => printScontrino(order).catch((e) => setError(`Stampa: ${e.message}`))}
+            >
+              🖨 Preconto
+            </button>
+            <button className="btn ghost small grow" onClick={() => setShowInvoice(true)}>
+              📧 Invia fattura{order.invoice_number ? ' ✓' : ''}
+            </button>
+          </div>
         </div>
 
         {/* ── DESTRA: metodi di pagamento + Sconto ── */}
@@ -367,50 +444,250 @@ export default function PaymentScreen({ order, settings, onClose, onBeforePay })
           ))}
 
           <div style={{ marginTop: 'auto' }}>
-            {showDiscount && !closed && (
-              <div style={{ marginBottom: 8 }}>
-                <label htmlFor="ps-disc">Sconto</label>
-                <input
-                  id="ps-disc"
-                  type="number"
-                  min="0"
-                  inputMode="decimal"
-                  value={disc.value}
-                  onChange={(e) => setDisc((d) => ({ ...d, value: e.target.value }))}
-                  style={{ width: '100%' }}
-                />
-                <div className="row" style={{ gap: 6, marginTop: 6 }}>
-                  <button
-                    className={`btn small ${disc.type === 'percent' ? '' : 'ghost'}`}
-                    onClick={() => setDisc((d) => ({ ...d, type: 'percent' }))}
-                  >
-                    %
-                  </button>
-                  <button
-                    className={`btn small ${disc.type === 'euro' ? '' : 'ghost'}`}
-                    onClick={() => setDisc((d) => ({ ...d, type: 'euro' }))}
-                  >
-                    €
-                  </button>
-                  {discDirty && (
-                    <button className="btn secondary small grow" disabled={saving} onClick={applyDiscount}>
-                      Applica
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
             {!closed && (
-              <button
-                className="btn ghost small block"
-                onClick={() => setShowDiscount((v) => !v)}
-              >
+              <button className="btn ghost small block" onClick={() => setShowDiscount(true)}>
                 🎁 Sconto{(order.discount_amount || 0) > 0 ? ` (−${formatPrice(order.discount_amount)})` : ''}
               </button>
             )}
           </div>
         </div>
       </div>
+
+      {/* ── Modale SCONTO: tastierino come quello del pagamento ── */}
+      {showDiscount && (
+        <div className="overlay confirm-overlay" onClick={() => setShowDiscount(false)}>
+          <div
+            className="confirm-box"
+            role="dialog"
+            aria-label="Sconto"
+            style={{ width: 'min(320px, 94vw)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="row between" style={{ alignItems: 'center' }}>
+              <h3 style={{ margin: 0 }}>🎁 Sconto</h3>
+              <button className="btn ghost small" onClick={() => setShowDiscount(false)}>✕</button>
+            </div>
+
+            <div className="row" style={{ gap: 6, marginTop: 10 }}>
+              <button
+                className={`btn small grow ${discType === 'percent' ? '' : 'ghost'}`}
+                onClick={() => {
+                  setDiscType('percent')
+                  setDiscDigits('')
+                }}
+              >
+                %
+              </button>
+              <button
+                className={`btn small grow ${discType === 'euro' ? '' : 'ghost'}`}
+                onClick={() => {
+                  setDiscType('euro')
+                  setDiscDigits('')
+                }}
+              >
+                €
+              </button>
+            </div>
+
+            <div style={{ textAlign: 'center', margin: '10px 0 2px' }}>
+              <strong style={{ fontSize: '1.8rem' }} data-testid="disc-amount">
+                {discType === 'percent' ? `${discValue}%` : formatPrice(discValue)}
+              </strong>
+              <p className="muted small" style={{ margin: '2px 0 0' }}>
+                Sconto sul conto: −{formatPrice(discPreview)}
+              </p>
+            </div>
+
+            <div className="paypad" style={{ marginTop: 8, minHeight: 'auto' }}>
+              {['7', '8', '9', '4', '5', '6', '1', '2', '3'].map((d) => (
+                <button key={d} className="paypad-key" onClick={() => setDiscDigits((s) => (s + d).slice(0, 6))}>
+                  {d}
+                </button>
+              ))}
+              <button className="paypad-key danger" onClick={() => setDiscDigits('')}>C</button>
+              <button className="paypad-key" onClick={() => setDiscDigits((s) => (s + '0').slice(0, 6))}>0</button>
+              <button
+                className="paypad-key danger"
+                aria-label="Cancella cifra sconto"
+                onClick={() => setDiscDigits((s) => s.slice(0, -1))}
+              >
+                ←
+              </button>
+            </div>
+
+            <button
+              className="btn block"
+              style={{ marginTop: 10 }}
+              disabled={saving}
+              onClick={applyDiscount}
+            >
+              Applica {discPreview > 0 ? `(−${formatPrice(discPreview)})` : ''}
+            </button>
+            {(order.discount_amount || 0) > 0 && (
+              <button
+                className="btn ghost small block"
+                style={{ marginTop: 6 }}
+                disabled={saving}
+                onClick={() =>
+                  run(async () => {
+                    await setOrderDiscount(order.id, null)
+                    setShowDiscount(false)
+                    setDiscDigits('')
+                  })
+                }
+              >
+                Rimuovi sconto
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Modale CODICE LOTTERIA (lotteria degli scontrini) ── */}
+      {showLottery && (
+        <div className="overlay confirm-overlay" onClick={() => setShowLottery(false)}>
+          <div
+            className="confirm-box"
+            role="dialog"
+            aria-label="Codice Lotteria"
+            style={{ width: 'min(360px, 94vw)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="row between" style={{ alignItems: 'center' }}>
+              <h3 style={{ margin: 0 }}>🎟 Codice Lotteria</h3>
+              <button className="btn ghost small" onClick={() => setShowLottery(false)}>✕</button>
+            </div>
+            <p className="muted small" style={{ margin: '8px 0' }}>
+              Il codice della "lotteria degli scontrini" che il cliente mostra
+              al pagamento: viene salvato sul conto e stampato sullo scontrino.
+            </p>
+            <label htmlFor="ps-lottery">Codice</label>
+            <input
+              id="ps-lottery"
+              value={lotteryCode}
+              onChange={(e) => setLotteryCode(e.target.value.toUpperCase())}
+              placeholder="Es. ABCD1234"
+              style={{ width: '100%' }}
+            />
+            <button className="btn block" style={{ marginTop: 10 }} disabled={saving} onClick={saveLottery}>
+              Salva codice
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modale INVIA FATTURA (fattura di cortesia) ── */}
+      {showInvoice && (
+        <div className="overlay confirm-overlay" onClick={() => setShowInvoice(false)}>
+          <div
+            className="confirm-box"
+            role="dialog"
+            aria-label="Invia fattura"
+            style={{ width: 'min(420px, 94vw)', maxHeight: '90vh', overflowY: 'auto' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="row between" style={{ alignItems: 'center' }}>
+              <h3 style={{ margin: 0 }}>📧 Fattura di cortesia</h3>
+              <button className="btn ghost small" onClick={() => setShowInvoice(false)}>✕</button>
+            </div>
+
+            {invoice ? (
+              <>
+                <p style={{ margin: '10px 0 4px' }}>
+                  ✅ Emessa la fattura <strong>n. {invoice.number}</strong> ·{' '}
+                  {formatPrice(invoice.total)}
+                </p>
+                <p className="muted small" style={{ margin: '0 0 10px' }}>
+                  Intestata a {invoice.customer?.denominazione}. La ritrovi nel
+                  gestionale, tab Fatture.
+                </p>
+                <button className="btn block" onClick={() => sendInvoiceEmail(invoice)}>
+                  📧 Invia via email{invoice.customer?.email ? ` a ${invoice.customer.email}` : ''}
+                </button>
+                <button
+                  className="btn secondary block"
+                  style={{ marginTop: 6 }}
+                  onClick={() => printFattura(invoice).catch((e) => setError(`Stampa: ${e.message}`))}
+                >
+                  🖨 Stampa fattura
+                </button>
+              </>
+            ) : (
+              <>
+                {order.invoice_number && (
+                  <p className="muted small" style={{ margin: '8px 0 0' }}>
+                    ⚠️ Per questo conto risulta già emessa la fattura n.{' '}
+                    {order.invoice_number} (vedi tab Fatture).
+                  </p>
+                )}
+                <p className="muted small" style={{ margin: '8px 0' }}>
+                  Documento di cortesia con i dati del cliente (la fattura
+                  elettronica vera resta al commercialista/SDI).
+                </p>
+                <label htmlFor="inv-den">Ragione sociale / Nome *</label>
+                <input
+                  id="inv-den"
+                  value={billing.denominazione}
+                  onChange={(e) => setBilling((b) => ({ ...b, denominazione: e.target.value }))}
+                  style={{ width: '100%' }}
+                />
+                <div className="grid-2" style={{ marginTop: 6 }}>
+                  <div>
+                    <label htmlFor="inv-piva">P.IVA</label>
+                    <input
+                      id="inv-piva"
+                      value={billing.piva}
+                      onChange={(e) => setBilling((b) => ({ ...b, piva: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="inv-cf">Codice fiscale</label>
+                    <input
+                      id="inv-cf"
+                      value={billing.cf}
+                      onChange={(e) => setBilling((b) => ({ ...b, cf: e.target.value }))}
+                    />
+                  </div>
+                </div>
+                <div className="grid-2" style={{ marginTop: 6 }}>
+                  <div>
+                    <label htmlFor="inv-sdi">Codice SDI / PEC</label>
+                    <input
+                      id="inv-sdi"
+                      value={billing.sdi}
+                      onChange={(e) => setBilling((b) => ({ ...b, sdi: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="inv-email">Email</label>
+                    <input
+                      id="inv-email"
+                      type="email"
+                      value={billing.email}
+                      onChange={(e) => setBilling((b) => ({ ...b, email: e.target.value }))}
+                    />
+                  </div>
+                </div>
+                <label htmlFor="inv-addr" style={{ marginTop: 6, display: 'block' }}>Indirizzo</label>
+                <input
+                  id="inv-addr"
+                  value={billing.indirizzo}
+                  onChange={(e) => setBilling((b) => ({ ...b, indirizzo: e.target.value }))}
+                  style={{ width: '100%' }}
+                />
+                <button
+                  className="btn block"
+                  style={{ marginTop: 10 }}
+                  disabled={saving || !billing.denominazione.trim()}
+                  onClick={emettiFattura}
+                >
+                  Emetti fattura · {formatPrice(order.total)}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

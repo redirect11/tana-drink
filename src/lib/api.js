@@ -49,6 +49,7 @@ const settingsDoc = doc(db, 'settings', 'bar')
 const serateCol = collection(db, 'serate')
 const groupsCol = collection(db, 'groups')
 const paymentsCol = collection(db, 'payments')
+const invoicesCol = collection(db, 'invoices')
 
 // --- Helpers ------------------------------------------------------------
 
@@ -176,6 +177,10 @@ function mapOrder(snap) {
     discount: o.discount ?? null,
     discount_amount: o.discount_amount ?? 0,
     payments: (o.payments || []).map((p) => ({ ...p, at: toIso(p.at) })),
+    // Lotteria degli scontrini e fattura di cortesia emessa.
+    lottery_code: o.lottery_code ?? null,
+    invoice_id: o.invoice_id ?? null,
+    invoice_number: o.invoice_number ?? null,
     payment_required: o.payment_required ?? false,
     sumup_checkout_id: o.sumup_checkout_id ?? null,
     sumup_checkout_attempts: o.sumup_checkout_attempts ?? 0,
@@ -1276,6 +1281,83 @@ export async function fetchActiveOrders() {
     String(a.created_at || '').localeCompare(String(b.created_at || ''))
   )
   return orders
+}
+
+// Codice della "lotteria degli scontrini" comunicato dal cliente al
+// pagamento: si salva sul conto e finisce stampato sullo scontrino.
+export async function setOrderLotteryCode(id, code) {
+  await updateDoc(doc(db, 'orders', id), {
+    lottery_code: String(code || '').trim().toUpperCase() || null,
+  })
+}
+
+// ── FATTURE DI CORTESIA ────────────────────────────────────────────────
+// Non è fatturazione elettronica (SDI): è il documento di cortesia con i
+// dati del cliente, numerato per anno, da inviare via email o stampare.
+// La numerazione usa un contatore transazionale per anno.
+export async function createInvoice({ order, customer, ivaRate = 10 }) {
+  const year = new Date().getFullYear()
+  const counterRef = doc(db, 'counters', `fatture-${year}`)
+  const invoiceRef = doc(invoicesCol)
+  const orderRef = doc(db, 'orders', order.id)
+  const nowIso = new Date().toISOString()
+  let number = null
+
+  await runTransaction(db, async (tx) => {
+    const counterSnap = await tx.get(counterRef)
+    const seq = ((counterSnap.exists() ? counterSnap.data().seq : 0) || 0) + 1
+    number = `${seq}/${year}`
+    tx.set(counterRef, { seq }, { merge: true })
+    tx.set(invoiceRef, {
+      number,
+      seq,
+      year,
+      order_id: order.id,
+      order_daily_number: order.daily_number ?? null,
+      serata_id: order.serata_id ?? null,
+      customer: {
+        denominazione: customer.denominazione || '',
+        piva: customer.piva || null,
+        cf: customer.cf || null,
+        sdi: customer.sdi || null,
+        indirizzo: customer.indirizzo || null,
+        email: customer.email || null,
+      },
+      items: (order.order_items || []).map((i) => ({
+        name: i.name,
+        qty: i.qty,
+        unit_price: i.unit_price,
+      })),
+      total: order.total ?? 0,
+      discount_amount: order.discount_amount ?? 0,
+      iva_rate: Number(ivaRate) || 0,
+      status: 'emessa',
+      sent_to: null,
+      sent_at: null,
+      created_at: nowIso,
+    })
+    tx.update(orderRef, { invoice_id: invoiceRef.id, invoice_number: number })
+  })
+  const snap = await getDoc(invoiceRef)
+  return { id: invoiceRef.id, ...snap.data() }
+}
+
+// Segna la fattura come inviata (dopo l'apertura del client email).
+export async function markInvoiceSent(invoiceId, email) {
+  await updateDoc(doc(invoicesCol, invoiceId), {
+    sent_to: email || null,
+    sent_at: new Date().toISOString(),
+  })
+}
+
+// Elenco fatture (gestionale), più recenti in alto.
+export function subscribeInvoices(cb, onError) {
+  const q = query(invoicesCol, orderBy('created_at', 'desc'), fbLimit(200))
+  return onSnapshot(
+    q,
+    (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+    onError
+  )
 }
 
 // Imposta (o rimuove, con null) lo sconto sul conto: percentuale o euro.

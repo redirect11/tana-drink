@@ -6,25 +6,43 @@
 // "Riscuotere" al CENTRO, metodi di pagamento e Sconto a DESTRA.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom/vitest'
 
 vi.mock('../../src/lib/api.js', () => ({
   registerPayment: vi.fn(() => Promise.resolve({ closed: false })),
   setOrderDiscount: vi.fn(() => Promise.resolve()),
+  setOrderLotteryCode: vi.fn(() => Promise.resolve()),
+  createInvoice: vi.fn(() =>
+    Promise.resolve({
+      id: 'inv1',
+      number: '1/2026',
+      total: 22,
+      items: [],
+      customer: { denominazione: 'ACME srl', email: 'amministrazione@acme.it' },
+    })
+  ),
+  markInvoiceSent: vi.fn(() => Promise.resolve()),
 }))
 vi.mock('../../src/lib/paymentsApi.js', () => ({
   readerCheckout: vi.fn(() => Promise.resolve({})),
 }))
 vi.mock('../../src/lib/printer.js', () => ({
   printScontrino: vi.fn(() => Promise.resolve()),
+  printFattura: vi.fn(() => Promise.resolve()),
+  loadPrinterSettings: vi.fn(() => ({ ivaRate: 10, businessName: 'La Tana' })),
 }))
 
 import PaymentScreen from '../../src/components/PaymentScreen.jsx'
-import { registerPayment, setOrderDiscount } from '../../src/lib/api.js'
+import {
+  registerPayment,
+  setOrderDiscount,
+  setOrderLotteryCode,
+  createInvoice,
+} from '../../src/lib/api.js'
 import { readerCheckout } from '../../src/lib/paymentsApi.js'
-import { printScontrino } from '../../src/lib/printer.js'
+import { printScontrino, printFattura } from '../../src/lib/printer.js'
 
 const baseOrder = (over = {}) => ({
   id: 'ord1',
@@ -184,31 +202,80 @@ describe('metodi di pagamento', () => {
   })
 })
 
-describe('sconto e preconto', () => {
-  it('lo Sconto si apre a destra e applica percentuale', async () => {
+describe('sconto: modale con tastierino', () => {
+  it('percentuale: si digita sul tastierino della modale e si applica', async () => {
     const user = userEvent.setup()
     mount(baseOrder())
     await user.click(screen.getByRole('button', { name: /Sconto/ }))
-    await user.type(screen.getByLabelText('Sconto'), '10')
-    await user.click(screen.getByRole('button', { name: 'Applica' }))
+    const modal = within(screen.getByRole('dialog', { name: 'Sconto' }))
+    await user.click(modal.getByRole('button', { name: '1' }))
+    await user.click(modal.getByRole('button', { name: '0' }))
+    expect(modal.getByTestId('disc-amount')).toHaveTextContent('10%')
+    expect(modal.getByText(/Sconto sul conto: −/)).toHaveTextContent('2,20 €') // anteprima su 22 €
+    await user.click(modal.getByRole('button', { name: /Applica/ }))
     expect(setOrderDiscount).toHaveBeenCalledWith('ord1', { type: 'percent', value: 10 })
   })
 
-  it('sconto in euro con il toggle €', async () => {
+  it('in euro: il toggle € interpreta le cifre come centesimi', async () => {
     const user = userEvent.setup()
     mount(baseOrder())
     await user.click(screen.getByRole('button', { name: /Sconto/ }))
-    await user.type(screen.getByLabelText('Sconto'), '5')
-    await user.click(screen.getByRole('button', { name: '€' }))
-    await user.click(screen.getByRole('button', { name: 'Applica' }))
+    const modal = within(screen.getByRole('dialog', { name: 'Sconto' }))
+    await user.click(modal.getByRole('button', { name: '€' }))
+    await user.click(modal.getByRole('button', { name: '5' }))
+    await user.click(modal.getByRole('button', { name: '0' }))
+    await user.click(modal.getByRole('button', { name: '0' }))
+    expect(modal.getByTestId('disc-amount')).toHaveTextContent('5,00')
+    await user.click(modal.getByRole('button', { name: /Applica/ }))
     expect(setOrderDiscount).toHaveBeenCalledWith('ord1', { type: 'euro', value: 5 })
   })
 
-  it('lo sconto applicato riduce il dovuto', () => {
+  it('lo sconto applicato riduce il dovuto e si può rimuovere', async () => {
+    const user = userEvent.setup()
     mount(baseOrder({ discount: { type: 'percent', value: 10 }, discount_amount: 2.2 }))
     expect(payAmount()).toHaveTextContent('19,80')
+    await user.click(screen.getByRole('button', { name: /Sconto/ }))
+    const modal = within(screen.getByRole('dialog', { name: 'Sconto' }))
+    await user.click(modal.getByRole('button', { name: 'Rimuovi sconto' }))
+    expect(setOrderDiscount).toHaveBeenCalledWith('ord1', null)
+  })
+})
+
+describe('codice lotteria e fattura', () => {
+  it('Codice Lotteria: modale, salva il codice in maiuscolo sul conto', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.click(screen.getByRole('button', { name: /Codice Lotteria/ }))
+    const modal = within(screen.getByRole('dialog', { name: 'Codice Lotteria' }))
+    await user.type(modal.getByLabelText('Codice'), 'abcd1234')
+    await user.click(modal.getByRole('button', { name: 'Salva codice' }))
+    expect(setOrderLotteryCode).toHaveBeenCalledWith('ord1', 'ABCD1234')
   })
 
+  it('Invia fattura: form dati cliente → emissione → invio/stampa', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.click(screen.getByRole('button', { name: /Invia fattura/ }))
+    const modal = within(screen.getByRole('dialog', { name: 'Invia fattura' }))
+    await user.type(modal.getByLabelText(/Ragione sociale/), 'ACME srl')
+    await user.type(modal.getByLabelText('Email'), 'amministrazione@acme.it')
+    await user.click(modal.getByRole('button', { name: /Emetti fattura/ }))
+    expect(createInvoice).toHaveBeenCalledWith({
+      order: expect.objectContaining({ id: 'ord1' }),
+      customer: expect.objectContaining({
+        denominazione: 'ACME srl',
+        email: 'amministrazione@acme.it',
+      }),
+      ivaRate: 10,
+    })
+    // emessa: numero visibile + stampa
+    expect(await screen.findByText(/n\. 1\/2026/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /Stampa fattura/ }))
+    expect(printFattura).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('preconto e stato del conto', () => {
   it('"Preconto" stampa lo scontrino non fiscale', async () => {
     const user = userEvent.setup()
     const order = baseOrder()
