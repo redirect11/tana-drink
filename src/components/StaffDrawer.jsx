@@ -64,7 +64,9 @@ export default function StaffDrawer({ role, active = null, onSelect = null }) {
 
   function nuovoOrdine() {
     setOpen(false)
-    navigate('/menu')
+    // La creazione ordine è la CASSA in stile POS (segue il tema staff),
+    // non il menù cliente: /menu resta per la "vista cliente" e i gruppi.
+    navigate('/pos')
   }
 
   function ordineGruppo(id) {
