@@ -187,18 +187,31 @@ describe('tastierino calcolatrice', () => {
 })
 
 describe('metodi di pagamento', () => {
-  it('lettore SumUp: selezionandolo, Riscuotere avvia readerCheckout', async () => {
+  it('Carta di Credito (POS esterno): registra l\'incasso con metodo carta', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.click(screen.getByRole('button', { name: /Carta di Credito/ }))
+    await user.click(screen.getByRole('button', { name: /Riscuotere/ }))
+    expect(registerPayment).toHaveBeenCalledWith('ord1', {
+      amount: 22,
+      method: 'carta',
+      items: null,
+    })
+  })
+
+  it('SumUp (lettore Solo): selezionandolo, Riscuotere avvia readerCheckout', async () => {
     const user = userEvent.setup()
     mount(baseOrder(), withReader)
-    await user.click(screen.getByRole('button', { name: /SumUp \(lettore\)/ }))
+    await user.click(screen.getByRole('button', { name: /SumUp/ }))
     await user.click(screen.getByRole('button', { name: /Riscuotere/ }))
     expect(readerCheckout).toHaveBeenCalledWith('ord1', { amount: 22, items: null })
     expect(registerPayment).not.toHaveBeenCalled()
   })
 
-  it('lettore NON configurato: il metodo non esiste', () => {
+  it('lettore NON configurato: resta Carta di Credito ma niente SumUp', () => {
     mount(baseOrder())
-    expect(screen.queryByRole('button', { name: /SumUp \(lettore\)/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Carta di Credito/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /SumUp/ })).not.toBeInTheDocument()
   })
 })
 

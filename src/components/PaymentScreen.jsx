@@ -95,10 +95,15 @@ export default function PaymentScreen({ order, settings, onClose, onBeforePay })
   const toPay = Math.min(round2(amount), due)
   const change = Math.max(0, round2(amount - due))
 
+  // Metodi come nella foto del POS: Contante, Carta di Credito (POS
+  // esterno, si registra e basta) e SumUp (il nostro lettore Solo, che
+  // avvia la transazione via Cloud API — compare solo se configurato
+  // nelle Impostazioni con il pairing).
   const readerReady = settings.payments_reader_enabled && settings.sumup_reader_id
   const methods = [
     { key: 'banco', label: 'Contante', emoji: '💵' },
-    ...(readerReady ? [{ key: 'lettore', label: 'SumUp (lettore)', emoji: '📟' }] : []),
+    { key: 'carta', label: 'Carta di Credito', emoji: '💳' },
+    ...(readerReady ? [{ key: 'lettore', label: 'SumUp', emoji: '📟' }] : []),
   ]
 
   async function run(fn) {
@@ -164,7 +169,7 @@ export default function PaymentScreen({ order, settings, onClose, onBeforePay })
       }
       const { closed: done } = await registerPayment(order.id, {
         amount: toPay,
-        method: 'banco',
+        method, // 'banco' (contante) o 'carta' (POS esterno)
         items,
       })
       if (done) onClose()

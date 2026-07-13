@@ -298,7 +298,7 @@ describe('schermata Pagamento', () => {
     try {
       mount(baseOrder())
       await user.click(screen.getByRole('button', { name: /Pagamento/ }))
-      await user.click(screen.getByRole('button', { name: /SumUp \(lettore\)/ }))
+      await user.click(screen.getByRole('button', { name: /SumUp/ }))
       await user.click(screen.getByRole('button', { name: /Riscuotere/ }))
       expect(readerCheckout).toHaveBeenCalledWith('ord1', { amount: 14, items: null })
       expect(registerPayment).not.toHaveBeenCalled()
@@ -308,11 +308,11 @@ describe('schermata Pagamento', () => {
     }
   })
 
-  it('lettore NON configurato: il metodo non esiste', async () => {
+  it('lettore NON configurato: il metodo SumUp non esiste', async () => {
     const user = userEvent.setup()
     mount(baseOrder())
     await user.click(screen.getByRole('button', { name: /Pagamento/ }))
-    expect(screen.queryByRole('button', { name: /SumUp \(lettore\)/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /SumUp/ })).not.toBeInTheDocument()
   })
 
   it('conto chiuso (pagato): griglia e modifiche disabilitate', () => {
