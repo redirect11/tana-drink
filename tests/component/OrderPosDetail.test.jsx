@@ -20,6 +20,9 @@ vi.mock('../../src/lib/api.js', () => ({
   updateOrderInfo: vi.fn(() => Promise.resolve()),
   registerPayment: vi.fn(() => Promise.resolve({ closed: true })),
   setOrderDiscount: vi.fn(() => Promise.resolve()),
+  setOrderLotteryCode: vi.fn(() => Promise.resolve()),
+  createInvoice: vi.fn(() => Promise.resolve({ id: 'inv1', number: '1/2026' })),
+  markInvoiceSent: vi.fn(() => Promise.resolve()),
   cancelOrder: vi.fn(() => Promise.resolve()),
   fetchInventoryItems: vi.fn(() => Promise.resolve([])),
   DEFAULT_SETTINGS: {},
@@ -44,6 +47,8 @@ vi.mock('../../src/lib/menuCache.js', () => ({
 vi.mock('../../src/lib/printer.js', () => ({
   printComanda: vi.fn(() => Promise.resolve()),
   printScontrino: vi.fn(() => Promise.resolve()),
+  printFattura: vi.fn(() => Promise.resolve()),
+  loadPrinterSettings: vi.fn(() => ({ ivaRate: 10 })),
 }))
 
 import OrderPosDetail from '../../src/components/OrderPosDetail.jsx'

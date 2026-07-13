@@ -301,10 +301,93 @@ export async function printScontrino(order, opts = {}) {
   prn.addText(row(`${metodo} (A)`, `${total.toFixed(2)}€`))
   prn.addText(line())
 
+  // ── Codice lotteria degli scontrini (se comunicato dal cliente) ──
+  if (order.lottery_code) {
+    prn.addText(row('Codice Lotteria', order.lottery_code))
+    prn.addText(line())
+  }
+
   // ── Footer ──
   prn.addTextAlign(prn.ALIGN_CENTER)
   const shortId = (order.id || '').substring(0, 36)
   prn.addText(`${shortId}\n`)
+  prn.addText(`${s.businessFooter}\n`)
+
+  prn.addFeedLine(4)
+  prn.addCut(prn.CUT_FEED)
+  prn.send()
+}
+
+// ── FATTURA DI CORTESIA ──────────────────────────────────────────────────────
+// Documento non fiscale con i dati di fatturazione del cliente: numero
+// progressivo per anno, articoli, scorporo IVA. (La fattura elettronica
+// vera passa dal commercialista/SDI: questa è la copia di cortesia.)
+
+export async function printFattura(invoice) {
+  const prn = await getPrinter()
+  const s = loadPrinterSettings()
+  const ivaRate = (Number(invoice.iva_rate) || 0) / 100
+  const { date, time } = italianDateTime(invoice.created_at)
+  const total = Number(invoice.total ?? 0)
+  const ivaAmount = total - total / (1 + ivaRate)
+  const imponibile = total / (1 + ivaRate)
+  const c = invoice.customer || {}
+
+  prn.addTextLang('it')
+  prn.addTextSmooth(true)
+
+  prn.addTextAlign(prn.ALIGN_CENTER)
+  prn.addTextSize(2, 2)
+  prn.addTextStyle(false, false, true, prn.COLOR_1)
+  prn.addText(`${s.businessName}\n`)
+  prn.addTextSize(1, 1)
+  prn.addTextStyle(false, false, false, prn.COLOR_1)
+  prn.addText(`${s.businessAddress}\n`)
+  prn.addText(`${s.businessCity}\n\n`)
+  prn.addTextSize(1, 2)
+  prn.addTextStyle(false, false, true, prn.COLOR_1)
+  prn.addText(`FATTURA DI CORTESIA n. ${invoice.number}\n`)
+  prn.addTextSize(1, 1)
+  prn.addTextStyle(false, false, false, prn.COLOR_1)
+  prn.addTextAlign(prn.ALIGN_LEFT)
+  prn.addText(`${date}, ${time}\n`)
+  prn.addText(line())
+
+  // ── Dati del cliente ──
+  prn.addTextStyle(false, false, true, prn.COLOR_1)
+  prn.addText('Intestata a\n')
+  prn.addTextStyle(false, false, false, prn.COLOR_1)
+  prn.addText(`${c.denominazione || '-'}\n`)
+  if (c.piva) prn.addText(`P.IVA: ${c.piva}\n`)
+  if (c.cf) prn.addText(`CF: ${c.cf}\n`)
+  if (c.sdi) prn.addText(`SDI/PEC: ${c.sdi}\n`)
+  if (c.indirizzo) prn.addText(`${c.indirizzo}\n`)
+  prn.addText(line())
+
+  // ── Articoli ──
+  prn.addTextStyle(false, false, true, prn.COLOR_1)
+  prn.addText(row('QTA  Prodotto', 'PU       Prezzo'))
+  prn.addTextStyle(false, false, false, prn.COLOR_1)
+  prn.addText(line())
+  for (const item of invoice.items || []) {
+    const pu = `${Number(item.unit_price).toFixed(2)}€`
+    const tot = `${(item.qty * item.unit_price).toFixed(2)}€`
+    prn.addText(row(`${item.qty}x  ${item.name}`, `${pu.padStart(7)} ${tot.padStart(7)}`))
+  }
+  prn.addText(line())
+  if (invoice.discount_amount > 0) {
+    prn.addText(row('Sconto', `-${Number(invoice.discount_amount).toFixed(2)}€`))
+  }
+  prn.addText(row(`IVA ${(ivaRate * 100).toFixed(1)}%`, `${ivaAmount.toFixed(2)}€`))
+  prn.addText(row('Imponibile', `${imponibile.toFixed(2)}€`))
+  prn.addText('\n')
+  prn.addTextAlign(prn.ALIGN_CENTER)
+  prn.addTextSize(2, 2)
+  prn.addTextStyle(false, false, true, prn.COLOR_1)
+  prn.addText(`Totale ${total.toFixed(2)}€\n`)
+  prn.addTextSize(1, 1)
+  prn.addTextStyle(false, false, false, prn.COLOR_1)
+  prn.addText('\nDocumento non fiscale - copia di cortesia\n')
   prn.addText(`${s.businessFooter}\n`)
 
   prn.addFeedLine(4)

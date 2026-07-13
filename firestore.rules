@@ -44,7 +44,8 @@ service cloud.firestore {
                 'sumup_transaction_id', 'sumup_client_transaction_id',
                 'payment_after_cancel', 'payment_id',
                 'payments', 'discount', 'discount_amount',
-                'sumup_pending_amount', 'sumup_pending_items'];
+                'sumup_pending_amount', 'sumup_pending_items',
+                'invoice_id', 'invoice_number'];
       }
       allow read: if true;
       // Alla creazione il pagamento può solo essere assente, non
@@ -181,6 +182,11 @@ service cloud.firestore {
 
     // PAYMENTS — registro incassi (ledger). Scrivibile dallo staff e dalle
     // Cloud Functions (Admin SDK, per i pagamenti online). Mai dal cliente.
+    // FATTURE di cortesia: solo staff (contengono dati dei clienti).
+    match /invoices/{invoiceId} {
+      allow read, write: if isStaffMember();
+    }
+
     match /payments/{paymentId} {
       allow read: if isStaffMember();
       allow create, update: if isStaffMember();
