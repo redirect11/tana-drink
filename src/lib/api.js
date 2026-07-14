@@ -2164,6 +2164,12 @@ export async function deleteStaffHours(id) {
   await deleteDoc(doc(staffHoursCol, id))
 }
 
+// Tutto il registro ore (per il dedup dell'import storico).
+export async function fetchAllStaffHours() {
+  const snap = await getDocs(staffHoursCol)
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+}
+
 // Token push del dispositivo di un membro dello staff: la Cloud Function
 // lo usa per recapitare la chiamata cerca-persone anche quando l'app è
 // in background o chiusa.
