@@ -272,6 +272,7 @@ function OrderQueue() {
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(false)
   const [statusTab, setStatusTab] = useState(ORDER_STATUSES.RICEVUTO)
+  const [boardFilter, setBoardFilter] = useState('attivi') // 'attivi' | 'chiusi' | 'tutti'
   const [slowLoad, setSlowLoad] = useState(false)
   const [confirmAction, setConfirmAction] = useState(null) // { title, message, danger, run }
   const [cancelTarget, setCancelTarget] = useState(null) // { order, kind }
@@ -471,15 +472,19 @@ function OrderQueue() {
     )
   }
 
-  // Nessuna serata aperta: invito ad aprire il conto. Subito dopo la
-  // chiusura qui appare anche il resoconto della serata appena conclusa.
+  // Nessuna serata aperta: NON blocca — la serata si apre da sola col
+  // primo ordine dal POS; qui resta l'apertura manuale e, dopo una
+  // chiusura, il resoconto della serata appena conclusa.
   if (!serata) {
     return (
       <div>
         {error && <div className="banner">Errore: {error}</div>}
-        <div className="empty">Nessuna serata aperta.</div>
-        <button className="btn block" onClick={apri} disabled={busy}>
-          {busy ? 'Apro…' : '▶️ Apri serata'}
+        <div className="empty">
+          Nessuna serata aperta: si apre da sola col primo ordine.
+        </div>
+        <Link className="btn block" to="/pos">🍸 Nuovo ordine (POS cassa)</Link>
+        <button className="btn ghost block" style={{ marginTop: 8 }} onClick={apri} disabled={busy}>
+          {busy ? 'Apro…' : '▶️ Apri la serata a vuoto'}
         </button>
         {report && <SerataReport report={report} onClose={() => setReport(null)} />}
       </div>
@@ -513,11 +518,13 @@ function OrderQueue() {
     ...(buckets[ORDER_STATUSES.RITIRATO] || []),
     ...(buckets[ORDER_STATUSES.PAGATO] || []),
   ]
-  // Vista a griglia: tutti gli ordini tranne quelli chiusi (pagati) o
-  // annullati, ordinati per numero.
+  // Vista a griglia: di default gli ordini in corso; col filtro si vedono
+  // anche i chiusi/pagati o TUTTI gli ordini della serata.
+  const isClosed = (o) =>
+    o.workflow_status === ORDER_STATUSES.PAGATO || o.workflow_status === ORDER_STATUSES.ANNULLATO
   const boardOrders = visibleOrders
-    .filter(
-      (o) => o.workflow_status !== ORDER_STATUSES.PAGATO && o.workflow_status !== ORDER_STATUSES.ANNULLATO
+    .filter((o) =>
+      boardFilter === 'tutti' ? true : boardFilter === 'chiusi' ? isClosed(o) : !isClosed(o)
     )
     .sort((a, b) => (a.daily_number || 0) - (b.daily_number || 0))
   // Ordini POS in invio (placeholder grigi). Finché il placeholder è attivo,
@@ -920,9 +927,25 @@ function OrderQueue() {
               🖨 {b.msg} <span className="muted">(tocca per chiudere)</span>
             </div>
           ))}
-          {/* Griglia: ordini in invio (grigi) + tutti gli ordini tranne i chiusi */}
+          {/* Filtro: in corso (default) / chiusi / tutta la serata */}
+          <div className="chips-row" style={{ margin: '8px 0 0' }}>
+            {[
+              ['attivi', 'In corso'],
+              ['chiusi', '💶 Chiusi'],
+              ['tutti', 'Tutta la serata'],
+            ].map(([k, label]) => (
+              <button
+                key={k}
+                className={`chip ${boardFilter === k ? 'active' : ''}`}
+                onClick={() => setBoardFilter(k)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {/* Griglia: ordini in invio (grigi) + ordini secondo il filtro */}
           {pend.pending.length === 0 && visibleBoard.length === 0 && (
-            <div className="empty">Nessun ordine attivo.</div>
+            <div className="empty">Nessun ordine{boardFilter === 'chiusi' ? ' chiuso' : boardFilter === 'attivi' ? ' in corso' : ''}.</div>
           )}
           <div className="order-grid">
             {pend.pending.map(renderPendingCard)}

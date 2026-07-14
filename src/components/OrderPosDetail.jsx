@@ -396,7 +396,7 @@ export default function OrderPosDetail({ order }) {
                 style={{ marginTop: 10 }}
                 onClick={() => setShowCustom(true)}
               >
-                🍹 Drink custom
+                🏷 Prodotto libero
               </button>
             )}
 
