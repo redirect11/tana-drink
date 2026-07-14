@@ -10,6 +10,7 @@ import { readerCheckout } from '../lib/paymentsApi.js'
 import { formatPrice, PAYMENT_METHOD_LABELS } from '../lib/orderStatus.js'
 import { allServed } from '../lib/comande.js'
 import { printScontrino, printFattura, loadPrinterSettings } from '../lib/printer.js'
+import { toastError } from '../lib/toast.js'
 import {
   remainingItems,
   paidAmount,
@@ -36,8 +37,28 @@ const fullSelection = (order) =>
 const toDigits = (euro) => String(Math.max(0, Math.round(euro * 100)))
 const digitsToEuro = (s) => (parseInt(s || '0', 10) || 0) / 100
 
-export default function PaymentScreen({ order, settings, onClose, onBeforePay, onError }) {
+// `resolveOrderId` (opzionale): quando la schermata si apre PRIMA che
+// l'ordine esista sul server (pagamento diretto dal POS), le azioni
+// aspettano qui l'id reale — la UI intanto è già piena e reattiva.
+export default function PaymentScreen({ order: orderProp, settings, onClose, onBeforePay, onError, resolveOrderId }) {
   const [error, setError] = useState(null)
+  // Sconto OTTIMISTICO: applicato subito a schermo, server in background.
+  const [optimisticDisc, setOptimisticDisc] = useState(null) // { disc, amount }
+  const order = useMemo(
+    () =>
+      optimisticDisc == null
+        ? orderProp
+        : { ...orderProp, discount: optimisticDisc.disc, discount_amount: optimisticDisc.amount },
+    [orderProp, optimisticDisc]
+  )
+  // Quando il server ha recepito lo sconto, l'override locale si ritira.
+  useEffect(() => {
+    if (optimisticDisc != null && (orderProp.discount_amount || 0) === optimisticDisc.amount) {
+      setOptimisticDisc(null)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderProp.discount_amount])
+  const orderId = async () => (resolveOrderId ? await resolveOrderId() : order.id)
   const [saving, setSaving] = useState(false)
   const [sel, setSel] = useState(() => fullSelection(order)) // drink_id -> qty da pagare ora
   const [method, setMethod] = useState('banco')
@@ -158,10 +179,29 @@ export default function PaymentScreen({ order, settings, onClose, onBeforePay, o
   const riscuoti = () => {
     const items = !manual && splitting ? selection : null
     if (method === 'lettore') {
-      // Il lettore avvia una transazione vera: qui si aspetta l'esito.
+      // Lettore SIMULATO (test/dev senza hardware): stessa UX del vero —
+      // transazione "avviata", poi l'esito arriva da solo dopo 2,5s.
+      if (settings.sumup_reader_id === 'sim') {
+        setReaderStarted(true)
+        ;(async () => {
+          try {
+            await onBeforePay?.()
+            const oid = await orderId()
+            setTimeout(() => {
+              registerPayment(oid, { amount: toPay, method: 'lettore', items }).catch((e) =>
+                onError?.(`Lettore simulato: ${e.message}`)
+              )
+            }, 2500)
+          } catch (e) {
+            setError(e.message)
+          }
+        })()
+        return
+      }
+      // Il lettore VERO avvia una transazione: qui si aspetta l'esito.
       return run(async () => {
         await onBeforePay?.()
-        const res = await readerCheckout(order.id, { amount: toPay, items })
+        const res = await readerCheckout(await orderId(), { amount: toPay, items })
         if (res?.unavailable) {
           setError('Lettore non disponibile in ambiente di sviluppo: simula dai DevTools.')
           return
@@ -176,7 +216,7 @@ export default function PaymentScreen({ order, settings, onClose, onBeforePay, o
     ;(async () => {
       try {
         await onBeforePay?.()
-        await registerPayment(order.id, { amount: toPay, method, items })
+        await registerPayment(await orderId(), { amount: toPay, method, items })
       } catch (e) {
         setError(e.message)
         onError?.(`Pagamento non registrato: ${e.message}`)
@@ -194,23 +234,37 @@ export default function PaymentScreen({ order, settings, onClose, onBeforePay, o
       : digitsToEuro(discDigits)
   const discPreview = discountAmount(order.total, { type: discType, value: discValue })
 
-  const applyDiscount = () =>
-    run(async () => {
-      await setOrderDiscount(order.id, discValue > 0 ? { type: discType, value: discValue } : null)
-      setShowDiscount(false)
-      setDiscDigits('')
-    })
+  // Applica SUBITO a schermo (override locale), server in background.
+  const applyDiscount = () => {
+    const disc = discValue > 0 ? { type: discType, value: discValue } : null
+    setOptimisticDisc({ disc, amount: discountAmount(orderProp.total, disc) })
+    setShowDiscount(false)
+    setDiscDigits('')
+    ;(async () => {
+      try {
+        await setOrderDiscount(await orderId(), disc)
+      } catch (e) {
+        setOptimisticDisc(null)
+        toastError(`Sconto non applicato: ${e.message}`)
+      }
+    })()
+  }
 
-  const saveLottery = () =>
-    run(async () => {
-      await setOrderLotteryCode(order.id, lotteryCode)
-      setShowLottery(false)
-    })
+  const saveLottery = () => {
+    setShowLottery(false)
+    ;(async () => {
+      try {
+        await setOrderLotteryCode(await orderId(), lotteryCode)
+      } catch (e) {
+        toastError(`Codice lotteria non salvato: ${e.message}`)
+      }
+    })()
+  }
 
   const emettiFattura = () =>
     run(async () => {
       const inv = await createInvoice({
-        order,
+        order: { ...order, id: await orderId() },
         customer: billing,
         ivaRate: loadPrinterSettings().ivaRate ?? 10,
       })
@@ -543,13 +597,19 @@ export default function PaymentScreen({ order, settings, onClose, onBeforePay, o
                 className="btn ghost small block"
                 style={{ marginTop: 6 }}
                 disabled={saving}
-                onClick={() =>
-                  run(async () => {
-                    await setOrderDiscount(order.id, null)
-                    setShowDiscount(false)
-                    setDiscDigits('')
-                  })
-                }
+                onClick={() => {
+                  setOptimisticDisc({ disc: null, amount: 0 })
+                  setShowDiscount(false)
+                  setDiscDigits('')
+                  ;(async () => {
+                    try {
+                      await setOrderDiscount(await orderId(), null)
+                    } catch (e) {
+                      setOptimisticDisc(null)
+                      toastError(`Sconto non rimosso: ${e.message}`)
+                    }
+                  })()
+                }}
               >
                 Rimuovi sconto
               </button>

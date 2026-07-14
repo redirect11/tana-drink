@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   ensureTodaySerata,
@@ -38,9 +38,9 @@ export default function PosPage() {
   const [showInfo, setShowInfo] = useState(false)
   // Modale nome alla conferma.
   const [askName, setAskName] = useState(false)
-  const [busyPay, setBusyPay] = useState(false)
-  // Pagamento diretto: ordine appena creato + suoi aggiornamenti live.
+  // Pagamento diretto: ordine (prima locale, poi reale) + update live.
   const [payOrder, setPayOrder] = useState(null)
+  const payIdRef = useRef(null) // promise che risolve l'id reale
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   useEffect(() => subscribeSettings(setSettings, () => {}), [])
   const payOrderId = payOrder?.id
@@ -123,35 +123,65 @@ export default function PosPage() {
     navigate('/bar')
   }
 
-  // PAGAMENTO DIRETTO: crea il conto e apre subito la schermata Pagamento,
-  // senza passare dalla coda. Se viene saldato lì, il conto nasce e muore
-  // chiuso (non comparirà tra gli aperti); se si esce senza saldare resta
-  // un conto aperto come gli altri.
-  async function handlePayNow() {
-    if (cart.items.length === 0 || busyPay) return
-    setBusyPay(true)
+  // PAGAMENTO DIRETTO: la schermata Pagamento si apre SUBITO su un ordine
+  // locale (stessi articoli e totale); serata e creazione girano in
+  // background e le azioni di incasso aspettano l'id reale da sole
+  // (resolveOrderId). Se viene saldato lì, il conto nasce e muore chiuso;
+  // se si esce senza saldare resta un conto aperto come gli altri.
+  function handlePayNow() {
+    if (cart.items.length === 0 || payOrder) return
     setError(null)
-    try {
+    const items = cart.items
+    const mapped = items.map((i) => ({
+      drink_id: i.drink_id,
+      name: i.name,
+      unit_price: i.price,
+      qty: i.qty,
+      ...(i.custom ? { custom: true } : {}),
+    }))
+    // Ordine locale: identico a quello che nascerà (id in arrivo).
+    setPayOrder({
+      id: null,
+      daily_number: null,
+      status: 'aperto',
+      payment_status: 'non_richiesto',
+      customer_name: customerName.trim() || null,
+      table_label: tableLabel || null,
+      total: cart.total,
+      discount: null,
+      discount_amount: 0,
+      payments: [],
+      lottery_code: null,
+      invoice_number: null,
+      comande: [
+        { id: 'c1', seq: 1, status: ORDER_STATUSES.IN_PREPARAZIONE, items: mapped },
+      ],
+      order_items: mapped,
+    })
+    payIdRef.current = (async () => {
       const serataId = await ensureSerataId()
       const created = await createOrder({
         serata_id: serataId,
         table_label: tableLabel || null,
         note: note || null,
         customer_name: customerName.trim() || null,
-        items: cart.items,
+        items,
         placed_by: staff ? { email: staff.email, name: staff.name, role: staff.role } : undefined,
         status: ORDER_STATUSES.IN_PREPARAZIONE,
       })
-      setPayOrder(created)
+      // Da qui in poi la schermata segue l'ordine VERO (e i suoi update).
+      setPayOrder((cur) => (cur && cur.id === null ? created : cur))
       cart.clear()
       setTableLabel('')
       setNote('')
       setCustomerName('')
-    } catch (e) {
-      setError(e.message)
-    } finally {
-      setBusyPay(false)
-    }
+      return created.id
+    })()
+    payIdRef.current.catch((e) => {
+      toastError(`Ordine non creato: ${e.message}`)
+      setPayOrder(null) // il carrello è intatto: si riprova
+      payIdRef.current = null
+    })
   }
 
   const cartCount = cart.items.reduce((s, i) => s + i.qty, 0)
@@ -298,12 +328,8 @@ export default function PosPage() {
             </div>
             {/* Vendita rapida: dritto alla schermata Pagamento, senza
                 passare dalla coda (il conto saldato non appare tra gli aperti). */}
-            <button
-              className="btn block"
-              disabled={cartCount === 0 || busyPay}
-              onClick={handlePayNow}
-            >
-              💳 Pagamento{busyPay ? '…' : ` · ${formatPrice(cart.total)}`}
+            <button className="btn block" disabled={cartCount === 0} onClick={handlePayNow}>
+              💳 Pagamento · {formatPrice(cart.total)}
             </button>
           </div>
         </div>
@@ -361,6 +387,7 @@ export default function PosPage() {
           settings={settings}
           onClose={() => setPayOrder(null)}
           onError={setError}
+          resolveOrderId={() => payIdRef.current}
         />
       )}
     </div>
