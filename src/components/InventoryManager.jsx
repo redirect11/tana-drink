@@ -30,6 +30,8 @@ import {
   inventoryTotalValue,
 } from '../lib/inventory.js'
 import { formatPrice } from '../lib/orderStatus.js'
+import { parseSupplierList } from '../lib/warehouse.js'
+import { toastSuccess, toastError } from '../lib/toast.js'
 import StockCountPanel from './StockCountPanel.jsx'
 import PurchaseOrdersPanel from './PurchaseOrdersPanel.jsx'
 import SupplierInvoicesPanel from './SupplierInvoicesPanel.jsx'
@@ -483,6 +485,37 @@ function InvCategoryManager({ categories, onChange }) {
 function SupplierManager({ suppliers, onChange }) {
   const [name, setName] = useState('')
   const [busy, setBusy] = useState(false)
+  const [showImport, setShowImport] = useState(false)
+  const [importText, setImportText] = useState('')
+
+  // Import in blocco (es. dall'Excel): un fornitore per riga, ";email"
+  // opzionale. I nomi già presenti vengono saltati.
+  async function importList() {
+    const rows = parseSupplierList(importText)
+    if (rows.length === 0) return
+    setBusy(true)
+    try {
+      const existing = new Set(suppliers.map((s) => s.name.toLowerCase()))
+      let added = 0
+      for (const r of rows) {
+        if (existing.has(r.name.toLowerCase())) continue
+        await createSupplier({
+          name: r.name,
+          sort_order: suppliers.length + added,
+          ...(r.email ? { email: r.email } : {}),
+        })
+        added += 1
+      }
+      toastSuccess(`Importati ${added} fornitori${rows.length - added > 0 ? ` (${rows.length - added} già presenti)` : ''}`)
+      setImportText('')
+      setShowImport(false)
+      await onChange()
+    } catch (e) {
+      toastError(`Import fornitori: ${e.message}`)
+    } finally {
+      setBusy(false)
+    }
+  }
 
   async function add() {
     if (!name.trim()) return
@@ -520,6 +553,27 @@ function SupplierManager({ suppliers, onChange }) {
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nuovo fornitore (es. NOVA)" />
         <button className="btn small" onClick={add} disabled={busy}>Aggiungi</button>
       </div>
+      <button
+        className="btn ghost small block"
+        style={{ marginTop: 8 }}
+        onClick={() => setShowImport((v) => !v)}
+      >
+        📥 Importa elenco (incolla, uno per riga)
+      </button>
+      {showImport && (
+        <div style={{ marginTop: 6 }}>
+          <textarea
+            rows={5}
+            value={importText}
+            onChange={(e) => setImportText(e.target.value)}
+            placeholder={'NOVA' + String.fromCharCode(10) + 'ENOFEL;ordini@enofel.it' + String.fromCharCode(10) + 'FONT'}
+            style={{ width: '100%' }}
+          />
+          <button className="btn small block" style={{ marginTop: 6 }} disabled={busy} onClick={importList}>
+            Importa
+          </button>
+        </div>
+      )}
       {suppliers.length === 0 && (
         <div className="muted small" style={{ marginTop: 8 }}>Nessun fornitore.</div>
       )}

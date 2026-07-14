@@ -64,6 +64,22 @@ export function suggestedPackages(item) {
   return Math.max(1, Math.ceil((thr * 2 - stock) / size))
 }
 
+// Elenco fornitori incollato (import dall'Excel: un nome per riga,
+// opzionale ";email"). Ritorna [{ name, email }] senza duplicati.
+export function parseSupplierList(text) {
+  const seen = new Set()
+  const out = []
+  for (const raw of String(text || '').split('\n')) {
+    const [name, email] = raw.split(';').map((x) => (x || '').trim())
+    if (!name) continue
+    const key = name.toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push({ name, email: email || null })
+  }
+  return out
+}
+
 // Testo dell'ordine da mandare al fornitore (email, copia, stampa).
 export function purchaseOrderText(order) {
   const righe = (order.lines || [])

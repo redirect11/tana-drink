@@ -7,6 +7,7 @@ import { describe, it, expect } from 'vitest'
 import {
   suggestedPackages,
   purchaseOrderText,
+  parseSupplierList,
   countLineCons,
   qtyValue,
   stockCountCompute,
@@ -154,5 +155,16 @@ describe('purchaseOrderText', () => {
     expect(txt).toContain('- 4× Rum bianco')
     expect(txt).toContain('- 2× Tonica')
     expect(txt).toContain('Totale ivato: 122.00')
+  })
+})
+
+describe('parseSupplierList (import elenco fornitori)', () => {
+  it('un nome per riga, ";email" opzionale, duplicati e vuoti saltati', () => {
+    const text = ['NOVA', 'ENOFEL;ordini@enofel.it', '', 'nova', '  FONT  '].join(String.fromCharCode(10))
+    expect(parseSupplierList(text)).toEqual([
+      { name: 'NOVA', email: null },
+      { name: 'ENOFEL', email: 'ordini@enofel.it' },
+      { name: 'FONT', email: null },
+    ])
   })
 })
