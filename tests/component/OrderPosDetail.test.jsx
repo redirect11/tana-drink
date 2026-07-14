@@ -332,11 +332,11 @@ describe('schermata Pagamento', () => {
     }
   })
 
-  it('lettore NON configurato: il metodo SumUp non esiste', async () => {
+  it('lettore NON configurato: il metodo SumUp è in lista ma spento', async () => {
     const user = userEvent.setup()
     mount(baseOrder())
     await user.click(screen.getByRole('button', { name: /Pagamento/ }))
-    expect(screen.queryByRole('button', { name: /SumUp/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /SumUp/ })).toBeDisabled()
   })
 
   it('conto chiuso (pagato): griglia e modifiche disabilitate', () => {

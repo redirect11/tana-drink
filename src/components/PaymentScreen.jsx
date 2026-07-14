@@ -118,14 +118,20 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onB
   const change = Math.max(0, round2(amount - due))
 
   // Metodi come nella foto del POS: Contante, Carta di Credito (POS
-  // esterno, si registra e basta) e SumUp (il nostro lettore Solo, che
-  // avvia la transazione via Cloud API — compare solo se configurato
-  // nelle Impostazioni con il pairing).
+  // esterno, si registra e basta) e SumUp (il lettore Solo, transazione
+  // via Cloud API). SumUp è SEMPRE in lista: senza pairing è spento con
+  // la nota su dove attivarlo (Impostazioni → Pagamenti).
   const readerReady = settings.payments_reader_enabled && settings.sumup_reader_id
   const methods = [
     { key: 'banco', label: 'Contante', emoji: '💵' },
     { key: 'carta', label: 'Carta di Credito', emoji: '💳' },
-    ...(readerReady ? [{ key: 'lettore', label: 'SumUp', emoji: '📟' }] : []),
+    {
+      key: 'lettore',
+      label: 'SumUp',
+      emoji: '📟',
+      disabled: !readerReady,
+      note: !readerReady ? 'configura il lettore nelle Impostazioni' : null,
+    },
   ]
 
   async function run(fn) {
@@ -502,12 +508,15 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onB
               key={m.key}
               className={`payscreen-method${method === m.key ? ' active' : ''}`}
               aria-pressed={method === m.key}
-              disabled={closed}
+              disabled={closed || m.disabled}
               onClick={() => setMethod(m.key)}
             >
               {m.emoji} {m.label}
-              {m.key === 'lettore' && settings.sumup_reader_name ? (
+              {m.key === 'lettore' && readerReady && settings.sumup_reader_name ? (
                 <span className="muted small"> ({settings.sumup_reader_name})</span>
+              ) : null}
+              {m.note ? (
+                <span className="muted small" style={{ display: 'block' }}>{m.note}</span>
               ) : null}
             </button>
           ))}
