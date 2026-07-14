@@ -38,6 +38,7 @@ export default function MenuManager() {
   const [catFilter, setCatFilter] = useState('all') // 'all' | 'none' | categoryId
   const [availFilter, setAvailFilter] = useState('all') // 'all' | 'yes' | 'no'
   const [collapsed, setCollapsed] = useState(() => new Set()) // categorie chiuse
+  const [openId, setOpenId] = useState(null) // card con azioni aperte
 
   const catName = (id) => categories.find((c) => c.id === id)?.name
 
@@ -314,41 +315,73 @@ export default function MenuManager() {
               <span>{isCollapsed ? '▸' : '▾'} {g.name}</span>
               <span className="muted small">{g.list.length}</span>
             </h3>
-            {!isCollapsed &&
-              g.list.map((d) => (
-                <div className="card" key={d.id}>
-                  <div className="row between">
-                    {d.image_url && (
-                      <img className="drink-thumb" src={d.image_url} alt={d.name} />
-                    )}
-                    <div className="grow">
-                      <strong>{d.name}</strong>{' '}
-                      {!d.available && <span className="pill ritirato">non disp.</span>}
-                      <div className="muted">{formatPrice(d.price)}</div>
+            {/* Card compatte in griglia (stessa UX delle card ordini):
+                nome+prezzo a vista, azioni a scomparsa con «⋯». */}
+            {!isCollapsed && (
+              <div className="admin-grid">
+                {g.list.map((d) => {
+                  const open = openId === d.id
+                  return (
+                    <div
+                      className={`card grid-card admin-card${d.available ? '' : ' off'}`}
+                      key={d.id}
+                    >
+                      <div
+                        className="grid-card-main"
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => setOpenId(open ? null : d.id)}
+                      >
+                        <div className="row between" style={{ alignItems: 'flex-start', gap: 6 }}>
+                          <strong style={{ fontSize: '0.92rem', lineHeight: 1.25 }}>{d.name}</strong>
+                          {!d.available && <span className="pill ritirato">off</span>}
+                        </div>
+                        <div className="row between" style={{ alignItems: 'baseline' }}>
+                          <span className="muted small">
+                            {d.recipe_items?.length > 0 ? `${d.recipe_items.length} ingr.` : ''}
+                          </span>
+                          <span className="grid-card-tot">{formatPrice(d.price)}</span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        className="grid-card-toggle"
+                        onClick={() => setOpenId(open ? null : d.id)}
+                        aria-expanded={open}
+                      >
+                        {open ? '▴ Chiudi' : '⋯ Azioni'}
+                      </button>
+                      {open && (
+                        <div className="grid-card-actions">
+                          {d.recipe_items && d.recipe_items.length > 0 && (
+                            <p className="muted small" style={{ margin: '0 0 6px' }}>
+                              {d.recipe_items.map((r) => `${r.name} ${formatQty(r.qty, r.unit)}`).join(' · ')}
+                            </p>
+                          )}
+                          <button className="btn secondary small block" onClick={() => setEditing(d)}>
+                            ✏️ Modifica
+                          </button>
+                          <button
+                            className="btn ghost small block"
+                            style={{ marginTop: 6 }}
+                            onClick={() => toggleAvailable(d)}
+                          >
+                            {d.available ? 'Rendi non disp.' : 'Rendi disponibile'}
+                          </button>
+                          <button
+                            className="btn ghost small block"
+                            style={{ marginTop: 6 }}
+                            onClick={() => handleDelete(d)}
+                          >
+                            🗑 Elimina
+                          </button>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                  {d.recipe_items && d.recipe_items.length > 0 && (
-                    <p className="muted" style={{ fontSize: '0.85rem', margin: '6px 0 0' }}>
-                      {d.recipe_items.map((r) => `${r.name} ${formatQty(r.qty, r.unit)}`).join(' · ')}
-                    </p>
-                  )}
-                  <div className="grid-2" style={{ marginTop: 8 }}>
-                    <button className="btn secondary small" onClick={() => setEditing(d)}>
-                      Modifica
-                    </button>
-                    <button className="btn ghost small" onClick={() => toggleAvailable(d)}>
-                      {d.available ? 'Rendi non disp.' : 'Rendi disponibile'}
-                    </button>
-                  </div>
-                  <button
-                    className="btn ghost small block"
-                    style={{ marginTop: 8 }}
-                    onClick={() => handleDelete(d)}
-                  >
-                    🗑 Elimina
-                  </button>
-                </div>
-              ))}
+                  )
+                })}
+              </div>
+            )}
           </section>
         )
       })}

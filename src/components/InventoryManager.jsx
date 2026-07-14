@@ -286,45 +286,57 @@ function ProductsPanel() {
       {error && <div className="banner" style={{ marginTop: 8 }}>Errore: {error}</div>}
       {loading && <div className="empty">Carico l’inventario…</div>}
 
-      {/* Lista compatta */}
-      <div className="inv-list">
+      {/* Card compatte in griglia (stessa UX delle card ordini): striscia
+          colorata per lo stato scorte, dettagli e azioni a scomparsa. */}
+      <div className="admin-grid">
         {visible.map((it) => {
           const st = stockStatus(it)
           const bd = bottleBreakdown(it)
           const expanded = expandedId === it.id
           return (
-            <div className="inv-item" key={it.id}>
+            <div className={`card grid-card admin-card inv-${st}`} key={it.id}>
               <div
-                className="inv-row"
+                className="grid-card-main"
+                role="button"
+                tabIndex={0}
                 onClick={() => {
                   setExpandedId(expanded ? null : it.id)
                   setCaricoFor(null)
                 }}
               >
-                <span className={`dot dot-${st}`} title={STATUS_LABEL[st] || 'ok'} />
-                <div className="grow">
-                  <div className="inv-name">
+                <div className="row between" style={{ alignItems: 'flex-start', gap: 6 }}>
+                  <strong style={{ fontSize: '0.92rem', lineHeight: 1.25 }}>
                     {it.name}{' '}
                     {it.status === 'out' && <span className="badge-empty">OUT</span>}
-                  </div>
-                  <div className="muted small">
+                  </strong>
+                  <span className={`dot dot-${st}`} title={STATUS_LABEL[st] || 'ok'} />
+                </div>
+                <div className="row between" style={{ alignItems: 'baseline' }}>
+                  <span className="muted small" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {catName(it.category_id) || 'Senza categoria'}
-                    {supName(it.supplier_id) && ` · ${supName(it.supplier_id)}`}
-                  </div>
+                    {supName(it.supplier_id) ? ` · ${supName(it.supplier_id)}` : ''}
+                  </span>
+                  <span className="grid-card-tot" style={{ fontSize: '1.05rem', whiteSpace: 'nowrap' }}>
+                    {formatQty(it.stock, it.unit)}
+                  </span>
                 </div>
-                <div className="inv-qty">
-                  <div>{formatQty(it.stock, it.unit)}</div>
-                  {bd && (
-                    <div className="muted small">
-                      {bd.full} piene{bd.hasOpen ? ' +1' : ''}
-                    </div>
-                  )}
-                </div>
-                <span className="chev">{expanded ? '▴' : '▾'}</span>
+                {bd && (
+                  <div className="muted small">🍾 {bd.full} piene{bd.hasOpen ? ' +1 aperta' : ''}</div>
+                )}
               </div>
-
+              <button
+                type="button"
+                className="grid-card-toggle"
+                onClick={() => {
+                  setExpandedId(expanded ? null : it.id)
+                  setCaricoFor(null)
+                }}
+                aria-expanded={expanded}
+              >
+                {expanded ? '▴ Chiudi' : '⋯ Azioni'}
+              </button>
               {expanded && (
-                <div className="inv-detail">
+                <div className="grid-card-actions">
                   {bd ? (
                     <div className="muted small">
                       🍾 {bd.full} piene
@@ -352,11 +364,13 @@ function ProductsPanel() {
                     <CaricoForm item={it} onCancel={() => setCaricoFor(null)} onConfirm={(p) => doCarico(it, p)} />
                   ) : (
                     <>
-                      <div className="grid-2" style={{ marginTop: 8 }}>
-                        <button className="btn small" onClick={() => setCaricoFor(it.id)}>⬆ Carico</button>
-                        <button className="btn secondary small" onClick={() => rettifica(it)}>Contenuto reale</button>
-                      </div>
-                      <div className="grid-2" style={{ marginTop: 8 }}>
+                      <button className="btn small block" style={{ marginTop: 8 }} onClick={() => setCaricoFor(it.id)}>
+                        ⬆ Carico
+                      </button>
+                      <button className="btn secondary small block" style={{ marginTop: 6 }} onClick={() => rettifica(it)}>
+                        Contenuto reale
+                      </button>
+                      <div className="grid-2" style={{ marginTop: 6, gap: 6 }}>
                         <button className="btn ghost small" onClick={() => setEditing(it)}>✏️ Modifica</button>
                         <button className="btn ghost small" onClick={() => remove(it)}>🗑 Elimina</button>
                       </div>

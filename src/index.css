@@ -1212,6 +1212,33 @@ body.fullbleed .bar-content {
   font-family: var(--serif);
 }
 
+/* ── Card amministrative (Menù e Inventario): stessa UX delle card
+   ordini in griglia — compatte, azioni a scomparsa con «⋯». ── */
+.admin-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+  align-items: start;
+}
+.admin-card .grid-card-main {
+  height: auto;
+  min-height: 62px;
+  padding: 10px 12px;
+}
+.admin-card.off .grid-card-main {
+  opacity: 0.55;
+}
+/* Striscia sinistra per lo stato scorte (come le card ordini). */
+.admin-card.inv-ok { border-left: 4px solid #2ecc71; }
+.admin-card.inv-low { border-left: 4px solid #f39c12; }
+.admin-card.inv-empty { border-left: 4px solid #e74c3c; }
+/* Sul tema chiaro l'override generico dei bordi card non deve mangiarsi
+   la striscia (stessa storia delle card ordini). */
+:root[data-luma='light'] .admin-card.inv-ok { border-left-color: #2ecc71; }
+:root[data-luma='light'] .admin-card.inv-low { border-left-color: #f39c12; }
+:root[data-luma='light'] .admin-card.inv-empty { border-left-color: #e74c3c; }
+
 /* Pulsante che apre/chiude i tasti azione della card */
 .grid-card-toggle {
   width: 100%;
