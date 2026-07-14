@@ -357,7 +357,7 @@ export default function MenuPage() {
           style={{ marginBottom: 10 }}
           onClick={() => setShowCustomDrink(true)}
         >
-          🍹 Drink custom (fuori menù)
+          🏷 Prodotto libero (fuori menù)
         </button>
       )}
       {showCustomDrink && (

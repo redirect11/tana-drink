@@ -3,16 +3,17 @@ import { fetchInventoryItems } from '../lib/api.js'
 import { toBaseQty, ENTRY_UNITS } from '../lib/inventory.js'
 import { formatPrice } from '../lib/orderStatus.js'
 
-// Drink custom: il bartender compone al volo una voce fuori menù (stile
-// "custom amount/item" dei POS SumUp): nome, prezzo e — opzionale — gli
-// ingredienti presi dall'inventario, così lo scarico scorte funziona come
-// per i drink del catalogo. Pensato per essere veloce: due campi e via.
+// PRODOTTO LIBERO: voce fuori catalogo battuta al volo (stile "custom
+// amount/item" dei POS SumUp). Bastano nome e prezzo — lo scarico
+// magazzino è opzionale: si cercano gli ingredienti per nome e si
+// toccano per aggiungerli (niente menu a tendina).
 export default function CustomDrinkForm({ onCancel, onAdd }) {
   const [name, setName] = useState('')
   const [price, setPrice] = useState('')
-  const [rows, setRows] = useState([]) // { inventory_item_id, qty, unit }
+  const [rows, setRows] = useState([]) // { inventory_item_id, name, qty, unit }
   const [inventory, setInventory] = useState([])
   const [showRecipe, setShowRecipe] = useState(false)
+  const [search, setSearch] = useState('')
 
   // L'inventario è leggibile solo dal bartender: se la lettura fallisce
   // (ruolo staff), il form resta usabile senza la sezione ingredienti.
@@ -20,19 +21,27 @@ export default function CustomDrinkForm({ onCancel, onAdd }) {
     fetchInventoryItems().then(setInventory).catch(() => setInventory([]))
   }, [])
 
-  function addRow() {
-    setRows((r) => [...r, { inventory_item_id: '', qty: '', unit: '' }])
+  const q = search.trim().toLowerCase()
+  const matches = q
+    ? inventory
+        .filter(
+          (i) =>
+            i.name.toLowerCase().includes(q) &&
+            !rows.some((r) => r.inventory_item_id === i.id)
+        )
+        .slice(0, 6)
+    : []
+
+  function addIngredient(inv) {
+    const unit = ENTRY_UNITS[inv.unit]?.[0] ?? inv.unit
+    setRows((r) => [...r, { inventory_item_id: inv.id, name: inv.name, invUnit: inv.unit, qty: '', unit }])
+    setSearch('')
   }
   function setRow(idx, patch) {
     setRows((r) => r.map((row, i) => (i === idx ? { ...row, ...patch } : row)))
   }
   function removeRow(idx) {
     setRows((r) => r.filter((_, i) => i !== idx))
-  }
-  function onItemChange(idx, itemId) {
-    const inv = inventory.find((i) => i.id === itemId)
-    const unit = inv ? (ENTRY_UNITS[inv.unit]?.[0] ?? inv.unit) : ''
-    setRow(idx, { inventory_item_id: itemId, unit })
   }
 
   const priceNum = Number(String(price).replace(',', '.')) || 0
@@ -42,16 +51,13 @@ export default function CustomDrinkForm({ onCancel, onAdd }) {
     e.preventDefault()
     if (!valid) return
     const recipe_items = rows
-      .filter((r) => r.inventory_item_id && Number(r.qty) > 0)
-      .map((r) => {
-        const inv = inventory.find((i) => i.id === r.inventory_item_id)
-        return {
-          inventory_item_id: r.inventory_item_id,
-          name: inv?.name ?? '',
-          unit: inv?.unit ?? 'pz',
-          qty: toBaseQty(r.qty, r.unit),
-        }
-      })
+      .filter((r) => Number(r.qty) > 0)
+      .map((r) => ({
+        inventory_item_id: r.inventory_item_id,
+        name: r.name,
+        unit: r.invUnit ?? 'pz',
+        qty: toBaseQty(r.qty, r.unit),
+      }))
     onAdd({ name: name.trim(), price: priceNum, recipe_items })
   }
 
@@ -63,14 +69,18 @@ export default function CustomDrinkForm({ onCancel, onAdd }) {
         onClick={(e) => e.stopPropagation()}
         onSubmit={submit}
       >
-        <h3 style={{ marginTop: 0 }}>🍹 Drink custom</h3>
+        <h3 style={{ marginTop: 0 }}>🏷 Prodotto libero</h3>
+        <p className="muted small" style={{ margin: '0 0 10px' }}>
+          Nome e prezzo bastano (es. voce non in inventario). Gli
+          ingredienti servono solo se vuoi lo scarico magazzino.
+        </p>
 
         <label htmlFor="cd-name">Nome *</label>
         <input
           id="cd-name"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Es. Gin tonic speciale"
+          placeholder="Es. Consumazione, Gin tonic speciale…"
           autoFocus
           required
         />
@@ -92,10 +102,7 @@ export default function CustomDrinkForm({ onCancel, onAdd }) {
             type="button"
             className="btn ghost small block"
             style={{ marginTop: 10 }}
-            onClick={() => {
-              setShowRecipe(true)
-              if (rows.length === 0) addRow()
-            }}
+            onClick={() => setShowRecipe(true)}
           >
             + Ingredienti (scarico magazzino)
           </button>
@@ -103,22 +110,14 @@ export default function CustomDrinkForm({ onCancel, onAdd }) {
 
         {showRecipe && (
           <>
-            <label style={{ marginTop: 10 }}>Ingredienti</label>
+            <label htmlFor="cd-ing" style={{ marginTop: 10 }}>Ingredienti</label>
+
+            {/* Righe già scelte: nome fisso, quantità e unità inline. */}
             {rows.map((r, idx) => {
-              const inv = inventory.find((i) => i.id === r.inventory_item_id)
-              const units = inv ? (ENTRY_UNITS[inv.unit] ?? [inv.unit]) : []
+              const units = ENTRY_UNITS[r.invUnit] ?? [r.unit]
               return (
-                <div className="row" style={{ gap: 6, marginTop: 6 }} key={idx}>
-                  <select
-                    value={r.inventory_item_id}
-                    onChange={(e) => onItemChange(idx, e.target.value)}
-                    style={{ flex: 2 }}
-                  >
-                    <option value="">— Ingrediente —</option>
-                    {inventory.map((i) => (
-                      <option key={i.id} value={i.id}>{i.name}</option>
-                    ))}
-                  </select>
+                <div className="row" style={{ gap: 6, marginTop: 6, alignItems: 'center' }} key={r.inventory_item_id}>
+                  <span className="grow" style={{ fontSize: '0.9rem' }}>{r.name}</span>
                   <input
                     type="number"
                     step="any"
@@ -126,10 +125,13 @@ export default function CustomDrinkForm({ onCancel, onAdd }) {
                     value={r.qty}
                     onChange={(e) => setRow(idx, { qty: e.target.value })}
                     placeholder="Qta"
-                    style={{ flex: 1 }}
+                    aria-label={`Quantità ${r.name}`}
+                    autoFocus
+                    style={{ width: 70 }}
                   />
                   <select
                     value={r.unit}
+                    aria-label={`Unità ${r.name}`}
                     onChange={(e) => setRow(idx, { unit: e.target.value })}
                     style={{ width: 70 }}
                   >
@@ -141,9 +143,33 @@ export default function CustomDrinkForm({ onCancel, onAdd }) {
                 </div>
               )
             })}
-            <button type="button" className="btn ghost small" style={{ marginTop: 6 }} onClick={addRow}>
-              + Ingrediente
-            </button>
+
+            {/* Ricerca rapida: digita e tocca per aggiungere. */}
+            <input
+              id="cd-ing"
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="🔍 Cerca ingrediente…"
+              style={{ marginTop: 6 }}
+            />
+            {matches.length > 0 && (
+              <div className="chips-row" style={{ marginTop: 6 }}>
+                {matches.map((i) => (
+                  <button
+                    key={i.id}
+                    type="button"
+                    className="chip"
+                    onClick={() => addIngredient(i)}
+                  >
+                    + {i.name}
+                  </button>
+                ))}
+              </div>
+            )}
+            {q && matches.length === 0 && (
+              <p className="muted small" style={{ margin: '6px 0 0' }}>Nessun ingrediente per «{search}».</p>
+            )}
           </>
         )}
 

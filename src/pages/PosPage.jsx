@@ -1,6 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { subscribeOpenSerata } from '../lib/api.js'
+import {
+  subscribeOpenSerata,
+  openSerata,
+  createOrder,
+  subscribeOrder,
+  subscribeSettings,
+  DEFAULT_SETTINGS,
+} from '../lib/api.js'
+import { ORDER_STATUSES } from '../lib/orderStatus.js'
 import { submitPosOrder } from '../lib/pendingOrders.js'
 import { useMenu } from '../lib/menuCache.js'
 import { useCart } from '../lib/cart.js'
@@ -9,6 +17,7 @@ import { auth } from '../lib/firebaseClient.js'
 import { onAuthStateChanged } from 'firebase/auth'
 import PosProductPicker from '../components/PosProductPicker.jsx'
 import CustomDrinkForm from '../components/CustomDrinkForm.jsx'
+import PaymentScreen from '../components/PaymentScreen.jsx'
 
 // ── POS cassa: creazione ordine in stile SumUp ─────────────────────────────
 // Layout identico al dettaglio ordine: categorie a sinistra, griglia prodotti
@@ -27,6 +36,18 @@ export default function PosPage() {
   const [customerName, setCustomerName] = useState('')
   const [showCustom, setShowCustom] = useState(false)
   const [showInfo, setShowInfo] = useState(false)
+  // Modale nome alla conferma ('save' | 'save-print' | null).
+  const [askName, setAskName] = useState(null)
+  const [busyPay, setBusyPay] = useState(false)
+  // Pagamento diretto: ordine appena creato + suoi aggiornamenti live.
+  const [payOrder, setPayOrder] = useState(null)
+  const [settings, setSettings] = useState(DEFAULT_SETTINGS)
+  useEffect(() => subscribeSettings(setSettings, () => {}), [])
+  const payOrderId = payOrder?.id
+  useEffect(() => {
+    if (!payOrderId) return
+    return subscribeOrder(payOrderId, (o) => o && setPayOrder(o), () => {})
+  }, [payOrderId])
 
   // POS a tutto schermo: esce dal contenitore centrato .app (max 760px) così
   // la griglia prodotti riempie tutta la larghezza (utile su tablet).
@@ -56,19 +77,30 @@ export default function PosPage() {
     return m
   }, [cart.items])
 
-  function handleSend({ printNow = false } = {}) {
+  // La serata NON è più un prerequisito: se manca, si apre da sola al
+  // primo ordine (resta la chiusura manuale per il resoconto).
+  async function ensureSerataId() {
+    if (serata?.id) return serata.id
+    const s = await openSerata()
+    return s.id
+  }
+
+  async function handleSend({ printNow = false, name = customerName } = {}) {
     if (cart.items.length === 0) return
-    if (!serata?.id) {
-      setError('Nessuna serata aperta: apri la serata dal gestionale.')
+    let serataId
+    try {
+      serataId = await ensureSerataId()
+    } catch (e) {
+      setError(`Serata non apribile: ${e.message}`)
       return
     }
     // Invio in background: lo store crea l'ordine (e stampa la comanda) mentre
     // torniamo subito alla griglia, dove l'ordine appare in caricamento.
     submitPosOrder({
-      serata_id: serata.id,
+      serata_id: serataId,
       table_label: tableLabel || null,
       note: note || null,
-      customer_name: customerName.trim() || null,
+      customer_name: (name || '').trim() || null, // vuoto = resta il progressivo #N
       items: cart.items,
       placed_by: staff ? { email: staff.email, name: staff.name, role: staff.role } : undefined,
       printNow,
@@ -78,6 +110,37 @@ export default function PosPage() {
     setNote('')
     setCustomerName('')
     navigate('/bar')
+  }
+
+  // PAGAMENTO DIRETTO: crea il conto e apre subito la schermata Pagamento,
+  // senza passare dalla coda. Se viene saldato lì, il conto nasce e muore
+  // chiuso (non comparirà tra gli aperti); se si esce senza saldare resta
+  // un conto aperto come gli altri.
+  async function handlePayNow() {
+    if (cart.items.length === 0 || busyPay) return
+    setBusyPay(true)
+    setError(null)
+    try {
+      const serataId = await ensureSerataId()
+      const created = await createOrder({
+        serata_id: serataId,
+        table_label: tableLabel || null,
+        note: note || null,
+        customer_name: customerName.trim() || null,
+        items: cart.items,
+        placed_by: staff ? { email: staff.email, name: staff.name, role: staff.role } : undefined,
+        status: ORDER_STATUSES.IN_PREPARAZIONE,
+      })
+      setPayOrder(created)
+      cart.clear()
+      setTableLabel('')
+      setNote('')
+      setCustomerName('')
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setBusyPay(false)
+    }
   }
 
   const cartCount = cart.items.reduce((s, i) => s + i.qty, 0)
@@ -96,11 +159,6 @@ export default function PosPage() {
 
       {/* ── Banner errori ── */}
       {error && <div className="banner" style={{ margin: '8px 8px 0', flexShrink: 0 }}>{error}</div>}
-      {serata === null && (
-        <div className="banner" style={{ margin: '8px 8px 0', flexShrink: 0 }}>
-          Nessuna serata aperta. Apri la serata dal gestionale prima di prendere ordini.
-        </div>
-      )}
 
       {/* ── Corpo a 3 colonne: categorie · griglia · comanda ── */}
       <div className="posd-body">
@@ -142,7 +200,7 @@ export default function PosPage() {
               style={{ marginTop: 10 }}
               onClick={() => setShowCustom(true)}
             >
-              🍹 Drink custom
+              🏷 Prodotto libero
             </button>
 
             {/* Dati conto (nome/tavolo/note), identico al dettaglio ordine */}
@@ -210,23 +268,32 @@ export default function PosPage() {
               <strong className="price">{formatPrice(cart.total)}</strong>
             </div>
             <div className="grid-2">
-              {/* Conferma = crea l'ordine SENZA stampare; la stampa della
-                  comanda è esplicita nel bottone accanto. */}
+              {/* Conferma = salva il conto (il nome si chiede nella modale);
+                  la stampa della comanda è esplicita nel bottone accanto. */}
               <button
                 className="btn secondary small"
-                disabled={cartCount === 0 || !serata}
-                onClick={() => handleSend({ printNow: false })}
+                disabled={cartCount === 0}
+                onClick={() => setAskName('save')}
               >
                 ✅ Conferma
               </button>
               <button
                 className="btn small"
-                disabled={cartCount === 0 || !serata}
-                onClick={() => handleSend({ printNow: true })}
+                disabled={cartCount === 0}
+                onClick={() => setAskName('save-print')}
               >
                 🖨 Conferma + stampa comanda
               </button>
             </div>
+            {/* Vendita rapida: dritto alla schermata Pagamento, senza
+                passare dalla coda (il conto saldato non appare tra gli aperti). */}
+            <button
+              className="btn block"
+              disabled={cartCount === 0 || busyPay}
+              onClick={handlePayNow}
+            >
+              💳 Pagamento{busyPay ? '…' : ` · ${formatPrice(cart.total)}`}
+            </button>
           </div>
         </div>
       </div>
@@ -238,6 +305,53 @@ export default function PosPage() {
             cart.addCustom(item)
             setShowCustom(false)
           }}
+        />
+      )}
+
+      {/* ── Modale nome conto alla conferma: vuoto = progressivo #N,
+          modificabile poi dai Dati conto nella modifica ordine. ── */}
+      {askName && (
+        <div className="overlay confirm-overlay" onClick={() => setAskName(null)}>
+          <form
+            className="confirm-box"
+            role="dialog"
+            aria-label="Nome del conto"
+            style={{ width: 'min(360px, 94vw)' }}
+            onClick={(e) => e.stopPropagation()}
+            onSubmit={(e) => {
+              e.preventDefault()
+              const mode = askName
+              setAskName(null)
+              handleSend({ printNow: mode === 'save-print' })
+            }}
+          >
+            <h3 style={{ margin: 0 }}>👤 Nome del conto</h3>
+            <p className="muted small" style={{ margin: '8px 0' }}>
+              Vuoto = numero progressivo. Si può cambiare dopo, dai Dati conto.
+            </p>
+            <label htmlFor="pos-askname">Nome</label>
+            <input
+              id="pos-askname"
+              value={customerName}
+              onChange={(e) => setCustomerName(e.target.value)}
+              placeholder="Es. Marco, Tavolo 4…"
+              autoFocus
+            />
+            <button className="btn block" type="submit" style={{ marginTop: 10 }}>
+              Salva{customerName.trim() ? '' : ' senza nome'}
+              {askName === 'save-print' ? ' e stampa' : ''}
+            </button>
+          </form>
+        </div>
+      )}
+
+      {/* ── Pagamento diretto sull'ordine appena creato ── */}
+      {payOrder && (
+        <PaymentScreen
+          order={payOrder}
+          settings={settings}
+          onClose={() => setPayOrder(null)}
+          onError={setError}
         />
       )}
     </div>
