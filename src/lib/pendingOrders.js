@@ -83,6 +83,9 @@ export function submitPosOrder({ serata_id, table_label, note, items, placed_by,
         placed_by,
         customer_name: customer_name || null,
         status: ORDER_STATUSES.IN_PREPARAZIONE,
+        // L'ordine reale porta l'id del placeholder: la griglia lo tiene
+        // nascosto finché il placeholder è attivo (scambio senza doppioni).
+        client_temp_id: tempId,
       })
     } catch (e) {
       patch(tempId, { state: 'error', error: e.message })
@@ -90,10 +93,13 @@ export function submitPosOrder({ serata_id, table_label, note, items, placed_by,
       return
     }
     rememberOrderId(created.id)
-    // Collega l'id reale: la griglia nasconde l'ordine reale finché il
-    // placeholder è attivo, così resta grigio fino a fine stampa.
-    patch(tempId, { realId: created.id, order: { ...order, daily_number: created.daily_number } })
+    // Collega l'id reale. Il placeholder NON si toglie qui: lo scambia la
+    // griglia quando l'ordine reale arriva dalla sottoscrizione (mai due
+    // card, mai buchi). Il timer è solo la rete di sicurezza se nessuna
+    // griglia è montata a fare lo scambio.
+    patch(tempId, { state: 'done', realId: created.id, order: { ...order, daily_number: created.daily_number } })
     toastSuccess(`Ordine #${created.daily_number ?? ''} creato`, { id: toastId })
+    setTimeout(() => remove(tempId), 15000)
     try {
       // La stampa della comanda è un'azione a parte (esplicita): qui solo
       // se richiesta al momento dell'invio.
@@ -101,8 +107,6 @@ export function submitPosOrder({ serata_id, table_label, note, items, placed_by,
     } catch (e) {
       addBanner(`Comanda #${created.daily_number ?? ''} non stampata: ${e.message}`)
       toastError(`Comanda non stampata: ${e.message}`)
-    } finally {
-      remove(tempId)
     }
   })()
 

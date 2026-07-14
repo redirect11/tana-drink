@@ -391,6 +391,15 @@ function OrderQueue() {
     return unsub
   }, [serataId])
 
+  // Scambio placeholder → ordine reale: appena l'ordine con il
+  // client_temp_id del placeholder arriva dalla sottoscrizione, il
+  // placeholder si toglie (lo scambio è sul posto: mai due card né buchi).
+  useEffect(() => {
+    for (const p of pend.pending) {
+      if (orders.some((o) => o.client_temp_id === p.tempId)) dismissPending(p.tempId)
+    }
+  }, [orders, pend.pending])
+
   // Apertura/chiusura serata NON esistono più come gesti: la serata di
   // oggi nasce col primo ordine e quella di ieri si chiude da sola
   // (rollover in ensureTodaySerata). Il resoconto vive nelle Statistiche.
@@ -494,11 +503,17 @@ function OrderQueue() {
       boardFilter === 'tutti' ? true : boardFilter === 'chiusi' ? isClosed(o) : !isClosed(o)
     )
     .sort((a, b) => (a.daily_number || 0) - (b.daily_number || 0))
-  // Ordini POS in invio (placeholder grigi). Finché il placeholder è attivo,
-  // l'ordine reale corrispondente resta nascosto: così resta grigio fino a
-  // fine invio, poi il placeholder sparisce e compare quello reale colorato.
+  // Ordini POS in invio. Finché il placeholder è attivo l'ordine reale
+  // resta nascosto: il match usa il client_temp_id scritto sull'ordine
+  // (deterministico anche se lo snapshot arriva PRIMA che il placeholder
+  // conosca il realId — era la causa del doppione per un attimo).
   const pendingRealIds = new Set(pend.pending.filter((p) => p.realId).map((p) => p.realId))
-  const visibleBoard = boardOrders.filter((o) => !pendingRealIds.has(o.id))
+  const pendingTempIds = new Set(pend.pending.map((p) => p.tempId))
+  const visibleBoard = boardOrders.filter(
+    (o) =>
+      !pendingRealIds.has(o.id) &&
+      !(o.client_temp_id && pendingTempIds.has(o.client_temp_id))
+  )
 
   async function incassaSuLettore(o) {
     setError(null)

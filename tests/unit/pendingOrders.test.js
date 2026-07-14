@@ -43,8 +43,13 @@ describe('submitPosOrder', () => {
     await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1))
     expect(ensureTodaySerata).toHaveBeenCalledTimes(1)
     expect(createOrder.mock.calls[0][0].serata_id).toBe('serata-oggi')
+    // l'ordine reale porta l'id del placeholder (scambio senza doppioni)
+    expect(createOrder.mock.calls[0][0].client_temp_id).toBe(p.tempId)
+    // a creazione avvenuta il placeholder resta ('done', con realId): lo
+    // scambia la griglia quando l'ordine reale arriva dalla sottoscrizione
+    await waitFor(() => expect(stato.pending.find((x) => x.tempId === p.tempId)?.state).toBe('done'))
+    expect(stato.pending.find((x) => x.tempId === p.tempId).realId).toBe('ord1')
     // niente stampa automatica alla conferma
-    await waitFor(() => expect(stato.pending.every((x) => x.tempId !== p.tempId)).toBe(true))
     expect(printComanda).not.toHaveBeenCalled()
     unsub()
   })

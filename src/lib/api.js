@@ -191,6 +191,7 @@ function mapOrder(snap) {
     group_id: o.group_id ?? null,
     group_name_snapshot: o.group_name_snapshot ?? null,
     payment_id: o.payment_id ?? null,
+    client_temp_id: o.client_temp_id ?? null,
     order_items: items.map((i, idx) => ({
       id: `${snap.id}-${idx}`,
       drink_id: i.drink_id ?? null,
@@ -1153,6 +1154,7 @@ export async function createOrder({
   group_id = null, // gruppo a cui associare l'ordine (null = nessuno)
   group_name_snapshot = null, // nome gruppo al momento dell'ordine (storico)
   status = ORDER_STATUSES.RICEVUTO, // stato iniziale (il POS lo crea già in preparazione)
+  client_temp_id = null, // id del placeholder POS: la griglia scambia SENZA doppioni
 }) {
   if (!serata_id) throw new Error('Nessuna serata aperta: ordini non disponibili.')
   // Cliente registrato senza gruppo esplicito → gruppo-cliente automatico
@@ -1229,6 +1231,7 @@ export async function createOrder({
       group_id: group_id || null,
       group_name_snapshot: group_name_snapshot || null,
       payment_id: null,
+      client_temp_id,
       created_at: serverTimestamp(),
       // Aggregato di tutte le comande (qui solo la prima): usato per totale,
       // scontrino e compatibilità con le viste esistenti.
