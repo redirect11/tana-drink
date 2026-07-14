@@ -233,6 +233,30 @@ describe('modale comande: consultazione, avanzamento e stampa', () => {
 })
 
 describe('modifiche ottimistiche (UX istantanea)', () => {
+  it('conferma aggiunte ISTANTANEA: le quantità restano a schermo mentre sincronizza', async () => {
+    const user = userEvent.setup()
+    addComanda.mockImplementationOnce(() => new Promise(() => {})) // server lento: mai risolta
+    mount(baseOrder())
+    await user.click(screen.getByText('Gin Tonic'))
+    expect(screen.getByText('+1 da inviare')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /Conferma aggiunte/ }))
+    // senza aspettare il server: badge sparito, riga ancora nell'ordine
+    expect(screen.queryByText(/da inviare/)).not.toBeInTheDocument()
+    expect(screen.getAllByText('Gin Tonic').length).toBeGreaterThan(1) // griglia + pannello
+  })
+
+  it('avanzamento ISTANTANEO: lo stato cambia subito, il server segue', async () => {
+    const user = userEvent.setup()
+    advanceComanda.mockImplementationOnce(() => new Promise(() => {})) // in volo
+    mount(baseOrder())
+    await user.click(screen.getByRole('button', { name: /Segna “Pronto al servizio”/ }))
+    // la pill mostra già "Pronto al servizio" senza attendere la transazione
+    expect(screen.getAllByText(/Pronto al servizio/).length).toBeGreaterThan(0)
+    expect(
+      screen.queryByRole('button', { name: /Segna “Pronto al servizio”/ })
+    ).not.toBeInTheDocument()
+  })
+
   it('tap rapidi su +: qty aggregata subito aggiornata, nessuna chiamata finché non invio', async () => {
     const user = userEvent.setup()
     mount(baseOrder())
