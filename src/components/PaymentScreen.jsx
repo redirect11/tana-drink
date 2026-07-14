@@ -16,6 +16,7 @@ import {
   orderDue,
   selectionAmount,
   discountAmount,
+  paymentCloses,
   round2,
 } from '../lib/pagamento.js'
 
@@ -35,7 +36,7 @@ const fullSelection = (order) =>
 const toDigits = (euro) => String(Math.max(0, Math.round(euro * 100)))
 const digitsToEuro = (s) => (parseInt(s || '0', 10) || 0) / 100
 
-export default function PaymentScreen({ order, settings, onClose, onBeforePay }) {
+export default function PaymentScreen({ order, settings, onClose, onBeforePay, onError }) {
   const [error, setError] = useState(null)
   const [saving, setSaving] = useState(false)
   const [sel, setSel] = useState(() => fullSelection(order)) // drink_id -> qty da pagare ora
@@ -154,26 +155,35 @@ export default function PaymentScreen({ order, settings, onClose, onBeforePay })
     setOp(null)
   }
 
-  const riscuoti = () =>
-    run(async () => {
-      await onBeforePay?.()
-      const items = !manual && splitting ? selection : null
-      if (method === 'lettore') {
+  const riscuoti = () => {
+    const items = !manual && splitting ? selection : null
+    if (method === 'lettore') {
+      // Il lettore avvia una transazione vera: qui si aspetta l'esito.
+      return run(async () => {
+        await onBeforePay?.()
         const res = await readerCheckout(order.id, { amount: toPay, items })
         if (res?.unavailable) {
           setError('Lettore non disponibile in ambiente di sviluppo: simula dai DevTools.')
           return
         }
         setReaderStarted(true)
-        return
-      }
-      const { closed: done } = await registerPayment(order.id, {
-        amount: toPay,
-        method, // 'banco' (contante) o 'carta' (POS esterno)
-        items,
       })
-      if (done) onClose()
-    })
+    }
+    // Contante / carta (POS esterno): OTTIMISTICO — il conto si chiude
+    // subito a schermo, la registrazione va in background; in errore
+    // l'avviso arriva nel dettaglio ordine.
+    const willClose = paymentCloses(order, toPay)
+    ;(async () => {
+      try {
+        await onBeforePay?.()
+        await registerPayment(order.id, { amount: toPay, method, items })
+      } catch (e) {
+        setError(e.message)
+        onError?.(`Pagamento non registrato: ${e.message}`)
+      }
+    })()
+    if (willClose) onClose()
+  }
 
   // ── Sconto dal tastierino della modale ──
   // In % le cifre sono la percentuale intera ("10" → 10%); in € sono

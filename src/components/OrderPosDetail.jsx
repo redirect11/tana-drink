@@ -106,11 +106,46 @@ export default function OrderPosDetail({ order }) {
     return () => Object.values(timers).forEach(clearTimeout)
   }, [])
 
+  // ── Avanzamenti di stato OTTIMISTICI ──
+  // Il tap aggiorna subito la pill/CTA; la transazione gira in background
+  // e in errore si torna allo stato del server.
+  const [statusOverrides, setStatusOverrides] = useState({})
+  const advance = (comandaId, ns) => {
+    setStatusOverrides((o) => ({ ...o, [comandaId]: ns }))
+    ;(async () => {
+      try {
+        await flushAll()
+        await advanceComanda(order.id, comandaId, ns)
+      } catch (e) {
+        setError(e.message)
+      } finally {
+        setStatusOverrides((o) => omit(o, comandaId))
+      }
+    })()
+  }
+
   // Comande "effettive": server + override locali in volo.
   const effComande = useMemo(
-    () => comande.map((c) => (pendingEdits[c.id] ? { ...c, items: pendingEdits[c.id] } : c)),
-    [comande, pendingEdits]
+    () =>
+      comande.map((c) => {
+        let x = pendingEdits[c.id] ? { ...c, items: pendingEdits[c.id] } : c
+        if (statusOverrides[c.id]) x = { ...x, status: statusOverrides[c.id] }
+        return x
+      }),
+    [comande, pendingEdits, statusOverrides]
   )
+
+  // AGGIUNTE già confermate ma ancora in volo verso il server: restano
+  // visibili come quantità normali (UX istantanea) finché la comanda vera
+  // non compare nella sottoscrizione.
+  const [inFlight, setInFlight] = useState([]) // [{ tempId, items, comandaId? }]
+  const comandeRef = useRef(comande)
+  comandeRef.current = comande
+  useEffect(() => {
+    setInFlight((f) =>
+      f.filter((x) => !x.comandaId || !comande.some((c) => c.id === x.comandaId))
+    )
+  }, [comande])
 
   // ── Vista aggregata: righe = item dell'ordine + aggiunte in bozza ──
   const rows = useMemo(() => {
@@ -132,6 +167,18 @@ export default function OrderPosDetail({ order }) {
         }
       }
     }
+    // Aggiunte in volo: contano come quantità già dell'ordine.
+    for (const fl of inFlight) {
+      for (const i of fl.items) {
+        const ex = !i.custom && byDrink.get(i.drink_id)
+        if (ex) ex.qty += i.qty
+        else {
+          const row = { ...i, editableQty: 0, draftQty: 0 }
+          out.push(row)
+          if (!i.custom && i.drink_id) byDrink.set(i.drink_id, row)
+        }
+      }
+    }
     for (const d of draft) {
       const ex = !d.custom && byDrink.get(d.drink_id)
       if (ex) {
@@ -142,7 +189,7 @@ export default function OrderPosDetail({ order }) {
       }
     }
     return out
-  }, [effComande, draft])
+  }, [effComande, draft, inFlight])
 
   const draftCount = draft.reduce((s, i) => s + i.qty, 0)
   const draftTotal = draft.reduce((s, i) => s + i.qty * i.unit_price, 0)
@@ -190,18 +237,41 @@ export default function OrderPosDetail({ order }) {
     flushTimers.current[plan.comandaId] = setTimeout(() => flushComanda(plan.comandaId), 600)
   }
 
-  // Conferma delle aggiunte: crea la nuova comanda (internamente).
-  // `printNow` stampa subito la comanda appena creata (stampa esplicita).
-  const sendDraft = (printNow = false) =>
-    run(async () => {
-      await flushAll()
-      const updated = await addComanda(order.id, draft)
-      setDraft([])
-      if (printNow) {
+  // Conferma delle aggiunte: OTTIMISTICA. La bozza diventa subito parte
+  // dell'ordine a schermo (via `inFlight`); la comanda si crea in
+  // background e in errore gli item tornano in bozza per riprovare.
+  // `printNow` stampa la comanda appena creata (stampa esplicita).
+  const sendDraft = (printNow = false) => {
+    const items = draft
+    if (items.length === 0) return
+    const tempId = `fl-${Date.now()}`
+    setInFlight((f) => [...f, { tempId, items }])
+    setDraft([])
+    ;(async () => {
+      try {
+        await flushAll()
+        const updated = await addComanda(order.id, items)
         const nuova = updated.comande?.[updated.comande.length - 1]
-        if (nuova) await printComanda(updated, nuova).catch((e) => setError(`Stampa: ${e.message}`))
+        setInFlight((f) => {
+          if (!nuova) return f.filter((x) => x.tempId !== tempId)
+          // Se la sottoscrizione ha già consegnato la comanda, l'entry non
+          // serve più (evita il doppio conteggio); altrimenti la si àncora
+          // all'id e la toglierà l'effetto quando arriva.
+          const arrivata = comandeRef.current.some((c) => c.id === nuova.id)
+          return arrivata
+            ? f.filter((x) => x.tempId !== tempId)
+            : f.map((x) => (x.tempId === tempId ? { ...x, comandaId: nuova.id } : x))
+        })
+        if (printNow && nuova) {
+          await printComanda(updated, nuova).catch((e) => setError(`Stampa: ${e.message}`))
+        }
+      } catch (e) {
+        setError(`Aggiunte non inviate: ${e.message}`)
+        setInFlight((f) => f.filter((x) => x.tempId !== tempId))
+        setDraft((d) => [...items, ...d]) // tornano in bozza, si riprova
       }
-    })
+    })()
+  }
 
   // ── Comanda attiva: azione rapida di avanzamento (senza mostrare i dettagli) ──
   const active = activeComanda({ comande: effComande })
@@ -332,10 +402,10 @@ export default function OrderPosDetail({ order }) {
 
             {draftCount > 0 && (
               <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <button className="btn block" disabled={saving} onClick={() => sendDraft(false)}>
+                <button className="btn block" onClick={() => sendDraft(false)}>
                   ✅ Conferma aggiunte ({draftCount}) · {formatPrice(draftTotal)}
                 </button>
-                <button className="btn secondary small block" disabled={saving} onClick={() => sendDraft(true)}>
+                <button className="btn secondary small block" onClick={() => sendDraft(true)}>
                   🖨 Conferma + stampa comanda
                 </button>
               </div>
@@ -404,16 +474,7 @@ export default function OrderPosDetail({ order }) {
                 <span className={`pill ${active.status}`}>
                   {STATUS_EMOJI[active.status]} {STATUS_LABELS[active.status]}
                 </span>
-                <button
-                  className="btn small"
-                  disabled={saving}
-                  onClick={() =>
-                    run(async () => {
-                      await flushAll()
-                      await advanceComanda(order.id, active.id, activeNext)
-                    })
-                  }
-                >
+                <button className="btn small" onClick={() => advance(active.id, activeNext)}>
                   Segna “{activeNext === ORDER_STATUSES.RITIRATO ? ritiratoLabel(order.service_mode) : STATUS_LABELS[activeNext]}”
                 </button>
               </div>
@@ -477,7 +538,7 @@ export default function OrderPosDetail({ order }) {
               <h3 style={{ margin: 0 }}>🧾 Comande</h3>
               <button className="btn ghost small" onClick={() => setShowComande(false)}>✕ Chiudi</button>
             </div>
-            {comande.map((c) => {
+            {effComande.map((c) => {
               const ns = nextComandaStatus(c.status)
               return (
                 <div className="card" key={c.id} style={{ margin: '10px 0 0', padding: 12 }}>
@@ -510,11 +571,7 @@ export default function OrderPosDetail({ order }) {
                       🖨 Stampa
                     </button>
                     {ns && !closed ? (
-                      <button
-                        className="btn small"
-                        disabled={saving}
-                        onClick={() => run(async () => { await flushAll(); await advanceComanda(order.id, c.id, ns) })}
-                      >
+                      <button className="btn small" onClick={() => advance(c.id, ns)}>
                         Segna “{ns === ORDER_STATUSES.RITIRATO ? ritiratoLabel(order.service_mode) : STATUS_LABELS[ns]}”
                       </button>
                     ) : (
@@ -557,6 +614,7 @@ export default function OrderPosDetail({ order }) {
           settings={settings}
           onClose={() => setShowPayment(false)}
           onBeforePay={flushAll}
+          onError={setError}
         />
       )}
 
