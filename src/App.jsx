@@ -14,6 +14,7 @@ import { subscribeSettings, DEFAULT_SETTINGS } from './lib/api.js'
 import { resolveThemeVars, applyTheme } from './lib/themes.js'
 import { envLabel } from './dev/devActions.js'
 import { openCookiePreferences } from './lib/cookieConsent.js'
+import { subscribeUpdateAvailable } from './lib/appVersion.js'
 import { useEffect, useState } from 'react'
 
 export default function App() {
@@ -27,6 +28,11 @@ export default function App() {
     return subscribeSettings(setSettings)
   }, [])
   const accountsOn = settings.customer_accounts_enabled
+
+  // Nuova versione online (la PWA resta aperta per giorni): banner
+  // "tocca per aggiornare" invece di aspettare un reload manuale.
+  const [updateReady, setUpdateReady] = useState(false)
+  useEffect(() => subscribeUpdateAvailable(() => setUpdateReady(true)), [])
 
   // Staff loggato (bartender o collaboratore): nel topbar lato cliente
   // mostra il ruolo ed «Esci» al posto di «Accedi».
@@ -67,6 +73,11 @@ export default function App() {
         <div className={`env-ribbon env-${envLabel.toLowerCase()}`}>
           ⚠️ AMBIENTE {envLabel} — non è la produzione
         </div>
+      )}
+      {updateReady && (
+        <button className="update-banner" onClick={() => window.location.reload()}>
+          🔄 Nuova versione disponibile — tocca per aggiornare
+        </button>
       )}
       <header className={`topbar${onBackoffice || staffRole ? ' backoffice' : ''}`}>
         {/* Nel gestionale il logo non porta al menu: resta sugli ordini. */}
