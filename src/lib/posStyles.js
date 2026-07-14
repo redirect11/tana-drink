@@ -24,13 +24,13 @@ export function catBtnStyle(active) {
 }
 
 export const qtyBtnStyle = {
-  width: 28,
-  height: 28,
+  width: 24,
+  height: 24,
   borderRadius: '50%',
   border: '1px solid var(--line)',
   background: 'var(--tile-bg)',
   color: 'inherit',
-  fontSize: '1.1rem',
+  fontSize: '1rem',
   cursor: 'pointer',
   display: 'flex',
   alignItems: 'center',

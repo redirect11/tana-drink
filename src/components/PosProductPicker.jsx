@@ -80,9 +80,11 @@ export default function PosProductPicker({ drinks, cats, loading, qtyByDrink, on
           overflowY: 'auto',
           padding: '10px 8px',
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
+          // Colonne più larghe delle tile alte 104px: schede RETTANGOLARI
+          // (larghe e basse), i nomi vanno meno a capo.
+          gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
           alignContent: 'start',
-          gap: 10,
+          gap: 8,
           opacity: disabled ? 0.5 : 1,
           pointerEvents: disabled ? 'none' : 'auto',
         }}
