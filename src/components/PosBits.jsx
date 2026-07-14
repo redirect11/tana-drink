@@ -20,13 +20,13 @@ export function DrinkTile({ drink, qty, onAdd, onSetQty, color = null }) {
         border: inCart
           ? '2px solid rgba(var(--accent-rgb, 180, 120, 60), 0.7)'
           : '1px solid var(--line)',
-        borderRadius: 14,
-        padding: '14px 10px 10px',
+        borderRadius: 12,
+        padding: '8px 10px 6px',
         cursor: 'pointer',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        gap: 6,
+        gap: 4,
         position: 'relative',
         userSelect: 'none',
         WebkitTapHighlightColor: 'transparent',
@@ -36,7 +36,8 @@ export function DrinkTile({ drink, qty, onAdd, onSetQty, color = null }) {
         // inchiodate al min-height e tastini fuori dal bordo — misurato sul
         // deploy con DevTools Protocol). Con l'altezza fissa ogni riga è
         // esatta; il nome si adatta con il clamp a 2 righe qui sotto.
-        height: 124,
+        // Bassa e larga (rettangolare): 2 righe di nome + prezzo + tastini.
+        height: 104,
       }}
     >
       {/* Angolo colorato per categoria (come le tile di SumUp POS) */}
@@ -60,18 +61,18 @@ export function DrinkTile({ drink, qty, onAdd, onSetQty, color = null }) {
       {inCart && (
         <div style={{
           position: 'absolute',
-          top: 8,
-          right: 8,
+          top: 6,
+          right: 6,
           background: 'var(--accent, #b47a3c)',
           color: '#fff',
           borderRadius: '50%',
-          width: 26,
-          height: 26,
+          width: 21,
+          height: 21,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           fontWeight: 800,
-          fontSize: '0.85rem',
+          fontSize: '0.75rem',
           lineHeight: 1,
         }}>
           {qty}
@@ -82,9 +83,9 @@ export function DrinkTile({ drink, qty, onAdd, onSetQty, color = null }) {
           lunghi finiscono in ellissi, come sulle tile del POS SumUp). */}
       <div style={{
         fontWeight: 700,
-        fontSize: '0.9rem',
+        fontSize: '0.88rem',
         textAlign: 'center',
-        lineHeight: 1.3,
+        lineHeight: 1.25,
         flex: '1 1 auto',
         minHeight: 0,
         overflow: 'hidden',
@@ -105,7 +106,7 @@ export function DrinkTile({ drink, qty, onAdd, onSetQty, color = null }) {
       </div>
 
       {/* Prezzo */}
-      <div style={{ fontSize: '0.85rem', opacity: 0.75, flexShrink: 0 }}>
+      <div style={{ fontSize: '0.8rem', opacity: 0.75, flexShrink: 0, lineHeight: 1.1 }}>
         {formatPrice(drink.price)}
       </div>
 
@@ -117,9 +118,8 @@ export function DrinkTile({ drink, qty, onAdd, onSetQty, color = null }) {
         aria-hidden={!inCart}
         style={{
           display: 'flex',
-          gap: 6,
+          gap: 5,
           alignItems: 'center',
-          marginTop: 2,
           flexShrink: 0,
           visibility: inCart ? 'visible' : 'hidden',
         }}
@@ -132,7 +132,7 @@ export function DrinkTile({ drink, qty, onAdd, onSetQty, color = null }) {
         >
           −
         </button>
-        <span style={{ fontWeight: 700, fontSize: '1rem', minWidth: 20, textAlign: 'center' }}>{qty}</span>
+        <span style={{ fontWeight: 700, fontSize: '0.95rem', minWidth: 18, textAlign: 'center' }}>{qty}</span>
         <button
           aria-label="Aumenta"
           onClick={onAdd}
