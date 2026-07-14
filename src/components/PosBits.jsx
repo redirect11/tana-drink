@@ -31,7 +31,12 @@ export function DrinkTile({ drink, qty, onAdd, onSetQty, color = null }) {
         userSelect: 'none',
         WebkitTapHighlightColor: 'transparent',
         transition: 'border-color 0.12s, background 0.12s',
-        minHeight: 100,
+        // Altezza FISSA, non minHeight: nelle griglie scrollabili grandi
+        // Chrome dimensiona le righe ignorando le altezze da testo (righe
+        // inchiodate al min-height e tastini fuori dal bordo — misurato sul
+        // deploy con DevTools Protocol). Con l'altezza fissa ogni riga è
+        // esatta; il nome si adatta con il clamp a 2 righe qui sotto.
+        height: 124,
       }}
     >
       {/* Angolo colorato per categoria (come le tile di SumUp POS) */}
@@ -73,18 +78,30 @@ export function DrinkTile({ drink, qty, onAdd, onSetQty, color = null }) {
         </div>
       )}
 
-      {/* Nome prodotto */}
+      {/* Nome prodotto: area flessibile con clamp a 2 righe (i nomi molto
+          lunghi finiscono in ellissi, come sulle tile del POS SumUp). */}
       <div style={{
         fontWeight: 700,
         fontSize: '0.9rem',
         textAlign: 'center',
         lineHeight: 1.3,
-        flex: 1,
+        flex: '1 1 auto',
+        minHeight: 0,
+        overflow: 'hidden',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
       }}>
-        {drink.name}
+        <span
+          style={{
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+          }}
+        >
+          {drink.name}
+        </span>
       </div>
 
       {/* Prezzo */}
