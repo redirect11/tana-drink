@@ -501,6 +501,13 @@ function SupplierManager({ suppliers, onChange }) {
     await updateSupplier(s.id, { name: n.trim() })
     await onChange()
   }
+  // Email per l'invio degli ordini d'acquisto (bottone 📧 negli Ordini).
+  async function setEmail(s) {
+    const e = prompt(`Email di ${s.name} (per inviare gli ordini):`, s.email || '')
+    if (e == null) return
+    await updateSupplier(s.id, { email: e.trim() || null })
+    await onChange()
+  }
   async function remove(s) {
     if (!confirm(`Eliminare il fornitore “${s.name}”? I prodotti resteranno, senza fornitore.`)) return
     await deleteSupplier(s.id)
@@ -518,8 +525,12 @@ function SupplierManager({ suppliers, onChange }) {
       )}
       {suppliers.map((s) => (
         <div className="row between" key={s.id} style={{ marginTop: 8 }}>
-          <span>{s.name}</span>
+          <span>
+            {s.name}
+            {s.email && <span className="muted small"> · {s.email}</span>}
+          </span>
           <span className="row" style={{ gap: 4 }}>
+            <button className="btn ghost small" title="Email per gli ordini" onClick={() => setEmail(s)}>📧</button>
             <button className="btn ghost small" onClick={() => rename(s)}>✏️</button>
             <button className="btn ghost small" onClick={() => remove(s)}>🗑</button>
           </span>

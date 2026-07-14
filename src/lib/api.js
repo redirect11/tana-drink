@@ -354,6 +354,7 @@ function mapSupplier(snap) {
     name: s.name ?? '',
     sort_order: s.sort_order ?? 0,
     notes: s.notes ?? null,
+    email: s.email ?? null,
     created_at: toIso(s.created_at),
   }
 }
@@ -2127,6 +2128,41 @@ export async function replaceCatalog({ categories, products }, onProgress = () =
 // --- STAFF CALLS (cerca-persone) ---
 
 const staffCallsCol = collection(db, 'staff_calls')
+const staffHoursCol = collection(db, 'staff_hours')
+
+// ── RAPP ORE: registro ore dello staff (per mese) ─────────────────────
+
+export async function addStaffHours({ staff_name, date, start, end, break_minutes = 0, hours, note = null }) {
+  const ref = await addDoc(staffHoursCol, {
+    staff_name: String(staff_name || '').trim(),
+    date, // YYYY-MM-DD
+    month: String(date || '').slice(0, 7), // per la query mensile
+    start,
+    end,
+    break_minutes: Number(break_minutes) || 0,
+    hours: Number(hours) || 0,
+    note: note || null,
+    created_at: serverTimestamp(),
+  })
+  return ref.id
+}
+
+export function subscribeStaffHours(month, cb, onError) {
+  const q = query(staffHoursCol, where('month', '==', month))
+  return onSnapshot(
+    q,
+    (snap) => {
+      const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+      rows.sort((a, b) => String(a.date).localeCompare(String(b.date)) || String(a.start).localeCompare(String(b.start)))
+      cb(rows)
+    },
+    onError
+  )
+}
+
+export async function deleteStaffHours(id) {
+  await deleteDoc(doc(staffHoursCol, id))
+}
 
 // Token push del dispositivo di un membro dello staff: la Cloud Function
 // lo usa per recapitare la chiamata cerca-persone anche quando l'app è

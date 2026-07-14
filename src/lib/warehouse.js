@@ -52,6 +52,37 @@ export function stockCountCompute(lines) {
 
 // ── Ordini fornitore (GENERATORE ORDINI) ──────────────────────────────
 
+// Confezioni SUGGERITE per il riordino: se il prodotto è sotto soglia si
+// riporta la giacenza a 2× la soglia di avviso (minimo una confezione).
+// Senza soglia impostata nessun suggerimento (0).
+export function suggestedPackages(item) {
+  const stock = Number(item?.stock) || 0
+  const thr = Number(item?.low_threshold) || 0
+  if (thr <= 0 || stock > thr) return 0
+  const size = item?.unit === 'pz' ? 1 : Number(item?.package_size) || 0
+  if (size <= 0) return 0
+  return Math.max(1, Math.ceil((thr * 2 - stock) / size))
+}
+
+// Testo dell'ordine da mandare al fornitore (email, copia, stampa).
+export function purchaseOrderText(order) {
+  const righe = (order.lines || [])
+    .map((l) => `- ${l.qty_packages}× ${l.name}`)
+    .join('\n')
+  return [
+    `Ordine del ${String(order.created_at || '').slice(0, 10)}`,
+    order.supplier_name ? `Fornitore: ${order.supplier_name}` : null,
+    '',
+    righe,
+    '',
+    `Totale netto: ${(Number(order.total_net) || 0).toFixed(2)} €`,
+    `Totale ivato: ${(Number(order.total_gross) || 0).toFixed(2)} €`,
+  ]
+    .filter((r) => r !== null)
+    .join('\n')
+}
+
+
 // Totali di un ordine: righe { qty_packages, unit_cost, vat }.
 export function purchaseOrderTotals(lines) {
   return (lines || []).reduce(

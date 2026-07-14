@@ -8,8 +8,10 @@ import {
   deletePurchaseOrder,
 } from '../lib/api.js'
 import { formatQty, stockStatus } from '../lib/inventory.js'
-import { purchaseOrderTotals } from '../lib/warehouse.js'
+import { purchaseOrderTotals, suggestedPackages, purchaseOrderText } from '../lib/warehouse.js'
 import { formatPrice } from '../lib/orderStatus.js'
+import { printOrdineFornitore } from '../lib/printer.js'
+import { toastSuccess, toastError } from '../lib/toast.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
 
 // Generatore ordini fornitore (come GENERATORE ORDINI dell'Excel): scegli il
@@ -104,6 +106,25 @@ export default function PurchaseOrdersPanel() {
     }
   }
 
+  // Invia l'ordine al fornitore: client di posta precompilato (l'email si
+  // imposta sull'anagrafica fornitore, bottone 📧 in Inventario → Fornitori).
+  function inviaEmail(order) {
+    const sup = suppliers.find((x) => x.id === order.supplier_id)
+    const body = purchaseOrderText(order)
+    window.location.href = `mailto:${encodeURIComponent(sup?.email || '')}?subject=${encodeURIComponent(
+      `Ordine ${order.supplier_name} — ${String(order.created_at || '').slice(0, 10)}`
+    )}&body=${encodeURIComponent(body)}`
+  }
+
+  async function copia(order) {
+    try {
+      await navigator.clipboard.writeText(purchaseOrderText(order))
+      toastSuccess('Ordine copiato negli appunti')
+    } catch (e) {
+      toastError(`Copia non riuscita: ${e.message}`)
+    }
+  }
+
   async function remove(order) {
     if (!confirm(`Eliminare l'ordine ${order.supplier_name} del ${order.created_at?.slice(0, 10)}?`)) return
     try {
@@ -128,6 +149,25 @@ export default function PurchaseOrdersPanel() {
           ))}
         </select>
 
+        {supplierId && supplierItems.some((it) => suggestedPackages(it) > 0) && (
+          <button
+            className="btn secondary small block"
+            style={{ marginTop: 8 }}
+            onClick={() =>
+              setQtys((q) => {
+                const next = { ...q }
+                for (const it of supplierItems) {
+                  const sugg = suggestedPackages(it)
+                  if (sugg > 0 && !next[it.id]) next[it.id] = String(sugg)
+                }
+                return next
+              })
+            }
+          >
+            ⚡ Precompila i sotto scorta (quantità suggerite)
+          </button>
+        )}
+
         {supplierId && supplierItems.length === 0 && (
           <p className="muted small" style={{ marginTop: 8 }}>
             Nessun prodotto assegnato a questo fornitore (assegna il fornitore ai
@@ -149,6 +189,7 @@ export default function PurchaseOrdersPanel() {
                 <div className="muted small">
                   In casa: {formatQty(it.stock, it.unit)}
                   {it.package_size ? ` · 1 conf. = ${formatQty(it.package_size, it.unit)}` : ''}
+                  {suggestedPackages(it) > 0 ? ` · sugg. ${suggestedPackages(it)} conf.` : ''}
                 </div>
               </div>
               <input
@@ -196,6 +237,15 @@ export default function PurchaseOrdersPanel() {
                       📦 Ricevuto
                     </button>
                   )}
+                  <button className="btn ghost small" title="Invia via email" onClick={() => inviaEmail(o)}>📧</button>
+                  <button className="btn ghost small" title="Copia il testo" onClick={() => copia(o)}>📋</button>
+                  <button
+                    className="btn ghost small"
+                    title="Stampa"
+                    onClick={() => printOrdineFornitore(o).catch((e) => toastError(`Stampa: ${e.message}`))}
+                  >
+                    🖨
+                  </button>
                   <button className="btn ghost small" onClick={() => remove(o)}>🗑</button>
                 </span>
               </div>

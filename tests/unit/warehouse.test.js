@@ -5,6 +5,8 @@
 
 import { describe, it, expect } from 'vitest'
 import {
+  suggestedPackages,
+  purchaseOrderText,
   countLineCons,
   qtyValue,
   stockCountCompute,
@@ -112,5 +114,45 @@ describe('invoiceTotals', () => {
     expect(t.paid).toBe(999)
     expect(t.bySupplier[0]).toMatchObject({ supplier_id: 'nova', unpaid: 150, count: 2 })
     expect(t.bySupplier[1]).toMatchObject({ supplier_id: 'mar', unpaid: 30 })
+  })
+})
+
+describe('suggestedPackages (riordino GENERATORE ORDINI)', () => {
+  it('sotto soglia: riporta a 2x la soglia in confezioni (minimo 1)', () => {
+    // soglia 140 cl, in casa 60, conf. 70 cl -> servono 220 cl -> 4 conf.
+    expect(
+      suggestedPackages({ stock: 60, low_threshold: 140, package_size: 70, unit: 'cl' })
+    ).toBe(4)
+    // appena sotto soglia: almeno una confezione
+    expect(
+      suggestedPackages({ stock: 139, low_threshold: 140, package_size: 700, unit: 'cl' })
+    ).toBe(1)
+    // a pezzi: 1 conf. = 1 pz
+    expect(suggestedPackages({ stock: 1, low_threshold: 4, unit: 'pz' })).toBe(7)
+  })
+
+  it('niente suggerimento sopra soglia o senza soglia/confezione', () => {
+    expect(suggestedPackages({ stock: 500, low_threshold: 140, package_size: 70 })).toBe(0)
+    expect(suggestedPackages({ stock: 10, low_threshold: 0, package_size: 70 })).toBe(0)
+    expect(suggestedPackages({ stock: 10, low_threshold: 40, package_size: 0, unit: 'cl' })).toBe(0)
+  })
+})
+
+describe('purchaseOrderText', () => {
+  it('testo pronto per email/copia con righe e totali', () => {
+    const txt = purchaseOrderText({
+      supplier_name: 'NOVA',
+      created_at: '2026-07-13T10:00:00.000Z',
+      lines: [
+        { qty_packages: 4, name: 'Rum bianco' },
+        { qty_packages: 2, name: 'Tonica' },
+      ],
+      total_net: 100,
+      total_gross: 122,
+    })
+    expect(txt).toContain('Fornitore: NOVA')
+    expect(txt).toContain('- 4× Rum bianco')
+    expect(txt).toContain('- 2× Tonica')
+    expect(txt).toContain('Totale ivato: 122.00')
   })
 })
