@@ -102,19 +102,13 @@ export default function PosPage() {
     }
   }
 
-  async function handleSend({ printNow = false, name = customerName } = {}) {
+  function handleSend({ printNow = false, name = customerName } = {}) {
     if (cart.items.length === 0) return
-    let serataId
-    try {
-      serataId = await ensureSerataId()
-    } catch (e) {
-      setError(`Serata non apribile: ${e.message}`)
-      return
-    }
-    // Invio in background: lo store crea l'ordine (e stampa la comanda) mentre
-    // torniamo subito alla griglia, dove l'ordine appare in caricamento.
+    // ZERO attese: niente rete prima di navigare. Serata e creazione si
+    // risolvono in background dentro lo store (submitPosOrder); in griglia
+    // l'ordine è già visibile, completo, dal primo frame.
     submitPosOrder({
-      serata_id: serataId,
+      serata_id: null, // risolta in background (serata di oggi)
       table_label: tableLabel || null,
       note: note || null,
       customer_name: (name || '').trim() || null, // vuoto = resta il progressivo #N

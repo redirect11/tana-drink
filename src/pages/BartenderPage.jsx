@@ -437,15 +437,22 @@ function OrderQueue() {
   }
 
   // Nessuna serata in corso: NON blocca — la serata di oggi nasce da
-  // sola col primo ordine dal POS.
+  // sola col primo ordine dal POS. Gli ordini appena battuti (in sync,
+  // serata inclusa) sono GIÀ qui, senza aspettare il server.
   if (!serata) {
     return (
       <div>
         {error && <div className="banner">Errore: {error}</div>}
-        <div className="empty">
-          Ancora nessun ordine oggi: la serata parte col primo ordine.
-        </div>
-        <Link className="btn block" to="/pos">🍸 Nuovo ordine (POS cassa)</Link>
+        {pend.pending.length > 0 ? (
+          <div className="order-grid" style={{ marginTop: 8 }}>
+            {pend.pending.map(renderPendingCard)}
+          </div>
+        ) : (
+          <div className="empty">
+            Ancora nessun ordine oggi: la serata parte col primo ordine.
+          </div>
+        )}
+        <Link className="btn block" to="/pos" style={{ marginTop: 8 }}>🍸 Nuovo ordine (POS cassa)</Link>
         {report && <SerataReport report={report} onClose={() => setReport(null)} />}
       </div>
     )
@@ -669,23 +676,32 @@ function OrderQueue() {
     )
   }
 
-  // Placeholder grigio di un ordine POS in invio (creazione/stampa in corso).
-  const renderPendingCard = (p) => {
+  // Ordine POS in invio: a schermo è GIÀ un ordine a tutti gli effetti
+  // (stessa card, stessi colori, info complete) — la sincronizzazione la
+  // racconta il toast, non la card. Solo in errore si distingue.
+  // Function declaration (hoisted): è usata anche PRIMA di questo punto,
+  // nella schermata senza serata.
+  function renderPendingCard(p) {
     const o = p.order
     const count = (o.order_items || []).reduce((s, i) => s + i.qty, 0)
     const isError = p.state === 'error'
     return (
       <div
-        className={`card order-card grid-card grid-card-pending${isError ? ' error' : ''}`}
+        className={`card order-card grid-card ${isError ? 'grid-card-pending error' : o.workflow_status}`}
         key={p.tempId}
       >
         <div className="grid-card-main" style={{ cursor: 'default' }}>
           <div className="row between">
-            <span className="bignum">#{o.daily_number ?? '—'}</span>
-            <span className="pill">{isError ? '⚠️ Errore invio' : '⏳ Invio…'}</span>
+            <span className="bignum">#{o.daily_number ?? '…'}</span>
+            <span className={`pill ${isError ? '' : o.workflow_status}`}>
+              {isError
+                ? '⚠️ Errore invio'
+                : `${STATUS_EMOJI[o.workflow_status]} ${STATUS_LABELS[o.workflow_status]}`}
+            </span>
           </div>
           <div className="grid-card-sub">
-            {o.table_label && <span className="muted">Tavolo {o.table_label}</span>}
+            {o.customer_name && <strong>{o.customer_name}</strong>}
+            {o.table_label && <span className="muted"> · Tavolo {o.table_label}</span>}
           </div>
           <div className="row between" style={{ alignItems: 'baseline' }}>
             <span className="muted">{count} prodott{count === 1 ? 'o' : 'i'}</span>

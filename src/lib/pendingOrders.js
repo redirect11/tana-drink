@@ -4,7 +4,7 @@
 // (e l'eventuale stampa comanda) non è completata. Poi il placeholder viene
 // rimosso e compare l'ordine reale (colorato) dalla sottoscrizione Firestore.
 
-import { createOrder } from './api.js'
+import { createOrder, ensureTodaySerata } from './api.js'
 import { printComanda } from './printer.js'
 import { ORDER_STATUSES } from './orderStatus.js'
 import { rememberOrderId } from './cart.js'
@@ -72,8 +72,11 @@ export function submitPosOrder({ serata_id, table_label, note, items, placed_by,
   ;(async () => {
     let created
     try {
+      // Anche la serata si risolve QUI in background: il chiamante non
+      // deve aspettare nessuna rete prima di tornare alla griglia.
+      const sid = serata_id ?? (await ensureTodaySerata()).id
       created = await createOrder({
-        serata_id,
+        serata_id: sid,
         table_label,
         note,
         items,
