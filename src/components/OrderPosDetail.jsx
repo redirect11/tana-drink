@@ -26,6 +26,7 @@ import {
   comandaEditable,
 } from '../lib/comande.js'
 import { paidAmount } from '../lib/pagamento.js'
+import { toastSync, toastSuccess, toastError } from '../lib/toast.js'
 import { printComanda, printScontrino } from '../lib/printer.js'
 import PosProductPicker from './PosProductPicker.jsx'
 import CustomDrinkForm from './CustomDrinkForm.jsx'
@@ -247,10 +248,12 @@ export default function OrderPosDetail({ order }) {
     const tempId = `fl-${Date.now()}`
     setInFlight((f) => [...f, { tempId, items }])
     setDraft([])
+    const toastId = toastSync('Sincronizzo le aggiunte…')
     ;(async () => {
       try {
         await flushAll()
         const updated = await addComanda(order.id, items)
+        toastSuccess('Aggiunte sincronizzate', { id: toastId })
         const nuova = updated.comande?.[updated.comande.length - 1]
         setInFlight((f) => {
           if (!nuova) return f.filter((x) => x.tempId !== tempId)
@@ -267,6 +270,7 @@ export default function OrderPosDetail({ order }) {
         }
       } catch (e) {
         setError(`Aggiunte non inviate: ${e.message}`)
+        toastError(`Aggiunte non inviate: ${e.message}`, { id: toastId })
         setInFlight((f) => f.filter((x) => x.tempId !== tempId))
         setDraft((d) => [...items, ...d]) // tornano in bozza, si riprova
       }

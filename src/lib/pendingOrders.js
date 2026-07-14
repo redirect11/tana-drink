@@ -5,9 +5,10 @@
 // rimosso e compare l'ordine reale (colorato) dalla sottoscrizione Firestore.
 
 import { createOrder } from './api.js'
-import { printComanda, loadPrinterSettings } from './printer.js'
+import { printComanda } from './printer.js'
 import { ORDER_STATUSES } from './orderStatus.js'
 import { rememberOrderId } from './cart.js'
+import { toastSync, toastSuccess, toastError } from './toast.js'
 
 let state = { pending: [], banners: [] }
 const subs = new Set()
@@ -65,6 +66,8 @@ export function submitPosOrder({ serata_id, table_label, note, items, placed_by,
     })),
   }
   setPending([...state.pending, { tempId, state: 'sending', realId: null, order }])
+  // Sync poco invasiva: spinner in basso finché l'ordine non è sul server.
+  const toastId = toastSync(`Sincronizzo ordine${customer_name ? ` "${customer_name}"` : ''}…`)
 
   ;(async () => {
     let created
@@ -80,17 +83,21 @@ export function submitPosOrder({ serata_id, table_label, note, items, placed_by,
       })
     } catch (e) {
       patch(tempId, { state: 'error', error: e.message })
+      toastError(`Ordine non sincronizzato: ${e.message}`, { id: toastId })
       return
     }
     rememberOrderId(created.id)
     // Collega l'id reale: la griglia nasconde l'ordine reale finché il
     // placeholder è attivo, così resta grigio fino a fine stampa.
     patch(tempId, { realId: created.id, order: { ...order, daily_number: created.daily_number } })
+    toastSuccess(`Ordine #${created.daily_number ?? ''} creato`, { id: toastId })
     try {
-      const ps = loadPrinterSettings()
-      if (ps.autoPrintComanda || printNow) await printComanda(created, created.comande?.[0] ?? null)
+      // La stampa della comanda è un'azione a parte (esplicita): qui solo
+      // se richiesta al momento dell'invio.
+      if (printNow) await printComanda(created, created.comande?.[0] ?? null)
     } catch (e) {
       addBanner(`Comanda #${created.daily_number ?? ''} non stampata: ${e.message}`)
+      toastError(`Comanda non stampata: ${e.message}`)
     } finally {
       remove(tempId)
     }

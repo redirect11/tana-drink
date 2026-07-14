@@ -15,6 +15,7 @@ import { resolveThemeVars, applyTheme } from './lib/themes.js'
 import { envLabel } from './dev/devActions.js'
 import { openCookiePreferences } from './lib/cookieConsent.js'
 import { subscribeUpdateAvailable } from './lib/appVersion.js'
+import Toasts from './components/Toasts.jsx'
 import { useEffect, useState } from 'react'
 
 export default function App() {
@@ -79,6 +80,8 @@ export default function App() {
           🔄 Nuova versione disponibile — tocca per aggiornare
         </button>
       )}
+      {/* Notifiche IN APP (sync, ordini da staff/clienti, errori) */}
+      <Toasts />
       <header className={`topbar${onBackoffice || staffRole ? ' backoffice' : ''}`}>
         {/* Nel gestionale il logo non porta al menu: resta sugli ordini. */}
         <Link

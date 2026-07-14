@@ -1699,8 +1699,12 @@ body.fullbleed .bar-content {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
 }
 
-.toggle:checked {
+/* Acceso = COLORATO su qualsiasi tema (la variante chiara sotto ha
+   specificità più alta: va ribadito anche lì, altrimenti resta grigio). */
+.toggle:checked,
+:root[data-luma='light'] .toggle:checked {
   background: linear-gradient(135deg, #f7c45e, #e8a32e);
+  border-color: #e8a32e;
 }
 
 .toggle::before {
@@ -2063,6 +2067,49 @@ body.fullbleed .bar-content {
   font-size: 0.9rem;
   cursor: pointer;
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+}
+
+/* ── Notifiche IN APP (toast): basso a destra, sopra ogni schermata ── */
+.toast-stack {
+  position: fixed;
+  right: 14px;
+  bottom: 14px;
+  z-index: 600;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+  pointer-events: none;
+}
+.toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: min(340px, 86vw);
+  padding: 9px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--bg-2);
+  color: var(--text);
+  font-size: 0.85rem;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+.toast-success { border-color: rgba(46, 204, 113, 0.6); }
+.toast-error { border-color: rgba(231, 76, 60, 0.7); }
+.toast-spinner {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  border-top-color: var(--accent, #b47a3c);
+  animation: toast-spin 0.8s linear infinite;
+}
+@keyframes toast-spin {
+  to { transform: rotate(360deg); }
 }
 
 /* ── Schermata Pagamento (stile POS SumUp: articoli · tastierino · metodi) ── */
