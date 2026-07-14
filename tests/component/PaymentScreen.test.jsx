@@ -208,10 +208,12 @@ describe('metodi di pagamento', () => {
     expect(registerPayment).not.toHaveBeenCalled()
   })
 
-  it('lettore NON configurato: resta Carta di Credito ma niente SumUp', () => {
+  it('lettore NON configurato: SumUp c'è ma è spento, con la nota', () => {
     mount(baseOrder())
     expect(screen.getByRole('button', { name: /Carta di Credito/ })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /SumUp/ })).not.toBeInTheDocument()
+    const sumup = screen.getByRole('button', { name: /SumUp/ })
+    expect(sumup).toBeDisabled()
+    expect(sumup).toHaveTextContent(/configura il lettore/)
   })
 })
 
