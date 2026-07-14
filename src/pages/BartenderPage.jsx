@@ -708,6 +708,13 @@ function OrderQueue() {
             <span className="grid-card-tot">{formatPrice(o.total)}</span>
           </div>
         </div>
+        {/* Footer identico alla card reale (stessa altezza prima e dopo
+            la sincronizzazione); le azioni arrivano con l'ordine vero. */}
+        {!isError && (
+          <button type="button" className="grid-card-toggle" disabled>
+            ⋯ Azioni
+          </button>
+        )}
         {isError && (
           <div className="grid-card-actions">
             <p className="muted small" style={{ margin: '0 0 6px' }}>{p.error}</p>
@@ -917,9 +924,11 @@ function OrderQueue() {
           {pend.pending.length === 0 && visibleBoard.length === 0 && (
             <div className="empty">Nessun ordine{boardFilter === 'chiusi' ? ' chiuso' : boardFilter === 'attivi' ? ' in corso' : ''}.</div>
           )}
+          {/* I nuovi ordini vanno IN FONDO (numeri più alti): il placeholder
+              in sync sta già lì, così alla conferma non cambia posizione. */}
           <div className="order-grid">
-            {pend.pending.map(renderPendingCard)}
             {visibleBoard.map(renderGridCard)}
+            {pend.pending.map(renderPendingCard)}
           </div>
         </>
       ) : listView ? (
