@@ -1039,10 +1039,12 @@ a.order-mini {
   }
 
   /* L'app è centrata (max 760px): sposta il contenuto solo di quanto
-     serve perché non finisca sotto la sidebar. */
+     serve perché non finisca sotto la sidebar. Un filo di respiro sopra:
+     senza, sezioni che partono con chips/controlli (es. Inventario)
+     restano incollate all'header. */
   .bar-content {
     margin-left: max(0px, calc(250px - (100vw - 760px) / 2));
-    padding-top: 0;
+    padding-top: 14px;
   }
 }
 
@@ -1651,13 +1653,23 @@ body.fullbleed .bar-content {
   height: 26px;
   min-width: 46px;
   border-radius: 13px;
+  /* Traccia visibile su QUALSIASI tema (su quello chiaro il bianco
+     traslucido spariva e il toggle sembrava non esserci). */
   background: rgba(255, 255, 255, 0.15);
+  border: 1px solid var(--line);
   cursor: pointer;
   position: relative;
   transition: background 0.2s ease;
-  border: none;
   padding: 0;
   margin: 0;
+}
+
+:root[data-luma='light'] .toggle {
+  background: rgba(0, 0, 0, 0.18);
+}
+
+:root[data-luma='light'] .toggle::before {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
 }
 
 .toggle:checked {
