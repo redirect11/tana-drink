@@ -778,6 +778,28 @@ export async function openSerata() {
   return mapSerata(await getDoc(ref))
 }
 
+// SERATA SENZA PENSIERI: niente più apertura/chiusura manuale. Il POS
+// chiama questa al primo ordine: se la serata aperta è di un GIORNO
+// precedente (rimasta lì), viene chiusa da sola col suo resoconto e se
+// ne apre una nuova; altrimenti si riusa o si crea quella di oggi.
+export async function ensureTodaySerata() {
+  const existing = await getOpenSerata()
+  if (existing) {
+    const day = existing.opened_at
+      ? new Intl.DateTimeFormat('en-CA', {
+          timeZone: 'Europe/Rome',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+        }).format(new Date(existing.opened_at))
+      : null
+    if (!day || day === romeDateKey()) return existing
+    await closeSerata(existing.id).catch(() => {})
+  }
+  const ref = await addDoc(serateCol, { status: 'open', opened_at: serverTimestamp() })
+  return mapSerata(await getDoc(ref))
+}
+
 // Chiude la serata salvando il riepilogo (n. ordini e totale dei non annullati).
 export async function closeSerata(id, report = null) {
   const snap = await getDocs(query(ordersCol, where('serata_id', '==', id)))

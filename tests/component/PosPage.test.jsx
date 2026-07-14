@@ -12,11 +12,8 @@ import '@testing-library/jest-dom/vitest'
 
 let mockSerata = { id: 'serata1', status: 'open' }
 vi.mock('../../src/lib/api.js', () => ({
-  subscribeOpenSerata: vi.fn((cb) => {
-    cb(mockSerata)
-    return () => {}
-  }),
-  openSerata: vi.fn(() => Promise.resolve({ id: 'nuova-serata' })),
+  // La serata non si apre più a mano: il POS chiama ensureTodaySerata.
+  ensureTodaySerata: vi.fn(() => Promise.resolve(mockSerata ?? { id: 'nuova-serata' })),
   createOrder: vi.fn(() =>
     Promise.resolve({
       id: 'ord-nuovo',
@@ -58,6 +55,7 @@ vi.mock('../../src/lib/paymentsApi.js', () => ({
 }))
 vi.mock('../../src/lib/printer.js', () => ({
   printScontrino: vi.fn(() => Promise.resolve()),
+  printComanda: vi.fn(() => Promise.resolve()),
   printFattura: vi.fn(() => Promise.resolve()),
   loadPrinterSettings: vi.fn(() => ({ ivaRate: 10 })),
 }))
@@ -78,7 +76,8 @@ vi.mock('firebase/auth', () => ({
 
 import PosPage from '../../src/pages/PosPage.jsx'
 import { submitPosOrder } from '../../src/lib/pendingOrders.js'
-import { openSerata, createOrder } from '../../src/lib/api.js'
+import { ensureTodaySerata, createOrder } from '../../src/lib/api.js'
+import { printComanda } from '../../src/lib/printer.js'
 
 function mount() {
   // Il carrello persiste in localStorage: pulito per ogni test.
@@ -146,7 +145,7 @@ describe('conferma con modale nome', () => {
     expect(submitPosOrder.mock.calls[0][0].customer_name).toBeNull()
   })
 
-  it('senza serata aperta: si apre da sola al primo ordine', async () => {
+  it('senza serata in corso: nasce da sola col primo ordine', async () => {
     mockSerata = null
     const user = userEvent.setup()
     mount()
@@ -154,8 +153,20 @@ describe('conferma con modale nome', () => {
     await user.click(screen.getByRole('button', { name: '✅ Conferma' }))
     await user.click(screen.getByRole('button', { name: /Salva senza nome/ }))
     await waitFor(() => expect(submitPosOrder).toHaveBeenCalledTimes(1))
-    expect(openSerata).toHaveBeenCalledTimes(1)
+    expect(ensureTodaySerata).toHaveBeenCalled()
     expect(submitPosOrder.mock.calls[0][0].serata_id).toBe('nuova-serata')
+  })
+
+  it('la stampa comanda è un’azione a parte: stampa senza creare l’ordine', async () => {
+    const user = userEvent.setup()
+    mount()
+    await user.click(screen.getByText('Mojito'))
+    await user.click(screen.getByRole('button', { name: /Stampa comanda/ }))
+    await waitFor(() => expect(printComanda).toHaveBeenCalledTimes(1))
+    const [orderLike, comandaLike] = printComanda.mock.calls[0]
+    expect(orderLike.daily_number).toBeNull()
+    expect(comandaLike.items).toEqual([{ name: 'Mojito', qty: 1 }])
+    expect(submitPosOrder).not.toHaveBeenCalled()
   })
 })
 

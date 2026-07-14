@@ -13,8 +13,6 @@ import {
   subscribeOpenSerata,
   subscribeSerataOrders,
   subscribeSettings,
-  openSerata,
-  closeSerata,
   DEFAULT_SETTINGS,
   saveStaffToken,
 } from '../lib/api.js'
@@ -28,11 +26,11 @@ import {
   nextStatus,
   placedByName,
 } from '../lib/orderStatus.js'
-import { bucketByStatus, serataRecap, openOrdersCount } from '../lib/serata.js'
+import { bucketByStatus, serataRecap } from '../lib/serata.js'
 import { isAwaitingPayment } from '../lib/payments.js'
 import { readerCheckout, readerTerminate } from '../lib/paymentsApi.js'
-import { aggregateProducts, serataFinance, longestPrep, phaseAverages } from '../lib/eta.js'
 import { ensureNotificationPermission, notify } from '../lib/notify.js'
+import { showToast } from '../lib/toast.js'
 import { beep, installAudioUnlock } from '../lib/beep.js'
 import { subscribePending, dismissPending, dismissBanner } from '../lib/pendingOrders.js'
 import { syncSumUpProducts, isSumUpEnabled } from '../lib/sumupApi.js'
@@ -270,7 +268,6 @@ function OrderQueue() {
   const [serata, setSerata] = useState(undefined) // undefined=caricamento, null=nessuna
   const [orders, setOrders] = useState([])
   const [error, setError] = useState(null)
-  const [busy, setBusy] = useState(false)
   const [statusTab, setStatusTab] = useState(ORDER_STATUSES.RICEVUTO)
   const [boardFilter, setBoardFilter] = useState('attivi') // 'attivi' | 'chiusi' | 'tutti'
   const [slowLoad, setSlowLoad] = useState(false)
@@ -283,6 +280,7 @@ function OrderQueue() {
   const [report, setReport] = useState(null) // resoconto mostrato dopo la chiusura
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   const knownIds = useRef(new Set())
+  const knownComande = useRef(new Map()) // id ordine -> n. comande (per il toast aggiunte)
   const navigate = useNavigate()
 
   useEffect(() => subscribeSettings((s) => setSettings(s)), [])
@@ -333,6 +331,7 @@ function OrderQueue() {
     if (!serataId) {
       setOrders([])
       knownIds.current = new Set()
+      knownComande.current = new Map()
       return
     }
     let primed = false
@@ -371,8 +370,19 @@ function OrderQueue() {
               }
             }
           }
+          // AGGIUNTE a conti esistenti (da altro dispositivo/staff): toast
+          // in app. Le proprie aggiunte non passano di qua: si fanno dal
+          // dettaglio ordine, dove questa vista non è montata.
+          for (const o of data) {
+            const prev = knownComande.current.get(o.id)
+            const n = (o.comande || []).length
+            if (prev != null && n > prev && o.status === 'aperto') {
+              showToast(`➕ Aggiunta all'ordine #${o.daily_number ?? '—'}${o.customer_name ? ` (${o.customer_name})` : ''}`)
+            }
+          }
         }
         knownIds.current = new Set(data.map((o) => o.id))
+        knownComande.current = new Map(data.map((o) => [o.id, (o.comande || []).length]))
         setOrders(data)
         primed = true
       },
@@ -381,55 +391,9 @@ function OrderQueue() {
     return unsub
   }, [serataId])
 
-  async function apri() {
-    setBusy(true)
-    setError(null)
-    try {
-      await openSerata()
-    } catch (e) {
-      setError(e.message)
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  function chiudi() {
-    const aperti = openOrdersCount(orders)
-    const finance = serataFinance(orders)
-    const righe = [
-      `Incasso: ${formatPrice(finance.incasso)} (${finance.ordini} ordini)`,
-      finance.servizio > 0 ? `Servizio: ${formatPrice(finance.servizio)}` : null,
-      finance.mance > 0 ? `Mance: ${formatPrice(finance.mance)}` : null,
-    ].filter(Boolean).join('\n')
-    const msg = aperti > 0
-      ? `Ci sono ancora ${aperti} ordini non conclusi.\n\n${righe}`
-      : righe
-    setConfirmAction({
-      title: '⏹ Chiudere la serata?',
-      message: msg,
-      confirmLabel: 'Chiudi serata',
-      run: async () => {
-        setBusy(true)
-        setError(null)
-        // Resoconto calcolato dagli ordini correnti + statistiche tempi.
-        const fullReport = {
-          finance,
-          products: aggregateProducts(orders),
-          longest_prep: longestPrep(orders),
-          phase_averages: phaseAverages(serata.prep_stats, serata.eta_stats),
-          drinks_sold: aggregateProducts(orders).reduce((s, p) => s + p.qty, 0),
-        }
-        try {
-          await closeSerata(serata.id, fullReport)
-          setReport(fullReport)
-        } catch (e) {
-          setError(e.message)
-        } finally {
-          setBusy(false)
-        }
-      },
-    })
-  }
+  // Apertura/chiusura serata NON esistono più come gesti: la serata di
+  // oggi nasce col primo ordine e quella di ieri si chiude da sola
+  // (rollover in ensureTodaySerata). Il resoconto vive nelle Statistiche.
 
   async function advance(order) {
     const ns = nextStatus(order.workflow_status)
@@ -472,20 +436,16 @@ function OrderQueue() {
     )
   }
 
-  // Nessuna serata aperta: NON blocca — la serata si apre da sola col
-  // primo ordine dal POS; qui resta l'apertura manuale e, dopo una
-  // chiusura, il resoconto della serata appena conclusa.
+  // Nessuna serata in corso: NON blocca — la serata di oggi nasce da
+  // sola col primo ordine dal POS.
   if (!serata) {
     return (
       <div>
         {error && <div className="banner">Errore: {error}</div>}
         <div className="empty">
-          Nessuna serata aperta: si apre da sola col primo ordine.
+          Ancora nessun ordine oggi: la serata parte col primo ordine.
         </div>
         <Link className="btn block" to="/pos">🍸 Nuovo ordine (POS cassa)</Link>
-        <button className="btn ghost block" style={{ marginTop: 8 }} onClick={apri} disabled={busy}>
-          {busy ? 'Apro…' : '▶️ Apri la serata a vuoto'}
-        </button>
         {report && <SerataReport report={report} onClose={() => setReport(null)} />}
       </div>
     )
@@ -861,7 +821,6 @@ function OrderQueue() {
             onChange={(e) => setSearch(e.target.value)}
           />
           <div className="board-actions">
-            <button className="btn ghost small" onClick={chiudi} disabled={busy}>⏹ Chiudi</button>
             <button
               className={`btn ghost small${showPanels ? ' active' : ''}`}
               onClick={() => setShowPanels((v) => !v)}
@@ -874,16 +833,11 @@ function OrderQueue() {
         </div>
       ) : (
         <>
-          <div className="card row between" style={{ alignItems: 'center' }}>
-            <div>
-              <strong>Serata aperta</strong>
-              <div className="muted">
-                {recap.count} ordini · {formatPrice(recap.total)}
-              </div>
+          <div className="card">
+            <strong>Serata</strong>
+            <div className="muted">
+              {recap.count} ordini · {formatPrice(recap.total)}
             </div>
-            <button className="btn ghost small" onClick={chiudi} disabled={busy}>
-              ⏹ Chiudi serata
-            </button>
           </div>
 
           <div style={{ display: 'flex', gap: 8, marginBottom: 4 }}>

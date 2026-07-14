@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
-  subscribeOpenSerata,
-  openSerata,
+  ensureTodaySerata,
   createOrder,
   subscribeOrder,
   subscribeSettings,
   DEFAULT_SETTINGS,
 } from '../lib/api.js'
+import { printComanda } from '../lib/printer.js'
+import { toastSuccess, toastError } from '../lib/toast.js'
 import { ORDER_STATUSES } from '../lib/orderStatus.js'
 import { submitPosOrder } from '../lib/pendingOrders.js'
 import { useMenu } from '../lib/menuCache.js'
@@ -28,7 +29,6 @@ export default function PosPage() {
   const navigate = useNavigate()
   const { drinks, cats, loading } = useMenu()
   const cart = useCart()
-  const [serata, setSerata] = useState(undefined)
   const [staff, setStaff] = useState(null)
   const [error, setError] = useState(null)
   const [tableLabel, setTableLabel] = useState('')
@@ -36,8 +36,8 @@ export default function PosPage() {
   const [customerName, setCustomerName] = useState('')
   const [showCustom, setShowCustom] = useState(false)
   const [showInfo, setShowInfo] = useState(false)
-  // Modale nome alla conferma ('save' | 'save-print' | null).
-  const [askName, setAskName] = useState(null)
+  // Modale nome alla conferma.
+  const [askName, setAskName] = useState(false)
   const [busyPay, setBusyPay] = useState(false)
   // Pagamento diretto: ordine appena creato + suoi aggiornamenti live.
   const [payOrder, setPayOrder] = useState(null)
@@ -55,8 +55,6 @@ export default function PosPage() {
     document.body.classList.add('fullbleed')
     return () => document.body.classList.remove('fullbleed')
   }, [])
-
-  useEffect(() => subscribeOpenSerata((s) => setSerata(s), () => setSerata(null)), [])
 
   useEffect(() => {
     return onAuthStateChanged(auth, async (u) => {
@@ -77,12 +75,31 @@ export default function PosPage() {
     return m
   }, [cart.items])
 
-  // La serata NON è più un prerequisito: se manca, si apre da sola al
-  // primo ordine (resta la chiusura manuale per il resoconto).
+  // La serata NON esiste più come gesto manuale: al primo ordine si apre
+  // (o si riusa) quella di oggi; quella di ieri rimasta aperta si chiude
+  // da sola col suo resoconto.
   async function ensureSerataId() {
-    if (serata?.id) return serata.id
-    const s = await openSerata()
+    const s = await ensureTodaySerata()
     return s.id
+  }
+
+  // Stampa comanda: azione A PARTE, a prescindere da conferma/pagamento.
+  async function printDraftComanda() {
+    if (cart.items.length === 0) return
+    try {
+      await printComanda(
+        {
+          customer_name: customerName.trim() || null,
+          table_label: tableLabel || null,
+          note: note || null,
+          daily_number: null,
+        },
+        { items: cart.items.map((i) => ({ name: i.name, qty: i.qty })) }
+      )
+      toastSuccess('Comanda stampata')
+    } catch (e) {
+      toastError(`Stampa comanda: ${e.message}`)
+    }
   }
 
   async function handleSend({ printNow = false, name = customerName } = {}) {
@@ -268,21 +285,21 @@ export default function PosPage() {
               <strong className="price">{formatPrice(cart.total)}</strong>
             </div>
             <div className="grid-2">
-              {/* Conferma = salva il conto (il nome si chiede nella modale);
-                  la stampa della comanda è esplicita nel bottone accanto. */}
+              {/* Conferma = SOLO salva il conto (il nome si chiede nella
+                  modale); la stampa della comanda è un'azione a parte. */}
               <button
                 className="btn secondary small"
                 disabled={cartCount === 0}
-                onClick={() => setAskName('save')}
+                onClick={() => setAskName(true)}
               >
                 ✅ Conferma
               </button>
               <button
-                className="btn small"
+                className="btn ghost small"
                 disabled={cartCount === 0}
-                onClick={() => setAskName('save-print')}
+                onClick={printDraftComanda}
               >
-                🖨 Conferma + stampa comanda
+                🖨 Stampa comanda
               </button>
             </div>
             {/* Vendita rapida: dritto alla schermata Pagamento, senza
@@ -320,9 +337,8 @@ export default function PosPage() {
             onClick={(e) => e.stopPropagation()}
             onSubmit={(e) => {
               e.preventDefault()
-              const mode = askName
               setAskName(null)
-              handleSend({ printNow: mode === 'save-print' })
+              handleSend({ printNow: false })
             }}
           >
             <h3 style={{ margin: 0 }}>👤 Nome del conto</h3>
@@ -339,7 +355,6 @@ export default function PosPage() {
             />
             <button className="btn block" type="submit" style={{ marginTop: 10 }}>
               Salva{customerName.trim() ? '' : ' senza nome'}
-              {askName === 'save-print' ? ' e stampa' : ''}
             </button>
           </form>
         </div>
