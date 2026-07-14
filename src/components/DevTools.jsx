@@ -9,6 +9,7 @@ import {
   isDevEnvironment,
 } from '../dev/devActions.js'
 import { subscribeOpenSerata, subscribeSerataOrders } from '../lib/api.js'
+import { runImport } from '../dev/importExcel.js'
 
 // Opzioni sviluppatore: visibili SOLO in ambiente emulatore (Docker locale
 // o ambiente di test). Permettono di svuotare il db o resettarlo coi mock.
@@ -159,7 +160,34 @@ export default function DevTools() {
       )}
 
       <div className="card settings-section">
-        <h3>Pagamenti (simulazione)</h3>
+        <h3>📥 Import storico da Excel (JSON)</h3>
+        <p className="muted small">
+          Carica il file <code>import-tana.json</code> (estratto dagli Excel:
+          fornitori, scadenzario, catalogo inventario, ore staff). Idempotente:
+          ciò che esiste già viene saltato, si può rilanciare.
+        </p>
+        <input
+          type="file"
+          accept="application/json,.json"
+          disabled={busy}
+          onChange={async (e) => {
+            const file = e.target.files?.[0]
+            e.target.value = ''
+            if (!file) return
+            setBusy(true)
+            setError(null)
+            try {
+              const data = JSON.parse(await file.text())
+              await runImport(data, (msg) => setLog((l) => [...l.slice(-30), msg]))
+            } catch (err) {
+              setError(err.message)
+            } finally {
+              setBusy(false)
+            }
+          }}
+        />
+
+        <h3 style={{ marginTop: 18 }}>Pagamenti (simulazione)</h3>
         <p className="muted small" style={{ marginTop: 0 }}>
           Simula qui l&apos;esito del pagamento SumUp per gli ordini in
           attesa (utile finché SumUp non è configurato con le credenziali
