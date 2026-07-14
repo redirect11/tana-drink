@@ -76,7 +76,7 @@ vi.mock('firebase/auth', () => ({
 
 import PosPage from '../../src/pages/PosPage.jsx'
 import { submitPosOrder } from '../../src/lib/pendingOrders.js'
-import { ensureTodaySerata, createOrder } from '../../src/lib/api.js'
+import { createOrder } from '../../src/lib/api.js'
 import { printComanda } from '../../src/lib/printer.js'
 
 function mount() {
@@ -129,7 +129,7 @@ describe('conferma con modale nome', () => {
     await user.click(screen.getByRole('button', { name: /^Salva$/ }))
     expect(submitPosOrder).toHaveBeenCalledTimes(1)
     const arg = submitPosOrder.mock.calls[0][0]
-    expect(arg.serata_id).toBe('serata1')
+    expect(arg.serata_id).toBeNull() // la serata si risolve in background nello store
     expect(arg.customer_name).toBe('iole')
     expect(arg.printNow).toBe(false)
     expect(arg.items).toEqual([expect.objectContaining({ drink_id: 'mojito', qty: 1 })])
@@ -143,18 +143,6 @@ describe('conferma con modale nome', () => {
     await user.click(screen.getByRole('button', { name: /Salva senza nome/ }))
     expect(submitPosOrder).toHaveBeenCalledTimes(1)
     expect(submitPosOrder.mock.calls[0][0].customer_name).toBeNull()
-  })
-
-  it('senza serata in corso: nasce da sola col primo ordine', async () => {
-    mockSerata = null
-    const user = userEvent.setup()
-    mount()
-    await user.click(screen.getByText('Mojito'))
-    await user.click(screen.getByRole('button', { name: '✅ Conferma' }))
-    await user.click(screen.getByRole('button', { name: /Salva senza nome/ }))
-    await waitFor(() => expect(submitPosOrder).toHaveBeenCalledTimes(1))
-    expect(ensureTodaySerata).toHaveBeenCalled()
-    expect(submitPosOrder.mock.calls[0][0].serata_id).toBe('nuova-serata')
   })
 
   it('la stampa comanda è un’azione a parte: stampa senza creare l’ordine', async () => {
