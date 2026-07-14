@@ -5,6 +5,7 @@ import { parseCarteCsv, decodeCsvBuffer } from '../lib/carteImport.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import ThemeSettings from './ThemeSettings.jsx'
 import { pairSumUpReader, unpairSumUpReader } from '../lib/paymentsApi.js'
+import { devToolsEnabled } from '../dev/devActions.js'
 
 // Impostazioni del bar (documento settings/bar). Ogni modifica viene salvata
 // subito; le pagine cliente le ricevono in tempo reale via subscribeSettings.
@@ -508,6 +509,20 @@ function ReaderPairing({ settings }) {
             Sul lettore: Menu → Connessioni → API → genera il codice di
             pairing e inseriscilo qui (vale 5 minuti).
           </p>
+          {devToolsEnabled && (
+            <button
+              className="btn ghost small block"
+              style={{ marginBottom: 8 }}
+              disabled={busy}
+              onClick={() =>
+                updateSettings({ sumup_reader_id: 'sim', sumup_reader_name: 'Simulato' }).catch(
+                  (e) => setError(e.message)
+                )
+              }
+            >
+              🧪 Usa un lettore SIMULATO (solo test): l&apos;esito arriva da solo dopo 2,5s
+            </button>
+          )}
           <div className="row" style={{ gap: 8 }}>
             <input
               type="text"

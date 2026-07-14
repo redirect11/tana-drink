@@ -159,7 +159,20 @@ describe('conferma con modale nome', () => {
 })
 
 describe('pagamento diretto dal POS', () => {
-  it('💳 Pagamento crea il conto e apre subito la schermata Pagamento', async () => {
+  it('💳 Pagamento apre SUBITO la schermata: la creazione va in background', async () => {
+    const user = userEvent.setup()
+    // server lento: la creazione non risolve mai, la UI non deve aspettarla
+    createOrder.mockImplementationOnce(() => new Promise(() => {}))
+    mount()
+    await user.click(screen.getByText('Mojito'))
+    await user.click(screen.getByRole('button', { name: /💳 Pagamento/ }))
+    // schermata aperta all'istante sull'ordine LOCALE (totale già giusto)
+    expect(screen.getByRole('dialog', { name: 'Pagamento' })).toBeInTheDocument()
+    expect(screen.getByTestId('pay-amount')).toHaveTextContent('7,00')
+    expect(screen.getByRole('button', { name: /Riscuotere/ })).toBeInTheDocument()
+  })
+
+  it('la creazione in background usa la serata di oggi e lo stato in preparazione', async () => {
     const user = userEvent.setup()
     mount()
     await user.click(screen.getByText('Mojito'))
@@ -169,9 +182,6 @@ describe('pagamento diretto dal POS', () => {
       serata_id: 'serata1',
       status: 'in_preparazione',
     })
-    // schermata Pagamento aperta sull'ordine appena creato
-    expect(await screen.findByRole('dialog', { name: 'Pagamento' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Riscuotere/ })).toBeInTheDocument()
   })
 })
 

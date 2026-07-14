@@ -44,7 +44,6 @@ import PaymentScreen from './PaymentScreen.jsx'
 export default function OrderPosDetail({ order }) {
   const { drinks, cats, loading } = useMenu()
   const [error, setError] = useState(null)
-  const [saving, setSaving] = useState(false)
   const [showCustom, setShowCustom] = useState(false)
   const [showComande, setShowComande] = useState(false)
   const [confirmCancel, setConfirmCancel] = useState(false)
@@ -63,18 +62,6 @@ export default function OrderPosDetail({ order }) {
 
   const closed = orderIsClosed(order)
   const comande = useMemo(() => order.comande || [], [order.comande])
-
-  async function run(fn) {
-    setSaving(true)
-    setError(null)
-    try {
-      await fn()
-    } catch (e) {
-      setError(e.message)
-    } finally {
-      setSaving(false)
-    }
-  }
 
   // ── Diminuzioni OTTIMISTICHE sulle comande modificabili ──
   // Override locale per-comanda + scrittura debounced (tap rapidi = una
@@ -452,8 +439,11 @@ export default function OrderPosDetail({ order }) {
                   <button
                     className="btn small block"
                     style={{ marginTop: 6 }}
-                    disabled={saving}
-                    onClick={() => run(() => updateOrderInfo(order.id, info))}
+                    onClick={() =>
+                      updateOrderInfo(order.id, info).catch((e) =>
+                        toastError(`Dati conto non salvati: ${e.message}`)
+                      )
+                    }
                   >
                     💾 Salva dati conto
                   </button>
@@ -509,7 +499,7 @@ export default function OrderPosDetail({ order }) {
                 🧾 Scontrino (non fiscale)
               </button>
               {!closed && order.payment_status !== 'pagato' ? (
-                <button className="btn small" disabled={saving} onClick={() => setShowPayment(true)}>
+                <button className="btn small" onClick={() => setShowPayment(true)}>
                   💳 Pagamento
                 </button>
               ) : (
@@ -520,7 +510,6 @@ export default function OrderPosDetail({ order }) {
             {!closed && (
               <button
                 className="btn ghost small block"
-                disabled={saving}
                 onClick={() => setConfirmCancel(true)}
               >
                 ✖️ Annulla ordine
@@ -630,12 +619,13 @@ export default function OrderPosDetail({ order }) {
           cancelLabel="Indietro"
           danger
           onCancel={() => setConfirmCancel(false)}
-          onConfirm={() =>
-            run(async () => {
-              setConfirmCancel(false)
-              await cancelOrder(order.id, { by: 'bartender' })
-            })
-          }
+          onConfirm={() => {
+            setConfirmCancel(false)
+            // In background: la card/schermata segue lo snapshot.
+            cancelOrder(order.id, { by: 'bartender' }).catch((e) =>
+              toastError(`Annullo non riuscito: ${e.message}`)
+            )
+          }}
         />
       )}
     </div>

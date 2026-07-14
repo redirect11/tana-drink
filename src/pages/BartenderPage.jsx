@@ -270,6 +270,9 @@ function OrderQueue() {
   const [error, setError] = useState(null)
   const [statusTab, setStatusTab] = useState(ORDER_STATUSES.RICEVUTO)
   const [boardFilter, setBoardFilter] = useState('attivi') // 'attivi' | 'chiusi' | 'tutti'
+  // Avanzamenti OTTIMISTICI dalla card: lo stato cambia al tap, il server
+  // segue in background (in errore si torna allo stato reale).
+  const [queueOverrides, setQueueOverrides] = useState({}) // id -> workflow_status
   const [slowLoad, setSlowLoad] = useState(false)
   const [confirmAction, setConfirmAction] = useState(null) // { title, message, danger, run }
   const [cancelTarget, setCancelTarget] = useState(null) // { order, kind }
@@ -404,27 +407,38 @@ function OrderQueue() {
   // oggi nasce col primo ordine e quella di ieri si chiude da sola
   // (rollover in ensureTodaySerata). Il resoconto vive nelle Statistiche.
 
-  async function advance(order) {
+  function advance(order) {
     const ns = nextStatus(order.workflow_status)
     if (!ns) return
-    try {
-      await updateOrderStatus(order.id, ns)
-    } catch (e) {
-      setError(e.message)
-    }
+    setQueueOverrides((m) => ({ ...m, [order.id]: ns }))
+    ;(async () => {
+      try {
+        await updateOrderStatus(order.id, ns)
+      } catch (e) {
+        setError(e.message)
+        showToast(`⚠️ Avanzamento non riuscito: ${e.message}`, { kind: 'error' })
+      } finally {
+        setQueueOverrides((m) => {
+          const n = { ...m }
+          delete n[order.id]
+          return n
+        })
+      }
+    })()
   }
 
   // Annullamento bartender: apre il dialog con frase/motivazione/notifica.
   // kind: 'ordine' (ricevuto), 'preparazione' (in_preparazione),
   // 'non_ritirato' (pronto mai ritirato/servito).
-  async function confirmCancel({ phrase, message, notify }) {
+  function confirmCancel({ phrase, message, notify }) {
     const { order, kind } = cancelTarget
     setCancelTarget(null)
-    try {
-      await cancelOrder(order.id, { by: 'bartender', kind, phrase, message, notify })
-    } catch (e) {
+    // In background: il dialog si chiude subito, la card sparisce con lo
+    // snapshot; in errore arriva il toast.
+    cancelOrder(order.id, { by: 'bartender', kind, phrase, message, notify }).catch((e) => {
       setError(e.message)
-    }
+      showToast(`⚠️ Annullo non riuscito: ${e.message}`, { kind: 'error' })
+    })
   }
 
   if (serata === undefined) {
@@ -468,10 +482,16 @@ function OrderQueue() {
   }
 
   const recap = serataRecap(orders)
+  // Ordini "effettivi" a schermo: stato del server + override ottimistici.
+  const effOrders = orders.map((o) =>
+    queueOverrides[o.id] && o.workflow_status !== queueOverrides[o.id]
+      ? { ...o, workflow_status: queueOverrides[o.id] }
+      : o
+  )
   // Ricerca rapida: numero, cliente, tavolo, drink, chi ha inserito.
   const q = search.trim().toLowerCase()
   const visibleOrders = q
-    ? orders.filter(
+    ? effOrders.filter(
         (o) =>
           String(o.daily_number ?? '').includes(q) ||
           o.customer_name?.toLowerCase().includes(q) ||
@@ -480,7 +500,7 @@ function OrderQueue() {
           o.placed_by?.name?.toLowerCase().includes(q) ||
           (o.order_items || []).some((i) => i.name?.toLowerCase().includes(q))
       )
-    : orders
+    : effOrders
   const buckets = bucketByStatus(visibleOrders)
   const listView = settings.queue_view === 'lista'
   const list = buckets[statusTab] || []
