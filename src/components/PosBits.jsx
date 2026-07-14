@@ -88,33 +88,43 @@ export function DrinkTile({ drink, qty, onAdd, onSetQty, color = null }) {
       </div>
 
       {/* Prezzo */}
-      <div style={{ fontSize: '0.85rem', opacity: 0.75 }}>
+      <div style={{ fontSize: '0.85rem', opacity: 0.75, flexShrink: 0 }}>
         {formatPrice(drink.price)}
       </div>
 
-      {/* Controllo quantità (visibile solo se nel carrello) */}
-      {inCart && (
-        <div
-          onClick={(e) => e.stopPropagation()}
-          style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 2 }}
+      {/* Controllo quantità: lo spazio è SEMPRE riservato (nascosto se il
+          prodotto non è nel carrello), così la tile non cambia altezza al
+          tap e i tastini non escono mai dal bordo. */}
+      <div
+        onClick={(e) => e.stopPropagation()}
+        aria-hidden={!inCart}
+        style={{
+          display: 'flex',
+          gap: 6,
+          alignItems: 'center',
+          marginTop: 2,
+          flexShrink: 0,
+          visibility: inCart ? 'visible' : 'hidden',
+        }}
+      >
+        <button
+          aria-label="Riduci"
+          onClick={() => onSetQty(qty - 1)}
+          tabIndex={inCart ? 0 : -1}
+          style={qtyBtnStyle}
         >
-          <button
-            aria-label="Riduci"
-            onClick={() => onSetQty(qty - 1)}
-            style={qtyBtnStyle}
-          >
-            −
-          </button>
-          <span style={{ fontWeight: 700, fontSize: '1rem', minWidth: 20, textAlign: 'center' }}>{qty}</span>
-          <button
-            aria-label="Aumenta"
-            onClick={onAdd}
-            style={qtyBtnStyle}
-          >
-            +
-          </button>
-        </div>
-      )}
+          −
+        </button>
+        <span style={{ fontWeight: 700, fontSize: '1rem', minWidth: 20, textAlign: 'center' }}>{qty}</span>
+        <button
+          aria-label="Aumenta"
+          onClick={onAdd}
+          tabIndex={inCart ? 0 : -1}
+          style={qtyBtnStyle}
+        >
+          +
+        </button>
+      </div>
     </div>
   )
 }
