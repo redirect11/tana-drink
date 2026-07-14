@@ -395,6 +395,40 @@ export async function printFattura(invoice) {
   prn.send()
 }
 
+// ── ORDINE FORNITORE ─────────────────────────────────────────────────────────
+// Ticket dell'ordine d'acquisto (GENERATORE ORDINI): righe a confezioni
+// e totali, da allegare/spuntare all'arrivo della merce.
+
+export async function printOrdineFornitore(order) {
+  const prn = await getPrinter()
+  const s = loadPrinterSettings()
+
+  prn.addTextLang('it')
+  prn.addTextSmooth(true)
+  prn.addTextAlign(prn.ALIGN_CENTER)
+  prn.addTextSize(2, 2)
+  prn.addTextStyle(false, false, true, prn.COLOR_1)
+  prn.addText('ORDINE FORNITORE\n')
+  prn.addTextSize(1, 1)
+  prn.addTextStyle(false, false, false, prn.COLOR_1)
+  prn.addText(`${s.businessName}\n\n`)
+  prn.addTextAlign(prn.ALIGN_LEFT)
+  prn.addText(row(order.supplier_name || '-', String(order.created_at || '').slice(0, 10)))
+  prn.addText(line())
+  prn.addTextSize(1, 2)
+  for (const l of order.lines || []) {
+    prn.addText(`${l.qty_packages}  ${String(l.name || '').toUpperCase()}\n`)
+  }
+  prn.addTextSize(1, 1)
+  prn.addText(line())
+  prn.addText(row('Totale netto', `${(Number(order.total_net) || 0).toFixed(2)}€`))
+  prn.addText(row('Totale ivato', `${(Number(order.total_gross) || 0).toFixed(2)}€`))
+
+  prn.addFeedLine(3)
+  prn.addCut(prn.CUT_FEED)
+  prn.send()
+}
+
 // ── TEST STAMPA ───────────────────────────────────────────────────────────────
 
 export async function printTest() {

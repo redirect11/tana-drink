@@ -182,6 +182,11 @@ service cloud.firestore {
 
     // PAYMENTS — registro incassi (ledger). Scrivibile dallo staff e dalle
     // Cloud Functions (Admin SDK, per i pagamenti online). Mai dal cliente.
+    // RAPP ORE: registro ore dello staff — solo staff autenticato.
+    match /staff_hours/{entryId} {
+      allow read, write: if isStaffMember();
+    }
+
     // FATTURE di cortesia: solo staff (contengono dati dei clienti).
     match /invoices/{invoiceId} {
       allow read, write: if isStaffMember();
