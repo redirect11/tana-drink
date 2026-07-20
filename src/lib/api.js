@@ -13,7 +13,6 @@ import {
   orderBy,
   limit as fbLimit,
   onSnapshot,
-  runTransaction,
   serverTimestamp,
   increment,
   writeBatch,
@@ -406,20 +405,18 @@ export async function deleteInventoryItem(id) {
 // `qty` è già in unità base; può essere negativo per uno scarico manuale.
 export async function loadStock(itemId, qty, { reason = 'carico' } = {}) {
   const ref = doc(db, 'inventory_items', itemId)
-  await runTransaction(db, async (tx) => {
-    const s = await tx.get(ref)
-    if (!s.exists()) throw new Error('Prodotto non trovato')
-    const cur = s.data()
-    tx.update(ref, { stock: (Number(cur.stock) || 0) + qty })
-    tx.set(doc(movementsCol), {
-      item_id: itemId,
-      item_name: cur.name,
-      type: qty >= 0 ? 'load' : 'unload',
-      qty: Math.abs(qty),
-      unit: cur.unit ?? null,
-      reason,
-      created_at: serverTimestamp(),
-    })
+  const s = await getDoc(ref)
+  if (!s.exists()) throw new Error('Prodotto non trovato')
+  const cur = s.data()
+  await updateDoc(ref, { stock: (Number(cur.stock) || 0) + qty })
+  await addDoc(movementsCol, {
+    item_id: itemId,
+    item_name: cur.name,
+    type: qty >= 0 ? 'load' : 'unload',
+    qty: Math.abs(qty),
+    unit: cur.unit ?? null,
+    reason,
+    created_at: serverTimestamp(),
   })
   return mapItem(await getDoc(ref))
 }
@@ -429,30 +426,28 @@ export async function loadStock(itemId, qty, { reason = 'carico' } = {}) {
 // bottiglie, scartando le vuote accumulate (al riassortimento si buttano).
 export async function receiveBottles(itemId, count, openQty = 0) {
   const ref = doc(db, 'inventory_items', itemId)
-  await runTransaction(db, async (tx) => {
-    const s = await tx.get(ref)
-    if (!s.exists()) throw new Error('Prodotto non trovato')
-    const cur = s.data()
-    const size = Number(cur.package_size) || 0
-    const stock = Number(cur.stock) || 0
-    const full = size ? Math.floor(stock / size) : 0
-    const hasOpen = size ? stock - full * size > 1e-9 : false
-    const withContent = full + (hasOpen ? 1 : 0)
+  const s = await getDoc(ref)
+  if (!s.exists()) throw new Error('Prodotto non trovato')
+  const cur = s.data()
+  const size = Number(cur.package_size) || 0
+  const stock = Number(cur.stock) || 0
+  const full = size ? Math.floor(stock / size) : 0
+  const hasOpen = size ? stock - full * size > 1e-9 : false
+  const withContent = full + (hasOpen ? 1 : 0)
 
-    const addQty = count * size + openQty
-    const newStock = stock + addQty
-    const newTotal = withContent + count + (openQty > 0 ? 1 : 0)
+  const addQty = count * size + openQty
+  const newStock = stock + addQty
+  const newTotal = withContent + count + (openQty > 0 ? 1 : 0)
 
-    tx.update(ref, { stock: newStock, bottles_total: newTotal })
-    tx.set(doc(movementsCol), {
-      item_id: itemId,
-      item_name: cur.name,
-      type: 'load',
-      qty: addQty,
-      unit: cur.unit ?? null,
-      reason: 'carico',
-      created_at: serverTimestamp(),
-    })
+  await updateDoc(ref, { stock: newStock, bottles_total: newTotal })
+  await addDoc(movementsCol, {
+    item_id: itemId,
+    item_name: cur.name,
+    type: 'load',
+    qty: addQty,
+    unit: cur.unit ?? null,
+    reason: 'carico',
+    created_at: serverTimestamp(),
   })
   return mapItem(await getDoc(ref))
 }
@@ -460,29 +455,27 @@ export async function receiveBottles(itemId, count, openQty = 0) {
 // Rettifica: imposta lo stock a un valore assoluto e registra il delta.
 export async function adjustStock(itemId, newStock) {
   const ref = doc(db, 'inventory_items', itemId)
-  await runTransaction(db, async (tx) => {
-    const s = await tx.get(ref)
-    if (!s.exists()) throw new Error('Prodotto non trovato')
-    const cur = s.data()
-    const delta = newStock - (Number(cur.stock) || 0)
-    const size = Number(cur.package_size) || 0
-    // Mantieni coerente il numero totale di bottiglie con la nuova giacenza.
-    const minTotal = size ? Math.ceil(newStock / size) : 0
-    const patch = { stock: newStock }
-    if (minTotal > (Number(cur.bottles_total) || 0)) patch.bottles_total = minTotal
-    tx.update(ref, patch)
-    if (delta !== 0) {
-      tx.set(doc(movementsCol), {
-        item_id: itemId,
-        item_name: cur.name,
-        type: delta > 0 ? 'load' : 'unload',
-        qty: Math.abs(delta),
-        unit: cur.unit ?? null,
-        reason: 'rettifica',
-        created_at: serverTimestamp(),
-      })
-    }
-  })
+  const s = await getDoc(ref)
+  if (!s.exists()) throw new Error('Prodotto non trovato')
+  const cur = s.data()
+  const delta = newStock - (Number(cur.stock) || 0)
+  const size = Number(cur.package_size) || 0
+  // Mantieni coerente il numero totale di bottiglie con la nuova giacenza.
+  const minTotal = size ? Math.ceil(newStock / size) : 0
+  const patch = { stock: newStock }
+  if (minTotal > (Number(cur.bottles_total) || 0)) patch.bottles_total = minTotal
+  await updateDoc(ref, patch)
+  if (delta !== 0) {
+    await addDoc(movementsCol, {
+      item_id: itemId,
+      item_name: cur.name,
+      type: delta > 0 ? 'load' : 'unload',
+      qty: Math.abs(delta),
+      unit: cur.unit ?? null,
+      reason: 'rettifica',
+      created_at: serverTimestamp(),
+    })
+  }
   return mapItem(await getDoc(ref))
 }
 
@@ -557,46 +550,43 @@ export async function updateStockCountLines(id, lines) {
 // Se align=true le giacenze dei prodotti vengono allineate alle rimanenze
 // contate (con movimento di rettifica per la differenza).
 export async function closeStockCount(id, { lines, totals, align = true }) {
-  await runTransaction(db, async (tx) => {
-    const countRef = doc(db, 'stock_counts', id)
-    const countSnap = await tx.get(countRef)
-    if (!countSnap.exists()) throw new Error('Conta non trovata')
-    if (countSnap.data().status !== 'open') throw new Error('Conta già chiusa')
+  const countRef = doc(db, 'stock_counts', id)
+  const countSnap = await getDoc(countRef)
+  if (!countSnap.exists()) throw new Error('Conta non trovata')
+  if (countSnap.data().status !== 'open') throw new Error('Conta già chiusa')
 
-    // --- LETTURE ---
-    const toAlign = align
-      ? lines.filter((l) => l.rim != null && l.rim !== '')
-      : []
-    const itemSnaps = await Promise.all(
-      toAlign.map((l) => tx.get(doc(db, 'inventory_items', l.item_id)))
-    )
+  const toAlign = align ? lines.filter((l) => l.rim != null && l.rim !== '') : []
+  const itemSnaps = await Promise.all(
+    toAlign.map((l) => getDoc(doc(db, 'inventory_items', l.item_id)))
+  )
 
-    // --- SCRITTURE ---
-    toAlign.forEach((l, idx) => {
-      const s = itemSnaps[idx]
-      if (!s.exists()) return
-      const cur = s.data()
-      const rim = Number(l.rim) || 0
-      const delta = rim - (Number(cur.stock) || 0)
-      if (delta === 0) return
-      tx.update(doc(db, 'inventory_items', l.item_id), { stock: rim })
-      tx.set(doc(movementsCol), {
-        item_id: l.item_id,
-        item_name: cur.name,
-        type: delta > 0 ? 'load' : 'unload',
-        qty: Math.abs(delta),
-        unit: cur.unit ?? null,
-        reason: 'conta',
-        created_at: serverTimestamp(),
-      })
+  for (let idx = 0; idx < toAlign.length; idx++) {
+    const l = toAlign[idx]
+    const s = itemSnaps[idx]
+    if (!s.exists()) continue
+    const cur = s.data()
+    const rim = Number(l.rim) || 0
+    const delta = rim - (Number(cur.stock) || 0)
+    if (delta === 0) continue
+    // Rettifica a valore assoluto: la conta è una fotografia autorevole,
+    // quindi qui si imposta lo stock (non increment).
+    await updateDoc(doc(db, 'inventory_items', l.item_id), { stock: rim })
+    await addDoc(movementsCol, {
+      item_id: l.item_id,
+      item_name: cur.name,
+      type: delta > 0 ? 'load' : 'unload',
+      qty: Math.abs(delta),
+      unit: cur.unit ?? null,
+      reason: 'conta',
+      created_at: serverTimestamp(),
     })
+  }
 
-    tx.update(countRef, {
-      status: 'closed',
-      closed_at: serverTimestamp(),
-      lines,
-      totals,
-    })
+  await updateDoc(countRef, {
+    status: 'closed',
+    closed_at: serverTimestamp(),
+    lines,
+    totals,
   })
 }
 
@@ -654,55 +644,51 @@ export async function deletePurchaseOrder(id) {
 // movimento; le bottiglie totali vengono aggiornate scartando le vuote,
 // come nel carico manuale.
 export async function receivePurchaseOrder(id) {
-  await runTransaction(db, async (tx) => {
-    const orderRef = doc(db, 'purchase_orders', id)
-    const orderSnap = await tx.get(orderRef)
-    if (!orderSnap.exists()) throw new Error('Ordine non trovato')
-    const order = orderSnap.data()
-    if (order.status === 'ricevuto') return
+  const orderRef = doc(db, 'purchase_orders', id)
+  const orderSnap = await getDoc(orderRef)
+  if (!orderSnap.exists()) throw new Error('Ordine non trovato')
+  const order = orderSnap.data()
+  if (order.status === 'ricevuto') return
 
-    const lines = (order.lines || []).filter((l) => (Number(l.qty_packages) || 0) > 0)
+  const lines = (order.lines || []).filter((l) => (Number(l.qty_packages) || 0) > 0)
+  const itemSnaps = await Promise.all(
+    lines.map((l) => getDoc(doc(db, 'inventory_items', l.item_id)))
+  )
 
-    // --- LETTURE ---
-    const itemSnaps = await Promise.all(
-      lines.map((l) => tx.get(doc(db, 'inventory_items', l.item_id)))
-    )
+  for (let idx = 0; idx < lines.length; idx++) {
+    const l = lines[idx]
+    const s = itemSnaps[idx]
+    if (!s.exists()) continue
+    const cur = s.data()
+    const qty = Number(l.qty_packages) || 0
+    const size = Number(cur.package_size) || 0
+    const stock = Number(cur.stock) || 0
 
-    // --- SCRITTURE ---
-    lines.forEach((l, idx) => {
-      const s = itemSnaps[idx]
-      if (!s.exists()) return
-      const cur = s.data()
-      const qty = Number(l.qty_packages) || 0
-      const size = Number(cur.package_size) || 0
-      const stock = Number(cur.stock) || 0
-
-      let addQty
-      const patch = {}
-      if (cur.unit === 'pz' || !size) {
-        addQty = qty
-        patch.stock = stock + addQty
-      } else {
-        addQty = qty * size
-        const full = Math.floor(stock / size)
-        const hasOpen = stock - full * size > 1e-9
-        patch.stock = stock + addQty
-        patch.bottles_total = full + (hasOpen ? 1 : 0) + qty
-      }
-      tx.update(doc(db, 'inventory_items', l.item_id), patch)
-      tx.set(doc(movementsCol), {
-        item_id: l.item_id,
-        item_name: cur.name,
-        type: 'load',
-        qty: addQty,
-        unit: cur.unit ?? null,
-        reason: 'ordine fornitore',
-        created_at: serverTimestamp(),
-      })
+    let addQty
+    const patch = {}
+    if (cur.unit === 'pz' || !size) {
+      addQty = qty
+      patch.stock = increment(addQty)
+    } else {
+      addQty = qty * size
+      const full = Math.floor(stock / size)
+      const hasOpen = stock - full * size > 1e-9
+      patch.stock = increment(addQty)
+      patch.bottles_total = full + (hasOpen ? 1 : 0) + qty
+    }
+    await updateDoc(doc(db, 'inventory_items', l.item_id), patch)
+    await addDoc(movementsCol, {
+      item_id: l.item_id,
+      item_name: cur.name,
+      type: 'load',
+      qty: addQty,
+      unit: cur.unit ?? null,
+      reason: 'ordine fornitore',
+      created_at: serverTimestamp(),
     })
+  }
 
-    tx.update(orderRef, { status: 'ricevuto', received_at: serverTimestamp() })
-  })
+  await updateDoc(orderRef, { status: 'ricevuto', received_at: serverTimestamp() })
 }
 
 // --- SCADENZARIO FORNITORI (documenti / pagamenti) ---
@@ -982,80 +968,74 @@ export async function payGroupCash({
   if (!orderIds || orderIds.length === 0) return null
   const nowIso = new Date().toISOString()
   const settlementId = doc(paymentsCol).id
-  let lowStock = []
 
-  await runTransaction(db, async (tx) => {
-    lowStock = []
-    const refs = orderIds.map((id) => doc(ordersCol, id))
-    const snaps = await Promise.all(refs.map((r) => tx.get(r)))
-    let total = 0
-    const covered = []
-    const items = []
-    snaps.forEach((s, i) => {
-      if (!s.exists()) return
-      const o = s.data()
-      if (o.status === ORDER_STATUSES.ANNULLATO || o.payment_status === 'pagato') return
-      total += Number(o.total) || 0
-      covered.push({ ref: refs[i], raw: o })
-      for (const it of o.items || []) {
-        items.push({ order_id: refs[i].id, name: it.name, qty: it.qty, unit_price: it.unit_price })
-      }
-    })
-    if (covered.length === 0) return
-
-    // Il pagamento chiude i conti: tutte le comande risultano SERVITE e
-    // quelle mai prese in carico si scaricano a magazzino ora (letture di
-    // scarico in blocco PRIMA delle scritture, regola delle transazioni).
-    const served = covered.map(({ ref, raw }) => ({
-      ref,
-      comande: serveAllComande(normalizeOrderDoc(raw).comande, nowIso),
-    }))
-    lowStock = await depleteComandeInventory(
-      tx,
-      served.flatMap(({ ref, comande }) => unappliedEntries(ref.id, comande))
-    )
-    for (const { ref, comande } of served) {
-      tx.update(ref, {
-        payment_status: 'pagato',
-        payment_method: 'banco',
-        paid_at: nowIso,
-        payment_id: settlementId,
-        status: ORDER_STATUSES.PAGATO,
-        [`status_times.${ORDER_STATUSES.PAGATO}`]: nowIso,
-        comande,
-        comande_statuses: comandeStatuses(comande),
-      })
-    }
-
-    const orderIdsCovered = covered.map((c) => c.ref.id)
-    const baseDoc = {
-      serata_id: serataId,
-      created_at: serverTimestamp(),
-      by,
-      direction: 'incasso',
-      method: 'banco',
-      status: 'pagato',
-      group_id: group_id || null,
-      group_ids: group_ids || [],
-      order_ids: orderIdsCovered,
-      items,
-      settlement_id: settlementId,
-      paid_at: nowIso,
-    }
-    if (split && split.count > 1) {
-      const amounts = splitAmounts(total, split.count)
-      amounts.forEach((amt, idx) => {
-        tx.set(doc(paymentsCol), {
-          ...baseDoc,
-          amount: amt,
-          split_count: split.count,
-          split_index: idx + 1,
-        })
-      })
-    } else {
-      tx.set(doc(paymentsCol), { ...baseDoc, amount: Math.round(total * 100) / 100, split_count: null, split_index: null })
+  const refs = orderIds.map((id) => doc(ordersCol, id))
+  const snaps = await Promise.all(refs.map((r) => getDoc(r)))
+  let total = 0
+  const covered = []
+  const items = []
+  snaps.forEach((s, i) => {
+    if (!s.exists()) return
+    const o = s.data()
+    if (o.status === ORDER_STATUSES.ANNULLATO || o.payment_status === 'pagato') return
+    total += Number(o.total) || 0
+    covered.push({ ref: refs[i], raw: o })
+    for (const it of o.items || []) {
+      items.push({ order_id: refs[i].id, name: it.name, qty: it.qty, unit_price: it.unit_price })
     }
   })
+  if (covered.length === 0) return null
+
+  // Il pagamento chiude i conti: tutte le comande risultano SERVITE e quelle
+  // mai prese in carico si scaricano a magazzino ora.
+  const served = covered.map(({ ref, raw }) => ({
+    ref,
+    comande: serveAllComande(normalizeOrderDoc(raw).comande, nowIso),
+  }))
+  const lowStock = await depleteComandeInventory(
+    served.flatMap(({ ref, comande }) => unappliedEntries(ref.id, comande))
+  )
+  for (const { ref, comande } of served) {
+    await updateDoc(ref, {
+      payment_status: 'pagato',
+      payment_method: 'banco',
+      paid_at: nowIso,
+      payment_id: settlementId,
+      status: ORDER_STATUSES.PAGATO,
+      [`status_times.${ORDER_STATUSES.PAGATO}`]: nowIso,
+      comande,
+      comande_statuses: comandeStatuses(comande),
+    })
+  }
+
+  const orderIdsCovered = covered.map((c) => c.ref.id)
+  const baseDoc = {
+    serata_id: serataId,
+    created_at: serverTimestamp(),
+    by,
+    direction: 'incasso',
+    method: 'banco',
+    status: 'pagato',
+    group_id: group_id || null,
+    group_ids: group_ids || [],
+    order_ids: orderIdsCovered,
+    items,
+    settlement_id: settlementId,
+    paid_at: nowIso,
+  }
+  if (split && split.count > 1) {
+    const amounts = splitAmounts(total, split.count)
+    for (let idx = 0; idx < amounts.length; idx++) {
+      await addDoc(paymentsCol, {
+        ...baseDoc,
+        amount: amounts[idx],
+        split_count: split.count,
+        split_index: idx + 1,
+      })
+    }
+  } else {
+    await addDoc(paymentsCol, { ...baseDoc, amount: Math.round(total * 100) / 100, split_count: null, split_index: null })
+  }
   notifyLowStock(lowStock)
   return settlementId
 }
@@ -1181,64 +1161,66 @@ export async function createOrder({
   const counterRef = doc(db, 'counters', serata_id)
   const newOrderRef = doc(ordersCol)
 
-  await runTransaction(db, async (tx) => {
-    const counterSnap = await tx.get(counterRef)
-    const last = counterSnap.exists() ? counterSnap.data().last || 0 : 0
-    const dailyNumber = last + 1
-    tx.set(counterRef, { last: dailyNumber }, { merge: true })
+  // Numero giornaliero: letto dalla cache (offline compreso) e incrementato.
+  // Su un singolo dispositivo resta univoco anche offline (la cache riflette
+  // subito le scritture in coda); su più dispositivi offline in contemporanea
+  // può collidere, si riconcilia al sync.
+  const counterSnap = await getDoc(counterRef)
+  const last = counterSnap.exists() ? counterSnap.data().last || 0 : 0
+  const dailyNumber = last + 1
+  await setDoc(counterRef, { last: dailyNumber }, { merge: true })
 
-    const nowIso = new Date().toISOString()
-    const mappedItems = items.map((i) => ({
-      drink_id: i.drink_id,
-      name: i.name,
-      unit_price: i.price,
-      qty: i.qty,
-      sumup_product_id: i.sumup_product_id ?? null,
-      ...(i.custom ? { custom: true, recipe_items: i.recipe_items ?? [] } : {}),
-    }))
-    // Modello conto/comande: l'ordine nasce `aperto` con la COMANDA 1, che
-    // porta lo stato di lavorazione (il POS la crea già in preparazione).
-    const comanda1 = {
-      id: 'c1',
-      seq: 1,
-      items: mappedItems,
-      status,
-      status_times: { [status]: nowIso },
-      inventory_applied: false,
-      inventory_consumption: null,
-      created_at: nowIso,
-    }
-    tx.set(newOrderRef, {
-      daily_number: dailyNumber,
-      order_date: orderDate,
-      serata_id,
-      table_label: table_label || null,
-      note: note || null,
-      status: ORDER_OPEN,
-      comande: [comanda1],
-      comande_statuses: [status],
-      total,
-      coperto_persons,
-      coperto_amount,
-      service_charge_amount,
-      tip_amount,
-      service_mode,
-      push_token,
-      placed_by,
-      customer_name,
-      customer_uid,
-      payment_method,
-      payment_status,
-      payment_required,
-      group_id: group_id || null,
-      group_name_snapshot: group_name_snapshot || null,
-      payment_id: null,
-      client_temp_id,
-      created_at: serverTimestamp(),
-      // Aggregato di tutte le comande (qui solo la prima): usato per totale,
-      // scontrino e compatibilità con le viste esistenti.
-      items: mappedItems,
-    })
+  const nowIso = new Date().toISOString()
+  const mappedItems = items.map((i) => ({
+    drink_id: i.drink_id,
+    name: i.name,
+    unit_price: i.price,
+    qty: i.qty,
+    sumup_product_id: i.sumup_product_id ?? null,
+    ...(i.custom ? { custom: true, recipe_items: i.recipe_items ?? [] } : {}),
+  }))
+  // Modello conto/comande: l'ordine nasce `aperto` con la COMANDA 1, che
+  // porta lo stato di lavorazione (il POS la crea già in preparazione).
+  const comanda1 = {
+    id: 'c1',
+    seq: 1,
+    items: mappedItems,
+    status,
+    status_times: { [status]: nowIso },
+    inventory_applied: false,
+    inventory_consumption: null,
+    created_at: nowIso,
+  }
+  await setDoc(newOrderRef, {
+    daily_number: dailyNumber,
+    order_date: orderDate,
+    serata_id,
+    table_label: table_label || null,
+    note: note || null,
+    status: ORDER_OPEN,
+    comande: [comanda1],
+    comande_statuses: [status],
+    total,
+    coperto_persons,
+    coperto_amount,
+    service_charge_amount,
+    tip_amount,
+    service_mode,
+    push_token,
+    placed_by,
+    customer_name,
+    customer_uid,
+    payment_method,
+    payment_status,
+    payment_required,
+    group_id: group_id || null,
+    group_name_snapshot: group_name_snapshot || null,
+    payment_id: null,
+    client_temp_id,
+    created_at: serverTimestamp(),
+    // Aggregato di tutte le comande (qui solo la prima): usato per totale,
+    // scontrino e compatibilità con le viste esistenti.
+    items: mappedItems,
   })
 
   const snap = await getDoc(newOrderRef)
@@ -1328,43 +1310,40 @@ export async function createInvoice({ order, customer, ivaRate = 10 }) {
   const invoiceRef = doc(invoicesCol)
   const orderRef = doc(db, 'orders', order.id)
   const nowIso = new Date().toISOString()
-  let number = null
 
-  await runTransaction(db, async (tx) => {
-    const counterSnap = await tx.get(counterRef)
-    const seq = ((counterSnap.exists() ? counterSnap.data().seq : 0) || 0) + 1
-    number = `${seq}/${year}`
-    tx.set(counterRef, { seq }, { merge: true })
-    tx.set(invoiceRef, {
-      number,
-      seq,
-      year,
-      order_id: order.id,
-      order_daily_number: order.daily_number ?? null,
-      serata_id: order.serata_id ?? null,
-      customer: {
-        denominazione: customer.denominazione || '',
-        piva: customer.piva || null,
-        cf: customer.cf || null,
-        sdi: customer.sdi || null,
-        indirizzo: customer.indirizzo || null,
-        email: customer.email || null,
-      },
-      items: (order.order_items || []).map((i) => ({
-        name: i.name,
-        qty: i.qty,
-        unit_price: i.unit_price,
-      })),
-      total: order.total ?? 0,
-      discount_amount: order.discount_amount ?? 0,
-      iva_rate: Number(ivaRate) || 0,
-      status: 'emessa',
-      sent_to: null,
-      sent_at: null,
-      created_at: nowIso,
-    })
-    tx.update(orderRef, { invoice_id: invoiceRef.id, invoice_number: number })
+  const counterSnap = await getDoc(counterRef)
+  const seq = ((counterSnap.exists() ? counterSnap.data().seq : 0) || 0) + 1
+  const number = `${seq}/${year}`
+  await setDoc(counterRef, { seq }, { merge: true })
+  await setDoc(invoiceRef, {
+    number,
+    seq,
+    year,
+    order_id: order.id,
+    order_daily_number: order.daily_number ?? null,
+    serata_id: order.serata_id ?? null,
+    customer: {
+      denominazione: customer.denominazione || '',
+      piva: customer.piva || null,
+      cf: customer.cf || null,
+      sdi: customer.sdi || null,
+      indirizzo: customer.indirizzo || null,
+      email: customer.email || null,
+    },
+    items: (order.order_items || []).map((i) => ({
+      name: i.name,
+      qty: i.qty,
+      unit_price: i.unit_price,
+    })),
+    total: order.total ?? 0,
+    discount_amount: order.discount_amount ?? 0,
+    iva_rate: Number(ivaRate) || 0,
+    status: 'emessa',
+    sent_to: null,
+    sent_at: null,
+    created_at: nowIso,
   })
+  await updateDoc(orderRef, { invoice_id: invoiceRef.id, invoice_number: number })
   const snap = await getDoc(invoiceRef)
   return { id: invoiceRef.id, ...snap.data() }
 }
@@ -1421,14 +1400,12 @@ export async function topUpVoucher(id, amount) {
   const add = Math.max(0, Math.round((Number(amount) || 0) * 100) / 100)
   if (!(add > 0)) throw new Error('Importo di ricarica non valido')
   const nowIso = new Date().toISOString()
-  await runTransaction(db, async (tx) => {
-    const snap = await tx.get(ref)
-    if (!snap.exists()) throw new Error('Buono non trovato')
-    const v = snap.data()
-    tx.update(ref, {
-      balance: Math.round(((Number(v.balance) || 0) + add) * 100) / 100,
-      movements: [...(v.movements || []), { type: 'carica', amount: add, at: nowIso }],
-    })
+  const snap = await getDoc(ref)
+  if (!snap.exists()) throw new Error('Buono non trovato')
+  const v = snap.data()
+  await updateDoc(ref, {
+    balance: increment(add),
+    movements: [...(v.movements || []), { type: 'carica', amount: add, at: nowIso }],
   })
 }
 
@@ -1444,48 +1421,46 @@ export async function payWithVoucher(orderId, voucherId, requestedAmount) {
   const orderRef = doc(db, 'orders', orderId)
   const voucherRef = doc(vouchersCol, voucherId)
   const nowIso = new Date().toISOString()
-  let redeemed = 0
-  let closed = false
-  await runTransaction(db, async (tx) => {
-    const [oSnap, vSnap] = await Promise.all([tx.get(orderRef), tx.get(voucherRef)])
-    if (!oSnap.exists()) throw new Error('Ordine non trovato')
-    if (!vSnap.exists()) throw new Error('Buono non trovato')
-    const o = oSnap.data()
-    const v = vSnap.data()
-    if (o.status === ORDER_STATUSES.ANNULLATO) throw new Error('Ordine annullato')
-    if (o.payment_status === 'pagato') throw new Error('Ordine già pagato')
-    const due = orderDue(o)
-    const balance = Math.max(0, Number(v.balance) || 0)
-    redeemed = Math.round(Math.min(due, balance, Math.max(0, Number(requestedAmount) || 0)) * 100) / 100
-    if (!(redeemed > 0)) throw new Error('Saldo del buono insufficiente')
+  const [oSnap, vSnap] = await Promise.all([getDoc(orderRef), getDoc(voucherRef)])
+  if (!oSnap.exists()) throw new Error('Ordine non trovato')
+  if (!vSnap.exists()) throw new Error('Buono non trovato')
+  const o = oSnap.data()
+  const v = vSnap.data()
+  if (o.status === ORDER_STATUSES.ANNULLATO) throw new Error('Ordine annullato')
+  if (o.payment_status === 'pagato') throw new Error('Ordine già pagato')
+  const due = orderDue(o)
+  const balance = Math.max(0, Number(v.balance) || 0)
+  const redeemed = Math.round(Math.min(due, balance, Math.max(0, Number(requestedAmount) || 0)) * 100) / 100
+  if (!(redeemed > 0)) throw new Error('Saldo del buono insufficiente')
 
-    const payments = [
-      ...(o.payments || []),
-      { id: `pay-${Date.now()}`, amount: redeemed, method: 'buono', voucher_id: voucherId, voucher_name: v.holder_name, at: nowIso },
-    ]
-    closed = paymentCloses(o, redeemed)
-    let servedPatch = {}
-    if (closed) {
-      const comande = serveAllComande(normalizeOrderDoc(o).comande, nowIso)
-      servedPatch = { comande, comande_statuses: comandeStatuses(comande) }
-    }
-    tx.update(orderRef, {
-      payments,
-      ...(closed
-        ? {
-            status: ORDER_STATUSES.PAGATO,
-            [`status_times.${ORDER_STATUSES.PAGATO}`]: nowIso,
-            payment_status: 'pagato',
-            payment_method: summaryMethod(payments),
-            paid_at: nowIso,
-            ...servedPatch,
-          }
-        : { payment_status: 'parziale' }),
-    })
-    tx.update(voucherRef, {
-      balance: Math.round((balance - redeemed) * 100) / 100,
-      movements: [...(v.movements || []), { type: 'uso', amount: -redeemed, order_id: orderId, at: nowIso }],
-    })
+  const payments = [
+    ...(o.payments || []),
+    { id: `pay-${Date.now()}`, amount: redeemed, method: 'buono', voucher_id: voucherId, voucher_name: v.holder_name, at: nowIso },
+  ]
+  const closed = paymentCloses(o, redeemed)
+  let servedPatch = {}
+  if (closed) {
+    const comande = serveAllComande(normalizeOrderDoc(o).comande, nowIso)
+    servedPatch = { comande, comande_statuses: comandeStatuses(comande) }
+  }
+  // Due scritture accodabili (ordine + buono): offline si accodano entrambe.
+  // Il saldo scala con increment (commutativo).
+  await updateDoc(orderRef, {
+    payments,
+    ...(closed
+      ? {
+          status: ORDER_STATUSES.PAGATO,
+          [`status_times.${ORDER_STATUSES.PAGATO}`]: nowIso,
+          payment_status: 'pagato',
+          payment_method: summaryMethod(payments),
+          paid_at: nowIso,
+          ...servedPatch,
+        }
+      : { payment_status: 'parziale' }),
+  })
+  await updateDoc(voucherRef, {
+    balance: increment(-redeemed),
+    movements: [...(v.movements || []), { type: 'uso', amount: -redeemed, order_id: orderId, at: nowIso }],
   })
   return { redeemed, closed }
 }
@@ -1495,19 +1470,17 @@ export async function payWithVoucher(orderId, voucherId, requestedAmount) {
 // dei pagamenti ragionano sempre sullo stesso numero.
 export async function setOrderDiscount(id, discount) {
   const ref = doc(db, 'orders', id)
-  await runTransaction(db, async (tx) => {
-    const snap = await tx.get(ref)
-    if (!snap.exists()) throw new Error('Ordine non trovato')
-    const o = snap.data()
-    if (o.payment_status === 'pagato') throw new Error('Ordine già pagato')
-    const clean =
-      discount && Number(discount.value) > 0
-        ? { type: discount.type === 'percent' ? 'percent' : 'euro', value: Number(discount.value) }
-        : null
-    tx.update(ref, {
-      discount: clean,
-      discount_amount: discountAmount(o.total ?? 0, clean),
-    })
+  const snap = await getDoc(ref)
+  if (!snap.exists()) throw new Error('Ordine non trovato')
+  const o = snap.data()
+  if (o.payment_status === 'pagato') throw new Error('Ordine già pagato')
+  const clean =
+    discount && Number(discount.value) > 0
+      ? { type: discount.type === 'percent' ? 'percent' : 'euro', value: Number(discount.value) }
+      : null
+  await updateDoc(ref, {
+    discount: clean,
+    discount_amount: discountAmount(o.total ?? 0, clean),
   })
 }
 
@@ -1518,50 +1491,46 @@ export async function setOrderDiscount(id, discount) {
 export async function registerPayment(id, { amount, method = 'banco', items = null } = {}) {
   const ref = doc(db, 'orders', id)
   const nowIso = new Date().toISOString()
-  let closed = false
+  const snap = await getDoc(ref)
+  if (!snap.exists()) throw new Error('Ordine non trovato')
+  const o = snap.data()
+  if (o.status === ORDER_STATUSES.ANNULLATO) throw new Error('Ordine annullato')
+  if (o.payment_status === 'pagato') throw new Error('Ordine già pagato')
+  const due = orderDue(o)
+  const paid = Math.min(Number(amount) || 0, due)
+  if (!(paid > 0)) throw new Error('Importo non valido')
+  const payments = [
+    ...(o.payments || []),
+    {
+      id: `pay-${Date.now()}-${(o.payments || []).length + 1}`,
+      amount: paid,
+      method,
+      items: items?.length ? items : null,
+      at: nowIso,
+    },
+  ]
+  const closed = paymentCloses(o, paid)
   let lowStock = []
-  await runTransaction(db, async (tx) => {
-    lowStock = []
-    const snap = await tx.get(ref)
-    if (!snap.exists()) throw new Error('Ordine non trovato')
-    const o = snap.data()
-    if (o.status === ORDER_STATUSES.ANNULLATO) throw new Error('Ordine annullato')
-    if (o.payment_status === 'pagato') throw new Error('Ordine già pagato')
-    const due = orderDue(o)
-    const paid = Math.min(Number(amount) || 0, due)
-    if (!(paid > 0)) throw new Error('Importo non valido')
-    const payments = [
-      ...(o.payments || []),
-      {
-        id: `pay-${Date.now()}-${(o.payments || []).length + 1}`,
-        amount: paid,
-        method,
-        items: items?.length ? items : null,
-        at: nowIso,
-      },
-    ]
-    closed = paymentCloses(o, paid)
-    let servedPatch = {}
-    if (closed) {
-      // Conto saldato ⇒ tutte le comande risultano SERVITE; quelle mai
-      // prese in carico vengono scaricate a magazzino adesso.
-      const comande = serveAllComande(normalizeOrderDoc(o).comande, nowIso)
-      lowStock = await depleteComandeInventory(tx, unappliedEntries(id, comande))
-      servedPatch = { comande, comande_statuses: comandeStatuses(comande) }
-    }
-    tx.update(ref, {
-      payments,
-      ...(closed
-        ? {
-            status: ORDER_STATUSES.PAGATO,
-            [`status_times.${ORDER_STATUSES.PAGATO}`]: nowIso,
-            payment_status: 'pagato',
-            payment_method: summaryMethod(payments),
-            paid_at: nowIso,
-            ...servedPatch,
-          }
-        : { payment_status: 'parziale' }),
-    })
+  let servedPatch = {}
+  if (closed) {
+    // Conto saldato ⇒ tutte le comande risultano SERVITE; quelle mai prese
+    // in carico vengono scaricate a magazzino adesso.
+    const comande = serveAllComande(normalizeOrderDoc(o).comande, nowIso)
+    lowStock = await depleteComandeInventory(unappliedEntries(id, comande))
+    servedPatch = { comande, comande_statuses: comandeStatuses(comande) }
+  }
+  await updateDoc(ref, {
+    payments,
+    ...(closed
+      ? {
+          status: ORDER_STATUSES.PAGATO,
+          [`status_times.${ORDER_STATUSES.PAGATO}`]: nowIso,
+          payment_status: 'pagato',
+          payment_method: summaryMethod(payments),
+          paid_at: nowIso,
+          ...servedPatch,
+        }
+      : { payment_status: 'parziale' }),
   })
   notifyLowStock(lowStock)
   return { closed }
@@ -1574,22 +1543,18 @@ export async function registerPayment(id, { amount, method = 'banco', items = nu
 export async function markOrderPaid(id, method) {
   const ref = doc(db, 'orders', id)
   const nowIso = new Date().toISOString()
-  let lowStock = []
-  await runTransaction(db, async (tx) => {
-    lowStock = []
-    const snap = await tx.get(ref)
-    if (!snap.exists()) throw new Error('Ordine non trovato')
-    const comande = serveAllComande(normalizeOrderDoc(snap.data()).comande, nowIso)
-    lowStock = await depleteComandeInventory(tx, unappliedEntries(id, comande))
-    tx.update(ref, {
-      status: ORDER_STATUSES.PAGATO,
-      [`status_times.${ORDER_STATUSES.PAGATO}`]: nowIso,
-      payment_method: method,
-      payment_status: 'pagato',
-      paid_at: nowIso,
-      comande,
-      comande_statuses: comandeStatuses(comande),
-    })
+  const snap = await getDoc(ref)
+  if (!snap.exists()) throw new Error('Ordine non trovato')
+  const comande = serveAllComande(normalizeOrderDoc(snap.data()).comande, nowIso)
+  const lowStock = await depleteComandeInventory(unappliedEntries(id, comande))
+  await updateDoc(ref, {
+    status: ORDER_STATUSES.PAGATO,
+    [`status_times.${ORDER_STATUSES.PAGATO}`]: nowIso,
+    payment_method: method,
+    payment_status: 'pagato',
+    paid_at: nowIso,
+    comande,
+    comande_statuses: comandeStatuses(comande),
   })
   notifyLowStock(lowStock)
 }
@@ -1599,20 +1564,19 @@ export async function markOrderPaid(id, method) {
 // `aperto` e si chiude solo con pagamento/annullo. Allo "in preparazione"
 // scala l'inventario sugli item della comanda (snapshot per-comanda usato
 // per storni e riallineamenti). I doc legacy vengono convertiti al volo.
-// Scarico inventario di PIÙ COMANDE dentro una transazione: tutte le
-// LETTURE (ricette drink, giacenze) prima delle SCRITTURE (regola delle
-// transazioni Firestore) — per questo il batch è unico e non un ciclo di
-// scarichi singoli. Muta le comande (inventory_applied/snapshot per
-// comanda) e ritorna le scorte basse da notificare fuori transazione.
+// Scarico inventario di PIÙ COMANDE — OFFLINE-FRIENDLY. Legge ricette e
+// giacenze dalla cache (getDoc funziona offline con la persistenza) e
+// aggiorna le giacenze con increment(-qty): commutativo, si accoda offline
+// e non richiede una transazione. Muta le comande (inventory_applied/
+// snapshot) e ritorna le scorte basse stimate dallo stock in cache.
 // `entries` = [{ orderId, comanda }].
-async function depleteComandeInventory(tx, entries) {
+async function depleteComandeInventory(entries) {
   if (!entries.length) return []
-  // --- LETTURE ---
   const plans = []
   for (const { orderId, comanda } of entries) {
     const items = Array.isArray(comanda.items) ? comanda.items : []
     const drinkIds = [...new Set(items.filter((i) => !i.custom).map((i) => i.drink_id).filter(Boolean))]
-    const drinkSnaps = await Promise.all(drinkIds.map((d) => tx.get(doc(db, 'drinks', d))))
+    const drinkSnaps = await Promise.all(drinkIds.map((d) => getDoc(doc(db, 'drinks', d))))
     const drinksById = {}
     drinkSnaps.forEach((sn, idx) => {
       drinksById[drinkIds[idx]] = sn.exists() ? sn.data() : null
@@ -1620,22 +1584,20 @@ async function depleteComandeInventory(tx, entries) {
     plans.push({ orderId, comanda, consumption: computeConsumption(items, drinksById) })
   }
   const itemIds = [...new Set(plans.flatMap((p) => p.consumption.map((c) => c.inventory_item_id)))]
-  const itemSnaps = await Promise.all(itemIds.map((id) => tx.get(doc(db, 'inventory_items', id))))
+  const itemSnaps = await Promise.all(itemIds.map((id) => getDoc(doc(db, 'inventory_items', id))))
   const itemsById = {}
   itemSnaps.forEach((sn, idx) => {
     if (sn.exists()) itemsById[itemIds[idx]] = sn.data()
   })
-  // --- SCRITTURE ---
-  // Un movimento per comanda/ingrediente; la giacenza si aggiorna UNA volta
-  // per ingrediente con il delta cumulato (due scritture sullo stesso doc
-  // nella stessa transazione si sovrascriverebbero).
+  // Un movimento per comanda/ingrediente; la giacenza cala una volta per
+  // ingrediente con il delta cumulato (increment: sicuro anche offline).
   const delta = {}
   for (const p of plans) {
     for (const c of p.consumption) {
       const cur = itemsById[c.inventory_item_id]
       if (!cur) continue
       delta[c.inventory_item_id] = (delta[c.inventory_item_id] || 0) + c.qty
-      tx.set(doc(movementsCol), {
+      await addDoc(movementsCol, {
         item_id: c.inventory_item_id,
         item_name: cur.name,
         type: 'unload',
@@ -1653,7 +1615,7 @@ async function depleteComandeInventory(tx, entries) {
   for (const [id, qty] of Object.entries(delta)) {
     const cur = itemsById[id]
     const newStock = (Number(cur.stock) || 0) - qty
-    tx.update(doc(db, 'inventory_items', id), { stock: newStock })
+    await updateDoc(doc(db, 'inventory_items', id), { stock: increment(-qty) })
     if (newStock <= (Number(cur.low_threshold) || 0)) {
       lowStock.push({ name: cur.name, stock: newStock, unit: cur.unit })
     }
@@ -1681,44 +1643,41 @@ export async function advanceComanda(orderId, comandaId, newStatus) {
   let lowStock = []
   let statComanda = null
 
-  await runTransaction(db, async (tx) => {
-    lowStock = []
-    const orderSnap = await tx.get(orderRef)
-    if (!orderSnap.exists()) throw new Error('Ordine non trovato')
-    const raw = orderSnap.data()
-    const norm = normalizeOrderDoc(raw)
-    const comande = norm.comande.map((c) => ({ ...c }))
-    const comanda = comandaId
-      ? comande.find((c) => c.id === comandaId)
-      : activeComanda({ comande })
-    if (!comanda) throw new Error('Comanda non trovata')
+  const orderSnap = await getDoc(orderRef)
+  if (!orderSnap.exists()) throw new Error('Ordine non trovato')
+  const raw = orderSnap.data()
+  const norm = normalizeOrderDoc(raw)
+  const comande = norm.comande.map((c) => ({ ...c }))
+  const comanda = comandaId
+    ? comande.find((c) => c.id === comandaId)
+    : activeComanda({ comande })
+  if (!comanda) throw new Error('Comanda non trovata')
 
-    // Scarico inventario alla presa in carico della comanda (una volta sola).
-    if (newStatus === ORDER_STATUSES.IN_PREPARAZIONE && comanda.inventory_applied !== true) {
-      lowStock = await depleteComandeInventory(tx, [{ orderId, comanda }])
-    }
+  // Scarico inventario alla presa in carico della comanda (una volta sola).
+  if (newStatus === ORDER_STATUSES.IN_PREPARAZIONE && comanda.inventory_applied !== true) {
+    lowStock = await depleteComandeInventory([{ orderId, comanda }])
+  }
 
-    comanda.status = newStatus
-    comanda.status_times = { ...(comanda.status_times || {}), [newStatus]: nowIso }
-    statComanda = { ...comanda, order: raw }
+  comanda.status = newStatus
+  comanda.status_times = { ...(comanda.status_times || {}), [newStatus]: nowIso }
+  statComanda = { ...comanda, order: raw }
 
-    const patch = {
-      status: norm.status,
-      comande,
-      comande_statuses: comandeStatuses(comande),
-    }
-    // Conto già pagato (online/lettore) e tutte le comande servite: il conto
-    // si chiude da solo (c'è anche la cintura lato server).
-    if (
-      newStatus === ORDER_STATUSES.RITIRATO &&
-      raw.payment_status === 'pagato' &&
-      allServed({ comande })
-    ) {
-      patch.status = ORDER_STATUSES.PAGATO
-      patch[`status_times.${ORDER_STATUSES.PAGATO}`] = nowIso
-    }
-    tx.update(orderRef, patch)
-  })
+  const patch = {
+    status: norm.status,
+    comande,
+    comande_statuses: comandeStatuses(comande),
+  }
+  // Conto già pagato (online/lettore) e tutte le comande servite: il conto
+  // si chiude da solo (c'è anche la cintura lato server).
+  if (
+    newStatus === ORDER_STATUSES.RITIRATO &&
+    raw.payment_status === 'pagato' &&
+    allServed({ comande })
+  ) {
+    patch.status = ORDER_STATUSES.PAGATO
+    patch[`status_times.${ORDER_STATUSES.PAGATO}`] = nowIso
+  }
+  await updateDoc(orderRef, patch)
 
   notifyLowStock(lowStock)
 
@@ -1800,39 +1759,37 @@ export async function updateOrderPushToken(id, token) {
 // e l'aggregato dell'ordine, ricalcolando il totale.
 export async function updateOrderItems(id, items) {
   const ref = doc(db, 'orders', id)
-  await runTransaction(db, async (tx) => {
-    const snap = await tx.get(ref)
-    if (!snap.exists()) throw new Error('Ordine non trovato')
-    const cur = snap.data()
-    const norm = normalizeOrderDoc(cur)
-    const comande = norm.comande.map((c) => ({ ...c }))
-    if (
-      norm.status !== ORDER_OPEN ||
-      comande.length !== 1 ||
-      comande[0].status !== ORDER_STATUSES.RICEVUTO
-    ) {
-      throw new Error('Ordine già in preparazione: non più modificabile')
-    }
-    const mapped = items.map((i) => ({
-      drink_id: i.drink_id,
-      name: i.name,
-      unit_price: i.unit_price ?? i.price ?? 0,
-      qty: i.qty,
-      sumup_product_id: i.sumup_product_id ?? null,
-      ...(i.custom ? { custom: true, recipe_items: i.recipe_items ?? [] } : {}),
-    }))
-    comande[0] = { ...comande[0], items: mapped }
-    const extras =
-      Number(cur.coperto_amount || 0) +
-      Number(cur.service_charge_amount || 0) +
-      Number(cur.tip_amount || 0)
-    tx.update(ref, {
-      status: ORDER_OPEN,
-      comande,
-      comande_statuses: comandeStatuses(comande),
-      items: mapped,
-      total: sumItems(mapped) + extras,
-    })
+  const snap = await getDoc(ref)
+  if (!snap.exists()) throw new Error('Ordine non trovato')
+  const cur = snap.data()
+  const norm = normalizeOrderDoc(cur)
+  const comande = norm.comande.map((c) => ({ ...c }))
+  if (
+    norm.status !== ORDER_OPEN ||
+    comande.length !== 1 ||
+    comande[0].status !== ORDER_STATUSES.RICEVUTO
+  ) {
+    throw new Error('Ordine già in preparazione: non più modificabile')
+  }
+  const mapped = items.map((i) => ({
+    drink_id: i.drink_id,
+    name: i.name,
+    unit_price: i.unit_price ?? i.price ?? 0,
+    qty: i.qty,
+    sumup_product_id: i.sumup_product_id ?? null,
+    ...(i.custom ? { custom: true, recipe_items: i.recipe_items ?? [] } : {}),
+  }))
+  comande[0] = { ...comande[0], items: mapped }
+  const extras =
+    Number(cur.coperto_amount || 0) +
+    Number(cur.service_charge_amount || 0) +
+    Number(cur.tip_amount || 0)
+  await updateDoc(ref, {
+    status: ORDER_OPEN,
+    comande,
+    comande_statuses: comandeStatuses(comande),
+    items: mapped,
+    total: sumItems(mapped) + extras,
   })
   return mapOrder(await getDoc(ref))
 }
@@ -1857,51 +1814,47 @@ export async function updateOrderInfo(id, { table_label, note, customer_name }) 
 export async function addComanda(orderId, items, { note = null } = {}) {
   const ref = doc(db, 'orders', orderId)
   const nowIso = new Date().toISOString()
-  let lowStock = []
-  await runTransaction(db, async (tx) => {
-    lowStock = []
-    const snap = await tx.get(ref)
-    if (!snap.exists()) throw new Error('Ordine non trovato')
-    const cur = snap.data()
-    const norm = normalizeOrderDoc(cur)
-    if (norm.status !== ORDER_OPEN) throw new Error('Conto chiuso: non più modificabile')
-    const comande = norm.comande.map((c) => ({ ...c }))
-    const seq = comande.reduce((m, c) => Math.max(m, c.seq || 0), 0) + 1
-    const nuova = {
-      id: `c${seq}`,
-      seq,
-      items: items.map((i) => ({
-        drink_id: i.drink_id,
-        name: i.name,
-        unit_price: i.unit_price ?? i.price ?? 0,
-        qty: i.qty,
-        sumup_product_id: i.sumup_product_id ?? null,
-        ...(i.custom ? { custom: true, recipe_items: i.recipe_items ?? [] } : {}),
-      })),
-      status: ORDER_STATUSES.IN_PREPARAZIONE,
-      status_times: {
-        [ORDER_STATUSES.RICEVUTO]: nowIso,
-        [ORDER_STATUSES.IN_PREPARAZIONE]: nowIso,
-      },
-      note: note || null,
-      inventory_applied: false,
-      inventory_consumption: null,
-      created_at: nowIso,
-    }
-    lowStock = await depleteComandeInventory(tx, [{ orderId, comanda: nuova }])
-    comande.push(nuova)
-    const agg = aggregateItems(comande)
-    const extras =
-      Number(cur.coperto_amount || 0) +
-      Number(cur.service_charge_amount || 0) +
-      Number(cur.tip_amount || 0)
-    tx.update(ref, {
-      status: ORDER_OPEN,
-      comande,
-      comande_statuses: comandeStatuses(comande),
-      items: agg,
-      total: sumItems(agg) + extras,
-    })
+  const snap = await getDoc(ref)
+  if (!snap.exists()) throw new Error('Ordine non trovato')
+  const cur = snap.data()
+  const norm = normalizeOrderDoc(cur)
+  if (norm.status !== ORDER_OPEN) throw new Error('Conto chiuso: non più modificabile')
+  const comande = norm.comande.map((c) => ({ ...c }))
+  const seq = comande.reduce((m, c) => Math.max(m, c.seq || 0), 0) + 1
+  const nuova = {
+    id: `c${seq}`,
+    seq,
+    items: items.map((i) => ({
+      drink_id: i.drink_id,
+      name: i.name,
+      unit_price: i.unit_price ?? i.price ?? 0,
+      qty: i.qty,
+      sumup_product_id: i.sumup_product_id ?? null,
+      ...(i.custom ? { custom: true, recipe_items: i.recipe_items ?? [] } : {}),
+    })),
+    status: ORDER_STATUSES.IN_PREPARAZIONE,
+    status_times: {
+      [ORDER_STATUSES.RICEVUTO]: nowIso,
+      [ORDER_STATUSES.IN_PREPARAZIONE]: nowIso,
+    },
+    note: note || null,
+    inventory_applied: false,
+    inventory_consumption: null,
+    created_at: nowIso,
+  }
+  const lowStock = await depleteComandeInventory([{ orderId, comanda: nuova }])
+  comande.push(nuova)
+  const agg = aggregateItems(comande)
+  const extras =
+    Number(cur.coperto_amount || 0) +
+    Number(cur.service_charge_amount || 0) +
+    Number(cur.tip_amount || 0)
+  await updateDoc(ref, {
+    status: ORDER_OPEN,
+    comande,
+    comande_statuses: comandeStatuses(comande),
+    items: agg,
+    total: sumItems(agg) + extras,
   })
   notifyLowStock(lowStock)
   return mapOrder(await getDoc(ref))
@@ -1922,69 +1875,67 @@ export async function bartenderUpdateComanda(orderId, comandaId, { items }) {
     ...(i.custom ? { custom: true, recipe_items: i.recipe_items ?? [] } : {}),
   }))
 
-  await runTransaction(db, async (tx) => {
-    const snap = await tx.get(ref)
-    if (!snap.exists()) throw new Error('Ordine non trovato')
-    const cur = snap.data()
-    const norm = normalizeOrderDoc(cur)
-    if (norm.status !== ORDER_OPEN) throw new Error('Conto chiuso: non più modificabile')
-    const comande = norm.comande.map((c) => ({ ...c }))
-    const comanda = comande.find((c) => c.id === comandaId)
-    if (!comanda) throw new Error('Comanda non trovata')
-    if (comanda.status === ORDER_STATUSES.RITIRATO || comanda.status === ORDER_STATUSES.ANNULLATO) {
-      throw new Error('Comanda già servita: non più modificabile')
-    }
+  const snap = await getDoc(ref)
+  if (!snap.exists()) throw new Error('Ordine non trovato')
+  const cur = snap.data()
+  const norm = normalizeOrderDoc(cur)
+  if (norm.status !== ORDER_OPEN) throw new Error('Conto chiuso: non più modificabile')
+  const comande = norm.comande.map((c) => ({ ...c }))
+  const comanda = comande.find((c) => c.id === comandaId)
+  if (!comanda) throw new Error('Comanda non trovata')
+  if (comanda.status === ORDER_STATUSES.RITIRATO || comanda.status === ORDER_STATUSES.ANNULLATO) {
+    throw new Error('Comanda già servita: non più modificabile')
+  }
 
-    // Scarico già applicato: riallinea le scorte con la differenza.
-    if (comanda.inventory_applied === true) {
-      // --- LETTURE ---
-      const drinkIds = [...new Set(newItems.filter((i) => !i.custom).map((i) => i.drink_id).filter(Boolean))]
-      const drinkSnaps = await Promise.all(drinkIds.map((d) => tx.get(doc(db, 'drinks', d))))
-      const drinksById = {}
-      drinkSnaps.forEach((sn, idx) => {
-        drinksById[drinkIds[idx]] = sn.exists() ? sn.data() : null
-      })
-      const oldCons = Array.isArray(comanda.inventory_consumption) ? comanda.inventory_consumption : []
-      const newCons = computeConsumption(newItems, drinksById)
-      const diffs = consumptionDiff(oldCons, newCons)
-      const invSnaps = await Promise.all(
-        diffs.map((d) => tx.get(doc(db, 'inventory_items', d.inventory_item_id)))
-      )
-      // --- SCRITTURE ---
-      diffs.forEach((d, idx) => {
-        const sn = invSnaps[idx]
-        if (!sn.exists()) return
-        const curItem = sn.data()
-        tx.update(doc(db, 'inventory_items', d.inventory_item_id), {
-          stock: (Number(curItem.stock) || 0) - d.delta,
-        })
-        tx.set(doc(movementsCol), {
-          item_id: d.inventory_item_id,
-          item_name: curItem.name,
-          type: d.delta > 0 ? 'unload' : 'load',
-          qty: Math.abs(d.delta),
-          unit: curItem.unit ?? null,
-          reason: 'modifica ordine',
-          order_id: orderId,
-          created_at: serverTimestamp(),
-        })
-      })
-      comanda.inventory_consumption = newCons
-    }
-
-    comanda.items = newItems
-    const agg = aggregateItems(comande)
-    const extras =
-      Number(cur.coperto_amount || 0) +
-      Number(cur.service_charge_amount || 0) +
-      Number(cur.tip_amount || 0)
-    tx.update(ref, {
-      status: ORDER_OPEN,
-      comande,
-      comande_statuses: comandeStatuses(comande),
-      items: agg,
-      total: sumItems(agg) + extras,
+  // Scarico già applicato: riallinea le scorte con la DIFFERENZA
+  // (increment sul delta: commutativo, si accoda offline).
+  if (comanda.inventory_applied === true) {
+    const drinkIds = [...new Set(newItems.filter((i) => !i.custom).map((i) => i.drink_id).filter(Boolean))]
+    const drinkSnaps = await Promise.all(drinkIds.map((d) => getDoc(doc(db, 'drinks', d))))
+    const drinksById = {}
+    drinkSnaps.forEach((sn, idx) => {
+      drinksById[drinkIds[idx]] = sn.exists() ? sn.data() : null
     })
+    const oldCons = Array.isArray(comanda.inventory_consumption) ? comanda.inventory_consumption : []
+    const newCons = computeConsumption(newItems, drinksById)
+    const diffs = consumptionDiff(oldCons, newCons)
+    const invSnaps = await Promise.all(
+      diffs.map((d) => getDoc(doc(db, 'inventory_items', d.inventory_item_id)))
+    )
+    for (let idx = 0; idx < diffs.length; idx++) {
+      const d = diffs[idx]
+      const sn = invSnaps[idx]
+      if (!sn.exists()) continue
+      const curItem = sn.data()
+      await updateDoc(doc(db, 'inventory_items', d.inventory_item_id), {
+        stock: increment(-d.delta),
+      })
+      await addDoc(movementsCol, {
+        item_id: d.inventory_item_id,
+        item_name: curItem.name,
+        type: d.delta > 0 ? 'unload' : 'load',
+        qty: Math.abs(d.delta),
+        unit: curItem.unit ?? null,
+        reason: 'modifica ordine',
+        order_id: orderId,
+        created_at: serverTimestamp(),
+      })
+    }
+    comanda.inventory_consumption = newCons
+  }
+
+  comanda.items = newItems
+  const agg = aggregateItems(comande)
+  const extras =
+    Number(cur.coperto_amount || 0) +
+    Number(cur.service_charge_amount || 0) +
+    Number(cur.tip_amount || 0)
+  await updateDoc(ref, {
+    status: ORDER_OPEN,
+    comande,
+    comande_statuses: comandeStatuses(comande),
+    items: agg,
+    total: sumItems(agg) + extras,
   })
   return mapOrder(await getDoc(ref))
 }
@@ -2002,66 +1953,64 @@ export async function cancelOrder(id, opts = {}) {
     notify: notifyClient = false,
   } = opts
   const orderRef = doc(db, 'orders', id)
-  await runTransaction(db, async (tx) => {
-    const snap = await tx.get(orderRef)
-    if (!snap.exists()) throw new Error('Ordine non trovato')
-    const order = snap.data()
-    if (order.status === ORDER_STATUSES.ANNULLATO) return
+  const snap = await getDoc(orderRef)
+  if (!snap.exists()) throw new Error('Ordine non trovato')
+  const order = snap.data()
+  if (order.status === ORDER_STATUSES.ANNULLATO) return mapOrder(snap)
 
-    // Somma gli snapshot di consumo di TUTTE le comande già scalate (i doc
-    // legacy hanno lo snapshot a livello ordine, gestito da normalize).
-    const norm = normalizeOrderDoc(order)
-    const comande = norm.comande.map((c) => ({ ...c }))
-    const consumption = comande
-      .filter((c) => c.inventory_applied === true && Array.isArray(c.inventory_consumption))
-      .flatMap((c) => c.inventory_consumption)
-    const restoreStock = kind !== 'non_ritirato'
-    if (restoreStock && consumption.length > 0) {
-      // --- letture ---
-      const itemSnaps = await Promise.all(
-        consumption.map((c) => tx.get(doc(db, 'inventory_items', c.inventory_item_id)))
-      )
-      // --- scritture: ripristino stock ---
-      consumption.forEach((c, idx) => {
-        const s = itemSnaps[idx]
-        if (!s.exists()) return
-        const cur = s.data()
-        tx.update(doc(db, 'inventory_items', c.inventory_item_id), {
-          stock: (Number(cur.stock) || 0) + c.qty,
-        })
-        tx.set(doc(movementsCol), {
-          item_id: c.inventory_item_id,
-          item_name: cur.name,
-          type: 'load',
-          qty: c.qty,
-          unit: cur.unit ?? null,
-          reason: 'storno',
-          order_id: id,
-          created_at: serverTimestamp(),
-        })
+  // Somma gli snapshot di consumo di TUTTE le comande già scalate (i doc
+  // legacy hanno lo snapshot a livello ordine, gestito da normalize).
+  const norm = normalizeOrderDoc(order)
+  const comande = norm.comande.map((c) => ({ ...c }))
+  const consumption = comande
+    .filter((c) => c.inventory_applied === true && Array.isArray(c.inventory_consumption))
+    .flatMap((c) => c.inventory_consumption)
+  const restoreStock = kind !== 'non_ritirato'
+  if (restoreStock && consumption.length > 0) {
+    const itemSnaps = await Promise.all(
+      consumption.map((c) => getDoc(doc(db, 'inventory_items', c.inventory_item_id)))
+    )
+    // Ripristino stock con increment(+qty): commutativo, si accoda offline.
+    for (let idx = 0; idx < consumption.length; idx++) {
+      const c = consumption[idx]
+      const s = itemSnaps[idx]
+      if (!s.exists()) continue
+      const cur = s.data()
+      await updateDoc(doc(db, 'inventory_items', c.inventory_item_id), {
+        stock: increment(c.qty),
+      })
+      await addDoc(movementsCol, {
+        item_id: c.inventory_item_id,
+        item_name: cur.name,
+        type: 'load',
+        qty: c.qty,
+        unit: cur.unit ?? null,
+        reason: 'storno',
+        order_id: id,
+        created_at: serverTimestamp(),
       })
     }
+  }
 
-    // Le comande non servite diventano annullate (le servite restano a storico).
-    const nowIso = new Date().toISOString()
-    for (const c of comande) {
-      if (c.status !== ORDER_STATUSES.RITIRATO && c.status !== ORDER_STATUSES.ANNULLATO) {
-        c.status = ORDER_STATUSES.ANNULLATO
-        c.status_times = { ...(c.status_times || {}), [ORDER_STATUSES.ANNULLATO]: nowIso }
-      }
-      if (restoreStock) c.inventory_applied = false
+  // Le comande non servite diventano annullate (le servite restano a storico).
+  const nowIso = new Date().toISOString()
+  for (const c of comande) {
+    if (c.status !== ORDER_STATUSES.RITIRATO && c.status !== ORDER_STATUSES.ANNULLATO) {
+      c.status = ORDER_STATUSES.ANNULLATO
+      c.status_times = { ...(c.status_times || {}), [ORDER_STATUSES.ANNULLATO]: nowIso }
     }
-    tx.update(orderRef, {
-      status: ORDER_STATUSES.ANNULLATO,
-      comande,
-      comande_statuses: comandeStatuses(comande),
-      [`status_times.${ORDER_STATUSES.ANNULLATO}`]: nowIso,
-      cancelled_by: by,
-      cancel_kind: kind,
-      cancel_phrase: phrase,
-      cancel_message: message || null,
-      cancel_notify: !!notifyClient,
-    })
+    if (restoreStock) c.inventory_applied = false
+  }
+  await updateDoc(orderRef, {
+    status: ORDER_STATUSES.ANNULLATO,
+    comande,
+    comande_statuses: comandeStatuses(comande),
+    [`status_times.${ORDER_STATUSES.ANNULLATO}`]: nowIso,
+    cancelled_by: by,
+    cancel_kind: kind,
+    cancel_phrase: phrase,
+    cancel_message: message || null,
+    cancel_notify: !!notifyClient,
   })
   return mapOrder(await getDoc(orderRef))
 }
