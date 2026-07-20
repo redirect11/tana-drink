@@ -32,6 +32,7 @@ import {
   splitLine,
   hasMergeable,
   lineSignature,
+  moveLine,
   qtyByDrink as draftQtyByDrink,
 } from '../lib/orderLines.js'
 import { toastSync, toastSuccess, toastError } from '../lib/toast.js'
@@ -265,6 +266,40 @@ export default function OrderPosDetail({ order }) {
     }
   }
 
+  // ── Riordino righe di bozza per DRAG (tieni premuto e trascina) ──
+  // Long-press (~300ms) su una riga → parte il trascinamento; muovendo il
+  // dito sopra un'altra riga le voci si riordinano dal vivo. Touch e mouse
+  // (pointer events); i +/− e ✏️ non avviano il drag (stopPropagation).
+  const [dragIndex, setDragIndex] = useState(null)
+  const dragRef = useRef({ timer: null, startY: 0 })
+  const startDrag = (e, index) => {
+    if (closed) return
+    try { e.currentTarget.setPointerCapture(e.pointerId) } catch { /* ok */ }
+    dragRef.current.startY = e.clientY
+    clearTimeout(dragRef.current.timer)
+    dragRef.current.timer = setTimeout(() => setDragIndex(index), 300)
+  }
+  const moveDrag = (e) => {
+    if (dragIndex == null) {
+      // mosso troppo prima dello scatto → è uno scroll, annulla il long-press
+      if (Math.abs(e.clientY - dragRef.current.startY) > 8) clearTimeout(dragRef.current.timer)
+      return
+    }
+    e.preventDefault()
+    const el = document.elementFromPoint(e.clientX, e.clientY)
+    const target = el?.closest('[data-draft-index]')
+    if (!target) return
+    const to = Number(target.dataset.draftIndex)
+    if (Number.isInteger(to) && to !== dragIndex) {
+      setDraft((items) => moveLine(items, dragIndex, to))
+      setDragIndex(to)
+    }
+  }
+  const endDrag = () => {
+    clearTimeout(dragRef.current.timer)
+    setDragIndex(null)
+  }
+
   const mergeDraft = () => setDraft((items) => mergeLines(items))
   // Separa TUTTE le righe unite (qty>1) in righe da 1: inverso di "Unisci",
   // stesso posto (toggle globale accanto a Comande).
@@ -444,19 +479,39 @@ export default function OrderPosDetail({ order }) {
             })}
 
             {/* Righe di BOZZA: SEPARATE (niente somma automatica), ognuna con
-                +/−, modifica per-item e dissocia; unione manuale in fondo. */}
+                +/−, modifica per-item. Si RIORDINANO col drag: tieni premuto
+                su una riga e trascinala sopra/sotto un'altra. */}
             {draft.length > 0 && (
               <div style={{ marginTop: 10, borderTop: '1px dashed var(--line)', paddingTop: 6 }}>
-                <span className="muted small" style={{ letterSpacing: 0.5 }}>DA AGGIUNGERE</span>
-                {draft.map((l) => (
-                  <div className="row between" key={l.line_id} style={{ alignItems: 'center', marginTop: 6 }}>
+                <span className="muted small" style={{ letterSpacing: 0.5 }}>DA AGGIUNGERE · tieni premuto per spostare</span>
+                {draft.map((l, idx) => (
+                  <div
+                    className="row between draft-line"
+                    key={l.line_id}
+                    data-draft-index={idx}
+                    onPointerDown={(e) => startDrag(e, idx)}
+                    onPointerMove={moveDrag}
+                    onPointerUp={endDrag}
+                    onPointerCancel={endDrag}
+                    style={{
+                      alignItems: 'center',
+                      marginTop: 6,
+                      touchAction: 'none',
+                      cursor: 'grab',
+                      borderRadius: 8,
+                      background: dragIndex === idx ? 'var(--tile-bg)' : 'transparent',
+                      boxShadow: dragIndex === idx ? '0 4px 14px rgba(0,0,0,0.35)' : 'none',
+                      opacity: dragIndex != null && dragIndex !== idx ? 0.85 : 1,
+                    }}
+                  >
                     <span className="grow" style={{ fontSize: '0.92rem' }}>
+                      <span aria-hidden style={{ opacity: 0.4, marginRight: 4 }}>⠿</span>
                       {l.custom ? '✨ ' : ''}{l.name}
                       <span className="muted small"> · {formatPrice(l.unit_price)}</span>
                     </span>
                     <span className="row" style={{ gap: 4, alignItems: 'center' }}>
-                      <button className="btn ghost small" aria-label={`Modifica ${l.name}`} onClick={() => setEditLine(l)}>✏️</button>
-                      <span className="qty">
+                      <button className="btn ghost small" aria-label={`Modifica ${l.name}`} onPointerDown={(e) => e.stopPropagation()} onClick={() => setEditLine(l)}>✏️</button>
+                      <span className="qty" onPointerDown={(e) => e.stopPropagation()}>
                         <button aria-label="Riduci" onClick={() => setDraftLineQty(l.line_id, l.qty - 1)}>−</button>
                         <strong>{l.qty}</strong>
                         <button aria-label="Aumenta" onClick={() => setDraftLineQty(l.line_id, l.qty + 1)}>+</button>

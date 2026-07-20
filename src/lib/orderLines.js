@@ -86,3 +86,13 @@ export function qtyByDrink(lines) {
 export const linesTotal = (lines) =>
   (lines || []).reduce((s, l) => s + l.qty * Number(l.price ?? l.unit_price ?? 0), 0)
 export const linesCount = (lines) => (lines || []).reduce((s, l) => s + l.qty, 0)
+
+// Sposta la riga da un indice all'altro (drag & drop nel riepilogo ordine).
+export function moveLine(lines, from, to) {
+  const arr = lines || []
+  if (from === to || from < 0 || to < 0 || from >= arr.length || to >= arr.length) return arr
+  const next = arr.slice()
+  const [item] = next.splice(from, 1)
+  next.splice(to, 0, item)
+  return next
+}
