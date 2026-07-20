@@ -137,6 +137,30 @@ export function costPerCl(item, { gross = true } = {}) {
   return unit / (size / 10)
 }
 
+// Unità di misura "piccole" adatte a mostrare il prezzo unitario:
+// liquidi (base ml) → cl o ml; solidi (base g) → g o mg; pezzi → pz.
+export function smallUnits(item) {
+  if (item?.unit === 'ml') return ['cl', 'ml']
+  if (item?.unit === 'g') return ['g', 'mg']
+  return ['pz']
+}
+
+// Quante unità base valgono 1 unità "piccola" scelta.
+const BASE_PER_SMALL = { cl: 10, ml: 1, g: 1, mg: 0.001, pz: 1 }
+
+// Costo di una singola unità (cl/ml/g/mg/pz) partendo dal costo per
+// confezione: cost / (package_size / base-per-unità). Null se non calcolabile.
+export function costPerUnit(item, unit, { gross = true } = {}) {
+  const packCost = gross ? costWithVat(item?.cost, item?.vat) : Number(item?.cost) || 0
+  if (!(packCost > 0)) return null
+  if ((item?.unit || 'pz') === 'pz') return unit === 'pz' ? packCost : null
+  const size = Number(item?.package_size) || 0
+  if (size <= 0) return null
+  const per = BASE_PER_SMALL[unit]
+  if (!per) return null
+  return packCost / (size / per)
+}
+
 // Valore totale del magazzino.
 export function inventoryTotalValue(items, opts) {
   return (items || []).reduce((s, it) => s + stockValue(it, opts), 0)

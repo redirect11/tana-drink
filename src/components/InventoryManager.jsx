@@ -26,7 +26,8 @@ import {
   filterItems,
   costWithVat,
   stockValue,
-  costPerCl,
+  smallUnits,
+  costPerUnit,
   inventoryTotalValue,
 } from '../lib/inventory.js'
 import { formatPrice } from '../lib/orderStatus.js'
@@ -43,6 +44,35 @@ const STATUS_ITEM = [
 ]
 
 const STATUS_LABEL = { ok: '', low: 'in esaurimento', empty: 'esaurito' }
+
+// Prezzo unitario dell'item con l'unità di misura selezionabile:
+// cl/ml per i liquidi, g/mg per i solidi, pz per i pezzi.
+function UnitPrice({ item }) {
+  const units = smallUnits(item)
+  const [unit, setUnit] = useState(units[0])
+  const cost = costPerUnit(item, unit)
+  if (cost == null) return null
+  return (
+    <span style={{ marginLeft: 6, display: 'inline-flex', gap: 4, alignItems: 'center' }}>
+      · {formatPrice(cost)}/{unit}
+      {units.length > 1 &&
+        units.map((u) => (
+          <button
+            key={u}
+            type="button"
+            className={`chip ${u === unit ? 'active' : ''}`}
+            style={{ padding: '1px 7px', fontSize: '0.72rem' }}
+            onClick={(e) => {
+              e.stopPropagation()
+              setUnit(u)
+            }}
+          >
+            {u}
+          </button>
+        ))}
+    </span>
+  )
+}
 
 // Sezioni del magazzino: prodotti (giacenze), conta periodica, ordini
 // fornitore e scadenzario — la controparte software dei fogli Excel storici.
@@ -356,9 +386,9 @@ function ProductsPanel() {
                   )}
                   {it.cost != null && (
                     <div className="muted small">
-                      💶 {formatPrice(it.cost)}/pz (+IVA {formatPrice(costWithVat(it.cost, it.vat))})
-                      {costPerCl(it) != null && ` · ${formatPrice(costPerCl(it))}/cl`}
+                      💶 {formatPrice(it.cost)}/conf. (+IVA {formatPrice(costWithVat(it.cost, it.vat))})
                       {' · valore '} <strong>{formatPrice(stockValue(it))}</strong>
+                      <UnitPrice item={it} />
                     </div>
                   )}
 
