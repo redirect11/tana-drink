@@ -13,7 +13,7 @@ import {
   DEFAULT_SETTINGS,
 } from '../lib/api.js'
 import { submitPosOrder } from '../lib/pendingOrders.js'
-import { useDraft } from '../lib/useDraft.js'
+import { useDraft, loadLayout, saveLayout } from '../lib/useDraft.js'
 import { auth } from '../lib/firebaseClient.js'
 import { onAuthStateChanged } from 'firebase/auth'
 import { useMenu } from '../lib/menuCache.js'
@@ -221,13 +221,18 @@ export default function OrderPosDetail({ order = null }) {
   )
   const naturalSig = naturalKeys.join('|')
 
-  // Ordine di visualizzazione: riordino a mano che sopravvive agli update.
-  const [layout, setLayout] = useState(naturalKeys)
+  // Ordine di visualizzazione: riordino a mano di TUTTI gli item, persistito
+  // per contesto così sopravvive sia agli update dal server sia all'uscita
+  // dalla schermata.
+  const [layout, setLayout] = useState(() => loadLayout(draftKey))
   const layoutRef = useRef(layout)
   layoutRef.current = layout
   useEffect(() => {
     setLayout((prev) => reconcileLayout(prev, naturalSig ? naturalSig.split('|') : []))
   }, [naturalSig])
+  useEffect(() => {
+    saveLayout(draftKey, layout)
+  }, [draftKey, layout])
   const orderedLines = useMemo(
     () => layout.map((k) => allByKey.get(k)).filter(Boolean),
     [layout, allByKey]

@@ -7,7 +7,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
-import { useDraft, loadDraft, saveDraft } from '../../src/lib/useDraft.js'
+import { useDraft, loadDraft, saveDraft, loadLayout, saveLayout } from '../../src/lib/useDraft.js'
 
 beforeEach(() => localStorage.clear())
 
@@ -23,6 +23,21 @@ describe('loadDraft / saveDraft', () => {
   it('dati corrotti → bozza vuota (nessun crash)', () => {
     localStorage.setItem('tana:draft:x', '{non-json')
     expect(loadDraft('x')).toEqual([])
+  })
+})
+
+describe('loadLayout / saveLayout (ordine visivo di TUTTI gli item)', () => {
+  it('salva e rilegge l’ordine delle chiavi; vuoto rimuove la chiave', () => {
+    saveLayout('ord-1', ['c:c1:1', 'c:c1:0', 'd:xyz'])
+    expect(loadLayout('ord-1')).toEqual(['c:c1:1', 'c:c1:0', 'd:xyz'])
+    saveLayout('ord-1', [])
+    expect(localStorage.getItem('tana:layout:ord-1')).toBeNull()
+  })
+  it('è indipendente dalla bozza (chiavi separate)', () => {
+    saveDraft('ord-1', [{ line_id: 'a', qty: 1 }])
+    saveLayout('ord-1', ['c:c1:0', 'd:a'])
+    expect(loadDraft('ord-1')).toEqual([{ line_id: 'a', qty: 1 }])
+    expect(loadLayout('ord-1')).toEqual(['c:c1:0', 'd:a'])
   })
 })
 
