@@ -1380,7 +1380,14 @@ export function subscribeVouchers(cb, onError) {
   )
 }
 
-export async function createVoucher({ holder_name, amount = 0, note = null }) {
+export async function createVoucher({
+  holder_name,
+  amount = 0,
+  note = null,
+  expiry_type = 'none', // 'none' | 'daily' | 'monthly' | 'yearly' | 'date'
+  expires_at = null, // ISO date per expiry_type 'date'
+  auto_renew = false,
+}) {
   const nowIso = new Date().toISOString()
   const initial = Math.max(0, Math.round((Number(amount) || 0) * 100) / 100)
   const ref = await addDoc(vouchersCol, {
@@ -1388,10 +1395,22 @@ export async function createVoucher({ holder_name, amount = 0, note = null }) {
     balance: initial,
     initial,
     note: note || null,
+    expiry_type,
+    expires_at: expiry_type === 'date' ? expires_at || null : null,
+    auto_renew: !!auto_renew,
     movements: initial > 0 ? [{ type: 'carica', amount: initial, at: nowIso }] : [],
     created_at: serverTimestamp(),
   })
   return { id: ref.id, ...(await getDoc(ref)).data() }
+}
+
+// Aggiorna la scadenza di un buono esistente.
+export async function updateVoucherExpiry(id, { expiry_type, expires_at = null, auto_renew = false }) {
+  await updateDoc(doc(vouchersCol, id), {
+    expiry_type,
+    expires_at: expiry_type === 'date' ? expires_at || null : null,
+    auto_renew: !!auto_renew,
+  })
 }
 
 // Ricarica un buono (aggiunge al saldo).

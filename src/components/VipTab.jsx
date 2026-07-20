@@ -1,8 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
 import { subscribeVouchers, createVoucher, topUpVoucher, deleteVoucher } from '../lib/api.js'
 import { formatPrice } from '../lib/orderStatus.js'
-import { totalOutstanding } from '../lib/vouchers.js'
+import { totalOutstanding, expiryLabel, isVoucherExpired } from '../lib/vouchers.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
+
+const EXPIRY_OPTS = [
+  ['none', 'Nessuna'],
+  ['daily', 'Giornaliera'],
+  ['monthly', 'Mensile'],
+  ['yearly', 'Annuale'],
+  ['date', 'Data libera'],
+]
 
 // Sezione VIP: buoni (credito ricaricabile) associati a una persona.
 // Si creano, si ricaricano e si spendono al pagamento (metodo Buono).
@@ -16,6 +24,9 @@ export default function VipTab() {
   const [name, setName] = useState('')
   const [amount, setAmount] = useState('')
   const [note, setNote] = useState('')
+  const [expiryType, setExpiryType] = useState('none')
+  const [expiresAt, setExpiresAt] = useState('')
+  const [autoRenew, setAutoRenew] = useState(false)
 
   // Ricarica in corso: id -> importo digitato
   const [topUp, setTopUp] = useState({})
@@ -31,11 +42,21 @@ export default function VipTab() {
   function crea(e) {
     e.preventDefault()
     if (!name.trim()) return
-    createVoucher({ holder_name: name.trim(), amount: Number(String(amount).replace(',', '.')) || 0, note: note.trim() || null })
+    createVoucher({
+      holder_name: name.trim(),
+      amount: Number(String(amount).replace(',', '.')) || 0,
+      note: note.trim() || null,
+      expiry_type: expiryType,
+      expires_at: expiryType === 'date' ? expiresAt || null : null,
+      auto_renew: autoRenew,
+    })
       .then(() => {
         setName('')
         setAmount('')
         setNote('')
+        setExpiryType('none')
+        setExpiresAt('')
+        setAutoRenew(false)
       })
       .catch((err) => setError(err.message))
   }
@@ -72,6 +93,26 @@ export default function VipTab() {
         </div>
         <label htmlFor="vip-note" style={{ marginTop: 6, display: 'block' }}>Note</label>
         <input id="vip-note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Es. regalo, staff…" />
+
+        {/* Scadenza */}
+        <label htmlFor="vip-expiry" style={{ marginTop: 8, display: 'block' }}>Scadenza</label>
+        <div className="row" style={{ gap: 8, alignItems: 'center' }}>
+          <select id="vip-expiry" value={expiryType} onChange={(e) => setExpiryType(e.target.value)} style={{ flex: 1 }}>
+            {EXPIRY_OPTS.map(([v, l]) => (
+              <option key={v} value={v}>{l}</option>
+            ))}
+          </select>
+          {expiryType === 'date' && (
+            <input type="date" value={expiresAt} onChange={(e) => setExpiresAt(e.target.value)} style={{ flex: 1 }} />
+          )}
+        </div>
+        {(expiryType === 'daily' || expiryType === 'monthly' || expiryType === 'yearly') && (
+          <label className="row" style={{ marginTop: 6, gap: 8, alignItems: 'center' }}>
+            <input type="checkbox" style={{ width: 'auto' }} checked={autoRenew} onChange={(e) => setAutoRenew(e.target.checked)} />
+            <span className="small">Rinnovo automatico (si estende a ogni nuovo periodo)</span>
+          </label>
+        )}
+
         <button className="btn block" type="submit" style={{ marginTop: 10 }} disabled={!name.trim()}>
           Crea buono
         </button>
@@ -89,13 +130,18 @@ export default function VipTab() {
         <p className="muted">Nessun buono{search ? ' trovato' : ''}.</p>
       )}
 
-      {filtered.map((v) => (
-        <div className="card" key={v.id} style={{ marginTop: 10, padding: 12 }}>
+      {filtered.map((v) => {
+        const scaduto = isVoucherExpired(v)
+        return (
+        <div className="card" key={v.id} style={{ marginTop: 10, padding: 12, opacity: scaduto ? 0.6 : 1 }}>
           <div className="row between" style={{ alignItems: 'baseline' }}>
             <strong>{v.holder_name}</strong>
             <strong className="price">{formatPrice(v.balance)}</strong>
           </div>
           {v.note && <div className="muted small">{v.note}</div>}
+          <div className="muted small">
+            🗓 {expiryLabel(v)}
+          </div>
           <div className="muted small">
             Caricato in tutto: {formatPrice(v.initial || 0)}
             {(v.movements || []).some((m) => m.type === 'uso') &&
@@ -118,7 +164,8 @@ export default function VipTab() {
             )}
           </div>
         </div>
-      ))}
+        )
+      })}
 
       {confirmDel && (
         <ConfirmDialog
