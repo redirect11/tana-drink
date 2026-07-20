@@ -133,7 +133,7 @@ describe('aggiunte: la nuova comanda è gestita internamente', () => {
     // niente somma automatica: la sezione bozza compare, non un badge aggregato
     expect(screen.getByText('DA AGGIUNGERE')).toBeInTheDocument()
     expect(screen.queryByText(/da inviare/)).not.toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: /Conferma aggiunte/ }))
+    await user.click(screen.getByRole('button', { name: '✅ Conferma' }))
     expect(addComanda).toHaveBeenCalledTimes(1)
     const [orderId, items] = addComanda.mock.calls[0]
     expect(orderId).toBe('ord1')
@@ -151,7 +151,7 @@ describe('aggiunte: la nuova comanda è gestita internamente', () => {
     await user.click(screen.getByRole('button', { name: '🔗 Unisci' }))
     // dopo l'unione il toggle diventa "Separa"
     expect(screen.getByRole('button', { name: '⑃ Separa' })).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: /Conferma aggiunte/ }))
+    await user.click(screen.getByRole('button', { name: '✅ Conferma' }))
     const [, items] = addComanda.mock.calls[0]
     expect(items).toHaveLength(1)
     expect(items[0]).toMatchObject({ drink_id: 'gin', qty: 2 })
@@ -166,21 +166,18 @@ describe('aggiunte: la nuova comanda è gestita internamente', () => {
     await user.clear(price)
     await user.type(price, '5')
     await user.click(screen.getByRole('button', { name: /^Salva/ }))
-    await user.click(screen.getByRole('button', { name: /Conferma aggiunte/ }))
+    await user.click(screen.getByRole('button', { name: '✅ Conferma' }))
     const [, items] = addComanda.mock.calls[0]
     expect(items[0]).toMatchObject({ drink_id: 'gin', unit_price: 5, custom: true })
   })
 
-  it('"Conferma + stampa comanda" invia e stampa la comanda appena creata', async () => {
+  it('"Stampa comanda" stampa le aggiunte in bozza SENZA confermarle', async () => {
     const user = userEvent.setup()
-    const nuova = { id: 'c2', seq: 2, status: 'ricevuto', items: [] }
-    addComanda.mockResolvedValueOnce({ id: 'ord1', comande: [{ id: 'c1' }, nuova] })
     mount(baseOrder())
-    await user.click(screen.getByText('Gin Tonic'))
-    await user.click(screen.getByRole('button', { name: /Conferma \+ stampa comanda/ }))
-    expect(addComanda).toHaveBeenCalledTimes(1)
+    await user.click(screen.getAllByText('Gin Tonic')[0])
+    await user.click(screen.getByRole('button', { name: /Stampa comanda/ }))
     await waitFor(() => expect(printComanda).toHaveBeenCalledTimes(1))
-    expect(printComanda.mock.calls[0][1].id).toBe('c2')
+    expect(addComanda).not.toHaveBeenCalled()
   })
 
   it("il + su un item del conto è un'aggiunta in bozza (non tocca le comande)", async () => {
@@ -190,7 +187,7 @@ describe('aggiunte: la nuova comanda è gestita internamente', () => {
     // compare la sezione bozza; le comande non vengono toccate
     expect(screen.getByText('DA AGGIUNGERE')).toBeInTheDocument()
     expect(bartenderUpdateComanda).not.toHaveBeenCalled()
-    await user.click(screen.getByRole('button', { name: /Conferma aggiunte/ }))
+    await user.click(screen.getByRole('button', { name: '✅ Conferma' }))
     expect(addComanda).toHaveBeenCalledTimes(1)
   })
 })
@@ -265,16 +262,16 @@ describe('modale comande: consultazione, avanzamento e stampa', () => {
 })
 
 describe('modifiche ottimistiche (UX istantanea)', () => {
-  it('conferma aggiunte ISTANTANEA: le quantità restano a schermo mentre sincronizza', async () => {
+  it('Conferma ISTANTANEA: crea la comanda in background senza attendere il server', async () => {
     const user = userEvent.setup()
     addComanda.mockImplementationOnce(() => new Promise(() => {})) // server lento: mai risolta
     mount(baseOrder())
-    await user.click(screen.getByText('Gin Tonic'))
+    await user.click(screen.getAllByText('Gin Tonic')[0])
     expect(screen.getByText('DA AGGIUNGERE')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: /Conferma aggiunte/ }))
-    // senza aspettare il server: la bozza è sparita ma la riga resta nel conto
-    expect(screen.queryByText('DA AGGIUNGERE')).not.toBeInTheDocument()
-    expect(screen.getAllByText('Gin Tonic').length).toBeGreaterThan(1) // griglia + pannello
+    await user.click(screen.getByRole('button', { name: '✅ Conferma' }))
+    // parte subito (ottimistico), senza aspettare la risoluzione del server
+    expect(addComanda).toHaveBeenCalledTimes(1)
+    expect(addComanda.mock.calls[0][0]).toBe('ord1')
   })
 
   it('avanzamento ISTANTANEO: lo stato cambia subito, il server segue', async () => {
@@ -289,15 +286,16 @@ describe('modifiche ottimistiche (UX istantanea)', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('tap rapidi su +: qty aggregata subito aggiornata, nessuna chiamata finché non invio', async () => {
+  it('tap rapidi sulla griglia: righe separate in bozza, nessuna chiamata finché non si conferma', async () => {
     const user = userEvent.setup()
     mount(baseOrder())
-    const plus = () => screen.getAllByRole('button', { name: 'Aumenta' }).at(-1)
-    await user.click(plus())
-    await user.click(plus())
-    await user.click(plus())
-    // 3 righe separate in bozza; niente chiamate finché non si conferma
-    expect(screen.getByRole('button', { name: /Conferma aggiunte \(3\)/ })).toBeInTheDocument()
+    const tile = () => screen.getAllByText('Mojito')[0] // la tile della griglia
+    await user.click(tile())
+    await user.click(tile())
+    await user.click(tile())
+    // 3 righe separate in bozza (3 bottoni Modifica), nessuna chiamata
+    expect(screen.getAllByRole('button', { name: /Modifica/ })).toHaveLength(3)
+    expect(screen.getByRole('button', { name: '✅ Conferma' })).toBeInTheDocument()
     expect(bartenderUpdateComanda).not.toHaveBeenCalled()
     expect(addComanda).not.toHaveBeenCalled()
   })
