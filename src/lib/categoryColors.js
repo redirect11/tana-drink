@@ -27,12 +27,26 @@ export function categoryColor(key) {
   return CATEGORY_PALETTE[h % CATEGORY_PALETTE.length]
 }
 
+// Colore di una categoria: quello CUSTOM se impostato, altrimenti quello
+// automatico deterministico (djb2 sull'id/nome).
+export function catColor(cat) {
+  return cat?.color || categoryColor(cat?.id ?? cat?.name)
+}
+
 // Mappa colore per i drink a partire dalle categorie note: preferisce
 // l'id della categoria (stabile ai rinomini), con fallback sul nome.
 export function drinkCategoryColor(drink, cats) {
   const cat = (cats || []).find(
     (c) => c.id === drink?.category_id || (drink?.category && c.name === drink.category)
   )
+  if (cat?.color) return cat.color
   const key = cat?.id ?? cat?.name ?? drink?.category_id ?? drink?.category
   return categoryColor(key)
 }
+
+// Set di icone (emoji) proponibili per le categorie di un bar.
+export const CATEGORY_ICONS = [
+  '🍸', '🍹', '🍺', '🍷', '🥃', '🍾', '🥂', '🍶', '🧉', '🥤',
+  '☕', '🍵', '🧃', '🧊', '🫗', '🍋', '🍊', '🍓', '🌿', '🔥',
+  '⭐', '💎', '🎩', '🎲', '🍫', '🍟', '🍕', '🥨', '🥜', '🧀',
+]

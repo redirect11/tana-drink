@@ -208,6 +208,7 @@ export default function PosPage() {
           cats={cats}
           loading={loading}
           qtyByDrink={qtyByDrink}
+          categoryDisplay={settings.category_display}
           onAdd={(d) => cart.add(d)}
           onSetQty={(d, q) => cart.setQty(d.id, q)}
         />

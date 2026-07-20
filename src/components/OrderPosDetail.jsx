@@ -386,6 +386,7 @@ export default function OrderPosDetail({ order }) {
           cats={cats}
           loading={loading}
           qtyByDrink={qtyByDrink}
+          categoryDisplay={settings.category_display}
           onAdd={plusFromCatalog}
           onSetQty={(d, q) => {
             const cur = qtyByDrink[d.id] ?? 0
