@@ -29,7 +29,6 @@ import {
   nextComandaStatus,
   activeComanda,
   orderIsClosed,
-  planDecrement,
   comandaEditable,
 } from '../lib/comande.js'
 import { paidAmount } from '../lib/pagamento.js'
@@ -40,6 +39,7 @@ import {
   hasMergeable,
   lineSignature,
   moveLine,
+  reconcileLayout,
   qtyByDrink as draftQtyByDrink,
 } from '../lib/orderLines.js'
 import { toastSync, toastSuccess, toastError } from '../lib/toast.js'
@@ -51,19 +51,21 @@ import PaymentScreen from './PaymentScreen.jsx'
 
 // ── Schermata UNICA POS creazione/modifica ordine (stile SumUp) ───────────
 // UN SOLO componente: con `order` è la MODIFICA di un ordine esistente,
-// senza `order` (null) è la CREAZIONE di un ordine nuovo. Layout e gesti
-// identici: categorie · griglia · pannello ordine a destra.
+// senza `order` (null) è la CREAZIONE. Layout e gesti identici.
 //
-// Le AGGIUNTE non ancora confermate stanno nella BOZZA ("DA AGGIUNGERE"),
-// persistita in localStorage per contesto ('new' in creazione, l'id
-// dell'ordine in modifica): non si perde uscendo dalla schermata, si
-// riprende dov'era. Righe separate con drag&drop, unisci/separa e modifica
-// per-item in ENTRAMBI i casi. Il conto (comande già confermate) è
-// aggregato e sola lettura salvo +/− sulle comande ancora modificabili.
+// A destra c'è UNA SOLA lista di item: quelli già confermati (dalle
+// comande) e quelli non ancora confermati (BOZZA), senza separazione
+// visiva. Tutti gli item sono spostabili col drag (tieni premuto). La
+// BOZZA è persistita in localStorage per contesto ('new' in creazione,
+// id ordine in modifica): non si perde uscendo, si riprende dov'era —
+// finché l'ordine non è confermato/pagato.
 //
-// Conferma = crea l'ordine (creazione) o una nuova comanda dalle aggiunte
-// (modifica) e TORNA alla coda. Le altre operazioni di modifica (avanza
-// comanda, +/−, drag, unisci/separa, modifica item) restano in schermata.
+// Rimozione: gli item NON confermati e quelli confermati ma ancora IN
+// PREPARAZIONE si possono togliere; pronti/serviti/pagati no.
+//
+// Conferma (nel footer, vicino a Pagamento): le aggiunte confluiscono
+// nella comanda in preparazione (se c'è) — una NUOVA comanda si crea solo
+// se l'ordine è già pronto/servito. Poi si torna alla coda.
 
 export default function OrderPosDetail({ order = null }) {
   const isNew = !order
@@ -80,7 +82,7 @@ export default function OrderPosDetail({ order = null }) {
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   useEffect(() => subscribeSettings(setSettings, () => {}), [])
 
-  // AGGIUNTE in composizione (BOZZA persistente → nuova comanda/ordine).
+  // AGGIUNTE in composizione (BOZZA persistente).
   const draftKey = order ? order.id : 'new'
   const [draft, setDraft, clearDraft] = useDraft(draftKey)
 
@@ -102,9 +104,8 @@ export default function OrderPosDetail({ order = null }) {
     })
   }, [isNew])
 
-  // PAGAMENTO DIRETTO (creazione): la schermata Pagamento si apre subito su
-  // un ordine locale; serata e creazione girano in background e le azioni
-  // di incasso aspettano l'id reale (resolveOrderId).
+  // PAGAMENTO DIRETTO (creazione): la schermata si apre subito su un ordine
+  // locale; serata e creazione girano in background (resolveOrderId).
   const [payOrder, setPayOrder] = useState(null)
   const payIdRef = useRef(null)
   const payOrderId = payOrder?.id
@@ -178,62 +179,79 @@ export default function OrderPosDetail({ order = null }) {
     [comande, pendingEdits, statusOverrides]
   )
 
-  // AGGIUNTE confermate ma ancora in volo verso il server (modifica).
-  const [inFlight, setInFlight] = useState([]) // [{ tempId, items, comandaId? }]
-  useEffect(() => {
-    setInFlight((f) =>
-      f.filter((x) => !x.comandaId || !comande.some((c) => c.id === x.comandaId))
-    )
-  }, [comande])
-
-  // ── Vista aggregata: righe = item dell'ordine + aggiunte in bozza ──
-  const rows = useMemo(() => {
+  // ── LISTA UNICA: item confermati (per-riga, dalle comande) + bozza ──
+  const confirmedLines = useMemo(() => {
     const out = []
-    const byDrink = new Map()
     for (const c of effComande) {
       if (c.status === ORDER_STATUSES.ANNULLATO) continue
-      const editable = comandaEditable(c)
-      for (const i of c.items || []) {
-        const key = i.drink_id
-        if (!i.custom && key && byDrink.has(key)) {
-          const ex = byDrink.get(key)
-          ex.qty += i.qty
-          if (editable) ex.editableQty += i.qty
-        } else {
-          const row = { ...i, editableQty: editable ? i.qty : 0, draftQty: 0 }
-          out.push(row)
-          if (key) byDrink.set(key, row)
-        }
-      }
-    }
-    for (const fl of inFlight) {
-      for (const i of fl.items) {
-        const ex = !i.custom && byDrink.get(i.drink_id)
-        if (ex) ex.qty += i.qty
-        else {
-          const row = { ...i, editableQty: 0, draftQty: 0 }
-          out.push(row)
-          if (!i.custom && i.drink_id) byDrink.set(i.drink_id, row)
-        }
-      }
+      ;(c.items || []).forEach((it, idx) => {
+        out.push({
+          key: `c:${c.id}:${idx}`,
+          source: 'comanda',
+          comandaId: c.id,
+          itemIndex: idx,
+          status: c.status,
+          removable: comandaEditable(c),
+          drink_id: it.drink_id,
+          name: it.name,
+          unit_price: it.unit_price,
+          qty: it.qty,
+          custom: it.custom,
+          recipe_items: it.recipe_items,
+        })
+      })
     }
     return out
-  }, [effComande, inFlight])
+  }, [effComande])
 
-  const confirmedRows = rows
+  const draftLines = useMemo(
+    () => draft.map((l) => ({ ...l, key: `d:${l.line_id}`, source: 'draft', status: 'draft', removable: true })),
+    [draft]
+  )
+
+  const allByKey = useMemo(() => {
+    const m = new Map()
+    for (const l of confirmedLines) m.set(l.key, l)
+    for (const l of draftLines) m.set(l.key, l)
+    return m
+  }, [confirmedLines, draftLines])
+  const naturalKeys = useMemo(
+    () => [...confirmedLines.map((l) => l.key), ...draftLines.map((l) => l.key)],
+    [confirmedLines, draftLines]
+  )
+  const naturalSig = naturalKeys.join('|')
+
+  // Ordine di visualizzazione: riordino a mano che sopravvive agli update.
+  const [layout, setLayout] = useState(naturalKeys)
+  const layoutRef = useRef(layout)
+  layoutRef.current = layout
+  useEffect(() => {
+    setLayout((prev) => reconcileLayout(prev, naturalSig ? naturalSig.split('|') : []))
+  }, [naturalSig])
+  const orderedLines = useMemo(
+    () => layout.map((k) => allByKey.get(k)).filter(Boolean),
+    [layout, allByKey]
+  )
+
+  // Memoria bozza solo finché non confermato/pagato: se l'ordine è chiuso
+  // (pagato/annullato) si azzera.
+  useEffect(() => {
+    if (closed) clearDraft()
+  }, [closed, clearDraft])
 
   const draftCount = draft.reduce((s, i) => s + i.qty, 0)
   const draftTotal = draft.reduce((s, i) => s + i.qty * i.unit_price, 0)
-  const confirmedTotal = confirmedRows.reduce((s, i) => s + i.qty * i.unit_price, 0)
+  const confirmedTotal = confirmedLines.reduce((s, l) => s + l.qty * l.unit_price, 0)
   const qtyByDrink = useMemo(() => {
     const m = {}
-    for (const r of confirmedRows) if (!r.custom) m[r.drink_id] = (m[r.drink_id] || 0) + r.qty
+    for (const l of confirmedLines) if (!l.custom) m[l.drink_id] = (m[l.drink_id] || 0) + l.qty
     const d = draftQtyByDrink(draft)
     for (const k of Object.keys(d)) m[k] = (m[k] || 0) + d[k]
     return m
-  }, [confirmedRows, draft])
+  }, [confirmedLines, draft])
 
-  // + dalla griglia/catalogo → riga di bozza (o somma se default 'uniti').
+  // + dalla griglia/catalogo o da una riga → riga di bozza (o somma se
+  // default 'uniti').
   const plusFromCatalog = (d) => {
     if (closed) return
     const nuova = {
@@ -254,8 +272,8 @@ export default function OrderPosDetail({ order = null }) {
     })
   }
 
-  // − dalla griglia: toglie dall'ultima riga di bozza; se non c'è, scala
-  // dalle comande modificabili (solo in modifica).
+  // − dalla griglia: toglie dall'ultima riga di bozza; se non c'è, scala la
+  // prima riga confermata modificabile (in preparazione) di quel drink.
   function minusFromCatalog(drinkId) {
     if (closed) return
     const idx = [...draft].reverse().findIndex((l) => !l.custom && l.drink_id === drinkId)
@@ -269,30 +287,38 @@ export default function OrderPosDetail({ order = null }) {
       return
     }
     if (isNew) return
-    const plan = planDecrement(effComande, drinkId)
-    if (!plan) return
-    setPendingEdits((p) => ({ ...p, [plan.comandaId]: plan.items }))
-    clearTimeout(flushTimers.current[plan.comandaId])
-    flushTimers.current[plan.comandaId] = setTimeout(() => flushComanda(plan.comandaId), 600)
+    const line = confirmedLines.find((l) => l.removable && l.drink_id === drinkId && l.qty > 0)
+    if (line) reduceComandaLine(line.comandaId, line.itemIndex)
   }
 
-  // − su una riga del CONTO (comande, modifica): scala dalle modificabili.
-  function minusConfirmed(row) {
-    if (closed) return
-    const plan = planDecrement(effComande, row.drink_id)
-    if (!plan) return
-    setPendingEdits((p) => ({ ...p, [plan.comandaId]: plan.items }))
-    clearTimeout(flushTimers.current[plan.comandaId])
-    flushTimers.current[plan.comandaId] = setTimeout(() => flushComanda(plan.comandaId), 600)
-  }
-
-  // ── Azioni sulle righe di BOZZA (separate) ──
   const setDraftLineQty = (lineId, qty) =>
     setDraft((items) => items.map((l) => (l.line_id === lineId ? { ...l, qty } : l)).filter((l) => l.qty > 0))
 
+  // Scala di 1 una specifica riga di una comanda modificabile (annulla un
+  // item confermato ma ancora in preparazione), con sync debounced.
+  function reduceComandaLine(comandaId, itemIndex) {
+    if (closed) return
+    const c = effComande.find((x) => x.id === comandaId)
+    if (!c) return
+    const items = (c.items || [])
+      .map((it, j) => (j === itemIndex ? { ...it, qty: it.qty - 1 } : it))
+      .filter((it) => it.qty > 0)
+    setPendingEdits((p) => ({ ...p, [comandaId]: items }))
+    clearTimeout(flushTimers.current[comandaId])
+    flushTimers.current[comandaId] = setTimeout(() => flushComanda(comandaId), 600)
+  }
+
+  // − su una qualsiasi riga della lista, secondo lo stato.
+  const minusRow = (l) => {
+    if (closed) return
+    if (l.source === 'draft') setDraftLineQty(l.line_id, l.qty - 1)
+    else if (l.removable) reduceComandaLine(l.comandaId, l.itemIndex)
+  }
+  const plusRow = (l) =>
+    plusFromCatalog({ id: l.drink_id, name: l.name, price: l.unit_price, sumup_product_id: l.sumup_product_id })
+
   async function printDraftComanda() {
     if (draft.length === 0) return
-    // Ordine sintetico per stampare la comanda della bozza in creazione.
     const printableOrder = isNew
       ? {
           customer_name: info.customer_name.trim() || null,
@@ -309,7 +335,9 @@ export default function OrderPosDetail({ order = null }) {
     }
   }
 
-  // ── Riordino righe di bozza per DRAG (tieni premuto e trascina) ──
+  // ── Riordino della lista per DRAG (tieni premuto e trascina) ──
+  // Tutti gli item sono spostabili. Il riordino delle righe di bozza viene
+  // reso persistente (allineo l'array bozza all'ordine visivo).
   const [dragIndex, setDragIndex] = useState(null)
   const dragRef = useRef({ timer: null, startY: 0 })
   const startDrag = (e, index) => {
@@ -326,17 +354,27 @@ export default function OrderPosDetail({ order = null }) {
     }
     e.preventDefault()
     const el = document.elementFromPoint(e.clientX, e.clientY)
-    const target = el?.closest('[data-draft-index]')
+    const target = el?.closest('[data-line-index]')
     if (!target) return
-    const to = Number(target.dataset.draftIndex)
+    const to = Number(target.dataset.lineIndex)
     if (Number.isInteger(to) && to !== dragIndex) {
-      setDraft((items) => moveLine(items, dragIndex, to))
+      setLayout((lay) => moveLine(lay, dragIndex, to))
       setDragIndex(to)
     }
   }
   const endDrag = () => {
     clearTimeout(dragRef.current.timer)
+    if (dragIndex != null) syncDraftOrder()
     setDragIndex(null)
+  }
+  // Allinea l'ordine della bozza (persistito) alla sequenza visiva corrente.
+  const syncDraftOrder = () => {
+    const draftIds = layoutRef.current.filter((k) => k.startsWith('d:')).map((k) => k.slice(2))
+    setDraft((cur) => {
+      const byId = new Map(cur.map((l) => [l.line_id, l]))
+      const next = draftIds.map((id) => byId.get(id)).filter(Boolean)
+      return next.length === cur.length ? next : cur
+    })
   }
 
   const mergeDraft = () => setDraft((items) => mergeLines(items))
@@ -361,7 +399,7 @@ export default function OrderPosDetail({ order = null }) {
     setEditLine(null)
   }
 
-  // Righe di bozza → item per createOrder/submitPosOrder (che usano `price`).
+  // Righe di bozza → item per createOrder/submitPosOrder (usano `price`).
   const draftToItems = () =>
     draft.map((l) => ({
       drink_id: l.drink_id,
@@ -375,18 +413,26 @@ export default function OrderPosDetail({ order = null }) {
   const placedBy = () =>
     staff ? { email: staff.email, name: staff.name, role: staff.role } : undefined
 
-  // CONFERMA. Creazione: chiede il nome, poi crea l'ordine e torna in coda.
-  // Modifica: crea una nuova comanda dalle aggiunte e torna in coda.
+  // CONFERMA. Creazione: chiede il nome, poi crea l'ordine. Modifica: le
+  // aggiunte confluiscono nella comanda in preparazione; una NUOVA comanda
+  // si crea solo se l'ordine è già pronto/servito. Poi torna in coda.
   const confirmDraft = () => {
     if (draft.length === 0) return
     if (isNew) return setAskName(true)
-    const items = draft
+    const additions = draft
+    const target = effComande.find(comandaEditable) // comanda ricevuta/in prep.
     clearDraft()
     const toastId = toastSync('Sincronizzo le aggiunte…')
     ;(async () => {
       try {
         await flushAll()
-        await addComanda(order.id, items)
+        if (target) {
+          await bartenderUpdateComanda(order.id, target.id, {
+            items: [...(target.items || []), ...additions],
+          })
+        } else {
+          await addComanda(order.id, additions)
+        }
         toastSuccess('Aggiunte sincronizzate', { id: toastId })
       } catch (e) {
         toastError(`Aggiunte non inviate: ${e.message}`, { id: toastId })
@@ -395,11 +441,10 @@ export default function OrderPosDetail({ order = null }) {
     navigate('/bar')
   }
 
-  // Creazione confermata (con o senza nome): l'ordine nasce in background.
   const submitNew = (name) => {
     setAskName(false)
     submitPosOrder({
-      serata_id: null, // risolta in background (serata di oggi)
+      serata_id: null,
       table_label: info.table_label || null,
       note: info.note || null,
       customer_name: (name || '').trim() || null,
@@ -412,7 +457,6 @@ export default function OrderPosDetail({ order = null }) {
     navigate('/bar')
   }
 
-  // PAGAMENTO DIRETTO in creazione (apre subito, crea in background).
   function handlePayNow() {
     if (draft.length === 0 || payOrder) return
     setError(null)
@@ -499,6 +543,7 @@ export default function OrderPosDetail({ order = null }) {
   const panelTitle = isNew
     ? info.customer_name.trim() || 'Nuovo ordine'
     : `#${order.daily_number ?? '—'}${order.customer_name ? ` · ${order.customer_name}` : ''}`
+  const canPay = !isNew && !closed && order.payment_status !== 'pagato'
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', overflow: 'hidden' }}>
@@ -547,9 +592,8 @@ export default function OrderPosDetail({ order = null }) {
           disabled={closed}
         />
 
-        {/* ── Pannello destro: L'ORDINE ── */}
+        {/* ── Pannello destro: L'ORDINE (lista unica) ── */}
         <div className="posd-comanda">
-          {/* Testata: nome/tavolo del conto */}
           <div style={{ padding: '8px 12px 0', flexShrink: 0 }}>
             <div className="row between" style={{ alignItems: 'center' }}>
               <strong style={{ fontFamily: 'var(--serif)' }}>{panelTitle}</strong>
@@ -573,74 +617,70 @@ export default function OrderPosDetail({ order = null }) {
           </div>
 
           <div style={{ flex: 1, overflowY: 'auto', padding: '6px 12px 10px' }}>
-            {confirmedRows.length === 0 && draft.length === 0 && (
+            {orderedLines.length === 0 && (
               <p className="muted small" style={{ margin: '6px 0 0' }}>
                 Tocca i prodotti per aggiungerli all'ordine.
               </p>
             )}
 
-            {/* Righe del CONTO (comande): aggregate, +/− sulle modificabili */}
-            {confirmedRows.map((r, idx) => {
-              const canMinus = !closed && r.editableQty > 0
+            {/* Barretta aggiunte non confermate: stampa + pulisci. Non è una
+                sezione a parte — gli item restano nella stessa lista sotto. */}
+            {draftCount > 0 && (
+              <div className="row between" style={{ alignItems: 'center', marginBottom: 2 }}>
+                <span className="muted small">
+                  🟡 {draftCount} non confermat{draftCount === 1 ? 'o' : 'i'} · trascina per riordinare
+                </span>
+                <span className="row" style={{ gap: 6 }}>
+                  <button className="btn ghost small" aria-label="Stampa comanda" onClick={printDraftComanda}>🖨</button>
+                  <button className="btn ghost small" onClick={() => setConfirmDiscard(true)}>🧹 Pulisci</button>
+                </span>
+              </div>
+            )}
+
+            {orderedLines.map((l, idx) => {
+              const isDraft = l.source === 'draft'
+              const canMinus = !closed && (isDraft || l.removable)
               return (
-                <div className="row between" key={r.drink_id ?? idx} style={{ alignItems: 'center', marginTop: 8 }}>
+                <div
+                  className="row between draft-line"
+                  key={l.key}
+                  data-line-index={idx}
+                  onPointerDown={(e) => startDrag(e, idx)}
+                  onPointerMove={moveDrag}
+                  onPointerUp={endDrag}
+                  onPointerCancel={endDrag}
+                  style={{
+                    alignItems: 'center',
+                    marginTop: 6,
+                    touchAction: 'none',
+                    cursor: closed ? 'default' : 'grab',
+                    borderRadius: 8,
+                    background: dragIndex === idx ? 'var(--tile-bg)' : 'transparent',
+                    boxShadow: dragIndex === idx ? '0 4px 14px rgba(0,0,0,0.35)' : 'none',
+                    opacity: dragIndex != null && dragIndex !== idx ? 0.85 : 1,
+                  }}
+                >
                   <span className="grow" style={{ fontSize: '0.92rem' }}>
-                    {r.custom ? '✨ ' : ''}{r.name}
-                    <span className="muted small"> · {formatPrice(r.unit_price)}</span>
+                    {!closed && <span aria-hidden style={{ opacity: 0.4, marginRight: 4 }}>⠿</span>}
+                    <span aria-hidden style={{ marginRight: 4 }} title={isDraft ? 'non confermato' : STATUS_LABELS[l.status]}>
+                      {isDraft ? '🟡' : STATUS_EMOJI[l.status]}
+                    </span>
+                    {l.custom ? '✨ ' : ''}{l.name}
+                    <span className="muted small"> · {formatPrice(l.unit_price)}</span>
                   </span>
-                  <span className="qty">
-                    <button aria-label="Riduci" onClick={() => minusConfirmed(r)} disabled={!canMinus}>−</button>
-                    <strong>{r.qty}</strong>
-                    <button aria-label="Aumenta" onClick={() => plusFromCatalog({ id: r.drink_id, name: r.name, price: r.unit_price })} disabled={closed}>+</button>
+                  <span className="row" style={{ gap: 4, alignItems: 'center' }}>
+                    {isDraft && (
+                      <button className="btn ghost small" aria-label={`Modifica ${l.name}`} onPointerDown={(e) => e.stopPropagation()} onClick={() => setEditLine(l)}>✏️</button>
+                    )}
+                    <span className="qty" onPointerDown={(e) => e.stopPropagation()}>
+                      <button aria-label="Riduci" onClick={() => minusRow(l)} disabled={!canMinus}>−</button>
+                      <strong>{l.qty}</strong>
+                      <button aria-label="Aumenta" onClick={() => plusRow(l)} disabled={closed}>+</button>
+                    </span>
                   </span>
                 </div>
               )
             })}
-
-            {/* Righe di BOZZA: separate, riordinabili col drag (tieni premuto). */}
-            {draft.length > 0 && (
-              <div style={{ marginTop: 10, borderTop: '1px dashed var(--line)', paddingTop: 6 }}>
-                <div className="row between" style={{ alignItems: 'center' }}>
-                  <span className="muted small" style={{ letterSpacing: 0.5 }}>DA AGGIUNGERE · tieni premuto per spostare</span>
-                  <button className="btn ghost small" onClick={() => setConfirmDiscard(true)}>Annulla</button>
-                </div>
-                {draft.map((l, idx) => (
-                  <div
-                    className="row between draft-line"
-                    key={l.line_id}
-                    data-draft-index={idx}
-                    onPointerDown={(e) => startDrag(e, idx)}
-                    onPointerMove={moveDrag}
-                    onPointerUp={endDrag}
-                    onPointerCancel={endDrag}
-                    style={{
-                      alignItems: 'center',
-                      marginTop: 6,
-                      touchAction: 'none',
-                      cursor: 'grab',
-                      borderRadius: 8,
-                      background: dragIndex === idx ? 'var(--tile-bg)' : 'transparent',
-                      boxShadow: dragIndex === idx ? '0 4px 14px rgba(0,0,0,0.35)' : 'none',
-                      opacity: dragIndex != null && dragIndex !== idx ? 0.85 : 1,
-                    }}
-                  >
-                    <span className="grow" style={{ fontSize: '0.92rem' }}>
-                      <span aria-hidden style={{ opacity: 0.4, marginRight: 4 }}>⠿</span>
-                      {l.custom ? '✨ ' : ''}{l.name}
-                      <span className="muted small"> · {formatPrice(l.unit_price)}</span>
-                    </span>
-                    <span className="row" style={{ gap: 4, alignItems: 'center' }}>
-                      <button className="btn ghost small" aria-label={`Modifica ${l.name}`} onPointerDown={(e) => e.stopPropagation()} onClick={() => setEditLine(l)}>✏️</button>
-                      <span className="qty" onPointerDown={(e) => e.stopPropagation()}>
-                        <button aria-label="Riduci" onClick={() => setDraftLineQty(l.line_id, l.qty - 1)}>−</button>
-                        <strong>{l.qty}</strong>
-                        <button aria-label="Aumenta" onClick={() => setDraftLineQty(l.line_id, l.qty + 1)}>+</button>
-                      </span>
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
 
             {!closed && (
               <button
@@ -650,19 +690,6 @@ export default function OrderPosDetail({ order = null }) {
               >
                 🏷 Prodotto libero
               </button>
-            )}
-
-            {/* Conferma crea l'ordine (creazione) o la comanda dalle aggiunte
-                (modifica); la stampa è un'azione a parte. */}
-            {draftCount > 0 && (
-              <div className="grid-2" style={{ marginTop: 8 }}>
-                <button className="btn secondary small" onClick={confirmDraft}>
-                  ✅ Conferma
-                </button>
-                <button className="btn ghost small" onClick={printDraftComanda}>
-                  🖨 Stampa comanda
-                </button>
-              </div>
             )}
 
             {/* Dati conto (nome/tavolo/note) */}
@@ -715,7 +742,7 @@ export default function OrderPosDetail({ order = null }) {
             )}
           </div>
 
-          {/* Footer: azione comanda attiva + totale + azioni conto */}
+          {/* Footer: avanzamento comanda + totale + CONFERMA vicino a PAGAMENTO */}
           <div
             style={{
               flexShrink: 0,
@@ -754,8 +781,15 @@ export default function OrderPosDetail({ order = null }) {
               </div>
             )}
 
+            {/* Conferma le aggiunte (in fondo, vicino a Pagamento) */}
+            {draftCount > 0 && (
+              <button className="btn block" onClick={confirmDraft}>
+                ✅ Conferma{isNew ? '' : ` ${draftCount} aggiunt${draftCount === 1 ? 'a' : 'e'}`}
+              </button>
+            )}
+
             {isNew ? (
-              <button className="btn block" disabled={draftCount === 0} onClick={handlePayNow}>
+              <button className="btn secondary block" disabled={draftCount === 0} onClick={handlePayNow}>
                 💳 Pagamento · {formatPrice(draftTotal)}
               </button>
             ) : (
@@ -767,7 +801,7 @@ export default function OrderPosDetail({ order = null }) {
                   >
                     🧾 Scontrino (non fiscale)
                   </button>
-                  {!closed && order.payment_status !== 'pagato' ? (
+                  {canPay ? (
                     <button className="btn small" onClick={() => setShowPayment(true)}>
                       💳 Pagamento
                     </button>
@@ -938,12 +972,12 @@ export default function OrderPosDetail({ order = null }) {
         />
       )}
 
-      {/* ── Annulla le aggiunte non confermate (la bozza) ── */}
+      {/* ── Pulisci le aggiunte non confermate (la bozza) ── */}
       {confirmDiscard && (
         <ConfirmDialog
-          title="Annullare le aggiunte non confermate?"
-          message={`${draftCount} prodott${draftCount === 1 ? 'o' : 'i'} in bozza verranno rimossi. Le comande già confermate restano.`}
-          confirmLabel="Annulla aggiunte"
+          title="Togliere gli item non confermati?"
+          message={`${draftCount} prodott${draftCount === 1 ? 'o' : 'i'} non confermat${draftCount === 1 ? 'o' : 'i'} verranno rimossi. Gli item già confermati restano.`}
+          confirmLabel="Pulisci non confermati"
           cancelLabel="Indietro"
           danger
           onCancel={() => setConfirmDiscard(false)}

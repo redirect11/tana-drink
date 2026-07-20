@@ -12,6 +12,7 @@ import {
   qtyByDrink,
   linesTotal,
   moveLine,
+  reconcileLayout,
 } from '../../src/lib/orderLines.js'
 
 const line = (over) => ({ line_id: over.line_id || 'x', drink_id: 'gin', name: 'Gin', price: 8, qty: 1, ...over })
@@ -67,6 +68,20 @@ describe('moveLine (drag & drop)', () => {
     expect(moveLine(ls, 1, 1)).toBe(ls)
     expect(moveLine(ls, 0, 5)).toBe(ls)
     expect(moveLine(ls, -1, 1)).toBe(ls)
+  })
+})
+
+describe('reconcileLayout (lista unica confermati + bozza)', () => {
+  it('mantiene l’ordine a mano e accoda le chiavi nuove in fondo', () => {
+    // Ho riordinato a mano: b prima di a; arriva la nuova chiave d.
+    expect(reconcileLayout(['b', 'a', 'c'], ['a', 'b', 'c', 'd'])).toEqual(['b', 'a', 'c', 'd'])
+  })
+  it('scarta le chiavi sparite (item confermati rimossi/serviti diversamente)', () => {
+    expect(reconcileLayout(['b', 'a', 'c'], ['a', 'c'])).toEqual(['a', 'c'])
+  })
+  it('primo giro (nessun ordine precedente) = ordine naturale', () => {
+    expect(reconcileLayout([], ['a', 'b'])).toEqual(['a', 'b'])
+    expect(reconcileLayout(undefined, ['a', 'b'])).toEqual(['a', 'b'])
   })
 })
 
