@@ -27,6 +27,30 @@ export function saveDraft(k, arr) {
   }
 }
 
+// ORDINE VISIVO della lista unica (item confermati + bozza), riordinabile a
+// mano: persistito per contesto così il riordino di TUTTI gli item non si
+// perde uscendo dalla schermata. Array di chiavi riga.
+const layoutKey = (k) => `tana:layout:${k}`
+
+export function loadLayout(k) {
+  try {
+    const raw = localStorage.getItem(layoutKey(k))
+    const arr = raw ? JSON.parse(raw) : []
+    return Array.isArray(arr) ? arr : []
+  } catch {
+    return []
+  }
+}
+
+export function saveLayout(k, arr) {
+  try {
+    if (!arr || arr.length === 0) localStorage.removeItem(layoutKey(k))
+    else localStorage.setItem(layoutKey(k), JSON.stringify(arr))
+  } catch {
+    /* best-effort */
+  }
+}
+
 // Ritorna [draft, setDraft, clearDraft]. `setDraft` accetta un valore o un
 // updater (come useState) e persiste. Cambiando `key` (es. si passa da un
 // ordine a un altro) ricarica la bozza di quella chiave.
