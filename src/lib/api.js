@@ -2335,6 +2335,10 @@ export const DEFAULT_SETTINGS = {
   // Coda ordini bartender: 'tabs' (schede per stato) o 'lista' (lista unica
   // con stato indicato da colore/etichetta sulla card).
   queue_view: 'griglia',
+  // Vista ordine: raggruppamento di default degli item aggiunti —
+  // 'separati' (ogni tocco una riga a sé) o 'uniti' (item uguali sommati).
+  // Si può comunque unire/separare al volo dal riepilogo ordine.
+  order_group_default: 'separati',
   // Pagamenti: online (SumUp Checkout) e lettore Solo (Cloud API).
   payments_online_enabled: false,
   payments_online_required: false,

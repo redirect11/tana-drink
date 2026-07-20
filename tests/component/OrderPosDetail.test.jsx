@@ -143,12 +143,14 @@ describe('aggiunte: la nuova comanda è gestita internamente', () => {
     expect(printComanda).not.toHaveBeenCalled()
   })
 
-  it('"Unisci uguali" accorpa le righe di bozza identiche', async () => {
+  it('toggle "Unisci" accorpa le righe di bozza identiche, poi diventa "Separa"', async () => {
     const user = userEvent.setup()
     mount(baseOrder())
     await user.click(screen.getAllByText('Gin Tonic')[0])
     await user.click(screen.getAllByText('Gin Tonic')[0])
-    await user.click(screen.getByRole('button', { name: /Unisci uguali/ }))
+    await user.click(screen.getByRole('button', { name: '🔗 Unisci' }))
+    // dopo l'unione il toggle diventa "Separa"
+    expect(screen.getByRole('button', { name: '⑃ Separa' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /Conferma aggiunte/ }))
     const [, items] = addComanda.mock.calls[0]
     expect(items).toHaveLength(1)
