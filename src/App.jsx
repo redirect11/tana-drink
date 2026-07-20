@@ -15,8 +15,10 @@ import { resolveThemeVars, applyTheme } from './lib/themes.js'
 import { envLabel } from './dev/devActions.js'
 import { openCookiePreferences } from './lib/cookieConsent.js'
 import { subscribeUpdateAvailable } from './lib/appVersion.js'
+import { useOnline } from './lib/useOnline.js'
+import { toastSuccess } from './lib/toast.js'
 import Toasts from './components/Toasts.jsx'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 export default function App() {
   const location = useLocation()
@@ -34,6 +36,17 @@ export default function App() {
   // "tocca per aggiornare" invece di aspettare un reload manuale.
   const [updateReady, setUpdateReady] = useState(false)
   useEffect(() => subscribeUpdateAvailable(() => setUpdateReady(true)), [])
+
+  // Stato connessione: offline mostra un nastro; al ritorno un toast.
+  const online = useOnline()
+  const wasOffline = useRef(false)
+  useEffect(() => {
+    if (!online) wasOffline.current = true
+    else if (wasOffline.current) {
+      wasOffline.current = false
+      toastSuccess('✅ Di nuovo online — sincronizzo le modifiche')
+    }
+  }, [online])
 
   // Staff loggato (bartender o collaboratore): nel topbar lato cliente
   // mostra il ruolo ed «Esci» al posto di «Accedi».
@@ -73,6 +86,11 @@ export default function App() {
       {envLabel && (
         <div className={`env-ribbon env-${envLabel.toLowerCase()}`}>
           ⚠️ AMBIENTE {envLabel} — non è la produzione
+        </div>
+      )}
+      {!online && (
+        <div className="offline-ribbon">
+          📴 Offline — puoi continuare a lavorare, tutto si sincronizza al ritorno della connessione
         </div>
       )}
       {updateReady && (
