@@ -94,11 +94,14 @@ export default function MenuManager() {
       })
 
     const payload = {
-      name: form.name.trim(),
-      description: form.description.trim() || null,
+      // Guardie su null: mapDrink restituisce description/recipe = null, e
+      // senza il fallback ''.trim() crashava (errore al salvataggio della
+      // voce di menu con descrizione/ricetta vuota).
+      name: (form.name || '').trim(),
+      description: (form.description || '').trim() || null,
       category_id: form.category_id || null,
       category: catName(form.category_id) || null, // denormalizzato per compat/fallback
-      recipe: form.recipe.trim() || null,
+      recipe: (form.recipe || '').trim() || null,
       recipe_items,
       price: Number(form.price || 0),
       available: !!form.available,
@@ -547,7 +550,7 @@ function DrinkForm({ initial, categories, inventory, onCreateCategory, onCancel,
 
   async function submit(e) {
     e.preventDefault()
-    if (!form.name.trim()) return
+    if (!(form.name || '').trim()) return
     setSaving(true)
     setSaveError(null)
     try {

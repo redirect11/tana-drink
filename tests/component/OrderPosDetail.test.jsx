@@ -23,6 +23,8 @@ vi.mock('../../src/lib/api.js', () => ({
   setOrderLotteryCode: vi.fn(() => Promise.resolve()),
   createInvoice: vi.fn(() => Promise.resolve({ id: 'inv1', number: '1/2026' })),
   markInvoiceSent: vi.fn(() => Promise.resolve()),
+  subscribeVouchers: vi.fn((cb) => { cb([]); return () => {} }),
+  payWithVoucher: vi.fn(() => Promise.resolve({ redeemed: 0, closed: false })),
   cancelOrder: vi.fn(() => Promise.resolve()),
   fetchInventoryItems: vi.fn(() => Promise.resolve([])),
   DEFAULT_SETTINGS: {},

@@ -50,6 +50,7 @@ const serateCol = collection(db, 'serate')
 const groupsCol = collection(db, 'groups')
 const paymentsCol = collection(db, 'payments')
 const invoicesCol = collection(db, 'invoices')
+const vouchersCol = collection(db, 'vouchers')
 
 // --- Helpers ------------------------------------------------------------
 
@@ -1384,6 +1385,109 @@ export function subscribeInvoices(cb, onError) {
     (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
     onError
   )
+}
+
+// ── BUONI VIP (credito ricaricabile) ──────────────────────────────────
+// Un buono ha un saldo in € associato a una persona: si ricarica e si
+// scala al pagamento (metodo 'buono'). Tutte le variazioni sono in una
+// transazione e lasciano una traccia in `movements`.
+
+export function subscribeVouchers(cb, onError) {
+  const q = query(vouchersCol, orderBy('holder_name'))
+  return onSnapshot(
+    q,
+    (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...d.data(), created_at: toIso(d.data().created_at) }))),
+    onError
+  )
+}
+
+export async function createVoucher({ holder_name, amount = 0, note = null }) {
+  const nowIso = new Date().toISOString()
+  const initial = Math.max(0, Math.round((Number(amount) || 0) * 100) / 100)
+  const ref = await addDoc(vouchersCol, {
+    holder_name: String(holder_name || '').trim(),
+    balance: initial,
+    initial,
+    note: note || null,
+    movements: initial > 0 ? [{ type: 'carica', amount: initial, at: nowIso }] : [],
+    created_at: serverTimestamp(),
+  })
+  return { id: ref.id, ...(await getDoc(ref)).data() }
+}
+
+// Ricarica un buono (aggiunge al saldo).
+export async function topUpVoucher(id, amount) {
+  const ref = doc(vouchersCol, id)
+  const add = Math.max(0, Math.round((Number(amount) || 0) * 100) / 100)
+  if (!(add > 0)) throw new Error('Importo di ricarica non valido')
+  const nowIso = new Date().toISOString()
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref)
+    if (!snap.exists()) throw new Error('Buono non trovato')
+    const v = snap.data()
+    tx.update(ref, {
+      balance: Math.round(((Number(v.balance) || 0) + add) * 100) / 100,
+      movements: [...(v.movements || []), { type: 'carica', amount: add, at: nowIso }],
+    })
+  })
+}
+
+// Elimina un buono (solo a saldo zero, dal gestionale).
+export async function deleteVoucher(id) {
+  await deleteDoc(doc(vouchersCol, id))
+}
+
+// Scala un buono per pagare un ordine: registra il pagamento sull'ordine
+// (metodo 'buono') e decrementa il saldo, in un'unica transazione.
+// Ritorna { redeemed, closed }.
+export async function payWithVoucher(orderId, voucherId, requestedAmount) {
+  const orderRef = doc(db, 'orders', orderId)
+  const voucherRef = doc(vouchersCol, voucherId)
+  const nowIso = new Date().toISOString()
+  let redeemed = 0
+  let closed = false
+  await runTransaction(db, async (tx) => {
+    const [oSnap, vSnap] = await Promise.all([tx.get(orderRef), tx.get(voucherRef)])
+    if (!oSnap.exists()) throw new Error('Ordine non trovato')
+    if (!vSnap.exists()) throw new Error('Buono non trovato')
+    const o = oSnap.data()
+    const v = vSnap.data()
+    if (o.status === ORDER_STATUSES.ANNULLATO) throw new Error('Ordine annullato')
+    if (o.payment_status === 'pagato') throw new Error('Ordine già pagato')
+    const due = orderDue(o)
+    const balance = Math.max(0, Number(v.balance) || 0)
+    redeemed = Math.round(Math.min(due, balance, Math.max(0, Number(requestedAmount) || 0)) * 100) / 100
+    if (!(redeemed > 0)) throw new Error('Saldo del buono insufficiente')
+
+    const payments = [
+      ...(o.payments || []),
+      { id: `pay-${Date.now()}`, amount: redeemed, method: 'buono', voucher_id: voucherId, voucher_name: v.holder_name, at: nowIso },
+    ]
+    closed = paymentCloses(o, redeemed)
+    let servedPatch = {}
+    if (closed) {
+      const comande = serveAllComande(normalizeOrderDoc(o).comande, nowIso)
+      servedPatch = { comande, comande_statuses: comandeStatuses(comande) }
+    }
+    tx.update(orderRef, {
+      payments,
+      ...(closed
+        ? {
+            status: ORDER_STATUSES.PAGATO,
+            [`status_times.${ORDER_STATUSES.PAGATO}`]: nowIso,
+            payment_status: 'pagato',
+            payment_method: summaryMethod(payments),
+            paid_at: nowIso,
+            ...servedPatch,
+          }
+        : { payment_status: 'parziale' }),
+    })
+    tx.update(voucherRef, {
+      balance: Math.round((balance - redeemed) * 100) / 100,
+      movements: [...(v.movements || []), { type: 'uso', amount: -redeemed, order_id: orderId, at: nowIso }],
+    })
+  })
+  return { redeemed, closed }
 }
 
 // Imposta (o rimuove, con null) lo sconto sul conto: percentuale o euro.
