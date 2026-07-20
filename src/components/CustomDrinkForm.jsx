@@ -7,12 +7,21 @@ import { formatPrice } from '../lib/orderStatus.js'
 // amount/item" dei POS SumUp). Bastano nome e prezzo — lo scarico
 // magazzino è opzionale: si cercano gli ingredienti per nome e si
 // toccano per aggiungerli (niente menu a tendina).
-export default function CustomDrinkForm({ onCancel, onAdd }) {
-  const [name, setName] = useState('')
-  const [price, setPrice] = useState('')
-  const [rows, setRows] = useState([]) // { inventory_item_id, name, qty, unit }
+// `initial` (opzionale) precompila il form per la MODIFICA per-item di
+// una riga d'ordine: nome, prezzo e ricetta già impostati.
+export default function CustomDrinkForm({ onCancel, onAdd, initial = null }) {
+  const initRows = (initial?.recipe_items || []).map((r) => ({
+    inventory_item_id: r.inventory_item_id || '',
+    name: r.name || '',
+    invUnit: r.unit || 'pz',
+    unit: r.unit || 'pz',
+    qty: r.qty,
+  }))
+  const [name, setName] = useState(initial?.name || '')
+  const [price, setPrice] = useState(initial?.price != null ? String(initial.price) : '')
+  const [rows, setRows] = useState(initRows) // { inventory_item_id, name, qty, unit }
   const [inventory, setInventory] = useState([])
-  const [showRecipe, setShowRecipe] = useState(false)
+  const [showRecipe, setShowRecipe] = useState(initRows.length > 0)
   const [search, setSearch] = useState('')
 
   // L'inventario è leggibile solo dal bartender: se la lettura fallisce
@@ -69,10 +78,11 @@ export default function CustomDrinkForm({ onCancel, onAdd }) {
         onClick={(e) => e.stopPropagation()}
         onSubmit={submit}
       >
-        <h3 style={{ marginTop: 0 }}>🏷 Prodotto libero</h3>
+        <h3 style={{ marginTop: 0 }}>{initial ? '✏️ Modifica prodotto' : '🏷 Prodotto libero'}</h3>
         <p className="muted small" style={{ margin: '0 0 10px' }}>
-          Nome e prezzo bastano (es. voce non in inventario). Gli
-          ingredienti servono solo se vuoi lo scarico magazzino.
+          {initial
+            ? 'Modifica nome, prezzo e ingredienti solo per questa riga: diventa una voce a sé e non si unisce più con gli originali.'
+            : 'Nome e prezzo bastano (es. voce non in inventario). Gli ingredienti servono solo se vuoi lo scarico magazzino.'}
         </p>
 
         <label htmlFor="cd-name">Nome *</label>
@@ -178,7 +188,7 @@ export default function CustomDrinkForm({ onCancel, onAdd }) {
             Annulla
           </button>
           <button type="submit" className="btn" disabled={!valid}>
-            Aggiungi {priceNum > 0 ? formatPrice(priceNum) : ''}
+            {initial ? 'Salva' : 'Aggiungi'} {priceNum > 0 ? formatPrice(priceNum) : ''}
           </button>
         </div>
       </form>

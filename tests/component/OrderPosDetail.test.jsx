@@ -105,10 +105,10 @@ beforeEach(() => vi.clearAllMocks())
 describe('vista aggregata: ordine a destra, comande nascoste', () => {
   it("mostra i prodotti dell'ORDINE aggregato, non le singole comande", () => {
     mount(baseOrder())
-    // header: numero + nome
-    expect(screen.getByText(/#4/)).toBeInTheDocument()
+    // testata colonna ordine: numero + nome del conto (spostati a destra)
+    expect(screen.getAllByText(/#4/).length).toBeGreaterThan(0)
+    expect(screen.getByText(/· iole/)).toBeInTheDocument()
     // destra: l'ordine aggregato (niente sezioni COMANDA in vista)
-    expect(screen.getByText('ORDINE')).toBeInTheDocument()
     expect(screen.queryByText(/COMANDA 1/)).not.toBeInTheDocument()
     expect(screen.getAllByText(/Mojito/).length).toBeGreaterThan(0)
     // accesso alle comande dal bottone dedicato
@@ -125,20 +125,48 @@ describe('vista aggregata: ordine a destra, comande nascoste', () => {
 })
 
 describe('aggiunte: la nuova comanda è gestita internamente', () => {
-  it('tap sulla griglia → badge "da inviare"; "Conferma aggiunte" chiama addComanda SENZA stampare', async () => {
+  it('tap sulla griglia → righe SEPARATE in "DA AGGIUNGERE"; Conferma le invia (no stampa)', async () => {
     const user = userEvent.setup()
     mount(baseOrder())
-    await user.click(screen.getByText('Gin Tonic'))
-    expect(screen.getByText('+1 da inviare')).toBeInTheDocument()
     await user.click(screen.getAllByText('Gin Tonic')[0])
+    await user.click(screen.getAllByText('Gin Tonic')[0])
+    // niente somma automatica: la sezione bozza compare, non un badge aggregato
+    expect(screen.getByText('DA AGGIUNGERE')).toBeInTheDocument()
+    expect(screen.queryByText(/da inviare/)).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /Conferma aggiunte/ }))
     expect(addComanda).toHaveBeenCalledTimes(1)
     const [orderId, items] = addComanda.mock.calls[0]
     expect(orderId).toBe('ord1')
-    expect(items).toEqual([
-      expect.objectContaining({ drink_id: 'gin', qty: 2, unit_price: 8 }),
-    ])
+    // due righe separate da 1 (non una da 2)
+    expect(items).toHaveLength(2)
+    expect(items.every((i) => i.drink_id === 'gin' && i.qty === 1)).toBe(true)
     expect(printComanda).not.toHaveBeenCalled()
+  })
+
+  it('"Unisci uguali" accorpa le righe di bozza identiche', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.click(screen.getAllByText('Gin Tonic')[0])
+    await user.click(screen.getAllByText('Gin Tonic')[0])
+    await user.click(screen.getByRole('button', { name: /Unisci uguali/ }))
+    await user.click(screen.getByRole('button', { name: /Conferma aggiunte/ }))
+    const [, items] = addComanda.mock.calls[0]
+    expect(items).toHaveLength(1)
+    expect(items[0]).toMatchObject({ drink_id: 'gin', qty: 2 })
+  })
+
+  it('modifica per-item: cambia prezzo di una riga e resta separata', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.click(screen.getByText('Gin Tonic'))
+    await user.click(screen.getByRole('button', { name: /Modifica Gin Tonic/ }))
+    const price = screen.getByLabelText('Prezzo (€) *')
+    await user.clear(price)
+    await user.type(price, '5')
+    await user.click(screen.getByRole('button', { name: /^Salva/ }))
+    await user.click(screen.getByRole('button', { name: /Conferma aggiunte/ }))
+    const [, items] = addComanda.mock.calls[0]
+    expect(items[0]).toMatchObject({ drink_id: 'gin', unit_price: 5, custom: true })
   })
 
   it('"Conferma + stampa comanda" invia e stampa la comanda appena creata', async () => {
@@ -153,12 +181,12 @@ describe('aggiunte: la nuova comanda è gestita internamente', () => {
     expect(printComanda.mock.calls[0][1].id).toBe('c2')
   })
 
-  it("il + su un item esistente è un'aggiunta (non tocca le comande)", async () => {
+  it("il + su un item del conto è un'aggiunta in bozza (non tocca le comande)", async () => {
     const user = userEvent.setup()
     mount(baseOrder())
     await user.click(screen.getAllByRole('button', { name: 'Aumenta' }).at(-1))
-    expect(screen.getAllByText('3').length).toBeGreaterThan(0)
-    expect(screen.getByText('+1 da inviare')).toBeInTheDocument()
+    // compare la sezione bozza; le comande non vengono toccate
+    expect(screen.getByText('DA AGGIUNGERE')).toBeInTheDocument()
     expect(bartenderUpdateComanda).not.toHaveBeenCalled()
     await user.click(screen.getByRole('button', { name: /Conferma aggiunte/ }))
     expect(addComanda).toHaveBeenCalledTimes(1)
@@ -240,10 +268,10 @@ describe('modifiche ottimistiche (UX istantanea)', () => {
     addComanda.mockImplementationOnce(() => new Promise(() => {})) // server lento: mai risolta
     mount(baseOrder())
     await user.click(screen.getByText('Gin Tonic'))
-    expect(screen.getByText('+1 da inviare')).toBeInTheDocument()
+    expect(screen.getByText('DA AGGIUNGERE')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /Conferma aggiunte/ }))
-    // senza aspettare il server: badge sparito, riga ancora nell'ordine
-    expect(screen.queryByText(/da inviare/)).not.toBeInTheDocument()
+    // senza aspettare il server: la bozza è sparita ma la riga resta nel conto
+    expect(screen.queryByText('DA AGGIUNGERE')).not.toBeInTheDocument()
     expect(screen.getAllByText('Gin Tonic').length).toBeGreaterThan(1) // griglia + pannello
   })
 
@@ -266,8 +294,8 @@ describe('modifiche ottimistiche (UX istantanea)', () => {
     await user.click(plus())
     await user.click(plus())
     await user.click(plus())
-    expect(screen.getAllByText('5').length).toBeGreaterThan(0)
-    expect(screen.getByText('+3 da inviare')).toBeInTheDocument()
+    // 3 righe separate in bozza; niente chiamate finché non si conferma
+    expect(screen.getByRole('button', { name: /Conferma aggiunte \(3\)/ })).toBeInTheDocument()
     expect(bartenderUpdateComanda).not.toHaveBeenCalled()
     expect(addComanda).not.toHaveBeenCalled()
   })
