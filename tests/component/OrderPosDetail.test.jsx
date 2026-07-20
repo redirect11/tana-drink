@@ -27,12 +27,19 @@ vi.mock('../../src/lib/api.js', () => ({
   payWithVoucher: vi.fn(() => Promise.resolve({ redeemed: 0, closed: false })),
   cancelOrder: vi.fn(() => Promise.resolve()),
   fetchInventoryItems: vi.fn(() => Promise.resolve([])),
+  // Usati solo in creazione (order == null): qui no-op.
+  createOrder: vi.fn(() => Promise.resolve({ id: 'ord-nuovo' })),
+  ensureTodaySerata: vi.fn(() => Promise.resolve({ id: 'serata1' })),
+  subscribeOrder: vi.fn(() => () => {}),
   DEFAULT_SETTINGS: {},
   subscribeSettings: vi.fn((cb) => {
     cb(mockSettings)
     return () => {}
   }),
 }))
+vi.mock('../../src/lib/pendingOrders.js', () => ({ submitPosOrder: vi.fn() }))
+vi.mock('../../src/lib/firebaseClient.js', () => ({ auth: {} }))
+vi.mock('firebase/auth', () => ({ onAuthStateChanged: vi.fn(() => () => {}) }))
 vi.mock('../../src/lib/paymentsApi.js', () => ({
   readerCheckout: vi.fn(() => Promise.resolve({})),
 }))
@@ -100,7 +107,11 @@ function mount(order) {
   )
 }
 
-beforeEach(() => vi.clearAllMocks())
+beforeEach(() => {
+  vi.clearAllMocks()
+  // La bozza è persistita in localStorage per ordine: pulisco tra i test.
+  localStorage.clear()
+})
 
 describe('vista aggregata: ordine a destra, comande nascoste', () => {
   it("mostra i prodotti dell'ORDINE aggregato, non le singole comande", () => {

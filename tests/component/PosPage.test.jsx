@@ -36,10 +36,16 @@ vi.mock('../../src/lib/api.js', () => ({
   ),
   subscribeOrder: vi.fn(() => () => {}),
   subscribeSettings: vi.fn((cb) => {
-    cb({ payments_reader_enabled: false, sumup_reader_id: null })
+    // 'uniti': due tap sullo stesso prodotto sommano la quantità.
+    cb({ payments_reader_enabled: false, sumup_reader_id: null, order_group_default: 'uniti' })
     return () => {}
   }),
   DEFAULT_SETTINGS: {},
+  advanceComanda: vi.fn(() => Promise.resolve()),
+  addComanda: vi.fn(() => Promise.resolve({ comande: [] })),
+  bartenderUpdateComanda: vi.fn(() => Promise.resolve()),
+  updateOrderInfo: vi.fn(() => Promise.resolve()),
+  cancelOrder: vi.fn(() => Promise.resolve()),
   fetchInventoryItems: vi.fn(() => Promise.resolve([])),
   registerPayment: vi.fn(() => Promise.resolve({ closed: true })),
   setOrderDiscount: vi.fn(() => Promise.resolve()),
@@ -101,7 +107,8 @@ describe('cassa: layout identico al dettaglio ordine', () => {
     mount()
     expect(screen.getByRole('button', { name: 'Cocktail' })).toBeInTheDocument()
     expect(screen.getByText('Gin Tonic')).toBeInTheDocument()
-    expect(screen.getByText('ORDINE')).toBeInTheDocument()
+    // La schermata di creazione è la stessa della modifica: intestazione "Nuovo ordine".
+    expect(screen.getAllByText('Nuovo ordine').length).toBeGreaterThan(0)
     expect(screen.getByText(/Tocca i prodotti per aggiungerli/)).toBeInTheDocument()
     // stessi elementi del dettaglio: prodotto libero e dati conto ripiegabili
     expect(screen.getByRole('button', { name: /Prodotto libero/ })).toBeInTheDocument()
