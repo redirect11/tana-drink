@@ -15,6 +15,8 @@ import {
   unitsInStock,
   stockValue,
   costPerCl,
+  smallUnits,
+  costPerUnit,
   inventoryTotalValue,
 } from '../../src/lib/inventory.js'
 
@@ -147,6 +149,24 @@ describe('costi e valorizzazione', () => {
   it('inventoryTotalValue somma i valori', () => {
     const v = inventoryTotalValue([amaro, birra])
     expect(v).toBeCloseTo(39.345 + 24 * 0.8296, 3)
+  })
+
+  it('smallUnits: cl/ml per liquidi, g/mg per solidi, pz per pezzi', () => {
+    expect(smallUnits({ unit: 'ml' })).toEqual(['cl', 'ml'])
+    expect(smallUnits({ unit: 'g' })).toEqual(['g', 'mg'])
+    expect(smallUnits({ unit: 'pz' })).toEqual(['pz'])
+  })
+
+  it('costPerUnit: prezzo per cl/ml (liquidi) e g/mg (solidi)', () => {
+    // amaro: 12,9 €/conf +IVA 22% = 15,738; conf. 1000 ml
+    expect(costPerUnit(amaro, 'ml')).toBeCloseTo(0.015738, 6)
+    expect(costPerUnit(amaro, 'cl')).toBeCloseTo(0.15738, 5)
+    // solido: 10 €/conf +IVA 22% = 12,2; conf. 500 g
+    const sale = { unit: 'g', package_size: 500, cost: 10, vat: 22 }
+    expect(costPerUnit(sale, 'g')).toBeCloseTo(0.0244, 4)
+    expect(costPerUnit(sale, 'mg')).toBeCloseTo(0.0000244, 7)
+    // pezzo: costo per pz = costo confezione ivato
+    expect(costPerUnit({ unit: 'pz', cost: 2, vat: 10 }, 'pz')).toBeCloseTo(2.2, 3)
   })
 })
 
