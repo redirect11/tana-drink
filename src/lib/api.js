@@ -2164,6 +2164,25 @@ export async function deleteStaffHours(id) {
   await deleteDoc(doc(staffHoursCol, id))
 }
 
+// Turni in un intervallo di date (per le viste calendario giorno/
+// settimana/mese, anche a cavallo di due mesi).
+export function subscribeStaffHoursRange(from, to, cb, onError) {
+  const q = query(staffHoursCol, where('date', '>=', from), where('date', '<=', to))
+  return onSnapshot(
+    q,
+    (snap) => {
+      const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+      rows.sort(
+        (a, b) =>
+          String(a.date).localeCompare(String(b.date)) ||
+          String(a.start || '').localeCompare(String(b.start || ''))
+      )
+      cb(rows)
+    },
+    onError
+  )
+}
+
 // Tutto il registro ore (per il dedup dell'import storico).
 export async function fetchAllStaffHours() {
   const snap = await getDocs(staffHoursCol)
