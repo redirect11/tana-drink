@@ -5,10 +5,13 @@ import {
   setOrderLotteryCode,
   createInvoice,
   markInvoiceSent,
+  subscribeVouchers,
+  payWithVoucher,
 } from '../lib/api.js'
 import { readerCheckout } from '../lib/paymentsApi.js'
 import { formatPrice, PAYMENT_METHOD_LABELS } from '../lib/orderStatus.js'
 import { allServed } from '../lib/comande.js'
+import { activeVouchers } from '../lib/vouchers.js'
 import { printScontrino, printFattura, loadPrinterSettings } from '../lib/printer.js'
 import { toastError } from '../lib/toast.js'
 import {
@@ -85,6 +88,12 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onB
     email: '',
   })
   const [readerStarted, setReaderStarted] = useState(false)
+  // Buoni VIP: elenco e beneficiario scelto per il pagamento col buono.
+  const [vouchers, setVouchers] = useState([])
+  const [voucherId, setVoucherId] = useState('')
+  useEffect(() => subscribeVouchers(setVouchers, () => {}), [])
+  const vipList = useMemo(() => activeVouchers(vouchers), [vouchers])
+  const chosenVoucher = vipList.find((v) => v.id === voucherId) || null
 
   // Dopo ogni incasso registrato si riparte da "tutto il residuo".
   const paymentsCount = (order.payments || []).length
@@ -132,7 +141,16 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onB
       disabled: !readerReady,
       note: !readerReady ? 'configura il lettore nelle Impostazioni' : null,
     },
+    {
+      key: 'buono',
+      label: 'Buono VIP',
+      emoji: '🎟',
+      disabled: vipList.length === 0,
+      note: vipList.length === 0 ? 'nessun buono con saldo' : null,
+    },
   ]
+  // Col buono si incassa al massimo il saldo del beneficiario scelto.
+  const voucherPay = chosenVoucher ? Math.min(toPay, round2(chosenVoucher.balance)) : 0
 
   async function run(fn) {
     setSaving(true)
@@ -184,6 +202,17 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onB
 
   const riscuoti = () => {
     const items = !manual && splitting ? selection : null
+    if (method === 'buono') {
+      // Buono VIP: scala il credito del beneficiario (transazione atomica
+      // ordine+buono). Aspetta l'id reale se il conto è appena nato.
+      if (!chosenVoucher || !(voucherPay > 0)) return
+      return run(async () => {
+        await onBeforePay?.()
+        const { closed } = await payWithVoucher(await orderId(), chosenVoucher.id, voucherPay)
+        setVoucherId('')
+        if (closed) onClose()
+      })
+    }
     if (method === 'lettore') {
       // Lettore SIMULATO (test/dev senza hardware): stessa UX del vero —
       // transazione "avviata", poi l'esito arriva da solo dopo 2,5s.
@@ -474,13 +503,39 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onB
             <button className="paypad-key danger" aria-label="Cancella cifra" onClick={back}>←</button>
           </div>
 
+          {/* Col buono: scelta del beneficiario e importo scalato dal saldo */}
+          {method === 'buono' && !closed && (
+            <div style={{ marginTop: 8, flexShrink: 0 }}>
+              <label htmlFor="pay-voucher">🎟 Buono di</label>
+              <select id="pay-voucher" value={voucherId} onChange={(e) => setVoucherId(e.target.value)}>
+                <option value="">— Scegli il beneficiario —</option>
+                {vipList.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.holder_name} · saldo {formatPrice(v.balance)}
+                  </option>
+                ))}
+              </select>
+              {chosenVoucher && (
+                <p className="muted small" style={{ margin: '4px 0 0' }}>
+                  Si scalano {formatPrice(voucherPay)} dal buono di {chosenVoucher.holder_name}
+                  {voucherPay < toPay ? ` · restano ${formatPrice(toPay - voucherPay)} da pagare a parte` : ''}
+                </p>
+              )}
+            </div>
+          )}
+
           {!closed && (
             <button
               className="btn block payscreen-collect"
-              disabled={saving || !(toPay > 0)}
+              disabled={
+                saving ||
+                (method === 'buono' ? !(voucherPay > 0) : !(toPay > 0))
+              }
               onClick={riscuoti}
             >
-              Riscuotere · {formatPrice(toPay)}
+              {method === 'buono'
+                ? `Usa il buono · ${formatPrice(voucherPay)}`
+                : `Riscuotere · ${formatPrice(toPay)}`}
             </button>
           )}
 

@@ -24,6 +24,11 @@ vi.mock('../../src/lib/api.js', () => ({
     })
   ),
   markInvoiceSent: vi.fn(() => Promise.resolve()),
+  subscribeVouchers: vi.fn((cb) => {
+    cb(mockVouchers)
+    return () => {}
+  }),
+  payWithVoucher: vi.fn(() => Promise.resolve({ redeemed: 0, closed: false })),
 }))
 vi.mock('../../src/lib/paymentsApi.js', () => ({
   readerCheckout: vi.fn(() => Promise.resolve({})),
@@ -42,7 +47,10 @@ import {
   createInvoice,
 } from '../../src/lib/api.js'
 import { readerCheckout } from '../../src/lib/paymentsApi.js'
+import { payWithVoucher } from '../../src/lib/api.js'
 import { printScontrino, printFattura } from '../../src/lib/printer.js'
+
+let mockVouchers = []
 
 const baseOrder = (over = {}) => ({
   id: 'ord1',
@@ -78,7 +86,10 @@ function mount(order, settings = noReader) {
 
 const payAmount = () => screen.getByTestId('pay-amount')
 
-beforeEach(() => vi.clearAllMocks())
+beforeEach(() => {
+  vi.clearAllMocks()
+  mockVouchers = []
+})
 
 describe('layout POS: tutto già in pagamento, Riscuotere incassa', () => {
   it('si apre con il residuo intero e Riscuotere lo incassa in Contante', async () => {
@@ -214,6 +225,24 @@ describe('metodi di pagamento', () => {
     const sumup = screen.getByRole('button', { name: /SumUp/ })
     expect(sumup).toBeDisabled()
     expect(sumup).toHaveTextContent(/configura il lettore/)
+  })
+
+  it('Buono VIP: senza buoni è spento; con buono si sceglie e si scala', async () => {
+    // Nessun buono: metodo presente ma disabilitato
+    mount(baseOrder())
+    expect(screen.getByRole('button', { name: /Buono VIP/ })).toBeDisabled()
+  })
+
+  it('Buono VIP: scelto il beneficiario, "Usa il buono" scala dal saldo', async () => {
+    mockVouchers = [{ id: 'v1', holder_name: 'Marco', balance: 10 }]
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.click(screen.getByRole('button', { name: /Buono VIP/ }))
+    // saldo 10 < dovuto 22 → si scalano 10, restano 12 da pagare
+    await user.selectOptions(screen.getByLabelText(/Buono di/), 'v1')
+    expect(screen.getByText(/Si scalano 10,00 € dal buono di Marco/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /Usa il buono/ }))
+    expect(payWithVoucher).toHaveBeenCalledWith('ord1', 'v1', 10)
   })
 })
 

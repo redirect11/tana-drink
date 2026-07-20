@@ -187,6 +187,11 @@ service cloud.firestore {
       allow read, write: if isStaffMember();
     }
 
+    // BUONI VIP: credito ricaricabile — solo staff (contiene i nomi VIP).
+    match /vouchers/{voucherId} {
+      allow read, write: if isStaffMember();
+    }
+
     // FATTURE di cortesia: solo staff (contengono dati dei clienti).
     match /invoices/{invoiceId} {
       allow read, write: if isStaffMember();

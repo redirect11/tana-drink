@@ -59,6 +59,7 @@ export const PAYMENT_METHOD_LABELS = {
   lettore: '📟 SumUp (lettore)',
   banco: '💶 Contante',
   carta: '💳 Carta di credito',
+  buono: '🎟 Buono VIP',
   misto: '💶+💳 Misto',
 }
 
