@@ -3,7 +3,16 @@
 // Unit test del registro ore staff (RAPP ORE) — src/lib/ore.js
 
 import { describe, it, expect } from 'vitest'
-import { computeHours, monthKey, monthlyTotals } from '../../src/lib/ore.js'
+import {
+  computeHours,
+  monthKey,
+  monthlyTotals,
+  byDay,
+  sumHours,
+  monthGrid,
+  weekDays,
+  shiftDay,
+} from '../../src/lib/ore.js'
 
 describe('computeHours', () => {
   it('turno normale, con e senza pausa', () => {
@@ -39,5 +48,44 @@ describe('monthKey / monthlyTotals', () => {
       { name: 'Marco', hours: 6, turni: 1 },
       { name: 'Sara', hours: 10, turni: 2 },
     ])
+  })
+})
+
+describe('calendario: byDay / sumHours / monthGrid / weekDays / shiftDay', () => {
+  const entries = [
+    { id: 'a', date: '2026-07-13', staff_name: 'Sara', hours: 5 },
+    { id: 'b', date: '2026-07-13', staff_name: 'Marco', hours: 4 },
+    { id: 'c', date: '2026-07-14', staff_name: 'Sara', hours: 6 },
+  ]
+
+  it('byDay raggruppa per giorno con totale e turni', () => {
+    const m = byDay(entries)
+    expect(m.get('2026-07-13').total).toBe(9)
+    expect(m.get('2026-07-13').entries).toHaveLength(2)
+    expect(m.get('2026-07-14').total).toBe(6)
+  })
+
+  it('sumHours somma le ore', () => {
+    expect(sumHours(entries)).toBe(15)
+    expect(sumHours([])).toBe(0)
+  })
+
+  it('monthGrid: 42 giorni dal lunedì, flag inMonth', () => {
+    const grid = monthGrid('2026-07') // luglio 2026: il 1 è mercoledì
+    expect(grid).toHaveLength(42)
+    expect(grid[0].date).toBe('2026-06-29') // lunedì prima
+    expect(grid[0].inMonth).toBe(false)
+    expect(grid.find((c) => c.date === '2026-07-01').inMonth).toBe(true)
+  })
+
+  it('weekDays: lun→dom della settimana che contiene la data', () => {
+    const w = weekDays('2026-07-15') // mercoledì
+    expect(w[0]).toBe('2026-07-13') // lunedì
+    expect(w[6]).toBe('2026-07-19') // domenica
+  })
+
+  it('shiftDay sposta di N giorni (anche oltre il mese)', () => {
+    expect(shiftDay('2026-07-31', 1)).toBe('2026-08-01')
+    expect(shiftDay('2026-07-01', -1)).toBe('2026-06-30')
   })
 })

@@ -27,6 +27,59 @@ export function computeHours(start, end, breakMinutes = 0) {
 // Chiave mese di una data ISO (YYYY-MM-DD → YYYY-MM).
 export const monthKey = (date) => String(date || '').slice(0, 7)
 
+// Ore totali di un elenco di turni.
+export const sumHours = (entries) =>
+  Math.round((entries || []).reduce((s, e) => s + (Number(e.hours) || 0), 0) * 100) / 100
+
+// Turni raggruppati per giorno: Map 'YYYY-MM-DD' → { total, entries }.
+export function byDay(entries) {
+  const m = new Map()
+  for (const e of entries || []) {
+    const cur = m.get(e.date) || { total: 0, entries: [] }
+    cur.entries.push(e)
+    cur.total = Math.round((cur.total + (Number(e.hours) || 0)) * 100) / 100
+    m.set(e.date, cur)
+  }
+  return m
+}
+
+// Le 6 settimane (42 giorni) che coprono il mese, partendo dal lunedì:
+// [{ date: 'YYYY-MM-DD', inMonth }]. `weekStartsMonday` per l'Italia.
+export function monthGrid(monthStr) {
+  const [y, mo] = String(monthStr).split('-').map(Number)
+  const first = new Date(Date.UTC(y, mo - 1, 1))
+  const dow = (first.getUTCDay() + 6) % 7 // 0 = lunedì
+  const start = new Date(first)
+  start.setUTCDate(first.getUTCDate() - dow)
+  const days = []
+  for (let i = 0; i < 42; i++) {
+    const d = new Date(start)
+    d.setUTCDate(start.getUTCDate() + i)
+    days.push({ date: d.toISOString().slice(0, 10), inMonth: d.getUTCMonth() === mo - 1 })
+  }
+  return days
+}
+
+// I 7 giorni (lun→dom) della settimana che contiene `dateStr`.
+export function weekDays(dateStr) {
+  const d = new Date(`${dateStr}T00:00:00Z`)
+  const dow = (d.getUTCDay() + 6) % 7
+  const monday = new Date(d)
+  monday.setUTCDate(d.getUTCDate() - dow)
+  return Array.from({ length: 7 }, (_, i) => {
+    const x = new Date(monday)
+    x.setUTCDate(monday.getUTCDate() + i)
+    return x.toISOString().slice(0, 10)
+  })
+}
+
+// Sposta una data ISO di N giorni.
+export function shiftDay(dateStr, delta) {
+  const d = new Date(`${dateStr}T00:00:00Z`)
+  d.setUTCDate(d.getUTCDate() + delta)
+  return d.toISOString().slice(0, 10)
+}
+
 // Totali del mese per persona: [{ name, hours, turni }] ordinati per nome,
 // più il totale complessivo.
 export function monthlyTotals(entries) {

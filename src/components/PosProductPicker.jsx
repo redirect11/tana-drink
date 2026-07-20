@@ -29,19 +29,9 @@ export default function PosProductPicker({ drinks, cats, loading, qtyByDrink, on
 
   return (
     <>
-      {/* Sidebar categorie */}
-      <aside
-        style={{
-          width: 104,
-          flexShrink: 0,
-          overflowY: 'auto',
-          borderRight: '1px solid var(--line)',
-          padding: '8px 6px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 6,
-        }}
-      >
+      {/* Sidebar categorie: larghezza flessibile in base ai nomi (clamp
+          min/max in CSS), non più fissa. */}
+      <aside className="posd-cats">
         <button onClick={() => setSelectedCat('__all__')} style={catBtnStyle(selectedCat === '__all__')}>
           <span aria-hidden style={catDotStyle(null)} />
           <span>Tutti</span>
