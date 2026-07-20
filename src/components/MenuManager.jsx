@@ -13,6 +13,7 @@ import {
 import { uploadDrinkImage, deleteDrinkImageByUrl } from '../lib/storage.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import { toBaseQty, formatQty, ENTRY_UNITS } from '../lib/inventory.js'
+import { CATEGORY_ICONS, catColor } from '../lib/categoryColors.js'
 
 const EMPTY = {
   name: '',
@@ -458,14 +459,54 @@ function CategoryManager({ categories, onChange }) {
         </div>
       )}
       {categories.map((c, idx) => (
-        <div className="row between" key={c.id} style={{ marginTop: 8 }}>
-          <span>{c.name}</span>
-          <span className="row" style={{ gap: 4 }}>
-            <button className="btn ghost small" onClick={() => move(idx, -1)} disabled={idx === 0}>↑</button>
-            <button className="btn ghost small" onClick={() => move(idx, 1)} disabled={idx === categories.length - 1}>↓</button>
-            <button className="btn ghost small" onClick={() => rename(c)}>✏️</button>
-            <button className="btn ghost small" onClick={() => remove(c)}>🗑</button>
-          </span>
+        <div key={c.id} style={{ marginTop: 8, borderTop: idx ? '1px solid var(--line)' : 'none', paddingTop: idx ? 8 : 0 }}>
+          <div className="row between">
+            <span className="row" style={{ gap: 6, alignItems: 'center' }}>
+              <span aria-hidden style={{ fontSize: '1.1rem', width: 20, textAlign: 'center' }}>
+                {c.icon || '•'}
+              </span>
+              {c.name}
+            </span>
+            <span className="row" style={{ gap: 4 }}>
+              <button className="btn ghost small" onClick={() => move(idx, -1)} disabled={idx === 0}>↑</button>
+              <button className="btn ghost small" onClick={() => move(idx, 1)} disabled={idx === categories.length - 1}>↓</button>
+              <button className="btn ghost small" onClick={() => rename(c)}>✏️</button>
+              <button className="btn ghost small" onClick={() => remove(c)}>🗑</button>
+            </span>
+          </div>
+          {/* Icona (set di emoji) + colore per la categoria */}
+          <div className="chips-row" style={{ marginTop: 6 }}>
+            <button
+              className={`chip ${!c.icon ? 'active' : ''}`}
+              title="Nessuna icona"
+              onClick={() => updateCategory(c.id, { icon: null }).then(onChange)}
+            >
+              ∅
+            </button>
+            {CATEGORY_ICONS.map((ic) => (
+              <button
+                key={ic}
+                className={`chip ${c.icon === ic ? 'active' : ''}`}
+                onClick={() => updateCategory(c.id, { icon: ic }).then(onChange)}
+              >
+                {ic}
+              </button>
+            ))}
+          </div>
+          <div className="row" style={{ gap: 8, marginTop: 6, alignItems: 'center' }}>
+            <span className="muted small">Colore</span>
+            <input
+              type="color"
+              value={c.color || catColor(c)}
+              onChange={(e) => updateCategory(c.id, { color: e.target.value }).then(onChange)}
+              style={{ width: 40, height: 28, padding: 0, border: 'none', background: 'none' }}
+            />
+            {c.color && (
+              <button className="btn ghost small" onClick={() => updateCategory(c.id, { color: null }).then(onChange)}>
+                Auto
+              </button>
+            )}
+          </div>
         </div>
       ))}
     </div>

@@ -85,6 +85,8 @@ function mapCategory(snap) {
     id: snap.id,
     name: c.name ?? '',
     sort_order: c.sort_order ?? 0,
+    icon: c.icon ?? null, // emoji scelta per la categoria (opzionale)
+    color: c.color ?? null, // colore custom (hex); null = colore automatico
     created_at: toIso(c.created_at),
   }
 }
@@ -298,8 +300,14 @@ export async function fetchCategories() {
   return cats
 }
 
-export async function createCategory({ name, sort_order = 0 }) {
-  const ref = await addDoc(categoriesCol, { name, sort_order, created_at: serverTimestamp() })
+export async function createCategory({ name, sort_order = 0, icon = null, color = null }) {
+  const ref = await addDoc(categoriesCol, {
+    name,
+    sort_order,
+    icon: icon || null,
+    color: color || null,
+    created_at: serverTimestamp(),
+  })
   return mapCategory(await getDoc(ref))
 }
 
@@ -2358,6 +2366,9 @@ export const DEFAULT_SETTINGS = {
   // 'separati' (ogni tocco una riga a sé) o 'uniti' (item uguali sommati).
   // Si può comunque unire/separare al volo dal riepilogo ordine.
   order_group_default: 'separati',
+  // Come mostrare le categorie nel POS: 'dot' (pallino + testo, come ora),
+  // 'icon_text' (icona + testo) o 'icon' (solo icona).
+  category_display: 'dot',
   // Pagamenti: online (SumUp Checkout) e lettore Solo (Cloud API).
   payments_online_enabled: false,
   payments_online_required: false,

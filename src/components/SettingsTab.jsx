@@ -69,6 +69,26 @@ export default function SettingsTab() {
             </button>
           ))}
         </div>
+
+        <p className="muted" style={{ margin: '12px 0 6px', fontSize: '0.85rem' }}>
+          Come mostrare le categorie nel POS (icona e colore si scelgono nel
+          Menù → Categorie).
+        </p>
+        <div className="mode-choice" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
+          {[
+            ['dot', '• Pallino + testo'],
+            ['icon_text', '🍸 Icona + testo'],
+            ['icon', '🍸 Solo icona'],
+          ].map(([value, label]) => (
+            <button
+              key={value}
+              className={`mode-option${(settings.category_display || 'dot') === value ? ' active' : ''}`}
+              onClick={() => save({ category_display: value })}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="card settings-section">

@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { DrinkTile } from './PosBits.jsx'
 import { catBtnStyle } from '../lib/posStyles.js'
-import { categoryColor, drinkCategoryColor } from '../lib/categoryColors.js'
+import { catColor, drinkCategoryColor } from '../lib/categoryColors.js'
 
 // Colonna categorie + griglia prodotti (il "centro" dell'interfaccia POS,
 // identico su cassa e dettaglio ordine, come nell'app SumUp). Toccando un
 // prodotto lo si aggiunge alla comanda nel pannello di destra.
-export default function PosProductPicker({ drinks, cats, loading, qtyByDrink, onAdd, onSetQty, disabled = false }) {
+// `categoryDisplay`: 'dot' (pallino+testo), 'icon_text' o 'icon'.
+export default function PosProductPicker({ drinks, cats, loading, qtyByDrink, onAdd, onSetQty, disabled = false, categoryDisplay = 'dot' }) {
   const [selectedCat, setSelectedCat] = useState(null)
   const [query, setQuery] = useState('')
   const gridRef = useRef(null)
@@ -32,21 +33,44 @@ export default function PosProductPicker({ drinks, cats, loading, qtyByDrink, on
       {/* Sidebar categorie: larghezza flessibile in base ai nomi (clamp
           min/max in CSS), non più fissa. */}
       <aside className="posd-cats">
-        <button onClick={() => setSelectedCat('__all__')} style={catBtnStyle(selectedCat === '__all__')}>
-          <span aria-hidden style={catDotStyle(null)} />
-          <span>Tutti</span>
+        <button onClick={() => setSelectedCat('__all__')} style={catBtnStyle(selectedCat === '__all__')} title="Tutti">
+          {categoryDisplay === 'icon' ? (
+            <span aria-hidden style={{ fontSize: '1.25rem' }}>▦</span>
+          ) : (
+            <>
+              <span aria-hidden style={catDotStyle(null)} />
+              <span>Tutti</span>
+            </>
+          )}
         </button>
         {cats.map((c) => (
           <button
             key={catKey(c)}
+            title={c.name}
             onClick={() => {
               setSelectedCat(catKey(c))
               gridRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
             }}
             style={catBtnStyle(selectedCat === catKey(c))}
           >
-            <span aria-hidden style={catDotStyle(categoryColor(c.id ?? c.name))} />
-            <span style={{ minWidth: 0 }}>{c.name}</span>
+            {categoryDisplay === 'icon' ? (
+              // Solo icona: emoji della categoria (o pallino colorato se manca).
+              c.icon ? (
+                <span aria-hidden style={{ fontSize: '1.25rem' }}>{c.icon}</span>
+              ) : (
+                <span aria-hidden style={{ ...catDotStyle(catColor(c)), width: 16, height: 16 }} />
+              )
+            ) : categoryDisplay === 'icon_text' ? (
+              <>
+                <span aria-hidden>{c.icon || <span style={catDotStyle(catColor(c))} />}</span>
+                <span style={{ minWidth: 0 }}>{c.name}</span>
+              </>
+            ) : (
+              <>
+                <span aria-hidden style={catDotStyle(catColor(c))} />
+                <span style={{ minWidth: 0 }}>{c.name}</span>
+              </>
+            )}
           </button>
         ))}
       </aside>
