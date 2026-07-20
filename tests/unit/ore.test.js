@@ -12,6 +12,9 @@ import {
   monthGrid,
   weekDays,
   shiftDay,
+  hoursBetweenIso,
+  hhmm,
+  effVsPlanned,
 } from '../../src/lib/ore.js'
 
 describe('computeHours', () => {
@@ -48,6 +51,37 @@ describe('monthKey / monthlyTotals', () => {
       { name: 'Marco', hours: 6, turni: 1 },
       { name: 'Sara', hours: 10, turni: 2 },
     ])
+  })
+})
+
+describe('badge: hoursBetweenIso / hhmm / effVsPlanned', () => {
+  it('hoursBetweenIso: ore tra due timbrature ISO', () => {
+    expect(hoursBetweenIso('2026-07-13T18:00:00.000Z', '2026-07-13T22:30:00.000Z')).toBe(4.5)
+    // 15 minuti = 0.25 h
+    expect(hoursBetweenIso('2026-07-13T18:00:00.000Z', '2026-07-13T18:15:00.000Z')).toBe(0.25)
+  })
+
+  it('hoursBetweenIso: uscita prima dell’entrata o valori invalidi → null', () => {
+    expect(hoursBetweenIso('2026-07-13T22:00:00Z', '2026-07-13T18:00:00Z')).toBeNull()
+    expect(hoursBetweenIso(null, '2026-07-13T18:00:00Z')).toBeNull()
+    expect(hoursBetweenIso('boh', 'boh')).toBeNull()
+  })
+
+  it('hhmm: HH:MM locale dall’ISO (vuoto se invalido)', () => {
+    // Uso un'ora locale nota per evitare dipendenze dal fuso.
+    const iso = new Date(2026, 6, 13, 18, 5).toISOString()
+    expect(hhmm(iso)).toBe('18:05')
+    expect(hhmm('nope')).toBe('')
+  })
+
+  it('effVsPlanned: separa effettivo e programmato e calcola lo scarto', () => {
+    const r = effVsPlanned([
+      { hours: 5, kind: 'effettivo' },
+      { hours: 2.5, kind: 'effettivo' },
+      { hours: 8, kind: 'programmato' },
+      { hours: 1 }, // senza kind = effettivo
+    ])
+    expect(r).toEqual({ effettivo: 8.5, programmato: 8, scarto: 0.5 })
   })
 })
 

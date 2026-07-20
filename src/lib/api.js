@@ -35,6 +35,7 @@ import {
   itemsTotal as sumItems,
 } from './comande.js'
 import { discountAmount, orderDue, paymentCloses, summaryMethod } from './pagamento.js'
+import { hoursBetweenIso } from './ore.js'
 import { notify } from './notify.js'
 
 const drinksCol = collection(db, 'drinks')
@@ -2212,7 +2213,7 @@ const staffHoursCol = collection(db, 'staff_hours')
 
 // ── RAPP ORE: registro ore dello staff (per mese) ─────────────────────
 
-export async function addStaffHours({ staff_name, date, start, end, break_minutes = 0, hours, note = null }) {
+export async function addStaffHours({ staff_name, date, start, end, break_minutes = 0, hours, note = null, kind = 'effettivo' }) {
   const ref = await addDoc(staffHoursCol, {
     staff_name: String(staff_name || '').trim(),
     date, // YYYY-MM-DD
@@ -2222,6 +2223,10 @@ export async function addStaffHours({ staff_name, date, start, end, break_minute
     break_minutes: Number(break_minutes) || 0,
     hours: Number(hours) || 0,
     note: note || null,
+    // 'programmato' = turno pianificato, 'effettivo' = ore realmente
+    // lavorate (correzione manuale o storico Excel). I doc legacy senza
+    // campo sono ore effettive (era il registro RAPP ORE).
+    kind: kind === 'programmato' ? 'programmato' : 'effettivo',
     created_at: serverTimestamp(),
   })
   return ref.id
@@ -2267,6 +2272,92 @@ export function subscribeStaffHoursRange(from, to, cb, onError) {
 export async function fetchAllStaffHours() {
   const snap = await getDocs(staffHoursCol)
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+}
+
+// ── BADGE VIRTUALE: timbrature entrata/uscita dello staff ─────────────
+// Al login lo staff "timbra" l'entrata, al logout l'uscita. Ogni sessione
+// è un doc con clock_in/clock_out; finché `open` è vero il turno è in
+// corso. Le ore effettive del calendario sommano queste sessioni chiuse
+// (kind 'effettivo' come le voci manuali).
+
+const staffShiftsCol = collection(db, 'staff_shifts')
+
+// Timbra ENTRATA: apre una sessione, ma solo se non ce n'è già una aperta
+// per questo uid (idempotente: un refresh a sessione aperta non duplica).
+// Offline la query legge dalla cache; se la cache è fredda può creare un
+// doppione, che il bartender corregge dal backoffice.
+export async function clockIn({ uid, name }) {
+  if (!uid) return null
+  const openQ = query(staffShiftsCol, where('staff_uid', '==', uid), where('open', '==', true))
+  const existing = await getDocs(openQ)
+  if (!existing.empty) return existing.docs[0].id
+  const now = new Date().toISOString()
+  const ref = await addDoc(staffShiftsCol, {
+    staff_uid: uid,
+    staff_name: String(name || '').trim(),
+    clock_in: now,
+    clock_out: null,
+    open: true,
+    date: now.slice(0, 10),
+    month: now.slice(0, 7),
+    hours: 0,
+    created_at: serverTimestamp(),
+  })
+  return ref.id
+}
+
+// Timbra USCITA: chiude la/e sessione/i aperta/e dell'uid calcolando le ore.
+export async function clockOut({ uid }) {
+  if (!uid) return
+  const openQ = query(staffShiftsCol, where('staff_uid', '==', uid), where('open', '==', true))
+  const snap = await getDocs(openQ)
+  const now = new Date().toISOString()
+  for (const d of snap.docs) {
+    const inIso = d.data().clock_in
+    await updateDoc(d.ref, {
+      clock_out: now,
+      open: false,
+      hours: hoursBetweenIso(inIso, now) || 0,
+    })
+  }
+}
+
+// Timbrature in un intervallo di date (per le viste calendario). Marcate
+// kind 'effettivo' per il confronto con le ore programmate.
+export function subscribeStaffShiftsRange(from, to, cb, onError) {
+  const q = query(staffShiftsCol, where('date', '>=', from), where('date', '<=', to))
+  return onSnapshot(
+    q,
+    (snap) => {
+      const rows = snap.docs.map((d) => ({ id: d.id, ...d.data(), kind: 'effettivo' }))
+      rows.sort(
+        (a, b) =>
+          String(a.date).localeCompare(String(b.date)) ||
+          String(a.clock_in || '').localeCompare(String(b.clock_in || ''))
+      )
+      cb(rows)
+    },
+    onError
+  )
+}
+
+// Correzione manuale di una timbratura (bartender): se imposta entrambi
+// gli orari ricalcola le ore e chiude la sessione.
+export async function updateStaffShift(id, patch) {
+  const p = { ...patch }
+  if (p.clock_in) {
+    p.date = String(p.clock_in).slice(0, 10)
+    p.month = String(p.clock_in).slice(0, 7)
+  }
+  if (p.clock_in && p.clock_out) {
+    p.hours = hoursBetweenIso(p.clock_in, p.clock_out) || 0
+    p.open = false
+  }
+  await updateDoc(doc(staffShiftsCol, id), p)
+}
+
+export async function deleteStaffShift(id) {
+  await deleteDoc(doc(staffShiftsCol, id))
 }
 
 // Token push del dispositivo di un membro dello staff: la Cloud Function

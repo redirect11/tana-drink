@@ -9,8 +9,9 @@ import StaffProfilePage from './pages/StaffProfilePage.jsx'
 import PosPage from './pages/PosPage.jsx'
 import { useCustomer, useHasOrders } from './lib/customerAuth.js'
 import { isFirebaseConfigured, auth } from './lib/firebaseClient.js'
-import { onAuthStateChanged, signOut } from 'firebase/auth'
-import { subscribeSettings, DEFAULT_SETTINGS } from './lib/api.js'
+import { onAuthStateChanged } from 'firebase/auth'
+import { subscribeSettings, DEFAULT_SETTINGS, clockIn } from './lib/api.js'
+import { logoutStaff } from './lib/logout.js'
 import { resolveThemeVars, applyTheme } from './lib/themes.js'
 import { envLabel } from './dev/devActions.js'
 import { openCookiePreferences } from './lib/cookieConsent.js'
@@ -59,8 +60,13 @@ export default function App() {
       try {
         const token = await u.getIdTokenResult()
         const role = token.claims.role
-        setStaffRole(role === 'bartender' || role === 'staff' ? role : null)
-        setStaffName(u.displayName || String(u.email || '').split('@')[0])
+        const isStaff = role === 'bartender' || role === 'staff'
+        setStaffRole(isStaff ? role : null)
+        const nome = u.displayName || String(u.email || '').split('@')[0]
+        setStaffName(nome)
+        // Badge virtuale: timbra l'entrata (idempotente, non duplica al
+        // refresh). Best-effort: se fallisce non blocca l'accesso.
+        if (isStaff) clockIn({ uid: u.uid, name: nome }).catch(() => {})
       } catch {
         setStaffRole(null)
       }
@@ -140,7 +146,7 @@ export default function App() {
                   <Link className="btn ghost small" to="/bar">
                     🍸 Ciao, {staffName}
                   </Link>
-                  <button className="btn ghost small" onClick={() => signOut(auth)}>
+                  <button className="btn ghost small" onClick={() => logoutStaff()}>
                     Esci
                   </button>
                 </>
