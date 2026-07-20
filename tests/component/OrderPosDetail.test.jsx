@@ -136,21 +136,25 @@ describe('vista aggregata: ordine a destra, comande nascoste', () => {
 })
 
 describe('aggiunte: la nuova comanda è gestita internamente', () => {
-  it('tap sulla griglia → righe SEPARATE in "DA AGGIUNGERE"; Conferma le invia (no stampa)', async () => {
+  it('tap sulla griglia → righe SEPARATE in un\'unica lista; Conferma confluisce nella comanda in prep.', async () => {
     const user = userEvent.setup()
     mount(baseOrder())
     await user.click(screen.getAllByText('Gin Tonic')[0])
     await user.click(screen.getAllByText('Gin Tonic')[0])
-    // niente somma automatica: la sezione bozza compare, non un badge aggregato
-    expect(screen.getByText(/DA AGGIUNGERE/)).toBeInTheDocument()
-    expect(screen.queryByText(/da inviare/)).not.toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: '✅ Conferma' }))
-    expect(addComanda).toHaveBeenCalledTimes(1)
-    const [orderId, items] = addComanda.mock.calls[0]
+    // niente somma automatica: righe separate, marcate come non confermate
+    expect(screen.getByText(/non confermat/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /Conferma/ }))
+    // l'ordine è in preparazione → NON crea una nuova comanda: confluisce in c1
+    expect(addComanda).not.toHaveBeenCalled()
+    await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalledTimes(1))
+    const [orderId, comandaId, payload] = bartenderUpdateComanda.mock.calls[0]
     expect(orderId).toBe('ord1')
-    // due righe separate da 1 (non una da 2)
-    expect(items).toHaveLength(2)
-    expect(items.every((i) => i.drink_id === 'gin' && i.qty === 1)).toBe(true)
+    expect(comandaId).toBe('c1')
+    // i 2 gin separati si aggiungono agli item già presenti (mojito ×2)
+    const gins = payload.items.filter((i) => i.drink_id === 'gin')
+    expect(gins).toHaveLength(2)
+    expect(gins.every((i) => i.qty === 1)).toBe(true)
+    expect(payload.items.some((i) => i.drink_id === 'mojito')).toBe(true)
     expect(printComanda).not.toHaveBeenCalled()
   })
 
@@ -162,10 +166,12 @@ describe('aggiunte: la nuova comanda è gestita internamente', () => {
     await user.click(screen.getByRole('button', { name: '🔗 Unisci' }))
     // dopo l'unione il toggle diventa "Separa"
     expect(screen.getByRole('button', { name: '⑃ Separa' })).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: '✅ Conferma' }))
-    const [, items] = addComanda.mock.calls[0]
-    expect(items).toHaveLength(1)
-    expect(items[0]).toMatchObject({ drink_id: 'gin', qty: 2 })
+    await user.click(screen.getByRole('button', { name: /Conferma/ }))
+    await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalledTimes(1))
+    const [, , payload] = bartenderUpdateComanda.mock.calls[0]
+    const gins = payload.items.filter((i) => i.drink_id === 'gin')
+    expect(gins).toHaveLength(1)
+    expect(gins[0]).toMatchObject({ drink_id: 'gin', qty: 2 })
   })
 
   it('modifica per-item: cambia prezzo di una riga e resta separata', async () => {
@@ -177,9 +183,29 @@ describe('aggiunte: la nuova comanda è gestita internamente', () => {
     await user.clear(price)
     await user.type(price, '5')
     await user.click(screen.getByRole('button', { name: /^Salva/ }))
-    await user.click(screen.getByRole('button', { name: '✅ Conferma' }))
-    const [, items] = addComanda.mock.calls[0]
-    expect(items[0]).toMatchObject({ drink_id: 'gin', unit_price: 5, custom: true })
+    await user.click(screen.getByRole('button', { name: /Conferma/ }))
+    await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalledTimes(1))
+    const [, , payload] = bartenderUpdateComanda.mock.calls[0]
+    expect(payload.items.find((i) => i.custom)).toMatchObject({ drink_id: 'gin', unit_price: 5, custom: true })
+  })
+
+  it('ordine già SERVITO: Conferma crea una NUOVA comanda (addComanda)', async () => {
+    const user = userEvent.setup()
+    mount(
+      baseOrder({
+        comande: [
+          { id: 'c1', seq: 1, status: 'ritirato', status_times: {}, items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 }] },
+        ],
+      })
+    )
+    await user.click(screen.getAllByText('Gin Tonic')[0])
+    await user.click(screen.getByRole('button', { name: /Conferma/ }))
+    // nessuna comanda modificabile → nuova comanda
+    await waitFor(() => expect(addComanda).toHaveBeenCalledTimes(1))
+    expect(bartenderUpdateComanda).not.toHaveBeenCalled()
+    const [orderId, items] = addComanda.mock.calls[0]
+    expect(orderId).toBe('ord1')
+    expect(items[0]).toMatchObject({ drink_id: 'gin', qty: 1 })
   })
 
   it('"Stampa comanda" stampa le aggiunte in bozza SENZA confermarle', async () => {
@@ -191,15 +217,18 @@ describe('aggiunte: la nuova comanda è gestita internamente', () => {
     expect(addComanda).not.toHaveBeenCalled()
   })
 
-  it("il + su un item del conto è un'aggiunta in bozza (non tocca le comande)", async () => {
+  it("il + su un item del conto è un'aggiunta non confermata (non tocca subito le comande)", async () => {
     const user = userEvent.setup()
     mount(baseOrder())
     await user.click(screen.getAllByRole('button', { name: 'Aumenta' }).at(-1))
-    // compare la sezione bozza; le comande non vengono toccate
-    expect(screen.getByText(/DA AGGIUNGERE/)).toBeInTheDocument()
+    // compare l'aggiunta non confermata; prima di Conferma le comande non si toccano
+    expect(screen.getByText(/non confermat/)).toBeInTheDocument()
     expect(bartenderUpdateComanda).not.toHaveBeenCalled()
-    await user.click(screen.getByRole('button', { name: '✅ Conferma' }))
-    expect(addComanda).toHaveBeenCalledTimes(1)
+    expect(addComanda).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: /Conferma/ }))
+    // ordine in preparazione → confluisce nella comanda c1
+    await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalledTimes(1))
+    expect(addComanda).not.toHaveBeenCalled()
   })
 })
 
@@ -273,16 +302,16 @@ describe('modale comande: consultazione, avanzamento e stampa', () => {
 })
 
 describe('modifiche ottimistiche (UX istantanea)', () => {
-  it('Conferma ISTANTANEA: crea la comanda in background senza attendere il server', async () => {
+  it('Conferma ISTANTANEA: aggiorna la comanda in background senza attendere il server', async () => {
     const user = userEvent.setup()
-    addComanda.mockImplementationOnce(() => new Promise(() => {})) // server lento: mai risolta
+    bartenderUpdateComanda.mockImplementationOnce(() => new Promise(() => {})) // server lento
     mount(baseOrder())
     await user.click(screen.getAllByText('Gin Tonic')[0])
-    expect(screen.getByText(/DA AGGIUNGERE/)).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: '✅ Conferma' }))
+    expect(screen.getByText(/non confermat/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /Conferma/ }))
     // parte subito (ottimistico), senza aspettare la risoluzione del server
-    expect(addComanda).toHaveBeenCalledTimes(1)
-    expect(addComanda.mock.calls[0][0]).toBe('ord1')
+    await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalledTimes(1))
+    expect(bartenderUpdateComanda.mock.calls[0][0]).toBe('ord1')
   })
 
   it('avanzamento ISTANTANEO: lo stato cambia subito, il server segue', async () => {
@@ -304,9 +333,9 @@ describe('modifiche ottimistiche (UX istantanea)', () => {
     await user.click(tile())
     await user.click(tile())
     await user.click(tile())
-    // 3 righe separate in bozza (3 bottoni Modifica), nessuna chiamata
+    // 3 righe separate non confermate (3 bottoni Modifica), nessuna chiamata
     expect(screen.getAllByRole('button', { name: /Modifica/ })).toHaveLength(3)
-    expect(screen.getByRole('button', { name: '✅ Conferma' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Conferma/ })).toBeInTheDocument()
     expect(bartenderUpdateComanda).not.toHaveBeenCalled()
     expect(addComanda).not.toHaveBeenCalled()
   })
