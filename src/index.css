@@ -1736,6 +1736,18 @@ body.fullbleed .bar-content {
 }
 
 /* Nastro d'ambiente non-produzione (test/locale): sempre visibile in alto. */
+/* ── Font BACKOFFICE sobrio (stile SumUp POS): niente serif decorativo
+   sulle superfici staff (gestionale, POS, dettaglio ordine). Ridefinendo
+   --serif nell'ambito, anche gli heading che lo usano diventano sans; il
+   lato cliente (fuori da queste superfici) mantiene il suo carattere. */
+body.fullbleed,
+.bar-content,
+.topbar.backoffice {
+  --serif: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial,
+    sans-serif;
+  letter-spacing: 0;
+}
+
 .env-ribbon {
   position: sticky;
   top: 0;
