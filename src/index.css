@@ -1747,6 +1747,18 @@ body.fullbleed .bar-content {
   padding: 5px 8px;
   color: #1c1305;
 }
+/* Nastro "sei offline": in cima, sopra ogni schermata. */
+.offline-ribbon {
+  position: sticky;
+  top: 0;
+  z-index: 21;
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.8rem;
+  padding: 5px 10px;
+  background: #4a4a55;
+  color: #fff;
+}
 .env-ribbon.env-test {
   background: repeating-linear-gradient(45deg, #f5b94a, #f5b94a 12px, #e8a32e 12px, #e8a32e 24px);
 }
