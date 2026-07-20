@@ -187,6 +187,14 @@ service cloud.firestore {
       allow read, write: if isStaffMember();
     }
 
+    // BADGE VIRTUALE: timbrature entrata/uscita — lo staff timbra sé
+    // stesso al login/logout; il bartender può correggere ogni voce.
+    match /staff_shifts/{shiftId} {
+      allow read: if isStaffMember();
+      allow create, update: if isStaffMember();
+      allow delete: if isBartender();
+    }
+
     // BUONI VIP: credito ricaricabile — solo staff (contiene i nomi VIP).
     match /vouchers/{voucherId} {
       allow read, write: if isStaffMember();

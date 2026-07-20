@@ -261,6 +261,20 @@ a.btn.block {
   background: rgba(255, 255, 255, 0.1);
 }
 
+/* Etichette compatte nel registro ore (badge/programmato/in corso). */
+.pill.small {
+  padding: 1px 7px;
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+.pill.live {
+  background: rgba(46, 204, 113, 0.22);
+  color: #9ff5c0;
+}
+.neg {
+  color: #ff8a80;
+}
+
 .pill.ricevuto {
   background: rgba(243, 156, 18, 0.2);
   color: #ffd591;

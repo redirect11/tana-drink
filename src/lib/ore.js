@@ -27,6 +27,39 @@ export function computeHours(start, end, breakMinutes = 0) {
 // Chiave mese di una data ISO (YYYY-MM-DD → YYYY-MM).
 export const monthKey = (date) => String(date || '').slice(0, 7)
 
+// Ore tra due istanti ISO (timbratura entrata/uscita), decimali ai
+// centesimi. Null se mancano o l'uscita precede l'entrata.
+export function hoursBetweenIso(startIso, endIso) {
+  const a = Date.parse(startIso)
+  const b = Date.parse(endIso)
+  if (!Number.isFinite(a) || !Number.isFinite(b) || b < a) return null
+  return Math.round(((b - a) / 3600000) * 100) / 100
+}
+
+// "HH:MM" locale da un istante ISO (per mostrare gli orari di timbratura).
+export function hhmm(iso) {
+  const t = Date.parse(iso)
+  if (!Number.isFinite(t)) return ''
+  const d = new Date(t)
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
+// Confronto ore EFFETTIVE vs PROGRAMMATE per una lista di voci giorno.
+// entries: [{ hours, kind: 'effettivo'|'programmato' }]. Ritorna i due
+// totali e lo scarto (effettivo − programmato).
+export function effVsPlanned(entries) {
+  let eff = 0
+  let plan = 0
+  for (const e of entries || []) {
+    const h = Number(e.hours) || 0
+    if (e.kind === 'programmato') plan += h
+    else eff += h
+  }
+  eff = Math.round(eff * 100) / 100
+  plan = Math.round(plan * 100) / 100
+  return { effettivo: eff, programmato: plan, scarto: Math.round((eff - plan) * 100) / 100 }
+}
+
 // Ore totali di un elenco di turni.
 export const sumHours = (entries) =>
   Math.round((entries || []).reduce((s, e) => s + (Number(e.hours) || 0), 0) * 100) / 100

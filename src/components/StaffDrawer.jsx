@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { signOut } from 'firebase/auth'
 import { auth } from '../lib/firebaseClient.js'
+import { logoutStaff } from '../lib/logout.js'
 import { devToolsEnabled } from '../dev/devActions.js'
 import {
   subscribeSettings,
@@ -149,7 +149,7 @@ export default function StaffDrawer({ role, active = null, onSelect = null }) {
         )}
 
         <div className="bar-nav-sep" />
-        <div className="bar-nav-item" onClick={() => signOut(auth)}>
+        <div className="bar-nav-item" onClick={() => logoutStaff()}>
           <span>🚪</span> Esci
         </div>
       </nav>
