@@ -11,6 +11,7 @@ import {
   splitLine,
   qtyByDrink,
   linesTotal,
+  moveLine,
 } from '../../src/lib/orderLines.js'
 
 const line = (over) => ({ line_id: over.line_id || 'x', drink_id: 'gin', name: 'Gin', price: 8, qty: 1, ...over })
@@ -52,6 +53,20 @@ describe('splitLine', () => {
   it('non tocca le righe da 1', () => {
     const lines = [line({ line_id: 'a', qty: 1 })]
     expect(splitLine(lines, 'a')).toEqual(lines)
+  })
+})
+
+describe('moveLine (drag & drop)', () => {
+  const ls = [{ line_id: 'a' }, { line_id: 'b' }, { line_id: 'c' }]
+  it('sposta un elemento su/giù mantenendo gli altri', () => {
+    expect(moveLine(ls, 0, 2).map((l) => l.line_id)).toEqual(['b', 'c', 'a'])
+    expect(moveLine(ls, 2, 0).map((l) => l.line_id)).toEqual(['c', 'a', 'b'])
+    expect(moveLine(ls, 1, 0).map((l) => l.line_id)).toEqual(['b', 'a', 'c'])
+  })
+  it('indici uguali o fuori range: lista invariata', () => {
+    expect(moveLine(ls, 1, 1)).toBe(ls)
+    expect(moveLine(ls, 0, 5)).toBe(ls)
+    expect(moveLine(ls, -1, 1)).toBe(ls)
   })
 })
 

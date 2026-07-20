@@ -131,7 +131,7 @@ describe('aggiunte: la nuova comanda è gestita internamente', () => {
     await user.click(screen.getAllByText('Gin Tonic')[0])
     await user.click(screen.getAllByText('Gin Tonic')[0])
     // niente somma automatica: la sezione bozza compare, non un badge aggregato
-    expect(screen.getByText('DA AGGIUNGERE')).toBeInTheDocument()
+    expect(screen.getByText(/DA AGGIUNGERE/)).toBeInTheDocument()
     expect(screen.queryByText(/da inviare/)).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '✅ Conferma' }))
     expect(addComanda).toHaveBeenCalledTimes(1)
@@ -185,7 +185,7 @@ describe('aggiunte: la nuova comanda è gestita internamente', () => {
     mount(baseOrder())
     await user.click(screen.getAllByRole('button', { name: 'Aumenta' }).at(-1))
     // compare la sezione bozza; le comande non vengono toccate
-    expect(screen.getByText('DA AGGIUNGERE')).toBeInTheDocument()
+    expect(screen.getByText(/DA AGGIUNGERE/)).toBeInTheDocument()
     expect(bartenderUpdateComanda).not.toHaveBeenCalled()
     await user.click(screen.getByRole('button', { name: '✅ Conferma' }))
     expect(addComanda).toHaveBeenCalledTimes(1)
@@ -267,7 +267,7 @@ describe('modifiche ottimistiche (UX istantanea)', () => {
     addComanda.mockImplementationOnce(() => new Promise(() => {})) // server lento: mai risolta
     mount(baseOrder())
     await user.click(screen.getAllByText('Gin Tonic')[0])
-    expect(screen.getByText('DA AGGIUNGERE')).toBeInTheDocument()
+    expect(screen.getByText(/DA AGGIUNGERE/)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '✅ Conferma' }))
     // parte subito (ottimistico), senza aspettare la risoluzione del server
     expect(addComanda).toHaveBeenCalledTimes(1)
