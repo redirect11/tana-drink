@@ -6,9 +6,16 @@ import {
   bartenderUpdateComanda,
   updateOrderInfo,
   cancelOrder,
+  createOrder,
+  ensureTodaySerata,
+  subscribeOrder,
   subscribeSettings,
   DEFAULT_SETTINGS,
 } from '../lib/api.js'
+import { submitPosOrder } from '../lib/pendingOrders.js'
+import { useDraft } from '../lib/useDraft.js'
+import { auth } from '../lib/firebaseClient.js'
+import { onAuthStateChanged } from 'firebase/auth'
 import { useMenu } from '../lib/menuCache.js'
 import {
   ORDER_STATUSES,
@@ -42,15 +49,24 @@ import CustomDrinkForm from './CustomDrinkForm.jsx'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import PaymentScreen from './PaymentScreen.jsx'
 
-// ── Dettaglio ordine in stile POS SumUp — solo bartender ──────────────────
-// Il pannello destro mostra L'ORDINE AGGREGATO (niente comande in vista):
-// gli aumenti (tap sulla griglia o +) compongono aggiunte che al salvataggio
-// diventano una nuova comanda GESTITA INTERNAMENTE; le diminuzioni toccano
-// solo le comande ancora modificabili — una comanda pronta o servita non si
-// tocca più (il − si disabilita al minimo bloccato). Le comande restano
-// consultabili a parte, in una modale dedicata (stati, avanzamento, stampa).
+// ── Schermata UNICA POS creazione/modifica ordine (stile SumUp) ───────────
+// UN SOLO componente: con `order` è la MODIFICA di un ordine esistente,
+// senza `order` (null) è la CREAZIONE di un ordine nuovo. Layout e gesti
+// identici: categorie · griglia · pannello ordine a destra.
+//
+// Le AGGIUNTE non ancora confermate stanno nella BOZZA ("DA AGGIUNGERE"),
+// persistita in localStorage per contesto ('new' in creazione, l'id
+// dell'ordine in modifica): non si perde uscendo dalla schermata, si
+// riprende dov'era. Righe separate con drag&drop, unisci/separa e modifica
+// per-item in ENTRAMBI i casi. Il conto (comande già confermate) è
+// aggregato e sola lettura salvo +/− sulle comande ancora modificabili.
+//
+// Conferma = crea l'ordine (creazione) o una nuova comanda dalle aggiunte
+// (modifica) e TORNA alla coda. Le altre operazioni di modifica (avanza
+// comanda, +/−, drag, unisci/separa, modifica item) restano in schermata.
 
-export default function OrderPosDetail({ order }) {
+export default function OrderPosDetail({ order = null }) {
+  const isNew = !order
   const navigate = useNavigate()
   const { drinks, cats, loading } = useMenu()
   const [error, setError] = useState(null)
@@ -58,12 +74,44 @@ export default function OrderPosDetail({ order }) {
   const [editLine, setEditLine] = useState(null) // riga bozza in modifica (editor)
   const [showComande, setShowComande] = useState(false)
   const [confirmCancel, setConfirmCancel] = useState(false)
+  const [confirmDiscard, setConfirmDiscard] = useState(false)
   const [showPayment, setShowPayment] = useState(false)
+  const [askName, setAskName] = useState(false) // modale nome (creazione)
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   useEffect(() => subscribeSettings(setSettings, () => {}), [])
 
-  // AGGIUNTE in composizione (bozza locale → nuova comanda all'invio).
-  const [draft, setDraft] = useState([])
+  // AGGIUNTE in composizione (BOZZA persistente → nuova comanda/ordine).
+  const draftKey = order ? order.id : 'new'
+  const [draft, setDraft, clearDraft] = useDraft(draftKey)
+
+  // Staff loggato (per l'attribuzione dell'ordine creato dal POS).
+  const [staff, setStaff] = useState(null)
+  useEffect(() => {
+    if (!isNew) return
+    return onAuthStateChanged(auth, async (u) => {
+      if (!u) return setStaff(null)
+      try {
+        const token = await u.getIdTokenResult()
+        const role = token.claims.role
+        if (role === 'bartender' || role === 'staff') {
+          setStaff({ email: u.email, name: u.displayName || u.email, role })
+        }
+      } catch {
+        setStaff(null)
+      }
+    })
+  }, [isNew])
+
+  // PAGAMENTO DIRETTO (creazione): la schermata Pagamento si apre subito su
+  // un ordine locale; serata e creazione girano in background e le azioni
+  // di incasso aspettano l'id reale (resolveOrderId).
+  const [payOrder, setPayOrder] = useState(null)
+  const payIdRef = useRef(null)
+  const payOrderId = payOrder?.id
+  useEffect(() => {
+    if (!payOrderId) return
+    return subscribeOrder(payOrderId, (o) => o && setPayOrder(o), () => {})
+  }, [payOrderId])
 
   // POS a tutto schermo, come la cassa.
   useEffect(() => {
@@ -71,12 +119,10 @@ export default function OrderPosDetail({ order }) {
     return () => document.body.classList.remove('fullbleed')
   }, [])
 
-  const closed = orderIsClosed(order)
-  const comande = useMemo(() => order.comande || [], [order.comande])
+  const closed = isNew ? false : orderIsClosed(order)
+  const comande = useMemo(() => (isNew ? [] : order.comande || []), [isNew, order])
 
-  // ── Diminuzioni OTTIMISTICHE sulle comande modificabili ──
-  // Override locale per-comanda + scrittura debounced (tap rapidi = una
-  // transazione); in errore si torna allo stato server.
+  // ── Diminuzioni OTTIMISTICHE sulle comande modificabili (modifica) ──
   const [pendingEdits, setPendingEdits] = useState({}) // comandaId -> items
   const flushTimers = useRef({})
   const latestPending = useRef({})
@@ -94,7 +140,7 @@ export default function OrderPosDetail({ order }) {
       setError(e.message)
       setPendingEdits((p) => omit(p, comandaId))
     }
-  }, [order.id])
+  }, [order?.id])
 
   const flushAll = useCallback(async () => {
     await Promise.all(Object.keys(latestPending.current).map((id) => flushComanda(id)))
@@ -105,9 +151,7 @@ export default function OrderPosDetail({ order }) {
     return () => Object.values(timers).forEach(clearTimeout)
   }, [])
 
-  // ── Avanzamenti di stato OTTIMISTICI ──
-  // Il tap aggiorna subito la pill/CTA; la transazione gira in background
-  // e in errore si torna allo stato del server.
+  // ── Avanzamenti di stato OTTIMISTICI (modifica) ──
   const [statusOverrides, setStatusOverrides] = useState({})
   const advance = (comandaId, ns) => {
     setStatusOverrides((o) => ({ ...o, [comandaId]: ns }))
@@ -134,12 +178,8 @@ export default function OrderPosDetail({ order }) {
     [comande, pendingEdits, statusOverrides]
   )
 
-  // AGGIUNTE già confermate ma ancora in volo verso il server: restano
-  // visibili come quantità normali (UX istantanea) finché la comanda vera
-  // non compare nella sottoscrizione.
+  // AGGIUNTE confermate ma ancora in volo verso il server (modifica).
   const [inFlight, setInFlight] = useState([]) // [{ tempId, items, comandaId? }]
-  const comandeRef = useRef(comande)
-  comandeRef.current = comande
   useEffect(() => {
     setInFlight((f) =>
       f.filter((x) => !x.comandaId || !comande.some((c) => c.id === x.comandaId))
@@ -166,7 +206,6 @@ export default function OrderPosDetail({ order }) {
         }
       }
     }
-    // Aggiunte in volo: contano come quantità già dell'ordine (aggregate).
     for (const fl of inFlight) {
       for (const i of fl.items) {
         const ex = !i.custom && byDrink.get(i.drink_id)
@@ -181,13 +220,11 @@ export default function OrderPosDetail({ order }) {
     return out
   }, [effComande, inFlight])
 
-  // Righe del CONTO (comande + in volo): aggregate, sola lettura salvo +/−.
   const confirmedRows = rows
 
   const draftCount = draft.reduce((s, i) => s + i.qty, 0)
   const draftTotal = draft.reduce((s, i) => s + i.qty * i.unit_price, 0)
   const confirmedTotal = confirmedRows.reduce((s, i) => s + i.qty * i.unit_price, 0)
-  // Badge quantità sulla griglia: conto + bozza per drink (solo catalogo).
   const qtyByDrink = useMemo(() => {
     const m = {}
     for (const r of confirmedRows) if (!r.custom) m[r.drink_id] = (m[r.drink_id] || 0) + r.qty
@@ -196,10 +233,7 @@ export default function OrderPosDetail({ order }) {
     return m
   }, [confirmedRows, draft])
 
-  // + dalla griglia/catalogo. Il default lo decide l'impostazione
-  // `order_group_default`: 'separati' → riga a sé; 'uniti' → somma nella
-  // riga uguale esistente. In entrambi i casi si può cambiare al volo col
-  // toggle Unisci/Separa.
+  // + dalla griglia/catalogo → riga di bozza (o somma se default 'uniti').
   const plusFromCatalog = (d) => {
     if (closed) return
     const nuova = {
@@ -220,8 +254,8 @@ export default function OrderPosDetail({ order }) {
     })
   }
 
-  // − dalla griglia: toglie un'unità dall'ULTIMA riga di bozza di quel
-  // drink; se non ce n'è, scala dalle comande modificabili.
+  // − dalla griglia: toglie dall'ultima riga di bozza; se non c'è, scala
+  // dalle comande modificabili (solo in modifica).
   function minusFromCatalog(drinkId) {
     if (closed) return
     const idx = [...draft].reverse().findIndex((l) => !l.custom && l.drink_id === drinkId)
@@ -234,6 +268,7 @@ export default function OrderPosDetail({ order }) {
       )
       return
     }
+    if (isNew) return
     const plan = planDecrement(effComande, drinkId)
     if (!plan) return
     setPendingEdits((p) => ({ ...p, [plan.comandaId]: plan.items }))
@@ -241,7 +276,7 @@ export default function OrderPosDetail({ order }) {
     flushTimers.current[plan.comandaId] = setTimeout(() => flushComanda(plan.comandaId), 600)
   }
 
-  // − su una riga del CONTO (comande): scala dalle comande modificabili.
+  // − su una riga del CONTO (comande, modifica): scala dalle modificabili.
   function minusConfirmed(row) {
     if (closed) return
     const plan = planDecrement(effComande, row.drink_id)
@@ -254,12 +289,20 @@ export default function OrderPosDetail({ order }) {
   // ── Azioni sulle righe di BOZZA (separate) ──
   const setDraftLineQty = (lineId, qty) =>
     setDraft((items) => items.map((l) => (l.line_id === lineId ? { ...l, qty } : l)).filter((l) => l.qty > 0))
-  // Stampa comanda delle AGGIUNTE in bozza, come azione a parte (identico
-  // alla creazione): non crea la comanda, stampa solo ciò che è in bozza.
+
   async function printDraftComanda() {
     if (draft.length === 0) return
+    // Ordine sintetico per stampare la comanda della bozza in creazione.
+    const printableOrder = isNew
+      ? {
+          customer_name: info.customer_name.trim() || null,
+          table_label: info.table_label || null,
+          note: info.note || null,
+          daily_number: null,
+        }
+      : order
     try {
-      await printComanda(order, { items: draft.map((l) => ({ name: l.name, qty: l.qty })) })
+      await printComanda(printableOrder, { items: draft.map((l) => ({ name: l.name, qty: l.qty })) })
       toastSuccess('Comanda stampata')
     } catch (e) {
       setError(`Stampa: ${e.message}`)
@@ -267,9 +310,6 @@ export default function OrderPosDetail({ order }) {
   }
 
   // ── Riordino righe di bozza per DRAG (tieni premuto e trascina) ──
-  // Long-press (~300ms) su una riga → parte il trascinamento; muovendo il
-  // dito sopra un'altra riga le voci si riordinano dal vivo. Touch e mouse
-  // (pointer events); i +/− e ✏️ non avviano il drag (stopPropagation).
   const [dragIndex, setDragIndex] = useState(null)
   const dragRef = useRef({ timer: null, startY: 0 })
   const startDrag = (e, index) => {
@@ -281,7 +321,6 @@ export default function OrderPosDetail({ order }) {
   }
   const moveDrag = (e) => {
     if (dragIndex == null) {
-      // mosso troppo prima dello scatto → è uno scroll, annulla il long-press
       if (Math.abs(e.clientY - dragRef.current.startY) > 8) clearTimeout(dragRef.current.timer)
       return
     }
@@ -301,16 +340,10 @@ export default function OrderPosDetail({ order }) {
   }
 
   const mergeDraft = () => setDraft((items) => mergeLines(items))
-  // Separa TUTTE le righe unite (qty>1) in righe da 1: inverso di "Unisci",
-  // stesso posto (toggle globale accanto a Comande).
   const splitAllDraft = () =>
     setDraft((items) => items.reduce((acc, l) => acc.concat(splitLine([l], l.line_id)), []))
-  // Stato del toggle: se ci sono righe accorpabili → si può Unire; se ci
-  // sono righe unite (qty>1) → si può Separare.
   const canMerge = hasMergeable(draft)
   const canSplit = !canMerge && draft.some((l) => l.qty > 1)
-  // Modifica per-item: l'editor rimpiazza la riga con la versione modificata,
-  // marcata `custom` così non si raggruppa più con gli originali di catalogo.
   const applyEdit = ({ name, price, recipe_items }) => {
     setDraft((items) =>
       items.map((l) =>
@@ -328,14 +361,27 @@ export default function OrderPosDetail({ order }) {
     setEditLine(null)
   }
 
-  // Conferma delle aggiunte: identica alla CREAZIONE (crea la comanda dalle
-  // aggiunte — resta la regola per cui un'aggiunta a ordine avanzato genera
-  // una nuova comanda) e TORNA alla schermata ordini. La sincronizzazione
-  // gira in background; in errore un toast (siamo già in coda).
-  const sendDraft = () => {
+  // Righe di bozza → item per createOrder/submitPosOrder (che usano `price`).
+  const draftToItems = () =>
+    draft.map((l) => ({
+      drink_id: l.drink_id,
+      name: l.name,
+      price: l.unit_price,
+      qty: l.qty,
+      ...(l.custom ? { custom: true } : {}),
+      ...(l.recipe_items ? { recipe_items: l.recipe_items } : {}),
+    }))
+
+  const placedBy = () =>
+    staff ? { email: staff.email, name: staff.name, role: staff.role } : undefined
+
+  // CONFERMA. Creazione: chiede il nome, poi crea l'ordine e torna in coda.
+  // Modifica: crea una nuova comanda dalle aggiunte e torna in coda.
+  const confirmDraft = () => {
+    if (draft.length === 0) return
+    if (isNew) return setAskName(true)
     const items = draft
-    if (items.length === 0) return
-    setDraft([])
+    clearDraft()
     const toastId = toastSync('Sincronizzo le aggiunte…')
     ;(async () => {
       try {
@@ -349,19 +395,88 @@ export default function OrderPosDetail({ order }) {
     navigate('/bar')
   }
 
-  // ── Comanda attiva: azione rapida di avanzamento (senza mostrare i dettagli) ──
+  // Creazione confermata (con o senza nome): l'ordine nasce in background.
+  const submitNew = (name) => {
+    setAskName(false)
+    submitPosOrder({
+      serata_id: null, // risolta in background (serata di oggi)
+      table_label: info.table_label || null,
+      note: info.note || null,
+      customer_name: (name || '').trim() || null,
+      items: draftToItems(),
+      placed_by: placedBy(),
+      printNow: false,
+    })
+    clearDraft()
+    setInfo({ customer_name: '', table_label: '', note: '' })
+    navigate('/bar')
+  }
+
+  // PAGAMENTO DIRETTO in creazione (apre subito, crea in background).
+  function handlePayNow() {
+    if (draft.length === 0 || payOrder) return
+    setError(null)
+    const items = draftToItems()
+    const mapped = items.map((i) => ({
+      drink_id: i.drink_id,
+      name: i.name,
+      unit_price: i.price,
+      qty: i.qty,
+      ...(i.custom ? { custom: true } : {}),
+    }))
+    setPayOrder({
+      id: null,
+      daily_number: null,
+      status: 'aperto',
+      payment_status: 'non_richiesto',
+      customer_name: info.customer_name.trim() || null,
+      table_label: info.table_label || null,
+      total: draftTotal,
+      discount: null,
+      discount_amount: 0,
+      payments: [],
+      lottery_code: null,
+      invoice_number: null,
+      comande: [{ id: 'c1', seq: 1, status: ORDER_STATUSES.IN_PREPARAZIONE, items: mapped }],
+      order_items: mapped,
+    })
+    payIdRef.current = (async () => {
+      const s = await ensureTodaySerata()
+      const created = await createOrder({
+        serata_id: s.id,
+        table_label: info.table_label || null,
+        note: info.note || null,
+        customer_name: info.customer_name.trim() || null,
+        items,
+        placed_by: placedBy(),
+        status: ORDER_STATUSES.IN_PREPARAZIONE,
+      })
+      setPayOrder((cur) => (cur && cur.id === null ? created : cur))
+      clearDraft()
+      setInfo({ customer_name: '', table_label: '', note: '' })
+      return created.id
+    })()
+    payIdRef.current.catch((e) => {
+      toastError(`Ordine non creato: ${e.message}`)
+      setPayOrder(null) // la bozza è intatta: si riprova
+      payIdRef.current = null
+    })
+  }
+
+  // ── Comanda attiva: azione rapida di avanzamento (modifica) ──
   const active = activeComanda({ comande: effComande })
   const activeNext = active ? nextComandaStatus(active.status) : null
 
   // ── Info conto ──
   const [info, setInfo] = useState({
-    customer_name: order.customer_name || '',
-    table_label: order.table_label || '',
-    note: order.note || '',
+    customer_name: order?.customer_name || '',
+    table_label: order?.table_label || '',
+    note: order?.note || '',
   })
   const [showInfo, setShowInfo] = useState(false)
-  const orderId = order.id
+  const orderId = order?.id
   useEffect(() => {
+    if (isNew) return
     setInfo({
       customer_name: order.customer_name || '',
       table_label: order.table_label || '',
@@ -370,14 +485,20 @@ export default function OrderPosDetail({ order }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId])
   const infoDirty =
-    info.customer_name !== (order.customer_name || '') ||
-    info.table_label !== (order.table_label || '') ||
-    info.note !== (order.note || '')
+    !isNew &&
+    (info.customer_name !== (order.customer_name || '') ||
+      info.table_label !== (order.table_label || '') ||
+      info.note !== (order.note || ''))
 
   const extras =
-    Number(order.coperto_amount || 0) +
-    Number(order.service_charge_amount || 0) +
-    Number(order.tip_amount || 0)
+    Number(order?.coperto_amount || 0) +
+    Number(order?.service_charge_amount || 0) +
+    Number(order?.tip_amount || 0)
+
+  const headTitle = isNew ? 'Nuovo ordine' : `#${order.daily_number ?? '—'}`
+  const panelTitle = isNew
+    ? info.customer_name.trim() || 'Nuovo ordine'
+    : `#${order.daily_number ?? '—'}${order.customer_name ? ` · ${order.customer_name}` : ''}`
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', overflow: 'hidden' }}>
@@ -393,16 +514,16 @@ export default function OrderPosDetail({ order }) {
         }}
       >
         <Link className="btn ghost small" to="/bar" aria-label="Torna agli ordini">← Ordini</Link>
-        <strong style={{ fontFamily: 'var(--serif)' }}>
-          #{order.daily_number ?? '—'}
-        </strong>
-        <span className={`pill ${order.status}`}>
-          {STATUS_EMOJI[order.status]} {STATUS_LABELS[order.status]}
-        </span>
-        {order.placed_by && (
+        <strong style={{ fontFamily: 'var(--serif)' }}>{headTitle}</strong>
+        {!isNew && (
+          <span className={`pill ${order.status}`}>
+            {STATUS_EMOJI[order.status]} {STATUS_LABELS[order.status]}
+          </span>
+        )}
+        {!isNew && order.placed_by && (
           <span className="muted small">✍️ {placedByName(order.placed_by)}</span>
         )}
-        {order.payment_status === 'pagato' && order.status !== ORDER_STATUSES.PAGATO && (
+        {!isNew && order.payment_status === 'pagato' && order.status !== ORDER_STATUSES.PAGATO && (
           <span className="muted small">💳 pagato</span>
         )}
       </div>
@@ -428,27 +549,25 @@ export default function OrderPosDetail({ order }) {
 
         {/* ── Pannello destro: L'ORDINE ── */}
         <div className="posd-comanda">
-          {/* Testata: nome/tavolo del conto (spostato qui, sopra la colonna) */}
+          {/* Testata: nome/tavolo del conto */}
           <div style={{ padding: '8px 12px 0', flexShrink: 0 }}>
             <div className="row between" style={{ alignItems: 'center' }}>
-              <strong style={{ fontFamily: 'var(--serif)' }}>
-                #{order.daily_number ?? '—'}
-                {order.customer_name ? ` · ${order.customer_name}` : ''}
-              </strong>
+              <strong style={{ fontFamily: 'var(--serif)' }}>{panelTitle}</strong>
               <span className="row" style={{ gap: 6 }}>
-                {/* Toggle globale: unisce/separa TUTTE le righe di bozza */}
                 {canMerge && (
                   <button className="btn ghost small" onClick={mergeDraft}>🔗 Unisci</button>
                 )}
                 {canSplit && (
                   <button className="btn ghost small" onClick={splitAllDraft}>⑃ Separa</button>
                 )}
-                <button className="btn secondary small" onClick={() => setShowComande(true)}>
-                  🧾 Comande ({comande.length})
-                </button>
+                {!isNew && (
+                  <button className="btn secondary small" onClick={() => setShowComande(true)}>
+                    🧾 Comande ({comande.length})
+                  </button>
+                )}
               </span>
             </div>
-            {order.table_label && (
+            {!isNew && order.table_label && (
               <div className="muted small">🍽 Tavolo {order.table_label}</div>
             )}
           </div>
@@ -478,12 +597,13 @@ export default function OrderPosDetail({ order }) {
               )
             })}
 
-            {/* Righe di BOZZA: SEPARATE (niente somma automatica), ognuna con
-                +/−, modifica per-item. Si RIORDINANO col drag: tieni premuto
-                su una riga e trascinala sopra/sotto un'altra. */}
+            {/* Righe di BOZZA: separate, riordinabili col drag (tieni premuto). */}
             {draft.length > 0 && (
               <div style={{ marginTop: 10, borderTop: '1px dashed var(--line)', paddingTop: 6 }}>
-                <span className="muted small" style={{ letterSpacing: 0.5 }}>DA AGGIUNGERE · tieni premuto per spostare</span>
+                <div className="row between" style={{ alignItems: 'center' }}>
+                  <span className="muted small" style={{ letterSpacing: 0.5 }}>DA AGGIUNGERE · tieni premuto per spostare</span>
+                  <button className="btn ghost small" onClick={() => setConfirmDiscard(true)}>Annulla</button>
+                </div>
                 {draft.map((l, idx) => (
                   <div
                     className="row between draft-line"
@@ -532,11 +652,11 @@ export default function OrderPosDetail({ order }) {
               </button>
             )}
 
-            {/* Bottoni IDENTICI alla creazione (PosPage): Conferma crea la
-                comanda dalle aggiunte; la stampa è un'azione a parte. */}
+            {/* Conferma crea l'ordine (creazione) o la comanda dalle aggiunte
+                (modifica); la stampa è un'azione a parte. */}
             {draftCount > 0 && (
               <div className="grid-2" style={{ marginTop: 8 }}>
-                <button className="btn secondary small" onClick={sendDraft}>
+                <button className="btn secondary small" onClick={confirmDraft}>
                   ✅ Conferma
                 </button>
                 <button className="btn ghost small" onClick={printDraftComanda}>
@@ -606,7 +726,7 @@ export default function OrderPosDetail({ order }) {
               gap: 8,
             }}
           >
-            {active && activeNext && !closed && (
+            {!isNew && active && activeNext && !closed && (
               <div className="row between" style={{ alignItems: 'center' }}>
                 <span className={`pill ${active.status}`}>
                   {STATUS_EMOJI[active.status]} {STATUS_LABELS[active.status]}
@@ -627,42 +747,50 @@ export default function OrderPosDetail({ order }) {
               <strong>Totale</strong>
               <strong className="price">{formatPrice(confirmedTotal + draftTotal + extras)}</strong>
             </div>
-            {((order.discount_amount || 0) > 0 || (order.payments || []).length > 0) && (
+            {!isNew && ((order.discount_amount || 0) > 0 || (order.payments || []).length > 0) && (
               <div className="row between muted small">
                 <span>Sconto e acconti già incassati</span>
                 <span>−{formatPrice((order.discount_amount || 0) + paidAmount(order))}</span>
               </div>
             )}
 
-            <div className="grid-2">
-              <button
-                className="btn ghost small"
-                onClick={() => printScontrino(order).catch((e) => setError(`Stampa: ${e.message}`))}
-              >
-                🧾 Scontrino (non fiscale)
+            {isNew ? (
+              <button className="btn block" disabled={draftCount === 0} onClick={handlePayNow}>
+                💳 Pagamento · {formatPrice(draftTotal)}
               </button>
-              {!closed && order.payment_status !== 'pagato' ? (
-                <button className="btn small" onClick={() => setShowPayment(true)}>
-                  💳 Pagamento
-                </button>
-              ) : (
-                <span />
-              )}
-            </div>
+            ) : (
+              <>
+                <div className="grid-2">
+                  <button
+                    className="btn ghost small"
+                    onClick={() => printScontrino(order).catch((e) => setError(`Stampa: ${e.message}`))}
+                  >
+                    🧾 Scontrino (non fiscale)
+                  </button>
+                  {!closed && order.payment_status !== 'pagato' ? (
+                    <button className="btn small" onClick={() => setShowPayment(true)}>
+                      💳 Pagamento
+                    </button>
+                  ) : (
+                    <span />
+                  )}
+                </div>
 
-            {!closed && (
-              <button
-                className="btn ghost small block"
-                onClick={() => setConfirmCancel(true)}
-              >
-                ✖️ Annulla ordine
-              </button>
+                {!closed && (
+                  <button
+                    className="btn ghost small block"
+                    onClick={() => setConfirmCancel(true)}
+                  >
+                    ✖️ Annulla ordine
+                  </button>
+                )}
+              </>
             )}
           </div>
         </div>
       </div>
 
-      {/* ── Modale comande: stati, avanzamento, stampa (sola lettura item) ── */}
+      {/* ── Modale comande (modifica): stati, avanzamento, stampa ── */}
       {showComande && (
         <div className="overlay confirm-overlay" onClick={() => setShowComande(false)}>
           <div
@@ -744,7 +872,7 @@ export default function OrderPosDetail({ order }) {
         />
       )}
 
-      {/* ── Modifica per-item di una riga di bozza (come prodotto libero) ── */}
+      {/* ── Modifica per-item di una riga di bozza ── */}
       {editLine && (
         <CustomDrinkForm
           initial={{
@@ -757,8 +885,50 @@ export default function OrderPosDetail({ order }) {
         />
       )}
 
-      {/* ── Schermata Pagamento (split, sconto, preconto, metodi) ── */}
-      {showPayment && (
+      {/* ── Modale nome del conto alla conferma (creazione) ── */}
+      {askName && (
+        <div className="overlay confirm-overlay" onClick={() => setAskName(false)}>
+          <form
+            className="confirm-box"
+            role="dialog"
+            aria-label="Nome del conto"
+            style={{ width: 'min(360px, 94vw)' }}
+            onClick={(e) => e.stopPropagation()}
+            onSubmit={(e) => {
+              e.preventDefault()
+              submitNew(info.customer_name)
+            }}
+          >
+            <h3 style={{ margin: 0 }}>👤 Nome del conto</h3>
+            <p className="muted small" style={{ margin: '8px 0' }}>
+              Vuoto = numero progressivo. Si può cambiare dopo, dai Dati conto.
+            </p>
+            <label htmlFor="pos-askname">Nome</label>
+            <input
+              id="pos-askname"
+              value={info.customer_name}
+              onChange={(e) => setInfo((v) => ({ ...v, customer_name: e.target.value }))}
+              placeholder="Es. Marco, Tavolo 4…"
+              autoFocus
+            />
+            <button className="btn block" type="submit" style={{ marginTop: 10 }}>
+              Salva{info.customer_name.trim() ? '' : ' senza nome'}
+            </button>
+          </form>
+        </div>
+      )}
+
+      {/* ── Schermata Pagamento ── */}
+      {isNew && payOrder && (
+        <PaymentScreen
+          order={payOrder}
+          settings={settings}
+          onClose={() => setPayOrder(null)}
+          onError={setError}
+          resolveOrderId={() => payIdRef.current}
+        />
+      )}
+      {!isNew && showPayment && (
         <PaymentScreen
           order={order}
           settings={settings}
@@ -768,17 +938,32 @@ export default function OrderPosDetail({ order }) {
         />
       )}
 
+      {/* ── Annulla le aggiunte non confermate (la bozza) ── */}
+      {confirmDiscard && (
+        <ConfirmDialog
+          title="Annullare le aggiunte non confermate?"
+          message={`${draftCount} prodott${draftCount === 1 ? 'o' : 'i'} in bozza verranno rimossi. Le comande già confermate restano.`}
+          confirmLabel="Annulla aggiunte"
+          cancelLabel="Indietro"
+          danger
+          onCancel={() => setConfirmDiscard(false)}
+          onConfirm={() => {
+            setConfirmDiscard(false)
+            clearDraft()
+          }}
+        />
+      )}
+
       {confirmCancel && (
         <ConfirmDialog
           title="✖️ Annullare l'ordine?"
-          message={`L'ordine #${order.daily_number ?? ''} verrà annullato e le scorte già scalate torneranno a magazzino.`}
+          message={`L'ordine #${order?.daily_number ?? ''} verrà annullato e le scorte già scalate torneranno a magazzino.`}
           confirmLabel="Annulla ordine"
           cancelLabel="Indietro"
           danger
           onCancel={() => setConfirmCancel(false)}
           onConfirm={() => {
             setConfirmCancel(false)
-            // In background: la card/schermata segue lo snapshot.
             cancelOrder(order.id, { by: 'bartender' }).catch((e) =>
               toastError(`Annullo non riuscito: ${e.message}`)
             )
