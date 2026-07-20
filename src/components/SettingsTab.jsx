@@ -50,6 +50,28 @@ export default function SettingsTab() {
       </div>
 
       <div className="card settings-section">
+        <h3>Vista ordine (bartender)</h3>
+        <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
+          Come raggruppare di default gli item aggiunti al conto. Si può
+          comunque unire o separare al volo dal riepilogo ordine.
+        </p>
+        <div className="mode-choice">
+          {[
+            ['separati', '≣ Separati'],
+            ['uniti', '🔗 Uniti (somma uguali)'],
+          ].map(([value, label]) => (
+            <button
+              key={value}
+              className={`mode-option${(settings.order_group_default || 'separati') === value ? ' active' : ''}`}
+              onClick={() => save({ order_group_default: value })}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="card settings-section">
         <h3>Consegna ordine</h3>
         <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
           Il ritiro al banco azzera coperto e costo di servizio.

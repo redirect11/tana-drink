@@ -31,6 +31,7 @@ import {
   mergeLines,
   splitLine,
   hasMergeable,
+  lineSignature,
   qtyByDrink as draftQtyByDrink,
 } from '../lib/orderLines.js'
 import { toastSync, toastSuccess, toastError } from '../lib/toast.js'
@@ -193,21 +194,28 @@ export default function OrderPosDetail({ order }) {
     return m
   }, [confirmedRows, draft])
 
-  // + dalla griglia/catalogo: SEMPRE una riga di bozza a sé (niente somma
-  // automatica); l'unione è manuale ("Unisci uguali").
+  // + dalla griglia/catalogo. Il default lo decide l'impostazione
+  // `order_group_default`: 'separati' → riga a sé; 'uniti' → somma nella
+  // riga uguale esistente. In entrambi i casi si può cambiare al volo col
+  // toggle Unisci/Separa.
   const plusFromCatalog = (d) => {
     if (closed) return
-    setDraft((items) => [
-      ...items,
-      {
-        line_id: makeLineId(),
-        drink_id: d.id,
-        name: d.name,
-        unit_price: d.price,
-        sumup_product_id: d.sumup_product_id ?? null,
-        qty: 1,
-      },
-    ])
+    const nuova = {
+      line_id: makeLineId(),
+      drink_id: d.id,
+      name: d.name,
+      unit_price: d.price,
+      sumup_product_id: d.sumup_product_id ?? null,
+      qty: 1,
+    }
+    setDraft((items) => {
+      if (settings.order_group_default === 'uniti') {
+        const sig = lineSignature(nuova)
+        const idx = items.findIndex((l) => lineSignature(l) === sig)
+        if (idx >= 0) return items.map((l, j) => (j === idx ? { ...l, qty: l.qty + 1 } : l))
+      }
+      return [...items, nuova]
+    })
   }
 
   // − dalla griglia: toglie un'unità dall'ULTIMA riga di bozza di quel
@@ -245,7 +253,14 @@ export default function OrderPosDetail({ order }) {
   const setDraftLineQty = (lineId, qty) =>
     setDraft((items) => items.map((l) => (l.line_id === lineId ? { ...l, qty } : l)).filter((l) => l.qty > 0))
   const mergeDraft = () => setDraft((items) => mergeLines(items))
-  const splitDraftLine = (lineId) => setDraft((items) => splitLine(items, lineId))
+  // Separa TUTTE le righe unite (qty>1) in righe da 1: inverso di "Unisci",
+  // stesso posto (toggle globale accanto a Comande).
+  const splitAllDraft = () =>
+    setDraft((items) => items.reduce((acc, l) => acc.concat(splitLine([l], l.line_id)), []))
+  // Stato del toggle: se ci sono righe accorpabili → si può Unire; se ci
+  // sono righe unite (qty>1) → si può Separare.
+  const canMerge = hasMergeable(draft)
+  const canSplit = !canMerge && draft.some((l) => l.qty > 1)
   // Modifica per-item: l'editor rimpiazza la riga con la versione modificata,
   // marcata `custom` così non si raggruppa più con gli originali di catalogo.
   const applyEdit = ({ name, price, recipe_items }) => {
@@ -389,9 +404,18 @@ export default function OrderPosDetail({ order }) {
                 #{order.daily_number ?? '—'}
                 {order.customer_name ? ` · ${order.customer_name}` : ''}
               </strong>
-              <button className="btn secondary small" onClick={() => setShowComande(true)}>
-                🧾 Comande ({comande.length})
-              </button>
+              <span className="row" style={{ gap: 6 }}>
+                {/* Toggle globale: unisce/separa TUTTE le righe di bozza */}
+                {canMerge && (
+                  <button className="btn ghost small" onClick={mergeDraft}>🔗 Unisci</button>
+                )}
+                {canSplit && (
+                  <button className="btn ghost small" onClick={splitAllDraft}>⑃ Separa</button>
+                )}
+                <button className="btn secondary small" onClick={() => setShowComande(true)}>
+                  🧾 Comande ({comande.length})
+                </button>
+              </span>
             </div>
             {order.table_label && (
               <div className="muted small">🍽 Tavolo {order.table_label}</div>
@@ -436,9 +460,6 @@ export default function OrderPosDetail({ order }) {
                     </span>
                     <span className="row" style={{ gap: 4, alignItems: 'center' }}>
                       <button className="btn ghost small" aria-label={`Modifica ${l.name}`} onClick={() => setEditLine(l)}>✏️</button>
-                      {l.qty > 1 && (
-                        <button className="btn ghost small" aria-label={`Dissocia ${l.name}`} onClick={() => splitDraftLine(l.line_id)}>⑃</button>
-                      )}
                       <span className="qty">
                         <button aria-label="Riduci" onClick={() => setDraftLineQty(l.line_id, l.qty - 1)}>−</button>
                         <strong>{l.qty}</strong>
@@ -447,11 +468,6 @@ export default function OrderPosDetail({ order }) {
                     </span>
                   </div>
                 ))}
-                {hasMergeable(draft) && (
-                  <button className="btn ghost small block" style={{ marginTop: 8 }} onClick={mergeDraft}>
-                    🔗 Unisci uguali
-                  </button>
-                )}
               </div>
             )}
 
