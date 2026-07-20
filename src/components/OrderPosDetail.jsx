@@ -26,6 +26,13 @@ import {
   comandaEditable,
 } from '../lib/comande.js'
 import { paidAmount } from '../lib/pagamento.js'
+import {
+  makeLineId,
+  mergeLines,
+  splitLine,
+  hasMergeable,
+  qtyByDrink as draftQtyByDrink,
+} from '../lib/orderLines.js'
 import { toastSync, toastSuccess, toastError } from '../lib/toast.js'
 import { printComanda, printScontrino } from '../lib/printer.js'
 import PosProductPicker from './PosProductPicker.jsx'
@@ -45,6 +52,7 @@ export default function OrderPosDetail({ order }) {
   const { drinks, cats, loading } = useMenu()
   const [error, setError] = useState(null)
   const [showCustom, setShowCustom] = useState(false)
+  const [editLine, setEditLine] = useState(null) // riga bozza in modifica (editor)
   const [showComande, setShowComande] = useState(false)
   const [confirmCancel, setConfirmCancel] = useState(false)
   const [showPayment, setShowPayment] = useState(false)
@@ -155,7 +163,7 @@ export default function OrderPosDetail({ order }) {
         }
       }
     }
-    // Aggiunte in volo: contano come quantità già dell'ordine.
+    // Aggiunte in volo: contano come quantità già dell'ordine (aggregate).
     for (const fl of inFlight) {
       for (const i of fl.items) {
         const ex = !i.custom && byDrink.get(i.drink_id)
@@ -167,62 +175,94 @@ export default function OrderPosDetail({ order }) {
         }
       }
     }
-    for (const d of draft) {
-      const ex = !d.custom && byDrink.get(d.drink_id)
-      if (ex) {
-        ex.qty += d.qty
-        ex.draftQty += d.qty
-      } else {
-        out.push({ ...d, editableQty: 0, draftQty: d.qty })
-      }
-    }
     return out
-  }, [effComande, draft, inFlight])
+  }, [effComande, inFlight])
+
+  // Righe del CONTO (comande + in volo): aggregate, sola lettura salvo +/−.
+  const confirmedRows = rows
 
   const draftCount = draft.reduce((s, i) => s + i.qty, 0)
   const draftTotal = draft.reduce((s, i) => s + i.qty * i.unit_price, 0)
-  const rowsTotal = rows.reduce((s, i) => s + i.qty * i.unit_price, 0)
+  const confirmedTotal = confirmedRows.reduce((s, i) => s + i.qty * i.unit_price, 0)
+  // Badge quantità sulla griglia: conto + bozza per drink (solo catalogo).
   const qtyByDrink = useMemo(() => {
     const m = {}
-    for (const r of rows) if (!r.custom) m[r.drink_id] = (m[r.drink_id] || 0) + r.qty
+    for (const r of confirmedRows) if (!r.custom) m[r.drink_id] = (m[r.drink_id] || 0) + r.qty
+    const d = draftQtyByDrink(draft)
+    for (const k of Object.keys(d)) m[k] = (m[k] || 0) + d[k]
     return m
-  }, [rows])
+  }, [confirmedRows, draft])
 
-  // + : sempre un'aggiunta (andrà in una NUOVA comanda, gestita internamente).
-  function plus(drinkLike) {
+  // + dalla griglia/catalogo: SEMPRE una riga di bozza a sé (niente somma
+  // automatica); l'unione è manuale ("Unisci uguali").
+  const plusFromCatalog = (d) => {
     if (closed) return
-    setDraft((items) => {
-      const idx = items.findIndex((i) => !i.custom && i.drink_id === drinkLike.drink_id)
-      if (idx >= 0) return items.map((i, j) => (j === idx ? { ...i, qty: i.qty + 1 } : i))
-      return [...items, { ...drinkLike, qty: 1 }]
-    })
+    setDraft((items) => [
+      ...items,
+      {
+        line_id: makeLineId(),
+        drink_id: d.id,
+        name: d.name,
+        unit_price: d.price,
+        sumup_product_id: d.sumup_product_id ?? null,
+        qty: 1,
+      },
+    ])
   }
-  const plusFromCatalog = (d) =>
-    plus({
-      drink_id: d.id,
-      name: d.name,
-      unit_price: d.price,
-      sumup_product_id: d.sumup_product_id ?? null,
-    })
 
-  // − : prima dalla bozza, poi dalle comande MODIFICABILI (mai da pronte/servite).
-  function minus(row) {
+  // − dalla griglia: toglie un'unità dall'ULTIMA riga di bozza di quel
+  // drink; se non ce n'è, scala dalle comande modificabili.
+  function minusFromCatalog(drinkId) {
     if (closed) return
-    if (row.draftQty > 0) {
-      setDraft((items) => {
-        const idx = items.findIndex((i) => i.drink_id === row.drink_id)
-        if (idx === -1) return items
-        return items
-          .map((i, j) => (j === idx ? { ...i, qty: i.qty - 1 } : i))
-          .filter((i) => i.qty > 0)
-      })
+    const idx = [...draft].reverse().findIndex((l) => !l.custom && l.drink_id === drinkId)
+    if (idx >= 0) {
+      const realIdx = draft.length - 1 - idx
+      setDraft((items) =>
+        items
+          .map((l, j) => (j === realIdx ? { ...l, qty: l.qty - 1 } : l))
+          .filter((l) => l.qty > 0)
+      )
       return
     }
-    const plan = planDecrement(effComande, row.drink_id)
-    if (!plan) return // solo quantità bloccate: il bottone è già disabilitato
+    const plan = planDecrement(effComande, drinkId)
+    if (!plan) return
     setPendingEdits((p) => ({ ...p, [plan.comandaId]: plan.items }))
     clearTimeout(flushTimers.current[plan.comandaId])
     flushTimers.current[plan.comandaId] = setTimeout(() => flushComanda(plan.comandaId), 600)
+  }
+
+  // − su una riga del CONTO (comande): scala dalle comande modificabili.
+  function minusConfirmed(row) {
+    if (closed) return
+    const plan = planDecrement(effComande, row.drink_id)
+    if (!plan) return
+    setPendingEdits((p) => ({ ...p, [plan.comandaId]: plan.items }))
+    clearTimeout(flushTimers.current[plan.comandaId])
+    flushTimers.current[plan.comandaId] = setTimeout(() => flushComanda(plan.comandaId), 600)
+  }
+
+  // ── Azioni sulle righe di BOZZA (separate) ──
+  const setDraftLineQty = (lineId, qty) =>
+    setDraft((items) => items.map((l) => (l.line_id === lineId ? { ...l, qty } : l)).filter((l) => l.qty > 0))
+  const mergeDraft = () => setDraft((items) => mergeLines(items))
+  const splitDraftLine = (lineId) => setDraft((items) => splitLine(items, lineId))
+  // Modifica per-item: l'editor rimpiazza la riga con la versione modificata,
+  // marcata `custom` così non si raggruppa più con gli originali di catalogo.
+  const applyEdit = ({ name, price, recipe_items }) => {
+    setDraft((items) =>
+      items.map((l) =>
+        l.line_id === editLine.line_id
+          ? {
+              ...l,
+              name,
+              unit_price: price,
+              custom: true,
+              recipe_items: recipe_items?.length ? recipe_items : undefined,
+            }
+          : l
+      )
+    )
+    setEditLine(null)
   }
 
   // Conferma delle aggiunte: OTTIMISTICA. La bozza diventa subito parte
@@ -310,7 +350,6 @@ export default function OrderPosDetail({ order }) {
         <Link className="btn ghost small" to="/bar" aria-label="Torna agli ordini">← Ordini</Link>
         <strong style={{ fontFamily: 'var(--serif)' }}>
           #{order.daily_number ?? '—'}
-          {order.customer_name ? ` · ${order.customer_name}` : ''}
         </strong>
         <span className={`pill ${order.status}`}>
           {STATUS_EMOJI[order.status]} {STATUS_LABELS[order.status]}
@@ -334,52 +373,87 @@ export default function OrderPosDetail({ order }) {
           qtyByDrink={qtyByDrink}
           onAdd={plusFromCatalog}
           onSetQty={(d, q) => {
-            const row = rows.find((r) => !r.custom && r.drink_id === d.id)
-            if (!row) return
-            if (q > row.qty) plusFromCatalog(d)
-            else if (q < row.qty) minus(row)
+            const cur = qtyByDrink[d.id] ?? 0
+            if (q > cur) plusFromCatalog(d)
+            else if (q < cur) minusFromCatalog(d.id)
           }}
           disabled={closed}
         />
 
-        {/* ── Pannello destro: L'ORDINE (aggregato) ── */}
+        {/* ── Pannello destro: L'ORDINE ── */}
         <div className="posd-comanda">
-          <div
-            className="row between"
-            style={{ padding: '8px 12px 0', alignItems: 'center', flexShrink: 0 }}
-          >
-            <span className="muted small" style={{ letterSpacing: 0.5 }}>ORDINE</span>
-            <button className="btn secondary small" onClick={() => setShowComande(true)}>
-              🧾 Comande ({comande.length})
-            </button>
+          {/* Testata: nome/tavolo del conto (spostato qui, sopra la colonna) */}
+          <div style={{ padding: '8px 12px 0', flexShrink: 0 }}>
+            <div className="row between" style={{ alignItems: 'center' }}>
+              <strong style={{ fontFamily: 'var(--serif)' }}>
+                #{order.daily_number ?? '—'}
+                {order.customer_name ? ` · ${order.customer_name}` : ''}
+              </strong>
+              <button className="btn secondary small" onClick={() => setShowComande(true)}>
+                🧾 Comande ({comande.length})
+              </button>
+            </div>
+            {order.table_label && (
+              <div className="muted small">🍽 Tavolo {order.table_label}</div>
+            )}
           </div>
 
-          <div style={{ flex: 1, overflowY: 'auto', padding: '4px 12px 10px' }}>
-            {rows.length === 0 && (
+          <div style={{ flex: 1, overflowY: 'auto', padding: '6px 12px 10px' }}>
+            {confirmedRows.length === 0 && draft.length === 0 && (
               <p className="muted small" style={{ margin: '6px 0 0' }}>
                 Tocca i prodotti per aggiungerli all'ordine.
               </p>
             )}
-            {rows.map((r, idx) => {
-              // Il − scende fino alle quantità bloccate (comande pronte/servite).
-              const canMinus = !closed && (r.draftQty > 0 || r.editableQty > 0)
+
+            {/* Righe del CONTO (comande): aggregate, +/− sulle modificabili */}
+            {confirmedRows.map((r, idx) => {
+              const canMinus = !closed && r.editableQty > 0
               return (
                 <div className="row between" key={r.drink_id ?? idx} style={{ alignItems: 'center', marginTop: 8 }}>
                   <span className="grow" style={{ fontSize: '0.92rem' }}>
                     {r.custom ? '✨ ' : ''}{r.name}
                     <span className="muted small"> · {formatPrice(r.unit_price)}</span>
-                    {r.draftQty > 0 && (
-                      <span className="badge-low" style={{ marginLeft: 6 }}>+{r.draftQty} da inviare</span>
-                    )}
                   </span>
                   <span className="qty">
-                    <button aria-label="Riduci" onClick={() => minus(r)} disabled={!canMinus}>−</button>
+                    <button aria-label="Riduci" onClick={() => minusConfirmed(r)} disabled={!canMinus}>−</button>
                     <strong>{r.qty}</strong>
-                    <button aria-label="Aumenta" onClick={() => plus(rowToDraft(r))} disabled={closed}>+</button>
+                    <button aria-label="Aumenta" onClick={() => plusFromCatalog({ id: r.drink_id, name: r.name, price: r.unit_price })} disabled={closed}>+</button>
                   </span>
                 </div>
               )
             })}
+
+            {/* Righe di BOZZA: SEPARATE (niente somma automatica), ognuna con
+                +/−, modifica per-item e dissocia; unione manuale in fondo. */}
+            {draft.length > 0 && (
+              <div style={{ marginTop: 10, borderTop: '1px dashed var(--line)', paddingTop: 6 }}>
+                <span className="muted small" style={{ letterSpacing: 0.5 }}>DA AGGIUNGERE</span>
+                {draft.map((l) => (
+                  <div className="row between" key={l.line_id} style={{ alignItems: 'center', marginTop: 6 }}>
+                    <span className="grow" style={{ fontSize: '0.92rem' }}>
+                      {l.custom ? '✨ ' : ''}{l.name}
+                      <span className="muted small"> · {formatPrice(l.unit_price)}</span>
+                    </span>
+                    <span className="row" style={{ gap: 4, alignItems: 'center' }}>
+                      <button className="btn ghost small" aria-label={`Modifica ${l.name}`} onClick={() => setEditLine(l)}>✏️</button>
+                      {l.qty > 1 && (
+                        <button className="btn ghost small" aria-label={`Dissocia ${l.name}`} onClick={() => splitDraftLine(l.line_id)}>⑃</button>
+                      )}
+                      <span className="qty">
+                        <button aria-label="Riduci" onClick={() => setDraftLineQty(l.line_id, l.qty - 1)}>−</button>
+                        <strong>{l.qty}</strong>
+                        <button aria-label="Aumenta" onClick={() => setDraftLineQty(l.line_id, l.qty + 1)}>+</button>
+                      </span>
+                    </span>
+                  </div>
+                ))}
+                {hasMergeable(draft) && (
+                  <button className="btn ghost small block" style={{ marginTop: 8 }} onClick={mergeDraft}>
+                    🔗 Unisci uguali
+                  </button>
+                )}
+              </div>
+            )}
 
             {!closed && (
               <button
@@ -482,7 +556,7 @@ export default function OrderPosDetail({ order }) {
             )}
             <div className="row between">
               <strong>Totale</strong>
-              <strong className="price">{formatPrice(rowsTotal + extras)}</strong>
+              <strong className="price">{formatPrice(confirmedTotal + draftTotal + extras)}</strong>
             </div>
             {((order.discount_amount || 0) > 0 || (order.payments || []).length > 0) && (
               <div className="row between muted small">
@@ -586,6 +660,7 @@ export default function OrderPosDetail({ order }) {
             setDraft((items) => [
               ...items,
               {
+                line_id: makeLineId(),
                 drink_id: `custom-${Date.now()}-${Math.floor(Math.random() * 1e6)}`,
                 custom: true,
                 name,
@@ -597,6 +672,19 @@ export default function OrderPosDetail({ order }) {
             ])
             setShowCustom(false)
           }}
+        />
+      )}
+
+      {/* ── Modifica per-item di una riga di bozza (come prodotto libero) ── */}
+      {editLine && (
+        <CustomDrinkForm
+          initial={{
+            name: editLine.name,
+            price: editLine.unit_price,
+            recipe_items: editLine.recipe_items || [],
+          }}
+          onCancel={() => setEditLine(null)}
+          onAdd={applyEdit}
         />
       )}
 
@@ -630,17 +718,6 @@ export default function OrderPosDetail({ order }) {
       )}
     </div>
   )
-}
-
-// Riga aggregata → forma "item da bozza" per il +1.
-function rowToDraft(r) {
-  return {
-    drink_id: r.drink_id,
-    name: r.name,
-    unit_price: r.unit_price,
-    sumup_product_id: r.sumup_product_id ?? null,
-    ...(r.custom ? { custom: true, recipe_items: r.recipe_items ?? [] } : {}),
-  }
 }
 
 // Copia di un oggetto senza una chiave (per rimuovere gli override flushati).
