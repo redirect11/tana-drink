@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   advanceComanda,
   addComanda,
@@ -50,6 +50,7 @@ import PaymentScreen from './PaymentScreen.jsx'
 // consultabili a parte, in una modale dedicata (stati, avanzamento, stampa).
 
 export default function OrderPosDetail({ order }) {
+  const navigate = useNavigate()
   const { drinks, cats, loading } = useMenu()
   const [error, setError] = useState(null)
   const [showCustom, setShowCustom] = useState(false)
@@ -252,6 +253,18 @@ export default function OrderPosDetail({ order }) {
   // ── Azioni sulle righe di BOZZA (separate) ──
   const setDraftLineQty = (lineId, qty) =>
     setDraft((items) => items.map((l) => (l.line_id === lineId ? { ...l, qty } : l)).filter((l) => l.qty > 0))
+  // Stampa comanda delle AGGIUNTE in bozza, come azione a parte (identico
+  // alla creazione): non crea la comanda, stampa solo ciò che è in bozza.
+  async function printDraftComanda() {
+    if (draft.length === 0) return
+    try {
+      await printComanda(order, { items: draft.map((l) => ({ name: l.name, qty: l.qty })) })
+      toastSuccess('Comanda stampata')
+    } catch (e) {
+      setError(`Stampa: ${e.message}`)
+    }
+  }
+
   const mergeDraft = () => setDraft((items) => mergeLines(items))
   // Separa TUTTE le righe unite (qty>1) in righe da 1: inverso di "Unisci",
   // stesso posto (toggle globale accanto a Comande).
@@ -280,43 +293,25 @@ export default function OrderPosDetail({ order }) {
     setEditLine(null)
   }
 
-  // Conferma delle aggiunte: OTTIMISTICA. La bozza diventa subito parte
-  // dell'ordine a schermo (via `inFlight`); la comanda si crea in
-  // background e in errore gli item tornano in bozza per riprovare.
-  // `printNow` stampa la comanda appena creata (stampa esplicita).
-  const sendDraft = (printNow = false) => {
+  // Conferma delle aggiunte: identica alla CREAZIONE (crea la comanda dalle
+  // aggiunte — resta la regola per cui un'aggiunta a ordine avanzato genera
+  // una nuova comanda) e TORNA alla schermata ordini. La sincronizzazione
+  // gira in background; in errore un toast (siamo già in coda).
+  const sendDraft = () => {
     const items = draft
     if (items.length === 0) return
-    const tempId = `fl-${Date.now()}`
-    setInFlight((f) => [...f, { tempId, items }])
     setDraft([])
     const toastId = toastSync('Sincronizzo le aggiunte…')
     ;(async () => {
       try {
         await flushAll()
-        const updated = await addComanda(order.id, items)
+        await addComanda(order.id, items)
         toastSuccess('Aggiunte sincronizzate', { id: toastId })
-        const nuova = updated.comande?.[updated.comande.length - 1]
-        setInFlight((f) => {
-          if (!nuova) return f.filter((x) => x.tempId !== tempId)
-          // Se la sottoscrizione ha già consegnato la comanda, l'entry non
-          // serve più (evita il doppio conteggio); altrimenti la si àncora
-          // all'id e la toglierà l'effetto quando arriva.
-          const arrivata = comandeRef.current.some((c) => c.id === nuova.id)
-          return arrivata
-            ? f.filter((x) => x.tempId !== tempId)
-            : f.map((x) => (x.tempId === tempId ? { ...x, comandaId: nuova.id } : x))
-        })
-        if (printNow && nuova) {
-          await printComanda(updated, nuova).catch((e) => setError(`Stampa: ${e.message}`))
-        }
       } catch (e) {
-        setError(`Aggiunte non inviate: ${e.message}`)
         toastError(`Aggiunte non inviate: ${e.message}`, { id: toastId })
-        setInFlight((f) => f.filter((x) => x.tempId !== tempId))
-        setDraft((d) => [...items, ...d]) // tornano in bozza, si riprova
       }
     })()
+    navigate('/bar')
   }
 
   // ── Comanda attiva: azione rapida di avanzamento (senza mostrare i dettagli) ──
@@ -482,13 +477,15 @@ export default function OrderPosDetail({ order }) {
               </button>
             )}
 
+            {/* Bottoni IDENTICI alla creazione (PosPage): Conferma crea la
+                comanda dalle aggiunte; la stampa è un'azione a parte. */}
             {draftCount > 0 && (
-              <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <button className="btn block" onClick={() => sendDraft(false)}>
-                  ✅ Conferma aggiunte ({draftCount}) · {formatPrice(draftTotal)}
+              <div className="grid-2" style={{ marginTop: 8 }}>
+                <button className="btn secondary small" onClick={sendDraft}>
+                  ✅ Conferma
                 </button>
-                <button className="btn secondary small block" onClick={() => sendDraft(true)}>
-                  🖨 Conferma + stampa comanda
+                <button className="btn ghost small" onClick={printDraftComanda}>
+                  🖨 Stampa comanda
                 </button>
               </div>
             )}
