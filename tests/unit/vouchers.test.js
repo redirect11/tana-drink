@@ -8,6 +8,8 @@ import {
   balanceAfterRedeem,
   activeVouchers,
   totalOutstanding,
+  voucherExpiresAt,
+  isVoucherExpired,
 } from '../../src/lib/vouchers.js'
 
 describe('redeemable / balanceAfterRedeem', () => {
@@ -34,5 +36,50 @@ describe('activeVouchers / totalOutstanding', () => {
   })
   it('totale credito in circolazione', () => {
     expect(totalOutstanding(vouchers)).toBe(42.5)
+  })
+})
+
+describe('scadenza buoni', () => {
+  const now = new Date('2026-07-15T12:00:00')
+
+  it('nessuna scadenza → mai scaduto', () => {
+    expect(voucherExpiresAt({ expiry_type: 'none' }, now)).toBeNull()
+    expect(isVoucherExpired({ expiry_type: 'none' }, now)).toBe(false)
+  })
+
+  it('data libera: scade dopo la data', () => {
+    const v = { expiry_type: 'date', expires_at: '2026-07-10T23:59:59' }
+    expect(isVoucherExpired(v, now)).toBe(true)
+    expect(isVoucherExpired({ ...v, expires_at: '2026-07-20T23:59:59' }, now)).toBe(false)
+  })
+
+  it('giornaliero SENZA rinnovo: scade a fine del giorno di creazione', () => {
+    const v = { expiry_type: 'daily', created_at: '2026-07-14T20:00:00', auto_renew: false }
+    // creato il 14 → scade fine 14 → il 15 è scaduto
+    expect(isVoucherExpired(v, now)).toBe(true)
+  })
+
+  it('giornaliero CON rinnovo: sempre valido fino a fine giornata corrente', () => {
+    const v = { expiry_type: 'daily', created_at: '2026-01-01T20:00:00', auto_renew: true }
+    expect(isVoucherExpired(v, now)).toBe(false)
+    const exp = voucherExpiresAt(v, now)
+    expect(exp.getFullYear()).toBe(2026)
+    expect(exp.getMonth()).toBe(6) // luglio
+    expect(exp.getDate()).toBe(15)
+  })
+
+  it('mensile senza rinnovo: scade a fine mese di creazione', () => {
+    const v = { expiry_type: 'monthly', created_at: '2026-06-20T10:00:00', auto_renew: false }
+    expect(isVoucherExpired(v, now)).toBe(true) // giugno < luglio
+    const v2 = { expiry_type: 'monthly', created_at: '2026-07-01T10:00:00', auto_renew: false }
+    expect(isVoucherExpired(v2, now)).toBe(false)
+  })
+
+  it('activeVouchers esclude i scaduti', () => {
+    const list = [
+      { id: 'a', holder_name: 'A', balance: 10, expiry_type: 'none' },
+      { id: 'b', holder_name: 'B', balance: 10, expiry_type: 'date', expires_at: '2026-07-01T00:00:00' },
+    ]
+    expect(activeVouchers(list, now).map((v) => v.id)).toEqual(['a'])
   })
 })
