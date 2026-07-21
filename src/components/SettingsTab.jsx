@@ -1,5 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { subscribeSettings, updateSettings, replaceCatalog } from '../lib/api.js'
+import {
+  subscribeSettings,
+  updateSettings,
+  replaceCatalog,
+  resetOpenOrdersToReceived,
+} from '../lib/api.js'
 import { CANCEL_PHRASES } from '../lib/orderStatus.js'
 import { parseCarteCsv, decodeCsvBuffer } from '../lib/carteImport.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
@@ -12,6 +17,8 @@ import { devToolsEnabled } from '../dev/devActions.js'
 export default function SettingsTab() {
   const [settings, setSettings] = useState(null)
   const [error, setError] = useState(null)
+  const [confermaSpegni, setConfermaSpegni] = useState(false) // gestione preparazione
+  const [esitoReset, setEsitoReset] = useState(null)
 
   useEffect(() => {
     return subscribeSettings(
@@ -36,6 +43,32 @@ export default function SettingsTab() {
   return (
     <div>
       {error && <div className="banner">Errore: {error}</div>}
+
+      {confermaSpegni && (
+        <ConfirmDialog
+          title="Spegnere la gestione della preparazione?"
+          message={
+            'I conti ancora aperti tornano tutti a “ricevuto”: senza la gestione ' +
+            'non ci sarebbero più i tasti per farli avanzare. Le scorte già ' +
+            'scalate restano scalate (il drink è stato fatto davvero) e non ' +
+            'verranno scalate di nuovo se riaccendi la gestione.'
+          }
+          confirmLabel="Spegni e riporta a ricevuto"
+          cancelLabel="Annulla"
+          onCancel={() => setConfermaSpegni(false)}
+          onConfirm={async () => {
+            setConfermaSpegni(false)
+            setEsitoReset(null)
+            try {
+              const n = await resetOpenOrdersToReceived()
+              await save({ workflow_enabled: false })
+              setEsitoReset(n)
+            } catch (e) {
+              setError(e.message)
+            }
+          }}
+        />
+      )}
 
       <ThemeSettings settings={settings} onSave={save} />
 
@@ -218,8 +251,15 @@ export default function SettingsTab() {
           label="Segui la preparazione degli ordini"
           desc="Spenta: si tiene traccia solo degli ordini (ricevuto e pagato). Spariscono avanzamenti di stato, tempi di servizio, stima ai clienti e avvisi di “pronto”."
           checked={settings.workflow_enabled !== false}
-          onChange={(v) => save({ workflow_enabled: v })}
+          onChange={(v) => (v ? save({ workflow_enabled: true }) : setConfermaSpegni(true))}
         />
+        {esitoReset != null && (
+          <div className="muted small" style={{ marginTop: 6 }}>
+            ✅ {esitoReset === 0
+              ? 'Nessun conto aperto da riportare indietro.'
+              : `${esitoReset} conti aperti riportati a “ricevuto”.`}
+          </div>
+        )}
       </div>
 
       <div className="card settings-section">
