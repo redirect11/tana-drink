@@ -13,6 +13,7 @@ import {
 import { uploadDrinkImage, deleteDrinkImageByUrl } from '../lib/storage.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import { toBaseQty, formatQty, ENTRY_UNITS } from '../lib/inventory.js'
+import PriceSuggestion from './PriceSuggestion.jsx'
 import { CATEGORY_ICONS, catColor } from '../lib/categoryColors.js'
 
 const EMPTY = {
@@ -516,6 +517,10 @@ function CategoryManager({ categories, onChange }) {
 // --- Form drink ---------------------------------------------------------
 
 function DrinkForm({ initial, categories, inventory, onCreateCategory, onCancel, onSave }) {
+  const itemsById = useMemo(
+    () => Object.fromEntries((inventory || []).map((i) => [i.id, i])),
+    [inventory]
+  )
   const [form, setForm] = useState(() => ({
     ...initial,
     _file: null,
@@ -653,6 +658,15 @@ function DrinkForm({ initial, categories, inventory, onCreateCategory, onCancel,
         min="0"
         value={form.price}
         onChange={set('price')}
+      />
+
+      {/* Costo reale della ricetta, prezzo consigliato e guadagno: si
+          aggiorna man mano che si compongono gli ingredienti qui sotto. */}
+      <PriceSuggestion
+        rows={form.recipe_rows}
+        itemsById={itemsById}
+        price={form.price}
+        onUse={(v) => setForm((f) => ({ ...f, price: String(v) }))}
       />
 
       <label htmlFor="description">Descrizione</label>

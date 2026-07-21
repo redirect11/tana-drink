@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
-import { fetchInventoryItems, subscribeSettings, DEFAULT_SETTINGS } from '../lib/api.js'
+import { fetchInventoryItems } from '../lib/api.js'
 import { toBaseQty, ENTRY_UNITS } from '../lib/inventory.js'
-import { recipeCost, suggestedPrice, markupOf, marginOf } from '../lib/pricing.js'
 import { formatPrice } from '../lib/orderStatus.js'
+import PriceSuggestion from './PriceSuggestion.jsx'
 
 // PRODOTTO LIBERO: voce fuori catalogo battuta al volo (stile "custom
 // amount/item" dei POS SumUp). Bastano nome e prezzo — lo scarico
@@ -28,9 +28,6 @@ export default function CustomDrinkForm({ onCancel, onAdd, initial = null, warnN
   const [inventory, setInventory] = useState([])
   const [showRecipe, setShowRecipe] = useState(initRows.length > 0 || warnNoRecipe)
   const [search, setSearch] = useState('')
-
-  const [settings, setSettings] = useState(DEFAULT_SETTINGS)
-  useEffect(() => subscribeSettings(setSettings, () => {}), [])
 
   // L'inventario è leggibile solo dal bartender: se la lettura fallisce
   // (ruolo staff), il form resta usabile senza la sezione ingredienti.
@@ -69,19 +66,6 @@ export default function CustomDrinkForm({ onCancel, onAdd, initial = null, warnN
     () => Object.fromEntries(inventory.map((i) => [i.id, i])),
     [inventory]
   )
-  const { cost: ingCost, missing: ingSenzaCosto } = useMemo(
-    () => recipeCost(rows, itemsById),
-    [rows, itemsById]
-  )
-  const consigliato = useMemo(
-    () =>
-      suggestedPrice(ingCost, {
-        markup: settings.price_markup,
-        step: settings.price_round_step,
-      }),
-    [ingCost, settings.price_markup, settings.price_round_step]
-  )
-
   const priceNum = Number(String(price).replace(',', '.')) || 0
   const valid = name.trim() && priceNum > 0
 
@@ -136,61 +120,13 @@ export default function CustomDrinkForm({ onCancel, onAdd, initial = null, warnN
           required
         />
 
-        {/* Prezzo REALE (costo al dettaglio degli ingredienti), prezzo
-            CONSIGLIATO (reale × ricarico) e guadagno effettivo del prezzo
-            scelto. Il consigliato è un punto di partenza: si scrive nel
-            campo col tasto e resta modificabile. */}
-        {ingCost > 0 && (
-          <div className="card" style={{ margin: '8px 0 0', padding: '8px 10px' }}>
-            <div className="row between" style={{ alignItems: 'baseline' }}>
-              <span className="muted small">Prezzo reale (costo ingredienti)</span>
-              <strong>{formatPrice(ingCost)}</strong>
-            </div>
-
-            {consigliato != null && (
-              <div className="row between" style={{ alignItems: 'center', marginTop: 6 }}>
-                <span className="muted small">Consigliato (×{settings.price_markup})</span>
-                <span className="row" style={{ gap: 8, alignItems: 'center' }}>
-                  <strong className="price">{formatPrice(consigliato)}</strong>
-                  <button
-                    type="button"
-                    className="btn small"
-                    disabled={priceNum === consigliato}
-                    onClick={() => setPrice(String(consigliato))}
-                  >
-                    Usa prezzo consigliato
-                  </button>
-                </span>
-              </div>
-            )}
-
-            {/* Guadagno (o perdita) del prezzo effettivamente impostato. */}
-            {priceNum > 0 && (
-              <div
-                className="row between small"
-                style={{ marginTop: 6, borderTop: '1px dashed var(--line)', paddingTop: 6 }}
-              >
-                <span className="muted">Con {formatPrice(priceNum)} guadagni</span>
-                <span>
-                  <strong className={marginOf(priceNum, ingCost) < 0 ? 'neg' : ''}>
-                    {marginOf(priceNum, ingCost) < 0 ? '− perdita ' : ''}
-                    {formatPrice(Math.abs(marginOf(priceNum, ingCost)))}
-                  </strong>
-                  {markupOf(priceNum, ingCost) != null && (
-                    <span className="muted"> · ×{markupOf(priceNum, ingCost)}</span>
-                  )}
-                </span>
-              </div>
-            )}
-
-            {ingSenzaCosto.length > 0 && (
-              <div className="muted small" style={{ marginTop: 6 }}>
-                ⚠️ Stima parziale: manca il costo al dettaglio di {ingSenzaCosto.join(', ')}.
-                Impostalo in Inventario per avere il prezzo reale.
-              </div>
-            )}
-          </div>
-        )}
+        {/* Costo reale, consigliato e guadagno: stesso riquadro del Menù. */}
+        <PriceSuggestion
+          rows={rows}
+          itemsById={itemsById}
+          price={price}
+          onUse={(v) => setPrice(String(v))}
+        />
 
         {inventory.length > 0 && !showRecipe && (
           <button

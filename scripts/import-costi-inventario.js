@@ -14,6 +14,7 @@
 // =====================================================================
 import { readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
+import { normName, bestMatch } from '../src/lib/nameMatch.js'
 
 const args = process.argv.slice(2)
 const getArg = (name, fallback = null) => {
@@ -29,15 +30,18 @@ const FORCE = args.includes('--force')
 const { sheet, products } = JSON.parse(readFileSync(JSON_PATH, 'utf8'))
 console.log(`[costi] ${products.length} prodotti dal foglio "${sheet}"`)
 
-// Confronto dei nomi tollerante: minuscole, senza accenti e punteggiatura,
-// spazi normalizzati ("Amaro del Capo " ≈ "amaro del capo").
-const norm = (s) =>
-  String(s || '')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // toglie i segni diacritici
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim()
+// Abbinamento nomi: esatto, parole invertite, nome contenuto, refuso.
+// Sotto la soglia NON si scrive nulla — meglio un articolo senza costo
+// che un vino col prezzo di una bibita (vedi nameMatch.js).
+const MIN = Number(getArg('min', '0.9'))
+const ALIAS_PATH = getArg('alias', 'alias-costi.json')
+let ALIAS = {}
+try {
+  ALIAS = JSON.parse(readFileSync(ALIAS_PATH, 'utf8'))
+  console.log(`[costi] ${Object.keys(ALIAS).length} corrispondenze manuali da ${ALIAS_PATH}`)
+} catch {
+  /* file opzionale */
+}
 
 // ── Autenticazione via sessione Firebase CLI ──────────────────────────
 const cfg = EMULATOR
@@ -107,36 +111,61 @@ const docs = await listAll('inventory_items')
 console.log(`[costi] ${docs.length} articoli in inventario su "${EMULATOR ? 'emulatore' : PROJECT}"`)
 
 const listino = new Map()
-for (const p of products) if (p.cost > 0) listino.set(norm(p.name), p)
+for (const p of products) if (p.cost > 0) listino.set(normName(p.name), p)
+const nomiListino = [...listino.values()].map((p) => p.name)
 
 const daAggiornare = []
 const giaValorizzati = []
+const daConfermare = [] // somiglianti ma sotto soglia: si mostrano, non si scrivono
 const senzaCorrispondenza = []
+const usati = new Set()
 
 for (const d of docs) {
   const f = d.fields || {}
   const nome = strOf(f.name)
-  const p = listino.get(norm(nome))
-  if (!p) {
-    senzaCorrispondenza.push(nome)
-    continue
-  }
   const costoAttuale = numOf(f.cost)
   if (costoAttuale > 0 && !FORCE) {
     giaValorizzati.push(nome)
     continue
   }
+
+  // 1) corrispondenza manuale, 2) nome identico, 3) abbinamento fine.
+  let p = null
+  let come = null
+  const alias = ALIAS[nome] || ALIAS[normName(nome)]
+  if (alias) {
+    p = listino.get(normName(alias))
+    come = 'alias'
+  }
+  if (!p) {
+    p = listino.get(normName(nome))
+    if (p) come = 'esatto'
+  }
+  if (!p) {
+    const m = bestMatch(nome, nomiListino)
+    if (m && m.score >= MIN && !m.ambiguous) {
+      p = listino.get(normName(m.value))
+      come = `${m.reason} ${m.score}`
+    } else if (m && m.score >= 0.72) {
+      daConfermare.push({ nome, candidato: m.value, score: m.score, ambiguo: m.ambiguous })
+      senzaCorrispondenza.push(nome)
+      continue
+    }
+  }
+  if (!p) {
+    senzaCorrispondenza.push(nome)
+    continue
+  }
+
+  usati.add(normName(p.name))
   const unit = strOf(f.unit) || 'pz'
   const packAttuale = numOf(f.package_size)
-  // Il formato si scrive solo se manca: quello in gestionale ha la
-  // precedenza (potrebbe essere stato corretto a mano).
+  // Il formato in gestionale ha la precedenza: può essere stato corretto.
   const pack = packAttuale > 0 ? packAttuale : unit === 'ml' ? p.package_size_ml : null
-  daAggiornare.push({ doc: d, nome, p, unit, pack, costoAttuale })
+  daAggiornare.push({ doc: d, nome, p, unit, pack, costoAttuale, come })
 }
 
-const nonUsati = [...listino.values()].filter(
-  (p) => !docs.some((d) => norm(strOf(d.fields?.name)) === norm(p.name))
-)
+const nonUsati = [...listino.values()].filter((p) => !usati.has(normName(p.name)))
 
 console.log(`\n  da aggiornare : ${daAggiornare.length}`)
 console.log(`  già valorizzati: ${giaValorizzati.length}${FORCE ? '' : ' (usa --force per sovrascrivere)'}`)
@@ -147,10 +176,21 @@ for (const x of daAggiornare.slice(0, 15)) {
   const perCl = x.pack > 0 ? (x.p.cost * (1 + x.p.vat / 100)) / (x.pack / 10) : null
   console.log(
     `   + ${x.nome.padEnd(28)} ${String(x.p.cost).padStart(8)} € /conf` +
-      (perCl ? ` · ${perCl.toFixed(4)} €/cl` : ' · (a pezzo)')
+      (perCl ? ` · ${perCl.toFixed(4)} €/cl` : ' · (a pezzo)') +
+      (x.come && x.come !== 'esatto' ? `  [${x.come} -> ${x.p.name}]` : '')
   )
 }
 if (daAggiornare.length > 15) console.log(`   … e altri ${daAggiornare.length - 15}`)
+
+if (daConfermare.length) {
+  console.log(`
+  DA CONFERMARE (somiglianti ma sotto la soglia ${MIN}: NON vengono scritti)`)
+  for (const c of daConfermare.slice(0, 30)) {
+    console.log(`   ? ${c.nome.padEnd(26)} -> ${String(c.candidato).padEnd(26)} ${c.score}${c.ambiguo ? ' (ambiguo)' : ''}`)
+  }
+  if (daConfermare.length > 30) console.log(`   ... e altri ${daConfermare.length - 30}`)
+  console.log(`   Per accettarne uno: mettilo in ${ALIAS_PATH} come {"NOME GESTIONALE": "NOME LISTINO"}`)
+}
 
 if (senzaCorrispondenza.length) {
   console.log(`\n  Senza corrispondenza nel listino (restano senza costo):`)
