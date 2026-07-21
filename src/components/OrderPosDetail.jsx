@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   advanceComanda,
   addComanda,
@@ -7,6 +7,7 @@ import {
   updateOrderInfo,
   cancelOrder,
   createOrder,
+  subscribeOpenGroups,
   subscribeOrder,
   subscribeSettings,
   DEFAULT_SETTINGS,
@@ -82,8 +83,24 @@ export default function OrderPosDetail({ order = null }) {
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   useEffect(() => subscribeSettings(setSettings, () => {}), [])
 
-  // AGGIUNTE in composizione (BOZZA persistente).
-  const draftKey = order ? order.id : 'new'
+  // CONTO DI GRUPPO (solo in creazione): si arriva qui da /pos?group=<id>
+  // toccando un gruppo nel drawer o nella coda. L'ordine nasce già dentro
+  // quel conto, così il gruppo si paga tutto insieme.
+  const [params] = useSearchParams()
+  const groupParam = isNew ? params.get('group') || '' : ''
+  const [groups, setGroups] = useState([])
+  useEffect(() => {
+    if (!groupParam) return
+    return subscribeOpenGroups(setGroups, () => setGroups([]))
+  }, [groupParam])
+  const group = groups.find((g) => g.id === groupParam) || null
+  // Un gruppo che contiene sottogruppi non può avere ordini diretti: si
+  // ordina in uno dei suoi sottogruppi (lo impedisce anche createOrder).
+  const groupIsContainer = !!group?.has_child_groups
+
+  // AGGIUNTE in composizione (BOZZA persistente). In creazione la chiave
+  // tiene conto del gruppo: bozze di gruppi diversi non si mescolano.
+  const draftKey = order ? order.id : groupParam ? `new:${groupParam}` : 'new'
   const [draft, setDraft, clearDraft] = useDraft(draftKey)
 
   // Staff loggato (per l'attribuzione dell'ordine creato dal POS).
@@ -470,6 +487,8 @@ export default function OrderPosDetail({ order = null }) {
       items: draftToItems(),
       placed_by: placedBy(),
       printNow: false,
+      group_id: group && !groupIsContainer ? group.id : null,
+      group_name_snapshot: group && !groupIsContainer ? group.name : null,
     })
     clearDraft()
     setInfo({ customer_name: '', table_label: '', note: '' })
@@ -511,6 +530,8 @@ export default function OrderPosDetail({ order = null }) {
         items,
         placed_by: placedBy(),
         status: ORDER_STATUSES.IN_PREPARAZIONE,
+        group_id: group && !groupIsContainer ? group.id : null,
+        group_name_snapshot: group && !groupIsContainer ? group.name : null,
       })
       setPayOrder((cur) => (cur && cur.id === null ? created : cur))
       clearDraft()
@@ -651,6 +672,26 @@ export default function OrderPosDetail({ order = null }) {
             </div>
             {!isNew && order.table_label && (
               <div className="muted small">🍽 Tavolo {order.table_label}</div>
+            )}
+            {/* Conto di gruppo: si vede sempre a quale conto si sta
+                addebitando, per non battere l'ordine sul gruppo sbagliato. */}
+            {group && !groupIsContainer && (
+              <div className="row between" style={{ alignItems: 'center', marginTop: 2 }}>
+                <span className="pill small">👥 {group.name}</span>
+                <button
+                  className="btn ghost small"
+                  onClick={() => navigate('/pos')}
+                  title="Ordina senza gruppo"
+                >
+                  ✕ Togli gruppo
+                </button>
+              </div>
+            )}
+            {groupIsContainer && (
+              <div className="banner" style={{ margin: '4px 0' }}>
+                👥 “{group.name}” contiene altri gruppi: non può avere ordini
+                diretti. Ordina in uno dei suoi sottogruppi.
+              </div>
             )}
           </div>
 

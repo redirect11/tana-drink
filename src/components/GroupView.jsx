@@ -397,7 +397,7 @@ export default function GroupView({ groupId, onClose }) {
         <div className="grid-2" style={{ marginTop: 14 }}>
           <button className="btn ghost" onClick={doRename}>✏️ Rinomina</button>
           {!isContainer && (
-            <button className="btn" onClick={() => navigate(`/menu?group=${node.group.id}`)}>
+            <button className="btn" onClick={() => navigate(`/pos?group=${node.group.id}`)}>
               ✍️ Nuovo ordine
             </button>
           )}

@@ -28,7 +28,7 @@ export default function GroupsPanel({ orders, role }) {
       created_by: u ? { uid: u.uid, email: u.email, role } : null,
     }).catch(() => null)
     setNewName('')
-    if (g) navigate(`/menu?group=${g.id}`)
+    if (g) navigate(`/pos?group=${g.id}`)
   }
 
   return (
@@ -70,7 +70,7 @@ export default function GroupsPanel({ orders, role }) {
                   {!node.group.has_child_groups && (
                     <button
                       className="btn ghost small"
-                      onClick={() => navigate(`/menu?group=${node.group.id}`)}
+                      onClick={() => navigate(`/pos?group=${node.group.id}`)}
                     >
                       ✍️
                     </button>
