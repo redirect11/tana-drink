@@ -26,6 +26,7 @@ import {
   placedByName,
 } from '../lib/orderStatus.js'
 import { bucketByStatus, ordersRecap } from '../lib/coda.js'
+import { businessDayKey, businessDayLabel } from '../lib/businessDay.js'
 import { isAwaitingPayment } from '../lib/payments.js'
 import { readerCheckout, readerTerminate } from '../lib/paymentsApi.js'
 import { ensureNotificationPermission, notify } from '../lib/notify.js'
@@ -272,7 +273,8 @@ function OrderQueue() {
   const [orders, setOrders] = useState([])
   const [error, setError] = useState(null)
   const [statusTab, setStatusTab] = useState(ORDER_STATUSES.RICEVUTO)
-  const [boardFilter, setBoardFilter] = useState('attivi') // 'attivi' | 'chiusi' | 'tutti'
+  const [boardFilter, setBoardFilter] = useState('attivi') // 'attivi' | 'chiusi' | 'tutti' | 'da_chiudere'
+  const [showArretrati, setShowArretrati] = useState(false) // pannello nelle viste a lista
   // Avanzamenti OTTIMISTICI dalla card: lo stato cambia al tap, il server
   // segue in background (in errore si torna allo stato reale).
   const [queueOverrides, setQueueOverrides] = useState({}) // id -> workflow_status
@@ -450,15 +452,35 @@ function OrderQueue() {
     )
   }
 
-  const recap = ordersRecap(orders)
   // Ordini "effettivi" a schermo: stato del server + override ottimistici.
   const effOrders = orders.map((o) =>
     queueOverrides[o.id] && o.workflow_status !== queueOverrides[o.id]
       ? { ...o, workflow_status: queueOverrides[o.id] }
       : o
   )
+  // ── DA CHIUDERE: conti rimasti aperti dalle giornate precedenti ──
+  // Restano fuori dalla schermata principale (altrimenti si mescolano agli
+  // ordini di oggi e i numeri del giorno sembrano duplicati): stanno nella
+  // loro tab dedicata, con la data ben visibile sulla card.
+  const oggiKey = businessDayKey(new Date(), cutoffHour)
+  const dayOf = (o) => o.order_date || businessDayKey(o.created_at, cutoffHour)
+  const isChiuso = (o) =>
+    o.workflow_status === ORDER_STATUSES.PAGATO || o.workflow_status === ORDER_STATUSES.ANNULLATO
+  const arretrati = effOrders
+    .filter((o) => !isChiuso(o) && dayOf(o) && dayOf(o) !== oggiKey)
+    .sort((a, b) => String(dayOf(a)).localeCompare(String(dayOf(b))))
+  const arretratiIds = new Set(arretrati.map((o) => o.id))
+  // Etichetta della giornata dell'ordine: "oggi", "ieri" o la data estesa.
+  const dayLabel = (o) => businessDayLabel(dayOf(o), new Date(), cutoffHour)
+  const ordersOggi = effOrders.filter((o) => !arretratiIds.has(o.id))
+  // Riepilogo di testata: solo la giornata corrente (gli arretrati stanno
+  // nella loro tab e non devono gonfiare i totali di oggi).
+  const recap = ordersRecap(ordersOggi)
+
   // Ricerca rapida: numero, cliente, tavolo, drink, chi ha inserito.
   const q = search.trim().toLowerCase()
+  // Cercando esplicitamente si trovano anche i conti dei giorni scorsi
+  // (altrimenti sarebbero raggiungibili solo dalla tab "Da chiudere").
   const visibleOrders = q
     ? effOrders.filter(
         (o) =>
@@ -469,7 +491,7 @@ function OrderQueue() {
           o.placed_by?.name?.toLowerCase().includes(q) ||
           (o.order_items || []).some((i) => i.name?.toLowerCase().includes(q))
       )
-    : effOrders
+    : ordersOggi
   const buckets = bucketByStatus(visibleOrders)
   const listView = settings.queue_view === 'lista'
   const list = buckets[statusTab] || []
@@ -485,13 +507,15 @@ function OrderQueue() {
   ]
   // Vista a griglia: di default gli ordini in corso; col filtro si vedono
   // anche i chiusi/pagati o TUTTI gli ordini in vista.
-  const isClosed = (o) =>
-    o.workflow_status === ORDER_STATUSES.PAGATO || o.workflow_status === ORDER_STATUSES.ANNULLATO
-  const boardOrders = visibleOrders
-    .filter((o) =>
-      boardFilter === 'tutti' ? true : boardFilter === 'chiusi' ? isClosed(o) : !isClosed(o)
-    )
-    .sort((a, b) => (a.daily_number || 0) - (b.daily_number || 0))
+  const isClosed = isChiuso
+  const boardOrders =
+    boardFilter === 'da_chiudere'
+      ? arretrati
+      : visibleOrders
+          .filter((o) =>
+            boardFilter === 'tutti' ? true : boardFilter === 'chiusi' ? isClosed(o) : !isClosed(o)
+          )
+          .sort((a, b) => (a.daily_number || 0) - (b.daily_number || 0))
   // Ordini POS in invio. Finché il placeholder è attivo l'ordine reale
   // resta nascosto: il match usa il client_temp_id scritto sull'ordine
   // (deterministico anche se lo snapshot arriva PRIMA che il placeholder
@@ -662,7 +686,10 @@ function OrderQueue() {
             )}
           </div>
           <div className="row between" style={{ alignItems: 'baseline' }}>
-            <span className="muted">{count} prodott{count === 1 ? 'o' : 'i'}</span>
+            <span className="muted">
+              {count} prodott{count === 1 ? 'o' : 'i'}
+              <span className="muted small"> · 📅 {dayLabel(o)}</span>
+            </span>
             <span className="grid-card-tot">{formatPrice(o.total)}</span>
           </div>
         </div>
@@ -745,7 +772,8 @@ function OrderQueue() {
                 {o.customer_name && <strong>{o.customer_name}</strong>}{' '}
                 {o.table_label && (
                   <span className="muted">· Tavolo {o.table_label}</span>
-                )}
+                )}{' '}
+                <span className="muted small">📅 {dayLabel(o)}</span>
                 {o.service_mode === 'banco' && (
                   <span className="pill" style={{ marginLeft: 6 }}>🚶 Ritiro al banco</span>
                 )}
@@ -887,6 +915,23 @@ function OrderQueue() {
         </>
       )}
 
+      {/* Conti aperti dai giorni scorsi: fuori dalla lista di oggi, qui in
+          un blocco a parte (nella vista a griglia è la tab "Da chiudere"). */}
+      {!gridView && arretrati.length > 0 && (
+        <div className="card" style={{ marginTop: 8 }}>
+          <div
+            className="row between"
+            style={{ cursor: 'pointer', alignItems: 'center' }}
+            onClick={() => setShowArretrati((v) => !v)}
+          >
+            <strong>⏳ Da chiudere ({arretrati.length})</strong>
+            <span className="muted">{showArretrati ? '▾' : '▸'}</span>
+          </div>
+          <div className="muted small">Conti rimasti aperti dai giorni scorsi.</div>
+          {showArretrati && <div style={{ marginTop: 8 }}>{arretrati.map(renderCard)}</div>}
+        </div>
+      )}
+
       {!gridView && (
         <input
           type="search"
@@ -906,12 +951,13 @@ function OrderQueue() {
               🖨 {b.msg} <span className="muted">(tocca per chiudere)</span>
             </div>
           ))}
-          {/* Filtro: in corso (default) / chiusi / tutti */}
+          {/* Filtro: in corso (default) / chiusi / tutti / da chiudere */}
           <div className="chips-row" style={{ margin: '8px 0 0' }}>
             {[
               ['attivi', 'In corso'],
               ['chiusi', '💶 Chiusi'],
               ['tutti', 'Tutti'],
+              ...(arretrati.length ? [['da_chiudere', `⏳ Da chiudere (${arretrati.length})`]] : []),
             ].map(([k, label]) => (
               <button
                 key={k}
@@ -924,7 +970,11 @@ function OrderQueue() {
           </div>
           {/* Griglia: ordini in invio (grigi) + ordini secondo il filtro */}
           {pend.pending.length === 0 && visibleBoard.length === 0 && (
-            <div className="empty">Nessun ordine{boardFilter === 'chiusi' ? ' chiuso' : boardFilter === 'attivi' ? ' in corso' : ''}.</div>
+            <div className="empty">
+              {boardFilter === 'da_chiudere'
+                ? 'Nessun conto rimasto aperto dai giorni scorsi. 🎉'
+                : `Nessun ordine${boardFilter === 'chiusi' ? ' chiuso' : boardFilter === 'attivi' ? ' in corso' : ''}.`}
+            </div>
           )}
           {/* I nuovi ordini vanno IN FONDO (numeri più alti): il placeholder
               in sync sta già lì, così alla conferma non cambia posizione. */}
