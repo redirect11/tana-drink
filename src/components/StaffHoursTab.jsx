@@ -142,10 +142,6 @@ export default function StaffHoursTab() {
   const days = useMemo(() => byDay(entries), [entries])
   const totals = useMemo(() => effVsPlanned(entries), [entries])
   const perPerson = useMemo(() => peopleTotals(entries), [entries])
-  // Costo del personale nel periodo: solo ore EFFETTIVE, ciascuna alla
-  // tariffa in vigore nel giorno in cui è stata lavorata.
-  const payroll = useMemo(() => payrollReport(entries, ratesFor), [entries, ratesFor])
-
   // I turni e le paghe si legano ai MEMBRI DELLO STAFF registrati: un nome
   // scritto a mano si sbaglia, cambia, e non si riaggancia a nulla.
   const membri = useMemo(
@@ -163,6 +159,11 @@ export default function StaffHoursTab() {
     const byName = new Map(rates.map((r) => [r.name, r.rates || []]))
     return (e) => (e.staff_uid && byUid.get(e.staff_uid)) || byName.get(e.staff_name) || []
   }, [rates])
+
+  // Costo del personale nel periodo: solo ore EFFETTIVE, ciascuna alla
+  // tariffa in vigore nel giorno in cui è stata lavorata.
+  const payroll = useMemo(() => payrollReport(entries, ratesFor), [entries, ratesFor])
+
 
   function salva(e) {
     e.preventDefault()
