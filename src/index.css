@@ -1252,15 +1252,6 @@ body.fullbleed .bar-content {
   gap: 4px;
 }
 
-/* Conto già PAGATO ma non ancora servito: resta in coda perché c'è ancora
-   da consegnarlo, ma si distingue da quelli da incassare. */
-.order-card.pagato-da-servire {
-  border-left-color: var(--accent-2, #f5b94a);
-  background:
-    linear-gradient(0deg, rgba(245, 185, 74, 0.07), rgba(245, 185, 74, 0.07)),
-    var(--card-bg, transparent);
-}
-
 /* Separatore fra le giornate nella coda (conti dei giorni scorsi). */
 .day-sep {
   display: flex;
@@ -1381,6 +1372,25 @@ body.fullbleed .bar-content {
 .order-card.pagato {
   border-left-color: rgba(245, 185, 74, 0.55);
   opacity: 0.7;
+}
+
+/* Conto già PAGATO ma non ancora servito: resta in coda perché c'è ancora
+   da consegnare. Il FONDO continua a dire a che punto è la preparazione
+   (le regole qui sopra), il BORDO doppio ambra dice che è già incassato:
+   così non si perde nessuna delle due informazioni. */
+.order-card.pagato-da-servire {
+  position: relative;
+  border-left-style: double;
+  border-left-width: 7px;
+  border-left-color: var(--accent-2, #f5b94a);
+}
+.order-card.pagato-da-servire::after {
+  content: '💶';
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  font-size: 0.7rem;
+  opacity: 0.75;
 }
 
 /* Nota dell'ordine sulla card del bartender */
