@@ -2239,8 +2239,11 @@ const staffHoursCol = collection(db, 'staff_hours')
 
 // ── RAPP ORE: registro ore dello staff (per mese) ─────────────────────
 
-export async function addStaffHours({ staff_name, date, start, end, break_minutes = 0, hours, note = null, kind = 'effettivo' }) {
+export async function addStaffHours({ staff_uid = null, staff_name, date, start, end, break_minutes = 0, hours, note = null, kind = 'effettivo' }) {
   const ref = await addDoc(staffHoursCol, {
+    // Il turno è di un MEMBRO dello staff: l'uid è il riferimento stabile,
+    // il nome resta come etichetta leggibile nei registri.
+    staff_uid,
     staff_name: String(staff_name || '').trim(),
     date, // YYYY-MM-DD
     month: String(date || '').slice(0, 7), // per la query mensile
@@ -2307,15 +2310,10 @@ export async function fetchAllStaffHours() {
 
 const staffRatesCol = collection(db, 'staff_rates')
 
-// Id stabile dal nome: le ore sono registrate per nome, non per uid
-// (le voci manuali non hanno un account dietro).
-export const rateDocId = (name) =>
-  String(name || '')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '') || 'senza-nome'
+// Le paghe sono legate al MEMBRO DELLO STAFF (uid dell'account), non a un
+// nome scritto a mano: due persone possono chiamarsi uguale e un nome si
+// può correggere, l'account no. Il nome si salva comunque come etichetta
+// leggibile per i registri storici.
 
 export function subscribeStaffRates(cb, onError) {
   return onSnapshot(
@@ -2325,19 +2323,18 @@ export function subscribeStaffRates(cb, onError) {
   )
 }
 
-// Salva l'elenco tariffe di una persona (già ordinato da paghe.js).
-export async function saveStaffRates(name, rates) {
-  const nome = String(name || '').trim()
-  if (!nome) throw new Error('Serve il nome della persona.')
+// Salva l'elenco tariffe di un membro dello staff (già ordinato da paghe.js).
+export async function saveStaffRates({ uid, name }, rates) {
+  if (!uid) throw new Error('Serve il membro dello staff.')
   await setDoc(
-    doc(staffRatesCol, rateDocId(nome)),
-    { name: nome, rates: rates || [], updated_at: serverTimestamp() },
+    doc(staffRatesCol, uid),
+    { uid, name: String(name || '').trim(), rates: rates || [], updated_at: serverTimestamp() },
     { merge: true }
   )
 }
 
-export async function deleteStaffRates(name) {
-  await deleteDoc(doc(staffRatesCol, rateDocId(name)))
+export async function deleteStaffRates(uid) {
+  await deleteDoc(doc(staffRatesCol, uid))
 }
 
 // ── BADGE VIRTUALE: timbrature entrata/uscita dello staff ─────────────

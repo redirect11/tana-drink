@@ -54,12 +54,13 @@ export function entryCost(entry, rates) {
 }
 
 // Riepilogo costo personale su un elenco di turni.
-//   entries: [{ staff_name, date, hours, kind }]
-//   ratesByName: { [nome]: [{ from, rate }] }
+//   entries: [{ staff_uid, staff_name, date, hours, kind }]
+//   ratesFor(entry) → elenco tariffe della persona (per uid, con ricaduta
+//   sul nome per i turni registrati prima che ci fosse l'uid)
 // Conta solo le ore EFFETTIVE (le programmate sono una previsione, non un
 // costo sostenuto). Ritorna il totale, il dettaglio per persona e le
 // persone senza tariffa: il totale è parziale e va detto.
-export function payrollReport(entries, ratesByName, { onlyKind = 'effettivo' } = {}) {
+export function payrollReport(entries, ratesFor, { onlyKind = 'effettivo' } = {}) {
   const perPerson = new Map()
   const senzaTariffa = new Set()
   let totale = 0
@@ -71,7 +72,8 @@ export function payrollReport(entries, ratesByName, { onlyKind = 'effettivo' } =
     const nome = e?.staff_name || '—'
     const h = Number(e?.hours) || 0
     if (h <= 0) continue
-    const cost = entryCost(e, ratesByName?.[nome])
+    const rates = typeof ratesFor === 'function' ? ratesFor(e) : ratesFor?.[nome]
+    const cost = entryCost(e, rates)
     const cur = perPerson.get(nome) || { name: nome, hours: 0, cost: 0, mancante: false }
     cur.hours = Math.round((cur.hours + h) * 100) / 100
     if (cost == null) {
