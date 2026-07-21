@@ -68,6 +68,30 @@ describe('useDraft', () => {
     expect(localStorage.getItem('tana:draft:new')).toBeNull()
   })
 
+  it('svuotare e smontare subito CANCELLA davvero (conferma + navigazione)', () => {
+    // Alla conferma il POS svuota la bozza e naviga via nello stesso giro:
+    // se il salvataggio dipendesse dall'updater di React, il componente
+    // smontato lo scarterebbe e gli item resterebbero per la volta dopo.
+    const first = renderHook(() => useDraft('new'))
+    act(() => first.result.current[1]([{ line_id: 'a', qty: 1 }]))
+    act(() => {
+      first.result.current[2]() // clearDraft
+      first.unmount() // …e via dalla schermata, subito
+    })
+    expect(loadDraft('new')).toEqual([])
+    expect(renderHook(() => useDraft('new')).result.current[0]).toEqual([])
+  })
+
+  it('più aggiornamenti nello stesso giro partono dal valore aggiornato', () => {
+    const { result } = renderHook(() => useDraft('new'))
+    act(() => {
+      result.current[1]([{ line_id: 'a', qty: 1 }])
+      result.current[1]((cur) => [...cur, { line_id: 'b', qty: 1 }])
+    })
+    expect(result.current[0].map((l) => l.line_id)).toEqual(['a', 'b'])
+    expect(loadDraft('new')).toHaveLength(2)
+  })
+
   it('cambiando key ricarica la bozza di quella chiave', () => {
     saveDraft('ord-9', [{ line_id: 'z', qty: 1 }])
     const { result, rerender } = renderHook(({ k }) => useDraft(k), {
