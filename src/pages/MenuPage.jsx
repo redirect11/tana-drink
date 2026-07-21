@@ -363,12 +363,6 @@ export default function MenuPage() {
           Rivolgersi allo staff per ordinare.
         </div>
       )}
-      {menuOnly && staff && (
-        <div className="banner">
-          📖 Ordinazioni sospese per i clienti — tu puoi comunque inserire
-          ordini dal gestionale.
-        </div>
-      )}
 
       {etaMinutes != null && !menuOnly && (
         <p className="eta-line">
