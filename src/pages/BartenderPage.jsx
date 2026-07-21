@@ -434,7 +434,12 @@ function OrderQueue() {
     })
   }
 
-  if (!ordersReady) {
+  // Attesa del primo snapshot: si mostra SOLO se non c'è già qualcosa da
+  // vedere. Un ordine appena battuto è un segnaposto locale, quindi deve
+  // comparire subito — la sincronizzazione col server viene dopo, non
+  // prima (era il caso del primo ordine della giornata: il contatore del
+  // giorno non è ancora in cache e la scrittura passa dal server).
+  if (!ordersReady && pend.pending.length === 0) {
     return (
       <div>
         {error && <div className="banner">Errore: {error}</div>}
