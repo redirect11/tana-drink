@@ -187,9 +187,9 @@ export default function OrderStatusPage() {
   const orderActive =
     order && (order.workflow_status === ORDER_STATUSES.RICEVUTO || order.workflow_status === ORDER_STATUSES.IN_PREPARAZIONE)
   useEffect(() => {
-    if (!settings.eta_enabled || !orderActive) return
+    if (!settings.eta_enabled || settings.workflow_enabled === false || !orderActive) return
     return subscribeQueue(setQueue)
-  }, [settings.eta_enabled, orderActive])
+  }, [settings.eta_enabled, settings.workflow_enabled, orderActive])
 
   async function enableNotifications() {
     const ok = await ensureNotificationPermission()
@@ -278,7 +278,8 @@ export default function OrderStatusPage() {
 
   // Tempo stimato personalizzato: tiene conto degli ordini attivi davanti a
   // questo (la coda non viene mostrata, conta solo la posizione).
-  const showEta = settings.eta_enabled && orderActive
+  const workflowOn = settings.workflow_enabled !== false
+  const showEta = settings.eta_enabled && workflowOn && orderActive
   const queueAhead = queue.filter(
     (q) => (q.daily_number || 0) < (order.daily_number || 0)
   ).length
@@ -348,6 +349,9 @@ export default function OrderStatusPage() {
         )}
       </div>
 
+      {/* Avanzamento della lavorazione: senza gestione della preparazione
+          non c'è nessun percorso da mostrare al cliente. */}
+      {workflowOn && (
       <div className="steps">
         {STATUS_FLOW.filter(
           (s) => s !== ORDER_STATUSES.RITIRATO && s !== ORDER_STATUSES.PAGATO
@@ -364,8 +368,9 @@ export default function OrderStatusPage() {
           )
         })}
       </div>
+      )}
 
-      {'Notification' in window && !notifOn && (
+      {workflowOn && 'Notification' in window && !notifOn && (
         <button className="btn secondary block" onClick={enableNotifications}>
           🔔 Avvisami quando è pronto
         </button>

@@ -208,6 +208,21 @@ export default function SettingsTab() {
       </div>
 
       <div className="card settings-section">
+        <h3>Gestione preparazione</h3>
+        <p className="muted small" style={{ margin: '0 0 8px' }}>
+          Serve se al bancone seguite la lavorazione dei drink: ricevuto →
+          in preparazione → pronto → servito. Se il locale lavora “a vista”
+          (si prepara e si consegna subito) è solo lavoro in più.
+        </p>
+        <ToggleRow
+          label="Segui la preparazione degli ordini"
+          desc="Spenta: si tiene traccia solo degli ordini (ricevuto e pagato). Spariscono avanzamenti di stato, tempi di servizio, stima ai clienti e avvisi di “pronto”."
+          checked={settings.workflow_enabled !== false}
+          onChange={(v) => save({ workflow_enabled: v })}
+        />
+      </div>
+
+      <div className="card settings-section">
         <h3>Giornata di lavoro</h3>
         <p className="muted small" style={{ margin: '0 0 8px' }}>
           I conti restano aperti finché non li chiudi tu: nessuna “serata” da
@@ -258,6 +273,7 @@ export default function SettingsTab() {
         </div>
       </div>
 
+      {settings.workflow_enabled !== false && (
       <div className="card settings-section">
         <h3>Tempi di servizio</h3>
         <ToggleRow
@@ -279,6 +295,7 @@ export default function SettingsTab() {
           </div>
         )}
       </div>
+      )}
 
       <div className="card settings-section">
         <h3>Coperto</h3>
