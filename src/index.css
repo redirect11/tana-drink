@@ -279,18 +279,18 @@ a.btn.block {
    al centro. Con il padding di quelle testuali risultava larga e storta,
    e non era allineata alla riga di testo che la ospita. */
 .pill.icon {
-  /* inline-grid + place-items centra su ENTRAMBI gli assi senza dipendere
-     dalla linea di base del carattere: con flex l'emoji restava bassa e
-     spostata, perché il glifo ha metriche proprie. */
-  display: inline-grid;
-  place-items: center;
+  /* Niente riquadro di dimensione fissa: le emoji hanno metriche proprie
+     e dentro un quadrato imposto restano sempre fuori centro. Qui è la
+     pill ad adattarsi al glifo, con padding UGUALE sui quattro lati: il
+     centraggio viene da sé, su entrambi gli assi. */
+  display: inline-block;
   gap: 0;
-  padding: 0;
-  width: 1.75em;
-  height: 1.75em;
+  padding: 4px;
   line-height: 1;
+  font-size: 0.85rem;
   vertical-align: middle;
 }
+
 
 .pill.ricevuto {
   background: rgba(243, 156, 18, 0.2);
