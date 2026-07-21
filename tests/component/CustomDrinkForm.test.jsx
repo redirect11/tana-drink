@@ -12,10 +12,16 @@ import '@testing-library/jest-dom/vitest'
 vi.mock('../../src/lib/api.js', () => ({
   fetchInventoryItems: vi.fn(() =>
     Promise.resolve([
-      { id: 'rum', name: 'Rum bianco', unit: 'cl' },
+      // Rum: bottiglia da 70 cl a 9,00 € + IVA → costo al cl noto.
+      { id: 'rum', name: 'Rum bianco', unit: 'ml', package_size: 700, cost: 9, vat: 22 },
       { id: 'menta', name: 'Menta', unit: 'pz' },
     ])
   ),
+  DEFAULT_SETTINGS: { price_markup: 3, price_round_step: 0.5 },
+  subscribeSettings: vi.fn((cb) => {
+    cb({ price_markup: 3, price_round_step: 0.5 })
+    return () => {}
+  }),
 }))
 
 import CustomDrinkForm from '../../src/components/CustomDrinkForm.jsx'
@@ -58,7 +64,7 @@ describe('prodotto libero', () => {
       {
         inventory_item_id: 'rum',
         name: 'Rum bianco',
-        unit: 'cl',
+        unit: 'ml', // unità BASE dell'articolo (si inserisce in cl)
         qty: toBaseQty(5, 'cl'),
       },
     ])
