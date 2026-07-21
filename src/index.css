@@ -278,18 +278,6 @@ a.btn.block {
 /* Pill con la SOLA icona (es. 💳 sulla card ordine): tonda e con l'icona
    al centro. Con il padding di quelle testuali risultava larga e storta,
    e non era allineata alla riga di testo che la ospita. */
-.pill.icon {
-  /* Niente riquadro di dimensione fissa: le emoji hanno metriche proprie
-     e dentro un quadrato imposto restano sempre fuori centro. Qui è la
-     pill ad adattarsi al glifo, con padding UGUALE sui quattro lati: il
-     centraggio viene da sé, su entrambi gli assi. */
-  display: inline-block;
-  gap: 0;
-  padding: 4px;
-  line-height: 1;
-  font-size: 0.85rem;
-  vertical-align: middle;
-}
 
 
 .pill.ricevuto {
