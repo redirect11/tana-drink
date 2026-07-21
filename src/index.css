@@ -1252,6 +1252,15 @@ body.fullbleed .bar-content {
   gap: 4px;
 }
 
+/* Conto già PAGATO ma non ancora servito: resta in coda perché c'è ancora
+   da consegnarlo, ma si distingue da quelli da incassare. */
+.order-card.pagato-da-servire {
+  border-left-color: var(--accent-2, #f5b94a);
+  background:
+    linear-gradient(0deg, rgba(245, 185, 74, 0.07), rgba(245, 185, 74, 0.07)),
+    var(--card-bg, transparent);
+}
+
 /* Separatore fra le giornate nella coda (conti dei giorni scorsi). */
 .day-sep {
   display: flex;

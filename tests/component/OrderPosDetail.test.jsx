@@ -382,6 +382,7 @@ describe('schermata Pagamento', () => {
       amount: 14,
       method: 'banco',
       items: null,
+      autoServe: false,
     })
   })
 
@@ -408,6 +409,7 @@ describe('schermata Pagamento', () => {
       amount: 14,
       method: 'banco',
       items: null,
+      autoServe: false,
     })
   })
 

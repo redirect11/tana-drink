@@ -46,3 +46,32 @@ describe('openOrdersCount', () => {
     expect(openOrdersCount(orders)).toBe(5) // 1,2,3,4,5
   })
 })
+
+// ── Chiusura del conto: pagato NON basta ───────────────────────────────
+// Regola voluta dal locale: con la preparazione tracciata un conto esce
+// dalla coda solo se è stato PAGATO **e** SERVITO. Pagare in anticipo è
+// normale; farlo sparire vorrebbe dire dimenticarsi di consegnarlo.
+import { allServed } from '../../src/lib/comande.js'
+
+describe('un conto pagato ma non servito resta da fare', () => {
+  const conto = (statoComanda, paymentStatus) => ({
+    payment_status: paymentStatus,
+    comande: [{ id: 'c1', status: statoComanda }],
+  })
+  const pagato = (o) => o.payment_status === 'pagato'
+  const chiuso = (o, workflowOn) => (workflowOn ? pagato(o) && allServed(o) : pagato(o))
+
+  it('con la preparazione attiva: pagato ma non servito NON è chiuso', () => {
+    expect(chiuso(conto('in_preparazione', 'pagato'), true)).toBe(false)
+    expect(chiuso(conto('pronto', 'pagato'), true)).toBe(false)
+  })
+
+  it('con la preparazione attiva: serve pagato E servito', () => {
+    expect(chiuso(conto('ritirato', 'pagato'), true)).toBe(true)
+    expect(chiuso(conto('ritirato', 'non_richiesto'), true)).toBe(false) // servito ma da incassare
+  })
+
+  it('senza preparazione: il pagamento chiude e basta', () => {
+    expect(chiuso(conto('ricevuto', 'pagato'), false)).toBe(true)
+  })
+})

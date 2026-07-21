@@ -107,6 +107,9 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onB
 
   const remaining = useMemo(() => remainingItems(order), [order])
   const paid = paidAmount(order)
+  // Incassare non vuol dire aver consegnato: seguendo la preparazione il
+  // conto resta aperto finché le comande non sono servite.
+  const autoServe = settings?.workflow_enabled === false
   const due = orderDue(order)
   const served = allServed(order)
   const closed = order.payment_status === 'pagato'
@@ -208,7 +211,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onB
       if (!chosenVoucher || !(voucherPay > 0)) return
       return run(async () => {
         await onBeforePay?.()
-        const { closed } = await payWithVoucher(await orderId(), chosenVoucher.id, voucherPay)
+        const { closed } = await payWithVoucher(await orderId(), chosenVoucher.id, voucherPay, { autoServe })
         setVoucherId('')
         if (closed) onClose()
       })
@@ -223,7 +226,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onB
             await onBeforePay?.()
             const oid = await orderId()
             setTimeout(() => {
-              registerPayment(oid, { amount: toPay, method: 'lettore', items }).catch((e) =>
+              registerPayment(oid, { amount: toPay, method: 'lettore', items, autoServe }).catch((e) =>
                 onError?.(`Lettore simulato: ${e.message}`)
               )
             }, 2500)
@@ -251,7 +254,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onB
     ;(async () => {
       try {
         await onBeforePay?.()
-        await registerPayment(await orderId(), { amount: toPay, method, items })
+        await registerPayment(await orderId(), { amount: toPay, method, items, autoServe })
       } catch (e) {
         setError(e.message)
         onError?.(`Pagamento non registrato: ${e.message}`)
