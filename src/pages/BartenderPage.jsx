@@ -10,8 +10,7 @@ import {
   updateOrderStatus,
   markOrderPaid,
   cancelOrder,
-  subscribeOpenSerata,
-  subscribeSerataOrders,
+  subscribeActiveOrders,
   subscribeSettings,
   DEFAULT_SETTINGS,
   saveStaffToken,
@@ -26,7 +25,7 @@ import {
   nextStatus,
   placedByName,
 } from '../lib/orderStatus.js'
-import { bucketByStatus, serataRecap } from '../lib/serata.js'
+import { bucketByStatus, ordersRecap } from '../lib/coda.js'
 import { isAwaitingPayment } from '../lib/payments.js'
 import { readerCheckout, readerTerminate } from '../lib/paymentsApi.js'
 import { ensureNotificationPermission, notify } from '../lib/notify.js'
@@ -269,7 +268,7 @@ function minutesBetween(fromIso, toIso) {
 }
 
 function OrderQueue() {
-  const [serata, setSerata] = useState(undefined) // undefined=caricamento, null=nessuna
+  const [ordersReady, setOrdersReady] = useState(false) // primo snapshot arrivato
   const [orders, setOrders] = useState([])
   const [error, setError] = useState(null)
   const [statusTab, setStatusTab] = useState(ORDER_STATUSES.RICEVUTO)
@@ -284,7 +283,6 @@ function OrderQueue() {
   const [showPanels, setShowPanels] = useState(false) // pannelli (chiamate/gruppi) nella griglia
   const [openCards, setOpenCards] = useState(() => new Set()) // card-griglia coi tasti aperti
   const [pend, setPend] = useState({ pending: [], banners: [] }) // ordini POS in invio
-  const [report, setReport] = useState(null) // resoconto mostrato dopo la chiusura
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   const knownIds = useRef(new Set())
   const knownComande = useRef(new Map()) // id ordine -> n. comande (per il toast aggiunte)
@@ -303,15 +301,14 @@ function OrderQueue() {
     return () => document.body.classList.remove('fullbleed')
   }, [gridView])
 
-  // Se dopo 8s la serata non è arrivata, probabilmente il database non è
+  // Se dopo 8s gli ordini non sono arrivati, probabilmente il database non è
   // raggiungibile (l'SDK ritenta in silenzio): mostra un suggerimento.
   useEffect(() => {
     const t = setTimeout(() => setSlowLoad(true), 8000)
     return () => clearTimeout(t)
   }, [])
 
-  // Osserva la serata aperta. In caso di errore esce comunque dal
-  // caricamento (serata=null) così l'errore è visibile in pagina.
+  // Registrazione push del dispositivo (indipendente dagli ordini).
   useEffect(() => {
     installAudioUnlock() // sblocca il bip al primo tocco (richiesto da iOS)
     // Registra il token push del dispositivo del bartender: senza questo la
@@ -322,29 +319,14 @@ function OrderQueue() {
       const token = await getPushToken()
       if (token) saveStaffToken(uid, token).catch(() => {})
     })
-    const unsub = subscribeOpenSerata(
-      (s) => setSerata(s),
-      (e) => {
-        setError(e.message)
-        setSerata(null)
-      }
-    )
-    return unsub
   }, [])
 
-  // Osserva gli ordini della serata aperta.
-  const serataId = serata?.id
+  // Osserva la CODA: conti aperti (sempre, per sempre) + chiusi di oggi.
+  const cutoffHour = settings.business_day_cutoff_hour
   useEffect(() => {
-    if (!serataId) {
-      setOrders([])
-      knownIds.current = new Set()
-      knownComande.current = new Map()
-      return
-    }
     let primed = false
     const awaiting = new Set() // ordini in attesa di pagamento obbligatorio
-    const unsub = subscribeSerataOrders(
-      serataId,
+    const unsub = subscribeActiveOrders(
       (data) => {
         // Notifica i nuovi ordini "ricevuti" comparsi dopo il primo
         // caricamento. Quelli con pagamento obbligatorio vengono
@@ -391,12 +373,17 @@ function OrderQueue() {
         knownIds.current = new Set(data.map((o) => o.id))
         knownComande.current = new Map(data.map((o) => [o.id, (o.comande || []).length]))
         setOrders(data)
+        setOrdersReady(true)
         primed = true
       },
-      (e) => setError(e.message)
+      (e) => {
+        setError(e.message)
+        setOrdersReady(true) // errore visibile in pagina, niente spinner infinito
+      },
+      { cutoffHour }
     )
     return unsub
-  }, [serataId])
+  }, [cutoffHour])
 
   // Scambio placeholder → ordine reale: appena l'ordine con il
   // client_temp_id del placeholder arriva dalla sottoscrizione, il
@@ -407,9 +394,9 @@ function OrderQueue() {
     }
   }, [orders, pend.pending])
 
-  // Apertura/chiusura serata NON esistono più come gesti: la serata di
-  // oggi nasce col primo ordine e quella di ieri si chiude da sola
-  // (rollover in ensureTodaySerata). Il resoconto vive nelle Statistiche.
+  // Nessuna apertura/chiusura di serata: il servizio è perpetuo. I conti
+  // restano aperti finché non li si chiude a mano; la giornata commerciale
+  // serve solo a raggruppare (statistiche e progressivo #N).
 
   function advance(order) {
     const ns = nextStatus(order.workflow_status)
@@ -445,12 +432,12 @@ function OrderQueue() {
     })
   }
 
-  if (serata === undefined) {
+  if (!ordersReady) {
     return (
       <div>
         {error && <div className="banner">Errore: {error}</div>}
         <div className="empty">
-          Carico la serata…
+          Carico gli ordini…
           {slowLoad && (
             <p className="muted" style={{ fontSize: '0.85rem', marginTop: 12 }}>
               Ci sta mettendo troppo? Controlla la connessione e che il database
@@ -463,29 +450,7 @@ function OrderQueue() {
     )
   }
 
-  // Nessuna serata in corso: NON blocca — la serata di oggi nasce da
-  // sola col primo ordine dal POS. Gli ordini appena battuti (in sync,
-  // serata inclusa) sono GIÀ qui, senza aspettare il server.
-  if (!serata) {
-    return (
-      <div>
-        {error && <div className="banner">Errore: {error}</div>}
-        {pend.pending.length > 0 ? (
-          <div className="order-grid" style={{ marginTop: 8 }}>
-            {pend.pending.map(renderPendingCard)}
-          </div>
-        ) : (
-          <div className="empty">
-            Ancora nessun ordine oggi: la serata parte col primo ordine.
-          </div>
-        )}
-        <Link className="btn block" to="/pos" style={{ marginTop: 8 }}>🍸 Nuovo ordine (POS cassa)</Link>
-        {report && <SerataReport report={report} onClose={() => setReport(null)} />}
-      </div>
-    )
-  }
-
-  const recap = serataRecap(orders)
+  const recap = ordersRecap(orders)
   // Ordini "effettivi" a schermo: stato del server + override ottimistici.
   const effOrders = orders.map((o) =>
     queueOverrides[o.id] && o.workflow_status !== queueOverrides[o.id]
@@ -519,7 +484,7 @@ function OrderQueue() {
     ...(buckets[ORDER_STATUSES.PAGATO] || []),
   ]
   // Vista a griglia: di default gli ordini in corso; col filtro si vedono
-  // anche i chiusi/pagati o TUTTI gli ordini della serata.
+  // anche i chiusi/pagati o TUTTI gli ordini in vista.
   const isClosed = (o) =>
     o.workflow_status === ORDER_STATUSES.PAGATO || o.workflow_status === ORDER_STATUSES.ANNULLATO
   const boardOrders = visibleOrders
@@ -718,8 +683,6 @@ function OrderQueue() {
   // Ordine POS in invio: a schermo è GIÀ un ordine a tutti gli effetti
   // (stessa card, stessi colori, info complete) — la sincronizzazione la
   // racconta il toast, non la card. Solo in errore si distingue.
-  // Function declaration (hoisted): è usata anche PRIMA di questo punto,
-  // nella schermata senza serata.
   function renderPendingCard(p) {
     const o = p.order
     const count = (o.order_items || []).reduce((s, i) => s + i.qty, 0)
@@ -868,11 +831,11 @@ function OrderQueue() {
       {error && <div className="banner">Errore: {error}</div>}
 
       {gridView ? (
-        // Testata compatta della griglia: info serata, ricerca e, in alto a
+        // Testata compatta della griglia: info giornata, ricerca e, in alto a
         // destra, il «+» per battere un nuovo ordine (apre il POS cassa).
         <div className="board-head">
           <div className="board-title">
-            <strong>Serata aperta</strong>
+            <strong>In servizio</strong>
             <span className="muted"> · {recap.count} ordini · {formatPrice(recap.total)}</span>
           </div>
           <input
@@ -896,7 +859,7 @@ function OrderQueue() {
       ) : (
         <>
           <div className="card">
-            <strong>Serata</strong>
+            <strong>Oggi</strong>
             <div className="muted">
               {recap.count} ordini · {formatPrice(recap.total)}
             </div>
@@ -919,7 +882,7 @@ function OrderQueue() {
         <>
           <StaffCallList />
           {settings.groups_enabled && settings.groups_in_queue && (
-            <GroupsPanel serataId={serata?.id} orders={orders} role="bartender" />
+            <GroupsPanel orders={orders} role="bartender" />
           )}
         </>
       )}
@@ -943,12 +906,12 @@ function OrderQueue() {
               🖨 {b.msg} <span className="muted">(tocca per chiudere)</span>
             </div>
           ))}
-          {/* Filtro: in corso (default) / chiusi / tutta la serata */}
+          {/* Filtro: in corso (default) / chiusi / tutti */}
           <div className="chips-row" style={{ margin: '8px 0 0' }}>
             {[
               ['attivi', 'In corso'],
               ['chiusi', '💶 Chiusi'],
-              ['tutti', 'Tutta la serata'],
+              ['tutti', 'Tutti'],
             ].map(([k, label]) => (
               <button
                 key={k}
@@ -1029,7 +992,6 @@ function OrderQueue() {
   )
 }
 
-// Resoconto di fine serata: incassi, scontrino prodotti e mini dashboard.
 function SerataReport({ report, onClose }) {
   const { finance, products, longest_prep, phase_averages, drinks_sold } = report
   const fmtMin = (m) => (m == null ? '—' : `${Math.round(m * 10) / 10} min`)

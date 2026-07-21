@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  subscribeSerataGroups,
-  subscribeSerataOrders,
+  subscribeOpenGroups,
+  subscribeActiveOrders,
   subscribeRecentGroups,
   nestGroup,
   unnestGroup,
@@ -32,7 +32,7 @@ import { formatPrice, STATUS_LABELS, STATUS_EMOJI } from '../lib/orderStatus.js'
 // Vista di un gruppo (modale) con drill-down ricorsivo: per un contenitore
 // mostra "composto da" + ordini aggregati; cliccando un sottogruppo si
 // scende mantenendo la stessa vista. Gestione annidamento (aggiungi/sgancia).
-export default function GroupView({ serataId, groupId, onClose }) {
+export default function GroupView({ groupId, onClose }) {
   const [groups, setGroups] = useState([])
   const [recent, setRecent] = useState([])
   const [orders, setOrders] = useState([])
@@ -48,14 +48,13 @@ export default function GroupView({ serataId, groupId, onClose }) {
   const navigate = useNavigate()
 
   useEffect(() => {
-    if (!serataId) return
-    const u1 = subscribeSerataGroups(serataId, setGroups, () => {})
-    const u2 = subscribeSerataOrders(serataId, setOrders, () => {})
+    const u1 = subscribeOpenGroups(setGroups, () => {})
+    const u2 = subscribeActiveOrders(setOrders, () => {})
     const u3 = subscribeRecentGroups(setRecent, () => {})
     return () => { u1(); u2(); u3() }
-  }, [serataId])
+  }, [])
 
-  // Unisce gruppi serata + recenti (clienti) per albero e candidati.
+  // Unisce gruppi aperti + recenti (clienti) per albero e candidati.
   const allGroups = useMemo(() => {
     const seen = new Set()
     const out = []
@@ -87,7 +86,7 @@ export default function GroupView({ serataId, groupId, onClose }) {
   const isContainer = node.group.has_child_groups
   const aggregated = flattenOrders(node)
 
-  // Candidati da annidare: gruppi (manuali della serata + clienti recenti)
+  // Candidati da annidare: gruppi (manuali aperti + clienti recenti)
   // che possono entrare in questo gruppo, escludendo discendenti/sé stesso.
   const candidates = allGroups.filter(
     (g) => g.id !== node.group.id && g.parent_group_id == null && canNest(g, node.group, groupsById).ok
@@ -127,7 +126,6 @@ export default function GroupView({ serataId, groupId, onClose }) {
     setError(null)
     try {
       await payGroupCash({
-        serataId,
         orderIds,
         by: payBy(),
         group_id: node.group.id,
@@ -147,7 +145,6 @@ export default function GroupView({ serataId, groupId, onClose }) {
   async function createPending(method) {
     const unpaid = unpaidOrders(node)
     return createPendingGroupPayment({
-      serataId,
       orderIds: unpaid.map((o) => o.id),
       amount: groupSettlement(node).remaining,
       method,

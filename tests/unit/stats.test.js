@@ -6,8 +6,8 @@ import { describe, it, expect } from 'vitest'
 import {
   kpiSummary,
   revenueByHour,
-  revenueBySerata,
-  revenueBySerataInRange,
+  revenueByDay,
+  revenueByDayInRange,
   topProducts,
   revenueByCategory,
   ingredientUsage,
@@ -57,11 +57,6 @@ const orders = [
   },
 ]
 
-const serate = [
-  { id: 's1', opened_at: '2026-06-05T19:00:00.000Z' },
-  { id: 's2', opened_at: '2026-06-06T19:00:00.000Z' },
-]
-
 const drinksById = {
   d1: {
     category: 'AMERICANI',
@@ -75,9 +70,11 @@ const drinksById = {
 
 describe('kpiSummary', () => {
   it('calcola incasso, scontrino medio e percentuali escludendo gli annullati', () => {
-    const k = kpiSummary(orders, serate)
+    const k = kpiSummary(orders, ['2026-06-05', '2026-06-06'])
     expect(k.incasso).toBe(28)
     expect(k.ordini).toBe(2)
+    expect(k.giorni).toBe(2)
+    expect(k.incassoPerGiorno).toBe(14)
     expect(k.scontrinoMedio).toBe(14)
     expect(k.drinkVenduti).toBe(4)
     expect(k.pctAnnullati).toBeCloseTo(33.33, 1)
@@ -107,21 +104,23 @@ describe('revenueByHour', () => {
   })
 })
 
-describe('revenueBySerataInRange', () => {
-  it('conta per serata solo gli ordini nella fascia', () => {
+describe('revenueByDayInRange', () => {
+  it('conta per giornata solo gli ordini nella fascia', () => {
     // 20:15Z = 22:15 locali → dentro 22:00-23:00; 22:40Z = 00:40 → fuori
-    const t = revenueBySerataInRange(orders, serate, { from: '22:00', to: '23:00' })
-    expect(t).toHaveLength(2)
+    const t = revenueByDayInRange(orders, { from: '22:00', to: '23:00' })
+    expect(t).toHaveLength(1)
     expect(t[0].incasso).toBe(20)
-    expect(t[1].incasso).toBe(0)
   })
 })
 
-describe('revenueBySerata', () => {
-  it('una voce per serata in ordine cronologico', () => {
-    const t = revenueBySerata(orders, serate)
+describe('revenueByDay (giornata commerciale)', () => {
+  it('una voce per giornata in ordine cronologico', () => {
+    const t = revenueByDay(orders)
     expect(t).toHaveLength(2)
+    // l'ordine delle 00:40 locali appartiene ancora alla giornata precedente
+    expect(t[0].id).toBe('2026-06-05')
     expect(t[0].incasso).toBe(20)
+    expect(t[1].id).toBe('2026-06-06')
     expect(t[1].incasso).toBe(8)
     expect(t[1].ordini).toBe(1) // l'annullato non conta
   })

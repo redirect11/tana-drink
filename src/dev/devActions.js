@@ -5,6 +5,7 @@
 // =====================================================================
 import { collection, doc, addDoc, setDoc, getDocs } from 'firebase/firestore'
 import { db } from '../lib/firebaseClient.js'
+import { businessDayKey } from '../lib/businessDay.js'
 import {
   INV_CATS,
   INV_ITEMS,
@@ -116,32 +117,30 @@ export async function seedDatabase(onProgress = () => {}) {
   await setDoc(doc(db, 'settings', 'bar'), { ...SEED_SETTINGS, updated_at: now }, { merge: true })
 }
 
-// Apre una serata e la popola con gli ordini mock (stati misti, tempi,
+// Popola il database con gli ordini mock di oggi (stati misti, tempi,
 // statistiche). Riusa lo stesso generatore dello script npm run mock:orders.
-export async function createMockSerata(onProgress = () => {}) {
-  onProgress('Apro la serata…')
-  const serataRef = await addDoc(collection(db, 'serate'), {
-    status: 'open',
-    opened_at: new Date().toISOString(),
-    closed_at: null,
-  })
-
+export async function createMockOrders(onProgress = () => {}) {
   const drinksSnap = await getDocs(collection(db, 'drinks'))
   const drinks = drinksSnap.docs.map((d) => ({ id: d.id, ...d.data() }))
   if (drinks.length === 0) throw new Error('Nessun drink nel database: esegui prima il seed.')
 
   onProgress('Ordini mock…')
-  const { orders, prepStats, etaStats, lastNumber } = generateMockOrders(drinks, serataRef.id, 0)
+  const { orders, prepStats, etaStats, lastNumber } = generateMockOrders(drinks, 0)
   for (const o of orders) {
     await addDoc(collection(db, 'orders'), o)
   }
 
-  await setDoc(doc(db, 'counters', serataRef.id), { last: lastNumber }, { merge: true })
-  await setDoc(serataRef, { prep_stats: prepStats, eta_stats: etaStats }, { merge: true })
+  const oggi = businessDayKey(new Date())
+  await setDoc(doc(db, 'counters', oggi), { last: lastNumber }, { merge: true })
+  await setDoc(
+    doc(db, 'service_stats', 'global'),
+    { prep_stats: prepStats, eta_stats: etaStats },
+    { merge: true }
+  )
   return orders.length
 }
 
-// Genera lo storico di serate passate chiuse (per le statistiche).
+// Genera lo storico di giornate passate (per le statistiche).
 export async function createMockHistory(onProgress = () => {}, nights = 12) {
   const drinksSnap = await getDocs(collection(db, 'drinks'))
   const drinks = drinksSnap.docs.map((d) => ({ id: d.id, ...d.data() }))
@@ -149,28 +148,24 @@ export async function createMockHistory(onProgress = () => {}, nights = 12) {
 
   const history = generateMockHistory(drinks, { nights })
   let done = 0
-  for (const { serata, orders, lastNumber } of history) {
-    const { id, ...serataData } = serata
-    // closed_at come Date → Timestamp (stesso tipo di closeSerata reale).
-    serataData.closed_at = new Date(serata.closed_at)
-    await setDoc(doc(db, 'serate', id), serataData)
-    await setDoc(doc(db, 'counters', id), { last: lastNumber })
+  for (const { day, orders, lastNumber } of history) {
+    await setDoc(doc(db, 'counters', day), { last: lastNumber })
     for (const o of orders) {
       await addDoc(collection(db, 'orders'), o)
     }
     done++
-    onProgress(`Serata ${done}/${history.length} (${serata.opened_at.slice(0, 10)}, ${orders.length} ordini)…`)
+    onProgress(`Giornata ${done}/${history.length} (${day}, ${orders.length} ordini)…`)
   }
   return history.length
 }
 
-// Reset completo: svuota tutto e ripopola con seed + serata mock.
+// Reset completo: svuota tutto e ripopola con seed + ordini mock.
 export async function resetWithMockData(onProgress = () => {}) {
   onProgress('Svuoto il database…')
   await clearDatabase()
   await seedDatabase(onProgress)
-  const n = await createMockSerata(onProgress)
-  onProgress(`Fatto: serata aperta con ${n} ordini mock.`)
+  const n = await createMockOrders(onProgress)
+  onProgress(`Fatto: ${n} ordini mock di oggi.`)
 }
 
 // Simula l'esito di un pagamento (online o lettore) su un ordine: in dev

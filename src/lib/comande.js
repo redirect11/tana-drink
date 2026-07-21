@@ -1,6 +1,6 @@
 // Logica pura del modello Ordine (conto) / Comande (ticket).
 //
-// L'ORDINE è il conto: resta `aperto` anche tutta la serata, si chiude solo
+// L'ORDINE è il conto: resta `aperto` quanto serve (anche giorni), si chiude solo
 // con il pagamento (`pagato`) o con l'annullo (`annullato`).
 // Ogni invio di articoli è una COMANDA: è la comanda ad avere il ciclo di
 // lavorazione (ricevuto → in_preparazione → pronto → ritirato), come i

@@ -76,10 +76,10 @@ service cloud.firestore {
       allow write: if true;
     }
 
-    // SERATE — lettura pubblica (il cliente deve sapere se è aperta);
-    // apri/chiudi bartender; lo staff autenticato può aggiornare i campi
-    // statistici (eta_stats) quando segna un ordine come servito.
-    match /serate/{serataId} {
+    // SERVIZIO PERPETUO — niente più "serate". Statistiche tempi (ETA):
+    // lettura pubblica (il cliente vede la stima), scrittura dello staff
+    // limitata ai campi statistici.
+    match /service_stats/{docId} {
       allow read: if true;
       allow create, delete: if isBartender();
       allow update: if isBartender()

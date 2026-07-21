@@ -8,7 +8,7 @@ import {
   simulateReaderPayment,
   isDevEnvironment,
 } from '../dev/devActions.js'
-import { subscribeOpenSerata, subscribeSerataOrders } from '../lib/api.js'
+import { subscribeActiveOrders } from '../lib/api.js'
 import { runImport } from '../dev/importExcel.js'
 
 // Opzioni sviluppatore: visibili SOLO in ambiente emulatore (Docker locale
@@ -21,17 +21,10 @@ export default function DevTools() {
 
   // Pagamenti da simulare: in dev non ci sono Cloud Functions, quindi
   // l'esito del checkout SumUp si "recita" da qui.
-  const [serata, setSerata] = useState(null)
   const [pending, setPending] = useState([])
-  useEffect(() => subscribeOpenSerata(setSerata, () => setSerata(null)), [])
   const [unpaid, setUnpaid] = useState([])
   useEffect(() => {
-    if (!serata?.id) {
-      setPending([])
-      setUnpaid([])
-      return
-    }
-    return subscribeSerataOrders(serata.id, (orders) => {
+    return subscribeActiveOrders((orders) => {
       setPending(orders.filter((o) => o.payment_status === 'in_attesa'))
       // Candidati alla simulazione del lettore: non pagati, in mano al
       // cliente (pronto/ritirato), senza pagamento già in corso.
@@ -44,7 +37,7 @@ export default function DevTools() {
         )
       )
     })
-  }, [serata?.id])
+  }, [])
 
   function pushLog(msg) {
     setLog((l) => [...l, msg])
@@ -85,7 +78,7 @@ export default function DevTools() {
             <div>Reset con dati mock</div>
             <div className="desc">
               Svuota tutto e ripopola: menù completo con immagini, inventario,
-              impostazioni e una serata aperta con 12 ordini di esempio.
+              impostazioni e 12 ordini di esempio di oggi.
             </div>
           </div>
           <button
@@ -105,9 +98,9 @@ export default function DevTools() {
         </div>
         <div className="toggle-row">
           <div>
-            <div>Genera storico serate</div>
+            <div>Genera storico giornate</div>
             <div className="desc">
-              Aggiunge 12 serate passate chiuse con ordini, incassi e tempi
+              Aggiunge 12 giornate passate con ordini, incassi e tempi
               realistici: alimenta la sezione Statistiche.
             </div>
           </div>
@@ -117,11 +110,11 @@ export default function DevTools() {
             onClick={() =>
               setConfirm({
                 title: '📊 Generare lo storico?',
-                message: 'Verranno aggiunte 12 serate chiuse con ordini mock (i dati esistenti restano).',
+                message: 'Verranno aggiunte 12 giornate passate con ordini mock (i dati esistenti restano).',
                 run: () =>
                   run(async (progress) => {
                     const n = await createMockHistory(progress)
-                    progress(`Storico creato: ${n} serate.`)
+                    progress(`Storico creato: ${n} giornate.`)
                   }),
               })
             }
@@ -133,7 +126,7 @@ export default function DevTools() {
           <div>
             <div>Svuota database</div>
             <div className="desc">
-              Cancella tutti i dati (menù, inventario, ordini, serate,
+              Cancella tutti i dati (menù, inventario, ordini,
               impostazioni). L&apos;utente bartender resta.
             </div>
           </div>

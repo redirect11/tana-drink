@@ -1,9 +1,9 @@
 'use strict'
 
-// Unit test della logica pura serata (src/lib/serata.js).
+// Unit test della logica pura coda (src/lib/coda.js).
 
 import { describe, it, expect } from 'vitest'
-import { bucketByStatus, serataRecap, openOrdersCount } from '../../src/lib/serata.js'
+import { bucketByStatus, ordersRecap, openOrdersCount } from '../../src/lib/coda.js'
 
 const orders = [
   { id: '1', status: 'ricevuto', total: 10 },
@@ -28,14 +28,14 @@ describe('bucketByStatus', () => {
   })
 })
 
-describe('serataRecap', () => {
+describe('ordersRecap', () => {
   it('conta e somma i non annullati', () => {
-    const r = serataRecap(orders)
+    const r = ordersRecap(orders)
     expect(r.count).toBe(6) // esclude l'annullato, include il pagato
     expect(r.total).toBe(10 + 5 + 8 + 12 + 20 + 15)
   })
-  it('serata vuota', () => {
-    expect(serataRecap([])).toEqual({ count: 0, total: 0 })
+  it('coda vuota', () => {
+    expect(ordersRecap([])).toEqual({ count: 0, total: 0 })
   })
 })
 

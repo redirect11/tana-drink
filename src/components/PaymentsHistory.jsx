@@ -1,22 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
-import { subscribeOpenSerata, subscribePayments } from '../lib/api.js'
+import { subscribePayments } from '../lib/api.js'
 import { formatPrice } from '../lib/orderStatus.js'
 
-// Storico degli incassi della serata: importo, metodo, gruppo, ora, e per
-// i conti divisi la quota (k/N).
+// Storico degli incassi della giornata: importo, metodo, gruppo, ora, e
+// per i conti divisi la quota (k/N).
 export default function PaymentsHistory() {
-  const [serata, setSerata] = useState(undefined)
   const [payments, setPayments] = useState([])
 
-  useEffect(() => subscribeOpenSerata((s) => setSerata(s), () => setSerata(null)), [])
-  const serataId = serata?.id
-  useEffect(() => {
-    if (!serataId) {
-      setPayments([])
-      return
-    }
-    return subscribePayments(serataId, setPayments, () => {})
-  }, [serataId])
+  useEffect(() => subscribePayments(setPayments, () => {}), [])
 
   const totals = useMemo(() => {
     const t = { all: 0, banco: 0, lettore: 0, online: 0 }
@@ -38,9 +29,6 @@ export default function PaymentsHistory() {
     }
   }
   const methodLabel = { banco: '💶 Contanti', lettore: '📟 Lettore', online: '💳 Online' }
-
-  if (serata === undefined) return <div className="empty">Carico…</div>
-  if (!serata) return <div className="empty">Nessuna serata aperta.</div>
 
   return (
     <div>

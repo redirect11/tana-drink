@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
-  subscribeOpenSerata,
+  subscribeServiceStats,
   subscribeSettings,
   subscribeOrder,
   subscribeReadyOrders,
-  subscribeSerataGroups,
+  subscribeOpenGroups,
   subscribeRecentGroups,
   createOrder,
   DEFAULT_SETTINGS,
@@ -38,7 +38,6 @@ export default function MenuPage() {
   // Menù dalla cache di modulo: una sola sottoscrizione viva, niente
   // re-fetch a ogni navigazione (solo un refresh forzato ricarica).
   const { drinks, cats, loading } = useMenu()
-  const [serata, setSerata] = useState(undefined) // undefined=caricamento, null=chiuso
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   const [error, setError] = useState(null)
   const [sending, setSending] = useState(false)
@@ -92,14 +91,11 @@ export default function MenuPage() {
   const groupParam = params.get('group') || ''
 
 
-  // Osserva la serata aperta: senza serata gli ordini sono bloccati.
+  // Statistiche tempi del servizio (perpetue): alimentano la stima ETA.
+  const [serviceStats, setServiceStats] = useState({})
   useEffect(() => {
     if (!isFirebaseConfigured) return
-    const unsub = subscribeOpenSerata(
-      (s) => setSerata(s),
-      () => setSerata(null)
-    )
-    return unsub
+    return subscribeServiceStats(setServiceStats, () => setServiceStats({}))
   }, [])
 
   // Impostazioni del bar (modalità solo menù, coperto, servizio, mancia…).
@@ -109,18 +105,17 @@ export default function MenuPage() {
   }, [])
 
   // Gruppi disponibili per l'associazione (solo staff, con gruppi attivi):
-  // gruppi manuali della serata + gruppi-cliente recenti.
-  const [serataGroups, setSerataGroups] = useState([])
+  // gruppi aperti + gruppi-cliente recenti.
+  const [openGroups, setOpenGroups] = useState([])
   const [recentGroups, setRecentGroups] = useState([])
   const groupsActive = !!staff && settings.groups_enabled
-  const serataIdForGroups = serata?.id
   useEffect(() => {
-    if (!groupsActive || !serataIdForGroups) {
-      setSerataGroups([])
+    if (!groupsActive) {
+      setOpenGroups([])
       return
     }
-    return subscribeSerataGroups(serataIdForGroups, setSerataGroups, () => {})
-  }, [groupsActive, serataIdForGroups])
+    return subscribeOpenGroups(setOpenGroups, () => {})
+  }, [groupsActive])
   useEffect(() => {
     if (!groupsActive) {
       setRecentGroups([])
@@ -129,21 +124,20 @@ export default function MenuPage() {
     return subscribeRecentGroups(setRecentGroups, () => {})
   }, [groupsActive])
 
-  // Ordini attivi di questo dispositivo (serata corrente): mostrati come box
-  // cliccabili in cima al menù, aggiornati in tempo reale.
-  const serataId = serata?.id
+  // Ordini attivi di questo dispositivo: mostrati come box cliccabili in
+  // cima al menù, aggiornati in tempo reale.
 
   // Tabellone "stiamo servendo / pronti al ritiro" (se attivo in impostazioni).
   const servingBoard = settings.show_serving_board && !settings.menu_only
   useEffect(() => {
-    if (!isFirebaseConfigured || !serataId || !servingBoard) {
+    if (!isFirebaseConfigured || !servingBoard) {
       setReadyOrders([])
       return
     }
-    return subscribeReadyOrders(serataId, setReadyOrders)
-  }, [serataId, servingBoard])
+    return subscribeReadyOrders(setReadyOrders)
+  }, [servingBoard])
   useEffect(() => {
-    if (!isFirebaseConfigured || !serataId) {
+    if (!isFirebaseConfigured) {
       setMyOrders([])
       return
     }
@@ -160,8 +154,7 @@ export default function MenuPage() {
         (o) => {
           setMyOrders((prev) => {
             const others = prev.filter((p) => p.id !== id)
-            const isActive =
-              o && o.serata_id === serataId && ACTIVE.includes(o.workflow_status)
+            const isActive = o && ACTIVE.includes(o.workflow_status)
             const next = isActive ? [...others, o] : others
             next.sort((a, b) => (b.daily_number || 0) - (a.daily_number || 0))
             return next
@@ -174,7 +167,7 @@ export default function MenuPage() {
       unsubs.forEach((u) => u())
       setMyOrders([])
     }
-  }, [serataId])
+  }, [])
 
   // Ricerca rapida (solo staff: utile sul catalogo grande per gli ordini manuali).
   const [search, setSearch] = useState('')
@@ -235,10 +228,6 @@ export default function MenuPage() {
 
   async function handleReviewOrder() {
     if (cart.items.length === 0) return
-    if (!serata) {
-      setError('Il servizio è chiuso: nessuna serata aperta.')
-      return
-    }
     setError(null)
 
     // Ri-verifica di prossimità appena prima dell'ordine.
@@ -270,7 +259,6 @@ export default function MenuPage() {
       const order = await createOrder({
         table_label: tableLabel,
         items: cart.items,
-        serata_id: serata.id,
         push_token,
         placed_by: staff, // null per i clienti
         customer_uid: customer?.uid ?? null,
@@ -293,26 +281,25 @@ export default function MenuPage() {
 
   if (loading) return <div className="empty">Carico il menù…</div>
 
-  const closed = serata === null
   const menuOnly = settings.menu_only
-  // Si può ordinare solo con serata aperta e modalità ordinazione attiva:
-  // a serata chiusa spariscono anche i pulsanti "Aggiungi" e il carrello.
-  // Lo staff loggato può inserire ordini manuali anche in modalità solo menu.
+  // Il servizio è PERPETUO: non esiste più una serata da aprire. A decidere
+  // se si può ordinare resta la modalità "solo menù" (l'interruttore del
+  // servizio): a servizio chiuso spariscono i pulsanti "Aggiungi" e il
+  // carrello. Lo staff loggato può inserire ordini manuali comunque.
   // Con geofence attivo si ordina solo a posizione verificata.
   const geoOk = !geoActive || geoGate === 'ok'
-  const canOrder = (!menuOnly || !!staff) && !closed && geoOk
+  const canOrder = (!menuOnly || !!staff) && geoOk
 
   // Tempo stimato mostrato nel menù: per la modalità "entrambi" usa la stima
   // fino al "pronto" (parte comune); il riepilogo ordine poi la adatta alla
   // scelta del cliente.
-  const etaMinutes =
-    settings.eta_enabled && serata
-      ? etaForMode(settings.service_mode === 'tavolo' ? 'tavolo' : 'banco', {
-          etaStats: serata.eta_stats,
-          prepStats: serata.prep_stats,
-          baseMinutes: settings.eta_base_minutes,
-        })
-      : null
+  const etaMinutes = settings.eta_enabled
+    ? etaForMode(settings.service_mode === 'tavolo' ? 'tavolo' : 'banco', {
+        etaStats: serviceStats.eta_stats,
+        prepStats: serviceStats.prep_stats,
+        baseMinutes: settings.eta_base_minutes,
+      })
+    : null
 
   return (
     <div className={staff ? 'bar-content menu-staff' : ''}>
@@ -712,15 +699,14 @@ export default function MenuPage() {
         <OrderSummary
           cart={cart}
           settings={settings}
-          serata={serata}
+          serviceStats={serviceStats}
           tableLabel={tableLabel}
           staff={staff}
           customerProfile={customerProfile}
           sending={sending}
           groupsActive={groupsActive}
-          groups={[...serataGroups, ...recentGroups]}
+          groups={[...openGroups, ...recentGroups]}
           initialGroupId={groupParam}
-          serataId={serata?.id}
           onConfirm={handleConfirmOrder}
           onCancel={() => !sending && setShowSummary(false)}
         />
