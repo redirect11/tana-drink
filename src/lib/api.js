@@ -41,6 +41,8 @@ import { notify } from './notify.js'
 
 const drinksCol = collection(db, 'drinks')
 const ordersCol = collection(db, 'orders')
+// Progressivo assoluto degli ordini (id interno che non riparte mai).
+const serialCounterRef = doc(db, 'counters', 'serial')
 const categoriesCol = collection(db, 'categories')
 const inventoryCol = collection(db, 'inventory_items')
 const inventoryCategoriesCol = collection(db, 'inventory_categories')
@@ -170,6 +172,7 @@ function mapOrder(snap) {
     cancel_phrase: o.cancel_phrase ?? null,
     cancel_message: o.cancel_message ?? null,
     cancel_notify: o.cancel_notify ?? false,
+    serial: o.serial ?? null,
     created_at: toIso(o.created_at),
     sumup_sale_id: o.sumup_sale_id ?? null,
     inventory_applied: o.inventory_applied ?? false,
@@ -1183,6 +1186,13 @@ export async function createOrder({
   const dailyNumber = last + 1
   await setDoc(counterRef, { last: dailyNumber }, { merge: true })
 
+  // Progressivo ASSOLUTO del sistema: non riparte mai, identifica l'ordine
+  // per sempre (id interno mostrato in piccolo nel dettaglio). Stessa
+  // lettura da cache del progressivo giornaliero.
+  const serialSnap = await getDoc(serialCounterRef)
+  const serial = (serialSnap.exists() ? serialSnap.data().last || 0 : 0) + 1
+  await setDoc(serialCounterRef, { last: serial }, { merge: true })
+
   const nowIso = new Date().toISOString()
   const mappedItems = items.map((i) => ({
     drink_id: i.drink_id,
@@ -1205,7 +1215,8 @@ export async function createOrder({
     created_at: nowIso,
   }
   await setDoc(newOrderRef, {
-    daily_number: dailyNumber,
+    daily_number: dailyNumber, // progressivo del giorno (riparte ogni giornata)
+    serial, // progressivo assoluto di sistema (non riparte mai)
     order_date: orderDate, // giornata commerciale (YYYY-MM-DD)
     table_label: table_label || null,
     note: note || null,
