@@ -95,6 +95,39 @@ describe('payrollReport', () => {
   })
 })
 
+describe('payrollReport: tariffe per MEMBRO dello staff', () => {
+  // Le paghe stanno sull'account (uid): un nome si può correggere o
+  // ripetere. I turni registrati prima dell'uid si agganciano per nome.
+  const byUid = { u1: [{ from: '2026-01-01', rate: 10 }] }
+  const byName = { Sara: [{ from: '2026-01-01', rate: 9 }] }
+  const ratesFor = (e) => byUid[e.staff_uid] || byName[e.staff_name] || []
+
+  it('usa l’uid quando c’è', () => {
+    const r = payrollReport(
+      [{ staff_uid: 'u1', staff_name: 'Sara', date: '2026-02-01', hours: 3, kind: 'effettivo' }],
+      ratesFor
+    )
+    expect(r.totale).toBe(30) // 3 × 10, non × 9
+  })
+
+  it('ricade sul nome per i turni storici senza uid', () => {
+    const r = payrollReport(
+      [{ staff_name: 'Sara', date: '2026-02-01', hours: 3, kind: 'effettivo' }],
+      ratesFor
+    )
+    expect(r.totale).toBe(27) // 3 × 9
+  })
+
+  it('persona sconosciuta: totale parziale, non zero silenzioso', () => {
+    const r = payrollReport(
+      [{ staff_uid: 'ignoto', staff_name: 'Tizio', date: '2026-02-01', hours: 3, kind: 'effettivo' }],
+      ratesFor
+    )
+    expect(r.parziale).toBe(true)
+    expect(r.senzaTariffa).toEqual(['Tizio'])
+  })
+})
+
 describe('costoSuIncasso', () => {
   it('incidenza in percentuale, con un decimale', () => {
     expect(costoSuIncasso(133, 1000)).toBe(13.3)
