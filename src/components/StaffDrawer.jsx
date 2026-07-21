@@ -69,7 +69,7 @@ export default function StaffDrawer({ role, active = null, onSelect = null }) {
 
   function ordineGruppo(id) {
     setOpen(false)
-    navigate(`/menu?group=${id}`)
+    navigate(`/pos?group=${id}`)
   }
 
   async function creaGruppo() {

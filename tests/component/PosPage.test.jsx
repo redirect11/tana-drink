@@ -32,6 +32,13 @@ vi.mock('../../src/lib/api.js', () => ({
     })
   ),
   subscribeOrder: vi.fn(() => () => {}),
+  subscribeOpenGroups: vi.fn((cb) => {
+    cb([
+      { id: 'g1', name: 'Tavolo 4', has_child_groups: false },
+      { id: 'g2', name: 'Compleanno', has_child_groups: true },
+    ])
+    return () => {}
+  }),
   subscribeSettings: vi.fn((cb) => {
     // 'uniti': due tap sullo stesso prodotto sommano la quantità.
     cb({ payments_reader_enabled: false, sumup_reader_id: null, order_group_default: 'uniti' })
@@ -195,5 +202,42 @@ describe('ricerca prodotti', () => {
     await user.type(screen.getByLabelText('Cerca prodotto'), 'gin')
     expect(screen.getByText('Gin Tonic')).toBeInTheDocument()
     expect(screen.queryByText('Mojito')).not.toBeInTheDocument()
+  })
+})
+
+describe('conto di gruppo dal POS', () => {
+  const mountGroup = (id) => {
+    localStorage.clear()
+    return render(
+      <MemoryRouter initialEntries={[`/pos?group=${id}`]}>
+        <PosPage />
+      </MemoryRouter>
+    )
+  }
+
+  it('mostra il gruppo e ci associa l’ordine creato', async () => {
+    const user = userEvent.setup()
+    mountGroup('g1')
+    expect(screen.getByText(/Tavolo 4/)).toBeInTheDocument()
+    await user.click(screen.getByText('Mojito'))
+    await user.click(screen.getByRole('button', { name: '✅ Conferma' }))
+    await user.click(screen.getByRole('button', { name: /Salva senza nome/ }))
+    const arg = submitPosOrder.mock.calls[0][0]
+    expect(arg.group_id).toBe('g1')
+    expect(arg.group_name_snapshot).toBe('Tavolo 4')
+  })
+
+  it('un gruppo CONTENITORE non può avere ordini diretti: avvisa', () => {
+    mountGroup('g2')
+    expect(screen.getByText(/contiene altri gruppi/)).toBeInTheDocument()
+  })
+
+  it('senza gruppo l’ordine non ne porta nessuno', async () => {
+    const user = userEvent.setup()
+    mount()
+    await user.click(screen.getByText('Mojito'))
+    await user.click(screen.getByRole('button', { name: '✅ Conferma' }))
+    await user.click(screen.getByRole('button', { name: /Salva senza nome/ }))
+    expect(submitPosOrder.mock.calls[0][0].group_id).toBeNull()
   })
 })

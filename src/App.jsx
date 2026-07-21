@@ -76,8 +76,9 @@ export default function App() {
   // Tema: le schermate del gestionale (/bar, POS cassa, dettaglio ordine e
   // menù usato dallo staff) seguono il tema staff; il resto quello cliente.
   // Il menù è una pagina cliente, ma lo staff ci passa per inserire ordini
-  // manuali e per ordinare a nome di un gruppo (/menu?group=…): lì sta
-  // lavorando al bancone, quindi deve vedere il tema del gestionale.
+  // manuali (la "vista cliente"): anche lì sta lavorando al bancone, quindi
+  // deve vedere il tema del gestionale. Gli ordini per gruppo passano
+  // invece dal POS (/pos?group=…), che è la schermata di lavoro.
   const staffSurface =
     onBackoffice ||
     location.pathname.startsWith('/pos') ||

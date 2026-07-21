@@ -44,7 +44,16 @@ const addBanner = (msg) => {
 
 // Invia un ordine dal POS in background. Ritorna subito: il chiamante può
 // navigare alla griglia mentre la creazione/stampa procede.
-export function submitPosOrder({ table_label, note, items, placed_by, customer_name = null, printNow = false }) {
+export function submitPosOrder({
+  table_label,
+  note,
+  items,
+  placed_by,
+  customer_name = null,
+  printNow = false,
+  group_id = null, // conto di gruppo: l'ordine ci nasce già dentro
+  group_name_snapshot = null,
+}) {
   const tempId = `tmp${++seq}`
   const order = {
     id: tempId,
@@ -55,6 +64,8 @@ export function submitPosOrder({ table_label, note, items, placed_by, customer_n
     workflow_status: ORDER_STATUSES.IN_PREPARAZIONE,
     payment_status: 'non_richiesto',
     customer_name: customer_name || null,
+    group_id,
+    group_name_snapshot,
     placed_by: placed_by || null,
     total: items.reduce((s, i) => s + i.qty * Number(i.price || 0), 0),
     order_items: items.map((i) => ({
@@ -73,6 +84,8 @@ export function submitPosOrder({ table_label, note, items, placed_by, customer_n
     try {
       created = await createOrder({
         table_label,
+        group_id,
+        group_name_snapshot,
         note,
         items,
         placed_by,
