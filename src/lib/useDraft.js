@@ -57,20 +57,29 @@ export function saveLayout(k, arr) {
 export function useDraft(key) {
   const [draft, setDraftState] = useState(() => loadDraft(key))
   const keyRef = useRef(key)
+  // Valore corrente sempre aggiornato: serve a calcolare il prossimo stato
+  // SENZA affidarsi all'updater di React (vedi sotto).
+  const draftRef = useRef(draft)
+  draftRef.current = draft
 
   useEffect(() => {
     if (keyRef.current !== key) {
       keyRef.current = key
-      setDraftState(loadDraft(key))
+      const loaded = loadDraft(key)
+      draftRef.current = loaded
+      setDraftState(loaded)
     }
   }, [key])
 
+  // Il salvataggio avviene SUBITO, non dentro l'updater di stato: chi
+  // conferma un ordine svuota la bozza e naviga via nello stesso giro, e
+  // React scarterebbe l'aggiornamento del componente ormai smontato —
+  // lasciando gli item in localStorage per la volta dopo.
   const setDraft = useCallback((updater) => {
-    setDraftState((prev) => {
-      const next = typeof updater === 'function' ? updater(prev) : updater
-      saveDraft(keyRef.current, next)
-      return next
-    })
+    const next = typeof updater === 'function' ? updater(draftRef.current) : updater
+    draftRef.current = next
+    saveDraft(keyRef.current, next)
+    setDraftState(next)
   }, [])
 
   const clearDraft = useCallback(() => setDraft([]), [setDraft])

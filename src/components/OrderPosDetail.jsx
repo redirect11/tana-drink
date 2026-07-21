@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import {
   advanceComanda,
   addComanda,
@@ -76,6 +76,7 @@ export default function OrderPosDetail({ order = null }) {
   const [showComande, setShowComande] = useState(false)
   const [confirmCancel, setConfirmCancel] = useState(false)
   const [confirmDiscard, setConfirmDiscard] = useState(false)
+  const [confirmExit, setConfirmExit] = useState(false) // uscita con item non confermati
   const [showPayment, setShowPayment] = useState(false)
   const [askName, setAskName] = useState(false) // modale nome (creazione)
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
@@ -540,6 +541,20 @@ export default function OrderPosDetail({ order = null }) {
     Number(order?.service_charge_amount || 0) +
     Number(order?.tip_amount || 0)
 
+  // Uscita dalla schermata con item NON confermati: si chiede cosa farne,
+  // invece di deciderlo al posto del bartender (buttarli o tenerli sono
+  // entrambe risposte sensate: un conto lasciato a metà si riprende, una
+  // lista dimenticata si ritrova addosso al prossimo ordine).
+  const handleExit = () => {
+    if (draftCount > 0) return setConfirmExit(true)
+    navigate('/bar')
+  }
+  const exitAnd = (svuota) => {
+    setConfirmExit(false)
+    if (svuota) clearDraft()
+    navigate('/bar')
+  }
+
   const headTitle = isNew ? 'Nuovo ordine' : `#${order.daily_number ?? '—'}`
   const panelTitle = isNew
     ? info.customer_name.trim() || 'Nuovo ordine'
@@ -559,7 +574,7 @@ export default function OrderPosDetail({ order = null }) {
           borderBottom: '1px solid var(--line)',
         }}
       >
-        <Link className="btn ghost small" to="/bar" aria-label="Torna agli ordini">← Ordini</Link>
+        <button className="btn ghost small" aria-label="Torna agli ordini" onClick={handleExit}>← Ordini</button>
         <strong style={{ fontFamily: 'var(--serif)' }}>{headTitle}</strong>
         {!isNew && (
           <span className={`pill ${order.status}`}>
@@ -978,6 +993,34 @@ export default function OrderPosDetail({ order = null }) {
           onBeforePay={flushAll}
           onError={setError}
         />
+      )}
+
+      {/* ── Uscita con item non confermati: svuotare o tenere? ── */}
+      {confirmExit && (
+        <div className="overlay confirm-overlay" onClick={() => setConfirmExit(false)}>
+          <div
+            className="confirm-box"
+            role="dialog"
+            aria-label="Item non confermati"
+            style={{ width: 'min(400px, 94vw)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ margin: 0 }}>Hai {draftCount} item non confermat{draftCount === 1 ? 'o' : 'i'}</h3>
+            <p className="muted small" style={{ margin: '8px 0 12px' }}>
+              Non sono ancora stati {isNew ? "inviati: l'ordine non esiste" : 'aggiunti al conto'}.
+              Vuoi svuotare la lista o tenerla per riprenderla dopo?
+            </p>
+            <button className="btn block" onClick={() => exitAnd(true)}>
+              🧹 Svuota ed esci
+            </button>
+            <button className="btn secondary block" style={{ marginTop: 8 }} onClick={() => exitAnd(false)}>
+              Tieni ed esci
+            </button>
+            <button className="btn ghost block" style={{ marginTop: 8 }} onClick={() => setConfirmExit(false)}>
+              Indietro
+            </button>
+          </div>
+        </div>
       )}
 
       {/* ── Pulisci le aggiunte non confermate (la bozza) ── */}
