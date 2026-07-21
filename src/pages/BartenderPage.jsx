@@ -755,7 +755,7 @@ function OrderQueue() {
               <span className="pill small" style={{ marginLeft: 6 }}>👥 {o.group_name_snapshot}</span>
             )}
             {o.payment_status === 'pagato' && o.workflow_status !== ORDER_STATUSES.PAGATO && (
-              <span className="pill pagato" style={{ marginLeft: 6 }}>💳</span>
+              <span className="pill pagato icon" style={{ marginLeft: 6 }} title="Già pagato">💳</span>
             )}
           </div>
           <div className="row between" style={{ alignItems: 'baseline', marginTop: 'auto' }}>

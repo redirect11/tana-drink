@@ -275,6 +275,19 @@ a.btn.block {
   color: #ff8a80;
 }
 
+/* Pill con la SOLA icona (es. 💳 sulla card ordine): tonda e con l'icona
+   al centro. Con il padding di quelle testuali risultava larga e storta,
+   e non era allineata alla riga di testo che la ospita. */
+.pill.icon {
+  gap: 0;
+  padding: 0;
+  width: 1.6em;
+  height: 1.6em;
+  justify-content: center;
+  line-height: 1;
+  vertical-align: middle;
+}
+
 .pill.ricevuto {
   background: rgba(243, 156, 18, 0.2);
   color: #ffd591;
