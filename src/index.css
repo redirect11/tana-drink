@@ -1375,22 +1375,11 @@ body.fullbleed .bar-content {
 }
 
 /* Conto già PAGATO ma non ancora servito: resta in coda perché c'è ancora
-   da consegnare. Il FONDO continua a dire a che punto è la preparazione
-   (le regole qui sopra), il BORDO doppio ambra dice che è già incassato:
-   così non si perde nessuna delle due informazioni. */
+   da consegnare. Il fondo continua a dire a che punto è la preparazione;
+   qui basta il bordo ambra — che è già pagato lo dice il 💳 accanto al
+   nome, non serve ripeterlo con un'altra icona. */
 .order-card.pagato-da-servire {
-  position: relative;
-  border-left-style: double;
-  border-left-width: 7px;
   border-left-color: var(--accent-2, #f5b94a);
-}
-.order-card.pagato-da-servire::after {
-  content: '💶';
-  position: absolute;
-  top: 6px;
-  right: 8px;
-  font-size: 0.7rem;
-  opacity: 0.75;
 }
 
 /* Nota dell'ordine sulla card del bartender */
