@@ -357,14 +357,20 @@ export default function MenuPage() {
         />
       )}
 
-      {menuOnly && (
+      {menuOnly && !staff && (
         <div className="banner">
           📖 Solo consultazione: le ordinazioni sono momentaneamente sospese.
           Rivolgersi allo staff per ordinare.
         </div>
       )}
+      {menuOnly && staff && (
+        <div className="banner">
+          📖 Ordinazioni sospese per i clienti — tu puoi comunque inserire
+          ordini dal gestionale.
+        </div>
+      )}
 
-      {etaMinutes != null && !menuOnly && !closed && (
+      {etaMinutes != null && !menuOnly && (
         <p className="eta-line">
           ⏱ {settings.service_mode === 'tavolo' ? 'Tempo di servizio' : 'Tempo di preparazione'}:
           {' '}~{etaMinutes} min
@@ -399,17 +405,11 @@ export default function MenuPage() {
         )
       })()}
 
-      {closed && !menuOnly && (
-        <div className="banner">
-          🔒 Servizio chiuso: gli ordini non sono disponibili al momento.
-        </div>
-      )}
-
       {/* Gate geolocalizzazione: stato della verifica al caricamento */}
-      {geoActive && !closed && geoGate === 'checking' && (
+      {geoActive && geoGate === 'checking' && (
         <div className="banner">📍 Verifico che sei al locale…</div>
       )}
-      {geoActive && !closed && geoGate === 'denied' && (
+      {geoActive && geoGate === 'denied' && (
         <div className="banner row between" style={{ alignItems: 'center', gap: 10 }}>
           <span>
             📍 Per ordinare serve la tua posizione: attiva la localizzazione e
@@ -420,7 +420,7 @@ export default function MenuPage() {
           </button>
         </div>
       )}
-      {geoActive && !closed && geoGate === 'out_of_range' && (
+      {geoActive && geoGate === 'out_of_range' && (
         <div className="banner row between" style={{ alignItems: 'center', gap: 10 }}>
           <span>
             📍 Devi essere al locale per ordinare
@@ -631,10 +631,10 @@ export default function MenuPage() {
             </div>
             <button
               className="btn"
-              disabled={sending || closed || checkingGeo}
+              disabled={sending || checkingGeo}
               onClick={handleReviewOrder}
             >
-              {closed ? 'Chiuso' : checkingGeo ? '📍 Verifico…' : 'Rivedi ordine'}
+              {checkingGeo ? '📍 Verifico…' : 'Rivedi ordine'}
             </button>
           </div>
         </div>
