@@ -89,11 +89,18 @@ export default function OrderPosDetail({ order = null }) {
   const [params] = useSearchParams()
   const groupParam = isNew ? params.get('group') || '' : ''
   const [groups, setGroups] = useState([])
+  const [groupId, setGroupId] = useState(groupParam)
+  const [pickGroup, setPickGroup] = useState(false)
+  useEffect(() => setGroupId(groupParam), [groupParam])
+  const groupsOn = isNew && settings.groups_enabled
   useEffect(() => {
-    if (!groupParam) return
+    if (!groupsOn) return
     return subscribeOpenGroups(setGroups, () => setGroups([]))
-  }, [groupParam])
-  const group = groups.find((g) => g.id === groupParam) || null
+  }, [groupsOn])
+  const group = groups.find((g) => g.id === groupId) || null
+  // Un gruppo contenitore non può ricevere ordini diretti: si sceglie fra
+  // i soli gruppi "foglia".
+  const groupChoices = groups.filter((g) => !g.has_child_groups)
   // Un gruppo che contiene sottogruppi non può avere ordini diretti: si
   // ordina in uno dei suoi sottogruppi (lo impedisce anche createOrder).
   const groupIsContainer = !!group?.has_child_groups
@@ -673,24 +680,37 @@ export default function OrderPosDetail({ order = null }) {
             {!isNew && order.table_label && (
               <div className="muted small">🍽 Tavolo {order.table_label}</div>
             )}
-            {/* Conto di gruppo: si vede sempre a quale conto si sta
-                addebitando, per non battere l'ordine sul gruppo sbagliato. */}
-            {group && !groupIsContainer && (
+            {/* Conto di gruppo. In CREAZIONE si sceglie qui (se i gruppi
+                sono attivi): si deve poter associare l'ordine anche senza
+                essere arrivati dal gruppo. In MODIFICA si mostra e basta. */}
+            {!isNew && order.group_name_snapshot && (
+              <div className="muted small" style={{ marginTop: 2 }}>
+                <span className="pill small">👥 {order.group_name_snapshot}</span>
+              </div>
+            )}
+            {groupsOn && (
               <div className="row between" style={{ alignItems: 'center', marginTop: 2 }}>
-                <span className="pill small">👥 {group.name}</span>
-                <button
-                  className="btn ghost small"
-                  onClick={() => navigate('/pos')}
-                  title="Ordina senza gruppo"
-                >
-                  ✕ Togli gruppo
-                </button>
+                {group && !groupIsContainer ? (
+                  <span className="pill small">👥 {group.name}</span>
+                ) : (
+                  <span className="muted small">Nessun gruppo</span>
+                )}
+                <span className="row" style={{ gap: 6 }}>
+                  <button className="btn ghost small" onClick={() => setPickGroup(true)}>
+                    👥 {group ? 'Cambia' : 'Associa a gruppo'}
+                  </button>
+                  {group && (
+                    <button className="btn ghost small" onClick={() => setGroupId('')} title="Ordine senza gruppo">
+                      ✕
+                    </button>
+                  )}
+                </span>
               </div>
             )}
             {groupIsContainer && (
               <div className="banner" style={{ margin: '4px 0' }}>
                 👥 “{group.name}” contiene altri gruppi: non può avere ordini
-                diretti. Ordina in uno dei suoi sottogruppi.
+                diretti. Scegli uno dei suoi sottogruppi.
               </div>
             )}
           </div>
@@ -1046,6 +1066,55 @@ export default function OrderPosDetail({ order = null }) {
           onBeforePay={flushAll}
           onError={setError}
         />
+      )}
+
+      {/* ── Scelta del gruppo a cui addebitare l'ordine ── */}
+      {pickGroup && (
+        <div className="overlay confirm-overlay" onClick={() => setPickGroup(false)}>
+          <div
+            className="confirm-box"
+            role="dialog"
+            aria-label="Scegli il gruppo"
+            style={{ width: 'min(420px, 94vw)', maxHeight: '80vh', overflowY: 'auto' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="row between" style={{ alignItems: 'center' }}>
+              <h3 style={{ margin: 0 }}>👥 Conto di gruppo</h3>
+              <button className="btn ghost small" onClick={() => setPickGroup(false)}>✕</button>
+            </div>
+            <p className="muted small" style={{ margin: '8px 0' }}>
+              L’ordine entra nel conto del gruppo e si potrà pagare insieme
+              agli altri.
+            </p>
+            <button
+              className={`btn ${groupId ? 'ghost' : ''} block`}
+              onClick={() => {
+                setGroupId('')
+                setPickGroup(false)
+              }}
+            >
+              Nessun gruppo
+            </button>
+            {groupChoices.map((g) => (
+              <button
+                key={g.id}
+                className={`btn ${groupId === g.id ? '' : 'secondary'} block`}
+                style={{ marginTop: 6 }}
+                onClick={() => {
+                  setGroupId(g.id)
+                  setPickGroup(false)
+                }}
+              >
+                {g.kind === 'customer' ? '👤' : '🏷'} {g.name}
+              </button>
+            ))}
+            {groupChoices.length === 0 && (
+              <p className="muted small" style={{ marginTop: 8 }}>
+                Nessun gruppo aperto: si creano dalla coda ordini.
+              </p>
+            )}
+          </div>
+        </div>
       )}
 
       {/* ── Uscita con item non confermati: svuotare o tenere? ── */}

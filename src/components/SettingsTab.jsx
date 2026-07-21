@@ -154,17 +154,46 @@ export default function SettingsTab() {
 
       <div className="card settings-section">
         <h3>Gruppi di ordini</h3>
+        <p className="muted small" style={{ margin: '0 0 8px' }}>
+          Servono quando <strong>più conti separati devono pagare insieme</strong>:
+          una tavolata in cui ognuno ha il suo conto, o un evento con più
+          tavoli che si saldano in blocco. Se da voi un tavolo = un conto
+          NON servono: la schermata di pagamento sa già dividere un conto
+          per articoli o incassare acconti.
+        </p>
         <ToggleRow
           label="Abilita i gruppi"
-          desc="Raggruppa gli ordini in contenitori (es. tavolata, cliente): ogni cliente registrato ha il suo gruppo."
+          desc="Se spenti, spariscono ovunque e nulla cambia nel resto del lavoro."
           checked={settings.groups_enabled}
           onChange={(v) => save({ groups_enabled: v })}
         />
         {settings.groups_enabled && (
           <>
+            <div className="muted small" style={{ margin: '8px 0' }}>
+              <strong>Come funzionano</strong>
+              <ol style={{ margin: '4px 0 0', paddingLeft: 18 }}>
+                <li>Crei il gruppo dal pannello nella coda o dal menu laterale.</li>
+                <li>
+                  Toccandolo vedi <strong>gli ordini di quel gruppo</strong>, il totale
+                  e quanto resta da pagare.
+                </li>
+                <li>
+                  Da lì aggiungi un ordine col tasto ✍️: si apre il POS e l’ordine
+                  nasce già dentro il gruppo.
+                </li>
+                <li>
+                  Alla fine incassi tutto insieme, oppure dividi in quote uguali.
+                </li>
+              </ol>
+              Gli ordini di un gruppo restano <strong>visibili nella coda</strong> come
+              tutti gli altri, con l’etichetta 👥 del gruppo.
+              Un gruppo può contenere altri gruppi (es. “Compleanno” con
+              “Tavolo A” e “Tavolo B”): chi contiene sottogruppi non ha ordini
+              diretti, si ordina nei figli.
+            </div>
             <ToggleRow
               label="Mostra nel menu laterale"
-              desc="Quadratini dei gruppi nel drawer per avviare un ordine già associato."
+              desc="Quadratini dei gruppi nel drawer: toccarne uno apre i suoi ordini."
               checked={settings.groups_in_drawer}
               onChange={(v) => save({ groups_in_drawer: v })}
             />

@@ -41,7 +41,12 @@ vi.mock('../../src/lib/api.js', () => ({
   }),
   subscribeSettings: vi.fn((cb) => {
     // 'uniti': due tap sullo stesso prodotto sommano la quantità.
-    cb({ payments_reader_enabled: false, sumup_reader_id: null, order_group_default: 'uniti' })
+    cb({
+      payments_reader_enabled: false,
+      sumup_reader_id: null,
+      order_group_default: 'uniti',
+      groups_enabled: true, // i gruppi sono opzionali: qui accesi
+    })
     return () => {}
   }),
   DEFAULT_SETTINGS: {},
@@ -230,6 +235,25 @@ describe('conto di gruppo dal POS', () => {
   it('un gruppo CONTENITORE non può avere ordini diretti: avvisa', () => {
     mountGroup('g2')
     expect(screen.getByText(/contiene altri gruppi/)).toBeInTheDocument()
+  })
+
+  it('si può associare un gruppo anche senza arrivarci dal gruppo', async () => {
+    const user = userEvent.setup()
+    mount() // POS normale, nessun ?group=
+    await user.click(screen.getByRole('button', { name: /Associa a gruppo/ }))
+    await user.click(screen.getByRole('button', { name: /Tavolo 4/ }))
+    await user.click(screen.getByText('Mojito'))
+    await user.click(screen.getByRole('button', { name: '✅ Conferma' }))
+    await user.click(screen.getByRole('button', { name: /Salva senza nome/ }))
+    expect(submitPosOrder.mock.calls[0][0].group_id).toBe('g1')
+  })
+
+  it('un gruppo CONTENITORE non è fra quelli scegliibili', async () => {
+    const user = userEvent.setup()
+    mount()
+    await user.click(screen.getByRole('button', { name: /Associa a gruppo/ }))
+    expect(screen.getByRole('button', { name: /Tavolo 4/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Compleanno/ })).not.toBeInTheDocument()
   })
 
   it('senza gruppo l’ordine non ne porta nessuno', async () => {
