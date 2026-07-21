@@ -279,11 +279,15 @@ a.btn.block {
    al centro. Con il padding di quelle testuali risultava larga e storta,
    e non era allineata alla riga di testo che la ospita. */
 .pill.icon {
+  /* inline-grid + place-items centra su ENTRAMBI gli assi senza dipendere
+     dalla linea di base del carattere: con flex l'emoji restava bassa e
+     spostata, perché il glifo ha metriche proprie. */
+  display: inline-grid;
+  place-items: center;
   gap: 0;
   padding: 0;
-  width: 1.6em;
-  height: 1.6em;
-  justify-content: center;
+  width: 1.75em;
+  height: 1.75em;
   line-height: 1;
   vertical-align: middle;
 }
