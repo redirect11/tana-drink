@@ -8,8 +8,12 @@ import { formatPrice } from '../lib/orderStatus.js'
 // magazzino è opzionale: si cercano gli ingredienti per nome e si
 // toccano per aggiungerli (niente menu a tendina).
 // `initial` (opzionale) precompila il form per la MODIFICA per-item di
-// una riga d'ordine: nome, prezzo e ricetta già impostati.
-export default function CustomDrinkForm({ onCancel, onAdd, initial = null }) {
+// una riga d'ordine: nome, prezzo e ricetta già impostati — così gli
+// ingredienti del drink si possono SOSTITUIRE (cambiare o togliere), non
+// solo aggiungere. `warnNoRecipe` segnala che il prodotto di partenza non
+// ha ingredienti configurati: probabilmente non sono mai stati inseriti
+// nella sua scheda, e senza di essi non c'è scarico di magazzino.
+export default function CustomDrinkForm({ onCancel, onAdd, initial = null, warnNoRecipe = false }) {
   const initRows = (initial?.recipe_items || []).map((r) => ({
     inventory_item_id: r.inventory_item_id || '',
     name: r.name || '',
@@ -21,7 +25,7 @@ export default function CustomDrinkForm({ onCancel, onAdd, initial = null }) {
   const [price, setPrice] = useState(initial?.price != null ? String(initial.price) : '')
   const [rows, setRows] = useState(initRows) // { inventory_item_id, name, qty, unit }
   const [inventory, setInventory] = useState([])
-  const [showRecipe, setShowRecipe] = useState(initRows.length > 0)
+  const [showRecipe, setShowRecipe] = useState(initRows.length > 0 || warnNoRecipe)
   const [search, setSearch] = useState('')
 
   // L'inventario è leggibile solo dal bartender: se la lettura fallisce
@@ -121,6 +125,15 @@ export default function CustomDrinkForm({ onCancel, onAdd, initial = null }) {
         {showRecipe && (
           <>
             <label htmlFor="cd-ing" style={{ marginTop: 10 }}>Ingredienti</label>
+
+            {warnNoRecipe && (
+              <div className="banner" style={{ margin: '6px 0' }}>
+                ⚠️ Questo prodotto non ha ingredienti configurati: forse non sono
+                mai stati inseriti nella sua scheda del Menù. Senza ingredienti
+                non c’è scarico di magazzino. Quelli che aggiungi qui valgono
+                solo per questa riga.
+              </div>
+            )}
 
             {/* Righe già scelte: nome fisso, quantità e unità inline. */}
             {rows.map((r, idx) => {

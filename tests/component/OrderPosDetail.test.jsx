@@ -47,7 +47,14 @@ vi.mock('../../src/lib/menuCache.js', () => ({
   useMenu: () => ({
     drinks: [
       { id: 'mojito', name: 'Mojito', price: 7, available: true, category_id: 'cat1' },
-      { id: 'gin', name: 'Gin Tonic', price: 8, available: true, category_id: 'cat1' },
+      {
+        id: 'gin',
+        name: 'Gin Tonic',
+        price: 8,
+        available: true,
+        category_id: 'cat1',
+        recipe_items: [{ inventory_item_id: 'inv-gin', name: 'Gin', qty: 40, unit: 'ml' }],
+      },
     ],
     cats: [{ id: 'cat1', name: 'Cocktail', sort_order: 0 }],
     loading: false,
@@ -206,6 +213,25 @@ describe('aggiunte: la nuova comanda è gestita internamente', () => {
     const [orderId, items] = addComanda.mock.calls[0]
     expect(orderId).toBe('ord1')
     expect(items[0]).toMatchObject({ drink_id: 'gin', qty: 1 })
+  })
+
+  it('la modifica per-item PRECARICA gli ingredienti del drink (si sostituiscono, non solo si aggiungono)', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.click(screen.getByText('Gin Tonic'))
+    await user.click(screen.getByRole('button', { name: /Modifica Gin Tonic/ }))
+    // la ricetta del prodotto è già lì, quindi si può togliere/cambiare
+    expect(screen.getByLabelText('Quantità Gin')).toHaveValue(40)
+    expect(screen.queryByText(/non ha ingredienti configurati/)).not.toBeInTheDocument()
+  })
+
+  it('drink SENZA ingredienti: avvisa il bartender', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    // Il Mojito non ha recipe_items nel menù mock
+    await user.click(screen.getAllByText('Mojito')[0])
+    await user.click(screen.getByRole('button', { name: /Modifica Mojito/ }))
+    expect(screen.getByText(/non ha ingredienti configurati/)).toBeInTheDocument()
   })
 
   it('"Stampa comanda" stampa le aggiunte in bozza SENZA confermarle', async () => {
