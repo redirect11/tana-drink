@@ -26,7 +26,7 @@ import {
   placedByName,
 } from '../lib/orderStatus.js'
 import { bucketByStatus, ordersRecap } from '../lib/coda.js'
-import { businessDayKey, businessDayLabel } from '../lib/businessDay.js'
+import { businessDayKey, businessDayLabel, businessDayShort } from '../lib/businessDay.js'
 import { isAwaitingPayment } from '../lib/payments.js'
 import { readerCheckout, readerTerminate } from '../lib/paymentsApi.js'
 import { ensureNotificationPermission, notify } from '../lib/notify.js'
@@ -273,8 +273,8 @@ function OrderQueue() {
   const [orders, setOrders] = useState([])
   const [error, setError] = useState(null)
   const [statusTab, setStatusTab] = useState(ORDER_STATUSES.RICEVUTO)
-  const [boardFilter, setBoardFilter] = useState('attivi') // 'attivi' | 'chiusi' | 'tutti' | 'da_chiudere'
-  const [showArretrati, setShowArretrati] = useState(false) // pannello nelle viste a lista
+  const [boardFilter, setBoardFilter] = useState('attivi') // 'attivi' | 'chiusi' | 'tutti'
+  const [soloOggi, setSoloOggi] = useState(false) // nasconde i conti dei giorni scorsi
   // Avanzamenti OTTIMISTICI dalla card: lo stato cambia al tap, il server
   // segue in background (in errore si torna allo stato reale).
   const [queueOverrides, setQueueOverrides] = useState({}) // id -> workflow_status
@@ -471,8 +471,22 @@ function OrderQueue() {
     .sort((a, b) => String(dayOf(a)).localeCompare(String(dayOf(b))))
   const arretratiIds = new Set(arretrati.map((o) => o.id))
   // Etichetta della giornata dell'ordine: "oggi", "ieri" o la data estesa.
-  const dayLabel = (o) => businessDayLabel(dayOf(o), new Date(), cutoffHour)
+  const dayLabel = (o) => businessDayShort(dayOf(o), new Date(), cutoffHour)
+  // Raggruppa una lista per giornata: prima oggi, poi i giorni scorsi dal
+  // più recente. Serve a separare con una riga i conti ancora da chiudere.
+  const groupByDay = (list) => {
+    const map = new Map()
+    for (const o of list) {
+      const k = dayOf(o) || '—'
+      if (!map.has(k)) map.set(k, [])
+      map.get(k).push(o)
+    }
+    return [...map.entries()]
+      .sort((a, b) => (a[0] === oggiKey ? -1 : b[0] === oggiKey ? 1 : b[0].localeCompare(a[0])))
+      .map(([day, orders]) => ({ day, orders }))
+  }
   const ordersOggi = effOrders.filter((o) => !arretratiIds.has(o.id))
+  const ordersInVista = soloOggi ? ordersOggi : effOrders
   // Riepilogo di testata: solo la giornata corrente (gli arretrati stanno
   // nella loro tab e non devono gonfiare i totali di oggi).
   const recap = ordersRecap(ordersOggi)
@@ -482,7 +496,7 @@ function OrderQueue() {
   // Cercando esplicitamente si trovano anche i conti dei giorni scorsi
   // (altrimenti sarebbero raggiungibili solo dalla tab "Da chiudere").
   const visibleOrders = q
-    ? effOrders.filter(
+    ? ordersInVista.filter(
         (o) =>
           String(o.daily_number ?? '').includes(q) ||
           o.customer_name?.toLowerCase().includes(q) ||
@@ -491,7 +505,7 @@ function OrderQueue() {
           o.placed_by?.name?.toLowerCase().includes(q) ||
           (o.order_items || []).some((i) => i.name?.toLowerCase().includes(q))
       )
-    : ordersOggi
+    : ordersInVista
   const buckets = bucketByStatus(visibleOrders)
   const listView = settings.queue_view === 'lista'
   const list = buckets[statusTab] || []
@@ -508,14 +522,11 @@ function OrderQueue() {
   // Vista a griglia: di default gli ordini in corso; col filtro si vedono
   // anche i chiusi/pagati o TUTTI gli ordini in vista.
   const isClosed = isChiuso
-  const boardOrders =
-    boardFilter === 'da_chiudere'
-      ? arretrati
-      : visibleOrders
-          .filter((o) =>
-            boardFilter === 'tutti' ? true : boardFilter === 'chiusi' ? isClosed(o) : !isClosed(o)
-          )
-          .sort((a, b) => (a.daily_number || 0) - (b.daily_number || 0))
+  const boardOrders = visibleOrders
+    .filter((o) =>
+      boardFilter === 'tutti' ? true : boardFilter === 'chiusi' ? isClosed(o) : !isClosed(o)
+    )
+    .sort((a, b) => (a.daily_number || 0) - (b.daily_number || 0))
   // Ordini POS in invio. Finché il placeholder è attivo l'ordine reale
   // resta nascosto: il match usa il client_temp_id scritto sull'ordine
   // (deterministico anche se lo snapshot arriva PRIMA che il placeholder
@@ -527,6 +538,7 @@ function OrderQueue() {
       !pendingRealIds.has(o.id) &&
       !(o.client_temp_id && pendingTempIds.has(o.client_temp_id))
   )
+  const boardGroups = groupByDay(visibleBoard)
 
   async function incassaSuLettore(o) {
     setError(null)
@@ -685,10 +697,9 @@ function OrderQueue() {
               <span className="pill pagato" style={{ marginLeft: 6 }}>💳</span>
             )}
           </div>
-          <div className="row between" style={{ alignItems: 'baseline' }}>
-            <span className="muted">
-              {count} prodott{count === 1 ? 'o' : 'i'}
-              <span className="muted small"> · 📅 {dayLabel(o)}</span>
+          <div className="row between" style={{ alignItems: 'baseline', marginTop: 'auto' }}>
+            <span className="grid-card-meta">
+              {count} prodott{count === 1 ? 'o' : 'i'} · {dayLabel(o)}
             </span>
             <span className="grid-card-tot">{formatPrice(o.total)}</span>
           </div>
@@ -766,7 +777,7 @@ function OrderQueue() {
           >
             <div className="row between">
               <div>
-                <span className="bignum" style={{ fontSize: '2rem' }}>
+                <span className="bignum" style={{ fontSize: '1.4rem', fontWeight: 600 }}>
                   #{o.daily_number ?? '—'}
                 </span>{' '}
                 {o.customer_name && <strong>{o.customer_name}</strong>}{' '}
@@ -915,23 +926,6 @@ function OrderQueue() {
         </>
       )}
 
-      {/* Conti aperti dai giorni scorsi: fuori dalla lista di oggi, qui in
-          un blocco a parte (nella vista a griglia è la tab "Da chiudere"). */}
-      {!gridView && arretrati.length > 0 && (
-        <div className="card" style={{ marginTop: 8 }}>
-          <div
-            className="row between"
-            style={{ cursor: 'pointer', alignItems: 'center' }}
-            onClick={() => setShowArretrati((v) => !v)}
-          >
-            <strong>⏳ Da chiudere ({arretrati.length})</strong>
-            <span className="muted">{showArretrati ? '▾' : '▸'}</span>
-          </div>
-          <div className="muted small">Conti rimasti aperti dai giorni scorsi.</div>
-          {showArretrati && <div style={{ marginTop: 8 }}>{arretrati.map(renderCard)}</div>}
-        </div>
-      )}
-
       {!gridView && (
         <input
           type="search"
@@ -957,7 +951,6 @@ function OrderQueue() {
               ['attivi', 'In corso'],
               ['chiusi', '💶 Chiusi'],
               ['tutti', 'Tutti'],
-              ...(arretrati.length ? [['da_chiudere', `⏳ Da chiudere (${arretrati.length})`]] : []),
             ].map(([k, label]) => (
               <button
                 key={k}
@@ -967,28 +960,60 @@ function OrderQueue() {
                 {label}
               </button>
             ))}
+            {/* Conti dei giorni scorsi: di default sono in coda, sotto la
+                loro data. Questo tasto li nasconde e lascia solo oggi. */}
+            {(arretrati.length > 0 || soloOggi) && (
+              <button
+                className={`chip ${soloOggi ? 'active' : ''}`}
+                onClick={() => setSoloOggi((v) => !v)}
+                title="Nascondi i conti rimasti aperti dai giorni scorsi"
+              >
+                📅 Solo oggi{arretrati.length ? ` (${arretrati.length} da chiudere)` : ''}
+              </button>
+            )}
           </div>
           {/* Griglia: ordini in invio (grigi) + ordini secondo il filtro */}
           {pend.pending.length === 0 && visibleBoard.length === 0 && (
             <div className="empty">
-              {boardFilter === 'da_chiudere'
-                ? 'Nessun conto rimasto aperto dai giorni scorsi. 🎉'
-                : `Nessun ordine${boardFilter === 'chiusi' ? ' chiuso' : boardFilter === 'attivi' ? ' in corso' : ''}.`}
+              {`Nessun ordine${boardFilter === 'chiusi' ? ' chiuso' : boardFilter === 'attivi' ? ' in corso' : ''}${soloOggi ? ' oggi' : ''}.`}
             </div>
           )}
           {/* I nuovi ordini vanno IN FONDO (numeri più alti): il placeholder
               in sync sta già lì, così alla conferma non cambia posizione. */}
-          <div className="order-grid">
-            {visibleBoard.map(renderGridCard)}
-            {pend.pending.map(renderPendingCard)}
-          </div>
+          {/* Una griglia per giornata: oggi in cima, poi i conti ancora
+              aperti dei giorni scorsi, ciascuno sotto la sua data. */}
+          {!boardGroups.some((g) => g.day === oggiKey) && pend.pending.length > 0 && (
+            <div className="order-grid">{pend.pending.map(renderPendingCard)}</div>
+          )}
+          {boardGroups.map(({ day, orders: gOrders }) => (
+            <div key={day}>
+              {day !== oggiKey && (
+                <div className="day-sep">
+                  ⏳ Da chiudere · {businessDayLabel(day, new Date(), cutoffHour)}
+                </div>
+              )}
+              <div className="order-grid">
+                {gOrders.map(renderGridCard)}
+                {day === oggiKey && pend.pending.map(renderPendingCard)}
+              </div>
+            </div>
+          ))}
         </>
       ) : listView ? (
         <>
           {/* Lista unica: stato indicato dal colore/etichetta della card */}
           <h3 className="cat-header">In corso ({inCorso.length})</h3>
           {inCorso.length === 0 && <div className="empty">Nessun ordine in corso.</div>}
-          {inCorso.map(renderCard)}
+          {groupByDay(inCorso).map(({ day, orders: gOrders }) => (
+            <div key={day}>
+              {day !== oggiKey && (
+                <div className="day-sep">
+                  ⏳ Da chiudere · {businessDayLabel(day, new Date(), cutoffHour)}
+                </div>
+              )}
+              {gOrders.map(renderCard)}
+            </div>
+          ))}
 
           <h3 className="cat-header">Serviti/Ritirati ({evasi.length})</h3>
           {evasi.length === 0 && <div className="empty">Ancora nessun ordine servito o ritirato.</div>}
