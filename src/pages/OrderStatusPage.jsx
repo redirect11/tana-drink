@@ -54,6 +54,10 @@ export default function OrderStatusPage() {
   // va mostrato solo allo staff, non al cliente che lo ha già scansionato.
   const [viewerIsStaff, setViewerIsStaff] = useState(false)
   const [viewerRole, setViewerRole] = useState(null) // 'bartender' | 'staff' | null
+  // Il listener realtime vive fuori dal ciclo di render: gli serve il
+  // ruolo aggiornato senza rimontarsi.
+  const viewerRoleRef = useRef(null)
+  viewerRoleRef.current = viewerRole
   const [viewerChecked, setViewerChecked] = useState(false)
 
   useEffect(() => {
@@ -108,15 +112,20 @@ export default function OrderStatusPage() {
         // (primo accesso, App Check non pronto), qui si recupera.
         setError(null)
         setOrder((prev) => ({ ...prev, ...updated }))
+        // "Drink pronto": è un avviso PER IL CLIENTE, e solo col RITIRO AL
+        // BANCO — al tavolo glielo portano, non deve fare nulla. Non va
+        // mostrato a chi sta lavorando: questa pagina la apre anche lo
+        // staff (per il bartender rende il dettaglio POS), e l'avviso
+        // scattava addosso a chi aveva appena premuto "pronto".
         if (
+          !viewerRoleRef.current &&
+          updated.service_mode === 'banco' &&
           prevStatus.current !== updated.workflow_status &&
           updated.workflow_status === ORDER_STATUSES.PRONTO
         ) {
           notify(
             '🔔 Il tuo drink è pronto!',
-            updated.service_mode === 'tavolo'
-              ? `Ordine #${updated.daily_number}: il drink verrà servito il prima possibile.`
-              : `Ordine #${updated.daily_number} pronto al ritiro.`
+            `Ordine #${updated.daily_number} pronto al ritiro.`
           )
         }
         // Annullamento da parte del bartender con notifica richiesta.

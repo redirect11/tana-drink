@@ -417,10 +417,13 @@ function OrderQueue() {
     ;(async () => {
       try {
         await updateOrderStatus(order.id, ns)
+        // NIENTE rimozione qui: la scrittura risponde PRIMA che arrivi lo
+        // snapshot aggiornato, quindi togliere subito l'override farebbe
+        // riapparire per un attimo lo stato vecchio (il tasto "rimbalza").
+        // Lo toglie l'effetto sotto, quando il server ha davvero recepito.
       } catch (e) {
         setError(e.message)
         showToast(`⚠️ Avanzamento non riuscito: ${e.message}`, { kind: 'error' })
-      } finally {
         setQueueOverrides((m) => {
           const n = { ...m }
           delete n[order.id]
@@ -429,6 +432,23 @@ function OrderQueue() {
       }
     })()
   }
+
+  // L'override ottimistico vive finché il server non è allineato: appena
+  // l'ordine arriva con lo stato atteso (o più avanti), si toglie.
+  useEffect(() => {
+    setQueueOverrides((m) => {
+      if (Object.keys(m).length === 0) return m
+      const next = { ...m }
+      let changed = false
+      for (const o of orders) {
+        if (next[o.id] && o.workflow_status === next[o.id]) {
+          delete next[o.id]
+          changed = true
+        }
+      }
+      return changed ? next : m
+    })
+  }, [orders])
 
   // Annullamento bartender: apre il dialog con frase/motivazione/notifica.
   // kind: 'ordine' (ricevuto), 'preparazione' (in_preparazione),
