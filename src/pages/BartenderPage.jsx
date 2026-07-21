@@ -62,6 +62,13 @@ export default function BartenderPage() {
   const [params] = useSearchParams()
   const [tab, setTab] = useState(() => params.get('tab') || 'coda')
 
+  // Arrivo dal drawer toccando un gruppo (/bar?group=…): la coda è il
+  // posto dove vive il pannello Gruppi, quindi ci si porta lì.
+  const groupParam = params.get('group')
+  useEffect(() => {
+    if (groupParam) setTab('coda')
+  }, [groupParam])
+
   useEffect(() => {
     return onAuthStateChanged(auth, async (u) => {
       if (!u) {
@@ -272,12 +279,19 @@ function OrderQueue() {
   // ?group=<id>: arrivo dal drawer toccando un gruppo → si apre la sua
   // lista ordini nel pannello Gruppi.
   const [queueParams] = useSearchParams()
+  const openGroupId = queueParams.get('group') || null
   const [ordersReady, setOrdersReady] = useState(false) // primo snapshot arrivato
   const [orders, setOrders] = useState([])
   const [error, setError] = useState(null)
   const [statusTab, setStatusTab] = useState(ORDER_STATUSES.RICEVUTO)
   const [boardFilter, setBoardFilter] = useState('attivi') // 'attivi' | 'chiusi' | 'tutti'
   const [soloOggi, setSoloOggi] = useState(false) // nasconde i conti dei giorni scorsi
+
+  // Nella griglia i pannelli sono a scomparsa: arrivando a un gruppo vanno
+  // aperti, altrimenti il click sul gruppo sembrerebbe non fare nulla.
+  useEffect(() => {
+    if (openGroupId) setShowPanels(true)
+  }, [openGroupId])
   // Avanzamenti OTTIMISTICI dalla card: lo stato cambia al tap, il server
   // segue in background (in errore si torna allo stato reale).
   const [queueOverrides, setQueueOverrides] = useState({}) // id -> workflow_status
@@ -936,8 +950,11 @@ function OrderQueue() {
       {(!gridView || showPanels) && (
         <>
           <StaffCallList />
-          {settings.groups_enabled && settings.groups_in_queue && (
-            <GroupsPanel orders={orders} role="bartender" openGroupId={queueParams.get('group') || null} />
+          {/* Il pannello si mostra anche se disattivato nella coda, quando
+              si arriva esplicitamente a un gruppo: altrimenti il click dal
+              menu laterale non porterebbe da nessuna parte. */}
+          {settings.groups_enabled && (settings.groups_in_queue || openGroupId) && (
+            <GroupsPanel orders={orders} role="bartender" openGroupId={openGroupId} />
           )}
         </>
       )}
