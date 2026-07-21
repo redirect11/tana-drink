@@ -569,6 +569,13 @@ export default function OrderPosDetail({ order = null }) {
         {!isNew && order.placed_by && (
           <span className="muted small">✍️ {placedByName(order.placed_by)}</span>
         )}
+        {/* Progressivo assoluto di sistema: id interno che non riparte mai
+            (il #N in grande invece riparte ogni giornata). */}
+        {!isNew && order.serial != null && (
+          <span className="muted" style={{ fontSize: '0.7rem', opacity: 0.6 }} title="Progressivo interno dell'ordine">
+            id {String(order.serial).padStart(5, '0')}
+          </span>
+        )}
         {!isNew && order.payment_status === 'pagato' && order.status !== ORDER_STATUSES.PAGATO && (
           <span className="muted small">💳 pagato</span>
         )}
