@@ -106,6 +106,7 @@ describe('layout POS: tutto già in pagamento, Riscuotere incassa', () => {
       amount: 22,
       method: 'banco',
       items: null,
+      autoServe: false,
     })
   })
 
@@ -120,6 +121,7 @@ describe('layout POS: tutto già in pagamento, Riscuotere incassa', () => {
       amount: 7,
       method: 'banco',
       items: [expect.objectContaining({ drink_id: 'mojito', qty: 1 })],
+      autoServe: false,
     })
   })
 
@@ -159,6 +161,7 @@ describe('tastierino calcolatrice', () => {
       amount: 5,
       method: 'banco',
       items: null,
+      autoServe: false,
     })
   })
 
@@ -184,6 +187,7 @@ describe('tastierino calcolatrice', () => {
       amount: 22,
       method: 'banco',
       items: null,
+      autoServe: false,
     })
   })
 
@@ -207,6 +211,7 @@ describe('metodi di pagamento', () => {
       amount: 22,
       method: 'carta',
       items: null,
+      autoServe: false,
     })
   })
 
@@ -242,7 +247,7 @@ describe('metodi di pagamento', () => {
     await user.selectOptions(screen.getByLabelText(/Buono di/), 'v1')
     expect(screen.getByText(/Si scalano 10,00 € dal buono di Marco/)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /Usa il buono/ }))
-    expect(payWithVoucher).toHaveBeenCalledWith('ord1', 'v1', 10)
+    expect(payWithVoucher).toHaveBeenCalledWith('ord1', 'v1', 10, { autoServe: false })
   })
 })
 

@@ -1015,6 +1015,28 @@ export function subscribeRecentGroups(onChange, onError, limitN = 20) {
 // quota). In un'unica transazione: marca pagati gli ordini non ancora
 // saldati e scrive nel ledger `payments` (1 documento, o N se diviso per
 // N). `split` = { count } per il conto diviso. Restituisce settlement_id.
+// Il pagamento CHIUDE il conto solo se non resta nulla da consegnare.
+// Con la gestione della preparazione attiva, incassare non significa aver
+// servito: pagare in anticipo è normale, e marcare tutto "servito" farebbe
+// sparire dalla coda un ordine ancora da preparare. Senza quella gestione
+// non esistono stati di consegna, quindi il pagamento chiude e basta.
+function chiusuraPagamento(rawOrder, nowIso, { autoServe = true } = {}) {
+  const norm = normalizeOrderDoc(rawOrder)
+  if (!autoServe && !allServed(norm)) {
+    // Resta APERTO: pagato, ma ancora da consegnare.
+    return { payment_status: 'pagato', paid_at: nowIso }
+  }
+  const comande = serveAllComande(norm.comande, nowIso)
+  return {
+    status: ORDER_STATUSES.PAGATO,
+    [`status_times.${ORDER_STATUSES.PAGATO}`]: nowIso,
+    payment_status: 'pagato',
+    paid_at: nowIso,
+    comande,
+    comande_statuses: comandeStatuses(comande),
+  }
+}
+
 export async function payGroupCash({
   orderIds,
   by = null,
@@ -1500,7 +1522,7 @@ export async function deleteVoucher(id) {
 // Scala un buono per pagare un ordine: registra il pagamento sull'ordine
 // (metodo 'buono') e decrementa il saldo, in un'unica transazione.
 // Ritorna { redeemed, closed }.
-export async function payWithVoucher(orderId, voucherId, requestedAmount) {
+export async function payWithVoucher(orderId, voucherId, requestedAmount, { autoServe = true } = {}) {
   const orderRef = doc(db, 'orders', orderId)
   const voucherRef = doc(vouchersCol, voucherId)
   const nowIso = new Date().toISOString()
@@ -1521,24 +1543,13 @@ export async function payWithVoucher(orderId, voucherId, requestedAmount) {
     { id: `pay-${Date.now()}`, amount: redeemed, method: 'buono', voucher_id: voucherId, voucher_name: v.holder_name, at: nowIso },
   ]
   const closed = paymentCloses(o, redeemed)
-  let servedPatch = {}
-  if (closed) {
-    const comande = serveAllComande(normalizeOrderDoc(o).comande, nowIso)
-    servedPatch = { comande, comande_statuses: comandeStatuses(comande) }
-  }
+  const chiusura = closed ? chiusuraPagamento(o, nowIso, { autoServe }) : null
   // Due scritture accodabili (ordine + buono): offline si accodano entrambe.
   // Il saldo scala con increment (commutativo).
   await updateDoc(orderRef, {
     payments,
     ...(closed
-      ? {
-          status: ORDER_STATUSES.PAGATO,
-          [`status_times.${ORDER_STATUSES.PAGATO}`]: nowIso,
-          payment_status: 'pagato',
-          payment_method: summaryMethod(payments),
-          paid_at: nowIso,
-          ...servedPatch,
-        }
+      ? { ...chiusura, payment_method: summaryMethod(payments) }
       : { payment_status: 'parziale' }),
   })
   await updateDoc(voucherRef, {
@@ -1571,7 +1582,7 @@ export async function setOrderDiscount(id, discount) {
 // pagamento e, se il residuo va a zero, chiude il conto come "pagato" —
 // anche con comande non servite (l'avviso sta nella UI, come concordato).
 // `items` è la selezione pagata (null = importo sul residuo, senza dettaglio).
-export async function registerPayment(id, { amount, method = 'banco', items = null } = {}) {
+export async function registerPayment(id, { amount, method = 'banco', items = null, autoServe = true } = {}) {
   const ref = doc(db, 'orders', id)
   const nowIso = new Date().toISOString()
   const snap = await getDoc(ref)
@@ -1594,25 +1605,16 @@ export async function registerPayment(id, { amount, method = 'banco', items = nu
   ]
   const closed = paymentCloses(o, paid)
   let lowStock = []
-  let servedPatch = {}
-  if (closed) {
-    // Conto saldato ⇒ tutte le comande risultano SERVITE; quelle mai prese
-    // in carico vengono scaricate a magazzino adesso.
-    const comande = serveAllComande(normalizeOrderDoc(o).comande, nowIso)
-    lowStock = await depleteComandeInventory(unappliedEntries(id, comande))
-    servedPatch = { comande, comande_statuses: comandeStatuses(comande) }
+  const chiusura = closed ? chiusuraPagamento(o, nowIso, { autoServe }) : null
+  if (chiusura?.comande) {
+    // Conto saldato E servito ⇒ le comande mai prese in carico vengono
+    // scaricate a magazzino adesso.
+    lowStock = await depleteComandeInventory(unappliedEntries(id, chiusura.comande))
   }
   await updateDoc(ref, {
     payments,
     ...(closed
-      ? {
-          status: ORDER_STATUSES.PAGATO,
-          [`status_times.${ORDER_STATUSES.PAGATO}`]: nowIso,
-          payment_status: 'pagato',
-          payment_method: summaryMethod(payments),
-          paid_at: nowIso,
-          ...servedPatch,
-        }
+      ? { ...chiusura, payment_method: summaryMethod(payments) }
       : { payment_status: 'parziale' }),
   })
   notifyLowStock(lowStock)
@@ -1621,24 +1623,19 @@ export async function registerPayment(id, { amount, method = 'banco', items = nu
 
 // Chiude definitivamente l'ordine come pagato, registrando il metodo
 // d'incasso ('banco' per contanti/POS esterno, 'lettore', 'online').
-// Conto pagato ⇒ tutte le comande risultano SERVITE (e quelle mai prese
-// in carico vengono scaricate a magazzino).
-export async function markOrderPaid(id, method) {
+// Conto pagato. Con `autoServe` le comande risultano anche SERVITE (e
+// quelle mai prese in carico vengono scaricate a magazzino); seguendo la
+// preparazione invece il conto resta aperto finché non si consegna.
+export async function markOrderPaid(id, method, { autoServe = true } = {}) {
   const ref = doc(db, 'orders', id)
   const nowIso = new Date().toISOString()
   const snap = await getDoc(ref)
   if (!snap.exists()) throw new Error('Ordine non trovato')
-  const comande = serveAllComande(normalizeOrderDoc(snap.data()).comande, nowIso)
-  const lowStock = await depleteComandeInventory(unappliedEntries(id, comande))
-  await updateDoc(ref, {
-    status: ORDER_STATUSES.PAGATO,
-    [`status_times.${ORDER_STATUSES.PAGATO}`]: nowIso,
-    payment_method: method,
-    payment_status: 'pagato',
-    paid_at: nowIso,
-    comande,
-    comande_statuses: comandeStatuses(comande),
-  })
+  const chiusura = chiusuraPagamento(snap.data(), nowIso, { autoServe })
+  const lowStock = chiusura.comande
+    ? await depleteComandeInventory(unappliedEntries(id, chiusura.comande))
+    : []
+  await updateDoc(ref, { ...chiusura, payment_method: method })
   notifyLowStock(lowStock)
 }
 

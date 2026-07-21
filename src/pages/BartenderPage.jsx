@@ -26,6 +26,7 @@ import {
   placedByName,
 } from '../lib/orderStatus.js'
 import { bucketByStatus, ordersRecap } from '../lib/coda.js'
+import { allServed } from '../lib/comande.js'
 import { businessDayKey, businessDayLabel, businessDayShort } from '../lib/businessDay.js'
 import { isAwaitingPayment } from '../lib/payments.js'
 import { readerCheckout, readerTerminate } from '../lib/paymentsApi.js'
@@ -284,6 +285,7 @@ function OrderQueue() {
   const [statusTab, setStatusTab] = useState(ORDER_STATUSES.RICEVUTO)
   const [boardFilter, setBoardFilter] = useState('attivi') // 'attivi' | 'chiusi' | 'tutti'
   const [soloOggi, setSoloOggi] = useState(false) // nasconde i conti dei giorni scorsi
+  const [nascondiPagati, setNascondiPagati] = useState(false) // pagati non ancora serviti
 
   // Avanzamenti OTTIMISTICI dalla card: lo stato cambia al tap, il server
   // segue in background (in errore si torna allo stato reale).
@@ -501,8 +503,19 @@ function OrderQueue() {
   // loro tab dedicata, con la data ben visibile sulla card.
   const oggiKey = businessDayKey(new Date(), cutoffHour)
   const dayOf = (o) => o.order_date || businessDayKey(o.created_at, cutoffHour)
+  // Un conto è CHIUSO — e quindi esce dalla coda — solo quando non c'è più
+  // nulla da fare. Con la preparazione attiva servono DUE cose: pagato E
+  // servito. Un ordine pagato in anticipo ma non ancora consegnato è
+  // lavoro ancora da fare, e sparire sarebbe il modo migliore per
+  // dimenticarselo. Senza la preparazione, invece, il pagamento chiude.
+  const pagato = (o) =>
+    o.payment_status === 'pagato' || o.workflow_status === ORDER_STATUSES.PAGATO
+  const servito = (o) => allServed(o) || o.workflow_status === ORDER_STATUSES.RITIRATO
   const isChiuso = (o) =>
-    o.workflow_status === ORDER_STATUSES.PAGATO || o.workflow_status === ORDER_STATUSES.ANNULLATO
+    o.workflow_status === ORDER_STATUSES.ANNULLATO ||
+    (workflowOn ? pagato(o) && servito(o) : pagato(o))
+  // Pagati ma non ancora serviti: restano in coda, si possono nascondere.
+  const pagatiDaServire = effOrders.filter((o) => workflowOn && pagato(o) && !servito(o))
   const arretrati = effOrders
     .filter((o) => !isChiuso(o) && dayOf(o) && dayOf(o) !== oggiKey)
     .sort((a, b) => String(dayOf(a)).localeCompare(String(dayOf(b))))
@@ -559,7 +572,9 @@ function OrderQueue() {
   // Vista a griglia: di default gli ordini in corso; col filtro si vedono
   // anche i chiusi/pagati o TUTTI gli ordini in vista.
   const isClosed = isChiuso
+  const nascosti = new Set(nascondiPagati ? pagatiDaServire.map((o) => o.id) : [])
   const boardOrders = visibleOrders
+    .filter((o) => !nascosti.has(o.id))
     .filter((o) =>
       boardFilter === 'tutti' ? true : boardFilter === 'chiusi' ? isClosed(o) : !isClosed(o)
     )
@@ -650,7 +665,7 @@ function OrderQueue() {
             className="btn block"
             style={{ marginTop: 8 }}
             disabled={readerPending}
-            onClick={() => markOrderPaid(o.id, 'banco').catch((e) => setError(e.message))}
+            onClick={() => markOrderPaid(o.id, 'banco', { autoServe: !workflowOn }).catch((e) => setError(e.message))}
           >
             💶 Incassato (contanti)
           </button>
@@ -709,7 +724,9 @@ function OrderQueue() {
     const open = openCards.has(o.id)
     return (
       <div
-        className={`card order-card grid-card ${o.workflow_status}`}
+        className={`card order-card grid-card ${o.workflow_status}${
+          workflowOn && pagato(o) && !servito(o) ? ' pagato-da-servire' : ''
+        }`}
         key={o.id}
         style={awaiting ? { opacity: 0.55 } : undefined}
       >
@@ -815,7 +832,9 @@ function OrderQueue() {
         const awaiting = isAwaitingPayment(o) && o.workflow_status === ORDER_STATUSES.RICEVUTO
         return (
           <div
-            className={`card order-card ${o.workflow_status}`}
+            className={`card order-card ${o.workflow_status}${
+              workflowOn && pagato(o) && !servito(o) ? ' pagato-da-servire' : ''
+            }`}
             key={o.id}
             style={awaiting ? { opacity: 0.55 } : undefined}
           >
@@ -1009,6 +1028,15 @@ function OrderQueue() {
             ))}
             {/* Conti dei giorni scorsi: di default sono in coda, sotto la
                 loro data. Questo tasto li nasconde e lascia solo oggi. */}
+            {(pagatiDaServire.length > 0 || nascondiPagati) && (
+              <button
+                className={`chip ${nascondiPagati ? 'active' : ''}`}
+                onClick={() => setNascondiPagati((v) => !v)}
+                title="Nascondi i conti già pagati ma non ancora serviti"
+              >
+                💶 Nascondi pagati{pagatiDaServire.length ? ` (${pagatiDaServire.length})` : ''}
+              </button>
+            )}
             {(arretrati.length > 0 || soloOggi) && (
               <button
                 className={`chip ${soloOggi ? 'active' : ''}`}
