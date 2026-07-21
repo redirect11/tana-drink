@@ -813,6 +813,47 @@ export function subscribeActiveOrders(onChange, onError, { cutoffHour = DEFAULT_
   }
 }
 
+// Riporta a "ricevuto" le comande dei conti ancora APERTI: si usa quando
+// si spegne la gestione della preparazione, altrimenti resterebbero in
+// stati che non si possono più far avanzare.
+// Lo scarico di magazzino NON si tocca: `inventory_applied` resta com'è,
+// quindi le scorte già consumate restano consumate (il drink è stato
+// fatto davvero) e, se un domani si riaccende la gestione, l'avanzamento
+// non le scala una seconda volta.
+export async function resetOpenOrdersToReceived() {
+  const snap = await getDocs(
+    query(
+      ordersCol,
+      where('status', 'in', [
+        ORDER_OPEN,
+        ORDER_STATUSES.RICEVUTO,
+        ORDER_STATUSES.IN_PREPARAZIONE,
+        ORDER_STATUSES.PRONTO,
+        ORDER_STATUSES.RITIRATO,
+      ])
+    )
+  )
+  let toccati = 0
+  for (const d of snap.docs) {
+    const data = d.data() || {}
+    const comande = Array.isArray(data.comande) ? data.comande : []
+    // Le comande annullate restano annullate: non sono lavorazioni in corso.
+    const nuove = comande.map((c) =>
+      c.status === ORDER_STATUSES.ANNULLATO ? c : { ...c, status: ORDER_STATUSES.RICEVUTO }
+    )
+    const cambia =
+      comande.some((c, i) => c.status !== nuove[i].status) || data.status !== ORDER_OPEN
+    if (!cambia) continue
+    await updateDoc(d.ref, {
+      status: ORDER_OPEN,
+      comande: nuove,
+      comande_statuses: comandeStatuses(nuove),
+    })
+    toccati += 1
+  }
+  return toccati
+}
+
 // Ordini di una giornata commerciale (per statistiche e storico).
 export async function fetchOrdersForBusinessDay(dayKey, cutoffHour = DEFAULT_CUTOFF_HOUR) {
   // Prendo una finestra larga attorno al giorno e taglio con businessDayKey.
