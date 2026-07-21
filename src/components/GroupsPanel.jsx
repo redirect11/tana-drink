@@ -1,34 +1,30 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { auth } from '../lib/firebaseClient.js'
-import { subscribeSerataGroups, createManualGroup } from '../lib/api.js'
+import { subscribeOpenGroups, createManualGroup } from '../lib/api.js'
 import { buildGroupTree, groupTotal, groupSettlement } from '../lib/groups.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import GroupView from './GroupView.jsx'
 
-// Pannello a scomparsa nella coda: panoramica dei gruppi della serata con
+// Pannello a scomparsa nella coda: panoramica dei gruppi aperti con
 // totale e stato del conto, creazione rapida e avvio ordine per gruppo.
-export default function GroupsPanel({ serataId, orders, role }) {
+export default function GroupsPanel({ orders, role }) {
   const [open, setOpen] = useState(false)
   const [groups, setGroups] = useState([])
   const [newName, setNewName] = useState('')
   const [viewGroupId, setViewGroupId] = useState(null)
   const navigate = useNavigate()
 
-  useEffect(() => {
-    if (!serataId) return
-    return subscribeSerataGroups(serataId, setGroups, () => {})
-  }, [serataId])
+  useEffect(() => subscribeOpenGroups(setGroups, () => {}), [])
 
   const { roots } = useMemo(() => buildGroupTree(groups, orders), [groups, orders])
 
   async function crea() {
     const name = newName.trim()
-    if (!name || !serataId) return
+    if (!name) return
     const u = auth.currentUser
     const g = await createManualGroup({
       name,
-      serata_id: serataId,
       created_by: u ? { uid: u.uid, email: u.email, role } : null,
     }).catch(() => null)
     setNewName('')
@@ -46,7 +42,7 @@ export default function GroupsPanel({ serataId, orders, role }) {
         <div style={{ marginTop: 10 }}>
           {roots.length === 0 && (
             <div className="muted small" style={{ marginBottom: 8 }}>
-              Nessun gruppo in questa serata.
+              Nessun gruppo aperto.
             </div>
           )}
           {roots.map((node) => {
@@ -100,7 +96,7 @@ export default function GroupsPanel({ serataId, orders, role }) {
       )}
 
       {viewGroupId && (
-        <GroupView serataId={serataId} groupId={viewGroupId} onClose={() => setViewGroupId(null)} />
+        <GroupView groupId={viewGroupId} onClose={() => setViewGroupId(null)} />
       )}
     </div>
   )

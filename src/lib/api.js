@@ -36,6 +36,7 @@ import {
 } from './comande.js'
 import { discountAmount, orderDue, paymentCloses, summaryMethod } from './pagamento.js'
 import { hoursBetweenIso } from './ore.js'
+import { businessDayKey, coverageStart, DEFAULT_CUTOFF_HOUR } from './businessDay.js'
 import { notify } from './notify.js'
 
 const drinksCol = collection(db, 'drinks')
@@ -46,7 +47,6 @@ const inventoryCategoriesCol = collection(db, 'inventory_categories')
 const suppliersCol = collection(db, 'suppliers')
 const movementsCol = collection(db, 'stock_movements')
 const settingsDoc = doc(db, 'settings', 'bar')
-const serateCol = collection(db, 'serate')
 const groupsCol = collection(db, 'groups')
 const paymentsCol = collection(db, 'payments')
 const invoicesCol = collection(db, 'invoices')
@@ -172,7 +172,6 @@ function mapOrder(snap) {
     cancel_notify: o.cancel_notify ?? false,
     created_at: toIso(o.created_at),
     sumup_sale_id: o.sumup_sale_id ?? null,
-    serata_id: o.serata_id ?? null,
     inventory_applied: o.inventory_applied ?? false,
     payment_method: o.payment_method ?? null,
     payment_status: o.payment_status ?? 'non_richiesto',
@@ -206,17 +205,6 @@ function mapOrder(snap) {
       recipe_items: i.recipe_items ?? null,
     })),
   }
-}
-
-// Data "di Roma" in formato YYYY-MM-DD per la numerazione giornaliera.
-function romeDateKey() {
-  const fmt = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Europe/Rome',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  })
-  return fmt.format(new Date())
 }
 
 // --- DRINKS (menù / ricette) ---
@@ -743,101 +731,108 @@ export async function deleteSupplierInvoice(id) {
   await deleteDoc(doc(db, 'supplier_invoices', id))
 }
 
-// --- SERATE (sessioni / conto) ---
+// --- SERVIZIO (perpetuo) ---
+// Niente più "serate": il locale lavora in continuità. I conti restano
+// aperti finché non li si chiude a mano, anche a giorni di distanza. Le
+// giornate servono solo a RAGGRUPPARE a posteriori (giornata commerciale
+// con ora di taglio, vedi businessDay.js), non a delimitare il lavoro.
 
-function mapSerata(snap) {
-  const s = snap.data() || {}
-  return {
-    id: snap.id,
-    status: s.status ?? 'open',
-    opened_at: toIso(s.opened_at),
-    closed_at: toIso(s.closed_at),
-    orders_count: s.orders_count ?? null,
-    total: s.total ?? null,
-    // Statistiche tempi: prep_stats (attesa+preparazione, tutti gli ordini),
-    // eta_stats (ciclo completo, solo ordini serviti al tavolo).
-    prep_stats: s.prep_stats ?? null,
-    eta_stats: s.eta_stats ?? null,
-    report: s.report ?? null,
-  }
-}
+// Statistiche tempi del servizio (perpetue, non più per serata):
+// prep_stats (attesa+preparazione, tutti gli ordini) e eta_stats (ciclo
+// completo, solo ordini serviti al tavolo). Alimentano la stima ETA.
+const serviceStatsDoc = doc(db, 'service_stats', 'global')
 
-// La serata attualmente aperta (o null).
-export async function getOpenSerata() {
-  const snap = await getDocs(query(serateCol, where('status', '==', 'open'), fbLimit(1)))
-  return snap.empty ? null : mapSerata(snap.docs[0])
-}
-
-// Apre una nuova serata (errore se ce n'è già una aperta).
-export async function openSerata() {
-  const existing = await getOpenSerata()
-  if (existing) return existing
-  const ref = await addDoc(serateCol, { status: 'open', opened_at: serverTimestamp() })
-  return mapSerata(await getDoc(ref))
-}
-
-// SERATA SENZA PENSIERI: niente più apertura/chiusura manuale. Il POS
-// chiama questa al primo ordine: se la serata aperta è di un GIORNO
-// precedente (rimasta lì), viene chiusa da sola col suo resoconto e se
-// ne apre una nuova; altrimenti si riusa o si crea quella di oggi.
-export async function ensureTodaySerata() {
-  const existing = await getOpenSerata()
-  if (existing) {
-    const day = existing.opened_at
-      ? new Intl.DateTimeFormat('en-CA', {
-          timeZone: 'Europe/Rome',
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit',
-        }).format(new Date(existing.opened_at))
-      : null
-    if (!day || day === romeDateKey()) return existing
-    await closeSerata(existing.id).catch(() => {})
-  }
-  const ref = await addDoc(serateCol, { status: 'open', opened_at: serverTimestamp() })
-  return mapSerata(await getDoc(ref))
-}
-
-// Chiude la serata salvando il riepilogo (n. ordini e totale dei non annullati).
-export async function closeSerata(id, report = null) {
-  const snap = await getDocs(query(ordersCol, where('serata_id', '==', id)))
-  const orders = snap.docs.map(mapOrder).filter((o) => o.status !== ORDER_STATUSES.ANNULLATO)
-  const total = orders.reduce((s, o) => s + (Number(o.total) || 0), 0)
-  const ref = doc(db, 'serate', id)
-  await updateDoc(ref, {
-    status: 'closed',
-    closed_at: serverTimestamp(),
-    orders_count: orders.length,
-    total,
-    ...(report ? { report } : {}),
-  })
-  return mapSerata(await getDoc(ref))
-}
-
-// Realtime sulla serata aperta (per il menù cliente e l'header bartender).
-export function subscribeOpenSerata(onChange, onError) {
-  const q = query(serateCol, where('status', '==', 'open'), fbLimit(1))
+export function subscribeServiceStats(onChange, onError) {
   return onSnapshot(
-    q,
-    (snap) => onChange(snap.empty ? null : mapSerata(snap.docs[0])),
-    onError
+    serviceStatsDoc,
+    (snap) => onChange(snap.exists() ? snap.data() : {}),
+    onError ?? (() => {})
   )
 }
 
-// Realtime su tutti gli ordini di una serata (tutti gli stati).
-export function subscribeSerataOrders(serataId, onChange, onError) {
-  const q = query(ordersCol, where('serata_id', '==', serataId))
-  return onSnapshot(
-    q,
+// Ordini della CODA: i conti aperti (sempre, per sempre) più quelli già
+// chiusi nella giornata commerciale corrente (per ristampe e verifiche).
+// Due sottoscrizioni unite: Firestore non fa OR fra campi diversi.
+export function subscribeActiveOrders(onChange, onError, { cutoffHour = DEFAULT_CUTOFF_HOUR } = {}) {
+  let aperti = []
+  let recenti = []
+  const emit = () => {
+    const byId = new Map()
+    for (const o of aperti) byId.set(o.id, o)
+    for (const o of recenti) byId.set(o.id, o)
+    const list = [...byId.values()]
+    list.sort((a, b) => String(a.created_at || '').localeCompare(String(b.created_at || '')))
+    onChange(list)
+  }
+  const fail = onError ?? (() => {})
+
+  // Conti aperti: nessun limite di data, si chiudono solo a mano.
+  const unsubAperti = onSnapshot(
+    query(ordersCol, where('status', '==', ORDER_OPEN)),
     (snap) => {
-      const orders = snap.docs.map(mapOrder)
-      orders.sort((a, b) =>
-        String(a.created_at || '').localeCompare(String(b.created_at || ''))
-      )
-      onChange(orders)
+      aperti = snap.docs.map(mapOrder)
+      emit()
     },
-    onError
+    fail
   )
+
+  // Chiusi/annullati della giornata commerciale in corso. La finestra della
+  // query è volutamente abbondante; il taglio esatto lo fa businessDayKey.
+  const from = Timestamp.fromDate(coverageStart(new Date()))
+  const unsubRecenti = onSnapshot(
+    query(ordersCol, where('created_at', '>=', from)),
+    (snap) => {
+      const oggi = businessDayKey(new Date(), cutoffHour)
+      recenti = snap.docs
+        .map(mapOrder)
+        .filter((o) => businessDayKey(o.created_at, cutoffHour) === oggi)
+      emit()
+    },
+    fail
+  )
+
+  return () => {
+    unsubAperti()
+    unsubRecenti()
+  }
+}
+
+// Ordini di una giornata commerciale (per statistiche e storico).
+export async function fetchOrdersForBusinessDay(dayKey, cutoffHour = DEFAULT_CUTOFF_HOUR) {
+  // Prendo una finestra larga attorno al giorno e taglio con businessDayKey.
+  const from = new Date(`${dayKey}T00:00:00Z`)
+  from.setUTCDate(from.getUTCDate() - 1)
+  const to = new Date(`${dayKey}T00:00:00Z`)
+  to.setUTCDate(to.getUTCDate() + 2)
+  const snap = await getDocs(
+    query(
+      ordersCol,
+      where('created_at', '>=', Timestamp.fromDate(from)),
+      where('created_at', '<', Timestamp.fromDate(to))
+    )
+  )
+  return snap.docs
+    .map(mapOrder)
+    .filter((o) => businessDayKey(o.created_at, cutoffHour) === dayKey)
+}
+
+// Ordini in un intervallo di giornate commerciali (estremi inclusi).
+export async function fetchOrdersBetween(fromDayKey, toDayKey, cutoffHour = DEFAULT_CUTOFF_HOUR) {
+  const from = new Date(`${fromDayKey}T00:00:00Z`)
+  from.setUTCDate(from.getUTCDate() - 1)
+  const to = new Date(`${toDayKey}T00:00:00Z`)
+  to.setUTCDate(to.getUTCDate() + 2)
+  const snap = await getDocs(
+    query(
+      ordersCol,
+      where('created_at', '>=', Timestamp.fromDate(from)),
+      where('created_at', '<', Timestamp.fromDate(to))
+    )
+  )
+  return snap.docs.map(mapOrder).filter((o) => {
+    const k = businessDayKey(o.created_at, cutoffHour)
+    return k && k >= fromDayKey && k <= toDayKey
+  })
 }
 
 // --- GROUPS (contenitori di ordini) ---
@@ -851,7 +846,6 @@ function mapGroup(snap) {
     customer_uid: g.customer_uid ?? null,
     parent_group_id: g.parent_group_id ?? null,
     has_child_groups: g.has_child_groups ?? false,
-    serata_id: g.serata_id ?? null,
     status: g.status ?? 'aperto',
     split_count: g.split_count ?? null,
     pinned: g.pinned ?? false,
@@ -863,7 +857,7 @@ function mapGroup(snap) {
 }
 
 // Gruppo-cliente: id == uid, idempotente. Aggiorna nome e ultimo ordine.
-export async function ensureCustomerGroup(uid, name, serata_id = null) {
+export async function ensureCustomerGroup(uid, name) {
   await setDoc(
     doc(groupsCol, uid),
     {
@@ -872,7 +866,6 @@ export async function ensureCustomerGroup(uid, name, serata_id = null) {
       name: name || 'Cliente',
       parent_group_id: null,
       has_child_groups: false,
-      serata_id: serata_id ?? null,
       status: 'aperto',
       last_order_at: serverTimestamp(),
     },
@@ -881,14 +874,13 @@ export async function ensureCustomerGroup(uid, name, serata_id = null) {
 }
 
 // Gruppo manuale creato dallo staff (eventualmente annidato in un padre).
-export async function createManualGroup({ name, serata_id, parent_group_id = null, created_by = null }) {
+export async function createManualGroup({ name, parent_group_id = null, created_by = null }) {
   const ref = await addDoc(groupsCol, {
     kind: 'manual',
     name: name?.trim() || 'Gruppo',
     customer_uid: null,
     parent_group_id: parent_group_id || null,
     has_child_groups: false,
-    serata_id: serata_id ?? null,
     status: 'aperto',
     split_count: null,
     pinned: true,
@@ -935,9 +927,9 @@ export async function fetchGroup(id) {
   return snap.exists() ? mapGroup(snap) : null
 }
 
-// Gruppi della serata (manuali) — per drawer e coda.
-export function subscribeSerataGroups(serataId, onChange, onError) {
-  const q = query(groupsCol, where('serata_id', '==', serataId))
+// Gruppi APERTI (perpetui) — per drawer e coda. Si chiudono a mano.
+export function subscribeOpenGroups(onChange, onError) {
+  const q = query(groupsCol, where('status', '==', 'aperto'))
   return onSnapshot(
     q,
     (snap) => onChange(snap.docs.map(mapGroup)),
@@ -967,7 +959,6 @@ export function subscribeRecentGroups(onChange, onError, limitN = 20) {
 // saldati e scrive nel ledger `payments` (1 documento, o N se diviso per
 // N). `split` = { count } per il conto diviso. Restituisce settlement_id.
 export async function payGroupCash({
-  serataId,
   orderIds,
   by = null,
   group_id = null,
@@ -1019,7 +1010,6 @@ export async function payGroupCash({
 
   const orderIdsCovered = covered.map((c) => c.ref.id)
   const baseDoc = {
-    serata_id: serataId,
     created_at: serverTimestamp(),
     by,
     direction: 'incasso',
@@ -1053,7 +1043,6 @@ export async function payGroupCash({
 // il documento porta importo e order_ids; il checkout SumUp lo salda via
 // Cloud Function/webhook). Restituisce il paymentId.
 export async function createPendingGroupPayment({
-  serataId,
   orderIds,
   amount,
   method, // 'online' | 'lettore'
@@ -1063,7 +1052,6 @@ export async function createPendingGroupPayment({
   by = null,
 }) {
   const ref = await addDoc(paymentsCol, {
-    serata_id: serataId,
     created_at: serverTimestamp(),
     by,
     direction: 'incasso',
@@ -1089,7 +1077,6 @@ function mapPayment(snap) {
   const p = snap.data() || {}
   return {
     id: snap.id,
-    serata_id: p.serata_id ?? null,
     created_at: toIso(p.created_at),
     by: p.by ?? null,
     method: p.method ?? 'banco',
@@ -1106,13 +1093,17 @@ function mapPayment(snap) {
   }
 }
 
-// Storico pagamenti della serata (realtime, più recenti prima).
-export function subscribePayments(serataId, onChange, onError) {
-  const q = query(paymentsCol, where('serata_id', '==', serataId))
+// Pagamenti della giornata commerciale corrente (realtime, più recenti prima).
+export function subscribePayments(onChange, onError, { cutoffHour = DEFAULT_CUTOFF_HOUR } = {}) {
+  const from = Timestamp.fromDate(coverageStart(new Date()))
+  const q = query(paymentsCol, where('created_at', '>=', from))
   return onSnapshot(
     q,
     (snap) => {
-      const list = snap.docs.map(mapPayment)
+      const oggi = businessDayKey(new Date(), cutoffHour)
+      const list = snap.docs
+        .map(mapPayment)
+        .filter((x) => businessDayKey(x.created_at, cutoffHour) === oggi)
       list.sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')))
       onChange(list)
     },
@@ -1123,13 +1114,12 @@ export function subscribePayments(serataId, onChange, onError) {
 // --- ORDERS ---
 
 // Crea un ordine con i relativi item. Il numero progressivo riparte ad ogni
-// serata: è assegnato in modo atomico da un contatore per serata
-// (counters/{serataId}). Richiede una serata aperta.
+// giornata commerciale: è assegnato da un contatore per giornata
+// (counters/{YYYY-MM-DD}), che riparte a ogni nuova giornata.
 export async function createOrder({
   table_label,
   note,
   items,
-  serata_id,
   coperto_persons = 0,
   coperto_amount = 0,
   service_charge_amount = 0,
@@ -1146,14 +1136,14 @@ export async function createOrder({
   group_name_snapshot = null, // nome gruppo al momento dell'ordine (storico)
   status = ORDER_STATUSES.RICEVUTO, // stato iniziale (il POS lo crea già in preparazione)
   client_temp_id = null, // id del placeholder POS: la griglia scambia SENZA doppioni
+  cutoff_hour = DEFAULT_CUTOFF_HOUR, // ora di taglio della giornata commerciale
 }) {
-  if (!serata_id) throw new Error('Nessuna serata aperta: ordini non disponibili.')
   // Cliente registrato senza gruppo esplicito → gruppo-cliente automatico
   // (id == uid). Il documento è idempotente (merge).
   if (!group_id && customer_uid) {
     group_id = customer_uid
     if (!group_name_snapshot) group_name_snapshot = customer_name || null
-    await ensureCustomerGroup(customer_uid, customer_name || 'Cliente', serata_id).catch(
+    await ensureCustomerGroup(customer_uid, customer_name || 'Cliente').catch(
       (e) => console.error('[groups] ensureCustomerGroup:', e?.message || e)
     )
   }
@@ -1166,8 +1156,10 @@ export async function createOrder({
   }
   const itemsTotal = items.reduce((s, i) => s + i.qty * Number(i.price || 0), 0)
   const total = itemsTotal + coperto_amount + service_charge_amount + tip_amount
-  const orderDate = romeDateKey()
-  const counterRef = doc(db, 'counters', serata_id)
+  // Giornata commerciale: raggruppa e fa ripartire il progressivo #N. La
+  // nottata oltre la mezzanotte resta nella giornata in cui è cominciata.
+  const orderDate = businessDayKey(new Date(), cutoff_hour)
+  const counterRef = doc(db, 'counters', orderDate)
   const newOrderRef = doc(ordersCol)
 
   // Numero giornaliero: letto dalla cache (offline compreso) e incrementato.
@@ -1202,8 +1194,7 @@ export async function createOrder({
   }
   await setDoc(newOrderRef, {
     daily_number: dailyNumber,
-    order_date: orderDate,
-    serata_id,
+    order_date: orderDate, // giornata commerciale (YYYY-MM-DD)
     table_label: table_label || null,
     note: note || null,
     status: ORDER_OPEN,
@@ -1330,7 +1321,6 @@ export async function createInvoice({ order, customer, ivaRate = 10 }) {
     year,
     order_id: order.id,
     order_daily_number: order.daily_number ?? null,
-    serata_id: order.serata_id ?? null,
     customer: {
       denominazione: customer.denominazione || '',
       piva: customer.piva || null,
@@ -1709,9 +1699,9 @@ export async function advanceComanda(orderId, comandaId, newStatus) {
 
   notifyLowStock(lowStock)
 
-  // Statistiche tempi della serata (per ETA cliente e resoconto), per comanda.
+  // Statistiche tempi del servizio (per ETA cliente), per comanda.
   if (statComanda) {
-    updateSerataTimeStats(statComanda.order, statComanda, newStatus).catch((e) =>
+    updateServiceTimeStats(statComanda.order, statComanda, newStatus).catch((e) =>
       console.error('[eta] aggiornamento statistiche fallito:', e)
     )
   }
@@ -1732,10 +1722,9 @@ export async function updateOrderStatus(id, status) {
   return advanceComanda(id, null, status)
 }
 
-// Incrementa le statistiche tempi della serata quando una COMANDA raggiunge
+// Incrementa le statistiche tempi del SERVIZIO (perpetue) quando una COMANDA raggiunge
 // "pronto" (attesa+preparazione) o "ritirato" (ciclo completo, solo tavolo).
-async function updateSerataTimeStats(orderRaw, comanda, status) {
-  if (!orderRaw?.serata_id) return
+async function updateServiceTimeStats(orderRaw, comanda, status) {
   const ms = (v) => {
     if (!v) return null
     if (typeof v?.toMillis === 'function') return v.toMillis()
@@ -1746,15 +1735,21 @@ async function updateSerataTimeStats(orderRaw, comanda, status) {
   const t1 = ms(comanda.status_times?.[ORDER_STATUSES.IN_PREPARAZIONE])
   const t2 = ms(comanda.status_times?.[ORDER_STATUSES.PRONTO])
   const t3 = ms(comanda.status_times?.[ORDER_STATUSES.RITIRATO])
-  const serataRef = doc(db, 'serate', orderRaw.serata_id)
 
+  // setDoc+merge: il documento perpetuo può non esistere ancora.
   if (status === ORDER_STATUSES.PRONTO && t0 && t1 && t2 && t2 >= t1 && t1 >= t0) {
-    await updateDoc(serataRef, {
-      'prep_stats.count': increment(1),
-      'prep_stats.attesa_ms': increment(t1 - t0),
-      'prep_stats.prep_ms': increment(t2 - t1),
-      'prep_stats.total_ms': increment(t2 - t0),
-    })
+    await setDoc(
+      serviceStatsDoc,
+      {
+        prep_stats: {
+          count: increment(1),
+          attesa_ms: increment(t1 - t0),
+          prep_ms: increment(t2 - t1),
+          total_ms: increment(t2 - t0),
+        },
+      },
+      { merge: true }
+    )
   }
 
   if (
@@ -1762,13 +1757,19 @@ async function updateSerataTimeStats(orderRaw, comanda, status) {
     orderRaw.service_mode === 'tavolo' &&
     t0 && t1 && t2 && t3 && t3 >= t2 && t2 >= t1 && t1 >= t0
   ) {
-    await updateDoc(serataRef, {
-      'eta_stats.count': increment(1),
-      'eta_stats.attesa_ms': increment(t1 - t0),
-      'eta_stats.prep_ms': increment(t2 - t1),
-      'eta_stats.ritiro_ms': increment(t3 - t2),
-      'eta_stats.total_ms': increment(t3 - t0),
-    })
+    await setDoc(
+      serviceStatsDoc,
+      {
+        eta_stats: {
+          count: increment(1),
+          attesa_ms: increment(t1 - t0),
+          prep_ms: increment(t2 - t1),
+          ritiro_ms: increment(t3 - t2),
+          total_ms: increment(t3 - t0),
+        },
+      },
+      { merge: true }
+    )
   }
 }
 
@@ -2055,52 +2056,13 @@ export function subscribeOrder(id, onChange, onError) {
   )
 }
 
-// Ascolta in tempo reale gli ordini attivi (coda bartender). Restituisce una
-// funzione di disiscrizione. `onChange` riceve la lista ordinata di ordini.
-export function subscribeActiveOrders(onChange, onError) {
-  const q = query(ordersCol, where('status', '==', ORDER_OPEN))
-  return onSnapshot(
-    q,
-    (snap) => {
-      const orders = snap.docs.map(mapOrder)
-      orders.sort((a, b) =>
-        String(a.created_at || '').localeCompare(String(b.created_at || ''))
-      )
-      onChange(orders)
-    },
-    onError
-  )
-}
 
-// Serate chiuse più recenti (per le statistiche).
-export async function fetchClosedSerate(limitN = 30) {
-  const snap = await getDocs(
-    query(serateCol, where('status', '==', 'closed'), orderBy('closed_at', 'desc'), fbLimit(limitN))
-  )
-  return snap.docs.map(mapSerata)
-}
-
-// Tutti gli ordini di un insieme di serate (per le statistiche).
-// Firestore: massimo 30 valori per clausola "in" → suddivisione in blocchi.
-export async function fetchOrdersForSerate(serataIds) {
-  if (!serataIds || serataIds.length === 0) return []
-  const chunks = []
-  for (let i = 0; i < serataIds.length; i += 30) chunks.push(serataIds.slice(i, i + 30))
-  const results = []
-  for (const chunk of chunks) {
-    const snap = await getDocs(query(ordersCol, where('serata_id', 'in', chunk)))
-    results.push(...snap.docs.map(mapOrder))
-  }
-  return results
-}
-
-// Coda attiva di una serata (solo ricevuto/in_preparazione): usata per la
+// Coda attiva (solo ricevuto/in_preparazione): usata per la
 // stima personalizzata dei tempi. `onChange` riceve [{daily_number, status}]
 // — dati minimi, gli altri ordini non vengono mostrati al cliente.
-export function subscribeQueue(serataId, onChange, onError) {
+export function subscribeQueue(onChange, onError) {
   const q = query(
     ordersCol,
-    where('serata_id', '==', serataId),
     where('comande_statuses', 'array-contains-any', [
       ORDER_STATUSES.RICEVUTO,
       ORDER_STATUSES.IN_PREPARAZIONE,
@@ -2128,13 +2090,12 @@ export function subscribeQueue(serataId, onChange, onError) {
   )
 }
 
-// Ordini "pronti" della serata, in tempo reale: alimenta il tabellone
+// Ordini "pronti", in tempo reale: alimenta il tabellone
 // "stiamo servendo / pronti al ritiro" nel menù cliente. Espone solo
 // numero e modalità di consegna.
-export function subscribeReadyOrders(serataId, onChange, onError) {
+export function subscribeReadyOrders(onChange, onError) {
   const q = query(
     ordersCol,
-    where('serata_id', '==', serataId),
     where('comande_statuses', 'array-contains', ORDER_STATUSES.PRONTO)
   )
   return onSnapshot(
@@ -2422,6 +2383,11 @@ export async function ackStaffCall(id) {
 
 export const DEFAULT_SETTINGS = {
   menu_only: false,
+  // GIORNATA COMMERCIALE: ora a cui "gira" la giornata. Il locale lavora
+  // oltre la mezzanotte, quindi la nottata resta contata nella giornata in
+  // cui è cominciata. Raggruppa statistiche e fa ripartire il progressivo
+  // #N. Non chiude nulla: i conti restano aperti finché non li si chiude.
+  business_day_cutoff_hour: DEFAULT_CUTOFF_HOUR,
   coperto_enabled: false,
   coperto_amount: 2,
   service_charge_enabled: false,
@@ -2433,7 +2399,7 @@ export const DEFAULT_SETTINGS = {
   // costo di servizio.
   service_mode: 'tavolo',
   // Tempo stimato di servizio mostrato ai clienti: parte dal tempo base e si
-  // raffina con i tempi reali della serata.
+  // raffina con i tempi reali del servizio.
   eta_enabled: false,
   eta_base_minutes: 10,
   // Frase di default mostrata al cliente quando il bartender annulla un

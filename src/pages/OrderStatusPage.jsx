@@ -4,7 +4,7 @@ import {
   fetchOrder,
   subscribeOrder,
   subscribeSettings,
-  subscribeOpenSerata,
+  subscribeServiceStats,
   subscribeQueue,
   updateOrderItems,
   updateOrderPushToken,
@@ -47,7 +47,7 @@ export default function OrderStatusPage() {
   const [saving, setSaving] = useState(false)
   const [confirmCancel, setConfirmCancel] = useState(false)
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
-  const [serata, setSerata] = useState(null)
+  const [serviceStats, setServiceStats] = useState({})
   const [queue, setQueue] = useState([])
   const prevStatus = useRef(null)
   // Chi sta guardando la pagina è staff? Il QR per agganciare l'ordine
@@ -170,18 +170,17 @@ export default function OrderStatusPage() {
       .catch(() => {})
   }, [showQr, qr])
 
-  // Impostazioni + serata aperta (per il tempo stimato personalizzato).
+  // Impostazioni + statistiche servizio (per il tempo stimato personalizzato).
   useEffect(() => subscribeSettings((s) => setSettings(s)), [])
-  useEffect(() => subscribeOpenSerata((s) => setSerata(s), () => setSerata(null)), [])
+  useEffect(() => subscribeServiceStats(setServiceStats, () => setServiceStats({})), [])
 
-  // Coda attiva della serata dell'ordine: serve per la posizione in coda.
-  const orderSerataId = order?.serata_id
+  // Coda attiva: serve per la posizione in coda.
   const orderActive =
     order && (order.workflow_status === ORDER_STATUSES.RICEVUTO || order.workflow_status === ORDER_STATUSES.IN_PREPARAZIONE)
   useEffect(() => {
-    if (!settings.eta_enabled || !orderSerataId || !orderActive) return
-    return subscribeQueue(orderSerataId, setQueue)
-  }, [settings.eta_enabled, orderSerataId, orderActive])
+    if (!settings.eta_enabled || !orderActive) return
+    return subscribeQueue(setQueue)
+  }, [settings.eta_enabled, orderActive])
 
   async function enableNotifications() {
     const ok = await ensureNotificationPermission()
@@ -270,7 +269,7 @@ export default function OrderStatusPage() {
 
   // Tempo stimato personalizzato: tiene conto degli ordini attivi davanti a
   // questo (la coda non viene mostrata, conta solo la posizione).
-  const showEta = settings.eta_enabled && orderActive && serata?.id === order.serata_id
+  const showEta = settings.eta_enabled && orderActive
   const queueAhead = queue.filter(
     (q) => (q.daily_number || 0) < (order.daily_number || 0)
   ).length
@@ -278,8 +277,8 @@ export default function OrderStatusPage() {
     ? queueEtaMinutes({
         status: order.workflow_status,
         position: queueAhead,
-        prepStats: serata?.prep_stats,
-        etaStats: serata?.eta_stats,
+        prepStats: serviceStats?.prep_stats,
+        etaStats: serviceStats?.eta_stats,
         baseMinutes: settings.eta_base_minutes,
         mode: order.service_mode === 'tavolo' ? 'tavolo' : 'banco',
       })

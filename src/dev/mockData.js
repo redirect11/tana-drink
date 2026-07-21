@@ -3,7 +3,7 @@
 //  scripts/mock-history.js (Node, Admin SDK) e dal pannello sviluppatore.
 //  Genera oggetti puri: created_at è un Date, i timestamp di stato ISO.
 // =====================================================================
-import { serataFinance, aggregateProducts, longestPrep, phaseAverages } from '../lib/eta.js'
+import { ordersFinance } from '../lib/eta.js'
 
 const rand = (min, max) => min + Math.random() * (max - min)
 const randInt = (min, max) => Math.floor(rand(min, max + 1))
@@ -19,10 +19,10 @@ const STATUSES = [
   'annullato',
 ]
 
-// Genera ordini mock per una serata. `drinks` = [{id, name, price}],
+// Genera ordini mock per una giornata. `drinks` = [{id, name, price}],
 // `startNumber` = ultimo numero progressivo già usato.
 // Restituisce { orders, prepStats, etaStats, lastNumber }.
-export function generateMockOrders(drinks, serataId, startNumber = 0) {
+export function generateMockOrders(drinks, startNumber = 0) {
   const prepStats = { count: 0, attesa_ms: 0, prep_ms: 0, total_ms: 0 }
   const etaStats = { count: 0, attesa_ms: 0, prep_ms: 0, ritiro_ms: 0, total_ms: 0 }
   const orders = []
@@ -93,7 +93,6 @@ export function generateMockOrders(drinks, serataId, startNumber = 0) {
     orders.push({
       daily_number: dailyNumber,
       order_date: createdAt.toISOString().slice(0, 10),
-      serata_id: serataId,
       table_label: atTable ? String(randInt(1, 12)) : null,
       note: null,
       status,
@@ -114,13 +113,13 @@ export function generateMockOrders(drinks, serataId, startNumber = 0) {
   return { orders, prepStats, etaStats, lastNumber: dailyNumber }
 }
 
-// ── Storico serate passate (per le statistiche) ───────────────────────
-// Genera `nights` serate chiuse nelle ultime ~3 settimane, con volumi
+// ── Storico giornate passate (per le statistiche) ─────────────────────
+// Genera `nights` giornate passate nelle ultime ~3 settimane, con volumi
 // realistici (weekend più piena), orari con picco 22–24, popolarità dei
 // drink stabile (pochi best-seller) e tempi coerenti con l'affollamento.
 
 // Mappa ordini (oggetti puri) → ordini "mappati" come mapOrder, per
-// riusare serataFinance/aggregateProducts nel report di chiusura.
+// riusare ordersFinance/aggregateProducts nel riepilogo.
 function asMapped(o) {
   return {
     ...o,
@@ -147,7 +146,7 @@ export function generateMockHistory(drinks, { nights = 12 } = {}) {
   let cursor = Date.now() - day // ieri, andando indietro
 
   for (let n = 0; n < nights; n++) {
-    cursor -= randInt(1, 2) * day // salta 1-2 giorni tra una serata e l'altra
+    cursor -= randInt(1, 2) * day // salta 1-2 giorni tra una giornata e l'altra
     const date = new Date(cursor)
     const weekday = date.getDay() // 0 dom … 6 sab
     const isWeekend = weekday === 5 || weekday === 6
@@ -155,7 +154,6 @@ export function generateMockHistory(drinks, { nights = 12 } = {}) {
 
     const opened = new Date(date)
     opened.setHours(19, randInt(0, 30), 0, 0)
-    const serataId = `mock-${opened.toISOString().slice(0, 10)}`
 
     const prepStats = { count: 0, attesa_ms: 0, prep_ms: 0, total_ms: 0 }
     const etaStats = { count: 0, attesa_ms: 0, prep_ms: 0, ritiro_ms: 0, total_ms: 0 }
@@ -207,7 +205,6 @@ export function generateMockHistory(drinks, { nights = 12 } = {}) {
       const base = {
         daily_number: i + 1,
         order_date: createdAt.toISOString().slice(0, 10),
-        serata_id: serataId,
         table_label: atTable ? String(randInt(1, 12)) : null,
         note: null,
         total,
@@ -272,31 +269,14 @@ export function generateMockHistory(drinks, { nights = 12 } = {}) {
     }
 
     // Chiusura: 30-60 min dopo l'ultimo ordine.
-    const lastT = Math.max(...orders.map((o) => o.created_at.getTime()))
-    const closedAt = new Date(lastT + rand(30, 60) * MIN)
-
     const mapped = orders.map(asMapped)
-    const finance = serataFinance(mapped)
-    const report = {
-      finance,
-      products: aggregateProducts(mapped),
-      longest_prep: longestPrep(mapped),
-      phase_averages: phaseAverages(prepStats, etaStats),
-      drinks_sold: aggregateProducts(mapped).reduce((s, p) => s + p.qty, 0),
-    }
+    const finance = ordersFinance(mapped)
 
     out.push({
-      serata: {
-        id: serataId,
-        status: 'closed',
-        opened_at: opened.toISOString(),
-        closed_at: closedAt.toISOString(),
-        orders_count: finance.ordini,
-        total: finance.incasso,
-        prep_stats: prepStats,
-        eta_stats: etaStats,
-        report,
-      },
+      day: opened.toISOString().slice(0, 10),
+      incasso: finance.incasso,
+      prepStats,
+      etaStats,
       orders,
       lastNumber: orders.length,
     })

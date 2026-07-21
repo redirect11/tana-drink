@@ -4,7 +4,7 @@
 // (e l'eventuale stampa comanda) non è completata. Poi il placeholder viene
 // rimosso e compare l'ordine reale (colorato) dalla sottoscrizione Firestore.
 
-import { createOrder, ensureTodaySerata } from './api.js'
+import { createOrder } from './api.js'
 import { printComanda } from './printer.js'
 import { ORDER_STATUSES } from './orderStatus.js'
 import { rememberOrderId } from './cart.js'
@@ -44,12 +44,11 @@ const addBanner = (msg) => {
 
 // Invia un ordine dal POS in background. Ritorna subito: il chiamante può
 // navigare alla griglia mentre la creazione/stampa procede.
-export function submitPosOrder({ serata_id, table_label, note, items, placed_by, customer_name = null, printNow = false }) {
+export function submitPosOrder({ table_label, note, items, placed_by, customer_name = null, printNow = false }) {
   const tempId = `tmp${++seq}`
   const order = {
     id: tempId,
     daily_number: null,
-    serata_id,
     table_label: table_label || null,
     note: note || null,
     status: 'aperto',
@@ -72,11 +71,7 @@ export function submitPosOrder({ serata_id, table_label, note, items, placed_by,
   ;(async () => {
     let created
     try {
-      // Anche la serata si risolve QUI in background: il chiamante non
-      // deve aspettare nessuna rete prima di tornare alla griglia.
-      const sid = serata_id ?? (await ensureTodaySerata()).id
       created = await createOrder({
-        serata_id: sid,
         table_label,
         note,
         items,

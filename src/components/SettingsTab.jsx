@@ -179,10 +179,30 @@ export default function SettingsTab() {
       </div>
 
       <div className="card settings-section">
+        <h3>Giornata di lavoro</h3>
+        <p className="muted small" style={{ margin: '0 0 8px' }}>
+          I conti restano aperti finché non li chiudi tu: nessuna “serata” da
+          aprire o chiudere. L’ora qui sotto dice solo quando far girare la
+          giornata per le statistiche e per il numero progressivo degli
+          ordini, così una nottata oltre la mezzanotte resta tutta insieme.
+        </p>
+        <div className="toggle-row">
+          <span>La giornata gira alle (ora)</span>
+          <AmountInput
+            value={settings.business_day_cutoff_hour}
+            min={0}
+            max={23}
+            step={1}
+            onCommit={(v) => save({ business_day_cutoff_hour: v })}
+          />
+        </div>
+      </div>
+
+      <div className="card settings-section">
         <h3>Tempi di servizio</h3>
         <ToggleRow
           label="Mostra tempo stimato ai clienti"
-          desc="Parte dal tempo base e si raffina con i tempi reali della serata. Per il ritiro al banco conta solo attesa + preparazione."
+          desc="Parte dal tempo base e si raffina con i tempi reali del servizio. Per il ritiro al banco conta solo attesa + preparazione."
           checked={settings.eta_enabled}
           onChange={(v) => save({ eta_enabled: v })}
         />

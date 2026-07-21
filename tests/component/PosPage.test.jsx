@@ -2,7 +2,7 @@
 'use strict'
 
 // Test di COMPONENTE della cassa (PosPage): layout identico al dettaglio
-// ordine, conferma con modale nome, pagamento diretto e serata auto-aperta.
+// ordine, conferma con modale nome e pagamento diretto.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
@@ -10,10 +10,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import '@testing-library/jest-dom/vitest'
 
-let mockSerata = { id: 'serata1', status: 'open' }
 vi.mock('../../src/lib/api.js', () => ({
-  // La serata non si apre più a mano: il POS chiama ensureTodaySerata.
-  ensureTodaySerata: vi.fn(() => Promise.resolve(mockSerata ?? { id: 'nuova-serata' })),
   createOrder: vi.fn(() =>
     Promise.resolve({
       id: 'ord-nuovo',
@@ -99,7 +96,6 @@ function mount() {
 
 beforeEach(() => {
   vi.clearAllMocks()
-  mockSerata = { id: 'serata1', status: 'open' }
 })
 
 describe('cassa: layout identico al dettaglio ordine', () => {
@@ -138,7 +134,6 @@ describe('conferma con modale nome', () => {
     await user.click(screen.getByRole('button', { name: /^Salva$/ }))
     expect(submitPosOrder).toHaveBeenCalledTimes(1)
     const arg = submitPosOrder.mock.calls[0][0]
-    expect(arg.serata_id).toBeNull() // la serata si risolve in background nello store
     expect(arg.customer_name).toBe('iole')
     expect(arg.printNow).toBe(false)
     expect(arg.items).toEqual([expect.objectContaining({ drink_id: 'mojito', qty: 1 })])
@@ -181,14 +176,13 @@ describe('pagamento diretto dal POS', () => {
     expect(screen.getByRole('button', { name: /Riscuotere/ })).toBeInTheDocument()
   })
 
-  it('la creazione in background usa la serata di oggi e lo stato in preparazione', async () => {
+  it('la creazione in background parte con lo stato in preparazione', async () => {
     const user = userEvent.setup()
     mount()
     await user.click(screen.getByText('Mojito'))
     await user.click(screen.getByRole('button', { name: /💳 Pagamento/ }))
     await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1))
     expect(createOrder.mock.calls[0][0]).toMatchObject({
-      serata_id: 'serata1',
       status: 'in_preparazione',
     })
   })

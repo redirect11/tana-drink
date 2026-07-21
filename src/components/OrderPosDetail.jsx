@@ -7,7 +7,6 @@ import {
   updateOrderInfo,
   cancelOrder,
   createOrder,
-  ensureTodaySerata,
   subscribeOrder,
   subscribeSettings,
   DEFAULT_SETTINGS,
@@ -105,7 +104,7 @@ export default function OrderPosDetail({ order = null }) {
   }, [isNew])
 
   // PAGAMENTO DIRETTO (creazione): la schermata si apre subito su un ordine
-  // locale; serata e creazione girano in background (resolveOrderId).
+  // locale; la creazione gira in background (resolveOrderId).
   const [payOrder, setPayOrder] = useState(null)
   const payIdRef = useRef(null)
   const payOrderId = payOrder?.id
@@ -449,7 +448,6 @@ export default function OrderPosDetail({ order = null }) {
   const submitNew = (name) => {
     setAskName(false)
     submitPosOrder({
-      serata_id: null,
       table_label: info.table_label || null,
       note: info.note || null,
       customer_name: (name || '').trim() || null,
@@ -490,9 +488,7 @@ export default function OrderPosDetail({ order = null }) {
       order_items: mapped,
     })
     payIdRef.current = (async () => {
-      const s = await ensureTodaySerata()
       const created = await createOrder({
-        serata_id: s.id,
         table_label: info.table_label || null,
         note: info.note || null,
         customer_name: info.customer_name.trim() || null,
@@ -789,7 +785,7 @@ export default function OrderPosDetail({ order = null }) {
             {/* Conferma le aggiunte (in fondo, vicino a Pagamento) */}
             {draftCount > 0 && (
               <button className="btn block" onClick={confirmDraft}>
-                ✅ Conferma{isNew ? '' : ` ${draftCount} aggiunt${draftCount === 1 ? 'a' : 'e'}`}
+                ✅ Conferma
               </button>
             )}
 

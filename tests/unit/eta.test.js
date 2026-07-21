@@ -13,7 +13,7 @@ import {
   queueEtaMinutes,
   phaseAverages,
   aggregateProducts,
-  serataFinance,
+  ordersFinance,
   longestPrep,
 } from '../../src/lib/eta.js'
 
@@ -160,9 +160,9 @@ describe('aggregateProducts', () => {
   })
 })
 
-describe('serataFinance', () => {
+describe('ordersFinance', () => {
   it('somma incasso e voci, esclusi gli annullati', () => {
-    const f = serataFinance(orders)
+    const f = ordersFinance(orders)
     expect(f.ordini).toBe(2)
     expect(f.incasso).toBe(31.5)
     expect(f.coperto).toBe(6)

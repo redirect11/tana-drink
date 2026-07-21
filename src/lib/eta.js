@@ -1,7 +1,7 @@
-// Stima dei tempi di servizio/ritiro e statistiche di fine serata.
+// Stima dei tempi di servizio/ritiro e statistiche di incasso.
 // Logica pura, senza dipendenze da Firestore: testabile in isolamento.
 //
-// Due gruppi di statistiche accumulati sul documento serata:
+// Due gruppi di statistiche accumulati sul documento del servizio:
 // - prep_stats  → attesa + preparazione (ricevuto→in_preparazione→pronto),
 //                 misurate su TUTTI gli ordini al passaggio a "pronto"
 // - eta_stats   → ciclo completo fino a ritirato/servito, misurato SOLO
@@ -98,7 +98,7 @@ export function phaseAverages(prepStats, etaStats) {
   }
 }
 
-// --- Statistiche di fine serata (da ordini mappati) ---
+// --- Statistiche di incasso (da ordini mappati) ---
 
 const isCancelled = (o) => o.status === ORDER_STATUSES.ANNULLATO
 
@@ -117,8 +117,8 @@ export function aggregateProducts(orders) {
   return [...byName.values()].sort((a, b) => b.qty - a.qty || a.name.localeCompare(b.name))
 }
 
-// Incassi della serata, esclusi gli ordini annullati.
-export function serataFinance(orders) {
+// Incassi, esclusi gli ordini annullati.
+export function ordersFinance(orders) {
   const valid = orders.filter((o) => !isCancelled(o))
   const sum = (fn) => valid.reduce((s, o) => s + (Number(fn(o)) || 0), 0)
   const incasso = sum((o) => o.total)

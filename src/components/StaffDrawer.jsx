@@ -5,8 +5,7 @@ import { logoutStaff } from '../lib/logout.js'
 import { devToolsEnabled } from '../dev/devActions.js'
 import {
   subscribeSettings,
-  subscribeOpenSerata,
-  subscribeSerataGroups,
+  subscribeOpenGroups,
   createManualGroup,
   DEFAULT_SETTINGS,
 } from '../lib/api.js'
@@ -38,20 +37,17 @@ export default function StaffDrawer({ role, active = null, onSelect = null }) {
 
   // Gruppi nel drawer (quadratini): attivi se l'impostazione lo prevede.
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
-  const [serata, setSerata] = useState(null)
   const [groups, setGroups] = useState([])
   const [newName, setNewName] = useState('')
   useEffect(() => subscribeSettings(setSettings, () => {}), [])
-  useEffect(() => subscribeOpenSerata((s) => setSerata(s), () => setSerata(null)), [])
-  const serataId = serata?.id
   const showGroups = settings.groups_enabled && settings.groups_in_drawer
   useEffect(() => {
-    if (!showGroups || !serataId) {
+    if (!showGroups) {
       setGroups([])
       return
     }
-    return subscribeSerataGroups(serataId, setGroups, () => {})
-  }, [showGroups, serataId])
+    return subscribeOpenGroups(setGroups, () => {})
+  }, [showGroups])
   // Solo gruppi che possono ricevere ordini diretti (no contenitori).
   const groupTiles = groups.filter((g) => !g.has_child_groups)
 
@@ -78,11 +74,10 @@ export default function StaffDrawer({ role, active = null, onSelect = null }) {
 
   async function creaGruppo() {
     const name = newName.trim()
-    if (!name || !serataId) return
+    if (!name) return
     const u = auth.currentUser
     const g = await createManualGroup({
       name,
-      serata_id: serataId,
       created_by: u ? { uid: u.uid, email: u.email, role } : null,
     }).catch(() => null)
     setNewName('')

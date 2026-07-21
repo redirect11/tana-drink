@@ -1,5 +1,6 @@
-// Logica pura della serata (niente Firebase): smistamento ordini per stato e
-// riepilogo. Interamente testabile a unità.
+// Logica pura della CODA ordini (niente Firebase): smistamento per stato e
+// riepilogo. Il servizio è perpetuo: non esistono più "serate", i conti
+// restano aperti finché non li si chiude a mano. Testabile a unità.
 
 import { ORDER_STATUSES } from './orderStatus.js'
 
@@ -21,8 +22,8 @@ export function bucketByStatus(orders) {
   return buckets
 }
 
-// Riepilogo serata: numero ordini e totale (esclude gli annullati).
-export function serataRecap(orders) {
+// Riepilogo: numero ordini e totale (esclude gli annullati).
+export function ordersRecap(orders) {
   let count = 0
   let total = 0
   for (const o of orders || []) {
@@ -33,8 +34,7 @@ export function serataRecap(orders) {
   return { count, total }
 }
 
-// Conti ancora aperti (non pagati né annullati): usato per avvisare alla
-// chiusura della serata.
+// Conti ancora aperti (non pagati né annullati).
 export function openOrdersCount(orders) {
   return (orders || []).filter(
     (o) => o.status !== ORDER_STATUSES.PAGATO && o.status !== ORDER_STATUSES.ANNULLATO

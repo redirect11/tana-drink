@@ -8,7 +8,7 @@ import { paymentOptions } from '../lib/payments.js'
 // Riepilogo ordine in stile scontrino, mostrato prima della conferma.
 // Calcola coperto (per persona), costo di servizio (percentuale) o mancia
 // (importo libero) in base alle impostazioni del bar.
-export default function OrderSummary({ cart, settings, serata, tableLabel, staff, customerProfile, sending, groupsActive = false, groups = [], initialGroupId = '', serataId = null, onConfirm, onCancel }) {
+export default function OrderSummary({ cart, settings, serviceStats = {}, tableLabel, staff, customerProfile, sending, groupsActive = false, groups = [], initialGroupId = '', onConfirm, onCancel }) {
   const [persons, setPersons] = useState(1)
   const [tip, setTip] = useState('')
   const [note, setNote] = useState('')
@@ -55,16 +55,16 @@ export default function OrderSummary({ cart, settings, serata, tableLabel, staff
   // la stima personale tiene conto di quanti ce ne sono davanti.
   const [queueLen, setQueueLen] = useState(0)
   useEffect(() => {
-    if (!settings.eta_enabled || !serata?.id) return
-    return subscribeQueue(serata.id, (q) => setQueueLen(q.length))
-  }, [settings.eta_enabled, serata?.id])
+    if (!settings.eta_enabled) return
+    return subscribeQueue((q) => setQueueLen(q.length))
+  }, [settings.eta_enabled])
 
   const etaMinutes = settings.eta_enabled
     ? queueEtaMinutes({
         status: ORDER_STATUSES.RICEVUTO,
         position: queueLen,
-        prepStats: serata?.prep_stats,
-        etaStats: serata?.eta_stats,
+        prepStats: serviceStats?.prep_stats,
+        etaStats: serviceStats?.eta_stats,
         baseMinutes: settings.eta_base_minutes,
         mode: effectiveMode,
       })
@@ -98,13 +98,12 @@ export default function OrderSummary({ cart, settings, serata, tableLabel, staff
 
   async function createAndSelectGroup() {
     const name = newGroupName.trim()
-    if (!name || !serataId) return
+    if (!name) return
     setCreatingGroup(true)
     try {
       const u = auth.currentUser
       const g = await createManualGroup({
         name,
-        serata_id: serataId,
         created_by: u ? { uid: u.uid, email: u.email, role: staff?.role } : null,
       })
       setGroupId(g.id)
