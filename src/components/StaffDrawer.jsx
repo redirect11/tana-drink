@@ -67,9 +67,11 @@ export default function StaffDrawer({ role, active = null, onSelect = null }) {
     navigate('/pos')
   }
 
-  function ordineGruppo(id) {
+  // Toccando un gruppo si aprono i SUOI ORDINI nella coda (non si entra
+  // a comporre un ordine: da lì semmai si aggiunge).
+  function apriGruppo(id) {
     setOpen(false)
-    navigate(`/pos?group=${id}`)
+    navigate(`/bar?group=${id}`)
   }
 
   async function creaGruppo() {
@@ -81,7 +83,7 @@ export default function StaffDrawer({ role, active = null, onSelect = null }) {
       created_by: u ? { uid: u.uid, email: u.email, role } : null,
     }).catch(() => null)
     setNewName('')
-    if (g) ordineGruppo(g.id)
+    if (g) apriGruppo(g.id)
   }
 
   return (
@@ -121,7 +123,7 @@ export default function StaffDrawer({ role, active = null, onSelect = null }) {
                   key={g.id}
                   className="group-tile"
                   title={g.name}
-                  onClick={() => ordineGruppo(g.id)}
+                  onClick={() => apriGruppo(g.id)}
                 >
                   <span className="group-tile-ic">{g.kind === 'customer' ? '👤' : '🏷'}</span>
                   <span className="group-tile-name">{g.name}</span>
