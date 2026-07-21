@@ -184,13 +184,32 @@ export default function OrderPosDetail({ order = null }) {
       try {
         await flushAll()
         await advanceComanda(order.id, comandaId, ns)
+        // L'override NON si toglie qui: la scrittura risponde prima che
+        // arrivi lo snapshot, e toglierlo subito farebbe riapparire per un
+        // istante lo stato precedente. Lo toglie l'effetto sotto.
       } catch (e) {
         setError(e.message)
-      } finally {
         setStatusOverrides((o) => omit(o, comandaId))
       }
     })()
   }
+
+  // Allineamento col server: l'override sparisce quando la comanda arriva
+  // davvero con lo stato atteso.
+  useEffect(() => {
+    setStatusOverrides((o) => {
+      if (Object.keys(o).length === 0) return o
+      const next = { ...o }
+      let changed = false
+      for (const c of comande) {
+        if (next[c.id] && c.status === next[c.id]) {
+          delete next[c.id]
+          changed = true
+        }
+      }
+      return changed ? next : o
+    })
+  }, [comande])
 
   // Comande "effettive": server + override locali in volo.
   const effComande = useMemo(
