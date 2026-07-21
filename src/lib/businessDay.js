@@ -68,6 +68,18 @@ export function coverageStart(now = new Date(), hoursBack = 36) {
   return new Date(t.getTime() - hoursBack * 3600000)
 }
 
+// Etichetta COMPATTA per le card: "oggi", "ieri" o "13/06".
+export function businessDayShort(key, now = new Date(), cutoffHour = DEFAULT_CUTOFF_HOUR) {
+  if (!key) return ''
+  const oggi = businessDayKey(now, cutoffHour)
+  if (key === oggi) return 'oggi'
+  const ieri = new Date(`${oggi}T00:00:00Z`)
+  ieri.setUTCDate(ieri.getUTCDate() - 1)
+  if (key === ieri.toISOString().slice(0, 10)) return 'ieri'
+  const [, m, d] = key.split('-')
+  return `${d}/${m}`
+}
+
 // Etichetta leggibile: "oggi", "ieri" o la data estesa.
 export function businessDayLabel(key, now = new Date(), cutoffHour = DEFAULT_CUTOFF_HOUR) {
   if (!key) return ''

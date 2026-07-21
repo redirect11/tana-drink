@@ -1198,32 +1198,76 @@ body.fullbleed .bar-content {
   padding: 0;
 }
 
+/* Altezza NON fissa: il contenuto (nome, data) non deve mai essere
+   tagliato. Tipografia contenuta e leggera: si legge per gerarchia, non
+   per grassetto. */
 .grid-card-main {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  gap: 6px;
-  height: 118px;
-  padding: 12px 14px;
+  justify-content: flex-start;
+  gap: 3px;
+  min-height: 96px;
+  padding: 9px 11px;
   cursor: pointer;
 }
 
 .grid-card .bignum {
-  font-size: 1.7rem;
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 .grid-card-sub {
-  font-size: 0.95rem;
-  line-height: 1.25;
+  font-size: 0.82rem;
+  font-weight: 500;
+  line-height: 1.3;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.grid-card-sub strong {
+  font-weight: 600;
+}
+
 .grid-card-tot {
-  font-size: 1.3rem;
-  font-weight: 800;
+  font-size: 0.98rem;
+  font-weight: 600;
   font-family: var(--serif);
+}
+
+/* Riga di coda (conteggio + data): informazione di servizio, sottile. */
+.grid-card-meta {
+  font-size: 0.74rem;
+  font-weight: 400;
+  line-height: 1.3;
+  opacity: 0.75;
+}
+
+/* Etichette di stato dentro la card: piccole, non gridate. */
+.grid-card .pill {
+  font-size: 0.68rem;
+  font-weight: 500;
+  padding: 2px 7px;
+  gap: 4px;
+}
+
+/* Separatore fra le giornate nella coda (conti dei giorni scorsi). */
+.day-sep {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 14px 0 8px;
+  font-size: 0.76rem;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: capitalize;
+}
+.day-sep::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--line);
 }
 
 /* ── Card amministrative (Menù e Inventario): stessa UX delle card
