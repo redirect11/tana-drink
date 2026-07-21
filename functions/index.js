@@ -168,11 +168,16 @@ exports.notifyOrderUpdate = onDocumentUpdated({ ...OPTS, document: 'orders/{orde
     await pushToStaff({ kind: 'new_order', orderId: event.params.orderId, msg: newOrderMsg })
   }
 
-  // 3) Push allo staff di sala quando c'è un ordine pronto da servire
-  //    al tavolo (tutti i dispositivi registrati in staff_tokens).
+  // 3) Push allo staff DI SALA quando c'è un ordine pronto da servire al
+  //    tavolo. Non al bancone: è il bancone che lo segna pronto.
   const serveMsg = decideStaffServePush(before, after)
   if (serveMsg) {
-    await pushToStaff({ kind: 'staff_serve', orderId: event.params.orderId, msg: serveMsg })
+    await pushToStaff({
+      kind: 'staff_serve',
+      orderId: event.params.orderId,
+      msg: serveMsg,
+      roles: ['staff'],
+    })
   }
 })
 
@@ -180,9 +185,15 @@ exports.notifyOrderUpdate = onDocumentUpdated({ ...OPTS, document: 'orders/{orde
 // (staff_tokens). La notifica vera (titolo/corpo/vibrazione) la costruisce il
 // service worker dal campo `kind`, così arriva anche ad app in background o
 // chiusa. Rimuove in automatico i token scaduti.
-async function pushToStaff({ kind, orderId, msg, url = '/bar' }) {
+async function pushToStaff({ kind, orderId, msg, url = '/bar', roles = null }) {
   const tokensSnap = await db.collection('staff_tokens').get()
-  const docs = tokensSnap.docs.filter((d) => d.get('token'))
+  let docs = tokensSnap.docs.filter((d) => d.get('token'))
+  // `roles` limita i destinatari: i drink pronti DA SERVIRE riguardano la
+  // sala, non il bancone — al bartender arriverebbero come rumore, visto
+  // che è lui stesso a segnarli pronti. I token senza ruolo sono di
+  // dispositivi registrati prima di questa distinzione: li si considera
+  // di sala solo se non si sta filtrando sul bartender.
+  if (roles) docs = docs.filter((d) => roles.includes(d.get('role') || 'staff'))
   if (docs.length === 0) return
 
   const res = await getMessaging().sendEachForMulticast({

@@ -24,12 +24,19 @@ function decideOrderPush(before, after) {
 
   // Una comanda in più è passata a "pronto" (vale anche per le aggiunte
   // a un conto aperto: ogni comanda pronta notifica il cliente).
-  if (countComande(after, 'pronto') > countComande(before, 'pronto')) {
-    // Al tavolo non si ritira nulla: arriva il servizio.
-    const body = after.service_mode === 'tavolo'
-      ? `Ordine #${after.daily_number ?? '—'}: il drink verrà servito il prima possibile.`
-      : `Ordine #${after.daily_number ?? '—'} pronto al ritiro.`
-    return { title: '🔔 Il tuo drink è pronto!', body }
+  // SOLO col RITIRO AL BANCO: è l'unico caso in cui il cliente deve fare
+  // qualcosa (alzarsi e venire a prendere il drink). Al tavolo ci pensa il
+  // servizio, quindi avvisarlo sarebbe un disturbo inutile.
+  // Il push arriva comunque solo a chi ha ordinato dal menù: gli ordini
+  // battuti dallo staff nascono senza push_token (vedi sopra).
+  if (
+    after.service_mode === 'banco' &&
+    countComande(after, 'pronto') > countComande(before, 'pronto')
+  ) {
+    return {
+      title: '🔔 Il tuo drink è pronto!',
+      body: `Ordine #${after.daily_number ?? '—'} pronto al ritiro.`,
+    }
   }
 
   if (!before || before.status === after.status) return null
