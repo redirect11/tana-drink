@@ -10,6 +10,7 @@ import {
   roundPrice,
   markupOf,
   marginOf,
+  marginReport,
   DEFAULT_MARKUP,
 } from '../../src/lib/pricing.js'
 
@@ -93,5 +94,50 @@ describe('markupOf / marginOf', () => {
   it('senza costo non si può dire il ricarico (ma il margine sì)', () => {
     expect(markupOf(7.5, 0)).toBeNull()
     expect(marginOf(7.5, 0)).toBe(7.5)
+  })
+})
+
+describe('marginReport (lista marginalità)', () => {
+  const itemsById = { gin, ton: tonica, x: senzaCosto }
+  const drinks = [
+    // 4cl gin + 20cl tonica = 1,978 € → a 4 € è ×2,02 (sotto il ×3)
+    { id: 'gt', name: 'Gin Tonic', price: 4, recipe_items: [
+      { inventory_item_id: 'gin', unit: 'cl', qty: 4 },
+      { inventory_item_id: 'ton', unit: 'cl', qty: 20 },
+    ] },
+    // stesso costo venduto a 8 € → ×4,04, in linea
+    { id: 'gt2', name: 'Gin Tonic Premium', price: 8, recipe_items: [
+      { inventory_item_id: 'gin', unit: 'cl', qty: 4 },
+      { inventory_item_id: 'ton', unit: 'cl', qty: 20 },
+    ] },
+    // ingrediente senza costo → parziale, non è un giudizio
+    { id: 'p', name: 'Parziale', price: 6, recipe_items: [
+      { inventory_item_id: 'gin', unit: 'cl', qty: 4 },
+      { inventory_item_id: 'x', name: 'Sciroppo', unit: 'ml', qty: 10 },
+    ] },
+    // senza ricetta: fuori dal report
+    { id: 'n', name: 'Senza ricetta', price: 5, recipe_items: [] },
+  ]
+
+  it('classifica e mette in cima i drink sotto il ricarico obiettivo', () => {
+    const r = marginReport(drinks, itemsById)
+    expect(r.totali).toBe(3) // "Senza ricetta" escluso
+    expect(r.righe[0].name).toBe('Gin Tonic')
+    expect(r.righe[0].stato).toBe('sotto')
+    expect(r.righe[0].markup).toBeLessThan(3)
+    expect(r.sotto).toBe(1)
+    expect(r.ok).toBe(1)
+    expect(r.parziali).toBe(1)
+  })
+
+  it('propone il prezzo che riporterebbe in linea', () => {
+    const gt = marginReport(drinks, itemsById).righe.find((x) => x.id === 'gt')
+    expect(gt.suggested).toBe(6) // 1,978 × 3 = 5,93 → 6,00
+    expect(gt.margin).toBeCloseTo(4 - 1.978, 2)
+  })
+
+  it('un obiettivo più alto sposta la soglia', () => {
+    const r = marginReport(drinks, itemsById, { markup: 5 })
+    expect(r.sotto).toBe(2) // anche il Premium (×4,04) va sotto il ×5
   })
 })
