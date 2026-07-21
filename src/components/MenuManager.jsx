@@ -14,6 +14,7 @@ import { uploadDrinkImage, deleteDrinkImageByUrl } from '../lib/storage.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import { toBaseQty, formatQty, ENTRY_UNITS } from '../lib/inventory.js'
 import PriceSuggestion from './PriceSuggestion.jsx'
+import MarginList from './MarginList.jsx'
 import { CATEGORY_ICONS, catColor } from '../lib/categoryColors.js'
 
 const EMPTY = {
@@ -39,6 +40,7 @@ export default function MenuManager() {
   const [search, setSearch] = useState('')
   const [catFilter, setCatFilter] = useState('all') // 'all' | 'none' | categoryId
   const [availFilter, setAvailFilter] = useState('all') // 'all' | 'yes' | 'no'
+  const [showMargini, setShowMargini] = useState(false)
   const [collapsed, setCollapsed] = useState(() => new Set()) // categorie chiuse
   const [openId, setOpenId] = useState(null) // card con azioni aperte
 
@@ -239,6 +241,22 @@ export default function MenuManager() {
         <CategoryManager
           categories={categories}
           onChange={async () => setCategories(await fetchCategories())}
+        />
+      )}
+
+      {/* Marginalità: quali drink rendono meno di quanto dovrebbero. */}
+      <button
+        className="btn ghost small block"
+        style={{ marginTop: 8 }}
+        onClick={() => setShowMargini((v) => !v)}
+      >
+        {showMargini ? 'Nascondi marginalità' : '📊 Marginalità del listino'}
+      </button>
+      {showMargini && (
+        <MarginList
+          drinks={drinks}
+          inventory={inventory}
+          onEdit={(id) => setEditing(drinks.find((d) => d.id === id) || null)}
         />
       )}
 

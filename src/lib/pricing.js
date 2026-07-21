@@ -69,3 +69,51 @@ export function marginOf(price, cost) {
   if (!(p > 0)) return null
   return Math.round((p - c) * 100) / 100
 }
+
+// ── Marginalità del listino ───────────────────────────────────────────
+// Per ogni drink con una ricetta: quanto costa, a quanto è venduto e che
+// ricarico ne esce. Serve a trovare a colpo d'occhio le voci fuori linea
+// (tipicamente le birre premium, che costano molto e si vendono a poco).
+//
+//  stato: 'sotto'    → ricarico inferiore all'obiettivo
+//         'ok'       → in linea o meglio
+//         'parziale' → manca il costo di qualche ingrediente: il ricarico
+//                      calcolato è per forza ottimistico, non è un giudizio
+//         'no_costo' → nessun ingrediente valorizzato, niente da dire
+export function marginReport(drinks, itemsById, { markup = DEFAULT_MARKUP } = {}) {
+  const righe = []
+  for (const d of drinks || []) {
+    const recipe = d?.recipe_items || []
+    if (recipe.length === 0) continue
+    const { cost, missing } = recipeCost(recipe, itemsById)
+    const price = Number(d.price) || 0
+    const stato =
+      cost <= 0 ? 'no_costo' : missing.length ? 'parziale' : markupOf(price, cost) < markup ? 'sotto' : 'ok'
+    righe.push({
+      id: d.id,
+      name: d.name,
+      price,
+      cost,
+      missing,
+      suggested: suggestedPrice(cost, { markup }),
+      markup: markupOf(price, cost),
+      margin: marginOf(price, cost),
+      stato,
+    })
+  }
+  // I casi da sistemare per primi: ricarico più basso in cima.
+  righe.sort((a, b) => {
+    const rank = { sotto: 0, ok: 1, parziale: 2, no_costo: 3 }
+    if (rank[a.stato] !== rank[b.stato]) return rank[a.stato] - rank[b.stato]
+    return (a.markup ?? Infinity) - (b.markup ?? Infinity)
+  })
+  const conta = (s) => righe.filter((r) => r.stato === s).length
+  return {
+    righe,
+    totali: righe.length,
+    sotto: conta('sotto'),
+    ok: conta('ok'),
+    parziali: conta('parziale'),
+    senzaCosto: conta('no_costo'),
+  }
+}
