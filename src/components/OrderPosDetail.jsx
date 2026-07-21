@@ -396,13 +396,28 @@ export default function OrderPosDetail({ order = null }) {
               name,
               unit_price: price,
               custom: true,
-              recipe_items: recipe_items?.length ? recipe_items : undefined,
+              // Sempre un array: una ricetta SVUOTATA a mano è una scelta,
+              // non va riletta dal prodotto di catalogo al prossimo giro.
+              recipe_items: recipe_items || [],
             }
           : l
       )
     )
     setEditLine(null)
   }
+
+  // Dati di partenza dell'editor per-item: se la riga è già stata
+  // personalizzata si riprende la sua ricetta, altrimenti si carica quella
+  // del prodotto di catalogo — così gli ingredienti si possono sostituire
+  // o togliere, non solo aggiungere.
+  const editInitial = useMemo(() => {
+    if (!editLine) return null
+    const base = drinks.find((d) => d.id === editLine.drink_id)
+    const recipe = editLine.custom
+      ? editLine.recipe_items || []
+      : base?.recipe_items || []
+    return { name: editLine.name, price: editLine.unit_price, recipe_items: recipe }
+  }, [editLine, drinks])
 
   // Righe di bozza → item per createOrder/submitPosOrder (usano `price`).
   const draftToItems = () =>
@@ -932,11 +947,8 @@ export default function OrderPosDetail({ order = null }) {
       {/* ── Modifica per-item di una riga di bozza ── */}
       {editLine && (
         <CustomDrinkForm
-          initial={{
-            name: editLine.name,
-            price: editLine.unit_price,
-            recipe_items: editLine.recipe_items || [],
-          }}
+          initial={editInitial}
+          warnNoRecipe={editInitial?.recipe_items.length === 0}
           onCancel={() => setEditLine(null)}
           onAdd={applyEdit}
         />
