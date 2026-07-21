@@ -766,9 +766,21 @@ export function subscribeActiveOrders(onChange, onError, { cutoffHour = DEFAULT_
   }
   const fail = onError ?? (() => {})
 
-  // Conti aperti: nessun limite di data, si chiudono solo a mano.
+  // Conti aperti: nessun limite di data, si chiudono solo a mano. Il filtro
+  // include anche i vecchi stati di lavorazione (ordini creati prima del
+  // modello conto/comande): la query lavora sul campo grezzo, quindi senza
+  // questi un conto storico non ancora saldato resterebbe invisibile.
   const unsubAperti = onSnapshot(
-    query(ordersCol, where('status', '==', ORDER_OPEN)),
+    query(
+      ordersCol,
+      where('status', 'in', [
+        ORDER_OPEN,
+        ORDER_STATUSES.RICEVUTO,
+        ORDER_STATUSES.IN_PREPARAZIONE,
+        ORDER_STATUSES.PRONTO,
+        ORDER_STATUSES.RITIRATO,
+      ])
+    ),
     (snap) => {
       aperti = snap.docs.map(mapOrder)
       emit()
