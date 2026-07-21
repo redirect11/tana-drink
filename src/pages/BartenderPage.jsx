@@ -329,7 +329,7 @@ function OrderQueue() {
     ensureNotificationPermission().then(async (ok) => {
       if (!ok || !uid) return
       const token = await getPushToken()
-      if (token) saveStaffToken(uid, token).catch(() => {})
+      if (token) saveStaffToken(uid, token, 'bartender').catch(() => {})
     })
   }, [])
 

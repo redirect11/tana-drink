@@ -19,9 +19,10 @@ const ord = (comande, extra = {}) => ({
 const c = (id, status) => ({ id, seq: Number(id.slice(1)), status })
 
 describe('decideOrderPush per comande', () => {
-  it('push quando UNA comanda passa a pronto (anche la seconda)', () => {
-    const before = ord([c('c1', 'ritirato'), c('c2', 'in_preparazione')])
-    const after = ord([c('c1', 'ritirato'), c('c2', 'pronto')])
+  it('push quando UNA comanda passa a pronto (anche la seconda), col ritiro', () => {
+    // Il cliente si avvisa solo se deve venire a ritirare (banco).
+    const before = ord([c('c1', 'ritirato'), c('c2', 'in_preparazione')], { service_mode: 'banco' })
+    const after = ord([c('c1', 'ritirato'), c('c2', 'pronto')], { service_mode: 'banco' })
     expect(decideOrderPush(before, after)?.title).toContain('pronto')
   })
   it('nessun push se le pronte non aumentano', () => {
@@ -30,8 +31,8 @@ describe('decideOrderPush per comande', () => {
     expect(decideOrderPush(before, after)).toBeNull()
   })
   it('legacy: status ordine → una comanda equivalente', () => {
-    const before = { daily_number: 3, push_token: 't', status: 'in_preparazione' }
-    const after = { daily_number: 3, push_token: 't', status: 'pronto' }
+    const before = { daily_number: 3, push_token: 't', status: 'in_preparazione', service_mode: 'banco' }
+    const after = { daily_number: 3, push_token: 't', status: 'pronto', service_mode: 'banco' }
     expect(decideOrderPush(before, after)).not.toBeNull()
   })
 })

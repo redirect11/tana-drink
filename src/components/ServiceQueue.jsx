@@ -73,7 +73,7 @@ export default function ServiceQueue() {
     ensureNotificationPermission().then(async (ok) => {
       if (!ok) return
       const token = await getPushToken()
-      if (token) saveStaffToken(uid, token).catch(() => {})
+      if (token) saveStaffToken(uid, token, 'staff').catch(() => {})
     })
   }, [])
 

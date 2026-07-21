@@ -34,10 +34,14 @@ describe('decideOrderPush', () => {
     expect(msg.body).toContain('ritiro')
   })
 
-  it('al tavolo annuncia il servizio, non il ritiro', () => {
-    const msg = decideOrderPush(base, { ...base, status: 'pronto', service_mode: 'tavolo' })
-    expect(msg.body).toContain('servito il prima possibile')
-    expect(msg.body).not.toContain('ritiro')
+  it('al TAVOLO non si notifica: al drink ci pensa il servizio', () => {
+    // Avvisare chi è seduto che il drink è pronto non gli fa fare nulla:
+    // glielo portano. La notifica serve solo se deve venire a ritirarlo.
+    expect(decideOrderPush(base, { ...base, status: 'pronto', service_mode: 'tavolo' })).toBeNull()
+  })
+
+  it('senza modalità di consegna definita non si notifica il pronto', () => {
+    expect(decideOrderPush(base, { ...base, status: 'pronto', service_mode: null })).toBeNull()
   })
 
   it('non notifica il passaggio a in_preparazione o ritirato', () => {
