@@ -187,6 +187,12 @@ service cloud.firestore {
       allow read, write: if isStaffMember();
     }
 
+    // PAGHE: tariffa oraria per persona (storicizzata). Dato sensibile:
+    // solo il bartender, nemmeno lo staff vede quanto prendono gli altri.
+    match /staff_rates/{personId} {
+      allow read, write: if isBartender();
+    }
+
     // BADGE VIRTUALE: timbrature entrata/uscita — lo staff timbra sé
     // stesso al login/logout; il bartender può correggere ogni voce.
     match /staff_shifts/{shiftId} {

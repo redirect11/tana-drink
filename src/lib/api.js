@@ -2259,6 +2259,46 @@ export async function fetchAllStaffHours() {
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }))
 }
 
+// ── PAGHE: tariffa oraria per persona, storicizzata ───────────────────
+// Un documento per persona (id = nome normalizzato, come sono registrate
+// le ore) con l'elenco delle tariffe e la data da cui valgono. Dato
+// sensibile: le regole lo riservano al bartender.
+
+const staffRatesCol = collection(db, 'staff_rates')
+
+// Id stabile dal nome: le ore sono registrate per nome, non per uid
+// (le voci manuali non hanno un account dietro).
+export const rateDocId = (name) =>
+  String(name || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '') || 'senza-nome'
+
+export function subscribeStaffRates(cb, onError) {
+  return onSnapshot(
+    staffRatesCol,
+    (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+    onError ?? (() => {})
+  )
+}
+
+// Salva l'elenco tariffe di una persona (già ordinato da paghe.js).
+export async function saveStaffRates(name, rates) {
+  const nome = String(name || '').trim()
+  if (!nome) throw new Error('Serve il nome della persona.')
+  await setDoc(
+    doc(staffRatesCol, rateDocId(nome)),
+    { name: nome, rates: rates || [], updated_at: serverTimestamp() },
+    { merge: true }
+  )
+}
+
+export async function deleteStaffRates(name) {
+  await deleteDoc(doc(staffRatesCol, rateDocId(name)))
+}
+
 // ── BADGE VIRTUALE: timbrature entrata/uscita dello staff ─────────────
 // Al login lo staff "timbra" l'entrata, al logout l'uscita. Ogni sessione
 // è un doc con clock_in/clock_out; finché `open` è vero il turno è in

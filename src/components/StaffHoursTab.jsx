@@ -6,7 +6,11 @@ import {
   subscribeStaffShiftsRange,
   updateStaffShift,
   deleteStaffShift,
+  subscribeStaffRates,
+  saveStaffRates,
 } from '../lib/api.js'
+import { payrollReport, rateAt, upsertRate, removeRate, sortRates } from '../lib/paghe.js'
+import { formatPrice } from '../lib/orderStatus.js'
 import { listStaff } from '../lib/staffApi.js'
 import {
   computeHours,
@@ -95,6 +99,8 @@ export default function StaffHoursTab() {
   const [confirmDel, setConfirmDel] = useState(null)
   const [dayDetail, setDayDetail] = useState(null) // giorno aperto dal calendario mensile
   const [editShift, setEditShift] = useState(null) // timbratura in correzione
+  const [rates, setRates] = useState([]) // tariffe orarie per persona
+  const [showPaghe, setShowPaghe] = useState(false)
 
   // Form nuovo turno
   const [kind, setKind] = useState('effettivo') // 'effettivo' | 'programmato'
@@ -124,6 +130,7 @@ export default function StaffHoursTab() {
     () => subscribeStaffShiftsRange(range[0], range[1], setShiftRows, (e) => setError(e.message)),
     [range]
   )
+  useEffect(() => subscribeStaffRates(setRates, () => setRates([])), [])
   useEffect(() => {
     listStaff()
       .then((users) => setStaff(users || []))
@@ -135,6 +142,14 @@ export default function StaffHoursTab() {
   const days = useMemo(() => byDay(entries), [entries])
   const totals = useMemo(() => effVsPlanned(entries), [entries])
   const perPerson = useMemo(() => peopleTotals(entries), [entries])
+  // Costo del personale nel periodo: solo ore EFFETTIVE, ciascuna alla
+  // tariffa in vigore nel giorno in cui è stata lavorata.
+  const ratesByName = useMemo(
+    () => Object.fromEntries(rates.map((r) => [r.name, r.rates || []])),
+    [rates]
+  )
+  const payroll = useMemo(() => payrollReport(entries, ratesByName), [entries, ratesByName])
+
   const nomi = useMemo(() => {
     const set = new Set(staff.map((u) => u.name || u.email).filter(Boolean))
     for (const e of entries) set.add(e.staff_name)
@@ -234,6 +249,15 @@ export default function StaffHoursTab() {
             </strong>
           </div>
         )}
+        <div className="row between" style={{ marginTop: 6, borderTop: '1px dashed var(--line)', paddingTop: 6 }}>
+          <span className="muted small">Costo del personale (ore effettive)</span>
+          <strong>{formatPrice(payroll.totale)}</strong>
+        </div>
+        {payroll.parziale && (
+          <div className="muted small">
+            ⚠️ Parziale: manca la tariffa oraria di {payroll.senzaTariffa.join(', ')}.
+          </div>
+        )}
         {perPerson.length === 0 && (
           <p className="muted small" style={{ margin: '6px 0 0' }}>Nessun turno nel periodo.</p>
         )}
@@ -245,10 +269,35 @@ export default function StaffHoursTab() {
             <span>
               <strong>{p.effettivo} h</strong>
               {p.programmato > 0 && <span className="muted small"> / {p.programmato} h prog.</span>}
+              {(() => {
+                const q = payroll.persone.find((x) => x.name === p.name)
+                if (!q) return null
+                return q.mancante ? (
+                  <span className="muted small" title="Manca la tariffa oraria"> · costo ?</span>
+                ) : (
+                  <span className="muted small"> · {formatPrice(q.cost)}</span>
+                )
+              })()}
             </span>
           </div>
         ))}
       </div>
+
+      {/* Paghe: tariffa oraria per persona, storicizzata */}
+      <button
+        className="btn ghost small block"
+        style={{ marginTop: 10 }}
+        onClick={() => setShowPaghe((v) => !v)}
+      >
+        {showPaghe ? 'Nascondi paghe' : '💶 Paghe orarie'}
+      </button>
+      {showPaghe && (
+        <PagheManager
+          nomi={nomi}
+          rates={rates}
+          onSave={(nome, list) => saveStaffRates(nome, list).catch((e) => setError(e.message))}
+        />
+      )}
 
       {/* Nuovo turno (manuale): effettivo o programmato */}
       <form className="card" onSubmit={salva} style={{ marginTop: 10 }}>
@@ -509,6 +558,102 @@ function ShiftEditDialog({ shift, onClose, onSave }) {
           Salva
         </button>
       </div>
+    </div>
+  )
+}
+
+// ── Paghe orarie: una tariffa per persona, con la data da cui vale ──────
+// Storicizzate di proposito: alzando la paga NON si riscrive il passato,
+// i turni già lavorati restano valorizzati alla tariffa di allora.
+function PagheManager({ nomi, rates, onSave }) {
+  const [chi, setChi] = useState('')
+  const [from, setFrom] = useState(oggi)
+  const [rate, setRate] = useState('')
+
+  const listaDi = (nome) => sortRates(rates.find((r) => r.name === nome)?.rates || [])
+  const correnti = rates
+    .map((r) => ({ name: r.name, rates: sortRates(r.rates || []) }))
+    .sort((a, b) => a.name.localeCompare(b.name))
+
+  function aggiungi(e) {
+    e.preventDefault()
+    const n = chi.trim()
+    const v = Number(String(rate).replace(',', '.'))
+    if (!n || !(v >= 0) || !from) return
+    onSave(n, upsertRate(listaDi(n), { from, rate: v }))
+    setRate('')
+  }
+
+  return (
+    <div className="card" style={{ marginTop: 8 }}>
+      <strong>💶 Paghe orarie</strong>
+      <p className="muted small" style={{ margin: '4px 0 8px' }}>
+        La tariffa vale <strong>dalla data indicata in poi</strong>. Un aumento
+        non cambia i turni già lavorati: restano pagati alla tariffa di allora.
+      </p>
+
+      <form onSubmit={aggiungi}>
+        <div className="row" style={{ gap: 8, alignItems: 'flex-end' }}>
+          <div className="grow">
+            <label htmlFor="pg-chi">Chi</label>
+            <input id="pg-chi" list="pg-nomi" value={chi} onChange={(e) => setChi(e.target.value)} placeholder="Nome" />
+            <datalist id="pg-nomi">
+              {nomi.map((n) => (
+                <option key={n} value={n} />
+              ))}
+            </datalist>
+          </div>
+          <div>
+            <label htmlFor="pg-da">Da</label>
+            <input id="pg-da" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+          </div>
+          <div style={{ width: 100 }}>
+            <label htmlFor="pg-eur">€/ora</label>
+            <input
+              id="pg-eur"
+              type="number"
+              min="0"
+              step="0.5"
+              value={rate}
+              onChange={(e) => setRate(e.target.value)}
+            />
+          </div>
+        </div>
+        <button className="btn block" type="submit" style={{ marginTop: 8 }} disabled={!chi.trim() || rate === ''}>
+          Salva tariffa
+        </button>
+      </form>
+
+      {correnti.length === 0 && (
+        <p className="muted small" style={{ marginTop: 8 }}>
+          Nessuna tariffa impostata: le ore si contano ma non si valorizzano.
+        </p>
+      )}
+      {correnti.map((p) => (
+        <div key={p.name} style={{ marginTop: 10, borderTop: '1px solid var(--line)', paddingTop: 6 }}>
+          <div className="row between">
+            <strong style={{ fontSize: '0.92rem' }}>{p.name}</strong>
+            <span className="muted small">
+              oggi {rateAt(p.rates, oggi()) != null ? `${formatPrice(rateAt(p.rates, oggi()))}/h` : '—'}
+            </span>
+          </div>
+          {p.rates.map((r) => (
+            <div className="row between" key={r.from} style={{ alignItems: 'center', marginTop: 4 }}>
+              <span className="muted small">dal {r.from}</span>
+              <span className="row" style={{ gap: 6, alignItems: 'center' }}>
+                <span>{formatPrice(r.rate)}/h</span>
+                <button
+                  className="btn ghost small"
+                  aria-label={`Rimuovi tariffa ${p.name} dal ${r.from}`}
+                  onClick={() => onSave(p.name, removeRate(p.rates, r.from))}
+                >
+                  🗑
+                </button>
+              </span>
+            </div>
+          ))}
+        </div>
+      ))}
     </div>
   )
 }
