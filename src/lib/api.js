@@ -37,6 +37,7 @@ import {
 import { discountAmount, orderDue, paymentCloses, summaryMethod } from './pagamento.js'
 import { hoursBetweenIso } from './ore.js'
 import { businessDayKey, coverageStart, DEFAULT_CUTOFF_HOUR } from './businessDay.js'
+import { DEFAULT_MARKUP, DEFAULT_ROUND_STEP } from './pricing.js'
 import { notify } from './notify.js'
 
 const drinksCol = collection(db, 'drinks')
@@ -2411,6 +2412,11 @@ export const DEFAULT_SETTINGS = {
   // cui è cominciata. Raggruppa statistiche e fa ripartire il progressivo
   // #N. Non chiude nulla: i conti restano aperti finché non li si chiude.
   business_day_cutoff_hour: DEFAULT_CUTOFF_HOUR,
+  // PREZZO CONSIGLIATO: ricarico sul costo degli ingredienti (di norma
+  // ×3, ma dipende dal drink) e passo di arrotondamento del listino.
+  // È solo un suggerimento: il prezzo resta sempre modificabile a mano.
+  price_markup: DEFAULT_MARKUP,
+  price_round_step: DEFAULT_ROUND_STEP,
   coperto_enabled: false,
   coperto_amount: 2,
   service_charge_enabled: false,

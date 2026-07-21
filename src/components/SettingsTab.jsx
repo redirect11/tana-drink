@@ -199,6 +199,37 @@ export default function SettingsTab() {
       </div>
 
       <div className="card settings-section">
+        <h3>Prezzo consigliato</h3>
+        <p className="muted small" style={{ margin: '0 0 8px' }}>
+          Creando un prodotto libero o modificando un drink, il sistema
+          calcola il <strong>prezzo reale</strong> sommando il costo al
+          dettaglio degli ingredienti (dal listino di magazzino) e propone un{' '}
+          <strong>prezzo consigliato</strong> moltiplicandolo per il ricarico.
+          È solo un suggerimento: il prezzo resta sempre modificabile.
+        </p>
+        <div className="toggle-row">
+          <span>Ricarico sul costo (×)</span>
+          <AmountInput
+            value={settings.price_markup}
+            min={1}
+            max={20}
+            step={0.5}
+            onCommit={(v) => save({ price_markup: v })}
+          />
+        </div>
+        <div className="toggle-row">
+          <span>Arrotonda il consigliato a (€)</span>
+          <AmountInput
+            value={settings.price_round_step}
+            min={0.05}
+            max={5}
+            step={0.05}
+            onCommit={(v) => save({ price_round_step: v })}
+          />
+        </div>
+      </div>
+
+      <div className="card settings-section">
         <h3>Tempi di servizio</h3>
         <ToggleRow
           label="Mostra tempo stimato ai clienti"
