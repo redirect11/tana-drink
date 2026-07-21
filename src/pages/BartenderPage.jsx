@@ -47,6 +47,7 @@ import ServiceQueue from '../components/ServiceQueue.jsx'
 import StaffMyOrders from '../components/StaffMyOrders.jsx'
 import StaffCallList from '../components/StaffCallList.jsx'
 import GroupsPanel from '../components/GroupsPanel.jsx'
+import GroupView from '../components/GroupView.jsx'
 import PaymentsHistory from '../components/PaymentsHistory.jsx'
 import InvoicesTab from '../components/InvoicesTab.jsx'
 import ConfirmDialog from '../components/ConfirmDialog.jsx'
@@ -56,18 +57,12 @@ import StaffDrawer from '../components/StaffDrawer.jsx'
 import { devToolsEnabled } from '../dev/devActions.js'
 
 export default function BartenderPage() {
+  const navigate = useNavigate()
   const [user, setUser] = useState(undefined) // undefined = caricamento, null = non loggato
   const [role, setRole] = useState(null) // 'bartender' | 'staff'
   // Tab iniziale anche da query (?tab=stats): usato dal drawer nel menu.
   const [params] = useSearchParams()
   const [tab, setTab] = useState(() => params.get('tab') || 'coda')
-
-  // Arrivo dal drawer toccando un gruppo (/bar?group=…): la coda è il
-  // posto dove vive il pannello Gruppi, quindi ci si porta lì.
-  const groupParam = params.get('group')
-  useEffect(() => {
-    if (groupParam) setTab('coda')
-  }, [groupParam])
 
   useEffect(() => {
     return onAuthStateChanged(auth, async (u) => {
@@ -124,6 +119,13 @@ export default function BartenderPage() {
   return (
     <div>
       <StaffDrawer role="bartender" active={tab} onSelect={setTab} />
+
+      {/* Toccando un gruppo (menu laterale) si ENTRA nella sua vista: la
+          lista dei suoi ordini col conto. La coda resta com'è — lì ci
+          vanno solo gli ordini, i pannelli restano dietro il loro tasto. */}
+      {params.get('group') && (
+        <GroupView groupId={params.get('group')} onClose={() => navigate('/bar')} />
+      )}
 
       <div className="bar-content">
         {tab === 'coda' && <OrderQueue />}
@@ -276,10 +278,6 @@ function minutesBetween(fromIso, toIso) {
 }
 
 function OrderQueue() {
-  // ?group=<id>: arrivo dal drawer toccando un gruppo → si apre la sua
-  // lista ordini nel pannello Gruppi.
-  const [queueParams] = useSearchParams()
-  const openGroupId = queueParams.get('group') || null
   const [ordersReady, setOrdersReady] = useState(false) // primo snapshot arrivato
   const [orders, setOrders] = useState([])
   const [error, setError] = useState(null)
@@ -287,11 +285,6 @@ function OrderQueue() {
   const [boardFilter, setBoardFilter] = useState('attivi') // 'attivi' | 'chiusi' | 'tutti'
   const [soloOggi, setSoloOggi] = useState(false) // nasconde i conti dei giorni scorsi
 
-  // Nella griglia i pannelli sono a scomparsa: arrivando a un gruppo vanno
-  // aperti, altrimenti il click sul gruppo sembrerebbe non fare nulla.
-  useEffect(() => {
-    if (openGroupId) setShowPanels(true)
-  }, [openGroupId])
   // Avanzamenti OTTIMISTICI dalla card: lo stato cambia al tap, il server
   // segue in background (in errore si torna allo stato reale).
   const [queueOverrides, setQueueOverrides] = useState({}) // id -> workflow_status
@@ -950,11 +943,8 @@ function OrderQueue() {
       {(!gridView || showPanels) && (
         <>
           <StaffCallList />
-          {/* Il pannello si mostra anche se disattivato nella coda, quando
-              si arriva esplicitamente a un gruppo: altrimenti il click dal
-              menu laterale non porterebbe da nessuna parte. */}
-          {settings.groups_enabled && (settings.groups_in_queue || openGroupId) && (
-            <GroupsPanel orders={orders} role="bartender" openGroupId={openGroupId} />
+          {settings.groups_enabled && settings.groups_in_queue && (
+            <GroupsPanel orders={orders} role="bartender" />
           )}
         </>
       )}
