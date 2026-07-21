@@ -8,21 +8,14 @@ import GroupView from './GroupView.jsx'
 
 // Pannello a scomparsa nella coda: panoramica dei gruppi aperti con
 // totale e stato del conto, creazione rapida e avvio ordine per gruppo.
-export default function GroupsPanel({ orders, role, openGroupId = null }) {
-  const [open, setOpen] = useState(!!openGroupId)
+export default function GroupsPanel({ orders, role }) {
+  const [open, setOpen] = useState(false)
   const [groups, setGroups] = useState([])
   const [newName, setNewName] = useState('')
-  const [viewGroupId, setViewGroupId] = useState(openGroupId)
+  const [viewGroupId, setViewGroupId] = useState(null)
   const navigate = useNavigate()
 
   useEffect(() => subscribeOpenGroups(setGroups, () => {}), [])
-  // Arrivo dal drawer con ?group=…: apre direttamente quel gruppo.
-  useEffect(() => {
-    if (openGroupId) {
-      setOpen(true)
-      setViewGroupId(openGroupId)
-    }
-  }, [openGroupId])
 
   const { roots } = useMemo(() => buildGroupTree(groups, orders), [groups, orders])
 
