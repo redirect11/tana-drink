@@ -73,12 +73,16 @@ export default function App() {
     })
   }, [])
 
-  // Tema: le schermate del gestionale (/bar, POS cassa e dettaglio ordine
-  // visto dallo staff) seguono il tema staff; il resto quello cliente.
+  // Tema: le schermate del gestionale (/bar, POS cassa, dettaglio ordine e
+  // menù usato dallo staff) seguono il tema staff; il resto quello cliente.
+  // Il menù è una pagina cliente, ma lo staff ci passa per inserire ordini
+  // manuali e per ordinare a nome di un gruppo (/menu?group=…): lì sta
+  // lavorando al bancone, quindi deve vedere il tema del gestionale.
   const staffSurface =
     onBackoffice ||
     location.pathname.startsWith('/pos') ||
-    (!!staffRole && location.pathname.startsWith('/ordine'))
+    (!!staffRole && location.pathname.startsWith('/ordine')) ||
+    (!!staffRole && location.pathname.startsWith('/menu'))
   useEffect(() => {
     const scope = staffSurface ? settings.theme_staff : settings.theme_client
     applyTheme(resolveThemeVars(scope))
