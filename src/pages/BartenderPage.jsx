@@ -335,6 +335,8 @@ function OrderQueue() {
 
   // Osserva la CODA: conti aperti (sempre, per sempre) + chiusi di oggi.
   const cutoffHour = settings.business_day_cutoff_hour
+  // Gestione preparazione: se spenta spariscono stati e avanzamenti.
+  const workflowOn = settings.workflow_enabled !== false
   useEffect(() => {
     let primed = false
     const awaiting = new Set() // ordini in attesa di pagamento obbligatorio
@@ -610,12 +612,14 @@ function OrderQueue() {
     const awaiting = isAwaitingPayment(o) && o.workflow_status === ORDER_STATUSES.RICEVUTO
     const readerReady = settings.payments_reader_enabled && settings.sumup_reader_id
     const readerPending = o.payment_method === 'lettore' && o.payment_status === 'in_attesa'
+    // Senza gestione della preparazione l'ordine resta "ricevuto": legare
+    // l'incasso agli stati lo renderebbe impossibile.
     const canCollect =
       o.payment_status !== 'pagato' &&
-      [ORDER_STATUSES.PRONTO, ORDER_STATUSES.RITIRATO].includes(o.workflow_status)
+      (!workflowOn || [ORDER_STATUSES.PRONTO, ORDER_STATUSES.RITIRATO].includes(o.workflow_status))
     return (
       <>
-        {ns && o.workflow_status !== ORDER_STATUSES.RITIRATO && !awaiting && (
+        {workflowOn && ns && o.workflow_status !== ORDER_STATUSES.RITIRATO && !awaiting && (
           <button className="btn block" onClick={() => advance(o)}>
             Segna come “{STATUS_LABELS[ns]}”
           </button>

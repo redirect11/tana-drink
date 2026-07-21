@@ -476,6 +476,17 @@ export default function OrderPosDetail({ order = null }) {
   const placedBy = () =>
     staff ? { email: staff.email, name: staff.name, role: staff.role } : undefined
 
+  // Senza gestione della preparazione non c'è nulla da far avanzare:
+  // l'ordine nasce "ricevuto" e da lì si chiude col pagamento.
+  const workflowOn = settings.workflow_enabled !== false
+  const statoIniziale = workflowOn ? ORDER_STATUSES.IN_PREPARAZIONE : ORDER_STATUSES.RICEVUTO
+  // Il POS eredita la modalità di consegna del locale (se non è "sceglie
+  // il cliente"), così l'ordine sa se sarà servito o ritirato.
+  const modoConsegna =
+    settings.service_mode === 'tavolo' || settings.service_mode === 'banco'
+      ? settings.service_mode
+      : null
+
   // CONFERMA. Creazione: chiede il nome, poi crea l'ordine. Modifica: le
   // aggiunte confluiscono nella comanda in preparazione; una NUOVA comanda
   // si crea solo se l'ordine è già pronto/servito. Poi torna in coda.
@@ -513,6 +524,8 @@ export default function OrderPosDetail({ order = null }) {
       items: draftToItems(),
       placed_by: placedBy(),
       printNow: false,
+      status: statoIniziale,
+      service_mode: modoConsegna,
       group_id: group && !groupIsContainer ? group.id : null,
       group_name_snapshot: group && !groupIsContainer ? group.name : null,
     })
@@ -545,7 +558,7 @@ export default function OrderPosDetail({ order = null }) {
       payments: [],
       lottery_code: null,
       invoice_number: null,
-      comande: [{ id: 'c1', seq: 1, status: ORDER_STATUSES.IN_PREPARAZIONE, items: mapped }],
+      comande: [{ id: 'c1', seq: 1, status: statoIniziale, items: mapped }],
       order_items: mapped,
     })
     payIdRef.current = (async () => {
@@ -555,7 +568,8 @@ export default function OrderPosDetail({ order = null }) {
         customer_name: info.customer_name.trim() || null,
         items,
         placed_by: placedBy(),
-        status: ORDER_STATUSES.IN_PREPARAZIONE,
+        status: statoIniziale,
+        service_mode: modoConsegna,
         group_id: group && !groupIsContainer ? group.id : null,
         group_name_snapshot: group && !groupIsContainer ? group.name : null,
       })
@@ -871,7 +885,7 @@ export default function OrderPosDetail({ order = null }) {
               gap: 8,
             }}
           >
-            {!isNew && active && activeNext && !closed && (
+            {!isNew && workflowOn && active && activeNext && !closed && (
               <div className="row between" style={{ alignItems: 'center' }}>
                 <span className={`pill ${active.status}`}>
                   {STATUS_EMOJI[active.status]} {STATUS_LABELS[active.status]}
@@ -986,7 +1000,7 @@ export default function OrderPosDetail({ order = null }) {
                     >
                       🖨 Stampa
                     </button>
-                    {ns && !closed ? (
+                    {ns && workflowOn && !closed ? (
                       <button className="btn small" onClick={() => advance(c.id, ns)}>
                         Segna “{ns === ORDER_STATUSES.RITIRATO ? ritiratoLabel(order.service_mode) : STATUS_LABELS[ns]}”
                       </button>

@@ -93,7 +93,7 @@ vi.mock('firebase/auth', () => ({
 
 import PosPage from '../../src/pages/PosPage.jsx'
 import { submitPosOrder } from '../../src/lib/pendingOrders.js'
-import { createOrder } from '../../src/lib/api.js'
+import { createOrder, subscribeSettings } from '../../src/lib/api.js'
 import { printComanda } from '../../src/lib/printer.js'
 
 function mount() {
@@ -263,5 +263,47 @@ describe('conto di gruppo dal POS', () => {
     await user.click(screen.getByRole('button', { name: '✅ Conferma' }))
     await user.click(screen.getByRole('button', { name: /Salva senza nome/ }))
     expect(submitPosOrder.mock.calls[0][0].group_id).toBeNull()
+  })
+})
+
+describe('gestione preparazione opzionale', () => {
+  const mountConWorkflow = (on) => {
+    localStorage.clear()
+    subscribeSettings.mockImplementation((cb) => {
+      cb({ order_group_default: 'uniti', workflow_enabled: on, service_mode: 'banco' })
+      return () => {}
+    })
+    return render(
+      <MemoryRouter>
+        <PosPage />
+      </MemoryRouter>
+    )
+  }
+
+  it('ATTIVA: l’ordine nasce già in preparazione', async () => {
+    const user = userEvent.setup()
+    mountConWorkflow(true)
+    await user.click(screen.getByText('Mojito'))
+    await user.click(screen.getByRole('button', { name: '✅ Conferma' }))
+    await user.click(screen.getByRole('button', { name: /Salva senza nome/ }))
+    expect(submitPosOrder.mock.calls[0][0].status).toBe('in_preparazione')
+  })
+
+  it('SPENTA: l’ordine nasce e resta "ricevuto"', async () => {
+    const user = userEvent.setup()
+    mountConWorkflow(false)
+    await user.click(screen.getByText('Mojito'))
+    await user.click(screen.getByRole('button', { name: '✅ Conferma' }))
+    await user.click(screen.getByRole('button', { name: /Salva senza nome/ }))
+    expect(submitPosOrder.mock.calls[0][0].status).toBe('ricevuto')
+  })
+
+  it('il POS eredita la modalità di consegna del locale', async () => {
+    const user = userEvent.setup()
+    mountConWorkflow(true)
+    await user.click(screen.getByText('Mojito'))
+    await user.click(screen.getByRole('button', { name: '✅ Conferma' }))
+    await user.click(screen.getByRole('button', { name: /Salva senza nome/ }))
+    expect(submitPosOrder.mock.calls[0][0].service_mode).toBe('banco')
   })
 })

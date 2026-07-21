@@ -53,6 +53,10 @@ export function submitPosOrder({
   printNow = false,
   group_id = null, // conto di gruppo: l'ordine ci nasce già dentro
   group_name_snapshot = null,
+  // Senza gestione della preparazione l'ordine nasce e resta "ricevuto":
+  // non c'è un ciclo di lavorazione da far avanzare.
+  status = ORDER_STATUSES.IN_PREPARAZIONE,
+  service_mode = null,
 }) {
   const tempId = `tmp${++seq}`
   const order = {
@@ -61,7 +65,7 @@ export function submitPosOrder({
     table_label: table_label || null,
     note: note || null,
     status: 'aperto',
-    workflow_status: ORDER_STATUSES.IN_PREPARAZIONE,
+    workflow_status: status,
     payment_status: 'non_richiesto',
     customer_name: customer_name || null,
     group_id,
@@ -90,7 +94,8 @@ export function submitPosOrder({
         items,
         placed_by,
         customer_name: customer_name || null,
-        status: ORDER_STATUSES.IN_PREPARAZIONE,
+        status,
+        service_mode,
         // L'ordine reale porta l'id del placeholder: la griglia lo tiene
         // nascosto finché il placeholder è attivo (scambio senza doppioni).
         client_temp_id: tempId,

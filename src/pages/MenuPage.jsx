@@ -293,7 +293,9 @@ export default function MenuPage() {
   // Tempo stimato mostrato nel menù: per la modalità "entrambi" usa la stima
   // fino al "pronto" (parte comune); il riepilogo ordine poi la adatta alla
   // scelta del cliente.
-  const etaMinutes = settings.eta_enabled
+  // La stima nasce dai tempi di lavorazione: senza gestione preparazione
+  // non ci sono tempi da misurare, quindi non si mostra nulla.
+  const etaMinutes = settings.eta_enabled && settings.workflow_enabled !== false
     ? etaForMode(settings.service_mode === 'tavolo' ? 'tavolo' : 'banco', {
         etaStats: serviceStats.eta_stats,
         prepStats: serviceStats.prep_stats,

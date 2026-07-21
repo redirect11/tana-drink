@@ -2455,6 +2455,11 @@ export const DEFAULT_SETTINGS = {
   // PREZZO CONSIGLIATO: ricarico sul costo degli ingredienti (di norma
   // ×3, ma dipende dal drink) e passo di arrotondamento del listino.
   // È solo un suggerimento: il prezzo resta sempre modificabile a mano.
+  // GESTIONE PREPARAZIONE: se spenta il locale tiene traccia solo degli
+  // ordini (ricevuto → pagato), senza il ciclo di lavorazione. Sparisce
+  // tutto ciò che ne dipende: avanzamenti di stato, tempi di servizio,
+  // stima ETA e notifiche di "pronto".
+  workflow_enabled: true,
   price_markup: DEFAULT_MARKUP,
   price_round_step: DEFAULT_ROUND_STEP,
   coperto_enabled: false,

@@ -55,11 +55,11 @@ export default function OrderSummary({ cart, settings, serviceStats = {}, tableL
   // la stima personale tiene conto di quanti ce ne sono davanti.
   const [queueLen, setQueueLen] = useState(0)
   useEffect(() => {
-    if (!settings.eta_enabled) return
+    if (!settings.eta_enabled || settings.workflow_enabled === false) return
     return subscribeQueue((q) => setQueueLen(q.length))
-  }, [settings.eta_enabled])
+  }, [settings.eta_enabled, settings.workflow_enabled])
 
-  const etaMinutes = settings.eta_enabled
+  const etaMinutes = settings.eta_enabled && settings.workflow_enabled !== false
     ? queueEtaMinutes({
         status: ORDER_STATUSES.RICEVUTO,
         position: queueLen,
