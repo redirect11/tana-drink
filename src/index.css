@@ -2656,3 +2656,30 @@ body.fullbleed,
     flex-shrink: 0;
   }
 }
+
+/* Maniglia di trascinamento delle card in modalità riordino POS: solo qui
+   il touch è "drag" (touch-action:none); il resto della card scorre. */
+.reorder-grip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 26px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  letter-spacing: 0.5px;
+  color: #1c1305;
+  background: var(--accent-2, #f5b94a);
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.reorder-grip:active {
+  cursor: grabbing;
+}

@@ -11,6 +11,7 @@ import {
   loadFavorites,
   saveFavorites,
 } from '../lib/posCatalog.js'
+import { subscribePosPrefs, savePosOrder, savePosFavorites } from '../lib/api.js'
 
 // Colonna categorie + griglia prodotti (il "centro" del POS). Oltre alle
 // categorie ci sono due raccolte speciali: ⭐ Preferiti (i drink che il
@@ -39,8 +40,32 @@ export default function PosProductPicker({
   useEffect(() => {
     if (cats.length > 0 && selectedCat === null) setSelectedCat('__all__')
   }, [cats, selectedCat])
+  // localStorage = cache locale immediata (funziona offline al primo avvio).
   useEffect(() => saveOrder(order), [order])
   useEffect(() => saveFavorites(favorites), [favorites])
+
+  // SINCRONIZZAZIONE COL SERVER: l'arrangiamento vale per tutto il locale.
+  // La sottoscrizione adotta il valore dal server (arriva anche dalla cache
+  // Firestore offline); le scritture partono dagli edit dell'utente, in
+  // background, quindi il server NON viene riscritto qui (niente loop).
+  useEffect(
+    () =>
+      subscribePosPrefs((p) => {
+        if (!p) return
+        if (Array.isArray(p.order)) setOrder(p.order)
+        if (Array.isArray(p.favorites)) setFavorites(p.favorites)
+      }, () => {}),
+    []
+  )
+  // Applica SUBITO in locale, poi sincronizza col server (offline si accoda).
+  const commitOrder = (next) => {
+    setOrder(next)
+    savePosOrder(next).catch(() => {})
+  }
+  const commitFavorites = (next) => {
+    setFavorites(next)
+    savePosFavorites(next).catch(() => {})
+  }
   const catKey = (c) => c.id ?? c.name
   const favSet = useMemo(() => new Set(favorites), [favorites])
   const byId = useMemo(() => new Map((drinks || []).map((d) => [d.id, d])), [drinks])
@@ -66,53 +91,35 @@ export default function PosProductPicker({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q, orderedAll, selectedCat, favSet, recentIds, byId])
 
-  // ── Riordino card per LONG-PRESS + DRAG (modalità riordino) ──
-  // Tenendo premuto (~300ms) su una card parte il trascinamento; muovendo
-  // prima dello scatto è uno scroll e non si sposta nulla. Il riordino
-  // agisce sull'ordine GLOBALE, così vale anche filtrando per categoria.
+  // ── Riordino card dalla MANIGLIA (modalità riordino) ──
+  // Sul touch "scorri col dito + long-press per spostare" sullo stesso
+  // punto non è affidabile: il browser decide scroll o drag all'inizio del
+  // tocco (touch-action) e non si torna indietro. Quindi si trascina da una
+  // MANIGLIA dedicata (touch-action:none): il resto della card scorre
+  // normalmente. Il riordino agisce sull'ordine GLOBALE, valido anche
+  // filtrando per categoria.
   const [dragId, setDragId] = useState(null)
-  const dragRef = useRef({ id: null, timer: null, active: false, startX: 0, startY: 0, el: null, pointerId: null })
+  const dragRef = useRef(null)
   const startDrag = (e, id) => {
-    const st = dragRef.current
-    st.id = id
-    st.active = false
-    st.startX = e.clientX
-    st.startY = e.clientY
-    st.el = e.currentTarget
-    st.pointerId = e.pointerId
-    clearTimeout(st.timer)
-    st.timer = setTimeout(() => {
-      st.active = true
-      setDragId(id)
-      try { st.el.setPointerCapture(st.pointerId) } catch { /* ok */ }
-    }, 300)
+    e.preventDefault()
+    try { e.currentTarget.setPointerCapture(e.pointerId) } catch { /* ok */ }
+    dragRef.current = id
+    setDragId(id)
   }
   const moveDrag = (e) => {
-    const st = dragRef.current
-    if (!st.id) return
-    if (!st.active) {
-      // Mosso troppo prima dello scatto → scroll: annulla il long-press.
-      if (Math.abs(e.clientX - st.startX) > 8 || Math.abs(e.clientY - st.startY) > 8) {
-        clearTimeout(st.timer)
-        st.id = null
-      }
-      return
-    }
+    if (!dragRef.current) return
     e.preventDefault()
     const el = document.elementFromPoint(e.clientX, e.clientY)
     const overId = el?.closest('[data-drink-id]')?.dataset.drinkId
-    if (!overId || overId === st.id) return
-    setOrder(moveInOrder(orderedAllIds, st.id, overId))
+    if (!overId || overId === dragRef.current) return
+    commitOrder(moveInOrder(orderedAllIds, dragRef.current, overId))
   }
   const endDrag = () => {
-    const st = dragRef.current
-    clearTimeout(st.timer)
-    st.id = null
-    st.active = false
+    dragRef.current = null
     setDragId(null)
   }
 
-  const toggleFav = (id) => setFavorites((f) => toggleFavorite(f, id))
+  const toggleFav = (id) => commitFavorites(toggleFavorite(favorites, id))
   // Riordino disponibile ovunque tranne Recenti (ordine per recenza) e in
   // ricerca; con l'ordine globale, filtrare per categoria lo preserva.
   const canReorder = reordering && selectedCat !== '__recent__' && !q
@@ -231,23 +238,28 @@ export default function PosProductPicker({
           )}
           {visibleDrinks.map((d) =>
             canReorder ? (
-              // Modalità riordino: tieni premuto e trascina; il tap non
-              // aggiunge. Lo scroll verticale resta libero (pan-y).
+              // Modalità riordino: si trascina dalla MANIGLIA in alto; il
+              // resto della card scorre. Il tap non aggiunge.
               <div
                 key={d.id}
                 data-drink-id={d.id}
-                onPointerDown={(e) => startDrag(e, d.id)}
-                onPointerMove={moveDrag}
-                onPointerUp={endDrag}
-                onPointerCancel={endDrag}
                 style={{
-                  touchAction: 'pan-y',
-                  cursor: 'grab',
+                  position: 'relative',
                   opacity: dragId === d.id ? 0.5 : 1,
                   boxShadow: dragId === d.id ? '0 6px 18px rgba(0,0,0,0.4)' : 'none',
                   borderRadius: 12,
                 }}
               >
+                <div
+                  className="reorder-grip"
+                  onPointerDown={(e) => startDrag(e, d.id)}
+                  onPointerMove={moveDrag}
+                  onPointerUp={endDrag}
+                  onPointerCancel={endDrag}
+                  title="Trascina per spostare"
+                >
+                  ⠿ trascina
+                </div>
                 <DrinkTile
                   drink={d}
                   qty={qtyByDrink[d.id] ?? 0}

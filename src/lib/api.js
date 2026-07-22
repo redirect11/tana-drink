@@ -877,6 +877,26 @@ export async function closePaidOrder(id) {
   notifyLowStock(lowStock)
 }
 
+// PREFERENZE POS condivise (ordine card e preferiti): stanno sul server
+// così l'arrangiamento è lo stesso su tutti i dispositivi del locale. Il
+// client applica SEMPRE prima in locale (localStorage) e scrive qui in
+// background — offline la scrittura si accoda e va al ritorno della rete.
+const posPrefsRef = doc(db, 'pos_prefs', 'global')
+
+export function subscribePosPrefs(cb, onError) {
+  return onSnapshot(
+    posPrefsRef,
+    (snap) => cb(snap.exists() ? snap.data() : null),
+    onError ?? (() => {})
+  )
+}
+export async function savePosOrder(order) {
+  await setDoc(posPrefsRef, { order: order || [], order_updated_at: serverTimestamp() }, { merge: true })
+}
+export async function savePosFavorites(favorites) {
+  await setDoc(posPrefsRef, { favorites: favorites || [], favorites_updated_at: serverTimestamp() }, { merge: true })
+}
+
 // Id dei drink usati di RECENTE negli ordini (per la raccolta "Recenti" del
 // POS): ultimi item distinti, più recenti prima. Legge un blocco di ordini
 // recenti e li riduce lato client.
