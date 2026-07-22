@@ -54,6 +54,7 @@ const movementsCol = collection(db, 'stock_movements')
 const settingsDoc = doc(db, 'settings', 'bar')
 const groupsCol = collection(db, 'groups')
 const paymentsCol = collection(db, 'payments')
+const cashSessionsCol = collection(db, 'cash_sessions')
 const invoicesCol = collection(db, 'invoices')
 const vouchersCol = collection(db, 'vouchers')
 
@@ -1282,6 +1283,80 @@ export function subscribePayments(onChange, onError, { cutoffHour = DEFAULT_CUTO
     },
     onError ?? (() => {})
   )
+}
+
+// --- CASSA (apertura/chiusura serata) ---
+// Una sessione di cassa marca la finestra della "serata": si apre a inizio
+// servizio (con un fondo cassa opzionale) e si chiude a fine, salvando il
+// riepilogo. Il flusso cassa è calcolato dagli ordini nella finestra.
+
+function mapCashSession(snap) {
+  const s = snap.data() || {}
+  return {
+    id: snap.id,
+    status: s.status ?? 'open',
+    opened_at: toIso(s.opened_at),
+    closed_at: toIso(s.closed_at),
+    opened_by: s.opened_by ?? null,
+    closed_by: s.closed_by ?? null,
+    fondo_cassa: Number(s.fondo_cassa) || 0,
+    business_day: s.business_day ?? null,
+    snapshot: s.snapshot ?? null,
+    counted_cash: s.counted_cash != null ? Number(s.counted_cash) : null,
+    difference: s.difference != null ? Number(s.difference) : null,
+    note: s.note ?? null,
+  }
+}
+
+// Sessione di cassa attualmente aperta (una sola alla volta), in realtime.
+export function subscribeOpenCashSession(onChange, onError) {
+  const q = query(cashSessionsCol, where('status', '==', 'open'), orderBy('opened_at', 'desc'), fbLimit(1))
+  return onSnapshot(
+    q,
+    (snap) => onChange(snap.empty ? null : mapCashSession(snap.docs[0])),
+    onError ?? (() => {})
+  )
+}
+
+// Apre la cassa. Rifiuta se ce n'è già una aperta (una sola serata alla volta).
+export async function openCashSession({ by = null, fondo = 0, cutoffHour = DEFAULT_CUTOFF_HOUR } = {}) {
+  const open = await getDocs(query(cashSessionsCol, where('status', '==', 'open'), fbLimit(1)))
+  if (!open.empty) return mapCashSession(open.docs[0]) // già aperta: la restituisce
+  const ref = await addDoc(cashSessionsCol, {
+    status: 'open',
+    opened_at: serverTimestamp(),
+    opened_by: by,
+    fondo_cassa: Number(fondo) || 0,
+    business_day: businessDayKey(new Date(), cutoffHour),
+    created_at: serverTimestamp(),
+  })
+  return mapCashSession(await getDoc(ref))
+}
+
+// Chiude la cassa: salva il riepilogo (snapshot) ed eventuale contante contato.
+export async function closeCashSession(id, { by = null, snapshot = null, countedCash = null, note = null } = {}) {
+  const ref = doc(db, 'cash_sessions', id)
+  const patch = {
+    status: 'closed',
+    closed_at: serverTimestamp(),
+    closed_by: by,
+    snapshot: snapshot || null,
+    note: note || null,
+  }
+  if (countedCash != null && countedCash !== '') {
+    const counted = Number(countedCash) || 0
+    patch.counted_cash = counted
+    const atteso = Number(snapshot?.contanteAtteso) || 0
+    patch.difference = Math.round((counted - atteso) * 100) / 100
+  }
+  await updateDoc(ref, patch)
+  return mapCashSession(await getDoc(ref))
+}
+
+// Storico delle sessioni di cassa chiuse, più recenti prima.
+export async function fetchCashSessions({ limit = 30 } = {}) {
+  const snap = await getDocs(query(cashSessionsCol, orderBy('opened_at', 'desc'), fbLimit(limit)))
+  return snap.docs.map(mapCashSession)
 }
 
 // --- ORDERS ---

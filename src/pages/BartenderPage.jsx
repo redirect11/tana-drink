@@ -49,7 +49,7 @@ import StaffMyOrders from '../components/StaffMyOrders.jsx'
 import StaffCallList from '../components/StaffCallList.jsx'
 import GroupsPanel from '../components/GroupsPanel.jsx'
 import GroupView from '../components/GroupView.jsx'
-import PaymentsHistory from '../components/PaymentsHistory.jsx'
+import CashFlow from '../components/CashFlow.jsx'
 import InvoicesTab from '../components/InvoicesTab.jsx'
 import ConfirmDialog from '../components/ConfirmDialog.jsx'
 import CancelOrderDialog from '../components/CancelOrderDialog.jsx'
@@ -130,7 +130,7 @@ export default function BartenderPage() {
 
       <div className="bar-content">
         {tab === 'coda' && <OrderQueue />}
-        {tab === 'pagamenti' && <PaymentsHistory />}
+        {tab === 'pagamenti' && <CashFlow />}
         {tab === 'fatture' && <InvoicesTab />}
         {tab === 'stats' && <StatsTab />}
         {tab === 'menu' && <MenuTab />}

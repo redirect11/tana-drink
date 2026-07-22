@@ -1397,6 +1397,11 @@ body.fullbleed .bar-content {
   padding: 7px 8px;
 }
 
+/* Flusso cassa: banner della cassa aperta. */
+.cassa-open {
+  border-left: 4px solid #37b24d;
+}
+
 /* Lampo di conferma quando si aggiunge un item all'ordine: la riga toccata
    si illumina un istante, così si vede che è stata inserita. */
 @keyframes flash-added {
