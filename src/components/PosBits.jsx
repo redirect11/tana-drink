@@ -7,7 +7,7 @@ import { qtyBtnStyle } from '../lib/posStyles.js'
 
 // ── Tile prodotto ────────────────────────────────────────────────────────
 
-export function DrinkTile({ drink, qty, onAdd, onSetQty, color = null }) {
+export function DrinkTile({ drink, qty, onAdd, onSetQty, color = null, favorite = false, onToggleFav = null }) {
   const inCart = qty > 0
 
   return (
@@ -40,6 +40,34 @@ export function DrinkTile({ drink, qty, onAdd, onSetQty, color = null }) {
         height: 104,
       }}
     >
+      {/* Stella preferiti (angolo in alto a destra) */}
+      {onToggleFav && (
+        <button
+          type="button"
+          aria-label={favorite ? `Togli ${drink.name} dai preferiti` : `Aggiungi ${drink.name} ai preferiti`}
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation()
+            onToggleFav()
+          }}
+          style={{
+            position: 'absolute',
+            top: 2,
+            right: 2,
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: '0.95rem',
+            lineHeight: 1,
+            padding: 2,
+            opacity: favorite ? 1 : 0.35,
+            zIndex: 2,
+          }}
+        >
+          {favorite ? '⭐' : '☆'}
+        </button>
+      )}
+
       {/* Angolo colorato per categoria (come le tile di SumUp POS) */}
       {color && (
         <div
