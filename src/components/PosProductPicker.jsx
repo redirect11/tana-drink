@@ -99,25 +99,74 @@ export default function PosProductPicker({
   // normalmente. Il riordino agisce sull'ordine GLOBALE, valido anche
   // filtrando per categoria.
   const [dragId, setDragId] = useState(null)
-  const dragRef = useRef(null)
+  const dragRef = useRef({ id: null, lastX: 0, lastY: 0, raf: 0, vy: 0 })
+  // Dati sempre freschi per il ciclo di auto-scroll (che gira su una
+  // closure vecchia): li legge da qui, non dalle variabili di render.
+  const latest = useRef({})
+  latest.current = { orderedAllIds, commitOrder }
+
+  // Sposta l'item trascinato sopra la card che sta sotto al punto (x,y).
+  const reorderAt = (x, y) => {
+    const st = dragRef.current
+    if (!st.id) return
+    const el = document.elementFromPoint(x, y)
+    const overId = el?.closest('[data-drink-id]')?.dataset.drinkId
+    if (!overId || overId === st.id) return
+    latest.current.commitOrder(moveInOrder(latest.current.orderedAllIds, st.id, overId))
+  }
+
+  // Ciclo di AUTO-SCROLL: mentre si trascina vicino a un bordo, la griglia
+  // scorre da sola (così si può portare un item dal fondo alla cima). Legge
+  // tutto da ref, quindi la closure "vecchia" resta valida.
+  const autoScrollTick = () => {
+    const st = dragRef.current
+    if (!st.id) return
+    const grid = gridRef.current
+    if (grid && st.vy) {
+      grid.scrollTop += st.vy
+      reorderAt(st.lastX, st.lastY)
+    }
+    st.raf = requestAnimationFrame(autoScrollTick)
+  }
+
   const startDrag = (e, id) => {
     e.preventDefault()
     try { e.currentTarget.setPointerCapture(e.pointerId) } catch { /* ok */ }
-    dragRef.current = id
+    const st = dragRef.current
+    st.id = id
+    st.lastX = e.clientX
+    st.lastY = e.clientY
+    st.vy = 0
     setDragId(id)
+    cancelAnimationFrame(st.raf)
+    st.raf = requestAnimationFrame(autoScrollTick)
   }
   const moveDrag = (e) => {
-    if (!dragRef.current) return
+    const st = dragRef.current
+    if (!st.id) return
     e.preventDefault()
-    const el = document.elementFromPoint(e.clientX, e.clientY)
-    const overId = el?.closest('[data-drink-id]')?.dataset.drinkId
-    if (!overId || overId === dragRef.current) return
-    commitOrder(moveInOrder(orderedAllIds, dragRef.current, overId))
+    st.lastX = e.clientX
+    st.lastY = e.clientY
+    // Velocità di scroll in base a quanto si entra nella fascia di bordo.
+    const grid = gridRef.current
+    if (grid) {
+      const r = grid.getBoundingClientRect()
+      const EDGE = 72
+      if (e.clientY < r.top + EDGE) st.vy = -Math.ceil((r.top + EDGE - e.clientY) / 5)
+      else if (e.clientY > r.bottom - EDGE) st.vy = Math.ceil((e.clientY - (r.bottom - EDGE)) / 5)
+      else st.vy = 0
+    }
+    reorderAt(e.clientX, e.clientY)
   }
   const endDrag = () => {
-    dragRef.current = null
+    const st = dragRef.current
+    cancelAnimationFrame(st.raf)
+    st.id = null
+    st.vy = 0
+    st.raf = 0
     setDragId(null)
   }
+  useEffect(() => () => cancelAnimationFrame(dragRef.current.raf), [])
 
   const toggleFav = (id) => commitFavorites(toggleFavorite(favorites, id))
   // Riordino disponibile ovunque tranne Recenti (ordine per recenza) e in
