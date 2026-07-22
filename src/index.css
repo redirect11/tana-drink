@@ -2188,9 +2188,9 @@ body.fullbleed,
   display: flex;
   flex-direction: column;
   gap: 6px;
-  width: fit-content;
+  width: var(--pos-cats-w, fit-content);
   min-width: 88px;
-  max-width: 220px;
+  max-width: none;
 }
 .posd-cats button {
   white-space: nowrap;
@@ -2200,10 +2200,36 @@ body.fullbleed,
   flex-direction: column;
   background: var(--bg-2);
   border-left: 1px solid rgba(255, 255, 255, 0.09);
-  width: fit-content;
+  width: var(--pos-comanda-w, fit-content);
   min-width: 300px;
-  max-width: 460px;
+  max-width: none;
   flex-shrink: 0;
+}
+
+/* Maniglia di ridimensionamento fra le colonne del POS. */
+.posd-resize-handle {
+  flex-shrink: 0;
+  width: 8px;
+  cursor: col-resize;
+  align-self: stretch;
+  touch-action: none;
+  background: transparent;
+  border: none;
+  position: relative;
+}
+.posd-resize-handle::before {
+  content: '';
+  position: absolute;
+  inset: 0 3px;
+  border-radius: 2px;
+  background: var(--line);
+  opacity: 0.5;
+  transition: opacity 0.15s;
+}
+.posd-resize-handle:hover::before,
+.posd-resize-handle:active::before {
+  opacity: 1;
+  background: var(--accent-2, #f5b94a);
 }
 @media (max-width: 899px) {
   .posd-body {
@@ -2226,6 +2252,10 @@ body.fullbleed,
   .posd-cats {
     max-width: none;
     min-width: 0;
+    width: 100% !important;
+  }
+  .posd-resize-handle {
+    display: none;
   }
   .posd-comanda {
     width: 100%;

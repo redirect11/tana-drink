@@ -7,7 +7,7 @@ import { catColor, drinkCategoryColor } from '../lib/categoryColors.js'
 // identico su cassa e dettaglio ordine, come nell'app SumUp). Toccando un
 // prodotto lo si aggiunge alla comanda nel pannello di destra.
 // `categoryDisplay`: 'dot' (pallino+testo), 'icon_text' o 'icon'.
-export default function PosProductPicker({ drinks, cats, loading, qtyByDrink, onAdd, onSetQty, disabled = false, categoryDisplay = 'dot' }) {
+export default function PosProductPicker({ drinks, cats, loading, qtyByDrink, onAdd, onSetQty, disabled = false, categoryDisplay = 'dot', catsHandleProps = null }) {
   const [selectedCat, setSelectedCat] = useState(null)
   const [query, setQuery] = useState('')
   const gridRef = useRef(null)
@@ -74,6 +74,9 @@ export default function PosProductPicker({ drinks, cats, loading, qtyByDrink, on
           </button>
         ))}
       </aside>
+
+      {/* Maniglia fra categorie e griglia */}
+      {catsHandleProps && <div className="posd-resize-handle" {...catsHandleProps} />}
 
       {/* Colonna centrale: ricerca + griglia prodotti */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
