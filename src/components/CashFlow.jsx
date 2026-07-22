@@ -134,8 +134,12 @@ function ChiudiCassa({ session, recap, by }) {
   const [busy, setBusy] = useState(false)
   const diff =
     counted === '' ? null : Math.round((Number(String(counted).replace(',', '.')) - recap.contanteAtteso) * 100) / 100
+  // La cassa NON si può chiudere se ci sono ordini non pagati: conta solo il
+  // pagamento, a prescindere dallo stato di preparazione/servizio.
+  const bloccato = recap.nAperti > 0
 
   async function chiudi() {
+    if (bloccato) return
     setBusy(true)
     try {
       await closeCashSession(session.id, { by, snapshot: recap, countedCash: counted === '' ? null : counted })
@@ -167,21 +171,25 @@ function ChiudiCassa({ session, recap, by }) {
         <span className="muted small">Contante atteso in cassa (fondo {formatPrice(recap.fondo)} + contanti)</span>
         <strong>{formatPrice(recap.contanteAtteso)}</strong>
       </div>
-      {recap.apertoDaIncassare > 0 && (
-        <div className="muted small" style={{ marginTop: 6 }}>
-          ⚠️ Ci sono {recap.nAperti} conti ancora aperti ({formatPrice(recap.apertoDaIncassare)} da incassare).
+      {bloccato ? (
+        <div className="banner" style={{ marginTop: 8 }}>
+          ⛔ Non puoi chiudere la cassa: ci sono <strong>{recap.nAperti} conti non pagati</strong>
+          {' '}({formatPrice(recap.apertoDaIncassare)} da incassare). Incassali prima di chiudere.
         </div>
-      )}
-      <label htmlFor="counted" style={{ display: 'block', marginTop: 8 }}>Contante contato (€) — opzionale</label>
-      <input id="counted" type="number" step="0.5" min="0" value={counted} onChange={(e) => setCounted(e.target.value)} placeholder={String(recap.contanteAtteso)} style={{ maxWidth: 160 }} />
-      {diff != null && (
-        <div className="small" style={{ marginTop: 4 }}>
-          Differenza: <strong className={diff < 0 ? 'neg' : ''}>{diff > 0 ? '+' : ''}{formatPrice(diff)}</strong>
-        </div>
+      ) : (
+        <>
+          <label htmlFor="counted" style={{ display: 'block', marginTop: 8 }}>Contante contato (€) — opzionale</label>
+          <input id="counted" type="number" step="0.5" min="0" value={counted} onChange={(e) => setCounted(e.target.value)} placeholder={String(recap.contanteAtteso)} style={{ maxWidth: 160 }} />
+          {diff != null && (
+            <div className="small" style={{ marginTop: 4 }}>
+              Differenza: <strong className={diff < 0 ? 'neg' : ''}>{diff > 0 ? '+' : ''}{formatPrice(diff)}</strong>
+            </div>
+          )}
+        </>
       )}
       <div className="grid-2" style={{ marginTop: 10, gap: 8 }}>
         <button className="btn ghost" onClick={() => setOpen(false)} disabled={busy}>Annulla</button>
-        <button className="btn danger" onClick={chiudi} disabled={busy}>Conferma chiusura</button>
+        <button className="btn danger" onClick={chiudi} disabled={busy || bloccato}>Conferma chiusura</button>
       </div>
     </div>
   )
