@@ -5,9 +5,12 @@
 export const BASE_UNITS = ['ml', 'g', 'pz']
 
 // Unità selezionabili in fase di inserimento ricetta, per unità base dell'item.
+// Sono le unità "piccole" con cui si dosa un drink (mai L/kg in una ricetta):
+// liquidi in cl/ml, solidi in g/mg. Devono restare un sottoinsieme di quelle
+// gestite da costPerUnit, altrimenti il costo dell'ingrediente andrebbe perso.
 export const ENTRY_UNITS = {
   ml: ['cl', 'ml'],
-  g: ['g', 'kg'],
+  g: ['g', 'mg'],
   pz: ['pz'],
 }
 
@@ -203,19 +206,24 @@ export function smallUnits(item) {
   return ['pz']
 }
 
-// Quante unità base valgono 1 unità "piccola" scelta.
-const BASE_PER_SMALL = { cl: 10, ml: 1, g: 1, mg: 0.001, pz: 1 }
+// Quante unità base (ml/g) vale 1 unità di misura. Copre TUTTE le unità
+// gestite (comprese L/kg), non solo le "piccole": così un costo non va mai
+// perso in silenzio per un'unità non prevista. Deve restare coerente con
+// toBaseQty (stessi fattori di conversione).
+const BASE_PER_UNIT = { l: 1000, cl: 10, ml: 1, kg: 1000, g: 1, mg: 0.001, pz: 1 }
 
-// Costo di una singola unità (cl/ml/g/mg/pz) partendo dal costo per
+// Costo di una singola unità (L/cl/ml/kg/g/mg/pz) partendo dal costo per
 // confezione: cost / (package_size / base-per-unità). Null se non calcolabile.
+// L'unità richiesta deve appartenere alla stessa famiglia dell'item
+// (liquido↔ml, solido↔g): chiedere il costo al ml di un solido non ha senso.
 export function costPerUnit(item, unit, { gross = true } = {}) {
   const packCost = gross ? costWithVat(item?.cost, item?.vat) : Number(item?.cost) || 0
   if (!(packCost > 0)) return null
   if ((item?.unit || 'pz') === 'pz') return unit === 'pz' ? packCost : null
+  const per = BASE_PER_UNIT[String(unit || '').toLowerCase()]
+  if (!per || baseUnit(unit) !== item.unit) return null
   const size = Number(item?.package_size) || 0
   if (size <= 0) return null
-  const per = BASE_PER_SMALL[unit]
-  if (!per) return null
   return packCost / (size / per)
 }
 
