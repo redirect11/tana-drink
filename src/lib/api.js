@@ -2591,6 +2591,9 @@ export const DEFAULT_SETTINGS = {
   workflow_enabled: true,
   price_markup: DEFAULT_MARKUP,
   price_round_step: DEFAULT_ROUND_STEP,
+  // IVA di vendita (somministrazione bar = 10%): serve a scorporare l'IVA dal
+  // fatturato per confrontarlo al netto con gli acquisti (Dashboard mensile).
+  sale_vat: 10,
   coperto_enabled: false,
   coperto_amount: 2,
   service_charge_enabled: false,

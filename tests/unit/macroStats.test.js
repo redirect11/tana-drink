@@ -163,4 +163,21 @@ describe('macroMonthlyReport', () => {
     expect(rep.grand.fatturato).toBeCloseTo(14, 2) // 2 negroni: Distillati 11 + Vino 3
     expect(rep.grand.acquisti).toBeCloseTo(42, 2)
   })
+
+  it('con saleVat scorpora l’IVA dal fatturato (acquisti restano netti)', () => {
+    const rep10 = macroMonthlyReport({
+      orders,
+      purchaseOrders,
+      drinksById: { negroni },
+      itemsById,
+      catToMacro,
+      macros,
+      months: ['2026-06', '2026-07'],
+      saleVat: 10,
+    })
+    // Fatturato lordo Distillati anno 11 → netto 11/1,10 = 10
+    expect(rep10.rows.find((r) => r.id === 'm1').tot.fatturato).toBeCloseTo(10, 2)
+    // Acquisti invariati (già netti)
+    expect(rep10.rows.find((r) => r.id === 'm1').tot.acquisti).toBeCloseTo(42, 2)
+  })
 })

@@ -63,8 +63,9 @@ export default function MacroMonthlyTab() {
       macros: data.macros,
       months: monthsOfYear(year),
       cutoffHour: cutoff,
+      saleVat: settings.sale_vat,
     })
-  }, [data, year, cutoff])
+  }, [data, year, cutoff, settings.sale_vat])
 
   if (error) return <div className="banner">Errore: {error}</div>
 
@@ -75,6 +76,11 @@ export default function MacroMonthlyTab() {
         <strong style={{ fontSize: '1.1rem' }}>{year}</strong>
         <button className="btn ghost small" onClick={() => setYear((y) => y + 1)}>→</button>
       </div>
+
+      <p className="muted small" style={{ margin: '0 0 10px' }}>
+        Valori al <strong>netto IVA</strong> (vendita {settings.sale_vat}%, modificabile in
+        Impostazioni). Acquisti = ordini fornitore segnati “ricevuto”.
+      </p>
 
       {loading && <div className="empty">Carico l’andamento…</div>}
 
