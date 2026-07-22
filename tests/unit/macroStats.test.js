@@ -164,20 +164,28 @@ describe('macroMonthlyReport', () => {
     expect(rep.grand.acquisti).toBeCloseTo(42, 2)
   })
 
-  it('con saleVat scorpora l’IVA dal fatturato (acquisti restano netti)', () => {
-    const rep10 = macroMonthlyReport({
+  it('scorpora l’IVA dal fatturato usando l’aliquota del PRODOTTO', () => {
+    // gin/bitter al 22%, vermouth al 10%: lo scorporo è per-prodotto.
+    const items = {
+      gin: { ...itemsById.gin, vat: 22 },
+      bitter: { ...itemsById.bitter, vat: 22 },
+      verm: { ...itemsById.verm, vat: 10 },
+    }
+    const rep2 = macroMonthlyReport({
       orders,
       purchaseOrders,
       drinksById: { negroni },
-      itemsById,
+      itemsById: items,
       catToMacro,
       macros,
       months: ['2026-06', '2026-07'],
-      saleVat: 10,
+      saleVat: 0,
     })
-    // Fatturato lordo Distillati anno 11 → netto 11/1,10 = 10
-    expect(rep10.rows.find((r) => r.id === 'm1').tot.fatturato).toBeCloseTo(10, 2)
+    // Distillati (gin+bitter) lordo anno 11 → netto 11/1,22 = 9,02
+    expect(rep2.rows.find((r) => r.id === 'm1').tot.fatturato).toBeCloseTo(9.02, 1)
+    // Vino (vermouth) lordo 3 → netto 3/1,10 = 2,73
+    expect(rep2.rows.find((r) => r.id === 'm2').tot.fatturato).toBeCloseTo(2.73, 1)
     // Acquisti invariati (già netti)
-    expect(rep10.rows.find((r) => r.id === 'm1').tot.acquisti).toBeCloseTo(42, 2)
+    expect(rep2.rows.find((r) => r.id === 'm1').tot.acquisti).toBeCloseTo(42, 2)
   })
 })
