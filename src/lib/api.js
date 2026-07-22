@@ -2587,8 +2587,9 @@ export const DEFAULT_SETTINGS = {
   // GESTIONE PREPARAZIONE: se spenta il locale tiene traccia solo degli
   // ordini (ricevuto → pagato), senza il ciclo di lavorazione. Sparisce
   // tutto ciò che ne dipende: avanzamenti di stato, tempi di servizio,
-  // stima ETA e notifiche di "pronto".
-  workflow_enabled: true,
+  // stima ETA e notifiche di "pronto". Disattivata di default: la si accende
+  // solo se si vuole tracciare la preparazione.
+  workflow_enabled: false,
   price_markup: DEFAULT_MARKUP,
   price_round_step: DEFAULT_ROUND_STEP,
   // IVA di vendita (somministrazione bar = 10%): serve a scorporare l'IVA dal
