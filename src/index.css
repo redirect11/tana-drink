@@ -1292,10 +1292,80 @@ body.fullbleed .bar-content {
   align-items: start;
 }
 .admin-card .grid-card-main {
-  height: auto;
-  min-height: 62px;
+  /* Altezza FISSA come le card ordini/menù: tutte uguali a colpo d'occhio,
+     a prescindere dal nome su una o due righe. Il dettaglio bottiglie sta
+     nelle azioni, così qui il contenuto è sempre lo stesso. */
+  height: 92px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   padding: 10px 12px;
+  overflow: hidden;
 }
+.admin-card .grid-card-main > .row.between {
+  margin-top: auto;
+}
+.admin-card .grid-card-main strong {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ── Inventario in LISTA condensata ── */
+.inv-list {
+  display: flex;
+  flex-direction: column;
+  margin-top: 4px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.inv-row {
+  border-left: 4px solid transparent;
+  border-bottom: 1px solid var(--line);
+}
+.inv-row:last-child { border-bottom: none; }
+.inv-row.inv-ok { border-left-color: #2ecc71; }
+.inv-row.inv-low { border-left-color: #f39c12; }
+.inv-row.inv-empty { border-left-color: #e74c3c; }
+.inv-row-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.inv-row.open .inv-row-main { background: rgba(255, 255, 255, 0.04); }
+.inv-row-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex-shrink: 0;
+}
+.inv-row-cat {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.inv-row-stock {
+  font-weight: 600;
+  white-space: nowrap;
+  font-family: var(--serif);
+}
+.inv-row .grid-card-actions {
+  padding: 0 12px 10px;
+}
+:root[data-luma='light'] .inv-row.open .inv-row-main { background: rgba(0, 0, 0, 0.03); }
 .admin-card.off .grid-card-main {
   opacity: 0.55;
 }
