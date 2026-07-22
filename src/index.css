@@ -2466,6 +2466,14 @@ body.fullbleed,
   border-color: rgba(0, 0, 0, 0.18);
   background: rgba(0, 0, 0, 0.04);
 }
+/* Il chip ATTIVO resta acceso anche sul tema chiaro: la regola qui sopra
+   ha specificità maggiore di ".chip.active" e altrimenti ne spegnerebbe
+   lo sfondo (i filtri sembravano sempre inattivi nel backoffice). */
+:root[data-luma='light'] .chip.active {
+  border-color: transparent;
+  background: linear-gradient(135deg, #f7c45e, #e8a32e);
+  color: #1c1305;
+}
 :root[data-luma='light'] .qty button {
   background: rgba(0, 0, 0, 0.08);
 }
