@@ -9,6 +9,7 @@ import {
   stockStatus,
   computeConsumption,
   bottleBreakdown,
+  bottleSummary,
   inventorySummary,
   filterItems,
   costWithVat,
@@ -233,5 +234,26 @@ describe('computeConsumption', () => {
       drinksById
     )
     expect(res).toEqual([{ inventory_item_id: 'gin', name: 'Gin', unit: 'ml', qty: 50 }])
+  })
+})
+
+describe('bottleSummary (giacenza in bottiglie sulle card)', () => {
+  const gin = { unit: 'ml', package_size: 700 } // bottiglia da 70 cl
+  it('bottiglie piene', () => {
+    expect(bottleSummary({ ...gin, stock: 700 })).toBe('1 bott.')
+    expect(bottleSummary({ ...gin, stock: 2100 })).toBe('3 bott.')
+  })
+  it('con una bottiglia aperta mostra anche il residuo', () => {
+    // 2 piene (1400 ml) + 300 ml aperti = 30 cl
+    expect(bottleSummary({ ...gin, stock: 1700 })).toBe('2 bott. + 30 cl')
+  })
+  it('meno di una bottiglia: solo il residuo', () => {
+    expect(bottleSummary({ ...gin, stock: 300 })).toBe('30 cl')
+  })
+  it('vuoto → 0 bott.', () => {
+    expect(bottleSummary({ ...gin, stock: 0 })).toBe('0 bott.')
+  })
+  it('articolo a pezzo: nessun conteggio bottiglie', () => {
+    expect(bottleSummary({ unit: 'pz', stock: 12 })).toBeNull()
   })
 })

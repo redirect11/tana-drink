@@ -61,6 +61,19 @@ export function bottleBreakdown(item) {
   return { full, openRemaining, hasOpen, finished, total }
 }
 
+// Giacenza in BOTTIGLIE per le card: "2 bott." o "2 bott. + 50 cl" quando
+// una è aperta. Il totale in cl/L da solo dice poco (70 cl = una bottiglia
+// o due mezze?), quindi lo si affianca al conteggio bottiglie. Null per gli
+// articoli a pezzo, che non hanno confezioni frazionabili.
+export function bottleSummary(item) {
+  const bd = bottleBreakdown(item)
+  if (!bd) return null
+  const parts = []
+  if (bd.full > 0) parts.push(`${bd.full} bott.`)
+  if (bd.hasOpen) parts.push(formatQty(Math.round(bd.openRemaining), item?.unit))
+  return parts.length ? parts.join(' + ') : '0 bott.'
+}
+
 // Stato scorta di un item: 'empty' (≤0), 'low' (≤ soglia), 'ok'.
 export function stockStatus(item) {
   const stock = Number(item?.stock) || 0

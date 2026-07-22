@@ -21,6 +21,7 @@ import {
   BASE_UNITS,
   formatQty,
   stockStatus,
+  bottleSummary,
   bottleBreakdown,
   inventorySummary,
   filterItems,
@@ -401,7 +402,10 @@ function ProductsPanel() {
                     {it.status === 'out' && <span className="badge-empty">OUT</span>}
                   </span>
                   <span className="muted small inv-row-cat">{catName(it.category_id) || '—'}</span>
-                  <span className="inv-row-stock">{formatQty(it.stock, it.unit)}</span>
+                  <span className="inv-row-stock">
+                    {formatQty(it.stock, it.unit)}
+                    {bottleSummary(it) && <span className="muted small"> · 🍾 {bottleSummary(it)}</span>}
+                  </span>
                 </button>
                 {expanded && itemActions(it, bottleBreakdown(it))}
               </div>
@@ -440,8 +444,13 @@ function ProductsPanel() {
                     {catName(it.category_id) || 'Senza categoria'}
                     {supName(it.supplier_id) ? ` · ${supName(it.supplier_id)}` : ''}
                   </span>
-                  <span className="grid-card-tot" style={{ fontSize: '1.05rem', whiteSpace: 'nowrap' }}>
-                    {formatQty(it.stock, it.unit)}
+                  <span style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                    <span className="grid-card-tot" style={{ fontSize: '1.05rem' }}>
+                      {formatQty(it.stock, it.unit)}
+                    </span>
+                    {bottleSummary(it) && (
+                      <span className="muted small" style={{ display: 'block' }}>🍾 {bottleSummary(it)}</span>
+                    )}
                   </span>
                 </div>
               </div>
