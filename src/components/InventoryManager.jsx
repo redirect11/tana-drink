@@ -37,6 +37,7 @@ import { toastSuccess, toastError } from '../lib/toast.js'
 import StockCountPanel from './StockCountPanel.jsx'
 import PurchaseOrdersPanel from './PurchaseOrdersPanel.jsx'
 import SupplierInvoicesPanel from './SupplierInvoicesPanel.jsx'
+import CategoryRail from './CategoryRail.jsx'
 
 const STATUS_ITEM = [
   { value: 'linea', label: 'In linea' },
@@ -211,6 +212,21 @@ function ProductsPanel() {
     [items, query, categoryFilter, supplierFilter, statusFilter]
   )
 
+  // Conteggi per categoria (su tutto l'inventario) per la barra a sinistra.
+  const catItems = useMemo(() => {
+    let none = 0
+    const per = {}
+    for (const it of items) {
+      if (it.category_id) per[it.category_id] = (per[it.category_id] || 0) + 1
+      else none += 1
+    }
+    return [
+      { key: 'all', label: 'Tutte', count: items.length },
+      ...categories.map((c) => ({ key: c.id, label: c.name, count: per[c.id] || 0 })),
+      ...(none ? [{ key: 'none', label: 'Senza categoria', count: none }] : []),
+    ]
+  }, [items, categories])
+
   async function handleSave(payload) {
     setError(null)
     try {
@@ -305,26 +321,8 @@ function ProductsPanel() {
         placeholder="🔍 Cerca prodotto…"
       />
 
-      {/* Filtro categorie */}
-      {categories.length > 0 && (
-        <div className="chips-row">
-          <button className={`chip ${categoryFilter === 'all' ? 'active' : ''}`} onClick={() => setCategoryFilter('all')}>
-            Tutte
-          </button>
-          {categories.map((c) => (
-            <button
-              key={c.id}
-              className={`chip ${categoryFilter === c.id ? 'active' : ''}`}
-              onClick={() => setCategoryFilter(c.id)}
-            >
-              {c.name}
-            </button>
-          ))}
-          <button className={`chip ${categoryFilter === 'none' ? 'active' : ''}`} onClick={() => setCategoryFilter('none')}>
-            Senza categoria
-          </button>
-        </div>
-      )}
+      {/* Categorie a SINISTRA (come il POS), il resto a destra. */}
+      <CategoryRail items={catItems} selected={categoryFilter} onSelect={setCategoryFilter}>
 
       {/* Filtro fornitori */}
       {suppliers.length > 0 && (
@@ -504,6 +502,8 @@ function ProductsPanel() {
       {!loading && items.length > 0 && visible.length === 0 && (
         <div className="empty">Nessun prodotto corrisponde ai filtri.</div>
       )}
+
+      </CategoryRail>
 
       {/* Movimenti (collassabile) */}
       {movements.length > 0 && (

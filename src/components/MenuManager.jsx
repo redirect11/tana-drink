@@ -15,6 +15,7 @@ import { formatPrice } from '../lib/orderStatus.js'
 import { toBaseQty, formatQty, ENTRY_UNITS } from '../lib/inventory.js'
 import PriceSuggestion from './PriceSuggestion.jsx'
 import MarginList from './MarginList.jsx'
+import CategoryRail from './CategoryRail.jsx'
 import { CATEGORY_ICONS, catColor } from '../lib/categoryColors.js'
 
 const EMPTY = {
@@ -178,6 +179,18 @@ export default function MenuManager() {
     return m
   }, [searched])
 
+  // Voci per la barra categorie a sinistra (come nel POS).
+  const catItems = useMemo(
+    () => [
+      { key: 'all', label: 'Tutte', count: counts.all },
+      ...categories
+        .filter((c) => counts[c.id])
+        .map((c) => ({ key: c.id, label: c.name, count: counts[c.id] })),
+      ...(counts.none ? [{ key: 'none', label: 'Senza categoria', count: counts.none }] : []),
+    ],
+    [categories, counts]
+  )
+
   // Applica il filtro categoria e raggruppa per categoria (ordine categorie).
   const groups = useMemo(() => {
     const inCat = searched.filter((d) => {
@@ -291,39 +304,14 @@ export default function MenuManager() {
               </button>
             ))}
           </div>
-
-          {/* Filtro categoria a chip con conteggi */}
-          <div className="chips-row">
-            <button
-              className={`chip${catFilter === 'all' ? ' active' : ''}`}
-              onClick={() => setCatFilter('all')}
-            >
-              Tutte ({counts.all})
-            </button>
-            {categories.map((c) =>
-              counts[c.id] ? (
-                <button
-                  key={c.id}
-                  className={`chip${catFilter === c.id ? ' active' : ''}`}
-                  onClick={() => setCatFilter(c.id)}
-                >
-                  {c.name} ({counts[c.id]})
-                </button>
-              ) : null
-            )}
-            {counts.none ? (
-              <button
-                className={`chip${catFilter === 'none' ? ' active' : ''}`}
-                onClick={() => setCatFilter('none')}
-              >
-                Senza categoria ({counts.none})
-              </button>
-            ) : null}
-          </div>
         </>
       )}
 
-      {!loading && drinks.length > 0 && groups.length === 0 && (
+      {/* Categorie a SINISTRA (come il POS), i drink a destra. */}
+      {!loading && drinks.length > 0 && (
+      <CategoryRail items={catItems} selected={catFilter} onSelect={setCatFilter}>
+
+      {groups.length === 0 && (
         <div className="empty">Nessun drink per «{search}».</div>
       )}
 
@@ -408,6 +396,9 @@ export default function MenuManager() {
           </section>
         )
       })}
+
+      </CategoryRail>
+      )}
 
       {!loading && drinks.length === 0 && (
         <div className="empty">Nessun drink nel menù. Aggiungine uno!</div>
