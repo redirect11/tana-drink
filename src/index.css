@@ -1368,9 +1368,6 @@ body.fullbleed .bar-content {
 .admin-card.inv-empty { border-left: 4px solid #e74c3c; }
 /* Sul tema chiaro l'override generico dei bordi card non deve mangiarsi
    la striscia (stessa storia delle card ordini). */
-:root[data-luma='light'] .admin-card.inv-ok { border-left-color: #2ecc71; }
-:root[data-luma='light'] .admin-card.inv-low { border-left-color: #f39c12; }
-:root[data-luma='light'] .admin-card.inv-empty { border-left-color: #e74c3c; }
 
 /* Pulsante che apre/chiude i tasti azione della card */
 .grid-card-toggle {
@@ -2552,6 +2549,18 @@ body.fullbleed,
   border-right-color: rgba(0, 0, 0, 0.1);
   border-bottom-color: rgba(0, 0, 0, 0.1);
 }
+/* Come le card ordine: la STRISCIA sinistra resta colorata per stato
+   scorte (verde/arancio/rosso), gli altri tre lati seguono il tema. La
+   regola generica ".card:not(.order-card)" qui sopra grigiava anche il
+   bordo sinistro, spegnendo l'indicatore. */
+:root[data-luma='light'] .admin-card {
+  border-top-color: rgba(0, 0, 0, 0.1);
+  border-right-color: rgba(0, 0, 0, 0.1);
+  border-bottom-color: rgba(0, 0, 0, 0.1);
+}
+:root[data-luma='light'] .admin-card.inv-ok { border-left-color: #2ecc71; }
+:root[data-luma='light'] .admin-card.inv-low { border-left-color: #f39c12; }
+:root[data-luma='light'] .admin-card.inv-empty { border-left-color: #e74c3c; }
 :root[data-luma='light'] input,
 :root[data-luma='light'] select,
 :root[data-luma='light'] textarea {
