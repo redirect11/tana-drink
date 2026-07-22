@@ -657,20 +657,22 @@ export default function OrderPosDetail({ order = null }) {
           // Il pill del conto porta anche lo stato del pagamento: un conto
           // aperto può essere già saldato (in attesa di servizio) o pagato
           // in parte. Meglio un solo pill parlante che due accostati.
+          // Se è già saldato, il pill NON dice "aperto": dice "Pagato". Che
+          // resti da servire lo mostrano lo stato di lavorazione e il footer.
           const paid = order.payment_status === 'pagato'
           const parziale = order.payment_status === 'parziale'
-          const cls = order.status === ORDER_OPEN && paid ? 'pagato' : order.status
+          const aperto = order.status === ORDER_OPEN
+          const cls = aperto && paid ? 'pagato' : order.status
+          const emoji = aperto && paid ? '💳' : STATUS_EMOJI[order.status]
           const label =
-            order.status === ORDER_OPEN
-              ? paid
-                ? 'Aperto · Pagato'
-                : parziale
-                  ? `Aperto · Acconto ${formatPrice(paidAmount(order))}`
-                  : STATUS_LABELS[order.status]
-              : STATUS_LABELS[order.status]
+            aperto && paid
+              ? 'Pagato'
+              : aperto && parziale
+                ? `Acconto ${formatPrice(paidAmount(order))}`
+                : STATUS_LABELS[order.status]
           return (
             <span className={`pill ${cls}`}>
-              {STATUS_EMOJI[order.status]} {label}
+              {emoji} {label}
             </span>
           )
         })()}
