@@ -409,8 +409,8 @@ function ProductsPanel() {
                         <>
                           {bs.bottles} 🍾{' '}
                           <span className="muted small">
-                            · {bs.total}
-                            {bs.open && ` · aperta ${bs.open}`}
+                            · {bs.total} ·{' '}
+                            {bs.open ? `aperta ${bs.open}` : bs.bottles > 1 ? 'piene' : 'piena'}
                           </span>
                         </>
                       ) : (
@@ -467,8 +467,12 @@ function ProductsPanel() {
                         </span>
                         {bs && (
                           <span className="muted small" style={{ display: 'block' }}>
-                            {bs.total}
-                            {bs.open && ` · aperta ${bs.open}`}
+                            {bs.total} ·{' '}
+                            {bs.open
+                              ? `aperta ${bs.open}`
+                              : bs.bottles > 1
+                                ? 'piene'
+                                : 'piena'}
                           </span>
                         )}
                       </span>
