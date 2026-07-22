@@ -237,21 +237,26 @@ describe('computeConsumption', () => {
   })
 })
 
-describe('bottleSummary (giacenza in bottiglie sulle card)', () => {
+describe('bottleSummary: bottiglie (pz) + contenuto (cl), unità distinte', () => {
   const gin = { unit: 'ml', package_size: 700 } // bottiglia da 70 cl
-  it('bottiglie piene', () => {
-    expect(bottleSummary({ ...gin, stock: 700 })).toBe('1 bott.')
-    expect(bottleSummary({ ...gin, stock: 2100 })).toBe('3 bott.')
+  it('bottiglie piene: conteggio + contenuto totale, nessuna aperta', () => {
+    expect(bottleSummary({ ...gin, stock: 700 })).toEqual({ bottles: 1, total: '70 cl', open: null })
+    expect(bottleSummary({ ...gin, stock: 2100 })).toEqual({ bottles: 3, total: '2,1 L', open: null })
   })
-  it('con una bottiglia aperta mostra anche il residuo', () => {
-    // 2 piene (1400 ml) + 300 ml aperti = 30 cl
-    expect(bottleSummary({ ...gin, stock: 1700 })).toBe('2 bott. + 30 cl')
+  it('una aperta: la conta come bottiglia e mostra il suo residuo in cl', () => {
+    // 2 piene (1400 ml) + 300 ml aperti → 3 bottiglie, 1,7 L totali, 30 cl aperta
+    expect(bottleSummary({ ...gin, stock: 1700 })).toEqual({ bottles: 3, total: '1,7 L', open: '30 cl' })
   })
-  it('meno di una bottiglia: solo il residuo', () => {
-    expect(bottleSummary({ ...gin, stock: 300 })).toBe('30 cl')
+  it('meno di una bottiglia: 1 aperta col suo contenuto', () => {
+    expect(bottleSummary({ ...gin, stock: 300 })).toEqual({ bottles: 1, total: '30 cl', open: '30 cl' })
   })
-  it('vuoto → 0 bott.', () => {
-    expect(bottleSummary({ ...gin, stock: 0 })).toBe('0 bott.')
+  it('vuoto → nessuna bottiglia', () => {
+    expect(bottleSummary({ ...gin, stock: 0 })).toEqual({ bottles: 0, total: '0 ml', open: null })
+  })
+  it('il contenuto NON si misura in pezzi', () => {
+    const s = bottleSummary({ ...gin, stock: 1700 })
+    expect(s.total).not.toMatch(/pz/)
+    expect(s.open).not.toMatch(/pz/)
   })
   it('articolo a pezzo: nessun conteggio bottiglie', () => {
     expect(bottleSummary({ unit: 'pz', stock: 12 })).toBeNull()

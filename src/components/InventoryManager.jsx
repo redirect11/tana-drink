@@ -403,8 +403,20 @@ function ProductsPanel() {
                   </span>
                   <span className="muted small inv-row-cat">{catName(it.category_id) || '—'}</span>
                   <span className="inv-row-stock">
-                    {formatQty(it.stock, it.unit)}
-                    {bottleSummary(it) && <span className="muted small"> · 🍾 {bottleSummary(it)}</span>}
+                    {(() => {
+                      const bs = bottleSummary(it)
+                      return bs ? (
+                        <>
+                          {bs.bottles} 🍾{' '}
+                          <span className="muted small">
+                            · {bs.total}
+                            {bs.open && ` · aperta ${bs.open}`}
+                          </span>
+                        </>
+                      ) : (
+                        formatQty(it.stock, it.unit)
+                      )
+                    })()}
                   </span>
                 </button>
                 {expanded && itemActions(it, bottleBreakdown(it))}
@@ -444,14 +456,24 @@ function ProductsPanel() {
                     {catName(it.category_id) || 'Senza categoria'}
                     {supName(it.supplier_id) ? ` · ${supName(it.supplier_id)}` : ''}
                   </span>
-                  <span style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                    <span className="grid-card-tot" style={{ fontSize: '1.05rem' }}>
-                      {formatQty(it.stock, it.unit)}
-                    </span>
-                    {bottleSummary(it) && (
-                      <span className="muted small" style={{ display: 'block' }}>🍾 {bottleSummary(it)}</span>
-                    )}
-                  </span>
+                  {(() => {
+                    // Item da drink: bottiglie (pezzi) come numero grande, il
+                    // CONTENUTO in cl/ml sotto — totale e residuo dell'aperta.
+                    const bs = bottleSummary(it)
+                    return (
+                      <span style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                        <span className="grid-card-tot" style={{ fontSize: '1.05rem' }}>
+                          {bs ? `${bs.bottles} 🍾` : formatQty(it.stock, it.unit)}
+                        </span>
+                        {bs && (
+                          <span className="muted small" style={{ display: 'block' }}>
+                            {bs.total}
+                            {bs.open && ` · aperta ${bs.open}`}
+                          </span>
+                        )}
+                      </span>
+                    )
+                  })()}
                 </div>
               </div>
               <button
