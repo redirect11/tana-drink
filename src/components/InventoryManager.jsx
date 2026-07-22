@@ -126,6 +126,7 @@ function ProductsPanel() {
   const [statusFilter, setStatusFilter] = useState('all')
 
   // Riga espansa + carico in corso
+  const [invView, setInvView] = useState('card') // 'card' | 'lista'
   const [expandedId, setExpandedId] = useState(null)
   const [caricoFor, setCaricoFor] = useState(null)
 
@@ -158,6 +159,52 @@ function ProductsPanel() {
 
   const summary = useMemo(() => inventorySummary(items), [items])
   const totalValue = useMemo(() => inventoryTotalValue(items), [items])
+  // Blocco azioni espanse di un item, condiviso dalla vista a CARD e dalla
+  // vista a LISTA: carico, rettifica, costi e modifica/elimina.
+  const itemActions = (it, bd) => (
+    <div className="grid-card-actions">
+      {bd ? (
+        <div className="muted small">
+          🍾 {bd.full} piene
+          {bd.hasOpen && ` · 1 aperta (${formatQty(bd.openRemaining, it.unit)})`}
+          {bd.finished > 0 && ` · ${bd.finished} finite`}
+          {' · '}1 conf. = {formatQty(it.package_size, it.unit)}
+        </div>
+      ) : (
+        it.unit !== 'pz' && Number(it.package_size) > 0 && (
+          <div className="muted small">1 conf. = {formatQty(it.package_size, it.unit)}</div>
+        )
+      )}
+      {Number(it.low_threshold) > 0 && (
+        <div className="muted small">Soglia avviso: {formatQty(it.low_threshold, it.unit)}</div>
+      )}
+      {it.cost != null && (
+        <div className="muted small">
+          💶 {formatPrice(it.cost)}/conf. (+IVA {formatPrice(costWithVat(it.cost, it.vat))})
+          {' · valore '} <strong>{formatPrice(stockValue(it))}</strong>
+          <UnitPrice item={it} />
+        </div>
+      )}
+
+      {caricoFor === it.id ? (
+        <CaricoForm item={it} onCancel={() => setCaricoFor(null)} onConfirm={(p) => doCarico(it, p)} />
+      ) : (
+        <>
+          <button className="btn small block" style={{ marginTop: 8 }} onClick={() => setCaricoFor(it.id)}>
+            ⬆ Carico
+          </button>
+          <button className="btn secondary small block" style={{ marginTop: 6 }} onClick={() => rettifica(it)}>
+            Contenuto reale
+          </button>
+          <div className="grid-2" style={{ marginTop: 6, gap: 6 }}>
+            <button className="btn ghost small" onClick={() => setEditing(it)}>✏️ Modifica</button>
+            <button className="btn ghost small" onClick={() => remove(it)}>🗑 Elimina</button>
+          </div>
+        </>
+      )}
+    </div>
+  )
+
   const visible = useMemo(
     () => filterItems(items, { query, categoryId: categoryFilter, supplierId: supplierFilter, status: statusFilter }),
     [items, query, categoryFilter, supplierFilter, statusFilter]
@@ -318,12 +365,57 @@ function ProductsPanel() {
       {error && <div className="banner" style={{ marginTop: 8 }}>Errore: {error}</div>}
       {loading && <div className="empty">Carico l’inventario…</div>}
 
+      {/* Come visualizzare: card in griglia o lista condensata. */}
+      {!loading && items.length > 0 && (
+        <div className="chips-row" style={{ margin: '8px 0' }}>
+          {[
+            ['card', '▦ Card'],
+            ['lista', '☰ Lista'],
+          ].map(([k, label]) => (
+            <button key={k} className={`chip ${invView === k ? 'active' : ''}`} onClick={() => setInvView(k)}>
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* LISTA condensata: una riga per prodotto, click per le azioni. */}
+      {invView === 'lista' && (
+        <div className="inv-list">
+          {visible.map((it) => {
+            const st = stockStatus(it)
+            const expanded = expandedId === it.id
+            return (
+              <div className={`inv-row inv-${st}${expanded ? ' open' : ''}`} key={it.id}>
+                <button
+                  type="button"
+                  className="inv-row-main"
+                  onClick={() => {
+                    setExpandedId(expanded ? null : it.id)
+                    setCaricoFor(null)
+                  }}
+                >
+                  <span className={`dot dot-${st}`} />
+                  <span className="inv-row-name">
+                    {it.name}
+                    {it.status === 'out' && <span className="badge-empty">OUT</span>}
+                  </span>
+                  <span className="muted small inv-row-cat">{catName(it.category_id) || '—'}</span>
+                  <span className="inv-row-stock">{formatQty(it.stock, it.unit)}</span>
+                </button>
+                {expanded && itemActions(it, bottleBreakdown(it))}
+              </div>
+            )
+          })}
+        </div>
+      )}
+
       {/* Card compatte in griglia (stessa UX delle card ordini): striscia
           colorata per lo stato scorte, dettagli e azioni a scomparsa. */}
+      {invView === 'card' && (
       <div className="admin-grid">
         {visible.map((it) => {
           const st = stockStatus(it)
-          const bd = bottleBreakdown(it)
           const expanded = expandedId === it.id
           return (
             <div className={`card grid-card admin-card inv-${st}`} key={it.id}>
@@ -352,9 +444,6 @@ function ProductsPanel() {
                     {formatQty(it.stock, it.unit)}
                   </span>
                 </div>
-                {bd && (
-                  <div className="muted small">🍾 {bd.full} piene{bd.hasOpen ? ' +1 aperta' : ''}</div>
-                )}
               </div>
               <button
                 type="button"
@@ -367,53 +456,12 @@ function ProductsPanel() {
               >
                 {expanded ? '▴ Chiudi' : '⋯ Azioni'}
               </button>
-              {expanded && (
-                <div className="grid-card-actions">
-                  {bd ? (
-                    <div className="muted small">
-                      🍾 {bd.full} piene
-                      {bd.hasOpen && ` · 1 aperta (${formatQty(bd.openRemaining, it.unit)})`}
-                      {bd.finished > 0 && ` · ${bd.finished} finite`}
-                      {' · '}1 conf. = {formatQty(it.package_size, it.unit)}
-                    </div>
-                  ) : (
-                    it.unit !== 'pz' && Number(it.package_size) > 0 && (
-                      <div className="muted small">1 conf. = {formatQty(it.package_size, it.unit)}</div>
-                    )
-                  )}
-                  {Number(it.low_threshold) > 0 && (
-                    <div className="muted small">Soglia avviso: {formatQty(it.low_threshold, it.unit)}</div>
-                  )}
-                  {it.cost != null && (
-                    <div className="muted small">
-                      💶 {formatPrice(it.cost)}/conf. (+IVA {formatPrice(costWithVat(it.cost, it.vat))})
-                      {' · valore '} <strong>{formatPrice(stockValue(it))}</strong>
-                      <UnitPrice item={it} />
-                    </div>
-                  )}
-
-                  {caricoFor === it.id ? (
-                    <CaricoForm item={it} onCancel={() => setCaricoFor(null)} onConfirm={(p) => doCarico(it, p)} />
-                  ) : (
-                    <>
-                      <button className="btn small block" style={{ marginTop: 8 }} onClick={() => setCaricoFor(it.id)}>
-                        ⬆ Carico
-                      </button>
-                      <button className="btn secondary small block" style={{ marginTop: 6 }} onClick={() => rettifica(it)}>
-                        Contenuto reale
-                      </button>
-                      <div className="grid-2" style={{ marginTop: 6, gap: 6 }}>
-                        <button className="btn ghost small" onClick={() => setEditing(it)}>✏️ Modifica</button>
-                        <button className="btn ghost small" onClick={() => remove(it)}>🗑 Elimina</button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
+              {expanded && itemActions(it, bottleBreakdown(it))}
             </div>
           )
         })}
       </div>
+      )}
 
       {!loading && items.length === 0 && (
         <div className="empty">Nessun prodotto in inventario. Aggiungine uno!</div>
