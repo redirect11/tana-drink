@@ -227,5 +227,12 @@ service cloud.firestore {
       allow create, update: if isStaffMember();
       allow delete: if false;
     }
+
+    // CASSA: sessioni di apertura/chiusura serata (flusso cassa). Staff.
+    match /cash_sessions/{sessionId} {
+      allow read: if isStaffMember();
+      allow create, update: if isStaffMember();
+      allow delete: if false;
+    }
   }
 }
