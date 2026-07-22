@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { splitLineRevenueByMacro, revenueByMacro, UNASSIGNED } from '../../src/lib/macroStats.js'
+import {
+  splitLineRevenueByMacro,
+  revenueByMacro,
+  purchasesByMacro,
+  macroMonthlyReport,
+  UNASSIGNED,
+} from '../../src/lib/macroStats.js'
 
 // Inventario: gin e bitter → Distillati (m1); vermouth → Vino (m2).
 const itemsById = {
@@ -83,5 +89,78 @@ describe('revenueByMacro', () => {
     const orders = [{ comande: [{ items: [{ drink_id: 'negroni', qty: 1, unit_price: 7 }] }] }]
     const acc = revenueByMacro(orders, { drinksById: { negroni }, itemsById, catToMacro })
     expect(acc.get('m1')).toBeCloseTo(5.5, 2)
+  })
+
+  it('salta gli ordini annullati', () => {
+    const orders = [{ status: 'annullato', order_items: [{ drink_id: 'negroni', qty: 1, unit_price: 7 }] }]
+    expect(revenueByMacro(orders, { drinksById: { negroni }, itemsById, catToMacro }).size).toBe(0)
+  })
+})
+
+describe('purchasesByMacro', () => {
+  const pos = [
+    {
+      status: 'ricevuto',
+      lines: [
+        { item_id: 'gin', unit_cost: 21, qty_packages: 2 }, // 42 → Distillati
+        { item_id: 'verm', unit_cost: 15, qty_packages: 1 }, // 15 → Vino
+        { item_id: 'cola', unit_cost: 0.5, qty_packages: 10 }, // 5 → none (senza macro)
+      ],
+    },
+    { status: 'inviato', lines: [{ item_id: 'gin', unit_cost: 21, qty_packages: 5 }] }, // non ricevuto → ignorato
+  ]
+  it('somma per macro solo gli ordini ricevuti (netto = unit_cost × colli)', () => {
+    const acc = purchasesByMacro(pos, { itemsById, catToMacro })
+    expect(acc.get('m1')).toBeCloseTo(42, 2)
+    expect(acc.get('m2')).toBeCloseTo(15, 2)
+    expect(acc.get(UNASSIGNED)).toBeCloseTo(5, 2)
+  })
+})
+
+describe('macroMonthlyReport', () => {
+  const macros = [
+    { id: 'm1', name: 'Distillati' },
+    { id: 'm2', name: 'Vino' },
+  ]
+  const orders = [
+    { status: 'aperto', created_at: '2026-07-15T20:00:00Z', order_items: [{ drink_id: 'negroni', qty: 1, unit_price: 7 }] },
+    { status: 'pagato', created_at: '2026-06-10T20:00:00Z', order_items: [{ drink_id: 'negroni', qty: 1, unit_price: 7 }] },
+  ]
+  const purchaseOrders = [
+    { status: 'ricevuto', received_at: '2026-07-03T09:00:00Z', lines: [{ item_id: 'gin', unit_cost: 21, qty_packages: 2 }] },
+  ]
+  const rep = macroMonthlyReport({
+    orders,
+    purchaseOrders,
+    drinksById: { negroni },
+    itemsById,
+    catToMacro,
+    macros,
+    months: ['2026-06', '2026-07'],
+  })
+
+  it('mette fatturato e acquisti nel mese giusto per macro', () => {
+    const distillati = rep.rows.find((r) => r.id === 'm1')
+    expect(distillati.byMonth.get('2026-07').fatturato).toBeCloseTo(5.5, 2)
+    expect(distillati.byMonth.get('2026-07').acquisti).toBeCloseTo(42, 2)
+    expect(distillati.byMonth.get('2026-06').fatturato).toBeCloseTo(5.5, 2)
+    expect(distillati.byMonth.get('2026-06').acquisti).toBe(0)
+  })
+
+  it('calcola utile e rapporto per cella', () => {
+    const distillati = rep.rows.find((r) => r.id === 'm1')
+    const lug = distillati.byMonth.get('2026-07')
+    expect(lug.utile).toBeCloseTo(5.5 - 42, 2)
+    expect(lug.rapporto).toBeCloseTo(0.13, 2) // 5,5/42 arrotondato a 2 decimali
+    // mese senza acquisti → rapporto null (niente divisione per zero)
+    expect(distillati.byMonth.get('2026-06').rapporto).toBeNull()
+  })
+
+  it('totali per macro (anno) e generale', () => {
+    const distillati = rep.rows.find((r) => r.id === 'm1')
+    expect(distillati.tot.fatturato).toBeCloseTo(11, 2)
+    expect(distillati.tot.acquisti).toBeCloseTo(42, 2)
+    expect(rep.grand.fatturato).toBeCloseTo(14, 2) // 2 negroni: Distillati 11 + Vino 3
+    expect(rep.grand.acquisti).toBeCloseTo(42, 2)
   })
 })

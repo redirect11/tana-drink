@@ -1418,6 +1418,55 @@ body.fullbleed .bar-content {
   opacity: 1;
 }
 
+/* Dashboard mensile per macro: tabella mesi × metriche, scrollabile in orizz. */
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.macro-tab {
+  border-collapse: collapse;
+  white-space: nowrap;
+  font-size: 0.78rem;
+  min-width: 100%;
+}
+.macro-tab th,
+.macro-tab td {
+  padding: 4px 8px;
+  text-align: right;
+  border-bottom: 1px solid var(--line);
+}
+.macro-tab thead th {
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.72rem;
+}
+.macro-tab .rowhead {
+  text-align: left;
+  position: sticky;
+  left: 0;
+  background: var(--card);
+  font-weight: 700;
+}
+.macro-tab thead .rowhead {
+  background: var(--card);
+}
+.macro-tab .tot {
+  font-weight: 800;
+  border-left: 1px solid var(--line);
+}
+.macro-tab .r-fat td {
+  color: var(--accent-2, #f5b94a);
+}
+.macro-tab .r-uti td {
+  font-weight: 700;
+}
+.macro-tab td.neg {
+  color: #e5484d;
+}
+.macro-total {
+  border: 1px solid var(--accent-2, #f5b94a);
+}
+
 /* Riepilogo info di un item inventario espanso: righe etichetta → valore,
    ordinate e leggibili invece di tre righe muted accatastate. */
 .inv-info {
