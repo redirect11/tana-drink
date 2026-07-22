@@ -10,6 +10,10 @@ import {
   computeConsumption,
   bottleBreakdown,
   bottleSummary,
+  baseUnit,
+  fromBaseQty,
+  formatIn,
+  fmtItem,
   inventorySummary,
   filterItems,
   costWithVat,
@@ -260,5 +264,36 @@ describe('bottleSummary: bottiglie (pz) + contenuto (cl), unità distinte', () =
   })
   it('articolo a pezzo: nessun conteggio bottiglie', () => {
     expect(bottleSummary({ unit: 'pz', stock: 12 })).toBeNull()
+  })
+})
+
+describe('unità di misura scelta dall\'utente', () => {
+  it('toBaseQty converte alla base (cl/l/kg/mg → ml/g)', () => {
+    expect(toBaseQty(5, 'cl')).toBe(50)
+    expect(toBaseQty(1, 'l')).toBe(1000)
+    expect(toBaseQty(2, 'kg')).toBe(2000)
+    expect(toBaseQty(500, 'mg')).toBe(0.5)
+  })
+  it('baseUnit: liquidi→ml, pesi→g, pezzi→pz', () => {
+    expect(baseUnit('cl')).toBe('ml')
+    expect(baseUnit('L')).toBe('ml')
+    expect(baseUnit('mg')).toBe('g')
+    expect(baseUnit('pz')).toBe('pz')
+  })
+  it('fromBaseQty è l\'inverso di toBaseQty', () => {
+    expect(fromBaseQty(50, 'cl')).toBe(5)
+    expect(fromBaseQty(1000, 'l')).toBe(1)
+    expect(fromBaseQty(0.5, 'mg')).toBe(500)
+  })
+  it('formatIn mostra l\'unità ESATTA scelta, senza auto-scaling', () => {
+    expect(formatIn(700, 'cl')).toBe('70 cl')
+    expect(formatIn(700, 'ml')).toBe('700 ml')
+    expect(formatIn(1500, 'l')).toBe('1,5 L')
+    expect(formatIn(2, 'mg')).toBe('2.000 mg')
+  })
+  it('fmtItem usa l\'unità scelta se presente, altrimenti auto', () => {
+    expect(fmtItem(700, { unit: 'ml', display_unit: 'cl' })).toBe('70 cl')
+    expect(fmtItem(700, { unit: 'ml' })).toBe('70 cl') // auto (formatQty)
+    expect(fmtItem(300, { unit: 'ml', display_unit: 'ml' })).toBe('300 ml')
   })
 })

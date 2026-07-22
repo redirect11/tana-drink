@@ -22,9 +22,50 @@ export function toBaseQty(qty, unit) {
       return n * 1000
     case 'kg':
       return n * 1000
+    case 'mg':
+      return n * 0.001
     default:
       return n
   }
+}
+
+// Unità base (in cui è salvato lo stock) a partire dall'unità scelta
+// dall'utente: liquidi → ml, pesi → g, pezzi → pz.
+export function baseUnit(u) {
+  const x = String(u || '').toLowerCase()
+  if (['l', 'cl', 'ml'].includes(x)) return 'ml'
+  if (['kg', 'g', 'mg'].includes(x)) return 'g'
+  return 'pz'
+}
+
+// Inverso di toBaseQty: da unità base al numero nell'unità scelta.
+export function fromBaseQty(base, unit) {
+  const n = Number(base) || 0
+  switch (String(unit || '').toLowerCase()) {
+    case 'l':
+    case 'kg':
+      return n / 1000
+    case 'cl':
+      return n / 10
+    case 'mg':
+      return n * 1000
+    default:
+      return n
+  }
+}
+
+// Formatta una quantità BASE nell'unità ESATTA scelta (niente auto-scaling:
+// se l'utente lavora in cl, vede cl). Etichette: L, cl, ml, kg, g, mg, pz.
+const UNIT_LABEL = { l: 'L', cl: 'cl', ml: 'ml', kg: 'kg', g: 'g', mg: 'mg', pz: 'pz' }
+export function formatIn(base, unit) {
+  const n = Math.round(fromBaseQty(base, unit) * 100) / 100
+  return `${n.toLocaleString('it-IT', { maximumFractionDigits: 2 })} ${UNIT_LABEL[String(unit || '').toLowerCase()] || unit}`
+}
+
+// Formatta la giacenza di un ITEM: nell'unità scelta se impostata, altrimenti
+// auto (retrocompatibile con gli item senza unità di visualizzazione).
+export function fmtItem(base, item) {
+  return item?.display_unit ? formatIn(base, item.display_unit) : formatQty(base, item?.unit)
 }
 
 // Formatta una quantità (in unità base) in modo leggibile.
@@ -73,8 +114,8 @@ export function bottleSummary(item) {
   if (!bd) return null
   return {
     bottles: bd.full + (bd.hasOpen ? 1 : 0),
-    total: formatQty(Math.max(0, Number(item?.stock) || 0), item?.unit),
-    open: bd.hasOpen ? formatQty(Math.round(bd.openRemaining), item?.unit) : null,
+    total: fmtItem(Math.max(0, Number(item?.stock) || 0), item),
+    open: bd.hasOpen ? fmtItem(Math.round(bd.openRemaining), item) : null,
   }
 }
 
