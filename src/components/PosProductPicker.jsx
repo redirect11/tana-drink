@@ -301,8 +301,9 @@ export default function PosProductPicker({
                   onPointerUp={endDrag}
                   onPointerCancel={endDrag}
                   title="Trascina per spostare"
+                  aria-label={`Trascina ${d.name}`}
                 >
-                  ⠿ trascina
+                  ⠿
                 </div>
                 <DrinkTile
                   drink={d}
