@@ -157,6 +157,24 @@ export default function OrderPosDetail({ order = null }) {
     return () => document.body.classList.remove('fullbleed')
   }, [])
 
+  // Quando si aggiunge un item, si porta la lista sulla riga toccata e la si
+  // evidenzia un attimo: con la lista lunga, altrimenti, non si vede se è
+  // stato inserito davvero.
+  const listRef = useRef(null)
+  const flashTimer = useRef(null)
+  const [flashKey, setFlashKey] = useState(null)
+  const scrollToLine = useCallback((key) => {
+    setFlashKey(key)
+    requestAnimationFrame(() => {
+      listRef.current
+        ?.querySelector(`[data-line-key="${key}"]`)
+        ?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+    })
+    clearTimeout(flashTimer.current)
+    flashTimer.current = setTimeout(() => setFlashKey(null), 750)
+  }, [])
+  useEffect(() => () => clearTimeout(flashTimer.current), [])
+
   const closed = isNew ? false : orderIsClosed(order)
   const comande = useMemo(() => (isNew ? [] : order.comande || []), [isNew, order])
 
@@ -323,6 +341,13 @@ export default function OrderPosDetail({ order = null }) {
       sumup_product_id: d.sumup_product_id ?? null,
       qty: 1,
     }
+    // Riga che verrà toccata: quella esistente se si accorpa, altrimenti la nuova.
+    let targetLineId = nuova.line_id
+    if (settings.order_group_default === 'uniti') {
+      const sig = lineSignature(nuova)
+      const existing = draft.find((l) => lineSignature(l) === sig)
+      if (existing) targetLineId = existing.line_id
+    }
     setDraft((items) => {
       if (settings.order_group_default === 'uniti') {
         const sig = lineSignature(nuova)
@@ -331,6 +356,7 @@ export default function OrderPosDetail({ order = null }) {
       }
       return [...items, nuova]
     })
+    scrollToLine(`d:${targetLineId}`)
   }
 
   // − dalla griglia: toglie dall'ultima riga di bozza; se non c'è, scala la
@@ -784,7 +810,7 @@ export default function OrderPosDetail({ order = null }) {
             )}
           </div>
 
-          <div style={{ flex: 1, overflowY: 'auto', padding: '6px 12px 10px' }}>
+          <div ref={listRef} style={{ flex: 1, overflowY: 'auto', padding: '6px 12px 10px' }}>
             {orderedLines.length === 0 && (
               <p className="muted small" style={{ margin: '6px 0 0' }}>
                 Tocca i prodotti per aggiungerli all'ordine.
@@ -810,9 +836,10 @@ export default function OrderPosDetail({ order = null }) {
               const canMinus = !closed && (isDraft || l.removable)
               return (
                 <div
-                  className="row between draft-line"
+                  className={`row between draft-line${l.key === flashKey ? ' flash-added' : ''}`}
                   key={l.key}
                   data-line-index={idx}
+                  data-line-key={l.key}
                   onPointerDown={(e) => startDrag(e, idx)}
                   onPointerMove={moveDrag}
                   onPointerUp={endDrag}
@@ -1071,20 +1098,19 @@ export default function OrderPosDetail({ order = null }) {
         <CustomDrinkForm
           onCancel={() => setShowCustom(false)}
           onAdd={({ name, price, recipe_items }) => {
-            setDraft((items) => [
-              ...items,
-              {
-                line_id: makeLineId(),
-                drink_id: `custom-${Date.now()}-${Math.floor(Math.random() * 1e6)}`,
-                custom: true,
-                name,
-                unit_price: price,
-                qty: 1,
-                sumup_product_id: null,
-                recipe_items,
-              },
-            ])
+            const nuova = {
+              line_id: makeLineId(),
+              drink_id: `custom-${Date.now()}-${Math.floor(Math.random() * 1e6)}`,
+              custom: true,
+              name,
+              unit_price: price,
+              qty: 1,
+              sumup_product_id: null,
+              recipe_items,
+            }
+            setDraft((items) => [...items, nuova])
             setShowCustom(false)
+            scrollToLine(`d:${nuova.line_id}`)
           }}
         />
       )}

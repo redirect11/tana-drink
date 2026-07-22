@@ -1397,6 +1397,16 @@ body.fullbleed .bar-content {
   padding: 7px 8px;
 }
 
+/* Lampo di conferma quando si aggiunge un item all'ordine: la riga toccata
+   si illumina un istante, così si vede che è stata inserita. */
+@keyframes flash-added {
+  0% { background: rgba(245, 185, 74, 0.55); }
+  100% { background: transparent; }
+}
+.draft-line.flash-added {
+  animation: flash-added 0.75s ease-out;
+}
+
 /* Macro-categorie: un blocco per macro con le categorie collegate. */
 .macro-group {
   margin-top: 10px;
