@@ -747,14 +747,14 @@ function OrderQueue() {
                 : STATUS_LABELS[o.workflow_status]}
             </span>
           </div>
-          <div className="grid-card-sub">
-            {o.customer_name && <strong>{o.customer_name}</strong>}
-            {o.table_label && <span className="muted"> · Tavolo {o.table_label}</span>}
-          </div>
-          {/* Etichette (gruppo, pagamento): riga propria che va a capo, così
-              non vengono tagliate dall'ellissi del nome qui sopra. */}
-          {(o.group_name_snapshot || o.payment_status === 'pagato' || o.payment_status === 'parziale') && (
-            <div className="grid-card-tags">
+          <div className="grid-card-sub row between" style={{ gap: 6 }}>
+            <span className="grow" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {o.customer_name && <strong>{o.customer_name}</strong>}
+              {o.table_label && <span className="muted"> · Tavolo {o.table_label}</span>}
+            </span>
+            {/* Pagamento allineato a DESTRA, fra il badge di stato (sopra) e
+                il prezzo (sotto). Il gruppo, se c'è, gli sta accanto. */}
+            <span className="row" style={{ gap: 4, flexShrink: 0 }}>
               {o.group_name_snapshot && (
                 <span className="pill small">👥 {o.group_name_snapshot}</span>
               )}
@@ -766,8 +766,8 @@ function OrderQueue() {
                   💳 Acconto
                 </span>
               )}
-            </div>
-          )}
+            </span>
+          </div>
           <div className="row between" style={{ alignItems: 'baseline', marginTop: 'auto' }}>
             <span className="grid-card-meta">
               {count} prodott{count === 1 ? 'o' : 'i'} · {dayLabel(o)}
