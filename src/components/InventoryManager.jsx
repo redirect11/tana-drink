@@ -16,6 +16,8 @@ import {
   createSupplier,
   updateSupplier,
   deleteSupplier,
+  subscribeSettings,
+  DEFAULT_SETTINGS,
 } from '../lib/api.js'
 import {
   formatQty,
@@ -50,16 +52,23 @@ const STATUS_ITEM = [
 
 const STATUS_LABEL = { ok: '', low: 'in esaurimento', empty: 'esaurito' }
 
-// Prezzo unitario dell'item con l'unità di misura selezionabile:
-// cl/ml per i liquidi, g/mg per i solidi, pz per i pezzi.
-function UnitPrice({ item }) {
+// Prezzo unitario dell'item con l'unità di misura selezionabile (cl/ml per i
+// liquidi, g/mg per i solidi, pz per i pezzi): costo REALE al dettaglio +
+// prezzo CONSIGLIATO a ricarico (×3 di default) e GUADAGNO che ne resta.
+// È qui che si legge la marginalità dell'ingrediente, per unità.
+function UnitPrice({ item, markup }) {
   const units = smallUnits(item)
   const [unit, setUnit] = useState(units[0])
   const cost = costPerUnit(item, unit)
   if (cost == null) return null
+  const m = Number(markup) > 0 ? Number(markup) : 3
+  const consigliato = cost * m
+  const guadagno = consigliato - cost
   return (
-    <span style={{ marginLeft: 6, display: 'inline-flex', gap: 4, alignItems: 'center' }}>
-      · {formatPrice(cost)}/{unit}
+    <span style={{ marginLeft: 6, display: 'inline-flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
+      · costo <strong>{formatPrice(cost)}</strong>/{unit}
+      {' · ×'}{m} <strong className="price">{formatPrice(consigliato)}</strong>/{unit}
+      <span className="muted">(guad. {formatPrice(guadagno)}/{unit})</span>
       {units.length > 1 &&
         units.map((u) => (
           <button
@@ -135,6 +144,10 @@ function ProductsPanel() {
   const [expandedId, setExpandedId] = useState(null)
   const [caricoFor, setCaricoFor] = useState(null)
 
+  // Ricarico (×N) per il prezzo consigliato mostrato accanto al costo.
+  const [markup, setMarkup] = useState(DEFAULT_SETTINGS.price_markup)
+  useEffect(() => subscribeSettings((s) => setMarkup(s.price_markup), () => {}), [])
+
   const catName = (id) => categories.find((c) => c.id === id)?.name
   const supName = (id) => suppliers.find((s) => s.id === id)?.name
 
@@ -187,7 +200,7 @@ function ProductsPanel() {
         <div className="muted small">
           💶 {formatPrice(it.cost)}/conf. (+IVA {formatPrice(costWithVat(it.cost, it.vat))})
           {' · valore '} <strong>{formatPrice(stockValue(it))}</strong>
-          <UnitPrice item={it} />
+          <UnitPrice item={it} markup={markup} />
         </div>
       )}
 
@@ -759,7 +772,11 @@ function ItemForm({ initial, categories, suppliers, onCancel, onSave }) {
   const isEdit = !!initial
   // Unità scelta dall'utente (L/cl/ml, g/mg, pz). Lo stock è salvato in
   // base (ml/g/pz); i campi si inseriscono e si mostrano nell'unità scelta.
-  const initUnit = initial?.display_unit ?? initial?.unit ?? 'ml'
+  // Default dei LIQUIDI in cl (non ml): al banco le bottiglie si dosano in cl,
+  // quindi contenuto e soglia si inseriscono in cl. Vale anche per gli item
+  // vecchi salvati in ml senza unità di visualizzazione.
+  const defaultUnit = (base) => (base === 'g' ? 'g' : base === 'pz' ? 'pz' : 'cl')
+  const initUnit = initial?.display_unit ?? defaultUnit(initial?.unit)
   const [form, setForm] = useState({
     name: initial?.name ?? '',
     unit: initUnit,
@@ -783,7 +800,7 @@ function ItemForm({ initial, categories, suppliers, onCancel, onSave }) {
   const costNum = num(form.cost)
   // Contenuto per confezione nell'unità scelta (per il costo unitario).
   const packInUnit = !isPz ? num(form.package_size) : 0
-  const initialBase = baseUnit(initial?.display_unit ?? initial?.unit ?? 'ml')
+  const initialBase = baseUnit(initUnit)
 
   async function submit(e) {
     e.preventDefault()
@@ -909,13 +926,13 @@ function ItemForm({ initial, categories, suppliers, onCancel, onSave }) {
             <label htmlFor="ibottles">Numero di confezioni piene</label>
             <input id="ibottles" type="number" step="1" min="0" value={form.bottles} onChange={set('bottles')} placeholder="Es. 3" />
             <label htmlFor="iopen">Bottiglia aperta — contenuto ({form.unit}) — opzionale</label>
-            <input id="iopen" type="number" step="any" min="0" value={form.open_content} onChange={set('open_content')} placeholder="Es. 400 se ne hai una già aperta" />
+            <input id="iopen" type="number" step="any" min="0" value={form.open_content} onChange={set('open_content')} placeholder={`Es. ${form.unit === 'l' ? '0,35' : form.unit === 'ml' ? '350' : '35'} se ne hai una già aperta`} />
           </>
         )
       )}
 
       <label htmlFor="ithr">Soglia di avviso ({form.unit})</label>
-      <input id="ithr" type="number" step="any" min="0" value={form.low_threshold} onChange={set('low_threshold')} placeholder="Es. 500" />
+      <input id="ithr" type="number" step="any" min="0" value={form.low_threshold} onChange={set('low_threshold')} placeholder={`Es. ${form.unit === 'l' ? '0,2' : form.unit === 'cl' ? '20' : form.unit === 'mg' ? '2000' : form.unit === 'g' ? '100' : form.unit === 'pz' ? '2' : '200'}`} />
 
       <div className="grid-2" style={{ marginTop: 16 }}>
         <button type="button" className="btn ghost" onClick={onCancel} disabled={saving}>Annulla</button>
