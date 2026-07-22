@@ -27,6 +27,7 @@ import {
 } from '../lib/orderStatus.js'
 import { bucketByStatus, ordersRecap } from '../lib/coda.js'
 import { allServed } from '../lib/comande.js'
+import { paidAmount } from '../lib/pagamento.js'
 import { businessDayKey, businessDayLabel, businessDayShort } from '../lib/businessDay.js'
 import { isAwaitingPayment } from '../lib/payments.js'
 import { readerCheckout, readerTerminate } from '../lib/paymentsApi.js'
@@ -755,7 +756,12 @@ function OrderQueue() {
               <span className="pill small" style={{ marginLeft: 6 }}>👥 {o.group_name_snapshot}</span>
             )}
             {o.payment_status === 'pagato' && o.workflow_status !== ORDER_STATUSES.PAGATO && (
-              <span className="muted" style={{ marginLeft: 6 }} title="Già pagato">💳</span>
+              <span className="pill pagato small" style={{ marginLeft: 6 }}>💳 Pagato</span>
+            )}
+            {o.payment_status === 'parziale' && (
+              <span className="pill ricevuto small" style={{ marginLeft: 6 }} title={`Incassati ${formatPrice(paidAmount(o))}`}>
+                💳 Acconto
+              </span>
             )}
           </div>
           <div className="row between" style={{ alignItems: 'baseline', marginTop: 'auto' }}>
@@ -861,6 +867,11 @@ function OrderQueue() {
                 {o.payment_status === 'pagato' && o.workflow_status !== ORDER_STATUSES.PAGATO && (
                   <span className="pill pagato" style={{ marginLeft: 6 }}>
                     💳 Pagato{o.payment_method === 'online' ? ' online' : ''}
+                  </span>
+                )}
+                {o.payment_status === 'parziale' && (
+                  <span className="pill ricevuto" style={{ marginLeft: 6 }}>
+                    💳 Parziale · incassati {formatPrice(paidAmount(o))}
                   </span>
                 )}
                 {awaiting && (
