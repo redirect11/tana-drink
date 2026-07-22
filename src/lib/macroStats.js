@@ -136,8 +136,12 @@ export function macroMonthlyReport({
   macros,
   months,
   cutoffHour = DEFAULT_CUTOFF_HOUR,
+  saleVat = 0,
 }) {
   const monthSet = new Set(months || [])
+  // Fattore per scorporare l'IVA di vendita dal fatturato: così il confronto
+  // con gli acquisti (già netti) è al netto, come si fa per l'utile.
+  const netFactor = 1 + (Number(saleVat) || 0) / 100
   // cell[macroKey][month] = { acquisti, fatturato }
   const cells = new Map()
   const ensure = (macroKey, month) => {
@@ -155,7 +159,10 @@ export function macroMonthlyReport({
     if (!monthSet.has(month)) continue
     for (const li of orderLines(o)) {
       const split = splitLineRevenueByMacro(li, drinksById?.[li.drink_id], itemsById, catToMacro)
-      for (const [k, v] of split) ensure(k, month).fatturato = round2(ensure(k, month).fatturato + v)
+      for (const [k, v] of split) {
+        const cell = ensure(k, month)
+        cell.fatturato = round2(cell.fatturato + v / netFactor) // al netto IVA
+      }
     }
   }
 

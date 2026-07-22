@@ -311,6 +311,20 @@ export default function SettingsTab() {
             onCommit={(v) => save({ price_round_step: v })}
           />
         </div>
+        <div className="toggle-row">
+          <span>IVA di vendita (%)</span>
+          <AmountInput
+            value={settings.sale_vat}
+            min={0}
+            max={22}
+            step={1}
+            onCommit={(v) => save({ sale_vat: v })}
+          />
+        </div>
+        <p className="muted small" style={{ margin: '4px 0 0' }}>
+          Serve a scorporare l’IVA dal fatturato nella dashboard mensile per
+          macro, così l’utile è al netto (bar/somministrazione: 10%).
+        </p>
       </div>
 
       {settings.workflow_enabled !== false && (
