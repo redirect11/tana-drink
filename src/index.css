@@ -2566,3 +2566,63 @@ body.fullbleed,
 :root[data-luma='light'] textarea {
   border-color: rgba(0, 0, 0, 0.22);
 }
+
+/* ── Categorie a sinistra (Inventario, Menù): stesso schema del POS ── */
+.cat-layout {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-top: 8px;
+}
+.cat-rail {
+  flex-shrink: 0;
+  position: sticky;
+  top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: fit-content;
+  min-width: 116px;
+  max-width: 200px;
+  max-height: calc(100dvh - 90px);
+  overflow-y: auto;
+}
+.cat-rail .chip {
+  justify-content: space-between;
+  text-align: left;
+  width: 100%;
+}
+.cat-rail-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cat-rail-count {
+  flex-shrink: 0;
+  opacity: 0.7;
+  font-size: 0.78rem;
+}
+.cat-content {
+  flex: 1;
+  min-width: 0;
+}
+@media (max-width: 700px) {
+  .cat-layout {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .cat-rail {
+    position: static;
+    flex-direction: row;
+    width: 100%;
+    max-width: none;
+    max-height: none;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 4px;
+  }
+  .cat-rail .chip {
+    width: auto;
+    flex-shrink: 0;
+  }
+}
