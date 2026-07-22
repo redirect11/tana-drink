@@ -20,6 +20,7 @@ import {
   shiftDay,
   hhmm,
   effVsPlanned,
+  peopleOfDay,
 } from '../lib/ore.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
 
@@ -89,7 +90,7 @@ function normalizeEntries(hoursRows, shiftRows) {
   return out
 }
 
-export default function StaffHoursTab() {
+export default function StaffHoursTab({ embedded = false }) {
   const [mode, setMode] = useState('mese') // 'giorno' | 'settimana' | 'mese'
   const [cursor, setCursor] = useState(oggi) // data di riferimento
   const [hoursRows, setHoursRows] = useState([])
@@ -101,15 +102,6 @@ export default function StaffHoursTab() {
   const [editShift, setEditShift] = useState(null) // timbratura in correzione
   const [rates, setRates] = useState([]) // tariffe orarie per persona
   const [showPaghe, setShowPaghe] = useState(false)
-
-  // Form nuovo turno
-  const [kind, setKind] = useState('effettivo') // 'effettivo' | 'programmato'
-  const [personUid, setPersonUid] = useState('') // membro dello staff scelto
-  const [date, setDate] = useState(oggi)
-  const [start, setStart] = useState('')
-  const [end, setEnd] = useState('')
-  const [breakMin, setBreakMin] = useState('')
-  const [note, setNote] = useState('')
 
   // Intervallo di date da caricare secondo la vista.
   const range = useMemo(() => {
@@ -137,7 +129,6 @@ export default function StaffHoursTab() {
       .catch(() => setStaff([]))
   }, [])
 
-  const hours = computeHours(start, end, Number(breakMin) || 0)
   const entries = useMemo(() => normalizeEntries(hoursRows, shiftRows), [hoursRows, shiftRows])
   const days = useMemo(() => byDay(entries), [entries])
   const totals = useMemo(() => effVsPlanned(entries), [entries])
@@ -151,7 +142,6 @@ export default function StaffHoursTab() {
         .sort((a, b) => String(a.label).localeCompare(String(b.label))),
     [staff]
   )
-  const membroDi = (uid) => membri.find((m) => m.uid === uid) || null
   // Tariffe della persona di un turno: per uid, con ricaduta sul nome per
   // i turni registrati prima che ci fosse l'uid.
   const ratesFor = useMemo(() => {
@@ -165,26 +155,8 @@ export default function StaffHoursTab() {
   const payroll = useMemo(() => payrollReport(entries, ratesFor), [entries, ratesFor])
 
 
-  function salva(e) {
-    e.preventDefault()
-    const m = membroDi(personUid)
-    if (!m || hours == null) return
-    addStaffHours({
-      staff_uid: m.uid,
-      staff_name: m.label,
-      date,
-      start,
-      end,
-      break_minutes: Number(breakMin) || 0,
-      hours,
-      note: note.trim() || null,
-      kind,
-    }).catch((err) => setError(err.message))
-    setStart('')
-    setEnd('')
-    setBreakMin('')
-    setNote('')
-  }
+  // Aggiunge un turno (dal form generale o dalla modale di un giorno).
+  const addTurno = (payload) => addStaffHours(payload).catch((err) => setError(err.message))
 
   // Etichetta del periodo + navigazione avanti/indietro.
   const periodo =
@@ -207,7 +179,7 @@ export default function StaffHoursTab() {
 
   return (
     <div>
-      <h2>🕒 Ore staff</h2>
+      {!embedded && <h2>🕒 Ore staff</h2>}
       {error && <div className="banner">Errore: {error}</div>}
 
       {/* Vista: giorno / settimana / mese */}
@@ -232,10 +204,19 @@ export default function StaffHoursTab() {
 
       {mode === 'mese' && <MonthCalendar cursor={cursor} days={days} onPick={setDayDetail} />}
       {mode === 'settimana' && (
-        <WeekView dates={weekDays(cursor)} days={days} {...rowActions} />
+        <WeekView dates={weekDays(cursor)} days={days} onPick={setDayDetail} {...rowActions} />
       )}
       {mode === 'giorno' && (
-        <DayView date={cursor} data={days.get(cursor)} {...rowActions} />
+        <>
+          <DayPeople entries={days.get(cursor)?.entries} />
+          <DayView date={cursor} data={days.get(cursor)} {...rowActions} />
+          {membri.length > 0 && (
+            <div className="card" style={{ marginTop: 8 }}>
+              <strong className="small">➕ Assegna a questo giorno</strong>
+              <ShiftForm membri={membri} fixedDate={cursor} onAdd={addTurno} />
+            </div>
+          )}
+        </>
       )}
 
       {/* Totali del periodo: effettivo vs programmato */}
@@ -310,80 +291,35 @@ export default function StaffHoursTab() {
         />
       )}
 
-      {/* Nuovo turno (manuale): effettivo o programmato */}
-      <form className="card" onSubmit={salva} style={{ marginTop: 10 }}>
+      {/* Nuovo turno (form generale): data scegliibile a mano. Per assegnare
+          a un giorno preciso conviene cliccare il giorno nel calendario. */}
+      <div className="card" style={{ marginTop: 10 }}>
         <strong>Nuovo turno</strong>
-        <div className="chips-row" style={{ margin: '8px 0 2px' }}>
-          {[
-            ['effettivo', '✅ Effettivo'],
-            ['programmato', '📅 Programmato'],
-          ].map(([k, label]) => (
-            <button
-              type="button"
-              key={k}
-              className={`chip ${kind === k ? 'active' : ''}`}
-              onClick={() => setKind(k)}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-        <p className="muted small" style={{ margin: '0 0 6px' }}>
-          {kind === 'effettivo'
-            ? 'Ore realmente lavorate (es. correzione se dimenticano di timbrare).'
-            : 'Turno pianificato, da confrontare con le ore effettive.'}
+        <p className="muted small" style={{ margin: '4px 0 0' }}>
+          Suggerimento: clicca un giorno nel calendario per assegnare lì lo staff con gli orari.
         </p>
-        <div className="grid-2">
-          <div>
-            <label htmlFor="ore-nome">Chi *</label>
-            <select
-              id="ore-nome"
-              value={personUid}
-              onChange={(e) => setPersonUid(e.target.value)}
-              required
-            >
-              <option value="">— Scegli —</option>
-              {membri.map((m) => (
-                <option key={m.uid} value={m.uid}>{m.label}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label htmlFor="ore-data">Giorno</label>
-            <input id="ore-data" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-          </div>
-        </div>
-        <div className="row" style={{ gap: 8, marginTop: 6 }}>
-          <div className="grow">
-            <label htmlFor="ore-in">Entrata *</label>
-            <input id="ore-in" type="time" value={start} onChange={(e) => setStart(e.target.value)} required />
-          </div>
-          <div className="grow">
-            <label htmlFor="ore-out">Uscita *</label>
-            <input id="ore-out" type="time" value={end} onChange={(e) => setEnd(e.target.value)} required />
-          </div>
-          <div style={{ width: 90 }}>
-            <label htmlFor="ore-pausa">Pausa (min)</label>
-            <input id="ore-pausa" type="number" min="0" step="5" value={breakMin} onChange={(e) => setBreakMin(e.target.value)} />
-          </div>
-        </div>
-        <label htmlFor="ore-note" style={{ marginTop: 6, display: 'block' }}>Note</label>
-        <input id="ore-note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Es. serata evento" />
-        <button className="btn block" type="submit" style={{ marginTop: 10 }} disabled={!personUid || hours == null}>
-          Aggiungi{hours != null ? ` · ${hours} h` : ''}
-          {start && end && end < start ? ' (oltre mezzanotte)' : ''}
-        </button>
-      </form>
+        <ShiftForm membri={membri} onAdd={addTurno} />
+      </div>
 
-      {/* Dettaglio giorno (dal calendario mensile) */}
+      {/* Dettaglio giorno (dal calendario mensile o settimanale): chi è di
+          turno con orari programmati/effettivi + assegnazione staff. */}
       {dayDetail && (
         <div className="overlay confirm-overlay" onClick={() => setDayDetail(null)}>
-          <div className="confirm-box" style={{ width: 'min(420px, 94vw)' }} onClick={(e) => e.stopPropagation()}>
+          <div className="confirm-box" style={{ width: 'min(460px, 94vw)', maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
             <div className="row between" style={{ alignItems: 'center' }}>
               <h3 style={{ margin: 0, textTransform: 'capitalize' }}>{giornoLabel(dayDetail)}</h3>
               <button className="btn ghost small" onClick={() => setDayDetail(null)}>✕</button>
             </div>
+            <DayPeople entries={days.get(dayDetail)?.entries} />
             <DayView date={dayDetail} data={days.get(dayDetail)} {...rowActions} />
+            <div style={{ marginTop: 10, borderTop: '1px solid var(--line)', paddingTop: 10 }}>
+              <strong className="small">➕ Assegna a questo giorno</strong>
+              {membri.length === 0 ? (
+                <p className="muted small" style={{ margin: '4px 0 0' }}>Nessun membro dello staff: aggiungilo nella scheda “Membri”.</p>
+              ) : (
+                <ShiftForm membri={membri} fixedDate={dayDetail} onAdd={addTurno} />
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -433,7 +369,12 @@ function peopleTotals(entries) {
   return [...byName.values()].sort((a, b) => String(a.name).localeCompare(String(b.name)))
 }
 
-// ── Calendario mensile: griglia 7×6, effettivo/programmato per giorno ──
+// Solo il nome di battesimo, per stare stretti nelle celle del calendario.
+const firstName = (name) => String(name || '').trim().split(/\s+/)[0]
+
+// ── Calendario mensile: griglia 7×6. Ogni giorno mostra CHI è di turno con
+// gli orari programmati (e, per i giorni passati, anche gli effettivi). Tutte
+// le celle sono cliccabili: si apre il dettaglio del giorno per assegnare. ──
 function MonthCalendar({ cursor, days, onPick }) {
   const grid = monthGrid(cursor.slice(0, 7))
   const today = oggi()
@@ -444,21 +385,29 @@ function MonthCalendar({ cursor, days, onPick }) {
       ))}
       {grid.map((cell) => {
         const info = days.get(cell.date)
-        const t = info ? effVsPlanned(info.entries) : null
+        const gente = info ? peopleOfDay(info.entries) : []
+        const past = cell.date < today
         return (
           <button
             key={cell.date}
-            className={`ore-cal-cell${cell.inMonth ? '' : ' out'}${cell.date === today ? ' today' : ''}${info ? ' has' : ''}`}
-            onClick={() => info && onPick(cell.date)}
-            disabled={!info}
+            className={`ore-cal-cell${cell.inMonth ? '' : ' out'}${cell.date === today ? ' today' : ''}${gente.length ? ' has' : ''}`}
+            onClick={() => onPick(cell.date)}
           >
             <span className="ore-cal-day">{Number(cell.date.slice(8))}</span>
-            {t && (
-              <>
-                <span className="ore-cal-h">{t.effettivo} h</span>
-                {t.programmato > 0 && <span className="ore-cal-n muted">/{t.programmato}</span>}
-              </>
-            )}
+            {gente.slice(0, 3).map((p) => {
+              // Orario da mostrare: programmato di norma; sui giorni passati
+              // l'effettivo se c'è (così si legge "da–a" reale, non solo il monte).
+              const prog = p.programmato.ranges[0]
+              const eff = p.effettivo.ranges[0]
+              const orario = past ? eff || prog : prog || eff
+              return (
+                <span key={p.key} className="ore-cal-who">
+                  <b>{firstName(p.name)}</b>
+                  {orario && <span className="ore-cal-when">{orario}</span>}
+                </span>
+              )
+            })}
+            {gente.length > 3 && <span className="ore-cal-more">+{gente.length - 3}</span>}
           </button>
         )
       })}
@@ -466,8 +415,33 @@ function MonthCalendar({ cursor, days, onPick }) {
   )
 }
 
-// ── Vista settimana: 7 giorni con i turni sotto ──
-function WeekView({ dates, days, onDelete, onEditShift }) {
+// Riepilogo "chi è di turno" per una modale/giorno: per persona, orari
+// PROGRAMMATI vs EFFETTIVI affiancati.
+function DayPeople({ entries }) {
+  const gente = peopleOfDay(entries)
+  if (gente.length === 0) return null
+  return (
+    <div className="day-people">
+      {gente.map((p) => (
+        <div key={p.key} className="day-person">
+          <strong>{p.name}</strong>
+          <span className="day-person-cols">
+            <span title="Programmato">
+              📅 {p.programmato.ranges.join(', ') || (p.programmato.hours ? `${p.programmato.hours} h` : '—')}
+            </span>
+            <span title="Effettivo" className={p.effettivo.hours ? '' : 'muted'}>
+              ✅ {p.effettivo.ranges.join(', ') || (p.effettivo.hours ? `${p.effettivo.hours} h` : '—')}
+            </span>
+          </span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ── Vista settimana: 7 giorni con i turni sotto. L'intestazione del giorno
+// è cliccabile e apre il dettaglio per assegnare/modificare i turni. ──
+function WeekView({ dates, days, onPick, onDelete, onEditShift }) {
   return (
     <div className="ore-week">
       {dates.map((d) => {
@@ -475,18 +449,19 @@ function WeekView({ dates, days, onDelete, onEditShift }) {
         const t = info ? effVsPlanned(info.entries) : null
         return (
           <div key={d} className="card" style={{ padding: 10 }}>
-            <div className="row between">
+            <button className="week-day-head row between" onClick={() => onPick(d)}>
               <strong style={{ textTransform: 'capitalize' }}>
                 {new Date(`${d}T00:00:00`).toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric' })}
               </strong>
-              {t && (
+              {t ? (
                 <strong>
                   {t.effettivo} h
                   {t.programmato > 0 && <span className="muted small"> / {t.programmato}</span>}
                 </strong>
+              ) : (
+                <span className="muted small">＋ assegna</span>
               )}
-            </div>
-            {!info && <span className="muted small">—</span>}
+            </button>
             {(info?.entries || []).map((e) => (
               <ShiftRow key={e.id} e={e} onDelete={onDelete} onEditShift={onEditShift} />
             ))}
@@ -494,6 +469,101 @@ function WeekView({ dates, days, onDelete, onEditShift }) {
         )
       })}
     </div>
+  )
+}
+
+// ── Form turno riusabile: nel riquadro generale (data scegliibile) e nella
+// modale di un giorno (data fissa). Effettivo o programmato. ──
+function ShiftForm({ membri, fixedDate = null, onAdd }) {
+  const [kind, setKind] = useState(fixedDate ? 'programmato' : 'effettivo')
+  const [personUid, setPersonUid] = useState('')
+  const [date, setDate] = useState(fixedDate || oggi())
+  const [start, setStart] = useState('')
+  const [end, setEnd] = useState('')
+  const [breakMin, setBreakMin] = useState('')
+  const [note, setNote] = useState('')
+  useEffect(() => {
+    if (fixedDate) setDate(fixedDate)
+  }, [fixedDate])
+
+  const hours = computeHours(start, end, Number(breakMin) || 0)
+  const membro = membri.find((m) => m.uid === personUid)
+
+  function submit(e) {
+    e.preventDefault()
+    if (!membro || hours == null) return
+    onAdd({
+      staff_uid: membro.uid,
+      staff_name: membro.label,
+      date,
+      start,
+      end,
+      break_minutes: Number(breakMin) || 0,
+      hours,
+      note: note.trim() || null,
+      kind,
+    })
+    setStart('')
+    setEnd('')
+    setBreakMin('')
+    setNote('')
+  }
+
+  return (
+    <form onSubmit={submit} style={{ marginTop: 8 }}>
+      <div className="chips-row" style={{ margin: '0 0 2px' }}>
+        {[
+          ['programmato', '📅 Programmato'],
+          ['effettivo', '✅ Effettivo'],
+        ].map(([k, label]) => (
+          <button type="button" key={k} className={`chip ${kind === k ? 'active' : ''}`} onClick={() => setKind(k)}>
+            {label}
+          </button>
+        ))}
+      </div>
+      <p className="muted small" style={{ margin: '0 0 6px' }}>
+        {kind === 'effettivo'
+          ? 'Ore realmente lavorate (es. correzione se dimenticano di timbrare).'
+          : 'Turno pianificato, da confrontare con le ore effettive.'}
+      </p>
+      <div className={fixedDate ? '' : 'grid-2'}>
+        <div>
+          <label htmlFor={`sf-nome-${fixedDate || 'gen'}`}>Chi *</label>
+          <select id={`sf-nome-${fixedDate || 'gen'}`} value={personUid} onChange={(e) => setPersonUid(e.target.value)} required>
+            <option value="">— Scegli —</option>
+            {membri.map((m) => (
+              <option key={m.uid} value={m.uid}>{m.label}</option>
+            ))}
+          </select>
+        </div>
+        {!fixedDate && (
+          <div>
+            <label htmlFor="sf-data-gen">Giorno</label>
+            <input id="sf-data-gen" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          </div>
+        )}
+      </div>
+      <div className="row" style={{ gap: 8, marginTop: 6 }}>
+        <div className="grow">
+          <label htmlFor={`sf-in-${fixedDate || 'gen'}`}>Entrata *</label>
+          <input id={`sf-in-${fixedDate || 'gen'}`} type="time" value={start} onChange={(e) => setStart(e.target.value)} required />
+        </div>
+        <div className="grow">
+          <label htmlFor={`sf-out-${fixedDate || 'gen'}`}>Uscita *</label>
+          <input id={`sf-out-${fixedDate || 'gen'}`} type="time" value={end} onChange={(e) => setEnd(e.target.value)} required />
+        </div>
+        <div style={{ width: 90 }}>
+          <label htmlFor={`sf-pausa-${fixedDate || 'gen'}`}>Pausa (min)</label>
+          <input id={`sf-pausa-${fixedDate || 'gen'}`} type="number" min="0" step="5" value={breakMin} onChange={(e) => setBreakMin(e.target.value)} />
+        </div>
+      </div>
+      <label htmlFor={`sf-note-${fixedDate || 'gen'}`} style={{ marginTop: 6, display: 'block' }}>Note</label>
+      <input id={`sf-note-${fixedDate || 'gen'}`} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Es. serata evento" />
+      <button className="btn block" type="submit" style={{ marginTop: 10 }} disabled={!personUid || hours == null}>
+        Aggiungi{hours != null ? ` · ${hours} h` : ''}
+        {start && end && end < start ? ' (oltre mezzanotte)' : ''}
+      </button>
+    </form>
   )
 }
 

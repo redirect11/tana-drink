@@ -2384,6 +2384,33 @@ body.fullbleed,
   font-size: 0.68rem;
   color: var(--muted);
 }
+/* Celle mensili con più contenuto: nomi + orari di chi è di turno. */
+.ore-cal-cell {
+  min-height: 76px;
+}
+.ore-cal-who {
+  width: 100%;
+  font-size: 0.64rem;
+  line-height: 1.2;
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.ore-cal-who b {
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ore-cal-who .ore-cal-when {
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.ore-cal-more {
+  font-size: 0.62rem;
+  color: var(--muted);
+}
 .ore-week {
   display: grid;
   gap: 8px;
@@ -2392,6 +2419,38 @@ body.fullbleed,
   .ore-week {
     grid-template-columns: repeat(2, 1fr);
   }
+}
+/* Intestazione giorno cliccabile nella vista settimana. */
+.week-day-head {
+  width: 100%;
+  background: none;
+  border: none;
+  color: inherit;
+  padding: 0 0 2px;
+  cursor: pointer;
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 4px;
+}
+/* Riepilogo "chi è di turno": programmato vs effettivo per persona. */
+.day-people {
+  display: grid;
+  gap: 6px;
+  margin: 8px 0;
+}
+.day-person {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 0.85rem;
+}
+.day-person-cols {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  text-align: right;
 }
 
 /* Banner "nuova versione": sopra tutto (anche il POS a tutto schermo),
