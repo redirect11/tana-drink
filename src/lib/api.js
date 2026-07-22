@@ -1309,36 +1309,47 @@ function mapCashSession(snap) {
 }
 
 // Sessione di cassa attualmente aperta (una sola alla volta), in realtime.
+// Niente orderBy nella query (eviterebbe un indice composito e, soprattutto,
+// escluderebbe il doc appena creato offline finché opened_at è nullo): si
+// ordina lato client.
 export function subscribeOpenCashSession(onChange, onError) {
-  const q = query(cashSessionsCol, where('status', '==', 'open'), orderBy('opened_at', 'desc'), fbLimit(1))
+  const q = query(cashSessionsCol, where('status', '==', 'open'))
   return onSnapshot(
     q,
-    (snap) => onChange(snap.empty ? null : mapCashSession(snap.docs[0])),
+    (snap) => {
+      const list = snap.docs.map(mapCashSession)
+      list.sort((a, b) => String(b.opened_at || '').localeCompare(String(a.opened_at || '')))
+      onChange(list[0] || null)
+    },
     onError ?? (() => {})
   )
 }
 
-// Apre la cassa. Rifiuta se ce n'è già una aperta (una sola serata alla volta).
-export async function openCashSession({ by = null, fondo = 0, cutoffHour = DEFAULT_CUTOFF_HOUR } = {}) {
-  const open = await getDocs(query(cashSessionsCol, where('status', '==', 'open'), fbLimit(1)))
-  if (!open.empty) return mapCashSession(open.docs[0]) // già aperta: la restituisce
-  const ref = await addDoc(cashSessionsCol, {
+// Apre la cassa. LOCAL-FIRST: id generato dal client e opened_at come ISO del
+// client (così il doc compare subito nella subscription anche offline); la
+// scrittura va in background senza attendere il server — altrimenti offline la
+// promise non si risolverebbe mai e il tasto sembrerebbe non fare nulla. Il
+// "una sola cassa aperta" è garantito dalla UI (il bottone c'è solo se non ce
+// n'è una aperta).
+export function openCashSession({ by = null, fondo = 0, cutoffHour = DEFAULT_CUTOFF_HOUR } = {}) {
+  const ref = doc(cashSessionsCol)
+  setDoc(ref, {
     status: 'open',
-    opened_at: serverTimestamp(),
+    opened_at: new Date().toISOString(),
     opened_by: by,
     fondo_cassa: Number(fondo) || 0,
     business_day: businessDayKey(new Date(), cutoffHour),
     created_at: serverTimestamp(),
-  })
-  return mapCashSession(await getDoc(ref))
+  }).catch(() => {})
+  return ref.id
 }
 
 // Chiude la cassa: salva il riepilogo (snapshot) ed eventuale contante contato.
-export async function closeCashSession(id, { by = null, snapshot = null, countedCash = null, note = null } = {}) {
-  const ref = doc(db, 'cash_sessions', id)
+// Anche qui local-first: scrittura in background, closed_at come ISO client.
+export function closeCashSession(id, { by = null, snapshot = null, countedCash = null, note = null } = {}) {
   const patch = {
     status: 'closed',
-    closed_at: serverTimestamp(),
+    closed_at: new Date().toISOString(),
     closed_by: by,
     snapshot: snapshot || null,
     note: note || null,
@@ -1349,8 +1360,7 @@ export async function closeCashSession(id, { by = null, snapshot = null, counted
     const atteso = Number(snapshot?.contanteAtteso) || 0
     patch.difference = Math.round((counted - atteso) * 100) / 100
   }
-  await updateDoc(ref, patch)
-  return mapCashSession(await getDoc(ref))
+  updateDoc(doc(db, 'cash_sessions', id), patch).catch(() => {})
 }
 
 // Storico delle sessioni di cassa chiuse, più recenti prima.
