@@ -750,20 +750,24 @@ function OrderQueue() {
           <div className="grid-card-sub">
             {o.customer_name && <strong>{o.customer_name}</strong>}
             {o.table_label && <span className="muted"> · Tavolo {o.table_label}</span>}
-            {/* Conto di gruppo: si vede subito che l'ordine fa parte di un
-                conto collettivo, pur restando in coda come gli altri. */}
-            {o.group_name_snapshot && (
-              <span className="pill small" style={{ marginLeft: 6 }}>👥 {o.group_name_snapshot}</span>
-            )}
-            {o.payment_status === 'pagato' && o.workflow_status !== ORDER_STATUSES.PAGATO && (
-              <span className="pill pagato small" style={{ marginLeft: 6 }}>💳 Pagato</span>
-            )}
-            {o.payment_status === 'parziale' && (
-              <span className="pill ricevuto small" style={{ marginLeft: 6 }} title={`Incassati ${formatPrice(paidAmount(o))}`}>
-                💳 Acconto
-              </span>
-            )}
           </div>
+          {/* Etichette (gruppo, pagamento): riga propria che va a capo, così
+              non vengono tagliate dall'ellissi del nome qui sopra. */}
+          {(o.group_name_snapshot || o.payment_status === 'pagato' || o.payment_status === 'parziale') && (
+            <div className="grid-card-tags">
+              {o.group_name_snapshot && (
+                <span className="pill small">👥 {o.group_name_snapshot}</span>
+              )}
+              {o.payment_status === 'pagato' && o.workflow_status !== ORDER_STATUSES.PAGATO && (
+                <span className="pill pagato small">💳 Pagato</span>
+              )}
+              {o.payment_status === 'parziale' && (
+                <span className="pill ricevuto small" title={`Incassati ${formatPrice(paidAmount(o))}`}>
+                  💳 Acconto
+                </span>
+              )}
+            </div>
+          )}
           <div className="row between" style={{ alignItems: 'baseline', marginTop: 'auto' }}>
             <span className="grid-card-meta">
               {count} prodott{count === 1 ? 'o' : 'i'} · {dayLabel(o)}
