@@ -42,8 +42,7 @@ import PrinterSetup from '../components/PrinterSetup.jsx'
 import InventoryManager from '../components/InventoryManager.jsx'
 import SettingsTab from '../components/SettingsTab.jsx'
 import StatsTab from '../components/StatsTab.jsx'
-import StaffTab from '../components/StaffTab.jsx'
-import StaffHoursTab from '../components/StaffHoursTab.jsx'
+import StaffPage from '../components/StaffPage.jsx'
 import VipTab from '../components/VipTab.jsx'
 import ServiceQueue from '../components/ServiceQueue.jsx'
 import StaffMyOrders from '../components/StaffMyOrders.jsx'
@@ -136,8 +135,7 @@ export default function BartenderPage() {
         {tab === 'stats' && <StatsTab />}
         {tab === 'menu' && <MenuTab />}
         {tab === 'inventario' && <InventoryManager />}
-        {tab === 'staff' && <StaffTab />}
-        {tab === 'ore' && <StaffHoursTab />}
+        {(tab === 'staff' || tab === 'ore') && <StaffPage />}
         {tab === 'vip' && <VipTab />}
         {tab === 'impostazioni' && <SettingsTab />}
         {tab === 'stampante' && <PrinterSetup />}

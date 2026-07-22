@@ -15,6 +15,8 @@ import {
   hoursBetweenIso,
   hhmm,
   effVsPlanned,
+  peopleOfDay,
+  shiftRange,
 } from '../../src/lib/ore.js'
 
 describe('computeHours', () => {
@@ -121,5 +123,29 @@ describe('calendario: byDay / sumHours / monthGrid / weekDays / shiftDay', () =>
   it('shiftDay sposta di N giorni (anche oltre il mese)', () => {
     expect(shiftDay('2026-07-31', 1)).toBe('2026-08-01')
     expect(shiftDay('2026-07-01', -1)).toBe('2026-06-30')
+  })
+})
+
+describe('chi è di turno: shiftRange / peopleOfDay', () => {
+  it('shiftRange: turno manuale (start–end), timbratura, aperta, o null', () => {
+    expect(shiftRange({ start: '18:00', end: '02:00' })).toBe('18:00–02:00')
+    expect(shiftRange({ clock_in: '2026-07-13T18:05:00', clock_out: '2026-07-14T02:10:00' })).toMatch(/–/)
+    expect(shiftRange({ clock_in: '2026-07-13T18:05:00', clock_out: null })).toMatch(/…$/)
+    expect(shiftRange({ hours: 8 })).toBeNull() // ore importate senza orari
+  })
+
+  it('peopleOfDay: raggruppa per persona programmato vs effettivo con orari', () => {
+    const gente = peopleOfDay([
+      { staff_uid: 'u1', staff_name: 'Marco', kind: 'programmato', hours: 8, start: '18:00', end: '02:00' },
+      { staff_uid: 'u1', staff_name: 'Marco', kind: 'effettivo', hours: 8.2, start: '18:05', end: '02:15' },
+      { staff_uid: 'u2', staff_name: 'Sara', kind: 'programmato', hours: 5, start: '20:00', end: '01:00' },
+    ])
+    expect(gente.map((p) => p.name)).toEqual(['Marco', 'Sara']) // ordinati per nome
+    const marco = gente.find((p) => p.name === 'Marco')
+    expect(marco.programmato.ranges).toEqual(['18:00–02:00'])
+    expect(marco.effettivo.ranges).toEqual(['18:05–02:15'])
+    expect(marco.effettivo.hours).toBe(8.2)
+    const sara = gente.find((p) => p.name === 'Sara')
+    expect(sara.effettivo.hours).toBe(0) // solo programmato
   })
 })

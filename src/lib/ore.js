@@ -60,6 +60,39 @@ export function effVsPlanned(entries) {
   return { effettivo: eff, programmato: plan, scarto: Math.round((eff - plan) * 100) / 100 }
 }
 
+// Etichetta oraria "da–a" di una voce, se ne ha: turno manuale (start/end)
+// o timbratura (clock_in/clock_out; '…' se ancora aperta). Null per le ore
+// importate senza orario (che quindi mostrano solo il monte ore).
+export function shiftRange(e) {
+  if (e?.start && e?.end) return `${e.start}–${e.end}`
+  if (e?.clock_in) return `${hhmm(e.clock_in)}–${e.clock_out ? hhmm(e.clock_out) : '…'}`
+  return null
+}
+
+// CHI è di turno in un giorno, con orari PROGRAMMATI ed EFFETTIVI. Raggruppa
+// le voci per persona (per uid, ripiego sul nome) e per ciascuna riporta i
+// due monti ore e gli intervalli "da–a" già pronti. Ordina per nome.
+//   → [{ key, name, programmato: {hours, ranges:[]}, effettivo: {hours, ranges:[]} }]
+export function peopleOfDay(entries) {
+  const m = new Map()
+  for (const e of entries || []) {
+    const key = e.staff_uid || e.staff_name || '?'
+    const cur =
+      m.get(key) || {
+        key,
+        name: e.staff_name || '—',
+        programmato: { hours: 0, ranges: [] },
+        effettivo: { hours: 0, ranges: [] },
+      }
+    const bucket = e.kind === 'programmato' ? cur.programmato : cur.effettivo
+    bucket.hours = Math.round((bucket.hours + (Number(e.hours) || 0)) * 100) / 100
+    const r = shiftRange(e)
+    if (r) bucket.ranges.push(r)
+    m.set(key, cur)
+  }
+  return [...m.values()].sort((a, b) => String(a.name).localeCompare(String(b.name)))
+}
+
 // Ore totali di un elenco di turni.
 export const sumHours = (entries) =>
   Math.round((entries || []).reduce((s, e) => s + (Number(e.hours) || 0), 0) * 100) / 100
