@@ -173,6 +173,25 @@ describe('costi e valorizzazione', () => {
     // pezzo: costo per pz = costo confezione ivato
     expect(costPerUnit({ unit: 'pz', cost: 2, vat: 10 }, 'pz')).toBeCloseTo(2.2, 3)
   })
+
+  it('costPerUnit: unità di famiglia diversa → null (niente costo sballato)', () => {
+    // chiedere il costo al g di un liquido (o al ml di un solido) non ha senso:
+    // meglio null (poi segnalato come "manca il costo") che un numero a caso.
+    expect(costPerUnit(amaro, 'g')).toBeNull()
+    expect(costPerUnit(amaro, 'mg')).toBeNull()
+    const sale = { unit: 'g', package_size: 500, cost: 10, vat: 22 }
+    expect(costPerUnit(sale, 'ml')).toBeNull()
+    expect(costPerUnit(sale, 'cl')).toBeNull()
+    // pezzo con unità di volume → null
+    expect(costPerUnit({ unit: 'pz', cost: 2, vat: 10 }, 'cl')).toBeNull()
+  })
+
+  it('costPerUnit: robusto anche con L/kg (nessun costo perso in silenzio)', () => {
+    // amaro conf. 1000 ml = 1 L → costo al litro = costo confezione ivato
+    expect(costPerUnit(amaro, 'l')).toBeCloseTo(15.738, 3)
+    const sale = { unit: 'g', package_size: 500, cost: 10, vat: 22 }
+    expect(costPerUnit(sale, 'kg')).toBeCloseTo(24.4, 3)
+  })
 })
 
 describe('computeConsumption', () => {
