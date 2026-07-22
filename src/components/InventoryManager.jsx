@@ -65,26 +65,31 @@ function UnitPrice({ item, markup }) {
   const consigliato = cost * m
   const guadagno = consigliato - cost
   return (
-    <span style={{ marginLeft: 6, display: 'inline-flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
-      · costo <strong>{formatPrice(cost)}</strong>/{unit}
-      {' · ×'}{m} <strong className="price">{formatPrice(consigliato)}</strong>/{unit}
-      <span className="muted">(guad. {formatPrice(guadagno)}/{unit})</span>
-      {units.length > 1 &&
-        units.map((u) => (
-          <button
-            key={u}
-            type="button"
-            className={`chip ${u === unit ? 'active' : ''}`}
-            style={{ padding: '1px 7px', fontSize: '0.72rem' }}
-            onClick={(e) => {
-              e.stopPropagation()
-              setUnit(u)
-            }}
-          >
-            {u}
-          </button>
-        ))}
-    </span>
+    <div className="inv-info-row">
+      <dt>
+        Al {unit}
+        {units.length > 1 &&
+          units.map((u) => (
+            <button
+              key={u}
+              type="button"
+              className={`chip ${u === unit ? 'active' : ''}`}
+              style={{ padding: '0 6px', fontSize: '0.68rem' }}
+              onClick={(e) => {
+                e.stopPropagation()
+                setUnit(u)
+              }}
+            >
+              {u}
+            </button>
+          ))}
+      </dt>
+      <dd className="inv-unitprice">
+        <span>costo <strong>{formatPrice(cost)}</strong></span>
+        <span>consigliato ×{m} <strong className="price">{formatPrice(consigliato)}</strong></span>
+        <span className="muted">guadagno {formatPrice(guadagno)}</span>
+      </dd>
+    </div>
   )
 }
 
@@ -181,28 +186,44 @@ function ProductsPanel() {
   // vista a LISTA: carico, rettifica, costi e modifica/elimina.
   const itemActions = (it, bd) => (
     <div className="grid-card-actions">
-      {bd ? (
-        <div className="muted small">
-          🍾 {bd.full} piene
-          {bd.hasOpen && ` · 1 aperta (${fmtItem(bd.openRemaining, it)})`}
-          {bd.finished > 0 && ` · ${bd.finished} finite`}
-          {' · '}1 conf. = {fmtItem(it.package_size, it)}
-        </div>
-      ) : (
-        it.unit !== 'pz' && Number(it.package_size) > 0 && (
-          <div className="muted small">1 conf. = {fmtItem(it.package_size, it)}</div>
-        )
-      )}
-      {Number(it.low_threshold) > 0 && (
-        <div className="muted small">Soglia avviso: {fmtItem(it.low_threshold, it)}</div>
-      )}
-      {it.cost != null && (
-        <div className="muted small">
-          💶 {formatPrice(it.cost)}/conf. (+IVA {formatPrice(costWithVat(it.cost, it.vat))})
-          {' · valore '} <strong>{formatPrice(stockValue(it))}</strong>
-          <UnitPrice item={it} markup={markup} />
-        </div>
-      )}
+      <dl className="inv-info">
+        {bd ? (
+          <div className="inv-info-row">
+            <dt>🍾 Bottiglie</dt>
+            <dd>
+              {bd.full} piene
+              {bd.hasOpen && ` · 1 aperta (${fmtItem(bd.openRemaining, it)})`}
+              {bd.finished > 0 && ` · ${bd.finished} finite`}
+              <span className="muted"> · 1 conf. = {fmtItem(it.package_size, it)}</span>
+            </dd>
+          </div>
+        ) : (
+          it.unit !== 'pz' && Number(it.package_size) > 0 && (
+            <div className="inv-info-row">
+              <dt>Confezione</dt>
+              <dd>1 conf. = {fmtItem(it.package_size, it)}</dd>
+            </div>
+          )
+        )}
+        {Number(it.low_threshold) > 0 && (
+          <div className="inv-info-row">
+            <dt>Soglia avviso</dt>
+            <dd>{fmtItem(it.low_threshold, it)}</dd>
+          </div>
+        )}
+        {it.cost != null && (
+          <>
+            <div className="inv-info-row">
+              <dt>💶 Costo</dt>
+              <dd>
+                {formatPrice(it.cost)}/conf. <span className="muted">(+IVA {formatPrice(costWithVat(it.cost, it.vat))})</span>
+                {' · valore '}<strong>{formatPrice(stockValue(it))}</strong>
+              </dd>
+            </div>
+            <UnitPrice item={it} markup={markup} />
+          </>
+        )}
+      </dl>
 
       {caricoFor === it.id ? (
         <CaricoForm item={it} onCancel={() => setCaricoFor(null)} onConfirm={(p) => doCarico(it, p)} />

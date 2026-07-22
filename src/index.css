@@ -1397,6 +1397,52 @@ body.fullbleed .bar-content {
   padding: 7px 8px;
 }
 
+/* Riepilogo info di un item inventario espanso: righe etichetta → valore,
+   ordinate e leggibili invece di tre righe muted accatastate. */
+.inv-info {
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(127, 127, 140, 0.1);
+  display: grid;
+  gap: 6px;
+  font-size: 0.82rem;
+}
+.inv-info .inv-info-row {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 4px 10px;
+  align-items: baseline;
+  margin: 0;
+}
+.inv-info dt {
+  color: var(--muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.inv-info dd {
+  margin: 0;
+}
+.inv-info .inv-unitprice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+@media (max-width: 460px) {
+  .inv-info .inv-info-row {
+    grid-template-columns: 1fr;
+    gap: 1px;
+  }
+  .inv-info dt {
+    font-size: 0.68rem;
+  }
+}
+
 /* Ordine POS in invio: grigio finché creazione/stampa non è completata,
    poi sparisce e compare l'ordine reale colorato. */
 .grid-card-pending {
