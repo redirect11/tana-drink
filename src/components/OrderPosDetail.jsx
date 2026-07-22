@@ -30,6 +30,7 @@ import {
   activeComanda,
   orderIsClosed,
   comandaEditable,
+  ORDER_OPEN,
 } from '../lib/comande.js'
 import { paidAmount } from '../lib/pagamento.js'
 import {
@@ -652,11 +653,27 @@ export default function OrderPosDetail({ order = null }) {
       >
         <button className="btn ghost small" aria-label="Torna agli ordini" onClick={handleExit}>← Ordini</button>
         <strong style={{ fontFamily: 'var(--serif)' }}>{headTitle}</strong>
-        {!isNew && (
-          <span className={`pill ${order.status}`}>
-            {STATUS_EMOJI[order.status]} {STATUS_LABELS[order.status]}
-          </span>
-        )}
+        {!isNew && (() => {
+          // Il pill del conto porta anche lo stato del pagamento: un conto
+          // aperto può essere già saldato (in attesa di servizio) o pagato
+          // in parte. Meglio un solo pill parlante che due accostati.
+          const paid = order.payment_status === 'pagato'
+          const parziale = order.payment_status === 'parziale'
+          const cls = order.status === ORDER_OPEN && paid ? 'pagato' : order.status
+          const label =
+            order.status === ORDER_OPEN
+              ? paid
+                ? 'Aperto · Pagato'
+                : parziale
+                  ? `Aperto · Acconto ${formatPrice(paidAmount(order))}`
+                  : STATUS_LABELS[order.status]
+              : STATUS_LABELS[order.status]
+          return (
+            <span className={`pill ${cls}`}>
+              {STATUS_EMOJI[order.status]} {label}
+            </span>
+          )
+        })()}
         {!isNew && order.placed_by && (
           <span className="muted small">✍️ {placedByName(order.placed_by)}</span>
         )}
@@ -666,9 +683,6 @@ export default function OrderPosDetail({ order = null }) {
           <span className="muted" style={{ fontSize: '0.7rem', opacity: 0.6 }} title="Progressivo interno dell'ordine">
             id {String(order.serial).padStart(5, '0')}
           </span>
-        )}
-        {!isNew && order.payment_status === 'pagato' && order.status !== ORDER_STATUSES.PAGATO && (
-          <span className="muted small">💳 pagato</span>
         )}
       </div>
 

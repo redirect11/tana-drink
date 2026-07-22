@@ -1231,6 +1231,13 @@ body.fullbleed .bar-content {
   white-space: nowrap;
 }
 
+.grid-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
 .grid-card-sub strong {
   font-weight: 600;
 }
