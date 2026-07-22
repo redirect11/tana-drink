@@ -292,12 +292,7 @@ export default function PosProductPicker({
               <div
                 key={d.id}
                 data-drink-id={d.id}
-                style={{
-                  position: 'relative',
-                  opacity: dragId === d.id ? 0.5 : 1,
-                  boxShadow: dragId === d.id ? '0 6px 18px rgba(0,0,0,0.4)' : 'none',
-                  borderRadius: 12,
-                }}
+                className={`reorder-cell${dragId === d.id ? ' dragging' : ''}`}
               >
                 <div
                   className="reorder-grip"

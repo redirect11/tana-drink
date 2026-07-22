@@ -2683,3 +2683,21 @@ body.fullbleed,
 .reorder-grip:active {
   cursor: grabbing;
 }
+
+/* Card in trascinamento: si "solleva" — ingrandita, ombra profonda, sopra
+   le altre — così si vede bene che la stai spostando. */
+.reorder-cell {
+  position: relative;
+  border-radius: 12px;
+  transition: transform 0.14s ease, box-shadow 0.14s ease;
+  will-change: transform;
+}
+.reorder-cell.dragging {
+  transform: scale(1.06) rotate(-1.5deg);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.45);
+  z-index: 5;
+  cursor: grabbing;
+}
+.reorder-cell.dragging .reorder-grip {
+  cursor: grabbing;
+}
