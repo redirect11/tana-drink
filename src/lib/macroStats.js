@@ -16,6 +16,8 @@
 
 import { costPerUnit } from './inventory.js'
 import { macroOfItem } from './macros.js'
+import { businessDayKey, DEFAULT_CUTOFF_HOUR } from './businessDay.js'
+import { ORDER_STATUSES } from './orderStatus.js'
 
 // Chiave usata per l'incasso non attribuibile a nessuna macro.
 export const UNASSIGNED = 'none'
@@ -75,15 +77,132 @@ function orderLines(o) {
   return o?.order_items || (o?.comande || []).flatMap((c) => c.items || []) || []
 }
 
-// Fatturato per macro su un insieme di ordini (già filtrati dei validi a monte,
-// oppure passa `skipCancelled`). Ritorna Map macroKey → incasso.
+// Fatturato per macro su un insieme di ordini. Salta gli annullati. Ritorna
+// Map macroKey → incasso.
 export function revenueByMacro(orders, { drinksById, itemsById, catToMacro }) {
   const acc = new Map()
   for (const o of orders || []) {
+    if (o?.status === ORDER_STATUSES.ANNULLATO) continue
     for (const li of orderLines(o)) {
       const split = splitLineRevenueByMacro(li, drinksById?.[li.drink_id], itemsById, catToMacro)
       for (const [k, v] of split) acc.set(k, round2((acc.get(k) || 0) + v))
     }
   }
   return acc
+}
+
+// ── ACQUISTI per macro ─────────────────────────────────────────────────
+// Dagli ordini fornitori RICEVUTI: per ogni riga, importo netto
+// (unit_cost × qty_packages) attribuito alla macro dell'articolo
+// (articolo → categoria → macro). Righe di articoli senza macro → `none`.
+export function purchasesByMacro(purchaseOrders, { itemsById, catToMacro, onlyReceived = true }) {
+  const acc = new Map()
+  for (const po of purchaseOrders || []) {
+    if (onlyReceived && po?.status !== 'ricevuto') continue
+    for (const l of po?.lines || []) {
+      const amount = round2((Number(l.unit_cost) || 0) * (Number(l.qty_packages) || 0))
+      if (amount <= 0) continue
+      const item = itemsById?.[l.item_id]
+      const macro = (item && macroOfItem(item, catToMacro)) || UNASSIGNED
+      acc.set(macro, round2((acc.get(macro) || 0) + amount))
+    }
+  }
+  return acc
+}
+
+// ── Report MENSILE per macro (Dashboard A) ─────────────────────────────
+// Mese del fatturato = giornata commerciale dell'ordine; mese degli acquisti =
+// data di arrivo (received_at) dell'ordine fornitore ricevuto.
+const monthOfReceived = (po) => String(po?.received_at || po?.created_at || '').slice(0, 7)
+
+// Riga vuota di metriche mensili.
+const emptyCell = () => ({ acquisti: 0, fatturato: 0 })
+const withDerived = (c) => {
+  const utile = round2(c.fatturato - c.acquisti)
+  return { ...c, utile, rapporto: c.acquisti > 0 ? round2(c.fatturato / c.acquisti) : null }
+}
+
+// Costruisce la tabella mensile per macro.
+//   months: elenco di 'YYYY-MM' da mostrare (colonne), es. i 12 mesi dell'anno.
+//   macros: [{ id, name }] nell'ordine voluto.
+// Ritorna { months, rows, totByMonth, grand } dove rows ha una voce per macro
+// (più "Non attribuito" se ci sono importi orfani), ognuna con byMonth e tot.
+export function macroMonthlyReport({
+  orders,
+  purchaseOrders,
+  drinksById,
+  itemsById,
+  catToMacro,
+  macros,
+  months,
+  cutoffHour = DEFAULT_CUTOFF_HOUR,
+}) {
+  const monthSet = new Set(months || [])
+  // cell[macroKey][month] = { acquisti, fatturato }
+  const cells = new Map()
+  const ensure = (macroKey, month) => {
+    let m = cells.get(macroKey)
+    if (!m) cells.set(macroKey, (m = new Map()))
+    let c = m.get(month)
+    if (!c) m.set(month, (c = emptyCell()))
+    return c
+  }
+
+  // Fatturato: per ordine, mese = giornata commerciale, poi ripartizione macro.
+  for (const o of orders || []) {
+    if (o?.status === ORDER_STATUSES.ANNULLATO) continue
+    const month = (businessDayKey(o?.created_at, cutoffHour) || '').slice(0, 7)
+    if (!monthSet.has(month)) continue
+    for (const li of orderLines(o)) {
+      const split = splitLineRevenueByMacro(li, drinksById?.[li.drink_id], itemsById, catToMacro)
+      for (const [k, v] of split) ensure(k, month).fatturato = round2(ensure(k, month).fatturato + v)
+    }
+  }
+
+  // Acquisti: per ordine fornitore ricevuto, mese = arrivo.
+  for (const po of purchaseOrders || []) {
+    if (po?.status !== 'ricevuto') continue
+    const month = monthOfReceived(po)
+    if (!monthSet.has(month)) continue
+    for (const l of po?.lines || []) {
+      const amount = round2((Number(l.unit_cost) || 0) * (Number(l.qty_packages) || 0))
+      if (amount <= 0) continue
+      const item = itemsById?.[l.item_id]
+      const macroKey = (item && macroOfItem(item, catToMacro)) || UNASSIGNED
+      ensure(macroKey, month).acquisti = round2(ensure(macroKey, month).acquisti + amount)
+    }
+  }
+
+  // Righe: le macro nell'ordine dato, più "Non attribuito" se ha importi.
+  const macroRows = [...(macros || [])]
+  if (cells.has(UNASSIGNED)) macroRows.push({ id: UNASSIGNED, name: 'Non attribuito' })
+
+  const rows = macroRows.map((m) => {
+    const byMonth = new Map()
+    const tot = emptyCell()
+    for (const month of months || []) {
+      const c = cells.get(m.id)?.get(month) || emptyCell()
+      byMonth.set(month, withDerived(c))
+      tot.acquisti = round2(tot.acquisti + c.acquisti)
+      tot.fatturato = round2(tot.fatturato + c.fatturato)
+    }
+    return { id: m.id, name: m.name, byMonth, tot: withDerived(tot) }
+  })
+
+  // Totali per colonna (tutte le macro) e totale generale.
+  const totByMonth = new Map()
+  const grand = emptyCell()
+  for (const month of months || []) {
+    const t = emptyCell()
+    for (const r of rows) {
+      const c = r.byMonth.get(month)
+      t.acquisti = round2(t.acquisti + c.acquisti)
+      t.fatturato = round2(t.fatturato + c.fatturato)
+    }
+    totByMonth.set(month, withDerived(t))
+    grand.acquisti = round2(grand.acquisti + t.acquisti)
+    grand.fatturato = round2(grand.fatturato + t.fatturato)
+  }
+
+  return { months: months || [], rows, totByMonth, grand: withDerived(grand) }
 }

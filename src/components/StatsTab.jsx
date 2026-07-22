@@ -21,6 +21,7 @@ import {
   extrasBreakdown,
   DEFAULT_HOUR_RANGE,
 } from '../lib/stats.js'
+import MacroMonthlyTab from './MacroMonthlyTab.jsx'
 
 const fmtMin = (m) => (m == null ? '—' : `${Math.round(m * 10) / 10} min`)
 // Prezzo compatto per le etichette dei grafici (niente centesimi).
@@ -31,7 +32,28 @@ const fmtQty = (u) =>
 // Statistiche del locale, per GIORNATA COMMERCIALE (niente più serate).
 const PERIOD_PRESETS = [7, 10, 20, 30, 60]
 
+// Le Statistiche hanno due viste: il giornaliero (finestra a giornate) e il
+// mensile per macro-categoria (Dashboard A).
 export default function StatsTab() {
+  const [sub, setSub] = useState('giornaliero') // 'giornaliero' | 'mensile'
+  return (
+    <div>
+      <div className="chips-row" style={{ marginBottom: 10 }}>
+        {[
+          ['giornaliero', '📊 Giornaliero'],
+          ['mensile', '🗂 Mensile per macro'],
+        ].map(([k, label]) => (
+          <button key={k} className={`chip ${sub === k ? 'active' : ''}`} onClick={() => setSub(k)}>
+            {label}
+          </button>
+        ))}
+      </div>
+      {sub === 'giornaliero' ? <DailyStats /> : <MacroMonthlyTab />}
+    </div>
+  )
+}
+
+function DailyStats() {
   const [loaded, setLoaded] = useState(false)
   const [orders, setOrders] = useState([])
   const [drinks, setDrinks] = useState([])
