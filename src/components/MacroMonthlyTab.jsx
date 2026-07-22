@@ -83,6 +83,13 @@ export default function MacroMonthlyTab() {
         ripiego {settings.sale_vat}% per ciò che non ha un articolo collegato).
         Acquisti = ordini fornitore segnati “ricevuto”.
       </p>
+      {report && report.rows.some((r) => r.id === 'none' && r.tot.fatturato > 0) && (
+        <p className="muted small" style={{ margin: '-4px 0 10px' }}>
+          ℹ️ In <strong>“Non attribuito”</strong> finisce l’incasso dei drink
+          senza ricetta collegata all’inventario (cocktail, food, ecc.):
+          aggiungendo le ricette si sposta sulle macro giuste.
+        </p>
+      )}
 
       {loading && <div className="empty">Carico l’andamento…</div>}
 
