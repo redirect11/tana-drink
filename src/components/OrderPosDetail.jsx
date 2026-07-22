@@ -9,6 +9,7 @@ import {
   closePaidOrder,
   createOrder,
   subscribeOpenGroups,
+  fetchRecentDrinkIds,
   subscribeOrder,
   subscribeSettings,
   DEFAULT_SETTINGS,
@@ -115,6 +116,11 @@ export default function OrderPosDetail({ order = null }) {
 
   // Colonne POS ridimensionabili (larghezze ricordate per dispositivo).
   const catsRz = useResizable('pos-cats', { def: 150, min: 96, max: 320, side: 'right' })
+  // Recenti per la griglia POS: gli ultimi item ordinati (best-effort).
+  const [recentIds, setRecentIds] = useState([])
+  useEffect(() => {
+    fetchRecentDrinkIds(20).then(setRecentIds).catch(() => setRecentIds([]))
+  }, [])
   const comandaRz = useResizable('pos-comanda', { def: 360, min: 300, max: 620, side: 'left' })
 
   // Staff loggato (per l'attribuzione dell'ordine creato dal POS).
@@ -708,6 +714,7 @@ export default function OrderPosDetail({ order = null }) {
           qtyByDrink={qtyByDrink}
           categoryDisplay={settings.category_display}
           catsHandleProps={catsRz.handleProps}
+          recentIds={recentIds}
           onAdd={plusFromCatalog}
           onSetQty={(d, q) => {
             const cur = qtyByDrink[d.id] ?? 0

@@ -37,6 +37,7 @@ import {
 import { discountAmount, orderDue, paymentCloses, summaryMethod } from './pagamento.js'
 import { hoursBetweenIso } from './ore.js'
 import { businessDayKey, coverageStart, DEFAULT_CUTOFF_HOUR } from './businessDay.js'
+import { recentDrinkIds } from './posCatalog.js'
 import { DEFAULT_MARKUP, DEFAULT_ROUND_STEP } from './pricing.js'
 import { notify } from './notify.js'
 
@@ -874,6 +875,14 @@ export async function closePaidOrder(id) {
     : []
   await updateDoc(ref, chiusura)
   notifyLowStock(lowStock)
+}
+
+// Id dei drink usati di RECENTE negli ordini (per la raccolta "Recenti" del
+// POS): ultimi item distinti, più recenti prima. Legge un blocco di ordini
+// recenti e li riduce lato client.
+export async function fetchRecentDrinkIds(limit = 20) {
+  const snap = await getDocs(query(ordersCol, orderBy('created_at', 'desc'), fbLimit(60)))
+  return recentDrinkIds(snap.docs.map(mapOrder), limit)
 }
 
 // Ordini di una giornata commerciale (per statistiche e storico).
