@@ -18,8 +18,11 @@ import {
   deleteSupplier,
 } from '../lib/api.js'
 import {
-  BASE_UNITS,
   formatQty,
+  fmtItem,
+  baseUnit,
+  fromBaseQty,
+  toBaseQty,
   stockStatus,
   bottleSummary,
   bottleBreakdown,
@@ -168,17 +171,17 @@ function ProductsPanel() {
       {bd ? (
         <div className="muted small">
           🍾 {bd.full} piene
-          {bd.hasOpen && ` · 1 aperta (${formatQty(bd.openRemaining, it.unit)})`}
+          {bd.hasOpen && ` · 1 aperta (${fmtItem(bd.openRemaining, it)})`}
           {bd.finished > 0 && ` · ${bd.finished} finite`}
-          {' · '}1 conf. = {formatQty(it.package_size, it.unit)}
+          {' · '}1 conf. = {fmtItem(it.package_size, it)}
         </div>
       ) : (
         it.unit !== 'pz' && Number(it.package_size) > 0 && (
-          <div className="muted small">1 conf. = {formatQty(it.package_size, it.unit)}</div>
+          <div className="muted small">1 conf. = {fmtItem(it.package_size, it)}</div>
         )
       )}
       {Number(it.low_threshold) > 0 && (
-        <div className="muted small">Soglia avviso: {formatQty(it.low_threshold, it.unit)}</div>
+        <div className="muted small">Soglia avviso: {fmtItem(it.low_threshold, it)}</div>
       )}
       {it.cost != null && (
         <div className="muted small">
@@ -412,7 +415,7 @@ function ProductsPanel() {
                           </span>
                         </>
                       ) : (
-                        formatQty(it.stock, it.unit)
+                        fmtItem(it.stock, it)
                       )
                     })()}
                   </span>
@@ -461,7 +464,7 @@ function ProductsPanel() {
                     return (
                       <span style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                         <span className="grid-card-tot" style={{ fontSize: '1.05rem' }}>
-                          {bs ? `${bs.bottles} 🍾` : formatQty(it.stock, it.unit)}
+                          {bs ? `${bs.bottles} 🍾` : fmtItem(it.stock, it)}
                         </span>
                         {bs && (
                           <span className="muted small" style={{ display: 'block' }}>
@@ -754,41 +757,51 @@ function CaricoForm({ item, onCancel, onConfirm }) {
 
 function ItemForm({ initial, categories, suppliers, onCancel, onSave }) {
   const isEdit = !!initial
+  // Unità scelta dall'utente (L/cl/ml, g/mg, pz). Lo stock è salvato in
+  // base (ml/g/pz); i campi si inseriscono e si mostrano nell'unità scelta.
+  const initUnit = initial?.display_unit ?? initial?.unit ?? 'ml'
   const [form, setForm] = useState({
     name: initial?.name ?? '',
-    unit: initial?.unit ?? 'ml',
+    unit: initUnit,
     category_id: initial?.category_id ?? '',
     supplier_id: initial?.supplier_id ?? '',
     cost: initial?.cost ?? '',
     vat: initial?.vat ?? 22,
     status: initial?.status ?? 'linea',
-    package_size: initial?.package_size ?? '',
-    low_threshold: initial?.low_threshold ?? '',
-    // solo in creazione: giacenza iniziale espressa in confezioni
+    package_size:
+      initial?.package_size != null && initial?.package_size !== ''
+        ? String(fromBaseQty(initial.package_size, initUnit))
+        : '',
+    low_threshold: initial?.low_threshold ? String(fromBaseQty(initial.low_threshold, initUnit)) : '',
     bottles: '',
     open_content: '',
   })
   const [saving, setSaving] = useState(false)
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
-  const isPz = form.unit === 'pz'
-  const costNum = Number(String(form.cost).replace(',', '.')) || 0
-  const clPerConf = !isPz && Number(form.package_size) > 0 ? Number(form.package_size) / 10 : 0
+  const num = (v) => Number(String(v).replace(',', '.')) || 0
+  const isPz = baseUnit(form.unit) === 'pz'
+  const costNum = num(form.cost)
+  // Contenuto per confezione nell'unità scelta (per il costo unitario).
+  const packInUnit = !isPz ? num(form.package_size) : 0
+  const initialBase = baseUnit(initial?.display_unit ?? initial?.unit ?? 'ml')
 
   async function submit(e) {
     e.preventDefault()
     if (!form.name.trim()) return
     setSaving(true)
     try {
+      const packBase = isPz ? null : toBaseQty(num(form.package_size), form.unit) || null
       const base = {
         name: form.name.trim(),
-        unit: form.unit,
+        unit: baseUnit(form.unit), // base in cui è salvato lo stock
+        display_unit: form.unit, // unità scelta per inserimento/visualizzazione
         category_id: form.category_id || null,
         supplier_id: form.supplier_id || null,
         cost: form.cost === '' ? null : costNum,
         vat: Number(form.vat) || 0,
         status: form.status || 'linea',
-        package_size: isPz ? null : (Number(form.package_size) || null),
-        low_threshold: Number(form.low_threshold) || 0,
+        package_size: packBase,
+        low_threshold: toBaseQty(num(form.low_threshold), form.unit),
       }
       if (isEdit) {
         // In modifica la giacenza non si tocca (si usa Carico/Contenuto reale).
@@ -800,8 +813,8 @@ function ItemForm({ initial, categories, suppliers, onCancel, onSave }) {
         if (isPz) {
           stock = n
         } else {
-          const size = Number(form.package_size) || 0
-          const open = Number(form.open_content) || 0
+          const size = packBase || 0
+          const open = toBaseQty(num(form.open_content), form.unit)
           stock = n * size + open
           bottles_total = n + (open > 0 ? 1 : 0)
         }
@@ -848,7 +861,7 @@ function ItemForm({ initial, categories, suppliers, onCancel, onSave }) {
       {costNum > 0 && (
         <div className="muted small">
           +IVA {formatPrice(costWithVat(costNum, form.vat))}
-          {clPerConf > 0 && ` · ${formatPrice(costWithVat(costNum, form.vat) / clPerConf)}/cl`}
+          {packInUnit > 0 && ` · ${formatPrice(costWithVat(costNum, form.vat) / packInUnit)}/${form.unit}`}
         </div>
       )}
 
@@ -859,19 +872,29 @@ function ItemForm({ initial, categories, suppliers, onCancel, onSave }) {
         ))}
       </select>
 
-      <label htmlFor="iunit">Tipo</label>
-      <select id="iunit" value={form.unit} onChange={set('unit')} disabled={isEdit}>
-        {BASE_UNITS.map((u) => (
-          <option key={u} value={u}>
-            {u === 'ml' ? 'Liquido (ml)' : u === 'g' ? 'Peso (g)' : 'Pezzi (es. birre)'}
-          </option>
+      <label htmlFor="iunit">Unità di misura</label>
+      <select id="iunit" value={form.unit} onChange={set('unit')}>
+        {[
+          ['Liquidi', [['l', 'Litri (L)'], ['cl', 'Centilitri (cl)'], ['ml', 'Millilitri (ml)']]],
+          ['Solidi', [['g', 'Grammi (g)'], ['mg', 'Milligrammi (mg)']]],
+          ['Pezzi', [['pz', 'Pezzi (es. birre)']]],
+        ].map(([grp, units]) => (
+          <optgroup key={grp} label={grp}>
+            {units.map(([u, label]) => (
+              // In modifica si cambia solo dentro la stessa base (cl↔ml↔L):
+              // passare a un'altra base reinterpreterebbe la giacenza salvata.
+              <option key={u} value={u} disabled={isEdit && baseUnit(u) !== initialBase}>
+                {label}
+              </option>
+            ))}
+          </optgroup>
         ))}
       </select>
 
       {!isPz && (
         <>
           <label htmlFor="ipkg">Contenuto per confezione ({form.unit})</label>
-          <input id="ipkg" type="number" step="any" min="0" value={form.package_size} onChange={set('package_size')} placeholder="Es. 1000 per una bottiglia da 1 L" />
+          <input id="ipkg" type="number" step="any" min="0" value={form.package_size} onChange={set('package_size')} placeholder={`Es. ${form.unit === 'l' ? '1' : form.unit === 'cl' ? '100' : '1000'} per una bottiglia da 1 L`} />
         </>
       )}
 
