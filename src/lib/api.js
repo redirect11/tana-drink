@@ -854,6 +854,28 @@ export async function resetOpenOrdersToReceived() {
   return toccati
 }
 
+// CHIUDE SUBITO un conto già pagato: serve tutte le comande e porta
+// l'ordine a "pagato", senza far avanzare gli stati uno per uno. È la
+// scorciatoia per quando si è incassato in anticipo e poi si consegna
+// tutto insieme. Le comande mai prese in carico vengono scaricate a
+// magazzino adesso (una sola volta, come sempre).
+export async function closePaidOrder(id) {
+  const ref = doc(db, 'orders', id)
+  const snap = await getDoc(ref)
+  if (!snap.exists()) throw new Error('Ordine non trovato')
+  const data = snap.data()
+  if (data.payment_status !== 'pagato') {
+    throw new Error('Il conto non è ancora pagato.')
+  }
+  const nowIso = new Date().toISOString()
+  const chiusura = chiusuraPagamento(data, nowIso, { autoServe: true })
+  const lowStock = chiusura.comande
+    ? await depleteComandeInventory(unappliedEntries(id, chiusura.comande))
+    : []
+  await updateDoc(ref, chiusura)
+  notifyLowStock(lowStock)
+}
+
 // Ordini di una giornata commerciale (per statistiche e storico).
 export async function fetchOrdersForBusinessDay(dayKey, cutoffHour = DEFAULT_CUTOFF_HOUR) {
   // Prendo una finestra larga attorno al giorno e taglio con businessDayKey.

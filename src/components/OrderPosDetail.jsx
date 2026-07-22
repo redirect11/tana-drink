@@ -6,6 +6,7 @@ import {
   bartenderUpdateComanda,
   updateOrderInfo,
   cancelOrder,
+  closePaidOrder,
   createOrder,
   subscribeOpenGroups,
   subscribeOrder,
@@ -906,9 +907,24 @@ export default function OrderPosDetail({ order = null }) {
                 <span className={`pill ${active.status}`}>
                   {STATUS_EMOJI[active.status]} {STATUS_LABELS[active.status]}
                 </span>
-                <button className="btn small" onClick={() => advance(active.id, activeNext)}>
-                  Segna “{activeNext === ORDER_STATUSES.RITIRATO ? ritiratoLabel(order.service_mode) : STATUS_LABELS[activeNext]}”
-                </button>
+                <span className="row" style={{ gap: 6 }}>
+                  {/* Conto già pagato: si può chiudere di netto senza far
+                      avanzare gli stati uno per uno (si è incassato in
+                      anticipo e si consegna tutto insieme). */}
+                  {order.payment_status === 'pagato' && (
+                    <button
+                      className="btn small"
+                      onClick={() =>
+                        closePaidOrder(order.id).catch((e) => toastError(`Chiusura non riuscita: ${e.message}`))
+                      }
+                    >
+                      ✅ Chiudi conto
+                    </button>
+                  )}
+                  <button className="btn secondary small" onClick={() => advance(active.id, activeNext)}>
+                    Segna “{activeNext === ORDER_STATUSES.RITIRATO ? ritiratoLabel(order.service_mode) : STATUS_LABELS[activeNext]}”
+                  </button>
+                </span>
               </div>
             )}
 
