@@ -110,6 +110,11 @@ service cloud.firestore {
       allow read, write: if isBartender();
     }
 
+    // MACRO-CATEGORIE — raggruppano le categorie per i conti aggregati, solo bartender.
+    match /macro_categories/{macroId} {
+      allow read, write: if isBartender();
+    }
+
     // FORNITORI — anagrafica fornitori di magazzino, solo bartender.
     match /suppliers/{supplierId} {
       allow read, write: if isBartender();

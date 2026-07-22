@@ -48,6 +48,7 @@ const serialCounterRef = doc(db, 'counters', 'serial')
 const categoriesCol = collection(db, 'categories')
 const inventoryCol = collection(db, 'inventory_items')
 const inventoryCategoriesCol = collection(db, 'inventory_categories')
+const macroCategoriesCol = collection(db, 'macro_categories')
 const suppliersCol = collection(db, 'suppliers')
 const movementsCol = collection(db, 'stock_movements')
 const settingsDoc = doc(db, 'settings', 'bar')
@@ -92,6 +93,7 @@ function mapCategory(snap) {
     sort_order: c.sort_order ?? 0,
     icon: c.icon ?? null, // emoji scelta per la categoria (opzionale)
     color: c.color ?? null, // colore custom (hex); null = colore automatico
+    macro_id: c.macro_id ?? null, // macro-categoria di appartenenza (inventario)
     created_at: toIso(c.created_at),
   }
 }
@@ -332,8 +334,8 @@ export async function fetchInventoryCategories() {
   return cats
 }
 
-export async function createInventoryCategory({ name, sort_order = 0 }) {
-  const ref = await addDoc(inventoryCategoriesCol, { name, sort_order, created_at: serverTimestamp() })
+export async function createInventoryCategory({ name, sort_order = 0, macro_id = null }) {
+  const ref = await addDoc(inventoryCategoriesCol, { name, sort_order, macro_id, created_at: serverTimestamp() })
   return mapCategory(await getDoc(ref))
 }
 
@@ -345,6 +347,47 @@ export async function updateInventoryCategory(id, patch) {
 
 export async function deleteInventoryCategory(id) {
   await deleteDoc(doc(db, 'inventory_categories', id))
+}
+
+// --- MACRO-CATEGORIE ---
+// Raggruppano le categorie d'inventario (Distillati, Birre+Bibite, Vino…) per
+// i conti aggregati di acquisti/fatturato. Il legame vive sulla categoria
+// (campo macro_id), così una categoria sta in al più una macro.
+
+function mapMacro(snap) {
+  const m = snap.data() || {}
+  return {
+    id: snap.id,
+    name: m.name ?? '',
+    sort_order: m.sort_order ?? 0,
+    created_at: toIso(m.created_at),
+  }
+}
+
+export async function fetchMacroCategories() {
+  const snap = await getDocs(macroCategoriesCol)
+  const list = snap.docs.map(mapMacro)
+  list.sort((a, b) => (a.sort_order - b.sort_order) || (a.name || '').localeCompare(b.name || ''))
+  return list
+}
+
+export async function createMacroCategory({ name, sort_order = 0 }) {
+  const ref = await addDoc(macroCategoriesCol, { name, sort_order, created_at: serverTimestamp() })
+  return mapMacro(await getDoc(ref))
+}
+
+export async function updateMacroCategory(id, patch) {
+  const ref = doc(db, 'macro_categories', id)
+  await updateDoc(ref, patch)
+  return mapMacro(await getDoc(ref))
+}
+
+// Eliminando una macro, le sue categorie tornano "senza macro" (non si
+// perdono): si azzera macro_id su quelle che la puntano.
+export async function deleteMacroCategory(id) {
+  const cats = await getDocs(query(inventoryCategoriesCol, where('macro_id', '==', id)))
+  await Promise.all(cats.docs.map((d) => updateDoc(d.ref, { macro_id: null })))
+  await deleteDoc(doc(db, 'macro_categories', id))
 }
 
 // --- FORNITORI ---
