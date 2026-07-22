@@ -12,6 +12,10 @@ import {
   createInventoryCategory,
   updateInventoryCategory,
   deleteInventoryCategory,
+  fetchMacroCategories,
+  createMacroCategory,
+  updateMacroCategory,
+  deleteMacroCategory,
   fetchSuppliers,
   createSupplier,
   updateSupplier,
@@ -38,6 +42,7 @@ import {
 } from '../lib/inventory.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import { parseSupplierList } from '../lib/warehouse.js'
+import { groupCategoriesByMacro } from '../lib/macros.js'
 import { toastSuccess, toastError } from '../lib/toast.js'
 import StockCountPanel from './StockCountPanel.jsx'
 import PurchaseOrdersPanel from './PurchaseOrdersPanel.jsx'
@@ -134,7 +139,9 @@ function ProductsPanel() {
   const [error, setError] = useState(null)
 
   const [editing, setEditing] = useState(null) // null | 'new' | item
+  const [macros, setMacros] = useState([])
   const [showCats, setShowCats] = useState(false)
+  const [showMacros, setShowMacros] = useState(false)
   const [showSup, setShowSup] = useState(false)
   const [showMovs, setShowMovs] = useState(false)
 
@@ -159,14 +166,16 @@ function ProductsPanel() {
   async function load() {
     setLoading(true)
     try {
-      const [its, cats, sups, movs] = await Promise.all([
+      const [its, cats, macs, sups, movs] = await Promise.all([
         fetchInventoryItems(),
         fetchInventoryCategories().catch(() => []),
+        fetchMacroCategories().catch(() => []),
         fetchSuppliers().catch(() => []),
         fetchStockMovements({ limit: 30 }).catch(() => []),
       ])
       setItems(its)
       setCategories(cats)
+      setMacros(macs)
       setSuppliers(sups)
       setMovements(movs)
     } catch (e) {
@@ -382,6 +391,7 @@ function ProductsPanel() {
       <button className="btn block" onClick={() => setEditing('new')}>+ Nuovo prodotto</button>
       <div className="grid-2" style={{ marginTop: 8 }}>
         <button className="btn ghost small" onClick={() => setShowCats((v) => !v)}>🏷 Categorie</button>
+        <button className="btn ghost small" onClick={() => setShowMacros((v) => !v)}>🗂 Macro-categorie</button>
         <button className="btn ghost small" onClick={() => setShowSup((v) => !v)}>🏭 Fornitori</button>
       </div>
 
@@ -389,6 +399,17 @@ function ProductsPanel() {
         <InvCategoryManager
           categories={categories}
           onChange={async () => setCategories(await fetchInventoryCategories())}
+        />
+      )}
+      {showMacros && (
+        <MacroCategoryManager
+          macros={macros}
+          categories={categories}
+          onChange={async () => {
+            const [macs, cats] = await Promise.all([fetchMacroCategories(), fetchInventoryCategories()])
+            setMacros(macs)
+            setCategories(cats)
+          }}
         />
       )}
       {showSup && (
@@ -626,6 +647,170 @@ function InvCategoryManager({ categories, onChange }) {
           </span>
         </div>
       ))}
+    </div>
+  )
+}
+
+// --- Macro-categorie -----------------------------------------------------
+// Raggruppano le categorie d'inventario (Distillati, Birre+Bibite, Vino,
+// Food+Moka…) per i conti aggregati di acquisti/fatturato. Si creano/
+// modificano/eliminano, e a ciascuna si collegano categorie esistenti (o se
+// ne creano di nuove dentro la macro). Una categoria sta in al più una macro.
+
+function MacroCategoryManager({ macros, categories, onChange }) {
+  const [name, setName] = useState('')
+  const [busy, setBusy] = useState(false)
+  const { groups, unassigned } = groupCategoriesByMacro(macros, categories)
+
+  async function addMacro() {
+    if (!name.trim()) return
+    setBusy(true)
+    try {
+      await createMacroCategory({ name: name.trim(), sort_order: macros.length })
+      setName('')
+      await onChange()
+    } finally {
+      setBusy(false)
+    }
+  }
+  async function renameMacro(m) {
+    const n = prompt('Nuovo nome macro-categoria:', m.name)
+    if (n == null || !n.trim()) return
+    await updateMacroCategory(m.id, { name: n.trim() })
+    await onChange()
+  }
+  async function removeMacro(m) {
+    if (!confirm(`Eliminare la macro “${m.name}”? Le sue categorie restano, senza macro.`)) return
+    await deleteMacroCategory(m.id)
+    await onChange()
+  }
+  async function moveMacro(idx, dir) {
+    const j = idx + dir
+    if (j < 0 || j >= groups.length) return
+    const a = groups[idx]
+    const b = groups[j]
+    await Promise.all([
+      updateMacroCategory(a.id, { sort_order: b.sort_order }),
+      updateMacroCategory(b.id, { sort_order: a.sort_order }),
+    ])
+    await onChange()
+  }
+  // Aggancia/sgancia una categoria a una macro (scrive macro_id sulla categoria).
+  const setCatMacro = async (catId, macroId) => {
+    await updateInventoryCategory(catId, { macro_id: macroId })
+    await onChange()
+  }
+
+  return (
+    <div className="card" style={{ marginTop: 8 }}>
+      <p className="muted small" style={{ margin: '0 0 8px' }}>
+        Le macro-categorie raggruppano le categorie del magazzino per i conti di
+        acquisti e fatturato. Una categoria può stare in una sola macro.
+      </p>
+      <div className="row" style={{ gap: 8 }}>
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nuova macro (es. Distillati)" />
+        <button className="btn small" onClick={addMacro} disabled={busy}>Aggiungi</button>
+      </div>
+
+      {groups.length === 0 && (
+        <div className="muted small" style={{ marginTop: 8 }}>Nessuna macro-categoria.</div>
+      )}
+
+      {groups.map((g, idx) => (
+        <div key={g.id} className="macro-group">
+          <div className="row between" style={{ alignItems: 'center' }}>
+            <strong>🗂 {g.name}</strong>
+            <span className="row" style={{ gap: 4 }}>
+              <button className="btn ghost small" onClick={() => moveMacro(idx, -1)} disabled={idx === 0}>↑</button>
+              <button className="btn ghost small" onClick={() => moveMacro(idx, 1)} disabled={idx === groups.length - 1}>↓</button>
+              <button className="btn ghost small" onClick={() => renameMacro(g)}>✏️</button>
+              <button className="btn ghost small" onClick={() => removeMacro(g)}>🗑</button>
+            </span>
+          </div>
+          {g.categories.length === 0 ? (
+            <div className="muted small" style={{ margin: '4px 0' }}>Nessuna categoria collegata.</div>
+          ) : (
+            <div className="chips-row" style={{ margin: '6px 0' }}>
+              {g.categories.map((c) => (
+                <span key={c.id} className="chip" style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+                  {c.name}
+                  <button
+                    type="button"
+                    aria-label={`Togli ${c.name} da ${g.name}`}
+                    className="chip-x"
+                    onClick={() => setCatMacro(c.id, null)}
+                  >
+                    ✕
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+          <AddCategoryToMacro macro={g} unassigned={unassigned} onChange={onChange} />
+        </div>
+      ))}
+
+      {unassigned.length > 0 && (
+        <div style={{ marginTop: 10, borderTop: '1px solid var(--line)', paddingTop: 8 }}>
+          <span className="muted small">Categorie senza macro: </span>
+          <span className="small">{unassigned.map((c) => c.name).join(', ')}</span>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Aggancio di una categoria a una macro: sceglie una categoria "libera" già
+// esistente, oppure ne crea una nuova direttamente dentro la macro.
+function AddCategoryToMacro({ macro, unassigned, onChange }) {
+  const [pick, setPick] = useState('')
+  const [newName, setNewName] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  async function attach() {
+    if (!pick) return
+    setBusy(true)
+    try {
+      await updateInventoryCategory(pick, { macro_id: macro.id })
+      setPick('')
+      await onChange()
+    } finally {
+      setBusy(false)
+    }
+  }
+  async function createInto() {
+    if (!newName.trim()) return
+    setBusy(true)
+    try {
+      await createInventoryCategory({ name: newName.trim(), macro_id: macro.id })
+      setNewName('')
+      await onChange()
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="row" style={{ gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+      {unassigned.length > 0 && (
+        <>
+          <select value={pick} onChange={(e) => setPick(e.target.value)} style={{ maxWidth: 180 }}>
+            <option value="">+ collega categoria…</option>
+            {unassigned.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+          <button className="btn ghost small" onClick={attach} disabled={!pick || busy}>Collega</button>
+          <span className="muted small">oppure</span>
+        </>
+      )}
+      <input
+        value={newName}
+        onChange={(e) => setNewName(e.target.value)}
+        placeholder="nuova categoria…"
+        style={{ maxWidth: 160 }}
+      />
+      <button className="btn ghost small" onClick={createInto} disabled={!newName.trim() || busy}>+ Crea</button>
     </div>
   )
 }
