@@ -41,60 +41,81 @@ export default function PosProductPicker({
   }, [cats, selectedCat])
   useEffect(() => saveOrder(order), [order])
   useEffect(() => saveFavorites(favorites), [favorites])
-  // Il riordino ha senso solo in "Tutti": cambiando raccolta si esce.
-  useEffect(() => {
-    if (selectedCat !== '__all__' && reordering) setReordering(false)
-  }, [selectedCat, reordering])
-
   const catKey = (c) => c.id ?? c.name
   const favSet = useMemo(() => new Set(favorites), [favorites])
   const byId = useMemo(() => new Map((drinks || []).map((d) => [d.id, d])), [drinks])
   const q = query.trim().toLowerCase()
 
-  // Drink da mostrare secondo ricerca / raccolta selezionata.
+  // ORDINE GLOBALE: una sola sequenza per tutti i drink. Le categorie non
+  // riordinano da sole — filtrano soltanto questa sequenza, così lo stesso
+  // ordinamento vale ovunque (una birra spostata in "Tutti" resta prima
+  // delle altre anche filtrando per Birre).
+  const availableAll = useMemo(() => (drinks || []).filter((d) => d.available), [drinks])
+  const orderedAll = useMemo(() => applyOrder(availableAll, order), [availableAll, order])
+  const orderedAllIds = useMemo(() => orderedAll.map((d) => d.id), [orderedAll])
+
+  const inCat = (d) => d.category_id === selectedCat || d.category === selectedCat
   const visibleDrinks = useMemo(() => {
-    if (q) return (drinks || []).filter((d) => d.available && d.name?.toLowerCase().includes(q))
-    if (selectedCat === '__fav__') {
-      return favorites.map((id) => byId.get(id)).filter((d) => d && d.available)
-    }
+    if (q) return orderedAll.filter((d) => d.name?.toLowerCase().includes(q))
     if (selectedCat === '__recent__') {
       return recentIds.map((id) => byId.get(id)).filter((d) => d && d.available)
     }
-    if (!selectedCat || selectedCat === '__all__') {
-      return applyOrder(
-        (drinks || []).filter((d) => d.available),
-        order
-      )
-    }
-    return (drinks || []).filter(
-      (d) => d.available && (d.category_id === selectedCat || d.category === selectedCat)
-    )
-  }, [q, drinks, selectedCat, favorites, recentIds, order, byId])
+    if (selectedCat === '__fav__') return orderedAll.filter((d) => favSet.has(d.id))
+    if (!selectedCat || selectedCat === '__all__') return orderedAll
+    return orderedAll.filter(inCat)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q, orderedAll, selectedCat, favSet, recentIds, byId])
 
-  // ── Riordino card per DRAG (solo in "Tutti", modalità attiva) ──
+  // ── Riordino card per LONG-PRESS + DRAG (modalità riordino) ──
+  // Tenendo premuto (~300ms) su una card parte il trascinamento; muovendo
+  // prima dello scatto è uno scroll e non si sposta nulla. Il riordino
+  // agisce sull'ordine GLOBALE, così vale anche filtrando per categoria.
   const [dragId, setDragId] = useState(null)
-  const dragRef = useRef(null)
+  const dragRef = useRef({ id: null, timer: null, active: false, startX: 0, startY: 0, el: null, pointerId: null })
   const startDrag = (e, id) => {
-    try { e.currentTarget.setPointerCapture(e.pointerId) } catch { /* ok */ }
-    dragRef.current = id
-    setDragId(id)
+    const st = dragRef.current
+    st.id = id
+    st.active = false
+    st.startX = e.clientX
+    st.startY = e.clientY
+    st.el = e.currentTarget
+    st.pointerId = e.pointerId
+    clearTimeout(st.timer)
+    st.timer = setTimeout(() => {
+      st.active = true
+      setDragId(id)
+      try { st.el.setPointerCapture(st.pointerId) } catch { /* ok */ }
+    }, 300)
   }
   const moveDrag = (e) => {
-    if (!dragRef.current) return
+    const st = dragRef.current
+    if (!st.id) return
+    if (!st.active) {
+      // Mosso troppo prima dello scatto → scroll: annulla il long-press.
+      if (Math.abs(e.clientX - st.startX) > 8 || Math.abs(e.clientY - st.startY) > 8) {
+        clearTimeout(st.timer)
+        st.id = null
+      }
+      return
+    }
     e.preventDefault()
     const el = document.elementFromPoint(e.clientX, e.clientY)
     const overId = el?.closest('[data-drink-id]')?.dataset.drinkId
-    if (!overId || overId === dragRef.current) return
-    // L'ordine persistito è la sequenza COMPLETA dei drink visibili ora.
-    const currentIds = visibleDrinks.map((d) => d.id)
-    setOrder(moveInOrder(currentIds, dragRef.current, overId))
+    if (!overId || overId === st.id) return
+    setOrder(moveInOrder(orderedAllIds, st.id, overId))
   }
   const endDrag = () => {
-    dragRef.current = null
+    const st = dragRef.current
+    clearTimeout(st.timer)
+    st.id = null
+    st.active = false
     setDragId(null)
   }
 
   const toggleFav = (id) => setFavorites((f) => toggleFavorite(f, id))
+  // Riordino disponibile ovunque tranne Recenti (ordine per recenza) e in
+  // ricerca; con l'ordine globale, filtrare per categoria lo preserva.
+  const canReorder = reordering && selectedCat !== '__recent__' && !q
 
   // Voci della barra: Preferiti e Recenti in cima, poi le categorie.
   const specialCats = [
@@ -173,11 +194,11 @@ export default function PosProductPicker({
             aria-label="Cerca prodotto"
             style={{ flex: 1 }}
           />
-          {selectedCat === '__all__' && !q && (
+          {selectedCat !== '__recent__' && !q && (
             <button
               className={`chip ${reordering ? 'active' : ''}`}
               onClick={() => setReordering((v) => !v)}
-              title="Trascina le card per riordinarle"
+              title="Tieni premuto su una card e trascinala per riordinare"
               style={{ flexShrink: 0 }}
             >
               {reordering ? '✓ Fine' : '↕ Riordina'}
@@ -209,8 +230,9 @@ export default function PosProductPicker({
             </div>
           )}
           {visibleDrinks.map((d) =>
-            reordering ? (
-              // Modalità riordino: si trascina, non si aggiunge.
+            canReorder ? (
+              // Modalità riordino: tieni premuto e trascina; il tap non
+              // aggiunge. Lo scroll verticale resta libero (pan-y).
               <div
                 key={d.id}
                 data-drink-id={d.id}
@@ -219,7 +241,7 @@ export default function PosProductPicker({
                 onPointerUp={endDrag}
                 onPointerCancel={endDrag}
                 style={{
-                  touchAction: 'none',
+                  touchAction: 'pan-y',
                   cursor: 'grab',
                   opacity: dragId === d.id ? 0.5 : 1,
                   boxShadow: dragId === d.id ? '0 6px 18px rgba(0,0,0,0.4)' : 'none',
