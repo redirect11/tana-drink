@@ -15,6 +15,7 @@ import {
 } from '../lib/api.js'
 import { submitPosOrder } from '../lib/pendingOrders.js'
 import { useDraft, loadLayout, saveLayout } from '../lib/useDraft.js'
+import { useResizable } from '../lib/useResizable.js'
 import { auth } from '../lib/firebaseClient.js'
 import { onAuthStateChanged } from 'firebase/auth'
 import { useMenu } from '../lib/menuCache.js'
@@ -111,6 +112,10 @@ export default function OrderPosDetail({ order = null }) {
   // tiene conto del gruppo: bozze di gruppi diversi non si mescolano.
   const draftKey = order ? order.id : groupParam ? `new:${groupParam}` : 'new'
   const [draft, setDraft, clearDraft] = useDraft(draftKey)
+
+  // Colonne POS ridimensionabili (larghezze ricordate per dispositivo).
+  const catsRz = useResizable('pos-cats', { def: 150, min: 96, max: 320, side: 'right' })
+  const comandaRz = useResizable('pos-comanda', { def: 360, min: 300, max: 620, side: 'left' })
 
   // Staff loggato (per l'attribuzione dell'ordine creato dal POS).
   const [staff, setStaff] = useState(null)
@@ -692,13 +697,17 @@ export default function OrderPosDetail({ order = null }) {
       {error && <div className="banner" style={{ margin: '8px 8px 0', flexShrink: 0 }}>{error}</div>}
 
       {/* ── Corpo a 3 colonne: categorie · griglia · ordine ── */}
-      <div className="posd-body">
+      <div
+        className="posd-body"
+        style={{ '--pos-cats-w': `${catsRz.width}px`, '--pos-comanda-w': `${comandaRz.width}px` }}
+      >
         <PosProductPicker
           drinks={drinks}
           cats={cats}
           loading={loading}
           qtyByDrink={qtyByDrink}
           categoryDisplay={settings.category_display}
+          catsHandleProps={catsRz.handleProps}
           onAdd={plusFromCatalog}
           onSetQty={(d, q) => {
             const cur = qtyByDrink[d.id] ?? 0
@@ -707,6 +716,9 @@ export default function OrderPosDetail({ order = null }) {
           }}
           disabled={closed}
         />
+
+        {/* Maniglia fra griglia e pannello ordine */}
+        <div className="posd-resize-handle" {...comandaRz.handleProps} />
 
         {/* ── Pannello destro: L'ORDINE (lista unica) ── */}
         <div className="posd-comanda">
