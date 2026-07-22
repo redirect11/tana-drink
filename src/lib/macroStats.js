@@ -31,10 +31,18 @@ const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100
 //   catToMacro: Map id-categoria → id-macro (da macros.categoryToMacro)
 // Ritorna Map macroKey → incasso (arrotondato ai centesimi; la somma = incasso
 // della riga). Riga senza ricetta/costi → tutto su `none`.
-export function splitLineRevenueByMacro(line, drink, itemsById, catToMacro) {
+// opts:
+//   netByVat    → scorpora l'IVA da ogni quota usando l'aliquota del PRODOTTO
+//                 (item.vat: può differire per food/acqua/alcolici).
+//   fallbackVat → aliquota per le quote senza prodotto (ingredienti/drink non
+//                 collegati all'inventario).
+export function splitLineRevenueByMacro(line, drink, itemsById, catToMacro, opts = {}) {
+  const { netByVat = false, fallbackVat = 0 } = opts
   const out = new Map()
   const revenue = round2((Number(line?.qty) || 0) * (Number(line?.unit_price) || 0))
   if (revenue <= 0) return out
+  const net = (val, vat) => (netByVat ? val / (1 + (Number(vat) || 0) / 100) : val)
+  const add = (k, val) => out.set(k, round2((out.get(k) || 0) + val))
 
   const recipe = Array.isArray(line?.recipe_items)
     ? line.recipe_items
@@ -42,32 +50,39 @@ export function splitLineRevenueByMacro(line, drink, itemsById, catToMacro) {
       ? drink.recipe_items
       : []
 
-  // Peso di ogni ingrediente = costo (qty × costo unitario), aggregato per macro.
-  const weights = new Map()
+  // Un pezzo per ingrediente: peso = costo (qty × costo unitario), macro e
+  // aliquota IVA del prodotto (per lo scorporo al netto per-prodotto).
+  const parts = []
   let tot = 0
   for (const ri of recipe) {
     const item = itemsById?.[ri.inventory_item_id]
-    const per = item ? costPerUnit(item, ri.unit, { gross: true }) : null
+    // Peso = costo NETTO dell'ingrediente: la ripartizione non deve dipendere
+    // dall'IVA (che si scorpora dopo, per prodotto).
+    const per = item ? costPerUnit(item, ri.unit, { gross: false }) : null
     const w = per != null ? per * (Number(ri.qty) || 0) : 0
     if (w <= 0) continue
-    const macro = (item && macroOfItem(item, catToMacro)) || UNASSIGNED
-    weights.set(macro, (weights.get(macro) || 0) + w)
+    parts.push({
+      macro: (item && macroOfItem(item, catToMacro)) || UNASSIGNED,
+      w,
+      vat: item?.vat ?? fallbackVat,
+    })
     tot += w
   }
 
   if (tot <= 0) {
-    out.set(UNASSIGNED, revenue)
+    // Nessun ingrediente valorizzato: tutto non attribuito (netto col ripiego).
+    add(UNASSIGNED, net(revenue, fallbackVat))
     return out
   }
 
-  // Ripartisci l'incasso REALE in proporzione ai pesi. L'ultima quota prende
-  // il resto, così la somma torna esatta al centesimo.
-  const keys = [...weights.keys()]
+  // Ripartisci l'incasso REALE in proporzione ai pesi. La quota LORDA dell'
+  // ultimo pezzo prende il resto, così le quote lorde tornano esatte al
+  // centesimo; poi ogni quota si scorpora con l'IVA del suo prodotto.
   let assigned = 0
-  keys.forEach((k, i) => {
-    const share = i === keys.length - 1 ? round2(revenue - assigned) : round2((revenue * weights.get(k)) / tot)
-    assigned = round2(assigned + share)
-    out.set(k, share)
+  parts.forEach((p, i) => {
+    const gross = i === parts.length - 1 ? round2(revenue - assigned) : round2((revenue * p.w) / tot)
+    assigned = round2(assigned + gross)
+    add(p.macro, net(gross, p.vat))
   })
   return out
 }
@@ -139,9 +154,10 @@ export function macroMonthlyReport({
   saleVat = 0,
 }) {
   const monthSet = new Set(months || [])
-  // Fattore per scorporare l'IVA di vendita dal fatturato: così il confronto
-  // con gli acquisti (già netti) è al netto, come si fa per l'utile.
-  const netFactor = 1 + (Number(saleVat) || 0) / 100
+  // Fatturato al NETTO IVA per prodotto (item.vat), col ripiego `saleVat` per
+  // ciò che non ha un articolo collegato: così il confronto con gli acquisti
+  // (già netti) è coerente, come si fa per l'utile.
+  const netOpts = { netByVat: true, fallbackVat: Number(saleVat) || 0 }
   // cell[macroKey][month] = { acquisti, fatturato }
   const cells = new Map()
   const ensure = (macroKey, month) => {
@@ -158,10 +174,10 @@ export function macroMonthlyReport({
     const month = (businessDayKey(o?.created_at, cutoffHour) || '').slice(0, 7)
     if (!monthSet.has(month)) continue
     for (const li of orderLines(o)) {
-      const split = splitLineRevenueByMacro(li, drinksById?.[li.drink_id], itemsById, catToMacro)
+      const split = splitLineRevenueByMacro(li, drinksById?.[li.drink_id], itemsById, catToMacro, netOpts)
       for (const [k, v] of split) {
         const cell = ensure(k, month)
-        cell.fatturato = round2(cell.fatturato + v / netFactor) // al netto IVA
+        cell.fatturato = round2(cell.fatturato + v) // già al netto IVA per prodotto
       }
     }
   }

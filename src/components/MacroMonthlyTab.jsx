@@ -78,8 +78,10 @@ export default function MacroMonthlyTab() {
       </div>
 
       <p className="muted small" style={{ margin: '0 0 10px' }}>
-        Valori al <strong>netto IVA</strong> (vendita {settings.sale_vat}%, modificabile in
-        Impostazioni). Acquisti = ordini fornitore segnati “ricevuto”.
+        Valori al <strong>netto IVA</strong>: il fatturato è scorporato con
+        l’aliquota di <strong>ciascun prodotto</strong> (campo IVA in Inventario;
+        ripiego {settings.sale_vat}% per ciò che non ha un articolo collegato).
+        Acquisti = ordini fornitore segnati “ricevuto”.
       </p>
 
       {loading && <div className="empty">Carico l’andamento…</div>}

@@ -312,7 +312,7 @@ export default function SettingsTab() {
           />
         </div>
         <div className="toggle-row">
-          <span>IVA di vendita (%)</span>
+          <span>IVA di vendita — ripiego (%)</span>
           <AmountInput
             value={settings.sale_vat}
             min={0}
@@ -322,8 +322,10 @@ export default function SettingsTab() {
           />
         </div>
         <p className="muted small" style={{ margin: '4px 0 0' }}>
-          Serve a scorporare l’IVA dal fatturato nella dashboard mensile per
-          macro, così l’utile è al netto (bar/somministrazione: 10%).
+          Nella dashboard mensile il fatturato è scorporato con l’IVA di
+          <strong> ogni prodotto</strong> (campo IVA in Inventario). Questa
+          aliquota è solo il <strong>ripiego</strong> per ciò che non ha un
+          articolo collegato (bar/somministrazione: 10%).
         </p>
       </div>
 
