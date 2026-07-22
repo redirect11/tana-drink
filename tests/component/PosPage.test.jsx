@@ -33,6 +33,9 @@ vi.mock('../../src/lib/api.js', () => ({
   ),
   subscribeOrder: vi.fn(() => () => {}),
   fetchRecentDrinkIds: vi.fn(() => Promise.resolve([])),
+  subscribePosPrefs: vi.fn(() => () => {}),
+  savePosOrder: vi.fn(() => Promise.resolve()),
+  savePosFavorites: vi.fn(() => Promise.resolve()),
   subscribeOpenGroups: vi.fn((cb) => {
     cb([
       { id: 'g1', name: 'Tavolo 4', has_child_groups: false },

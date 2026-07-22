@@ -187,6 +187,12 @@ service cloud.firestore {
       allow read, write: if isStaffMember();
     }
 
+    // PREFERENZE POS (ordine card, preferiti): configurazione del banco,
+    // gestita dallo staff. Condivisa fra i dispositivi del locale.
+    match /pos_prefs/{docId} {
+      allow read, write: if isStaffMember();
+    }
+
     // PAGHE: tariffa oraria per persona (storicizzata). Dato sensibile:
     // solo il bartender, nemmeno lo staff vede quanto prendono gli altri.
     match /staff_rates/{personId} {

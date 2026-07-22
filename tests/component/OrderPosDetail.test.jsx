@@ -32,6 +32,9 @@ vi.mock('../../src/lib/api.js', () => ({
   ensureTodaySerata: vi.fn(() => Promise.resolve({ id: 'serata1' })),
   subscribeOrder: vi.fn(() => () => {}),
   fetchRecentDrinkIds: vi.fn(() => Promise.resolve([])),
+  subscribePosPrefs: vi.fn(() => () => {}),
+  savePosOrder: vi.fn(() => Promise.resolve()),
+  savePosFavorites: vi.fn(() => Promise.resolve()),
   DEFAULT_SETTINGS: {},
   subscribeSettings: vi.fn((cb) => {
     cb(mockSettings)
