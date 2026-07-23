@@ -1074,6 +1074,36 @@ export async function setGroupPinned(id, pinned) {
   await updateDoc(doc(groupsCol, id), { pinned: !!pinned })
 }
 
+// CHIUDE (archivia) uno o più gruppi: escono dalla lista dei gruppi aperti.
+// Gli ordini restano dove sono (col loro stato/pagamento). Local-first.
+export function closeGroups(ids) {
+  for (const id of ids || []) {
+    updateDoc(doc(groupsCol, id), { status: 'chiuso', closed_at: serverTimestamp() }).catch(() => {})
+  }
+}
+export const closeGroup = (id) => closeGroups([id])
+
+// ELIMINA un gruppo: gli ordini vengono SGANCIATI (restano, senza etichetta
+// gruppo) e gli eventuali sottogruppi tornano indipendenti. Local-first: le
+// scritture partono e si sincronizzano in background.
+export async function deleteGroup(id) {
+  const snap = await getDoc(doc(groupsCol, id))
+  const parentId = snap.exists() ? snap.data().parent_group_id : null
+  // Ordini del gruppo → senza gruppo.
+  const os = await getDocs(query(ordersCol, where('group_id', '==', id)))
+  os.docs.forEach((d) => updateDoc(d.ref, { group_id: null, group_name_snapshot: null }).catch(() => {}))
+  // Sottogruppi → indipendenti.
+  const cs = await getDocs(query(groupsCol, where('parent_group_id', '==', id)))
+  cs.docs.forEach((d) => updateDoc(d.ref, { parent_group_id: null }).catch(() => {}))
+  deleteDoc(doc(groupsCol, id)).catch(() => {})
+  // Se era l'ultimo figlio, il padre non è più contenitore.
+  if (parentId) {
+    const rest = await getDocs(query(groupsCol, where('parent_group_id', '==', parentId)))
+    const others = rest.docs.filter((d) => d.id !== id)
+    if (others.length === 0) updateDoc(doc(groupsCol, parentId), { has_child_groups: false }).catch(() => {})
+  }
+}
+
 export async function fetchGroup(id) {
   const snap = await getDoc(doc(groupsCol, id))
   return snap.exists() ? mapGroup(snap) : null
