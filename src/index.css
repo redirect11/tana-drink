@@ -2031,6 +2031,34 @@ body.fullbleed,
   pointer-events: none;
   text-transform: lowercase;
 }
+/* Suggerimento "aggiungi a Home" (solo iPad/iPhone in Safari). */
+.a2hs-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  color: var(--muted);
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--line);
+}
+.a2hs-hint strong {
+  color: var(--text);
+}
+.a2hs-x {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0.6;
+  font-size: 0.9rem;
+  padding: 0 4px;
+}
+.a2hs-x:hover {
+  opacity: 1;
+}
+
 /* Nastro "sei offline": in cima, sopra ogni schermata. */
 .offline-ribbon {
   position: sticky;
