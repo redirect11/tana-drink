@@ -1268,6 +1268,7 @@ export default function OrderPosDetail({ order = null }) {
           order={payOrder}
           settings={settings}
           onClose={() => setPayOrder(null)}
+          onPaid={() => navigate('/bar')}
           onError={setError}
           resolveOrderId={() => payIdRef.current}
         />
@@ -1277,6 +1278,7 @@ export default function OrderPosDetail({ order = null }) {
           order={order}
           settings={settings}
           onClose={() => setShowPayment(false)}
+          onPaid={() => navigate('/bar')}
           onBeforePay={flushAll}
           onError={setError}
         />
