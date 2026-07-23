@@ -274,29 +274,39 @@ export default function OrderPosDetail({ order = null }) {
   )
 
   // ── LISTA UNICA: item confermati (per-riga, dalle comande) + bozza ──
+  // Le quantità già pagate (acconti/split registrati) vengono scorporate in
+  // righe "pagate" a sé, così si distinguono e si possono spostare in fondo.
   const confirmedLines = useMemo(() => {
+    const remainingPaid = {}
+    for (const p of order?.payments || [])
+      for (const it of p.items || [])
+        if (it.drink_id) remainingPaid[it.drink_id] = (remainingPaid[it.drink_id] || 0) + (Number(it.qty) || 0)
     const out = []
     for (const c of effComande) {
       if (c.status === ORDER_STATUSES.ANNULLATO) continue
       ;(c.items || []).forEach((it, idx) => {
-        out.push({
-          key: `c:${c.id}:${idx}`,
+        const base = {
           source: 'comanda',
           comandaId: c.id,
           itemIndex: idx,
           status: c.status,
-          removable: comandaEditable(c),
           drink_id: it.drink_id,
           name: it.name,
           unit_price: it.unit_price,
-          qty: it.qty,
           custom: it.custom,
           recipe_items: it.recipe_items,
-        })
+        }
+        const paidHere = it.drink_id ? Math.min(it.qty, remainingPaid[it.drink_id] || 0) : 0
+        if (it.drink_id) remainingPaid[it.drink_id] -= paidHere
+        const unpaidQty = it.qty - paidHere
+        if (unpaidQty > 0)
+          out.push({ ...base, key: `c:${c.id}:${idx}`, qty: unpaidQty, removable: comandaEditable(c) })
+        if (paidHere > 0)
+          out.push({ ...base, key: `c:${c.id}:${idx}:paid`, qty: paidHere, removable: false, paid: true })
       })
     }
     return out
-  }, [effComande])
+  }, [effComande, order?.payments])
 
   const draftLines = useMemo(
     () => draft.map((l) => ({ ...l, key: `d:${l.line_id}`, source: 'draft', status: 'draft', removable: true })),
@@ -329,9 +339,17 @@ export default function OrderPosDetail({ order = null }) {
   useEffect(() => {
     saveLayout(draftKey, layout)
   }, [draftKey, layout])
-  const orderedLines = useMemo(
-    () => layout.map((k) => allByKey.get(k)).filter(Boolean),
-    [layout, allByKey]
+  // Nasconde/mostra le righe già pagate (che stanno comunque in fondo).
+  const [hidePaid, setHidePaid] = useState(false)
+  const orderedLines = useMemo(() => {
+    const arr = layout.map((k) => allByKey.get(k)).filter(Boolean)
+    const unpaid = arr.filter((l) => !l.paid)
+    const paid = arr.filter((l) => l.paid)
+    return hidePaid ? unpaid : [...unpaid, ...paid]
+  }, [layout, allByKey, hidePaid])
+  const paidCount = useMemo(
+    () => [...allByKey.values()].filter((l) => l.paid).reduce((s, l) => s + l.qty, 0),
+    [allByKey]
   )
 
   // Memoria bozza solo finché non confermato/pagato: se l'ordine è chiuso
@@ -466,8 +484,15 @@ export default function OrderPosDetail({ order = null }) {
     const target = el?.closest('[data-line-index]')
     if (!target) return
     const to = Number(target.dataset.lineIndex)
-    if (Number.isInteger(to) && to !== dragIndex) {
-      setLayout((lay) => moveLine(lay, dragIndex, to))
+    if (!Number.isInteger(to) || to === dragIndex) return
+    // Non si scavalcano le righe pagate (stanno in fondo, bloccate).
+    if (orderedLines[to]?.paid) return
+    // Gli indici sono quelli VISIBILI (lista partizionata): traduco in indici
+    // del layout tramite le chiavi, così il riordino resta corretto.
+    const fromKey = orderedLines[dragIndex]?.key
+    const toKey = orderedLines[to]?.key
+    if (fromKey && toKey) {
+      setLayout((lay) => moveLine(lay, lay.indexOf(fromKey), lay.indexOf(toKey)))
       setDragIndex(to)
     }
   }
@@ -891,48 +916,66 @@ export default function OrderPosDetail({ order = null }) {
               </div>
             )}
 
+            {paidCount > 0 && (
+              <button
+                className="btn ghost small"
+                style={{ marginBottom: 2 }}
+                onClick={() => setHidePaid((v) => !v)}
+              >
+                {hidePaid ? `💳 Mostra pagati (${paidCount})` : `💳 Nascondi pagati (${paidCount})`}
+              </button>
+            )}
+
             {orderedLines.map((l, idx) => {
               const isDraft = l.source === 'draft'
-              const canMinus = !closed && (isDraft || l.removable)
+              const isPaid = !!l.paid
+              const canMinus = !closed && !isPaid && (isDraft || l.removable)
+              const firstPaid = isPaid && !orderedLines[idx - 1]?.paid
               return (
-                <div
-                  className={`row between draft-line${l.key === flashKey ? ' flash-added' : ''}`}
-                  key={l.key}
-                  data-line-index={idx}
-                  data-line-key={l.key}
-                  onPointerDown={(e) => startDrag(e, idx)}
-                  onPointerMove={moveDrag}
-                  onPointerUp={endDrag}
-                  onPointerCancel={endDrag}
-                  style={{
-                    alignItems: 'center',
-                    marginTop: 2,
-                    touchAction: 'none',
-                    cursor: closed ? 'default' : 'grab',
-                    borderRadius: 8,
-                    background: dragIndex === idx ? 'var(--tile-bg)' : 'transparent',
-                    boxShadow: dragIndex === idx ? '0 4px 14px rgba(0,0,0,0.35)' : 'none',
-                    opacity: dragIndex != null && dragIndex !== idx ? 0.85 : 1,
-                  }}
-                >
-                  <span className="grow" style={{ fontSize: '0.92rem' }}>
-                    {!closed && <span aria-hidden style={{ opacity: 0.4, marginRight: 4 }}>⠿</span>}
-                    <span aria-hidden style={{ marginRight: 4 }} title={isDraft ? 'non confermato' : STATUS_LABELS[l.status]}>
-                      {isDraft ? '🟡' : STATUS_EMOJI[l.status]}
+                <div key={l.key}>
+                  {firstPaid && (
+                    <div className="muted small" style={{ margin: '10px 0 2px', borderTop: '1px dashed var(--line)', paddingTop: 6 }}>
+                      💳 Pagati
+                    </div>
+                  )}
+                  <div
+                    className={`row between draft-line${l.key === flashKey ? ' flash-added' : ''}`}
+                    data-line-index={idx}
+                    data-line-key={l.key}
+                    onPointerDown={(e) => !isPaid && startDrag(e, idx)}
+                    onPointerMove={moveDrag}
+                    onPointerUp={endDrag}
+                    onPointerCancel={endDrag}
+                    style={{
+                      alignItems: 'center',
+                      marginTop: 2,
+                      touchAction: 'none',
+                      cursor: closed || isPaid ? 'default' : 'grab',
+                      borderRadius: 8,
+                      background: dragIndex === idx ? 'var(--tile-bg)' : 'transparent',
+                      boxShadow: dragIndex === idx ? '0 4px 14px rgba(0,0,0,0.35)' : 'none',
+                      opacity: isPaid ? 0.6 : dragIndex != null && dragIndex !== idx ? 0.85 : 1,
+                    }}
+                  >
+                    <span className="grow" style={{ fontSize: '0.92rem' }}>
+                      {!closed && !isPaid && <span aria-hidden style={{ opacity: 0.4, marginRight: 4 }}>⠿</span>}
+                      <span aria-hidden style={{ marginRight: 4 }} title={isPaid ? 'pagato' : isDraft ? 'non confermato' : STATUS_LABELS[l.status]}>
+                        {isPaid ? '💳' : isDraft ? '🟡' : STATUS_EMOJI[l.status]}
+                      </span>
+                      {l.custom ? '✨ ' : ''}{l.name}
+                      <span className="muted small"> · {formatPrice(l.unit_price)}</span>
                     </span>
-                    {l.custom ? '✨ ' : ''}{l.name}
-                    <span className="muted small"> · {formatPrice(l.unit_price)}</span>
-                  </span>
-                  <span className="row" style={{ gap: 4, alignItems: 'center' }}>
-                    {isDraft && (
-                      <button className="btn ghost small" aria-label={`Modifica ${l.name}`} onPointerDown={(e) => e.stopPropagation()} onClick={() => setEditLine(l)}>✏️</button>
-                    )}
-                    <span className="qty" onPointerDown={(e) => e.stopPropagation()}>
-                      <button aria-label="Riduci" onClick={() => minusRow(l)} disabled={!canMinus}>−</button>
-                      <strong>{l.qty}</strong>
-                      <button aria-label="Aumenta" onClick={() => plusRow(l)} disabled={closed}>+</button>
+                    <span className="row" style={{ gap: 4, alignItems: 'center' }}>
+                      {isDraft && (
+                        <button className="btn ghost small" aria-label={`Modifica ${l.name}`} onPointerDown={(e) => e.stopPropagation()} onClick={() => setEditLine(l)}>✏️</button>
+                      )}
+                      <span className="qty" onPointerDown={(e) => e.stopPropagation()}>
+                        <button aria-label="Riduci" onClick={() => minusRow(l)} disabled={!canMinus}>−</button>
+                        <strong>{l.qty}</strong>
+                        <button aria-label="Aumenta" onClick={() => plusRow(l)} disabled={closed || isPaid}>+</button>
+                      </span>
                     </span>
-                  </span>
+                  </div>
                 </div>
               )
             })}
