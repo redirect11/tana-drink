@@ -161,6 +161,7 @@ export default function OrderPosDetail({ order = null }) {
   // evidenzia un attimo: con la lista lunga, altrimenti, non si vede se è
   // stato inserito davvero.
   const listRef = useRef(null)
+  const infoRef = useRef(null)
   const flashTimer = useRef(null)
   const [flashKey, setFlashKey] = useState(null)
   const scrollToLine = useCallback((key) => {
@@ -635,6 +636,15 @@ export default function OrderPosDetail({ order = null }) {
     note: order?.note || '',
   })
   const [showInfo, setShowInfo] = useState(false)
+  // Aprendo i "dati conto" si scorre lì: con la lista lunga altrimenti il
+  // pannello si apre fuori vista e non si capisce che si è aperto.
+  useEffect(() => {
+    if (showInfo) {
+      requestAnimationFrame(() =>
+        infoRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+      )
+    }
+  }, [showInfo])
   const orderId = order?.id
   useEffect(() => {
     if (isNew) return
@@ -892,7 +902,7 @@ export default function OrderPosDetail({ order = null }) {
               {showInfo ? 'Nascondi dati conto' : '👤 Dati conto (nome, tavolo, note)'}
             </button>
             {showInfo && (
-              <div style={{ marginTop: 6 }}>
+              <div ref={infoRef} style={{ marginTop: 6 }}>
                 <label htmlFor="pd-name">Nome</label>
                 <input
                   id="pd-name"
