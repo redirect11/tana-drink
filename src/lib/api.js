@@ -1427,14 +1427,17 @@ export async function createOrder({
   const counterSnap = await getDoc(counterRef)
   const last = counterSnap.exists() ? counterSnap.data().last || 0 : 0
   const dailyNumber = last + 1
-  await setDoc(counterRef, { last: dailyNumber }, { merge: true })
+  // LOCAL-FIRST: la scrittura è già applicata alla cache in modo sincrono, non
+  // si attende l'ack del server (offline `await setDoc` non si risolverebbe mai
+  // e bloccherebbe la creazione dell'ordine). Il sync va in background.
+  setDoc(counterRef, { last: dailyNumber }, { merge: true }).catch(() => {})
 
   // Progressivo ASSOLUTO del sistema: non riparte mai, identifica l'ordine
   // per sempre (id interno mostrato in piccolo nel dettaglio). Stessa
   // lettura da cache del progressivo giornaliero.
   const serialSnap = await getDoc(serialCounterRef)
   const serial = (serialSnap.exists() ? serialSnap.data().last || 0 : 0) + 1
-  await setDoc(serialCounterRef, { last: serial }, { merge: true })
+  setDoc(serialCounterRef, { last: serial }, { merge: true }).catch(() => {})
 
   const nowIso = new Date().toISOString()
   const mappedItems = items.map((i) => ({
@@ -1457,7 +1460,10 @@ export async function createOrder({
     inventory_consumption: null,
     created_at: nowIso,
   }
-  await setDoc(newOrderRef, {
+  // Anche l'ordine è local-first: la scrittura entra subito in cache (la
+  // sottoscrizione lo mostra all'istante, online e offline), il server la
+  // riceve appena c'è rete. Niente await: offline non si sbloccherebbe.
+  setDoc(newOrderRef, {
     daily_number: dailyNumber, // progressivo del giorno (riparte ogni giornata)
     serial, // progressivo assoluto di sistema (non riparte mai)
     order_date: orderDate, // giornata commerciale (YYYY-MM-DD)
@@ -1487,8 +1493,10 @@ export async function createOrder({
     // Aggregato di tutte le comande (qui solo la prima): usato per totale,
     // scontrino e compatibilità con le viste esistenti.
     items: mappedItems,
-  })
+  }).catch(() => {})
 
+  // getDoc legge la scrittura locale appena applicata (risolve anche offline):
+  // niente attesa del server.
   const snap = await getDoc(newOrderRef)
   const order = mapOrder(snap)
 
