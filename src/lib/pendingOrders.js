@@ -105,7 +105,12 @@ export function submitPosOrder({
       toastError(`Ordine non sincronizzato: ${e.message}`, { id: toastId })
       return
     }
-    rememberOrderId(created.id)
+    // Ricorda l'ordine come "del cliente" SOLO se non è inserito dallo staff/
+    // bartender: i loro ordini POS non sono ordini del dispositivo, stanno
+    // nella coda del gestionale.
+    if (placed_by?.role !== 'bartender' && placed_by?.role !== 'staff') {
+      rememberOrderId(created.id)
+    }
     // Collega l'id reale. Il placeholder NON si toglie qui: lo scambia la
     // griglia quando l'ordine reale arriva dalla sottoscrizione (mai due
     // card, mai buchi). Il timer è solo la rete di sicurezza se nessuna

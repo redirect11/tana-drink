@@ -201,7 +201,10 @@ export default function App() {
             </Link>
           ) : (
             <>
-              {hasOrders && (
+              {/* "I miei ordini" ha senso solo per il CLIENTE. Per lo staff/
+                  bartender gli ordini aperti sono nella coda (/bar), non sono
+                  ordini "suoi": niente schermata cliente. */}
+              {hasOrders && !staffRole && (
                 <Link className="btn ghost small" to="/ordini">I miei ordini</Link>
               )}
               {staffRole ? (
