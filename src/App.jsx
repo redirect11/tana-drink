@@ -59,6 +59,16 @@ export default function App() {
     return () => document.removeEventListener('keydown', onKey)
   }, [])
 
+  // Topbar apribile/chiudibile ovunque. Sulle schermate a tutto schermo
+  // (coda, creazione/modifica ordine, pagamento) quando è aperta compare come
+  // OVERLAY (fissa), senza spingere il contenuto: quelle schermate restano
+  // interamente nel viewport.
+  const [topbarOpen, setTopbarOpen] = useState(false)
+  useEffect(() => {
+    document.body.classList.toggle('topbar-open', topbarOpen)
+    return () => document.body.classList.remove('topbar-open')
+  }, [topbarOpen])
+
   // Config stampante: reidrata il localStorage dal server, così l'IP e le
   // preferenze non si perdono quando iPad/Safari svuota la cache (ITP).
   useEffect(() => {
@@ -124,6 +134,20 @@ export default function App() {
 
   return (
     <div className="app">
+      {/* Campanella FISSA e flottante: sempre visibile, anche sulle schermate
+          di lavoro a tutto schermo (dove la topbar è nascosta). Notifiche +
+          stato sincronizzazione. */}
+      <StatusBell />
+      {/* Mostra/nascondi la topbar ovunque (utile sulle schermate a tutto
+          schermo, dove è nascosta). Da aperta è un overlay, non spinge nulla. */}
+      <button
+        className="topbar-toggle"
+        onClick={() => setTopbarOpen((v) => !v)}
+        aria-label={topbarOpen ? 'Nascondi barra' : 'Mostra barra'}
+        title={topbarOpen ? 'Nascondi barra' : 'Mostra barra'}
+      >
+        {topbarOpen ? '⌃' : '☰'}
+      </button>
       {/* Ambiente non-produzione: solo una scritta piccola e discreta in un
           angolo (niente più nastro in alto), che non dà fastidio. In
           produzione non compare. */}
@@ -155,7 +179,6 @@ export default function App() {
           <span>La Tana del Coniglio</span>
         </Link>
         <nav className="row">
-          <StatusBell />
           <FullscreenButton />
           {onBackoffice ? (
             <>
