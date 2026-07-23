@@ -16,6 +16,7 @@ import {
 } from '../lib/api.js'
 import { submitPosOrder } from '../lib/pendingOrders.js'
 import { useDraft, loadLayout, saveLayout } from '../lib/useDraft.js'
+import { dismissKeyboard } from '../lib/keyboard.js'
 import { useResizable } from '../lib/useResizable.js'
 import { auth } from '../lib/firebaseClient.js'
 import { onAuthStateChanged } from 'firebase/auth'
@@ -176,12 +177,13 @@ export default function OrderPosDetail({ order = null }) {
   }, [])
   useEffect(() => () => clearTimeout(flashTimer.current), [])
 
-  // Invio su un campo dati conto: chiude la tastiera (toglie il focus). Diretto
-  // sull'input, così è affidabile anche su Windows/touch.
+  // Invio su un campo dati conto: chiude la tastiera virtuale. Diretto
+  // sull'input e con il rimedio Windows (readonly momentaneo), così funziona
+  // su Windows, Android e iPhone/iPad.
   const blurOnEnter = (e) => {
     if (e.key === 'Enter') {
       e.preventDefault()
-      e.currentTarget.blur()
+      dismissKeyboard(e.currentTarget)
     }
   }
 
