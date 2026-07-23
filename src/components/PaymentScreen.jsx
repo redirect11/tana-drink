@@ -64,6 +64,10 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onB
   const orderId = async () => (resolveOrderId ? await resolveOrderId() : order.id)
   const [saving, setSaving] = useState(false)
   const [sel, setSel] = useState(() => fullSelection(order)) // drink_id -> qty da pagare ora
+  // Vista SEPARATA delle righe uguali (al volo, come nel riepilogo ordine):
+  // ogni unità è mostrata a sé e si sceglie fin dove pagare. Solo visuale, la
+  // selezione resta per prodotto (sel[drink_id] = quante unità pagate).
+  const [separati, setSeparati] = useState(false)
   const [method, setMethod] = useState('banco')
   // Tastierino: null = importo automatico (dalla selezione); altrimenti
   // la stringa di cifre digitata. `acc`/`op` per la calcolatrice.
@@ -379,8 +383,42 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onB
             {order.customer_name && (
               <p style={{ margin: '10px 0 2px', fontWeight: 600 }}>{order.customer_name}</p>
             )}
+            {remaining.some((r) => r.qty > 1) && (
+              <button
+                className="btn ghost small"
+                style={{ marginTop: 4 }}
+                onClick={() => setSeparati((v) => !v)}
+              >
+                {separati ? '🔗 Unisci uguali' : '≣ Separa uguali'}
+              </button>
+            )}
             {remaining.map((r) => {
               const s = Math.min(sel[r.drink_id] || 0, r.qty)
+              // Separata: una riga per unità; si tocca fin dove pagare.
+              if (separati && r.qty > 1) {
+                return (
+                  <div key={r.drink_id} style={{ marginTop: 8 }}>
+                    {Array.from({ length: r.qty }, (_, i) => {
+                      const on = i < s
+                      return (
+                        <button
+                          key={i}
+                          type="button"
+                          className="payscreen-unit row between"
+                          disabled={closed}
+                          onClick={() => setSel((st) => ({ ...st, [r.drink_id]: on ? i : i + 1 }))}
+                          style={{ opacity: on ? 1 : 0.5 }}
+                        >
+                          <span className="grow" style={{ fontSize: '0.92rem', textAlign: 'left' }}>
+                            {on ? '☑' : '☐'} {r.custom ? '✨ ' : ''}{r.name}
+                          </span>
+                          <span className="muted small">{formatPrice(r.unit_price)}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )
+              }
               return (
                 <div className="row between" key={r.drink_id} style={{ alignItems: 'center', marginTop: 8 }}>
                   <span className="grow" style={{ fontSize: '0.92rem' }}>
