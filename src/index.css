@@ -2321,6 +2321,17 @@ body.fullbleed,
 }
 .posd-cats button {
   white-space: nowrap;
+  /* Il tasto cresce in ALTEZZA insieme alla larghezza quando si allarga la
+     colonna (tasti più grandi, anche se se ne vedono meno): l'altezza segue
+     la larghezza via aspect-ratio, con un minimo per quando è stretta. */
+  aspect-ratio: 3 / 1;
+  min-height: 40px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.posd-cats button > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .posd-comanda {
   display: flex;
@@ -2398,6 +2409,8 @@ body.fullbleed,
     width: auto !important;
     white-space: nowrap;
     flex-shrink: 0;
+    aspect-ratio: auto; /* in riga orizzontale niente scaling proporzionale */
+    min-height: 0;
   }
   .posd-cats {
     max-width: none;

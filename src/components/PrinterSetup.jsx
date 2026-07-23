@@ -6,6 +6,14 @@ import {
   disconnectPrinter,
   DEFAULT_PRINTER_SETTINGS,
 } from '../lib/printer.js'
+import { savePrinterConfig } from '../lib/api.js'
+
+// Salva le impostazioni stampante sia in locale (uso immediato/offline) sia
+// su server (così l'IP non si perde quando iPad/Safari svuota il localStorage).
+function persistPrinter(form) {
+  savePrinterSettings(form)
+  savePrinterConfig(form)
+}
 
 export default function PrinterSetup() {
   const [form, setForm] = useState(() => loadPrinterSettings())
@@ -26,14 +34,14 @@ export default function PrinterSetup() {
 
   function handleSave(e) {
     e.preventDefault()
-    savePrinterSettings(form)
+    persistPrinter(form)
     disconnectPrinter() // forza riconnessione con nuovi parametri
     setSaved(true)
     setTimeout(() => setSaved(false), 2500)
   }
 
   async function handleTest() {
-    savePrinterSettings(form)
+    persistPrinter(form)
     disconnectPrinter()
     setTesting(true)
     setTestResult(null)

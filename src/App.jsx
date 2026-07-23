@@ -10,7 +10,8 @@ import PosPage from './pages/PosPage.jsx'
 import { useCustomer, useHasOrders } from './lib/customerAuth.js'
 import { isFirebaseConfigured, auth } from './lib/firebaseClient.js'
 import { onAuthStateChanged } from 'firebase/auth'
-import { subscribeSettings, DEFAULT_SETTINGS, clockIn } from './lib/api.js'
+import { subscribeSettings, DEFAULT_SETTINGS, clockIn, subscribePrinterConfig } from './lib/api.js'
+import { savePrinterSettings } from './lib/printer.js'
 import { logoutStaff } from './lib/logout.js'
 import { resolveThemeVars, applyTheme } from './lib/themes.js'
 import { envLabel } from './dev/devActions.js'
@@ -54,6 +55,17 @@ export default function App() {
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
+  }, [])
+
+  // Config stampante: reidrata il localStorage dal server, così l'IP e le
+  // preferenze non si perdono quando iPad/Safari svuota la cache (ITP).
+  useEffect(() => {
+    if (!isFirebaseConfigured) return
+    return subscribePrinterConfig((cfg) => {
+      if (!cfg) return
+      const { updated_at, ...rest } = cfg // eslint-disable-line no-unused-vars
+      savePrinterSettings(rest) // scrive solo in locale: nessun loop col server
+    }, () => {})
   }, [])
 
   // Stato connessione: offline mostra un nastro; al ritorno un toast.
@@ -141,6 +153,7 @@ export default function App() {
           <span>La Tana del Coniglio</span>
         </Link>
         <nav className="row">
+          <FullscreenButton />
           {onBackoffice ? (
             <>
               {staffRole && (
@@ -258,3 +271,32 @@ const SOCIALS = [
     path: 'M12.006 4.295c-2.67 0-5.338.784-7.645 2.353H0l1.963 2.135a5.997 5.997 0 0 0 4.04 10.43 5.976 5.976 0 0 0 4.075-1.6L12 19.705l1.922-2.09a5.972 5.972 0 0 0 4.072 1.598 6 6 0 0 0 6-5.998 5.982 5.982 0 0 0-1.957-4.432L24 6.648h-4.35a13.573 13.573 0 0 0-7.644-2.353zM12 6.255c1.531 0 3.063.303 4.504.903C13.943 8.138 12 10.43 12 13.1c0-2.671-1.942-4.962-4.504-5.942A11.72 11.72 0 0 1 12 6.256zM6.002 9.157a4.059 4.059 0 1 1 0 8.118 4.059 4.059 0 0 1 0-8.118zm11.992.002a4.057 4.057 0 1 1 .003 8.115 4.057 4.057 0 0 1-.003-8.115zm-11.992 1.93a2.128 2.128 0 0 0 0 4.256 2.128 2.128 0 0 0 0-4.256zm11.992 0a2.128 2.128 0 0 0 0 4.256 2.128 2.128 0 0 0 0-4.256z',
   },
 ]
+
+// Tasto schermo intero. L'API Fullscreen non c'è su iPad/Safari (solo per i
+// video): lì il "fullscreen" è aggiungere la PWA alla Home (display standalone).
+// Dove supportata (desktop/Android), entra/esce a schermo intero.
+function FullscreenButton() {
+  const [fs, setFs] = useState(() => typeof document !== 'undefined' && !!document.fullscreenElement)
+  useEffect(() => {
+    const on = () => setFs(!!document.fullscreenElement)
+    document.addEventListener('fullscreenchange', on)
+    return () => document.removeEventListener('fullscreenchange', on)
+  }, [])
+  const supported =
+    typeof document !== 'undefined' && !!document.documentElement.requestFullscreen
+  if (!supported) return null
+  const toggle = () => {
+    if (document.fullscreenElement) document.exitFullscreen?.()
+    else document.documentElement.requestFullscreen?.().catch(() => {})
+  }
+  return (
+    <button
+      className="btn ghost small"
+      onClick={toggle}
+      title={fs ? 'Esci da schermo intero' : 'Schermo intero'}
+      aria-label={fs ? 'Esci da schermo intero' : 'Schermo intero'}
+    >
+      {fs ? '🡼' : '⛶'}
+    </button>
+  )
+}

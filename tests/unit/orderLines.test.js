@@ -83,6 +83,10 @@ describe('reconcileLayout (lista unica confermati + bozza)', () => {
     expect(reconcileLayout([], ['a', 'b'])).toEqual(['a', 'b'])
     expect(reconcileLayout(undefined, ['a', 'b'])).toEqual(['a', 'b'])
   })
+  it('addTop: le chiavi nuove vanno in cima, il riordino resta', () => {
+    expect(reconcileLayout(['b', 'a', 'c'], ['a', 'b', 'c', 'd'], true)).toEqual(['d', 'b', 'a', 'c'])
+    expect(reconcileLayout([], ['a', 'b'], true)).toEqual(['a', 'b'])
+  })
 })
 
 describe('qtyByDrink / linesTotal', () => {

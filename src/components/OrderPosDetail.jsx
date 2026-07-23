@@ -303,8 +303,10 @@ export default function OrderPosDetail({ order = null }) {
   const layoutRef = useRef(layout)
   layoutRef.current = layout
   useEffect(() => {
-    setLayout((prev) => reconcileLayout(prev, naturalSig ? naturalSig.split('|') : []))
-  }, [naturalSig])
+    setLayout((prev) =>
+      reconcileLayout(prev, naturalSig ? naturalSig.split('|') : [], settings.pos_add_top)
+    )
+  }, [naturalSig, settings.pos_add_top])
   useEffect(() => {
     saveLayout(draftKey, layout)
   }, [draftKey, layout])
@@ -856,7 +858,7 @@ export default function OrderPosDetail({ order = null }) {
                   onPointerCancel={endDrag}
                   style={{
                     alignItems: 'center',
-                    marginTop: 6,
+                    marginTop: 2,
                     touchAction: 'none',
                     cursor: closed ? 'default' : 'grab',
                     borderRadius: 8,

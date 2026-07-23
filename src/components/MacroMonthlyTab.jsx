@@ -79,9 +79,8 @@ export default function MacroMonthlyTab() {
 
       <p className="muted small" style={{ margin: '0 0 10px' }}>
         Valori al <strong>netto IVA</strong>: il fatturato è scorporato con
-        l’aliquota di <strong>ciascun prodotto</strong> (campo IVA in Inventario;
-        ripiego {settings.sale_vat}% per ciò che non ha un articolo collegato).
-        Acquisti = ordini fornitore segnati “ricevuto”.
+        l’IVA di rivendita (predefinita {settings.sale_vat}%, modificabile per
+        prodotto in Inventario). Acquisti = ordini fornitore segnati “ricevuto”.
       </p>
       {report && report.rows.some((r) => r.id === 'none' && r.tot.fatturato > 0) && (
         <p className="muted small" style={{ margin: '-4px 0 10px' }}>
