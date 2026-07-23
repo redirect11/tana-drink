@@ -23,15 +23,19 @@ export function bucketByStatus(orders) {
 }
 
 // Riepilogo: numero ordini e totale (esclude gli annullati).
-export function ordersRecap(orders) {
+export function ordersRecap(orders, isClosed = () => false) {
   let count = 0
   let total = 0
+  let aperti = 0
+  let chiusi = 0
   for (const o of orders || []) {
     if (o.status === ORDER_STATUSES.ANNULLATO) continue
     count += 1
     total += Number(o.total) || 0
+    if (isClosed(o)) chiusi += 1
+    else aperti += 1
   }
-  return { count, total }
+  return { count, total, aperti, chiusi }
 }
 
 // Conti ancora aperti (non pagati né annullati).

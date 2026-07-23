@@ -541,7 +541,7 @@ function OrderQueue() {
   const ordersInVista = soloOggi ? ordersOggi : effOrders
   // Riepilogo di testata: solo la giornata corrente (gli arretrati stanno
   // nella loro tab e non devono gonfiare i totali di oggi).
-  const recap = ordersRecap(ordersOggi)
+  const recap = ordersRecap(ordersOggi, isChiuso)
 
   // Ricerca rapida: numero, cliente, tavolo, drink, chi ha inserito.
   const q = search.trim().toLowerCase()
@@ -963,7 +963,7 @@ function OrderQueue() {
         <div className="board-head">
           <div className="board-title">
             <strong>In servizio</strong>
-            <span className="muted"> · {recap.count} ordini · {formatPrice(recap.total)}</span>
+            <span className="muted"> · {recap.aperti} apert{recap.aperti === 1 ? 'o' : 'i'} · {recap.chiusi} chius{recap.chiusi === 1 ? 'o' : 'i'} · {formatPrice(recap.total)}</span>
           </div>
           <input
             type="search"
@@ -988,7 +988,7 @@ function OrderQueue() {
           <div className="card">
             <strong>Oggi</strong>
             <div className="muted">
-              {recap.count} ordini · {formatPrice(recap.total)}
+              {recap.aperti} apert{recap.aperti === 1 ? 'o' : 'i'} · {recap.chiusi} chius{recap.chiusi === 1 ? 'o' : 'i'} · {formatPrice(recap.total)}
             </div>
           </div>
 
