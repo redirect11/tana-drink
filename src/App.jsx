@@ -13,6 +13,7 @@ import { onAuthStateChanged } from 'firebase/auth'
 import { subscribeSettings, DEFAULT_SETTINGS, clockIn, subscribePrinterConfig } from './lib/api.js'
 import { savePrinterSettings } from './lib/printer.js'
 import { dismissKeyboard } from './lib/keyboard.js'
+import StatusBell from './components/StatusBell.jsx'
 import { logoutStaff } from './lib/logout.js'
 import { resolveThemeVars, applyTheme } from './lib/themes.js'
 import { envLabel } from './dev/devActions.js'
@@ -154,6 +155,7 @@ export default function App() {
           <span>La Tana del Coniglio</span>
         </Link>
         <nav className="row">
+          <StatusBell />
           <FullscreenButton />
           {onBackoffice ? (
             <>
