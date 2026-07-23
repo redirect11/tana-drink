@@ -114,6 +114,9 @@ function payableReceivedCount(o) {
 // obbligatorio viene saldato (e solo allora entra in coda). Restituisce il
 // messaggio { title, body } o null se non c'è nulla di nuovo da notificare.
 function decideNewOrderStaffPush(before, after) {
+  // Ordine inserito dal bartender stesso: nessuna notifica (avvisano solo
+  // gli ordini di clienti o staff).
+  if (after && after.placed_by && after.placed_by.role === 'bartender') return null
   const now = payableReceivedCount(after)
   const prev = payableReceivedCount(before)
   if (now <= prev) return null // niente di nuovo in coda
