@@ -12,6 +12,7 @@ import { isFirebaseConfigured, auth } from './lib/firebaseClient.js'
 import { onAuthStateChanged } from 'firebase/auth'
 import { subscribeSettings, DEFAULT_SETTINGS, clockIn, subscribePrinterConfig } from './lib/api.js'
 import { savePrinterSettings } from './lib/printer.js'
+import { dismissKeyboard } from './lib/keyboard.js'
 import { logoutStaff } from './lib/logout.js'
 import { resolveThemeVars, applyTheme } from './lib/themes.js'
 import { envLabel } from './dev/devActions.js'
@@ -51,7 +52,7 @@ export default function App() {
       const type = (el.getAttribute('type') || 'text').toLowerCase()
       const singleLine = ['text', 'search', 'tel', 'url', 'email', 'number', 'password'].includes(type)
       if (!singleLine || el.closest('form')) return
-      el.blur() // chiude la tastiera virtuale
+      dismissKeyboard(el) // chiude la tastiera virtuale (anche su Windows)
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
