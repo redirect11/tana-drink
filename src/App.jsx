@@ -38,6 +38,24 @@ export default function App() {
   const [updateReady, setUpdateReady] = useState(false)
   useEffect(() => subscribeUpdateAvailable(() => setUpdateReady(true)), [])
 
+  // Tastiera virtuale: premendo Invio su un campo a riga singola FUORI da un
+  // form (es. nome tavolo/note, che si salvano con un bottone) la si chiude,
+  // togliendo il focus. Dentro un form si lascia il comportamento nativo
+  // (submit di login, ricerca…), per non romperlo.
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key !== 'Enter' || e.shiftKey) return
+      const el = document.activeElement
+      if (!el || el.tagName !== 'INPUT') return
+      const type = (el.getAttribute('type') || 'text').toLowerCase()
+      const singleLine = ['text', 'search', 'tel', 'url', 'email', 'number', 'password'].includes(type)
+      if (!singleLine || el.closest('form')) return
+      el.blur() // chiude la tastiera virtuale
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [])
+
   // Stato connessione: offline mostra un nastro; al ritorno un toast.
   const online = useOnline()
   const wasOffline = useRef(false)
@@ -92,11 +110,12 @@ export default function App() {
 
   return (
     <div className="app">
-      {/* Nastro d'ambiente: distingue a colpo d'occhio test/locale da
-          produzione (i siti sono identici). In produzione non compare. */}
+      {/* Ambiente non-produzione: solo una scritta piccola e discreta in un
+          angolo (niente più nastro in alto), che non dà fastidio. In
+          produzione non compare. */}
       {envLabel && (
-        <div className={`env-ribbon env-${envLabel.toLowerCase()}`}>
-          ⚠️ AMBIENTE {envLabel} — non è la produzione
+        <div className="env-badge" aria-hidden>
+          {envLabel === 'TEST' ? 'test version' : envLabel.toLowerCase()}
         </div>
       )}
       {!online && (

@@ -2017,16 +2017,19 @@ body.fullbleed,
   letter-spacing: 0;
 }
 
-.env-ribbon {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  text-align: center;
-  font-weight: 700;
-  font-size: 0.8rem;
+/* Ambiente non-produzione: scritta minuscola e discreta in basso a sinistra,
+   sopra a tutto ma senza catturare i tap, così non dà fastidio. */
+.env-badge {
+  position: fixed;
+  left: 6px;
+  bottom: 6px;
+  z-index: 5;
+  font-size: 0.6rem;
   letter-spacing: 0.5px;
-  padding: 5px 8px;
-  color: #1c1305;
+  color: var(--muted);
+  opacity: 0.5;
+  pointer-events: none;
+  text-transform: lowercase;
 }
 /* Nastro "sei offline": in cima, sopra ogni schermata. */
 .offline-ribbon {
@@ -2040,13 +2043,6 @@ body.fullbleed,
   background: #4a4a55;
   color: #fff;
 }
-.env-ribbon.env-test {
-  background: repeating-linear-gradient(45deg, #f5b94a, #f5b94a 12px, #e8a32e 12px, #e8a32e 24px);
-}
-.env-ribbon.env-locale {
-  background: repeating-linear-gradient(45deg, #9ad0ff, #9ad0ff 12px, #6fb8f5 12px, #6fb8f5 24px);
-}
-
 /* Intestazione categoria cliccabile nella gestione menù (collassa/espande). */
 .menu-admin-cat {
   cursor: pointer;
