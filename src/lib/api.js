@@ -40,6 +40,7 @@ import { businessDayKey, coverageStart, DEFAULT_CUTOFF_HOUR } from './businessDa
 import { recentDrinkIds } from './posCatalog.js'
 import { DEFAULT_MARKUP, DEFAULT_ROUND_STEP } from './pricing.js'
 import { notify } from './notify.js'
+import { bgWrite } from './sync.js'
 
 const drinksCol = collection(db, 'drinks')
 const ordersCol = collection(db, 'orders')
@@ -889,11 +890,11 @@ export async function resetOpenOrdersToReceived() {
     const cambia =
       comande.some((c, i) => c.status !== nuove[i].status) || data.status !== ORDER_OPEN
     if (!cambia) continue
-    await updateDoc(d.ref, {
+    bgWrite(() => updateDoc(d.ref, {
       status: ORDER_OPEN,
       comande: nuove,
       comande_statuses: comandeStatuses(nuove),
-    })
+    }), 'ripristino ordine')
     toccati += 1
   }
   return toccati
@@ -917,7 +918,7 @@ export async function closePaidOrder(id) {
   const lowStock = chiusura.comande
     ? await depleteComandeInventory(unappliedEntries(id, chiusura.comande))
     : []
-  await updateDoc(ref, chiusura)
+  bgWrite(() => updateDoc(ref, chiusura), 'chiusura conto')
   notifyLowStock(lowStock)
 }
 
@@ -1200,7 +1201,7 @@ export async function payGroupCash({
     served.flatMap(({ ref, comande }) => unappliedEntries(ref.id, comande))
   )
   for (const { ref, comande } of served) {
-    await updateDoc(ref, {
+    bgWrite(() => updateDoc(ref, {
       payment_status: 'pagato',
       payment_method: 'banco',
       paid_at: nowIso,
@@ -1209,7 +1210,7 @@ export async function payGroupCash({
       [`status_times.${ORDER_STATUSES.PAGATO}`]: nowIso,
       comande,
       comande_statuses: comandeStatuses(comande),
-    })
+    }), 'pagamento gruppo')
   }
 
   const orderIdsCovered = covered.map((c) => c.ref.id)
@@ -1229,15 +1230,15 @@ export async function payGroupCash({
   if (split && split.count > 1) {
     const amounts = splitAmounts(total, split.count)
     for (let idx = 0; idx < amounts.length; idx++) {
-      await addDoc(paymentsCol, {
+      bgWrite(() => addDoc(paymentsCol, {
         ...baseDoc,
         amount: amounts[idx],
         split_count: split.count,
         split_index: idx + 1,
-      })
+      }), 'ledger pagamento')
     }
   } else {
-    await addDoc(paymentsCol, { ...baseDoc, amount: Math.round(total * 100) / 100, split_count: null, split_index: null })
+    bgWrite(() => addDoc(paymentsCol, { ...baseDoc, amount: Math.round(total * 100) / 100, split_count: null, split_index: null }), 'ledger pagamento')
   }
   notifyLowStock(lowStock)
   return settlementId
@@ -1789,10 +1790,10 @@ export async function setOrderDiscount(id, discount) {
     discount && Number(discount.value) > 0
       ? { type: discount.type === 'percent' ? 'percent' : 'euro', value: Number(discount.value) }
       : null
-  await updateDoc(ref, {
+  bgWrite(() => updateDoc(ref, {
     discount: clean,
     discount_amount: discountAmount(o.total ?? 0, clean),
-  })
+  }), 'sconto ordine')
 }
 
 // Registra un incasso (anche PARZIALE, per lo split del conto): appende il
@@ -1828,12 +1829,12 @@ export async function registerPayment(id, { amount, method = 'banco', items = nu
     // scaricate a magazzino adesso.
     lowStock = await depleteComandeInventory(unappliedEntries(id, chiusura.comande))
   }
-  await updateDoc(ref, {
+  bgWrite(() => updateDoc(ref, {
     payments,
     ...(closed
       ? { ...chiusura, payment_method: summaryMethod(payments) }
       : { payment_status: 'parziale' }),
-  })
+  }), 'incasso ordine')
   notifyLowStock(lowStock)
   return { closed }
 }
@@ -1852,7 +1853,7 @@ export async function markOrderPaid(id, method, { autoServe = true } = {}) {
   const lowStock = chiusura.comande
     ? await depleteComandeInventory(unappliedEntries(id, chiusura.comande))
     : []
-  await updateDoc(ref, { ...chiusura, payment_method: method })
+  bgWrite(() => updateDoc(ref, { ...chiusura, payment_method: method }), 'pagamento ordine')
   notifyLowStock(lowStock)
 }
 
@@ -1894,7 +1895,7 @@ async function depleteComandeInventory(entries) {
       const cur = itemsById[c.inventory_item_id]
       if (!cur) continue
       delta[c.inventory_item_id] = (delta[c.inventory_item_id] || 0) + c.qty
-      await addDoc(movementsCol, {
+      bgWrite(() => addDoc(movementsCol, {
         item_id: c.inventory_item_id,
         item_name: cur.name,
         type: 'unload',
@@ -1903,7 +1904,7 @@ async function depleteComandeInventory(entries) {
         reason: 'ordine',
         order_id: p.orderId,
         created_at: serverTimestamp(),
-      })
+      }), 'movimento scorta')
     }
     p.comanda.inventory_applied = true
     p.comanda.inventory_consumption = p.consumption
@@ -1912,7 +1913,7 @@ async function depleteComandeInventory(entries) {
   for (const [id, qty] of Object.entries(delta)) {
     const cur = itemsById[id]
     const newStock = (Number(cur.stock) || 0) - qty
-    await updateDoc(doc(db, 'inventory_items', id), { stock: increment(-qty) })
+    bgWrite(() => updateDoc(doc(db, 'inventory_items', id), { stock: increment(-qty) }), 'scarico scorta')
     if (newStock <= (Number(cur.low_threshold) || 0)) {
       lowStock.push({ name: cur.name, stock: newStock, unit: cur.unit })
     }
@@ -1974,7 +1975,7 @@ export async function advanceComanda(orderId, comandaId, newStatus) {
     patch.status = ORDER_STATUSES.PAGATO
     patch[`status_times.${ORDER_STATUSES.PAGATO}`] = nowIso
   }
-  await updateDoc(orderRef, patch)
+  bgWrite(() => updateDoc(orderRef, patch), 'stato comanda')
 
   notifyLowStock(lowStock)
 
@@ -2092,13 +2093,13 @@ export async function updateOrderItems(id, items) {
     Number(cur.coperto_amount || 0) +
     Number(cur.service_charge_amount || 0) +
     Number(cur.tip_amount || 0)
-  await updateDoc(ref, {
+  bgWrite(() => updateDoc(ref, {
     status: ORDER_OPEN,
     comande,
     comande_statuses: comandeStatuses(comande),
     items: mapped,
     total: sumItems(mapped) + extras,
-  })
+  }), 'modifica ordine')
   return mapOrder(await getDoc(ref))
 }
 
@@ -2109,7 +2110,7 @@ export async function updateOrderInfo(id, { table_label, note, customer_name }) 
   if (table_label !== undefined) patch.table_label = table_label || null
   if (note !== undefined) patch.note = note || null
   if (customer_name !== undefined) patch.customer_name = customer_name || null
-  if (Object.keys(patch).length) await updateDoc(doc(db, 'orders', id), patch)
+  if (Object.keys(patch).length) bgWrite(() => updateDoc(doc(db, 'orders', id), patch), 'dati conto')
   return mapOrder(await getDoc(doc(db, 'orders', id)))
 }
 
@@ -2157,13 +2158,13 @@ export async function addComanda(orderId, items, { note = null } = {}) {
     Number(cur.coperto_amount || 0) +
     Number(cur.service_charge_amount || 0) +
     Number(cur.tip_amount || 0)
-  await updateDoc(ref, {
+  bgWrite(() => updateDoc(ref, {
     status: ORDER_OPEN,
     comande,
     comande_statuses: comandeStatuses(comande),
     items: agg,
     total: sumItems(agg) + extras,
-  })
+  }), 'aggiunta al conto')
   notifyLowStock(lowStock)
   return mapOrder(await getDoc(ref))
 }
@@ -2215,10 +2216,10 @@ export async function bartenderUpdateComanda(orderId, comandaId, { items }) {
       const sn = invSnaps[idx]
       if (!sn.exists()) continue
       const curItem = sn.data()
-      await updateDoc(doc(db, 'inventory_items', d.inventory_item_id), {
+      bgWrite(() => updateDoc(doc(db, 'inventory_items', d.inventory_item_id), {
         stock: increment(-d.delta),
-      })
-      await addDoc(movementsCol, {
+      }), 'riallineo scorta')
+      bgWrite(() => addDoc(movementsCol, {
         item_id: d.inventory_item_id,
         item_name: curItem.name,
         type: d.delta > 0 ? 'unload' : 'load',
@@ -2227,7 +2228,7 @@ export async function bartenderUpdateComanda(orderId, comandaId, { items }) {
         reason: 'modifica ordine',
         order_id: orderId,
         created_at: serverTimestamp(),
-      })
+      }), 'movimento scorta')
     }
     comanda.inventory_consumption = newCons
   }
@@ -2238,13 +2239,13 @@ export async function bartenderUpdateComanda(orderId, comandaId, { items }) {
     Number(cur.coperto_amount || 0) +
     Number(cur.service_charge_amount || 0) +
     Number(cur.tip_amount || 0)
-  await updateDoc(ref, {
+  bgWrite(() => updateDoc(ref, {
     status: ORDER_OPEN,
     comande,
     comande_statuses: comandeStatuses(comande),
     items: agg,
     total: sumItems(agg) + extras,
-  })
+  }), 'modifica comanda')
   return mapOrder(await getDoc(ref))
 }
 
@@ -2284,10 +2285,10 @@ export async function cancelOrder(id, opts = {}) {
       const s = itemSnaps[idx]
       if (!s.exists()) continue
       const cur = s.data()
-      await updateDoc(doc(db, 'inventory_items', c.inventory_item_id), {
+      bgWrite(() => updateDoc(doc(db, 'inventory_items', c.inventory_item_id), {
         stock: increment(c.qty),
-      })
-      await addDoc(movementsCol, {
+      }), 'storno scorta')
+      bgWrite(() => addDoc(movementsCol, {
         item_id: c.inventory_item_id,
         item_name: cur.name,
         type: 'load',
@@ -2296,7 +2297,7 @@ export async function cancelOrder(id, opts = {}) {
         reason: 'storno',
         order_id: id,
         created_at: serverTimestamp(),
-      })
+      }), 'movimento scorta')
     }
   }
 
@@ -2309,7 +2310,7 @@ export async function cancelOrder(id, opts = {}) {
     }
     if (restoreStock) c.inventory_applied = false
   }
-  await updateDoc(orderRef, {
+  bgWrite(() => updateDoc(orderRef, {
     status: ORDER_STATUSES.ANNULLATO,
     comande,
     comande_statuses: comandeStatuses(comande),
@@ -2319,7 +2320,7 @@ export async function cancelOrder(id, opts = {}) {
     cancel_phrase: phrase,
     cancel_message: message || null,
     cancel_notify: !!notifyClient,
-  })
+  }), 'annullo ordine')
   return mapOrder(await getDoc(orderRef))
 }
 
