@@ -122,14 +122,15 @@ export default function SettingsTab() {
         </div>
 
         <p className="muted" style={{ margin: '12px 0 6px', fontSize: '0.85rem' }}>
-          Come mostrare le categorie nel POS (icona e colore si scelgono nel
-          Menù → Categorie).
+          Come mostrare le categorie nel POS. L’icona e il colore di ogni
+          categoria si impostano nel <strong>Menù → Categorie</strong>: se una
+          categoria non ha un’icona, al suo posto compare il pallino colore.
         </p>
         <div className="mode-choice" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
           {[
-            ['dot', '• Pallino + testo'],
-            ['icon_text', '🍸 Icona + testo'],
-            ['icon', '🍸 Solo icona'],
+            ['dot', '● Pallino + nome'],
+            ['icon_text', '🍸 Icona + nome'],
+            ['icon', '🍸 Solo icona (senza nome)'],
           ].map(([value, label]) => (
             <button
               key={value}
