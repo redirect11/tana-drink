@@ -7,9 +7,12 @@ import {
   nestGroup,
   unnestGroup,
   renameGroup,
+  closeGroups,
+  deleteGroup,
   payGroupCash,
   createPendingGroupPayment,
 } from '../lib/api.js'
+import ConfirmDialog from './ConfirmDialog.jsx'
 import {
   createGroupCheckout,
   getGroupPaymentStatus,
@@ -45,6 +48,7 @@ export default function GroupView({ groupId, onClose }) {
   const [perOrder, setPerOrder] = useState(false)
   const [sumupMsg, setSumupMsg] = useState(null)
   const [checkoutId, setCheckoutId] = useState(null)
+  const [confirm, setConfirm] = useState(null) // 'close' | 'delete'
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -402,7 +406,51 @@ export default function GroupView({ groupId, onClose }) {
             </button>
           )}
         </div>
+
+        {/* Chiusura/eliminazione del gruppo */}
+        <div className="grid-2" style={{ marginTop: 8 }}>
+          <button className="btn ghost small" onClick={() => setConfirm('close')}>
+            📁 Chiudi gruppo
+          </button>
+          <button className="btn ghost small" onClick={() => setConfirm('delete')}>
+            🗑 Elimina gruppo
+          </button>
+        </div>
       </div>
+
+      {confirm === 'close' && (
+        <ConfirmDialog
+          title="📁 Chiudere il gruppo?"
+          message={`“${node.group.name}” verrà archiviato e sparirà dai gruppi aperti.${
+            s.remaining > 0 ? ` Attenzione: restano ${formatPrice(s.remaining)} da incassare.` : ''
+          } Gli ordini restano dove sono.`}
+          confirmLabel="Chiudi gruppo"
+          onCancel={() => setConfirm(null)}
+          onConfirm={() => {
+            setConfirm(null)
+            closeGroups(subtreeGroupIds(node))
+            onClose()
+          }}
+        />
+      )}
+      {confirm === 'delete' && (
+        <ConfirmDialog
+          title="🗑 Eliminare il gruppo?"
+          message={`“${node.group.name}” verrà eliminato. Gli ordini${
+            aggregated.length ? ` (${aggregated.length})` : ''
+          } restano ma senza etichetta di gruppo${
+            node.childGroups.length ? '; i sottogruppi tornano indipendenti' : ''
+          }.`}
+          confirmLabel="Elimina gruppo"
+          danger
+          onCancel={() => setConfirm(null)}
+          onConfirm={() => {
+            setConfirm(null)
+            deleteGroup(node.group.id).catch((e) => setError(e.message))
+            onClose()
+          }}
+        />
+      )}
     </div>
   )
 }

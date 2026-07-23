@@ -23,18 +23,28 @@ export function dismissKeyboard(el) {
     }
     return
   }
-  // Windows touch: readonly momentaneo per forzare la chiusura, poi ripristina.
+  // Windows touch: il blur da solo non chiude la tastiera. La si forza
+  // spostando il focus su un input READONLY fuori schermo (che NON apre la
+  // tastiera): l'editabile perde il focus e la tastiera si chiude. Poi si
+  // rimuove il campo temporaneo.
   try {
-    const wasReadonly = !!el.readOnly
-    el.readOnly = true
+    const tmp = document.createElement('input')
+    tmp.readOnly = true
+    tmp.tabIndex = -1
+    tmp.setAttribute('aria-hidden', 'true')
+    tmp.style.cssText =
+      'position:fixed;bottom:0;left:0;width:1px;height:1px;opacity:0;pointer-events:none;border:0;padding:0;'
+    document.body.appendChild(tmp)
+    tmp.focus()
     el.blur()
     setTimeout(() => {
       try {
-        el.readOnly = wasReadonly
+        tmp.blur()
+        tmp.remove()
       } catch {
         /* ok */
       }
-    }, 120)
+    }, 200)
   } catch {
     try {
       el.blur()
