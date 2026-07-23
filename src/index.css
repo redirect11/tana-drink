@@ -1092,6 +1092,10 @@ body.fullbleed.topbar-open .topbar {
   top: 0;
   left: 0;
   right: 0;
+  margin: 0;
+  /* Il logo parte dopo il ☰ (12+42) e la linguetta (62+34): niente più
+     sovrapposizione, e staccato dal bordo. */
+  padding-left: 108px;
   z-index: 125; /* sopra il ☰ del menu laterale (bar-burger, z-index 120) */
   background: var(--bg-2);
   box-shadow: 0 2px 14px rgba(0, 0, 0, 0.4);
