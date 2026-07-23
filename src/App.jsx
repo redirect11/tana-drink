@@ -134,12 +134,9 @@ export default function App() {
 
   return (
     <div className="app">
-      {/* Campanella FISSA e flottante: sempre visibile, anche sulle schermate
-          di lavoro a tutto schermo (dove la topbar è nascosta). Notifiche +
-          stato sincronizzazione. */}
-      <StatusBell />
       {/* Mostra/nascondi la topbar ovunque (utile sulle schermate a tutto
-          schermo, dove è nascosta). Da aperta è un overlay, non spinge nulla. */}
+          schermo, dove è nascosta). Da aperta è un overlay, non spinge nulla.
+          La campanella (notifiche + sync) sta nella topbar: si richiama da qui. */}
       <button
         className={`topbar-toggle${topbarOpen ? ' open' : ''}`}
         onClick={() => setTopbarOpen((v) => !v)}
@@ -179,6 +176,7 @@ export default function App() {
           <span>La Tana del Coniglio</span>
         </Link>
         <nav className="row">
+          <StatusBell />
           <FullscreenButton />
           {onBackoffice ? (
             <>

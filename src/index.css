@@ -1449,27 +1449,17 @@ body.fullbleed .bar-content {
   border-left: 4px solid #37b24d;
 }
 
-/* Campanella notifiche + stato sincronizzazione: FISSA e flottante, sempre
-   visibile (anche sulle schermate di lavoro a tutto schermo, senza topbar).
-   In basso a destra per non coprire i controlli in alto della coda. */
+/* Campanella notifiche + stato sincronizzazione: sta nella topbar (a tutto
+   schermo la si richiama con la linguetta). Pulsante inline. */
 .status-bell {
-  position: fixed;
-  bottom: 12px;
-  right: 12px;
-  z-index: 55;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: var(--card);
-  border: 1px solid var(--line);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  position: relative;
+  background: none;
+  border: none;
   cursor: pointer;
-  font-size: 1.2rem;
+  font-size: 1.15rem;
   line-height: 1;
+  padding: 4px;
   color: inherit;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 .status-bell-badge {
   position: absolute;
@@ -1519,19 +1509,18 @@ body.fullbleed .bar-content {
   inset: 0;
   z-index: 60;
 }
-/* Si apre come box "chat" in corrispondenza della campanella (in basso a
-   destra), verso l'alto. */
+/* Si apre sotto la campanella (in alto a destra), come una tendina. */
 .status-bell-panel {
   position: fixed;
-  right: 12px;
-  bottom: 64px;
-  z-index: 61;
+  right: 8px;
+  top: 54px;
+  z-index: 130; /* sopra la topbar-overlay (z125) quando è a tutto schermo */
   width: min(330px, 92vw);
-  max-height: 70vh;
+  max-height: 72vh;
   overflow-y: auto;
   background: var(--card);
   border: 1px solid var(--line);
-  border-radius: 12px 12px 4px 12px;
+  border-radius: 4px 12px 12px 12px;
   box-shadow: 0 10px 34px rgba(0, 0, 0, 0.45);
   padding: 8px;
 }
