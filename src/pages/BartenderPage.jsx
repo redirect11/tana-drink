@@ -351,6 +351,9 @@ function OrderQueue() {
           for (const o of data) {
             const isNew = !knownIds.current.has(o.id)
             if (o.workflow_status !== ORDER_STATUSES.RICEVUTO) continue
+            // Niente notifica per gli ordini inseriti dal bartender stesso:
+            // avvisano solo quelli di clienti o staff.
+            if (o.placed_by?.role === 'bartender') continue
             if (isAwaitingPayment(o)) {
               if (isNew) awaiting.add(o.id)
               continue
