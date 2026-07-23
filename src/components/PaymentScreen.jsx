@@ -43,7 +43,13 @@ const digitsToEuro = (s) => (parseInt(s || '0', 10) || 0) / 100
 // `resolveOrderId` (opzionale): quando la schermata si apre PRIMA che
 // l'ordine esista sul server (pagamento diretto dal POS), le azioni
 // aspettano qui l'id reale — la UI intanto è già piena e reattiva.
-export default function PaymentScreen({ order: orderProp, settings, onClose, onBeforePay, onError, resolveOrderId }) {
+export default function PaymentScreen({ order: orderProp, settings, onClose, onPaid, onBeforePay, onError, resolveOrderId }) {
+  // Chiusura per pagamento COMPLETATO (non semplice annulla): chiude e avvisa
+  // il chiamante, che può tornare alla coda ordini.
+  const closePaid = () => {
+    onPaid?.()
+    onClose()
+  }
   const [error, setError] = useState(null)
   // Sconto OTTIMISTICO: applicato subito a schermo, server in background.
   const [optimisticDisc, setOptimisticDisc] = useState(null) // { disc, amount }
@@ -217,7 +223,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onB
         await onBeforePay?.()
         const { closed } = await payWithVoucher(await orderId(), chosenVoucher.id, voucherPay, { autoServe })
         setVoucherId('')
-        if (closed) onClose()
+        if (closed) closePaid()
       })
     }
     if (method === 'lettore') {
@@ -264,7 +270,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onB
         onError?.(`Pagamento non registrato: ${e.message}`)
       }
     })()
-    if (willClose) onClose()
+    if (willClose) closePaid()
   }
 
   // ── Sconto dal tastierino della modale ──
