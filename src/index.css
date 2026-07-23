@@ -2371,6 +2371,44 @@ body.fullbleed,
   max-width: none;
   flex-shrink: 0;
 }
+/* Footer dell'ordine, ridimensionabile: la scala (--foot-scale) guida la
+   dimensione del font, e tasti/prezzi la seguono perché espressi in em. */
+.posd-comanda-foot {
+  flex-shrink: 0;
+  padding: 4px 12px 10px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: calc(8px * var(--foot-scale, 1));
+  font-size: calc(1rem * var(--foot-scale, 1));
+}
+.posd-comanda-foot .btn {
+  font-size: 0.9em;
+  padding: 0.5em 0.7em;
+}
+.posd-comanda-foot .price {
+  font-size: 1.05em;
+}
+.posd-foot-handle {
+  height: 16px;
+  margin: 0 -12px 2px;
+  cursor: row-resize;
+  touch-action: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.posd-foot-handle::before {
+  content: '';
+  width: 44px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line);
+}
+.posd-foot-handle:hover::before {
+  background: var(--accent-2, #f5b94a);
+}
 
 /* Maniglia di ridimensionamento fra le colonne del POS: area ampia e
    comoda da afferrare col dito, con un indicatore a pallini centrale che

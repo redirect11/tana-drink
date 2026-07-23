@@ -122,6 +122,9 @@ export default function OrderPosDetail({ order = null }) {
     fetchRecentDrinkIds(20).then(setRecentIds).catch(() => setRecentIds([]))
   }, [])
   const comandaRz = useResizable('pos-comanda', { def: 360, min: 300, max: 620, side: 'left' })
+  // Scala del footer (totale + conferma/pagamento): la maniglia in cima lo
+  // "allunga" e tasti/font crescono insieme. Valore in % (100 = normale).
+  const footRz = useResizable('pos-foot-scale', { def: 100, min: 80, max: 175, axis: 'y', side: 'up', speed: 0.5 })
 
   // Staff loggato (per l'attribuzione dell'ordine creato dal POS).
   const [staff, setStaff] = useState(null)
@@ -997,17 +1000,10 @@ export default function OrderPosDetail({ order = null }) {
             )}
           </div>
 
-          {/* Footer: avanzamento comanda + totale + CONFERMA vicino a PAGAMENTO */}
-          <div
-            style={{
-              flexShrink: 0,
-              padding: '10px 12px',
-              borderTop: '1px solid var(--line)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 8,
-            }}
-          >
+          {/* Footer: avanzamento comanda + totale + CONFERMA vicino a PAGAMENTO.
+              Ridimensionabile dalla maniglia in cima: font e tasti scalano. */}
+          <div className="posd-comanda-foot" style={{ '--foot-scale': footRz.width / 100 }}>
+            <div className="posd-foot-handle" title="Trascina per ingrandire/rimpicciolire" {...footRz.handleProps} />
             {!isNew && workflowOn && active && activeNext && !closed && (
               <div className="row between" style={{ alignItems: 'center' }}>
                 <span className={`pill ${active.status}`}>

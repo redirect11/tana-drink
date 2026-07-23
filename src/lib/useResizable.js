@@ -17,7 +17,12 @@ const load = (key, def) => {
   }
 }
 
-export function useResizable(key, { def, min = 80, max = 640, side = 'right' } = {}) {
+// `axis`: 'x' (larghezza, default) o 'y' (per una maniglia orizzontale che
+// controlla un valore verticale/una scala). `speed`: quanti "punti" per pixel
+// trascinato (per una scala serve <1 per non essere ipersensibili). `side`
+// determina il verso: 'right'/'down' aumentano trascinando in avanti,
+// 'left'/'up' l'opposto.
+export function useResizable(key, { def, min = 80, max = 640, side = 'right', axis = 'x', speed = 1 } = {}) {
   const [width, setWidth] = useState(() => load(key, def))
   const drag = useRef(null)
 
@@ -27,21 +32,21 @@ export function useResizable(key, { def, min = 80, max = 640, side = 'right' } =
     (e) => {
       e.preventDefault()
       try { e.currentTarget.setPointerCapture(e.pointerId) } catch { /* ok */ }
-      drag.current = { startX: e.clientX, startW: width }
+      drag.current = { start: axis === 'y' ? e.clientY : e.clientX, startW: width }
     },
-    [width]
+    [width, axis]
   )
 
   const onPointerMove = useCallback(
     (e) => {
       if (!drag.current) return
-      const dx = e.clientX - drag.current.startX
-      // Maniglia a destra: trascinando verso destra si allarga. A sinistra
-      // (colonna sul lato destro dello schermo) è l'opposto.
-      const next = clamp(drag.current.startW + (side === 'left' ? -dx : dx))
+      const d = (axis === 'y' ? e.clientY : e.clientX) - drag.current.start
+      // 'right'/'down' → in avanti allarga; 'left'/'up' → l'opposto.
+      const dir = side === 'left' || side === 'up' ? -1 : 1
+      const next = clamp(drag.current.startW + dir * d * speed)
       setWidth(next)
     },
-    [clamp, side]
+    [clamp, side, axis, speed]
   )
 
   const onPointerUp = useCallback(() => {
@@ -64,7 +69,7 @@ export function useResizable(key, { def, min = 80, max = 640, side = 'right' } =
     onPointerUp,
     onPointerCancel: onPointerUp,
     role: 'separator',
-    'aria-orientation': 'vertical',
+    'aria-orientation': axis === 'y' ? 'horizontal' : 'vertical',
   }
 
   return { width, handleProps, setWidth }
