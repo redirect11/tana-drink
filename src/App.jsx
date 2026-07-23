@@ -199,6 +199,8 @@ export default function App() {
         </nav>
       </header>
 
+      {(onBackoffice || !!staffRole) && <AddToHomeHint />}
+
       {!isFirebaseConfigured && (
         <div className="banner">
           ⚠️ Firebase non è configurato. Imposta <code>VITE_FIREBASE_API_KEY</code> e{' '}
@@ -271,6 +273,51 @@ const SOCIALS = [
     path: 'M12.006 4.295c-2.67 0-5.338.784-7.645 2.353H0l1.963 2.135a5.997 5.997 0 0 0 4.04 10.43 5.976 5.976 0 0 0 4.075-1.6L12 19.705l1.922-2.09a5.972 5.972 0 0 0 4.072 1.598 6 6 0 0 0 6-5.998 5.982 5.982 0 0 0-1.957-4.432L24 6.648h-4.35a13.573 13.573 0 0 0-7.644-2.353zM12 6.255c1.531 0 3.063.303 4.504.903C13.943 8.138 12 10.43 12 13.1c0-2.671-1.942-4.962-4.504-5.942A11.72 11.72 0 0 1 12 6.256zM6.002 9.157a4.059 4.059 0 1 1 0 8.118 4.059 4.059 0 0 1 0-8.118zm11.992.002a4.057 4.057 0 1 1 .003 8.115 4.057 4.057 0 0 1-.003-8.115zm-11.992 1.93a2.128 2.128 0 0 0 0 4.256 2.128 2.128 0 0 0 0-4.256zm11.992 0a2.128 2.128 0 0 0 0 4.256 2.128 2.128 0 0 0 0-4.256z',
   },
 ]
+
+// Suggerimento (solo iPad/iPhone in Safari, non ancora installata): per lo
+// schermo intero va aggiunta alla Home. Là l'API Fullscreen non esiste, quindi
+// è l'unica strada. Chiudibile una volta per tutte.
+function AddToHomeHint() {
+  const [dismissed, setDismissed] = useState(() => {
+    try {
+      return localStorage.getItem('tana:a2hs') === '1'
+    } catch {
+      return false
+    }
+  })
+  if (dismissed) return null
+  const standalone =
+    window.navigator.standalone === true ||
+    !!window.matchMedia?.('(display-mode: standalone)')?.matches
+  const isIOS =
+    /iP(hone|ad|od)/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  const hasFsApi = !!document.documentElement.requestFullscreen
+  // Mostra solo dove il tasto ⛶ non funziona (iOS Safari) e non è già installata.
+  if (standalone || !isIOS || hasFsApi) return null
+  const close = () => {
+    setDismissed(true)
+    try {
+      localStorage.setItem('tana:a2hs', '1')
+    } catch {
+      /* privata/quota: pazienza */
+    }
+  }
+  return (
+    <div className="a2hs-hint">
+      <span>
+        Per lo schermo intero: tocca{' '}
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: 'text-bottom' }}>
+          <path d="M12 3v12" />
+          <path d="M8 7l4-4 4 4" />
+          <path d="M6 12v7a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-7" />
+        </svg>{' '}
+        <strong>Condividi</strong> e poi <strong>“Aggiungi a Home”</strong>.
+      </span>
+      <button className="a2hs-x" onClick={close} aria-label="Chiudi">✕</button>
+    </div>
+  )
+}
 
 // Tasto schermo intero. L'API Fullscreen non c'è su iPad/Safari (solo per i
 // video): lì il "fullscreen" è aggiungere la PWA alla Home (display standalone).
