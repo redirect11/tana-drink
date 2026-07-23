@@ -13,12 +13,14 @@ export async function ensureNotificationPermission() {
 }
 
 import { showToast } from './toast.js'
+import { recordNotif } from './notifyStore.js'
 
 export async function notify(title, body, extra = {}) {
   // SEMPRE anche in app (toast): le notifiche di sistema dipendono dai
   // permessi/piattaforma, ma chi sta guardando l'app deve vedere comunque
   // nuovi ordini, aggiunte e avvisi.
   showToast(body ? `${title} — ${body}` : title, { kind: 'info' })
+  recordNotif(title, body) // storico, per la campanella
 
   if (!('Notification' in window)) return
   if (Notification.permission !== 'granted') return

@@ -1402,6 +1402,98 @@ body.fullbleed .bar-content {
   border-left: 4px solid #37b24d;
 }
 
+/* Campanella notifiche + stato sincronizzazione (topbar). */
+.status-bell {
+  position: relative;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.15rem;
+  line-height: 1;
+  padding: 4px;
+  color: inherit;
+}
+.status-bell-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  background: var(--accent, #e52e71);
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 700;
+  min-width: 15px;
+  height: 15px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
+}
+/* Pallino di stato sync in basso a destra della campanella. */
+.status-bell::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1.5px solid var(--bg, #0e0e15);
+  background: transparent;
+}
+.status-bell.syncing::after {
+  background: #f5b94a;
+  animation: bell-pulse 1s ease-in-out infinite;
+}
+.status-bell.synced::after {
+  background: #37b24d;
+}
+.status-bell.error::after {
+  background: #e5484d;
+  animation: bell-pulse 0.8s ease-in-out infinite;
+}
+@keyframes bell-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.8); }
+}
+.status-bell-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+}
+.status-bell-panel {
+  position: fixed;
+  top: 54px;
+  right: 8px;
+  z-index: 61;
+  width: min(330px, 92vw);
+  max-height: 72vh;
+  overflow-y: auto;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.4);
+  padding: 8px;
+}
+.status-bell-sync {
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+}
+.status-bell-sync.ok {
+  color: var(--muted);
+}
+.status-bell-sync.err {
+  background: rgba(229, 72, 77, 0.12);
+}
+.status-bell-item {
+  padding: 7px 8px;
+  border-top: 1px solid var(--line);
+}
+.status-bell-item:first-child {
+  border-top: none;
+}
+
 /* Lampo di conferma quando si aggiunge un item all'ordine: la riga toccata
    si illumina un istante, così si vede che è stata inserita. */
 @keyframes flash-added {
