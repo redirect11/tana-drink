@@ -104,6 +104,24 @@ export default function SettingsTab() {
         </div>
 
         <p className="muted" style={{ margin: '12px 0 6px', fontSize: '0.85rem' }}>
+          Dove finisce l’item appena aggiunto nella lista del conto.
+        </p>
+        <div className="mode-choice">
+          {[
+            [false, '⬇ In fondo (scorre)'],
+            [true, '⬆ In cima'],
+          ].map(([value, label]) => (
+            <button
+              key={String(value)}
+              className={`mode-option${!!settings.pos_add_top === value ? ' active' : ''}`}
+              onClick={() => save({ pos_add_top: value })}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <p className="muted" style={{ margin: '12px 0 6px', fontSize: '0.85rem' }}>
           Come mostrare le categorie nel POS (icona e colore si scelgono nel
           Menù → Categorie).
         </p>
@@ -312,7 +330,7 @@ export default function SettingsTab() {
           />
         </div>
         <div className="toggle-row">
-          <span>IVA di vendita — ripiego (%)</span>
+          <span>IVA di vendita predefinita (%)</span>
           <AmountInput
             value={settings.sale_vat}
             min={0}
@@ -322,10 +340,9 @@ export default function SettingsTab() {
           />
         </div>
         <p className="muted small" style={{ margin: '4px 0 0' }}>
-          Nella dashboard mensile il fatturato è scorporato con l’IVA di
-          <strong> ogni prodotto</strong> (campo IVA in Inventario). Questa
-          aliquota è solo il <strong>ripiego</strong> per ciò che non ha un
-          articolo collegato (bar/somministrazione: 10%).
+          IVA di rivendita (somministrazione: <strong>10%</strong>) usata per
+          scorporare il fatturato al netto. È il valore predefinito: ogni
+          prodotto in Inventario può indicarne una diversa (campo IVA).
         </p>
       </div>
 

@@ -158,7 +158,15 @@ function ProductsPanel() {
 
   // Ricarico (×N) per il prezzo consigliato mostrato accanto al costo.
   const [markup, setMarkup] = useState(DEFAULT_SETTINGS.price_markup)
-  useEffect(() => subscribeSettings((s) => setMarkup(s.price_markup), () => {}), [])
+  const [saleVat, setSaleVat] = useState(DEFAULT_SETTINGS.sale_vat)
+  useEffect(
+    () =>
+      subscribeSettings((s) => {
+        setMarkup(s.price_markup)
+        setSaleVat(s.sale_vat)
+      }, () => {}),
+    []
+  )
 
   const catName = (id) => categories.find((c) => c.id === id)?.name
   const supName = (id) => suppliers.find((s) => s.id === id)?.name
@@ -329,6 +337,7 @@ function ProductsPanel() {
         initial={editing === 'new' ? null : editing}
         categories={categories}
         suppliers={suppliers}
+        defaultVat={saleVat}
         onCancel={() => setEditing(null)}
         onSave={handleSave}
       />
@@ -974,7 +983,7 @@ function CaricoForm({ item, onCancel, onConfirm }) {
 
 // --- Form prodotto (creazione + modifica) -------------------------------
 
-function ItemForm({ initial, categories, suppliers, onCancel, onSave }) {
+function ItemForm({ initial, categories, suppliers, defaultVat = 10, onCancel, onSave }) {
   const isEdit = !!initial
   // Unità scelta dall'utente (L/cl/ml, g/mg, pz). Lo stock è salvato in
   // base (ml/g/pz); i campi si inseriscono e si mostrano nell'unità scelta.
@@ -989,7 +998,7 @@ function ItemForm({ initial, categories, suppliers, onCancel, onSave }) {
     category_id: initial?.category_id ?? '',
     supplier_id: initial?.supplier_id ?? '',
     cost: initial?.cost ?? '',
-    vat: initial?.vat ?? 22,
+    vat: initial?.vat ?? defaultVat,
     status: initial?.status ?? 'linea',
     package_size:
       initial?.package_size != null && initial?.package_size !== ''

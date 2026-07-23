@@ -2715,6 +2715,9 @@ export const DEFAULT_SETTINGS = {
   // 'separati' (ogni tocco una riga a sé) o 'uniti' (item uguali sommati).
   // Si può comunque unire/separare al volo dal riepilogo ordine.
   order_group_default: 'separati',
+  // Dove finisce l'item appena aggiunto nella lista ordine: in fondo (default,
+  // e la lista scorre a mostrarlo) o in cima (subito visibile senza scorrere).
+  pos_add_top: false,
   // Come mostrare le categorie nel POS: 'dot' (pallino + testo, come ora),
   // 'icon_text' (icona + testo) o 'icon' (solo icona).
   category_display: 'dot',
@@ -2755,4 +2758,24 @@ export function subscribeSettings(onChange, onError) {
 
 export async function updateSettings(data) {
   await setDoc(settingsDoc, { ...data, updated_at: serverTimestamp() }, { merge: true })
+}
+
+// --- CONFIG STAMPANTE (persistita anche su server) ---
+// L'IP e le preferenze stampante stavano solo in localStorage, che su iPad/
+// Safari (PWA) viene svuotato dopo giorni di inattività (ITP): l'IP si perdeva.
+// Le mirror-iamo su Firestore (doc condiviso del locale) e reidratiamo il
+// localStorage all'avvio, così l'IP sopravvive alla pulizia della cache.
+const printerConfigDoc = doc(db, 'settings', 'printer')
+
+export function subscribePrinterConfig(onChange, onError) {
+  return onSnapshot(
+    printerConfigDoc,
+    (snap) => onChange(snap.exists() ? snap.data() : null),
+    onError ?? (() => {})
+  )
+}
+
+// Salvataggio local-first: scrittura in background, non blocca offline.
+export function savePrinterConfig(patch) {
+  setDoc(printerConfigDoc, { ...patch, updated_at: serverTimestamp() }, { merge: true }).catch(() => {})
 }

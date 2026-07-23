@@ -101,10 +101,12 @@ export function moveLine(lines, from, to) {
 // mantiene l'ordine precedente per le chiavi ancora presenti e accoda in
 // fondo le chiavi nuove (nell'ordine naturale). Così il riordino a mano
 // sopravvive agli aggiornamenti dal server e le aggiunte compaiono in coda.
-export function reconcileLayout(prev, natural) {
+// `addTop`: le chiavi nuove vanno in cima (item aggiunto in alto) invece che
+// in fondo. Il riordino a mano delle chiavi già presenti resta comunque.
+export function reconcileLayout(prev, natural, addTop = false) {
   const present = new Set(natural || [])
   const kept = (prev || []).filter((k) => present.has(k))
   const keptSet = new Set(kept)
   const added = (natural || []).filter((k) => !keptSet.has(k))
-  return [...kept, ...added]
+  return addTop ? [...added, ...kept] : [...kept, ...added]
 }
