@@ -1106,7 +1106,7 @@ body.fullbleed.topbar-open .topbar {
 .topbar-toggle {
   position: fixed;
   top: 0;
-  left: 60px;
+  left: 112px; /* oltre "← Ordini" (creazione/modifica) e il ☰ (coda) */
   z-index: 126;
   height: 16px;
   padding: 0 9px;
@@ -2503,15 +2503,12 @@ body.fullbleed,
   white-space: nowrap;
   /* Il tasto cresce in ALTEZZA insieme alla larghezza quando si allarga la
      colonna (tasti più grandi, anche se se ne vedono meno): l'altezza segue
-     la larghezza via aspect-ratio, con un minimo per quando è stretta. */
+     la larghezza via aspect-ratio, con un minimo per quando è stretta. Il
+     contenuto (icona/pallino + nome) gestisce da sé l'overflow, quindi qui
+     NON si taglia col button (rischiava di nascondere il testo). */
   aspect-ratio: 3 / 1;
   min-height: 40px;
   flex-shrink: 0;
-  overflow: hidden;
-}
-.posd-cats button > span:last-child {
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 .posd-comanda {
   display: flex;

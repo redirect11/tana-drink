@@ -218,19 +218,32 @@ export default function PosProductPicker({
           >
             {categoryDisplay === 'icon' ? (
               c.icon ? (
-                <span aria-hidden style={{ fontSize: '1.25rem' }}>{c.icon}</span>
+                <span aria-hidden style={{ fontSize: '1.25rem', lineHeight: 1 }}>{c.icon}</span>
               ) : (
                 <span aria-hidden style={{ ...catDotStyle(catColor(c)), width: 16, height: 16 }} />
               )
-            ) : categoryDisplay === 'icon_text' ? (
-              <>
-                <span aria-hidden>{c.icon || <span style={catDotStyle(catColor(c))} />}</span>
-                <span style={{ minWidth: 0 }}>{c.name}</span>
-              </>
             ) : (
               <>
-                <span aria-hidden style={catDotStyle(catColor(c))} />
-                <span style={{ minWidth: 0 }}>{c.name}</span>
+                {/* icona (se scelta 'icona+testo' e la categoria ne ha una),
+                    altrimenti il pallino colore; poi SEMPRE il nome. */}
+                <span aria-hidden style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center' }}>
+                  {categoryDisplay === 'icon_text' && c.icon ? (
+                    <span style={{ fontSize: '1.05rem', lineHeight: 1 }}>{c.icon}</span>
+                  ) : (
+                    <span style={catDotStyle(catColor(c))} />
+                  )}
+                </span>
+                <span
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {c.name}
+                </span>
               </>
             )}
           </button>
