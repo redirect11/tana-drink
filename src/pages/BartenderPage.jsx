@@ -659,7 +659,7 @@ function OrderQueue() {
             </button>
           )
         )}
-        {o.workflow_status === ORDER_STATUSES.RITIRATO && o.payment_status !== 'pagato' && (
+        {canCollect && (
           <button
             className="btn block"
             style={{ marginTop: 8 }}
@@ -738,12 +738,16 @@ function OrderQueue() {
         >
           <div className="row between">
             <span className="bignum">#{o.daily_number ?? '—'}</span>
-            <span className={`pill ${o.workflow_status}`}>
-              {STATUS_EMOJI[o.workflow_status]}{' '}
-              {o.workflow_status === ORDER_STATUSES.RITIRATO
-                ? ritiratoLabel(o.service_mode)
-                : STATUS_LABELS[o.workflow_status]}
-            </span>
+            {/* Il badge di preparazione compare solo se si tracciano gli stati:
+                a gestione preparazione spenta l'ordine è solo ricevuto→pagato. */}
+            {workflowOn && (
+              <span className={`pill ${o.workflow_status}`}>
+                {STATUS_EMOJI[o.workflow_status]}{' '}
+                {o.workflow_status === ORDER_STATUSES.RITIRATO
+                  ? ritiratoLabel(o.service_mode)
+                  : STATUS_LABELS[o.workflow_status]}
+              </span>
+            )}
           </div>
           <div className="grid-card-sub row between" style={{ gap: 6 }}>
             <span className="grow" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -892,12 +896,14 @@ function OrderQueue() {
                   </span>
                 )}
               </div>
-              <span className={`pill ${o.workflow_status}`}>
-                {STATUS_EMOJI[o.workflow_status]}{' '}
-                {o.workflow_status === ORDER_STATUSES.RITIRATO
-                  ? ritiratoLabel(o.service_mode)
-                  : STATUS_LABELS[o.workflow_status]}
-              </span>
+              {workflowOn && (
+                <span className={`pill ${o.workflow_status}`}>
+                  {STATUS_EMOJI[o.workflow_status]}{' '}
+                  {o.workflow_status === ORDER_STATUSES.RITIRATO
+                    ? ritiratoLabel(o.service_mode)
+                    : STATUS_LABELS[o.workflow_status]}
+                </span>
+              )}
             </div>
             <div style={{ margin: '8px 0' }}>
               {(o.order_items || []).map((i) => (
