@@ -141,12 +141,12 @@ export default function App() {
       {/* Mostra/nascondi la topbar ovunque (utile sulle schermate a tutto
           schermo, dove è nascosta). Da aperta è un overlay, non spinge nulla. */}
       <button
-        className="topbar-toggle"
+        className={`topbar-toggle${topbarOpen ? ' open' : ''}`}
         onClick={() => setTopbarOpen((v) => !v)}
         aria-label={topbarOpen ? 'Nascondi barra' : 'Mostra barra'}
         title={topbarOpen ? 'Nascondi barra' : 'Mostra barra'}
       >
-        {topbarOpen ? '⌃' : '☰'}
+        {topbarOpen ? '▴' : '▾'}
       </button>
       {/* Ambiente non-produzione: solo una scritta piccola e discreta in un
           angolo (niente più nastro in alto), che non dà fastidio. In
