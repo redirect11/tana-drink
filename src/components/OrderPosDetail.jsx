@@ -168,22 +168,12 @@ export default function OrderPosDetail({ order = null }) {
   const flashTimer = useRef(null)
   const scrollKeyRef = useRef(null)
   const [flashKey, setFlashKey] = useState(null)
-  const [scrollNonce, setScrollNonce] = useState(0)
   const scrollToLine = useCallback((key) => {
-    scrollKeyRef.current = key
+    scrollKeyRef.current = key // lo scroll vero avviene nell'effetto su orderedLines
     setFlashKey(key)
-    setScrollNonce((n) => n + 1) // forza lo scroll anche se si ri-tocca la stessa riga
     clearTimeout(flashTimer.current)
     flashTimer.current = setTimeout(() => setFlashKey(null), 750)
   }, [])
-  // Scroll DOPO il commit (come per i "dati conto"): l'rAF imperativo poteva
-  // scattare prima che la riga nuova fosse nel DOM, e così non scrollava.
-  useEffect(() => {
-    if (!scrollKeyRef.current) return
-    listRef.current
-      ?.querySelector(`[data-line-key="${scrollKeyRef.current}"]`)
-      ?.scrollIntoView({ block: 'center', behavior: 'smooth' })
-  }, [scrollNonce])
   useEffect(() => () => clearTimeout(flashTimer.current), [])
 
   // Invio su un campo dati conto: chiude la tastiera (toglie il focus). Diretto
@@ -351,6 +341,19 @@ export default function OrderPosDetail({ order = null }) {
     () => [...allByKey.values()].filter((l) => l.paid).reduce((s, l) => s + l.qty, 0),
     [allByKey]
   )
+
+  // Scroll all'item appena aggiunto: si aggancia a orderedLines perché
+  // l'aggiunta passa da più render (bozza → reconcile del layout) e la riga
+  // nuova entra nel DOM solo quando orderedLines la include. Scrolla e azzera.
+  useEffect(() => {
+    const key = scrollKeyRef.current
+    if (!key) return
+    const el = listRef.current?.querySelector(`[data-line-key="${key}"]`)
+    if (el) {
+      el.scrollIntoView({ block: 'center', behavior: 'smooth' })
+      scrollKeyRef.current = null
+    }
+  }, [orderedLines])
 
   // Memoria bozza solo finché non confermato/pagato: se l'ordine è chiuso
   // (pagato/annullato) si azzera.
