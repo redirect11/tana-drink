@@ -34,8 +34,14 @@ describe('ordersRecap', () => {
     expect(r.count).toBe(6) // esclude l'annullato, include il pagato
     expect(r.total).toBe(10 + 5 + 8 + 12 + 20 + 15)
   })
+  it('separa aperti e chiusi con il predicato', () => {
+    const isClosed = (o) => o.payment_status === 'pagato'
+    const r = ordersRecap(orders, isClosed)
+    expect(r.aperti + r.chiusi).toBe(r.count)
+    expect(r.chiusi).toBe(orders.filter((o) => o.status !== 'annullato' && o.payment_status === 'pagato').length)
+  })
   it('coda vuota', () => {
-    expect(ordersRecap([])).toEqual({ count: 0, total: 0 })
+    expect(ordersRecap([])).toEqual({ count: 0, total: 0, aperti: 0, chiusi: 0 })
   })
 })
 
