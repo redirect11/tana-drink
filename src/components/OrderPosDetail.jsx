@@ -163,18 +163,34 @@ export default function OrderPosDetail({ order = null }) {
   const listRef = useRef(null)
   const infoRef = useRef(null)
   const flashTimer = useRef(null)
+  const scrollKeyRef = useRef(null)
   const [flashKey, setFlashKey] = useState(null)
+  const [scrollNonce, setScrollNonce] = useState(0)
   const scrollToLine = useCallback((key) => {
+    scrollKeyRef.current = key
     setFlashKey(key)
-    requestAnimationFrame(() => {
-      listRef.current
-        ?.querySelector(`[data-line-key="${key}"]`)
-        ?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
-    })
+    setScrollNonce((n) => n + 1) // forza lo scroll anche se si ri-tocca la stessa riga
     clearTimeout(flashTimer.current)
     flashTimer.current = setTimeout(() => setFlashKey(null), 750)
   }, [])
+  // Scroll DOPO il commit (come per i "dati conto"): l'rAF imperativo poteva
+  // scattare prima che la riga nuova fosse nel DOM, e così non scrollava.
+  useEffect(() => {
+    if (!scrollKeyRef.current) return
+    listRef.current
+      ?.querySelector(`[data-line-key="${scrollKeyRef.current}"]`)
+      ?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  }, [scrollNonce])
   useEffect(() => () => clearTimeout(flashTimer.current), [])
+
+  // Invio su un campo dati conto: chiude la tastiera (toglie il focus). Diretto
+  // sull'input, così è affidabile anche su Windows/touch.
+  const blurOnEnter = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      e.currentTarget.blur()
+    }
+  }
 
   const closed = isNew ? false : orderIsClosed(order)
   const comande = useMemo(() => (isNew ? [] : order.comande || []), [isNew, order])
@@ -467,11 +483,40 @@ export default function OrderPosDetail({ order = null }) {
     })
   }
 
-  const mergeDraft = () => setDraft((items) => mergeLines(items))
-  const splitAllDraft = () =>
+  // Separa/Unisci agiscono su TUTTE le voci visibili: la bozza + gli item
+  // delle comande modificabili (confermati). Sui confermati si programma il
+  // salvataggio come per le altre modifiche per-riga.
+  const explode = (items) =>
+    (items || []).flatMap((it) => {
+      const q = Math.floor(Number(it.qty) || 0)
+      return q > 1 ? Array.from({ length: q }, () => ({ ...it, qty: 1 })) : [it]
+    })
+  const transformEditableComande = (transform) => {
+    for (const c of effComande) {
+      if (!comandaEditable(c)) continue
+      const cur = c.items || []
+      const items = transform(cur)
+      if (items.length === cur.length) continue // niente da unire/separare qui
+      setPendingEdits((p) => ({ ...p, [c.id]: items }))
+      clearTimeout(flushTimers.current[c.id])
+      flushTimers.current[c.id] = setTimeout(() => flushComanda(c.id), 600)
+    }
+  }
+  const mergeDraft = () => {
+    setDraft((items) => mergeLines(items))
+    transformEditableComande((items) => mergeLines(items))
+  }
+  const splitAllDraft = () => {
     setDraft((items) => items.reduce((acc, l) => acc.concat(splitLine([l], l.line_id)), []))
-  const canMerge = hasMergeable(draft)
-  const canSplit = !canMerge && draft.some((l) => l.qty > 1)
+    transformEditableComande(explode)
+  }
+  const editableComande = effComande.filter(comandaEditable)
+  const canMerge =
+    hasMergeable(draft) || editableComande.some((c) => hasMergeable(c.items || []))
+  const canSplit =
+    !canMerge &&
+    (draft.some((l) => l.qty > 1) ||
+      editableComande.some((c) => (c.items || []).some((i) => i.qty > 1)))
   const applyEdit = ({ name, price, recipe_items }) => {
     setDraft((items) =>
       items.map((l) =>
@@ -910,6 +955,7 @@ export default function OrderPosDetail({ order = null }) {
                   id="pd-name"
                   value={info.customer_name}
                   disabled={closed}
+                  onKeyDown={blurOnEnter}
                   onChange={(e) => setInfo((v) => ({ ...v, customer_name: e.target.value }))}
                 />
                 <div className="grid-2" style={{ marginTop: 6 }}>
@@ -919,6 +965,7 @@ export default function OrderPosDetail({ order = null }) {
                       id="pd-table"
                       value={info.table_label}
                       disabled={closed}
+                      onKeyDown={blurOnEnter}
                       onChange={(e) => setInfo((v) => ({ ...v, table_label: e.target.value }))}
                     />
                   </div>
@@ -928,6 +975,7 @@ export default function OrderPosDetail({ order = null }) {
                       id="pd-note"
                       value={info.note}
                       disabled={closed}
+                      onKeyDown={blurOnEnter}
                       onChange={(e) => setInfo((v) => ({ ...v, note: e.target.value }))}
                     />
                   </div>
