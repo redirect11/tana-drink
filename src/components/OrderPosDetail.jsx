@@ -47,7 +47,7 @@ import {
   reconcileLayout,
   qtyByDrink as draftQtyByDrink,
 } from '../lib/orderLines.js'
-import { toastSync, toastSuccess, toastError } from '../lib/toast.js'
+import { toastSuccess, toastError } from '../lib/toast.js'
 import { printComanda, printScontrino } from '../lib/printer.js'
 import PosProductPicker from './PosProductPicker.jsx'
 import CustomDrinkForm from './CustomDrinkForm.jsx'
@@ -114,6 +114,8 @@ export default function OrderPosDetail({ order = null }) {
   // tiene conto del gruppo: bozze di gruppi diversi non si mescolano.
   const draftKey = order ? order.id : groupParam ? `new:${groupParam}` : 'new'
   const [draft, setDraft, clearDraft] = useDraft(draftKey)
+  const draftRef = useRef(draft)
+  draftRef.current = draft
 
   // Colonne POS ridimensionabili (larghezze ricordate per dispositivo).
   const catsRz = useResizable('pos-cats', { def: 150, min: 96, max: 320, side: 'right' })
@@ -264,6 +266,9 @@ export default function OrderPosDetail({ order = null }) {
       }),
     [comande, pendingEdits, statusOverrides]
   )
+  // Riferimenti sempre aggiornati per l'auto-conferma e la conferma all'uscita.
+  const effComandeRef = useRef(effComande)
+  effComandeRef.current = effComande
 
   // ── LISTA UNICA: item confermati (per-riga, dalle comande) + bozza ──
   // Le quantità già pagate (acconti/split registrati) vengono scorporate in
@@ -607,32 +612,50 @@ export default function OrderPosDetail({ order = null }) {
       ? settings.service_mode
       : null
 
-  // CONFERMA. Creazione: chiede il nome, poi crea l'ordine. Modifica: le
-  // aggiunte confluiscono nella comanda in preparazione; una NUOVA comanda
-  // si crea solo se l'ordine è già pronto/servito. Poi torna in coda.
-  const confirmDraft = () => {
-    if (draft.length === 0) return
-    if (isNew) return setAskName(true)
-    const additions = draft
-    const target = effComande.find(comandaEditable) // comanda ricevuta/in prep.
+  // MODIFICA: manda al server le aggiunte in sospeso (senza navigare). Gli
+  // item confluiscono nella comanda in preparazione; una NUOVA comanda si crea
+  // solo se l'ordine è già pronto/servito. Usata dall'AUTO-CONFERMA (ogni
+  // aggiunta è confermata subito) e all'uscita per non perdere nulla.
+  const flushAdditions = useCallback(() => {
+    if (isNew || !order?.id) return
+    const additions = draftRef.current
+    if (!additions || additions.length === 0) return
     clearDraft()
-    const toastId = toastSync('Sincronizzo le aggiunte…')
+    const target = effComandeRef.current.find(comandaEditable)
+    const oid = order.id
     ;(async () => {
       try {
         await flushAll()
         if (target) {
-          await bartenderUpdateComanda(order.id, target.id, {
+          await bartenderUpdateComanda(oid, target.id, {
             items: [...(target.items || []), ...additions],
           })
         } else {
-          await addComanda(order.id, additions)
+          await addComanda(oid, additions)
         }
-        toastSuccess('Aggiunte sincronizzate', { id: toastId })
       } catch (e) {
-        toastError(`Aggiunte non inviate: ${e.message}`, { id: toastId })
+        toastError(`Aggiunte non inviate: ${e.message}`)
       }
     })()
-    navigate('/bar')
+  }, [isNew, order?.id, flushAll, clearDraft])
+
+  // Auto-conferma in MODIFICA: poco dopo l'ultima aggiunta gli item vengono
+  // confermati da soli (niente tasto Conferma, niente stato "non confermato"
+  // che resta). In CREAZIONE resta la conferma manuale (serve nome/tavolo).
+  // Il timer dipende SOLO da draft/isNew (flushAdditions via ref) così non si
+  // resetta a ogni render.
+  const flushAdditionsRef = useRef(flushAdditions)
+  flushAdditionsRef.current = flushAdditions
+  useEffect(() => {
+    if (isNew || draft.length === 0) return
+    const t = setTimeout(() => flushAdditionsRef.current(), 300)
+    return () => clearTimeout(t)
+  }, [draft, isNew])
+
+  // CREAZIONE: la conferma chiede il nome del conto e crea l'ordine.
+  const confirmDraft = () => {
+    if (draft.length === 0 || !isNew) return
+    setAskName(true)
   }
 
   const submitNew = (name) => {
@@ -751,6 +774,14 @@ export default function OrderPosDetail({ order = null }) {
   // entrambe risposte sensate: un conto lasciato a metà si riprende, una
   // lista dimenticata si ritrova addosso al prossimo ordine).
   const handleExit = () => {
+    // MODIFICA: le aggiunte sono già confermate all'istante; eventuali item
+    // ancora in volo (prima dell'auto-conferma) si confermano ora, senza
+    // chiedere. CREAZIONE: si chiede cosa fare degli item non ancora inviati
+    // (l'ordine non esiste finché non lo si conferma con nome/tavolo).
+    if (!isNew) {
+      flushAdditions()
+      return navigate('/bar')
+    }
     if (draftCount > 0) return setConfirmExit(true)
     navigate('/bar')
   }
@@ -907,9 +938,9 @@ export default function OrderPosDetail({ order = null }) {
               </p>
             )}
 
-            {/* Barretta aggiunte non confermate: stampa + pulisci. Non è una
-                sezione a parte — gli item restano nella stessa lista sotto. */}
-            {draftCount > 0 && (
+            {/* Barretta aggiunte non confermate (solo in CREAZIONE: in modifica
+                gli item si confermano da soli). Stampa + pulisci. */}
+            {isNew && draftCount > 0 && (
               <div className="row between" style={{ alignItems: 'center', marginBottom: 2 }}>
                 <span className="muted small">
                   🟡 {draftCount} non confermat{draftCount === 1 ? 'o' : 'i'} · trascina per riordinare
@@ -1095,8 +1126,9 @@ export default function OrderPosDetail({ order = null }) {
               </div>
             )}
 
-            {/* Conferma le aggiunte (in fondo, vicino a Pagamento) */}
-            {draftCount > 0 && (
+            {/* CREAZIONE: la conferma crea l'ordine (nome/tavolo). In MODIFICA
+                gli item si confermano da soli all'aggiunta: niente tasto. */}
+            {isNew && draftCount > 0 && (
               <button className="btn block" onClick={confirmDraft}>
                 ✅ Conferma
               </button>
@@ -1108,6 +1140,11 @@ export default function OrderPosDetail({ order = null }) {
               </button>
             ) : (
               <>
+                {/* MODIFICA: le aggiunte sono già confermate → il tasto chiude
+                    la schermata e torna agli ordini (svuota eventuali item in volo). */}
+                <button className="btn block" onClick={handleExit}>
+                  ✓ Chiudi
+                </button>
                 <div className="grid-2">
                   <button
                     className="btn ghost small"

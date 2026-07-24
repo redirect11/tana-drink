@@ -129,7 +129,6 @@ function ApriCassa({ cutoff, by }) {
 
 // Chiusura cassa: mostra il riepilogo, contante atteso ed eventuale conteggio.
 function ChiudiCassa({ session, recap, by }) {
-  const [open, setOpen] = useState(false)
   const [counted, setCounted] = useState('')
   const [busy, setBusy] = useState(false)
   const diff =
@@ -139,23 +138,17 @@ function ChiudiCassa({ session, recap, by }) {
   const bloccato = recap.nAperti > 0
 
   async function chiudi() {
-    if (bloccato) return
+    if (bloccato || busy) return
     setBusy(true)
     try {
       await closeCashSession(session.id, { by, snapshot: recap, countedCash: counted === '' ? null : counted })
-      setOpen(false)
     } finally {
       setBusy(false)
     }
   }
 
-  if (!open) {
-    return (
-      <button className="btn danger block" style={{ marginTop: 12 }} onClick={() => setOpen(true)}>
-        🔴 Chiudi cassa
-      </button>
-    )
-  }
+  // Nessuna conferma: si può chiudere solo se tutti i conti sono già pagati
+  // (altrimenti è bloccata), quindi la chiusura è un'azione diretta.
   return (
     <div className="card" style={{ marginTop: 12, border: '1px solid var(--line)' }}>
       <strong>🔴 Chiusura cassa</strong>
@@ -187,10 +180,9 @@ function ChiudiCassa({ session, recap, by }) {
           )}
         </>
       )}
-      <div className="grid-2" style={{ marginTop: 10, gap: 8 }}>
-        <button className="btn ghost" onClick={() => setOpen(false)} disabled={busy}>Annulla</button>
-        <button className="btn danger" onClick={chiudi} disabled={busy || bloccato}>Conferma chiusura</button>
-      </div>
+      <button className="btn danger block" style={{ marginTop: 10 }} onClick={chiudi} disabled={busy || bloccato}>
+        🔴 Chiudi cassa
+      </button>
     </div>
   )
 }
