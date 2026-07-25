@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import {
   advanceComanda,
   addComanda,
@@ -14,7 +14,6 @@ import {
   subscribeSettings,
   DEFAULT_SETTINGS,
 } from '../lib/api.js'
-import { submitPosOrder } from '../lib/pendingOrders.js'
 import { useDraft, loadLayout, saveLayout } from '../lib/useDraft.js'
 import { dismissKeyboard } from '../lib/keyboard.js'
 import { useResizable } from '../lib/useResizable.js'
@@ -68,13 +67,23 @@ import PaymentScreen from './PaymentScreen.jsx'
 // Rimozione: gli item NON confermati e quelli confermati ma ancora IN
 // PREPARAZIONE si possono togliere; pronti/serviti/pagati no.
 //
-// Conferma (nel footer, vicino a Pagamento): le aggiunte confluiscono
-// nella comanda in preparazione (se c'è) — una NUOVA comanda si crea solo
-// se l'ordine è già pronto/servito. Poi si torna alla coda.
+// NIENTE tasto Conferma: gli item si confermano da soli. In CREAZIONE,
+// appena si aggiunge il primo item l'ordine viene CREATO (createOrder) e si
+// passa alla modifica (/ordine/:id); il nome si chiede UNA sola volta
+// all'uscita, se manca. In MODIFICA le aggiunte confluiscono nella comanda in
+// preparazione (una NUOVA comanda solo se l'ordine è già pronto/servito).
+// Dal footer si "Chiude" (torna alla coda); il pagamento resta a parte.
 
 export default function OrderPosDetail({ order = null }) {
   const isNew = !order
   const navigate = useNavigate()
+  const location = useLocation()
+  // Ordine "appena creato": ci si arriva dalla creazione (auto-creato all'aggiunta
+  // del primo item). All'uscita, se non ha ancora un nome, lo si chiede UNA volta.
+  const justCreatedRef = useRef(!!location.state?.justCreated)
+  // Ordine appena creato in fase di USCITA dalla creazione: tiene l'ordine reale
+  // in attesa del nome nel modale (submitNew).
+  const createdRef = useRef(null)
   const { drinks, cats, loading } = useMenu()
   const [error, setError] = useState(null)
   const [showCustom, setShowCustom] = useState(false)
@@ -82,7 +91,6 @@ export default function OrderPosDetail({ order = null }) {
   const [showComande, setShowComande] = useState(false)
   const [confirmCancel, setConfirmCancel] = useState(false)
   const [confirmDiscard, setConfirmDiscard] = useState(false)
-  const [confirmExit, setConfirmExit] = useState(false) // uscita con item non confermati
   const [showPayment, setShowPayment] = useState(false)
   const [askName, setAskName] = useState(false) // modale nome (creazione)
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
@@ -587,7 +595,7 @@ export default function OrderPosDetail({ order = null }) {
     return { name: editLine.name, price: editLine.unit_price, recipe_items: recipe }
   }, [editLine, drinks])
 
-  // Righe di bozza → item per createOrder/submitPosOrder (usano `price`).
+  // Righe di bozza → item per createOrder (usano `price`).
   const draftToItems = () =>
     draft.map((l) => ({
       drink_id: l.drink_id,
@@ -646,39 +654,79 @@ export default function OrderPosDetail({ order = null }) {
   // resetta a ogni render.
   const flushAdditionsRef = useRef(flushAdditions)
   flushAdditionsRef.current = flushAdditions
+  // Poco dopo l'ultima aggiunta: in MODIFICA gli item si confermano da soli;
+  // in CREAZIONE l'ordine viene CREATO con la bozza e si passa alla modifica
+  // (da lì le aggiunte successive si confermano al volo). Il timer si resetta a
+  // ogni aggiunta, così parte solo quando la bozza è "ferma" (batch completo).
   useEffect(() => {
-    if (isNew || draft.length === 0) return
-    const t = setTimeout(() => flushAdditionsRef.current(), 300)
+    if (draft.length === 0) return
+    const t = setTimeout(() => {
+      if (isNew) {
+        createFromDraftRef.current().then((o) => {
+          if (o) navigate(`/ordine/${o.id}`, { state: { justCreated: true } })
+        })
+      } else {
+        flushAdditionsRef.current()
+      }
+    }, 300)
     return () => clearTimeout(t)
-  }, [draft, isNew])
+  }, [draft, isNew, navigate])
 
-  // CREAZIONE: la conferma chiede il nome del conto e crea l'ordine.
-  const confirmDraft = () => {
-    if (draft.length === 0 || !isNew) return
-    setAskName(true)
+  // CREAZIONE: l'ordine NON si "conferma" più a mano. Appena si aggiunge il
+  // primo item viene CREATO (createFromDraft) e da lì si continua come nella
+  // modifica (aggiunte confermate al volo). Il nome si chiede solo all'uscita.
+  const creatingRef = useRef(false)
+  const createFromDraft = async () => {
+    if (!isNew || creatingRef.current) return null
+    const items = draftToItems()
+    if (items.length === 0) return null
+    creatingRef.current = true
+    try {
+      const created = await createOrder({
+        table_label: info.table_label || null,
+        note: info.note || null,
+        customer_name: info.customer_name.trim() || null,
+        items,
+        placed_by: placedBy(),
+        status: statoIniziale,
+        service_mode: modoConsegna,
+        group_id: group && !groupIsContainer ? group.id : null,
+        group_name_snapshot: group && !groupIsContainer ? group.name : null,
+      })
+      clearDraft()
+      return created
+    } catch (e) {
+      creatingRef.current = false
+      toastError(`Ordine non creato: ${e.message}`)
+      return null
+    }
   }
+  const createFromDraftRef = useRef(createFromDraft)
+  createFromDraftRef.current = createFromDraft
 
+  // Modale nome: salva il nome sull'ordine reale (appena creato) e torna alla
+  // coda. In creazione l'ordine è in `createdRef`; in modifica è `order`
+  // (ordine appena creato uscito senza nome).
   const submitNew = (name) => {
     setAskName(false)
-    submitPosOrder({
-      table_label: info.table_label || null,
-      note: info.note || null,
-      customer_name: (name || '').trim() || null,
-      items: draftToItems(),
-      placed_by: placedBy(),
-      printNow: false,
-      status: statoIniziale,
-      service_mode: modoConsegna,
-      group_id: group && !groupIsContainer ? group.id : null,
-      group_name_snapshot: group && !groupIsContainer ? group.name : null,
-    })
-    clearDraft()
+    const nm = (name || '').trim() || null
+    const target = createdRef.current || order
+    createdRef.current = null
+    justCreatedRef.current = false
+    if (target?.id && nm) {
+      updateOrderInfo(target.id, { customer_name: nm }).catch((e) =>
+        toastError(`Nome non salvato: ${e.message}`)
+      )
+    }
     setInfo({ customer_name: '', table_label: '', note: '' })
     navigate('/bar')
   }
 
   function handlePayNow() {
     if (draft.length === 0 || payOrder) return
+    // Il pagamento diretto crea già l'ordine: blocca l'auto-creazione della
+    // bozza (il debounce non deve creare un secondo ordine e navigare via).
+    creatingRef.current = true
     setError(null)
     const items = draftToItems()
     const mapped = items.map((i) => ({
@@ -769,26 +817,31 @@ export default function OrderPosDetail({ order = null }) {
     Number(order?.service_charge_amount || 0) +
     Number(order?.tip_amount || 0)
 
-  // Uscita dalla schermata con item NON confermati: si chiede cosa farne,
-  // invece di deciderlo al posto del bartender (buttarli o tenerli sono
-  // entrambe risposte sensate: un conto lasciato a metà si riprende, una
-  // lista dimenticata si ritrova addosso al prossimo ordine).
+  // Un ordine senza alcun identificativo (nome o tavolo): all'uscita di un
+  // ordine APPENA creato glielo si chiede una volta sola.
+  const needsName = (o) => o && !o.customer_name && !o.table_label
+
+  // Uscita dalla schermata: l'ordine esiste sempre (creato all'aggiunta del
+  // primo item), quindi non c'è nulla da "confermare".
   const handleExit = () => {
-    // MODIFICA: le aggiunte sono già confermate all'istante; eventuali item
-    // ancora in volo (prima dell'auto-conferma) si confermano ora, senza
-    // chiedere. CREAZIONE: si chiede cosa fare degli item non ancora inviati
-    // (l'ordine non esiste finché non lo si conferma con nome/tavolo).
     if (!isNew) {
+      // MODIFICA: eventuali item ancora in volo si confermano ora. Se è un
+      // ordine appena creato senza nome, lo si chiede una volta prima di uscire.
       flushAdditions()
+      if (justCreatedRef.current && needsName(order)) return setAskName(true)
       return navigate('/bar')
     }
-    if (draftCount > 0) return setConfirmExit(true)
-    navigate('/bar')
-  }
-  const exitAnd = (svuota) => {
-    setConfirmExit(false)
-    if (svuota) clearDraft()
-    navigate('/bar')
+    // CREAZIONE: niente in bozza → non è stato creato nulla, si esce. Con item
+    // in bozza, si crea l'ordine ora e — se manca il nome — lo si chiede.
+    if (draftCount === 0) return navigate('/bar')
+    createFromDraftRef.current().then((o) => {
+      if (!o) return
+      if (needsName(o)) {
+        createdRef.current = o
+        return setAskName(true)
+      }
+      navigate('/bar')
+    })
   }
 
   const headTitle = isNew ? 'Nuovo ordine' : `#${order.daily_number ?? '—'}`
@@ -1126,18 +1179,17 @@ export default function OrderPosDetail({ order = null }) {
               </div>
             )}
 
-            {/* CREAZIONE: la conferma crea l'ordine (nome/tavolo). In MODIFICA
-                gli item si confermano da soli all'aggiunta: niente tasto. */}
-            {isNew && draftCount > 0 && (
-              <button className="btn block" onClick={confirmDraft}>
-                ✅ Conferma
-              </button>
-            )}
-
+            {/* CREAZIONE e MODIFICA: gli item si confermano da soli all'aggiunta
+                (l'ordine è creato al primo item). Niente tasto Conferma. */}
             {isNew ? (
-              <button className="btn secondary block" disabled={draftCount === 0} onClick={handlePayNow}>
-                💳 Pagamento · {formatPrice(draftTotal)}
-              </button>
+              <>
+                <button className="btn block" onClick={handleExit}>
+                  ✓ Chiudi
+                </button>
+                <button className="btn secondary block" disabled={draftCount === 0} onClick={handlePayNow}>
+                  💳 Pagamento · {formatPrice(draftTotal)}
+                </button>
+              </>
             ) : (
               <>
                 {/* MODIFICA: le aggiunte sono già confermate → il tasto chiude
@@ -1266,9 +1318,15 @@ export default function OrderPosDetail({ order = null }) {
         />
       )}
 
-      {/* ── Modale nome del conto alla conferma (creazione) ── */}
+      {/* ── Modale nome del conto all'uscita di un ordine appena creato ── */}
       {askName && (
-        <div className="overlay confirm-overlay" onClick={() => setAskName(false)}>
+        <div
+          className="overlay confirm-overlay"
+          onClick={() => {
+            createdRef.current = null
+            setAskName(false)
+          }}
+        >
           <form
             className="confirm-box"
             role="dialog"
@@ -1304,7 +1362,10 @@ export default function OrderPosDetail({ order = null }) {
         <PaymentScreen
           order={payOrder}
           settings={settings}
-          onClose={() => setPayOrder(null)}
+          onClose={() => {
+            setPayOrder(null)
+            creatingRef.current = false // pagamento annullato: riabilita l'auto-creazione
+          }}
           onPaid={() => navigate('/bar')}
           onError={setError}
           resolveOrderId={() => payIdRef.current}
@@ -1366,34 +1427,6 @@ export default function OrderPosDetail({ order = null }) {
                 Nessun gruppo aperto: si creano dalla coda ordini.
               </p>
             )}
-          </div>
-        </div>
-      )}
-
-      {/* ── Uscita con item non confermati: svuotare o tenere? ── */}
-      {confirmExit && (
-        <div className="overlay confirm-overlay" onClick={() => setConfirmExit(false)}>
-          <div
-            className="confirm-box"
-            role="dialog"
-            aria-label="Item non confermati"
-            style={{ width: 'min(400px, 94vw)' }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 style={{ margin: 0 }}>Hai {draftCount} item non confermat{draftCount === 1 ? 'o' : 'i'}</h3>
-            <p className="muted small" style={{ margin: '8px 0 12px' }}>
-              Non sono ancora stati {isNew ? "inviati: l'ordine non esiste" : 'aggiunti al conto'}.
-              Vuoi svuotare la lista o tenerla per riprenderla dopo?
-            </p>
-            <button className="btn block" onClick={() => exitAnd(true)}>
-              🧹 Svuota ed esci
-            </button>
-            <button className="btn secondary block" style={{ marginTop: 8 }} onClick={() => exitAnd(false)}>
-              Tieni ed esci
-            </button>
-            <button className="btn ghost block" style={{ marginTop: 8 }} onClick={() => setConfirmExit(false)}>
-              Indietro
-            </button>
           </div>
         </div>
       )}
