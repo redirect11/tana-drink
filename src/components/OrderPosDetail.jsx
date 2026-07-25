@@ -49,6 +49,7 @@ import {
 import { toastSuccess, toastError } from '../lib/toast.js'
 import { printComanda, printScontrino } from '../lib/printer.js'
 import PosProductPicker from './PosProductPicker.jsx'
+import { IconPencil, IconPrinter, IconReceipt, IconCard, IconRefresh, IconX, IconCheck, IconClose } from './Icons.jsx'
 import CustomDrinkForm from './CustomDrinkForm.jsx'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import PaymentScreen from './PaymentScreen.jsx'
@@ -948,7 +949,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                 )}
                 {!isNew && (
                   <button className="btn secondary small" onClick={() => setShowComande(true)}>
-                    🧾 Comande ({comande.length})
+                    <IconReceipt /> Comande ({comande.length})
                   </button>
                 )}
               </span>
@@ -1069,7 +1070,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                     </span>
                     <span className="row" style={{ gap: 4, alignItems: 'center' }}>
                       {(isDraft || l.removable) && (
-                        <button className="btn ghost small" aria-label={`Modifica ${l.name}`} onPointerDown={(e) => e.stopPropagation()} onClick={() => setEditLine(l)}>✏️</button>
+                        <button className="btn ghost small" aria-label={`Modifica ${l.name}`} onPointerDown={(e) => e.stopPropagation()} onClick={() => setEditLine(l)}><IconPencil /></button>
                       )}
                       <span className="qty" onPointerDown={(e) => e.stopPropagation()}>
                         <button aria-label="Riduci" onClick={() => minusRow(l)} disabled={!canMinus}>−</button>
@@ -1117,7 +1118,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                       closePaidOrder(order.id).catch((e) => toastError(`Chiusura non riuscita: ${e.message}`))
                     }
                   >
-                    ✅ Chiudi conto
+                    <IconCheck /> Chiudi conto
                   </button>
                 )}
               </div>
@@ -1144,7 +1145,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                 indietro con "← Ordini" in alto a sinistra. */}
             {isNew ? (
               <button className="btn secondary block" disabled={draftCount === 0} onClick={handlePayNow}>
-                💳 Pagamento · {formatPrice(draftTotal)}
+                <IconCard /> Pagamento · {formatPrice(draftTotal)}
               </button>
             ) : (
               <>
@@ -1153,11 +1154,11 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                     className="btn ghost small"
                     onClick={() => printScontrino(order).catch((e) => setError(`Stampa: ${e.message}`))}
                   >
-                    🧾 Scontrino (non fiscale)
+                    <IconReceipt /> Scontrino (non fiscale)
                   </button>
                   {canPay ? (
                     <button className="btn small" onClick={() => setShowPayment(true)}>
-                      💳 Pagamento
+                      <IconCard /> Pagamento
                     </button>
                   ) : (
                     <span />
@@ -1166,7 +1167,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
 
                 {!closed && workflowOn && (
                   <button className="btn ghost small block" onClick={() => setShowComande(true)}>
-                    🔄 Stato servizio
+                    <IconRefresh /> Stato servizio
                   </button>
                 )}
 
@@ -1175,7 +1176,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                     className="btn ghost small block"
                     onClick={() => setConfirmCancel(true)}
                   >
-                    ✖️ Annulla ordine
+                    <IconX /> Annulla ordine
                   </button>
                 )}
               </>
@@ -1193,8 +1194,8 @@ export default function OrderPosDetail({ order: orderProp = null }) {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="row between" style={{ alignItems: 'center' }}>
-              <h3 style={{ margin: 0 }}>🧾 Comande</h3>
-              <button className="btn ghost small" onClick={() => setShowComande(false)}>✕ Chiudi</button>
+              <h3 style={{ margin: 0 }}><IconReceipt /> Comande</h3>
+              <button className="btn ghost small" onClick={() => setShowComande(false)}><IconClose /> Chiudi</button>
             </div>
             {effComande.map((c) => {
               const ns = nextComandaStatus(c.status)
@@ -1226,7 +1227,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                       aria-label={`Stampa comanda ${c.seq}`}
                       onClick={() => printComanda(order, c).catch((e) => setError(`Stampa: ${e.message}`))}
                     >
-                      🖨 Stampa
+                      <IconPrinter /> Stampa
                     </button>
                     {ns && workflowOn && !closed ? (
                       <button className="btn small" onClick={() => advance(c.id, ns)}>
