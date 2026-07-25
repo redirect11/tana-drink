@@ -2487,6 +2487,8 @@ body.fullbleed,
   width: var(--pos-cats-w, fit-content);
   min-width: 88px;
   max-width: none;
+  /* Allargando la colonna cresce anche il testo (e viceversa). */
+  font-size: calc(1rem * var(--cats-scale, 1));
 }
 .posd-cats button {
   white-space: nowrap;
@@ -2508,6 +2510,19 @@ body.fullbleed,
   min-width: 300px;
   max-width: none;
   flex-shrink: 0;
+}
+/* Lista dell'ordine: allargando la colonna crescono i testi (nomi, prezzi,
+   quantità), e si rimpiccioliscono restringendola. Il testo secondario usa em
+   così segue la scala; il footer ha una sua scala (--foot-scale) indipendente. */
+.posd-list {
+  font-size: calc(1rem * var(--comanda-scale, 1));
+}
+.posd-list .small {
+  font-size: 0.82em;
+}
+.posd-list .qty button,
+.posd-list .qty strong {
+  font-size: 1em;
 }
 /* Footer dell'ordine, ridimensionabile: la scala (--foot-scale) guida la
    dimensione del font, e tasti/prezzi la seguono perché espressi in em. */

@@ -136,6 +136,12 @@ export default function OrderPosDetail({ order = null }) {
   // Scala del footer (totale + conferma/pagamento): la maniglia in cima lo
   // "allunga" e tasti/font crescono insieme. Valore in % (100 = normale).
   const footRz = useResizable('pos-foot-scale', { def: 100, min: 80, max: 175, axis: 'y', side: 'up', speed: 0.5 })
+  // Allargando una colonna ne crescono anche i testi (e viceversa): la scala
+  // del font segue la larghezza rispetto alla misura di riposo (def), con un
+  // tetto per non esagerare. Guida i font via CSS (--cats-scale/--comanda-scale).
+  const clampScale = (v, lo, hi) => Math.max(lo, Math.min(hi, v))
+  const catsScale = clampScale(catsRz.width / 150, 0.85, 1.8)
+  const comandaScale = clampScale(comandaRz.width / 360, 0.9, 1.5)
 
   // Staff loggato (per l'attribuzione dell'ordine creato dal POS).
   const [staff, setStaff] = useState(null)
@@ -905,7 +911,12 @@ export default function OrderPosDetail({ order = null }) {
       {/* ── Corpo a 3 colonne: categorie · griglia · ordine ── */}
       <div
         className="posd-body"
-        style={{ '--pos-cats-w': `${catsRz.width}px`, '--pos-comanda-w': `${comandaRz.width}px` }}
+        style={{
+          '--pos-cats-w': `${catsRz.width}px`,
+          '--pos-comanda-w': `${comandaRz.width}px`,
+          '--cats-scale': catsScale,
+          '--comanda-scale': comandaScale,
+        }}
       >
         <PosProductPicker
           drinks={drinks}
@@ -984,7 +995,7 @@ export default function OrderPosDetail({ order = null }) {
             )}
           </div>
 
-          <div ref={listRef} style={{ flex: 1, overflowY: 'auto', padding: '6px 12px 10px' }}>
+          <div ref={listRef} className="posd-list" style={{ flex: 1, overflowY: 'auto', padding: '6px 12px 10px' }}>
             {orderedLines.length === 0 && (
               <p className="muted small" style={{ margin: '6px 0 0' }}>
                 Tocca i prodotti per aggiungerli all'ordine.
@@ -1046,7 +1057,7 @@ export default function OrderPosDetail({ order = null }) {
                       opacity: isPaid ? 0.6 : dragIndex != null && dragIndex !== idx ? 0.85 : 1,
                     }}
                   >
-                    <span className="grow" style={{ fontSize: '0.92rem' }}>
+                    <span className="grow" style={{ fontSize: '0.92em' }}>
                       {!closed && !isPaid && <span aria-hidden style={{ opacity: 0.4, marginRight: 4 }}>⠿</span>}
                       <span aria-hidden style={{ marginRight: 4 }} title={isPaid ? 'pagato' : isDraft ? 'non confermato' : STATUS_LABELS[l.status]}>
                         {isPaid ? '💳' : isDraft ? '🟡' : STATUS_EMOJI[l.status]}
