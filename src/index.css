@@ -2485,20 +2485,19 @@ body.fullbleed,
   flex-direction: column;
   gap: 6px;
   width: var(--pos-cats-w, fit-content);
-  min-width: 88px;
+  min-width: 112px;
   max-width: none;
   /* Allargando la colonna cresce anche il testo (e viceversa). */
   font-size: calc(1rem * var(--cats-scale, 1));
 }
 .posd-cats button {
   white-space: nowrap;
-  /* Il tasto cresce in ALTEZZA insieme alla larghezza quando si allarga la
-     colonna (tasti più grandi, anche se se ne vedono meno): l'altezza segue
-     la larghezza via aspect-ratio, con un minimo per quando è stretta. Il
-     contenuto (icona/pallino + nome) gestisce da sé l'overflow, quindi qui
-     NON si taglia col button (rischiava di nascondere il testo). */
-  aspect-ratio: 3 / 1;
-  min-height: 40px;
+  /* L'altezza segue il contenuto (padding+font in em, quindi scala con la
+     larghezza della colonna): niente aspect-ratio, che rendeva i tasti troppo
+     alti da larga e schiacciati da stretta. Il nome si accorcia con l'ellissi
+     invece di andare a capo. */
+  min-height: 2.4em;
+  overflow: hidden;
   flex-shrink: 0;
 }
 .posd-comanda {
@@ -2520,9 +2519,17 @@ body.fullbleed,
 .posd-list .small {
   font-size: 0.82em;
 }
-.posd-list .qty button,
+.posd-list .qty button {
+  /* un filo più piccoli di default (34px) e scalano con la colonna */
+  width: 1.9em;
+  height: 1.9em;
+  font-size: 1em;
+}
 .posd-list .qty strong {
   font-size: 1em;
+}
+.posd-list .qty {
+  gap: 0.5em;
 }
 /* Footer dell'ordine, ridimensionabile: la scala (--foot-scale) guida la
    dimensione del font, e tasti/prezzi la seguono perché espressi in em. */

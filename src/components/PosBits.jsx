@@ -79,19 +79,21 @@ export function DrinkTile({ drink, qty, onAdd, onSetQty, color = null, favorite 
             left: 0,
             width: 0,
             height: 0,
-            borderTop: `16px solid ${color}`,
-            borderRight: '16px solid transparent',
+            // in em: la linguetta scala con la dimensione della card
+            borderTop: `1em solid ${color}`,
+            borderRight: '1em solid transparent',
             borderTopLeftRadius: 14,
           }}
         />
       )}
 
-      {/* Badge quantità */}
+      {/* Badge quantità: in ALTO A SINISTRA, così non copre la stella dei
+          preferiti (in alto a destra). */}
       {inCart && (
         <div style={{
           position: 'absolute',
           top: 6,
-          right: 6,
+          left: 6,
           background: 'var(--accent, #b47a3c)',
           color: '#fff',
           borderRadius: '50%',
