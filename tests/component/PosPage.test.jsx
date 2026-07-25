@@ -97,7 +97,7 @@ vi.mock('firebase/auth', () => ({
 
 import PosPage from '../../src/pages/PosPage.jsx'
 import { submitPosOrder } from '../../src/lib/pendingOrders.js'
-import { createOrder, subscribeSettings } from '../../src/lib/api.js'
+import { createOrder, updateOrderInfo, subscribeSettings } from '../../src/lib/api.js'
 import { printComanda } from '../../src/lib/printer.js'
 
 function mount() {
@@ -137,32 +137,39 @@ describe('cassa: layout identico al dettaglio ordine', () => {
   })
 })
 
-describe('conferma con modale nome', () => {
-  it('Conferma chiede il nome e salva con quello indicato', async () => {
+describe('creazione: ordine creato al primo item, nome chiesto alla chiusura', () => {
+  it('aggiungere un item CREA subito l’ordine (createOrder) con quegli item', async () => {
     const user = userEvent.setup()
     mount()
     await user.click(screen.getByText('Mojito'))
-    await user.click(screen.getByRole('button', { name: '✅ Conferma' }))
-    // modale nome
-    const modal = screen.getByRole('dialog', { name: 'Nome del conto' })
-    await user.type(screen.getByLabelText('Nome'), 'iole')
-    expect(modal).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: /^Salva$/ }))
-    expect(submitPosOrder).toHaveBeenCalledTimes(1)
-    const arg = submitPosOrder.mock.calls[0][0]
-    expect(arg.customer_name).toBe('iole')
-    expect(arg.printNow).toBe(false)
-    expect(arg.items).toEqual([expect.objectContaining({ drink_id: 'mojito', qty: 1 })])
+    // niente tasto Conferma: l'ordine si crea da solo poco dopo l'aggiunta
+    expect(screen.queryByRole('button', { name: /✅ Conferma/ })).not.toBeInTheDocument()
+    await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1))
+    expect(createOrder.mock.calls[0][0].items).toEqual([
+      expect.objectContaining({ drink_id: 'mojito', qty: 1 }),
+    ])
   })
 
-  it('senza nome: salva col progressivo (customer_name null)', async () => {
+  it('alla chiusura di un ordine appena creato chiede il nome e lo salva', async () => {
     const user = userEvent.setup()
     mount()
     await user.click(screen.getByText('Mojito'))
-    await user.click(screen.getByRole('button', { name: '✅ Conferma' }))
-    await user.click(screen.getByRole('button', { name: /Salva senza nome/ }))
-    expect(submitPosOrder).toHaveBeenCalledTimes(1)
-    expect(submitPosOrder.mock.calls[0][0].customer_name).toBeNull()
+    await user.click(screen.getByRole('button', { name: /✓ Chiudi/ }))
+    await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1))
+    // l'ordine creato non ha nome → lo si chiede una volta
+    await user.type(await screen.findByLabelText('Nome'), 'iole')
+    await user.click(screen.getByRole('button', { name: /^Salva$/ }))
+    expect(updateOrderInfo).toHaveBeenCalledWith('ord-nuovo', { customer_name: 'iole' })
+  })
+
+  it('chiusura senza nome: nessun nome salvato (resta il progressivo)', async () => {
+    const user = userEvent.setup()
+    mount()
+    await user.click(screen.getByText('Mojito'))
+    await user.click(screen.getByRole('button', { name: /✓ Chiudi/ }))
+    await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1))
+    await user.click(await screen.findByRole('button', { name: /Salva senza nome/ }))
+    expect(updateOrderInfo).not.toHaveBeenCalled()
   })
 
   it('la stampa comanda è un’azione a parte: stampa senza creare l’ordine', async () => {
@@ -229,9 +236,8 @@ describe('conto di gruppo dal POS', () => {
     mountGroup('g1')
     expect(screen.getByText(/Tavolo 4/)).toBeInTheDocument()
     await user.click(screen.getByText('Mojito'))
-    await user.click(screen.getByRole('button', { name: '✅ Conferma' }))
-    await user.click(screen.getByRole('button', { name: /Salva senza nome/ }))
-    const arg = submitPosOrder.mock.calls[0][0]
+    await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1))
+    const arg = createOrder.mock.calls[0][0]
     expect(arg.group_id).toBe('g1')
     expect(arg.group_name_snapshot).toBe('Tavolo 4')
   })
@@ -247,9 +253,8 @@ describe('conto di gruppo dal POS', () => {
     await user.click(screen.getByRole('button', { name: /Associa a gruppo/ }))
     await user.click(screen.getByRole('button', { name: /Tavolo 4/ }))
     await user.click(screen.getByText('Mojito'))
-    await user.click(screen.getByRole('button', { name: '✅ Conferma' }))
-    await user.click(screen.getByRole('button', { name: /Salva senza nome/ }))
-    expect(submitPosOrder.mock.calls[0][0].group_id).toBe('g1')
+    await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1))
+    expect(createOrder.mock.calls[0][0].group_id).toBe('g1')
   })
 
   it('un gruppo CONTENITORE non è fra quelli scegliibili', async () => {
@@ -264,9 +269,8 @@ describe('conto di gruppo dal POS', () => {
     const user = userEvent.setup()
     mount()
     await user.click(screen.getByText('Mojito'))
-    await user.click(screen.getByRole('button', { name: '✅ Conferma' }))
-    await user.click(screen.getByRole('button', { name: /Salva senza nome/ }))
-    expect(submitPosOrder.mock.calls[0][0].group_id).toBeNull()
+    await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1))
+    expect(createOrder.mock.calls[0][0].group_id).toBeNull()
   })
 })
 
@@ -288,26 +292,23 @@ describe('gestione preparazione opzionale', () => {
     const user = userEvent.setup()
     mountConWorkflow(true)
     await user.click(screen.getByText('Mojito'))
-    await user.click(screen.getByRole('button', { name: '✅ Conferma' }))
-    await user.click(screen.getByRole('button', { name: /Salva senza nome/ }))
-    expect(submitPosOrder.mock.calls[0][0].status).toBe('in_preparazione')
+    await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1))
+    expect(createOrder.mock.calls[0][0].status).toBe('in_preparazione')
   })
 
   it('SPENTA: l’ordine nasce e resta "ricevuto"', async () => {
     const user = userEvent.setup()
     mountConWorkflow(false)
     await user.click(screen.getByText('Mojito'))
-    await user.click(screen.getByRole('button', { name: '✅ Conferma' }))
-    await user.click(screen.getByRole('button', { name: /Salva senza nome/ }))
-    expect(submitPosOrder.mock.calls[0][0].status).toBe('ricevuto')
+    await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1))
+    expect(createOrder.mock.calls[0][0].status).toBe('ricevuto')
   })
 
   it('il POS eredita la modalità di consegna del locale', async () => {
     const user = userEvent.setup()
     mountConWorkflow(true)
     await user.click(screen.getByText('Mojito'))
-    await user.click(screen.getByRole('button', { name: '✅ Conferma' }))
-    await user.click(screen.getByRole('button', { name: /Salva senza nome/ }))
-    expect(submitPosOrder.mock.calls[0][0].service_mode).toBe('banco')
+    await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1))
+    expect(createOrder.mock.calls[0][0].service_mode).toBe('banco')
   })
 })
