@@ -65,7 +65,7 @@ export function DrinkTile({ drink, qty, onAdd, onSetQty, color = null, favorite 
             zIndex: 2,
           }}
         >
-          {favorite ? '⭐' : '☆'}
+          {favorite ? '★' : '☆'}
         </button>
       )}
 

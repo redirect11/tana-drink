@@ -191,7 +191,7 @@ describe('pagamento diretto dal POS', () => {
     createOrder.mockImplementationOnce(() => new Promise(() => {}))
     mount()
     await user.click(screen.getByText('Mojito'))
-    await user.click(screen.getByRole('button', { name: /💳 Pagamento/ }))
+    await user.click(screen.getByRole('button', { name: /Pagamento/ }))
     // schermata aperta all'istante sull'ordine LOCALE (totale già giusto)
     expect(screen.getByRole('dialog', { name: 'Pagamento' })).toBeInTheDocument()
     expect(screen.getByTestId('pay-amount')).toHaveTextContent('7,00')
@@ -202,7 +202,7 @@ describe('pagamento diretto dal POS', () => {
     const user = userEvent.setup()
     mount()
     await user.click(screen.getByText('Mojito'))
-    await user.click(screen.getByRole('button', { name: /💳 Pagamento/ }))
+    await user.click(screen.getByRole('button', { name: /Pagamento/ }))
     await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1))
     expect(createOrder.mock.calls[0][0]).toMatchObject({
       status: 'in_preparazione',
