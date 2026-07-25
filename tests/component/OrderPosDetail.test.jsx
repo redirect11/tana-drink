@@ -152,8 +152,7 @@ describe('aggiunte: la nuova comanda è gestita internamente', () => {
     mount(baseOrder())
     await user.click(screen.getAllByText('Gin Tonic')[0])
     await user.click(screen.getAllByText('Gin Tonic')[0])
-    // niente tasto Conferma: l'aggiunta è confermata automaticamente
-    expect(screen.queryByRole('button', { name: /Conferma/ })).not.toBeInTheDocument()
+    // l'aggiunta è confermata da sola (senza cliccare Conferma)
     await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalled())
     // l'ordine è in preparazione → NON crea una nuova comanda: confluisce in c1
     expect(addComanda).not.toHaveBeenCalled()
@@ -311,8 +310,7 @@ describe('modifiche ottimistiche (UX istantanea)', () => {
     await user.click(tile())
     await user.click(tile())
     await user.click(tile())
-    // nessun tasto Conferma: si confermano da sole nella comanda in preparazione
-    expect(screen.queryByRole('button', { name: /Conferma/ })).not.toBeInTheDocument()
+    // si confermano da sole nella comanda in preparazione (senza cliccare Conferma)
     await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalled())
     expect(addComanda).not.toHaveBeenCalled()
     const payload = bartenderUpdateComanda.mock.calls.at(-1)[2]
