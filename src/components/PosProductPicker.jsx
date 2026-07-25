@@ -37,6 +37,22 @@ export default function PosProductPicker({
   const [reordering, setReordering] = useState(false)
   const gridRef = useRef(null)
 
+  // Font delle card che segue la larghezza della colonna centrale: allargando
+  // (o restringendo) le colonne laterali, il centro cambia e il testo cresce/
+  // cala di conseguenza. Vale sia in creazione sia in modifica (stesso picker).
+  const [tileScale, setTileScale] = useState(1)
+  useEffect(() => {
+    const el = gridRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver((entries) => {
+      const w = entries[0].contentRect.width
+      const s = Math.max(0.8, Math.min(1.5, w / 480))
+      setTileScale(Math.round(s * 100) / 100)
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
   useEffect(() => {
     if (cats.length > 0 && selectedCat === null) setSelectedCat('__all__')
   }, [cats, selectedCat])
@@ -184,7 +200,7 @@ export default function PosProductPicker({
       <aside className="posd-cats">
         <button onClick={() => setSelectedCat('__all__')} style={catBtnStyle(selectedCat === '__all__')} title="Tutti">
           {categoryDisplay === 'icon' ? (
-            <span aria-hidden style={{ fontSize: '1.25rem' }}>▦</span>
+            <span aria-hidden style={{ fontSize: '1.25em' }}>▦</span>
           ) : (
             <>
               <span aria-hidden style={catDotStyle(null)} />
@@ -200,7 +216,7 @@ export default function PosProductPicker({
             title={sc.label}
           >
             {categoryDisplay === 'icon' ? (
-              <span aria-hidden style={{ fontSize: '1.2rem' }}>{sc.label.slice(0, 2)}</span>
+              <span aria-hidden style={{ fontSize: '1.2em' }}>{sc.label.slice(0, 2)}</span>
             ) : (
               <span>{sc.label}</span>
             )}
@@ -281,9 +297,11 @@ export default function PosProductPicker({
             overflowY: 'auto',
             padding: '10px 8px',
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+            gridTemplateColumns: `repeat(auto-fill, minmax(${Math.round(160 * tileScale)}px, 1fr))`,
             alignContent: 'start',
             gap: 8,
+            // il font-size della griglia guida i testi em delle card
+            fontSize: `${tileScale}rem`,
             opacity: disabled ? 0.5 : 1,
             pointerEvents: disabled ? 'none' : 'auto',
           }}

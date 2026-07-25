@@ -12,7 +12,9 @@ export function catBtnStyle(active) {
       : 'var(--tile-bg)',
     color: active ? '#fff' : 'inherit',
     fontWeight: active ? 700 : 400,
-    fontSize: '0.8rem',
+    // em (non rem): così il font segue la scala della colonna categorie
+    // (--cats-scale su .posd-cats), crescendo/calando con la larghezza.
+    fontSize: '0.8em',
     textAlign: 'left',
     cursor: 'pointer',
     transition: 'background 0.12s',
@@ -24,13 +26,14 @@ export function catBtnStyle(active) {
 }
 
 export const qtyBtnStyle = {
-  width: 24,
-  height: 24,
+  // em: i tastini +/- scalano col font della card (larghezza colonna centrale).
+  width: '1.5em',
+  height: '1.5em',
   borderRadius: '50%',
   border: '1px solid var(--line)',
   background: 'var(--tile-bg)',
   color: 'inherit',
-  fontSize: '1rem',
+  fontSize: '1em',
   cursor: 'pointer',
   display: 'flex',
   alignItems: 'center',
