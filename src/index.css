@@ -2492,11 +2492,11 @@ body.fullbleed,
 }
 .posd-cats button {
   white-space: nowrap;
-  /* L'altezza segue il contenuto (padding+font in em, quindi scala con la
-     larghezza della colonna): niente aspect-ratio, che rendeva i tasti troppo
-     alti da larga e schiacciati da stretta. Il nome si accorcia con l'ellissi
-     invece di andare a capo. */
-  min-height: 3em;
+  /* Altezza legata alla SCALA della colonna (in rem, non all'em del font
+     piccolo del tasto): tasti belli alti, che crescono allargando la colonna.
+     Niente aspect-ratio (rendeva i tasti troppo alti da larga e schiacciati da
+     stretta). Il nome si accorcia con l'ellissi invece di andare a capo. */
+  min-height: calc(3rem * var(--cats-scale, 1));
   overflow: hidden;
   flex-shrink: 0;
 }
