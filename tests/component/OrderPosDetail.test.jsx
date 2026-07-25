@@ -186,7 +186,8 @@ describe('aggiunte: la nuova comanda è gestita internamente', () => {
     const user = userEvent.setup()
     mount(baseOrder())
     await user.click(screen.getByText('Gin Tonic'))
-    await user.click(screen.getByRole('button', { name: /Modifica Gin Tonic/ }))
+    // l'item nel conto è cliccabile per modificarlo (niente tasto matita)
+    await user.click(screen.getAllByTitle(/Modifica Gin Tonic/).at(-1))
     // la ricetta del prodotto è già lì, quindi si può togliere/cambiare
     expect(screen.getByLabelText('Quantità Gin')).toHaveValue(40)
     expect(screen.queryByText(/non ha ingredienti configurati/)).not.toBeInTheDocument()
@@ -195,10 +196,10 @@ describe('aggiunte: la nuova comanda è gestita internamente', () => {
   it('drink SENZA ingredienti: avvisa il bartender', async () => {
     const user = userEvent.setup()
     mount(baseOrder())
-    // Il Mojito non ha recipe_items nel menù mock. Ora anche l'item confermato
-    // ha la ✏️, quindi ce ne sono più d'una: modifico l'ultima aggiunta (bozza).
+    // Il Mojito non ha recipe_items nel menù mock. L'item è cliccabile per
+    // modificarlo; ce n'è più d'uno (comanda + bozza): modifico l'ultima aggiunta.
     await user.click(screen.getAllByText('Mojito')[0])
-    await user.click(screen.getAllByRole('button', { name: /Modifica Mojito/ }).at(-1))
+    await user.click(screen.getAllByTitle(/Modifica Mojito/).at(-1))
     expect(screen.getByText(/non ha ingredienti configurati/)).toBeInTheDocument()
   })
 
@@ -408,8 +409,9 @@ describe('schermata Pagamento', () => {
         ],
       })
     )
-    expect(screen.queryByRole('button', { name: /Pagamento/ })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /Annulla ordine/ })).not.toBeInTheDocument()
+    // I tasti azione ci sono SEMPRE, ma su un conto chiuso sono disabilitati.
+    expect(screen.getByRole('button', { name: /Pagamento/ })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /Annulla ordine/ })).toBeDisabled()
   })
 })
 

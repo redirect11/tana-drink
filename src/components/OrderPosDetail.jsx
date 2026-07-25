@@ -49,7 +49,7 @@ import {
 import { toastSuccess, toastError } from '../lib/toast.js'
 import { printComanda, printScontrino } from '../lib/printer.js'
 import PosProductPicker from './PosProductPicker.jsx'
-import { IconPencil, IconPrinter, IconReceipt, IconCard, IconRefresh, IconX, IconCheck, IconClose } from './Icons.jsx'
+import { IconPrinter, IconReceipt, IconCard, IconRefresh, IconX, IconCheck, IconClose } from './Icons.jsx'
 import CustomDrinkForm from './CustomDrinkForm.jsx'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import PaymentScreen from './PaymentScreen.jsx'
@@ -387,6 +387,29 @@ export default function OrderPosDetail({ order: orderProp = null }) {
       scrollKeyRef.current = null
     }
   }, [orderedLines])
+
+  // Auto-larghezza della colonna ordine: aggiungendo un item la colonna si
+  // allarga (mai oltre il massimo) per far entrare il nome più lungo. Non si
+  // restringe da sola, così un allargamento manuale resta.
+  const measureRef = useRef(null)
+  const namesSig = orderedLines.map((l) => `${l.custom ? '*' : ''}${l.name}`).join('')
+  useEffect(() => {
+    if (isNew || !orderedLines.length || typeof document === 'undefined') return
+    const canvas = measureRef.current || (measureRef.current = document.createElement('canvas'))
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    const px = Math.round(16 * comandaScale * 0.88)
+    ctx.font = `500 ${px}px system-ui, -apple-system, "Segoe UI", sans-serif`
+    let maxW = 0
+    for (const l of orderedLines) {
+      const w = ctx.measureText(`⠿ ${l.custom ? '✨ ' : ''}${l.name}  · ${formatPrice(l.unit_price)}`).width
+      if (w > maxW) maxW = w
+    }
+    // overhead: padding lista + controlli quantità
+    const needed = Math.ceil(maxW + 24 + 86)
+    if (needed > comandaRz.width + 6) comandaRz.setWidth(Math.min(700, needed))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [namesSig])
 
   // Memoria bozza solo finché non confermato/pagato: se l'ordine è chiuso
   // (pagato/annullato) si azzera.
@@ -1054,24 +1077,23 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                       opacity: isPaid ? 0.6 : dragIndex != null && dragIndex !== idx ? 0.85 : 1,
                     }}
                   >
-                    <span className="grow" style={{ fontSize: '0.92em', display: 'flex', alignItems: 'center', minWidth: 0 }}>
-                      {!closed && !isPaid && <span aria-hidden style={{ opacity: 0.4, marginRight: 4, flexShrink: 0 }}>⠿</span>}
-                      <span aria-hidden style={{ marginRight: 4, flexShrink: 0 }} title={isPaid ? 'pagato' : isDraft ? 'non confermato' : STATUS_LABELS[l.status]}>
-                        {isPaid ? '💳' : isDraft ? '🟡' : STATUS_EMOJI[l.status]}
-                      </span>
-                      {/* nome: si accorcia con l'ellissi se la colonna è stretta */}
+                    {/* L'item è CLICCABILE per modificarlo (niente tasto matita
+                        che rubava spazio): tap sul nome → editor per-riga. */}
+                    <span
+                      className="grow"
+                      style={{ fontSize: '0.88em', display: 'flex', alignItems: 'center', minWidth: 0, cursor: !closed && (isDraft || l.removable) ? 'pointer' : 'inherit' }}
+                      onClick={() => { if (!closed && (isDraft || l.removable)) setEditLine(l) }}
+                      title={!closed && (isDraft || l.removable) ? `Modifica ${l.name}` : undefined}
+                    >
+                      {!closed && !isPaid && <span aria-hidden style={{ opacity: 0.35, marginRight: 4, flexShrink: 0 }}>⠿</span>}
                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
                         {l.custom ? '✨ ' : ''}{l.name}
                       </span>
-                      {/* prezzo del singolo: più grande e sempre su una riga */}
-                      <span className="muted" style={{ whiteSpace: 'nowrap', flexShrink: 0, marginLeft: 5, fontSize: '0.96em' }}>
+                      <span className="muted" style={{ whiteSpace: 'nowrap', flexShrink: 0, marginLeft: 5, fontSize: '0.95em' }}>
                         · {formatPrice(l.unit_price)}
                       </span>
                     </span>
                     <span className="row" style={{ gap: 4, alignItems: 'center' }}>
-                      {(isDraft || l.removable) && (
-                        <button className="btn ghost small" aria-label={`Modifica ${l.name}`} onPointerDown={(e) => e.stopPropagation()} onClick={() => setEditLine(l)}><IconPencil /></button>
-                      )}
                       <span className="qty" onPointerDown={(e) => e.stopPropagation()}>
                         <button aria-label="Riduci" onClick={() => minusRow(l)} disabled={!canMinus}>−</button>
                         <strong>{l.qty}</strong>
@@ -1141,46 +1163,43 @@ export default function OrderPosDetail({ order: orderProp = null }) {
               </div>
             )}
 
-            {/* Niente tasto Conferma: gli item si confermano da soli. Si torna
-                indietro con "← Ordini" in alto a sinistra. */}
-            {isNew ? (
-              <button className="btn secondary block" disabled={draftCount === 0} onClick={handlePayNow}>
-                <IconCard /> Pagamento · {formatPrice(draftTotal)}
+            {/* Niente tasto Conferma: gli item si confermano da soli (si torna
+                con "← Ordini"). I tasti azione sono SEMPRE presenti: quelli non
+                applicabili sono disabilitati, non spariscono. */}
+            <div className="grid-2">
+              <button
+                className="btn ghost small"
+                disabled={isNew}
+                onClick={() => printScontrino(order).catch((e) => setError(`Stampa: ${e.message}`))}
+              >
+                <IconReceipt /> Scontrino
               </button>
-            ) : (
-              <>
-                <div className="grid-2">
-                  <button
-                    className="btn ghost small"
-                    onClick={() => printScontrino(order).catch((e) => setError(`Stampa: ${e.message}`))}
-                  >
-                    <IconReceipt /> Scontrino (non fiscale)
-                  </button>
-                  {canPay ? (
-                    <button className="btn small" onClick={() => setShowPayment(true)}>
-                      <IconCard /> Pagamento
-                    </button>
-                  ) : (
-                    <span />
-                  )}
-                </div>
+              <button
+                className="btn small"
+                disabled={isNew ? draftCount === 0 : !canPay}
+                onClick={isNew ? handlePayNow : () => setShowPayment(true)}
+              >
+                <IconCard /> Pagamento{isNew && draftCount > 0 ? ` · ${formatPrice(draftTotal)}` : ''}
+              </button>
+            </div>
 
-                {!closed && workflowOn && (
-                  <button className="btn ghost small block" onClick={() => setShowComande(true)}>
-                    <IconRefresh /> Stato servizio
-                  </button>
-                )}
-
-                {!closed && (
-                  <button
-                    className="btn ghost small block"
-                    onClick={() => setConfirmCancel(true)}
-                  >
-                    <IconX /> Annulla ordine
-                  </button>
-                )}
-              </>
+            {workflowOn && (
+              <button
+                className="btn ghost small block"
+                disabled={isNew || closed}
+                onClick={() => setShowComande(true)}
+              >
+                <IconRefresh /> Stato servizio
+              </button>
             )}
+
+            <button
+              className="btn ghost small block"
+              disabled={isNew || closed}
+              onClick={() => setConfirmCancel(true)}
+            >
+              <IconX /> Annulla ordine
+            </button>
           </div>
         </div>
       </div>
