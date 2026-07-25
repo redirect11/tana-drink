@@ -87,13 +87,13 @@ export function DrinkTile({ drink, qty, onAdd, onSetQty, color = null, favorite 
         />
       )}
 
-      {/* Badge quantità: in ALTO A SINISTRA, così non copre la stella dei
-          preferiti (in alto a destra). */}
+      {/* Badge quantità: in ALTO A SINISTRA (non copre la stella dei preferiti),
+          spostato quel poco che basta per non finire sopra la linguetta colore. */}
       {inCart && (
         <div style={{
           position: 'absolute',
-          top: 6,
-          left: 6,
+          top: '0.7em',
+          left: '0.7em',
           background: 'var(--accent, #b47a3c)',
           color: '#fff',
           borderRadius: '50%',
