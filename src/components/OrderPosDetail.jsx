@@ -181,7 +181,6 @@ export default function OrderPosDetail({ order = null }) {
   // evidenzia un attimo: con la lista lunga, altrimenti, non si vede se è
   // stato inserito davvero.
   const listRef = useRef(null)
-  const infoRef = useRef(null)
   const flashTimer = useRef(null)
   const scrollKeyRef = useRef(null)
   const [flashKey, setFlashKey] = useState(null)
@@ -792,16 +791,7 @@ export default function OrderPosDetail({ order = null }) {
     table_label: order?.table_label || '',
     note: order?.note || '',
   })
-  const [showInfo, setShowInfo] = useState(false)
-  // Aprendo i "dati conto" si scorre lì: con la lista lunga altrimenti il
-  // pannello si apre fuori vista e non si capisce che si è aperto.
-  useEffect(() => {
-    if (showInfo) {
-      requestAnimationFrame(() =>
-        infoRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' })
-      )
-    }
-  }, [showInfo])
+  const [showInfo, setShowInfo] = useState(false) // popup dati conto
   const orderId = order?.id
   useEffect(() => {
     if (isNew) return
@@ -1090,57 +1080,11 @@ export default function OrderPosDetail({ order = null }) {
               </button>
             )}
 
-            {/* Dati conto (nome/tavolo/note) */}
-            <button className="btn ghost small block" style={{ marginTop: 10 }} onClick={() => setShowInfo((v) => !v)}>
-              {showInfo ? 'Nascondi dati conto' : '👤 Dati conto (nome, tavolo, note)'}
+            {/* Dati conto (nome/tavolo/note): si aprono in un popup, come in
+                creazione, invece di espandersi in fondo alla lista. */}
+            <button className="btn ghost small block" style={{ marginTop: 10 }} onClick={() => setShowInfo(true)}>
+              👤 Dati conto (nome, tavolo, note)
             </button>
-            {showInfo && (
-              <div ref={infoRef} style={{ marginTop: 6 }}>
-                <label htmlFor="pd-name">Nome</label>
-                <input
-                  id="pd-name"
-                  value={info.customer_name}
-                  disabled={closed}
-                  onKeyDown={blurOnEnter}
-                  onChange={(e) => setInfo((v) => ({ ...v, customer_name: e.target.value }))}
-                />
-                <div className="grid-2" style={{ marginTop: 6 }}>
-                  <div>
-                    <label htmlFor="pd-table">Tavolo</label>
-                    <input
-                      id="pd-table"
-                      value={info.table_label}
-                      disabled={closed}
-                      onKeyDown={blurOnEnter}
-                      onChange={(e) => setInfo((v) => ({ ...v, table_label: e.target.value }))}
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="pd-note">Note</label>
-                    <input
-                      id="pd-note"
-                      value={info.note}
-                      disabled={closed}
-                      onKeyDown={blurOnEnter}
-                      onChange={(e) => setInfo((v) => ({ ...v, note: e.target.value }))}
-                    />
-                  </div>
-                </div>
-                {infoDirty && (
-                  <button
-                    className="btn small block"
-                    style={{ marginTop: 6 }}
-                    onClick={() =>
-                      updateOrderInfo(order.id, info).catch((e) =>
-                        toastError(`Dati conto non salvati: ${e.message}`)
-                      )
-                    }
-                  >
-                    💾 Salva dati conto
-                  </button>
-                )}
-              </div>
-            )}
           </div>
 
           {/* Footer: avanzamento comanda + totale + CONFERMA vicino a PAGAMENTO.
@@ -1294,6 +1238,74 @@ export default function OrderPosDetail({ order = null }) {
               )
             })}
             {comande.length === 0 && <p className="muted small">Nessuna comanda.</p>}
+          </div>
+        </div>
+      )}
+
+      {/* ── Popup Dati conto (nome/tavolo/note) ── */}
+      {showInfo && (
+        <div className="overlay confirm-overlay" onClick={() => setShowInfo(false)}>
+          <div
+            className="confirm-box"
+            role="dialog"
+            aria-label="Dati conto"
+            style={{ width: 'min(400px, 94vw)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="row between" style={{ alignItems: 'center' }}>
+              <h3 style={{ margin: 0 }}>👤 Dati conto</h3>
+              <button className="btn ghost small" onClick={() => setShowInfo(false)}>✕</button>
+            </div>
+            <label htmlFor="pd-name" style={{ display: 'block', marginTop: 10 }}>Nome</label>
+            <input
+              id="pd-name"
+              value={info.customer_name}
+              disabled={closed}
+              autoFocus
+              onKeyDown={blurOnEnter}
+              onChange={(e) => setInfo((v) => ({ ...v, customer_name: e.target.value }))}
+              placeholder="Es. Marco, Tavolo 4…"
+            />
+            <div className="grid-2" style={{ marginTop: 8 }}>
+              <div>
+                <label htmlFor="pd-table">Tavolo</label>
+                <input
+                  id="pd-table"
+                  value={info.table_label}
+                  disabled={closed}
+                  onKeyDown={blurOnEnter}
+                  onChange={(e) => setInfo((v) => ({ ...v, table_label: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label htmlFor="pd-note">Note</label>
+                <input
+                  id="pd-note"
+                  value={info.note}
+                  disabled={closed}
+                  onKeyDown={blurOnEnter}
+                  onChange={(e) => setInfo((v) => ({ ...v, note: e.target.value }))}
+                />
+              </div>
+            </div>
+            {!closed && (
+              <button
+                className="btn block"
+                style={{ marginTop: 12 }}
+                onClick={() => {
+                  // In modifica si salva sull'ordine; in creazione i dati restano
+                  // in `info` e finiscono nell'ordine appena lo si crea.
+                  if (!isNew && order?.id && infoDirty) {
+                    updateOrderInfo(order.id, info).catch((e) =>
+                      toastError(`Dati conto non salvati: ${e.message}`)
+                    )
+                  }
+                  setShowInfo(false)
+                }}
+              >
+                {isNew ? 'OK' : '💾 Salva dati conto'}
+              </button>
+            )}
           </div>
         </div>
       )}
