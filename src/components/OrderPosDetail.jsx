@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   advanceComanda,
   addComanda,
@@ -74,16 +74,18 @@ import PaymentScreen from './PaymentScreen.jsx'
 // preparazione (una NUOVA comanda solo se l'ordine è già pronto/servito).
 // Dal footer si "Chiude" (torna alla coda); il pagamento resta a parte.
 
-export default function OrderPosDetail({ order = null }) {
-  const isNew = !order
+export default function OrderPosDetail({ order: orderProp = null }) {
   const navigate = useNavigate()
-  const location = useLocation()
-  // Ordine "appena creato": ci si arriva dalla creazione (auto-creato all'aggiunta
-  // del primo item). All'uscita, se non ha ancora un nome, lo si chiede UNA volta.
-  const justCreatedRef = useRef(!!location.state?.justCreated)
-  // Ordine appena creato in fase di USCITA dalla creazione: tiene l'ordine reale
-  // in attesa del nome nel modale (submitNew).
-  const createdRef = useRef(null)
+  // Ordine auto-creato IN PLACE alla prima aggiunta (creazione): NON si naviga
+  // altrove, così il layout non si ricarica. Da lì la schermata è identica alla
+  // modifica (l'ordine effettivo è prop OPPURE quello appena creato).
+  const [selfOrder, setSelfOrder] = useState(null)
+  const order = orderProp || selfOrder
+  const isNew = !order
+  // Ordine appena creato in place e ancora senza nome: all'uscita lo si chiede
+  // una volta (poi non più).
+  const createdInPlace = !orderProp && !!selfOrder
+  const nameAskedRef = useRef(false)
   const { drinks, cats, loading } = useMenu()
   const [error, setError] = useState(null)
   const [showCustom, setShowCustom] = useState(false)
@@ -160,6 +162,14 @@ export default function OrderPosDetail({ order = null }) {
       }
     })
   }, [isNew])
+
+  // Ordine auto-creato in place: lo si tiene aggiornato dal server (comande,
+  // pagamenti…) senza rimontare la pagina.
+  const selfOrderId = selfOrder?.id
+  useEffect(() => {
+    if (!selfOrderId || orderProp) return
+    return subscribeOrder(selfOrderId, (o) => o && setSelfOrder(o), () => {})
+  }, [selfOrderId, orderProp])
 
   // PAGAMENTO DIRETTO (creazione): la schermata si apre subito su un ordine
   // locale; la creazione gira in background (resolveOrderId).
@@ -666,20 +676,16 @@ export default function OrderPosDetail({ order = null }) {
   useEffect(() => {
     if (draft.length === 0) return
     const t = setTimeout(() => {
-      if (isNew) {
-        createFromDraftRef.current().then((o) => {
-          if (o) navigate(`/ordine/${o.id}`, { state: { justCreated: true } })
-        })
-      } else {
-        flushAdditionsRef.current()
-      }
+      if (isNew) createFromDraftRef.current()
+      else flushAdditionsRef.current()
     }, 300)
     return () => clearTimeout(t)
-  }, [draft, isNew, navigate])
+  }, [draft, isNew])
 
-  // CREAZIONE: l'ordine NON si "conferma" più a mano. Appena si aggiunge il
-  // primo item viene CREATO (createFromDraft) e da lì si continua come nella
-  // modifica (aggiunte confermate al volo). Il nome si chiede solo all'uscita.
+  // CREAZIONE: appena si aggiunge il primo item l'ordine viene CREATO IN PLACE
+  // (setSelfOrder), SENZA navigare: la schermata resta montata e da lì si
+  // continua come nella modifica (aggiunte confermate al volo). Il nome si
+  // chiede solo all'uscita, se manca.
   const creatingRef = useRef(false)
   const createFromDraft = async () => {
     if (!isNew || creatingRef.current) return null
@@ -699,6 +705,7 @@ export default function OrderPosDetail({ order = null }) {
         group_name_snapshot: group && !groupIsContainer ? group.name : null,
       })
       clearDraft()
+      setSelfOrder(created) // diventa "modifica" in place, niente reload
       return created
     } catch (e) {
       creatingRef.current = false
@@ -709,17 +716,13 @@ export default function OrderPosDetail({ order = null }) {
   const createFromDraftRef = useRef(createFromDraft)
   createFromDraftRef.current = createFromDraft
 
-  // Modale nome: salva il nome sull'ordine reale (appena creato) e torna alla
-  // coda. In creazione l'ordine è in `createdRef`; in modifica è `order`
-  // (ordine appena creato uscito senza nome).
+  // Modale nome (uscita di un ordine appena creato senza nome): lo salva
+  // sull'ordine e torna alla coda.
   const submitNew = (name) => {
     setAskName(false)
     const nm = (name || '').trim() || null
-    const target = createdRef.current || order
-    createdRef.current = null
-    justCreatedRef.current = false
-    if (target?.id && nm) {
-      updateOrderInfo(target.id, { customer_name: nm }).catch((e) =>
+    if (order?.id && nm) {
+      updateOrderInfo(order.id, { customer_name: nm }).catch((e) =>
         toastError(`Nome non salvato: ${e.message}`)
       )
     }
@@ -817,25 +820,25 @@ export default function OrderPosDetail({ order = null }) {
   // ordine APPENA creato glielo si chiede una volta sola.
   const needsName = (o) => o && !o.customer_name && !o.table_label
 
-  // Uscita dalla schermata: l'ordine esiste sempre (creato all'aggiunta del
-  // primo item), quindi non c'è nulla da "confermare".
+  // Uscita dalla schermata.
+  const askNameThenExit = () => {
+    nameAskedRef.current = true
+    setAskName(true)
+  }
   const handleExit = () => {
     if (!isNew) {
-      // MODIFICA: eventuali item ancora in volo si confermano ora. Se è un
-      // ordine appena creato senza nome, lo si chiede una volta prima di uscire.
+      // Le aggiunte ancora in volo si confermano ora. Se è un ordine creato in
+      // place senza nome, lo si chiede una volta prima di uscire.
       flushAdditions()
-      if (justCreatedRef.current && needsName(order)) return setAskName(true)
+      if (createdInPlace && !nameAskedRef.current && needsName(order)) return askNameThenExit()
       return navigate('/bar')
     }
-    // CREAZIONE: niente in bozza → non è stato creato nulla, si esce. Con item
-    // in bozza, si crea l'ordine ora e — se manca il nome — lo si chiede.
+    // Nulla ancora creato (uscita prima dell'auto-creazione): con item in bozza
+    // si crea ora e — se manca il nome — lo si chiede; altrimenti si esce.
     if (draftCount === 0) return navigate('/bar')
     createFromDraftRef.current().then((o) => {
       if (!o) return
-      if (needsName(o)) {
-        createdRef.current = o
-        return setAskName(true)
-      }
+      if (needsName(o)) return askNameThenExit()
       navigate('/bar')
     })
   }
@@ -1343,13 +1346,7 @@ export default function OrderPosDetail({ order = null }) {
 
       {/* ── Modale nome del conto all'uscita di un ordine appena creato ── */}
       {askName && (
-        <div
-          className="overlay confirm-overlay"
-          onClick={() => {
-            createdRef.current = null
-            setAskName(false)
-          }}
-        >
+        <div className="overlay confirm-overlay" onClick={() => setAskName(false)}>
           <form
             className="confirm-box"
             role="dialog"
