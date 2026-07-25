@@ -2520,16 +2520,16 @@ body.fullbleed,
   font-size: 0.82em;
 }
 .posd-list .qty button {
-  /* un filo più piccoli di default (34px) e scalano con la colonna */
-  width: 1.9em;
-  height: 1.9em;
-  font-size: 1em;
+  /* più piccoli, per non rubare spazio al nome; scalano con la colonna */
+  width: 1.6em;
+  height: 1.6em;
+  font-size: 0.95em;
 }
 .posd-list .qty strong {
-  font-size: 1em;
+  font-size: 0.95em;
 }
 .posd-list .qty {
-  gap: 0.5em;
+  gap: 0.4em;
 }
 /* Footer dell'ordine, ridimensionabile: la scala (--foot-scale) guida la
    dimensione del font, e tasti/prezzi la seguono perché espressi in em. */
