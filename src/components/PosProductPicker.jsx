@@ -37,21 +37,25 @@ export default function PosProductPicker({
   const [reordering, setReordering] = useState(false)
   const gridRef = useRef(null)
 
-  // Font delle card che segue la larghezza della colonna centrale: allargando
-  // (o restringendo) le colonne laterali, il centro cambia e il testo cresce/
-  // cala di conseguenza. Vale sia in creazione sia in modifica (stesso picker).
-  const [tileScale, setTileScale] = useState(1)
+  // Le card (e il loro testo) seguono la larghezza della colonna centrale, che
+  // cambia quando si ridimensionano le colonne laterali. Vale in creazione e in
+  // modifica (stesso picker).
+  const [gridW, setGridW] = useState(0)
   useEffect(() => {
     const el = gridRef.current
     if (!el || typeof ResizeObserver === 'undefined') return
-    const ro = new ResizeObserver((entries) => {
-      const w = entries[0].contentRect.width
-      const s = Math.max(0.8, Math.min(1.5, w / 480))
-      setTileScale(Math.round(s * 100) / 100)
-    })
+    const ro = new ResizeObserver((entries) => setGridW(Math.round(entries[0].contentRect.width)))
     ro.observe(el)
     return () => ro.disconnect()
   }, [])
+  const GRID_GAP = 8
+  // Font contenuto (tetto basso, così non diventa troppo grande).
+  const tileScale = gridW ? Math.max(0.9, Math.min(1.1, gridW / 520)) : 1
+  // Card un po' più strette e SEMPRE almeno 3 per riga: la min-width non
+  // supera mai un terzo della larghezza disponibile.
+  const tileMin = gridW
+    ? Math.max(92, Math.min(Math.round(146 * tileScale), Math.floor((gridW - 2 * GRID_GAP) / 3)))
+    : 146
 
   useEffect(() => {
     if (cats.length > 0 && selectedCat === null) setSelectedCat('__all__')
@@ -297,9 +301,9 @@ export default function PosProductPicker({
             overflowY: 'auto',
             padding: '10px 8px',
             display: 'grid',
-            gridTemplateColumns: `repeat(auto-fill, minmax(${Math.round(160 * tileScale)}px, 1fr))`,
+            gridTemplateColumns: `repeat(auto-fill, minmax(${tileMin}px, 1fr))`,
             alignContent: 'start',
-            gap: 8,
+            gap: GRID_GAP,
             // il font-size della griglia guida i testi em delle card
             fontSize: `${tileScale}rem`,
             opacity: disabled ? 0.5 : 1,
