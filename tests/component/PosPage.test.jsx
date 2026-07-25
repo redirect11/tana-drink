@@ -153,7 +153,7 @@ describe('creazione: ordine creato al primo item, nome chiesto alla chiusura', (
     const user = userEvent.setup()
     mount()
     await user.click(screen.getByText('Mojito'))
-    await user.click(screen.getByRole('button', { name: /✅ Conferma/ }))
+    await user.click(screen.getByRole('button', { name: /Torna agli ordini/ }))
     await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1))
     // l'ordine creato non ha nome → lo si chiede una volta
     await user.type(await screen.findByLabelText('Nome'), 'iole')
@@ -165,7 +165,7 @@ describe('creazione: ordine creato al primo item, nome chiesto alla chiusura', (
     const user = userEvent.setup()
     mount()
     await user.click(screen.getByText('Mojito'))
-    await user.click(screen.getByRole('button', { name: /✅ Conferma/ }))
+    await user.click(screen.getByRole('button', { name: /Torna agli ordini/ }))
     await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1))
     await user.click(await screen.findByRole('button', { name: /Salva senza nome/ }))
     expect(updateOrderInfo).not.toHaveBeenCalled()

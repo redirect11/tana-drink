@@ -49,13 +49,14 @@ export default function PosProductPicker({
     return () => ro.disconnect()
   }, [])
   const GRID_GAP = 8
-  // Font contenuto (tetto basso, così non diventa troppo grande).
-  const tileScale = gridW ? Math.max(0.9, Math.min(1.1, gridW / 520)) : 1
-  // Card un po' più strette e SEMPRE almeno 3 per riga: la min-width non
-  // supera mai un terzo della larghezza disponibile.
+  // Base più grande (leggibile su iPad): il minimo parte alto e cresce con la
+  // larghezza del centro.
+  const tileScale = gridW ? Math.max(1.05, Math.min(1.5, gridW / 440)) : 1.05
+  // Card più grandi ma SEMPRE almeno 3 per riga: la min-width non supera mai un
+  // terzo della larghezza disponibile.
   const tileMin = gridW
-    ? Math.max(92, Math.min(Math.round(146 * tileScale), Math.floor((gridW - 2 * GRID_GAP) / 3)))
-    : 146
+    ? Math.max(112, Math.min(Math.round(172 * tileScale), Math.floor((gridW - 2 * GRID_GAP) / 3)))
+    : 172
 
   useEffect(() => {
     if (cats.length > 0 && selectedCat === null) setSelectedCat('__all__')
