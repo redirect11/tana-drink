@@ -24,7 +24,7 @@ vi.mock('../../src/lib/api.js', () => ({
   createInvoice: vi.fn(() => Promise.resolve({ id: 'inv1', number: '1/2026' })),
   markInvoiceSent: vi.fn(() => Promise.resolve()),
   subscribeVouchers: vi.fn((cb) => { cb([]); return () => {} }),
-  payWithVoucher: vi.fn(() => Promise.resolve({ redeemed: 0, closed: false })),
+  applyVoucherDiscount: vi.fn(() => Promise.resolve({ redeemed: 0 })),
   cancelOrder: vi.fn(() => Promise.resolve()),
   fetchInventoryItems: vi.fn(() => Promise.resolve([])),
   // Usati solo in creazione (order == null): qui no-op.
