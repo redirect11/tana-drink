@@ -1203,8 +1203,8 @@ body.fullbleed .bar-content {
    senza dipendere dalle metriche del glifo. */
 .board-add {
   position: relative;
-  width: 46px;
-  height: 46px;
+  width: 60px;
+  height: 60px;
   padding: 0;
   border-radius: 50%;
   flex-shrink: 0;
@@ -1223,13 +1223,13 @@ body.fullbleed .bar-content {
 }
 
 .board-add::before {
-  width: 20px;
-  height: 3px;
+  width: 26px;
+  height: 4px;
 }
 
 .board-add::after {
-  width: 3px;
-  height: 20px;
+  width: 4px;
+  height: 26px;
 }
 
 /* Griglia delle card ordine: si adatta da sola a 1/2/3/4+ colonne. */
@@ -2496,7 +2496,7 @@ body.fullbleed,
      larghezza della colonna): niente aspect-ratio, che rendeva i tasti troppo
      alti da larga e schiacciati da stretta. Il nome si accorcia con l'ellissi
      invece di andare a capo. */
-  min-height: 2.4em;
+  min-height: 3em;
   overflow: hidden;
   flex-shrink: 0;
 }

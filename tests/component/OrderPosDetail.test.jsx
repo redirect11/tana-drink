@@ -195,9 +195,10 @@ describe('aggiunte: la nuova comanda è gestita internamente', () => {
   it('drink SENZA ingredienti: avvisa il bartender', async () => {
     const user = userEvent.setup()
     mount(baseOrder())
-    // Il Mojito non ha recipe_items nel menù mock
+    // Il Mojito non ha recipe_items nel menù mock. Ora anche l'item confermato
+    // ha la ✏️, quindi ce ne sono più d'una: modifico l'ultima aggiunta (bozza).
     await user.click(screen.getAllByText('Mojito')[0])
-    await user.click(screen.getByRole('button', { name: /Modifica Mojito/ }))
+    await user.click(screen.getAllByRole('button', { name: /Modifica Mojito/ }).at(-1))
     expect(screen.getByText(/non ha ingredienti configurati/)).toBeInTheDocument()
   })
 
@@ -212,9 +213,10 @@ describe('aggiunte: la nuova comanda è gestita internamente', () => {
 })
 
 describe('diminuzioni: solo dalle comande ancora modificabili', () => {
-  it('avanza lo stato della comanda ATTIVA dal footer', async () => {
+  it('avanza lo stato della comanda ATTIVA dal popup Servizio', async () => {
     const user = userEvent.setup()
     mount(baseOrder())
+    await user.click(screen.getByRole('button', { name: /Stato servizio/ }))
     await user.click(screen.getByRole('button', { name: /Segna “Pronto al servizio”/ }))
     expect(advanceComanda).toHaveBeenCalledWith('ord1', 'c1', 'pronto')
   })
@@ -295,8 +297,9 @@ describe('modifiche ottimistiche (UX istantanea)', () => {
     const user = userEvent.setup()
     advanceComanda.mockImplementationOnce(() => new Promise(() => {})) // in volo
     mount(baseOrder())
+    await user.click(screen.getByRole('button', { name: /Stato servizio/ }))
     await user.click(screen.getByRole('button', { name: /Segna “Pronto al servizio”/ }))
-    // la pill mostra già "Pronto al servizio" senza attendere la transazione
+    // lo stato passa subito a "Pronto al servizio" senza attendere la transazione
     expect(screen.getAllByText(/Pronto al servizio/).length).toBeGreaterThan(0)
     expect(
       screen.queryByRole('button', { name: /Segna “Pronto al servizio”/ })

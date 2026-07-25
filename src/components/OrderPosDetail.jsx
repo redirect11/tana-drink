@@ -128,13 +128,13 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   draftRef.current = draft
 
   // Colonne POS ridimensionabili (larghezze ricordate per dispositivo).
-  const catsRz = useResizable('pos-cats', { def: 150, min: 120, max: 300, side: 'right' })
+  const catsRz = useResizable('pos-cats', { def: 168, min: 140, max: 340, side: 'right' })
   // Recenti per la griglia POS: gli ultimi item ordinati (best-effort).
   const [recentIds, setRecentIds] = useState([])
   useEffect(() => {
     fetchRecentDrinkIds(20).then(setRecentIds).catch(() => setRecentIds([]))
   }, [])
-  const comandaRz = useResizable('pos-comanda', { def: 360, min: 300, max: 620, side: 'left' })
+  const comandaRz = useResizable('pos-comanda', { def: 400, min: 340, max: 700, side: 'left' })
   // Scala del footer (totale + conferma/pagamento): la maniglia in cima lo
   // "allunga" e tasti/font crescono insieme. Valore in % (100 = normale).
   const footRz = useResizable('pos-foot-scale', { def: 100, min: 80, max: 175, axis: 'y', side: 'up', speed: 0.5 })
@@ -142,8 +142,10 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   // del font segue la larghezza rispetto alla misura di riposo (def), con un
   // tetto per non esagerare. Guida i font via CSS (--cats-scale/--comanda-scale).
   const clampScale = (v, lo, hi) => Math.max(lo, Math.min(hi, v))
-  const catsScale = clampScale(catsRz.width / 150, 0.9, 1.35)
-  const comandaScale = clampScale(comandaRz.width / 360, 0.9, 1.5)
+  // Base più grande ovunque (leggibile anche su iPad): il minimo parte alto e
+  // cresce ancora allargando la colonna.
+  const catsScale = clampScale(catsRz.width / 150, 1.1, 1.7)
+  const comandaScale = clampScale(comandaRz.width / 340, 1.1, 1.7)
 
   // Staff loggato (per l'attribuzione dell'ordine creato dal POS).
   const [staff, setStaff] = useState(null)
@@ -579,22 +581,24 @@ export default function OrderPosDetail({ order: orderProp = null }) {
     (draft.some((l) => l.qty > 1) ||
       editableComande.some((c) => (c.items || []).some((i) => i.qty > 1)))
   const applyEdit = ({ name, price, recipe_items }) => {
-    setDraft((items) =>
-      items.map((l) =>
-        l.line_id === editLine.line_id
-          ? {
-              ...l,
-              name,
-              unit_price: price,
-              custom: true,
-              // Sempre un array: una ricetta SVUOTATA a mano è una scelta,
-              // non va riletta dal prodotto di catalogo al prossimo giro.
-              recipe_items: recipe_items || [],
-            }
-          : l
-      )
-    )
+    const l = editLine
     setEditLine(null)
+    if (!l) return
+    // Ricetta SEMPRE un array: svuotarla a mano è una scelta, non va riletta
+    // dal prodotto di catalogo al prossimo giro.
+    const patch = { name, unit_price: price, custom: true, recipe_items: recipe_items || [] }
+    if (l.source === 'draft') {
+      setDraft((items) => items.map((x) => (x.line_id === l.line_id ? { ...x, ...patch } : x)))
+      return
+    }
+    // Item già CONFERMATO (comanda in preparazione): modifica ottimistica sulla
+    // comanda + sync in background (come le diminuzioni per-riga).
+    const c = effComandeRef.current.find((x) => x.id === l.comandaId)
+    if (!c) return
+    const items = (c.items || []).map((it, idx) => (idx === l.itemIndex ? { ...it, ...patch } : it))
+    setPendingEdits((p) => ({ ...p, [l.comandaId]: items }))
+    clearTimeout(flushTimers.current[l.comandaId])
+    flushTimers.current[l.comandaId] = setTimeout(() => flushComanda(l.comandaId), 600)
   }
 
   // Dati di partenza dell'editor per-item: se la riga è già stata
@@ -786,7 +790,6 @@ export default function OrderPosDetail({ order: orderProp = null }) {
 
   // ── Comanda attiva: azione rapida di avanzamento (modifica) ──
   const active = activeComanda({ comande: effComande })
-  const activeNext = active ? nextComandaStatus(active.status) : null
 
   // ── Info conto ──
   const [info, setInfo] = useState({
@@ -1065,7 +1068,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                       </span>
                     </span>
                     <span className="row" style={{ gap: 4, alignItems: 'center' }}>
-                      {isDraft && (
+                      {(isDraft || l.removable) && (
                         <button className="btn ghost small" aria-label={`Modifica ${l.name}`} onPointerDown={(e) => e.stopPropagation()} onClick={() => setEditLine(l)}>✏️</button>
                       )}
                       <span className="qty" onPointerDown={(e) => e.stopPropagation()}>
@@ -1100,29 +1103,23 @@ export default function OrderPosDetail({ order: orderProp = null }) {
               Ridimensionabile dalla maniglia in cima: font e tasti scalano. */}
           <div className="posd-comanda-foot" style={{ '--foot-scale': footRz.width / 100 }}>
             <div className="posd-foot-handle" title="Trascina per ingrandire/rimpicciolire" {...footRz.handleProps} />
-            {!isNew && workflowOn && active && activeNext && !closed && (
+            {!isNew && workflowOn && active && !closed && (
               <div className="row between" style={{ alignItems: 'center' }}>
                 <span className={`pill ${active.status}`}>
                   {STATUS_EMOJI[active.status]} {STATUS_LABELS[active.status]}
                 </span>
-                <span className="row" style={{ gap: 6 }}>
-                  {/* Conto già pagato: si può chiudere di netto senza far
-                      avanzare gli stati uno per uno (si è incassato in
-                      anticipo e si consegna tutto insieme). */}
-                  {order.payment_status === 'pagato' && (
-                    <button
-                      className="btn small"
-                      onClick={() =>
-                        closePaidOrder(order.id).catch((e) => toastError(`Chiusura non riuscita: ${e.message}`))
-                      }
-                    >
-                      ✅ Chiudi conto
-                    </button>
-                  )}
-                  <button className="btn secondary small" onClick={() => advance(active.id, activeNext)}>
-                    Segna “{activeNext === ORDER_STATUSES.RITIRATO ? ritiratoLabel(order.service_mode) : STATUS_LABELS[activeNext]}”
+                {/* Conto già pagato: si può chiudere di netto senza far avanzare
+                    gli stati uno per uno (l'avanzamento vero è nel popup Servizio). */}
+                {order.payment_status === 'pagato' && (
+                  <button
+                    className="btn small"
+                    onClick={() =>
+                      closePaidOrder(order.id).catch((e) => toastError(`Chiusura non riuscita: ${e.message}`))
+                    }
+                  >
+                    ✅ Chiudi conto
                   </button>
-                </span>
+                )}
               </div>
             )}
 
@@ -1143,24 +1140,14 @@ export default function OrderPosDetail({ order: orderProp = null }) {
               </div>
             )}
 
-            {/* CREAZIONE e MODIFICA: gli item si confermano da soli all'aggiunta
-                (l'ordine è creato al primo item). Niente tasto Conferma. */}
+            {/* Niente tasto Conferma: gli item si confermano da soli. Si torna
+                indietro con "← Ordini" in alto a sinistra. */}
             {isNew ? (
-              <>
-                <button className="btn block" onClick={handleExit}>
-                  ✅ Conferma
-                </button>
-                <button className="btn secondary block" disabled={draftCount === 0} onClick={handlePayNow}>
-                  💳 Pagamento · {formatPrice(draftTotal)}
-                </button>
-              </>
+              <button className="btn secondary block" disabled={draftCount === 0} onClick={handlePayNow}>
+                💳 Pagamento · {formatPrice(draftTotal)}
+              </button>
             ) : (
               <>
-                {/* MODIFICA: le aggiunte sono già confermate → il tasto chiude
-                    la schermata e torna agli ordini (svuota eventuali item in volo). */}
-                <button className="btn block" onClick={handleExit}>
-                  ✅ Conferma
-                </button>
                 <div className="grid-2">
                   <button
                     className="btn ghost small"
@@ -1176,6 +1163,12 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                     <span />
                   )}
                 </div>
+
+                {!closed && workflowOn && (
+                  <button className="btn ghost small block" onClick={() => setShowComande(true)}>
+                    🔄 Stato servizio
+                  </button>
+                )}
 
                 {!closed && (
                   <button
