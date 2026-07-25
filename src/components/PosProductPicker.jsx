@@ -199,6 +199,9 @@ export default function PosProductPicker({
     ...(recentIds.length ? [{ key: '__recent__', label: '🕘 Recenti', count: recentIds.length }] : []),
   ]
 
+  // Etichetta categoria: una riga sola, si accorcia con l'ellissi (mai a capo).
+  const catLabel = { flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }
+
   return (
     <>
       <aside className="posd-cats">
@@ -208,7 +211,7 @@ export default function PosProductPicker({
           ) : (
             <>
               <span aria-hidden style={catDotStyle(null)} />
-              <span>Tutti</span>
+              <span style={catLabel}>Tutti</span>
             </>
           )}
         </button>
@@ -222,7 +225,7 @@ export default function PosProductPicker({
             {categoryDisplay === 'icon' ? (
               <span aria-hidden style={{ fontSize: '1.2em' }}>{sc.label.slice(0, 2)}</span>
             ) : (
-              <span>{sc.label}</span>
+              <span style={catLabel}>{sc.label}</span>
             )}
           </button>
         ))}

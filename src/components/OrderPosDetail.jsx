@@ -128,7 +128,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   draftRef.current = draft
 
   // Colonne POS ridimensionabili (larghezze ricordate per dispositivo).
-  const catsRz = useResizable('pos-cats', { def: 150, min: 96, max: 320, side: 'right' })
+  const catsRz = useResizable('pos-cats', { def: 150, min: 120, max: 300, side: 'right' })
   // Recenti per la griglia POS: gli ultimi item ordinati (best-effort).
   const [recentIds, setRecentIds] = useState([])
   useEffect(() => {
@@ -142,7 +142,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   // del font segue la larghezza rispetto alla misura di riposo (def), con un
   // tetto per non esagerare. Guida i font via CSS (--cats-scale/--comanda-scale).
   const clampScale = (v, lo, hi) => Math.max(lo, Math.min(hi, v))
-  const catsScale = clampScale(catsRz.width / 150, 0.85, 1.8)
+  const catsScale = clampScale(catsRz.width / 150, 0.9, 1.35)
   const comandaScale = clampScale(comandaRz.width / 360, 0.9, 1.5)
 
   // Staff loggato (per l'attribuzione dell'ordine creato dal POS).
@@ -1050,13 +1050,19 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                       opacity: isPaid ? 0.6 : dragIndex != null && dragIndex !== idx ? 0.85 : 1,
                     }}
                   >
-                    <span className="grow" style={{ fontSize: '0.92em' }}>
-                      {!closed && !isPaid && <span aria-hidden style={{ opacity: 0.4, marginRight: 4 }}>⠿</span>}
-                      <span aria-hidden style={{ marginRight: 4 }} title={isPaid ? 'pagato' : isDraft ? 'non confermato' : STATUS_LABELS[l.status]}>
+                    <span className="grow" style={{ fontSize: '0.92em', display: 'flex', alignItems: 'center', minWidth: 0 }}>
+                      {!closed && !isPaid && <span aria-hidden style={{ opacity: 0.4, marginRight: 4, flexShrink: 0 }}>⠿</span>}
+                      <span aria-hidden style={{ marginRight: 4, flexShrink: 0 }} title={isPaid ? 'pagato' : isDraft ? 'non confermato' : STATUS_LABELS[l.status]}>
                         {isPaid ? '💳' : isDraft ? '🟡' : STATUS_EMOJI[l.status]}
                       </span>
-                      {l.custom ? '✨ ' : ''}{l.name}
-                      <span className="muted small"> · {formatPrice(l.unit_price)}</span>
+                      {/* nome: si accorcia con l'ellissi se la colonna è stretta */}
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
+                        {l.custom ? '✨ ' : ''}{l.name}
+                      </span>
+                      {/* prezzo del singolo: più grande e sempre su una riga */}
+                      <span className="muted" style={{ whiteSpace: 'nowrap', flexShrink: 0, marginLeft: 5, fontSize: '0.96em' }}>
+                        · {formatPrice(l.unit_price)}
+                      </span>
                     </span>
                     <span className="row" style={{ gap: 4, alignItems: 'center' }}>
                       {isDraft && (

@@ -4,7 +4,8 @@
 export function catBtnStyle(active) {
   return {
     width: '100%',
-    padding: '10px 6px',
+    // padding in em: l'altezza del tasto scala col font (che segue la larghezza)
+    padding: '0.6em 0.5em',
     borderRadius: 10,
     border: 'none',
     background: active
