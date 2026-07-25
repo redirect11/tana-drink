@@ -6,7 +6,7 @@ import {
   createInvoice,
   markInvoiceSent,
   subscribeVouchers,
-  payWithVoucher,
+  applyVoucherDiscount,
 } from '../lib/api.js'
 import { readerCheckout } from '../lib/paymentsApi.js'
 import { formatPrice, PAYMENT_METHOD_LABELS } from '../lib/orderStatus.js'
@@ -154,16 +154,16 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
       disabled: !readerReady,
       note: !readerReady ? 'configura il lettore nelle Impostazioni' : null,
     },
-    {
-      key: 'buono',
-      label: 'Buono VIP',
-      emoji: '🎟',
-      disabled: vipList.length === 0,
-      note: vipList.length === 0 ? 'nessun buono con saldo' : null,
-    },
   ]
-  // Col buono si incassa al massimo il saldo del beneficiario scelto.
-  const voucherPay = chosenVoucher ? Math.min(toPay, round2(chosenVoucher.balance)) : 0
+  // Buono come SCONTO (non metodo di pagamento): si applica al totale e si
+  // detrae dal saldo del beneficiario, anche parzialmente. Importo proposto:
+  // il residuo, mai oltre il saldo o il totale.
+  const voucherBalance = chosenVoucher ? round2(chosenVoucher.balance) : 0
+  const voucherDefault = round2(Math.min(due, voucherBalance))
+  const voucherReq = discDigits ? digitsToEuro(discDigits) : voucherDefault
+  const voucherRedeem = chosenVoucher
+    ? round2(Math.min(voucherReq, voucherBalance, Number(order.total) || 0))
+    : 0
 
   async function run(fn) {
     setSaving(true)
@@ -215,17 +215,6 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
 
   const riscuoti = () => {
     const items = !manual && splitting ? selection : null
-    if (method === 'buono') {
-      // Buono VIP: scala il credito del beneficiario (transazione atomica
-      // ordine+buono). Aspetta l'id reale se il conto è appena nato.
-      if (!chosenVoucher || !(voucherPay > 0)) return
-      return run(async () => {
-        await onBeforePay?.()
-        const { closed } = await payWithVoucher(await orderId(), chosenVoucher.id, voucherPay, { autoServe })
-        setVoucherId('')
-        if (closed) closePaid()
-      })
-    }
     if (method === 'lettore') {
       // Lettore SIMULATO (test/dev senza hardware): stessa UX del vero —
       // transazione "avviata", poi l'esito arriva da solo dopo 2,5s.
@@ -284,6 +273,25 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
 
   // Applica SUBITO a schermo (override locale), server in background.
   const applyDiscount = () => {
+    // BUONO come sconto: attinge al saldo del beneficiario (anche parziale).
+    if (discType === 'buono') {
+      if (!chosenVoucher || !(voucherRedeem > 0)) return
+      const disc = { type: 'buono', value: voucherRedeem, voucher_id: chosenVoucher.id, voucher_name: chosenVoucher.holder_name }
+      setOptimisticDisc({ disc, amount: voucherRedeem })
+      setShowDiscount(false)
+      setDiscDigits('')
+      const vid = chosenVoucher.id
+      setVoucherId('')
+      ;(async () => {
+        try {
+          await applyVoucherDiscount(await orderId(), vid, voucherReq)
+        } catch (e) {
+          setOptimisticDisc(null)
+          toastError(`Buono non applicato: ${e.message}`)
+        }
+      })()
+      return
+    }
     const disc = discValue > 0 ? { type: discType, value: discValue } : null
     setOptimisticDisc({ disc, amount: discountAmount(orderProp.total, disc) })
     setShowDiscount(false)
@@ -550,39 +558,13 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
             <button className="paypad-key danger" aria-label="Cancella cifra" onClick={back}>←</button>
           </div>
 
-          {/* Col buono: scelta del beneficiario e importo scalato dal saldo */}
-          {method === 'buono' && !closed && (
-            <div style={{ marginTop: 8, flexShrink: 0 }}>
-              <label htmlFor="pay-voucher">🎟 Buono di</label>
-              <select id="pay-voucher" value={voucherId} onChange={(e) => setVoucherId(e.target.value)}>
-                <option value="">— Scegli il beneficiario —</option>
-                {vipList.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.holder_name} · saldo {formatPrice(v.balance)}
-                  </option>
-                ))}
-              </select>
-              {chosenVoucher && (
-                <p className="muted small" style={{ margin: '4px 0 0' }}>
-                  Si scalano {formatPrice(voucherPay)} dal buono di {chosenVoucher.holder_name}
-                  {voucherPay < toPay ? ` · restano ${formatPrice(toPay - voucherPay)} da pagare a parte` : ''}
-                </p>
-              )}
-            </div>
-          )}
-
           {!closed && (
             <button
               className="btn block payscreen-collect"
-              disabled={
-                saving ||
-                (method === 'buono' ? !(voucherPay > 0) : !(toPay > 0))
-              }
+              disabled={saving || !(toPay > 0)}
               onClick={riscuoti}
             >
-              {method === 'buono'
-                ? `Usa il buono · ${formatPrice(voucherPay)}`
-                : `Riscuotere · ${formatPrice(toPay)}`}
+              Riscuotere · {formatPrice(toPay)}
             </button>
           )}
 
@@ -626,7 +608,8 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
           <div style={{ marginTop: 'auto' }}>
             {!closed && (
               <button className="btn ghost small block" onClick={() => setShowDiscount(true)}>
-                🎁 Sconto{(order.discount_amount || 0) > 0 ? ` (−${formatPrice(order.discount_amount)})` : ''}
+                {order.discount?.type === 'buono' ? '🎟 Buono' : '🎁 Sconto'}
+                {(order.discount_amount || 0) > 0 ? ` (−${formatPrice(order.discount_amount)})` : ''}
               </button>
             )}
           </div>
@@ -667,14 +650,57 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
               >
                 €
               </button>
+              <button
+                className={`btn small grow ${discType === 'buono' ? '' : 'ghost'}`}
+                disabled={vipList.length === 0}
+                title={vipList.length === 0 ? 'Nessun buono con saldo' : 'Sconto col buono'}
+                onClick={() => {
+                  setDiscType('buono')
+                  setDiscDigits('')
+                }}
+              >
+                🎟
+              </button>
             </div>
+
+            {/* BUONO: si sceglie il beneficiario; l'importo (parziale) attinge
+                al suo saldo e si applica al totale come uno sconto. */}
+            {discType === 'buono' && (
+              <div style={{ marginTop: 10 }}>
+                <label htmlFor="disc-voucher">🎟 Buono di</label>
+                <select
+                  id="disc-voucher"
+                  value={voucherId}
+                  onChange={(e) => {
+                    setVoucherId(e.target.value)
+                    setDiscDigits('')
+                  }}
+                  style={{ width: '100%' }}
+                >
+                  <option value="">— Scegli il beneficiario —</option>
+                  {vipList.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.holder_name} · saldo {formatPrice(v.balance)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             <div style={{ textAlign: 'center', margin: '10px 0 2px' }}>
               <strong style={{ fontSize: '1.8rem' }} data-testid="disc-amount">
-                {discType === 'percent' ? `${discValue}%` : formatPrice(discValue)}
+                {discType === 'percent'
+                  ? `${discValue}%`
+                  : discType === 'buono'
+                    ? formatPrice(voucherReq)
+                    : formatPrice(discValue)}
               </strong>
               <p className="muted small" style={{ margin: '2px 0 0' }}>
-                Sconto sul conto: −{formatPrice(discPreview)}
+                {discType === 'buono'
+                  ? chosenVoucher
+                    ? `Dal buono: −${formatPrice(voucherRedeem)}${voucherRedeem < voucherReq ? ' (saldo/totale insufficiente)' : ''}`
+                    : 'Scegli un beneficiario'
+                  : `Sconto sul conto: −${formatPrice(discPreview)}`}
               </p>
             </div>
 
@@ -698,10 +724,12 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
             <button
               className="btn block"
               style={{ marginTop: 10 }}
-              disabled={saving}
+              disabled={saving || (discType === 'buono' && !(voucherRedeem > 0))}
               onClick={applyDiscount}
             >
-              Applica {discPreview > 0 ? `(−${formatPrice(discPreview)})` : ''}
+              Applica {(discType === 'buono' ? voucherRedeem : discPreview) > 0
+                ? `(−${formatPrice(discType === 'buono' ? voucherRedeem : discPreview)})`
+                : ''}
             </button>
             {(order.discount_amount || 0) > 0 && (
               <button

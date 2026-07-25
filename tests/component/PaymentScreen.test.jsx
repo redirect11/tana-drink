@@ -28,7 +28,7 @@ vi.mock('../../src/lib/api.js', () => ({
     cb(mockVouchers)
     return () => {}
   }),
-  payWithVoucher: vi.fn(() => Promise.resolve({ redeemed: 0, closed: false })),
+  applyVoucherDiscount: vi.fn(() => Promise.resolve({ redeemed: 10 })),
 }))
 vi.mock('../../src/lib/paymentsApi.js', () => ({
   readerCheckout: vi.fn(() => Promise.resolve({})),
@@ -47,7 +47,7 @@ import {
   createInvoice,
 } from '../../src/lib/api.js'
 import { readerCheckout } from '../../src/lib/paymentsApi.js'
-import { payWithVoucher } from '../../src/lib/api.js'
+import { applyVoucherDiscount } from '../../src/lib/api.js'
 import { printScontrino, printFattura } from '../../src/lib/printer.js'
 
 let mockVouchers = []
@@ -232,22 +232,28 @@ describe('metodi di pagamento', () => {
     expect(sumup).toHaveTextContent(/configura il lettore/)
   })
 
-  it('Buono VIP: senza buoni è spento; con buono si sceglie e si scala', async () => {
-    // Nessun buono: metodo presente ma disabilitato
+  it('Buono come sconto: senza buoni l’opzione 🎟 è spenta nel modale sconto', async () => {
+    const user = userEvent.setup()
     mount(baseOrder())
-    expect(screen.getByRole('button', { name: /Buono VIP/ })).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: /Sconto/ }))
+    const modal = within(screen.getByRole('dialog', { name: 'Sconto' }))
+    expect(modal.getByRole('button', { name: '🎟' })).toBeDisabled()
+    // niente più metodo di pagamento "Buono VIP"
+    expect(screen.queryByRole('button', { name: /Buono VIP/ })).not.toBeInTheDocument()
   })
 
-  it('Buono VIP: scelto il beneficiario, "Usa il buono" scala dal saldo', async () => {
+  it('Buono come sconto: scelto il beneficiario, si applica come sconto dal saldo', async () => {
     mockVouchers = [{ id: 'v1', holder_name: 'Marco', balance: 10 }]
     const user = userEvent.setup()
     mount(baseOrder())
-    await user.click(screen.getByRole('button', { name: /Buono VIP/ }))
-    // saldo 10 < dovuto 22 → si scalano 10, restano 12 da pagare
-    await user.selectOptions(screen.getByLabelText(/Buono di/), 'v1')
-    expect(screen.getByText(/Si scalano 10,00 € dal buono di Marco/)).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: /Usa il buono/ }))
-    expect(payWithVoucher).toHaveBeenCalledWith('ord1', 'v1', 10, { autoServe: false })
+    await user.click(screen.getByRole('button', { name: /Sconto/ }))
+    const modal = within(screen.getByRole('dialog', { name: 'Sconto' }))
+    await user.click(modal.getByRole('button', { name: '🎟' }))
+    await user.selectOptions(modal.getByLabelText(/Buono di/), 'v1')
+    // saldo 10 < dovuto 22 → si applicano 10 di sconto attingendo al buono
+    expect(modal.getByText(/Dal buono: −10,00 €/)).toBeInTheDocument()
+    await user.click(modal.getByRole('button', { name: /Applica/ }))
+    expect(applyVoucherDiscount).toHaveBeenCalledWith('ord1', 'v1', 10)
   })
 })
 

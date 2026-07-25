@@ -1777,15 +1777,77 @@ export async function payWithVoucher(orderId, voucherId, requestedAmount, { auto
   return { redeemed, closed }
 }
 
+const r2 = (n) => Math.round((Number(n) || 0) * 100) / 100
+
+// Rimette `amount` sul saldo di un buono (storno di un buono-sconto rimosso o
+// di un ordine annullato). increment(+) è commutativo e si accoda offline.
+async function refundVoucher(voucherId, amount, orderId, atIso) {
+  const amt = r2(amount)
+  if (!voucherId || !(amt > 0)) return
+  const ref = doc(vouchersCol, voucherId)
+  const snap = await getDoc(ref)
+  if (!snap.exists()) return
+  const v = snap.data()
+  await updateDoc(ref, {
+    balance: increment(amt),
+    movements: [...(v.movements || []), { type: 'storno', amount: amt, order_id: orderId, at: atIso }],
+  })
+}
+
+// BUONO come SCONTO: il buono non è un metodo di pagamento ma uno sconto che
+// attinge al saldo del beneficiario. Si applica al totale (come uno sconto in
+// euro) e si detrae dal buono, anche PARZIALMENTE (il cliente sceglie quanto
+// usare, fino al saldo). Rimuoverlo/annullare l'ordine ristorna il saldo.
+export async function applyVoucherDiscount(orderId, voucherId, requestedAmount) {
+  const orderRef = doc(db, 'orders', orderId)
+  const voucherRef = doc(vouchersCol, voucherId)
+  const nowIso = new Date().toISOString()
+  const [oSnap, vSnap] = await Promise.all([getDoc(orderRef), getDoc(voucherRef)])
+  if (!oSnap.exists()) throw new Error('Ordine non trovato')
+  if (!vSnap.exists()) throw new Error('Buono non trovato')
+  const o = oSnap.data()
+  const v = vSnap.data()
+  if (o.status === ORDER_STATUSES.ANNULLATO) throw new Error('Ordine annullato')
+  if (o.payment_status === 'pagato') throw new Error('Ordine già pagato')
+
+  // Se c'era già un buono-sconto: quello su un ALTRO buono va ristornato; se
+  // era lo STESSO buono, il suo valore torna disponibile (lo si rimpiazza).
+  const prev = o.discount && o.discount.type === 'buono' ? o.discount : null
+  if (prev && prev.voucher_id && prev.voucher_id !== voucherId) {
+    await refundVoucher(prev.voucher_id, prev.value, orderId, nowIso)
+  }
+  const sameBack = prev && prev.voucher_id === voucherId ? r2(prev.value) : 0
+  const balance = Math.max(0, r2((Number(v.balance) || 0) + sameBack))
+  const total = Number(o.total) || 0
+  const redeemed = r2(Math.min(Math.max(0, Number(requestedAmount) || 0), balance, total))
+  if (!(redeemed > 0)) throw new Error('Saldo del buono insufficiente')
+
+  const disc = { type: 'buono', value: redeemed, voucher_id: voucherId, voucher_name: v.holder_name }
+  await updateDoc(orderRef, { discount: disc, discount_amount: redeemed })
+  // Netto sul buono: rimetti l'eventuale vecchio valore (stesso buono) e togli
+  // il nuovo. movements registra la variazione netta di questo passaggio.
+  const net = r2(sameBack - redeemed)
+  await updateDoc(voucherRef, {
+    balance: increment(net),
+    movements: [...(v.movements || []), { type: net >= 0 ? 'storno' : 'uso', amount: net, order_id: orderId, at: nowIso }],
+  })
+  return { redeemed }
+}
+
 // Imposta (o rimuove, con null) lo sconto sul conto: percentuale o euro.
 // L'importo in euro viene calcolato e persistito, così residuo e webhook
-// dei pagamenti ragionano sempre sullo stesso numero.
+// dei pagamenti ragionano sempre sullo stesso numero. Se c'era un buono-sconto
+// lo si ristorna prima (il buono torna al beneficiario).
 export async function setOrderDiscount(id, discount) {
   const ref = doc(db, 'orders', id)
   const snap = await getDoc(ref)
   if (!snap.exists()) throw new Error('Ordine non trovato')
   const o = snap.data()
   if (o.payment_status === 'pagato') throw new Error('Ordine già pagato')
+  const prev = o.discount && o.discount.type === 'buono' ? o.discount : null
+  if (prev && prev.voucher_id) {
+    await refundVoucher(prev.voucher_id, prev.value, id, new Date().toISOString())
+  }
   const clean =
     discount && Number(discount.value) > 0
       ? { type: discount.type === 'percent' ? 'percent' : 'euro', value: Number(discount.value) }
@@ -2303,6 +2365,10 @@ export async function cancelOrder(id, opts = {}) {
 
   // Le comande non servite diventano annullate (le servite restano a storico).
   const nowIso = new Date().toISOString()
+  // Buono-sconto applicato: il saldo torna al beneficiario (l'ordine salta).
+  if (order.discount && order.discount.type === 'buono' && order.discount.voucher_id) {
+    await refundVoucher(order.discount.voucher_id, order.discount.value, id, nowIso)
+  }
   for (const c of comande) {
     if (c.status !== ORDER_STATUSES.RITIRATO && c.status !== ORDER_STATUSES.ANNULLATO) {
       c.status = ORDER_STATUSES.ANNULLATO
