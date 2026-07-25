@@ -1139,7 +1139,7 @@ export default function OrderPosDetail({ order = null }) {
             {isNew ? (
               <>
                 <button className="btn block" onClick={handleExit}>
-                  ✓ Chiudi
+                  ✅ Conferma
                 </button>
                 <button className="btn secondary block" disabled={draftCount === 0} onClick={handlePayNow}>
                   💳 Pagamento · {formatPrice(draftTotal)}
@@ -1150,7 +1150,7 @@ export default function OrderPosDetail({ order = null }) {
                 {/* MODIFICA: le aggiunte sono già confermate → il tasto chiude
                     la schermata e torna agli ordini (svuota eventuali item in volo). */}
                 <button className="btn block" onClick={handleExit}>
-                  ✓ Chiudi
+                  ✅ Conferma
                 </button>
                 <div className="grid-2">
                   <button

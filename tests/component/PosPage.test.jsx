@@ -142,8 +142,7 @@ describe('creazione: ordine creato al primo item, nome chiesto alla chiusura', (
     const user = userEvent.setup()
     mount()
     await user.click(screen.getByText('Mojito'))
-    // niente tasto Conferma: l'ordine si crea da solo poco dopo l'aggiunta
-    expect(screen.queryByRole('button', { name: /✅ Conferma/ })).not.toBeInTheDocument()
+    // l'ordine si crea da solo poco dopo l'aggiunta (senza cliccare Conferma)
     await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1))
     expect(createOrder.mock.calls[0][0].items).toEqual([
       expect.objectContaining({ drink_id: 'mojito', qty: 1 }),
@@ -154,7 +153,7 @@ describe('creazione: ordine creato al primo item, nome chiesto alla chiusura', (
     const user = userEvent.setup()
     mount()
     await user.click(screen.getByText('Mojito'))
-    await user.click(screen.getByRole('button', { name: /✓ Chiudi/ }))
+    await user.click(screen.getByRole('button', { name: /✅ Conferma/ }))
     await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1))
     // l'ordine creato non ha nome → lo si chiede una volta
     await user.type(await screen.findByLabelText('Nome'), 'iole')
@@ -166,7 +165,7 @@ describe('creazione: ordine creato al primo item, nome chiesto alla chiusura', (
     const user = userEvent.setup()
     mount()
     await user.click(screen.getByText('Mojito'))
-    await user.click(screen.getByRole('button', { name: /✓ Chiudi/ }))
+    await user.click(screen.getByRole('button', { name: /✅ Conferma/ }))
     await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1))
     await user.click(await screen.findByRole('button', { name: /Salva senza nome/ }))
     expect(updateOrderInfo).not.toHaveBeenCalled()
