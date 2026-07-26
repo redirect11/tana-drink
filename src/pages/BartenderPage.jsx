@@ -60,6 +60,16 @@ import { devToolsEnabled } from '../dev/devActions.js'
 
 // Badge accanto al numero d'ordine: la LETTERA del dipendente che l'ha aperto,
 // oppure il segno del CLIENTE se l'ha aperto lui dall'app.
+// Colore della striscia laterale della card per STATO dell'ordine (non della
+// preparazione): aperto · pagato parzialmente · pagato · annullato.
+function orderStripClass(o) {
+  if (o.status === ORDER_STATUSES.ANNULLATO || o.workflow_status === ORDER_STATUSES.ANNULLATO)
+    return 'pay-annullato'
+  if (o.payment_status === 'pagato') return 'pay-pagato'
+  if (o.payment_status === 'parziale') return 'pay-parziale'
+  return 'pay-aperto'
+}
+
 function OrderBy({ order }) {
   const L = placedByLetter(order?.placed_by)
   return L ? (
@@ -761,7 +771,7 @@ function OrderQueue() {
     const open = openCards.has(o.id)
     return (
       <div
-        className={`card order-card grid-card ${o.workflow_status}${
+        className={`card order-card grid-card ${o.workflow_status} ${orderStripClass(o)}${
           workflowOn && pagato(o) && !servito(o) ? ' pagato-da-servire' : ''
         }`}
         key={o.id}
