@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { DrinkTile } from './PosBits.jsx'
 import { catBtnStyle } from '../lib/posStyles.js'
-import { catColor, drinkCategoryColor } from '../lib/categoryColors.js'
+import { catColor, drinkCategoryColor, CATEGORY_PALETTE } from '../lib/categoryColors.js'
 import {
   applyOrder,
   moveInOrder,
@@ -10,8 +10,10 @@ import {
   saveOrder,
   loadFavorites,
   saveFavorites,
+  loadColors,
+  saveColors,
 } from '../lib/posCatalog.js'
-import { subscribePosPrefs, savePosOrder, savePosFavorites } from '../lib/api.js'
+import { subscribePosPrefs, savePosOrder, savePosFavorites, savePosColors } from '../lib/api.js'
 
 // Colonna categorie + griglia prodotti (il "centro" del POS). Oltre alle
 // categorie ci sono due raccolte speciali: ⭐ Preferiti (i drink che il
@@ -34,7 +36,9 @@ export default function PosProductPicker({
   const [query, setQuery] = useState('')
   const [order, setOrder] = useState(() => loadOrder())
   const [favorites, setFavorites] = useState(() => loadFavorites())
+  const [tileColors, setTileColors] = useState(() => loadColors())
   const [reordering, setReordering] = useState(false)
+  const [menuDrink, setMenuDrink] = useState(null) // MENU del singolo prodotto
   const gridRef = useRef(null)
 
   // Le card (e il loro testo) seguono la larghezza della colonna centrale, che
@@ -64,6 +68,7 @@ export default function PosProductPicker({
   // localStorage = cache locale immediata (funziona offline al primo avvio).
   useEffect(() => saveOrder(order), [order])
   useEffect(() => saveFavorites(favorites), [favorites])
+  useEffect(() => saveColors(tileColors), [tileColors])
 
   // SINCRONIZZAZIONE COL SERVER: l'arrangiamento vale per tutto il locale.
   // La sottoscrizione adotta il valore dal server (arriva anche dalla cache
@@ -75,6 +80,7 @@ export default function PosProductPicker({
         if (!p) return
         if (Array.isArray(p.order)) setOrder(p.order)
         if (Array.isArray(p.favorites)) setFavorites(p.favorites)
+        if (p.colors && typeof p.colors === 'object' && !Array.isArray(p.colors)) setTileColors(p.colors)
       }, () => {}),
     []
   )
@@ -87,6 +93,15 @@ export default function PosProductPicker({
     setFavorites(next)
     savePosFavorites(next).catch(() => {})
   }
+  // Colore del tab di un prodotto: null/assente = colore della categoria.
+  const setTileColor = (id, color) => {
+    const next = { ...tileColors }
+    if (color) next[id] = color
+    else delete next[id]
+    setTileColors(next)
+    savePosColors(next).catch(() => {})
+  }
+  const tileColor = (d) => tileColors[d.id] || drinkCategoryColor(d, cats)
   const catKey = (c) => c.id ?? c.name
   const favSet = useMemo(() => new Set(favorites), [favorites])
   const byId = useMemo(() => new Map((drinks || []).map((d) => [d.id, d])), [drinks])
@@ -291,10 +306,10 @@ export default function PosProductPicker({
             <button
               className={`chip ${reordering ? 'active' : ''}`}
               onClick={() => setReordering((v) => !v)}
-              title="Tieni premuto su una card e trascinala per riordinare"
+              title="Trascina dalla maniglia per spostare · tocca una card per il menu prodotto (colore)"
               style={{ flexShrink: 0 }}
             >
-              {reordering ? '✓ Fine' : '↕ Riordina'}
+              {reordering ? '✓ Fine' : '↕ Organizza'}
             </button>
           )}
         </div>
@@ -326,8 +341,8 @@ export default function PosProductPicker({
           )}
           {visibleDrinks.map((d) =>
             canReorder ? (
-              // Modalità riordino: si trascina dalla MANIGLIA in alto; il
-              // resto della card scorre. Il tap non aggiunge.
+              // Modalità ORGANIZZA: si trascina dalla MANIGLIA in alto per
+              // spostare; toccando la card si apre il MENU del prodotto (colore).
               <div
                 key={d.id}
                 data-drink-id={d.id}
@@ -347,8 +362,8 @@ export default function PosProductPicker({
                 <DrinkTile
                   drink={d}
                   qty={qtyByDrink[d.id] ?? 0}
-                  color={drinkCategoryColor(d, cats)}
-                  onAdd={() => {}}
+                  color={tileColor(d)}
+                  onAdd={() => setMenuDrink(d)}
                   onSetQty={() => {}}
                 />
               </div>
@@ -357,7 +372,7 @@ export default function PosProductPicker({
                 key={d.id}
                 drink={d}
                 qty={qtyByDrink[d.id] ?? 0}
-                color={drinkCategoryColor(d, cats)}
+                color={tileColor(d)}
                 favorite={favSet.has(d.id)}
                 onToggleFav={() => toggleFav(d.id)}
                 onAdd={() => onAdd(d)}
@@ -367,6 +382,52 @@ export default function PosProductPicker({
           )}
         </div>
       </div>
+
+      {/* ── MENU del singolo prodotto (in Organizza): cambio colore del tab ── */}
+      {menuDrink && (
+        <div className="overlay confirm-overlay" onClick={() => setMenuDrink(null)}>
+          <div
+            className="confirm-box"
+            role="dialog"
+            aria-label={`Menu ${menuDrink.name}`}
+            style={{ width: 'min(360px, 94vw)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="row between" style={{ alignItems: 'center' }}>
+              <h3 style={{ margin: 0 }}>{menuDrink.name}</h3>
+              <button className="btn ghost small" onClick={() => setMenuDrink(null)}>✕</button>
+            </div>
+            <p className="muted small" style={{ margin: '8px 0' }}>Colore del tab</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 8 }}>
+              {CATEGORY_PALETTE.map((c) => {
+                const active = (tileColors[menuDrink.id] || '').toLowerCase() === c.toLowerCase()
+                return (
+                  <button
+                    key={c}
+                    aria-label={`Colore ${c}`}
+                    onClick={() => setTileColor(menuDrink.id, c)}
+                    style={{
+                      width: '100%',
+                      aspectRatio: '1 / 1',
+                      borderRadius: 8,
+                      background: c,
+                      border: active ? '3px solid var(--text)' : '1px solid var(--line)',
+                      cursor: 'pointer',
+                    }}
+                  />
+                )
+              })}
+            </div>
+            <button
+              className="btn ghost small block"
+              style={{ marginTop: 12 }}
+              onClick={() => setTileColor(menuDrink.id, null)}
+            >
+              ↩︎ Colore della categoria (default)
+            </button>
+          </div>
+        </div>
+      )}
     </>
   )
 }

@@ -941,6 +941,11 @@ export async function savePosOrder(order) {
 export async function savePosFavorites(favorites) {
   await setDoc(posPrefsRef, { favorites: favorites || [], favorites_updated_at: serverTimestamp() }, { merge: true })
 }
+// Colore del "tab" (angolo) di ogni prodotto: mappa { drinkId: '#rrggbb' }.
+// Vale per tutto il locale (come ordine/preferiti), sincronizzato in background.
+export async function savePosColors(colors) {
+  await setDoc(posPrefsRef, { colors: colors || {}, colors_updated_at: serverTimestamp() }, { merge: true })
+}
 
 // Id dei drink usati di RECENTE negli ordini (per la raccolta "Recenti" del
 // POS): ultimi item distinti, più recenti prima. Legge un blocco di ordini
