@@ -101,8 +101,8 @@ export default function BartenderPage() {
   const wideTab = role === 'bartender' && tab === 'inventario'
   useEffect(() => {
     if (!wideTab) return undefined
-    document.body.classList.add('fullbleed')
-    return () => document.body.classList.remove('fullbleed')
+    document.body.classList.add('fullbleed', 'inv-wide')
+    return () => document.body.classList.remove('fullbleed', 'inv-wide')
   }, [wideTab])
 
   if (user === undefined || (user && role === null)) {

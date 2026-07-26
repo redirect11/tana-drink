@@ -1404,6 +1404,45 @@ body.fullbleed .bar-content.bar-content-wide {
   overflow: hidden;
 }
 
+/* Header FISSO dell'inventario: tasto menu integrato + sotto-viste. In inv-wide
+   il burger flottante e la linguetta topbar spariscono (il menu è qui). */
+.inv-header {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg);
+  padding: 8px 0;
+  margin-bottom: 8px;
+}
+.inv-header-tabs {
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  margin-bottom: 0 !important;
+}
+.inv-menu-btn {
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg-2);
+  color: var(--text);
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+body.inv-wide .bar-burger,
+body.inv-wide .topbar-toggle {
+  display: none !important;
+}
+/* Il burger è integrato nell'header: niente padding-top per lasciarlo passare. */
+body.inv-wide .bar-content.bar-content-wide {
+  padding: 0 14px 24px;
+}
+
 /* ── Inventario come TABELLA: colonne allineate (grid identico su intestazione
    e righe) ── */
 .inv-table {
@@ -1424,9 +1463,10 @@ body.fullbleed .bar-content.bar-content-wide {
   color: var(--muted);
   border-bottom: 1px solid var(--line);
   position: sticky;
-  top: 0;
+  /* sotto l'header fisso dell'inventario (menu + sotto-viste) */
+  top: 50px;
   background: var(--bg-2);
-  z-index: 1;
+  z-index: 2;
 }
 .inv-table .inv-row-name {
   overflow: hidden;

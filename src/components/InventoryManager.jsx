@@ -111,16 +111,28 @@ export default function InventoryManager() {
   const [view, setView] = useState('prodotti')
   return (
     <div>
-      <div className="chips-row" style={{ marginBottom: 8 }}>
-        {INV_VIEWS.map(([id, label]) => (
-          <button
-            key={id}
-            className={`chip ${view === id ? 'active' : ''}`}
-            onClick={() => setView(id)}
-          >
-            {label}
-          </button>
-        ))}
+      {/* Header FISSO in alto: tasto menu integrato + sotto-viste inventario. */}
+      <div className="inv-header">
+        <button
+          type="button"
+          className="inv-menu-btn"
+          aria-label="Menu"
+          title="Menu"
+          onClick={() => window.dispatchEvent(new Event('tana:toggle-drawer'))}
+        >
+          ☰
+        </button>
+        <div className="chips-row inv-header-tabs">
+          {INV_VIEWS.map(([id, label]) => (
+            <button
+              key={id}
+              className={`chip ${view === id ? 'active' : ''}`}
+              onClick={() => setView(id)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
       {view === 'prodotti' && <ProductsPanel />}
       {view === 'conta' && <StockCountPanel />}
