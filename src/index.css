@@ -3154,6 +3154,34 @@ body.fullbleed,
   flex: 1;
   min-width: 0;
 }
+/* Barra categorie A SCOMPARSA: nascosta, il contenuto si allarga; resta una
+   linguetta sottile per riaprirla. */
+.cat-rail-hide {
+  justify-content: center !important;
+  opacity: 0.75;
+  font-size: 0.78rem;
+}
+.cat-rail-show {
+  flex-shrink: 0;
+  align-self: flex-start;
+  position: sticky;
+  top: 8px;
+  width: 30px;
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--tile-bg, rgba(127, 127, 140, 0.12));
+  color: inherit;
+  cursor: pointer;
+  font-size: 1.1rem;
+}
+@media (max-width: 700px) {
+  .cat-rail-show {
+    position: static;
+    width: 100%;
+    min-height: 34px;
+  }
+}
 @media (max-width: 700px) {
   .cat-layout {
     flex-direction: column;
