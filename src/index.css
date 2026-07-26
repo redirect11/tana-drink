@@ -1834,6 +1834,22 @@ body.inv-wide .app {
   border-left-color: var(--accent-2, #f5b94a);
 }
 
+/* Striscia laterale per STATO ORDINE (sovrascrive il colore della preparazione):
+   aperto · pagato parzialmente · pagato · annullato. Deve venire DOPO le regole
+   del workflow per vincere sul border-left-color. */
+.order-card.pay-aperto {
+  border-left-color: #3498db;
+}
+.order-card.pay-parziale {
+  border-left-color: #f39c12;
+}
+.order-card.pay-pagato {
+  border-left-color: #2ecc71;
+}
+.order-card.pay-annullato {
+  border-left-color: #8a8a8a;
+}
+
 /* Nota dell'ordine sulla card del bartender */
 .order-note {
   background: rgba(245, 185, 74, 0.1);
