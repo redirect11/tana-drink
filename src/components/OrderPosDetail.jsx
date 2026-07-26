@@ -46,7 +46,7 @@ import {
   reconcileLayout,
   qtyByDrink as draftQtyByDrink,
 } from '../lib/orderLines.js'
-import { toastSuccess, toastError } from '../lib/toast.js'
+import { toastError } from '../lib/toast.js'
 import { printComanda, printScontrino } from '../lib/printer.js'
 import PosProductPicker from './PosProductPicker.jsx'
 import { IconPrinter, IconReceipt, IconCard, IconRefresh, IconX, IconCheck, IconClose } from './Icons.jsx'
@@ -93,7 +93,6 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   const [editLine, setEditLine] = useState(null) // riga bozza in modifica (editor)
   const [showComande, setShowComande] = useState(false)
   const [confirmCancel, setConfirmCancel] = useState(false)
-  const [confirmDiscard, setConfirmDiscard] = useState(false)
   const [showPayment, setShowPayment] = useState(false)
   const [askName, setAskName] = useState(false) // modale nome (creazione)
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
@@ -503,24 +502,6 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   const plusRow = (l) =>
     plusFromCatalog({ id: l.drink_id, name: l.name, price: l.unit_price, sumup_product_id: l.sumup_product_id })
 
-  async function printDraftComanda() {
-    if (draft.length === 0) return
-    const printableOrder = isNew
-      ? {
-          customer_name: info.customer_name.trim() || null,
-          table_label: info.table_label || null,
-          note: info.note || null,
-          daily_number: null,
-        }
-      : order
-    try {
-      await printComanda(printableOrder, { items: draft.map((l) => ({ name: l.name, qty: l.qty })) })
-      toastSuccess('Comanda stampata')
-    } catch (e) {
-      setError(`Stampa: ${e.message}`)
-    }
-  }
-
   // ── Riordino della lista per DRAG (tieni premuto e trascina) ──
   // Tutti gli item sono spostabili. Il riordino delle righe di bozza viene
   // reso persistente (allineo l'array bozza all'ordine visivo).
@@ -530,12 +511,21 @@ export default function OrderPosDetail({ order: orderProp = null }) {
     if (closed) return
     try { e.currentTarget.setPointerCapture(e.pointerId) } catch { /* ok */ }
     dragRef.current.startY = e.clientY
+    dragRef.current.startX = e.clientX
+    dragRef.current.startIndex = index
+    dragRef.current.moved = false
     clearTimeout(dragRef.current.timer)
     dragRef.current.timer = setTimeout(() => setDragIndex(index), 300)
   }
   const moveDrag = (e) => {
     if (dragIndex == null) {
-      if (Math.abs(e.clientY - dragRef.current.startY) > 8) clearTimeout(dragRef.current.timer)
+      const moved =
+        Math.abs(e.clientY - dragRef.current.startY) > 8 ||
+        Math.abs(e.clientX - dragRef.current.startX) > 8
+      if (moved) {
+        dragRef.current.moved = true
+        clearTimeout(dragRef.current.timer)
+      }
       return
     }
     e.preventDefault()
@@ -555,10 +545,17 @@ export default function OrderPosDetail({ order: orderProp = null }) {
       setDragIndex(to)
     }
   }
-  const endDrag = () => {
+  const endDrag = (e) => {
     clearTimeout(dragRef.current.timer)
-    if (dragIndex != null) syncDraftOrder()
+    const wasDragging = dragIndex != null
+    if (wasDragging) syncDraftOrder()
     setDragIndex(null)
+    // TAP (nessun drag, nessun movimento) sull'item → apre l'editor per-riga.
+    // Serve qui perché il pointer-capture del drag "mangia" il click sul figlio.
+    if (!wasDragging && !dragRef.current.moved && e?.type === 'pointerup') {
+      const l = orderedLines[dragRef.current.startIndex]
+      if (l && !closed && (l.source === 'draft' || l.removable)) setEditLine(l)
+    }
   }
   // Allinea l'ordine della bozza (persistito) alla sequenza visiva corrente.
   const syncDraftOrder = () => {
@@ -671,24 +668,30 @@ export default function OrderPosDetail({ order: orderProp = null }) {
     if (isNew || !order?.id) return
     const additions = draftRef.current
     if (!additions || additions.length === 0) return
-    clearDraft()
     const target = effComandeRef.current.find(comandaEditable)
     const oid = order.id
-    ;(async () => {
-      try {
-        await flushAll()
-        if (target) {
-          await bartenderUpdateComanda(oid, target.id, {
-            items: [...(target.items || []), ...additions],
-          })
-        } else {
+    if (target) {
+      // OTTIMISTICO: gli item entrano SUBITO nella comanda (stesso render in cui
+      // si svuota la bozza), così non spariscono un istante = niente flicker. Il
+      // sync col server (e la pulizia dell'override) li fa flushComanda.
+      const merged = [...(target.items || []), ...additions]
+      setPendingEdits((p) => ({ ...p, [target.id]: merged }))
+      clearDraft()
+      clearTimeout(flushTimers.current[target.id])
+      flushTimers.current[target.id] = setTimeout(() => flushComanda(target.id), 250)
+    } else {
+      // Nessuna comanda modificabile → nuova comanda (dal server).
+      clearDraft()
+      ;(async () => {
+        try {
+          await flushAll()
           await addComanda(oid, additions)
+        } catch (e) {
+          toastError(`Aggiunte non inviate: ${e.message}`)
         }
-      } catch (e) {
-        toastError(`Aggiunte non inviate: ${e.message}`)
-      }
-    })()
-  }, [isNew, order?.id, flushAll, clearDraft])
+      })()
+    }
+  }, [isNew, order?.id, flushAll, clearDraft, flushComanda])
 
   // Auto-conferma in MODIFICA: poco dopo l'ultima aggiunta gli item vengono
   // confermati da soli (niente tasto Conferma, niente stato "non confermato"
@@ -1022,19 +1025,6 @@ export default function OrderPosDetail({ order: orderProp = null }) {
               </p>
             )}
 
-            {/* Barretta aggiunte non confermate (solo in CREAZIONE: in modifica
-                gli item si confermano da soli). Stampa + pulisci. */}
-            {isNew && draftCount > 0 && (
-              <div className="row between" style={{ alignItems: 'center', marginBottom: 2 }}>
-                <span className="muted small">
-                  🟡 {draftCount} non confermat{draftCount === 1 ? 'o' : 'i'} · trascina per riordinare
-                </span>
-                <span className="row" style={{ gap: 6 }}>
-                  <button className="btn ghost small" aria-label="Stampa comanda" onClick={printDraftComanda}>🖨</button>
-                  <button className="btn ghost small" onClick={() => setConfirmDiscard(true)}>🧹 Pulisci</button>
-                </span>
-              </div>
-            )}
 
             {paidCount > 0 && (
               <button
@@ -1077,12 +1067,12 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                       opacity: isPaid ? 0.6 : dragIndex != null && dragIndex !== idx ? 0.85 : 1,
                     }}
                   >
-                    {/* L'item è CLICCABILE per modificarlo (niente tasto matita
-                        che rubava spazio): tap sul nome → editor per-riga. */}
+                    {/* L'item è CLICCABILE per modificarlo (niente tasto matita):
+                        il tap è gestito in endDrag (pointerup) perché il
+                        pointer-capture del drag intercetta il click sul figlio. */}
                     <span
                       className="grow"
                       style={{ fontSize: '0.88em', display: 'flex', alignItems: 'center', minWidth: 0, cursor: !closed && (isDraft || l.removable) ? 'pointer' : 'inherit' }}
-                      onClick={() => { if (!closed && (isDraft || l.removable)) setEditLine(l) }}
                       title={!closed && (isDraft || l.removable) ? `Modifica ${l.name}` : undefined}
                     >
                       {!closed && !isPaid && <span aria-hidden style={{ opacity: 0.35, marginRight: 4, flexShrink: 0 }}>⠿</span>}
@@ -1468,22 +1458,6 @@ export default function OrderPosDetail({ order: orderProp = null }) {
             )}
           </div>
         </div>
-      )}
-
-      {/* ── Pulisci le aggiunte non confermate (la bozza) ── */}
-      {confirmDiscard && (
-        <ConfirmDialog
-          title="Togliere gli item non confermati?"
-          message={`${draftCount} prodott${draftCount === 1 ? 'o' : 'i'} non confermat${draftCount === 1 ? 'o' : 'i'} verranno rimossi. Gli item già confermati restano.`}
-          confirmLabel="Pulisci non confermati"
-          cancelLabel="Indietro"
-          danger
-          onCancel={() => setConfirmDiscard(false)}
-          onConfirm={() => {
-            setConfirmDiscard(false)
-            clearDraft()
-          }}
-        />
       )}
 
       {confirmCancel && (
