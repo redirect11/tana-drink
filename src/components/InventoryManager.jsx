@@ -152,7 +152,7 @@ function ProductsPanel() {
   const [statusFilter, setStatusFilter] = useState('all')
 
   // Riga espansa + carico in corso
-  const [invView, setInvView] = useState('card') // 'card' | 'lista'
+  const [invView, setInvView] = useState('lista') // 'lista' | 'card' — default LISTA
   const [expandedId, setExpandedId] = useState(null)
   const [caricoFor, setCaricoFor] = useState(null)
 
