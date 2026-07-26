@@ -441,7 +441,10 @@ a.btn.block {
 .inv-item:last-child {
   border-bottom: none;
 }
-.inv-row {
+/* Riga legacy (StockCount/Fatture fornitore): SEMPRE dentro .inv-item. NON
+   deve toccare la lista inventario nuova (.inv-list > .inv-row), che è a blocco
+   col dettaglio sotto — altrimenti il flex mette il dettaglio di fianco. */
+.inv-item .inv-row {
   display: flex;
   align-items: center;
   gap: 10px;
