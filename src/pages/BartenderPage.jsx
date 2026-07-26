@@ -142,7 +142,7 @@ export default function BartenderPage() {
 
       <div className="bar-content">
         {tab === 'coda' && <OrderQueue />}
-        {tab === 'pagamenti' && <CashFlow />}
+        {tab === 'pagamenti' && <CashFlow canManageStaff={role === 'bartender'} />}
         {tab === 'fatture' && <InvoicesTab />}
         {tab === 'stats' && <StatsTab />}
         {tab === 'menu' && <MenuTab />}

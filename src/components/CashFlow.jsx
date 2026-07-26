@@ -10,6 +10,7 @@ import {
 import { auth } from '../lib/firebaseClient.js'
 import { cashRecap } from '../lib/cassa.js'
 import { formatPrice } from '../lib/orderStatus.js'
+import StaffBadgePanel from './StaffBadgePanel.jsx'
 
 // FLUSSO CASSA: apertura/chiusura della serata e andamento in tempo reale
 // degli incassi della sessione aperta. I numeri vengono dagli ordini nella
@@ -32,7 +33,7 @@ const durata = (fromIso, toIso) => {
   return h > 0 ? `${h}h ${min % 60}m` : `${min}m`
 }
 
-export default function CashFlow() {
+export default function CashFlow({ canManageStaff = false }) {
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   const [session, setSession] = useState(null)
   const [orders, setOrders] = useState([])
@@ -51,10 +52,18 @@ export default function CashFlow() {
   const recap = useMemo(() => cashRecap(orders, session, now), [orders, session, now])
   const by = { email: auth.currentUser?.email ?? null }
 
-  if (!session) return <ApriCassa cutoff={cutoff} by={by} />
+  if (!session) {
+    return (
+      <>
+        <ApriCassa cutoff={cutoff} by={by} />
+        {canManageStaff && <StaffBadgePanel />}
+      </>
+    )
+  }
 
   return (
     <div>
+      {canManageStaff && <StaffBadgePanel />}
       <div className="card cassa-open">
         <div className="row between" style={{ alignItems: 'center' }}>
           <div>
