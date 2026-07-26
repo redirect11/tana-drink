@@ -96,6 +96,15 @@ export default function BartenderPage() {
     })
   }, [])
 
+  // Inventario: vista tabellare a TUTTA LARGHEZZA col menu laterale a scomparsa
+  // (riusa la modalità fullbleed della griglia). Solo per il bartender.
+  const wideTab = role === 'bartender' && tab === 'inventario'
+  useEffect(() => {
+    if (!wideTab) return undefined
+    document.body.classList.add('fullbleed')
+    return () => document.body.classList.remove('fullbleed')
+  }, [wideTab])
+
   if (user === undefined || (user && role === null)) {
     return <div className="empty">Verifica accesso…</div>
   }
@@ -140,7 +149,7 @@ export default function BartenderPage() {
         <GroupView groupId={params.get('group')} onClose={() => navigate('/bar')} />
       )}
 
-      <div className="bar-content">
+      <div className={`bar-content${wideTab ? ' bar-content-wide' : ''}`}>
         {tab === 'coda' && <OrderQueue />}
         {tab === 'pagamenti' && <CashFlow canManageStaff={role === 'bartender'} />}
         {tab === 'fatture' && <InvoicesTab />}
