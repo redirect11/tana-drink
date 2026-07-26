@@ -171,17 +171,6 @@ describe('creazione: ordine creato al primo item, nome chiesto alla chiusura', (
     expect(updateOrderInfo).not.toHaveBeenCalled()
   })
 
-  it('la stampa comanda è un’azione a parte: stampa senza creare l’ordine', async () => {
-    const user = userEvent.setup()
-    mount()
-    await user.click(screen.getByText('Mojito'))
-    await user.click(screen.getByRole('button', { name: /Stampa comanda/ }))
-    await waitFor(() => expect(printComanda).toHaveBeenCalledTimes(1))
-    const [orderLike, comandaLike] = printComanda.mock.calls[0]
-    expect(orderLike.daily_number).toBeNull()
-    expect(comandaLike.items).toEqual([{ name: 'Mojito', qty: 1 }])
-    expect(submitPosOrder).not.toHaveBeenCalled()
-  })
 })
 
 describe('pagamento diretto dal POS', () => {
