@@ -296,11 +296,15 @@ function ProductsPanel() {
     }
   }
 
-  async function doCarico(item, { count, open }) {
+  async function doCarico(item, { count, open, newCost }) {
     setError(null)
     try {
-      if (item.unit === 'pz') await loadStock(item.id, count)
-      else await receiveBottles(item.id, count, open)
+      if (count > 0 || open > 0) {
+        if (item.unit === 'pz') await loadStock(item.id, count)
+        else await receiveBottles(item.id, count, open)
+      }
+      // Prezzo aggiornato al carico (il fornitore ha cambiato tariffa).
+      if (newCost != null) await updateInventoryItem(item.id, { cost: newCost })
       setCaricoFor(null)
       await load()
     } catch (e) {
@@ -467,6 +471,14 @@ function ProductsPanel() {
                     {it.status === 'out' && <span className="badge-empty">OUT</span>}
                   </span>
                   <span className="muted small inv-row-cat">{catName(it.category_id) || '—'}</span>
+                  <span className="muted small inv-row-price">
+                    {it.cost != null ? (
+                      <>
+                        {formatPrice(it.cost)}
+                        <span className="inv-row-price-iva"> · IVA {formatPrice(costWithVat(it.cost, it.vat))}</span>
+                      </>
+                    ) : '—'}
+                  </span>
                   <span className="inv-row-stock">
                     {(() => {
                       const bs = bottleSummary(it)
@@ -946,16 +958,44 @@ function CaricoForm({ item, onCancel, onConfirm }) {
   const isPz = item.unit === 'pz'
   const size = Number(item.package_size) || 0
 
+  // Costo al carico (bidirezionale): il fornitore spesso scarica il prezzo del
+  // COLLO/CARTONE. Si inserisce l'unitario OPPURE il totale del collo (sapendo
+  // quanti pezzi ci sono) e l'altro si ricalcola. Il "pezzi per collo" è solo
+  // per il calcolo, non viene salvato.
+  const r2 = (n) => Math.round((Number(n) || 0) * 100) / 100
+  const num = (v) => Number(String(v).replace(',', '.')) || 0
+  const [unitCost, setUnitCost] = useState(item.cost != null ? String(item.cost) : '')
+  const [perCollo, setPerCollo] = useState('')
+  const [colloTot, setColloTot] = useState('')
+
+  const onUnit = (v) => {
+    setUnitCost(v)
+    const p = num(perCollo)
+    if (p > 0) setColloTot(num(v) > 0 ? String(r2(num(v) * p)) : '')
+  }
+  const onCollo = (v) => {
+    setPerCollo(v)
+    const p = num(v)
+    if (p <= 0) return
+    if (num(unitCost) > 0) setColloTot(String(r2(num(unitCost) * p)))
+    else if (num(colloTot) > 0) setUnitCost(String(r2(num(colloTot) / p)))
+  }
+  const onTot = (v) => {
+    setColloTot(v)
+    const p = num(perCollo)
+    if (p > 0) setUnitCost(num(v) > 0 ? String(r2(num(v) / p)) : '')
+  }
+
+  const unitN = num(unitCost)
+  const perN = num(perCollo)
+
   function confirm() {
-    const n = Number(String(count).replace(',', '.')) || 0
-    if (isPz) {
-      if (n <= 0) return
-      onConfirm({ count: n, open: 0 })
-      return
-    }
-    const openQty = Number(String(open).replace(',', '.')) || 0
-    if (n <= 0 && openQty <= 0) return
-    onConfirm({ count: n, open: openQty })
+    const n = num(count)
+    const openQty = num(open)
+    const hasQty = isPz ? n > 0 : n > 0 || openQty > 0
+    const newCost = unitCost !== '' && unitN >= 0 && r2(unitN) !== Number(item.cost) ? r2(unitN) : null
+    if (!hasQty && newCost == null) return
+    onConfirm({ count: n, open: isPz ? 0 : openQty, newCost })
   }
 
   return (
@@ -973,6 +1013,30 @@ function CaricoForm({ item, onCancel, onConfirm }) {
           <input type="number" step="any" min="0" value={open} onChange={(e) => setOpen(e.target.value)} placeholder="Es. 400 se ne aggiungi una già aperta" />
         </>
       )}
+
+      {/* Prezzo: unitario ↔ totale collo (per confrontare col fornitore) */}
+      <div className="card" style={{ marginTop: 10, padding: 10 }}>
+        <div className="muted small">💶 Prezzo — aggiorna se il fornitore l'ha cambiato</div>
+        <div className="grid-2" style={{ marginTop: 6 }}>
+          <div>
+            <label htmlFor="cf-unit">Costo unitario (€, netto)</label>
+            <input id="cf-unit" type="number" step="any" min="0" value={unitCost} onChange={(e) => onUnit(e.target.value)} />
+          </div>
+          <div>
+            <label htmlFor="cf-collo">Pezzi per collo/cartone</label>
+            <input id="cf-collo" type="number" step="any" min="0" value={perCollo} onChange={(e) => onCollo(e.target.value)} placeholder="Es. 24" />
+          </div>
+        </div>
+        <label htmlFor="cf-tot" style={{ marginTop: 6 }}>Totale collo (€, netto)</label>
+        <input id="cf-tot" type="number" step="any" min="0" value={colloTot} onChange={(e) => onTot(e.target.value)} placeholder="Prezzo del cartone dal fornitore" />
+        {unitN > 0 && (
+          <div className="muted small" style={{ marginTop: 4 }}>
+            Unitario +IVA {formatPrice(costWithVat(unitN, item.vat))}
+            {perN > 0 && ` · Totale collo +IVA ${formatPrice(costWithVat(unitN * perN, item.vat))}`}
+          </div>
+        )}
+      </div>
+
       <div className="grid-2" style={{ marginTop: 10 }}>
         <button className="btn ghost small" onClick={onCancel}>Annulla</button>
         <button className="btn small" onClick={confirm}>Conferma carico</button>

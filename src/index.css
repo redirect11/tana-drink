@@ -1434,6 +1434,17 @@ body.fullbleed .bar-content {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.inv-row-price {
+  white-space: nowrap;
+  flex-shrink: 0;
+  text-align: right;
+  min-width: 84px;
+}
+.inv-row-price-iva { opacity: 0.7; }
+@media (max-width: 640px) {
+  .inv-row-price-iva { display: none; }
+  .inv-row-price { min-width: 56px; }
+}
 .inv-row-stock {
   font-weight: 600;
   white-space: nowrap;
