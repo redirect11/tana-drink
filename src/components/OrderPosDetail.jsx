@@ -166,11 +166,19 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   }, [isNew])
 
   // Ordine auto-creato in place: lo si tiene aggiornato dal server (comande,
-  // pagamenti…) senza rimontare la pagina.
+  // pagamenti…) senza rimontare la pagina. Si aggiorna lo stato SOLO se cambia
+  // davvero (i "battiti" identici della sottoscrizione non causano re-render).
   const selfOrderId = selfOrder?.id
+  const selfOrderJsonRef = useRef('')
   useEffect(() => {
     if (!selfOrderId || orderProp) return
-    return subscribeOrder(selfOrderId, (o) => o && setSelfOrder(o), () => {})
+    return subscribeOrder(selfOrderId, (o) => {
+      if (!o) return
+      const j = JSON.stringify(o)
+      if (j === selfOrderJsonRef.current) return
+      selfOrderJsonRef.current = j
+      setSelfOrder(o)
+    }, () => {})
   }, [selfOrderId, orderProp])
 
   // PAGAMENTO DIRETTO (creazione): la schermata si apre subito su un ordine
@@ -193,16 +201,10 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   // evidenzia un attimo: con la lista lunga, altrimenti, non si vede se è
   // stato inserito davvero.
   const listRef = useRef(null)
-  const flashTimer = useRef(null)
   const scrollKeyRef = useRef(null)
-  const [flashKey, setFlashKey] = useState(null)
   const scrollToLine = useCallback((key) => {
     scrollKeyRef.current = key // lo scroll vero avviene nell'effetto su orderedLines
-    setFlashKey(key)
-    clearTimeout(flashTimer.current)
-    flashTimer.current = setTimeout(() => setFlashKey(null), 750)
   }, [])
-  useEffect(() => () => clearTimeout(flashTimer.current), [])
 
   // Invio su un campo dati conto: chiude la tastiera virtuale. Diretto
   // sull'input e con il rimedio Windows (readonly momentaneo), così funziona
@@ -736,6 +738,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
         group_name_snapshot: group && !groupIsContainer ? group.name : null,
       })
       clearDraft()
+      selfOrderJsonRef.current = JSON.stringify(created) // evita un re-render doppio dalla subscription
       setSelfOrder(created) // diventa "modifica" in place, niente reload
       return created
     } catch (e) {
@@ -1049,7 +1052,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                     </div>
                   )}
                   <div
-                    className={`row between draft-line${l.key === flashKey ? ' flash-added' : ''}`}
+                    className="row between draft-line"
                     data-line-index={idx}
                     data-line-key={l.key}
                     onPointerDown={(e) => !isPaid && startDrag(e, idx)}

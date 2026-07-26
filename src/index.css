@@ -2509,6 +2509,9 @@ body.fullbleed,
   min-width: 300px;
   max-width: none;
   flex-shrink: 0;
+  /* L'auto-larghezza (quando si aggiunge un item con nome lungo) si anima invece
+     di "saltare": niente sensazione di ricaricamento del layout. */
+  transition: width 0.14s ease;
 }
 /* Lista dell'ordine: allargando la colonna crescono i testi (nomi, prezzi,
    quantità), e si rimpiccioliscono restringendola. Il testo secondario usa em
