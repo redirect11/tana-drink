@@ -1165,6 +1165,18 @@ body.fullbleed .bar-content {
   margin-left: 0;
   padding-top: 0;
 }
+/* Inventario a tutta larghezza (vista tabellare): come le viste fullbleed la
+   sidebar è a scomparsa (burger), ma qui serve un po' di respiro in alto per
+   non finire sotto al burger, e un padding orizzontale (non è una griglia che
+   se lo gestisce da sé). */
+body.fullbleed .bar-content.bar-content-wide {
+  padding: 52px 14px 24px;
+}
+@media (max-width: 700px) {
+  body.fullbleed .bar-content.bar-content-wide {
+    padding: 52px 10px 20px;
+  }
+}
 
 /* Board ordini a griglia */
 .queue-board {
