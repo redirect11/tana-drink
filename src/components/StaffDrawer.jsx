@@ -34,14 +34,6 @@ export default function StaffDrawer({ role, active = null, onSelect = null }) {
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
 
-  // Apertura del menu da un tasto INTEGRATO altrove (es. header inventario a
-  // tutta larghezza), senza dover usare il burger flottante.
-  useEffect(() => {
-    const h = () => setOpen((o) => !o)
-    window.addEventListener('tana:toggle-drawer', h)
-    return () => window.removeEventListener('tana:toggle-drawer', h)
-  }, [])
-
   // Gruppi nel drawer (quadratini): attivi se l'impostazione lo prevede.
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   const [groups, setGroups] = useState([])
