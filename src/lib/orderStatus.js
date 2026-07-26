@@ -81,3 +81,13 @@ export function placedByName(placedBy) {
   if (placedBy.name) return placedBy.name
   return String(placedBy.email || '').split('@')[0]
 }
+
+// Lettera (iniziale) del dipendente/bartender che ha APERTO l'ordine, da
+// affiancare al numero. `null` se l'ordine è stato aperto dal CLIENTE (nessun
+// placed_by di staff), così a colpo d'occhio si capisce chi l'ha inserito.
+export function placedByLetter(placedBy) {
+  if (!placedBy) return null
+  if (placedBy.role !== 'bartender' && placedBy.role !== 'staff') return null
+  const n = placedByName(placedBy).trim()
+  return n ? n[0].toUpperCase() : null
+}
