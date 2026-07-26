@@ -240,7 +240,7 @@ export default function MenuManager() {
   return (
     <div>
       <button className="btn block" onClick={() => setEditing('new')}>
-        + Aggiungi drink
+        + Aggiungi prodotto
       </button>
 
       <button

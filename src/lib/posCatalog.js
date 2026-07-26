@@ -77,3 +77,21 @@ export const loadOrder = () => read('tana:pos:order', [])
 export const saveOrder = (ids) => write('tana:pos:order', ids)
 export const loadFavorites = () => read('tana:pos:favorites', [])
 export const saveFavorites = (ids) => write('tana:pos:favorites', ids)
+
+// ── Colore del "tab" (angolo) per prodotto: mappa { drinkId: colore } ──
+export const loadColors = () => {
+  try {
+    const raw = localStorage.getItem('tana:pos:colors')
+    const v = raw ? JSON.parse(raw) : {}
+    return v && typeof v === 'object' && !Array.isArray(v) ? v : {}
+  } catch {
+    return {}
+  }
+}
+export const saveColors = (map) => {
+  try {
+    localStorage.setItem('tana:pos:colors', JSON.stringify(map || {}))
+  } catch {
+    /* quota/privata: resta in memoria */
+  }
+}
