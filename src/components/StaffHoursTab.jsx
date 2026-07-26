@@ -707,7 +707,7 @@ function PagheManager({ membri, rates, onSave }) {
                 id="pg-eur"
                 type="number"
                 min="0"
-                step="0.5"
+                step="0.01"
                 value={rate}
                 onChange={(e) => setRate(e.target.value)}
               />
