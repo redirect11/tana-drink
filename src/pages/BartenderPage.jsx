@@ -96,13 +96,13 @@ export default function BartenderPage() {
     })
   }, [])
 
-  // Inventario: vista tabellare a TUTTA LARGHEZZA col menu laterale a scomparsa
-  // (riusa la modalità fullbleed della griglia). Solo per il bartender.
+  // Inventario: vista tabellare PIÙ LARGA (esce dal cap di 760px), MANTENENDO
+  // l'header col logo. Niente fullbleed (che nasconderebbe la topbar).
   const wideTab = role === 'bartender' && tab === 'inventario'
   useEffect(() => {
     if (!wideTab) return undefined
-    document.body.classList.add('fullbleed', 'inv-wide')
-    return () => document.body.classList.remove('fullbleed', 'inv-wide')
+    document.body.classList.add('inv-wide')
+    return () => document.body.classList.remove('inv-wide')
   }, [wideTab])
 
   if (user === undefined || (user && role === null)) {
@@ -149,7 +149,7 @@ export default function BartenderPage() {
         <GroupView groupId={params.get('group')} onClose={() => navigate('/bar')} />
       )}
 
-      <div className={`bar-content${wideTab ? ' bar-content-wide' : ''}`}>
+      <div className="bar-content">
         {tab === 'coda' && <OrderQueue />}
         {tab === 'pagamenti' && <CashFlow canManageStaff={role === 'bartender'} />}
         {tab === 'fatture' && <InvoicesTab />}

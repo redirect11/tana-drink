@@ -1165,18 +1165,6 @@ body.fullbleed .bar-content {
   margin-left: 0;
   padding-top: 0;
 }
-/* Inventario a tutta larghezza (vista tabellare): come le viste fullbleed la
-   sidebar è a scomparsa (burger), ma qui serve un po' di respiro in alto per
-   non finire sotto al burger, e un padding orizzontale (non è una griglia che
-   se lo gestisce da sé). */
-body.fullbleed .bar-content.bar-content-wide {
-  padding: 52px 14px 24px;
-}
-@media (max-width: 700px) {
-  body.fullbleed .bar-content.bar-content-wide {
-    padding: 52px 10px 20px;
-  }
-}
 
 /* Board ordini a griglia */
 .queue-board {
@@ -1404,43 +1392,17 @@ body.fullbleed .bar-content.bar-content-wide {
   overflow: hidden;
 }
 
-/* Header FISSO dell'inventario: tasto menu integrato + sotto-viste. In inv-wide
-   il burger flottante e la linguetta topbar spariscono (il menu è qui). */
-.inv-header {
-  position: sticky;
-  top: 0;
-  z-index: 6;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: var(--bg);
-  padding: 8px 0;
-  margin-bottom: 8px;
+/* Inventario PIÙ LARGO: esce dal cap di 760px di .app mantenendo l'header
+   (topbar col logo) e il menu laterale. Su desktop la sidebar resta agganciata,
+   quindi il contenuto lascia spazio a sinistra; su mobile la sidebar è già a
+   scomparsa (burger) e il contenuto è a tutta larghezza. */
+body.inv-wide .app {
+  max-width: none;
 }
-.inv-header-tabs {
-  flex: 1;
-  min-width: 0;
-  overflow-x: auto;
-  margin-bottom: 0 !important;
-}
-.inv-menu-btn {
-  flex-shrink: 0;
-  width: 42px;
-  height: 42px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--bg-2);
-  color: var(--text);
-  font-size: 1.2rem;
-  cursor: pointer;
-}
-body.inv-wide .bar-burger,
-body.inv-wide .topbar-toggle {
-  display: none !important;
-}
-/* Il burger è integrato nell'header: niente padding-top per lasciarlo passare. */
-body.inv-wide .bar-content.bar-content-wide {
-  padding: 0 14px 24px;
+@media (min-width: 900px) {
+  body.inv-wide .bar-content {
+    margin-left: 250px;
+  }
 }
 
 /* ── Inventario come TABELLA: colonne allineate (grid identico su intestazione
@@ -1462,11 +1424,7 @@ body.inv-wide .bar-content.bar-content-wide {
   letter-spacing: 0.03em;
   color: var(--muted);
   border-bottom: 1px solid var(--line);
-  position: sticky;
-  /* sotto l'header fisso dell'inventario (menu + sotto-viste) */
-  top: 50px;
   background: var(--bg-2);
-  z-index: 2;
 }
 .inv-table .inv-row-name {
   overflow: hidden;
