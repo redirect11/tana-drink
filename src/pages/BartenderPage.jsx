@@ -24,6 +24,7 @@ import {
   formatPrice,
   nextStatus,
   placedByName,
+  placedByLetter,
 } from '../lib/orderStatus.js'
 import { bucketByStatus, ordersRecap } from '../lib/coda.js'
 import { allServed } from '../lib/comande.js'
@@ -56,6 +57,17 @@ import CancelOrderDialog from '../components/CancelOrderDialog.jsx'
 import DevTools from '../components/DevTools.jsx'
 import StaffDrawer from '../components/StaffDrawer.jsx'
 import { devToolsEnabled } from '../dev/devActions.js'
+
+// Badge accanto al numero d'ordine: la LETTERA del dipendente che l'ha aperto,
+// oppure il segno del CLIENTE se l'ha aperto lui dall'app.
+function OrderBy({ order }) {
+  const L = placedByLetter(order?.placed_by)
+  return L ? (
+    <span className="order-by staff" title={`Aperto da ${placedByName(order.placed_by)}`}>{L}</span>
+  ) : (
+    <span className="order-by client" title="Aperto dal cliente (app)">🌐</span>
+  )
+}
 
 export default function BartenderPage() {
   const navigate = useNavigate()
@@ -543,6 +555,20 @@ function OrderQueue() {
   // nella loro tab e non devono gonfiare i totali di oggi).
   const recap = ordersRecap(ordersOggi, isChiuso)
 
+  // Leggenda "chi ha aperto l'ordine": lettera → nome per lo staff che ha
+  // battuto ordini oggi, più l'eventuale voce Cliente (ordini dall'app).
+  // Calcolo semplice (non hook: qui siamo dopo eventuali early-return).
+  const legenda = (() => {
+    const staff = new Map()
+    let hasClient = false
+    for (const o of ordersOggi) {
+      const L = placedByLetter(o.placed_by)
+      if (L) { if (!staff.has(L)) staff.set(L, placedByName(o.placed_by)) }
+      else hasClient = true
+    }
+    return { staff: [...staff.entries()].sort((a, b) => a[0].localeCompare(b[0])), hasClient }
+  })()
+
   // Ricerca rapida: numero, cliente, tavolo, drink, chi ha inserito.
   const q = search.trim().toLowerCase()
   // Cercando esplicitamente si trovano anche i conti dei giorni scorsi
@@ -740,7 +766,7 @@ function OrderQueue() {
           onClick={() => navigate(`/ordine/${o.id}`)}
         >
           <div className="row between">
-            <span className="bignum">#{o.daily_number ?? '—'}</span>
+            <span className="bignum">#{o.daily_number ?? '—'} <OrderBy order={o} /></span>
             {/* Il badge di preparazione compare solo se si tracciano gli stati:
                 a gestione preparazione spenta l'ordine è solo ricevuto→pagato. */}
             {workflowOn && (
@@ -808,7 +834,7 @@ function OrderQueue() {
       >
         <div className="grid-card-main" style={{ cursor: 'default' }}>
           <div className="row between">
-            <span className="bignum">#{o.daily_number ?? '…'}</span>
+            <span className="bignum">#{o.daily_number ?? '…'} <OrderBy order={o} /></span>
             <span className={`pill ${isError ? '' : o.workflow_status}`}>
               {isError
                 ? '⚠️ Errore invio'
@@ -856,7 +882,7 @@ function OrderQueue() {
             <div className="row between">
               <div>
                 <span className="bignum" style={{ fontSize: '1.4rem', fontWeight: 600 }}>
-                  #{o.daily_number ?? '—'}
+                  #{o.daily_number ?? '—'} <OrderBy order={o} />
                 </span>{' '}
                 {o.customer_name && <strong>{o.customer_name}</strong>}{' '}
                 {o.table_label && (
@@ -964,6 +990,16 @@ function OrderQueue() {
           <div className="board-title">
             <strong>In servizio</strong>
             <span className="muted"> · {recap.aperti} apert{recap.aperti === 1 ? 'o' : 'i'} · {recap.chiusi} chius{recap.chiusi === 1 ? 'o' : 'i'} · {formatPrice(recap.total)}</span>
+            {(legenda.staff.length > 0 || legenda.hasClient) && (
+              <div className="order-legend">
+                {legenda.staff.map(([L, name]) => (
+                  <span key={L}><span className="order-by staff">{L}</span> {name}</span>
+                ))}
+                {legenda.hasClient && (
+                  <span><span className="order-by client">🌐</span> Cliente</span>
+                )}
+              </div>
+            )}
           </div>
           <input
             type="search"
