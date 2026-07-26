@@ -449,12 +449,22 @@ function ProductsPanel() {
         </div>
       )}
 
-      {/* LISTA condensata: una riga per prodotto, click per le azioni. */}
+      {/* TABELLA: colonne allineate (stato · prodotto · categoria · netto ·
+          +IVA · scorte), riga cliccabile per aprire le azioni. */}
       {invView === 'lista' && (
-        <div className="inv-list">
+        <div className="inv-list inv-table">
+          <div className="inv-thead">
+            <span aria-hidden />
+            <span>Prodotto</span>
+            <span>Categoria</span>
+            <span className="inv-cell-num">Netto</span>
+            <span className="inv-cell-num">+IVA</span>
+            <span className="inv-cell-num">Scorte</span>
+          </div>
           {visible.map((it) => {
             const st = stockStatus(it)
             const expanded = expandedId === it.id
+            const bs = bottleSummary(it)
             return (
               <div className={`inv-row inv-${st}${expanded ? ' open' : ''}`} key={it.id}>
                 <button
@@ -471,29 +481,19 @@ function ProductsPanel() {
                     {it.status === 'out' && <span className="badge-empty">OUT</span>}
                   </span>
                   <span className="muted small inv-row-cat">{catName(it.category_id) || '—'}</span>
-                  <span className="muted small inv-row-price">
-                    {it.cost != null ? (
+                  <span className="inv-cell-num">{it.cost != null ? formatPrice(it.cost) : '—'}</span>
+                  <span className="inv-cell-num muted">{it.cost != null ? formatPrice(costWithVat(it.cost, it.vat)) : '—'}</span>
+                  <span className="inv-cell-num inv-row-stock">
+                    {bs ? (
                       <>
-                        {formatPrice(it.cost)}
-                        <span className="inv-row-price-iva"> · IVA {formatPrice(costWithVat(it.cost, it.vat))}</span>
+                        {bs.bottles} 🍾{' '}
+                        <span className="muted small">
+                          · {bs.open ? `aperta ${bs.open}` : bs.bottles > 1 ? 'piene' : 'piena'}
+                        </span>
                       </>
-                    ) : '—'}
-                  </span>
-                  <span className="inv-row-stock">
-                    {(() => {
-                      const bs = bottleSummary(it)
-                      return bs ? (
-                        <>
-                          {bs.bottles} 🍾{' '}
-                          <span className="muted small">
-                            · {bs.total} ·{' '}
-                            {bs.open ? `aperta ${bs.open}` : bs.bottles > 1 ? 'piene' : 'piena'}
-                          </span>
-                        </>
-                      ) : (
-                        fmtItem(it.stock, it)
-                      )
-                    })()}
+                    ) : (
+                      fmtItem(it.stock, it)
+                    )}
                   </span>
                 </button>
                 {expanded && itemActions(it, bottleBreakdown(it))}
