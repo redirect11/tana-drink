@@ -134,7 +134,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   useEffect(() => {
     fetchRecentDrinkIds(20).then(setRecentIds).catch(() => setRecentIds([]))
   }, [])
-  const comandaRz = useResizable('pos-comanda', { def: 400, min: 340, max: 700, side: 'left' })
+  const comandaRz = useResizable('pos-comanda', { def: 400, min: 260, max: 700, side: 'left' })
   // Scala del footer (totale + conferma/pagamento): la maniglia in cima lo
   // "allunga" e tasti/font crescono insieme. Valore in % (100 = normale).
   const footRz = useResizable('pos-foot-scale', { def: 100, min: 80, max: 175, axis: 'y', side: 'up', speed: 0.5 })
@@ -384,7 +384,9 @@ export default function OrderPosDetail({ order: orderProp = null }) {
     if (!key) return
     const el = listRef.current?.querySelector(`[data-line-key="${key}"]`)
     if (el) {
-      el.scrollIntoView({ block: 'center', behavior: 'smooth' })
+      // 'nearest': scorre SOLO se la riga non è già visibile, del minimo
+      // indispensabile e senza animazione → niente slide involontari.
+      el.scrollIntoView({ block: 'nearest' })
       scrollKeyRef.current = null
     }
   }, [orderedLines])
@@ -429,19 +431,54 @@ export default function OrderPosDetail({ order: orderProp = null }) {
     return m
   }, [confirmedLines, draft])
 
-  // + dalla griglia/catalogo o da una riga → riga di bozza (o somma se
-  // default 'uniti').
+  // MODIFICA: l'item entra DIRETTAMENTE nella comanda modificabile (modifica
+  // ottimistica, chiave riga stabile) e si sincronizza in background — così NON
+  // si vede la riga "ricaricarsi" (niente swap bozza→comanda). Se non c'è una
+  // comanda modificabile (ordine già servito), si crea una nuova comanda.
+  const addToEditableComanda = (item) => {
+    const target = effComandeRef.current.find(comandaEditable)
+    if (!target) {
+      addComanda(order.id, [item]).catch((e) => toastError(`Aggiunta non inviata: ${e.message}`))
+      return
+    }
+    const cur = target.items || []
+    let mergeIdx = -1
+    if (settings.order_group_default === 'uniti' && !item.custom) {
+      mergeIdx = cur.findIndex(
+        (it) => !it.custom && it.drink_id === item.drink_id && it.unit_price === item.unit_price
+      )
+    }
+    let items
+    let scrollIdx
+    if (mergeIdx >= 0) {
+      items = cur.map((it, j) => (j === mergeIdx ? { ...it, qty: it.qty + 1 } : it))
+      scrollIdx = mergeIdx
+    } else {
+      items = [...cur, item]
+      scrollIdx = items.length - 1
+    }
+    setPendingEdits((p) => ({ ...p, [target.id]: items }))
+    clearTimeout(flushTimers.current[target.id])
+    flushTimers.current[target.id] = setTimeout(() => flushComanda(target.id), 500)
+    scrollToLine(`c:${target.id}:${scrollIdx}`)
+  }
+
+  // + dalla griglia/catalogo o da una riga. In MODIFICA va dritto nella comanda;
+  // in CREAZIONE finisce in bozza (poi createFromDraft crea l'ordine).
   const plusFromCatalog = (d) => {
     if (closed) return
-    const nuova = {
-      line_id: makeLineId(),
+    const base = {
       drink_id: d.id,
       name: d.name,
       unit_price: d.price,
       sumup_product_id: d.sumup_product_id ?? null,
       qty: 1,
     }
-    // Riga che verrà toccata: quella esistente se si accorpa, altrimenti la nuova.
+    if (!isNew) {
+      addToEditableComanda(base)
+      return
+    }
+    const nuova = { line_id: makeLineId(), ...base }
     let targetLineId = nuova.line_id
     if (settings.order_group_default === 'uniti') {
       const sig = lineSignature(nuova)
@@ -860,8 +897,10 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   }
   const handleExit = () => {
     if (!isNew) {
-      // Le aggiunte ancora in volo si confermano ora. Se è un ordine creato in
-      // place senza nome, lo si chiede una volta prima di uscire.
+      // Le modifiche ottimistiche ancora in volo (aggiunte/decrementi) si
+      // inviano ora, per non perderle uscendo. Se è un ordine creato in place
+      // senza nome, lo si chiede una volta prima di uscire.
+      flushAll()
       flushAdditions()
       if (createdInPlace && !nameAskedRef.current && needsName(order)) return askNameThenExit()
       return navigate('/bar')
@@ -1329,8 +1368,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
         <CustomDrinkForm
           onCancel={() => setShowCustom(false)}
           onAdd={({ name, price, recipe_items }) => {
-            const nuova = {
-              line_id: makeLineId(),
+            const custom = {
               drink_id: `custom-${Date.now()}-${Math.floor(Math.random() * 1e6)}`,
               custom: true,
               name,
@@ -1339,9 +1377,15 @@ export default function OrderPosDetail({ order: orderProp = null }) {
               sumup_product_id: null,
               recipe_items,
             }
-            setDraft((items) => [...items, nuova])
             setShowCustom(false)
-            scrollToLine(`d:${nuova.line_id}`)
+            // MODIFICA: dritto nella comanda (niente flicker); CREAZIONE: bozza.
+            if (!isNew) {
+              addToEditableComanda(custom)
+            } else {
+              const nuova = { line_id: makeLineId(), ...custom }
+              setDraft((items) => [...items, nuova])
+              scrollToLine(`d:${nuova.line_id}`)
+            }
           }}
         />
       )}

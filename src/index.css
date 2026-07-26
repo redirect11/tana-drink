@@ -2614,7 +2614,7 @@ body.fullbleed,
   background: var(--bg-2);
   border-left: 1px solid rgba(255, 255, 255, 0.09);
   width: var(--pos-comanda-w, fit-content);
-  min-width: 300px;
+  min-width: 240px;
   max-width: none;
   flex-shrink: 0;
   /* L'auto-larghezza (quando si aggiunge un item con nome lungo) si anima invece
