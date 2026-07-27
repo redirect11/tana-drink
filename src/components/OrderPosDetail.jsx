@@ -232,7 +232,10 @@ export default function OrderPosDetail({ order: orderProp = null }) {
     if (!items) return
     try {
       await bartenderUpdateComanda(order.id, comandaId, { items })
-      setPendingEdits((p) => (p[comandaId] === items ? omit(p, comandaId) : p))
+      // L'override NON si toglie qui: la scrittura risponde PRIMA dello snapshot,
+      // e toglierlo subito farebbe sparire+riapparire l'item nella lista (il
+      // "ricaricamento" alla sync). Lo toglie l'effetto sotto, quando la comanda
+      // dal server combacia davvero con l'override.
     } catch (e) {
       setError(e.message)
       setPendingEdits((p) => omit(p, comandaId))
@@ -280,6 +283,25 @@ export default function OrderPosDetail({ order: orderProp = null }) {
         }
       }
       return changed ? next : o
+    })
+  }, [comande])
+
+  // Stessa logica per gli item: l'override (aggiunte/decrementi ottimistici) si
+  // toglie SOLO quando la comanda dal server combacia — così l'item non
+  // sparisce+riappare (niente "ricaricamento" alla sincronizzazione).
+  useEffect(() => {
+    const sig = (arr) =>
+      (arr || []).map((i) => `${i.drink_id}~${i.qty}~${i.unit_price}~${i.custom ? 1 : 0}`).join('|')
+    setPendingEdits((p) => {
+      if (Object.keys(p).length === 0) return p
+      let next = p
+      for (const c of comande) {
+        if (p[c.id] && sig(p[c.id]) === sig(c.items)) {
+          if (next === p) next = { ...p }
+          delete next[c.id]
+        }
+      }
+      return next
     })
   }, [comande])
 
