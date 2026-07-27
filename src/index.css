@@ -2805,7 +2805,16 @@ body.fullbleed,
     white-space: nowrap;
     flex-shrink: 0;
     aspect-ratio: auto; /* in riga orizzontale niente scaling proporzionale */
-    min-height: 0;
+    /* Bersaglio touch comodo: belli alti anche in riga orizzontale. */
+    min-height: 48px;
+    padding: 10px 14px;
+  }
+  /* Ricerca e chip (Organizza) della griglia: più alti per il dito. */
+  .posd-body input[type='search'] {
+    min-height: 48px;
+  }
+  .posd-body .chip {
+    min-height: 48px;
   }
   .posd-cats {
     max-width: none;
