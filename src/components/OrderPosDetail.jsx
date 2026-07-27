@@ -161,9 +161,18 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   // Pannello ordine in basso (solo smartphone): si RIMPICCIOLISCE quando si
   // lavora sulla griglia (scroll/ricerca/aggiunta) e si riapre toccandolo.
   const [panelCollapsed, setPanelCollapsed] = useState(false)
+  const lastGridTouchRef = useRef(0)
   const collapsePanel = useCallback(() => {
+    lastGridTouchRef.current = Date.now()
     if (window.matchMedia('(max-width: 899px)').matches) setPanelCollapsed(true)
   }, [])
+  // La barra ignora i tocchi subito dopo un'interazione con la griglia: il tap
+  // su una card vicino al bordo (o il "ghost click" dopo il collasso) non deve
+  // riaprire il pannello da solo.
+  const expandPanel = () => {
+    if (Date.now() - lastGridTouchRef.current < 450) return
+    setPanelCollapsed(false)
+  }
 
   // Staff loggato (per l'attribuzione dell'ordine creato dal POS).
   const [staff, setStaff] = useState(null)
@@ -1056,7 +1065,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
             <button
               type="button"
               className="posd-collapsed-bar"
-              onClick={() => setPanelCollapsed(false)}
+              onClick={expandPanel}
             >
               🧾 {confirmedLines.reduce((s, l) => s + l.qty, 0) + draftCount} item ·{' '}
               <strong>{formatPrice(confirmedTotal + draftTotal + extras)}</strong>

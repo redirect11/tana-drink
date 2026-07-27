@@ -1201,6 +1201,48 @@ body.fullbleed .bar-content {
   flex-shrink: 0;
 }
 
+/* Testata COMPATTA su smartphone: riga 1 = titolo + azioni (Pannelli e «+»
+   ridimensionati), riga 2 = ricerca a tutta larghezza. Niente più tasti
+   sparsi a metà schermo. */
+@media (max-width: 640px) {
+  .board-head {
+    gap: 8px;
+    row-gap: 6px;
+  }
+  .board-title {
+    order: 1;
+    flex: 1;
+    min-width: 0;
+    white-space: normal;
+  }
+  .board-actions {
+    order: 2;
+    margin-left: auto;
+  }
+  .board-search {
+    order: 3;
+    flex-basis: 100%;
+    font-size: 0.92rem;
+  }
+  .board-add {
+    width: 46px;
+    height: 46px;
+  }
+  .board-add::before {
+    width: 20px;
+    height: 3px;
+  }
+  .board-add::after {
+    width: 3px;
+    height: 20px;
+  }
+  /* Card più compatte: meno vuoto fra numero e riga finale. */
+  .grid-card-main {
+    min-height: 70px;
+    padding: 8px 10px;
+  }
+}
+
 /* «+» nuovo ordine, in alto a destra. Il «+» è disegnato con due barre
    (pseudo-elementi) così è centrato in modo matematicamente perfetto,
    senza dipendere dalle metriche del glifo. */
@@ -2794,17 +2836,19 @@ body.fullbleed,
     display: flex;
   }
 }
-/* Barra del pannello collassato (montata solo da collassato, su smartphone). */
+/* Barra del pannello collassato (montata solo da collassato, su smartphone):
+   bella alta, così si tocca senza mirare. */
 .posd-collapsed-bar {
   display: flex;
   align-items: center;
   gap: 8px;
   width: 100%;
-  padding: 12px 14px;
+  min-height: 58px;
+  padding: 14px 16px;
   border: none;
   background: none;
   color: inherit;
-  font-size: 0.95rem;
+  font-size: 1rem;
   cursor: pointer;
   text-align: left;
 }
