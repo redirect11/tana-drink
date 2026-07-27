@@ -2782,6 +2782,31 @@ body.fullbleed,
     border-top: 1px solid rgba(255, 255, 255, 0.12);
     box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.4);
   }
+  /* Pannello COLLASSATO (mentre si lavora sulla griglia): resta solo la barra
+     con totale e n. item; un tocco riapre. La griglia respira. */
+  .posd-comanda.collapsed > :not(.posd-collapsed-bar) {
+    display: none !important;
+  }
+  .posd-comanda.collapsed {
+    max-height: none;
+  }
+  .posd-comanda.collapsed .posd-collapsed-bar {
+    display: flex;
+  }
+}
+/* Barra del pannello collassato (montata solo da collassato, su smartphone). */
+.posd-collapsed-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 14px;
+  border: none;
+  background: none;
+  color: inherit;
+  font-size: 0.95rem;
+  cursor: pointer;
+  text-align: left;
 }
 
 /* ── Calendario ore staff (vista mensile) ── */

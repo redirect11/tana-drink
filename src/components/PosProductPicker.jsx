@@ -27,6 +27,7 @@ export default function PosProductPicker({
   qtyByDrink,
   onAdd,
   onSetQty,
+  onInteract = null, // notifica il parent quando si lavora sulla griglia (scroll/ricerca)
   disabled = false,
   categoryDisplay = 'dot',
   catsHandleProps = null,
@@ -53,9 +54,11 @@ export default function PosProductPicker({
     return () => ro.disconnect()
   }, [])
   const GRID_GAP = 8
-  // Base più grande (leggibile su iPad): il minimo parte alto e cresce con la
-  // larghezza del centro.
-  const tileScale = gridW ? Math.max(1.05, Math.min(1.5, gridW / 440)) : 1.05
+  // Centro stretto (smartphone): barra alta compatta e font più piccoli.
+  const compact = gridW > 0 && gridW < 520
+  // Base più grande su tablet/desktop (leggibile su iPad); su smartphone il
+  // floor è più basso, così le card non escono enormi.
+  const tileScale = gridW ? Math.max(compact ? 0.9 : 1.05, Math.min(1.5, gridW / 440)) : 1
   // Card più grandi ma SEMPRE almeno 3 per riga: la min-width non supera mai un
   // terzo della larghezza disponibile.
   const tileMin = gridW
@@ -295,28 +298,36 @@ export default function PosProductPicker({
           è essenziale: senza, su mobile (posd-body in colonna) questo contenitore
           cresce col contenuto e la griglia non scrolla (bug flexbox classico). */}
       <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        <div style={{ padding: '8px 8px 0', display: 'flex', gap: 8, flexShrink: 0 }}>
+        {/* Barra alta compatta: su schermo stretto la ricerca prende tutto lo
+            spazio e "Organizza" diventa solo icona. */}
+        <div style={{ padding: compact ? '6px 6px 0' : '8px 8px 0', display: 'flex', gap: 6, flexShrink: 0, alignItems: 'center' }}>
           <input
             type="search"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              onInteract?.()
+              setQuery(e.target.value)
+            }}
+            onFocus={() => onInteract?.()}
             placeholder="🔍 Cerca prodotto…"
             aria-label="Cerca prodotto"
-            style={{ flex: 1 }}
+            style={{ flex: 1, minWidth: 0, ...(compact ? { fontSize: '0.9rem', padding: '8px 10px' } : {}) }}
           />
           {selectedCat !== '__recent__' && !q && (
             <button
               className={`chip ${reordering ? 'active' : ''}`}
               onClick={() => setReordering((v) => !v)}
               title="Trascina dalla maniglia per spostare · tocca una card per il menu prodotto (colore)"
+              aria-label={reordering ? 'Fine organizzazione' : 'Organizza griglia'}
               style={{ flexShrink: 0 }}
             >
-              {reordering ? '✓ Fine' : '↕ Organizza'}
+              {reordering ? (compact ? '✓' : '✓ Fine') : compact ? '↕' : '↕ Organizza'}
             </button>
           )}
         </div>
         <div
           ref={gridRef}
+          onScroll={() => onInteract?.()}
           style={{
             flex: 1,
             minHeight: 0,

@@ -142,10 +142,28 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   // del font segue la larghezza rispetto alla misura di riposo (def), con un
   // tetto per non esagerare. Guida i font via CSS (--cats-scale/--comanda-scale).
   const clampScale = (v, lo, hi) => Math.max(lo, Math.min(hi, v))
-  // Base più grande ovunque (leggibile anche su iPad): il minimo parte alto e
-  // cresce ancora allargando la colonna.
-  const catsScale = clampScale(catsRz.width / 150, 1.1, 1.7)
-  const comandaScale = clampScale(comandaRz.width / 340, 1.1, 1.7)
+  // Smartphone (layout in colonna): testi più piccoli e pannello ordine
+  // COLLASSABILE, altrimenti la griglia resta schiacciata.
+  const [isPhone, setIsPhone] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(max-width: 899px)').matches
+  )
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 899px)')
+    const h = (e) => setIsPhone(e.matches)
+    mq.addEventListener?.('change', h)
+    return () => mq.removeEventListener?.('change', h)
+  }, [])
+  // Base più grande su tablet/desktop (leggibile su iPad); su smartphone scala
+  // fissa più contenuta (la colonna è comunque al 100%).
+  const catsScale = isPhone ? 0.95 : clampScale(catsRz.width / 150, 1.1, 1.7)
+  const comandaScale = isPhone ? 0.95 : clampScale(comandaRz.width / 340, 1.1, 1.7)
+
+  // Pannello ordine in basso (solo smartphone): si RIMPICCIOLISCE quando si
+  // lavora sulla griglia (scroll/ricerca/aggiunta) e si riapre toccandolo.
+  const [panelCollapsed, setPanelCollapsed] = useState(false)
+  const collapsePanel = useCallback(() => {
+    if (window.matchMedia('(max-width: 899px)').matches) setPanelCollapsed(true)
+  }, [])
 
   // Staff loggato (per l'attribuzione dell'ordine creato dal POS).
   const [staff, setStaff] = useState(null)
@@ -1013,20 +1031,38 @@ export default function OrderPosDetail({ order: orderProp = null }) {
           categoryDisplay={settings.category_display}
           catsHandleProps={catsRz.handleProps}
           recentIds={recentIds}
-          onAdd={plusFromCatalog}
+          onAdd={(d) => {
+            collapsePanel()
+            plusFromCatalog(d)
+          }}
           onSetQty={(d, q) => {
+            collapsePanel()
             const cur = qtyByDrink[d.id] ?? 0
             if (q > cur) plusFromCatalog(d)
             else if (q < cur) minusFromCatalog(d.id)
           }}
+          onInteract={collapsePanel}
           disabled={closed}
         />
 
         {/* Maniglia fra griglia e pannello ordine */}
         <div className="posd-resize-handle" {...comandaRz.handleProps} />
 
-        {/* ── Pannello destro: L'ORDINE (lista unica) ── */}
-        <div className="posd-comanda">
+        {/* ── Pannello destro: L'ORDINE (lista unica). Su smartphone si
+            comprime in una barra (totale + n. item) mentre si lavora sulla
+            griglia; un tocco la riapre. ── */}
+        <div className={`posd-comanda${panelCollapsed ? ' collapsed' : ''}`}>
+          {panelCollapsed && (
+            <button
+              type="button"
+              className="posd-collapsed-bar"
+              onClick={() => setPanelCollapsed(false)}
+            >
+              🧾 {confirmedLines.reduce((s, l) => s + l.qty, 0) + draftCount} item ·{' '}
+              <strong>{formatPrice(confirmedTotal + draftTotal + extras)}</strong>
+              <span className="muted small" style={{ marginLeft: 'auto' }}>▲ apri</span>
+            </button>
+          )}
           <div style={{ padding: '8px 12px 0', flexShrink: 0 }}>
             <div className="row between" style={{ alignItems: 'center' }}>
               <strong style={{ fontFamily: 'var(--serif)' }}>{panelTitle}</strong>
