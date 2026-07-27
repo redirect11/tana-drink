@@ -291,8 +291,10 @@ export default function PosProductPicker({
 
       {catsHandleProps && <div className="posd-resize-handle" {...catsHandleProps} />}
 
-      {/* Colonna centrale: ricerca (+ riordino in "Tutti") + griglia */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+      {/* Colonna centrale: ricerca (+ riordino in "Tutti") + griglia. minHeight:0
+          è essenziale: senza, su mobile (posd-body in colonna) questo contenitore
+          cresce col contenuto e la griglia non scrolla (bug flexbox classico). */}
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         <div style={{ padding: '8px 8px 0', display: 'flex', gap: 8, flexShrink: 0 }}>
           <input
             type="search"
@@ -317,7 +319,9 @@ export default function PosProductPicker({
           ref={gridRef}
           style={{
             flex: 1,
+            minHeight: 0,
             overflowY: 'auto',
+            WebkitOverflowScrolling: 'touch',
             padding: '10px 8px',
             display: 'grid',
             gridTemplateColumns: `repeat(auto-fill, minmax(${tileMin}px, 1fr))`,
