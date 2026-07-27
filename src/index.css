@@ -2837,20 +2837,25 @@ body.fullbleed,
   }
 }
 /* Barra del pannello collassato (montata solo da collassato, su smartphone):
-   bella alta, così si tocca senza mirare. */
+   BEN alta (una vera fascia), così si tocca senza mirare. */
 .posd-collapsed-bar {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   width: 100%;
-  min-height: 58px;
-  padding: 14px 16px;
+  min-height: 116px;
+  padding: 18px 18px calc(18px + env(safe-area-inset-bottom, 0px));
   border: none;
   background: none;
   color: inherit;
-  font-size: 1rem;
+  font-size: 1.05rem;
   cursor: pointer;
   text-align: left;
+}
+.posd-collapsed-bar .posd-collapsed-tot {
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-family: var(--serif);
 }
 
 /* ── Calendario ore staff (vista mensile) ── */

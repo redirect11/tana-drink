@@ -1067,9 +1067,15 @@ export default function OrderPosDetail({ order: orderProp = null }) {
               className="posd-collapsed-bar"
               onClick={expandPanel}
             >
-              🧾 {confirmedLines.reduce((s, l) => s + l.qty, 0) + draftCount} item ·{' '}
-              <strong>{formatPrice(confirmedTotal + draftTotal + extras)}</strong>
-              <span className="muted small" style={{ marginLeft: 'auto' }}>▲ apri</span>
+              <span style={{ minWidth: 0 }}>
+                <span className="muted">
+                  🧾 {confirmedLines.reduce((s, l) => s + l.qty, 0) + draftCount} item — tocca per aprire
+                </span>
+                <span className="posd-collapsed-tot" style={{ display: 'block' }}>
+                  {formatPrice(confirmedTotal + draftTotal + extras)}
+                </span>
+              </span>
+              <span className="muted" style={{ marginLeft: 'auto', fontSize: '1.4rem' }}>▲</span>
             </button>
           )}
           <div style={{ padding: '8px 12px 0', flexShrink: 0 }}>
