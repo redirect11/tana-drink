@@ -1101,7 +1101,9 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                     style={{
                       alignItems: 'center',
                       marginTop: 2,
-                      touchAction: 'none',
+                      // pan-y: lo scroll verticale della lista resta possibile su
+                      // touch (prima 'none' lo bloccava); il drag parte dal long-press.
+                      touchAction: 'pan-y',
                       cursor: closed || isPaid ? 'default' : 'grab',
                       borderRadius: 8,
                       background: dragIndex === idx ? 'var(--tile-bg)' : 'transparent',
