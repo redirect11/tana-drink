@@ -2824,6 +2824,16 @@ body.fullbleed,
     border-top: 1px solid rgba(255, 255, 255, 0.12);
     box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.4);
   }
+  /* Footer del pannello APERTO: tasti più alti e staccati dal bordo (la
+     gesture bar del telefono mangiava l'ultima riga). */
+  .posd-comanda-foot {
+    padding: 6px 14px calc(16px + env(safe-area-inset-bottom, 0px));
+    gap: calc(10px * var(--foot-scale, 1));
+  }
+  .posd-comanda-foot .btn {
+    padding: 0.85em 0.8em;
+    font-size: 0.95em;
+  }
   /* Pannello COLLASSATO (mentre si lavora sulla griglia): resta solo la barra
      con totale e n. item; un tocco riapre. La griglia respira. */
   .posd-comanda.collapsed > :not(.posd-collapsed-bar) {
