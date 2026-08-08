@@ -77,6 +77,18 @@ async function getPrinter() {
   const s = loadPrinterSettings()
   if (!s.ip) throw new Error("Imposta l'IP della stampante nelle impostazioni.")
 
+  // L'SDK sceglie il protocollo SOLO dalla porta: 8008 → ws (non sicuro),
+  // qualunque altra → wss. Una pagina servita in HTTPS non può aprire un
+  // WebSocket in chiaro: il browser lo blocca e l'SDK va in timeout dopo
+  // ~10 s senza dire perché. Meglio fermarsi subito, spiegando cosa fare.
+  const paginaSicura = typeof location !== 'undefined' && location.protocol === 'https:'
+  if (paginaSicura && Number(s.port) === 8008) {
+    throw new Error(
+      "L'app è in HTTPS: la porta 8008 (non sicura) viene bloccata dal browser. " +
+        'Usa la porta 8043 con SSL/TLS abilitato sulla stampante.'
+    )
+  }
+
   _connectPromise = new Promise((resolve, reject) => {
     const dev = new window.epson.ePOSDevice()
     _device = dev
