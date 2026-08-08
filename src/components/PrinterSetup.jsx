@@ -32,7 +32,8 @@ export default function PrinterSetup() {
       setForm((f) => {
         const next = { ...f, [key]: val }
         if (key === 'https') next.port = val ? 8043 : 8008
-        if (key === 'port') next.https = Number(val) !== 8008
+        // Campo vuoto durante la digitazione: non si tocca il flag.
+        if (key === 'port' && e.target.value !== '') next.https = Number(val) !== 8008
         return next
       })
       setSaved(false)

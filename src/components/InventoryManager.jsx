@@ -1187,6 +1187,16 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
   const packInUnit = !isPz ? num(form.package_size) : 0
   const initialBase = baseUnit(initUnit)
   const baseChanged = isEdit && baseUnit(form.unit) !== initialBase
+  // Conversione possibile solo con il contenuto per confezione: verso i pezzi
+  // serve quello salvato, dai pezzi quello appena inserito nel form.
+  const convertible = (() => {
+    if (!baseChanged) return true
+    const toPz = baseUnit(form.unit) === 'pz'
+    const fromPz = initialBase === 'pz'
+    if (toPz && !fromPz) return Number(initial?.package_size) > 0
+    if (fromPz && !toPz) return num(form.package_size) > 0
+    return true // liquidi ↔ solidi: nessuna conversione, il numero resta
+  })()
   // Giacenza convertita quando si cambia il modo di gestire l'articolo:
   //   liquido/peso → pezzi  : quante confezioni sono (stock / contenuto conf.)
   //   pezzi → liquido/peso  : contenuto totale (pezzi × contenuto conf.)
@@ -1224,6 +1234,14 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
         status: form.status || 'linea',
         package_size: packBase,
         low_threshold: toBaseQty(num(form.low_threshold), form.unit),
+      }
+      // Cambio del modo di gestire l'articolo SENZA il contenuto per confezione:
+      // la conversione non è calcolabile e si salverebbe una giacenza falsa
+      // (24 pezzi → 24 ml). Meglio fermarsi e chiederlo.
+      if (baseChanged && !convertible) {
+        setSaving(false)
+        toastError('Indica il contenuto per confezione: senza, la giacenza non si può convertire.')
+        return
       }
       if (isEdit) {
         // In modifica la giacenza NON si tocca... a meno che si cambi il modo di
@@ -1333,6 +1351,12 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
           a <strong>{isPz ? 'pezzi' : baseUnit(form.unit) === 'g' ? 'peso' : 'liquidi'}</strong>: la giacenza attuale
           ({fmtItem(initial?.stock, initial)}) diventerà{' '}
           <strong>{formatQty(convertedStock(), baseUnit(form.unit))}</strong>.
+          {!convertible && (
+            <div style={{ marginTop: 6 }}>
+              ⛔ Indica prima il <strong>contenuto per confezione</strong>: senza,
+              la giacenza non si può convertire.
+            </div>
+          )}
         </div>
       )}
 

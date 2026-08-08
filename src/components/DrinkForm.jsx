@@ -19,6 +19,10 @@ export default function DrinkForm({ initial, categories, inventory, onCreateCate
       inventory_item_id: r.inventory_item_id,
       qty: r.qty,
       unit: r.unit,
+      // Conservati per non perderli se l'inventario non è disponibile al
+      // salvataggio (vedi buildRecipeItems).
+      name: r.name,
+      invUnit: r.unit,
     })),
   }))
   const [preview, setPreview] = useState(initial.image_url || null)

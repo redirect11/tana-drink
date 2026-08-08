@@ -1480,7 +1480,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
       {showCustom && (
         <CustomDrinkForm
           onCancel={() => setShowCustom(false)}
-          onAdd={({ name, price, recipe_items }) => {
+          onAdd={({ name, price, recipe_items, note }) => {
             const custom = {
               drink_id: `custom-${Date.now()}-${Math.floor(Math.random() * 1e6)}`,
               custom: true,
@@ -1489,6 +1489,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
               qty: 1,
               sumup_product_id: null,
               recipe_items,
+              ...(note ? { note } : {}),
             }
             setShowCustom(false)
             // MODIFICA: dritto nella comanda (niente flicker); CREAZIONE: bozza.

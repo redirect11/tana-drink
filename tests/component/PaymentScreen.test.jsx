@@ -12,6 +12,7 @@ import '@testing-library/jest-dom/vitest'
 
 vi.mock('../../src/lib/api.js', () => ({
   registerPayment: vi.fn(() => Promise.resolve({ closed: false })),
+  markOrderPaid: vi.fn(() => Promise.resolve()),
   setOrderDiscount: vi.fn(() => Promise.resolve()),
   setOrderLotteryCode: vi.fn(() => Promise.resolve()),
   createInvoice: vi.fn(() =>

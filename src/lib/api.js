@@ -974,20 +974,26 @@ export async function peekNextDailyNumber({ cutoffHour = DEFAULT_CUTOFF_HOUR } =
 // aggiorna da sola quando torna la rete.
 export function subscribeOrdersHistory(cb, onError, { limit = 300 } = {}) {
   const byDate = (a, b) => String(b.created_at || '').localeCompare(String(a.created_at || ''))
-  return onSnapshot(
+  let stopFallback = null
+  const stopMain = onSnapshot(
     query(ordersCol, orderBy('created_at', 'desc'), fbLimit(limit)),
     (snap) => cb(snap.docs.map(mapOrder)),
-    (e) => {
-      // Se l'ordinamento non è disponibile (indice/campo), si ripiega su una
-      // lettura semplice ordinata lato client: lo storico non resta vuoto.
-      onSnapshot(
+    () => {
+      // Ordinamento non disponibile (indice/campo): si ripiega su una lettura
+      // semplice ordinata qui. NON si segnala errore se il ripiego funziona,
+      // altrimenti resterebbe un avviso rosso sopra una lista piena.
+      stopFallback = onSnapshot(
         query(ordersCol, fbLimit(limit)),
         (snap) => cb(snap.docs.map(mapOrder).sort(byDate)),
         onError ?? (() => {})
       )
-      if (onError) onError(e)
     }
   )
+  // Disiscrive ENTRAMBE: senza questo il ripiego restava vivo per sempre.
+  return () => {
+    stopMain()
+    if (stopFallback) stopFallback()
+  }
 }
 
 // Ordini di una giornata commerciale (per statistiche e storico).
