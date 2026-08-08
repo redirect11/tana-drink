@@ -26,7 +26,15 @@ export default function PrinterSetup() {
       const val = e.target.type === 'checkbox' ? e.target.checked
         : e.target.type === 'number' ? Number(e.target.value)
         : e.target.value
-      setForm((f) => ({ ...f, [key]: val }))
+      // Porta e HTTPS devono restare d'accordo: la connessione la decide la
+      // PORTA (8008 = in chiaro, 8043 = sicura), quindi spuntare HTTPS senza
+      // cambiare porta non avrebbe alcun effetto — e non funzionerebbe.
+      setForm((f) => {
+        const next = { ...f, [key]: val }
+        if (key === 'https') next.port = val ? 8043 : 8008
+        if (key === 'port') next.https = Number(val) !== 8008
+        return next
+      })
       setSaved(false)
       setTestResult(null)
     }
@@ -114,8 +122,18 @@ export default function PrinterSetup() {
           </div>
         </div>
         <p className="muted" style={{ fontSize: '0.8rem', margin: '6px 0 0' }}>
-          Porta 8043 + HTTPS attivo = connessione sicura (necessario con app in HTTPS).
+          È la <strong>porta</strong> a decidere: <strong>8043</strong> = connessione
+          sicura (obbligatoria con l'app in HTTPS), 8008 = in chiaro.
         </p>
+        {typeof location !== 'undefined' &&
+          location.protocol === 'https:' &&
+          Number(form.port) === 8008 && (
+            <div className="banner" style={{ marginTop: 8 }}>
+              ⚠️ L'app è in HTTPS: con la porta <strong>8008</strong> il browser
+              blocca la connessione e la stampa va in timeout. Usa la{' '}
+              <strong>8043</strong> con SSL/TLS abilitato sulla stampante.
+            </div>
+          )}
       </fieldset>
 
       {/* ── Stampa automatica ── */}
