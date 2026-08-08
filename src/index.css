@@ -1277,6 +1277,16 @@ body.fullbleed .bar-content {
   height: 26px;
 }
 
+/* Avviso "cassa chiusa" in cima alla coda: senza cassa aperta non si battono
+   ordini, quindi deve saltare all'occhio senza coprire il lavoro. */
+.cassa-chiusa-banner {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
 /* Badge "chi ha aperto l'ordine" accanto al numero: lettera del dipendente o
    segno del cliente. Leggenda in testata (lettera → nome). */
 .order-by {
