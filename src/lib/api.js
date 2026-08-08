@@ -2815,6 +2815,9 @@ export const DEFAULT_SETTINGS = {
   // IVA di vendita (somministrazione bar = 10%): serve a scorporare l'IVA dal
   // fatturato per confrontarlo al netto con gli acquisti (Dashboard mensile).
   sale_vat: 10,
+  // IVA di ACQUISTO (ordinaria = 22%): è quella delle fatture fornitore, quindi
+  // il default dei prodotti in Inventario. Diversa da quella di vendita.
+  purchase_vat: 22,
   coperto_enabled: false,
   coperto_amount: 2,
   service_charge_enabled: false,

@@ -342,8 +342,22 @@ export default function SettingsTab() {
         </div>
         <p className="muted small" style={{ margin: '4px 0 0' }}>
           IVA di rivendita (somministrazione: <strong>10%</strong>) usata per
-          scorporare il fatturato al netto. È il valore predefinito: ogni
-          prodotto in Inventario può indicarne una diversa (campo IVA).
+          scorporare il fatturato al netto.
+        </p>
+        <div className="toggle-row">
+          <span>IVA di acquisto predefinita (%)</span>
+          <AmountInput
+            value={settings.purchase_vat}
+            min={0}
+            max={22}
+            step={1}
+            onCommit={(v) => save({ purchase_vat: v })}
+          />
+        </div>
+        <p className="muted small" style={{ margin: '4px 0 0' }}>
+          IVA delle fatture fornitore (ordinaria: <strong>22%</strong>): è il
+          valore predefinito dei nuovi prodotti in Inventario. Ogni prodotto può
+          comunque indicarne una diversa (campo IVA).
         </p>
       </div>
 
