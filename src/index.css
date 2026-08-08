@@ -1450,7 +1450,7 @@ body.inv-wide .app {
 /* ── Inventario come TABELLA: colonne allineate (grid identico su intestazione
    e righe) ── */
 .inv-table {
-  --inv-cols: 20px minmax(140px, 2fr) minmax(90px, 1fr) 96px 100px minmax(96px, 1.1fr);
+  --inv-cols: 20px minmax(140px, 2fr) minmax(90px, 1fr) 96px 100px 84px minmax(96px, 1.1fr);
 }
 .inv-thead,
 .inv-table .inv-row-main {
@@ -1460,13 +1460,35 @@ body.inv-wide .app {
   align-items: center;
 }
 .inv-thead {
-  padding: 8px 12px;
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: var(--muted);
+  padding: 6px 12px;
   border-bottom: 1px solid var(--line);
   background: var(--bg-2);
+}
+/* Intestazioni cliccabili (ordinamento): stesso grid delle righe, quindi il
+   bottone non deve aggiungere padding orizzontale o le colonne si sfalsano. */
+.inv-th {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 0;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-family: inherit;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  min-width: 0;
+}
+.inv-th.inv-cell-num {
+  justify-content: flex-end;
+}
+.inv-th.active {
+  color: var(--text);
+}
+.inv-th-arrow {
+  font-size: 0.6em;
 }
 .inv-table .inv-row-name {
   overflow: hidden;
@@ -1478,15 +1500,18 @@ body.inv-wide .app {
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
-@media (max-width: 640px) {
-  /* Stretto: mostra solo stato · prodotto · netto · scorte. */
+@media (max-width: 900px) {
+  /* Stretto: stato · prodotto · IVA esclusa · scorte (via categoria, IVA
+     inclusa e €/cl, che stanno comunque nel dettaglio della riga). */
   .inv-table {
-    --inv-cols: 18px minmax(120px, 1.7fr) 76px minmax(72px, 1fr);
+    --inv-cols: 18px minmax(120px, 1.7fr) 78px minmax(72px, 1fr);
   }
   .inv-thead > :nth-child(3),
   .inv-table .inv-row-main > :nth-child(3),
   .inv-thead > :nth-child(5),
-  .inv-table .inv-row-main > :nth-child(5) {
+  .inv-table .inv-row-main > :nth-child(5),
+  .inv-thead > :nth-child(6),
+  .inv-table .inv-row-main > :nth-child(6) {
     display: none;
   }
 }

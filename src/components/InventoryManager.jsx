@@ -153,6 +153,10 @@ function ProductsPanel() {
 
   // Riga espansa + carico in corso
   const [invView, setInvView] = useState('lista') // 'lista' | 'card' — default LISTA
+  // Ordinamento della tabella: click sull'intestazione, ri-click inverte.
+  const [sort, setSort] = useState({ col: 'name', dir: 'asc' })
+  const toggleSort = (col) =>
+    setSort((s) => (s.col === col ? { col, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { col, dir: 'asc' }))
   const [expandedId, setExpandedId] = useState(null)
   const [caricoFor, setCaricoFor] = useState(null)
 
@@ -265,6 +269,34 @@ function ProductsPanel() {
     () => filterItems(items, { query, categoryId: categoryFilter, supplierId: supplierFilter, status: statusFilter }),
     [items, query, categoryFilter, supplierFilter, statusFilter]
   )
+
+  // Righe ordinate per la TABELLA: testo in ordine alfabetico, numeri per
+  // valore. I valori mancanti finiscono sempre in fondo, in entrambi i versi.
+  const sortedVisible = useMemo(() => {
+    const val = (it) => {
+      switch (sort.col) {
+        case 'cat': return catName(it.category_id) || ''
+        case 'net': return it.cost != null ? Number(it.cost) : null
+        case 'gross': return it.cost != null ? costWithVat(it.cost, it.vat) : null
+        case 'percl': return costPerUnit(it, 'cl')
+        case 'stock': return Number(it.stock) || 0
+        default: return it.name || ''
+      }
+    }
+    const mul = sort.dir === 'asc' ? 1 : -1
+    return [...visible].sort((a, b) => {
+      const x = val(a)
+      const y = val(b)
+      const xMissing = x == null || x === ''
+      const yMissing = y == null || y === ''
+      if (xMissing && yMissing) return 0
+      if (xMissing) return 1 // i vuoti restano in fondo
+      if (yMissing) return -1
+      if (typeof x === 'number' && typeof y === 'number') return (x - y) * mul
+      return String(x).localeCompare(String(y), 'it') * mul
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, sort, categories])
 
   // Conteggi per categoria (su tutto l'inventario) per la barra a sinistra.
   const catItems = useMemo(() => {
@@ -455,16 +487,18 @@ function ProductsPanel() {
         <div className="inv-list inv-table">
           <div className="inv-thead">
             <span aria-hidden />
-            <span>Prodotto</span>
-            <span>Categoria</span>
-            <span className="inv-cell-num">IVA esclusa</span>
-            <span className="inv-cell-num">IVA inclusa</span>
-            <span className="inv-cell-num">Scorte</span>
+            <SortTh label="Prodotto" col="name" sort={sort} onSort={toggleSort} />
+            <SortTh label="Categoria" col="cat" sort={sort} onSort={toggleSort} />
+            <SortTh label="IVA esclusa" col="net" sort={sort} onSort={toggleSort} num />
+            <SortTh label="IVA inclusa" col="gross" sort={sort} onSort={toggleSort} num />
+            <SortTh label="€/cl" col="percl" sort={sort} onSort={toggleSort} num />
+            <SortTh label="Scorte" col="stock" sort={sort} onSort={toggleSort} num />
           </div>
-          {visible.map((it) => {
+          {sortedVisible.map((it) => {
             const st = stockStatus(it)
             const expanded = expandedId === it.id
             const bs = bottleSummary(it)
+            const perCl = costPerUnit(it, 'cl') // già IVA inclusa
             return (
               <div className={`inv-row inv-${st}${expanded ? ' open' : ''}`} key={it.id}>
                 <button
@@ -483,6 +517,7 @@ function ProductsPanel() {
                   <span className="muted small inv-row-cat">{catName(it.category_id) || '—'}</span>
                   <span className="inv-cell-num">{it.cost != null ? formatPrice(it.cost) : '—'}</span>
                   <span className="inv-cell-num muted">{it.cost != null ? formatPrice(costWithVat(it.cost, it.vat)) : '—'}</span>
+                  <span className="inv-cell-num muted">{perCl != null ? formatPrice(perCl) : '—'}</span>
                   <span className="inv-cell-num inv-row-stock">
                     {bs ? (
                       <>
@@ -1218,5 +1253,22 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 10, onCancel, o
         <button type="submit" className="btn" disabled={saving}>{saving ? 'Salvataggio…' : 'Salva'}</button>
       </div>
     </form>
+  )
+}
+
+// Intestazione di colonna ORDINABILE della tabella inventario: un click ordina,
+// il ri-click inverte; la freccia indica il verso attivo.
+function SortTh({ label, col, sort, onSort, num = false }) {
+  const active = sort.col === col
+  return (
+    <button
+      type="button"
+      className={`inv-th${num ? ' inv-cell-num' : ''}${active ? ' active' : ''}`}
+      onClick={() => onSort(col)}
+      title={`Ordina per ${label}`}
+    >
+      {label}
+      <span aria-hidden className="inv-th-arrow">{active ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</span>
+    </button>
   )
 }
