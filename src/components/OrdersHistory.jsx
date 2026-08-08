@@ -54,7 +54,10 @@ export default function OrdersHistory() {
           setOrders(list)
           setLoading(false)
         },
-        (e) => setError(e.message)
+        (e) => {
+          setError(e.message)
+          setLoading(false) // altrimenti resta "Carico lo storico…" per sempre
+        }
       ),
     []
   )

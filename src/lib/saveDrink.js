@@ -14,8 +14,11 @@ export function buildRecipeItems(rows, inventory) {
       const inv = (inventory || []).find((i) => i.id === r.inventory_item_id)
       return {
         inventory_item_id: r.inventory_item_id,
-        name: inv?.name ?? '',
-        unit: inv?.unit ?? 'pz',
+        // Se l'inventario non è (ancora) caricato — es. salvataggio dal POS con
+        // la lettura fallita — si TENGONO nome e unità già sulla riga: senza
+        // questo la ricetta veniva riscritta con nome vuoto e unità "pz".
+        name: inv?.name ?? r.name ?? '',
+        unit: inv?.unit ?? r.invUnit ?? r.baseUnit ?? 'pz',
         qty: toBaseQty(r.qty, r.unit),
       }
     })

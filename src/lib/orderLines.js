@@ -27,6 +27,9 @@ export function lineSignature(line) {
     (line.name ?? '').trim().toLowerCase(),
     Number(line.price ?? line.unit_price ?? 0),
     recipe,
+    // La NOTA fa parte dell'identità della riga: "Spritz per Anna" e "Spritz
+    // per Marco" non vanno uniti, o una delle due note sparirebbe.
+    (line.note ?? '').trim().toLowerCase(),
   ].join('|')
 }
 

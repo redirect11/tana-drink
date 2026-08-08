@@ -132,6 +132,11 @@ export default function App() {
   }, [settings, staffSurface])
 
 
+  // Il ☰ apre lo StaffDrawer, che è montato solo nel gestionale e nel menù:
+  // altrove (dettaglio ordine, POS) il tasto non avrebbe nessuno che risponde.
+  const drawerHere =
+    location.pathname.startsWith('/bar') || location.pathname.startsWith('/menu')
+
   return (
     <div className="app">
       {/* Mostra/nascondi la topbar ovunque (utile sulle schermate a tutto
@@ -169,7 +174,7 @@ export default function App() {
         {/* Menu laterale A SCOMPARSA ovunque: si apre da qui (il tasto
             flottante resta solo nelle schermate a tutto schermo, dove la
             topbar è nascosta). */}
-        {staffRole && (
+        {staffRole && drawerHere && (
           <button
             className="topbar-burger"
             aria-label="Menu"

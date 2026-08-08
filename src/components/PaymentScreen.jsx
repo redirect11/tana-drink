@@ -52,8 +52,15 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
     // partiva solo quando l'ordine passava a "pronto", quindi con la gestione
     // preparazione spenta non usciva mai.
     try {
-      if (loadPrinterSettings().autoPrintScontrino && claimReceiptPrint(order.id)) {
-        printScontrino(order).catch((e) => console.warn('[printer] scontrino:', e.message))
+      // Solo su un ordine REALE: nel pagamento diretto dal POS la schermata si
+      // apre su un ordine locale senza id né numero, e ne uscirebbe uno
+      // scontrino con "#-". In quel caso stampa la coda quando l'ordine vero
+      // risulta pagato (claimReceiptPrint garantisce una copia sola).
+      if (order.id && order.daily_number != null && loadPrinterSettings().autoPrintScontrino && claimReceiptPrint(order.id)) {
+        printScontrino(order).catch((e) => {
+          console.warn('[printer] scontrino:', e.message)
+          onError?.(`Scontrino non stampato: ${e.message}`)
+        })
       }
     } catch {
       /* stampante non configurata: si continua */
@@ -230,6 +237,9 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
     // incassare ma il conto va CHIUSO lo stesso, altrimenti resta aperto per
     // sempre e blocca anche la chiusura di cassa.
     if (due <= 0) {
+      // Conto vuoto (nessun articolo, nessuno sconto, nessun acconto): non c'è
+      // niente da chiudere.
+      if (!(Number(order.total) > 0) && paid <= 0) return
       return run(async () => {
         await onBeforePay?.()
         await markOrderPaid(await orderId(), null, { autoServe })
