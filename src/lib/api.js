@@ -969,8 +969,17 @@ export async function peekNextDailyNumber({ cutoffHour = DEFAULT_CUTOFF_HOUR } =
 // STORICO ordini in ordine cronologico (più recenti prima), qualunque sia lo
 // stato: aperti, chiusi, annullati. Usato dallo storico nel Flusso cassa.
 export async function fetchOrdersHistory(limit = 200) {
-  const snap = await getDocs(query(ordersCol, orderBy('created_at', 'desc'), fbLimit(limit)))
-  return snap.docs.map(mapOrder)
+  const byDate = (a, b) => String(b.created_at || '').localeCompare(String(a.created_at || ''))
+  try {
+    const snap = await getDocs(query(ordersCol, orderBy('created_at', 'desc'), fbLimit(limit)))
+    // orderBy scarta i doc con created_at ancora nullo (creati offline e non
+    // ancora sincronizzati): se non torna nulla si rilegge senza ordinamento.
+    if (!snap.empty) return snap.docs.map(mapOrder)
+  } catch {
+    /* niente indice o campo assente: si ricade sulla lettura semplice */
+  }
+  const snap = await getDocs(query(ordersCol, fbLimit(limit)))
+  return snap.docs.map(mapOrder).sort(byDate)
 }
 
 // Ordini di una giornata commerciale (per statistiche e storico).
