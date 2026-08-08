@@ -1361,6 +1361,61 @@ body.fullbleed .bar-content {
   letter-spacing: -0.01em;
 }
 
+/* Storico ordini (Flusso cassa): righe compatte, una per conto, cronologiche. */
+.ordhist {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.ordhist-row {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr) auto auto auto;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+  padding: 9px 10px;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  border-left: 4px solid transparent;
+  background: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.86rem;
+}
+.ordhist-row:last-child { border-bottom: none; }
+.ordhist-row:hover { background: rgba(127, 127, 140, 0.08); }
+.ordhist-aperti { border-left-color: #3498db; }
+.ordhist-chiusi { border-left-color: #2ecc71; }
+.ordhist-annullati { border-left-color: #8a8a8a; opacity: 0.7; }
+.ordhist-num { font-weight: 700; font-family: var(--serif); }
+.ordhist-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+.ordhist-tot { font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ordhist-when { white-space: nowrap; }
+@media (max-width: 560px) {
+  .ordhist-row { grid-template-columns: 40px minmax(0, 1fr) auto auto; }
+  .ordhist-when { display: none; }
+}
+
+/* Nome del conto sulla card: GRANDE, la prima cosa che si legge dopo il numero. */
+.grid-card-name {
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.15;
+  font-family: var(--serif);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .grid-card-sub {
   font-size: 0.82rem;
   font-weight: 500;
