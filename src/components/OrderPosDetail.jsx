@@ -1279,7 +1279,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                 disabled={isNew}
                 onClick={() => printScontrino(order).catch((e) => setError(`Stampa: ${e.message}`))}
               >
-                <IconReceipt /> Scontrino
+                <IconReceipt /> Invia
               </button>
               <button
                 className="btn small"

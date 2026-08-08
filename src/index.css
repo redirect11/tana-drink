@@ -1450,7 +1450,7 @@ body.inv-wide .app {
 /* ── Inventario come TABELLA: colonne allineate (grid identico su intestazione
    e righe) ── */
 .inv-table {
-  --inv-cols: 20px minmax(140px, 2fr) minmax(90px, 1fr) 84px 92px minmax(96px, 1.1fr);
+  --inv-cols: 20px minmax(140px, 2fr) minmax(90px, 1fr) 96px 100px minmax(96px, 1.1fr);
 }
 .inv-thead,
 .inv-table .inv-row-main {
