@@ -1186,6 +1186,26 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
   // Contenuto per confezione nell'unità scelta (per il costo unitario).
   const packInUnit = !isPz ? num(form.package_size) : 0
   const initialBase = baseUnit(initUnit)
+  const baseChanged = isEdit && baseUnit(form.unit) !== initialBase
+  // Giacenza convertita quando si cambia il modo di gestire l'articolo:
+  //   liquido/peso → pezzi  : quante confezioni sono (stock / contenuto conf.)
+  //   pezzi → liquido/peso  : contenuto totale (pezzi × contenuto conf.)
+  // Fra liquidi e pesi non c'è conversione sensata: il numero resta com'è
+  // (è una ri-catalogazione, non un travaso).
+  const convertedStock = () => {
+    const cur = Number(initial?.stock) || 0
+    const toPz = baseUnit(form.unit) === 'pz'
+    const fromPz = initialBase === 'pz'
+    if (toPz && !fromPz) {
+      const size = Number(initial?.package_size) || 0
+      return size > 0 ? Math.round((cur / size) * 100) / 100 : cur
+    }
+    if (fromPz && !toPz) {
+      const size = toBaseQty(num(form.package_size), form.unit) || 0
+      return size > 0 ? cur * size : cur
+    }
+    return cur
+  }
 
   async function submit(e) {
     e.preventDefault()
@@ -1206,8 +1226,19 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
         low_threshold: toBaseQty(num(form.low_threshold), form.unit),
       }
       if (isEdit) {
-        // In modifica la giacenza non si tocca (si usa Carico/Contenuto reale).
-        await onSave(base)
+        // In modifica la giacenza NON si tocca... a meno che si cambi il modo di
+        // gestire l'articolo (es. da centilitri a pezzi): allora si converte,
+        // altrimenti il numero salvato vorrebbe dire un'altra cosa.
+        if (baseChanged) {
+          const stock = convertedStock()
+          await onSave({
+            ...base,
+            stock,
+            bottles_total: baseUnit(form.unit) === 'pz' ? Math.round(stock) : Math.floor(stock / (packBase || 1)),
+          })
+        } else {
+          await onSave(base)
+        }
       } else {
         const n = Number(form.bottles) || 0
         let stock
@@ -1283,15 +1314,27 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
         ].map(([grp, units]) => (
           <optgroup key={grp} label={grp}>
             {units.map(([u, label]) => (
-              // In modifica si cambia solo dentro la stessa base (cl↔ml↔L):
-              // passare a un'altra base reinterpreterebbe la giacenza salvata.
-              <option key={u} value={u} disabled={isEdit && baseUnit(u) !== initialBase}>
+              // Ogni articolo può essere gestito come si vuole (litri, peso o
+              // pezzi): cambiando base in modifica la giacenza viene CONVERTITA
+              // (vedi l'avviso qui sotto), non reinterpretata a caso.
+              <option key={u} value={u}>
                 {label}
               </option>
             ))}
           </optgroup>
         ))}
       </select>
+
+      {/* Cambio del modo di gestire l'articolo: si dice CHIARAMENTE come
+          finisce la giacenza, prima di salvare. */}
+      {baseChanged && (
+        <div className="banner" style={{ marginTop: 8 }}>
+          ⚠️ Cambi la gestione da <strong>{initialBase === 'pz' ? 'pezzi' : initialBase === 'g' ? 'peso' : 'liquidi'}</strong>{' '}
+          a <strong>{isPz ? 'pezzi' : baseUnit(form.unit) === 'g' ? 'peso' : 'liquidi'}</strong>: la giacenza attuale
+          ({fmtItem(initial?.stock, initial)}) diventerà{' '}
+          <strong>{formatQty(convertedStock(), baseUnit(form.unit))}</strong>.
+        </div>
+      )}
 
       {!isPz && (
         <>
