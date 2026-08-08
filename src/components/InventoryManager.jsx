@@ -162,12 +162,13 @@ function ProductsPanel() {
 
   // Ricarico (×N) per il prezzo consigliato mostrato accanto al costo.
   const [markup, setMarkup] = useState(DEFAULT_SETTINGS.price_markup)
-  const [saleVat, setSaleVat] = useState(DEFAULT_SETTINGS.sale_vat)
+  // IVA di ACQUISTO (fatture fornitore, 22%): è il default dei prodotti qui.
+  const [purchaseVat, setPurchaseVat] = useState(DEFAULT_SETTINGS.purchase_vat)
   useEffect(
     () =>
       subscribeSettings((s) => {
         setMarkup(s.price_markup)
-        setSaleVat(s.sale_vat)
+        setPurchaseVat(s.purchase_vat ?? DEFAULT_SETTINGS.purchase_vat)
       }, () => {}),
     []
   )
@@ -373,7 +374,7 @@ function ProductsPanel() {
         initial={editing === 'new' ? null : editing}
         categories={categories}
         suppliers={suppliers}
-        defaultVat={saleVat}
+        defaultVat={purchaseVat}
         onCancel={() => setEditing(null)}
         onSave={handleSave}
       />
@@ -1082,7 +1083,7 @@ function CaricoForm({ item, onCancel, onConfirm }) {
 
 // --- Form prodotto (creazione + modifica) -------------------------------
 
-function ItemForm({ initial, categories, suppliers, defaultVat = 10, onCancel, onSave }) {
+function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, onSave }) {
   const isEdit = !!initial
   // Unità scelta dall'utente (L/cl/ml, g/mg, pz). Lo stock è salvato in
   // base (ml/g/pz); i campi si inseriscono e si mostrano nell'unità scelta.
@@ -1185,7 +1186,7 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 10, onCancel, o
           <input id="icost" type="number" step="any" min="0" value={form.cost} onChange={set('cost')} placeholder="Es. 12,9" />
         </div>
         <div>
-          <label htmlFor="ivat">IVA %</label>
+          <label htmlFor="ivat">IVA acquisto %</label>
           <input id="ivat" type="number" step="any" min="0" value={form.vat} onChange={set('vat')} />
         </div>
       </div>
