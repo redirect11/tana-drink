@@ -13,7 +13,18 @@ import {
   loadColors,
   saveColors,
 } from '../lib/posCatalog.js'
-import { subscribePosPrefs, savePosOrder, savePosFavorites, savePosColors } from '../lib/api.js'
+import {
+  subscribePosPrefs,
+  savePosOrder,
+  savePosFavorites,
+  savePosColors,
+  updateDrink,
+  createCategory,
+  fetchInventoryItems,
+} from '../lib/api.js'
+import { saveDrinkFromForm } from '../lib/saveDrink.js'
+import { toastError } from '../lib/toast.js'
+import DrinkForm from './DrinkForm.jsx'
 
 // Colonna categorie + griglia prodotti (il "centro" del POS). Oltre alle
 // categorie ci sono due raccolte speciali: ⭐ Preferiti (i drink che il
@@ -40,6 +51,9 @@ export default function PosProductPicker({
   const [tileColors, setTileColors] = useState(() => loadColors())
   const [reordering, setReordering] = useState(false)
   const [menuDrink, setMenuDrink] = useState(null) // MENU del singolo prodotto
+  const [editDrink, setEditDrink] = useState(null) // scheda prodotto in modifica
+  const [savingDrink, setSavingDrink] = useState(false)
+  const [inventory, setInventory] = useState([]) // per la ricetta nella scheda
   const gridRef = useRef(null)
 
   // Le card (e il loro testo) seguono la larghezza della colonna centrale, che
@@ -68,6 +82,13 @@ export default function PosProductPicker({
   useEffect(() => {
     if (cats.length > 0 && selectedCat === null) setSelectedCat('__all__')
   }, [cats, selectedCat])
+
+  // Inventario: serve solo alla scheda prodotto (ricetta). Si carica alla
+  // prima apertura del menu prodotto, non all'avvio del POS.
+  useEffect(() => {
+    if (!menuDrink || inventory.length > 0) return
+    fetchInventoryItems().then((inv) => setInventory(inv || [])).catch(() => setInventory([]))
+  }, [menuDrink, inventory.length])
   // localStorage = cache locale immediata (funziona offline al primo avvio).
   useEffect(() => saveOrder(order), [order])
   useEffect(() => saveFavorites(favorites), [favorites])
@@ -440,6 +461,63 @@ export default function PosProductPicker({
             >
               ↩︎ Colore della categoria (default)
             </button>
+
+            {/* Scheda prodotto completa (prezzo, ingredienti, disponibilità):
+                la stessa del Menù, così si corregge un prezzo sbagliato senza
+                passare dal backoffice. */}
+            <button
+              className="btn block"
+              style={{ marginTop: 10 }}
+              onClick={() => {
+                setEditDrink(menuDrink)
+                setMenuDrink(null)
+              }}
+            >
+              ✏️ Modifica prodotto (prezzo, ingredienti…)
+            </button>
+            <button
+              className="btn ghost small block"
+              style={{ marginTop: 8 }}
+              disabled={savingDrink}
+              onClick={async () => {
+                setSavingDrink(true)
+                try {
+                  await updateDrink(menuDrink.id, { available: false })
+                  setMenuDrink(null)
+                } catch (e) {
+                  toastError(`Non disattivato: ${e.message}`)
+                } finally {
+                  setSavingDrink(false)
+                }
+              }}
+            >
+              🚫 Togli dalla griglia (non disponibile)
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Scheda prodotto in modifica (aperta dal menu prodotto) */}
+      {editDrink && (
+        <div className="overlay confirm-overlay" onClick={() => setEditDrink(null)}>
+          <div
+            style={{ width: 'min(520px, 96vw)', maxHeight: '92vh', overflowY: 'auto' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <DrinkForm
+              initial={editDrink}
+              categories={cats}
+              inventory={inventory}
+              onCreateCategory={async (name) => {
+                const cat = await createCategory({ name, sort_order: cats.length })
+                return cat
+              }}
+              onCancel={() => setEditDrink(null)}
+              onSave={async (form) => {
+                await saveDrinkFromForm({ form, existing: editDrink, inventory, categories: cats })
+                setEditDrink(null)
+              }}
+            />
           </div>
         </div>
       )}
