@@ -11,6 +11,7 @@ import { auth } from '../lib/firebaseClient.js'
 import { cashRecap } from '../lib/cassa.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import StaffBadgePanel from './StaffBadgePanel.jsx'
+import OrdersHistory from './OrdersHistory.jsx'
 
 // FLUSSO CASSA: apertura/chiusura della serata e andamento in tempo reale
 // degli incassi della sessione aperta. I numeri vengono dagli ordini nella
@@ -50,6 +51,8 @@ export default function CashFlow({ canManageStaff = false }) {
   }, [])
 
   const recap = useMemo(() => cashRecap(orders, session, now), [orders, session, now])
+  // Storico ordini (lista cronologica di tutti i conti): a scomparsa.
+  const [showStorico, setShowStorico] = useState(false)
   const by = { email: auth.currentUser?.email ?? null }
 
   if (!session) {
@@ -57,6 +60,16 @@ export default function CashFlow({ canManageStaff = false }) {
       <>
         <ApriCassa cutoff={cutoff} by={by} />
         {canManageStaff && <StaffBadgePanel />}
+      {/* Storico: la lista cronologica di TUTTI i conti (qui, non nella coda,
+          che serve al lavoro in corso). */}
+      <button
+        className="btn ghost small block"
+        style={{ marginTop: 12 }}
+        onClick={() => setShowStorico((v) => !v)}
+      >
+        {showStorico ? '▴ Nascondi storico ordini' : '🧾 Storico ordini'}
+      </button>
+      {showStorico && <OrdersHistory />}
       </>
     )
   }
@@ -103,6 +116,18 @@ export default function CashFlow({ canManageStaff = false }) {
       {recap.perOra.length > 0 && <OraBars perOra={recap.perOra} />}
 
       <ChiudiCassa session={session} recap={recap} by={by} />
+
+      {/* Storico: la lista cronologica di TUTTI i conti (qui, non nella coda,
+          che serve al lavoro in corso). */}
+      <button
+        className="btn ghost small block"
+        style={{ marginTop: 12 }}
+        onClick={() => setShowStorico((v) => !v)}
+      >
+        {showStorico ? '▴ Nascondi storico ordini' : '🧾 Storico ordini'}
+      </button>
+      {showStorico && <OrdersHistory />}
+
     </div>
   )
 }

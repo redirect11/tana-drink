@@ -956,6 +956,13 @@ export async function fetchRecentDrinkIds(limit = 20) {
   return recentDrinkIds(snap.docs.map(mapOrder), limit)
 }
 
+// STORICO ordini in ordine cronologico (più recenti prima), qualunque sia lo
+// stato: aperti, chiusi, annullati. Usato dallo storico nel Flusso cassa.
+export async function fetchOrdersHistory(limit = 200) {
+  const snap = await getDocs(query(ordersCol, orderBy('created_at', 'desc'), fbLimit(limit)))
+  return snap.docs.map(mapOrder)
+}
+
 // Ordini di una giornata commerciale (per statistiche e storico).
 export async function fetchOrdersForBusinessDay(dayKey, cutoffHour = DEFAULT_CUTOFF_HOUR) {
   // Prendo una finestra larga attorno al giorno e taglio con businessDayKey.

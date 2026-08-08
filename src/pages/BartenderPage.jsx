@@ -801,10 +801,13 @@ function OrderQueue() {
               </span>
             )}
           </div>
+          {/* NOME del conto in grande: è la prima cosa da riconoscere sulla
+              card. Tavolo, gruppo e pagamento restano piccoli, sotto. */}
+          {o.customer_name && <div className="grid-card-name">{o.customer_name}</div>}
           <div className="grid-card-sub row between" style={{ gap: 6 }}>
             <span className="grow" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {o.customer_name && <strong>{o.customer_name}</strong>}
-              {o.table_label && <span className="muted"> · Tavolo {o.table_label}</span>}
+              {o.table_label && <span className="muted">🍽 Tavolo {o.table_label}</span>}
+              {o.note && <span className="muted">{o.table_label ? ' · ' : ''}{o.note}</span>}
             </span>
             {/* Pagamento allineato a DESTRA, fra il badge di stato (sopra) e
                 il prezzo (sotto). Il gruppo, se c'è, gli sta accanto. */}
