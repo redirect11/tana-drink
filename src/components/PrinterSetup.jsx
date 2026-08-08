@@ -184,6 +184,24 @@ export default function PrinterSetup() {
           }
         >
           {testResult.ok ? '✓ ' : ''}{testResult.msg}
+          {/* Timeout = quasi sempre certificato della stampante non ancora
+              accettato su questo dispositivo: il link ci porta direttamente. */}
+          {!testResult.ok && form.ip && (
+            <div style={{ marginTop: 8, fontSize: '0.85rem' }}>
+              Sul <strong>questo</strong> dispositivo apri una volta{' '}
+              <a
+                href={`https://${form.ip}:${form.port || 8043}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                https://{form.ip}:{form.port || 8043}
+              </a>{' '}
+              e accetta il certificato (“Avanzate → Procedi”), poi torna qui e
+              ripremi <strong>Test stampa</strong>. Verifica anche che la
+              stampante sia accesa, sulla <strong>stessa rete Wi-Fi</strong> e
+              con SSL/TLS abilitato.
+            </div>
+          )}
         </div>
       )}
 
