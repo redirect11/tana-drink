@@ -159,6 +159,7 @@ function ProductsPanel() {
     setSort((s) => (s.col === col ? { col, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { col, dir: 'asc' }))
   const [expandedId, setExpandedId] = useState(null)
   const [caricoFor, setCaricoFor] = useState(null)
+  const [rettificaFor, setRettificaFor] = useState(null)
 
   // Ricarico (×N) per il prezzo consigliato mostrato accanto al costo.
   const [markup, setMarkup] = useState(DEFAULT_SETTINGS.price_markup)
@@ -249,12 +250,25 @@ function ProductsPanel() {
 
       {caricoFor === it.id ? (
         <CaricoForm item={it} onCancel={() => setCaricoFor(null)} onConfirm={(p) => doCarico(it, p)} />
+      ) : rettificaFor === it.id ? (
+        <RettificaForm
+          item={it}
+          onCancel={() => setRettificaFor(null)}
+          onConfirm={(baseQty) => rettifica(it, baseQty)}
+        />
       ) : (
         <>
           <button className="btn small block" style={{ marginTop: 8 }} onClick={() => setCaricoFor(it.id)}>
             ⬆ Carico
           </button>
-          <button className="btn secondary small block" style={{ marginTop: 6 }} onClick={() => rettifica(it)}>
+          <button
+            className="btn secondary small block"
+            style={{ marginTop: 6 }}
+            onClick={() => {
+              setCaricoFor(null)
+              setRettificaFor(it.id)
+            }}
+          >
             Contenuto reale
           </button>
           <div className="grid-2" style={{ marginTop: 6, gap: 6 }}>
@@ -345,13 +359,13 @@ function ProductsPanel() {
     }
   }
 
-  async function rettifica(item) {
-    const v = prompt(`Contenuto effettivo di "${item.name}" (${item.unit}):`, String(item.stock))
-    if (v == null) return
-    const n = Number(v.replace(',', '.'))
-    if (Number.isNaN(n)) return
+  // Contenuto reale: la quantità arriva GIÀ convertita in unità base dal form
+  // (che lavora in cl per i liquidi, come il bartender conta le bottiglie).
+  async function rettifica(item, baseQty) {
+    setError(null)
     try {
-      await adjustStock(item.id, n)
+      await adjustStock(item.id, baseQty)
+      setRettificaFor(null)
       await load()
     } catch (e) {
       setError(e.message)
@@ -982,6 +996,62 @@ function SupplierManager({ suppliers, onChange }) {
           </span>
         </div>
       ))}
+    </div>
+  )
+}
+
+// --- Contenuto reale (rettifica giacenza) -------------------------------
+// Si lavora nell'unità con cui si conta davvero: CL per i liquidi (non ml),
+// g per i solidi, pz per i pezzi. Il valore si converte in unità base solo
+// al salvataggio.
+function RettificaForm({ item, onCancel, onConfirm }) {
+  const units = smallUnits(item)
+  const [unit, setUnit] = useState(units[0])
+  const [val, setVal] = useState(() => String(fromBaseQty(Number(item.stock) || 0, units[0])))
+
+  function changeUnit(u) {
+    // Mantiene la quantità reale, cambiando solo come la si esprime.
+    const base = toBaseQty(Number(String(val).replace(',', '.')) || 0, unit)
+    setUnit(u)
+    setVal(String(fromBaseQty(base, u)))
+  }
+  function confirm() {
+    const n = Number(String(val).replace(',', '.'))
+    if (Number.isNaN(n) || n < 0) return
+    onConfirm(toBaseQty(n, unit))
+  }
+
+  return (
+    <div style={{ marginTop: 8 }}>
+      <label htmlFor={`rt-${item.id}`}>Contenuto effettivo di “{item.name}”</label>
+      <div className="row" style={{ gap: 6 }}>
+        <input
+          id={`rt-${item.id}`}
+          type="number"
+          step="any"
+          min="0"
+          value={val}
+          onChange={(e) => setVal(e.target.value)}
+          autoFocus
+          style={{ flex: 1 }}
+        />
+        {units.length > 1 ? (
+          <select value={unit} onChange={(e) => changeUnit(e.target.value)} style={{ width: 80 }}>
+            {units.map((u) => (
+              <option key={u} value={u}>{u}</option>
+            ))}
+          </select>
+        ) : (
+          <span className="chip" style={{ cursor: 'default' }}>{unit}</span>
+        )}
+      </div>
+      <p className="muted small" style={{ margin: '4px 0 0' }}>
+        Quantità totale in giacenza dopo la conta (sostituisce quella attuale).
+      </p>
+      <div className="grid-2" style={{ marginTop: 10 }}>
+        <button className="btn ghost small" onClick={onCancel}>Annulla</button>
+        <button className="btn small" onClick={confirm}>Salva contenuto</button>
+      </div>
     </div>
   )
 }
