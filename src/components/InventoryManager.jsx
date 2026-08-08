@@ -1310,7 +1310,7 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
         {[
           ['Liquidi', [['l', 'Litri (L)'], ['cl', 'Centilitri (cl)'], ['ml', 'Millilitri (ml)']]],
           ['Solidi', [['g', 'Grammi (g)'], ['mg', 'Milligrammi (mg)']]],
-          ['Pezzi', [['pz', 'Pezzi (es. birre)']]],
+          ['Pezzi', [['pz', 'Pezzi / unità (bottiglie, lattine, confezioni…)']]],
         ].map(([grp, units]) => (
           <optgroup key={grp} label={grp}>
             {units.map(([u, label]) => (
