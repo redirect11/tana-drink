@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { fetchOrdersHistory } from '../lib/api.js'
+import { subscribeOrdersHistory } from '../lib/api.js'
 import { formatPrice, ORDER_STATUSES } from '../lib/orderStatus.js'
 import { paidAmount } from '../lib/pagamento.js'
 
@@ -45,16 +45,19 @@ export default function OrdersHistory() {
   const [q, setQ] = useState('')
   const navigate = useNavigate()
 
-  useEffect(() => {
-    let vivo = true
-    fetchOrdersHistory(300)
-      .then((list) => vivo && setOrders(list))
-      .catch((e) => vivo && setError(e.message))
-      .finally(() => vivo && setLoading(false))
-    return () => {
-      vivo = false
-    }
-  }, [])
+  // Realtime + LOCAL-FIRST: la lista compare subito (anche offline, dalla
+  // cache) e si aggiorna da sola quando cambiano gli ordini.
+  useEffect(
+    () =>
+      subscribeOrdersHistory(
+        (list) => {
+          setOrders(list)
+          setLoading(false)
+        },
+        (e) => setError(e.message)
+      ),
+    []
+  )
 
   const visibili = useMemo(() => {
     const needle = q.trim().toLowerCase()

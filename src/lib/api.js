@@ -968,18 +968,26 @@ export async function peekNextDailyNumber({ cutoffHour = DEFAULT_CUTOFF_HOUR } =
 
 // STORICO ordini in ordine cronologico (più recenti prima), qualunque sia lo
 // stato: aperti, chiusi, annullati. Usato dallo storico nel Flusso cassa.
-export async function fetchOrdersHistory(limit = 200) {
+// STORICO ordini in tempo reale (più recenti prima), qualunque sia lo stato:
+// aperti, chiusi, annullati. onSnapshot e non getDocs: OFFLINE la lista arriva
+// SUBITO dalla cache locale (una lettura una-tantum resterebbe appesa), e si
+// aggiorna da sola quando torna la rete.
+export function subscribeOrdersHistory(cb, onError, { limit = 300 } = {}) {
   const byDate = (a, b) => String(b.created_at || '').localeCompare(String(a.created_at || ''))
-  try {
-    const snap = await getDocs(query(ordersCol, orderBy('created_at', 'desc'), fbLimit(limit)))
-    // orderBy scarta i doc con created_at ancora nullo (creati offline e non
-    // ancora sincronizzati): se non torna nulla si rilegge senza ordinamento.
-    if (!snap.empty) return snap.docs.map(mapOrder)
-  } catch {
-    /* niente indice o campo assente: si ricade sulla lettura semplice */
-  }
-  const snap = await getDocs(query(ordersCol, fbLimit(limit)))
-  return snap.docs.map(mapOrder).sort(byDate)
+  return onSnapshot(
+    query(ordersCol, orderBy('created_at', 'desc'), fbLimit(limit)),
+    (snap) => cb(snap.docs.map(mapOrder)),
+    (e) => {
+      // Se l'ordinamento non è disponibile (indice/campo), si ripiega su una
+      // lettura semplice ordinata lato client: lo storico non resta vuoto.
+      onSnapshot(
+        query(ordersCol, fbLimit(limit)),
+        (snap) => cb(snap.docs.map(mapOrder).sort(byDate)),
+        onError ?? (() => {})
+      )
+      if (onError) onError(e)
+    }
+  )
 }
 
 // Ordini di una giornata commerciale (per statistiche e storico).
