@@ -86,7 +86,7 @@ export default function BartenderPage() {
   const [user, setUser] = useState(undefined) // undefined = caricamento, null = non loggato
   const [role, setRole] = useState(null) // 'bartender' | 'staff'
   // Tab iniziale anche da query (?tab=stats): usato dal drawer nel menu.
-  const [params] = useSearchParams()
+  const [params, setParams] = useSearchParams()
   const [tab, setTab] = useState(() => params.get('tab') || 'coda')
   // La sezione segue anche i cambi di query string a pagina già aperta (es. la
   // scorciatoia "Lista ordini" dal Flusso cassa): senza questo il link non
@@ -95,6 +95,16 @@ export default function BartenderPage() {
   useEffect(() => {
     if (tabParam) setTab(tabParam)
   }, [tabParam])
+  // Cambiando sezione dal menu si aggiorna ANCHE l'indirizzo: così indirizzo e
+  // sezione restano sempre d'accordo e le scorciatoie (es. "Lista ordini" dal
+  // Flusso cassa) funzionano anche se ci si era già passati.
+  const goTab = (id) => {
+    setTab(id)
+    const next = new URLSearchParams(params)
+    if (id === 'coda') next.delete('tab')
+    else next.set('tab', id)
+    setParams(next, { replace: true })
+  }
 
   useEffect(() => {
     return onAuthStateChanged(auth, async (u) => {
@@ -159,7 +169,7 @@ export default function BartenderPage() {
 
   return (
     <div>
-      <StaffDrawer role="bartender" active={tab} onSelect={setTab} />
+      <StaffDrawer role="bartender" active={tab} onSelect={goTab} />
 
       {/* Toccando un gruppo (menu laterale) si ENTRA nella sua vista: la
           lista dei suoi ordini col conto. La coda resta com'è — lì ci
