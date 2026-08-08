@@ -1189,14 +1189,14 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                         pointer-capture del drag intercetta il click sul figlio. */}
                     <span
                       className="grow"
-                      style={{ fontSize: '0.88em', display: 'flex', alignItems: 'center', minWidth: 0, cursor: !closed && (isDraft || l.removable) ? 'pointer' : 'inherit' }}
+                      style={{ fontSize: '1.08em', display: 'flex', alignItems: 'center', minWidth: 0, cursor: !closed && (isDraft || l.removable) ? 'pointer' : 'inherit' }}
                       title={!closed && (isDraft || l.removable) ? `Modifica ${l.name}` : undefined}
                     >
-                      {!closed && !isPaid && <span aria-hidden style={{ opacity: 0.35, marginRight: 4, flexShrink: 0 }}>⠿</span>}
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
+                      {!closed && !isPaid && <span aria-hidden style={{ opacity: 0.35, marginRight: 4, flexShrink: 0, fontSize: '0.85em' }}>⠿</span>}
+                      <span style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
                         {l.custom ? '✨ ' : ''}{l.name}
                       </span>
-                      <span className="muted" style={{ whiteSpace: 'nowrap', flexShrink: 0, marginLeft: 5, fontSize: '0.95em' }}>
+                      <span className="muted" style={{ whiteSpace: 'nowrap', flexShrink: 0, marginLeft: 5, fontSize: '0.85em' }}>
                         · {formatPrice(l.unit_price)}
                       </span>
                     </span>
