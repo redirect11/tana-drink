@@ -945,6 +945,7 @@ a.order-mini {
 }
 
 .bar-burger {
+  display: none; /* solo in fullbleed: altrove il ☰ sta nella topbar */
   position: fixed;
   top: 12px;
   left: 12px;
@@ -1047,26 +1048,15 @@ a.order-mini {
 }
 
 .bar-content {
-  padding-top: 46px;
+  padding-top: 10px;
 }
 
+/* La sidebar è A SCOMPARSA in tutte le sezioni e a ogni larghezza: si apre
+   dal ☰ della topbar (o da quello flottante, a tutto schermo). Il contenuto
+   non le lascia più spazio a sinistra. */
 @media (min-width: 900px) {
-  .bar-burger,
-  .bar-nav-overlay {
-    display: none;
-  }
-
-  .bar-sidebar {
-    transform: none;
-  }
-
-  /* L'app è centrata (max 760px): sposta il contenuto solo di quanto
-     serve perché non finisca sotto la sidebar. Un filo di respiro sopra:
-     senza, sezioni che partono con chips/controlli (es. Inventario)
-     restano incollate all'header. */
   .bar-content {
-    margin-left: max(0px, calc(250px - (100vw - 760px) / 2));
-    padding-top: 14px;
+    padding-top: 10px;
   }
 }
 
@@ -1287,6 +1277,21 @@ body.fullbleed .bar-content {
   margin-bottom: 10px;
 }
 
+/* ☰ del menu laterale dentro la topbar: primo elemento a sinistra, prima del
+   logo, così il menu è raggiungibile ovunque senza tasti flottanti. */
+.topbar-burger {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  margin-right: 2px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--bg-2);
+  color: var(--text);
+  font-size: 1.05rem;
+  cursor: pointer;
+}
+
 /* Badge "chi ha aperto l'ordine" accanto al numero: lettera del dipendente o
    segno del cliente. Leggenda in testata (lettera → nome). */
 .order-by {
@@ -1505,11 +1510,6 @@ body.fullbleed .bar-content {
    scomparsa (burger) e il contenuto è a tutta larghezza. */
 body.inv-wide .app {
   max-width: none;
-}
-@media (min-width: 900px) {
-  body.inv-wide .bar-content {
-    margin-left: 250px;
-  }
 }
 
 /* ── Inventario come TABELLA: colonne allineate (grid identico su intestazione
