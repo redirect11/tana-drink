@@ -88,6 +88,13 @@ export default function BartenderPage() {
   // Tab iniziale anche da query (?tab=stats): usato dal drawer nel menu.
   const [params] = useSearchParams()
   const [tab, setTab] = useState(() => params.get('tab') || 'coda')
+  // La sezione segue anche i cambi di query string a pagina già aperta (es. la
+  // scorciatoia "Lista ordini" dal Flusso cassa): senza questo il link non
+  // faceva nulla, perché il tab veniva letto solo al primo mount.
+  const tabParam = params.get('tab')
+  useEffect(() => {
+    if (tabParam) setTab(tabParam)
+  }, [tabParam])
 
   useEffect(() => {
     return onAuthStateChanged(auth, async (u) => {
