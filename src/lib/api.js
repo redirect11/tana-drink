@@ -1381,12 +1381,29 @@ function mapCashSession(snap) {
 
 // Id della sessione di cassa APERTA (o null). Letta anche dalla cache offline.
 // Serve al progressivo degli ordini, che segue la CASSA e non il giorno.
+// Puntatore PUBBLICO alla sessione di cassa aperta. Serve perché `cash_sessions`
+// è leggibile solo dallo staff (contiene incassi e nomi), ma il progressivo
+// dev'essere lo stesso ANCHE per gli ordini che arrivano dai clienti: senza
+// questo, i loro ordini userebbero il contatore del giorno e si avrebbero
+// numeri duplicati in coda.
+const activeCashRef = doc(db, 'counters', '_active_cash')
+
 async function currentCashSessionId() {
+  // 1) puntatore pubblico (funziona per tutti, cliente compreso)
+  try {
+    const snap = await getDoc(activeCashRef)
+    if (snap.exists()) return snap.data().session_id ?? null
+  } catch {
+    /* si prova con la lettura diretta qui sotto */
+  }
+  // 2) fallback per lo staff: sessioni aperte prima che esistesse il puntatore
   try {
     const snap = await getDocs(query(cashSessionsCol, where('status', '==', 'open')))
     if (snap.empty) return null
     const list = snap.docs.map((d) => ({ id: d.id, opened_at: toIso(d.data().opened_at) }))
     list.sort((a, b) => String(b.opened_at || '').localeCompare(String(a.opened_at || '')))
+    // Riallinea il puntatore, così anche i clienti prendono il numero giusto.
+    setDoc(activeCashRef, { session_id: list[0].id }, { merge: true }).catch(() => {})
     return list[0].id
   } catch {
     return null
@@ -1426,6 +1443,9 @@ export function openCashSession({ by = null, fondo = 0, cutoffHour = DEFAULT_CUT
     business_day: businessDayKey(new Date(), cutoffHour),
     created_at: serverTimestamp(),
   }).catch(() => {})
+  // Puntatore pubblico: da qui anche gli ordini dei clienti prendono il
+  // progressivo della sessione (vedi currentCashSessionId).
+  setDoc(activeCashRef, { session_id: ref.id }, { merge: true }).catch(() => {})
   return ref.id
 }
 
@@ -1446,6 +1466,9 @@ export function closeCashSession(id, { by = null, snapshot = null, countedCash =
     patch.difference = Math.round((counted - atteso) * 100) / 100
   }
   updateDoc(doc(db, 'cash_sessions', id), patch).catch(() => {})
+  // Cassa chiusa: il puntatore pubblico si svuota, così il progressivo riparte
+  // alla prossima apertura (e intanto si ricade sulla giornata commerciale).
+  setDoc(activeCashRef, { session_id: null }, { merge: true }).catch(() => {})
 }
 
 // Storico delle sessioni di cassa chiuse, più recenti prima.

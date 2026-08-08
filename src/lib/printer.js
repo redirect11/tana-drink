@@ -29,6 +29,22 @@ export const DEFAULT_PRINTER_SETTINGS = {
   businessFooter: 'EFFEVI - SRLS',
 }
 
+// Scontrino automatico UNA SOLA VOLTA per conto: la chiusura può passare da
+// più strade (schermata pagamento, coda, incasso di gruppo) e senza questa
+// guardia lo stesso scontrino uscirebbe due volte.
+const PRINTED_KEY = 'tana_printed_receipts'
+export function claimReceiptPrint(orderId) {
+  if (!orderId) return true
+  try {
+    const list = JSON.parse(localStorage.getItem(PRINTED_KEY) || '[]')
+    if (list.includes(orderId)) return false
+    localStorage.setItem(PRINTED_KEY, JSON.stringify([...list, orderId].slice(-300)))
+    return true
+  } catch {
+    return true // storage non disponibile: meglio stampare che non stampare
+  }
+}
+
 export function loadPrinterSettings() {
   try {
     return { ...DEFAULT_PRINTER_SETTINGS, ...JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}') }
