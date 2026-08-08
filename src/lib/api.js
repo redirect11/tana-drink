@@ -156,6 +156,7 @@ function mapOrder(snap) {
     id: snap.id,
     daily_number: o.daily_number ?? null,
     order_date: o.order_date ?? null,
+    cash_session_id: o.cash_session_id ?? null,
     table_label: o.table_label ?? null,
     note: o.note ?? null,
     status: norm.status,
@@ -1344,6 +1345,20 @@ function mapCashSession(snap) {
   }
 }
 
+// Id della sessione di cassa APERTA (o null). Letta anche dalla cache offline.
+// Serve al progressivo degli ordini, che segue la CASSA e non il giorno.
+async function currentCashSessionId() {
+  try {
+    const snap = await getDocs(query(cashSessionsCol, where('status', '==', 'open')))
+    if (snap.empty) return null
+    const list = snap.docs.map((d) => ({ id: d.id, opened_at: toIso(d.data().opened_at) }))
+    list.sort((a, b) => String(b.opened_at || '').localeCompare(String(a.opened_at || '')))
+    return list[0].id
+  } catch {
+    return null
+  }
+}
+
 // Sessione di cassa attualmente aperta (una sola alla volta), in realtime.
 // Niente orderBy nella query (eviterebbe un indice composito e, soprattutto,
 // escluderebbe il doc appena creato offline finché opened_at è nullo): si
@@ -1453,7 +1468,12 @@ export async function createOrder({
   // Giornata commerciale: raggruppa e fa ripartire il progressivo #N. La
   // nottata oltre la mezzanotte resta nella giornata in cui è cominciata.
   const orderDate = businessDayKey(new Date(), cutoff_hour)
-  const counterRef = doc(db, 'counters', orderDate)
+  // PROGRESSIVO legato alla SESSIONE DI CASSA: finché la cassa resta aperta i
+  // numeri continuano (anche a cavallo di più giorni) e riprendono da 1 solo
+  // alla nuova apertura. Senza cassa aperta si ricade sulla giornata
+  // commerciale, come prima.
+  const cashSessionId = await currentCashSessionId()
+  const counterRef = doc(db, 'counters', cashSessionId ? `cash-${cashSessionId}` : orderDate)
   const newOrderRef = doc(ordersCol)
 
   // Numero giornaliero: letto dalla cache (offline compreso) e incrementato.
@@ -1501,9 +1521,10 @@ export async function createOrder({
   // sottoscrizione lo mostra all'istante, online e offline), il server la
   // riceve appena c'è rete. Niente await: offline non si sbloccherebbe.
   setDoc(newOrderRef, {
-    daily_number: dailyNumber, // progressivo del giorno (riparte ogni giornata)
+    daily_number: dailyNumber, // progressivo della SESSIONE DI CASSA (o del giorno se la cassa è chiusa)
     serial, // progressivo assoluto di sistema (non riparte mai)
     order_date: orderDate, // giornata commerciale (YYYY-MM-DD)
+    cash_session_id: cashSessionId, // sessione di cassa che numera l'ordine
     table_label: table_label || null,
     note: note || null,
     status: ORDER_OPEN,

@@ -1138,6 +1138,21 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                 diretti. Scegli uno dei suoi sottogruppi.
               </div>
             )}
+
+            {/* Azioni FISSE in testata (prima Dati conto, poi Prodotto libero):
+                con la lista lunga scorrevano via insieme al nome del conto. */}
+            <div className="grid-2" style={{ gap: 6, margin: '8px 0 6px' }}>
+              <button className="btn ghost small" onClick={() => setShowInfo(true)}>
+                👤 Dati conto
+              </button>
+              <button
+                className="btn ghost small"
+                disabled={closed}
+                onClick={() => setShowCustom(true)}
+              >
+                🏷 Prodotto libero
+              </button>
+            </div>
           </div>
 
           <div ref={listRef} className="posd-list" style={{ flex: 1, overflowY: 'auto', padding: '6px 12px 10px' }}>
@@ -1232,21 +1247,6 @@ export default function OrderPosDetail({ order: orderProp = null }) {
               )
             })}
 
-            {!closed && (
-              <button
-                className="btn ghost small block"
-                style={{ marginTop: 10 }}
-                onClick={() => setShowCustom(true)}
-              >
-                🏷 Prodotto libero
-              </button>
-            )}
-
-            {/* Dati conto (nome/tavolo/note): si aprono in un popup, come in
-                creazione, invece di espandersi in fondo alla lista. */}
-            <button className="btn ghost small block" style={{ marginTop: 10 }} onClick={() => setShowInfo(true)}>
-              👤 Dati conto (nome, tavolo, note)
-            </button>
           </div>
 
           {/* Footer: avanzamento comanda + totale + CONFERMA vicino a PAGAMENTO.
