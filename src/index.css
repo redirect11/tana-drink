@@ -1281,15 +1281,39 @@ body.fullbleed .bar-content {
    logo, così il menu è raggiungibile ovunque senza tasti flottanti. */
 .topbar-burger {
   flex-shrink: 0;
-  width: 38px;
-  height: 38px;
+  width: 44px;
+  height: 44px;
   margin-right: 2px;
   border: 1px solid var(--line);
-  border-radius: 9px;
+  border-radius: 10px;
   background: var(--bg-2);
   color: var(--text);
-  font-size: 1.05rem;
+  font-size: 1.15rem;
   cursor: pointer;
+}
+
+/* Dispositivi TOUCH (iPad al banco): i tasti che si usano di continuo — menu,
+   voci del menu laterale, azioni della topbar — devono essere presi al volo,
+   anche col monitor piccolo. Su desktop col mouse restano compatti. */
+@media (pointer: coarse) {
+  .topbar-burger {
+    width: 50px;
+    height: 50px;
+    font-size: 1.3rem;
+  }
+  .topbar .btn.small {
+    min-height: 44px;
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+  .bar-nav-item {
+    min-height: 52px;
+    font-size: 1rem;
+  }
+  .bar-burger {
+    width: 50px;
+    height: 50px;
+  }
 }
 
 /* Badge "chi ha aperto l'ordine" accanto al numero: lettera del dipendente o
