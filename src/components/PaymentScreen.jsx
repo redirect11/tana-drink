@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   registerPayment,
+  markOrderPaid,
   setOrderDiscount,
   setOrderLotteryCode,
   createInvoice,
@@ -47,6 +48,16 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   // Chiusura per pagamento COMPLETATO (non semplice annulla): chiude e avvisa
   // il chiamante, che può tornare alla coda ordini.
   const closePaid = () => {
+    // Scontrino alla CHIUSURA del conto (se l'auto-stampa è attiva): prima
+    // partiva solo quando l'ordine passava a "pronto", quindi con la gestione
+    // preparazione spenta non usciva mai.
+    try {
+      if (loadPrinterSettings().autoPrintScontrino) {
+        printScontrino(order).catch((e) => console.warn('[printer] scontrino:', e.message))
+      }
+    } catch {
+      /* stampante non configurata: si continua */
+    }
     onPaid?.()
     onClose()
   }
@@ -215,6 +226,16 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
 
   const riscuoti = () => {
     const items = !manual && splitting ? selection : null
+    // Conto già coperto (sconto totale, buono o acconti): non c'è nulla da
+    // incassare ma il conto va CHIUSO lo stesso, altrimenti resta aperto per
+    // sempre e blocca anche la chiusura di cassa.
+    if (due <= 0) {
+      return run(async () => {
+        await onBeforePay?.()
+        await markOrderPaid(await orderId(), null, { autoServe })
+        closePaid()
+      })
+    }
     if (method === 'lettore') {
       // Lettore SIMULATO (test/dev senza hardware): stessa UX del vero —
       // transazione "avviata", poi l'esito arriva da solo dopo 2,5s.
@@ -561,10 +582,10 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
           {!closed && (
             <button
               className="btn block payscreen-collect"
-              disabled={saving || !(toPay > 0)}
+              disabled={saving || (due > 0 && !(toPay > 0))}
               onClick={riscuoti}
             >
-              Riscuotere · {formatPrice(toPay)}
+              {due <= 0 ? 'Chiudi conto · 0,00 €' : `Riscuotere · ${formatPrice(toPay)}`}
             </button>
           )}
 
