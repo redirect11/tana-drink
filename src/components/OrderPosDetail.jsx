@@ -995,13 +995,13 @@ export default function OrderPosDetail({ order: orderProp = null }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', overflow: 'hidden' }}>
-      {/* ── Barra in alto ── */}
+      {/* ── Barra in alto (sotto la barra di sistema del tablet: --safe-top) ── */}
       <div
+        className="posd-topbar"
         style={{
           display: 'flex',
           alignItems: 'center',
           gap: 10,
-          padding: '8px 10px',
           flexShrink: 0,
           borderBottom: '1px solid var(--line)',
         }}

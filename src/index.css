@@ -50,6 +50,19 @@ a {
   color: var(--accent-2);
 }
 
+:root {
+  /* Fascia della barra di sistema (ora, wifi, batteria) su tablet/telefono in
+     modalità app: il contenuto ci passa sotto (viewport-fit=cover), quindi
+     tutte le barre in cima devono scostarsi di tanto. In standalone si tiene
+     un minimo, perché su iPad senza notch env() può valere 0. */
+  --safe-top: env(safe-area-inset-top, 0px);
+}
+@media (display-mode: standalone) {
+  :root {
+    --safe-top: max(env(safe-area-inset-top, 0px), 22px);
+  }
+}
+
 .app {
   max-width: 760px;
   margin: 0 auto;
@@ -67,7 +80,7 @@ a {
   gap: 12px;
   /* A tutta larghezza: esce dal padding orizzontale di .app. */
   margin: 0 -16px;
-  padding: 12px 16px;
+  padding: calc(12px + var(--safe-top)) 16px 12px;
   /* Segue il TEMA (prima era un blocco scuro fisso: sui temi chiari
      l'header restava nero). */
   background: color-mix(in srgb, var(--bg-2) 90%, transparent);
@@ -947,7 +960,7 @@ a.order-mini {
 .bar-burger {
   display: none; /* solo in fullbleed: altrove il ☰ sta nella topbar */
   position: fixed;
-  top: 12px;
+  top: calc(12px + var(--safe-top));
   left: 12px;
   z-index: 120;
   width: 42px;
@@ -1098,7 +1111,7 @@ body.fullbleed.topbar-open .topbar {
    riga "In servizio" così non copre le scritte. Solo a tutto schermo. */
 .topbar-toggle {
   position: fixed;
-  top: 0;
+  top: var(--safe-top);
   left: 112px; /* oltre "← Ordini" (creazione/modifica) e il ☰ (coda) */
   z-index: 126;
   height: 16px;
@@ -1159,7 +1172,7 @@ body.fullbleed .bar-content {
 /* Board ordini a griglia */
 .queue-board {
   min-height: 100vh;
-  padding: 10px 12px 24px;
+  padding: calc(10px + var(--safe-top)) 12px 24px;
 }
 
 .board-head {
@@ -2793,6 +2806,11 @@ body.fullbleed,
      di "saltare": niente sensazione di ricaricamento del layout. */
   transition: width 0.14s ease;
 }
+/* Barra in alto del POS: scostata dalla barra di sistema del tablet. */
+.posd-topbar {
+  padding: calc(8px + var(--safe-top)) 10px 8px;
+}
+
 /* Nome del conto in testata (#4 · iole): GRANDE quanto i nomi degli item della
    lista (1.08em della scala colonna), non più un titolino. */
 .posd-title {
