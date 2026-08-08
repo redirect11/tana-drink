@@ -166,6 +166,19 @@ export default function App() {
       {/* Notifiche IN APP (sync, ordini da staff/clienti, errori) */}
       <Toasts />
       <header className={`topbar${onBackoffice || staffRole ? ' backoffice' : ''}`}>
+        {/* Menu laterale A SCOMPARSA ovunque: si apre da qui (il tasto
+            flottante resta solo nelle schermate a tutto schermo, dove la
+            topbar è nascosta). */}
+        {staffRole && (
+          <button
+            className="topbar-burger"
+            aria-label="Menu"
+            title="Menu"
+            onClick={() => window.dispatchEvent(new Event('tana:toggle-drawer'))}
+          >
+            ☰
+          </button>
+        )}
         {/* Nel gestionale il logo non porta al menu: resta sugli ordini. */}
         <Link
           to={onBackoffice ? '/bar' : '/'}

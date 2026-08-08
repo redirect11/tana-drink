@@ -34,6 +34,14 @@ export default function StaffDrawer({ role, active = null, onSelect = null }) {
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
 
+  // Il menu si apre dal ☰ della TOPBAR (che sta in App.jsx): il tasto flottante
+  // resta solo nelle schermate a tutto schermo, dove la topbar è nascosta.
+  useEffect(() => {
+    const h = () => setOpen((o) => !o)
+    window.addEventListener('tana:toggle-drawer', h)
+    return () => window.removeEventListener('tana:toggle-drawer', h)
+  }, [])
+
   // Gruppi nel drawer (quadratini): attivi se l'impostazione lo prevede.
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   const [groups, setGroups] = useState([])
