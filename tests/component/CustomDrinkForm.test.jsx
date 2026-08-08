@@ -45,6 +45,7 @@ describe('prodotto libero', () => {
       name: 'Consumazione',
       price: 10,
       recipe_items: [],
+      note: null, // nessuna nota di riga inserita
     })
   })
 

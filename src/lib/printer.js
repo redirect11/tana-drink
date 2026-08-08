@@ -193,6 +193,13 @@ export async function printComanda(order, comanda = null) {
   prn.addTextSize(1, 2)
   for (const item of ticketItems) {
     prn.addText(`${item.qty}  ${item.name.toUpperCase()}\n`)
+    // Nota della singola riga (es. "poco ghiaccio", o per chi è): il banco
+    // deve vederla sotto al prodotto, in corpo normale.
+    if (item.note) {
+      prn.addTextSize(1, 1)
+      prn.addText(`     > ${item.note}\n`)
+      prn.addTextSize(1, 2)
+    }
   }
   prn.addTextSize(1, 1)
   prn.addText(line())

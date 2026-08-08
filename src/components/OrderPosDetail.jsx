@@ -368,6 +368,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
           unit_price: it.unit_price,
           custom: it.custom,
           recipe_items: it.recipe_items,
+          note: it.note || null,
         }
         const paidHere = it.drink_id ? Math.min(it.qty, remainingPaid[it.drink_id] || 0) : 0
         if (it.drink_id) remainingPaid[it.drink_id] -= paidHere
@@ -689,13 +690,13 @@ export default function OrderPosDetail({ order: orderProp = null }) {
     !canMerge &&
     (draft.some((l) => l.qty > 1) ||
       editableComande.some((c) => (c.items || []).some((i) => i.qty > 1)))
-  const applyEdit = ({ name, price, recipe_items }) => {
+  const applyEdit = ({ name, price, recipe_items, note }) => {
     const l = editLine
     setEditLine(null)
     if (!l) return
     // Ricetta SEMPRE un array: svuotarla a mano è una scelta, non va riletta
     // dal prodotto di catalogo al prossimo giro.
-    const patch = { name, unit_price: price, custom: true, recipe_items: recipe_items || [] }
+    const patch = { name, unit_price: price, custom: true, recipe_items: recipe_items || [], note: note || null }
     if (l.source === 'draft') {
       setDraft((items) => items.map((x) => (x.line_id === l.line_id ? { ...x, ...patch } : x)))
       return
@@ -720,7 +721,12 @@ export default function OrderPosDetail({ order: orderProp = null }) {
     const recipe = editLine.custom
       ? editLine.recipe_items || []
       : base?.recipe_items || []
-    return { name: editLine.name, price: editLine.unit_price, recipe_items: recipe }
+    return {
+      name: editLine.name,
+      price: editLine.unit_price,
+      recipe_items: recipe,
+      note: editLine.note || '',
+    }
   }, [editLine, drinks])
 
   // Righe di bozza → item per createOrder (usano `price`).
@@ -732,6 +738,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
       qty: l.qty,
       ...(l.custom ? { custom: true } : {}),
       ...(l.recipe_items ? { recipe_items: l.recipe_items } : {}),
+      ...(l.note ? { note: l.note } : {}),
     }))
 
   const placedBy = () =>
@@ -1193,11 +1200,24 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                       title={!closed && (isDraft || l.removable) ? `Modifica ${l.name}` : undefined}
                     >
                       {!closed && !isPaid && <span aria-hidden style={{ opacity: 0.35, marginRight: 4, flexShrink: 0, fontSize: '0.85em' }}>⠿</span>}
-                      <span style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
-                        {l.custom ? '✨ ' : ''}{l.name}
-                      </span>
-                      <span className="muted" style={{ whiteSpace: 'nowrap', flexShrink: 0, marginLeft: 5, fontSize: '0.85em' }}>
-                        · {formatPrice(l.unit_price)}
+                      <span style={{ minWidth: 0, overflow: 'hidden' }}>
+                        <span style={{ display: 'flex', alignItems: 'baseline', minWidth: 0 }}>
+                          <span style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
+                            {l.custom ? '✨ ' : ''}{l.name}
+                          </span>
+                          <span className="muted" style={{ whiteSpace: 'nowrap', flexShrink: 0, marginLeft: 5, fontSize: '0.85em' }}>
+                            · {formatPrice(l.unit_price)}
+                          </span>
+                        </span>
+                        {/* Nota della riga (es. "poco ghiaccio", o di chi è) */}
+                        {l.note && (
+                          <span
+                            className="muted"
+                            style={{ display: 'block', fontSize: '0.78em', fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                          >
+                            ↳ {l.note}
+                          </span>
+                        )}
                       </span>
                     </span>
                     <span className="row" style={{ gap: 4, alignItems: 'center' }}>

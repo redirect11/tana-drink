@@ -1483,6 +1483,7 @@ export async function createOrder({
     qty: i.qty,
     sumup_product_id: i.sumup_product_id ?? null,
     ...(i.custom ? { custom: true, recipe_items: i.recipe_items ?? [] } : {}),
+    ...(i.note ? { note: i.note } : {}),
   }))
   // Modello conto/comande: l'ordine nasce `aperto` con la COMANDA 1, che
   // porta lo stato di lavorazione (il POS la crea già in preparazione).
@@ -2154,6 +2155,7 @@ export async function updateOrderItems(id, items) {
     qty: i.qty,
     sumup_product_id: i.sumup_product_id ?? null,
     ...(i.custom ? { custom: true, recipe_items: i.recipe_items ?? [] } : {}),
+    ...(i.note ? { note: i.note } : {}),
   }))
   comande[0] = { ...comande[0], items: mapped }
   const extras =
@@ -2207,6 +2209,7 @@ export async function addComanda(orderId, items, { note = null } = {}) {
       qty: i.qty,
       sumup_product_id: i.sumup_product_id ?? null,
       ...(i.custom ? { custom: true, recipe_items: i.recipe_items ?? [] } : {}),
+      ...(i.note ? { note: i.note } : {}),
     })),
     status: ORDER_STATUSES.IN_PREPARAZIONE,
     status_times: {
@@ -2249,6 +2252,7 @@ export async function bartenderUpdateComanda(orderId, comandaId, { items }) {
     qty: i.qty,
     sumup_product_id: i.sumup_product_id ?? null,
     ...(i.custom ? { custom: true, recipe_items: i.recipe_items ?? [] } : {}),
+    ...(i.note ? { note: i.note } : {}),
   }))
 
   const snap = await getDoc(ref)

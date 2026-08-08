@@ -24,6 +24,9 @@ export default function CustomDrinkForm({ onCancel, onAdd, initial = null, warnN
   }))
   const [name, setName] = useState(initial?.name || '')
   const [price, setPrice] = useState(initial?.price != null ? String(initial.price) : '')
+  // Nota della SINGOLA riga (es. "poco ghiaccio", o il nome di chi la beve):
+  // finisce sulla comanda del banco, non sul conto.
+  const [note, setNote] = useState(initial?.note || '')
   const [rows, setRows] = useState(initRows) // { inventory_item_id, name, qty, unit }
   const [inventory, setInventory] = useState([])
   const [showRecipe, setShowRecipe] = useState(initRows.length > 0 || warnNoRecipe)
@@ -80,7 +83,7 @@ export default function CustomDrinkForm({ onCancel, onAdd, initial = null, warnN
         unit: r.invUnit ?? 'pz',
         qty: toBaseQty(r.qty, r.unit),
       }))
-    onAdd({ name: name.trim(), price: priceNum, recipe_items })
+    onAdd({ name: name.trim(), price: priceNum, recipe_items, note: note.trim() || null })
   }
 
   return (
@@ -118,6 +121,14 @@ export default function CustomDrinkForm({ onCancel, onAdd, initial = null, warnN
           onChange={(e) => setPrice(e.target.value)}
           placeholder="Es. 8"
           required
+        />
+
+        <label htmlFor="cd-note">Nota per questa riga</label>
+        <input
+          id="cd-note"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="Es. poco ghiaccio · senza zucchero · per Maurizio"
         />
 
         {/* Costo reale, consigliato e guadagno: stesso riquadro del Menù. */}
