@@ -43,6 +43,7 @@ vi.mock('../../src/lib/api.js', () => ({
     ])
     return () => {}
   }),
+  peekNextDailyNumber: vi.fn(() => Promise.resolve(9)),
   subscribeSettings: vi.fn((cb) => {
     // 'uniti': due tap sullo stesso prodotto sommano la quantità.
     cb({
