@@ -457,8 +457,8 @@ function ProductsPanel() {
             <span aria-hidden />
             <span>Prodotto</span>
             <span>Categoria</span>
-            <span className="inv-cell-num">Netto</span>
-            <span className="inv-cell-num">+IVA</span>
+            <span className="inv-cell-num">IVA esclusa</span>
+            <span className="inv-cell-num">IVA inclusa</span>
             <span className="inv-cell-num">Scorte</span>
           </div>
           {visible.map((it) => {
