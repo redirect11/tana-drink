@@ -37,7 +37,7 @@ import { showToast } from '../lib/toast.js'
 import { beep, installAudioUnlock } from '../lib/beep.js'
 import { subscribePending, dismissPending, dismissBanner } from '../lib/pendingOrders.js'
 import { syncSumUpProducts, isSumUpEnabled } from '../lib/sumupApi.js'
-import { printComanda, printScontrino, loadPrinterSettings } from '../lib/printer.js'
+import { printComanda, printScontrino, loadPrinterSettings, claimReceiptPrint } from '../lib/printer.js'
 import MenuManager from '../components/MenuManager.jsx'
 import PrinterSetup from '../components/PrinterSetup.jsx'
 import InventoryManager from '../components/InventoryManager.jsx'
@@ -422,11 +422,14 @@ function OrderQueue() {
               }
             }
           }
-          // Auto-stampa scontrino quando un ordine diventa "pronto".
+          // Auto-stampa scontrino alla CHIUSURA del conto (prima era al
+          // "pronto": con la gestione preparazione spenta non usciva mai, e con
+          // quella accesa usciva due volte — al pronto e all'incasso).
+          // claimReceiptPrint garantisce una sola copia per conto, da qualunque
+          // schermata sia stato chiuso.
           if (printerSettings.autoPrintScontrino) {
             for (const o of data) {
-              if (o.workflow_status === ORDER_STATUSES.PRONTO && !knownIds.current.has(o.id + '_pronto')) {
-                knownIds.current.add(o.id + '_pronto')
+              if (o.payment_status === 'pagato' && claimReceiptPrint(o.id)) {
                 printScontrino(o).catch((e) => console.warn('[printer] auto-scontrino:', e.message))
               }
             }

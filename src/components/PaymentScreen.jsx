@@ -13,7 +13,7 @@ import { readerCheckout } from '../lib/paymentsApi.js'
 import { formatPrice, PAYMENT_METHOD_LABELS } from '../lib/orderStatus.js'
 import { allServed } from '../lib/comande.js'
 import { activeVouchers } from '../lib/vouchers.js'
-import { printScontrino, printFattura, loadPrinterSettings } from '../lib/printer.js'
+import { printScontrino, printFattura, loadPrinterSettings, claimReceiptPrint } from '../lib/printer.js'
 import { toastError } from '../lib/toast.js'
 import {
   remainingItems,
@@ -52,7 +52,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
     // partiva solo quando l'ordine passava a "pronto", quindi con la gestione
     // preparazione spenta non usciva mai.
     try {
-      if (loadPrinterSettings().autoPrintScontrino) {
+      if (loadPrinterSettings().autoPrintScontrino && claimReceiptPrint(order.id)) {
         printScontrino(order).catch((e) => console.warn('[printer] scontrino:', e.message))
       }
     } catch {
