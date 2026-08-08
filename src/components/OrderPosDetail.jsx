@@ -1087,7 +1087,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
           )}
           <div style={{ padding: '8px 12px 0', flexShrink: 0 }}>
             <div className="row between" style={{ alignItems: 'center' }}>
-              <strong style={{ fontFamily: 'var(--serif)' }}>{panelTitle}</strong>
+              <strong className="posd-title">{panelTitle}</strong>
               <span className="row" style={{ gap: 6 }}>
                 {canMerge && (
                   <button className="btn ghost small" onClick={mergeDraft}>🔗 Unisci</button>
@@ -1139,14 +1139,16 @@ export default function OrderPosDetail({ order: orderProp = null }) {
               </div>
             )}
 
-            {/* Azioni FISSE in testata (prima Dati conto, poi Prodotto libero):
-                con la lista lunga scorrevano via insieme al nome del conto. */}
-            <div className="grid-2" style={{ gap: 6, margin: '8px 0 6px' }}>
-              <button className="btn ghost small" onClick={() => setShowInfo(true)}>
+            {/* Azioni FISSE in testata, una sotto l'altra: prima Dati conto,
+                poi Prodotto libero. Con la lista lunga scorrevano via insieme
+                al nome del conto. */}
+            <div style={{ margin: '8px 0 6px' }}>
+              <button className="btn ghost small block" onClick={() => setShowInfo(true)}>
                 👤 Dati conto
               </button>
               <button
-                className="btn ghost small"
+                className="btn ghost small block"
+                style={{ marginTop: 6 }}
                 disabled={closed}
                 onClick={() => setShowCustom(true)}
               >
