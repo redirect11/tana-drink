@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   subscribeActiveOrders,
   subscribeOpenCashSession,
@@ -11,7 +12,6 @@ import { auth } from '../lib/firebaseClient.js'
 import { cashRecap } from '../lib/cassa.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import StaffBadgePanel from './StaffBadgePanel.jsx'
-import OrdersHistory from './OrdersHistory.jsx'
 
 // FLUSSO CASSA: apertura/chiusura della serata e andamento in tempo reale
 // degli incassi della sessione aperta. I numeri vengono dagli ordini nella
@@ -51,8 +51,6 @@ export default function CashFlow({ canManageStaff = false }) {
   }, [])
 
   const recap = useMemo(() => cashRecap(orders, session, now), [orders, session, now])
-  // Storico ordini (lista cronologica di tutti i conti): a scomparsa.
-  const [showStorico, setShowStorico] = useState(false)
   const by = { email: auth.currentUser?.email ?? null }
 
   if (!session) {
@@ -60,16 +58,10 @@ export default function CashFlow({ canManageStaff = false }) {
       <>
         <ApriCassa cutoff={cutoff} by={by} />
         {canManageStaff && <StaffBadgePanel />}
-      {/* Storico: la lista cronologica di TUTTI i conti (qui, non nella coda,
-          che serve al lavoro in corso). */}
-      <button
-        className="btn ghost small block"
-        style={{ marginTop: 12 }}
-        onClick={() => setShowStorico((v) => !v)}
-      >
-        {showStorico ? '▴ Nascondi storico ordini' : '🧾 Storico ordini'}
-      </button>
-      {showStorico && <OrdersHistory />}
+      {/* Lista ordini: sezione a sé (menu laterale), qui solo la scorciatoia. */}
+      <Link className="btn ghost small block" style={{ marginTop: 12 }} to="/bar?tab=storico">
+        📋 Lista ordini
+      </Link>
       </>
     )
   }
@@ -117,16 +109,10 @@ export default function CashFlow({ canManageStaff = false }) {
 
       <ChiudiCassa session={session} recap={recap} by={by} />
 
-      {/* Storico: la lista cronologica di TUTTI i conti (qui, non nella coda,
-          che serve al lavoro in corso). */}
-      <button
-        className="btn ghost small block"
-        style={{ marginTop: 12 }}
-        onClick={() => setShowStorico((v) => !v)}
-      >
-        {showStorico ? '▴ Nascondi storico ordini' : '🧾 Storico ordini'}
-      </button>
-      {showStorico && <OrdersHistory />}
+      {/* Lista ordini: sezione a sé (menu laterale), qui solo la scorciatoia. */}
+      <Link className="btn ghost small block" style={{ marginTop: 12 }} to="/bar?tab=storico">
+        📋 Lista ordini
+      </Link>
 
     </div>
   )
