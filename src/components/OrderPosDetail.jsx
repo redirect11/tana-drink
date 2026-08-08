@@ -12,6 +12,7 @@ import {
   fetchRecentDrinkIds,
   subscribeOrder,
   subscribeSettings,
+  peekNextDailyNumber,
   DEFAULT_SETTINGS,
 } from '../lib/api.js'
 import { useDraft, loadLayout, saveLayout } from '../lib/useDraft.js'
@@ -921,6 +922,18 @@ export default function OrderPosDetail({ order: orderProp = null }) {
     note: order?.note || '',
   })
   const [showInfo, setShowInfo] = useState(false) // popup dati conto
+  // Progressivo previsto per l'ordine in creazione (non lo consuma).
+  const [nextNum, setNextNum] = useState(null)
+  useEffect(() => {
+    if (!isNew) return
+    let vivo = true
+    peekNextDailyNumber({ cutoffHour: settings.business_day_cutoff_hour })
+      .then((n) => vivo && setNextNum(n))
+      .catch(() => {})
+    return () => {
+      vivo = false
+    }
+  }, [isNew, settings.business_day_cutoff_hour])
   const orderId = order?.id
   useEffect(() => {
     if (isNew) return
@@ -971,10 +984,13 @@ export default function OrderPosDetail({ order: orderProp = null }) {
     })
   }
 
-  const headTitle = isNew ? 'Nuovo ordine' : `#${order.daily_number ?? '—'}`
-  const panelTitle = isNew
-    ? info.customer_name.trim() || 'Nuovo ordine'
-    : `#${order.daily_number ?? '—'}${order.customer_name ? ` · ${order.customer_name}` : ''}`
+  // In creazione si mostra GIÀ il progressivo che l'ordine avrà (letto dal
+  // contatore della sessione di cassa), invece di un generico "Nuovo ordine":
+  // il numero è il riferimento che si dice al cliente e si scrive sul bicchiere.
+  const numero = isNew ? nextNum : order.daily_number
+  const headTitle = numero != null ? `#${numero}` : isNew ? 'Nuovo ordine' : '#—'
+  const nomeConto = isNew ? info.customer_name.trim() : order.customer_name
+  const panelTitle = `${headTitle}${nomeConto ? ` · ${nomeConto}` : ''}`
   const canPay = !isNew && !closed && order.payment_status !== 'pagato'
 
   return (

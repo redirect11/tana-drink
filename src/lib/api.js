@@ -956,6 +956,16 @@ export async function fetchRecentDrinkIds(limit = 20) {
   return recentDrinkIds(snap.docs.map(mapOrder), limit)
 }
 
+// PROSSIMO numero d'ordine (senza consumarlo): serve al POS per mostrare il
+// progressivo già all'apertura della schermata, prima ancora del primo item.
+// Segue lo stesso contatore di createOrder (sessione di cassa, o giornata).
+export async function peekNextDailyNumber({ cutoffHour = DEFAULT_CUTOFF_HOUR } = {}) {
+  const cashSessionId = await currentCashSessionId()
+  const key = cashSessionId ? `cash-${cashSessionId}` : businessDayKey(new Date(), cutoffHour)
+  const snap = await getDoc(doc(db, 'counters', key))
+  return ((snap.exists() ? snap.data().last : 0) || 0) + 1
+}
+
 // STORICO ordini in ordine cronologico (più recenti prima), qualunque sia lo
 // stato: aperti, chiusi, annullati. Usato dallo storico nel Flusso cassa.
 export async function fetchOrdersHistory(limit = 200) {
