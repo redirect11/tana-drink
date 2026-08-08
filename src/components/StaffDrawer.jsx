@@ -13,6 +13,7 @@ import {
 const BARTENDER_NAV = [
   ['coda', '🧾', 'Coda ordini'],
   ['pagamenti', '💶', 'Flusso cassa'],
+  ['storico', '📋', 'Lista ordini'],
   ['fatture', '📄', 'Fatture'],
   ['stats', '📊', 'Statistiche'],
   ['menu', '🍸', 'Menù'],
