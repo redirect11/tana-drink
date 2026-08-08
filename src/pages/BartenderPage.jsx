@@ -57,6 +57,7 @@ import CancelOrderDialog from '../components/CancelOrderDialog.jsx'
 import DevTools from '../components/DevTools.jsx'
 import StaffDrawer from '../components/StaffDrawer.jsx'
 import { devToolsEnabled } from '../dev/devActions.js'
+import { useCashSession } from '../lib/cashSession.js'
 
 // Badge accanto al numero d'ordine: la LETTERA del dipendente che l'ha aperto,
 // oppure il segno del CLIENTE se l'ha aperto lui dall'app.
@@ -334,6 +335,9 @@ function OrderQueue() {
 
   useEffect(() => subscribeSettings((s) => setSettings(s)), [])
   useEffect(() => subscribePending(setPend), [])
+  // Senza cassa aperta non si battono ordini: il «+» è spento e in cima
+  // compare l'avviso con la scorciatoia per aprirla.
+  const { open: cassaAperta, loading: cassaLoading } = useCashSession()
 
   // Vista a griglia: a tutto schermo. Aggiunge `fullbleed` al body così la
   // pagina esce dal contenitore centrato (.app, max 760px) e riempie larghezza
@@ -1002,6 +1006,16 @@ function OrderQueue() {
     <div className={gridView ? 'queue-board' : undefined}>
       {error && <div className="banner">Errore: {error}</div>}
 
+      {/* Cassa chiusa: non si battono ordini finché non la si apre. */}
+      {!cassaLoading && !cassaAperta && (
+        <div className="banner cassa-chiusa-banner">
+          🔴 <strong>Cassa chiusa</strong> — per battere ordini apri prima la cassa.{' '}
+          <Link className="btn small" to="/bar?tab=pagamenti" style={{ marginLeft: 8 }}>
+            🟢 Apri cassa
+          </Link>
+        </div>
+      )}
+
       {gridView ? (
         // Testata compatta della griglia: info giornata, ricerca e, in alto a
         // destra, il «+» per battere un nuovo ordine (apre il POS cassa).
@@ -1035,7 +1049,16 @@ function OrderQueue() {
             >
               {showPanels ? '▴' : '▾'} Pannelli
             </button>
-            <Link className="btn board-add" to="/pos" aria-label="Nuovo ordine" title="Nuovo ordine" />
+            {cassaAperta || cassaLoading ? (
+              <Link className="btn board-add" to="/pos" aria-label="Nuovo ordine" title="Nuovo ordine" />
+            ) : (
+              <button
+                className="btn board-add"
+                disabled
+                aria-label="Nuovo ordine (apri prima la cassa)"
+                title="Apri la cassa per battere ordini"
+              />
+            )}
           </div>
         </div>
       ) : (

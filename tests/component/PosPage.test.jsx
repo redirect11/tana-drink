@@ -67,6 +67,11 @@ vi.mock('../../src/lib/api.js', () => ({
   markInvoiceSent: vi.fn(() => Promise.resolve()),
   subscribeVouchers: vi.fn((cb) => { cb([]); return () => {} }),
   applyVoucherDiscount: vi.fn(() => Promise.resolve({ redeemed: 0 })),
+  // Senza cassa aperta il POS non fa battere ordini: qui la cassa è aperta.
+  subscribeOpenCashSession: vi.fn((cb) => {
+    cb({ id: 'cash1', status: 'open', opened_at: '2026-08-08T18:00:00.000Z' })
+    return () => {}
+  }),
 }))
 vi.mock('../../src/lib/pendingOrders.js', () => ({
   submitPosOrder: vi.fn(),
