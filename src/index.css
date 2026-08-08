@@ -2714,6 +2714,19 @@ body.fullbleed,
      di "saltare": niente sensazione di ricaricamento del layout. */
   transition: width 0.14s ease;
 }
+/* Nome del conto in testata (#4 · iole): GRANDE quanto i nomi degli item della
+   lista (1.08em della scala colonna), non più un titolino. */
+.posd-title {
+  font-family: var(--serif);
+  font-size: calc(1.08rem * var(--comanda-scale, 1));
+  font-weight: 700;
+  line-height: 1.2;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Lista dell'ordine: allargando la colonna crescono i testi (nomi, prezzi,
    quantità), e si rimpiccioliscono restringendola. Il testo secondario usa em
    così segue la scala; il footer ha una sua scala (--foot-scale) indipendente. */
