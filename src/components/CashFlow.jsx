@@ -11,6 +11,8 @@ import {
 import { auth } from '../lib/firebaseClient.js'
 import { cashRecap } from '../lib/cassa.js'
 import { formatPrice } from '../lib/orderStatus.js'
+import { printChiusuraCassa } from '../lib/printer.js'
+import { toastError } from '../lib/toast.js'
 import StaffBadgePanel from './StaffBadgePanel.jsx'
 
 // FLUSSO CASSA: apertura/chiusura della serata e andamento in tempo reale
@@ -166,6 +168,11 @@ function ChiudiCassa({ session, recap, by }) {
     setBusy(true)
     try {
       await closeCashSession(session.id, { by, snapshot: recap, countedCash: counted === '' ? null : counted })
+      // Scontrino di chiusura: contante, carte, sconti e totale, da allegare
+      // al fondo. Se la stampante non risponde la cassa resta comunque chiusa.
+      printChiusuraCassa(recap, session, { by: by?.email, countedCash: counted }).catch((e) =>
+        toastError(`Chiusura non stampata: ${e.message}`)
+      )
     } finally {
       setBusy(false)
     }
@@ -184,6 +191,12 @@ function ChiudiCassa({ session, recap, by }) {
         <span className="muted small">di cui contanti</span>
         <span>{formatPrice(recap.byMethod.banco)}</span>
       </div>
+      {recap.sconti > 0 && (
+        <div className="row between">
+          <span className="muted small">Sconti concessi (già dedotti)</span>
+          <span className="muted">−{formatPrice(recap.sconti)}</span>
+        </div>
+      )}
       <div className="row between" style={{ borderTop: '1px dashed var(--line)', paddingTop: 6, marginTop: 6 }}>
         <span className="muted small">Contante atteso in cassa (fondo {formatPrice(recap.fondo)} + contanti)</span>
         <strong>{formatPrice(recap.contanteAtteso)}</strong>
