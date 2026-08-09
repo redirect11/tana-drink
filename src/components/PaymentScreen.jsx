@@ -416,6 +416,9 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
       style={{
         position: 'fixed',
         inset: 0,
+        // Sotto la barra di sistema del tablet (ora, wifi, batteria): senza,
+        // il titolo e il tasto Chiudi finiscono dietro l'orologio.
+        paddingTop: 'var(--safe-top)',
         zIndex: 300,
         background: 'var(--bg)',
         display: 'flex',
