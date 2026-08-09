@@ -236,12 +236,6 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   // Invio su un campo dati conto: chiude la tastiera virtuale. Diretto
   // sull'input e con il rimedio Windows (readonly momentaneo), così funziona
   // su Windows, Android e iPhone/iPad.
-  const blurOnEnter = (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      dismissKeyboard(e.currentTarget)
-    }
-  }
 
   const closed = isNew ? false : orderIsClosed(order)
   const comande = useMemo(() => (isNew ? [] : order.comande || []), [isNew, order])
@@ -972,11 +966,38 @@ export default function OrderPosDetail({ order: orderProp = null }) {
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId])
+  // CHIUSURA DEL POPUP DATI CONTO — sempre salvando.
+  // Prima il salvataggio stava solo sul tasto: chiudendo con la ✕, toccando
+  // fuori dal riquadro o premendo Invio (che chiude la tastiera e sembra
+  // confermare) il nome appena scritto spariva senza un avviso. È il "a
+  // volte non viene salvato" segnalato: dipende da COME si chiude.
   const infoDirty =
     !isNew &&
     (info.customer_name !== (order.customer_name || '') ||
       info.table_label !== (order.table_label || '') ||
       info.note !== (order.note || ''))
+
+  // CHIUSURA DEL POPUP DATI CONTO — sempre salvando.
+  // Prima il salvataggio stava solo sul tasto: chiudendo con la ✕, toccando
+  // fuori dal riquadro o premendo Invio (che chiude la tastiera e sembra
+  // confermare) il nome appena scritto spariva senza un avviso. È il "a
+  // volte non viene salvato": dipende da COME si chiude il popup.
+  // Invio nel popup: chiude la tastiera E salva. Prima chiudeva solo la
+  // tastiera, e chi dava per fatto il salvataggio perdeva il nome.
+  const infoOnEnter = (e) => {
+    if (e.key !== 'Enter') return
+    e.preventDefault()
+    dismissKeyboard(e.currentTarget)
+    chiudiInfo()
+  }
+
+  const chiudiInfo = () => {
+    setShowInfo(false)
+    if (isNew || !order?.id || closed || !infoDirty) return
+    updateOrderInfo(order.id, info).catch((e) =>
+      toastError(`Dati conto non salvati: ${e.message}`)
+    )
+  }
 
   const extras =
     Number(order?.coperto_amount || 0) +
@@ -1478,7 +1499,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
 
       {/* ── Popup Dati conto (nome/tavolo/note) ── */}
       {showInfo && (
-        <div className="overlay confirm-overlay" onClick={() => setShowInfo(false)}>
+        <div className="overlay confirm-overlay" onClick={chiudiInfo}>
           <div
             className="confirm-box"
             role="dialog"
@@ -1488,7 +1509,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
           >
             <div className="row between" style={{ alignItems: 'center' }}>
               <h3 style={{ margin: 0 }}>👤 Dati conto</h3>
-              <button className="btn ghost small" onClick={() => setShowInfo(false)}>✕</button>
+              <button className="btn ghost small" onClick={chiudiInfo}>✕</button>
             </div>
             <label htmlFor="pd-name" style={{ display: 'block', marginTop: 10 }}>Nome</label>
             <input
@@ -1496,7 +1517,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
               value={info.customer_name}
               disabled={closed}
               autoFocus
-              onKeyDown={blurOnEnter}
+              onKeyDown={infoOnEnter}
               onChange={(e) => setInfo((v) => ({ ...v, customer_name: e.target.value }))}
               placeholder="Es. Marco, Tavolo 4…"
             />
@@ -1507,7 +1528,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                   id="pd-table"
                   value={info.table_label}
                   disabled={closed}
-                  onKeyDown={blurOnEnter}
+                  onKeyDown={infoOnEnter}
                   onChange={(e) => setInfo((v) => ({ ...v, table_label: e.target.value }))}
                 />
               </div>
@@ -1517,7 +1538,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                   id="pd-note"
                   value={info.note}
                   disabled={closed}
-                  onKeyDown={blurOnEnter}
+                  onKeyDown={infoOnEnter}
                   onChange={(e) => setInfo((v) => ({ ...v, note: e.target.value }))}
                 />
               </div>
@@ -1526,16 +1547,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
               <button
                 className="btn block"
                 style={{ marginTop: 12 }}
-                onClick={() => {
-                  // In modifica si salva sull'ordine; in creazione i dati restano
-                  // in `info` e finiscono nell'ordine appena lo si crea.
-                  if (!isNew && order?.id && infoDirty) {
-                    updateOrderInfo(order.id, info).catch((e) =>
-                      toastError(`Dati conto non salvati: ${e.message}`)
-                    )
-                  }
-                  setShowInfo(false)
-                }}
+                onClick={chiudiInfo}
               >
                 {isNew ? 'OK' : '💾 Salva dati conto'}
               </button>

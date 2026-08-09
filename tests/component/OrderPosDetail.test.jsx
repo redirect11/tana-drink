@@ -78,6 +78,7 @@ import {
   addComanda,
   bartenderUpdateComanda,
   registerPayment,
+  updateOrderInfo,
 } from '../../src/lib/api.js'
 import { readerCheckout } from '../../src/lib/paymentsApi.js'
 import { printComanda } from '../../src/lib/printer.js'
@@ -506,5 +507,62 @@ describe('ricerca prodotti', () => {
     expect(screen.queryByText('Gin Tonic')).not.toBeInTheDocument()
     // Mojito resta sia in griglia sia nella riga dell'ordine
     expect(screen.getAllByText('Mojito').length).toBeGreaterThan(0)
+  })
+})
+
+// IL NOME DEL CONTO NON SI PERDE.
+// Segnalato dal locale: "a volte metto il nome e non viene salvato". Il
+// salvataggio stava solo sul tasto in fondo al popup: chiudendo con la ✕,
+// toccando fuori dal riquadro o premendo Invio — che chiude la tastiera e
+// sembra confermare — quello che si era appena scritto spariva in silenzio.
+describe('dati conto: il nome si salva comunque si chiuda', () => {
+  // Il conto di prova un nome ce l'ha già: si svuota il campo, altrimenti
+  // quello nuovo si accoda al vecchio.
+  const apriPopup = async (user) => {
+    await user.click(screen.getByRole('button', { name: /Dati conto/ }))
+    const campo = screen.getByLabelText('Nome')
+    await user.clear(campo)
+    return campo
+  }
+
+  it('col tasto Salva', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.type(await apriPopup(user), 'Marco')
+    await user.click(screen.getByRole('button', { name: /Salva dati conto/ }))
+    expect(updateOrderInfo).toHaveBeenCalledWith(
+      'ord1',
+      expect.objectContaining({ customer_name: 'Marco' })
+    )
+  })
+
+  it('chiudendo con la ✕', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.type(await apriPopup(user), 'Marco')
+    await user.click(screen.getByRole('button', { name: '✕' }))
+    expect(updateOrderInfo).toHaveBeenCalledWith(
+      'ord1',
+      expect.objectContaining({ customer_name: 'Marco' })
+    )
+  })
+
+  it('premendo Invio', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    const campo = await apriPopup(user)
+    await user.type(campo, 'Marco{Enter}')
+    expect(updateOrderInfo).toHaveBeenCalledWith(
+      'ord1',
+      expect.objectContaining({ customer_name: 'Marco' })
+    )
+  })
+
+  it('senza modifiche non scrive niente', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.click(screen.getByRole('button', { name: /Dati conto/ }))
+    await user.click(screen.getByRole('button', { name: '✕' }))
+    expect(updateOrderInfo).not.toHaveBeenCalled()
   })
 })
