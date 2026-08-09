@@ -1022,7 +1022,8 @@ a.order-mini {
   transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
-  padding: 18px 0;
+  /* La prima voce deve stare SOTTO la barra di sistema, non dietro l'ora. */
+  padding: calc(18px + var(--safe-top)) 0 18px;
   overflow-y: auto;
 }
 
@@ -2265,9 +2266,14 @@ body.bar-wide .app {
 }
 
 /* ── Riepilogo ordine (bottom sheet) ─────────────────────────── */
+/* Ogni strato che parte dal bordo superiore dello schermo deve scostarsi
+   dalla barra di sistema (ora, wifi, batteria): in modalità app il contenuto
+   ci passa SOTTO, e senza questo scostamento titoli e tasti finiscono
+   nascosti dietro l'orologio. */
 .overlay {
   position: fixed;
   inset: 0;
+  padding-top: var(--safe-top);
   background: rgba(0, 0, 0, 0.7);
   display: flex;
   align-items: flex-end;
