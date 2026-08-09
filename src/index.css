@@ -3845,3 +3845,12 @@ body.fullbleed,
 .sconto-scelta span {
   line-height: 1.4;
 }
+
+/* Coroncina dei prodotti premium: piccola, accanto al nome, senza rubare
+   spazio come farebbe un'etichetta di testo su meta' inventario. */
+.badge-premium {
+  margin-left: 6px;
+  font-size: 0.8em;
+  line-height: 1;
+  opacity: 0.9;
+}

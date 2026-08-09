@@ -34,6 +34,8 @@ import {
   bottleBreakdown,
   inventorySummary,
   filterItems,
+  ASSORTIMENTI,
+  assortimentoDi,
   costWithVat,
   stockValue,
   smallUnits,
@@ -56,6 +58,22 @@ const STATUS_ITEM = [
 ]
 
 const STATUS_LABEL = { ok: '', low: 'in esaurimento', empty: 'esaurito' }
+
+// Come si legge l'assortimento in lista: OUT accanto al nome (si deve vedere
+// subito che non si ricompra) e una coroncina piccola sui premium. Chi è "in
+// linea" non porta niente: è la normalità, e un segno su tutto non segna nulla.
+const ASSORTIMENTO_LABEL = { linea: '📋 In linea', premium: '👑 Premium', out: '🚫 Fuori assortimento' }
+const ASSORTIMENTO_TITOLO = {
+  linea: 'Prodotti di listino',
+  premium: 'Bottiglie premium',
+  out: 'Fuori assortimento: non si ricompra',
+}
+function SegnoAssortimento({ item }) {
+  const a = assortimentoDi(item)
+  if (a === 'out') return <span className="badge-empty">OUT</span>
+  if (a === 'premium') return <span className="badge-premium" title="Premium">👑</span>
+  return null
+}
 
 // Prezzo unitario dell'item con l'unità di misura selezionabile (cl/ml per i
 // liquidi, g/mg per i solidi, pz per i pezzi): costo REALE al dettaglio +
@@ -150,6 +168,11 @@ function ProductsPanel() {
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [supplierFilter, setSupplierFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
+  // Assortimento: si possono tenere accesi PIÙ valori insieme (linea +
+  // premium, linea + out…). Vuoto = si vede tutto.
+  const [assortimenti, setAssortimenti] = useState([])
+  const toggleAssortimento = (k) =>
+    setAssortimenti((cur) => (cur.includes(k) ? cur.filter((x) => x !== k) : [...cur, k]))
 
   // Riga espansa + carico in corso
   const [invView, setInvView] = useState('lista') // 'lista' | 'card' — default LISTA
@@ -281,8 +304,15 @@ function ProductsPanel() {
   )
 
   const visible = useMemo(
-    () => filterItems(items, { query, categoryId: categoryFilter, supplierId: supplierFilter, status: statusFilter }),
-    [items, query, categoryFilter, supplierFilter, statusFilter]
+    () =>
+      filterItems(items, {
+        query,
+        categoryId: categoryFilter,
+        supplierId: supplierFilter,
+        status: statusFilter,
+        assortimenti,
+      }),
+    [items, query, categoryFilter, supplierFilter, statusFilter, assortimenti]
   )
 
   // Righe ordinate per la TABELLA: testo in ordine alfabetico, numeri per
@@ -414,6 +444,29 @@ function ProductsPanel() {
         </button>
       </div>
 
+      {/* ASSORTIMENTO: filtro a più scelte. "Nessuno acceso" vuol dire tutto,
+          così deselezionando non si resta con la lista vuota. */}
+      <div className="chips-row" style={{ marginBottom: 8 }}>
+        {ASSORTIMENTI.map((k) => {
+          const quanti = items.filter((it) => assortimentoDi(it) === k).length
+          return (
+            <button
+              key={k}
+              className={`chip ${assortimenti.includes(k) ? 'active' : ''}`}
+              onClick={() => toggleAssortimento(k)}
+              title={ASSORTIMENTO_TITOLO[k]}
+            >
+              {ASSORTIMENTO_LABEL[k]} <strong>{quanti}</strong>
+            </button>
+          )
+        })}
+        {assortimenti.length > 0 && (
+          <button className="chip" onClick={() => setAssortimenti([])}>
+            ✕ Tutti
+          </button>
+        )}
+      </div>
+
       <div className="chip" style={{ width: '100%', justifyContent: 'center', marginBottom: 8, cursor: 'default' }}>
         💶 Valore magazzino <strong>{formatPrice(totalValue)}</strong>
       </div>
@@ -527,7 +580,7 @@ function ProductsPanel() {
                   <span className={`dot dot-${st}`} />
                   <span className="inv-row-name">
                     {it.name}
-                    {it.status === 'out' && <span className="badge-empty">OUT</span>}
+                    <SegnoAssortimento item={it} />
                   </span>
                   <span className="muted small inv-row-cat">{catName(it.category_id) || '—'}</span>
                   <span className="inv-cell-num">{it.cost != null ? formatPrice(it.cost) : '—'}</span>
@@ -573,8 +626,7 @@ function ProductsPanel() {
               >
                 <div className="row between" style={{ alignItems: 'flex-start', gap: 6 }}>
                   <strong style={{ fontSize: '0.92rem', lineHeight: 1.25 }}>
-                    {it.name}{' '}
-                    {it.status === 'out' && <span className="badge-empty">OUT</span>}
+                    {it.name} <SegnoAssortimento item={it} />
                   </strong>
                   <span className={`dot dot-${st}`} title={STATUS_LABEL[st] || 'ok'} />
                 </div>

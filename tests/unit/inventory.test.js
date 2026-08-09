@@ -16,6 +16,7 @@ import {
   fmtItem,
   inventorySummary,
   filterItems,
+  assortimentoDi,
   costWithVat,
   unitsInStock,
   stockValue,
@@ -314,5 +315,46 @@ describe('unità di misura scelta dall\'utente', () => {
     expect(fmtItem(700, { unit: 'ml', display_unit: 'cl' })).toBe('70 cl')
     expect(fmtItem(700, { unit: 'ml' })).toBe('70 cl') // auto (formatQty)
     expect(fmtItem(300, { unit: 'ml', display_unit: 'ml' })).toBe('300 ml')
+  })
+})
+
+// ASSORTIMENTO: linea / premium / out. Il filtro deve accettare più valori
+// insieme, perché la domanda vera è quasi sempre combinata ("linea e premium,
+// senza gli out").
+describe('filtro per assortimento', () => {
+  const items = [
+    { id: '1', name: 'Gin Base', status: 'linea' },
+    { id: '2', name: 'Gin Buono', status: 'premium' },
+    { id: '3', name: 'Gin Vecchio', status: 'out' },
+    { id: '4', name: 'Senza stato' }, // i vecchi doc non hanno il campo
+  ]
+  const nomi = (opts) => filterItems(items, opts).map((i) => i.name)
+
+  it('chi non ha lo stato vale come "in linea"', () => {
+    expect(assortimentoDi({})).toBe('linea')
+    expect(assortimentoDi({ status: 'boh' })).toBe('linea')
+    expect(assortimentoDi({ status: 'premium' })).toBe('premium')
+  })
+
+  it('un solo assortimento', () => {
+    expect(nomi({ assortimenti: ['premium'] })).toEqual(['Gin Buono'])
+    expect(nomi({ assortimenti: ['out'] })).toEqual(['Gin Vecchio'])
+  })
+
+  it('più assortimenti insieme', () => {
+    expect(nomi({ assortimenti: ['linea', 'premium' ] })).toEqual([
+      'Gin Base',
+      'Gin Buono',
+      'Senza stato',
+    ])
+  })
+
+  it('nessuno selezionato = si vede tutto, non niente', () => {
+    expect(nomi({ assortimenti: [] })).toHaveLength(4)
+    expect(nomi({})).toHaveLength(4)
+  })
+
+  it('si combina con la ricerca', () => {
+    expect(nomi({ query: 'gin', assortimenti: ['linea'] })).toEqual(['Gin Base'])
   })
 })
