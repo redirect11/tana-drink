@@ -88,12 +88,14 @@ export default function BartenderPage() {
   // Tab iniziale anche da query (?tab=stats): usato dal drawer nel menu.
   const [params, setParams] = useSearchParams()
   const [tab, setTab] = useState(() => params.get('tab') || 'coda')
-  // La sezione segue anche i cambi di query string a pagina già aperta (es. la
-  // scorciatoia "Lista ordini" dal Flusso cassa): senza questo il link non
-  // faceva nulla, perché il tab veniva letto solo al primo mount.
+  // La sezione segue SEMPRE l'indirizzo, in entrambi i versi. Prima si
+  // aggiornava solo quando il parametro c'era: tornando a /bar (che è la
+  // coda, senza parametro) la pagina restava sulla sezione di prima, e
+  // "← Ordini" o il tasto indietro sembravano non fare niente — l'indirizzo
+  // cambiava, la schermata no.
   const tabParam = params.get('tab')
   useEffect(() => {
-    if (tabParam) setTab(tabParam)
+    setTab(tabParam || 'coda')
   }, [tabParam])
   // Cambiando sezione dal menu si aggiorna ANCHE l'indirizzo: così indirizzo e
   // sezione restano sempre d'accordo e le scorciatoie (es. "Lista ordini" dal

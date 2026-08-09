@@ -8,6 +8,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
+
+// Spia sulla navigazione: serve a verificare che "← Ordini" riporti davvero
+// alla coda, non solo che non esploda.
+const navigateSpy = vi.fn()
+vi.mock('react-router-dom', async (orig) => {
+  const vera = await orig()
+  return { ...vera, useNavigate: () => navigateSpy }
+})
 import '@testing-library/jest-dom/vitest'
 
 vi.mock('../../src/lib/api.js', () => ({
@@ -304,5 +312,50 @@ describe('gestione preparazione opzionale', () => {
     await user.click(screen.getByText('Mojito'))
     await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1))
     expect(createOrder.mock.calls[0][0].service_mode).toBe('banco')
+  })
+})
+
+// USCITA DAL POS: "← Ordini" deve riportare alla coda. Segnalato da Flavio:
+// creato un conto e lasciato lì, premendo la freccia non si tornava alla
+// lista degli ordini.
+describe('uscita dal POS', () => {
+  const mount = () =>
+    render(
+      <MemoryRouter initialEntries={['/pos']}>
+        <PosPage />
+      </MemoryRouter>
+    )
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    navigateSpy.mockClear()
+  })
+
+  it('senza niente in bozza torna subito alla coda', async () => {
+    const user = userEvent.setup()
+    mount()
+    await user.click(screen.getByRole('button', { name: /Torna agli ordini/ }))
+    expect(navigateSpy).toHaveBeenCalledWith('/bar')
+  })
+
+  it('col conto appena creato: dopo il nome torna alla coda', async () => {
+    const user = userEvent.setup()
+    mount()
+    await user.click(screen.getByText('Mojito'))
+    await user.click(screen.getByRole('button', { name: /Torna agli ordini/ }))
+    await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1))
+    await user.type(await screen.findByLabelText('Nome'), 'iole')
+    await user.click(screen.getByRole('button', { name: /^Salva$/ }))
+    await waitFor(() => expect(navigateSpy).toHaveBeenCalledWith('/bar'))
+  })
+
+  it('e anche scegliendo di non dare un nome', async () => {
+    const user = userEvent.setup()
+    mount()
+    await user.click(screen.getByText('Mojito'))
+    await user.click(screen.getByRole('button', { name: /Torna agli ordini/ }))
+    await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1))
+    await user.click(await screen.findByRole('button', { name: /Salva senza nome/ }))
+    await waitFor(() => expect(navigateSpy).toHaveBeenCalledWith('/bar'))
   })
 })
