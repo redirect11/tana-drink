@@ -93,14 +93,24 @@ export function orderRecap(order, { drinksById, itemsById } = {}) {
 
   const sconto = round2(Number(order?.discount_amount) || 0)
   const netto = round2(lordo - sconto)
+  const pagato = order?.payment_status === 'pagato'
+  // Metodi dai pagamenti registrati; per i conti vecchi, chiusi prima che
+  // esistesse `payments[]`, vale ancora il metodo scritto sull'ordine.
+  const metodi = [...new Set((order?.payments || []).map((p) => p.method).filter(Boolean))]
+  if (!metodi.length && order?.payment_method) metodi.push(order.payment_method)
   return {
     id: order?.id,
     numero: order?.daily_number ?? null,
     nome: order?.customer_name || order?.table || '',
     quando: order?.paid_at || order?.created_at || null,
     stato: order?.status ?? null,
-    pagato: order?.payment_status === 'pagato',
-    metodi: [...new Set((order?.payments || []).map((p) => p.method).filter(Boolean))],
+    pagato,
+    // Un conto chiuso senza incasso NON è un dato mancante: o è stato
+    // offerto (sconto pari al totale), o è ancora da incassare. Senza
+    // questa distinzione in tabella si legge un trattino e sembra un bug.
+    omaggio: pagato && metodi.length === 0 && netto <= 0,
+    daIncassare: !pagato && netto > 0,
+    metodi,
     pezzi,
     lordo: round2(lordo),
     sconto,
