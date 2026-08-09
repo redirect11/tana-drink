@@ -64,11 +64,21 @@ const STATUS_LABEL = { ok: '', low: 'in esaurimento', empty: 'esaurito' }
 // Come si legge l'assortimento in lista: OUT accanto al nome (si deve vedere
 // subito che non si ricompra) e una coroncina piccola sui premium. Chi è "in
 // linea" non porta niente: è la normalità, e un segno su tutto non segna nulla.
+// Il chip del filtro porta lo STESSO segno che compare nella riga: è lì che
+// si impara cosa vuol dire il bollino, senza una legenda a parte da cercare.
 const ASSORTIMENTO_LABEL = {
-  assortimento: '📦 In assortimento',
-  linea: '● In linea',
-  premium: '👑 Premium',
-  out: '🚫 Fuori assortimento',
+  assortimento: <>📦 In assortimento</>,
+  linea: (
+    <>
+      <span className="badge-linea" style={{ marginLeft: 0, marginRight: 6 }} /> In linea
+    </>
+  ),
+  premium: <>👑 Premium</>,
+  out: (
+    <>
+      <span className="badge-empty">OUT</span> Fuori assortimento
+    </>
+  ),
 }
 const ASSORTIMENTO_TITOLO = {
   assortimento: 'Si tiene, senza niente di speciale',
