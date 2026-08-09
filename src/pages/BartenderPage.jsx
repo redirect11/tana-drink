@@ -103,7 +103,10 @@ export default function BartenderPage() {
     const next = new URLSearchParams(params)
     if (id === 'coda') next.delete('tab')
     else next.set('tab', id)
-    setParams(next, { replace: true })
+    // PUSH (non replace): ogni sezione entra nella cronologia, così il tasto
+    // indietro — del browser o dell'app — torna alla sezione precedente e non
+    // salta fuori dal gestionale.
+    setParams(next)
   }
 
   useEffect(() => {
@@ -125,14 +128,19 @@ export default function BartenderPage() {
     })
   }, [])
 
-  // Inventario: vista tabellare PIÙ LARGA (esce dal cap di 760px), MANTENENDO
-  // l'header col logo. Niente fullbleed (che nasconderebbe la topbar).
-  const wideTab = role === 'bartender' && tab === 'inventario'
+  // Il GESTIONALE usa tutta la larghezza della pagina (liste, tabelle e
+  // statistiche stavano strette nei 760px pensati per il lato cliente).
+  // L'header col logo resta: niente fullbleed, che lo nasconderebbe.
+  const wideTab = role === 'bartender' || role === 'staff'
   useEffect(() => {
     if (!wideTab) return undefined
-    document.body.classList.add('inv-wide')
-    return () => document.body.classList.remove('inv-wide')
-  }, [wideTab])
+    document.body.classList.add('bar-wide')
+    // Cinturino di sicurezza: le sezioni del gestionale NON sono mai a tutto
+    // schermo. Se la classe è rimasta appiccicata da una schermata precedente
+    // (coda a griglia, POS), la topbar sparirebbe e resterebbero due ☰.
+    if (tab !== 'coda') document.body.classList.remove('fullbleed')
+    return () => document.body.classList.remove('bar-wide')
+  }, [wideTab, tab])
 
   if (user === undefined || (user && role === null)) {
     return <div className="empty">Verifica accesso…</div>
@@ -179,6 +187,19 @@ export default function BartenderPage() {
       )}
 
       <div className="bar-content">
+        {/* Indietro: torna alla sezione da cui si è arrivati, restando dentro
+            il gestionale. Nella coda non serve: è la schermata di partenza. */}
+        {tab !== 'coda' && (
+          <button
+            className="btn ghost small bar-back"
+            onClick={() => {
+              if (window.history.length > 1) navigate(-1)
+              else goTab('coda')
+            }}
+          >
+            ← Indietro
+          </button>
+        )}
         {tab === 'coda' && <OrderQueue />}
         {tab === 'pagamenti' && <CashFlow canManageStaff={role === 'bartender'} />}
         {tab === 'storico' && <OrdersHistory />}
