@@ -8,6 +8,19 @@ describe('cashRecap', () => {
     expect(cashRecap([], null, '2026-07-21T20:00:00.000Z')).toBeNull()
   })
 
+  it('la CARTA non finisce nei contanti (né nel contante atteso in cassa)', () => {
+    const orders = [
+      { status: 'pagato', payment_status: 'pagato', payment_method: 'banco', total: 10, paid_at: '2026-07-21T19:00:00.000Z' },
+      { status: 'pagato', payment_status: 'pagato', payment_method: 'carta', total: 40, paid_at: '2026-07-21T19:30:00.000Z' },
+    ]
+    const r = cashRecap(orders, session, '2026-07-21T21:00:00.000Z')
+    expect(r.incassato).toBe(50)
+    expect(r.byMethod.banco).toBe(10)
+    expect(r.byMethod.carta).toBe(40)
+    // in cassa ci sono solo fondo + contanti: la carta è sul POS esterno
+    expect(r.contanteAtteso).toBe(60)
+  })
+
   it('conta incassi (chiusura secca) nella finestra, per metodo e ora', () => {
     const orders = [
       { status: 'pagato', payment_status: 'pagato', payment_method: 'banco', total: 20, paid_at: '2026-07-21T19:30:00.000Z' },

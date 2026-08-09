@@ -1403,6 +1403,17 @@ body.fullbleed .bar-content {
   letter-spacing: -0.01em;
 }
 
+/* Sconto applicato: piccolo e verde, accanto al totale (che è già scontato). */
+.sconto-badge {
+  color: #2ecc71;
+  font-size: 0.78em;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.ordhist-pay {
+  white-space: nowrap;
+}
+
 /* Storico ordini (Flusso cassa): righe compatte, una per conto, cronologiche. */
 .ordhist {
   display: flex;

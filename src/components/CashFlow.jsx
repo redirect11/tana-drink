@@ -89,11 +89,15 @@ export default function CashFlow({ canManageStaff = false }) {
         </div>
         <strong className="price" style={{ fontSize: '1.4rem' }}>{formatPrice(recap.incassato)}</strong>
       </div>
-      {(recap.byMethod.banco > 0 || recap.byMethod.lettore > 0 || recap.byMethod.online > 0) && (
+      {(recap.byMethod.banco > 0 ||
+        recap.byMethod.carta > 0 ||
+        recap.byMethod.lettore > 0 ||
+        recap.byMethod.online > 0) && (
         <div className="chips-row" style={{ marginBottom: 8 }}>
-          {recap.byMethod.banco > 0 && <span className="chip">💶 {formatPrice(recap.byMethod.banco)}</span>}
-          {recap.byMethod.lettore > 0 && <span className="chip">📟 {formatPrice(recap.byMethod.lettore)}</span>}
-          {recap.byMethod.online > 0 && <span className="chip">💳 {formatPrice(recap.byMethod.online)}</span>}
+          {recap.byMethod.banco > 0 && <span className="chip">💶 Contanti {formatPrice(recap.byMethod.banco)}</span>}
+          {recap.byMethod.carta > 0 && <span className="chip">💳 Carta {formatPrice(recap.byMethod.carta)}</span>}
+          {recap.byMethod.lettore > 0 && <span className="chip">📟 SumUp {formatPrice(recap.byMethod.lettore)}</span>}
+          {recap.byMethod.online > 0 && <span className="chip">🌐 Online {formatPrice(recap.byMethod.online)}</span>}
         </div>
       )}
 
