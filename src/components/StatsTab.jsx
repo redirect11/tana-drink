@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   fetchOrdersBetween,
   fetchDrinks,
+  fetchCashSessions,
   subscribeSettings,
   DEFAULT_SETTINGS,
 } from '../lib/api.js'
@@ -30,8 +31,26 @@ const fmtShort = (v) => `${Math.round(v).toLocaleString('it-IT')} €`
 const fmtQty = (u) =>
   u.unit === 'pz' ? `${u.qty} pz` : u.qty >= 1000 ? `${(u.qty / 1000).toFixed(1)} L` : `${Math.round(u.qty)} ml`
 
-// Statistiche del locale, per GIORNATA COMMERCIALE (niente più serate).
+// Statistiche del locale, per GIORNATA COMMERCIALE o per SERATA (la finestra
+// di una chiusura di cassa).
 const PERIOD_PRESETS = [7, 10, 20, 30, 60]
+
+// Etichetta di una serata nell'elenco: data, orari e incasso, così si sceglie
+// riconoscendola e non a numero di riga.
+const etichettaSerata = (s) => {
+  const d = (iso, opt) => {
+    try {
+      return new Date(iso).toLocaleString('it-IT', opt)
+    } catch {
+      return '—'
+    }
+  }
+  const giorno = d(s.opened_at, { weekday: 'short', day: '2-digit', month: '2-digit' })
+  const da = d(s.opened_at, { hour: '2-digit', minute: '2-digit' })
+  const a = s.closed_at ? d(s.closed_at, { hour: '2-digit', minute: '2-digit' }) : 'in corso'
+  const inc = Number(s.snapshot?.incassato)
+  return `${giorno} · ${da}→${a}${Number.isFinite(inc) && inc > 0 ? ` · ${Math.round(inc)} €` : ''}`
+}
 
 // Le Statistiche hanno due viste: il giornaliero (finestra a giornate) e il
 // mensile per macro-categoria (Dashboard A).
@@ -71,6 +90,33 @@ function DailyStats() {
   if (effective > loadLimit) setLoadLimit(Math.ceil(effective / 30) * 30)
   // Range orari configurabili dei grafici.
   const [hourRange, setHourRange] = useState(DEFAULT_HOUR_RANGE)
+  // SERATA (chiusura di cassa): in alternativa alle ultime N giornate si
+  // guardano le statistiche di UNA serata, dall'apertura alla chiusura della
+  // cassa. È il taglio con cui si ragiona davvero al bancone ("com'è andata
+  // sabato"), e non coincide con la giornata solare: la cassa scavalca la
+  // mezzanotte.
+  const [sessions, setSessions] = useState([])
+  const [sessionId, setSessionId] = useState(null)
+  useEffect(() => {
+    let vivo = true
+    fetchCashSessions({ limit: 60 })
+      .then((list) => vivo && setSessions(list.filter((x) => x.opened_at)))
+      .catch(() => {})
+    return () => {
+      vivo = false
+    }
+  }, [])
+  const serata = useMemo(
+    () => sessions.find((x) => x.id === sessionId) || null,
+    [sessions, sessionId]
+  )
+  // Una serata vecchia può stare fuori dalla finestra già scaricata.
+  useEffect(() => {
+    if (!serata) return
+    const oggi = businessDayKey(new Date(), cutoff)
+    const giorni = Math.ceil((Date.parse(oggi) - Date.parse(businessDayKey(serata.opened_at, cutoff))) / 86400000) + 2
+    if (Number.isFinite(giorni) && giorni > loadLimit) setLoadLimit(Math.ceil(giorni / 30) * 30)
+  }, [serata, cutoff, loadLimit])
   // Sezione "venduto nella fascia oraria": ha un suo intervallo di DATE, così
   // si può chiedere "sabato scorso, fra le 22 e l'una" indipendentemente dal
   // periodo generale scelto sopra.
@@ -120,9 +166,19 @@ function DailyStats() {
 
   const view = useMemo(() => {
     if (!loaded) return null
-    const sel = giorniAttivi.slice(0, effective)
-    const selSet = new Set(sel)
-    const ord = orders.filter((o) => selSet.has(businessDayKey(o.created_at, cutoff)))
+    // Serata scelta → finestra della cassa; altrimenti le ultime N giornate.
+    let sel
+    let ord
+    if (serata) {
+      const da = serata.opened_at
+      const a = serata.closed_at || new Date().toISOString()
+      ord = orders.filter((o) => o.created_at >= da && o.created_at <= a)
+      sel = [...new Set(ord.map((o) => businessDayKey(o.created_at, cutoff)).filter(Boolean))]
+    } else {
+      sel = giorniAttivi.slice(0, effective)
+      const selSet = new Set(sel)
+      ord = orders.filter((o) => selSet.has(businessDayKey(o.created_at, cutoff)))
+    }
     const drinksById = Object.fromEntries(drinks.map((d) => [d.id, d]))
     return {
       sel,
@@ -147,7 +203,7 @@ function DailyStats() {
       split: serviceModeSplit(ord),
       extras: extrasBreakdown(ord),
     }
-  }, [loaded, giorniAttivi, orders, drinks, effective, hourRange, dayRange, cutoff, fasciaDal, fasciaAl])
+  }, [loaded, giorniAttivi, orders, drinks, effective, hourRange, dayRange, cutoff, fasciaDal, fasciaAl, serata])
 
   if (error) return <div className="banner">Errore: {error}</div>
   if (!loaded) return <div className="empty">Carico le statistiche…</div>
@@ -167,8 +223,9 @@ function DailyStats() {
         {PERIOD_PRESETS.map((v) => (
           <button
             key={v}
-            className={`chip${!custom && period === v ? ' active' : ''}`}
+            className={`chip${!custom && !serata && period === v ? ' active' : ''}`}
             onClick={() => {
+              setSessionId(null)
               setCustom(false)
               setPeriod(v)
             }}
@@ -178,10 +235,42 @@ function DailyStats() {
         ))}
         <button
           className={`chip${custom ? ' active' : ''}`}
-          onClick={() => setCustom(true)}
+          onClick={() => {
+            setSessionId(null)
+            setCustom(true)
+          }}
         >
           Personalizzato
         </button>
+        {/* SERATA: le stesse statistiche, ma sulla finestra di una chiusura
+            di cassa. Di default l'ultima chiusa; dall'elenco si sceglie
+            un'altra serata. */}
+        {sessions.length > 0 && (
+          <button
+            className={`chip${serata ? ' active' : ''}`}
+            onClick={() => {
+              setCustom(false)
+              setSessionId(serata ? null : (sessions.find((x) => x.status !== 'open') || sessions[0]).id)
+            }}
+          >
+            🧾 Ultima chiusura
+          </button>
+        )}
+        {serata && (
+          <select
+            className="setting-amount"
+            value={sessionId}
+            onChange={(e) => setSessionId(e.target.value)}
+            aria-label="Scegli la serata"
+            style={{ maxWidth: 260 }}
+          >
+            {sessions.map((x) => (
+              <option key={x.id} value={x.id}>
+                {etichettaSerata(x)}
+              </option>
+            ))}
+          </select>
+        )}
         {custom && (
           <input
             className="setting-amount"
@@ -195,8 +284,17 @@ function DailyStats() {
         )}
       </div>
       <p className="muted small" style={{ margin: '0 0 12px' }}>
-        Statistiche sulle ultime {Math.min(effective, giorniAttivi.length)} giornate
-        {giorniAttivi.length < effective ? ` (${giorniAttivi.length} disponibili)` : ''}.
+        {serata ? (
+          <>
+            Serata del {etichettaSerata(serata)} — dall’apertura alla chiusura della cassa,
+            mezzanotte compresa.
+          </>
+        ) : (
+          <>
+            Statistiche sulle ultime {Math.min(effective, giorniAttivi.length)} giornate
+            {giorniAttivi.length < effective ? ` (${giorniAttivi.length} disponibili)` : ''}.
+          </>
+        )}
       </p>
 
       {/* KPI */}
