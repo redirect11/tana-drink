@@ -16,6 +16,7 @@ import {
   fmtItem,
   inventorySummary,
   filterItems,
+  qtyInStockUnit,
   assortimentoDi,
   ASSORTIMENTI,
   costWithVat,
@@ -427,5 +428,54 @@ describe('bottiglie a zero', () => {
     const bs = bottleSummary({ ...gin, stock: 900 })
     expect(bs.bottles).toBe(2)
     expect(bs.open).toBe('20 cl')
+  })
+})
+
+// Le RICETTE si scrivono come si versa (40 ml di gin), la GIACENZA può essere
+// contata in un'altra unità (bottiglie). Lo scarico deve convertire: senza,
+// un cocktail toglierebbe 40 bottiglie invece di 40 ml.
+describe('dalla ricetta alla giacenza', () => {
+  const ginAPezzo = { unit: 'pz', package_size: 700, content_unit: 'ml' }
+  const ginAVolume = { unit: 'ml', package_size: 700 }
+  const coca = { unit: 'pz' }
+
+  it('40 ml da una bottiglia da 700 sono 0,057 pezzi', () => {
+    expect(qtyInStockUnit(40, 'ml', ginAPezzo)).toBeCloseTo(40 / 700, 6)
+    expect(qtyInStockUnit(4, 'cl', ginAPezzo)).toBeCloseTo(40 / 700, 6)
+  })
+
+  it('con la giacenza a volume restano millilitri', () => {
+    expect(qtyInStockUnit(40, 'ml', ginAVolume)).toBe(40)
+    expect(qtyInStockUnit(4, 'cl', ginAVolume)).toBe(40)
+  })
+
+  it('un pezzo di un articolo a pezzo resta un pezzo', () => {
+    expect(qtyInStockUnit(1, 'pz', coca)).toBe(1)
+  })
+
+  it('un pezzo di un articolo a volume è una confezione intera', () => {
+    expect(qtyInStockUnit(1, 'pz', ginAVolume)).toBe(700)
+  })
+
+  it('senza contenuto non si inventa una conversione', () => {
+    expect(qtyInStockUnit(40, 'ml', { unit: 'pz' })).toBe(40)
+    expect(qtyInStockUnit(40, 'ml', { unit: 'g', package_size: 500 })).toBe(40)
+  })
+})
+
+// Una bottiglia aperta resta leggibile anche con la giacenza in pezzi:
+// "0,8 pz" al banco non dice niente, "1 bott. · aperta 56 cl" sì.
+describe('bottiglia aperta contata a pezzi', () => {
+  const gin = { unit: 'pz', package_size: 700, content_unit: 'ml', stock: 2.8 }
+  it('parte intera piene, resto nella aperta', () => {
+    const bd = bottleBreakdown(gin)
+    expect(bd.full).toBe(2)
+    expect(bd.openRemaining).toBeCloseTo(560, 6)
+    const bs = bottleSummary(gin)
+    expect(bs.bottles).toBe(3)
+    expect(bs.open).toBe('56 cl')
+  })
+  it('giacenza intera: nessuna aperta', () => {
+    expect(bottleSummary({ ...gin, stock: 3 }).open).toBeNull()
   })
 })
