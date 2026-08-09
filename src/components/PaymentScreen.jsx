@@ -11,6 +11,7 @@ import {
 } from '../lib/api.js'
 import { readerCheckout } from '../lib/paymentsApi.js'
 import { formatPrice, PAYMENT_METHOD_LABELS } from '../lib/orderStatus.js'
+import { useOnline } from '../lib/useOnline.js'
 import { allServed } from '../lib/comande.js'
 import { activeVouchers } from '../lib/vouchers.js'
 import { printScontrino, printFattura, loadPrinterSettings, claimReceiptPrint } from '../lib/printer.js'
@@ -46,6 +47,7 @@ const digitsToEuro = (s) => (parseInt(s || '0', 10) || 0) / 100
 // l'ordine esista sul server (pagamento diretto dal POS), le azioni
 // aspettano qui l'id reale — la UI intanto è già piena e reattiva.
 export default function PaymentScreen({ order: orderProp, settings, onClose, onPaid, onBeforePay, onError, resolveOrderId }) {
+  const online = useOnline()
   // Chiusura per pagamento COMPLETATO (non semplice annulla): chiude e avvisa
   // il chiamante, che può tornare alla coda ordini.
   const closePaid = () => {
@@ -168,6 +170,11 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   // via Cloud API). SumUp è SEMPRE in lista: senza pairing è spento con
   // la nota su dove attivarlo (Impostazioni → Pagamenti).
   const readerReady = settings.payments_reader_enabled && settings.sumup_reader_id
+  // Contante e carta si incassano anche SENZA RETE: la registrazione entra in
+  // cache e si sincronizza dopo. Il lettore SumUp no — deve parlare con i suoi
+  // server per autorizzare — quindi senza rete si spegne e lo dice, invece di
+  // far aspettare il cassiere davanti a una transazione che non partirà.
+  const senzaRete = !online
   const methods = [
     { key: 'banco', label: 'Contante', emoji: '💵' },
     { key: 'carta', label: 'Carta di Credito', emoji: '💳' },
@@ -175,8 +182,12 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
       key: 'lettore',
       label: 'SumUp',
       emoji: '📟',
-      disabled: !readerReady,
-      note: !readerReady ? 'configura il lettore nelle Impostazioni' : null,
+      disabled: !readerReady || senzaRete,
+      note: senzaRete
+        ? 'serve la rete: incassa e registra come carta'
+        : !readerReady
+          ? 'configura il lettore nelle Impostazioni'
+          : null,
     },
   ]
   // Buono come SCONTO (non metodo di pagamento): si applica al totale e si
