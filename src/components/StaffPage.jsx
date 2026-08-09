@@ -10,16 +10,29 @@ export default function StaffPage() {
   return (
     <div>
       <h2>👥 Staff &amp; ore</h2>
-      <div className="chips-row" style={{ marginBottom: 10 }}>
+      {/* TAB, non chip: sono due sezioni diverse, e con l'aspetto da filtro
+          "Membri" non si trovava — chi cerca dove si creano gli account
+          guarda il menu, non i chip sotto un titolo. */}
+      <div className="tabs">
         {[
           ['ore', '🕒 Turni & ore'],
-          ['membri', '🧑‍🤝‍🧑 Membri'],
+          ['membri', '🧑‍🤝‍🧑 Membri e ruoli'],
         ].map(([k, label]) => (
-          <button key={k} className={`chip ${sub === k ? 'active' : ''}`} onClick={() => setSub(k)}>
+          <button
+            key={k}
+            type="button"
+            className={`tab${sub === k ? ' active' : ''}`}
+            onClick={() => setSub(k)}
+          >
             {label}
           </button>
         ))}
       </div>
+      <p className="muted small" style={{ margin: '4px 0 10px' }}>
+        {sub === 'ore'
+          ? 'Turni, ore lavorate e paghe.'
+          : 'Qui si creano gli account dello staff e si cambiano i ruoli.'}
+      </p>
       {sub === 'ore' && <StaffHoursTab embedded />}
       {sub === 'membri' && <StaffTab />}
     </div>

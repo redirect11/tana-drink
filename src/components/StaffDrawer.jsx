@@ -18,7 +18,7 @@ const BARTENDER_NAV = [
   ['stats', '📊', 'Statistiche'],
   ['menu', '🍸', 'Menù'],
   ['inventario', '📦', 'Inventario'],
-  ['staff', '👥', 'Staff & ore'],
+  ['staff', '👥', 'Staff: membri e ore'],
   ['vip', '🎟', 'Buoni VIP'],
   ['stampante', '🖨️', 'Stampante'],
   ['impostazioni', '⚙️', 'Impostazioni'],
