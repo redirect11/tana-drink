@@ -204,10 +204,32 @@ describe('aggiunte: la nuova comanda è gestita internamente', () => {
     expect(screen.getByText(/non ha ingredienti configurati/)).toBeInTheDocument()
   })
 
+  it('GRIGLIA vs + sulla riga: la griglia duplica, il + aumenta la quantità', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    // due tocchi sulla stessa tile → DUE righe separate di Gin Tonic
+    await user.click(screen.getAllByText('Gin Tonic')[0])
+    await user.click(screen.getAllByText('Gin Tonic')[0])
+    await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalled())
+    const dopoGriglia = bartenderUpdateComanda.mock.calls.at(-1)[2].items
+    const ginRighe = dopoGriglia.filter((i) => i.drink_id === 'gin')
+    expect(ginRighe).toHaveLength(2)
+    expect(ginRighe.every((i) => i.qty === 1)).toBe(true)
+
+    // il + sulla riga del Mojito (già nel conto) ne aumenta la QUANTITÀ
+    bartenderUpdateComanda.mockClear()
+    await user.click(screen.getByRole('button', { name: 'Aumenta Mojito' }))
+    await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalled())
+    const dopoPiu = bartenderUpdateComanda.mock.calls.at(-1)[2].items
+    const mojito = dopoPiu.filter((i) => i.drink_id === 'mojito')
+    expect(mojito).toHaveLength(1) // niente riga nuova
+    expect(mojito[0].qty).toBe(3) // erano 2
+  })
+
   it("il + su un item del conto è un'aggiunta che si conferma da sola", async () => {
     const user = userEvent.setup()
     mount(baseOrder())
-    await user.click(screen.getAllByRole('button', { name: 'Aumenta' }).at(-1))
+    await user.click(screen.getByRole('button', { name: 'Aumenta Mojito' }))
     // ordine in preparazione → l'aggiunta confluisce da sola nella comanda c1
     await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalled())
     expect(addComanda).not.toHaveBeenCalled()
@@ -226,7 +248,7 @@ describe('diminuzioni: solo dalle comande ancora modificabili', () => {
   it('il − scala la comanda modificabile con sync in background (debounce)', async () => {
     const user = userEvent.setup()
     mount(baseOrder())
-    await user.click(screen.getAllByRole('button', { name: 'Riduci' }).at(-1))
+    await user.click(screen.getByRole('button', { name: 'Riduci Mojito' }))
     expect(screen.getAllByText('1').length).toBeGreaterThan(0)
     await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalledTimes(1), { timeout: 2000 })
     const [, comandaId, payload] = bartenderUpdateComanda.mock.calls[0]
@@ -249,8 +271,8 @@ describe('diminuzioni: solo dalle comande ancora modificabili', () => {
         ],
       })
     )
-    expect(screen.getAllByRole('button', { name: 'Riduci' }).at(-1)).toBeDisabled()
-    expect(screen.getAllByRole('button', { name: 'Aumenta' }).at(-1)).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Riduci Mojito' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Aumenta Mojito' })).toBeEnabled()
     expect(screen.queryByRole('button', { name: /Segna/ })).not.toBeInTheDocument()
   })
 })

@@ -2915,9 +2915,6 @@ export const DEFAULT_SETTINGS = {
   // Vista ordine: raggruppamento di default degli item aggiunti —
   // 'separati' (ogni tocco una riga a sé) o 'uniti' (item uguali sommati).
   // Si può comunque unire/separare al volo dal riepilogo ordine.
-  // Aggiungendo di nuovo lo stesso prodotto si AUMENTA la quantità della riga
-  // esistente (invece di accodarne una uguale): è come lavora una cassa.
-  order_group_default: 'uniti',
   // Dove finisce l'item appena aggiunto nella lista ordine: in fondo (default,
   // e la lista scorre a mostrarlo) o in cima (subito visibile senza scorrere).
   pos_add_top: false,

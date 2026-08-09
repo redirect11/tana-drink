@@ -42,7 +42,6 @@ import {
   mergeLines,
   splitLine,
   hasMergeable,
-  lineSignature,
   moveLine,
   reconcileLayout,
   qtyByDrink as draftQtyByDrink,
@@ -508,22 +507,12 @@ export default function OrderPosDetail({ order: orderProp = null }) {
       addComanda(order.id, [item]).catch((e) => toastError(`Aggiunta non inviata: ${e.message}`))
       return
     }
+    // Dalla GRIGLIA ogni tocco è una riga a sé (due Spritz sono due righe, così
+    // si possono personalizzare e annotare separatamente). Per aumentare la
+    // quantità di una riga esistente si usa il + su quella riga.
     const cur = target.items || []
-    let mergeIdx = -1
-    if (settings.order_group_default === 'uniti' && !item.custom) {
-      mergeIdx = cur.findIndex(
-        (it) => !it.custom && it.drink_id === item.drink_id && it.unit_price === item.unit_price
-      )
-    }
-    let items
-    let scrollIdx
-    if (mergeIdx >= 0) {
-      items = cur.map((it, j) => (j === mergeIdx ? { ...it, qty: it.qty + 1 } : it))
-      scrollIdx = mergeIdx
-    } else {
-      items = [...cur, item]
-      scrollIdx = items.length - 1
-    }
+    const items = [...cur, item]
+    const scrollIdx = items.length - 1
     setPendingEdits((p) => ({ ...p, [target.id]: items }))
     clearTimeout(flushTimers.current[target.id])
     flushTimers.current[target.id] = setTimeout(() => flushComanda(target.id), 500)
@@ -546,21 +535,8 @@ export default function OrderPosDetail({ order: orderProp = null }) {
       return
     }
     const nuova = { line_id: makeLineId(), ...base }
-    let targetLineId = nuova.line_id
-    if (settings.order_group_default === 'uniti') {
-      const sig = lineSignature(nuova)
-      const existing = draft.find((l) => lineSignature(l) === sig)
-      if (existing) targetLineId = existing.line_id
-    }
-    setDraft((items) => {
-      if (settings.order_group_default === 'uniti') {
-        const sig = lineSignature(nuova)
-        const idx = items.findIndex((l) => lineSignature(l) === sig)
-        if (idx >= 0) return items.map((l, j) => (j === idx ? { ...l, qty: l.qty + 1 } : l))
-      }
-      return [...items, nuova]
-    })
-    scrollToLine(`d:${targetLineId}`)
+    setDraft((items) => [...items, nuova])
+    scrollToLine(`d:${nuova.line_id}`)
   }
 
   // − dalla griglia: toglie dall'ultima riga di bozza; se non c'è, scala la
@@ -605,8 +581,21 @@ export default function OrderPosDetail({ order: orderProp = null }) {
     if (l.source === 'draft') setDraftLineQty(l.line_id, l.qty - 1)
     else if (l.removable) reduceComandaLine(l.comandaId, l.itemIndex)
   }
-  const plusRow = (l) =>
-    plusFromCatalog({ id: l.drink_id, name: l.name, price: l.unit_price, sumup_product_id: l.sumup_product_id })
+  // + su una riga del conto: aumenta la quantità di QUELLA riga. È il gesto
+  // opposto al tocco sulla griglia, che invece aggiunge una riga nuova.
+  const plusRow = (l) => {
+    if (closed || l.paid) return
+    if (l.source === 'draft') {
+      setDraftLineQty(l.line_id, l.qty + 1)
+      return
+    }
+    const c = effComandeRef.current.find((x) => x.id === l.comandaId)
+    if (!c || !comandaEditable(c)) return
+    const items = (c.items || []).map((it, j) => (j === l.itemIndex ? { ...it, qty: it.qty + 1 } : it))
+    setPendingEdits((p) => ({ ...p, [l.comandaId]: items }))
+    clearTimeout(flushTimers.current[l.comandaId])
+    flushTimers.current[l.comandaId] = setTimeout(() => flushComanda(l.comandaId), 600)
+  }
 
   // ── Riordino della lista per DRAG (tieni premuto e trascina) ──
   // Tutti gli item sono spostabili. Il riordino delle righe di bozza viene
@@ -1291,9 +1280,11 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                     </span>
                     <span className="row" style={{ gap: 4, alignItems: 'center' }}>
                       <span className="qty" onPointerDown={(e) => e.stopPropagation()}>
-                        <button aria-label="Riduci" onClick={() => minusRow(l)} disabled={!canMinus}>−</button>
+                        {/* Etichette col nome: nella lista ci sono molte righe,
+                            e i +/- della griglia hanno un altro significato. */}
+                        <button aria-label={`Riduci ${l.name}`} onClick={() => minusRow(l)} disabled={!canMinus}>−</button>
                         <strong>{l.qty}</strong>
-                        <button aria-label="Aumenta" onClick={() => plusRow(l)} disabled={closed || isPaid}>+</button>
+                        <button aria-label={`Aumenta ${l.name}`} onClick={() => plusRow(l)} disabled={closed || isPaid}>+</button>
                       </span>
                     </span>
                   </div>
