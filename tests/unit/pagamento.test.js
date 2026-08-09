@@ -13,6 +13,8 @@ import {
   selectionAmount,
   paymentCloses,
   summaryMethod,
+  discountAfterChange,
+  scontoEccessivo,
 } from '../../src/lib/pagamento.js'
 
 const order = (over = {}) => ({
@@ -131,5 +133,56 @@ describe('summaryMethod', () => {
     expect(summaryMethod([{ method: 'banco' }])).toBe('banco')
     expect(summaryMethod([{ method: 'banco' }, { method: 'lettore' }])).toBe('misto')
     expect(summaryMethod([])).toBeNull()
+  })
+})
+
+// Lo sconto in euro è deciso su un certo conto: se poi si tolgono righe,
+// quell'importo va riletto. Tre strategie, scelte in Impostazioni, perché
+// rispondono a tre modi legittimi di intendere lo sconto.
+describe('sconto quando cambiano le righe del conto', () => {
+  const euro5 = { type: 'euro', value: 5 }
+  const cambio = (newTotal, policy) =>
+    discountAfterChange(
+      { discount: euro5, prevAmount: 5, prevTotal: 20, newTotal },
+      policy
+    )
+
+  it('tetto: finché ci sta dentro lo sconto non si tocca', () => {
+    expect(cambio(12, 'tetto')).toBe(5)
+  })
+
+  it('tetto: se il conto scende sotto, lo sconto si accorcia al totale', () => {
+    expect(cambio(2, 'tetto')).toBe(2) // conto offerto, mai negativo
+    expect(cambio(0, 'tetto')).toBe(0)
+  })
+
+  it('è il default: senza strategia indicata vale il tetto', () => {
+    expect(cambio(2)).toBe(2)
+  })
+
+  it('proporzione: lo sconto resta la stessa quota del conto', () => {
+    expect(cambio(12, 'proporzione')).toBe(3) // 25% di 12
+    expect(cambio(40, 'proporzione')).toBe(10) // cresce se il conto cresce
+  })
+
+  it('avviso: non si tocca niente, anche se supera il totale', () => {
+    expect(cambio(2, 'avviso')).toBe(5)
+    expect(scontoEccessivo({ total: 2, discount_amount: 5 })).toBe(true)
+    expect(scontoEccessivo({ total: 12, discount_amount: 5 })).toBe(false)
+  })
+
+  it('la percentuale segue sempre il conto, con qualsiasi strategia', () => {
+    for (const p of ['tetto', 'proporzione', 'avviso']) {
+      expect(
+        discountAfterChange(
+          { discount: { type: 'percent', value: 25 }, prevAmount: 5, prevTotal: 20, newTotal: 12 },
+          p
+        )
+      ).toBe(3)
+    }
+  })
+
+  it('senza sconto non c’è niente da ricalcolare', () => {
+    expect(discountAfterChange({ discount: null, prevAmount: 0, prevTotal: 20, newTotal: 12 })).toBe(0)
   })
 })

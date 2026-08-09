@@ -19,6 +19,7 @@ import {
   remainingItems,
   paidAmount,
   orderDue,
+  scontoEccessivo,
   selectionAmount,
   discountAmount,
   paymentCloses,
@@ -139,6 +140,11 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   // conto resta aperto finché le comande non sono servite.
   const autoServe = settings?.workflow_enabled === false
   const due = orderDue(order)
+  // Sconto più grande del conto: capita solo con la strategia "avvisa"
+  // (Impostazioni → Sconto e righe del conto), quando si sconta e poi si
+  // tolgono righe. Chiudere così significherebbe registrare un incasso che
+  // non torna con niente: prima lo si sistema.
+  const scontoFuoriMisura = scontoEccessivo(order)
   const served = allServed(order)
   const closed = order.payment_status === 'pagato'
 
@@ -589,10 +595,17 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
             <button className="paypad-key danger" aria-label="Cancella cifra" onClick={back}>←</button>
           </div>
 
+          {scontoFuoriMisura && (
+            <div className="banner" style={{ marginTop: 10 }}>
+              Lo sconto ({formatPrice(order.discount_amount)}) supera il totale del conto (
+              {formatPrice(order.total)}): correggilo qui sotto prima di incassare.
+            </div>
+          )}
+
           {!closed && (
             <button
               className="btn block payscreen-collect"
-              disabled={saving || (due > 0 && !(toPay > 0))}
+              disabled={saving || scontoFuoriMisura || (due > 0 && !(toPay > 0))}
               onClick={riscuoti}
             >
               {due <= 0 ? 'Chiudi conto · 0,00 €' : `Riscuotere · ${formatPrice(toPay)}`}
