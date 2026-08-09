@@ -154,28 +154,30 @@ export default function RendicontoSerata({ session, orders, drinksById, itemsByI
         </button>
       </div>
 
+      {/* Dentro i conti, un secondo tab sceglie COME leggerli: a lista (card,
+          come nella schermata ordini) o a tabella (colonne confrontabili). */}
       {vista === 'conti' && (
-        <div className="row between" style={{ margin: '0 0 8px' }}>
-          <span className="muted small">
-            {totConti.conti} conti · tocca per vedere cosa è stato venduto
-          </span>
-          <span className="chips-row">
+        <>
+          <div className="tabs rend-subtabs">
             <button
               type="button"
-              className={`chip ${forma === 'tabella' ? 'active' : ''}`}
+              className={`tab${forma === 'card' ? ' active' : ''}`}
+              onClick={() => cambiaForma('card')}
+            >
+              ▤ Lista
+            </button>
+            <button
+              type="button"
+              className={`tab${forma === 'tabella' ? ' active' : ''}`}
               onClick={() => cambiaForma('tabella')}
             >
               ▦ Tabella
             </button>
-            <button
-              type="button"
-              className={`chip ${forma === 'card' ? 'active' : ''}`}
-              onClick={() => cambiaForma('card')}
-            >
-              ▤ Card
-            </button>
-          </span>
-        </div>
+          </div>
+          <div className="muted small" style={{ margin: '0 0 8px' }}>
+            {totConti.conti} conti · tocca per vedere cosa è stato venduto
+          </div>
+        </>
       )}
 
       {vista === 'conti' && forma === 'card' ? (
