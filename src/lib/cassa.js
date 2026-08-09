@@ -22,7 +22,9 @@ export function cashRecap(orders, session, nowIso) {
   const from = session.opened_at
   const to = session.closed_at || nowIso || null
 
-  const byMethod = { banco: 0, lettore: 0, online: 0 }
+  // 'carta' = POS esterno: NON è contante. Senza questa voce finiva nel
+  // secchio 'banco' e gonfiava il contante atteso in cassa.
+  const byMethod = { banco: 0, carta: 0, lettore: 0, online: 0 }
   const perOra = new Map()
   let incassato = 0
   let nPagati = 0

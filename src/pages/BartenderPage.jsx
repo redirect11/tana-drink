@@ -28,7 +28,7 @@ import {
 } from '../lib/orderStatus.js'
 import { bucketByStatus, ordersRecap } from '../lib/coda.js'
 import { allServed } from '../lib/comande.js'
-import { paidAmount } from '../lib/pagamento.js'
+import { paidAmount, orderTotal } from '../lib/pagamento.js'
 import { businessDayKey, businessDayLabel, businessDayShort } from '../lib/businessDay.js'
 import { isAwaitingPayment } from '../lib/payments.js'
 import { readerCheckout, readerTerminate } from '../lib/paymentsApi.js'
@@ -850,8 +850,12 @@ function OrderQueue() {
           <div className="row between" style={{ alignItems: 'baseline', marginTop: 'auto' }}>
             <span className="grid-card-meta">
               {count} prodott{count === 1 ? 'o' : 'i'} · {dayLabel(o)}
+              {/* Sconto applicato: si vede, e il totale è già quello scontato. */}
+              {(o.discount_amount || 0) > 0 && (
+                <span className="sconto-badge"> 🎁 −{formatPrice(o.discount_amount)}</span>
+              )}
             </span>
-            <span className="grid-card-tot">{formatPrice(o.total)}</span>
+            <span className="grid-card-tot">{formatPrice(orderTotal(o))}</span>
           </div>
         </div>
         {/* Pulsante separato: apre/chiude i tasti azione (non va al dettaglio) */}

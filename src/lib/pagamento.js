@@ -32,6 +32,16 @@ export function paidAmount(order) {
   return round2((order?.payments || []).reduce((s, p) => s + (Number(p.amount) || 0), 0))
 }
 
+// Totale EFFETTIVO del conto: quello che il cliente paga davvero, cioè il
+// totale degli articoli meno lo sconto applicato. È il numero da mostrare
+// ovunque si dica "totale": mostrare il lordo faceva sembrare che lo sconto
+// non fosse stato registrato.
+export function orderTotal(order) {
+  const total = Number(order?.total) || 0
+  const disc = Number(order?.discount_amount) || 0
+  return Math.max(0, round2(total - disc))
+}
+
 // Residuo da incassare: totale − sconto − già pagato (mai negativo).
 export function orderDue(order) {
   const total = Number(order?.total) || 0
