@@ -54,7 +54,7 @@ import CategoryRail from './CategoryRail.jsx'
 
 const STATUS_ITEM = [
   { value: 'assortimento', label: 'In assortimento' },
-  { value: 'linea', label: '🍾 In linea (non deve mancare)' },
+  { value: 'linea', label: '● In linea (non deve mancare)' },
   { value: 'premium', label: '👑 Premium' },
   { value: 'out', label: '🚫 Fuori assortimento' },
 ]
@@ -66,7 +66,7 @@ const STATUS_LABEL = { ok: '', low: 'in esaurimento', empty: 'esaurito' }
 // linea" non porta niente: è la normalità, e un segno su tutto non segna nulla.
 const ASSORTIMENTO_LABEL = {
   assortimento: '📦 In assortimento',
-  linea: '🍾 In linea',
+  linea: '● In linea',
   premium: '👑 Premium',
   out: '🚫 Fuori assortimento',
 }
@@ -80,7 +80,11 @@ function SegnoAssortimento({ item }) {
   const a = assortimentoDi(item)
   if (a === 'out') return <span className="badge-empty">OUT</span>
   if (a === 'premium') return <span className="badge-premium" title="Premium">👑</span>
-  if (a === 'linea') return <span className="badge-premium" title="In linea: non deve mancare">🍾</span>
+  // NON una bottiglia: 🍾 è già il segno delle bottiglie rimaste nella
+  // colonna scorte, e lo stesso simbolo due volte nella stessa riga vuol
+  // dire due cose diverse. Un bollino non compete con niente.
+  if (a === 'linea')
+    return <span className="badge-linea" title="In linea: non deve mancare mai" aria-label="in linea" />
   return null
 }
 

@@ -3854,3 +3854,60 @@ body.fullbleed,
   line-height: 1;
   opacity: 0.9;
 }
+
+/* "In linea": i prodotti che non devono mancare mai. Un bollino pieno, non
+   un'emoji — la bottiglia e' gia' il segno delle scorte rimaste, e due
+   simboli uguali nella stessa riga direbbero due cose diverse. */
+.badge-linea {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-left: 7px;
+  border-radius: 50%;
+  background: var(--accent-2, #f5b94a);
+  box-shadow: 0 0 0 2px rgba(245, 185, 74, 0.25);
+  vertical-align: middle;
+}
+
+/* Colore di un prodotto nel POS, scelto dal MENU: la spia accanto al nome
+   dice com'e' adesso, la fila di pastiglie lo cambia. Lo stesso colore che
+   si sceglie al banco: e' scritto nello stesso posto. */
+.menu-colore-spia {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 6px;
+  border-radius: 3px;
+  vertical-align: baseline;
+}
+.menu-colori {
+  margin: 0 0 8px;
+}
+.menu-colori-riga {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+.menu-colore {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #1c1305;
+  font-size: 0.7rem;
+  font-weight: 800;
+  line-height: 1;
+}
+.menu-colore.active {
+  border-color: var(--text);
+  box-shadow: 0 0 0 2px rgba(127, 127, 140, 0.35);
+}
+@media (pointer: coarse) {
+  .menu-colore {
+    width: 34px;
+    height: 34px;
+  }
+}
