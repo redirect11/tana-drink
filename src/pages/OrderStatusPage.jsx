@@ -496,26 +496,54 @@ export default function OrderStatusPage() {
             <p className="muted" style={{ marginTop: 0, fontSize: '0.85rem' }}>
               🛠 Gestione ordine
             </p>
-            <button
-              className="btn block"
-              disabled={saving}
-              onClick={async () => {
-                setSaving(true)
-                setError(null)
-                try {
-                  if (isPay) await markOrderPaid(order.id, 'banco')
-                  else await updateOrderStatus(order.id, ns)
-                } catch (e) {
-                  setError(e.message)
-                } finally {
-                  setSaving(false)
-                }
-              }}
-            >
-              {isPay
-                ? '💶 Segna pagato (al banco)'
-                : `Segna come “${ns === ORDER_STATUSES.RITIRATO ? ritiratoLabel(order.service_mode) : STATUS_LABELS[ns]}”`}
-            </button>
+            {/* Incasso: il METODO si sceglie, non si dà per scontato. Con un
+                solo tasto "pagato" ogni conto finiva nei contanti, carta
+                compresa, e la cassa a fine serata non tornava. */}
+            {isPay ? (
+              <div className="grid-2">
+                {[
+                  ['banco', '💶 Contanti'],
+                  ['carta', '💳 Carta'],
+                ].map(([metodo, label]) => (
+                  <button
+                    key={metodo}
+                    className="btn"
+                    disabled={saving}
+                    onClick={async () => {
+                      setSaving(true)
+                      setError(null)
+                      try {
+                        await markOrderPaid(order.id, metodo)
+                      } catch (e) {
+                        setError(e.message)
+                      } finally {
+                        setSaving(false)
+                      }
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <button
+                className="btn block"
+                disabled={saving}
+                onClick={async () => {
+                  setSaving(true)
+                  setError(null)
+                  try {
+                    await updateOrderStatus(order.id, ns)
+                  } catch (e) {
+                    setError(e.message)
+                  } finally {
+                    setSaving(false)
+                  }
+                }}
+              >
+                {`Segna come “${ns === ORDER_STATUSES.RITIRATO ? ritiratoLabel(order.service_mode) : STATUS_LABELS[ns]}”`}
+              </button>
+            )}
           </div>
         )
       })()}

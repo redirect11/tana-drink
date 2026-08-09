@@ -1256,6 +1256,9 @@ export async function payGroupCash({
   group_id = null,
   group_ids = [],
   split = null,
+  // COME si è incassato. Era cablato a 'banco': un tavolo pagato con la carta
+  // finiva nei contanti, e a fine serata la cassa non tornava.
+  method = 'banco',
 }) {
   if (!orderIds || orderIds.length === 0) return null
   const nowIso = new Date().toISOString()
@@ -1290,7 +1293,7 @@ export async function payGroupCash({
   for (const { ref, comande } of served) {
     bgWrite(() => updateDoc(ref, {
       payment_status: 'pagato',
-      payment_method: 'banco',
+      payment_method: method,
       paid_at: nowIso,
       payment_id: settlementId,
       status: ORDER_STATUSES.PAGATO,
@@ -1305,7 +1308,7 @@ export async function payGroupCash({
     created_at: serverTimestamp(),
     by,
     direction: 'incasso',
-    method: 'banco',
+    method,
     status: 'pagato',
     group_id: group_id || null,
     group_ids: group_ids || [],
