@@ -147,13 +147,22 @@ export function inventorySummary(items) {
 // Filtra/ordina la lista inventario per ricerca (nome), categoria, fornitore e stato.
 //   filters: { query?, categoryId? ('all'|id|'none'), supplierId? ('all'|id|'none'),
 //              status? ('all'|'ok'|'low'|'empty') }
-// ASSORTIMENTO: 'linea' (di listino), 'premium' (le bottiglie buone) e 'out'
-// (fuori assortimento). Il filtro accetta PIÙ valori insieme, perché la
-// domanda vera è quasi sempre combinata: "fammi vedere linea e premium, senza
-// gli out" oppure "linea e out, per decidere cosa rientra".
-export const ASSORTIMENTI = ['linea', 'premium', 'out']
+// ASSORTIMENTO. Quattro stati, in ordine di attenzione richiesta:
+//
+//   'assortimento' → si tiene, senza niente di speciale. È il DEFAULT: un
+//                    prodotto nuovo nasce così, e la stragrande maggioranza
+//                    resta così.
+//   'linea'        → i cavalli di battaglia: non devono mancare mai, sono i
+//                    primi da controllare prima di una serata.
+//   'premium'      → le bottiglie buone.
+//   'out'          → fuori assortimento: non si ricompra.
+//
+// Il filtro accetta PIÙ valori insieme, perché la domanda vera è quasi sempre
+// combinata: "linea e premium, senza gli out" oppure "linea e out, per
+// decidere cosa far rientrare".
+export const ASSORTIMENTI = ['assortimento', 'linea', 'premium', 'out']
 export const assortimentoDi = (item) =>
-  ASSORTIMENTI.includes(item?.status) ? item.status : 'linea'
+  ASSORTIMENTI.includes(item?.status) ? item.status : 'assortimento'
 
 export function filterItems(
   items,

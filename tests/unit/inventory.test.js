@@ -17,6 +17,7 @@ import {
   inventorySummary,
   filterItems,
   assortimentoDi,
+  ASSORTIMENTI,
   costWithVat,
   unitsInStock,
   stockValue,
@@ -330,21 +331,23 @@ describe('filtro per assortimento', () => {
   ]
   const nomi = (opts) => filterItems(items, opts).map((i) => i.name)
 
-  it('chi non ha lo stato vale come "in linea"', () => {
-    expect(assortimentoDi({})).toBe('linea')
-    expect(assortimentoDi({ status: 'boh' })).toBe('linea')
+  it('chi non ha lo stato è in assortimento: "in linea" è una scelta', () => {
+    expect(assortimentoDi({})).toBe('assortimento')
+    expect(assortimentoDi({ status: 'boh' })).toBe('assortimento')
+    expect(assortimentoDi({ status: 'linea' })).toBe('linea')
     expect(assortimentoDi({ status: 'premium' })).toBe('premium')
   })
 
   it('un solo assortimento', () => {
     expect(nomi({ assortimenti: ['premium'] })).toEqual(['Gin Buono'])
     expect(nomi({ assortimenti: ['out'] })).toEqual(['Gin Vecchio'])
+    expect(nomi({ assortimenti: ['assortimento'] })).toEqual(['Senza stato'])
   })
 
   it('più assortimenti insieme', () => {
-    expect(nomi({ assortimenti: ['linea', 'premium' ] })).toEqual([
-      'Gin Base',
-      'Gin Buono',
+    expect(nomi({ assortimenti: ['linea', 'premium'] })).toEqual(['Gin Base', 'Gin Buono'])
+    expect(nomi({ assortimenti: ['assortimento', 'out'] })).toEqual([
+      'Gin Vecchio',
       'Senza stato',
     ])
   })
@@ -356,6 +359,10 @@ describe('filtro per assortimento', () => {
 
   it('si combina con la ricerca', () => {
     expect(nomi({ query: 'gin', assortimenti: ['linea'] })).toEqual(['Gin Base'])
+  })
+
+  it('gli stati sono quattro, in ordine di attenzione', () => {
+    expect(ASSORTIMENTI).toEqual(['assortimento', 'linea', 'premium', 'out'])
   })
 })
 
