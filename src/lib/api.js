@@ -34,7 +34,14 @@ import {
   comandeStatuses,
   itemsTotal as sumItems,
 } from './comande.js'
-import { discountAmount, orderDue, paymentCloses, summaryMethod } from './pagamento.js'
+import {
+  discountAmount,
+  discountAfterChange,
+  DEFAULT_DISCOUNT_POLICY,
+  orderDue,
+  paymentCloses,
+  summaryMethod,
+} from './pagamento.js'
 import { hoursBetweenIso } from './ore.js'
 import { businessDayKey, coverageStart, DEFAULT_CUTOFF_HOUR } from './businessDay.js'
 import { recentDrinkIds } from './posCatalog.js'
@@ -2246,12 +2253,15 @@ export async function updateOrderItems(id, items) {
     Number(cur.coperto_amount || 0) +
     Number(cur.service_charge_amount || 0) +
     Number(cur.tip_amount || 0)
+  const nuovoTotale = sumItems(mapped) + extras
+  const nuovoSconto = await scontoRicalcolato(cur, nuovoTotale)
   bgWrite(() => updateDoc(ref, {
     status: ORDER_OPEN,
     comande,
     comande_statuses: comandeStatuses(comande),
     items: mapped,
-    total: sumItems(mapped) + extras,
+    total: nuovoTotale,
+    ...(nuovoSconto != null ? { discount_amount: nuovoSconto } : {}),
   }), 'modifica ordine')
   return mapOrder(await getDoc(ref))
 }
@@ -2312,12 +2322,18 @@ export async function addComanda(orderId, items, { note = null } = {}) {
     Number(cur.coperto_amount || 0) +
     Number(cur.service_charge_amount || 0) +
     Number(cur.tip_amount || 0)
+  const nuovoTotale = sumItems(agg) + extras
+  const nuovoSconto = await scontoRicalcolato(cur, nuovoTotale)
   bgWrite(() => updateDoc(ref, {
     status: ORDER_OPEN,
     comande,
     comande_statuses: comandeStatuses(comande),
     items: agg,
-    total: sumItems(agg) + extras,
+    total: nuovoTotale,
+    // Lo sconto segue il conto secondo la strategia scelta (vedi
+    // discountAfterChange): un importo fisso su un conto cambiato non ha
+    // più il significato che aveva quando è stato deciso.
+    ...(nuovoSconto != null ? { discount_amount: nuovoSconto } : {}),
   }), 'aggiunta al conto')
   notifyLowStock(lowStock)
   return mapOrder(await getDoc(ref))
@@ -2394,12 +2410,15 @@ export async function bartenderUpdateComanda(orderId, comandaId, { items }) {
     Number(cur.coperto_amount || 0) +
     Number(cur.service_charge_amount || 0) +
     Number(cur.tip_amount || 0)
+  const nuovoTotale = sumItems(agg) + extras
+  const nuovoSconto = await scontoRicalcolato(cur, nuovoTotale)
   bgWrite(() => updateDoc(ref, {
     status: ORDER_OPEN,
     comande,
     comande_statuses: comandeStatuses(comande),
     items: agg,
-    total: sumItems(agg) + extras,
+    total: nuovoTotale,
+    ...(nuovoSconto != null ? { discount_amount: nuovoSconto } : {}),
   }), 'modifica comanda')
   return mapOrder(await getDoc(ref))
 }
@@ -2881,6 +2900,10 @@ export const DEFAULT_SETTINGS = {
   // IVA di ACQUISTO (ordinaria = 22%): è quella delle fatture fornitore, quindi
   // il default dei prodotti in Inventario. Diversa da quella di vendita.
   purchase_vat: 22,
+  // COSA FA LO SCONTO quando si tolgono righe da un conto già scontato:
+  // 'tetto' (default) | 'proporzione' | 'avviso'. Le tre strategie sono
+  // spiegate per esteso in pagamento.js e nella schermata Impostazioni.
+  discount_policy: DEFAULT_DISCOUNT_POLICY,
   coperto_enabled: false,
   coperto_amount: 2,
   service_charge_enabled: false,
@@ -2939,12 +2962,48 @@ export const DEFAULT_SETTINGS = {
   theme_client: { preset: 'tana-scuro', custom: null },
 }
 
+// IMPOSTAZIONI IN CACHE. Le scritture sugli ordini devono sapere che sconto
+// applicare quando cambiano le righe, e non possono permettersi una lettura
+// di rete a ogni tocco del + o del −. La cache si popola da subscribeSettings
+// (che il gestionale tiene sempre aperto); se nessuno l'ha ancora aperto si
+// legge una volta sola, dalla cache offline se serve.
+let settingsCache = null
+
+async function impostazioni() {
+  if (settingsCache) return { ...DEFAULT_SETTINGS, ...settingsCache }
+  try {
+    const snap = await getDoc(settingsDoc)
+    if (snap.exists()) settingsCache = snap.data()
+  } catch {
+    /* offline e mai lette: si va di default */
+  }
+  return { ...DEFAULT_SETTINGS, ...(settingsCache || {}) }
+}
+
+// Sconto da riscrivere quando il totale del conto cambia. Ritorna null se
+// sull'ordine non c'è nessuno sconto: in quel caso non si tocca il campo.
+async function scontoRicalcolato(cur, nuovoTotale) {
+  const discount = cur?.discount || null
+  if (!discount) return null
+  const { discount_policy: policy } = await impostazioni()
+  return discountAfterChange(
+    {
+      discount,
+      prevAmount: cur.discount_amount,
+      prevTotal: cur.total,
+      newTotal: nuovoTotale,
+    },
+    policy
+  )
+}
+
 export function subscribeSettings(onChange, onError) {
   return onSnapshot(
     settingsDoc,
     (snap) => {
       if (!snap.exists()) return onChange({ ...DEFAULT_SETTINGS })
       const data = snap.data()
+      settingsCache = data
       const merged = { ...DEFAULT_SETTINGS, ...data }
       // Retrocompatibilità col vecchio flag booleano della scelta consegna.
       if (!data.service_mode && data.service_mode_choice_enabled) {

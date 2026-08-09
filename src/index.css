@@ -3817,3 +3817,31 @@ body.fullbleed,
   padding: 7px 10px;
   font-size: 0.85rem;
 }
+
+/* Scelta della strategia di sconto: tre riquadri con la spiegazione per
+   esteso: e' una decisione che si prende una volta e va capita, non un
+   interruttore da indovinare. */
+.sconto-scelte {
+  display: grid;
+  gap: 8px;
+}
+.sconto-scelta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--tile-bg, rgba(127, 127, 140, 0.08));
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.sconto-scelta.active {
+  border-color: var(--accent-2, #f5b94a);
+  background: rgba(245, 185, 74, 0.12);
+}
+.sconto-scelta span {
+  line-height: 1.4;
+}

@@ -374,6 +374,47 @@ export default function SettingsTab() {
       )}
 
       <div className="card settings-section">
+        <h3>Sconto e righe del conto</h3>
+        <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
+          Uno sconto in euro è deciso su un certo conto. Se poi si tolgono o si aggiungono
+          righe, quell&apos;importo va riletto: 5&nbsp;€ di sconto su un conto sceso a 3&nbsp;€
+          vorrebbero dire incassare −2&nbsp;€. Scegli come deve comportarsi.
+          <br />
+          Lo sconto in <strong>percentuale</strong> segue sempre il conto, con qualsiasi scelta:
+          è la sua definizione.
+        </p>
+        <div className="sconto-scelte">
+          {[
+            [
+              'tetto',
+              '🔒 Tetto al totale',
+              'Lo sconto resta quello che hai scelto finché ci sta dentro. Se togliendo righe il conto scende sotto lo sconto, lo sconto si accorcia fino al totale e il conto diventa offerto: non va mai in negativo. Esempio: conto 20 €, sconto 5 € → togli 8 € di roba → conto 12 €, sconto ancora 5 €, da pagare 7 €. Togli altri 10 € → conto 2 €, lo sconto si accorcia a 2 € e non si paga nulla.',
+            ],
+            [
+              'proporzione',
+              '⚖️ Mantieni la proporzione',
+              'Lo sconto vale sempre la stessa quota del conto: togliendo righe cala insieme al conto, aggiungendone cresce. Esempio: conto 20 €, sconto 5 € (il 25%) → togli 8 € di roba → conto 12 €, sconto 3 €, da pagare 9 €. Da preferire se lo sconto è un "quanto gli faccio di sconto in percentuale" più che una cifra promessa.',
+            ],
+            [
+              'avviso',
+              '⚠️ Avvisa e basta',
+              'L’app non tocca lo sconto che hai messo. Se supera il totale del conto lo segnala in rosso e blocca l’incasso finché non lo correggi a mano. Da scegliere se lo sconto è una cifra concordata col cliente e nessuno, a parte te, deve poterla cambiare.',
+            ],
+          ].map(([value, titolo, testo]) => (
+            <button
+              key={value}
+              type="button"
+              className={`sconto-scelta${(settings.discount_policy || 'tetto') === value ? ' active' : ''}`}
+              onClick={() => save({ discount_policy: value })}
+            >
+              <strong>{titolo}</strong>
+              <span className="muted small">{testo}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="card settings-section">
         <h3>Coperto</h3>
         <ToggleRow
           label="Coperto a persona"

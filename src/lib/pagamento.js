@@ -27,6 +27,52 @@ export function discountAmount(total, discount) {
   return round2(amount)
 }
 
+// ── Cosa fa lo SCONTO quando cambiano le righe del conto ──────────────
+// Lo sconto in euro è un importo fisso deciso su un certo conto. Se poi si
+// tolgono (o aggiungono) righe, quell'importo non è più detto che abbia
+// senso: 5 € di sconto su un conto sceso a 3 € vorrebbe dire incassare −2 €.
+// Le tre strategie sono un'impostazione perché rispondono a tre modi diversi
+// di intendere lo sconto, e nessuno è sbagliato:
+//
+//   'tetto'       lo sconto resta quello scelto finché ci sta dentro; se il
+//                 conto scende sotto, si accorcia fino al totale (il conto
+//                 diventa offerto, mai negativo). È il default.
+//   'proporzione' lo sconto vale sempre la stessa quota del conto: tolta una
+//                 riga cala insieme al conto, aggiunta una riga cresce.
+//   'avviso'      non si tocca niente: se lo sconto supera il totale la UI lo
+//                 segnala e blocca l'incasso finché non lo si sistema a mano.
+//
+// Lo sconto in PERCENTUALE segue sempre il conto, con qualsiasi strategia:
+// è la sua definizione, non una scelta.
+export const DISCOUNT_POLICIES = ['tetto', 'proporzione', 'avviso']
+export const DEFAULT_DISCOUNT_POLICY = 'tetto'
+
+export function discountAfterChange(
+  { discount, prevAmount, prevTotal, newTotal },
+  policy = DEFAULT_DISCOUNT_POLICY
+) {
+  if (!discount || !(Number(discount.value) > 0)) return 0
+  if (discount.type === 'percent') return discountAmount(newTotal, discount)
+
+  const prev = round2(Number(prevAmount) || 0)
+  const t = Math.max(0, round2(Number(newTotal) || 0))
+  if (policy === 'avviso') return prev
+  if (policy === 'proporzione') {
+    const base = round2(Number(prevTotal) || 0)
+    if (!(base > 0)) return Math.min(prev, t)
+    return Math.min(round2(t * (prev / base)), t)
+  }
+  return Math.min(prev, t) // 'tetto'
+}
+
+// Sconto più grande del conto: può restare solo con la strategia 'avviso'.
+// Chi incassa deve vederlo prima di chiudere, non dopo.
+export function scontoEccessivo(order) {
+  const total = Number(order?.total) || 0
+  const disc = Number(order?.discount_amount) || 0
+  return disc > total + EPS
+}
+
 // Somma dei pagamenti già registrati sull'ordine.
 export function paidAmount(order) {
   return round2((order?.payments || []).reduce((s, p) => s + (Number(p.amount) || 0), 0))
