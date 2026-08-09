@@ -8,7 +8,10 @@ import { useState } from 'react'
 // La barra è A SCOMPARSA: si può nascondere per allargare il contenuto (utile
 // per la vista tabellare dell'inventario). La scelta è ricordata per contesto.
 //
-//   items: [{ key, label, count }] — `count` opzionale
+//   items: [{ key, label, count, color, icon }] — `count`, `color` e `icon`
+//          opzionali: col colore la voce porta il pallino della categoria,
+//          esattamente come nel POS, così la stessa categoria si riconosce
+//          allo stesso modo ovunque la si incontri.
 //   storageKey: distingue la memoria del collasso (es. 'inventory' | 'menu')
 export default function CategoryRail({ items, selected, onSelect, children, storageKey = 'cat' }) {
   const key = `tana:catrail:${storageKey}`
@@ -50,6 +53,11 @@ export default function CategoryRail({ items, selected, onSelect, children, stor
               onClick={() => onSelect(it.key)}
               title={it.label}
             >
+              {(it.icon || it.color) && (
+                <span aria-hidden className="cat-rail-segno">
+                  {it.icon || <span className="cat-rail-dot" style={{ background: it.color }} />}
+                </span>
+              )}
               <span className="cat-rail-label">{it.label}</span>
               {it.count != null && <span className="cat-rail-count">{it.count}</span>}
             </button>

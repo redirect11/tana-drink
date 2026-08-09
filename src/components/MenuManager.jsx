@@ -176,9 +176,17 @@ export default function MenuManager() {
   const catItems = useMemo(
     () => [
       { key: 'all', label: 'Tutte', count: counts.all },
+      // Colore e icona della categoria, come nel POS: la stessa categoria si
+      // riconosce allo stesso modo in tutte le schermate.
       ...categories
         .filter((c) => counts[c.id])
-        .map((c) => ({ key: c.id, label: c.name, count: counts[c.id] })),
+        .map((c) => ({
+          key: c.id,
+          label: c.name,
+          count: counts[c.id],
+          color: catColor(c),
+          icon: c.icon || null,
+        })),
       ...(counts.none ? [{ key: 'none', label: 'Senza categoria', count: counts.none }] : []),
     ],
     [categories, counts]

@@ -3529,6 +3529,25 @@ body.fullbleed,
   text-align: left;
   width: 100%;
 }
+/* Pallino (o icona) della categoria nella barra a sinistra: stesso segno
+   del POS, cosi' la categoria si riconosce ovunque allo stesso modo. */
+.cat-rail-segno {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  font-size: 1.05em;
+  line-height: 1;
+}
+.cat-rail-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1.5px var(--line);
+}
+.cat-rail .chip {
+  gap: 7px;
+}
 .cat-rail-label {
   overflow: hidden;
   text-overflow: ellipsis;
