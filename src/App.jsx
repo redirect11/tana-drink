@@ -22,6 +22,7 @@ import { subscribeUpdateAvailable } from './lib/appVersion.js'
 import { useOnline } from './lib/useOnline.js'
 import { toastSuccess } from './lib/toast.js'
 import Toasts from './components/Toasts.jsx'
+import ZoomControl from './components/ZoomControl.jsx'
 import { useEffect, useRef, useState } from 'react'
 
 export default function App() {
@@ -170,6 +171,8 @@ export default function App() {
       )}
       {/* Notifiche IN APP (sync, ordini da staff/clienti, errori) */}
       <Toasts />
+      {/* Zoom della pagina: nella PWA a tutto schermo il browser non lo offre */}
+      <ZoomControl />
       <header className={`topbar${onBackoffice || staffRole ? ' backoffice' : ''}`}>
         {/* Menu laterale A SCOMPARSA ovunque: si apre da qui (il tasto
             flottante resta solo nelle schermate a tutto schermo, dove la

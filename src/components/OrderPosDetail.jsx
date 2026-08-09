@@ -1022,7 +1022,16 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   const canPay = !isNew && !closed && order.payment_status !== 'pagato'
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', overflow: 'hidden' }}>
+    // L'altezza si divide per lo zoom: dentro un contenitore scalato 100dvh
+    // varrebbe più dello schermo e la schermata sborderebbe (vedi ZoomControl).
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: 'calc(100dvh / var(--zoom, 1))',
+        overflow: 'hidden',
+      }}
+    >
       {/* ── Barra in alto (sotto la barra di sistema del tablet: --safe-top) ── */}
       <div
         className="posd-topbar"
