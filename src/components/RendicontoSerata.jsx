@@ -44,6 +44,14 @@ const fmtData = (iso) => {
 }
 const pct = (v) => (v == null ? '—' : `${v.toFixed(1).replace('.', ',')}%`)
 
+// Come è stato incassato un conto — e se non lo è stato, perché.
+const comePagato = (c) => {
+  if (c.metodi.length) return c.metodi.map(paymentMethodLabel).join(' + ')
+  if (c.omaggio) return '🎁 offerto'
+  if (c.daIncassare) return '🟡 da incassare'
+  return '—'
+}
+
 export default function RendicontoSerata({ session, orders, drinksById, itemsById, recap, onClose }) {
   const [vista, setVista] = useState('conti')
   // I conti si leggono in due modi: a tabella per confrontare le colonne, a
@@ -75,6 +83,15 @@ export default function RendicontoSerata({ session, orders, drinksById, itemsByI
     [prodotti, cat]
   )
   const totConti = useMemo(() => sommaRighe(conti), [conti])
+  // I conti ancora aperti sono venduto ma NON incasso: tenerli dentro
+  // l'incassato farebbe quadrare la schermata con se stessa e non con la cassa.
+  const aperti = useMemo(() => conti.filter((c) => c.daIncassare), [conti])
+  const totAperti = useMemo(() => sommaRighe(aperti), [aperti])
+  const totIncassato = useMemo(
+    () => sommaRighe(conti.filter((c) => !c.daIncassare)),
+    [conti]
+  )
+  const omaggi = useMemo(() => conti.filter((c) => c.omaggio), [conti])
   const totProdotti = useMemo(() => sommaRighe(prodottiVisti), [prodottiVisti])
 
   const byMethod = recap?.byMethod || {}
@@ -98,9 +115,19 @@ export default function RendicontoSerata({ session, orders, drinksById, itemsByI
       <div className="rend-kpi">
         <div className="rend-kpi-box">
           <span className="muted small">Incassato</span>
-          <strong>{formatPrice(totConti.netto)}</strong>
-          <span className="muted small">{totConti.conti} conti</span>
+          <strong>{formatPrice(totIncassato.netto)}</strong>
+          <span className="muted small">
+            {totIncassato.conti} conti chiusi
+            {omaggi.length > 0 && `, ${omaggi.length} offerti`}
+          </span>
         </div>
+        {aperti.length > 0 && (
+          <div className="rend-kpi-box">
+            <span className="muted small">Da incassare</span>
+            <strong>{formatPrice(totAperti.netto)}</strong>
+            <span className="muted small">{aperti.length} conti ancora aperti</span>
+          </div>
+        )}
         <div className="rend-kpi-box">
           <span className="muted small">Sconti concessi</span>
           <strong>{totConti.sconto > 0 ? `−${formatPrice(totConti.sconto)}` : formatPrice(0)}</strong>
@@ -338,9 +365,7 @@ function CardConto({ conto, aperto, onToggle }) {
             · {fmtOra(conto.quando)} · {conto.pezzi} pz
           </span>
           <br />
-          <span className="muted small">
-            {conto.metodi.length ? conto.metodi.map(paymentMethodLabel).join(' + ') : 'non incassato'}
-          </span>
+          <span className="muted small">{comePagato(conto)}</span>
         </span>
         <span className="rend-card-cifre">
           <strong className="price">{formatPrice(conto.netto)}</strong>
@@ -388,9 +413,7 @@ function RigaConto({ conto, aperto, onToggle }) {
         </td>
         <td>{fmtOra(conto.quando)}</td>
         <td>{conto.pezzi}</td>
-        <td className="muted">
-          {conto.metodi.length ? conto.metodi.map(paymentMethodLabel).join(' + ') : '—'}
-        </td>
+        <td className="muted">{comePagato(conto)}</td>
         <td className="muted">{formatPrice(conto.lordo)}</td>
         <td>{conto.sconto > 0 ? `−${formatPrice(conto.sconto)}` : '—'}</td>
         <td>

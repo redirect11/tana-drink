@@ -163,3 +163,36 @@ describe('liste e totali', () => {
     expect(tot.netto).toBe(7.6) // 4 pieno + 3,60 scontato
   })
 })
+
+// Un conto senza contante né carta non è un buco nei dati: o è stato offerto
+// (sconto pari al totale, quindi non è entrato niente) o è ancora da
+// incassare. Distinguerli evita che in tabella si legga un trattino e sembri
+// un bug — è la domanda che si è fatta chi legge il rendiconto.
+describe('conti senza incasso', () => {
+  it('sconto pari al totale = offerto, non dato mancante', () => {
+    const r = orderRecap(
+      conto({ discount_amount: 10, payments: undefined, payment_method: null }),
+      ctx
+    )
+    expect(r.netto).toBe(0)
+    expect(r.metodi).toEqual([])
+    expect(r.omaggio).toBe(true)
+    expect(r.daIncassare).toBe(false)
+  })
+
+  it('conto ancora aperto = da incassare', () => {
+    const r = orderRecap(
+      conto({ payment_status: 'non_richiesto', payments: undefined, paid_at: null }),
+      ctx
+    )
+    expect(r.daIncassare).toBe(true)
+    expect(r.omaggio).toBe(false)
+    expect(r.netto).toBe(10) // venduto sì, incassato no
+  })
+
+  it('conti vecchi: il metodo si legge da payment_method', () => {
+    const r = orderRecap(conto({ payments: undefined, payment_method: 'banco' }), ctx)
+    expect(r.metodi).toEqual(['banco'])
+    expect(r.omaggio).toBe(false)
+  })
+})
