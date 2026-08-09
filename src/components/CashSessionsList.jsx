@@ -1,11 +1,17 @@
 import { useEffect, useState } from 'react'
-import { fetchCashSessions, fetchOrdersBetween, fetchDrinks } from '../lib/api.js'
+import {
+  fetchCashSessions,
+  fetchOrdersBetween,
+  fetchDrinks,
+  fetchInventoryItems,
+} from '../lib/api.js'
 import { sessionReport } from '../lib/stats.js'
 import { cashRecap } from '../lib/cassa.js'
 import { businessDayKey } from '../lib/businessDay.js'
 import { formatPrice, cashMethodKeys, paymentMethodLabel } from '../lib/orderStatus.js'
 import { printChiusuraCassa } from '../lib/printer.js'
 import { toastSuccess, toastError } from '../lib/toast.js'
+import RendicontoSerata from './RendicontoSerata.jsx'
 
 // STORICO DELLE CHIUSURE DI CASSA: una riga per serata, dall'apertura alla
 // chiusura. Aprendo una riga il riepilogo (incassi per metodo, sconti, contante
@@ -34,13 +40,6 @@ const fmtOra = (iso) => {
     return '—'
   }
 }
-// Come e' stato pagato: piu' metodi se il conto e' stato diviso.
-const metodiDi = (o) => {
-  const metodi = [...new Set((o.payments || []).map((p) => p.method).filter(Boolean))]
-  if (!metodi.length && o.payment_method) metodi.push(o.payment_method)
-  return metodi.map(paymentMethodLabel).join(' + ')
-}
-
 const durata = (a, b) => {
   const t1 = Date.parse(a)
   const t2 = Date.parse(b)
@@ -57,6 +56,8 @@ export default function CashSessionsList() {
   const [openId, setOpenId] = useState(null)
   const [report, setReport] = useState(null) // { id, dati } della serata aperta
   const [caricando, setCaricando] = useState(false)
+  // Serata aperta a tutta pagina nel rendiconto tabellare.
+  const [rendiconto, setRendiconto] = useState(null)
 
   useEffect(() => {
     let vivo = true
@@ -82,11 +83,15 @@ export default function CashSessionsList() {
     try {
       const dal = businessDayKey(s.opened_at)
       const al = businessDayKey(s.closed_at || new Date().toISOString())
-      const [ordini, drinks] = await Promise.all([
+      // L'inventario serve per il COSTO delle ricette (e quindi il guadagno):
+      // se non si riesce a leggerlo il rendiconto mostra comunque i ricavi.
+      const [ordini, drinks, items] = await Promise.all([
         fetchOrdersBetween(dal, al),
         fetchDrinks({}).catch(() => []),
+        fetchInventoryItems().catch(() => []),
       ])
       const drinksById = Object.fromEntries(drinks.map((d) => [d.id, d]))
+      const itemsById = Object.fromEntries(items.map((i) => [i.id, i]))
       // Il riepilogo si RICALCOLA dagli ordini, non si legge dallo snapshot
       // salvato alla chiusura: le serate chiuse con una versione vecchia
       // avevano le carte di credito finite nel secchio dei contanti, e il
@@ -102,12 +107,29 @@ export default function CashSessionsList() {
         dati: sessionReport(ordini, s, drinksById),
         recap: cashRecap(ordini, s, s.closed_at || new Date().toISOString()),
         conti: dentro,
+        drinksById,
+        itemsById,
       })
     } catch (e) {
       setError(e.message)
     } finally {
       setCaricando(false)
     }
+  }
+
+  // Il rendiconto si prende tutta la schermata: è una tabella da leggere, non
+  // un riquadro dentro una lista.
+  if (rendiconto) {
+    return (
+      <RendicontoSerata
+        session={rendiconto.session}
+        orders={rendiconto.conti}
+        drinksById={rendiconto.drinksById}
+        itemsById={rendiconto.itemsById}
+        recap={rendiconto.recap}
+        onClose={() => setRendiconto(null)}
+      />
+    )
   }
 
   return (
@@ -180,8 +202,9 @@ export default function CashSessionsList() {
                   </div>
                 )}
 
-                {/* Venduto della serata */}
-                {caricando && <p className="muted small" style={{ marginTop: 8 }}>Carico il venduto…</p>}
+                {/* Il dettaglio (prodotti, conti, guadagno) sta nel
+                    rendiconto: qui resta il colpo d'occhio sulla cassa. */}
+                {caricando && <p className="muted small" style={{ marginTop: 8 }}>Carico la serata…</p>}
                 {report?.id === s.id && report.dati && (
                   <div style={{ marginTop: 10 }}>
                     <div className="row between">
@@ -191,59 +214,21 @@ export default function CashSessionsList() {
                       </span>
                       <strong>{formatPrice(report.dati.totale)}</strong>
                     </div>
-                    {report.dati.categorie.length > 0 && (
-                      <div className="chips-row" style={{ margin: '6px 0' }}>
-                        {report.dati.categorie.map((c) => (
-                          <span className="chip" key={c.name}>
-                            {c.name} · {c.qty} · {formatPrice(c.revenue)}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    <div className="fascia-prodotti">
-                      {report.dati.prodotti.map((pr) => (
-                        <div className="row between fascia-riga" key={pr.name}>
-                          <span className="grow">{pr.qty}× {pr.name}</span>
-                          <span className="muted">{formatPrice(pr.revenue)}</span>
-                        </div>
-                      ))}
-                    </div>
-                    {/* COME viene ripartito lo sconto: la domanda se la fa
-                        chiunque legga "9× Bjorne 35,24" invece di 36,00. */}
-                    <p className="muted small" style={{ margin: '8px 0 0' }}>
-                      ℹ️ Gli importi sono il <strong>venduto reale</strong>, non il listino.
-                      Lo sconto è un importo sul conto e viene ripartito{' '}
-                      <strong>in proporzione al prezzo</strong> di ogni riga: su un conto da
-                      10&nbsp;€ con 1&nbsp;€ di sconto ogni prodotto vale il 10% in meno
-                      (una birra da 4&nbsp;€ conta 3,60, un cocktail da 6&nbsp;€ conta 5,40).
-                    </p>
-
-                    {/* Lista dei conti della serata: dal totale ai singoli
-                        scontrini, senza uscire dalla chiusura. */}
-                    <div className="row between" style={{ marginTop: 12 }}>
-                      <span className="muted small">Conti della serata</span>
-                      <span className="muted small">{report.conti.length}</span>
-                    </div>
-                    <div className="fascia-prodotti">
-                      {report.conti.map((o) => (
-                        <div className="row between fascia-riga" key={o.id}>
-                          <span className="grow">
-                            <strong>#{o.daily_number ?? '—'}</strong>{' '}
-                            {o.customer_name || o.table || ''}{' '}
-                            <span className="muted">{fmtOra(o.paid_at || o.created_at)}</span>
-                            {Number(o.discount_amount) > 0 && (
-                              <span className="muted"> · sconto −{formatPrice(o.discount_amount)}</span>
-                            )}
-                          </span>
-                          <span className="muted">{metodiDi(o)}</span>
-                          <strong>
-                            {formatPrice(
-                              (Number(o.total) || 0) - (Number(o.discount_amount) || 0)
-                            )}
-                          </strong>
-                        </div>
-                      ))}
-                    </div>
+                    <button
+                      className="btn block"
+                      style={{ marginTop: 10 }}
+                      onClick={() =>
+                        setRendiconto({
+                          session: s,
+                          conti: report.conti,
+                          drinksById: report.drinksById,
+                          itemsById: report.itemsById,
+                          recap: report.recap,
+                        })
+                      }
+                    >
+                      📊 Apri il rendiconto — conti, prodotti e guadagno
+                    </button>
                   </div>
                 )}
 

@@ -3640,3 +3640,173 @@ body.fullbleed,
 .reorder-cell.dragging .reorder-grip {
   cursor: grabbing;
 }
+
+/* ── RENDICONTO SERATA: tabella da rendiconto, non da scontrino ──────────
+   Numeri a destra e incolonnati (si confrontano a colpo d'occhio), prima
+   colonna ancorata a sinistra durante lo scorrimento orizzontale, righe
+   dei conti cliccabili per aprire i prodotti di quel conto. */
+.rendiconto {
+  margin-top: 12px;
+}
+.rend-kpi {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+  margin: 10px 0;
+}
+.rend-kpi-box {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+}
+.rend-kpi-box strong {
+  font-size: 1.25rem;
+  line-height: 1.2;
+}
+/* Il guadagno è il numero per cui si apre questa schermata. */
+.rend-kpi-forte {
+  border-color: var(--accent-2, #f5b94a);
+}
+.rend-tab {
+  border-collapse: collapse;
+  white-space: nowrap;
+  font-size: 0.82rem;
+  min-width: 100%;
+}
+.rend-tab th,
+.rend-tab td {
+  padding: 7px 10px;
+  text-align: right;
+  border-bottom: 1px solid var(--line);
+}
+.rend-tab thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--card);
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.rend-tab .rowhead {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  text-align: left;
+  background: var(--card);
+  font-weight: 600;
+}
+.rend-tab thead .rowhead {
+  z-index: 3;
+}
+.rend-tab tfoot th {
+  position: sticky;
+  bottom: 0;
+  background: var(--card);
+  font-weight: 800;
+  border-top: 2px solid var(--line);
+}
+.rend-tab td.neg {
+  color: #e5484d;
+}
+.rend-riga {
+  cursor: pointer;
+}
+.rend-riga:hover td {
+  background: rgba(127, 127, 140, 0.1);
+}
+.rend-riga.aperta td,
+.rend-riga.aperta .rowhead {
+  background: rgba(245, 185, 74, 0.12);
+}
+.rend-caret {
+  display: inline-block;
+  width: 1em;
+  opacity: 0.6;
+}
+/* Righe prodotto dentro un conto aperto: rientrate e più leggere, così si
+   distinguono a occhio dai conti senza bisogno di una seconda tabella. */
+.rend-dettaglio td {
+  font-size: 0.78rem;
+  opacity: 0.85;
+  background: rgba(127, 127, 140, 0.06);
+}
+.rend-dettaglio .rowhead {
+  background: rgba(127, 127, 140, 0.06);
+  font-weight: 400;
+}
+@media (pointer: coarse) {
+  .rend-tab th,
+  .rend-tab td {
+    padding: 10px 12px;
+  }
+}
+
+/* Vista a CARD dei conti: stessa lettura della schermata ordini, ma con le
+   cifre del rendiconto (incassato, sconto, guadagno). Si tocca e si apre. */
+.rend-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 8px;
+  align-items: start;
+}
+.rend-card {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+  overflow: hidden;
+}
+.rend-card.aperta {
+  border-color: var(--accent-2, #f5b94a);
+}
+.rend-card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  background: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+.rend-card-num {
+  flex-shrink: 0;
+  font-weight: 800;
+  opacity: 0.75;
+}
+.rend-card-nome {
+  min-width: 0;
+  line-height: 1.35;
+}
+.rend-card-cifre {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+.rend-card-cifre .neg {
+  color: #e5484d;
+}
+.rend-card-righe {
+  padding: 0 12px 10px;
+  border-top: 1px solid var(--line);
+}
+.rend-card-riga {
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px dashed var(--line);
+  font-size: 0.86rem;
+}
+.rend-card-riga:last-child {
+  border-bottom: 0;
+}
