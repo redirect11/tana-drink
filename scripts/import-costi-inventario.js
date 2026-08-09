@@ -197,8 +197,13 @@ for (const d of docs) {
 // premium e' una scelta fatta a mano in gestionale e non va sovrascritta da
 // un foglio che quella colonna non ce l'ha.
 function statoDaFoglio(p, attuale) {
+  // `stato` viene dal generatore ordini, che e' l'unico posto dove esistono
+  // tutti e tre i marcatori (LINEA, PREM, OUT). Le colonne di INV portano
+  // solo linea e fuori: valgono come ripiego.
+  if (p.stato) return p.stato
   if (p.out) return 'out'
   if (p.linea) return 'linea'
+  // Nessuno dei due fogli si esprime: un premium messo a mano non si tocca.
   return attuale === 'premium' ? 'premium' : 'assortimento'
 }
 
@@ -262,7 +267,7 @@ if (daConfermare.length) {
 }
 
 if (STATI) {
-  const conta = { linea: 0, out: 0, assortimento: 0, invariati: 0 }
+  const conta = { linea: 0, premium: 0, out: 0, assortimento: 0, invariati: 0 }
   for (const x of daAggiornare) {
     const attuale = strOf(x.doc.fields?.status) || 'assortimento'
     const nuovo = statoDaFoglio(x.p, attuale)
@@ -270,10 +275,12 @@ if (STATI) {
     else conta[nuovo] = (conta[nuovo] || 0) + 1
   }
   console.log(`\n  ASSORTIMENTO dalla colonna C:`)
-  console.log(`   → in linea: ${conta.linea} · fuori assortimento: ${conta.out}` +
-    ` · in assortimento: ${conta.assortimento} · invariati: ${conta.invariati}`)
-  const premium = daAggiornare.filter((x) => strOf(x.doc.fields?.status) === 'premium').length
-  if (premium) console.log(`   (${premium} premium lasciati come sono: nel foglio non esistono)`)
+  console.log(
+    `   → in linea: ${conta.linea} · premium: ${conta.premium} · fuori: ${conta.out}` +
+      ` · in assortimento: ${conta.assortimento} · invariati: ${conta.invariati}`
+  )
+  const senzaVoce = daAggiornare.filter((x) => !x.p.stato && !x.p.out && !x.p.linea).length
+  if (senzaVoce) console.log(`   (${senzaVoce} senza voce nei fogli: vanno in assortimento)`)
 }
 
 if (FORMATI) {

@@ -28,6 +28,11 @@ ap = argparse.ArgumentParser()
 ap.add_argument('--file', default='GEN ORD REC.xlsx')
 ap.add_argument('--sheet', default=None, help='un solo foglio (default: tutti, più recente vince)')
 ap.add_argument('--out', default='costi-inventario.json')
+# L'ASSORTIMENTO (linea / premium / fuori) sta nel generatore ordini, non in
+# INV: la colonna con LINEA, PREM e OUT e' li'. Si legge da un file a parte
+# e si unisce ai prodotti per nome.
+ap.add_argument('--stati-da', default='GEN ORD REC.xlsx',
+                help='file da cui leggere LINEA/PREM/OUT (vuoto per saltare)')
 ap.add_argument('--vat', type=float, default=22.0, help='aliquota IVA usata nel foglio')
 ap.add_argument('--max-rows', type=int, default=1300, help='righe max per foglio (evita i fogli vuoti enormi)')
 args = ap.parse_args()
@@ -63,7 +68,7 @@ def find_header(ws):
                 # mancare) e OUT (fuori assortimento).
                 elif v == 'c':
                     cols['stato'] = j
-            if 'name' in cols and 'cost' in cols:
+            if 'name' in cols:
                 return i, cols
     return None, None
 
@@ -72,7 +77,7 @@ def read_sheet(ws, into):
     """Legge un foglio e aggiorna `into` (nome normalizzato → prodotto):
     l'ultima occorrenza (foglio più recente) sovrascrive."""
     header_row, cols = find_header(ws)
-    if header_row is None:
+    if header_row is None or 'cost' not in cols:
         return 0
     added = 0
     for k, row in enumerate(ws.iter_rows(min_row=header_row + 1, max_col=24, values_only=True)):
@@ -125,6 +130,60 @@ else:
         if read_sheet(wb[name], latest):
             fogli += 1
     origine = f'{fogli} fogli del generatore'
+
+
+# ── ASSORTIMENTO: linea / premium / fuori ────────────────────────────
+# I marcatori stanno nelle prime colonne, ma non sempre nella stessa: in un
+# foglio OUT sta in "X" e LINEA/PREM in "C", in un altro sono insieme. Invece
+# di fidarsi della posizione si cercano i TOKEN nelle prime colonne.
+TOKEN = {'OUT': 'out', 'LINEA': 'linea', 'PREM': 'premium', 'PREMIUM': 'premium'}
+
+
+def leggi_stati(path):
+    stati = {}
+    try:
+        wbs = openpyxl.load_workbook(path, read_only=True, data_only=True)
+    except Exception as e:
+        print(f'[costi] stati non letti da {path}: {e}')
+        return stati
+    for name in wbs.sheetnames:
+        ws2 = wbs[name]
+        header_row, cols2 = find_header(ws2)
+        if header_row is None or 'name' not in cols2:
+            continue
+        jn = cols2['name']
+        for k, row in enumerate(ws2.iter_rows(min_row=header_row + 1, max_col=24, values_only=True)):
+            if k > args.max_rows:
+                break
+            nome = row[jn] if jn < len(row) else None
+            if not isinstance(nome, str) or not nome.strip():
+                continue
+            trovato = None
+            for v in row[:jn]:
+                if isinstance(v, str) and v.strip().upper() in TOKEN:
+                    trovato = TOKEN[v.strip().upper()]
+                    break
+            # L'ultimo foglio che si esprime su un prodotto ha ragione: i
+            # fogli sono in ordine e il piu' recente e' la situazione di ora.
+            if trovato:
+                stati[nome.strip().lower()] = trovato
+    return stati
+
+
+if args.stati_da:
+    stati = leggi_stati(args.stati_da)
+    quanti = {'linea': 0, 'premium': 0, 'out': 0, 'senza prodotto': 0}
+    for nome, st in stati.items():
+        if nome in latest:
+            latest[nome]['stato'] = st
+            quanti[st] += 1
+        else:
+            quanti['senza prodotto'] += 1
+    print(
+        f"[costi] assortimento da {args.stati_da}: "
+        f"{quanti['linea']} in linea, {quanti['premium']} premium, {quanti['out']} fuori"
+        + (f" ({quanti['senza prodotto']} nomi non nel listino)" if quanti['senza prodotto'] else '')
+    )
 
 prodotti = sorted(latest.values(), key=lambda p: p['name'].lower())
 with open(args.out, 'w', encoding='utf-8') as f:
