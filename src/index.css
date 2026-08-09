@@ -979,7 +979,10 @@ a.order-mini {
   color: var(--text);
   font-size: 1.2rem;
   cursor: pointer;
-  display: flex;
+  /* NIENTE `display: flex` qui: sovrascriverebbe il `display: none` di sopra
+     (stessa regola, vince l'ultima) e il ☰ flottante resterebbe visibile
+     ANCHE con la topbar in vista — sono i due tasti menu insieme.
+     Ad accenderlo ci pensa `body.fullbleed .bar-burger`. */
   align-items: center;
   justify-content: center;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
