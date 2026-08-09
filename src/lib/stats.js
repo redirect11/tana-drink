@@ -2,7 +2,7 @@
 // Logica pura senza dipendenze Firestore: testabile in isolamento.
 // Riusa aggregateProducts/ordersFinance da eta.js.
 import { ORDER_STATUSES } from './orderStatus.js'
-import { aggregateProducts, ordersFinance, discountFactor } from './eta.js'
+import { aggregateProducts, ordersFinance, discountFactor, orderNet } from './eta.js'
 import { businessDayKey, DEFAULT_CUTOFF_HOUR } from './businessDay.js'
 
 const isCancelled = (o) => o.status === ORDER_STATUSES.ANNULLATO
@@ -94,7 +94,7 @@ export function revenueByHour(orders, range = DEFAULT_HOUR_RANGE) {
     const off = offsetInRange(minuteOfDay(t), fromMin, span)
     if (off == null) continue
     const b = buckets[Math.floor(off / 60)]
-    b.incasso += Number(o.total) || 0
+    b.incasso += orderNet(o)
     b.ordini += 1
   }
 
@@ -180,7 +180,7 @@ export function revenueByDay(orders, cutoffHour = DEFAULT_CUTOFF_HOUR) {
     const k = businessDayKey(o.created_at, cutoffHour)
     if (!k) continue
     const cur = byDay.get(k) || { incasso: 0, ordini: 0 }
-    cur.incasso += Number(o.total) || 0
+    cur.incasso += orderNet(o)
     cur.ordini += 1
     byDay.set(k, cur)
   }
@@ -278,7 +278,7 @@ export function serviceModeSplit(orders) {
   for (const o of valid(orders)) {
     const k = o.service_mode === 'banco' ? 'banco' : 'tavolo'
     out[k].ordini += 1
-    out[k].incasso += Number(o.total) || 0
+    out[k].incasso += orderNet(o)
   }
   return out
 }
