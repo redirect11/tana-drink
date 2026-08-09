@@ -1177,8 +1177,10 @@ function OrderQueue() {
               🖨 {b.msg} <span className="muted">(tocca per chiudere)</span>
             </div>
           ))}
-          {/* Filtro: in corso (default) / chiusi / tutti / da chiudere */}
-          <div className="chips-row" style={{ margin: '8px 0 0' }}>
+          {/* Filtro: in corso (default) / chiusi / tutti / da chiudere.
+              Sotto ci vuole aria: attaccati, i chip sembravano la prima riga
+              delle card. */}
+          <div className="chips-row" style={{ margin: '8px 0 16px' }}>
             {[
               ['attivi', 'In corso'],
               ['chiusi', '💶 Chiusi'],

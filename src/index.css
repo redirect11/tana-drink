@@ -1399,12 +1399,25 @@ body.fullbleed .bar-content {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 12px;
-  align-items: start;
+  /* STESSA ALTEZZA per le card della stessa riga: con `start` ognuna teneva
+     la sua e la fila risultava sfrangiata — un conto col tavolo era piu'
+     alto di uno senza. Le righe restano indipendenti fra loro. */
+  align-items: stretch;
   margin-bottom: 8px;
 }
 
 .order-grid .card {
   margin: 0; /* lo spazio lo dà il gap della griglia */
+}
+
+/* La card riempie la sua cella e il corpo si allunga: cosi' la riga delle
+   azioni resta in fondo, allineata con quella delle card accanto. */
+.order-grid .grid-card {
+  display: flex;
+  flex-direction: column;
+}
+.order-grid .grid-card > .grid-card-main {
+  flex: 1;
 }
 
 /* Card-griglia compatta: tutte uguali, più larghe che alte. */
