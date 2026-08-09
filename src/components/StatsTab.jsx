@@ -71,7 +71,21 @@ function DailyStats() {
   if (effective > loadLimit) setLoadLimit(Math.ceil(effective / 30) * 30)
   // Range orari configurabili dei grafici.
   const [hourRange, setHourRange] = useState(DEFAULT_HOUR_RANGE)
+  // Sezione "venduto nella fascia oraria": ha un suo intervallo di DATE, così
+  // si può chiedere "sabato scorso, fra le 22 e l'una" indipendentemente dal
+  // periodo generale scelto sopra.
+  const [fasciaDal, setFasciaDal] = useState(() => businessDayKey(new Date(), cutoff))
+  const [fasciaAl, setFasciaAl] = useState(() => businessDayKey(new Date(), cutoff))
   const [dayRange, setDayRange] = useState({ from: '22:00', to: '00:00' })
+
+  // Date scelte fuori dai dati già scaricati: si allarga la finestra.
+  useEffect(() => {
+    const oggi = businessDayKey(new Date(), cutoff)
+    const giorni = Math.ceil((Date.parse(oggi) - Date.parse(fasciaDal)) / 86400000) + 1
+    if (Number.isFinite(giorni) && giorni > loadLimit) {
+      setLoadLimit(Math.ceil(giorni / 30) * 30)
+    }
+  }, [fasciaDal, cutoff, loadLimit])
 
   useEffect(() => {
     let active = true
@@ -118,14 +132,22 @@ function DailyStats() {
       byDayRange: revenueByDayInRange(ord, dayRange, cutoff),
       top: topProducts(ord),
       byCategory: revenueByCategory(ord, drinksById).slice(0, 10),
-      // Cosa si è venduto DAVVERO nella fascia scelta (totale, prodotti, categorie)
-      fascia: hourRangeReport(ord, hourRange, drinksById),
+      // Cosa si è venduto DAVVERO nella fascia scelta (totale, prodotti,
+      // categorie), sulle GIORNATE indicate qui sotto — non sul periodo sopra.
+      fascia: hourRangeReport(
+        orders.filter((o) => {
+          const k = businessDayKey(o.created_at, cutoff)
+          return k && k >= fasciaDal && k <= fasciaAl
+        }),
+        hourRange,
+        drinksById
+      ),
       ingredients: ingredientUsage(ord, drinksById),
       prep: prepTimeStats(ord),
       split: serviceModeSplit(ord),
       extras: extrasBreakdown(ord),
     }
-  }, [loaded, giorniAttivi, orders, drinks, effective, hourRange, dayRange, cutoff])
+  }, [loaded, giorniAttivi, orders, drinks, effective, hourRange, dayRange, cutoff, fasciaDal, fasciaAl])
 
   if (error) return <div className="banner">Errore: {error}</div>
   if (!loaded) return <div className="empty">Carico le statistiche…</div>
@@ -215,7 +237,30 @@ function DailyStats() {
       {/* Cosa si è venduto nella fascia oraria scelta qui sopra: totale, tutti
           i prodotti e le categorie. Risponde a "fra le 22 e l'una cosa vendo?" */}
       <ChartCard title="🧾 Venduto nella fascia oraria">
-        <div className="row between" style={{ alignItems: 'baseline', marginBottom: 8 }}>
+        <div className="grid-2" style={{ gap: 8, marginBottom: 8 }}>
+          <div>
+            <label htmlFor="fascia-dal" className="muted small">Dal giorno</label>
+            <input
+              id="fascia-dal"
+              type="date"
+              value={fasciaDal}
+              max={fasciaAl}
+              onChange={(e) => setFasciaDal(e.target.value)}
+            />
+          </div>
+          <div>
+            <label htmlFor="fascia-al" className="muted small">Al giorno</label>
+            <input
+              id="fascia-al"
+              type="date"
+              value={fasciaAl}
+              min={fasciaDal}
+              onChange={(e) => setFasciaAl(e.target.value)}
+            />
+          </div>
+        </div>
+        <TimeRange value={hourRange} onChange={setHourRange} />
+        <div className="row between" style={{ alignItems: 'baseline', margin: '8px 0' }}>
           <span className="muted small">
             {hourRange.from}–{hourRange.to} · {fascia.nOrdini} cont{fascia.nOrdini === 1 ? 'o' : 'i'}
           </span>
