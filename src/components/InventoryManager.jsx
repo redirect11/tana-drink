@@ -53,9 +53,10 @@ import SupplierInvoicesPanel from './SupplierInvoicesPanel.jsx'
 import CategoryRail from './CategoryRail.jsx'
 
 const STATUS_ITEM = [
-  { value: 'linea', label: 'In linea' },
-  { value: 'premium', label: 'Premium' },
-  { value: 'out', label: 'Fuori assortimento' },
+  { value: 'assortimento', label: 'In assortimento' },
+  { value: 'linea', label: '🍾 In linea (non deve mancare)' },
+  { value: 'premium', label: '👑 Premium' },
+  { value: 'out', label: '🚫 Fuori assortimento' },
 ]
 
 const STATUS_LABEL = { ok: '', low: 'in esaurimento', empty: 'esaurito' }
@@ -63,9 +64,15 @@ const STATUS_LABEL = { ok: '', low: 'in esaurimento', empty: 'esaurito' }
 // Come si legge l'assortimento in lista: OUT accanto al nome (si deve vedere
 // subito che non si ricompra) e una coroncina piccola sui premium. Chi è "in
 // linea" non porta niente: è la normalità, e un segno su tutto non segna nulla.
-const ASSORTIMENTO_LABEL = { linea: '📋 In linea', premium: '👑 Premium', out: '🚫 Fuori assortimento' }
+const ASSORTIMENTO_LABEL = {
+  assortimento: '📦 In assortimento',
+  linea: '🍾 In linea',
+  premium: '👑 Premium',
+  out: '🚫 Fuori assortimento',
+}
 const ASSORTIMENTO_TITOLO = {
-  linea: 'Prodotti di listino',
+  assortimento: 'Si tiene, senza niente di speciale',
+  linea: 'Non deve mancare mai: i primi da controllare',
   premium: 'Bottiglie premium',
   out: 'Fuori assortimento: non si ricompra',
 }
@@ -73,6 +80,7 @@ function SegnoAssortimento({ item }) {
   const a = assortimentoDi(item)
   if (a === 'out') return <span className="badge-empty">OUT</span>
   if (a === 'premium') return <span className="badge-premium" title="Premium">👑</span>
+  if (a === 'linea') return <span className="badge-premium" title="In linea: non deve mancare">🍾</span>
   return null
 }
 
@@ -1228,7 +1236,7 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
     supplier_id: initial?.supplier_id ?? '',
     cost: initial?.cost ?? '',
     vat: initial?.vat ?? defaultVat,
-    status: initial?.status ?? 'linea',
+    status: initial?.status ?? 'assortimento',
     package_size:
       initial?.package_size != null && initial?.package_size !== ''
         ? String(fromBaseQty(initial.package_size, initUnit))
@@ -1302,7 +1310,7 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
         supplier_id: form.supplier_id || null,
         cost: form.cost === '' ? null : costNum,
         vat: Number(form.vat) || 0,
-        status: form.status || 'linea',
+        status: form.status || 'assortimento',
         package_size: packBase,
         // Serve solo a pezzo: dice se quel contenuto è un volume o un peso.
         content_unit: isPz && packBase ? baseUnit(form.content_unit) : null,

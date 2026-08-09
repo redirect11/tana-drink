@@ -125,7 +125,9 @@ function mapItem(snap) {
     supplier_id: i.supplier_id ?? null,
     cost: i.cost != null ? Number(i.cost) : null,
     vat: i.vat != null ? Number(i.vat) : 22,
-    status: i.status ?? 'linea',
+    // Chi non lo dichiara è semplicemente in assortimento: "in linea" è una
+    // scelta esplicita (i prodotti che non devono mancare), non il default.
+    status: i.status ?? 'assortimento',
     created_at: toIso(i.created_at),
   }
 }
