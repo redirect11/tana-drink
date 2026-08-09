@@ -624,10 +624,16 @@ label {
   color: var(--muted);
 }
 
+/* AVVISI: fondo giallo e scritta ROSSA. Il testo era giallo chiaro sul giallo
+   e in pratica non si leggeva — un avviso che non si legge non e' un avviso. */
 .banner {
-  background: rgba(243, 156, 18, 0.16);
-  border: 1px solid rgba(243, 156, 18, 0.4);
-  color: #ffd591;
+  /* Fondo pieno (non una velatura): cosi' resta giallo con testo rosso su
+     entrambi i temi — col fondo semitrasparente, sul tema scuro, il rosso
+     finiva su marrone e tornava illeggibile. */
+  background: #fbe9bd;
+  border: 1px solid #d99a1f;
+  color: #c0392b;
+  font-weight: 600;
   border-radius: 12px;
   padding: 12px 14px;
   margin: 12px 0;
