@@ -957,6 +957,12 @@ a.order-mini {
   }
 }
 
+/* UN SOLO ☰ per schermata. Chi lo mostra:
+     coda a griglia / POS (topbar nascosta) → questo, flottante
+     tutto il resto (topbar visibile)       → .topbar-burger
+     topbar APERTA a tutto schermo          → .topbar-burger (questo sparisce)
+     POS e dettaglio ordine                 → nessuno: si esce con "← Ordini"
+   Le regole qui sotto e in App.jsx (drawerHere) tengono fede a questa tabella. */
 .bar-burger {
   display: none; /* solo in fullbleed: altrove il ☰ sta nella topbar */
   position: fixed;
@@ -1155,6 +1161,19 @@ body.fullbleed .bar-sidebar.open {
 
 body.fullbleed .bar-burger {
   display: flex;
+}
+/* Topbar aperta a tutto schermo: il ☰ è già lì dentro, quindi il tasto
+   flottante sparisce — altrimenti se ne vedono DUE. */
+body.fullbleed.topbar-open .bar-burger {
+  display: none;
+}
+/* Avvisi in cima alla board (es. "Cassa chiusa"): lasciano il posto al ☰
+   flottante, che è fisso nell'angolo e ci finiva sopra. */
+body.fullbleed .queue-board > .banner {
+  padding-left: 62px;
+}
+body.fullbleed.topbar-open .queue-board > .banner {
+  padding-left: 12px; /* col ☰ nascosto lo spazio non serve più */
 }
 
 /* Overlay per chiudere il menu cliccando fuori: di norma è nascosto sopra i
