@@ -2292,7 +2292,7 @@ export async function updateOrderItems(id, items) {
     Number(cur.service_charge_amount || 0) +
     Number(cur.tip_amount || 0)
   const nuovoTotale = sumItems(mapped) + extras
-  const nuovoSconto = await scontoRicalcolato(cur, nuovoTotale)
+  const nuovoSconto = scontoRicalcolato(cur, nuovoTotale)
   bgWrite(() => updateDoc(ref, {
     status: ORDER_OPEN,
     comande,
@@ -2361,7 +2361,7 @@ export async function addComanda(orderId, items, { note = null } = {}) {
     Number(cur.service_charge_amount || 0) +
     Number(cur.tip_amount || 0)
   const nuovoTotale = sumItems(agg) + extras
-  const nuovoSconto = await scontoRicalcolato(cur, nuovoTotale)
+  const nuovoSconto = scontoRicalcolato(cur, nuovoTotale)
   bgWrite(() => updateDoc(ref, {
     status: ORDER_OPEN,
     comande,
@@ -2449,7 +2449,7 @@ export async function bartenderUpdateComanda(orderId, comandaId, { items }) {
     Number(cur.service_charge_amount || 0) +
     Number(cur.tip_amount || 0)
   const nuovoTotale = sumItems(agg) + extras
-  const nuovoSconto = await scontoRicalcolato(cur, nuovoTotale)
+  const nuovoSconto = scontoRicalcolato(cur, nuovoTotale)
   bgWrite(() => updateDoc(ref, {
     status: ORDER_OPEN,
     comande,
@@ -3007,23 +3007,28 @@ export const DEFAULT_SETTINGS = {
 // legge una volta sola, dalla cache offline se serve.
 let settingsCache = null
 
-async function impostazioni() {
-  if (settingsCache) return { ...DEFAULT_SETTINGS, ...settingsCache }
-  try {
-    const snap = await getDoc(settingsDoc)
-    if (snap.exists()) settingsCache = snap.data()
-  } catch {
-    /* offline e mai lette: si va di default */
+// SUBITO, senza aspettare NIENTE. Una preferenza non deve poter ritardare —
+// né tantomeno impedire — il salvataggio di un ordine: se la cache non c'è
+// ancora si parte dai default e la si riempie in sottofondo, per la prossima
+// volta. (Prima qui c'era un `await getDoc`: con una rete collegata che non
+// passa quella lettura resta appesa, e con lei restava appesa la scrittura
+// degli item — gli ordini non si salvavano più.)
+function impostazioni() {
+  if (!settingsCache) {
+    getDoc(settingsDoc)
+      .then((snap) => {
+        if (snap.exists()) settingsCache = snap.data()
+      })
+      .catch(() => {})
   }
   return { ...DEFAULT_SETTINGS, ...(settingsCache || {}) }
 }
 
 // Sconto da riscrivere quando il totale del conto cambia. Ritorna null se
 // sull'ordine non c'è nessuno sconto: in quel caso non si tocca il campo.
-async function scontoRicalcolato(cur, nuovoTotale) {
+function scontoRicalcolato(cur, nuovoTotale) {
   const discount = cur?.discount || null
   if (!discount) return null
-  const { discount_policy: policy } = await impostazioni()
   return discountAfterChange(
     {
       discount,
@@ -3031,7 +3036,7 @@ async function scontoRicalcolato(cur, nuovoTotale) {
       prevTotal: cur.total,
       newTotal: nuovoTotale,
     },
-    policy
+    impostazioni().discount_policy
   )
 }
 

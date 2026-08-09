@@ -17,7 +17,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const mai = () => new Promise(() => {}) // una Promise che non si risolve mai
 
-const stato = { ordine: null, scritture: [] }
+const stato = { ordine: null, scritture: [], settingsAppese: false }
 
 vi.mock('../../src/lib/firebaseClient.js', () => ({
   db: {},
@@ -33,13 +33,21 @@ vi.mock('../../src/lib/sumupApi.js', () => ({
 
 vi.mock('firebase/firestore', () => ({
   collection: () => ({}),
-  doc: () => ({ id: 'ord-1' }),
-  // Le LETTURE offline arrivano dalla cache: qui rispondono subito.
-  getDoc: vi.fn(async () => ({
-    exists: () => !!stato.ordine,
-    id: 'ord-1',
-    data: () => stato.ordine,
-  })),
+  doc: (_db, col, id) => ({ col: col || 'orders', id: id || 'ord-1' }),
+  // Le LETTURE offline arrivano dalla cache: qui rispondono subito. Le
+  // impostazioni invece possono restare appese (vedi `stato.settingsAppese`):
+  // e' il caso che aveva bloccato il salvataggio degli item.
+  getDoc: vi.fn(async (ref) => {
+    if (ref?.col === 'settings') {
+      if (stato.settingsAppese) return mai()
+      return { exists: () => false, data: () => ({}) }
+    }
+    return {
+      exists: () => !!stato.ordine,
+      id: 'ord-1',
+      data: () => stato.ordine,
+    }
+  }),
   getDocs: vi.fn(async () => ({ docs: [] })),
   getDocsFromCache: vi.fn(async () => ({ docs: [] })),
   // Le SCRITTURE restano appese, come offline.
@@ -72,7 +80,7 @@ vi.mock('firebase/firestore', () => ({
   },
 }))
 
-const { registerPayment, markOrderPaid } = await import('../../src/lib/api.js')
+const { registerPayment, markOrderPaid, updateOrderItems } = await import('../../src/lib/api.js')
 
 const contoDa = (totale, extra = {}) => ({
   status: 'aperto',
@@ -95,6 +103,7 @@ describe('incasso senza rete', () => {
   beforeEach(() => {
     stato.ordine = contoDa(20)
     stato.scritture = []
+    stato.settingsAppese = false
   })
 
   it('contanti: si chiude subito, la scrittura va in coda', async () => {
@@ -133,5 +142,50 @@ describe('incasso senza rete', () => {
     await expect(
       entroUnSecondo(registerPayment('ord-1', { amount: 20, method: 'banco' }))
     ).rejects.toThrow(/già pagato/)
+  })
+})
+
+// GLI ITEM SI SALVANO SEMPRE.
+// Il ricalcolo dello sconto ha bisogno di sapere quale strategia è impostata,
+// ma una PREFERENZA non deve poter ritardare — tantomeno impedire — il
+// salvataggio di un ordine. Quando quella lettura veniva attesa, con una rete
+// collegata che non passava restava appesa, e con lei la scrittura degli item:
+// gli ordini non si salvavano più.
+describe('scrittura degli item', () => {
+  // Conto ancora modificabile: la prima comanda dev'essere "ricevuto".
+  const modificabile = (extra = {}) =>
+    contoDa(20, {
+      comande: [{ id: 'c1', seq: 1, status: 'ricevuto', items: [], inventory_applied: false }],
+      ...extra,
+    })
+
+  beforeEach(() => {
+    stato.ordine = modificabile()
+    stato.scritture = []
+    stato.settingsAppese = false
+  })
+
+  const righe = [{ drink_id: 'mojito', name: 'Mojito', unit_price: 8, qty: 1 }]
+
+  it('parte anche se le impostazioni non rispondono', async () => {
+    stato.settingsAppese = true
+    stato.ordine = modificabile({ discount: { type: 'euro', value: 5 }, discount_amount: 5 })
+    await entroUnSecondo(updateOrderItems('ord-1', righe))
+    const patch = stato.scritture.find((s) => s.tipo === 'update')?.patch
+    expect(patch.items).toHaveLength(1)
+    expect(patch.total).toBe(8)
+  })
+
+  it('senza sconto sul conto il campo non si tocca', async () => {
+    await entroUnSecondo(updateOrderItems('ord-1', righe))
+    const patch = stato.scritture.find((s) => s.tipo === 'update')?.patch
+    expect(patch).not.toHaveProperty('discount_amount')
+  })
+
+  it('con lo sconto si riallinea al nuovo totale (tetto, il default)', async () => {
+    stato.ordine = modificabile({ discount: { type: 'euro', value: 30 }, discount_amount: 30 })
+    await entroUnSecondo(updateOrderItems('ord-1', righe))
+    const patch = stato.scritture.find((s) => s.tipo === 'update')?.patch
+    expect(patch.discount_amount).toBe(8) // mai più del conto
   })
 })
