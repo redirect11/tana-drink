@@ -465,6 +465,22 @@ export default function OrderPosDetail({ order: orderProp = null }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [namesSig])
 
+  // Ordine appena aperto e rimasto SENZA prodotti (si aggiunge una voce e la si
+  // toglie subito): si annulla da solo e si torna alla coda, senza chiedere
+  // nulla — non era un conto, era un ripensamento. Vale solo per l'ordine
+  // creato in questa sessione, mai per uno aperto dalla coda.
+  useEffect(() => {
+    if (isNew || !createdInPlace || closed || !order?.id) return
+    if (orderedLines.length > 0 || draft.length > 0) return
+    if ((order.payments || []).length > 0) return // qualcosa è già stato incassato
+    const t = setTimeout(() => {
+      cancelOrder(order.id, { by: 'bartender' }).catch(() => {})
+      navigate('/bar')
+    }, 400) // respiro: evita di annullare durante una sostituzione di riga
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isNew, createdInPlace, closed, order?.id, orderedLines.length, draft.length])
+
   // Memoria bozza solo finché non confermato/pagato: se l'ordine è chiuso
   // (pagato/annullato) si azzera.
   useEffect(() => {
@@ -814,32 +830,42 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   // continua come nella modifica (aggiunte confermate al volo). Il nome si
   // chiede solo all'uscita, se manca.
   const creatingRef = useRef(false)
+  // Promise dell'ordine in creazione: chi arriva mentre la creazione è in volo
+  // (es. il tasto Pagamento) deve ASPETTARE questo, non creare un secondo
+  // ordine — altrimenti si ritrovano due conti con lo stesso nome/tavolo.
+  const creatingPromiseRef = useRef(null)
   const createFromDraft = async () => {
-    if (!isNew || creatingRef.current) return null
+    if (!isNew) return null
+    if (creatingRef.current) return creatingPromiseRef.current
     const items = draftToItems()
     if (items.length === 0) return null
     creatingRef.current = true
-    try {
-      const created = await createOrder({
-        table_label: info.table_label || null,
-        note: info.note || null,
-        customer_name: info.customer_name.trim() || null,
-        items,
-        placed_by: placedBy(),
-        status: statoIniziale,
-        service_mode: modoConsegna,
-        group_id: group && !groupIsContainer ? group.id : null,
-        group_name_snapshot: group && !groupIsContainer ? group.name : null,
-      })
-      clearDraft()
-      selfOrderJsonRef.current = JSON.stringify(created) // evita un re-render doppio dalla subscription
-      setSelfOrder(created) // diventa "modifica" in place, niente reload
-      return created
-    } catch (e) {
-      creatingRef.current = false
-      toastError(`Ordine non creato: ${e.message}`)
-      return null
+    const run = async () => {
+      try {
+        const created = await createOrder({
+          table_label: info.table_label || null,
+          note: info.note || null,
+          customer_name: info.customer_name.trim() || null,
+          items,
+          placed_by: placedBy(),
+          status: statoIniziale,
+          service_mode: modoConsegna,
+          group_id: group && !groupIsContainer ? group.id : null,
+          group_name_snapshot: group && !groupIsContainer ? group.name : null,
+        })
+        clearDraft()
+        selfOrderJsonRef.current = JSON.stringify(created) // evita un re-render doppio dalla subscription
+        setSelfOrder(created) // diventa "modifica" in place, niente reload
+        return created
+      } catch (e) {
+        creatingRef.current = false
+        creatingPromiseRef.current = null
+        toastError(`Ordine non creato: ${e.message}`)
+        return null
+      }
     }
+    creatingPromiseRef.current = run()
+    return creatingPromiseRef.current
   }
   const createFromDraftRef = useRef(createFromDraft)
   createFromDraftRef.current = createFromDraft
@@ -860,8 +886,11 @@ export default function OrderPosDetail({ order: orderProp = null }) {
 
   function handlePayNow() {
     if (draft.length === 0 || payOrder) return
-    // Il pagamento diretto crea già l'ordine: blocca l'auto-creazione della
-    // bozza (il debounce non deve creare un secondo ordine e navigare via).
+    // Se una creazione è GIÀ in volo (auto-creazione appena scattata), il
+    // pagamento si aggancia a quella: creare qui un secondo ordine
+    // duplicherebbe il conto.
+    const giaInCreazione = creatingRef.current && creatingPromiseRef.current
+    // Il pagamento diretto crea l'ordine: blocca l'auto-creazione della bozza.
     creatingRef.current = true
     setError(null)
     const items = draftToItems()
@@ -889,6 +918,13 @@ export default function OrderPosDetail({ order: orderProp = null }) {
       order_items: mapped,
     })
     payIdRef.current = (async () => {
+      if (giaInCreazione) {
+        const gia = await creatingPromiseRef.current
+        if (gia) {
+          setPayOrder((cur) => (cur && cur.id === null ? gia : cur))
+          return gia.id
+        }
+      }
       const created = await createOrder({
         table_label: info.table_label || null,
         note: info.note || null,

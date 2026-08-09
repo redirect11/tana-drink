@@ -1424,7 +1424,7 @@ body.fullbleed .bar-content {
 }
 .ordhist-row {
   display: grid;
-  grid-template-columns: 46px minmax(0, 1fr) auto auto auto;
+  grid-template-columns: 46px minmax(0, 1fr) auto auto auto auto;
   gap: 8px;
   align-items: center;
   width: 100%;
@@ -1453,8 +1453,15 @@ body.fullbleed .bar-content {
 }
 .ordhist-tot { font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .ordhist-when { white-space: nowrap; }
+.ordhist-print {
+  padding: 4px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  opacity: 0.65;
+}
+.ordhist-print:hover { opacity: 1; background: rgba(127, 127, 140, 0.18); }
 @media (max-width: 560px) {
-  .ordhist-row { grid-template-columns: 40px minmax(0, 1fr) auto auto; }
+  .ordhist-row { grid-template-columns: 40px minmax(0, 1fr) auto auto auto; }
   .ordhist-when { display: none; }
 }
 

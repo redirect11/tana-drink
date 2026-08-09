@@ -253,7 +253,11 @@ export async function printScontrino(order, opts = {}) {
   const s = loadPrinterSettings()
   const ivaRate = Number(opts.ivaRate ?? s.ivaRate ?? 10) / 100
   const { date, time } = italianDateTime(order.created_at)
-  const total = Number(order.total ?? 0)
+  const lordo = Number(order.total ?? 0)
+  const sconto = Number(order.discount_amount ?? 0)
+  // Il totale dello scontrino è quello REALMENTE pagato: prima si stampava il
+  // lordo e lo sconto applicato non compariva da nessuna parte.
+  const total = Math.max(0, Math.round((lordo - sconto) * 100) / 100)
   const ivaAmount = total - total / (1 + ivaRate)
   const imponibile = total / (1 + ivaRate)
 
@@ -302,6 +306,12 @@ export async function printScontrino(order, opts = {}) {
     prn.addText(row(`${order.coperto_persons}x  Coperto`, `${cop.padStart(7)} ${cop.padStart(7)}`))
   }
 
+  // ── Sconto applicato ──
+  if (sconto > 0) {
+    prn.addText(row('Subtotale', `${lordo.toFixed(2)}€`))
+    prn.addText(row('Sconto', `-${sconto.toFixed(2)}€`))
+  }
+
   prn.addText(line())
 
   // ── IVA ──
@@ -327,13 +337,26 @@ export async function printScontrino(order, opts = {}) {
   prn.addTextStyle(false, false, true, prn.COLOR_1)
   prn.addText('Pagamenti\n')
   prn.addTextStyle(false, false, false, prn.COLOR_1)
-  const metodo = {
-    contanti: 'Contante',
-    carta: 'Carta',
-    online: 'Online',
-    lettore: 'Carta (lettore)',
-  }[order.payment_method] || 'Contante'
-  prn.addText(row(`${metodo} (A)`, `${total.toFixed(2)}€`))
+  const nomeMetodo = (m) =>
+    ({
+      banco: 'Contante',
+      contanti: 'Contante',
+      carta: 'Carta',
+      online: 'Online',
+      lettore: 'Carta (POS)',
+      buono: 'Buono',
+    })[m] || 'Contante'
+  // Se ci sono incassi registrati si elencano uno per uno (conti divisi o
+  // acconti): così su ogni scontrino si legge quanto in contanti e quanto in
+  // carta. Altrimenti si usa il metodo di chiusura del conto.
+  const incassi = (order.payments || []).filter((p) => Number(p.amount) > 0)
+  if (incassi.length > 0) {
+    for (const p of incassi) {
+      prn.addText(row(`${nomeMetodo(p.method)} (A)`, `${Number(p.amount).toFixed(2)}€`))
+    }
+  } else {
+    prn.addText(row(`${nomeMetodo(order.payment_method)} (A)`, `${total.toFixed(2)}€`))
+  }
   prn.addText(line())
 
   // ── Codice lotteria degli scontrini (se comunicato dal cliente) ──

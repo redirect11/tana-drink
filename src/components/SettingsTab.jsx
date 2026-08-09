@@ -95,7 +95,7 @@ export default function SettingsTab() {
           ].map(([value, label]) => (
             <button
               key={value}
-              className={`mode-option${(settings.order_group_default || 'separati') === value ? ' active' : ''}`}
+              className={`mode-option${(settings.order_group_default || 'uniti') === value ? ' active' : ''}`}
               onClick={() => save({ order_group_default: value })}
             >
               {label}

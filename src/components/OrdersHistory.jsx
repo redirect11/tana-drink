@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { subscribeOrdersHistory } from '../lib/api.js'
 import { formatPrice, ORDER_STATUSES, PAYMENT_METHOD_LABELS } from '../lib/orderStatus.js'
 import { paidAmount, orderTotal } from '../lib/pagamento.js'
+import { printScontrino } from '../lib/printer.js'
+import { toastSuccess, toastError } from '../lib/toast.js'
 
 // STORICO ORDINI (nel Flusso cassa): la lista CRONOLOGICA di tutti i conti —
 // aperti, chiusi, annullati — col nome se gliene è stato dato uno, altrimenti
@@ -139,6 +141,25 @@ export default function OrdersHistory() {
               </span>
               <span className={`pill small ordhist-state ${st === 'chiusi' ? 'pagato' : st === 'annullati' ? 'ritirato' : 'ricevuto'}`}>
                 {st === 'chiusi' ? 'pagato' : st === 'annullati' ? 'annullato' : acconto ? 'acconto' : 'aperto'}
+              </span>
+              {/* Ristampa dello scontrino (anche di conti vecchi): riporta
+                  articoli, sconto, totale reale e come è stato incassato. */}
+              <span
+                role="button"
+                tabIndex={0}
+                className="ordhist-print"
+                title="Ristampa scontrino"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  printScontrino(o)
+                    .then(() => toastSuccess(`Scontrino #${o.daily_number ?? ''} ristampato`))
+                    .catch((err) => toastError(`Stampa: ${err.message}`))
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') e.currentTarget.click()
+                }}
+              >
+                🖨
               </span>
               <span className="ordhist-tot">
                 {formatPrice(orderTotal(o))}
