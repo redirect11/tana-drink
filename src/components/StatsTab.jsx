@@ -15,6 +15,7 @@ import {
   revenueByDayInRange,
   topProducts,
   revenueByCategory,
+  hourRangeReport,
   ingredientUsage,
   prepTimeStats,
   serviceModeSplit,
@@ -117,6 +118,8 @@ function DailyStats() {
       byDayRange: revenueByDayInRange(ord, dayRange, cutoff),
       top: topProducts(ord),
       byCategory: revenueByCategory(ord, drinksById).slice(0, 10),
+      // Cosa si è venduto DAVVERO nella fascia scelta (totale, prodotti, categorie)
+      fascia: hourRangeReport(ord, hourRange, drinksById),
       ingredients: ingredientUsage(ord, drinksById),
       prep: prepTimeStats(ord),
       split: serviceModeSplit(ord),
@@ -134,7 +137,7 @@ function DailyStats() {
     )
   }
 
-  const { kpi, byHour, byDay, byDayRange, top, byCategory, ingredients, prep, split, extras } = view
+  const { kpi, byHour, byDay, byDayRange, top, byCategory, ingredients, prep, split, extras, fascia } = view
 
   return (
     <div>
@@ -207,6 +210,42 @@ function DailyStats() {
           }))}
           format={fmtShort}
         />
+      </ChartCard>
+
+      {/* Cosa si è venduto nella fascia oraria scelta qui sopra: totale, tutti
+          i prodotti e le categorie. Risponde a "fra le 22 e l'una cosa vendo?" */}
+      <ChartCard title="🧾 Venduto nella fascia oraria">
+        <div className="row between" style={{ alignItems: 'baseline', marginBottom: 8 }}>
+          <span className="muted small">
+            {hourRange.from}–{hourRange.to} · {fascia.nOrdini} cont{fascia.nOrdini === 1 ? 'o' : 'i'}
+          </span>
+          <strong className="price" style={{ fontSize: '1.3rem' }}>{formatPrice(fascia.totale)}</strong>
+        </div>
+        {fascia.prodotti.length === 0 ? (
+          <p className="muted small">Nessuna vendita in questa fascia.</p>
+        ) : (
+          <>
+            <div className="muted small" style={{ margin: '6px 0 4px' }}>Categorie</div>
+            <HBars
+              data={fascia.categorie.map((c) => ({
+                label: `${c.name} (${c.qty})`,
+                value: c.revenue,
+                text: formatPrice(c.revenue),
+              }))}
+            />
+            <div className="muted small" style={{ margin: '10px 0 4px' }}>
+              Prodotti venduti ({fascia.prodotti.length})
+            </div>
+            <div className="fascia-prodotti">
+              {fascia.prodotti.map((p) => (
+                <div className="row between fascia-riga" key={p.name}>
+                  <span className="grow">{p.qty}× {p.name}</span>
+                  <span className="muted">{formatPrice(p.revenue)}</span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </ChartCard>
 
       <ChartCard title="📅 Incasso per giornata nella fascia scelta">
