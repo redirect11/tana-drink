@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react'
 import { fetchCashSessions, fetchOrdersBetween, fetchDrinks } from '../lib/api.js'
 import { sessionReport } from '../lib/stats.js'
+import { cashRecap } from '../lib/cassa.js'
 import { businessDayKey } from '../lib/businessDay.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import { printChiusuraCassa } from '../lib/printer.js'
 import { toastSuccess, toastError } from '../lib/toast.js'
 
 // STORICO DELLE CHIUSURE DI CASSA: una riga per serata, dall'apertura alla
-// chiusura, col riepilogo salvato in quel momento (incassi per metodo, sconti,
-// contante contato). Aprendo una riga si vede anche COSA è stato venduto in
+// chiusura. Aprendo una riga il riepilogo (incassi per metodo, sconti, contante
+// atteso) viene RICALCOLATO dagli ordini di quella finestra, non riletto dallo
+// snapshot congelato alla chiusura. Si vede anche COSA è stato venduto in
 // quella finestra — comprese le ore dopo la mezzanotte, perché il periodo è
 // quello della sessione e non della giornata solare.
 
@@ -78,7 +80,15 @@ export default function CashSessionsList() {
         fetchDrinks({}).catch(() => []),
       ])
       const drinksById = Object.fromEntries(drinks.map((d) => [d.id, d]))
-      setReport({ id: s.id, dati: sessionReport(ordini, s, drinksById) })
+      // Il riepilogo si RICALCOLA dagli ordini, non si legge dallo snapshot
+      // salvato alla chiusura: le serate chiuse con una versione vecchia
+      // avevano le carte di credito finite nel secchio dei contanti, e il
+      // dato buono (payments[].method) è sempre rimasto sull'ordine.
+      setReport({
+        id: s.id,
+        dati: sessionReport(ordini, s, drinksById),
+        recap: cashRecap(ordini, s, s.closed_at || new Date().toISOString()),
+      })
     } catch (e) {
       setError(e.message)
     } finally {
@@ -100,9 +110,11 @@ export default function CashSessionsList() {
       )}
 
       {sessions.map((s) => {
-        const snap = s.snapshot || {}
+        const salvato = s.snapshot || {}
         const aperta = s.status === 'open'
         const isOpen = openId === s.id
+        // Ricalcolato quando la riga è aperta; finché carica, quello salvato.
+        const snap = (isOpen && report?.id === s.id && report.recap) || salvato
         return (
           <div className="card" key={s.id} style={{ margin: '8px 0 0', padding: 10 }}>
             <button
@@ -123,7 +135,7 @@ export default function CashSessionsList() {
 
             {isOpen && (
               <div style={{ marginTop: 8 }}>
-                {/* Riepilogo salvato alla chiusura */}
+                {/* Incassi per metodo, ricalcolati dagli ordini della serata */}
                 <div className="row between muted small">
                   <span>💶 Contanti</span>
                   <span>{formatPrice(snap.byMethod?.banco ?? 0)}</span>
@@ -136,12 +148,12 @@ export default function CashSessionsList() {
                   <span>📟 POS SumUp</span>
                   <span>{formatPrice(snap.byMethod?.lettore ?? 0)}</span>
                 </div>
-                {(snap.sconti ?? 0) > 0 && (
-                  <div className="row between muted small">
-                    <span>🎁 Sconti concessi</span>
-                    <span>−{formatPrice(snap.sconti)}</span>
-                  </div>
-                )}
+                {/* Sempre in elenco, anche a zero: "quanto ho lasciato sul
+                    tavolo stasera" è una domanda che si fa ogni sera. */}
+                <div className="row between muted small">
+                  <span>🎁 Sconti concessi</span>
+                  <span>{(snap.sconti ?? 0) > 0 ? `−${formatPrice(snap.sconti)}` : formatPrice(0)}</span>
+                </div>
                 <div className="row between muted small">
                   <span>Conti chiusi</span>
                   <span>{snap.nPagati ?? 0}</span>
