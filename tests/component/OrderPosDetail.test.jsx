@@ -255,6 +255,36 @@ describe('aggiunte: la nuova comanda è gestita internamente', () => {
     expect(uniti[0].qty).toBe(5)
   })
 
+  it("Unisci e Separa convivono: si può separare anche quando c'è da unire", async () => {
+    const user = userEvent.setup()
+    mount(
+      baseOrder({
+        comande: [
+          {
+            id: 'c1',
+            seq: 1,
+            status: 'in_preparazione',
+            status_times: {},
+            items: [
+              { drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 4 }, // da separare
+              { drink_id: 'gin', name: 'Gin Tonic', unit_price: 8, qty: 1 },
+              { drink_id: 'gin', name: 'Gin Tonic', unit_price: 8, qty: 1 }, // da unire
+            ],
+          },
+        ],
+      })
+    )
+    // entrambe le azioni sono possibili → entrambi i tasti sono lì
+    expect(screen.getByRole('button', { name: /Unisci/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Separa/ })).toBeInTheDocument()
+
+    // Separa: il Mojito da 4 diventa 4 righe da 1
+    await user.click(screen.getByRole('button', { name: /Separa/ }))
+    await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalled())
+    const dopo = bartenderUpdateComanda.mock.calls.at(-1)[2].items
+    expect(dopo.filter((i) => i.drink_id === 'mojito')).toHaveLength(4)
+  })
+
   it("il + su un item del conto è un'aggiunta che si conferma da sola", async () => {
     const user = userEvent.setup()
     mount(baseOrder())
