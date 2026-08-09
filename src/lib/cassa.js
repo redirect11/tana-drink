@@ -30,6 +30,7 @@ export function cashRecap(orders, session, nowIso) {
   let nPagati = 0
   let apertoDaIncassare = 0
   let nAperti = 0
+  let sconti = 0 // sconti applicati ai conti chiusi nella finestra
 
   const bump = (ts, amt, method) => {
     if (!(amt > 0)) return
@@ -61,6 +62,11 @@ export function cashRecap(orders, session, nowIso) {
       collected += amt
     }
     if (collected > 0 && o?.payment_status === 'pagato') nPagati += 1
+    // Sconti concessi sui conti chiusi in questa cassa: sono già dedotti dagli
+    // incassi, ma vanno mostrati per sapere quanto si è "lasciato sul tavolo".
+    if (o?.payment_status === 'pagato' && inRange(o?.paid_at, from, to)) {
+      sconti = round2(sconti + (Number(o.discount_amount) || 0))
+    }
 
     if (o?.payment_status !== 'pagato') {
       const due = orderDue(o)
@@ -77,6 +83,7 @@ export function cashRecap(orders, session, nowIso) {
 
   return {
     incassato,
+    sconti,
     byMethod,
     nPagati,
     apertoDaIncassare,

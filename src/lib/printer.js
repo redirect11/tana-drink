@@ -489,6 +489,87 @@ export async function printOrdineFornitore(order) {
 
 // ── TEST STAMPA ───────────────────────────────────────────────────────────────
 
+// ── CHIUSURA CASSA ───────────────────────────────────────────────────────────
+// Riepilogo di fine serata da allegare al fondo: incassato per metodo
+// (contante, carta, POS, online), sconti concessi, conti chiusi e contante
+// atteso in cassa. `recap` è quello di cashRecap().
+export async function printChiusuraCassa(recap, session, opts = {}) {
+  const prn = await getPrinter()
+  const s = loadPrinterSettings()
+  const { date, time } = italianDateTime(new Date().toISOString())
+  const eur = (n) => `${(Number(n) || 0).toFixed(2)}€`
+
+  prn.addTextLang('it')
+  prn.addTextSmooth(true)
+
+  prn.addTextAlign(prn.ALIGN_CENTER)
+  prn.addTextSize(2, 2)
+  prn.addTextStyle(false, false, true, prn.COLOR_1)
+  prn.addText(`${s.businessName}\n`)
+  prn.addTextSize(1, 1)
+  prn.addText('CHIUSURA CASSA\n')
+  prn.addTextStyle(false, false, false, prn.COLOR_1)
+  prn.addTextAlign(prn.ALIGN_LEFT)
+  prn.addText(`${date}, ${time}\n`)
+  if (session?.opened_at) {
+    const a = italianDateTime(session.opened_at)
+    prn.addText(`Apertura: ${a.date}, ${a.time}\n`)
+  }
+  if (opts.by) prn.addText(`Operatore: ${opts.by}\n`)
+  prn.addText(line())
+
+  // ── Incassi per metodo ──
+  prn.addTextStyle(false, false, true, prn.COLOR_1)
+  prn.addText('Incassi per metodo\n')
+  prn.addTextStyle(false, false, false, prn.COLOR_1)
+  const m = recap?.byMethod || {}
+  prn.addText(row('Contante', eur(m.banco)))
+  prn.addText(row('Carta di credito', eur(m.carta)))
+  prn.addText(row('Carta (POS SumUp)', eur(m.lettore)))
+  if (Number(m.online) > 0) prn.addText(row('Online', eur(m.online)))
+  prn.addText(line())
+
+  // ── Sconti concessi (già dedotti dagli incassi) ──
+  if (Number(recap?.sconti) > 0) {
+    prn.addText(row('Sconti concessi', `-${eur(recap.sconti)}`))
+    prn.addText(line())
+  }
+
+  // ── Totale ──
+  prn.addTextAlign(prn.ALIGN_CENTER)
+  prn.addTextSize(1, 2)
+  prn.addTextStyle(false, false, true, prn.COLOR_1)
+  prn.addText('Totale incassato\n')
+  prn.addTextSize(3, 3)
+  prn.addText(`${eur(recap?.incassato)}\n`)
+  prn.addTextSize(1, 1)
+  prn.addTextStyle(false, false, false, prn.COLOR_1)
+  prn.addTextAlign(prn.ALIGN_LEFT)
+  prn.addText(line())
+
+  // ── Cassa ──
+  prn.addText(row('Conti chiusi', String(recap?.nPagati ?? 0)))
+  prn.addText(row('Fondo cassa', eur(recap?.fondo)))
+  prn.addText(row('Contante atteso', eur(recap?.contanteAtteso)))
+  if (opts.countedCash != null && opts.countedCash !== '') {
+    const counted = Number(String(opts.countedCash).replace(',', '.')) || 0
+    prn.addText(row('Contante contato', eur(counted)))
+    const diff = Math.round((counted - (Number(recap?.contanteAtteso) || 0)) * 100) / 100
+    prn.addText(row('Differenza', `${diff > 0 ? '+' : ''}${eur(diff)}`))
+  }
+  if (Number(recap?.apertoDaIncassare) > 0) {
+    prn.addText(line())
+    prn.addText(row(`Conti aperti (${recap.nAperti})`, eur(recap.apertoDaIncassare)))
+  }
+  prn.addText(line())
+
+  prn.addTextAlign(prn.ALIGN_CENTER)
+  prn.addText(`${s.businessFooter}\n`)
+  prn.addFeedLine(4)
+  prn.addCut(prn.CUT_FEED)
+  prn.send()
+}
+
 export async function printTest() {
   const prn = await getPrinter()
   const s = loadPrinterSettings()
