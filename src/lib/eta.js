@@ -102,19 +102,40 @@ export function phaseAverages(prepStats, etaStats) {
 
 const isCancelled = (o) => o.status === ORDER_STATUSES.ANNULLATO
 
+// SCONTO SPALMATO SULLE RIGHE. Lo sconto è un importo sul CONTO, mentre le
+// righe portano il prezzo di LISTINO: sommando i listini si legge un incasso
+// che non è mai entrato in cassa (4 coca cola a 3€ = 12€ anche se il conto è
+// stato chiuso a 9€). Il fattore ripartisce lo sconto in proporzione, così
+// "venduto per prodotto" e "per categoria" tornano col totale incassato.
+export function discountFactor(order) {
+  const lordo = (order?.order_items || []).reduce(
+    (s, i) => s + (Number(i.qty) || 0) * (Number(i.unit_price) || 0),
+    0
+  )
+  const sconto = Number(order?.discount_amount) || 0
+  if (!(lordo > 0) || !(sconto > 0)) return 1
+  return Math.max(0, 1 - sconto / lordo)
+}
+
+const cent = (n) => Math.round((Number(n) || 0) * 100) / 100
+
 // Vendite per prodotto: [{ name, qty, revenue }] ordinate per quantità.
+// `revenue` è AL NETTO degli sconti applicati al conto.
 export function aggregateProducts(orders) {
   const byName = new Map()
   for (const o of orders) {
     if (isCancelled(o)) continue
+    const f = discountFactor(o)
     for (const i of o.order_items || []) {
       const cur = byName.get(i.name) || { name: i.name, qty: 0, revenue: 0 }
       cur.qty += Number(i.qty) || 0
-      cur.revenue += (Number(i.qty) || 0) * (Number(i.unit_price) || 0)
+      cur.revenue += (Number(i.qty) || 0) * (Number(i.unit_price) || 0) * f
       byName.set(i.name, cur)
     }
   }
-  return [...byName.values()].sort((a, b) => b.qty - a.qty || a.name.localeCompare(b.name))
+  return [...byName.values()]
+    .map((x) => ({ ...x, revenue: cent(x.revenue) }))
+    .sort((a, b) => b.qty - a.qty || a.name.localeCompare(b.name))
 }
 
 // Incassi, esclusi gli ordini annullati.

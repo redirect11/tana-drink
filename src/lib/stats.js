@@ -2,7 +2,7 @@
 // Logica pura senza dipendenze Firestore: testabile in isolamento.
 // Riusa aggregateProducts/ordersFinance da eta.js.
 import { ORDER_STATUSES } from './orderStatus.js'
-import { aggregateProducts, ordersFinance } from './eta.js'
+import { aggregateProducts, ordersFinance, discountFactor } from './eta.js'
 import { businessDayKey, DEFAULT_CUTOFF_HOUR } from './businessDay.js'
 
 const isCancelled = (o) => o.status === ORDER_STATUSES.ANNULLATO
@@ -208,18 +208,22 @@ export function topProducts(orders, limit = 10) {
 }
 
 // ── Incasso per categoria menu ────────────────────────────────────────
+// `revenue` AL NETTO degli sconti, come per i prodotti: vedi discountFactor.
 export function revenueByCategory(orders, drinksById) {
   const byCat = new Map()
   for (const o of valid(orders)) {
+    const f = discountFactor(o)
     for (const i of o.order_items || []) {
       const cat = drinksById?.[i.drink_id]?.category || 'Altro'
       const cur = byCat.get(cat) || { name: cat, revenue: 0, qty: 0 }
-      cur.revenue += (Number(i.qty) || 0) * (Number(i.unit_price) || 0)
+      cur.revenue += (Number(i.qty) || 0) * (Number(i.unit_price) || 0) * f
       cur.qty += Number(i.qty) || 0
       byCat.set(cat, cur)
     }
   }
-  return [...byCat.values()].sort((a, b) => b.revenue - a.revenue)
+  return [...byCat.values()]
+    .map((x) => ({ ...x, revenue: Math.round(x.revenue * 100) / 100 }))
+    .sort((a, b) => b.revenue - a.revenue)
 }
 
 // ── Consumo ingredienti (qty venduta × ricetta) ───────────────────────

@@ -242,3 +242,60 @@ describe('sessionReport (serata di cassa, da apertura a chiusura)', () => {
     expect(sessionReport([], null, {})).toBeNull()
   })
 })
+
+// Lo SCONTO è un importo sul conto, i prodotti hanno il prezzo di listino:
+// nel venduto per prodotto/categoria va spalmato, altrimenti si legge un
+// incasso che in cassa non è mai entrato (segnalato da Flavio sul venduto
+// della serata: 4 coca cola × 3€ = 12€ anche se il conto è stato scontato).
+const { aggregateProducts } = await import('../../src/lib/eta.js')
+
+describe('venduto al netto degli sconti', () => {
+  const drinksById = { d1: { category: 'ANALCOLICI' } }
+  const ordini = [
+    {
+      status: 'pagato',
+      total: 12,
+      discount_amount: 3, // -25%
+      created_at: '2026-06-06T21:00:00.000Z',
+      order_items: [{ drink_id: 'd1', name: 'COCA COLA VETRO', qty: 4, unit_price: 3 }],
+    },
+  ]
+
+  it('il prodotto porta il prezzo scontato, non il listino', () => {
+    const p = aggregateProducts(ordini)[0]
+    expect(p.qty).toBe(4)
+    expect(p.revenue).toBe(9) // 12 − 3, non 12
+  })
+
+  it('anche la categoria', () => {
+    expect(revenueByCategory(ordini, drinksById)[0].revenue).toBe(9)
+  })
+
+  it('senza sconto resta il listino', () => {
+    const senza = [{ ...ordini[0], discount_amount: 0 }]
+    expect(aggregateProducts(senza)[0].revenue).toBe(12)
+  })
+
+  it('lo sconto si spalma in proporzione fra righe diverse', () => {
+    const misto = [
+      {
+        status: 'pagato',
+        total: 100,
+        discount_amount: 10, // -10% su tutto
+        created_at: '2026-06-06T21:00:00.000Z',
+        order_items: [
+          { drink_id: 'd1', name: 'Negroni', qty: 5, unit_price: 16 }, // 80 → 72
+          { drink_id: 'd1', name: 'Ceres', qty: 5, unit_price: 4 }, // 20 → 18
+        ],
+      },
+    ]
+    const p = aggregateProducts(misto)
+    expect(p.find((x) => x.name === 'Negroni').revenue).toBe(72)
+    expect(p.find((x) => x.name === 'Ceres').revenue).toBe(18)
+  })
+
+  it('sconto più grande del conto non genera incassi negativi', () => {
+    const assurdo = [{ ...ordini[0], discount_amount: 99 }]
+    expect(aggregateProducts(assurdo)[0].revenue).toBe(0)
+  })
+})
