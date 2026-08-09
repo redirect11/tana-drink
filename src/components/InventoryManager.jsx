@@ -34,6 +34,7 @@ import {
   bottleBreakdown,
   inventorySummary,
   filterItems,
+  formatIn,
   ASSORTIMENTI,
   assortimentoDi,
   costWithVat,
@@ -244,10 +245,16 @@ function ProductsPanel() {
             </dd>
           </div>
         ) : (
-          it.unit !== 'pz' && Number(it.package_size) > 0 && (
+          Number(it.package_size) > 0 && (
             <div className="inv-info-row">
               <dt>Confezione</dt>
-              <dd>1 conf. = {fmtItem(it.package_size, it)}</dd>
+              <dd>
+                {it.unit === 'pz' ? (
+                  <>1 pz = {formatIn(it.package_size, it.content_unit === 'g' ? 'g' : 'cl')}</>
+                ) : (
+                  <>1 conf. = {fmtItem(it.package_size, it)}</>
+                )}
+              </dd>
             </div>
           )
         )}
@@ -1226,6 +1233,14 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
       initial?.package_size != null && initial?.package_size !== ''
         ? String(fromBaseQty(initial.package_size, initUnit))
         : '',
+    // Contenuto di UN pezzo, per gli articoli contati a pezzo: la bottiglia
+    // si conta a bottiglie, ma 33 cl li contiene lo stesso — e senza quel
+    // numero non esiste un costo al cl.
+    content_size:
+      initial?.unit === 'pz' && Number(initial?.package_size) > 0
+        ? String(fromBaseQty(initial.package_size, initial?.content_unit === 'g' ? 'g' : 'cl'))
+        : '',
+    content_unit: initial?.content_unit === 'g' ? 'g' : 'cl',
     low_threshold: initial?.low_threshold ? String(fromBaseQty(initial.low_threshold, initUnit)) : '',
     bottles: '',
     open_content: '',
@@ -1274,7 +1289,11 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
     if (!form.name.trim()) return
     setSaving(true)
     try {
-      const packBase = isPz ? null : toBaseQty(num(form.package_size), form.unit) || null
+      // A pezzo il contenuto arriva dal suo campo (33 cl), altrimenti dal
+      // contenuto per confezione nell'unità scelta.
+      const packBase = isPz
+        ? toBaseQty(num(form.content_size), form.content_unit) || null
+        : toBaseQty(num(form.package_size), form.unit) || null
       const base = {
         name: form.name.trim(),
         unit: baseUnit(form.unit), // base in cui è salvato lo stock
@@ -1285,6 +1304,8 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
         vat: Number(form.vat) || 0,
         status: form.status || 'linea',
         package_size: packBase,
+        // Serve solo a pezzo: dice se quel contenuto è un volume o un peso.
+        content_unit: isPz && packBase ? baseUnit(form.content_unit) : null,
         low_threshold: toBaseQty(num(form.low_threshold), form.unit),
       }
       // Cambio del modo di gestire l'articolo SENZA il contenuto per confezione:
@@ -1412,10 +1433,40 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
         </div>
       )}
 
-      {!isPz && (
+      {!isPz ? (
         <>
           <label htmlFor="ipkg">Contenuto per confezione ({form.unit})</label>
           <input id="ipkg" type="number" step="any" min="0" value={form.package_size} onChange={set('package_size')} placeholder={`Es. ${form.unit === 'l' ? '1' : form.unit === 'cl' ? '100' : '1000'} per una bottiglia da 1 L`} />
+        </>
+      ) : (
+        <>
+          <label htmlFor="icontent">Contenuto di un pezzo</label>
+          <div className="row" style={{ gap: 6 }}>
+            <input
+              id="icontent"
+              type="number"
+              step="any"
+              min="0"
+              className="grow"
+              value={form.content_size}
+              onChange={set('content_size')}
+              placeholder="Es. 33 per una bottiglia da 33 cl"
+            />
+            <select
+              value={form.content_unit}
+              onChange={set('content_unit')}
+              aria-label="Unità del contenuto"
+              style={{ width: 90 }}
+            >
+              <option value="cl">cl</option>
+              <option value="ml">ml</option>
+              <option value="g">g</option>
+            </select>
+          </div>
+          <p className="muted small" style={{ margin: '2px 0 8px' }}>
+            La giacenza si conta a pezzi. Il contenuto serve solo a sapere quanto costa
+            al cl (o al grammo) quello che c&apos;è dentro.
+          </p>
         </>
       )}
 
