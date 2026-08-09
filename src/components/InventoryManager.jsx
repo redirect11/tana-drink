@@ -54,7 +54,7 @@ import CategoryRail from './CategoryRail.jsx'
 
 const STATUS_ITEM = [
   { value: 'assortimento', label: 'In assortimento' },
-  { value: 'linea', label: '● In linea' },
+  { value: 'linea', label: '🍾 In linea' },
   { value: 'premium', label: '👑 Premium' },
   { value: 'out', label: '🚫 Fuori assortimento' },
 ]
@@ -68,11 +68,7 @@ const STATUS_LABEL = { ok: '', low: 'in esaurimento', empty: 'esaurito' }
 // si impara cosa vuol dire il bollino, senza una legenda a parte da cercare.
 const ASSORTIMENTO_LABEL = {
   assortimento: <>📦 In assortimento</>,
-  linea: (
-    <>
-      <span className="badge-linea" style={{ marginLeft: 0, marginRight: 6 }} /> In linea
-    </>
-  ),
+  linea: <>🍾 In linea</>,
   premium: <>👑 Premium</>,
   out: (
     <>
@@ -89,11 +85,10 @@ const ASSORTIMENTO_TITOLO = {
 function SegnoAssortimento({ item }) {
   const a = assortimentoDi(item)
   if (a === 'out') return <span className="badge-empty">OUT</span>
-  if (a === 'premium') return <span className="badge-premium" title="Premium">👑</span>
-  // Un bollino, non un'icona: nella riga ci sono già il pallino delle scorte
-  // a sinistra e i numeri a destra, e un'altra emoji sarebbe rumore.
-  if (a === 'linea')
-    return <span className="badge-linea" title="In linea" aria-label="in linea" />
+  if (a === 'premium') return <span className="badge-segno" title="Premium">👑</span>
+  // La bottiglia: ora è libera, perché la colonna scorte non la usa più per
+  // contare le bottiglie rimaste (scrive "3 bott.").
+  if (a === 'linea') return <span className="badge-segno" title="In linea">🍾</span>
   return null
 }
 
