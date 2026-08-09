@@ -690,12 +690,15 @@ export default function OrderPosDetail({ order: orderProp = null }) {
     transformEditableComande(explode)
   }
   const editableComande = effComande.filter(comandaEditable)
+  // Unisci e Separa sono INDIPENDENTI: si può avere insieme una riga da 5 (da
+  // separare) e due righe uguali (da unire), quindi entrambi i tasti compaiono
+  // quando l'azione è possibile — prima "Separa" spariva finché c'era qualcosa
+  // da unire.
   const canMerge =
     hasMergeable(draft) || editableComande.some((c) => hasMergeable(c.items || []))
   const canSplit =
-    !canMerge &&
-    (draft.some((l) => l.qty > 1) ||
-      editableComande.some((c) => (c.items || []).some((i) => i.qty > 1)))
+    draft.some((l) => l.qty > 1) ||
+    editableComande.some((c) => (c.items || []).some((i) => i.qty > 1))
   const applyEdit = ({ name, price, recipe_items, note }) => {
     const l = editLine
     setEditLine(null)
