@@ -8,6 +8,8 @@ import {
   updateCategory,
   deleteCategory,
   fetchInventoryItems,
+  subscribePosPrefs,
+  savePosColors,
 } from '../lib/api.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import { deleteDrinkImageByUrl } from '../lib/storage.js'
@@ -16,7 +18,12 @@ import MarginList from './MarginList.jsx'
 import DrinkForm from './DrinkForm.jsx'
 import { saveDrinkFromForm } from '../lib/saveDrink.js'
 import CategoryRail from './CategoryRail.jsx'
-import { CATEGORY_ICONS, catColor } from '../lib/categoryColors.js'
+import {
+  CATEGORY_ICONS,
+  catColor,
+  CATEGORY_PALETTE,
+  drinkCategoryColor,
+} from '../lib/categoryColors.js'
 
 const EMPTY = {
   name: '',
@@ -43,7 +50,27 @@ export default function MenuManager() {
   const [availFilter, setAvailFilter] = useState('all') // 'all' | 'yes' | 'no'
   const [showMargini, setShowMargini] = useState(false)
   const [collapsed, setCollapsed] = useState(() => new Set()) // categorie chiuse
-  const [openId, setOpenId] = useState(null) // card con azioni aperte
+  const [openId, setOpenId] = useState(null)
+  // COLORE DEL PRODOTTO NEL POS. Vive nelle preferenze del POS (pos_prefs),
+  // non sul drink: qui si scrive nello stesso posto, così il colore scelto
+  // dal menù e quello scelto dal POS sono la stessa cosa e non due verità.
+  const [tileColors, setTileColors] = useState({})
+  useEffect(
+    () =>
+      subscribePosPrefs((p) => {
+        if (p?.colors && typeof p.colors === 'object' && !Array.isArray(p.colors)) {
+          setTileColors(p.colors)
+        }
+      }, () => {}),
+    []
+  )
+  const setTileColor = (id, color) => {
+    const next = { ...tileColors }
+    if (color) next[id] = color
+    else delete next[id]
+    setTileColors(next)
+    savePosColors(next).catch(() => {})
+  } // card con azioni aperte
 
   const catName = (id) => categories.find((c) => c.id === id)?.name
 
@@ -308,7 +335,15 @@ export default function MenuManager() {
                         onClick={() => setOpenId(open ? null : d.id)}
                       >
                         <div className="row between" style={{ alignItems: 'flex-start', gap: 6 }}>
-                          <strong style={{ fontSize: '0.92rem', lineHeight: 1.25 }}>{d.name}</strong>
+                          <strong style={{ fontSize: '0.92rem', lineHeight: 1.25 }}>
+                            {/* Il colore con cui il prodotto appare al banco:
+                                si vede qui senza dover aprire il POS. */}
+                            <span
+                              className="menu-colore-spia"
+                              style={{ background: tileColors[d.id] || drinkCategoryColor(d, categories) }}
+                            />
+                            {d.name}
+                          </strong>
                           {!d.available && <span className="pill ritirato">off</span>}
                         </div>
                         <div className="row between" style={{ alignItems: 'baseline' }}>
@@ -333,6 +368,37 @@ export default function MenuManager() {
                               {d.recipe_items.map((r) => `${r.name} ${formatQty(r.qty, r.unit)}`).join(' · ')}
                             </p>
                           )}
+                          {/* COLORE nel POS: si sceglie da qui senza passare
+                              dal banco. Scrive dove scrive il POS, quindi il
+                              colore è uno solo. */}
+                          <div className="menu-colori">
+                            <span className="muted small">Colore nel POS</span>
+                            <div className="menu-colori-riga">
+                              <button
+                                type="button"
+                                className={`menu-colore auto${tileColors[d.id] ? '' : ' active'}`}
+                                title="Colore della categoria"
+                                onClick={() => setTileColor(d.id, null)}
+                                style={{ background: drinkCategoryColor(d, categories) }}
+                              >
+                                A
+                              </button>
+                              {CATEGORY_PALETTE.map((c) => (
+                                <button
+                                  key={c}
+                                  type="button"
+                                  aria-label={`Colore ${c}`}
+                                  className={`menu-colore${
+                                    (tileColors[d.id] || '').toLowerCase() === c.toLowerCase()
+                                      ? ' active'
+                                      : ''
+                                  }`}
+                                  onClick={() => setTileColor(d.id, c)}
+                                  style={{ background: c }}
+                                />
+                              ))}
+                            </div>
+                          </div>
                           <button className="btn secondary small block" onClick={() => setEditing(d)}>
                             ✏️ Modifica
                           </button>
