@@ -18,6 +18,7 @@ import { costPerUnit } from './inventory.js'
 import { macroOfItem } from './macros.js'
 import { businessDayKey, DEFAULT_CUTOFF_HOUR } from './businessDay.js'
 import { ORDER_STATUSES } from './orderStatus.js'
+import { discountFactor } from './eta.js'
 
 // Chiave usata per l'incasso non attribuibile a nessuna macro.
 export const UNASSIGNED = 'none'
@@ -36,10 +37,14 @@ const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100
 //                 (item.vat: può differire per food/acqua/alcolici).
 //   fallbackVat → aliquota per le quote senza prodotto (ingredienti/drink non
 //                 collegati all'inventario).
+//   factor      → quota di prezzo davvero incassata (1 = nessuno sconto). Il
+//                 margine si calcola su quello che è entrato, non sul listino.
 export function splitLineRevenueByMacro(line, drink, itemsById, catToMacro, opts = {}) {
-  const { netByVat = false, fallbackVat = 0 } = opts
+  const { netByVat = false, fallbackVat = 0, factor = 1 } = opts
   const out = new Map()
-  const revenue = round2((Number(line?.qty) || 0) * (Number(line?.unit_price) || 0))
+  const revenue = round2(
+    (Number(line?.qty) || 0) * (Number(line?.unit_price) || 0) * (Number(factor) || 0)
+  )
   if (revenue <= 0) return out
   const net = (val, vat) => (netByVat ? val / (1 + (Number(vat) || 0) / 100) : val)
   const add = (k, val) => out.set(k, round2((out.get(k) || 0) + val))
@@ -98,8 +103,11 @@ export function revenueByMacro(orders, { drinksById, itemsById, catToMacro }) {
   const acc = new Map()
   for (const o of orders || []) {
     if (o?.status === ORDER_STATUSES.ANNULLATO) continue
+    const factor = discountFactor(o)
     for (const li of orderLines(o)) {
-      const split = splitLineRevenueByMacro(li, drinksById?.[li.drink_id], itemsById, catToMacro)
+      const split = splitLineRevenueByMacro(li, drinksById?.[li.drink_id], itemsById, catToMacro, {
+        factor,
+      })
       for (const [k, v] of split) acc.set(k, round2((acc.get(k) || 0) + v))
     }
   }
@@ -173,8 +181,12 @@ export function macroMonthlyReport({
     if (o?.status === ORDER_STATUSES.ANNULLATO) continue
     const month = (businessDayKey(o?.created_at, cutoffHour) || '').slice(0, 7)
     if (!monthSet.has(month)) continue
+    const factor = discountFactor(o)
     for (const li of orderLines(o)) {
-      const split = splitLineRevenueByMacro(li, drinksById?.[li.drink_id], itemsById, catToMacro, netOpts)
+      const split = splitLineRevenueByMacro(li, drinksById?.[li.drink_id], itemsById, catToMacro, {
+        ...netOpts,
+        factor,
+      })
       for (const [k, v] of split) {
         const cell = ensure(k, month)
         cell.fatturato = round2(cell.fatturato + v) // già al netto IVA per prodotto

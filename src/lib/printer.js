@@ -9,6 +9,8 @@
 //   3. Dal browser dell'iPad: vai su https://<IP>:8043 e accetta il certificato
 //   4. Da quel momento la connessione WSS funziona senza dialoghi
 
+import { CASH_METHOD_ORDER, cashMethodKeys } from './orderStatus.js'
+
 // Larghezza colonne stamante 80 mm (TM-m30II / TM-m30III): 48 chars std.
 const COL = 48
 
@@ -493,6 +495,17 @@ export async function printOrdineFornitore(order) {
 // Riepilogo di fine serata da allegare al fondo: incassato per metodo
 // (contante, carta, POS, online), sconti concessi, conti chiusi e contante
 // atteso in cassa. `recap` è quello di cashRecap().
+// Etichette per la stampante termica: niente emoji (la testina stampa
+// caratteri, non icone) e nomi come li chiama chi legge la striscia.
+const NOMI_STAMPA = {
+  banco: 'Contante',
+  carta: 'Carta di credito',
+  lettore: 'Carta (POS SumUp)',
+  online: 'Online',
+  buono: 'Buoni VIP',
+}
+const scontrinoMetodo = (k) => NOMI_STAMPA[k] || k
+
 export async function printChiusuraCassa(recap, session, opts = {}) {
   const prn = await getPrinter()
   const s = loadPrinterSettings()
@@ -522,18 +535,21 @@ export async function printChiusuraCassa(recap, session, opts = {}) {
   prn.addTextStyle(false, false, true, prn.COLOR_1)
   prn.addText('Incassi per metodo\n')
   prn.addTextStyle(false, false, false, prn.COLOR_1)
+  // Una riga per metodo battuto: i soliti sempre (anche a zero, così la
+  // striscia si legge uguale ogni sera) e in coda quelli nuovi, senza dover
+  // ristampare il codice quando si aggiunge un metodo di pagamento.
   const m = recap?.byMethod || {}
-  prn.addText(row('Contante', eur(m.banco)))
-  prn.addText(row('Carta di credito', eur(m.carta)))
-  prn.addText(row('Carta (POS SumUp)', eur(m.lettore)))
-  if (Number(m.online) > 0) prn.addText(row('Online', eur(m.online)))
+  for (const k of cashMethodKeys(m)) {
+    const noto = CASH_METHOD_ORDER.includes(k)
+    if (!noto && !(Number(m[k]) > 0)) continue
+    prn.addText(row(scontrinoMetodo(k), eur(m[k])))
+  }
   prn.addText(line())
 
   // ── Sconti concessi (già dedotti dagli incassi) ──
-  if (Number(recap?.sconti) > 0) {
-    prn.addText(row('Sconti concessi', `-${eur(recap.sconti)}`))
-    prn.addText(line())
-  }
+  // Sempre stampati, anche a zero: è una voce che si controlla ogni sera.
+  prn.addText(row('Sconti concessi', `-${eur(recap?.sconti)}`))
+  prn.addText(line())
 
   // ── Totale ──
   prn.addTextAlign(prn.ALIGN_CENTER)
