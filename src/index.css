@@ -3855,9 +3855,9 @@ body.fullbleed,
   opacity: 0.9;
 }
 
-/* "In linea": i prodotti che non devono mancare mai. Un bollino pieno, non
-   un'emoji — la bottiglia e' gia' il segno delle scorte rimaste, e due
-   simboli uguali nella stessa riga direbbero due cose diverse. */
+/* "In linea": i prodotti che non devono mancare mai. Un bollino pieno: nella
+   riga ci sono gia' il pallino delle scorte e i numeri, un'altra emoji
+   sarebbe solo rumore. */
 .badge-linea {
   display: inline-block;
   width: 9px;

@@ -80,9 +80,8 @@ function SegnoAssortimento({ item }) {
   const a = assortimentoDi(item)
   if (a === 'out') return <span className="badge-empty">OUT</span>
   if (a === 'premium') return <span className="badge-premium" title="Premium">👑</span>
-  // NON una bottiglia: 🍾 è già il segno delle bottiglie rimaste nella
-  // colonna scorte, e lo stesso simbolo due volte nella stessa riga vuol
-  // dire due cose diverse. Un bollino non compete con niente.
+  // Un bollino, non un'icona: nella riga ci sono già il pallino delle scorte
+  // a sinistra e i numeri a destra, e un'altra emoji sarebbe rumore.
   if (a === 'linea')
     return <span className="badge-linea" title="In linea" aria-label="in linea" />
   return null
@@ -248,7 +247,7 @@ function ProductsPanel() {
       <dl className="inv-info">
         {bd ? (
           <div className="inv-info-row">
-            <dt>🍾 Bottiglie</dt>
+            <dt>Bottiglie</dt>
             <dd>
               {bd.full} piene
               {bd.hasOpen && ` · 1 aperta (${fmtItem(bd.openRemaining, it)})`}
@@ -608,9 +607,14 @@ function ProductsPanel() {
                   <span className="inv-cell-num inv-row-stock">
                     {bs ? (
                       <>
-                        {bs.bottles} 🍾{' '}
+                        {/* Niente emoji della bottiglia: il conteggio si
+                            scrive. A zero non c'è nulla da chiamare "piena",
+                            e si leggeva "0 🍾 · piena". */}
+                        {bs.bottles} bott.{' '}
                         <span className="muted small">
-                          · {bs.open ? `aperta ${bs.open}` : bs.bottles > 1 ? 'piene' : 'piena'}
+                          {bs.bottles === 0
+                            ? '· esaurito'
+                            : `· ${bs.open ? `aperta ${bs.open}` : bs.bottles > 1 ? 'piene' : 'piena'}`}
                         </span>
                       </>
                     ) : (
@@ -661,7 +665,7 @@ function ProductsPanel() {
                     return (
                       <span style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                         <span className="grid-card-tot" style={{ fontSize: '1.05rem' }}>
-                          {bs ? `${bs.bottles} 🍾` : fmtItem(it.stock, it)}
+                          {bs ? `${bs.bottles} bott.` : fmtItem(it.stock, it)}
                         </span>
                         {bs && (
                           <span className="muted small" style={{ display: 'block' }}>

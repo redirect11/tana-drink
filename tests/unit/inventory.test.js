@@ -410,3 +410,22 @@ describe('contenuto di un pezzo', () => {
     expect(smallUnits(senzaContenuto)).toEqual(['pz'])
   })
 })
+
+// A giacenza zero non c'è nessuna bottiglia da chiamare "piena": la riga
+// diceva "0 🍾 · piena", che è una contraddizione in due parole.
+describe('bottiglie a zero', () => {
+  const gin = { unit: 'ml', display_unit: 'cl', package_size: 700, stock: 0 }
+  it('nessuna bottiglia, nessun residuo aperto', () => {
+    const bs = bottleSummary(gin)
+    expect(bs.bottles).toBe(0)
+    expect(bs.open).toBeNull()
+  })
+  it('una bottiglia intera resta una bottiglia piena', () => {
+    expect(bottleSummary({ ...gin, stock: 700 }).bottles).toBe(1)
+  })
+  it('una aperta conta come bottiglia, col suo residuo', () => {
+    const bs = bottleSummary({ ...gin, stock: 900 })
+    expect(bs.bottles).toBe(2)
+    expect(bs.open).toBe('20 cl')
+  })
+})
