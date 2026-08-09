@@ -105,6 +105,29 @@ export function revenueByHour(orders, range = DEFAULT_HOUR_RANGE) {
   return { buckets, peakLabel: peak?.label ?? null }
 }
 
+// Riepilogo di una SERATA DI CASSA (da apertura a chiusura): totale realmente
+// incassato, conti, prodotti venduti e categorie. La finestra è quella della
+// sessione, quindi comprende naturalmente le ore dopo la mezzanotte.
+export function sessionReport(orders, session, drinksById) {
+  if (!session?.opened_at) return null
+  const from = session.opened_at
+  const to = session.closed_at || null
+  const dentro = valid(orders).filter((o) => {
+    const t = o.created_at
+    return !!t && t >= from && (!to || t <= to)
+  })
+  const totale = dentro.reduce(
+    (s2, o) => s2 + (Number(o.total) || 0) - (Number(o.discount_amount) || 0),
+    0
+  )
+  return {
+    nOrdini: dentro.length,
+    totale: Math.round(totale * 100) / 100,
+    prodotti: aggregateProducts(dentro),
+    categorie: revenueByCategory(dentro, drinksById),
+  }
+}
+
 // Ordini che cadono in una FASCIA ORARIA (es. 22:00 → 01:00, anche a cavallo
 // della mezzanotte). Serve a rispondere a "cosa ho venduto fra le 22 e l'una":
 // da qui si passano gli ordini filtrati a topProducts / revenueByCategory.

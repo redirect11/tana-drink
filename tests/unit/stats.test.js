@@ -14,6 +14,7 @@ import {
   prepTimeStats,
   serviceModeSplit,
   hourRangeReport,
+  sessionReport,
 } from '../../src/lib/stats.js'
 
 const orders = [
@@ -207,5 +208,37 @@ describe('hourRangeReport (venduto in una fascia oraria)', () => {
     expect(r.nOrdini).toBe(0)
     expect(r.totale).toBe(0)
     expect(r.prodotti).toEqual([])
+  })
+})
+
+describe('sessionReport (serata di cassa, da apertura a chiusura)', () => {
+  const session = {
+    opened_at: '2026-06-06T19:00:00.000Z',
+    closed_at: '2026-06-07T02:00:00.000Z', // la serata scavalca la mezzanotte
+  }
+
+  it('somma quello venduto nella finestra, mezzanotte compresa', () => {
+    const ord = [
+      // dentro: sera
+      { status: 'pagato', total: 30, created_at: '2026-06-06T21:00:00.000Z',
+        order_items: [{ drink_id: 'd1', name: 'Negroni', qty: 3, unit_price: 10 }] },
+      // dentro: dopo mezzanotte
+      { status: 'pagato', total: 10, discount_amount: 2, created_at: '2026-06-07T00:30:00.000Z',
+        order_items: [{ drink_id: 'd1', name: 'Negroni', qty: 1, unit_price: 10 }] },
+      // fuori: prima dell'apertura
+      { status: 'pagato', total: 99, created_at: '2026-06-06T15:00:00.000Z',
+        order_items: [{ drink_id: 'd2', name: 'Ceres', qty: 9, unit_price: 4 }] },
+      // fuori: dopo la chiusura
+      { status: 'pagato', total: 50, created_at: '2026-06-07T03:00:00.000Z',
+        order_items: [{ drink_id: 'd2', name: 'Ceres', qty: 5, unit_price: 4 }] },
+    ]
+    const r = sessionReport(ord, session, drinksById)
+    expect(r.nOrdini).toBe(2)
+    expect(r.totale).toBe(38) // 30 + (10 − 2)
+    expect(r.prodotti.find((p) => p.name === 'Negroni').qty).toBe(4)
+  })
+
+  it('senza sessione → null', () => {
+    expect(sessionReport([], null, {})).toBeNull()
   })
 })

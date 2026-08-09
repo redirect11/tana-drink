@@ -1403,6 +1403,21 @@ body.fullbleed .bar-content {
   letter-spacing: -0.01em;
 }
 
+/* Riga di una serata nello storico chiusure di cassa. */
+.cash-sess-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 4px 0;
+  border: none;
+  background: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
 /* Elenco dei prodotti venduti in una fascia oraria: righe compatte scorrevoli. */
 .fascia-prodotti {
   max-height: 320px;
