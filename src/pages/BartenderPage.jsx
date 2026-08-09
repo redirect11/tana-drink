@@ -562,11 +562,25 @@ function OrderQueue() {
         <div className="empty">
           Carico gli ordini…
           {slowLoad && (
-            <p className="muted" style={{ fontSize: '0.85rem', marginTop: 12 }}>
-              Ci sta mettendo troppo? Controlla la connessione e che il database
-              sia raggiungibile (in sviluppo: emulatori avviati), poi ricarica la
-              pagina.
-            </p>
+            <>
+              {/* Chi legge questo sta al bancone, non davanti al codice: gli
+                  emulatori non gli dicono niente. La causa quasi sempre è una
+                  rete che RISULTA collegata ma non passa (wifi del locale che
+                  fa i capricci): lì l'app aspetta il server invece di
+                  arrendersi alla cache. */}
+              <p className="muted" style={{ fontSize: '0.85rem', marginTop: 12 }}>
+                Il wifi risulta collegato ma non sta passando niente. Prova a
+                spegnere e riaccendere il wifi, oppure passa alla rete del
+                telefono: gli ordini già presi restano al sicuro.
+              </p>
+              <button
+                className="btn ghost small"
+                style={{ marginTop: 8 }}
+                onClick={() => window.location.reload()}
+              >
+                🔄 Ricarica
+              </button>
+            </>
           )}
         </div>
       </div>

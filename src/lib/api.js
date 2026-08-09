@@ -4,6 +4,7 @@ import {
   addDoc,
   getDoc,
   getDocs,
+  getDocsFromCache,
   setDoc,
   updateDoc,
   deleteDoc,
@@ -829,21 +830,51 @@ export function subscribeActiveOrders(onChange, onError, { cutoffHour = DEFAULT_
   }
   const fail = onError ?? (() => {})
 
-  // Conti aperti: nessun limite di data, si chiudono solo a mano. Il filtro
-  // include anche i vecchi stati di lavorazione (ordini creati prima del
-  // modello conto/comande): la query lavora sul campo grezzo, quindi senza
-  // questi un conto storico non ancora saldato resterebbe invisibile.
-  const unsubAperti = onSnapshot(
-    query(
-      ordersCol,
-      where('status', 'in', [
-        ORDER_OPEN,
-        ORDER_STATUSES.RICEVUTO,
-        ORDER_STATUSES.IN_PREPARAZIONE,
-        ORDER_STATUSES.PRONTO,
-        ORDER_STATUSES.RITIRATO,
+  // Stati che tengono un conto "in vita". Include i vecchi stati di
+  // lavorazione: la query lavora sul campo grezzo, quindi senza questi un
+  // conto storico non ancora saldato resterebbe invisibile.
+  const STATI_APERTI = [
+    ORDER_OPEN,
+    ORDER_STATUSES.RICEVUTO,
+    ORDER_STATUSES.IN_PREPARAZIONE,
+    ORDER_STATUSES.PRONTO,
+    ORDER_STATUSES.RITIRATO,
+  ]
+  // Finestra volutamente abbondante per i conti chiusi di oggi; il taglio
+  // esatto lo fa businessDayKey.
+  const copertura = Timestamp.fromDate(coverageStart(new Date()))
+
+  // PRIMA DI TUTTO, LA CACHE. onSnapshot di norma risponde subito col dato
+  // locale, ma non quando la rete c'è e non funziona (wifi collegato senza
+  // internet, portale captive, DNS che non risponde): lì l'SDK crede di
+  // essere online e ASPETTA il server, anche per minuti. La coda restava
+  // sullo spinner pur avendo tutti gli ordini già in cache.
+  // Con una lettura esplicita dalla cache la schermata è utilizzabile
+  // subito; il listener poi allinea da solo quando la rete torna.
+  const dallaCache = async () => {
+    try {
+      const [a, r] = await Promise.all([
+        getDocsFromCache(query(ordersCol, where('status', 'in', STATI_APERTI))),
+        getDocsFromCache(query(ordersCol, where('created_at', '>=', copertura))),
       ])
-    ),
+      if (aperti.length === 0 && recenti.length === 0) {
+        const oggi = businessDayKey(new Date(), cutoffHour)
+        aperti = a.docs.map(mapOrder)
+        recenti = r.docs
+          .map(mapOrder)
+          .filter((o) => businessDayKey(o.created_at, cutoffHour) === oggi)
+        if (aperti.length || recenti.length) emit()
+      }
+    } catch {
+      // Cache vuota o non disponibile: si aspetta il listener, come prima.
+    }
+  }
+
+  dallaCache()
+
+  // Conti aperti: nessun limite di data, si chiudono solo a mano.
+  const unsubAperti = onSnapshot(
+    query(ordersCol, where('status', 'in', STATI_APERTI)),
     (snap) => {
       aperti = snap.docs.map(mapOrder)
       emit()
@@ -851,11 +882,9 @@ export function subscribeActiveOrders(onChange, onError, { cutoffHour = DEFAULT_
     fail
   )
 
-  // Chiusi/annullati della giornata commerciale in corso. La finestra della
-  // query è volutamente abbondante; il taglio esatto lo fa businessDayKey.
-  const from = Timestamp.fromDate(coverageStart(new Date()))
+  // Chiusi/annullati della giornata commerciale in corso.
   const unsubRecenti = onSnapshot(
-    query(ordersCol, where('created_at', '>=', from)),
+    query(ordersCol, where('created_at', '>=', copertura)),
     (snap) => {
       const oggi = businessDayKey(new Date(), cutoffHour)
       recenti = snap.docs
