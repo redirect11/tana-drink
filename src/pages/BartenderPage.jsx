@@ -861,8 +861,10 @@ function OrderQueue() {
             )}
           </div>
           {/* NOME del conto in grande: è la prima cosa da riconoscere sulla
-              card. Tavolo, gruppo e pagamento restano piccoli, sotto. */}
-          {o.customer_name && <div className="grid-card-name">{o.customer_name}</div>}
+              card. Tavolo, gruppo e pagamento restano piccoli, sotto.
+              La riga c'è SEMPRE, anche senza nome: altrimenti i conti senza
+              nome venivano più bassi e la board risultava a scalini. */}
+          <div className="grid-card-name">{o.customer_name || ' '}</div>
           <div className="grid-card-sub row between" style={{ gap: 6 }}>
             <span className="grow" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {o.table_label && <span className="muted">🍽 Tavolo {o.table_label}</span>}

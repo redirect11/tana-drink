@@ -1558,6 +1558,11 @@ body.fullbleed .bar-content {
 .grid-card-sub {
   font-size: 0.82rem;
   font-weight: 500;
+  /* Riga riservata anche quando è vuota: un conto senza tavolo deve avere
+     la stessa altezza di uno che ce l'ha, altrimenti le card non pareggiano
+     fra una riga e l'altra della board. L'altezza è quella di una pastiglia
+     (Tavolo, Pagato), che è il contenuto più alto che ci può stare. */
+  min-height: 22px;
   /* Stessa ragione del nome: `overflow: hidden` taglia le code se la riga
      e' troppo stretta. */
   line-height: 1.45;
