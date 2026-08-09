@@ -17,7 +17,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const mai = () => new Promise(() => {}) // una Promise che non si risolve mai
 
-const stato = { ordine: null, scritture: [], settingsAppese: false }
+const stato = { ordine: null, scritture: [], settingsAppese: false, magazzinoAppeso: false }
 
 vi.mock('../../src/lib/firebaseClient.js', () => ({
   db: {},
@@ -40,6 +40,12 @@ vi.mock('firebase/firestore', () => ({
   getDoc: vi.fn(async (ref) => {
     if (ref?.col === 'settings') {
       if (stato.settingsAppese) return mai()
+      return { exists: () => false, data: () => ({}) }
+    }
+    // Ricette e articoli: dopo un import non sono piu' in cache e la lettura
+    // parte verso la rete. Con la rete a meta' resta appesa per sempre.
+    if (ref?.col === 'drinks' || ref?.col === 'inventory_items') {
+      if (stato.magazzinoAppeso) return mai()
       return { exists: () => false, data: () => ({}) }
     }
     return {
@@ -80,7 +86,8 @@ vi.mock('firebase/firestore', () => ({
   },
 }))
 
-const { registerPayment, markOrderPaid, updateOrderItems } = await import('../../src/lib/api.js')
+const { registerPayment, markOrderPaid, updateOrderItems, addComanda, advanceComanda } =
+  await import('../../src/lib/api.js')
 
 const contoDa = (totale, extra = {}) => ({
   status: 'aperto',
@@ -187,5 +194,50 @@ describe('scrittura degli item', () => {
     await entroUnSecondo(updateOrderItems('ord-1', righe))
     const patch = stato.scritture.find((s) => s.tipo === 'update')?.patch
     expect(patch.discount_amount).toBe(8) // mai più del conto
+  })
+})
+
+// LA VENDITA SI SCRIVE PRIMA DEL MAGAZZINO.
+// Lo scarico delle scorte deve leggere ricette e articoli di inventario:
+// letture che, se quei documenti non sono in cache — per esempio dopo un
+// import che li ha riscritti tutti — partono verso la rete. Aspettarle prima
+// di salvare l'ordine significava PERDERE GLI ITEM quando la rete non
+// rispondeva: il conto non si salvava perche' il magazzino taceva.
+describe('aggiunte al conto col magazzino che non risponde', () => {
+  const conConto = () =>
+    contoDa(20, {
+      comande: [{ id: 'c1', seq: 1, status: 'ricevuto', items: [], inventory_applied: false }],
+    })
+
+  beforeEach(() => {
+    stato.ordine = conConto()
+    stato.scritture = []
+    stato.settingsAppese = false
+    stato.magazzinoAppeso = true // il caso peggiore
+  })
+
+  it('la comanda si aggiunge lo stesso, con gli item dentro', async () => {
+    await entroUnSecondo(
+      addComanda('ord-1', [{ drink_id: 'mojito', name: 'Mojito', unit_price: 8, qty: 2 }])
+    )
+    const patch = stato.scritture.find((s) => s.tipo === 'update')?.patch
+    expect(patch.comande).toHaveLength(2)
+    expect(patch.comande[1].items[0].name).toBe('Mojito')
+    expect(patch.items[0].qty).toBe(2)
+    expect(patch.total).toBe(16)
+  })
+
+  it('la comanda resta segnata come NON scaricata: le scorte si riprendono dopo', async () => {
+    await entroUnSecondo(
+      addComanda('ord-1', [{ drink_id: 'mojito', name: 'Mojito', unit_price: 8, qty: 1 }])
+    )
+    const patch = stato.scritture.find((s) => s.tipo === 'update')?.patch
+    expect(patch.comande[1].inventory_applied).toBe(false)
+  })
+
+  it('anche l’avanzamento di stato non aspetta il magazzino', async () => {
+    await entroUnSecondo(advanceComanda('ord-1', 'c1', 'in_preparazione'))
+    const patch = stato.scritture.find((s) => s.tipo === 'update')?.patch
+    expect(patch.comande[0].status).toBe('in_preparazione')
   })
 })

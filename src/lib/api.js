@@ -2061,6 +2061,91 @@ export async function markOrderPaid(id, method, { autoServe = true } = {}) {
 // e non richiede una transazione. Muta le comande (inventory_applied/
 // snapshot) e ritorna le scorte basse stimate dallo stock in cache.
 // `entries` = [{ orderId, comanda }].
+// SCARICO IN SOTTOFONDO — la vendita si scrive PRIMA, le scorte dopo.
+//
+// Lo scarico ha bisogno di leggere ricette e articoli di inventario. Sono
+// letture che offline arrivano dalla cache, ma se quei documenti non ci sono
+// (o sono stati riscritti dal server, come dopo un import) partono verso la
+// rete — e con una rete collegata che non passa restano appese. Aspettarle
+// prima di scrivere l'ordine significava PERDERE GLI ITEM: il conto non si
+// salvava perché il magazzino non rispondeva.
+//
+// Qui l'ordine è già scritto. Se lo scarico non riesce, la comanda resta
+// `inventory_applied: false` e viene ripresa al pagamento (unappliedEntries):
+// le scorte si allineano più tardi, la vendita non si perde mai.
+function scaricaInSottofondo(orderId, comandaId) {
+  ;(async () => {
+    try {
+      const ref = doc(db, 'orders', orderId)
+      const snap = await getDoc(ref)
+      if (!snap.exists()) return
+      const norm = normalizeOrderDoc(snap.data())
+      const comande = norm.comande.map((c) => ({ ...c }))
+      const comanda = comande.find((c) => c.id === comandaId)
+      if (!comanda || comanda.inventory_applied === true) return
+      const lowStock = await depleteComandeInventory([{ orderId, comanda }])
+      bgWrite(() => updateDoc(ref, { comande }), 'scarico scorte')
+      notifyLowStock(lowStock)
+    } catch {
+      /* si riprende al pagamento */
+    }
+  })()
+}
+
+// RIALLINEO IN SOTTOFONDO dopo una modifica di comanda già scaricata: si
+// confronta il consumo di prima con quello di adesso e si applica solo la
+// differenza. Come per lo scarico, la vendita è già scritta: qui si insegue
+// il magazzino, non viceversa.
+function riallineaInSottofondo(orderId, comandaId) {
+  ;(async () => {
+    try {
+      const ref = doc(db, 'orders', orderId)
+      const snap = await getDoc(ref)
+      if (!snap.exists()) return
+      const norm = normalizeOrderDoc(snap.data())
+      const comande = norm.comande.map((c) => ({ ...c }))
+      const comanda = comande.find((c) => c.id === comandaId)
+      if (!comanda) return
+      const items = Array.isArray(comanda.items) ? comanda.items : []
+      const drinkIds = [...new Set(items.filter((i) => !i.custom).map((i) => i.drink_id).filter(Boolean))]
+      const drinkSnaps = await Promise.all(drinkIds.map((d) => getDoc(doc(db, 'drinks', d))))
+      const drinksById = {}
+      drinkSnaps.forEach((sn, idx) => {
+        drinksById[drinkIds[idx]] = sn.exists() ? sn.data() : null
+      })
+      const oldCons = Array.isArray(comanda.inventory_consumption) ? comanda.inventory_consumption : []
+      const newCons = computeConsumption(items, drinksById)
+      const diffs = consumptionDiff(oldCons, newCons)
+      const invSnaps = await Promise.all(
+        diffs.map((d) => getDoc(doc(db, 'inventory_items', d.inventory_item_id)))
+      )
+      for (let idx = 0; idx < diffs.length; idx++) {
+        const d = diffs[idx]
+        const sn = invSnaps[idx]
+        if (!sn.exists()) continue
+        const curItem = sn.data()
+        bgWrite(() => updateDoc(doc(db, 'inventory_items', d.inventory_item_id), {
+          stock: increment(-qtyInStockUnit(d.delta, d.unit, curItem)),
+        }), 'riallineo scorta')
+        bgWrite(() => addDoc(movementsCol, {
+          item_id: d.inventory_item_id,
+          item_name: curItem.name,
+          type: d.delta > 0 ? 'unload' : 'load',
+          qty: Math.abs(d.delta),
+          unit: curItem.unit ?? null,
+          reason: 'modifica ordine',
+          order_id: orderId,
+          created_at: serverTimestamp(),
+        }), 'movimento scorta')
+      }
+      comanda.inventory_consumption = newCons
+      bgWrite(() => updateDoc(ref, { comande }), 'consumo comanda')
+    } catch {
+      /* il magazzino si riallinea alla prossima occasione */
+    }
+  })()
+}
+
 async function depleteComandeInventory(entries) {
   if (!entries.length) return []
   const plans = []
@@ -2148,10 +2233,10 @@ export async function advanceComanda(orderId, comandaId, newStatus) {
     : activeComanda({ comande })
   if (!comanda) throw new Error('Comanda non trovata')
 
-  // Scarico inventario alla presa in carico della comanda (una volta sola).
-  if (newStatus === ORDER_STATUSES.IN_PREPARAZIONE && comanda.inventory_applied !== true) {
-    lowStock = await depleteComandeInventory([{ orderId, comanda }])
-  }
+  // Scarico inventario alla presa in carico della comanda (una volta sola),
+  // ma DOPO aver salvato l'avanzamento: vedi scaricaInSottofondo.
+  const daScaricare =
+    newStatus === ORDER_STATUSES.IN_PREPARAZIONE && comanda.inventory_applied !== true
 
   comanda.status = newStatus
   comanda.status_times = { ...(comanda.status_times || {}), [newStatus]: nowIso }
@@ -2174,6 +2259,8 @@ export async function advanceComanda(orderId, comandaId, newStatus) {
   }
   bgWrite(() => updateDoc(orderRef, patch), 'stato comanda')
 
+  // Scorte dopo: se il magazzino non risponde l'avanzamento è comunque salvo.
+  if (daScaricare) scaricaInSottofondo(orderId, comanda.id)
   notifyLowStock(lowStock)
 
   // Statistiche tempi del servizio (per ETA cliente), per comanda.
@@ -2353,7 +2440,6 @@ export async function addComanda(orderId, items, { note = null } = {}) {
     inventory_consumption: null,
     created_at: nowIso,
   }
-  const lowStock = await depleteComandeInventory([{ orderId, comanda: nuova }])
   comande.push(nuova)
   const agg = aggregateItems(comande)
   const extras =
@@ -2373,7 +2459,8 @@ export async function addComanda(orderId, items, { note = null } = {}) {
     // più il significato che aveva quando è stato deciso.
     ...(nuovoSconto != null ? { discount_amount: nuovoSconto } : {}),
   }), 'aggiunta al conto')
-  notifyLowStock(lowStock)
+  // Le scorte si scalano DOPO: la vendita non deve aspettare il magazzino.
+  scaricaInSottofondo(orderId, nuova.id)
   return mapOrder(await getDoc(ref))
 }
 
@@ -2405,42 +2492,11 @@ export async function bartenderUpdateComanda(orderId, comandaId, { items }) {
     throw new Error('Comanda già servita: non più modificabile')
   }
 
-  // Scarico già applicato: riallinea le scorte con la DIFFERENZA
-  // (increment sul delta: commutativo, si accoda offline).
-  if (comanda.inventory_applied === true) {
-    const drinkIds = [...new Set(newItems.filter((i) => !i.custom).map((i) => i.drink_id).filter(Boolean))]
-    const drinkSnaps = await Promise.all(drinkIds.map((d) => getDoc(doc(db, 'drinks', d))))
-    const drinksById = {}
-    drinkSnaps.forEach((sn, idx) => {
-      drinksById[drinkIds[idx]] = sn.exists() ? sn.data() : null
-    })
-    const oldCons = Array.isArray(comanda.inventory_consumption) ? comanda.inventory_consumption : []
-    const newCons = computeConsumption(newItems, drinksById)
-    const diffs = consumptionDiff(oldCons, newCons)
-    const invSnaps = await Promise.all(
-      diffs.map((d) => getDoc(doc(db, 'inventory_items', d.inventory_item_id)))
-    )
-    for (let idx = 0; idx < diffs.length; idx++) {
-      const d = diffs[idx]
-      const sn = invSnaps[idx]
-      if (!sn.exists()) continue
-      const curItem = sn.data()
-      bgWrite(() => updateDoc(doc(db, 'inventory_items', d.inventory_item_id), {
-        stock: increment(-qtyInStockUnit(d.delta, d.unit, curItem)),
-      }), 'riallineo scorta')
-      bgWrite(() => addDoc(movementsCol, {
-        item_id: d.inventory_item_id,
-        item_name: curItem.name,
-        type: d.delta > 0 ? 'unload' : 'load',
-        qty: Math.abs(d.delta),
-        unit: curItem.unit ?? null,
-        reason: 'modifica ordine',
-        order_id: orderId,
-        created_at: serverTimestamp(),
-      }), 'movimento scorta')
-    }
-    comanda.inventory_consumption = newCons
-  }
+  // Scarico già applicato: le scorte si riallineano con la DIFFERENZA, ma
+  // DOPO aver salvato le righe. Prima si aspettavano qui le letture di
+  // ricette e articoli: se il magazzino non rispondeva, la modifica dell'ordine
+  // non veniva scritta e gli item andavano persi.
+  const daRiallineare = comanda.inventory_applied === true
 
   comanda.items = newItems
   const agg = aggregateItems(comande)
@@ -2458,6 +2514,8 @@ export async function bartenderUpdateComanda(orderId, comandaId, { items }) {
     total: nuovoTotale,
     ...(nuovoSconto != null ? { discount_amount: nuovoSconto } : {}),
   }), 'modifica comanda')
+  // Scorte dopo: se erano già state scalate si applica solo la differenza.
+  if (daRiallineare) riallineaInSottofondo(orderId, comandaId)
   return mapOrder(await getDoc(ref))
 }
 
