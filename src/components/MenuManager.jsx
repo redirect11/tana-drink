@@ -55,6 +55,8 @@ export default function MenuManager() {
   // non sul drink: qui si scrive nello stesso posto, così il colore scelto
   // dal menù e quello scelto dal POS sono la stessa cosa e non due verità.
   const [tileColors, setTileColors] = useState({})
+  // Card con la tavolozza aperta (una alla volta).
+  const [coloreId, setColoreId] = useState(null)
   useEffect(
     () =>
       subscribePosPrefs((p) => {
@@ -325,9 +327,46 @@ export default function MenuManager() {
                   const open = openId === d.id
                   return (
                     <div
-                      className={`card grid-card admin-card${d.available ? '' : ' off'}`}
+                      className={`card grid-card admin-card menu-card${d.available ? '' : ' off'}`}
                       key={d.id}
+                      /* Il colore con cui il prodotto appare al banco sta
+                         ADDOSSO alla card, non nascosto in un pannello: è
+                         così che lo si riconosce sul POS. */
+                      style={{ '--menu-colore': tileColors[d.id] || drinkCategoryColor(d, categories) }}
                     >
+                      <button
+                        type="button"
+                        className="menu-colore-spia"
+                        title="Cambia il colore al banco"
+                        aria-label={`Colore di ${d.name}`}
+                        aria-expanded={coloreId === d.id}
+                        onClick={() => setColoreId(coloreId === d.id ? null : d.id)}
+                      />
+                      {coloreId === d.id && (
+                        <div className="menu-colori-riga">
+                          <button
+                            type="button"
+                            className={`menu-colore auto${tileColors[d.id] ? '' : ' active'}`}
+                            title="Colore della categoria"
+                            onClick={() => setTileColor(d.id, null)}
+                            style={{ background: drinkCategoryColor(d, categories) }}
+                          >
+                            A
+                          </button>
+                          {CATEGORY_PALETTE.map((c) => (
+                            <button
+                              key={c}
+                              type="button"
+                              aria-label={`Colore ${c}`}
+                              className={`menu-colore${
+                                (tileColors[d.id] || '').toLowerCase() === c.toLowerCase() ? ' active' : ''
+                              }`}
+                              onClick={() => setTileColor(d.id, c)}
+                              style={{ background: c }}
+                            />
+                          ))}
+                        </div>
+                      )}
                       <div
                         className="grid-card-main"
                         role="button"
@@ -335,15 +374,7 @@ export default function MenuManager() {
                         onClick={() => setOpenId(open ? null : d.id)}
                       >
                         <div className="row between" style={{ alignItems: 'flex-start', gap: 6 }}>
-                          <strong style={{ fontSize: '0.92rem', lineHeight: 1.25 }}>
-                            {/* Il colore con cui il prodotto appare al banco:
-                                si vede qui senza dover aprire il POS. */}
-                            <span
-                              className="menu-colore-spia"
-                              style={{ background: tileColors[d.id] || drinkCategoryColor(d, categories) }}
-                            />
-                            {d.name}
-                          </strong>
+                          <strong style={{ fontSize: '0.92rem', lineHeight: 1.25 }}>{d.name}</strong>
                           {!d.available && <span className="pill ritirato">off</span>}
                         </div>
                         <div className="row between" style={{ alignItems: 'baseline' }}>
@@ -368,37 +399,6 @@ export default function MenuManager() {
                               {d.recipe_items.map((r) => `${r.name} ${formatQty(r.qty, r.unit)}`).join(' · ')}
                             </p>
                           )}
-                          {/* COLORE nel POS: si sceglie da qui senza passare
-                              dal banco. Scrive dove scrive il POS, quindi il
-                              colore è uno solo. */}
-                          <div className="menu-colori">
-                            <span className="muted small">Colore nel POS</span>
-                            <div className="menu-colori-riga">
-                              <button
-                                type="button"
-                                className={`menu-colore auto${tileColors[d.id] ? '' : ' active'}`}
-                                title="Colore della categoria"
-                                onClick={() => setTileColor(d.id, null)}
-                                style={{ background: drinkCategoryColor(d, categories) }}
-                              >
-                                A
-                              </button>
-                              {CATEGORY_PALETTE.map((c) => (
-                                <button
-                                  key={c}
-                                  type="button"
-                                  aria-label={`Colore ${c}`}
-                                  className={`menu-colore${
-                                    (tileColors[d.id] || '').toLowerCase() === c.toLowerCase()
-                                      ? ' active'
-                                      : ''
-                                  }`}
-                                  onClick={() => setTileColor(d.id, c)}
-                                  style={{ background: c }}
-                                />
-                              ))}
-                            </div>
-                          </div>
                           <button className="btn secondary small block" onClick={() => setEditing(d)}>
                             ✏️ Modifica
                           </button>
