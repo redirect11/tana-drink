@@ -11,6 +11,7 @@ import {
 import { auth } from '../lib/firebaseClient.js'
 import { cashRecap } from '../lib/cassa.js'
 import { formatPrice } from '../lib/orderStatus.js'
+import CashSessionsList from './CashSessionsList.jsx'
 import { printChiusuraCassa } from '../lib/printer.js'
 import { toastError } from '../lib/toast.js'
 import StaffBadgePanel from './StaffBadgePanel.jsx'
@@ -54,6 +55,7 @@ export default function CashFlow({ canManageStaff = false }) {
 
   const recap = useMemo(() => cashRecap(orders, session, now), [orders, session, now])
   const by = { email: auth.currentUser?.email ?? null }
+  const [showChiusure, setShowChiusure] = useState(false)
 
   if (!session) {
     return (
@@ -64,6 +66,16 @@ export default function CashFlow({ canManageStaff = false }) {
       <Link className="btn ghost small block" style={{ marginTop: 12 }} to="/bar?tab=storico">
         📋 Lista ordini
       </Link>
+
+      {/* Storico delle serate: da apertura a chiusura, col venduto di ognuna. */}
+      <button
+        className="btn ghost small block"
+        style={{ marginTop: 8 }}
+        onClick={() => setShowChiusure((v) => !v)}
+      >
+        {showChiusure ? '▴ Nascondi chiusure di cassa' : '📒 Chiusure di cassa'}
+      </button>
+      {showChiusure && <CashSessionsList />}
       </>
     )
   }
@@ -119,6 +131,16 @@ export default function CashFlow({ canManageStaff = false }) {
       <Link className="btn ghost small block" style={{ marginTop: 12 }} to="/bar?tab=storico">
         📋 Lista ordini
       </Link>
+
+      {/* Storico delle serate: da apertura a chiusura, col venduto di ognuna. */}
+      <button
+        className="btn ghost small block"
+        style={{ marginTop: 8 }}
+        onClick={() => setShowChiusure((v) => !v)}
+      >
+        {showChiusure ? '▴ Nascondi chiusure di cassa' : '📒 Chiusure di cassa'}
+      </button>
+      {showChiusure && <CashSessionsList />}
 
     </div>
   )
