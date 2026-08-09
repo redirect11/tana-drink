@@ -10,6 +10,7 @@ import {
   revenueByDayInRange,
   topProducts,
   revenueByCategory,
+  extrasBreakdown,
   ingredientUsage,
   prepTimeStats,
   serviceModeSplit,
@@ -297,5 +298,58 @@ describe('venduto al netto degli sconti', () => {
   it('sconto più grande del conto non genera incassi negativi', () => {
     const assurdo = [{ ...ordini[0], discount_amount: 99 }]
     expect(aggregateProducts(assurdo)[0].revenue).toBe(0)
+  })
+})
+
+// Gli SCONTI vanno scorporati in tutte le statistiche, non solo nel venduto
+// per prodotto: `total` è il lordo di listino, e usarlo significa dichiarare
+// incassi mai visti.
+describe('statistiche al netto degli sconti', () => {
+  const ordini = [
+    {
+      status: 'pagato',
+      total: 100,
+      discount_amount: 10,
+      service_mode: 'tavolo',
+      created_at: '2026-06-06T21:30:00.000Z',
+      order_items: [{ drink_id: 'd1', name: 'Negroni', qty: 10, unit_price: 10 }],
+    },
+    {
+      status: 'pagato',
+      total: 50,
+      discount_amount: 0,
+      service_mode: 'banco',
+      created_at: '2026-06-06T22:30:00.000Z',
+      order_items: [{ drink_id: 'd1', name: 'Negroni', qty: 5, unit_price: 10 }],
+    },
+  ]
+
+  it('il KPI incasso è quello entrato in cassa', () => {
+    const k = kpiSummary(ordini, ['2026-06-06'])
+    expect(k.incasso).toBe(140) // 90 + 50, non 150
+    expect(k.scontrinoMedio).toBe(70)
+  })
+
+  it('incasso per giornata', () => {
+    const g = revenueByDay(ordini, 5)
+    expect(g.reduce((s, x) => s + x.incasso, 0)).toBe(140)
+  })
+
+  it('incasso per fascia oraria', () => {
+    const h = revenueByHour(ordini, { from: '00:00', to: '23:59' })
+    expect(h.buckets.reduce((s, b) => s + b.incasso, 0)).toBe(140)
+  })
+
+  it('tavolo e banco', () => {
+    const s = serviceModeSplit(ordini)
+    expect(s.tavolo.incasso).toBe(90) // era 100 col listino
+    expect(s.banco.incasso).toBe(50)
+  })
+
+  it('la ripartizione dice anche quanto sconto è stato concesso', () => {
+    const e = extrasBreakdown(ordini)
+    expect(e.incasso).toBe(140)
+    expect(e.sconti).toBe(10)
+    expect(e.lordo).toBe(150)
   })
 })

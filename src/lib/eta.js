@@ -138,17 +138,28 @@ export function aggregateProducts(orders) {
     .sort((a, b) => b.qty - a.qty || a.name.localeCompare(b.name))
 }
 
-// Incassi, esclusi gli ordini annullati.
+// INCASSO DI UN ORDINE, al netto dello sconto: è quello che è entrato in
+// cassa davvero. `total` è il lordo di listino, e usarlo nelle statistiche
+// significa dichiarare incassi mai visti (di sabato erano 22 € su 600).
+export const orderNet = (o) =>
+  Math.max(0, Math.round(((Number(o?.total) || 0) - (Number(o?.discount_amount) || 0)) * 100) / 100)
+
+// Incassi, esclusi gli ordini annullati. Tutto al NETTO degli sconti.
 export function ordersFinance(orders) {
   const valid = orders.filter((o) => !isCancelled(o))
   const sum = (fn) => valid.reduce((s, o) => s + (Number(fn(o)) || 0), 0)
-  const incasso = sum((o) => o.total)
+  const incasso = sum(orderNet)
+  const sconti = sum((o) => o.discount_amount)
   const coperto = sum((o) => o.coperto_amount)
   const servizio = sum((o) => o.service_charge_amount)
   const mance = sum((o) => o.tip_amount)
   return {
     ordini: valid.length,
     incasso,
+    lordo: sum((o) => o.total),
+    sconti,
+    // Lo sconto si scarica sui drink: coperto, servizio e mance restano
+    // quello che sono stati addebitati.
     drink: incasso - coperto - servizio - mance,
     coperto,
     servizio,

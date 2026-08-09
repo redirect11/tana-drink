@@ -436,6 +436,11 @@ function DailyStats() {
           {extras.coperto > 0 && <Row k="Coperto" v={formatPrice(extras.coperto)} />}
           {extras.servizio > 0 && <Row k="Servizio" v={formatPrice(extras.servizio)} />}
           {extras.mance > 0 && <Row k="Mance" v={formatPrice(extras.mance)} />}
+          {/* Gli sconti sono già scalati dagli incassi qui sopra: si mostrano
+              per sapere quanto si è lasciato sul tavolo. */}
+          {extras.sconti > 0 && (
+            <Row k="Sconti concessi (già dedotti)" v={`−${formatPrice(extras.sconti)}`} />
+          )}
           <Row
             k="🍸 Al tavolo"
             v={`${split.tavolo.ordini} ordini · ${formatPrice(split.tavolo.incasso)}`}
