@@ -147,7 +147,18 @@ export function inventorySummary(items) {
 // Filtra/ordina la lista inventario per ricerca (nome), categoria, fornitore e stato.
 //   filters: { query?, categoryId? ('all'|id|'none'), supplierId? ('all'|id|'none'),
 //              status? ('all'|'ok'|'low'|'empty') }
-export function filterItems(items, { query = '', categoryId = 'all', supplierId = 'all', status = 'all' } = {}) {
+// ASSORTIMENTO: 'linea' (di listino), 'premium' (le bottiglie buone) e 'out'
+// (fuori assortimento). Il filtro accetta PIÙ valori insieme, perché la
+// domanda vera è quasi sempre combinata: "fammi vedere linea e premium, senza
+// gli out" oppure "linea e out, per decidere cosa rientra".
+export const ASSORTIMENTI = ['linea', 'premium', 'out']
+export const assortimentoDi = (item) =>
+  ASSORTIMENTI.includes(item?.status) ? item.status : 'linea'
+
+export function filterItems(
+  items,
+  { query = '', categoryId = 'all', supplierId = 'all', status = 'all', assortimenti = null } = {}
+) {
   const q = query.trim().toLowerCase()
   const out = (items || []).filter((it) => {
     if (q && !(it.name || '').toLowerCase().includes(q)) return false
@@ -162,6 +173,11 @@ export function filterItems(items, { query = '', categoryId = 'all', supplierId 
       if (it.supplier_id !== supplierId) return false
     }
     if (status !== 'all' && stockStatus(it) !== status) return false
+    // null o lista vuota = nessun filtro: si vede tutto (non "niente", che
+    // farebbe sparire l'inventario a chi deseleziona per sbaglio).
+    if (Array.isArray(assortimenti) && assortimenti.length > 0) {
+      if (!assortimenti.includes(assortimentoDi(it))) return false
+    }
     return true
   })
   out.sort((a, b) => (a.name || '').localeCompare(b.name || ''))

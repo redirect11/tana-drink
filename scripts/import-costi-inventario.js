@@ -10,6 +10,8 @@
 //           --azzera    mette a 0 il costo degli articoli che NON si
 //                       abbinano con certezza (zero = da rivedere a mano)
 //           --giacenze  aggiorna anche la giacenza dalla colonna DEP
+//           --formati   riscrive il contenuto della confezione dalla
+//                       colonna `cl` del foglio (package_size)
 //  Aggiorna SOLO i campi del costo (cost, vat, package_size quando manca):
 //  nome, giacenze e soglie non si toccano. Senza --force lascia stare gli
 //  articoli che un costo ce l'hanno già.
@@ -35,6 +37,11 @@ const FORCE = args.includes('--force')
 const AZZERA = args.includes('--azzera')
 // Giacenze dalla colonna DEP del foglio (deposito, in confezioni).
 const GIACENZE = args.includes('--giacenze')
+// FORMATI: il contenuto della confezione (colonna `cl` del foglio) sovrascrive
+// quello in gestionale. Senza questo, il formato in gestionale ha la
+// precedenza — e se è sbagliato resta sbagliato per sempre, portandosi dietro
+// il costo al cl e quindi il margine di ogni drink che usa il prodotto.
+const FORMATI = args.includes('--formati')
 
 const { sheet, products } = JSON.parse(readFileSync(JSON_PATH, 'utf8'))
 console.log(`[costi] ${products.length} prodotti dal foglio "${sheet}"`)
@@ -173,7 +180,10 @@ for (const d of docs) {
   const unit = strOf(f.unit) || 'pz'
   const packAttuale = numOf(f.package_size)
   // Il formato in gestionale ha la precedenza: può essere stato corretto.
-  const pack = packAttuale > 0 ? packAttuale : unit === 'ml' ? p.package_size_ml : null
+  // Col flag --formati comanda il FOGLIO; altrimenti vince quello che c'è
+  // già in gestionale (può essere stato corretto a mano).
+  const dalFoglio = unit === 'ml' ? p.package_size_ml : null
+  const pack = FORMATI && dalFoglio > 0 ? dalFoglio : packAttuale > 0 ? packAttuale : dalFoglio
   daAggiornare.push({ doc: d, nome, p, unit, pack, costoAttuale, come })
 }
 
@@ -236,6 +246,19 @@ if (daConfermare.length) {
   console.log(`   Per accettarne uno: mettilo in ${ALIAS_PATH} come {"NOME GESTIONALE": "NOME LISTINO"}`)
 }
 
+if (FORMATI) {
+  const cambiati = daAggiornare.filter((x) => {
+    const inDoc = numOf(x.doc.fields?.package_size)
+    return x.pack > 0 && inDoc > 0 && Math.round(x.pack) !== Math.round(inDoc)
+  })
+  console.log(`\n  FORMATI riscritti dalla colonna cl: ${cambiati.length}`)
+  for (const x of cambiati.slice(0, 25)) {
+    const inDoc = numOf(x.doc.fields?.package_size)
+    console.log(`   ~ ${x.nome.padEnd(28)} ${inDoc} → ${Math.round(x.pack)} ml`)
+  }
+  if (cambiati.length > 25) console.log(`   … e altri ${cambiati.length - 25}`)
+}
+
 if (AZZERA && daAzzerare.length) {
   console.log(`\n  DA AZZERARE: ${daAzzerare.length} articoli senza corrispondenza certa`)
   console.log('  che oggi hanno un costo. Va a zero, cosi si vedono e si mettono a mano:')
@@ -273,7 +296,8 @@ const writes = daAggiornare.map((x) => {
     vat: { doubleValue: x.p.vat },
   }
   const paths = ['cost', 'vat']
-  if (x.pack > 0 && !(numOf(x.doc.fields?.package_size) > 0)) {
+  const packInDoc = numOf(x.doc.fields?.package_size)
+  if (x.pack > 0 && (FORMATI ? Math.round(x.pack) !== Math.round(packInDoc) : !(packInDoc > 0))) {
     fields.package_size = { integerValue: String(Math.round(x.pack)) }
     paths.push('package_size')
   }
