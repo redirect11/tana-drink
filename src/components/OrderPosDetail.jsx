@@ -46,7 +46,7 @@ import {
   reconcileLayout,
   qtyByDrink as draftQtyByDrink,
 } from '../lib/orderLines.js'
-import { toastError } from '../lib/toast.js'
+import { toastSuccess, toastError } from '../lib/toast.js'
 import { printComanda, printScontrino } from '../lib/printer.js'
 import PosProductPicker from './PosProductPicker.jsx'
 import { IconPrinter, IconReceipt, IconCard, IconRefresh, IconX, IconCheck, IconClose } from './Icons.jsx'
@@ -1345,9 +1345,22 @@ export default function OrderPosDetail({ order: orderProp = null }) {
               <button
                 className="btn ghost small"
                 disabled={isNew}
-                onClick={() => printScontrino(order).catch((e) => setError(`Stampa: ${e.message}`))}
+                onClick={() => {
+                  // "Invia" manda la COMANDA al banco (non lo scontrino del
+                  // cliente): si stampa quella in lavorazione, con dentro anche
+                  // le aggiunte appena fatte.
+                  flushAll()
+                  flushAdditions()
+                  const daStampare =
+                    active ??
+                    effComandeRef.current.filter((c) => c.status !== ORDER_STATUSES.ANNULLATO).at(-1) ??
+                    null
+                  printComanda(order, daStampare)
+                    .then(() => toastSuccess('Comanda inviata al banco'))
+                    .catch((e) => setError(`Stampa: ${e.message}`))
+                }}
               >
-                <IconReceipt /> Invia
+                <IconPrinter /> Invia comanda
               </button>
               <button
                 className="btn small"
@@ -1435,6 +1448,21 @@ export default function OrderPosDetail({ order: orderProp = null }) {
               )
             })}
             {comande.length === 0 && <p className="muted small">Nessuna comanda.</p>}
+
+            {/* Scontrino NON FISCALE del conto intero (il riepilogo per il
+                cliente): sta qui con le altre stampe, mentre "Invia comanda"
+                nel footer manda il ticket al banco. */}
+            <button
+              className="btn ghost small block"
+              style={{ marginTop: 12 }}
+              onClick={() =>
+                printScontrino(order)
+                  .then(() => toastSuccess('Scontrino stampato'))
+                  .catch((e) => setError(`Stampa: ${e.message}`))
+              }
+            >
+              <IconReceipt /> Scontrino (non fiscale)
+            </button>
           </div>
         </div>
       )}
