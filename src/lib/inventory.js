@@ -93,12 +93,18 @@ export function formatQty(qty, unit) {
 // Esempio: bottiglia 1 L, 4 totali, stock 2,5 L → full 2, openRemaining 0,5 L, finished 1.
 // Ritorna null per i prodotti a pezzi o senza confezione.
 export function bottleBreakdown(item) {
-  const size = Number(item?.package_size) || 0
-  if (item?.unit === 'pz' || !size) return null
+  const c = contentBase(item)
+  if (!c) return null
   const stock = Math.max(0, Number(item?.stock) || 0)
   const total = Number(item?.bottles_total) || 0
-  const full = Math.floor(stock / size)
-  const openRemaining = stock - full * size
+  // Con la giacenza contata a PEZZI, "0,8" è una bottiglia aperta all'80%:
+  // la parte intera sono le bottiglie piene, il resto è quanto c'è nella
+  // aperta. Con la giacenza a volume vale lo stesso ragionamento diviso
+  // per il contenuto. In entrambi i casi il residuo si esprime in ml/g,
+  // che è come lo si legge al banco.
+  const aPezzo = (item?.unit || 'pz') === 'pz'
+  const full = aPezzo ? Math.floor(stock) : Math.floor(stock / c.size)
+  const openRemaining = aPezzo ? (stock - full) * c.size : stock - full * c.size
   const hasOpen = openRemaining > 1e-9
   const withContent = full + (hasOpen ? 1 : 0)
   const finished = Math.max(0, total - withContent)
@@ -115,10 +121,18 @@ export function bottleBreakdown(item) {
 export function bottleSummary(item) {
   const bd = bottleBreakdown(item)
   if (!bd) return null
+  // Il residuo della bottiglia aperta si legge SEMPRE in cl (o in g): anche
+  // quando la giacenza è contata a pezzi, "aperta 0,8 pz" non dice niente a
+  // chi sta versando.
+  const unitaContenuto = item?.unit === 'pz' ? (item?.content_unit === 'g' ? 'g' : 'cl') : null
   return {
     bottles: bd.full + (bd.hasOpen ? 1 : 0),
     total: fmtItem(Math.max(0, Number(item?.stock) || 0), item),
-    open: bd.hasOpen ? fmtItem(Math.round(bd.openRemaining), item) : null,
+    open: bd.hasOpen
+      ? unitaContenuto
+        ? formatIn(Math.round(bd.openRemaining), unitaContenuto)
+        : fmtItem(Math.round(bd.openRemaining), item)
+      : null,
   }
 }
 
@@ -282,6 +296,38 @@ export function costPerUnit(item, unit, { gross = true } = {}) {
 // Valore totale del magazzino.
 export function inventoryTotalValue(items, opts) {
   return (items || []).reduce((s, it) => s + stockValue(it, opts), 0)
+}
+
+// QUANTO TOGLIERE DALLA GIACENZA per una riga di ricetta.
+//
+// Le ricette si scrivono come si versa — 40 ml di gin, 1 pz di Coca — mentre
+// la giacenza può essere contata in un'altra unità. Un articolo a PEZZO con
+// il contenuto noto consuma FRAZIONI di bottiglia: 40 ml da una da 700 sono
+// 0,057 pezzi. Senza questa conversione lo scarico sottrae il numero della
+// ricetta così com'è, cioè 40 BOTTIGLIE per un cocktail da 40 ml.
+//
+// Se la conversione non è possibile (unità di famiglie diverse, contenuto
+// ignoto) si restituisce la quantità com'è: meglio un consumo impreciso che
+// un numero inventato con una moltiplicazione a caso.
+export function qtyInStockUnit(qty, unit, item) {
+  const q = Number(qty) || 0
+  if (!(q > 0)) return 0
+  const u = String(unit || 'pz').toLowerCase()
+  const stockUnit = item?.unit || 'pz'
+  if (u === stockUnit) return q
+  // "1 pz" di un articolo contato a volume = una confezione intera.
+  if (u === 'pz') {
+    const size = Number(item?.package_size) || 0
+    return size > 0 ? q * size : q
+  }
+  const base = toBaseQty(q, u)
+  if (stockUnit === 'pz') {
+    const c = contentBase(item)
+    if (!c || baseUnit(u) !== c.base || !(c.size > 0)) return q
+    return base / c.size
+  }
+  if (baseUnit(u) !== stockUnit) return q
+  return base
 }
 
 // Calcola il consumo totale per ingrediente da una lista di order_items.

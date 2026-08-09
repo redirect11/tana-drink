@@ -22,7 +22,7 @@ import { db } from './firebaseClient.js'
 import { ORDER_STATUSES } from './orderStatus.js'
 import { splitAmounts } from './groups.js'
 import { createSumUpSale, updateSumUpSaleStatus, toSumUpStatus } from './sumupApi.js'
-import { computeConsumption, formatQty } from './inventory.js'
+import { computeConsumption, formatQty, qtyInStockUnit } from './inventory.js'
 import { consumptionDiff } from './warehouse.js'
 import {
   ORDER_OPEN,
@@ -2058,13 +2058,17 @@ async function depleteComandeInventory(entries) {
     for (const c of p.consumption) {
       const cur = itemsById[c.inventory_item_id]
       if (!cur) continue
-      delta[c.inventory_item_id] = (delta[c.inventory_item_id] || 0) + c.qty
+      // Dalla ricetta alla giacenza: le unità possono non coincidere.
+      delta[c.inventory_item_id] =
+        (delta[c.inventory_item_id] || 0) + qtyInStockUnit(c.qty, c.unit, cur)
       bgWrite(() => addDoc(movementsCol, {
         item_id: c.inventory_item_id,
         item_name: cur.name,
         type: 'unload',
+        // Nel movimento resta scritto quanto è stato VERSATO (40 ml), che è
+        // il dato leggibile; la giacenza cala di quello che vale in pezzi.
         qty: c.qty,
-        unit: cur.unit ?? null,
+        unit: c.unit ?? cur.unit ?? null,
         reason: 'ordine',
         order_id: p.orderId,
         created_at: serverTimestamp(),
@@ -2393,7 +2397,7 @@ export async function bartenderUpdateComanda(orderId, comandaId, { items }) {
       if (!sn.exists()) continue
       const curItem = sn.data()
       bgWrite(() => updateDoc(doc(db, 'inventory_items', d.inventory_item_id), {
-        stock: increment(-d.delta),
+        stock: increment(-qtyInStockUnit(d.delta, d.unit, curItem)),
       }), 'riallineo scorta')
       bgWrite(() => addDoc(movementsCol, {
         item_id: d.inventory_item_id,
@@ -2465,7 +2469,7 @@ export async function cancelOrder(id, opts = {}) {
       if (!s.exists()) continue
       const cur = s.data()
       bgWrite(() => updateDoc(doc(db, 'inventory_items', c.inventory_item_id), {
-        stock: increment(c.qty),
+        stock: increment(qtyInStockUnit(c.qty, c.unit, cur)),
       }), 'storno scorta')
       bgWrite(() => addDoc(movementsCol, {
         item_id: c.inventory_item_id,
