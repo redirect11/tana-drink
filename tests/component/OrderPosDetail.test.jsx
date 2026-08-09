@@ -226,6 +226,35 @@ describe('aggiunte: la nuova comanda è gestita internamente', () => {
     expect(mojito[0].qty).toBe(3) // erano 2
   })
 
+  it('Unisci accorpa righe uguali con quantità diverse (4 + 1 = 5)', async () => {
+    const user = userEvent.setup()
+    mount(
+      baseOrder({
+        comande: [
+          {
+            id: 'c1',
+            seq: 1,
+            status: 'in_preparazione',
+            status_times: {},
+            items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 4 }],
+          },
+        ],
+      })
+    )
+    // una riga da 4; se ne aggiunge una da 1 dalla griglia → due righe
+    await user.click(screen.getAllByText('Mojito')[0])
+    await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalled())
+    expect(bartenderUpdateComanda.mock.calls.at(-1)[2].items.filter((i) => i.drink_id === 'mojito')).toHaveLength(2)
+
+    // il tasto Unisci c'è e accorpa in una riga da 5
+    bartenderUpdateComanda.mockClear()
+    await user.click(screen.getByRole('button', { name: /Unisci/ }))
+    await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalled())
+    const uniti = bartenderUpdateComanda.mock.calls.at(-1)[2].items.filter((i) => i.drink_id === 'mojito')
+    expect(uniti).toHaveLength(1)
+    expect(uniti[0].qty).toBe(5)
+  })
+
   it("il + su un item del conto è un'aggiunta che si conferma da sola", async () => {
     const user = userEvent.setup()
     mount(baseOrder())
