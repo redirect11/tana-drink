@@ -771,14 +771,34 @@ function OrderQueue() {
           )
         )}
         {canCollect && (
-          <button
-            className="btn block"
-            style={{ marginTop: 8 }}
-            disabled={readerPending}
-            onClick={() => markOrderPaid(o.id, 'banco', { autoServe: !workflowOn }).catch((e) => setError(e.message))}
-          >
-            💶 Incassato (contanti)
-          </button>
+          // DUE tasti, non uno. C'era solo "Incassato (contanti)": è il tasto
+          // più a portata di mano della board, e chi incassava con la carta lo
+          // premeva lo stesso — il conto finiva nei contanti e a fine serata
+          // la cassa non tornava. Il metodo ora si sceglie qui.
+          <div className="grid-2" style={{ marginTop: 8 }}>
+            <button
+              className="btn"
+              disabled={readerPending}
+              onClick={() =>
+                markOrderPaid(o.id, 'banco', { autoServe: !workflowOn }).catch((e) =>
+                  setError(e.message)
+                )
+              }
+            >
+              💶 Contanti
+            </button>
+            <button
+              className="btn"
+              disabled={readerPending}
+              onClick={() =>
+                markOrderPaid(o.id, 'carta', { autoServe: !workflowOn }).catch((e) =>
+                  setError(e.message)
+                )
+              }
+            >
+              💳 Carta
+            </button>
+          </div>
         )}
         <div className="grid-2" style={{ marginTop: 8 }}>
           <button

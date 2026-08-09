@@ -124,7 +124,9 @@ export default function GroupView({ groupId, onClose }) {
     return u ? { uid: u.uid, email: u.email } : null
   }
 
-  async function pay(orderIds, split = null) {
+  // `metodo` viaggia fino al conto: senza, un tavolo pagato con la carta
+  // veniva registrato come contante e la cassa a fine serata non tornava.
+  async function pay(orderIds, split = null, metodo = 'banco') {
     if (!orderIds.length) return
     setPaying(true)
     setError(null)
@@ -135,6 +137,7 @@ export default function GroupView({ groupId, onClose }) {
         group_id: node.group.id,
         group_ids: subtreeGroupIds(node),
         split,
+        method: metodo,
       })
       setShowSplit(false)
       setPerOrder(false)
@@ -292,8 +295,13 @@ export default function GroupView({ groupId, onClose }) {
                 <span className="muted small">{ids.length} da pagare</span>
               </div>
               <div className="grid-2" style={{ marginTop: 10 }}>
-                <button className="btn" disabled={paying} onClick={() => pay(ids)}>
+                <button className="btn" disabled={paying} onClick={() => pay(ids, null, 'banco')}>
                   💶 Contanti
+                </button>
+                {/* Carta col POS esterno: si registra qui, altrimenti finiva
+                    nei contanti e la chiusura di cassa non tornava. */}
+                <button className="btn" disabled={paying} onClick={() => pay(ids, null, 'carta')}>
+                  💳 Carta
                 </button>
                 <button
                   className="btn secondary"
@@ -338,9 +346,22 @@ export default function GroupView({ groupId, onClose }) {
                     {splitN} quote da {formatPrice(splitAmounts(s.remaining, splitN)[0])}
                     {' '}(l’ultima {formatPrice(splitAmounts(s.remaining, splitN).at(-1))})
                   </p>
-                  <button className="btn block" disabled={paying} onClick={() => pay(ids, { count: splitN })}>
-                    💶 Incassa {splitN} quote
-                  </button>
+                  <div className="grid-2">
+                    <button
+                      className="btn"
+                      disabled={paying}
+                      onClick={() => pay(ids, { count: splitN }, 'banco')}
+                    >
+                      💶 {splitN} quote
+                    </button>
+                    <button
+                      className="btn"
+                      disabled={paying}
+                      onClick={() => pay(ids, { count: splitN }, 'carta')}
+                    >
+                      💳 {splitN} quote
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -349,9 +370,22 @@ export default function GroupView({ groupId, onClose }) {
                   {unpaid.map((o) => (
                     <div className="row between" key={o.id} style={{ padding: '4px 0' }}>
                       <span>#{o.daily_number} · {formatPrice(o.total)}</span>
-                      <button className="btn ghost small" disabled={paying} onClick={() => pay([o.id])}>
-                        Paga
-                      </button>
+                      <span className="row" style={{ gap: 6 }}>
+                        <button
+                          className="btn ghost small"
+                          disabled={paying}
+                          onClick={() => pay([o.id], null, 'banco')}
+                        >
+                          💶
+                        </button>
+                        <button
+                          className="btn ghost small"
+                          disabled={paying}
+                          onClick={() => pay([o.id], null, 'carta')}
+                        >
+                          💳
+                        </button>
+                      </span>
                     </div>
                   ))}
                 </div>
