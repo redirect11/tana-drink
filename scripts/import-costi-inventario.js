@@ -7,6 +7,9 @@
 //    node scripts/import-costi-inventario.js --apply   # 3. scrive davvero
 //
 //  Opzioni: --project <id> --emulator --force --json <file>
+//           --azzera    mette a 0 il costo degli articoli che NON si
+//                       abbinano con certezza (zero = da rivedere a mano)
+//           --giacenze  aggiorna anche la giacenza dalla colonna DEP
 //  Aggiorna SOLO i campi del costo (cost, vat, package_size quando manca):
 //  nome, giacenze e soglie non si toccano. Senza --force lascia stare gli
 //  articoli che un costo ce l'hanno già.
@@ -26,6 +29,12 @@ const PROJECT = getArg('project', 'tana-drink')
 const APPLY = args.includes('--apply')
 const EMULATOR = args.includes('--emulator')
 const FORCE = args.includes('--force')
+// Quello che non si abbina con CERTEZZA va messo a zero, non lasciato com'è:
+// un costo vecchio che sembra buono è peggio di un buco visibile, perché
+// nessuno va a ricontrollarlo. Zero = "da mettere a mano".
+const AZZERA = args.includes('--azzera')
+// Giacenze dalla colonna DEP del foglio (deposito, in confezioni).
+const GIACENZE = args.includes('--giacenze')
 
 const { sheet, products } = JSON.parse(readFileSync(JSON_PATH, 'utf8'))
 console.log(`[costi] ${products.length} prodotti dal foglio "${sheet}"`)
@@ -118,6 +127,7 @@ const daAggiornare = []
 const giaValorizzati = []
 const daConfermare = [] // somiglianti ma sotto soglia: si mostrano, non si scrivono
 const senzaCorrispondenza = []
+const daAzzerare = []
 const usati = new Set()
 
 for (const d of docs) {
@@ -149,11 +159,13 @@ for (const d of docs) {
     } else if (m && m.score >= 0.72) {
       daConfermare.push({ nome, candidato: m.value, score: m.score, ambiguo: m.ambiguous })
       senzaCorrispondenza.push(nome)
+      if (costoAttuale > 0) daAzzerare.push({ doc: d, nome, costoAttuale })
       continue
     }
   }
   if (!p) {
     senzaCorrispondenza.push(nome)
+    if (costoAttuale > 0) daAzzerare.push({ doc: d, nome, costoAttuale })
     continue
   }
 
@@ -172,7 +184,39 @@ console.log(`  già valorizzati: ${giaValorizzati.length}${FORCE ? '' : ' (usa -
 console.log(`  senza costo nel listino: ${senzaCorrispondenza.length}`)
 console.log(`  nel listino ma non in inventario: ${nonUsati.length}`)
 
-for (const x of daAggiornare.slice(0, 15)) {
+// Con --force si riscrivono costi che c'erano già: prima di farlo si deve
+// poter vedere COSA cambia. Un listino nuovo può contenere un errore di
+// battitura, e un costo sbagliato sposta i margini di tutti i drink che
+// usano quell'ingrediente.
+const variazione = (x) => {
+  const vecchio = Number(x.costoAttuale) || 0
+  const nuovo = Number(x.p.cost) || 0
+  if (!(vecchio > 0)) return null
+  return { vecchio, nuovo, pct: ((nuovo - vecchio) / vecchio) * 100 }
+}
+const conStorico = daAggiornare.map((x) => ({ x, v: variazione(x) })).filter((r) => r.v)
+const invariati = conStorico.filter((r) => Math.abs(r.v.pct) < 0.5).length
+if (conStorico.length) {
+  console.log(`
+  di cui già valorizzati e ora RISCRITTI: ${conStorico.length}`)
+  console.log(`   invariati (meno dello 0,5%): ${invariati}`)
+  const grossi = conStorico
+    .filter((r) => Math.abs(r.v.pct) >= 0.5)
+    .sort((a, b) => Math.abs(b.v.pct) - Math.abs(a.v.pct))
+  console.log(`   cambiano: ${grossi.length} — i venti scostamenti maggiori:`)
+  for (const { x, v } of grossi.slice(0, 20)) {
+    const segno = v.nuovo > v.vecchio ? '+' : ''
+    console.log(
+      `   ~ ${x.nome.padEnd(28)} ${v.vecchio.toFixed(2)} → ${v.nuovo.toFixed(2)} €` +
+        ` (${segno}${v.pct.toFixed(0)}%)`
+    )
+  }
+}
+
+const nuoviCosti = daAggiornare.filter((x) => !(Number(x.costoAttuale) > 0))
+if (nuoviCosti.length) console.log(`
+  articoli che un costo NON ce l'avevano: ${nuoviCosti.length}`)
+for (const x of nuoviCosti.slice(0, 15)) {
   const perCl = x.pack > 0 ? (x.p.cost * (1 + x.p.vat / 100)) / (x.pack / 10) : null
   console.log(
     `   + ${x.nome.padEnd(28)} ${String(x.p.cost).padStart(8)} € /conf` +
@@ -180,7 +224,7 @@ for (const x of daAggiornare.slice(0, 15)) {
       (x.come && x.come !== 'esatto' ? `  [${x.come} -> ${x.p.name}]` : '')
   )
 }
-if (daAggiornare.length > 15) console.log(`   … e altri ${daAggiornare.length - 15}`)
+if (nuoviCosti.length > 15) console.log(`   … e altri ${nuoviCosti.length - 15}`)
 
 if (daConfermare.length) {
   console.log(`
@@ -190,6 +234,26 @@ if (daConfermare.length) {
   }
   if (daConfermare.length > 30) console.log(`   ... e altri ${daConfermare.length - 30}`)
   console.log(`   Per accettarne uno: mettilo in ${ALIAS_PATH} come {"NOME GESTIONALE": "NOME LISTINO"}`)
+}
+
+if (AZZERA && daAzzerare.length) {
+  console.log(`\n  DA AZZERARE: ${daAzzerare.length} articoli senza corrispondenza certa`)
+  console.log('  che oggi hanno un costo. Va a zero, cosi si vedono e si mettono a mano:')
+  for (const z of daAzzerare.slice(0, 25)) {
+    console.log(`   0 ${z.nome.padEnd(28)} (aveva ${z.costoAttuale.toFixed(2)} €)`)
+  }
+  if (daAzzerare.length > 25) console.log(`   … e altri ${daAzzerare.length - 25}`)
+}
+
+if (GIACENZE) {
+  const conDep = daAggiornare.filter((x) => x.p.dep != null)
+  console.log(`\n  GIACENZE dalla colonna DEP: ${conDep.length} articoli`)
+  for (const x of conDep.slice(0, 12)) {
+    console.log(`   = ${x.nome.padEnd(28)} ${x.p.dep} ${x.unit === 'pz' ? 'pz' : 'conf'}`)
+  }
+  if (conDep.length > 12) console.log(`   … e altri ${conDep.length - 12}`)
+  const senzaDep = daAggiornare.filter((x) => x.p.dep == null).length
+  if (senzaDep) console.log(`   (${senzaDep} senza DEP nel foglio: la giacenza resta com'è)`)
 }
 
 if (senzaCorrispondenza.length) {
@@ -213,8 +277,29 @@ const writes = daAggiornare.map((x) => {
     fields.package_size = { integerValue: String(Math.round(x.pack)) }
     paths.push('package_size')
   }
+  // GIACENZA: nel foglio DEP è in CONFEZIONI (0,8 = 8/10 di bottiglia),
+  // mentre in gestionale `stock` è in unità base (ml per i liquidi, pezzi
+  // per i pezzi): si moltiplica per il formato.
+  if (GIACENZE && x.p.dep != null) {
+    const base = x.unit === 'pz' ? x.p.dep : x.pack > 0 ? x.p.dep * x.pack : null
+    if (base != null) {
+      fields.stock = { doubleValue: Math.round(base * 1000) / 1000 }
+      paths.push('stock')
+    }
+  }
   return { update: { name: x.doc.name, fields }, updateMask: { fieldPaths: paths } }
 })
+
+// Senza corrispondenza certa il costo va a ZERO: un costo vecchio che sembra
+// buono e' peggio di un buco visibile, perche' nessuno va a ricontrollarlo.
+if (AZZERA) {
+  for (const z of daAzzerare) {
+    writes.push({
+      update: { name: z.doc.name, fields: { cost: { doubleValue: 0 } } },
+      updateMask: { fieldPaths: ['cost'] },
+    })
+  }
+}
 
 await commit(writes)
 console.log(`\n[costi] ✓ aggiornati ${writes.length} articoli su "${EMULATOR ? 'emulatore' : PROJECT}".`)
