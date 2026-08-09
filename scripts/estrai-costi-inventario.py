@@ -54,6 +54,11 @@ def find_header(ws):
                     cols['tipo'] = j
                 elif v.startswith('€/pz') or v.endswith('/pz'):
                     cols['cost'] = j
+                # DEP = deposito, cioè la GIACENZA in confezioni (0.8 = 8/10
+                # di bottiglia). Serve a riallineare il magazzino, non solo
+                # il costo.
+                elif v == 'dep':
+                    cols['dep'] = j
             if 'name' in cols and 'cost' in cols:
                 return i, cols
     return None, None
@@ -76,6 +81,7 @@ def read_sheet(ws, into):
         if costo is None or costo <= 0:
             continue
         cl = num(row[cols['cl']]) if 'cl' in cols else None
+        dep = num(row[cols['dep']]) if 'dep' in cols else None
         nome = nome.strip()
         into[nome.lower()] = {
             'name': nome,
@@ -85,6 +91,8 @@ def read_sheet(ws, into):
             'vat': args.vat,
             'package_size_ml': int(round(cl * 10)) if cl else None,
             'cost_per_cl': round(costo * (1 + args.vat / 100) / cl, 6) if cl else None,
+            # Giacenza in CONFEZIONI dall'ultimo foglio che nomina il prodotto.
+            'dep': round(dep, 4) if dep is not None and dep >= 0 else None,
         }
         added += 1
     return added
@@ -109,5 +117,7 @@ prodotti = sorted(latest.values(), key=lambda p: p['name'].lower())
 with open(args.out, 'w', encoding='utf-8') as f:
     json.dump({'sheet': origine, 'vat': args.vat, 'products': prodotti}, f, ensure_ascii=False, indent=2)
 
+con_dep = sum(1 for p in prodotti if p.get('dep') is not None)
 print(f'[costi] {origine}: {len(prodotti)} prodotti con prezzo più recente.')
+print(f'[costi] {con_dep} con la giacenza (colonna DEP).')
 print(f'[costi] scritto {args.out}')
