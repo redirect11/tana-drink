@@ -358,3 +358,48 @@ describe('filtro per assortimento', () => {
     expect(nomi({ query: 'gin', assortimenti: ['linea'] })).toEqual(['Gin Base'])
   })
 })
+
+// Una bottiglia contata a PEZZO ha comunque un contenuto: 33 cl. Senza
+// tenerne conto il costo al cl sparisce nel momento in cui si passa a
+// contare le bottiglie invece dei millilitri.
+describe('contenuto di un pezzo', () => {
+  // Ceres 33 cl: cassa da... no, il costo è per BOTTIGLIA (1,30 € + IVA 22%).
+  const ceres = {
+    name: 'Ceres',
+    unit: 'pz',
+    package_size: 330,
+    content_unit: 'ml',
+    cost: 1.3,
+    vat: 22,
+    stock: 28,
+  }
+  const senzaContenuto = { ...ceres, package_size: null, content_unit: null }
+
+  it('il pezzo costa quello che costa', () => {
+    expect(costPerUnit(ceres, 'pz')).toBeCloseTo(1.586, 3) // 1,30 + 22%
+  })
+
+  it('e il costo al cl si ricava dal contenuto', () => {
+    expect(costPerUnit(ceres, 'cl')).toBeCloseTo(1.586 / 33, 4)
+    expect(costPerUnit(ceres, 'ml')).toBeCloseTo(1.586 / 330, 5)
+  })
+
+  it('senza contenuto il costo al cl è ignoto, non zero', () => {
+    expect(costPerUnit(senzaContenuto, 'cl')).toBeNull()
+    expect(costPerUnit(senzaContenuto, 'pz')).toBeCloseTo(1.586, 3)
+  })
+
+  it('non si mescolano volumi e pesi', () => {
+    expect(costPerUnit(ceres, 'g')).toBeNull()
+    expect(costPerUnit({ ...ceres, content_unit: 'g' }, 'cl')).toBeNull()
+  })
+
+  it('la giacenza resta in pezzi', () => {
+    expect(unitsInStock(ceres)).toBe(28)
+  })
+
+  it('le unità offerte comprendono il contenuto', () => {
+    expect(smallUnits(ceres)).toEqual(['pz', 'cl', 'ml'])
+    expect(smallUnits(senzaContenuto)).toEqual(['pz'])
+  })
+})

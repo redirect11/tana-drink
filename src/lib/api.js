@@ -116,6 +116,9 @@ function mapItem(snap) {
     unit: i.unit ?? 'pz',
     stock: Number(i.stock) || 0,
     package_size: i.package_size ?? null,
+    // Famiglia del contenuto per gli articoli contati a pezzo: senza, una
+    // bottiglia da 33 cl non ha un costo al cl (vedi contentBase).
+    content_unit: i.content_unit ?? null,
     bottles_total: Number(i.bottles_total) || 0,
     low_threshold: Number(i.low_threshold) || 0,
     category_id: i.category_id ?? null,

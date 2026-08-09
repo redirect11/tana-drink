@@ -214,11 +214,30 @@ export function costPerCl(item, { gross = true } = {}) {
   return unit / (size / 10)
 }
 
+// CONTENUTO DI UNA CONFEZIONE, con la famiglia a cui appartiene.
+// Per gli articoli a volume o a peso il contenuto è già nell'unità base
+// dell'articolo. Per quelli contati a PEZZO (una Ceres o una Coca: o c'è o
+// non c'è) la giacenza è in pezzi, ma la bottiglia un contenuto ce l'ha
+// lo stesso — 33 cl — e senza saperlo non si può dire quanto costa al cl.
+// `content_unit` dice di che famiglia è quel numero.
+export function contentBase(item) {
+  const size = Number(item?.package_size) || 0
+  if (!(size > 0)) return null
+  const base = (item?.unit || 'pz') === 'pz' ? item?.content_unit || null : item.unit
+  if (base !== 'ml' && base !== 'g') return null
+  return { size, base }
+}
+
 // Unità di misura "piccole" adatte a mostrare il prezzo unitario:
 // liquidi (base ml) → cl o ml; solidi (base g) → g o mg; pezzi → pz.
+// Un articolo a pezzo di cui si conosce il contenuto le offre entrambe: si
+// vende a bottiglia, ma sapere quanto costa al cl serve lo stesso.
 export function smallUnits(item) {
   if (item?.unit === 'ml') return ['cl', 'ml']
   if (item?.unit === 'g') return ['g', 'mg']
+  const c = contentBase(item)
+  if (c?.base === 'ml') return ['pz', 'cl', 'ml']
+  if (c?.base === 'g') return ['pz', 'g', 'mg']
   return ['pz']
 }
 
@@ -235,8 +254,16 @@ const BASE_PER_UNIT = { l: 1000, cl: 10, ml: 1, kg: 1000, g: 1, mg: 0.001, pz: 1
 export function costPerUnit(item, unit, { gross = true } = {}) {
   const packCost = gross ? costWithVat(item?.cost, item?.vat) : Number(item?.cost) || 0
   if (!(packCost > 0)) return null
-  if ((item?.unit || 'pz') === 'pz') return unit === 'pz' ? packCost : null
   const per = BASE_PER_UNIT[String(unit || '').toLowerCase()]
+  if ((item?.unit || 'pz') === 'pz') {
+    // Il pezzo costa quello che costa. Il costo al cl si ricava solo se si
+    // sa quanto contiene la bottiglia: altrimenti null, che vuol dire "non
+    // lo so" e non "zero".
+    if (unit === 'pz') return packCost
+    const c = contentBase(item)
+    if (!c || !per || baseUnit(unit) !== c.base) return null
+    return packCost / (c.size / per)
+  }
   if (!per || baseUnit(unit) !== item.unit) return null
   const size = Number(item?.package_size) || 0
   if (size <= 0) return null

@@ -109,6 +109,8 @@ const strOf = (f) => (f?.stringValue != null ? f.stringValue : null)
 const docs = await listAll('inventory_items')
 const daCambiare = []
 const giaPezzo = []
+// Articoli già a pezzo che non dicono di che famiglia è il contenuto.
+const senzaContentUnit = []
 for (const d of docs) {
   const f = d.fields || {}
   const nome = strOf(f.name) || ''
@@ -121,6 +123,9 @@ for (const d of docs) {
   const unit = String(strOf(f.unit) || 'pz').toLowerCase()
   if (unit === 'pz') {
     giaPezzo.push(nome)
+    if (!strOf(f.content_unit) && (numOf(f.package_size) || 0) > 0) {
+      senzaContentUnit.push({ doc: d, nome, pack: numOf(f.package_size) })
+    }
     continue
   }
   const pack = numOf(f.package_size) || 0
@@ -137,6 +142,9 @@ for (const d of docs) {
 }
 
 console.log(`\n  già a pezzo: ${giaPezzo.length}`)
+if (senzaContentUnit.length) {
+  console.log(`  di cui SENZA l'unità del contenuto (niente costo al cl): ${senzaContentUnit.length}`)
+}
 console.log(`  da portare a pezzo: ${daCambiare.length}`)
 for (const x of daCambiare.slice(0, 30)) {
   console.log(
@@ -212,9 +220,25 @@ const writes = daCambiare.map((x) => ({
       unit: { stringValue: 'pz' },
       display_unit: { stringValue: 'pz' },
       stock: { doubleValue: x.pezzi },
+      // Il contenuto resta in package_size: `content_unit` dice che è un
+      // volume, ed è quello che permette di calcolare il costo al cl di una
+      // bottiglia che ormai si conta a pezzi.
+      content_unit: { stringValue: 'ml' },
     },
   },
-  updateMask: { fieldPaths: ['unit', 'display_unit', 'stock'] },
+  updateMask: { fieldPaths: ['unit', 'display_unit', 'stock', 'content_unit'] },
 }))
+// Chi era già a pezzo ma non diceva che il contenuto è un volume: senza
+// quel campo il costo al cl non esiste.
+for (const x of senzaContentUnit) {
+  writes.push({
+    update: { name: x.doc.name, fields: { content_unit: { stringValue: 'ml' } } },
+    updateMask: { fieldPaths: ['content_unit'] },
+  })
+}
 await commit(writes)
-console.log(`\n[pezzo] ✓ portati a pezzo ${writes.length} articoli su "${PROJECT}".`)
+console.log(
+  `\n[pezzo] ✓ portati a pezzo ${daCambiare.length} articoli` +
+    (senzaContentUnit.length ? `, completati ${senzaContentUnit.length}` : '') +
+    ` su "${PROJECT}".`
+)
