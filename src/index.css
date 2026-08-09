@@ -1422,6 +1422,11 @@ body.fullbleed .bar-content {
   letter-spacing: -0.01em;
 }
 
+/* Indietro nelle sezioni del gestionale: piccolo, in cima al contenuto. */
+.bar-back {
+  margin-bottom: 8px;
+}
+
 /* Riga di una serata nello storico chiusure di cassa. */
 .cash-sess-head {
   display: flex;
@@ -1605,11 +1610,11 @@ body.fullbleed .bar-content {
   overflow: hidden;
 }
 
-/* Inventario PIÙ LARGO: esce dal cap di 760px di .app mantenendo l'header
+/* GESTIONALE a tutta larghezza: esce dal cap di 760px di .app mantenendo l'header
    (topbar col logo) e il menu laterale. Su desktop la sidebar resta agganciata,
    quindi il contenuto lascia spazio a sinistra; su mobile la sidebar è già a
    scomparsa (burger) e il contenuto è a tutta larghezza. */
-body.inv-wide .app {
+body.bar-wide .app {
   max-width: none;
 }
 
