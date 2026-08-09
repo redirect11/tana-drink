@@ -3872,16 +3872,30 @@ body.fullbleed,
 /* Colore di un prodotto nel POS, scelto dal MENU: la spia accanto al nome
    dice com'e' adesso, la fila di pastiglie lo cambia. Lo stesso colore che
    si sceglie al banco: e' scritto nello stesso posto. */
-.menu-colore-spia {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  margin-right: 6px;
-  border-radius: 3px;
-  vertical-align: baseline;
+/* La card del prodotto porta il suo colore: una fascia sul bordo sinistro,
+   come la piastrella al banco. La pastiglia in alto a destra apre la
+   tavolozza senza dover aprire le azioni. */
+.menu-card {
+  position: relative;
+  border-left: 5px solid var(--menu-colore, transparent);
 }
-.menu-colori {
-  margin: 0 0 8px;
+.menu-colore-spia {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--menu-colore, transparent);
+  cursor: pointer;
+}
+@media (pointer: coarse) {
+  .menu-colore-spia {
+    width: 26px;
+    height: 26px;
+  }
 }
 .menu-colori-riga {
   display: flex;

@@ -59,6 +59,10 @@ def find_header(ws):
                 # il costo.
                 elif v == 'dep':
                     cols['dep'] = j
+                # Colonna "C": porta LINEA (i prodotti che non devono
+                # mancare) e OUT (fuori assortimento).
+                elif v == 'c':
+                    cols['stato'] = j
             if 'name' in cols and 'cost' in cols:
                 return i, cols
     return None, None
@@ -82,7 +86,11 @@ def read_sheet(ws, into):
             continue
         cl = num(row[cols['cl']]) if 'cl' in cols else None
         dep = num(row[cols['dep']]) if 'dep' in cols else None
+        stato = None
+        if 'stato' in cols and row[cols['stato']]:
+            stato = str(row[cols['stato']]).strip().upper() or None
         nome = nome.strip()
+        precedente = into.get(nome.lower(), {})
         into[nome.lower()] = {
             'name': nome,
             'cl': cl,
@@ -93,6 +101,11 @@ def read_sheet(ws, into):
             'cost_per_cl': round(costo * (1 + args.vat / 100) / cl, 6) if cl else None,
             # Giacenza in CONFEZIONI dall'ultimo foglio che nomina il prodotto.
             'dep': round(dep, 4) if dep is not None and dep >= 0 else None,
+            # OUT vale l'ULTIMO foglio (è la situazione di adesso); LINEA
+            # sta solo sul foglio ORD e non va persa dai fogli successivi,
+            # che quella colonna non la compilano.
+            'out': stato == 'OUT',
+            'linea': stato == 'LINEA' or bool(precedente.get('linea')),
         }
         added += 1
     return added
@@ -118,6 +131,9 @@ with open(args.out, 'w', encoding='utf-8') as f:
     json.dump({'sheet': origine, 'vat': args.vat, 'products': prodotti}, f, ensure_ascii=False, indent=2)
 
 con_dep = sum(1 for p in prodotti if p.get('dep') is not None)
+in_linea = sum(1 for p in prodotti if p.get('linea'))
+fuori = sum(1 for p in prodotti if p.get('out'))
 print(f'[costi] {origine}: {len(prodotti)} prodotti con prezzo più recente.')
 print(f'[costi] {con_dep} con la giacenza (colonna DEP).')
+print(f'[costi] assortimento (colonna C): {in_linea} in linea, {fuori} fuori.')
 print(f'[costi] scritto {args.out}')

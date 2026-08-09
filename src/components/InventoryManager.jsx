@@ -54,7 +54,7 @@ import CategoryRail from './CategoryRail.jsx'
 
 const STATUS_ITEM = [
   { value: 'assortimento', label: 'In assortimento' },
-  { value: 'linea', label: '● In linea (non deve mancare)' },
+  { value: 'linea', label: '● In linea' },
   { value: 'premium', label: '👑 Premium' },
   { value: 'out', label: '🚫 Fuori assortimento' },
 ]
@@ -72,7 +72,7 @@ const ASSORTIMENTO_LABEL = {
 }
 const ASSORTIMENTO_TITOLO = {
   assortimento: 'Si tiene, senza niente di speciale',
-  linea: 'Non deve mancare mai: i primi da controllare',
+  linea: 'I primi da controllare prima di una serata',
   premium: 'Bottiglie premium',
   out: 'Fuori assortimento: non si ricompra',
 }
@@ -84,7 +84,7 @@ function SegnoAssortimento({ item }) {
   // colonna scorte, e lo stesso simbolo due volte nella stessa riga vuol
   // dire due cose diverse. Un bollino non compete con niente.
   if (a === 'linea')
-    return <span className="badge-linea" title="In linea: non deve mancare mai" aria-label="in linea" />
+    return <span className="badge-linea" title="In linea" aria-label="in linea" />
   return null
 }
 

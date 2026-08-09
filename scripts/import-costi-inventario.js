@@ -12,6 +12,8 @@
 //           --giacenze  aggiorna anche la giacenza dalla colonna DEP
 //           --formati   riscrive il contenuto della confezione dalla
 //                       colonna `cl` del foglio (package_size)
+//           --stati     assortimento dalla colonna C: LINEA e OUT
+//                       (i premium impostati a mano non si toccano)
 //  Aggiorna SOLO i campi del costo (cost, vat, package_size quando manca):
 //  nome, giacenze e soglie non si toccano. Senza --force lascia stare gli
 //  articoli che un costo ce l'hanno già.
@@ -42,6 +44,10 @@ const GIACENZE = args.includes('--giacenze')
 // precedenza — e se è sbagliato resta sbagliato per sempre, portandosi dietro
 // il costo al cl e quindi il margine di ogni drink che usa il prodotto.
 const FORMATI = args.includes('--formati')
+// ASSORTIMENTO dalla colonna C del foglio: LINEA (non deve mancare) e OUT
+// (fuori assortimento). Il "premium" nel foglio non esiste, quindi chi è
+// premium in gestionale resta premium: è una scelta fatta a mano.
+const STATI = args.includes('--stati')
 
 const { sheet, products } = JSON.parse(readFileSync(JSON_PATH, 'utf8'))
 console.log(`[costi] ${products.length} prodotti dal foglio "${sheet}"`)
@@ -187,6 +193,15 @@ for (const d of docs) {
   daAggiornare.push({ doc: d, nome, p, unit, pack, costoAttuale, come })
 }
 
+// Stato dal foglio: OUT e LINEA sono le uniche voci che ci sono. Il
+// premium e' una scelta fatta a mano in gestionale e non va sovrascritta da
+// un foglio che quella colonna non ce l'ha.
+function statoDaFoglio(p, attuale) {
+  if (p.out) return 'out'
+  if (p.linea) return 'linea'
+  return attuale === 'premium' ? 'premium' : 'assortimento'
+}
+
 const nonUsati = [...listino.values()].filter((p) => !usati.has(normName(p.name)))
 
 console.log(`\n  da aggiornare : ${daAggiornare.length}`)
@@ -244,6 +259,21 @@ if (daConfermare.length) {
   }
   if (daConfermare.length > 30) console.log(`   ... e altri ${daConfermare.length - 30}`)
   console.log(`   Per accettarne uno: mettilo in ${ALIAS_PATH} come {"NOME GESTIONALE": "NOME LISTINO"}`)
+}
+
+if (STATI) {
+  const conta = { linea: 0, out: 0, assortimento: 0, invariati: 0 }
+  for (const x of daAggiornare) {
+    const attuale = strOf(x.doc.fields?.status) || 'assortimento'
+    const nuovo = statoDaFoglio(x.p, attuale)
+    if (nuovo === attuale) conta.invariati++
+    else conta[nuovo] = (conta[nuovo] || 0) + 1
+  }
+  console.log(`\n  ASSORTIMENTO dalla colonna C:`)
+  console.log(`   → in linea: ${conta.linea} · fuori assortimento: ${conta.out}` +
+    ` · in assortimento: ${conta.assortimento} · invariati: ${conta.invariati}`)
+  const premium = daAggiornare.filter((x) => strOf(x.doc.fields?.status) === 'premium').length
+  if (premium) console.log(`   (${premium} premium lasciati come sono: nel foglio non esistono)`)
 }
 
 if (FORMATI) {
@@ -310,6 +340,11 @@ const writes = daAggiornare.map((x) => {
       fields.stock = { doubleValue: Math.round(base * 1000) / 1000 }
       paths.push('stock')
     }
+  }
+  if (STATI) {
+    const attuale = strOf(x.doc.fields?.status) || 'assortimento'
+    fields.status = { stringValue: statoDaFoglio(x.p, attuale) }
+    paths.push('status')
   }
   return { update: { name: x.doc.name, fields }, updateMask: { fieldPaths: paths } }
 })
