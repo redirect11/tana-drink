@@ -1403,6 +1403,18 @@ body.fullbleed .bar-content {
   letter-spacing: -0.01em;
 }
 
+/* Elenco dei prodotti venduti in una fascia oraria: righe compatte scorrevoli. */
+.fascia-prodotti {
+  max-height: 320px;
+  overflow-y: auto;
+  font-size: 0.86rem;
+}
+.fascia-riga {
+  padding: 4px 0;
+  border-bottom: 1px dashed var(--line);
+}
+.fascia-riga:last-child { border-bottom: none; }
+
 /* Sconto applicato: piccolo e verde, accanto al totale (che è già scontato). */
 .sconto-badge {
   color: #2ecc71;

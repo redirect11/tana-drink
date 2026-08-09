@@ -13,6 +13,7 @@ import {
   ingredientUsage,
   prepTimeStats,
   serviceModeSplit,
+  hourRangeReport,
 } from '../../src/lib/stats.js'
 
 const orders = [
@@ -168,5 +169,43 @@ describe('serviceModeSplit', () => {
     const s = serviceModeSplit(orders)
     expect(s.tavolo).toEqual({ ordini: 1, incasso: 20 })
     expect(s.banco).toEqual({ ordini: 1, incasso: 8 })
+  })
+})
+
+describe('hourRangeReport (venduto in una fascia oraria)', () => {
+  // La fascia si calcola dall'ora LOCALE di un ordine noto, così il test vale
+  // in qualunque fuso orario.
+  const iso = '2026-06-05T20:15:00.000Z'
+  const hh = new Date(iso).getHours()
+  const due = (h) => `${String((h + 24) % 24).padStart(2, '0')}:00`
+  const fascia = { from: due(hh), to: due(hh + 1) }
+
+  it('somma solo gli ordini nella fascia, al netto degli sconti, con prodotti e categorie', () => {
+    const conSconto = [
+      ...orders,
+      {
+        serata_id: 's3',
+        daily_number: 4,
+        status: 'pagato',
+        total: 20,
+        discount_amount: 5, // il totale della fascia è quello REALE
+        created_at: iso, // stessa ora dell'ordine da 20 → stessa fascia
+        status_times: {},
+        order_items: [{ drink_id: 'd1', name: 'Negroni', qty: 2, unit_price: 8 }],
+      },
+    ]
+    const r = hourRangeReport(conSconto, fascia, drinksById)
+    expect(r.nOrdini).toBe(2)
+    expect(r.totale).toBe(35) // 20 + (20 − 5)
+    const negroni = r.prodotti.find((p) => p.name === 'Negroni')
+    expect(negroni.qty).toBe(4) // 2 + 2
+    expect(r.categorie.length).toBeGreaterThan(0)
+  })
+
+  it('fuori fascia non conta nulla', () => {
+    const r = hourRangeReport(orders, { from: due(hh + 6), to: due(hh + 7) }, drinksById)
+    expect(r.nOrdini).toBe(0)
+    expect(r.totale).toBe(0)
+    expect(r.prodotti).toEqual([])
   })
 })

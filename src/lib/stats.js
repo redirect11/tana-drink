@@ -105,6 +105,36 @@ export function revenueByHour(orders, range = DEFAULT_HOUR_RANGE) {
   return { buckets, peakLabel: peak?.label ?? null }
 }
 
+// Ordini che cadono in una FASCIA ORARIA (es. 22:00 → 01:00, anche a cavallo
+// della mezzanotte). Serve a rispondere a "cosa ho venduto fra le 22 e l'una":
+// da qui si passano gli ordini filtrati a topProducts / revenueByCategory.
+export function ordersInHourRange(orders, range = DEFAULT_HOUR_RANGE) {
+  const fromMin = parseHM(range?.from) ?? parseHM(DEFAULT_HOUR_RANGE.from)
+  const toMin = parseHM(range?.to) ?? parseHM(DEFAULT_HOUR_RANGE.to)
+  const span = rangeSpan(fromMin, toMin)
+  return valid(orders).filter((o) => {
+    const t = ms(o.created_at)
+    if (t == null) return false
+    return offsetInRange(minuteOfDay(t), fromMin, span) != null
+  })
+}
+
+// Riepilogo di una fascia oraria: totale incassato (al netto degli sconti),
+// numero di conti, TUTTI i prodotti venduti e le categorie.
+export function hourRangeReport(orders, range, drinksById) {
+  const ord = ordersInHourRange(orders, range)
+  const totale = ord.reduce(
+    (s, o) => s + (Number(o.total) || 0) - (Number(o.discount_amount) || 0),
+    0
+  )
+  return {
+    nOrdini: ord.length,
+    totale: Math.round(totale * 100) / 100,
+    prodotti: aggregateProducts(ord), // già ordinati per quantità
+    categorie: revenueByCategory(ord, drinksById),
+  }
+}
+
 // Incasso per GIORNATA COMMERCIALE considerando SOLO gli ordini in una
 // fascia oraria (es. "quanto incassiamo fra le 22 e l'una").
 export function revenueByDayInRange(orders, range, cutoffHour = DEFAULT_CUTOFF_HOUR) {
