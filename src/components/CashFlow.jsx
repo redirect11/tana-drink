@@ -10,7 +10,7 @@ import {
 } from '../lib/api.js'
 import { auth } from '../lib/firebaseClient.js'
 import { cashRecap } from '../lib/cassa.js'
-import { formatPrice } from '../lib/orderStatus.js'
+import { formatPrice, cashMethodKeys, paymentMethodLabel } from '../lib/orderStatus.js'
 import CashSessionsList from './CashSessionsList.jsx'
 import { printChiusuraCassa } from '../lib/printer.js'
 import { toastError } from '../lib/toast.js'
@@ -103,15 +103,17 @@ export default function CashFlow({ canManageStaff = false }) {
         </div>
         <strong className="price" style={{ fontSize: '1.4rem' }}>{formatPrice(recap.incassato)}</strong>
       </div>
-      {(recap.byMethod.banco > 0 ||
-        recap.byMethod.carta > 0 ||
-        recap.byMethod.lettore > 0 ||
-        recap.byMethod.online > 0) && (
+      {/* Un chip per ogni metodo BATTUTO, anche uno mai visto prima: l'elenco
+          si costruisce dagli incassi, non da una lista scritta a mano. */}
+      {cashMethodKeys(recap.byMethod).some((k) => recap.byMethod[k] > 0) && (
         <div className="chips-row" style={{ marginBottom: 8 }}>
-          {recap.byMethod.banco > 0 && <span className="chip">💶 Contanti {formatPrice(recap.byMethod.banco)}</span>}
-          {recap.byMethod.carta > 0 && <span className="chip">💳 Carta {formatPrice(recap.byMethod.carta)}</span>}
-          {recap.byMethod.lettore > 0 && <span className="chip">📟 SumUp {formatPrice(recap.byMethod.lettore)}</span>}
-          {recap.byMethod.online > 0 && <span className="chip">🌐 Online {formatPrice(recap.byMethod.online)}</span>}
+          {cashMethodKeys(recap.byMethod)
+            .filter((k) => recap.byMethod[k] > 0)
+            .map((k) => (
+              <span className="chip" key={k}>
+                {paymentMethodLabel(k)} {formatPrice(recap.byMethod[k])}
+              </span>
+            ))}
         </div>
       )}
 

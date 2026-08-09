@@ -3,7 +3,7 @@ import { fetchCashSessions, fetchOrdersBetween, fetchDrinks } from '../lib/api.j
 import { sessionReport } from '../lib/stats.js'
 import { cashRecap } from '../lib/cassa.js'
 import { businessDayKey } from '../lib/businessDay.js'
-import { formatPrice } from '../lib/orderStatus.js'
+import { formatPrice, cashMethodKeys, paymentMethodLabel } from '../lib/orderStatus.js'
 import { printChiusuraCassa } from '../lib/printer.js'
 import { toastSuccess, toastError } from '../lib/toast.js'
 
@@ -34,6 +34,13 @@ const fmtOra = (iso) => {
     return '—'
   }
 }
+// Come e' stato pagato: piu' metodi se il conto e' stato diviso.
+const metodiDi = (o) => {
+  const metodi = [...new Set((o.payments || []).map((p) => p.method).filter(Boolean))]
+  if (!metodi.length && o.payment_method) metodi.push(o.payment_method)
+  return metodi.map(paymentMethodLabel).join(' + ')
+}
+
 const durata = (a, b) => {
   const t1 = Date.parse(a)
   const t2 = Date.parse(b)
@@ -84,10 +91,17 @@ export default function CashSessionsList() {
       // salvato alla chiusura: le serate chiuse con una versione vecchia
       // avevano le carte di credito finite nel secchio dei contanti, e il
       // dato buono (payments[].method) è sempre rimasto sull'ordine.
+      const dentro = ordini
+        .filter((o) => {
+          const t = o.paid_at || o.created_at
+          return !!t && t >= s.opened_at && (!s.closed_at || t <= s.closed_at)
+        })
+        .sort((a, b) => String(b.paid_at || b.created_at).localeCompare(a.paid_at || a.created_at))
       setReport({
         id: s.id,
         dati: sessionReport(ordini, s, drinksById),
         recap: cashRecap(ordini, s, s.closed_at || new Date().toISOString()),
+        conti: dentro,
       })
     } catch (e) {
       setError(e.message)
@@ -135,19 +149,15 @@ export default function CashSessionsList() {
 
             {isOpen && (
               <div style={{ marginTop: 8 }}>
-                {/* Incassi per metodo, ricalcolati dagli ordini della serata */}
-                <div className="row between muted small">
-                  <span>💶 Contanti</span>
-                  <span>{formatPrice(snap.byMethod?.banco ?? 0)}</span>
-                </div>
-                <div className="row between muted small">
-                  <span>💳 Carta</span>
-                  <span>{formatPrice(snap.byMethod?.carta ?? 0)}</span>
-                </div>
-                <div className="row between muted small">
-                  <span>📟 POS SumUp</span>
-                  <span>{formatPrice(snap.byMethod?.lettore ?? 0)}</span>
-                </div>
+                {/* Incassi per metodo, ricalcolati dagli ordini della serata.
+                    Le righe vengono dai metodi davvero battuti: se domani si
+                    incassa con un metodo nuovo, compare da solo. */}
+                {cashMethodKeys(snap.byMethod).map((k) => (
+                  <div className="row between muted small" key={k}>
+                    <span>{paymentMethodLabel(k)}</span>
+                    <span>{formatPrice(snap.byMethod?.[k] ?? 0)}</span>
+                  </div>
+                ))}
                 {/* Sempre in elenco, anche a zero: "quanto ho lasciato sul
                     tavolo stasera" è una domanda che si fa ogni sera. */}
                 <div className="row between muted small">
@@ -195,6 +205,42 @@ export default function CashSessionsList() {
                         <div className="row between fascia-riga" key={pr.name}>
                           <span className="grow">{pr.qty}× {pr.name}</span>
                           <span className="muted">{formatPrice(pr.revenue)}</span>
+                        </div>
+                      ))}
+                    </div>
+                    {/* COME viene ripartito lo sconto: la domanda se la fa
+                        chiunque legga "9× Bjorne 35,24" invece di 36,00. */}
+                    <p className="muted small" style={{ margin: '8px 0 0' }}>
+                      ℹ️ Gli importi sono il <strong>venduto reale</strong>, non il listino.
+                      Lo sconto è un importo sul conto e viene ripartito{' '}
+                      <strong>in proporzione al prezzo</strong> di ogni riga: su un conto da
+                      10&nbsp;€ con 1&nbsp;€ di sconto ogni prodotto vale il 10% in meno
+                      (una birra da 4&nbsp;€ conta 3,60, un cocktail da 6&nbsp;€ conta 5,40).
+                    </p>
+
+                    {/* Lista dei conti della serata: dal totale ai singoli
+                        scontrini, senza uscire dalla chiusura. */}
+                    <div className="row between" style={{ marginTop: 12 }}>
+                      <span className="muted small">Conti della serata</span>
+                      <span className="muted small">{report.conti.length}</span>
+                    </div>
+                    <div className="fascia-prodotti">
+                      {report.conti.map((o) => (
+                        <div className="row between fascia-riga" key={o.id}>
+                          <span className="grow">
+                            <strong>#{o.daily_number ?? '—'}</strong>{' '}
+                            {o.customer_name || o.table || ''}{' '}
+                            <span className="muted">{fmtOra(o.paid_at || o.created_at)}</span>
+                            {Number(o.discount_amount) > 0 && (
+                              <span className="muted"> · sconto −{formatPrice(o.discount_amount)}</span>
+                            )}
+                          </span>
+                          <span className="muted">{metodiDi(o)}</span>
+                          <strong>
+                            {formatPrice(
+                              (Number(o.total) || 0) - (Number(o.discount_amount) || 0)
+                            )}
+                          </strong>
                         </div>
                       ))}
                     </div>

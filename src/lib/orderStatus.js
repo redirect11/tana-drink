@@ -63,6 +63,27 @@ export const PAYMENT_METHOD_LABELS = {
   misto: '💶+💳 Misto',
 }
 
+// Ordine in cui i metodi compaiono nei riepiloghi di cassa. Chi NON è in
+// questa lista viene comunque mostrato, in coda: il riepilogo si costruisce
+// da quello che è stato battuto davvero, non da un elenco fisso. Un metodo
+// nuovo (satispay, bancomat, buoni pasto…) si aggiunge qui solo per decidere
+// dove appare e con che etichetta — contato lo è comunque, da subito.
+export const CASH_METHOD_ORDER = ['banco', 'carta', 'lettore', 'online', 'buono']
+
+// Etichetta di un metodo mai visto prima: meglio il codice grezzo in chiaro
+// che farlo sparire in un altro secchio.
+export function paymentMethodLabel(method) {
+  return PAYMENT_METHOD_LABELS[method] || `❓ ${method || 'non indicato'}`
+}
+
+// Metodi da mostrare in un riepilogo: i noti sempre (anche a zero, così le
+// righe non ballano da una serata all'altra), più gli altri effettivamente
+// presenti.
+export function cashMethodKeys(byMethod = {}) {
+  const extra = Object.keys(byMethod).filter((k) => !CASH_METHOD_ORDER.includes(k))
+  return [...CASH_METHOD_ORDER, ...extra.sort()]
+}
+
 export function nextStatus(status) {
   const idx = STATUS_FLOW.indexOf(status)
   if (idx === -1 || idx === STATUS_FLOW.length - 1) return null

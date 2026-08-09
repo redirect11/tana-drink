@@ -80,3 +80,51 @@ describe('cashRecap', () => {
     expect(r.incassato).toBe(10)
   })
 })
+
+// Il metodo di pagamento va tracciato SEMPRE, anche uno aggiunto in futuro.
+// Prima il secchio era un elenco fisso con fallback su 'banco': la carta di
+// credito, che non era in elenco, finiva nel contante e gonfiava il contante
+// atteso in cassa — una serata intera contata sbagliata senza un segnale.
+const { CASH_METHOD_ORDER } = await import('../../src/lib/orderStatus.js')
+
+describe('metodi di pagamento: elenco aperto', () => {
+  const session = { opened_at: '2026-08-08T15:00:00.000Z', fondo_cassa: 100 }
+  const conto = (method, amount, at = '2026-08-08T22:00:00.000Z') => ({
+    status: 'pagato',
+    payment_status: 'pagato',
+    paid_at: at,
+    total: amount,
+    payments: [{ method, amount, at }],
+  })
+
+  it('la carta di credito non finisce nei contanti', () => {
+    const r = cashRecap([conto('banco', 30), conto('carta', 70)], session, '2026-08-09T02:00:00.000Z')
+    expect(r.byMethod.banco).toBe(30)
+    expect(r.byMethod.carta).toBe(70)
+    expect(r.incassato).toBe(100)
+    // In cassa ci devono essere fondo + SOLI contanti.
+    expect(r.contanteAtteso).toBe(130)
+  })
+
+  it('un metodo mai visto prima viene contato con il suo nome', () => {
+    const r = cashRecap([conto('satispay', 50)], session, '2026-08-09T02:00:00.000Z')
+    expect(r.byMethod.satispay).toBe(50)
+    expect(r.byMethod.banco).toBe(0) // non lo assorbe il contante
+    expect(r.incassato).toBe(50)
+    expect(r.contanteAtteso).toBe(100) // solo il fondo
+  })
+
+  it('i metodi noti ci sono sempre, anche a zero', () => {
+    const r = cashRecap([], session, '2026-08-09T02:00:00.000Z')
+    for (const k of CASH_METHOD_ORDER) expect(r.byMethod[k]).toBe(0)
+  })
+
+  it('senza metodo indicato resta il contante (chiusure vecchie)', () => {
+    const r = cashRecap(
+      [{ status: 'pagato', payment_status: 'pagato', paid_at: '2026-08-08T22:00:00.000Z', total: 20 }],
+      session,
+      '2026-08-09T02:00:00.000Z'
+    )
+    expect(r.byMethod.banco).toBe(20)
+  })
+})

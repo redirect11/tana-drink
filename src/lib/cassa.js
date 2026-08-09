@@ -9,6 +9,7 @@
 // Logica pura (niente Firebase), interamente testabile.
 
 import { orderDue } from './pagamento.js'
+import { CASH_METHOD_ORDER } from './orderStatus.js'
 
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100
 const inRange = (ts, from, to) => !!ts && ts >= from && (!to || ts <= to)
@@ -22,9 +23,13 @@ export function cashRecap(orders, session, nowIso) {
   const from = session.opened_at
   const to = session.closed_at || nowIso || null
 
-  // 'carta' = POS esterno: NON è contante. Senza questa voce finiva nel
-  // secchio 'banco' e gonfiava il contante atteso in cassa.
-  const byMethod = { banco: 0, carta: 0, lettore: 0, online: 0 }
+  // Il secchio dei metodi è APERTO: si accumula qualunque `method` sia stato
+  // battuto, anche uno mai visto prima. Prima era un elenco fisso con un
+  // fallback silenzioso su 'banco': la carta di credito, che nell'elenco non
+  // c'era, finiva nel contante e gonfiava il contante atteso in cassa — una
+  // serata intera contata sbagliata senza un solo segnale. I metodi noti
+  // partono da zero così le righe del riepilogo non ballano.
+  const byMethod = Object.fromEntries(CASH_METHOD_ORDER.map((k) => [k, 0]))
   const perOra = new Map()
   let incassato = 0
   let nPagati = 0
@@ -35,7 +40,9 @@ export function cashRecap(orders, session, nowIso) {
   const bump = (ts, amt, method) => {
     if (!(amt > 0)) return
     incassato = round2(incassato + amt)
-    const m = byMethod[method] != null ? method : 'banco'
+    // Niente rimappature: un metodo sconosciuto si porta dietro il suo nome
+    // e si vede nel riepilogo, non viene assorbito dal contante.
+    const m = method || 'banco'
     byMethod[m] = round2((byMethod[m] || 0) + amt)
     if (ts) {
       const h = String(ts).slice(11, 13)
