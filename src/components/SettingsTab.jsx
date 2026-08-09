@@ -85,23 +85,11 @@ export default function SettingsTab() {
       <div className="card settings-section">
         <h3>Vista ordine (bartender)</h3>
         <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
-          Come raggruppare di default gli item aggiunti al conto. Si può
-          comunque unire o separare al volo dal riepilogo ordine.
+          Toccando un prodotto nella griglia si aggiunge sempre una <strong>riga
+          nuova</strong> (così si può personalizzarla e annotarla); per
+          aumentare la quantità si usa il <strong>+ sulla riga</strong> del
+          conto. Dal riepilogo si possono comunque unire o separare al volo.
         </p>
-        <div className="mode-choice">
-          {[
-            ['separati', '≣ Separati'],
-            ['uniti', '🔗 Uniti (somma uguali)'],
-          ].map(([value, label]) => (
-            <button
-              key={value}
-              className={`mode-option${(settings.order_group_default || 'uniti') === value ? ' active' : ''}`}
-              onClick={() => save({ order_group_default: value })}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
 
         <p className="muted" style={{ margin: '12px 0 6px', fontSize: '0.85rem' }}>
           Dove finisce l’item appena aggiunto nella lista del conto.
