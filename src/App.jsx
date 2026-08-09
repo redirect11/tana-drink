@@ -271,15 +271,19 @@ export default function App() {
       </main>
 
       <footer className="app-footer">
-        <div className="footer-social">
-          {SOCIALS.map((s) => (
-            <a key={s.label} href={s.href} target="_blank" rel="noopener noreferrer" aria-label={s.label}>
-              <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                <path d={s.path} />
-              </svg>
-            </a>
-          ))}
-        </div>
+        {/* Social solo lato CLIENTE: nel gestionale sono spazio buttato — chi
+            sta al bancone non apre Instagram dal footer del POS. */}
+        {!staffSurface && (
+          <div className="footer-social">
+            {SOCIALS.map((s) => (
+              <a key={s.label} href={s.href} target="_blank" rel="noopener noreferrer" aria-label={s.label}>
+                <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                  <path d={s.path} />
+                </svg>
+              </a>
+            ))}
+          </div>
+        )}
         <a href={`${import.meta.env.BASE_URL}privacy-policy.html`}>Privacy</a>
         <a href={`${import.meta.env.BASE_URL}cookie-policy.html`} style={{ marginLeft: 14 }}>Cookie Policy</a>
         <button type="button" className="footer-link-btn" onClick={openCookiePreferences}>
