@@ -3810,3 +3810,10 @@ body.fullbleed,
 .rend-card-riga:last-child {
   border-bottom: 0;
 }
+
+/* Tab di secondo livello (lista/tabella dentro i conti): stessi tasti, un
+   gradino piu' piccoli, per non competere col tab principale. */
+.rend-subtabs .tab {
+  padding: 7px 10px;
+  font-size: 0.85rem;
+}
