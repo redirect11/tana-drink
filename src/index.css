@@ -4046,3 +4046,16 @@ body.fullbleed,
   opacity: 0.5;
   font-weight: 500;
 }
+
+/* Azioni del pannello ordine SOTTO il nome del conto, non accanto: di lato
+   restavano schiacciate e il nome finiva nei puntini di sospensione. */
+.posd-azioni {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+.posd-azioni .btn {
+  flex: 1 1 auto;
+  white-space: nowrap;
+}
