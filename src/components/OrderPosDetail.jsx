@@ -1239,12 +1239,15 @@ export default function OrderPosDetail({ order: orderProp = null }) {
             </button>
           )}
           <div style={{ padding: '8px 12px 0', flexShrink: 0 }}>
-            <div className="row between" style={{ alignItems: 'center' }}>
-              <strong className="posd-title">{panelTitle}</strong>
+            {/* Il nome del conto si prende tutta la riga: schiacciato fra i
+                tasti restava un filo di spazio e spariva nei puntini. */}
+            <strong className="posd-title" style={{ display: 'block' }}>
+              {panelTitle}
+            </strong>
+            <div className="posd-azioni">
               {/* I tasti ci sono SEMPRE, spenti quando non servono. Comparire e
                   sparire sposta tutto quello che sta sotto proprio mentre ci si
                   sta per premere sopra — e il tasto che cercavi non è più lì. */}
-              <span className="row" style={{ gap: 6 }}>
                 <button
                   className="btn ghost small"
                   onClick={mergeDraft}
@@ -1269,7 +1272,6 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                 >
                   <IconReceipt /> Comande ({isNew ? 0 : comande.length})
                 </button>
-              </span>
             </div>
             {!isNew && order.table_label && (
               <div className="muted small">🍽 Tavolo {order.table_label}</div>
@@ -1290,17 +1292,28 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                   <span className="muted small">Nessun gruppo</span>
                 )}
                 <span className="row" style={{ gap: 6 }}>
-                  <button className="btn ghost small" onClick={() => setPickGroup(true)}>
-                    👥 {group ? 'Cambia' : 'Associa a gruppo'}
-                  </button>
+                  {/* Solo l'icona: il nome del gruppo, quando c'è, sta già a
+                      sinistra, e la scritta mangiava mezza riga. */}
                   <button
                     className="btn ghost small"
-                    onClick={() => scegliGruppo('')}
-                    disabled={!group}
-                    title={group ? 'Togli dal gruppo' : 'Il conto non è in nessun gruppo'}
+                    onClick={() => setPickGroup(true)}
+                    aria-label={group ? 'Cambia gruppo' : 'Associa a gruppo'}
+                    title={group ? 'Cambia gruppo' : 'Associa a gruppo'}
                   >
-                    ✕
+                    👥
                   </button>
+                  {/* La ✕ toglie il conto dal gruppo: senza un gruppo non
+                      vuol dire niente, quindi non c'è. */}
+                  {group && (
+                    <button
+                      className="btn ghost small"
+                      onClick={() => scegliGruppo('')}
+                      aria-label="Togli dal gruppo"
+                      title="Togli dal gruppo"
+                    >
+                      ✕
+                    </button>
+                  )}
                 </span>
               </div>
             )}
