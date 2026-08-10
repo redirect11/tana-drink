@@ -50,7 +50,21 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   const online = useOnline()
   // Chiusura per pagamento COMPLETATO (non semplice annulla): chiude e avvisa
   // il chiamante, che può tornare alla coda ordini.
-  const closePaid = () => {
+  // `incasso` = { amount, method } appena registrato. Serve per lo SCONTRINO:
+  // la registrazione va in background, quindi in questo istante l'ordine non
+  // sa ancora com'è stato pagato — e lo scontrino usciva "Contante" anche per
+  // una carta di credito. Qui glielo si dice.
+  const closePaid = (incasso = null) => {
+    const perStampa = incasso
+      ? {
+          ...order,
+          payments: [
+            ...(order.payments || []),
+            { amount: incasso.amount, method: incasso.method, at: new Date().toISOString() },
+          ],
+          payment_method: incasso.method,
+        }
+      : order
     // Scontrino alla CHIUSURA del conto (se l'auto-stampa è attiva): prima
     // partiva solo quando l'ordine passava a "pronto", quindi con la gestione
     // preparazione spenta non usciva mai.
@@ -60,7 +74,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
       // scontrino con "#-". In quel caso stampa la coda quando l'ordine vero
       // risulta pagato (claimReceiptPrint garantisce una copia sola).
       if (order.id && order.daily_number != null && loadPrinterSettings().autoPrintScontrino && claimReceiptPrint(order.id)) {
-        printScontrino(order).catch((e) => {
+        printScontrino(perStampa).catch((e) => {
           console.warn('[printer] scontrino:', e.message)
           onError?.(`Scontrino non stampato: ${e.message}`)
         })
@@ -307,7 +321,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
         onError?.(`Pagamento non registrato: ${e.message}`)
       }
     })()
-    if (willClose) closePaid()
+    if (willClose) closePaid({ amount: toPay, method })
   }
 
   // ── Sconto dal tastierino della modale ──
