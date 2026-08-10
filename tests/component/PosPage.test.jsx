@@ -421,3 +421,35 @@ describe('primo item: la riga resta la stessa', () => {
     expect(inviati[0].line_id).toBe(chiavePrima.slice(2))
   })
 })
+
+// IL BOX DEL NOME È MODALE: si esce solo dalla ✕ o salvando.
+// Un tocco a vuoto sullo schermo non deve far sparire la domanda — al banco
+// capita di appoggiare il dito di striscio, e poi non si sa più se il nome
+// è stato messo o no.
+describe('box del nome: modale', () => {
+  const apri = async (user) => {
+    render(
+      <MemoryRouter initialEntries={['/pos']}>
+        <PosPage />
+      </MemoryRouter>
+    )
+    await user.click(screen.getByText('Mojito'))
+    await user.click(screen.getByRole('button', { name: /Torna agli ordini/ }))
+    return screen.findByRole('dialog', { name: /Nome del conto/ })
+  }
+
+  it('cliccando fuori resta aperto', async () => {
+    const user = userEvent.setup()
+    const box = await apri(user)
+    await user.click(box.parentElement) // lo sfondo scuro
+    expect(screen.getByRole('dialog', { name: /Nome del conto/ })).toBeInTheDocument()
+  })
+
+  it('la ✕ chiude e prosegue verso la lista ordini', async () => {
+    const user = userEvent.setup()
+    await apri(user)
+    await user.click(screen.getByRole('button', { name: /Chiudi senza dare un nome/ }))
+    await waitFor(() => expect(navigateSpy).toHaveBeenCalledWith('/bar'))
+    expect(updateOrderInfo).not.toHaveBeenCalled()
+  })
+})
