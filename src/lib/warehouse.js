@@ -122,9 +122,12 @@ export function purchaseOrderTotals(lines) {
 // restituire a magazzino. Usato quando il bartender modifica un ordine già
 // in preparazione (scarico già applicato).
 export function consumptionDiff(oldCons, newCons) {
+  // Chiave ARTICOLO + UNITÀ, come in computeConsumption: 40 ml di gin e 1 pz
+  // di gin sono due consumi diversi dello stesso prodotto e non si sommano.
+  const chiave = (c) => `${c.inventory_item_id}|${c.unit ?? 'pz'}`
   const byId = new Map()
   for (const c of newCons || []) {
-    byId.set(c.inventory_item_id, {
+    byId.set(chiave(c), {
       inventory_item_id: c.inventory_item_id,
       name: c.name ?? null,
       unit: c.unit ?? 'pz',
@@ -132,11 +135,11 @@ export function consumptionDiff(oldCons, newCons) {
     })
   }
   for (const c of oldCons || []) {
-    const cur = byId.get(c.inventory_item_id)
+    const cur = byId.get(chiave(c))
     if (cur) {
       cur.delta -= Number(c.qty) || 0
     } else {
-      byId.set(c.inventory_item_id, {
+      byId.set(chiave(c), {
         inventory_item_id: c.inventory_item_id,
         name: c.name ?? null,
         unit: c.unit ?? 'pz',
