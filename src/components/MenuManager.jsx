@@ -13,7 +13,7 @@ import {
 } from '../lib/api.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import { deleteDrinkImageByUrl } from '../lib/storage.js'
-import { formatQty } from '../lib/inventory.js'
+import { formatQty, stockStatus } from '../lib/inventory.js'
 import MarginList from './MarginList.jsx'
 import DrinkForm from './DrinkForm.jsx'
 import { saveDrinkFromForm } from '../lib/saveDrink.js'
@@ -191,6 +191,30 @@ export default function MenuManager() {
     ],
     [categories, counts]
   )
+
+  // STATO DI UN PRODOTTO DEL MENÙ, con i colori dell'inventario.
+  //   verde   si può fare
+  //   arancio si può fare ma un ingrediente sta finendo
+  //   rosso   spento a mano, oppure un ingrediente è esaurito
+  // Prima lo si capiva solo dal grigio della card e da una scritta "off"
+  // piccolissima: su una griglia piena non si vedeva.
+  const scorteById = useMemo(
+    () => Object.fromEntries((inventory || []).map((i) => [i.id, i])),
+    [inventory]
+  )
+  const statoMenu = (d) => {
+    if (!d.available) return { dot: 'empty', testo: 'Non disponibile' }
+    const ingredienti = (d.recipe_items || [])
+      .map((r) => scorteById[r.inventory_item_id])
+      .filter(Boolean)
+    if (ingredienti.some((i) => stockStatus(i) === 'empty')) {
+      return { dot: 'empty', testo: 'Ingrediente esaurito' }
+    }
+    if (ingredienti.some((i) => stockStatus(i) === 'low')) {
+      return { dot: 'low', testo: 'Ingrediente in esaurimento' }
+    }
+    return { dot: 'ok', testo: 'Disponibile' }
+  }
 
   // Applica il filtro categoria e raggruppa per categoria (ordine categorie).
   const groups = useMemo(() => {
@@ -383,12 +407,17 @@ export default function MenuManager() {
                       >
                         <div className="row between" style={{ alignItems: 'flex-start', gap: 6 }}>
                           <strong style={{ fontSize: '0.92rem', lineHeight: 1.25 }}>{d.name}</strong>
-                          {!d.available && <span className="pill ritirato">off</span>}
+                          {/* Stato col pallino dell'inventario: prima si
+                              distingueva solo dal grigio della card, che a
+                              colpo d'occhio su una griglia piena non si vede. */}
+                          <span
+                            className={`dot dot-${statoMenu(d).dot}`}
+                            title={statoMenu(d).testo}
+                            style={{ marginTop: 4 }}
+                          />
                         </div>
                         <div className="row between" style={{ alignItems: 'baseline' }}>
-                          <span className="muted small">
-                            {d.recipe_items?.length > 0 ? `${d.recipe_items.length} ingr.` : ''}
-                          </span>
+                          <span className="muted small">{statoMenu(d).testo}</span>
                           <span className="grid-card-tot">{formatPrice(d.price)}</span>
                         </div>
                       </div>
