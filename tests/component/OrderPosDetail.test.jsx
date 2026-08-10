@@ -566,3 +566,26 @@ describe('dati conto: il nome si salva comunque si chiuda', () => {
     expect(updateOrderInfo).not.toHaveBeenCalled()
   })
 })
+
+// I TASTI NON BALLANO.
+// Segnalato dal locale: aggiungendo il primo drink il tasto "Associa a
+// gruppo" spariva e al suo posto compariva "Comande" — il tasto che stavi per
+// premere non era più dov'era. I tasti ci sono sempre: spenti quando l'azione
+// non è possibile, mai rimossi.
+describe('tasti sempre presenti, spenti se non servono', () => {
+  it('Unisci e Separa ci sono anche quando non c’è niente da unire', () => {
+    mount(baseOrder({ comande: [{ id: 'c1', seq: 1, status: 'in_preparazione', items: [] }] }))
+    expect(screen.getByRole('button', { name: /Unisci/ })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /Separa/ })).toBeDisabled()
+  })
+
+  it('e si accendono quando l’azione diventa possibile', () => {
+    mount(baseOrder()) // 2 Mojito su una riga → si possono separare
+    expect(screen.getByRole('button', { name: /Separa/ })).toBeEnabled()
+  })
+
+  it('Comande c’è sempre: sul conto aperto è attivo', () => {
+    mount(baseOrder())
+    expect(screen.getByRole('button', { name: /Comande/ })).toBeEnabled()
+  })
+})

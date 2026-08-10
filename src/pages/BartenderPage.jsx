@@ -744,9 +744,25 @@ function OrderQueue() {
       (!workflowOn || [ORDER_STATUSES.PRONTO, ORDER_STATUSES.RITIRATO].includes(o.workflow_status))
     return (
       <>
-        {workflowOn && ns && o.workflow_status !== ORDER_STATUSES.RITIRATO && !awaiting && (
-          <button className="btn block" onClick={() => advance(o)}>
-            Segna come “{STATUS_LABELS[ns]}”
+        {/* Coi tasti che compaiono e spariscono, quello che cercavi non è più
+            dove l'avevi visto un attimo prima. Ci sono sempre: spenti quando
+            l'azione non è possibile, con il perché nel titolo. */}
+        {workflowOn && (
+          <button
+            className="btn block"
+            disabled={!ns || o.workflow_status === ORDER_STATUSES.RITIRATO || awaiting}
+            title={
+              awaiting
+                ? 'In attesa del pagamento: non si prepara'
+                : !ns || o.workflow_status === ORDER_STATUSES.RITIRATO
+                  ? 'Nessuno stato successivo'
+                  : undefined
+            }
+            onClick={() => advance(o)}
+          >
+            {ns && o.workflow_status !== ORDER_STATUSES.RITIRATO
+              ? `Segna come “${STATUS_LABELS[ns]}”`
+              : 'Servito'}
           </button>
         )}
         {readerPending ? (
@@ -759,18 +775,19 @@ function OrderQueue() {
             </button>
           </div>
         ) : (
-          canCollect &&
           readerReady && (
             <button
               className="btn secondary block"
               style={{ marginTop: o.workflow_status === ORDER_STATUSES.PRONTO ? 8 : 0 }}
+              disabled={!canCollect}
+              title={canCollect ? undefined : 'Conto già chiuso o non ancora incassabile'}
               onClick={() => incassaSuLettore(o)}
             >
               📟 Incassa sul lettore
             </button>
           )
         )}
-        {canCollect && (
+        {(
           // DUE tasti, non uno. C'era solo "Incassato (contanti)": è il tasto
           // più a portata di mano della board, e chi incassava con la carta lo
           // premeva lo stesso — il conto finiva nei contanti e a fine serata
@@ -778,7 +795,8 @@ function OrderQueue() {
           <div className="grid-2" style={{ marginTop: 8 }}>
             <button
               className="btn"
-              disabled={readerPending}
+              disabled={readerPending || !canCollect}
+              title={canCollect ? undefined : 'Conto già chiuso'}
               onClick={() =>
                 markOrderPaid(o.id, 'banco', { autoServe: !workflowOn }).catch((e) =>
                   setError(e.message)
@@ -789,7 +807,8 @@ function OrderQueue() {
             </button>
             <button
               className="btn"
-              disabled={readerPending}
+              disabled={readerPending || !canCollect}
+              title={canCollect ? undefined : 'Conto già chiuso'}
               onClick={() =>
                 markOrderPaid(o.id, 'carta', { autoServe: !workflowOn }).catch((e) =>
                   setError(e.message)
