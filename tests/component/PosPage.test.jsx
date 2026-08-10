@@ -133,8 +133,9 @@ describe('cassa: layout identico al dettaglio ordine', () => {
     mount()
     expect(screen.getByRole('button', { name: 'Cocktail' })).toBeInTheDocument()
     expect(screen.getByText('Gin Tonic')).toBeInTheDocument()
-    // La schermata di creazione è la stessa della modifica: intestazione "Nuovo ordine".
-    expect(screen.getAllByText('Nuovo ordine').length).toBeGreaterThan(0)
+    // La testata porta il PROGRESSIVO previsto, mai una parola al suo posto:
+    // "Nuovo ordine" che diventava "#9" faceva ballare tutta la riga.
+    expect(screen.getAllByText(/^#(9|…)$/).length).toBeGreaterThan(0)
     expect(screen.getByText(/Tocca i prodotti per aggiungerli/)).toBeInTheDocument()
     // stessi elementi del dettaglio: prodotto libero e dati conto ripiegabili
     expect(screen.getByRole('button', { name: /Prodotto libero/ })).toBeInTheDocument()
@@ -357,5 +358,40 @@ describe('uscita dal POS', () => {
     await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1))
     await user.click(await screen.findByRole('button', { name: /Salva senza nome/ }))
     await waitFor(() => expect(navigateSpy).toHaveBeenCalledWith('/bar'))
+  })
+})
+
+// APERTURA DI UN NUOVO ORDINE: niente scritte che si trasformano.
+// Il progressivo si legge dal contatore, che risponde un istante dopo: prima
+// la testata diceva "Nuovo ordine" e poi diventava "#9", e tutto quello che
+// stava accanto scivolava di lato mentre lo si guardava.
+describe('testata del nuovo ordine', () => {
+  beforeEach(() => localStorage.clear())
+
+  it('non scrive mai "Nuovo ordine"', async () => {
+    render(
+      <MemoryRouter initialEntries={['/pos']}>
+        <PosPage />
+      </MemoryRouter>
+    )
+    expect(screen.queryByText(/Nuovo ordine/)).toBeNull()
+    await waitFor(() => expect(screen.getAllByText('#9').length).toBeGreaterThan(0))
+  })
+
+  it('la seconda volta il numero c’è già, senza segnaposto', async () => {
+    const primo = render(
+      <MemoryRouter initialEntries={['/pos']}>
+        <PosPage />
+      </MemoryRouter>
+    )
+    await waitFor(() => expect(screen.getAllByText('#9').length).toBeGreaterThan(0))
+    primo.unmount()
+    render(
+      <MemoryRouter initialEntries={['/pos']}>
+        <PosPage />
+      </MemoryRouter>
+    )
+    // Subito, senza aspettare la lettura del contatore.
+    expect(screen.getAllByText('#9').length).toBeGreaterThan(0)
   })
 })
