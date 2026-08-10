@@ -411,10 +411,13 @@ export default function OrderPosDetail({ order: orderProp = null }) {
         const paidHere = it.drink_id ? Math.min(it.qty, remainingPaid[it.drink_id] || 0) : 0
         if (it.drink_id) remainingPaid[it.drink_id] -= paidHere
         const unpaidQty = it.qty - paidHere
+        // Stessa chiave della bozza da cui viene: la riga resta LO STESSO
+        // nodo e non riparte da capo (vedi draftToItems).
+        const chiave = it.line_id ? `d:${it.line_id}` : `c:${c.id}:${idx}`
         if (unpaidQty > 0)
-          out.push({ ...base, key: `c:${c.id}:${idx}`, qty: unpaidQty, removable: comandaEditable(c) })
+          out.push({ ...base, key: chiave, qty: unpaidQty, removable: comandaEditable(c) })
         if (paidHere > 0)
-          out.push({ ...base, key: `c:${c.id}:${idx}:paid`, qty: paidHere, removable: false, paid: true })
+          out.push({ ...base, key: `${chiave}:paid`, qty: paidHere, removable: false, paid: true })
       })
     }
     return out
@@ -777,12 +780,18 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   }, [editLine, drinks])
 
   // Righe di bozza → item per createOrder (usano `price`).
+  // `line_id` viaggia con l'item fino al documento dell'ordine. Non serve ai
+  // conti: serve a non far SALTARE la riga quando la bozza diventa item
+  // confermato. Senza, la chiave React cambiava (d:… → c:…), il nodo veniva
+  // ricreato e l'item appena aggiunto rifaceva il suo effetto di comparsa —
+  // il "piccolo relayout" che si vedeva a ogni primo drink.
   const draftToItems = () =>
     draft.map((l) => ({
       drink_id: l.drink_id,
       name: l.name,
       price: l.unit_price,
       qty: l.qty,
+      line_id: l.line_id,
       ...(l.custom ? { custom: true } : {}),
       ...(l.recipe_items ? { recipe_items: l.recipe_items } : {}),
       ...(l.note ? { note: l.note } : {}),

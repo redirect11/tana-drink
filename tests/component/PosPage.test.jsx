@@ -395,3 +395,29 @@ describe('testata del nuovo ordine', () => {
     expect(screen.getAllByText('#9').length).toBeGreaterThan(0)
   })
 })
+
+// LA RIGA APPENA AGGIUNTA NON SI RICREA.
+// In creazione l'item nasce in bozza e un attimo dopo diventa item confermato
+// dell'ordine appena creato. Se in quel passaggio cambia la chiave React, il
+// nodo viene distrutto e ricostruito: la riga "rimbalza" e rifà l'effetto di
+// comparsa. La chiave della bozza viaggia con l'item, quindi resta la stessa.
+describe('primo item: la riga resta la stessa', () => {
+  it('la chiave della riga non cambia quando l’ordine viene creato', async () => {
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter initialEntries={['/pos']}>
+        <PosPage />
+      </MemoryRouter>
+    )
+    await user.click(screen.getByText('Mojito'))
+    const riga = document.querySelector('.draft-line[data-line-key]')
+    const chiavePrima = riga.getAttribute('data-line-key')
+    expect(chiavePrima).toMatch(/^d:/)
+
+    // L'ordine viene creato: l'item passa da bozza a confermato.
+    await waitFor(() => expect(createOrder).toHaveBeenCalled())
+    const inviati = createOrder.mock.calls.at(-1)[0].items
+    // Il line_id viaggia con l'item, ed è quello che tiene ferma la riga.
+    expect(inviati[0].line_id).toBe(chiavePrima.slice(2))
+  })
+})
