@@ -64,6 +64,9 @@ import { useCashSession } from '../lib/cashSession.js'
 // oppure il segno del CLIENTE se l'ha aperto lui dall'app.
 // Colore della striscia laterale della card per STATO dell'ordine (non della
 // preparazione): aperto · pagato parzialmente · pagato · annullato.
+const annullato = (o) =>
+  o.status === ORDER_STATUSES.ANNULLATO || o.workflow_status === ORDER_STATUSES.ANNULLATO
+
 function orderStripClass(o) {
   if (o.status === ORDER_STATUSES.ANNULLATO || o.workflow_status === ORDER_STATUSES.ANNULLATO)
     return 'pay-annullato'
@@ -933,7 +936,16 @@ function OrderQueue() {
                 <span className="sconto-badge"> 🎁 −{formatPrice(o.discount_amount)}</span>
               )}
             </span>
-            <span className="grid-card-tot">{formatPrice(orderTotal(o))}</span>
+            {/* Un conto ANNULLATO non ha incassato niente: il totale si mostra
+                barrato, com'è nei conti di casa. Prima si leggeva "4,00 €"
+                identico a un conto vero e sembrava che contasse (non conta:
+                gli annullati restano fuori da cassa e statistiche). */}
+            <span
+              className={`grid-card-tot${annullato(o) ? ' tot-annullato' : ''}`}
+              title={annullato(o) ? 'Ordine annullato: non incassato' : undefined}
+            >
+              {formatPrice(orderTotal(o))}
+            </span>
           </div>
         </div>
         {/* Pulsante separato: apre/chiude i tasti azione (non va al dettaglio) */}
