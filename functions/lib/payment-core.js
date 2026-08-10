@@ -60,15 +60,97 @@ function mapTransactionStatus(txStatus) {
   return 'in_attesa'
 }
 
+// Tutte le comande servite? (modello conto/comande; i doc legacy valgono
+// come una sola comanda con lo stato dell'ordine)
+function isServed(o) {
+  if (!o) return false
+  if (Array.isArray(o.comande)) {
+    const attive = o.comande.filter((c) => c && c.status !== 'annullato')
+    return attive.length > 0 && attive.every((c) => c.status === 'ritirato')
+  }
+  return o.status === 'ritirato'
+}
+
+// Conto pagato ⇒ tutte le comande risultano SERVITE ('ritirato'); le
+// annullate restano annullate (specchio di serveAllComande lato client).
+function serveComande(comande, now) {
+  return comande.map((c) =>
+    !c || c.status === 'annullato' || c.status === 'ritirato'
+      ? c
+      : { ...c, status: 'ritirato', status_times: { ...(c.status_times || {}), ritirato: now } }
+  )
+}
+
+// Residuo del conto: totale − sconto − pagamenti parziali già registrati
+// (stessa aritmetica di src/lib/pagamento.js lato client).
+function orderDue(order) {
+  const paid = (order?.payments || []).reduce((s, p) => s + (Number(p.amount) || 0), 0)
+  const due = (Number(order?.total) || 0) - (Number(order?.discount_amount) || 0) - paid
+  return Math.max(0, Math.round(due * 100) / 100)
+}
+
 // Patch Firestore da applicare all'ordine per un esito di pagamento.
 // - pagato su ordine "ritirato" → chiude anche lo status (auto-avanzamento)
 // - pagato su ordine "annullato" → NON tocca lo status: segna
 //   payment_after_cancel per la gestione manuale (rimborso dal dashboard)
+// - incasso PARZIALE sul lettore (sumup_pending_amount < residuo): registra
+//   il pagamento nello storico e lascia il conto aperto ('parziale')
 function decidePaymentPatch(order, { status, transactionId = null, now }) {
   if (status === 'fallito') {
-    return { payment_status: 'fallito' }
+    return {
+      payment_status: (order?.payments || []).length ? 'parziale' : 'fallito',
+      sumup_pending_amount: null,
+      sumup_pending_items: null,
+    }
   }
   if (status !== 'pagato') return null
+
+  const pending = Number(order?.sumup_pending_amount)
+  if (pending > 0) {
+    const payments = [
+      ...(order?.payments || []),
+      {
+        id: `pay-${now}`,
+        amount: pending,
+        method: 'lettore',
+        items: order?.sumup_pending_items || null,
+        at: now,
+        ...(transactionId ? { transaction_id: transactionId } : {}),
+      },
+    ]
+    const residuo = orderDue({ ...order, payments })
+    if (residuo > 0.005) {
+      return {
+        payments,
+        payment_status: 'parziale',
+        sumup_pending_amount: null,
+        sumup_pending_items: null,
+        sumup_client_transaction_id: null,
+      }
+    }
+    const patch = {
+      payments,
+      payment_status: 'pagato',
+      payment_method: payments.every((p) => p.method === 'lettore') ? 'lettore' : 'misto',
+      paid_at: now,
+      sumup_pending_amount: null,
+      sumup_pending_items: null,
+    }
+    if (transactionId) patch.sumup_transaction_id = transactionId
+    if (order?.status === 'annullato') {
+      patch.payment_after_cancel = true
+    } else {
+      // Il saldo dal POS chiude il conto: le comande ancora in lavorazione
+      // risultano SERVITE (stessa regola del pagamento in contanti).
+      patch.status = 'pagato'
+      patch['status_times.pagato'] = now
+      if (Array.isArray(order?.comande)) {
+        patch.comande = serveComande(order.comande, now)
+        patch.comande_statuses = [...new Set(patch.comande.map((c) => c?.status).filter(Boolean))]
+      }
+    }
+    return patch
+  }
 
   const patch = {
     payment_status: 'pagato',
@@ -78,7 +160,25 @@ function decidePaymentPatch(order, { status, transactionId = null, now }) {
 
   if (order?.status === 'annullato') {
     patch.payment_after_cancel = true
-  } else if (order?.status === 'ritirato') {
+  } else if (isServed(order)) {
+    patch.status = 'pagato'
+    patch['status_times.pagato'] = now
+  }
+  return patch
+}
+
+// Patch per un singolo ordine saldato da un pagamento di GRUPPO: marca
+// pagato (metodo del pagamento, payment_id) e chiude lo status solo se
+// l'ordine era già ritirato. `null` se l'ordine è già pagato/da saltare.
+function groupOrderPaidPatch(order, { method, paymentId, now }) {
+  if (!order || order.payment_status === 'pagato' || order.status === 'annullato') return null
+  const patch = {
+    payment_status: 'pagato',
+    payment_method: method || 'online',
+    paid_at: now,
+    payment_id: paymentId,
+  }
+  if (isServed(order)) {
     patch.status = 'pagato'
     patch['status_times.pagato'] = now
   }
@@ -89,9 +189,9 @@ function decidePaymentPatch(order, { status, transactionId = null, now }) {
 // pagato — in qualunque ordine siano arrivate le due cose — si chiude.
 function decideAutoAdvance(before, after) {
   if (!after) return null
-  const nowClosed = after.status === 'ritirato' && after.payment_status === 'pagato'
-  const wasClosed =
-    before && before.status === 'ritirato' && before.payment_status === 'pagato'
+  if (after.status === 'pagato' || after.status === 'annullato') return null
+  const nowClosed = isServed(after) && after.payment_status === 'pagato'
+  const wasClosed = before && isServed(before) && before.payment_status === 'pagato'
   return nowClosed && !wasClosed ? 'pagato' : null
 }
 
@@ -116,12 +216,16 @@ function parseCheckoutWebhookBody(body) {
 }
 
 module.exports = {
+  isServed,
+  orderDue,
+  serveComande,
   eurosToCents,
   buildCheckoutPayload,
   buildReaderCheckoutPayload,
   mapCheckoutStatus,
   mapTransactionStatus,
   decidePaymentPatch,
+  groupOrderPaidPatch,
   decideAutoAdvance,
   parseReaderWebhookBody,
   parseCheckoutWebhookBody,

@@ -1,6 +1,9 @@
 // Stati dell'ordine, in ordine di avanzamento.
 // "tipo salumeria": ogni ordine ha un numero progressivo giornaliero.
 export const ORDER_STATUSES = {
+  // Stato dell'ORDINE (conto): aperto finché non viene pagato o annullato.
+  APERTO: 'aperto',
+  // Flusso di lavorazione della COMANDA (ticket) — vedi src/lib/comande.js.
   RICEVUTO: 'ricevuto',
   IN_PREPARAZIONE: 'in_preparazione',
   PRONTO: 'pronto',
@@ -18,6 +21,7 @@ export const STATUS_FLOW = [
 ]
 
 export const STATUS_LABELS = {
+  [ORDER_STATUSES.APERTO]: 'Conto aperto',
   [ORDER_STATUSES.RICEVUTO]: 'Ordine ricevuto',
   [ORDER_STATUSES.IN_PREPARAZIONE]: 'In preparazione',
   [ORDER_STATUSES.PRONTO]: 'Pronto al servizio',
@@ -40,6 +44,7 @@ export const CANCEL_PHRASES = {
 }
 
 export const STATUS_EMOJI = {
+  [ORDER_STATUSES.APERTO]: '🟢',
   [ORDER_STATUSES.RICEVUTO]: '🧾',
   [ORDER_STATUSES.IN_PREPARAZIONE]: '🍹',
   [ORDER_STATUSES.PRONTO]: '🔔',
@@ -51,8 +56,32 @@ export const STATUS_EMOJI = {
 // Etichette leggibili del metodo di pagamento di un ordine.
 export const PAYMENT_METHOD_LABELS = {
   online: '💳 Online',
-  lettore: '📟 Lettore',
-  banco: '💶 Al banco',
+  lettore: '📟 SumUp (lettore)',
+  banco: '💶 Contante',
+  carta: '💳 Carta di credito',
+  buono: '🎟 Buono VIP',
+  misto: '💶+💳 Misto',
+}
+
+// Ordine in cui i metodi compaiono nei riepiloghi di cassa. Chi NON è in
+// questa lista viene comunque mostrato, in coda: il riepilogo si costruisce
+// da quello che è stato battuto davvero, non da un elenco fisso. Un metodo
+// nuovo (satispay, bancomat, buoni pasto…) si aggiunge qui solo per decidere
+// dove appare e con che etichetta — contato lo è comunque, da subito.
+export const CASH_METHOD_ORDER = ['banco', 'carta', 'lettore', 'online', 'buono']
+
+// Etichetta di un metodo mai visto prima: meglio il codice grezzo in chiaro
+// che farlo sparire in un altro secchio.
+export function paymentMethodLabel(method) {
+  return PAYMENT_METHOD_LABELS[method] || `❓ ${method || 'non indicato'}`
+}
+
+// Metodi da mostrare in un riepilogo: i noti sempre (anche a zero, così le
+// righe non ballano da una serata all'altra), più gli altri effettivamente
+// presenti.
+export function cashMethodKeys(byMethod = {}) {
+  const extra = Object.keys(byMethod).filter((k) => !CASH_METHOD_ORDER.includes(k))
+  return [...CASH_METHOD_ORDER, ...extra.sort()]
 }
 
 export function nextStatus(status) {
@@ -72,4 +101,14 @@ export function placedByName(placedBy) {
   if (!placedBy) return ''
   if (placedBy.name) return placedBy.name
   return String(placedBy.email || '').split('@')[0]
+}
+
+// Lettera (iniziale) del dipendente/bartender che ha APERTO l'ordine, da
+// affiancare al numero. `null` se l'ordine è stato aperto dal CLIENTE (nessun
+// placed_by di staff), così a colpo d'occhio si capisce chi l'ha inserito.
+export function placedByLetter(placedBy) {
+  if (!placedBy) return null
+  if (placedBy.role !== 'bartender' && placedBy.role !== 'staff') return null
+  const n = placedByName(placedBy).trim()
+  return n ? n[0].toUpperCase() : null
 }

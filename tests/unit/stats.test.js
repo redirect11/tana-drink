@@ -6,13 +6,16 @@ import { describe, it, expect } from 'vitest'
 import {
   kpiSummary,
   revenueByHour,
-  revenueBySerata,
-  revenueBySerataInRange,
+  revenueByDay,
+  revenueByDayInRange,
   topProducts,
   revenueByCategory,
+  extrasBreakdown,
   ingredientUsage,
   prepTimeStats,
   serviceModeSplit,
+  hourRangeReport,
+  sessionReport,
 } from '../../src/lib/stats.js'
 
 const orders = [
@@ -57,11 +60,6 @@ const orders = [
   },
 ]
 
-const serate = [
-  { id: 's1', opened_at: '2026-06-05T19:00:00.000Z' },
-  { id: 's2', opened_at: '2026-06-06T19:00:00.000Z' },
-]
-
 const drinksById = {
   d1: {
     category: 'AMERICANI',
@@ -75,9 +73,11 @@ const drinksById = {
 
 describe('kpiSummary', () => {
   it('calcola incasso, scontrino medio e percentuali escludendo gli annullati', () => {
-    const k = kpiSummary(orders, serate)
+    const k = kpiSummary(orders, ['2026-06-05', '2026-06-06'])
     expect(k.incasso).toBe(28)
     expect(k.ordini).toBe(2)
+    expect(k.giorni).toBe(2)
+    expect(k.incassoPerGiorno).toBe(14)
     expect(k.scontrinoMedio).toBe(14)
     expect(k.drinkVenduti).toBe(4)
     expect(k.pctAnnullati).toBeCloseTo(33.33, 1)
@@ -107,21 +107,23 @@ describe('revenueByHour', () => {
   })
 })
 
-describe('revenueBySerataInRange', () => {
-  it('conta per serata solo gli ordini nella fascia', () => {
+describe('revenueByDayInRange', () => {
+  it('conta per giornata solo gli ordini nella fascia', () => {
     // 20:15Z = 22:15 locali → dentro 22:00-23:00; 22:40Z = 00:40 → fuori
-    const t = revenueBySerataInRange(orders, serate, { from: '22:00', to: '23:00' })
-    expect(t).toHaveLength(2)
+    const t = revenueByDayInRange(orders, { from: '22:00', to: '23:00' })
+    expect(t).toHaveLength(1)
     expect(t[0].incasso).toBe(20)
-    expect(t[1].incasso).toBe(0)
   })
 })
 
-describe('revenueBySerata', () => {
-  it('una voce per serata in ordine cronologico', () => {
-    const t = revenueBySerata(orders, serate)
+describe('revenueByDay (giornata commerciale)', () => {
+  it('una voce per giornata in ordine cronologico', () => {
+    const t = revenueByDay(orders)
     expect(t).toHaveLength(2)
+    // l'ordine delle 00:40 locali appartiene ancora alla giornata precedente
+    expect(t[0].id).toBe('2026-06-05')
     expect(t[0].incasso).toBe(20)
+    expect(t[1].id).toBe('2026-06-06')
     expect(t[1].incasso).toBe(8)
     expect(t[1].ordini).toBe(1) // l'annullato non conta
   })
@@ -169,5 +171,185 @@ describe('serviceModeSplit', () => {
     const s = serviceModeSplit(orders)
     expect(s.tavolo).toEqual({ ordini: 1, incasso: 20 })
     expect(s.banco).toEqual({ ordini: 1, incasso: 8 })
+  })
+})
+
+describe('hourRangeReport (venduto in una fascia oraria)', () => {
+  // La fascia si calcola dall'ora LOCALE di un ordine noto, così il test vale
+  // in qualunque fuso orario.
+  const iso = '2026-06-05T20:15:00.000Z'
+  const hh = new Date(iso).getHours()
+  const due = (h) => `${String((h + 24) % 24).padStart(2, '0')}:00`
+  const fascia = { from: due(hh), to: due(hh + 1) }
+
+  it('somma solo gli ordini nella fascia, al netto degli sconti, con prodotti e categorie', () => {
+    const conSconto = [
+      ...orders,
+      {
+        serata_id: 's3',
+        daily_number: 4,
+        status: 'pagato',
+        total: 20,
+        discount_amount: 5, // il totale della fascia è quello REALE
+        created_at: iso, // stessa ora dell'ordine da 20 → stessa fascia
+        status_times: {},
+        order_items: [{ drink_id: 'd1', name: 'Negroni', qty: 2, unit_price: 8 }],
+      },
+    ]
+    const r = hourRangeReport(conSconto, fascia, drinksById)
+    expect(r.nOrdini).toBe(2)
+    expect(r.totale).toBe(35) // 20 + (20 − 5)
+    const negroni = r.prodotti.find((p) => p.name === 'Negroni')
+    expect(negroni.qty).toBe(4) // 2 + 2
+    expect(r.categorie.length).toBeGreaterThan(0)
+  })
+
+  it('fuori fascia non conta nulla', () => {
+    const r = hourRangeReport(orders, { from: due(hh + 6), to: due(hh + 7) }, drinksById)
+    expect(r.nOrdini).toBe(0)
+    expect(r.totale).toBe(0)
+    expect(r.prodotti).toEqual([])
+  })
+})
+
+describe('sessionReport (serata di cassa, da apertura a chiusura)', () => {
+  const session = {
+    opened_at: '2026-06-06T19:00:00.000Z',
+    closed_at: '2026-06-07T02:00:00.000Z', // la serata scavalca la mezzanotte
+  }
+
+  it('somma quello venduto nella finestra, mezzanotte compresa', () => {
+    const ord = [
+      // dentro: sera
+      { status: 'pagato', total: 30, created_at: '2026-06-06T21:00:00.000Z',
+        order_items: [{ drink_id: 'd1', name: 'Negroni', qty: 3, unit_price: 10 }] },
+      // dentro: dopo mezzanotte
+      { status: 'pagato', total: 10, discount_amount: 2, created_at: '2026-06-07T00:30:00.000Z',
+        order_items: [{ drink_id: 'd1', name: 'Negroni', qty: 1, unit_price: 10 }] },
+      // fuori: prima dell'apertura
+      { status: 'pagato', total: 99, created_at: '2026-06-06T15:00:00.000Z',
+        order_items: [{ drink_id: 'd2', name: 'Ceres', qty: 9, unit_price: 4 }] },
+      // fuori: dopo la chiusura
+      { status: 'pagato', total: 50, created_at: '2026-06-07T03:00:00.000Z',
+        order_items: [{ drink_id: 'd2', name: 'Ceres', qty: 5, unit_price: 4 }] },
+    ]
+    const r = sessionReport(ord, session, drinksById)
+    expect(r.nOrdini).toBe(2)
+    expect(r.totale).toBe(38) // 30 + (10 − 2)
+    expect(r.prodotti.find((p) => p.name === 'Negroni').qty).toBe(4)
+  })
+
+  it('senza sessione → null', () => {
+    expect(sessionReport([], null, {})).toBeNull()
+  })
+})
+
+// Lo SCONTO è un importo sul conto, i prodotti hanno il prezzo di listino:
+// nel venduto per prodotto/categoria va spalmato, altrimenti si legge un
+// incasso che in cassa non è mai entrato (segnalato da Flavio sul venduto
+// della serata: 4 coca cola × 3€ = 12€ anche se il conto è stato scontato).
+const { aggregateProducts } = await import('../../src/lib/eta.js')
+
+describe('venduto al netto degli sconti', () => {
+  const drinksById = { d1: { category: 'ANALCOLICI' } }
+  const ordini = [
+    {
+      status: 'pagato',
+      total: 12,
+      discount_amount: 3, // -25%
+      created_at: '2026-06-06T21:00:00.000Z',
+      order_items: [{ drink_id: 'd1', name: 'COCA COLA VETRO', qty: 4, unit_price: 3 }],
+    },
+  ]
+
+  it('il prodotto porta il prezzo scontato, non il listino', () => {
+    const p = aggregateProducts(ordini)[0]
+    expect(p.qty).toBe(4)
+    expect(p.revenue).toBe(9) // 12 − 3, non 12
+  })
+
+  it('anche la categoria', () => {
+    expect(revenueByCategory(ordini, drinksById)[0].revenue).toBe(9)
+  })
+
+  it('senza sconto resta il listino', () => {
+    const senza = [{ ...ordini[0], discount_amount: 0 }]
+    expect(aggregateProducts(senza)[0].revenue).toBe(12)
+  })
+
+  it('lo sconto si spalma in proporzione fra righe diverse', () => {
+    const misto = [
+      {
+        status: 'pagato',
+        total: 100,
+        discount_amount: 10, // -10% su tutto
+        created_at: '2026-06-06T21:00:00.000Z',
+        order_items: [
+          { drink_id: 'd1', name: 'Negroni', qty: 5, unit_price: 16 }, // 80 → 72
+          { drink_id: 'd1', name: 'Ceres', qty: 5, unit_price: 4 }, // 20 → 18
+        ],
+      },
+    ]
+    const p = aggregateProducts(misto)
+    expect(p.find((x) => x.name === 'Negroni').revenue).toBe(72)
+    expect(p.find((x) => x.name === 'Ceres').revenue).toBe(18)
+  })
+
+  it('sconto più grande del conto non genera incassi negativi', () => {
+    const assurdo = [{ ...ordini[0], discount_amount: 99 }]
+    expect(aggregateProducts(assurdo)[0].revenue).toBe(0)
+  })
+})
+
+// Gli SCONTI vanno scorporati in tutte le statistiche, non solo nel venduto
+// per prodotto: `total` è il lordo di listino, e usarlo significa dichiarare
+// incassi mai visti.
+describe('statistiche al netto degli sconti', () => {
+  const ordini = [
+    {
+      status: 'pagato',
+      total: 100,
+      discount_amount: 10,
+      service_mode: 'tavolo',
+      created_at: '2026-06-06T21:30:00.000Z',
+      order_items: [{ drink_id: 'd1', name: 'Negroni', qty: 10, unit_price: 10 }],
+    },
+    {
+      status: 'pagato',
+      total: 50,
+      discount_amount: 0,
+      service_mode: 'banco',
+      created_at: '2026-06-06T22:30:00.000Z',
+      order_items: [{ drink_id: 'd1', name: 'Negroni', qty: 5, unit_price: 10 }],
+    },
+  ]
+
+  it('il KPI incasso è quello entrato in cassa', () => {
+    const k = kpiSummary(ordini, ['2026-06-06'])
+    expect(k.incasso).toBe(140) // 90 + 50, non 150
+    expect(k.scontrinoMedio).toBe(70)
+  })
+
+  it('incasso per giornata', () => {
+    const g = revenueByDay(ordini, 5)
+    expect(g.reduce((s, x) => s + x.incasso, 0)).toBe(140)
+  })
+
+  it('incasso per fascia oraria', () => {
+    const h = revenueByHour(ordini, { from: '00:00', to: '23:59' })
+    expect(h.buckets.reduce((s, b) => s + b.incasso, 0)).toBe(140)
+  })
+
+  it('tavolo e banco', () => {
+    const s = serviceModeSplit(ordini)
+    expect(s.tavolo.incasso).toBe(90) // era 100 col listino
+    expect(s.banco.incasso).toBe(50)
+  })
+
+  it('la ripartizione dice anche quanto sconto è stato concesso', () => {
+    const e = extrasBreakdown(ordini)
+    expect(e.incasso).toBe(140)
+    expect(e.sconti).toBe(10)
+    expect(e.lordo).toBe(150)
   })
 })

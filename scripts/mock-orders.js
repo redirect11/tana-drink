@@ -3,14 +3,14 @@
 //
 //    npm run mock:orders
 //
-//  Crea ~12 ordini nella serata aperta con stati misti, modalità di
-//  consegna varie, coperto/servizio/mancia, timestamp di stato coerenti
-//  e statistiche tempi (prep_stats/eta_stats) aggiornate sulla serata.
-//  Richiede: emulatore avviato, db seedato (npm run seed:dev) e una
-//  serata aperta.
+//  Crea ~12 ordini di oggi con stati misti, modalità di consegna varie,
+//  coperto/servizio/mancia, timestamp di stato coerenti e statistiche
+//  tempi (prep_stats/eta_stats) sul documento del servizio.
+//  Richiede: emulatore avviato e db seedato (npm run seed:dev).
 // =====================================================================
 import admin from 'firebase-admin'
 import { generateMockOrders } from '../src/dev/mockData.js'
+import { businessDayKey } from '../src/lib/businessDay.js'
 
 process.env.FIRESTORE_EMULATOR_HOST =
   process.env.FIRESTORE_EMULATOR_HOST ||
@@ -24,14 +24,6 @@ const db = admin.firestore()
 async function main() {
   console.log(`[mock] Emulatore Firestore: ${process.env.FIRESTORE_EMULATOR_HOST}`)
 
-  const serataSnap = await db.collection('serate').where('status', '==', 'open').limit(1).get()
-  if (serataSnap.empty) {
-    console.error('[mock] Nessuna serata aperta: aprila dal gestionale o con seed.')
-    process.exit(1)
-  }
-  const serataRef = serataSnap.docs[0].ref
-  const serataId = serataRef.id
-
   const drinksSnap = await db.collection('drinks').get()
   const drinks = drinksSnap.docs.map((d) => ({ id: d.id, ...d.data() }))
   if (drinks.length === 0) {
@@ -39,12 +31,13 @@ async function main() {
     process.exit(1)
   }
 
-  // Numero progressivo: continua dal contatore esistente.
-  const counterRef = db.collection('counters').doc(serataId)
+  // Numero progressivo: continua dal contatore della giornata commerciale.
+  const oggi = businessDayKey(new Date())
+  const counterRef = db.collection('counters').doc(oggi)
   const counterSnap = await counterRef.get()
   const startNumber = counterSnap.exists ? counterSnap.data().last || 0 : 0
 
-  const { orders, prepStats, etaStats, lastNumber } = generateMockOrders(drinks, serataId, startNumber)
+  const { orders, prepStats, etaStats, lastNumber } = generateMockOrders(drinks, startNumber)
 
   for (const o of orders) {
     await db.collection('orders').add({
@@ -57,9 +50,12 @@ async function main() {
   }
 
   await counterRef.set({ last: lastNumber }, { merge: true })
-  await serataRef.set({ prep_stats: prepStats, eta_stats: etaStats }, { merge: true })
+  await db
+    .collection('service_stats')
+    .doc('global')
+    .set({ prep_stats: prepStats, eta_stats: etaStats }, { merge: true })
 
-  console.log(`\n[mock] ✓ ${orders.length} ordini creati nella serata ${serataId}.`)
+  console.log(`\n[mock] ✓ ${orders.length} ordini creati nella giornata ${oggi}.`)
   console.log(`[mock]   prep_stats: ${prepStats.count} campioni · eta_stats (tavolo): ${etaStats.count} campioni`)
   process.exit(0)
 }

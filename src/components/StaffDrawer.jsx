@@ -1,15 +1,26 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { signOut } from 'firebase/auth'
 import { auth } from '../lib/firebaseClient.js'
+import { logoutStaff } from '../lib/logout.js'
 import { devToolsEnabled } from '../dev/devActions.js'
+import {
+  subscribeSettings,
+  subscribeOpenGroups,
+  createManualGroup,
+  DEFAULT_SETTINGS,
+} from '../lib/api.js'
 
 const BARTENDER_NAV = [
   ['coda', '🧾', 'Coda ordini'],
+  ['pagamenti', '💶', 'Flusso cassa'],
+  ['storico', '📋', 'Lista ordini'],
+  ['fatture', '📄', 'Fatture'],
   ['stats', '📊', 'Statistiche'],
   ['menu', '🍸', 'Menù'],
   ['inventario', '📦', 'Inventario'],
-  ['staff', '👥', 'Staff'],
+  ['staff', '👥', 'Staff: membri e ore'],
+  ['vip', '🎟', 'Buoni VIP'],
+  ['stampante', '🖨️', 'Stampante'],
   ['impostazioni', '⚙️', 'Impostazioni'],
 ]
 
@@ -24,6 +35,30 @@ export default function StaffDrawer({ role, active = null, onSelect = null }) {
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
 
+  // Il menu si apre dal ☰ della TOPBAR (che sta in App.jsx): il tasto flottante
+  // resta solo nelle schermate a tutto schermo, dove la topbar è nascosta.
+  useEffect(() => {
+    const h = () => setOpen((o) => !o)
+    window.addEventListener('tana:toggle-drawer', h)
+    return () => window.removeEventListener('tana:toggle-drawer', h)
+  }, [])
+
+  // Gruppi nel drawer (quadratini): attivi se l'impostazione lo prevede.
+  const [settings, setSettings] = useState(DEFAULT_SETTINGS)
+  const [groups, setGroups] = useState([])
+  const [newName, setNewName] = useState('')
+  useEffect(() => subscribeSettings(setSettings, () => {}), [])
+  const showGroups = settings.groups_enabled && settings.groups_in_drawer
+  useEffect(() => {
+    if (!showGroups) {
+      setGroups([])
+      return
+    }
+    return subscribeOpenGroups(setGroups, () => {})
+  }, [showGroups])
+  // Solo gruppi che possono ricevere ordini diretti (no contenitori).
+  const groupTiles = groups.filter((g) => !g.has_child_groups)
+
   const base = role === 'bartender' ? BARTENDER_NAV : STAFF_NAV
   const items = role === 'bartender' && devToolsEnabled ? [...base, ['dev', '🛠', 'Dev']] : base
 
@@ -35,7 +70,28 @@ export default function StaffDrawer({ role, active = null, onSelect = null }) {
 
   function nuovoOrdine() {
     setOpen(false)
-    navigate('/')
+    // La creazione ordine è la CASSA in stile POS (segue il tema staff),
+    // non il menù cliente: /menu resta per la "vista cliente" e i gruppi.
+    navigate('/pos')
+  }
+
+  // Toccando un gruppo si aprono i SUOI ORDINI nella coda (non si entra
+  // a comporre un ordine: da lì semmai si aggiunge).
+  function apriGruppo(id) {
+    setOpen(false)
+    navigate(`/bar?group=${id}`)
+  }
+
+  async function creaGruppo() {
+    const name = newName.trim()
+    if (!name) return
+    const u = auth.currentUser
+    const g = await createManualGroup({
+      name,
+      created_by: u ? { uid: u.uid, email: u.email, role } : null,
+    }).catch(() => null)
+    setNewName('')
+    if (g) apriGruppo(g.id)
   }
 
   return (
@@ -65,7 +121,40 @@ export default function StaffDrawer({ role, active = null, onSelect = null }) {
         >
           <span>✍️</span> Nuovo ordine
         </div>
-        <div className="bar-nav-item" onClick={() => signOut(auth)}>
+
+        {showGroups && (
+          <div className="drawer-groups">
+            <div className="drawer-groups-title">Gruppi</div>
+            <div className="group-tiles">
+              {groupTiles.map((g) => (
+                <button
+                  key={g.id}
+                  className="group-tile"
+                  title={g.name}
+                  onClick={() => apriGruppo(g.id)}
+                >
+                  <span className="group-tile-ic">{g.kind === 'customer' ? '👤' : '🏷'}</span>
+                  <span className="group-tile-name">{g.name}</span>
+                </button>
+              ))}
+            </div>
+            <div className="row" style={{ gap: 6, padding: '0 14px', marginTop: 8 }}>
+              <input
+                type="text"
+                placeholder="+ Nuovo gruppo"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && creaGruppo()}
+              />
+              <button className="btn small" style={{ flexShrink: 0 }} onClick={creaGruppo} disabled={!newName.trim()}>
+                Crea
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="bar-nav-sep" />
+        <div className="bar-nav-item" onClick={() => logoutStaff()}>
           <span>🚪</span> Esci
         </div>
       </nav>

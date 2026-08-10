@@ -1,15 +1,24 @@
 import { useEffect, useRef, useState } from 'react'
-import { subscribeSettings, updateSettings, replaceCatalog } from '../lib/api.js'
+import {
+  subscribeSettings,
+  updateSettings,
+  replaceCatalog,
+  resetOpenOrdersToReceived,
+} from '../lib/api.js'
 import { CANCEL_PHRASES } from '../lib/orderStatus.js'
 import { parseCarteCsv, decodeCsvBuffer } from '../lib/carteImport.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
+import ThemeSettings from './ThemeSettings.jsx'
 import { pairSumUpReader, unpairSumUpReader } from '../lib/paymentsApi.js'
+import { devToolsEnabled } from '../dev/devActions.js'
 
 // Impostazioni del bar (documento settings/bar). Ogni modifica viene salvata
 // subito; le pagine cliente le ricevono in tempo reale via subscribeSettings.
 export default function SettingsTab() {
   const [settings, setSettings] = useState(null)
   const [error, setError] = useState(null)
+  const [confermaSpegni, setConfermaSpegni] = useState(false) // gestione preparazione
+  const [esitoReset, setEsitoReset] = useState(null)
 
   useEffect(() => {
     return subscribeSettings(
@@ -35,6 +44,34 @@ export default function SettingsTab() {
     <div>
       {error && <div className="banner">Errore: {error}</div>}
 
+      {confermaSpegni && (
+        <ConfirmDialog
+          title="Spegnere la gestione della preparazione?"
+          message={
+            'I conti ancora aperti tornano tutti a “ricevuto”: senza la gestione ' +
+            'non ci sarebbero più i tasti per farli avanzare. Le scorte già ' +
+            'scalate restano scalate (il drink è stato fatto davvero) e non ' +
+            'verranno scalate di nuovo se riaccendi la gestione.'
+          }
+          confirmLabel="Spegni e riporta a ricevuto"
+          cancelLabel="Annulla"
+          onCancel={() => setConfermaSpegni(false)}
+          onConfirm={async () => {
+            setConfermaSpegni(false)
+            setEsitoReset(null)
+            try {
+              const n = await resetOpenOrdersToReceived()
+              await save({ workflow_enabled: false })
+              setEsitoReset(n)
+            } catch (e) {
+              setError(e.message)
+            }
+          }}
+        />
+      )}
+
+      <ThemeSettings settings={settings} onSave={save} />
+
       <div className="card settings-section">
         <h3>Modalità menù</h3>
         <ToggleRow
@@ -43,6 +80,55 @@ export default function SettingsTab() {
           checked={settings.menu_only}
           onChange={(v) => save({ menu_only: v })}
         />
+      </div>
+
+      <div className="card settings-section">
+        <h3>Vista ordine (bartender)</h3>
+        <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
+          Toccando un prodotto nella griglia si aggiunge sempre una <strong>riga
+          nuova</strong> (così si può personalizzarla e annotarla); per
+          aumentare la quantità si usa il <strong>+ sulla riga</strong> del
+          conto. Dal riepilogo si possono comunque unire o separare al volo.
+        </p>
+
+        <p className="muted" style={{ margin: '12px 0 6px', fontSize: '0.85rem' }}>
+          Dove finisce l’item appena aggiunto nella lista del conto.
+        </p>
+        <div className="mode-choice">
+          {[
+            [false, '⬇ In fondo (scorre)'],
+            [true, '⬆ In cima'],
+          ].map(([value, label]) => (
+            <button
+              key={String(value)}
+              className={`mode-option${!!settings.pos_add_top === value ? ' active' : ''}`}
+              onClick={() => save({ pos_add_top: value })}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <p className="muted" style={{ margin: '12px 0 6px', fontSize: '0.85rem' }}>
+          Come mostrare le categorie nel POS. L’icona e il colore di ogni
+          categoria si impostano nel <strong>Menù → Categorie</strong>: se una
+          categoria non ha un’icona, al suo posto compare il pallino colore.
+        </p>
+        <div className="mode-choice" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
+          {[
+            ['dot', '● Pallino + nome'],
+            ['icon_text', '🍸 Icona + nome'],
+            ['icon', '🍸 Solo icona (senza nome)'],
+          ].map(([value, label]) => (
+            <button
+              key={value}
+              className={`mode-option${(settings.category_display || 'dot') === value ? ' active' : ''}`}
+              onClick={() => save({ category_display: value })}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="card settings-section">
@@ -107,10 +193,168 @@ export default function SettingsTab() {
       </div>
 
       <div className="card settings-section">
+        <h3>Gruppi di ordini</h3>
+        <p className="muted small" style={{ margin: '0 0 8px' }}>
+          Servono quando <strong>più conti separati devono pagare insieme</strong>:
+          una tavolata in cui ognuno ha il suo conto, o un evento con più
+          tavoli che si saldano in blocco. Se da voi un tavolo = un conto
+          NON servono: la schermata di pagamento sa già dividere un conto
+          per articoli o incassare acconti.
+        </p>
+        <ToggleRow
+          label="Abilita i gruppi"
+          desc="Se spenti, spariscono ovunque e nulla cambia nel resto del lavoro."
+          checked={settings.groups_enabled}
+          onChange={(v) => save({ groups_enabled: v })}
+        />
+        {settings.groups_enabled && (
+          <>
+            <div className="muted small" style={{ margin: '8px 0' }}>
+              <strong>Come funzionano</strong>
+              <ol style={{ margin: '4px 0 0', paddingLeft: 18 }}>
+                <li>Crei il gruppo dal pannello nella coda o dal menu laterale.</li>
+                <li>
+                  Toccandolo vedi <strong>gli ordini di quel gruppo</strong>, il totale
+                  e quanto resta da pagare.
+                </li>
+                <li>
+                  Da lì aggiungi un ordine col tasto ✍️: si apre il POS e l’ordine
+                  nasce già dentro il gruppo.
+                </li>
+                <li>
+                  Alla fine incassi tutto insieme, oppure dividi in quote uguali.
+                </li>
+              </ol>
+              Gli ordini di un gruppo restano <strong>visibili nella coda</strong> come
+              tutti gli altri, con l’etichetta 👥 del gruppo.
+              Un gruppo può contenere altri gruppi (es. “Compleanno” con
+              “Tavolo A” e “Tavolo B”): chi contiene sottogruppi non ha ordini
+              diretti, si ordina nei figli.
+            </div>
+            <ToggleRow
+              label="Mostra nel menu laterale"
+              desc="Quadratini dei gruppi nel drawer: toccarne uno apre i suoi ordini."
+              checked={settings.groups_in_drawer}
+              onChange={(v) => save({ groups_in_drawer: v })}
+            />
+            <ToggleRow
+              label="Pannello gruppi nella coda"
+              desc="Pannello a scomparsa nella coda ordini con i gruppi e i loro conti."
+              checked={settings.groups_in_queue}
+              onChange={(v) => save({ groups_in_queue: v })}
+            />
+          </>
+        )}
+      </div>
+
+      <div className="card settings-section">
+        <h3>Gestione preparazione</h3>
+        <p className="muted small" style={{ margin: '0 0 8px' }}>
+          Serve se al bancone seguite la lavorazione dei drink: ricevuto →
+          in preparazione → pronto → servito. Se il locale lavora “a vista”
+          (si prepara e si consegna subito) è solo lavoro in più.
+        </p>
+        <ToggleRow
+          label="Segui la preparazione degli ordini"
+          desc="Spenta: si tiene traccia solo degli ordini (ricevuto e pagato). Spariscono avanzamenti di stato, tempi di servizio, stima ai clienti e avvisi di “pronto”."
+          checked={settings.workflow_enabled !== false}
+          onChange={(v) => (v ? save({ workflow_enabled: true }) : setConfermaSpegni(true))}
+        />
+        {esitoReset != null && (
+          <div className="muted small" style={{ marginTop: 6 }}>
+            ✅ {esitoReset === 0
+              ? 'Nessun conto aperto da riportare indietro.'
+              : `${esitoReset} conti aperti riportati a “ricevuto”.`}
+          </div>
+        )}
+      </div>
+
+      <div className="card settings-section">
+        <h3>Giornata di lavoro</h3>
+        <p className="muted small" style={{ margin: '0 0 8px' }}>
+          I conti restano aperti finché non li chiudi tu: nessuna “serata” da
+          aprire o chiudere. L’ora qui sotto dice solo quando far girare la
+          giornata per le statistiche e per il numero progressivo degli
+          ordini, così una nottata oltre la mezzanotte resta tutta insieme.
+        </p>
+        <div className="toggle-row">
+          <span>La giornata gira alle (ora)</span>
+          <AmountInput
+            value={settings.business_day_cutoff_hour}
+            min={0}
+            max={23}
+            step={1}
+            onCommit={(v) => save({ business_day_cutoff_hour: v })}
+          />
+        </div>
+      </div>
+
+      <div className="card settings-section">
+        <h3>Prezzo consigliato</h3>
+        <p className="muted small" style={{ margin: '0 0 8px' }}>
+          Creando un prodotto libero o modificando un drink, il sistema
+          calcola il <strong>prezzo reale</strong> sommando il costo al
+          dettaglio degli ingredienti (dal listino di magazzino) e propone un{' '}
+          <strong>prezzo consigliato</strong> moltiplicandolo per il ricarico.
+          È solo un suggerimento: il prezzo resta sempre modificabile.
+        </p>
+        <div className="toggle-row">
+          <span>Ricarico sul costo (×)</span>
+          <AmountInput
+            value={settings.price_markup}
+            min={1}
+            max={20}
+            step={0.5}
+            onCommit={(v) => save({ price_markup: v })}
+          />
+        </div>
+        <div className="toggle-row">
+          <span>Arrotonda il consigliato a (€)</span>
+          <AmountInput
+            value={settings.price_round_step}
+            min={0.05}
+            max={5}
+            step={0.05}
+            onCommit={(v) => save({ price_round_step: v })}
+          />
+        </div>
+        <div className="toggle-row">
+          <span>IVA di vendita predefinita (%)</span>
+          <AmountInput
+            value={settings.sale_vat}
+            min={0}
+            max={22}
+            step={1}
+            onCommit={(v) => save({ sale_vat: v })}
+          />
+        </div>
+        <p className="muted small" style={{ margin: '4px 0 0' }}>
+          IVA di rivendita (somministrazione: <strong>10%</strong>) usata per
+          scorporare il fatturato al netto.
+        </p>
+        <div className="toggle-row">
+          <span>IVA di acquisto predefinita (%)</span>
+          <AmountInput
+            value={settings.purchase_vat}
+            min={0}
+            max={22}
+            step={1}
+            onCommit={(v) => save({ purchase_vat: v })}
+          />
+        </div>
+        <p className="muted small" style={{ margin: '4px 0 0' }}>
+          IVA delle fatture fornitore (ordinaria: <strong>22%</strong>): è il
+          valore predefinito dei nuovi prodotti in Inventario. Ogni prodotto può
+          comunque indicarne una diversa (campo IVA).
+        </p>
+      </div>
+
+      {settings.workflow_enabled !== false && (
+      <div className="card settings-section">
         <h3>Tempi di servizio</h3>
         <ToggleRow
           label="Mostra tempo stimato ai clienti"
-          desc="Parte dal tempo base e si raffina con i tempi reali della serata. Per il ritiro al banco conta solo attesa + preparazione."
+          desc="Parte dal tempo base e si raffina con i tempi reali del servizio. Per il ritiro al banco conta solo attesa + preparazione."
           checked={settings.eta_enabled}
           onChange={(v) => save({ eta_enabled: v })}
         />
@@ -126,6 +370,48 @@ export default function SettingsTab() {
             />
           </div>
         )}
+      </div>
+      )}
+
+      <div className="card settings-section">
+        <h3>Sconto e righe del conto</h3>
+        <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
+          Uno sconto in euro è deciso su un certo conto. Se poi si tolgono o si aggiungono
+          righe, quell&apos;importo va riletto: 5&nbsp;€ di sconto su un conto sceso a 3&nbsp;€
+          vorrebbero dire incassare −2&nbsp;€. Scegli come deve comportarsi.
+          <br />
+          Lo sconto in <strong>percentuale</strong> segue sempre il conto, con qualsiasi scelta:
+          è la sua definizione.
+        </p>
+        <div className="sconto-scelte">
+          {[
+            [
+              'tetto',
+              '🔒 Tetto al totale',
+              'Lo sconto resta quello che hai scelto finché ci sta dentro. Se togliendo righe il conto scende sotto lo sconto, lo sconto si accorcia fino al totale e il conto diventa offerto: non va mai in negativo. Esempio: conto 20 €, sconto 5 € → togli 8 € di roba → conto 12 €, sconto ancora 5 €, da pagare 7 €. Togli altri 10 € → conto 2 €, lo sconto si accorcia a 2 € e non si paga nulla.',
+            ],
+            [
+              'proporzione',
+              '⚖️ Mantieni la proporzione',
+              'Lo sconto vale sempre la stessa quota del conto: togliendo righe cala insieme al conto, aggiungendone cresce. Esempio: conto 20 €, sconto 5 € (il 25%) → togli 8 € di roba → conto 12 €, sconto 3 €, da pagare 9 €. Da preferire se lo sconto è un "quanto gli faccio di sconto in percentuale" più che una cifra promessa.',
+            ],
+            [
+              'avviso',
+              '⚠️ Avvisa e basta',
+              'L’app non tocca lo sconto che hai messo. Se supera il totale del conto lo segnala in rosso e blocca l’incasso finché non lo correggi a mano. Da scegliere se lo sconto è una cifra concordata col cliente e nessuno, a parte te, deve poterla cambiare.',
+            ],
+          ].map(([value, titolo, testo]) => (
+            <button
+              key={value}
+              type="button"
+              className={`sconto-scelta${(settings.discount_policy || 'tetto') === value ? ' active' : ''}`}
+              onClick={() => save({ discount_policy: value })}
+            >
+              <strong>{titolo}</strong>
+              <span className="muted small">{testo}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="card settings-section">
@@ -203,12 +489,14 @@ export default function SettingsTab() {
       <div className="card settings-section">
         <h3>Coda ordini</h3>
         <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
-          Come visualizzare gli ordini nel gestionale: schede separate per
-          stato, oppure un&apos;unica lista (in corso + evasi) dove lo stato è
+          Come visualizzare gli ordini nel gestionale: <strong>griglia</strong> a
+          tutto schermo (card affiancate, ideale su tablet), schede separate per
+          stato, oppure un&apos;unica lista (in corso + evasi). Lo stato è sempre
           indicato dal colore e dall&apos;etichetta sulla card.
         </p>
         <div className="mode-choice">
           {[
+            ['griglia', '🔲 Griglia (schermo intero)'],
             ['tabs', '🗂 Schede per stato'],
             ['lista', '📋 Lista unica'],
           ].map(([value, label]) => (
@@ -477,6 +765,20 @@ function ReaderPairing({ settings }) {
             Sul lettore: Menu → Connessioni → API → genera il codice di
             pairing e inseriscilo qui (vale 5 minuti).
           </p>
+          {devToolsEnabled && (
+            <button
+              className="btn ghost small block"
+              style={{ marginBottom: 8 }}
+              disabled={busy}
+              onClick={() =>
+                updateSettings({ sumup_reader_id: 'sim', sumup_reader_name: 'Simulato' }).catch(
+                  (e) => setError(e.message)
+                )
+              }
+            >
+              🧪 Usa un lettore SIMULATO (solo test): l&apos;esito arriva da solo dopo 2,5s
+            </button>
+          )}
           <div className="row" style={{ gap: 8 }}>
             <input
               type="text"

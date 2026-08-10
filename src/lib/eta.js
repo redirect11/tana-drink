@@ -1,7 +1,7 @@
-// Stima dei tempi di servizio/ritiro e statistiche di fine serata.
+// Stima dei tempi di servizio/ritiro e statistiche di incasso.
 // Logica pura, senza dipendenze da Firestore: testabile in isolamento.
 //
-// Due gruppi di statistiche accumulati sul documento serata:
+// Due gruppi di statistiche accumulati sul documento del servizio:
 // - prep_stats  → attesa + preparazione (ricevuto→in_preparazione→pronto),
 //                 misurate su TUTTI gli ordini al passaggio a "pronto"
 // - eta_stats   → ciclo completo fino a ritirato/servito, misurato SOLO
@@ -98,36 +98,68 @@ export function phaseAverages(prepStats, etaStats) {
   }
 }
 
-// --- Statistiche di fine serata (da ordini mappati) ---
+// --- Statistiche di incasso (da ordini mappati) ---
 
 const isCancelled = (o) => o.status === ORDER_STATUSES.ANNULLATO
 
+// SCONTO SPALMATO SULLE RIGHE. Lo sconto è un importo sul CONTO, mentre le
+// righe portano il prezzo di LISTINO: sommando i listini si legge un incasso
+// che non è mai entrato in cassa (4 coca cola a 3€ = 12€ anche se il conto è
+// stato chiuso a 9€). Il fattore ripartisce lo sconto in proporzione, così
+// "venduto per prodotto" e "per categoria" tornano col totale incassato.
+export function discountFactor(order) {
+  const lordo = (order?.order_items || []).reduce(
+    (s, i) => s + (Number(i.qty) || 0) * (Number(i.unit_price) || 0),
+    0
+  )
+  const sconto = Number(order?.discount_amount) || 0
+  if (!(lordo > 0) || !(sconto > 0)) return 1
+  return Math.max(0, 1 - sconto / lordo)
+}
+
+const cent = (n) => Math.round((Number(n) || 0) * 100) / 100
+
 // Vendite per prodotto: [{ name, qty, revenue }] ordinate per quantità.
+// `revenue` è AL NETTO degli sconti applicati al conto.
 export function aggregateProducts(orders) {
   const byName = new Map()
   for (const o of orders) {
     if (isCancelled(o)) continue
+    const f = discountFactor(o)
     for (const i of o.order_items || []) {
       const cur = byName.get(i.name) || { name: i.name, qty: 0, revenue: 0 }
       cur.qty += Number(i.qty) || 0
-      cur.revenue += (Number(i.qty) || 0) * (Number(i.unit_price) || 0)
+      cur.revenue += (Number(i.qty) || 0) * (Number(i.unit_price) || 0) * f
       byName.set(i.name, cur)
     }
   }
-  return [...byName.values()].sort((a, b) => b.qty - a.qty || a.name.localeCompare(b.name))
+  return [...byName.values()]
+    .map((x) => ({ ...x, revenue: cent(x.revenue) }))
+    .sort((a, b) => b.qty - a.qty || a.name.localeCompare(b.name))
 }
 
-// Incassi della serata, esclusi gli ordini annullati.
-export function serataFinance(orders) {
+// INCASSO DI UN ORDINE, al netto dello sconto: è quello che è entrato in
+// cassa davvero. `total` è il lordo di listino, e usarlo nelle statistiche
+// significa dichiarare incassi mai visti (di sabato erano 22 € su 600).
+export const orderNet = (o) =>
+  Math.max(0, Math.round(((Number(o?.total) || 0) - (Number(o?.discount_amount) || 0)) * 100) / 100)
+
+// Incassi, esclusi gli ordini annullati. Tutto al NETTO degli sconti.
+export function ordersFinance(orders) {
   const valid = orders.filter((o) => !isCancelled(o))
   const sum = (fn) => valid.reduce((s, o) => s + (Number(fn(o)) || 0), 0)
-  const incasso = sum((o) => o.total)
+  const incasso = sum(orderNet)
+  const sconti = sum((o) => o.discount_amount)
   const coperto = sum((o) => o.coperto_amount)
   const servizio = sum((o) => o.service_charge_amount)
   const mance = sum((o) => o.tip_amount)
   return {
     ordini: valid.length,
     incasso,
+    lordo: sum((o) => o.total),
+    sconti,
+    // Lo sconto si scarica sui drink: coperto, servizio e mance restano
+    // quello che sono stati addebitati.
     drink: incasso - coperto - servizio - mance,
     coperto,
     servizio,

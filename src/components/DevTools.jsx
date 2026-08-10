@@ -8,7 +8,8 @@ import {
   simulateReaderPayment,
   isDevEnvironment,
 } from '../dev/devActions.js'
-import { subscribeOpenSerata, subscribeSerataOrders } from '../lib/api.js'
+import { subscribeActiveOrders } from '../lib/api.js'
+import { runImport } from '../dev/importExcel.js'
 
 // Opzioni sviluppatore: visibili SOLO in ambiente emulatore (Docker locale
 // o ambiente di test). Permettono di svuotare il db o resettarlo coi mock.
@@ -20,17 +21,10 @@ export default function DevTools() {
 
   // Pagamenti da simulare: in dev non ci sono Cloud Functions, quindi
   // l'esito del checkout SumUp si "recita" da qui.
-  const [serata, setSerata] = useState(null)
   const [pending, setPending] = useState([])
-  useEffect(() => subscribeOpenSerata(setSerata, () => setSerata(null)), [])
   const [unpaid, setUnpaid] = useState([])
   useEffect(() => {
-    if (!serata?.id) {
-      setPending([])
-      setUnpaid([])
-      return
-    }
-    return subscribeSerataOrders(serata.id, (orders) => {
+    return subscribeActiveOrders((orders) => {
       setPending(orders.filter((o) => o.payment_status === 'in_attesa'))
       // Candidati alla simulazione del lettore: non pagati, in mano al
       // cliente (pronto/ritirato), senza pagamento già in corso.
@@ -43,7 +37,7 @@ export default function DevTools() {
         )
       )
     })
-  }, [serata?.id])
+  }, [])
 
   function pushLog(msg) {
     setLog((l) => [...l, msg])
@@ -84,7 +78,7 @@ export default function DevTools() {
             <div>Reset con dati mock</div>
             <div className="desc">
               Svuota tutto e ripopola: menù completo con immagini, inventario,
-              impostazioni e una serata aperta con 12 ordini di esempio.
+              impostazioni e 12 ordini di esempio di oggi.
             </div>
           </div>
           <button
@@ -104,9 +98,9 @@ export default function DevTools() {
         </div>
         <div className="toggle-row">
           <div>
-            <div>Genera storico serate</div>
+            <div>Genera storico giornate</div>
             <div className="desc">
-              Aggiunge 12 serate passate chiuse con ordini, incassi e tempi
+              Aggiunge 12 giornate passate con ordini, incassi e tempi
               realistici: alimenta la sezione Statistiche.
             </div>
           </div>
@@ -116,11 +110,11 @@ export default function DevTools() {
             onClick={() =>
               setConfirm({
                 title: '📊 Generare lo storico?',
-                message: 'Verranno aggiunte 12 serate chiuse con ordini mock (i dati esistenti restano).',
+                message: 'Verranno aggiunte 12 giornate passate con ordini mock (i dati esistenti restano).',
                 run: () =>
                   run(async (progress) => {
                     const n = await createMockHistory(progress)
-                    progress(`Storico creato: ${n} serate.`)
+                    progress(`Storico creato: ${n} giornate.`)
                   }),
               })
             }
@@ -132,7 +126,7 @@ export default function DevTools() {
           <div>
             <div>Svuota database</div>
             <div className="desc">
-              Cancella tutti i dati (menù, inventario, ordini, serate,
+              Cancella tutti i dati (menù, inventario, ordini,
               impostazioni). L&apos;utente bartender resta.
             </div>
           </div>
@@ -159,7 +153,34 @@ export default function DevTools() {
       )}
 
       <div className="card settings-section">
-        <h3>Pagamenti (simulazione)</h3>
+        <h3>📥 Import storico da Excel (JSON)</h3>
+        <p className="muted small">
+          Carica il file <code>import-tana.json</code> (estratto dagli Excel:
+          fornitori, scadenzario, catalogo inventario, ore staff). Idempotente:
+          ciò che esiste già viene saltato, si può rilanciare.
+        </p>
+        <input
+          type="file"
+          accept="application/json,.json"
+          disabled={busy}
+          onChange={async (e) => {
+            const file = e.target.files?.[0]
+            e.target.value = ''
+            if (!file) return
+            setBusy(true)
+            setError(null)
+            try {
+              const data = JSON.parse(await file.text())
+              await runImport(data, (msg) => setLog((l) => [...l.slice(-30), msg]))
+            } catch (err) {
+              setError(err.message)
+            } finally {
+              setBusy(false)
+            }
+          }}
+        />
+
+        <h3 style={{ marginTop: 18 }}>Pagamenti (simulazione)</h3>
         <p className="muted small" style={{ marginTop: 0 }}>
           Simula qui l&apos;esito del pagamento SumUp per gli ordini in
           attesa (utile finché SumUp non è configurato con le credenziali

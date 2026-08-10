@@ -1,17 +1,29 @@
-import { Routes, Route, Link, useLocation } from 'react-router-dom'
+import { Routes, Route, Link, Navigate, useLocation } from 'react-router-dom'
+import LandingPage from './pages/LandingPage.jsx'
 import MenuPage from './pages/MenuPage.jsx'
 import OrderStatusPage from './pages/OrderStatusPage.jsx'
 import MyOrdersPage from './pages/MyOrdersPage.jsx'
 import BartenderPage from './pages/BartenderPage.jsx'
 import { AccediPage, RegistratiPage, ProfiloPage } from './pages/AccountPages.jsx'
 import StaffProfilePage from './pages/StaffProfilePage.jsx'
+import PosPage from './pages/PosPage.jsx'
 import { useCustomer, useHasOrders } from './lib/customerAuth.js'
 import { isFirebaseConfigured, auth } from './lib/firebaseClient.js'
-import { onAuthStateChanged, signOut } from 'firebase/auth'
-import { subscribeSettings, DEFAULT_SETTINGS } from './lib/api.js'
+import { onAuthStateChanged } from 'firebase/auth'
+import { subscribeSettings, DEFAULT_SETTINGS, clockIn, subscribePrinterConfig } from './lib/api.js'
+import { savePrinterSettings } from './lib/printer.js'
+import { dismissKeyboard } from './lib/keyboard.js'
+import StatusBell from './components/StatusBell.jsx'
+import { logoutStaff } from './lib/logout.js'
+import { resolveThemeVars, applyTheme } from './lib/themes.js'
 import { envLabel } from './dev/devActions.js'
 import { openCookiePreferences } from './lib/cookieConsent.js'
-import { useEffect, useState } from 'react'
+import { subscribeUpdateAvailable } from './lib/appVersion.js'
+import { useOnline } from './lib/useOnline.js'
+import { toastSuccess } from './lib/toast.js'
+import Toasts from './components/Toasts.jsx'
+import ZoomControl from './components/ZoomControl.jsx'
+import { useEffect, useRef, useState } from 'react'
 
 export default function App() {
   const location = useLocation()
@@ -25,6 +37,61 @@ export default function App() {
   }, [])
   const accountsOn = settings.customer_accounts_enabled
 
+  // Nuova versione online (la PWA resta aperta per giorni): banner
+  // "tocca per aggiornare" invece di aspettare un reload manuale.
+  const [updateReady, setUpdateReady] = useState(false)
+  useEffect(() => subscribeUpdateAvailable(() => setUpdateReady(true)), [])
+
+  // Tastiera virtuale: premendo Invio su un campo a riga singola FUORI da un
+  // form (es. nome tavolo/note, che si salvano con un bottone) la si chiude,
+  // togliendo il focus. Dentro un form si lascia il comportamento nativo
+  // (submit di login, ricerca…), per non romperlo.
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key !== 'Enter' || e.shiftKey) return
+      const el = document.activeElement
+      if (!el || el.tagName !== 'INPUT') return
+      const type = (el.getAttribute('type') || 'text').toLowerCase()
+      const singleLine = ['text', 'search', 'tel', 'url', 'email', 'number', 'password'].includes(type)
+      if (!singleLine || el.closest('form')) return
+      dismissKeyboard(el) // chiude la tastiera virtuale (anche su Windows)
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [])
+
+  // Topbar apribile/chiudibile ovunque. Sulle schermate a tutto schermo
+  // (coda, creazione/modifica ordine, pagamento) quando è aperta compare come
+  // OVERLAY (fissa), senza spingere il contenuto: quelle schermate restano
+  // interamente nel viewport.
+  const [topbarOpen, setTopbarOpen] = useState(false)
+  useEffect(() => {
+    document.body.classList.toggle('topbar-open', topbarOpen)
+    return () => document.body.classList.remove('topbar-open')
+  }, [topbarOpen])
+
+  // Config stampante: reidrata il localStorage dal server, così l'IP e le
+  // preferenze non si perdono quando iPad/Safari svuota la cache (ITP).
+  useEffect(() => {
+    if (!isFirebaseConfigured) return
+    return subscribePrinterConfig((cfg) => {
+      if (!cfg) return
+      const { updated_at, ...rest } = cfg // eslint-disable-line no-unused-vars
+      savePrinterSettings(rest) // scrive solo in locale: nessun loop col server
+    }, () => {})
+  }, [])
+
+  // Stato connessione: offline mostra un nastro; al ritorno un toast.
+  const online = useOnline()
+  const wasOffline = useRef(false)
+  useEffect(() => {
+    if (!online) wasOffline.current = true
+    else if (wasOffline.current) {
+      wasOffline.current = false
+      toastSuccess('✅ Di nuovo online — sincronizzo le modifiche')
+    }
+  }, [online])
+
   // Staff loggato (bartender o collaboratore): nel topbar lato cliente
   // mostra il ruolo ed «Esci» al posto di «Accedi».
   const [staffRole, setStaffRole] = useState(null)
@@ -36,24 +103,90 @@ export default function App() {
       try {
         const token = await u.getIdTokenResult()
         const role = token.claims.role
-        setStaffRole(role === 'bartender' || role === 'staff' ? role : null)
-        setStaffName(u.displayName || String(u.email || '').split('@')[0])
+        const isStaff = role === 'bartender' || role === 'staff'
+        setStaffRole(isStaff ? role : null)
+        const nome = u.displayName || String(u.email || '').split('@')[0]
+        setStaffName(nome)
+        // Badge virtuale: timbra l'entrata (idempotente, non duplica al
+        // refresh). Best-effort: se fallisce non blocca l'accesso.
+        if (isStaff) clockIn({ uid: u.uid, name: nome }).catch(() => {})
       } catch {
         setStaffRole(null)
       }
     })
   }, [])
 
+  // Tema: le schermate del gestionale (/bar, POS cassa, dettaglio ordine e
+  // menù usato dallo staff) seguono il tema staff; il resto quello cliente.
+  // Il menù è una pagina cliente, ma lo staff ci passa per inserire ordini
+  // manuali (la "vista cliente"): anche lì sta lavorando al bancone, quindi
+  // deve vedere il tema del gestionale. Gli ordini per gruppo passano
+  // invece dal POS (/pos?group=…), che è la schermata di lavoro.
+  const staffSurface =
+    onBackoffice ||
+    location.pathname.startsWith('/pos') ||
+    (!!staffRole && location.pathname.startsWith('/ordine')) ||
+    (!!staffRole && location.pathname.startsWith('/menu'))
+  useEffect(() => {
+    const scope = staffSurface ? settings.theme_staff : settings.theme_client
+    applyTheme(resolveThemeVars(scope))
+  }, [settings, staffSurface])
+
+
+  // Il ☰ apre lo StaffDrawer, che è montato solo nel gestionale e nel menù:
+  // altrove (dettaglio ordine, POS) il tasto non avrebbe nessuno che risponde.
+  const drawerHere =
+    location.pathname.startsWith('/bar') || location.pathname.startsWith('/menu')
+
   return (
     <div className="app">
-      {/* Nastro d'ambiente: distingue a colpo d'occhio test/locale da
-          produzione (i siti sono identici). In produzione non compare. */}
+      {/* Mostra/nascondi la topbar ovunque (utile sulle schermate a tutto
+          schermo, dove è nascosta). Da aperta è un overlay, non spinge nulla.
+          La campanella (notifiche + sync) sta nella topbar: si richiama da qui. */}
+      <button
+        className={`topbar-toggle${topbarOpen ? ' open' : ''}`}
+        onClick={() => setTopbarOpen((v) => !v)}
+        aria-label={topbarOpen ? 'Nascondi barra' : 'Mostra barra'}
+        title={topbarOpen ? 'Nascondi barra' : 'Mostra barra'}
+      >
+        {topbarOpen ? '▴' : '▾'}
+      </button>
+      {/* Ambiente non-produzione: solo una scritta piccola e discreta in un
+          angolo (niente più nastro in alto), che non dà fastidio. In
+          produzione non compare. */}
       {envLabel && (
-        <div className={`env-ribbon env-${envLabel.toLowerCase()}`}>
-          ⚠️ AMBIENTE {envLabel} — non è la produzione
+        <div className="env-badge" aria-hidden>
+          {envLabel === 'TEST' ? 'test version' : envLabel.toLowerCase()}
         </div>
       )}
+      {!online && (
+        <div className="offline-ribbon">
+          📴 Offline — puoi continuare a lavorare, tutto si sincronizza al ritorno della connessione
+        </div>
+      )}
+      {updateReady && (
+        <button className="update-banner" onClick={() => window.location.reload()}>
+          🔄 Nuova versione disponibile — tocca per aggiornare
+        </button>
+      )}
+      {/* Notifiche IN APP (sync, ordini da staff/clienti, errori) */}
+      <Toasts />
+      {/* Zoom della pagina: nella PWA a tutto schermo il browser non lo offre */}
+      <ZoomControl />
       <header className={`topbar${onBackoffice || staffRole ? ' backoffice' : ''}`}>
+        {/* Menu laterale A SCOMPARSA ovunque: si apre da qui (il tasto
+            flottante resta solo nelle schermate a tutto schermo, dove la
+            topbar è nascosta). */}
+        {staffRole && drawerHere && (
+          <button
+            className="topbar-burger"
+            aria-label="Menu"
+            title="Menu"
+            onClick={() => window.dispatchEvent(new Event('tana:toggle-drawer'))}
+          >
+            ☰
+          </button>
+        )}
         {/* Nel gestionale il logo non porta al menu: resta sugli ordini. */}
         <Link
           to={onBackoffice ? '/bar' : '/'}
@@ -64,6 +197,8 @@ export default function App() {
           <span>La Tana del Coniglio</span>
         </Link>
         <nav className="row">
+          <StatusBell />
+          <FullscreenButton />
           {onBackoffice ? (
             <>
               {staffRole && (
@@ -71,9 +206,10 @@ export default function App() {
                   Ciao, {staffName} ⚙️
                 </Link>
               )}
+              <Link className="btn ghost small" to="/pos">🍸 POS</Link>
               {/* Per lo staff «Nuovo ordine» porta già al menu: niente doppione. */}
               {staffRole !== 'staff' && (
-                <Link className="btn ghost small" to="/">Vista cliente</Link>
+                <Link className="btn ghost small" to="/menu">Vista cliente</Link>
               )}
             </>
           ) : staffRole === 'staff' ? (
@@ -84,7 +220,10 @@ export default function App() {
             </Link>
           ) : (
             <>
-              {hasOrders && (
+              {/* "I miei ordini" ha senso solo per il CLIENTE. Per lo staff/
+                  bartender gli ordini aperti sono nella coda (/bar), non sono
+                  ordini "suoi": niente schermata cliente. */}
+              {hasOrders && !staffRole && (
                 <Link className="btn ghost small" to="/ordini">I miei ordini</Link>
               )}
               {staffRole ? (
@@ -92,7 +231,7 @@ export default function App() {
                   <Link className="btn ghost small" to="/bar">
                     🍸 Ciao, {staffName}
                   </Link>
-                  <button className="btn ghost small" onClick={() => signOut(auth)}>
+                  <button className="btn ghost small" onClick={() => logoutStaff()}>
                     Esci
                   </button>
                 </>
@@ -108,6 +247,8 @@ export default function App() {
         </nav>
       </header>
 
+      {(onBackoffice || !!staffRole) && <AddToHomeHint />}
+
       {!isFirebaseConfigured && (
         <div className="banner">
           ⚠️ Firebase non è configurato. Imposta <code>VITE_FIREBASE_API_KEY</code> e{' '}
@@ -118,7 +259,8 @@ export default function App() {
 
       <main>
         <Routes>
-          <Route path="/" element={<MenuPage />} />
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/menu" element={<MenuPage />} />
           <Route path="/ordini" element={<MyOrdersPage />} />
           <Route path="/ordine/:id" element={<OrderStatusPage />} />
           <Route path="/accedi" element={<AccediPage />} />
@@ -126,20 +268,25 @@ export default function App() {
           <Route path="/profilo" element={<ProfiloPage />} />
           <Route path="/profilo-staff" element={<StaffProfilePage />} />
           <Route path="/bar" element={<BartenderPage />} />
-          <Route path="*" element={<MenuPage />} />
+          <Route path="/pos" element={<PosPage />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
 
       <footer className="app-footer">
-        <div className="footer-social">
-          {SOCIALS.map((s) => (
-            <a key={s.label} href={s.href} target="_blank" rel="noopener noreferrer" aria-label={s.label}>
-              <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                <path d={s.path} />
-              </svg>
-            </a>
-          ))}
-        </div>
+        {/* Social solo lato CLIENTE: nel gestionale sono spazio buttato — chi
+            sta al bancone non apre Instagram dal footer del POS. */}
+        {!staffSurface && (
+          <div className="footer-social">
+            {SOCIALS.map((s) => (
+              <a key={s.label} href={s.href} target="_blank" rel="noopener noreferrer" aria-label={s.label}>
+                <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                  <path d={s.path} />
+                </svg>
+              </a>
+            ))}
+          </div>
+        )}
         <a href={`${import.meta.env.BASE_URL}privacy-policy.html`}>Privacy</a>
         <a href={`${import.meta.env.BASE_URL}cookie-policy.html`} style={{ marginLeft: 14 }}>Cookie Policy</a>
         <button type="button" className="footer-link-btn" onClick={openCookiePreferences}>
@@ -178,3 +325,77 @@ const SOCIALS = [
     path: 'M12.006 4.295c-2.67 0-5.338.784-7.645 2.353H0l1.963 2.135a5.997 5.997 0 0 0 4.04 10.43 5.976 5.976 0 0 0 4.075-1.6L12 19.705l1.922-2.09a5.972 5.972 0 0 0 4.072 1.598 6 6 0 0 0 6-5.998 5.982 5.982 0 0 0-1.957-4.432L24 6.648h-4.35a13.573 13.573 0 0 0-7.644-2.353zM12 6.255c1.531 0 3.063.303 4.504.903C13.943 8.138 12 10.43 12 13.1c0-2.671-1.942-4.962-4.504-5.942A11.72 11.72 0 0 1 12 6.256zM6.002 9.157a4.059 4.059 0 1 1 0 8.118 4.059 4.059 0 0 1 0-8.118zm11.992.002a4.057 4.057 0 1 1 .003 8.115 4.057 4.057 0 0 1-.003-8.115zm-11.992 1.93a2.128 2.128 0 0 0 0 4.256 2.128 2.128 0 0 0 0-4.256zm11.992 0a2.128 2.128 0 0 0 0 4.256 2.128 2.128 0 0 0 0-4.256z',
   },
 ]
+
+// Suggerimento (solo iPad/iPhone in Safari, non ancora installata): per lo
+// schermo intero va aggiunta alla Home. Là l'API Fullscreen non esiste, quindi
+// è l'unica strada. Chiudibile una volta per tutte.
+function AddToHomeHint() {
+  const [dismissed, setDismissed] = useState(() => {
+    try {
+      return localStorage.getItem('tana:a2hs') === '1'
+    } catch {
+      return false
+    }
+  })
+  if (dismissed) return null
+  const standalone =
+    window.navigator.standalone === true ||
+    !!window.matchMedia?.('(display-mode: standalone)')?.matches
+  const isIOS =
+    /iP(hone|ad|od)/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  const hasFsApi = !!document.documentElement.requestFullscreen
+  // Mostra solo dove il tasto ⛶ non funziona (iOS Safari) e non è già installata.
+  if (standalone || !isIOS || hasFsApi) return null
+  const close = () => {
+    setDismissed(true)
+    try {
+      localStorage.setItem('tana:a2hs', '1')
+    } catch {
+      /* privata/quota: pazienza */
+    }
+  }
+  return (
+    <div className="a2hs-hint">
+      <span>
+        Per lo schermo intero: tocca{' '}
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: 'text-bottom' }}>
+          <path d="M12 3v12" />
+          <path d="M8 7l4-4 4 4" />
+          <path d="M6 12v7a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-7" />
+        </svg>{' '}
+        <strong>Condividi</strong> e poi <strong>“Aggiungi a Home”</strong>.
+      </span>
+      <button className="a2hs-x" onClick={close} aria-label="Chiudi">✕</button>
+    </div>
+  )
+}
+
+// Tasto schermo intero. L'API Fullscreen non c'è su iPad/Safari (solo per i
+// video): lì il "fullscreen" è aggiungere la PWA alla Home (display standalone).
+// Dove supportata (desktop/Android), entra/esce a schermo intero.
+function FullscreenButton() {
+  const [fs, setFs] = useState(() => typeof document !== 'undefined' && !!document.fullscreenElement)
+  useEffect(() => {
+    const on = () => setFs(!!document.fullscreenElement)
+    document.addEventListener('fullscreenchange', on)
+    return () => document.removeEventListener('fullscreenchange', on)
+  }, [])
+  const supported =
+    typeof document !== 'undefined' && !!document.documentElement.requestFullscreen
+  if (!supported) return null
+  const toggle = () => {
+    if (document.fullscreenElement) document.exitFullscreen?.()
+    else document.documentElement.requestFullscreen?.().catch(() => {})
+  }
+  return (
+    <button
+      className="btn ghost small"
+      onClick={toggle}
+      title={fs ? 'Esci da schermo intero' : 'Schermo intero'}
+      aria-label={fs ? 'Esci da schermo intero' : 'Schermo intero'}
+    >
+      {fs ? '🡼' : '⛶'}
+    </button>
+  )
+}

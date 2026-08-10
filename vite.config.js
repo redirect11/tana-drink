@@ -7,10 +7,31 @@ import react from '@vitejs/plugin-react'
 // (es. "/karaoke-drink/" per un eventuale deploy su GitHub Pages di progetto).
 const base = process.env.BASE_PATH || '/'
 
+// Identificativo di build: l'app lo confronta con version.json pubblicato
+// insieme al deploy per accorgersi che c'è una versione nuova (la PWA
+// sull'iPad resta aperta per giorni e non ricarica mai da sola).
+const buildId = String(Date.now())
+
 // https://vitejs.dev/config/
 export default defineConfig({
   base,
-  plugins: [react()],
+  define: {
+    __BUILD_ID__: JSON.stringify(buildId),
+  },
+  plugins: [
+    react(),
+    {
+      name: 'emit-version-json',
+      apply: 'build',
+      generateBundle() {
+        this.emitFile({
+          type: 'asset',
+          fileName: 'version.json',
+          source: JSON.stringify({ build: buildId }),
+        })
+      },
+    },
+  ],
   build: {
     rollupOptions: {
       output: {

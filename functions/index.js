@@ -23,7 +23,12 @@ const { getAuth } = require('firebase-admin/auth')
 
 const { buildSumupHeaders, buildSumupUrl } = require('./lib/sumup-core')
 const { syncProducts, createSale, updateSaleStatus, handleWebhook } = require('./lib/sumup-service')
-const { decideOrderPush, decideStaffCallPush, decideStaffServePush } = require('./lib/push-core')
+const {
+  decideOrderPush,
+  decideStaffCallPush,
+  decideStaffServePush,
+  decideNewOrderStaffPush,
+} = require('./lib/push-core')
 const { staffAdmin } = require('./lib/staff-service')
 const {
   createCheckout,
@@ -34,6 +39,9 @@ const {
   readerCheckout: readerCheckoutSvc,
   readerTerminate: readerTerminateSvc,
   handleReaderWebhook,
+  createGroupCheckout,
+  verifyGroupPayment,
+  groupReaderCheckout: groupReaderCheckoutSvc,
 } = require('./lib/payment-service')
 const {
   decideAutoAdvance,
@@ -153,28 +161,47 @@ exports.notifyOrderUpdate = onDocumentUpdated({ ...OPTS, document: 'orders/{orde
     }
   }
 
-  // 2) Push allo staff di sala quando c'è un ordine pronto da servire
-  //    al tavolo (tutti i dispositivi registrati in staff_tokens).
-  const serveMsg = decideStaffServePush(before, after)
-  if (!serveMsg) return
+  // 2) Push allo staff al bancone quando un ordine in attesa di pagamento
+  //    obbligatorio viene saldato ed entra in coda (è "nuovo" per la cucina).
+  const newOrderMsg = decideNewOrderStaffPush(before, after)
+  if (newOrderMsg) {
+    await pushToStaff({ kind: 'new_order', orderId: event.params.orderId, msg: newOrderMsg })
+  }
 
+  // 3) Push allo staff DI SALA quando c'è un ordine pronto da servire al
+  //    tavolo. Non al bancone: è il bancone che lo segna pronto.
+  const serveMsg = decideStaffServePush(before, after)
+  if (serveMsg) {
+    await pushToStaff({
+      kind: 'staff_serve',
+      orderId: event.params.orderId,
+      msg: serveMsg,
+      roles: ['staff'],
+    })
+  }
+})
+
+// Invia una push data-only a TUTTI i dispositivi staff registrati
+// (staff_tokens). La notifica vera (titolo/corpo/vibrazione) la costruisce il
+// service worker dal campo `kind`, così arriva anche ad app in background o
+// chiusa. Rimuove in automatico i token scaduti.
+async function pushToStaff({ kind, orderId, msg, url = '/bar', roles = null }) {
   const tokensSnap = await db.collection('staff_tokens').get()
-  const docs = tokensSnap.docs.filter((d) => d.get('token'))
+  let docs = tokensSnap.docs.filter((d) => d.get('token'))
+  // `roles` limita i destinatari: i drink pronti DA SERVIRE riguardano la
+  // sala, non il bancone — al bartender arriverebbero come rumore, visto
+  // che è lui stesso a segnarli pronti. I token senza ruolo sono di
+  // dispositivi registrati prima di questa distinzione: li si considera
+  // di sala solo se non si sta filtrando sul bartender.
+  if (roles) docs = docs.filter((d) => roles.includes(d.get('role') || 'staff'))
   if (docs.length === 0) return
 
   const res = await getMessaging().sendEachForMulticast({
     tokens: docs.map((d) => d.get('token')),
-    data: {
-      kind: 'staff_serve',
-      order_id: event.params.orderId,
-      title: serveMsg.title,
-      body: serveMsg.body,
-      url: '/bar',
-    },
+    data: { kind, order_id: orderId, title: msg.title, body: msg.body, url },
     webpush: { headers: { Urgency: 'high', TTL: '600' } },
   })
 
-  // Token scaduti: rimuovili, niente retry.
   await Promise.all(
     res.responses.map((r, i) =>
       r.error?.code === 'messaging/registration-token-not-registered'
@@ -182,6 +209,19 @@ exports.notifyOrderUpdate = onDocumentUpdated({ ...OPTS, document: 'orders/{orde
         : null
     )
   )
+}
+
+// ── Push nuovo ordine allo staff (FCM) ────────────────────────────────────────
+// Quando arriva un ordine, avvisa tutti i dispositivi al bancone: è l'unico
+// modo per ricevere l'avviso a schermo bloccato / app in background su iPad
+// (lì il listener realtime della pagina è sospeso dal sistema). Gli ordini con
+// pagamento obbligatorio non ancora saldato NON si notificano qui: lo farà
+// notifyOrderUpdate quando risulteranno pagati.
+exports.notifyNewOrder = onDocumentCreated({ ...OPTS, document: 'orders/{orderId}' }, async (event) => {
+  const after = event.data?.data()
+  const msg = decideNewOrderStaffPush(null, after)
+  if (!msg) return
+  await pushToStaff({ kind: 'new_order', orderId: event.params.orderId, msg })
 })
 
 // ── Push cerca-persone allo staff (FCM) ───────────────────────────────────────
@@ -353,6 +393,31 @@ exports.readerCheckout = onCall({ ...OPTS, secrets: [SUMUP_API_KEY] }, async (re
 exports.readerTerminate = onCall({ ...OPTS, secrets: [SUMUP_API_KEY] }, async (request) => {
   try {
     return await readerTerminateSvc(paymentDeps(), request.auth, request.data || {})
+  } catch (e) {
+    throw toHttpsError(e)
+  }
+})
+
+// ── Pagamento di un GRUPPO via SumUp (online + lettore) ───────────────────────
+exports.createGroupCheckout = onCall({ ...OPTS, secrets: [SUMUP_API_KEY] }, async (request) => {
+  try {
+    return await createGroupCheckout(paymentDeps(), request.data || {})
+  } catch (e) {
+    throw toHttpsError(e)
+  }
+})
+
+exports.getGroupPaymentStatus = onCall({ ...OPTS, secrets: [SUMUP_API_KEY] }, async (request) => {
+  try {
+    return await verifyGroupPayment(paymentDeps(), request.data || {})
+  } catch (e) {
+    throw toHttpsError(e)
+  }
+})
+
+exports.groupReaderCheckout = onCall({ ...OPTS, secrets: [SUMUP_API_KEY] }, async (request) => {
+  try {
+    return await groupReaderCheckoutSvc(paymentDeps(), request.auth, request.data || {})
   } catch (e) {
     throw toHttpsError(e)
   }

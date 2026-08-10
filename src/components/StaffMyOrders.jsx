@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { auth } from '../lib/firebaseClient.js'
-import { subscribeOpenSerata, subscribeSerataOrders } from '../lib/api.js'
+import { subscribeActiveOrders } from '../lib/api.js'
 import {
   ORDER_STATUSES,
   STATUS_LABELS,
@@ -10,29 +10,16 @@ import {
   formatPrice,
 } from '../lib/orderStatus.js'
 
-// Ordini manuali inseriti da QUESTO membro dello staff nella serata
-// aperta: per ritrovarli, vederne lo stato e riaprire il QR da mostrare
-// al cliente.
+// Ordini manuali inseriti da QUESTO membro dello staff: per ritrovarli,
+// vederne lo stato e riaprire il QR da mostrare al cliente.
 export default function StaffMyOrders() {
-  const [serata, setSerata] = useState(undefined)
   const [orders, setOrders] = useState([])
   const [error, setError] = useState(null)
 
-  useEffect(() => {
-    return subscribeOpenSerata(
-      (s) => setSerata(s),
-      () => setSerata(null)
-    )
-  }, [])
-
-  const serataId = serata?.id
-  useEffect(() => {
-    if (!serataId) {
-      setOrders([])
-      return
-    }
-    return subscribeSerataOrders(serataId, setOrders, (e) => setError(e.message))
-  }, [serataId])
+  useEffect(
+    () => subscribeActiveOrders(setOrders, (e) => setError(e.message)),
+    []
+  )
 
   const myEmail = auth.currentUser?.email
   const miei = orders
@@ -44,30 +31,24 @@ export default function StaffMyOrders() {
       <div className="card">
         <strong>🧾 I miei ordini</strong>
         <div className="muted">
-          {serata === undefined
-            ? 'Carico…'
-            : serata
-              ? `${miei.length} inseriti da te in questa serata`
-              : 'Nessuna serata aperta'}
+          {`${miei.length} inseriti da te`}
         </div>
-        <Link className="btn block" style={{ marginTop: 12 }} to="/">
+        <Link className="btn block" style={{ marginTop: 12 }} to="/menu">
           ✍️ Nuovo ordine dal menù
         </Link>
       </div>
 
       {error && <div className="banner">Errore: {error}</div>}
 
-      {serata && miei.length === 0 && (
-        <div className="empty">
-          Non hai ancora inserito ordini in questa serata.
-        </div>
+      {miei.length === 0 && (
+        <div className="empty">Non hai ancora inserito ordini.</div>
       )}
 
       {miei.map((o) => (
         <Link
           key={o.id}
           to={`/ordine/${o.id}`}
-          className={`card order-card ${o.status}`}
+          className={`card order-card ${o.workflow_status}`}
           style={{ display: 'block', textDecoration: 'none', color: 'inherit' }}
         >
           <div className="row between">
@@ -87,11 +68,11 @@ export default function StaffMyOrders() {
               </div>
             ))}
           </div>
-          <span className={`pill ${o.status}`}>
-            {STATUS_EMOJI[o.status]}{' '}
-            {o.status === ORDER_STATUSES.RITIRATO
+          <span className={`pill ${o.workflow_status}`}>
+            {STATUS_EMOJI[o.workflow_status]}{' '}
+            {o.workflow_status === ORDER_STATUSES.RITIRATO
               ? ritiratoLabel(o.service_mode)
-              : STATUS_LABELS[o.status]}
+              : STATUS_LABELS[o.workflow_status]}
           </span>
         </Link>
       ))}

@@ -1,6 +1,6 @@
 // Service worker minimale per la PWA.
 // Fornisce un cache di base e gestisce i click sulle notifiche.
-const CACHE = 'tana-drink-v2'
+const CACHE = 'tana-drink-v3'
 
 self.addEventListener('install', (event) => {
   self.skipWaiting()
@@ -72,6 +72,39 @@ self.addEventListener('push', (event) => {
             vibrate: [500, 200, 500, 200, 900],
             tag: 'staff-call',
             renotify: true,
+            requireInteraction: true,
+            data: { url: payload.data.url || '/bar' },
+          }
+        )
+      }
+
+      // Nuovo ordine al bancone (push allo staff): saltata solo se il
+      // gestionale è già in primo piano — lì il listener realtime emette il
+      // bip e aggiorna la lista, quindi la notifica di sistema sarebbe doppia.
+      if (payload.data?.kind === 'new_order') {
+        const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+        const onBar = wins.some((w) => {
+          try {
+            return (
+              (w.focused || w.visibilityState === 'visible') &&
+              new URL(w.url).pathname.startsWith('/bar')
+            )
+          } catch {
+            return false
+          }
+        })
+        if (onBar) return
+        return self.registration.showNotification(
+          payload.data.title || '🆕 Nuovo ordine',
+          {
+            body: payload.data.body || '',
+            icon: './logo.png',
+            badge: './logo.png',
+            vibrate: [200, 100, 200],
+            tag: payload.data.order_id ? `new-order-${payload.data.order_id}` : 'new-order',
+            renotify: true,
+            // Resta nel centro notifiche finché non viene toccata: in un bar
+            // pieno è facile non vedere subito un banner che sparisce.
             requireInteraction: true,
             data: { url: payload.data.url || '/bar' },
           }

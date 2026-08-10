@@ -22,10 +22,48 @@ async function emulatorRequest(path, body) {
 
 const call = (data) => httpsCallable(functions, 'staffAdmin')(data).then((r) => r.data)
 
+// ELENCO STAFF IN CACHE. `listStaff` passa da una Cloud Function: e' lenta e
+// vuole la rete, quindi ogni pannello che la apriva mostrava "Carico lo
+// staff…" per qualche secondo — e offline non arrivava mai. La lista cambia
+// una volta ogni morte di papa: si tiene da parte e la si mostra subito,
+// aggiornandola in sottofondo.
+const CHIAVE_STAFF = 'tana:staff'
+let cacheStaff = null
+
+export function staffFromCache() {
+  if (cacheStaff) return cacheStaff
+  try {
+    const v = JSON.parse(localStorage.getItem(CHIAVE_STAFF) || 'null')
+    if (Array.isArray(v)) cacheStaff = v
+  } catch {
+    /* niente cache: si aspetta la rete, come prima */
+  }
+  return cacheStaff
+}
+
+function ricordaStaff(list) {
+  cacheStaff = Array.isArray(list) ? list : null
+  try {
+    if (cacheStaff) localStorage.setItem(CHIAVE_STAFF, JSON.stringify(cacheStaff))
+  } catch {
+    /* memoria piena o negata: pazienza */
+  }
+}
+
+// Scalda la cache senza che nessuno stia aspettando: si chiama all'apertura
+// del gestionale, così quando si aprono i pannelli l'elenco è già lì.
+export function preloadStaff() {
+  listStaff().catch(() => {})
+}
+
 export async function listStaff() {
-  if (!isEmulator) return (await call({ action: 'list' })).users
+  if (!isEmulator) {
+    const users = (await call({ action: 'list' })).users
+    ricordaStaff(users)
+    return users
+  }
   const res = await emulatorRequest('accounts:query', {})
-  return (res.userInfo || [])
+  const users = (res.userInfo || [])
     .map((u) => ({
       uid: u.localId,
       email: u.email,
@@ -34,6 +72,8 @@ export async function listStaff() {
       disabled: !!u.disabled,
     }))
     .filter((u) => u.role === 'bartender' || u.role === 'staff')
+  ricordaStaff(users)
+  return users
 }
 
 export async function createStaff({ email, password, role, name }) {
