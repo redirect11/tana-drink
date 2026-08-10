@@ -94,9 +94,9 @@ export default function StaffBadgePanel() {
             <span style={{ minWidth: 0 }}>
               <strong>{m.name}</strong>{' '}
               {open ? (
-                <span className="muted small">dentro dalle {fmtTime(open.clock_in)}</span>
+                <span className="muted small">in servizio dalle {fmtTime(open.clock_in)}</span>
               ) : (
-                <span className="muted small">fuori</span>
+                <span className="muted small">non in servizio</span>
               )}
             </span>
             <span className="row" style={{ gap: 6, flexShrink: 0 }}>
