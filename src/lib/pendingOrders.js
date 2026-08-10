@@ -5,6 +5,7 @@
 // rimosso e compare l'ordine reale (colorato) dalla sottoscrizione Firestore.
 
 import { createOrder } from './api.js'
+import { isPersonale } from './ruoli.js'
 import { printComanda } from './printer.js'
 import { ORDER_STATUSES } from './orderStatus.js'
 import { rememberOrderId } from './cart.js'
@@ -108,7 +109,7 @@ export function submitPosOrder({
     // Ricorda l'ordine come "del cliente" SOLO se non è inserito dallo staff/
     // bartender: i loro ordini POS non sono ordini del dispositivo, stanno
     // nella coda del gestionale.
-    if (placed_by?.role !== 'bartender' && placed_by?.role !== 'staff') {
+    if (!isPersonale(placed_by?.role)) {
       rememberOrderId(created.id)
     }
     // Collega l'id reale. Il placeholder NON si toglie qui: lo scambia la

@@ -21,6 +21,7 @@ import {
 } from 'firebase/auth'
 import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore'
 import { auth, db } from './firebaseClient.js'
+import { isPersonale } from './ruoli.js'
 import { getMyOrderIds } from './cart.js'
 import { fetchOrdersByCustomer } from './api.js'
 
@@ -135,7 +136,7 @@ export function useCustomer() {
       if (!u) return setState({ user: null, profile: null, loading: false })
       try {
         const token = await u.getIdTokenResult()
-        if (token.claims.role === 'bartender' || token.claims.role === 'staff') {
+        if (isPersonale(token.claims.role)) {
           // Lo staff non è un cliente.
           return setState({ user: null, profile: null, loading: false })
         }

@@ -38,6 +38,7 @@ import {
   ORDER_OPEN,
 } from '../lib/comande.js'
 import { paidAmount } from '../lib/pagamento.js'
+import { isPersonale } from '../lib/ruoli.js'
 import {
   makeLineId,
   mergeLines,
@@ -243,7 +244,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
       try {
         const token = await u.getIdTokenResult()
         const role = token.claims.role
-        if (role === 'bartender' || role === 'staff') {
+        if (isPersonale(role)) {
           setStaff({ email: u.email, name: u.displayName || u.email, role })
         }
       } catch {

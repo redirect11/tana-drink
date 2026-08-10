@@ -8,8 +8,7 @@ import {
   clockIn,
   clockOut,
 } from '../lib/api.js'
-
-const ROLE_LABELS = { bartender: '🍸 Bartender', staff: '🫱 Staff' }
+import { RUOLO_ETICHETTA } from '../lib/ruoli.js'
 
 // Cerca-persone direttamente nella coda del bartender: elenco del
 // personale con tasto di chiamata per ciascuno. Cliccando 📟 si apre
@@ -100,7 +99,7 @@ export default function StaffCallList() {
               {/* Sotto il nome: ruolo e, se è in servizio, da che ora. È la
                   prima cosa che si vuole sapere di chi si sta per chiamare. */}
               <div className="desc">
-                {ROLE_LABELS[u.role] ?? u.role}
+                {RUOLO_ETICHETTA[u.role] ?? u.role}
                 {/* "dentro/fuori" si leggeva come "dentro o fuori dal locale":
                     qui si parla di TURNO, cioè di chi ha timbrato. */}
                 {turnoAperto(u.uid)
