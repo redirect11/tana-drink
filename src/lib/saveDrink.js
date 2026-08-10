@@ -4,7 +4,7 @@
 // prodotto), così la logica di salvataggio è una sola.
 import { createDrink, updateDrink } from './api.js'
 import { uploadDrinkImage, deleteDrinkImageByUrl } from './storage.js'
-import { toBaseQty } from './inventory.js'
+import { toBaseQty, baseUnit } from './inventory.js'
 
 // Righe editabili → recipe_items persistiti (quantità convertite in unità base).
 export function buildRecipeItems(rows, inventory) {
@@ -18,7 +18,12 @@ export function buildRecipeItems(rows, inventory) {
         // la lettura fallita — si TENGONO nome e unità già sulla riga: senza
         // questo la ricetta veniva riscritta con nome vuoto e unità "pz".
         name: inv?.name ?? r.name ?? '',
-        unit: inv?.unit ?? r.invUnit ?? r.baseUnit ?? 'pz',
+        // L'unità della riga è la BASE DI QUELLO CHE SI È SCRITTO, non
+        // l'unità dell'articolo. Su un articolo contato a pezzo si dosa in
+        // cl: scrivendo "4 cl" si salvava `40 pz`, cioè quaranta bottiglie
+        // per un cocktail. Ora si salva `40 ml` e a convertire in frazione
+        // di bottiglia ci pensa lo scarico (qtyInStockUnit).
+        unit: r.unit ? baseUnit(r.unit) : (inv?.unit ?? r.invUnit ?? r.baseUnit ?? 'pz'),
         qty: toBaseQty(r.qty, r.unit),
       }
     })

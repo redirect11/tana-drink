@@ -14,6 +14,25 @@ export const ENTRY_UNITS = {
   pz: ['pz'],
 }
 
+// Unità con cui si dosa QUESTO ingrediente in una ricetta.
+//
+// La giacenza si conta a bottiglie (si carica la merce a pezzi), ma un
+// cocktail si dosa in CL: sono due misure diverse dello stesso prodotto, e
+// servono entrambe. Finché le unità dipendevano solo da `unit`, un articolo a
+// pezzo offriva soltanto "pz" e per 4 cl di gin bisognava scrivere 0,057
+// pezzi — un numero che non vuol dire niente per chi prepara.
+//
+// Il cl viene per primo: nelle ricette è il caso normale. Il pezzo resta,
+// perché una Coca in un drink si mette intera.
+export function entryUnits(item) {
+  const unit = item?.unit || 'pz'
+  if (unit !== 'pz') return ENTRY_UNITS[unit] ?? [unit]
+  const c = contentBase(item)
+  if (c?.base === 'ml') return ['cl', 'ml', 'pz']
+  if (c?.base === 'g') return ['g', 'mg', 'pz']
+  return ['pz']
+}
+
 // Converte una quantità dall'unità inserita all'unità base dell'item.
 //   cl→ml (×10), L→ml (×1000), kg→g (×1000); ml/g/pz invariati.
 export function toBaseQty(qty, unit) {
@@ -348,12 +367,19 @@ export function computeConsumption(orderItems, drinksById) {
       if (!ri.inventory_item_id) continue
       const add = (Number(ri.qty) || 0) * mult
       if (add <= 0) continue
-      const ex = acc.get(ri.inventory_item_id)
+      // Si somma per ARTICOLO **E UNITÀ**: la stessa bottiglia può comparire
+      // in una ricetta a cl (40 ml di gin in un cocktail) e in un'altra a
+      // pezzo (una Coca servita intera). Sommandole insieme si otterrebbe
+      // "41" senza sapere di cosa, e lo scarico toglierebbe un numero senza
+      // senso. Restano due voci, ognuna con la sua unità.
+      const unit = ri.unit ?? 'pz'
+      const chiave = `${ri.inventory_item_id}|${unit}`
+      const ex = acc.get(chiave)
       if (ex) ex.qty += add
-      else acc.set(ri.inventory_item_id, {
+      else acc.set(chiave, {
         inventory_item_id: ri.inventory_item_id,
         name: ri.name ?? null,
-        unit: ri.unit ?? 'pz',
+        unit,
         qty: add,
       })
     }
