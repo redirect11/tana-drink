@@ -79,6 +79,7 @@ import {
   bartenderUpdateComanda,
   registerPayment,
   updateOrderInfo,
+  cancelOrder,
 } from '../../src/lib/api.js'
 import { readerCheckout } from '../../src/lib/paymentsApi.js'
 import { printComanda } from '../../src/lib/printer.js'
@@ -587,5 +588,55 @@ describe('tasti sempre presenti, spenti se non servono', () => {
   it('Comande c’è sempre: sul conto aperto è attivo', () => {
     mount(baseOrder())
     expect(screen.getByRole('button', { name: /Comande/ })).toBeEnabled()
+  })
+})
+
+// CONTO SVUOTATO = CONTO ANNULLATO, sempre.
+// Prima valeva solo per il conto creato in quella sessione: uscendo e
+// rientrando (per esempio chiudendo il box del nome) il conto non era più
+// "creato qui", e togliendo l'ultima riga restava aperto e vuoto in coda.
+describe('conto rimasto senza righe', () => {
+  it('si annulla da solo e si torna alla lista', async () => {
+    const user = userEvent.setup()
+    mount(
+      baseOrder({
+        comande: [
+          {
+            id: 'c1',
+            seq: 1,
+            status: 'in_preparazione',
+            status_times: {},
+            items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1 }],
+          },
+        ],
+      })
+    )
+    // Tolgo l'unica riga rimasta.
+    await user.click(screen.getByRole('button', { name: 'Riduci Mojito' }))
+    await waitFor(() => expect(cancelOrder).toHaveBeenCalledWith('ord1', { by: 'bartender' }), {
+      timeout: 3000,
+    })
+  })
+
+  it('ma non se qualcosa è già stato incassato', async () => {
+    const user = userEvent.setup()
+    mount(
+      baseOrder({
+        payments: [{ id: 'p1', amount: 7, method: 'banco', at: '2026-07-11T22:00:00.000Z' }],
+        comande: [
+          {
+            id: 'c1',
+            seq: 1,
+            status: 'in_preparazione',
+            status_times: {},
+            items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1 }],
+          },
+        ],
+      })
+    )
+    const meno = screen.queryByRole('button', { name: 'Riduci Mojito' })
+    if (meno && !meno.disabled) await user.click(meno)
+    await new Promise((r) => setTimeout(r, 700))
+    expect(cancelOrder).not.toHaveBeenCalled()
   })
 })

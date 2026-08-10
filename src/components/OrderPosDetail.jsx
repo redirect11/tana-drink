@@ -510,7 +510,11 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   // nulla — non era un conto, era un ripensamento. Vale solo per l'ordine
   // creato in questa sessione, mai per uno aperto dalla coda.
   useEffect(() => {
-    if (isNew || !createdInPlace || closed || !order?.id) return
+    // Vale per QUALSIASI conto aperto rimasto senza righe, non solo per quello
+    // creato in questa sessione: uscendo e rientrando (per esempio quando si
+    // chiude il box del nome) il conto non era più "creato qui", e togliendo
+    // l'ultima riga restava aperto e vuoto in mezzo agli altri.
+    if (isNew || closed || !order?.id) return
     if (orderedLines.length > 0 || draft.length > 0) return
     if ((order.payments || []).length > 0) return // qualcosa è già stato incassato
     const t = setTimeout(async () => {
@@ -529,7 +533,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
     }, 400) // respiro: evita di annullare durante una sostituzione di riga
     return () => clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isNew, createdInPlace, closed, order?.id, orderedLines.length, draft.length])
+  }, [isNew, closed, order?.id, orderedLines.length, draft.length])
 
   // Memoria bozza solo finché non confermato/pagato: se l'ordine è chiuso
   // (pagato/annullato) si azzera.
@@ -1689,7 +1693,11 @@ export default function OrderPosDetail({ order: orderProp = null }) {
 
       {/* ── Modale nome del conto all'uscita di un ordine appena creato ── */}
       {askName && (
-        <div className="overlay confirm-overlay" onClick={() => setAskName(false)}>
+        // Chiudere questo box vuol dire "esco senza dare un nome", non "resto
+        // qui": si stava andando alla lista ordini e il nome era solo una
+        // domanda di passaggio. Prima cliccando fuori si restava piantati nel
+        // dettaglio, e bisognava premere di nuovo "← Ordini".
+        <div className="overlay confirm-overlay" onClick={() => submitNew('')}>
           <form
             className="confirm-box"
             role="dialog"
@@ -1701,7 +1709,18 @@ export default function OrderPosDetail({ order: orderProp = null }) {
               submitNew(info.customer_name)
             }}
           >
-            <h3 style={{ margin: 0 }}>👤 Nome del conto</h3>
+            <div className="row between" style={{ alignItems: 'center' }}>
+              <h3 style={{ margin: 0 }}>👤 Nome del conto</h3>
+              <button
+                type="button"
+                className="btn ghost small"
+                onClick={() => submitNew('')}
+                aria-label="Chiudi senza dare un nome"
+                title="Chiudi senza dare un nome"
+              >
+                ✕
+              </button>
+            </div>
             <p className="muted small" style={{ margin: '8px 0' }}>
               Vuoto = numero progressivo. Si può cambiare dopo, dai Dati conto.
             </p>
