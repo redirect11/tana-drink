@@ -1609,6 +1609,9 @@ export async function createOrder({
     unit_price: i.price,
     qty: i.qty,
     sumup_product_id: i.sumup_product_id ?? null,
+    // Identita' della riga nella schermata: la si porta dietro cosi' la riga
+    // non viene ricreata quando la bozza diventa item confermato.
+    ...(i.line_id ? { line_id: i.line_id } : {}),
     ...(i.custom ? { custom: true, recipe_items: i.recipe_items ?? [] } : {}),
     ...(i.note ? { note: i.note } : {}),
   }))
@@ -2373,6 +2376,9 @@ export async function updateOrderItems(id, items) {
     unit_price: i.unit_price ?? i.price ?? 0,
     qty: i.qty,
     sumup_product_id: i.sumup_product_id ?? null,
+    // Identita' della riga nella schermata: la si porta dietro cosi' la riga
+    // non viene ricreata quando la bozza diventa item confermato.
+    ...(i.line_id ? { line_id: i.line_id } : {}),
     ...(i.custom ? { custom: true, recipe_items: i.recipe_items ?? [] } : {}),
     ...(i.note ? { note: i.note } : {}),
   }))
@@ -2452,6 +2458,7 @@ export async function addComanda(orderId, items, { note = null } = {}) {
       unit_price: i.unit_price ?? i.price ?? 0,
       qty: i.qty,
       sumup_product_id: i.sumup_product_id ?? null,
+      ...(i.line_id ? { line_id: i.line_id } : {}),
       ...(i.custom ? { custom: true, recipe_items: i.recipe_items ?? [] } : {}),
       ...(i.note ? { note: i.note } : {}),
     })),
@@ -2501,6 +2508,9 @@ export async function bartenderUpdateComanda(orderId, comandaId, { items }) {
     unit_price: i.unit_price ?? i.price ?? 0,
     qty: i.qty,
     sumup_product_id: i.sumup_product_id ?? null,
+    // Identita' della riga nella schermata: la si porta dietro cosi' la riga
+    // non viene ricreata quando la bozza diventa item confermato.
+    ...(i.line_id ? { line_id: i.line_id } : {}),
     ...(i.custom ? { custom: true, recipe_items: i.recipe_items ?? [] } : {}),
     ...(i.note ? { note: i.note } : {}),
   }))
