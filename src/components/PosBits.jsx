@@ -69,7 +69,10 @@ export function DrinkTile({ drink, qty, onAdd, onSetQty, color = null, favorite 
         </button>
       )}
 
-      {/* Angolo colorato per categoria (come le tile di SumUp POS) */}
+      {/* SEGNALIBRO colorato della categoria (come sulle tile di SumUp POS).
+          Era una linguetta da 1em: a colpo d'occhio, su una griglia piena, non
+          si distingueva. Ora è quasi il doppio — deve essere il primo segno
+          che si vede, non un dettaglio da cercare. */}
       {color && (
         <div
           aria-hidden
@@ -79,21 +82,23 @@ export function DrinkTile({ drink, qty, onAdd, onSetQty, color = null, favorite 
             left: 0,
             width: 0,
             height: 0,
-            // in em: la linguetta scala con la dimensione della card
-            borderTop: `1em solid ${color}`,
-            borderRight: '1em solid transparent',
+            // in em: il segnalibro scala con la dimensione della card
+            borderTop: `1.9em solid ${color}`,
+            borderRight: '1.9em solid transparent',
             borderTopLeftRadius: 14,
           }}
         />
       )}
 
-      {/* Badge quantità: in ALTO A SINISTRA (non copre la stella dei preferiti),
-          spostato quel poco che basta per non finire sopra la linguetta colore. */}
+      {/* Badge quantità: in ALTO A SINISTRA (non copre la stella dei
+          preferiti). Sta sotto il segnalibro, che ora è più grande: se si
+          sovrapponessero, il numero degli ordinati sarebbe illeggibile
+          proprio sulle card che si stanno usando. */}
       {inCart && (
         <div style={{
           position: 'absolute',
-          top: '0.7em',
-          left: '0.7em',
+          top: '1.5em',
+          left: '0.55em',
           background: 'var(--accent, #b47a3c)',
           color: '#fff',
           borderRadius: '50%',

@@ -3,6 +3,7 @@
 // Unit test della logica pura inventario (src/lib/inventory.js).
 
 import { describe, it, expect } from 'vitest'
+import { consumptionDiff } from '../../src/lib/warehouse.js'
 import {
   toBaseQty,
   formatQty,
@@ -17,6 +18,7 @@ import {
   inventorySummary,
   filterItems,
   qtyInStockUnit,
+  entryUnits,
   assortimentoDi,
   ASSORTIMENTI,
   costWithVat,
@@ -477,5 +479,89 @@ describe('bottiglia aperta contata a pezzi', () => {
   })
   it('giacenza intera: nessuna aperta', () => {
     expect(bottleSummary({ ...gin, stock: 3 }).open).toBeNull()
+  })
+})
+
+// UNITÀ DELLA RICETTA. La giacenza si conta a bottiglie, ma un cocktail si
+// dosa in CL: sono due misure dello stesso prodotto e servono entrambe.
+// Segnalato dal locale: "me lo porta in pezzi, ho dovuto scrivere 0,03 pezzi,
+// a me qui servono i cl".
+describe('unità con cui si dosa un ingrediente', () => {
+  const gin = { unit: 'pz', package_size: 700, content_unit: 'ml' }
+  const lime = { unit: 'pz' } // a pezzo e basta: un lime non si dosa in cl
+  const sciroppo = { unit: 'ml', package_size: 700 }
+  const sale = { unit: 'pz', package_size: 500, content_unit: 'g' }
+
+  it('bottiglia contata a pezzi: si dosa in cl, e il cl viene per primo', () => {
+    expect(entryUnits(gin)).toEqual(['cl', 'ml', 'pz'])
+  })
+
+  it('il pezzo resta: una Coca in un drink si mette intera', () => {
+    expect(entryUnits(gin)).toContain('pz')
+  })
+
+  it('senza contenuto dichiarato resta solo il pezzo', () => {
+    expect(entryUnits(lime)).toEqual(['pz'])
+  })
+
+  it('articolo a volume: come prima', () => {
+    expect(entryUnits(sciroppo)).toEqual(['cl', 'ml'])
+  })
+
+  it('e i solidi in grammi', () => {
+    expect(entryUnits(sale)).toEqual(['g', 'mg', 'pz'])
+  })
+})
+
+// LO SCARICO SEGUE L'UNITÀ SCRITTA NELLA RICETTA.
+//   in pezzi → esce quel numero di bottiglie (una intera è una intera)
+//   in cl/ml → esce esattamente quel volume, cioè una frazione di bottiglia
+// e le due cose non si sommano fra loro.
+describe('scarico secondo l’unità della ricetta', () => {
+  const gin = { unit: 'pz', package_size: 700, content_unit: 'ml' } // bottiglia da 70 cl
+  const drinks = {
+    cocktail: { recipe_items: [{ inventory_item_id: 'gin', name: 'Gin', qty: 40, unit: 'ml' }] },
+    bottiglia: { recipe_items: [{ inventory_item_id: 'gin', name: 'Gin', qty: 1, unit: 'pz' }] },
+  }
+
+  it('in cl esce esattamente quel volume', () => {
+    const [c] = computeConsumption([{ drink_id: 'cocktail', qty: 1 }], drinks)
+    expect(c).toMatchObject({ qty: 40, unit: 'ml' })
+    expect(qtyInStockUnit(c.qty, c.unit, gin)).toBeCloseTo(40 / 700, 6)
+  })
+
+  it('in pezzi esce la bottiglia intera', () => {
+    const [c] = computeConsumption([{ drink_id: 'bottiglia', qty: 2 }], drinks)
+    expect(c).toMatchObject({ qty: 2, unit: 'pz' })
+    expect(qtyInStockUnit(c.qty, c.unit, gin)).toBe(2)
+  })
+
+  it('due unità diverse sullo stesso prodotto restano separate', () => {
+    const cons = computeConsumption(
+      [
+        { drink_id: 'cocktail', qty: 3 }, // 120 ml
+        { drink_id: 'bottiglia', qty: 1 }, // 1 pz
+      ],
+      drinks
+    )
+    expect(cons).toHaveLength(2)
+    const inMl = cons.find((c) => c.unit === 'ml')
+    const inPz = cons.find((c) => c.unit === 'pz')
+    expect(inMl.qty).toBe(120)
+    expect(inPz.qty).toBe(1)
+    // In bottiglie: 120/700 + 1 — mai "121" di qualcosa.
+    const totale = cons.reduce((s, c) => s + qtyInStockUnit(c.qty, c.unit, gin), 0)
+    expect(totale).toBeCloseTo(120 / 700 + 1, 6)
+  })
+
+  it('e il riallineo dopo una modifica non le mescola', () => {
+    const prima = computeConsumption([{ drink_id: 'cocktail', qty: 2 }], drinks)
+    const dopo = computeConsumption(
+      [{ drink_id: 'cocktail', qty: 1 }, { drink_id: 'bottiglia', qty: 1 }],
+      drinks
+    )
+    const diff = consumptionDiff(prima, dopo)
+    expect(diff.find((d) => d.unit === 'ml').delta).toBe(-40) // un cocktail in meno
+    expect(diff.find((d) => d.unit === 'pz').delta).toBe(1) // una bottiglia in più
   })
 })

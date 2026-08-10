@@ -92,7 +92,16 @@ export function nextStatus(status) {
 
 export function formatPrice(value) {
   const n = Number(value || 0)
-  return n.toLocaleString('it-IT', { style: 'currency', currency: 'EUR' })
+  // `useGrouping: 'always'`: il punto delle migliaia dipende da quanto è
+  // aggiornata la tabella delle lingue del dispositivo (le versioni recenti
+  // non raggruppano i numeri di quattro cifre in italiano). Senza, la stessa
+  // chiusura di cassa usciva "2.000,00 €" sul portatile e "2000,00 €"
+  // sull'iPad — e sullo scontrino stampato non si sa nemmeno quale.
+  return n.toLocaleString('it-IT', {
+    style: 'currency',
+    currency: 'EUR',
+    useGrouping: 'always',
+  })
 }
 
 // Nome leggibile di chi ha inserito un ordine manuale: il nome dello
