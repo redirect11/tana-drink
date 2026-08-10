@@ -42,7 +42,10 @@ service cloud.firestore {
         return ['payment_status', 'payment_method', 'payment_required',
                 'paid_at', 'sumup_checkout_id', 'sumup_checkout_attempts',
                 'sumup_transaction_id', 'sumup_client_transaction_id',
-                'payment_after_cancel'];
+                'payment_after_cancel', 'payment_id',
+                'payments', 'discount', 'discount_amount',
+                'sumup_pending_amount', 'sumup_pending_items',
+                'invoice_id', 'invoice_number'];
       }
       allow read: if true;
       // Alla creazione il pagamento può solo essere assente, non
@@ -50,16 +53,18 @@ service cloud.firestore {
       allow create: if isStaffMember()
         || !('payment_status' in request.resource.data)
         || request.resource.data.payment_status in ['non_richiesto', 'in_attesa'];
-      allow update: if isBartender()
-        || (isStaffMember()
-            && resource.data.status == 'pronto'
-            && request.resource.data.status == 'ritirato')
-        // Lo staff incassa al tavolo: chiude l'ordine come pagato.
-        || (isStaffMember()
-            && resource.data.status == 'ritirato'
-            && request.resource.data.status == 'pagato')
-        || (resource.data.status == 'ricevuto'
-            && request.resource.data.status in ['ricevuto', 'annullato']
+      // Modello conto/comande: il flusso di lavorazione vive sulle comande
+      // (array nel doc), quindi le transizioni fini sono validate in app.
+      // Lo staff (ruolo fidato via claims) può aggiornare gli ordini
+      // (serve/incassa le comande); il cliente anonimo solo finché il conto
+      // ha la sola prima comanda ancora "ricevuta", senza toccare i campi
+      // di pagamento, e può al più annullare.
+      allow update: if isStaffMember()
+        || (resource.data.status in ['aperto', 'ricevuto']
+            && (!('comande' in resource.data)
+                || (resource.data.comande.size() == 1
+                    && resource.data.comande[0].status == 'ricevuto'))
+            && request.resource.data.status in ['aperto', 'ricevuto', 'annullato']
             && !request.resource.data.diff(resource.data)
                  .affectedKeys().hasAny(paymentKeys().toSet()));
       allow delete: if false;
@@ -71,10 +76,10 @@ service cloud.firestore {
       allow write: if true;
     }
 
-    // SERATE — lettura pubblica (il cliente deve sapere se è aperta);
-    // apri/chiudi bartender; lo staff autenticato può aggiornare i campi
-    // statistici (eta_stats) quando segna un ordine come servito.
-    match /serate/{serataId} {
+    // SERVIZIO PERPETUO — niente più "serate". Statistiche tempi (ETA):
+    // lettura pubblica (il cliente vede la stima), scrittura dello staff
+    // limitata ai campi statistici.
+    match /service_stats/{docId} {
       allow read: if true;
       allow create, delete: if isBartender();
       allow update: if isBartender()
@@ -105,8 +110,33 @@ service cloud.firestore {
       allow read, write: if isBartender();
     }
 
+    // MACRO-CATEGORIE — raggruppano le categorie per i conti aggregati, solo bartender.
+    match /macro_categories/{macroId} {
+      allow read, write: if isBartender();
+    }
+
+    // FORNITORI — anagrafica fornitori di magazzino, solo bartender.
+    match /suppliers/{supplierId} {
+      allow read, write: if isBartender();
+    }
+
     // STOCK MOVEMENTS — registro carico/scarico, solo bartender.
     match /stock_movements/{movementId} {
+      allow read, write: if isBartender();
+    }
+
+    // CONTE DI MAGAZZINO — inventario periodico (dep/acq/rim→consumo).
+    match /stock_counts/{countId} {
+      allow read, write: if isBartender();
+    }
+
+    // ORDINI FORNITORE — generatore ordini e storico acquisti.
+    match /purchase_orders/{orderId} {
+      allow read, write: if isBartender();
+    }
+
+    // SCADENZARIO FORNITORI — documenti/proforma, pagato, note.
+    match /supplier_invoices/{invoiceId} {
       allow read, write: if isBartender();
     }
 
@@ -128,6 +158,81 @@ service cloud.firestore {
     match /customers/{uid} {
       allow read: if isBartender() || (isSignedIn() && request.auth.uid == uid);
       allow write: if isSignedIn() && request.auth.uid == uid;
+    }
+
+    // GROUPS — contenitori di ordini. Lo staff gestisce tutto; il cliente
+    // registrato può creare/aggiornare SOLO il proprio gruppo-cliente
+    // (id == uid, kind 'customer', radice, senza sottogruppi).
+    match /groups/{groupId} {
+      allow read: if isStaffMember()
+        || (isSignedIn() && resource.data.customer_uid == request.auth.uid);
+      allow create: if isStaffMember()
+        || (isSignedIn()
+            && groupId == request.auth.uid
+            && request.resource.data.kind == 'customer'
+            && request.resource.data.customer_uid == request.auth.uid
+            && request.resource.data.parent_group_id == null
+            && request.resource.data.has_child_groups == false);
+      allow update: if isBartender()
+        || (isStaffMember()
+            && !request.resource.data.diff(resource.data).affectedKeys()
+                 .hasAny(['kind', 'customer_uid'].toSet()))
+        || (isSignedIn()
+            && resource.data.kind == 'customer'
+            && resource.data.customer_uid == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['name', 'status', 'last_order_at'].toSet()));
+      allow delete: if isBartender();
+    }
+
+    // PAYMENTS — registro incassi (ledger). Scrivibile dallo staff e dalle
+    // Cloud Functions (Admin SDK, per i pagamenti online). Mai dal cliente.
+    // RAPP ORE: registro ore dello staff — solo staff autenticato.
+    match /staff_hours/{entryId} {
+      allow read, write: if isStaffMember();
+    }
+
+    // PREFERENZE POS (ordine card, preferiti): configurazione del banco,
+    // gestita dallo staff. Condivisa fra i dispositivi del locale.
+    match /pos_prefs/{docId} {
+      allow read, write: if isStaffMember();
+    }
+
+    // PAGHE: tariffa oraria per persona (storicizzata). Dato sensibile:
+    // solo il bartender, nemmeno lo staff vede quanto prendono gli altri.
+    match /staff_rates/{personId} {
+      allow read, write: if isBartender();
+    }
+
+    // BADGE VIRTUALE: timbrature entrata/uscita — lo staff timbra sé
+    // stesso al login/logout; il bartender può correggere ogni voce.
+    match /staff_shifts/{shiftId} {
+      allow read: if isStaffMember();
+      allow create, update: if isStaffMember();
+      allow delete: if isBartender();
+    }
+
+    // BUONI VIP: credito ricaricabile — solo staff (contiene i nomi VIP).
+    match /vouchers/{voucherId} {
+      allow read, write: if isStaffMember();
+    }
+
+    // FATTURE di cortesia: solo staff (contengono dati dei clienti).
+    match /invoices/{invoiceId} {
+      allow read, write: if isStaffMember();
+    }
+
+    match /payments/{paymentId} {
+      allow read: if isStaffMember();
+      allow create, update: if isStaffMember();
+      allow delete: if false;
+    }
+
+    // CASSA: sessioni di apertura/chiusura serata (flusso cassa). Staff.
+    match /cash_sessions/{sessionId} {
+      allow read: if isStaffMember();
+      allow create, update: if isStaffMember();
+      allow delete: if false;
     }
   }
 }

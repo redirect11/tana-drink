@@ -1,11 +1,17 @@
 {
   "indexes": [
     {
-      "collectionGroup": "serate",
+      "collectionGroup": "groups",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "closed_at", "order": "DESCENDING" }
+        {
+          "fieldPath": "kind",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "last_order_at",
+          "order": "DESCENDING"
+        }
       ]
     }
   ],

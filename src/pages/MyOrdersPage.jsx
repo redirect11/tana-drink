@@ -52,7 +52,7 @@ export default function MyOrdersPage() {
       <div className="empty">
         Non hai ancora effettuato ordini da questo dispositivo.
         <br />
-        <Link className="btn block" to="/" style={{ marginTop: 16 }}>
+        <Link className="btn block" to="/menu" style={{ marginTop: 16 }}>
           Vai al menù
         </Link>
       </div>
@@ -61,7 +61,7 @@ export default function MyOrdersPage() {
   return (
     <div>
       <h2 style={{ margin: '8px 4px' }}>I miei ordini</h2>
-      <Link className="btn ghost block" to="/">
+      <Link className="btn ghost block" to="/menu">
         ← Torna al menù
       </Link>
       {orders.map((o) => (
@@ -78,8 +78,8 @@ export default function MyOrdersPage() {
                 · {(o.order_items || []).reduce((s, i) => s + i.qty, 0)} drink
               </span>
             </div>
-            <span className={`pill ${o.status}`}>
-              {STATUS_EMOJI[o.status]} {STATUS_LABELS[o.status]}
+            <span className={`pill ${o.workflow_status}`}>
+              {STATUS_EMOJI[o.workflow_status]} {STATUS_LABELS[o.workflow_status]}
             </span>
           </div>
           <span className="price">{formatPrice(o.total)}</span>

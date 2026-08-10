@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { onAuthStateChanged, signOut } from 'firebase/auth'
+import { onAuthStateChanged } from 'firebase/auth'
 import { auth } from '../lib/firebaseClient.js'
+import { logoutStaff } from '../lib/logout.js'
 import { updateDisplayName } from '../lib/customerAuth.js'
 import PasswordChanger from '../components/PasswordChanger.jsx'
 
@@ -91,7 +92,7 @@ export default function StaffProfilePage() {
       <button
         className="btn ghost block"
         style={{ marginTop: 8 }}
-        onClick={() => signOut(auth).then(() => navigate('/bar'))}
+        onClick={() => logoutStaff().then(() => navigate('/bar'))}
       >
         Esci
       </button>

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   signInWithEmailAndPassword,
   signOut,
@@ -10,13 +10,12 @@ import {
   updateOrderStatus,
   markOrderPaid,
   cancelOrder,
-  subscribeOpenSerata,
-  subscribeSerataOrders,
+  subscribeActiveOrders,
   subscribeSettings,
-  openSerata,
-  closeSerata,
   DEFAULT_SETTINGS,
+  saveStaffToken,
 } from '../lib/api.js'
+import { getPushToken } from '../lib/push.js'
 import {
   ORDER_STATUSES,
   STATUS_LABELS,
@@ -25,33 +24,103 @@ import {
   formatPrice,
   nextStatus,
   placedByName,
+  placedByLetter,
 } from '../lib/orderStatus.js'
-import { bucketByStatus, serataRecap, openOrdersCount } from '../lib/serata.js'
+import { bucketByStatus, ordersRecap } from '../lib/coda.js'
+import { allServed } from '../lib/comande.js'
+import { paidAmount, orderTotal } from '../lib/pagamento.js'
+import { businessDayKey, businessDayLabel, businessDayShort } from '../lib/businessDay.js'
 import { isAwaitingPayment } from '../lib/payments.js'
 import { readerCheckout, readerTerminate } from '../lib/paymentsApi.js'
-import { aggregateProducts, serataFinance, longestPrep, phaseAverages } from '../lib/eta.js'
 import { ensureNotificationPermission, notify } from '../lib/notify.js'
+import { showToast } from '../lib/toast.js'
+import { beep, installAudioUnlock } from '../lib/beep.js'
+import { subscribePending, dismissPending, dismissBanner } from '../lib/pendingOrders.js'
 import { syncSumUpProducts, isSumUpEnabled } from '../lib/sumupApi.js'
+import { printComanda, printScontrino, loadPrinterSettings, claimReceiptPrint } from '../lib/printer.js'
 import MenuManager from '../components/MenuManager.jsx'
+import PrinterSetup from '../components/PrinterSetup.jsx'
 import InventoryManager from '../components/InventoryManager.jsx'
 import SettingsTab from '../components/SettingsTab.jsx'
 import StatsTab from '../components/StatsTab.jsx'
-import StaffTab from '../components/StaffTab.jsx'
+import StaffPage from '../components/StaffPage.jsx'
+import VipTab from '../components/VipTab.jsx'
 import ServiceQueue from '../components/ServiceQueue.jsx'
 import StaffMyOrders from '../components/StaffMyOrders.jsx'
 import StaffCallList from '../components/StaffCallList.jsx'
+import GroupsPanel from '../components/GroupsPanel.jsx'
+import GroupView from '../components/GroupView.jsx'
+import CashFlow from '../components/CashFlow.jsx'
+import OrdersHistory from '../components/OrdersHistory.jsx'
+import InvoicesTab from '../components/InvoicesTab.jsx'
 import ConfirmDialog from '../components/ConfirmDialog.jsx'
 import CancelOrderDialog from '../components/CancelOrderDialog.jsx'
 import DevTools from '../components/DevTools.jsx'
 import StaffDrawer from '../components/StaffDrawer.jsx'
 import { devToolsEnabled } from '../dev/devActions.js'
+import { preloadStaff } from '../lib/staffApi.js'
+import { useCashSession } from '../lib/cashSession.js'
+
+// Badge accanto al numero d'ordine: la LETTERA del dipendente che l'ha aperto,
+// oppure il segno del CLIENTE se l'ha aperto lui dall'app.
+// Colore della striscia laterale della card per STATO dell'ordine (non della
+// preparazione): aperto · pagato parzialmente · pagato · annullato.
+const annullato = (o) =>
+  o.status === ORDER_STATUSES.ANNULLATO || o.workflow_status === ORDER_STATUSES.ANNULLATO
+
+function orderStripClass(o) {
+  if (o.status === ORDER_STATUSES.ANNULLATO || o.workflow_status === ORDER_STATUSES.ANNULLATO)
+    return 'pay-annullato'
+  if (o.payment_status === 'pagato') return 'pay-pagato'
+  if (o.payment_status === 'parziale') return 'pay-parziale'
+  return 'pay-aperto'
+}
+
+function OrderBy({ order }) {
+  const L = placedByLetter(order?.placed_by)
+  return L ? (
+    <span className="order-by staff" title={`Aperto da ${placedByName(order.placed_by)}`}>{L}</span>
+  ) : (
+    <span className="order-by client" title="Aperto dal cliente (app)">🌐</span>
+  )
+}
 
 export default function BartenderPage() {
+  const navigate = useNavigate()
   const [user, setUser] = useState(undefined) // undefined = caricamento, null = non loggato
   const [role, setRole] = useState(null) // 'bartender' | 'staff'
   // Tab iniziale anche da query (?tab=stats): usato dal drawer nel menu.
-  const [params] = useSearchParams()
+  const [params, setParams] = useSearchParams()
   const [tab, setTab] = useState(() => params.get('tab') || 'coda')
+  // La sezione segue SEMPRE l'indirizzo, in entrambi i versi. Prima si
+  // aggiornava solo quando il parametro c'era: tornando a /bar (che è la
+  // coda, senza parametro) la pagina restava sulla sezione di prima, e
+  // "← Ordini" o il tasto indietro sembravano non fare niente — l'indirizzo
+  // cambiava, la schermata no.
+  const tabParam = params.get('tab')
+  useEffect(() => {
+    setTab(tabParam || 'coda')
+  }, [tabParam])
+  // Cambiando sezione dal menu si aggiorna ANCHE l'indirizzo: così indirizzo e
+  // sezione restano sempre d'accordo e le scorciatoie (es. "Lista ordini" dal
+  // Flusso cassa) funzionano anche se ci si era già passati.
+  const goTab = (id) => {
+    setTab(id)
+    const next = new URLSearchParams(params)
+    if (id === 'coda') next.delete('tab')
+    else next.set('tab', id)
+    // PUSH (non replace): ogni sezione entra nella cronologia, così il tasto
+    // indietro — del browser o dell'app — torna alla sezione precedente e non
+    // salta fuori dal gestionale.
+    setParams(next)
+  }
+
+  // L'elenco dello staff passa da una Cloud Function: lo si scalda appena si
+  // entra nel gestionale, così quando si aprono i pannelli i nomi ci sono già
+  // invece di comparire dopo un "Carico lo staff…".
+  useEffect(() => {
+    if (role === 'bartender') preloadStaff()
+  }, [role])
 
   useEffect(() => {
     return onAuthStateChanged(auth, async (u) => {
@@ -71,6 +140,20 @@ export default function BartenderPage() {
       setUser(u)
     })
   }, [])
+
+  // Il GESTIONALE usa tutta la larghezza della pagina (liste, tabelle e
+  // statistiche stavano strette nei 760px pensati per il lato cliente).
+  // L'header col logo resta: niente fullbleed, che lo nasconderebbe.
+  const wideTab = role === 'bartender' || role === 'staff'
+  useEffect(() => {
+    if (!wideTab) return undefined
+    document.body.classList.add('bar-wide')
+    // Cinturino di sicurezza: le sezioni del gestionale NON sono mai a tutto
+    // schermo. Se la classe è rimasta appiccicata da una schermata precedente
+    // (coda a griglia, POS), la topbar sparirebbe e resterebbero due ☰.
+    if (tab !== 'coda') document.body.classList.remove('fullbleed')
+    return () => document.body.classList.remove('bar-wide')
+  }, [wideTab, tab])
 
   if (user === undefined || (user && role === null)) {
     return <div className="empty">Verifica accesso…</div>
@@ -107,15 +190,40 @@ export default function BartenderPage() {
 
   return (
     <div>
-      <StaffDrawer role="bartender" active={tab} onSelect={setTab} />
+      <StaffDrawer role="bartender" active={tab} onSelect={goTab} />
+
+      {/* Toccando un gruppo (menu laterale) si ENTRA nella sua vista: la
+          lista dei suoi ordini col conto. La coda resta com'è — lì ci
+          vanno solo gli ordini, i pannelli restano dietro il loro tasto. */}
+      {params.get('group') && (
+        <GroupView groupId={params.get('group')} onClose={() => navigate('/bar')} />
+      )}
 
       <div className="bar-content">
+        {/* Indietro: torna alla sezione da cui si è arrivati, restando dentro
+            il gestionale. Nella coda non serve: è la schermata di partenza. */}
+        {tab !== 'coda' && (
+          <button
+            className="btn ghost small bar-back"
+            onClick={() => {
+              if (window.history.length > 1) navigate(-1)
+              else goTab('coda')
+            }}
+          >
+            ← Indietro
+          </button>
+        )}
         {tab === 'coda' && <OrderQueue />}
+        {tab === 'pagamenti' && <CashFlow canManageStaff={role === 'bartender'} />}
+        {tab === 'storico' && <OrdersHistory />}
+        {tab === 'fatture' && <InvoicesTab />}
         {tab === 'stats' && <StatsTab />}
         {tab === 'menu' && <MenuTab />}
         {tab === 'inventario' && <InventoryManager />}
-        {tab === 'staff' && <StaffTab />}
+        {(tab === 'staff' || tab === 'ore') && <StaffPage />}
+        {tab === 'vip' && <VipTab />}
         {tab === 'impostazioni' && <SettingsTab />}
+        {tab === 'stampante' && <PrinterSetup />}
         {tab === 'dev' && devToolsEnabled && <DevTools />}
       </div>
     </div>
@@ -255,192 +363,311 @@ function minutesBetween(fromIso, toIso) {
 }
 
 function OrderQueue() {
-  const [serata, setSerata] = useState(undefined) // undefined=caricamento, null=nessuna
+  const [ordersReady, setOrdersReady] = useState(false) // primo snapshot arrivato
   const [orders, setOrders] = useState([])
   const [error, setError] = useState(null)
-  const [busy, setBusy] = useState(false)
   const [statusTab, setStatusTab] = useState(ORDER_STATUSES.RICEVUTO)
+  const [boardFilter, setBoardFilter] = useState('attivi') // 'attivi' | 'chiusi' | 'tutti'
+  const [soloOggi, setSoloOggi] = useState(false) // nasconde i conti dei giorni scorsi
+  const [nascondiPagati, setNascondiPagati] = useState(false) // pagati non ancora serviti
+
+  // Avanzamenti OTTIMISTICI dalla card: lo stato cambia al tap, il server
+  // segue in background (in errore si torna allo stato reale).
+  const [queueOverrides, setQueueOverrides] = useState({}) // id -> workflow_status
   const [slowLoad, setSlowLoad] = useState(false)
   const [confirmAction, setConfirmAction] = useState(null) // { title, message, danger, run }
   const [cancelTarget, setCancelTarget] = useState(null) // { order, kind }
   const [search, setSearch] = useState('')
-  const [report, setReport] = useState(null) // resoconto mostrato dopo la chiusura
+  const [showPanels, setShowPanels] = useState(false) // pannelli (chiamate/gruppi) nella griglia
+  const [openCards, setOpenCards] = useState(() => new Set()) // card-griglia coi tasti aperti
+  const [pend, setPend] = useState({ pending: [], banners: [] }) // ordini POS in invio
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   const knownIds = useRef(new Set())
+  const knownComande = useRef(new Map()) // id ordine -> n. comande (per il toast aggiunte)
+  const navigate = useNavigate()
 
   useEffect(() => subscribeSettings((s) => setSettings(s)), [])
+  useEffect(() => subscribePending(setPend), [])
+  // Senza cassa aperta non si battono ordini: il «+» è spento e in cima
+  // compare l'avviso con la scorciatoia per aprirla.
+  const { open: cassaAperta, loading: cassaLoading } = useCashSession()
 
-  // Se dopo 8s la serata non è arrivata, probabilmente il database non è
+  // Vista a griglia: a tutto schermo. Aggiunge `fullbleed` al body così la
+  // pagina esce dal contenitore centrato (.app, max 760px) e riempie larghezza
+  // e altezza. Rimosso quando si lascia la griglia o si smonta la coda.
+  const gridView = settings.queue_view === 'griglia'
+  useEffect(() => {
+    if (!gridView) return undefined
+    document.body.classList.add('fullbleed')
+    return () => document.body.classList.remove('fullbleed')
+  }, [gridView])
+
+  // Se dopo 8s gli ordini non sono arrivati, probabilmente il database non è
   // raggiungibile (l'SDK ritenta in silenzio): mostra un suggerimento.
   useEffect(() => {
     const t = setTimeout(() => setSlowLoad(true), 8000)
     return () => clearTimeout(t)
   }, [])
 
-  // Osserva la serata aperta. In caso di errore esce comunque dal
-  // caricamento (serata=null) così l'errore è visibile in pagina.
+  // Registrazione push del dispositivo (indipendente dagli ordini).
   useEffect(() => {
-    ensureNotificationPermission()
-    const unsub = subscribeOpenSerata(
-      (s) => setSerata(s),
-      (e) => {
-        setError(e.message)
-        setSerata(null)
-      }
-    )
-    return unsub
+    installAudioUnlock() // sblocca il bip al primo tocco (richiesto da iOS)
+    // Registra il token push del dispositivo del bartender: senza questo la
+    // push "nuovo ordine" non arriverebbe a chi sta solo sul gestionale.
+    const uid = auth.currentUser?.uid
+    ensureNotificationPermission().then(async (ok) => {
+      if (!ok || !uid) return
+      const token = await getPushToken()
+      if (token) saveStaffToken(uid, token, 'bartender').catch(() => {})
+    })
   }, [])
 
-  // Osserva gli ordini della serata aperta.
-  const serataId = serata?.id
+  // Osserva la CODA: conti aperti (sempre, per sempre) + chiusi di oggi.
+  const cutoffHour = settings.business_day_cutoff_hour
+  // Gestione preparazione: se spenta spariscono stati e avanzamenti.
+  const workflowOn = settings.workflow_enabled !== false
   useEffect(() => {
-    if (!serataId) {
-      setOrders([])
-      knownIds.current = new Set()
-      return
-    }
     let primed = false
     const awaiting = new Set() // ordini in attesa di pagamento obbligatorio
-    const unsub = subscribeSerataOrders(
-      serataId,
+    const unsub = subscribeActiveOrders(
       (data) => {
         // Notifica i nuovi ordini "ricevuti" comparsi dopo il primo
         // caricamento. Quelli con pagamento obbligatorio vengono
         // notificati solo QUANDO risultano pagati (prima non si preparano).
         if (primed) {
+          const printerSettings = loadPrinterSettings()
           for (const o of data) {
             const isNew = !knownIds.current.has(o.id)
-            if (o.status !== ORDER_STATUSES.RICEVUTO) continue
+            if (o.workflow_status !== ORDER_STATUSES.RICEVUTO) continue
+            // Niente notifica per gli ordini inseriti dal bartender stesso:
+            // avvisano solo quelli di clienti o staff.
+            if (o.placed_by?.role === 'bartender') continue
             if (isAwaitingPayment(o)) {
               if (isNew) awaiting.add(o.id)
               continue
             }
             if (isNew || awaiting.has(o.id)) {
               awaiting.delete(o.id)
+              beep() // avviso sonoro: su iPad in primo piano il banner è soppresso
               notify('🆕 Nuovo ordine', `Ordine #${o.daily_number} ricevuto.`)
+              // Auto-stampa comanda se abilitata nelle impostazioni stampante.
+              if (printerSettings.autoPrintComanda) {
+                printComanda(o, o.comande?.find((cc) => cc.id === o.active_comanda_id) ?? null).catch((e) => console.warn('[printer] auto-comanda:', e.message))
+              }
+            }
+          }
+          // Auto-stampa scontrino alla CHIUSURA del conto (prima era al
+          // "pronto": con la gestione preparazione spenta non usciva mai, e con
+          // quella accesa usciva due volte — al pronto e all'incasso).
+          // claimReceiptPrint garantisce una sola copia per conto, da qualunque
+          // schermata sia stato chiuso.
+          if (printerSettings.autoPrintScontrino) {
+            for (const o of data) {
+              if (o.payment_status === 'pagato' && claimReceiptPrint(o.id)) {
+                printScontrino(o).catch((e) => console.warn('[printer] auto-scontrino:', e.message))
+              }
+            }
+          }
+          // AGGIUNTE a conti esistenti (da altro dispositivo/staff): toast
+          // in app. Le proprie aggiunte non passano di qua: si fanno dal
+          // dettaglio ordine, dove questa vista non è montata.
+          for (const o of data) {
+            const prev = knownComande.current.get(o.id)
+            const n = (o.comande || []).length
+            if (prev != null && n > prev && o.status === 'aperto') {
+              showToast(`➕ Aggiunta all'ordine #${o.daily_number ?? '—'}${o.customer_name ? ` (${o.customer_name})` : ''}`)
             }
           }
         }
         knownIds.current = new Set(data.map((o) => o.id))
+        knownComande.current = new Map(data.map((o) => [o.id, (o.comande || []).length]))
         setOrders(data)
+        setOrdersReady(true)
         primed = true
       },
-      (e) => setError(e.message)
+      (e) => {
+        setError(e.message)
+        setOrdersReady(true) // errore visibile in pagina, niente spinner infinito
+      },
+      { cutoffHour }
     )
     return unsub
-  }, [serataId])
+  }, [cutoffHour])
 
-  async function apri() {
-    setBusy(true)
-    setError(null)
-    try {
-      await openSerata()
-    } catch (e) {
-      setError(e.message)
-    } finally {
-      setBusy(false)
+  // Scambio placeholder → ordine reale: appena l'ordine con il
+  // client_temp_id del placeholder arriva dalla sottoscrizione, il
+  // placeholder si toglie (lo scambio è sul posto: mai due card né buchi).
+  useEffect(() => {
+    for (const p of pend.pending) {
+      if (orders.some((o) => o.client_temp_id === p.tempId)) dismissPending(p.tempId)
     }
-  }
+  }, [orders, pend.pending])
 
-  function chiudi() {
-    const aperti = openOrdersCount(orders)
-    const finance = serataFinance(orders)
-    const righe = [
-      `Incasso: ${formatPrice(finance.incasso)} (${finance.ordini} ordini)`,
-      finance.servizio > 0 ? `Servizio: ${formatPrice(finance.servizio)}` : null,
-      finance.mance > 0 ? `Mance: ${formatPrice(finance.mance)}` : null,
-    ].filter(Boolean).join('\n')
-    const msg = aperti > 0
-      ? `Ci sono ancora ${aperti} ordini non conclusi.\n\n${righe}`
-      : righe
-    setConfirmAction({
-      title: '⏹ Chiudere la serata?',
-      message: msg,
-      confirmLabel: 'Chiudi serata',
-      run: async () => {
-        setBusy(true)
-        setError(null)
-        // Resoconto calcolato dagli ordini correnti + statistiche tempi.
-        const fullReport = {
-          finance,
-          products: aggregateProducts(orders),
-          longest_prep: longestPrep(orders),
-          phase_averages: phaseAverages(serata.prep_stats, serata.eta_stats),
-          drinks_sold: aggregateProducts(orders).reduce((s, p) => s + p.qty, 0),
-        }
-        try {
-          await closeSerata(serata.id, fullReport)
-          setReport(fullReport)
-        } catch (e) {
-          setError(e.message)
-        } finally {
-          setBusy(false)
-        }
-      },
-    })
-  }
+  // Nessuna apertura/chiusura di serata: il servizio è perpetuo. I conti
+  // restano aperti finché non li si chiude a mano; la giornata commerciale
+  // serve solo a raggruppare (statistiche e progressivo #N).
 
-  async function advance(order) {
-    const ns = nextStatus(order.status)
+  function advance(order) {
+    const ns = nextStatus(order.workflow_status)
     if (!ns) return
-    try {
-      await updateOrderStatus(order.id, ns)
-    } catch (e) {
-      setError(e.message)
-    }
+    setQueueOverrides((m) => ({ ...m, [order.id]: ns }))
+    ;(async () => {
+      try {
+        await updateOrderStatus(order.id, ns)
+        // NIENTE rimozione qui: la scrittura risponde PRIMA che arrivi lo
+        // snapshot aggiornato, quindi togliere subito l'override farebbe
+        // riapparire per un attimo lo stato vecchio (il tasto "rimbalza").
+        // Lo toglie l'effetto sotto, quando il server ha davvero recepito.
+      } catch (e) {
+        setError(e.message)
+        showToast(`⚠️ Avanzamento non riuscito: ${e.message}`, { kind: 'error' })
+        setQueueOverrides((m) => {
+          const n = { ...m }
+          delete n[order.id]
+          return n
+        })
+      }
+    })()
   }
+
+  // L'override ottimistico vive finché il server non è allineato: appena
+  // l'ordine arriva con lo stato atteso (o più avanti), si toglie.
+  useEffect(() => {
+    setQueueOverrides((m) => {
+      if (Object.keys(m).length === 0) return m
+      const next = { ...m }
+      let changed = false
+      for (const o of orders) {
+        if (next[o.id] && o.workflow_status === next[o.id]) {
+          delete next[o.id]
+          changed = true
+        }
+      }
+      return changed ? next : m
+    })
+  }, [orders])
 
   // Annullamento bartender: apre il dialog con frase/motivazione/notifica.
   // kind: 'ordine' (ricevuto), 'preparazione' (in_preparazione),
   // 'non_ritirato' (pronto mai ritirato/servito).
-  async function confirmCancel({ phrase, message, notify }) {
+  function confirmCancel({ phrase, message, notify }) {
     const { order, kind } = cancelTarget
     setCancelTarget(null)
-    try {
-      await cancelOrder(order.id, { by: 'bartender', kind, phrase, message, notify })
-    } catch (e) {
+    // In background: il dialog si chiude subito, la card sparisce con lo
+    // snapshot; in errore arriva il toast.
+    cancelOrder(order.id, { by: 'bartender', kind, phrase, message, notify }).catch((e) => {
       setError(e.message)
-    }
+      showToast(`⚠️ Annullo non riuscito: ${e.message}`, { kind: 'error' })
+    })
   }
 
-  if (serata === undefined) {
+  // Attesa del primo snapshot: si mostra SOLO se non c'è già qualcosa da
+  // vedere. Un ordine appena battuto è un segnaposto locale, quindi deve
+  // comparire subito — la sincronizzazione col server viene dopo, non
+  // prima (era il caso del primo ordine della giornata: il contatore del
+  // giorno non è ancora in cache e la scrittura passa dal server).
+  if (!ordersReady && pend.pending.length === 0) {
     return (
       <div>
         {error && <div className="banner">Errore: {error}</div>}
         <div className="empty">
-          Carico la serata…
+          Carico gli ordini…
           {slowLoad && (
-            <p className="muted" style={{ fontSize: '0.85rem', marginTop: 12 }}>
-              Ci sta mettendo troppo? Controlla la connessione e che il database
-              sia raggiungibile (in sviluppo: emulatori avviati), poi ricarica la
-              pagina.
-            </p>
+            <>
+              {/* Chi legge questo sta al bancone, non davanti al codice: gli
+                  emulatori non gli dicono niente. La causa quasi sempre è una
+                  rete che RISULTA collegata ma non passa (wifi del locale che
+                  fa i capricci): lì l'app aspetta il server invece di
+                  arrendersi alla cache. */}
+              <p className="muted" style={{ fontSize: '0.85rem', marginTop: 12 }}>
+                Il wifi risulta collegato ma non sta passando niente. Prova a
+                spegnere e riaccendere il wifi, oppure passa alla rete del
+                telefono: gli ordini già presi restano al sicuro.
+              </p>
+              <button
+                className="btn ghost small"
+                style={{ marginTop: 8 }}
+                onClick={() => window.location.reload()}
+              >
+                🔄 Ricarica
+              </button>
+            </>
           )}
         </div>
       </div>
     )
   }
 
-  // Nessuna serata aperta: invito ad aprire il conto. Subito dopo la
-  // chiusura qui appare anche il resoconto della serata appena conclusa.
-  if (!serata) {
-    return (
-      <div>
-        {error && <div className="banner">Errore: {error}</div>}
-        <div className="empty">Nessuna serata aperta.</div>
-        <button className="btn block" onClick={apri} disabled={busy}>
-          {busy ? 'Apro…' : '▶️ Apri serata'}
-        </button>
-        {report && <SerataReport report={report} onClose={() => setReport(null)} />}
-      </div>
-    )
+  // Ordini "effettivi" a schermo: stato del server + override ottimistici.
+  const effOrders = orders.map((o) =>
+    queueOverrides[o.id] && o.workflow_status !== queueOverrides[o.id]
+      ? { ...o, workflow_status: queueOverrides[o.id] }
+      : o
+  )
+  // ── DA CHIUDERE: conti rimasti aperti dalle giornate precedenti ──
+  // Restano fuori dalla schermata principale (altrimenti si mescolano agli
+  // ordini di oggi e i numeri del giorno sembrano duplicati): stanno nella
+  // loro tab dedicata, con la data ben visibile sulla card.
+  const oggiKey = businessDayKey(new Date(), cutoffHour)
+  const dayOf = (o) => o.order_date || businessDayKey(o.created_at, cutoffHour)
+  // Un conto è CHIUSO — e quindi esce dalla coda — solo quando non c'è più
+  // nulla da fare. Con la preparazione attiva servono DUE cose: pagato E
+  // servito. Un ordine pagato in anticipo ma non ancora consegnato è
+  // lavoro ancora da fare, e sparire sarebbe il modo migliore per
+  // dimenticarselo. Senza la preparazione, invece, il pagamento chiude.
+  const pagato = (o) =>
+    o.payment_status === 'pagato' || o.workflow_status === ORDER_STATUSES.PAGATO
+  const servito = (o) => allServed(o) || o.workflow_status === ORDER_STATUSES.RITIRATO
+  const isChiuso = (o) =>
+    o.workflow_status === ORDER_STATUSES.ANNULLATO ||
+    (workflowOn ? pagato(o) && servito(o) : pagato(o))
+  // Pagati ma non ancora serviti: restano in coda, si possono nascondere.
+  const pagatiDaServire = effOrders.filter((o) => workflowOn && pagato(o) && !servito(o))
+  const arretrati = effOrders
+    .filter((o) => !isChiuso(o) && dayOf(o) && dayOf(o) !== oggiKey)
+    .sort((a, b) => String(dayOf(a)).localeCompare(String(dayOf(b))))
+  const arretratiIds = new Set(arretrati.map((o) => o.id))
+  // Etichetta della giornata dell'ordine: "oggi", "ieri" o la data estesa.
+  const dayLabel = (o) => businessDayShort(dayOf(o), new Date(), cutoffHour)
+  // Raggruppa una lista per giornata: prima oggi, poi i giorni scorsi dal
+  // più recente. Serve a separare con una riga i conti ancora da chiudere.
+  const groupByDay = (list) => {
+    const map = new Map()
+    for (const o of list) {
+      const k = dayOf(o) || '—'
+      if (!map.has(k)) map.set(k, [])
+      map.get(k).push(o)
+    }
+    return [...map.entries()]
+      .sort((a, b) => (a[0] === oggiKey ? -1 : b[0] === oggiKey ? 1 : b[0].localeCompare(a[0])))
+      .map(([day, orders]) => ({ day, orders }))
   }
+  const ordersOggi = effOrders.filter((o) => !arretratiIds.has(o.id))
+  const ordersInVista = soloOggi ? ordersOggi : effOrders
+  // Riepilogo di testata: solo la giornata corrente (gli arretrati stanno
+  // nella loro tab e non devono gonfiare i totali di oggi).
+  const recap = ordersRecap(ordersOggi, isChiuso)
 
-  const recap = serataRecap(orders)
+  // Leggenda "chi ha aperto l'ordine": lettera → nome per lo staff che ha
+  // battuto ordini oggi, più l'eventuale voce Cliente (ordini dall'app).
+  // Calcolo semplice (non hook: qui siamo dopo eventuali early-return).
+  const legenda = (() => {
+    const staff = new Map()
+    let hasClient = false
+    for (const o of ordersOggi) {
+      const L = placedByLetter(o.placed_by)
+      if (L) { if (!staff.has(L)) staff.set(L, placedByName(o.placed_by)) }
+      else hasClient = true
+    }
+    return { staff: [...staff.entries()].sort((a, b) => a[0].localeCompare(b[0])), hasClient }
+  })()
+
   // Ricerca rapida: numero, cliente, tavolo, drink, chi ha inserito.
   const q = search.trim().toLowerCase()
+  // Cercando esplicitamente si trovano anche i conti dei giorni scorsi
+  // (altrimenti sarebbero raggiungibili solo dalla tab "Da chiudere").
   const visibleOrders = q
-    ? orders.filter(
+    ? ordersInVista.filter(
         (o) =>
           String(o.daily_number ?? '').includes(q) ||
           o.customer_name?.toLowerCase().includes(q) ||
@@ -449,7 +676,7 @@ function OrderQueue() {
           o.placed_by?.name?.toLowerCase().includes(q) ||
           (o.order_items || []).some((i) => i.name?.toLowerCase().includes(q))
       )
-    : orders
+    : ordersInVista
   const buckets = bucketByStatus(visibleOrders)
   const listView = settings.queue_view === 'lista'
   const list = buckets[statusTab] || []
@@ -463,6 +690,28 @@ function OrderQueue() {
     ...(buckets[ORDER_STATUSES.RITIRATO] || []),
     ...(buckets[ORDER_STATUSES.PAGATO] || []),
   ]
+  // Vista a griglia: di default gli ordini in corso; col filtro si vedono
+  // anche i chiusi/pagati o TUTTI gli ordini in vista.
+  const isClosed = isChiuso
+  const nascosti = new Set(nascondiPagati ? pagatiDaServire.map((o) => o.id) : [])
+  const boardOrders = visibleOrders
+    .filter((o) => !nascosti.has(o.id))
+    .filter((o) =>
+      boardFilter === 'tutti' ? true : boardFilter === 'chiusi' ? isClosed(o) : !isClosed(o)
+    )
+    .sort((a, b) => (a.daily_number || 0) - (b.daily_number || 0))
+  // Ordini POS in invio. Finché il placeholder è attivo l'ordine reale
+  // resta nascosto: il match usa il client_temp_id scritto sull'ordine
+  // (deterministico anche se lo snapshot arriva PRIMA che il placeholder
+  // conosca il realId — era la causa del doppione per un attimo).
+  const pendingRealIds = new Set(pend.pending.filter((p) => p.realId).map((p) => p.realId))
+  const pendingTempIds = new Set(pend.pending.map((p) => p.tempId))
+  const visibleBoard = boardOrders.filter(
+    (o) =>
+      !pendingRealIds.has(o.id) &&
+      !(o.client_temp_id && pendingTempIds.has(o.client_temp_id))
+  )
+  const boardGroups = groupByDay(visibleBoard)
 
   async function incassaSuLettore(o) {
     setError(null)
@@ -485,33 +734,314 @@ function OrderQueue() {
     }
   }
 
+  const toggleCard = (id) =>
+    setOpenCards((s) => {
+      const n = new Set(s)
+      n.has(id) ? n.delete(id) : n.add(id)
+      return n
+    })
+
+  // Pulsanti azione di un ordine (avanza stato, incasso, stampe, annullo).
+  // Condivisi dalla card piena (liste) e dalla card-griglia (a scomparsa).
+  const orderActions = (o) => {
+    const ns = nextStatus(o.workflow_status)
+    const awaiting = isAwaitingPayment(o) && o.workflow_status === ORDER_STATUSES.RICEVUTO
+    const readerReady = settings.payments_reader_enabled && settings.sumup_reader_id
+    const readerPending = o.payment_method === 'lettore' && o.payment_status === 'in_attesa'
+    // Senza gestione della preparazione l'ordine resta "ricevuto": legare
+    // l'incasso agli stati lo renderebbe impossibile.
+    const canCollect =
+      o.payment_status !== 'pagato' &&
+      (!workflowOn || [ORDER_STATUSES.PRONTO, ORDER_STATUSES.RITIRATO].includes(o.workflow_status))
+    return (
+      <>
+        {/* Coi tasti che compaiono e spariscono, quello che cercavi non è più
+            dove l'avevi visto un attimo prima. Ci sono sempre: spenti quando
+            l'azione non è possibile, con il perché nel titolo. */}
+        {workflowOn && (
+          <button
+            className="btn block"
+            disabled={!ns || o.workflow_status === ORDER_STATUSES.RITIRATO || awaiting}
+            title={
+              awaiting
+                ? 'In attesa del pagamento: non si prepara'
+                : !ns || o.workflow_status === ORDER_STATUSES.RITIRATO
+                  ? 'Nessuno stato successivo'
+                  : undefined
+            }
+            onClick={() => advance(o)}
+          >
+            {ns && o.workflow_status !== ORDER_STATUSES.RITIRATO
+              ? `Segna come “${STATUS_LABELS[ns]}”`
+              : 'Servito'}
+          </button>
+        )}
+        {readerPending ? (
+          <div style={{ marginTop: 8 }}>
+            <p className="muted small" style={{ margin: '0 0 6px', textAlign: 'center' }}>
+              📟 In corso sul lettore… carta del cliente sul Solo.
+            </p>
+            <button className="btn ghost small block" onClick={() => annullaSuLettore(o)}>
+              ✖️ Annulla sul lettore
+            </button>
+          </div>
+        ) : (
+          readerReady && (
+            <button
+              className="btn secondary block"
+              style={{ marginTop: o.workflow_status === ORDER_STATUSES.PRONTO ? 8 : 0 }}
+              disabled={!canCollect}
+              title={canCollect ? undefined : 'Conto già chiuso o non ancora incassabile'}
+              onClick={() => incassaSuLettore(o)}
+            >
+              📟 Incassa sul lettore
+            </button>
+          )
+        )}
+        {(
+          // DUE tasti, non uno. C'era solo "Incassato (contanti)": è il tasto
+          // più a portata di mano della board, e chi incassava con la carta lo
+          // premeva lo stesso — il conto finiva nei contanti e a fine serata
+          // la cassa non tornava. Il metodo ora si sceglie qui.
+          <div className="grid-2" style={{ marginTop: 8 }}>
+            <button
+              className="btn"
+              disabled={readerPending || !canCollect}
+              title={canCollect ? undefined : 'Conto già chiuso'}
+              onClick={() =>
+                markOrderPaid(o.id, 'banco', { autoServe: !workflowOn }).catch((e) =>
+                  setError(e.message)
+                )
+              }
+            >
+              💶 Contanti
+            </button>
+            <button
+              className="btn"
+              disabled={readerPending || !canCollect}
+              title={canCollect ? undefined : 'Conto già chiuso'}
+              onClick={() =>
+                markOrderPaid(o.id, 'carta', { autoServe: !workflowOn }).catch((e) =>
+                  setError(e.message)
+                )
+              }
+            >
+              💳 Carta
+            </button>
+          </div>
+        )}
+        <div className="grid-2" style={{ marginTop: 8 }}>
+          <button
+            className="btn ghost small"
+            onClick={() => printComanda(o, o.comande?.find((cc) => cc.id === o.active_comanda_id) ?? null).catch((e) => setError(`Stampa: ${e.message}`))}
+          >
+            🖨 Comanda
+          </button>
+          <button
+            className="btn ghost small"
+            onClick={() => printScontrino(o).catch((e) => setError(`Stampa: ${e.message}`))}
+          >
+            🧾 Scontrino
+          </button>
+        </div>
+        {o.workflow_status === ORDER_STATUSES.RICEVUTO && (
+          <button
+            className="btn ghost small block"
+            style={{ marginTop: 8 }}
+            onClick={() => setCancelTarget({ order: o, kind: 'ordine' })}
+          >
+            ✖️ Annulla ordine
+          </button>
+        )}
+        {o.workflow_status === ORDER_STATUSES.IN_PREPARAZIONE && (
+          <button
+            className="btn ghost small block"
+            style={{ marginTop: 8 }}
+            onClick={() => setCancelTarget({ order: o, kind: 'preparazione' })}
+          >
+            ✖️ Annulla preparazione
+          </button>
+        )}
+        {o.workflow_status === ORDER_STATUSES.PRONTO && (
+          <button
+            className="btn ghost small block"
+            style={{ marginTop: 8 }}
+            onClick={() => setCancelTarget({ order: o, kind: 'non_ritirato' })}
+          >
+            🚫 {o.service_mode === 'tavolo' ? 'Non servito' : 'Non ritirato'}
+          </button>
+        )}
+      </>
+    )
+  }
+
+  // Card-griglia compatta: tutte uguali, più larghe che alte. Mostra solo
+  // numero, cliente/tavolo, stato, n° prodotti e subtotale. I tasti sono a
+  // scomparsa: nascosti di default, compaiono toccando la card.
+  const renderGridCard = (o) => {
+    const awaiting = isAwaitingPayment(o) && o.workflow_status === ORDER_STATUSES.RICEVUTO
+    const count = (o.order_items || []).reduce((s, i) => s + i.qty, 0)
+    const open = openCards.has(o.id)
+    return (
+      <div
+        className={`card order-card grid-card ${o.workflow_status} ${orderStripClass(o)}${
+          workflowOn && pagato(o) && !servito(o) ? ' pagato-da-servire' : ''
+        }`}
+        key={o.id}
+        style={awaiting ? { opacity: 0.55 } : undefined}
+      >
+        {/* Corpo: click → dettaglio ordine */}
+        <div
+          className="grid-card-main"
+          role="button"
+          tabIndex={0}
+          onClick={() => navigate(`/ordine/${o.id}`)}
+        >
+          <div className="row between">
+            <span className="bignum">#{o.daily_number ?? '—'} <OrderBy order={o} /></span>
+            {/* Il badge di preparazione compare solo se si tracciano gli stati:
+                a gestione preparazione spenta l'ordine è solo ricevuto→pagato. */}
+            {workflowOn && (
+              <span className={`pill ${o.workflow_status}`}>
+                {STATUS_EMOJI[o.workflow_status]}{' '}
+                {o.workflow_status === ORDER_STATUSES.RITIRATO
+                  ? ritiratoLabel(o.service_mode)
+                  : STATUS_LABELS[o.workflow_status]}
+              </span>
+            )}
+          </div>
+          {/* NOME del conto in grande: è la prima cosa da riconoscere sulla
+              card. Tavolo, gruppo e pagamento restano piccoli, sotto.
+              La riga c'è SEMPRE, anche senza nome: altrimenti i conti senza
+              nome venivano più bassi e la board risultava a scalini. */}
+          <div className="grid-card-name">{o.customer_name || ' '}</div>
+          <div className="grid-card-sub row between" style={{ gap: 6 }}>
+            <span className="grow" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {o.table_label && <span className="muted">🍽 Tavolo {o.table_label}</span>}
+              {o.note && <span className="muted">{o.table_label ? ' · ' : ''}{o.note}</span>}
+            </span>
+            {/* Pagamento allineato a DESTRA, fra il badge di stato (sopra) e
+                il prezzo (sotto). Il gruppo, se c'è, gli sta accanto. */}
+            <span className="row" style={{ gap: 4, flexShrink: 0 }}>
+              {o.group_name_snapshot && (
+                <span className="pill small">👥 {o.group_name_snapshot}</span>
+              )}
+              {o.payment_status === 'pagato' && o.workflow_status !== ORDER_STATUSES.PAGATO && (
+                <span className="pill pagato small">💳 Pagato</span>
+              )}
+              {o.payment_status === 'parziale' && (
+                <span className="pill ricevuto small" title={`Incassati ${formatPrice(paidAmount(o))}`}>
+                  💳 Acconto
+                </span>
+              )}
+            </span>
+          </div>
+          <div className="row between" style={{ alignItems: 'baseline', marginTop: 'auto' }}>
+            <span className="grid-card-meta">
+              {count} prodott{count === 1 ? 'o' : 'i'} · {dayLabel(o)}
+              {/* Sconto applicato: si vede, e il totale è già quello scontato. */}
+              {(o.discount_amount || 0) > 0 && (
+                <span className="sconto-badge"> 🎁 −{formatPrice(o.discount_amount)}</span>
+              )}
+            </span>
+            {/* Un conto ANNULLATO non ha incassato niente: il totale si mostra
+                barrato, com'è nei conti di casa. Prima si leggeva "4,00 €"
+                identico a un conto vero e sembrava che contasse (non conta:
+                gli annullati restano fuori da cassa e statistiche). */}
+            <span
+              className={`grid-card-tot${annullato(o) ? ' tot-annullato' : ''}`}
+              title={annullato(o) ? 'Ordine annullato: non incassato' : undefined}
+            >
+              {formatPrice(orderTotal(o))}
+            </span>
+          </div>
+        </div>
+        {/* Pulsante separato: apre/chiude i tasti azione (non va al dettaglio) */}
+        <button
+          type="button"
+          className="grid-card-toggle"
+          onClick={() => toggleCard(o.id)}
+          aria-expanded={open}
+        >
+          {open ? '▴ Chiudi' : '⋯ Azioni'}
+        </button>
+        {open && <div className="grid-card-actions">{orderActions(o)}</div>}
+      </div>
+    )
+  }
+
+  // Ordine POS in invio: a schermo è GIÀ un ordine a tutti gli effetti
+  // (stessa card, stessi colori, info complete) — la sincronizzazione la
+  // racconta il toast, non la card. Solo in errore si distingue.
+  function renderPendingCard(p) {
+    const o = p.order
+    const count = (o.order_items || []).reduce((s, i) => s + i.qty, 0)
+    const isError = p.state === 'error'
+    return (
+      <div
+        className={`card order-card grid-card ${isError ? 'grid-card-pending error' : o.workflow_status}`}
+        key={p.tempId}
+      >
+        <div className="grid-card-main" style={{ cursor: 'default' }}>
+          <div className="row between">
+            <span className="bignum">#{o.daily_number ?? '…'} <OrderBy order={o} /></span>
+            <span className={`pill ${isError ? '' : o.workflow_status}`}>
+              {isError
+                ? '⚠️ Errore invio'
+                : `${STATUS_EMOJI[o.workflow_status]} ${STATUS_LABELS[o.workflow_status]}`}
+            </span>
+          </div>
+          <div className="grid-card-sub">
+            {o.customer_name && <strong>{o.customer_name}</strong>}
+            {o.table_label && <span className="muted"> · Tavolo {o.table_label}</span>}
+          </div>
+          <div className="row between" style={{ alignItems: 'baseline' }}>
+            <span className="muted">{count} prodott{count === 1 ? 'o' : 'i'}</span>
+            <span className="grid-card-tot">{formatPrice(o.total)}</span>
+          </div>
+        </div>
+        {/* Footer identico alla card reale (stessa altezza prima e dopo
+            la sincronizzazione); le azioni arrivano con l'ordine vero. */}
+        {!isError && (
+          <button type="button" className="grid-card-toggle" disabled>
+            ⋯ Azioni
+          </button>
+        )}
+        {isError && (
+          <div className="grid-card-actions">
+            <p className="muted small" style={{ margin: '0 0 6px' }}>{p.error}</p>
+            <button className="btn ghost small block" onClick={() => dismissPending(p.tempId)}>
+              Rimuovi
+            </button>
+          </div>
+        )}
+      </div>
+    )
+  }
+
   const renderCard = (o) => {
-        const ns = nextStatus(o.status)
-        const awaiting = isAwaitingPayment(o) && o.status === ORDER_STATUSES.RICEVUTO
-        // Incasso col lettore: ordini non pagati in mano al cliente
-        // (pronto/ritirato), col lettore associato e attivo.
-        const readerReady =
-          settings.payments_reader_enabled && settings.sumup_reader_id
-        const readerPending =
-          o.payment_method === 'lettore' && o.payment_status === 'in_attesa'
-        const canCollect =
-          o.payment_status !== 'pagato' &&
-          [ORDER_STATUSES.PRONTO, ORDER_STATUSES.RITIRATO].includes(o.status)
+        const awaiting = isAwaitingPayment(o) && o.workflow_status === ORDER_STATUSES.RICEVUTO
         return (
           <div
-            className={`card order-card ${o.status}`}
+            className={`card order-card ${o.workflow_status}${
+              workflowOn && pagato(o) && !servito(o) ? ' pagato-da-servire' : ''
+            }`}
             key={o.id}
             style={awaiting ? { opacity: 0.55 } : undefined}
           >
             <div className="row between">
               <div>
-                <span className="bignum" style={{ fontSize: '2rem' }}>
-                  #{o.daily_number ?? '—'}
+                <span className="bignum" style={{ fontSize: '1.4rem', fontWeight: 600 }}>
+                  #{o.daily_number ?? '—'} <OrderBy order={o} />
                 </span>{' '}
                 {o.customer_name && <strong>{o.customer_name}</strong>}{' '}
                 {o.table_label && (
                   <span className="muted">· Tavolo {o.table_label}</span>
-                )}
+                )}{' '}
+                {o.group_name_snapshot && (
+                  <span className="pill small">👥 {o.group_name_snapshot}</span>
+                )}{' '}
+                <span className="muted small">📅 {dayLabel(o)}</span>
                 {o.service_mode === 'banco' && (
                   <span className="pill" style={{ marginLeft: 6 }}>🚶 Ritiro al banco</span>
                 )}
@@ -519,9 +1049,14 @@ function OrderQueue() {
                   <span className="pill" style={{ marginLeft: 6 }}>🍸 Al tavolo</span>
                 )}
                 {/* Stato pagamento */}
-                {o.payment_status === 'pagato' && o.status !== ORDER_STATUSES.PAGATO && (
+                {o.payment_status === 'pagato' && o.workflow_status !== ORDER_STATUSES.PAGATO && (
                   <span className="pill pagato" style={{ marginLeft: 6 }}>
                     💳 Pagato{o.payment_method === 'online' ? ' online' : ''}
+                  </span>
+                )}
+                {o.payment_status === 'parziale' && (
+                  <span className="pill ricevuto" style={{ marginLeft: 6 }}>
+                    💳 Parziale · incassati {formatPrice(paidAmount(o))}
                   </span>
                 )}
                 {awaiting && (
@@ -540,12 +1075,14 @@ function OrderQueue() {
                   </span>
                 )}
               </div>
-              <span className={`pill ${o.status}`}>
-                {STATUS_EMOJI[o.status]}{' '}
-                {o.status === ORDER_STATUSES.RITIRATO
-                  ? ritiratoLabel(o.service_mode)
-                  : STATUS_LABELS[o.status]}
-              </span>
+              {workflowOn && (
+                <span className={`pill ${o.workflow_status}`}>
+                  {STATUS_EMOJI[o.workflow_status]}{' '}
+                  {o.workflow_status === ORDER_STATUSES.RITIRATO
+                    ? ritiratoLabel(o.service_mode)
+                    : STATUS_LABELS[o.workflow_status]}
+                </span>
+              )}
             </div>
             <div style={{ margin: '8px 0' }}>
               {(o.order_items || []).map((i) => (
@@ -566,7 +1103,7 @@ function OrderQueue() {
               <div className="order-note">📝 {o.note}</div>
             )}
             {/* Tempi effettivi: preparazione sui "pronti", servizio sui serviti al tavolo. */}
-            {o.status === ORDER_STATUSES.PRONTO && (() => {
+            {o.workflow_status === ORDER_STATUSES.PRONTO && (() => {
               const m = minutesBetween(o.status_times?.in_preparazione, o.status_times?.pronto)
               return m != null && (
                 <p className="muted small" style={{ margin: '0 0 8px' }}>
@@ -574,7 +1111,7 @@ function OrderQueue() {
                 </p>
               )
             })()}
-            {o.status === ORDER_STATUSES.RITIRATO && o.service_mode === 'tavolo' && (() => {
+            {o.workflow_status === ORDER_STATUSES.RITIRATO && o.service_mode === 'tavolo' && (() => {
               const m = minutesBetween(o.status_times?.pronto, o.status_times?.ritirato)
               return m != null && (
                 <p className="muted small" style={{ margin: '0 0 8px' }}>
@@ -587,112 +1124,200 @@ function OrderQueue() {
                 ⏳ Entra in coda al pagamento: non preparare.
               </p>
             )}
-            {ns && o.status !== ORDER_STATUSES.RITIRATO && !awaiting && (
-              <button className="btn block" onClick={() => advance(o)}>
-                Segna come “{STATUS_LABELS[ns]}”
-              </button>
-            )}
-            {/* Incasso sul lettore SumUp (pronto/ritirato non pagati). */}
-            {readerPending ? (
-              <div style={{ marginTop: 8 }}>
-                <p className="muted small" style={{ margin: '0 0 6px', textAlign: 'center' }}>
-                  📟 In corso sul lettore… carta del cliente sul Solo.
-                </p>
-                <button className="btn ghost small block" onClick={() => annullaSuLettore(o)}>
-                  ✖️ Annulla sul lettore
-                </button>
-              </div>
-            ) : (
-              canCollect &&
-              readerReady && (
-                <button
-                  className="btn secondary block"
-                  style={{ marginTop: o.status === ORDER_STATUSES.PRONTO ? 8 : 0 }}
-                  onClick={() => incassaSuLettore(o)}
-                >
-                  📟 Incassa sul lettore
-                </button>
-              )
-            )}
-            {/* Ritirato/servito ma non pagato: l'incasso chiude l'ordine. */}
-            {o.status === ORDER_STATUSES.RITIRATO && o.payment_status !== 'pagato' && (
-              <button
-                className="btn block"
-                style={{ marginTop: 8 }}
-                disabled={readerPending}
-                onClick={() => markOrderPaid(o.id, 'banco').catch((e) => setError(e.message))}
-              >
-                💶 Incassato (contanti)
-              </button>
-            )}
-            {o.status === ORDER_STATUSES.RICEVUTO && (
-              <button
-                className="btn ghost small block"
-                style={{ marginTop: 8 }}
-                onClick={() => setCancelTarget({ order: o, kind: 'ordine' })}
-              >
-                ✖️ Annulla ordine
-              </button>
-            )}
-            {o.status === ORDER_STATUSES.IN_PREPARAZIONE && (
-              <button
-                className="btn ghost small block"
-                style={{ marginTop: 8 }}
-                onClick={() => setCancelTarget({ order: o, kind: 'preparazione' })}
-              >
-                ✖️ Annulla preparazione
-              </button>
-            )}
-            {o.status === ORDER_STATUSES.PRONTO && (
-              <button
-                className="btn ghost small block"
-                style={{ marginTop: 8 }}
-                onClick={() => setCancelTarget({ order: o, kind: 'non_ritirato' })}
-              >
-                🚫 {o.service_mode === 'tavolo' ? 'Non servito' : 'Non ritirato'}
-              </button>
-            )}
+            {orderActions(o)}
           </div>
         )
   }
 
   return (
-    <div>
+    <div className={gridView ? 'queue-board' : undefined}>
       {error && <div className="banner">Errore: {error}</div>}
 
-      <div className="card row between" style={{ alignItems: 'center' }}>
-        <div>
-          <strong>Serata aperta</strong>
-          <div className="muted">
-            {recap.count} ordini · {formatPrice(recap.total)}
+      {/* Cassa chiusa: non si battono ordini finché non la si apre. */}
+      {!cassaLoading && !cassaAperta && (
+        <div className="banner cassa-chiusa-banner">
+          🔴 <strong>Cassa chiusa</strong> — per battere ordini apri prima la cassa.{' '}
+          <Link className="btn small" to="/bar?tab=pagamenti" style={{ marginLeft: 8 }}>
+            🟢 Apri cassa
+          </Link>
+        </div>
+      )}
+
+      {gridView ? (
+        // Testata compatta della griglia: info giornata, ricerca e, in alto a
+        // destra, il «+» per battere un nuovo ordine (apre il POS cassa).
+        <div className="board-head">
+          <div className="board-title">
+            <strong>In servizio</strong>
+            <span className="muted"> · {recap.aperti} apert{recap.aperti === 1 ? 'o' : 'i'} · {recap.chiusi} chius{recap.chiusi === 1 ? 'o' : 'i'} · {formatPrice(recap.total)}</span>
+            {(legenda.staff.length > 0 || legenda.hasClient) && (
+              <div className="order-legend">
+                {legenda.staff.map(([L, name]) => (
+                  <span key={L}><span className="order-by staff">{L}</span> {name}</span>
+                ))}
+                {legenda.hasClient && (
+                  <span><span className="order-by client">🌐</span> Cliente</span>
+                )}
+              </div>
+            )}
+          </div>
+          <input
+            type="search"
+            className="menu-search board-search"
+            placeholder="🔍 Cerca numero, cliente, tavolo, drink…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <div className="board-actions">
+            <button
+              className={`btn ghost small${showPanels ? ' active' : ''}`}
+              onClick={() => setShowPanels((v) => !v)}
+              title="Chiamate staff e gruppi"
+            >
+              {showPanels ? '▴' : '▾'} Pannelli
+            </button>
+            {cassaAperta || cassaLoading ? (
+              <Link className="btn board-add" to="/pos" aria-label="Nuovo ordine" title="Nuovo ordine" />
+            ) : (
+              <button
+                className="btn board-add"
+                disabled
+                aria-label="Nuovo ordine (apri prima la cassa)"
+                title="Apri la cassa per battere ordini"
+              />
+            )}
           </div>
         </div>
-        <button className="btn ghost small" onClick={chiudi} disabled={busy}>
-          ⏹ Chiudi serata
-        </button>
-      </div>
+      ) : (
+        <>
+          <div className="card">
+            <strong>Oggi</strong>
+            <div className="muted">
+              {recap.aperti} apert{recap.aperti === 1 ? 'o' : 'i'} · {recap.chiusi} chius{recap.chiusi === 1 ? 'o' : 'i'} · {formatPrice(recap.total)}
+            </div>
+          </div>
 
-      <Link className="btn block" to="/" style={{ marginBottom: 4 }}>
-        ✍️ Inserisci nuovo ordine
-      </Link>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
+            <Link className="btn" to="/pos" style={{ flex: 1 }}>
+              🍸 POS cassa
+            </Link>
+            <Link className="btn ghost" to="/menu" style={{ flex: 1 }}>
+              ✍️ Vista cliente
+            </Link>
+          </div>
+        </>
+      )}
 
-      <StaffCallList />
+      {/* Pannelli chiamate/gruppi: nella griglia compaiono solo col toggle
+          «Pannelli»; nelle altre viste restano sempre visibili. */}
+      {(!gridView || showPanels) && (
+        <>
+          <StaffCallList />
+          {settings.groups_enabled && settings.groups_in_queue && (
+            <GroupsPanel orders={orders} role="bartender" />
+          )}
+        </>
+      )}
 
-      <input
-        type="search"
-        className="menu-search"
-        placeholder="🔍 Cerca per numero, cliente, tavolo, drink…"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        style={{ marginTop: 8 }}
-      />
+      {!gridView && (
+        <input
+          type="search"
+          className="menu-search"
+          placeholder="🔍 Cerca per numero, cliente, tavolo, drink…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          style={{ marginTop: 8 }}
+        />
+      )}
 
-      {listView ? (
+      {gridView ? (
+        <>
+          {/* Avvisi (es. comanda non stampata) dagli invii in background */}
+          {pend.banners.map((b) => (
+            <div className="banner" key={b.id} onClick={() => dismissBanner(b.id)} style={{ cursor: 'pointer' }}>
+              🖨 {b.msg} <span className="muted">(tocca per chiudere)</span>
+            </div>
+          ))}
+          {/* Filtro: in corso (default) / chiusi / tutti / da chiudere.
+              Sotto ci vuole aria: attaccati, i chip sembravano la prima riga
+              delle card. */}
+          <div className="chips-row" style={{ margin: '8px 0 16px' }}>
+            {[
+              ['attivi', 'In corso'],
+              ['chiusi', '💶 Chiusi'],
+              ['tutti', 'Tutti'],
+            ].map(([k, label]) => (
+              <button
+                key={k}
+                className={`chip ${boardFilter === k ? 'active' : ''}`}
+                onClick={() => setBoardFilter(k)}
+              >
+                {label}
+              </button>
+            ))}
+            {/* Conti dei giorni scorsi: di default sono in coda, sotto la
+                loro data. Questo tasto li nasconde e lascia solo oggi. */}
+            {(pagatiDaServire.length > 0 || nascondiPagati) && (
+              <button
+                className={`chip ${nascondiPagati ? 'active' : ''}`}
+                onClick={() => setNascondiPagati((v) => !v)}
+                title="Nascondi i conti già pagati ma non ancora serviti"
+              >
+                💶 Nascondi pagati{pagatiDaServire.length ? ` (${pagatiDaServire.length})` : ''}
+              </button>
+            )}
+            {(arretrati.length > 0 || soloOggi) && (
+              <button
+                className={`chip ${soloOggi ? 'active' : ''}`}
+                onClick={() => setSoloOggi((v) => !v)}
+                title="Nascondi i conti rimasti aperti dai giorni scorsi"
+              >
+                📅 Solo oggi{arretrati.length ? ` (${arretrati.length} da chiudere)` : ''}
+              </button>
+            )}
+          </div>
+          {/* Griglia: ordini in invio (grigi) + ordini secondo il filtro */}
+          {pend.pending.length === 0 && visibleBoard.length === 0 && (
+            <div className="empty">
+              {`Nessun ordine${boardFilter === 'chiusi' ? ' chiuso' : boardFilter === 'attivi' ? ' in corso' : ''}${soloOggi ? ' oggi' : ''}.`}
+            </div>
+          )}
+          {/* I nuovi ordini vanno IN FONDO (numeri più alti): il placeholder
+              in sync sta già lì, così alla conferma non cambia posizione. */}
+          {/* Una griglia per giornata: oggi in cima, poi i conti ancora
+              aperti dei giorni scorsi, ciascuno sotto la sua data. */}
+          {!boardGroups.some((g) => g.day === oggiKey) && pend.pending.length > 0 && (
+            <div className="order-grid">{pend.pending.map(renderPendingCard)}</div>
+          )}
+          {boardGroups.map(({ day, orders: gOrders }) => (
+            <div key={day}>
+              {day !== oggiKey && (
+                <div className="day-sep">
+                  ⏳ Da chiudere · {businessDayLabel(day, new Date(), cutoffHour)}
+                </div>
+              )}
+              <div className="order-grid">
+                {gOrders.map(renderGridCard)}
+                {day === oggiKey && pend.pending.map(renderPendingCard)}
+              </div>
+            </div>
+          ))}
+        </>
+      ) : listView ? (
         <>
           {/* Lista unica: stato indicato dal colore/etichetta della card */}
           <h3 className="cat-header">In corso ({inCorso.length})</h3>
           {inCorso.length === 0 && <div className="empty">Nessun ordine in corso.</div>}
-          {inCorso.map(renderCard)}
+          {groupByDay(inCorso).map(({ day, orders: gOrders }) => (
+            <div key={day}>
+              {day !== oggiKey && (
+                <div className="day-sep">
+                  ⏳ Da chiudere · {businessDayLabel(day, new Date(), cutoffHour)}
+                </div>
+              )}
+              {gOrders.map(renderCard)}
+            </div>
+          ))}
 
           <h3 className="cat-header">Serviti/Ritirati ({evasi.length})</h3>
           {evasi.length === 0 && <div className="empty">Ancora nessun ordine servito o ritirato.</div>}
@@ -746,7 +1371,6 @@ function OrderQueue() {
   )
 }
 
-// Resoconto di fine serata: incassi, scontrino prodotti e mini dashboard.
 function SerataReport({ report, onClose }) {
   const { finance, products, longest_prep, phase_averages, drinks_sold } = report
   const fmtMin = (m) => (m == null ? '—' : `${Math.round(m * 10) / 10} min`)

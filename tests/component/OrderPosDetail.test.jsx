@@ -1,0 +1,642 @@
+// @vitest-environment happy-dom
+'use strict'
+
+// Test di COMPONENTE del dettaglio ordine POS (OrderPosDetail): monta il
+// componente vero con React Testing Library e verifica ciò che il bartender
+// vede e tocca. Firebase/menu/stampante sono mockati.
+
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router-dom'
+import '@testing-library/jest-dom/vitest'
+
+// ── Mock dei moduli con dipendenze Firebase/hardware ──
+const mockSettings = { payments_reader_enabled: false, sumup_reader_id: null }
+vi.mock('../../src/lib/api.js', () => ({
+  advanceComanda: vi.fn(() => Promise.resolve()),
+  addComanda: vi.fn(() => Promise.resolve({ comande: [] })),
+  bartenderUpdateComanda: vi.fn(() => Promise.resolve()),
+  updateOrderInfo: vi.fn(() => Promise.resolve()),
+  registerPayment: vi.fn(() => Promise.resolve({ closed: true })),
+  setOrderDiscount: vi.fn(() => Promise.resolve()),
+  setOrderLotteryCode: vi.fn(() => Promise.resolve()),
+  createInvoice: vi.fn(() => Promise.resolve({ id: 'inv1', number: '1/2026' })),
+  markInvoiceSent: vi.fn(() => Promise.resolve()),
+  subscribeVouchers: vi.fn((cb) => { cb([]); return () => {} }),
+  applyVoucherDiscount: vi.fn(() => Promise.resolve({ redeemed: 0 })),
+  cancelOrder: vi.fn(() => Promise.resolve()),
+  fetchInventoryItems: vi.fn(() => Promise.resolve([])),
+  // Usati solo in creazione (order == null): qui no-op.
+  createOrder: vi.fn(() => Promise.resolve({ id: 'ord-nuovo' })),
+  ensureTodaySerata: vi.fn(() => Promise.resolve({ id: 'serata1' })),
+  subscribeOrder: vi.fn(() => () => {}),
+  fetchRecentDrinkIds: vi.fn(() => Promise.resolve([])),
+  subscribePosPrefs: vi.fn(() => () => {}),
+  savePosOrder: vi.fn(() => Promise.resolve()),
+  savePosFavorites: vi.fn(() => Promise.resolve()),
+  DEFAULT_SETTINGS: {},
+  peekNextDailyNumber: vi.fn(() => Promise.resolve(5)),
+  subscribeSettings: vi.fn((cb) => {
+    cb(mockSettings)
+    return () => {}
+  }),
+}))
+vi.mock('../../src/lib/pendingOrders.js', () => ({ submitPosOrder: vi.fn() }))
+vi.mock('../../src/lib/firebaseClient.js', () => ({ auth: {} }))
+vi.mock('firebase/auth', () => ({ onAuthStateChanged: vi.fn(() => () => {}) }))
+vi.mock('../../src/lib/paymentsApi.js', () => ({
+  readerCheckout: vi.fn(() => Promise.resolve({})),
+}))
+vi.mock('../../src/lib/menuCache.js', () => ({
+  useMenu: () => ({
+    drinks: [
+      { id: 'mojito', name: 'Mojito', price: 7, available: true, category_id: 'cat1' },
+      {
+        id: 'gin',
+        name: 'Gin Tonic',
+        price: 8,
+        available: true,
+        category_id: 'cat1',
+        recipe_items: [{ inventory_item_id: 'inv-gin', name: 'Gin', qty: 40, unit: 'ml' }],
+      },
+    ],
+    cats: [{ id: 'cat1', name: 'Cocktail', sort_order: 0 }],
+    loading: false,
+  }),
+}))
+vi.mock('../../src/lib/printer.js', () => ({
+  printComanda: vi.fn(() => Promise.resolve()),
+  printScontrino: vi.fn(() => Promise.resolve()),
+  printFattura: vi.fn(() => Promise.resolve()),
+  loadPrinterSettings: vi.fn(() => ({ ivaRate: 10 })),
+}))
+
+import OrderPosDetail from '../../src/components/OrderPosDetail.jsx'
+import {
+  advanceComanda,
+  addComanda,
+  bartenderUpdateComanda,
+  registerPayment,
+  updateOrderInfo,
+  cancelOrder,
+} from '../../src/lib/api.js'
+import { readerCheckout } from '../../src/lib/paymentsApi.js'
+import { printComanda } from '../../src/lib/printer.js'
+
+const baseOrder = (over = {}) => ({
+  id: 'ord1',
+  daily_number: 4,
+  status: 'aperto',
+  workflow_status: 'in_preparazione',
+  payment_status: 'non_richiesto',
+  customer_name: 'iole',
+  table_label: '3',
+  note: null,
+  total: 14,
+  coperto_amount: 0,
+  service_charge_amount: 0,
+  tip_amount: 0,
+  order_items: [
+    { id: 'ord1-0', drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2, custom: false },
+  ],
+  comande: [
+    {
+      id: 'c1',
+      seq: 1,
+      status: 'in_preparazione',
+      status_times: {},
+      created_at: '2026-07-11T21:00:00.000Z',
+      items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 }],
+    },
+  ],
+  ...over,
+})
+
+function mount(order) {
+  return render(
+    <MemoryRouter>
+      <OrderPosDetail order={order} />
+    </MemoryRouter>
+  )
+}
+
+beforeEach(() => {
+  vi.clearAllMocks()
+  // La bozza è persistita in localStorage per ordine: pulisco tra i test.
+  localStorage.clear()
+})
+
+describe('vista aggregata: ordine a destra, comande nascoste', () => {
+  it("mostra i prodotti dell'ORDINE aggregato, non le singole comande", () => {
+    mount(baseOrder())
+    // testata colonna ordine: numero + nome del conto (spostati a destra)
+    expect(screen.getAllByText(/#4/).length).toBeGreaterThan(0)
+    expect(screen.getByText(/· iole/)).toBeInTheDocument()
+    // destra: l'ordine aggregato (niente sezioni COMANDA in vista)
+    expect(screen.queryByText(/COMANDA 1/)).not.toBeInTheDocument()
+    expect(screen.getAllByText(/Mojito/).length).toBeGreaterThan(0)
+    // accesso alle comande dal bottone dedicato
+    expect(screen.getByRole('button', { name: /Comande \(1\)/ })).toBeInTheDocument()
+    // centro: griglia visibile contemporaneamente
+    expect(screen.getByText('Gin Tonic')).toBeInTheDocument()
+  })
+
+  it('conto vuoto: griglia + ordine vuoto', () => {
+    mount(baseOrder({ comande: [], order_items: [], workflow_status: 'ricevuto' }))
+    expect(screen.getByText(/Tocca i prodotti per aggiungerli/)).toBeInTheDocument()
+    expect(screen.getByText('Gin Tonic')).toBeInTheDocument()
+  })
+})
+
+describe('aggiunte: la nuova comanda è gestita internamente', () => {
+  it('tap sulla griglia → gli item si CONFERMANO da soli, confluiscono nella comanda in prep.', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.click(screen.getAllByText('Gin Tonic')[0])
+    await user.click(screen.getAllByText('Gin Tonic')[0])
+    // l'aggiunta è confermata da sola (senza cliccare Conferma)
+    await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalled())
+    // l'ordine è in preparazione → NON crea una nuova comanda: confluisce in c1
+    expect(addComanda).not.toHaveBeenCalled()
+    const [orderId, comandaId, payload] = bartenderUpdateComanda.mock.calls.at(-1)
+    expect(orderId).toBe('ord1')
+    expect(comandaId).toBe('c1')
+    expect(payload.items.some((i) => i.drink_id === 'gin')).toBe(true)
+    expect(payload.items.some((i) => i.drink_id === 'mojito')).toBe(true)
+    expect(printComanda).not.toHaveBeenCalled()
+  })
+
+  it('ordine già SERVITO: l\'aggiunta crea una NUOVA comanda (addComanda)', async () => {
+    const user = userEvent.setup()
+    mount(
+      baseOrder({
+        comande: [
+          { id: 'c1', seq: 1, status: 'ritirato', status_times: {}, items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 }] },
+        ],
+      })
+    )
+    await user.click(screen.getAllByText('Gin Tonic')[0])
+    // nessuna comanda modificabile → nuova comanda, da sola
+    await waitFor(() => expect(addComanda).toHaveBeenCalled())
+    expect(bartenderUpdateComanda).not.toHaveBeenCalled()
+    const [orderId, items] = addComanda.mock.calls.at(-1)
+    expect(orderId).toBe('ord1')
+    expect(items.some((i) => i.drink_id === 'gin')).toBe(true)
+  })
+
+  it('la modifica per-item PRECARICA gli ingredienti del drink (si sostituiscono, non solo si aggiungono)', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.click(screen.getByText('Gin Tonic'))
+    // l'item nel conto è cliccabile per modificarlo (niente tasto matita)
+    await user.click(screen.getAllByTitle(/Modifica Gin Tonic/).at(-1))
+    // la ricetta del prodotto è già lì, quindi si può togliere/cambiare
+    expect(screen.getByLabelText('Quantità Gin')).toHaveValue(40)
+    expect(screen.queryByText(/non ha ingredienti configurati/)).not.toBeInTheDocument()
+  })
+
+  it('drink SENZA ingredienti: avvisa il bartender', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    // Il Mojito non ha recipe_items nel menù mock. L'item è cliccabile per
+    // modificarlo; ce n'è più d'uno (comanda + bozza): modifico l'ultima aggiunta.
+    await user.click(screen.getAllByText('Mojito')[0])
+    await user.click(screen.getAllByTitle(/Modifica Mojito/).at(-1))
+    expect(screen.getByText(/non ha ingredienti configurati/)).toBeInTheDocument()
+  })
+
+  it('GRIGLIA vs + sulla riga: la griglia duplica, il + aumenta la quantità', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    // due tocchi sulla stessa tile → DUE righe separate di Gin Tonic
+    await user.click(screen.getAllByText('Gin Tonic')[0])
+    await user.click(screen.getAllByText('Gin Tonic')[0])
+    await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalled())
+    const dopoGriglia = bartenderUpdateComanda.mock.calls.at(-1)[2].items
+    const ginRighe = dopoGriglia.filter((i) => i.drink_id === 'gin')
+    expect(ginRighe).toHaveLength(2)
+    expect(ginRighe.every((i) => i.qty === 1)).toBe(true)
+
+    // il + sulla riga del Mojito (già nel conto) ne aumenta la QUANTITÀ
+    bartenderUpdateComanda.mockClear()
+    await user.click(screen.getByRole('button', { name: 'Aumenta Mojito' }))
+    await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalled())
+    const dopoPiu = bartenderUpdateComanda.mock.calls.at(-1)[2].items
+    const mojito = dopoPiu.filter((i) => i.drink_id === 'mojito')
+    expect(mojito).toHaveLength(1) // niente riga nuova
+    expect(mojito[0].qty).toBe(3) // erano 2
+  })
+
+  it('Unisci accorpa righe uguali con quantità diverse (4 + 1 = 5)', async () => {
+    const user = userEvent.setup()
+    mount(
+      baseOrder({
+        comande: [
+          {
+            id: 'c1',
+            seq: 1,
+            status: 'in_preparazione',
+            status_times: {},
+            items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 4 }],
+          },
+        ],
+      })
+    )
+    // una riga da 4; se ne aggiunge una da 1 dalla griglia → due righe
+    await user.click(screen.getAllByText('Mojito')[0])
+    await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalled())
+    expect(bartenderUpdateComanda.mock.calls.at(-1)[2].items.filter((i) => i.drink_id === 'mojito')).toHaveLength(2)
+
+    // il tasto Unisci c'è e accorpa in una riga da 5
+    bartenderUpdateComanda.mockClear()
+    await user.click(screen.getByRole('button', { name: /Unisci/ }))
+    await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalled())
+    const uniti = bartenderUpdateComanda.mock.calls.at(-1)[2].items.filter((i) => i.drink_id === 'mojito')
+    expect(uniti).toHaveLength(1)
+    expect(uniti[0].qty).toBe(5)
+  })
+
+  it("Unisci e Separa convivono: si può separare anche quando c'è da unire", async () => {
+    const user = userEvent.setup()
+    mount(
+      baseOrder({
+        comande: [
+          {
+            id: 'c1',
+            seq: 1,
+            status: 'in_preparazione',
+            status_times: {},
+            items: [
+              { drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 4 }, // da separare
+              { drink_id: 'gin', name: 'Gin Tonic', unit_price: 8, qty: 1 },
+              { drink_id: 'gin', name: 'Gin Tonic', unit_price: 8, qty: 1 }, // da unire
+            ],
+          },
+        ],
+      })
+    )
+    // entrambe le azioni sono possibili → entrambi i tasti sono lì
+    expect(screen.getByRole('button', { name: /Unisci/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Separa/ })).toBeInTheDocument()
+
+    // Separa: il Mojito da 4 diventa 4 righe da 1
+    await user.click(screen.getByRole('button', { name: /Separa/ }))
+    await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalled())
+    const dopo = bartenderUpdateComanda.mock.calls.at(-1)[2].items
+    expect(dopo.filter((i) => i.drink_id === 'mojito')).toHaveLength(4)
+  })
+
+  it("il + su un item del conto è un'aggiunta che si conferma da sola", async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.click(screen.getByRole('button', { name: 'Aumenta Mojito' }))
+    // ordine in preparazione → l'aggiunta confluisce da sola nella comanda c1
+    await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalled())
+    expect(addComanda).not.toHaveBeenCalled()
+  })
+})
+
+describe('diminuzioni: solo dalle comande ancora modificabili', () => {
+  it('avanza lo stato della comanda ATTIVA dal popup Servizio', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.click(screen.getByRole('button', { name: /Stato servizio/ }))
+    await user.click(screen.getByRole('button', { name: /Segna “Pronto al servizio”/ }))
+    expect(advanceComanda).toHaveBeenCalledWith('ord1', 'c1', 'pronto')
+  })
+
+  it('il − scala la comanda modificabile con sync in background (debounce)', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.click(screen.getByRole('button', { name: 'Riduci Mojito' }))
+    expect(screen.getAllByText('1').length).toBeGreaterThan(0)
+    await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalledTimes(1), { timeout: 2000 })
+    const [, comandaId, payload] = bartenderUpdateComanda.mock.calls[0]
+    expect(comandaId).toBe('c1')
+    expect(payload.items[0]).toMatchObject({ drink_id: 'mojito', qty: 1 })
+  })
+
+  it('comanda servita: il − è disabilitato (quantità bloccate), il + resta', () => {
+    mount(
+      baseOrder({
+        workflow_status: 'ritirato',
+        comande: [
+          {
+            id: 'c1',
+            seq: 1,
+            status: 'ritirato',
+            status_times: {},
+            items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 }],
+          },
+        ],
+      })
+    )
+    expect(screen.getByRole('button', { name: 'Riduci Mojito' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Aumenta Mojito' })).toBeEnabled()
+    expect(screen.queryByRole('button', { name: /Segna/ })).not.toBeInTheDocument()
+  })
+})
+
+describe('modale comande: consultazione, avanzamento e stampa', () => {
+  it('le comande si aprono a parte e ognuna si stampa singolarmente', async () => {
+    const user = userEvent.setup()
+    const order = baseOrder({
+      comande: [
+        {
+          id: 'c1', seq: 1, status: 'ritirato', status_times: {},
+          items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 }],
+        },
+        {
+          id: 'c2', seq: 2, status: 'ricevuto', status_times: {},
+          items: [{ drink_id: 'gin', name: 'Gin Tonic', unit_price: 8, qty: 1 }],
+        },
+      ],
+    })
+    mount(order)
+    // le comande NON sono in vista finché non apro la modale
+    expect(screen.queryByText(/COMANDA 1/)).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /Comande \(2\)/ }))
+    expect(screen.getByText(/COMANDA 1/)).toBeInTheDocument()
+    expect(screen.getByText(/COMANDA 2/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Stampa comanda 2' }))
+    expect(printComanda).toHaveBeenCalledTimes(1)
+    const [printedOrder, printedComanda] = printComanda.mock.calls[0]
+    expect(printedOrder.id).toBe('ord1')
+    expect(printedComanda.id).toBe('c2')
+  })
+})
+
+describe('modifiche ottimistiche (UX istantanea)', () => {
+  it('aggiunta ISTANTANEA: parte in background senza attendere il server', async () => {
+    const user = userEvent.setup()
+    bartenderUpdateComanda.mockImplementationOnce(() => new Promise(() => {})) // server lento
+    mount(baseOrder())
+    await user.click(screen.getAllByText('Gin Tonic')[0])
+    // parte da sola (ottimistico), senza aspettare la risoluzione del server
+    await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalled())
+    expect(bartenderUpdateComanda.mock.calls.at(-1)[0]).toBe('ord1')
+  })
+
+  it('avanzamento ISTANTANEO: lo stato cambia subito, il server segue', async () => {
+    const user = userEvent.setup()
+    advanceComanda.mockImplementationOnce(() => new Promise(() => {})) // in volo
+    mount(baseOrder())
+    await user.click(screen.getByRole('button', { name: /Stato servizio/ }))
+    await user.click(screen.getByRole('button', { name: /Segna “Pronto al servizio”/ }))
+    // lo stato passa subito a "Pronto al servizio" senza attendere la transazione
+    expect(screen.getAllByText(/Pronto al servizio/).length).toBeGreaterThan(0)
+    expect(
+      screen.queryByRole('button', { name: /Segna “Pronto al servizio”/ })
+    ).not.toBeInTheDocument()
+  })
+
+  it('tap rapidi sulla griglia: le aggiunte confluiscono nella comanda in prep., senza tasto Conferma', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    const tile = () => screen.getAllByText('Mojito')[0] // la tile della griglia
+    await user.click(tile())
+    await user.click(tile())
+    await user.click(tile())
+    // si confermano da sole nella comanda in preparazione (senza cliccare Conferma)
+    await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalled())
+    expect(addComanda).not.toHaveBeenCalled()
+    const payload = bartenderUpdateComanda.mock.calls.at(-1)[2]
+    expect(payload.items.some((i) => i.drink_id === 'mojito')).toBe(true)
+  })
+})
+
+describe('schermata Pagamento', () => {
+  it('"Pagamento" apre la schermata POS con dovuto e avviso; Riscuotere incassa tutto', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.click(screen.getByRole('button', { name: /Pagamento/ }))
+    // schermata: articoli a sinistra, importo al centro, avviso (c1 in prep.)
+    expect(screen.getByRole('dialog', { name: 'Pagamento' })).toBeInTheDocument()
+    expect(screen.getByTestId('pay-amount')).toHaveTextContent('14,00')
+    expect(screen.getByText(/[Cc]omande non ancora servite/)).toBeInTheDocument()
+    expect(registerPayment).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: /Riscuotere/ }))
+    expect(registerPayment).toHaveBeenCalledWith('ord1', {
+      amount: 14,
+      method: 'banco',
+      items: null,
+      autoServe: false,
+    })
+  })
+
+  it('con tutto servito la schermata non mostra avvisi', async () => {
+    const user = userEvent.setup()
+    mount(
+      baseOrder({
+        workflow_status: 'ritirato',
+        comande: [
+          {
+            id: 'c1',
+            seq: 1,
+            status: 'ritirato',
+            status_times: {},
+            items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 }],
+          },
+        ],
+      })
+    )
+    await user.click(screen.getByRole('button', { name: /Pagamento/ }))
+    expect(screen.queryByText(/[Cc]omande non ancora servite/)).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /Riscuotere/ }))
+    expect(registerPayment).toHaveBeenCalledWith('ord1', {
+      amount: 14,
+      method: 'banco',
+      items: null,
+      autoServe: false,
+    })
+  })
+
+  it('lettore SumUp: metodo visibile solo se configurato, Riscuotere avvia readerCheckout', async () => {
+    const user = userEvent.setup()
+    mockSettings.payments_reader_enabled = true
+    mockSettings.sumup_reader_id = 'reader1'
+    try {
+      mount(baseOrder())
+      await user.click(screen.getByRole('button', { name: /Pagamento/ }))
+      await user.click(screen.getByRole('button', { name: /SumUp/ }))
+      await user.click(screen.getByRole('button', { name: /Riscuotere/ }))
+      expect(readerCheckout).toHaveBeenCalledWith('ord1', { amount: 14, items: null })
+      expect(registerPayment).not.toHaveBeenCalled()
+    } finally {
+      mockSettings.payments_reader_enabled = false
+      mockSettings.sumup_reader_id = null
+    }
+  })
+
+  it('lettore NON configurato: il metodo SumUp è in lista ma spento', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.click(screen.getByRole('button', { name: /Pagamento/ }))
+    expect(screen.getByRole('button', { name: /SumUp/ })).toBeDisabled()
+  })
+
+  it('conto chiuso (pagato): griglia e modifiche disabilitate', () => {
+    mount(
+      baseOrder({
+        status: 'pagato',
+        workflow_status: 'pagato',
+        payment_status: 'pagato',
+        comande: [
+          {
+            id: 'c1',
+            seq: 1,
+            status: 'ritirato',
+            status_times: {},
+            items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 }],
+          },
+        ],
+      })
+    )
+    // I tasti azione ci sono SEMPRE, ma su un conto chiuso sono disabilitati.
+    expect(screen.getByRole('button', { name: /Pagamento/ })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /Annulla ordine/ })).toBeDisabled()
+  })
+})
+
+describe('ricerca prodotti', () => {
+  it('digitando nella barra la griglia filtra su tutto il catalogo', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    expect(screen.getByText('Gin Tonic')).toBeInTheDocument()
+    await user.type(screen.getByLabelText('Cerca prodotto'), 'moj')
+    expect(screen.queryByText('Gin Tonic')).not.toBeInTheDocument()
+    // Mojito resta sia in griglia sia nella riga dell'ordine
+    expect(screen.getAllByText('Mojito').length).toBeGreaterThan(0)
+  })
+})
+
+// IL NOME DEL CONTO NON SI PERDE.
+// Segnalato dal locale: "a volte metto il nome e non viene salvato". Il
+// salvataggio stava solo sul tasto in fondo al popup: chiudendo con la ✕,
+// toccando fuori dal riquadro o premendo Invio — che chiude la tastiera e
+// sembra confermare — quello che si era appena scritto spariva in silenzio.
+describe('dati conto: il nome si salva comunque si chiuda', () => {
+  // Il conto di prova un nome ce l'ha già: si svuota il campo, altrimenti
+  // quello nuovo si accoda al vecchio.
+  const apriPopup = async (user) => {
+    await user.click(screen.getByRole('button', { name: /Dati conto/ }))
+    const campo = screen.getByLabelText('Nome')
+    await user.clear(campo)
+    return campo
+  }
+
+  it('col tasto Salva', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.type(await apriPopup(user), 'Marco')
+    await user.click(screen.getByRole('button', { name: /Salva dati conto/ }))
+    expect(updateOrderInfo).toHaveBeenCalledWith(
+      'ord1',
+      expect.objectContaining({ customer_name: 'Marco' })
+    )
+  })
+
+  it('chiudendo con la ✕', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.type(await apriPopup(user), 'Marco')
+    await user.click(screen.getByRole('button', { name: '✕' }))
+    expect(updateOrderInfo).toHaveBeenCalledWith(
+      'ord1',
+      expect.objectContaining({ customer_name: 'Marco' })
+    )
+  })
+
+  it('premendo Invio', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    const campo = await apriPopup(user)
+    await user.type(campo, 'Marco{Enter}')
+    expect(updateOrderInfo).toHaveBeenCalledWith(
+      'ord1',
+      expect.objectContaining({ customer_name: 'Marco' })
+    )
+  })
+
+  it('senza modifiche non scrive niente', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.click(screen.getByRole('button', { name: /Dati conto/ }))
+    await user.click(screen.getByRole('button', { name: '✕' }))
+    expect(updateOrderInfo).not.toHaveBeenCalled()
+  })
+})
+
+// I TASTI NON BALLANO.
+// Segnalato dal locale: aggiungendo il primo drink il tasto "Associa a
+// gruppo" spariva e al suo posto compariva "Comande" — il tasto che stavi per
+// premere non era più dov'era. I tasti ci sono sempre: spenti quando l'azione
+// non è possibile, mai rimossi.
+describe('tasti sempre presenti, spenti se non servono', () => {
+  it('Unisci e Separa ci sono anche quando non c’è niente da unire', () => {
+    mount(baseOrder({ comande: [{ id: 'c1', seq: 1, status: 'in_preparazione', items: [] }] }))
+    expect(screen.getByRole('button', { name: /Unisci/ })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /Separa/ })).toBeDisabled()
+  })
+
+  it('e si accendono quando l’azione diventa possibile', () => {
+    mount(baseOrder()) // 2 Mojito su una riga → si possono separare
+    expect(screen.getByRole('button', { name: /Separa/ })).toBeEnabled()
+  })
+
+  it('Comande c’è sempre: sul conto aperto è attivo', () => {
+    mount(baseOrder())
+    expect(screen.getByRole('button', { name: /Comande/ })).toBeEnabled()
+  })
+})
+
+// CONTO SVUOTATO = CONTO ANNULLATO, sempre.
+// Prima valeva solo per il conto creato in quella sessione: uscendo e
+// rientrando (per esempio chiudendo il box del nome) il conto non era più
+// "creato qui", e togliendo l'ultima riga restava aperto e vuoto in coda.
+describe('conto rimasto senza righe', () => {
+  it('si annulla da solo e si torna alla lista', async () => {
+    const user = userEvent.setup()
+    mount(
+      baseOrder({
+        comande: [
+          {
+            id: 'c1',
+            seq: 1,
+            status: 'in_preparazione',
+            status_times: {},
+            items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1 }],
+          },
+        ],
+      })
+    )
+    // Tolgo l'unica riga rimasta.
+    await user.click(screen.getByRole('button', { name: 'Riduci Mojito' }))
+    await waitFor(() => expect(cancelOrder).toHaveBeenCalledWith('ord1', { by: 'bartender' }), {
+      timeout: 3000,
+    })
+  })
+
+  it('ma non se qualcosa è già stato incassato', async () => {
+    const user = userEvent.setup()
+    mount(
+      baseOrder({
+        payments: [{ id: 'p1', amount: 7, method: 'banco', at: '2026-07-11T22:00:00.000Z' }],
+        comande: [
+          {
+            id: 'c1',
+            seq: 1,
+            status: 'in_preparazione',
+            status_times: {},
+            items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1 }],
+          },
+        ],
+      })
+    )
+    const meno = screen.queryByRole('button', { name: 'Riduci Mojito' })
+    if (meno && !meno.disabled) await user.click(meno)
+    await new Promise((r) => setTimeout(r, 700))
+    expect(cancelOrder).not.toHaveBeenCalled()
+  })
+})

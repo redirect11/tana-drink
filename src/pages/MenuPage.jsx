@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
-  subscribeDrinks,
-  subscribeCategories,
-  subscribeOpenSerata,
+  subscribeServiceStats,
   subscribeSettings,
   subscribeOrder,
   subscribeReadyOrders,
+  subscribeOpenGroups,
+  subscribeRecentGroups,
   createOrder,
   DEFAULT_SETTINGS,
 } from '../lib/api.js'
@@ -26,21 +26,23 @@ import { getPushToken } from '../lib/push.js'
 import { isFirebaseConfigured, auth } from '../lib/firebaseClient.js'
 import { useCustomer } from '../lib/customerAuth.js'
 import { onAuthStateChanged } from 'firebase/auth'
+import { useMenu } from '../lib/menuCache.js'
 import OrderSummary from '../components/OrderSummary.jsx'
 import StaffDrawer from '../components/StaffDrawer.jsx'
+import CustomDrinkForm from '../components/CustomDrinkForm.jsx'
 
 const NOTIF_PROMPT_KEY = 'tana_notif_prompt_v1' // chiave storica
 const WELCOME_KEY = 'tana_welcome_v1'
 
 export default function MenuPage() {
-  const [drinks, setDrinks] = useState([])
-  const [cats, setCats] = useState([])
-  const [serata, setSerata] = useState(undefined) // undefined=caricamento, null=chiuso
+  // Menù dalla cache di modulo: una sola sottoscrizione viva, niente
+  // re-fetch a ogni navigazione (solo un refresh forzato ricarica).
+  const { drinks, cats, loading } = useMenu()
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
-  const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [sending, setSending] = useState(false)
   const [showSummary, setShowSummary] = useState(false)
+  const [showCustomDrink, setShowCustomDrink] = useState(false)
   const [myOrders, setMyOrders] = useState([])
   const [readyOrders, setReadyOrders] = useState([])
   // Staff loggato (bartender/cameriera): gli ordini fatti da qui vengono
@@ -86,42 +88,14 @@ export default function MenuPage() {
 
   // Il QR può contenere ?tavolo=12 per identificare il tavolo.
   const tableLabel = params.get('tavolo') || params.get('table') || ''
+  const groupParam = params.get('group') || ''
 
-  // Menù in tempo reale: il listener ritenta da solo (al primo accesso
-  // App Check/permessi possono rallentare la prima richiesta — niente
-  // più menù vuoto da ricaricare) e si aggiorna live.
-  useEffect(() => {
-    if (!isFirebaseConfigured) {
-      setLoading(false)
-      return
-    }
-    const unsubDrinks = subscribeDrinks(
-      { onlyAvailable: true },
-      (d) => {
-        setDrinks(d)
-        setLoading(false)
-        setError(null)
-      },
-      (e) => {
-        setError(e.message)
-        setLoading(false)
-      }
-    )
-    const unsubCats = subscribeCategories(setCats)
-    return () => {
-      unsubDrinks()
-      unsubCats()
-    }
-  }, [])
 
-  // Osserva la serata aperta: senza serata gli ordini sono bloccati.
+  // Statistiche tempi del servizio (perpetue): alimentano la stima ETA.
+  const [serviceStats, setServiceStats] = useState({})
   useEffect(() => {
     if (!isFirebaseConfigured) return
-    const unsub = subscribeOpenSerata(
-      (s) => setSerata(s),
-      () => setSerata(null)
-    )
-    return unsub
+    return subscribeServiceStats(setServiceStats, () => setServiceStats({}))
   }, [])
 
   // Impostazioni del bar (modalità solo menù, coperto, servizio, mancia…).
@@ -130,21 +104,40 @@ export default function MenuPage() {
     return subscribeSettings((s) => setSettings(s))
   }, [])
 
-  // Ordini attivi di questo dispositivo (serata corrente): mostrati come box
-  // cliccabili in cima al menù, aggiornati in tempo reale.
-  const serataId = serata?.id
+  // Gruppi disponibili per l'associazione (solo staff, con gruppi attivi):
+  // gruppi aperti + gruppi-cliente recenti.
+  const [openGroups, setOpenGroups] = useState([])
+  const [recentGroups, setRecentGroups] = useState([])
+  const groupsActive = !!staff && settings.groups_enabled
+  useEffect(() => {
+    if (!groupsActive) {
+      setOpenGroups([])
+      return
+    }
+    return subscribeOpenGroups(setOpenGroups, () => {})
+  }, [groupsActive])
+  useEffect(() => {
+    if (!groupsActive) {
+      setRecentGroups([])
+      return
+    }
+    return subscribeRecentGroups(setRecentGroups, () => {})
+  }, [groupsActive])
+
+  // Ordini attivi di questo dispositivo: mostrati come box cliccabili in
+  // cima al menù, aggiornati in tempo reale.
 
   // Tabellone "stiamo servendo / pronti al ritiro" (se attivo in impostazioni).
   const servingBoard = settings.show_serving_board && !settings.menu_only
   useEffect(() => {
-    if (!isFirebaseConfigured || !serataId || !servingBoard) {
+    if (!isFirebaseConfigured || !servingBoard) {
       setReadyOrders([])
       return
     }
-    return subscribeReadyOrders(serataId, setReadyOrders)
-  }, [serataId, servingBoard])
+    return subscribeReadyOrders(setReadyOrders)
+  }, [servingBoard])
   useEffect(() => {
-    if (!isFirebaseConfigured || !serataId) {
+    if (!isFirebaseConfigured) {
       setMyOrders([])
       return
     }
@@ -161,8 +154,7 @@ export default function MenuPage() {
         (o) => {
           setMyOrders((prev) => {
             const others = prev.filter((p) => p.id !== id)
-            const isActive =
-              o && o.serata_id === serataId && ACTIVE.includes(o.status)
+            const isActive = o && ACTIVE.includes(o.workflow_status)
             const next = isActive ? [...others, o] : others
             next.sort((a, b) => (b.daily_number || 0) - (a.daily_number || 0))
             return next
@@ -175,10 +167,12 @@ export default function MenuPage() {
       unsubs.forEach((u) => u())
       setMyOrders([])
     }
-  }, [serataId])
+  }, [])
 
   // Ricerca rapida (solo staff: utile sul catalogo grande per gli ordini manuali).
   const [search, setSearch] = useState('')
+  // Categoria selezionata nella vista staff a 2 colonne.
+  const [selectedCat, setSelectedCat] = useState(null)
 
   const categories = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -234,10 +228,6 @@ export default function MenuPage() {
 
   async function handleReviewOrder() {
     if (cart.items.length === 0) return
-    if (!serata) {
-      setError('Il servizio è chiuso: nessuna serata aperta.')
-      return
-    }
     setError(null)
 
     // Ri-verifica di prossimità appena prima dell'ordine.
@@ -269,7 +259,6 @@ export default function MenuPage() {
       const order = await createOrder({
         table_label: tableLabel,
         items: cart.items,
-        serata_id: serata.id,
         push_token,
         placed_by: staff, // null per i clienti
         customer_uid: customer?.uid ?? null,
@@ -292,26 +281,27 @@ export default function MenuPage() {
 
   if (loading) return <div className="empty">Carico il menù…</div>
 
-  const closed = serata === null
   const menuOnly = settings.menu_only
-  // Si può ordinare solo con serata aperta e modalità ordinazione attiva:
-  // a serata chiusa spariscono anche i pulsanti "Aggiungi" e il carrello.
-  // Lo staff loggato può inserire ordini manuali anche in modalità solo menu.
+  // Il servizio è PERPETUO: non esiste più una serata da aprire. A decidere
+  // se si può ordinare resta la modalità "solo menù" (l'interruttore del
+  // servizio): a servizio chiuso spariscono i pulsanti "Aggiungi" e il
+  // carrello. Lo staff loggato può inserire ordini manuali comunque.
   // Con geofence attivo si ordina solo a posizione verificata.
   const geoOk = !geoActive || geoGate === 'ok'
-  const canOrder = (!menuOnly || !!staff) && !closed && geoOk
+  const canOrder = (!menuOnly || !!staff) && geoOk
 
   // Tempo stimato mostrato nel menù: per la modalità "entrambi" usa la stima
   // fino al "pronto" (parte comune); il riepilogo ordine poi la adatta alla
   // scelta del cliente.
-  const etaMinutes =
-    settings.eta_enabled && serata
-      ? etaForMode(settings.service_mode === 'tavolo' ? 'tavolo' : 'banco', {
-          etaStats: serata.eta_stats,
-          prepStats: serata.prep_stats,
-          baseMinutes: settings.eta_base_minutes,
-        })
-      : null
+  // La stima nasce dai tempi di lavorazione: senza gestione preparazione
+  // non ci sono tempi da misurare, quindi non si mostra nulla.
+  const etaMinutes = settings.eta_enabled && settings.workflow_enabled !== false
+    ? etaForMode(settings.service_mode === 'tavolo' ? 'tavolo' : 'banco', {
+        etaStats: serviceStats.eta_stats,
+        prepStats: serviceStats.prep_stats,
+        baseMinutes: settings.eta_base_minutes,
+      })
+    : null
 
   return (
     <div className={staff ? 'bar-content menu-staff' : ''}>
@@ -349,14 +339,34 @@ export default function MenuPage() {
         </p>
       )}
 
-      {menuOnly && (
+      {/* Drink custom: solo il bartender compone voci fuori menù al volo. */}
+      {staff?.role === 'bartender' && !menuOnly && canOrder && (
+        <button
+          className="btn secondary block"
+          style={{ marginBottom: 10 }}
+          onClick={() => setShowCustomDrink(true)}
+        >
+          🏷 Prodotto libero (fuori menù)
+        </button>
+      )}
+      {showCustomDrink && (
+        <CustomDrinkForm
+          onCancel={() => setShowCustomDrink(false)}
+          onAdd={(item) => {
+            cart.addCustom(item)
+            setShowCustomDrink(false)
+          }}
+        />
+      )}
+
+      {menuOnly && !staff && (
         <div className="banner">
           📖 Solo consultazione: le ordinazioni sono momentaneamente sospese.
           Rivolgersi allo staff per ordinare.
         </div>
       )}
 
-      {etaMinutes != null && !menuOnly && !closed && (
+      {etaMinutes != null && !menuOnly && (
         <p className="eta-line">
           ⏱ {settings.service_mode === 'tavolo' ? 'Tempo di servizio' : 'Tempo di preparazione'}:
           {' '}~{etaMinutes} min
@@ -391,17 +401,11 @@ export default function MenuPage() {
         )
       })()}
 
-      {closed && !menuOnly && (
-        <div className="banner">
-          🔒 Servizio chiuso: gli ordini non sono disponibili al momento.
-        </div>
-      )}
-
       {/* Gate geolocalizzazione: stato della verifica al caricamento */}
-      {geoActive && !closed && geoGate === 'checking' && (
+      {geoActive && geoGate === 'checking' && (
         <div className="banner">📍 Verifico che sei al locale…</div>
       )}
-      {geoActive && !closed && geoGate === 'denied' && (
+      {geoActive && geoGate === 'denied' && (
         <div className="banner row between" style={{ alignItems: 'center', gap: 10 }}>
           <span>
             📍 Per ordinare serve la tua posizione: attiva la localizzazione e
@@ -412,7 +416,7 @@ export default function MenuPage() {
           </button>
         </div>
       )}
-      {geoActive && !closed && geoGate === 'out_of_range' && (
+      {geoActive && geoGate === 'out_of_range' && (
         <div className="banner row between" style={{ alignItems: 'center', gap: 10 }}>
           <span>
             📍 Devi essere al locale per ordinare
@@ -436,8 +440,8 @@ export default function MenuPage() {
                 <span className="price">{formatPrice(o.total)}</span>
               </span>
             </div>
-            <span className={`pill ${o.status}`} style={{ marginTop: 6 }}>
-              {STATUS_EMOJI[o.status]} {STATUS_LABELS[o.status]}
+            <span className={`pill ${o.workflow_status}`} style={{ marginTop: 6 }}>
+              {STATUS_EMOJI[o.workflow_status]} {STATUS_LABELS[o.workflow_status]}
             </span>
           </div>
           <span className="order-mini-chev">›</span>
@@ -466,7 +470,59 @@ export default function MenuPage() {
         <div className="empty">Nessun risultato per «{search}».</div>
       )}
 
-      {categories.length > 1 && (
+      {/* Vista staff: 2 colonne compatte (categorie sx, prodotti dx) per
+          inserire ordini velocemente. */}
+      {staff && categories.length > 0 && (() => {
+        const activeCat = search.trim()
+          ? null
+          : categories.find(([c]) => c === selectedCat)?.[0] || categories[0][0]
+        const shown = search.trim()
+          ? categories.flatMap(([, list]) => list)
+          : categories.find(([c]) => c === activeCat)?.[1] || []
+        return (
+          <div className="staff-menu">
+            {!search.trim() && (
+              <div className="staff-cats">
+                {categories.map(([cat, list]) => (
+                  <button
+                    key={cat}
+                    className={`staff-cat${cat === activeCat ? ' active' : ''}`}
+                    onClick={() => setSelectedCat(cat)}
+                  >
+                    <span className="staff-cat-name">{cat}</span>
+                    <span className="staff-cat-count">{list.length}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="staff-products">
+              {shown.map((d) => {
+                const inCart = cart.items.find((i) => i.drink_id === d.id)
+                return (
+                  <div className="staff-product" key={d.id}>
+                    <div className="staff-product-info">
+                      <span className="staff-product-name">{d.name}</span>
+                      <span className="price">{formatPrice(d.price)}</span>
+                    </div>
+                    {canOrder &&
+                      (inCart ? (
+                        <div className="qty">
+                          <button aria-label="Riduci" onClick={() => cart.setQty(d.id, inCart.qty - 1)}>−</button>
+                          <strong>{inCart.qty}</strong>
+                          <button aria-label="Aumenta" onClick={() => cart.setQty(d.id, inCart.qty + 1)}>+</button>
+                        </div>
+                      ) : (
+                        <button className="btn small" onClick={() => cart.add(d)}>+</button>
+                      ))}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )
+      })()}
+
+      {!staff && categories.length > 1 && (
         <nav className="cat-nav">
           {categories.map(([cat]) => (
             <a key={cat} href={`#cat-${encodeURIComponent(cat)}`} className="cat-chip">
@@ -476,7 +532,7 @@ export default function MenuPage() {
         </nav>
       )}
 
-      {categories.map(([cat, list]) => (
+      {!staff && categories.map(([cat, list]) => (
         <section key={cat}>
           <h3 className="cat-header" id={`cat-${encodeURIComponent(cat)}`}>{cat}</h3>
           {list.map((d) => {
@@ -571,10 +627,10 @@ export default function MenuPage() {
             </div>
             <button
               className="btn"
-              disabled={sending || closed || checkingGeo}
+              disabled={sending || checkingGeo}
               onClick={handleReviewOrder}
             >
-              {closed ? 'Chiuso' : checkingGeo ? '📍 Verifico…' : 'Rivedi ordine'}
+              {checkingGeo ? '📍 Verifico…' : 'Rivedi ordine'}
             </button>
           </div>
         </div>
@@ -639,11 +695,14 @@ export default function MenuPage() {
         <OrderSummary
           cart={cart}
           settings={settings}
-          serata={serata}
+          serviceStats={serviceStats}
           tableLabel={tableLabel}
           staff={staff}
           customerProfile={customerProfile}
           sending={sending}
+          groupsActive={groupsActive}
+          groups={[...openGroups, ...recentGroups]}
+          initialGroupId={groupParam}
           onConfirm={handleConfirmOrder}
           onCancel={() => !sending && setShowSummary(false)}
         />

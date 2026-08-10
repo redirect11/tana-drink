@@ -1,6 +1,12 @@
 import { initializeApp } from 'firebase/app'
 import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check'
-import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore'
+import {
+  initializeFirestore,
+  getFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+  connectFirestoreEmulator,
+} from 'firebase/firestore'
 import { getFunctions, connectFunctionsEmulator } from 'firebase/functions'
 import { getAuth, connectAuthEmulator } from 'firebase/auth'
 import { getStorage, connectStorageEmulator } from 'firebase/storage'
@@ -58,7 +64,24 @@ if (recaptchaKey) {
   }
 }
 
-export const db = getFirestore(app)
+// Firestore con PERSISTENZA OFFLINE (IndexedDB, multi-tab): letture e
+// liste restano disponibili senza rete e le scritture non transazionali
+// (addDoc/setDoc/updateDoc/deleteDoc) si accodano e si sincronizzano da
+// sole al ritorno online. Le transazioni e le Cloud Functions richiedono
+// comunque connessione. Se IndexedDB non è disponibile (es. navigazione
+// privata su alcuni browser) si degrada alla cache in memoria.
+function makeDb() {
+  try {
+    return initializeFirestore(app, {
+      localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+    })
+  } catch (e) {
+    console.warn('[Firestore] persistenza offline non disponibile:', e?.message)
+    return getFirestore(app)
+  }
+}
+
+export const db = makeDb()
 export const functions = getFunctions(app, 'europe-west1')
 export const auth = getAuth(app)
 export const storage = getStorage(app)

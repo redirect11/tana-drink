@@ -1,8 +1,9 @@
-// Statistiche del locale calcolate dagli ordini delle serate chiuse.
+// Statistiche del locale calcolate dagli ordini, per giornata commerciale.
 // Logica pura senza dipendenze Firestore: testabile in isolamento.
-// Riusa aggregateProducts/serataFinance da eta.js.
+// Riusa aggregateProducts/ordersFinance da eta.js.
 import { ORDER_STATUSES } from './orderStatus.js'
-import { aggregateProducts, serataFinance } from './eta.js'
+import { aggregateProducts, ordersFinance, discountFactor, orderNet } from './eta.js'
+import { businessDayKey, DEFAULT_CUTOFF_HOUR } from './businessDay.js'
 
 const isCancelled = (o) => o.status === ORDER_STATUSES.ANNULLATO
 const valid = (orders) => orders.filter((o) => !isCancelled(o))
@@ -13,9 +14,9 @@ const ms = (v) => {
 }
 
 // ── KPI principali ────────────────────────────────────────────────────
-export function kpiSummary(orders, serate) {
+export function kpiSummary(orders, giorni = []) {
   const ok = valid(orders)
-  const finance = serataFinance(orders)
+  const finance = ordersFinance(orders)
   const drinksSold = ok.reduce(
     (s, o) => s + (o.order_items || []).reduce((q, i) => q + (Number(i.qty) || 0), 0),
     0
@@ -27,11 +28,11 @@ export function kpiSummary(orders, serate) {
   return {
     incasso: finance.incasso,
     ordini: ok.length,
-    serate: serate.length,
+    giorni: giorni.length,
     scontrinoMedio: ok.length ? finance.incasso / ok.length : 0,
     drinkVenduti: drinksSold,
     drinkPerOrdine: ok.length ? drinksSold / ok.length : 0,
-    incassoPerSerata: serate.length ? finance.incasso / serate.length : 0,
+    incassoPerGiorno: giorni.length ? finance.incasso / giorni.length : 0,
     pctAnnullati: orders.length ? (annullati / orders.length) * 100 : 0,
     pctNonRitirati: orders.length ? (nonRitirati / orders.length) * 100 : 0,
   }
@@ -93,7 +94,7 @@ export function revenueByHour(orders, range = DEFAULT_HOUR_RANGE) {
     const off = offsetInRange(minuteOfDay(t), fromMin, span)
     if (off == null) continue
     const b = buckets[Math.floor(off / 60)]
-    b.incasso += Number(o.total) || 0
+    b.incasso += orderNet(o)
     b.ordini += 1
   }
 
@@ -104,8 +105,62 @@ export function revenueByHour(orders, range = DEFAULT_HOUR_RANGE) {
   return { buckets, peakLabel: peak?.label ?? null }
 }
 
-// Incasso per serata considerando SOLO gli ordini in una fascia oraria.
-export function revenueBySerataInRange(orders, serate, range) {
+// Riepilogo di una SERATA DI CASSA (da apertura a chiusura): totale realmente
+// incassato, conti, prodotti venduti e categorie. La finestra è quella della
+// sessione, quindi comprende naturalmente le ore dopo la mezzanotte.
+export function sessionReport(orders, session, drinksById) {
+  if (!session?.opened_at) return null
+  const from = session.opened_at
+  const to = session.closed_at || null
+  const dentro = valid(orders).filter((o) => {
+    const t = o.created_at
+    return !!t && t >= from && (!to || t <= to)
+  })
+  const totale = dentro.reduce(
+    (s2, o) => s2 + (Number(o.total) || 0) - (Number(o.discount_amount) || 0),
+    0
+  )
+  return {
+    nOrdini: dentro.length,
+    totale: Math.round(totale * 100) / 100,
+    prodotti: aggregateProducts(dentro),
+    categorie: revenueByCategory(dentro, drinksById),
+  }
+}
+
+// Ordini che cadono in una FASCIA ORARIA (es. 22:00 → 01:00, anche a cavallo
+// della mezzanotte). Serve a rispondere a "cosa ho venduto fra le 22 e l'una":
+// da qui si passano gli ordini filtrati a topProducts / revenueByCategory.
+export function ordersInHourRange(orders, range = DEFAULT_HOUR_RANGE) {
+  const fromMin = parseHM(range?.from) ?? parseHM(DEFAULT_HOUR_RANGE.from)
+  const toMin = parseHM(range?.to) ?? parseHM(DEFAULT_HOUR_RANGE.to)
+  const span = rangeSpan(fromMin, toMin)
+  return valid(orders).filter((o) => {
+    const t = ms(o.created_at)
+    if (t == null) return false
+    return offsetInRange(minuteOfDay(t), fromMin, span) != null
+  })
+}
+
+// Riepilogo di una fascia oraria: totale incassato (al netto degli sconti),
+// numero di conti, TUTTI i prodotti venduti e le categorie.
+export function hourRangeReport(orders, range, drinksById) {
+  const ord = ordersInHourRange(orders, range)
+  const totale = ord.reduce(
+    (s, o) => s + (Number(o.total) || 0) - (Number(o.discount_amount) || 0),
+    0
+  )
+  return {
+    nOrdini: ord.length,
+    totale: Math.round(totale * 100) / 100,
+    prodotti: aggregateProducts(ord), // già ordinati per quantità
+    categorie: revenueByCategory(ord, drinksById),
+  }
+}
+
+// Incasso per GIORNATA COMMERCIALE considerando SOLO gli ordini in una
+// fascia oraria (es. "quanto incassiamo fra le 22 e l'una").
+export function revenueByDayInRange(orders, range, cutoffHour = DEFAULT_CUTOFF_HOUR) {
   const fromMin = parseHM(range.from) ?? 0
   const toMin = parseHM(range.to) ?? 0
   const span = rangeSpan(fromMin, toMin)
@@ -113,29 +168,30 @@ export function revenueBySerataInRange(orders, serate, range) {
     const t = ms(o.created_at)
     return t != null && offsetInRange(minuteOfDay(t), fromMin, span) != null
   })
-  return revenueBySerata(filtered, serate)
+  return revenueByDay(filtered, cutoffHour)
 }
 
-// ── Trend per serata ──────────────────────────────────────────────────
-export function revenueBySerata(orders, serate) {
-  const byId = new Map()
+// ── Trend per giornata commerciale ────────────────────────────────────
+// Niente più "serate": si raggruppa per giornata (con ora di taglio, così
+// la nottata oltre la mezzanotte resta nella giornata in cui è iniziata).
+export function revenueByDay(orders, cutoffHour = DEFAULT_CUTOFF_HOUR) {
+  const byDay = new Map()
   for (const o of valid(orders)) {
-    const cur = byId.get(o.serata_id) || { incasso: 0, ordini: 0 }
-    cur.incasso += Number(o.total) || 0
+    const k = businessDayKey(o.created_at, cutoffHour)
+    if (!k) continue
+    const cur = byDay.get(k) || { incasso: 0, ordini: 0 }
+    cur.incasso += orderNet(o)
     cur.ordini += 1
-    byId.set(o.serata_id, cur)
+    byDay.set(k, cur)
   }
-  return [...serate]
-    .sort((a, b) => String(a.opened_at || '').localeCompare(String(b.opened_at || '')))
-    .map((s) => {
-      const agg = byId.get(s.id) || { incasso: 0, ordini: 0 }
-      const d = ms(s.opened_at)
+  return [...byDay.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([k, agg]) => {
+      const d = new Date(`${k}T12:00:00`)
       return {
-        id: s.id,
-        label: d
-          ? new Date(d).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' })
-          : '—',
-        weekday: d ? new Date(d).toLocaleDateString('it-IT', { weekday: 'short' }) : '',
+        id: k,
+        label: d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' }),
+        weekday: d.toLocaleDateString('it-IT', { weekday: 'short' }),
         incasso: agg.incasso,
         ordini: agg.ordini,
       }
@@ -152,18 +208,22 @@ export function topProducts(orders, limit = 10) {
 }
 
 // ── Incasso per categoria menu ────────────────────────────────────────
+// `revenue` AL NETTO degli sconti, come per i prodotti: vedi discountFactor.
 export function revenueByCategory(orders, drinksById) {
   const byCat = new Map()
   for (const o of valid(orders)) {
+    const f = discountFactor(o)
     for (const i of o.order_items || []) {
       const cat = drinksById?.[i.drink_id]?.category || 'Altro'
       const cur = byCat.get(cat) || { name: cat, revenue: 0, qty: 0 }
-      cur.revenue += (Number(i.qty) || 0) * (Number(i.unit_price) || 0)
+      cur.revenue += (Number(i.qty) || 0) * (Number(i.unit_price) || 0) * f
       cur.qty += Number(i.qty) || 0
       byCat.set(cat, cur)
     }
   }
-  return [...byCat.values()].sort((a, b) => b.revenue - a.revenue)
+  return [...byCat.values()]
+    .map((x) => ({ ...x, revenue: Math.round(x.revenue * 100) / 100 }))
+    .sort((a, b) => b.revenue - a.revenue)
 }
 
 // ── Consumo ingredienti (qty venduta × ricetta) ───────────────────────
@@ -218,12 +278,12 @@ export function serviceModeSplit(orders) {
   for (const o of valid(orders)) {
     const k = o.service_mode === 'banco' ? 'banco' : 'tavolo'
     out[k].ordini += 1
-    out[k].incasso += Number(o.total) || 0
+    out[k].incasso += orderNet(o)
   }
   return out
 }
 
 // ── Ripartizione incassi ──────────────────────────────────────────────
 export function extrasBreakdown(orders) {
-  return serataFinance(orders)
+  return ordersFinance(orders)
 }

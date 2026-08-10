@@ -32,7 +32,7 @@ function AccountsDisabled() {
     <div className="empty">
       🔒 La registrazione clienti non è attiva al momento.
       <br />
-      <Link className="btn block" style={{ marginTop: 14 }} to="/">← Torna al menù</Link>
+      <Link className="btn block" style={{ marginTop: 14 }} to="/menu">← Torna al menù</Link>
     </div>
   )
 }
@@ -138,7 +138,7 @@ export function AccediPage() {
           </Link>
         </div>
       </form>
-      <Link className="btn ghost block" to="/">← Torna al menù</Link>
+      <Link className="btn ghost block" to="/menu">← Torna al menù</Link>
     </div>
   )
 }
@@ -201,7 +201,7 @@ export function RegistratiPage() {
       </form>
       <div className="row" style={{ gap: 8 }}>
         <Link className="btn ghost grow" to="/accedi">Ho già un account</Link>
-        <Link className="btn ghost grow" to="/">← Menù</Link>
+        <Link className="btn ghost grow" to="/menu">← Menù</Link>
       </div>
     </div>
   )
@@ -374,7 +374,7 @@ export function ProfiloPage() {
         </button>
       </div>
 
-      <Link className="btn ghost block" to="/">← Torna al menù</Link>
+      <Link className="btn ghost block" to="/menu">← Torna al menù</Link>
 
       {confirmDelete && (
         <ConfirmDialog

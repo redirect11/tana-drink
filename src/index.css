@@ -50,6 +50,19 @@ a {
   color: var(--accent-2);
 }
 
+:root {
+  /* Fascia della barra di sistema (ora, wifi, batteria) su tablet/telefono in
+     modalità app: il contenuto ci passa sotto (viewport-fit=cover), quindi
+     tutte le barre in cima devono scostarsi di tanto. In standalone si tiene
+     un minimo, perché su iPad senza notch env() può valere 0. */
+  --safe-top: env(safe-area-inset-top, 0px);
+}
+@media (display-mode: standalone) {
+  :root {
+    --safe-top: max(env(safe-area-inset-top, 0px), 22px);
+  }
+}
+
 .app {
   max-width: 760px;
   margin: 0 auto;
@@ -67,10 +80,12 @@ a {
   gap: 12px;
   /* A tutta larghezza: esce dal padding orizzontale di .app. */
   margin: 0 -16px;
-  padding: 12px 16px;
-  background: rgba(14, 14, 21, 0.88);
+  padding: calc(12px + var(--safe-top)) 16px 12px;
+  /* Segue il TEMA (prima era un blocco scuro fisso: sui temi chiari
+     l'header restava nero). */
+  background: color-mix(in srgb, var(--bg-2) 90%, transparent);
   backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--line);
 }
 
 .topbar nav {
@@ -250,6 +265,7 @@ a.btn.block {
 .pill {
   display: inline-flex;
   align-items: center;
+  white-space: nowrap;
   gap: 6px;
   padding: 4px 10px;
   border-radius: 999px;
@@ -257,6 +273,25 @@ a.btn.block {
   font-weight: 600;
   background: rgba(255, 255, 255, 0.1);
 }
+
+/* Etichette compatte nel registro ore (badge/programmato/in corso). */
+.pill.small {
+  padding: 1px 7px;
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+.pill.live {
+  background: rgba(46, 204, 113, 0.22);
+  color: #9ff5c0;
+}
+.neg {
+  color: #ff8a80;
+}
+
+/* Pill con la SOLA icona (es. 💳 sulla card ordine): tonda e con l'icona
+   al centro. Con il padding di quelle testuali risultava larga e storta,
+   e non era allineata alla riga di testo che la ospita. */
+
 
 .pill.ricevuto {
   background: rgba(243, 156, 18, 0.2);
@@ -277,6 +312,15 @@ a.btn.block {
 .pill.pagato {
   background: rgba(245, 185, 74, 0.2);
   color: var(--accent-2);
+}
+/* Stato dell'ORDINE (conto): aperto finché non viene incassato. */
+.pill.aperto {
+  background: rgba(46, 204, 113, 0.18);
+  color: #9ff5c0;
+}
+.pill.annullato {
+  background: rgba(244, 67, 54, 0.18);
+  color: #ff8a80;
 }
 
 .menu-item h3 {
@@ -410,7 +454,10 @@ a.btn.block {
 .inv-item:last-child {
   border-bottom: none;
 }
-.inv-row {
+/* Riga legacy (StockCount/Fatture fornitore): SEMPRE dentro .inv-item. NON
+   deve toccare la lista inventario nuova (.inv-list > .inv-row), che è a blocco
+   col dettaglio sotto — altrimenti il flex mette il dettaglio di fianco. */
+.inv-item .inv-row {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -461,7 +508,7 @@ a.btn.block {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(14, 14, 21, 0.94);
+  background: color-mix(in srgb, var(--bg-2) 94%, transparent);
   backdrop-filter: blur(10px);
   border-top: none;
   padding: 13px 16px 12px;
@@ -577,10 +624,16 @@ label {
   color: var(--muted);
 }
 
+/* AVVISI: fondo giallo e scritta ROSSA. Il testo era giallo chiaro sul giallo
+   e in pratica non si leggeva — un avviso che non si legge non e' un avviso. */
 .banner {
-  background: rgba(243, 156, 18, 0.16);
-  border: 1px solid rgba(243, 156, 18, 0.4);
-  color: #ffd591;
+  /* Fondo pieno (non una velatura): cosi' resta giallo con testo rosso su
+     entrambi i temi — col fondo semitrasparente, sul tema scuro, il rosso
+     finiva su marrone e tornava illeggibile. */
+  background: #fbe9bd;
+  border: 1px solid #d99a1f;
+  color: #c0392b;
+  font-weight: 600;
   border-radius: 12px;
   padding: 12px 14px;
   margin: 12px 0;
@@ -910,22 +963,35 @@ a.order-mini {
   }
 }
 
+/* UN SOLO ☰ per schermata. Chi lo mostra:
+     coda a griglia / POS (topbar nascosta) → questo, flottante
+     tutto il resto (topbar visibile)       → .topbar-burger
+     topbar APERTA a tutto schermo          → .topbar-burger (questo sparisce)
+     POS e dettaglio ordine                 → nessuno: si esce con "← Ordini"
+   Le regole qui sotto e in App.jsx (drawerHere) tengono fede a questa tabella. */
 .bar-burger {
+  display: none; /* solo in fullbleed: altrove il ☰ sta nella topbar */
   position: fixed;
-  top: 12px;
+  top: calc(12px + var(--safe-top));
   left: 12px;
   z-index: 120;
   width: 42px;
   height: 42px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  /* Segue il tema (prima era un quadrato scuro fisso: sul tema chiaro
+     diventava un blocco nero con l'icona invisibile). */
+  border: 1px solid var(--line);
   border-radius: 10px;
-  background: rgba(14, 14, 21, 0.92);
+  background: var(--bg-2);
   color: var(--text);
   font-size: 1.2rem;
   cursor: pointer;
-  display: flex;
+  /* NIENTE `display: flex` qui: sovrascriverebbe il `display: none` di sopra
+     (stessa regola, vince l'ultima) e il ☰ flottante resterebbe visibile
+     ANCHE con la topbar in vista — sono i due tasti menu insieme.
+     Ad accenderlo ci pensa `body.fullbleed .bar-burger`. */
   align-items: center;
   justify-content: center;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
 }
 
 .bar-nav-overlay {
@@ -956,7 +1022,8 @@ a.order-mini {
   transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
-  padding: 18px 0;
+  /* La prima voce deve stare SOTTO la barra di sistema, non dietro l'ora. */
+  padding: calc(18px + var(--safe-top)) 0 18px;
   overflow-y: auto;
 }
 
@@ -1010,25 +1077,997 @@ a.order-mini {
 }
 
 .bar-content {
-  padding-top: 46px;
+  padding-top: 10px;
 }
 
+/* La sidebar è A SCOMPARSA in tutte le sezioni e a ogni larghezza: si apre
+   dal ☰ della topbar (o da quello flottante, a tutto schermo). Il contenuto
+   non le lascia più spazio a sinistra. */
 @media (min-width: 900px) {
-  .bar-burger,
-  .bar-nav-overlay {
+  .bar-content {
+    padding-top: 10px;
+  }
+}
+
+/* ── Modalità a tutto schermo (griglia ordini / POS) ───────────────────────
+   Toglie il limite di 760px e i padding di .app, così la pagina riempie
+   larghezza e altezza. Il body riceve la classe `fullbleed` dalle pagine
+   che la usano (OrderQueue griglia, PosPage). */
+body.fullbleed .app {
+  max-width: none;
+  padding-left: 0;
+  padding-right: 0;
+  padding-bottom: 0;
+}
+
+/* Vista pulita: niente topbar globale. La navigazione resta nel menu a
+   scomparsa (burger) per la griglia e nel pulsante «← Ordini» per il POS. */
+body.fullbleed .topbar {
+  display: none;
+}
+/* Topbar richiamabile a tutto schermo: compare come OVERLAY fisso, non spinge
+   il contenuto — le schermate a 100dvh (ordini, creazione/modifica, pagamento)
+   restano interamente nel viewport. */
+body.fullbleed.topbar-open .topbar {
+  display: flex;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  margin: 0;
+  /* Il logo parte appena dopo il ☰ (12+42=54): più a sinistra, ma senza
+     finirci sotto. */
+  padding-left: 64px;
+  z-index: 125; /* sopra il ☰ del menu laterale (bar-burger, z-index 120) */
+  background: var(--bg-2);
+  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.4);
+}
+/* Linguetta mostra/nascondi topbar: sottile e discreta, appesa al bordo
+   superiore, appena a destra del ☰ (bar-burger 42px a left:12) e SOPRA la
+   riga "In servizio" così non copre le scritte. Solo a tutto schermo. */
+.topbar-toggle {
+  position: fixed;
+  top: var(--safe-top);
+  left: 112px; /* oltre "← Ordini" (creazione/modifica) e il ☰ (coda) */
+  z-index: 126;
+  height: 16px;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  background: var(--bg-2);
+  color: var(--muted);
+  font-size: 0.68rem;
+  line-height: 1;
+  cursor: pointer;
+  display: none;
+  opacity: 0.75;
+}
+.topbar-toggle.open {
+  color: var(--text);
+  opacity: 1;
+}
+body.fullbleed .topbar-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Niente footer con i social sulle schermate di lavoro (POS, creazione e
+   modifica ordine): è roba da vetrina cliente, non da cassa. */
+body.fullbleed .app-footer {
+  display: none;
+}
+
+/* Menu laterale nascosto a qualsiasi larghezza: si apre col burger e si
+   sovrappone al contenuto, che così occupa tutta la larghezza. */
+body.fullbleed .bar-sidebar {
+  transform: translateX(-100%);
+}
+
+body.fullbleed .bar-sidebar.open {
+  transform: translateX(0);
+}
+
+body.fullbleed .bar-burger {
+  display: flex;
+}
+/* Topbar aperta a tutto schermo: il ☰ è già lì dentro, quindi il tasto
+   flottante sparisce — altrimenti se ne vedono DUE. */
+body.fullbleed.topbar-open .bar-burger {
+  display: none;
+}
+/* Avvisi in cima alla board (es. "Cassa chiusa"): lasciano il posto al ☰
+   flottante, che è fisso nell'angolo e ci finiva sopra. */
+body.fullbleed .queue-board > .banner {
+  padding-left: 62px;
+}
+body.fullbleed.topbar-open .queue-board > .banner {
+  padding-left: 12px; /* col ☰ nascosto lo spazio non serve più */
+}
+
+/* Overlay per chiudere il menu cliccando fuori: di norma è nascosto sopra i
+   900px (la sidebar è sempre aperta), ma in fullbleed la sidebar è a
+   scomparsa, quindi serve anche su schermi larghi. */
+body.fullbleed .bar-nav-overlay {
+  display: block;
+}
+
+body.fullbleed .bar-content {
+  margin-left: 0;
+  padding-top: 0;
+}
+
+/* Board ordini a griglia */
+.queue-board {
+  min-height: calc(100vh / var(--zoom, 1));
+  padding: calc(10px + var(--safe-top)) 12px 24px;
+}
+
+.board-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+  /* lascia spazio al burger fisso in alto a sinistra */
+  padding-left: 52px;
+  min-height: 42px;
+}
+
+.board-title {
+  font-family: var(--serif);
+  white-space: nowrap;
+}
+
+.board-search {
+  flex: 1;
+  min-width: 180px;
+  margin: 0;
+}
+
+.board-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Testata COMPATTA su smartphone: riga 1 = titolo + azioni (Pannelli e «+»
+   ridimensionati), riga 2 = ricerca a tutta larghezza. Niente più tasti
+   sparsi a metà schermo. */
+@media (max-width: 640px) {
+  .board-head {
+    gap: 8px;
+    row-gap: 6px;
+  }
+  .board-title {
+    order: 1;
+    flex: 1;
+    min-width: 0;
+    white-space: normal;
+  }
+  .board-actions {
+    order: 2;
+    margin-left: auto;
+  }
+  .board-search {
+    order: 3;
+    flex-basis: 100%;
+    font-size: 0.92rem;
+  }
+  .board-add {
+    width: 46px;
+    height: 46px;
+  }
+  .board-add::before {
+    width: 20px;
+    height: 3px;
+  }
+  .board-add::after {
+    width: 3px;
+    height: 20px;
+  }
+  /* Card più compatte: meno vuoto fra numero e riga finale. */
+  .grid-card-main {
+    min-height: 70px;
+    padding: 8px 10px;
+  }
+}
+
+/* «+» nuovo ordine, in alto a destra. Il «+» è disegnato con due barre
+   (pseudo-elementi) così è centrato in modo matematicamente perfetto,
+   senza dipendere dalle metriche del glifo. */
+.board-add {
+  position: relative;
+  width: 60px;
+  height: 60px;
+  padding: 0;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-right: 4px;
+}
+
+.board-add::before,
+.board-add::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  background: currentColor;
+  border-radius: 2px;
+  transform: translate(-50%, -50%);
+}
+
+.board-add::before {
+  width: 26px;
+  height: 4px;
+}
+
+.board-add::after {
+  width: 4px;
+  height: 26px;
+}
+
+/* Avviso "cassa chiusa" in cima alla coda: senza cassa aperta non si battono
+   ordini, quindi deve saltare all'occhio senza coprire il lavoro. */
+.cassa-chiusa-banner {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+/* ☰ del menu laterale dentro la topbar: primo elemento a sinistra, prima del
+   logo, così il menu è raggiungibile ovunque senza tasti flottanti. */
+.topbar-burger {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  margin-right: 2px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg-2);
+  color: var(--text);
+  font-size: 1.15rem;
+  cursor: pointer;
+}
+
+/* Dispositivi TOUCH (iPad al banco): i tasti che si usano di continuo — menu,
+   voci del menu laterale, azioni della topbar — devono essere presi al volo,
+   anche col monitor piccolo. Su desktop col mouse restano compatti. */
+@media (pointer: coarse) {
+  .topbar-burger {
+    width: 50px;
+    height: 50px;
+    font-size: 1.3rem;
+  }
+  .topbar .btn.small {
+    min-height: 44px;
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+  .bar-nav-item {
+    min-height: 52px;
+    font-size: 1rem;
+  }
+  .bar-burger {
+    width: 50px;
+    height: 50px;
+  }
+}
+
+/* Badge "chi ha aperto l'ordine" accanto al numero: lettera del dipendente o
+   segno del cliente. Leggenda in testata (lettera → nome). */
+.order-by {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5em;
+  height: 1.5em;
+  padding: 0 0.35em;
+  border-radius: 6px;
+  font-size: 0.62em;
+  font-weight: 800;
+  line-height: 1;
+  vertical-align: middle;
+  transform: translateY(-0.12em);
+}
+.order-by.staff {
+  background: var(--accent, #b47a3c);
+  color: #fff;
+}
+.order-by.client {
+  background: rgba(150, 150, 150, 0.22);
+}
+.order-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 6px;
+  font-size: 0.82rem;
+  color: var(--muted, #999);
+}
+.order-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Griglia delle card ordine: si adatta da sola a 1/2/3/4+ colonne. */
+.order-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+  /* STESSA ALTEZZA per le card della stessa riga: con `start` ognuna teneva
+     la sua e la fila risultava sfrangiata — un conto col tavolo era piu'
+     alto di uno senza. Le righe restano indipendenti fra loro. */
+  align-items: stretch;
+  margin-bottom: 8px;
+}
+
+.order-grid .card {
+  margin: 0; /* lo spazio lo dà il gap della griglia */
+}
+
+/* La card riempie la sua cella e il corpo si allunga: cosi' la riga delle
+   azioni resta in fondo, allineata con quella delle card accanto. */
+.order-grid .grid-card {
+  display: flex;
+  flex-direction: column;
+}
+.order-grid .grid-card > .grid-card-main {
+  flex: 1;
+}
+
+/* Card-griglia compatta: tutte uguali, più larghe che alte. */
+.grid-card {
+  padding: 0;
+}
+
+/* Altezza NON fissa: il contenuto (nome, data) non deve mai essere
+   tagliato. Tipografia contenuta e leggera: si legge per gerarchia, non
+   per grassetto. */
+.grid-card-main {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 3px;
+  min-height: 96px;
+  padding: 9px 11px;
+  cursor: pointer;
+}
+
+.grid-card .bignum {
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* Indietro nelle sezioni del gestionale: piccolo, in cima al contenuto. */
+.bar-back {
+  margin-bottom: 8px;
+}
+
+/* Riga di una serata nello storico chiusure di cassa. */
+.cash-sess-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 4px 0;
+  border: none;
+  background: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+/* Elenco dei prodotti venduti in una fascia oraria: righe compatte scorrevoli. */
+.fascia-prodotti {
+  max-height: 320px;
+  overflow-y: auto;
+  font-size: 0.86rem;
+}
+.fascia-riga {
+  padding: 4px 0;
+  border-bottom: 1px dashed var(--line);
+}
+.fascia-riga:last-child { border-bottom: none; }
+
+/* Sconto applicato: piccolo e verde, accanto al totale (che è già scontato). */
+.sconto-badge {
+  color: #2ecc71;
+  font-size: 0.78em;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.ordhist-pay {
+  white-space: nowrap;
+}
+
+/* Storico ordini (Flusso cassa): righe compatte, una per conto, cronologiche. */
+.ordhist {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.ordhist-row {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr) auto auto auto auto;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+  padding: 9px 10px;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  border-left: 4px solid transparent;
+  background: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.86rem;
+}
+.ordhist-row:last-child { border-bottom: none; }
+.ordhist-row:hover { background: rgba(127, 127, 140, 0.08); }
+.ordhist-aperti { border-left-color: #3498db; }
+.ordhist-chiusi { border-left-color: #2ecc71; }
+.ordhist-annullati { border-left-color: #8a8a8a; opacity: 0.7; }
+.ordhist-num { font-weight: 700; font-family: var(--serif); }
+.ordhist-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+.ordhist-tot { font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ordhist-when { white-space: nowrap; }
+.ordhist-print {
+  padding: 4px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  opacity: 0.65;
+}
+.ordhist-print:hover { opacity: 1; background: rgba(127, 127, 140, 0.18); }
+@media (max-width: 560px) {
+  .ordhist-row { grid-template-columns: 40px minmax(0, 1fr) auto auto auto; }
+  .ordhist-when { display: none; }
+}
+
+/* Nome del conto sulla card: GRANDE, la prima cosa che si legge dopo il numero. */
+/* Il nome del conto e' in Playfair, un serif con le code lunghe: la "p" di
+   "coppia" e la "g" di "biagio" scendono parecchio sotto la riga. Con
+   `overflow: hidden` (che serve per i puntini di sospensione) e una riga
+   stretta venivano TAGLIATE. La riga piu' alta e un filo di spazio sotto
+   lasciano passare le code senza spostare niente. */
+.grid-card-name {
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.35;
+  padding-bottom: 0.08em;
+  font-family: var(--serif);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.grid-card-sub {
+  font-size: 0.82rem;
+  font-weight: 500;
+  /* Riga riservata anche quando è vuota: un conto senza tavolo deve avere
+     la stessa altezza di uno che ce l'ha, altrimenti le card non pareggiano
+     fra una riga e l'altra della board. L'altezza è quella di una pastiglia
+     (Tavolo, Pagato), che è il contenuto più alto che ci può stare. */
+  min-height: 22px;
+  /* Stessa ragione del nome: `overflow: hidden` taglia le code se la riga
+     e' troppo stretta. */
+  line-height: 1.45;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.grid-card-sub strong {
+  font-weight: 600;
+}
+
+.grid-card-tot {
+  font-size: 0.98rem;
+  font-weight: 600;
+  font-family: var(--serif);
+}
+
+/* Riga di coda (conteggio + data): informazione di servizio, sottile. */
+.grid-card-meta {
+  font-size: 0.74rem;
+  font-weight: 400;
+  line-height: 1.3;
+  opacity: 0.75;
+}
+
+/* Etichette di stato dentro la card: piccole, non gridate. */
+.grid-card .pill {
+  font-size: 0.68rem;
+  font-weight: 500;
+  padding: 2px 7px;
+  gap: 4px;
+}
+
+/* Separatore fra le giornate nella coda (conti dei giorni scorsi). */
+.day-sep {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 14px 0 8px;
+  font-size: 0.76rem;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: capitalize;
+}
+.day-sep::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+/* ── Card amministrative (Menù e Inventario): stessa UX delle card
+   ordini in griglia — compatte, azioni a scomparsa con «⋯». ── */
+.admin-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+  align-items: start;
+}
+.admin-card .grid-card-main {
+  /* Altezza FISSA come le card ordini/menù: tutte uguali a colpo d'occhio,
+     a prescindere dal nome su una o due righe. Il dettaglio bottiglie sta
+     nelle azioni, così qui il contenuto è sempre lo stesso. */
+  height: 92px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  overflow: hidden;
+}
+.admin-card .grid-card-main > .row.between {
+  margin-top: auto;
+}
+.admin-card .grid-card-main strong {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* GESTIONALE a tutta larghezza: esce dal cap di 760px di .app mantenendo l'header
+   (topbar col logo) e il menu laterale. Su desktop la sidebar resta agganciata,
+   quindi il contenuto lascia spazio a sinistra; su mobile la sidebar è già a
+   scomparsa (burger) e il contenuto è a tutta larghezza. */
+body.bar-wide .app {
+  max-width: none;
+}
+
+/* ── Inventario come TABELLA: colonne allineate (grid identico su intestazione
+   e righe) ── */
+.inv-table {
+  --inv-cols: 20px minmax(140px, 2fr) minmax(90px, 1fr) 96px 100px 84px minmax(96px, 1.1fr);
+}
+.inv-thead,
+.inv-table .inv-row-main {
+  display: grid;
+  grid-template-columns: var(--inv-cols);
+  gap: 10px;
+  align-items: center;
+}
+.inv-thead {
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-2);
+}
+/* Intestazioni cliccabili (ordinamento): stesso grid delle righe, quindi il
+   bottone non deve aggiungere padding orizzontale o le colonne si sfalsano. */
+.inv-th {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 0;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-family: inherit;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  min-width: 0;
+}
+.inv-th.inv-cell-num {
+  justify-content: flex-end;
+}
+.inv-th.active {
+  color: var(--text);
+}
+.inv-th-arrow {
+  font-size: 0.6em;
+}
+.inv-table .inv-row-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.inv-cell-num {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 900px) {
+  /* Stretto: stato · prodotto · IVA esclusa · scorte (via categoria, IVA
+     inclusa e €/cl, che stanno comunque nel dettaglio della riga). */
+  .inv-table {
+    --inv-cols: 18px minmax(120px, 1.7fr) 78px minmax(72px, 1fr);
+  }
+  .inv-thead > :nth-child(3),
+  .inv-table .inv-row-main > :nth-child(3),
+  .inv-thead > :nth-child(5),
+  .inv-table .inv-row-main > :nth-child(5),
+  .inv-thead > :nth-child(6),
+  .inv-table .inv-row-main > :nth-child(6) {
     display: none;
   }
+}
 
-  .bar-sidebar {
-    transform: none;
-  }
+/* ── Inventario in LISTA condensata ── */
+.inv-list {
+  display: flex;
+  flex-direction: column;
+  margin-top: 4px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.inv-row {
+  border-left: 4px solid transparent;
+  border-bottom: 1px solid var(--line);
+}
+.inv-row:last-child { border-bottom: none; }
+.inv-row.inv-ok { border-left-color: #2ecc71; }
+.inv-row.inv-low { border-left-color: #f39c12; }
+.inv-row.inv-empty { border-left-color: #e74c3c; }
+.inv-row-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.inv-row.open .inv-row-main { background: rgba(255, 255, 255, 0.04); }
+.inv-row-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex-shrink: 0;
+}
+.inv-row-cat {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.inv-row-price {
+  white-space: nowrap;
+  flex-shrink: 0;
+  text-align: right;
+  min-width: 84px;
+}
+.inv-row-price-iva { opacity: 0.7; }
+@media (max-width: 640px) {
+  .inv-row-price-iva { display: none; }
+  .inv-row-price { min-width: 56px; }
+}
+.inv-row-stock {
+  font-weight: 600;
+  white-space: nowrap;
+  font-family: var(--serif);
+}
+.inv-row .grid-card-actions {
+  padding: 0 12px 10px;
+}
+:root[data-luma='light'] .inv-row.open .inv-row-main { background: rgba(0, 0, 0, 0.03); }
+.admin-card.off .grid-card-main {
+  opacity: 0.55;
+}
+/* Striscia sinistra per lo stato scorte (come le card ordini). */
+.admin-card.inv-ok { border-left: 4px solid #2ecc71; }
+.admin-card.inv-low { border-left: 4px solid #f39c12; }
+.admin-card.inv-empty { border-left: 4px solid #e74c3c; }
+/* Sul tema chiaro l'override generico dei bordi card non deve mangiarsi
+   la striscia (stessa storia delle card ordini). */
 
-  /* L'app è centrata (max 760px): sposta il contenuto solo di quanto
-     serve perché non finisca sotto la sidebar. */
-  .bar-content {
-    margin-left: max(0px, calc(250px - (100vw - 760px) / 2));
-    padding-top: 0;
+/* Pulsante che apre/chiude i tasti azione della card */
+.grid-card-toggle {
+  width: 100%;
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--muted, #9aa);
+  padding: 7px;
+  font-size: 0.78rem;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+}
+
+.grid-card-toggle:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.grid-card-actions {
+  padding: 10px 12px 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Tasti azione più compatti dentro la card-griglia */
+.grid-card-actions .btn {
+  font-size: 0.76rem;
+  padding: 7px 8px;
+}
+
+/* Flusso cassa: banner della cassa aperta. */
+.cassa-open {
+  border-left: 4px solid #37b24d;
+}
+
+/* Campanella notifiche + stato sincronizzazione: sta nella topbar (a tutto
+   schermo la si richiama con la linguetta). Pulsante inline. */
+.status-bell {
+  position: relative;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.15rem;
+  line-height: 1;
+  padding: 4px;
+  color: inherit;
+}
+.status-bell-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  background: var(--accent, #e52e71);
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 700;
+  min-width: 15px;
+  height: 15px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
+}
+/* Pallino di stato sync in basso a destra della campanella. */
+.status-bell::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1.5px solid var(--bg, #0e0e15);
+  background: transparent;
+}
+.status-bell.syncing::after {
+  background: #f5b94a;
+  animation: bell-pulse 1s ease-in-out infinite;
+}
+.status-bell.synced::after {
+  background: #37b24d;
+}
+.status-bell.error::after {
+  background: #e5484d;
+  animation: bell-pulse 0.8s ease-in-out infinite;
+}
+@keyframes bell-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.8); }
+}
+.status-bell-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+}
+/* Si apre sotto la campanella (in alto a destra), come una tendina. */
+.status-bell-panel {
+  position: fixed;
+  right: 8px;
+  top: 54px;
+  z-index: 130; /* sopra la topbar-overlay (z125) quando è a tutto schermo */
+  width: min(330px, 92vw);
+  max-height: 72vh;
+  overflow-y: auto;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 4px 12px 12px 12px;
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.45);
+  padding: 8px;
+}
+.status-bell-sync {
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+}
+.status-bell-sync.ok {
+  color: var(--muted);
+}
+.status-bell-sync.err {
+  background: rgba(229, 72, 77, 0.12);
+}
+.status-bell-item {
+  padding: 7px 8px;
+  border-top: 1px solid var(--line);
+}
+.status-bell-item:first-child {
+  border-top: none;
+}
+
+/* Lampo di conferma quando si aggiunge un item all'ordine: la riga toccata
+   si illumina un istante, così si vede che è stata inserita. */
+@keyframes flash-added {
+  0% { background: rgba(245, 185, 74, 0.55); }
+  100% { background: transparent; }
+}
+.draft-line.flash-added {
+  animation: flash-added 0.75s ease-out;
+}
+
+/* Macro-categorie: un blocco per macro con le categorie collegate. */
+.macro-group {
+  margin-top: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.macro-group .chip-x {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+  font-size: 0.8em;
+  opacity: 0.7;
+  line-height: 1;
+}
+.macro-group .chip-x:hover {
+  opacity: 1;
+}
+
+/* Dashboard mensile per macro: tabella mesi × metriche, scrollabile in orizz. */
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.macro-tab {
+  border-collapse: collapse;
+  white-space: nowrap;
+  font-size: 0.78rem;
+  min-width: 100%;
+}
+.macro-tab th,
+.macro-tab td {
+  padding: 4px 8px;
+  text-align: right;
+  border-bottom: 1px solid var(--line);
+}
+.macro-tab thead th {
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.72rem;
+}
+.macro-tab .rowhead {
+  text-align: left;
+  position: sticky;
+  left: 0;
+  background: var(--card);
+  font-weight: 700;
+}
+.macro-tab thead .rowhead {
+  background: var(--card);
+}
+.macro-tab .tot {
+  font-weight: 800;
+  border-left: 1px solid var(--line);
+}
+.macro-tab .r-fat td {
+  color: var(--accent-2, #f5b94a);
+}
+.macro-tab .r-uti td {
+  font-weight: 700;
+}
+.macro-tab td.neg {
+  color: #e5484d;
+}
+.macro-total {
+  border: 1px solid var(--accent-2, #f5b94a);
+}
+
+/* Riepilogo info di un item inventario espanso: righe etichetta → valore,
+   ordinate e leggibili invece di tre righe muted accatastate. */
+.inv-info {
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(127, 127, 140, 0.1);
+  display: grid;
+  gap: 6px;
+  font-size: 0.82rem;
+}
+.inv-info .inv-info-row {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 4px 10px;
+  align-items: baseline;
+  margin: 0;
+}
+.inv-info dt {
+  color: var(--muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.inv-info dd {
+  margin: 0;
+}
+.inv-info .inv-unitprice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+@media (max-width: 460px) {
+  .inv-info .inv-info-row {
+    grid-template-columns: 1fr;
+    gap: 1px;
   }
+  .inv-info dt {
+    font-size: 0.68rem;
+  }
+}
+
+/* Ordine POS in invio: grigio finché creazione/stampa non è completata,
+   poi sparisce e compare l'ordine reale colorato. */
+.grid-card-pending {
+  opacity: 0.5;
+  border-left-color: rgba(255, 255, 255, 0.3);
+  animation: pending-pulse 1.2s ease-in-out infinite;
+}
+
+.grid-card-pending.error {
+  opacity: 1;
+  border-left-color: #e74c3c;
+  animation: none;
+}
+
+@keyframes pending-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.65; }
 }
 
 /* Card ordine: lo stato è leggibile dal bordo/tinta oltre che dalla pill */
@@ -1059,6 +2098,30 @@ a.order-mini {
 .order-card.pagato {
   border-left-color: rgba(245, 185, 74, 0.55);
   opacity: 0.7;
+}
+
+/* Conto già PAGATO ma non ancora servito: resta in coda perché c'è ancora
+   da consegnare. Il fondo continua a dire a che punto è la preparazione;
+   qui basta il bordo ambra — che è già pagato lo dice il 💳 accanto al
+   nome, non serve ripeterlo con un'altra icona. */
+.order-card.pagato-da-servire {
+  border-left-color: var(--accent-2, #f5b94a);
+}
+
+/* Striscia laterale per STATO ORDINE (sovrascrive il colore della preparazione):
+   aperto · pagato parzialmente · pagato · annullato. Deve venire DOPO le regole
+   del workflow per vincere sul border-left-color. */
+.order-card.pay-aperto {
+  border-left-color: #3498db;
+}
+.order-card.pay-parziale {
+  border-left-color: #f39c12;
+}
+.order-card.pay-pagato {
+  border-left-color: #2ecc71;
+}
+.order-card.pay-annullato {
+  border-left-color: #8a8a8a;
 }
 
 /* Nota dell'ordine sulla card del bartender */
@@ -1108,7 +2171,7 @@ a.order-mini {
   top: 64px;
   z-index: 6;
   padding: 10px 0;
-  background: #0e0e15;
+  background: var(--bg);
 }
 
 .menu-staff .menu-search {
@@ -1149,7 +2212,7 @@ a.order-mini {
   scrollbar-width: none;
   -ms-overflow-style: none;
   -webkit-overflow-scrolling: touch;
-  background: rgba(14, 14, 21, 0.92);
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
   backdrop-filter: blur(8px);
 }
 
@@ -1203,9 +2266,14 @@ a.order-mini {
 }
 
 /* ── Riepilogo ordine (bottom sheet) ─────────────────────────── */
+/* Ogni strato che parte dal bordo superiore dello schermo deve scostarsi
+   dalla barra di sistema (ora, wifi, batteria): in modalità app il contenuto
+   ci passa SOTTO, e senza questo scostamento titoli e tasti finiscono
+   nascosti dietro l'orologio. */
 .overlay {
   position: fixed;
   inset: 0;
+  padding-top: var(--safe-top);
   background: rgba(0, 0, 0, 0.7);
   display: flex;
   align-items: flex-end;
@@ -1425,17 +2493,31 @@ a.order-mini {
   height: 26px;
   min-width: 46px;
   border-radius: 13px;
+  /* Traccia visibile su QUALSIASI tema (su quello chiaro il bianco
+     traslucido spariva e il toggle sembrava non esserci). */
   background: rgba(255, 255, 255, 0.15);
+  border: 1px solid var(--line);
   cursor: pointer;
   position: relative;
   transition: background 0.2s ease;
-  border: none;
   padding: 0;
   margin: 0;
 }
 
-.toggle:checked {
+:root[data-luma='light'] .toggle {
+  background: rgba(0, 0, 0, 0.18);
+}
+
+:root[data-luma='light'] .toggle::before {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+/* Acceso = COLORATO su qualsiasi tema (la variante chiara sotto ha
+   specificità più alta: va ribadito anche lì, altrimenti resta grigio). */
+.toggle:checked,
+:root[data-luma='light'] .toggle:checked {
   background: linear-gradient(135deg, #f7c45e, #e8a32e);
+  border-color: #e8a32e;
 }
 
 .toggle::before {
@@ -1467,24 +2549,72 @@ a.order-mini {
 }
 
 /* Nastro d'ambiente non-produzione (test/locale): sempre visibile in alto. */
-.env-ribbon {
+/* ── Font BACKOFFICE sobrio (stile SumUp POS): niente serif decorativo
+   sulle superfici staff (gestionale, POS, dettaglio ordine). Ridefinendo
+   --serif nell'ambito, anche gli heading che lo usano diventano sans; il
+   lato cliente (fuori da queste superfici) mantiene il suo carattere. */
+body.fullbleed,
+.bar-content,
+.topbar.backoffice {
+  --serif: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial,
+    sans-serif;
+  letter-spacing: 0;
+}
+
+/* Ambiente non-produzione: scritta minuscola e discreta in basso a sinistra,
+   sopra a tutto ma senza catturare i tap, così non dà fastidio. */
+.env-badge {
+  position: fixed;
+  left: 6px;
+  bottom: 6px;
+  z-index: 5;
+  font-size: 0.6rem;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  opacity: 0.5;
+  pointer-events: none;
+  text-transform: lowercase;
+}
+/* Suggerimento "aggiungi a Home" (solo iPad/iPhone in Safari). */
+.a2hs-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  color: var(--muted);
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--line);
+}
+.a2hs-hint strong {
+  color: var(--text);
+}
+.a2hs-x {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0.6;
+  font-size: 0.9rem;
+  padding: 0 4px;
+}
+.a2hs-x:hover {
+  opacity: 1;
+}
+
+/* Nastro "sei offline": in cima, sopra ogni schermata. */
+.offline-ribbon {
   position: sticky;
   top: 0;
-  z-index: 20;
+  z-index: 21;
   text-align: center;
   font-weight: 700;
   font-size: 0.8rem;
-  letter-spacing: 0.5px;
-  padding: 5px 8px;
-  color: #1c1305;
+  padding: 5px 10px;
+  background: #4a4a55;
+  color: #fff;
 }
-.env-ribbon.env-test {
-  background: repeating-linear-gradient(45deg, #f5b94a, #f5b94a 12px, #e8a32e 12px, #e8a32e 24px);
-}
-.env-ribbon.env-locale {
-  background: repeating-linear-gradient(45deg, #9ad0ff, #9ad0ff 12px, #6fb8f5 12px, #6fb8f5 24px);
-}
-
 /* Intestazione categoria cliccabile nella gestione menù (collassa/espande). */
 .menu-admin-cat {
   cursor: pointer;
@@ -1493,4 +2623,1439 @@ a.order-mini {
 }
 .menu-admin-cat:hover {
   opacity: 0.85;
+}
+
+/* Landing page pubblica */
+/* ── Box novità: Karaoke Night × Ceres (palette nero/rosso/oro) ── */
+.news-ceres {
+  --ceres-red: #e2001a;
+  --ceres-gold: #f5b94a;
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius);
+  padding: 24px 20px;
+  margin: 14px 0 4px;
+  color: #fff;
+  background:
+    radial-gradient(900px 280px at 82% -50%, rgba(226, 0, 26, 0.6), transparent 60%),
+    linear-gradient(160deg, #1c0709, #0a0506 62%);
+  border: 1px solid rgba(226, 0, 26, 0.55);
+  box-shadow: 0 14px 46px rgba(226, 0, 26, 0.22);
+}
+
+/* raggi "sole" come nel marchio Ceres, sfatti in CSS */
+.news-ceres-rays {
+  position: absolute;
+  inset: -60% -20% auto -20%;
+  height: 220%;
+  background: repeating-conic-gradient(
+    from 0deg at 84% 0%,
+    rgba(245, 185, 74, 0.12) 0deg 5deg,
+    transparent 5deg 12deg
+  );
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+/* nastro "NOVITÀ" in alto a destra */
+.news-ceres-badge {
+  position: absolute;
+  top: 16px;
+  right: -38px;
+  transform: rotate(45deg);
+  background: var(--ceres-red);
+  color: #fff;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  font-size: 0.7rem;
+  padding: 5px 44px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+  z-index: 2;
+}
+
+.news-ceres-content {
+  position: relative;
+  z-index: 1;
+}
+
+.news-ceres-sponsor {
+  margin: 0;
+  text-transform: uppercase;
+  font-size: 0.76rem;
+  letter-spacing: 1.6px;
+  color: var(--ceres-gold);
+}
+
+.ceres-wordmark {
+  color: var(--ceres-red);
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 2px;
+  text-shadow: 0 0 14px rgba(226, 0, 26, 0.7);
+}
+
+.news-ceres-title {
+  font-size: clamp(1.9rem, 7vw, 2.7rem);
+  line-height: 1.05;
+  margin: 6px 0 10px;
+  letter-spacing: 1px;
+  text-shadow: 0 2px 22px rgba(226, 0, 26, 0.65);
+}
+
+.news-ceres-lead {
+  color: rgba(255, 255, 255, 0.85);
+  margin: 0 0 14px;
+}
+
+.news-ceres-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 16px;
+  display: grid;
+  gap: 9px;
+}
+
+.news-ceres-list li {
+  font-weight: 600;
+  padding-left: 2px;
+}
+
+.news-ceres-img {
+  display: block;
+  width: 100%;
+  border-radius: 14px;
+  margin: 4px 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.news-ceres-cta {
+  background: var(--ceres-red);
+  border: none;
+  color: #fff;
+  font-weight: 700;
+}
+
+.news-ceres-cta:hover {
+  filter: brightness(1.1);
+}
+
+.landing-nav {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin: 14px 0 4px;
+}
+.landing-nav a {
+  color: var(--accent-2);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+.landing-nav a:hover { color: var(--text); }
+.landing section.card h2 {
+  font-family: var(--serif);
+  color: var(--accent-2);
+}
+
+/* ── Gruppi nel drawer ──────────────────────────────────────── */
+.drawer-groups { margin-top: 6px; }
+.drawer-groups-title {
+  padding: 6px 18px;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--muted);
+}
+.group-tiles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 0 14px;
+}
+.group-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  min-height: 56px;
+}
+.group-tile:hover { border-color: rgba(245, 185, 74, 0.5); }
+.group-tile-ic { font-size: 1.1rem; }
+.group-tile-name {
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.15;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+/* ── Pannello gruppi nella coda ─────────────────────────────── */
+.groups-panel { margin: 8px 0; }
+.groups-panel .group-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.groups-panel .group-row:last-child { border-bottom: none; }
+.pill.chiuso { background: rgba(46, 204, 113, 0.22); color: #9ff5c0; }
+
+/* ── Vista menù staff: 2 colonne compatte ───────────────────── */
+.staff-menu {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 10px;
+  align-items: start;
+}
+.staff-cats {
+  position: sticky;
+  top: 118px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: calc(100vh / var(--zoom, 1) - 130px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.staff-cat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  font-size: 0.82rem;
+}
+.staff-cat.active {
+  background: linear-gradient(135deg, rgba(247, 196, 94, 0.25), rgba(232, 163, 46, 0.18));
+  border-color: rgba(245, 185, 74, 0.5);
+}
+.staff-cat-name { font-weight: 600; line-height: 1.1; }
+.staff-cat-count { color: var(--muted); font-size: 0.72rem; flex-shrink: 0; }
+.staff-products {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.staff-product {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--card);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+.staff-product-info { display: flex; flex-direction: column; min-width: 0; }
+.staff-product-name { font-weight: 600; font-size: 0.9rem; line-height: 1.15; }
+.staff-product .btn.small { min-width: 40px; flex-shrink: 0; }
+
+/* ── Dettaglio ordine POS (stile SumUp, solo bartender) ─────────────── */
+/* Tablet/desktop: comanda come colonna destra; telefono: pannello in basso.
+   Le colonne laterali (categorie e ordine) sono FLESSIBILI: si allargano e
+   restringono in base al contenuto entro un min/max, il centro (griglia)
+   prende il resto. */
+.posd-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+.posd-cats {
+  flex-shrink: 0;
+  overflow-y: auto;
+  border-right: 1px solid var(--line);
+  padding: 8px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: var(--pos-cats-w, fit-content);
+  min-width: 112px;
+  max-width: none;
+  /* Allargando la colonna cresce anche il testo (e viceversa). */
+  font-size: calc(1rem * var(--cats-scale, 1));
+}
+.posd-cats button {
+  white-space: nowrap;
+  /* Altezza legata alla SCALA della colonna (in rem, non all'em del font
+     piccolo del tasto): tasti belli alti, che crescono allargando la colonna.
+     Niente aspect-ratio (rendeva i tasti troppo alti da larga e schiacciati da
+     stretta). Il nome si accorcia con l'ellissi invece di andare a capo. */
+  min-height: calc(3rem * var(--cats-scale, 1));
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.posd-comanda {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-2);
+  border-left: 1px solid rgba(255, 255, 255, 0.09);
+  width: var(--pos-comanda-w, fit-content);
+  min-width: 240px;
+  max-width: none;
+  flex-shrink: 0;
+  /* L'auto-larghezza (quando si aggiunge un item con nome lungo) si anima invece
+     di "saltare": niente sensazione di ricaricamento del layout. */
+  transition: width 0.14s ease;
+}
+/* Barra in alto del POS: scostata dalla barra di sistema del tablet. */
+.posd-topbar {
+  padding: calc(8px + var(--safe-top)) 10px 8px;
+}
+
+/* Nome del conto in testata (#4 · iole): GRANDE quanto i nomi degli item della
+   lista (1.08em della scala colonna), non più un titolino. */
+/* Numero del conto in testata: spazio RISERVATO e cifre a larghezza fissa.
+   Il progressivo arriva un istante dopo l'apertura: senza questo, la
+   testata si allargava da "#9" a "#12" e tutto quello che sta accanto
+   scivolava di lato mentre lo si guardava. */
+.posd-num {
+  font-family: var(--serif);
+  font-variant-numeric: tabular-nums;
+  min-width: 3.2em;
+}
+
+.posd-title {
+  font-family: var(--serif);
+  font-variant-numeric: tabular-nums;
+  font-size: calc(1.08rem * var(--comanda-scale, 1));
+  font-weight: 700;
+  /* Serif con le code lunghe + overflow nascosto: riga stretta = "p" e "g"
+     tagliate. Stessa correzione del nome nelle card. */
+  line-height: 1.35;
+  padding-bottom: 0.08em;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Lista dell'ordine: allargando la colonna crescono i testi (nomi, prezzi,
+   quantità), e si rimpiccioliscono restringendola. Il testo secondario usa em
+   così segue la scala; il footer ha una sua scala (--foot-scale) indipendente. */
+.posd-list {
+  font-size: calc(1rem * var(--comanda-scale, 1));
+}
+.posd-list .small {
+  font-size: 0.82em;
+}
+.posd-list .qty button {
+  /* più piccoli, per non rubare spazio al nome; scalano con la colonna */
+  width: 1.6em;
+  height: 1.6em;
+  font-size: 0.95em;
+}
+.posd-list .qty strong {
+  font-size: 0.95em;
+}
+.posd-list .qty {
+  gap: 0.4em;
+}
+/* Footer dell'ordine, ridimensionabile: la scala (--foot-scale) guida la
+   dimensione del font, e tasti/prezzi la seguono perché espressi in em. */
+.posd-comanda-foot {
+  flex-shrink: 0;
+  padding: 4px 12px 10px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: calc(8px * var(--foot-scale, 1));
+  font-size: calc(1rem * var(--foot-scale, 1));
+}
+.posd-comanda-foot .btn {
+  font-size: 0.9em;
+  padding: 0.5em 0.7em;
+}
+.posd-comanda-foot .price {
+  font-size: 1.05em;
+}
+.posd-foot-handle {
+  height: 16px;
+  margin: 0 -12px 2px;
+  cursor: row-resize;
+  touch-action: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.posd-foot-handle::before {
+  content: '';
+  width: 44px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line);
+}
+.posd-foot-handle:hover::before {
+  background: var(--accent-2, #f5b94a);
+}
+
+/* Maniglia di ridimensionamento fra le colonne del POS: area ampia e
+   comoda da afferrare col dito, con un indicatore a pallini centrale che
+   segnala che si può trascinare. */
+.posd-resize-handle {
+  flex-shrink: 0;
+  width: 18px;
+  cursor: col-resize;
+  align-self: stretch;
+  touch-action: none;
+  background: transparent;
+  border: none;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+/* Traccia verticale */
+.posd-resize-handle::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--line);
+  opacity: 0.6;
+  transition: opacity 0.15s, background 0.15s;
+}
+/* Presa a pallini al centro (⣿ verticale) */
+.posd-resize-handle::after {
+  content: '';
+  position: relative;
+  width: 4px;
+  height: 34px;
+  border-radius: 4px;
+  background:
+    radial-gradient(circle, var(--muted) 1.4px, transparent 1.6px) 0 2px / 4px 7px repeat-y;
+  opacity: 0.8;
+}
+.posd-resize-handle:hover::before,
+.posd-resize-handle:active::before {
+  opacity: 1;
+  background: var(--accent-2, #f5b94a);
+}
+.posd-resize-handle:hover::after,
+.posd-resize-handle:active::after {
+  opacity: 1;
+}
+@media (max-width: 899px) {
+  .posd-body {
+    flex-direction: column;
+  }
+  .posd-body > aside {
+    /* Categorie in riga orizzontale scorrevole sopra la griglia. */
+    width: 100% !important;
+    flex-direction: row !important;
+    overflow-x: auto;
+    overflow-y: hidden !important;
+    border-right: none !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  }
+  .posd-body > aside button {
+    width: auto !important;
+    white-space: nowrap;
+    flex-shrink: 0;
+    aspect-ratio: auto; /* in riga orizzontale niente scaling proporzionale */
+    /* Bersaglio touch comodo: belli alti anche in riga orizzontale. */
+    min-height: 48px;
+    padding: 10px 14px;
+  }
+  /* Ricerca e chip (Organizza) della griglia: più alti per il dito. */
+  .posd-body input[type='search'] {
+    min-height: 48px;
+  }
+  .posd-body .chip {
+    min-height: 48px;
+  }
+  .posd-cats {
+    max-width: none;
+    min-width: 0;
+    width: 100% !important;
+  }
+  .posd-resize-handle {
+    display: none;
+  }
+  .posd-comanda {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    max-height: 46dvh;
+    border-left: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.4);
+  }
+  /* Footer del pannello APERTO: tasti più alti e staccati dal bordo (la
+     gesture bar del telefono mangiava l'ultima riga). */
+  .posd-comanda-foot {
+    padding: 6px 14px calc(16px + env(safe-area-inset-bottom, 0px));
+    gap: calc(10px * var(--foot-scale, 1));
+  }
+  .posd-comanda-foot .btn {
+    padding: 0.85em 0.8em;
+    font-size: 0.95em;
+  }
+  /* Pannello COLLASSATO (mentre si lavora sulla griglia): resta solo la barra
+     con totale e n. item; un tocco riapre. La griglia respira. */
+  .posd-comanda.collapsed > :not(.posd-collapsed-bar) {
+    display: none !important;
+  }
+  .posd-comanda.collapsed {
+    max-height: none;
+  }
+  .posd-comanda.collapsed .posd-collapsed-bar {
+    display: flex;
+  }
+}
+/* Barra del pannello collassato (montata solo da collassato, su smartphone):
+   BEN alta (una vera fascia), così si tocca senza mirare. */
+.posd-collapsed-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 116px;
+  padding: 18px 18px calc(18px + env(safe-area-inset-bottom, 0px));
+  border: none;
+  background: none;
+  color: inherit;
+  font-size: 1.05rem;
+  cursor: pointer;
+  text-align: left;
+}
+.posd-collapsed-bar .posd-collapsed-tot {
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-family: var(--serif);
+}
+
+/* ── Calendario ore staff (vista mensile) ── */
+.ore-cal {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+.ore-cal-dow {
+  text-align: center;
+  font-size: 0.72rem;
+  color: var(--muted);
+  padding: 2px 0;
+}
+.ore-cal-cell {
+  min-height: 62px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--tile-bg);
+  color: var(--text);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  cursor: default;
+}
+.ore-cal-cell.has {
+  cursor: pointer;
+  border-color: rgba(245, 185, 74, 0.5);
+}
+.ore-cal-cell.out {
+  opacity: 0.4;
+}
+.ore-cal-cell.today {
+  box-shadow: inset 0 0 0 1.5px var(--accent, #b47a3c);
+}
+.ore-cal-day {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.ore-cal-h {
+  font-weight: 800;
+  font-size: 0.95rem;
+}
+.ore-cal-n {
+  font-size: 0.68rem;
+  color: var(--muted);
+}
+/* Celle mensili con più contenuto: nomi + orari di chi è di turno. */
+.ore-cal-cell {
+  min-height: 76px;
+}
+.ore-cal-who {
+  width: 100%;
+  font-size: 0.64rem;
+  line-height: 1.2;
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.ore-cal-who b {
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ore-cal-who .ore-cal-when {
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.ore-cal-more {
+  font-size: 0.62rem;
+  color: var(--muted);
+}
+.ore-week {
+  display: grid;
+  gap: 8px;
+}
+@media (min-width: 700px) {
+  .ore-week {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+/* Intestazione giorno cliccabile nella vista settimana. */
+.week-day-head {
+  width: 100%;
+  background: none;
+  border: none;
+  color: inherit;
+  padding: 0 0 2px;
+  cursor: pointer;
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 4px;
+}
+/* Riepilogo "chi è di turno": programmato vs effettivo per persona. */
+.day-people {
+  display: grid;
+  gap: 6px;
+  margin: 8px 0;
+}
+.day-person {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 0.85rem;
+}
+.day-person-cols {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  text-align: right;
+}
+
+/* Banner "nuova versione": sopra tutto (anche il POS a tutto schermo),
+   tocca e l'app si ricarica con il bundle nuovo. */
+.update-banner {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 500;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 10px 18px;
+  background: var(--accent, #b47a3c);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+}
+
+/* ── Notifiche IN APP (toast): basso a destra, sopra ogni schermata ── */
+.toast-stack {
+  position: fixed;
+  right: 14px;
+  bottom: 14px;
+  z-index: 600;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+  pointer-events: none;
+}
+.toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: min(340px, 86vw);
+  padding: 9px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--bg-2);
+  color: var(--text);
+  font-size: 0.85rem;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+.toast-success { border-color: rgba(46, 204, 113, 0.6); }
+.toast-error { border-color: rgba(231, 76, 60, 0.7); }
+.toast-spinner {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  border-top-color: var(--accent, #b47a3c);
+  animation: toast-spin 0.8s linear infinite;
+}
+@keyframes toast-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Schermata Pagamento (stile POS SumUp: articoli · tastierino · metodi) ── */
+.payscreen-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+.payscreen-items {
+  display: flex;
+  flex-direction: column;
+  width: min(340px, 34%);
+  flex-shrink: 0;
+  padding: 4px 14px 12px;
+  min-width: 0;
+  border-right: 1px solid var(--line);
+}
+/* Riga di una singola unità nella vista "Separa" del pagamento. */
+.payscreen-unit {
+  width: 100%;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+  padding: 4px 6px;
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  border-radius: 8px;
+}
+.payscreen-unit:hover {
+  background: var(--tile-bg);
+}
+.payscreen-pad {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 10px 14px 12px;
+}
+.paypad {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-top: 10px;
+  min-height: 0;
+}
+.paypad-key {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--tile-bg);
+  color: var(--text);
+  font-size: 1.25rem;
+  cursor: pointer;
+  min-height: 44px;
+}
+.paypad-key.accent {
+  color: #3f7ce0;
+}
+.paypad-key.danger {
+  color: #e74c3c;
+}
+.paypad-key:active {
+  filter: brightness(1.25);
+}
+.payscreen-collect {
+  margin-top: 10px;
+  flex-shrink: 0;
+  font-size: 1.15rem;
+  padding: 14px;
+  background: linear-gradient(135deg, #2f6bd8, #3f7ce0);
+  color: #fff;
+}
+.payscreen-methods {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 230px;
+  flex-shrink: 0;
+  padding: 12px;
+  background: var(--bg-2);
+  border-left: 1px solid var(--line);
+  overflow-y: auto;
+}
+.payscreen-method {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--tile-bg);
+  color: var(--text);
+  padding: 14px 12px;
+  text-align: left;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+.payscreen-method.active {
+  border-color: #3f7ce0;
+  box-shadow: inset 0 0 0 1.5px #3f7ce0;
+}
+@media (max-width: 799px) {
+  .payscreen-body {
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  .payscreen-items {
+    width: 100%;
+    max-height: 32dvh;
+    border-right: none;
+    border-bottom: 1px solid var(--line);
+  }
+  .payscreen-pad {
+    flex: none;
+  }
+  .paypad {
+    flex: none;
+  }
+  .paypad-key {
+    min-height: 52px;
+  }
+  .payscreen-methods {
+    width: 100%;
+    border-left: none;
+    border-top: 1px solid var(--line);
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .payscreen-methods .payscreen-method {
+    flex: 1 1 40%;
+  }
+}
+
+/* ── Varianti per TEMI CHIARI (impostate da applyTheme via data-luma) ──
+   I colori di stato di default sono pensati per fondi scuri (testi
+   pastello): sul chiaro diventano versioni sature e scure, leggibili. */
+:root {
+  /* Superfici/linee POS: seguono il tema (variante chiara sotto). */
+  --line: rgba(255, 255, 255, 0.1);
+  --tile-bg: rgba(255, 255, 255, 0.05);
+}
+:root[data-luma='light'] {
+  --line: rgba(0, 0, 0, 0.14);
+  --tile-bg: rgba(0, 0, 0, 0.05);
+}
+:root[data-luma='light'] .pill.aperto {
+  background: rgba(46, 204, 113, 0.2);
+  color: #12653d;
+}
+:root[data-luma='light'] .pill.annullato {
+  background: rgba(244, 67, 54, 0.14);
+  color: #b02a37;
+}
+:root[data-luma='light'] .pill.ricevuto {
+  background: rgba(243, 156, 18, 0.18);
+  color: #8a5200;
+}
+:root[data-luma='light'] .pill.in_preparazione {
+  background: rgba(52, 152, 219, 0.16);
+  color: #0b5cad;
+}
+:root[data-luma='light'] .pill.pronto {
+  background: rgba(46, 204, 113, 0.18);
+  color: #157347;
+}
+:root[data-luma='light'] .pill.ritirato {
+  background: rgba(0, 0, 0, 0.08);
+}
+:root[data-luma='light'] .pill.pagato {
+  background: rgba(180, 130, 20, 0.15);
+}
+:root[data-luma='light'] .badge-low {
+  background: rgba(255, 193, 7, 0.22);
+  color: #7a5c00;
+}
+:root[data-luma='light'] .badge-empty {
+  background: rgba(244, 67, 54, 0.15);
+  color: #b02a37;
+}
+:root[data-luma='light'] .btn.ghost {
+  border-color: rgba(0, 0, 0, 0.25);
+}
+:root[data-luma='light'] .btn.secondary {
+  background: rgba(0, 0, 0, 0.08);
+}
+:root[data-luma='light'] .chip {
+  border-color: rgba(0, 0, 0, 0.18);
+  background: rgba(0, 0, 0, 0.04);
+}
+/* Il chip ATTIVO resta acceso anche sul tema chiaro: la regola qui sopra
+   ha specificità maggiore di ".chip.active" e altrimenti ne spegnerebbe
+   lo sfondo (i filtri sembravano sempre inattivi nel backoffice). */
+:root[data-luma='light'] .chip.active {
+  border-color: transparent;
+  background: linear-gradient(135deg, #f7c45e, #e8a32e);
+  color: #1c1305;
+}
+:root[data-luma='light'] .qty button {
+  background: rgba(0, 0, 0, 0.08);
+}
+:root[data-luma='light'] .card:not(.order-card),
+:root[data-luma='light'] .inv-list,
+:root[data-luma='light'] .inv-item {
+  border-color: rgba(0, 0, 0, 0.1);
+}
+/* Le card ordine mantengono la STRISCIA sinistra colorata per stato:
+   sul chiaro si aggiornano solo gli altri tre lati. */
+:root[data-luma='light'] .order-card {
+  border-top-color: rgba(0, 0, 0, 0.1);
+  border-right-color: rgba(0, 0, 0, 0.1);
+  border-bottom-color: rgba(0, 0, 0, 0.1);
+}
+/* Come le card ordine: la STRISCIA sinistra resta colorata per stato
+   scorte (verde/arancio/rosso), gli altri tre lati seguono il tema. La
+   regola generica ".card:not(.order-card)" qui sopra grigiava anche il
+   bordo sinistro, spegnendo l'indicatore. */
+:root[data-luma='light'] .admin-card {
+  border-top-color: rgba(0, 0, 0, 0.1);
+  border-right-color: rgba(0, 0, 0, 0.1);
+  border-bottom-color: rgba(0, 0, 0, 0.1);
+}
+:root[data-luma='light'] .admin-card.inv-ok { border-left-color: #2ecc71; }
+:root[data-luma='light'] .admin-card.inv-low { border-left-color: #f39c12; }
+:root[data-luma='light'] .admin-card.inv-empty { border-left-color: #e74c3c; }
+:root[data-luma='light'] input,
+:root[data-luma='light'] select,
+:root[data-luma='light'] textarea {
+  border-color: rgba(0, 0, 0, 0.22);
+}
+
+/* ── Categorie a sinistra (Inventario, Menù): stesso schema del POS ── */
+.cat-layout {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-top: 8px;
+}
+.cat-rail {
+  flex-shrink: 0;
+  position: sticky;
+  top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: fit-content;
+  min-width: 116px;
+  max-width: 200px;
+  max-height: calc(100dvh / var(--zoom, 1) - 90px);
+  overflow-y: auto;
+}
+.cat-rail .chip {
+  justify-content: space-between;
+  text-align: left;
+  width: 100%;
+}
+/* Pallino (o icona) della categoria nella barra a sinistra: stesso segno
+   del POS, cosi' la categoria si riconosce ovunque allo stesso modo. */
+.cat-rail-segno {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  font-size: 1.05em;
+  line-height: 1;
+}
+.cat-rail-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1.5px var(--line);
+}
+.cat-rail .chip {
+  gap: 7px;
+}
+.cat-rail-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cat-rail-count {
+  flex-shrink: 0;
+  opacity: 0.7;
+  font-size: 0.78rem;
+}
+.cat-content {
+  flex: 1;
+  min-width: 0;
+}
+/* Barra categorie A SCOMPARSA: nascosta, il contenuto si allarga; resta una
+   linguetta sottile per riaprirla. */
+.cat-rail-hide {
+  justify-content: center !important;
+  opacity: 0.75;
+  font-size: 0.78rem;
+}
+.cat-rail-show {
+  flex-shrink: 0;
+  align-self: flex-start;
+  position: sticky;
+  top: 8px;
+  width: 30px;
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--tile-bg, rgba(127, 127, 140, 0.12));
+  color: inherit;
+  cursor: pointer;
+  font-size: 1.1rem;
+}
+@media (max-width: 700px) {
+  .cat-rail-show {
+    position: static;
+    width: 100%;
+    min-height: 34px;
+  }
+}
+@media (max-width: 700px) {
+  .cat-layout {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .cat-rail {
+    position: static;
+    flex-direction: row;
+    width: 100%;
+    max-width: none;
+    max-height: none;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 4px;
+  }
+  .cat-rail .chip {
+    width: auto;
+    flex-shrink: 0;
+  }
+}
+
+/* Maniglia di trascinamento delle card in modalità riordino POS: barra
+   VERTICALE sulla destra, in una fascia riservata (la card si stringe di
+   tanto) così NON copre il nome. Solo qui il touch è "drag"
+   (touch-action:none); il resto della card scorre. */
+.reorder-cell {
+  padding-right: 44px;
+}
+.reorder-grip {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 44px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: #1c1305;
+  background: var(--accent-2, #f5b94a);
+  border-top-right-radius: 12px;
+  border-bottom-right-radius: 12px;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.reorder-grip:active {
+  cursor: grabbing;
+}
+
+/* Card in trascinamento: si "solleva" — ingrandita, ombra profonda, sopra
+   le altre — così si vede bene che la stai spostando. */
+.reorder-cell {
+  position: relative;
+  border-radius: 12px;
+  transition: transform 0.14s ease, box-shadow 0.14s ease;
+  will-change: transform;
+}
+.reorder-cell.dragging {
+  transform: scale(1.06) rotate(-1.5deg);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.45);
+  z-index: 5;
+  cursor: grabbing;
+}
+.reorder-cell.dragging .reorder-grip {
+  cursor: grabbing;
+}
+
+/* ── RENDICONTO SERATA: tabella da rendiconto, non da scontrino ──────────
+   Numeri a destra e incolonnati (si confrontano a colpo d'occhio), prima
+   colonna ancorata a sinistra durante lo scorrimento orizzontale, righe
+   dei conti cliccabili per aprire i prodotti di quel conto. */
+.rendiconto {
+  margin-top: 12px;
+}
+.rend-kpi {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+  margin: 10px 0;
+}
+.rend-kpi-box {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+}
+.rend-kpi-box strong {
+  font-size: 1.25rem;
+  line-height: 1.2;
+}
+/* Il guadagno è il numero per cui si apre questa schermata. */
+.rend-kpi-forte {
+  border-color: var(--accent-2, #f5b94a);
+}
+.rend-tab {
+  border-collapse: collapse;
+  white-space: nowrap;
+  font-size: 0.82rem;
+  min-width: 100%;
+}
+.rend-tab th,
+.rend-tab td {
+  padding: 7px 10px;
+  text-align: right;
+  border-bottom: 1px solid var(--line);
+}
+.rend-tab thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--card);
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.rend-tab .rowhead {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  text-align: left;
+  background: var(--card);
+  font-weight: 600;
+}
+.rend-tab thead .rowhead {
+  z-index: 3;
+}
+.rend-tab tfoot th {
+  position: sticky;
+  bottom: 0;
+  background: var(--card);
+  font-weight: 800;
+  border-top: 2px solid var(--line);
+}
+.rend-tab td.neg {
+  color: #e5484d;
+}
+.rend-riga {
+  cursor: pointer;
+}
+.rend-riga:hover td {
+  background: rgba(127, 127, 140, 0.1);
+}
+.rend-riga.aperta td,
+.rend-riga.aperta .rowhead {
+  background: rgba(245, 185, 74, 0.12);
+}
+.rend-caret {
+  display: inline-block;
+  width: 1em;
+  opacity: 0.6;
+}
+/* Righe prodotto dentro un conto aperto: rientrate e più leggere, così si
+   distinguono a occhio dai conti senza bisogno di una seconda tabella. */
+.rend-dettaglio td {
+  font-size: 0.78rem;
+  opacity: 0.85;
+  background: rgba(127, 127, 140, 0.06);
+}
+.rend-dettaglio .rowhead {
+  background: rgba(127, 127, 140, 0.06);
+  font-weight: 400;
+}
+@media (pointer: coarse) {
+  .rend-tab th,
+  .rend-tab td {
+    padding: 10px 12px;
+  }
+}
+
+/* Vista a CARD dei conti: stessa lettura della schermata ordini, ma con le
+   cifre del rendiconto (incassato, sconto, guadagno). Si tocca e si apre. */
+.rend-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 8px;
+  align-items: start;
+}
+.rend-card {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+  overflow: hidden;
+}
+.rend-card.aperta {
+  border-color: var(--accent-2, #f5b94a);
+}
+.rend-card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  background: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+.rend-card-num {
+  flex-shrink: 0;
+  font-weight: 800;
+  opacity: 0.75;
+}
+.rend-card-nome {
+  min-width: 0;
+  line-height: 1.35;
+}
+.rend-card-cifre {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+.rend-card-cifre .neg {
+  color: #e5484d;
+}
+.rend-card-righe {
+  padding: 0 12px 10px;
+  border-top: 1px solid var(--line);
+}
+.rend-card-riga {
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px dashed var(--line);
+  font-size: 0.86rem;
+}
+.rend-card-riga:last-child {
+  border-bottom: 0;
+}
+
+/* Tab di secondo livello (lista/tabella dentro i conti): stessi tasti, un
+   gradino piu' piccoli, per non competere col tab principale. */
+.rend-subtabs .tab {
+  padding: 7px 10px;
+  font-size: 0.85rem;
+}
+
+/* Scelta della strategia di sconto: tre riquadri con la spiegazione per
+   esteso: e' una decisione che si prende una volta e va capita, non un
+   interruttore da indovinare. */
+.sconto-scelte {
+  display: grid;
+  gap: 8px;
+}
+.sconto-scelta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--tile-bg, rgba(127, 127, 140, 0.08));
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.sconto-scelta.active {
+  border-color: var(--accent-2, #f5b94a);
+  background: rgba(245, 185, 74, 0.12);
+}
+.sconto-scelta span {
+  line-height: 1.4;
+}
+
+/* Segni di assortimento accanto al nome (coroncina premium, bottiglia "in
+   linea"): piccoli, senza rubare spazio come farebbe un'etichetta di testo
+   su meta' inventario. */
+.badge-segno {
+  margin-left: 6px;
+  font-size: 0.8em;
+  line-height: 1;
+  opacity: 0.9;
+}
+
+
+/* Colore di un prodotto nel POS, scelto dal MENU: la spia accanto al nome
+   dice com'e' adesso, la fila di pastiglie lo cambia. Lo stesso colore che
+   si sceglie al banco: e' scritto nello stesso posto. */
+/* La card del prodotto porta il suo colore: una fascia sul bordo sinistro,
+   come la piastrella al banco. La pastiglia in alto a destra apre la
+   tavolozza senza dover aprire le azioni. */
+.menu-card {
+  position: relative;
+  border-left: 5px solid var(--menu-colore, transparent);
+}
+.menu-colore-spia {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--menu-colore, transparent);
+  cursor: pointer;
+}
+@media (pointer: coarse) {
+  .menu-colore-spia {
+    width: 26px;
+    height: 26px;
+  }
+}
+.menu-colori-riga {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+.menu-colore {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #1c1305;
+  font-size: 0.7rem;
+  font-weight: 800;
+  line-height: 1;
+}
+.menu-colore.active {
+  border-color: var(--text);
+  box-shadow: 0 0 0 2px rgba(127, 127, 140, 0.35);
+}
+@media (pointer: coarse) {
+  .menu-colore {
+    width: 34px;
+    height: 34px;
+  }
+}
+
+/* ZOOM DELLA PAGINA: due tasti in basso a sinistra, sopra tutto e fuori dal
+   contenitore che viene scalato (portale sul body) — se stessero dentro si
+   rimpicciolirebbero proprio mentre servono a chi non ci vede bene.
+   Discreti finche' non li si tocca: al banco non devono rubare l'occhio. */
+.zoom-control {
+  position: fixed;
+  left: calc(8px + env(safe-area-inset-left, 0px));
+  bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  z-index: 400;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg-2) 85%, transparent);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+  opacity: 0.55;
+  transition: opacity 0.15s ease;
+}
+.zoom-control:hover,
+.zoom-control:focus-within {
+  opacity: 1;
+}
+.zoom-control button {
+  min-width: 30px;
+  height: 30px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+.zoom-control button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.zoom-control .zoom-livello {
+  min-width: 44px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  opacity: 0.8;
+}
+@media (pointer: coarse) {
+  .zoom-control button {
+    min-width: 38px;
+    height: 38px;
+    font-size: 1.15rem;
+  }
+  .zoom-control .zoom-livello {
+    min-width: 52px;
+    font-size: 0.8rem;
+  }
+}
+
+/* Totale di un conto ANNULLATO: barrato e spento. Non e' un incasso, e
+   mostrarlo uguale a quello dei conti veri faceva credere che contasse. */
+.grid-card-tot.tot-annullato {
+  text-decoration: line-through;
+  opacity: 0.5;
+  font-weight: 500;
+}
+
+/* Azioni del pannello ordine SOTTO il nome del conto, non accanto: di lato
+   restavano schiacciate e il nome finiva nei puntini di sospensione. */
+.posd-azioni {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+.posd-azioni .btn {
+  flex: 1 1 auto;
+  white-space: nowrap;
 }

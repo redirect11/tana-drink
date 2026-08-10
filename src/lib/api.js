@@ -4,6 +4,7 @@ import {
   addDoc,
   getDoc,
   getDocs,
+  getDocsFromCache,
   setDoc,
   updateDoc,
   deleteDoc,
@@ -13,7 +14,6 @@ import {
   orderBy,
   limit as fbLimit,
   onSnapshot,
-  runTransaction,
   serverTimestamp,
   increment,
   writeBatch,
@@ -21,18 +21,51 @@ import {
 } from 'firebase/firestore'
 import { db } from './firebaseClient.js'
 import { ORDER_STATUSES } from './orderStatus.js'
+import { splitAmounts } from './groups.js'
 import { createSumUpSale, updateSumUpSaleStatus, toSumUpStatus } from './sumupApi.js'
-import { computeConsumption, formatQty } from './inventory.js'
+import { computeConsumption, formatQty, qtyInStockUnit } from './inventory.js'
+import { consumptionDiff } from './warehouse.js'
+import {
+  ORDER_OPEN,
+  normalizeOrderDoc,
+  activeComanda,
+  allServed,
+  serveAllComande,
+  aggregateItems,
+  comandeStatuses,
+  itemsTotal as sumItems,
+} from './comande.js'
+import {
+  discountAmount,
+  discountAfterChange,
+  DEFAULT_DISCOUNT_POLICY,
+  orderDue,
+  paymentCloses,
+  summaryMethod,
+} from './pagamento.js'
+import { hoursBetweenIso } from './ore.js'
+import { businessDayKey, coverageStart, DEFAULT_CUTOFF_HOUR } from './businessDay.js'
+import { recentDrinkIds } from './posCatalog.js'
+import { DEFAULT_MARKUP, DEFAULT_ROUND_STEP } from './pricing.js'
 import { notify } from './notify.js'
+import { bgWrite } from './sync.js'
 
 const drinksCol = collection(db, 'drinks')
 const ordersCol = collection(db, 'orders')
+// Progressivo assoluto degli ordini (id interno che non riparte mai).
+const serialCounterRef = doc(db, 'counters', 'serial')
 const categoriesCol = collection(db, 'categories')
 const inventoryCol = collection(db, 'inventory_items')
 const inventoryCategoriesCol = collection(db, 'inventory_categories')
+const macroCategoriesCol = collection(db, 'macro_categories')
+const suppliersCol = collection(db, 'suppliers')
 const movementsCol = collection(db, 'stock_movements')
 const settingsDoc = doc(db, 'settings', 'bar')
-const serateCol = collection(db, 'serate')
+const groupsCol = collection(db, 'groups')
+const paymentsCol = collection(db, 'payments')
+const cashSessionsCol = collection(db, 'cash_sessions')
+const invoicesCol = collection(db, 'invoices')
+const vouchersCol = collection(db, 'vouchers')
 
 // --- Helpers ------------------------------------------------------------
 
@@ -68,6 +101,9 @@ function mapCategory(snap) {
     id: snap.id,
     name: c.name ?? '',
     sort_order: c.sort_order ?? 0,
+    icon: c.icon ?? null, // emoji scelta per la categoria (opzionale)
+    color: c.color ?? null, // colore custom (hex); null = colore automatico
+    macro_id: c.macro_id ?? null, // macro-categoria di appartenenza (inventario)
     created_at: toIso(c.created_at),
   }
 }
@@ -81,9 +117,18 @@ function mapItem(snap) {
     unit: i.unit ?? 'pz',
     stock: Number(i.stock) || 0,
     package_size: i.package_size ?? null,
+    // Famiglia del contenuto per gli articoli contati a pezzo: senza, una
+    // bottiglia da 33 cl non ha un costo al cl (vedi contentBase).
+    content_unit: i.content_unit ?? null,
     bottles_total: Number(i.bottles_total) || 0,
     low_threshold: Number(i.low_threshold) || 0,
     category_id: i.category_id ?? null,
+    supplier_id: i.supplier_id ?? null,
+    cost: i.cost != null ? Number(i.cost) : null,
+    vat: i.vat != null ? Number(i.vat) : 22,
+    // Chi non lo dichiara è semplicemente in assortimento: "in linea" è una
+    // scelta esplicita (i prodotti che non devono mancare), non il default.
+    status: i.status ?? 'assortimento',
     created_at: toIso(i.created_at),
   }
 }
@@ -106,13 +151,31 @@ function mapMovement(snap) {
 function mapOrder(snap) {
   const o = snap.data() || {}
   const items = Array.isArray(o.items) ? o.items : []
+  // Normalizza al modello conto/comande (i doc legacy ottengono una comanda
+  // sintetica). `workflow_status` è lo stato di lavorazione della comanda
+  // attiva: è ciò che coda/cliente mostrano e fanno avanzare.
+  const norm = normalizeOrderDoc(o)
+  const comande = norm.comande.map((c) => ({ ...c, created_at: toIso(c.created_at) }))
+  const active = activeComanda({ comande })
+  const workflow =
+    norm.status === ORDER_STATUSES.PAGATO || norm.status === ORDER_STATUSES.ANNULLATO
+      ? norm.status
+      : active
+        ? active.status
+        : comande.length > 0
+          ? ORDER_STATUSES.RITIRATO
+          : ORDER_STATUSES.RICEVUTO
   return {
     id: snap.id,
     daily_number: o.daily_number ?? null,
     order_date: o.order_date ?? null,
+    cash_session_id: o.cash_session_id ?? null,
     table_label: o.table_label ?? null,
     note: o.note ?? null,
-    status: o.status,
+    status: norm.status,
+    workflow_status: workflow,
+    comande,
+    active_comanda_id: active?.id ?? null,
     total: o.total ?? 0,
     coperto_persons: o.coperto_persons ?? 0,
     coperto_amount: o.coperto_amount ?? 0,
@@ -122,17 +185,27 @@ function mapOrder(snap) {
     placed_by: o.placed_by ?? null,
     customer_name: o.customer_name ?? null,
     customer_uid: o.customer_uid ?? null,
-    status_times: o.status_times ?? {},
+    // Tempi di lavorazione: quelli della comanda attiva (o gli ultimi).
+    status_times: (active ?? comande[comande.length - 1])?.status_times ?? o.status_times ?? {},
     cancelled_by: o.cancelled_by ?? null,
     cancel_kind: o.cancel_kind ?? null,
     cancel_phrase: o.cancel_phrase ?? null,
     cancel_message: o.cancel_message ?? null,
     cancel_notify: o.cancel_notify ?? false,
+    serial: o.serial ?? null,
     created_at: toIso(o.created_at),
     sumup_sale_id: o.sumup_sale_id ?? null,
-    serata_id: o.serata_id ?? null,
+    inventory_applied: o.inventory_applied ?? false,
     payment_method: o.payment_method ?? null,
     payment_status: o.payment_status ?? 'non_richiesto',
+    // Sconto sul conto e pagamenti parziali (split alla cassa).
+    discount: o.discount ?? null,
+    discount_amount: o.discount_amount ?? 0,
+    payments: (o.payments || []).map((p) => ({ ...p, at: toIso(p.at) })),
+    // Lotteria degli scontrini e fattura di cortesia emessa.
+    lottery_code: o.lottery_code ?? null,
+    invoice_id: o.invoice_id ?? null,
+    invoice_number: o.invoice_number ?? null,
     payment_required: o.payment_required ?? false,
     sumup_checkout_id: o.sumup_checkout_id ?? null,
     sumup_checkout_attempts: o.sumup_checkout_attempts ?? 0,
@@ -140,6 +213,10 @@ function mapOrder(snap) {
     sumup_transaction_id: o.sumup_transaction_id ?? null,
     paid_at: o.paid_at ?? null,
     payment_after_cancel: o.payment_after_cancel ?? false,
+    group_id: o.group_id ?? null,
+    group_name_snapshot: o.group_name_snapshot ?? null,
+    payment_id: o.payment_id ?? null,
+    client_temp_id: o.client_temp_id ?? null,
     order_items: items.map((i, idx) => ({
       id: `${snap.id}-${idx}`,
       drink_id: i.drink_id ?? null,
@@ -147,19 +224,10 @@ function mapOrder(snap) {
       unit_price: i.unit_price ?? 0,
       qty: i.qty ?? 1,
       sumup_product_id: i.sumup_product_id ?? null,
+      custom: i.custom ?? false,
+      recipe_items: i.recipe_items ?? null,
     })),
   }
-}
-
-// Data "di Roma" in formato YYYY-MM-DD per la numerazione giornaliera.
-function romeDateKey() {
-  const fmt = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Europe/Rome',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  })
-  return fmt.format(new Date())
 }
 
 // --- DRINKS (menù / ricette) ---
@@ -244,8 +312,14 @@ export async function fetchCategories() {
   return cats
 }
 
-export async function createCategory({ name, sort_order = 0 }) {
-  const ref = await addDoc(categoriesCol, { name, sort_order, created_at: serverTimestamp() })
+export async function createCategory({ name, sort_order = 0, icon = null, color = null }) {
+  const ref = await addDoc(categoriesCol, {
+    name,
+    sort_order,
+    icon: icon || null,
+    color: color || null,
+    created_at: serverTimestamp(),
+  })
   return mapCategory(await getDoc(ref))
 }
 
@@ -276,8 +350,8 @@ export async function fetchInventoryCategories() {
   return cats
 }
 
-export async function createInventoryCategory({ name, sort_order = 0 }) {
-  const ref = await addDoc(inventoryCategoriesCol, { name, sort_order, created_at: serverTimestamp() })
+export async function createInventoryCategory({ name, sort_order = 0, macro_id = null }) {
+  const ref = await addDoc(inventoryCategoriesCol, { name, sort_order, macro_id, created_at: serverTimestamp() })
   return mapCategory(await getDoc(ref))
 }
 
@@ -289,6 +363,83 @@ export async function updateInventoryCategory(id, patch) {
 
 export async function deleteInventoryCategory(id) {
   await deleteDoc(doc(db, 'inventory_categories', id))
+}
+
+// --- MACRO-CATEGORIE ---
+// Raggruppano le categorie d'inventario (Distillati, Birre+Bibite, Vino…) per
+// i conti aggregati di acquisti/fatturato. Il legame vive sulla categoria
+// (campo macro_id), così una categoria sta in al più una macro.
+
+function mapMacro(snap) {
+  const m = snap.data() || {}
+  return {
+    id: snap.id,
+    name: m.name ?? '',
+    sort_order: m.sort_order ?? 0,
+    created_at: toIso(m.created_at),
+  }
+}
+
+export async function fetchMacroCategories() {
+  const snap = await getDocs(macroCategoriesCol)
+  const list = snap.docs.map(mapMacro)
+  list.sort((a, b) => (a.sort_order - b.sort_order) || (a.name || '').localeCompare(b.name || ''))
+  return list
+}
+
+export async function createMacroCategory({ name, sort_order = 0 }) {
+  const ref = await addDoc(macroCategoriesCol, { name, sort_order, created_at: serverTimestamp() })
+  return mapMacro(await getDoc(ref))
+}
+
+export async function updateMacroCategory(id, patch) {
+  const ref = doc(db, 'macro_categories', id)
+  await updateDoc(ref, patch)
+  return mapMacro(await getDoc(ref))
+}
+
+// Eliminando una macro, le sue categorie tornano "senza macro" (non si
+// perdono): si azzera macro_id su quelle che la puntano.
+export async function deleteMacroCategory(id) {
+  const cats = await getDocs(query(inventoryCategoriesCol, where('macro_id', '==', id)))
+  await Promise.all(cats.docs.map((d) => updateDoc(d.ref, { macro_id: null })))
+  await deleteDoc(doc(db, 'macro_categories', id))
+}
+
+// --- FORNITORI ---
+
+function mapSupplier(snap) {
+  const s = snap.data() || {}
+  return {
+    id: snap.id,
+    name: s.name ?? '',
+    sort_order: s.sort_order ?? 0,
+    notes: s.notes ?? null,
+    email: s.email ?? null,
+    created_at: toIso(s.created_at),
+  }
+}
+
+export async function fetchSuppliers() {
+  const snap = await getDocs(suppliersCol)
+  const list = snap.docs.map(mapSupplier)
+  list.sort((a, b) => (a.sort_order - b.sort_order) || (a.name || '').localeCompare(b.name || ''))
+  return list
+}
+
+export async function createSupplier({ name, sort_order = 0, notes = null }) {
+  const ref = await addDoc(suppliersCol, { name, sort_order, notes, created_at: serverTimestamp() })
+  return mapSupplier(await getDoc(ref))
+}
+
+export async function updateSupplier(id, patch) {
+  const ref = doc(db, 'suppliers', id)
+  await updateDoc(ref, patch)
+  return mapSupplier(await getDoc(ref))
+}
+
+export async function deleteSupplier(id) {
+  await deleteDoc(doc(db, 'suppliers', id))
 }
 
 export async function createInventoryItem(item) {
@@ -315,20 +466,18 @@ export async function deleteInventoryItem(id) {
 // `qty` è già in unità base; può essere negativo per uno scarico manuale.
 export async function loadStock(itemId, qty, { reason = 'carico' } = {}) {
   const ref = doc(db, 'inventory_items', itemId)
-  await runTransaction(db, async (tx) => {
-    const s = await tx.get(ref)
-    if (!s.exists()) throw new Error('Prodotto non trovato')
-    const cur = s.data()
-    tx.update(ref, { stock: (Number(cur.stock) || 0) + qty })
-    tx.set(doc(movementsCol), {
-      item_id: itemId,
-      item_name: cur.name,
-      type: qty >= 0 ? 'load' : 'unload',
-      qty: Math.abs(qty),
-      unit: cur.unit ?? null,
-      reason,
-      created_at: serverTimestamp(),
-    })
+  const s = await getDoc(ref)
+  if (!s.exists()) throw new Error('Prodotto non trovato')
+  const cur = s.data()
+  await updateDoc(ref, { stock: (Number(cur.stock) || 0) + qty })
+  await addDoc(movementsCol, {
+    item_id: itemId,
+    item_name: cur.name,
+    type: qty >= 0 ? 'load' : 'unload',
+    qty: Math.abs(qty),
+    unit: cur.unit ?? null,
+    reason,
+    created_at: serverTimestamp(),
   })
   return mapItem(await getDoc(ref))
 }
@@ -338,30 +487,28 @@ export async function loadStock(itemId, qty, { reason = 'carico' } = {}) {
 // bottiglie, scartando le vuote accumulate (al riassortimento si buttano).
 export async function receiveBottles(itemId, count, openQty = 0) {
   const ref = doc(db, 'inventory_items', itemId)
-  await runTransaction(db, async (tx) => {
-    const s = await tx.get(ref)
-    if (!s.exists()) throw new Error('Prodotto non trovato')
-    const cur = s.data()
-    const size = Number(cur.package_size) || 0
-    const stock = Number(cur.stock) || 0
-    const full = size ? Math.floor(stock / size) : 0
-    const hasOpen = size ? stock - full * size > 1e-9 : false
-    const withContent = full + (hasOpen ? 1 : 0)
+  const s = await getDoc(ref)
+  if (!s.exists()) throw new Error('Prodotto non trovato')
+  const cur = s.data()
+  const size = Number(cur.package_size) || 0
+  const stock = Number(cur.stock) || 0
+  const full = size ? Math.floor(stock / size) : 0
+  const hasOpen = size ? stock - full * size > 1e-9 : false
+  const withContent = full + (hasOpen ? 1 : 0)
 
-    const addQty = count * size + openQty
-    const newStock = stock + addQty
-    const newTotal = withContent + count + (openQty > 0 ? 1 : 0)
+  const addQty = count * size + openQty
+  const newStock = stock + addQty
+  const newTotal = withContent + count + (openQty > 0 ? 1 : 0)
 
-    tx.update(ref, { stock: newStock, bottles_total: newTotal })
-    tx.set(doc(movementsCol), {
-      item_id: itemId,
-      item_name: cur.name,
-      type: 'load',
-      qty: addQty,
-      unit: cur.unit ?? null,
-      reason: 'carico',
-      created_at: serverTimestamp(),
-    })
+  await updateDoc(ref, { stock: newStock, bottles_total: newTotal })
+  await addDoc(movementsCol, {
+    item_id: itemId,
+    item_name: cur.name,
+    type: 'load',
+    qty: addQty,
+    unit: cur.unit ?? null,
+    reason: 'carico',
+    created_at: serverTimestamp(),
   })
   return mapItem(await getDoc(ref))
 }
@@ -369,29 +516,27 @@ export async function receiveBottles(itemId, count, openQty = 0) {
 // Rettifica: imposta lo stock a un valore assoluto e registra il delta.
 export async function adjustStock(itemId, newStock) {
   const ref = doc(db, 'inventory_items', itemId)
-  await runTransaction(db, async (tx) => {
-    const s = await tx.get(ref)
-    if (!s.exists()) throw new Error('Prodotto non trovato')
-    const cur = s.data()
-    const delta = newStock - (Number(cur.stock) || 0)
-    const size = Number(cur.package_size) || 0
-    // Mantieni coerente il numero totale di bottiglie con la nuova giacenza.
-    const minTotal = size ? Math.ceil(newStock / size) : 0
-    const patch = { stock: newStock }
-    if (minTotal > (Number(cur.bottles_total) || 0)) patch.bottles_total = minTotal
-    tx.update(ref, patch)
-    if (delta !== 0) {
-      tx.set(doc(movementsCol), {
-        item_id: itemId,
-        item_name: cur.name,
-        type: delta > 0 ? 'load' : 'unload',
-        qty: Math.abs(delta),
-        unit: cur.unit ?? null,
-        reason: 'rettifica',
-        created_at: serverTimestamp(),
-      })
-    }
-  })
+  const s = await getDoc(ref)
+  if (!s.exists()) throw new Error('Prodotto non trovato')
+  const cur = s.data()
+  const delta = newStock - (Number(cur.stock) || 0)
+  const size = Number(cur.package_size) || 0
+  // Mantieni coerente il numero totale di bottiglie con la nuova giacenza.
+  const minTotal = size ? Math.ceil(newStock / size) : 0
+  const patch = { stock: newStock }
+  if (minTotal > (Number(cur.bottles_total) || 0)) patch.bottles_total = minTotal
+  await updateDoc(ref, patch)
+  if (delta !== 0) {
+    await addDoc(movementsCol, {
+      item_id: itemId,
+      item_name: cur.name,
+      type: delta > 0 ? 'load' : 'unload',
+      qty: Math.abs(delta),
+      unit: cur.unit ?? null,
+      reason: 'rettifica',
+      created_at: serverTimestamp(),
+    })
+  }
   return mapItem(await getDoc(ref))
 }
 
@@ -400,91 +545,997 @@ export async function fetchStockMovements({ limit = 50 } = {}) {
   return snap.docs.map(mapMovement)
 }
 
-// --- SERATE (sessioni / conto) ---
+// Carichi registrati dopo una certa data (per la colonna ACQ della conta).
+// Filtro per tipo lato client: la query resta su un solo campo (niente
+// indici compositi).
+export async function fetchLoadMovementsSince(iso) {
+  const snap = await getDocs(
+    query(movementsCol, where('created_at', '>', Timestamp.fromDate(new Date(iso))))
+  )
+  return snap.docs.map(mapMovement).filter((m) => m.type === 'load')
+}
 
-function mapSerata(snap) {
+// --- CONTA DI MAGAZZINO (inventario periodico: DEP → ACQ → RIM → CONS) ---
+
+function mapStockCount(snap) {
+  const c = snap.data() || {}
+  return {
+    id: snap.id,
+    status: c.status ?? 'open',
+    started_at: toIso(c.started_at),
+    closed_at: toIso(c.closed_at),
+    lines: Array.isArray(c.lines) ? c.lines : [],
+    totals: c.totals ?? null,
+  }
+}
+
+// La conta aperta (al più una), o null.
+export async function getOpenStockCount() {
+  const snap = await getDocs(
+    query(collection(db, 'stock_counts'), where('status', '==', 'open'), fbLimit(1))
+  )
+  return snap.empty ? null : mapStockCount(snap.docs[0])
+}
+
+// Apre una nuova conta fotografando la giacenza corrente (DEP) di ogni
+// prodotto; costi/formnum denormalizzati per calcolare i valori alla chiusura.
+export async function startStockCount(items) {
+  const existing = await getOpenStockCount()
+  if (existing) return existing
+  const lines = (items || []).map((it) => ({
+    item_id: it.id,
+    name: it.name,
+    unit: it.unit,
+    package_size: it.package_size ?? null,
+    cost: it.cost ?? null,
+    vat: it.vat ?? 22,
+    dep: it.stock,
+    acq: 0,
+    rim: null,
+  }))
+  const ref = await addDoc(collection(db, 'stock_counts'), {
+    status: 'open',
+    started_at: serverTimestamp(),
+    lines,
+    totals: null,
+  })
+  return mapStockCount(await getDoc(ref))
+}
+
+// Salva le rimanenze inserite (senza chiudere la conta).
+export async function updateStockCountLines(id, lines) {
+  await updateDoc(doc(db, 'stock_counts', id), { lines })
+}
+
+// Chiude la conta salvando righe complete (cons/valori) e totali.
+// Se align=true le giacenze dei prodotti vengono allineate alle rimanenze
+// contate (con movimento di rettifica per la differenza).
+export async function closeStockCount(id, { lines, totals, align = true }) {
+  const countRef = doc(db, 'stock_counts', id)
+  const countSnap = await getDoc(countRef)
+  if (!countSnap.exists()) throw new Error('Conta non trovata')
+  if (countSnap.data().status !== 'open') throw new Error('Conta già chiusa')
+
+  const toAlign = align ? lines.filter((l) => l.rim != null && l.rim !== '') : []
+  const itemSnaps = await Promise.all(
+    toAlign.map((l) => getDoc(doc(db, 'inventory_items', l.item_id)))
+  )
+
+  for (let idx = 0; idx < toAlign.length; idx++) {
+    const l = toAlign[idx]
+    const s = itemSnaps[idx]
+    if (!s.exists()) continue
+    const cur = s.data()
+    const rim = Number(l.rim) || 0
+    const delta = rim - (Number(cur.stock) || 0)
+    if (delta === 0) continue
+    // Rettifica a valore assoluto: la conta è una fotografia autorevole,
+    // quindi qui si imposta lo stock (non increment).
+    await updateDoc(doc(db, 'inventory_items', l.item_id), { stock: rim })
+    await addDoc(movementsCol, {
+      item_id: l.item_id,
+      item_name: cur.name,
+      type: delta > 0 ? 'load' : 'unload',
+      qty: Math.abs(delta),
+      unit: cur.unit ?? null,
+      reason: 'conta',
+      created_at: serverTimestamp(),
+    })
+  }
+
+  await updateDoc(countRef, {
+    status: 'closed',
+    closed_at: serverTimestamp(),
+    lines,
+    totals,
+  })
+}
+
+export async function fetchStockCounts({ limit = 20 } = {}) {
+  const snap = await getDocs(
+    query(collection(db, 'stock_counts'), orderBy('started_at', 'desc'), fbLimit(limit))
+  )
+  return snap.docs.map(mapStockCount)
+}
+
+// --- ORDINI FORNITORE (generatore ordini + storico) ---
+
+function mapPurchaseOrder(snap) {
+  const o = snap.data() || {}
+  return {
+    id: snap.id,
+    supplier_id: o.supplier_id ?? null,
+    supplier_name: o.supplier_name ?? '',
+    status: o.status ?? 'inviato', // inviato | ricevuto
+    created_at: toIso(o.created_at),
+    received_at: toIso(o.received_at),
+    lines: Array.isArray(o.lines) ? o.lines : [],
+    total_net: Number(o.total_net) || 0,
+    total_gross: Number(o.total_gross) || 0,
+  }
+}
+
+export async function createPurchaseOrder({ supplier_id, supplier_name, lines, total_net, total_gross }) {
+  const ref = await addDoc(collection(db, 'purchase_orders'), {
+    supplier_id,
+    supplier_name,
+    status: 'inviato',
+    created_at: serverTimestamp(),
+    received_at: null,
+    lines,
+    total_net,
+    total_gross,
+  })
+  return mapPurchaseOrder(await getDoc(ref))
+}
+
+export async function fetchPurchaseOrders({ limit = 30 } = {}) {
+  const snap = await getDocs(
+    query(collection(db, 'purchase_orders'), orderBy('created_at', 'desc'), fbLimit(limit))
+  )
+  return snap.docs.map(mapPurchaseOrder)
+}
+
+export async function deletePurchaseOrder(id) {
+  await deleteDoc(doc(db, 'purchase_orders', id))
+}
+
+// Segna un ordine come ricevuto e carica la merce a magazzino: per ogni riga
+// aumenta la giacenza (confezioni × contenuto, o pezzi) e registra il
+// movimento; le bottiglie totali vengono aggiornate scartando le vuote,
+// come nel carico manuale.
+export async function receivePurchaseOrder(id) {
+  const orderRef = doc(db, 'purchase_orders', id)
+  const orderSnap = await getDoc(orderRef)
+  if (!orderSnap.exists()) throw new Error('Ordine non trovato')
+  const order = orderSnap.data()
+  if (order.status === 'ricevuto') return
+
+  const lines = (order.lines || []).filter((l) => (Number(l.qty_packages) || 0) > 0)
+  const itemSnaps = await Promise.all(
+    lines.map((l) => getDoc(doc(db, 'inventory_items', l.item_id)))
+  )
+
+  for (let idx = 0; idx < lines.length; idx++) {
+    const l = lines[idx]
+    const s = itemSnaps[idx]
+    if (!s.exists()) continue
+    const cur = s.data()
+    const qty = Number(l.qty_packages) || 0
+    const size = Number(cur.package_size) || 0
+    const stock = Number(cur.stock) || 0
+
+    let addQty
+    const patch = {}
+    if (cur.unit === 'pz' || !size) {
+      addQty = qty
+      patch.stock = increment(addQty)
+    } else {
+      addQty = qty * size
+      const full = Math.floor(stock / size)
+      const hasOpen = stock - full * size > 1e-9
+      patch.stock = increment(addQty)
+      patch.bottles_total = full + (hasOpen ? 1 : 0) + qty
+    }
+    await updateDoc(doc(db, 'inventory_items', l.item_id), patch)
+    await addDoc(movementsCol, {
+      item_id: l.item_id,
+      item_name: cur.name,
+      type: 'load',
+      qty: addQty,
+      unit: cur.unit ?? null,
+      reason: 'ordine fornitore',
+      created_at: serverTimestamp(),
+    })
+  }
+
+  await updateDoc(orderRef, { status: 'ricevuto', received_at: serverTimestamp() })
+}
+
+// --- SCADENZARIO FORNITORI (documenti / pagamenti) ---
+
+function mapInvoice(snap) {
+  const i = snap.data() || {}
+  return {
+    id: snap.id,
+    supplier_id: i.supplier_id ?? null,
+    supplier_name: i.supplier_name ?? '',
+    number: i.number ?? '',
+    doc_type: i.doc_type ?? 'Proforma',
+    date: i.date ?? null, // YYYY-MM-DD
+    amount: Number(i.amount) || 0,
+    paid: !!i.paid,
+    notes: i.notes ?? null,
+    created_at: toIso(i.created_at),
+  }
+}
+
+export async function fetchSupplierInvoices({ limit = 100 } = {}) {
+  const snap = await getDocs(
+    query(collection(db, 'supplier_invoices'), orderBy('date', 'desc'), fbLimit(limit))
+  )
+  return snap.docs.map(mapInvoice)
+}
+
+export async function createSupplierInvoice(invoice) {
+  const ref = await addDoc(collection(db, 'supplier_invoices'), {
+    ...invoice,
+    amount: Number(invoice.amount) || 0,
+    paid: !!invoice.paid,
+    created_at: serverTimestamp(),
+  })
+  return mapInvoice(await getDoc(ref))
+}
+
+export async function updateSupplierInvoice(id, patch) {
+  await updateDoc(doc(db, 'supplier_invoices', id), patch)
+}
+
+export async function deleteSupplierInvoice(id) {
+  await deleteDoc(doc(db, 'supplier_invoices', id))
+}
+
+// --- SERVIZIO (perpetuo) ---
+// Niente più "serate": il locale lavora in continuità. I conti restano
+// aperti finché non li si chiude a mano, anche a giorni di distanza. Le
+// giornate servono solo a RAGGRUPPARE a posteriori (giornata commerciale
+// con ora di taglio, vedi businessDay.js), non a delimitare il lavoro.
+
+// Statistiche tempi del servizio (perpetue, non più per serata):
+// prep_stats (attesa+preparazione, tutti gli ordini) e eta_stats (ciclo
+// completo, solo ordini serviti al tavolo). Alimentano la stima ETA.
+const serviceStatsDoc = doc(db, 'service_stats', 'global')
+
+export function subscribeServiceStats(onChange, onError) {
+  return onSnapshot(
+    serviceStatsDoc,
+    (snap) => onChange(snap.exists() ? snap.data() : {}),
+    onError ?? (() => {})
+  )
+}
+
+// Ordini della CODA: i conti aperti (sempre, per sempre) più quelli già
+// chiusi nella giornata commerciale corrente (per ristampe e verifiche).
+// Due sottoscrizioni unite: Firestore non fa OR fra campi diversi.
+export function subscribeActiveOrders(onChange, onError, { cutoffHour = DEFAULT_CUTOFF_HOUR } = {}) {
+  let aperti = []
+  let recenti = []
+  const emit = () => {
+    const byId = new Map()
+    for (const o of aperti) byId.set(o.id, o)
+    for (const o of recenti) byId.set(o.id, o)
+    const list = [...byId.values()]
+    list.sort((a, b) => String(a.created_at || '').localeCompare(String(b.created_at || '')))
+    onChange(list)
+  }
+  const fail = onError ?? (() => {})
+
+  // Stati che tengono un conto "in vita". Include i vecchi stati di
+  // lavorazione: la query lavora sul campo grezzo, quindi senza questi un
+  // conto storico non ancora saldato resterebbe invisibile.
+  const STATI_APERTI = [
+    ORDER_OPEN,
+    ORDER_STATUSES.RICEVUTO,
+    ORDER_STATUSES.IN_PREPARAZIONE,
+    ORDER_STATUSES.PRONTO,
+    ORDER_STATUSES.RITIRATO,
+  ]
+  // Finestra volutamente abbondante per i conti chiusi di oggi; il taglio
+  // esatto lo fa businessDayKey.
+  const copertura = Timestamp.fromDate(coverageStart(new Date()))
+
+  // PRIMA DI TUTTO, LA CACHE. onSnapshot di norma risponde subito col dato
+  // locale, ma non quando la rete c'è e non funziona (wifi collegato senza
+  // internet, portale captive, DNS che non risponde): lì l'SDK crede di
+  // essere online e ASPETTA il server, anche per minuti. La coda restava
+  // sullo spinner pur avendo tutti gli ordini già in cache.
+  // Con una lettura esplicita dalla cache la schermata è utilizzabile
+  // subito; il listener poi allinea da solo quando la rete torna.
+  const dallaCache = async () => {
+    try {
+      const [a, r] = await Promise.all([
+        getDocsFromCache(query(ordersCol, where('status', 'in', STATI_APERTI))),
+        getDocsFromCache(query(ordersCol, where('created_at', '>=', copertura))),
+      ])
+      if (aperti.length === 0 && recenti.length === 0) {
+        const oggi = businessDayKey(new Date(), cutoffHour)
+        aperti = a.docs.map(mapOrder)
+        recenti = r.docs
+          .map(mapOrder)
+          .filter((o) => businessDayKey(o.created_at, cutoffHour) === oggi)
+        if (aperti.length || recenti.length) emit()
+      }
+    } catch {
+      // Cache vuota o non disponibile: si aspetta il listener, come prima.
+    }
+  }
+
+  dallaCache()
+
+  // Conti aperti: nessun limite di data, si chiudono solo a mano.
+  const unsubAperti = onSnapshot(
+    query(ordersCol, where('status', 'in', STATI_APERTI)),
+    (snap) => {
+      aperti = snap.docs.map(mapOrder)
+      emit()
+    },
+    fail
+  )
+
+  // Chiusi/annullati della giornata commerciale in corso.
+  const unsubRecenti = onSnapshot(
+    query(ordersCol, where('created_at', '>=', copertura)),
+    (snap) => {
+      const oggi = businessDayKey(new Date(), cutoffHour)
+      recenti = snap.docs
+        .map(mapOrder)
+        .filter((o) => businessDayKey(o.created_at, cutoffHour) === oggi)
+      emit()
+    },
+    fail
+  )
+
+  return () => {
+    unsubAperti()
+    unsubRecenti()
+  }
+}
+
+// Riporta a "ricevuto" le comande dei conti ancora APERTI: si usa quando
+// si spegne la gestione della preparazione, altrimenti resterebbero in
+// stati che non si possono più far avanzare.
+// Lo scarico di magazzino NON si tocca: `inventory_applied` resta com'è,
+// quindi le scorte già consumate restano consumate (il drink è stato
+// fatto davvero) e, se un domani si riaccende la gestione, l'avanzamento
+// non le scala una seconda volta.
+export async function resetOpenOrdersToReceived() {
+  const snap = await getDocs(
+    query(
+      ordersCol,
+      where('status', 'in', [
+        ORDER_OPEN,
+        ORDER_STATUSES.RICEVUTO,
+        ORDER_STATUSES.IN_PREPARAZIONE,
+        ORDER_STATUSES.PRONTO,
+        ORDER_STATUSES.RITIRATO,
+      ])
+    )
+  )
+  let toccati = 0
+  for (const d of snap.docs) {
+    const data = d.data() || {}
+    const comande = Array.isArray(data.comande) ? data.comande : []
+    // Le comande annullate restano annullate: non sono lavorazioni in corso.
+    const nuove = comande.map((c) =>
+      c.status === ORDER_STATUSES.ANNULLATO ? c : { ...c, status: ORDER_STATUSES.RICEVUTO }
+    )
+    const cambia =
+      comande.some((c, i) => c.status !== nuove[i].status) || data.status !== ORDER_OPEN
+    if (!cambia) continue
+    bgWrite(() => updateDoc(d.ref, {
+      status: ORDER_OPEN,
+      comande: nuove,
+      comande_statuses: comandeStatuses(nuove),
+    }), 'ripristino ordine')
+    toccati += 1
+  }
+  return toccati
+}
+
+// CHIUDE SUBITO un conto già pagato: serve tutte le comande e porta
+// l'ordine a "pagato", senza far avanzare gli stati uno per uno. È la
+// scorciatoia per quando si è incassato in anticipo e poi si consegna
+// tutto insieme. Le comande mai prese in carico vengono scaricate a
+// magazzino adesso (una sola volta, come sempre).
+export async function closePaidOrder(id) {
+  const ref = doc(db, 'orders', id)
+  const snap = await getDoc(ref)
+  if (!snap.exists()) throw new Error('Ordine non trovato')
+  const data = snap.data()
+  if (data.payment_status !== 'pagato') {
+    throw new Error('Il conto non è ancora pagato.')
+  }
+  const nowIso = new Date().toISOString()
+  const chiusura = chiusuraPagamento(data, nowIso, { autoServe: true })
+  const lowStock = chiusura.comande
+    ? await depleteComandeInventory(unappliedEntries(id, chiusura.comande))
+    : []
+  bgWrite(() => updateDoc(ref, chiusura), 'chiusura conto')
+  notifyLowStock(lowStock)
+}
+
+// PREFERENZE POS condivise (ordine card e preferiti): stanno sul server
+// così l'arrangiamento è lo stesso su tutti i dispositivi del locale. Il
+// client applica SEMPRE prima in locale (localStorage) e scrive qui in
+// background — offline la scrittura si accoda e va al ritorno della rete.
+const posPrefsRef = doc(db, 'pos_prefs', 'global')
+
+export function subscribePosPrefs(cb, onError) {
+  return onSnapshot(
+    posPrefsRef,
+    (snap) => cb(snap.exists() ? snap.data() : null),
+    onError ?? (() => {})
+  )
+}
+export async function savePosOrder(order) {
+  await setDoc(posPrefsRef, { order: order || [], order_updated_at: serverTimestamp() }, { merge: true })
+}
+export async function savePosFavorites(favorites) {
+  await setDoc(posPrefsRef, { favorites: favorites || [], favorites_updated_at: serverTimestamp() }, { merge: true })
+}
+// Colore del "tab" (angolo) di ogni prodotto: mappa { drinkId: '#rrggbb' }.
+// Vale per tutto il locale (come ordine/preferiti), sincronizzato in background.
+export async function savePosColors(colors) {
+  await setDoc(posPrefsRef, { colors: colors || {}, colors_updated_at: serverTimestamp() }, { merge: true })
+}
+
+// Id dei drink usati di RECENTE negli ordini (per la raccolta "Recenti" del
+// POS): ultimi item distinti, più recenti prima. Legge un blocco di ordini
+// recenti e li riduce lato client.
+export async function fetchRecentDrinkIds(limit = 20) {
+  const snap = await getDocs(query(ordersCol, orderBy('created_at', 'desc'), fbLimit(60)))
+  return recentDrinkIds(snap.docs.map(mapOrder), limit)
+}
+
+// PROSSIMO numero d'ordine (senza consumarlo): serve al POS per mostrare il
+// progressivo già all'apertura della schermata, prima ancora del primo item.
+// Segue lo stesso contatore di createOrder (sessione di cassa, o giornata).
+export async function peekNextDailyNumber({ cutoffHour = DEFAULT_CUTOFF_HOUR } = {}) {
+  const cashSessionId = await currentCashSessionId()
+  const key = cashSessionId ? `cash-${cashSessionId}` : businessDayKey(new Date(), cutoffHour)
+  const snap = await getDoc(doc(db, 'counters', key))
+  return ((snap.exists() ? snap.data().last : 0) || 0) + 1
+}
+
+// STORICO ordini in ordine cronologico (più recenti prima), qualunque sia lo
+// stato: aperti, chiusi, annullati. Usato dallo storico nel Flusso cassa.
+// STORICO ordini in tempo reale (più recenti prima), qualunque sia lo stato:
+// aperti, chiusi, annullati. onSnapshot e non getDocs: OFFLINE la lista arriva
+// SUBITO dalla cache locale (una lettura una-tantum resterebbe appesa), e si
+// aggiorna da sola quando torna la rete.
+export function subscribeOrdersHistory(cb, onError, { limit = 300 } = {}) {
+  const byDate = (a, b) => String(b.created_at || '').localeCompare(String(a.created_at || ''))
+  let stopFallback = null
+  const stopMain = onSnapshot(
+    query(ordersCol, orderBy('created_at', 'desc'), fbLimit(limit)),
+    (snap) => cb(snap.docs.map(mapOrder)),
+    () => {
+      // Ordinamento non disponibile (indice/campo): si ripiega su una lettura
+      // semplice ordinata qui. NON si segnala errore se il ripiego funziona,
+      // altrimenti resterebbe un avviso rosso sopra una lista piena.
+      stopFallback = onSnapshot(
+        query(ordersCol, fbLimit(limit)),
+        (snap) => cb(snap.docs.map(mapOrder).sort(byDate)),
+        onError ?? (() => {})
+      )
+    }
+  )
+  // Disiscrive ENTRAMBE: senza questo il ripiego restava vivo per sempre.
+  return () => {
+    stopMain()
+    if (stopFallback) stopFallback()
+  }
+}
+
+// Ordini di una giornata commerciale (per statistiche e storico).
+export async function fetchOrdersForBusinessDay(dayKey, cutoffHour = DEFAULT_CUTOFF_HOUR) {
+  // Prendo una finestra larga attorno al giorno e taglio con businessDayKey.
+  const from = new Date(`${dayKey}T00:00:00Z`)
+  from.setUTCDate(from.getUTCDate() - 1)
+  const to = new Date(`${dayKey}T00:00:00Z`)
+  to.setUTCDate(to.getUTCDate() + 2)
+  const snap = await getDocs(
+    query(
+      ordersCol,
+      where('created_at', '>=', Timestamp.fromDate(from)),
+      where('created_at', '<', Timestamp.fromDate(to))
+    )
+  )
+  return snap.docs
+    .map(mapOrder)
+    .filter((o) => businessDayKey(o.created_at, cutoffHour) === dayKey)
+}
+
+// Ordini in un intervallo di giornate commerciali (estremi inclusi).
+export async function fetchOrdersBetween(fromDayKey, toDayKey, cutoffHour = DEFAULT_CUTOFF_HOUR) {
+  const from = new Date(`${fromDayKey}T00:00:00Z`)
+  from.setUTCDate(from.getUTCDate() - 1)
+  const to = new Date(`${toDayKey}T00:00:00Z`)
+  to.setUTCDate(to.getUTCDate() + 2)
+  const snap = await getDocs(
+    query(
+      ordersCol,
+      where('created_at', '>=', Timestamp.fromDate(from)),
+      where('created_at', '<', Timestamp.fromDate(to))
+    )
+  )
+  return snap.docs.map(mapOrder).filter((o) => {
+    const k = businessDayKey(o.created_at, cutoffHour)
+    return k && k >= fromDayKey && k <= toDayKey
+  })
+}
+
+// --- GROUPS (contenitori di ordini) ---
+
+function mapGroup(snap) {
+  const g = snap.data() || {}
+  return {
+    id: snap.id,
+    name: g.name ?? '',
+    kind: g.kind ?? 'manual',
+    customer_uid: g.customer_uid ?? null,
+    parent_group_id: g.parent_group_id ?? null,
+    has_child_groups: g.has_child_groups ?? false,
+    status: g.status ?? 'aperto',
+    split_count: g.split_count ?? null,
+    pinned: g.pinned ?? false,
+    last_order_at: toIso(g.last_order_at),
+    created_at: toIso(g.created_at),
+    created_by: g.created_by ?? null,
+    closed_at: toIso(g.closed_at),
+  }
+}
+
+// Gruppo-cliente: id == uid, idempotente. Aggiorna nome e ultimo ordine.
+export async function ensureCustomerGroup(uid, name) {
+  await setDoc(
+    doc(groupsCol, uid),
+    {
+      kind: 'customer',
+      customer_uid: uid,
+      name: name || 'Cliente',
+      parent_group_id: null,
+      has_child_groups: false,
+      status: 'aperto',
+      last_order_at: serverTimestamp(),
+    },
+    { merge: true }
+  )
+}
+
+// Gruppo manuale creato dallo staff (eventualmente annidato in un padre).
+export async function createManualGroup({ name, parent_group_id = null, created_by = null }) {
+  const ref = await addDoc(groupsCol, {
+    kind: 'manual',
+    name: name?.trim() || 'Gruppo',
+    customer_uid: null,
+    parent_group_id: parent_group_id || null,
+    has_child_groups: false,
+    status: 'aperto',
+    split_count: null,
+    pinned: true,
+    last_order_at: serverTimestamp(),
+    created_at: serverTimestamp(),
+    created_by: created_by ?? null,
+  })
+  if (parent_group_id) {
+    await updateDoc(doc(groupsCol, parent_group_id), { has_child_groups: true }).catch(() => {})
+  }
+  return mapGroup(await getDoc(ref))
+}
+
+export async function renameGroup(id, name) {
+  await updateDoc(doc(groupsCol, id), { name: name.trim() })
+}
+
+// Annida `childId` dentro `parentId` (il padre diventa contenitore).
+export async function nestGroup(childId, parentId) {
+  await updateDoc(doc(groupsCol, childId), { parent_group_id: parentId })
+  await updateDoc(doc(groupsCol, parentId), { has_child_groups: true })
+}
+
+// Sgancia un gruppo dal padre; se il padre resta senza figli, non è più
+// un contenitore (torna a poter ricevere ordini diretti).
+export async function unnestGroup(childId) {
+  const childSnap = await getDoc(doc(groupsCol, childId))
+  const parentId = childSnap.exists() ? childSnap.data().parent_group_id : null
+  await updateDoc(doc(groupsCol, childId), { parent_group_id: null })
+  if (parentId) {
+    const rest = await getDocs(query(groupsCol, where('parent_group_id', '==', parentId)))
+    if (rest.empty) {
+      await updateDoc(doc(groupsCol, parentId), { has_child_groups: false }).catch(() => {})
+    }
+  }
+}
+
+export async function setGroupPinned(id, pinned) {
+  await updateDoc(doc(groupsCol, id), { pinned: !!pinned })
+}
+
+// CHIUDE (archivia) uno o più gruppi: escono dalla lista dei gruppi aperti.
+// Gli ordini restano dove sono (col loro stato/pagamento). Local-first.
+export function closeGroups(ids) {
+  for (const id of ids || []) {
+    updateDoc(doc(groupsCol, id), { status: 'chiuso', closed_at: serverTimestamp() }).catch(() => {})
+  }
+}
+export const closeGroup = (id) => closeGroups([id])
+
+// ELIMINA un gruppo: gli ordini vengono SGANCIATI (restano, senza etichetta
+// gruppo) e gli eventuali sottogruppi tornano indipendenti. Local-first: le
+// scritture partono e si sincronizzano in background.
+export async function deleteGroup(id) {
+  const snap = await getDoc(doc(groupsCol, id))
+  const parentId = snap.exists() ? snap.data().parent_group_id : null
+  // Ordini del gruppo → senza gruppo.
+  const os = await getDocs(query(ordersCol, where('group_id', '==', id)))
+  os.docs.forEach((d) => updateDoc(d.ref, { group_id: null, group_name_snapshot: null }).catch(() => {}))
+  // Sottogruppi → indipendenti.
+  const cs = await getDocs(query(groupsCol, where('parent_group_id', '==', id)))
+  cs.docs.forEach((d) => updateDoc(d.ref, { parent_group_id: null }).catch(() => {}))
+  deleteDoc(doc(groupsCol, id)).catch(() => {})
+  // Se era l'ultimo figlio, il padre non è più contenitore.
+  if (parentId) {
+    const rest = await getDocs(query(groupsCol, where('parent_group_id', '==', parentId)))
+    const others = rest.docs.filter((d) => d.id !== id)
+    if (others.length === 0) updateDoc(doc(groupsCol, parentId), { has_child_groups: false }).catch(() => {})
+  }
+}
+
+export async function fetchGroup(id) {
+  const snap = await getDoc(doc(groupsCol, id))
+  return snap.exists() ? mapGroup(snap) : null
+}
+
+// Gruppi APERTI (perpetui) — per drawer e coda. Si chiudono a mano.
+export function subscribeOpenGroups(onChange, onError) {
+  const q = query(groupsCol, where('status', '==', 'aperto'))
+  return onSnapshot(
+    q,
+    (snap) => onChange(snap.docs.map(mapGroup)),
+    onError ?? (() => {})
+  )
+}
+
+// Gruppi-cliente recenti (hanno ordinato): per "richiamare" il cliente.
+export function subscribeRecentGroups(onChange, onError, limitN = 20) {
+  const q = query(
+    groupsCol,
+    where('kind', '==', 'customer'),
+    orderBy('last_order_at', 'desc'),
+    fbLimit(limitN)
+  )
+  return onSnapshot(
+    q,
+    (snap) => onChange(snap.docs.map(mapGroup)),
+    onError ?? (() => {})
+  )
+}
+
+// --- PAGAMENTI DI GRUPPO (contanti) + ledger ---
+
+// Incassa in contanti un insieme di ordini (un (sotto)gruppo o una sua
+// quota). In un'unica transazione: marca pagati gli ordini non ancora
+// saldati e scrive nel ledger `payments` (1 documento, o N se diviso per
+// N). `split` = { count } per il conto diviso. Restituisce settlement_id.
+// Il pagamento CHIUDE il conto solo se non resta nulla da consegnare.
+// Con la gestione della preparazione attiva, incassare non significa aver
+// servito: pagare in anticipo è normale, e marcare tutto "servito" farebbe
+// sparire dalla coda un ordine ancora da preparare. Senza quella gestione
+// non esistono stati di consegna, quindi il pagamento chiude e basta.
+function chiusuraPagamento(rawOrder, nowIso, { autoServe = true } = {}) {
+  const norm = normalizeOrderDoc(rawOrder)
+  if (!autoServe && !allServed(norm)) {
+    // Resta APERTO: pagato, ma ancora da consegnare.
+    return { payment_status: 'pagato', paid_at: nowIso }
+  }
+  const comande = serveAllComande(norm.comande, nowIso)
+  return {
+    status: ORDER_STATUSES.PAGATO,
+    [`status_times.${ORDER_STATUSES.PAGATO}`]: nowIso,
+    payment_status: 'pagato',
+    paid_at: nowIso,
+    comande,
+    comande_statuses: comandeStatuses(comande),
+  }
+}
+
+export async function payGroupCash({
+  orderIds,
+  by = null,
+  group_id = null,
+  group_ids = [],
+  split = null,
+  // COME si è incassato. Era cablato a 'banco': un tavolo pagato con la carta
+  // finiva nei contanti, e a fine serata la cassa non tornava.
+  method = 'banco',
+}) {
+  if (!orderIds || orderIds.length === 0) return null
+  const nowIso = new Date().toISOString()
+  const settlementId = doc(paymentsCol).id
+
+  const refs = orderIds.map((id) => doc(ordersCol, id))
+  const snaps = await Promise.all(refs.map((r) => getDoc(r)))
+  let total = 0
+  const covered = []
+  const items = []
+  snaps.forEach((s, i) => {
+    if (!s.exists()) return
+    const o = s.data()
+    if (o.status === ORDER_STATUSES.ANNULLATO || o.payment_status === 'pagato') return
+    total += Number(o.total) || 0
+    covered.push({ ref: refs[i], raw: o })
+    for (const it of o.items || []) {
+      items.push({ order_id: refs[i].id, name: it.name, qty: it.qty, unit_price: it.unit_price })
+    }
+  })
+  if (covered.length === 0) return null
+
+  // Il pagamento chiude i conti: tutte le comande risultano SERVITE e quelle
+  // mai prese in carico si scaricano a magazzino ora.
+  const served = covered.map(({ ref, raw }) => ({
+    ref,
+    comande: serveAllComande(normalizeOrderDoc(raw).comande, nowIso),
+  }))
+  const lowStock = await depleteComandeInventory(
+    served.flatMap(({ ref, comande }) => unappliedEntries(ref.id, comande))
+  )
+  for (const { ref, comande } of served) {
+    bgWrite(() => updateDoc(ref, {
+      payment_status: 'pagato',
+      payment_method: method,
+      paid_at: nowIso,
+      payment_id: settlementId,
+      status: ORDER_STATUSES.PAGATO,
+      [`status_times.${ORDER_STATUSES.PAGATO}`]: nowIso,
+      comande,
+      comande_statuses: comandeStatuses(comande),
+    }), 'pagamento gruppo')
+  }
+
+  const orderIdsCovered = covered.map((c) => c.ref.id)
+  const baseDoc = {
+    created_at: serverTimestamp(),
+    by,
+    direction: 'incasso',
+    method,
+    status: 'pagato',
+    group_id: group_id || null,
+    group_ids: group_ids || [],
+    order_ids: orderIdsCovered,
+    items,
+    settlement_id: settlementId,
+    paid_at: nowIso,
+  }
+  if (split && split.count > 1) {
+    const amounts = splitAmounts(total, split.count)
+    for (let idx = 0; idx < amounts.length; idx++) {
+      bgWrite(() => addDoc(paymentsCol, {
+        ...baseDoc,
+        amount: amounts[idx],
+        split_count: split.count,
+        split_index: idx + 1,
+      }), 'ledger pagamento')
+    }
+  } else {
+    bgWrite(() => addDoc(paymentsCol, { ...baseDoc, amount: Math.round(total * 100) / 100, split_count: null, split_index: null }), 'ledger pagamento')
+  }
+  notifyLowStock(lowStock)
+  return settlementId
+}
+
+// Crea un pagamento "in attesa" per un gruppo (usato dai pagamenti SumUp:
+// il documento porta importo e order_ids; il checkout SumUp lo salda via
+// Cloud Function/webhook). Restituisce il paymentId.
+export async function createPendingGroupPayment({
+  orderIds,
+  amount,
+  method, // 'online' | 'lettore'
+  group_id = null,
+  group_ids = [],
+  items = [],
+  by = null,
+}) {
+  const ref = await addDoc(paymentsCol, {
+    created_at: serverTimestamp(),
+    by,
+    direction: 'incasso',
+    method,
+    status: 'in_attesa',
+    amount: Math.round((Number(amount) || 0) * 100) / 100,
+    group_id: group_id || null,
+    group_ids: group_ids || [],
+    order_ids: orderIds || [],
+    items,
+    split_count: null,
+    split_index: null,
+    settlement_id: null,
+    sumup_checkout_id: null,
+    sumup_client_transaction_id: null,
+    sumup_transaction_id: null,
+    paid_at: null,
+  })
+  return ref.id
+}
+
+function mapPayment(snap) {
+  const p = snap.data() || {}
+  return {
+    id: snap.id,
+    created_at: toIso(p.created_at),
+    by: p.by ?? null,
+    method: p.method ?? 'banco',
+    status: p.status ?? 'pagato',
+    amount: p.amount ?? 0,
+    group_id: p.group_id ?? null,
+    group_ids: p.group_ids ?? [],
+    order_ids: p.order_ids ?? [],
+    items: p.items ?? [],
+    split_count: p.split_count ?? null,
+    split_index: p.split_index ?? null,
+    settlement_id: p.settlement_id ?? null,
+    paid_at: toIso(p.paid_at),
+  }
+}
+
+// Pagamenti della giornata commerciale corrente (realtime, più recenti prima).
+export function subscribePayments(onChange, onError, { cutoffHour = DEFAULT_CUTOFF_HOUR } = {}) {
+  const from = Timestamp.fromDate(coverageStart(new Date()))
+  const q = query(paymentsCol, where('created_at', '>=', from))
+  return onSnapshot(
+    q,
+    (snap) => {
+      const oggi = businessDayKey(new Date(), cutoffHour)
+      const list = snap.docs
+        .map(mapPayment)
+        .filter((x) => businessDayKey(x.created_at, cutoffHour) === oggi)
+      list.sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')))
+      onChange(list)
+    },
+    onError ?? (() => {})
+  )
+}
+
+// --- CASSA (apertura/chiusura serata) ---
+// Una sessione di cassa marca la finestra della "serata": si apre a inizio
+// servizio (con un fondo cassa opzionale) e si chiude a fine, salvando il
+// riepilogo. Il flusso cassa è calcolato dagli ordini nella finestra.
+
+function mapCashSession(snap) {
   const s = snap.data() || {}
   return {
     id: snap.id,
     status: s.status ?? 'open',
     opened_at: toIso(s.opened_at),
     closed_at: toIso(s.closed_at),
-    orders_count: s.orders_count ?? null,
-    total: s.total ?? null,
-    // Statistiche tempi: prep_stats (attesa+preparazione, tutti gli ordini),
-    // eta_stats (ciclo completo, solo ordini serviti al tavolo).
-    prep_stats: s.prep_stats ?? null,
-    eta_stats: s.eta_stats ?? null,
-    report: s.report ?? null,
+    opened_by: s.opened_by ?? null,
+    closed_by: s.closed_by ?? null,
+    fondo_cassa: Number(s.fondo_cassa) || 0,
+    business_day: s.business_day ?? null,
+    snapshot: s.snapshot ?? null,
+    counted_cash: s.counted_cash != null ? Number(s.counted_cash) : null,
+    difference: s.difference != null ? Number(s.difference) : null,
+    note: s.note ?? null,
   }
 }
 
-// La serata attualmente aperta (o null).
-export async function getOpenSerata() {
-  const snap = await getDocs(query(serateCol, where('status', '==', 'open'), fbLimit(1)))
-  return snap.empty ? null : mapSerata(snap.docs[0])
+// Id della sessione di cassa APERTA (o null). Letta anche dalla cache offline.
+// Serve al progressivo degli ordini, che segue la CASSA e non il giorno.
+// Puntatore PUBBLICO alla sessione di cassa aperta. Serve perché `cash_sessions`
+// è leggibile solo dallo staff (contiene incassi e nomi), ma il progressivo
+// dev'essere lo stesso ANCHE per gli ordini che arrivano dai clienti: senza
+// questo, i loro ordini userebbero il contatore del giorno e si avrebbero
+// numeri duplicati in coda.
+const activeCashRef = doc(db, 'counters', '_active_cash')
+
+async function currentCashSessionId() {
+  // 1) puntatore pubblico (funziona per tutti, cliente compreso)
+  try {
+    const snap = await getDoc(activeCashRef)
+    if (snap.exists()) return snap.data().session_id ?? null
+  } catch {
+    /* si prova con la lettura diretta qui sotto */
+  }
+  // 2) fallback per lo staff: sessioni aperte prima che esistesse il puntatore
+  try {
+    const snap = await getDocs(query(cashSessionsCol, where('status', '==', 'open')))
+    if (snap.empty) return null
+    const list = snap.docs.map((d) => ({ id: d.id, opened_at: toIso(d.data().opened_at) }))
+    list.sort((a, b) => String(b.opened_at || '').localeCompare(String(a.opened_at || '')))
+    // Riallinea il puntatore, così anche i clienti prendono il numero giusto.
+    setDoc(activeCashRef, { session_id: list[0].id }, { merge: true }).catch(() => {})
+    return list[0].id
+  } catch {
+    return null
+  }
 }
 
-// Apre una nuova serata (errore se ce n'è già una aperta).
-export async function openSerata() {
-  const existing = await getOpenSerata()
-  if (existing) return existing
-  const ref = await addDoc(serateCol, { status: 'open', opened_at: serverTimestamp() })
-  return mapSerata(await getDoc(ref))
-}
-
-// Chiude la serata salvando il riepilogo (n. ordini e totale dei non annullati).
-export async function closeSerata(id, report = null) {
-  const snap = await getDocs(query(ordersCol, where('serata_id', '==', id)))
-  const orders = snap.docs.map(mapOrder).filter((o) => o.status !== ORDER_STATUSES.ANNULLATO)
-  const total = orders.reduce((s, o) => s + (Number(o.total) || 0), 0)
-  const ref = doc(db, 'serate', id)
-  await updateDoc(ref, {
-    status: 'closed',
-    closed_at: serverTimestamp(),
-    orders_count: orders.length,
-    total,
-    ...(report ? { report } : {}),
-  })
-  return mapSerata(await getDoc(ref))
-}
-
-// Realtime sulla serata aperta (per il menù cliente e l'header bartender).
-export function subscribeOpenSerata(onChange, onError) {
-  const q = query(serateCol, where('status', '==', 'open'), fbLimit(1))
-  return onSnapshot(
-    q,
-    (snap) => onChange(snap.empty ? null : mapSerata(snap.docs[0])),
-    onError
-  )
-}
-
-// Realtime su tutti gli ordini di una serata (tutti gli stati).
-export function subscribeSerataOrders(serataId, onChange, onError) {
-  const q = query(ordersCol, where('serata_id', '==', serataId))
+// Sessione di cassa attualmente aperta (una sola alla volta), in realtime.
+// Niente orderBy nella query (eviterebbe un indice composito e, soprattutto,
+// escluderebbe il doc appena creato offline finché opened_at è nullo): si
+// ordina lato client.
+export function subscribeOpenCashSession(onChange, onError) {
+  const q = query(cashSessionsCol, where('status', '==', 'open'))
   return onSnapshot(
     q,
     (snap) => {
-      const orders = snap.docs.map(mapOrder)
-      orders.sort((a, b) =>
-        String(a.created_at || '').localeCompare(String(b.created_at || ''))
-      )
-      onChange(orders)
+      const list = snap.docs.map(mapCashSession)
+      list.sort((a, b) => String(b.opened_at || '').localeCompare(String(a.opened_at || '')))
+      onChange(list[0] || null)
     },
-    onError
+    onError ?? (() => {})
   )
+}
+
+// Apre la cassa. LOCAL-FIRST: id generato dal client e opened_at come ISO del
+// client (così il doc compare subito nella subscription anche offline); la
+// scrittura va in background senza attendere il server — altrimenti offline la
+// promise non si risolverebbe mai e il tasto sembrerebbe non fare nulla. Il
+// "una sola cassa aperta" è garantito dalla UI (il bottone c'è solo se non ce
+// n'è una aperta).
+export function openCashSession({ by = null, fondo = 0, cutoffHour = DEFAULT_CUTOFF_HOUR } = {}) {
+  const ref = doc(cashSessionsCol)
+  setDoc(ref, {
+    status: 'open',
+    opened_at: new Date().toISOString(),
+    opened_by: by,
+    fondo_cassa: Number(fondo) || 0,
+    business_day: businessDayKey(new Date(), cutoffHour),
+    created_at: serverTimestamp(),
+  }).catch(() => {})
+  // Puntatore pubblico: da qui anche gli ordini dei clienti prendono il
+  // progressivo della sessione (vedi currentCashSessionId).
+  setDoc(activeCashRef, { session_id: ref.id }, { merge: true }).catch(() => {})
+  return ref.id
+}
+
+// Chiude la cassa: salva il riepilogo (snapshot) ed eventuale contante contato.
+// Anche qui local-first: scrittura in background, closed_at come ISO client.
+export function closeCashSession(id, { by = null, snapshot = null, countedCash = null, note = null } = {}) {
+  const patch = {
+    status: 'closed',
+    closed_at: new Date().toISOString(),
+    closed_by: by,
+    snapshot: snapshot || null,
+    note: note || null,
+  }
+  if (countedCash != null && countedCash !== '') {
+    const counted = Number(countedCash) || 0
+    patch.counted_cash = counted
+    const atteso = Number(snapshot?.contanteAtteso) || 0
+    patch.difference = Math.round((counted - atteso) * 100) / 100
+  }
+  updateDoc(doc(db, 'cash_sessions', id), patch).catch(() => {})
+  // Cassa chiusa: il puntatore pubblico si svuota, così il progressivo riparte
+  // alla prossima apertura (e intanto si ricade sulla giornata commerciale).
+  setDoc(activeCashRef, { session_id: null }, { merge: true }).catch(() => {})
+}
+
+// Storico delle sessioni di cassa chiuse, più recenti prima.
+export async function fetchCashSessions({ limit = 30 } = {}) {
+  const snap = await getDocs(query(cashSessionsCol, orderBy('opened_at', 'desc'), fbLimit(limit)))
+  return snap.docs.map(mapCashSession)
 }
 
 // --- ORDERS ---
 
 // Crea un ordine con i relativi item. Il numero progressivo riparte ad ogni
-// serata: è assegnato in modo atomico da un contatore per serata
-// (counters/{serataId}). Richiede una serata aperta.
+// giornata commerciale: è assegnato da un contatore per giornata
+// (counters/{YYYY-MM-DD}), che riparte a ogni nuova giornata.
 export async function createOrder({
   table_label,
   note,
   items,
-  serata_id,
   coperto_persons = 0,
   coperto_amount = 0,
   service_charge_amount = 0,
@@ -497,51 +1548,123 @@ export async function createOrder({
   payment_method = null, // 'online' se il cliente sceglie di pagare subito
   payment_status = 'non_richiesto', // 'in_attesa' per i pagamenti online
   payment_required = false, // fotografa l'impostazione alla creazione
+  group_id = null, // gruppo a cui associare l'ordine (null = nessuno)
+  group_name_snapshot = null, // nome gruppo al momento dell'ordine (storico)
+  status = ORDER_STATUSES.RICEVUTO, // stato iniziale (il POS lo crea già in preparazione)
+  client_temp_id = null, // id del placeholder POS: la griglia scambia SENZA doppioni
+  cutoff_hour = DEFAULT_CUTOFF_HOUR, // ora di taglio della giornata commerciale
 }) {
-  if (!serata_id) throw new Error('Nessuna serata aperta: ordini non disponibili.')
+  // Cliente registrato senza gruppo esplicito → gruppo-cliente automatico
+  // (id == uid). Il documento è idempotente (merge).
+  if (!group_id && customer_uid) {
+    group_id = customer_uid
+    if (!group_name_snapshot) group_name_snapshot = customer_name || null
+    await ensureCustomerGroup(customer_uid, customer_name || 'Cliente').catch(
+      (e) => console.error('[groups] ensureCustomerGroup:', e?.message || e)
+    )
+  }
+  // Un gruppo-contenitore (con sottogruppi) non può avere ordini diretti.
+  if (group_id) {
+    const gSnap = await getDoc(doc(groupsCol, group_id))
+    if (gSnap.exists() && gSnap.data().has_child_groups) {
+      throw new Error('Questo gruppo contiene altri gruppi: aggiungi l’ordine a un sottogruppo.')
+    }
+  }
   const itemsTotal = items.reduce((s, i) => s + i.qty * Number(i.price || 0), 0)
   const total = itemsTotal + coperto_amount + service_charge_amount + tip_amount
-  const orderDate = romeDateKey()
-  const counterRef = doc(db, 'counters', serata_id)
+  // Giornata commerciale: raggruppa e fa ripartire il progressivo #N. La
+  // nottata oltre la mezzanotte resta nella giornata in cui è cominciata.
+  const orderDate = businessDayKey(new Date(), cutoff_hour)
+  // PROGRESSIVO legato alla SESSIONE DI CASSA: finché la cassa resta aperta i
+  // numeri continuano (anche a cavallo di più giorni) e riprendono da 1 solo
+  // alla nuova apertura. Senza cassa aperta si ricade sulla giornata
+  // commerciale, come prima.
+  const cashSessionId = await currentCashSessionId()
+  const counterRef = doc(db, 'counters', cashSessionId ? `cash-${cashSessionId}` : orderDate)
   const newOrderRef = doc(ordersCol)
 
-  await runTransaction(db, async (tx) => {
-    const counterSnap = await tx.get(counterRef)
-    const last = counterSnap.exists() ? counterSnap.data().last || 0 : 0
-    const dailyNumber = last + 1
-    tx.set(counterRef, { last: dailyNumber }, { merge: true })
+  // Numero giornaliero: letto dalla cache (offline compreso) e incrementato.
+  // Su un singolo dispositivo resta univoco anche offline (la cache riflette
+  // subito le scritture in coda); su più dispositivi offline in contemporanea
+  // può collidere, si riconcilia al sync.
+  const counterSnap = await getDoc(counterRef)
+  const last = counterSnap.exists() ? counterSnap.data().last || 0 : 0
+  const dailyNumber = last + 1
+  // LOCAL-FIRST: la scrittura è già applicata alla cache in modo sincrono, non
+  // si attende l'ack del server (offline `await setDoc` non si risolverebbe mai
+  // e bloccherebbe la creazione dell'ordine). Il sync va in background.
+  setDoc(counterRef, { last: dailyNumber }, { merge: true }).catch(() => {})
 
-    tx.set(newOrderRef, {
-      daily_number: dailyNumber,
-      order_date: orderDate,
-      serata_id,
-      table_label: table_label || null,
-      note: note || null,
-      status: ORDER_STATUSES.RICEVUTO,
-      total,
-      coperto_persons,
-      coperto_amount,
-      service_charge_amount,
-      tip_amount,
-      service_mode,
-      push_token,
-      placed_by,
-      customer_name,
-      customer_uid,
-      payment_method,
-      payment_status,
-      payment_required,
-      created_at: serverTimestamp(),
-      items: items.map((i) => ({
-        drink_id: i.drink_id,
-        name: i.name,
-        unit_price: i.price,
-        qty: i.qty,
-        sumup_product_id: i.sumup_product_id ?? null,
-      })),
-    })
-  })
+  // Progressivo ASSOLUTO del sistema: non riparte mai, identifica l'ordine
+  // per sempre (id interno mostrato in piccolo nel dettaglio). Stessa
+  // lettura da cache del progressivo giornaliero.
+  const serialSnap = await getDoc(serialCounterRef)
+  const serial = (serialSnap.exists() ? serialSnap.data().last || 0 : 0) + 1
+  setDoc(serialCounterRef, { last: serial }, { merge: true }).catch(() => {})
 
+  const nowIso = new Date().toISOString()
+  const mappedItems = items.map((i) => ({
+    drink_id: i.drink_id,
+    name: i.name,
+    unit_price: i.price,
+    qty: i.qty,
+    sumup_product_id: i.sumup_product_id ?? null,
+    // Identita' della riga nella schermata: la si porta dietro cosi' la riga
+    // non viene ricreata quando la bozza diventa item confermato.
+    ...(i.line_id ? { line_id: i.line_id } : {}),
+    ...(i.custom ? { custom: true, recipe_items: i.recipe_items ?? [] } : {}),
+    ...(i.note ? { note: i.note } : {}),
+  }))
+  // Modello conto/comande: l'ordine nasce `aperto` con la COMANDA 1, che
+  // porta lo stato di lavorazione (il POS la crea già in preparazione).
+  const comanda1 = {
+    id: 'c1',
+    seq: 1,
+    items: mappedItems,
+    status,
+    status_times: { [status]: nowIso },
+    inventory_applied: false,
+    inventory_consumption: null,
+    created_at: nowIso,
+  }
+  // Anche l'ordine è local-first: la scrittura entra subito in cache (la
+  // sottoscrizione lo mostra all'istante, online e offline), il server la
+  // riceve appena c'è rete. Niente await: offline non si sbloccherebbe.
+  setDoc(newOrderRef, {
+    daily_number: dailyNumber, // progressivo della SESSIONE DI CASSA (o del giorno se la cassa è chiusa)
+    serial, // progressivo assoluto di sistema (non riparte mai)
+    order_date: orderDate, // giornata commerciale (YYYY-MM-DD)
+    cash_session_id: cashSessionId, // sessione di cassa che numera l'ordine
+    table_label: table_label || null,
+    note: note || null,
+    status: ORDER_OPEN,
+    comande: [comanda1],
+    comande_statuses: [status],
+    total,
+    coperto_persons,
+    coperto_amount,
+    service_charge_amount,
+    tip_amount,
+    service_mode,
+    push_token,
+    placed_by,
+    customer_name,
+    customer_uid,
+    payment_method,
+    payment_status,
+    payment_required,
+    group_id: group_id || null,
+    group_name_snapshot: group_name_snapshot || null,
+    payment_id: null,
+    client_temp_id,
+    created_at: serverTimestamp(),
+    // Aggregato di tutte le comande (qui solo la prima): usato per totale,
+    // scontrino e compatibilità con le viste esistenti.
+    items: mappedItems,
+  }).catch(() => {})
+
+  // getDoc legge la scrittura locale appena applicata (risolve anche offline):
+  // niente attesa del server.
   const snap = await getDoc(newOrderRef)
   const order = mapOrder(snap)
 
@@ -598,15 +1721,11 @@ export async function fetchOrdersByIds(ids) {
 }
 
 // Coda del bartender: ordini attivi (non ancora ritirati/pagati).
-const INACTIVE_STATUSES = [
-  ORDER_STATUSES.RITIRATO,
-  ORDER_STATUSES.PAGATO,
-  ORDER_STATUSES.ANNULLATO,
-]
+// Ordini attivi = conti aperti (il flusso di lavorazione vive sulle comande).
 
 export async function fetchActiveOrders() {
   const snap = await getDocs(
-    query(ordersCol, where('status', 'not-in', INACTIVE_STATUSES))
+    query(ordersCol, where('status', '==', ORDER_OPEN))
   )
   const orders = snap.docs.map(mapOrder)
   orders.sort((a, b) =>
@@ -615,178 +1734,611 @@ export async function fetchActiveOrders() {
   return orders
 }
 
-// Chiude definitivamente l'ordine come pagato, registrando il metodo
-// d'incasso ('banco' per contanti/POS esterno, 'lettore', 'online').
-export async function markOrderPaid(id, method) {
-  const nowIso = new Date().toISOString()
+// Codice della "lotteria degli scontrini" comunicato dal cliente al
+// pagamento: si salva sul conto e finisce stampato sullo scontrino.
+export async function setOrderLotteryCode(id, code) {
   await updateDoc(doc(db, 'orders', id), {
-    status: ORDER_STATUSES.PAGATO,
-    [`status_times.${ORDER_STATUSES.PAGATO}`]: nowIso,
-    payment_method: method,
-    payment_status: 'pagato',
-    paid_at: nowIso,
+    lottery_code: String(code || '').trim().toUpperCase() || null,
   })
 }
 
-export async function updateOrderStatus(id, status) {
-  const ref = doc(db, 'orders', id)
+// ── FATTURE DI CORTESIA ────────────────────────────────────────────────
+// Non è fatturazione elettronica (SDI): è il documento di cortesia con i
+// dati del cliente, numerato per anno, da inviare via email o stampare.
+// La numerazione usa un contatore transazionale per anno.
+export async function createInvoice({ order, customer, ivaRate = 10 }) {
+  const year = new Date().getFullYear()
+  const counterRef = doc(db, 'counters', `fatture-${year}`)
+  const invoiceRef = doc(invoicesCol)
+  const orderRef = doc(db, 'orders', order.id)
   const nowIso = new Date().toISOString()
 
-  if (status === ORDER_STATUSES.IN_PREPARAZIONE) {
-    // Allo "sta preparando" scala l'inventario (una sola volta per ordine).
-    await applyDepletionAndAdvance(id, status)
-  } else {
-    await updateDoc(ref, { status, [`status_times.${status}`]: nowIso })
-  }
+  const counterSnap = await getDoc(counterRef)
+  const seq = ((counterSnap.exists() ? counterSnap.data().seq : 0) || 0) + 1
+  const number = `${seq}/${year}`
+  await setDoc(counterRef, { seq }, { merge: true })
+  await setDoc(invoiceRef, {
+    number,
+    seq,
+    year,
+    order_id: order.id,
+    order_daily_number: order.daily_number ?? null,
+    customer: {
+      denominazione: customer.denominazione || '',
+      piva: customer.piva || null,
+      cf: customer.cf || null,
+      sdi: customer.sdi || null,
+      indirizzo: customer.indirizzo || null,
+      email: customer.email || null,
+    },
+    items: (order.order_items || []).map((i) => ({
+      name: i.name,
+      qty: i.qty,
+      unit_price: i.unit_price,
+    })),
+    total: order.total ?? 0,
+    discount_amount: order.discount_amount ?? 0,
+    iva_rate: Number(ivaRate) || 0,
+    status: 'emessa',
+    sent_to: null,
+    sent_at: null,
+    created_at: nowIso,
+  })
+  await updateDoc(orderRef, { invoice_id: invoiceRef.id, invoice_number: number })
+  const snap = await getDoc(invoiceRef)
+  return { id: invoiceRef.id, ...snap.data() }
+}
 
-  let snap = await getDoc(ref)
+// Segna la fattura come inviata (dopo l'apertura del client email).
+export async function markInvoiceSent(invoiceId, email) {
+  await updateDoc(doc(invoicesCol, invoiceId), {
+    sent_to: email || null,
+    sent_at: new Date().toISOString(),
+  })
+}
 
-  // Ordine già pagato (online o lettore) che viene ritirato/servito:
-  // si chiude da solo come "pagato" (c'è anche la cintura lato server).
-  if (
-    status === ORDER_STATUSES.RITIRATO &&
-    snap.data()?.payment_status === 'pagato'
-  ) {
-    await updateDoc(ref, {
-      status: ORDER_STATUSES.PAGATO,
-      [`status_times.${ORDER_STATUSES.PAGATO}`]: new Date().toISOString(),
-    })
-    snap = await getDoc(ref)
-  }
-
-  // Statistiche tempi sulla serata (per ETA cliente e resoconto).
-  // - al "pronto": attesa+preparazione, su tutti gli ordini
-  // - al "ritirato": ciclo completo, solo per ordini serviti al tavolo
-  updateSerataTimeStats(snap, status).catch((e) =>
-    console.error('[eta] aggiornamento statistiche fallito:', e)
+// Elenco fatture (gestionale), più recenti in alto.
+export function subscribeInvoices(cb, onError) {
+  const q = query(invoicesCol, orderBy('created_at', 'desc'), fbLimit(200))
+  return onSnapshot(
+    q,
+    (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+    onError
   )
+}
+
+// ── BUONI VIP (credito ricaricabile) ──────────────────────────────────
+// Un buono ha un saldo in € associato a una persona: si ricarica e si
+// scala al pagamento (metodo 'buono'). Tutte le variazioni sono in una
+// transazione e lasciano una traccia in `movements`.
+
+export function subscribeVouchers(cb, onError) {
+  const q = query(vouchersCol, orderBy('holder_name'))
+  return onSnapshot(
+    q,
+    (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...d.data(), created_at: toIso(d.data().created_at) }))),
+    onError
+  )
+}
+
+export async function createVoucher({
+  holder_name,
+  amount = 0,
+  note = null,
+  expiry_type = 'none', // 'none' | 'daily' | 'monthly' | 'yearly' | 'date'
+  expires_at = null, // ISO date per expiry_type 'date'
+  auto_renew = false,
+}) {
+  const nowIso = new Date().toISOString()
+  const initial = Math.max(0, Math.round((Number(amount) || 0) * 100) / 100)
+  const ref = await addDoc(vouchersCol, {
+    holder_name: String(holder_name || '').trim(),
+    balance: initial,
+    initial,
+    note: note || null,
+    expiry_type,
+    expires_at: expiry_type === 'date' ? expires_at || null : null,
+    auto_renew: !!auto_renew,
+    movements: initial > 0 ? [{ type: 'carica', amount: initial, at: nowIso }] : [],
+    created_at: serverTimestamp(),
+  })
+  return { id: ref.id, ...(await getDoc(ref)).data() }
+}
+
+// Aggiorna la scadenza di un buono esistente.
+export async function updateVoucherExpiry(id, { expiry_type, expires_at = null, auto_renew = false }) {
+  await updateDoc(doc(vouchersCol, id), {
+    expiry_type,
+    expires_at: expiry_type === 'date' ? expires_at || null : null,
+    auto_renew: !!auto_renew,
+  })
+}
+
+// Ricarica un buono (aggiunge al saldo).
+export async function topUpVoucher(id, amount) {
+  const ref = doc(vouchersCol, id)
+  const add = Math.max(0, Math.round((Number(amount) || 0) * 100) / 100)
+  if (!(add > 0)) throw new Error('Importo di ricarica non valido')
+  const nowIso = new Date().toISOString()
+  const snap = await getDoc(ref)
+  if (!snap.exists()) throw new Error('Buono non trovato')
+  const v = snap.data()
+  await updateDoc(ref, {
+    balance: increment(add),
+    movements: [...(v.movements || []), { type: 'carica', amount: add, at: nowIso }],
+  })
+}
+
+// Elimina un buono (solo a saldo zero, dal gestionale).
+export async function deleteVoucher(id) {
+  await deleteDoc(doc(vouchersCol, id))
+}
+
+// Scala un buono per pagare un ordine: registra il pagamento sull'ordine
+// (metodo 'buono') e decrementa il saldo, in un'unica transazione.
+// Ritorna { redeemed, closed }.
+export async function payWithVoucher(orderId, voucherId, requestedAmount, { autoServe = true } = {}) {
+  const orderRef = doc(db, 'orders', orderId)
+  const voucherRef = doc(vouchersCol, voucherId)
+  const nowIso = new Date().toISOString()
+  const [oSnap, vSnap] = await Promise.all([getDoc(orderRef), getDoc(voucherRef)])
+  if (!oSnap.exists()) throw new Error('Ordine non trovato')
+  if (!vSnap.exists()) throw new Error('Buono non trovato')
+  const o = oSnap.data()
+  const v = vSnap.data()
+  if (o.status === ORDER_STATUSES.ANNULLATO) throw new Error('Ordine annullato')
+  if (o.payment_status === 'pagato') throw new Error('Ordine già pagato')
+  const due = orderDue(o)
+  const balance = Math.max(0, Number(v.balance) || 0)
+  const redeemed = Math.round(Math.min(due, balance, Math.max(0, Number(requestedAmount) || 0)) * 100) / 100
+  if (!(redeemed > 0)) throw new Error('Saldo del buono insufficiente')
+
+  const payments = [
+    ...(o.payments || []),
+    { id: `pay-${Date.now()}`, amount: redeemed, method: 'buono', voucher_id: voucherId, voucher_name: v.holder_name, at: nowIso },
+  ]
+  const closed = paymentCloses(o, redeemed)
+  const chiusura = closed ? chiusuraPagamento(o, nowIso, { autoServe }) : null
+  // Due scritture accodabili (ordine + buono): offline si accodano entrambe.
+  // Il saldo scala con increment (commutativo).
+  await updateDoc(orderRef, {
+    payments,
+    ...(closed
+      ? { ...chiusura, payment_method: summaryMethod(payments) }
+      : { payment_status: 'parziale' }),
+  })
+  await updateDoc(voucherRef, {
+    balance: increment(-redeemed),
+    movements: [...(v.movements || []), { type: 'uso', amount: -redeemed, order_id: orderId, at: nowIso }],
+  })
+  return { redeemed, closed }
+}
+
+const r2 = (n) => Math.round((Number(n) || 0) * 100) / 100
+
+// Rimette `amount` sul saldo di un buono (storno di un buono-sconto rimosso o
+// di un ordine annullato). increment(+) è commutativo e si accoda offline.
+async function refundVoucher(voucherId, amount, orderId, atIso) {
+  const amt = r2(amount)
+  if (!voucherId || !(amt > 0)) return
+  const ref = doc(vouchersCol, voucherId)
+  const snap = await getDoc(ref)
+  if (!snap.exists()) return
+  const v = snap.data()
+  await updateDoc(ref, {
+    balance: increment(amt),
+    movements: [...(v.movements || []), { type: 'storno', amount: amt, order_id: orderId, at: atIso }],
+  })
+}
+
+// BUONO come SCONTO: il buono non è un metodo di pagamento ma uno sconto che
+// attinge al saldo del beneficiario. Si applica al totale (come uno sconto in
+// euro) e si detrae dal buono, anche PARZIALMENTE (il cliente sceglie quanto
+// usare, fino al saldo). Rimuoverlo/annullare l'ordine ristorna il saldo.
+export async function applyVoucherDiscount(orderId, voucherId, requestedAmount) {
+  const orderRef = doc(db, 'orders', orderId)
+  const voucherRef = doc(vouchersCol, voucherId)
+  const nowIso = new Date().toISOString()
+  const [oSnap, vSnap] = await Promise.all([getDoc(orderRef), getDoc(voucherRef)])
+  if (!oSnap.exists()) throw new Error('Ordine non trovato')
+  if (!vSnap.exists()) throw new Error('Buono non trovato')
+  const o = oSnap.data()
+  const v = vSnap.data()
+  if (o.status === ORDER_STATUSES.ANNULLATO) throw new Error('Ordine annullato')
+  if (o.payment_status === 'pagato') throw new Error('Ordine già pagato')
+
+  // Se c'era già un buono-sconto: quello su un ALTRO buono va ristornato; se
+  // era lo STESSO buono, il suo valore torna disponibile (lo si rimpiazza).
+  const prev = o.discount && o.discount.type === 'buono' ? o.discount : null
+  if (prev && prev.voucher_id && prev.voucher_id !== voucherId) {
+    await refundVoucher(prev.voucher_id, prev.value, orderId, nowIso)
+  }
+  const sameBack = prev && prev.voucher_id === voucherId ? r2(prev.value) : 0
+  const balance = Math.max(0, r2((Number(v.balance) || 0) + sameBack))
+  const total = Number(o.total) || 0
+  const redeemed = r2(Math.min(Math.max(0, Number(requestedAmount) || 0), balance, total))
+  if (!(redeemed > 0)) throw new Error('Saldo del buono insufficiente')
+
+  const disc = { type: 'buono', value: redeemed, voucher_id: voucherId, voucher_name: v.holder_name }
+  await updateDoc(orderRef, { discount: disc, discount_amount: redeemed })
+  // Netto sul buono: rimetti l'eventuale vecchio valore (stesso buono) e togli
+  // il nuovo. movements registra la variazione netta di questo passaggio.
+  const net = r2(sameBack - redeemed)
+  await updateDoc(voucherRef, {
+    balance: increment(net),
+    movements: [...(v.movements || []), { type: net >= 0 ? 'storno' : 'uso', amount: net, order_id: orderId, at: nowIso }],
+  })
+  return { redeemed }
+}
+
+// Imposta (o rimuove, con null) lo sconto sul conto: percentuale o euro.
+// L'importo in euro viene calcolato e persistito, così residuo e webhook
+// dei pagamenti ragionano sempre sullo stesso numero. Se c'era un buono-sconto
+// lo si ristorna prima (il buono torna al beneficiario).
+export async function setOrderDiscount(id, discount) {
+  const ref = doc(db, 'orders', id)
+  const snap = await getDoc(ref)
+  if (!snap.exists()) throw new Error('Ordine non trovato')
+  const o = snap.data()
+  if (o.payment_status === 'pagato') throw new Error('Ordine già pagato')
+  const prev = o.discount && o.discount.type === 'buono' ? o.discount : null
+  if (prev && prev.voucher_id) {
+    await refundVoucher(prev.voucher_id, prev.value, id, new Date().toISOString())
+  }
+  const clean =
+    discount && Number(discount.value) > 0
+      ? { type: discount.type === 'percent' ? 'percent' : 'euro', value: Number(discount.value) }
+      : null
+  bgWrite(() => updateDoc(ref, {
+    discount: clean,
+    discount_amount: discountAmount(o.total ?? 0, clean),
+  }), 'sconto ordine')
+}
+
+// Registra un incasso (anche PARZIALE, per lo split del conto): appende il
+// pagamento e, se il residuo va a zero, chiude il conto come "pagato" —
+// anche con comande non servite (l'avviso sta nella UI, come concordato).
+// `items` è la selezione pagata (null = importo sul residuo, senza dettaglio).
+export async function registerPayment(id, { amount, method = 'banco', items = null, autoServe = true } = {}) {
+  const ref = doc(db, 'orders', id)
+  const nowIso = new Date().toISOString()
+  const snap = await getDoc(ref)
+  if (!snap.exists()) throw new Error('Ordine non trovato')
+  const o = snap.data()
+  if (o.status === ORDER_STATUSES.ANNULLATO) throw new Error('Ordine annullato')
+  if (o.payment_status === 'pagato') throw new Error('Ordine già pagato')
+  const due = orderDue(o)
+  const paid = Math.min(Number(amount) || 0, due)
+  if (!(paid > 0)) throw new Error('Importo non valido')
+  const payments = [
+    ...(o.payments || []),
+    {
+      id: `pay-${Date.now()}-${(o.payments || []).length + 1}`,
+      amount: paid,
+      method,
+      items: items?.length ? items : null,
+      at: nowIso,
+    },
+  ]
+  const closed = paymentCloses(o, paid)
+  let lowStock = []
+  const chiusura = closed ? chiusuraPagamento(o, nowIso, { autoServe }) : null
+  if (chiusura?.comande) {
+    // Conto saldato E servito ⇒ le comande mai prese in carico vengono
+    // scaricate a magazzino adesso.
+    lowStock = await depleteComandeInventory(unappliedEntries(id, chiusura.comande))
+  }
+  bgWrite(() => updateDoc(ref, {
+    payments,
+    ...(closed
+      ? { ...chiusura, payment_method: summaryMethod(payments) }
+      : { payment_status: 'parziale' }),
+  }), 'incasso ordine')
+  notifyLowStock(lowStock)
+  return { closed }
+}
+
+// Chiude definitivamente l'ordine come pagato, registrando il metodo
+// d'incasso ('banco' per contanti/POS esterno, 'lettore', 'online').
+// Conto pagato. Con `autoServe` le comande risultano anche SERVITE (e
+// quelle mai prese in carico vengono scaricate a magazzino); seguendo la
+// preparazione invece il conto resta aperto finché non si consegna.
+export async function markOrderPaid(id, method, { autoServe = true } = {}) {
+  const ref = doc(db, 'orders', id)
+  const nowIso = new Date().toISOString()
+  const snap = await getDoc(ref)
+  if (!snap.exists()) throw new Error('Ordine non trovato')
+  const chiusura = chiusuraPagamento(snap.data(), nowIso, { autoServe })
+  const lowStock = chiusura.comande
+    ? await depleteComandeInventory(unappliedEntries(id, chiusura.comande))
+    : []
+  bgWrite(() => updateDoc(ref, { ...chiusura, payment_method: method }), 'pagamento ordine')
+  notifyLowStock(lowStock)
+}
+
+// Avanza lo stato di UNA COMANDA (il ticket di lavorazione). È qui che vive
+// il flusso ricevuto→in_preparazione→pronto→ritirato: l'ordine (conto) resta
+// `aperto` e si chiude solo con pagamento/annullo. Allo "in preparazione"
+// scala l'inventario sugli item della comanda (snapshot per-comanda usato
+// per storni e riallineamenti). I doc legacy vengono convertiti al volo.
+// Scarico inventario di PIÙ COMANDE — OFFLINE-FRIENDLY. Legge ricette e
+// giacenze dalla cache (getDoc funziona offline con la persistenza) e
+// aggiorna le giacenze con increment(-qty): commutativo, si accoda offline
+// e non richiede una transazione. Muta le comande (inventory_applied/
+// snapshot) e ritorna le scorte basse stimate dallo stock in cache.
+// `entries` = [{ orderId, comanda }].
+// SCARICO IN SOTTOFONDO — la vendita si scrive PRIMA, le scorte dopo.
+//
+// Lo scarico ha bisogno di leggere ricette e articoli di inventario. Sono
+// letture che offline arrivano dalla cache, ma se quei documenti non ci sono
+// (o sono stati riscritti dal server, come dopo un import) partono verso la
+// rete — e con una rete collegata che non passa restano appese. Aspettarle
+// prima di scrivere l'ordine significava PERDERE GLI ITEM: il conto non si
+// salvava perché il magazzino non rispondeva.
+//
+// Qui l'ordine è già scritto. Se lo scarico non riesce, la comanda resta
+// `inventory_applied: false` e viene ripresa al pagamento (unappliedEntries):
+// le scorte si allineano più tardi, la vendita non si perde mai.
+function scaricaInSottofondo(orderId, comandaId) {
+  ;(async () => {
+    try {
+      const ref = doc(db, 'orders', orderId)
+      const snap = await getDoc(ref)
+      if (!snap.exists()) return
+      const norm = normalizeOrderDoc(snap.data())
+      const comande = norm.comande.map((c) => ({ ...c }))
+      const comanda = comande.find((c) => c.id === comandaId)
+      if (!comanda || comanda.inventory_applied === true) return
+      const lowStock = await depleteComandeInventory([{ orderId, comanda }])
+      bgWrite(() => updateDoc(ref, { comande }), 'scarico scorte')
+      notifyLowStock(lowStock)
+    } catch {
+      /* si riprende al pagamento */
+    }
+  })()
+}
+
+// RIALLINEO IN SOTTOFONDO dopo una modifica di comanda già scaricata: si
+// confronta il consumo di prima con quello di adesso e si applica solo la
+// differenza. Come per lo scarico, la vendita è già scritta: qui si insegue
+// il magazzino, non viceversa.
+function riallineaInSottofondo(orderId, comandaId) {
+  ;(async () => {
+    try {
+      const ref = doc(db, 'orders', orderId)
+      const snap = await getDoc(ref)
+      if (!snap.exists()) return
+      const norm = normalizeOrderDoc(snap.data())
+      const comande = norm.comande.map((c) => ({ ...c }))
+      const comanda = comande.find((c) => c.id === comandaId)
+      if (!comanda) return
+      const items = Array.isArray(comanda.items) ? comanda.items : []
+      const drinkIds = [...new Set(items.filter((i) => !i.custom).map((i) => i.drink_id).filter(Boolean))]
+      const drinkSnaps = await Promise.all(drinkIds.map((d) => getDoc(doc(db, 'drinks', d))))
+      const drinksById = {}
+      drinkSnaps.forEach((sn, idx) => {
+        drinksById[drinkIds[idx]] = sn.exists() ? sn.data() : null
+      })
+      const oldCons = Array.isArray(comanda.inventory_consumption) ? comanda.inventory_consumption : []
+      const newCons = computeConsumption(items, drinksById)
+      const diffs = consumptionDiff(oldCons, newCons)
+      const invSnaps = await Promise.all(
+        diffs.map((d) => getDoc(doc(db, 'inventory_items', d.inventory_item_id)))
+      )
+      for (let idx = 0; idx < diffs.length; idx++) {
+        const d = diffs[idx]
+        const sn = invSnaps[idx]
+        if (!sn.exists()) continue
+        const curItem = sn.data()
+        bgWrite(() => updateDoc(doc(db, 'inventory_items', d.inventory_item_id), {
+          stock: increment(-qtyInStockUnit(d.delta, d.unit, curItem)),
+        }), 'riallineo scorta')
+        bgWrite(() => addDoc(movementsCol, {
+          item_id: d.inventory_item_id,
+          item_name: curItem.name,
+          type: d.delta > 0 ? 'unload' : 'load',
+          qty: Math.abs(d.delta),
+          unit: curItem.unit ?? null,
+          reason: 'modifica ordine',
+          order_id: orderId,
+          created_at: serverTimestamp(),
+        }), 'movimento scorta')
+      }
+      comanda.inventory_consumption = newCons
+      bgWrite(() => updateDoc(ref, { comande }), 'consumo comanda')
+    } catch {
+      /* il magazzino si riallinea alla prossima occasione */
+    }
+  })()
+}
+
+async function depleteComandeInventory(entries) {
+  if (!entries.length) return []
+  const plans = []
+  for (const { orderId, comanda } of entries) {
+    const items = Array.isArray(comanda.items) ? comanda.items : []
+    const drinkIds = [...new Set(items.filter((i) => !i.custom).map((i) => i.drink_id).filter(Boolean))]
+    const drinkSnaps = await Promise.all(drinkIds.map((d) => getDoc(doc(db, 'drinks', d))))
+    const drinksById = {}
+    drinkSnaps.forEach((sn, idx) => {
+      drinksById[drinkIds[idx]] = sn.exists() ? sn.data() : null
+    })
+    plans.push({ orderId, comanda, consumption: computeConsumption(items, drinksById) })
+  }
+  const itemIds = [...new Set(plans.flatMap((p) => p.consumption.map((c) => c.inventory_item_id)))]
+  const itemSnaps = await Promise.all(itemIds.map((id) => getDoc(doc(db, 'inventory_items', id))))
+  const itemsById = {}
+  itemSnaps.forEach((sn, idx) => {
+    if (sn.exists()) itemsById[itemIds[idx]] = sn.data()
+  })
+  // Un movimento per comanda/ingrediente; la giacenza cala una volta per
+  // ingrediente con il delta cumulato (increment: sicuro anche offline).
+  const delta = {}
+  for (const p of plans) {
+    for (const c of p.consumption) {
+      const cur = itemsById[c.inventory_item_id]
+      if (!cur) continue
+      // Dalla ricetta alla giacenza: le unità possono non coincidere.
+      delta[c.inventory_item_id] =
+        (delta[c.inventory_item_id] || 0) + qtyInStockUnit(c.qty, c.unit, cur)
+      bgWrite(() => addDoc(movementsCol, {
+        item_id: c.inventory_item_id,
+        item_name: cur.name,
+        type: 'unload',
+        // Nel movimento resta scritto quanto è stato VERSATO (40 ml), che è
+        // il dato leggibile; la giacenza cala di quello che vale in pezzi.
+        qty: c.qty,
+        unit: c.unit ?? cur.unit ?? null,
+        reason: 'ordine',
+        order_id: p.orderId,
+        created_at: serverTimestamp(),
+      }), 'movimento scorta')
+    }
+    p.comanda.inventory_applied = true
+    p.comanda.inventory_consumption = p.consumption
+  }
+  const lowStock = []
+  for (const [id, qty] of Object.entries(delta)) {
+    const cur = itemsById[id]
+    const newStock = (Number(cur.stock) || 0) - qty
+    bgWrite(() => updateDoc(doc(db, 'inventory_items', id), { stock: increment(-qty) }), 'scarico scorta')
+    if (newStock <= (Number(cur.low_threshold) || 0)) {
+      lowStock.push({ name: cur.name, stock: newStock, unit: cur.unit })
+    }
+  }
+  return lowStock
+}
+
+// Comande di un conto pagato ancora da scaricare a magazzino.
+const unappliedEntries = (orderId, comande) =>
+  comande
+    .filter((c) => c.status === ORDER_STATUSES.RITIRATO && c.inventory_applied !== true)
+    .map((comanda) => ({ orderId, comanda }))
+
+// Notifica scorte basse/finite (da chiamare fuori dalla transazione).
+function notifyLowStock(lowStock) {
+  for (const it of lowStock) {
+    const stato = it.stock <= 0 ? 'esaurito' : 'in esaurimento'
+    notify(`⚠️ Scorta ${stato}`, `${it.name}: rimasti ${formatQty(it.stock, it.unit)}`)
+  }
+}
+
+export async function advanceComanda(orderId, comandaId, newStatus) {
+  const orderRef = doc(db, 'orders', orderId)
+  const nowIso = new Date().toISOString()
+  let lowStock = []
+  let statComanda = null
+
+  const orderSnap = await getDoc(orderRef)
+  if (!orderSnap.exists()) throw new Error('Ordine non trovato')
+  const raw = orderSnap.data()
+  const norm = normalizeOrderDoc(raw)
+  const comande = norm.comande.map((c) => ({ ...c }))
+  const comanda = comandaId
+    ? comande.find((c) => c.id === comandaId)
+    : activeComanda({ comande })
+  if (!comanda) throw new Error('Comanda non trovata')
+
+  // Scarico inventario alla presa in carico della comanda (una volta sola),
+  // ma DOPO aver salvato l'avanzamento: vedi scaricaInSottofondo.
+  const daScaricare =
+    newStatus === ORDER_STATUSES.IN_PREPARAZIONE && comanda.inventory_applied !== true
+
+  comanda.status = newStatus
+  comanda.status_times = { ...(comanda.status_times || {}), [newStatus]: nowIso }
+  statComanda = { ...comanda, order: raw }
+
+  const patch = {
+    status: norm.status,
+    comande,
+    comande_statuses: comandeStatuses(comande),
+  }
+  // Conto già pagato (online/lettore) e tutte le comande servite: il conto
+  // si chiude da solo (c'è anche la cintura lato server).
+  if (
+    newStatus === ORDER_STATUSES.RITIRATO &&
+    raw.payment_status === 'pagato' &&
+    allServed({ comande })
+  ) {
+    patch.status = ORDER_STATUSES.PAGATO
+    patch[`status_times.${ORDER_STATUSES.PAGATO}`] = nowIso
+  }
+  bgWrite(() => updateDoc(orderRef, patch), 'stato comanda')
+
+  // Scorte dopo: se il magazzino non risponde l'avanzamento è comunque salvo.
+  if (daScaricare) scaricaInSottofondo(orderId, comanda.id)
+  notifyLowStock(lowStock)
+
+  // Statistiche tempi del servizio (per ETA cliente), per comanda.
+  if (statComanda) {
+    updateServiceTimeStats(statComanda.order, statComanda, newStatus).catch((e) =>
+      console.error('[eta] aggiornamento statistiche fallito:', e)
+    )
+  }
 
   // Sync stato verso SumUp POS Pro in background (fire-and-forget).
-  const sumupStatus = toSumUpStatus(status)
-  if (sumupStatus) {
-    const sumupSaleId = snap.data()?.sumup_sale_id ?? null
-    updateSumUpSaleStatus(sumupSaleId, sumupStatus)
+  const sumupStatus = toSumUpStatus(newStatus)
+  if (sumupStatus && statComanda?.order?.sumup_sale_id) {
+    updateSumUpSaleStatus(statComanda.order.sumup_sale_id, sumupStatus)
       .catch((e) => console.error('[SumUp] updateStatus failed:', e))
   }
 
-  return mapOrder(snap)
+  return mapOrder(await getDoc(orderRef))
 }
 
-// Incrementa le statistiche tempi della serata quando un ordine raggiunge
-// "pronto" (attesa+preparazione, tutti gli ordini) o "ritirato" (ciclo
-// completo, solo servizio al tavolo: il ritiro al banco dipende dal cliente).
-async function updateSerataTimeStats(orderSnap, status) {
-  const o = orderSnap.data()
-  if (!o?.serata_id) return
+// Retrocompatibilità: avanza la comanda ATTIVA dell'ordine (le viste che
+// ragionano per workflow_status continuano a funzionare).
+export async function updateOrderStatus(id, status) {
+  return advanceComanda(id, null, status)
+}
+
+// Incrementa le statistiche tempi del SERVIZIO (perpetue) quando una COMANDA raggiunge
+// "pronto" (attesa+preparazione) o "ritirato" (ciclo completo, solo tavolo).
+async function updateServiceTimeStats(orderRaw, comanda, status) {
   const ms = (v) => {
     if (!v) return null
     if (typeof v?.toMillis === 'function') return v.toMillis()
     const t = Date.parse(v)
     return Number.isFinite(t) ? t : null
   }
-  const t0 = ms(o.created_at)
-  const t1 = ms(o.status_times?.[ORDER_STATUSES.IN_PREPARAZIONE])
-  const t2 = ms(o.status_times?.[ORDER_STATUSES.PRONTO])
-  const t3 = ms(o.status_times?.[ORDER_STATUSES.RITIRATO])
-  const serataRef = doc(db, 'serate', o.serata_id)
+  const t0 = ms(comanda.created_at) ?? ms(orderRaw.created_at)
+  const t1 = ms(comanda.status_times?.[ORDER_STATUSES.IN_PREPARAZIONE])
+  const t2 = ms(comanda.status_times?.[ORDER_STATUSES.PRONTO])
+  const t3 = ms(comanda.status_times?.[ORDER_STATUSES.RITIRATO])
 
+  // setDoc+merge: il documento perpetuo può non esistere ancora.
   if (status === ORDER_STATUSES.PRONTO && t0 && t1 && t2 && t2 >= t1 && t1 >= t0) {
-    await updateDoc(serataRef, {
-      'prep_stats.count': increment(1),
-      'prep_stats.attesa_ms': increment(t1 - t0),
-      'prep_stats.prep_ms': increment(t2 - t1),
-      'prep_stats.total_ms': increment(t2 - t0),
-    })
+    await setDoc(
+      serviceStatsDoc,
+      {
+        prep_stats: {
+          count: increment(1),
+          attesa_ms: increment(t1 - t0),
+          prep_ms: increment(t2 - t1),
+          total_ms: increment(t2 - t0),
+        },
+      },
+      { merge: true }
+    )
   }
 
   if (
     status === ORDER_STATUSES.RITIRATO &&
-    o.service_mode === 'tavolo' &&
+    orderRaw.service_mode === 'tavolo' &&
     t0 && t1 && t2 && t3 && t3 >= t2 && t2 >= t1 && t1 >= t0
   ) {
-    await updateDoc(serataRef, {
-      'eta_stats.count': increment(1),
-      'eta_stats.attesa_ms': increment(t1 - t0),
-      'eta_stats.prep_ms': increment(t2 - t1),
-      'eta_stats.ritiro_ms': increment(t3 - t2),
-      'eta_stats.total_ms': increment(t3 - t0),
-    })
-  }
-}
-
-// Avanza lo stato e, se non già fatto, scala l'inventario in base alle ricette
-// dei drink dell'ordine. Tutto in una transazione (letture prima delle scritture).
-// Dopo il commit notifica gli item scesi sotto soglia.
-async function applyDepletionAndAdvance(id, status) {
-  const orderRef = doc(db, 'orders', id)
-  const nowIso = new Date().toISOString()
-  let lowStock = []
-
-  await runTransaction(db, async (tx) => {
-    lowStock = []
-    const orderSnap = await tx.get(orderRef)
-    if (!orderSnap.exists()) throw new Error('Ordine non trovato')
-    const order = orderSnap.data()
-
-    // Già scalato in precedenza: aggiorna solo lo stato.
-    if (order.inventory_applied === true) {
-      tx.update(orderRef, { status, [`status_times.${status}`]: nowIso })
-      return
-    }
-
-    const items = Array.isArray(order.items) ? order.items : []
-
-    // --- LETTURE ---
-    const drinkIds = [...new Set(items.map((i) => i.drink_id).filter(Boolean))]
-    const drinkSnaps = await Promise.all(drinkIds.map((d) => tx.get(doc(db, 'drinks', d))))
-    const drinksById = {}
-    drinkSnaps.forEach((s, idx) => {
-      drinksById[drinkIds[idx]] = s.exists() ? s.data() : null
-    })
-
-    const consumption = computeConsumption(items, drinksById)
-    const itemSnaps = await Promise.all(
-      consumption.map((c) => tx.get(doc(db, 'inventory_items', c.inventory_item_id)))
-    )
-
-    // --- SCRITTURE ---
-    consumption.forEach((c, idx) => {
-      const s = itemSnaps[idx]
-      if (!s.exists()) return
-      const cur = s.data()
-      const newStock = (Number(cur.stock) || 0) - c.qty
-      tx.update(doc(db, 'inventory_items', c.inventory_item_id), { stock: newStock })
-      tx.set(doc(movementsCol), {
-        item_id: c.inventory_item_id,
-        item_name: cur.name,
-        type: 'unload',
-        qty: c.qty,
-        unit: cur.unit ?? null,
-        reason: 'ordine',
-        order_id: id,
-        created_at: serverTimestamp(),
-      })
-      if (newStock <= (Number(cur.low_threshold) || 0)) {
-        lowStock.push({ name: cur.name, stock: newStock, unit: cur.unit })
-      }
-    })
-
-    // Salva lo snapshot del consumo: serve a ripristinare lo stock se l'ordine
-    // viene annullato (ripristino esatto, indipendente da modifiche alle ricette).
-    tx.update(orderRef, {
-      status,
-      [`status_times.${status}`]: nowIso,
-      inventory_applied: true,
-      inventory_consumption: consumption,
-    })
-  })
-
-  // Notifica scorte basse/finite (fuori dalla transazione).
-  for (const it of lowStock) {
-    const stato = it.stock <= 0 ? 'esaurito' : 'in esaurimento'
-    notify(
-      `⚠️ Scorta ${stato}`,
-      `${it.name}: rimasti ${formatQty(it.stock, it.unit)}`
+    await setDoc(
+      serviceStatsDoc,
+      {
+        eta_stats: {
+          count: increment(1),
+          attesa_ms: increment(t1 - t0),
+          prep_ms: increment(t2 - t1),
+          ritiro_ms: increment(t3 - t2),
+          total_ms: increment(t3 - t0),
+        },
+      },
+      { merge: true }
     )
   }
 }
@@ -801,33 +2353,204 @@ export async function updateOrderPushToken(id, token) {
   await updateDoc(doc(db, 'orders', id), { push_token: token })
 }
 
+// Modifica del CLIENTE: consentita solo finché il conto ha la sola prima
+// comanda ancora "ricevuta" (prima della preparazione). Aggiorna la comanda
+// e l'aggregato dell'ordine, ricalcolando il totale.
 export async function updateOrderItems(id, items) {
   const ref = doc(db, 'orders', id)
-  const itemsTotal = items.reduce((s, i) => s + i.qty * Number(i.unit_price ?? i.price ?? 0), 0)
-  await runTransaction(db, async (tx) => {
-    const snap = await tx.get(ref)
-    if (!snap.exists()) throw new Error('Ordine non trovato')
-    const cur = snap.data()
-    if (cur.status !== ORDER_STATUSES.RICEVUTO) {
-      throw new Error('Ordine già in preparazione: non più modificabile')
+  const snap = await getDoc(ref)
+  if (!snap.exists()) throw new Error('Ordine non trovato')
+  const cur = snap.data()
+  const norm = normalizeOrderDoc(cur)
+  const comande = norm.comande.map((c) => ({ ...c }))
+  if (
+    norm.status !== ORDER_OPEN ||
+    comande.length !== 1 ||
+    comande[0].status !== ORDER_STATUSES.RICEVUTO
+  ) {
+    throw new Error('Ordine già in preparazione: non più modificabile')
+  }
+  const mapped = items.map((i) => ({
+    drink_id: i.drink_id,
+    name: i.name,
+    unit_price: i.unit_price ?? i.price ?? 0,
+    qty: i.qty,
+    sumup_product_id: i.sumup_product_id ?? null,
+    // Identita' della riga nella schermata: la si porta dietro cosi' la riga
+    // non viene ricreata quando la bozza diventa item confermato.
+    ...(i.line_id ? { line_id: i.line_id } : {}),
+    ...(i.custom ? { custom: true, recipe_items: i.recipe_items ?? [] } : {}),
+    ...(i.note ? { note: i.note } : {}),
+  }))
+  comande[0] = { ...comande[0], items: mapped }
+  const extras =
+    Number(cur.coperto_amount || 0) +
+    Number(cur.service_charge_amount || 0) +
+    Number(cur.tip_amount || 0)
+  const nuovoTotale = sumItems(mapped) + extras
+  const nuovoSconto = scontoRicalcolato(cur, nuovoTotale)
+  bgWrite(() => updateDoc(ref, {
+    status: ORDER_OPEN,
+    comande,
+    comande_statuses: comandeStatuses(comande),
+    items: mapped,
+    total: nuovoTotale,
+    ...(nuovoSconto != null ? { discount_amount: nuovoSconto } : {}),
+  }), 'modifica ordine')
+  return mapOrder(await getDoc(ref))
+}
+
+// Campi "anagrafici" del conto (nome, tavolo, note): modificabili dal
+// bartender finché l'ordine non è chiuso.
+// GRUPPO di un conto già aperto: si può associare (o togliere) anche dopo,
+// non solo alla creazione. Al bancone il tavolo lo si decide spesso a conto
+// avviato — "questi tre li metto insieme" — e prima si poteva farlo solo
+// prima del primo drink.
+export async function setOrderGroup(id, groupId) {
+  const ref = doc(db, 'orders', id)
+  let nome = null
+  if (groupId) {
+    try {
+      const g = await getDoc(doc(groupsCol, groupId))
+      if (g.exists()) nome = g.data().name ?? null
+    } catch {
+      /* nome non leggibile: resta l'associazione, l'etichetta si rilegge dopo */
     }
-    // Il totale conserva coperto/servizio/mancia già applicati alla creazione.
-    const extras =
-      Number(cur.coperto_amount || 0) +
-      Number(cur.service_charge_amount || 0) +
-      Number(cur.tip_amount || 0)
-    const total = itemsTotal + extras
-    tx.update(ref, {
-      items: items.map((i) => ({
-        drink_id: i.drink_id,
-        name: i.name,
-        unit_price: i.unit_price ?? i.price ?? 0,
-        qty: i.qty,
-        sumup_product_id: i.sumup_product_id ?? null,
-      })),
-      total,
-    })
-  })
+  }
+  bgWrite(
+    () => updateDoc(ref, { group_id: groupId || null, group_name_snapshot: nome }),
+    'gruppo del conto'
+  )
+  return mapOrder(await getDoc(ref))
+}
+
+export async function updateOrderInfo(id, { table_label, note, customer_name }) {
+  const patch = {}
+  if (table_label !== undefined) patch.table_label = table_label || null
+  if (note !== undefined) patch.note = note || null
+  if (customer_name !== undefined) patch.customer_name = customer_name || null
+  if (Object.keys(patch).length) bgWrite(() => updateDoc(doc(db, 'orders', id), patch), 'dati conto')
+  return mapOrder(await getDoc(doc(db, 'orders', id)))
+}
+
+// AGGIUNTA a un conto aperto: crea una NUOVA COMANDA con i soli item
+// aggiunti (come "aggiungi un ordine" nei POS) e aggiorna aggregato+totale.
+// La comanda nasce già IN PREPARAZIONE (l'aggiunta la fa il banco, che la
+// prepara subito): lo stato dell'ordine in coda TORNA "in preparazione"
+// anche se le comande precedenti erano pronte/servite, e le scorte si
+// scalano subito (snapshot per-comanda, come in advanceComanda).
+export async function addComanda(orderId, items, { note = null } = {}) {
+  const ref = doc(db, 'orders', orderId)
+  const nowIso = new Date().toISOString()
+  const snap = await getDoc(ref)
+  if (!snap.exists()) throw new Error('Ordine non trovato')
+  const cur = snap.data()
+  const norm = normalizeOrderDoc(cur)
+  if (norm.status !== ORDER_OPEN) throw new Error('Conto chiuso: non più modificabile')
+  const comande = norm.comande.map((c) => ({ ...c }))
+  const seq = comande.reduce((m, c) => Math.max(m, c.seq || 0), 0) + 1
+  const nuova = {
+    id: `c${seq}`,
+    seq,
+    items: items.map((i) => ({
+      drink_id: i.drink_id,
+      name: i.name,
+      unit_price: i.unit_price ?? i.price ?? 0,
+      qty: i.qty,
+      sumup_product_id: i.sumup_product_id ?? null,
+      ...(i.line_id ? { line_id: i.line_id } : {}),
+      ...(i.custom ? { custom: true, recipe_items: i.recipe_items ?? [] } : {}),
+      ...(i.note ? { note: i.note } : {}),
+    })),
+    status: ORDER_STATUSES.IN_PREPARAZIONE,
+    status_times: {
+      [ORDER_STATUSES.RICEVUTO]: nowIso,
+      [ORDER_STATUSES.IN_PREPARAZIONE]: nowIso,
+    },
+    note: note || null,
+    inventory_applied: false,
+    inventory_consumption: null,
+    created_at: nowIso,
+  }
+  comande.push(nuova)
+  const agg = aggregateItems(comande)
+  const extras =
+    Number(cur.coperto_amount || 0) +
+    Number(cur.service_charge_amount || 0) +
+    Number(cur.tip_amount || 0)
+  const nuovoTotale = sumItems(agg) + extras
+  const nuovoSconto = scontoRicalcolato(cur, nuovoTotale)
+  bgWrite(() => updateDoc(ref, {
+    status: ORDER_OPEN,
+    comande,
+    comande_statuses: comandeStatuses(comande),
+    items: agg,
+    total: nuovoTotale,
+    // Lo sconto segue il conto secondo la strategia scelta (vedi
+    // discountAfterChange): un importo fisso su un conto cambiato non ha
+    // più il significato che aveva quando è stato deciso.
+    ...(nuovoSconto != null ? { discount_amount: nuovoSconto } : {}),
+  }), 'aggiunta al conto')
+  // Le scorte si scalano DOPO: la vendita non deve aspettare il magazzino.
+  scaricaInSottofondo(orderId, nuova.id)
+  return mapOrder(await getDoc(ref))
+}
+
+// Modifica di UNA COMANDA da parte del bartender (quantità, rimozioni,
+// aggiunte, custom) finché non è servita. Se lo scarico era già stato
+// applicato, l'inventario viene riallineato con la DIFFERENZA tra il
+// vecchio snapshot della comanda e il nuovo consumo.
+export async function bartenderUpdateComanda(orderId, comandaId, { items }) {
+  const ref = doc(db, 'orders', orderId)
+  const newItems = items.map((i) => ({
+    drink_id: i.drink_id,
+    name: i.name,
+    unit_price: i.unit_price ?? i.price ?? 0,
+    qty: i.qty,
+    sumup_product_id: i.sumup_product_id ?? null,
+    // Identita' della riga nella schermata: la si porta dietro cosi' la riga
+    // non viene ricreata quando la bozza diventa item confermato.
+    ...(i.line_id ? { line_id: i.line_id } : {}),
+    ...(i.custom ? { custom: true, recipe_items: i.recipe_items ?? [] } : {}),
+    ...(i.note ? { note: i.note } : {}),
+  }))
+
+  const snap = await getDoc(ref)
+  if (!snap.exists()) throw new Error('Ordine non trovato')
+  const cur = snap.data()
+  const norm = normalizeOrderDoc(cur)
+  if (norm.status !== ORDER_OPEN) throw new Error('Conto chiuso: non più modificabile')
+  const comande = norm.comande.map((c) => ({ ...c }))
+  const comanda = comande.find((c) => c.id === comandaId)
+  if (!comanda) throw new Error('Comanda non trovata')
+  if (comanda.status === ORDER_STATUSES.RITIRATO || comanda.status === ORDER_STATUSES.ANNULLATO) {
+    throw new Error('Comanda già servita: non più modificabile')
+  }
+
+  // Scarico già applicato: le scorte si riallineano con la DIFFERENZA, ma
+  // DOPO aver salvato le righe. Prima si aspettavano qui le letture di
+  // ricette e articoli: se il magazzino non rispondeva, la modifica dell'ordine
+  // non veniva scritta e gli item andavano persi.
+  const daRiallineare = comanda.inventory_applied === true
+
+  comanda.items = newItems
+  const agg = aggregateItems(comande)
+  const extras =
+    Number(cur.coperto_amount || 0) +
+    Number(cur.service_charge_amount || 0) +
+    Number(cur.tip_amount || 0)
+  const nuovoTotale = sumItems(agg) + extras
+  const nuovoSconto = scontoRicalcolato(cur, nuovoTotale)
+  bgWrite(() => updateDoc(ref, {
+    status: ORDER_OPEN,
+    comande,
+    comande_statuses: comandeStatuses(comande),
+    items: agg,
+    total: nuovoTotale,
+    ...(nuovoSconto != null ? { discount_amount: nuovoSconto } : {}),
+  }), 'modifica comanda')
+  // Scorte dopo: se erano già state scalate si applica solo la differenza.
+  if (daRiallineare) riallineaInSottofondo(orderId, comandaId)
   return mapOrder(await getDoc(ref))
 }
 
@@ -844,51 +2567,69 @@ export async function cancelOrder(id, opts = {}) {
     notify: notifyClient = false,
   } = opts
   const orderRef = doc(db, 'orders', id)
-  await runTransaction(db, async (tx) => {
-    const snap = await tx.get(orderRef)
-    if (!snap.exists()) throw new Error('Ordine non trovato')
-    const order = snap.data()
-    if (order.status === ORDER_STATUSES.ANNULLATO) return
+  const snap = await getDoc(orderRef)
+  if (!snap.exists()) throw new Error('Ordine non trovato')
+  const order = snap.data()
+  if (order.status === ORDER_STATUSES.ANNULLATO) return mapOrder(snap)
 
-    const consumption = Array.isArray(order.inventory_consumption) ? order.inventory_consumption : []
-    const restoreStock = kind !== 'non_ritirato'
-    if (restoreStock && order.inventory_applied === true && consumption.length > 0) {
-      // --- letture ---
-      const itemSnaps = await Promise.all(
-        consumption.map((c) => tx.get(doc(db, 'inventory_items', c.inventory_item_id)))
-      )
-      // --- scritture: ripristino stock ---
-      consumption.forEach((c, idx) => {
-        const s = itemSnaps[idx]
-        if (!s.exists()) return
-        const cur = s.data()
-        tx.update(doc(db, 'inventory_items', c.inventory_item_id), {
-          stock: (Number(cur.stock) || 0) + c.qty,
-        })
-        tx.set(doc(movementsCol), {
-          item_id: c.inventory_item_id,
-          item_name: cur.name,
-          type: 'load',
-          qty: c.qty,
-          unit: cur.unit ?? null,
-          reason: 'storno',
-          order_id: id,
-          created_at: serverTimestamp(),
-        })
-      })
+  // Somma gli snapshot di consumo di TUTTE le comande già scalate (i doc
+  // legacy hanno lo snapshot a livello ordine, gestito da normalize).
+  const norm = normalizeOrderDoc(order)
+  const comande = norm.comande.map((c) => ({ ...c }))
+  const consumption = comande
+    .filter((c) => c.inventory_applied === true && Array.isArray(c.inventory_consumption))
+    .flatMap((c) => c.inventory_consumption)
+  const restoreStock = kind !== 'non_ritirato'
+  if (restoreStock && consumption.length > 0) {
+    const itemSnaps = await Promise.all(
+      consumption.map((c) => getDoc(doc(db, 'inventory_items', c.inventory_item_id)))
+    )
+    // Ripristino stock con increment(+qty): commutativo, si accoda offline.
+    for (let idx = 0; idx < consumption.length; idx++) {
+      const c = consumption[idx]
+      const s = itemSnaps[idx]
+      if (!s.exists()) continue
+      const cur = s.data()
+      bgWrite(() => updateDoc(doc(db, 'inventory_items', c.inventory_item_id), {
+        stock: increment(qtyInStockUnit(c.qty, c.unit, cur)),
+      }), 'storno scorta')
+      bgWrite(() => addDoc(movementsCol, {
+        item_id: c.inventory_item_id,
+        item_name: cur.name,
+        type: 'load',
+        qty: c.qty,
+        unit: cur.unit ?? null,
+        reason: 'storno',
+        order_id: id,
+        created_at: serverTimestamp(),
+      }), 'movimento scorta')
     }
+  }
 
-    tx.update(orderRef, {
-      status: ORDER_STATUSES.ANNULLATO,
-      inventory_applied: restoreStock ? false : order.inventory_applied === true,
-      [`status_times.${ORDER_STATUSES.ANNULLATO}`]: new Date().toISOString(),
-      cancelled_by: by,
-      cancel_kind: kind,
-      cancel_phrase: phrase,
-      cancel_message: message || null,
-      cancel_notify: !!notifyClient,
-    })
-  })
+  // Le comande non servite diventano annullate (le servite restano a storico).
+  const nowIso = new Date().toISOString()
+  // Buono-sconto applicato: il saldo torna al beneficiario (l'ordine salta).
+  if (order.discount && order.discount.type === 'buono' && order.discount.voucher_id) {
+    await refundVoucher(order.discount.voucher_id, order.discount.value, id, nowIso)
+  }
+  for (const c of comande) {
+    if (c.status !== ORDER_STATUSES.RITIRATO && c.status !== ORDER_STATUSES.ANNULLATO) {
+      c.status = ORDER_STATUSES.ANNULLATO
+      c.status_times = { ...(c.status_times || {}), [ORDER_STATUSES.ANNULLATO]: nowIso }
+    }
+    if (restoreStock) c.inventory_applied = false
+  }
+  bgWrite(() => updateDoc(orderRef, {
+    status: ORDER_STATUSES.ANNULLATO,
+    comande,
+    comande_statuses: comandeStatuses(comande),
+    [`status_times.${ORDER_STATUSES.ANNULLATO}`]: nowIso,
+    cancelled_by: by,
+    cancel_kind: kind,
+    cancel_phrase: phrase,
+    cancel_message: message || null,
+    cancel_notify: !!notifyClient,
+  }), 'annullo ordine')
   return mapOrder(await getDoc(orderRef))
 }
 
@@ -904,53 +2645,17 @@ export function subscribeOrder(id, onChange, onError) {
   )
 }
 
-// Ascolta in tempo reale gli ordini attivi (coda bartender). Restituisce una
-// funzione di disiscrizione. `onChange` riceve la lista ordinata di ordini.
-export function subscribeActiveOrders(onChange, onError) {
-  const q = query(ordersCol, where('status', 'not-in', INACTIVE_STATUSES))
-  return onSnapshot(
-    q,
-    (snap) => {
-      const orders = snap.docs.map(mapOrder)
-      orders.sort((a, b) =>
-        String(a.created_at || '').localeCompare(String(b.created_at || ''))
-      )
-      onChange(orders)
-    },
-    onError
-  )
-}
 
-// Serate chiuse più recenti (per le statistiche).
-export async function fetchClosedSerate(limitN = 30) {
-  const snap = await getDocs(
-    query(serateCol, where('status', '==', 'closed'), orderBy('closed_at', 'desc'), fbLimit(limitN))
-  )
-  return snap.docs.map(mapSerata)
-}
-
-// Tutti gli ordini di un insieme di serate (per le statistiche).
-// Firestore: massimo 30 valori per clausola "in" → suddivisione in blocchi.
-export async function fetchOrdersForSerate(serataIds) {
-  if (!serataIds || serataIds.length === 0) return []
-  const chunks = []
-  for (let i = 0; i < serataIds.length; i += 30) chunks.push(serataIds.slice(i, i + 30))
-  const results = []
-  for (const chunk of chunks) {
-    const snap = await getDocs(query(ordersCol, where('serata_id', 'in', chunk)))
-    results.push(...snap.docs.map(mapOrder))
-  }
-  return results
-}
-
-// Coda attiva di una serata (solo ricevuto/in_preparazione): usata per la
+// Coda attiva (solo ricevuto/in_preparazione): usata per la
 // stima personalizzata dei tempi. `onChange` riceve [{daily_number, status}]
 // — dati minimi, gli altri ordini non vengono mostrati al cliente.
-export function subscribeQueue(serataId, onChange, onError) {
+export function subscribeQueue(onChange, onError) {
   const q = query(
     ordersCol,
-    where('serata_id', '==', serataId),
-    where('status', 'in', [ORDER_STATUSES.RICEVUTO, ORDER_STATUSES.IN_PREPARAZIONE])
+    where('comande_statuses', 'array-contains-any', [
+      ORDER_STATUSES.RICEVUTO,
+      ORDER_STATUSES.IN_PREPARAZIONE,
+    ])
   )
   return onSnapshot(
     q,
@@ -959,7 +2664,10 @@ export function subscribeQueue(serataId, onChange, onError) {
         snap.docs
           .map((d) => ({
             daily_number: d.data().daily_number ?? 0,
-            status: d.data().status,
+            // Stato di lavorazione più avanzato tra le comande in coda.
+            status: (d.data().comande_statuses || []).includes(ORDER_STATUSES.IN_PREPARAZIONE)
+              ? ORDER_STATUSES.IN_PREPARAZIONE
+              : ORDER_STATUSES.RICEVUTO,
             payment_required: d.data().payment_required ?? false,
             payment_status: d.data().payment_status ?? 'non_richiesto',
           }))
@@ -971,14 +2679,13 @@ export function subscribeQueue(serataId, onChange, onError) {
   )
 }
 
-// Ordini "pronti" della serata, in tempo reale: alimenta il tabellone
+// Ordini "pronti", in tempo reale: alimenta il tabellone
 // "stiamo servendo / pronti al ritiro" nel menù cliente. Espone solo
 // numero e modalità di consegna.
-export function subscribeReadyOrders(serataId, onChange, onError) {
+export function subscribeReadyOrders(onChange, onError) {
   const q = query(
     ordersCol,
-    where('serata_id', '==', serataId),
-    where('status', '==', ORDER_STATUSES.PRONTO)
+    where('comande_statuses', 'array-contains', ORDER_STATUSES.PRONTO)
   )
   return onSnapshot(
     q,
@@ -1052,14 +2759,201 @@ export async function replaceCatalog({ categories, products }, onProgress = () =
 // --- STAFF CALLS (cerca-persone) ---
 
 const staffCallsCol = collection(db, 'staff_calls')
+const staffHoursCol = collection(db, 'staff_hours')
+
+// ── RAPP ORE: registro ore dello staff (per mese) ─────────────────────
+
+export async function addStaffHours({ staff_uid = null, staff_name, date, start, end, break_minutes = 0, hours, note = null, kind = 'effettivo' }) {
+  const ref = await addDoc(staffHoursCol, {
+    // Il turno è di un MEMBRO dello staff: l'uid è il riferimento stabile,
+    // il nome resta come etichetta leggibile nei registri.
+    staff_uid,
+    staff_name: String(staff_name || '').trim(),
+    date, // YYYY-MM-DD
+    month: String(date || '').slice(0, 7), // per la query mensile
+    start,
+    end,
+    break_minutes: Number(break_minutes) || 0,
+    hours: Number(hours) || 0,
+    note: note || null,
+    // 'programmato' = turno pianificato, 'effettivo' = ore realmente
+    // lavorate (correzione manuale o storico Excel). I doc legacy senza
+    // campo sono ore effettive (era il registro RAPP ORE).
+    kind: kind === 'programmato' ? 'programmato' : 'effettivo',
+    created_at: serverTimestamp(),
+  })
+  return ref.id
+}
+
+export function subscribeStaffHours(month, cb, onError) {
+  const q = query(staffHoursCol, where('month', '==', month))
+  return onSnapshot(
+    q,
+    (snap) => {
+      const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+      rows.sort((a, b) => String(a.date).localeCompare(String(b.date)) || String(a.start).localeCompare(String(b.start)))
+      cb(rows)
+    },
+    onError
+  )
+}
+
+export async function deleteStaffHours(id) {
+  await deleteDoc(doc(staffHoursCol, id))
+}
+
+// Turni in un intervallo di date (per le viste calendario giorno/
+// settimana/mese, anche a cavallo di due mesi).
+export function subscribeStaffHoursRange(from, to, cb, onError) {
+  const q = query(staffHoursCol, where('date', '>=', from), where('date', '<=', to))
+  return onSnapshot(
+    q,
+    (snap) => {
+      const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+      rows.sort(
+        (a, b) =>
+          String(a.date).localeCompare(String(b.date)) ||
+          String(a.start || '').localeCompare(String(b.start || ''))
+      )
+      cb(rows)
+    },
+    onError
+  )
+}
+
+// Tutto il registro ore (per il dedup dell'import storico).
+export async function fetchAllStaffHours() {
+  const snap = await getDocs(staffHoursCol)
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+}
+
+// ── PAGHE: tariffa oraria per persona, storicizzata ───────────────────
+// Un documento per persona (id = nome normalizzato, come sono registrate
+// le ore) con l'elenco delle tariffe e la data da cui valgono. Dato
+// sensibile: le regole lo riservano al bartender.
+
+const staffRatesCol = collection(db, 'staff_rates')
+
+// Le paghe sono legate al MEMBRO DELLO STAFF (uid dell'account), non a un
+// nome scritto a mano: due persone possono chiamarsi uguale e un nome si
+// può correggere, l'account no. Il nome si salva comunque come etichetta
+// leggibile per i registri storici.
+
+export function subscribeStaffRates(cb, onError) {
+  return onSnapshot(
+    staffRatesCol,
+    (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+    onError ?? (() => {})
+  )
+}
+
+// Salva l'elenco tariffe di un membro dello staff (già ordinato da paghe.js).
+export async function saveStaffRates({ uid, name }, rates) {
+  if (!uid) throw new Error('Serve il membro dello staff.')
+  await setDoc(
+    doc(staffRatesCol, uid),
+    { uid, name: String(name || '').trim(), rates: rates || [], updated_at: serverTimestamp() },
+    { merge: true }
+  )
+}
+
+export async function deleteStaffRates(uid) {
+  await deleteDoc(doc(staffRatesCol, uid))
+}
+
+// ── BADGE VIRTUALE: timbrature entrata/uscita dello staff ─────────────
+// Al login lo staff "timbra" l'entrata, al logout l'uscita. Ogni sessione
+// è un doc con clock_in/clock_out; finché `open` è vero il turno è in
+// corso. Le ore effettive del calendario sommano queste sessioni chiuse
+// (kind 'effettivo' come le voci manuali).
+
+const staffShiftsCol = collection(db, 'staff_shifts')
+
+// Timbra ENTRATA: apre una sessione, ma solo se non ce n'è già una aperta
+// per questo uid (idempotente: un refresh a sessione aperta non duplica).
+// Offline la query legge dalla cache; se la cache è fredda può creare un
+// doppione, che il bartender corregge dal backoffice.
+export async function clockIn({ uid, name }) {
+  if (!uid) return null
+  const openQ = query(staffShiftsCol, where('staff_uid', '==', uid), where('open', '==', true))
+  const existing = await getDocs(openQ)
+  if (!existing.empty) return existing.docs[0].id
+  const now = new Date().toISOString()
+  const ref = await addDoc(staffShiftsCol, {
+    staff_uid: uid,
+    staff_name: String(name || '').trim(),
+    clock_in: now,
+    clock_out: null,
+    open: true,
+    date: now.slice(0, 10),
+    month: now.slice(0, 7),
+    hours: 0,
+    created_at: serverTimestamp(),
+  })
+  return ref.id
+}
+
+// Timbra USCITA: chiude la/e sessione/i aperta/e dell'uid calcolando le ore.
+export async function clockOut({ uid }) {
+  if (!uid) return
+  const openQ = query(staffShiftsCol, where('staff_uid', '==', uid), where('open', '==', true))
+  const snap = await getDocs(openQ)
+  const now = new Date().toISOString()
+  for (const d of snap.docs) {
+    const inIso = d.data().clock_in
+    await updateDoc(d.ref, {
+      clock_out: now,
+      open: false,
+      hours: hoursBetweenIso(inIso, now) || 0,
+    })
+  }
+}
+
+// Timbrature in un intervallo di date (per le viste calendario). Marcate
+// kind 'effettivo' per il confronto con le ore programmate.
+export function subscribeStaffShiftsRange(from, to, cb, onError) {
+  const q = query(staffShiftsCol, where('date', '>=', from), where('date', '<=', to))
+  return onSnapshot(
+    q,
+    (snap) => {
+      const rows = snap.docs.map((d) => ({ id: d.id, ...d.data(), kind: 'effettivo' }))
+      rows.sort(
+        (a, b) =>
+          String(a.date).localeCompare(String(b.date)) ||
+          String(a.clock_in || '').localeCompare(String(b.clock_in || ''))
+      )
+      cb(rows)
+    },
+    onError
+  )
+}
+
+// Correzione manuale di una timbratura (bartender): se imposta entrambi
+// gli orari ricalcola le ore e chiude la sessione.
+export async function updateStaffShift(id, patch) {
+  const p = { ...patch }
+  if (p.clock_in) {
+    p.date = String(p.clock_in).slice(0, 10)
+    p.month = String(p.clock_in).slice(0, 7)
+  }
+  if (p.clock_in && p.clock_out) {
+    p.hours = hoursBetweenIso(p.clock_in, p.clock_out) || 0
+    p.open = false
+  }
+  await updateDoc(doc(staffShiftsCol, id), p)
+}
+
+export async function deleteStaffShift(id) {
+  await deleteDoc(doc(staffShiftsCol, id))
+}
 
 // Token push del dispositivo di un membro dello staff: la Cloud Function
 // lo usa per recapitare la chiamata cerca-persone anche quando l'app è
 // in background o chiusa.
-export async function saveStaffToken(uid, token) {
+export async function saveStaffToken(uid, token, role = null) {
   await setDoc(
     doc(db, 'staff_tokens', uid),
-    { token, updated_at: serverTimestamp() },
+    { token, role, updated_at: serverTimestamp() },
     { merge: true }
   )
 }
@@ -1115,6 +3009,32 @@ export async function ackStaffCall(id) {
 
 export const DEFAULT_SETTINGS = {
   menu_only: false,
+  // GIORNATA COMMERCIALE: ora a cui "gira" la giornata. Il locale lavora
+  // oltre la mezzanotte, quindi la nottata resta contata nella giornata in
+  // cui è cominciata. Raggruppa statistiche e fa ripartire il progressivo
+  // #N. Non chiude nulla: i conti restano aperti finché non li si chiude.
+  business_day_cutoff_hour: DEFAULT_CUTOFF_HOUR,
+  // PREZZO CONSIGLIATO: ricarico sul costo degli ingredienti (di norma
+  // ×3, ma dipende dal drink) e passo di arrotondamento del listino.
+  // È solo un suggerimento: il prezzo resta sempre modificabile a mano.
+  // GESTIONE PREPARAZIONE: se spenta il locale tiene traccia solo degli
+  // ordini (ricevuto → pagato), senza il ciclo di lavorazione. Sparisce
+  // tutto ciò che ne dipende: avanzamenti di stato, tempi di servizio,
+  // stima ETA e notifiche di "pronto". Disattivata di default: la si accende
+  // solo se si vuole tracciare la preparazione.
+  workflow_enabled: false,
+  price_markup: DEFAULT_MARKUP,
+  price_round_step: DEFAULT_ROUND_STEP,
+  // IVA di vendita (somministrazione bar = 10%): serve a scorporare l'IVA dal
+  // fatturato per confrontarlo al netto con gli acquisti (Dashboard mensile).
+  sale_vat: 10,
+  // IVA di ACQUISTO (ordinaria = 22%): è quella delle fatture fornitore, quindi
+  // il default dei prodotti in Inventario. Diversa da quella di vendita.
+  purchase_vat: 22,
+  // COSA FA LO SCONTO quando si tolgono righe da un conto già scontato:
+  // 'tetto' (default) | 'proporzione' | 'avviso'. Le tre strategie sono
+  // spiegate per esteso in pagamento.js e nella schermata Impostazioni.
+  discount_policy: DEFAULT_DISCOUNT_POLICY,
   coperto_enabled: false,
   coperto_amount: 2,
   service_charge_enabled: false,
@@ -1126,7 +3046,7 @@ export const DEFAULT_SETTINGS = {
   // costo di servizio.
   service_mode: 'tavolo',
   // Tempo stimato di servizio mostrato ai clienti: parte dal tempo base e si
-  // raffina con i tempi reali della serata.
+  // raffina con i tempi reali del servizio.
   eta_enabled: false,
   eta_base_minutes: 10,
   // Frase di default mostrata al cliente quando il bartender annulla un
@@ -1145,7 +3065,16 @@ export const DEFAULT_SETTINGS = {
   venue_radius_m: 150,
   // Coda ordini bartender: 'tabs' (schede per stato) o 'lista' (lista unica
   // con stato indicato da colore/etichetta sulla card).
-  queue_view: 'tabs',
+  queue_view: 'griglia',
+  // Vista ordine: raggruppamento di default degli item aggiunti —
+  // 'separati' (ogni tocco una riga a sé) o 'uniti' (item uguali sommati).
+  // Si può comunque unire/separare al volo dal riepilogo ordine.
+  // Dove finisce l'item appena aggiunto nella lista ordine: in fondo (default,
+  // e la lista scorre a mostrarlo) o in cima (subito visibile senza scorrere).
+  pos_add_top: false,
+  // Come mostrare le categorie nel POS: 'dot' (pallino + testo, come ora),
+  // 'icon_text' (icona + testo) o 'icon' (solo icona).
+  category_display: 'dot',
   // Pagamenti: online (SumUp Checkout) e lettore Solo (Cloud API).
   payments_online_enabled: false,
   payments_online_required: false,
@@ -1154,6 +3083,54 @@ export const DEFAULT_SETTINGS = {
   sumup_reader_name: null,
   // Chi non paga online deve ritirare al banco (dove c'è un banco).
   banco_required_if_unpaid: false,
+  // Gruppi di ordini (contenitori associabili ai clienti).
+  groups_enabled: false,
+  groups_in_drawer: true,
+  groups_in_queue: true,
+  // Temi: preset + eventuali override colore, separati per gestionale
+  // (staff/bartender) e vista cliente. Vedi src/lib/themes.js.
+  theme_staff: { preset: 'tana-scuro', custom: null },
+  theme_client: { preset: 'tana-scuro', custom: null },
+}
+
+// IMPOSTAZIONI IN CACHE. Le scritture sugli ordini devono sapere che sconto
+// applicare quando cambiano le righe, e non possono permettersi una lettura
+// di rete a ogni tocco del + o del −. La cache si popola da subscribeSettings
+// (che il gestionale tiene sempre aperto); se nessuno l'ha ancora aperto si
+// legge una volta sola, dalla cache offline se serve.
+let settingsCache = null
+
+// SUBITO, senza aspettare NIENTE. Una preferenza non deve poter ritardare —
+// né tantomeno impedire — il salvataggio di un ordine: se la cache non c'è
+// ancora si parte dai default e la si riempie in sottofondo, per la prossima
+// volta. (Prima qui c'era un `await getDoc`: con una rete collegata che non
+// passa quella lettura resta appesa, e con lei restava appesa la scrittura
+// degli item — gli ordini non si salvavano più.)
+function impostazioni() {
+  if (!settingsCache) {
+    getDoc(settingsDoc)
+      .then((snap) => {
+        if (snap.exists()) settingsCache = snap.data()
+      })
+      .catch(() => {})
+  }
+  return { ...DEFAULT_SETTINGS, ...(settingsCache || {}) }
+}
+
+// Sconto da riscrivere quando il totale del conto cambia. Ritorna null se
+// sull'ordine non c'è nessuno sconto: in quel caso non si tocca il campo.
+function scontoRicalcolato(cur, nuovoTotale) {
+  const discount = cur?.discount || null
+  if (!discount) return null
+  return discountAfterChange(
+    {
+      discount,
+      prevAmount: cur.discount_amount,
+      prevTotal: cur.total,
+      newTotal: nuovoTotale,
+    },
+    impostazioni().discount_policy
+  )
 }
 
 export function subscribeSettings(onChange, onError) {
@@ -1162,6 +3139,7 @@ export function subscribeSettings(onChange, onError) {
     (snap) => {
       if (!snap.exists()) return onChange({ ...DEFAULT_SETTINGS })
       const data = snap.data()
+      settingsCache = data
       const merged = { ...DEFAULT_SETTINGS, ...data }
       // Retrocompatibilità col vecchio flag booleano della scelta consegna.
       if (!data.service_mode && data.service_mode_choice_enabled) {
@@ -1175,4 +3153,24 @@ export function subscribeSettings(onChange, onError) {
 
 export async function updateSettings(data) {
   await setDoc(settingsDoc, { ...data, updated_at: serverTimestamp() }, { merge: true })
+}
+
+// --- CONFIG STAMPANTE (persistita anche su server) ---
+// L'IP e le preferenze stampante stavano solo in localStorage, che su iPad/
+// Safari (PWA) viene svuotato dopo giorni di inattività (ITP): l'IP si perdeva.
+// Le mirror-iamo su Firestore (doc condiviso del locale) e reidratiamo il
+// localStorage all'avvio, così l'IP sopravvive alla pulizia della cache.
+const printerConfigDoc = doc(db, 'settings', 'printer')
+
+export function subscribePrinterConfig(onChange, onError) {
+  return onSnapshot(
+    printerConfigDoc,
+    (snap) => onChange(snap.exists() ? snap.data() : null),
+    onError ?? (() => {})
+  )
+}
+
+// Salvataggio local-first: scrittura in background, non blocca offline.
+export function savePrinterConfig(patch) {
+  setDoc(printerConfigDoc, { ...patch, updated_at: serverTimestamp() }, { merge: true }).catch(() => {})
 }

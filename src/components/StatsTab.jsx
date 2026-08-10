@@ -1,23 +1,29 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
-  fetchClosedSerate,
-  fetchOrdersForSerate,
+  fetchOrdersBetween,
   fetchDrinks,
+  fetchCashSessions,
+  subscribeSettings,
+  DEFAULT_SETTINGS,
 } from '../lib/api.js'
+import { businessDayKey } from '../lib/businessDay.js'
+import { shiftDay } from '../lib/ore.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import {
   kpiSummary,
   revenueByHour,
-  revenueBySerata,
-  revenueBySerataInRange,
+  revenueByDay,
+  revenueByDayInRange,
   topProducts,
   revenueByCategory,
+  hourRangeReport,
   ingredientUsage,
   prepTimeStats,
   serviceModeSplit,
   extrasBreakdown,
   DEFAULT_HOUR_RANGE,
 } from '../lib/stats.js'
+import MacroMonthlyTab from './MacroMonthlyTab.jsx'
 
 const fmtMin = (m) => (m == null ? '—' : `${Math.round(m * 10) / 10} min`)
 // Prezzo compatto per le etichette dei grafici (niente centesimi).
@@ -25,74 +31,191 @@ const fmtShort = (v) => `${Math.round(v).toLocaleString('it-IT')} €`
 const fmtQty = (u) =>
   u.unit === 'pz' ? `${u.qty} pz` : u.qty >= 1000 ? `${(u.qty / 1000).toFixed(1)} L` : `${Math.round(u.qty)} ml`
 
-// Statistiche del locale: calcolate dagli ordini delle serate chiuse.
+// Statistiche del locale, per GIORNATA COMMERCIALE o per SERATA (la finestra
+// di una chiusura di cassa).
 const PERIOD_PRESETS = [7, 10, 20, 30, 60]
 
+// Etichetta di una serata nell'elenco: data, orari e incasso, così si sceglie
+// riconoscendola e non a numero di riga.
+const etichettaSerata = (s) => {
+  const d = (iso, opt) => {
+    try {
+      return new Date(iso).toLocaleString('it-IT', opt)
+    } catch {
+      return '—'
+    }
+  }
+  const giorno = d(s.opened_at, { weekday: 'short', day: '2-digit', month: '2-digit' })
+  const da = d(s.opened_at, { hour: '2-digit', minute: '2-digit' })
+  const a = s.closed_at ? d(s.closed_at, { hour: '2-digit', minute: '2-digit' }) : 'in corso'
+  const inc = Number(s.snapshot?.incassato)
+  return `${giorno} · ${da}→${a}${Number.isFinite(inc) && inc > 0 ? ` · ${Math.round(inc)} €` : ''}`
+}
+
+// Le Statistiche hanno due viste: il giornaliero (finestra a giornate) e il
+// mensile per macro-categoria (Dashboard A).
 export default function StatsTab() {
-  const [serate, setSerate] = useState(null)
+  const [sub, setSub] = useState('giornaliero') // 'giornaliero' | 'mensile'
+  return (
+    <div>
+      <div className="chips-row" style={{ marginBottom: 10 }}>
+        {[
+          ['giornaliero', '📊 Giornaliero'],
+          ['mensile', '🗂 Mensile per macro'],
+        ].map(([k, label]) => (
+          <button key={k} className={`chip ${sub === k ? 'active' : ''}`} onClick={() => setSub(k)}>
+            {label}
+          </button>
+        ))}
+      </div>
+      {sub === 'giornaliero' ? <DailyStats /> : <MacroMonthlyTab />}
+    </div>
+  )
+}
+
+function DailyStats() {
+  const [loaded, setLoaded] = useState(false)
   const [orders, setOrders] = useState([])
   const [drinks, setDrinks] = useState([])
   const [error, setError] = useState(null)
-  const [period, setPeriod] = useState(10) // ultime N serate
+  const [period, setPeriod] = useState(10) // ultime N giornate
   const [custom, setCustom] = useState(false)
   const [customInput, setCustomInput] = useState('15')
   const effective = custom ? Math.max(1, Number(customInput) || 1) : period
-  // Carica abbastanza serate da coprire il periodo scelto (min 60).
+  // Carica abbastanza giornate da coprire il periodo scelto (min 60).
   const [loadLimit, setLoadLimit] = useState(60)
+  const [settings, setSettings] = useState(DEFAULT_SETTINGS)
+  useEffect(() => subscribeSettings(setSettings, () => {}), [])
+  const cutoff = settings.business_day_cutoff_hour
   if (effective > loadLimit) setLoadLimit(Math.ceil(effective / 30) * 30)
   // Range orari configurabili dei grafici.
   const [hourRange, setHourRange] = useState(DEFAULT_HOUR_RANGE)
+  // SERATA (chiusura di cassa): in alternativa alle ultime N giornate si
+  // guardano le statistiche di UNA serata, dall'apertura alla chiusura della
+  // cassa. È il taglio con cui si ragiona davvero al bancone ("com'è andata
+  // sabato"), e non coincide con la giornata solare: la cassa scavalca la
+  // mezzanotte.
+  const [sessions, setSessions] = useState([])
+  const [sessionId, setSessionId] = useState(null)
+  useEffect(() => {
+    let vivo = true
+    fetchCashSessions({ limit: 60 })
+      .then((list) => vivo && setSessions(list.filter((x) => x.opened_at)))
+      .catch(() => {})
+    return () => {
+      vivo = false
+    }
+  }, [])
+  const serata = useMemo(
+    () => sessions.find((x) => x.id === sessionId) || null,
+    [sessions, sessionId]
+  )
+  // Una serata vecchia può stare fuori dalla finestra già scaricata.
+  useEffect(() => {
+    if (!serata) return
+    const oggi = businessDayKey(new Date(), cutoff)
+    const giorni = Math.ceil((Date.parse(oggi) - Date.parse(businessDayKey(serata.opened_at, cutoff))) / 86400000) + 2
+    if (Number.isFinite(giorni) && giorni > loadLimit) setLoadLimit(Math.ceil(giorni / 30) * 30)
+  }, [serata, cutoff, loadLimit])
+  // Sezione "venduto nella fascia oraria": ha un suo intervallo di DATE, così
+  // si può chiedere "sabato scorso, fra le 22 e l'una" indipendentemente dal
+  // periodo generale scelto sopra.
+  const [fasciaDal, setFasciaDal] = useState(() => businessDayKey(new Date(), cutoff))
+  const [fasciaAl, setFasciaAl] = useState(() => businessDayKey(new Date(), cutoff))
   const [dayRange, setDayRange] = useState({ from: '22:00', to: '00:00' })
+
+  // Date scelte fuori dai dati già scaricati: si allarga la finestra.
+  useEffect(() => {
+    const oggi = businessDayKey(new Date(), cutoff)
+    const giorni = Math.ceil((Date.parse(oggi) - Date.parse(fasciaDal)) / 86400000) + 1
+    if (Number.isFinite(giorni) && giorni > loadLimit) {
+      setLoadLimit(Math.ceil(giorni / 30) * 30)
+    }
+  }, [fasciaDal, cutoff, loadLimit])
 
   useEffect(() => {
     let active = true
-    setSerate(null)
-    Promise.all([fetchClosedSerate(loadLimit), fetchDrinks({}).catch(() => [])])
-      .then(async ([s, d]) => {
+    setLoaded(false)
+    const oggi = businessDayKey(new Date(), cutoff)
+    const from = shiftDay(oggi, -(loadLimit - 1))
+    Promise.all([
+      fetchOrdersBetween(from, oggi, cutoff),
+      fetchDrinks({}).catch(() => []),
+    ])
+      .then(([o, d]) => {
         if (!active) return
-        setSerate(s)
+        setOrders(o)
         setDrinks(d)
-        const o = await fetchOrdersForSerate(s.map((x) => x.id))
-        if (active) setOrders(o)
+        setLoaded(true)
       })
       .catch((e) => active && setError(e.message))
     return () => {
       active = false
     }
-  }, [loadLimit])
+  }, [loadLimit, cutoff])
+
+  // Giornate che hanno avuto attività, più recenti prima.
+  const giorniAttivi = useMemo(() => {
+    const set = new Set()
+    for (const o of orders) {
+      const k = businessDayKey(o.created_at, cutoff)
+      if (k) set.add(k)
+    }
+    return [...set].sort().reverse()
+  }, [orders, cutoff])
 
   const view = useMemo(() => {
-    if (!serate) return null
-    const sel = serate.slice(0, effective)
-    const ids = new Set(sel.map((s) => s.id))
-    const ord = orders.filter((o) => ids.has(o.serata_id))
+    if (!loaded) return null
+    // Serata scelta → finestra della cassa; altrimenti le ultime N giornate.
+    let sel
+    let ord
+    if (serata) {
+      const da = serata.opened_at
+      const a = serata.closed_at || new Date().toISOString()
+      ord = orders.filter((o) => o.created_at >= da && o.created_at <= a)
+      sel = [...new Set(ord.map((o) => businessDayKey(o.created_at, cutoff)).filter(Boolean))]
+    } else {
+      sel = giorniAttivi.slice(0, effective)
+      const selSet = new Set(sel)
+      ord = orders.filter((o) => selSet.has(businessDayKey(o.created_at, cutoff)))
+    }
     const drinksById = Object.fromEntries(drinks.map((d) => [d.id, d]))
     return {
       sel,
       kpi: kpiSummary(ord, sel),
       byHour: revenueByHour(ord, hourRange),
-      bySerata: revenueBySerata(ord, sel),
-      bySerataRange: revenueBySerataInRange(ord, sel, dayRange),
+      byDay: revenueByDay(ord, cutoff),
+      byDayRange: revenueByDayInRange(ord, dayRange, cutoff),
       top: topProducts(ord),
       byCategory: revenueByCategory(ord, drinksById).slice(0, 10),
+      // Cosa si è venduto DAVVERO nella fascia scelta (totale, prodotti,
+      // categorie), sulle GIORNATE indicate qui sotto — non sul periodo sopra.
+      fascia: hourRangeReport(
+        orders.filter((o) => {
+          const k = businessDayKey(o.created_at, cutoff)
+          return k && k >= fasciaDal && k <= fasciaAl
+        }),
+        hourRange,
+        drinksById
+      ),
       ingredients: ingredientUsage(ord, drinksById),
       prep: prepTimeStats(ord),
       split: serviceModeSplit(ord),
       extras: extrasBreakdown(ord),
     }
-  }, [serate, orders, drinks, effective, hourRange, dayRange])
+  }, [loaded, giorniAttivi, orders, drinks, effective, hourRange, dayRange, cutoff, fasciaDal, fasciaAl, serata])
 
   if (error) return <div className="banner">Errore: {error}</div>
-  if (!serate) return <div className="empty">Carico le statistiche…</div>
-  if (serate.length === 0) {
+  if (!loaded) return <div className="empty">Carico le statistiche…</div>
+  if (giorniAttivi.length === 0) {
     return (
       <div className="empty">
-        Nessuna serata chiusa: le statistiche compaiono dopo la prima serata.
+        Nessun ordine ancora: le statistiche compaiono dopo la prima giornata di lavoro.
       </div>
     )
   }
 
-  const { kpi, byHour, bySerata, bySerataRange, top, byCategory, ingredients, prep, split, extras } = view
+  const { kpi, byHour, byDay, byDayRange, top, byCategory, ingredients, prep, split, extras, fascia } = view
 
   return (
     <div>
@@ -100,8 +223,9 @@ export default function StatsTab() {
         {PERIOD_PRESETS.map((v) => (
           <button
             key={v}
-            className={`chip${!custom && period === v ? ' active' : ''}`}
+            className={`chip${!custom && !serata && period === v ? ' active' : ''}`}
             onClick={() => {
+              setSessionId(null)
               setCustom(false)
               setPeriod(v)
             }}
@@ -111,10 +235,42 @@ export default function StatsTab() {
         ))}
         <button
           className={`chip${custom ? ' active' : ''}`}
-          onClick={() => setCustom(true)}
+          onClick={() => {
+            setSessionId(null)
+            setCustom(true)
+          }}
         >
           Personalizzato
         </button>
+        {/* SERATA: le stesse statistiche, ma sulla finestra di una chiusura
+            di cassa. Di default l'ultima chiusa; dall'elenco si sceglie
+            un'altra serata. */}
+        {sessions.length > 0 && (
+          <button
+            className={`chip${serata ? ' active' : ''}`}
+            onClick={() => {
+              setCustom(false)
+              setSessionId(serata ? null : (sessions.find((x) => x.status !== 'open') || sessions[0]).id)
+            }}
+          >
+            🧾 Ultima chiusura
+          </button>
+        )}
+        {serata && (
+          <select
+            className="setting-amount"
+            value={sessionId}
+            onChange={(e) => setSessionId(e.target.value)}
+            aria-label="Scegli la serata"
+            style={{ maxWidth: 260 }}
+          >
+            {sessions.map((x) => (
+              <option key={x.id} value={x.id}>
+                {etichettaSerata(x)}
+              </option>
+            ))}
+          </select>
+        )}
         {custom && (
           <input
             className="setting-amount"
@@ -123,30 +279,39 @@ export default function StatsTab() {
             value={customInput}
             onChange={(e) => setCustomInput(e.target.value)}
             style={{ width: 80 }}
-            aria-label="Numero di serate"
+            aria-label="Numero di giornate"
           />
         )}
       </div>
       <p className="muted small" style={{ margin: '0 0 12px' }}>
-        Statistiche sulle ultime {Math.min(effective, serate.length)} serate
-        {serate.length < effective ? ` (${serate.length} disponibili)` : ''}.
+        {serata ? (
+          <>
+            Serata del {etichettaSerata(serata)} — dall’apertura alla chiusura della cassa,
+            mezzanotte compresa.
+          </>
+        ) : (
+          <>
+            Statistiche sulle ultime {Math.min(effective, giorniAttivi.length)} giornate
+            {giorniAttivi.length < effective ? ` (${giorniAttivi.length} disponibili)` : ''}.
+          </>
+        )}
       </p>
 
       {/* KPI */}
       <div className="kpi-grid">
         <Kpi label="Incasso" value={formatPrice(kpi.incasso)} />
-        <Kpi label="Ordini" value={kpi.ordini} sub={`${kpi.serate} serate`} />
+        <Kpi label="Ordini" value={kpi.ordini} sub={`${kpi.giorni} giornate`} />
         <Kpi label="Scontrino medio" value={formatPrice(kpi.scontrinoMedio)} />
         <Kpi label="Drink venduti" value={kpi.drinkVenduti} sub={`${kpi.drinkPerOrdine.toFixed(1)}/ordine`} />
-        <Kpi label="Incasso / serata" value={formatPrice(kpi.incassoPerSerata)} />
+        <Kpi label="Incasso / giornata" value={formatPrice(kpi.incassoPerGiorno)} />
         <Kpi label="Ora di punta" value={byHour.peakLabel ?? '—'} />
         <Kpi label="Attesa media" value={fmtMin(prep.attesaMedia)} />
         <Kpi label="Preparazione media" value={fmtMin(prep.prepMedia)} />
       </div>
 
-      <ChartCard title="📈 Incasso per serata">
+      <ChartCard title="📈 Incasso per giornata">
         <VBars
-          data={bySerata.map((s) => ({
+          data={byDay.map((s) => ({
             label: `${s.weekday} ${s.label}`,
             value: s.incasso,
             sub: `${s.ordini} ordini`,
@@ -167,10 +332,69 @@ export default function StatsTab() {
         />
       </ChartCard>
 
-      <ChartCard title="📅 Incasso per serata nella fascia scelta">
+      {/* Cosa si è venduto nella fascia oraria scelta qui sopra: totale, tutti
+          i prodotti e le categorie. Risponde a "fra le 22 e l'una cosa vendo?" */}
+      <ChartCard title="🧾 Venduto nella fascia oraria">
+        <div className="grid-2" style={{ gap: 8, marginBottom: 8 }}>
+          <div>
+            <label htmlFor="fascia-dal" className="muted small">Dal giorno</label>
+            <input
+              id="fascia-dal"
+              type="date"
+              value={fasciaDal}
+              max={fasciaAl}
+              onChange={(e) => setFasciaDal(e.target.value)}
+            />
+          </div>
+          <div>
+            <label htmlFor="fascia-al" className="muted small">Al giorno</label>
+            <input
+              id="fascia-al"
+              type="date"
+              value={fasciaAl}
+              min={fasciaDal}
+              onChange={(e) => setFasciaAl(e.target.value)}
+            />
+          </div>
+        </div>
+        <TimeRange value={hourRange} onChange={setHourRange} />
+        <div className="row between" style={{ alignItems: 'baseline', margin: '8px 0' }}>
+          <span className="muted small">
+            {hourRange.from}–{hourRange.to} · {fascia.nOrdini} cont{fascia.nOrdini === 1 ? 'o' : 'i'}
+          </span>
+          <strong className="price" style={{ fontSize: '1.3rem' }}>{formatPrice(fascia.totale)}</strong>
+        </div>
+        {fascia.prodotti.length === 0 ? (
+          <p className="muted small">Nessuna vendita in questa fascia.</p>
+        ) : (
+          <>
+            <div className="muted small" style={{ margin: '6px 0 4px' }}>Categorie</div>
+            <HBars
+              data={fascia.categorie.map((c) => ({
+                label: `${c.name} (${c.qty})`,
+                value: c.revenue,
+                text: formatPrice(c.revenue),
+              }))}
+            />
+            <div className="muted small" style={{ margin: '10px 0 4px' }}>
+              Prodotti venduti ({fascia.prodotti.length})
+            </div>
+            <div className="fascia-prodotti">
+              {fascia.prodotti.map((p) => (
+                <div className="row between fascia-riga" key={p.name}>
+                  <span className="grow">{p.qty}× {p.name}</span>
+                  <span className="muted">{formatPrice(p.revenue)}</span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </ChartCard>
+
+      <ChartCard title="📅 Incasso per giornata nella fascia scelta">
         <TimeRange value={dayRange} onChange={setDayRange} />
         <VBars
-          data={bySerataRange.map((s) => ({
+          data={byDayRange.map((s) => ({
             label: `${s.weekday} ${s.label}`,
             value: s.incasso,
             sub: `${s.ordini} ordini`,
@@ -212,6 +436,11 @@ export default function StatsTab() {
           {extras.coperto > 0 && <Row k="Coperto" v={formatPrice(extras.coperto)} />}
           {extras.servizio > 0 && <Row k="Servizio" v={formatPrice(extras.servizio)} />}
           {extras.mance > 0 && <Row k="Mance" v={formatPrice(extras.mance)} />}
+          {/* Gli sconti sono già scalati dagli incassi qui sopra: si mostrano
+              per sapere quanto si è lasciato sul tavolo. */}
+          {extras.sconti > 0 && (
+            <Row k="Sconti concessi (già dedotti)" v={`−${formatPrice(extras.sconti)}`} />
+          )}
           <Row
             k="🍸 Al tavolo"
             v={`${split.tavolo.ordini} ordini · ${formatPrice(split.tavolo.incasso)}`}

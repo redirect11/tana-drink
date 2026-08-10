@@ -2,8 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { auth } from '../lib/firebaseClient.js'
 import {
-  subscribeOpenSerata,
-  subscribeSerataOrders,
+  subscribeActiveOrders,
   subscribeSettings,
   subscribeMyCalls,
   ackStaffCall,
@@ -18,26 +17,14 @@ import { notify, ensureNotificationPermission } from '../lib/notify.js'
 // Vista cameriera: SOLO gli ordini pronti da servire ai tavoli, con il
 // tasto per segnarli come serviti. Nessun'altra funzione del gestionale.
 export default function ServiceQueue() {
-  const [serata, setSerata] = useState(undefined)
   const [orders, setOrders] = useState([])
   const [error, setError] = useState(null)
   const [busyId, setBusyId] = useState(null)
 
-  useEffect(() => {
-    return subscribeOpenSerata(
-      (s) => setSerata(s),
-      () => setSerata(null)
-    )
-  }, [])
-
-  const serataId = serata?.id
-  useEffect(() => {
-    if (!serataId) {
-      setOrders([])
-      return
-    }
-    return subscribeSerataOrders(serataId, setOrders, (e) => setError(e.message))
-  }, [serataId])
+  useEffect(
+    () => subscribeActiveOrders(setOrders, (e) => setError(e.message)),
+    []
+  )
 
   // Impostazioni (per il numero di membri dello staff → divisione mance).
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
@@ -86,7 +73,7 @@ export default function ServiceQueue() {
     ensureNotificationPermission().then(async (ok) => {
       if (!ok) return
       const token = await getPushToken()
-      if (token) saveStaffToken(uid, token).catch(() => {})
+      if (token) saveStaffToken(uid, token, 'staff').catch(() => {})
     })
   }, [])
 
@@ -146,12 +133,12 @@ export default function ServiceQueue() {
 
   // Da servire: pronti, al tavolo (il ritiro al banco lo gestisce il bancone).
   const daServire = orders
-    .filter((o) => o.status === ORDER_STATUSES.PRONTO && o.service_mode !== 'banco')
+    .filter((o) => o.workflow_status === ORDER_STATUSES.PRONTO && o.service_mode !== 'banco')
     .sort((a, b) => (a.daily_number || 0) - (b.daily_number || 0))
 
-  // Mance della serata, divise equamente tra i membri dello staff.
+  // Mance della giornata, divise equamente tra i membri dello staff.
   const mance = orders
-    .filter((o) => o.status !== ORDER_STATUSES.ANNULLATO)
+    .filter((o) => o.workflow_status !== ORDER_STATUSES.ANNULLATO)
     .reduce((s, o) => s + (Number(o.tip_amount) || 0), 0)
   const membri = Math.max(1, Number(settings.staff_count) || 1)
 
@@ -160,22 +147,18 @@ export default function ServiceQueue() {
       <div className="card">
         <strong>🫱 Servizio ai tavoli</strong>
         <div className="muted">
-          {serata === undefined
-            ? 'Carico…'
-            : serata
-              ? `${daServire.length} da servire`
-              : 'Nessuna serata aperta'}
+          {`${daServire.length} da servire`}
         </div>
-        <Link className="btn block" style={{ marginTop: 12 }} to="/">
+        <Link className="btn block" style={{ marginTop: 12 }} to="/menu">
           ✍️ Nuovo ordine dal menù
         </Link>
       </div>
 
       {error && <div className="banner">Errore: {error}</div>}
 
-      {serata && mance > 0 && (
+      {mance > 0 && (
         <div className="card row between" style={{ alignItems: 'center' }}>
-          <span className="muted">💶 Mance serata</span>
+          <span className="muted">💶 Mance di oggi</span>
           <span>
             <strong className="price">{formatPrice(mance)}</strong>{' '}
             <span className="muted small">
@@ -185,7 +168,7 @@ export default function ServiceQueue() {
         </div>
       )}
 
-      {serata && daServire.length === 0 && (
+      {daServire.length === 0 && (
         <div className="empty">Nessun drink pronto da servire. 🎉</div>
       )}
 
