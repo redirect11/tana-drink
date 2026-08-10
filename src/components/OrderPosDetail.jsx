@@ -76,6 +76,31 @@ import PaymentScreen from './PaymentScreen.jsx'
 // preparazione (una NUOVA comanda solo se l'ordine è già pronto/servito).
 // Dal footer si "Chiude" (torna alla coda); il pagamento resta a parte.
 
+// Ultimo progressivo previsto, tenuto in locale: serve solo a mostrare subito
+// il numero giusto invece di un segnaposto che poi cambia. Si scarta se è
+// vecchio, altrimenti a inizio serata si vedrebbe il numero di ieri.
+const CHIAVE_NUMERO = 'tana:prossimoNumero'
+const ORE_VALIDE = 8
+
+function numeroPrevistoInCache() {
+  try {
+    const v = JSON.parse(localStorage.getItem(CHIAVE_NUMERO) || 'null')
+    if (!v || !Number.isFinite(v.n)) return null
+    if (Date.now() - v.at > ORE_VALIDE * 3600 * 1000) return null
+    return v.n
+  } catch {
+    return null
+  }
+}
+
+function ricordaNumeroPrevisto(n) {
+  try {
+    localStorage.setItem(CHIAVE_NUMERO, JSON.stringify({ n, at: Date.now() }))
+  } catch {
+    /* senza memoria locale si parte dal segnaposto, come prima */
+  }
+}
+
 export default function OrderPosDetail({ order: orderProp = null }) {
   const navigate = useNavigate()
   // Ordine auto-creato IN PLACE alla prima aggiunta (creazione): NON si naviga
@@ -964,12 +989,22 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   })
   const [showInfo, setShowInfo] = useState(false) // popup dati conto
   // Progressivo previsto per l'ordine in creazione (non lo consuma).
-  const [nextNum, setNextNum] = useState(null)
+  // PROGRESSIVO PREVISTO, subito. La lettura del contatore è asincrona: finché
+  // non rispondeva la testata diceva "Nuovo ordine" e poi diventava "#12" —
+  // una parola che si trasforma in un numero, con tutto quello che sta
+  // accanto che si sposta. Si parte dall'ultimo numero visto (in memoria
+  // locale) e lo si corregge quando arriva quello vero: nel caso normale è
+  // già giusto e non si muove niente.
+  const [nextNum, setNextNum] = useState(numeroPrevistoInCache)
   useEffect(() => {
     if (!isNew) return
     let vivo = true
     peekNextDailyNumber({ cutoffHour: settings.business_day_cutoff_hour })
-      .then((n) => vivo && setNextNum(n))
+      .then((n) => {
+        if (!vivo) return
+        setNextNum(n)
+        ricordaNumeroPrevisto(n)
+      })
       .catch(() => {})
     return () => {
       vivo = false
@@ -1056,7 +1091,9 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   // contatore della sessione di cassa), invece di un generico "Nuovo ordine":
   // il numero è il riferimento che si dice al cliente e si scrive sul bicchiere.
   const numero = isNew ? nextNum : order.daily_number
-  const headTitle = numero != null ? `#${numero}` : isNew ? 'Nuovo ordine' : '#—'
+  // Mai una parola al posto del numero: se non lo si sa ancora si tiene il
+  // segnaposto, che occupa lo stesso spazio.
+  const headTitle = numero != null ? `#${numero}` : '#…'
   const nomeConto = isNew ? info.customer_name.trim() : order.customer_name
   const panelTitle = `${headTitle}${nomeConto ? ` · ${nomeConto}` : ''}`
   const canPay = !isNew && !closed && order.payment_status !== 'pagato'
@@ -1084,7 +1121,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
         }}
       >
         <button className="btn ghost small" aria-label="Torna agli ordini" onClick={handleExit}>← Ordini</button>
-        <strong style={{ fontFamily: 'var(--serif)' }}>{headTitle}</strong>
+        <strong className="posd-num">{headTitle}</strong>
         {!isNew && (() => {
           // Il pill del conto porta anche lo stato del pagamento: un conto
           // aperto può essere già saldato (in attesa di servizio) o pagato

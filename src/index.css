@@ -2923,8 +2923,19 @@ body.fullbleed,
 
 /* Nome del conto in testata (#4 · iole): GRANDE quanto i nomi degli item della
    lista (1.08em della scala colonna), non più un titolino. */
+/* Numero del conto in testata: spazio RISERVATO e cifre a larghezza fissa.
+   Il progressivo arriva un istante dopo l'apertura: senza questo, la
+   testata si allargava da "#9" a "#12" e tutto quello che sta accanto
+   scivolava di lato mentre lo si guardava. */
+.posd-num {
+  font-family: var(--serif);
+  font-variant-numeric: tabular-nums;
+  min-width: 3.2em;
+}
+
 .posd-title {
   font-family: var(--serif);
+  font-variant-numeric: tabular-nums;
   font-size: calc(1.08rem * var(--comanda-scale, 1));
   font-weight: 700;
   /* Serif con le code lunghe + overflow nascosto: riga stretta = "p" e "g"
