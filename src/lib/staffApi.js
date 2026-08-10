@@ -1,9 +1,10 @@
-// Gestione utenze staff dal gestionale. In produzione passa dalla
-// callable `staffAdmin` (Admin SDK, riservata al bartender). In ambiente
-// emulatore parla direttamente con l'Auth emulator (nessuna function
-// necessaria nel docker-compose).
+// Gestione utenze dal gestionale. In produzione passa dalla callable
+// `staffAdmin` (Admin SDK: l'elenco lo vede chi gestisce, le nomine solo
+// l'admin). In ambiente emulatore parla direttamente con l'Auth emulator
+// (nessuna function necessaria nel docker-compose).
 import { httpsCallable } from 'firebase/functions'
 import { functions } from './firebaseClient.js'
+import { RUOLI } from './ruoli.js'
 
 const isEmulator = String(import.meta.env.VITE_USE_FIREBASE_EMULATOR) === 'true'
 const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID
@@ -62,18 +63,30 @@ export async function listStaff() {
     ricordaStaff(users)
     return users
   }
-  const res = await emulatorRequest('accounts:query', {})
-  const users = (res.userInfo || [])
-    .map((u) => ({
-      uid: u.localId,
-      email: u.email,
-      name: u.displayName || null,
-      role: safeRole(u.customAttributes),
-      disabled: !!u.disabled,
-    }))
-    .filter((u) => u.role === 'bartender' || u.role === 'staff')
+  const users = (await utenzeEmulatore()).filter((u) => RUOLI.includes(u.role))
   ricordaStaff(users)
   return users
+}
+
+// ELENCO COMPLETO, clienti registrati compresi: è la lista da cui l'admin
+// nomina i ruoli. Non finisce nella cache dello staff, che serve ad altro
+// (cerca-persone, turni) e non deve gonfiarsi con tutti i clienti.
+export async function listUtenti() {
+  if (!isEmulator) return (await call({ action: 'list', tutti: true })).users
+  return utenzeEmulatore()
+}
+
+async function utenzeEmulatore() {
+  const res = await emulatorRequest('accounts:query', {})
+  return (res.userInfo || []).map((u) => ({
+    uid: u.localId,
+    email: u.email,
+    name: u.displayName || null,
+    role: safeRole(u.customAttributes),
+    disabled: !!u.disabled,
+    created_at: u.createdAt ? new Date(Number(u.createdAt)).toISOString() : null,
+    last_login_at: u.lastLoginAt ? new Date(Number(u.lastLoginAt)).toISOString() : null,
+  }))
 }
 
 export async function createStaff({ email, password, role, name }) {
@@ -91,8 +104,17 @@ export async function setStaffRole(uid, role) {
   if (!isEmulator) return call({ action: 'setRole', uid, role })
   return emulatorRequest('accounts:update', {
     localId: uid,
-    customAttributes: JSON.stringify({ role }),
+    // Declassare a cliente vuol dire togliere il claim, non scriverne uno.
+    customAttributes: role === 'cliente' ? JSON.stringify({}) : JSON.stringify({ role }),
   })
+}
+
+// Sospende l'accesso senza cancellare nulla: l'account resta, con i suoi
+// turni e le sue ore, ma non entra più. È il gesto giusto per chi non
+// lavora più qui — l'eliminazione è definitiva e porta via lo storico.
+export async function setStaffDisabled(uid, disabled) {
+  if (!isEmulator) return call({ action: 'setDisabled', uid, disabled })
+  return emulatorRequest('accounts:update', { localId: uid, disableUser: disabled })
 }
 
 export async function removeStaff(uid) {

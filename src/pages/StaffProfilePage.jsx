@@ -5,6 +5,7 @@ import { auth } from '../lib/firebaseClient.js'
 import { logoutStaff } from '../lib/logout.js'
 import { updateDisplayName } from '../lib/customerAuth.js'
 import PasswordChanger from '../components/PasswordChanger.jsx'
+import { RUOLO_ETICHETTA } from '../lib/ruoli.js'
 
 // Profilo dello staff/bartender registrato: modifica del nome
 // visualizzato (usato in «Ciao, …» e nell'attribuzione degli ordini) e
@@ -64,12 +65,12 @@ export default function StaffProfilePage() {
     <div>
       <div className="card">
         <h2 style={{ marginTop: 0 }}>
-          {role === 'bartender' ? '🍸' : '🫱'} Il mio profilo
+          {RUOLO_ETICHETTA[role]?.split(' ')[0] ?? '🫱'} Il mio profilo
         </h2>
         <div className="summary-rows" style={{ margin: '0 0 12px' }}>
           <div className="summary-row">
             <span className="muted">Ruolo</span>
-            <span>{role === 'bartender' ? 'Bartender' : 'Staff'}</span>
+            <span>{RUOLO_ETICHETTA[role] ?? role}</span>
           </div>
           <div className="summary-row">
             <span className="muted">Email</span>

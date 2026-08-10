@@ -30,6 +30,7 @@ import { auth } from '../lib/firebaseClient.js'
 import { queueEtaMinutes } from '../lib/eta.js'
 import { ensureNotificationPermission, notify } from '../lib/notify.js'
 import { rememberOrderId } from '../lib/cart.js'
+import { isPersonale } from '../lib/ruoli.js'
 import ConfirmDialog from '../components/ConfirmDialog.jsx'
 import PaymentPanel from '../components/PaymentPanel.jsx'
 import OrderPosDetail from '../components/OrderPosDetail.jsx'
@@ -71,8 +72,8 @@ export default function OrderStatusPage() {
       try {
         const token = await u.getIdTokenResult()
         const role = token.claims.role
-        setViewerIsStaff(role === 'bartender' || role === 'staff')
-        setViewerRole(role === 'bartender' || role === 'staff' ? role : null)
+        setViewerIsStaff(isPersonale(role))
+        setViewerRole(isPersonale(role) ? role : null)
       } catch {
         setViewerIsStaff(false)
         setViewerRole(null)

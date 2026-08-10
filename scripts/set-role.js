@@ -22,8 +22,12 @@ const ROLE = getArg('role')
 const EMULATOR = args.includes('--emulator')
 const PROJECT = getArg('project') || (EMULATOR ? 'demo-tana-drink' : 'tana-drink')
 
-if (!EMAIL || !['bartender', 'staff'].includes(ROLE)) {
-  console.error('Uso: node scripts/set-role.js --email <email> --role bartender|staff [--emulator]')
+const RUOLI = ['admin', 'bartender', 'staff', 'cliente']
+const ELENCO = args.includes('--elenco')
+
+if (!ELENCO && (!EMAIL || !RUOLI.includes(ROLE))) {
+  console.error('Uso: node scripts/set-role.js --email <email> --role admin|bartender|staff|cliente [--emulator]')
+  console.error('     node scripts/set-role.js --elenco [--project tana-drink-test]')
   process.exit(1)
 }
 
@@ -52,6 +56,40 @@ const HOST = EMULATOR
   : 'https://identitytoolkit.googleapis.com'
 const auth = { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' }
 
+// --elenco: chi ha un ruolo, in questo progetto. Le password non sono
+// leggibili (Firebase tiene solo l'impronta), i ruoli sì.
+if (ELENCO) {
+  const res = await (await fetch(`${HOST}/v1/projects/${PROJECT}/accounts:query`, {
+    method: 'POST',
+    headers: auth,
+    body: JSON.stringify({ limit: 1000 }),
+  })).json()
+  if (res.error) {
+    console.error('Errore:', res.error.message)
+    process.exit(1)
+  }
+  const conRuolo = (res.userInfo || [])
+    .map((u) => {
+      let ruolo = null
+      try {
+        ruolo = JSON.parse(u.customAttributes || '{}').role ?? null
+      } catch {
+        /* attributi illeggibili: lo trattiamo come cliente */
+      }
+      return { email: u.email || '(senza email)', nome: u.displayName || '—', ruolo, sospeso: !!u.disabled }
+    })
+    .filter((u) => u.ruolo)
+  console.log(`[ruoli] ${PROJECT}: ${res.userInfo?.length ?? 0} utenze, ${conRuolo.length} con un ruolo`)
+  for (const u of conRuolo.sort((a, b) => a.ruolo.localeCompare(b.ruolo))) {
+    console.log(`  ${u.ruolo.padEnd(10)} ${u.email.padEnd(34)} ${u.nome}${u.sospeso ? '  [sospeso]' : ''}`)
+  }
+  if (!conRuolo.some((u) => u.ruolo === 'admin')) {
+    console.log('')
+    console.log('  ⚠️  Nessun admin: nominane uno con --email <email> --role admin')
+  }
+  process.exit(0)
+}
+
 // 1. Trova l'utente per email.
 const lookup = await (await fetch(`${HOST}/v1/projects/${PROJECT}/accounts:lookup`, {
   method: 'POST',
@@ -70,7 +108,8 @@ const res = await (await fetch(`${HOST}/v1/projects/${PROJECT}/accounts:update`,
   headers: auth,
   body: JSON.stringify({
     localId: user.localId,
-    customAttributes: JSON.stringify({ role: ROLE }),
+    // "cliente" non è un ruolo: è l'assenza di ruolo.
+    customAttributes: JSON.stringify(ROLE === 'cliente' ? {} : { role: ROLE }),
   }),
 })).json()
 if (res.error) {

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { auth } from '../lib/firebaseClient.js'
 import { logoutStaff } from '../lib/logout.js'
 import { devToolsEnabled } from '../dev/devActions.js'
+import { isGestore } from '../lib/ruoli.js'
 import {
   subscribeSettings,
   subscribeOpenGroups,
@@ -59,8 +60,8 @@ export default function StaffDrawer({ role, active = null, onSelect = null }) {
   // Solo gruppi che possono ricevere ordini diretti (no contenitori).
   const groupTiles = groups.filter((g) => !g.has_child_groups)
 
-  const base = role === 'bartender' ? BARTENDER_NAV : STAFF_NAV
-  const items = role === 'bartender' && devToolsEnabled ? [...base, ['dev', '🛠', 'Dev']] : base
+  const base = isGestore(role) ? BARTENDER_NAV : STAFF_NAV
+  const items = isGestore(role) && devToolsEnabled ? [...base, ['dev', '🛠', 'Dev']] : base
 
   function go(id) {
     setOpen(false)

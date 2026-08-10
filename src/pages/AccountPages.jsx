@@ -19,6 +19,7 @@ import {
 } from '../lib/customerAuth.js'
 import PasswordChanger from '../components/PasswordChanger.jsx'
 import ConfirmDialog from '../components/ConfirmDialog.jsx'
+import { isPersonale } from '../lib/ruoli.js'
 
 // Hook: gli account clienti sono attivi? (impostazione del bartender)
 function useAccountsEnabled() {
@@ -53,7 +54,7 @@ export function AccediPage() {
     try {
       const token = await user.getIdTokenResult()
       const role = token.claims.role
-      navigate(role === 'bartender' || role === 'staff' ? '/bar' : '/profilo')
+      navigate(isPersonale(role) ? '/bar' : '/profilo')
     } catch {
       navigate('/profilo')
     }
