@@ -56,6 +56,10 @@ a {
      tutte le barre in cima devono scostarsi di tanto. In standalone si tiene
      un minimo, perché su iPad senza notch env() può valere 0. */
   --safe-top: env(safe-area-inset-top, 0px);
+  /* Altezza della barra in alto (logo + azioni), senza la fascia di sistema:
+     serve a chi si "appiccica" scorrendo — le categorie a sinistra — per
+     fermarsi SOTTO l'intestazione invece che finirci dietro. */
+  --barra-alta: 68px;
 }
 @media (display-mode: standalone) {
   :root {
@@ -3557,18 +3561,27 @@ body.fullbleed,
   align-items: flex-start;
   margin-top: 8px;
 }
+/* La barra delle categorie si ferma SOTTO l'intestazione: prima si appiccicava
+   al bordo della pagina e le prime voci finivano dietro il logo e il menu,
+   rendendo faticoso scorrerle. L'altezza massima tiene conto della stessa
+   fascia, altrimenti l'ultima voce resterebbe irraggiungibile. */
 .cat-rail {
   flex-shrink: 0;
   position: sticky;
-  top: 8px;
+  top: calc(var(--safe-top) + var(--barra-alta) + 8px);
   display: flex;
   flex-direction: column;
   gap: 6px;
   width: fit-content;
   min-width: 116px;
   max-width: 200px;
-  max-height: calc(100dvh / var(--zoom, 1) - 90px);
+  max-height: calc(100dvh / var(--zoom, 1) - var(--safe-top) - var(--barra-alta) - 24px);
   overflow-y: auto;
+}
+/* A tutto schermo la barra in alto non c'è: le categorie tornano in cima. */
+body.fullbleed .cat-rail {
+  top: calc(var(--safe-top) + 8px);
+  max-height: calc(100dvh / var(--zoom, 1) - var(--safe-top) - 16px);
 }
 .cat-rail .chip {
   justify-content: space-between;
@@ -3619,7 +3632,9 @@ body.fullbleed,
   flex-shrink: 0;
   align-self: flex-start;
   position: sticky;
-  top: 8px;
+  /* Stessa fascia della barra categorie: la linguetta per riaprirle deve
+     restare accanto a loro, non sparire dietro l'intestazione. */
+  top: calc(var(--safe-top) + var(--barra-alta) + 8px);
   width: 30px;
   min-height: 40px;
   border: 1px solid var(--line);
