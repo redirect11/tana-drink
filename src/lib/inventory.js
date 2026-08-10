@@ -81,7 +81,13 @@ export function fromBaseQty(base, unit) {
 const UNIT_LABEL = { l: 'L', cl: 'cl', ml: 'ml', kg: 'kg', g: 'g', mg: 'mg', pz: 'pz' }
 export function formatIn(base, unit) {
   const n = Math.round(fromBaseQty(base, unit) * 100) / 100
-  return `${n.toLocaleString('it-IT', { maximumFractionDigits: 2 })} ${UNIT_LABEL[String(unit || '').toLowerCase()] || unit}`
+  // `useGrouping: 'always'`: senza, il punto delle migliaia dipende da quanto
+  // è aggiornata la tabella delle lingue del dispositivo — le versioni
+  // recenti non raggruppano i numeri di quattro cifre in italiano, quelle
+  // vecchie sì. Lo stesso magazzino si leggeva "2.000 mg" sul portatile e
+  // "2000 mg" sull'iPad. Qui si sceglie una forma sola, uguale ovunque.
+  const numero = n.toLocaleString('it-IT', { maximumFractionDigits: 2, useGrouping: 'always' })
+  return `${numero} ${UNIT_LABEL[String(unit || '').toLowerCase()] || unit}`
 }
 
 // Formatta la giacenza di un ITEM: nell'unità scelta se impostata, altrimenti
@@ -94,12 +100,12 @@ export function fmtItem(base, item) {
 export function formatQty(qty, unit) {
   const n = Number(qty) || 0
   if (unit === 'ml') {
-    if (n >= 1000) return `${(n / 1000).toLocaleString('it-IT', { maximumFractionDigits: 2 })} L`
+    if (n >= 1000) return `${(n / 1000).toLocaleString('it-IT', { maximumFractionDigits: 2, useGrouping: 'always' })} L`
     if (n >= 100 && n % 10 === 0) return `${n / 10} cl`
     return `${n} ml`
   }
   if (unit === 'g') {
-    if (n >= 1000) return `${(n / 1000).toLocaleString('it-IT', { maximumFractionDigits: 2 })} kg`
+    if (n >= 1000) return `${(n / 1000).toLocaleString('it-IT', { maximumFractionDigits: 2, useGrouping: 'always' })} kg`
     return `${n} g`
   }
   return `${n} pz`
