@@ -4038,3 +4038,11 @@ body.fullbleed,
     font-size: 0.8rem;
   }
 }
+
+/* Totale di un conto ANNULLATO: barrato e spento. Non e' un incasso, e
+   mostrarlo uguale a quello dei conti veri faceva credere che contasse. */
+.grid-card-tot.tot-annullato {
+  text-decoration: line-through;
+  opacity: 0.5;
+  font-weight: 500;
+}

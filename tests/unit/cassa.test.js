@@ -128,3 +128,37 @@ describe('metodi di pagamento: elenco aperto', () => {
     expect(r.byMethod.banco).toBe(20)
   })
 })
+
+// Un conto ANNULLATO non ha incassato niente, anche se nel documento è
+// rimasto scritto un totale (succede quando si toglie l'ultima riga: l'ordine
+// si annulla da solo e l'aggregato resta com'era). Non deve entrare in cassa.
+describe('gli annullati non contano', () => {
+  const session = { opened_at: '2026-08-09T15:00:00.000Z', fondo_cassa: 0 }
+  const annullato = {
+    status: 'annullato',
+    payment_status: 'non_richiesto',
+    total: 4, // resta scritto, ma non è mai stato incassato
+    paid_at: null,
+    created_at: '2026-08-09T20:00:00.000Z',
+  }
+  const pagato = {
+    status: 'pagato',
+    payment_status: 'pagato',
+    paid_at: '2026-08-09T21:00:00.000Z',
+    total: 10,
+    payments: [{ method: 'carta', amount: 10, at: '2026-08-09T21:00:00.000Z' }],
+  }
+
+  it('niente incasso e niente conti chiusi in più', () => {
+    const r = cashRecap([annullato, pagato], session, '2026-08-10T02:00:00.000Z')
+    expect(r.incassato).toBe(10)
+    expect(r.nPagati).toBe(1)
+    expect(r.byMethod.banco).toBe(0)
+  })
+
+  it('e nemmeno fra i conti aperti da incassare', () => {
+    const r = cashRecap([annullato], session, '2026-08-10T02:00:00.000Z')
+    expect(r.apertoDaIncassare).toBe(0)
+    expect(r.nAperti).toBe(0)
+  })
+})

@@ -513,7 +513,17 @@ export default function OrderPosDetail({ order: orderProp = null }) {
     if (isNew || !createdInPlace || closed || !order?.id) return
     if (orderedLines.length > 0 || draft.length > 0) return
     if ((order.payments || []).length > 0) return // qualcosa è già stato incassato
-    const t = setTimeout(() => {
+    const t = setTimeout(async () => {
+      // PRIMA si scrive la rimozione, POI si annulla. La rimozione dell'ultima
+      // riga passa da un salvataggio ritardato (600ms): l'annullo arrivava
+      // prima, leggeva l'ordine con la riga ancora dentro e la riscriveva
+      // così com'era. Risultato: un conto annullato che in coda mostrava
+      // ancora "1 prodotto · 4,00 €" mentre dentro non aveva più niente.
+      try {
+        await flushAll()
+      } catch {
+        /* se la scrittura non riesce si annulla lo stesso: il conto va chiuso */
+      }
       cancelOrder(order.id, { by: 'bartender' }).catch(() => {})
       navigate('/bar')
     }, 400) // respiro: evita di annullare durante una sostituzione di riga
