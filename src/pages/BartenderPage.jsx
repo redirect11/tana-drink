@@ -58,6 +58,7 @@ import CancelOrderDialog from '../components/CancelOrderDialog.jsx'
 import DevTools from '../components/DevTools.jsx'
 import StaffDrawer from '../components/StaffDrawer.jsx'
 import { devToolsEnabled } from '../dev/devActions.js'
+import { preloadStaff } from '../lib/staffApi.js'
 import { useCashSession } from '../lib/cashSession.js'
 
 // Badge accanto al numero d'ordine: la LETTERA del dipendente che l'ha aperto,
@@ -113,6 +114,13 @@ export default function BartenderPage() {
     // salta fuori dal gestionale.
     setParams(next)
   }
+
+  // L'elenco dello staff passa da una Cloud Function: lo si scalda appena si
+  // entra nel gestionale, così quando si aprono i pannelli i nomi ci sono già
+  // invece di comparire dopo un "Carico lo staff…".
+  useEffect(() => {
+    if (role === 'bartender') preloadStaff()
+  }, [role])
 
   useEffect(() => {
     return onAuthStateChanged(auth, async (u) => {
