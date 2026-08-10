@@ -5,6 +5,7 @@ import {
   addComanda,
   bartenderUpdateComanda,
   updateOrderInfo,
+  setOrderGroup,
   cancelOrder,
   closePaidOrder,
   createOrder,
@@ -104,10 +105,28 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   const [params] = useSearchParams()
   const groupParam = isNew ? params.get('group') || '' : ''
   const [groups, setGroups] = useState([])
-  const [groupId, setGroupId] = useState(groupParam)
+  const [groupId, setGroupId] = useState(groupParam || order?.group_id || '')
   const [pickGroup, setPickGroup] = useState(false)
   useEffect(() => setGroupId(groupParam), [groupParam])
-  const groupsOn = isNew && settings.groups_enabled
+  // Il conto passa da "nuovo" a "esistente" appena si aggiunge il primo drink:
+  // legare i gruppi a `isNew` faceva sparire il tasto sotto le dita, proprio
+  // mentre lo si stava per usare. I gruppi ci sono se sono ACCESI, punto.
+  const groupsOn = settings.groups_enabled
+  // Su un conto già creato il gruppo si scrive subito sull'ordine.
+  const orderIdCorrente = order?.id
+  useEffect(() => {
+    if (isNew || !orderIdCorrente) return
+    setGroupId(order?.group_id || '')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderIdCorrente, order?.group_id])
+  const scegliGruppo = (id) => {
+    setGroupId(id)
+    if (!isNew && orderIdCorrente) {
+      setOrderGroup(orderIdCorrente, id || null).catch((e) =>
+        toastError(`Gruppo non aggiornato: ${e.message}`)
+      )
+    }
+  }
   useEffect(() => {
     if (!groupsOn) return
     return subscribeOpenGroups(setGroups, () => setGroups([]))
@@ -1162,18 +1181,34 @@ export default function OrderPosDetail({ order: orderProp = null }) {
           <div style={{ padding: '8px 12px 0', flexShrink: 0 }}>
             <div className="row between" style={{ alignItems: 'center' }}>
               <strong className="posd-title">{panelTitle}</strong>
+              {/* I tasti ci sono SEMPRE, spenti quando non servono. Comparire e
+                  sparire sposta tutto quello che sta sotto proprio mentre ci si
+                  sta per premere sopra — e il tasto che cercavi non è più lì. */}
               <span className="row" style={{ gap: 6 }}>
-                {canMerge && (
-                  <button className="btn ghost small" onClick={mergeDraft}>🔗 Unisci</button>
-                )}
-                {canSplit && (
-                  <button className="btn ghost small" onClick={splitAllDraft}>⑃ Separa</button>
-                )}
-                {!isNew && (
-                  <button className="btn secondary small" onClick={() => setShowComande(true)}>
-                    <IconReceipt /> Comande ({comande.length})
-                  </button>
-                )}
+                <button
+                  className="btn ghost small"
+                  onClick={mergeDraft}
+                  disabled={!canMerge}
+                  title={canMerge ? 'Unisci le righe uguali' : 'Niente da unire'}
+                >
+                  🔗 Unisci
+                </button>
+                <button
+                  className="btn ghost small"
+                  onClick={splitAllDraft}
+                  disabled={!canSplit}
+                  title={canSplit ? 'Separa le quantità' : 'Niente da separare'}
+                >
+                  ⑃ Separa
+                </button>
+                <button
+                  className="btn secondary small"
+                  onClick={() => setShowComande(true)}
+                  disabled={isNew}
+                  title={isNew ? 'Il conto non è ancora stato aperto' : 'Storico comande'}
+                >
+                  <IconReceipt /> Comande ({isNew ? 0 : comande.length})
+                </button>
               </span>
             </div>
             {!isNew && order.table_label && (
@@ -1198,11 +1233,14 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                   <button className="btn ghost small" onClick={() => setPickGroup(true)}>
                     👥 {group ? 'Cambia' : 'Associa a gruppo'}
                   </button>
-                  {group && (
-                    <button className="btn ghost small" onClick={() => setGroupId('')} title="Ordine senza gruppo">
-                      ✕
-                    </button>
-                  )}
+                  <button
+                    className="btn ghost small"
+                    onClick={() => scegliGruppo('')}
+                    disabled={!group}
+                    title={group ? 'Togli dal gruppo' : 'Il conto non è in nessun gruppo'}
+                  >
+                    ✕
+                  </button>
                 </span>
               </div>
             )}
@@ -1672,7 +1710,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
             <button
               className={`btn ${groupId ? 'ghost' : ''} block`}
               onClick={() => {
-                setGroupId('')
+                scegliGruppo('')
                 setPickGroup(false)
               }}
             >
@@ -1684,7 +1722,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                 className={`btn ${groupId === g.id ? '' : 'secondary'} block`}
                 style={{ marginTop: 6 }}
                 onClick={() => {
-                  setGroupId(g.id)
+                  scegliGruppo(g.id)
                   setPickGroup(false)
                 }}
               >

@@ -2396,6 +2396,28 @@ export async function updateOrderItems(id, items) {
 
 // Campi "anagrafici" del conto (nome, tavolo, note): modificabili dal
 // bartender finché l'ordine non è chiuso.
+// GRUPPO di un conto già aperto: si può associare (o togliere) anche dopo,
+// non solo alla creazione. Al bancone il tavolo lo si decide spesso a conto
+// avviato — "questi tre li metto insieme" — e prima si poteva farlo solo
+// prima del primo drink.
+export async function setOrderGroup(id, groupId) {
+  const ref = doc(db, 'orders', id)
+  let nome = null
+  if (groupId) {
+    try {
+      const g = await getDoc(doc(groupsCol, groupId))
+      if (g.exists()) nome = g.data().name ?? null
+    } catch {
+      /* nome non leggibile: resta l'associazione, l'etichetta si rilegge dopo */
+    }
+  }
+  bgWrite(
+    () => updateDoc(ref, { group_id: groupId || null, group_name_snapshot: nome }),
+    'gruppo del conto'
+  )
+  return mapOrder(await getDoc(ref))
+}
+
 export async function updateOrderInfo(id, { table_label, note, customer_name }) {
   const patch = {}
   if (table_label !== undefined) patch.table_label = table_label || null
