@@ -1693,11 +1693,12 @@ export default function OrderPosDetail({ order: orderProp = null }) {
 
       {/* ── Modale nome del conto all'uscita di un ordine appena creato ── */}
       {askName && (
-        // Chiudere questo box vuol dire "esco senza dare un nome", non "resto
-        // qui": si stava andando alla lista ordini e il nome era solo una
-        // domanda di passaggio. Prima cliccando fuori si restava piantati nel
-        // dettaglio, e bisognava premere di nuovo "← Ordini".
-        <div className="overlay confirm-overlay" onClick={() => submitNew('')}>
+        // MODALE: cliccare fuori non chiude niente. Con un tocco a vuoto che
+        // chiude, un dito appoggiato di striscio sullo schermo fa sparire la
+        // domanda e non si sa più se il nome è stato messo. Si esce dalla ✕ o
+        // salvando — e in entrambi i casi si prosegue verso la lista ordini,
+        // che è dove si stava andando.
+        <div className="overlay confirm-overlay">
           <form
             className="confirm-box"
             role="dialog"
