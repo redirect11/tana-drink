@@ -101,7 +101,11 @@ export default function StaffCallList() {
                   prima cosa che si vuole sapere di chi si sta per chiamare. */}
               <div className="desc">
                 {ROLE_LABELS[u.role] ?? u.role}
-                {turnoAperto(u.uid) ? ` · dentro dalle ${fmtOra(turnoAperto(u.uid).clock_in)}` : ' · fuori'}
+                {/* "dentro/fuori" si leggeva come "dentro o fuori dal locale":
+                    qui si parla di TURNO, cioè di chi ha timbrato. */}
+                {turnoAperto(u.uid)
+                  ? ` · in servizio dalle ${fmtOra(turnoAperto(u.uid).clock_in)}`
+                  : ' · non in servizio'}
               </div>
             </div>
             <span className="row" style={{ gap: 6, flexShrink: 0 }}>
