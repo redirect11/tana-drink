@@ -74,10 +74,86 @@ function sdkAvailable() {
 
 // Termina la connessione corrente (se attiva).
 export function disconnectPrinter() {
+  fermaBattito()
   try { _device?.disconnect() } catch { /* ignora */ }
   _device = null
   _printer = null
   _connectPromise = null
+}
+
+// ── CONNESSIONE TENUTA VIVA ───────────────────────────────────────────────
+//
+// Il certificato della stampante è auto-firmato: il browser lo accetta solo
+// dopo che qualcuno è andato a mano su https://IP:8043 e ha detto sì, e
+// quell'eccezione NON è per sempre — iPadOS la lascia cadere al riavvio, e
+// l'app installata sulla home ha un suo spazio separato da Safari. Ogni volta
+// che l'eccezione cade, la PRIMA stampa fallisce: cioè in servizio, con il
+// cliente davanti.
+//
+// L'eccezione serve però solo alla STRETTA DI MANO. Finché il collegamento
+// resta aperto non si ricontratta niente. Quindi lo si tiene vivo: un
+// controllo ogni mezzo minuto e una riconnessione appena l'app torna in primo
+// piano. Così la stretta di mano avviene una volta a inizio serata invece che
+// a ogni scontrino — e se il certificato è caduto lo si scopre allora, non
+// davanti al cliente.
+//
+// La soluzione DEFINITIVA non è codice: è installare il certificato della
+// stampante come attendibile sul dispositivo (vedi la guida in Impostazioni →
+// Stampante). Questo qui riduce i danni, non li elimina.
+let _battito = null
+
+function fermaBattito() {
+  clearInterval(_battito)
+  _battito = null
+}
+
+function avviaBattito() {
+  fermaBattito()
+  _battito = setInterval(() => {
+    try {
+      if (_device && !_device.isConnected()) {
+        // Caduta: si libera tutto, la prossima stampa riconnette.
+        _printer = null
+        _device = null
+        _connectPromise = null
+      }
+    } catch {
+      /* SDK in uno stato strano: si lascia stare */
+    }
+  }, 30000)
+}
+
+// SCALDA LA CONNESSIONE: da chiamare quando si apre il gestionale o la cassa.
+// Se il certificato non è più accettato, l'errore esce ADESSO — quando c'è
+// tempo per sistemarlo — invece che al primo scontrino della serata.
+export async function preparaStampante() {
+  const s = loadPrinterSettings()
+  if (!s.ip) return { ok: false, motivo: 'non configurata' }
+  try {
+    await getPrinter()
+    return { ok: true }
+  } catch (e) {
+    return { ok: false, motivo: e.message }
+  }
+}
+
+// Ritorno in primo piano (l'iPad si blocca fra un giro di tavoli e l'altro):
+// si ricontrolla subito, così una caduta si scopre appena si riprende in mano
+// il tablet e non alla prima comanda.
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return
+    if (!loadPrinterSettings().ip) return
+    try {
+      if (_device && !_device.isConnected()) {
+        _printer = null
+        _device = null
+        _connectPromise = null
+      }
+    } catch {
+      /* niente da fare */
+    }
+  })
 }
 
 // Restituisce il printer object, connettendosi se necessario.
@@ -131,12 +207,14 @@ async function getPrinter() {
             return
           }
           _printer = devobj
+          avviaBattito()
 
           // Pulisce la connessione alla disconnessione così al prossimo
           // invio si riconnette in automatico.
           _printer.ondisconnect = () => {
             _printer = null
             _device = null
+            fermaBattito()
           }
 
           _printer.onreceive = (res) => {

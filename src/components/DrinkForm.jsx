@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { ENTRY_UNITS } from '../lib/inventory.js'
+import { entryUnits } from '../lib/inventory.js'
 import PriceSuggestion from './PriceSuggestion.jsx'
 
 // Scheda prodotto del MENÙ: nome, foto, categoria, prezzo, descrizione,
@@ -84,7 +84,7 @@ export default function DrinkForm({ initial, categories, inventory, onCreateCate
   function onItemChange(idx, itemId) {
     const inv = inventory.find((i) => i.id === itemId)
     // unità di inserimento di default per l'item scelto (cl per i volumi, ecc.)
-    const unit = inv ? (ENTRY_UNITS[inv.unit]?.[0] ?? inv.unit) : ''
+    const unit = inv ? (entryUnits(inv)[0] ?? inv.unit) : ''
     setRow(idx, { inventory_item_id: itemId, unit })
   }
 
@@ -177,7 +177,7 @@ export default function DrinkForm({ initial, categories, inventory, onCreateCate
       )}
       {form.recipe_rows.map((r, idx) => {
         const inv = inventory.find((i) => i.id === r.inventory_item_id)
-        const units = inv ? (ENTRY_UNITS[inv.unit] ?? [inv.unit]) : []
+        const units = inv ? entryUnits(inv) : []
         return (
           <div className="row" style={{ gap: 6, marginTop: 6 }} key={idx}>
             <select

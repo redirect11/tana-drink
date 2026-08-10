@@ -3,7 +3,7 @@
 // Unit test del flusso di stato ordine (src/lib/orderStatus.js).
 
 import { describe, it, expect } from 'vitest'
-import {
+import { formatPrice,
   ORDER_STATUSES,
   STATUS_FLOW,
   STATUS_LABELS,
@@ -30,5 +30,22 @@ describe('flusso stati con «pagato»', () => {
   it('pagato ha label ed emoji', () => {
     expect(STATUS_LABELS[ORDER_STATUSES.PAGATO]).toBe('Pagato')
     expect(STATUS_EMOJI[ORDER_STATUSES.PAGATO]).toBeTruthy()
+  })
+})
+
+// I NUMERI SI LEGGONO UGUALI SU TUTTI I DISPOSITIVI.
+// Il punto delle migliaia dipende da quanto è aggiornata la tabella delle
+// lingue: le versioni recenti non raggruppano i numeri di quattro cifre in
+// italiano, quelle vecchie sì. Senza forzarlo, la stessa chiusura di cassa
+// usciva "2.000,00 €" sul portatile e "2000,00 €" sull'iPad — e sullo
+// scontrino stampato non si sa nemmeno quale delle due.
+describe('formato dei prezzi', () => {
+  it('raggruppa le migliaia, sempre', () => {
+    expect(formatPrice(2000)).toContain('2.000')
+    expect(formatPrice(1234.5)).toContain('1.234')
+  })
+
+  it('sotto il migliaio non cambia niente', () => {
+    expect(formatPrice(600.5)).toContain('600,50')
   })
 })

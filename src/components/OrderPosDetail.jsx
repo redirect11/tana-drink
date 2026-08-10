@@ -101,6 +101,22 @@ function ricordaNumeroPrevisto(n) {
   }
 }
 
+// Quando è stato aperto il conto: data breve + ora. "oggi" per la giornata in
+// corso, perché scrivere la data di oggi accanto al numero è rumore.
+function apertoIl(iso) {
+  const t = Date.parse(iso || '')
+  if (!Number.isFinite(t)) return ''
+  const d = new Date(t)
+  const ora = d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
+  const oggi = new Date()
+  const stessoGiorno =
+    d.getDate() === oggi.getDate() &&
+    d.getMonth() === oggi.getMonth() &&
+    d.getFullYear() === oggi.getFullYear()
+  if (stessoGiorno) return `oggi ${ora}`
+  return `${d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' })} ${ora}`
+}
+
 export default function OrderPosDetail({ order: orderProp = null }) {
   const navigate = useNavigate()
   // Ordine auto-creato IN PLACE alla prima aggiunta (creazione): NON si naviga
@@ -1145,6 +1161,13 @@ export default function OrderPosDetail({ order: orderProp = null }) {
       >
         <button className="btn ghost small" aria-label="Torna agli ordini" onClick={handleExit}>← Ordini</button>
         <strong className="posd-num">{headTitle}</strong>
+        {/* QUANDO è stato aperto il conto, accanto al numero: sapere che quel
+            tavolo è lì dalle nove cambia come lo si tratta. */}
+        {!isNew && order.created_at && (
+          <span className="muted small posd-aperto" title="Conto aperto il">
+            {apertoIl(order.created_at)}
+          </span>
+        )}
         {!isNew && (() => {
           // Il pill del conto porta anche lo stato del pagamento: un conto
           // aperto può essere già saldato (in attesa di servizio) o pagato

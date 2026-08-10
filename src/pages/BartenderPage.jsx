@@ -629,6 +629,21 @@ function OrderQueue() {
   const arretratiIds = new Set(arretrati.map((o) => o.id))
   // Etichetta della giornata dell'ordine: "oggi", "ieri" o la data estesa.
   const dayLabel = (o) => businessDayShort(dayOf(o), new Date(), cutoffHour)
+  // Quando è stato APERTO il conto: la giornata da sola non basta — su una
+  // board piena serve sapere se quel tavolo è lì da dieci minuti o da un'ora.
+  const apertoLabel = (o) => {
+    const g = dayLabel(o)
+    const t = o.created_at
+    if (!t) return g
+    try {
+      return `${g} ${new Date(t).toLocaleTimeString('it-IT', {
+        hour: '2-digit',
+        minute: '2-digit',
+      })}`
+    } catch {
+      return g
+    }
+  }
   // Raggruppa una lista per giornata: prima oggi, poi i giorni scorsi dal
   // più recente. Serve a separare con una riga i conti ancora da chiudere.
   const groupByDay = (list) => {
@@ -938,7 +953,7 @@ function OrderQueue() {
           </div>
           <div className="row between" style={{ alignItems: 'baseline', marginTop: 'auto' }}>
             <span className="grid-card-meta">
-              {count} prodott{count === 1 ? 'o' : 'i'} · {dayLabel(o)}
+              {count} prodott{count === 1 ? 'o' : 'i'} · {apertoLabel(o)}
               {/* Sconto applicato: si vede, e il totale è già quello scontato. */}
               {(o.discount_amount || 0) > 0 && (
                 <span className="sconto-badge"> 🎁 −{formatPrice(o.discount_amount)}</span>
@@ -1041,7 +1056,7 @@ function OrderQueue() {
                 {o.group_name_snapshot && (
                   <span className="pill small">👥 {o.group_name_snapshot}</span>
                 )}{' '}
-                <span className="muted small">📅 {dayLabel(o)}</span>
+                <span className="muted small">📅 {apertoLabel(o)}</span>
                 {o.service_mode === 'banco' && (
                   <span className="pill" style={{ marginLeft: 6 }}>🚶 Ritiro al banco</span>
                 )}

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { fetchInventoryItems } from '../lib/api.js'
-import { toBaseQty, ENTRY_UNITS } from '../lib/inventory.js'
+import { toBaseQty, baseUnit, entryUnits } from '../lib/inventory.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import PriceSuggestion from './PriceSuggestion.jsx'
 
@@ -50,8 +50,21 @@ export default function CustomDrinkForm({ onCancel, onAdd, initial = null, warnN
     : []
 
   function addIngredient(inv) {
-    const unit = ENTRY_UNITS[inv.unit]?.[0] ?? inv.unit
-    setRows((r) => [...r, { inventory_item_id: inv.id, name: inv.name, invUnit: inv.unit, qty: '', unit }])
+    const unit = entryUnits(inv)[0] ?? inv.unit
+    setRows((r) => [
+      ...r,
+      {
+        inventory_item_id: inv.id,
+        name: inv.name,
+        invUnit: inv.unit,
+        // Contenuto della confezione: serve a sapere se questo articolo, pur
+        // contato a pezzi, si può dosare in cl (vedi entryUnits).
+        package_size: inv.package_size,
+        content_unit: inv.content_unit,
+        qty: '',
+        unit,
+      },
+    ])
     setSearch('')
   }
   function setRow(idx, patch) {
@@ -80,7 +93,9 @@ export default function CustomDrinkForm({ onCancel, onAdd, initial = null, warnN
       .map((r) => ({
         inventory_item_id: r.inventory_item_id,
         name: r.name,
-        unit: r.invUnit ?? 'pz',
+        // Base di quello che si e' scritto, non l'unita' dell'articolo:
+        // "4 cl" di una bottiglia contata a pezzi sono 40 ml, non 40 pezzi.
+        unit: r.unit ? baseUnit(r.unit) : (r.invUnit ?? 'pz'),
         qty: toBaseQty(r.qty, r.unit),
       }))
     onAdd({ name: name.trim(), price: priceNum, recipe_items, note: note.trim() || null })
@@ -165,7 +180,11 @@ export default function CustomDrinkForm({ onCancel, onAdd, initial = null, warnN
 
             {/* Righe già scelte: nome fisso, quantità e unità inline. */}
             {rows.map((r, idx) => {
-              const units = ENTRY_UNITS[r.invUnit] ?? [r.unit]
+              const units = entryUnits({
+                unit: r.invUnit,
+                package_size: r.package_size,
+                content_unit: r.content_unit,
+              })
               return (
                 <div className="row" style={{ gap: 6, marginTop: 6, alignItems: 'center' }} key={r.inventory_item_id}>
                   <span className="grow" style={{ fontSize: '0.9rem' }}>{r.name}</span>
