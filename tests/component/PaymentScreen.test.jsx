@@ -6,7 +6,7 @@
 // "Riscuotere" al CENTRO, metodi di pagamento e Sconto a DESTRA.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, within, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom/vitest'
 
@@ -38,6 +38,8 @@ vi.mock('../../src/lib/printer.js', () => ({
   printScontrino: vi.fn(() => Promise.resolve()),
   printFattura: vi.fn(() => Promise.resolve()),
   loadPrinterSettings: vi.fn(() => ({ ivaRate: 10, businessName: 'La Tana' })),
+  // Guardia "una copia sola per conto": nei test lascia sempre passare.
+  claimReceiptPrint: vi.fn(() => true),
 }))
 
 import PaymentScreen from '../../src/components/PaymentScreen.jsx'
@@ -49,7 +51,7 @@ import {
 } from '../../src/lib/api.js'
 import { readerCheckout } from '../../src/lib/paymentsApi.js'
 import { applyVoucherDiscount } from '../../src/lib/api.js'
-import { printScontrino, printFattura } from '../../src/lib/printer.js'
+import { printScontrino, printFattura, loadPrinterSettings } from '../../src/lib/printer.js'
 
 let mockVouchers = []
 
@@ -345,5 +347,42 @@ describe('preconto e stato del conto', () => {
     mount(baseOrder({ payment_status: 'pagato', status: 'pagato' }))
     expect(screen.queryByRole('button', { name: /Riscuotere/ })).not.toBeInTheDocument()
     expect(screen.getByText(/Conto pagato e chiuso/)).toBeInTheDocument()
+  })
+})
+
+// LO SCONTRINO DEVE DIRE COME SI È PAGATO.
+// Segnalato dal locale: "il conteggio lo fa di carta, ma lo scontrino esce
+// sempre contanti". La registrazione va in background, quindi al momento della
+// stampa l'ordine non sa ancora com'è stato pagato: la stampa ripiegava sul
+// contante, che è una dichiarazione falsa e non un default.
+describe('scontrino: il metodo di pagamento', () => {
+  // Lo scontrino a fine incasso esce solo con l'auto-stampa accesa.
+  beforeEach(() => {
+    loadPrinterSettings.mockReturnValue({
+      ivaRate: 10,
+      businessName: 'La Tana',
+      autoPrintScontrino: true,
+    })
+  })
+
+  it('con la carta lo scontrino esce con la carta', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.click(screen.getByRole('button', { name: /Carta di Credito/ }))
+    await user.click(screen.getByRole('button', { name: /Riscuotere/ }))
+    await waitFor(() => expect(printScontrino).toHaveBeenCalled())
+    const stampato = printScontrino.mock.calls.at(-1)[0]
+    expect(stampato.payment_method).toBe('carta')
+    expect(stampato.payments.at(-1).method).toBe('carta')
+  })
+
+  it('coi contanti resta contanti', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.click(screen.getByRole('button', { name: /Contante/ }))
+    await user.click(screen.getByRole('button', { name: /Riscuotere/ }))
+    await waitFor(() => expect(printScontrino).toHaveBeenCalled())
+    const stampato = printScontrino.mock.calls.at(-1)[0]
+    expect(stampato.payment_method).toBe('banco')
   })
 })

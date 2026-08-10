@@ -347,7 +347,10 @@ export async function printScontrino(order, opts = {}) {
       online: 'Online',
       lettore: 'Carta (POS)',
       buono: 'Buono',
-    })[m] || 'Contante'
+      // Metodo sconosciuto o assente: si scrive che non è indicato. Prima si
+      // ripiegava su "Contante", e uno scontrino pagato con la carta usciva
+      // con scritto contante — una dichiarazione falsa, non un default.
+    })[m] || 'Non indicato'
   // Se ci sono incassi registrati si elencano uno per uno (conti divisi o
   // acconti): così su ogni scontrino si legge quanto in contanti e quanto in
   // carta. Altrimenti si usa il metodo di chiusura del conto.
