@@ -18,7 +18,8 @@ import { macroMonthlyReport } from '../lib/macroStats.js'
 
 const MESI = ['GEN', 'FEB', 'MAR', 'APR', 'MAG', 'GIU', 'LUG', 'AGO', 'SET', 'OTT', 'NOV', 'DIC']
 const monthsOfYear = (year) => MESI.map((_, i) => `${year}-${String(i + 1).padStart(2, '0')}`)
-const eur0 = (v) => `${Math.round(Number(v) || 0).toLocaleString('it-IT')} €`
+const eur0 = (v) =>
+  `${Math.round(Number(v) || 0).toLocaleString('it-IT', { useGrouping: 'always' })} €`
 
 export default function MacroMonthlyTab() {
   const [year, setYear] = useState(() => new Date().getFullYear())
