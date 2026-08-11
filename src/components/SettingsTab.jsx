@@ -10,12 +10,13 @@ import { parseCarteCsv, decodeCsvBuffer } from '../lib/carteImport.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import ThemeSettings from './ThemeSettings.jsx'
 import PrinterSetup from './PrinterSetup.jsx'
+import BackupPanel from './BackupPanel.jsx'
 import { pairSumUpReader, unpairSumUpReader } from '../lib/paymentsApi.js'
 import { devToolsEnabled } from '../dev/devActions.js'
 
 // Impostazioni del bar (documento settings/bar). Ogni modifica viene salvata
 // subito; le pagine cliente le ricevono in tempo reale via subscribeSettings.
-export default function SettingsTab() {
+export default function SettingsTab({ role = null }) {
   const [settings, setSettings] = useState(null)
   const [error, setError] = useState(null)
   const [confermaSpegni, setConfermaSpegni] = useState(false) // gestione preparazione
@@ -602,6 +603,8 @@ export default function SettingsTab() {
       {/* STAMPANTE: era una voce di menu a sé, ma si tocca una volta e
           poi mai più — sta con le altre configurazioni. */}
       <PrinterSetup />
+
+      <BackupPanel role={role} />
 
       <div className="card settings-section">
         <h3>Annullamenti</h3>
