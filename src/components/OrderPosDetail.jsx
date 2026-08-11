@@ -54,6 +54,7 @@ import PosProductPicker from './PosProductPicker.jsx'
 import { IconPrinter, IconReceipt, IconCard, IconRefresh, IconX, IconCheck, IconClose, IconGruppo, IconPersona, IconTag } from './Icons.jsx'
 import CustomDrinkForm from './CustomDrinkForm.jsx'
 import ConfirmDialog from './ConfirmDialog.jsx'
+import ActionSheet from './ActionSheet.jsx'
 import PaymentScreen from './PaymentScreen.jsx'
 
 // ── Schermata UNICA POS creazione/modifica ordine (stile SumUp) ───────────
@@ -136,6 +137,9 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   const [editLine, setEditLine] = useState(null) // riga bozza in modifica (editor)
   const [showComande, setShowComande] = useState(false)
   const [confirmCancel, setConfirmCancel] = useState(false)
+  // Menu delle azioni: esiste solo sul telefono, dove i tasti non ci stanno
+  // tutti in pagina senza mangiarsi le righe del conto.
+  const [showAzioni, setShowAzioni] = useState(false)
   const [showPayment, setShowPayment] = useState(false)
   const [askName, setAskName] = useState(false) // modale nome (creazione)
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
@@ -954,6 +958,22 @@ export default function OrderPosDetail({ order: orderProp = null }) {
     navigate('/bar')
   }
 
+  // "Invia" manda la COMANDA al banco (non lo scontrino del cliente): si
+  // stampa quella in lavorazione, con dentro anche le aggiunte appena
+  // fatte. Sta qui e non dentro il tasto perché la usano in due: il footer
+  // sul tablet e il menu delle azioni sul telefono.
+  function inviaComanda() {
+    flushAll()
+    flushAdditions()
+    const daStampare =
+      active ??
+      effComandeRef.current.filter((c) => c.status !== ORDER_STATUSES.ANNULLATO).at(-1) ??
+      null
+    printComanda(order, daStampare)
+      .then(() => toastSuccess('Comanda inviata al banco'))
+      .catch((e) => setError(`Stampa: ${e.message}`))
+  }
+
   function handlePayNow() {
     if (draft.length === 0 || payOrder) return
     // Se una creazione è GIÀ in volo (auto-creazione appena scattata), il
@@ -1269,9 +1289,19 @@ export default function OrderPosDetail({ order: orderProp = null }) {
           <div style={{ padding: '8px 12px 0', flexShrink: 0 }}>
             {/* Il nome del conto si prende tutta la riga: schiacciato fra i
                 tasti restava un filo di spazio e spariva nei puntini. */}
-            <strong className="posd-title" style={{ display: 'block' }}>
-              {panelTitle}
-            </strong>
+            <div className="row between" style={{ alignItems: 'center', gap: 8 }}>
+              <strong className="posd-title" style={{ display: 'block', flex: 1, minWidth: 0 }}>
+                {panelTitle}
+              </strong>
+              <button
+                className="btn ghost small solo-telefono"
+                onClick={() => setShowAzioni(true)}
+                aria-label="Azioni del conto"
+                title="Azioni del conto"
+              >
+                ⋯
+              </button>
+            </div>
             <div className="posd-azioni">
               {/* I tasti ci sono SEMPRE, spenti quando non servono. Comparire e
                   sparire sposta tutto quello che sta sotto proprio mentre ci si
@@ -1313,7 +1343,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
               </div>
             )}
             {groupsOn && (
-              <div className="row between" style={{ alignItems: 'center', marginTop: 2 }}>
+              <div className="row between posd-gruppo-row" style={{ alignItems: 'center', marginTop: 2 }}>
                 {group && !groupIsContainer ? (
                   <span className="pill small">👥 {group.name}</span>
                 ) : (
@@ -1509,25 +1539,9 @@ export default function OrderPosDetail({ order: orderProp = null }) {
             {/* Niente tasto Conferma: gli item si confermano da soli (si torna
                 con "← Ordini"). I tasti azione sono SEMPRE presenti: quelli non
                 applicabili sono disabilitati, non spariscono. */}
+            <div className="posd-foot-azioni">
             <div className="grid-2">
-              <button
-                className="btn ghost small"
-                disabled={isNew}
-                onClick={() => {
-                  // "Invia" manda la COMANDA al banco (non lo scontrino del
-                  // cliente): si stampa quella in lavorazione, con dentro anche
-                  // le aggiunte appena fatte.
-                  flushAll()
-                  flushAdditions()
-                  const daStampare =
-                    active ??
-                    effComandeRef.current.filter((c) => c.status !== ORDER_STATUSES.ANNULLATO).at(-1) ??
-                    null
-                  printComanda(order, daStampare)
-                    .then(() => toastSuccess('Comanda inviata al banco'))
-                    .catch((e) => setError(`Stampa: ${e.message}`))
-                }}
-              >
+              <button className="btn ghost small" disabled={isNew} onClick={inviaComanda}>
                 <IconPrinter /> Invia comanda
               </button>
               <button
@@ -1556,9 +1570,95 @@ export default function OrderPosDetail({ order: orderProp = null }) {
             >
               <IconX /> Annulla ordine
             </button>
+            </div>
+
+            {/* TELEFONO: un tasto solo, tutto il resto nel menu dal basso.
+                In pagina restano il totale e le righe del conto. */}
+            <button className="btn block solo-telefono" onClick={() => setShowAzioni(true)}>
+              ⋯ Azioni
+            </button>
           </div>
         </div>
       </div>
+
+      {/* ── MENU AZIONI (solo telefono) ──────────────────────────────
+          Le stesse azioni dei tasti, con gli stessi handler: qui non c'è
+          una seconda logica da tenere allineata, solo un altro posto da
+          cui chiamarla. */}
+      <ActionSheet
+        open={showAzioni}
+        onClose={() => setShowAzioni(false)}
+        titolo={panelTitle}
+        voci={[
+          {
+            id: 'invia',
+            icon: <IconPrinter />,
+            label: 'Invia comanda',
+            hint: 'Stampa al banco quella in lavorazione',
+            disabled: isNew,
+            onClick: inviaComanda,
+          },
+          {
+            id: 'paga',
+            icon: <IconCard />,
+            label: 'Pagamento',
+            disabled: isNew ? draftCount === 0 : !canPay,
+            onClick: isNew ? handlePayNow : () => setShowPayment(true),
+          },
+          {
+            id: 'comande',
+            icon: <IconReceipt />,
+            label: `Comande (${isNew ? 0 : comande.length})`,
+            hint: workflowOn ? 'Stato del servizio e ristampe' : 'Storico delle comande',
+            disabled: isNew,
+            onClick: () => setShowComande(true),
+          },
+          {
+            id: 'libero',
+            icon: <IconTag />,
+            label: 'Prodotto libero',
+            hint: 'Una voce che non è a menù',
+            disabled: closed,
+            onClick: () => setShowCustom(true),
+          },
+          {
+            id: 'dati',
+            icon: '👤',
+            label: 'Dati conto',
+            hint: 'Nome, tavolo, note',
+            onClick: () => setShowInfo(true),
+          },
+          {
+            id: 'unisci',
+            icon: '🔗',
+            label: 'Unisci le righe uguali',
+            disabled: !canMerge,
+            onClick: mergeDraft,
+          },
+          {
+            id: 'separa',
+            icon: '⑃',
+            label: 'Separa le quantità',
+            disabled: !canSplit,
+            onClick: splitAllDraft,
+          },
+          groupsOn && {
+            id: 'gruppo',
+            icon: <IconGruppo />,
+            label: group ? `Gruppo: ${group.name}` : 'Associa a un gruppo',
+            hint: group ? 'Cambia o togli' : null,
+            onClick: () => setPickGroup(true),
+          },
+          {
+            id: 'annulla',
+            icon: <IconX />,
+            label: 'Annulla ordine',
+            danger: true,
+            disabled: isNew || closed,
+            onClick: () => setConfirmCancel(true),
+          },
+        ]}
+      />
 
       {/* ── Modale comande (modifica): stati, avanzamento, stampa ── */}
       {showComande && (

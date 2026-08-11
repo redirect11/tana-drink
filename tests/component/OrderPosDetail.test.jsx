@@ -6,7 +6,7 @@
 // vede e tocca. Firebase/menu/stampante sono mockati.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import '@testing-library/jest-dom/vitest'
@@ -638,5 +638,69 @@ describe('conto rimasto senza righe', () => {
     if (meno && !meno.disabled) await user.click(meno)
     await new Promise((r) => setTimeout(r, 700))
     expect(cancelOrder).not.toHaveBeenCalled()
+  })
+})
+
+// ── TELEFONO: le azioni stanno in un menu, non in pagina ──────────────
+// Su uno schermo stretto i tasti secondari (unisci, gruppi, dati conto,
+// annulla) occupavano più spazio delle righe ordinate. Ora c'è un tasto
+// "⋯ Azioni" che apre un menu dal basso: il CSS nasconde i tasti in
+// pagina sotto i 700px, ma quello che conta è che il menu ci sia e che
+// chiami gli STESSI handler — niente seconda logica da tenere allineata.
+// (Qui i tasti in pagina ci sono comunque: jsdom non applica il CSS, per
+// questo le ricerche sono ristrette al menu.)
+describe('menu azioni del telefono', () => {
+  const apriMenu = async (user) => {
+    await user.click(screen.getByRole('button', { name: /⋯ Azioni/ }))
+    return within(screen.getByRole('dialog'))
+  }
+
+  it('apre il menu con tutte le azioni del conto', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    const menu = await apriMenu(user)
+    for (const voce of [
+      /Invia comanda/,
+      /Pagamento/,
+      /Comande \(1\)/,
+      /Prodotto libero/,
+      /Dati conto/,
+      /Unisci le righe uguali/,
+      /Separa le quantità/,
+      /Annulla ordine/,
+    ]) {
+      expect(menu.getByRole('button', { name: voce })).toBeInTheDocument()
+    }
+  })
+
+  it('“Annulla ordine” dal menu chiede conferma, non annulla di colpo', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    const menu = await apriMenu(user)
+    await user.click(menu.getByRole('button', { name: /Annulla ordine/ }))
+    await waitFor(() => expect(document.querySelector('.confirm-box')).toBeTruthy())
+    expect(cancelOrder).not.toHaveBeenCalled()
+  })
+
+  it('scegliendo una voce il menu si chiude: mai due pannelli sovrapposti', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    const menu = await apriMenu(user)
+    await user.click(menu.getByRole('button', { name: /Dati conto/ }))
+    await waitFor(() =>
+      expect(document.querySelector('.action-sheet')).toBeFalsy()
+    )
+  })
+
+  it('su un ordine NUOVO le azioni che richiedono un conto aperto sono spente', async () => {
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter>
+        <OrderPosDetail order={null} />
+      </MemoryRouter>
+    )
+    const menu = await apriMenu(user)
+    expect(menu.getByRole('button', { name: /Invia comanda/ })).toBeDisabled()
+    expect(menu.getByRole('button', { name: /Annulla ordine/ })).toBeDisabled()
   })
 })

@@ -4239,6 +4239,99 @@ body.drawer-open .zoom-control {
   white-space: nowrap;
 }
 
+/* ── MENU AZIONI DAL BASSO (telefono) ────────────────────────────────
+   Il pollice arriva in fondo allo schermo, non in cima: le azioni stanno
+   lì, con righe alte da premere senza mirare. */
+.action-sheet-overlay {
+  align-items: flex-end;
+  padding: 0;
+}
+.action-sheet {
+  width: 100%;
+  max-height: 82dvh;
+  overflow-y: auto;
+  background: var(--card);
+  border-top: 1px solid var(--line);
+  border-radius: 18px 18px 0 0;
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.45);
+  padding: 8px 12px calc(14px + env(safe-area-inset-bottom, 0px));
+}
+.action-sheet-maniglia {
+  width: 42px;
+  height: 4px;
+  margin: 4px auto 10px;
+  border-radius: 999px;
+  background: var(--line);
+}
+.action-sheet-titolo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.action-sheet-voci {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.action-sheet-voce {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 54px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--tile-bg);
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.action-sheet-voce:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.action-sheet-voce.danger {
+  color: #e05c5c;
+}
+.action-sheet-ic {
+  display: flex;
+  width: 24px;
+  justify-content: center;
+  font-size: 1.05rem;
+}
+.action-sheet-testo {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+/* Tasti che esistono SOLO sul telefono (aprono il menu qui sopra). */
+.solo-telefono {
+  display: none;
+}
+@media (max-width: 700px) {
+  .solo-telefono {
+    display: flex;
+  }
+  button.solo-telefono {
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  /* Quello che è finito dentro il menu non sta più anche in pagina: sul
+     telefono la priorità è la lista degli item e la griglia. */
+  .posd-azioni,
+  .posd-azioni-fisse,
+  .posd-gruppo-row,
+  .posd-foot-azioni {
+    display: none !important;
+  }
+}
+
 /* Dati conto e Prodotto libero: affiancati. Erano due righe intere, e su
    uno schermo da telefono due righe di testata sono due righe di conto in
    meno — cioè le uniche che servono davvero mentre si batte. */
