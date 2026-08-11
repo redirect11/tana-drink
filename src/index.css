@@ -3249,6 +3249,31 @@ body.fullbleed,
 .posd-comanda-foot .price {
   font-size: 1.05em;
 }
+/* Maniglia per l'ALTEZZA del pannello ordine (telefono). Larga tutta la
+   riga e con un segno al centro: si prende senza mirare. Si accende quando
+   ha preso, perché il dito copre quello che sta toccando. */
+.posd-altezza-handle {
+  flex-shrink: 0;
+  height: 20px;
+  cursor: row-resize;
+  touch-action: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.posd-altezza-handle::before {
+  content: '';
+  width: 44px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--line);
+  transition: background 0.12s ease, width 0.12s ease;
+}
+.posd-altezza-handle.attiva::before {
+  background: var(--accent, #e8a32e);
+  width: 64px;
+}
+
 .posd-foot-handle {
   height: 16px;
   margin: 0 -12px 2px;
@@ -3359,7 +3384,8 @@ body.fullbleed,
     width: 100%;
     max-width: none;
     min-width: 0;
-    max-height: 46dvh;
+    /* Altezza regolabile dalla maniglia in cima (tieni premuto e trascina). */
+    max-height: var(--pos-comanda-h, 46dvh);
     border-left: none;
     border-top: 1px solid rgba(255, 255, 255, 0.12);
     box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.4);

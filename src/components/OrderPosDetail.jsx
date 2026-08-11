@@ -241,6 +241,17 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   // Scala del footer (totale + conferma/pagamento): la maniglia in cima lo
   // "allunga" e tasti/font crescono insieme. Valore in % (100 = normale).
   const footRz = useResizable('pos-foot-scale', { def: 100, min: 80, max: 175, axis: 'y', side: 'up', speed: 0.5 })
+  // ALTEZZA DEL PANNELLO ORDINE sul telefono (in dvh): con più di tre o
+  // quattro righe il conto non ci stava e bisognava scorrere dentro una
+  // finestrella. Si tira su la maniglia e si guarda tutto il conto.
+  const altezzaRz = useResizable('pos-comanda-h', {
+    def: 46,
+    min: 26,
+    max: 84,
+    axis: 'y',
+    side: 'up',
+    speed: 0.13, // pixel → dvh (uno schermo tipico è ~800px: 1dvh ≈ 8px)
+  })
   // Allargando una colonna ne crescono anche i testi (e viceversa): la scala
   // del font segue la larghezza rispetto alla misura di riposo (def), con un
   // tetto per non esagerare. Guida i font via CSS (--cats-scale/--comanda-scale).
@@ -276,6 +287,19 @@ export default function OrderPosDetail({ order: orderProp = null }) {
     if (Date.now() - lastGridTouchRef.current < 450) return
     setPanelCollapsed(false)
   }
+
+  // APRENDO IL PANNELLO SI VEDE L'ULTIMA RIGA. È quella appena battuta:
+  // trovarsi in cima alla lista, con l'ultimo drink fuori vista, vuol dire
+  // scorrere ogni volta per controllare quello che si è appena aggiunto.
+  useEffect(() => {
+    if (panelCollapsed) return undefined
+    // Dopo il render: la lista si popola in un secondo giro.
+    const t = requestAnimationFrame(() => {
+      const el = listRef.current
+      if (el) el.scrollTop = el.scrollHeight
+    })
+    return () => cancelAnimationFrame(t)
+  }, [panelCollapsed])
 
   // Staff loggato (per l'attribuzione dell'ordine creato dal POS).
   const [staff, setStaff] = useState(null)
@@ -1382,7 +1406,20 @@ export default function OrderPosDetail({ order: orderProp = null }) {
         {/* ── Pannello destro: L'ORDINE (lista unica). Su smartphone si
             comprime in una barra (totale + n. item) mentre si lavora sulla
             griglia; un tocco la riapre. ── */}
-        <div className={`posd-comanda${panelCollapsed ? ' collapsed' : ''}`}>
+        <div
+          className={`posd-comanda${panelCollapsed ? ' collapsed' : ''}`}
+          style={{ '--pos-comanda-h': `${altezzaRz.width}dvh` }}
+        >
+          {/* Maniglia per l'altezza (telefono): tieni premuto e trascina.
+              Col dito serve una presa voluta, altrimenti sfiorandola mentre
+              si scorre il pannello cambiava altezza da solo. */}
+          {telefono && !panelCollapsed && (
+            <div
+              className={`posd-altezza-handle${altezzaRz.attivo ? ' attiva' : ''}`}
+              title="Tieni premuto e trascina per cambiare l'altezza"
+              {...altezzaRz.handleProps}
+            />
+          )}
           {panelCollapsed && (
             <button
               type="button"
