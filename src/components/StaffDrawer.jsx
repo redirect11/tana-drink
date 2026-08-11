@@ -23,6 +23,7 @@ const BARTENDER_NAV = [
   ['inventario', '📦', 'Inventario'],
   ['staff', '👥', 'Staff'],
   ['utenti', '🧑‍🤝‍🧑', 'Utenti e ruoli'],
+  ['vista-cliente', '👀', 'Vista cliente'],
   ['impostazioni', '⚙️', 'Impostazioni'],
 ]
 
@@ -88,6 +89,9 @@ export default function StaffDrawer({ role, active = null, onSelect = null }) {
 
   function go(id) {
     setOpen(false)
+    // "Vista cliente" non è una sezione del gestionale: è il menù come lo
+    // vede chi ordina. Era un tasto in barra, ma la navigazione sta qui.
+    if (id === 'vista-cliente') return navigate('/menu')
     if (onSelect) onSelect(id)
     else navigate(id === 'servizio' ? '/bar' : `/bar?tab=${id}`)
   }

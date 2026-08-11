@@ -20,6 +20,7 @@ import { useDraft, loadLayout, saveLayout, saveDraft } from '../lib/useDraft.js'
 import { dismissKeyboard } from '../lib/keyboard.js'
 import { useResizable } from '../lib/useResizable.js'
 import { useTelefono } from '../lib/useTelefono.js'
+import { nascondiOrdine, mostraOrdine } from '../lib/ordiniNascosti.js'
 import ZoomControl from './ZoomControl.jsx'
 import { auth } from '../lib/firebaseClient.js'
 import { onAuthStateChanged } from 'firebase/auth'
@@ -554,7 +555,8 @@ export default function OrderPosDetail({ order: orderProp = null }) {
       } catch {
         /* se la scrittura non riesce si annulla lo stesso: il conto va chiuso */
       }
-      cancelOrder(order.id, { by: 'bartender' }).catch(() => {})
+      cancelOrder(order.id, { by: 'bartender' }).catch(() => mostraOrdine(order.id))
+      nascondiOrdine(order.id)
       navigate('/bar')
     }, 400) // respiro: evita di annullare durante una sostituzione di riga
     return () => clearTimeout(t)
@@ -1927,7 +1929,10 @@ export default function OrderPosDetail({ order: orderProp = null }) {
             setPayOrder(null)
             creatingRef.current = false // pagamento annullato: riabilita l'auto-creazione
           }}
-          onPaid={() => navigate('/bar')}
+          onPaid={() => {
+            nascondiOrdine(payIdRef.current)
+            navigate('/bar')
+          }}
           onError={setError}
           resolveOrderId={() => payIdRef.current}
         />
@@ -1937,7 +1942,10 @@ export default function OrderPosDetail({ order: orderProp = null }) {
           order={order}
           settings={settings}
           onClose={() => setShowPayment(false)}
-          onPaid={() => navigate('/bar')}
+          onPaid={() => {
+            nascondiOrdine(order.id)
+            navigate('/bar')
+          }}
           onBeforePay={flushAll}
           onError={setError}
         />
@@ -2002,9 +2010,14 @@ export default function OrderPosDetail({ order: orderProp = null }) {
           onCancel={() => setConfirmCancel(false)}
           onConfirm={() => {
             setConfirmCancel(false)
-            cancelOrder(order.id, { by: 'bartender' }).catch((e) =>
+            cancelOrder(order.id, { by: 'bartender' }).catch((e) => {
+              // Non è andata: torni a vederlo in coda, com'è giusto.
+              mostraOrdine(order.id)
               toastError(`Annullo non riuscito: ${e.message}`)
-            )
+            })
+            // Sparisce dalla coda SUBITO, senza aspettare il database:
+            // altrimenti lo si ritrova lì per un istante e si dubita.
+            nascondiOrdine(order.id)
             // SI TORNA AGLI ORDINI. Un conto annullato non si lavora più:
             // restarci davanti serve solo a chiedersi se l'annullo è andato,
             // e a rischiare di batterci sopra. Come quando si svuota da sé.
