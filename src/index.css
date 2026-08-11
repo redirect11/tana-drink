@@ -325,6 +325,15 @@ body.schermo-intero {
      nella coda il riepilogo e il "+", nel conto numero, ora e stato. Ora il
      contenuto scende della sua altezza, e il conto (che è alto quanto lo
      schermo) si accorcia della stessa misura invece di sbordare. */
+  /* E la barra stessa scende SOTTO la striscia: la linguetta le stava
+     davanti (z-index più alto) e le tagliava logo e tasti sul filo. Era
+     questo il taglio che si vedeva, non un problema della pagina. */
+  body.fullbleed.topbar-open .topbar {
+    padding-top: calc(var(--safe-top) + 26px);
+  }
+  body.fullbleed.topbar-open {
+    --barra-aperta: 88px;
+  }
   body.fullbleed.topbar-open .queue-board {
     padding-top: var(--barra-aperta);
   }
