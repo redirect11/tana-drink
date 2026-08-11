@@ -8,7 +8,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import '@testing-library/jest-dom/vitest'
 
 // ── Mock dei moduli con dipendenze Firebase/hardware ──
@@ -651,6 +651,16 @@ describe('conto rimasto senza righe', () => {
 // (Qui i tasti in pagina ci sono comunque: jsdom non applica il CSS, per
 // questo le ricerche sono ristrette al menu.)
 describe('menu azioni del telefono', () => {
+  // Schermo da telefono: il tasto ⋯ esiste solo qui (useTelefono).
+  beforeEach(() => {
+    window.matchMedia = (query) => ({
+      matches: query.includes('700px'),
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    })
+  })
+
   const apriMenu = async (user) => {
     await user.click(screen.getByRole('button', { name: /⋯ Azioni/ }))
     return within(screen.getByRole('dialog'))
@@ -804,5 +814,28 @@ describe('creazione: niente si perde mentre l’ordine nasce', () => {
     expect(items.filter((i) => i.drink_id === 'gin')).toHaveLength(2)
     expect(screen.getAllByText('Gin Tonic').length).toBeGreaterThan(0)
     expect(createOrder).toHaveBeenCalledTimes(1) // un ordine solo, non due
+  })
+})
+
+// ── Dopo l'annullo si torna agli ordini ───────────────────────────────
+// Un conto annullato non si lavora più: restarci davanti serve solo a
+// chiedersi se l'annullo è andato a buon fine, e a rischiare di batterci
+// sopra un altro drink.
+describe('annullo dell’ordine', () => {
+  it('annullando si torna alla coda', async () => {
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter initialEntries={['/ordine/ord1']}>
+        <Routes>
+          <Route path="/ordine/:id" element={<OrderPosDetail order={baseOrder()} />} />
+          <Route path="/bar" element={<div>CODA ORDINI</div>} />
+        </Routes>
+      </MemoryRouter>
+    )
+    await user.click(screen.getByRole('button', { name: /Annulla ordine/ }))
+    const conferma = within(document.querySelector('.confirm-box'))
+    await user.click(conferma.getByRole('button', { name: 'Annulla ordine' }))
+    expect(cancelOrder).toHaveBeenCalledWith('ord1', { by: 'bartender' })
+    expect(await screen.findByText('CODA ORDINI')).toBeInTheDocument()
   })
 })

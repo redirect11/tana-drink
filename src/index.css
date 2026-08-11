@@ -4353,19 +4353,11 @@ body.drawer-open .zoom-control {
   line-height: 1.2;
 }
 
-/* Tasti che esistono SOLO sul telefono (aprono il menu qui sopra). */
-.solo-telefono {
-  display: none;
-}
+/* Il tasto che apre il menu non si nasconde col CSS: fuori dal telefono
+   non viene proprio creato (useTelefono). Nascondere un tasto e lasciarlo
+   nella pagina è il modo migliore per ritrovarselo addosso alla prima
+   regola che cambia. */
 @media (max-width: 700px) {
-  .solo-telefono {
-    display: flex;
-  }
-  button.solo-telefono {
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-  }
   /* Quello che è finito dentro il menu non sta più anche in pagina: sul
      telefono la priorità è la lista degli item e la griglia. */
   .posd-azioni,
