@@ -1,0 +1,110 @@
+# Tana Drink — istruzioni per chi lavora qui (persone e agenti)
+
+App di cassa e gestione per **La Tana del Coniglio**, cocktail bar a Nola.
+Non è una demo: ci si batte gli ordini la sera, col locale pieno. Ogni
+scelta va pesata su quello — un errore qui vuol dire un conto sbagliato o
+un drink che non arriva.
+
+React + Vite (PWA) · Firebase (Firestore, Auth, Functions, Hosting) ·
+SumUp per i pagamenti · stampante termica Epson al banco.
+
+## La lingua
+
+**Tutto in italiano**: interfaccia, commenti, messaggi di commit, titoli
+delle PR, risposte nelle issue. Chi legge questo codice parla italiano.
+
+## Come si lavora: GitFlow
+
+Regole non negoziabili, per intero in [docs/gitflow.md](docs/gitflow.md).
+
+- Il lavoro normale va su **`release/x.y.z`**, staccato da `develop`.
+  Se ne esiste già uno aperto, si lavora lì.
+- Un branch `feature/<nome>` solo per una funzione **grossa**, o quando lo
+  si chiede esplicitamente.
+- **Mai commit diretti su `develop` o `main`.**
+- `hotfix/<nome>` nasce da `main` e torna in `main` **e** in `develop`.
+- Ogni push su `release/**`, `feature/**`, `hotfix/**` e `develop`
+  pubblica sull'ambiente di **test**. Solo `main` va in produzione.
+- La versione `x.y.z` si tagga su `develop` subito prima del merge su
+  `main`.
+
+Per un agente che apre una pull request: la PR va **verso il
+`release/x.y.z` aperto** (o verso `develop` se non ce n'è uno), mai verso
+`main`.
+
+## Prima di aprire una PR
+
+```sh
+npm run lint      # deve essere pulito
+npm test          # deve essere verde (744+ test)
+npm run build     # deve compilare
+```
+
+La pipeline fa girare lint e test **prima** del deploy: se sono rossi non
+viene pubblicato niente. Non aggirarla e non "sistemare" un test per farlo
+passare: se un test fallisce, o il codice è sbagliato o il test descriveva
+una cosa che abbiamo deciso di cambiare — e in quel secondo caso si cambia
+il test spiegando perché.
+
+## I test sono la specifica
+
+I test in `tests/` dicono cosa fa l'app, e i loro commenti dicono **perché**
+— quasi tutti nascono da un difetto vero visto al banco. Chi tocca un
+comportamento aggiunge o aggiorna il test corrispondente.
+
+- `tests/unit/` — logica pura (calcoli, regole, conversioni)
+- `tests/component/` — schermate, con Firebase e hardware simulati
+- `tests/bdd/` — le Cloud Functions
+
+I requisiti in [requirements/requirements.yaml](requirements/requirements.yaml)
+sono la mappa di cosa esiste; da lì si generano le issue.
+
+## Come si scrive qui
+
+- **I commenti spiegano il perché, non il cosa.** Il codice dice già cosa
+  fa. Il commento serve a chi tra sei mesi si chiederà "perché è fatto
+  così?" — di solito la risposta è un guaio successo davvero.
+- Nomi in italiano dove il dominio è italiano (`conto`, `comanda`,
+  `scorte`, `giornata`), in inglese dove lo è il codice attorno.
+- Niente riscritture di massa non richieste, niente rinomini a tappeto.
+- L'interfaccia va spiegata a chi ha in mano un vassoio: parole comuni,
+  nessun gergo tecnico, nessun messaggio d'errore che scarica la colpa
+  addosso a chi legge.
+
+## Regole del mestiere (imparate sbagliando)
+
+- **Niente aspetta la rete.** Le scritture partono in sottofondo; le
+  schermate si aggiornano subito. Un `await` su una scrittura Firestore
+  offline non torna mai: al banco significa l'app bloccata.
+- **Il magazzino si scala con lo snapshot**, non ricalcolando la ricetta:
+  la ricetta cambia, il drink già fatto no.
+- **I ruoli si confrontano solo con `src/lib/ruoli.js`.** C'è un test che
+  boccia i confronti diretti sparsi nel codice.
+- **Le quantità in magazzino sono in unità base** (ml, g, pz). "4 cl" non
+  deve mai diventare 4 pezzi.
+- **La produzione non si tocca** senza un via libera esplicito: gli script
+  scrivono su `tana-drink-test` e la produzione va nominata a mano.
+
+## Ambiente locale
+
+```sh
+npm run dev       # server di sviluppo (con emulatori: npm run emulators)
+npm run locale    # come il server: app compilata + Functions + Hosting emulati
+npm run seed:dev  # riempie il database locale
+```
+
+Dettagli in [docs/ambiente-locale.md](docs/ambiente-locale.md). Stampante,
+SumUp, notifiche push e App Check in locale non si provano.
+
+## Dove sta cosa
+
+| Dove | Cosa |
+|---|---|
+| `src/pages/BartenderPage.jsx` | gestionale: coda ordini e sezioni |
+| `src/components/OrderPosDetail.jsx` | il conto: la schermata più usata |
+| `src/lib/api.js` | tutto ciò che tocca Firestore |
+| `src/lib/comande.js` | conti e comande, logica pura |
+| `src/lib/inventory.js` | magazzino, unità, consumi |
+| `src/lib/ruoli.js` | chi può fare cosa |
+| `functions/lib/` | logica delle Cloud Functions (pura e testabile) |
+| `scripts/` | manutenzione: backup, travasi, ruoli, diagnostica |
