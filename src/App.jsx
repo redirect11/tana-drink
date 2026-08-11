@@ -199,7 +199,10 @@ export default function App() {
         </Link>
         <nav className="row">
           <StatusBell />
-          <FullscreenButton />
+          {/* A tutto schermo ci va chi LAVORA sull'app per ore (banco, sala):
+              al cliente che apre il menù dal telefono non serve, e in mezzo
+              ai tasti era solo un'icona in più da capire. */}
+          {staffRole && <FullscreenButton />}
           {onBackoffice ? (
             <>
               {staffRole && (

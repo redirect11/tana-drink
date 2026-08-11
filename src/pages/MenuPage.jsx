@@ -52,6 +52,15 @@ export default function MenuPage() {
   // Account cliente (null per anonimi e staff): ordini legati al profilo.
   const { user: customer, profile: customerProfile } = useCustomer()
 
+  // IL MENÙ PRENDE TUTTA LA LARGHEZZA. I 760px del contenitore sono nati
+  // per le pagine di testo; il menù è una griglia di prodotti, e su un
+  // tablet o su un monitor restava una colonnina in mezzo allo schermo con
+  // due drink per riga e metà pagina vuota.
+  useEffect(() => {
+    document.body.classList.add('menu-largo')
+    return () => document.body.classList.remove('menu-largo')
+  }, [])
+
   useEffect(() => {
     if (!isFirebaseConfigured) return
     return onAuthStateChanged(auth, async (u) => {
