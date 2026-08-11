@@ -149,6 +149,33 @@ a {
   white-space: nowrap;
 }
 
+/* ── TESTATA SUL TELEFONO ─────────────────────────────────────────────
+   Su 360px non ci stavano logo, schermo intero, "Ciao, Capo Bar", POS,
+   Vista cliente ed Esci: l'ultimo tasto finiva mezzo fuori dallo schermo,
+   e l'ultimo tasto era "Esci". Qui si toglie il superfluo invece di
+   stringere tutto fino a renderlo illeggibile: il saluto diventa il solo
+   ingranaggio (chi è collegato lo dice il menu laterale, in fondo) e
+   "Vista cliente" resta nel menu, dov'è comunque. */
+@media (max-width: 700px) {
+  .topbar {
+    gap: 8px;
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+  .topbar nav {
+    gap: 6px;
+    min-width: 0;
+  }
+  .topbar .brand img {
+    width: 34px;
+    height: 34px;
+  }
+  .topbar-hello-testo,
+  .solo-schermo-largo {
+    display: none;
+  }
+}
+
 .card {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 50%), var(--card);
   border: 1px solid rgba(255, 255, 255, 0.07);
@@ -3322,12 +3349,6 @@ body.fullbleed,
   .posd-azioni-fisse {
     margin: 6px 0 4px;
   }
-  /* Lo ZOOM sta in basso a sinistra, cioè sopra "Annulla ordine" e sopra le
-     ultime voci del menu: sul telefono si finiva per premere lui. Il
-     browser del telefono lo zoom ce l'ha già suo. */
-  .zoom-control {
-    display: none;
-  }
 }
 /* Barra del pannello collassato (montata solo da collassato, su smartphone):
    BEN alta (una vera fascia), così si tocca senza mirare. */
@@ -4219,6 +4240,28 @@ body.fullbleed .cat-rail {
 .zoom-control:hover,
 .zoom-control:focus-within {
   opacity: 1;
+}
+/* SUL TELEFONO NON FLOTTA. In basso a sinistra finiva sopra "Annulla" e
+   sopra le ultime voci del menu: si premeva lui. Lì sparisce e ricompare
+   IN TESTATA, di fianco allo stato del conto (zoom-inline).
+   La regola sta qui e non nel blocco @media più in alto: quello perdeva
+   contro il `display: flex` di .zoom-control, che ha la stessa
+   specificità ma viene dopo — le media query non contano nulla in questa
+   gara. */
+@media (max-width: 700px) {
+  .zoom-control:not(.zoom-inline) {
+    display: none;
+  }
+}
+/* In linea: niente angolo, niente velatura, sta nella riga che lo ospita. */
+.zoom-control.zoom-inline {
+  position: static;
+  z-index: auto;
+  opacity: 1;
+  margin-left: auto;
+  box-shadow: none;
+  backdrop-filter: none;
+  flex-shrink: 0;
 }
 /* Col menu laterale aperto passano DIETRO (il menu sta a z140, il suo velo
    a z130): stando in basso a sinistra finivano sopra le ultime voci — Esci

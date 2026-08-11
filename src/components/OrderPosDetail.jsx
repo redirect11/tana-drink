@@ -20,6 +20,7 @@ import { useDraft, loadLayout, saveLayout, saveDraft } from '../lib/useDraft.js'
 import { dismissKeyboard } from '../lib/keyboard.js'
 import { useResizable } from '../lib/useResizable.js'
 import { useTelefono } from '../lib/useTelefono.js'
+import ZoomControl from './ZoomControl.jsx'
 import { auth } from '../lib/firebaseClient.js'
 import { onAuthStateChanged } from 'firebase/auth'
 import { useMenu } from '../lib/menuCache.js'
@@ -1256,6 +1257,9 @@ export default function OrderPosDetail({ order: orderProp = null }) {
             id {String(order.serial).padStart(5, '0')}
           </span>
         )}
+        {/* ZOOM sul telefono: qui, in fondo alla testata. Flottante
+            nell'angolo finiva sopra i tasti del conto e si premeva lui. */}
+        {telefono && <ZoomControl inline />}
       </div>
 
       {error && <div className="banner" style={{ margin: '8px 8px 0', flexShrink: 0 }}>{error}</div>}

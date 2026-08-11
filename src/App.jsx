@@ -207,13 +207,18 @@ export default function App() {
             <>
               {staffRole && (
                 <Link className="topbar-hello" to="/profilo-staff" style={{ textDecoration: 'none' }}>
-                  Ciao, {staffName} ⚙️
+                  {/* Sul telefono resta il solo ingranaggio: il saluto per
+                      esteso mandava "Esci" fuori dallo schermo, e chi è
+                      collegato lo dice già il menu laterale. */}
+                  <span className="topbar-hello-testo">Ciao, {staffName} </span>⚙️
                 </Link>
               )}
               <Link className="btn ghost small" to="/pos">🍸 POS</Link>
               {/* Per lo staff «Nuovo ordine» porta già al menu: niente doppione. */}
               {!isSala(staffRole) && (
-                <Link className="btn ghost small" to="/menu">Vista cliente</Link>
+                <Link className="btn ghost small solo-schermo-largo" to="/menu">
+                  Vista cliente
+                </Link>
               )}
             </>
           ) : isSala(staffRole) ? (
