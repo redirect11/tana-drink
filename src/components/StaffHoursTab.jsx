@@ -179,7 +179,14 @@ export default function StaffHoursTab({ embedded = false }) {
 
   return (
     <div>
-      {!embedded && <h2>🕒 Ore staff</h2>}
+      {!embedded && (
+        <>
+          <h2>👥 Staff</h2>
+          <p className="muted small" style={{ margin: '-6px 0 10px' }}>
+            Turni, ore lavorate e paghe. Account e ruoli stanno in “Utenti e ruoli”.
+          </p>
+        </>
+      )}
       {error && <div className="banner">Errore: {error}</div>}
 
       {/* Vista: giorno / settimana / mese */}

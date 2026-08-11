@@ -77,7 +77,7 @@ describe('menu laterale', () => {
     apri()
     expect(screen.queryByText('Stampante')).toBeNull()
     expect(screen.getByText('Utenti e ruoli')).toBeInTheDocument()
-    expect(screen.getByText('Staff: turni e ore')).toBeInTheDocument()
+    expect(screen.getByText('Staff')).toBeInTheDocument()
   })
 
   it('lo staff di sala non vede il gestionale', () => {
