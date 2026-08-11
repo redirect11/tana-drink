@@ -1,22 +1,34 @@
 name: Deploy to Firebase
 
-# Due ambienti, stessa pipeline:
-#   push su main    → PRODUZIONE (progetto tana-drink)
-#   push su develop → TEST       (progetto tana-drink-test)
+# GitFlow, una pipeline sola:
+#   push su main        → PRODUZIONE (progetto tana-drink)
+#   push su develop     → TEST       (progetto tana-drink-test)
+#   push su feature/**  → TEST       (si prova il branch prima del merge)
+#   push su hotfix/**   → TEST       (si prova l'urgenza prima della produzione)
+# L'ambiente di test è UNO e vale per tutti: l'ultimo push è quello
+# pubblicato. Per sapere cosa si sta guardando, l'app mostra ramo e commit
+# in fondo al menu (vedi VersionBadge).
 # I segreti per-ambiente vivono nelle GitHub Environments "production" e
 # "test" (stessi NOMI, valori diversi). La produzione, senza segreti
 # d'ambiente, usa i segreti a livello repo già esistenti: invariata.
 on:
   push:
-    branches: [main, develop]
+    branches:
+      - main
+      - develop
+      - 'feature/**'
+      - 'hotfix/**'
   workflow_dispatch:
 
 permissions:
   contents: read
 
-# Un deploy alla volta per ramo (prod e test non si annullano a vicenda).
+# Un deploy alla volta PER AMBIENTE, non per ramo: su test ci finiscono a
+# turno develop e i branch feature, e due deploy in parallelo sullo stesso
+# progetto si sovrascrivono a metà. L'ultimo push vince, i precedenti si
+# annullano.
 concurrency:
-  group: firebase-deploy-${{ github.ref_name }}
+  group: firebase-deploy-${{ github.ref_name == 'main' && 'produzione' || 'test' }}
   cancel-in-progress: true
 
 jobs:
