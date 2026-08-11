@@ -1,0 +1,71 @@
+name: Claude
+
+# SCRIVI @claude IN UNA ISSUE O IN UNA PR, e Claude lavora: legge il
+# repository (comprese le istruzioni in CLAUDE.md), scrive il codice,
+# committa su un branch e apre la pull request, commentando qui mentre
+# procede.
+#
+#   @claude implementa il requisito REQ-POS-010
+#   @claude perché questo test fallisce solo in CI?
+#
+# SERVE, UNA VOLTA SOLA:
+#   1. installare la Claude GitHub App sul repository
+#      → https://github.com/apps/claude
+#   2. mettere il segreto per l'autenticazione, uno dei due:
+#      · CLAUDE_CODE_OAUTH_TOKEN — abbonamento Claude, si genera in
+#        locale con `claude setup-token` (nessun costo di API in più)
+#      · ANTHROPIC_API_KEY — chiave della Console, consumo a token
+#      Se usi la chiave, sostituisci la riga qui sotto con:
+#        anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+#
+# Chi può innescarlo: solo chi ha accesso in scrittura al repository. I
+# bot sono esclusi apposta, così due automatismi non si rispondono a
+# vicenda all'infinito.
+#
+# NOTA sul nostro GitFlow (docs/gitflow.md): le PR vanno verso il
+# release/x.y.z aperto, MAI verso main. Sta scritto in CLAUDE.md, che
+# Claude legge da sé — ma conviene dirglielo anche nella richiesta.
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  issues:
+    types: [opened, assigned]
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  claude:
+    # Filtro a monte: senza questo un runner partirebbe a ogni commento.
+    if: |
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
+      (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write # per committare sul branch
+      pull-requests: write # per aprire la PR
+      issues: write # per rispondere nell'issue
+      id-token: write # richiesto dall'autenticazione dell'app
+      actions: read # per leggere l'esito della CI sulle PR
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # I tag servono alla versione mostrata nell'app (vedi
+          # vite.config.js): con il checkout superficiale non arrivano.
+          fetch-depth: 0
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # NON passare github_token: senza, Claude firma come Claude
+          # GitHub App e la nostra CI parte anche sui suoi commit. Col
+          # token di default di Actions, invece, GitHub non innesca i
+          # workflow — e le PR resterebbero senza test.
+          claude_args: |
+            --max-turns 40
