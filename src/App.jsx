@@ -460,9 +460,11 @@ function AddToHomeHint() {
   const isIOS =
     /iP(hone|ad|od)/.test(navigator.userAgent) ||
     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-  const hasFsApi = !!document.documentElement.requestFullscreen
-  // Mostra solo dove il tasto ⛶ non funziona (iOS Safari) e non è già installata.
-  if (standalone || !isIOS || hasFsApi) return null
+  // Su iPhone e iPad l'app si installa SOLO dal menu Condividi: non esiste
+  // un invito automatico come su Android, e senza installarla non ci sono
+  // né schermo intero né notifiche (iOS le dà solo alle app installate).
+  // Quindi lo si dice, finché non è installata.
+  if (standalone || !isIOS) return null
   const close = () => {
     setDismissed(true)
     try {
@@ -474,13 +476,14 @@ function AddToHomeHint() {
   return (
     <div className="a2hs-hint">
       <span>
-        Per lo schermo intero: tocca{' '}
+        Installa l’app: tocca{' '}
         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: 'text-bottom' }}>
           <path d="M12 3v12" />
           <path d="M8 7l4-4 4 4" />
           <path d="M6 12v7a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-7" />
         </svg>{' '}
         <strong>Condividi</strong> e poi <strong>“Aggiungi a Home”</strong>.
+        {' '}Schermo intero e notifiche funzionano solo da lì.
       </span>
       <button className="a2hs-x" onClick={close} aria-label="Chiudi">✕</button>
     </div>
