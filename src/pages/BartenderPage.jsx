@@ -44,7 +44,8 @@ import PrinterSetup from '../components/PrinterSetup.jsx'
 import InventoryManager from '../components/InventoryManager.jsx'
 import SettingsTab from '../components/SettingsTab.jsx'
 import StatsTab from '../components/StatsTab.jsx'
-import StaffPage from '../components/StaffPage.jsx'
+import StaffHoursTab from '../components/StaffHoursTab.jsx'
+import UtentiTab from '../components/UtentiTab.jsx'
 import VipTab from '../components/VipTab.jsx'
 import ServiceQueue from '../components/ServiceQueue.jsx'
 import StaffMyOrders from '../components/StaffMyOrders.jsx'
@@ -228,9 +229,12 @@ export default function BartenderPage() {
         {tab === 'stats' && <StatsTab />}
         {tab === 'menu' && <MenuTab />}
         {tab === 'inventario' && <InventoryManager />}
-        {(tab === 'staff' || tab === 'ore') && <StaffPage role={role} />}
+        {(tab === 'staff' || tab === 'ore') && <StaffHoursTab />}
+        {tab === 'utenti' && <UtentiTab role={role} />}
         {tab === 'vip' && <VipTab />}
         {tab === 'impostazioni' && <SettingsTab />}
+        {/* La stampante sta nelle Impostazioni: qui resta solo perché i
+            vecchi collegamenti (?tab=stampante) continuino a funzionare. */}
         {tab === 'stampante' && <PrinterSetup />}
         {tab === 'dev' && devToolsEnabled && <DevTools />}
       </div>
