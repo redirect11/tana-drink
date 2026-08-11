@@ -1606,10 +1606,29 @@ export default function OrderPosDetail({ order: orderProp = null }) {
 
             {/* TELEFONO: un tasto solo, tutto il resto nel menu dal basso.
                 In pagina restano il totale e le righe del conto. */}
+            {/* TELEFONO: i tre gesti della serata su una riga sola —
+                si manda al banco, si incassa, si annulla. Tutto il resto
+                sta dietro i ⋯ in alto, dove non intralcia. */}
             {telefono && (
-              <button className="btn block" onClick={() => setShowAzioni(true)}>
-                ⋯ Azioni
-              </button>
+              <div className="posd-foot-telefono">
+                <button className="btn ghost" disabled={isNew} onClick={inviaComanda}>
+                  <IconPrinter /> Invia
+                </button>
+                <button
+                  className="btn"
+                  disabled={isNew ? draftCount === 0 : !canPay}
+                  onClick={isNew ? handlePayNow : () => setShowPayment(true)}
+                >
+                  <IconCard /> Paga
+                </button>
+                <button
+                  className="btn ghost"
+                  disabled={isNew || closed}
+                  onClick={() => setConfirmCancel(true)}
+                >
+                  <IconX /> Annulla
+                </button>
+              </div>
             )}
           </div>
         </div>
@@ -1624,21 +1643,6 @@ export default function OrderPosDetail({ order: orderProp = null }) {
         onClose={() => setShowAzioni(false)}
         titolo={panelTitle}
         voci={[
-          {
-            id: 'invia',
-            icon: <IconPrinter />,
-            label: 'Invia comanda',
-            hint: 'Stampa al banco quella in lavorazione',
-            disabled: isNew,
-            onClick: inviaComanda,
-          },
-          {
-            id: 'paga',
-            icon: <IconCard />,
-            label: daIncassare > 0 ? `Pagamento · ${formatPrice(daIncassare)}` : 'Pagamento',
-            disabled: isNew ? draftCount === 0 : !canPay,
-            onClick: isNew ? handlePayNow : () => setShowPayment(true),
-          },
           {
             id: 'comande',
             icon: <IconReceipt />,
@@ -1682,14 +1686,6 @@ export default function OrderPosDetail({ order: orderProp = null }) {
             label: group ? `Gruppo: ${group.name}` : 'Associa a un gruppo',
             hint: group ? 'Cambia o togli' : null,
             onClick: () => setPickGroup(true),
-          },
-          {
-            id: 'annulla',
-            icon: <IconX />,
-            label: 'Annulla ordine',
-            danger: true,
-            disabled: isNew || closed,
-            onClick: () => setConfirmCancel(true),
           },
         ]}
       />

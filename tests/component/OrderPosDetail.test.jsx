@@ -662,33 +662,43 @@ describe('menu azioni del telefono', () => {
   })
 
   const apriMenu = async (user) => {
-    await user.click(screen.getByRole('button', { name: /⋯ Azioni/ }))
+    await user.click(screen.getByRole('button', { name: 'Azioni del conto' }))
     return within(screen.getByRole('dialog'))
   }
 
-  it('apre il menu con tutte le azioni del conto', async () => {
+  it('nel menu c’è quello che si usa ogni tanto', async () => {
     const user = userEvent.setup()
     mount(baseOrder())
     const menu = await apriMenu(user)
     for (const voce of [
-      /Invia comanda/,
-      /Pagamento/,
       /Comande \(1\)/,
       /Prodotto libero/,
       /Dati conto/,
       /Unisci le righe uguali/,
       /Separa le quantità/,
-      /Annulla ordine/,
     ]) {
       expect(menu.getByRole('button', { name: voce })).toBeInTheDocument()
     }
   })
 
-  it('“Annulla ordine” dal menu chiede conferma, non annulla di colpo', async () => {
+  it('quello che si usa sempre NON è nel menu: sta in fondo, su una riga', async () => {
     const user = userEvent.setup()
     mount(baseOrder())
+    // In fondo al pannello, i tre gesti della serata.
+    for (const nome of [/Invia$/, /Paga$/, /Annulla$/]) {
+      expect(screen.getByRole('button', { name: nome })).toBeInTheDocument()
+    }
+    // E non anche dentro il menu, che sarebbe un doppione.
     const menu = await apriMenu(user)
-    await user.click(menu.getByRole('button', { name: /Annulla ordine/ }))
+    expect(menu.queryByRole('button', { name: /Invia/ })).toBeNull()
+    expect(menu.queryByRole('button', { name: /Paga/ })).toBeNull()
+    expect(menu.queryByRole('button', { name: /Annulla/ })).toBeNull()
+  })
+
+  it('“Annulla” chiede conferma, non annulla di colpo', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.click(screen.getByRole('button', { name: /Annulla$/ }))
     await waitFor(() => expect(document.querySelector('.confirm-box')).toBeTruthy())
     expect(cancelOrder).not.toHaveBeenCalled()
   })
@@ -703,16 +713,14 @@ describe('menu azioni del telefono', () => {
     )
   })
 
-  it('su un ordine NUOVO le azioni che richiedono un conto aperto sono spente', async () => {
-    const user = userEvent.setup()
+  it('su un ordine NUOVO le azioni che richiedono un conto aperto sono spente', () => {
     render(
       <MemoryRouter>
         <OrderPosDetail order={null} />
       </MemoryRouter>
     )
-    const menu = await apriMenu(user)
-    expect(menu.getByRole('button', { name: /Invia comanda/ })).toBeDisabled()
-    expect(menu.getByRole('button', { name: /Annulla ordine/ })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /Invia$/ })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /Annulla$/ })).toBeDisabled()
   })
 })
 
