@@ -361,7 +361,7 @@ export default function UtentiTab({ role = null }) {
                   const u = cambioRuolo
                   const nuovo = ruoloScelto
                   setCambioRuolo(null)
-                  if (nuovo === 'admin') {
+                  if (isAdmin(nuovo)) {
                     setConfirm({
                       title: `Nominare admin ${u.email}?`,
                       message:

@@ -5,7 +5,7 @@ import { auth } from '../lib/firebaseClient.js'
 import { logoutStaff } from '../lib/logout.js'
 import { updateDisplayName } from '../lib/customerAuth.js'
 import PasswordChanger from '../components/PasswordChanger.jsx'
-import { RUOLO_ETICHETTA } from '../lib/ruoli.js'
+import { RUOLO_ETICHETTA, isPersonale } from '../lib/ruoli.js'
 
 // Profilo dello staff/bartender registrato: modifica del nome
 // visualizzato (usato in «Ciao, …» e nell'attribuzione degli ordini) e
@@ -27,7 +27,7 @@ export default function StaffProfilePage() {
       try {
         const token = await u.getIdTokenResult()
         const r = token.claims.role
-        setRole(r === 'bartender' || r === 'staff' ? r : null)
+        setRole(isPersonale(r) ? r : null)
       } catch {
         setRole(null)
       }

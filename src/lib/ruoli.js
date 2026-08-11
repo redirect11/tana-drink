@@ -50,7 +50,13 @@ export function isGestore(role) {
   return role === 'admin' || role === 'bartender'
 }
 
+// SALA: chi serve ai tavoli e basta. Vede solo i drink pronti da portare,
+// non la cassa.
+export function isSala(role) {
+  return role === 'staff'
+}
+
 // Chi appartiene al personale, a qualunque titolo (contrapposto al cliente).
 export function isPersonale(role) {
-  return isGestore(role) || role === 'staff'
+  return isGestore(role) || isSala(role)
 }
