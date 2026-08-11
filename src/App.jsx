@@ -250,7 +250,7 @@ export default function App() {
             <Link className="btn small" to="/bar">
               🫱 Torna al servizio
             </Link>
-          ) : (
+          ) : telefono ? null : (
             <>
               {/* "I miei ordini" ha senso solo per il CLIENTE. Per lo staff/
                   bartender gli ordini aperti sono nella coda (/bar), non sono
@@ -279,14 +279,37 @@ export default function App() {
         </nav>
       </header>
 
+      {/* SECONDA RIGA, LATO CLIENTE (telefono). "I miei ordini" e "Accedi"
+          non stanno in barra — dove sarebbero due tasti in mezzo al logo —
+          né dietro un menu, dove nessuno andrebbe a cercarli. Stanno qui
+          sotto, su una riga tutta loro. La riga c'è SEMPRE, anche mentre si
+          sta ancora capendo chi è collegato: così non compare dopo,
+          spostando quello che c'è sotto proprio mentre lo si tocca. */}
+      {telefono && !staffRole && !onBackoffice && (
+        <div className="barra-cliente">
+          <Link className="btn ghost small" to="/menu">🍸 Menù</Link>
+          {hasOrders && (
+            <Link className="btn ghost small" to="/ordini">🧾 I miei ordini</Link>
+          )}
+          {user ? (
+            <Link className="btn ghost small" to="/profilo">
+              👤 {profile?.nome || user.displayName?.split(' ')[0] || 'Profilo'}
+            </Link>
+          ) : accountsOn ? (
+            <Link className="btn ghost small" to="/accedi">🔑 Accedi</Link>
+          ) : null}
+        </div>
+      )}
+
       {/* Menu della barra sul telefono: le azioni che prima stavano in fila
           e non ci stavano. Stesso pannello dal basso del dettaglio ordine —
           si impara una volta e vale ovunque. */}
       <ActionSheet
         open={menuTopbar}
         onClose={() => setMenuTopbar(false)}
-        titolo={staffName ? `Ciao, ${staffName}` : 'Menu'}
+        titolo={staffName ? staffName : 'La Tana del Coniglio'}
         voci={[
+
           {
             id: 'profilo',
             icon: '⚙️',

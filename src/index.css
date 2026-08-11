@@ -178,6 +178,31 @@ a {
   text-overflow: ellipsis;
 }
 
+/* SECONDA RIGA lato cliente (telefono): menù, i miei ordini, accedi. Sta
+   sotto la barra e non dentro, perché in barra sarebbero tasti in mezzo al
+   nome del locale; e non dietro un menu, perché "Accedi" dietro un menu
+   non lo trova nessuno. Altezza fissa: c'è anche mentre si sta ancora
+   capendo chi è collegato, così non compare dopo spostando la pagina. */
+.barra-cliente {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  margin: 0 -16px;
+  padding: 6px 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--bg-2) 70%, transparent);
+}
+.barra-cliente::-webkit-scrollbar {
+  display: none;
+}
+.barra-cliente .btn {
+  flex-shrink: 0;
+  min-height: 36px;
+}
+
 /* Il ⋮ della barra: bersaglio pieno da 48px, non un'icona da centrare col
    dito. È la porta di tutto quello che non ci sta in barra. */
 .topbar-piu {
@@ -892,12 +917,29 @@ label {
 
 /* Il marchio è già un tondo disegnato: niente ritaglio e niente anello
    sopra, che lo rifilavano sul bordo. Intero, con la sua ombra. */
+/* Marchio e nome affiancati, allineati fra loro: il nome può andare a capo
+   quanto vuole, il logo gli resta di fianco e non ci finisce sopra. */
+.hero-testa {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
 .hero-logo {
   width: 72px;
   height: 72px;
+  flex-shrink: 0;
   object-fit: contain;
-  margin-bottom: 10px;
   filter: drop-shadow(0 4px 14px rgba(0, 0, 0, 0.55));
+}
+@media (max-width: 560px) {
+  .hero-logo {
+    width: 58px;
+    height: 58px;
+  }
+  .hero-testa {
+    gap: 10px;
+  }
 }
 
 .hero-title {
@@ -2022,6 +2064,11 @@ body.menu-largo .app {
   padding: 0 3px;
 }
 /* Pallino di stato sync in basso a destra della campanella. */
+/* Da fermo NON C'È. Prima restava un cerchietto vuoto col bordo del colore
+   dello sfondo: sul tema chiaro sembrava un pallino nero appiccicato alla
+   campanella, e non voleva dire niente — "niente da sincronizzare" si dice
+   meglio non mostrando nulla. Compare solo quando c'è qualcosa da dire:
+   giallo mentre sincronizza, verde a fatto, rosso se è andata storta. */
 .status-bell::after {
   content: '';
   position: absolute;
@@ -2032,6 +2079,12 @@ body.menu-largo .app {
   border-radius: 50%;
   border: 1.5px solid var(--bg, #0e0e15);
   background: transparent;
+  display: none;
+}
+.status-bell.syncing::after,
+.status-bell.synced::after,
+.status-bell.error::after {
+  display: block;
 }
 .status-bell.syncing::after {
   background: #f5b94a;
