@@ -3242,6 +3242,49 @@ body.fullbleed,
     display: flex;
   }
 }
+
+/* ── SMARTPHONE: la testata del conto deve stare su UNA riga ───────────
+   Su 360px "← Ordini · #1 · oggi 10:05 · Conto aperto · ✍️ Capo Bar · id
+   00197" andava a capo due volte e mangiava mezzo schermo. Restano le
+   cose che servono mentre si lavora: da dove si torna, che conto è, com'è
+   messo. Chi l'ha aperto e il progressivo interno si leggono in Comande e
+   nei Dati conto — lì c'è spazio. */
+@media (max-width: 700px) {
+  .posd-topbar {
+    gap: 6px;
+    padding: calc(6px + var(--safe-top)) 8px 6px;
+  }
+  .posd-autore,
+  .posd-serial {
+    display: none;
+  }
+  .posd-num {
+    min-width: 0;
+  }
+  .posd-topbar .pill {
+    padding: 4px 8px;
+    font-size: 0.75rem;
+  }
+  .posd-aperto {
+    font-size: 0.72rem;
+    white-space: nowrap;
+  }
+  /* Testata del pannello: tutta l'aria possibile alle righe del conto. */
+  .posd-azioni .btn,
+  .posd-azioni-fisse .btn {
+    padding: 0.55em 0.5em;
+    font-size: 0.85em;
+  }
+  .posd-azioni-fisse {
+    margin: 6px 0 4px;
+  }
+  /* Lo ZOOM sta in basso a sinistra, cioè sopra "Annulla ordine" e sopra le
+     ultime voci del menu: sul telefono si finiva per premere lui. Il
+     browser del telefono lo zoom ce l'ha già suo. */
+  .zoom-control {
+    display: none;
+  }
+}
 /* Barra del pannello collassato (montata solo da collassato, su smartphone):
    BEN alta (una vera fascia), così si tocca senza mirare. */
 .posd-collapsed-bar {
@@ -4193,5 +4236,19 @@ body.drawer-open .zoom-control {
 }
 .posd-azioni .btn {
   flex: 1 1 auto;
+  white-space: nowrap;
+}
+
+/* Dati conto e Prodotto libero: affiancati. Erano due righe intere, e su
+   uno schermo da telefono due righe di testata sono due righe di conto in
+   meno — cioè le uniche che servono davvero mentre si batte. */
+.posd-azioni-fisse {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin: 8px 0 6px;
+}
+.posd-azioni-fisse .btn {
+  margin: 0;
   white-space: nowrap;
 }
