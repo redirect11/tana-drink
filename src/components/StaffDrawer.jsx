@@ -5,6 +5,7 @@ import { logoutStaff } from '../lib/logout.js'
 import { devToolsEnabled } from '../dev/devActions.js'
 import { isGestore, RUOLO_ETICHETTA } from '../lib/ruoli.js'
 import { IconGruppo, IconPersona } from './Icons.jsx'
+import VersionBadge from './VersionBadge.jsx'
 import {
   subscribeSettings,
   subscribeOpenGroups,
@@ -221,6 +222,10 @@ export default function StaffDrawer({ role, active = null, onSelect = null }) {
         <div className="bar-nav-item" onClick={() => logoutStaff()}>
           <span>🚪</span> Esci
         </div>
+        {/* Ramo e commit del deploy: con più branch che passano a turno
+            sullo stesso ambiente di test, serve sapere cosa si sta
+            guardando prima di dire "non funziona". */}
+        <VersionBadge className="drawer-versione" />
       </nav>
     </>
   )
