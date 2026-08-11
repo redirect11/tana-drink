@@ -17,6 +17,8 @@ import {
   isAdmin,
 } from '../lib/ruoli.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
+import SectionPanels from './SectionPanels.jsx'
+import VipTab from './VipTab.jsx'
 
 // GESTIONE UTENTI. Due elenchi in uno: il personale (admin/bartender/staff)
 // e i clienti registrati dal sito. La nomina dei ruoli è dell'admin: da qui
@@ -37,7 +39,6 @@ export default function UtentiTab({ role = null }) {
   const [tuttiClienti, setTuttiClienti] = useState(false)
 
   // Form nuovo account
-  const [apriNuovo, setApriNuovo] = useState(false)
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -108,7 +109,6 @@ export default function UtentiTab({ role = null }) {
       setName('')
       setEmail('')
       setPassword('')
-      setApriNuovo(false)
     })
   }
 
@@ -211,6 +211,7 @@ export default function UtentiTab({ role = null }) {
 
   return (
     <div>
+      <h2>🧑‍🤝‍🧑 Utenti e ruoli</h2>
       {error && <div className="banner">Errore: {error}</div>}
 
       {!admin && (
@@ -222,21 +223,17 @@ export default function UtentiTab({ role = null }) {
         </div>
       )}
 
+      {/* Sottosezioni: stessa convenzione di tutte le pagine — tasti sotto
+          al titolo, il pannello si apre lì. */}
       {admin && (
-        <div className="card settings-section">
-          <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 style={{ margin: 0 }}>Nuovo account</h3>
-            <button className="btn ghost small" onClick={() => setApriNuovo((v) => !v)}>
-              {apriNuovo ? 'Chiudi' : '➕ Crea'}
-            </button>
-          </div>
-          <p className="muted small" style={{ margin: '6px 0 0' }}>
-            Serve solo per creare un account al posto di qualcuno. Chi si
-            registra da sé compare qui sotto fra i clienti: gli dai il ruolo e
-            basta.
-          </p>
-          {apriNuovo && (
-            <form onSubmit={handleCreate} style={{ marginTop: 12 }}>
+        <SectionPanels
+          panels={[
+            {
+              id: 'nuovo',
+              label: '➕ Nuovo account',
+              desc: 'Serve solo per creare un account al posto di qualcuno. Chi si registra da sé compare qui sotto fra i clienti: gli dai il ruolo e basta.',
+              render: () => (
+            <form onSubmit={handleCreate}>
               <label htmlFor="staff-name">Nome</label>
               <input
                 id="staff-name"
@@ -285,8 +282,17 @@ export default function UtentiTab({ role = null }) {
                 {busy ? 'Creo…' : '➕ Crea account'}
               </button>
             </form>
-          )}
-        </div>
+              ),
+            },
+            {
+              id: 'vip',
+              label: '🎟 Buoni VIP',
+              // I buoni sono credito intestato a una persona: stanno con le
+              // persone, non in una voce di menu tutta loro.
+              render: () => <VipTab embedded />,
+            },
+          ]}
+        />
       )}
 
       <div className="card settings-section">

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import SectionPanels from './SectionPanels.jsx'
 import {
   fetchDrinks,
   updateDrink,
@@ -43,12 +44,10 @@ export default function MenuManager() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [editing, setEditing] = useState(null) // null | 'new' | drink object
-  const [showCats, setShowCats] = useState(false)
   // Filtri della lista (catalogo grande: ricerca + categoria + disponibilità).
   const [search, setSearch] = useState('')
   const [catFilter, setCatFilter] = useState('all') // 'all' | 'none' | categoryId
   const [availFilter, setAvailFilter] = useState('all') // 'all' | 'yes' | 'no'
-  const [showMargini, setShowMargini] = useState(false)
   const [collapsed, setCollapsed] = useState(() => new Set()) // categorie chiuse
   const [openId, setOpenId] = useState(null)
   // COLORE DEL PRODOTTO NEL POS. Vive nelle preferenze del POS (pos_prefs),
@@ -264,39 +263,37 @@ export default function MenuManager() {
 
   return (
     <div>
+      {/* Sottosezioni del menù: sotto al titolo, come nelle altre pagine. */}
+      <SectionPanels
+        panels={[
+          {
+            id: 'cats',
+            label: `🏷 Categorie (${categories.length})`,
+            render: () => (
+              <CategoryManager
+                categories={categories}
+                onChange={async () => setCategories(await fetchCategories())}
+              />
+            ),
+          },
+          {
+            id: 'margini',
+            label: '📊 Marginalità del listino',
+            desc: 'Quali drink rendono meno di quanto dovrebbero.',
+            render: () => (
+              <MarginList
+                drinks={drinks}
+                inventory={inventory}
+                onEdit={(id) => setEditing(drinks.find((d) => d.id === id) || null)}
+              />
+            ),
+          },
+        ]}
+      />
+
       <button className="btn block" onClick={() => setEditing('new')}>
         + Aggiungi prodotto
       </button>
-
-      <button
-        className="btn ghost small block"
-        style={{ marginTop: 8 }}
-        onClick={() => setShowCats((v) => !v)}
-      >
-        {showCats ? 'Nascondi categorie' : `🏷 Gestisci categorie (${categories.length})`}
-      </button>
-      {showCats && (
-        <CategoryManager
-          categories={categories}
-          onChange={async () => setCategories(await fetchCategories())}
-        />
-      )}
-
-      {/* Marginalità: quali drink rendono meno di quanto dovrebbero. */}
-      <button
-        className="btn ghost small block"
-        style={{ marginTop: 8 }}
-        onClick={() => setShowMargini((v) => !v)}
-      >
-        {showMargini ? 'Nascondi marginalità' : '📊 Marginalità del listino'}
-      </button>
-      {showMargini && (
-        <MarginList
-          drinks={drinks}
-          inventory={inventory}
-          onEdit={(id) => setEditing(drinks.find((d) => d.id === id) || null)}
-        />
-      )}
 
       {error && <div className="banner">Errore: {error}</div>}
       {loading && <div className="empty">Carico il menù…</div>}

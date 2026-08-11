@@ -14,7 +14,7 @@ const EXPIRY_OPTS = [
 
 // Sezione VIP: buoni (credito ricaricabile) associati a una persona.
 // Si creano, si ricaricano e si spendono al pagamento (metodo Buono).
-export default function VipTab() {
+export default function VipTab({ embedded = false }) {
   const [vouchers, setVouchers] = useState([])
   const [error, setError] = useState(null)
   const [search, setSearch] = useState('')
@@ -71,7 +71,7 @@ export default function VipTab() {
 
   return (
     <div>
-      <h2>🎟 Buoni VIP</h2>
+      {!embedded && <h2>🎟 Buoni VIP</h2>}
       {error && <div className="banner">Errore: {error}</div>}
 
       <div className="chip" style={{ width: '100%', justifyContent: 'center', marginBottom: 8, cursor: 'default' }}>

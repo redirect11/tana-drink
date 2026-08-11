@@ -52,6 +52,8 @@ describe('registro Ore staff', () => {
   it('il turno si assegna scegliendo un MEMBRO, non digitando un nome', async () => {
     const user = userEvent.setup()
     render(<StaffHoursTab />)
+    // Il form sta nel pannello "Nuovo turno", sotto al titolo.
+    await user.click(screen.getByRole('button', { name: /Nuovo turno/ }))
     await waitFor(() => expect(screen.getByLabelText('Chi *')).toBeInTheDocument())
     const chi = screen.getByLabelText('Chi *')
     expect(chi.tagName).toBe('SELECT') // niente campo libero

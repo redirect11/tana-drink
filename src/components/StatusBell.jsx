@@ -14,7 +14,11 @@ const fmtTime = (ms) => {
   }
 }
 
-export default function StatusBell() {
+// `floating`: la stessa campanella come tasto tondo in basso a destra.
+// Serve nella coda a tutto schermo, dove la topbar (e quindi la campanella)
+// non c'è: gli avvisi di sincronizzazione non devono sparire proprio nella
+// schermata dove si lavora tutta la sera.
+export default function StatusBell({ floating = false }) {
   const [sync, setSync] = useState({ phase: 'idle', pending: 0, failedCount: 0, lastError: null })
   const [notifs, setNotifs] = useState({ items: [], unseen: 0 })
   const [open, setOpen] = useState(false)
@@ -34,7 +38,7 @@ export default function StatusBell() {
   return (
     <>
       <button
-        className={`status-bell ${syncClass}`}
+        className={`status-bell ${syncClass}${floating ? ' status-bell-float' : ''}`}
         onClick={toggle}
         title="Notifiche e sincronizzazione"
         aria-label={`Notifiche${notifs.unseen ? ` (${notifs.unseen} nuove)` : ''}`}
@@ -46,7 +50,7 @@ export default function StatusBell() {
       {open && (
         <>
           <div className="status-bell-backdrop" onClick={() => setOpen(false)} />
-          <div className="status-bell-panel" role="dialog" aria-label="Notifiche e sincronizzazione">
+          <div className={`status-bell-panel${floating ? ' basso' : ''}`} role="dialog" aria-label="Notifiche e sincronizzazione">
             {/* Stato sincronizzazione */}
             {sync.phase === 'error' ? (
               <div className="status-bell-sync err">
