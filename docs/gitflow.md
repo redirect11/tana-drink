@@ -23,9 +23,16 @@ solo per `main`; per tutto il resto è `tana-drink-test`.
 **L'ambiente di test è uno solo.** Ci finiscono a turno `develop` e i
 branch in lavorazione: l'ultimo push è quello pubblicato, e i deploy dello
 stesso ambiente si annullano a vicenda invece di sovrapporsi. Per sapere
-cosa si sta guardando, l'app mostra **ramo e commit** in fondo al menu
-laterale (si tocca per copiarli in un messaggio). Gli stessi valori stanno
-in `/version.json`.
+cosa si sta guardando, l'app lo scrive in fondo al menu laterale (si tocca
+per copiarlo in un messaggio):
+
+| Dove | Cosa si legge |
+|---|---|
+| produzione (`main`) | `v1.1.0` — solo il numero: il ramo è sempre quello |
+| test (`develop`, `feature/**`, `hotfix/**`) | `v1.1.0 · develop · b50bb1c` |
+
+La versione è **l'ultimo tag raggiungibile**; senza tag si ripiega su
+`package.json`. Gli stessi valori stanno in `/version.json`.
 
 Se serve provare due branch insieme senza che si diano fastidio, la strada
 è un canale di anteprima di Firebase Hosting
