@@ -353,6 +353,10 @@ export default function PosProductPicker({
             flex: 1,
             minHeight: 0,
             overflowY: 'auto',
+            // Arrivati in cima, il trascinamento si ferma qui: non passa al
+            // documento, dove Android farebbe partire il ricaricamento
+            // della pagina in mezzo a un ordine.
+            overscrollBehavior: 'contain',
             WebkitOverflowScrolling: 'touch',
             padding: '10px 8px',
             display: 'grid',
