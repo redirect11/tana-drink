@@ -80,6 +80,7 @@ import {
   registerPayment,
   updateOrderInfo,
   cancelOrder,
+  createOrder,
 } from '../../src/lib/api.js'
 import { readerCheckout } from '../../src/lib/paymentsApi.js'
 import { printComanda } from '../../src/lib/printer.js'
@@ -702,5 +703,68 @@ describe('menu azioni del telefono', () => {
     const menu = await apriMenu(user)
     expect(menu.getByRole('button', { name: /Invia comanda/ })).toBeDisabled()
     expect(menu.getByRole('button', { name: /Annulla ordine/ })).toBeDisabled()
+  })
+})
+
+// ── ITEM BATTUTI MENTRE L'ORDINE SI STA CREANDO ──────────────────────
+// Difetto vero, visto al banco: si aggiunge un'acqua, un secondo dopo si
+// aggiunge altro, e quando l'ordine finisce di crearsi resta solo
+// l'acqua. La creazione dura qualche decimo di secondo; in quei decimi si
+// continua a battere, e chi svuotava la bozza a creazione finita portava
+// via anche le righe arrivate nel frattempo.
+describe('creazione: niente si perde mentre l’ordine nasce', () => {
+  it('gli item battuti durante la creazione finiscono nell’ordine', async () => {
+    const user = userEvent.setup()
+    // Creazione LENTA e controllata da qui: è la finestra in cui si continua
+    // a battere.
+    let creaLaConclude
+    createOrder.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          creaLaConclude = () =>
+            resolve({
+              id: 'ord-nuovo',
+              status: 'aperto',
+              comande: [
+                {
+                  id: 'c1',
+                  seq: 1,
+                  status: 'in_preparazione',
+                  status_times: {},
+                  items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1 }],
+                },
+              ],
+              order_items: [
+                { id: 'x', drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1 },
+              ],
+              payments: [],
+            })
+        })
+    )
+
+    render(
+      <MemoryRouter>
+        <OrderPosDetail order={null} />
+      </MemoryRouter>
+    )
+
+    // Primo item: fa partire la creazione (parte da sola dopo ~300ms).
+    await user.click(screen.getAllByText('Mojito')[0])
+    await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1), { timeout: 2000 })
+
+    // Mentre l'ordine sta nascendo, se ne battono altri due.
+    await user.click(screen.getAllByText('Gin Tonic')[0])
+    await user.click(screen.getAllByText('Gin Tonic')[0])
+
+    // Ora il server risponde.
+    creaLaConclude()
+
+    // I due Gin Tonic non devono sparire: restano a schermo e vengono
+    // mandati al server come aggiunte.
+    await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalled(), { timeout: 3000 })
+    const items = bartenderUpdateComanda.mock.calls.at(-1)[2].items
+    expect(items.filter((i) => i.drink_id === 'gin')).toHaveLength(2)
+    expect(screen.getAllByText('Gin Tonic').length).toBeGreaterThan(0)
+    expect(createOrder).toHaveBeenCalledTimes(1) // un ordine solo, non due
   })
 })
