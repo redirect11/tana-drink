@@ -3571,8 +3571,13 @@ body.fullbleed,
     width: 100%;
     max-width: none;
     min-width: 0;
-    /* Altezza regolabile dalla maniglia in cima (tieni premuto e trascina). */
-    max-height: var(--pos-comanda-h, 46dvh);
+    /* ALTEZZA VOLUTA, non "al massimo". Con max-height il pannello era alto
+       quanto il suo contenuto: con poche righe tirare la maniglia in su non
+       faceva niente — si alzava solo il tetto, e sembrava che funzionasse
+       solo per rimpicciolire. Ora l'altezza è quella scelta, e la lista
+       dentro scorre o lascia spazio vuoto. */
+    height: var(--pos-comanda-h, 46dvh);
+    max-height: none;
     border-left: none;
     border-top: 1px solid rgba(255, 255, 255, 0.12);
     box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.4);
@@ -3593,6 +3598,7 @@ body.fullbleed,
     display: none !important;
   }
   .posd-comanda.collapsed {
+    height: auto;
     max-height: none;
   }
   .posd-comanda.collapsed .posd-collapsed-bar {

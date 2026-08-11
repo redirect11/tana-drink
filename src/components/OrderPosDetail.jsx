@@ -245,9 +245,12 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   // quattro righe il conto non ci stava e bisognava scorrere dentro una
   // finestrella. Si tira su la maniglia e si guarda tutto il conto.
   const altezzaRz = useResizable('pos-comanda-h', {
-    def: 46,
-    min: 26,
-    max: 84,
+    // In quarti di schermo: da un quarto (si guarda la griglia) a tre
+    // quarti (si guarda il conto), partendo da metà. Oltre i tre quarti
+    // della griglia non resterebbe abbastanza per battere.
+    def: 50,
+    min: 25,
+    max: 75,
     axis: 'y',
     side: 'up',
     speed: 0.13, // pixel → dvh (uno schermo tipico è ~800px: 1dvh ≈ 8px)
