@@ -1284,6 +1284,11 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   // compariva solo finché l'ordine non esisteva ancora: appena si creava da
   // sé — cioè un istante dopo il primo prodotto — spariva, e sembrava un
   // difetto. È il totale meno lo sconto e gli acconti già presi.
+  // Ingranditi al massimo dalla maniglia, tre parole non stanno su una
+  // riga: da lì in poi restano le sole icone. Meglio un'icona che si vede
+  // di una parola tagliata. (La scala del footer va da 80 a 175.)
+  const soloIcone = telefono && footRz.width > 118
+
   const daIncassare = Math.max(
     0,
     confirmedTotal +
@@ -1736,22 +1741,35 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                 sta dietro i ⋯ in alto, dove non intralcia. */}
             {telefono && (
               <div className="posd-foot-telefono">
-                <button className="btn ghost" disabled={isNew} onClick={inviaComanda}>
-                  <IconPrinter /> Invia
+                <button
+                  className="btn ghost"
+                  disabled={isNew}
+                  onClick={inviaComanda}
+                  aria-label="Invia"
+                  title="Invia la comanda al banco"
+                >
+                  <IconPrinter />
+                  {!soloIcone && ' Invia'}
                 </button>
                 <button
                   className="btn"
                   disabled={isNew ? draftCount === 0 : !canPay}
                   onClick={isNew ? handlePayNow : () => setShowPayment(true)}
+                  aria-label="Paga"
+                  title="Incassa il conto"
                 >
-                  <IconCard /> Paga
+                  <IconCard />
+                  {!soloIcone && ' Paga'}
                 </button>
                 <button
                   className="btn ghost"
                   disabled={isNew || closed}
                   onClick={() => setConfirmCancel(true)}
+                  aria-label="Annulla"
+                  title="Annulla l'ordine"
                 >
-                  <IconX /> Annulla
+                  <IconX />
+                  {!soloIcone && ' Annulla'}
                 </button>
               </div>
             )}
