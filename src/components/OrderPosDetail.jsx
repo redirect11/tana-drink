@@ -19,6 +19,7 @@ import {
 import { useDraft, loadLayout, saveLayout, saveDraft } from '../lib/useDraft.js'
 import { dismissKeyboard } from '../lib/keyboard.js'
 import { useResizable } from '../lib/useResizable.js'
+import { useTelefono } from '../lib/useTelefono.js'
 import { auth } from '../lib/firebaseClient.js'
 import { onAuthStateChanged } from 'firebase/auth'
 import { useMenu } from '../lib/menuCache.js'
@@ -140,6 +141,9 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   // Menu delle azioni: esiste solo sul telefono, dove i tasti non ci stanno
   // tutti in pagina senza mangiarsi le righe del conto.
   const [showAzioni, setShowAzioni] = useState(false)
+  // Il menu delle azioni vale SOLO sul telefono: altrove i tasti stanno in
+  // pagina, e un ⋯ in più sarebbe solo un doppione da capire.
+  const telefono = useTelefono()
   const [showPayment, setShowPayment] = useState(false)
   const [askName, setAskName] = useState(false) // modale nome (creazione)
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
@@ -1319,14 +1323,16 @@ export default function OrderPosDetail({ order: orderProp = null }) {
               <strong className="posd-title" style={{ display: 'block', flex: 1, minWidth: 0 }}>
                 {panelTitle}
               </strong>
-              <button
-                className="btn ghost small solo-telefono"
-                onClick={() => setShowAzioni(true)}
-                aria-label="Azioni del conto"
-                title="Azioni del conto"
-              >
-                ⋯
-              </button>
+              {telefono && (
+                <button
+                  className="btn ghost small"
+                  onClick={() => setShowAzioni(true)}
+                  aria-label="Azioni del conto"
+                  title="Azioni del conto"
+                >
+                  ⋯
+                </button>
+              )}
             </div>
             <div className="posd-azioni">
               {/* I tasti ci sono SEMPRE, spenti quando non servono. Comparire e
@@ -1600,9 +1606,11 @@ export default function OrderPosDetail({ order: orderProp = null }) {
 
             {/* TELEFONO: un tasto solo, tutto il resto nel menu dal basso.
                 In pagina restano il totale e le righe del conto. */}
-            <button className="btn block solo-telefono" onClick={() => setShowAzioni(true)}>
-              ⋯ Azioni
-            </button>
+            {telefono && (
+              <button className="btn block" onClick={() => setShowAzioni(true)}>
+                ⋯ Azioni
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -1612,7 +1620,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
           una seconda logica da tenere allineata, solo un altro posto da
           cui chiamarla. */}
       <ActionSheet
-        open={showAzioni}
+        open={showAzioni && telefono}
         onClose={() => setShowAzioni(false)}
         titolo={panelTitle}
         voci={[
@@ -1993,6 +2001,12 @@ export default function OrderPosDetail({ order: orderProp = null }) {
             cancelOrder(order.id, { by: 'bartender' }).catch((e) =>
               toastError(`Annullo non riuscito: ${e.message}`)
             )
+            // SI TORNA AGLI ORDINI. Un conto annullato non si lavora più:
+            // restarci davanti serve solo a chiedersi se l'annullo è andato,
+            // e a rischiare di batterci sopra. Come quando si svuota da sé.
+            // La scrittura prosegue per conto suo: se fallisce lo dice il
+            // toast, ma la coda è già lì.
+            navigate('/bar')
           }}
         />
       )}
