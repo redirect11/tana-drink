@@ -19,6 +19,7 @@ import {
 import ConfirmDialog from './ConfirmDialog.jsx'
 import SectionPanels from './SectionPanels.jsx'
 import VipTab from './VipTab.jsx'
+import { IconPiu, IconBuono } from './Icons.jsx'
 
 // GESTIONE UTENTI. Due elenchi in uno: il personale (admin/bartender/staff)
 // e i clienti registrati dal sito. La nomina dei ruoli è dell'admin: da qui
@@ -230,7 +231,7 @@ export default function UtentiTab({ role = null }) {
           panels={[
             {
               id: 'nuovo',
-              label: '➕ Nuovo account',
+              label: <><IconPiu /> Nuovo account</>,
               desc: 'Serve solo per creare un account al posto di qualcuno. Chi si registra da sé compare qui sotto fra i clienti: gli dai il ruolo e basta.',
               render: () => (
             <form onSubmit={handleCreate}>
@@ -286,7 +287,7 @@ export default function UtentiTab({ role = null }) {
             },
             {
               id: 'vip',
-              label: '🎟 Buoni VIP',
+              label: <><IconBuono /> Buoni VIP</>,
               // I buoni sono credito intestato a una persona: stanno con le
               // persone, non in una voce di menu tutta loro.
               render: () => <VipTab embedded />,

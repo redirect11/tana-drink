@@ -632,6 +632,9 @@ label {
   margin: 8px 0 10px;
 }
 .section-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   padding: 9px 14px;
   border: 1px solid var(--line);
   border-radius: 12px;

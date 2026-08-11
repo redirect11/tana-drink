@@ -24,6 +24,7 @@ import {
 } from '../lib/ore.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import SectionPanels from './SectionPanels.jsx'
+import { IconPiu, IconSoldi } from './Icons.jsx'
 
 // RAPP ORE + BADGE VIRTUALE: registro ore dello staff con vista calendario
 // giornaliera, settimanale e mensile. Distingue le ore EFFETTIVE (badge:
@@ -195,13 +196,13 @@ export default function StaffHoursTab({ embedded = false }) {
         panels={[
           {
             id: 'turno',
-            label: '➕ Nuovo turno',
+            label: <><IconPiu /> Nuovo turno</>,
             desc: 'Per un giorno preciso conviene cliccarlo nel calendario: si assegna lì, con gli orari.',
             render: () => <ShiftForm membri={membri} onAdd={addTurno} />,
           },
           {
             id: 'paghe',
-            label: '💶 Paghe orarie',
+            label: <><IconSoldi /> Paghe orarie</>,
             desc: 'Tariffa oraria per persona. Resta storicizzata: i turni già registrati mantengono quella in vigore quel giorno.',
             render: () => (
               <PagheManager
