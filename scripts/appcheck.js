@@ -16,7 +16,7 @@
 //  arrivando (questo comando), e solo quando i non validi sono zero si
 //  accende. I numeri vengono da Cloud Monitoring, cioè dal traffico vero.
 // =====================================================================
-import { accessToken, arg, flag } from './lib-firestore.js'
+import { accessToken, arg } from './lib-firestore.js'
 
 const PROGETTO = arg('project', 'tana-drink-test')
 const GIORNI = Number(arg('giorni', 3)) || 3
