@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   signInWithEmailAndPassword,
@@ -29,6 +29,7 @@ import {
 import { bucketByStatus, ordersRecap } from '../lib/coda.js'
 import StatusBell from '../components/StatusBell.jsx'
 import { isGestore, isPersonale } from '../lib/ruoli.js'
+import { senzaNascosti, subscribeNascosti } from '../lib/ordiniNascosti.js'
 import { allServed } from '../lib/comande.js'
 import { paidAmount, orderTotal } from '../lib/pagamento.js'
 import { businessDayKey, businessDayLabel, businessDayShort } from '../lib/businessDay.js'
@@ -391,7 +392,19 @@ function minutesBetween(fromIso, toIso) {
 
 function OrderQueue() {
   const [ordersReady, setOrdersReady] = useState(false) // primo snapshot arrivato
-  const [orders, setOrders] = useState([])
+  const [ordersRaw, setOrders] = useState([])
+  // CONTI APPENA CHIUSI QUI: fuori dalla lista all'istante. La scrittura
+  // parte in sottofondo e per un attimo la coda ha ancora la versione di
+  // prima: si tornava dalla schermata del conto e lo si vedeva lì, per poi
+  // guardarlo sparire — abbastanza per chiedersi se l'operazione fosse
+  // andata a buon fine.
+  const [chiusiQui, setChiusiQui] = useState([])
+  useEffect(() => subscribeNascosti(setChiusiQui), [])
+  const orders = useMemo(
+    () => senzaNascosti(ordersRaw),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [ordersRaw, chiusiQui]
+  )
   const [error, setError] = useState(null)
   const [statusTab, setStatusTab] = useState(ORDER_STATUSES.RICEVUTO)
   const [boardFilter, setBoardFilter] = useState('attivi') // 'attivi' | 'chiusi' | 'tutti'

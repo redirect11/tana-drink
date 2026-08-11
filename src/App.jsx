@@ -232,20 +232,18 @@ export default function App() {
               ⋮
             </button>
           ) : onBackoffice ? (
-            <>
-              {staffRole && (
-                <Link className="topbar-hello" to="/profilo-staff" style={{ textDecoration: 'none' }}>
-                  <span className="topbar-hello-testo">Ciao, {staffName} </span>⚙️
-                </Link>
-              )}
-              <Link className="btn ghost small" to="/pos">🍸 POS</Link>
-              {/* Per lo staff «Nuovo ordine» porta già al menu: niente doppione. */}
-              {!isSala(staffRole) && (
-                <Link className="btn ghost small solo-schermo-largo" to="/menu">
-                  Vista cliente
-                </Link>
-              )}
-            </>
+            /* CHI È COLLEGATO, e basta. "POS" e "Vista cliente" erano due
+               tasti di navigazione in una barra che non è un menu: stanno
+               nel menu laterale, dov'è tutto il resto. Del saluto resta il
+               nome — l'iniziale nel quadratino è la stessa che marca gli
+               ordini aperti da questa persona, così si riconosce a colpo
+               d'occhio chi sta battendo. */
+            staffRole && (
+              <Link className="topbar-io" to="/profilo-staff" title="Il mio profilo">
+                <span className="order-by staff">{(staffName || '?')[0].toUpperCase()}</span>
+                <span className="topbar-io-nome">{staffName}</span>
+              </Link>
+            )
           ) : isSala(staffRole) ? (
             // Staff nel menu (ordine manuale): solo il ritorno al servizio.
             // Saluto ed Esci stanno nel gestionale e nel drawer.

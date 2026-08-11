@@ -149,6 +149,37 @@ a {
   white-space: nowrap;
 }
 
+/* CHI È COLLEGATO, in barra: iniziale nel quadratino (la stessa che marca
+   gli ordini aperti da quella persona) e il nome. Niente "Ciao": lo spazio
+   in barra è tutto, e un saluto non dice niente che il nome non dica. */
+.topbar-io {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 4px 4px;
+  border-radius: 999px;
+  color: inherit;
+  text-decoration: none;
+  min-width: 0;
+}
+.topbar-io:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+.topbar-io .order-by {
+  font-size: 0.85rem;
+  min-width: 1.9em;
+  height: 1.9em;
+  border-radius: 999px;
+  transform: none;
+}
+.topbar-io-nome {
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* Il ⋮ della barra: bersaglio pieno da 48px, non un'icona da centrare col
    dito. È la porta di tutto quello che non ci sta in barra. */
 .topbar-piu {
@@ -188,6 +219,7 @@ a {
     height: 34px;
   }
   .topbar-hello-testo,
+  .topbar-io-nome,
   .solo-schermo-largo {
     display: none;
   }
