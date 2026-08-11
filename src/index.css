@@ -1695,6 +1695,13 @@ body.bar-wide .app {
   max-width: none;
 }
 
+/* Menù cliente: si adatta al dispositivo invece di stare in una colonna da
+   760px. Su telefono non cambia niente (lo schermo è più stretto); su
+   tablet e monitor la griglia usa lo spazio che c'è. */
+body.menu-largo .app {
+  max-width: none;
+}
+
 /* ── Inventario come TABELLA: colonne allineate (grid identico su intestazione
    e righe) ── */
 .inv-table {
