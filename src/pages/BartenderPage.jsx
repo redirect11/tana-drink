@@ -1230,12 +1230,18 @@ function OrderQueue() {
             onChange={(e) => setSearch(e.target.value)}
           />
           <div className="board-actions">
+            {/* Sul telefono la parola "Pannelli" mangiava mezza riga a
+                un comando che si tocca due volte a sera: resta il tasto,
+                senza scritta. */}
             <button
-              className={`btn ghost small${showPanels ? ' active' : ''}`}
+              className={`btn ghost small board-pannelli${showPanels ? ' active' : ''}`}
               onClick={() => setShowPanels((v) => !v)}
               title="Chiamate staff e gruppi"
+              aria-label="Chiamate staff e gruppi"
             >
-              {showPanels ? '▴' : '▾'} Pannelli
+              <span className="board-pannelli-freccia">{showPanels ? '▴' : '▾'}</span>
+              <span className="board-pannelli-testo"> Pannelli</span>
+              <span className="board-pannelli-punti">⋯</span>
             </button>
             {cassaAperta || cassaLoading ? (
               <Link className="btn board-add" to="/pos" aria-label="Nuovo ordine" title="Nuovo ordine" />

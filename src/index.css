@@ -197,6 +197,28 @@ body.schermo-intero {
   text-overflow: ellipsis;
 }
 
+/* "Pannelli" (chiamate staff e gruppi): sul telefono resta il tasto, senza
+   la parola — mangiava mezza riga per un comando che si tocca due volte a
+   sera. */
+.board-pannelli-punti {
+  display: none;
+}
+@media (max-width: 700px) {
+  .board-pannelli-testo,
+  .board-pannelli-freccia {
+    display: none;
+  }
+  .board-pannelli-punti {
+    display: inline;
+    font-size: 1.2rem;
+    line-height: 1;
+  }
+  .board-pannelli {
+    min-width: 44px;
+    justify-content: center;
+  }
+}
+
 /* SECONDA RIGA lato cliente (telefono): menù, i miei ordini, accedi. Sta
    sotto la barra e non dentro, perché in barra sarebbero tasti in mezzo al
    nome del locale; e non dietro un menu, perché "Accedi" dietro un menu
@@ -267,9 +289,14 @@ body.schermo-intero {
     background: color-mix(in srgb, var(--bg-2) 94%, transparent);
     opacity: 1;
   }
-  body.fullbleed .posd-topbar,
-  body.fullbleed .queue-board > :first-child {
+  body.fullbleed .posd-topbar {
     margin-top: 20px;
+  }
+  /* La coda: stessa cosa, ma con un rientro sulla LAVAGNA — il suo primo
+     figlio è la campanella flottante, che non occupa spazio e quindi non
+     avrebbe spinto giù niente. */
+  body.fullbleed .queue-board {
+    padding-top: 20px;
   }
   .topbar {
     gap: 8px;
@@ -2169,6 +2196,14 @@ body.bar-wide .app {
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
 }
 body.fullbleed .status-bell-float { display: flex; }
+@media (max-width: 700px) {
+  /* Nell'angolo esatto è scomoda da prendere e sfiora il gesto di
+     sistema: un po' più dentro. */
+  .status-bell-float {
+    right: calc(18px + env(safe-area-inset-right, 0px));
+    bottom: calc(30px + env(safe-area-inset-bottom, 0px));
+  }
+}
 /* Con la topbar richiamata la campanella è già lì dentro: due no. */
 body.fullbleed.topbar-open .status-bell-float,
 body.drawer-open .status-bell-float { display: none; }
