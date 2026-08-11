@@ -19,6 +19,7 @@ import MarginList from './MarginList.jsx'
 import DrinkForm from './DrinkForm.jsx'
 import { saveDrinkFromForm } from '../lib/saveDrink.js'
 import CategoryRail from './CategoryRail.jsx'
+import { IconTag, IconGrafico } from './Icons.jsx'
 import {
   CATEGORY_ICONS,
   catColor,
@@ -268,7 +269,7 @@ export default function MenuManager() {
         panels={[
           {
             id: 'cats',
-            label: `🏷 Categorie (${categories.length})`,
+            label: <><IconTag /> Categorie ({categories.length})</>,
             render: () => (
               <CategoryManager
                 categories={categories}
@@ -278,7 +279,7 @@ export default function MenuManager() {
           },
           {
             id: 'margini',
-            label: '📊 Marginalità del listino',
+            label: <><IconGrafico /> Marginalità del listino</>,
             desc: 'Quali drink rendono meno di quanto dovrebbero.',
             render: () => (
               <MarginList

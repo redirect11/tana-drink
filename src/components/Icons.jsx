@@ -57,3 +57,29 @@ export const IconGruppo = (p) => (
 export const IconPersona = (p) => (
   <Svg {...p}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></Svg>
 )
+
+// ── Sottosezioni delle pagine (SectionPanels) ────────────────────────
+// Emoji come 🏷 e 🗂 su Windows vengono disegnati come rettangolini storti:
+// nella fila dei tasti sembravano immagini non caricate. Questi sono
+// disegni veri, uguali su ogni sistema, e seguono il colore del testo.
+export const IconTag = (p) => (
+  <Svg {...p}><path d="M20.6 13.4 12 22l-9-9V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z" /><circle cx="7.5" cy="7.5" r="1.3" /></Svg>
+)
+export const IconCartelle = (p) => (
+  <Svg {...p}><path d="M3 8V6a1 1 0 0 1 1-1h4l2 2h6a1 1 0 0 1 1 1v1" /><path d="M2 11a1 1 0 0 1 1-1h17a1 1 0 0 1 1 1.15l-1.1 7A1 1 0 0 1 18.9 19H4.1a1 1 0 0 1-1-.85L2 11Z" /></Svg>
+)
+export const IconFornitore = (p) => (
+  <Svg {...p}><path d="M2 20h20" /><path d="M4 20V9l5 3V9l5 3V4h6v16" /><path d="M17 12h.01M17 16h.01" /></Svg>
+)
+export const IconGrafico = (p) => (
+  <Svg {...p}><path d="M3 3v18h18" /><path d="M7 15l3-4 3 3 5-7" /></Svg>
+)
+export const IconPiu = (p) => (
+  <Svg {...p}><path d="M12 5v14M5 12h14" /></Svg>
+)
+export const IconSoldi = (p) => (
+  <Svg {...p}><rect x="2" y="6" width="20" height="12" rx="2" /><circle cx="12" cy="12" r="2.5" /><path d="M6 12h.01M18 12h.01" /></Svg>
+)
+export const IconBuono = (p) => (
+  <Svg {...p}><path d="M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4Z" /><path d="M14 6v12" /></Svg>
+)

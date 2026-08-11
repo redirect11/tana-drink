@@ -52,6 +52,7 @@ import PurchaseOrdersPanel from './PurchaseOrdersPanel.jsx'
 import SupplierInvoicesPanel from './SupplierInvoicesPanel.jsx'
 import CategoryRail from './CategoryRail.jsx'
 import SectionPanels from './SectionPanels.jsx'
+import { IconTag, IconCartelle, IconFornitore } from './Icons.jsx'
 
 const STATUS_ITEM = [
   { value: 'assortimento', label: 'In assortimento' },
@@ -459,7 +460,7 @@ function ProductsPanel() {
         panels={[
           {
             id: 'cats',
-            label: '🏷 Categorie',
+            label: <><IconTag /> Categorie</>,
             render: () => (
               <InvCategoryManager
                 categories={categories}
@@ -469,7 +470,7 @@ function ProductsPanel() {
           },
           {
             id: 'macro',
-            label: '🗂 Macro-categorie',
+            label: <><IconCartelle /> Macro-categorie</>,
             render: () => (
               <MacroCategoryManager
                 macros={macros}
@@ -487,7 +488,7 @@ function ProductsPanel() {
           },
           {
             id: 'forn',
-            label: '🏭 Fornitori',
+            label: <><IconFornitore /> Fornitori</>,
             render: () => (
               <SupplierManager
                 suppliers={suppliers}
