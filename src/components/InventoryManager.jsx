@@ -51,6 +51,8 @@ import StockCountPanel from './StockCountPanel.jsx'
 import PurchaseOrdersPanel from './PurchaseOrdersPanel.jsx'
 import SupplierInvoicesPanel from './SupplierInvoicesPanel.jsx'
 import CategoryRail from './CategoryRail.jsx'
+import SectionPanels from './SectionPanels.jsx'
+import { IconTag, IconCartelle, IconFornitore } from './Icons.jsx'
 
 const STATUS_ITEM = [
   { value: 'assortimento', label: 'In assortimento' },
@@ -175,9 +177,6 @@ function ProductsPanel() {
 
   const [editing, setEditing] = useState(null) // null | 'new' | item
   const [macros, setMacros] = useState([])
-  const [showCats, setShowCats] = useState(false)
-  const [showMacros, setShowMacros] = useState(false)
-  const [showSup, setShowSup] = useState(false)
   const [showMovs, setShowMovs] = useState(false)
 
   // Filtri
@@ -454,6 +453,52 @@ function ProductsPanel() {
 
   return (
     <div>
+      {/* Sottosezioni dell'inventario: sotto al titolo, come nelle altre
+          pagine. Erano tre tasti in mezzo alla lista e i pannelli si
+          aprivano dove capitava. */}
+      <SectionPanels
+        panels={[
+          {
+            id: 'cats',
+            label: <><IconTag /> Categorie</>,
+            render: () => (
+              <InvCategoryManager
+                categories={categories}
+                onChange={async () => setCategories(await fetchInventoryCategories())}
+              />
+            ),
+          },
+          {
+            id: 'macro',
+            label: <><IconCartelle /> Macro-categorie</>,
+            render: () => (
+              <MacroCategoryManager
+                macros={macros}
+                categories={categories}
+                onChange={async () => {
+                  const [macs, cats] = await Promise.all([
+                    fetchMacroCategories(),
+                    fetchInventoryCategories(),
+                  ])
+                  setMacros(macs)
+                  setCategories(cats)
+                }}
+              />
+            ),
+          },
+          {
+            id: 'forn',
+            label: <><IconFornitore /> Fornitori</>,
+            render: () => (
+              <SupplierManager
+                suppliers={suppliers}
+                onChange={async () => setSuppliers(await fetchSuppliers())}
+              />
+            ),
+          },
+        ]}
+      />
+
       {/* Riepilogo a colpo d'occhio (anche filtri di stato) */}
       <div className="inv-summary">
         <button className={`chip ${statusFilter === 'all' ? 'active' : ''}`} onClick={() => setStatusFilter('all')}>
@@ -525,35 +570,6 @@ function ProductsPanel() {
       )}
 
       <button className="btn block" onClick={() => setEditing('new')}>+ Nuovo prodotto</button>
-      <div className="grid-2" style={{ marginTop: 8 }}>
-        <button className="btn ghost small" onClick={() => setShowCats((v) => !v)}>🏷 Categorie</button>
-        <button className="btn ghost small" onClick={() => setShowMacros((v) => !v)}>🗂 Macro-categorie</button>
-        <button className="btn ghost small" onClick={() => setShowSup((v) => !v)}>🏭 Fornitori</button>
-      </div>
-
-      {showCats && (
-        <InvCategoryManager
-          categories={categories}
-          onChange={async () => setCategories(await fetchInventoryCategories())}
-        />
-      )}
-      {showMacros && (
-        <MacroCategoryManager
-          macros={macros}
-          categories={categories}
-          onChange={async () => {
-            const [macs, cats] = await Promise.all([fetchMacroCategories(), fetchInventoryCategories()])
-            setMacros(macs)
-            setCategories(cats)
-          }}
-        />
-      )}
-      {showSup && (
-        <SupplierManager
-          suppliers={suppliers}
-          onChange={async () => setSuppliers(await fetchSuppliers())}
-        />
-      )}
 
       {error && <div className="banner" style={{ marginTop: 8 }}>Errore: {error}</div>}
       {loading && <div className="empty">Carico l’inventario…</div>}

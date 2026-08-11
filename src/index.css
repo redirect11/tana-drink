@@ -622,6 +622,43 @@ label {
   color: #1c1305;
 }
 
+/* SOTTOSEZIONI DI UNA PAGINA (SectionPanels): la fila di tasti sotto al
+   titolo e il pannello che aprono. Stesso posto e stesso aspetto in ogni
+   sezione — prima ognuna aveva il suo tasto "mostra/nascondi" in fondo. */
+.section-panels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px 0 10px;
+}
+.section-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.section-tab:hover { border-color: rgba(245, 185, 74, 0.5); }
+.section-tab.active {
+  background: linear-gradient(135deg, #f7c45e, #e8a32e);
+  border-color: transparent;
+  color: #1c1305;
+}
+.section-panel {
+  margin-bottom: 12px;
+  border-color: rgba(245, 185, 74, 0.45);
+}
+@media (pointer: coarse) {
+  .section-tab { padding: 12px 16px; font-size: 0.95rem; }
+}
+
 .empty {
   text-align: center;
   padding: 40px 16px;
@@ -1895,6 +1932,32 @@ body.bar-wide .app {
   inset: 0;
   z-index: 60;
 }
+/* CAMPANELLA FLOTTANTE: nella coda a tutto schermo la topbar non c'è, e con
+   lei sparivano notifiche e stato della sincronizzazione — proprio nella
+   schermata dove si sta tutta la sera. Torna come tasto tondo in basso a
+   destra, dall'altra parte rispetto allo zoom. */
+.status-bell-float {
+  position: fixed;
+  right: calc(10px + env(safe-area-inset-right, 0px));
+  bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  z-index: 110; /* sotto il menu laterale (z140) e il suo velo (z130) */
+  width: 44px;
+  height: 44px;
+  display: none; /* si accende solo a tutto schermo */
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg-2) 88%, transparent);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+body.fullbleed .status-bell-float { display: flex; }
+/* Con la topbar richiamata la campanella è già lì dentro: due no. */
+body.fullbleed.topbar-open .status-bell-float,
+body.drawer-open .status-bell-float { display: none; }
+.status-bell-float .status-bell-badge { top: 0; right: 0; }
+
 /* Si apre sotto la campanella (in alto a destra), come una tendina. */
 .status-bell-panel {
   position: fixed;
@@ -1909,6 +1972,13 @@ body.bar-wide .app {
   border-radius: 4px 12px 12px 12px;
   box-shadow: 0 10px 34px rgba(0, 0, 0, 0.45);
   padding: 8px;
+}
+/* Aperta dal tasto flottante, la tendina scende dal basso: in alto non c'è
+   niente a cui agganciarsi. */
+.status-bell-panel.basso {
+  top: auto;
+  bottom: 62px;
+  border-radius: 12px 12px 12px 4px;
 }
 .status-bell-sync {
   padding: 8px 10px;
@@ -2762,13 +2832,57 @@ body.fullbleed,
   color: var(--accent-2);
 }
 
-/* ── Gruppi nel drawer ──────────────────────────────────────── */
+/* ── Gruppi nel drawer (sezione a scomparsa) ─────────────────── */
 .drawer-groups { margin-top: 6px; }
 .drawer-groups-title {
-  padding: 6px 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 18px;
+  border: 0;
+  background: none;
   font-size: 0.72rem;
+  font-family: inherit;
   text-transform: uppercase;
   letter-spacing: 0.6px;
+  color: var(--muted);
+  cursor: pointer;
+  text-align: left;
+}
+.drawer-groups-title:hover { color: var(--text); }
+.drawer-groups-freccia {
+  display: inline-block;
+  transition: transform 0.15s ease;
+  font-size: 0.7rem;
+}
+.drawer-groups-title.aperto .drawer-groups-freccia { transform: rotate(90deg); }
+.drawer-groups-conto {
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  font-size: 0.68rem;
+  line-height: 18px;
+  text-align: center;
+}
+
+/* Chi è collegato, in fondo al menu: nome e ruolo, si apre il profilo. */
+.bar-nav-item.drawer-io { align-items: center; }
+.drawer-io-testo {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+  min-width: 0;
+}
+.drawer-io-nome {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.drawer-io-ruolo {
+  font-size: 0.72rem;
   color: var(--muted);
 }
 .group-tiles {
@@ -4018,6 +4132,13 @@ body.fullbleed .cat-rail {
 .zoom-control:hover,
 .zoom-control:focus-within {
   opacity: 1;
+}
+/* Col menu laterale aperto passano DIETRO (il menu sta a z140, il suo velo
+   a z130): stando in basso a sinistra finivano sopra le ultime voci — Esci
+   e il profilo — e si toccava lo zoom invece della voce. */
+body.drawer-open .zoom-control {
+  z-index: 100;
+  opacity: 0.3;
 }
 .zoom-control button {
   min-width: 30px;
