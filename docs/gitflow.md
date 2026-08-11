@@ -8,6 +8,7 @@ Regola unica, vale anche per una modifica di una riga.
 |---|---|---|---|
 | `feature/<nome>` | `develop` | `develop` | **test** (`tana-drink-test`) |
 | `develop` | — | `main` | **test** |
+| `release/<versione>` | `develop` | `main` **e** `develop` | **test** |
 | `hotfix/<nome>` | `main` | `main` **e** `develop` | **test**, poi produzione |
 | `main` | — | — | **produzione** (`tana-drink`) |
 
@@ -15,7 +16,7 @@ Su `develop` e `main` non si committa mai direttamente.
 
 ## Il deploy
 
-Ogni push su `main`, `develop`, `feature/**`, `hotfix/**` fa partire
+Ogni push su `main`, `develop`, `feature/**`, `release/**`, `hotfix/**` fa partire
 [la pipeline](../.github/workflows/firebase-hosting.yml): compila, deploya
 hosting, Functions e regole. Il progetto di destinazione è `tana-drink`
 solo per `main`; per tutto il resto è `tana-drink-test`.
@@ -38,6 +39,17 @@ Se serve provare due branch insieme senza che si diano fastidio, la strada
 è un canale di anteprima di Firebase Hosting
 (`firebase hosting:channel:deploy <nome>`), che dà un indirizzo temporaneo
 a sé: oggi non è nella pipeline, si aggiunge quando servirà davvero.
+
+## I rami di rilascio
+
+Quando un rilascio va preparato con calma — ultime correzioni, prove al
+banco per una sera intera — si stacca `release/<versione>` da `develop`.
+Ci si mettono solo correzioni, mai funzioni nuove: quelle continuano su
+`develop` senza disturbare. Va su test come tutti gli altri, così si prova
+esattamente quello che finirà in produzione. Poi si tagga, si mergia in
+`main` e si riporta in `develop`.
+
+Per un rilascio semplice non serve: si tagga `develop` e si mergia.
 
 ## I rilasci
 

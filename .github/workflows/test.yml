@@ -7,6 +7,7 @@ on:
       - develop
       - 'copilot/**'
       - 'feature/**'
+      - 'release/**'
       - 'hotfix/**'
   pull_request:
     branches:
