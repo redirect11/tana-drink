@@ -4,6 +4,7 @@ name: Deploy to Firebase
 #   push su main        → PRODUZIONE (progetto tana-drink)
 #   push su develop     → TEST       (progetto tana-drink-test)
 #   push su feature/**  → TEST       (si prova il branch prima del merge)
+#   push su release/**  → TEST       (si prova il rilascio candidato)
 #   push su hotfix/**   → TEST       (si prova l'urgenza prima della produzione)
 # L'ambiente di test è UNO e vale per tutti: l'ultimo push è quello
 # pubblicato. Per sapere cosa si sta guardando, l'app mostra ramo e commit
@@ -17,6 +18,7 @@ on:
       - main
       - develop
       - 'feature/**'
+      - 'release/**'
       - 'hotfix/**'
   workflow_dispatch:
 
