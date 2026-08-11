@@ -118,14 +118,10 @@ a {
   min-width: 0;
 }
 
-/* Nel gestionale (saluto + pulsanti a destra) lo spazio è poco: sotto i
-   560px mostra solo il logo. Lato cliente, solo su schermi molto stretti. */
-@media (max-width: 560px) {
-  .topbar.backoffice .brand span {
-    display: none;
-  }
-}
-@media (max-width: 360px) {
+/* Il nome del locale resta finché c'è spazio: adesso in barra ci sono
+   solo ☰, logo, campanella e ⋮, quindi ce n'è. Sparisce solo sugli
+   schermi davvero stretti, dove toglierebbe posto ai tasti. */
+@media (max-width: 420px) {
   .brand span {
     display: none;
   }
@@ -1072,13 +1068,11 @@ a.order-mini {
 }
 
 /* ── Navigazione laterale bartender ──────────────────────────── */
-/* Sul backoffice mobile l'hamburger è fisso in alto a sinistra:
-   sposta il brand per non farlo coprire. */
-@media (max-width: 899px) {
-  .topbar.backoffice .brand {
-    padding-left: 50px;
-  }
-}
+/* Nessuno spostamento del brand: il ☰ sta DENTRO la barra, come primo
+   elemento, e non copre niente. Il rientro da 50px era rimasto da quando
+   era un tasto flottante sopra la barra: sulle pagine senza ☰ — la
+   vetrina, il menù visti da collegati — spingeva il logo in mezzo al
+   nulla, con un buco a sinistra. */
 
 /* UN SOLO ☰ per schermata. Chi lo mostra:
      coda a griglia / POS (topbar nascosta) → questo, flottante
