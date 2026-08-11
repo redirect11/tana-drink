@@ -4371,9 +4371,13 @@ body.drawer-open .zoom-control {
 /* Dati conto e Prodotto libero: affiancati. Erano due righe intere, e su
    uno schermo da telefono due righe di testata sono due righe di conto in
    meno — cioè le uniche che servono davvero mentre si batte. */
+/* Dati conto e Prodotto libero: UNO SOTTO L'ALTRO. Li avevo affiancati
+   per far spazio sul telefono, ma sul telefono ormai stanno nel menu:
+   l'unico posto dove si vedevano davvero era il pannello largo, dove
+   affiancati diventano due tasti stretti con le scritte al limite. */
 .posd-azioni-fisse {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  flex-direction: column;
   gap: 6px;
   margin: 8px 0 6px;
 }
