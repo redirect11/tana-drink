@@ -117,19 +117,11 @@ a {
   min-width: 0;
 }
 
-/* Il nome per esteso finché ci sta; sotto, la versione corta. Il logo da
-   solo, appiccicato al bordo con mezzo schermo vuoto accanto, sembrava un
-   errore di caricamento. */
+/* Il nome del locale si scrive per intero: se lo spazio finisce si tronca
+   con i puntini, ma non si accorcia a mano — "La Tana" non è il nome del
+   locale. */
 .brand-corto {
   display: none;
-}
-@media (max-width: 560px) {
-  .brand-nome {
-    display: none;
-  }
-  .brand-corto {
-    display: inline;
-  }
 }
 
 /* Il marchio è già un tondo disegnato, con il coniglio che tocca il bordo.
@@ -870,17 +862,27 @@ label {
   pointer-events: none;
 }
 
+/* LA FOTO STA DIETRO, non detta l'altezza. Prima era lei a decidere: 230px
+   fissi, con il contenuto (logo, nome su due righe, sottotitolo, tasto)
+   appoggiato sopra in posizione assoluta. Su uno schermo stretto il nome
+   va a capo, il contenuto diventa più alto della foto e quello che
+   avanzava usciva dal riquadro — che ha overflow:hidden. Risultato: il
+   logo tagliato a metà, in cima.
+   Ora il riquadro è alto quanto il suo contenuto (mai meno di 230px) e la
+   foto lo riempie da dietro: non si taglia più niente, su nessuno schermo. */
 .hero-img {
+  position: absolute;
+  inset: 0;
   width: 100%;
-  height: 230px;
+  height: 100%;
   object-fit: cover;
   display: block;
   filter: brightness(0.6);
 }
 
 .hero-overlay {
-  position: absolute;
-  inset: 0;
+  position: relative;
+  min-height: 230px;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
@@ -888,12 +890,14 @@ label {
   background: linear-gradient(180deg, transparent 35%, rgba(10, 10, 18, 0.88));
 }
 
+/* Il marchio è già un tondo disegnato: niente ritaglio e niente anello
+   sopra, che lo rifilavano sul bordo. Intero, con la sua ombra. */
 .hero-logo {
   width: 72px;
   height: 72px;
-  border-radius: 50%;
+  object-fit: contain;
   margin-bottom: 10px;
-  box-shadow: 0 0 0 2px rgba(245, 185, 74, 0.6), 0 4px 18px rgba(0, 0, 0, 0.55);
+  filter: drop-shadow(0 4px 14px rgba(0, 0, 0, 0.55));
 }
 
 .hero-title {
