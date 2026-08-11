@@ -383,6 +383,14 @@ function AddToHomeHint() {
 // Tasto schermo intero. L'API Fullscreen non c'è su iPad/Safari (solo per i
 // video): lì il "fullscreen" è aggiungere la PWA alla Home (display standalone).
 // Dove supportata (desktop/Android), entra/esce a schermo intero.
+// SCHERMO INTERO. Non c'è quando non serve: se l'app è stata installata
+// sulla schermata iniziale gira già senza barre del browser, e il tasto
+// sarebbe solo un'icona in più.
+//
+// Da browser, invece, "schermo intero" è quello del browser: Chrome su
+// Android ci mette del suo un avviso in basso ("per uscire, trascina
+// dall'alto…") che non possiamo togliere — è suo, non nostro, e sparisce
+// da sé. L'unico modo per non vederlo è installare l'app.
 function FullscreenButton() {
   const [fs, setFs] = useState(() => typeof document !== 'undefined' && !!document.fullscreenElement)
   useEffect(() => {
@@ -392,7 +400,12 @@ function FullscreenButton() {
   }, [])
   const supported =
     typeof document !== 'undefined' && !!document.documentElement.requestFullscreen
-  if (!supported) return null
+  const installata =
+    typeof window !== 'undefined' &&
+    (window.matchMedia?.('(display-mode: standalone)').matches ||
+      window.matchMedia?.('(display-mode: fullscreen)').matches ||
+      window.navigator?.standalone === true)
+  if (!supported || installata) return null
   const toggle = () => {
     if (document.fullscreenElement) document.exitFullscreen?.()
     else document.documentElement.requestFullscreen?.().catch(() => {})
