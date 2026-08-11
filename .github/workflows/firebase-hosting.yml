@@ -40,6 +40,11 @@ jobs:
       TARGET_PROJECT: ${{ github.ref_name == 'main' && 'tana-drink' || 'tana-drink-test' }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          # I TAG SERVONO: la versione mostrata nell'app è l'ultimo tag
+          # raggiungibile, e con il checkout superficiale di default non
+          # arriverebbe nessun tag (in produzione resterebbe senza numero).
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:

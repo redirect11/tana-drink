@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { execSync } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 
 // Su Firebase Hosting il sito è servito dalla radice ("/").
 // Usiamo BrowserRouter lato app, quindi qui serve solo impostare il base path.
@@ -34,6 +35,14 @@ const commit = (
   process.env.GIT_COMMIT ||
   daGit('git rev-parse HEAD')
 ).slice(0, 7)
+// VERSIONE: l'ultimo tag raggiungibile. In produzione è l'unica cosa che
+// serve sapere. Se i tag non ci sono (checkout superficiale, cartella
+// senza git) si ripiega su package.json, che al rilascio viene allineato.
+const versione =
+  process.env.APP_VERSION ||
+  daGit('git describe --tags --abbrev=0') ||
+  JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')).version ||
+  ''
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -42,6 +51,7 @@ export default defineConfig({
     __BUILD_ID__: JSON.stringify(buildId),
     __GIT_BRANCH__: JSON.stringify(branch),
     __GIT_COMMIT__: JSON.stringify(commit),
+    __APP_VERSION__: JSON.stringify(versione),
   },
   plugins: [
     react(),
@@ -52,7 +62,7 @@ export default defineConfig({
         this.emitFile({
           type: 'asset',
           fileName: 'version.json',
-          source: JSON.stringify({ build: buildId, branch, commit }),
+          source: JSON.stringify({ build: buildId, branch, commit, versione }),
         })
       },
     },
