@@ -31,6 +31,7 @@ import {
   canNest,
 } from '../lib/groups.js'
 import { formatPrice, STATUS_LABELS, STATUS_EMOJI } from '../lib/orderStatus.js'
+import { IconGruppo, IconPersona } from './Icons.jsx'
 
 // Vista di un gruppo (modale) con drill-down ricorsivo: per un contenitore
 // mostra "composto da" + ordini aggregati; cliccando un sottogruppo si
@@ -230,7 +231,7 @@ export default function GroupView({ groupId, onClose }) {
               </button>
             )}
             <h2 style={{ margin: 0 }}>
-              {node.group.kind === 'customer' ? '👤 ' : '🏷 '}{node.group.name}
+              {node.group.kind === 'customer' ? <IconPersona /> : <IconGruppo />} {node.group.name}
             </h2>
             <p className="muted small" style={{ margin: '4px 0 0' }}>
               {t.orderCount} ordini · {formatPrice(t.total)}
@@ -255,7 +256,7 @@ export default function GroupView({ groupId, onClose }) {
                 const cs = groupSettlement(c)
                 return (
                   <button key={c.group.id} className="chip" onClick={() => setCurrentId(c.group.id)}>
-                    {c.group.kind === 'customer' ? '👤 ' : '🏷 '}{c.group.name} · {formatPrice(ct.total)}
+                    {c.group.kind === 'customer' ? <IconPersona /> : <IconGruppo />} {c.group.name} · {formatPrice(ct.total)}
                     {cs.settled ? ' ✓' : ''}
                   </button>
                 )
@@ -413,7 +414,7 @@ export default function GroupView({ groupId, onClose }) {
                 <div className="chips-row">
                   {candidates.map((g) => (
                     <button key={g.id} className="chip" onClick={() => doNest(g.id)}>
-                      {g.kind === 'customer' ? '👤 ' : '🏷 '}{g.name}
+                      {g.kind === 'customer' ? <IconPersona /> : <IconGruppo />} {g.name}
                     </button>
                   ))}
                 </div>

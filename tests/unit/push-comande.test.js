@@ -57,6 +57,10 @@ describe('decideStaffServePush / decideNewOrderStaffPush', () => {
     const after = ord([c('c1', 'ricevuto')], { placed_by: { role: 'bartender' } })
     expect(decideNewOrderStaffPush(null, after)).toBeNull()
   })
+  it("ordine inserito dall'admin: niente notifica (sta al banco anche lui)", () => {
+    const after = ord([c('c1', 'ricevuto')], { placed_by: { role: 'admin' } })
+    expect(decideNewOrderStaffPush(null, after)).toBeNull()
+  })
   it('ordine inserito dallo staff: notifica sì', () => {
     const after = ord([c('c1', 'ricevuto')], { placed_by: { role: 'staff' } })
     expect(decideNewOrderStaffPush(null, after)?.title).toContain('Nuovo ordine')

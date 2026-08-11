@@ -5,6 +5,7 @@ import { subscribeOpenGroups, createManualGroup } from '../lib/api.js'
 import { buildGroupTree, groupTotal, groupSettlement } from '../lib/groups.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import GroupView from './GroupView.jsx'
+import { IconGruppo, IconPersona } from './Icons.jsx'
 
 // Pannello a scomparsa nella coda: panoramica dei gruppi aperti con
 // totale e stato del conto, creazione rapida e avvio ordine per gruppo.
@@ -55,7 +56,7 @@ export default function GroupsPanel({ orders, role }) {
                   onClick={() => setViewGroupId(node.group.id)}
                 >
                   <div>
-                    {node.group.kind === 'customer' ? '👤 ' : '🏷 '}
+                    {node.group.kind === 'customer' ? <IconPersona /> : <IconGruppo />}{' '}
                     <strong>{node.group.name}</strong>
                   </div>
                   <div className="muted small">

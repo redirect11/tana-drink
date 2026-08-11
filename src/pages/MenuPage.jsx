@@ -27,6 +27,7 @@ import { isFirebaseConfigured, auth } from '../lib/firebaseClient.js'
 import { useCustomer } from '../lib/customerAuth.js'
 import { onAuthStateChanged } from 'firebase/auth'
 import { useMenu } from '../lib/menuCache.js'
+import { isGestore, isPersonale } from '../lib/ruoli.js'
 import OrderSummary from '../components/OrderSummary.jsx'
 import StaffDrawer from '../components/StaffDrawer.jsx'
 import CustomDrinkForm from '../components/CustomDrinkForm.jsx'
@@ -60,7 +61,7 @@ export default function MenuPage() {
         const role = token.claims.role
         // Solo bartender/staff: i clienti registrati ordinano come clienti.
         setStaff(
-          role === 'bartender' || role === 'staff'
+          isPersonale(role)
             ? { email: u.email, name: u.displayName || null, role }
             : null
         )
@@ -340,7 +341,7 @@ export default function MenuPage() {
       )}
 
       {/* Drink custom: solo il bartender compone voci fuori menù al volo. */}
-      {staff?.role === 'bartender' && !menuOnly && canOrder && (
+      {isGestore(staff?.role) && !menuOnly && canOrder && (
         <button
           className="btn secondary block"
           style={{ marginBottom: 10 }}

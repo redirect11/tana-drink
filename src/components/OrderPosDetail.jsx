@@ -38,6 +38,7 @@ import {
   ORDER_OPEN,
 } from '../lib/comande.js'
 import { paidAmount } from '../lib/pagamento.js'
+import { isPersonale } from '../lib/ruoli.js'
 import {
   makeLineId,
   mergeLines,
@@ -50,7 +51,7 @@ import {
 import { toastSuccess, toastError } from '../lib/toast.js'
 import { printComanda, printScontrino } from '../lib/printer.js'
 import PosProductPicker from './PosProductPicker.jsx'
-import { IconPrinter, IconReceipt, IconCard, IconRefresh, IconX, IconCheck, IconClose } from './Icons.jsx'
+import { IconPrinter, IconReceipt, IconCard, IconRefresh, IconX, IconCheck, IconClose, IconGruppo, IconPersona } from './Icons.jsx'
 import CustomDrinkForm from './CustomDrinkForm.jsx'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import PaymentScreen from './PaymentScreen.jsx'
@@ -243,7 +244,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
       try {
         const token = await u.getIdTokenResult()
         const role = token.claims.role
-        if (role === 'bartender' || role === 'staff') {
+        if (isPersonale(role)) {
           setStaff({ email: u.email, name: u.displayName || u.email, role })
         }
       } catch {
@@ -1838,7 +1839,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                   setPickGroup(false)
                 }}
               >
-                {g.kind === 'customer' ? '👤' : '🏷'} {g.name}
+                {g.kind === 'customer' ? <IconPersona /> : <IconGruppo />} {g.name}
               </button>
             ))}
             {groupChoices.length === 0 && (

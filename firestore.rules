@@ -4,22 +4,26 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // ── Ruoli ─────────────────────────────────────────────────────────
-    // Il ruolo vive nei custom claims del token ("role"): 'bartender' o
-    // 'staff', assegnati esplicitamente. Gli account SENZA claim sono
-    // CLIENTI registrati (nessun privilegio gestionale). Lo staff può
-    // SOLO segnare come serviti gli ordini pronti.
+    // Il ruolo vive nei custom claims del token ("role"): 'admin',
+    // 'bartender' o 'staff', assegnati esplicitamente dall'admin. Gli
+    // account SENZA claim sono CLIENTI registrati (nessun privilegio
+    // gestionale). Lo staff può SOLO segnare come serviti gli ordini pronti.
+    //
+    // isBartender() vale anche per l'admin: le due figure hanno lo stesso
+    // accesso ai dati, l'admin in più nomina i ruoli — e quello non passa
+    // da qui, ma dalla callable staffAdmin (Admin SDK).
     function isSignedIn() {
       return request.auth != null;
     }
     function isBartender() {
       return isSignedIn()
         && 'role' in request.auth.token
-        && request.auth.token.role == 'bartender';
+        && request.auth.token.role in ['admin', 'bartender'];
     }
     function isStaffMember() {
       return isSignedIn()
         && 'role' in request.auth.token
-        && request.auth.token.role in ['bartender', 'staff'];
+        && request.auth.token.role in ['admin', 'bartender', 'staff'];
     }
 
     // DRINKS — lettura pubblica (clienti vedono il menù), scrittura solo bartender.

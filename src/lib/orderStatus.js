@@ -1,3 +1,5 @@
+import { isPersonale } from './ruoli.js'
+
 // Stati dell'ordine, in ordine di avanzamento.
 // "tipo salumeria": ogni ordine ha un numero progressivo giornaliero.
 export const ORDER_STATUSES = {
@@ -117,7 +119,7 @@ export function placedByName(placedBy) {
 // placed_by di staff), così a colpo d'occhio si capisce chi l'ha inserito.
 export function placedByLetter(placedBy) {
   if (!placedBy) return null
-  if (placedBy.role !== 'bartender' && placedBy.role !== 'staff') return null
+  if (!isPersonale(placedBy.role)) return null
   const n = placedByName(placedBy).trim()
   return n ? n[0].toUpperCase() : null
 }

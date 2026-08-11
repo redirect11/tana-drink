@@ -30,6 +30,7 @@ import { auth } from '../lib/firebaseClient.js'
 import { queueEtaMinutes } from '../lib/eta.js'
 import { ensureNotificationPermission, notify } from '../lib/notify.js'
 import { rememberOrderId } from '../lib/cart.js'
+import { isGestore, isPersonale } from '../lib/ruoli.js'
 import ConfirmDialog from '../components/ConfirmDialog.jsx'
 import PaymentPanel from '../components/PaymentPanel.jsx'
 import OrderPosDetail from '../components/OrderPosDetail.jsx'
@@ -53,7 +54,7 @@ export default function OrderStatusPage() {
   // Chi sta guardando la pagina è staff? Il QR per agganciare l'ordine
   // va mostrato solo allo staff, non al cliente che lo ha già scansionato.
   const [viewerIsStaff, setViewerIsStaff] = useState(false)
-  const [viewerRole, setViewerRole] = useState(null) // 'bartender' | 'staff' | null
+  const [viewerRole, setViewerRole] = useState(null) // 'admin' | 'bartender' | 'staff' | null
   // Il listener realtime vive fuori dal ciclo di render: gli serve il
   // ruolo aggiornato senza rimontarsi.
   const viewerRoleRef = useRef(null)
@@ -71,8 +72,8 @@ export default function OrderStatusPage() {
       try {
         const token = await u.getIdTokenResult()
         const role = token.claims.role
-        setViewerIsStaff(role === 'bartender' || role === 'staff')
-        setViewerRole(role === 'bartender' || role === 'staff' ? role : null)
+        setViewerIsStaff(isPersonale(role))
+        setViewerRole(isPersonale(role) ? role : null)
       } catch {
         setViewerIsStaff(false)
         setViewerRole(null)
@@ -251,9 +252,10 @@ export default function OrderStatusPage() {
   if (error) return <div className="banner">Errore: {error}</div>
   if (!order) return <div className="empty">Carico l’ordine…</div>
 
-  // Il bartender vede il dettaglio in stile POS (come la cassa SumUp):
-  // griglia prodotti per aggiungere alla comanda + gestione completa.
-  if (viewerRole === 'bartender') {
+  // Chi sta al banco (admin o bartender) vede il dettaglio in stile POS
+  // (come la cassa SumUp): griglia prodotti per aggiungere alla comanda +
+  // gestione completa. Lo staff di sala e il cliente vedono lo stato.
+  if (isGestore(viewerRole)) {
     return <OrderPosDetail order={order} />
   }
 

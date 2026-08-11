@@ -27,6 +27,8 @@ import {
   placedByLetter,
 } from '../lib/orderStatus.js'
 import { bucketByStatus, ordersRecap } from '../lib/coda.js'
+import StatusBell from '../components/StatusBell.jsx'
+import { isGestore, isPersonale } from '../lib/ruoli.js'
 import { allServed } from '../lib/comande.js'
 import { paidAmount, orderTotal } from '../lib/pagamento.js'
 import { businessDayKey, businessDayLabel, businessDayShort } from '../lib/businessDay.js'
@@ -43,7 +45,8 @@ import PrinterSetup from '../components/PrinterSetup.jsx'
 import InventoryManager from '../components/InventoryManager.jsx'
 import SettingsTab from '../components/SettingsTab.jsx'
 import StatsTab from '../components/StatsTab.jsx'
-import StaffPage from '../components/StaffPage.jsx'
+import StaffHoursTab from '../components/StaffHoursTab.jsx'
+import UtentiTab from '../components/UtentiTab.jsx'
 import VipTab from '../components/VipTab.jsx'
 import ServiceQueue from '../components/ServiceQueue.jsx'
 import StaffMyOrders from '../components/StaffMyOrders.jsx'
@@ -88,7 +91,7 @@ function OrderBy({ order }) {
 export default function BartenderPage() {
   const navigate = useNavigate()
   const [user, setUser] = useState(undefined) // undefined = caricamento, null = non loggato
-  const [role, setRole] = useState(null) // 'bartender' | 'staff'
+  const [role, setRole] = useState(null) // 'admin' | 'bartender' | 'staff' | 'cliente'
   // Tab iniziale anche da query (?tab=stats): usato dal drawer nel menu.
   const [params, setParams] = useSearchParams()
   const [tab, setTab] = useState(() => params.get('tab') || 'coda')
@@ -119,7 +122,7 @@ export default function BartenderPage() {
   // entra nel gestionale, così quando si aprono i pannelli i nomi ci sono già
   // invece di comparire dopo un "Carico lo staff…".
   useEffect(() => {
-    if (role === 'bartender') preloadStaff()
+    if (isGestore(role)) preloadStaff()
   }, [role])
 
   useEffect(() => {
@@ -132,8 +135,15 @@ export default function BartenderPage() {
       // Ruolo dai custom claims: senza claim è un CLIENTE registrato
       // (nessun accesso al gestionale).
       try {
-        const token = await u.getIdTokenResult()
-        setRole(token.claims.role ?? 'cliente')
+        let ruolo = (await u.getIdTokenResult()).claims.role ?? 'cliente'
+        // APPENA NOMINATO. Il token che il dispositivo ha in tasca dura
+        // un'ora: chi viene promosso mentre è già collegato si vedrebbe
+        // ancora "area riservata" fino alla scadenza. Prima di sbatterlo
+        // fuori si chiede un token nuovo: se il ruolo c'è, entra subito.
+        if (ruolo === 'cliente') {
+          ruolo = (await u.getIdTokenResult(true)).claims.role ?? 'cliente'
+        }
+        setRole(ruolo)
       } catch {
         setRole('cliente')
       }
@@ -144,7 +154,7 @@ export default function BartenderPage() {
   // Il GESTIONALE usa tutta la larghezza della pagina (liste, tabelle e
   // statistiche stavano strette nei 760px pensati per il lato cliente).
   // L'header col logo resta: niente fullbleed, che lo nasconderebbe.
-  const wideTab = role === 'bartender' || role === 'staff'
+  const wideTab = isPersonale(role)
   useEffect(() => {
     if (!wideTab) return undefined
     document.body.classList.add('bar-wide')
@@ -176,7 +186,7 @@ export default function BartenderPage() {
   // Lo staff (non bartender) vede la lista da servire e i propri ordini,
   // col drawer laterale (Nuovo ordine, Esci). Il tab segue la query
   // string, così la navigazione dal drawer funziona anche dal menu.
-  if (role !== 'bartender') {
+  if (!isGestore(role)) {
     const staffTab = params.get('tab') === 'miei-ordini' ? 'miei-ordini' : 'servizio'
     return (
       <div>
@@ -190,7 +200,7 @@ export default function BartenderPage() {
 
   return (
     <div>
-      <StaffDrawer role="bartender" active={tab} onSelect={goTab} />
+      <StaffDrawer role={role} active={tab} onSelect={goTab} />
 
       {/* Toccando un gruppo (menu laterale) si ENTRA nella sua vista: la
           lista dei suoi ordini col conto. La coda resta com'è — lì ci
@@ -214,15 +224,20 @@ export default function BartenderPage() {
           </button>
         )}
         {tab === 'coda' && <OrderQueue />}
-        {tab === 'pagamenti' && <CashFlow canManageStaff={role === 'bartender'} />}
+        {tab === 'pagamenti' && <CashFlow canManageStaff={isGestore(role)} />}
         {tab === 'storico' && <OrdersHistory />}
         {tab === 'fatture' && <InvoicesTab />}
         {tab === 'stats' && <StatsTab />}
         {tab === 'menu' && <MenuTab />}
         {tab === 'inventario' && <InventoryManager />}
-        {(tab === 'staff' || tab === 'ore') && <StaffPage />}
+        {(tab === 'staff' || tab === 'ore') && <StaffHoursTab />}
+        {tab === 'utenti' && <UtentiTab role={role} />}
+        {/* I buoni VIP sono un pannello di "Utenti e ruoli": qui restano
+            solo perché i vecchi collegamenti (?tab=vip) funzionino. */}
         {tab === 'vip' && <VipTab />}
         {tab === 'impostazioni' && <SettingsTab />}
+        {/* La stampante sta nelle Impostazioni: qui resta solo perché i
+            vecchi collegamenti (?tab=stampante) continuino a funzionare. */}
         {tab === 'stampante' && <PrinterSetup />}
         {tab === 'dev' && devToolsEnabled && <DevTools />}
       </div>
@@ -418,6 +433,8 @@ function OrderQueue() {
     ensureNotificationPermission().then(async (ok) => {
       if (!ok || !uid) return
       const token = await getPushToken()
+      // Ruolo del TOKEN, non della persona: serve solo a distinguere i
+      // dispositivi al banco da quelli di sala quando si smistano le push.
       if (token) saveStaffToken(uid, token, 'bartender').catch(() => {})
     })
   }, [])
@@ -439,9 +456,9 @@ function OrderQueue() {
           for (const o of data) {
             const isNew = !knownIds.current.has(o.id)
             if (o.workflow_status !== ORDER_STATUSES.RICEVUTO) continue
-            // Niente notifica per gli ordini inseriti dal bartender stesso:
-            // avvisano solo quelli di clienti o staff.
-            if (o.placed_by?.role === 'bartender') continue
+            // Niente notifica per gli ordini battuti al banco da chi sta
+            // guardando: avvisano solo quelli di clienti o staff di sala.
+            if (isGestore(o.placed_by?.role)) continue
             if (isAwaitingPayment(o)) {
               if (isNew) awaiting.add(o.id)
               continue
@@ -1146,6 +1163,10 @@ function OrderQueue() {
 
   return (
     <div className={gridView ? 'queue-board' : undefined}>
+      {/* A tutto schermo la topbar non c'è, e con lei sparivano campanella,
+          notifiche e stato della sincronizzazione: torna come tasto tondo in
+          basso a destra (il CSS la mostra solo quando serve). */}
+      {gridView && <StatusBell floating />}
       {error && <div className="banner">Errore: {error}</div>}
 
       {/* Cassa chiusa: non si battono ordini finché non la si apre. */}
