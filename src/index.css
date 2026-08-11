@@ -2874,6 +2874,28 @@ body.fullbleed,
   text-align: center;
 }
 
+/* Ramo e commit pubblicati, in fondo al menu: piccolo, spento, ma sempre
+   raggiungibile. Si tocca per copiarlo in un messaggio. */
+.version-badge {
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.68rem;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  opacity: 0.7;
+}
+.version-badge:hover {
+  opacity: 1;
+}
+.drawer-versione {
+  display: block;
+  width: 100%;
+  padding: 8px 18px 10px;
+  text-align: left;
+}
+
 /* Chi è collegato, in fondo al menu: nome e ruolo, si apre il profilo. */
 .bar-nav-item.drawer-io { align-items: center; }
 .drawer-io-testo {

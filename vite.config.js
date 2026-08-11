@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { execSync } from 'node:child_process'
 
 // Su Firebase Hosting il sito è servito dalla radice ("/").
 // Usiamo BrowserRouter lato app, quindi qui serve solo impostare il base path.
@@ -12,11 +13,35 @@ const base = process.env.BASE_PATH || '/'
 // sull'iPad resta aperta per giorni e non ricarica mai da sola).
 const buildId = String(Date.now())
 
+// DA QUALE VERSIONE STIAMO GUARDANDO. Con GitFlow su un solo ambiente di
+// test ci finiscono, a turno, i branch feature e develop: senza scriverlo
+// da qualche parte, "l'ho provato e non andava" non vuol dire niente —
+// non si sa cosa fosse pubblicato in quel momento.
+// In CI i valori arrivano da GitHub; in locale si chiedono a git; se git
+// non c'è (build in un container spoglio) restano vuoti e l'app non
+// mostra niente, invece di mostrare una bugia.
+function daGit(comando, fallback = '') {
+  try {
+    return execSync(comando, { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim()
+  } catch {
+    return fallback
+  }
+}
+const branch =
+  process.env.GITHUB_REF_NAME || process.env.GIT_BRANCH || daGit('git rev-parse --abbrev-ref HEAD')
+const commit = (
+  process.env.GITHUB_SHA ||
+  process.env.GIT_COMMIT ||
+  daGit('git rev-parse HEAD')
+).slice(0, 7)
+
 // https://vitejs.dev/config/
 export default defineConfig({
   base,
   define: {
     __BUILD_ID__: JSON.stringify(buildId),
+    __GIT_BRANCH__: JSON.stringify(branch),
+    __GIT_COMMIT__: JSON.stringify(commit),
   },
   plugins: [
     react(),
@@ -27,7 +52,7 @@ export default defineConfig({
         this.emitFile({
           type: 'asset',
           fileName: 'version.json',
-          source: JSON.stringify({ build: buildId }),
+          source: JSON.stringify({ build: buildId, branch, commit }),
         })
       },
     },
