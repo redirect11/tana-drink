@@ -1,14 +1,28 @@
 # Come si lavora: GitFlow
 
-Regola unica, vale anche per una modifica di una riga.
+## Dove si lavora, in pratica
+
+Il lavoro normale — correzioni, ritocchi di interfaccia, modifiche di
+media taglia — va **direttamente su `release/x.y.z`**, staccato da
+`develop`, col numero della prossima versione. Le modifiche si accumulano
+lì e si mergiano tutte insieme.
+
+Un branch `feature/` si stacca **solo per una funzione grossa**, o quando
+serve provarla in isolamento con prove serie end-to-end: in quel caso si
+decide caso per caso se staccarlo da `release/x.y.z` o da `develop`.
+
+Il motivo è che qui sviluppa una persona sola, con un ambiente di test
+solo: venti branch separati vogliono venti deploy e venti prove, mentre
+quello che serve è provare le modifiche **insieme**, com'è la serata vera.
+
 
 ## I rami
 
 | Ramo | Nasce da | Finisce in | Dove viene pubblicato |
 |---|---|---|---|
-| `feature/<nome>` | `develop` | `develop` | **test** (`tana-drink-test`) |
+| `release/<versione>` | `develop` | `develop`, poi `main` | **test** (`tana-drink-test`) |
+| `feature/<nome>` | `release/**` o `develop` | da dove è nato | **test** |
 | `develop` | — | `main` | **test** |
-| `release/<versione>` | `develop` | `main` **e** `develop` | **test** |
 | `hotfix/<nome>` | `main` | `main` **e** `develop` | **test**, poi produzione |
 | `main` | — | — | **produzione** (`tana-drink`) |
 
@@ -40,16 +54,19 @@ Se serve provare due branch insieme senza che si diano fastidio, la strada
 (`firebase hosting:channel:deploy <nome>`), che dà un indirizzo temporaneo
 a sé: oggi non è nella pipeline, si aggiunge quando servirà davvero.
 
-## I rami di rilascio
+## Il ramo di rilascio
 
-Quando un rilascio va preparato con calma — ultime correzioni, prove al
-banco per una sera intera — si stacca `release/<versione>` da `develop`.
-Ci si mettono solo correzioni, mai funzioni nuove: quelle continuano su
-`develop` senza disturbare. Va su test come tutti gli altri, così si prova
-esattamente quello che finirà in produzione. Poi si tagga, si mergia in
-`main` e si riporta in `develop`.
+È il posto dove si lavora tutti i giorni. Si apre col numero della
+prossima versione:
 
-Per un rilascio semplice non serve: si tagga `develop` e si mergia.
+```sh
+git checkout develop && git pull
+git checkout -b release/1.3.0
+```
+
+Ci finisce dentro tutto quello che si fa; ogni push lo pubblica su test,
+quindi si prova sempre l'insieme e non il pezzo singolo. Quando la
+versione è pronta si mergia su `develop`, si tagga e si va in `main`.
 
 ## I rilasci
 
