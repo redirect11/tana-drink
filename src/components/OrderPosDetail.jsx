@@ -1157,6 +1157,17 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   const nomeConto = isNew ? info.customer_name.trim() : order.customer_name
   const panelTitle = `${headTitle}${nomeConto ? ` · ${nomeConto}` : ''}`
   const canPay = !isNew && !closed && order.payment_status !== 'pagato'
+  // QUANTO RESTA DA INCASSARE, scritto sul tasto Pagamento. Prima la cifra
+  // compariva solo finché l'ordine non esisteva ancora: appena si creava da
+  // sé — cioè un istante dopo il primo prodotto — spariva, e sembrava un
+  // difetto. È il totale meno lo sconto e gli acconti già presi.
+  const daIncassare = Math.max(
+    0,
+    confirmedTotal +
+      draftTotal +
+      extras -
+      (isNew ? 0 : (order.discount_amount || 0) + paidAmount(order))
+  )
 
   return (
     // L'altezza si divide per lo zoom: dentro un contenitore scalato 100dvh
@@ -1549,7 +1560,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                 disabled={isNew ? draftCount === 0 : !canPay}
                 onClick={isNew ? handlePayNow : () => setShowPayment(true)}
               >
-                <IconCard /> Pagamento{isNew && draftCount > 0 ? ` · ${formatPrice(draftTotal)}` : ''}
+                <IconCard /> Pagamento{daIncassare > 0 ? ` · ${formatPrice(daIncassare)}` : ''}
               </button>
             </div>
 
@@ -1601,7 +1612,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
           {
             id: 'paga',
             icon: <IconCard />,
-            label: 'Pagamento',
+            label: daIncassare > 0 ? `Pagamento · ${formatPrice(daIncassare)}` : 'Pagamento',
             disabled: isNew ? draftCount === 0 : !canPay,
             onClick: isNew ? handlePayNow : () => setShowPayment(true),
           },

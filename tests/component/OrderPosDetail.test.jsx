@@ -704,3 +704,41 @@ describe('menu azioni del telefono', () => {
     expect(menu.getByRole('button', { name: /Annulla ordine/ })).toBeDisabled()
   })
 })
+
+// ── Quanto c'è da incassare, scritto sul tasto ────────────────────────
+// Prima la cifra compariva solo finché l'ordine non esisteva ancora:
+// appena si creava da sé — un istante dopo il primo prodotto — spariva, e
+// sembrava un difetto. Deve restare, e deve dire quanto manca DAVVERO:
+// sconto e acconti già presi non si pagano due volte.
+describe('totale sul tasto Pagamento', () => {
+  const tastoPagamento = () =>
+    screen.getAllByRole('button', { name: /Pagamento/ })[0]
+
+  it('su un conto aperto mostra il totale da incassare', () => {
+    mount(baseOrder()) // 2 Mojito × 7 €
+    expect(tastoPagamento()).toHaveTextContent('14,00 €')
+  })
+
+  it('con un acconto già preso mostra solo quello che manca', () => {
+    mount(
+      baseOrder({
+        payments: [{ id: 'p1', amount: 10, method: 'banco', at: '2026-07-11T22:00:00.000Z' }],
+      })
+    )
+    expect(tastoPagamento()).toHaveTextContent('4,00 €')
+  })
+
+  it('con lo sconto la cifra è quella scontata', () => {
+    mount(baseOrder({ discount_amount: 4 }))
+    expect(tastoPagamento()).toHaveTextContent('10,00 €')
+  })
+
+  it('conto già saldato: nessuna cifra da mostrare', () => {
+    mount(
+      baseOrder({
+        payments: [{ id: 'p1', amount: 14, method: 'banco', at: '2026-07-11T22:00:00.000Z' }],
+      })
+    )
+    expect(tastoPagamento()).not.toHaveTextContent('€')
+  })
+})

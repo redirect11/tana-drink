@@ -3120,16 +3120,31 @@ body.fullbleed,
    dimensione del font, e tasti/prezzi la seguono perché espressi in em. */
 .posd-comanda-foot {
   flex-shrink: 0;
-  padding: 4px 12px 10px;
+  padding: 6px 14px 14px;
   border-top: 1px solid var(--line);
   display: flex;
   flex-direction: column;
-  gap: calc(8px * var(--foot-scale, 1));
+  /* I tasti del footer si toccano al volo e per sbaglio: prima erano
+     appiccicati fra loro e al bordo, e "Annulla ordine" stava a un pelo da
+     "Pagamento". Un po' d'aria è quello che separa un incasso da un
+     ordine annullato. */
+  gap: calc(10px * var(--foot-scale, 1));
   font-size: calc(1rem * var(--foot-scale, 1));
 }
 .posd-comanda-foot .btn {
   font-size: 0.9em;
-  padding: 0.5em 0.7em;
+  padding: 0.7em 0.8em;
+}
+/* Il totale respira sopra i tasti, e "Annulla ordine" sta staccato dai due
+   che si usano davvero. */
+.posd-comanda-foot .posd-foot-azioni {
+  display: flex;
+  flex-direction: column;
+  gap: calc(10px * var(--foot-scale, 1));
+  margin-top: calc(4px * var(--foot-scale, 1));
+}
+.posd-comanda-foot .posd-foot-azioni .grid-2 {
+  gap: calc(10px * var(--foot-scale, 1));
 }
 .posd-comanda-foot .price {
   font-size: 1.05em;
