@@ -1217,6 +1217,23 @@ body.fullbleed .app {
   padding-bottom: 0;
 }
 
+/* NIENTE "TIRA PER AGGIORNARE" nelle schermate di lavoro. Arrivati in cima
+   alla lista, continuando a trascinare in giù Android faceva partire il
+   ricaricamento della pagina: in mezzo alla composizione di un ordine è
+   l'ultima cosa che deve succedere. Qui lo scorrimento si ferma dov'è.
+   (Il ricaricamento resta possibile dal browser, e in quel caso il conto
+   in corso viene ripreso: vedi CHIAVE_IN_CORSO in OrderPosDetail.) */
+body.fullbleed {
+  overscroll-behavior: none;
+}
+/* E non si "propaga" nemmeno dalle liste interne al documento. */
+body.fullbleed .posd-list,
+body.fullbleed .posd-body,
+body.fullbleed .posd-cats,
+body.fullbleed .queue-board {
+  overscroll-behavior: contain;
+}
+
 /* Vista pulita: niente topbar globale. La navigazione resta nel menu a
    scomparsa (burger) per la griglia e nel pulsante «← Ordini» per il POS. */
 body.fullbleed .topbar {

@@ -98,6 +98,38 @@ function numeroPrevistoInCache() {
   }
 }
 
+// IL CONTO CHE STAVO APRENDO. In creazione l'ordine nasce SENZA cambiare
+// pagina (niente navigazione, la schermata resta montata): se il browser
+// ricarica — basta uno scorrimento di troppo in cima alla lista, e su
+// Android parte l'aggiornamento della pagina — l'app non saprebbe più a
+// quale conto stava lavorando e ne aprirebbe un altro, lasciando il primo
+// aperto in coda con dentro la roba già battuta.
+// Qui si tiene il suo id: al ritorno si riprende da lì. Si dimentica
+// uscendo dal conto o quando il conto si chiude — e comunque scade, per
+// non ritrovarsi dentro un conto di ieri.
+const CHIAVE_IN_CORSO = 'tana:pos:conto-in-corso'
+const ORE_IN_CORSO = 8
+
+function contoInCorso() {
+  try {
+    const v = JSON.parse(localStorage.getItem(CHIAVE_IN_CORSO) || 'null')
+    if (!v?.id) return null
+    if (Date.now() - v.at > ORE_IN_CORSO * 3600 * 1000) return null
+    return v.id
+  } catch {
+    return null
+  }
+}
+
+function ricordaContoInCorso(id) {
+  try {
+    if (id) localStorage.setItem(CHIAVE_IN_CORSO, JSON.stringify({ id, at: Date.now() }))
+    else localStorage.removeItem(CHIAVE_IN_CORSO)
+  } catch {
+    /* senza memoria locale si riparte da zero, come prima */
+  }
+}
+
 function ricordaNumeroPrevisto(n) {
   try {
     localStorage.setItem(CHIAVE_NUMERO, JSON.stringify({ n, at: Date.now() }))
@@ -276,8 +308,46 @@ export default function OrderPosDetail({ order: orderProp = null }) {
       if (j === selfOrderJsonRef.current) return
       selfOrderJsonRef.current = j
       setSelfOrder(o)
+      // Chiuso o annullato (magari da un altro dispositivo): non è più
+      // "il conto in corso", e al prossimo giro si riparte puliti.
+      if (o.status !== ORDER_OPEN) ricordaContoInCorso(null)
     }, () => {})
   }, [selfOrderId, orderProp])
+
+  // RIPRESA DOPO UN RICARICAMENTO. Si entra in creazione ma un conto era
+  // già stato aperto qui: si torna dentro quello invece di aprirne un
+  // altro e lasciare il primo per strada, con dentro quello che era già
+  // stato battuto. Solo se è ancora aperto: un conto chiuso non si
+  // riapre.
+  useEffect(() => {
+    if (orderProp || selfOrder) return undefined
+    const id = contoInCorso()
+    if (!id) return undefined
+    let vivo = true
+    let stop = null
+    stop = subscribeOrder(
+      id,
+      (o) => {
+        if (!vivo) return
+        vivo = false
+        if (o && o.status === ORDER_OPEN) {
+          selfOrderJsonRef.current = JSON.stringify(o)
+          setSelfOrder(o)
+        } else {
+          ricordaContoInCorso(null)
+        }
+        // Basta la prima risposta: da qui in poi ci pensa l'ascolto
+        // normale del conto (selfOrderId), questo era solo per ritrovarlo.
+        stop?.()
+      },
+      () => ricordaContoInCorso(null)
+    )
+    return () => {
+      vivo = false
+      stop?.()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderProp])
 
   // PAGAMENTO DIRETTO (creazione): la schermata si apre subito su un ordine
   // locale; la creazione gira in background (resolveOrderId).
@@ -951,6 +1021,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
         clearDraft()
         if (restanti.length) saveDraft(created.id, restanti)
         selfOrderJsonRef.current = JSON.stringify(created) // evita un re-render doppio dalla subscription
+        ricordaContoInCorso(created.id) // se la pagina ricarica, si riprende da qui
         setSelfOrder(created) // diventa "modifica" in place, niente reload
         return created
       } catch (e) {
@@ -1150,6 +1221,9 @@ export default function OrderPosDetail({ order: orderProp = null }) {
     setAskName(true)
   }
   const handleExit = () => {
+    // Uscendo dal conto la ripresa non serve più: si esce apposta, non per
+    // sbaglio. Restasse, il prossimo "nuovo ordine" ripartirebbe da questo.
+    ricordaContoInCorso(null)
     if (!isNew) {
       // Le modifiche ottimistiche ancora in volo (aggiunte/decrementi) si
       // inviano ora, per non perderle uscendo. Se è un ordine creato in place
