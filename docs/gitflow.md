@@ -31,8 +31,10 @@ Su `develop` e `main` non si committa mai direttamente.
 ## Il deploy
 
 Ogni push su `main`, `develop`, `feature/**`, `release/**`, `hotfix/**` fa partire
-[la pipeline](../.github/workflows/firebase-hosting.yml): compila, deploya
-hosting, Functions e regole. Il progetto di destinazione è `tana-drink`
+[la pipeline](../.github/workflows/firebase-hosting.yml): **prima lint e
+test**, e solo se sono verdi compila e deploya hosting, Functions e regole.
+Se un test fallisce non viene pubblicato niente — prima erano due
+workflow che partivano insieme, e la roba rotta finiva online lo stesso. Il progetto di destinazione è `tana-drink`
 solo per `main`; per tutto il resto è `tana-drink-test`.
 
 **L'ambiente di test è uno solo.** Ci finiscono a turno `develop` e i
