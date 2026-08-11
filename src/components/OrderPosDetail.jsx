@@ -16,7 +16,7 @@ import {
   peekNextDailyNumber,
   DEFAULT_SETTINGS,
 } from '../lib/api.js'
-import { useDraft, loadLayout, saveLayout } from '../lib/useDraft.js'
+import { useDraft, loadLayout, saveLayout, saveDraft } from '../lib/useDraft.js'
 import { dismissKeyboard } from '../lib/keyboard.js'
 import { useResizable } from '../lib/useResizable.js'
 import { auth } from '../lib/firebaseClient.js'
@@ -913,6 +913,11 @@ export default function OrderPosDetail({ order: orderProp = null }) {
     if (creatingRef.current) return creatingPromiseRef.current
     const items = draftToItems()
     if (items.length === 0) return null
+    // QUALI RIGHE STANNO PARTENDO. La creazione dura qualche decimo di
+    // secondo, e in quei decimi al banco si continua a battere: le righe
+    // aggiunte nel frattempo NON sono in questo ordine e non vanno buttate
+    // via con le altre.
+    const inviate = new Set(items.map((i) => i.line_id))
     creatingRef.current = true
     const run = async () => {
       try {
@@ -927,7 +932,17 @@ export default function OrderPosDetail({ order: orderProp = null }) {
           group_id: group && !groupIsContainer ? group.id : null,
           group_name_snapshot: group && !groupIsContainer ? group.name : null,
         })
+        // LE RIGHE BATTUTE MENTRE L'ORDINE NASCEVA NON SI BUTTANO.
+        // La creazione dura qualche decimo di secondo e al banco in quei
+        // decimi si continua a battere. Qui succedevano due cose: si
+        // svuotava tutta la bozza (comprese le righe arrivate dopo lo
+        // scatto), e soprattutto la bozza cambia CHIAVE — da 'new' all'id
+        // dell'ordine — quindi anche salvandole restavano in un cassetto
+        // che nessuno riapriva più. Si passano a mano alla chiave nuova:
+        // un istante dopo l'auto-conferma le manda dentro l'ordine.
+        const restanti = draftRef.current.filter((r) => !inviate.has(r.line_id))
         clearDraft()
+        if (restanti.length) saveDraft(created.id, restanti)
         selfOrderJsonRef.current = JSON.stringify(created) // evita un re-render doppio dalla subscription
         setSelfOrder(created) // diventa "modifica" in place, niente reload
         return created
