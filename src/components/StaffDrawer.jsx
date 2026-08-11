@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { auth } from '../lib/firebaseClient.js'
 import { logoutStaff } from '../lib/logout.js'
 import { devToolsEnabled } from '../dev/devActions.js'
-import { isGestore } from '../lib/ruoli.js'
+import { isGestore, RUOLO_ETICHETTA } from '../lib/ruoli.js'
 import {
   subscribeSettings,
   subscribeOpenGroups,
@@ -19,9 +19,9 @@ const BARTENDER_NAV = [
   ['stats', '📊', 'Statistiche'],
   ['menu', '🍸', 'Menù'],
   ['inventario', '📦', 'Inventario'],
-  ['staff', '👥', 'Staff: membri e ore'],
+  ['staff', '👥', 'Staff: turni e ore'],
+  ['utenti', '🧑‍🤝‍🧑', 'Utenti e ruoli'],
   ['vip', '🎟', 'Buoni VIP'],
-  ['stampante', '🖨️', 'Stampante'],
   ['impostazioni', '⚙️', 'Impostazioni'],
 ]
 
@@ -34,7 +34,22 @@ const STAFF_NAV = [
 // e nella vista menu per l'ordinazione manuale (naviga a /bar?tab=…).
 export default function StaffDrawer({ role, active = null, onSelect = null }) {
   const [open, setOpen] = useState(false)
+  // I gruppi restano chiusi finché non li si apre, e la scelta si ricorda:
+  // chi lavora a gruppi non deve riaprirli a ogni giro.
+  const [gruppiAperti, setGruppiAperti] = useState(
+    () => localStorage.getItem('tana:drawer-gruppi') === '1'
+  )
   const navigate = useNavigate()
+  const utente = auth.currentUser
+  const nomeUtente = utente?.displayName || String(utente?.email || '').split('@')[0] || 'Il mio profilo'
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('tana:drawer-gruppi', gruppiAperti ? '1' : '0')
+    } catch {
+      /* niente memoria: valgono per questa sessione */
+    }
+  }, [gruppiAperti])
 
   // Il menu si apre dal ☰ della TOPBAR (che sta in App.jsx): il tasto flottante
   // resta solo nelle schermate a tutto schermo, dove la topbar è nascosta.
@@ -43,6 +58,13 @@ export default function StaffDrawer({ role, active = null, onSelect = null }) {
     window.addEventListener('tana:toggle-drawer', h)
     return () => window.removeEventListener('tana:toggle-drawer', h)
   }, [])
+
+  // Col menu aperto i tasti dello zoom devono passare DIETRO: stanno in
+  // basso a sinistra, cioè esattamente sopra le ultime voci (Esci).
+  useEffect(() => {
+    document.body.classList.toggle('drawer-open', open)
+    return () => document.body.classList.remove('drawer-open')
+  }, [open])
 
   // Gruppi nel drawer (quadratini): attivi se l'impostazione lo prevede.
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
@@ -125,36 +147,75 @@ export default function StaffDrawer({ role, active = null, onSelect = null }) {
 
         {showGroups && (
           <div className="drawer-groups">
-            <div className="drawer-groups-title">Gruppi</div>
-            <div className="group-tiles">
-              {groupTiles.map((g) => (
-                <button
-                  key={g.id}
-                  className="group-tile"
-                  title={g.name}
-                  onClick={() => apriGruppo(g.id)}
-                >
-                  <span className="group-tile-ic">{g.kind === 'customer' ? '👤' : '🏷'}</span>
-                  <span className="group-tile-name">{g.name}</span>
-                </button>
-              ))}
-            </div>
-            <div className="row" style={{ gap: 6, padding: '0 14px', marginTop: 8 }}>
-              <input
-                type="text"
-                placeholder="+ Nuovo gruppo"
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && creaGruppo()}
-              />
-              <button className="btn small" style={{ flexShrink: 0 }} onClick={creaGruppo} disabled={!newName.trim()}>
-                Crea
-              </button>
-            </div>
+            {/* A SCOMPARSA. I gruppi sono pochi ma occupano molto (riquadri
+                a due colonne) e spingevano "Esci" e il resto fuori vista.
+                Chiusi di default: chi li usa li apre, e la scelta resta. */}
+            <button
+              type="button"
+              className={`drawer-groups-title${gruppiAperti ? ' aperto' : ''}`}
+              onClick={() => setGruppiAperti((v) => !v)}
+              aria-expanded={gruppiAperti}
+            >
+              <span className="drawer-groups-freccia">▸</span>
+              Gruppi
+              {groupTiles.length > 0 && <span className="drawer-groups-conto">{groupTiles.length}</span>}
+            </button>
+            {gruppiAperti && (
+              <>
+                <div className="group-tiles">
+                  {groupTiles.map((g) => (
+                    <button
+                      key={g.id}
+                      className="group-tile"
+                      title={g.name}
+                      onClick={() => apriGruppo(g.id)}
+                    >
+                      <span className="group-tile-ic">{g.kind === 'customer' ? '👤' : '🏷'}</span>
+                      <span className="group-tile-name">{g.name}</span>
+                    </button>
+                  ))}
+                </div>
+                <div className="row" style={{ gap: 6, padding: '0 14px', marginTop: 8 }}>
+                  <input
+                    type="text"
+                    placeholder="+ Nuovo gruppo"
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && creaGruppo()}
+                  />
+                  <button
+                    className="btn small"
+                    style={{ flexShrink: 0 }}
+                    onClick={creaGruppo}
+                    disabled={!newName.trim()}
+                  >
+                    Crea
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         )}
 
         <div className="bar-nav-sep" />
+        {/* CHI È COLLEGATO. Serve al bar con più persone e un dispositivo
+            solo: prima di battere un ordine si vede a nome di chi va, e con
+            un tocco si apre il profilo (nome, password). */}
+        <div
+          className={`bar-nav-item drawer-io${active === 'profilo' ? ' active' : ''}`}
+          onClick={() => {
+            setOpen(false)
+            navigate('/profilo-staff')
+          }}
+        >
+          <span>{RUOLO_ETICHETTA[role]?.split(' ')[0] ?? '🙋'}</span>
+          <span className="drawer-io-testo">
+            <span className="drawer-io-nome">{nomeUtente}</span>
+            <span className="drawer-io-ruolo">
+              {(RUOLO_ETICHETTA[role] ?? 'Utente').replace(/^\S+\s/, '')}
+            </span>
+          </span>
+        </div>
         <div className="bar-nav-item" onClick={() => logoutStaff()}>
           <span>🚪</span> Esci
         </div>

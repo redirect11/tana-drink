@@ -2762,13 +2762,57 @@ body.fullbleed,
   color: var(--accent-2);
 }
 
-/* ── Gruppi nel drawer ──────────────────────────────────────── */
+/* ── Gruppi nel drawer (sezione a scomparsa) ─────────────────── */
 .drawer-groups { margin-top: 6px; }
 .drawer-groups-title {
-  padding: 6px 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 18px;
+  border: 0;
+  background: none;
   font-size: 0.72rem;
+  font-family: inherit;
   text-transform: uppercase;
   letter-spacing: 0.6px;
+  color: var(--muted);
+  cursor: pointer;
+  text-align: left;
+}
+.drawer-groups-title:hover { color: var(--text); }
+.drawer-groups-freccia {
+  display: inline-block;
+  transition: transform 0.15s ease;
+  font-size: 0.7rem;
+}
+.drawer-groups-title.aperto .drawer-groups-freccia { transform: rotate(90deg); }
+.drawer-groups-conto {
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  font-size: 0.68rem;
+  line-height: 18px;
+  text-align: center;
+}
+
+/* Chi è collegato, in fondo al menu: nome e ruolo, si apre il profilo. */
+.bar-nav-item.drawer-io { align-items: center; }
+.drawer-io-testo {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+  min-width: 0;
+}
+.drawer-io-nome {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.drawer-io-ruolo {
+  font-size: 0.72rem;
   color: var(--muted);
 }
 .group-tiles {
@@ -4018,6 +4062,13 @@ body.fullbleed .cat-rail {
 .zoom-control:hover,
 .zoom-control:focus-within {
   opacity: 1;
+}
+/* Col menu laterale aperto passano DIETRO (il menu sta a z140, il suo velo
+   a z130): stando in basso a sinistra finivano sopra le ultime voci — Esci
+   e il profilo — e si toccava lo zoom invece della voce. */
+body.drawer-open .zoom-control {
+  z-index: 100;
+  opacity: 0.3;
 }
 .zoom-control button {
   min-width: 30px;

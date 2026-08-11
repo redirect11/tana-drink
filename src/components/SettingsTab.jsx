@@ -9,6 +9,7 @@ import { CANCEL_PHRASES } from '../lib/orderStatus.js'
 import { parseCarteCsv, decodeCsvBuffer } from '../lib/carteImport.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import ThemeSettings from './ThemeSettings.jsx'
+import PrinterSetup from './PrinterSetup.jsx'
 import { pairSumUpReader, unpairSumUpReader } from '../lib/paymentsApi.js'
 import { devToolsEnabled } from '../dev/devActions.js'
 
@@ -597,6 +598,10 @@ export default function SettingsTab() {
           </>
         )}
       </div>
+
+      {/* STAMPANTE: era una voce di menu a sé, ma si tocca una volta e
+          poi mai più — sta con le altre configurazioni. */}
+      <PrinterSetup />
 
       <div className="card settings-section">
         <h3>Annullamenti</h3>
