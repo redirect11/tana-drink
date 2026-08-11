@@ -149,6 +149,23 @@ a {
   white-space: nowrap;
 }
 
+/* Il ⋮ della barra: bersaglio pieno da 48px, non un'icona da centrare col
+   dito. È la porta di tutto quello che non ci sta in barra. */
+.topbar-piu {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: none;
+  color: var(--text);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
 /* ── TESTATA SUL TELEFONO ─────────────────────────────────────────────
    Su 360px non ci stavano logo, schermo intero, "Ciao, Capo Bar", POS,
    Vista cliente ed Esci: l'ultimo tasto finiva mezzo fuori dallo schermo,
@@ -1193,19 +1210,26 @@ body.fullbleed.topbar-open .topbar {
 /* Linguetta mostra/nascondi topbar: sottile e discreta, appesa al bordo
    superiore, appena a destra del ☰ (bar-burger 42px a left:12) e SOPRA la
    riga "In servizio" così non copre le scritte. Solo a tutto schermo. */
+/* LINGUETTA DELLA BARRA. Era alta 16px e infilata a sinistra fra i tasti:
+   sotto qualunque soglia ragionevole per un dito (44-48px secondo tutte le
+   linee guida) e per giunta in mezzo ad altri bersagli. Ora è una maniglia
+   CENTRATA, larga e alta abbastanza da prendersi senza mirare — dove non
+   c'è nient'altro da sbagliare. */
 .topbar-toggle {
   position: fixed;
   top: var(--safe-top);
-  left: 112px; /* oltre "← Ordini" (creazione/modifica) e il ☰ (coda) */
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 126;
-  height: 16px;
-  padding: 0 9px;
+  height: 26px;
+  min-width: 76px;
+  padding: 0 14px;
   border: 1px solid var(--line);
   border-top: none;
-  border-radius: 0 0 8px 8px;
+  border-radius: 0 0 12px 12px;
   background: var(--bg-2);
   color: var(--muted);
-  font-size: 0.68rem;
+  font-size: 0.8rem;
   line-height: 1;
   cursor: pointer;
   display: none;
@@ -3322,8 +3346,20 @@ body.fullbleed,
    nei Dati conto — lì c'è spazio. */
 @media (max-width: 700px) {
   .posd-topbar {
-    gap: 6px;
+    gap: 8px;
     padding: calc(6px + var(--safe-top)) 8px 6px;
+    /* Niente sovrapposizioni: chi ha testo lungo si tronca, gli altri
+       restano interi. Prima "#5" e l'ora finivano uno sull'altro. */
+    flex-wrap: nowrap;
+    overflow: hidden;
+  }
+  .posd-topbar > * {
+    flex-shrink: 0;
+  }
+  .posd-aperto {
+    flex-shrink: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .posd-autore,
   .posd-serial {
@@ -4253,7 +4289,9 @@ body.fullbleed .cat-rail {
     display: none;
   }
 }
-/* In linea: niente angolo, niente velatura, sta nella riga che lo ospita. */
+/* In linea: niente angolo, niente velatura, sta nella riga che lo ospita —
+   e piccolo: è un comando di servizio, non deve pesare quanto lo stato del
+   conto che gli sta accanto. */
 .zoom-control.zoom-inline {
   position: static;
   z-index: auto;
@@ -4262,6 +4300,20 @@ body.fullbleed .cat-rail {
   box-shadow: none;
   backdrop-filter: none;
   flex-shrink: 0;
+  padding: 0;
+  gap: 0;
+  background: none;
+  border-color: transparent;
+}
+.zoom-control.zoom-inline button {
+  min-width: 26px;
+  height: 26px;
+  padding: 0 2px;
+  font-size: 0.9rem;
+}
+.zoom-control.zoom-inline .zoom-livello {
+  min-width: 34px;
+  font-size: 0.62rem;
 }
 /* Col menu laterale aperto passano DIETRO (il menu sta a z140, il suo velo
    a z130): stando in basso a sinistra finivano sopra le ultime voci — Esci
