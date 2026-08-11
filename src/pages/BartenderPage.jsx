@@ -27,6 +27,7 @@ import {
   placedByLetter,
 } from '../lib/orderStatus.js'
 import { bucketByStatus, ordersRecap } from '../lib/coda.js'
+import StatusBell from '../components/StatusBell.jsx'
 import { isGestore, isPersonale } from '../lib/ruoli.js'
 import { allServed } from '../lib/comande.js'
 import { paidAmount, orderTotal } from '../lib/pagamento.js'
@@ -231,6 +232,8 @@ export default function BartenderPage() {
         {tab === 'inventario' && <InventoryManager />}
         {(tab === 'staff' || tab === 'ore') && <StaffHoursTab />}
         {tab === 'utenti' && <UtentiTab role={role} />}
+        {/* I buoni VIP sono un pannello di "Utenti e ruoli": qui restano
+            solo perché i vecchi collegamenti (?tab=vip) funzionino. */}
         {tab === 'vip' && <VipTab />}
         {tab === 'impostazioni' && <SettingsTab />}
         {/* La stampante sta nelle Impostazioni: qui resta solo perché i
@@ -1160,6 +1163,10 @@ function OrderQueue() {
 
   return (
     <div className={gridView ? 'queue-board' : undefined}>
+      {/* A tutto schermo la topbar non c'è, e con lei sparivano campanella,
+          notifiche e stato della sincronizzazione: torna come tasto tondo in
+          basso a destra (il CSS la mostra solo quando serve). */}
+      {gridView && <StatusBell floating />}
       {error && <div className="banner">Errore: {error}</div>}
 
       {/* Cassa chiusa: non si battono ordini finché non la si apre. */}

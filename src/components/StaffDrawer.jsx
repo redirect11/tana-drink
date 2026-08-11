@@ -22,7 +22,6 @@ const BARTENDER_NAV = [
   ['inventario', '📦', 'Inventario'],
   ['staff', '👥', 'Staff'],
   ['utenti', '🧑‍🤝‍🧑', 'Utenti e ruoli'],
-  ['vip', '🎟', 'Buoni VIP'],
   ['impostazioni', '⚙️', 'Impostazioni'],
 ]
 
