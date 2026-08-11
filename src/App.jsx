@@ -63,6 +63,22 @@ export default function App() {
     return () => document.removeEventListener('keydown', onKey)
   }, [])
 
+  // A SCHERMO INTERO SI PRENDE ANCHE LA FASCIA IN CIMA. Con la barra di
+  // sistema nascosta (niente orario, niente icone) quello spazio è libero:
+  // tenerlo vuoto vuol dire buttare via una striscia di schermo proprio
+  // dove serve, cioè in una schermata di lavoro. Il body si marca, e il
+  // CSS azzera lo scosto di sicurezza.
+  useEffect(() => {
+    const aggiorna = () =>
+      document.body.classList.toggle('schermo-intero', !!document.fullscreenElement)
+    aggiorna()
+    document.addEventListener('fullscreenchange', aggiorna)
+    return () => {
+      document.removeEventListener('fullscreenchange', aggiorna)
+      document.body.classList.remove('schermo-intero')
+    }
+  }, [])
+
   // Topbar apribile/chiudibile ovunque. Sulle schermate a tutto schermo
   // (coda, creazione/modifica ordine, pagamento) quando è aperta compare come
   // OVERLAY (fissa), senza spingere il contenuto: quelle schermate restano
