@@ -67,10 +67,24 @@ a {
   }
 }
 
+/* LA PAGINA RIEMPIE LO SCHERMO. I 760px erano nati per le pagine di testo,
+   ma qui dentro ci sono griglie di prodotti, tabelle e liste: su un tablet
+   o un monitor restava una colonna in mezzo, con la barra in alto larga
+   tutta la pagina e il contenuto no — sembrava un pezzo mancante.
+   Il testo lungo (la vetrina, i moduli) si tiene stretto da sé: sono le
+   uniche cose che con righe larghe si leggono peggio. */
 .app {
-  max-width: 760px;
+  max-width: none;
   margin: 0 auto;
   padding: 0 16px 96px;
+}
+
+/* Vetrina e moduli (accesso, registrazione, profilo): larghi al massimo
+   quanto si legge comodo, e centrati. */
+.landing,
+.app > main > form.card {
+  max-width: 900px;
+  margin-inline: auto;
 }
 
 .topbar {
@@ -1854,9 +1868,8 @@ body.bar-wide .app {
 /* Menù cliente: si adatta al dispositivo invece di stare in una colonna da
    760px. Su telefono non cambia niente (lo schermo è più stretto); su
    tablet e monitor la griglia usa lo spazio che c'è. */
-body.menu-largo .app {
-  max-width: none;
-}
+/* (Il menù cliente non ha più bisogno di una regola sua: ora è la pagina
+   intera a riempire la larghezza.) */
 
 /* ── Inventario come TABELLA: colonne allineate (grid identico su intestazione
    e righe) ── */
