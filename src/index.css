@@ -66,6 +66,11 @@ a {
     --safe-top: max(env(safe-area-inset-top, 0px), 22px);
   }
 }
+/* A schermo intero la fascia di sistema non c'è: niente orario, niente
+   icone, niente da scansare. Quella striscia torna al contenuto. */
+body.schermo-intero {
+  --safe-top: 0px;
+}
 
 /* LA PAGINA RIEMPIE LO SCHERMO. I 760px erano nati per le pagine di testo,
    ma qui dentro ci sono griglie di prodotti, tabelle e liste: su un tablet
@@ -242,6 +247,30 @@ a {
    ingranaggio (chi è collegato lo dice il menu laterale, in fondo) e
    "Vista cliente" resta nel menu, dov'è comunque. */
 @media (max-width: 700px) {
+  /* LA LINGUETTA NON DEVE STARE SOPRA LE INFORMAZIONI. Fissa e centrata
+     copriva numero, ora e stato del conto — roba che serve, su uno schermo
+     dove non avanza spazio. Resta in cima, larga quanto la pagina e alta
+     20px, e la testata del conto si sposta sotto di lei: nessuna
+     sovrapposizione, e la striscia si becca senza mirare.
+     A schermo intero non costa niente, perché lo scosto della barra di
+     sistema (--safe-top) l'abbiamo appena riguadagnato. */
+  body.fullbleed .topbar-toggle {
+    left: 0;
+    right: 0;
+    transform: none;
+    width: 100%;
+    min-width: 0;
+    height: 20px;
+    border-left: none;
+    border-right: none;
+    border-radius: 0;
+    background: color-mix(in srgb, var(--bg-2) 94%, transparent);
+    opacity: 1;
+  }
+  body.fullbleed .posd-topbar,
+  body.fullbleed .queue-board > :first-child {
+    margin-top: 20px;
+  }
   .topbar {
     gap: 8px;
     padding-left: 10px;
