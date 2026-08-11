@@ -426,6 +426,8 @@ function OrderQueue() {
     ensureNotificationPermission().then(async (ok) => {
       if (!ok || !uid) return
       const token = await getPushToken()
+      // Ruolo del TOKEN, non della persona: serve solo a distinguere i
+      // dispositivi al banco da quelli di sala quando si smistano le push.
       if (token) saveStaffToken(uid, token, 'bartender').catch(() => {})
     })
   }, [])
@@ -447,9 +449,9 @@ function OrderQueue() {
           for (const o of data) {
             const isNew = !knownIds.current.has(o.id)
             if (o.workflow_status !== ORDER_STATUSES.RICEVUTO) continue
-            // Niente notifica per gli ordini inseriti dal bartender stesso:
-            // avvisano solo quelli di clienti o staff.
-            if (o.placed_by?.role === 'bartender') continue
+            // Niente notifica per gli ordini battuti al banco da chi sta
+            // guardando: avvisano solo quelli di clienti o staff di sala.
+            if (isGestore(o.placed_by?.role)) continue
             if (isAwaitingPayment(o)) {
               if (isNew) awaiting.add(o.id)
               continue

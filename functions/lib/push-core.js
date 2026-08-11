@@ -8,6 +8,11 @@ const CANCEL_PHRASES = {
   staff: 'Lo staff sarà subito da te.',
 }
 
+// Chi sta al banco: batte gli ordini di persona, quindi non ha bisogno che
+// glieli annuncino. (Stessa coppia di src/lib/ruoli.js: qui non si possono
+// importare i moduli del client.)
+const BANCO = ['admin', 'bartender']
+
 // Conta le comande di un ordine in un dato stato. Retrocompatibile: i doc
 // legacy (senza `comande`) valgono come una sola comanda con lo stato
 // dell'ordine.
@@ -114,9 +119,9 @@ function payableReceivedCount(o) {
 // obbligatorio viene saldato (e solo allora entra in coda). Restituisce il
 // messaggio { title, body } o null se non c'è nulla di nuovo da notificare.
 function decideNewOrderStaffPush(before, after) {
-  // Ordine inserito dal bartender stesso: nessuna notifica (avvisano solo
-  // gli ordini di clienti o staff).
-  if (after && after.placed_by && after.placed_by.role === 'bartender') return null
+  // Ordine battuto al banco (admin o bartender): nessuna notifica —
+  // avvisano solo gli ordini di clienti o staff di sala.
+  if (after && after.placed_by && BANCO.includes(after.placed_by.role)) return null
   const now = payableReceivedCount(after)
   const prev = payableReceivedCount(before)
   if (now <= prev) return null // niente di nuovo in coda

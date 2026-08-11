@@ -9,7 +9,7 @@ import StaffProfilePage from './pages/StaffProfilePage.jsx'
 import PosPage from './pages/PosPage.jsx'
 import { useCustomer, useHasOrders } from './lib/customerAuth.js'
 import { isFirebaseConfigured, auth } from './lib/firebaseClient.js'
-import { isPersonale } from './lib/ruoli.js'
+import { isPersonale, isSala } from './lib/ruoli.js'
 import { onAuthStateChanged } from 'firebase/auth'
 import { subscribeSettings, DEFAULT_SETTINGS, clockIn, subscribePrinterConfig } from './lib/api.js'
 import { savePrinterSettings } from './lib/printer.js'
@@ -209,11 +209,11 @@ export default function App() {
               )}
               <Link className="btn ghost small" to="/pos">🍸 POS</Link>
               {/* Per lo staff «Nuovo ordine» porta già al menu: niente doppione. */}
-              {staffRole !== 'staff' && (
+              {!isSala(staffRole) && (
                 <Link className="btn ghost small" to="/menu">Vista cliente</Link>
               )}
             </>
-          ) : staffRole === 'staff' ? (
+          ) : isSala(staffRole) ? (
             // Staff nel menu (ordine manuale): solo il ritorno al servizio.
             // Saluto ed Esci stanno nel gestionale e nel drawer.
             <Link className="btn small" to="/bar">

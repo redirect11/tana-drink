@@ -18,7 +18,11 @@ const {
   orderDue,
 } = require('./payment-core')
 
-const STAFF_ROLES = ['bartender', 'staff']
+// Chi può incassare (tutto il personale) e chi configura il lettore
+// (chi sta al banco). L'admin fa quello che fa il bartender: lasciarlo
+// fuori vorrebbe dire non poter nemmeno passare una carta.
+const STAFF_ROLES = ['admin', 'bartender', 'staff']
+const BANCO = ['admin', 'bartender']
 
 function err(code, message) {
   return { code, message }
@@ -158,7 +162,7 @@ async function readerSettings(db) {
 // Associa il lettore: il codice si genera dal menu API del lettore Solo.
 async function pairReader(deps, auth, { pairing_code } = {}) {
   const { db, paymentsFetch, isConfigured, merchantCode } = deps
-  requireRole(auth, ['bartender'])
+  requireRole(auth, BANCO)
   if (!isConfigured()) return { unavailable: true }
   const code = String(pairing_code || '').trim().toUpperCase()
   if (!code) throw err('invalid-argument', 'Inserisci il codice di pairing.')
@@ -190,7 +194,7 @@ async function pairReader(deps, auth, { pairing_code } = {}) {
 // Dissocia il lettore (best-effort lato SumUp, azzera sempre i settings).
 async function unpairReader(deps, auth) {
   const { db, paymentsFetch, isConfigured, merchantCode } = deps
-  requireRole(auth, ['bartender'])
+  requireRole(auth, BANCO)
   const settings = await readerSettings(db)
   if (settings.sumup_reader_id && isConfigured()) {
     await paymentsFetch(
