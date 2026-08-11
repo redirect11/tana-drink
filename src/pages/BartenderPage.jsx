@@ -134,16 +134,28 @@ export default function BartenderPage() {
       }
       // Ruolo dai custom claims: senza claim è un CLIENTE registrato
       // (nessun accesso al gestionale).
+      //
+      // IL RUOLO VIVE DENTRO IL TOKEN, E IL TOKEN DURA UN'ORA. Chi era già
+      // collegato quando gli è cambiato il ruolo continua a girare con
+      // quello vecchio: le regole del database guardano il token, non
+      // l'anagrafica, e il risultato è una schermata che carica il menù ma
+      // non la cassa, con "permessi insufficienti" sparso in giro — un
+      // guaio da capire, in mezzo al servizio.
+      //
+      // Quindi: prima quello che c'è (istantaneo, la schermata si apre
+      // subito), poi SEMPRE uno fresco in sottofondo. Se il ruolo è
+      // cambiato, la pagina si allinea da sola in un secondo.
       try {
-        let ruolo = (await u.getIdTokenResult()).claims.role ?? 'cliente'
-        // APPENA NOMINATO. Il token che il dispositivo ha in tasca dura
-        // un'ora: chi viene promosso mentre è già collegato si vedrebbe
-        // ancora "area riservata" fino alla scadenza. Prima di sbatterlo
-        // fuori si chiede un token nuovo: se il ruolo c'è, entra subito.
-        if (ruolo === 'cliente') {
-          ruolo = (await u.getIdTokenResult(true)).claims.role ?? 'cliente'
-        }
+        const ruolo = (await u.getIdTokenResult()).claims.role ?? 'cliente'
         setRole(ruolo)
+        u.getIdTokenResult(true)
+          .then((t) => {
+            const aggiornato = t.claims.role ?? 'cliente'
+            if (aggiornato !== ruolo) setRole(aggiornato)
+          })
+          .catch(() => {
+            /* offline: si tiene quello in tasca, è comunque valido */
+          })
       } catch {
         setRole('cliente')
       }
