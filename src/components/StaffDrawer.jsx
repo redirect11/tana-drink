@@ -4,6 +4,7 @@ import { auth } from '../lib/firebaseClient.js'
 import { logoutStaff } from '../lib/logout.js'
 import { devToolsEnabled } from '../dev/devActions.js'
 import { isGestore, RUOLO_ETICHETTA } from '../lib/ruoli.js'
+import { IconGruppo, IconPersona } from './Icons.jsx'
 import {
   subscribeSettings,
   subscribeOpenGroups,
@@ -170,7 +171,9 @@ export default function StaffDrawer({ role, active = null, onSelect = null }) {
                       title={g.name}
                       onClick={() => apriGruppo(g.id)}
                     >
-                      <span className="group-tile-ic">{g.kind === 'customer' ? '👤' : '🏷'}</span>
+                      <span className="group-tile-ic">
+                        {g.kind === 'customer' ? <IconPersona /> : <IconGruppo />}
+                      </span>
                       <span className="group-tile-name">{g.name}</span>
                     </button>
                   ))}

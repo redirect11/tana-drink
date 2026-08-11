@@ -48,3 +48,12 @@ export const IconCheck = (p) => (
 export const IconClose = (p) => (
   <Svg {...p}><path d="M18 6 6 18M6 6l12 12" /></Svg>
 )
+// Gruppo di ordini: un tavolo di persone. (L'emoji 🏷 che c'era prima su
+// Windows viene disegnato come un rettangolino storto e non diceva niente.)
+export const IconGruppo = (p) => (
+  <Svg {...p}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></Svg>
+)
+// Una persona sola: il gruppo intestato a un cliente registrato.
+export const IconPersona = (p) => (
+  <Svg {...p}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></Svg>
+)
