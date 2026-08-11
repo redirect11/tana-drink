@@ -1,4 +1,4 @@
-import { Routes, Route, Link, Navigate, useLocation } from 'react-router-dom'
+import { Routes, Route, Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import LandingPage from './pages/LandingPage.jsx'
 import MenuPage from './pages/MenuPage.jsx'
 import OrderStatusPage from './pages/OrderStatusPage.jsx'
@@ -15,6 +15,8 @@ import { subscribeSettings, DEFAULT_SETTINGS, clockIn, subscribePrinterConfig } 
 import { savePrinterSettings } from './lib/printer.js'
 import { dismissKeyboard } from './lib/keyboard.js'
 import StatusBell from './components/StatusBell.jsx'
+import ActionSheet from './components/ActionSheet.jsx'
+import { useTelefono } from './lib/useTelefono.js'
 import { logoutStaff } from './lib/logout.js'
 import { resolveThemeVars, applyTheme } from './lib/themes.js'
 import { envLabel } from './dev/devActions.js'
@@ -66,6 +68,18 @@ export default function App() {
   // OVERLAY (fissa), senza spingere il contenuto: quelle schermate restano
   // interamente nel viewport.
   const [topbarOpen, setTopbarOpen] = useState(false)
+  const navigate = useNavigate()
+  // Sul telefono la barra tiene il ☰, il logo e due sole azioni: la
+  // campanella e i ⋮. Tutto il resto sta nel menu (vedi sotto).
+  const telefono = useTelefono()
+  const [menuTopbar, setMenuTopbar] = useState(false)
+  // "Schermo intero" ha senso solo da browser: con l'app installata le
+  // barre non ci sono già.
+  const schermoInteroDisponibile =
+    typeof document !== 'undefined' &&
+    !!document.documentElement.requestFullscreen &&
+    !window.matchMedia?.('(display-mode: standalone)').matches &&
+    window.navigator?.standalone !== true
   useEffect(() => {
     document.body.classList.toggle('topbar-open', topbarOpen)
     return () => document.body.classList.remove('topbar-open')
@@ -202,14 +216,25 @@ export default function App() {
           {/* A tutto schermo ci va chi LAVORA sull'app per ore (banco, sala):
               al cliente che apre il menù dal telefono non serve, e in mezzo
               ai tasti era solo un'icona in più da capire. */}
-          {staffRole && <FullscreenButton />}
-          {onBackoffice ? (
+          {staffRole && !telefono && <FullscreenButton />}
+          {/* TELEFONO: una sola azione in più (⋮), il resto nel menu.
+              Le linee guida sono concordi — in una barra ci stanno il tasto
+              di sinistra, il titolo e due o tre azioni; il resto va in un
+              menu, con bersagli da 48px. Prima erano cinque cose in fila e
+              l'ultima, "Esci", finiva mezza fuori dallo schermo. */}
+          {telefono && staffRole ? (
+            <button
+              className="topbar-piu"
+              onClick={() => setMenuTopbar(true)}
+              aria-label="Altre azioni"
+              title="Altre azioni"
+            >
+              ⋮
+            </button>
+          ) : onBackoffice ? (
             <>
               {staffRole && (
                 <Link className="topbar-hello" to="/profilo-staff" style={{ textDecoration: 'none' }}>
-                  {/* Sul telefono resta il solo ingranaggio: il saluto per
-                      esteso mandava "Esci" fuori dallo schermo, e chi è
-                      collegato lo dice già il menu laterale. */}
                   <span className="topbar-hello-testo">Ciao, {staffName} </span>⚙️
                 </Link>
               )}
@@ -255,6 +280,51 @@ export default function App() {
           )}
         </nav>
       </header>
+
+      {/* Menu della barra sul telefono: le azioni che prima stavano in fila
+          e non ci stavano. Stesso pannello dal basso del dettaglio ordine —
+          si impara una volta e vale ovunque. */}
+      <ActionSheet
+        open={menuTopbar}
+        onClose={() => setMenuTopbar(false)}
+        titolo={staffName ? `Ciao, ${staffName}` : 'Menu'}
+        voci={[
+          {
+            id: 'profilo',
+            icon: '⚙️',
+            label: 'Il mio profilo',
+            hint: 'Nome e password',
+            onClick: () => navigate('/profilo-staff'),
+          },
+          !isSala(staffRole) && {
+            id: 'pos',
+            icon: '🍸',
+            label: 'POS — nuovo ordine',
+            onClick: () => navigate('/pos'),
+          },
+          !isSala(staffRole) && {
+            id: 'vista-cliente',
+            icon: '👀',
+            label: 'Vista cliente',
+            hint: 'Il menù come lo vede chi ordina',
+            onClick: () => navigate('/menu'),
+          },
+          isSala(staffRole) && {
+            id: 'servizio',
+            icon: '🫱',
+            label: 'Torna al servizio',
+            onClick: () => navigate('/bar'),
+          },
+          schermoInteroDisponibile && {
+            id: 'schermo',
+            icon: '⛶',
+            label: 'Schermo intero',
+            hint: 'Meglio ancora: installa l’app dalla schermata iniziale',
+            onClick: () => document.documentElement.requestFullscreen?.().catch(() => {}),
+          },
+          { id: 'esci', icon: '🚪', label: 'Esci', danger: true, onClick: () => logoutStaff() },
+        ]}
+      />
 
       {(onBackoffice || !!staffRole) && <AddToHomeHint />}
 

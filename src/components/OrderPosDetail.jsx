@@ -1211,7 +1211,11 @@ export default function OrderPosDetail({ order: orderProp = null }) {
           borderBottom: '1px solid var(--line)',
         }}
       >
-        <button className="btn ghost small" aria-label="Torna agli ordini" onClick={handleExit}>← Ordini</button>
+        {/* Sul telefono la sola freccia: "Ordini" scritto per esteso andava a
+            capo e si mangiava la riga, dove servono numero, ora e stato. */}
+        <button className="btn ghost small" aria-label="Torna agli ordini" onClick={handleExit}>
+          {telefono ? '←' : '← Ordini'}
+        </button>
         <strong className="posd-num">{headTitle}</strong>
         {/* QUANDO è stato aperto il conto, accanto al numero: sapere che quel
             tavolo è lì dalle nove cambia come lo si tratta. */}
