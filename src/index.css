@@ -60,6 +60,10 @@ a {
      serve a chi si "appiccica" scorrendo — le categorie a sinistra — per
      fermarsi SOTTO l'intestazione invece che finirci dietro. */
   --barra-alta: 68px;
+  /* Quanto occupa la barra quando la si apre a tutto schermo: la striscia
+     della linguetta più la barra stessa. Serve a far scendere il contenuto
+     invece di lasciarglielo coprire. */
+  --barra-aperta: 78px;
 }
 @media (display-mode: standalone) {
   :root {
@@ -219,6 +223,22 @@ body.schermo-intero {
   }
 }
 
+/* Anteprima "vista cliente": si è al lavoro ma si sta guardando il menù
+   con gli occhi di chi ordina. Una riga sola, per ricordarlo e tornare. */
+.anteprima-cliente {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 8px 0;
+  padding: 8px 12px;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
 /* SECONDA RIGA lato cliente (telefono): menù, i miei ordini, accedi. Sta
    sotto la barra e non dentro, perché in barra sarebbero tasti in mezzo al
    nome del locale; e non dietro un menu, perché "Accedi" dietro un menu
@@ -297,6 +317,20 @@ body.schermo-intero {
      avrebbe spinto giù niente. */
   body.fullbleed .queue-board {
     padding-top: 20px;
+  }
+
+  /* BARRA APERTA: fa spazio, non copre. A tutto schermo la barra compare
+     come pannello fisso sopra la pagina — comodo su un tablet, dove sotto
+     c'è margine — ma sul telefono si mangiava la testata della schermata:
+     nella coda il riepilogo e il "+", nel conto numero, ora e stato. Ora il
+     contenuto scende della sua altezza, e il conto (che è alto quanto lo
+     schermo) si accorcia della stessa misura invece di sbordare. */
+  body.fullbleed.topbar-open .queue-board {
+    padding-top: var(--barra-aperta);
+  }
+  body.fullbleed.topbar-open .posd-root {
+    height: calc(100dvh / var(--zoom, 1) - var(--barra-aperta));
+    margin-top: var(--barra-aperta);
   }
   .topbar {
     gap: 8px;

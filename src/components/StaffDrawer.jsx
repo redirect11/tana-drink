@@ -91,7 +91,10 @@ export default function StaffDrawer({ role, active = null, onSelect = null }) {
     setOpen(false)
     // "Vista cliente" non è una sezione del gestionale: è il menù come lo
     // vede chi ordina. Era un tasto in barra, ma la navigazione sta qui.
-    if (id === 'vista-cliente') return navigate('/menu')
+    // ?vista=cliente: il menù COM'È PER CHI ORDINA. Senza, un membro del
+    // personale che apre /menu trova il proprio strumento per gli ordini
+    // manuali — utile, ma non è la vista cliente.
+    if (id === 'vista-cliente') return navigate('/menu?vista=cliente')
     if (onSelect) onSelect(id)
     else navigate(id === 'servizio' ? '/bar' : `/bar?tab=${id}`)
   }
