@@ -51,7 +51,7 @@ import {
 import { toastSuccess, toastError } from '../lib/toast.js'
 import { printComanda, printScontrino } from '../lib/printer.js'
 import PosProductPicker from './PosProductPicker.jsx'
-import { IconPrinter, IconReceipt, IconCard, IconRefresh, IconX, IconCheck, IconClose, IconGruppo, IconPersona } from './Icons.jsx'
+import { IconPrinter, IconReceipt, IconCard, IconRefresh, IconX, IconCheck, IconClose, IconGruppo, IconPersona, IconTag } from './Icons.jsx'
 import CustomDrinkForm from './CustomDrinkForm.jsx'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import PaymentScreen from './PaymentScreen.jsx'
@@ -1193,12 +1193,16 @@ export default function OrderPosDetail({ order: orderProp = null }) {
           )
         })()}
         {!isNew && order.placed_by && (
-          <span className="muted small">✍️ {placedByName(order.placed_by)}</span>
+          <span className="muted small posd-autore">✍️ {placedByName(order.placed_by)}</span>
         )}
         {/* Progressivo assoluto di sistema: id interno che non riparte mai
             (il #N in grande invece riparte ogni giornata). */}
         {!isNew && order.serial != null && (
-          <span className="muted" style={{ fontSize: '0.7rem', opacity: 0.6 }} title="Progressivo interno dell'ordine">
+          <span
+            className="muted posd-serial"
+            style={{ fontSize: '0.7rem', opacity: 0.6 }}
+            title="Progressivo interno dell'ordine"
+          >
             id {String(order.serial).padStart(5, '0')}
           </span>
         )}
@@ -1351,17 +1355,16 @@ export default function OrderPosDetail({ order: orderProp = null }) {
             {/* Azioni FISSE in testata, una sotto l'altra: prima Dati conto,
                 poi Prodotto libero. Con la lista lunga scorrevano via insieme
                 al nome del conto. */}
-            <div style={{ margin: '8px 0 6px' }}>
+            <div className="posd-azioni-fisse">
               <button className="btn ghost small block" onClick={() => setShowInfo(true)}>
                 👤 Dati conto
               </button>
               <button
                 className="btn ghost small block"
-                style={{ marginTop: 6 }}
                 disabled={closed}
                 onClick={() => setShowCustom(true)}
               >
-                🏷 Prodotto libero
+                <IconTag /> Prodotto libero
               </button>
             </div>
           </div>
