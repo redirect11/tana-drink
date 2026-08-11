@@ -107,8 +107,7 @@ a {
   font-size: 1.05rem;
 }
 
-/* Titolo su una riga sola: se non c'è spazio si tronca, e sotto certe
-   larghezze sparisce del tutto lasciando solo il logo (header compatto). */
+/* Titolo su una riga sola: se non c'è spazio si tronca. */
 .brand span {
   font-size: 0.95rem;
   line-height: 1.2;
@@ -118,12 +117,18 @@ a {
   min-width: 0;
 }
 
-/* Il nome del locale resta finché c'è spazio: adesso in barra ci sono
-   solo ☰, logo, campanella e ⋮, quindi ce n'è. Sparisce solo sugli
-   schermi davvero stretti, dove toglierebbe posto ai tasti. */
-@media (max-width: 420px) {
-  .brand span {
+/* Il nome per esteso finché ci sta; sotto, la versione corta. Il logo da
+   solo, appiccicato al bordo con mezzo schermo vuoto accanto, sembrava un
+   errore di caricamento. */
+.brand-corto {
+  display: none;
+}
+@media (max-width: 560px) {
+  .brand-nome {
     display: none;
+  }
+  .brand-corto {
+    display: inline;
   }
 }
 
@@ -211,8 +216,13 @@ a {
     min-width: 0;
   }
   .topbar .brand img {
-    width: 34px;
-    height: 34px;
+    width: 36px;
+    height: 36px;
+  }
+  /* Un po' d'aria dal bordo: il logo incollato allo spigolo sembra tagliato. */
+  .topbar .brand {
+    padding-left: 4px;
+    gap: 8px;
   }
   .topbar-hello-testo,
   .topbar-io-nome,

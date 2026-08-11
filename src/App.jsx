@@ -209,7 +209,11 @@ export default function App() {
           style={{ textDecoration: 'none', color: 'inherit' }}
         >
           <img src={`${import.meta.env.BASE_URL}logo.png`} alt="" />
-          <span>La Tana del Coniglio</span>
+          {/* Sul telefono il nome per esteso non ci sta e sparire del tutto
+              lascia il logo solo, appiccicato al bordo, con mezzo schermo
+              vuoto: resta la versione corta. */}
+          <span className="brand-nome">La Tana del Coniglio</span>
+          <span className="brand-corto">La Tana</span>
         </Link>
         <nav className="row">
           <StatusBell />
