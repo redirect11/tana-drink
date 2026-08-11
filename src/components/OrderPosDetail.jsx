@@ -1293,6 +1293,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
     // L'altezza si divide per lo zoom: dentro un contenitore scalato 100dvh
     // varrebbe più dello schermo e la schermata sborderebbe (vedi ZoomControl).
     <div
+      className="posd-root"
       style={{
         display: 'flex',
         flexDirection: 'column',

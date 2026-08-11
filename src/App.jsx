@@ -344,7 +344,7 @@ export default function App() {
             icon: '👀',
             label: 'Vista cliente',
             hint: 'Il menù come lo vede chi ordina',
-            onClick: () => navigate('/menu'),
+            onClick: () => navigate('/menu?vista=cliente'),
           },
           isSala(staffRole) && {
             id: 'servizio',

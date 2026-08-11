@@ -48,25 +48,25 @@ export default function MenuPage() {
   const [readyOrders, setReadyOrders] = useState([])
   // Staff loggato (bartender/cameriera): gli ordini fatti da qui vengono
   // marcati come manuali con chi li ha inseriti.
-  const [staff, setStaff] = useState(null) // { email, name, role } | null
+  const [staffVero, setStaffVero] = useState(null) // { email, name, role } | null
   // Account cliente (null per anonimi e staff): ordini legati al profilo.
   const { user: customer, profile: customerProfile } = useCustomer()
 
   useEffect(() => {
     if (!isFirebaseConfigured) return
     return onAuthStateChanged(auth, async (u) => {
-      if (!u) return setStaff(null)
+      if (!u) return setStaffVero(null)
       try {
         const token = await u.getIdTokenResult()
         const role = token.claims.role
         // Solo bartender/staff: i clienti registrati ordinano come clienti.
-        setStaff(
+        setStaffVero(
           isPersonale(role)
             ? { email: u.email, name: u.displayName || null, role }
             : null
         )
       } catch {
-        setStaff(null)
+        setStaffVero(null)
       }
     })
   }, [])
@@ -85,6 +85,14 @@ export default function MenuPage() {
   }
   const [params] = useSearchParams()
   const navigate = useNavigate()
+  // ANTEPRIMA CLIENTE. Aprendo il menù, chi è collegato come personale
+  // trova il suo strumento: catalogo a due colonne, ricerca, gruppi,
+  // niente vetrina — serve al cameriere che prende l'ordine al tavolo.
+  // "Vista cliente" invece deve mostrare il menù COM'È PER CHI ORDINA: non
+  // una schermata a parte, la stessa della home, guardata senza i panni
+  // del personale. Con ?vista=cliente si finge di essere un cliente.
+  const anteprimaCliente = params.get('vista') === 'cliente'
+  const staff = anteprimaCliente ? null : staffVero
   const cart = useCart()
 
   // Il QR può contenere ?tavolo=12 per identificare il tavolo.
@@ -307,6 +315,16 @@ export default function MenuPage() {
   return (
     <div className={staff ? 'bar-content menu-staff' : ''}>
       {staff && <StaffDrawer role={staff.role} active="ordine" />}
+      {/* In anteprima si vede il menù del cliente, ma si è pur sempre al
+          lavoro: una riga per ricordarlo e per tornare indietro. */}
+      {anteprimaCliente && staffVero && (
+        <div className="anteprima-cliente">
+          <span>👀 Stai guardando il menù come lo vede il cliente.</span>
+          <Link className="btn ghost small" to="/bar">
+            ← Torna al gestionale
+          </Link>
+        </div>
+      )}
       {/* Hero d'intestazione solo per i clienti: allo staff serve spazio. */}
       {!staff && (
         <div className="hero">
