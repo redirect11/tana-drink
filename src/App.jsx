@@ -22,6 +22,7 @@ import { useTelefono } from './lib/useTelefono.js'
 import { useSchermoIntero } from './lib/useSchermoIntero.js'
 import { logoutStaff } from './lib/logout.js'
 import { resolveThemeVars, applyTheme } from './lib/themes.js'
+import { applicaNomeApp } from './lib/nomeApp.js'
 import { envLabel } from './dev/devActions.js'
 import { openCookiePreferences } from './lib/cookieConsent.js'
 import { subscribeUpdateAvailable } from './lib/appVersion.js'
@@ -175,6 +176,14 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [staffRole])
 
+  // IL NOME DELL'APP SEGUE CHI LA USA: «La Tana del Coniglio» per il
+  // cliente, col suffisso del ruolo per chi lavora. Vale per la linguetta
+  // del browser e per il nome che il telefono propone all'installazione
+  // (vedi src/lib/nomeApp.js: il nome dell'icona si congela lì).
+  useEffect(() => {
+    applicaNomeApp(staffRole)
+  }, [staffRole])
+
   // Tema: SEGUE CHI GUARDA, non l'indirizzo. Prima era un elenco di
   // percorsi, e bastava che ne mancasse uno — il profilo staff, "i miei
   // ordini", l'accesso — perché a chi sta lavorando arrivassero i colori
@@ -208,6 +217,11 @@ export default function App() {
   // quando ci sta lavorando qualcuno dello staff. Altrove — e nell'anteprima
   // vista cliente, dove il menù dello staff non c'entra — lo monta l'app,
   // perché il ☰ non resti a premere nel vuoto.
+  // Dentro il gestionale, ogni sezione che non sia la coda ha il suo
+  // «indietro»: la coda è il punto di partenza e da lì non si torna da
+  // nessuna parte.
+  const tabGestionale = new URLSearchParams(location.search).get('tab') || 'coda'
+  const indietroQui = onBackoffice && !!staffRole && tabGestionale !== 'coda'
   const drawerDellaPagina =
     (onBackoffice && !!staffRole) ||
     (location.pathname.startsWith('/menu') && !!staffRole && !anteprimaCliente)
@@ -271,6 +285,24 @@ export default function App() {
             onClick={() => window.dispatchEvent(new Event('tana:toggle-drawer'))}
           >
             ☰
+          </button>
+        )}
+        {/* INDIETRO, NELLA BARRA. Nelle sezioni del gestionale stava dentro
+            la pagina e si mangiava una riga in cima al contenuto — proprio
+            dove le Impostazioni hanno bisogno di tutta l'altezza per stare
+            in uno schermo. Qui sta fra il ☰ e il marchio, sempre nello
+            stesso posto, e non ruba niente a quello che si sta guardando. */}
+        {indietroQui && (
+          <button
+            className="topbar-back"
+            aria-label="Indietro"
+            title="Indietro"
+            onClick={() => {
+              if (window.history.length > 1) navigate(-1)
+              else navigate('/bar')
+            }}
+          >
+            ←
           </button>
         )}
         {/* Nel gestionale il logo non porta al menu: resta sugli ordini. */}

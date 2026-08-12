@@ -1772,6 +1772,10 @@ body.fullbleed .bar-content {
   .board-title {
     display: flex;
     align-items: center;
+    /* Un dito d'aria fra il ☰ e «In servizio»: il ☰ flottante finisce a
+       12 + 42 = 54px, e col rientro di base (52px) la scritta gli stava
+       addosso. Sul telefono resta com'è: lì lo spazio è tutto. */
+    padding-left: 70px;
   }
   /* La ricerca è anche una `.menu-search`, e quella regola — più in basso
      nel file, stesso peso — le rimetteva i 10px di margine sotto che
@@ -1801,7 +1805,8 @@ body.fullbleed .bar-content {
 
 /* ☰ del menu laterale dentro la topbar: primo elemento a sinistra, prima del
    logo, così il menu è raggiungibile ovunque senza tasti flottanti. */
-.topbar-burger {
+.topbar-burger,
+.topbar-back {
   flex-shrink: 0;
   width: 44px;
   height: 44px;
@@ -1813,12 +1818,18 @@ body.fullbleed .bar-content {
   font-size: 1.15rem;
   cursor: pointer;
 }
+/* «Indietro» delle sezioni del gestionale: sta nella barra, subito dopo il
+   ☰, e non dentro la pagina — lì si mangiava la prima riga di contenuto. */
+.topbar-back {
+  margin-left: -6px;
+}
 
 /* Dispositivi TOUCH (iPad al banco): i tasti che si usano di continuo — menu,
    voci del menu laterale, azioni della topbar — devono essere presi al volo,
    anche col monitor piccolo. Su desktop col mouse restano compatti. */
 @media (pointer: coarse) {
-  .topbar-burger {
+  .topbar-burger,
+  .topbar-back {
     width: 50px;
     height: 50px;
     font-size: 1.3rem;
@@ -1926,10 +1937,6 @@ body.fullbleed .bar-content {
 }
 
 /* Indietro nelle sezioni del gestionale: piccolo, in cima al contenuto. */
-.bar-back {
-  margin-bottom: 8px;
-}
-
 /* Riga di una serata nello storico chiusure di cassa. */
 .cash-sess-head {
   display: flex;
@@ -4277,6 +4284,44 @@ body.fullbleed,
   max-height: calc(100dvh / var(--zoom, 1) - var(--safe-top) - var(--barra-alta) - 24px);
   overflow-y: auto;
 }
+/* TUTTO DENTRO LO SCHERMO (impostazioni). Le sezioni sono più di venti: la
+   barra era più alta della finestra, e per arrivare all'ultima voce si
+   scorreva la PAGINA — testata compresa, che intanto scorreva via. Qui la
+   coppia barra+contenuto è alta quanto lo schermo meno la testata, e a
+   scorrere sono i due pannelli, ognuno per conto suo. */
+.cat-layout.cat-pieno {
+  height: calc(100dvh / var(--zoom, 1) - var(--safe-top) - var(--barra-alta) - 18px);
+  align-items: stretch;
+}
+.cat-layout.cat-pieno .cat-rail {
+  position: static;
+  max-height: none;
+  height: 100%;
+}
+.cat-layout.cat-pieno .cat-content {
+  height: 100%;
+  overflow-y: auto;
+  /* La barra di scorrimento non deve stare addosso al testo. */
+  padding-right: 4px;
+}
+/* A tutto schermo la testata non c'è: quello spazio torna al contenuto. */
+body.fullbleed .cat-layout.cat-pieno {
+  height: calc(100dvh / var(--zoom, 1) - var(--safe-top) - 18px);
+}
+/* Sul telefono la barra passa in orizzontale sopra al contenuto: un'altezza
+   fissa lo strozzerebbe in una finestrella. Lì si scorre come sempre. */
+@media (max-width: 700px) {
+  .cat-layout.cat-pieno,
+  body.fullbleed .cat-layout.cat-pieno {
+    height: auto;
+  }
+  .cat-layout.cat-pieno .cat-rail,
+  .cat-layout.cat-pieno .cat-content {
+    height: auto;
+    overflow-y: visible;
+  }
+}
+
 /* A tutto schermo la barra in alto non c'è: le categorie tornano in cima. */
 body.fullbleed .cat-rail {
   top: calc(var(--safe-top) + 8px);
@@ -4734,6 +4779,17 @@ body.fullbleed .cat-rail {
 body.drawer-open .zoom-control {
   z-index: 100;
   opacity: 0.3;
+}
+/* E lo stesso con QUALUNQUE pannello aperto: il foglio dei ⋯, le conferme,
+   il riepilogo. Sono tutti `.overlay` (z200) e lo zoom stava a z400, quindi
+   galleggiava sopra le ultime voci del pannello — e si toccava lo zoom
+   invece della voce, con l'aggravante che il pannello dei ⋯ sale proprio da
+   quell'angolo. Una regola sola per tutti, invece di ricordarsi una classe
+   ogni volta che nasce un pannello nuovo. */
+body:has(.overlay) .zoom-control {
+  z-index: 100;
+  opacity: 0.3;
+  pointer-events: none;
 }
 .zoom-control button {
   min-width: 30px;

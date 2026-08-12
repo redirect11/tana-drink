@@ -1051,7 +1051,12 @@ requirements:
     description: >
       Le impostazioni sono ventuno riquadri: sono voci di una barra laterale e se
       ne apre una alla volta, con la scelta ricordata. Erano una pagina lunghissima
-      da scorrere a occhio.
+      da scorrere a occhio. Da tablet in su la schermata sta TUTTA dentro il
+      viewport: a scorrere sono i due pannelli — l'elenco delle sezioni e il
+      contenuto — ognuno per conto suo, e non la pagina con dentro la testata,
+      che scorrendo via si portava dietro l'elenco proprio mentre lo si usava.
+      Sul telefono, dove l'elenco passa in orizzontale sopra al contenuto, si
+      scorre come sempre.
     status: implemented
     generate_issue: false
     labels: [ux, impostazioni]
@@ -1076,7 +1081,10 @@ requirements:
     description: >
       Nella PWA a tutto schermo il browser non offre lo zoom: l'app ha il suo, che
       scala la pagina senza deformarla. Sul telefono non flotta sull'angolo (dove
-      finiva sopra i tasti) ma sta nella testata del conto.
+      finiva sopra i tasti) ma sta nella testata del conto. Con un pannello aperto
+      — il foglio dei ⋯, una conferma, il menu laterale — passa dietro e non si
+      lascia toccare: stando in basso a sinistra finiva sopra le ultime voci, e si
+      premeva lo zoom al posto della voce.
     status: implemented
     generate_issue: false
     labels: [ux]
@@ -1101,7 +1109,10 @@ requirements:
       destra, chi è collegato — e il menu laterale risponde a tutti: allo staff
       il gestionale, a chi ordina il suo (menù, i propri ordini, accesso e
       profilo). Fanno eccezione le due schermate in cui si compone un conto,
-      dove non c'è menu e si esce con «← Ordini». Anche i colori seguono il
+      dove non c'è menu e si esce con «← Ordini». Nelle sezioni del gestionale
+      l'«indietro» sta nella barra, fra il ☰ e il marchio: dentro la pagina si
+      mangiava la prima riga di contenuto. Nella coda non c'è, perché è la
+      schermata di partenza. Anche i colori seguono il
       ruolo: chi lavora vede il tema del gestionale ovunque, profilo e accesso
       compresi; chi ordina vede il suo, e così l'anteprima «vista cliente».
       Sempre per la stessa ragione, chi è dello staff non passa dalla vetrina:
@@ -1176,6 +1187,25 @@ requirements:
     generate_issue: false
     labels: [ux, coda]
     test_cases: [tests/unit/coda.test.js, tests/component/SettingsTab.test.jsx]
+
+  - id: REQ-UI-010
+    title: "L'app si chiama come il locale, e dice a chi appartiene"
+    area: "src/lib/nomeApp.js, public/manifest.webmanifest"
+    description: >
+      L'app installata si chiama «La Tana del Coniglio», non con la sigla del
+      progetto. A chi lavora il nome porta il suffisso del ruolo — « - admin»,
+      « - bartender», « - staff» — così sul telefono l'icona dice di chi è, e
+      chi tiene due profili non li confonde; il cliente, e chi non ha fatto
+      accesso, vede il nome nudo. Il suffisso segue il ruolo di chi è collegato
+      e vale per la linguetta del browser e per il nome proposto
+      all'installazione: il telefono lo congela in quel momento, quindi l'app va
+      installata da collegati col ruolo che serve. Il manifest riscritto porta
+      avvio, ambito e icone per esteso, altrimenti l'app installata partirebbe
+      da nessuna parte.
+    status: implemented
+    generate_issue: false
+    labels: [ux, pwa]
+    test_cases: [tests/unit/nomeApp.test.js]
 
   # ══════════════════════════════════════════════════════════════════════
 

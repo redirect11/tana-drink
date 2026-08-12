@@ -13,9 +13,14 @@
 //          opzionali: col colore la voce porta il pallino della categoria,
 //          esattamente come nel POS, così la stessa categoria si riconosce
 //          allo stesso modo ovunque la si incontri.
-export default function CategoryRail({ items, selected, onSelect, children }) {
+//   pieno: la coppia barra+contenuto sta TUTTA nello schermo e non fa
+//          scorrere la pagina — scorrono i due pannelli, ognuno per conto
+//          suo. Serve dove le voci sono tante (le impostazioni): per
+//          arrivare all'ultima si scorreva la pagina intera, testata
+//          compresa, e la barra spariva proprio mentre la si usava.
+export default function CategoryRail({ items, selected, onSelect, children, pieno = false }) {
   return (
-    <div className="cat-layout">
+    <div className={`cat-layout${pieno ? ' cat-pieno' : ''}`}>
       <aside className="cat-rail">
         {items.map((it) => (
           <button

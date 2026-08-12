@@ -9,6 +9,28 @@ una funzione, il terzo per le correzioni.
 
 ---
 
+## Non ancora rilasciata — 1.4.0
+
+### Al banco
+
+- **L'app si chiama «La Tana del Coniglio»**, non più con la sigla del
+  progetto — e a chi lavora l'icona dice di chi è: col suffisso del ruolo
+  (« - admin», « - bartender», « - staff»). Il cliente vede il nome nudo.
+  Il telefono fissa quel nome quando si installa l'app: per averlo giusto,
+  installala da collegato col ruolo che ti serve.
+- **Le Impostazioni stanno tutte in uno schermo**: l'elenco delle sezioni
+  scorre per conto suo invece di trascinarsi dietro tutta la pagina — e la
+  testata non scivola più via proprio mentre si cerca una voce.
+- **L'«indietro» è passato nella barra in alto**, fra il menu e il nome:
+  dentro la pagina si mangiava la prima riga di ogni sezione.
+- **Lo zoom non galleggia più sopra i pannelli aperti** (i ⋯, le conferme):
+  stando in basso a sinistra finiva sopra le ultime voci e si toccava lui
+  al posto della voce.
+- Nella coda, da tablet in su, **«In servizio» è staccata dal tasto menu**:
+  prima gli stava addosso.
+
+---
+
 ## 1.3.0 — 12 agosto 2026
 
 ### Al banco

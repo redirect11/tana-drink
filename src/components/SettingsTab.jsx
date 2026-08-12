@@ -817,6 +817,7 @@ export default function SettingsTab({ role = null }) {
         items={sezioni.map((s) => ({ key: s.id, label: s.label, icon: s.icona }))}
         selected={attiva.id}
         onSelect={scegliSezione}
+        pieno
       >
         {attiva.nodo}
       </CategoryRail>
