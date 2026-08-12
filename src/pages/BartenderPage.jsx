@@ -1231,24 +1231,6 @@ function OrderQueue() {
         <div className="board-head">
           <div className="board-title">
             <strong>In servizio</strong>
-            {/* I conteggi vanno a capo sul telefono (board-conti): tutto su
-                una riga sola, accanto al titolo, si spezzava a metà parola
-                e finiva sotto il ☰. */}
-            <span className="muted board-conti">
-              <span className="board-conti-sep"> · </span>
-              {recap.aperti} apert{recap.aperti === 1 ? 'o' : 'i'} · {recap.chiusi} chius
-              {recap.chiusi === 1 ? 'o' : 'i'} · {formatPrice(recap.total)}
-            </span>
-            {(legenda.staff.length > 0 || legenda.hasClient) && (
-              <div className="order-legend">
-                {legenda.staff.map(([L, name]) => (
-                  <span key={L}><span className="order-by staff">{L}</span> {name}</span>
-                ))}
-                {legenda.hasClient && (
-                  <span><span className="order-by client">🌐</span> Cliente</span>
-                )}
-              </div>
-            )}
           </div>
           <input
             type="search"
@@ -1278,6 +1260,27 @@ function OrderQueue() {
                 aria-label="Nuovo ordine (apri prima la cassa)"
                 title="Apri la cassa per battere ordini"
               />
+            )}
+          </div>
+          {/* SECONDA RIGA: conteggi e legenda degli autori. Stavano dentro
+              il titolo, e il titolo diventava alto due o tre righe: la
+              testata li centrava tutti insieme (ricerca, ⋯, +) su
+              quell'altezza variabile, e sul tablet non era allineato più
+              niente. Qui sono una riga a sé, sotto e a filo a sinistra. */}
+          <div className="board-sotto">
+            <span className="muted board-conti">
+              {recap.aperti} apert{recap.aperti === 1 ? 'o' : 'i'} · {recap.chiusi} chius
+              {recap.chiusi === 1 ? 'o' : 'i'} · {formatPrice(recap.total)}
+            </span>
+            {(legenda.staff.length > 0 || legenda.hasClient) && (
+              <div className="order-legend">
+                {legenda.staff.map(([L, name]) => (
+                  <span key={L}><span className="order-by staff">{L}</span> {name}</span>
+                ))}
+                {legenda.hasClient && (
+                  <span><span className="order-by client">🌐</span> Cliente</span>
+                )}
+              </div>
             )}
           </div>
         </div>
