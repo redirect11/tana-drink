@@ -16,6 +16,8 @@ import { savePrinterSettings } from './lib/printer.js'
 import { dismissKeyboard } from './lib/keyboard.js'
 import StatusBell from './components/StatusBell.jsx'
 import ActionSheet from './components/ActionSheet.jsx'
+import StaffDrawer from './components/StaffDrawer.jsx'
+import ClientDrawer from './components/ClientDrawer.jsx'
 import { useTelefono } from './lib/useTelefono.js'
 import { logoutStaff } from './lib/logout.js'
 import { resolveThemeVars, applyTheme } from './lib/themes.js'
@@ -147,27 +149,42 @@ export default function App() {
     })
   }, [])
 
-  // Tema: le schermate del gestionale (/bar, POS cassa, dettaglio ordine e
-  // menù usato dallo staff) seguono il tema staff; il resto quello cliente.
-  // Il menù è una pagina cliente, ma lo staff ci passa per inserire ordini
-  // manuali (la "vista cliente"): anche lì sta lavorando al bancone, quindi
-  // deve vedere il tema del gestionale. Gli ordini per gruppo passano
-  // invece dal POS (/pos?group=…), che è la schermata di lavoro.
-  const staffSurface =
-    onBackoffice ||
-    location.pathname.startsWith('/pos') ||
-    (!!staffRole && location.pathname.startsWith('/ordine')) ||
-    (!!staffRole && location.pathname.startsWith('/menu'))
+  // Tema: SEGUE CHI GUARDA, non l'indirizzo. Prima era un elenco di
+  // percorsi, e bastava che ne mancasse uno — il profilo staff, "i miei
+  // ordini", l'accesso — perché a chi sta lavorando arrivassero i colori
+  // pensati per il cliente, in mezzo alla serata.
+  // Unica eccezione, l'ANTEPRIMA: «Vista cliente» (/menu?vista=cliente)
+  // serve a vedere il menù com'è per chi ordina, e i colori sono parte di
+  // com'è. Il menù usato dallo staff per gli ordini manuali (/menu senza
+  // quel parametro) resta invece sul tema del gestionale: lì si lavora.
+  const anteprimaCliente =
+    location.pathname.startsWith('/menu') &&
+    new URLSearchParams(location.search).get('vista') === 'cliente'
+  const staffSurface = !!staffRole && !anteprimaCliente
   useEffect(() => {
     const scope = staffSurface ? settings.theme_staff : settings.theme_client
     applyTheme(resolveThemeVars(scope))
   }, [settings, staffSurface])
 
 
-  // Il ☰ apre lo StaffDrawer, che è montato solo nel gestionale e nel menù:
-  // altrove (dettaglio ordine, POS) il tasto non avrebbe nessuno che risponde.
-  const drawerHere =
-    location.pathname.startsWith('/bar') || location.pathname.startsWith('/menu')
+  // IL ☰ C'È OVUNQUE, per tutti: chi è dello staff apre il gestionale, il
+  // cliente il suo (menù, i propri ordini, accesso). Fanno eccezione le due
+  // schermate in cui si compone un conto — creazione (/pos) e modifica
+  // (/ordine/:id vista da chi è staff): lì si esce con «← Ordini», e un
+  // menu che porta altrove in mezzo a un ordine aperto è solo un modo per
+  // perderlo.
+  const suOrdinePos =
+    location.pathname.startsWith('/pos') ||
+    (!!staffRole && location.pathname.startsWith('/ordine'))
+  const menuQui = !suOrdinePos
+  // Le due pagine che hanno un menu "loro" (con la sezione attiva
+  // evidenziata) se lo montano da sé: il gestionale sempre, il menù solo
+  // quando ci sta lavorando qualcuno dello staff. Altrove — e nell'anteprima
+  // vista cliente, dove il menù dello staff non c'entra — lo monta l'app,
+  // perché il ☰ non resti a premere nel vuoto.
+  const drawerDellaPagina =
+    (onBackoffice && !!staffRole) ||
+    (location.pathname.startsWith('/menu') && !!staffRole && !anteprimaCliente)
 
   return (
     <div className="app">
@@ -204,11 +221,23 @@ export default function App() {
       <Toasts />
       {/* Zoom della pagina: nella PWA a tutto schermo il browser non lo offre */}
       <ZoomControl />
+      {/* IL MENU CHE RISPONDE AL ☰. Le pagine che hanno una sezione attiva da
+          evidenziare (gestionale, menù) montano il proprio; altrove lo monta
+          l'app, perché il tasto in barra non resti a premere nel vuoto.
+          Allo staff il gestionale, a chi ordina il suo. */}
+      {menuQui && !drawerDellaPagina && (
+        staffRole && !anteprimaCliente ? (
+          <StaffDrawer role={staffRole} />
+        ) : (
+          <ClientDrawer user={user} profile={profile} accountsOn={accountsOn} />
+        )
+      )}
       <header className={`topbar${onBackoffice || staffRole ? ' backoffice' : ''}`}>
         {/* Menu laterale A SCOMPARSA ovunque: si apre da qui (il tasto
-            flottante resta solo nelle schermate a tutto schermo, dove la
-            topbar è nascosta). */}
-        {staffRole && drawerHere && (
+            flottante `.bar-burger` resta solo nelle schermate a tutto
+            schermo, dove la topbar è nascosta — lo accende il CSS, non
+            questo). */}
+        {menuQui && (
           <button
             className="topbar-burger"
             aria-label="Menu"
@@ -247,43 +276,28 @@ export default function App() {
             >
               ⋮
             </button>
-          ) : onBackoffice ? (
-            /* CHI È COLLEGATO, e basta. "POS" e "Vista cliente" erano due
-               tasti di navigazione in una barra che non è un menu: stanno
-               nel menu laterale, dov'è tutto il resto. Del saluto resta il
-               nome — l'iniziale nel quadratino è la stessa che marca gli
-               ordini aperti da questa persona, così si riconosce a colpo
-               d'occhio chi sta battendo. */
-            staffRole && (
-              <Link className="topbar-io" to="/profilo-staff" title="Il mio profilo">
-                <span className="order-by staff">{(staffName || '?')[0].toUpperCase()}</span>
-                <span className="topbar-io-nome">{staffName}</span>
-              </Link>
-            )
-          ) : isSala(staffRole) ? (
-            // Staff nel menu (ordine manuale): solo il ritorno al servizio.
-            // Saluto ed Esci stanno nel gestionale e nel drawer.
-            <Link className="btn small" to="/bar">
-              🫱 Torna al servizio
+          ) : staffRole ? (
+            /* CHI È COLLEGATO, e basta — su OGNI schermata, non solo nel
+               gestionale. Prima qui si alternavano tre cose diverse ("Ciao,
+               nome" + Esci, "Torna al servizio", il chip): passando dalla
+               coda al profilo la barra cambiava forma, e non si capiva più
+               dove si era. Quelle voci sono tutte nel menu laterale, che ora
+               si apre da ovunque. Del saluto resta il nome — l'iniziale nel
+               quadratino è la stessa che marca gli ordini aperti da questa
+               persona, così si riconosce a colpo d'occhio chi sta battendo. */
+            <Link className="topbar-io" to="/profilo-staff" title="Il mio profilo">
+              <span className="order-by staff">{(staffName || '?')[0].toUpperCase()}</span>
+              <span className="topbar-io-nome">{staffName}</span>
             </Link>
           ) : telefono ? null : (
             <>
               {/* "I miei ordini" ha senso solo per il CLIENTE. Per lo staff/
                   bartender gli ordini aperti sono nella coda (/bar), non sono
                   ordini "suoi": niente schermata cliente. */}
-              {hasOrders && !staffRole && (
+              {hasOrders && (
                 <Link className="btn ghost small" to="/ordini">I miei ordini</Link>
               )}
-              {staffRole ? (
-                <>
-                  <Link className="btn ghost small" to="/bar">
-                    🍸 Ciao, {staffName}
-                  </Link>
-                  <button className="btn ghost small" onClick={() => logoutStaff()}>
-                    Esci
-                  </button>
-                </>
-              ) : user ? (
+              {user ? (
                 <Link className="btn ghost small" to="/profilo">
                   👤 Ciao, {profile?.nome || user.displayName?.split(' ')[0] || 'Profilo'}
                 </Link>

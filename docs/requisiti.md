@@ -4,12 +4,12 @@
 > `node scripts/requisiti.mjs --documento`. Non si modifica a mano:
 > si modifica il file dei requisiti.
 
-Alla data di generazione: **91 requisiti**.
+Alla data di generazione: **93 requisiti**.
 
 | | Quanti | Cosa vuol dire |
 |---|---|---|
-| ✅ | 72 | fatto e coperto dai test |
-| ⚠️  | 14 | fatto ma nessun test lo verifica |
+| ✅ | 73 | fatto e coperto dai test |
+| ⚠️  | 15 | fatto ma nessun test lo verifica |
 | ⬜ | 5 | da fare |
 
 Un requisito può essere dimostrato da più test; un test appartiene a
@@ -693,6 +693,22 @@ Si scelgono due temi distinti: uno per le schermate di lavoro e uno per la vista
 *Dove*: `src/lib/themes.js, src/components/ThemeSettings.jsx`
 
 *Lo dimostrano*: `tests/unit/themes.test.js`, `tests/unit/themes-dom.test.js`
+
+### ✅ REQ-UI-006 — L'app segue chi guarda, non l'indirizzo
+
+La barra in cima è la stessa su ogni schermata — menu, logo col nome e, a destra, chi è collegato — e il menu laterale risponde a tutti: allo staff il gestionale, a chi ordina il suo (menù, i propri ordini, accesso e profilo). Fanno eccezione le due schermate in cui si compone un conto, dove non c'è menu e si esce con «← Ordini». Anche i colori seguono il ruolo: chi lavora vede il tema del gestionale ovunque, profilo e accesso compresi; chi ordina vede il suo, e così l'anteprima «vista cliente».
+
+*Dove*: `src/App.jsx, src/components/ClientDrawer.jsx`
+
+*Lo dimostrano*: `tests/component/AppHeader.test.jsx`
+
+### ⚠️  REQ-UI-007 — La testata della coda sta su una riga sola
+
+Nella coda a griglia titolo, ricerca, ⋯ e ➕ stanno tutti sulla stessa linea, alti uguale; conteggi e legenda degli autori vanno sulla riga sotto. Prima i conteggi stavano dentro il titolo, il titolo cresceva in altezza e ognuno degli altri si centrava a un'altezza diversa.
+
+*Dove*: `src/pages/BartenderPage.jsx, src/index.css`
+
+*Nessun test lo verifica.*
 
 ## Intelligenza artificiale
 

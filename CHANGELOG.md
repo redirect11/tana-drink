@@ -43,6 +43,21 @@ una funzione, il terzo per le correzioni.
 
 ### Ovunque
 
+- **La barra in alto è la stessa su tutte le schermate** — menu, logo col
+  nome, e a destra chi è collegato — e **il menu laterale si apre da
+  ovunque**, anche per il cliente, col suo (menù, i propri ordini,
+  accesso e profilo). Restano senza menu le due schermate in cui si
+  compone un conto: da lì si esce con «← Ordini». Prima la barra cambiava
+  forma a ogni pagina e il menu spariva.
+- **I colori seguono chi guarda, non la pagina.** Chi lavora vede il tema
+  del gestionale dappertutto — profilo, lista ordini, accesso compresi —;
+  chi ordina vede il suo. Prima bastava un indirizzo dimenticato e in
+  mezzo alla serata arrivavano i colori del cliente.
+- Nelle impostazioni si cambia **il tema del gestionale e quello della
+  vista cliente**, e adesso c'è scritto quale si sta toccando.
+- Nella coda a griglia **titolo, ricerca, ⋯ e ➕ stanno sulla stessa
+  linea**; conteggi e legenda vanno sulla riga sotto. Su tablet e desktop
+  non era allineato niente.
 - **Impostazioni a schede**: ventuno riquadri diventano voci di una barra
   laterale, una alla volta.
 - **Backup e ripristino di tutto il database**, dall'app e da riga di
@@ -59,7 +74,7 @@ una funzione, il terzo per le correzioni.
   non si pubblica niente.
 - Si lavora su un ramo di rilascio, e i branch di lavorazione vanno da
   soli sull'ambiente di test.
-- **91 requisiti** scritti in `requirements/requirements.yaml`, legati ai
+- **93 requisiti** scritti in `requirements/requirements.yaml`, legati ai
   test da una prova che fallisce se qualcuno li lascia indietro.
 
 ---

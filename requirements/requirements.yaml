@@ -1064,6 +1064,35 @@ requirements:
     labels: [ux, temi]
     test_cases: [tests/unit/themes.test.js, tests/unit/themes-dom.test.js]
 
+  - id: REQ-UI-006
+    title: "L'app segue chi guarda, non l'indirizzo"
+    area: "src/App.jsx, src/components/ClientDrawer.jsx"
+    description: >
+      La barra in cima è la stessa su ogni schermata — menu, logo col nome e, a
+      destra, chi è collegato — e il menu laterale risponde a tutti: allo staff
+      il gestionale, a chi ordina il suo (menù, i propri ordini, accesso e
+      profilo). Fanno eccezione le due schermate in cui si compone un conto,
+      dove non c'è menu e si esce con «← Ordini». Anche i colori seguono il
+      ruolo: chi lavora vede il tema del gestionale ovunque, profilo e accesso
+      compresi; chi ordina vede il suo, e così l'anteprima «vista cliente».
+    status: implemented
+    generate_issue: false
+    labels: [ux, temi]
+    test_cases: [tests/component/AppHeader.test.jsx]
+
+  - id: REQ-UI-007
+    title: "La testata della coda sta su una riga sola"
+    area: "src/pages/BartenderPage.jsx, src/index.css"
+    description: >
+      Nella coda a griglia titolo, ricerca, ⋯ e ➕ stanno tutti sulla stessa
+      linea, alti uguale; conteggi e legenda degli autori vanno sulla riga
+      sotto. Prima i conteggi stavano dentro il titolo, il titolo cresceva in
+      altezza e ognuno degli altri si centrava a un'altezza diversa.
+    status: implemented
+    generate_issue: false
+    labels: [ux, coda]
+    test_cases: []
+
   # ══════════════════════════════════════════════════════════════════════
   #  DA FARE — pianificato, non ancora scritto
   # ══════════════════════════════════════════════════════════════════════

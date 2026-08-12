@@ -197,20 +197,12 @@ body.schermo-intero {
   text-overflow: ellipsis;
 }
 
-/* ── Testata della coda, sul telefono ────────────────────────────────
-   Il ☰ è un tasto FISSO nell'angolo: il testo che gli passava sotto non
-   si leggeva, e i conteggi (aperti, chiusi, totale) spezzati sulla stessa
-   riga del titolo finivano a metà parola. Qui: più aria dal ☰, titolo su
-   una riga e conteggi sulla successiva. */
-/* I conteggi (aperti, chiusi, totale) vanno SOTTO "In servizio": in riga
-   allungavano la testata e su schermo stretto si spezzavano a metà. Il "·"
-   che li separava dal titolo, a capo, sarebbe un trattino orfano. */
+/* I conteggi (aperti, chiusi, totale) stanno sulla seconda riga della
+   testata (.board-sotto): in riga col titolo allungavano la testata e su
+   schermo stretto si spezzavano a metà parola, finendo sotto il ☰. */
 .board-conti {
   display: block;
   margin-left: 0;
-}
-.board-conti-sep {
-  display: none;
 }
 
 @media (max-width: 700px) {
@@ -274,6 +266,7 @@ body.schermo-intero {
    in fila rubavano spazio alla ricerca, che invece si usa di continuo. */
 .board-pannelli {
   min-width: 44px;
+  height: 44px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1303,7 +1296,7 @@ a.order-mini {
      tutto il resto (topbar visibile)       → .topbar-burger
      topbar APERTA a tutto schermo          → .topbar-burger (questo sparisce)
      POS e dettaglio ordine                 → nessuno: si esce con "← Ordini"
-   Le regole qui sotto e in App.jsx (drawerHere) tengono fede a questa tabella. */
+   Le regole qui sotto e in App.jsx (menuQui) tengono fede a questa tabella. */
 .bar-burger {
   display: none; /* solo in fullbleed: altrove il ☰ sta nella topbar */
   position: fixed;
@@ -1562,22 +1555,38 @@ body.fullbleed .bar-content {
 
 /* Board ordini a griglia */
 .queue-board {
+  /* Altezza della riga 1 della testata: ci si allineano titolo, ricerca,
+     ⋯ e +. Ci si allinea anche il ☰, che però è FISSO (top 12px, alto
+     42) e non sta nel flusso: lo scosto qui sopra è calcolato perché i
+     due centri coincidano davvero, invece di somigliarsi a occhio. */
+  --coda-riga: 48px;
   min-height: calc(100vh / var(--zoom, 1));
-  padding: calc(10px + var(--safe-top)) 12px 24px;
+  padding: calc(var(--safe-top) + 12px + (42px - var(--coda-riga)) / 2) 12px 24px;
 }
 
+/* TESTATA DELLA CODA — due righe, non una.
+     riga 1: titolo · ricerca · ⋯ · +   tutti centrati sulla stessa linea
+     riga 2: conteggi e legenda degli autori, a filo a sinistra
+   Prima era una riga sola e i conteggi stavano DENTRO il titolo: il titolo
+   diventava alto due righe (tre con la legenda) e tutto il resto si
+   centrava su quell'altezza — che cambiava a seconda di quanti stavano in
+   servizio. Su tablet e desktop non era allineato niente, e il ☰, che è
+   fisso e non sta nel flusso, ci finiva vicino solo per caso. Adesso la
+   riga ha un'altezza sua (--coda-riga) e tutti la seguono. */
 .board-head {
   display: flex;
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
   margin-bottom: 10px;
-  /* lascia spazio al burger fisso in alto a sinistra */
-  padding-left: 52px;
-  min-height: 42px;
 }
 
 .board-title {
+  display: flex;
+  align-items: center;
+  min-height: var(--coda-riga);
+  /* lascia spazio al ☰ fisso in alto a sinistra */
+  padding-left: 52px;
   font-family: var(--serif);
   white-space: nowrap;
 }
@@ -1585,7 +1594,22 @@ body.fullbleed .bar-content {
 .board-search {
   flex: 1;
   min-width: 180px;
+  height: var(--coda-riga);
   margin: 0;
+}
+
+/* Seconda riga: va a capo da sé (prende tutta la larghezza) e parte dal
+   bordo — sotto il ☰, che finisce sopra la riga 1. */
+.board-sotto {
+  flex-basis: 100%;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 2px 14px;
+}
+/* Il distacco dal titolo lo dà ormai la riga: qui sarebbe uno scalino. */
+.board-sotto .order-legend {
+  margin-top: 0;
 }
 
 /* ── Testata della coda sul TELEFONO ──────────────────────────────────
@@ -1596,7 +1620,6 @@ body.fullbleed .bar-content {
    aggiunge peso.) */
 @media (max-width: 700px) {
   .board-head {
-    padding-left: 0;
     row-gap: 4px;
   }
   .board-title {
@@ -1642,6 +1665,11 @@ body.fullbleed .bar-content {
     flex-basis: 100%;
     font-size: 0.92rem;
   }
+  /* Ultima: senza un ordine esplicito, con gli altri spostati avanti,
+     conteggi e legenda risalirebbero in cima. */
+  .board-sotto {
+    order: 4;
+  }
   .board-add {
     width: 46px;
     height: 46px;
@@ -1661,13 +1689,15 @@ body.fullbleed .bar-content {
   }
 }
 
-/* «+» nuovo ordine, in alto a destra. Il «+» è disegnato con due barre
+/* «+» nuovo ordine, in fondo alla riga. Il «+» è disegnato con due barre
    (pseudo-elementi) così è centrato in modo matematicamente perfetto,
-   senza dipendere dalle metriche del glifo. */
+   senza dipendere dalle metriche del glifo.
+   Alto quanto la riga: a 60px era l'unico fuori scala e sporgeva sopra e
+   sotto tutti gli altri. */
 .board-add {
   position: relative;
-  width: 60px;
-  height: 60px;
+  width: var(--coda-riga, 48px);
+  height: var(--coda-riga, 48px);
   padding: 0;
   border-radius: 50%;
   flex-shrink: 0;
@@ -1686,13 +1716,13 @@ body.fullbleed .bar-content {
 }
 
 .board-add::before {
-  width: 26px;
+  width: 22px;
   height: 4px;
 }
 
 .board-add::after {
   width: 4px;
-  height: 26px;
+  height: 22px;
 }
 
 /* Avviso "cassa chiusa" in cima alla coda: senza cassa aperta non si battono
