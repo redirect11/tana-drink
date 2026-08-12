@@ -391,6 +391,25 @@ function minutesBetween(fromIso, toIso) {
   return Math.round((t2 - t1) / 6000) / 10
 }
 
+// Porta sotto gli occhi il conto acceso dalla ricerca.
+//
+// È un componente a sé, e non un `useEffect` dentro OrderQueue, perché lì
+// sopra c'è un return anticipato (la coda che sta ancora caricando): un
+// hook messo dopo quel punto verrebbe eseguito in certi render e in altri
+// no, e React conta sull'ordine sempre uguale. Il lint lo boccia, ed è
+// stato lui a prendermi con le mani nel sacco.
+function PortaInVista({ id }) {
+  useEffect(() => {
+    if (!id) return
+    // `block: 'center'` e non 'nearest': se il conto è appena fuori
+    // schermo, "nearest" lo incolla al bordo e sembra tagliato.
+    document
+      .getElementById(`ordine-${id}`)
+      ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [id])
+  return null
+}
+
 function OrderQueue() {
   const [ordersReady, setOrdersReady] = useState(false) // primo snapshot arrivato
   const [ordersRaw, setOrders] = useState([])
@@ -803,15 +822,6 @@ function OrderQueue() {
       : list
   const acceso = ricercaEvidenzia ? primoCorrispondente(ordiniComeSiVedono, q) : null
   const idAcceso = acceso?.id || null
-  // Portarlo sotto gli occhi. Si rifà a ogni lettera battuta: il conto
-  // acceso cambia mentre si scrive, e lo scorrimento lo segue.
-  useEffect(() => {
-    if (!idAcceso) return
-    const el = document.getElementById(`ordine-${idAcceso}`)
-    // `block: 'center'` e non 'nearest': se il conto è appena fuori
-    // schermo, "nearest" lo incolla al bordo e sembra tagliato.
-    el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-  }, [idAcceso])
   // Toccando un conto qualsiasi la ricerca si azzera: si è trovato quello
   // che si cercava, e lasciare il testo lì vorrebbe dire ritrovarsi la
   // coda accesa a metà al giro dopo.
@@ -1252,6 +1262,7 @@ function OrderQueue() {
 
   return (
     <div className={gridView ? 'queue-board' : undefined}>
+      <PortaInVista id={idAcceso} />
       {/* A tutto schermo la topbar non c'è, e con lei sparivano campanella,
           notifiche e stato della sincronizzazione: torna come tasto tondo in
           basso a destra (il CSS la mostra solo quando serve). */}
