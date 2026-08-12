@@ -474,7 +474,8 @@ describe('schermata Pagamento', () => {
     const user = userEvent.setup()
     mount(baseOrder())
     await user.click(screen.getByRole('button', { name: /Pagamento/ }))
-    expect(screen.getByRole('button', { name: /SumUp/ })).toBeDisabled()
+    // Spento a vedersi, ma toccabile: al tocco dice dove si configura.
+    expect(screen.getByRole('button', { name: /SumUp/ })).toHaveAttribute('aria-disabled', 'true')
   })
 
   it('conto chiuso (pagato): griglia e modifiche disabilitate', () => {

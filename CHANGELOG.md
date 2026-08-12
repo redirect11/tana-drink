@@ -100,6 +100,11 @@ una funzione, il terzo per le correzioni.
   primo conto che risponde e lo illumina — così si vede dov'è rispetto
   agli altri — e appena si tocca un conto la ricerca si azzera da sé.
 - In fondo al menu c'è **la versione** che si sta guardando.
+- Nel pagamento, **SumUp non porta più il sottotitolo** sotto al tasto: è
+  spento e basta, e toccandolo dice che il lettore si configura in
+  Impostazioni → Pagamenti (o che senza rete non può autorizzare).
+- La lista degli articoli, aprendo il pagamento, **parte dal fondo**: si
+  vede subito l'ultima riga battuta, non quelle di mezz'ora prima.
 - **Il tastierino dello sconto ha di nuovo le cifre in ordine** (7 8 9 /
   4 5 6 / 1 2 3): riusava la griglia del pagamento, larga quattro colonne
   per gli operatori, e i numeri finivano sparsi a caso.

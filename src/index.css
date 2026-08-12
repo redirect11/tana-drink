@@ -4119,6 +4119,11 @@ body.fullbleed,
   border-color: #3f7ce0;
   box-shadow: inset 0 0 0 1.5px #3f7ce0;
 }
+/* Metodo non disponibile: si vede che è spento, ma si può toccare — al
+   tocco dice perché. Un tasto `disabled` non lo direbbe mai. */
+.payscreen-method.spento {
+  opacity: 0.5;
+}
 @media (max-width: 799px) {
   .payscreen-body {
     flex-direction: column;

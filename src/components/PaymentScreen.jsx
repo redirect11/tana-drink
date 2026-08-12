@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   registerPayment,
   markOrderPaid,
@@ -151,6 +151,14 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   }, [order.id, paymentsCount])
 
   const remaining = useMemo(() => remainingItems(order), [order])
+  // LA LISTA PARTE DAL FONDO. Il conto lo si legge dall'ultima riga battuta:
+  // aprendo il pagamento con quindici righe si vedevano le prime — quelle di
+  // mezz'ora prima — e per controllare l'ultimo giro bisognava scorrere.
+  const listaRef = useRef(null)
+  useEffect(() => {
+    const el = listaRef.current
+    if (el) el.scrollTop = el.scrollHeight
+  }, [remaining.length])
   const paid = paidAmount(order)
   // Incassare non vuol dire aver consegnato: seguendo la preparazione il
   // conto resta aperto finché le comande non sono servite.
@@ -197,11 +205,12 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
       label: 'SumUp',
       emoji: '📟',
       disabled: !readerReady || senzaRete,
-      note: senzaRete
-        ? 'serve la rete: incassa e registra come carta'
-        : !readerReady
-          ? 'configura il lettore nelle Impostazioni'
-          : null,
+      // Niente sottotitolo sul tasto: il motivo si legge SOLO se lo si tocca.
+      // Scritto lì sotto stava sempre in mezzo, mangiava una riga a una
+      // schermata che ne ha poche, e chi incassa non lo leggeva comunque.
+      motivo: senzaRete
+        ? '📶 Senza rete il lettore SumUp non può autorizzare: incassa e registra come Carta di Credito.'
+        : 'Il lettore SumUp non è ancora configurato: si attiva in Impostazioni → Pagamenti.',
     },
   ]
   // Buono come SCONTO (non metodo di pagamento): si applica al totale e si
@@ -458,7 +467,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
       <div className="payscreen-body">
         {/* ── SINISTRA: articoli del conto (split) + riepilogo ── */}
         <div className="payscreen-items">
-          <div style={{ flex: 1, overflowY: 'auto', paddingRight: 4 }}>
+          <div ref={listaRef} style={{ flex: 1, overflowY: 'auto', paddingRight: 4 }}>
             {order.customer_name && (
               <p style={{ margin: '10px 0 2px', fontWeight: 600 }}>{order.customer_name}</p>
             )}
@@ -659,23 +668,28 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
 
         {/* ── DESTRA: metodi di pagamento + Sconto ── */}
         <div className="payscreen-methods">
-          {methods.map((m) => (
-            <button
-              key={m.key}
-              className={`payscreen-method${method === m.key ? ' active' : ''}`}
-              aria-pressed={method === m.key}
-              disabled={closed || m.disabled}
-              onClick={() => setMethod(m.key)}
-            >
-              {m.emoji} {m.label}
-              {m.key === 'lettore' && readerReady && settings.sumup_reader_name ? (
-                <span className="muted small"> ({settings.sumup_reader_name})</span>
-              ) : null}
-              {m.note ? (
-                <span className="muted small" style={{ display: 'block' }}>{m.note}</span>
-              ) : null}
-            </button>
-          ))}
+          {methods.map((m) => {
+            // Un metodo spento resta CLICCABILE apposta: `disabled` non fa
+            // partire il tocco, e chi incassa resta a premere un tasto morto
+            // senza sapere perché. Qui è spento a vedersi (`spento`), e al
+            // tocco dice il motivo invece di non fare niente.
+            const spento = m.disabled && !closed
+            return (
+              <button
+                key={m.key}
+                className={`payscreen-method${method === m.key ? ' active' : ''}${spento ? ' spento' : ''}`}
+                aria-pressed={method === m.key}
+                aria-disabled={spento || undefined}
+                disabled={closed || (m.disabled && !m.motivo)}
+                onClick={() => (spento ? toastError(m.motivo) : setMethod(m.key))}
+              >
+                {m.emoji} {m.label}
+                {m.key === 'lettore' && readerReady && settings.sumup_reader_name ? (
+                  <span className="muted small"> ({settings.sumup_reader_name})</span>
+                ) : null}
+              </button>
+            )
+          })}
 
           <div style={{ marginTop: 'auto' }}>
             {!closed && (
