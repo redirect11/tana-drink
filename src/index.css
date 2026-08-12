@@ -99,7 +99,12 @@ body.schermo-intero {
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
-  justify-content: space-between;
+  /* IL LOGO STA ATTACCATO AL ☰, non in mezzo alla barra. Con
+     `space-between` e tre figli — ☰, marchio, azioni — il marchio finiva
+     al centro, a mezzo schermo dal tasto menu, e la barra sembrava di
+     un'altra app a seconda di quante azioni c'erano a destra. Ora si
+     parte da sinistra e sono le azioni a spingersi da sole in fondo. */
+  justify-content: flex-start;
   gap: 12px;
   /* A tutta larghezza: esce dal padding orizzontale di .app. */
   margin: 0 -16px;
@@ -113,6 +118,8 @@ body.schermo-intero {
 
 .topbar nav {
   flex-shrink: 0;
+  /* Le azioni in fondo a destra, qualunque cosa ci sia in mezzo. */
+  margin-left: auto;
 }
 
 .brand {
@@ -266,7 +273,6 @@ body.schermo-intero {
    in fila rubavano spazio alla ricerca, che invece si usa di continuo. */
 .board-pannelli {
   min-width: 44px;
-  height: 44px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1555,24 +1561,19 @@ body.fullbleed .bar-content {
 
 /* Board ordini a griglia */
 .queue-board {
-  /* Altezza della riga 1 della testata: ci si allineano titolo, ricerca,
-     ⋯ e +. Ci si allinea anche il ☰, che però è FISSO (top 12px, alto
-     42) e non sta nel flusso: lo scosto qui sopra è calcolato perché i
-     due centri coincidano davvero, invece di somigliarsi a occhio. */
-  --coda-riga: 48px;
   min-height: calc(100vh / var(--zoom, 1));
-  padding: calc(var(--safe-top) + 12px + (42px - var(--coda-riga)) / 2) 12px 24px;
+  padding: calc(10px + var(--safe-top)) 12px 24px;
 }
 
 /* TESTATA DELLA CODA — due righe, non una.
-     riga 1: titolo · ricerca · ⋯ · +   tutti centrati sulla stessa linea
-     riga 2: conteggi e legenda degli autori, a filo a sinistra
+     riga 1: titolo · ricerca · ⋯ · +
+     riga 2: conteggi e legenda degli autori
    Prima era una riga sola e i conteggi stavano DENTRO il titolo: il titolo
    diventava alto due righe (tre con la legenda) e tutto il resto si
    centrava su quell'altezza — che cambiava a seconda di quanti stavano in
-   servizio. Su tablet e desktop non era allineato niente, e il ☰, che è
-   fisso e non sta nel flusso, ci finiva vicino solo per caso. Adesso la
-   riga ha un'altezza sua (--coda-riga) e tutti la seguono. */
+   servizio. Su tablet e desktop non era allineato niente.
+   Le misure della riga 1 stanno in fondo al file, nel blocco «da tablet in
+   su»: sul telefono la testata è un'altra cosa e non si tocca. */
 .board-head {
   display: flex;
   align-items: center;
@@ -1582,9 +1583,6 @@ body.fullbleed .bar-content {
 }
 
 .board-title {
-  display: flex;
-  align-items: center;
-  min-height: var(--coda-riga);
   /* lascia spazio al ☰ fisso in alto a sinistra */
   padding-left: 52px;
   font-family: var(--serif);
@@ -1594,7 +1592,6 @@ body.fullbleed .bar-content {
 .board-search {
   flex: 1;
   min-width: 180px;
-  height: var(--coda-riga);
   margin: 0;
 }
 
@@ -1633,6 +1630,11 @@ body.fullbleed .bar-content {
     min-width: 0;
     margin-left: 0;
   }
+  /* Conteggi e legenda rientrati come il titolo: sono roba sua, e a filo
+     col bordo finirebbero sotto il ☰. */
+  .board-sotto {
+    padding-left: 54px;
+  }
 }
 
 .board-actions {
@@ -1665,10 +1667,14 @@ body.fullbleed .bar-content {
     flex-basis: 100%;
     font-size: 0.92rem;
   }
-  /* Ultima: senza un ordine esplicito, con gli altri spostati avanti,
-     conteggi e legenda risalirebbero in cima. */
+  /* SUL TELEFONO NON CAMBIA NIENTE. Conteggi e legenda sono usciti dal
+     titolo per allineare la riga su tablet e desktop; qui devono restare
+     dov'erano — subito sotto "In servizio", rientrati come lui e sopra la
+     ricerca. Ordine 2 come le azioni: a parità vince chi viene prima nel
+     markup, e le azioni stanno prima. */
   .board-sotto {
-    order: 4;
+    order: 2;
+    padding-left: 54px;
   }
   .board-add {
     width: 46px;
@@ -1691,13 +1697,11 @@ body.fullbleed .bar-content {
 
 /* «+» nuovo ordine, in fondo alla riga. Il «+» è disegnato con due barre
    (pseudo-elementi) così è centrato in modo matematicamente perfetto,
-   senza dipendere dalle metriche del glifo.
-   Alto quanto la riga: a 60px era l'unico fuori scala e sporgeva sopra e
-   sotto tutti gli altri. */
+   senza dipendere dalle metriche del glifo. */
 .board-add {
   position: relative;
-  width: var(--coda-riga, 48px);
-  height: var(--coda-riga, 48px);
+  width: 60px;
+  height: 60px;
   padding: 0;
   border-radius: 50%;
   flex-shrink: 0;
@@ -1716,13 +1720,69 @@ body.fullbleed .bar-content {
 }
 
 .board-add::before {
-  width: 22px;
+  width: 26px;
   height: 4px;
 }
 
 .board-add::after {
   width: 4px;
-  height: 22px;
+  height: 26px;
+}
+
+/* ── Riga 1 della testata, DA TABLET IN SU ────────────────────────────
+   Il ☰ della coda è un tasto FISSO nell'angolo (42px, a 12px dal bordo) e
+   non sta nel flusso: la riga si aggancia a lui — stessa altezza, stesso
+   centro — invece di provare a somigliargli. Prima ogni pezzo aveva la sua
+   misura (☰ 42, ricerca 48, ⋯ 34, ➕ 60) e nessuno stava sulla linea di
+   nessun altro.
+   Questo blocco sta in FONDO al file apposta: le misure di base e quelle
+   del telefono vengono prima, e a parità di specificità vince l'ultima
+   regola scritta — una media query non aggiunge peso. Sotto i 701px non
+   entra in gioco niente di tutto questo: sul telefono la testata resta
+   quella di sempre. */
+@media (min-width: 701px) {
+  .queue-board {
+    /* Stesso scosto del ☰: i due centri coincidono per costruzione. */
+    padding-top: calc(12px + var(--safe-top));
+  }
+  /* La misura sta qui e non su .queue-board: la lavagna c'è solo nella
+     vista a griglia, la testata anche in quella a elenco. */
+  .board-head {
+    --coda-riga: 42px;
+  }
+  .board-title,
+  .board-search,
+  .board-pannelli,
+  .board-add {
+    height: var(--coda-riga);
+  }
+  .board-title {
+    display: flex;
+    align-items: center;
+  }
+  /* La ricerca è anche una `.menu-search`, e quella regola — più in basso
+     nel file, stesso peso — le rimetteva i 10px di margine sotto che
+     `.board-search` toglie: in una riga centrata quel margine la spinge su
+     di 5px, ed era metà del disallineamento. Due classi per pesare di più
+     dell'ultima arrivata. */
+  .board-head .board-search {
+    margin: 0;
+  }
+  /* Quadrati come il ☰, senza il padding del tasto piccolo a gonfiarli. */
+  .board-pannelli,
+  .board-add {
+    width: var(--coda-riga);
+    min-width: 0;
+    padding: 0;
+  }
+  .board-add::before {
+    width: 20px;
+    height: 4px;
+  }
+  .board-add::after {
+    width: 4px;
+    height: 20px;
+  }
 }
 
 /* Avviso "cassa chiusa" in cima alla coda: senza cassa aperta non si battono
