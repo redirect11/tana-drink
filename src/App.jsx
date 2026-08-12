@@ -147,6 +147,19 @@ export default function App() {
     })
   }, [])
 
+  // CHI LAVORA NON PASSA DALLA VETRINA. Aprendo l'app, chi è dello staff si
+  // trovava la landing dei clienti e doveva cercare la strada per la coda:
+  // dalla home lo si porta dritto alla lista ordini. Unica eccezione, il QR
+  // del tavolo (?tavolo=/?group=): quello deve arrivare al menù anche se a
+  // inquadrarlo è chi sta dietro al banco. `replace` per non lasciarsi
+  // dietro un passo indietro che rimanda subito qui.
+  useEffect(() => {
+    if (!staffRole || location.pathname !== '/') return
+    const p = new URLSearchParams(location.search)
+    if (p.get('tavolo') || p.get('table') || p.get('group')) return
+    navigate('/bar', { replace: true })
+  }, [staffRole, location.pathname, location.search, navigate])
+
   // Tema: SEGUE CHI GUARDA, non l'indirizzo. Prima era un elenco di
   // percorsi, e bastava che ne mancasse uno — il profilo staff, "i miei
   // ordini", l'accesso — perché a chi sta lavorando arrivassero i colori

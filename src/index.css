@@ -1630,10 +1630,12 @@ body.fullbleed .bar-content {
     min-width: 0;
     margin-left: 0;
   }
-  /* Conteggi e legenda rientrati come il titolo: sono roba sua, e a filo
-     col bordo finirebbero sotto il ☰. */
+  /* Conteggi e legenda partono dal bordo, allineati alla BARRA DI RICERCA
+     che sta sotto — non rientrati come il titolo, che li lasciava sospesi
+     in mezzo alla testata senza allinearsi a niente. Sotto il ☰ non ci
+     finiscono: il ☰ sta tutto nella riga 1, che è alta quanto il ➕. */
   .board-sotto {
-    padding-left: 54px;
+    padding-left: 0;
   }
 }
 
@@ -1667,14 +1669,14 @@ body.fullbleed .bar-content {
     flex-basis: 100%;
     font-size: 0.92rem;
   }
-  /* SUL TELEFONO NON CAMBIA NIENTE. Conteggi e legenda sono usciti dal
-     titolo per allineare la riga su tablet e desktop; qui devono restare
-     dov'erano — subito sotto "In servizio", rientrati come lui e sopra la
-     ricerca. Ordine 2 come le azioni: a parità vince chi viene prima nel
-     markup, e le azioni stanno prima. */
+  /* Conteggi e legenda stanno fra il titolo e la ricerca (ordine 2 come le
+     azioni: a parità vince chi viene prima nel markup, e le azioni stanno
+     prima), e partono dal BORDO: sono allineati alla barra di ricerca che
+     hanno sotto. Rientrati di 54px come il titolo restavano appesi in
+     mezzo, allineati a niente. */
   .board-sotto {
     order: 2;
-    padding-left: 54px;
+    padding-left: 0;
   }
   .board-add {
     width: 46px;
@@ -1742,8 +1744,16 @@ body.fullbleed .bar-content {
    quella di sempre. */
 @media (min-width: 701px) {
   .queue-board {
-    /* Stesso scosto del ☰: i due centri coincidono per costruzione. */
     padding-top: calc(12px + var(--safe-top));
+  }
+  /* Il ☰ flottante non sta nel flusso: al centro della riga 1 ci si porta a
+     mano. La riga è alta quanto il ➕ (60px, il pezzo più alto: vedi sotto),
+     non quanto il titolo, quindi il suo centro cade a 12 + 30 = 42px dal
+     bordo; il ☰ è alto 42px e per centrarcisi parte da 42 − 21 = 21px.
+     Prima partiva da 12px come la lavagna, e restava un dito più in alto
+     di «In servizio». */
+  body.fullbleed .bar-burger {
+    top: calc(21px + var(--safe-top));
   }
   /* La misura sta qui e non su .queue-board: la lavagna c'è solo nella
      vista a griglia, la testata anche in quella a elenco. */

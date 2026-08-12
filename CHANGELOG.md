@@ -49,6 +49,9 @@ una funzione, il terzo per le correzioni.
   accesso e profilo). Restano senza menu le due schermate in cui si
   compone un conto: da lì si esce con «← Ordini». Prima la barra cambiava
   forma a ogni pagina e il menu spariva.
+- **Chi lavora non passa più dalla vetrina**: aprendo l'app, a bartender,
+  staff e gestore si apre subito la lista ordini. Il QR del tavolo porta
+  al menù come sempre, anche se a inquadrarlo è chi sta al banco.
 - **I colori seguono chi guarda, non la pagina.** Chi lavora vede il tema
   del gestionale dappertutto — profilo, lista ordini, accesso compresi —;
   chi ordina vede il suo. Prima bastava un indirizzo dimenticato e in
@@ -58,8 +61,10 @@ una funzione, il terzo per le correzioni.
 - Nella coda, **da tablet in su, titolo, ricerca e ⋯ stanno sulla stessa
   linea**, alti quanto il tasto menu; conteggi e legenda vanno sulla riga
   sotto. Prima non era allineato niente. Il ➕ resta grande com'era e
-  sporge dalla riga: è il tasto che si prende di corsa. Sul telefono la
-  testata resta quella di sempre.
+  sporge dalla riga: è il tasto che si prende di corsa. Anche il ☰ scende
+  al centro della riga, a filo con «In servizio». Sul telefono i conteggi
+  («3 aperti · 0 chiusi · …») partono dal bordo, allineati alla barra di
+  ricerca, invece di restare sospesi a metà.
 - **Impostazioni a schede**: ventuno riquadri diventano voci di una barra
   laterale, una alla volta.
 - **Backup e ripristino di tutto il database**, dall'app e da riga di
