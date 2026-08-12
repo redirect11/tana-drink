@@ -586,6 +586,32 @@ export default function SettingsTab({ role = null }) {
                   </button>
                 ))}
               </div>
+
+              <h4 style={{ margin: '16px 0 4px' }}>La ricerca</h4>
+              <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
+                Cercando un numero, un nome, un tavolo o un drink: si può{' '}
+                <strong>filtrare</strong> la coda, lasciando in pagina solo i conti che
+                rispondono, oppure lasciarla com&apos;è e{' '}
+                <strong>accendere</strong> il primo conto trovato, portandolo sotto gli
+                occhi. Nel secondo modo la ricerca si azzera da sé appena si tocca un
+                conto.
+              </p>
+              <div className="mode-choice">
+                {[
+                  ['filtra', '🔍 Filtra la coda'],
+                  ['evidenzia', '💡 Accendi e porta lì'],
+                ].map(([value, label]) => (
+                  <button
+                    key={value}
+                    className={`mode-option${
+                      (settings.queue_search || 'filtra') === value ? ' active' : ''
+                    }`}
+                    onClick={() => save({ queue_search: value })}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
       ),
     },

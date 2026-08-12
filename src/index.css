@@ -2658,6 +2658,39 @@ body.drawer-open .status-bell-float { display: none; }
   border-left-color: #8a8a8a;
 }
 
+/* IL CONTO ACCESO DALLA RICERCA (impostazione "accendi e porta lì"). La
+   coda resta intera e il conto trovato si fa riconoscere da solo: un anello
+   nel colore d'accento e un alone, che è quello che l'occhio prende al volo
+   scorrendo trenta card uguali. Niente cambi di fondo o di bordo sinistro —
+   quelli dicono a che punto sta la preparazione e non si toccano.
+   Il respiro iniziale serve a farsi notare anche se lo scorrimento è già
+   finito: due battiti e si ferma, perché una card che pulsa tutta la sera
+   davanti a chi lavora è solo fastidio. */
+.order-card.conto-acceso {
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 0 0 2px var(--accent), 0 0 18px color-mix(in srgb, var(--accent) 45%, transparent);
+  animation: conto-acceso 0.9s ease-out 2;
+}
+
+@keyframes conto-acceso {
+  0%,
+  100% {
+    box-shadow: 0 0 0 2px var(--accent), 0 0 18px color-mix(in srgb, var(--accent) 45%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 3px var(--accent), 0 0 26px color-mix(in srgb, var(--accent) 70%, transparent);
+  }
+}
+
+/* Chi ha chiesto di non far muovere le cose sullo schermo: resta l'anello,
+   che è quello che serve davvero. */
+@media (prefers-reduced-motion: reduce) {
+  .order-card.conto-acceso {
+    animation: none;
+  }
+}
+
 /* Nota dell'ordine sulla card del bartender */
 .order-note {
   background: rgba(245, 185, 74, 0.1);

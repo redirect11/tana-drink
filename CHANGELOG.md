@@ -70,6 +70,10 @@ una funzione, il terzo per le correzioni.
 - **Da schermo intero si esce dallo stesso tasto** con cui si entra, che
   ora cambia icona e parole. Prima, entrati, il tasto spariva e restava
   solo F11 — che su un tablet montato al banco non c'è.
+- **La ricerca nella coda può accendere invece di filtrare**: si sceglie in
+  Impostazioni → Coda ordini. Lasciando la coda intera, scorre fino al
+  primo conto che risponde e lo illumina — così si vede dov'è rispetto
+  agli altri — e appena si tocca un conto la ricerca si azzera da sé.
 - In fondo al menu c'è **la versione** che si sta guardando.
 
 ### Sotto il cofano
@@ -78,7 +82,7 @@ una funzione, il terzo per le correzioni.
   non si pubblica niente.
 - Si lavora su un ramo di rilascio, e i branch di lavorazione vanno da
   soli sull'ambiente di test.
-- **94 requisiti** scritti in `requirements/requirements.yaml`, legati ai
+- **95 requisiti** scritti in `requirements/requirements.yaml`, legati ai
   test da una prova che fallisce se qualcuno li lascia indietro.
 
 ---
