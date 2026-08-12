@@ -60,10 +60,6 @@ a {
      serve a chi si "appiccica" scorrendo — le categorie a sinistra — per
      fermarsi SOTTO l'intestazione invece che finirci dietro. */
   --barra-alta: 68px;
-  /* Quanto occupa la barra quando la si apre a tutto schermo: la striscia
-     della linguetta più la barra stessa. Serve a far scendere il contenuto
-     invece di lasciarglielo coprire. */
-  --barra-aperta: 78px;
 }
 @media (display-mode: standalone) {
   :root {
@@ -319,27 +315,16 @@ body.schermo-intero {
     padding-top: 20px;
   }
 
-  /* BARRA APERTA: fa spazio, non copre. A tutto schermo la barra compare
-     come pannello fisso sopra la pagina — comodo su un tablet, dove sotto
-     c'è margine — ma sul telefono si mangiava la testata della schermata:
-     nella coda il riepilogo e il "+", nel conto numero, ora e stato. Ora il
-     contenuto scende della sua altezza, e il conto (che è alto quanto lo
-     schermo) si accorcia della stessa misura invece di sbordare. */
-  /* E la barra stessa scende SOTTO la striscia: la linguetta le stava
-     davanti (z-index più alto) e le tagliava logo e tasti sul filo. Era
-     questo il taglio che si vedeva, non un problema della pagina. */
+  /* BARRA APERTA: si sovrappone, e va bene così. Farla "fare spazio"
+     spingeva giù tutta la schermata e il footer del conto — pagamento
+     compreso — finiva fuori dallo schermo: si guadagnava una testata e si
+     perdeva il tasto per incassare. La barra si apre, si legge, si
+     richiude; quello che copre per un attimo torna al suo posto.
+     Quello che invece serve è che la barra stessa scenda SOTTO la
+     striscia: la linguetta le sta davanti (z-index più alto) e le tagliava
+     logo e tasti sul filo. */
   body.fullbleed.topbar-open .topbar {
     padding-top: calc(var(--safe-top) + 26px);
-  }
-  body.fullbleed.topbar-open {
-    --barra-aperta: 88px;
-  }
-  body.fullbleed.topbar-open .queue-board {
-    padding-top: var(--barra-aperta);
-  }
-  body.fullbleed.topbar-open .posd-root {
-    height: calc(100dvh / var(--zoom, 1) - var(--barra-aperta));
-    margin-top: var(--barra-aperta);
   }
   .topbar {
     gap: 8px;
