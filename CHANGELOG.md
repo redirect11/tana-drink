@@ -9,7 +9,7 @@ una funzione, il terzo per le correzioni.
 
 ---
 
-## Non ancora rilasciata — 1.3.0
+## 1.3.0 — 12 agosto 2026
 
 ### Al banco
 
