@@ -1076,6 +1076,10 @@ requirements:
       dove non c'è menu e si esce con «← Ordini». Anche i colori seguono il
       ruolo: chi lavora vede il tema del gestionale ovunque, profilo e accesso
       compresi; chi ordina vede il suo, e così l'anteprima «vista cliente».
+      Sempre per la stessa ragione, chi è dello staff non passa dalla vetrina:
+      aprendo la home finisce dritto nella lista ordini. Unica eccezione il QR
+      del tavolo (?tavolo= / ?group=), che porta al menù anche se a inquadrarlo
+      è chi sta dietro al banco.
     status: implemented
     generate_issue: false
     labels: [ux, temi]
@@ -1092,8 +1096,12 @@ requirements:
       degli altri si centrava a un'altezza diversa. Il ➕ resta invece grande
       com'era (60px) e sporge dalla riga: è il tasto che si prende di corsa e
       con le mani occupate, e un bersaglio largo vale più di una riga
-      allineata. Sul telefono la testata resta com'era: titolo e conteggi
-      rientrati, ricerca a tutta larghezza.
+      allineata. Siccome è il ➕ a dare l'altezza alla riga, il ☰ flottante si
+      scosta di 21px dal bordo e non di 12: così il suo centro cade su «In
+      servizio» invece di restare un dito più in alto. Sul telefono la testata
+      resta a due piani — titolo rientrato per fare posto al ☰, ricerca a tutta
+      larghezza — e conteggi e legenda partono dal bordo, allineati alla barra
+      di ricerca che hanno sotto invece di stare sospesi a metà.
     status: implemented
     generate_issue: false
     labels: [ux, coda]

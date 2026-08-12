@@ -166,6 +166,38 @@ describe('la barra in cima è la stessa su tutte le schermate', () => {
   })
 })
 
+// Aprendo l'app, chi lavora si trovava la vetrina dei clienti e doveva
+// cercarsi la strada per la coda.
+describe('chi lavora non passa dalla vetrina', () => {
+  it('dalla home lo staff finisce dritto nella lista ordini', async () => {
+    ruoloClaim = 'bartender'
+    apri('/')
+    await screen.findByText('PAGINA CODA')
+    expect(screen.queryByText('PAGINA HOME')).toBeNull()
+  })
+
+  it('anche il gestore', async () => {
+    ruoloClaim = 'admin'
+    apri('/')
+    await screen.findByText('PAGINA CODA')
+  })
+
+  it('il cliente la vetrina la vede, com’è giusto', async () => {
+    apri('/')
+    await screen.findByText('PAGINA HOME')
+    expect(screen.queryByText('PAGINA CODA')).toBeNull()
+  })
+
+  it('col QR del tavolo si va al menù anche se a inquadrarlo è il barista', async () => {
+    // La home inoltra da sé al menù coi parametri: il rimando alla coda non
+    // deve rubargli la precedenza, o il tavolo si perde.
+    ruoloClaim = 'bartender'
+    apri('/?tavolo=12')
+    await screen.findByText('PAGINA HOME')
+    expect(screen.queryByText('PAGINA CODA')).toBeNull()
+  })
+})
+
 describe('il menu laterale risponde anche al cliente', () => {
   // Il menu, e non la barra: "Accedi" sta in tutti e due, e cercarlo in
   // pagina ne troverebbe due.
