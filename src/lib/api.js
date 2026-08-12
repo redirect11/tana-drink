@@ -25,6 +25,7 @@ import { splitAmounts } from './groups.js'
 import { createSumUpSale, updateSumUpSaleStatus, toSumUpStatus } from './sumupApi.js'
 import { computeConsumption, formatQty, qtyInStockUnit } from './inventory.js'
 import { consumptionDiff } from './warehouse.js'
+import { riaddebitoBuono } from './vouchers.js'
 import {
   ORDER_OPEN,
   normalizeOrderDoc,
@@ -2677,6 +2678,40 @@ export async function restoreOrder(id, { motivo = null, chi = null } = {}) {
       : c
   )
   const incassato = (data.payments || []).reduce((s, p) => s + (Number(p.amount) || 0), 0)
+
+  // BUONO VIP: annullando, il saldo era tornato al beneficiario. Riaprendo,
+  // lo sconto è ancora sul conto: se non lo si ri-addebita diventa un regalo
+  // che nessuno ha pagato, e il credito in circolazione non torna più con i
+  // conti. Solo per i conti ANNULLATI: su uno chiuso il buono non era mai
+  // stato ristornato, e riprenderlo lo scalerebbe due volte.
+  let scontoRiscritto = null
+  const buono = data.status === ORDER_STATUSES.ANNULLATO && data.discount?.type === 'buono'
+    ? data.discount
+    : null
+  if (buono?.voucher_id) {
+    const vRef = doc(vouchersCol, buono.voucher_id)
+    const vSnap = await getDoc(vRef)
+    if (!vSnap.exists()) {
+      // Buono sparito: lo sconto non ha più un padrone e si toglie.
+      scontoRiscritto = { discount: null, discount_amount: 0 }
+    } else {
+      const v = vSnap.data()
+      const esito = riaddebitoBuono(buono, v.balance)
+      if (esito.addebito > 0) {
+        await updateDoc(vRef, {
+          balance: increment(-esito.addebito),
+          movements: [
+            ...(v.movements || []),
+            { type: 'uso', amount: -esito.addebito, order_id: id, at: nowIso },
+          ],
+        })
+      }
+      if (esito.discount_amount !== r2(buono.value)) {
+        scontoRiscritto = { discount: esito.discount, discount_amount: esito.discount_amount }
+      }
+    }
+  }
+
   const riaperture = [
     ...(Array.isArray(data.riaperture) ? data.riaperture : []),
     { at: nowIso, motivo: motivo || null, chi: chi || null },
@@ -2689,6 +2724,9 @@ export async function restoreOrder(id, { motivo = null, chi = null } = {}) {
     // chiusi: se dei soldi erano entrati resta un acconto.
     payment_status: incassato > 0 ? 'parziale' : 'non_richiesto',
     riaperture,
+    // Solo se il buono non copriva più tutto: se copre, il conto resta
+    // identico a com'era.
+    ...(scontoRiscritto || {}),
   }), 'ripristino conto')
   return mapOrder(await getDoc(orderRef))
 }
