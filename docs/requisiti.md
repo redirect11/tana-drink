@@ -704,7 +704,7 @@ La barra in cima è la stessa su ogni schermata — menu, logo col nome e, a des
 
 ### ⚠️  REQ-UI-007 — La testata della coda sta su una riga sola
 
-Nella coda a griglia titolo, ricerca, ⋯ e ➕ stanno tutti sulla stessa linea, alti uguale; conteggi e legenda degli autori vanno sulla riga sotto. Prima i conteggi stavano dentro il titolo, il titolo cresceva in altezza e ognuno degli altri si centrava a un'altezza diversa.
+Da tablet in su, nella testata della coda titolo, ricerca, ⋯ e ➕ stanno tutti sulla stessa linea e alti quanto il ☰ (42px), che è fisso e fuori dal flusso; conteggi e legenda degli autori vanno sulla riga sotto. Prima i conteggi stavano dentro il titolo, il titolo cresceva in altezza e ognuno degli altri si centrava a un'altezza diversa. Sul telefono la testata resta com'era: titolo e conteggi rientrati, ricerca a tutta larghezza.
 
 *Dove*: `src/pages/BartenderPage.jsx, src/index.css`
 
