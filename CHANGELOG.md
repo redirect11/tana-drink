@@ -105,6 +105,9 @@ una funzione, il terzo per le correzioni.
   Impostazioni → Pagamenti (o che senza rete non può autorizzare).
 - La lista degli articoli, aprendo il pagamento, **parte dal fondo**: si
   vede subito l'ultima riga battuta, non quelle di mezz'ora prima.
+- Con la **gestione preparazione spenta**, nel pagamento non esce più
+  l'avviso «comande non ancora servite»: senza preparazione non ci sono
+  comande da servire, e usciva a ogni incasso.
 - **Il tastierino dello sconto ha di nuovo le cifre in ordine** (7 8 9 /
   4 5 6 / 1 2 3): riusava la griglia del pagamento, larga quattro colonne
   per gli operatori, e i numeri finivano sparsi a caso.

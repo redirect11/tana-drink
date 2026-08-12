@@ -123,11 +123,13 @@ requirements:
       La coda smista i conti per stato, conta e somma solo i non annullati e sa
       dire quanti conti sono ancora aperti. Con la gestione della preparazione
       attiva un conto pagato ma non servito resta da fare; senza, il pagamento
-      chiude e basta.
+      chiude e basta — e nella schermata di pagamento non compare l'avviso
+      «comande non ancora servite», che senza preparazione non vuol dire niente
+      e uscirebbe a ogni incasso.
     status: implemented
     generate_issue: false
     labels: [ordini, coda]
-    test_cases: [tests/unit/coda.test.js]
+    test_cases: [tests/unit/coda.test.js, tests/component/PaymentScreen.test.jsx]
 
   # ══════════════════════════════════════════════════════════════════════
   #  CASSA / POS — come si batte un ordine

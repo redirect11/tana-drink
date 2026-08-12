@@ -232,6 +232,21 @@ describe('metodi di pagamento', () => {
   // Il motivo stava scritto sotto al tasto e occupava una riga a una
   // schermata che ne ha poche. Ora il tasto è spento e basta: il perché lo
   // dice se lo si tocca.
+  // La gestione preparazione si può spegnere (Impostazioni): senza, non
+  // esistono comande "da servire" e l'avviso era un allarme che non voleva
+  // dire niente, a ogni singolo incasso.
+  it('gestione preparazione SPENTA: niente avviso sulle comande da servire', () => {
+    mount(baseOrder(), { ...noReader, workflow_enabled: false })
+    expect(screen.queryByText(/Comande non ancora servite/)).toBeNull()
+  })
+
+  it('gestione preparazione ACCESA: l’avviso c’è, il conto si chiude servendo tutto', () => {
+    mount(baseOrder({ comande: [{ id: 'c1', seq: 1, status: 'in_preparazione', items: [
+      { drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 },
+    ] }] }))
+    expect(screen.getByText(/Comande non ancora servite/)).toBeInTheDocument()
+  })
+
   it('lettore NON configurato: SumUp spento, senza sottotitolo sul tasto', () => {
     mount(baseOrder())
     expect(screen.getByRole('button', { name: /Carta di Credito/ })).toBeInTheDocument()
