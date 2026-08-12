@@ -131,6 +131,31 @@ requirements:
     labels: [ordini, coda]
     test_cases: [tests/unit/coda.test.js, tests/component/PaymentScreen.test.jsx]
 
+  - id: REQ-ORD-008
+    title: "Un conto chiuso o annullato si può rimettere in corso"
+    area: "src/lib/storiaOrdine.js, src/lib/api.js, src/components/StoriaOrdine.jsx"
+    description: >
+      Capita di chiudere un conto sul tavolo sbagliato, di annullarlo per un
+      malinteso, o che il cliente torni e voglia ordinare ancora su quello.
+      Chi ha il gestionale può rimetterlo in corso: si conferma in un pannello
+      che dice cosa succederà e si può scrivere il perché — FACOLTATIVO, perché
+      se fosse obbligatorio si scriverebbe "x" per passare oltre, e al banco i
+      secondi non ci sono. Il conto torna aperto e si può battere di nuovo.
+      Non si tocca quello che è già successo: gli incassi registrati restano
+      dove sono (riaprire non è un rimborso, e la cassa deve continuare a
+      tornare) e il dovuto si ricalcola da sé; le comande già servite restano
+      servite, tornano da fare solo quelle annullate col conto. Se dei soldi
+      erano entrati, il conto riaperto risulta a ACCONTO, non pagato.
+      Il motivo si legge DENTRO il conto riaperto, senza doverlo cercare, e la
+      storia completa — aperto, chiuso, annullato, riaperto, con chi e perché —
+      sta dietro i ⋯ del conto, sia nella coda sia nel dettaglio. La storia si
+      ricostruisce da quello che il conto porta già addosso, quindi vale anche
+      per i conti di ieri, senza migrazioni.
+    status: implemented
+    generate_issue: false
+    labels: [ordini, difetto-risolto]
+    test_cases: [tests/unit/storiaOrdine.test.js, tests/component/OrderPosDetail.test.jsx]
+
   # ══════════════════════════════════════════════════════════════════════
   #  CASSA / POS — come si batte un ordine
   # ══════════════════════════════════════════════════════════════════════

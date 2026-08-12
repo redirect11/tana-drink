@@ -14,6 +14,7 @@ import {
   subscribeSettings,
   DEFAULT_SETTINGS,
   saveStaffToken,
+  restoreOrder,
 } from '../lib/api.js'
 import { getPushToken } from '../lib/push.js'
 import {
@@ -27,10 +28,12 @@ import {
   placedByLetter,
 } from '../lib/orderStatus.js'
 import { bucketByStatus, ordersRecap, ordineCorrisponde, primoCorrispondente } from '../lib/coda.js'
+import { ripristinabile } from '../lib/storiaOrdine.js'
+import { StoriaOrdineDialog, RipristinaOrdineDialog } from '../components/StoriaOrdine.jsx'
 import StatusBell from '../components/StatusBell.jsx'
 import ActionSheet from '../components/ActionSheet.jsx'
 import { isGestore, isPersonale } from '../lib/ruoli.js'
-import { senzaNascosti, subscribeNascosti } from '../lib/ordiniNascosti.js'
+import { senzaNascosti, subscribeNascosti, mostraOrdine } from '../lib/ordiniNascosti.js'
 import { allServed } from '../lib/comande.js'
 import { paidAmount, orderTotal } from '../lib/pagamento.js'
 import { businessDayKey, businessDayLabel, businessDayShort } from '../lib/businessDay.js'
@@ -437,6 +440,9 @@ function OrderQueue() {
   const [slowLoad, setSlowLoad] = useState(false)
   const [confirmAction, setConfirmAction] = useState(null) // { title, message, danger, run }
   const [cancelTarget, setCancelTarget] = useState(null) // { order, kind }
+  // Storia del conto e ripristino: due pannelli, un conto alla volta.
+  const [storiaTarget, setStoriaTarget] = useState(null)
+  const [ripristinoTarget, setRipristinoTarget] = useState(null)
   const [search, setSearch] = useState('')
   const [showPanels, setShowPanels] = useState(false) // pannelli (chiamate/gruppi) nella griglia
   const [menuBoard, setMenuBoard] = useState(false) // menu ⋯ della lavagna
@@ -861,6 +867,13 @@ function OrderQueue() {
     }
   }
 
+  // Chi sta usando l'app in questo momento: la storia deve dire CHI ha
+  // riaperto un conto, non solo che è stato riaperto.
+  const chiSonoIo = () =>
+    auth.currentUser?.displayName ||
+    String(auth.currentUser?.email || '').split('@')[0] ||
+    null
+
   const toggleCard = (id) =>
     setOpenCards((s) => {
       const n = new Set(s)
@@ -998,6 +1011,22 @@ function OrderQueue() {
             🚫 {o.service_mode === 'tavolo' ? 'Non servito' : 'Non ritirato'}
           </button>
         )}
+        {/* La storia c'è per tutti i conti: è come si spiega, un'ora dopo,
+            un conto che qualcuno ha riaperto. Il ripristino compare solo
+            dove ha senso — su un conto chiuso o annullato. */}
+        <div className="grid-2" style={{ marginTop: 8 }}>
+          <button className="btn ghost small" onClick={() => setStoriaTarget(o)}>
+            🕘 Storia
+          </button>
+          <button
+            className="btn ghost small"
+            disabled={!ripristinabile(o)}
+            title={ripristinabile(o) ? undefined : 'Il conto è già in corso'}
+            onClick={() => setRipristinoTarget(o)}
+          >
+            ♻️ Ripristina
+          </button>
+        </div>
       </>
     )
   }
@@ -1548,6 +1577,28 @@ function OrderQueue() {
           defaultPhrase={settings.cancel_phrase_default}
           onCancel={() => setCancelTarget(null)}
           onConfirm={confirmCancel}
+        />
+      )}
+
+      {storiaTarget && (
+        <StoriaOrdineDialog order={storiaTarget} onClose={() => setStoriaTarget(null)} />
+      )}
+
+      {ripristinoTarget && (
+        <RipristinaOrdineDialog
+          order={ripristinoTarget}
+          onClose={() => setRipristinoTarget(null)}
+          onConferma={(motivo) => {
+            const o = ripristinoTarget
+            setRipristinoTarget(null)
+            // Il conto era stato nascosto dalla coda quando l'avevamo
+            // chiuso qui: riaprendolo deve tornare a vedersi subito, senza
+            // aspettare il giro del server.
+            mostraOrdine(o.id)
+            restoreOrder(o.id, { motivo, chi: chiSonoIo() }).catch((e) =>
+              setError(`Conto non ripristinato: ${e.message}`)
+            )
+          }}
         />
       )}
     </div>
