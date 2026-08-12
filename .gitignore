@@ -45,3 +45,5 @@ ePOS_SDK_JavaScript_v*.zip
 # Estratto dei costi dal foglio INV: dati aziendali, mai nel repo.
 costi-inventario.json
 backup/
+# Roba di passaggio (catture del markup, prove): non è codice.
+tmp/

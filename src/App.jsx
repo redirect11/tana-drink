@@ -19,6 +19,7 @@ import ActionSheet from './components/ActionSheet.jsx'
 import StaffDrawer from './components/StaffDrawer.jsx'
 import ClientDrawer from './components/ClientDrawer.jsx'
 import { useTelefono } from './lib/useTelefono.js'
+import { useSchermoIntero } from './lib/useSchermoIntero.js'
 import { logoutStaff } from './lib/logout.js'
 import { resolveThemeVars, applyTheme } from './lib/themes.js'
 import { envLabel } from './dev/devActions.js'
@@ -92,12 +93,9 @@ export default function App() {
   const telefono = useTelefono()
   const [menuTopbar, setMenuTopbar] = useState(false)
   // "Schermo intero" ha senso solo da browser: con l'app installata le
-  // barre non ci sono già.
-  const schermoInteroDisponibile =
-    typeof document !== 'undefined' &&
-    !!document.documentElement.requestFullscreen &&
-    !window.matchMedia?.('(display-mode: standalone)').matches &&
-    window.navigator?.standalone !== true
+  // barre non ci sono già. Lo stesso stato del tasto nella barra, così la
+  // voce del menu sa anche USCIRE e non solo entrare.
+  const schermoIntero = useSchermoIntero()
   useEffect(() => {
     document.body.classList.toggle('topbar-open', topbarOpen)
     return () => document.body.classList.remove('topbar-open')
@@ -366,12 +364,14 @@ export default function App() {
             label: 'Torna al servizio',
             onClick: () => navigate('/bar'),
           },
-          schermoInteroDisponibile && {
+          schermoIntero.disponibile && {
             id: 'schermo',
-            icon: '⛶',
-            label: 'Schermo intero',
-            hint: 'Meglio ancora: installa l’app dalla schermata iniziale',
-            onClick: () => document.documentElement.requestFullscreen?.().catch(() => {}),
+            icon: schermoIntero.attivo ? '🡼' : '⛶',
+            label: schermoIntero.attivo ? 'Esci da schermo intero' : 'Schermo intero',
+            hint: schermoIntero.attivo
+              ? null
+              : 'Meglio ancora: installa l’app dalla schermata iniziale',
+            onClick: schermoIntero.alterna,
           },
           { id: 'esci', icon: '🚪', label: 'Esci', danger: true, onClick: () => logoutStaff() },
         ]}
@@ -516,32 +516,16 @@ function AddToHomeHint() {
 // dall'alto…") che non possiamo togliere — è suo, non nostro, e sparisce
 // da sé. L'unico modo per non vederlo è installare l'app.
 function FullscreenButton() {
-  const [fs, setFs] = useState(() => typeof document !== 'undefined' && !!document.fullscreenElement)
-  useEffect(() => {
-    const on = () => setFs(!!document.fullscreenElement)
-    document.addEventListener('fullscreenchange', on)
-    return () => document.removeEventListener('fullscreenchange', on)
-  }, [])
-  const supported =
-    typeof document !== 'undefined' && !!document.documentElement.requestFullscreen
-  const installata =
-    typeof window !== 'undefined' &&
-    (window.matchMedia?.('(display-mode: standalone)').matches ||
-      window.matchMedia?.('(display-mode: fullscreen)').matches ||
-      window.navigator?.standalone === true)
-  if (!supported || installata) return null
-  const toggle = () => {
-    if (document.fullscreenElement) document.exitFullscreen?.()
-    else document.documentElement.requestFullscreen?.().catch(() => {})
-  }
+  const { attivo, disponibile, alterna } = useSchermoIntero()
+  if (!disponibile) return null
   return (
     <button
       className="btn ghost small"
-      onClick={toggle}
-      title={fs ? 'Esci da schermo intero' : 'Schermo intero'}
-      aria-label={fs ? 'Esci da schermo intero' : 'Schermo intero'}
+      onClick={alterna}
+      title={attivo ? 'Esci da schermo intero' : 'Schermo intero'}
+      aria-label={attivo ? 'Esci da schermo intero' : 'Schermo intero'}
     >
-      {fs ? '🡼' : '⛶'}
+      {attivo ? '🡼' : '⛶'}
     </button>
   )
 }

@@ -67,6 +67,9 @@ una funzione, il terzo per le correzioni.
 - La pagina riempie lo schermo invece di stare in una colonna da 760px.
 - **L'app si installa anche su iPhone** come si deve (icona, invito, e
   senza l'app installata niente schermo intero né notifiche: ora lo dice).
+- **Da schermo intero si esce dallo stesso tasto** con cui si entra, che
+  ora cambia icona e parole. Prima, entrati, il tasto spariva e restava
+  solo F11 — che su un tablet montato al banco non c'è.
 - In fondo al menu c'è **la versione** che si sta guardando.
 
 ### Sotto il cofano
@@ -75,7 +78,7 @@ una funzione, il terzo per le correzioni.
   non si pubblica niente.
 - Si lavora su un ramo di rilascio, e i branch di lavorazione vanno da
   soli sull'ambiente di test.
-- **93 requisiti** scritti in `requirements/requirements.yaml`, legati ai
+- **94 requisiti** scritti in `requirements/requirements.yaml`, legati ai
   test da una prova che fallisce se qualcuno li lascia indietro.
 
 ---
