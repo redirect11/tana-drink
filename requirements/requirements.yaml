@@ -156,7 +156,10 @@ requirements:
       continua a battere: le righe aggiunte nel frattempo devono finire nello
       stesso conto, senza sparire e senza far nascere un secondo conto. La bozza
       cambia chiave quando il conto nasce, e le righe rimaste vanno passate alla
-      chiave nuova.
+      chiave nuova. Nemmeno il PAGAMENTO si perde: premendo Pagamento mentre la
+      creazione è ancora in volo, la schermata deve restare aperta anche quando
+      il server risponde e il conto smette di essere "nuovo" — prima si chiudeva
+      da sola e bisognava ripremere Pagamento, col cliente davanti.
     status: implemented
     generate_issue: false
     labels: [pos, difetto-risolto]

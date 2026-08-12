@@ -16,6 +16,11 @@ una funzione, il terzo per le correzioni.
 - **Gli item battuti mentre l'ordine sta nascendo non si perdono più.** Si
   aggiungeva un'acqua, un secondo dopo dell'altro, e quando il conto
   finiva di crearsi restava solo l'acqua.
+- **Il pagamento non si chiude più da solo.** Battendo due drink di corsa
+  e premendo subito Pagamento, un istante dopo ci si ritrovava sulla
+  schermata dell'ordine e bisognava ripremere: la schermata spariva nel
+  momento in cui il conto finiva di nascere. Dipendeva da quanto si era
+  veloci, ed era peggio col cliente davanti.
 - **Il totale da incassare resta scritto sul tasto Pagamento**, al netto
   di sconti e acconti già presi. Prima spariva un istante dopo il primo
   prodotto.

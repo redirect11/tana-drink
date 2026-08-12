@@ -882,3 +882,62 @@ describe('la ricerca prodotti segue l’impostazione del bar', () => {
     expect(card('Mojito')).toHaveClass('prodotto-acceso')
   })
 })
+
+// ── Pagamento battuto mentre l'ordine sta ancora nascendo ─────────────
+// Segnalato dal banco: si battono due acque di corsa, si preme Pagamento,
+// e un attimo dopo si è di nuovo sulla schermata dell'ordine — Pagamento va
+// ripremuto. Dipende da quanto si è veloci: l'ordine nasce da solo al primo
+// prodotto, e quando il server risponde il conto smette di essere "nuovo".
+// La schermata di pagamento era appesa proprio a quel "nuovo": appena
+// cambiava, spariva da sé, col cassiere davanti al cliente che paga.
+describe('Pagamento premuto mentre l’ordine sta ancora nascendo', () => {
+  it('la schermata di pagamento resta aperta quando la creazione va a buon fine', async () => {
+    const user = userEvent.setup()
+    let rispondiIlServer
+    createOrder.mockImplementationOnce(
+      () =>
+        new Promise((res) => {
+          rispondiIlServer = () =>
+            res({
+              id: 'ord-nuovo',
+              daily_number: 9,
+              status: 'aperto',
+              payment_status: 'non_richiesto',
+              total: 7,
+              payments: [],
+              discount_amount: 0,
+              comande: [
+                {
+                  id: 'c1',
+                  seq: 1,
+                  status: 'in_preparazione',
+                  items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1 }],
+                },
+              ],
+              order_items: [
+                { id: 'x', drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1 },
+              ],
+            })
+        })
+    )
+    render(
+      <MemoryRouter>
+        <OrderPosDetail order={null} />
+      </MemoryRouter>
+    )
+    await user.click(screen.getAllByText('Mojito')[0])
+    // L'auto-creazione parte da sola dopo qualche decimo di secondo…
+    await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1), { timeout: 2000 })
+    // …e mentre è in volo si preme Pagamento.
+    await user.click(screen.getByRole('button', { name: /Pagamento/ }))
+    expect(await screen.findByRole('button', { name: /Riscuotere/ })).toBeInTheDocument()
+
+    // Il server risponde: il conto esiste, non è più "nuovo".
+    rispondiIlServer()
+    // Il numero del conto arriva a schermo: siamo oltre il passaggio.
+    // (Compare in due punti: la testata del conto e quella del pagamento.)
+    expect((await screen.findAllByText(/#9/)).length).toBeGreaterThan(0)
+    // E il pagamento è ancora lì, dove il cassiere l'ha lasciato.
+    expect(screen.getByRole('button', { name: /Riscuotere/ })).toBeInTheDocument()
+  })
+})
