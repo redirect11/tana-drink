@@ -187,6 +187,12 @@ function mapOrder(snap) {
     customer_uid: o.customer_uid ?? null,
     // Tempi di lavorazione: quelli della comanda attiva (o gli ultimi).
     status_times: (active ?? comande[comande.length - 1])?.status_times ?? o.status_times ?? {},
+    // TEMPI DEL CONTO, non della comanda: `status_times` qui sopra è quello
+    // della comanda attiva (serve ai tempi di preparazione), e lì dentro non
+    // c'è né la chiusura né l'annullo del conto. La storia del conto legge
+    // questi.
+    tempi_conto: o.status_times ?? {},
+    riaperture: (o.riaperture || []).map((r) => ({ ...r, at: toIso(r.at) })),
     cancelled_by: o.cancelled_by ?? null,
     cancel_kind: o.cancel_kind ?? null,
     cancel_phrase: o.cancel_phrase ?? null,
@@ -2630,6 +2636,60 @@ export async function cancelOrder(id, opts = {}) {
     cancel_message: message || null,
     cancel_notify: !!notifyClient,
   }), 'annullo ordine')
+  return mapOrder(await getDoc(orderRef))
+}
+
+// RIPRISTINO DI UN CONTO CHIUSO O ANNULLATO. Capita: si chiude un conto sul
+// tavolo sbagliato, si annulla per un malinteso, il cliente torna e ordina
+// ancora sullo stesso conto. Finora l'unica strada era batterlo da capo, e
+// il conto vero restava lì a sporcare la serata.
+//
+// Cosa NON si tocca, apposta:
+//   • gli incassi già registrati restano dove sono. Riaprire un conto non è
+//     un rimborso: i soldi presi sono presi, e la cassa deve continuare a
+//     tornare. Il dovuto si ricalcola da sé (totale − incassato).
+//   • la storia resta tutta: l'annullo, la chiusura, i tempi. In più si
+//     scrive la riapertura, con chi e perché.
+//   • le comande GIÀ SERVITE restano servite: quei drink sono usciti davvero.
+//     Tornano da fare solo quelle annullate insieme al conto.
+//
+// Sul magazzino: annullando, le scorte erano state rimesse dentro e le
+// comande segnate come non scalate — quindi rifacendole si scalano di nuovo,
+// una volta sola. È giusto così: il drink va rifatto.
+export async function restoreOrder(id, { motivo = null, chi = null } = {}) {
+  const orderRef = doc(db, 'orders', id)
+  const snap = await getDoc(orderRef)
+  if (!snap.exists()) throw new Error('Ordine non trovato')
+  const data = snap.data()
+  if (data.status !== ORDER_STATUSES.PAGATO && data.status !== ORDER_STATUSES.ANNULLATO) {
+    throw new Error('Il conto è già in corso')
+  }
+  const nowIso = new Date().toISOString()
+  const norm = normalizeOrderDoc(data)
+  // Le comande annullate tornano "da fare"; le altre restano come sono.
+  const comande = norm.comande.map((c) =>
+    c.status === ORDER_STATUSES.ANNULLATO
+      ? {
+          ...c,
+          status: ORDER_STATUSES.RICEVUTO,
+          status_times: { ...(c.status_times || {}), [ORDER_STATUSES.RICEVUTO]: nowIso },
+        }
+      : c
+  )
+  const incassato = (data.payments || []).reduce((s, p) => s + (Number(p.amount) || 0), 0)
+  const riaperture = [
+    ...(Array.isArray(data.riaperture) ? data.riaperture : []),
+    { at: nowIso, motivo: motivo || null, chi: chi || null },
+  ]
+  bgWrite(() => updateDoc(orderRef, {
+    status: ORDER_OPEN,
+    comande,
+    comande_statuses: comandeStatuses(comande),
+    // Un conto riaperto NON è pagato, altrimenti tornerebbe subito fra i
+    // chiusi: se dei soldi erano entrati resta un acconto.
+    payment_status: incassato > 0 ? 'parziale' : 'non_richiesto',
+    riaperture,
+  }), 'ripristino conto')
   return mapOrder(await getDoc(orderRef))
 }
 
