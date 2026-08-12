@@ -2765,26 +2765,6 @@ body.drawer-open .status-bell-float { display: none; }
   background: rgba(255, 255, 255, 0.06);
 }
 
-/* Menu in modalità staff: ricerca e categorie restano fisse sotto la
-   topbar durante lo scroll. Il wrapper opaco dà aria attorno al campo
-   e copre il contenuto che scorre sotto. */
-.menu-staff .menu-search-wrap {
-  position: sticky;
-  top: 64px;
-  z-index: 6;
-  padding: 10px 0;
-  background: var(--bg);
-}
-
-.menu-staff .menu-search {
-  margin-bottom: 0;
-}
-
-.menu-staff .cat-nav {
-  top: 125px;
-  padding-top: 10px;
-}
-
 .menu-search:focus {
   outline: none;
   border-color: rgba(245, 185, 74, 0.5);
@@ -3479,63 +3459,6 @@ body.fullbleed,
 }
 .groups-panel .group-row:last-child { border-bottom: none; }
 .pill.chiuso { background: rgba(46, 204, 113, 0.22); color: #9ff5c0; }
-
-/* ── Vista menù staff: 2 colonne compatte ───────────────────── */
-.staff-menu {
-  display: grid;
-  grid-template-columns: 120px 1fr;
-  gap: 10px;
-  align-items: start;
-}
-.staff-cats {
-  position: sticky;
-  top: 118px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  max-height: calc(100vh / var(--zoom, 1) - 130px);
-  overflow-y: auto;
-  scrollbar-width: thin;
-}
-.staff-cat {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  padding: 8px 10px;
-  border-radius: 10px;
-  border: 1px solid transparent;
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text);
-  cursor: pointer;
-  text-align: left;
-  font-size: 0.82rem;
-}
-.staff-cat.active {
-  background: linear-gradient(135deg, rgba(247, 196, 94, 0.25), rgba(232, 163, 46, 0.18));
-  border-color: rgba(245, 185, 74, 0.5);
-}
-.staff-cat-name { font-weight: 600; line-height: 1.1; }
-.staff-cat-count { color: var(--muted); font-size: 0.72rem; flex-shrink: 0; }
-.staff-products {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-}
-.staff-product {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 8px 12px;
-  border-radius: 10px;
-  background: var(--card);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-}
-.staff-product-info { display: flex; flex-direction: column; min-width: 0; }
-.staff-product-name { font-weight: 600; font-size: 0.9rem; line-height: 1.15; }
-.staff-product .btn.small { min-width: 40px; flex-shrink: 0; }
 
 /* ── Dettaglio ordine POS (stile SumUp, solo bartender) ─────────────── */
 /* Tablet/desktop: comanda come colonna destra; telefono: pannello in basso.

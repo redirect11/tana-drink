@@ -80,9 +80,12 @@ una funzione, il terzo per le correzioni.
   si sceglie in Impostazioni → Vista ordine. La griglia resta com'è —
   nessuna card sparisce sotto le dita — e la prima che risponde si
   illumina, con la griglia che ci scorre sopra; toccandone una la ricerca
-  si azzera da sé. **Vale anche per la ricerca nel menù**: lì le
-  categorie restano al loro posto, ci si sposta su quella del prodotto
-  trovato e il prodotto si accende.
+  si azzera da sé.
+- **Il menù è uno solo, quello che vede il cliente.** Aprendolo da
+  bartender non si trova più un catalogo a due colonne diverso da quello
+  che si sta mostrando al tavolo: gli ordini a mano si battono al POS.
+  Ordinare dal menù si può lo stesso, quando le impostazioni lo
+  consentono.
 - **Le categorie non si nascondono più.** Il tasto che faceva sparire la
   barra a sinistra (menù, magazzino, impostazioni, rendiconto) non c'è
   più: sul telefono, dove le categorie sono già una riga che scorre, non

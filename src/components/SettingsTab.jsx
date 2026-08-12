@@ -146,9 +146,6 @@ export default function SettingsTab({ role = null }) {
                 a memoria e non vuole vederla cambiare sotto le dita; mostra tutti i
                 prodotti mentre si cerca, perché quello giusto può stare in
                 un&apos;altra categoria. Toccando una card la ricerca si azzera da sé.
-                Vale anche per la ricerca nel <strong>menù</strong>: lì la barra
-                delle categorie resta, e ci si sposta su quella del prodotto
-                trovato.
               </p>
               <div className="mode-choice">
                 {[
