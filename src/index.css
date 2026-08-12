@@ -197,6 +197,41 @@ body.schermo-intero {
   text-overflow: ellipsis;
 }
 
+/* ── Testata della coda, sul telefono ────────────────────────────────
+   Il ☰ è un tasto FISSO nell'angolo: il testo che gli passava sotto non
+   si leggeva, e i conteggi (aperti, chiusi, totale) spezzati sulla stessa
+   riga del titolo finivano a metà parola. Qui: più aria dal ☰, titolo su
+   una riga e conteggi sulla successiva. */
+@media (max-width: 700px) {
+  .board-head {
+    padding-left: 56px;
+    row-gap: 4px;
+  }
+  .board-title {
+    white-space: normal;
+    min-width: 0;
+  }
+  .board-conti {
+    display: block;
+    margin-left: 0;
+  }
+  /* Il "·" davanti ai conteggi separa dal titolo: andando a capo è solo un
+     trattino orfano a inizio riga. */
+  .board-conti-sep {
+    display: none;
+  }
+  /* Il ☰ flottante: un filo più piccolo, staccato dal bordo e sotto la
+     striscia della linguetta — così non schiaccia il testo accanto e non
+     ci finisce sotto. */
+  body.fullbleed .bar-burger {
+    top: calc(26px + var(--safe-top));
+    left: 8px;
+    width: 40px;
+    height: 40px;
+    font-size: 1.1rem;
+  }
+}
+
 /* "Pannelli" (chiamate staff e gruppi): sul telefono resta il tasto, senza
    la parola — mangiava mezza riga per un comando che si tocca due volte a
    sera. */
