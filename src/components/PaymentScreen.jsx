@@ -596,7 +596,11 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
               Resto: <strong>{formatPrice(change)}</strong> (si incassano {formatPrice(toPay)})
             </p>
           )}
-          {!served && !closed && (
+          {/* L'avviso ha senso solo se si sta seguendo la preparazione: con la
+              gestione spenta non esistono comande "da servire" — sono servite
+              per definizione — e leggerlo a ogni incasso era un allarme che non
+              voleva dire niente. */}
+          {!autoServe && !served && !closed && (
             <p className="muted small" style={{ margin: '2px 0 0', flexShrink: 0 }}>
               ⚠️ Comande non ancora servite: saldando tutto, il conto si chiude
               e risultano tutte servite.
