@@ -9,6 +9,34 @@ una funzione, il terzo per le correzioni.
 
 ---
 
+## Non ancora rilasciata — 1.3.2
+
+### Al banco
+
+- **Un conto chiuso o annullato si può rimettere in corso.** Chiuso sul
+  tavolo sbagliato, annullato per un malinteso, o il cliente che torna e
+  vuole ordinare ancora su quello: si riapre **dal tasto del pagamento**,
+  che su un conto chiuso era lì spento a non fare niente, scrivendo — se
+  si vuole — il perché. Gli incassi già presi restano dove sono e il
+  dovuto si ricalcola da sé; le comande già servite restano servite,
+  tornano da fare solo quelle annullate col conto.
+- **Ogni conto ha la sua storia**, dietro i ⋯: aperto, chiuso, annullato,
+  riaperto — con l'ora, chi l'ha fatto e il motivo della riapertura. E il
+  motivo si legge anche dentro il conto riaperto, senza cercarlo: un conto
+  in corso con dentro un incasso, senza una spiegazione, è solo un
+  mistero.
+- **Riaprendo un conto annullato, il buono VIP torna a pagare lo sconto.**
+  Annullando, il saldo tornava al beneficiario; riaprendo, lo sconto
+  restava sul conto senza che lo pagasse più nessuno — credito regalato e
+  conti che non tornano. Se nel frattempo il buono è stato speso altrove,
+  si prende quel che c'è e lo sconto si riduce di conseguenza.
+- **Gli avvisi seguono il terminale, non il ruolo.** Chi prende ordini col
+  telefono con un account da gestore non li faceva più arrivare a nessuno:
+  al banco non squillava niente. Ora l'unico a non essere avvisato è il
+  dispositivo che ha battuto l'ordine — sa già di averlo mandato.
+
+---
+
 ## 1.3.1 — 14 agosto 2026
 
 ### Al banco
