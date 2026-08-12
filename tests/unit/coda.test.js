@@ -3,7 +3,13 @@
 // Unit test della logica pura coda (src/lib/coda.js).
 
 import { describe, it, expect } from 'vitest'
-import { bucketByStatus, ordersRecap, openOrdersCount } from '../../src/lib/coda.js'
+import {
+  bucketByStatus,
+  ordersRecap,
+  openOrdersCount,
+  ordineCorrisponde,
+  primoCorrispondente,
+} from '../../src/lib/coda.js'
 
 const orders = [
   { id: '1', status: 'ricevuto', total: 10 },
@@ -79,5 +85,65 @@ describe('un conto pagato ma non servito resta da fare', () => {
 
   it('senza preparazione: il pagamento chiude e basta', () => {
     expect(chiuso(conto('ricevuto', 'pagato'), false)).toBe(true)
+  })
+})
+
+// ── La ricerca nella coda ──────────────────────────────────────────────
+// Stessa funzione per tutti e due i modi (filtra / accendi): se
+// rispondessero in modo diverso, cambiando impostazione lo stesso testo
+// troverebbe conti diversi e chi sta al banco non capirebbe perché.
+describe('ordineCorrisponde', () => {
+  const conto = {
+    daily_number: 42,
+    customer_name: 'Marco Rossi',
+    table_label: 'Tavolo 7',
+    placed_by: { email: 'anna@tana.it', name: 'Anna' },
+    order_items: [{ name: 'Negroni' }, { name: 'Spritz' }],
+  }
+
+  it('trova per numero, cliente, tavolo, chi ha battuto e drink', () => {
+    expect(ordineCorrisponde(conto, '42')).toBe(true)
+    expect(ordineCorrisponde(conto, 'rossi')).toBe(true)
+    expect(ordineCorrisponde(conto, 'tavolo 7')).toBe(true)
+    expect(ordineCorrisponde(conto, 'anna@')).toBe(true)
+    expect(ordineCorrisponde(conto, 'anna')).toBe(true)
+    expect(ordineCorrisponde(conto, 'negroni')).toBe(true)
+  })
+
+  it('non guarda maiuscole e spazi ai lati', () => {
+    // Chi cerca sul tablet scrive di fretta, con la maiuscola automatica.
+    expect(ordineCorrisponde(conto, '  NEGRONI ')).toBe(true)
+  })
+
+  it('con la ricerca vuota non risponde nessuno', () => {
+    // Altrimenti la ricerca vuota "accenderebbe" il primo conto della coda.
+    expect(ordineCorrisponde(conto, '')).toBe(false)
+    expect(ordineCorrisponde(conto, '   ')).toBe(false)
+    expect(ordineCorrisponde(conto, null)).toBe(false)
+  })
+
+  it('regge i conti a metà, senza cliente o senza righe', () => {
+    expect(ordineCorrisponde({ daily_number: 3 }, 'marco')).toBe(false)
+    expect(ordineCorrisponde(null, 'marco')).toBe(false)
+  })
+})
+
+describe('primoCorrispondente', () => {
+  const lista = [
+    { id: 'a', daily_number: 1, customer_name: 'Luca' },
+    { id: 'b', daily_number: 2, customer_name: 'Marco' },
+    { id: 'c', daily_number: 3, customer_name: 'Marcella' },
+  ]
+
+  it('accende il PRIMO che risponde, nell ordine in cui sta sullo schermo', () => {
+    // "Il primo" vuol dire il primo che si incontra scorrendo la pagina:
+    // la lista arriva già ordinata come la si vede.
+    expect(primoCorrispondente(lista, 'marc')?.id).toBe('b')
+  })
+
+  it('senza nessuna risposta torna niente (e la coda resta intera)', () => {
+    expect(primoCorrispondente(lista, 'zzz')).toBe(null)
+    expect(primoCorrispondente(lista, '')).toBe(null)
+    expect(primoCorrispondente(null, 'marc')).toBe(null)
   })
 })

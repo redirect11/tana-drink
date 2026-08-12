@@ -26,7 +26,7 @@ import {
   placedByName,
   placedByLetter,
 } from '../lib/orderStatus.js'
-import { bucketByStatus, ordersRecap } from '../lib/coda.js'
+import { bucketByStatus, ordersRecap, ordineCorrisponde, primoCorrispondente } from '../lib/coda.js'
 import StatusBell from '../components/StatusBell.jsx'
 import ActionSheet from '../components/ActionSheet.jsx'
 import { isGestore, isPersonale } from '../lib/ruoli.js'
@@ -742,19 +742,19 @@ function OrderQueue() {
 
   // Ricerca rapida: numero, cliente, tavolo, drink, chi ha inserito.
   const q = search.trim().toLowerCase()
+  // DUE MODI, si sceglie dalle impostazioni (Coda ordini → La ricerca):
+  //   filtra    — resta in pagina solo chi risponde (come è sempre stato)
+  //   evidenzia — la coda non si tocca: si accende il primo conto trovato
+  //               e ce lo si porta sotto gli occhi. Al banco, con la coda a
+  //               memoria per posizione, veder sparire tutto il resto vuol
+  //               dire perdere il colpo d'occhio proprio mentre si cerca.
+  const ricercaEvidenzia = settings.queue_search === 'evidenzia'
   // Cercando esplicitamente si trovano anche i conti dei giorni scorsi
   // (altrimenti sarebbero raggiungibili solo dalla tab "Da chiudere").
-  const visibleOrders = q
-    ? ordersInVista.filter(
-        (o) =>
-          String(o.daily_number ?? '').includes(q) ||
-          o.customer_name?.toLowerCase().includes(q) ||
-          o.table_label?.toLowerCase().includes(q) ||
-          o.placed_by?.email?.toLowerCase().includes(q) ||
-          o.placed_by?.name?.toLowerCase().includes(q) ||
-          (o.order_items || []).some((i) => i.name?.toLowerCase().includes(q))
-      )
-    : ordersInVista
+  const visibleOrders =
+    q && !ricercaEvidenzia
+      ? ordersInVista.filter((o) => ordineCorrisponde(o, q))
+      : ordersInVista
   const buckets = bucketByStatus(visibleOrders)
   const listView = settings.queue_view === 'lista'
   const list = buckets[statusTab] || []
@@ -790,6 +790,45 @@ function OrderQueue() {
       !(o.client_temp_id && pendingTempIds.has(o.client_temp_id))
   )
   const boardGroups = groupByDay(visibleBoard)
+
+  // IL CONTO ACCESO. Solo nel modo "evidenzia": è il primo che risponde
+  // NELL'ORDINE IN CUI STA SULLO SCHERMO — non nell'ordine in cui arrivano
+  // dal database, altrimenti si accende un conto e lo scorrimento va da
+  // un'altra parte. Ogni vista ha il suo ordine, quindi si guarda la lista
+  // che quella vista sta davvero disegnando.
+  const ordiniComeSiVedono = gridView
+    ? boardGroups.flatMap((g) => g.orders)
+    : listView
+      ? [...inCorso, ...evasi]
+      : list
+  const acceso = ricercaEvidenzia ? primoCorrispondente(ordiniComeSiVedono, q) : null
+  const idAcceso = acceso?.id || null
+  // Portarlo sotto gli occhi. Si rifà a ogni lettera battuta: il conto
+  // acceso cambia mentre si scrive, e lo scorrimento lo segue.
+  useEffect(() => {
+    if (!idAcceso) return
+    const el = document.getElementById(`ordine-${idAcceso}`)
+    // `block: 'center'` e non 'nearest': se il conto è appena fuori
+    // schermo, "nearest" lo incolla al bordo e sembra tagliato.
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [idAcceso])
+  // Toccando un conto qualsiasi la ricerca si azzera: si è trovato quello
+  // che si cercava, e lasciare il testo lì vorrebbe dire ritrovarsi la
+  // coda accesa a metà al giro dopo.
+  const contoToccato = () => {
+    if (ricercaEvidenzia && search) setSearch('')
+  }
+  // A schede si guarda una scheda per volta: il conto cercato può esserci
+  // ed essere in un'altra. Dire solo "non c'è" manderebbe a cercarlo di
+  // nuovo dove non è mai stato.
+  const altroveNonInVista =
+    ricercaEvidenzia && q && !idAcceso ? primoCorrispondente(ordersInVista, q) : null
+  const avvisoRicerca =
+    ricercaEvidenzia && q && !idAcceso
+      ? altroveNonInVista
+        ? `🔍 «${search.trim()}» sta in un'altra scheda.`
+        : `🔍 Nessun conto per «${search.trim()}».`
+      : null
 
   async function incassaSuLettore(o) {
     setError(null)
@@ -964,8 +1003,10 @@ function OrderQueue() {
       <div
         className={`card order-card grid-card ${o.workflow_status} ${orderStripClass(o)}${
           workflowOn && pagato(o) && !servito(o) ? ' pagato-da-servire' : ''
-        }`}
+        }${o.id === idAcceso ? ' conto-acceso' : ''}`}
         key={o.id}
+        id={`ordine-${o.id}`}
+        onClick={contoToccato}
         style={awaiting ? { opacity: 0.55 } : undefined}
       >
         {/* Corpo: click → dettaglio ordine */}
@@ -1103,8 +1144,10 @@ function OrderQueue() {
           <div
             className={`card order-card ${o.workflow_status}${
               workflowOn && pagato(o) && !servito(o) ? ' pagato-da-servire' : ''
-            }`}
+            }${o.id === idAcceso ? ' conto-acceso' : ''}`}
             key={o.id}
+            id={`ordine-${o.id}`}
+            onClick={contoToccato}
             style={awaiting ? { opacity: 0.55 } : undefined}
           >
             <div className="row between">
@@ -1272,6 +1315,10 @@ function OrderQueue() {
               {recap.aperti} apert{recap.aperti === 1 ? 'o' : 'i'} · {recap.chiusi} chius
               {recap.chiusi === 1 ? 'o' : 'i'} · {formatPrice(recap.total)}
             </span>
+            {/* Cercando con l'evidenziazione la coda non cambia: se non si
+                trova niente, senza scritta non succede proprio nulla e si
+                resta a chiedersi se abbia capito. */}
+            {avvisoRicerca && <span className="muted">{avvisoRicerca}</span>}
             {(legenda.staff.length > 0 || legenda.hasClient) && (
               <div className="order-legend">
                 {legenda.staff.map(([L, name]) => (
@@ -1338,14 +1385,21 @@ function OrderQueue() {
       )}
 
       {!gridView && (
-        <input
-          type="search"
-          className="menu-search"
-          placeholder="🔍 Cerca per numero, cliente, tavolo, drink…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={{ marginTop: 8 }}
-        />
+        <>
+          <input
+            type="search"
+            className="menu-search"
+            placeholder="🔍 Cerca per numero, cliente, tavolo, drink…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{ marginTop: 8 }}
+          />
+          {avvisoRicerca && (
+            <p className="muted small" style={{ margin: '-4px 0 8px' }}>
+              {avvisoRicerca}
+            </p>
+          )}
+        </>
       )}
 
       {gridView ? (

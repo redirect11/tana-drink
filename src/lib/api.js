@@ -3066,6 +3066,12 @@ export const DEFAULT_SETTINGS = {
   // Coda ordini bartender: 'tabs' (schede per stato) o 'lista' (lista unica
   // con stato indicato da colore/etichetta sulla card).
   queue_view: 'griglia',
+  // Cosa fa la ricerca nella coda: 'filtra' lascia in pagina solo i conti
+  // che rispondono (come è sempre stato), 'evidenzia' non toglie niente —
+  // accende il primo conto trovato e ce lo porta sotto gli occhi. Il
+  // secondo modo serve a chi vuole tenere davanti tutta la coda mentre
+  // cerca un nome.
+  queue_search: 'filtra',
   // Vista ordine: raggruppamento di default degli item aggiunti —
   // 'separati' (ogni tocco una riga a sé) o 'uniti' (item uguali sommati).
   // Si può comunque unire/separare al volo dal riepilogo ordine.

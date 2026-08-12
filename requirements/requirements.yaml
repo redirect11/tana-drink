@@ -1113,6 +1113,26 @@ requirements:
     labels: [ux, difetto-risolto]
     test_cases: [tests/component/SchermoIntero.test.jsx]
 
+  - id: REQ-UI-009
+    title: "La ricerca nella coda: filtra, oppure accende il conto e ci porta lì"
+    area: "src/lib/coda.js, src/pages/BartenderPage.jsx, src/components/SettingsTab.jsx"
+    description: >
+      Cercando nella coda per numero, cliente, tavolo, chi ha battuto o drink si
+      può scegliere fra due comportamenti, in Impostazioni → Coda ordini. «Filtra
+      la coda» lascia in pagina solo i conti che rispondono, come è sempre stato.
+      «Accendi e porta lì» non toglie niente: scorre fino al primo conto che
+      risponde e lo accende con un anello nel colore d'accento, così si vede
+      dov'è rispetto agli altri; toccando un conto qualsiasi la ricerca si
+      azzera da sé. La regola di corrispondenza è una sola per tutti e due i
+      modi, altrimenti cambiando impostazione lo stesso testo troverebbe conti
+      diversi. Se non risponde nessuno lo dice, invece di lasciare la coda
+      apparentemente immobile; e se il conto c'è ma sta in un'altra scheda,
+      dice anche quello.
+    status: implemented
+    generate_issue: false
+    labels: [ux, coda]
+    test_cases: [tests/unit/coda.test.js, tests/component/SettingsTab.test.jsx]
+
   # ══════════════════════════════════════════════════════════════════════
 
   - id: REQ-AI-001
