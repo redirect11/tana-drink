@@ -45,6 +45,9 @@ vi.mock('../../src/components/PrinterSetup.jsx', () => ({
 vi.mock('../../src/components/BackupPanel.jsx', () => ({
   default: () => <div>PANNELLO BACKUP</div>,
 }))
+vi.mock('../../src/components/InfoTab.jsx', () => ({
+  default: () => <div>PANNELLO INFORMAZIONI</div>,
+}))
 vi.mock('../../src/components/ThemeSettings.jsx', () => ({
   default: () => <div>PANNELLO ASPETTO</div>,
 }))
@@ -108,6 +111,7 @@ describe('impostazioni a schede', () => {
       'Posizione locale',
       'Stampante',
       'Backup e ripristino',
+      'Informazioni',
       'Annullamenti',
     ]) {
       expect(screen.getByRole('button', { name: new RegExp(voce) })).toBeInTheDocument()

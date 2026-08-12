@@ -12,6 +12,7 @@ import ThemeSettings from './ThemeSettings.jsx'
 import CategoryRail from './CategoryRail.jsx'
 import PrinterSetup from './PrinterSetup.jsx'
 import BackupPanel from './BackupPanel.jsx'
+import InfoTab from './InfoTab.jsx'
 import { pairSumUpReader, unpairSumUpReader } from '../lib/paymentsApi.js'
 import { devToolsEnabled } from '../dev/devActions.js'
 
@@ -688,6 +689,12 @@ export default function SettingsTab({ role = null }) {
     },
     { id: 'stampante', icona: '🖨️', label: 'Stampante', nodo: <PrinterSetup /> },
     { id: 'backup', icona: '💾', label: 'Backup e ripristino', nodo: <BackupPanel role={role} /> },
+    {
+      id: 'informazioni',
+      icona: 'ℹ️',
+      label: 'Informazioni',
+      nodo: <InfoTab />,
+    },
     {
       id: 'annullamenti',
       icona: '✖️',

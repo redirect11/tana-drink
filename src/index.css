@@ -242,6 +242,50 @@ body.schermo-intero {
   }
 }
 
+/* INFORMAZIONI: dati tecnici e note di versione. */
+.info-dati {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.info-valore {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-left: 12px;
+}
+.changelog h4.changelog-versione {
+  margin: 18px 0 2px;
+  font-family: var(--serif);
+  font-size: 1.05rem;
+}
+.changelog h4.changelog-versione:first-child {
+  margin-top: 4px;
+}
+.changelog-sezione {
+  margin: 10px 0 2px;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--muted);
+}
+.changelog ul {
+  margin: 4px 0;
+  padding-left: 18px;
+}
+.changelog li {
+  margin: 4px 0;
+  line-height: 1.45;
+}
+.changelog code {
+  font-size: 0.85em;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.07);
+}
+
 /* Il ⋯ della lavagna: pannelli e ordinamento stanno lì dentro. Le parole
    in fila rubavano spazio alla ricerca, che invece si usa di continuo. */
 .board-pannelli {

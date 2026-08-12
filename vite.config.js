@@ -56,6 +56,26 @@ export default defineConfig({
   plugins: [
     react(),
     {
+      // IL CHANGELOG VIAGGIA COL DEPLOY. Le note della versione si leggono
+      // dentro l'app (Impostazioni → Informazioni): il file sta nella
+      // radice del progetto e viene pubblicato insieme al resto, così a
+      // ogni rilascio l'app racconta cosa è cambiato senza doverlo
+      // scrivere due volte.
+      name: 'emit-changelog',
+      apply: 'build',
+      generateBundle() {
+        try {
+          this.emitFile({
+            type: 'asset',
+            fileName: 'changelog.md',
+            source: readFileSync(new URL('./CHANGELOG.md', import.meta.url), 'utf8'),
+          })
+        } catch {
+          /* senza changelog l'app mostra solo i dati tecnici */
+        }
+      },
+    },
+    {
       name: 'emit-version-json',
       apply: 'build',
       generateBundle() {
