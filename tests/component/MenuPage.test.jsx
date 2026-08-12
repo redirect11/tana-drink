@@ -1,9 +1,12 @@
 // @vitest-environment happy-dom
 'use strict'
 
-// Test di COMPONENTE del MENÙ visto dallo STAFF (/menu): la ricerca rapida,
-// quella che serve a battere un ordine a mano mentre si ha un vassoio in
-// mano. Due modi, come nel POS e nella coda: filtrare o accendere.
+// IL MENÙ È UNO SOLO. C'è stata una seconda schermata, riservata allo staff:
+// catalogo a due colonne con la ricerca, nata per gli ordini battuti a mano.
+// Quelli si battono al POS, e chi apriva il menù dal gestionale si trovava
+// una pagina diversa da quella che stava mostrando al tavolo. Ora chi lavora
+// vede lo stesso menù del cliente — e ci può ordinare, se le impostazioni lo
+// consentono.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
@@ -12,11 +15,12 @@ import { MemoryRouter } from 'react-router-dom'
 import '@testing-library/jest-dom/vitest'
 
 let mockSettings = {}
+let ruoloClaim = 'bartender'
 
 vi.mock('../../src/lib/api.js', () => ({
   subscribeServiceStats: vi.fn(() => () => {}),
   subscribeSettings: vi.fn((cb) => {
-    cb({ service_mode: 'tavolo', ...mockSettings })
+    cb({ service_mode: 'tavolo', menu_only: false, ...mockSettings })
     return () => {}
   }),
   subscribeOrder: vi.fn(() => () => {}),
@@ -27,8 +31,6 @@ vi.mock('../../src/lib/api.js', () => ({
   DEFAULT_SETTINGS: { service_mode: 'tavolo' },
 }))
 
-// Catalogo finto: due categorie, così si vede se la ricerca porta davvero
-// nell'altra categoria invece di limitarsi a filtrare.
 vi.mock('../../src/lib/menuCache.js', () => ({
   useMenu: () => ({
     loading: false,
@@ -40,7 +42,6 @@ vi.mock('../../src/lib/menuCache.js', () => ({
       { id: 'd1', name: 'Mojito', price: 7, category_id: 'c1', available: true },
       { id: 'd2', name: 'Negroni', price: 8, category_id: 'c1', available: true },
       { id: 'd3', name: 'Ichnusa', price: 4, category_id: 'c2', available: true },
-      { id: 'd4', name: 'Moretti', price: 4, category_id: 'c2', available: true },
     ],
   }),
 }))
@@ -51,14 +52,17 @@ vi.mock('../../src/lib/firebaseClient.js', () => ({
   db: {},
 }))
 
-// Chi guarda è un bartender: è la vista a due colonne con la ricerca.
 vi.mock('firebase/auth', () => ({
   onAuthStateChanged: (_auth, cb) => {
-    cb({
-      email: 'anna@tana.it',
-      displayName: 'Anna',
-      getIdTokenResult: () => Promise.resolve({ claims: { role: 'bartender' } }),
-    })
+    cb(
+      ruoloClaim
+        ? {
+            email: 'anna@tana.it',
+            displayName: 'Anna',
+            getIdTokenResult: () => Promise.resolve({ claims: { role: ruoloClaim } }),
+          }
+        : null
+    )
     return () => {}
   },
 }))
@@ -73,84 +77,61 @@ vi.mock('../../src/components/StaffDrawer.jsx', () => ({ default: () => null }))
 
 import MenuPage from '../../src/pages/MenuPage.jsx'
 
-// La vista staff compare quando il ruolo è arrivato dal token (una promessa):
-// si aspetta la ricerca, che è il primo segno che siamo nella vista giusta.
-async function mostra() {
-  const r = render(
-    <MemoryRouter initialEntries={['/menu']}>
+function mostra(percorso = '/menu') {
+  return render(
+    <MemoryRouter initialEntries={[percorso]}>
       <MenuPage />
     </MemoryRouter>
   )
-  await screen.findByPlaceholderText(/Cerca drink/)
-  return r
 }
 
-// I nomi dei prodotti, nell'ordine in cui stanno a schermo.
-const nomi = () =>
-  [...document.querySelectorAll('.staff-product-name')].map((e) => e.textContent)
-const acceso = () => document.querySelector('.staff-product.prodotto-acceso .staff-product-name')
+// I prodotti come li vede chi guarda: le card del menù cliente.
+const voci = () =>
+  [...document.querySelectorAll('.menu-item h3')].map((e) => e.textContent)
 
 beforeEach(() => {
   mockSettings = {}
+  ruoloClaim = 'bartender'
   localStorage.clear()
-  // Al primo accesso il menù mostra il benvenuto a tutta pagina: qui
-  // interessa la ricerca, quindi si finge di averlo già visto.
+  // Al primo accesso il menù mostra il benvenuto a tutta pagina.
   localStorage.setItem('tana_welcome_v1', '1')
 })
 
-describe('menù staff: la ricerca FILTRA (impostazione di partenza)', () => {
-  it('restano solo i prodotti che rispondono, le categorie spariscono', async () => {
-    const user = userEvent.setup()
-    await mostra()
-    // Si parte dalla prima categoria: solo i cocktail.
-    expect(nomi()).toEqual(['Mojito', 'Negroni'])
-    await user.type(screen.getByPlaceholderText(/Cerca drink/), 'mo')
-    expect(nomi()).toEqual(['Mojito', 'Moretti'])
+describe('il menù è uno solo, quello del cliente', () => {
+  it('allo staff arriva lo stesso menù, non più il catalogo a due colonne', async () => {
+    mostra()
+    // Il segno che si è dello staff c'è (l'ordine viene marcato col nome),
+    // ma la pagina sotto è la stessa del cliente.
+    await screen.findByText(/Inserimento ordine da/)
+    expect(voci()).toEqual(['Mojito', 'Negroni', 'Ichnusa'])
+    expect(document.querySelector('.staff-menu')).toBeNull()
     expect(document.querySelector('.staff-cats')).toBeNull()
-    expect(acceso()).toBeNull()
-  })
-})
-
-describe('menù staff: la ricerca ACCENDE e porta lì', () => {
-  beforeEach(() => {
-    mockSettings = { pos_search: 'evidenzia' }
+    expect(screen.queryByPlaceholderText(/Cerca drink/)).toBeNull()
   })
 
-  it('la categoria del prodotto trovato si apre e il prodotto si illumina', async () => {
+  it('lo stesso menù per il cliente', async () => {
+    ruoloClaim = null
+    mostra()
+    await screen.findByText('Mojito')
+    expect(voci()).toEqual(['Mojito', 'Negroni', 'Ichnusa'])
+    expect(document.querySelector('.staff-menu')).toBeNull()
+  })
+
+  it('chi lavora può ordinare da qui: il prodotto entra nel carrello', async () => {
     const user = userEvent.setup()
-    await mostra()
-    expect(nomi()).toEqual(['Mojito', 'Negroni'])
-    // "ichn" sta nell'altra categoria: la barra resta, ma ci si sposta lì.
-    await user.type(screen.getByPlaceholderText(/Cerca drink/), 'ichn')
-    expect(document.querySelector('.staff-cats')).not.toBeNull()
-    expect(nomi()).toEqual(['Ichnusa', 'Moretti'])
-    expect(acceso()).toHaveTextContent('Ichnusa')
+    mostra()
+    await screen.findByText(/Inserimento ordine da/)
+    const aggiungi = screen.getAllByRole('button', { name: /Aggiungi/ })
+    await user.click(aggiungi[0])
+    expect(screen.getByText(/Rivedi ordine/)).toBeInTheDocument()
   })
 
-  it('si accende il PRIMO che risponde, e gli altri restano al loro posto', async () => {
-    const user = userEvent.setup()
-    await mostra()
-    await user.type(screen.getByPlaceholderText(/Cerca drink/), 'mo')
-    // Mojito viene prima di Moretti: è quello da accendere.
-    expect(acceso()).toHaveTextContent('Mojito')
-    expect(nomi()).toEqual(['Mojito', 'Negroni'])
-  })
-
-  it('battuto il prodotto la ricerca si azzera da sé, e resta la categoria giusta', async () => {
-    const user = userEvent.setup()
-    await mostra()
-    await user.type(screen.getByPlaceholderText(/Cerca drink/), 'ichn')
-    await user.click(screen.getAllByRole('button', { name: '+' })[0])
-    expect(screen.getByPlaceholderText(/Cerca drink/)).toHaveValue('')
-    expect(nomi()).toEqual(['Ichnusa', 'Moretti'])
-  })
-
-  it('niente da trovare: il catalogo resta intero e lo dice', async () => {
-    const user = userEvent.setup()
-    await mostra()
-    await user.type(screen.getByPlaceholderText(/Cerca drink/), 'grappa')
-    expect(nomi()).toEqual(['Mojito', 'Negroni'])
-    expect(screen.getByText(/Nessun prodotto per «grappa»/)).toBeInTheDocument()
-    expect(acceso()).toBeNull()
+  it('a «solo menù» il cliente guarda e basta: niente tasti per aggiungere', async () => {
+    ruoloClaim = null
+    mockSettings = { menu_only: true }
+    mostra()
+    await screen.findByText('Mojito')
+    expect(screen.queryByRole('button', { name: /Aggiungi/ })).toBeNull()
+    expect(screen.getByText(/Rivolgersi allo staff per ordinare/)).toBeInTheDocument()
   })
 })
