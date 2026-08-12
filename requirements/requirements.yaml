@@ -313,10 +313,15 @@ requirements:
       Il lettore si associa con un codice di pairing (riservato a chi sta al
       banco); da lì si incassa con carta direttamente dall'app. Il webhook verifica
       l'esito tramite la Transactions API prima di segnare il conto pagato.
+      Nella schermata di pagamento SumUp resta sempre in lista: se il lettore non
+      è configurato — o manca la rete — il tasto è spento a vedersi ma si può
+      toccare, e al tocco dice il perché e dove si rimedia. Il motivo non sta
+      scritto sotto al tasto: occupava una riga in una schermata che ne ha
+      poche, e chi incassa non lo leggeva comunque.
     status: implemented
     generate_issue: false
     labels: [pagamenti, sumup]
-    test_cases: [tests/bdd/payment-reader.test.js]
+    test_cases: [tests/bdd/payment-reader.test.js, tests/component/PaymentScreen.test.jsx]
 
   - id: REQ-PAG-005
     title: "Pagamento online con link o QR"

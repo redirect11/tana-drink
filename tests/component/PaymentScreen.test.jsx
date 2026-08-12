@@ -41,8 +41,10 @@ vi.mock('../../src/lib/printer.js', () => ({
   // Guardia "una copia sola per conto": nei test lascia sempre passare.
   claimReceiptPrint: vi.fn(() => true),
 }))
+vi.mock('../../src/lib/toast.js', () => ({ toastError: vi.fn() }))
 
 import PaymentScreen from '../../src/components/PaymentScreen.jsx'
+import { toastError } from '../../src/lib/toast.js'
 import {
   registerPayment,
   setOrderDiscount,
@@ -227,12 +229,25 @@ describe('metodi di pagamento', () => {
     expect(registerPayment).not.toHaveBeenCalled()
   })
 
-  it("lettore NON configurato: SumUp in lista ma spento, con la nota", () => {
+  // Il motivo stava scritto sotto al tasto e occupava una riga a una
+  // schermata che ne ha poche. Ora il tasto è spento e basta: il perché lo
+  // dice se lo si tocca.
+  it('lettore NON configurato: SumUp spento, senza sottotitolo sul tasto', () => {
     mount(baseOrder())
     expect(screen.getByRole('button', { name: /Carta di Credito/ })).toBeInTheDocument()
     const sumup = screen.getByRole('button', { name: /SumUp/ })
-    expect(sumup).toBeDisabled()
-    expect(sumup).toHaveTextContent(/configura il lettore/)
+    expect(sumup).toHaveClass('spento')
+    expect(sumup).toHaveAttribute('aria-disabled', 'true')
+    expect(sumup).not.toHaveTextContent(/Impostazioni/)
+  })
+
+  it('toccando SumUp spento si legge perché, e il metodo non cambia', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.click(screen.getByRole('button', { name: /SumUp/ }))
+    expect(toastError).toHaveBeenCalledWith(expect.stringMatching(/Impostazioni → Pagamenti/))
+    // Resta selezionato il contante: un tasto spento non cambia l'incasso.
+    expect(screen.getByRole('button', { name: /Contante/ })).toHaveAttribute('aria-pressed', 'true')
   })
 
   it('Buono come sconto: senza buoni l’opzione 🎟 è spenta nel modale sconto', async () => {
