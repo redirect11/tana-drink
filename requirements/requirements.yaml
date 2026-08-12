@@ -1107,7 +1107,12 @@ requirements:
       Sempre per la stessa ragione, chi è dello staff non passa dalla vetrina:
       aprendo la home finisce dritto nella lista ordini. Unica eccezione il QR
       del tavolo (?tavolo= / ?group=), che porta al menù anche se a inquadrarlo
-      è chi sta dietro al banco.
+      è chi sta dietro al banco. E all'inizio della sessione non si finisce mai
+      dentro il POS: se l'app si riapre lì — scheda rimasta aperta, accesso
+      appena fatto — si torna alla lista ordini, perché il POS riprende da sé
+      il conto lasciato in corso e ci si ritroverebbe a battere righe in un
+      conto che non si è scelto. Vale una volta sola, all'avvio: dopo, «Nuovo
+      ordine» e il ➕ portano al POS come sempre.
     status: implemented
     generate_issue: false
     labels: [ux, temi]

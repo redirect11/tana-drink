@@ -160,6 +160,21 @@ export default function App() {
     navigate('/bar', { replace: true })
   }, [staffRole, location.pathname, location.search, navigate])
 
+  // E NON SI ENTRA MAI NEL POS DA SOLI. Appena la sessione dello staff è
+  // pronta — accesso, o riapertura dell'app con la scheda rimasta lì — la
+  // strada è la lista ordini. Nel POS ci si entra apposta, col ➕: trovarcisi
+  // dentro all'avvio significa battere righe in un conto che non si è scelto
+  // (la schermata riprende da sé il conto lasciato aperto). Vale UNA VOLTA
+  // SOLA, all'inizio della sessione: dopo, «Nuovo ordine» funziona come
+  // sempre.
+  const rottaIniziale = useRef(false)
+  useEffect(() => {
+    if (!staffRole || rottaIniziale.current) return
+    rottaIniziale.current = true
+    if (location.pathname.startsWith('/pos')) navigate('/bar', { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [staffRole])
+
   // Tema: SEGUE CHI GUARDA, non l'indirizzo. Prima era un elenco di
   // percorsi, e bastava che ne mancasse uno — il profilo staff, "i miei
   // ordini", l'accesso — perché a chi sta lavorando arrivassero i colori

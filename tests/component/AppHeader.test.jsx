@@ -16,6 +16,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import '@testing-library/jest-dom/vitest'
 
@@ -145,9 +146,17 @@ describe('la barra in cima è la stessa su tutte le schermate', () => {
     expect(screen.getByText('La Tana del Coniglio')).toBeInTheDocument()
   })
 
+  // Nel POS ci si arriva dal menu (o dal ➕ della coda), non aprendo l'app lì
+  // dentro: all'avvio della sessione si viene riportati alla lista ordini.
   it('niente ☰ mentre si compone un conto: da lì si esce con «← Ordini»', async () => {
+    const user = userEvent.setup()
     ruoloClaim = 'bartender'
-    apri('/pos')
+    // Da una schermata qualsiasi: il menu laterale lo monta l'app (nella coda
+    // se lo monta la pagina, che qui è finta).
+    apri('/profilo-staff')
+    await screen.findByText('PAGINA PROFILO STAFF')
+    await user.click(burger())
+    await user.click(screen.getByText('Nuovo ordine'))
     await screen.findByText('PAGINA POS')
     expect(burger()).toBeNull()
   })
@@ -186,6 +195,16 @@ describe('chi lavora non passa dalla vetrina', () => {
     apri('/')
     await screen.findByText('PAGINA HOME')
     expect(screen.queryByText('PAGINA CODA')).toBeNull()
+  })
+
+  // La scheda resta aperta sul POS, l'app si riapre lì dentro e la schermata
+  // riprende da sé il conto lasciato in corso: si finisce a battere righe in
+  // un conto che non si è scelto. Nel POS ci si entra col ➕, non per inerzia.
+  it('riaprendo l’app dentro il POS si finisce nella lista ordini', async () => {
+    ruoloClaim = 'bartender'
+    apri('/pos')
+    await screen.findByText('PAGINA CODA')
+    expect(screen.queryByText('PAGINA POS')).toBeNull()
   })
 
   it('col QR del tavolo si va al menù anche se a inquadrarlo è il barista', async () => {
