@@ -1084,13 +1084,15 @@ requirements:
     title: "La testata della coda sta su una riga sola"
     area: "src/pages/BartenderPage.jsx, src/index.css"
     description: >
-      Da tablet in su, nella testata della coda titolo, ricerca, ⋯ e ➕ stanno
-      tutti sulla stessa linea e alti quanto il ☰ (42px), che è fisso e fuori
-      dal flusso; conteggi e legenda degli autori vanno sulla riga sotto.
-      Prima i conteggi stavano dentro il titolo, il titolo cresceva in altezza
-      e ognuno degli altri si centrava a un'altezza diversa. Sul telefono la
-      testata resta com'era: titolo e conteggi rientrati, ricerca a tutta
-      larghezza.
+      Da tablet in su, nella testata della coda titolo, ricerca e ⋯ stanno tutti
+      sulla stessa linea e alti quanto il ☰ (42px), che è fisso e fuori dal
+      flusso; conteggi e legenda degli autori vanno sulla riga sotto. Prima i
+      conteggi stavano dentro il titolo, il titolo cresceva in altezza e ognuno
+      degli altri si centrava a un'altezza diversa. Il ➕ resta invece grande
+      com'era (60px) e sporge dalla riga: è il tasto che si prende di corsa e
+      con le mani occupate, e un bersaglio largo vale più di una riga
+      allineata. Sul telefono la testata resta com'era: titolo e conteggi
+      rientrati, ricerca a tutta larghezza.
     status: implemented
     generate_issue: false
     labels: [ux, coda]

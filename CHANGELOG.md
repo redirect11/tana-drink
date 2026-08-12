@@ -55,10 +55,11 @@ una funzione, il terzo per le correzioni.
   mezzo alla serata arrivavano i colori del cliente.
 - Nelle impostazioni si cambia **il tema del gestionale e quello della
   vista cliente**, e adesso c'è scritto quale si sta toccando.
-- Nella coda, **da tablet in su, titolo, ricerca, ⋯ e ➕ stanno sulla
-  stessa linea**, alti quanto il tasto menu; conteggi e legenda vanno sulla
-  riga sotto. Prima non era allineato niente. Sul telefono la testata resta
-  quella di sempre.
+- Nella coda, **da tablet in su, titolo, ricerca e ⋯ stanno sulla stessa
+  linea**, alti quanto il tasto menu; conteggi e legenda vanno sulla riga
+  sotto. Prima non era allineato niente. Il ➕ resta grande com'era e
+  sporge dalla riga: è il tasto che si prende di corsa. Sul telefono la
+  testata resta quella di sempre.
 - **Impostazioni a schede**: ventuno riquadri diventano voci di una barra
   laterale, una alla volta.
 - **Backup e ripristino di tutto il database**, dall'app e da riga di
