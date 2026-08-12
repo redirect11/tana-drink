@@ -28,6 +28,7 @@ import {
 } from '../lib/orderStatus.js'
 import { bucketByStatus, ordersRecap } from '../lib/coda.js'
 import StatusBell from '../components/StatusBell.jsx'
+import ActionSheet from '../components/ActionSheet.jsx'
 import { isGestore, isPersonale } from '../lib/ruoli.js'
 import { senzaNascosti, subscribeNascosti } from '../lib/ordiniNascosti.js'
 import { allServed } from '../lib/comande.js'
@@ -419,6 +420,26 @@ function OrderQueue() {
   const [cancelTarget, setCancelTarget] = useState(null) // { order, kind }
   const [search, setSearch] = useState('')
   const [showPanels, setShowPanels] = useState(false) // pannelli (chiamate/gruppi) nella griglia
+  const [menuBoard, setMenuBoard] = useState(false) // menu ⋯ della lavagna
+  // Verso della lista: dal più vecchio (come nasce la serata) o dal più
+  // recente (utile quando i conti sono tanti e l'ultimo è quello che
+  // serve). Si ricorda, perché è una preferenza di chi lavora.
+  const [ordineDesc, setOrdineDesc] = useState(() => {
+    try {
+      return localStorage.getItem('tana:coda:desc') === '1'
+    } catch {
+      return false
+    }
+  })
+  const cambiaOrdine = () =>
+    setOrdineDesc((v) => {
+      try {
+        localStorage.setItem('tana:coda:desc', v ? '0' : '1')
+      } catch {
+        /* niente memoria: vale per questa sessione */
+      }
+      return !v
+    })
   const [openCards, setOpenCards] = useState(() => new Set()) // card-griglia coi tasti aperti
   const [pend, setPend] = useState({ pending: [], banners: [] }) // ordini POS in invio
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
@@ -756,7 +777,7 @@ function OrderQueue() {
     .filter((o) =>
       boardFilter === 'tutti' ? true : boardFilter === 'chiusi' ? isClosed(o) : !isClosed(o)
     )
-    .sort((a, b) => (a.daily_number || 0) - (b.daily_number || 0))
+    .sort((a, b) => ((a.daily_number || 0) - (b.daily_number || 0)) * (ordineDesc ? -1 : 1))
   // Ordini POS in invio. Finché il placeholder è attivo l'ordine reale
   // resta nascosto: il match usa il client_temp_id scritto sull'ordine
   // (deterministico anche se lo snapshot arriva PRIMA che il placeholder
@@ -1237,18 +1258,16 @@ function OrderQueue() {
             onChange={(e) => setSearch(e.target.value)}
           />
           <div className="board-actions">
-            {/* Sul telefono la parola "Pannelli" mangiava mezza riga a
-                un comando che si tocca due volte a sera: resta il tasto,
-                senza scritta. */}
+            {/* Un tasto solo per le cose che si fanno ogni tanto: i
+                pannelli (chiamate e gruppi) e il verso della lista. Erano
+                parole in fila in una riga che serve alla ricerca. */}
             <button
               className={`btn ghost small board-pannelli${showPanels ? ' active' : ''}`}
-              onClick={() => setShowPanels((v) => !v)}
-              title="Chiamate staff e gruppi"
-              aria-label="Chiamate staff e gruppi"
+              onClick={() => setMenuBoard(true)}
+              title="Altro: pannelli e ordinamento"
+              aria-label="Altro"
             >
-              <span className="board-pannelli-freccia">{showPanels ? '▴' : '▾'}</span>
-              <span className="board-pannelli-testo"> Pannelli</span>
-              <span className="board-pannelli-punti">⋯</span>
+              ⋯
             </button>
             {cassaAperta || cassaLoading ? (
               <Link className="btn board-add" to="/pos" aria-label="Nuovo ordine" title="Nuovo ordine" />
@@ -1281,6 +1300,28 @@ function OrderQueue() {
           </div>
         </>
       )}
+
+      <ActionSheet
+        open={menuBoard}
+        onClose={() => setMenuBoard(false)}
+        titolo="Coda ordini"
+        voci={[
+          {
+            id: 'pannelli',
+            icon: '📟',
+            label: showPanels ? 'Nascondi i pannelli' : 'Chiamate staff e gruppi',
+            hint: 'Il cerca-persone e i gruppi aperti',
+            onClick: () => setShowPanels((v) => !v),
+          },
+          {
+            id: 'ordine',
+            icon: '↕',
+            label: ordineDesc ? 'Ordina dal meno recente' : 'Ordina dal più recente',
+            hint: ordineDesc ? 'Adesso: prima gli ultimi' : 'Adesso: prima i primi della serata',
+            onClick: cambiaOrdine,
+          },
+        ]}
+      />
 
       {/* Pannelli chiamate/gruppi: nella griglia compaiono solo col toggle
           «Pannelli»; nelle altre viste restano sempre visibili. */}

@@ -27,6 +27,7 @@
  */
 
 import { readFileSync } from 'node:fs'
+import { parseRequirementsYaml } from './lib-requisiti.mjs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -41,107 +42,6 @@ const DRY_RUN = process.env.DRY_RUN === 'true' || process.argv.includes('--dry-r
 
 const [OWNER, REPO] = GITHUB_REPO.split('/')
 const GITHUB_API = 'https://api.github.com'
-
-// ── Minimal YAML parser ───────────────────────────────────────────────────────
-// Parses only the subset of YAML used in requirements.yaml.
-// For a production system, replace with `js-yaml` (npm install js-yaml).
-
-function parseRequirementsYaml(text) {
-  const lines = text.split('\n')
-  const requirements = []
-  let current = null
-  let inDescription = false
-  let descriptionLines = []
-
-  for (let i = 0; i < lines.length; i++) {
-    const raw = lines[i]
-    const line = raw.trimEnd()
-
-    // Skip comments and empty lines outside of description blocks
-    if (!inDescription && (line.startsWith('#') || line.trim() === '')) continue
-
-    // Start of a new requirement entry
-    if (line.match(/^  - id:/)) {
-      if (current) {
-        if (inDescription) {
-          current.description = descriptionLines.join(' ').trim()
-          inDescription = false
-          descriptionLines = []
-        }
-        requirements.push(current)
-      }
-      current = { id: '', title: '', area: '', description: '', status: 'todo', generate_issue: false, labels: [], test_cases: [] }
-      current.id = line.replace(/^  - id:\s*/, '').trim()
-      continue
-    }
-
-    if (!current) continue
-
-    // Finish multi-line description if we hit a non-indented field
-    if (inDescription) {
-      // Le righe di continuazione del blocco '>' sono indentate più in profondità
-      // della chiave (almeno 6 spazi). Qualsiasi altra cosa chiude la descrizione.
-      if (line.match(/^\s{6,}\S/)) {
-        descriptionLines.push(line.trim())
-        continue
-      } else {
-        if (descriptionLines.length > 0) {
-          current.description = descriptionLines.join(' ').trim()
-        }
-        inDescription = false
-        descriptionLines = []
-      }
-    }
-
-    const fieldMatch = line.match(/^    ([a-z_]+): (.*)/)
-    if (!fieldMatch) continue
-    const [, key, value] = fieldMatch
-
-    switch (key) {
-      case 'title':
-        current.title = value.replace(/^["']|["']$/g, '')
-        break
-      case 'area':
-        current.area = value.replace(/^["']|["']$/g, '')
-        break
-      case 'description':
-        if (value.trim() === '>') {
-          inDescription = true
-          descriptionLines = []
-        } else {
-          current.description = value.replace(/^["']|["']$/g, '')
-        }
-        break
-      case 'status':
-        current.status = value.trim()
-        break
-      case 'generate_issue':
-        current.generate_issue = value.trim() === 'true'
-        break
-      case 'labels': {
-        const labelsMatch = value.match(/\[([^\]]*)\]/)
-        if (labelsMatch) {
-          current.labels = labelsMatch[1].split(',').map((l) => l.trim()).filter(Boolean)
-        }
-        break
-      }
-      case 'test_cases': {
-        const tcMatch = value.match(/\[([^\]]*)\]/)
-        if (tcMatch) {
-          current.test_cases = tcMatch[1].split(',').map((t) => t.trim()).filter(Boolean)
-        }
-        break
-      }
-    }
-  }
-
-  if (current) {
-    if (inDescription) current.description = descriptionLines.join(' ').trim()
-    requirements.push(current)
-  }
-
-  return requirements
-}
 
 // ── GitHub API helpers ────────────────────────────────────────────────────────
 

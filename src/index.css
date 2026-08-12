@@ -202,23 +202,33 @@ body.schermo-intero {
    si leggeva, e i conteggi (aperti, chiusi, totale) spezzati sulla stessa
    riga del titolo finivano a metà parola. Qui: più aria dal ☰, titolo su
    una riga e conteggi sulla successiva. */
+/* I conteggi (aperti, chiusi, totale) vanno SOTTO "In servizio": in riga
+   allungavano la testata e su schermo stretto si spezzavano a metà. Il "·"
+   che li separava dal titolo, a capo, sarebbe un trattino orfano. */
+.board-conti {
+  display: block;
+  margin-left: 0;
+}
+.board-conti-sep {
+  display: none;
+}
+
 @media (max-width: 700px) {
+  /* Solo il TITOLO si scosta dal ☰ (che è fisso nell'angolo): scostando
+     tutta la testata, la ricerca partiva da metà schermo e sprecava la
+     riga. */
   .board-head {
-    padding-left: 56px;
+    padding-left: 0;
     row-gap: 4px;
   }
   .board-title {
+    padding-left: 56px;
     white-space: normal;
     min-width: 0;
   }
-  .board-conti {
-    display: block;
-    margin-left: 0;
-  }
-  /* Il "·" davanti ai conteggi separa dal titolo: andando a capo è solo un
-     trattino orfano a inizio riga. */
-  .board-conti-sep {
-    display: none;
+  .board-search {
+    width: 100%;
+    min-width: 0;
   }
   /* Il ☰ flottante: un filo più piccolo, staccato dal bordo e sotto la
      striscia della linguetta — così non schiaccia il testo accanto e non
@@ -232,26 +242,15 @@ body.schermo-intero {
   }
 }
 
-/* "Pannelli" (chiamate staff e gruppi): sul telefono resta il tasto, senza
-   la parola — mangiava mezza riga per un comando che si tocca due volte a
-   sera. */
-.board-pannelli-punti {
-  display: none;
-}
-@media (max-width: 700px) {
-  .board-pannelli-testo,
-  .board-pannelli-freccia {
-    display: none;
-  }
-  .board-pannelli-punti {
-    display: inline;
-    font-size: 1.2rem;
-    line-height: 1;
-  }
-  .board-pannelli {
-    min-width: 44px;
-    justify-content: center;
-  }
+/* Il ⋯ della lavagna: pannelli e ordinamento stanno lì dentro. Le parole
+   in fila rubavano spazio alla ricerca, che invece si usa di continuo. */
+.board-pannelli {
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  line-height: 1;
 }
 
 /* Anteprima "vista cliente": si è al lavoro ma si sta guardando il menù
@@ -360,6 +359,9 @@ body.schermo-intero {
      logo e tasti sul filo. */
   body.fullbleed.topbar-open .topbar {
     padding-top: calc(var(--safe-top) + 26px);
+  }
+  body.fullbleed.topbar-open .topbar {
+    padding-left: 8px;
   }
   .topbar {
     gap: 8px;
@@ -1431,6 +1433,8 @@ body.fullbleed .topbar {
 /* Topbar richiamabile a tutto schermo: compare come OVERLAY fisso, non spinge
    il contenuto — le schermate a 100dvh (ordini, creazione/modifica, pagamento)
    restano interamente nel viewport. */
+/* A barra aperta il ☰ flottante sparisce (è già dentro la barra): il
+   rientro che gli faceva posto spingeva il tasto in mezzo allo schermo. */
 body.fullbleed.topbar-open .topbar {
   display: flex;
   position: fixed;
@@ -1440,7 +1444,7 @@ body.fullbleed.topbar-open .topbar {
   margin: 0;
   /* Il logo parte appena dopo il ☰ (12+42=54): più a sinistra, ma senza
      finirci sotto. */
-  padding-left: 64px;
+  padding-left: 12px;
   z-index: 125; /* sopra il ☰ del menu laterale (bar-burger, z-index 120) */
   background: var(--bg-2);
   box-shadow: 0 2px 14px rgba(0, 0, 0, 0.4);
