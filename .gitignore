@@ -5,6 +5,9 @@ dist-ssr
 .env
 .env.*
 !.env.example
+# Ambiente locale con gli emulatori: valori finti di un progetto "demo-*"
+# che gira offline. Sta nel repo apposta, così chi arriva avvia e basta.
+!.env.locale
 # Config (vuota) delle Functions: serve in CI per il deploy non-interattivo.
 # NON contiene segreti (i valori reali SumUp vanno nei secret Firebase).
 !functions/.env
@@ -41,3 +44,6 @@ ePOS_SDK_JavaScript_v*.zip
 *.xls
 # Estratto dei costi dal foglio INV: dati aziendali, mai nel repo.
 costi-inventario.json
+backup/
+# Roba di passaggio (catture del markup, prove): non è codice.
+tmp/

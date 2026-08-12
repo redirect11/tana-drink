@@ -1,26 +1,61 @@
 name: Deploy to Firebase
 
-# Due ambienti, stessa pipeline:
-#   push su main    → PRODUZIONE (progetto tana-drink)
-#   push su develop → TEST       (progetto tana-drink-test)
+# GitFlow, una pipeline sola:
+#   push su main        → PRODUZIONE (progetto tana-drink)
+#   push su develop     → TEST       (progetto tana-drink-test)
+#   push su feature/**  → TEST       (si prova il branch prima del merge)
+#   push su release/**  → TEST       (si prova il rilascio candidato)
+#   push su hotfix/**   → TEST       (si prova l'urgenza prima della produzione)
+# L'ambiente di test è UNO e vale per tutti: l'ultimo push è quello
+# pubblicato. Per sapere cosa si sta guardando, l'app mostra ramo e commit
+# in fondo al menu (vedi VersionBadge).
 # I segreti per-ambiente vivono nelle GitHub Environments "production" e
 # "test" (stessi NOMI, valori diversi). La produzione, senza segreti
 # d'ambiente, usa i segreti a livello repo già esistenti: invariata.
 on:
   push:
-    branches: [main, develop]
+    branches:
+      - main
+      - develop
+      - 'feature/**'
+      - 'release/**'
+      - 'hotfix/**'
   workflow_dispatch:
 
 permissions:
   contents: read
 
-# Un deploy alla volta per ramo (prod e test non si annullano a vicenda).
+# Un deploy alla volta PER AMBIENTE, non per ramo: su test ci finiscono a
+# turno develop e i branch feature, e due deploy in parallelo sullo stesso
+# progetto si sovrascrivono a metà. L'ultimo push vince, i precedenti si
+# annullano.
 concurrency:
-  group: firebase-deploy-${{ github.ref_name }}
+  group: firebase-deploy-${{ github.ref_name == 'main' && 'produzione' || 'test' }}
   cancel-in-progress: true
 
 jobs:
+  # PRIMA I TEST, POI IL DEPLOY. Erano due workflow separati che partivano
+  # insieme: se i test fallivano, la roba rotta era già online — e su test
+  # ci lavora il locale. Ora il deploy ASPETTA (needs) e se qui qualcosa è
+  # rosso non parte proprio.
+  test:
+    name: Lint e test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Test
+        run: npm test
+
   build_and_deploy:
+    needs: test
     runs-on: ubuntu-latest
     environment: ${{ github.ref_name == 'main' && 'production' || 'test' }}
     env:
@@ -28,6 +63,11 @@ jobs:
       TARGET_PROJECT: ${{ github.ref_name == 'main' && 'tana-drink' || 'tana-drink-test' }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          # I TAG SERVONO: la versione mostrata nell'app è l'ultimo tag
+          # raggiungibile, e con il checkout superficiale di default non
+          # arriverebbe nessun tag (in produzione resterebbe senza numero).
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:

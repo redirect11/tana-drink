@@ -48,25 +48,25 @@ export default function MenuPage() {
   const [readyOrders, setReadyOrders] = useState([])
   // Staff loggato (bartender/cameriera): gli ordini fatti da qui vengono
   // marcati come manuali con chi li ha inseriti.
-  const [staff, setStaff] = useState(null) // { email, name, role } | null
+  const [staffVero, setStaffVero] = useState(null) // { email, name, role } | null
   // Account cliente (null per anonimi e staff): ordini legati al profilo.
   const { user: customer, profile: customerProfile } = useCustomer()
 
   useEffect(() => {
     if (!isFirebaseConfigured) return
     return onAuthStateChanged(auth, async (u) => {
-      if (!u) return setStaff(null)
+      if (!u) return setStaffVero(null)
       try {
         const token = await u.getIdTokenResult()
         const role = token.claims.role
         // Solo bartender/staff: i clienti registrati ordinano come clienti.
-        setStaff(
+        setStaffVero(
           isPersonale(role)
             ? { email: u.email, name: u.displayName || null, role }
             : null
         )
       } catch {
-        setStaff(null)
+        setStaffVero(null)
       }
     })
   }, [])
@@ -85,6 +85,14 @@ export default function MenuPage() {
   }
   const [params] = useSearchParams()
   const navigate = useNavigate()
+  // ANTEPRIMA CLIENTE. Aprendo il menù, chi è collegato come personale
+  // trova il suo strumento: catalogo a due colonne, ricerca, gruppi,
+  // niente vetrina — serve al cameriere che prende l'ordine al tavolo.
+  // "Vista cliente" invece deve mostrare il menù COM'È PER CHI ORDINA: non
+  // una schermata a parte, la stessa della home, guardata senza i panni
+  // del personale. Con ?vista=cliente si finge di essere un cliente.
+  const anteprimaCliente = params.get('vista') === 'cliente'
+  const staff = anteprimaCliente ? null : staffVero
   const cart = useCart()
 
   // Il QR può contenere ?tavolo=12 per identificare il tavolo.
@@ -170,25 +178,16 @@ export default function MenuPage() {
     }
   }, [])
 
-  // Ricerca rapida (solo staff: utile sul catalogo grande per gli ordini manuali).
-  const [search, setSearch] = useState('')
-  // Categoria selezionata nella vista staff a 2 colonne.
-  const [selectedCat, setSelectedCat] = useState(null)
-
+  // IL MENÙ È UNO SOLO, quello che vede il cliente. C'è stata una seconda
+  // schermata per lo staff — catalogo a due colonne con la ricerca — nata per
+  // gli ordini battuti a mano: quelli si battono al POS, e chi apriva il menù
+  // dal gestionale si trovava una pagina diversa da quella che stava
+  // mostrando al tavolo. Ordinare da qui si può lo stesso, se le impostazioni
+  // lo consentono (vedi `canOrder`).
   const categories = useMemo(() => {
-    const q = search.trim().toLowerCase()
-    const filtered = q
-      ? drinks.filter(
-          (d) =>
-            d.name?.toLowerCase().includes(q) ||
-            d.category?.toLowerCase().includes(q) ||
-            d.description?.toLowerCase().includes(q) ||
-            d.recipe_items?.some((r) => r.name?.toLowerCase().includes(q))
-        )
-      : drinks
     const byId = new Map(cats.map((c) => [c.id, c]))
     const groups = new Map() // key -> { name, sort, list }
-    for (const d of filtered) {
+    for (const d of drinks) {
       const cat = byId.get(d.category_id)
       const name = cat?.name || d.category || 'Altro'
       const sort = cat ? cat.sort_order : 9999
@@ -198,7 +197,7 @@ export default function MenuPage() {
     return [...groups.values()]
       .sort((a, b) => (a.sort - b.sort) || a.name.localeCompare(b.name))
       .map((g) => [g.name, g.list])
-  }, [drinks, cats, search])
+  }, [drinks, cats])
 
   // ── Geofence: verificato AL CARICAMENTO del menu (lo staff è esente).
   // Finché la posizione non risulta nel raggio, i controlli per ordinare
@@ -305,8 +304,18 @@ export default function MenuPage() {
     : null
 
   return (
-    <div className={staff ? 'bar-content menu-staff' : ''}>
+    <div className={staff ? 'bar-content' : ''}>
       {staff && <StaffDrawer role={staff.role} active="ordine" />}
+      {/* In anteprima si vede il menù del cliente, ma si è pur sempre al
+          lavoro: una riga per ricordarlo e per tornare indietro. */}
+      {anteprimaCliente && staffVero && (
+        <div className="anteprima-cliente">
+          <span>👀 Stai guardando il menù come lo vede il cliente.</span>
+          <Link className="btn ghost small" to="/bar">
+            ← Torna al gestionale
+          </Link>
+        </div>
+      )}
       {/* Hero d'intestazione solo per i clienti: allo staff serve spazio. */}
       {!staff && (
         <div className="hero">
@@ -455,75 +464,7 @@ export default function MenuPage() {
         </div>
       )}
 
-      {staff && (
-        <div className="menu-search-wrap">
-          <input
-            type="search"
-            className="menu-search"
-            placeholder="🔍 Cerca drink, categoria, ingrediente…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-      )}
-
-      {staff && search && categories.length === 0 && (
-        <div className="empty">Nessun risultato per «{search}».</div>
-      )}
-
-      {/* Vista staff: 2 colonne compatte (categorie sx, prodotti dx) per
-          inserire ordini velocemente. */}
-      {staff && categories.length > 0 && (() => {
-        const activeCat = search.trim()
-          ? null
-          : categories.find(([c]) => c === selectedCat)?.[0] || categories[0][0]
-        const shown = search.trim()
-          ? categories.flatMap(([, list]) => list)
-          : categories.find(([c]) => c === activeCat)?.[1] || []
-        return (
-          <div className="staff-menu">
-            {!search.trim() && (
-              <div className="staff-cats">
-                {categories.map(([cat, list]) => (
-                  <button
-                    key={cat}
-                    className={`staff-cat${cat === activeCat ? ' active' : ''}`}
-                    onClick={() => setSelectedCat(cat)}
-                  >
-                    <span className="staff-cat-name">{cat}</span>
-                    <span className="staff-cat-count">{list.length}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-            <div className="staff-products">
-              {shown.map((d) => {
-                const inCart = cart.items.find((i) => i.drink_id === d.id)
-                return (
-                  <div className="staff-product" key={d.id}>
-                    <div className="staff-product-info">
-                      <span className="staff-product-name">{d.name}</span>
-                      <span className="price">{formatPrice(d.price)}</span>
-                    </div>
-                    {canOrder &&
-                      (inCart ? (
-                        <div className="qty">
-                          <button aria-label="Riduci" onClick={() => cart.setQty(d.id, inCart.qty - 1)}>−</button>
-                          <strong>{inCart.qty}</strong>
-                          <button aria-label="Aumenta" onClick={() => cart.setQty(d.id, inCart.qty + 1)}>+</button>
-                        </div>
-                      ) : (
-                        <button className="btn small" onClick={() => cart.add(d)}>+</button>
-                      ))}
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )
-      })()}
-
-      {!staff && categories.length > 1 && (
+      {categories.length > 1 && (
         <nav className="cat-nav">
           {categories.map(([cat]) => (
             <a key={cat} href={`#cat-${encodeURIComponent(cat)}`} className="cat-chip">
@@ -533,7 +474,7 @@ export default function MenuPage() {
         </nav>
       )}
 
-      {!staff && categories.map(([cat, list]) => (
+      {categories.map(([cat, list]) => (
         <section key={cat}>
           <h3 className="cat-header" id={`cat-${encodeURIComponent(cat)}`}>{cat}</h3>
           {list.map((d) => {

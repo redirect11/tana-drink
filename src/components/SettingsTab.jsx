@@ -9,17 +9,37 @@ import { CANCEL_PHRASES } from '../lib/orderStatus.js'
 import { parseCarteCsv, decodeCsvBuffer } from '../lib/carteImport.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import ThemeSettings from './ThemeSettings.jsx'
+import CategoryRail from './CategoryRail.jsx'
 import PrinterSetup from './PrinterSetup.jsx'
+import BackupPanel from './BackupPanel.jsx'
+import InfoTab from './InfoTab.jsx'
 import { pairSumUpReader, unpairSumUpReader } from '../lib/paymentsApi.js'
 import { devToolsEnabled } from '../dev/devActions.js'
 
 // Impostazioni del bar (documento settings/bar). Ogni modifica viene salvata
 // subito; le pagine cliente le ricevono in tempo reale via subscribeSettings.
-export default function SettingsTab() {
+export default function SettingsTab({ role = null }) {
   const [settings, setSettings] = useState(null)
   const [error, setError] = useState(null)
   const [confermaSpegni, setConfermaSpegni] = useState(false) // gestione preparazione
   const [esitoReset, setEsitoReset] = useState(null)
+  // Sezione aperta: si ricorda, perché a impostazioni si torna sempre per
+  // lo stesso motivo (di solito gli orari o i pagamenti).
+  const [sezione, setSezione] = useState(() => {
+    try {
+      return localStorage.getItem('tana:impostazioni:sezione') || 'aspetto'
+    } catch {
+      return 'aspetto'
+    }
+  })
+  const scegliSezione = (id) => {
+    setSezione(id)
+    try {
+      localStorage.setItem('tana:impostazioni:sezione', id)
+    } catch {
+      /* niente memoria: vale per questa volta */
+    }
+  }
 
   useEffect(() => {
     return subscribeSettings(
@@ -41,8 +61,730 @@ export default function SettingsTab() {
 
   if (!settings) return <div className="empty">Carico le impostazioni…</div>
 
+  // OGNI RIQUADRO UNA SCHEDA. Erano venti riquadri uno sotto l'altro in una
+  // pagina lunghissima: per cambiare l'orario di chiusura si scorreva
+  // oltre pagamenti, gruppi, sconti e coperto, e quello che si cercava lo
+  // si trovava a occhio. Con la barra a sinistra (la stessa di Inventario
+  // e Menù) si va dritti dove serve, e la scelta resta per la volta dopo.
+  const sezioni = [
+    { id: 'aspetto', icona: '🎨', label: 'Aspetto', nodo: <ThemeSettings settings={settings} onSave={save} /> },
+    {
+      id: 'modalita-menu',
+      icona: '📖',
+      label: 'Modalità menù',
+      nodo: (
+            <div className="card settings-section">
+              <h3>Modalità menù</h3>
+              <ToggleRow
+                label="Solo menù (consultazione)"
+                desc="I clienti vedono il menù ma non possono ordinare."
+                checked={settings.menu_only}
+                onChange={(v) => save({ menu_only: v })}
+              />
+            </div>
+      ),
+    },
+    {
+      id: 'vista-ordine',
+      icona: '🧾',
+      label: 'Vista ordine',
+      nodo: (
+            <div className="card settings-section">
+              <h3>Vista ordine (bartender)</h3>
+              <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
+                Toccando un prodotto nella griglia si aggiunge sempre una <strong>riga
+                nuova</strong> (così si può personalizzarla e annotarla); per
+                aumentare la quantità si usa il <strong>+ sulla riga</strong> del
+                conto. Dal riepilogo si possono comunque unire o separare al volo.
+              </p>
+
+              <p className="muted" style={{ margin: '12px 0 6px', fontSize: '0.85rem' }}>
+                Dove finisce l’item appena aggiunto nella lista del conto.
+              </p>
+              <div className="mode-choice">
+                {[
+                  [false, '⬇ In fondo (scorre)'],
+                  [true, '⬆ In cima'],
+                ].map(([value, label]) => (
+                  <button
+                    key={String(value)}
+                    className={`mode-option${!!settings.pos_add_top === value ? ' active' : ''}`}
+                    onClick={() => save({ pos_add_top: value })}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              <p className="muted" style={{ margin: '12px 0 6px', fontSize: '0.85rem' }}>
+                Come mostrare le categorie nel POS. L’icona e il colore di ogni
+                categoria si impostano nel <strong>Menù → Categorie</strong>: se una
+                categoria non ha un’icona, al suo posto compare il pallino colore.
+              </p>
+              <div className="mode-choice" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
+                {[
+                  ['dot', '● Pallino + nome'],
+                  ['icon_text', '🍸 Icona + nome'],
+                  ['icon', '🍸 Solo icona (senza nome)'],
+                ].map(([value, label]) => (
+                  <button
+                    key={value}
+                    className={`mode-option${(settings.category_display || 'dot') === value ? ' active' : ''}`}
+                    onClick={() => save({ category_display: value })}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              <h4 style={{ margin: '16px 0 4px' }}>La ricerca nella griglia dei prodotti</h4>
+              <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
+                Cercando un prodotto nella griglia: si può <strong>filtrare</strong>,
+                lasciando le sole card che rispondono, oppure lasciare la griglia
+                com&apos;è e <strong>accendere</strong> la prima card trovata,
+                portandocisi sopra. Il secondo modo serve a chi la griglia la conosce
+                a memoria e non vuole vederla cambiare sotto le dita; mostra tutti i
+                prodotti mentre si cerca, perché quello giusto può stare in
+                un&apos;altra categoria. Toccando una card la ricerca si azzera da sé.
+              </p>
+              <div className="mode-choice">
+                {[
+                  ['filtra', '🔍 Filtra la griglia'],
+                  ['evidenzia', '💡 Accendi il prodotto e portami lì'],
+                ].map(([value, label]) => (
+                  <button
+                    key={value}
+                    className={`mode-option${
+                      (settings.pos_search || 'filtra') === value ? ' active' : ''
+                    }`}
+                    onClick={() => save({ pos_search: value })}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+      ),
+    },
+    {
+      id: 'consegna',
+      icona: '🛎',
+      label: 'Consegna ordine',
+      nodo: (
+            <div className="card settings-section">
+              <h3>Consegna ordine</h3>
+              <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
+                Il ritiro al banco azzera coperto e costo di servizio.
+              </p>
+              <div className="mode-choice" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
+                {[
+                  ['tavolo', '🍸 Servizio'],
+                  ['banco', '🚶 Ritiro'],
+                  ['entrambi', '🤝 Sceglie il cliente'],
+                ].map(([value, label]) => (
+                  <button
+                    key={value}
+                    className={`mode-option${settings.service_mode === value ? ' active' : ''}`}
+                    onClick={() => save({ service_mode: value })}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+      ),
+    },
+    {
+      id: 'pagamenti',
+      icona: '💳',
+      label: 'Pagamenti',
+      nodo: (
+            <div className="card settings-section">
+              <h3>Pagamenti</h3>
+              <ToggleRow
+                label="Pagamento online (SumUp)"
+                desc="Il cliente può pagare con carta dal suo telefono al momento dell'ordine."
+                checked={settings.payments_online_enabled}
+                onChange={(v) => save({ payments_online_enabled: v })}
+              />
+              {settings.payments_online_enabled && (
+                <>
+                  <ToggleRow
+                    label="Pagamento obbligatorio"
+                    desc="L'ordine entra in coda solo dopo il pagamento online."
+                    checked={settings.payments_online_required}
+                    onChange={(v) => save({ payments_online_required: v })}
+                  />
+                  {!settings.payments_online_required && (
+                    <ToggleRow
+                      label="Senza pagamento, ritiro al banco"
+                      desc={
+                        settings.service_mode === 'tavolo'
+                          ? 'Con servizio solo al tavolo non si applica: chi non paga online paga allo staff alla consegna.'
+                          : 'Chi sceglie di pagare al bancone deve ritirare al banco (niente servizio al tavolo).'
+                      }
+                      checked={settings.banco_required_if_unpaid}
+                      onChange={(v) => save({ banco_required_if_unpaid: v })}
+                    />
+                  )}
+                </>
+              )}
+              <ToggleRow
+                label="Lettore SumUp Solo"
+                desc="Incasso col lettore di carte direttamente dalla coda ordini (Cloud API, lettore in Wi-Fi)."
+                checked={settings.payments_reader_enabled}
+                onChange={(v) => save({ payments_reader_enabled: v })}
+              />
+              {settings.payments_reader_enabled && <ReaderPairing settings={settings} />}
+            </div>
+      ),
+    },
+    {
+      id: 'gruppi',
+      icona: '👥',
+      label: 'Gruppi di ordini',
+      nodo: (
+            <div className="card settings-section">
+              <h3>Gruppi di ordini</h3>
+              <p className="muted small" style={{ margin: '0 0 8px' }}>
+                Servono quando <strong>più conti separati devono pagare insieme</strong>:
+                una tavolata in cui ognuno ha il suo conto, o un evento con più
+                tavoli che si saldano in blocco. Se da voi un tavolo = un conto
+                NON servono: la schermata di pagamento sa già dividere un conto
+                per articoli o incassare acconti.
+              </p>
+              <ToggleRow
+                label="Abilita i gruppi"
+                desc="Se spenti, spariscono ovunque e nulla cambia nel resto del lavoro."
+                checked={settings.groups_enabled}
+                onChange={(v) => save({ groups_enabled: v })}
+              />
+              {settings.groups_enabled && (
+                <>
+                  <div className="muted small" style={{ margin: '8px 0' }}>
+                    <strong>Come funzionano</strong>
+                    <ol style={{ margin: '4px 0 0', paddingLeft: 18 }}>
+                      <li>Crei il gruppo dal pannello nella coda o dal menu laterale.</li>
+                      <li>
+                        Toccandolo vedi <strong>gli ordini di quel gruppo</strong>, il totale
+                        e quanto resta da pagare.
+                      </li>
+                      <li>
+                        Da lì aggiungi un ordine col tasto ✍️: si apre il POS e l’ordine
+                        nasce già dentro il gruppo.
+                      </li>
+                      <li>
+                        Alla fine incassi tutto insieme, oppure dividi in quote uguali.
+                      </li>
+                    </ol>
+                    Gli ordini di un gruppo restano <strong>visibili nella coda</strong> come
+                    tutti gli altri, con l’etichetta 👥 del gruppo.
+                    Un gruppo può contenere altri gruppi (es. “Compleanno” con
+                    “Tavolo A” e “Tavolo B”): chi contiene sottogruppi non ha ordini
+                    diretti, si ordina nei figli.
+                  </div>
+                  <ToggleRow
+                    label="Mostra nel menu laterale"
+                    desc="Quadratini dei gruppi nel drawer: toccarne uno apre i suoi ordini."
+                    checked={settings.groups_in_drawer}
+                    onChange={(v) => save({ groups_in_drawer: v })}
+                  />
+                  <ToggleRow
+                    label="Pannello gruppi nella coda"
+                    desc="Pannello a scomparsa nella coda ordini con i gruppi e i loro conti."
+                    checked={settings.groups_in_queue}
+                    onChange={(v) => save({ groups_in_queue: v })}
+                  />
+                </>
+              )}
+            </div>
+      ),
+    },
+    {
+      id: 'preparazione',
+      icona: '🍸',
+      label: 'Gestione preparazione',
+      nodo: (
+            <div className="card settings-section">
+              <h3>Gestione preparazione</h3>
+              <p className="muted small" style={{ margin: '0 0 8px' }}>
+                Serve se al bancone seguite la lavorazione dei drink: ricevuto →
+                in preparazione → pronto → servito. Se il locale lavora “a vista”
+                (si prepara e si consegna subito) è solo lavoro in più.
+              </p>
+              <ToggleRow
+                label="Segui la preparazione degli ordini"
+                desc="Spenta: si tiene traccia solo degli ordini (ricevuto e pagato). Spariscono avanzamenti di stato, tempi di servizio, stima ai clienti e avvisi di “pronto”."
+                checked={settings.workflow_enabled !== false}
+                onChange={(v) => (v ? save({ workflow_enabled: true }) : setConfermaSpegni(true))}
+              />
+              {esitoReset != null && (
+                <div className="muted small" style={{ marginTop: 6 }}>
+                  ✅ {esitoReset === 0
+                    ? 'Nessun conto aperto da riportare indietro.'
+                    : `${esitoReset} conti aperti riportati a “ricevuto”.`}
+                </div>
+              )}
+            </div>
+      ),
+    },
+    {
+      id: 'giornata',
+      icona: '📅',
+      label: 'Giornata di lavoro',
+      nodo: (
+            <div className="card settings-section">
+              <h3>Giornata di lavoro</h3>
+              <p className="muted small" style={{ margin: '0 0 8px' }}>
+                I conti restano aperti finché non li chiudi tu: nessuna “serata”
+                da aprire o chiudere. Qui si dice soltanto <strong>a che ora
+                finisce una giornata e ne comincia un’altra</strong>. Da
+                quell’ora la numerazione degli ordini riparte da 1 e le
+                statistiche cominciano a contare il giorno nuovo.
+              </p>
+              <p className="muted small" style={{ margin: '0 0 8px' }}>
+                Con le 5, un ordine battuto all’una di notte è ancora della
+                serata prima: la nottata resta tutta insieme, invece di
+                spezzarsi a mezzanotte.
+              </p>
+              <div className="toggle-row">
+                <span>Il giorno nuovo comincia alle (ora)</span>
+                <AmountInput
+                  value={settings.business_day_cutoff_hour}
+                  min={0}
+                  max={23}
+                  step={1}
+                  onCommit={(v) => save({ business_day_cutoff_hour: v })}
+                />
+              </div>
+            </div>
+      ),
+    },
+    {
+      id: 'prezzo',
+      icona: '🏷',
+      label: 'Prezzo consigliato',
+      nodo: (
+            <div className="card settings-section">
+              <h3>Prezzo consigliato</h3>
+              <p className="muted small" style={{ margin: '0 0 8px' }}>
+                Creando un prodotto libero o modificando un drink, il sistema
+                calcola il <strong>prezzo reale</strong> sommando il costo al
+                dettaglio degli ingredienti (dal listino di magazzino) e propone un{' '}
+                <strong>prezzo consigliato</strong> moltiplicandolo per il ricarico.
+                È solo un suggerimento: il prezzo resta sempre modificabile.
+              </p>
+              <div className="toggle-row">
+                <span>Ricarico sul costo (×)</span>
+                <AmountInput
+                  value={settings.price_markup}
+                  min={1}
+                  max={20}
+                  step={0.5}
+                  onCommit={(v) => save({ price_markup: v })}
+                />
+              </div>
+              <div className="toggle-row">
+                <span>Arrotonda il consigliato a (€)</span>
+                <AmountInput
+                  value={settings.price_round_step}
+                  min={0.05}
+                  max={5}
+                  step={0.05}
+                  onCommit={(v) => save({ price_round_step: v })}
+                />
+              </div>
+              <div className="toggle-row">
+                <span>IVA di vendita predefinita (%)</span>
+                <AmountInput
+                  value={settings.sale_vat}
+                  min={0}
+                  max={22}
+                  step={1}
+                  onCommit={(v) => save({ sale_vat: v })}
+                />
+              </div>
+              <p className="muted small" style={{ margin: '4px 0 0' }}>
+                IVA di rivendita (somministrazione: <strong>10%</strong>) usata per
+                scorporare il fatturato al netto.
+              </p>
+              <div className="toggle-row">
+                <span>IVA di acquisto predefinita (%)</span>
+                <AmountInput
+                  value={settings.purchase_vat}
+                  min={0}
+                  max={22}
+                  step={1}
+                  onCommit={(v) => save({ purchase_vat: v })}
+                />
+              </div>
+              <p className="muted small" style={{ margin: '4px 0 0' }}>
+                IVA delle fatture fornitore (ordinaria: <strong>22%</strong>): è il
+                valore predefinito dei nuovi prodotti in Inventario. Ogni prodotto può
+                comunque indicarne una diversa (campo IVA).
+              </p>
+            </div>
+      ),
+    },
+    {
+      id: 'tempi',
+      icona: '⏱',
+      label: 'Tempi di servizio',
+      nodo: (
+            <div className="card settings-section">
+              <h3>Tempi di servizio</h3>
+              <ToggleRow
+                label="Mostra tempo stimato ai clienti"
+                desc="Parte dal tempo base e si raffina con i tempi reali del servizio. Per il ritiro al banco conta solo attesa + preparazione."
+                checked={settings.eta_enabled}
+                onChange={(v) => save({ eta_enabled: v })}
+              />
+              {settings.eta_enabled && (
+                <div className="toggle-row">
+                  <span>Tempo base (minuti)</span>
+                  <AmountInput
+                    value={settings.eta_base_minutes}
+                    min={1}
+                    max={120}
+                    step={1}
+                    onCommit={(v) => save({ eta_base_minutes: v })}
+                  />
+                </div>
+              )}
+            </div>
+      ),
+    },
+    {
+      id: 'sconto',
+      icona: '✂️',
+      label: 'Sconto e righe del conto',
+      nodo: (
+            <div className="card settings-section">
+              <h3>Sconto e righe del conto</h3>
+              <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
+                Uno sconto in euro è deciso su un certo conto. Se poi si tolgono o si aggiungono
+                righe, quell&apos;importo va riletto: 5&nbsp;€ di sconto su un conto sceso a 3&nbsp;€
+                vorrebbero dire incassare −2&nbsp;€. Scegli come deve comportarsi.
+                <br />
+                Lo sconto in <strong>percentuale</strong> segue sempre il conto, con qualsiasi scelta:
+                è la sua definizione.
+              </p>
+              <div className="sconto-scelte">
+                {[
+                  [
+                    'tetto',
+                    '🔒 Tetto al totale',
+                    'Lo sconto resta quello che hai scelto finché ci sta dentro. Se togliendo righe il conto scende sotto lo sconto, lo sconto si accorcia fino al totale e il conto diventa offerto: non va mai in negativo. Esempio: conto 20 €, sconto 5 € → togli 8 € di roba → conto 12 €, sconto ancora 5 €, da pagare 7 €. Togli altri 10 € → conto 2 €, lo sconto si accorcia a 2 € e non si paga nulla.',
+                  ],
+                  [
+                    'proporzione',
+                    '⚖️ Mantieni la proporzione',
+                    'Lo sconto vale sempre la stessa quota del conto: togliendo righe cala insieme al conto, aggiungendone cresce. Esempio: conto 20 €, sconto 5 € (il 25%) → togli 8 € di roba → conto 12 €, sconto 3 €, da pagare 9 €. Da preferire se lo sconto è un "quanto gli faccio di sconto in percentuale" più che una cifra promessa.',
+                  ],
+                  [
+                    'avviso',
+                    '⚠️ Avvisa e basta',
+                    'L’app non tocca lo sconto che hai messo. Se supera il totale del conto lo segnala in rosso e blocca l’incasso finché non lo correggi a mano. Da scegliere se lo sconto è una cifra concordata col cliente e nessuno, a parte te, deve poterla cambiare.',
+                  ],
+                ].map(([value, titolo, testo]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    className={`sconto-scelta${(settings.discount_policy || 'tetto') === value ? ' active' : ''}`}
+                    onClick={() => save({ discount_policy: value })}
+                  >
+                    <strong>{titolo}</strong>
+                    <span className="muted small">{testo}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+      ),
+    },
+    {
+      id: 'coperto',
+      icona: '🍽',
+      label: 'Coperto',
+      nodo: (
+            <div className="card settings-section">
+              <h3>Coperto</h3>
+              <ToggleRow
+                label="Coperto a persona"
+                desc="Il cliente indica quante persone sono al tavolo."
+                checked={settings.coperto_enabled}
+                onChange={(v) => save({ coperto_enabled: v })}
+              />
+              {settings.coperto_enabled && (
+                <div className="toggle-row">
+                  <span>Importo a persona (€)</span>
+                  <AmountInput
+                    value={settings.coperto_amount}
+                    min={0}
+                    step={0.5}
+                    onCommit={(v) => save({ coperto_amount: v })}
+                  />
+                </div>
+              )}
+            </div>
+      ),
+    },
+    {
+      id: 'servizio-mancia',
+      icona: '🙌',
+      label: 'Servizio e mancia',
+      nodo: (
+            <div className="card settings-section">
+              <h3>Servizio e mancia</h3>
+              <p className="muted" style={{ margin: '0 0 4px', fontSize: '0.85rem' }}>
+                Si può attivare il costo di servizio <em>oppure</em> la mancia, non entrambi.
+              </p>
+              <ToggleRow
+                label="Costo di servizio (%)"
+                desc="Percentuale calcolata automaticamente sul totale."
+                checked={settings.service_charge_enabled}
+                onChange={(v) =>
+                  save({ service_charge_enabled: v, ...(v ? { tip_enabled: false } : {}) })
+                }
+              />
+              {settings.service_charge_enabled && (
+                <div className="toggle-row">
+                  <span>Percentuale (%)</span>
+                  <AmountInput
+                    value={settings.service_charge_percent}
+                    min={0}
+                    max={100}
+                    step={1}
+                    onCommit={(v) => save({ service_charge_percent: v })}
+                  />
+                </div>
+              )}
+              <ToggleRow
+                label="Mancia libera"
+                desc="Il cliente sceglie liberamente un importo al momento dell'ordine."
+                checked={settings.tip_enabled}
+                onChange={(v) =>
+                  save({ tip_enabled: v, ...(v ? { service_charge_enabled: false } : {}) })
+                }
+              />
+            </div>
+      ),
+    },
+    {
+      id: 'menu',
+      icona: '🍹',
+      label: 'Menù',
+      nodo: (
+            <div className="card settings-section">
+              <h3>Menù</h3>
+              <ToggleRow
+                label="Mostra quantità ingredienti"
+                desc="Es. «Gin 50 ml» invece di solo «Gin» nelle voci del menù."
+                checked={settings.show_ingredient_quantities}
+                onChange={(v) => save({ show_ingredient_quantities: v })}
+              />
+              <ToggleRow
+                label="Tabellone «stiamo servendo»"
+                desc="Mostra nel menù i numeri degli ordini pronti al servizio/ritiro. Nascosto in modalità solo menù."
+                checked={settings.show_serving_board}
+                onChange={(v) => save({ show_serving_board: v })}
+              />
+            </div>
+      ),
+    },
+    {
+      id: 'coda',
+      icona: '📋',
+      label: 'Coda ordini',
+      nodo: (
+            <div className="card settings-section">
+              <h3>Coda ordini</h3>
+              <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
+                Come visualizzare gli ordini nel gestionale: <strong>griglia</strong> a
+                tutto schermo (card affiancate, ideale su tablet), schede separate per
+                stato, oppure un&apos;unica lista (in corso + evasi). Lo stato è sempre
+                indicato dal colore e dall&apos;etichetta sulla card.
+              </p>
+              <div className="mode-choice">
+                {[
+                  ['griglia', '🔲 Griglia (schermo intero)'],
+                  ['tabs', '🗂 Schede per stato'],
+                  ['lista', '📋 Lista unica'],
+                ].map(([value, label]) => (
+                  <button
+                    key={value}
+                    className={`mode-option${settings.queue_view === value ? ' active' : ''}`}
+                    onClick={() => save({ queue_view: value })}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              <h4 style={{ margin: '16px 0 4px' }}>La ricerca</h4>
+              <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
+                Cercando un numero, un nome, un tavolo o un drink: si può{' '}
+                <strong>filtrare</strong> la coda, lasciando in pagina solo i conti che
+                rispondono, oppure lasciarla com&apos;è e{' '}
+                <strong>accendere</strong> il primo conto trovato, portandolo sotto gli
+                occhi. Nel secondo modo la ricerca si azzera da sé appena si tocca un
+                conto.
+              </p>
+              <div className="mode-choice">
+                {[
+                  ['filtra', '🔍 Filtra la coda'],
+                  ['evidenzia', '💡 Accendi il conto e portami lì'],
+                ].map(([value, label]) => (
+                  <button
+                    key={value}
+                    className={`mode-option${
+                      (settings.queue_search || 'filtra') === value ? ' active' : ''
+                    }`}
+                    onClick={() => save({ queue_search: value })}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+      ),
+    },
+    { id: 'catalogo', icona: '📥', label: 'Catalogo prodotti', nodo: <CatalogImport /> },
+    {
+      id: 'account-clienti',
+      icona: '🙋',
+      label: 'Account clienti',
+      nodo: (
+            <div className="card settings-section">
+              <h3>Account clienti</h3>
+              <ToggleRow
+                label="Login e registrazione clienti"
+                desc="Se disattivato, il link «Accedi» e la registrazione spariscono dal lato cliente; lo staff continua ad accedere da /bar."
+                checked={settings.customer_accounts_enabled}
+                onChange={(v) => save({ customer_accounts_enabled: v })}
+              />
+            </div>
+      ),
+    },
+    {
+      id: 'posizione',
+      icona: '📍',
+      label: 'Posizione locale',
+      nodo: (
+            <div className="card settings-section">
+              <h3>Posizione locale</h3>
+              <ToggleRow
+                label="Posizione obbligatoria per ordinare"
+                desc="Il cliente deve trovarsi nei pressi del locale: senza localizzazione attiva non può ordinare. Lo staff è esente."
+                checked={settings.geofence_enabled}
+                onChange={(v) => save({ geofence_enabled: v })}
+              />
+              {settings.geofence_enabled && (
+                <>
+                  <label htmlFor="venue-addr">Indirizzo del locale</label>
+                  <input
+                    id="venue-addr"
+                    type="text"
+                    placeholder="es. Via Roma 1, Nola"
+                    defaultValue={settings.venue_address}
+                    onBlur={(e) => save({ venue_address: e.target.value.trim() })}
+                  />
+                  <div className="grid-2" style={{ marginTop: 10 }}>
+                    <div>
+                      <label htmlFor="venue-lat">Latitudine</label>
+                      <input
+                        id="venue-lat"
+                        type="number"
+                        step="0.000001"
+                        defaultValue={settings.venue_lat ?? ''}
+                        onBlur={(e) => save({ venue_lat: e.target.value === '' ? null : Number(e.target.value) })}
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="venue-lng">Longitudine</label>
+                      <input
+                        id="venue-lng"
+                        type="number"
+                        step="0.000001"
+                        defaultValue={settings.venue_lng ?? ''}
+                        onBlur={(e) => save({ venue_lng: e.target.value === '' ? null : Number(e.target.value) })}
+                      />
+                    </div>
+                  </div>
+                  <div className="toggle-row">
+                    <span>Raggio consentito (metri)</span>
+                    <AmountInput
+                      value={settings.venue_radius_m}
+                      min={10}
+                      max={5000}
+                      step={10}
+                      onCommit={(v) => save({ venue_radius_m: v })}
+                    />
+                  </div>
+                  <button
+                    className="btn secondary block"
+                    type="button"
+                    onClick={() => {
+                      navigator.geolocation?.getCurrentPosition(
+                        (pos) =>
+                          save({
+                            venue_lat: Number(pos.coords.latitude.toFixed(6)),
+                            venue_lng: Number(pos.coords.longitude.toFixed(6)),
+                          }),
+                        () => setError('Posizione non disponibile: inserisci le coordinate a mano.')
+                      )
+                    }}
+                  >
+                    📍 Usa la mia posizione attuale
+                  </button>
+                  {settings.venue_lat == null && (
+                    <p className="muted small" style={{ margin: '8px 0 0' }}>
+                      ⚠️ Senza coordinate il controllo non è attivo.
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
+      ),
+    },
+    { id: 'stampante', icona: '🖨️', label: 'Stampante', nodo: <PrinterSetup /> },
+    { id: 'backup', icona: '💾', label: 'Backup e ripristino', nodo: <BackupPanel role={role} /> },
+    {
+      id: 'informazioni',
+      icona: 'ℹ️',
+      label: 'Informazioni',
+      nodo: <InfoTab />,
+    },
+    {
+      id: 'annullamenti',
+      icona: '✖️',
+      label: 'Annullamenti',
+      nodo: (
+            <div className="card settings-section">
+              <h3>Annullamenti</h3>
+              <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
+                Frase proposta di default quando annulli un ordine (modificabile di
+                volta in volta nel dialog di annullamento).
+              </p>
+              <div className="mode-choice">
+                {Object.entries(CANCEL_PHRASES).map(([key, text]) => (
+                  <button
+                    key={key}
+                    className={`mode-option${settings.cancel_phrase_default === key ? ' active' : ''}`}
+                    onClick={() => save({ cancel_phrase_default: key })}
+                  >
+                    {text}
+                  </button>
+                ))}
+              </div>
+            </div>
+      ),
+    },
+  ]
+  const attiva = sezioni.find((s) => s.id === sezione) ?? sezioni[0]
+
   return (
     <div>
+      <h2>⚙️ Impostazioni</h2>
       {error && <div className="banner">Errore: {error}</div>}
 
       {confermaSpegni && (
@@ -71,556 +813,13 @@ export default function SettingsTab() {
         />
       )}
 
-      <ThemeSettings settings={settings} onSave={save} />
-
-      <div className="card settings-section">
-        <h3>Modalità menù</h3>
-        <ToggleRow
-          label="Solo menù (consultazione)"
-          desc="I clienti vedono il menù ma non possono ordinare."
-          checked={settings.menu_only}
-          onChange={(v) => save({ menu_only: v })}
-        />
-      </div>
-
-      <div className="card settings-section">
-        <h3>Vista ordine (bartender)</h3>
-        <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
-          Toccando un prodotto nella griglia si aggiunge sempre una <strong>riga
-          nuova</strong> (così si può personalizzarla e annotarla); per
-          aumentare la quantità si usa il <strong>+ sulla riga</strong> del
-          conto. Dal riepilogo si possono comunque unire o separare al volo.
-        </p>
-
-        <p className="muted" style={{ margin: '12px 0 6px', fontSize: '0.85rem' }}>
-          Dove finisce l’item appena aggiunto nella lista del conto.
-        </p>
-        <div className="mode-choice">
-          {[
-            [false, '⬇ In fondo (scorre)'],
-            [true, '⬆ In cima'],
-          ].map(([value, label]) => (
-            <button
-              key={String(value)}
-              className={`mode-option${!!settings.pos_add_top === value ? ' active' : ''}`}
-              onClick={() => save({ pos_add_top: value })}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        <p className="muted" style={{ margin: '12px 0 6px', fontSize: '0.85rem' }}>
-          Come mostrare le categorie nel POS. L’icona e il colore di ogni
-          categoria si impostano nel <strong>Menù → Categorie</strong>: se una
-          categoria non ha un’icona, al suo posto compare il pallino colore.
-        </p>
-        <div className="mode-choice" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
-          {[
-            ['dot', '● Pallino + nome'],
-            ['icon_text', '🍸 Icona + nome'],
-            ['icon', '🍸 Solo icona (senza nome)'],
-          ].map(([value, label]) => (
-            <button
-              key={value}
-              className={`mode-option${(settings.category_display || 'dot') === value ? ' active' : ''}`}
-              onClick={() => save({ category_display: value })}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="card settings-section">
-        <h3>Consegna ordine</h3>
-        <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
-          Il ritiro al banco azzera coperto e costo di servizio.
-        </p>
-        <div className="mode-choice" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
-          {[
-            ['tavolo', '🍸 Servizio'],
-            ['banco', '🚶 Ritiro'],
-            ['entrambi', '🤝 Sceglie il cliente'],
-          ].map(([value, label]) => (
-            <button
-              key={value}
-              className={`mode-option${settings.service_mode === value ? ' active' : ''}`}
-              onClick={() => save({ service_mode: value })}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="card settings-section">
-        <h3>Pagamenti</h3>
-        <ToggleRow
-          label="Pagamento online (SumUp)"
-          desc="Il cliente può pagare con carta dal suo telefono al momento dell'ordine."
-          checked={settings.payments_online_enabled}
-          onChange={(v) => save({ payments_online_enabled: v })}
-        />
-        {settings.payments_online_enabled && (
-          <>
-            <ToggleRow
-              label="Pagamento obbligatorio"
-              desc="L'ordine entra in coda solo dopo il pagamento online."
-              checked={settings.payments_online_required}
-              onChange={(v) => save({ payments_online_required: v })}
-            />
-            {!settings.payments_online_required && (
-              <ToggleRow
-                label="Senza pagamento, ritiro al banco"
-                desc={
-                  settings.service_mode === 'tavolo'
-                    ? 'Con servizio solo al tavolo non si applica: chi non paga online paga allo staff alla consegna.'
-                    : 'Chi sceglie di pagare al bancone deve ritirare al banco (niente servizio al tavolo).'
-                }
-                checked={settings.banco_required_if_unpaid}
-                onChange={(v) => save({ banco_required_if_unpaid: v })}
-              />
-            )}
-          </>
-        )}
-        <ToggleRow
-          label="Lettore SumUp Solo"
-          desc="Incasso col lettore di carte direttamente dalla coda ordini (Cloud API, lettore in Wi-Fi)."
-          checked={settings.payments_reader_enabled}
-          onChange={(v) => save({ payments_reader_enabled: v })}
-        />
-        {settings.payments_reader_enabled && <ReaderPairing settings={settings} />}
-      </div>
-
-      <div className="card settings-section">
-        <h3>Gruppi di ordini</h3>
-        <p className="muted small" style={{ margin: '0 0 8px' }}>
-          Servono quando <strong>più conti separati devono pagare insieme</strong>:
-          una tavolata in cui ognuno ha il suo conto, o un evento con più
-          tavoli che si saldano in blocco. Se da voi un tavolo = un conto
-          NON servono: la schermata di pagamento sa già dividere un conto
-          per articoli o incassare acconti.
-        </p>
-        <ToggleRow
-          label="Abilita i gruppi"
-          desc="Se spenti, spariscono ovunque e nulla cambia nel resto del lavoro."
-          checked={settings.groups_enabled}
-          onChange={(v) => save({ groups_enabled: v })}
-        />
-        {settings.groups_enabled && (
-          <>
-            <div className="muted small" style={{ margin: '8px 0' }}>
-              <strong>Come funzionano</strong>
-              <ol style={{ margin: '4px 0 0', paddingLeft: 18 }}>
-                <li>Crei il gruppo dal pannello nella coda o dal menu laterale.</li>
-                <li>
-                  Toccandolo vedi <strong>gli ordini di quel gruppo</strong>, il totale
-                  e quanto resta da pagare.
-                </li>
-                <li>
-                  Da lì aggiungi un ordine col tasto ✍️: si apre il POS e l’ordine
-                  nasce già dentro il gruppo.
-                </li>
-                <li>
-                  Alla fine incassi tutto insieme, oppure dividi in quote uguali.
-                </li>
-              </ol>
-              Gli ordini di un gruppo restano <strong>visibili nella coda</strong> come
-              tutti gli altri, con l’etichetta 👥 del gruppo.
-              Un gruppo può contenere altri gruppi (es. “Compleanno” con
-              “Tavolo A” e “Tavolo B”): chi contiene sottogruppi non ha ordini
-              diretti, si ordina nei figli.
-            </div>
-            <ToggleRow
-              label="Mostra nel menu laterale"
-              desc="Quadratini dei gruppi nel drawer: toccarne uno apre i suoi ordini."
-              checked={settings.groups_in_drawer}
-              onChange={(v) => save({ groups_in_drawer: v })}
-            />
-            <ToggleRow
-              label="Pannello gruppi nella coda"
-              desc="Pannello a scomparsa nella coda ordini con i gruppi e i loro conti."
-              checked={settings.groups_in_queue}
-              onChange={(v) => save({ groups_in_queue: v })}
-            />
-          </>
-        )}
-      </div>
-
-      <div className="card settings-section">
-        <h3>Gestione preparazione</h3>
-        <p className="muted small" style={{ margin: '0 0 8px' }}>
-          Serve se al bancone seguite la lavorazione dei drink: ricevuto →
-          in preparazione → pronto → servito. Se il locale lavora “a vista”
-          (si prepara e si consegna subito) è solo lavoro in più.
-        </p>
-        <ToggleRow
-          label="Segui la preparazione degli ordini"
-          desc="Spenta: si tiene traccia solo degli ordini (ricevuto e pagato). Spariscono avanzamenti di stato, tempi di servizio, stima ai clienti e avvisi di “pronto”."
-          checked={settings.workflow_enabled !== false}
-          onChange={(v) => (v ? save({ workflow_enabled: true }) : setConfermaSpegni(true))}
-        />
-        {esitoReset != null && (
-          <div className="muted small" style={{ marginTop: 6 }}>
-            ✅ {esitoReset === 0
-              ? 'Nessun conto aperto da riportare indietro.'
-              : `${esitoReset} conti aperti riportati a “ricevuto”.`}
-          </div>
-        )}
-      </div>
-
-      <div className="card settings-section">
-        <h3>Giornata di lavoro</h3>
-        <p className="muted small" style={{ margin: '0 0 8px' }}>
-          I conti restano aperti finché non li chiudi tu: nessuna “serata” da
-          aprire o chiudere. L’ora qui sotto dice solo quando far girare la
-          giornata per le statistiche e per il numero progressivo degli
-          ordini, così una nottata oltre la mezzanotte resta tutta insieme.
-        </p>
-        <div className="toggle-row">
-          <span>La giornata gira alle (ora)</span>
-          <AmountInput
-            value={settings.business_day_cutoff_hour}
-            min={0}
-            max={23}
-            step={1}
-            onCommit={(v) => save({ business_day_cutoff_hour: v })}
-          />
-        </div>
-      </div>
-
-      <div className="card settings-section">
-        <h3>Prezzo consigliato</h3>
-        <p className="muted small" style={{ margin: '0 0 8px' }}>
-          Creando un prodotto libero o modificando un drink, il sistema
-          calcola il <strong>prezzo reale</strong> sommando il costo al
-          dettaglio degli ingredienti (dal listino di magazzino) e propone un{' '}
-          <strong>prezzo consigliato</strong> moltiplicandolo per il ricarico.
-          È solo un suggerimento: il prezzo resta sempre modificabile.
-        </p>
-        <div className="toggle-row">
-          <span>Ricarico sul costo (×)</span>
-          <AmountInput
-            value={settings.price_markup}
-            min={1}
-            max={20}
-            step={0.5}
-            onCommit={(v) => save({ price_markup: v })}
-          />
-        </div>
-        <div className="toggle-row">
-          <span>Arrotonda il consigliato a (€)</span>
-          <AmountInput
-            value={settings.price_round_step}
-            min={0.05}
-            max={5}
-            step={0.05}
-            onCommit={(v) => save({ price_round_step: v })}
-          />
-        </div>
-        <div className="toggle-row">
-          <span>IVA di vendita predefinita (%)</span>
-          <AmountInput
-            value={settings.sale_vat}
-            min={0}
-            max={22}
-            step={1}
-            onCommit={(v) => save({ sale_vat: v })}
-          />
-        </div>
-        <p className="muted small" style={{ margin: '4px 0 0' }}>
-          IVA di rivendita (somministrazione: <strong>10%</strong>) usata per
-          scorporare il fatturato al netto.
-        </p>
-        <div className="toggle-row">
-          <span>IVA di acquisto predefinita (%)</span>
-          <AmountInput
-            value={settings.purchase_vat}
-            min={0}
-            max={22}
-            step={1}
-            onCommit={(v) => save({ purchase_vat: v })}
-          />
-        </div>
-        <p className="muted small" style={{ margin: '4px 0 0' }}>
-          IVA delle fatture fornitore (ordinaria: <strong>22%</strong>): è il
-          valore predefinito dei nuovi prodotti in Inventario. Ogni prodotto può
-          comunque indicarne una diversa (campo IVA).
-        </p>
-      </div>
-
-      {settings.workflow_enabled !== false && (
-      <div className="card settings-section">
-        <h3>Tempi di servizio</h3>
-        <ToggleRow
-          label="Mostra tempo stimato ai clienti"
-          desc="Parte dal tempo base e si raffina con i tempi reali del servizio. Per il ritiro al banco conta solo attesa + preparazione."
-          checked={settings.eta_enabled}
-          onChange={(v) => save({ eta_enabled: v })}
-        />
-        {settings.eta_enabled && (
-          <div className="toggle-row">
-            <span>Tempo base (minuti)</span>
-            <AmountInput
-              value={settings.eta_base_minutes}
-              min={1}
-              max={120}
-              step={1}
-              onCommit={(v) => save({ eta_base_minutes: v })}
-            />
-          </div>
-        )}
-      </div>
-      )}
-
-      <div className="card settings-section">
-        <h3>Sconto e righe del conto</h3>
-        <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
-          Uno sconto in euro è deciso su un certo conto. Se poi si tolgono o si aggiungono
-          righe, quell&apos;importo va riletto: 5&nbsp;€ di sconto su un conto sceso a 3&nbsp;€
-          vorrebbero dire incassare −2&nbsp;€. Scegli come deve comportarsi.
-          <br />
-          Lo sconto in <strong>percentuale</strong> segue sempre il conto, con qualsiasi scelta:
-          è la sua definizione.
-        </p>
-        <div className="sconto-scelte">
-          {[
-            [
-              'tetto',
-              '🔒 Tetto al totale',
-              'Lo sconto resta quello che hai scelto finché ci sta dentro. Se togliendo righe il conto scende sotto lo sconto, lo sconto si accorcia fino al totale e il conto diventa offerto: non va mai in negativo. Esempio: conto 20 €, sconto 5 € → togli 8 € di roba → conto 12 €, sconto ancora 5 €, da pagare 7 €. Togli altri 10 € → conto 2 €, lo sconto si accorcia a 2 € e non si paga nulla.',
-            ],
-            [
-              'proporzione',
-              '⚖️ Mantieni la proporzione',
-              'Lo sconto vale sempre la stessa quota del conto: togliendo righe cala insieme al conto, aggiungendone cresce. Esempio: conto 20 €, sconto 5 € (il 25%) → togli 8 € di roba → conto 12 €, sconto 3 €, da pagare 9 €. Da preferire se lo sconto è un "quanto gli faccio di sconto in percentuale" più che una cifra promessa.',
-            ],
-            [
-              'avviso',
-              '⚠️ Avvisa e basta',
-              'L’app non tocca lo sconto che hai messo. Se supera il totale del conto lo segnala in rosso e blocca l’incasso finché non lo correggi a mano. Da scegliere se lo sconto è una cifra concordata col cliente e nessuno, a parte te, deve poterla cambiare.',
-            ],
-          ].map(([value, titolo, testo]) => (
-            <button
-              key={value}
-              type="button"
-              className={`sconto-scelta${(settings.discount_policy || 'tetto') === value ? ' active' : ''}`}
-              onClick={() => save({ discount_policy: value })}
-            >
-              <strong>{titolo}</strong>
-              <span className="muted small">{testo}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="card settings-section">
-        <h3>Coperto</h3>
-        <ToggleRow
-          label="Coperto a persona"
-          desc="Il cliente indica quante persone sono al tavolo."
-          checked={settings.coperto_enabled}
-          onChange={(v) => save({ coperto_enabled: v })}
-        />
-        {settings.coperto_enabled && (
-          <div className="toggle-row">
-            <span>Importo a persona (€)</span>
-            <AmountInput
-              value={settings.coperto_amount}
-              min={0}
-              step={0.5}
-              onCommit={(v) => save({ coperto_amount: v })}
-            />
-          </div>
-        )}
-      </div>
-
-      <div className="card settings-section">
-        <h3>Servizio e mancia</h3>
-        <p className="muted" style={{ margin: '0 0 4px', fontSize: '0.85rem' }}>
-          Si può attivare il costo di servizio <em>oppure</em> la mancia, non entrambi.
-        </p>
-        <ToggleRow
-          label="Costo di servizio (%)"
-          desc="Percentuale calcolata automaticamente sul totale."
-          checked={settings.service_charge_enabled}
-          onChange={(v) =>
-            save({ service_charge_enabled: v, ...(v ? { tip_enabled: false } : {}) })
-          }
-        />
-        {settings.service_charge_enabled && (
-          <div className="toggle-row">
-            <span>Percentuale (%)</span>
-            <AmountInput
-              value={settings.service_charge_percent}
-              min={0}
-              max={100}
-              step={1}
-              onCommit={(v) => save({ service_charge_percent: v })}
-            />
-          </div>
-        )}
-        <ToggleRow
-          label="Mancia libera"
-          desc="Il cliente sceglie liberamente un importo al momento dell'ordine."
-          checked={settings.tip_enabled}
-          onChange={(v) =>
-            save({ tip_enabled: v, ...(v ? { service_charge_enabled: false } : {}) })
-          }
-        />
-      </div>
-
-      <div className="card settings-section">
-        <h3>Menù</h3>
-        <ToggleRow
-          label="Mostra quantità ingredienti"
-          desc="Es. «Gin 50 ml» invece di solo «Gin» nelle voci del menù."
-          checked={settings.show_ingredient_quantities}
-          onChange={(v) => save({ show_ingredient_quantities: v })}
-        />
-        <ToggleRow
-          label="Tabellone «stiamo servendo»"
-          desc="Mostra nel menù i numeri degli ordini pronti al servizio/ritiro. Nascosto in modalità solo menù."
-          checked={settings.show_serving_board}
-          onChange={(v) => save({ show_serving_board: v })}
-        />
-      </div>
-
-      <div className="card settings-section">
-        <h3>Coda ordini</h3>
-        <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
-          Come visualizzare gli ordini nel gestionale: <strong>griglia</strong> a
-          tutto schermo (card affiancate, ideale su tablet), schede separate per
-          stato, oppure un&apos;unica lista (in corso + evasi). Lo stato è sempre
-          indicato dal colore e dall&apos;etichetta sulla card.
-        </p>
-        <div className="mode-choice">
-          {[
-            ['griglia', '🔲 Griglia (schermo intero)'],
-            ['tabs', '🗂 Schede per stato'],
-            ['lista', '📋 Lista unica'],
-          ].map(([value, label]) => (
-            <button
-              key={value}
-              className={`mode-option${settings.queue_view === value ? ' active' : ''}`}
-              onClick={() => save({ queue_view: value })}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <CatalogImport />
-
-      <div className="card settings-section">
-        <h3>Account clienti</h3>
-        <ToggleRow
-          label="Login e registrazione clienti"
-          desc="Se disattivato, il link «Accedi» e la registrazione spariscono dal lato cliente; lo staff continua ad accedere da /bar."
-          checked={settings.customer_accounts_enabled}
-          onChange={(v) => save({ customer_accounts_enabled: v })}
-        />
-      </div>
-
-      <div className="card settings-section">
-        <h3>Posizione locale</h3>
-        <ToggleRow
-          label="Posizione obbligatoria per ordinare"
-          desc="Il cliente deve trovarsi nei pressi del locale: senza localizzazione attiva non può ordinare. Lo staff è esente."
-          checked={settings.geofence_enabled}
-          onChange={(v) => save({ geofence_enabled: v })}
-        />
-        {settings.geofence_enabled && (
-          <>
-            <label htmlFor="venue-addr">Indirizzo del locale</label>
-            <input
-              id="venue-addr"
-              type="text"
-              placeholder="es. Via Roma 1, Nola"
-              defaultValue={settings.venue_address}
-              onBlur={(e) => save({ venue_address: e.target.value.trim() })}
-            />
-            <div className="grid-2" style={{ marginTop: 10 }}>
-              <div>
-                <label htmlFor="venue-lat">Latitudine</label>
-                <input
-                  id="venue-lat"
-                  type="number"
-                  step="0.000001"
-                  defaultValue={settings.venue_lat ?? ''}
-                  onBlur={(e) => save({ venue_lat: e.target.value === '' ? null : Number(e.target.value) })}
-                />
-              </div>
-              <div>
-                <label htmlFor="venue-lng">Longitudine</label>
-                <input
-                  id="venue-lng"
-                  type="number"
-                  step="0.000001"
-                  defaultValue={settings.venue_lng ?? ''}
-                  onBlur={(e) => save({ venue_lng: e.target.value === '' ? null : Number(e.target.value) })}
-                />
-              </div>
-            </div>
-            <div className="toggle-row">
-              <span>Raggio consentito (metri)</span>
-              <AmountInput
-                value={settings.venue_radius_m}
-                min={10}
-                max={5000}
-                step={10}
-                onCommit={(v) => save({ venue_radius_m: v })}
-              />
-            </div>
-            <button
-              className="btn secondary block"
-              type="button"
-              onClick={() => {
-                navigator.geolocation?.getCurrentPosition(
-                  (pos) =>
-                    save({
-                      venue_lat: Number(pos.coords.latitude.toFixed(6)),
-                      venue_lng: Number(pos.coords.longitude.toFixed(6)),
-                    }),
-                  () => setError('Posizione non disponibile: inserisci le coordinate a mano.')
-                )
-              }}
-            >
-              📍 Usa la mia posizione attuale
-            </button>
-            {settings.venue_lat == null && (
-              <p className="muted small" style={{ margin: '8px 0 0' }}>
-                ⚠️ Senza coordinate il controllo non è attivo.
-              </p>
-            )}
-          </>
-        )}
-      </div>
-
-      {/* STAMPANTE: era una voce di menu a sé, ma si tocca una volta e
-          poi mai più — sta con le altre configurazioni. */}
-      <PrinterSetup />
-
-      <div className="card settings-section">
-        <h3>Annullamenti</h3>
-        <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
-          Frase proposta di default quando annulli un ordine (modificabile di
-          volta in volta nel dialog di annullamento).
-        </p>
-        <div className="mode-choice">
-          {Object.entries(CANCEL_PHRASES).map(([key, text]) => (
-            <button
-              key={key}
-              className={`mode-option${settings.cancel_phrase_default === key ? ' active' : ''}`}
-              onClick={() => save({ cancel_phrase_default: key })}
-            >
-              {text}
-            </button>
-          ))}
-        </div>
-      </div>
+      <CategoryRail
+        items={sezioni.map((s) => ({ key: s.id, label: s.label, icon: s.icona }))}
+        selected={attiva.id}
+        onSelect={scegliSezione}
+      >
+        {attiva.nodo}
+      </CategoryRail>
     </div>
   )
 }
