@@ -96,6 +96,61 @@ npm run seed:dev  # riempie il database locale
 Dettagli in [docs/ambiente-locale.md](docs/ambiente-locale.md). Stampante,
 SumUp, notifiche push e App Check in locale non si provano.
 
+## I requisiti e i test sono la bibbia
+
+`requirements/requirements.yaml` dice **cosa fa l'app**; i test dicono cosa
+fa **davvero**. Le due cose vanno tenute insieme, e c'è un test che lo
+verifica: ogni file di test dev'essere citato nei `test_cases` di almeno un
+requisito, e ogni test citato deve esistere. Un requisito può avere più
+test; un test appartiene a un requisito.
+
+```sh
+node scripts/requisiti.mjs              # a che punto siamo
+node scripts/requisiti.mjs --documento  # scrive docs/requisiti.md
+```
+
+Tre stati che contano:
+
+- ✅ **fatto e coperto** — `implemented`, con i test che lo dimostrano
+- ⚠️ **fatto ma scoperto** — `implemented` senza test: funziona finché
+  qualcuno non lo rompe senza accorgersene
+- ⬜ **da fare** — `todo`, e da lì nascono le issue GitHub
+  (`scripts/generate-issues.mjs`)
+
+**Quindi:** se cambia un comportamento, si aggiornano insieme codice, test
+e requisito, nello stesso commit. Se nasce una funzione, prima il requisito.
+
+## Cose da sapere sull'infrastruttura
+
+**Non si scrive mai in produzione di propria iniziativa.** Gli script che
+toccano Firestore (import, seed, migrazioni, travasi) girano su
+`tana-drink-test`; la produzione va nominata a mano e aspetta il via libera
+esplicito. Vale anche per il merge `develop` → `main`, che è un deploy in
+produzione. In produzione ci sono i dati veri del locale: un import
+sbagliato lì non è una prova da rifare, è un danno.
+
+**Deploy delle Functions (Gen2, girano su Cloud Run).** Il service account
+del deploy (`firebase-adminsdk-fbsvc@tana-drink…`) deve poter "agire come"
+il service account di runtime (`8401382511-compute@developer…`): serve
+`roles/iam.serviceAccountUser` sul secondo. Senza, il deploy fallisce con
+`iam.serviceaccounts.actAs`. Vanno abilitate le API cloudfunctions,
+cloudbuild, artifactregistry, run, eventarc, pubsub, serviceusage, storage.
+Richiede il piano Blaze, ma per un bar resta nel tier gratuito.
+
+**`functions/.env` è committato apposta**, con valori vuoti, ed è esentato
+nel `.gitignore`. Le Functions leggono `SUMUP_VENDOR_ID` e
+`SUMUP_OUTLET_ID` da `process.env`: senza quel file il deploy non
+interattivo si blocca a chiedere i valori da tastiera. Valori vuoti = SumUp
+spento. Per accenderlo davvero **non** si scrivono le credenziali lì:
+`firebase functions:secrets:set`, e lato sito `VITE_SUMUP_ENABLED=true`.
+
+**La bozza del POS non si perde mai.** Le righe non confermate sopravvivono
+all'uscita dalla schermata (chiave `new` in creazione, id ordine in
+modifica); confermare o pagare la azzera. Trappola già vista: il
+salvataggio non va dentro un updater di stato React — alla conferma si
+svuota e si naviga via nello stesso giro, il componente si smonta, React
+scarta l'updater e la cancellazione non avviene. Si salva in modo sincrono.
+
 ## Dove sta cosa
 
 | Dove | Cosa |
