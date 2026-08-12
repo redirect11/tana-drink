@@ -214,22 +214,6 @@ body.schermo-intero {
 }
 
 @media (max-width: 700px) {
-  /* Solo il TITOLO si scosta dal ☰ (che è fisso nell'angolo): scostando
-     tutta la testata, la ricerca partiva da metà schermo e sprecava la
-     riga. */
-  .board-head {
-    padding-left: 0;
-    row-gap: 4px;
-  }
-  .board-title {
-    padding-left: 56px;
-    white-space: normal;
-    min-width: 0;
-  }
-  .board-search {
-    width: 100%;
-    min-width: 0;
-  }
   /* Il ☰ flottante: un filo più piccolo, staccato dal bordo e sotto la
      striscia della linguetta — così non schiaccia il testo accanto e non
      ci finisce sotto. */
@@ -1602,6 +1586,30 @@ body.fullbleed .bar-content {
   flex: 1;
   min-width: 180px;
   margin: 0;
+}
+
+/* ── Testata della coda sul TELEFONO ──────────────────────────────────
+   Il ☰ è fisso nell'angolo: a scostarsi dev'essere solo il TITOLO, non
+   tutta la testata — scostando tutto, la ricerca partiva da metà schermo
+   e sprecava mezza riga. (Queste regole stanno DOPO quelle di base
+   apposta: a parità di specificità vince l'ultima, e una media query non
+   aggiunge peso.) */
+@media (max-width: 700px) {
+  .board-head {
+    padding-left: 0;
+    row-gap: 4px;
+  }
+  .board-title {
+    padding-left: 54px;
+    white-space: normal;
+    min-width: 0;
+    text-align: left;
+  }
+  .board-search {
+    width: 100%;
+    min-width: 0;
+    margin-left: 0;
+  }
 }
 
 .board-actions {
@@ -4642,10 +4650,10 @@ body.fullbleed .cat-rail {
   box-shadow: none;
   backdrop-filter: none;
   flex-shrink: 0;
-  padding: 0;
+  /* Il fondo arrotondato resta: senza, i due segni e la percentuale
+     sembrano testo lasciato lì, non un comando. */
+  padding: 2px;
   gap: 0;
-  background: none;
-  border-color: transparent;
 }
 .zoom-control.zoom-inline button {
   min-width: 26px;
