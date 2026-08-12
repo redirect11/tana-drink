@@ -48,7 +48,7 @@ requirements:
     status: implemented
     generate_issue: false
     labels: [ordini, comande]
-    test_cases: [tests/unit/comande.test.js]
+    test_cases: [tests/unit/comande.test.js, tests/unit/orderStatus.test.js, tests/unit/orderLines.test.js]
 
   - id: REQ-ORD-002
     title: "Gli ordini vecchi continuano a funzionare"
@@ -196,7 +196,7 @@ requirements:
     status: implemented
     generate_issue: false
     labels: [pos, offline]
-    test_cases: [tests/component/OrderPosDetail.test.jsx, tests/unit/incassoOffline.test.js]
+    test_cases: [tests/component/OrderPosDetail.test.jsx, tests/unit/incassoOffline.test.js, tests/unit/pendingOrders.test.js]
 
   - id: REQ-POS-006
     title: "Prodotto libero: una voce che non è a menù"
@@ -277,7 +277,7 @@ requirements:
     status: implemented
     generate_issue: false
     labels: [pagamenti, offline]
-    test_cases: [tests/unit/incassoOffline.test.js, tests/component/PaymentScreen.test.jsx]
+    test_cases: [tests/unit/incassoOffline.test.js, tests/component/PaymentScreen.test.jsx, tests/unit/pagamento.test.js, tests/unit/payments.test.js, tests/unit/payment-core.test.js]
 
   - id: REQ-PAG-002
     title: "Il tasto Pagamento dice quanto resta da incassare"
@@ -570,7 +570,7 @@ requirements:
     status: implemented
     generate_issue: false
     labels: [menu, import]
-    test_cases: [tests/unit/carteImport.test.js, tests/unit/importExcel.test.js]
+    test_cases: [tests/unit/carteImport.test.js, tests/unit/importExcel.test.js, tests/unit/nameMatch.test.js]
 
   - id: REQ-MENU-004
     title: "Colori e icone di categoria uguali dappertutto"
@@ -1082,6 +1082,75 @@ requirements:
     labels: [ai, fatture, magazzino]
     test_cases: []
 
+  - id: REQ-MAG-009
+    title: "Macro-categorie: il magazzino letto per famiglie"
+    area: "src/lib/macros.js, src/lib/macroStats.js, src/components/MacroCategoryManager.jsx"
+    description: >
+      Le categorie di magazzino si raggruppano in macro-categorie (distillati,
+      birre, bibite…): servono a leggere consumi, valore e margini per famiglia
+      invece che articolo per articolo, e a capire dove se ne va il denaro.
+    status: implemented
+    generate_issue: false
+    labels: [magazzino, statistiche]
+    test_cases: [tests/unit/macros.test.js, tests/unit/macroStats.test.js]
+
+  - id: REQ-POS-011
+    title: "La griglia del POS si organizza come si lavora"
+    area: "src/lib/posCatalog.js, src/components/PosProductPicker.jsx"
+    description: >
+      Nel POS i prodotti si trovano per categoria, per preferiti (fissati a mano)
+      e per recenti (gli ultimi battuti davvero). L'ordine delle card si può
+      cambiare trascinandole, e resta com'è stato messo.
+    status: implemented
+    generate_issue: false
+    labels: [pos]
+    test_cases: [tests/unit/posCatalog.test.js]
+
+  # ══════════════════════════════════════════════════════════════════════
+  #  COME SI LAVORA AL PROGETTO
+  # ══════════════════════════════════════════════════════════════════════
+
+  - id: REQ-DEV-001
+    title: "I requisiti restano attaccati ai test"
+    area: "requirements/requirements.yaml, tests/unit/requisiti.test.js"
+    description: >
+      Questo elenco dice cosa fa l'app; i test dicono cosa fa davvero. Un test
+      controlla che le due cose non si stacchino: ogni file di test dev'essere
+      citato da almeno un requisito, ogni test citato deve esistere, gli
+      identificativi non si ripetono e non si apre un'issue per qualcosa di già
+      fatto. Chi aggiunge un test senza dire a quale requisito appartiene se ne
+      accorge subito, non fra sei mesi.
+    status: implemented
+    generate_issue: false
+    labels: [metodo]
+    test_cases: [tests/unit/requisiti.test.js]
+
+  - id: REQ-DEV-002
+    title: "Si sa sempre quale versione si sta guardando"
+    area: "src/lib/versione.js, src/components/VersionBadge.jsx, vite.config.js"
+    description: >
+      In fondo al menu laterale c'è la versione: in produzione il solo numero,
+      altrove numero, ramo e commit — perché sull'unico ambiente di test passano
+      a turno develop e i branch in lavorazione, e "l'ho provato e non andava"
+      senza sapere cosa era pubblicato non vuol dire niente. Si tocca e si copia.
+    status: implemented
+    generate_issue: false
+    labels: [metodo]
+    test_cases: [tests/unit/versione.test.js]
+
+  - id: REQ-DEV-003
+    title: "Changelog delle versioni, leggibile anche dall'app"
+    area: "CHANGELOG.md, src/components/InfoTab.jsx"
+    description: >
+      Ogni versione rilasciata ha le sue note in CHANGELOG.md, e le stesse note
+      si leggono dentro l'app in Impostazioni → Informazioni, insieme ai dati
+      tecnici (versione, ramo, commit, ambiente, progetto). Chi usa l'app deve
+      poter sapere cosa è cambiato senza chiederlo a chi l'ha scritta.
+    status: implemented
+    generate_issue: false
+    labels: [metodo]
+    test_cases: []
+
   # ══════════════════════════════════════════════════════════════════════
   #  INTEGRAZIONE SUMUP (Cloud Functions)
   # ══════════════════════════════════════════════════════════════════════
@@ -1110,7 +1179,7 @@ requirements:
     status: implemented
     generate_issue: false
     labels: [sumup, sync, functions]
-    test_cases: [TC-SYNC-002, TC-SYNC-003, TC-SYNC-004]
+    test_cases: [TC-SYNC-002, TC-SYNC-003, TC-SYNC-004, tests/bdd/sync-products.test.js]
 
   - id: REQ-SUMUP-SYNC-002
     title: "Normalizzazione robusta della risposta prodotti SumUp"
@@ -1139,7 +1208,7 @@ requirements:
     status: implemented
     generate_issue: false
     labels: [sumup, sale, functions]
-    test_cases: [TC-SALE-002, TC-SALE-003, TC-CORE-004]
+    test_cases: [TC-SALE-002, TC-SALE-003, TC-CORE-004, tests/bdd/create-sale.test.js, tests/unit/sumup-core.test.js]
 
   - id: REQ-SUMUP-STATUS-001
     title: "Aggiornamento stato vendita su SumUp"
@@ -1151,7 +1220,7 @@ requirements:
     status: implemented
     generate_issue: false
     labels: [sumup, status, functions]
-    test_cases: [TC-STATUS-002, TC-STATUS-003]
+    test_cases: [TC-STATUS-002, TC-STATUS-003, tests/bdd/update-sale-status.test.js]
 
   - id: REQ-SUMUP-WEBHOOK-001
     title: "Webhook SumUp → aggiornamento stato ordine Firestore"
@@ -1165,4 +1234,4 @@ requirements:
     status: implemented
     generate_issue: false
     labels: [sumup, webhook, functions]
-    test_cases: [TC-HOOK-001, TC-HOOK-002, TC-HOOK-003, TC-HOOK-004, TC-HOOK-005]
+    test_cases: [TC-HOOK-001, TC-HOOK-002, TC-HOOK-003, TC-HOOK-004, TC-HOOK-005, tests/bdd/webhook.test.js]
