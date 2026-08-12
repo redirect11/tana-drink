@@ -81,6 +81,9 @@ una funzione, il terzo per le correzioni.
   primo conto che risponde e lo illumina — così si vede dov'è rispetto
   agli altri — e appena si tocca un conto la ricerca si azzera da sé.
 - In fondo al menu c'è **la versione** che si sta guardando.
+- **Il tastierino dello sconto ha di nuovo le cifre in ordine** (7 8 9 /
+  4 5 6 / 1 2 3): riusava la griglia del pagamento, larga quattro colonne
+  per gli operatori, e i numeri finivano sparsi a caso.
 
 ### Sotto il cofano
 

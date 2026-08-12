@@ -297,6 +297,23 @@ describe('sconto: modale con tastierino', () => {
     await user.click(modal.getByRole('button', { name: 'Rimuovi sconto' }))
     expect(setOrderDiscount).toHaveBeenCalledWith('ord1', null)
   })
+
+  // Il tastierino dello sconto riusava la griglia del pagamento, che ha quattro
+  // colonne per far posto agli operatori: le cifre andavano a capo dove capitava
+  // (7 8 9 4 / 5 6 1 2 / 3 C 0 ←) e al banco non si trovava più niente.
+  it('le cifre stanno in ordine da tastierino, su tre colonne', async () => {
+    const user = userEvent.setup()
+    const { container } = mount(baseOrder())
+    await user.click(screen.getByRole('button', { name: /Sconto/ }))
+    const pad = container.querySelector('.paypad-cifre')
+    expect(pad).toBeTruthy()
+    expect([...pad.querySelectorAll('.paypad-key')].map((b) => b.textContent)).toEqual([
+      '7', '8', '9',
+      '4', '5', '6',
+      '1', '2', '3',
+      'C', '0', '←',
+    ])
+  })
 })
 
 describe('codice lotteria e fattura', () => {

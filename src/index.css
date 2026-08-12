@@ -4130,6 +4130,11 @@ body.fullbleed,
   margin-top: 10px;
   min-height: 0;
 }
+/* Il tastierino del solo sconto: tre colonne, perché ci sono le cifre e basta.
+   Con le quattro colonne del pagamento le cifre si spezzavano a metà riga. */
+.paypad.paypad-cifre {
+  grid-template-columns: repeat(3, 1fr);
+}
 .paypad-key {
   border: 1px solid var(--line);
   border-radius: 10px;

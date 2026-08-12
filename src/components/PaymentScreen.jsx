@@ -776,7 +776,10 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
               </p>
             </div>
 
-            <div className="paypad" style={{ marginTop: 8, minHeight: 'auto' }}>
+            {/* Tre colonne, non quattro: qui non ci sono gli operatori, e con la
+                griglia del pagamento le cifre andavano a capo dove capitava
+                (7 8 9 4 / 5 6 1 2 / 3 C 0 ←). Sul tastierino si batte a memoria. */}
+            <div className="paypad paypad-cifre" style={{ marginTop: 8, minHeight: 'auto' }}>
               {['7', '8', '9', '4', '5', '6', '1', '2', '3'].map((d) => (
                 <button key={d} className="paypad-key" onClick={() => setDiscDigits((s) => (s + d).slice(0, 6))}>
                   {d}
