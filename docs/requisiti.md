@@ -4,11 +4,11 @@
 > `node scripts/requisiti.mjs --documento`. Non si modifica a mano:
 > si modifica il file dei requisiti.
 
-Alla data di generazione: **93 requisiti**.
+Alla data di generazione: **94 requisiti**.
 
 | | Quanti | Cosa vuol dire |
 |---|---|---|
-| ✅ | 73 | fatto e coperto dai test |
+| ✅ | 74 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | ⬜ | 5 | da fare |
 
@@ -709,6 +709,14 @@ Da tablet in su, nella testata della coda titolo, ricerca, ⋯ e ➕ stanno tutt
 *Dove*: `src/pages/BartenderPage.jsx, src/index.css`
 
 *Nessun test lo verifica.*
+
+### ✅ REQ-UI-008 — Dallo schermo intero si esce dallo stesso tasto con cui si entra
+
+Da browser il tasto ⛶ porta a schermo intero e, richiamato, ne fa uscire: vale sia per il tasto in barra sia per la voce nei ⋯ del telefono, che cambiano icona e parole quando si è dentro. Il tasto non compare a chi ha installato l'app, che gira già senza barre — ma "installata" non va confusa con "a schermo intero adesso": il browser risponde di sì a `display-mode: fullscreen` anche quando ci siamo andati noi con l'API, e il tasto per uscire spariva proprio quando serviva. Al banco il tablet è montato e la tastiera non c'è: senza tasto non si esce.
+
+*Dove*: `src/lib/useSchermoIntero.js, src/App.jsx`
+
+*Lo dimostrano*: `tests/component/SchermoIntero.test.jsx`
 
 ## Intelligenza artificiale
 
