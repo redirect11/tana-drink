@@ -268,3 +268,32 @@ describe('il tema segue chi guarda, non l’indirizzo', () => {
     await waitFor(() => expect(accento()).toBe(THEME_PRESETS[TEMA_CLIENTE.preset].vars['--accent']))
   })
 })
+
+// L'«indietro» delle sezioni del gestionale stava dentro la pagina e si
+// mangiava la prima riga di contenuto: nelle Impostazioni, che hanno bisogno
+// di tutta l'altezza per stare in uno schermo, era una riga di troppo.
+describe('l’indietro sta nella barra, non dentro la pagina', () => {
+  const nastro = () => [...document.querySelector('.topbar').children].map((e) => e.className)
+
+  it('in una sezione del gestionale c’è, fra il ☰ e il marchio', async () => {
+    ruoloClaim = 'admin'
+    apri('/bar?tab=impostazioni')
+    await waitFor(() => expect(document.querySelector('.topbar-back')).not.toBeNull())
+    const ordine = nastro()
+    expect(ordine.indexOf('topbar-burger')).toBeLessThan(ordine.indexOf('topbar-back'))
+    expect(ordine.indexOf('topbar-back')).toBeLessThan(ordine.indexOf('brand'))
+  })
+
+  it('nella coda non c’è: da lì non si torna da nessuna parte', async () => {
+    ruoloClaim = 'admin'
+    apri('/bar')
+    await screen.findByText('PAGINA CODA')
+    expect(document.querySelector('.topbar-back')).toBeNull()
+  })
+
+  it('al cliente non compare mai', async () => {
+    apri('/menu')
+    await screen.findByText('PAGINA MENU')
+    expect(document.querySelector('.topbar-back')).toBeNull()
+  })
+})

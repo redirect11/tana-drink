@@ -1,6 +1,6 @@
 {
-  "name": "La Tana del Coniglio — Drink",
-  "short_name": "Tana Drink",
+  "name": "La Tana del Coniglio",
+  "short_name": "La Tana",
   "description": "Ordina i tuoi drink alla Tana del Coniglio",
   "start_url": "./",
   "scope": "./",

@@ -224,19 +224,9 @@ export default function BartenderPage() {
       )}
 
       <div className="bar-content">
-        {/* Indietro: torna alla sezione da cui si è arrivati, restando dentro
-            il gestionale. Nella coda non serve: è la schermata di partenza. */}
-        {tab !== 'coda' && (
-          <button
-            className="btn ghost small bar-back"
-            onClick={() => {
-              if (window.history.length > 1) navigate(-1)
-              else goTab('coda')
-            }}
-          >
-            ← Indietro
-          </button>
-        )}
+        {/* L'«indietro» sta nella barra in alto, fra il ☰ e il marchio
+            (vedi App.jsx): dentro la pagina si mangiava la prima riga di
+            contenuto in ogni sezione. */}
         {tab === 'coda' && <OrderQueue />}
         {tab === 'pagamenti' && <CashFlow canManageStaff={isGestore(role)} />}
         {tab === 'storico' && <OrdersHistory />}
