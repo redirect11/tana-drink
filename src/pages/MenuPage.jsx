@@ -27,6 +27,7 @@ import { isFirebaseConfigured, auth } from '../lib/firebaseClient.js'
 import { useCustomer } from '../lib/customerAuth.js'
 import { onAuthStateChanged } from 'firebase/auth'
 import { useMenu } from '../lib/menuCache.js'
+import { voceMenuCorrisponde } from '../lib/posCatalog.js'
 import { isGestore, isPersonale } from '../lib/ruoli.js'
 import OrderSummary from '../components/OrderSummary.jsx'
 import StaffDrawer from '../components/StaffDrawer.jsx'
@@ -34,6 +35,19 @@ import CustomDrinkForm from '../components/CustomDrinkForm.jsx'
 
 const NOTIF_PROMPT_KEY = 'tana_notif_prompt_v1' // chiave storica
 const WELCOME_KEY = 'tana_welcome_v1'
+
+// Porta sotto gli occhi il prodotto acceso dalla ricerca. È un componente a
+// sé, e non un `useEffect` dentro MenuPage, perché lì sotto ci sono rami che
+// escono prima (menù che carica, servizio chiuso): un hook dopo un return
+// anticipato gira a intermittenza e React lo boccia.
+function PortaInVista({ id }) {
+  useEffect(() => {
+    if (!id) return
+    document.getElementById(`menu-voce-${id}`)
+      ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [id])
+  return null
+}
 
 export default function MenuPage() {
   // Menù dalla cache di modulo: una sola sottoscrizione viva, niente
@@ -182,18 +196,17 @@ export default function MenuPage() {
   const [search, setSearch] = useState('')
   // Categoria selezionata nella vista staff a 2 colonne.
   const [selectedCat, setSelectedCat] = useState(null)
+  // Due modi di cercare, come nel POS e nella coda: filtrare (si vede solo
+  // quello che risponde) oppure accendere (resta tutto, si illumina il primo
+  // e ci si va sopra). La scelta è una sola per tutta l'app: chi lavora non
+  // deve ricordarsi che qui la ricerca si comporta in un altro modo.
+  const ricercaEvidenzia = settings.pos_search === 'evidenzia'
 
   const categories = useMemo(() => {
-    const q = search.trim().toLowerCase()
-    const filtered = q
-      ? drinks.filter(
-          (d) =>
-            d.name?.toLowerCase().includes(q) ||
-            d.category?.toLowerCase().includes(q) ||
-            d.description?.toLowerCase().includes(q) ||
-            d.recipe_items?.some((r) => r.name?.toLowerCase().includes(q))
-        )
-      : drinks
+    const q = search.trim()
+    // In modo "accendi" non si toglie niente: il prodotto cercato può stare in
+    // un'altra categoria, e sparire tutto il resto fa perdere il segno.
+    const filtered = q && !ricercaEvidenzia ? drinks.filter((d) => voceMenuCorrisponde(d, q)) : drinks
     const byId = new Map(cats.map((c) => [c.id, c]))
     const groups = new Map() // key -> { name, sort, list }
     for (const d of filtered) {
@@ -206,7 +219,21 @@ export default function MenuPage() {
     return [...groups.values()]
       .sort((a, b) => (a.sort - b.sort) || a.name.localeCompare(b.name))
       .map((g) => [g.name, g.list])
-  }, [drinks, cats, search])
+  }, [drinks, cats, search, ricercaEvidenzia])
+
+  // Modo "accendi": il primo prodotto che risponde, nell'ordine in cui si
+  // vede, e la categoria in cui sta — è lì che bisogna portare chi cerca.
+  const [catAccesa, idAcceso] = useMemo(() => {
+    const q = search.trim()
+    if (!q || !ricercaEvidenzia) return [null, null]
+    for (const [cat, list] of categories) {
+      const trovato = list.find((d) => voceMenuCorrisponde(d, q))
+      if (trovato) return [cat, trovato.id]
+    }
+    return [null, null]
+  }, [categories, search, ricercaEvidenzia])
+
+  // Porta sotto gli occhi il prodotto acceso: vedi PortaInVista, in fondo.
 
   // ── Geofence: verificato AL CARICAMENTO del menu (lo staff è esente).
   // Finché la posizione non risulta nel raggio, i controlli per ordinare
@@ -485,22 +512,35 @@ export default function MenuPage() {
         </div>
       )}
 
-      {staff && search && categories.length === 0 && (
+      {staff && search && !ricercaEvidenzia && categories.length === 0 && (
         <div className="empty">Nessun risultato per «{search}».</div>
+      )}
+      {staff && search.trim() && ricercaEvidenzia && !idAcceso && (
+        <p className="muted small" style={{ margin: '4px 2px 0' }}>
+          🔍 Nessun prodotto per «{search}».
+        </p>
       )}
 
       {/* Vista staff: 2 colonne compatte (categorie sx, prodotti dx) per
           inserire ordini velocemente. */}
       {staff && categories.length > 0 && (() => {
-        const activeCat = search.trim()
+        const cercando = !!search.trim()
+        // MODO "ACCENDI": le categorie restano e ci si sposta su quella del
+        // prodotto trovato. MODO "FILTRA": come sempre, un elenco solo coi
+        // risultati e le categorie via.
+        const listaPiatta = cercando && !ricercaEvidenzia
+        const activeCat = listaPiatta
           ? null
-          : categories.find(([c]) => c === selectedCat)?.[0] || categories[0][0]
-        const shown = search.trim()
+          : (cercando && ricercaEvidenzia && catAccesa) ||
+            categories.find(([c]) => c === selectedCat)?.[0] ||
+            categories[0][0]
+        const shown = listaPiatta
           ? categories.flatMap(([, list]) => list)
           : categories.find(([c]) => c === activeCat)?.[1] || []
         return (
           <div className="staff-menu">
-            {!search.trim() && (
+            <PortaInVista id={idAcceso} />
+            {!listaPiatta && (
               <div className="staff-cats">
                 {categories.map(([cat, list]) => (
                   <button
@@ -517,8 +557,20 @@ export default function MenuPage() {
             <div className="staff-products">
               {shown.map((d) => {
                 const inCart = cart.items.find((i) => i.drink_id === d.id)
+                // Battuto il prodotto, la ricerca si azzera da sé: si torna
+                // alla categoria e si continua a battere senza cancellare.
+                const battuto = () => {
+                  if (ricercaEvidenzia && search) {
+                    setSelectedCat(catAccesa || selectedCat)
+                    setSearch('')
+                  }
+                }
                 return (
-                  <div className="staff-product" key={d.id}>
+                  <div
+                    className={`staff-product${d.id === idAcceso ? ' prodotto-acceso' : ''}`}
+                    id={`menu-voce-${d.id}`}
+                    key={d.id}
+                  >
                     <div className="staff-product-info">
                       <span className="staff-product-name">{d.name}</span>
                       <span className="price">{formatPrice(d.price)}</span>
@@ -531,7 +583,15 @@ export default function MenuPage() {
                           <button aria-label="Aumenta" onClick={() => cart.setQty(d.id, inCart.qty + 1)}>+</button>
                         </div>
                       ) : (
-                        <button className="btn small" onClick={() => cart.add(d)}>+</button>
+                        <button
+                          className="btn small"
+                          onClick={() => {
+                            cart.add(d)
+                            battuto()
+                          }}
+                        >
+                          +
+                        </button>
                       ))}
                   </div>
                 )

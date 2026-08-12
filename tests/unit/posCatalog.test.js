@@ -11,6 +11,7 @@ import {
   recentDrinkIds,
   prodottoCorrisponde,
   primoProdottoCorrispondente,
+  voceMenuCorrisponde,
 } from '../../src/lib/posCatalog.js'
 
 const D = (id) => ({ id, name: id })
@@ -109,5 +110,36 @@ describe('primoProdottoCorrispondente', () => {
     expect(primoProdottoCorrispondente(griglia, 'zzz')).toBe(null)
     expect(primoProdottoCorrispondente(griglia, '')).toBe(null)
     expect(primoProdottoCorrispondente(null, 'gin')).toBe(null)
+  })
+})
+
+// La ricerca del MENÙ guarda più in là del nome: al banco si cerca "quello
+// col rum" o si scrive il nome della categoria. Regola unica anche qui, se no
+// cambiando impostazione lo stesso testo troverebbe cose diverse.
+describe('voceMenuCorrisponde', () => {
+  const mojito = {
+    id: 'm',
+    name: 'Mojito',
+    category: 'Cocktail',
+    description: 'Fresco, con la menta',
+    recipe_items: [{ name: 'Rum bianco' }, { name: 'Lime' }],
+  }
+
+  it('trova per nome, categoria, descrizione e ingrediente', () => {
+    expect(voceMenuCorrisponde(mojito, 'moji')).toBe(true)
+    expect(voceMenuCorrisponde(mojito, 'cocktail')).toBe(true)
+    expect(voceMenuCorrisponde(mojito, 'menta')).toBe(true)
+    expect(voceMenuCorrisponde(mojito, 'rum')).toBe(true)
+    expect(voceMenuCorrisponde(mojito, 'whisky')).toBe(false)
+  })
+
+  it('con la ricerca vuota non risponde nessuno', () => {
+    expect(voceMenuCorrisponde(mojito, '')).toBe(false)
+    expect(voceMenuCorrisponde(mojito, '  ')).toBe(false)
+    expect(voceMenuCorrisponde(null, 'moji')).toBe(false)
+  })
+
+  it('regge un prodotto spoglio, senza ricetta né descrizione', () => {
+    expect(voceMenuCorrisponde({ id: 'x' }, 'a')).toBe(false)
   })
 })
