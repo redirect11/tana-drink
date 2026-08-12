@@ -4982,3 +4982,47 @@ body:has(.overlay) .zoom-control {
   margin: 0;
   white-space: nowrap;
 }
+
+/* ── Storia del conto ─────────────────────────────────────────────────
+   Un fatto per riga, in ordine di tempo. Serve a spiegare un conto
+   riaperto a chi non c'era quando è successo. */
+.storia-lista {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.storia-riga {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding-left: 2px;
+  border-left: 3px solid var(--line);
+  padding-block: 2px;
+  padding-inline-start: 10px;
+}
+.storia-riga.storia-riaperto { border-left-color: var(--accent); }
+.storia-riga.storia-annullato { border-left-color: #e74c3c; }
+.storia-riga.storia-chiuso { border-left-color: #2ecc71; }
+.storia-segno {
+  flex-shrink: 0;
+  line-height: 1.4;
+}
+/* Il motivo è la parte che conta: si legge come una frase detta, non come
+   un campo di un modulo. */
+.storia-motivo {
+  margin-top: 2px;
+  font-style: italic;
+  opacity: 0.85;
+}
+/* Dentro il conto riaperto: la riga che dice perché lo è. */
+.riaperto-nota {
+  margin: 6px 0 0;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  font-size: 0.85rem;
+}
