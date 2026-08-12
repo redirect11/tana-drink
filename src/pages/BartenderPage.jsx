@@ -1210,7 +1210,14 @@ function OrderQueue() {
         <div className="board-head">
           <div className="board-title">
             <strong>In servizio</strong>
-            <span className="muted"> · {recap.aperti} apert{recap.aperti === 1 ? 'o' : 'i'} · {recap.chiusi} chius{recap.chiusi === 1 ? 'o' : 'i'} · {formatPrice(recap.total)}</span>
+            {/* I conteggi vanno a capo sul telefono (board-conti): tutto su
+                una riga sola, accanto al titolo, si spezzava a metà parola
+                e finiva sotto il ☰. */}
+            <span className="muted board-conti">
+              <span className="board-conti-sep"> · </span>
+              {recap.aperti} apert{recap.aperti === 1 ? 'o' : 'i'} · {recap.chiusi} chius
+              {recap.chiusi === 1 ? 'o' : 'i'} · {formatPrice(recap.total)}
+            </span>
             {(legenda.staff.length > 0 || legenda.hasClient) && (
               <div className="order-legend">
                 {legenda.staff.map(([L, name]) => (
