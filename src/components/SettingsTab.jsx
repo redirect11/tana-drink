@@ -137,7 +137,7 @@ export default function SettingsTab({ role = null }) {
                 ))}
               </div>
 
-              <h4 style={{ margin: '16px 0 4px' }}>La ricerca prodotti</h4>
+              <h4 style={{ margin: '16px 0 4px' }}>La ricerca nella griglia dei prodotti</h4>
               <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
                 Cercando un prodotto nella griglia: si può <strong>filtrare</strong>,
                 lasciando le sole card che rispondono, oppure lasciare la griglia
@@ -150,7 +150,7 @@ export default function SettingsTab({ role = null }) {
               <div className="mode-choice">
                 {[
                   ['filtra', '🔍 Filtra la griglia'],
-                  ['evidenzia', '💡 Accendi e porta lì'],
+                  ['evidenzia', '💡 Accendi il prodotto e portami lì'],
                 ].map(([value, label]) => (
                   <button
                     key={value}
@@ -632,7 +632,7 @@ export default function SettingsTab({ role = null }) {
               <div className="mode-choice">
                 {[
                   ['filtra', '🔍 Filtra la coda'],
-                  ['evidenzia', '💡 Accendi e porta lì'],
+                  ['evidenzia', '💡 Accendi il conto e portami lì'],
                 ].map(([value, label]) => (
                   <button
                     key={value}

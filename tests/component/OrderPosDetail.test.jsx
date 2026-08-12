@@ -5,7 +5,7 @@
 // componente vero con React Testing Library e verifica ciò che il bartender
 // vede e tocca. Firebase/menu/stampante sono mockati.
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
@@ -845,5 +845,39 @@ describe('annullo dell’ordine', () => {
     await user.click(conferma.getByRole('button', { name: 'Annulla ordine' }))
     expect(cancelOrder).toHaveBeenCalledWith('ord1', { by: 'bartender' })
     expect(await screen.findByText('CODA ORDINI')).toBeInTheDocument()
+  })
+})
+
+// ── La ricerca prodotti, dentro la schermata vera ─────────────────────
+// Il picker da solo era già coperto (PosProductPicker.test.jsx), ma quello
+// che al banco non funzionava era il COLLEGAMENTO: l'impostazione arriva
+// dalle impostazioni del bar, passa da qui e finisce nella griglia. Se si
+// stacca un anello, la ricerca torna a filtrare e nessun test se ne accorge.
+describe('la ricerca prodotti segue l’impostazione del bar', () => {
+  const card = (nome) =>
+    [...document.querySelectorAll('[data-drink-id]')].find((e) => e.textContent.includes(nome))
+  const cerca = () => screen.getByLabelText('Cerca prodotto')
+
+  afterEach(() => {
+    delete mockSettings.pos_search
+  })
+
+  it('«filtra»: cercando resta solo il prodotto che risponde', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.type(cerca(), 'mojito')
+    expect(card('Mojito')).toBeTruthy()
+    expect(card('Gin Tonic')).toBeFalsy()
+  })
+
+  it('«accendi e porta lì»: la griglia resta intera e la card si accende', async () => {
+    mockSettings.pos_search = 'evidenzia'
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.type(cerca(), 'mojito')
+    // Niente sparisce da sotto le dita…
+    expect(card('Gin Tonic')).toBeTruthy()
+    // …e quella cercata è accesa.
+    expect(card('Mojito')).toHaveClass('prodotto-acceso')
   })
 })
