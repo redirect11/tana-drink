@@ -18,7 +18,9 @@ una funzione, il terzo per le correzioni.
   dai ⋯ del conto si riapre, scrivendo — se si vuole — il perché. Gli
   incassi già presi restano dove sono e il dovuto si ricalcola da sé; le
   comande già servite restano servite, tornano da fare solo quelle
-  annullate col conto.
+  annullate col conto. Se il conto annullato era pagato con un **buono
+  VIP**, riaprendolo il saldo si ri-addebita: lo sconto deve restare
+  pagato da qualcuno.
 - **Ogni conto ha la sua storia**, dietro i ⋯: aperto, chiuso, annullato,
   riaperto — con l'ora, chi l'ha fatto e il motivo della riapertura. E il
   motivo si legge anche dentro il conto riaperto, senza cercarlo: un conto

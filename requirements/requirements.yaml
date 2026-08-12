@@ -146,6 +146,14 @@ requirements:
       tornare) e il dovuto si ricalcola da sé; le comande già servite restano
       servite, tornano da fare solo quelle annullate col conto. Se dei soldi
       erano entrati, il conto riaperto risulta a ACCONTO, non pagato.
+      Se il conto annullato era stato scontato con un BUONO VIP, riaprendolo il
+      saldo si ri-addebita: annullando era tornato al beneficiario, e lasciarlo
+      lì significherebbe uno sconto che nessuno ha pagato e un credito in
+      circolazione che non torna più con i conti. Se nel frattempo il buono è
+      stato speso altrove e il saldo non basta, si addebita quel che c'è e lo
+      sconto si riduce a quella cifra (fino a sparire): meglio un conto che
+      chiede qualche euro in più che un buono in rosso. Su un conto CHIUSO non
+      si tocca niente, perché lì il buono non era mai stato ristornato.
       Il motivo si legge DENTRO il conto riaperto, senza doverlo cercare, e la
       storia completa — aperto, chiuso, annullato, riaperto, con chi e perché —
       sta dietro i ⋯ del conto, sia nella coda sia nel dettaglio. La storia si
@@ -154,7 +162,7 @@ requirements:
     status: implemented
     generate_issue: false
     labels: [ordini, difetto-risolto]
-    test_cases: [tests/unit/storiaOrdine.test.js, tests/component/OrderPosDetail.test.jsx]
+    test_cases: [tests/unit/storiaOrdine.test.js, tests/component/OrderPosDetail.test.jsx, tests/unit/vouchers.test.js]
 
   # ══════════════════════════════════════════════════════════════════════
   #  CASSA / POS — come si batte un ordine
