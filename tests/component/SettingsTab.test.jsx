@@ -45,6 +45,9 @@ vi.mock('../../src/components/PrinterSetup.jsx', () => ({
 vi.mock('../../src/components/BackupPanel.jsx', () => ({
   default: () => <div>PANNELLO BACKUP</div>,
 }))
+vi.mock('../../src/components/InfoTab.jsx', () => ({
+  default: () => <div>PANNELLO INFORMAZIONI</div>,
+}))
 vi.mock('../../src/components/ThemeSettings.jsx', () => ({
   default: () => <div>PANNELLO ASPETTO</div>,
 }))
@@ -108,9 +111,33 @@ describe('impostazioni a schede', () => {
       'Posizione locale',
       'Stampante',
       'Backup e ripristino',
+      'Informazioni',
       'Annullamenti',
     ]) {
       expect(screen.getByRole('button', { name: new RegExp(voce) })).toBeInTheDocument()
     }
+  })
+})
+
+// ── Come si comporta la ricerca nella coda ────────────────────────────
+// Chi lavora al banco ha due abitudini diverse: c'è chi vuole la coda
+// ripulita e chi vuole vederla tutta e sapere solo DOVE sta il conto.
+// Non si sceglie per lui: l'interruttore sta qui, nelle impostazioni.
+describe('la ricerca della coda: filtra o accende', () => {
+  it('di suo filtra, come è sempre stato', async () => {
+    const user = userEvent.setup()
+    render(<SettingsTab role="admin" />)
+    await user.click(screen.getByRole('button', { name: /Coda ordini/ }))
+    expect(screen.getByRole('button', { name: /Filtra la coda/ })).toHaveClass('active')
+    expect(screen.getByRole('button', { name: /Accendi il conto e portami lì/ })).not.toHaveClass('active')
+  })
+
+  it('si può passare ad accendere il conto trovato', async () => {
+    const user = userEvent.setup()
+    const { updateSettings } = await import('../../src/lib/api.js')
+    render(<SettingsTab role="admin" />)
+    await user.click(screen.getByRole('button', { name: /Coda ordini/ }))
+    await user.click(screen.getByRole('button', { name: /Accendi il conto e portami lì/ }))
+    expect(updateSettings).toHaveBeenCalledWith(expect.objectContaining({ queue_search: 'evidenzia' }))
   })
 })

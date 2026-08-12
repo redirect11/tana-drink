@@ -5,7 +5,7 @@
 // componente vero con React Testing Library e verifica ciò che il bartender
 // vede e tocca. Firebase/menu/stampante sono mockati.
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
@@ -474,7 +474,8 @@ describe('schermata Pagamento', () => {
     const user = userEvent.setup()
     mount(baseOrder())
     await user.click(screen.getByRole('button', { name: /Pagamento/ }))
-    expect(screen.getByRole('button', { name: /SumUp/ })).toBeDisabled()
+    // Spento a vedersi, ma toccabile: al tocco dice dove si configura.
+    expect(screen.getByRole('button', { name: /SumUp/ })).toHaveAttribute('aria-disabled', 'true')
   })
 
   it('conto chiuso (pagato): griglia e modifiche disabilitate', () => {
@@ -662,33 +663,43 @@ describe('menu azioni del telefono', () => {
   })
 
   const apriMenu = async (user) => {
-    await user.click(screen.getByRole('button', { name: /⋯ Azioni/ }))
+    await user.click(screen.getByRole('button', { name: 'Azioni del conto' }))
     return within(screen.getByRole('dialog'))
   }
 
-  it('apre il menu con tutte le azioni del conto', async () => {
+  it('nel menu c’è quello che si usa ogni tanto', async () => {
     const user = userEvent.setup()
     mount(baseOrder())
     const menu = await apriMenu(user)
     for (const voce of [
-      /Invia comanda/,
-      /Pagamento/,
       /Comande \(1\)/,
       /Prodotto libero/,
       /Dati conto/,
       /Unisci le righe uguali/,
       /Separa le quantità/,
-      /Annulla ordine/,
     ]) {
       expect(menu.getByRole('button', { name: voce })).toBeInTheDocument()
     }
   })
 
-  it('“Annulla ordine” dal menu chiede conferma, non annulla di colpo', async () => {
+  it('quello che si usa sempre NON è nel menu: sta in fondo, su una riga', async () => {
     const user = userEvent.setup()
     mount(baseOrder())
+    // In fondo al pannello, i tre gesti della serata.
+    for (const nome of [/Invia$/, /Paga$/, /Annulla$/]) {
+      expect(screen.getByRole('button', { name: nome })).toBeInTheDocument()
+    }
+    // E non anche dentro il menu, che sarebbe un doppione.
     const menu = await apriMenu(user)
-    await user.click(menu.getByRole('button', { name: /Annulla ordine/ }))
+    expect(menu.queryByRole('button', { name: /Invia/ })).toBeNull()
+    expect(menu.queryByRole('button', { name: /Paga/ })).toBeNull()
+    expect(menu.queryByRole('button', { name: /Annulla/ })).toBeNull()
+  })
+
+  it('“Annulla” chiede conferma, non annulla di colpo', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.click(screen.getByRole('button', { name: /Annulla$/ }))
     await waitFor(() => expect(document.querySelector('.confirm-box')).toBeTruthy())
     expect(cancelOrder).not.toHaveBeenCalled()
   })
@@ -703,16 +714,14 @@ describe('menu azioni del telefono', () => {
     )
   })
 
-  it('su un ordine NUOVO le azioni che richiedono un conto aperto sono spente', async () => {
-    const user = userEvent.setup()
+  it('su un ordine NUOVO le azioni che richiedono un conto aperto sono spente', () => {
     render(
       <MemoryRouter>
         <OrderPosDetail order={null} />
       </MemoryRouter>
     )
-    const menu = await apriMenu(user)
-    expect(menu.getByRole('button', { name: /Invia comanda/ })).toBeDisabled()
-    expect(menu.getByRole('button', { name: /Annulla ordine/ })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /Invia$/ })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /Annulla$/ })).toBeDisabled()
   })
 })
 
@@ -837,5 +846,98 @@ describe('annullo dell’ordine', () => {
     await user.click(conferma.getByRole('button', { name: 'Annulla ordine' }))
     expect(cancelOrder).toHaveBeenCalledWith('ord1', { by: 'bartender' })
     expect(await screen.findByText('CODA ORDINI')).toBeInTheDocument()
+  })
+})
+
+// ── La ricerca prodotti, dentro la schermata vera ─────────────────────
+// Il picker da solo era già coperto (PosProductPicker.test.jsx), ma quello
+// che al banco non funzionava era il COLLEGAMENTO: l'impostazione arriva
+// dalle impostazioni del bar, passa da qui e finisce nella griglia. Se si
+// stacca un anello, la ricerca torna a filtrare e nessun test se ne accorge.
+describe('la ricerca prodotti segue l’impostazione del bar', () => {
+  const card = (nome) =>
+    [...document.querySelectorAll('[data-drink-id]')].find((e) => e.textContent.includes(nome))
+  const cerca = () => screen.getByLabelText('Cerca prodotto')
+
+  afterEach(() => {
+    delete mockSettings.pos_search
+  })
+
+  it('«filtra»: cercando resta solo il prodotto che risponde', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.type(cerca(), 'mojito')
+    expect(card('Mojito')).toBeTruthy()
+    expect(card('Gin Tonic')).toBeFalsy()
+  })
+
+  it('«accendi e porta lì»: la griglia resta intera e la card si accende', async () => {
+    mockSettings.pos_search = 'evidenzia'
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.type(cerca(), 'mojito')
+    // Niente sparisce da sotto le dita…
+    expect(card('Gin Tonic')).toBeTruthy()
+    // …e quella cercata è accesa.
+    expect(card('Mojito')).toHaveClass('prodotto-acceso')
+  })
+})
+
+// ── Pagamento battuto mentre l'ordine sta ancora nascendo ─────────────
+// Segnalato dal banco: si battono due acque di corsa, si preme Pagamento,
+// e un attimo dopo si è di nuovo sulla schermata dell'ordine — Pagamento va
+// ripremuto. Dipende da quanto si è veloci: l'ordine nasce da solo al primo
+// prodotto, e quando il server risponde il conto smette di essere "nuovo".
+// La schermata di pagamento era appesa proprio a quel "nuovo": appena
+// cambiava, spariva da sé, col cassiere davanti al cliente che paga.
+describe('Pagamento premuto mentre l’ordine sta ancora nascendo', () => {
+  it('la schermata di pagamento resta aperta quando la creazione va a buon fine', async () => {
+    const user = userEvent.setup()
+    let rispondiIlServer
+    createOrder.mockImplementationOnce(
+      () =>
+        new Promise((res) => {
+          rispondiIlServer = () =>
+            res({
+              id: 'ord-nuovo',
+              daily_number: 9,
+              status: 'aperto',
+              payment_status: 'non_richiesto',
+              total: 7,
+              payments: [],
+              discount_amount: 0,
+              comande: [
+                {
+                  id: 'c1',
+                  seq: 1,
+                  status: 'in_preparazione',
+                  items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1 }],
+                },
+              ],
+              order_items: [
+                { id: 'x', drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1 },
+              ],
+            })
+        })
+    )
+    render(
+      <MemoryRouter>
+        <OrderPosDetail order={null} />
+      </MemoryRouter>
+    )
+    await user.click(screen.getAllByText('Mojito')[0])
+    // L'auto-creazione parte da sola dopo qualche decimo di secondo…
+    await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1), { timeout: 2000 })
+    // …e mentre è in volo si preme Pagamento.
+    await user.click(screen.getByRole('button', { name: /Pagamento/ }))
+    expect(await screen.findByRole('button', { name: /Riscuotere/ })).toBeInTheDocument()
+
+    // Il server risponde: il conto esiste, non è più "nuovo".
+    rispondiIlServer()
+    // Il numero del conto arriva a schermo: siamo oltre il passaggio.
+    // (Compare in due punti: la testata del conto e quella del pagamento.)
+    expect((await screen.findAllByText(/#9/)).length).toBeGreaterThan(0)
+    // E il pagamento è ancora lì, dove il cassiere l'ha lasciato.
+    expect(screen.getByRole('button', { name: /Riscuotere/ })).toBeInTheDocument()
   })
 })

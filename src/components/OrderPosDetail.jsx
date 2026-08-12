@@ -20,6 +20,8 @@ import { useDraft, loadLayout, saveLayout, saveDraft } from '../lib/useDraft.js'
 import { dismissKeyboard } from '../lib/keyboard.js'
 import { useResizable } from '../lib/useResizable.js'
 import { useTelefono } from '../lib/useTelefono.js'
+import { nascondiOrdine, mostraOrdine } from '../lib/ordiniNascosti.js'
+import ZoomControl from './ZoomControl.jsx'
 import { auth } from '../lib/firebaseClient.js'
 import { onAuthStateChanged } from 'firebase/auth'
 import { useMenu } from '../lib/menuCache.js'
@@ -93,6 +95,38 @@ function numeroPrevistoInCache() {
     return v.n
   } catch {
     return null
+  }
+}
+
+// IL CONTO CHE STAVO APRENDO. In creazione l'ordine nasce SENZA cambiare
+// pagina (niente navigazione, la schermata resta montata): se il browser
+// ricarica — basta uno scorrimento di troppo in cima alla lista, e su
+// Android parte l'aggiornamento della pagina — l'app non saprebbe più a
+// quale conto stava lavorando e ne aprirebbe un altro, lasciando il primo
+// aperto in coda con dentro la roba già battuta.
+// Qui si tiene il suo id: al ritorno si riprende da lì. Si dimentica
+// uscendo dal conto o quando il conto si chiude — e comunque scade, per
+// non ritrovarsi dentro un conto di ieri.
+const CHIAVE_IN_CORSO = 'tana:pos:conto-in-corso'
+const ORE_IN_CORSO = 8
+
+function contoInCorso() {
+  try {
+    const v = JSON.parse(localStorage.getItem(CHIAVE_IN_CORSO) || 'null')
+    if (!v?.id) return null
+    if (Date.now() - v.at > ORE_IN_CORSO * 3600 * 1000) return null
+    return v.id
+  } catch {
+    return null
+  }
+}
+
+function ricordaContoInCorso(id) {
+  try {
+    if (id) localStorage.setItem(CHIAVE_IN_CORSO, JSON.stringify({ id, at: Date.now() }))
+    else localStorage.removeItem(CHIAVE_IN_CORSO)
+  } catch {
+    /* senza memoria locale si riparte da zero, come prima */
   }
 }
 
@@ -207,6 +241,20 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   // Scala del footer (totale + conferma/pagamento): la maniglia in cima lo
   // "allunga" e tasti/font crescono insieme. Valore in % (100 = normale).
   const footRz = useResizable('pos-foot-scale', { def: 100, min: 80, max: 175, axis: 'y', side: 'up', speed: 0.5 })
+  // ALTEZZA DEL PANNELLO ORDINE sul telefono (in dvh): con più di tre o
+  // quattro righe il conto non ci stava e bisognava scorrere dentro una
+  // finestrella. Si tira su la maniglia e si guarda tutto il conto.
+  const altezzaRz = useResizable('pos-comanda-h', {
+    // In quarti di schermo: da un quarto (si guarda la griglia) a tre
+    // quarti (si guarda il conto), partendo da metà. Oltre i tre quarti
+    // della griglia non resterebbe abbastanza per battere.
+    def: 50,
+    min: 25,
+    max: 75,
+    axis: 'y',
+    side: 'up',
+    speed: 0.13, // pixel → dvh (uno schermo tipico è ~800px: 1dvh ≈ 8px)
+  })
   // Allargando una colonna ne crescono anche i testi (e viceversa): la scala
   // del font segue la larghezza rispetto alla misura di riposo (def), con un
   // tetto per non esagerare. Guida i font via CSS (--cats-scale/--comanda-scale).
@@ -243,6 +291,19 @@ export default function OrderPosDetail({ order: orderProp = null }) {
     setPanelCollapsed(false)
   }
 
+  // APRENDO IL PANNELLO SI VEDE L'ULTIMA RIGA. È quella appena battuta:
+  // trovarsi in cima alla lista, con l'ultimo drink fuori vista, vuol dire
+  // scorrere ogni volta per controllare quello che si è appena aggiunto.
+  useEffect(() => {
+    if (panelCollapsed) return undefined
+    // Dopo il render: la lista si popola in un secondo giro.
+    const t = requestAnimationFrame(() => {
+      const el = listRef.current
+      if (el) el.scrollTop = el.scrollHeight
+    })
+    return () => cancelAnimationFrame(t)
+  }, [panelCollapsed])
+
   // Staff loggato (per l'attribuzione dell'ordine creato dal POS).
   const [staff, setStaff] = useState(null)
   useEffect(() => {
@@ -274,8 +335,46 @@ export default function OrderPosDetail({ order: orderProp = null }) {
       if (j === selfOrderJsonRef.current) return
       selfOrderJsonRef.current = j
       setSelfOrder(o)
+      // Chiuso o annullato (magari da un altro dispositivo): non è più
+      // "il conto in corso", e al prossimo giro si riparte puliti.
+      if (o.status !== ORDER_OPEN) ricordaContoInCorso(null)
     }, () => {})
   }, [selfOrderId, orderProp])
+
+  // RIPRESA DOPO UN RICARICAMENTO. Si entra in creazione ma un conto era
+  // già stato aperto qui: si torna dentro quello invece di aprirne un
+  // altro e lasciare il primo per strada, con dentro quello che era già
+  // stato battuto. Solo se è ancora aperto: un conto chiuso non si
+  // riapre.
+  useEffect(() => {
+    if (orderProp || selfOrder) return undefined
+    const id = contoInCorso()
+    if (!id) return undefined
+    let vivo = true
+    let stop = null
+    stop = subscribeOrder(
+      id,
+      (o) => {
+        if (!vivo) return
+        vivo = false
+        if (o && o.status === ORDER_OPEN) {
+          selfOrderJsonRef.current = JSON.stringify(o)
+          setSelfOrder(o)
+        } else {
+          ricordaContoInCorso(null)
+        }
+        // Basta la prima risposta: da qui in poi ci pensa l'ascolto
+        // normale del conto (selfOrderId), questo era solo per ritrovarlo.
+        stop?.()
+      },
+      () => ricordaContoInCorso(null)
+    )
+    return () => {
+      vivo = false
+      stop?.()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderProp])
 
   // PAGAMENTO DIRETTO (creazione): la schermata si apre subito su un ordine
   // locale; la creazione gira in background (resolveOrderId).
@@ -553,7 +652,8 @@ export default function OrderPosDetail({ order: orderProp = null }) {
       } catch {
         /* se la scrittura non riesce si annulla lo stesso: il conto va chiuso */
       }
-      cancelOrder(order.id, { by: 'bartender' }).catch(() => {})
+      cancelOrder(order.id, { by: 'bartender' }).catch(() => mostraOrdine(order.id))
+      nascondiOrdine(order.id)
       navigate('/bar')
     }, 400) // respiro: evita di annullare durante una sostituzione di riga
     return () => clearTimeout(t)
@@ -948,6 +1048,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
         clearDraft()
         if (restanti.length) saveDraft(created.id, restanti)
         selfOrderJsonRef.current = JSON.stringify(created) // evita un re-render doppio dalla subscription
+        ricordaContoInCorso(created.id) // se la pagina ricarica, si riprende da qui
         setSelfOrder(created) // diventa "modifica" in place, niente reload
         return created
       } catch (e) {
@@ -1147,6 +1248,9 @@ export default function OrderPosDetail({ order: orderProp = null }) {
     setAskName(true)
   }
   const handleExit = () => {
+    // Uscendo dal conto la ripresa non serve più: si esce apposta, non per
+    // sbaglio. Restasse, il prossimo "nuovo ordine" ripartirebbe da questo.
+    ricordaContoInCorso(null)
     if (!isNew) {
       // Le modifiche ottimistiche ancora in volo (aggiunte/decrementi) si
       // inviano ora, per non perderle uscendo. Se è un ordine creato in place
@@ -1180,6 +1284,11 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   // compariva solo finché l'ordine non esisteva ancora: appena si creava da
   // sé — cioè un istante dopo il primo prodotto — spariva, e sembrava un
   // difetto. È il totale meno lo sconto e gli acconti già presi.
+  // Ingranditi al massimo dalla maniglia, tre parole non stanno su una
+  // riga: da lì in poi restano le sole icone. Meglio un'icona che si vede
+  // di una parola tagliata. (La scala del footer va da 80 a 175.)
+  const soloIcone = telefono && footRz.width > 118
+
   const daIncassare = Math.max(
     0,
     confirmedTotal +
@@ -1192,6 +1301,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
     // L'altezza si divide per lo zoom: dentro un contenitore scalato 100dvh
     // varrebbe più dello schermo e la schermata sborderebbe (vedi ZoomControl).
     <div
+      className="posd-root"
       style={{
         display: 'flex',
         flexDirection: 'column',
@@ -1210,7 +1320,11 @@ export default function OrderPosDetail({ order: orderProp = null }) {
           borderBottom: '1px solid var(--line)',
         }}
       >
-        <button className="btn ghost small" aria-label="Torna agli ordini" onClick={handleExit}>← Ordini</button>
+        {/* Sul telefono la sola freccia: "Ordini" scritto per esteso andava a
+            capo e si mangiava la riga, dove servono numero, ora e stato. */}
+        <button className="btn ghost small" aria-label="Torna agli ordini" onClick={handleExit}>
+          {telefono ? '←' : '← Ordini'}
+        </button>
         <strong className="posd-num">{headTitle}</strong>
         {/* QUANDO è stato aperto il conto, accanto al numero: sapere che quel
             tavolo è lì dalle nove cambia come lo si tratta. */}
@@ -1256,6 +1370,9 @@ export default function OrderPosDetail({ order: orderProp = null }) {
             id {String(order.serial).padStart(5, '0')}
           </span>
         )}
+        {/* ZOOM sul telefono: qui, in fondo alla testata. Flottante
+            nell'angolo finiva sopra i tasti del conto e si premeva lui. */}
+        {telefono && <ZoomControl inline />}
       </div>
 
       {error && <div className="banner" style={{ margin: '8px 8px 0', flexShrink: 0 }}>{error}</div>}
@@ -1276,6 +1393,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
           loading={loading}
           qtyByDrink={qtyByDrink}
           categoryDisplay={settings.category_display}
+          ricercaEvidenzia={settings.pos_search === 'evidenzia'}
           catsHandleProps={catsRz.handleProps}
           recentIds={recentIds}
           onAdd={(d) => {
@@ -1298,7 +1416,20 @@ export default function OrderPosDetail({ order: orderProp = null }) {
         {/* ── Pannello destro: L'ORDINE (lista unica). Su smartphone si
             comprime in una barra (totale + n. item) mentre si lavora sulla
             griglia; un tocco la riapre. ── */}
-        <div className={`posd-comanda${panelCollapsed ? ' collapsed' : ''}`}>
+        <div
+          className={`posd-comanda${panelCollapsed ? ' collapsed' : ''}`}
+          style={{ '--pos-comanda-h': `${altezzaRz.width}dvh` }}
+        >
+          {/* Maniglia per l'altezza (telefono): tieni premuto e trascina.
+              Col dito serve una presa voluta, altrimenti sfiorandola mentre
+              si scorre il pannello cambiava altezza da solo. */}
+          {telefono && !panelCollapsed && (
+            <div
+              className={`posd-altezza-handle${altezzaRz.attivo ? ' attiva' : ''}`}
+              title="Tieni premuto e trascina per cambiare l'altezza"
+              {...altezzaRz.handleProps}
+            />
+          )}
           {panelCollapsed && (
             <button
               type="button"
@@ -1606,10 +1737,42 @@ export default function OrderPosDetail({ order: orderProp = null }) {
 
             {/* TELEFONO: un tasto solo, tutto il resto nel menu dal basso.
                 In pagina restano il totale e le righe del conto. */}
+            {/* TELEFONO: i tre gesti della serata su una riga sola —
+                si manda al banco, si incassa, si annulla. Tutto il resto
+                sta dietro i ⋯ in alto, dove non intralcia. */}
             {telefono && (
-              <button className="btn block" onClick={() => setShowAzioni(true)}>
-                ⋯ Azioni
-              </button>
+              <div className="posd-foot-telefono">
+                <button
+                  className="btn ghost"
+                  disabled={isNew}
+                  onClick={inviaComanda}
+                  aria-label="Invia"
+                  title="Invia la comanda al banco"
+                >
+                  <IconPrinter />
+                  {!soloIcone && ' Invia'}
+                </button>
+                <button
+                  className="btn"
+                  disabled={isNew ? draftCount === 0 : !canPay}
+                  onClick={isNew ? handlePayNow : () => setShowPayment(true)}
+                  aria-label="Paga"
+                  title="Incassa il conto"
+                >
+                  <IconCard />
+                  {!soloIcone && ' Paga'}
+                </button>
+                <button
+                  className="btn ghost"
+                  disabled={isNew || closed}
+                  onClick={() => setConfirmCancel(true)}
+                  aria-label="Annulla"
+                  title="Annulla l'ordine"
+                >
+                  <IconX />
+                  {!soloIcone && ' Annulla'}
+                </button>
+              </div>
             )}
           </div>
         </div>
@@ -1624,21 +1787,6 @@ export default function OrderPosDetail({ order: orderProp = null }) {
         onClose={() => setShowAzioni(false)}
         titolo={panelTitle}
         voci={[
-          {
-            id: 'invia',
-            icon: <IconPrinter />,
-            label: 'Invia comanda',
-            hint: 'Stampa al banco quella in lavorazione',
-            disabled: isNew,
-            onClick: inviaComanda,
-          },
-          {
-            id: 'paga',
-            icon: <IconCard />,
-            label: daIncassare > 0 ? `Pagamento · ${formatPrice(daIncassare)}` : 'Pagamento',
-            disabled: isNew ? draftCount === 0 : !canPay,
-            onClick: isNew ? handlePayNow : () => setShowPayment(true),
-          },
           {
             id: 'comande',
             icon: <IconReceipt />,
@@ -1682,14 +1830,6 @@ export default function OrderPosDetail({ order: orderProp = null }) {
             label: group ? `Gruppo: ${group.name}` : 'Associa a un gruppo',
             hint: group ? 'Cambia o togli' : null,
             onClick: () => setPickGroup(true),
-          },
-          {
-            id: 'annulla',
-            icon: <IconX />,
-            label: 'Annulla ordine',
-            danger: true,
-            disabled: isNew || closed,
-            onClick: () => setConfirmCancel(true),
           },
         ]}
       />
@@ -1914,28 +2054,38 @@ export default function OrderPosDetail({ order: orderProp = null }) {
         </div>
       )}
 
-      {/* ── Schermata Pagamento ── */}
-      {isNew && payOrder && (
+      {/* ── Schermata Pagamento ──
+          UNA SOLA, e NON appesa a `isNew`. Erano due rami, uno per la
+          creazione (`isNew && payOrder`) e uno per la modifica
+          (`!isNew && showPayment`). Al banco: si battono due acque di
+          corsa e si preme subito Pagamento, mentre la creazione automatica
+          della bozza è ancora in volo. Quando il server risponde, il conto
+          esiste — `isNew` diventa falso, il primo ramo sparisce e il
+          secondo non ha `showPayment` — e la schermata di pagamento si
+          chiudeva DA SOLA, col cliente davanti che stava pagando. Ora
+          quello che comanda è "c'è un pagamento in corso", che il conto sia
+          nato un istante prima o mezz'ora prima. */}
+      {(payOrder || (showPayment && order)) && (
         <PaymentScreen
-          order={payOrder}
+          order={payOrder || order}
           settings={settings}
           onClose={() => {
             setPayOrder(null)
+            setShowPayment(false)
             creatingRef.current = false // pagamento annullato: riabilita l'auto-creazione
           }}
-          onPaid={() => navigate('/bar')}
-          onError={setError}
-          resolveOrderId={() => payIdRef.current}
-        />
-      )}
-      {!isNew && showPayment && (
-        <PaymentScreen
-          order={order}
-          settings={settings}
-          onClose={() => setShowPayment(false)}
-          onPaid={() => navigate('/bar')}
+          onPaid={() => {
+            // In creazione l'id arriva da una PROMESSA: va attesa, se no si
+            // "nasconde" un oggetto Promise e il conto pagato resta a
+            // schermo nella coda finché il server non lo conferma.
+            Promise.resolve(payOrder ? payIdRef.current : order?.id)
+              .then((id) => nascondiOrdine(id))
+              .catch(() => {})
+            navigate('/bar')
+          }}
           onBeforePay={flushAll}
           onError={setError}
+          resolveOrderId={payOrder ? () => payIdRef.current : undefined}
         />
       )}
 
@@ -1998,9 +2148,14 @@ export default function OrderPosDetail({ order: orderProp = null }) {
           onCancel={() => setConfirmCancel(false)}
           onConfirm={() => {
             setConfirmCancel(false)
-            cancelOrder(order.id, { by: 'bartender' }).catch((e) =>
+            cancelOrder(order.id, { by: 'bartender' }).catch((e) => {
+              // Non è andata: torni a vederlo in coda, com'è giusto.
+              mostraOrdine(order.id)
               toastError(`Annullo non riuscito: ${e.message}`)
-            )
+            })
+            // Sparisce dalla coda SUBITO, senza aspettare il database:
+            // altrimenti lo si ritrova lì per un istante e si dubita.
+            nascondiOrdine(order.id)
             // SI TORNA AGLI ORDINI. Un conto annullato non si lavora più:
             // restarci davanti serve solo a chiedersi se l'annullo è andato,
             // e a rischiare di batterci sopra. Come quando si svuota da sé.

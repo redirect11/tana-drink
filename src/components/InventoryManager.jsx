@@ -549,7 +549,7 @@ function ProductsPanel() {
       />
 
       {/* Categorie a SINISTRA (come il POS), il resto a destra. */}
-      <CategoryRail items={catItems} selected={categoryFilter} onSelect={setCategoryFilter} storageKey="inventory">
+      <CategoryRail items={catItems} selected={categoryFilter} onSelect={setCategoryFilter}>
 
       {/* Filtro fornitori */}
       {suppliers.length > 0 && (

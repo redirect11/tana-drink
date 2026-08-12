@@ -1,4 +1,4 @@
-import { Routes, Route, Link, Navigate, useLocation } from 'react-router-dom'
+import { Routes, Route, Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import LandingPage from './pages/LandingPage.jsx'
 import MenuPage from './pages/MenuPage.jsx'
 import OrderStatusPage from './pages/OrderStatusPage.jsx'
@@ -15,6 +15,11 @@ import { subscribeSettings, DEFAULT_SETTINGS, clockIn, subscribePrinterConfig } 
 import { savePrinterSettings } from './lib/printer.js'
 import { dismissKeyboard } from './lib/keyboard.js'
 import StatusBell from './components/StatusBell.jsx'
+import ActionSheet from './components/ActionSheet.jsx'
+import StaffDrawer from './components/StaffDrawer.jsx'
+import ClientDrawer from './components/ClientDrawer.jsx'
+import { useTelefono } from './lib/useTelefono.js'
+import { useSchermoIntero } from './lib/useSchermoIntero.js'
 import { logoutStaff } from './lib/logout.js'
 import { resolveThemeVars, applyTheme } from './lib/themes.js'
 import { envLabel } from './dev/devActions.js'
@@ -61,11 +66,36 @@ export default function App() {
     return () => document.removeEventListener('keydown', onKey)
   }, [])
 
+  // A SCHERMO INTERO SI PRENDE ANCHE LA FASCIA IN CIMA. Con la barra di
+  // sistema nascosta (niente orario, niente icone) quello spazio è libero:
+  // tenerlo vuoto vuol dire buttare via una striscia di schermo proprio
+  // dove serve, cioè in una schermata di lavoro. Il body si marca, e il
+  // CSS azzera lo scosto di sicurezza.
+  useEffect(() => {
+    const aggiorna = () =>
+      document.body.classList.toggle('schermo-intero', !!document.fullscreenElement)
+    aggiorna()
+    document.addEventListener('fullscreenchange', aggiorna)
+    return () => {
+      document.removeEventListener('fullscreenchange', aggiorna)
+      document.body.classList.remove('schermo-intero')
+    }
+  }, [])
+
   // Topbar apribile/chiudibile ovunque. Sulle schermate a tutto schermo
   // (coda, creazione/modifica ordine, pagamento) quando è aperta compare come
   // OVERLAY (fissa), senza spingere il contenuto: quelle schermate restano
   // interamente nel viewport.
   const [topbarOpen, setTopbarOpen] = useState(false)
+  const navigate = useNavigate()
+  // Sul telefono la barra tiene il ☰, il logo e due sole azioni: la
+  // campanella e i ⋮. Tutto il resto sta nel menu (vedi sotto).
+  const telefono = useTelefono()
+  const [menuTopbar, setMenuTopbar] = useState(false)
+  // "Schermo intero" ha senso solo da browser: con l'app installata le
+  // barre non ci sono già. Lo stesso stato del tasto nella barra, così la
+  // voce del menu sa anche USCIRE e non solo entrare.
+  const schermoIntero = useSchermoIntero()
   useEffect(() => {
     document.body.classList.toggle('topbar-open', topbarOpen)
     return () => document.body.classList.remove('topbar-open')
@@ -117,27 +147,70 @@ export default function App() {
     })
   }, [])
 
-  // Tema: le schermate del gestionale (/bar, POS cassa, dettaglio ordine e
-  // menù usato dallo staff) seguono il tema staff; il resto quello cliente.
-  // Il menù è una pagina cliente, ma lo staff ci passa per inserire ordini
-  // manuali (la "vista cliente"): anche lì sta lavorando al bancone, quindi
-  // deve vedere il tema del gestionale. Gli ordini per gruppo passano
-  // invece dal POS (/pos?group=…), che è la schermata di lavoro.
-  const staffSurface =
-    onBackoffice ||
-    location.pathname.startsWith('/pos') ||
-    (!!staffRole && location.pathname.startsWith('/ordine')) ||
-    (!!staffRole && location.pathname.startsWith('/menu'))
+  // CHI LAVORA NON PASSA DALLA VETRINA. Aprendo l'app, chi è dello staff si
+  // trovava la landing dei clienti e doveva cercare la strada per la coda:
+  // dalla home lo si porta dritto alla lista ordini. Unica eccezione, il QR
+  // del tavolo (?tavolo=/?group=): quello deve arrivare al menù anche se a
+  // inquadrarlo è chi sta dietro al banco. `replace` per non lasciarsi
+  // dietro un passo indietro che rimanda subito qui.
+  useEffect(() => {
+    if (!staffRole || location.pathname !== '/') return
+    const p = new URLSearchParams(location.search)
+    if (p.get('tavolo') || p.get('table') || p.get('group')) return
+    navigate('/bar', { replace: true })
+  }, [staffRole, location.pathname, location.search, navigate])
+
+  // E NON SI ENTRA MAI NEL POS DA SOLI. Appena la sessione dello staff è
+  // pronta — accesso, o riapertura dell'app con la scheda rimasta lì — la
+  // strada è la lista ordini. Nel POS ci si entra apposta, col ➕: trovarcisi
+  // dentro all'avvio significa battere righe in un conto che non si è scelto
+  // (la schermata riprende da sé il conto lasciato aperto). Vale UNA VOLTA
+  // SOLA, all'inizio della sessione: dopo, «Nuovo ordine» funziona come
+  // sempre.
+  const rottaIniziale = useRef(false)
+  useEffect(() => {
+    if (!staffRole || rottaIniziale.current) return
+    rottaIniziale.current = true
+    if (location.pathname.startsWith('/pos')) navigate('/bar', { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [staffRole])
+
+  // Tema: SEGUE CHI GUARDA, non l'indirizzo. Prima era un elenco di
+  // percorsi, e bastava che ne mancasse uno — il profilo staff, "i miei
+  // ordini", l'accesso — perché a chi sta lavorando arrivassero i colori
+  // pensati per il cliente, in mezzo alla serata.
+  // Unica eccezione, l'ANTEPRIMA: «Vista cliente» (/menu?vista=cliente)
+  // serve a vedere il menù com'è per chi ordina, e i colori sono parte di
+  // com'è. Il menù usato dallo staff per gli ordini manuali (/menu senza
+  // quel parametro) resta invece sul tema del gestionale: lì si lavora.
+  const anteprimaCliente =
+    location.pathname.startsWith('/menu') &&
+    new URLSearchParams(location.search).get('vista') === 'cliente'
+  const staffSurface = !!staffRole && !anteprimaCliente
   useEffect(() => {
     const scope = staffSurface ? settings.theme_staff : settings.theme_client
     applyTheme(resolveThemeVars(scope))
   }, [settings, staffSurface])
 
 
-  // Il ☰ apre lo StaffDrawer, che è montato solo nel gestionale e nel menù:
-  // altrove (dettaglio ordine, POS) il tasto non avrebbe nessuno che risponde.
-  const drawerHere =
-    location.pathname.startsWith('/bar') || location.pathname.startsWith('/menu')
+  // IL ☰ C'È OVUNQUE, per tutti: chi è dello staff apre il gestionale, il
+  // cliente il suo (menù, i propri ordini, accesso). Fanno eccezione le due
+  // schermate in cui si compone un conto — creazione (/pos) e modifica
+  // (/ordine/:id vista da chi è staff): lì si esce con «← Ordini», e un
+  // menu che porta altrove in mezzo a un ordine aperto è solo un modo per
+  // perderlo.
+  const suOrdinePos =
+    location.pathname.startsWith('/pos') ||
+    (!!staffRole && location.pathname.startsWith('/ordine'))
+  const menuQui = !suOrdinePos
+  // Le due pagine che hanno un menu "loro" (con la sezione attiva
+  // evidenziata) se lo montano da sé: il gestionale sempre, il menù solo
+  // quando ci sta lavorando qualcuno dello staff. Altrove — e nell'anteprima
+  // vista cliente, dove il menù dello staff non c'entra — lo monta l'app,
+  // perché il ☰ non resti a premere nel vuoto.
+  const drawerDellaPagina =
+    (onBackoffice && !!staffRole) ||
+    (location.pathname.startsWith('/menu') && !!staffRole && !anteprimaCliente)
 
   return (
     <div className="app">
@@ -174,11 +247,23 @@ export default function App() {
       <Toasts />
       {/* Zoom della pagina: nella PWA a tutto schermo il browser non lo offre */}
       <ZoomControl />
+      {/* IL MENU CHE RISPONDE AL ☰. Le pagine che hanno una sezione attiva da
+          evidenziare (gestionale, menù) montano il proprio; altrove lo monta
+          l'app, perché il tasto in barra non resti a premere nel vuoto.
+          Allo staff il gestionale, a chi ordina il suo. */}
+      {menuQui && !drawerDellaPagina && (
+        staffRole && !anteprimaCliente ? (
+          <StaffDrawer role={staffRole} />
+        ) : (
+          <ClientDrawer user={user} profile={profile} accountsOn={accountsOn} />
+        )
+      )}
       <header className={`topbar${onBackoffice || staffRole ? ' backoffice' : ''}`}>
         {/* Menu laterale A SCOMPARSA ovunque: si apre da qui (il tasto
-            flottante resta solo nelle schermate a tutto schermo, dove la
-            topbar è nascosta). */}
-        {staffRole && drawerHere && (
+            flottante `.bar-burger` resta solo nelle schermate a tutto
+            schermo, dove la topbar è nascosta — lo accende il CSS, non
+            questo). */}
+        {menuQui && (
           <button
             className="topbar-burger"
             aria-label="Menu"
@@ -195,51 +280,50 @@ export default function App() {
           style={{ textDecoration: 'none', color: 'inherit' }}
         >
           <img src={`${import.meta.env.BASE_URL}logo.png`} alt="" />
-          <span>La Tana del Coniglio</span>
+          <span className="brand-nome">La Tana del Coniglio</span>
         </Link>
         <nav className="row">
           <StatusBell />
           {/* A tutto schermo ci va chi LAVORA sull'app per ore (banco, sala):
               al cliente che apre il menù dal telefono non serve, e in mezzo
               ai tasti era solo un'icona in più da capire. */}
-          {staffRole && <FullscreenButton />}
-          {onBackoffice ? (
-            <>
-              {staffRole && (
-                <Link className="topbar-hello" to="/profilo-staff" style={{ textDecoration: 'none' }}>
-                  Ciao, {staffName} ⚙️
-                </Link>
-              )}
-              <Link className="btn ghost small" to="/pos">🍸 POS</Link>
-              {/* Per lo staff «Nuovo ordine» porta già al menu: niente doppione. */}
-              {!isSala(staffRole) && (
-                <Link className="btn ghost small" to="/menu">Vista cliente</Link>
-              )}
-            </>
-          ) : isSala(staffRole) ? (
-            // Staff nel menu (ordine manuale): solo il ritorno al servizio.
-            // Saluto ed Esci stanno nel gestionale e nel drawer.
-            <Link className="btn small" to="/bar">
-              🫱 Torna al servizio
+          {staffRole && !telefono && <FullscreenButton />}
+          {/* TELEFONO: una sola azione in più (⋮), il resto nel menu.
+              Le linee guida sono concordi — in una barra ci stanno il tasto
+              di sinistra, il titolo e due o tre azioni; il resto va in un
+              menu, con bersagli da 48px. Prima erano cinque cose in fila e
+              l'ultima, "Esci", finiva mezza fuori dallo schermo. */}
+          {telefono && staffRole ? (
+            <button
+              className="topbar-piu"
+              onClick={() => setMenuTopbar(true)}
+              aria-label="Altre azioni"
+              title="Altre azioni"
+            >
+              ⋮
+            </button>
+          ) : staffRole ? (
+            /* CHI È COLLEGATO, e basta — su OGNI schermata, non solo nel
+               gestionale. Prima qui si alternavano tre cose diverse ("Ciao,
+               nome" + Esci, "Torna al servizio", il chip): passando dalla
+               coda al profilo la barra cambiava forma, e non si capiva più
+               dove si era. Quelle voci sono tutte nel menu laterale, che ora
+               si apre da ovunque. Del saluto resta il nome — l'iniziale nel
+               quadratino è la stessa che marca gli ordini aperti da questa
+               persona, così si riconosce a colpo d'occhio chi sta battendo. */
+            <Link className="topbar-io" to="/profilo-staff" title="Il mio profilo">
+              <span className="order-by staff">{(staffName || '?')[0].toUpperCase()}</span>
+              <span className="topbar-io-nome">{staffName}</span>
             </Link>
-          ) : (
+          ) : telefono ? null : (
             <>
               {/* "I miei ordini" ha senso solo per il CLIENTE. Per lo staff/
                   bartender gli ordini aperti sono nella coda (/bar), non sono
                   ordini "suoi": niente schermata cliente. */}
-              {hasOrders && !staffRole && (
+              {hasOrders && (
                 <Link className="btn ghost small" to="/ordini">I miei ordini</Link>
               )}
-              {staffRole ? (
-                <>
-                  <Link className="btn ghost small" to="/bar">
-                    🍸 Ciao, {staffName}
-                  </Link>
-                  <button className="btn ghost small" onClick={() => logoutStaff()}>
-                    Esci
-                  </button>
-                </>
-              ) : user ? (
+              {user ? (
                 <Link className="btn ghost small" to="/profilo">
                   👤 Ciao, {profile?.nome || user.displayName?.split(' ')[0] || 'Profilo'}
                 </Link>
@@ -250,6 +334,76 @@ export default function App() {
           )}
         </nav>
       </header>
+
+      {/* SECONDA RIGA, LATO CLIENTE (telefono). "I miei ordini" e "Accedi"
+          non stanno in barra — dove sarebbero due tasti in mezzo al logo —
+          né dietro un menu, dove nessuno andrebbe a cercarli. Stanno qui
+          sotto, su una riga tutta loro. La riga c'è SEMPRE, anche mentre si
+          sta ancora capendo chi è collegato: così non compare dopo,
+          spostando quello che c'è sotto proprio mentre lo si tocca. */}
+      {telefono && !staffRole && !onBackoffice && (
+        <div className="barra-cliente">
+          <Link className="btn ghost small" to="/menu">🍸 Menù</Link>
+          {hasOrders && (
+            <Link className="btn ghost small" to="/ordini">🧾 I miei ordini</Link>
+          )}
+          {user ? (
+            <Link className="btn ghost small" to="/profilo">
+              👤 {profile?.nome || user.displayName?.split(' ')[0] || 'Profilo'}
+            </Link>
+          ) : accountsOn ? (
+            <Link className="btn ghost small" to="/accedi">🔑 Accedi</Link>
+          ) : null}
+        </div>
+      )}
+
+      {/* Menu della barra sul telefono: le azioni che prima stavano in fila
+          e non ci stavano. Stesso pannello dal basso del dettaglio ordine —
+          si impara una volta e vale ovunque. */}
+      <ActionSheet
+        open={menuTopbar}
+        onClose={() => setMenuTopbar(false)}
+        titolo={staffName ? staffName : 'La Tana del Coniglio'}
+        voci={[
+
+          {
+            id: 'profilo',
+            icon: '⚙️',
+            label: 'Il mio profilo',
+            hint: 'Nome e password',
+            onClick: () => navigate('/profilo-staff'),
+          },
+          !isSala(staffRole) && {
+            id: 'pos',
+            icon: '🍸',
+            label: 'POS — nuovo ordine',
+            onClick: () => navigate('/pos'),
+          },
+          !isSala(staffRole) && {
+            id: 'vista-cliente',
+            icon: '👀',
+            label: 'Vista cliente',
+            hint: 'Il menù come lo vede chi ordina',
+            onClick: () => navigate('/menu?vista=cliente'),
+          },
+          isSala(staffRole) && {
+            id: 'servizio',
+            icon: '🫱',
+            label: 'Torna al servizio',
+            onClick: () => navigate('/bar'),
+          },
+          schermoIntero.disponibile && {
+            id: 'schermo',
+            icon: schermoIntero.attivo ? '🡼' : '⛶',
+            label: schermoIntero.attivo ? 'Esci da schermo intero' : 'Schermo intero',
+            hint: schermoIntero.attivo
+              ? null
+              : 'Meglio ancora: installa l’app dalla schermata iniziale',
+            onClick: schermoIntero.alterna,
+          },
+          { id: 'esci', icon: '🚪', label: 'Esci', danger: true, onClick: () => logoutStaff() },
+        ]}
+      />
 
       {(onBackoffice || !!staffRole) && <AddToHomeHint />}
 
@@ -348,9 +502,11 @@ function AddToHomeHint() {
   const isIOS =
     /iP(hone|ad|od)/.test(navigator.userAgent) ||
     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-  const hasFsApi = !!document.documentElement.requestFullscreen
-  // Mostra solo dove il tasto ⛶ non funziona (iOS Safari) e non è già installata.
-  if (standalone || !isIOS || hasFsApi) return null
+  // Su iPhone e iPad l'app si installa SOLO dal menu Condividi: non esiste
+  // un invito automatico come su Android, e senza installarla non ci sono
+  // né schermo intero né notifiche (iOS le dà solo alle app installate).
+  // Quindi lo si dice, finché non è installata.
+  if (standalone || !isIOS) return null
   const close = () => {
     setDismissed(true)
     try {
@@ -362,13 +518,14 @@ function AddToHomeHint() {
   return (
     <div className="a2hs-hint">
       <span>
-        Per lo schermo intero: tocca{' '}
+        Installa l’app: tocca{' '}
         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: 'text-bottom' }}>
           <path d="M12 3v12" />
           <path d="M8 7l4-4 4 4" />
           <path d="M6 12v7a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-7" />
         </svg>{' '}
         <strong>Condividi</strong> e poi <strong>“Aggiungi a Home”</strong>.
+        {' '}Schermo intero e notifiche funzionano solo da lì.
       </span>
       <button className="a2hs-x" onClick={close} aria-label="Chiudi">✕</button>
     </div>
@@ -378,28 +535,25 @@ function AddToHomeHint() {
 // Tasto schermo intero. L'API Fullscreen non c'è su iPad/Safari (solo per i
 // video): lì il "fullscreen" è aggiungere la PWA alla Home (display standalone).
 // Dove supportata (desktop/Android), entra/esce a schermo intero.
+// SCHERMO INTERO. Non c'è quando non serve: se l'app è stata installata
+// sulla schermata iniziale gira già senza barre del browser, e il tasto
+// sarebbe solo un'icona in più.
+//
+// Da browser, invece, "schermo intero" è quello del browser: Chrome su
+// Android ci mette del suo un avviso in basso ("per uscire, trascina
+// dall'alto…") che non possiamo togliere — è suo, non nostro, e sparisce
+// da sé. L'unico modo per non vederlo è installare l'app.
 function FullscreenButton() {
-  const [fs, setFs] = useState(() => typeof document !== 'undefined' && !!document.fullscreenElement)
-  useEffect(() => {
-    const on = () => setFs(!!document.fullscreenElement)
-    document.addEventListener('fullscreenchange', on)
-    return () => document.removeEventListener('fullscreenchange', on)
-  }, [])
-  const supported =
-    typeof document !== 'undefined' && !!document.documentElement.requestFullscreen
-  if (!supported) return null
-  const toggle = () => {
-    if (document.fullscreenElement) document.exitFullscreen?.()
-    else document.documentElement.requestFullscreen?.().catch(() => {})
-  }
+  const { attivo, disponibile, alterna } = useSchermoIntero()
+  if (!disponibile) return null
   return (
     <button
       className="btn ghost small"
-      onClick={toggle}
-      title={fs ? 'Esci da schermo intero' : 'Schermo intero'}
-      aria-label={fs ? 'Esci da schermo intero' : 'Schermo intero'}
+      onClick={alterna}
+      title={attivo ? 'Esci da schermo intero' : 'Schermo intero'}
+      aria-label={attivo ? 'Esci da schermo intero' : 'Schermo intero'}
     >
-      {fs ? '🡼' : '⛶'}
+      {attivo ? '🡼' : '⛶'}
     </button>
   )
 }
