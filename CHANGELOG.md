@@ -57,6 +57,11 @@ una funzione, il terzo per le correzioni.
 - **Chi lavora non passa più dalla vetrina**: aprendo l'app, a bartender,
   staff e gestore si apre subito la lista ordini. Il QR del tavolo porta
   al menù come sempre, anche se a inquadrarlo è chi sta al banco.
+- **All'accesso non ci si ritrova mai dentro il POS.** Se l'app era
+  rimasta aperta su un ordine, riaprendola si tornava lì dentro — e la
+  schermata riprende da sé il conto lasciato aperto: si finiva a battere
+  righe in un conto che non si era scelto. Ora si parte sempre dalla
+  lista ordini; al POS ci si va col ➕, come sempre.
 - **I colori seguono chi guarda, non la pagina.** Chi lavora vede il tema
   del gestionale dappertutto — profilo, lista ordini, accesso compresi —;
   chi ordina vede il suo. Prima bastava un indirizzo dimenticato e in
