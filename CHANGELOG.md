@@ -70,6 +70,11 @@ una funzione, il terzo per le correzioni.
 - **Da schermo intero si esce dallo stesso tasto** con cui si entra, che
   ora cambia icona e parole. Prima, entrati, il tasto spariva e restava
   solo F11 — che su un tablet montato al banco non c'è.
+- **La ricerca dei prodotti nel POS può accendere invece di filtrare**:
+  si sceglie in Impostazioni → Vista ordine. La griglia resta com'è —
+  nessuna card sparisce sotto le dita — e la prima che risponde si
+  illumina, con la griglia che ci scorre sopra; toccandone una la ricerca
+  si azzera da sé.
 - **La ricerca nella coda può accendere invece di filtrare**: si sceglie in
   Impostazioni → Coda ordini. Lasciando la coda intera, scorre fino al
   primo conto che risponde e lo illumina — così si vede dov'è rispetto
@@ -82,7 +87,7 @@ una funzione, il terzo per le correzioni.
   non si pubblica niente.
 - Si lavora su un ramo di rilascio, e i branch di lavorazione vanno da
   soli sull'ambiente di test.
-- **95 requisiti** scritti in `requirements/requirements.yaml`, legati ai
+- **96 requisiti** scritti in `requirements/requirements.yaml`, legati ai
   test da una prova che fallisce se qualcuno li lascia indietro.
 
 ---

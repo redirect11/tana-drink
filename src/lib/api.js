@@ -3081,6 +3081,11 @@ export const DEFAULT_SETTINGS = {
   // Come mostrare le categorie nel POS: 'dot' (pallino + testo, come ora),
   // 'icon_text' (icona + testo) o 'icon' (solo icona).
   category_display: 'dot',
+  // Cosa fa la ricerca nella griglia prodotti del POS: 'filtra' lascia le
+  // sole card che rispondono (come è sempre stato), 'evidenzia' non toglie
+  // niente — accende la prima card trovata e ci porta sopra la griglia. Chi
+  // lavora a memoria di posizione la griglia la vuole sempre uguale.
+  pos_search: 'filtra',
   // Pagamenti: online (SumUp Checkout) e lettore Solo (Cloud API).
   payments_online_enabled: false,
   payments_online_required: false,

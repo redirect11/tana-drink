@@ -2691,6 +2691,37 @@ body.drawer-open .status-bell-float { display: none; }
   }
 }
 
+/* LA CARD PRODOTTO ACCESA DALLA RICERCA nel POS (impostazione "accendi e
+   porta lì"). La griglia resta intera e la card trovata si fa riconoscere
+   da sola. Anello e alone, non bordo o fondo: quelli sulla tile dicono già
+   un'altra cosa (è nel conto, e con che colore di categoria) e sono scritti
+   in linea nel componente — sovrascriverli da qui vorrebbe dire una guerra
+   di !important. Il box-shadow invece è libero.
+   Due battiti e si ferma: una card che pulsa tutta la sera davanti a chi
+   lavora è solo fastidio. */
+.prodotto-acceso {
+  box-shadow: 0 0 0 3px var(--accent), 0 0 18px color-mix(in srgb, var(--accent) 45%, transparent);
+  animation: prodotto-acceso 0.9s ease-out 2;
+}
+
+/* Keyframes suoi: partono e finiscono sugli STESSI valori della regola qui
+   sopra, altrimenti a fine animazione la card farebbe uno scatto. */
+@keyframes prodotto-acceso {
+  0%,
+  100% {
+    box-shadow: 0 0 0 3px var(--accent), 0 0 18px color-mix(in srgb, var(--accent) 45%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 4px var(--accent), 0 0 26px color-mix(in srgb, var(--accent) 75%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .prodotto-acceso {
+    animation: none;
+  }
+}
+
 /* Nota dell'ordine sulla card del bartender */
 .order-note {
   background: rgba(245, 185, 74, 0.1);

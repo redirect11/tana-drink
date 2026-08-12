@@ -7,12 +7,24 @@ import { qtyBtnStyle } from '../lib/posStyles.js'
 
 // ── Tile prodotto ────────────────────────────────────────────────────────
 
-export function DrinkTile({ drink, qty, onAdd, onSetQty, color = null, favorite = false, onToggleFav = null }) {
+export function DrinkTile({
+  drink,
+  qty,
+  onAdd,
+  onSetQty,
+  color = null,
+  favorite = false,
+  onToggleFav = null,
+  acceso = false, // acceso dalla ricerca: è la card che si sta cercando
+}) {
   const inCart = qty > 0
 
   return (
     <div
       onClick={onAdd}
+      // Serve alla ricerca per ritrovare la card e portarcisi sopra.
+      data-drink-id={drink.id}
+      className={acceso ? 'prodotto-acceso' : undefined}
       style={{
         background: inCart
           ? 'rgba(var(--accent-rgb, 180, 120, 60), 0.18)'

@@ -1393,6 +1393,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
           loading={loading}
           qtyByDrink={qtyByDrink}
           categoryDisplay={settings.category_display}
+          ricercaEvidenzia={settings.pos_search === 'evidenzia'}
           catsHandleProps={catsRz.handleProps}
           recentIds={recentIds}
           onAdd={(d) => {

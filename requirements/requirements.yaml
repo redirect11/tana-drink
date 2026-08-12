@@ -1173,6 +1173,27 @@ requirements:
     labels: [pos]
     test_cases: [tests/unit/posCatalog.test.js]
 
+  - id: REQ-POS-012
+    title: "La ricerca prodotti: filtra, oppure accende la card e ci porta lì"
+    area: "src/lib/posCatalog.js, src/components/PosProductPicker.jsx, src/components/SettingsTab.jsx"
+    description: >
+      Cercando un prodotto nella griglia del POS (creazione e modifica ordine) si
+      sceglie fra due comportamenti, in Impostazioni → Vista ordine. «Filtra la
+      griglia» lascia le sole card che rispondono, come è sempre stato.
+      «Accendi e porta lì» non toglie niente: la griglia scorre fino alla prima
+      card che risponde e la accende con un anello nel colore d'accento, così si
+      vede dov'è rispetto alle altre — serve a chi la griglia la conosce a
+      memoria e non vuole vederla cambiare sotto le dita. Mentre si cerca mostra
+      tutto il catalogo, perché il prodotto giusto può stare in un'altra
+      categoria; toccando una card la ricerca si azzera da sé. La regola di
+      corrispondenza è una sola per tutti e due i modi, altrimenti cambiando
+      impostazione lo stesso testo troverebbe prodotti diversi. Se non risponde
+      niente lo dice, invece di lasciare la griglia apparentemente immobile.
+    status: implemented
+    generate_issue: false
+    labels: [pos, ux]
+    test_cases: [tests/component/PosProductPicker.test.jsx]
+
   # ══════════════════════════════════════════════════════════════════════
   #  COME SI LAVORA AL PROGETTO
   # ══════════════════════════════════════════════════════════════════════

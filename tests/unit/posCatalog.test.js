@@ -9,6 +9,8 @@ import {
   moveInOrder,
   toggleFavorite,
   recentDrinkIds,
+  prodottoCorrisponde,
+  primoProdottoCorrispondente,
 } from '../../src/lib/posCatalog.js'
 
 const D = (id) => ({ id, name: id })
@@ -63,5 +65,49 @@ describe('recentDrinkIds', () => {
   it('legge anche dalle comande se mancano gli order_items', () => {
     const orders = [{ comande: [{ items: [{ drink_id: 'gin' }] }, { items: [{ drink_id: 'rum' }] }] }]
     expect(recentDrinkIds(orders)).toEqual(['gin', 'rum'])
+  })
+})
+
+// ── La ricerca nella griglia prodotti ──────────────────────────────────
+// Stessa funzione per tutti e due i modi (filtra / accendi): se
+// rispondessero in modo diverso, cambiando impostazione lo stesso testo
+// troverebbe prodotti diversi.
+describe('prodottoCorrisponde', () => {
+  const negroni = { id: 'n', name: 'Negroni Sbagliato' }
+
+  it('trova per pezzo di nome, senza badare alle maiuscole', () => {
+    expect(prodottoCorrisponde(negroni, 'negro')).toBe(true)
+    expect(prodottoCorrisponde(negroni, 'SBAGLIATO')).toBe(true)
+    expect(prodottoCorrisponde(negroni, '  bagli ')).toBe(true)
+    expect(prodottoCorrisponde(negroni, 'mojito')).toBe(false)
+  })
+
+  it('con la ricerca vuota non risponde nessuno', () => {
+    // Altrimenti la ricerca vuota accenderebbe la prima card della griglia.
+    expect(prodottoCorrisponde(negroni, '')).toBe(false)
+    expect(prodottoCorrisponde(negroni, '   ')).toBe(false)
+    expect(prodottoCorrisponde(null, 'negro')).toBe(false)
+  })
+
+  it('regge un prodotto senza nome', () => {
+    expect(prodottoCorrisponde({ id: 'x' }, 'a')).toBe(false)
+  })
+})
+
+describe('primoProdottoCorrispondente', () => {
+  const griglia = [
+    { id: '1', name: 'Gin Tonic' },
+    { id: '2', name: 'Negroni' },
+    { id: '3', name: 'Negroni Sbagliato' },
+  ]
+
+  it('accende la PRIMA che risponde, nell ordine in cui sta nella griglia', () => {
+    expect(primoProdottoCorrispondente(griglia, 'negro')?.id).toBe('2')
+  })
+
+  it('senza risposta torna niente (e la griglia resta com era)', () => {
+    expect(primoProdottoCorrispondente(griglia, 'zzz')).toBe(null)
+    expect(primoProdottoCorrispondente(griglia, '')).toBe(null)
+    expect(primoProdottoCorrispondente(null, 'gin')).toBe(null)
   })
 })

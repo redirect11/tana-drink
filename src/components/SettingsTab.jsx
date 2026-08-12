@@ -136,6 +136,33 @@ export default function SettingsTab({ role = null }) {
                   </button>
                 ))}
               </div>
+
+              <h4 style={{ margin: '16px 0 4px' }}>La ricerca prodotti</h4>
+              <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
+                Cercando un prodotto nella griglia: si può <strong>filtrare</strong>,
+                lasciando le sole card che rispondono, oppure lasciare la griglia
+                com&apos;è e <strong>accendere</strong> la prima card trovata,
+                portandocisi sopra. Il secondo modo serve a chi la griglia la conosce
+                a memoria e non vuole vederla cambiare sotto le dita; mostra tutti i
+                prodotti mentre si cerca, perché quello giusto può stare in
+                un&apos;altra categoria. Toccando una card la ricerca si azzera da sé.
+              </p>
+              <div className="mode-choice">
+                {[
+                  ['filtra', '🔍 Filtra la griglia'],
+                  ['evidenzia', '💡 Accendi e porta lì'],
+                ].map(([value, label]) => (
+                  <button
+                    key={value}
+                    className={`mode-option${
+                      (settings.pos_search || 'filtra') === value ? ' active' : ''
+                    }`}
+                    onClick={() => save({ pos_search: value })}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
       ),
     },
