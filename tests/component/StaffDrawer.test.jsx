@@ -77,6 +77,8 @@ describe('menu laterale', () => {
     apri()
     expect(screen.queryByText('Stampante')).toBeNull()
     expect(screen.getByText('Utenti e ruoli')).toBeInTheDocument()
+    // "Vista cliente" era un tasto in barra: la navigazione sta nel menu.
+    expect(screen.getByText('Vista cliente')).toBeInTheDocument()
     expect(screen.getByText('Staff')).toBeInTheDocument()
   })
 

@@ -41,8 +41,10 @@ vi.mock('../../src/lib/printer.js', () => ({
   // Guardia "una copia sola per conto": nei test lascia sempre passare.
   claimReceiptPrint: vi.fn(() => true),
 }))
+vi.mock('../../src/lib/toast.js', () => ({ toastError: vi.fn() }))
 
 import PaymentScreen from '../../src/components/PaymentScreen.jsx'
+import { toastError } from '../../src/lib/toast.js'
 import {
   registerPayment,
   setOrderDiscount,
@@ -227,12 +229,40 @@ describe('metodi di pagamento', () => {
     expect(registerPayment).not.toHaveBeenCalled()
   })
 
-  it("lettore NON configurato: SumUp in lista ma spento, con la nota", () => {
+  // Il motivo stava scritto sotto al tasto e occupava una riga a una
+  // schermata che ne ha poche. Ora il tasto è spento e basta: il perché lo
+  // dice se lo si tocca.
+  // La gestione preparazione si può spegnere (Impostazioni): senza, non
+  // esistono comande "da servire" e l'avviso era un allarme che non voleva
+  // dire niente, a ogni singolo incasso.
+  it('gestione preparazione SPENTA: niente avviso sulle comande da servire', () => {
+    mount(baseOrder(), { ...noReader, workflow_enabled: false })
+    expect(screen.queryByText(/Comande non ancora servite/)).toBeNull()
+  })
+
+  it('gestione preparazione ACCESA: l’avviso c’è, il conto si chiude servendo tutto', () => {
+    mount(baseOrder({ comande: [{ id: 'c1', seq: 1, status: 'in_preparazione', items: [
+      { drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 },
+    ] }] }))
+    expect(screen.getByText(/Comande non ancora servite/)).toBeInTheDocument()
+  })
+
+  it('lettore NON configurato: SumUp spento, senza sottotitolo sul tasto', () => {
     mount(baseOrder())
     expect(screen.getByRole('button', { name: /Carta di Credito/ })).toBeInTheDocument()
     const sumup = screen.getByRole('button', { name: /SumUp/ })
-    expect(sumup).toBeDisabled()
-    expect(sumup).toHaveTextContent(/configura il lettore/)
+    expect(sumup).toHaveClass('spento')
+    expect(sumup).toHaveAttribute('aria-disabled', 'true')
+    expect(sumup).not.toHaveTextContent(/Impostazioni/)
+  })
+
+  it('toccando SumUp spento si legge perché, e il metodo non cambia', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.click(screen.getByRole('button', { name: /SumUp/ }))
+    expect(toastError).toHaveBeenCalledWith(expect.stringMatching(/Impostazioni → Pagamenti/))
+    // Resta selezionato il contante: un tasto spento non cambia l'incasso.
+    expect(screen.getByRole('button', { name: /Contante/ })).toHaveAttribute('aria-pressed', 'true')
   })
 
   it('Buono come sconto: senza buoni l’opzione 🎟 è spenta nel modale sconto', async () => {
@@ -296,6 +326,23 @@ describe('sconto: modale con tastierino', () => {
     const modal = within(screen.getByRole('dialog', { name: 'Sconto' }))
     await user.click(modal.getByRole('button', { name: 'Rimuovi sconto' }))
     expect(setOrderDiscount).toHaveBeenCalledWith('ord1', null)
+  })
+
+  // Il tastierino dello sconto riusava la griglia del pagamento, che ha quattro
+  // colonne per far posto agli operatori: le cifre andavano a capo dove capitava
+  // (7 8 9 4 / 5 6 1 2 / 3 C 0 ←) e al banco non si trovava più niente.
+  it('le cifre stanno in ordine da tastierino, su tre colonne', async () => {
+    const user = userEvent.setup()
+    const { container } = mount(baseOrder())
+    await user.click(screen.getByRole('button', { name: /Sconto/ }))
+    const pad = container.querySelector('.paypad-cifre')
+    expect(pad).toBeTruthy()
+    expect([...pad.querySelectorAll('.paypad-key')].map((b) => b.textContent)).toEqual([
+      '7', '8', '9',
+      '4', '5', '6',
+      '1', '2', '3',
+      'C', '0', '←',
+    ])
   })
 })
 

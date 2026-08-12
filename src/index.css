@@ -66,11 +66,30 @@ a {
     --safe-top: max(env(safe-area-inset-top, 0px), 22px);
   }
 }
+/* A schermo intero la fascia di sistema non c'è: niente orario, niente
+   icone, niente da scansare. Quella striscia torna al contenuto. */
+body.schermo-intero {
+  --safe-top: 0px;
+}
 
+/* LA PAGINA RIEMPIE LO SCHERMO. I 760px erano nati per le pagine di testo,
+   ma qui dentro ci sono griglie di prodotti, tabelle e liste: su un tablet
+   o un monitor restava una colonna in mezzo, con la barra in alto larga
+   tutta la pagina e il contenuto no — sembrava un pezzo mancante.
+   Il testo lungo (la vetrina, i moduli) si tiene stretto da sé: sono le
+   uniche cose che con righe larghe si leggono peggio. */
 .app {
-  max-width: 760px;
+  max-width: none;
   margin: 0 auto;
   padding: 0 16px 96px;
+}
+
+/* Vetrina e moduli (accesso, registrazione, profilo): larghi al massimo
+   quanto si legge comodo, e centrati. */
+.landing,
+.app > main > form.card {
+  max-width: 900px;
+  margin-inline: auto;
 }
 
 .topbar {
@@ -80,7 +99,12 @@ a {
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
-  justify-content: space-between;
+  /* IL LOGO STA ATTACCATO AL ☰, non in mezzo alla barra. Con
+     `space-between` e tre figli — ☰, marchio, azioni — il marchio finiva
+     al centro, a mezzo schermo dal tasto menu, e la barra sembrava di
+     un'altra app a seconda di quante azioni c'erano a destra. Ora si
+     parte da sinistra e sono le azioni a spingersi da sole in fondo. */
+  justify-content: flex-start;
   gap: 12px;
   /* A tutta larghezza: esce dal padding orizzontale di .app. */
   margin: 0 -16px;
@@ -94,6 +118,8 @@ a {
 
 .topbar nav {
   flex-shrink: 0;
+  /* Le azioni in fondo a destra, qualunque cosa ci sia in mezzo. */
+  margin-left: auto;
 }
 
 .brand {
@@ -107,8 +133,7 @@ a {
   font-size: 1.05rem;
 }
 
-/* Titolo su una riga sola: se non c'è spazio si tronca, e sotto certe
-   larghezze sparisce del tutto lasciando solo il logo (header compatto). */
+/* Titolo su una riga sola: se non c'è spazio si tronca. */
 .brand span {
   font-size: 0.95rem;
   line-height: 1.2;
@@ -118,24 +143,23 @@ a {
   min-width: 0;
 }
 
-/* Nel gestionale (saluto + pulsanti a destra) lo spazio è poco: sotto i
-   560px mostra solo il logo. Lato cliente, solo su schermi molto stretti. */
-@media (max-width: 560px) {
-  .topbar.backoffice .brand span {
-    display: none;
-  }
-}
-@media (max-width: 360px) {
-  .brand span {
-    display: none;
-  }
+/* Il nome del locale si scrive per intero: se lo spazio finisce si tronca
+   con i puntini, ma non si accorcia a mano — "La Tana" non è il nome del
+   locale. */
+.brand-corto {
+  display: none;
 }
 
+/* Il marchio è già un tondo disegnato, con il coniglio che tocca il bordo.
+   Ritagliarlo di nuovo con border-radius e cerchiarlo con un anello a un
+   pixel e mezzo lo mangiava sul filo: sullo schermo del telefono, dove è
+   piccolo, sembrava tagliato. Ora si mostra INTERO (contain), senza
+   maschera e senza anello: il tondo ce l'ha già suo. */
 .brand img {
   width: 40px;
   height: 40px;
-  border-radius: 50%;
-  box-shadow: 0 0 0 1.5px rgba(245, 185, 74, 0.55), 0 2px 10px rgba(0, 0, 0, 0.4);
+  object-fit: contain;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.45));
 }
 
 .muted {
@@ -147,6 +171,248 @@ a {
   color: var(--muted);
   font-size: 0.85rem;
   white-space: nowrap;
+}
+
+/* CHI È COLLEGATO, in barra: iniziale nel quadratino (la stessa che marca
+   gli ordini aperti da quella persona) e il nome. Niente "Ciao": lo spazio
+   in barra è tutto, e un saluto non dice niente che il nome non dica. */
+.topbar-io {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 4px 4px;
+  border-radius: 999px;
+  color: inherit;
+  text-decoration: none;
+  min-width: 0;
+}
+.topbar-io:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+.topbar-io .order-by {
+  font-size: 0.85rem;
+  min-width: 1.9em;
+  height: 1.9em;
+  border-radius: 999px;
+  transform: none;
+}
+.topbar-io-nome {
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* I conteggi (aperti, chiusi, totale) stanno sulla seconda riga della
+   testata (.board-sotto): in riga col titolo allungavano la testata e su
+   schermo stretto si spezzavano a metà parola, finendo sotto il ☰. */
+.board-conti {
+  display: block;
+  margin-left: 0;
+}
+
+@media (max-width: 700px) {
+  /* Il ☰ flottante: un filo più piccolo, staccato dal bordo e sotto la
+     striscia della linguetta — così non schiaccia il testo accanto e non
+     ci finisce sotto. */
+  body.fullbleed .bar-burger {
+    top: calc(26px + var(--safe-top));
+    left: 8px;
+    width: 40px;
+    height: 40px;
+    font-size: 1.1rem;
+  }
+}
+
+/* INFORMAZIONI: dati tecnici e note di versione. */
+.info-dati {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.info-valore {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-left: 12px;
+}
+.changelog h4.changelog-versione {
+  margin: 18px 0 2px;
+  font-family: var(--serif);
+  font-size: 1.05rem;
+}
+.changelog h4.changelog-versione:first-child {
+  margin-top: 4px;
+}
+.changelog-sezione {
+  margin: 10px 0 2px;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--muted);
+}
+.changelog ul {
+  margin: 4px 0;
+  padding-left: 18px;
+}
+.changelog li {
+  margin: 4px 0;
+  line-height: 1.45;
+}
+.changelog code {
+  font-size: 0.85em;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+/* Il ⋯ della lavagna: pannelli e ordinamento stanno lì dentro. Le parole
+   in fila rubavano spazio alla ricerca, che invece si usa di continuo. */
+.board-pannelli {
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+/* Anteprima "vista cliente": si è al lavoro ma si sta guardando il menù
+   con gli occhi di chi ordina. Una riga sola, per ricordarlo e tornare. */
+.anteprima-cliente {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 8px 0;
+  padding: 8px 12px;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+/* SECONDA RIGA lato cliente (telefono): menù, i miei ordini, accedi. Sta
+   sotto la barra e non dentro, perché in barra sarebbero tasti in mezzo al
+   nome del locale; e non dietro un menu, perché "Accedi" dietro un menu
+   non lo trova nessuno. Altezza fissa: c'è anche mentre si sta ancora
+   capendo chi è collegato, così non compare dopo spostando la pagina. */
+.barra-cliente {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  margin: 0 -16px;
+  padding: 6px 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--bg-2) 70%, transparent);
+}
+.barra-cliente::-webkit-scrollbar {
+  display: none;
+}
+.barra-cliente .btn {
+  flex-shrink: 0;
+  min-height: 36px;
+}
+
+/* Il ⋮ della barra: bersaglio pieno da 48px, non un'icona da centrare col
+   dito. È la porta di tutto quello che non ci sta in barra. */
+.topbar-piu {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: none;
+  color: var(--text);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* ── TESTATA SUL TELEFONO ─────────────────────────────────────────────
+   Su 360px non ci stavano logo, schermo intero, "Ciao, Capo Bar", POS,
+   Vista cliente ed Esci: l'ultimo tasto finiva mezzo fuori dallo schermo,
+   e l'ultimo tasto era "Esci". Qui si toglie il superfluo invece di
+   stringere tutto fino a renderlo illeggibile: il saluto diventa il solo
+   ingranaggio (chi è collegato lo dice il menu laterale, in fondo) e
+   "Vista cliente" resta nel menu, dov'è comunque. */
+@media (max-width: 700px) {
+  /* LA LINGUETTA NON DEVE STARE SOPRA LE INFORMAZIONI. Fissa e centrata
+     copriva numero, ora e stato del conto — roba che serve, su uno schermo
+     dove non avanza spazio. Resta in cima, larga quanto la pagina e alta
+     20px, e la testata del conto si sposta sotto di lei: nessuna
+     sovrapposizione, e la striscia si becca senza mirare.
+     A schermo intero non costa niente, perché lo scosto della barra di
+     sistema (--safe-top) l'abbiamo appena riguadagnato. */
+  body.fullbleed .topbar-toggle {
+    left: 0;
+    right: 0;
+    transform: none;
+    width: 100%;
+    min-width: 0;
+    height: 20px;
+    border-left: none;
+    border-right: none;
+    border-radius: 0;
+    background: color-mix(in srgb, var(--bg-2) 94%, transparent);
+    opacity: 1;
+  }
+  body.fullbleed .posd-topbar {
+    margin-top: 20px;
+  }
+  /* La coda: stessa cosa, ma con un rientro sulla LAVAGNA — il suo primo
+     figlio è la campanella flottante, che non occupa spazio e quindi non
+     avrebbe spinto giù niente. */
+  body.fullbleed .queue-board {
+    padding-top: 20px;
+  }
+
+  /* BARRA APERTA: si sovrappone, e va bene così. Farla "fare spazio"
+     spingeva giù tutta la schermata e il footer del conto — pagamento
+     compreso — finiva fuori dallo schermo: si guadagnava una testata e si
+     perdeva il tasto per incassare. La barra si apre, si legge, si
+     richiude; quello che copre per un attimo torna al suo posto.
+     Quello che invece serve è che la barra stessa scenda SOTTO la
+     striscia: la linguetta le sta davanti (z-index più alto) e le tagliava
+     logo e tasti sul filo. */
+  body.fullbleed.topbar-open .topbar {
+    padding-top: calc(var(--safe-top) + 26px);
+  }
+  body.fullbleed.topbar-open .topbar {
+    padding-left: 8px;
+  }
+  .topbar {
+    gap: 8px;
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+  .topbar nav {
+    gap: 6px;
+    min-width: 0;
+  }
+  .topbar .brand img {
+    width: 38px;
+    height: 38px;
+  }
+  /* Un po' d'aria dal bordo: il logo incollato allo spigolo sembra tagliato. */
+  .topbar .brand {
+    padding-left: 4px;
+    gap: 8px;
+  }
+  .topbar-hello-testo,
+  .topbar-io-nome,
+  .solo-schermo-largo {
+    display: none;
+  }
 }
 
 .card {
@@ -783,17 +1049,27 @@ label {
   pointer-events: none;
 }
 
+/* LA FOTO STA DIETRO, non detta l'altezza. Prima era lei a decidere: 230px
+   fissi, con il contenuto (logo, nome su due righe, sottotitolo, tasto)
+   appoggiato sopra in posizione assoluta. Su uno schermo stretto il nome
+   va a capo, il contenuto diventa più alto della foto e quello che
+   avanzava usciva dal riquadro — che ha overflow:hidden. Risultato: il
+   logo tagliato a metà, in cima.
+   Ora il riquadro è alto quanto il suo contenuto (mai meno di 230px) e la
+   foto lo riempie da dietro: non si taglia più niente, su nessuno schermo. */
 .hero-img {
+  position: absolute;
+  inset: 0;
   width: 100%;
-  height: 230px;
+  height: 100%;
   object-fit: cover;
   display: block;
   filter: brightness(0.6);
 }
 
 .hero-overlay {
-  position: absolute;
-  inset: 0;
+  position: relative;
+  min-height: 230px;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
@@ -801,12 +1077,31 @@ label {
   background: linear-gradient(180deg, transparent 35%, rgba(10, 10, 18, 0.88));
 }
 
+/* Il marchio è già un tondo disegnato: niente ritaglio e niente anello
+   sopra, che lo rifilavano sul bordo. Intero, con la sua ombra. */
+/* Marchio e nome affiancati, allineati fra loro: il nome può andare a capo
+   quanto vuole, il logo gli resta di fianco e non ci finisce sopra. */
+.hero-testa {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
 .hero-logo {
   width: 72px;
   height: 72px;
-  border-radius: 50%;
-  margin-bottom: 10px;
-  box-shadow: 0 0 0 2px rgba(245, 185, 74, 0.6), 0 4px 18px rgba(0, 0, 0, 0.55);
+  flex-shrink: 0;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 14px rgba(0, 0, 0, 0.55));
+}
+@media (max-width: 560px) {
+  .hero-logo {
+    width: 58px;
+    height: 58px;
+  }
+  .hero-testa {
+    gap: 10px;
+  }
 }
 
 .hero-title {
@@ -996,20 +1291,18 @@ a.order-mini {
 }
 
 /* ── Navigazione laterale bartender ──────────────────────────── */
-/* Sul backoffice mobile l'hamburger è fisso in alto a sinistra:
-   sposta il brand per non farlo coprire. */
-@media (max-width: 899px) {
-  .topbar.backoffice .brand {
-    padding-left: 50px;
-  }
-}
+/* Nessuno spostamento del brand: il ☰ sta DENTRO la barra, come primo
+   elemento, e non copre niente. Il rientro da 50px era rimasto da quando
+   era un tasto flottante sopra la barra: sulle pagine senza ☰ — la
+   vetrina, il menù visti da collegati — spingeva il logo in mezzo al
+   nulla, con un buco a sinistra. */
 
 /* UN SOLO ☰ per schermata. Chi lo mostra:
      coda a griglia / POS (topbar nascosta) → questo, flottante
      tutto il resto (topbar visibile)       → .topbar-burger
      topbar APERTA a tutto schermo          → .topbar-burger (questo sparisce)
      POS e dettaglio ordine                 → nessuno: si esce con "← Ordini"
-   Le regole qui sotto e in App.jsx (drawerHere) tengono fede a questa tabella. */
+   Le regole qui sotto e in App.jsx (menuQui) tengono fede a questa tabella. */
 .bar-burger {
   display: none; /* solo in fullbleed: altrove il ☰ sta nella topbar */
   position: fixed;
@@ -1081,11 +1374,12 @@ a.order-mini {
   font-weight: 700;
 }
 
+/* Stesso marchio, stesso trattamento del logo in barra: intero, senza
+   maschera e senza anello che lo rifili sul bordo. */
 .bar-sidebar .brand-mini img {
   width: 34px;
   height: 34px;
-  border-radius: 50%;
-  box-shadow: 0 0 0 1.5px rgba(245, 185, 74, 0.5);
+  object-fit: contain;
 }
 
 .bar-nav-item {
@@ -1141,6 +1435,23 @@ body.fullbleed .app {
   padding-bottom: 0;
 }
 
+/* NIENTE "TIRA PER AGGIORNARE" nelle schermate di lavoro. Arrivati in cima
+   alla lista, continuando a trascinare in giù Android faceva partire il
+   ricaricamento della pagina: in mezzo alla composizione di un ordine è
+   l'ultima cosa che deve succedere. Qui lo scorrimento si ferma dov'è.
+   (Il ricaricamento resta possibile dal browser, e in quel caso il conto
+   in corso viene ripreso: vedi CHIAVE_IN_CORSO in OrderPosDetail.) */
+body.fullbleed {
+  overscroll-behavior: none;
+}
+/* E non si "propaga" nemmeno dalle liste interne al documento. */
+body.fullbleed .posd-list,
+body.fullbleed .posd-body,
+body.fullbleed .posd-cats,
+body.fullbleed .queue-board {
+  overscroll-behavior: contain;
+}
+
 /* Vista pulita: niente topbar globale. La navigazione resta nel menu a
    scomparsa (burger) per la griglia e nel pulsante «← Ordini» per il POS. */
 body.fullbleed .topbar {
@@ -1149,6 +1460,8 @@ body.fullbleed .topbar {
 /* Topbar richiamabile a tutto schermo: compare come OVERLAY fisso, non spinge
    il contenuto — le schermate a 100dvh (ordini, creazione/modifica, pagamento)
    restano interamente nel viewport. */
+/* A barra aperta il ☰ flottante sparisce (è già dentro la barra): il
+   rientro che gli faceva posto spingeva il tasto in mezzo allo schermo. */
 body.fullbleed.topbar-open .topbar {
   display: flex;
   position: fixed;
@@ -1158,7 +1471,7 @@ body.fullbleed.topbar-open .topbar {
   margin: 0;
   /* Il logo parte appena dopo il ☰ (12+42=54): più a sinistra, ma senza
      finirci sotto. */
-  padding-left: 64px;
+  padding-left: 12px;
   z-index: 125; /* sopra il ☰ del menu laterale (bar-burger, z-index 120) */
   background: var(--bg-2);
   box-shadow: 0 2px 14px rgba(0, 0, 0, 0.4);
@@ -1166,19 +1479,26 @@ body.fullbleed.topbar-open .topbar {
 /* Linguetta mostra/nascondi topbar: sottile e discreta, appesa al bordo
    superiore, appena a destra del ☰ (bar-burger 42px a left:12) e SOPRA la
    riga "In servizio" così non copre le scritte. Solo a tutto schermo. */
+/* LINGUETTA DELLA BARRA. Era alta 16px e infilata a sinistra fra i tasti:
+   sotto qualunque soglia ragionevole per un dito (44-48px secondo tutte le
+   linee guida) e per giunta in mezzo ad altri bersagli. Ora è una maniglia
+   CENTRATA, larga e alta abbastanza da prendersi senza mirare — dove non
+   c'è nient'altro da sbagliare. */
 .topbar-toggle {
   position: fixed;
   top: var(--safe-top);
-  left: 112px; /* oltre "← Ordini" (creazione/modifica) e il ☰ (coda) */
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 126;
-  height: 16px;
-  padding: 0 9px;
+  height: 26px;
+  min-width: 76px;
+  padding: 0 14px;
   border: 1px solid var(--line);
   border-top: none;
-  border-radius: 0 0 8px 8px;
+  border-radius: 0 0 12px 12px;
   background: var(--bg-2);
   color: var(--muted);
-  font-size: 0.68rem;
+  font-size: 0.8rem;
   line-height: 1;
   cursor: pointer;
   display: none;
@@ -1245,18 +1565,26 @@ body.fullbleed .bar-content {
   padding: calc(10px + var(--safe-top)) 12px 24px;
 }
 
+/* TESTATA DELLA CODA — due righe, non una.
+     riga 1: titolo · ricerca · ⋯ · +
+     riga 2: conteggi e legenda degli autori
+   Prima era una riga sola e i conteggi stavano DENTRO il titolo: il titolo
+   diventava alto due righe (tre con la legenda) e tutto il resto si
+   centrava su quell'altezza — che cambiava a seconda di quanti stavano in
+   servizio. Su tablet e desktop non era allineato niente.
+   Le misure della riga 1 stanno in fondo al file, nel blocco «da tablet in
+   su»: sul telefono la testata è un'altra cosa e non si tocca. */
 .board-head {
   display: flex;
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
   margin-bottom: 10px;
-  /* lascia spazio al burger fisso in alto a sinistra */
-  padding-left: 52px;
-  min-height: 42px;
 }
 
 .board-title {
+  /* lascia spazio al ☰ fisso in alto a sinistra */
+  padding-left: 52px;
   font-family: var(--serif);
   white-space: nowrap;
 }
@@ -1265,6 +1593,50 @@ body.fullbleed .bar-content {
   flex: 1;
   min-width: 180px;
   margin: 0;
+}
+
+/* Seconda riga: va a capo da sé (prende tutta la larghezza) e parte dal
+   bordo — sotto il ☰, che finisce sopra la riga 1. */
+.board-sotto {
+  flex-basis: 100%;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 2px 14px;
+}
+/* Il distacco dal titolo lo dà ormai la riga: qui sarebbe uno scalino. */
+.board-sotto .order-legend {
+  margin-top: 0;
+}
+
+/* ── Testata della coda sul TELEFONO ──────────────────────────────────
+   Il ☰ è fisso nell'angolo: a scostarsi dev'essere solo il TITOLO, non
+   tutta la testata — scostando tutto, la ricerca partiva da metà schermo
+   e sprecava mezza riga. (Queste regole stanno DOPO quelle di base
+   apposta: a parità di specificità vince l'ultima, e una media query non
+   aggiunge peso.) */
+@media (max-width: 700px) {
+  .board-head {
+    row-gap: 4px;
+  }
+  .board-title {
+    padding-left: 54px;
+    white-space: normal;
+    min-width: 0;
+    text-align: left;
+  }
+  .board-search {
+    width: 100%;
+    min-width: 0;
+    margin-left: 0;
+  }
+  /* Conteggi e legenda partono dal bordo, allineati alla BARRA DI RICERCA
+     che sta sotto — non rientrati come il titolo, che li lasciava sospesi
+     in mezzo alla testata senza allinearsi a niente. Sotto il ☰ non ci
+     finiscono: il ☰ sta tutto nella riga 1, che è alta quanto il ➕. */
+  .board-sotto {
+    padding-left: 0;
+  }
 }
 
 .board-actions {
@@ -1297,6 +1669,15 @@ body.fullbleed .bar-content {
     flex-basis: 100%;
     font-size: 0.92rem;
   }
+  /* Conteggi e legenda stanno fra il titolo e la ricerca (ordine 2 come le
+     azioni: a parità vince chi viene prima nel markup, e le azioni stanno
+     prima), e partono dal BORDO: sono allineati alla barra di ricerca che
+     hanno sotto. Rientrati di 54px come il titolo restavano appesi in
+     mezzo, allineati a niente. */
+  .board-sotto {
+    order: 2;
+    padding-left: 0;
+  }
   .board-add {
     width: 46px;
     height: 46px;
@@ -1316,7 +1697,7 @@ body.fullbleed .bar-content {
   }
 }
 
-/* «+» nuovo ordine, in alto a destra. Il «+» è disegnato con due barre
+/* «+» nuovo ordine, in fondo alla riga. Il «+» è disegnato con due barre
    (pseudo-elementi) così è centrato in modo matematicamente perfetto,
    senza dipendere dalle metriche del glifo. */
 .board-add {
@@ -1348,6 +1729,64 @@ body.fullbleed .bar-content {
 .board-add::after {
   width: 4px;
   height: 26px;
+}
+
+/* ── Riga 1 della testata, DA TABLET IN SU ────────────────────────────
+   Il ☰ della coda è un tasto FISSO nell'angolo (42px, a 12px dal bordo) e
+   non sta nel flusso: la riga si aggancia a lui — stessa altezza, stesso
+   centro — invece di provare a somigliargli. Prima ogni pezzo aveva la sua
+   misura (☰ 42, ricerca 48, ⋯ 34, ➕ 60) e nessuno stava sulla linea di
+   nessun altro.
+   Questo blocco sta in FONDO al file apposta: le misure di base e quelle
+   del telefono vengono prima, e a parità di specificità vince l'ultima
+   regola scritta — una media query non aggiunge peso. Sotto i 701px non
+   entra in gioco niente di tutto questo: sul telefono la testata resta
+   quella di sempre. */
+@media (min-width: 701px) {
+  .queue-board {
+    padding-top: calc(12px + var(--safe-top));
+  }
+  /* Il ☰ flottante non sta nel flusso: al centro della riga 1 ci si porta a
+     mano. La riga è alta quanto il ➕ (60px, il pezzo più alto: vedi sotto),
+     non quanto il titolo, quindi il suo centro cade a 12 + 30 = 42px dal
+     bordo; il ☰ è alto 42px e per centrarcisi parte da 42 − 21 = 21px.
+     Prima partiva da 12px come la lavagna, e restava un dito più in alto
+     di «In servizio». */
+  body.fullbleed .bar-burger {
+    top: calc(21px + var(--safe-top));
+  }
+  /* La misura sta qui e non su .queue-board: la lavagna c'è solo nella
+     vista a griglia, la testata anche in quella a elenco. */
+  .board-head {
+    --coda-riga: 42px;
+  }
+  /* Il ➕ NON è in questo elenco apposta: resta grande com'era (60px),
+     perché è il tasto che si prende di corsa e con le mani occupate. Vale
+     più un bersaglio largo che una riga perfettamente allineata — sporge
+     sopra e sotto, ed è una scelta, non una dimenticanza. */
+  .board-title,
+  .board-search,
+  .board-pannelli {
+    height: var(--coda-riga);
+  }
+  .board-title {
+    display: flex;
+    align-items: center;
+  }
+  /* La ricerca è anche una `.menu-search`, e quella regola — più in basso
+     nel file, stesso peso — le rimetteva i 10px di margine sotto che
+     `.board-search` toglie: in una riga centrata quel margine la spinge su
+     di 5px, ed era metà del disallineamento. Due classi per pesare di più
+     dell'ultima arrivata. */
+  .board-head .board-search {
+    margin: 0;
+  }
+  /* Quadrato come il ☰, senza il padding del tasto piccolo a gonfiarlo. */
+  .board-pannelli {
+    width: var(--coda-riga);
+    min-width: 0;
+    padding: 0;
+  }
 }
 
 /* Avviso "cassa chiusa" in cima alla coda: senza cassa aperta non si battono
@@ -1698,9 +2137,8 @@ body.bar-wide .app {
 /* Menù cliente: si adatta al dispositivo invece di stare in una colonna da
    760px. Su telefono non cambia niente (lo schermo è più stretto); su
    tablet e monitor la griglia usa lo spazio che c'è. */
-body.menu-largo .app {
-  max-width: none;
-}
+/* (Il menù cliente non ha più bisogno di una regola sua: ora è la pagina
+   intera a riempire la larghezza.) */
 
 /* ── Inventario come TABELLA: colonne allineate (grid identico su intestazione
    e righe) ── */
@@ -1908,6 +2346,11 @@ body.menu-largo .app {
   padding: 0 3px;
 }
 /* Pallino di stato sync in basso a destra della campanella. */
+/* Da fermo NON C'È. Prima restava un cerchietto vuoto col bordo del colore
+   dello sfondo: sul tema chiaro sembrava un pallino nero appiccicato alla
+   campanella, e non voleva dire niente — "niente da sincronizzare" si dice
+   meglio non mostrando nulla. Compare solo quando c'è qualcosa da dire:
+   giallo mentre sincronizza, verde a fatto, rosso se è andata storta. */
 .status-bell::after {
   content: '';
   position: absolute;
@@ -1918,6 +2361,12 @@ body.menu-largo .app {
   border-radius: 50%;
   border: 1.5px solid var(--bg, #0e0e15);
   background: transparent;
+  display: none;
+}
+.status-bell.syncing::after,
+.status-bell.synced::after,
+.status-bell.error::after {
+  display: block;
 }
 .status-bell.syncing::after {
   background: #f5b94a;
@@ -1960,6 +2409,14 @@ body.menu-largo .app {
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
 }
 body.fullbleed .status-bell-float { display: flex; }
+@media (max-width: 700px) {
+  /* Nell'angolo esatto è scomoda da prendere e sfiora il gesto di
+     sistema: un po' più dentro. */
+  .status-bell-float {
+    right: calc(18px + env(safe-area-inset-right, 0px));
+    bottom: calc(30px + env(safe-area-inset-bottom, 0px));
+  }
+}
 /* Con la topbar richiamata la campanella è già lì dentro: due no. */
 body.fullbleed.topbar-open .status-bell-float,
 body.drawer-open .status-bell-float { display: none; }
@@ -2205,6 +2662,70 @@ body.drawer-open .status-bell-float { display: none; }
   border-left-color: #8a8a8a;
 }
 
+/* IL CONTO ACCESO DALLA RICERCA (impostazione "accendi e porta lì"). La
+   coda resta intera e il conto trovato si fa riconoscere da solo: un anello
+   nel colore d'accento e un alone, che è quello che l'occhio prende al volo
+   scorrendo trenta card uguali. Niente cambi di fondo o di bordo sinistro —
+   quelli dicono a che punto sta la preparazione e non si toccano.
+   Il respiro iniziale serve a farsi notare anche se lo scorrimento è già
+   finito: due battiti e si ferma, perché una card che pulsa tutta la sera
+   davanti a chi lavora è solo fastidio. */
+.order-card.conto-acceso {
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 0 0 2px var(--accent), 0 0 18px color-mix(in srgb, var(--accent) 45%, transparent);
+  animation: conto-acceso 0.9s ease-out 2;
+}
+
+@keyframes conto-acceso {
+  0%,
+  100% {
+    box-shadow: 0 0 0 2px var(--accent), 0 0 18px color-mix(in srgb, var(--accent) 45%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 3px var(--accent), 0 0 26px color-mix(in srgb, var(--accent) 70%, transparent);
+  }
+}
+
+/* Chi ha chiesto di non far muovere le cose sullo schermo: resta l'anello,
+   che è quello che serve davvero. */
+@media (prefers-reduced-motion: reduce) {
+  .order-card.conto-acceso {
+    animation: none;
+  }
+}
+
+/* LA CARD PRODOTTO ACCESA DALLA RICERCA nel POS (impostazione "accendi e
+   porta lì"). La griglia resta intera e la card trovata si fa riconoscere
+   da sola. Anello e alone, non bordo o fondo: quelli sulla tile dicono già
+   un'altra cosa (è nel conto, e con che colore di categoria) e sono scritti
+   in linea nel componente — sovrascriverli da qui vorrebbe dire una guerra
+   di !important. Il box-shadow invece è libero.
+   Due battiti e si ferma: una card che pulsa tutta la sera davanti a chi
+   lavora è solo fastidio. */
+.prodotto-acceso {
+  box-shadow: 0 0 0 3px var(--accent), 0 0 18px color-mix(in srgb, var(--accent) 45%, transparent);
+  animation: prodotto-acceso 0.9s ease-out 2;
+}
+
+/* Keyframes suoi: partono e finiscono sugli STESSI valori della regola qui
+   sopra, altrimenti a fine animazione la card farebbe uno scatto. */
+@keyframes prodotto-acceso {
+  0%,
+  100% {
+    box-shadow: 0 0 0 3px var(--accent), 0 0 18px color-mix(in srgb, var(--accent) 45%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 4px var(--accent), 0 0 26px color-mix(in srgb, var(--accent) 75%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .prodotto-acceso {
+    animation: none;
+  }
+}
+
 /* Nota dell'ordine sulla card del bartender */
 .order-note {
   background: rgba(245, 185, 74, 0.1);
@@ -2242,26 +2763,6 @@ body.drawer-open .status-bell-float { display: none; }
   margin: 0 0 10px;
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.06);
-}
-
-/* Menu in modalità staff: ricerca e categorie restano fisse sotto la
-   topbar durante lo scroll. Il wrapper opaco dà aria attorno al campo
-   e copre il contenuto che scorre sotto. */
-.menu-staff .menu-search-wrap {
-  position: sticky;
-  top: 64px;
-  z-index: 6;
-  padding: 10px 0;
-  background: var(--bg);
-}
-
-.menu-staff .menu-search {
-  margin-bottom: 0;
-}
-
-.menu-staff .cat-nav {
-  top: 125px;
-  padding-top: 10px;
 }
 
 .menu-search:focus {
@@ -2959,63 +3460,6 @@ body.fullbleed,
 .groups-panel .group-row:last-child { border-bottom: none; }
 .pill.chiuso { background: rgba(46, 204, 113, 0.22); color: #9ff5c0; }
 
-/* ── Vista menù staff: 2 colonne compatte ───────────────────── */
-.staff-menu {
-  display: grid;
-  grid-template-columns: 120px 1fr;
-  gap: 10px;
-  align-items: start;
-}
-.staff-cats {
-  position: sticky;
-  top: 118px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  max-height: calc(100vh / var(--zoom, 1) - 130px);
-  overflow-y: auto;
-  scrollbar-width: thin;
-}
-.staff-cat {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  padding: 8px 10px;
-  border-radius: 10px;
-  border: 1px solid transparent;
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text);
-  cursor: pointer;
-  text-align: left;
-  font-size: 0.82rem;
-}
-.staff-cat.active {
-  background: linear-gradient(135deg, rgba(247, 196, 94, 0.25), rgba(232, 163, 46, 0.18));
-  border-color: rgba(245, 185, 74, 0.5);
-}
-.staff-cat-name { font-weight: 600; line-height: 1.1; }
-.staff-cat-count { color: var(--muted); font-size: 0.72rem; flex-shrink: 0; }
-.staff-products {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-}
-.staff-product {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 8px 12px;
-  border-radius: 10px;
-  background: var(--card);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-}
-.staff-product-info { display: flex; flex-direction: column; min-width: 0; }
-.staff-product-name { font-weight: 600; font-size: 0.9rem; line-height: 1.15; }
-.staff-product .btn.small { min-width: 40px; flex-shrink: 0; }
-
 /* ── Dettaglio ordine POS (stile SumUp, solo bartender) ─────────────── */
 /* Tablet/desktop: comanda come colonna destra; telefono: pannello in basso.
    Le colonne laterali (categorie e ordine) sono FLESSIBILI: si allargano e
@@ -3053,6 +3497,12 @@ body.fullbleed,
 .posd-comanda {
   display: flex;
   flex-direction: column;
+  /* SOPRA LA GRIGLIA. Le card dei prodotti sono elementi posizionati (per
+     la maniglia di riordino): un elemento non posizionato — com'era questo
+     pannello — si dipinge SOTTO, e tirando su la lista si vedevano le card
+     spuntare in mezzo alle righe del conto. */
+  position: relative;
+  z-index: 2;
   background: var(--bg-2);
   border-left: 1px solid rgba(255, 255, 255, 0.09);
   width: var(--pos-comanda-w, fit-content);
@@ -3149,6 +3599,31 @@ body.fullbleed,
 .posd-comanda-foot .price {
   font-size: 1.05em;
 }
+/* Maniglia per l'ALTEZZA del pannello ordine (telefono). Larga tutta la
+   riga e con un segno al centro: si prende senza mirare. Si accende quando
+   ha preso, perché il dito copre quello che sta toccando. */
+.posd-altezza-handle {
+  flex-shrink: 0;
+  height: 20px;
+  cursor: row-resize;
+  touch-action: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.posd-altezza-handle::before {
+  content: '';
+  width: 44px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--line);
+  transition: background 0.12s ease, width 0.12s ease;
+}
+.posd-altezza-handle.attiva::before {
+  background: var(--accent, #e8a32e);
+  width: 64px;
+}
+
 .posd-foot-handle {
   height: 16px;
   margin: 0 -12px 2px;
@@ -3259,7 +3734,13 @@ body.fullbleed,
     width: 100%;
     max-width: none;
     min-width: 0;
-    max-height: 46dvh;
+    /* ALTEZZA VOLUTA, non "al massimo". Con max-height il pannello era alto
+       quanto il suo contenuto: con poche righe tirare la maniglia in su non
+       faceva niente — si alzava solo il tetto, e sembrava che funzionasse
+       solo per rimpicciolire. Ora l'altezza è quella scelta, e la lista
+       dentro scorre o lascia spazio vuoto. */
+    height: var(--pos-comanda-h, 46dvh);
+    max-height: none;
     border-left: none;
     border-top: 1px solid rgba(255, 255, 255, 0.12);
     box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.4);
@@ -3280,6 +3761,7 @@ body.fullbleed,
     display: none !important;
   }
   .posd-comanda.collapsed {
+    height: auto;
     max-height: none;
   }
   .posd-comanda.collapsed .posd-collapsed-bar {
@@ -3295,8 +3777,20 @@ body.fullbleed,
    nei Dati conto — lì c'è spazio. */
 @media (max-width: 700px) {
   .posd-topbar {
-    gap: 6px;
+    gap: 8px;
     padding: calc(6px + var(--safe-top)) 8px 6px;
+    /* Niente sovrapposizioni: chi ha testo lungo si tronca, gli altri
+       restano interi. Prima "#5" e l'ora finivano uno sull'altro. */
+    flex-wrap: nowrap;
+    overflow: hidden;
+  }
+  .posd-topbar > * {
+    flex-shrink: 0;
+  }
+  .posd-aperto {
+    flex-shrink: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .posd-autore,
   .posd-serial {
@@ -3321,12 +3815,6 @@ body.fullbleed,
   }
   .posd-azioni-fisse {
     margin: 6px 0 4px;
-  }
-  /* Lo ZOOM sta in basso a sinistra, cioè sopra "Annulla ordine" e sopra le
-     ultime voci del menu: sul telefono si finiva per premere lui. Il
-     browser del telefono lo zoom ce l'ha già suo. */
-  .zoom-control {
-    display: none;
   }
 }
 /* Barra del pannello collassato (montata solo da collassato, su smartphone):
@@ -3575,6 +4063,11 @@ body.fullbleed,
   margin-top: 10px;
   min-height: 0;
 }
+/* Il tastierino del solo sconto: tre colonne, perché ci sono le cifre e basta.
+   Con le quattro colonne del pagamento le cifre si spezzavano a metà riga. */
+.paypad.paypad-cifre {
+  grid-template-columns: repeat(3, 1fr);
+}
 .paypad-key {
   border: 1px solid var(--line);
   border-radius: 10px;
@@ -3625,6 +4118,11 @@ body.fullbleed,
 .payscreen-method.active {
   border-color: #3f7ce0;
   box-shadow: inset 0 0 0 1.5px #3f7ce0;
+}
+/* Metodo non disponibile: si vede che è spento, ma si può toccare — al
+   tocco dice perché. Un tasto `disabled` non lo direbbe mai. */
+.payscreen-method.spento {
+  opacity: 0.5;
 }
 @media (max-width: 799px) {
   .payscreen-body {
@@ -3822,36 +4320,8 @@ body.fullbleed .cat-rail {
   flex: 1;
   min-width: 0;
 }
-/* Barra categorie A SCOMPARSA: nascosta, il contenuto si allarga; resta una
-   linguetta sottile per riaprirla. */
-.cat-rail-hide {
-  justify-content: center !important;
-  opacity: 0.75;
-  font-size: 0.78rem;
-}
-.cat-rail-show {
-  flex-shrink: 0;
-  align-self: flex-start;
-  position: sticky;
-  /* Stessa fascia della barra categorie: la linguetta per riaprirle deve
-     restare accanto a loro, non sparire dietro l'intestazione. */
-  top: calc(var(--safe-top) + var(--barra-alta) + 8px);
-  width: 30px;
-  min-height: 40px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--tile-bg, rgba(127, 127, 140, 0.12));
-  color: inherit;
-  cursor: pointer;
-  font-size: 1.1rem;
-}
-@media (max-width: 700px) {
-  .cat-rail-show {
-    position: static;
-    width: 100%;
-    min-height: 34px;
-  }
-}
+/* Barra categorie sempre in vista: il tasto per nasconderla non c'è più
+   (vedi CategoryRail.jsx). */
 @media (max-width: 700px) {
   .cat-layout {
     flex-direction: column;
@@ -4220,6 +4690,44 @@ body.fullbleed .cat-rail {
 .zoom-control:focus-within {
   opacity: 1;
 }
+/* SUL TELEFONO NON FLOTTA. In basso a sinistra finiva sopra "Annulla" e
+   sopra le ultime voci del menu: si premeva lui. Lì sparisce e ricompare
+   IN TESTATA, di fianco allo stato del conto (zoom-inline).
+   La regola sta qui e non nel blocco @media più in alto: quello perdeva
+   contro il `display: flex` di .zoom-control, che ha la stessa
+   specificità ma viene dopo — le media query non contano nulla in questa
+   gara. */
+@media (max-width: 700px) {
+  .zoom-control:not(.zoom-inline) {
+    display: none;
+  }
+}
+/* In linea: niente angolo, niente velatura, sta nella riga che lo ospita —
+   e piccolo: è un comando di servizio, non deve pesare quanto lo stato del
+   conto che gli sta accanto. */
+.zoom-control.zoom-inline {
+  position: static;
+  z-index: auto;
+  opacity: 1;
+  margin-left: auto;
+  box-shadow: none;
+  backdrop-filter: none;
+  flex-shrink: 0;
+  /* Il fondo arrotondato resta: senza, i due segni e la percentuale
+     sembrano testo lasciato lì, non un comando. */
+  padding: 2px;
+  gap: 0;
+}
+.zoom-control.zoom-inline button {
+  min-width: 26px;
+  height: 26px;
+  padding: 0 2px;
+  font-size: 0.9rem;
+}
+.zoom-control.zoom-inline .zoom-livello {
+  min-width: 34px;
+  font-size: 0.62rem;
+}
 /* Col menu laterale aperto passano DIETRO (il menu sta a z140, il suo velo
    a z130): stando in basso a sinistra finivano sopra le ultime voci — Esci
    e il profilo — e si toccava lo zoom invece della voce. */
@@ -4351,6 +4859,39 @@ body.drawer-open .zoom-control {
   display: flex;
   flex-direction: column;
   line-height: 1.2;
+}
+
+/* TELEFONO: i tre gesti della serata in fondo al pannello, su una riga.
+   Grossi da premere col pollice e sempre nello stesso posto — quello che
+   si fa cento volte non deve stare dietro un menu. */
+.posd-foot-telefono {
+  display: grid;
+  /* minmax(0, 1fr) e non 1fr: una colonna "1fr" non scende MAI sotto la
+     larghezza del suo contenuto, quindi ingrandendo i tasti dalla maniglia
+     la riga sfondava e "Annulla" finiva mezzo fuori schermo. Così invece
+     le tre colonne restano uguali e si stringono davvero. */
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.posd-foot-telefono .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: 52px;
+  padding: 0.6em 0.3em;
+  /* Cresce con la maniglia: è il senso di quella maniglia. Quando le
+     parole non ci stanno più, in JS restano le sole icone (soloIcone). */
+  font-size: 0.92em;
+  white-space: nowrap;
+  overflow: hidden;
+}
+/* Sole icone: allora che si vedano — l'icona prende la grandezza che
+   avrebbe avuto la scritta. */
+.posd-foot-telefono .btn > svg:only-child {
+  width: 1.5em;
+  height: 1.5em;
 }
 
 /* Il tasto che apre il menu non si nasconde col CSS: fuori dal telefono

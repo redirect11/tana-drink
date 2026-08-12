@@ -33,7 +33,11 @@ const leggi = () => {
   }
 }
 
-export default function ZoomControl() {
+// `inline`: gli stessi tasti, ma DENTRO la pagina invece che flottanti
+// nell'angolo. Sul telefono l'angolo in basso a sinistra è già occupato —
+// ci finiscono sopra i tasti del conto — quindi lo zoom va messo dove c'è
+// posto: in testata, di fianco allo stato del conto.
+export default function ZoomControl({ inline = false }) {
   const [zoom, setZoom] = useState(leggi)
 
   useEffect(() => {
@@ -50,8 +54,12 @@ export default function ZoomControl() {
 
   const cambia = (d) => setZoom((z) => arrotonda(Math.min(MAX, Math.max(MIN, z + d))))
 
-  return createPortal(
-    <div className="zoom-control" role="group" aria-label="Zoom della pagina">
+  const controllo = (
+    <div
+      className={`zoom-control${inline ? ' zoom-inline' : ''}`}
+      role="group"
+      aria-label="Zoom della pagina"
+    >
       <button
         type="button"
         onClick={() => cambia(-PASSO)}
@@ -81,7 +89,12 @@ export default function ZoomControl() {
       >
         +
       </button>
-    </div>,
-    document.body
+    </div>
   )
+
+  // Flottante: fuori da #root (portale sul body), altrimenti si
+  // rimpicciolirebbe insieme alla pagina che sta scalando. In linea invece
+  // sta dov'è scritto, e va bene così: è già dentro una testata che non
+  // scala col contenuto.
+  return inline ? controllo : createPortal(controllo, document.body)
 }
