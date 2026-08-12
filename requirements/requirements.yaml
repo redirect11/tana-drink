@@ -299,7 +299,8 @@ requirements:
       come proporzione sulle righe o come semplice avviso; la strategia si sceglie
       nelle impostazioni (default: tetto al totale). Le statistiche e il rendiconto
       devono sempre scorporare lo sconto, mai mostrare il prezzo di listino come
-      venduto.
+      venduto. Il tastierino dello sconto ha le cifre nell'ordine di sempre
+      (7 8 9 / 4 5 6 / 1 2 3 / C 0 ←), su tre colonne: si batte a memoria.
     status: implemented
     generate_issue: false
     labels: [pagamenti, sconti]
