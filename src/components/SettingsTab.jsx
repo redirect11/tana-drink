@@ -146,6 +146,9 @@ export default function SettingsTab({ role = null }) {
                 a memoria e non vuole vederla cambiare sotto le dita; mostra tutti i
                 prodotti mentre si cerca, perché quello giusto può stare in
                 un&apos;altra categoria. Toccando una card la ricerca si azzera da sé.
+                Vale anche per la ricerca nel <strong>menù</strong>: lì la barra
+                delle categorie resta, e ci si sposta su quella del prodotto
+                trovato.
               </p>
               <div className="mode-choice">
                 {[
@@ -336,13 +339,19 @@ export default function SettingsTab({ role = null }) {
             <div className="card settings-section">
               <h3>Giornata di lavoro</h3>
               <p className="muted small" style={{ margin: '0 0 8px' }}>
-                I conti restano aperti finché non li chiudi tu: nessuna “serata” da
-                aprire o chiudere. L’ora qui sotto dice solo quando far girare la
-                giornata per le statistiche e per il numero progressivo degli
-                ordini, così una nottata oltre la mezzanotte resta tutta insieme.
+                I conti restano aperti finché non li chiudi tu: nessuna “serata”
+                da aprire o chiudere. Qui si dice soltanto <strong>a che ora
+                finisce una giornata e ne comincia un’altra</strong>. Da
+                quell’ora la numerazione degli ordini riparte da 1 e le
+                statistiche cominciano a contare il giorno nuovo.
+              </p>
+              <p className="muted small" style={{ margin: '0 0 8px' }}>
+                Con le 5, un ordine battuto all’una di notte è ancora della
+                serata prima: la nottata resta tutta insieme, invece di
+                spezzarsi a mezzanotte.
               </p>
               <div className="toggle-row">
-                <span>La giornata gira alle (ora)</span>
+                <span>Il giorno nuovo comincia alle (ora)</span>
                 <AmountInput
                   value={settings.business_day_cutoff_hour}
                   min={0}
@@ -811,7 +820,6 @@ export default function SettingsTab({ role = null }) {
         items={sezioni.map((s) => ({ key: s.id, label: s.label, icon: s.icona }))}
         selected={attiva.id}
         onSelect={scegliSezione}
-        storageKey="impostazioni"
       >
         {attiva.nodo}
       </CategoryRail>

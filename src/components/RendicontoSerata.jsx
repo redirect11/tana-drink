@@ -274,7 +274,6 @@ export default function RendicontoSerata({ session, orders, drinksById, itemsByI
           items={categorie}
           selected={cat}
           onSelect={setCat}
-          storageKey="rendiconto"
         >
           <div className="table-scroll">
             <table className="rend-tab">

@@ -332,7 +332,7 @@ export default function MenuManager() {
 
       {/* Categorie a SINISTRA (come il POS), i drink a destra. */}
       {!loading && drinks.length > 0 && (
-      <CategoryRail items={catItems} selected={catFilter} onSelect={setCatFilter} storageKey="menu">
+      <CategoryRail items={catItems} selected={catFilter} onSelect={setCatFilter}>
 
       {groups.length === 0 && (
         <div className="empty">Nessun drink per «{search}».</div>

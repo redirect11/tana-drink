@@ -1192,10 +1192,15 @@ requirements:
       corrispondenza è una sola per tutti e due i modi, altrimenti cambiando
       impostazione lo stesso testo troverebbe prodotti diversi. Se non risponde
       niente lo dice, invece di lasciare la griglia apparentemente immobile.
+      La stessa scelta vale per la ricerca del MENÙ visto dallo staff (/menu),
+      che serve agli ordini battuti a mano e cerca anche per categoria,
+      descrizione e ingrediente: «Accendi e porta lì» lascia la barra delle
+      categorie al suo posto, si sposta sulla categoria del prodotto trovato e
+      lo illumina; battuto il prodotto la ricerca si azzera da sé.
     status: implemented
     generate_issue: false
     labels: [pos, ux]
-    test_cases: [tests/component/PosProductPicker.test.jsx]
+    test_cases: [tests/component/PosProductPicker.test.jsx, tests/component/MenuPage.test.jsx]
 
   # ══════════════════════════════════════════════════════════════════════
   #  COME SI LAVORA AL PROGETTO

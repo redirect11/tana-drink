@@ -75,7 +75,18 @@ una funzione, il terzo per le correzioni.
   si sceglie in Impostazioni → Vista ordine. La griglia resta com'è —
   nessuna card sparisce sotto le dita — e la prima che risponde si
   illumina, con la griglia che ci scorre sopra; toccandone una la ricerca
-  si azzera da sé.
+  si azzera da sé. **Vale anche per la ricerca nel menù**: lì le
+  categorie restano al loro posto, ci si sposta su quella del prodotto
+  trovato e il prodotto si accende.
+- **Le categorie non si nascondono più.** Il tasto che faceva sparire la
+  barra a sinistra (menù, magazzino, impostazioni, rendiconto) non c'è
+  più: sul telefono, dove le categorie sono già una riga che scorre, non
+  serviva a niente e in cambio si perdeva l'unico modo di girare fra
+  loro.
+- In Impostazioni, **la giornata di lavoro è spiegata in italiano**: si
+  dice a che ora finisce una giornata e ne comincia un'altra — da lì gli
+  ordini ripartono dal numero 1 e le statistiche contano il giorno nuovo
+  — invece di «far girare la giornata», che non voleva dire niente.
 - **La ricerca nella coda può accendere invece di filtrare**: si sceglie in
   Impostazioni → Coda ordini. Lasciando la coda intera, scorre fino al
   primo conto che risponde e lo illumina — così si vede dov'è rispetto

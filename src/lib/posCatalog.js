@@ -67,6 +67,22 @@ export function prodottoCorrisponde(d, query) {
   return !!d.name?.toLowerCase().includes(q)
 }
 
+// La ricerca del MENÙ (la vista staff di /menu) guarda più in là del nome:
+// categoria, descrizione e ingredienti della ricetta. Serve per gli ordini
+// battuti a mano — "quello col rum" si cerca così. Vale la stessa regola di
+// prima: una sola funzione per tutti e due i modi, filtra e accendi, se no
+// cambiando impostazione lo stesso testo troverebbe cose diverse.
+export function voceMenuCorrisponde(d, query) {
+  const q = String(query ?? '').trim().toLowerCase()
+  if (!q || !d) return false
+  return !!(
+    d.name?.toLowerCase().includes(q) ||
+    d.category?.toLowerCase().includes(q) ||
+    d.description?.toLowerCase().includes(q) ||
+    d.recipe_items?.some((r) => r.name?.toLowerCase().includes(q))
+  )
+}
+
 // La PRIMA card che risponde, nell'ordine in cui sta nella griglia: è
 // quella da accendere e da portare sotto gli occhi. L'ordine lo decide chi
 // chiama, passando la lista già come la si vede.
