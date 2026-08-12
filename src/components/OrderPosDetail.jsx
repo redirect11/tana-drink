@@ -2054,34 +2054,38 @@ export default function OrderPosDetail({ order: orderProp = null }) {
         </div>
       )}
 
-      {/* ── Schermata Pagamento ── */}
-      {isNew && payOrder && (
+      {/* ── Schermata Pagamento ──
+          UNA SOLA, e NON appesa a `isNew`. Erano due rami, uno per la
+          creazione (`isNew && payOrder`) e uno per la modifica
+          (`!isNew && showPayment`). Al banco: si battono due acque di
+          corsa e si preme subito Pagamento, mentre la creazione automatica
+          della bozza è ancora in volo. Quando il server risponde, il conto
+          esiste — `isNew` diventa falso, il primo ramo sparisce e il
+          secondo non ha `showPayment` — e la schermata di pagamento si
+          chiudeva DA SOLA, col cliente davanti che stava pagando. Ora
+          quello che comanda è "c'è un pagamento in corso", che il conto sia
+          nato un istante prima o mezz'ora prima. */}
+      {(payOrder || (showPayment && order)) && (
         <PaymentScreen
-          order={payOrder}
+          order={payOrder || order}
           settings={settings}
           onClose={() => {
             setPayOrder(null)
+            setShowPayment(false)
             creatingRef.current = false // pagamento annullato: riabilita l'auto-creazione
           }}
           onPaid={() => {
-            nascondiOrdine(payIdRef.current)
-            navigate('/bar')
-          }}
-          onError={setError}
-          resolveOrderId={() => payIdRef.current}
-        />
-      )}
-      {!isNew && showPayment && (
-        <PaymentScreen
-          order={order}
-          settings={settings}
-          onClose={() => setShowPayment(false)}
-          onPaid={() => {
-            nascondiOrdine(order.id)
+            // In creazione l'id arriva da una PROMESSA: va attesa, se no si
+            // "nasconde" un oggetto Promise e il conto pagato resta a
+            // schermo nella coda finché il server non lo conferma.
+            Promise.resolve(payOrder ? payIdRef.current : order?.id)
+              .then((id) => nascondiOrdine(id))
+              .catch(() => {})
             navigate('/bar')
           }}
           onBeforePay={flushAll}
           onError={setError}
+          resolveOrderId={payOrder ? () => payIdRef.current : undefined}
         />
       )}
 
