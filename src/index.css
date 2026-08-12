@@ -1750,10 +1750,13 @@ body.fullbleed .bar-content {
   .board-head {
     --coda-riga: 42px;
   }
+  /* Il ➕ NON è in questo elenco apposta: resta grande com'era (60px),
+     perché è il tasto che si prende di corsa e con le mani occupate. Vale
+     più un bersaglio largo che una riga perfettamente allineata — sporge
+     sopra e sotto, ed è una scelta, non una dimenticanza. */
   .board-title,
   .board-search,
-  .board-pannelli,
-  .board-add {
+  .board-pannelli {
     height: var(--coda-riga);
   }
   .board-title {
@@ -1768,20 +1771,11 @@ body.fullbleed .bar-content {
   .board-head .board-search {
     margin: 0;
   }
-  /* Quadrati come il ☰, senza il padding del tasto piccolo a gonfiarli. */
-  .board-pannelli,
-  .board-add {
+  /* Quadrato come il ☰, senza il padding del tasto piccolo a gonfiarlo. */
+  .board-pannelli {
     width: var(--coda-riga);
     min-width: 0;
     padding: 0;
-  }
-  .board-add::before {
-    width: 20px;
-    height: 4px;
-  }
-  .board-add::after {
-    width: 4px;
-    height: 20px;
   }
 }
 
