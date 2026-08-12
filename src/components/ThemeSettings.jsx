@@ -11,19 +11,27 @@ import {
 // chiari) e personalizzazione dei colori principali, separatamente per il
 // gestionale (staff/bartender) e per la vista cliente. Il tema scelto è
 // salvato in settings/bar e arriva a tutti i dispositivi in tempo reale.
+//
+// I due temi si scelgono da qui, ma non si applicano per indirizzo: seguono
+// CHI GUARDA. Chi è dello staff vede il gestionale su ogni schermata — il
+// proprio profilo, la lista ordini, il menù per gli ordini manuali; chi
+// ordina vede il suo. Per questo le etichette dicono a chi tocca cosa: da
+// sole, "Gestionale" e "Vista cliente" sembravano due pagine.
 export default function ThemeSettings({ settings, onSave }) {
   return (
     <div className="card settings-section">
       <h3>🎨 Aspetto</h3>
       <ThemeEditor
-        title="Gestionale (staff)"
+        title="Gestionale — quello che vedi ora"
+        hint="I colori di chi lavora: coda, cassa, impostazioni, profilo."
         value={settings.theme_staff}
         // Anteprima immediata: il gestionale è la vista in cui ci troviamo.
         livePreview
         onSave={(t) => onSave({ theme_staff: t })}
       />
       <ThemeEditor
-        title="Vista cliente"
+        title="Vista cliente — come lo vedono i clienti"
+        hint="I colori del menù sul telefono di chi ordina. Per provarli: menu ▸ Vista cliente."
         value={settings.theme_client}
         onSave={(t) => onSave({ theme_client: t })}
       />
@@ -31,7 +39,7 @@ export default function ThemeSettings({ settings, onSave }) {
   )
 }
 
-function ThemeEditor({ title, value, onSave, livePreview = false }) {
+function ThemeEditor({ title, hint, value, onSave, livePreview = false }) {
   const current = value || { preset: DEFAULT_THEME, custom: null }
   const [customizing, setCustomizing] = useState(false)
   // Bozza degli override colore mentre si personalizza (non ancora salvata).
@@ -81,6 +89,11 @@ function ThemeEditor({ title, value, onSave, livePreview = false }) {
         <strong>{title}</strong>
         {hasCustom && ' · personalizzato'}
       </p>
+      {hint && (
+        <p className="muted" style={{ margin: '0 0 6px', fontSize: '0.82rem' }}>
+          {hint}
+        </p>
+      )}
 
       <div className="chips-row">
         {Object.entries(THEME_PRESETS).map(([id, p]) => (

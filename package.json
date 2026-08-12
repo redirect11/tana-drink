@@ -1,7 +1,7 @@
 {
   "name": "karaoke-drink",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.3.0",
   "type": "module",
   "description": "App per la prenotazione dei drink del cocktail bar La Tana del Coniglio",
   "scripts": {
@@ -9,15 +9,17 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint .",
-    "test": "TZ=Europe/Rome vitest run",
-    "test:watch": "TZ=Europe/Rome vitest",
-    "test:coverage": "TZ=Europe/Rome vitest run --coverage",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "requirements:issues": "node scripts/generate-issues.mjs",
     "seed": "node scripts/seed.js",
     "seed:dev": "VITE_USE_FIREBASE_EMULATOR=true VITE_FIREBASE_PROJECT_ID=demo-tana-drink VITE_FIRESTORE_EMULATOR_HOST=localhost VITE_FIRESTORE_EMULATOR_PORT=8080 node scripts/seed.js",
     "mock:orders": "VITE_FIREBASE_PROJECT_ID=demo-tana-drink VITE_FIRESTORE_EMULATOR_HOST=localhost VITE_FIRESTORE_EMULATOR_PORT=8080 node scripts/mock-orders.js",
     "mock:history": "VITE_FIREBASE_PROJECT_ID=demo-tana-drink VITE_FIRESTORE_EMULATOR_HOST=localhost VITE_FIRESTORE_EMULATOR_PORT=8080 node scripts/mock-history.js",
-    "emulators": "firebase emulators:start --project demo-tana-drink --only auth,firestore,storage"
+    "emulators": "firebase emulators:start --project demo-tana-drink --only auth,firestore,storage",
+    "emulatori": "firebase emulators:start --project demo-tana-drink --only auth,firestore,storage,functions,hosting",
+    "locale": "vite build --mode locale && npm run emulatori"
   },
   "dependencies": {
     "firebase": "^12.14.0",

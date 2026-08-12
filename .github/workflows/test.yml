@@ -1,14 +1,15 @@
 name: Tests
 
+# Sui push i test girano dentro la pipeline di deploy, che senza il loro
+# verde non pubblica niente (firebase-hosting.yml). Qui restano le pull
+# request — dove non c'è nessun deploy da bloccare — e la copertura, che
+# nella pipeline sarebbe solo tempo in più prima di andare online.
 on:
-  push:
-    branches:
-      - main
-      - 'copilot/**'
-      - 'feature/**'
   pull_request:
     branches:
       - main
+      - develop
+  workflow_dispatch:
 
 permissions:
   contents: read

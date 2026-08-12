@@ -55,6 +55,25 @@ export function recentDrinkIds(orders, limit = 20) {
   return out
 }
 
+// ── Ricerca prodotto nella griglia ─────────────────────────────────────
+// "Questa card risponde a quello che sto scrivendo?" — per nome.
+// Sta qui, in una riga sola, perché la ricerca della griglia ha DUE modi
+// di usarla: filtrare le card, oppure lasciarle tutte e accendere quella
+// trovata. Se le due strade rispondessero in modo diverso, cambiando
+// impostazione lo stesso testo troverebbe prodotti diversi.
+export function prodottoCorrisponde(d, query) {
+  const q = String(query ?? '').trim().toLowerCase()
+  if (!q || !d) return false
+  return !!d.name?.toLowerCase().includes(q)
+}
+
+// La PRIMA card che risponde, nell'ordine in cui sta nella griglia: è
+// quella da accendere e da portare sotto gli occhi. L'ordine lo decide chi
+// chiama, passando la lista già come la si vede.
+export function primoProdottoCorrispondente(drinks, query) {
+  return (drinks || []).find((d) => prodottoCorrisponde(d, query)) || null
+}
+
 // ── Persistenza (localStorage) ─────────────────────────────────────────
 const read = (key, def) => {
   try {

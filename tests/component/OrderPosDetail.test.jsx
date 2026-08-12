@@ -5,10 +5,10 @@
 // componente vero con React Testing Library e verifica ciò che il bartender
 // vede e tocca. Firebase/menu/stampante sono mockati.
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import '@testing-library/jest-dom/vitest'
 
 // ── Mock dei moduli con dipendenze Firebase/hardware ──
@@ -80,6 +80,7 @@ import {
   registerPayment,
   updateOrderInfo,
   cancelOrder,
+  createOrder,
 } from '../../src/lib/api.js'
 import { readerCheckout } from '../../src/lib/paymentsApi.js'
 import { printComanda } from '../../src/lib/printer.js'
@@ -473,7 +474,8 @@ describe('schermata Pagamento', () => {
     const user = userEvent.setup()
     mount(baseOrder())
     await user.click(screen.getByRole('button', { name: /Pagamento/ }))
-    expect(screen.getByRole('button', { name: /SumUp/ })).toBeDisabled()
+    // Spento a vedersi, ma toccabile: al tocco dice dove si configura.
+    expect(screen.getByRole('button', { name: /SumUp/ })).toHaveAttribute('aria-disabled', 'true')
   })
 
   it('conto chiuso (pagato): griglia e modifiche disabilitate', () => {
@@ -638,5 +640,304 @@ describe('conto rimasto senza righe', () => {
     if (meno && !meno.disabled) await user.click(meno)
     await new Promise((r) => setTimeout(r, 700))
     expect(cancelOrder).not.toHaveBeenCalled()
+  })
+})
+
+// ── TELEFONO: le azioni stanno in un menu, non in pagina ──────────────
+// Su uno schermo stretto i tasti secondari (unisci, gruppi, dati conto,
+// annulla) occupavano più spazio delle righe ordinate. Ora c'è un tasto
+// "⋯ Azioni" che apre un menu dal basso: il CSS nasconde i tasti in
+// pagina sotto i 700px, ma quello che conta è che il menu ci sia e che
+// chiami gli STESSI handler — niente seconda logica da tenere allineata.
+// (Qui i tasti in pagina ci sono comunque: jsdom non applica il CSS, per
+// questo le ricerche sono ristrette al menu.)
+describe('menu azioni del telefono', () => {
+  // Schermo da telefono: il tasto ⋯ esiste solo qui (useTelefono).
+  beforeEach(() => {
+    window.matchMedia = (query) => ({
+      matches: query.includes('700px'),
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    })
+  })
+
+  const apriMenu = async (user) => {
+    await user.click(screen.getByRole('button', { name: 'Azioni del conto' }))
+    return within(screen.getByRole('dialog'))
+  }
+
+  it('nel menu c’è quello che si usa ogni tanto', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    const menu = await apriMenu(user)
+    for (const voce of [
+      /Comande \(1\)/,
+      /Prodotto libero/,
+      /Dati conto/,
+      /Unisci le righe uguali/,
+      /Separa le quantità/,
+    ]) {
+      expect(menu.getByRole('button', { name: voce })).toBeInTheDocument()
+    }
+  })
+
+  it('quello che si usa sempre NON è nel menu: sta in fondo, su una riga', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    // In fondo al pannello, i tre gesti della serata.
+    for (const nome of [/Invia$/, /Paga$/, /Annulla$/]) {
+      expect(screen.getByRole('button', { name: nome })).toBeInTheDocument()
+    }
+    // E non anche dentro il menu, che sarebbe un doppione.
+    const menu = await apriMenu(user)
+    expect(menu.queryByRole('button', { name: /Invia/ })).toBeNull()
+    expect(menu.queryByRole('button', { name: /Paga/ })).toBeNull()
+    expect(menu.queryByRole('button', { name: /Annulla/ })).toBeNull()
+  })
+
+  it('“Annulla” chiede conferma, non annulla di colpo', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.click(screen.getByRole('button', { name: /Annulla$/ }))
+    await waitFor(() => expect(document.querySelector('.confirm-box')).toBeTruthy())
+    expect(cancelOrder).not.toHaveBeenCalled()
+  })
+
+  it('scegliendo una voce il menu si chiude: mai due pannelli sovrapposti', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    const menu = await apriMenu(user)
+    await user.click(menu.getByRole('button', { name: /Dati conto/ }))
+    await waitFor(() =>
+      expect(document.querySelector('.action-sheet')).toBeFalsy()
+    )
+  })
+
+  it('su un ordine NUOVO le azioni che richiedono un conto aperto sono spente', () => {
+    render(
+      <MemoryRouter>
+        <OrderPosDetail order={null} />
+      </MemoryRouter>
+    )
+    expect(screen.getByRole('button', { name: /Invia$/ })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /Annulla$/ })).toBeDisabled()
+  })
+})
+
+// ── Quanto c'è da incassare, scritto sul tasto ────────────────────────
+// Prima la cifra compariva solo finché l'ordine non esisteva ancora:
+// appena si creava da sé — un istante dopo il primo prodotto — spariva, e
+// sembrava un difetto. Deve restare, e deve dire quanto manca DAVVERO:
+// sconto e acconti già presi non si pagano due volte.
+describe('totale sul tasto Pagamento', () => {
+  const tastoPagamento = () =>
+    screen.getAllByRole('button', { name: /Pagamento/ })[0]
+
+  it('su un conto aperto mostra il totale da incassare', () => {
+    mount(baseOrder()) // 2 Mojito × 7 €
+    expect(tastoPagamento()).toHaveTextContent('14,00 €')
+  })
+
+  it('con un acconto già preso mostra solo quello che manca', () => {
+    mount(
+      baseOrder({
+        payments: [{ id: 'p1', amount: 10, method: 'banco', at: '2026-07-11T22:00:00.000Z' }],
+      })
+    )
+    expect(tastoPagamento()).toHaveTextContent('4,00 €')
+  })
+
+  it('con lo sconto la cifra è quella scontata', () => {
+    mount(baseOrder({ discount_amount: 4 }))
+    expect(tastoPagamento()).toHaveTextContent('10,00 €')
+  })
+
+  it('conto già saldato: nessuna cifra da mostrare', () => {
+    mount(
+      baseOrder({
+        payments: [{ id: 'p1', amount: 14, method: 'banco', at: '2026-07-11T22:00:00.000Z' }],
+      })
+    )
+    expect(tastoPagamento()).not.toHaveTextContent('€')
+  })
+})
+
+// ── ITEM BATTUTI MENTRE L'ORDINE SI STA CREANDO ──────────────────────
+// Difetto vero, visto al banco: si aggiunge un'acqua, un secondo dopo si
+// aggiunge altro, e quando l'ordine finisce di crearsi resta solo
+// l'acqua. La creazione dura qualche decimo di secondo; in quei decimi si
+// continua a battere, e chi svuotava la bozza a creazione finita portava
+// via anche le righe arrivate nel frattempo.
+describe('creazione: niente si perde mentre l’ordine nasce', () => {
+  it('gli item battuti durante la creazione finiscono nell’ordine', async () => {
+    const user = userEvent.setup()
+    // Creazione LENTA e controllata da qui: è la finestra in cui si continua
+    // a battere.
+    let creaLaConclude
+    createOrder.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          creaLaConclude = () =>
+            resolve({
+              id: 'ord-nuovo',
+              status: 'aperto',
+              comande: [
+                {
+                  id: 'c1',
+                  seq: 1,
+                  status: 'in_preparazione',
+                  status_times: {},
+                  items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1 }],
+                },
+              ],
+              order_items: [
+                { id: 'x', drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1 },
+              ],
+              payments: [],
+            })
+        })
+    )
+
+    render(
+      <MemoryRouter>
+        <OrderPosDetail order={null} />
+      </MemoryRouter>
+    )
+
+    // Primo item: fa partire la creazione (parte da sola dopo ~300ms).
+    await user.click(screen.getAllByText('Mojito')[0])
+    await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1), { timeout: 2000 })
+
+    // Mentre l'ordine sta nascendo, se ne battono altri due.
+    await user.click(screen.getAllByText('Gin Tonic')[0])
+    await user.click(screen.getAllByText('Gin Tonic')[0])
+
+    // Ora il server risponde.
+    creaLaConclude()
+
+    // I due Gin Tonic non devono sparire: restano a schermo e vengono
+    // mandati al server come aggiunte.
+    await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalled(), { timeout: 3000 })
+    const items = bartenderUpdateComanda.mock.calls.at(-1)[2].items
+    expect(items.filter((i) => i.drink_id === 'gin')).toHaveLength(2)
+    expect(screen.getAllByText('Gin Tonic').length).toBeGreaterThan(0)
+    expect(createOrder).toHaveBeenCalledTimes(1) // un ordine solo, non due
+  })
+})
+
+// ── Dopo l'annullo si torna agli ordini ───────────────────────────────
+// Un conto annullato non si lavora più: restarci davanti serve solo a
+// chiedersi se l'annullo è andato a buon fine, e a rischiare di batterci
+// sopra un altro drink.
+describe('annullo dell’ordine', () => {
+  it('annullando si torna alla coda', async () => {
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter initialEntries={['/ordine/ord1']}>
+        <Routes>
+          <Route path="/ordine/:id" element={<OrderPosDetail order={baseOrder()} />} />
+          <Route path="/bar" element={<div>CODA ORDINI</div>} />
+        </Routes>
+      </MemoryRouter>
+    )
+    await user.click(screen.getByRole('button', { name: /Annulla ordine/ }))
+    const conferma = within(document.querySelector('.confirm-box'))
+    await user.click(conferma.getByRole('button', { name: 'Annulla ordine' }))
+    expect(cancelOrder).toHaveBeenCalledWith('ord1', { by: 'bartender' })
+    expect(await screen.findByText('CODA ORDINI')).toBeInTheDocument()
+  })
+})
+
+// ── La ricerca prodotti, dentro la schermata vera ─────────────────────
+// Il picker da solo era già coperto (PosProductPicker.test.jsx), ma quello
+// che al banco non funzionava era il COLLEGAMENTO: l'impostazione arriva
+// dalle impostazioni del bar, passa da qui e finisce nella griglia. Se si
+// stacca un anello, la ricerca torna a filtrare e nessun test se ne accorge.
+describe('la ricerca prodotti segue l’impostazione del bar', () => {
+  const card = (nome) =>
+    [...document.querySelectorAll('[data-drink-id]')].find((e) => e.textContent.includes(nome))
+  const cerca = () => screen.getByLabelText('Cerca prodotto')
+
+  afterEach(() => {
+    delete mockSettings.pos_search
+  })
+
+  it('«filtra»: cercando resta solo il prodotto che risponde', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.type(cerca(), 'mojito')
+    expect(card('Mojito')).toBeTruthy()
+    expect(card('Gin Tonic')).toBeFalsy()
+  })
+
+  it('«accendi e porta lì»: la griglia resta intera e la card si accende', async () => {
+    mockSettings.pos_search = 'evidenzia'
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.type(cerca(), 'mojito')
+    // Niente sparisce da sotto le dita…
+    expect(card('Gin Tonic')).toBeTruthy()
+    // …e quella cercata è accesa.
+    expect(card('Mojito')).toHaveClass('prodotto-acceso')
+  })
+})
+
+// ── Pagamento battuto mentre l'ordine sta ancora nascendo ─────────────
+// Segnalato dal banco: si battono due acque di corsa, si preme Pagamento,
+// e un attimo dopo si è di nuovo sulla schermata dell'ordine — Pagamento va
+// ripremuto. Dipende da quanto si è veloci: l'ordine nasce da solo al primo
+// prodotto, e quando il server risponde il conto smette di essere "nuovo".
+// La schermata di pagamento era appesa proprio a quel "nuovo": appena
+// cambiava, spariva da sé, col cassiere davanti al cliente che paga.
+describe('Pagamento premuto mentre l’ordine sta ancora nascendo', () => {
+  it('la schermata di pagamento resta aperta quando la creazione va a buon fine', async () => {
+    const user = userEvent.setup()
+    let rispondiIlServer
+    createOrder.mockImplementationOnce(
+      () =>
+        new Promise((res) => {
+          rispondiIlServer = () =>
+            res({
+              id: 'ord-nuovo',
+              daily_number: 9,
+              status: 'aperto',
+              payment_status: 'non_richiesto',
+              total: 7,
+              payments: [],
+              discount_amount: 0,
+              comande: [
+                {
+                  id: 'c1',
+                  seq: 1,
+                  status: 'in_preparazione',
+                  items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1 }],
+                },
+              ],
+              order_items: [
+                { id: 'x', drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1 },
+              ],
+            })
+        })
+    )
+    render(
+      <MemoryRouter>
+        <OrderPosDetail order={null} />
+      </MemoryRouter>
+    )
+    await user.click(screen.getAllByText('Mojito')[0])
+    // L'auto-creazione parte da sola dopo qualche decimo di secondo…
+    await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1), { timeout: 2000 })
+    // …e mentre è in volo si preme Pagamento.
+    await user.click(screen.getByRole('button', { name: /Pagamento/ }))
+    expect(await screen.findByRole('button', { name: /Riscuotere/ })).toBeInTheDocument()
+
+    // Il server risponde: il conto esiste, non è più "nuovo".
+    rispondiIlServer()
+    // Il numero del conto arriva a schermo: siamo oltre il passaggio.
+    // (Compare in due punti: la testata del conto e quella del pagamento.)
+    expect((await screen.findAllByText(/#9/)).length).toBeGreaterThan(0)
+    // E il pagamento è ancora lì, dove il cassiere l'ha lasciato.
+    expect(screen.getByRole('button', { name: /Riscuotere/ })).toBeInTheDocument()
   })
 })

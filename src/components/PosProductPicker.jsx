@@ -12,6 +12,8 @@ import {
   saveFavorites,
   loadColors,
   saveColors,
+  prodottoCorrisponde,
+  primoProdottoCorrispondente,
 } from '../lib/posCatalog.js'
 import {
   subscribePosPrefs,
@@ -43,6 +45,9 @@ export default function PosProductPicker({
   categoryDisplay = 'dot',
   catsHandleProps = null,
   recentIds = [],
+  // Cosa fa la ricerca: filtrare le card (come è sempre stato) oppure
+  // lasciarle tutte in griglia e accendere la prima che risponde.
+  ricercaEvidenzia = false,
 }) {
   const [selectedCat, setSelectedCat] = useState(null)
   const [query, setQuery] = useState('')
@@ -141,7 +146,12 @@ export default function PosProductPicker({
 
   const inCat = (d) => d.category_id === selectedCat || d.category === selectedCat
   const visibleDrinks = useMemo(() => {
-    if (q) return orderedAll.filter((d) => d.name?.toLowerCase().includes(q))
+    // MODO "ACCENDI": cercando non si toglie NIENTE dalla griglia. Si passa
+    // però a mostrare tutto il catalogo, perché il prodotto cercato può
+    // stare in un'altra categoria (o fuori dai preferiti) e altrimenti non
+    // ci sarebbe niente da accendere. Cancellando la ricerca si torna dov'era.
+    if (q && ricercaEvidenzia) return orderedAll
+    if (q) return orderedAll.filter((d) => prodottoCorrisponde(d, q))
     if (selectedCat === '__recent__') {
       return recentIds.map((id) => byId.get(id)).filter((d) => d && d.available)
     }
@@ -149,7 +159,30 @@ export default function PosProductPicker({
     if (!selectedCat || selectedCat === '__all__') return orderedAll
     return orderedAll.filter(inCat)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q, orderedAll, selectedCat, favSet, recentIds, byId])
+  }, [q, ricercaEvidenzia, orderedAll, selectedCat, favSet, recentIds, byId])
+
+  // LA CARD ACCESA. È la prima che risponde NELL'ORDINE IN CUI STA NELLA
+  // GRIGLIA — non nell'ordine in cui arrivano i prodotti dal database:
+  // accendere una card e far scorrere da un'altra parte sarebbe peggio che
+  // non fare niente.
+  const acceso = ricercaEvidenzia ? primoProdottoCorrispondente(visibleDrinks, q) : null
+  const idAcceso = acceso?.id || null
+
+  // Portarla sotto gli occhi. Si muove SOLO la griglia (scrollTop suo), non
+  // `scrollIntoView`: quello scorre anche i contenitori sopra e al banco fa
+  // saltare via mezza schermata del conto mentre si sta ancora scrivendo.
+  useEffect(() => {
+    if (!idAcceso) return
+    const grid = gridRef.current
+    const el = grid?.querySelector(`[data-drink-id="${idAcceso}"]`)
+    if (!grid || !el) return
+    const r = el.getBoundingClientRect()
+    const g = grid.getBoundingClientRect()
+    // In mezzo alla griglia, non incollata a un bordo: si vede anche cosa
+    // c'è intorno, che è il motivo per cui non si filtra.
+    const delta = r.top - g.top - (g.height - r.height) / 2
+    grid.scrollTo?.({ top: grid.scrollTop + delta, behavior: 'smooth' })
+  }, [idAcceso])
 
   // ── Riordino card dalla MANIGLIA (modalità riordino) ──
   // Sul touch "scorri col dito + long-press per spostare" sullo stesso
@@ -346,6 +379,17 @@ export default function PosProductPicker({
             </button>
           )}
         </div>
+        {/* Accendendo invece di filtrare, la griglia non cambia: se non c'è
+            niente da accendere non succede nulla e si resta a chiedersi se
+            abbia capito. Quindi lo si dice. */}
+        {ricercaEvidenzia && q && !idAcceso && (
+          <p
+            className="muted small"
+            style={{ margin: 0, padding: compact ? '4px 8px 0' : '6px 10px 0', flexShrink: 0 }}
+          >
+            🔍 Nessun prodotto per «{query.trim()}».
+          </p>
+        )}
         <div
           ref={gridRef}
           onScroll={() => onInteract?.()}
@@ -353,6 +397,10 @@ export default function PosProductPicker({
             flex: 1,
             minHeight: 0,
             overflowY: 'auto',
+            // Arrivati in cima, il trascinamento si ferma qui: non passa al
+            // documento, dove Android farebbe partire il ricaricamento
+            // della pagina in mezzo a un ordine.
+            overscrollBehavior: 'contain',
             WebkitOverflowScrolling: 'touch',
             padding: '10px 8px',
             display: 'grid',
@@ -409,9 +457,16 @@ export default function PosProductPicker({
                 drink={d}
                 qty={qtyByDrink[d.id] ?? 0}
                 color={tileColor(d)}
+                acceso={d.id === idAcceso}
                 favorite={favSet.has(d.id)}
                 onToggleFav={() => toggleFav(d.id)}
-                onAdd={() => onAdd(d)}
+                onAdd={() => {
+                  // Scelto un prodotto, la ricerca ha finito il suo lavoro:
+                  // lasciarla scritta vorrebbe dire ritrovarsi il catalogo
+                  // intero e una card accesa al prodotto dopo.
+                  if (ricercaEvidenzia && query) setQuery('')
+                  onAdd(d)
+                }}
                 onSetQty={(nq) => onSetQty(d, nq)}
               />
             )

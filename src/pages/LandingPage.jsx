@@ -28,8 +28,13 @@ export default function LandingPage() {
           onError={(e) => (e.target.style.display = 'none')}
         />
         <div className="hero-overlay">
-          <img className="hero-logo" src={`${import.meta.env.BASE_URL}logo.png`} alt="" />
-          <h1 className="hero-title">La Tana del Coniglio</h1>
+          {/* Marchio e nome sulla stessa riga: il logo sopra al nome faceva
+              una torre di tre piani su schermo stretto, dove il nome va già
+              a capo di suo. Di fianco, invece, si leggono insieme. */}
+          <div className="hero-testa">
+            <img className="hero-logo" src={`${import.meta.env.BASE_URL}logo.png`} alt="" />
+            <h1 className="hero-title">La Tana del Coniglio</h1>
+          </div>
           <p className="hero-sub">Cocktail bar · Nola</p>
           <Link className="btn" to="/menu" style={{ marginTop: 14, minWidth: 200 }}>
             🍸 Vai al menù
