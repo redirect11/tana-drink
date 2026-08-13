@@ -13,6 +13,8 @@ una funzione, il terzo per le correzioni.
 
 ### Al banco
 
+- **La versione mostrata dall'app è quella giusta.** Sull'ambiente di
+  test diceva 1.2.0 mentre ci girava sopra la 1.3.0.
 - **Sullo scontrino c'è scritto «Carta di credito», non «Carta».** A fine
   serata la striscia si divide per metodo a colpo d'occhio: «Carta» e
   «Contante» si somigliano troppo. Stesse parole anche sulla chiusura di

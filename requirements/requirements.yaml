@@ -1360,6 +1360,12 @@ requirements:
       si leggono dentro l'app in Impostazioni → Informazioni, insieme ai dati
       tecnici (versione, ramo, commit, ambiente, progetto). Chi usa l'app deve
       poter sapere cosa è cambiato senza chiederlo a chi l'ha scritta.
+      Il NUMERO di versione lo dice package.json, allineato al rilascio, non
+      l'ultimo tag raggiungibile: il tag sta sul merge in main, che non è
+      antenato dei rami di lavoro, e lì `git describe` risaliva al rilascio
+      PRECEDENTE — l'ambiente di test diceva 1.2.0 mentre ci girava la 1.3.0.
+      Un numero sbagliato è peggio di nessun numero: chi segnala un problema
+      dichiara una versione che non è quella che ha davanti.
       E non deve andarle a cercare: l'app si aggiorna da sé mentre la si usa,
       e chi lavora si accorge del cambiamento solo perché qualcosa è finito in
       un altro posto. Toccando «Nuova versione disponibile», alla riapertura
