@@ -1,5 +1,19 @@
 # Cosa è cambiato
 
+## Non ancora rilasciata — 1.4.1
+
+### Al banco
+
+- **Le Impostazioni entrano tutte nella finestra**, senza scorrere la
+  pagina: la testata in alto, il piè di pagina in fondo, e in mezzo
+  l'elenco delle sezioni e il contenuto, che scorrono ognuno per conto
+  suo.
+- **Il titolo della pagina è passato nella barra in alto**, accanto al
+  nome del locale: dentro la pagina si prendeva una riga in cima al
+  contenuto, e su un tablet al banco quella riga si vede.
+
+---
+
 ## 1.4.0 — 13 agosto 2026
 
 ### Al banco

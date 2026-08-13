@@ -28,6 +28,7 @@ import { openCookiePreferences } from './lib/cookieConsent.js'
 import { subscribeUpdateAvailable } from './lib/appVersion.js'
 import { cosaFareAllAvvio, versioneVista, segnaVersioneVista } from './lib/novita.js'
 import { leggiAvvisi, avvisoAttivo } from './lib/preferenzeNotifiche.js'
+import { titoloPagina } from './lib/sezioni.js'
 import { recordNotif } from './lib/notifyStore.js'
 import NovitaDialog from './components/NovitaDialog.jsx'
 import { useOnline } from './lib/useOnline.js'
@@ -269,6 +270,8 @@ export default function App() {
   const indietroQui =
     !!staffRole &&
     ((onBackoffice && tabGestionale !== 'coda') || location.pathname.startsWith('/profilo-staff'))
+  // Che pagina si sta guardando: il titolo va nella barra, non dentro.
+  const pagina = titoloPagina(location.pathname, location.search)
   const drawerDellaPagina =
     (onBackoffice && !!staffRole) ||
     (location.pathname.startsWith('/menu') && !!staffRole && !anteprimaCliente)
@@ -372,6 +375,14 @@ export default function App() {
           <img src={`${import.meta.env.BASE_URL}logo.png`} alt="" />
           <span className="brand-nome">La Tana del Coniglio</span>
         </Link>
+        {/* IL TITOLO DELLA PAGINA STA QUI, attaccato al marchio: dentro la
+            pagina si prendeva una riga in cima al contenuto, e su un tablet
+            al banco quella riga è roba che si vede. */}
+        {pagina && (
+          <span className="topbar-pagina">
+            <span aria-hidden>·</span> {pagina.icona} {pagina.titolo}
+          </span>
+        )}
         <nav className="row">
           <StatusBell />
           {/* A tutto schermo ci va chi LAVORA sull'app per ore (banco, sala):

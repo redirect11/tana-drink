@@ -1823,6 +1823,23 @@ body.fullbleed .bar-content {
 .topbar-back {
   margin-left: -6px;
 }
+/* Il titolo della pagina, attaccato al marchio. Su schermo stretto sparisce:
+   lì la barra ha già poco spazio e il titolo si legge dal menu da cui si è
+   arrivati. */
+.topbar-pagina {
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+  opacity: 0.9;
+}
+@media (max-width: 700px) {
+  .topbar-pagina {
+    display: none;
+  }
+}
 
 /* Dispositivi TOUCH (iPad al banco): i tasti che si usano di continuo — menu,
    voci del menu laterale, azioni della topbar — devono essere presi al volo,
@@ -4286,14 +4303,35 @@ body.fullbleed,
 }
 /* TUTTO DENTRO LO SCHERMO (impostazioni). Le sezioni sono più di venti: la
    barra era più alta della finestra, e per arrivare all'ultima voce si
-   scorreva la PAGINA — testata compresa, che intanto scorreva via. Qui la
-   coppia barra+contenuto è alta quanto lo schermo meno la testata, e a
-   scorrere sono i due pannelli, ognuno per conto suo.
-   Questo è solo il valore di PARTENZA, per non far saltare il riquadro al
-   primo disegno: l'altezza buona la misura CategoryRail.jsx, perché qui il
-   conto non può tenere insieme testata, zoom e piè di pagina. */
+   scorreva la PAGINA — testata compresa, che intanto scorreva via.
+   NON SI MISURA, SI ADATTA. Ci abbiamo provato col righello (100dvh meno la
+   testata, meno il piè di pagina, meno il respiro in fondo) e ogni volta
+   restava fuori un pezzo: prima la pagina sforava, poi avanzava un buco.
+   Qui la pagina è alta quanto la finestra e si divide in tre — testata,
+   quello che resta, piè di pagina — e a scorrere sono i due pannelli. */
+@media (min-width: 701px) {
+  body.pagina-piena .app {
+    /* `zoom` su #root: l'altezza della finestra va letta nella scala della
+       pagina, se no a zoom 125% la pagina è un quarto più alta dello schermo. */
+    height: calc(100dvh / var(--zoom, 1));
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 0; /* i 96px di respiro in fondo qui sono spazio perso */
+  }
+  body.pagina-piena .app > main,
+  body.pagina-piena .bar-content,
+  body.pagina-piena .pagina-impostazioni {
+    flex: 1;
+    min-height: 0; /* senza, un figlio che scorre allunga il padre */
+    display: flex;
+    flex-direction: column;
+  }
+  body.pagina-piena .cat-layout.cat-pieno {
+    flex: 1;
+    min-height: 0;
+  }
+}
 .cat-layout.cat-pieno {
-  height: calc(100dvh / var(--zoom, 1) - var(--safe-top) - var(--barra-alta) - 18px);
   align-items: stretch;
 }
 .cat-layout.cat-pieno .cat-rail {
@@ -4307,17 +4345,9 @@ body.fullbleed,
   /* La barra di scorrimento non deve stare addosso al testo. */
   padding-right: 4px;
 }
-/* A tutto schermo la testata non c'è: quello spazio torna al contenuto. */
-body.fullbleed .cat-layout.cat-pieno {
-  height: calc(100dvh / var(--zoom, 1) - var(--safe-top) - 18px);
-}
 /* Sul telefono la barra passa in orizzontale sopra al contenuto: un'altezza
    fissa lo strozzerebbe in una finestrella. Lì si scorre come sempre. */
 @media (max-width: 700px) {
-  .cat-layout.cat-pieno,
-  body.fullbleed .cat-layout.cat-pieno {
-    height: auto;
-  }
   .cat-layout.cat-pieno .cat-rail,
   .cat-layout.cat-pieno .cat-content {
     height: auto;
