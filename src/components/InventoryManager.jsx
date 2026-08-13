@@ -145,6 +145,7 @@ const INV_VIEWS = [
   ['categorie', '🏷', 'Categorie'],
   ['macro', '🗂', 'Macro-categorie'],
   ['fornitori', '🏭', 'Fornitori'],
+  ['movimenti', '📜', 'Movimenti'],
 ]
 
 // LE SEZIONI DEL MAGAZZINO IN UNA BARRA, come nelle impostazioni. Erano una
@@ -171,6 +172,7 @@ export default function InventoryManager() {
         {view === 'categorie' && <CategoriePanel />}
         {view === 'macro' && <MacroPanel />}
         {view === 'fornitori' && <FornitoriPanel />}
+        {view === 'movimenti' && <MovimentiPanel />}
       </CategoryRail>
     </div>
   )
@@ -202,6 +204,37 @@ function MacroPanel() {
   return <MacroCategoryManager macros={macros} categories={categories} onChange={ricarica} />
 }
 
+// I MOVIMENTI HANNO UNA SEZIONE LORO. Stavano in fondo alla lista dei
+// prodotti dietro un tasto largo quanto lo schermo: fuori contesto (non
+// sono un prodotto), e in mezzo ai piedi a chi cercava una bottiglia.
+function MovimentiPanel() {
+  const [movements, setMovements] = useState([])
+  const [loading, setLoading] = useState(true)
+  useEffect(() => {
+    fetchStockMovements({ limit: 100 })
+      .then(setMovements)
+      .catch(() => setMovements([]))
+      .finally(() => setLoading(false))
+  }, [])
+  if (loading) return <div className="empty">Carico i movimenti…</div>
+  if (movements.length === 0) return <div className="empty">Ancora nessun movimento.</div>
+  return (
+    <div className="card inv-movimenti">
+      {movements.map((m) => (
+        <div className="row between" key={m.id}>
+          <span className="muted small">
+            {m.type === 'load' ? '⬆' : '⬇'} {m.item_name} · {m.reason}
+          </span>
+          <span className="muted small">
+            {m.type === 'load' ? '+' : '−'}
+            {formatQty(m.qty, m.unit)}
+          </span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function FornitoriPanel() {
   const [suppliers, setSuppliers] = useState([])
   const ricarica = async () => setSuppliers(await fetchSuppliers())
@@ -215,12 +248,10 @@ function ProductsPanel() {
   const [items, setItems] = useState([])
   const [categories, setCategories] = useState([])
   const [suppliers, setSuppliers] = useState([])
-  const [movements, setMovements] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
   const [editing, setEditing] = useState(null) // null | 'new' | item
-  const [showMovs, setShowMovs] = useState(false)
 
   // Filtri
   const [query, setQuery] = useState('')
@@ -262,16 +293,14 @@ function ProductsPanel() {
   async function load() {
     setLoading(true)
     try {
-      const [its, cats, sups, movs] = await Promise.all([
+      const [its, cats, sups] = await Promise.all([
         fetchInventoryItems(),
         fetchInventoryCategories().catch(() => []),
         fetchSuppliers().catch(() => []),
-        fetchStockMovements({ limit: 30 }).catch(() => []),
       ])
       setItems(its)
       setCategories(cats)
       setSuppliers(sups)
-      setMovements(movs)
     } catch (e) {
       setError(e.message)
     } finally {
@@ -752,26 +781,6 @@ function ProductsPanel() {
 
       </CategoryRail>
 
-      {/* Movimenti (collassabile) */}
-      {movements.length > 0 && (
-        <div className="card" style={{ marginTop: 12 }}>
-          <button className="btn ghost small block" onClick={() => setShowMovs((v) => !v)}>
-            {showMovs ? 'Nascondi movimenti' : '📜 Ultimi movimenti'}
-          </button>
-          {showMovs &&
-            movements.map((m) => (
-              <div className="row between" key={m.id} style={{ marginTop: 6 }}>
-                <span className="muted small">
-                  {m.type === 'load' ? '⬆' : '⬇'} {m.item_name} · {m.reason}
-                </span>
-                <span className="muted small">
-                  {m.type === 'load' ? '+' : '−'}
-                  {formatQty(m.qty, m.unit)}
-                </span>
-              </div>
-            ))}
-        </div>
-      )}
     </div>
   )
 }

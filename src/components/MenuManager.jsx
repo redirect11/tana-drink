@@ -357,17 +357,25 @@ export default function MenuManager() {
                   const open = openId === d.id
                   return (
                     <div
-                      className={`card grid-card admin-card menu-card${d.available ? '' : ' off'}`}
+                      /* DUE SEGNI, DUE COSE DIVERSE, dove uno se le aspetta.
+                         La STRISCIA A SINISTRA dice come sta il prodotto —
+                         come sulle card della coda, dove la striscia dice
+                         com'è messo il conto. La LINGUETTA nell'angolo è il
+                         colore che il prodotto ha al banco, disegnata come
+                         sulle tile del POS: là quel segno vuol dire già
+                         quello, e qui si tocca per cambiarlo.
+                         Prima erano un quadratino (che sembrava un'etichetta
+                         e invece era un tasto) e un pallino il cui rosso
+                         diceva due cose opposte: «l'ho spento io» e «è finito
+                         il rum». */
+                      className={`card grid-card admin-card menu-card stato-${statoMenu(d).dot}${d.available ? '' : ' off'}`}
                       key={d.id}
-                      /* Il colore con cui il prodotto appare al banco sta
-                         ADDOSSO alla card, non nascosto in un pannello: è
-                         così che lo si riconosce sul POS. */
                       style={{ '--menu-colore': tileColors[d.id] || drinkCategoryColor(d, categories) }}
                     >
                       <button
                         type="button"
                         className="menu-colore-spia"
-                        title="Cambia il colore al banco"
+                        title="Colore al banco: tocca per cambiarlo"
                         aria-label={`Colore di ${d.name}`}
                         aria-expanded={coloreId === d.id}
                         onClick={() => setColoreId(coloreId === d.id ? null : d.id)}
@@ -405,14 +413,6 @@ export default function MenuManager() {
                       >
                         <div className="row between" style={{ alignItems: 'flex-start', gap: 6 }}>
                           <strong style={{ fontSize: '0.92rem', lineHeight: 1.25 }}>{d.name}</strong>
-                          {/* Stato col pallino dell'inventario: prima si
-                              distingueva solo dal grigio della card, che a
-                              colpo d'occhio su una griglia piena non si vede. */}
-                          <span
-                            className={`dot dot-${statoMenu(d).dot}`}
-                            title={statoMenu(d).testo}
-                            style={{ marginTop: 4 }}
-                          />
                         </div>
                         <div className="row between" style={{ alignItems: 'baseline' }}>
                           <span className="muted small">{statoMenu(d).testo}</span>

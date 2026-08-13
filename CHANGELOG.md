@@ -9,6 +9,19 @@
   l'elenco delle sezioni e il contenuto, che **scorrono ognuno per conto
   suo** — l'elenco resta lì mentre si legge la sezione, invece di
   trascinarsi via insieme alla pagina.
+- **Sulle card del menù i due segni dicono cose diverse, dove uno se le
+  aspetta.** La **striscia a sinistra** dice come sta il prodotto — verde
+  si può fare, arancione un ingrediente sta finendo, rosso non si può
+  fare — come sulle card della coda dice com'è messo il conto. Il colore
+  al banco è diventato una **linguetta nell'angolo**, disegnata come sulle
+  tile del POS: si tocca per cambiarlo. Prima erano un quadratino che
+  sembrava un'etichetta (ed era un tasto) e un pallino il cui rosso
+  diceva due cose opposte.
+- **Anche le tile del POS hanno la striscia a sinistra**, come le card
+  della coda e del menù: lo stesso oggetto si riconosce allo stesso modo
+  in ogni schermata.
+- **«Ultimi movimenti» non è più un tastone in fondo alla lista**: è una
+  sezione del menu del magazzino, con gli ultimi cento invece di trenta.
 - **Il magazzino sta in una schermata sola.** Prodotti, Conta, Ordini,
   Scadenzario, Categorie, Macro-categorie e Fornitori sono diventati un
   menu a sinistra, come nelle impostazioni — prima erano due file di tasti
