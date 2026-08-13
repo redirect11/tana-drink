@@ -44,8 +44,15 @@ export default function CategoryRail({ items, selected, onSelect, children, pien
       // l'altezza che scriviamo è in pixel della pagina zoomata.
       const z =
         Number(getComputedStyle(document.documentElement).getPropertyValue('--zoom')) || 1
-      const sotto = document.querySelector('.app-footer')?.getBoundingClientRect().height || 0
-      const alto = (window.innerHeight - el.getBoundingClientRect().top - sotto - 10) / z
+      const mio = el.getBoundingClientRect()
+      // QUANTO C'È SOTTO, misurato e non elencato: il piè di pagina, i 96px
+      // di respiro in fondo alla pagina, e qualunque cosa ci si aggiunga
+      // domani. Contando solo il piè di pagina la pagina sforava lo stesso —
+      // di quei 96px, che nessuno si ricordava. La distanza fra il fondo del
+      // riquadro e il fondo della pagina non cambia con l'altezza che gli
+      // diamo, quindi la si può misurare prima.
+      const sotto = Math.max(0, document.body.getBoundingClientRect().bottom - mio.bottom)
+      const alto = (window.innerHeight - mio.top - sotto - 6) / z
       const nuova = `${Math.max(220, Math.floor(alto))}px`
       if (el.style.height !== nuova) el.style.height = nuova
     }
