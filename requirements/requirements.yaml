@@ -615,15 +615,17 @@ requirements:
     area: "src/components/InventoryManager.jsx, src/components/CategoryRail.jsx"
     description: >
       Prodotti, Conta, Ordini, Scadenzario, Categorie, Macro-categorie,
-      Fornitori e Movimenti sono SCHEDE su una riga, sotto la testata: erano
-      due file di tasti più tre pannelli a scomparsa in mezzo alla lista, e
-      prima di vedere un prodotto se ne andavano cinque righe di schermo. In
-      una barra a sinistra costavano una colonna, e dentro «Prodotti» c'è già
-      la barra delle categorie: due elenchi affiancati mangiano mezzo schermo,
-      e stringendo quello di fuori diventavano illeggibili tutti e due.
-      Le barre laterali che si possono stringere a icone restano dove servono
-      (impostazioni, categorie dei prodotti), e stringendone una NON si toccano
-      quelle annidate dentro.
+      Fornitori e Movimenti si scelgono dalla BARRA IN ALTO: il titolo della
+      pagina è il comando. In pagina costavano spazio fisso tutto il giorno —
+      due file di tasti più tre pannelli a scomparsa, poi una barra a sinistra
+      (che rubava la colonna ai prodotti), poi una riga di schede — per una
+      scelta che si fa ogni tanto. Sul telefono, dove nella barra non ci sta un
+      elenco, si apre il foglio dal basso: lo stesso gesto di «⋯ Azioni», che
+      al banco si conosce già.
+      La ricerca sta sopra; sotto, una riga sola con due TENDINE (filtri di
+      scorta e assortimento, fornitore), il valore di magazzino, card/lista
+      come due icone e il tasto per un prodotto nuovo. Il tasto di una tendina
+      dice cosa è scelto senza doverla aprire.
       I filtri (tutti, in esaurimento, esauriti, e i quattro di assortimento)
       stanno su UNA RIGA sola, con scritto che sono filtri: sembravano un
       riepilogo, si leggevano i numeri senza capire che toccandoli la lista si
@@ -1252,8 +1254,10 @@ requirements:
       dove non c'è menu e si esce con «← Ordini». Nelle sezioni del gestionale
       l'«indietro» sta nella barra, fra il ☰ e il marchio: dentro la pagina si
       mangiava la prima riga di contenuto. E accanto al marchio c'è il TITOLO
-      della pagina che si sta guardando (icona compresa), al posto di un
-      titolo dentro il contenuto: su un tablet al banco una riga in meno di
+      della pagina che si sta guardando (icona compresa) — che diventa il
+      COMANDO per cambiare sottosezione dove ce ne sono (magazzino,
+      impostazioni): a tendina da tablet in su, foglio dal basso sul telefono.
+      Al posto di un titolo dentro il contenuto: su un tablet al banco una riga in meno di
       contenuto si vede. Le voci del menu laterale e i titoli sono lo stesso
       elenco, in un posto solo, se no prima o poi uno dice «Lista ordini» e
       l'altro «Storico». Sul telefono il titolo sparisce: lì la barra ha già

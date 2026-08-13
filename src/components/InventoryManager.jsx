@@ -54,6 +54,8 @@ import CategoryRail from './CategoryRail.jsx'
 import SectionPanels from './SectionPanels.jsx'
 import { IconTag, IconCartelle, IconFornitore } from './Icons.jsx'
 import Tendina from './Tendina.jsx'
+import { useSottosezioni } from '../lib/sottosezioni.js'
+import { usePaginaPiena } from '../lib/paginaPiena.js'
 
 const STATUS_ITEM = [
   { value: 'assortimento', label: 'In assortimento' },
@@ -157,37 +159,29 @@ const INV_VIEWS = [
   ['movimenti', '📜', 'Movimenti'],
 ]
 
-// LE SEZIONI DEL MAGAZZINO SONO SCHEDE, sotto la testata. Le avevo messe in
-// una barra a sinistra come nelle impostazioni: lì dentro però c'è già la
-// barra delle categorie dei prodotti, e due elenchi affiancati mangiavano
-// mezzo schermo — stringendo il primo diventavano illeggibili tutti e due.
-// In orizzontale costano una riga sola e lasciano la larghezza ai prodotti.
+// LE SEZIONI DEL MAGAZZINO STANNO NELLA BARRA IN ALTO. Le ho provate in due
+// modi sbagliati: a sinistra costavano una colonna (e dentro c'è già la barra
+// delle categorie), in orizzontale una riga. Sono una scelta che si fa ogni
+// tanto e non merita spazio fisso: ora è il TITOLO della pagina a diventare
+// il comando, e sul telefono si apre il foglio dal basso.
 export default function InventoryManager() {
   const [view, setView] = useState('prodotti')
+  usePaginaPiena()
+  useSottosezioni(
+    INV_VIEWS.map(([id, icona, label]) => ({ id, icona, label })),
+    view,
+    setView
+  )
   return (
     <div className="pagina-inventario">
-      <div className="tab-sezioni">
-        {INV_VIEWS.map(([id, icona, label]) => (
-          <button
-            key={id}
-            className={`chip ${view === id ? 'active' : ''}`}
-            onClick={() => setView(id)}
-            title={label}
-          >
-            <span aria-hidden>{icona}</span> {label}
-          </button>
-        ))}
-      </div>
-      <div className="tab-corpo">
-        {view === 'prodotti' && <ProductsPanel />}
-        {view === 'conta' && <StockCountPanel />}
-        {view === 'ordini' && <PurchaseOrdersPanel />}
-        {view === 'scadenzario' && <SupplierInvoicesPanel />}
-        {view === 'categorie' && <CategoriePanel />}
-        {view === 'macro' && <MacroPanel />}
-        {view === 'fornitori' && <FornitoriPanel />}
-        {view === 'movimenti' && <MovimentiPanel />}
-      </div>
+      {view === 'prodotti' && <ProductsPanel />}
+      {view === 'conta' && <StockCountPanel />}
+      {view === 'ordini' && <PurchaseOrdersPanel />}
+      {view === 'scadenzario' && <SupplierInvoicesPanel />}
+      {view === 'categorie' && <CategoriePanel />}
+      {view === 'macro' && <MacroPanel />}
+      {view === 'fornitori' && <FornitoriPanel />}
+      {view === 'movimenti' && <MovimentiPanel />}
     </div>
   )
 }

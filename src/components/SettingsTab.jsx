@@ -9,7 +9,6 @@ import { CANCEL_PHRASES } from '../lib/orderStatus.js'
 import { parseCarteCsv, decodeCsvBuffer } from '../lib/carteImport.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import ThemeSettings from './ThemeSettings.jsx'
-import CategoryRail from './CategoryRail.jsx'
 import PrinterSetup from './PrinterSetup.jsx'
 import BackupPanel from './BackupPanel.jsx'
 import InfoTab from './InfoTab.jsx'
@@ -24,10 +23,15 @@ import {
   avvisoAttivo,
 } from '../lib/preferenzeNotifiche.js'
 import { devToolsEnabled } from '../dev/devActions.js'
+import { Sottosezioni } from '../lib/sottosezioni.js'
+import { usePaginaPiena } from '../lib/paginaPiena.js'
 
 // Impostazioni del bar (documento settings/bar). Ogni modifica viene salvata
 // subito; le pagine cliente le ricevono in tempo reale via subscribeSettings.
 export default function SettingsTab({ role = null }) {
+  // La schermata sta tutta nella finestra: scorre la sezione aperta, non la
+  // pagina con dentro la testata.
+  usePaginaPiena()
   const [settings, setSettings] = useState(null)
   const [error, setError] = useState(null)
   const [confermaSpegni, setConfermaSpegni] = useState(false) // gestione preparazione
@@ -804,7 +808,13 @@ export default function SettingsTab({ role = null }) {
 
   return (
     <div className="pagina-impostazioni">
-      {/* Il titolo sta nella barra in alto (vedi lib/sezioni.js). */}
+      {/* Il titolo sta nella barra in alto (vedi lib/sezioni.js), e con lui
+          l'elenco delle sezioni: in pagina costava una colonna intera. */}
+      <Sottosezioni
+        voci={sezioni.map((x) => ({ id: x.id, icona: x.icona, label: x.label }))}
+        attiva={attiva.id}
+        scegli={scegliSezione}
+      />
       {error && <div className="banner">Errore: {error}</div>}
 
       {confermaSpegni && (
@@ -833,14 +843,10 @@ export default function SettingsTab({ role = null }) {
         />
       )}
 
-      <CategoryRail
-        items={sezioni.map((s) => ({ key: s.id, label: s.label, icon: s.icona }))}
-        selected={attiva.id}
-        onSelect={scegliSezione}
-        pieno
-      >
-        {attiva.nodo}
-      </CategoryRail>
+      {/* Le sezioni stanno nella barra in alto (il titolo è il comando):
+          a sinistra costavano una colonna tutto il giorno per una scelta che
+          si fa ogni tanto. */}
+      <div className="tab-corpo">{attiva.nodo}</div>
     </div>
   )
 }

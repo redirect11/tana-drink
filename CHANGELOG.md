@@ -22,14 +22,13 @@
   in ogni schermata.
 - **«Ultimi movimenti» non è più un tastone in fondo alla lista**: è una
   sezione del menu del magazzino, con gli ultimi cento invece di trenta.
-- **Il magazzino sta in una schermata sola.** Prodotti, Conta, Ordini,
-  Scadenzario, Categorie, Macro-categorie, Fornitori e Movimenti sono
-  diventati **schede su una riga**, sotto la testata — prima erano due file
-  di tasti più tre pannelli a scomparsa, e cinque righe di schermo se ne
-  andavano prima di vedere un prodotto. A sinistra costavano una colonna
-  che serve ai prodotti.
-- Nelle **Impostazioni** il menu delle sezioni **si stringe a icone**, e la
-  scelta si ricorda.
+- **Le sezioni di una pagina si scelgono dalla barra in alto.** Nel
+  magazzino (Prodotti, Conta, Ordini, Scadenzario, Categorie,
+  Macro-categorie, Fornitori, Movimenti) e nelle Impostazioni: il **titolo
+  della pagina è il comando**, con la freccia. Prima erano file di tasti o
+  una colonna a sinistra — spazio occupato tutto il giorno per una scelta
+  che si fa ogni tanto. **Sul telefono** si apre il foglio dal basso, lo
+  stesso gesto di «⋯ Azioni».
 - **I filtri del magazzino stanno su una riga sola**, e ora c'è scritto
   che sono filtri: sembravano un riepilogo, e nessuno pensava di toccarli.
   Il valore di magazzino resta lì accanto, ma non si tocca: è un numero da
