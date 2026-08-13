@@ -4346,6 +4346,16 @@ body.fullbleed,
   height: auto;
   overflow-y: auto;
 }
+/* Il contenuto si arrangia da sé: niente scorrimento qui, ce l'ha dentro
+   (una lista lunga con la sua testata fissa). Due barre di scorrimento una
+   dentro l'altra sono un modo per non trovare più niente. */
+.cat-layout.cat-pieno .cat-content-fisso {
+  min-height: 0;
+  height: auto;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
 .cat-layout.cat-pieno .cat-content {
   min-height: 0;
   height: auto;
@@ -5087,4 +5097,131 @@ body:has(.overlay) .zoom-control {
 /* Nello storico non c'è più niente da fare: si legge e basta. */
 .status-bell-item.letta {
   opacity: 0.65;
+}
+
+/* ── Barra delle sezioni STRETTA: solo le icone ───────────────────────
+   Dove dentro c'è già una barra di categorie (Inventario) due elenchi
+   affiancati mangiano mezzo schermo. Stretta resta l'icona; il nome torna
+   sfiorandola, e sta comunque nel titolo per chi usa le dita. */
+.cat-rail-stringi {
+  justify-content: center !important;
+  opacity: 0.7;
+  font-size: 0.8rem;
+  min-height: 26px;
+}
+.cat-stretta .cat-rail {
+  min-width: 0;
+  width: auto;
+}
+.cat-stretta .cat-rail .chip {
+  justify-content: center;
+  padding-inline: 10px;
+}
+.cat-stretta .cat-rail-label,
+.cat-stretta .cat-rail-count {
+  display: none;
+}
+/* Sfiorando la voce il nome torna, sopra il contenuto: serve a chi non ha
+   ancora in mente cosa c'è dietro a ogni icona. */
+.cat-stretta .cat-rail .chip {
+  position: relative;
+}
+.cat-stretta .cat-rail .chip:hover .cat-rail-label {
+  display: block;
+  position: absolute;
+  left: calc(100% + 6px);
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 20;
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--bg-2);
+  white-space: nowrap;
+  pointer-events: none;
+}
+/* Sul telefono la barra è già una riga orizzontale che scorre: lì
+   "stringere" non vuol dire niente e il tasto non serve. */
+@media (max-width: 700px) {
+  .cat-rail-stringi {
+    display: none;
+  }
+  .cat-stretta .cat-rail-label {
+    display: inline;
+  }
+}
+
+/* ── I FILTRI DEL MAGAZZINO: una riga sola ────────────────────────────
+   Erano tre file di pastiglie che sembravano un riepilogo — si leggevano i
+   numeri senza capire che toccandoli la lista si restringeva. Ora è una
+   riga, con scritto che è un filtro; quando non ci sta, scorre in
+   orizzontale: meglio scorrere una riga che perderne tre. */
+.inv-filtri {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  min-width: 0;
+}
+.inv-filtri-eti {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.inv-filtri-riga {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  padding-bottom: 2px;
+}
+.inv-filtri-riga .chip {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+/* Stacco fra "come sta a scorta" e "che assortimento è": due domande
+   diverse sulla stessa riga. */
+.inv-filtri-sep {
+  flex-shrink: 0;
+  width: 1px;
+  align-self: stretch;
+  background: var(--line);
+  margin-inline: 2px;
+}
+/* Il valore di magazzino NON è un filtro: non si tocca e non si accende. */
+.inv-valore {
+  flex-shrink: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+@media (max-width: 700px) {
+  .inv-filtri-eti {
+    display: none;
+  }
+  .inv-valore {
+    font-size: 0.78rem;
+  }
+}
+
+/* ── Magazzino: la lista scorre, la testata resta ─────────────────────
+   Filtri, ricerca e categorie stanno fermi; a scorrere è solo l'elenco dei
+   prodotti. Prima scorreva tutta la pagina, e per tornare alla ricerca
+   dopo aver guardato in fondo si risaliva da capo. */
+body.pagina-piena .pagina-inventario,
+body.pagina-piena .pagina-inventario .inv-panel {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+body.pagina-piena .pagina-inventario .inv-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }

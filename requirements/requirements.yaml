@@ -610,6 +610,31 @@ requirements:
     labels: [magazzino, menu, dati]
     test_cases: []
 
+  - id: REQ-MAG-010
+    title: "Il magazzino sta in una schermata, con le sezioni a lato"
+    area: "src/components/InventoryManager.jsx, src/components/CategoryRail.jsx"
+    description: >
+      Prodotti, Conta, Ordini, Scadenzario, Categorie, Macro-categorie e
+      Fornitori sono voci di una BARRA LATERALE, come nelle impostazioni: erano
+      una fila di tasti in cima più tre pannelli a scomparsa in mezzo alla
+      lista, e prima di vedere un prodotto se ne andavano cinque righe di
+      schermo. La barra si può STRINGERE A ICONE — dentro «Prodotti» ce n'è già
+      una per le categorie, e due elenchi affiancati mangiano mezzo schermo; il
+      nome torna sfiorando l'icona e resta nel titolo per chi usa le dita. La
+      scelta stretta/larga si ricorda per pagina.
+      I filtri (tutti, in esaurimento, esauriti, e i quattro di assortimento)
+      stanno su UNA RIGA sola, con scritto che sono filtri: sembravano un
+      riepilogo, si leggevano i numeri senza capire che toccandoli la lista si
+      restringeva. Il valore di magazzino è lì accanto ma non si tocca: è un
+      numero da leggere, non un filtro.
+      Tutto sta nella finestra: filtri, ricerca e categorie restano fermi, a
+      scorrere è solo l'elenco dei prodotti — prima, per tornare alla ricerca
+      dopo aver guardato in fondo, si risaliva da capo.
+    status: implemented
+    generate_issue: false
+    labels: [magazzino, ux]
+    test_cases: []
+
   # ══════════════════════════════════════════════════════════════════════
   #  MENÙ E CATALOGO
   # ══════════════════════════════════════════════════════════════════════
