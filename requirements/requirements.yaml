@@ -300,16 +300,21 @@ requirements:
     title: "In «Organizza» la card segue il dito"
     area: "src/components/PosProductPicker.jsx, src/index.css"
     description: >
-      Trascinando una card della griglia, quella in mano si muove INSIEME al
-      dito (nessuna transizione: con una arriverebbe dove sei stato, non dove
-      sei) e le altre SCIVOLANO per fare spazio. Il riordino non scatta a ogni
-      pixel: si aspetta che il dito stia fermo un attimo sopra un'altra card —
-      passandoci sopra in fretta, riordinare a ogni sfioramento fa impazzire
-      la griglia sotto le dita. Lasciando la card, lo spostamento si toglie e
-      la card torna al suo posto nella griglia, invece di restare dove l'ha
-      lasciata il dito. La maniglia è attaccata alla card, non affiancata: è
-      la stessa cosa, e fra le due c'era una fessura con gli angoli tondi da
-      tutte e due le parti.
+      Trascinando una card dalla maniglia, quella in mano segue il dito e le
+      altre si spostano per farle posto; lasciandola, resta dove l'hai messa.
+      Lo fa una libreria (dnd-kit), non codice nostro: la versione scritta a
+      mano — cattura del puntatore, ciclo di auto-scroll, animazioni a mano —
+      aveva un difetto dopo l'altro (lo scorrimento che non si fermava, le
+      card che si spostavano solo mentre la griglia scorreva, il rilascio
+      fuori area). Trascinare col dito è un problema risolto, con dieci casi
+      limite che non si vedono finché non capitano al banco; in più arriva
+      gratis il riordino da TASTIERA, che non avevamo.
+      Quello che resta nostro è la regola: l'ordine è UNO SOLO e globale,
+      anche quando a schermo c'è una sola categoria — se no spostare una birra
+      dentro «Birre» la lascerebbe al suo posto in «Tutti».
+      La maniglia è attaccata alla card, non affiancata: è la stessa cosa, e
+      fra le due c'era una fessura con gli angoli tondi da tutte e due le
+      parti.
     status: implemented
     generate_issue: false
     labels: [pos, ux]

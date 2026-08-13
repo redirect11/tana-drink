@@ -420,32 +420,25 @@ export default function App() {
               {(sezioneAttiva?.label) || pagina.titolo} <span aria-hidden>▾</span>
             </button>
           ) : (
-            // FUORI dal contenitore del titolo: quello taglia (overflow
-            // hidden, per i puntini) e il pannello della tendina si apriva
-            // invisibile — sembrava che il tocco non funzionasse.
-            <Tendina
-                classe="tendina-barra"
-                etichetta={pagina.titolo}
-                riassunto={`${(sezioneAttiva?.icona) || pagina.icona} ${(sezioneAttiva?.label) || pagina.titolo}`}
-              >
-                {(chiudi) =>
-                  vociSotto.map((v) => (
-                    <button
-                      key={v.id}
-                      type="button"
-                      className={`tendina-voce${v.id === sotto.attiva ? ' scelta' : ''}`}
-                      onClick={() => {
-                        sotto.scegli?.(v.id)
-                        chiudi()
-                      }}
-                    >
-                      <span>
-                        <span aria-hidden>{v.icona}</span> {v.label}
-                      </span>
-                    </button>
-                  ))
-                }
-            </Tendina>
+            // DA TABLET IN SU: SCHEDE nella barra, tutte in vista. Una
+            // tendina costringe ad aprirla per sapere cosa c'è, e con lo
+            // spazio che qui c'è è un giro in più per niente. Se non ci
+            // stanno, la fila scorre in orizzontale.
+            <div className="topbar-tabs" role="tablist" aria-label={pagina.titolo}>
+              {vociSotto.map((v) => (
+                <button
+                  key={v.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={v.id === sotto.attiva}
+                  className={`chip${v.id === sotto.attiva ? ' active' : ''}`}
+                  onClick={() => sotto.scegli?.(v.id)}
+                  title={v.label}
+                >
+                  <span aria-hidden>{v.icona}</span> {v.label}
+                </button>
+              ))}
+            </div>
           )
         )}
         <nav className="row">

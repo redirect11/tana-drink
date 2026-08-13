@@ -33,12 +33,13 @@
 - **L'intestazione della tabella del magazzino non scorre più via**:
   scorrendo trecento prodotti si perdevano i nomi delle colonne, e «6,20 €»
   senza sapere se è con o senza IVA non vuol dire niente.
-- **In «Organizza» la card segue il dito.** Prima scattava di posto: ora
-  si muove insieme al dito, e le altre **scivolano** per fare spazio
-  quando ci si ferma un attimo sopra. Lasciandola, torna al suo posto
-  invece di restare spostata. La maniglia è attaccata alla card — erano
-  due oggetti con una fessura in mezzo — e ha il colore di casa al posto
-  della macchia senape.
+- **In «Organizza» il trascinamento funziona come ci si aspetta**: la card
+  segue il dito, le altre si spostano per farle posto, e lasciandola resta
+  dove l'hai messa. Si può riordinare anche **da tastiera**. La maniglia è
+  attaccata alla card — erano due oggetti con una fessura in mezzo — e ha
+  il colore di casa al posto della macchia senape.
+- **Le sezioni della pagina sono schede nella barra** su tablet e computer,
+  e restano a tendina sul telefono, dove lo spazio non c'è.
 - **Sul telefono la barra in alto respira.** C'erano otto cose in una riga
   e il nome del locale finiva in «La …»: ora sotto i 700px restano il
   logo, il menu, dove sei e le azioni. L'«indietro» sparisce perché il
