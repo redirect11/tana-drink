@@ -4319,6 +4319,7 @@ body.fullbleed,
     padding-bottom: 0; /* i 96px di respiro in fondo qui sono spazio perso */
   }
   body.pagina-piena .app > main,
+  body.pagina-piena .bar-page,
   body.pagina-piena .bar-content,
   body.pagina-piena .pagina-impostazioni {
     flex: 1;
@@ -4337,10 +4338,17 @@ body.fullbleed,
 .cat-layout.cat-pieno .cat-rail {
   position: static;
   max-height: none;
-  height: 100%;
+  /* Alta quanto la riga (align-items: stretch) e con lo scorrimento suo:
+     l'elenco delle sezioni è più lungo della finestra e deve scorrere per
+     conto proprio, non trascinarsi dietro la pagina. `min-height: 0` perché
+     un figlio che scorre, senza, allunga il padre invece di scorrere. */
+  min-height: 0;
+  height: auto;
+  overflow-y: auto;
 }
 .cat-layout.cat-pieno .cat-content {
-  height: 100%;
+  min-height: 0;
+  height: auto;
   overflow-y: auto;
   /* La barra di scorrimento non deve stare addosso al testo. */
   padding-right: 4px;
