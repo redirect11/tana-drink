@@ -4710,26 +4710,39 @@ body.fullbleed .cat-rail {
 /* La card del prodotto porta il suo colore: una fascia sul bordo sinistro,
    come la piastrella al banco. La pastiglia in alto a destra apre la
    tavolozza senza dover aprire le azioni. */
+/* LA STRISCIA A SINISTRA DICE COME STA IL PRODOTTO, come sulle card della
+   coda dice com'è messo il conto: verde si può fare, arancione un
+   ingrediente sta finendo, rosso non si può fare (spento a mano o
+   ingrediente esaurito — la riga sotto al nome dice quale dei due). */
 .menu-card {
   position: relative;
-  border-left: 5px solid var(--menu-colore, transparent);
+  border-left: 5px solid var(--line);
 }
+.menu-card.stato-ok { border-left-color: #2ecc71; }
+.menu-card.stato-low { border-left-color: #f39c12; }
+.menu-card.stato-empty { border-left-color: #e74c3c; }
+
+/* LA LINGUETTA NELL'ANGOLO è il colore che il prodotto ha al banco, disegnata
+   come sulle tile del POS: là quel segno vuol dire già quello. Si tocca per
+   cambiarlo — prima era un quadratino che sembrava un'etichetta. */
 .menu-colore-spia {
   position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 18px;
-  height: 18px;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
   padding: 0;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--menu-colore, transparent);
+  border: none;
+  border-top: 1.7em solid var(--menu-colore, transparent);
+  border-right: 1.7em solid transparent;
+  border-top-left-radius: 12px;
+  background: none;
   cursor: pointer;
 }
 @media (pointer: coarse) {
   .menu-colore-spia {
-    width: 26px;
-    height: 26px;
+    border-top-width: 2.1em;
+    border-right-width: 2.1em;
   }
 }
 .menu-colori-riga {
@@ -5149,6 +5162,15 @@ body:has(.overlay) .zoom-control {
   .cat-stretta .cat-rail-label {
     display: inline;
   }
+}
+
+/* Le tile della griglia POS hanno la striscia a sinistra come tutte le altre
+   card (coda, menù): lo stesso oggetto — un prodotto, un conto — si riconosce
+   allo stesso modo ovunque, invece di cambiare linguaggio da una schermata
+   all'altra. */
+.pos-tile-striscia {
+  border-left-width: 5px !important;
+  border-left-style: solid !important;
 }
 
 /* ── I FILTRI DEL MAGAZZINO: una riga sola ────────────────────────────

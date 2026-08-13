@@ -629,7 +629,9 @@ requirements:
       numero da leggere, non un filtro.
       Tutto sta nella finestra: filtri, ricerca e categorie restano fermi, a
       scorrere è solo l'elenco dei prodotti — prima, per tornare alla ricerca
-      dopo aver guardato in fondo, si risaliva da capo.
+      dopo aver guardato in fondo, si risaliva da capo. Anche i MOVIMENTI sono
+      una sezione: stavano in fondo alla lista dei prodotti dietro un tasto
+      largo quanto lo schermo, fuori contesto e in mezzo ai piedi.
     status: implemented
     generate_issue: false
     labels: [magazzino, ux]
@@ -649,6 +651,27 @@ requirements:
     status: implemented
     generate_issue: false
     labels: [menu, magazzino]
+    test_cases: []
+
+  - id: REQ-MENU-006
+    title: "Sulle card i segni dicono cose diverse, dove uno se le aspetta"
+    area: "src/components/MenuManager.jsx, src/components/PosBits.jsx, src/index.css"
+    description: >
+      Un oggetto si riconosce allo stesso modo in ogni schermata. La STRISCIA A
+      SINISTRA dice come sta la cosa: sulle card della coda com'è messo il
+      conto, sulle card del menù se il prodotto si può fare (verde), se un
+      ingrediente sta finendo (arancione) o se non si può fare (rosso, e la
+      riga sotto al nome dice se è spento a mano o se manca l'ingrediente).
+      La LINGUETTA NELL'ANGOLO è il colore che il prodotto ha al banco,
+      disegnata come sulle tile del POS, dove quel segno vuol dire già quello;
+      nel menù si tocca per cambiarlo. Anche le tile del POS portano la
+      striscia a sinistra, come tutte le altre card.
+      Prima il menù aveva un quadratino che sembrava un'etichetta e invece era
+      un tasto, e un pallino il cui rosso diceva due cose opposte — «l'ho
+      spento io» e «è finito il rum» — che chiedono azioni diverse.
+    status: implemented
+    generate_issue: false
+    labels: [menu, ux]
     test_cases: []
 
   - id: REQ-MENU-005
