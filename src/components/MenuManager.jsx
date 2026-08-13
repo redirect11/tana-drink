@@ -202,8 +202,12 @@ export default function MenuManager() {
     () => Object.fromEntries((inventory || []).map((i) => [i.id, i])),
     [inventory]
   )
+  // QUATTRO STATI, QUATTRO COLORI SULLA STRISCIA. Il rosso diceva due cose
+  // opposte: «l'ho tolto io dal menu» e «è finito l'ingrediente» — la prima
+  // si riaccende, la seconda si compra. Ora chi è fuori menu è GRIGIO:
+  // spento, non rotto.
   const statoMenu = (d) => {
-    if (!d.available) return { dot: 'empty', testo: 'Non disponibile' }
+    if (!d.available) return { dot: 'nascosto', testo: 'Non in menu' }
     const ingredienti = (d.recipe_items || [])
       .map((r) => scorteById[r.inventory_item_id])
       .filter(Boolean)

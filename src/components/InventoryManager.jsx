@@ -716,7 +716,15 @@ function ProductsPanel() {
             const bs = bottleSummary(it)
             const perCl = costPerUnit(it, 'cl') // già IVA inclusa
             return (
-              <div className={`inv-row inv-${st}${expanded ? ' open' : ''}`} key={it.id}>
+              /* DUE SEGNI, DUE COSE. Il PALLINO dice quanta roba c'è
+                 (verde/arancione/rosso), la STRISCIA che assortimento è —
+                 in linea, premium, in assortimento, fuori. Prima dicevano
+                 tutti e due la stessa cosa, e l'assortimento si leggeva
+                 solo dai bollini accanto al nome. */
+              <div
+                className={`inv-row ass-${assortimentoDi(it)}${expanded ? ' open' : ''}`}
+                key={it.id}
+              >
                 <button
                   type="button"
                   className="inv-row-main"
@@ -767,7 +775,7 @@ function ProductsPanel() {
           const st = stockStatus(it)
           const expanded = expandedId === it.id
           return (
-            <div className={`card grid-card admin-card inv-${st}`} key={it.id}>
+            <div className={`card grid-card admin-card ass-${assortimentoDi(it)}`} key={it.id}>
               <div
                 className="grid-card-main"
                 role="button"

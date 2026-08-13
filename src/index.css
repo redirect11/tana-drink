@@ -2283,9 +2283,16 @@ body.bar-wide .app {
   border-bottom: 1px solid var(--line);
 }
 .inv-row:last-child { border-bottom: none; }
-.inv-row.inv-ok { border-left-color: #2ecc71; }
-.inv-row.inv-low { border-left-color: #f39c12; }
-.inv-row.inv-empty { border-left-color: #e74c3c; }
+/* LA STRISCIA DICE L'ASSORTIMENTO, il pallino dice la scorta: prima
+   dicevano tutti e due la stessa cosa, e l'assortimento — che decide se una
+   cosa si ricompra — si leggeva solo dai bollini accanto al nome.
+   I colori stanno con i segni che si usano già: oro come la corona dei
+   premium, rosso come il bollino OUT, blu per la linea (i primi da
+   controllare prima di una serata), grigio per la normalità. */
+.inv-row.ass-assortimento { border-left-color: var(--line); }
+.inv-row.ass-linea { border-left-color: #3498db; }
+.inv-row.ass-premium { border-left-color: #f0b429; }
+.inv-row.ass-out { border-left-color: #e74c3c; }
 .inv-row-main {
   display: flex;
   align-items: center;
@@ -2338,9 +2345,10 @@ body.bar-wide .app {
   opacity: 0.55;
 }
 /* Striscia sinistra per lo stato scorte (come le card ordini). */
-.admin-card.inv-ok { border-left: 4px solid #2ecc71; }
-.admin-card.inv-low { border-left: 4px solid #f39c12; }
-.admin-card.inv-empty { border-left: 4px solid #e74c3c; }
+.admin-card.ass-assortimento { border-left: 4px solid var(--line); }
+.admin-card.ass-linea { border-left: 4px solid #3498db; }
+.admin-card.ass-premium { border-left: 4px solid #f0b429; }
+.admin-card.ass-out { border-left: 4px solid #e74c3c; }
 /* Sul tema chiaro l'override generico dei bordi card non deve mangiarsi
    la striscia (stessa storia delle card ordini). */
 
@@ -4304,9 +4312,9 @@ body.fullbleed,
   border-right-color: rgba(0, 0, 0, 0.1);
   border-bottom-color: rgba(0, 0, 0, 0.1);
 }
-:root[data-luma='light'] .admin-card.inv-ok { border-left-color: #2ecc71; }
-:root[data-luma='light'] .admin-card.inv-low { border-left-color: #f39c12; }
-:root[data-luma='light'] .admin-card.inv-empty { border-left-color: #e74c3c; }
+:root[data-luma='light'] .admin-card.ass-linea { border-left-color: #2f7fbf; }
+:root[data-luma='light'] .admin-card.ass-premium { border-left-color: #d99a00; }
+:root[data-luma='light'] .admin-card.ass-out { border-left-color: #d64541; }
 :root[data-luma='light'] input,
 :root[data-luma='light'] select,
 :root[data-luma='light'] textarea {
@@ -4778,13 +4786,21 @@ body.fullbleed .cat-rail {
    coda dice com'è messo il conto: verde si può fare, arancione un
    ingrediente sta finendo, rosso non si può fare (spento a mano o
    ingrediente esaurito — la riga sotto al nome dice quale dei due). */
+/* LA STRISCIA A SINISTRA DICE COM'È MESSO IL PRODOTTO:
+     grigia    → non è in menu (spento a mano)
+     verde     → in menu, le scorte ci sono
+     arancione → in menu, un ingrediente sta finendo
+     rossa     → in menu, un ingrediente è finito
+   Il rosso prima diceva due cose opposte — «l'ho tolto io» e «è finito il
+   rum» — che chiedono azioni diverse: una si riaccende, l'altra si compra. */
 .menu-card {
   position: relative;
-  border-left: 5px solid var(--line);
+  border-left: 5px solid var(--line) !important;
 }
-.menu-card.stato-ok { border-left-color: #2ecc71; }
-.menu-card.stato-low { border-left-color: #f39c12; }
-.menu-card.stato-empty { border-left-color: #e74c3c; }
+.menu-card.stato-nascosto { border-left-color: var(--line) !important; }
+.menu-card.stato-ok { border-left-color: #2ecc71 !important; }
+.menu-card.stato-low { border-left-color: #f39c12 !important; }
+.menu-card.stato-empty { border-left-color: #e74c3c !important; }
 
 /* LA LINGUETTA NELL'ANGOLO è il colore che il prodotto ha al banco, disegnata
    come sulle tile del POS: là quel segno vuol dire già quello. Si tocca per
@@ -5358,6 +5374,16 @@ body.pagina-piena .tab-corpo {
   flex-direction: column;
 }
 
+/* L'INTESTAZIONE DELLA TABELLA NON SCORRE VIA. Scorrendo trecento prodotti
+   si perdevano i nomi delle colonne dopo dieci righe, e «6,20 €» senza
+   sapere se è con o senza IVA non vuol dire niente. */
+.inv-table .inv-thead {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  background: var(--bg-2);
+}
+
 /* ── Magazzino: la lista scorre, la testata resta ─────────────────────
    Filtri, ricerca e categorie stanno fermi; a scorrere è solo l'elenco dei
    prodotti. Prima scorreva tutta la pagina, e per tornare alla ricerca
@@ -5383,9 +5409,13 @@ body.pagina-piena .pagina-inventario .inv-scroll {
   position: relative;
   flex-shrink: 0;
 }
+/* La freccia dice «qui si apre»: piccola non la si vede, e la tendina
+   sembra un'etichetta. */
 .tendina-freccia {
-  opacity: 0.6;
-  font-size: 0.8em;
+  opacity: 0.85;
+  font-size: 1.15em;
+  line-height: 1;
+  margin-left: 2px;
 }
 .tendina-pannello {
   position: absolute;
