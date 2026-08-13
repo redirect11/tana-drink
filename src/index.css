@@ -5122,24 +5122,25 @@ body:has(.overlay) .zoom-control {
   font-size: 0.8rem;
   min-height: 26px;
 }
-.cat-stretta .cat-rail {
+/* SOLO LA PROPRIA barra, non quelle annidate: con il selettore discendente,
+   stringendo quella di fuori sparivano le etichette anche di quella dentro —
+   due elenchi di pastiglie vuote, illeggibili tutti e due. */
+.cat-stretta > .cat-rail {
   min-width: 0;
   width: auto;
 }
-.cat-stretta .cat-rail .chip {
+.cat-stretta > .cat-rail .chip {
   justify-content: center;
   padding-inline: 10px;
+  position: relative;
 }
-.cat-stretta .cat-rail-label,
-.cat-stretta .cat-rail-count {
+.cat-stretta > .cat-rail .cat-rail-label,
+.cat-stretta > .cat-rail .cat-rail-count {
   display: none;
 }
 /* Sfiorando la voce il nome torna, sopra il contenuto: serve a chi non ha
    ancora in mente cosa c'è dietro a ogni icona. */
-.cat-stretta .cat-rail .chip {
-  position: relative;
-}
-.cat-stretta .cat-rail .chip:hover .cat-rail-label {
+.cat-stretta > .cat-rail .chip:hover .cat-rail-label {
   display: block;
   position: absolute;
   left: calc(100% + 6px);
@@ -5159,7 +5160,7 @@ body:has(.overlay) .zoom-control {
   .cat-rail-stringi {
     display: none;
   }
-  .cat-stretta .cat-rail-label {
+  .cat-stretta > .cat-rail .cat-rail-label {
     display: inline;
   }
 }
@@ -5229,6 +5230,30 @@ body:has(.overlay) .zoom-control {
   .inv-valore {
     font-size: 0.78rem;
   }
+}
+
+/* ── Magazzino: le sezioni sono SCHEDE, sotto la testata ──────────────
+   In una barra a sinistra costavano una colonna, e dentro c'è già la barra
+   delle categorie: due elenchi affiancati mangiavano mezzo schermo. In
+   orizzontale costano una riga e scorrono se non ci stanno. */
+.tab-sezioni {
+  flex-shrink: 0;
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  padding-bottom: 6px;
+  margin-bottom: 8px;
+}
+.tab-sezioni .chip {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+body.pagina-piena .tab-corpo {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 /* ── Magazzino: la lista scorre, la testata resta ─────────────────────

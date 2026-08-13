@@ -614,14 +614,16 @@ requirements:
     title: "Il magazzino sta in una schermata, con le sezioni a lato"
     area: "src/components/InventoryManager.jsx, src/components/CategoryRail.jsx"
     description: >
-      Prodotti, Conta, Ordini, Scadenzario, Categorie, Macro-categorie e
-      Fornitori sono voci di una BARRA LATERALE, come nelle impostazioni: erano
-      una fila di tasti in cima più tre pannelli a scomparsa in mezzo alla
-      lista, e prima di vedere un prodotto se ne andavano cinque righe di
-      schermo. La barra si può STRINGERE A ICONE — dentro «Prodotti» ce n'è già
-      una per le categorie, e due elenchi affiancati mangiano mezzo schermo; il
-      nome torna sfiorando l'icona e resta nel titolo per chi usa le dita. La
-      scelta stretta/larga si ricorda per pagina.
+      Prodotti, Conta, Ordini, Scadenzario, Categorie, Macro-categorie,
+      Fornitori e Movimenti sono SCHEDE su una riga, sotto la testata: erano
+      due file di tasti più tre pannelli a scomparsa in mezzo alla lista, e
+      prima di vedere un prodotto se ne andavano cinque righe di schermo. In
+      una barra a sinistra costavano una colonna, e dentro «Prodotti» c'è già
+      la barra delle categorie: due elenchi affiancati mangiano mezzo schermo,
+      e stringendo quello di fuori diventavano illeggibili tutti e due.
+      Le barre laterali che si possono stringere a icone restano dove servono
+      (impostazioni, categorie dei prodotti), e stringendone una NON si toccano
+      quelle annidate dentro.
       I filtri (tutti, in esaurimento, esauriti, e i quattro di assortimento)
       stanno su UNA RIGA sola, con scritto che sono filtri: sembravano un
       riepilogo, si leggevano i numeri senza capire che toccandoli la lista si

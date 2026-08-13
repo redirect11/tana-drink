@@ -148,23 +148,28 @@ const INV_VIEWS = [
   ['movimenti', '📜', 'Movimenti'],
 ]
 
-// LE SEZIONI DEL MAGAZZINO IN UNA BARRA, come nelle impostazioni. Erano una
-// fila di tasti in cima più tre pannelli a scomparsa in mezzo alla lista dei
-// prodotti: fra le due file e i pannelli, prima di vedere un prodotto se ne
-// andavano cinque righe di schermo. La barra si stringe a icone, perché
-// dentro «Prodotti» ce n'è già una per le categorie.
+// LE SEZIONI DEL MAGAZZINO SONO SCHEDE, sotto la testata. Le avevo messe in
+// una barra a sinistra come nelle impostazioni: lì dentro però c'è già la
+// barra delle categorie dei prodotti, e due elenchi affiancati mangiavano
+// mezzo schermo — stringendo il primo diventavano illeggibili tutti e due.
+// In orizzontale costano una riga sola e lasciano la larghezza ai prodotti.
 export default function InventoryManager() {
   const [view, setView] = useState('prodotti')
   return (
     <div className="pagina-inventario">
-      <CategoryRail
-        items={INV_VIEWS.map(([key, icon, label]) => ({ key, icon, label }))}
-        selected={view}
-        onSelect={setView}
-        pieno
-        chiave="inventario"
-        scorre={false}
-      >
+      <div className="tab-sezioni">
+        {INV_VIEWS.map(([id, icona, label]) => (
+          <button
+            key={id}
+            className={`chip ${view === id ? 'active' : ''}`}
+            onClick={() => setView(id)}
+            title={label}
+          >
+            <span aria-hidden>{icona}</span> {label}
+          </button>
+        ))}
+      </div>
+      <div className="tab-corpo">
         {view === 'prodotti' && <ProductsPanel />}
         {view === 'conta' && <StockCountPanel />}
         {view === 'ordini' && <PurchaseOrdersPanel />}
@@ -173,7 +178,7 @@ export default function InventoryManager() {
         {view === 'macro' && <MacroPanel />}
         {view === 'fornitori' && <FornitoriPanel />}
         {view === 'movimenti' && <MovimentiPanel />}
-      </CategoryRail>
+      </div>
     </div>
   )
 }
