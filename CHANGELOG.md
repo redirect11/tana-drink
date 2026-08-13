@@ -13,6 +13,11 @@ una funzione, il terzo per le correzioni.
 
 ### Al banco
 
+- **Dopo un aggiornamento l'app dice cosa è cambiato.** Toccando «Nuova
+  versione disponibile», alla riapertura compare il riquadro con le note
+  di quella versione — una volta sola. Se invece l'aggiornamento arriva da
+  sé, niente riquadro in faccia mentre si lavora: resta una notifica nella
+  campanella, che si tocca e porta dritti alle note.
 - **Un conto chiuso o annullato si può rimettere in corso.** Chiuso sul
   tavolo sbagliato, annullato per un malinteso, o il cliente che torna:
   dai ⋯ del conto si riapre, scrivendo — se si vuole — il perché. Gli

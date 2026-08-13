@@ -41,8 +41,11 @@ export function subscribeNotifs(fn) {
 }
 
 // Registra una notifica nello storico (chiamata da notify()).
-export function recordNotif(title, body) {
-  items = [{ id: `n${Date.now()}-${Math.floor(Math.random() * 1e4)}`, title: title || '', body: body || '', at: Date.now() }, ...items].slice(0, MAX)
+// `href` (facoltativo): dove porta toccandola. Serve alle notifiche che non
+// si esauriscono nel leggerle — «l'app è cambiata, ecco cosa» deve poter
+// aprire le Informazioni, se no resta un avviso che non si può seguire.
+export function recordNotif(title, body, { href = null } = {}) {
+  items = [{ id: `n${Date.now()}-${Math.floor(Math.random() * 1e4)}`, title: title || '', body: body || '', href, at: Date.now() }, ...items].slice(0, MAX)
   persist()
   emit()
 }
