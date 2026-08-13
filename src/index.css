@@ -4288,7 +4288,10 @@ body.fullbleed,
    barra era più alta della finestra, e per arrivare all'ultima voce si
    scorreva la PAGINA — testata compresa, che intanto scorreva via. Qui la
    coppia barra+contenuto è alta quanto lo schermo meno la testata, e a
-   scorrere sono i due pannelli, ognuno per conto suo. */
+   scorrere sono i due pannelli, ognuno per conto suo.
+   Questo è solo il valore di PARTENZA, per non far saltare il riquadro al
+   primo disegno: l'altezza buona la misura CategoryRail.jsx, perché qui il
+   conto non può tenere insieme testata, zoom e piè di pagina. */
 .cat-layout.cat-pieno {
   height: calc(100dvh / var(--zoom, 1) - var(--safe-top) - var(--barra-alta) - 18px);
   align-items: stretch;

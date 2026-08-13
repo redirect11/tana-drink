@@ -1,14 +1,5 @@
 # Cosa è cambiato
 
-Le note di ogni versione, dalla più recente. Si leggono anche dentro
-l'app: **Impostazioni → Informazioni**.
-
-I numeri seguono il versionamento semantico: il primo cambia quando si
-rompe qualcosa di come si lavorava prima, il secondo quando si aggiunge
-una funzione, il terzo per le correzioni.
-
----
-
 ## Non ancora rilasciata — 1.4.0
 
 ### Al banco
@@ -29,6 +20,11 @@ una funzione, il terzo per le correzioni.
   in mezz'ora di servizio un elenco che non si svuota mai diventa un muro
   di righe vecchie, e non ci si guarda più. Aprire la campanella non basta
   a segnarle lette: si toccano, oppure c'è «segna tutte lette».
+- **Ogni avviso si può spegnere**, uno per uno: nuovo ordine, i singoli
+  passaggi della preparazione, le scorte e la nuova versione. La scelta
+  vale **su quel dispositivo e per chi è collegato** — al banco serve
+  «nuovo ordine», in sala «pronto», sul portatile nel retro niente — e sta
+  in Impostazioni → 🔔 Notifiche.
 - **Un ordine battuto su un altro terminale ora si vede.** Prima, se lo
   mandava un bartender, gli altri dispositivi non ricevevano nulla: chi
   stava in sala col telefono non sapeva che al banco era entrato un

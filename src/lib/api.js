@@ -19,13 +19,14 @@ import {
   writeBatch,
   Timestamp,
 } from 'firebase/firestore'
-import { db } from './firebaseClient.js'
+import { db, auth } from './firebaseClient.js'
 import { ORDER_STATUSES } from './orderStatus.js'
 import { splitAmounts } from './groups.js'
 import { createSumUpSale, updateSumUpSaleStatus, toSumUpStatus } from './sumupApi.js'
 import { computeConsumption, formatQty, qtyInStockUnit } from './inventory.js'
 import { consumptionDiff } from './warehouse.js'
 import { idDispositivo } from './dispositivo.js'
+import { leggiAvvisi, avvisoAttivo, idAvvisoScorta } from './preferenzeNotifiche.js'
 import { riaddebitoBuono } from './vouchers.js'
 import {
   ORDER_OPEN,
@@ -2227,10 +2228,17 @@ const unappliedEntries = (orderId, comande) =>
     .map((comanda) => ({ orderId, comanda }))
 
 // Notifica scorte basse/finite (da chiamare fuori dalla transazione).
+// Chi non tiene il magazzino può spegnerle dalle impostazioni: in sala un
+// avviso su un ingrediente sotto soglia è solo una riga da chiudere.
 function notifyLowStock(lowStock) {
+  const preferenze = leggiAvvisi(auth.currentUser?.uid)
   for (const it of lowStock) {
-    const stato = it.stock <= 0 ? 'esaurito' : 'in esaurimento'
-    notify(`⚠️ Scorta ${stato}`, `${it.name}: rimasti ${formatQty(it.stock, it.unit)}`)
+    const finito = it.stock <= 0
+    if (!avvisoAttivo(preferenze, idAvvisoScorta(finito ? 'empty' : 'low'))) continue
+    notify(
+      `⚠️ Scorta ${finito ? 'esaurita' : 'in esaurimento'}`,
+      `${it.name}: rimasti ${formatQty(it.stock, it.unit)}`
+    )
   }
 }
 

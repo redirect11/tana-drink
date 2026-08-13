@@ -27,6 +27,7 @@ import { envLabel } from './dev/devActions.js'
 import { openCookiePreferences } from './lib/cookieConsent.js'
 import { subscribeUpdateAvailable } from './lib/appVersion.js'
 import { cosaFareAllAvvio, versioneVista, segnaVersioneVista } from './lib/novita.js'
+import { leggiAvvisi, avvisoAttivo } from './lib/preferenzeNotifiche.js'
 import { recordNotif } from './lib/notifyStore.js'
 import NovitaDialog from './components/NovitaDialog.jsx'
 import { useOnline } from './lib/useOnline.js'
@@ -67,7 +68,13 @@ export default function App() {
   // con le note di rilascio non lo vuole nessuno.
   const [novitaAperte, setNovitaAperte] = useState(false)
   useEffect(() => {
-    const cosa = cosaFareAllAvvio({ build: BUILD, vista: versioneVista() })
+    // Chi non le vuole le spegne (Impostazioni → Notifiche, per questo
+    // dispositivo): la build si segna comunque vista, se no il box salterebbe
+    // fuori tutto insieme il giorno in cui le riaccende.
+    const vuoleSaperlo = avvisoAttivo(leggiAvvisi(auth.currentUser?.uid), 'nuova_versione')
+    const cosa = vuoleSaperlo
+      ? cosaFareAllAvvio({ build: BUILD, vista: versioneVista() })
+      : 'niente'
     if (cosa !== 'niente') {
       // La notifica si registra SEMPRE: di un aggiornamento deve restare
       // traccia anche dopo aver chiuso il box. Se il box esce adesso, la

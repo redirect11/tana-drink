@@ -14,6 +14,15 @@ import PrinterSetup from './PrinterSetup.jsx'
 import BackupPanel from './BackupPanel.jsx'
 import InfoTab from './InfoTab.jsx'
 import { pairSumUpReader, unpairSumUpReader } from '../lib/paymentsApi.js'
+import { auth } from '../lib/firebaseClient.js'
+import { isGestore } from '../lib/ruoli.js'
+import {
+  avvisiPerRuolo,
+  leggiAvvisi,
+  scriviAvviso,
+  subscribeAvvisi,
+  avvisoAttivo,
+} from '../lib/preferenzeNotifiche.js'
 import { devToolsEnabled } from '../dev/devActions.js'
 
 // Impostazioni del bar (documento settings/bar). Ogni modifica viene salvata
@@ -751,6 +760,12 @@ export default function SettingsTab({ role = null }) {
             </div>
       ),
     },
+    {
+      id: 'notifiche',
+      icona: '🔔',
+      label: 'Notifiche',
+      nodo: <AvvisiPanel gestore={isGestore(role)} />,
+    },
     { id: 'stampante', icona: '🖨️', label: 'Stampante', nodo: <PrinterSetup /> },
     { id: 'backup', icona: '💾', label: 'Backup e ripristino', nodo: <BackupPanel role={role} /> },
     {
@@ -1017,6 +1032,49 @@ function ReaderPairing({ settings }) {
           onCancel={() => setConfirmUnpair(false)}
           onConfirm={dissocia}
         />
+      )}
+    </div>
+  )
+}
+
+// ── QUALI AVVISI VOGLIO, SU QUESTO SCHERMO ───────────────────────────
+// Le notifiche non servono a tutti allo stesso modo: al banco «nuovo
+// ordine» è la cosa più importante della serata, in sala serve «pronto», e
+// chi tiene il portatile nel retro non vuole niente. La scelta è di chi
+// guarda QUESTO schermo — non una regola del bar — quindi resta sul
+// dispositivo e vale per la persona collegata: due che si passano lo stesso
+// tablet nei cambi turno non si sovrascrivono a vicenda.
+function AvvisiPanel({ gestore }) {
+  const uid = auth.currentUser?.uid
+  const [avvisi, setAvvisi] = useState(() => leggiAvvisi(uid))
+  useEffect(() => subscribeAvvisi(uid, setAvvisi), [uid])
+  const elenco = avvisiPerRuolo(gestore)
+  const spenti = elenco.filter((a) => !avvisoAttivo(avvisi, a.id)).length
+
+  return (
+    <div className="card settings-section">
+      <h3>🔔 Notifiche</h3>
+      <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
+        Valgono <strong>su questo dispositivo</strong> e per te: il tablet della
+        cassa e il telefono in sala possono volere avvisi diversi, anche con lo
+        stesso accesso. Chi manda un ordine non riceve l&apos;avviso di
+        quell&apos;ordine: sa già di averlo mandato.
+      </p>
+      {elenco.map((a) => (
+        <ToggleRow
+          key={a.id}
+          label={a.label}
+          desc={a.desc}
+          checked={avvisoAttivo(avvisi, a.id)}
+          onChange={(v) => setAvvisi(scriviAvviso(uid, a.id, v))}
+        />
+      ))}
+      {spenti > 0 && (
+        <p className="muted small" style={{ margin: '10px 0 0' }}>
+          {spenti === 1 ? 'Un avviso è spento' : `${spenti} avvisi sono spenti`} su
+          questo dispositivo: quello che succede lo vedi comunque nella coda,
+          ma nessuno te lo verrà a dire.
+        </p>
       )}
     </div>
   )
