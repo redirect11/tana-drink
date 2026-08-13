@@ -42,8 +42,11 @@ import Toasts from './components/Toasts.jsx'
 import ZoomControl from './components/ZoomControl.jsx'
 import { useEffect, useRef, useState } from 'react'
 
-/* global __APP_VERSION__ */
+/* global __APP_VERSION__, __BUILD_ID__ */
 const VERSIONE = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : ''
+// A cambiare a ogni pubblicazione è la BUILD, non il numero di versione:
+// è lei che dice "questa è un'altra app rispetto a quella di prima".
+const BUILD = typeof __BUILD_ID__ !== 'undefined' ? __BUILD_ID__ : ''
 
 export default function App() {
   const location = useLocation()
@@ -72,7 +75,7 @@ export default function App() {
   const [novitaAperte, setNovitaAperte] = useState(false)
   useEffect(() => {
     const cosa = cosaFareAllAvvio({
-      versione: VERSIONE,
+      build: BUILD,
       vista: versioneVista(),
       attese: novitaAttese(),
     })
@@ -80,7 +83,7 @@ export default function App() {
     if (cosa === 'box') setNovitaAperte(true)
     if (cosa === 'notifica') {
       recordNotif(
-        `🎉 Aggiornata alla ${VERSIONE}`,
+        '🎉 L’app è stata aggiornata',
         'Tocca per vedere cosa è cambiato',
         { href: '/bar?tab=impostazioni&sezione=informazioni' }
       )
@@ -88,7 +91,7 @@ export default function App() {
     // La versione si segna VISTA solo quando le note sono state mostrate o
     // messe in campanella: se si segnasse comunque, un aggiornamento che
     // arriva mentre si sta battendo un ordine passerebbe in silenzio.
-    if (cosa !== 'box') segnaVersioneVista(VERSIONE)
+    if (cosa !== 'box') segnaVersioneVista(BUILD)
   }, [])
 
   // Tastiera virtuale: premendo Invio su un campo a riga singola FUORI da un
@@ -259,11 +262,16 @@ export default function App() {
   // quando ci sta lavorando qualcuno dello staff. Altrove — e nell'anteprima
   // vista cliente, dove il menù dello staff non c'entra — lo monta l'app,
   // perché il ☰ non resti a premere nel vuoto.
-  // Dentro il gestionale, ogni sezione che non sia la coda ha il suo
-  // «indietro»: la coda è il punto di partenza e da lì non si torna da
-  // nessuna parte.
+  // L'«INDIETRO» IN BARRA. Ce l'ha ogni schermata di lavoro tranne il punto
+  // di partenza — la coda — da cui non si torna da nessuna parte. Vale per le
+  // sezioni del gestionale e per le pagine che stanno fuori (il proprio
+  // profilo), dove prima c'era un tasto in fondo alla pagina che diceva
+  // «Torna al gestionale»: lo si trovava solo scorrendo, ed era l'unico a
+  // chiamarsi in un altro modo.
   const tabGestionale = new URLSearchParams(location.search).get('tab') || 'coda'
-  const indietroQui = onBackoffice && !!staffRole && tabGestionale !== 'coda'
+  const indietroQui =
+    !!staffRole &&
+    ((onBackoffice && tabGestionale !== 'coda') || location.pathname.startsWith('/profilo-staff'))
   const drawerDellaPagina =
     (onBackoffice && !!staffRole) ||
     (location.pathname.startsWith('/menu') && !!staffRole && !anteprimaCliente)
@@ -309,10 +317,9 @@ export default function App() {
       )}
       {novitaAperte && (
         <NovitaDialog
-          versione={VERSIONE}
           onClose={() => {
             setNovitaAperte(false)
-            segnaVersioneVista(VERSIONE)
+            segnaVersioneVista(BUILD)
           }}
         />
       )}

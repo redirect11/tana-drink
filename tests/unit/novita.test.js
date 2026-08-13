@@ -9,26 +9,26 @@ import { cosaFareAllAvvio, sezioneChangelog } from '../../src/lib/novita.js'
 
 describe('cosaFareAllAvvio', () => {
   it('ha toccato «aggiorna»: le note gli si mettono davanti', () => {
-    expect(cosaFareAllAvvio({ versione: 'v1.4.0', vista: 'v1.3.0', attese: true })).toBe('box')
+    expect(cosaFareAllAvvio({ build: 'b2', vista: 'b1', attese: true })).toBe('box')
   })
 
   it('l’aggiornamento è arrivato da sé: resta un avviso in campanella', () => {
-    expect(cosaFareAllAvvio({ versione: 'v1.4.0', vista: 'v1.3.0', attese: false })).toBe('notifica')
+    expect(cosaFareAllAvvio({ build: 'b2', vista: 'b1', attese: false })).toBe('notifica')
   })
 
-  it('stessa versione di prima: non succede niente', () => {
-    expect(cosaFareAllAvvio({ versione: 'v1.4.0', vista: 'v1.4.0', attese: true })).toBe('niente')
-    expect(cosaFareAllAvvio({ versione: 'v1.4.0', vista: 'v1.4.0', attese: false })).toBe('niente')
+  it('stessa build di prima: non succede niente', () => {
+    expect(cosaFareAllAvvio({ build: 'b2', vista: 'b2', attese: true })).toBe('niente')
+    expect(cosaFareAllAvvio({ build: 'b2', vista: 'b2', attese: false })).toBe('niente')
   })
 
   // Un box di benvenuto con le note di rilascio non lo vuole nessuno: alla
   // prima apertura su un dispositivo nuovo si registra e basta.
   it('prima volta su questo dispositivo: silenzio', () => {
-    expect(cosaFareAllAvvio({ versione: 'v1.4.0', vista: null, attese: false })).toBe('niente')
+    expect(cosaFareAllAvvio({ build: 'b2', vista: null, attese: false })).toBe('niente')
   })
 
-  it('senza numero di versione (sviluppo) non si inventa niente', () => {
-    expect(cosaFareAllAvvio({ versione: '', vista: null, attese: true })).toBe('niente')
+  it('senza id di build (sviluppo) non si inventa niente', () => {
+    expect(cosaFareAllAvvio({ build: '', vista: null, attese: true })).toBe('niente')
   })
 })
 
