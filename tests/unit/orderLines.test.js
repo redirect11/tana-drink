@@ -13,6 +13,7 @@ import {
   linesTotal,
   moveLine,
   reconcileLayout,
+  splitAll,
 } from '../../src/lib/orderLines.js'
 
 const line = (over) => ({ line_id: over.line_id || 'x', drink_id: 'gin', name: 'Gin', price: 8, qty: 1, ...over })
@@ -100,3 +101,73 @@ describe('qtyByDrink / linesTotal', () => {
     expect(linesTotal(lines)).toBe(2 * 8 + 6 + 8)
   })
 })
+
+// SEPARA TUTTO. Difetto visto al banco: si univa tutto, poi si premeva
+// «Separa» e tornavano su solo le ultime voci — le altre mostravano quantità
+// 1 e le righe in più non comparivano. Le righe nuove nascevano tutte con lo
+// STESSO identificativo, e a schermo le righe si distinguono per quello.
+describe('splitAll', () => {
+  it('una riga da tre diventa tre righe da uno, ognuna col suo id', () => {
+    const out = splitAll([{ line_id: 'a', drink_id: 'x', qty: 3 }], contatore())
+    expect(out).toHaveLength(3)
+    expect(out.every((l) => l.qty === 1)).toBe(true)
+    expect(new Set(out.map((l) => l.line_id)).size).toBe(3)
+    // Il primo tiene l'id che aveva: è la riga che si stava guardando.
+    expect(out[0].line_id).toBe('a')
+  })
+
+  it('separa TUTTE le righe, non solo l’ultima', () => {
+    const out = splitAll(
+      [
+        { line_id: 'a', drink_id: 'x', qty: 2 },
+        { line_id: 'b', drink_id: 'y', qty: 3 },
+      ],
+      contatore()
+    )
+    expect(out).toHaveLength(5)
+    expect(new Set(out.map((l) => l.line_id)).size).toBe(5)
+  })
+
+  it('le righe da uno restano come sono', () => {
+    const dentro = [{ line_id: 'a', drink_id: 'x', qty: 1 }]
+    expect(splitAll(dentro)).toEqual(dentro)
+    expect(splitAll([])).toEqual([])
+    expect(splitAll(null)).toEqual([])
+  })
+
+  // Unisci e poi separa: si deve tornare a tante righe quante erano le unità.
+  it('unito e poi separato, il conto delle unità torna', () => {
+    const righe = [
+      { line_id: 'a', drink_id: 'x', qty: 1 },
+      { line_id: 'b', drink_id: 'x', qty: 1 },
+      { line_id: 'c', drink_id: 'y', qty: 1 },
+    ]
+    const unite = mergeLines(righe)
+    expect(unite).toHaveLength(2)
+    const separate = splitAll(unite, contatore())
+    expect(separate).toHaveLength(3)
+    expect(new Set(separate.map((l) => l.line_id)).size).toBe(3)
+  })
+})
+
+// La riprova del difetto: se gli id si ripetono, a schermo le righe in più
+// spariscono. Qui si simula come le conta una lista con chiavi uniche.
+describe('perché gli id devono essere diversi', () => {
+  it('con id ripetuti si perdono le righe', () => {
+    const conIdRipetuti = (lines) =>
+      (lines || []).flatMap((l) =>
+        l.qty > 1 ? Array.from({ length: l.qty }, () => ({ ...l, qty: 1 })) : [l]
+      )
+    const rotte = conIdRipetuti([{ line_id: 'a', drink_id: 'x', qty: 3 }])
+    expect(rotte).toHaveLength(3)
+    expect(new Set(rotte.map((l) => l.line_id)).size).toBe(1) // una sola riga a schermo
+    const buone = splitAll([{ line_id: 'a', drink_id: 'x', qty: 3 }], contatore())
+    expect(new Set(buone.map((l) => l.line_id)).size).toBe(3)
+  })
+})
+
+// Identificativi finti ma diversi, per non dipendere dal caso.
+function contatore() {
+  let n = 0
+  return () => `nuovo-${++n}`
+}
