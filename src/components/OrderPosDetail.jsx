@@ -46,7 +46,7 @@ import { isPersonale } from '../lib/ruoli.js'
 import {
   makeLineId,
   mergeLines,
-  splitLine,
+  splitAll,
   hasMergeable,
   moveLine,
   reconcileLayout,
@@ -855,11 +855,9 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   // Separa/Unisci agiscono su TUTTE le voci visibili: la bozza + gli item
   // delle comande modificabili (confermati). Sui confermati si programma il
   // salvataggio come per le altre modifiche per-riga.
-  const explode = (items) =>
-    (items || []).flatMap((it) => {
-      const q = Math.floor(Number(it.qty) || 0)
-      return q > 1 ? Array.from({ length: q }, () => ({ ...it, qty: 1 })) : [it]
-    })
+  // Separare vuol dire anche dare a ogni riga nuova un identificativo suo:
+  // vedi splitAll in lib/orderLines.js (le righe con lo stesso id sparivano).
+  const explode = (items) => splitAll(items)
   const transformEditableComande = (transform) => {
     for (const c of effComande) {
       if (!comandaEditable(c)) continue
@@ -876,7 +874,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
     transformEditableComande((items) => mergeLines(items))
   }
   const splitAllDraft = () => {
-    setDraft((items) => items.reduce((acc, l) => acc.concat(splitLine([l], l.line_id)), []))
+    setDraft((items) => splitAll(items))
     transformEditableComande(explode)
   }
   const editableComande = effComande.filter(comandaEditable)

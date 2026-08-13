@@ -75,6 +75,25 @@ export function splitLine(lines, lineId, makeId = makeLineId) {
   return out
 }
 
+// SEPARA TUTTO: ogni riga con quantità maggiore di uno diventa tante righe
+// da uno. Ognuna con un IDENTIFICATIVO SUO — è il punto della faccenda:
+// generandole tutte con lo stesso id (come faceva il vecchio `explode`
+// dentro la schermata) le righe in più sparivano dalla lista, perché a
+// schermo le righe si distinguono per id. Si vedeva la quantità scendere a
+// uno e nient'altro: gli item «separati» non comparivano.
+export function splitAll(lines, makeId = makeLineId) {
+  const out = []
+  for (const l of lines || []) {
+    const q = Math.floor(Number(l.qty) || 0)
+    if (q > 1) {
+      for (let i = 0; i < q; i++) out.push({ ...l, line_id: i === 0 ? l.line_id : makeId(), qty: 1 })
+    } else {
+      out.push(l)
+    }
+  }
+  return out
+}
+
 // Quantità per drink (griglia prodotti): somma solo le righe di catalogo
 // NON modificate (i custom/modificati escono dal conteggio della tile).
 export function qtyByDrink(lines) {

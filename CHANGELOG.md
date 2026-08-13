@@ -22,6 +22,10 @@
   in ogni schermata.
 - **«Ultimi movimenti» non è più un tastone in fondo alla lista**: è una
   sezione del menu del magazzino, con gli ultimi cento invece di trenta.
+- **«Separa» ora separa davvero tutte le righe.** Si univa tutto, si
+  premeva Separa e tornavano su solo le ultime voci: le altre mostravano
+  quantità 1 e le righe in più non comparivano. Nascevano tutte con lo
+  stesso identificativo, e a schermo le righe si distinguono per quello.
 - **Nel magazzino i due segni dicono due cose.** Il **pallino** dice
   quanta roba c'è (verde/arancione/rosso), la **striscia** che assortimento
   è: grigia in assortimento, blu in linea, oro premium, rossa fuori
