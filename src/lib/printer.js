@@ -9,7 +9,7 @@
 //   3. Dal browser dell'iPad: vai su https://<IP>:8043 e accetta il certificato
 //   4. Da quel momento la connessione WSS funziona senza dialoghi
 
-import { CASH_METHOD_ORDER, cashMethodKeys } from './orderStatus.js'
+import { CASH_METHOD_ORDER, cashMethodKeys, PAYMENT_METHOD_PRINT } from './orderStatus.js'
 
 // Larghezza colonne stamante 80 mm (TM-m30II / TM-m30III): 48 chars std.
 const COL = 48
@@ -417,18 +417,10 @@ export async function printScontrino(order, opts = {}) {
   prn.addTextStyle(false, false, true, prn.COLOR_1)
   prn.addText('Pagamenti\n')
   prn.addTextStyle(false, false, false, prn.COLOR_1)
-  const nomeMetodo = (m) =>
-    ({
-      banco: 'Contante',
-      contanti: 'Contante',
-      carta: 'Carta',
-      online: 'Online',
-      lettore: 'Carta (POS)',
-      buono: 'Buono',
-      // Metodo sconosciuto o assente: si scrive che non è indicato. Prima si
-      // ripiegava su "Contante", e uno scontrino pagato con la carta usciva
-      // con scritto contante — una dichiarazione falsa, non un default.
-    })[m] || 'Non indicato'
+  // Metodo sconosciuto o assente: si scrive che non è indicato. Prima si
+  // ripiegava su "Contante", e uno scontrino pagato con la carta usciva
+  // con scritto contante — una dichiarazione falsa, non un default.
+  const nomeMetodo = (m) => PAYMENT_METHOD_PRINT[m] || 'Non indicato'
   // Se ci sono incassi registrati si elencano uno per uno (conti divisi o
   // acconti): così su ogni scontrino si legge quanto in contanti e quanto in
   // carta. Altrimenti si usa il metodo di chiusura del conto.
@@ -576,16 +568,10 @@ export async function printOrdineFornitore(order) {
 // Riepilogo di fine serata da allegare al fondo: incassato per metodo
 // (contante, carta, POS, online), sconti concessi, conti chiusi e contante
 // atteso in cassa. `recap` è quello di cashRecap().
-// Etichette per la stampante termica: niente emoji (la testina stampa
-// caratteri, non icone) e nomi come li chiama chi legge la striscia.
-const NOMI_STAMPA = {
-  banco: 'Contante',
-  carta: 'Carta di credito',
-  lettore: 'Carta (POS SumUp)',
-  online: 'Online',
-  buono: 'Buoni VIP',
-}
-const scontrinoMetodo = (k) => NOMI_STAMPA[k] || k
+// Gli stessi nomi dello scontrino: la chiusura di cassa si confronta con la
+// striscia degli scontrini, e due parole diverse per la stessa cosa
+// costringono a tradurre a mente mentre si contano i soldi.
+const scontrinoMetodo = (k) => PAYMENT_METHOD_PRINT[k] || k
 
 export async function printChiusuraCassa(recap, session, opts = {}) {
   const prn = await getPrinter()

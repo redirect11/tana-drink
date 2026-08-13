@@ -13,6 +13,10 @@ una funzione, il terzo per le correzioni.
 
 ### Al banco
 
+- **Sullo scontrino c'è scritto «Carta di credito», non «Carta».** A fine
+  serata la striscia si divide per metodo a colpo d'occhio: «Carta» e
+  «Contante» si somigliano troppo. Stesse parole anche sulla chiusura di
+  cassa, così i due fogli si confrontano senza tradurre a mente.
 - **Dopo un aggiornamento l'app dice cosa è cambiato.** Toccando «Nuova
   versione disponibile», alla riapertura compare il riquadro con le note
   di quella versione — una volta sola. Se invece l'aggiornamento arriva da
