@@ -25,8 +25,13 @@ export default function SettingsTab({ role = null }) {
   const [esitoReset, setEsitoReset] = useState(null)
   // Sezione aperta: si ricorda, perché a impostazioni si torna sempre per
   // lo stesso motivo (di solito gli orari o i pagamenti).
+  // …ma un collegamento può chiedere una sezione precisa (?sezione=…): ci
+  // arriva la notifica «l'app è cambiata», che deve aprire le Informazioni e
+  // non l'ultima sezione guardata.
   const [sezione, setSezione] = useState(() => {
     try {
+      const chiesta = new URLSearchParams(window.location.search).get('sezione')
+      if (chiesta) return chiesta
       return localStorage.getItem('tana:impostazioni:sezione') || 'aspetto'
     } catch {
       return 'aspetto'

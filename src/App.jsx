@@ -26,11 +26,24 @@ import { applicaNomeApp } from './lib/nomeApp.js'
 import { envLabel } from './dev/devActions.js'
 import { openCookiePreferences } from './lib/cookieConsent.js'
 import { subscribeUpdateAvailable } from './lib/appVersion.js'
+import {
+  cosaFareAllAvvio,
+  versioneVista,
+  segnaVersioneVista,
+  chiediNovitaAlRiavvio,
+  novitaAttese,
+  dimenticaNovitaAttese,
+} from './lib/novita.js'
+import { recordNotif } from './lib/notifyStore.js'
+import NovitaDialog from './components/NovitaDialog.jsx'
 import { useOnline } from './lib/useOnline.js'
 import { toastSuccess } from './lib/toast.js'
 import Toasts from './components/Toasts.jsx'
 import ZoomControl from './components/ZoomControl.jsx'
 import { useEffect, useRef, useState } from 'react'
+
+/* global __APP_VERSION__ */
+const VERSIONE = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : ''
 
 export default function App() {
   const location = useLocation()
@@ -48,6 +61,35 @@ export default function App() {
   // "tocca per aggiornare" invece di aspettare un reload manuale.
   const [updateReady, setUpdateReady] = useState(false)
   useEffect(() => subscribeUpdateAvailable(() => setUpdateReady(true)), [])
+
+  // COSA È CAMBIATO. Dopo un aggiornamento chi lavora si ritrova qualcosa
+  // spostato di posto senza sapere perché: le note vanno portate davanti una
+  // volta. Se l'aggiornamento l'ha chiesto lui (ha toccato il banner) esce il
+  // box; se è arrivato da sé — l'app riaperta il giorno dopo — resta una
+  // notifica nella campanella, che porta alle Informazioni. Alla prima
+  // apertura su un dispositivo nuovo non succede niente: un box di benvenuto
+  // con le note di rilascio non lo vuole nessuno.
+  const [novitaAperte, setNovitaAperte] = useState(false)
+  useEffect(() => {
+    const cosa = cosaFareAllAvvio({
+      versione: VERSIONE,
+      vista: versioneVista(),
+      attese: novitaAttese(),
+    })
+    dimenticaNovitaAttese()
+    if (cosa === 'box') setNovitaAperte(true)
+    if (cosa === 'notifica') {
+      recordNotif(
+        `🎉 Aggiornata alla ${VERSIONE}`,
+        'Tocca per vedere cosa è cambiato',
+        { href: '/bar?tab=impostazioni&sezione=informazioni' }
+      )
+    }
+    // La versione si segna VISTA solo quando le note sono state mostrate o
+    // messe in campanella: se si segnasse comunque, un aggiornamento che
+    // arriva mentre si sta battendo un ordine passerebbe in silenzio.
+    if (cosa !== 'box') segnaVersioneVista(VERSIONE)
+  }, [])
 
   // Tastiera virtuale: premendo Invio su un campo a riga singola FUORI da un
   // form (es. nome tavolo/note, che si salvano con un bottone) la si chiude,
@@ -253,9 +295,26 @@ export default function App() {
         </div>
       )}
       {updateReady && (
-        <button className="update-banner" onClick={() => window.location.reload()}>
+        <button
+          className="update-banner"
+          onClick={() => {
+            // Il segno serve al riavvio: è l'unico modo per distinguere
+            // "ricaricato per aggiornare" da una pagina riaperta a caso.
+            chiediNovitaAlRiavvio()
+            window.location.reload()
+          }}
+        >
           🔄 Nuova versione disponibile — tocca per aggiornare
         </button>
+      )}
+      {novitaAperte && (
+        <NovitaDialog
+          versione={VERSIONE}
+          onClose={() => {
+            setNovitaAperte(false)
+            segnaVersioneVista(VERSIONE)
+          }}
+        />
       )}
       {/* Notifiche IN APP (sync, ordini da staff/clienti, errori) */}
       <Toasts />

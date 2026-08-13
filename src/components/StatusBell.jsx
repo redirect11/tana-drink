@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { subscribeSync, retryAllSync, retryLastSync } from '../lib/sync.js'
 import { subscribeNotifs, markNotifsSeen, clearNotifs } from '../lib/notifyStore.js'
 
@@ -76,13 +77,29 @@ export default function StatusBell({ floating = false }) {
               {notifs.items.length === 0 && (
                 <div className="muted small" style={{ padding: '10px 8px' }}>Nessuna notifica.</div>
               )}
-              {notifs.items.map((n) => (
-                <div className="status-bell-item" key={n.id}>
-                  <div><strong>{n.title}</strong></div>
-                  {n.body && <div className="muted small">{n.body}</div>}
-                  <div className="muted" style={{ fontSize: '0.64rem', marginTop: 2 }}>{fmtTime(n.at)}</div>
-                </div>
-              ))}
+              {notifs.items.map((n) => {
+                const dentro = (
+                  <>
+                    <div><strong>{n.title}</strong></div>
+                    {n.body && <div className="muted small">{n.body}</div>}
+                    <div className="muted" style={{ fontSize: '0.64rem', marginTop: 2 }}>{fmtTime(n.at)}</div>
+                  </>
+                )
+                // Con un `href` la notifica è una porta: si tocca e ci porta.
+                // Senza, resta quello che è sempre stata, una riga da leggere.
+                return n.href ? (
+                  <Link
+                    className="status-bell-item status-bell-link"
+                    key={n.id}
+                    to={n.href}
+                    onClick={() => setOpen(false)}
+                  >
+                    {dentro}
+                  </Link>
+                ) : (
+                  <div className="status-bell-item" key={n.id}>{dentro}</div>
+                )
+              })}
             </div>
 
             {notifs.items.length > 0 && (

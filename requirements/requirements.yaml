@@ -1341,10 +1341,19 @@ requirements:
       si leggono dentro l'app in Impostazioni → Informazioni, insieme ai dati
       tecnici (versione, ramo, commit, ambiente, progetto). Chi usa l'app deve
       poter sapere cosa è cambiato senza chiederlo a chi l'ha scritta.
+      E non deve andarle a cercare: l'app si aggiorna da sé mentre la si usa,
+      e chi lavora si accorge del cambiamento solo perché qualcosa è finito in
+      un altro posto. Toccando «Nuova versione disponibile», alla riapertura
+      compare il BOX con le note di quella versione — una volta sola, poi mai
+      più. Se invece l'aggiornamento arriva da sé (l'app riaperta il giorno
+      dopo) niente box in faccia mentre si lavora: resta una NOTIFICA nella
+      campanella che porta a Impostazioni → Informazioni. Alla prima apertura
+      su un dispositivo nuovo non succede niente: un box di benvenuto con le
+      note di rilascio non lo vuole nessuno.
     status: implemented
     generate_issue: false
-    labels: [metodo]
-    test_cases: []
+    labels: [metodo, ux]
+    test_cases: [tests/unit/novita.test.js, tests/component/AppHeader.test.jsx]
 
   # ══════════════════════════════════════════════════════════════════════
   #  INTEGRAZIONE SUMUP (Cloud Functions)
