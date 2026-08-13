@@ -894,6 +894,23 @@ requirements:
     labels: [stampa, infrastruttura]
     test_cases: []
 
+  - id: REQ-STAMPA-005
+    title: "Sullo scontrino il metodo si legge per esteso"
+    area: "src/lib/orderStatus.js, src/lib/printer.js"
+    description: >
+      Sullo scontrino e sulla chiusura di cassa i metodi di pagamento si
+      scrivono per esteso e con le stesse parole: «Carta di credito», non
+      «Carta». A fine serata la striscia degli scontrini si divide per metodo a
+      colpo d'occhio, e «Carta» e «Contante» si somigliano abbastanza da
+      doverli leggere uno per uno. I nomi stanno in un posto solo, senza emoji
+      (la testina stampa caratteri, non icone): due parole diverse per la
+      stessa cosa costringono a tradurre a mente mentre si contano i soldi.
+      Un metodo sconosciuto resta «Non indicato», mai un ripiego su «Contante».
+    status: implemented
+    generate_issue: false
+    labels: [stampa, cassa]
+    test_cases: [tests/unit/orderStatus.test.js]
+
   - id: REQ-STAMPA-004
     title: "Chiusura di cassa stampata con tutti i metodi"
     area: "src/lib/printer.js"
