@@ -1823,9 +1823,18 @@ body.fullbleed .bar-content {
 .topbar-back {
   margin-left: -6px;
 }
-/* Il titolo della pagina, attaccato al marchio. Su schermo stretto sparisce:
-   lì la barra ha già poco spazio e il titolo si legge dal menu da cui si è
-   arrivati. */
+/* Il titolo della pagina, attaccato al marchio — e, quando la pagina ha
+   sottosezioni, è anche il comando per cambiarle. Su schermo stretto resta
+   solo se è un comando: un titolo che non fa niente lì è spazio buttato. */
+.topbar-pagina-tasto {
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 6px 4px;
+}
 .topbar-pagina {
   flex-shrink: 1;
   min-width: 0;
@@ -1836,7 +1845,7 @@ body.fullbleed .bar-content {
   opacity: 0.9;
 }
 @media (max-width: 700px) {
-  .topbar-pagina {
+  .topbar-pagina:not(.topbar-pagina-tasto) {
     display: none;
   }
 }
