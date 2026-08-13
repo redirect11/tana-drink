@@ -22,6 +22,17 @@
   in ogni schermata.
 - **«Ultimi movimenti» non è più un tastone in fondo alla lista**: è una
   sezione del menu del magazzino, con gli ultimi cento invece di trenta.
+- **Nel magazzino i due segni dicono due cose.** Il **pallino** dice
+  quanta roba c'è (verde/arancione/rosso), la **striscia** che assortimento
+  è: grigia in assortimento, blu in linea, oro premium, rossa fuori
+  assortimento. Prima dicevano tutti e due la stessa cosa.
+- **Nel menù la striscia dice com'è messo il prodotto**: grigia non è in
+  menu, verde le scorte ci sono, arancione un ingrediente sta finendo,
+  rossa un ingrediente è finito. Il rosso prima diceva due cose opposte —
+  «l'ho tolto io» e «è finito il rum» — che chiedono azioni diverse.
+- **L'intestazione della tabella del magazzino non scorre più via**:
+  scorrendo trecento prodotti si perdevano i nomi delle colonne, e «6,20 €»
+  senza sapere se è con o senza IVA non vuol dire niente.
 - **In «Organizza» la card segue il dito.** Prima scattava di posto: ora
   si muove insieme al dito, e le altre **scivolano** per fare spazio
   quando ci si ferma un attimo sopra. Lasciandola, torna al suo posto

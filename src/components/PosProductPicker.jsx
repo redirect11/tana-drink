@@ -211,8 +211,7 @@ export default function PosProductPicker({
     dy: 0,
     lastX: 0,
     lastY: 0,
-    sopra: null, // su quale card sta ora
-    da: 0, // da quando
+    da: 0, // quando è avvenuto l'ultimo scambio
     raf: 0,
     vy: 0,
   })
@@ -221,8 +220,9 @@ export default function PosProductPicker({
 
   const cella = (id) => gridRef.current?.querySelector(`[data-cella="${id}"]`)
 
-  // Quanto deve stare ferma sopra una card prima di scambiare.
-  const ATTESA = 120
+  // Fra uno scambio e l'altro passa almeno questo: senza, muovendosi in
+  // fretta sopra dieci card la griglia si riordina dieci volte sotto le dita.
+  const PAUSA = 90
 
   // FLIP: si segnano le posizioni PRIMA del riordino; dopo, ognuna riparte
   // da dov'era e scivola al posto nuovo. Senza, le card comparirebbero già
@@ -273,23 +273,20 @@ export default function PosProductPicker({
     el.style.transform = `translate(${st.dx}px, ${st.dy}px) scale(1.04)`
   }
 
-  // Scambia con la card sotto al dito, se ci è rimasto abbastanza.
-  const forseRiordina = (x, y) => {
+  // Scambia con la card sotto al dito.
+  //
+  // ATTENZIONE AL PERCHÉ SI CHIAMA DAL CICLO: stando fermi sopra una card
+  // NON arriva nessun evento di movimento. Legandolo ai movimenti, chi si
+  // fermava tre secondi sopra un'altra card non vedeva succedere niente —
+  // ed è esattamente il gesto che uno fa quando vuole mettere la card lì.
+  const forseRiordina = () => {
     const st = dragRef.current
     if (!st.id) return
-    const el = document.elementFromPoint(x, y)
+    const el = document.elementFromPoint(st.lastX, st.lastY)
     const overId = el?.closest('[data-cella]')?.dataset.cella
-    if (!overId || overId === st.id) {
-      st.sopra = null
-      return
-    }
+    if (!overId || overId === st.id) return
     const ora = performance.now()
-    if (st.sopra !== overId) {
-      st.sopra = overId
-      st.da = ora
-      return
-    }
-    if (ora - st.da < ATTESA) return
+    if (ora - st.da < PAUSA) return
     st.da = ora
     const mappa = primaDi()
     latest.current.commitOrder(moveInOrder(latest.current.orderedAllIds, st.id, overId))
@@ -298,6 +295,9 @@ export default function PosProductPicker({
 
   // Vicino a un bordo la griglia scorre da sola: così si porta un item dal
   // fondo alla cima senza lasciarlo.
+  // Il ciclo del trascinamento: fa scorrere la griglia vicino ai bordi e —
+  // soprattutto — guarda SEMPRE cosa c'è sotto il dito, anche quando il dito
+  // sta fermo. È lì che si decide lo scambio.
   const autoScrollTick = () => {
     const st = dragRef.current
     if (!st.id) return
@@ -305,8 +305,8 @@ export default function PosProductPicker({
     if (grid && st.vy) {
       grid.scrollTop += st.vy
       muoviCella()
-      forseRiordina(st.lastX, st.lastY)
     }
+    forseRiordina()
     st.raf = requestAnimationFrame(autoScrollTick)
   }
 
@@ -328,7 +328,6 @@ export default function PosProductPicker({
     st.lastY = e.clientY
     st.dx = 0
     st.dy = 0
-    st.sopra = null
     st.vy = 0
     const r = cella(id)?.getBoundingClientRect()
     st.cx = r ? r.left + r.width / 2 : e.clientX
@@ -353,7 +352,7 @@ export default function PosProductPicker({
       else if (e.clientY > r.bottom - EDGE) st.vy = Math.ceil((e.clientY - (r.bottom - EDGE)) / 5)
       else st.vy = 0
     }
-    forseRiordina(e.clientX, e.clientY)
+    // Lo scambio lo decide il ciclo: qui basta sapere dov'è il dito.
   }
 
   const endDrag = () => {
@@ -368,7 +367,6 @@ export default function PosProductPicker({
       el.style.transform = ''
     }
     st.id = null
-    st.sopra = null
     st.vy = 0
     st.raf = 0
     setDragId(null)
