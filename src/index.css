@@ -4530,12 +4530,21 @@ body.fullbleed .cat-rail {
   cursor: grabbing;
   box-shadow: 0 16px 34px rgba(0, 0, 0, 0.45);
   transition: none;
+  /* LA CARD IN MANO È TRASPARENTE AL TOCCO. Ora segue il dito, quindi sotto
+     il dito c'è sempre lei: chiedendo «cosa c'è qui sotto» rispondeva sé
+     stessa, e lo scambio non avveniva mai — si spostava e tornava indietro.
+     La maniglia continua a ricevere il gesto perché se l'è presa
+     (setPointerCapture), che vale anche qui dentro. */
+  pointer-events: none;
 }
 .reorder-cell.scivola {
   transition: transform 0.18s cubic-bezier(0.2, 0.7, 0.3, 1);
 }
 .reorder-cell.dragging .reorder-grip {
   cursor: grabbing;
+  /* La cella è trasparente al tocco, la maniglia no: se no, staccando il
+     dito su di lei il gesto finirebbe nel vuoto. */
+  pointer-events: auto;
 }
 @media (prefers-reduced-motion: reduce) {
   .reorder-cell.scivola {
