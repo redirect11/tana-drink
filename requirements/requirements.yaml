@@ -1340,6 +1340,31 @@ requirements:
     labels: [ux, coda]
     test_cases: [tests/unit/coda.test.js, tests/component/SettingsTab.test.jsx]
 
+  - id: REQ-UI-011
+    title: "La navigazione ha delle regole, e sono scritte"
+    area: "docs/navigazione.md, src/App.jsx, src/index.css"
+    description: >
+      La barra in alto ha tre zone, sempre nello stesso ordine: a sinistra
+      come si esce (☰ oppure ←), al centro dove si è (marchio e titolo, che è
+      anche il comando delle sottosezioni), a destra cosa si può fare
+      (campanella, ⋮). Quando lo spazio manca NON si rimpiccioliscono i tasti
+      — al banco si tocca con le dita bagnate e sotto i 44px si sbaglia — si
+      toglie, in quest'ordine: il nome del locale (sotto i 700px resta il
+      logo), l'«indietro» (sul telefono il ☰ fa quello che fa lui e in più:
+      dalla coda alle impostazioni in un tocco solo), il logo (sotto i 400px).
+      Il titolo della sezione si accorcia coi puntini ma non sparisce mai: è
+      l'unica cosa che dice dove sei; ☰, campanella e ⋮ non cadono mai.
+      Le gerarchie stanno una per volta e ognuna al suo posto: le pagine nel
+      menu laterale, le sottosezioni nel titolo, i filtri in una tendina, e il
+      contenuto non porta navigazione. Niente seconda riga sotto la barra, e
+      un solo modo di tornare indietro per schermata.
+      Le regole stanno in docs/navigazione.md: si seguono invece di
+      ridiscuterle a ogni schermata.
+    status: implemented
+    generate_issue: false
+    labels: [ux, navigazione]
+    test_cases: []
+
   - id: REQ-UI-010
     title: "L'app si chiama come il locale, e dice a chi appartiene"
     area: "src/lib/nomeApp.js, public/manifest.webmanifest"

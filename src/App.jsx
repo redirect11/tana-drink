@@ -416,7 +416,7 @@ export default function App() {
               onClick={() => setSottoAperte(true)}
               aria-haspopup="dialog"
             >
-              <span aria-hidden>·</span> {(sezioneAttiva?.icona) || pagina.icona}{' '}
+              {(sezioneAttiva?.icona) || pagina.icona}{' '}
               {(sezioneAttiva?.label) || pagina.titolo} <span aria-hidden>▾</span>
             </button>
           ) : (

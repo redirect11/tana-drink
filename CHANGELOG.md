@@ -22,6 +22,11 @@
   in ogni schermata.
 - **«Ultimi movimenti» non è più un tastone in fondo alla lista**: è una
   sezione del menu del magazzino, con gli ultimi cento invece di trenta.
+- **Sul telefono la barra in alto respira.** C'erano otto cose in una riga
+  e il nome del locale finiva in «La …»: ora sotto i 700px restano il
+  logo, il menu, dove sei e le azioni. L'«indietro» sparisce perché il
+  menu fa quello che fa lui e in più — dalla coda alle impostazioni in un
+  tocco solo. I tasti restano grandi: si toglie, non si rimpicciolisce.
 - **Le sezioni di una pagina si scelgono dalla barra in alto.** Nel
   magazzino (Prodotti, Conta, Ordini, Scadenzario, Categorie,
   Macro-categorie, Fornitori, Movimenti) e nelle Impostazioni: il **titolo
