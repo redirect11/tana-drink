@@ -6,8 +6,9 @@
 
 - **Le Impostazioni entrano tutte nella finestra**, senza scorrere la
   pagina: la testata in alto, il piè di pagina in fondo, e in mezzo
-  l'elenco delle sezioni e il contenuto, che scorrono ognuno per conto
-  suo.
+  l'elenco delle sezioni e il contenuto, che **scorrono ognuno per conto
+  suo** — l'elenco resta lì mentre si legge la sezione, invece di
+  trascinarsi via insieme alla pagina.
 - **Il titolo della pagina è passato nella barra in alto**, accanto al
   nome del locale: dentro la pagina si prendeva una riga in cima al
   contenuto, e su un tablet al banco quella riga si vede.

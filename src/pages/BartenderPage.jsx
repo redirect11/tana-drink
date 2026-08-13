@@ -223,7 +223,10 @@ export default function BartenderPage() {
   }
 
   return (
-    <div>
+    // La classe serve alla catena delle altezze: da qui in giù, quando la
+    // pagina deve stare tutta nella finestra, ogni contenitore passa al
+    // figlio quello che gli resta. Un div senza nome la spezzava.
+    <div className="bar-page">
       <StaffDrawer role={role} active={tab} onSelect={goTab} />
 
       {/* Toccando un gruppo (menu laterale) si ENTRA nella sua vista: la
