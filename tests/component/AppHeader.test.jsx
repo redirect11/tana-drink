@@ -285,6 +285,13 @@ describe('l’indietro sta nella barra, non dentro la pagina', () => {
     expect(ordine.indexOf('topbar-back')).toBeLessThan(ordine.indexOf('brand'))
   })
 
+  it('anche nel proprio profilo, dove prima c’era un tasto in fondo alla pagina', async () => {
+    ruoloClaim = 'bartender'
+    apri('/profilo-staff')
+    await waitFor(() => expect(document.querySelector('.topbar-back')).not.toBeNull())
+    expect(screen.queryByText(/Torna al gestionale/)).toBeNull()
+  })
+
   it('nella coda non c’è: da lì non si torna da nessuna parte', async () => {
     ruoloClaim = 'admin'
     apri('/bar')
@@ -347,7 +354,7 @@ describe('le novità dopo un aggiornamento', () => {
     await screen.findByText('PAGINA MENU')
     expect(screen.queryByRole('dialog', { name: 'Novità di questa versione' })).toBeNull()
     const notifiche = JSON.parse(localStorage.getItem('tana:notifs') || '[]')
-    expect(notifiche[0].title).toMatch(/Aggiornata/)
+    expect(notifiche[0].title).toMatch(/aggiornata/i)
     expect(notifiche[0].href).toMatch(/tab=impostazioni/)
   })
 

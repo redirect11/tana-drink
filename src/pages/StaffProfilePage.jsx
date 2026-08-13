@@ -89,7 +89,9 @@ export default function StaffProfilePage() {
 
       <PasswordChanger />
 
-      <Link className="btn secondary block" to="/bar">← Torna al gestionale</Link>
+      {/* Per tornare al gestionale c'è l'«← Indietro» nella barra in alto,
+          come in ogni altra schermata: un tasto in fondo alla pagina lo si
+          trova solo scorrendo, e diceva una cosa diversa dagli altri. */}
       <button
         className="btn ghost block"
         style={{ marginTop: 8 }}

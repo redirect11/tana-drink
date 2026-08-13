@@ -12,7 +12,13 @@
 //
 // Qui la logica pura e le chiavi di memoria; chi la usa è App.jsx.
 
-const CHIAVE_VISTA = 'tana:novita:vista' // ultima versione di cui si sono viste le note
+// SI GUARDA LA BUILD, NON IL NUMERO DI VERSIONE. Il numero (v1.3.0) cambia
+// solo quando si rilascia: fra un aggiornamento e l'altro dell'ambiente di
+// test è sempre lo stesso, e legando le novità a quello non compariva mai
+// niente — provato al banco, due aggiornamenti di fila e nessun box. La
+// build invece cambia a ogni pubblicazione, ed è già quella che fa comparire
+// «Nuova versione disponibile»: le due cose devono guardare la stessa cosa.
+const CHIAVE_VISTA = 'tana:novita:vista' // ultima BUILD di cui si sono viste le note
 const CHIAVE_ATTESA = 'tana:novita:attesa' // "sto ricaricando per aggiornare"
 
 const leggi = (k) => {
@@ -47,9 +53,9 @@ export const dimenticaNovitaAttese = () => scrivi(CHIAVE_ATTESA, null)
 //   'niente'   → stessa versione di prima, o è la prima volta su questo
 //                dispositivo (un box di benvenuto con le note di rilascio
 //                non lo vuole nessuno)
-export function cosaFareAllAvvio({ versione, vista, attese }) {
-  if (!versione) return 'niente'
-  if (vista === versione) return 'niente'
+export function cosaFareAllAvvio({ build, vista, attese }) {
+  if (!build) return 'niente'
+  if (vista === build) return 'niente'
   if (attese) return 'box'
   if (!vista) return 'niente' // prima volta qui: si registra e zitti
   return 'notifica'

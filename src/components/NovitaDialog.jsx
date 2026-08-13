@@ -7,7 +7,7 @@ import { sezioneChangelog } from '../lib/novita.js'
 // ritrova con qualcosa spostato di posto, senza sapere perché. Le note ci
 // sono sempre state (Impostazioni → Informazioni) ma nessuno va a
 // cercarle: si portano davanti UNA VOLTA, e chi ha fretta le chiude.
-export default function NovitaDialog({ versione, onClose }) {
+export default function NovitaDialog({ onClose }) {
   const [testo, setTesto] = useState(null)
   const [errore, setErrore] = useState(false)
 
@@ -15,12 +15,16 @@ export default function NovitaDialog({ versione, onClose }) {
     let vivo = true
     fetch(`${import.meta.env.BASE_URL || '/'}changelog.md`, { cache: 'no-store' })
       .then((r) => (r.ok ? r.text() : Promise.reject(new Error(String(r.status)))))
-      .then((md) => vivo && setTesto(sezioneChangelog(md, versione)))
+      // SEMPRE LA SEZIONE PIÙ RECENTE, non quella del numero di versione che
+      // l'app si porta dietro: sull'ambiente di test quel numero è l'ultimo
+      // tag raggiungibile (vecchio), e il box avrebbe mostrato le note di due
+      // versioni fa. In cima al changelog c'è quello che è appena arrivato.
+      .then((md) => vivo && setTesto(sezioneChangelog(md)))
       .catch(() => vivo && setErrore(true))
     return () => {
       vivo = false
     }
-  }, [versione])
+  }, [])
 
   return (
     <div className="overlay confirm-overlay" onClick={onClose}>
@@ -36,7 +40,7 @@ export default function NovitaDialog({ versione, onClose }) {
           <button className="btn ghost small" onClick={onClose} aria-label="Chiudi">✕</button>
         </div>
         <p className="muted small" style={{ margin: '6px 0 0' }}>
-          L&apos;app è stata aggiornata{versione ? ` alla ${versione}` : ''}.
+          L&apos;app è stata aggiornata. Ecco cosa è cambiato:
         </p>
         {errore && (
           <p className="muted small" style={{ marginTop: 10 }}>
