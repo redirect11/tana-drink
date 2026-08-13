@@ -279,7 +279,6 @@ export default function App() {
   // per una scelta che si fa ogni tanto. Qui costano zero.
   const [sotto, setSotto] = useState({ voci: [], attiva: null, scegli: null })
   useEffect(() => subscribeSottosezioni(setSotto), [])
-  const [sottoAperte, setSottoAperte] = useState(false)
   const vociSotto = sotto.voci || []
   const sezioneAttiva = vociSotto.find((v) => v.id === sotto.attiva)
   const drawerDellaPagina =
@@ -328,19 +327,6 @@ export default function App() {
           }}
         />
       )}
-      {/* Le sottosezioni sul telefono: foglio dal basso, come le azioni. */}
-      <ActionSheet
-        open={sottoAperte && vociSotto.length > 0}
-        onClose={() => setSottoAperte(false)}
-        titolo={pagina ? `${pagina.icona} ${pagina.titolo}` : 'Sezioni'}
-        voci={vociSotto.map((v) => ({
-          id: v.id,
-          icon: v.icona,
-          label: v.label,
-          onClick: () => sotto.scegli?.(v.id),
-        }))}
-      />
-
       {/* Notifiche IN APP (sync, ordini da staff/clienti, errori) */}
       <Toasts />
       {/* Zoom della pagina: nella PWA a tutto schermo il browser non lo offre */}
@@ -401,45 +387,16 @@ export default function App() {
         {/* IL TITOLO DELLA PAGINA STA QUI, attaccato al marchio: dentro la
             pagina si prendeva una riga in cima al contenuto, e su un tablet
             al banco quella riga è roba che si vede. */}
-        {pagina && vociSotto.length === 0 && (
+        {/* IL TITOLO DICE DOVE SEI, e basta: a navigare si va nel menu (☰),
+            che porta le pagine e — sotto quella aperta — le sue sezioni. Le
+            schede in barra reggono cinque voci, non ventidue; e una tendina
+            costringe ad aprirla per sapere cosa c'è dentro. Un posto solo,
+            uguale sul telefono e sul computer. */}
+        {pagina && (
           <span className="topbar-pagina">
-            <span aria-hidden>·</span> {pagina.icona} {pagina.titolo}
+            <span aria-hidden>·</span> {(sezioneAttiva?.icona) || pagina.icona}{' '}
+            {(sezioneAttiva?.label) || pagina.titolo}
           </span>
-        )}
-        {pagina && vociSotto.length > 0 && (
-          telefono ? (
-            // SUL TELEFONO NON C'È SPAZIO per un elenco nella barra: si apre
-            // il foglio dal basso, lo stesso di «⋯ Azioni» — al banco quel
-            // gesto si conosce già, e i bersagli sono grandi.
-            <button
-              className="topbar-pagina topbar-pagina-tasto"
-              onClick={() => setSottoAperte(true)}
-              aria-haspopup="dialog"
-            >
-              {(sezioneAttiva?.icona) || pagina.icona}{' '}
-              {(sezioneAttiva?.label) || pagina.titolo} <span aria-hidden>▾</span>
-            </button>
-          ) : (
-            // DA TABLET IN SU: SCHEDE nella barra, tutte in vista. Una
-            // tendina costringe ad aprirla per sapere cosa c'è, e con lo
-            // spazio che qui c'è è un giro in più per niente. Se non ci
-            // stanno, la fila scorre in orizzontale.
-            <div className="topbar-tabs" role="tablist" aria-label={pagina.titolo}>
-              {vociSotto.map((v) => (
-                <button
-                  key={v.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={v.id === sotto.attiva}
-                  className={`chip${v.id === sotto.attiva ? ' active' : ''}`}
-                  onClick={() => sotto.scegli?.(v.id)}
-                  title={v.label}
-                >
-                  <span aria-hidden>{v.icona}</span> {v.label}
-                </button>
-              ))}
-            </div>
-          )
         )}
         <nav className="row">
           <StatusBell />

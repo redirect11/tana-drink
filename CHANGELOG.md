@@ -38,8 +38,12 @@
   dove l'hai messa. Si può riordinare anche **da tastiera**. La maniglia è
   attaccata alla card — erano due oggetti con una fessura in mezzo — e ha
   il colore di casa al posto della macchia senape.
-- **Le sezioni della pagina sono schede nella barra** su tablet e computer,
-  e restano a tendina sul telefono, dove lo spazio non c'è.
+- **Le sezioni di una pagina stanno nel menu a scomparsa**, rientrate sotto
+  la pagina aperta: un posto solo per navigare, uguale sul telefono e sul
+  computer. In pagina costavano una colonna o una riga tutto il giorno;
+  nella barra reggevano cinque voci, non ventidue.
+- Nel conto, **la storia è un'icona in alto** accanto al numero: da tasto
+  largo si prendeva una riga intera accanto a Unisci, Separa e Comande.
 - **Sul telefono la barra in alto respira.** C'erano otto cose in una riga
   e il nome del locale finiva in «La …»: ora sotto i 700px restano il
   logo, il menu, dove sei e le azioni. L'«indietro» sparisce perché il

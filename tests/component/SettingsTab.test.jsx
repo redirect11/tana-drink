@@ -56,8 +56,8 @@ import SettingsTab from '../../src/components/SettingsTab.jsx'
 import { subscribeSottosezioni } from '../../src/lib/sottosezioni.js'
 import { useEffect, useState } from 'react'
 
-// LE SEZIONI ORA STANNO NELLA BARRA IN ALTO, non dentro la pagina: qui si
-// rifà quel pezzetto di barra, così le prove restano quelle di prima —
+// LE SEZIONI STANNO NEL MENU A SCOMPARSA, sotto la pagina aperta: qui si
+// rifà quel pezzetto di menu, così le prove restano quelle di prima —
 // «scelgo una sezione, si apre il suo riquadro» — invece di frugare nella
 // tubatura.
 function BarraSezioni() {
