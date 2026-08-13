@@ -164,6 +164,30 @@ requirements:
     labels: [ordini, difetto-risolto]
     test_cases: [tests/unit/storiaOrdine.test.js, tests/component/OrderPosDetail.test.jsx, tests/unit/vouchers.test.js]
 
+  - id: REQ-ORD-009
+    title: "Un ordine battuto altrove si vede su tutti gli altri terminali"
+    area: "src/lib/dispositivo.js, src/pages/BartenderPage.jsx, src/lib/notifyStore.js"
+    description: >
+      Chi manda un ordine non ha bisogno di un avviso che gli dica quello che
+      ha appena fatto; tutti gli altri terminali sì. Il metro è il
+      DISPOSITIVO, non il ruolo: prima si tacevano tutti gli ordini battuti da
+      un gestore su qualunque terminale, e chi stava in sala col telefono non
+      sapeva mai che al banco era entrato un ordine — lo stesso account sta su
+      tablet, telefono e portatile insieme. Ogni ordine porta l'identificativo
+      del dispositivo che l'ha creato (un numero a caso per browser, non
+      identifica una persona); gli ordini che non ce l'hanno avvisano, perché
+      un avviso in più si chiude e uno in meno è un drink che non parte.
+      Le notifiche della campanella si dividono in DA LEGGERE e lette: una
+      letta sparisce dall'elenco — in mezz'ora di servizio un elenco che non
+      si svuota mai diventa un muro di righe vecchie, e non ci si guarda più —
+      e resta nello STORICO, che si apre dalla campanella. Aprire la
+      campanella non è leggere: si segna leggendo, toccando la notifica,
+      oppure con «segna tutte lette», che è una decisione.
+    status: implemented
+    generate_issue: false
+    labels: [ordini, notifiche]
+    test_cases: [tests/unit/dispositivo.test.js, tests/unit/notifyStore.test.js]
+
   # ══════════════════════════════════════════════════════════════════════
   #  CASSA / POS — come si batte un ordine
   # ══════════════════════════════════════════════════════════════════════
@@ -1378,7 +1402,7 @@ requirements:
     status: implemented
     generate_issue: false
     labels: [metodo, ux]
-    test_cases: [tests/unit/novita.test.js, tests/component/AppHeader.test.jsx]
+    test_cases: [tests/unit/novita.test.js, tests/component/AppHeader.test.jsx, tests/unit/notifyStore.test.js]
 
   # ══════════════════════════════════════════════════════════════════════
   #  INTEGRAZIONE SUMUP (Cloud Functions)

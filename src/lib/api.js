@@ -25,6 +25,7 @@ import { splitAmounts } from './groups.js'
 import { createSumUpSale, updateSumUpSaleStatus, toSumUpStatus } from './sumupApi.js'
 import { computeConsumption, formatQty, qtyInStockUnit } from './inventory.js'
 import { consumptionDiff } from './warehouse.js'
+import { idDispositivo } from './dispositivo.js'
 import { riaddebitoBuono } from './vouchers.js'
 import {
   ORDER_OPEN,
@@ -1654,7 +1655,10 @@ export async function createOrder({
     tip_amount,
     service_mode,
     push_token,
-    placed_by,
+    // DA QUALE DISPOSITIVO. Lo stesso account sta su più terminali: senza
+    // questo, avvisare «tutti tranne chi l'ha battuto» non si può fare, e
+    // infatti prima non si avvisava nessuno (vedi BartenderPage).
+    placed_by: placed_by ? { ...placed_by, device: idDispositivo() } : null,
     customer_name,
     customer_uid,
     payment_method,

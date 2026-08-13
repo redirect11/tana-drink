@@ -4,11 +4,9 @@
 // (Impostazioni → Informazioni), ma nessuno va a cercarle: vanno portate
 // davanti una volta, subito dopo l'aggiornamento, e poi mai più.
 //
-// Due strade, perché una sola non basta:
-//   1. si tocca «Nuova versione disponibile» → alla riapertura esce il box
-//      con cosa è cambiato;
-//   2. l'aggiornamento arriva da sé (l'app riaperta il giorno dopo) → nella
-//      campanella resta una notifica che porta alle Informazioni.
+// Due cose, insieme: il BOX quando la build cambia — comunque ci si sia
+// arrivati — e una NOTIFICA che resta in campanella, così di un
+// aggiornamento c'è traccia anche dopo aver chiuso il box.
 //
 // Qui la logica pura e le chiavi di memoria; chi la usa è App.jsx.
 
@@ -19,7 +17,6 @@
 // build invece cambia a ogni pubblicazione, ed è già quella che fa comparire
 // «Nuova versione disponibile»: le due cose devono guardare la stessa cosa.
 const CHIAVE_VISTA = 'tana:novita:vista' // ultima BUILD di cui si sono viste le note
-const CHIAVE_ATTESA = 'tana:novita:attesa' // "sto ricaricando per aggiornare"
 
 const leggi = (k) => {
   try {
@@ -40,25 +37,29 @@ const scrivi = (k, v) => {
 export const versioneVista = () => leggi(CHIAVE_VISTA)
 export const segnaVersioneVista = (v) => scrivi(CHIAVE_VISTA, v || null)
 
-// Toccando «Nuova versione disponibile» si lascia un segno PRIMA di
-// ricaricare: al riavvio è l'unico modo per sapere che quel riavvio l'ha
-// chiesto qualcuno per aggiornare, e non è una pagina riaperta a caso.
-export const chiediNovitaAlRiavvio = () => scrivi(CHIAVE_ATTESA, '1')
-export const novitaAttese = () => leggi(CHIAVE_ATTESA) === '1'
-export const dimenticaNovitaAttese = () => scrivi(CHIAVE_ATTESA, null)
-
 // COSA FARE ALL'AVVIO, in una funzione sola e provabile.
-//   'box'      → mostra subito le novità (l'aggiornamento l'ha chiesto lui)
-//   'notifica' → la versione è cambiata da sé: lascia un avviso e basta
-//   'niente'   → stessa versione di prima, o è la prima volta su questo
-//                dispositivo (un box di benvenuto con le note di rilascio
-//                non lo vuole nessuno)
-export function cosaFareAllAvvio({ build, vista, attese }) {
+//
+// LA BUILD È CAMBIATA? Allora il box, punto — non importa COME ci si è
+// arrivati: toccando il banner, riaprendo l'app da un terminale rimasto
+// indietro, o ricaricando la pagina da zero. Legarlo al tocco sul banner
+// significava che il tablet lasciato acceso tutta la notte, che al mattino
+// si aggiorna da solo, non lo vedeva mai — ed è proprio quello dove nessuno
+// va a leggere le note.
+//
+// In ogni caso la notifica si registra SEMPRE, così di un aggiornamento
+// resta traccia: già letta se il box è uscito (l'hai appena visto), da
+// leggere se no.
+//
+//   'box'      → mostra le novità adesso, e archivia la notifica come letta
+//   'notifica' → solo l'avviso in campanella, da leggere
+//   'niente'   → stessa build di prima, o è la prima volta su questo
+//                dispositivo (non è stato aggiornato niente: per lui l'app
+//                nasce adesso)
+export function cosaFareAllAvvio({ build, vista }) {
   if (!build) return 'niente'
   if (vista === build) return 'niente'
-  if (attese) return 'box'
   if (!vista) return 'niente' // prima volta qui: si registra e zitti
-  return 'notifica'
+  return 'box'
 }
 
 // Il pezzo di changelog di UNA versione. Il file è in Markdown e le versioni

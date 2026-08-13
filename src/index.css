@@ -5027,13 +5027,23 @@ body:has(.overlay) .zoom-control {
   font-size: 0.85rem;
 }
 
-/* Notifica che porta da qualche parte: si vede che si può toccare. */
+/* Una notifica si tocca: per andare dove porta, o anche solo per dire
+   «letta». Tasto o collegamento, a vedersi sono la stessa riga. */
 .status-bell-link {
   display: block;
+  width: 100%;
   color: inherit;
   text-decoration: none;
+  text-align: left;
+  background: none;
+  border: none;
+  font: inherit;
   cursor: pointer;
 }
 .status-bell-link:active {
   filter: brightness(1.2);
+}
+/* Nello storico non c'è più niente da fare: si legge e basta. */
+.status-bell-item.letta {
+  opacity: 0.65;
 }

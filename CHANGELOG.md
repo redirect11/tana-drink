@@ -19,11 +19,20 @@ una funzione, il terzo per le correzioni.
   serata la striscia si divide per metodo a colpo d'occhio: «Carta» e
   «Contante» si somigliano troppo. Stesse parole anche sulla chiusura di
   cassa, così i due fogli si confrontano senza tradurre a mente.
-- **Dopo un aggiornamento l'app dice cosa è cambiato.** Toccando «Nuova
-  versione disponibile», alla riapertura compare il riquadro con le note
-  di quella versione — una volta sola. Se invece l'aggiornamento arriva da
-  sé, niente riquadro in faccia mentre si lavora: resta una notifica nella
-  campanella, che si tocca e porta dritti alle note.
+- **Dopo un aggiornamento l'app dice cosa è cambiato.** Il riquadro con le
+  note esce ogni volta che arriva una versione nuova — che tu abbia toccato
+  «Nuova versione disponibile», riaperto l'app da un tablet rimasto
+  indietro o ricaricato la pagina. Una volta sola, e ne resta traccia
+  nella campanella.
+- **Le notifiche si dividono in da leggere e lette.** Una letta sparisce
+  dall'elenco e finisce nello **storico**, che si apre dalla campanella:
+  in mezz'ora di servizio un elenco che non si svuota mai diventa un muro
+  di righe vecchie, e non ci si guarda più. Aprire la campanella non basta
+  a segnarle lette: si toccano, oppure c'è «segna tutte lette».
+- **Un ordine battuto su un altro terminale ora si vede.** Prima, se lo
+  mandava un bartender, gli altri dispositivi non ricevevano nulla: chi
+  stava in sala col telefono non sapeva che al banco era entrato un
+  ordine. Adesso avvisa tutti tranne chi l'ha appena mandato.
 - **Un conto chiuso o annullato si può rimettere in corso.** Chiuso sul
   tavolo sbagliato, annullato per un malinteso, o il cliente che torna:
   dai ⋯ del conto si riapre, scrivendo — se si vuole — il perché. Gli

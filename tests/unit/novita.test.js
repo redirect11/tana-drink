@@ -8,27 +8,27 @@ import { describe, it, expect } from 'vitest'
 import { cosaFareAllAvvio, sezioneChangelog } from '../../src/lib/novita.js'
 
 describe('cosaFareAllAvvio', () => {
-  it('ha toccato «aggiorna»: le note gli si mettono davanti', () => {
-    expect(cosaFareAllAvvio({ build: 'b2', vista: 'b1', attese: true })).toBe('box')
-  })
-
-  it('l’aggiornamento è arrivato da sé: resta un avviso in campanella', () => {
-    expect(cosaFareAllAvvio({ build: 'b2', vista: 'b1', attese: false })).toBe('notifica')
+  // Non importa COME si è arrivati qui: banner toccato, app riaperta da un
+  // terminale rimasto indietro, pagina ricaricata da zero. Se la build è
+  // cambiata, le note si mostrano. Legarlo al tocco sul banner voleva dire
+  // che il tablet lasciato acceso, che si aggiorna da solo, non le vedeva
+  // mai — ed è proprio quello dove nessuno va a leggerle.
+  it('build cambiata: le note si mostrano, comunque ci si sia arrivati', () => {
+    expect(cosaFareAllAvvio({ build: 'b2', vista: 'b1' })).toBe('box')
   })
 
   it('stessa build di prima: non succede niente', () => {
-    expect(cosaFareAllAvvio({ build: 'b2', vista: 'b2', attese: true })).toBe('niente')
-    expect(cosaFareAllAvvio({ build: 'b2', vista: 'b2', attese: false })).toBe('niente')
+    expect(cosaFareAllAvvio({ build: 'b2', vista: 'b2' })).toBe('niente')
   })
 
   // Un box di benvenuto con le note di rilascio non lo vuole nessuno: alla
   // prima apertura su un dispositivo nuovo si registra e basta.
   it('prima volta su questo dispositivo: silenzio', () => {
-    expect(cosaFareAllAvvio({ build: 'b2', vista: null, attese: false })).toBe('niente')
+    expect(cosaFareAllAvvio({ build: 'b2', vista: null })).toBe('niente')
   })
 
   it('senza id di build (sviluppo) non si inventa niente', () => {
-    expect(cosaFareAllAvvio({ build: '', vista: null, attese: true })).toBe('niente')
+    expect(cosaFareAllAvvio({ build: '', vista: null })).toBe('niente')
   })
 })
 
