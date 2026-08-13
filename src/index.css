@@ -4529,36 +4529,18 @@ body.fullbleed .cat-rail {
   cursor: grabbing;
 }
 
-/* La card in mano segue il dito: niente transizione mentre la si muove (se
-   no arriva dove sei stato, non dove sei), ombra e ingrandimento per
-   staccarla dalle altre. Le altre invece si spostano CON una transizione:
-   è il movimento che fa capire che si sta facendo spazio. */
+/* La card in mano si stacca dalle altre (ombra, e sopra tutte). Il
+   movimento — lei che segue il dito, le altre che fanno spazio — lo mette
+   dnd-kit: qui c'è solo l'aspetto. */
 .reorder-cell.dragging {
   z-index: 5;
   cursor: grabbing;
   box-shadow: 0 16px 34px rgba(0, 0, 0, 0.45);
-  transition: none;
-  /* LA CARD IN MANO È TRASPARENTE AL TOCCO. Ora segue il dito, quindi sotto
-     il dito c'è sempre lei: chiedendo «cosa c'è qui sotto» rispondeva sé
-     stessa, e lo scambio non avveniva mai — si spostava e tornava indietro.
-     La maniglia continua a ricevere il gesto perché se l'è presa
-     (setPointerCapture), che vale anche qui dentro. */
-  pointer-events: none;
-}
-.reorder-cell.scivola {
-  transition: transform 0.18s cubic-bezier(0.2, 0.7, 0.3, 1);
 }
 .reorder-cell.dragging .reorder-grip {
   cursor: grabbing;
-  /* La cella è trasparente al tocco, la maniglia no: se no, staccando il
-     dito su di lei il gesto finirebbe nel vuoto. */
-  pointer-events: auto;
 }
-@media (prefers-reduced-motion: reduce) {
-  .reorder-cell.scivola {
-    transition: none;
-  }
-}
+
 
 /* ── RENDICONTO SERATA: tabella da rendiconto, non da scontrino ──────────
    Numeri a destra e incolonnati (si confrontano a colpo d'occhio), prima
@@ -5431,6 +5413,32 @@ body.pagina-piena .pagina-inventario .inv-scroll {
   background: var(--bg-2);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
 }
+/* LE SCHEDE DELLA PAGINA, dentro la barra. Da tablet in su lo spazio c'è e
+   le sezioni si vedono tutte: una tendina costringerebbe ad aprirla per
+   sapere cosa c'è dentro. Se sono tante, la fila scorre in orizzontale —
+   una riga che scorre, non una riga in più. */
+.topbar-tabs {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  padding: 2px 0;
+  margin-left: 4px;
+}
+.topbar-tabs .chip {
+  flex-shrink: 0;
+  white-space: nowrap;
+  font-size: 0.82rem;
+  padding: 6px 10px;
+}
+/* La barra di scorrimento delle schede non deve fare rumore. */
+.topbar-tabs::-webkit-scrollbar {
+  height: 4px;
+}
+
 /* Nella barra in alto: allineata al marchio, e col pannello che scende
    sotto la barra. Il tasto non ha il fondo delle pastiglie — nella barra
    sarebbe un bottone dentro un bottone. */
