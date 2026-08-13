@@ -324,38 +324,37 @@ describe('le novità dopo un aggiornamento', () => {
     )
   })
 
-  it('chi ha toccato «aggiorna» trova il box con le note', async () => {
-    // Il segno lasciato prima di ricaricare, e una versione già vista
-    // diversa da questa: è esattamente lo stato dopo l'aggiornamento.
-    localStorage.setItem('tana:novita:attesa', '1')
-    localStorage.setItem('tana:novita:vista', 'v0.0.1-vecchia')
+  it('build nuova: il box con le note esce da sé', async () => {
+    // Una build già vista diversa da questa: è lo stato di chi riapre l'app
+    // dopo un aggiornamento, comunque ci sia arrivato.
+    localStorage.setItem('tana:novita:vista', 'build-vecchia')
     apri('/menu')
     expect(await screen.findByRole('dialog', { name: 'Novità di questa versione' })).toBeInTheDocument()
     expect(await screen.findByText(/La cosa nuova/)).toBeInTheDocument()
   })
 
-  it('chiuso il box, la versione risulta vista e non torna più', async () => {
+  it('chiuso il box, la build risulta vista e non torna più', async () => {
     const user = userEvent.setup()
-    localStorage.setItem('tana:novita:attesa', '1')
-    localStorage.setItem('tana:novita:vista', 'v0.0.1-vecchia')
+    localStorage.setItem('tana:novita:vista', 'build-vecchia')
     const { unmount } = apri('/menu')
     await user.click(await screen.findByRole('button', { name: 'Ho capito' }))
-    expect(localStorage.getItem('tana:novita:vista')).not.toBe('v0.0.1-vecchia')
+    expect(localStorage.getItem('tana:novita:vista')).not.toBe('build-vecchia')
     unmount()
     apri('/menu')
     expect(screen.queryByRole('dialog', { name: 'Novità di questa versione' })).toBeNull()
   })
 
-  // Seconda strada: l'aggiornamento arriva da sé (app riaperta il giorno
-  // dopo). Niente box in faccia mentre si lavora, ma un avviso che resta.
-  it('aggiornamento arrivato da sé: niente box, una notifica che porta alle Informazioni', async () => {
-    localStorage.setItem('tana:novita:vista', 'v0.0.1-vecchia')
+  // Del box, dopo averlo chiuso, non resterebbe niente: l'avviso si registra
+  // comunque — già letto, perché è appena stato mostrato — così l'aggiornamento
+  // si ritrova nello storico della campanella.
+  it('resta traccia in campanella, come notifica già letta', async () => {
+    localStorage.setItem('tana:novita:vista', 'build-vecchia')
     apri('/menu')
-    await screen.findByText('PAGINA MENU')
-    expect(screen.queryByRole('dialog', { name: 'Novità di questa versione' })).toBeNull()
+    await screen.findByRole('dialog', { name: 'Novità di questa versione' })
     const notifiche = JSON.parse(localStorage.getItem('tana:notifs') || '[]')
     expect(notifiche[0].title).toMatch(/aggiornata/i)
     expect(notifiche[0].href).toMatch(/tab=impostazioni/)
+    expect(notifiche[0].letta).toBe(true)
   })
 
   it('prima apertura su un dispositivo nuovo: nessun box, nessuna notifica', async () => {

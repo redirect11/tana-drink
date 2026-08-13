@@ -34,6 +34,7 @@ import StatusBell from '../components/StatusBell.jsx'
 import ActionSheet from '../components/ActionSheet.jsx'
 import { isGestore, isPersonale } from '../lib/ruoli.js'
 import { senzaNascosti, subscribeNascosti, mostraOrdine } from '../lib/ordiniNascosti.js'
+import { battutoDaQui } from '../lib/dispositivo.js'
 import { allServed } from '../lib/comande.js'
 import { paidAmount, orderTotal } from '../lib/pagamento.js'
 import { businessDayKey, businessDayLabel, businessDayShort } from '../lib/businessDay.js'
@@ -517,9 +518,13 @@ function OrderQueue() {
           for (const o of data) {
             const isNew = !knownIds.current.has(o.id)
             if (o.workflow_status !== ORDER_STATUSES.RICEVUTO) continue
-            // Niente notifica per gli ordini battuti al banco da chi sta
-            // guardando: avvisano solo quelli di clienti o staff di sala.
-            if (isGestore(o.placed_by?.role)) continue
+            // NIENTE AVVISO SOLO A CHI L'HA MANDATO. Prima si tacevano tutti
+            // gli ordini battuti da un gestore, su QUALUNQUE dispositivo: chi
+            // stava in sala col telefono non sapeva mai che al banco era
+            // entrato un ordine. Il metro giusto non è il ruolo, è il
+            // terminale — lo stesso account sta su tablet, telefono e
+            // portatile insieme.
+            if (battutoDaQui(o.placed_by)) continue
             if (isAwaitingPayment(o)) {
               if (isNew) awaiting.add(o.id)
               continue

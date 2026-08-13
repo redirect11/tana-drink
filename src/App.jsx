@@ -26,14 +26,7 @@ import { applicaNomeApp } from './lib/nomeApp.js'
 import { envLabel } from './dev/devActions.js'
 import { openCookiePreferences } from './lib/cookieConsent.js'
 import { subscribeUpdateAvailable } from './lib/appVersion.js'
-import {
-  cosaFareAllAvvio,
-  versioneVista,
-  segnaVersioneVista,
-  chiediNovitaAlRiavvio,
-  novitaAttese,
-  dimenticaNovitaAttese,
-} from './lib/novita.js'
+import { cosaFareAllAvvio, versioneVista, segnaVersioneVista } from './lib/novita.js'
 import { recordNotif } from './lib/notifyStore.js'
 import NovitaDialog from './components/NovitaDialog.jsx'
 import { useOnline } from './lib/useOnline.js'
@@ -74,24 +67,21 @@ export default function App() {
   // con le note di rilascio non lo vuole nessuno.
   const [novitaAperte, setNovitaAperte] = useState(false)
   useEffect(() => {
-    const cosa = cosaFareAllAvvio({
-      build: BUILD,
-      vista: versioneVista(),
-      attese: novitaAttese(),
-    })
-    dimenticaNovitaAttese()
-    if (cosa === 'box') setNovitaAperte(true)
-    if (cosa === 'notifica') {
+    const cosa = cosaFareAllAvvio({ build: BUILD, vista: versioneVista() })
+    if (cosa !== 'niente') {
+      // La notifica si registra SEMPRE: di un aggiornamento deve restare
+      // traccia anche dopo aver chiuso il box. Se il box esce adesso, la
+      // notifica nasce già letta — è appena stata mostrata.
       recordNotif(
         '🎉 L’app è stata aggiornata',
-        'Tocca per vedere cosa è cambiato',
-        { href: '/bar?tab=impostazioni&sezione=informazioni' }
+        'Tocca per rivedere cosa è cambiato',
+        { href: '/bar?tab=impostazioni&sezione=informazioni', letta: cosa === 'box' }
       )
     }
-    // La versione si segna VISTA solo quando le note sono state mostrate o
-    // messe in campanella: se si segnasse comunque, un aggiornamento che
-    // arriva mentre si sta battendo un ordine passerebbe in silenzio.
-    if (cosa !== 'box') segnaVersioneVista(BUILD)
+    if (cosa === 'box') setNovitaAperte(true)
+    // Segnata subito: il box può anche restare aperto, ma questa build
+    // l'abbiamo annunciata e non va annunciata due volte.
+    segnaVersioneVista(BUILD)
   }, [])
 
   // Tastiera virtuale: premendo Invio su un campo a riga singola FUORI da un
@@ -305,12 +295,7 @@ export default function App() {
       {updateReady && (
         <button
           className="update-banner"
-          onClick={() => {
-            // Il segno serve al riavvio: è l'unico modo per distinguere
-            // "ricaricato per aggiornare" da una pagina riaperta a caso.
-            chiediNovitaAlRiavvio()
-            window.location.reload()
-          }}
+          onClick={() => window.location.reload()}
         >
           🔄 Nuova versione disponibile — tocca per aggiornare
         </button>
