@@ -313,6 +313,9 @@ export default function PosProductPicker({
   const startDrag = (e, id) => {
     e.preventDefault()
     try {
+      // La cattura sta sulla MANIGLIA e regge anche quando la cella diventa
+      // trasparente al tocco: chi ha catturato il puntatore continua a
+      // ricevere i movimenti, comunque sia il disegno sotto.
       e.currentTarget.setPointerCapture(e.pointerId)
     } catch {
       /* senza cattura si trascina lo stesso, finché il dito resta sopra */
