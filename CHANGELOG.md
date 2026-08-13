@@ -22,6 +22,12 @@
   in ogni schermata.
 - **«Ultimi movimenti» non è più un tastone in fondo alla lista**: è una
   sezione del menu del magazzino, con gli ultimi cento invece di trenta.
+- **In «Organizza» la card segue il dito.** Prima scattava di posto: ora
+  si muove insieme al dito, e le altre **scivolano** per fare spazio
+  quando ci si ferma un attimo sopra. Lasciandola, torna al suo posto
+  invece di restare spostata. La maniglia è attaccata alla card — erano
+  due oggetti con una fessura in mezzo — e ha il colore di casa al posto
+  della macchia senape.
 - **Sul telefono la barra in alto respira.** C'erano otto cose in una riga
   e il nome del locale finiva in «La …»: ora sotto i 700px restano il
   logo, il menu, dove sei e le azioni. L'«indietro» sparisce perché il
