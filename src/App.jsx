@@ -22,14 +22,25 @@ import { useTelefono } from './lib/useTelefono.js'
 import { useSchermoIntero } from './lib/useSchermoIntero.js'
 import { logoutStaff } from './lib/logout.js'
 import { resolveThemeVars, applyTheme } from './lib/themes.js'
+import { applicaNomeApp } from './lib/nomeApp.js'
 import { envLabel } from './dev/devActions.js'
 import { openCookiePreferences } from './lib/cookieConsent.js'
 import { subscribeUpdateAvailable } from './lib/appVersion.js'
+import { cosaFareAllAvvio, versioneVista, segnaVersioneVista } from './lib/novita.js'
+import { leggiAvvisi, avvisoAttivo } from './lib/preferenzeNotifiche.js'
+import { recordNotif } from './lib/notifyStore.js'
+import NovitaDialog from './components/NovitaDialog.jsx'
 import { useOnline } from './lib/useOnline.js'
 import { toastSuccess } from './lib/toast.js'
 import Toasts from './components/Toasts.jsx'
 import ZoomControl from './components/ZoomControl.jsx'
 import { useEffect, useRef, useState } from 'react'
+
+/* global __APP_VERSION__, __BUILD_ID__ */
+const VERSIONE = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : ''
+// A cambiare a ogni pubblicazione è la BUILD, non il numero di versione:
+// è lei che dice "questa è un'altra app rispetto a quella di prima".
+const BUILD = typeof __BUILD_ID__ !== 'undefined' ? __BUILD_ID__ : ''
 
 export default function App() {
   const location = useLocation()
@@ -47,6 +58,38 @@ export default function App() {
   // "tocca per aggiornare" invece di aspettare un reload manuale.
   const [updateReady, setUpdateReady] = useState(false)
   useEffect(() => subscribeUpdateAvailable(() => setUpdateReady(true)), [])
+
+  // COSA È CAMBIATO. Dopo un aggiornamento chi lavora si ritrova qualcosa
+  // spostato di posto senza sapere perché: le note vanno portate davanti una
+  // volta. Se l'aggiornamento l'ha chiesto lui (ha toccato il banner) esce il
+  // box; se è arrivato da sé — l'app riaperta il giorno dopo — resta una
+  // notifica nella campanella, che porta alle Informazioni. Alla prima
+  // apertura su un dispositivo nuovo non succede niente: un box di benvenuto
+  // con le note di rilascio non lo vuole nessuno.
+  const [novitaAperte, setNovitaAperte] = useState(false)
+  useEffect(() => {
+    // Chi non le vuole le spegne (Impostazioni → Notifiche, per questo
+    // dispositivo): la build si segna comunque vista, se no il box salterebbe
+    // fuori tutto insieme il giorno in cui le riaccende.
+    const vuoleSaperlo = avvisoAttivo(leggiAvvisi(auth.currentUser?.uid), 'nuova_versione')
+    const cosa = vuoleSaperlo
+      ? cosaFareAllAvvio({ build: BUILD, vista: versioneVista() })
+      : 'niente'
+    if (cosa !== 'niente') {
+      // La notifica si registra SEMPRE: di un aggiornamento deve restare
+      // traccia anche dopo aver chiuso il box. Se il box esce adesso, la
+      // notifica nasce già letta — è appena stata mostrata.
+      recordNotif(
+        '🎉 L’app è stata aggiornata',
+        'Tocca per rivedere cosa è cambiato',
+        { href: '/bar?tab=impostazioni&sezione=informazioni', letta: cosa === 'box' }
+      )
+    }
+    if (cosa === 'box') setNovitaAperte(true)
+    // Segnata subito: il box può anche restare aperto, ma questa build
+    // l'abbiamo annunciata e non va annunciata due volte.
+    segnaVersioneVista(BUILD)
+  }, [])
 
   // Tastiera virtuale: premendo Invio su un campo a riga singola FUORI da un
   // form (es. nome tavolo/note, che si salvano con un bottone) la si chiude,
@@ -175,6 +218,14 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [staffRole])
 
+  // IL NOME DELL'APP SEGUE CHI LA USA: «La Tana del Coniglio» per il
+  // cliente, col suffisso del ruolo per chi lavora. Vale per la linguetta
+  // del browser e per il nome che il telefono propone all'installazione
+  // (vedi src/lib/nomeApp.js: il nome dell'icona si congela lì).
+  useEffect(() => {
+    applicaNomeApp(staffRole)
+  }, [staffRole])
+
   // Tema: SEGUE CHI GUARDA, non l'indirizzo. Prima era un elenco di
   // percorsi, e bastava che ne mancasse uno — il profilo staff, "i miei
   // ordini", l'accesso — perché a chi sta lavorando arrivassero i colori
@@ -208,6 +259,16 @@ export default function App() {
   // quando ci sta lavorando qualcuno dello staff. Altrove — e nell'anteprima
   // vista cliente, dove il menù dello staff non c'entra — lo monta l'app,
   // perché il ☰ non resti a premere nel vuoto.
+  // L'«INDIETRO» IN BARRA. Ce l'ha ogni schermata di lavoro tranne il punto
+  // di partenza — la coda — da cui non si torna da nessuna parte. Vale per le
+  // sezioni del gestionale e per le pagine che stanno fuori (il proprio
+  // profilo), dove prima c'era un tasto in fondo alla pagina che diceva
+  // «Torna al gestionale»: lo si trovava solo scorrendo, ed era l'unico a
+  // chiamarsi in un altro modo.
+  const tabGestionale = new URLSearchParams(location.search).get('tab') || 'coda'
+  const indietroQui =
+    !!staffRole &&
+    ((onBackoffice && tabGestionale !== 'coda') || location.pathname.startsWith('/profilo-staff'))
   const drawerDellaPagina =
     (onBackoffice && !!staffRole) ||
     (location.pathname.startsWith('/menu') && !!staffRole && !anteprimaCliente)
@@ -239,9 +300,20 @@ export default function App() {
         </div>
       )}
       {updateReady && (
-        <button className="update-banner" onClick={() => window.location.reload()}>
+        <button
+          className="update-banner"
+          onClick={() => window.location.reload()}
+        >
           🔄 Nuova versione disponibile — tocca per aggiornare
         </button>
+      )}
+      {novitaAperte && (
+        <NovitaDialog
+          onClose={() => {
+            setNovitaAperte(false)
+            segnaVersioneVista(BUILD)
+          }}
+        />
       )}
       {/* Notifiche IN APP (sync, ordini da staff/clienti, errori) */}
       <Toasts />
@@ -271,6 +343,24 @@ export default function App() {
             onClick={() => window.dispatchEvent(new Event('tana:toggle-drawer'))}
           >
             ☰
+          </button>
+        )}
+        {/* INDIETRO, NELLA BARRA. Nelle sezioni del gestionale stava dentro
+            la pagina e si mangiava una riga in cima al contenuto — proprio
+            dove le Impostazioni hanno bisogno di tutta l'altezza per stare
+            in uno schermo. Qui sta fra il ☰ e il marchio, sempre nello
+            stesso posto, e non ruba niente a quello che si sta guardando. */}
+        {indietroQui && (
+          <button
+            className="topbar-back"
+            aria-label="Indietro"
+            title="Indietro"
+            onClick={() => {
+              if (window.history.length > 1) navigate(-1)
+              else navigate('/bar')
+            }}
+          >
+            ←
           </button>
         )}
         {/* Nel gestionale il logo non porta al menu: resta sugli ordini. */}

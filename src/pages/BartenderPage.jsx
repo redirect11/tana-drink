@@ -14,6 +14,7 @@ import {
   subscribeSettings,
   DEFAULT_SETTINGS,
   saveStaffToken,
+  restoreOrder,
 } from '../lib/api.js'
 import { getPushToken } from '../lib/push.js'
 import {
@@ -27,10 +28,19 @@ import {
   placedByLetter,
 } from '../lib/orderStatus.js'
 import { bucketByStatus, ordersRecap, ordineCorrisponde, primoCorrispondente } from '../lib/coda.js'
+import { ripristinabile } from '../lib/storiaOrdine.js'
+import { StoriaOrdineDialog, RipristinaOrdineDialog } from '../components/StoriaOrdine.jsx'
 import StatusBell from '../components/StatusBell.jsx'
 import ActionSheet from '../components/ActionSheet.jsx'
 import { isGestore, isPersonale } from '../lib/ruoli.js'
-import { senzaNascosti, subscribeNascosti } from '../lib/ordiniNascosti.js'
+import { senzaNascosti, subscribeNascosti, mostraOrdine } from '../lib/ordiniNascosti.js'
+import { battutoDaQui } from '../lib/dispositivo.js'
+import {
+  leggiAvvisi,
+  subscribeAvvisi,
+  avvisoAttivo,
+  idAvvisoStato,
+} from '../lib/preferenzeNotifiche.js'
 import { allServed } from '../lib/comande.js'
 import { paidAmount, orderTotal } from '../lib/pagamento.js'
 import { businessDayKey, businessDayLabel, businessDayShort } from '../lib/businessDay.js'
@@ -224,19 +234,9 @@ export default function BartenderPage() {
       )}
 
       <div className="bar-content">
-        {/* Indietro: torna alla sezione da cui si è arrivati, restando dentro
-            il gestionale. Nella coda non serve: è la schermata di partenza. */}
-        {tab !== 'coda' && (
-          <button
-            className="btn ghost small bar-back"
-            onClick={() => {
-              if (window.history.length > 1) navigate(-1)
-              else goTab('coda')
-            }}
-          >
-            ← Indietro
-          </button>
-        )}
+        {/* L'«indietro» sta nella barra in alto, fra il ☰ e il marchio
+            (vedi App.jsx): dentro la pagina si mangiava la prima riga di
+            contenuto in ogni sezione. */}
         {tab === 'coda' && <OrderQueue />}
         {tab === 'pagamenti' && <CashFlow canManageStaff={isGestore(role)} />}
         {tab === 'storico' && <OrdersHistory />}
@@ -437,6 +437,20 @@ function OrderQueue() {
   const [slowLoad, setSlowLoad] = useState(false)
   const [confirmAction, setConfirmAction] = useState(null) // { title, message, danger, run }
   const [cancelTarget, setCancelTarget] = useState(null) // { order, kind }
+  // Storia del conto e ripristino: due pannelli, un conto alla volta.
+  // Quali avvisi vuole CHI GUARDA QUESTO SCHERMO (per dispositivo e per
+  // persona). In un ref perché la sottoscrizione agli ordini nasce una volta
+  // sola: leggendoli dallo stato resterebbero quelli di quando è nata.
+  const avvisi = useRef(leggiAvvisi(auth.currentUser?.uid))
+  useEffect(
+    () => subscribeAvvisi(auth.currentUser?.uid, (p) => { avvisi.current = p }),
+    []
+  )
+  // Gli avanzamenti fatti DA QUI non si annunciano: l'ho appena premuto io.
+  const avanzatiDaMe = useRef(new Set())
+  const statoPrec = useRef(new Map())
+  const [storiaTarget, setStoriaTarget] = useState(null)
+  const [ripristinoTarget, setRipristinoTarget] = useState(null)
   const [search, setSearch] = useState('')
   const [showPanels, setShowPanels] = useState(false) // pannelli (chiamate/gruppi) nella griglia
   const [menuBoard, setMenuBoard] = useState(false) // menu ⋯ della lavagna
@@ -521,17 +535,23 @@ function OrderQueue() {
           for (const o of data) {
             const isNew = !knownIds.current.has(o.id)
             if (o.workflow_status !== ORDER_STATUSES.RICEVUTO) continue
-            // Niente notifica per gli ordini battuti al banco da chi sta
-            // guardando: avvisano solo quelli di clienti o staff di sala.
-            if (isGestore(o.placed_by?.role)) continue
+            // NIENTE AVVISO SOLO A CHI L'HA MANDATO. Prima si tacevano tutti
+            // gli ordini battuti da un gestore, su QUALUNQUE dispositivo: chi
+            // stava in sala col telefono non sapeva mai che al banco era
+            // entrato un ordine. Il metro giusto non è il ruolo, è il
+            // terminale — lo stesso account sta su tablet, telefono e
+            // portatile insieme.
+            if (battutoDaQui(o.placed_by)) continue
             if (isAwaitingPayment(o)) {
               if (isNew) awaiting.add(o.id)
               continue
             }
             if (isNew || awaiting.has(o.id)) {
               awaiting.delete(o.id)
-              beep() // avviso sonoro: su iPad in primo piano il banner è soppresso
-              notify('🆕 Nuovo ordine', `Ordine #${o.daily_number} ricevuto.`)
+              if (avvisoAttivo(avvisi.current, 'nuovo_ordine')) {
+                beep() // su iPad in primo piano il banner di sistema è soppresso
+                notify('🆕 Nuovo ordine', `Ordine #${o.daily_number} ricevuto.`)
+              }
               // Auto-stampa comanda se abilitata nelle impostazioni stampante.
               if (printerSettings.autoPrintComanda) {
                 printComanda(o, o.comande?.find((cc) => cc.id === o.active_comanda_id) ?? null).catch((e) => console.warn('[printer] auto-comanda:', e.message))
@@ -560,9 +580,33 @@ function OrderQueue() {
               showToast(`➕ Aggiunta all'ordine #${o.daily_number ?? '—'}${o.customer_name ? ` (${o.customer_name})` : ''}`)
             }
           }
+          // AVANZAMENTI FATTI ALTROVE. Chi sta in sala deve sapere che un
+          // conto è diventato «pronto» senza dover guardare la coda ogni
+          // minuto; chi l'ha premuto qui non ha bisogno che glielo si
+          // ripeta. Ogni stato si accende e si spegne per conto suo, dalle
+          // impostazioni: in sala interessa «pronto», al banco altro.
+          for (const o of data) {
+            const prima = statoPrec.current.get(o.id)
+            const ora = o.workflow_status
+            if (!prima || prima === ora) continue
+            if (avanzatiDaMe.current.has(`${o.id}:${ora}`)) {
+              avanzatiDaMe.current.delete(`${o.id}:${ora}`)
+              continue
+            }
+            if (!avvisoAttivo(avvisi.current, idAvvisoStato(ora))) continue
+            const nome = ora === ORDER_STATUSES.RITIRATO
+              ? ritiratoLabel(o.service_mode)
+              : STATUS_LABELS[ora]
+            if (!nome) continue
+            notify(
+              `${STATUS_EMOJI[ora] || '•'} ${nome}`,
+              `Ordine #${o.daily_number ?? '—'}${o.customer_name ? ` · ${o.customer_name}` : ''}`
+            )
+          }
         }
         knownIds.current = new Set(data.map((o) => o.id))
         knownComande.current = new Map(data.map((o) => [o.id, (o.comande || []).length]))
+        statoPrec.current = new Map(data.map((o) => [o.id, o.workflow_status]))
         setOrders(data)
         setOrdersReady(true)
         primed = true
@@ -593,6 +637,7 @@ function OrderQueue() {
     const ns = nextStatus(order.workflow_status)
     if (!ns) return
     setQueueOverrides((m) => ({ ...m, [order.id]: ns }))
+    avanzatiDaMe.current.add(`${order.id}:${ns}`)
     ;(async () => {
       try {
         await updateOrderStatus(order.id, ns)
@@ -861,6 +906,13 @@ function OrderQueue() {
     }
   }
 
+  // Chi sta usando l'app in questo momento: la storia deve dire CHI ha
+  // riaperto un conto, non solo che è stato riaperto.
+  const chiSonoIo = () =>
+    auth.currentUser?.displayName ||
+    String(auth.currentUser?.email || '').split('@')[0] ||
+    null
+
   const toggleCard = (id) =>
     setOpenCards((s) => {
       const n = new Set(s)
@@ -998,6 +1050,22 @@ function OrderQueue() {
             🚫 {o.service_mode === 'tavolo' ? 'Non servito' : 'Non ritirato'}
           </button>
         )}
+        {/* La storia c'è per tutti i conti: è come si spiega, un'ora dopo,
+            un conto che qualcuno ha riaperto. Il ripristino compare solo
+            dove ha senso — su un conto chiuso o annullato. */}
+        <div className="grid-2" style={{ marginTop: 8 }}>
+          <button className="btn ghost small" onClick={() => setStoriaTarget(o)}>
+            🕘 Storia
+          </button>
+          <button
+            className="btn ghost small"
+            disabled={!ripristinabile(o)}
+            title={ripristinabile(o) ? undefined : 'Il conto è già in corso'}
+            onClick={() => setRipristinoTarget(o)}
+          >
+            ♻️ Ripristina
+          </button>
+        </div>
       </>
     )
   }
@@ -1548,6 +1616,28 @@ function OrderQueue() {
           defaultPhrase={settings.cancel_phrase_default}
           onCancel={() => setCancelTarget(null)}
           onConfirm={confirmCancel}
+        />
+      )}
+
+      {storiaTarget && (
+        <StoriaOrdineDialog order={storiaTarget} onClose={() => setStoriaTarget(null)} />
+      )}
+
+      {ripristinoTarget && (
+        <RipristinaOrdineDialog
+          order={ripristinoTarget}
+          onClose={() => setRipristinoTarget(null)}
+          onConferma={(motivo) => {
+            const o = ripristinoTarget
+            setRipristinoTarget(null)
+            // Il conto era stato nascosto dalla coda quando l'avevamo
+            // chiuso qui: riaprendolo deve tornare a vedersi subito, senza
+            // aspettare il giro del server.
+            mostraOrdine(o.id)
+            restoreOrder(o.id, { motivo, chi: chiSonoIo() }).catch((e) =>
+              setError(`Conto non ripristinato: ${e.message}`)
+            )
+          }}
         />
       )}
     </div>

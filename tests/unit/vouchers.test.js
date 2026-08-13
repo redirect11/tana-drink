@@ -10,6 +10,7 @@ import {
   totalOutstanding,
   voucherExpiresAt,
   isVoucherExpired,
+  riaddebitoBuono,
 } from '../../src/lib/vouchers.js'
 
 describe('redeemable / balanceAfterRedeem', () => {
@@ -81,5 +82,35 @@ describe('scadenza buoni', () => {
       { id: 'b', holder_name: 'B', balance: 10, expiry_type: 'date', expires_at: '2026-07-01T00:00:00' },
     ]
     expect(activeVouchers(list, now).map((v) => v.id)).toEqual(['a'])
+  })
+})
+
+// RIAPRIRE UN CONTO ANNULLATO CHE AVEVA UN BUONO. Annullando, il saldo era
+// tornato al beneficiario: riaprendo va ri-addebitato, se no lo sconto resta
+// sul conto ma non lo paga nessuno — e il credito in circolazione non torna
+// più con i conti.
+describe('riaddebitoBuono', () => {
+  const sconto = { type: 'buono', value: 10, voucher_id: 'v1', voucher_name: 'Marco' }
+
+  it('saldo capiente: si riprende tutto e sul conto non cambia niente', () => {
+    const r = riaddebitoBuono(sconto, 25)
+    expect(r.addebito).toBe(10)
+    expect(r.discount).toEqual(sconto)
+    expect(r.discount_amount).toBe(10)
+  })
+
+  it('saldo insufficiente: si prende quel che c’è e lo sconto si riduce', () => {
+    // Nel frattempo il buono è stato speso altrove: restano 4 €.
+    const r = riaddebitoBuono(sconto, 4)
+    expect(r.addebito).toBe(4)
+    expect(r.discount.value).toBe(4)
+    expect(r.discount_amount).toBe(4)
+  })
+
+  it('buono ormai a zero: lo sconto si toglie del tutto', () => {
+    const r = riaddebitoBuono(sconto, 0)
+    expect(r.addebito).toBe(0)
+    expect(r.discount).toBe(null)
+    expect(r.discount_amount).toBe(0)
   })
 })

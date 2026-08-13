@@ -1,3 +1,5 @@
+import { useEffect, useRef } from 'react'
+
 // CATEGORIE A SINISTRA, contenuto a destra — lo stesso schema del POS
 // (PosProductPicker), riusato nel backoffice per Inventario e Menù così la
 // navigazione per categoria è omogenea ovunque. Su schermo stretto la
@@ -13,9 +15,54 @@
 //          opzionali: col colore la voce porta il pallino della categoria,
 //          esattamente come nel POS, così la stessa categoria si riconosce
 //          allo stesso modo ovunque la si incontri.
-export default function CategoryRail({ items, selected, onSelect, children }) {
+//   pieno: la coppia barra+contenuto sta TUTTA nello schermo e non fa
+//          scorrere la pagina — scorrono i due pannelli, ognuno per conto
+//          suo. Serve dove le voci sono tante (le impostazioni): per
+//          arrivare all'ultima si scorreva la pagina intera, testata
+//          compresa, e la barra spariva proprio mentre la si usava.
+export default function CategoryRail({ items, selected, onSelect, children, pieno = false }) {
+  const rif = useRef(null)
+
+  // L'ALTEZZA SI MISURA, NON SI INDOVINA. Prima era un conto in CSS
+  // (100dvh meno la testata, meno un margine): ma la testata cambia altezza
+  // con lo zoom e col telefono, sotto c'è il piè di pagina, e il conto era
+  // sempre un po' sbagliato — la pagina sforava e si scorreva lo stesso,
+  // che è esattamente quello che si voleva togliere. Qui si guarda dove
+  // comincia davvero il riquadro e cosa gli sta sotto.
+  useEffect(() => {
+    const el = rif.current
+    if (!pieno || !el) return undefined
+    const stretto = () => window.matchMedia('(max-width: 700px)').matches
+    const calcola = () => {
+      // Sul telefono la barra passa in orizzontale sopra al contenuto:
+      // un'altezza fissa lo strozzerebbe in una finestrella.
+      if (stretto()) {
+        el.style.removeProperty('height')
+        return
+      }
+      // `zoom` su #root: rect e innerHeight sono in pixel dello schermo,
+      // l'altezza che scriviamo è in pixel della pagina zoomata.
+      const z =
+        Number(getComputedStyle(document.documentElement).getPropertyValue('--zoom')) || 1
+      const sotto = document.querySelector('.app-footer')?.getBoundingClientRect().height || 0
+      const alto = (window.innerHeight - el.getBoundingClientRect().top - sotto - 10) / z
+      const nuova = `${Math.max(220, Math.floor(alto))}px`
+      if (el.style.height !== nuova) el.style.height = nuova
+    }
+    calcola()
+    window.addEventListener('resize', calcola)
+    // Quello che sta SOPRA può cambiare (un avviso, la barra che si apre):
+    // l'altezza va rifatta, se no torna a sforare.
+    const osserva = new ResizeObserver(calcola)
+    osserva.observe(document.body)
+    return () => {
+      window.removeEventListener('resize', calcola)
+      osserva.disconnect()
+    }
+  }, [pieno])
+
   return (
-    <div className="cat-layout">
+    <div ref={rif} className={`cat-layout${pieno ? ' cat-pieno' : ''}`}>
       <aside className="cat-rail">
         {items.map((it) => (
           <button

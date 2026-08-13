@@ -56,6 +56,20 @@ export const STATUS_EMOJI = {
 }
 
 // Etichette leggibili del metodo di pagamento di un ordine.
+// GLI STESSI METODI, PER LA STAMPANTE. Niente emoji (la testina stampa
+// caratteri, non icone) e il nome PER ESTESO: su una striscia di scontrini
+// «Carta di credito» si distingue da «Contante» a colpo d'occhio, mentre
+// «Carta» e «Contante» si somigliano abbastanza da doverli leggere uno per
+// uno — e a fine serata gli scontrini si contano, non si leggono.
+export const PAYMENT_METHOD_PRINT = {
+  banco: 'Contante',
+  contanti: 'Contante',
+  carta: 'Carta di credito',
+  lettore: 'Carta di credito (POS)',
+  online: 'Online',
+  buono: 'Buono VIP',
+}
+
 export const PAYMENT_METHOD_LABELS = {
   online: '💳 Online',
   lettore: '📟 SumUp (lettore)',

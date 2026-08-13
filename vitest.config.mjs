@@ -3,6 +3,15 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
+  // Le costanti che di solito inietta Vite al build. Senza, il codice che le
+  // legge cade nel ramo "non c'è versione" e i test che riguardano gli
+  // aggiornamenti non potrebbero nemmeno partire.
+  define: {
+    __APP_VERSION__: JSON.stringify('v0.0.0-test'),
+    __BUILD_ID__: JSON.stringify('test'),
+    __GIT_BRANCH__: JSON.stringify('test'),
+    __GIT_COMMIT__: JSON.stringify('0000000'),
+  },
   test: {
     // Default: Node (functions e logica pura). I test COMPONENTE dichiarano
     // jsdom nel file con il docblock `// @vitest-environment jsdom`.

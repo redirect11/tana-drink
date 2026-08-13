@@ -19,12 +19,15 @@ import {
   writeBatch,
   Timestamp,
 } from 'firebase/firestore'
-import { db } from './firebaseClient.js'
+import { db, auth } from './firebaseClient.js'
 import { ORDER_STATUSES } from './orderStatus.js'
 import { splitAmounts } from './groups.js'
 import { createSumUpSale, updateSumUpSaleStatus, toSumUpStatus } from './sumupApi.js'
 import { computeConsumption, formatQty, qtyInStockUnit } from './inventory.js'
 import { consumptionDiff } from './warehouse.js'
+import { idDispositivo } from './dispositivo.js'
+import { leggiAvvisi, avvisoAttivo, idAvvisoScorta } from './preferenzeNotifiche.js'
+import { riaddebitoBuono } from './vouchers.js'
 import {
   ORDER_OPEN,
   normalizeOrderDoc,
@@ -187,6 +190,12 @@ function mapOrder(snap) {
     customer_uid: o.customer_uid ?? null,
     // Tempi di lavorazione: quelli della comanda attiva (o gli ultimi).
     status_times: (active ?? comande[comande.length - 1])?.status_times ?? o.status_times ?? {},
+    // TEMPI DEL CONTO, non della comanda: `status_times` qui sopra è quello
+    // della comanda attiva (serve ai tempi di preparazione), e lì dentro non
+    // c'è né la chiusura né l'annullo del conto. La storia del conto legge
+    // questi.
+    tempi_conto: o.status_times ?? {},
+    riaperture: (o.riaperture || []).map((r) => ({ ...r, at: toIso(r.at) })),
     cancelled_by: o.cancelled_by ?? null,
     cancel_kind: o.cancel_kind ?? null,
     cancel_phrase: o.cancel_phrase ?? null,
@@ -1647,7 +1656,10 @@ export async function createOrder({
     tip_amount,
     service_mode,
     push_token,
-    placed_by,
+    // DA QUALE DISPOSITIVO. Lo stesso account sta su più terminali: senza
+    // questo, avvisare «tutti tranne chi l'ha battuto» non si può fare, e
+    // infatti prima non si avvisava nessuno (vedi BartenderPage).
+    placed_by: placed_by ? { ...placed_by, device: idDispositivo() } : null,
     customer_name,
     customer_uid,
     payment_method,
@@ -2216,10 +2228,17 @@ const unappliedEntries = (orderId, comande) =>
     .map((comanda) => ({ orderId, comanda }))
 
 // Notifica scorte basse/finite (da chiamare fuori dalla transazione).
+// Chi non tiene il magazzino può spegnerle dalle impostazioni: in sala un
+// avviso su un ingrediente sotto soglia è solo una riga da chiudere.
 function notifyLowStock(lowStock) {
+  const preferenze = leggiAvvisi(auth.currentUser?.uid)
   for (const it of lowStock) {
-    const stato = it.stock <= 0 ? 'esaurito' : 'in esaurimento'
-    notify(`⚠️ Scorta ${stato}`, `${it.name}: rimasti ${formatQty(it.stock, it.unit)}`)
+    const finito = it.stock <= 0
+    if (!avvisoAttivo(preferenze, idAvvisoScorta(finito ? 'empty' : 'low'))) continue
+    notify(
+      `⚠️ Scorta ${finito ? 'esaurita' : 'in esaurimento'}`,
+      `${it.name}: rimasti ${formatQty(it.stock, it.unit)}`
+    )
   }
 }
 
@@ -2630,6 +2649,97 @@ export async function cancelOrder(id, opts = {}) {
     cancel_message: message || null,
     cancel_notify: !!notifyClient,
   }), 'annullo ordine')
+  return mapOrder(await getDoc(orderRef))
+}
+
+// RIPRISTINO DI UN CONTO CHIUSO O ANNULLATO. Capita: si chiude un conto sul
+// tavolo sbagliato, si annulla per un malinteso, il cliente torna e ordina
+// ancora sullo stesso conto. Finora l'unica strada era batterlo da capo, e
+// il conto vero restava lì a sporcare la serata.
+//
+// Cosa NON si tocca, apposta:
+//   • gli incassi già registrati restano dove sono. Riaprire un conto non è
+//     un rimborso: i soldi presi sono presi, e la cassa deve continuare a
+//     tornare. Il dovuto si ricalcola da sé (totale − incassato).
+//   • la storia resta tutta: l'annullo, la chiusura, i tempi. In più si
+//     scrive la riapertura, con chi e perché.
+//   • le comande GIÀ SERVITE restano servite: quei drink sono usciti davvero.
+//     Tornano da fare solo quelle annullate insieme al conto.
+//
+// Sul magazzino: annullando, le scorte erano state rimesse dentro e le
+// comande segnate come non scalate — quindi rifacendole si scalano di nuovo,
+// una volta sola. È giusto così: il drink va rifatto.
+export async function restoreOrder(id, { motivo = null, chi = null } = {}) {
+  const orderRef = doc(db, 'orders', id)
+  const snap = await getDoc(orderRef)
+  if (!snap.exists()) throw new Error('Ordine non trovato')
+  const data = snap.data()
+  if (data.status !== ORDER_STATUSES.PAGATO && data.status !== ORDER_STATUSES.ANNULLATO) {
+    throw new Error('Il conto è già in corso')
+  }
+  const nowIso = new Date().toISOString()
+  const norm = normalizeOrderDoc(data)
+  // Le comande annullate tornano "da fare"; le altre restano come sono.
+  const comande = norm.comande.map((c) =>
+    c.status === ORDER_STATUSES.ANNULLATO
+      ? {
+          ...c,
+          status: ORDER_STATUSES.RICEVUTO,
+          status_times: { ...(c.status_times || {}), [ORDER_STATUSES.RICEVUTO]: nowIso },
+        }
+      : c
+  )
+  const incassato = (data.payments || []).reduce((s, p) => s + (Number(p.amount) || 0), 0)
+
+  // BUONO VIP: annullando, il saldo era tornato al beneficiario. Riaprendo,
+  // lo sconto è ancora sul conto: se non lo si ri-addebita diventa un regalo
+  // che nessuno ha pagato, e il credito in circolazione non torna più con i
+  // conti. Solo per i conti ANNULLATI: su uno chiuso il buono non era mai
+  // stato ristornato, e riprenderlo lo scalerebbe due volte.
+  let scontoRiscritto = null
+  const buono = data.status === ORDER_STATUSES.ANNULLATO && data.discount?.type === 'buono'
+    ? data.discount
+    : null
+  if (buono?.voucher_id) {
+    const vRef = doc(vouchersCol, buono.voucher_id)
+    const vSnap = await getDoc(vRef)
+    if (!vSnap.exists()) {
+      // Buono sparito: lo sconto non ha più un padrone e si toglie.
+      scontoRiscritto = { discount: null, discount_amount: 0 }
+    } else {
+      const v = vSnap.data()
+      const esito = riaddebitoBuono(buono, v.balance)
+      if (esito.addebito > 0) {
+        await updateDoc(vRef, {
+          balance: increment(-esito.addebito),
+          movements: [
+            ...(v.movements || []),
+            { type: 'uso', amount: -esito.addebito, order_id: id, at: nowIso },
+          ],
+        })
+      }
+      if (esito.discount_amount !== r2(buono.value)) {
+        scontoRiscritto = { discount: esito.discount, discount_amount: esito.discount_amount }
+      }
+    }
+  }
+
+  const riaperture = [
+    ...(Array.isArray(data.riaperture) ? data.riaperture : []),
+    { at: nowIso, motivo: motivo || null, chi: chi || null },
+  ]
+  bgWrite(() => updateDoc(orderRef, {
+    status: ORDER_OPEN,
+    comande,
+    comande_statuses: comandeStatuses(comande),
+    // Un conto riaperto NON è pagato, altrimenti tornerebbe subito fra i
+    // chiusi: se dei soldi erano entrati resta un acconto.
+    payment_status: incassato > 0 ? 'parziale' : 'non_richiesto',
+    riaperture,
+    // Solo se il buono non copriva più tutto: se copre, il conto resta
+    // identico a com'era.
+    ...(scontoRiscritto || {}),
+  }), 'ripristino conto')
   return mapOrder(await getDoc(orderRef))
 }
 

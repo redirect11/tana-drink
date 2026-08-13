@@ -1,11 +1,62 @@
 # Cosa è cambiato
 
-Le note di ogni versione, dalla più recente. Si leggono anche dentro
-l'app: **Impostazioni → Informazioni**.
+## 1.4.0 — 13 agosto 2026
 
-I numeri seguono il versionamento semantico: il primo cambia quando si
-rompe qualcosa di come si lavorava prima, il secondo quando si aggiunge
-una funzione, il terzo per le correzioni.
+### Al banco
+
+- **La versione mostrata dall'app è quella giusta.** Sull'ambiente di
+  test diceva 1.2.0 mentre ci girava sopra la 1.3.0.
+- **Sullo scontrino c'è scritto «Carta di credito», non «Carta».** A fine
+  serata la striscia si divide per metodo a colpo d'occhio: «Carta» e
+  «Contante» si somigliano troppo. Stesse parole anche sulla chiusura di
+  cassa, così i due fogli si confrontano senza tradurre a mente.
+- **Dopo un aggiornamento l'app dice cosa è cambiato.** Il riquadro con le
+  note esce ogni volta che arriva una versione nuova — che tu abbia toccato
+  «Nuova versione disponibile», riaperto l'app da un tablet rimasto
+  indietro o ricaricato la pagina. Una volta sola, e ne resta traccia
+  nella campanella.
+- **Le notifiche si dividono in da leggere e lette.** Una letta sparisce
+  dall'elenco e finisce nello **storico**, che si apre dalla campanella:
+  in mezz'ora di servizio un elenco che non si svuota mai diventa un muro
+  di righe vecchie, e non ci si guarda più. Aprire la campanella non basta
+  a segnarle lette: si toccano, oppure c'è «segna tutte lette».
+- **Ogni avviso si può spegnere**, uno per uno: nuovo ordine, i singoli
+  passaggi della preparazione, le scorte e la nuova versione. La scelta
+  vale **su quel dispositivo e per chi è collegato** — al banco serve
+  «nuovo ordine», in sala «pronto», sul portatile nel retro niente — e sta
+  in Impostazioni → 🔔 Notifiche.
+- **Un ordine battuto su un altro terminale ora si vede.** Prima, se lo
+  mandava un bartender, gli altri dispositivi non ricevevano nulla: chi
+  stava in sala col telefono non sapeva che al banco era entrato un
+  ordine. Adesso avvisa tutti tranne chi l'ha appena mandato.
+- **Un conto chiuso o annullato si può rimettere in corso.** Chiuso sul
+  tavolo sbagliato, annullato per un malinteso, o il cliente che torna:
+  dai ⋯ del conto si riapre, scrivendo — se si vuole — il perché. Gli
+  incassi già presi restano dove sono e il dovuto si ricalcola da sé; le
+  comande già servite restano servite, tornano da fare solo quelle
+  annullate col conto. Se il conto annullato era pagato con un **buono
+  VIP**, riaprendolo il saldo si ri-addebita: lo sconto deve restare
+  pagato da qualcuno.
+- **Ogni conto ha la sua storia**, dietro i ⋯: aperto, chiuso, annullato,
+  riaperto — con l'ora, chi l'ha fatto e il motivo della riapertura. E il
+  motivo si legge anche dentro il conto riaperto, senza cercarlo: un conto
+  in corso con dentro un incasso, senza una spiegazione, è solo un
+  mistero.
+- **L'app si chiama «La Tana del Coniglio»**, non più con la sigla del
+  progetto — e a chi lavora l'icona dice di chi è: col suffisso del ruolo
+  (« - admin», « - bartender», « - staff»). Il cliente vede il nome nudo.
+  Il telefono fissa quel nome quando si installa l'app: per averlo giusto,
+  installala da collegato col ruolo che ti serve.
+- **Le Impostazioni stanno tutte in uno schermo**: l'elenco delle sezioni
+  scorre per conto suo invece di trascinarsi dietro tutta la pagina — e la
+  testata non scivola più via proprio mentre si cerca una voce.
+- **L'«indietro» è passato nella barra in alto**, fra il menu e il nome:
+  dentro la pagina si mangiava la prima riga di ogni sezione.
+- **Lo zoom non galleggia più sopra i pannelli aperti** (i ⋯, le conferme):
+  stando in basso a sinistra finiva sopra le ultime voci e si toccava lui
+  al posto della voce.
+- Nella coda, da tablet in su, **«In servizio» è staccata dal tasto menu**:
+  prima gli stava addosso.
 
 ---
 

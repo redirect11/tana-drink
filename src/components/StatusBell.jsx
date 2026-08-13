@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { subscribeSync, retryAllSync, retryLastSync } from '../lib/sync.js'
-import { subscribeNotifs, markNotifsSeen, clearNotifs } from '../lib/notifyStore.js'
+import {
+  subscribeNotifs,
+  segnaLetta,
+  segnaTutteLette,
+  svuotaArchivio,
+} from '../lib/notifyStore.js'
 
 // Campanella unica in topbar: mostra lo storico delle notifiche e, con un
 // pallino animato, lo STATO DELLA SINCRONIZZAZIONE local-first (idle / in
@@ -20,16 +26,22 @@ const fmtTime = (ms) => {
 // schermata dove si lavora tutta la sera.
 export default function StatusBell({ floating = false }) {
   const [sync, setSync] = useState({ phase: 'idle', pending: 0, failedCount: 0, lastError: null })
-  const [notifs, setNotifs] = useState({ items: [], unseen: 0 })
+  const [notifs, setNotifs] = useState({ items: [], archivio: [], unseen: 0 })
   const [open, setOpen] = useState(false)
+  // Lo storico sta dietro un tocco: si apre quando serve («cos'era
+  // quell'avviso di prima?»), non sta lì a fare volume.
+  const [storico, setStorico] = useState(false)
 
   useEffect(() => subscribeSync(setSync), [])
   useEffect(() => subscribeNotifs(setNotifs), [])
 
+  // APRIRE NON È LEGGERE. Prima bastava aprire la campanella perché tutto
+  // risultasse visto: si dava un'occhiata di corsa fra due ordini e l'avviso
+  // spariva senza essere stato letto davvero. Ora si segna leggendo — si
+  // tocca la notifica — o con «segna tutte lette», che è una decisione.
   const toggle = () => {
-    if (open) return setOpen(false)
-    setOpen(true)
-    markNotifsSeen()
+    setOpen((v) => !v)
+    setStorico(false)
   }
 
   const syncClass = ['idle', 'syncing', 'synced', 'error'].includes(sync.phase) ? sync.phase : 'idle'
@@ -71,25 +83,76 @@ export default function StatusBell({ floating = false }) {
               </div>
             )}
 
-            {/* Storico notifiche */}
-            <div className="status-bell-list">
-              {notifs.items.length === 0 && (
-                <div className="muted small" style={{ padding: '10px 8px' }}>Nessuna notifica.</div>
-              )}
-              {notifs.items.map((n) => (
-                <div className="status-bell-item" key={n.id}>
+            {/* DA LEGGERE, oppure lo STORICO di quelle già lette. */}
+            {(() => {
+              const lista = storico ? notifs.archivio : notifs.items
+              const riga = (n) => (
+                <>
                   <div><strong>{n.title}</strong></div>
                   {n.body && <div className="muted small">{n.body}</div>}
                   <div className="muted" style={{ fontSize: '0.64rem', marginTop: 2 }}>{fmtTime(n.at)}</div>
+                </>
+              )
+              return (
+                <div className="status-bell-list">
+                  {lista.length === 0 && (
+                    <div className="muted small" style={{ padding: '10px 8px' }}>
+                      {storico ? 'Lo storico è vuoto.' : 'Nessuna notifica da leggere.'}
+                    </div>
+                  )}
+                  {lista.map((n) =>
+                    // Con un `href` la notifica è una porta: si tocca, ci
+                    // porta, e nel farlo risulta letta. Senza, il tocco la
+                    // legge e basta.
+                    n.href ? (
+                      <Link
+                        className={`status-bell-item status-bell-link${n.letta ? ' letta' : ''}`}
+                        key={n.id}
+                        to={n.href}
+                        onClick={() => {
+                          segnaLetta(n.id)
+                          setOpen(false)
+                        }}
+                      >
+                        {riga(n)}
+                      </Link>
+                    ) : (
+                      <button
+                        type="button"
+                        className={`status-bell-item status-bell-link${n.letta ? ' letta' : ''}`}
+                        key={n.id}
+                        onClick={() => segnaLetta(n.id)}
+                        title={n.letta ? undefined : 'Tocca per segnarla letta'}
+                      >
+                        {riga(n)}
+                      </button>
+                    )
+                  )}
                 </div>
-              ))}
-            </div>
+              )
+            })()}
 
-            {notifs.items.length > 0 && (
-              <button className="btn ghost small block" style={{ marginTop: 6 }} onClick={clearNotifs}>
-                🧹 Svuota
+            <div className="row" style={{ gap: 6, marginTop: 6 }}>
+              <button
+                className="btn ghost small grow"
+                onClick={() => setStorico((v) => !v)}
+              >
+                {storico ? '← Da leggere' : `📜 Storico${notifs.archivio.length ? ` (${notifs.archivio.length})` : ''}`}
               </button>
-            )}
+              {storico ? (
+                notifs.archivio.length > 0 && (
+                  <button className="btn ghost small grow" onClick={svuotaArchivio}>
+                    🧹 Svuota storico
+                  </button>
+                )
+              ) : (
+                notifs.items.length > 0 && (
+                  <button className="btn ghost small grow" onClick={segnaTutteLette}>
+                    ✓ Segna tutte lette
+                  </button>
+                )
+              )}
+            </div>
           </div>
         </>
       )}
