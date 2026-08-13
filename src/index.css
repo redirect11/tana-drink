@@ -4479,25 +4479,40 @@ body.fullbleed .cat-rail {
    VERTICALE sulla destra, in una fascia riservata (la card si stringe di
    tanto) così NON copre il nome. Solo qui il touch è "drag"
    (touch-action:none); il resto della card scorre. */
+/* ── MODALITÀ ORGANIZZA ───────────────────────────────────────────────
+   La maniglia è ATTACCATA alla card, non affiancata: sono la stessa cosa,
+   e fra le due c'era una fessura con gli angoli tondi da tutte e due le
+   parti — sembravano due oggetti. Il colore è quello di casa (l'accento
+   smorzato sul fondo), non una macchia senape che non c'entra niente. */
 .reorder-cell {
-  padding-right: 44px;
+  position: relative;
+  padding-right: 38px;
+  border-radius: 12px;
+  will-change: transform;
+}
+/* La card perde gli angoli tondi dal lato della maniglia: il giro esterno
+   lo chiude lei. */
+.reorder-cell > [data-drink-id] {
+  border-top-right-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
 }
 .reorder-grip {
   position: absolute;
   top: 0;
   bottom: 0;
   right: 0;
-  width: 44px;
+  width: 38px;
   z-index: 3;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.5rem;
+  font-size: 1.3rem;
   line-height: 1;
-  color: #1c1305;
-  background: var(--accent-2, #f5b94a);
-  border-top-right-radius: 12px;
-  border-bottom-right-radius: 12px;
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 22%, var(--tile-bg));
+  border: 1px solid var(--line);
+  border-left: none;
+  border-radius: 0 12px 12px 0;
   cursor: grab;
   touch-action: none;
   user-select: none;
@@ -4506,22 +4521,26 @@ body.fullbleed .cat-rail {
   cursor: grabbing;
 }
 
-/* Card in trascinamento: si "solleva" — ingrandita, ombra profonda, sopra
-   le altre — così si vede bene che la stai spostando. */
-.reorder-cell {
-  position: relative;
-  border-radius: 12px;
-  transition: transform 0.14s ease, box-shadow 0.14s ease;
-  will-change: transform;
-}
+/* La card in mano segue il dito: niente transizione mentre la si muove (se
+   no arriva dove sei stato, non dove sei), ombra e ingrandimento per
+   staccarla dalle altre. Le altre invece si spostano CON una transizione:
+   è il movimento che fa capire che si sta facendo spazio. */
 .reorder-cell.dragging {
-  transform: scale(1.06) rotate(-1.5deg);
-  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.45);
   z-index: 5;
   cursor: grabbing;
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.45);
+  transition: none;
+}
+.reorder-cell.scivola {
+  transition: transform 0.18s cubic-bezier(0.2, 0.7, 0.3, 1);
 }
 .reorder-cell.dragging .reorder-grip {
   cursor: grabbing;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reorder-cell.scivola {
+    transition: none;
+  }
 }
 
 /* ── RENDICONTO SERATA: tabella da rendiconto, non da scontrino ──────────

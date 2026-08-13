@@ -296,6 +296,25 @@ requirements:
     labels: [pos, telefono, ux]
     test_cases: [tests/component/OrderPosDetail.test.jsx]
 
+  - id: REQ-POS-013
+    title: "In «Organizza» la card segue il dito"
+    area: "src/components/PosProductPicker.jsx, src/index.css"
+    description: >
+      Trascinando una card della griglia, quella in mano si muove INSIEME al
+      dito (nessuna transizione: con una arriverebbe dove sei stato, non dove
+      sei) e le altre SCIVOLANO per fare spazio. Il riordino non scatta a ogni
+      pixel: si aspetta che il dito stia fermo un attimo sopra un'altra card —
+      passandoci sopra in fretta, riordinare a ogni sfioramento fa impazzire
+      la griglia sotto le dita. Lasciando la card, lo spostamento si toglie e
+      la card torna al suo posto nella griglia, invece di restare dove l'ha
+      lasciata il dito. La maniglia è attaccata alla card, non affiancata: è
+      la stessa cosa, e fra le due c'era una fessura con gli angoli tondi da
+      tutte e due le parti.
+    status: implemented
+    generate_issue: false
+    labels: [pos, ux]
+    test_cases: []
+
   - id: REQ-POS-008
     title: "Le maniglie, col dito, si prendono solo tenendo premuto"
     area: "src/lib/useResizable.js"

@@ -191,56 +191,157 @@ export default function PosProductPicker({
   // MANIGLIA dedicata (touch-action:none): il resto della card scorre
   // normalmente. Il riordino agisce sull'ordine GLOBALE, valido anche
   // filtrando per categoria.
+  // ── TRASCINAMENTO FLUIDO (modalità organizza) ──────────────────────
+  // La card SEGUE IL DITO: si muove con un transform, senza transizione —
+  // con una, arriverebbe dove sei stato e non dove sei. Le altre invece si
+  // spostano CON la transizione: è quel movimento che fa capire che si sta
+  // facendo spazio, e prima mancava del tutto (scattavano di posto).
+  //
+  // Il riordino non scatta a ogni pixel: si aspetta che il dito STIA FERMO
+  // per un attimo sopra un'altra card (DWELL). Muovendosi in fretta sopra
+  // dieci card, riordinare dieci volte fa impazzire la griglia sotto le
+  // dita.
   const [dragId, setDragId] = useState(null)
-  const dragRef = useRef({ id: null, lastX: 0, lastY: 0, raf: 0, vy: 0 })
-  // Dati sempre freschi per il ciclo di auto-scroll (che gira su una
-  // closure vecchia): li legge da qui, non dalle variabili di render.
+  const dragRef = useRef({
+    id: null,
+    // da dove è partito il dito e dove sta ora: la differenza è lo spostamento
+    x0: 0,
+    y0: 0,
+    dx: 0,
+    dy: 0,
+    lastX: 0,
+    lastY: 0,
+    sopra: null, // su quale card sta ora
+    da: 0, // da quando
+    raf: 0,
+    vy: 0,
+  })
   const latest = useRef({})
   latest.current = { orderedAllIds, commitOrder }
 
-  // Sposta l'item trascinato sopra la card che sta sotto al punto (x,y).
-  const reorderAt = (x, y) => {
+  const cella = (id) => gridRef.current?.querySelector(`[data-cella="${id}"]`)
+
+  // Quanto deve stare ferma sopra una card prima di scambiare.
+  const ATTESA = 120
+
+  // FLIP: si segnano le posizioni PRIMA del riordino; dopo, ognuna riparte
+  // da dov'era e scivola al posto nuovo. Senza, le card comparirebbero già
+  // spostate — che è lo "scatto" di prima.
+  const primaDi = () => {
+    const mappa = new Map()
+    gridRef.current?.querySelectorAll('[data-cella]').forEach((el) => {
+      mappa.set(el.dataset.cella, el.getBoundingClientRect())
+    })
+    return mappa
+  }
+  const scivolaDa = (mappa) => {
+    requestAnimationFrame(() => {
+      gridRef.current?.querySelectorAll('[data-cella]').forEach((el) => {
+        const prima = mappa.get(el.dataset.cella)
+        if (!prima || el.dataset.cella === dragRef.current.id) return
+        const ora = el.getBoundingClientRect()
+        const dx = prima.left - ora.left
+        const dy = prima.top - ora.top
+        if (!dx && !dy) return
+        el.classList.remove('scivola')
+        el.style.transform = `translate(${dx}px, ${dy}px)`
+        requestAnimationFrame(() => {
+          el.classList.add('scivola')
+          el.style.transform = ''
+        })
+      })
+      // La card in mano resta incollata al dito: la sua posizione di
+      // partenza è cambiata insieme alla griglia, quindi si ricalcola.
+      const st = dragRef.current
+      const mia = cella(st.id)
+      if (mia) {
+        mia.style.transform = ''
+        const r = mia.getBoundingClientRect()
+        st.x0 = st.lastX - (r.left + r.width / 2 - st.cx)
+        st.y0 = st.lastY - (r.top + r.height / 2 - st.cy)
+        muoviCella()
+      }
+    })
+  }
+
+  const muoviCella = () => {
+    const st = dragRef.current
+    const el = cella(st.id)
+    if (!el) return
+    st.dx = st.lastX - st.x0
+    st.dy = st.lastY - st.y0
+    el.style.transform = `translate(${st.dx}px, ${st.dy}px) scale(1.04)`
+  }
+
+  // Scambia con la card sotto al dito, se ci è rimasto abbastanza.
+  const forseRiordina = (x, y) => {
     const st = dragRef.current
     if (!st.id) return
     const el = document.elementFromPoint(x, y)
-    const overId = el?.closest('[data-drink-id]')?.dataset.drinkId
-    if (!overId || overId === st.id) return
+    const overId = el?.closest('[data-cella]')?.dataset.cella
+    if (!overId || overId === st.id) {
+      st.sopra = null
+      return
+    }
+    const ora = performance.now()
+    if (st.sopra !== overId) {
+      st.sopra = overId
+      st.da = ora
+      return
+    }
+    if (ora - st.da < ATTESA) return
+    st.da = ora
+    const mappa = primaDi()
     latest.current.commitOrder(moveInOrder(latest.current.orderedAllIds, st.id, overId))
+    scivolaDa(mappa)
   }
 
-  // Ciclo di AUTO-SCROLL: mentre si trascina vicino a un bordo, la griglia
-  // scorre da sola (così si può portare un item dal fondo alla cima). Legge
-  // tutto da ref, quindi la closure "vecchia" resta valida.
+  // Vicino a un bordo la griglia scorre da sola: così si porta un item dal
+  // fondo alla cima senza lasciarlo.
   const autoScrollTick = () => {
     const st = dragRef.current
     if (!st.id) return
     const grid = gridRef.current
     if (grid && st.vy) {
       grid.scrollTop += st.vy
-      reorderAt(st.lastX, st.lastY)
+      muoviCella()
+      forseRiordina(st.lastX, st.lastY)
     }
     st.raf = requestAnimationFrame(autoScrollTick)
   }
 
   const startDrag = (e, id) => {
     e.preventDefault()
-    try { e.currentTarget.setPointerCapture(e.pointerId) } catch { /* ok */ }
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId)
+    } catch {
+      /* senza cattura si trascina lo stesso, finché il dito resta sopra */
+    }
     const st = dragRef.current
     st.id = id
+    st.x0 = e.clientX
+    st.y0 = e.clientY
     st.lastX = e.clientX
     st.lastY = e.clientY
+    st.dx = 0
+    st.dy = 0
+    st.sopra = null
     st.vy = 0
+    const r = cella(id)?.getBoundingClientRect()
+    st.cx = r ? r.left + r.width / 2 : e.clientX
+    st.cy = r ? r.top + r.height / 2 : e.clientY
     setDragId(id)
     cancelAnimationFrame(st.raf)
     st.raf = requestAnimationFrame(autoScrollTick)
   }
+
   const moveDrag = (e) => {
     const st = dragRef.current
     if (!st.id) return
     e.preventDefault()
     st.lastX = e.clientX
     st.lastY = e.clientY
-    // Velocità di scroll in base a quanto si entra nella fascia di bordo.
+    muoviCella()
     const grid = gridRef.current
     if (grid) {
       const r = grid.getBoundingClientRect()
@@ -249,12 +350,22 @@ export default function PosProductPicker({
       else if (e.clientY > r.bottom - EDGE) st.vy = Math.ceil((e.clientY - (r.bottom - EDGE)) / 5)
       else st.vy = 0
     }
-    reorderAt(e.clientX, e.clientY)
+    forseRiordina(e.clientX, e.clientY)
   }
+
   const endDrag = () => {
     const st = dragRef.current
     cancelAnimationFrame(st.raf)
+    // La card TORNA AL SUO POSTO: lo spostamento si toglie con la stessa
+    // transizione delle altre, se no resta lì dove l'hai lasciata col dito
+    // — spostata di suo rispetto alla griglia.
+    const el = cella(st.id)
+    if (el) {
+      el.classList.add('scivola')
+      el.style.transform = ''
+    }
     st.id = null
+    st.sopra = null
     st.vy = 0
     st.raf = 0
     setDragId(null)
@@ -430,6 +541,10 @@ export default function PosProductPicker({
               <div
                 key={d.id}
                 data-drink-id={d.id}
+                // Il riordino guarda QUESTA (la cella), non la card dentro:
+                // il dito passa sopra la cella, e la card è quella che si
+                // muove col transform.
+                data-cella={d.id}
                 className={`reorder-cell${dragId === d.id ? ' dragging' : ''}`}
               >
                 <div
