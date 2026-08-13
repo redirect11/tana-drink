@@ -5487,3 +5487,25 @@ body.pagina-piena .pagina-inventario .inv-scroll {
   border-color: var(--accent);
   background: color-mix(in srgb, var(--accent) 14%, transparent);
 }
+
+/* La storia del conto: sola icona in alto, accanto al numero. Da tasto
+   largo si prendeva una riga intera accanto a Unisci/Separa/Comande, per
+   una cosa che si guarda ogni tanto. */
+.posd-storia {
+  flex-shrink: 0;
+  min-width: 34px;
+  padding-inline: 8px;
+}
+/* IL SECONDO LIVELLO NEL MENU: le sezioni della pagina aperta, rientrate
+   sotto di lei. Un posto solo per navigare, uguale sul telefono e sul
+   computer. */
+.bar-nav-sotto {
+  margin: 2px 0 6px;
+  border-left: 2px solid var(--line);
+  margin-left: 14px;
+  padding-left: 6px;
+}
+.bar-nav-sottovoce {
+  font-size: 0.92rem;
+  opacity: 0.92;
+}

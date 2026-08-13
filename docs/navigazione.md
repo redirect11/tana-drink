@@ -10,7 +10,7 @@ una riga, e il nome del locale ridotto a «La …».
 | Zona | Cosa ci sta | Domanda a cui risponde |
 |---|---|---|
 | Sinistra | ☰ oppure ← | «Come esco da qui?» |
-| Centro | marchio · titolo della pagina/sezione | «Dove sono?» |
+| Centro | marchio · titolo della pagina e della sezione | «Dove sono?» |
 | Destra | campanella, ⋮ / chi sono | «Cosa posso fare adesso?» |
 
 L'ordine non cambia mai. Chi cerca il menu guarda a sinistra anche in una
@@ -35,10 +35,20 @@ sotto i 44px si sbaglia. Si **toglie**, in quest'ordine:
 
 - **Le pagine** stanno nel menu laterale (☰). Punto.
 - **Le sottosezioni di una pagina** (Inventario: Prodotti, Conta, Ordini…;
-  Impostazioni: Aspetto, Pagamenti…) stanno **nel titolo**, che diventa il
-  comando: tendina da tablet in su, foglio dal basso sul telefono. Non hanno
-  mai spazio fisso in pagina — sono una scelta che si fa ogni tanto, e una
-  riga di tasti la si paga tutto il giorno.
+  Impostazioni: Aspetto, Pagamenti…) stanno **nel menu a scomparsa**,
+  rientrate sotto la pagina aperta. Un posto solo per navigare, uguale sul
+  telefono e sul computer.
+
+  Le altre strade le abbiamo provate tutte, e non reggono: una **colonna in
+  pagina** costa spazio tutto il giorno per una scelta che si fa ogni tanto;
+  una **riga di schede** in pagina idem, e sul telefono non ci sta; le
+  **schede nella barra** reggono cinque voci, non ventidue; una **tendina**
+  costringe ad aprirla per sapere cosa c'è dentro. Il menu invece scorre, è
+  già il posto dove si va per cambiare pagina, e non toglie un pixel al
+  contenuto.
+
+  Nel menu compaiono le sezioni della **pagina aperta**: sono le uniche che
+  si conoscono senza esserci passati.
 - **I filtri** stanno in una tendina sopra il contenuto, e il tasto dice cosa
   è scelto senza doverla aprire.
 - **Il contenuto non porta navigazione**: niente tasti «vai a…» in mezzo a una

@@ -1278,10 +1278,13 @@ requirements:
       dove non c'è menu e si esce con «← Ordini». Nelle sezioni del gestionale
       l'«indietro» sta nella barra, fra il ☰ e il marchio: dentro la pagina si
       mangiava la prima riga di contenuto. E accanto al marchio c'è il TITOLO
-      della pagina che si sta guardando (icona compresa) — che diventa il
-      COMANDO per cambiare sottosezione dove ce ne sono (magazzino,
-      impostazioni): a tendina da tablet in su, foglio dal basso sul telefono.
-      Al posto di un titolo dentro il contenuto: su un tablet al banco una riga in meno di
+      della pagina e della SEZIONE che si sta guardando (icona compresa). A
+      cambiare sezione si va nel menu a scomparsa, che sotto la pagina aperta
+      elenca le sue sezioni: un posto solo per navigare, uguale sul telefono e
+      sul computer. Le altre strade non reggono — una colonna o una riga di
+      schede in pagina costano spazio tutto il giorno, le schede in barra
+      reggono cinque voci e non ventidue, una tendina va aperta per sapere
+      cosa c'è dentro. Al posto di un titolo dentro il contenuto: su un tablet al banco una riga in meno di
       contenuto si vede. Le voci del menu laterale e i titoli sono lo stesso
       elenco, in un posto solo, se no prima o poi uno dice «Lista ordini» e
       l'altro «Storico». Sul telefono il titolo sparisce: lì la barra ha già
