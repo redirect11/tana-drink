@@ -1844,8 +1844,35 @@ body.fullbleed .bar-content {
   font-weight: 600;
   opacity: 0.9;
 }
+/* ── SUL TELEFONO SI TOGLIE, NON SI RIMPICCIOLISCE ────────────────────
+   Nella barra c'erano otto cose in una riga e il nome del locale finiva in
+   «La …». I tasti non si stringono — al banco si tocca con le dita bagnate e
+   sotto i 44px si sbaglia — quindi si toglie, nell'ordine scritto in
+   docs/navigazione.md: prima il nome del locale (resta il logo), poi
+   l'«indietro» (il ☰ fa quello che fa lui e in più: dalla coda alle
+   impostazioni in un tocco solo). Il titolo della sezione si accorcia coi
+   puntini ma non sparisce: è l'unica cosa che dice dove sei. */
 @media (max-width: 700px) {
   .topbar-pagina:not(.topbar-pagina-tasto) {
+    display: none;
+  }
+  .brand-nome {
+    display: none;
+  }
+  .topbar-back {
+    display: none;
+  }
+  .topbar-pagina-tasto {
+    max-width: 52vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+/* Schermi piccolissimi: va via anche il marchio. Restano menu, dove sono, e
+   cosa posso fare. */
+@media (max-width: 400px) {
+  .topbar .brand img {
     display: none;
   }
 }
