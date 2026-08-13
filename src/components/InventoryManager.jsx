@@ -53,6 +53,7 @@ import SupplierInvoicesPanel from './SupplierInvoicesPanel.jsx'
 import CategoryRail from './CategoryRail.jsx'
 import SectionPanels from './SectionPanels.jsx'
 import { IconTag, IconCartelle, IconFornitore } from './Icons.jsx'
+import Tendina from './Tendina.jsx'
 
 const STATUS_ITEM = [
   { value: 'assortimento', label: 'In assortimento' },
@@ -77,6 +78,14 @@ const ASSORTIMENTO_LABEL = {
       <span className="badge-empty">OUT</span> Fuori assortimento
     </>
   ),
+}
+// Gli stessi nomi, in parole: servono al tasto della tendina, che deve dire
+// cosa è scelto senza doversi aprire.
+const ASSORTIMENTO_NOME = {
+  assortimento: 'In assortimento',
+  linea: 'In linea',
+  premium: 'Premium',
+  out: 'Fuori assortimento',
 }
 const ASSORTIMENTO_TITOLO = {
   assortimento: 'Si tiene, senza niente di speciale',
@@ -522,71 +531,27 @@ function ProductsPanel() {
     )
   }
 
-  function toggleStatus(s) {
-    setStatusFilter((cur) => (cur === s ? 'all' : s))
-  }
+  // Cosa dice il tasto della tendina: una tendina che non dice cosa è
+  // scelto costringe ad aprirla per ricordarselo.
+  const nomiStato = { all: null, low: 'In esaurimento', empty: 'Esauriti' }
+  const sceltiOra = [nomiStato[statusFilter], ...assortimenti.map((k) => ASSORTIMENTO_NOME[k])]
+    .filter(Boolean)
+  const riassuntoFiltri =
+    sceltiOra.length === 0
+      ? '⚗️ Filtra'
+      : sceltiOra.length === 1
+        ? `⚗️ ${sceltiOra[0]}`
+        : `⚗️ ${sceltiOra.length} filtri`
 
   return (
     <div className="inv-panel">
-      {/* I FILTRI SU UNA RIGA SOLA, e detti per quello che sono. Erano tre
-          file di pastiglie che sembravano un riepilogo: si leggevano i
-          numeri e non veniva in mente che toccandoli la lista si
-          restringeva. Sono filtri, e ora c'è scritto; il valore di
-          magazzino, che invece è solo un numero da leggere, sta in fondo
-          alla stessa riga. La riga scorre in orizzontale quando non ci
-          sta: meglio scorrere una riga che perderne tre. */}
-      <div className="inv-filtri">
-        <span className="inv-filtri-eti">Filtra</span>
-        <div className="inv-filtri-riga">
-          <button
-            className={`chip ${statusFilter === 'all' ? 'active' : ''}`}
-            onClick={() => setStatusFilter('all')}
-            title="Tutti i prodotti"
-          >
-            Tutti <strong>{summary.total}</strong>
-          </button>
-          <button
-            className={`chip warn ${statusFilter === 'low' ? 'active' : ''}`}
-            onClick={() => toggleStatus('low')}
-            title="Solo quelli sotto la soglia"
-          >
-            In esaurimento <strong>{summary.low}</strong>
-          </button>
-          <button
-            className={`chip danger ${statusFilter === 'empty' ? 'active' : ''}`}
-            onClick={() => toggleStatus('empty')}
-            title="Solo quelli finiti"
-          >
-            Esauriti <strong>{summary.empty}</strong>
-          </button>
-          <span className="inv-filtri-sep" aria-hidden />
-          {/* ASSORTIMENTO: filtro a più scelte. "Nessuno acceso" vuol dire
-              tutto, così deselezionando non si resta con la lista vuota. */}
-          {ASSORTIMENTI.map((k) => {
-            const quanti = items.filter((it) => assortimentoDi(it) === k).length
-            return (
-              <button
-                key={k}
-                className={`chip ${assortimenti.includes(k) ? 'active' : ''}`}
-                onClick={() => toggleAssortimento(k)}
-                title={ASSORTIMENTO_TITOLO[k]}
-              >
-                {ASSORTIMENTO_LABEL[k]} <strong>{quanti}</strong>
-              </button>
-            )
-          })}
-          {assortimenti.length > 0 && (
-            <button className="chip" onClick={() => setAssortimenti([])} title="Togli i filtri di assortimento">
-              ✕
-            </button>
-          )}
-        </div>
-        <span className="inv-valore" title="Valore del magazzino a costo">
-          💶 {formatPrice(totalValue)}
-        </span>
-      </div>
-
-      {/* Ricerca */}
+      {/* LA TESTATA: ricerca, e sotto le scelte che stanno ferme quasi
+          sempre. I filtri erano sette pastiglie sempre aperte — una riga di
+          schermo occupata tutto il giorno per una scelta che si cambia due
+          volte a sera — più una riga per i fornitori, una per il tasto
+          nuovo prodotto e una per card/lista: quattro righe prima di vedere
+          un prodotto. Ora stanno in due tendine e due icone, su una riga, e
+          il tasto dice cosa è scelto senza doverlo aprire. */}
       <input
         className="inv-search"
         type="search"
@@ -594,6 +559,131 @@ function ProductsPanel() {
         onChange={(e) => setQuery(e.target.value)}
         placeholder="🔍 Cerca prodotto…"
       />
+
+      <div className="inv-testa">
+        <Tendina
+          etichetta="Filtra i prodotti"
+          attivo={statusFilter !== 'all' || assortimenti.length > 0}
+          riassunto={riassuntoFiltri}
+        >
+          <div className="tendina-titolo">Come stanno a scorta</div>
+          {[
+            ['all', 'Tutti', summary.total],
+            ['low', 'In esaurimento', summary.low],
+            ['empty', 'Esauriti', summary.empty],
+          ].map(([k, label, n]) => (
+            <button
+              key={k}
+              type="button"
+              className={`tendina-voce${statusFilter === k ? ' scelta' : ''}`}
+              onClick={() => setStatusFilter(k)}
+            >
+              <span>{label}</span>
+              <strong>{n}</strong>
+            </button>
+          ))}
+          <div className="tendina-titolo">Assortimento</div>
+          {ASSORTIMENTI.map((k) => {
+            const quanti = items.filter((it) => assortimentoDi(it) === k).length
+            return (
+              <button
+                key={k}
+                type="button"
+                className={`tendina-voce${assortimenti.includes(k) ? ' scelta' : ''}`}
+                onClick={() => toggleAssortimento(k)}
+                title={ASSORTIMENTO_TITOLO[k]}
+              >
+                <span>{ASSORTIMENTO_LABEL[k]}</span>
+                <strong>{quanti}</strong>
+              </button>
+            )
+          })}
+          {(assortimenti.length > 0 || statusFilter !== 'all') && (
+            <button
+              type="button"
+              className="btn ghost small block"
+              style={{ marginTop: 6 }}
+              onClick={() => {
+                setAssortimenti([])
+                setStatusFilter('all')
+              }}
+            >
+              ✕ Togli i filtri
+            </button>
+          )}
+        </Tendina>
+
+        {suppliers.length > 0 && (
+          <Tendina
+            etichetta="Fornitore"
+            attivo={supplierFilter !== 'all'}
+            riassunto={
+              supplierFilter === 'all'
+                ? '🏭 Fornitore'
+                : `🏭 ${suppliers.find((x) => x.id === supplierFilter)?.name || 'Fornitore'}`
+            }
+          >
+            {(chiudi) => (
+              <>
+                <button
+                  type="button"
+                  className={`tendina-voce${supplierFilter === 'all' ? ' scelta' : ''}`}
+                  onClick={() => {
+                    setSupplierFilter('all')
+                    chiudi()
+                  }}
+                >
+                  <span>Tutti i fornitori</span>
+                </button>
+                {suppliers.map((sup) => (
+                  <button
+                    key={sup.id}
+                    type="button"
+                    className={`tendina-voce${supplierFilter === sup.id ? ' scelta' : ''}`}
+                    onClick={() => {
+                      setSupplierFilter(sup.id)
+                      chiudi()
+                    }}
+                  >
+                    <span>{sup.name}</span>
+                  </button>
+                ))}
+              </>
+            )}
+          </Tendina>
+        )}
+
+        <span className="inv-valore" title="Valore del magazzino a costo">
+          💶 {formatPrice(totalValue)}
+        </span>
+
+        <span className="inv-testa-spinta" />
+
+        {/* Card o lista: due icone, non due tasti con su scritto cosa fanno.
+            È una scelta che si fa una volta e resta. */}
+        <div className="inv-vista" role="group" aria-label="Come mostrare i prodotti">
+          {[
+            ['card', '▦', 'A card'],
+            ['lista', '☰', 'A lista'],
+          ].map(([k, icona, titolo]) => (
+            <button
+              key={k}
+              type="button"
+              className={`chip${invView === k ? ' active' : ''}`}
+              onClick={() => setInvView(k)}
+              title={titolo}
+              aria-label={titolo}
+              aria-pressed={invView === k}
+            >
+              {icona}
+            </button>
+          ))}
+        </div>
+
+        <button className="btn small" onClick={() => setEditing('new')}>
+          + Nuovo prodotto
+        </button>
+      </div>
 
       {/* Categorie a SINISTRA (come il POS), il resto a destra. Si prende
           quello che resta dell'altezza: a scorrere è la lista dei prodotti,
@@ -607,42 +697,8 @@ function ProductsPanel() {
         chiave="inv-categorie"
       >
 
-      {/* Filtro fornitori */}
-      {suppliers.length > 0 && (
-        <div className="chips-row">
-          <button className={`chip ${supplierFilter === 'all' ? 'active' : ''}`} onClick={() => setSupplierFilter('all')}>
-            🏭 Tutti
-          </button>
-          {suppliers.map((s) => (
-            <button
-              key={s.id}
-              className={`chip ${supplierFilter === s.id ? 'active' : ''}`}
-              onClick={() => setSupplierFilter(s.id)}
-            >
-              {s.name}
-            </button>
-          ))}
-        </div>
-      )}
-
-      <button className="btn block" onClick={() => setEditing('new')}>+ Nuovo prodotto</button>
-
       {error && <div className="banner" style={{ marginTop: 8 }}>Errore: {error}</div>}
       {loading && <div className="empty">Carico l’inventario…</div>}
-
-      {/* Come visualizzare: card in griglia o lista condensata. */}
-      {!loading && items.length > 0 && (
-        <div className="chips-row" style={{ margin: '8px 0' }}>
-          {[
-            ['card', '▦ Card'],
-            ['lista', '☰ Lista'],
-          ].map(([k, label]) => (
-            <button key={k} className={`chip ${invView === k ? 'active' : ''}`} onClick={() => setInvView(k)}>
-              {label}
-            </button>
-          ))}
-        </div>
-      )}
 
       {/* TABELLA: colonne allineate (stato · prodotto · categoria · netto ·
           +IVA · scorte), riga cliccabile per aprire le azioni. */}

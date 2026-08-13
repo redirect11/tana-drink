@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import { usePaginaPiena } from '../lib/paginaPiena.js'
 
 // CATEGORIE A SINISTRA, contenuto a destra — lo stesso schema del POS
 // (PosProductPicker), riusato nel backoffice per Inventario, Menù e
@@ -28,11 +29,6 @@ import { useEffect, useState } from 'react'
 //          (una lista lunga con la sua testata fissa): due barre di
 //          scorrimento una dentro l'altra sono un modo per non trovare più
 //          niente.
-// Quante barre "piene" ci sono in giro: nell'inventario ce ne sono due,
-// una dentro l'altra. Senza contarle, smontandone una la pagina tornerebbe
-// a scorrere mentre l'altra è ancora lì.
-let piene = 0
-
 export default function CategoryRail({
   items,
   selected,
@@ -61,22 +57,8 @@ export default function CategoryRail({
       return nv
     })
 
-  // NIENTE MISURE: SI ADATTA. Ci ho provato col righello — 100dvh meno la
-  // testata, meno il piè di pagina, meno il respiro in fondo — e ogni volta
-  // restava fuori un pezzo che nessuno si ricordava: prima la pagina sforava,
-  // poi avanzava un buco sotto. Il conto giusto non è un conto: la pagina, in
-  // questo modo, è alta quanto la finestra e si divide in tre — testata in
-  // alto, piè di pagina in fondo, e in mezzo quello che resta, che tocca a
-  // noi. Lo dice il CSS (body.pagina-piena), qui si accende e si spegne.
-  useEffect(() => {
-    if (!pieno) return undefined
-    piene += 1
-    document.body.classList.add('pagina-piena')
-    return () => {
-      piene -= 1
-      if (piene <= 0) document.body.classList.remove('pagina-piena')
-    }
-  }, [pieno])
+  // La schermata sta tutta nella finestra: vedi lib/paginaPiena.js.
+  usePaginaPiena(pieno)
 
   return (
     <div
