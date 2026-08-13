@@ -91,6 +91,7 @@ export function DrinkTile({
       {color && (
         <div
           aria-hidden
+          className="pos-tile-nastro"
           style={{
             position: 'absolute',
             top: 0,
