@@ -183,10 +183,21 @@ requirements:
       e resta nello STORICO, che si apre dalla campanella. Aprire la
       campanella non è leggere: si segna leggendo, toccando la notifica,
       oppure con «segna tutte lette», che è una decisione.
+      OGNI AVVISO SI PUÒ SPEGNERE, uno per uno: nuovo ordine, ciascuno stato
+      della preparazione separatamente, le scorte (in esaurimento ed esaurita,
+      solo per chi tiene il gestionale) e la nuova versione dell'app. La scelta
+      è PER DISPOSITIVO E PER PERSONA e resta in memoria locale, perché non è
+      una regola del bar: al banco «nuovo ordine» è la cosa più importante
+      della serata, in sala serve «pronto», e sul portatile nel retro non serve
+      niente. Un interruttore unico si spegnerebbe dove dà fastidio lasciando
+      senza chi ne aveva bisogno; e due persone che si passano lo stesso tablet
+      nei cambi turno non si sovrascrivono a vicenda. Di partenza sono tutti
+      accesi: nessuno deve scoprire di essersi perso un ordine perché «era
+      spento di default».
     status: implemented
     generate_issue: false
     labels: [ordini, notifiche]
-    test_cases: [tests/unit/dispositivo.test.js, tests/unit/notifyStore.test.js]
+    test_cases: [tests/unit/dispositivo.test.js, tests/unit/notifyStore.test.js, tests/unit/preferenzeNotifiche.test.js]
 
   # ══════════════════════════════════════════════════════════════════════
   #  CASSA / POS — come si batte un ordine

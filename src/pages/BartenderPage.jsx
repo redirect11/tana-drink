@@ -35,6 +35,12 @@ import ActionSheet from '../components/ActionSheet.jsx'
 import { isGestore, isPersonale } from '../lib/ruoli.js'
 import { senzaNascosti, subscribeNascosti, mostraOrdine } from '../lib/ordiniNascosti.js'
 import { battutoDaQui } from '../lib/dispositivo.js'
+import {
+  leggiAvvisi,
+  subscribeAvvisi,
+  avvisoAttivo,
+  idAvvisoStato,
+} from '../lib/preferenzeNotifiche.js'
 import { allServed } from '../lib/comande.js'
 import { paidAmount, orderTotal } from '../lib/pagamento.js'
 import { businessDayKey, businessDayLabel, businessDayShort } from '../lib/businessDay.js'
@@ -432,6 +438,17 @@ function OrderQueue() {
   const [confirmAction, setConfirmAction] = useState(null) // { title, message, danger, run }
   const [cancelTarget, setCancelTarget] = useState(null) // { order, kind }
   // Storia del conto e ripristino: due pannelli, un conto alla volta.
+  // Quali avvisi vuole CHI GUARDA QUESTO SCHERMO (per dispositivo e per
+  // persona). In un ref perché la sottoscrizione agli ordini nasce una volta
+  // sola: leggendoli dallo stato resterebbero quelli di quando è nata.
+  const avvisi = useRef(leggiAvvisi(auth.currentUser?.uid))
+  useEffect(
+    () => subscribeAvvisi(auth.currentUser?.uid, (p) => { avvisi.current = p }),
+    []
+  )
+  // Gli avanzamenti fatti DA QUI non si annunciano: l'ho appena premuto io.
+  const avanzatiDaMe = useRef(new Set())
+  const statoPrec = useRef(new Map())
   const [storiaTarget, setStoriaTarget] = useState(null)
   const [ripristinoTarget, setRipristinoTarget] = useState(null)
   const [search, setSearch] = useState('')
@@ -531,8 +548,10 @@ function OrderQueue() {
             }
             if (isNew || awaiting.has(o.id)) {
               awaiting.delete(o.id)
-              beep() // avviso sonoro: su iPad in primo piano il banner è soppresso
-              notify('🆕 Nuovo ordine', `Ordine #${o.daily_number} ricevuto.`)
+              if (avvisoAttivo(avvisi.current, 'nuovo_ordine')) {
+                beep() // su iPad in primo piano il banner di sistema è soppresso
+                notify('🆕 Nuovo ordine', `Ordine #${o.daily_number} ricevuto.`)
+              }
               // Auto-stampa comanda se abilitata nelle impostazioni stampante.
               if (printerSettings.autoPrintComanda) {
                 printComanda(o, o.comande?.find((cc) => cc.id === o.active_comanda_id) ?? null).catch((e) => console.warn('[printer] auto-comanda:', e.message))
@@ -561,9 +580,33 @@ function OrderQueue() {
               showToast(`➕ Aggiunta all'ordine #${o.daily_number ?? '—'}${o.customer_name ? ` (${o.customer_name})` : ''}`)
             }
           }
+          // AVANZAMENTI FATTI ALTROVE. Chi sta in sala deve sapere che un
+          // conto è diventato «pronto» senza dover guardare la coda ogni
+          // minuto; chi l'ha premuto qui non ha bisogno che glielo si
+          // ripeta. Ogni stato si accende e si spegne per conto suo, dalle
+          // impostazioni: in sala interessa «pronto», al banco altro.
+          for (const o of data) {
+            const prima = statoPrec.current.get(o.id)
+            const ora = o.workflow_status
+            if (!prima || prima === ora) continue
+            if (avanzatiDaMe.current.has(`${o.id}:${ora}`)) {
+              avanzatiDaMe.current.delete(`${o.id}:${ora}`)
+              continue
+            }
+            if (!avvisoAttivo(avvisi.current, idAvvisoStato(ora))) continue
+            const nome = ora === ORDER_STATUSES.RITIRATO
+              ? ritiratoLabel(o.service_mode)
+              : STATUS_LABELS[ora]
+            if (!nome) continue
+            notify(
+              `${STATUS_EMOJI[ora] || '•'} ${nome}`,
+              `Ordine #${o.daily_number ?? '—'}${o.customer_name ? ` · ${o.customer_name}` : ''}`
+            )
+          }
         }
         knownIds.current = new Set(data.map((o) => o.id))
         knownComande.current = new Map(data.map((o) => [o.id, (o.comande || []).length]))
+        statoPrec.current = new Map(data.map((o) => [o.id, o.workflow_status]))
         setOrders(data)
         setOrdersReady(true)
         primed = true
@@ -594,6 +637,7 @@ function OrderQueue() {
     const ns = nextStatus(order.workflow_status)
     if (!ns) return
     setQueueOverrides((m) => ({ ...m, [order.id]: ns }))
+    avanzatiDaMe.current.add(`${order.id}:${ns}`)
     ;(async () => {
       try {
         await updateOrderStatus(order.id, ns)
