@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
 
 // CATEGORIE A SINISTRA, contenuto a destra — lo stesso schema del POS
 // (PosProductPicker), riusato nel backoffice per Inventario e Menù così la
@@ -21,55 +21,21 @@ import { useEffect, useRef } from 'react'
 //          arrivare all'ultima si scorreva la pagina intera, testata
 //          compresa, e la barra spariva proprio mentre la si usava.
 export default function CategoryRail({ items, selected, onSelect, children, pieno = false }) {
-  const rif = useRef(null)
-
-  // L'ALTEZZA SI MISURA, NON SI INDOVINA. Prima era un conto in CSS
-  // (100dvh meno la testata, meno un margine): ma la testata cambia altezza
-  // con lo zoom e col telefono, sotto c'è il piè di pagina, e il conto era
-  // sempre un po' sbagliato — la pagina sforava e si scorreva lo stesso,
-  // che è esattamente quello che si voleva togliere. Qui si guarda dove
-  // comincia davvero il riquadro e cosa gli sta sotto.
+  // NIENTE MISURE: SI ADATTA. Ci ho provato col righello — 100dvh meno la
+  // testata, meno il piè di pagina, meno il respiro in fondo — e ogni volta
+  // restava fuori un pezzo che nessuno si ricordava: prima la pagina sforava,
+  // poi avanzava un buco sotto. Il conto giusto non è un conto: la pagina, in
+  // questo modo, è alta quanto la finestra e si divide in tre — testata in
+  // alto, piè di pagina in fondo, e in mezzo quello che resta, che tocca a
+  // noi. Lo dice il CSS (body.pagina-piena), qui si accende e si spegne.
   useEffect(() => {
-    const el = rif.current
-    if (!pieno || !el) return undefined
-    const stretto = () => window.matchMedia('(max-width: 700px)').matches
-    const calcola = () => {
-      // Sul telefono la barra passa in orizzontale sopra al contenuto:
-      // un'altezza fissa lo strozzerebbe in una finestrella.
-      if (stretto()) {
-        el.style.removeProperty('height')
-        return
-      }
-      // `zoom` su #root: rect e innerHeight sono in pixel dello schermo,
-      // l'altezza che scriviamo è in pixel della pagina zoomata.
-      const z =
-        Number(getComputedStyle(document.documentElement).getPropertyValue('--zoom')) || 1
-      const mio = el.getBoundingClientRect()
-      // QUANTO C'È SOTTO, misurato e non elencato: il piè di pagina, i 96px
-      // di respiro in fondo alla pagina, e qualunque cosa ci si aggiunga
-      // domani. Contando solo il piè di pagina la pagina sforava lo stesso —
-      // di quei 96px, che nessuno si ricordava. La distanza fra il fondo del
-      // riquadro e il fondo della pagina non cambia con l'altezza che gli
-      // diamo, quindi la si può misurare prima.
-      const sotto = Math.max(0, document.body.getBoundingClientRect().bottom - mio.bottom)
-      const alto = (window.innerHeight - mio.top - sotto - 6) / z
-      const nuova = `${Math.max(220, Math.floor(alto))}px`
-      if (el.style.height !== nuova) el.style.height = nuova
-    }
-    calcola()
-    window.addEventListener('resize', calcola)
-    // Quello che sta SOPRA può cambiare (un avviso, la barra che si apre):
-    // l'altezza va rifatta, se no torna a sforare.
-    const osserva = new ResizeObserver(calcola)
-    osserva.observe(document.body)
-    return () => {
-      window.removeEventListener('resize', calcola)
-      osserva.disconnect()
-    }
+    if (!pieno) return undefined
+    document.body.classList.add('pagina-piena')
+    return () => document.body.classList.remove('pagina-piena')
   }, [pieno])
 
   return (
-    <div ref={rif} className={`cat-layout${pieno ? ' cat-pieno' : ''}`}>
+    <div className={`cat-layout${pieno ? ' cat-pieno' : ''}`}>
       <aside className="cat-rail">
         {items.map((it) => (
           <button

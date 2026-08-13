@@ -1140,6 +1140,11 @@ requirements:
       viewport: a scorrere sono i due pannelli — l'elenco delle sezioni e il
       contenuto — ognuno per conto suo, e non la pagina con dentro la testata,
       che scorrendo via si portava dietro l'elenco proprio mentre lo si usava.
+      L'altezza NON si calcola: la pagina si divide in tre (testata, quello che
+      resta, piè di pagina) e il mezzo si prende quello che avanza. Provando a
+      farla col righello — 100dvh meno la testata, meno il piè di pagina, meno
+      il respiro in fondo — restava fuori ogni volta un pezzo diverso: prima la
+      pagina sforava, poi avanzava un buco sotto.
       Sul telefono, dove l'elenco passa in orizzontale sopra al contenuto, si
       scorre come sempre.
     status: implemented
@@ -1196,7 +1201,13 @@ requirements:
       profilo). Fanno eccezione le due schermate in cui si compone un conto,
       dove non c'è menu e si esce con «← Ordini». Nelle sezioni del gestionale
       l'«indietro» sta nella barra, fra il ☰ e il marchio: dentro la pagina si
-      mangiava la prima riga di contenuto. Vale anche per il proprio profilo,
+      mangiava la prima riga di contenuto. E accanto al marchio c'è il TITOLO
+      della pagina che si sta guardando (icona compresa), al posto di un
+      titolo dentro il contenuto: su un tablet al banco una riga in meno di
+      contenuto si vede. Le voci del menu laterale e i titoli sono lo stesso
+      elenco, in un posto solo, se no prima o poi uno dice «Lista ordini» e
+      l'altro «Storico». Sul telefono il titolo sparisce: lì la barra ha già
+      poco spazio. Vale anche per il proprio profilo,
       dove stava in fondo alla pagina e si chiamava «Torna al gestionale» — lo
       si trovava solo scorrendo, ed era l'unico a chiamarsi in un altro modo.
       Nella coda non c'è, perché è la schermata di partenza. Anche i colori seguono il
@@ -1214,7 +1225,7 @@ requirements:
     status: implemented
     generate_issue: false
     labels: [ux, temi]
-    test_cases: [tests/component/AppHeader.test.jsx]
+    test_cases: [tests/component/AppHeader.test.jsx, tests/unit/sezioni.test.js]
 
   - id: REQ-UI-007
     title: "La testata della coda sta su una riga sola"

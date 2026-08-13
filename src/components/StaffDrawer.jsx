@@ -12,25 +12,8 @@ import {
   createManualGroup,
   DEFAULT_SETTINGS,
 } from '../lib/api.js'
-
-const BARTENDER_NAV = [
-  ['coda', '🧾', 'Coda ordini'],
-  ['pagamenti', '💶', 'Flusso cassa'],
-  ['storico', '📋', 'Lista ordini'],
-  ['fatture', '📄', 'Fatture'],
-  ['stats', '📊', 'Statistiche'],
-  ['menu', '🍸', 'Menù'],
-  ['inventario', '📦', 'Inventario'],
-  ['staff', '👥', 'Staff'],
-  ['utenti', '🧑‍🤝‍🧑', 'Utenti e ruoli'],
-  ['vista-cliente', '👀', 'Vista cliente'],
-  ['impostazioni', '⚙️', 'Impostazioni'],
-]
-
-const STAFF_NAV = [
-  ['servizio', '🫱', 'Da servire'],
-  ['miei-ordini', '🧾', 'I miei ordini'],
-]
+// Le voci stanno in un posto solo: le stesse fanno il titolo nella barra.
+import { NAV_GESTIONALE as BARTENDER_NAV, NAV_SALA as STAFF_NAV } from '../lib/sezioni.js'
 
 // Menu laterale dello staff: usato nel gestionale (onSelect cambia tab)
 // e nella vista menu per l'ordinazione manuale (naviga a /bar?tab=…).

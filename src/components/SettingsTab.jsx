@@ -803,8 +803,8 @@ export default function SettingsTab({ role = null }) {
   const attiva = sezioni.find((s) => s.id === sezione) ?? sezioni[0]
 
   return (
-    <div>
-      <h2>⚙️ Impostazioni</h2>
+    <div className="pagina-impostazioni">
+      {/* Il titolo sta nella barra in alto (vedi lib/sezioni.js). */}
       {error && <div className="banner">Errore: {error}</div>}
 
       {confermaSpegni && (
