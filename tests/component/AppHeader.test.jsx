@@ -128,7 +128,12 @@ describe('la barra in cima è la stessa su tutte le schermate', () => {
   it('logo, nome e ☰ ci sono anche fuori dal gestionale', async () => {
     ruoloClaim = 'admin'
     apri('/profilo-staff')
-    await waitFor(() => expect(burger()).not.toBeNull())
+    // Si aspetta il CHIP di chi è collegato, non il ☰: quello c'è anche
+    // prima che arrivi il ruolo, e in quell'attimo è montato il menu del
+    // CLIENTE — che porta anche lui il nome del locale. Aspettando il ☰ il
+    // nome si trovava due volte, ogni tanto: una prova ballerina è peggio di
+    // una prova che manca, perché la si impara a ignorare.
+    await waitFor(() => expect(document.querySelector('.topbar-io')).not.toBeNull())
     expect(screen.getByText('La Tana del Coniglio')).toBeInTheDocument()
     // A destra una cosa sola: chi è collegato, che apre il suo profilo.
     const io = document.querySelector('.topbar-io')
