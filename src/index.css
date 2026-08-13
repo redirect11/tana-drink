@@ -5209,6 +5209,13 @@ body:has(.overlay) .zoom-control {
   border-left-width: 5px !important;
   border-left-style: solid !important;
 }
+/* IL NASTRO D'ANGOLO PARTE DAL BORDO. Sta in posizione assoluta, e per una
+   scatola con bordo «zero» vuol dire il bordo INTERNO: restava un dentino di
+   sfondo fra il nastro e la striscia, che a griglia piena si vede eccome. */
+.pos-tile-nastro {
+  top: -1px !important;
+  left: -5px !important;
+}
 
 /* ── La testata del magazzino: una riga di scelte ─────────────────────
    Ricerca sopra, e sotto le cose che stanno ferme quasi sempre: due tendine
@@ -5366,6 +5373,19 @@ body.pagina-piena .pagina-inventario .inv-scroll {
   background: var(--bg-2);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
 }
+/* Nella barra in alto: allineata al marchio, e col pannello che scende
+   sotto la barra. Il tasto non ha il fondo delle pastiglie — nella barra
+   sarebbe un bottone dentro un bottone. */
+.tendina-barra {
+  min-width: 0;
+}
+.tendina-barra .tendina-tasto {
+  max-width: 40vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Vicino al bordo destro si apre verso l'interno, se no metà pannello
    finisce fuori schermo. */
 .tendina.tendina-destra .tendina-pannello {

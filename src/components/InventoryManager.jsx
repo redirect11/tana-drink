@@ -647,8 +647,11 @@ function ProductsPanel() {
           </Tendina>
         )}
 
-        <span className="inv-valore" title="Valore del magazzino a costo">
-          💶 {formatPrice(totalValue)}
+        {/* Un numero senza nome non vuol dire niente: si legge «6.823,82 €»
+            e ci si chiede di cosa. */}
+        <span className="inv-valore" title="Somma del costo di tutto quello che c'è in magazzino">
+          💶 <span className="inv-valore-eti">Valore magazzino</span>{' '}
+          <strong>{formatPrice(totalValue)}</strong>
         </span>
 
         <span className="inv-testa-spinta" />

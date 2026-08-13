@@ -8,7 +8,14 @@ import { useEffect, useRef, useState } from 'react'
 //
 // Si chiude toccando fuori o con Esc, e il tasto dice COSA è scelto adesso:
 // una tendina che non lo dice costringe ad aprirla per ricordarselo.
-export default function Tendina({ etichetta, riassunto, attivo = false, largo = 260, children }) {
+export default function Tendina({
+  etichetta,
+  riassunto,
+  attivo = false,
+  largo = 260,
+  classe = '',
+  children,
+}) {
   const [aperta, setAperta] = useState(false)
   const rif = useRef(null)
 
@@ -29,7 +36,7 @@ export default function Tendina({ etichetta, riassunto, attivo = false, largo = 
   }, [aperta])
 
   return (
-    <div className="tendina" ref={rif}>
+    <div className={`tendina${classe ? ` ${classe}` : ''}`} ref={rif}>
       <button
         type="button"
         className={`chip tendina-tasto${attivo ? ' active' : ''}`}

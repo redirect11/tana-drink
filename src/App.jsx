@@ -420,9 +420,11 @@ export default function App() {
               {(sezioneAttiva?.label) || pagina.titolo} <span aria-hidden>▾</span>
             </button>
           ) : (
-            <span className="topbar-pagina">
-              <span aria-hidden>·</span>{' '}
-              <Tendina
+            // FUORI dal contenitore del titolo: quello taglia (overflow
+            // hidden, per i puntini) e il pannello della tendina si apriva
+            // invisibile — sembrava che il tocco non funzionasse.
+            <Tendina
+                classe="tendina-barra"
                 etichetta={pagina.titolo}
                 riassunto={`${(sezioneAttiva?.icona) || pagina.icona} ${(sezioneAttiva?.label) || pagina.titolo}`}
               >
@@ -443,8 +445,7 @@ export default function App() {
                     </button>
                   ))
                 }
-              </Tendina>
-            </span>
+            </Tendina>
           )
         )}
         <nav className="row">
