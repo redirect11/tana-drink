@@ -9,6 +9,18 @@
   l'elenco delle sezioni e il contenuto, che **scorrono ognuno per conto
   suo** — l'elenco resta lì mentre si legge la sezione, invece di
   trascinarsi via insieme alla pagina.
+- **Il magazzino sta in una schermata sola.** Prodotti, Conta, Ordini,
+  Scadenzario, Categorie, Macro-categorie e Fornitori sono diventati un
+  menu a sinistra, come nelle impostazioni — prima erano due file di tasti
+  più tre pannelli a scomparsa, e cinque righe di schermo se ne andavano
+  prima di vedere un prodotto. Il menu **si stringe a icone** quando serve
+  spazio (anche nelle impostazioni), e la scelta si ricorda.
+- **I filtri del magazzino stanno su una riga sola**, e ora c'è scritto
+  che sono filtri: sembravano un riepilogo, e nessuno pensava di toccarli.
+  Il valore di magazzino resta lì accanto, ma non si tocca: è un numero da
+  leggere.
+- **Nel magazzino scorre solo la lista**: filtri, ricerca e categorie
+  restano fermi. Prima si risaliva da capo per tornare alla ricerca.
 - **Il titolo della pagina è passato nella barra in alto**, accanto al
   nome del locale: dentro la pagina si prendeva una riga in cima al
   contenuto, e su un tablet al banco quella riga si vede.

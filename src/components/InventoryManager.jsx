@@ -138,33 +138,77 @@ function UnitPrice({ item, markup }) {
 // Sezioni del magazzino: prodotti (giacenze), conta periodica, ordini
 // fornitore e scadenzario — la controparte software dei fogli Excel storici.
 const INV_VIEWS = [
-  ['prodotti', '📦 Prodotti'],
-  ['conta', '📋 Conta'],
-  ['ordini', '🛒 Ordini'],
-  ['scadenzario', '📄 Scadenzario'],
+  ['prodotti', '📦', 'Prodotti'],
+  ['conta', '📋', 'Conta'],
+  ['ordini', '🛒', 'Ordini'],
+  ['scadenzario', '📄', 'Scadenzario'],
+  ['categorie', '🏷', 'Categorie'],
+  ['macro', '🗂', 'Macro-categorie'],
+  ['fornitori', '🏭', 'Fornitori'],
 ]
 
+// LE SEZIONI DEL MAGAZZINO IN UNA BARRA, come nelle impostazioni. Erano una
+// fila di tasti in cima più tre pannelli a scomparsa in mezzo alla lista dei
+// prodotti: fra le due file e i pannelli, prima di vedere un prodotto se ne
+// andavano cinque righe di schermo. La barra si stringe a icone, perché
+// dentro «Prodotti» ce n'è già una per le categorie.
 export default function InventoryManager() {
   const [view, setView] = useState('prodotti')
   return (
-    <div>
-      <div className="chips-row" style={{ marginBottom: 8 }}>
-        {INV_VIEWS.map(([id, label]) => (
-          <button
-            key={id}
-            className={`chip ${view === id ? 'active' : ''}`}
-            onClick={() => setView(id)}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-      {view === 'prodotti' && <ProductsPanel />}
-      {view === 'conta' && <StockCountPanel />}
-      {view === 'ordini' && <PurchaseOrdersPanel />}
-      {view === 'scadenzario' && <SupplierInvoicesPanel />}
+    <div className="pagina-inventario">
+      <CategoryRail
+        items={INV_VIEWS.map(([key, icon, label]) => ({ key, icon, label }))}
+        selected={view}
+        onSelect={setView}
+        pieno
+        chiave="inventario"
+        scorre={false}
+      >
+        {view === 'prodotti' && <ProductsPanel />}
+        {view === 'conta' && <StockCountPanel />}
+        {view === 'ordini' && <PurchaseOrdersPanel />}
+        {view === 'scadenzario' && <SupplierInvoicesPanel />}
+        {view === 'categorie' && <CategoriePanel />}
+        {view === 'macro' && <MacroPanel />}
+        {view === 'fornitori' && <FornitoriPanel />}
+      </CategoryRail>
     </div>
   )
+}
+
+// Le tre anagrafiche: si tirano su i dati che servono e basta. Prima
+// stavano dentro il pannello dei prodotti, che li aveva già in mano per
+// altri motivi — e infatti erano finite lì.
+function CategoriePanel() {
+  const [categories, setCategories] = useState([])
+  const ricarica = async () => setCategories(await fetchInventoryCategories())
+  useEffect(() => {
+    ricarica()
+  }, [])
+  return <InvCategoryManager categories={categories} onChange={ricarica} />
+}
+
+function MacroPanel() {
+  const [macros, setMacros] = useState([])
+  const [categories, setCategories] = useState([])
+  const ricarica = async () => {
+    const [macs, cats] = await Promise.all([fetchMacroCategories(), fetchInventoryCategories()])
+    setMacros(macs)
+    setCategories(cats)
+  }
+  useEffect(() => {
+    ricarica()
+  }, [])
+  return <MacroCategoryManager macros={macros} categories={categories} onChange={ricarica} />
+}
+
+function FornitoriPanel() {
+  const [suppliers, setSuppliers] = useState([])
+  const ricarica = async () => setSuppliers(await fetchSuppliers())
+  useEffect(() => {
+    ricarica()
+  }, [])
+  return <SupplierManager suppliers={suppliers} onChange={ricarica} />
 }
 
 function ProductsPanel() {
@@ -176,7 +220,6 @@ function ProductsPanel() {
   const [error, setError] = useState(null)
 
   const [editing, setEditing] = useState(null) // null | 'new' | item
-  const [macros, setMacros] = useState([])
   const [showMovs, setShowMovs] = useState(false)
 
   // Filtri
@@ -219,16 +262,14 @@ function ProductsPanel() {
   async function load() {
     setLoading(true)
     try {
-      const [its, cats, macs, sups, movs] = await Promise.all([
+      const [its, cats, sups, movs] = await Promise.all([
         fetchInventoryItems(),
         fetchInventoryCategories().catch(() => []),
-        fetchMacroCategories().catch(() => []),
         fetchSuppliers().catch(() => []),
         fetchStockMovements({ limit: 30 }).catch(() => []),
       ])
       setItems(its)
       setCategories(cats)
-      setMacros(macs)
       setSuppliers(sups)
       setMovements(movs)
     } catch (e) {
@@ -452,91 +493,63 @@ function ProductsPanel() {
   }
 
   return (
-    <div>
-      {/* Sottosezioni dell'inventario: sotto al titolo, come nelle altre
-          pagine. Erano tre tasti in mezzo alla lista e i pannelli si
-          aprivano dove capitava. */}
-      <SectionPanels
-        panels={[
-          {
-            id: 'cats',
-            label: <><IconTag /> Categorie</>,
-            render: () => (
-              <InvCategoryManager
-                categories={categories}
-                onChange={async () => setCategories(await fetchInventoryCategories())}
-              />
-            ),
-          },
-          {
-            id: 'macro',
-            label: <><IconCartelle /> Macro-categorie</>,
-            render: () => (
-              <MacroCategoryManager
-                macros={macros}
-                categories={categories}
-                onChange={async () => {
-                  const [macs, cats] = await Promise.all([
-                    fetchMacroCategories(),
-                    fetchInventoryCategories(),
-                  ])
-                  setMacros(macs)
-                  setCategories(cats)
-                }}
-              />
-            ),
-          },
-          {
-            id: 'forn',
-            label: <><IconFornitore /> Fornitori</>,
-            render: () => (
-              <SupplierManager
-                suppliers={suppliers}
-                onChange={async () => setSuppliers(await fetchSuppliers())}
-              />
-            ),
-          },
-        ]}
-      />
-
-      {/* Riepilogo a colpo d'occhio (anche filtri di stato) */}
-      <div className="inv-summary">
-        <button className={`chip ${statusFilter === 'all' ? 'active' : ''}`} onClick={() => setStatusFilter('all')}>
-          Totale <strong>{summary.total}</strong>
-        </button>
-        <button className={`chip warn ${statusFilter === 'low' ? 'active' : ''}`} onClick={() => toggleStatus('low')}>
-          In esaurimento <strong>{summary.low}</strong>
-        </button>
-        <button className={`chip danger ${statusFilter === 'empty' ? 'active' : ''}`} onClick={() => toggleStatus('empty')}>
-          Esauriti <strong>{summary.empty}</strong>
-        </button>
-      </div>
-
-      {/* ASSORTIMENTO: filtro a più scelte. "Nessuno acceso" vuol dire tutto,
-          così deselezionando non si resta con la lista vuota. */}
-      <div className="chips-row" style={{ marginBottom: 8 }}>
-        {ASSORTIMENTI.map((k) => {
-          const quanti = items.filter((it) => assortimentoDi(it) === k).length
-          return (
-            <button
-              key={k}
-              className={`chip ${assortimenti.includes(k) ? 'active' : ''}`}
-              onClick={() => toggleAssortimento(k)}
-              title={ASSORTIMENTO_TITOLO[k]}
-            >
-              {ASSORTIMENTO_LABEL[k]} <strong>{quanti}</strong>
-            </button>
-          )
-        })}
-        {assortimenti.length > 0 && (
-          <button className="chip" onClick={() => setAssortimenti([])}>
-            ✕ Tutti
+    <div className="inv-panel">
+      {/* I FILTRI SU UNA RIGA SOLA, e detti per quello che sono. Erano tre
+          file di pastiglie che sembravano un riepilogo: si leggevano i
+          numeri e non veniva in mente che toccandoli la lista si
+          restringeva. Sono filtri, e ora c'è scritto; il valore di
+          magazzino, che invece è solo un numero da leggere, sta in fondo
+          alla stessa riga. La riga scorre in orizzontale quando non ci
+          sta: meglio scorrere una riga che perderne tre. */}
+      <div className="inv-filtri">
+        <span className="inv-filtri-eti">Filtra</span>
+        <div className="inv-filtri-riga">
+          <button
+            className={`chip ${statusFilter === 'all' ? 'active' : ''}`}
+            onClick={() => setStatusFilter('all')}
+            title="Tutti i prodotti"
+          >
+            Tutti <strong>{summary.total}</strong>
           </button>
-        )}
-      </div>
-
-      <div className="chip" style={{ width: '100%', justifyContent: 'center', marginBottom: 8, cursor: 'default' }}>
-        💶 Valore magazzino <strong>{formatPrice(totalValue)}</strong>
+          <button
+            className={`chip warn ${statusFilter === 'low' ? 'active' : ''}`}
+            onClick={() => toggleStatus('low')}
+            title="Solo quelli sotto la soglia"
+          >
+            In esaurimento <strong>{summary.low}</strong>
+          </button>
+          <button
+            className={`chip danger ${statusFilter === 'empty' ? 'active' : ''}`}
+            onClick={() => toggleStatus('empty')}
+            title="Solo quelli finiti"
+          >
+            Esauriti <strong>{summary.empty}</strong>
+          </button>
+          <span className="inv-filtri-sep" aria-hidden />
+          {/* ASSORTIMENTO: filtro a più scelte. "Nessuno acceso" vuol dire
+              tutto, così deselezionando non si resta con la lista vuota. */}
+          {ASSORTIMENTI.map((k) => {
+            const quanti = items.filter((it) => assortimentoDi(it) === k).length
+            return (
+              <button
+                key={k}
+                className={`chip ${assortimenti.includes(k) ? 'active' : ''}`}
+                onClick={() => toggleAssortimento(k)}
+                title={ASSORTIMENTO_TITOLO[k]}
+              >
+                {ASSORTIMENTO_LABEL[k]} <strong>{quanti}</strong>
+              </button>
+            )
+          })}
+          {assortimenti.length > 0 && (
+            <button className="chip" onClick={() => setAssortimenti([])} title="Togli i filtri di assortimento">
+              ✕
+            </button>
+          )}
+        </div>
+        <span className="inv-valore" title="Valore del magazzino a costo">
+          💶 {formatPrice(totalValue)}
+        </span>
       </div>
 
       {/* Ricerca */}
@@ -548,8 +561,17 @@ function ProductsPanel() {
         placeholder="🔍 Cerca prodotto…"
       />
 
-      {/* Categorie a SINISTRA (come il POS), il resto a destra. */}
-      <CategoryRail items={catItems} selected={categoryFilter} onSelect={setCategoryFilter}>
+      {/* Categorie a SINISTRA (come il POS), il resto a destra. Si prende
+          quello che resta dell'altezza: a scorrere è la lista dei prodotti,
+          non la pagina — prima, per tornare alla ricerca dopo aver guardato
+          in fondo, si risaliva da capo. */}
+      <CategoryRail
+        items={catItems}
+        selected={categoryFilter}
+        onSelect={setCategoryFilter}
+        pieno
+        chiave="inv-categorie"
+      >
 
       {/* Filtro fornitori */}
       {suppliers.length > 0 && (
