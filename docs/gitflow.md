@@ -78,15 +78,35 @@ Ogni rilascio su `develop` ha una versione **x.y.z** semantica:
 - **y** quando si aggiunge una funzione;
 - **z** per correzioni.
 
-Il tag si mette **su `develop`, subito prima del merge su `main`**:
+Rilasciare vuol dire tre cose, in quest'ordine:
+
+1. **allineare `package.json`** al numero della versione e datare le note in
+   `CHANGELOG.md`, sul ramo di rilascio;
+2. portare il ramo di rilascio in `develop` e poi in `main`;
+3. **taggare `main`**, spingendo il tag **prima** del ramo — la pipeline
+   legge i tag al checkout, e spingendo prima il ramo la build partirebbe
+   senza.
 
 ```sh
-git checkout develop && git pull
+# 1. sul ramo di rilascio: package.json + CHANGELOG datato
+git commit -am "release: versione 1.4.0"
+
+# 2. develop, poi main
+git checkout develop && git pull && git merge --no-ff release/1.4.0
+git push origin develop
+git checkout main && git pull && git merge --no-ff release/1.4.0
+
+# 3. il tag, prima del ramo
 git tag -a v1.4.0 -m "Descrizione del rilascio"
 git push origin v1.4.0
-git checkout main && git merge develop --no-ff
 git push origin main
 ```
+
+**Il numero di versione che l'app mostra lo dice `package.json`, non il
+tag.** Il tag sta sul merge in `main`, che non è antenato di `develop` né dei
+rami di lavoro: lì `git describe` risalirebbe al tag precedente e l'ambiente
+di test direbbe una versione vecchia di un rilascio. È già successo. Il passo
+1 non è una formalità: se si salta, tutti gli ambienti mentono sul numero.
 
 **Prima di ogni merge su `develop` e su `main` si chiede conferma.** Il
 push di un branch `feature/` invece è libero: serve proprio a provare.

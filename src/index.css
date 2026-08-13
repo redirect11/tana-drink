@@ -1772,6 +1772,10 @@ body.fullbleed .bar-content {
   .board-title {
     display: flex;
     align-items: center;
+    /* Un dito d'aria fra il ☰ e «In servizio»: il ☰ flottante finisce a
+       12 + 42 = 54px, e col rientro di base (52px) la scritta gli stava
+       addosso. Sul telefono resta com'è: lì lo spazio è tutto. */
+    padding-left: 70px;
   }
   /* La ricerca è anche una `.menu-search`, e quella regola — più in basso
      nel file, stesso peso — le rimetteva i 10px di margine sotto che
@@ -1801,7 +1805,8 @@ body.fullbleed .bar-content {
 
 /* ☰ del menu laterale dentro la topbar: primo elemento a sinistra, prima del
    logo, così il menu è raggiungibile ovunque senza tasti flottanti. */
-.topbar-burger {
+.topbar-burger,
+.topbar-back {
   flex-shrink: 0;
   width: 44px;
   height: 44px;
@@ -1813,12 +1818,18 @@ body.fullbleed .bar-content {
   font-size: 1.15rem;
   cursor: pointer;
 }
+/* «Indietro» delle sezioni del gestionale: sta nella barra, subito dopo il
+   ☰, e non dentro la pagina — lì si mangiava la prima riga di contenuto. */
+.topbar-back {
+  margin-left: -6px;
+}
 
 /* Dispositivi TOUCH (iPad al banco): i tasti che si usano di continuo — menu,
    voci del menu laterale, azioni della topbar — devono essere presi al volo,
    anche col monitor piccolo. Su desktop col mouse restano compatti. */
 @media (pointer: coarse) {
-  .topbar-burger {
+  .topbar-burger,
+  .topbar-back {
     width: 50px;
     height: 50px;
     font-size: 1.3rem;
@@ -1926,10 +1937,6 @@ body.fullbleed .bar-content {
 }
 
 /* Indietro nelle sezioni del gestionale: piccolo, in cima al contenuto. */
-.bar-back {
-  margin-bottom: 8px;
-}
-
 /* Riga di una serata nello storico chiusure di cassa. */
 .cash-sess-head {
   display: flex;
@@ -4277,6 +4284,47 @@ body.fullbleed,
   max-height: calc(100dvh / var(--zoom, 1) - var(--safe-top) - var(--barra-alta) - 24px);
   overflow-y: auto;
 }
+/* TUTTO DENTRO LO SCHERMO (impostazioni). Le sezioni sono più di venti: la
+   barra era più alta della finestra, e per arrivare all'ultima voce si
+   scorreva la PAGINA — testata compresa, che intanto scorreva via. Qui la
+   coppia barra+contenuto è alta quanto lo schermo meno la testata, e a
+   scorrere sono i due pannelli, ognuno per conto suo.
+   Questo è solo il valore di PARTENZA, per non far saltare il riquadro al
+   primo disegno: l'altezza buona la misura CategoryRail.jsx, perché qui il
+   conto non può tenere insieme testata, zoom e piè di pagina. */
+.cat-layout.cat-pieno {
+  height: calc(100dvh / var(--zoom, 1) - var(--safe-top) - var(--barra-alta) - 18px);
+  align-items: stretch;
+}
+.cat-layout.cat-pieno .cat-rail {
+  position: static;
+  max-height: none;
+  height: 100%;
+}
+.cat-layout.cat-pieno .cat-content {
+  height: 100%;
+  overflow-y: auto;
+  /* La barra di scorrimento non deve stare addosso al testo. */
+  padding-right: 4px;
+}
+/* A tutto schermo la testata non c'è: quello spazio torna al contenuto. */
+body.fullbleed .cat-layout.cat-pieno {
+  height: calc(100dvh / var(--zoom, 1) - var(--safe-top) - 18px);
+}
+/* Sul telefono la barra passa in orizzontale sopra al contenuto: un'altezza
+   fissa lo strozzerebbe in una finestrella. Lì si scorre come sempre. */
+@media (max-width: 700px) {
+  .cat-layout.cat-pieno,
+  body.fullbleed .cat-layout.cat-pieno {
+    height: auto;
+  }
+  .cat-layout.cat-pieno .cat-rail,
+  .cat-layout.cat-pieno .cat-content {
+    height: auto;
+    overflow-y: visible;
+  }
+}
+
 /* A tutto schermo la barra in alto non c'è: le categorie tornano in cima. */
 body.fullbleed .cat-rail {
   top: calc(var(--safe-top) + 8px);
@@ -4735,6 +4783,17 @@ body.drawer-open .zoom-control {
   z-index: 100;
   opacity: 0.3;
 }
+/* E lo stesso con QUALUNQUE pannello aperto: il foglio dei ⋯, le conferme,
+   il riepilogo. Sono tutti `.overlay` (z200) e lo zoom stava a z400, quindi
+   galleggiava sopra le ultime voci del pannello — e si toccava lo zoom
+   invece della voce, con l'aggravante che il pannello dei ⋯ sale proprio da
+   quell'angolo. Una regola sola per tutti, invece di ricordarsi una classe
+   ogni volta che nasce un pannello nuovo. */
+body:has(.overlay) .zoom-control {
+  z-index: 100;
+  opacity: 0.3;
+  pointer-events: none;
+}
 .zoom-control button {
   min-width: 30px;
   height: 30px;
@@ -4925,4 +4984,69 @@ body.drawer-open .zoom-control {
 .posd-azioni-fisse .btn {
   margin: 0;
   white-space: nowrap;
+}
+
+/* ── Storia del conto ─────────────────────────────────────────────────
+   Un fatto per riga, in ordine di tempo. Serve a spiegare un conto
+   riaperto a chi non c'era quando è successo. */
+.storia-lista {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.storia-riga {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding-left: 2px;
+  border-left: 3px solid var(--line);
+  padding-block: 2px;
+  padding-inline-start: 10px;
+}
+.storia-riga.storia-riaperto { border-left-color: var(--accent); }
+.storia-riga.storia-annullato { border-left-color: #e74c3c; }
+.storia-riga.storia-chiuso { border-left-color: #2ecc71; }
+.storia-segno {
+  flex-shrink: 0;
+  line-height: 1.4;
+}
+/* Il motivo è la parte che conta: si legge come una frase detta, non come
+   un campo di un modulo. */
+.storia-motivo {
+  margin-top: 2px;
+  font-style: italic;
+  opacity: 0.85;
+}
+/* Dentro il conto riaperto: la riga che dice perché lo è. */
+.riaperto-nota {
+  margin: 6px 0 0;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  font-size: 0.85rem;
+}
+
+/* Una notifica si tocca: per andare dove porta, o anche solo per dire
+   «letta». Tasto o collegamento, a vedersi sono la stessa riga. */
+.status-bell-link {
+  display: block;
+  width: 100%;
+  color: inherit;
+  text-decoration: none;
+  text-align: left;
+  background: none;
+  border: none;
+  font: inherit;
+  cursor: pointer;
+}
+.status-bell-link:active {
+  filter: brightness(1.2);
+}
+/* Nello storico non c'è più niente da fare: si legge e basta. */
+.status-bell-item.letta {
+  opacity: 0.65;
 }

@@ -131,6 +131,74 @@ requirements:
     labels: [ordini, coda]
     test_cases: [tests/unit/coda.test.js, tests/component/PaymentScreen.test.jsx]
 
+  - id: REQ-ORD-008
+    title: "Un conto chiuso o annullato si può rimettere in corso"
+    area: "src/lib/storiaOrdine.js, src/lib/api.js, src/components/StoriaOrdine.jsx"
+    description: >
+      Capita di chiudere un conto sul tavolo sbagliato, di annullarlo per un
+      malinteso, o che il cliente torni e voglia ordinare ancora su quello.
+      Chi ha il gestionale può rimetterlo in corso: si conferma in un pannello
+      che dice cosa succederà e si può scrivere il perché — FACOLTATIVO, perché
+      se fosse obbligatorio si scriverebbe "x" per passare oltre, e al banco i
+      secondi non ci sono. Il conto torna aperto e si può battere di nuovo.
+      Non si tocca quello che è già successo: gli incassi registrati restano
+      dove sono (riaprire non è un rimborso, e la cassa deve continuare a
+      tornare) e il dovuto si ricalcola da sé; le comande già servite restano
+      servite, tornano da fare solo quelle annullate col conto. Se dei soldi
+      erano entrati, il conto riaperto risulta a ACCONTO, non pagato.
+      Se il conto annullato era stato scontato con un BUONO VIP, riaprendolo il
+      saldo si ri-addebita: annullando era tornato al beneficiario, e lasciarlo
+      lì significherebbe uno sconto che nessuno ha pagato e un credito in
+      circolazione che non torna più con i conti. Se nel frattempo il buono è
+      stato speso altrove e il saldo non basta, si addebita quel che c'è e lo
+      sconto si riduce a quella cifra (fino a sparire): meglio un conto che
+      chiede qualche euro in più che un buono in rosso. Su un conto CHIUSO non
+      si tocca niente, perché lì il buono non era mai stato ristornato.
+      Il motivo si legge DENTRO il conto riaperto, senza doverlo cercare, e la
+      storia completa — aperto, chiuso, annullato, riaperto, con chi e perché —
+      sta dietro i ⋯ del conto, sia nella coda sia nel dettaglio. La storia si
+      ricostruisce da quello che il conto porta già addosso, quindi vale anche
+      per i conti di ieri, senza migrazioni.
+    status: implemented
+    generate_issue: false
+    labels: [ordini, difetto-risolto]
+    test_cases: [tests/unit/storiaOrdine.test.js, tests/component/OrderPosDetail.test.jsx, tests/unit/vouchers.test.js]
+
+  - id: REQ-ORD-009
+    title: "Un ordine battuto altrove si vede su tutti gli altri terminali"
+    area: "src/lib/dispositivo.js, src/pages/BartenderPage.jsx, src/lib/notifyStore.js"
+    description: >
+      Chi manda un ordine non ha bisogno di un avviso che gli dica quello che
+      ha appena fatto; tutti gli altri terminali sì. Il metro è il
+      DISPOSITIVO, non il ruolo: prima si tacevano tutti gli ordini battuti da
+      un gestore su qualunque terminale, e chi stava in sala col telefono non
+      sapeva mai che al banco era entrato un ordine — lo stesso account sta su
+      tablet, telefono e portatile insieme. Ogni ordine porta l'identificativo
+      del dispositivo che l'ha creato (un numero a caso per browser, non
+      identifica una persona); gli ordini che non ce l'hanno avvisano, perché
+      un avviso in più si chiude e uno in meno è un drink che non parte.
+      Le notifiche della campanella si dividono in DA LEGGERE e lette: una
+      letta sparisce dall'elenco — in mezz'ora di servizio un elenco che non
+      si svuota mai diventa un muro di righe vecchie, e non ci si guarda più —
+      e resta nello STORICO, che si apre dalla campanella. Aprire la
+      campanella non è leggere: si segna leggendo, toccando la notifica,
+      oppure con «segna tutte lette», che è una decisione.
+      OGNI AVVISO SI PUÒ SPEGNERE, uno per uno: nuovo ordine, ciascuno stato
+      della preparazione separatamente, le scorte (in esaurimento ed esaurita,
+      solo per chi tiene il gestionale) e la nuova versione dell'app. La scelta
+      è PER DISPOSITIVO E PER PERSONA e resta in memoria locale, perché non è
+      una regola del bar: al banco «nuovo ordine» è la cosa più importante
+      della serata, in sala serve «pronto», e sul portatile nel retro non serve
+      niente. Un interruttore unico si spegnerebbe dove dà fastidio lasciando
+      senza chi ne aveva bisogno; e due persone che si passano lo stesso tablet
+      nei cambi turno non si sovrascrivono a vicenda. Di partenza sono tutti
+      accesi: nessuno deve scoprire di essersi perso un ordine perché «era
+      spento di default».
+    status: implemented
+    generate_issue: false
+    labels: [ordini, notifiche]
+    test_cases: [tests/unit/dispositivo.test.js, tests/unit/notifyStore.test.js, tests/unit/preferenzeNotifiche.test.js]
+
   # ══════════════════════════════════════════════════════════════════════
   #  CASSA / POS — come si batte un ordine
   # ══════════════════════════════════════════════════════════════════════
@@ -861,6 +929,23 @@ requirements:
     labels: [stampa, infrastruttura]
     test_cases: []
 
+  - id: REQ-STAMPA-005
+    title: "Sullo scontrino il metodo si legge per esteso"
+    area: "src/lib/orderStatus.js, src/lib/printer.js"
+    description: >
+      Sullo scontrino e sulla chiusura di cassa i metodi di pagamento si
+      scrivono per esteso e con le stesse parole: «Carta di credito», non
+      «Carta». A fine serata la striscia degli scontrini si divide per metodo a
+      colpo d'occhio, e «Carta» e «Contante» si somigliano abbastanza da
+      doverli leggere uno per uno. I nomi stanno in un posto solo, senza emoji
+      (la testina stampa caratteri, non icone): due parole diverse per la
+      stessa cosa costringono a tradurre a mente mentre si contano i soldi.
+      Un metodo sconosciuto resta «Non indicato», mai un ripiego su «Contante».
+    status: implemented
+    generate_issue: false
+    labels: [stampa, cassa]
+    test_cases: [tests/unit/orderStatus.test.js]
+
   - id: REQ-STAMPA-004
     title: "Chiusura di cassa stampata con tutti i metodi"
     area: "src/lib/printer.js"
@@ -1051,7 +1136,12 @@ requirements:
     description: >
       Le impostazioni sono ventuno riquadri: sono voci di una barra laterale e se
       ne apre una alla volta, con la scelta ricordata. Erano una pagina lunghissima
-      da scorrere a occhio.
+      da scorrere a occhio. Da tablet in su la schermata sta TUTTA dentro il
+      viewport: a scorrere sono i due pannelli — l'elenco delle sezioni e il
+      contenuto — ognuno per conto suo, e non la pagina con dentro la testata,
+      che scorrendo via si portava dietro l'elenco proprio mentre lo si usava.
+      Sul telefono, dove l'elenco passa in orizzontale sopra al contenuto, si
+      scorre come sempre.
     status: implemented
     generate_issue: false
     labels: [ux, impostazioni]
@@ -1076,7 +1166,10 @@ requirements:
     description: >
       Nella PWA a tutto schermo il browser non offre lo zoom: l'app ha il suo, che
       scala la pagina senza deformarla. Sul telefono non flotta sull'angolo (dove
-      finiva sopra i tasti) ma sta nella testata del conto.
+      finiva sopra i tasti) ma sta nella testata del conto. Con un pannello aperto
+      — il foglio dei ⋯, una conferma, il menu laterale — passa dietro e non si
+      lascia toccare: stando in basso a sinistra finiva sopra le ultime voci, e si
+      premeva lo zoom al posto della voce.
     status: implemented
     generate_issue: false
     labels: [ux]
@@ -1101,7 +1194,12 @@ requirements:
       destra, chi è collegato — e il menu laterale risponde a tutti: allo staff
       il gestionale, a chi ordina il suo (menù, i propri ordini, accesso e
       profilo). Fanno eccezione le due schermate in cui si compone un conto,
-      dove non c'è menu e si esce con «← Ordini». Anche i colori seguono il
+      dove non c'è menu e si esce con «← Ordini». Nelle sezioni del gestionale
+      l'«indietro» sta nella barra, fra il ☰ e il marchio: dentro la pagina si
+      mangiava la prima riga di contenuto. Vale anche per il proprio profilo,
+      dove stava in fondo alla pagina e si chiamava «Torna al gestionale» — lo
+      si trovava solo scorrendo, ed era l'unico a chiamarsi in un altro modo.
+      Nella coda non c'è, perché è la schermata di partenza. Anche i colori seguono il
       ruolo: chi lavora vede il tema del gestionale ovunque, profilo e accesso
       compresi; chi ordina vede il suo, e così l'anteprima «vista cliente».
       Sempre per la stessa ragione, chi è dello staff non passa dalla vetrina:
@@ -1176,6 +1274,25 @@ requirements:
     generate_issue: false
     labels: [ux, coda]
     test_cases: [tests/unit/coda.test.js, tests/component/SettingsTab.test.jsx]
+
+  - id: REQ-UI-010
+    title: "L'app si chiama come il locale, e dice a chi appartiene"
+    area: "src/lib/nomeApp.js, public/manifest.webmanifest"
+    description: >
+      L'app installata si chiama «La Tana del Coniglio», non con la sigla del
+      progetto. A chi lavora il nome porta il suffisso del ruolo — « - admin»,
+      « - bartender», « - staff» — così sul telefono l'icona dice di chi è, e
+      chi tiene due profili non li confonde; il cliente, e chi non ha fatto
+      accesso, vede il nome nudo. Il suffisso segue il ruolo di chi è collegato
+      e vale per la linguetta del browser e per il nome proposto
+      all'installazione: il telefono lo congela in quel momento, quindi l'app va
+      installata da collegati col ruolo che serve. Il manifest riscritto porta
+      avvio, ambito e icone per esteso, altrimenti l'app installata partirebbe
+      da nessuna parte.
+    status: implemented
+    generate_issue: false
+    labels: [ux, pwa]
+    test_cases: [tests/unit/nomeApp.test.js]
 
   # ══════════════════════════════════════════════════════════════════════
 
@@ -1278,10 +1395,25 @@ requirements:
       si leggono dentro l'app in Impostazioni → Informazioni, insieme ai dati
       tecnici (versione, ramo, commit, ambiente, progetto). Chi usa l'app deve
       poter sapere cosa è cambiato senza chiederlo a chi l'ha scritta.
+      Il NUMERO di versione lo dice package.json, allineato al rilascio, non
+      l'ultimo tag raggiungibile: il tag sta sul merge in main, che non è
+      antenato dei rami di lavoro, e lì `git describe` risaliva al rilascio
+      PRECEDENTE — l'ambiente di test diceva 1.2.0 mentre ci girava la 1.3.0.
+      Un numero sbagliato è peggio di nessun numero: chi segnala un problema
+      dichiara una versione che non è quella che ha davanti.
+      E non deve andarle a cercare: l'app si aggiorna da sé mentre la si usa,
+      e chi lavora si accorge del cambiamento solo perché qualcosa è finito in
+      un altro posto. Toccando «Nuova versione disponibile», alla riapertura
+      compare il BOX con le note di quella versione — una volta sola, poi mai
+      più. Se invece l'aggiornamento arriva da sé (l'app riaperta il giorno
+      dopo) niente box in faccia mentre si lavora: resta una NOTIFICA nella
+      campanella che porta a Impostazioni → Informazioni. Alla prima apertura
+      su un dispositivo nuovo non succede niente: un box di benvenuto con le
+      note di rilascio non lo vuole nessuno.
     status: implemented
     generate_issue: false
-    labels: [metodo]
-    test_cases: []
+    labels: [metodo, ux]
+    test_cases: [tests/unit/novita.test.js, tests/component/AppHeader.test.jsx, tests/unit/notifyStore.test.js]
 
   # ══════════════════════════════════════════════════════════════════════
   #  INTEGRAZIONE SUMUP (Cloud Functions)

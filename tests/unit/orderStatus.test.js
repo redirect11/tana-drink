@@ -9,6 +9,8 @@ import { formatPrice,
   STATUS_LABELS,
   STATUS_EMOJI,
   nextStatus,
+  PAYMENT_METHOD_PRINT,
+  CASH_METHOD_ORDER,
 } from '../../src/lib/orderStatus.js'
 
 describe('flusso stati con «pagato»', () => {
@@ -47,5 +49,29 @@ describe('formato dei prezzi', () => {
 
   it('sotto il migliaio non cambia niente', () => {
     expect(formatPrice(600.5)).toContain('600,50')
+  })
+})
+
+// I NOMI SULLA STAMPANTE. Sulla striscia di scontrini di fine serata si
+// separa il contante dalla carta a colpo d'occhio: «Carta» e «Contante» si
+// somigliano abbastanza da doverli leggere uno per uno, «Carta di credito»
+// no. Chiesto da chi quegli scontrini li conta davvero.
+describe('nomi dei metodi di pagamento sulla stampante', () => {
+  it('la carta si scrive per esteso, il contante resta contante', () => {
+    expect(PAYMENT_METHOD_PRINT.carta).toBe('Carta di credito')
+    expect(PAYMENT_METHOD_PRINT.lettore).toMatch(/^Carta di credito/)
+    expect(PAYMENT_METHOD_PRINT.banco).toBe('Contante')
+  })
+
+  it('niente emoji: la testina stampa caratteri, non icone', () => {
+    for (const nome of Object.values(PAYMENT_METHOD_PRINT)) {
+      expect(nome).toMatch(/^[\x20-\x7E\u00C0-\u017F]+$/)
+    }
+  })
+
+  it('ogni metodo che la cassa conta ha un nome da stampare', () => {
+    for (const k of CASH_METHOD_ORDER) {
+      expect(PAYMENT_METHOD_PRINT[k], `manca il nome di stampa per ${k}`).toBeTruthy()
+    }
   })
 })

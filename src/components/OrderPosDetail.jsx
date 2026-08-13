@@ -7,6 +7,7 @@ import {
   updateOrderInfo,
   setOrderGroup,
   cancelOrder,
+  restoreOrder,
   closePaidOrder,
   createOrder,
   subscribeOpenGroups,
@@ -58,6 +59,8 @@ import { IconPrinter, IconReceipt, IconCard, IconRefresh, IconX, IconCheck, Icon
 import CustomDrinkForm from './CustomDrinkForm.jsx'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import ActionSheet from './ActionSheet.jsx'
+import { StoriaOrdineDialog, RipristinaOrdineDialog } from './StoriaOrdine.jsx'
+import { ripristinabile, ultimaRiapertura, quando } from '../lib/storiaOrdine.js'
 import PaymentScreen from './PaymentScreen.jsx'
 
 // ── Schermata UNICA POS creazione/modifica ordine (stile SumUp) ───────────
@@ -179,6 +182,13 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   // pagina, e un ⋯ in più sarebbe solo un doppione da capire.
   const telefono = useTelefono()
   const [showPayment, setShowPayment] = useState(false)
+  const [showStoria, setShowStoria] = useState(false)
+  // Chi sta usando l'app: la storia deve dire CHI ha riaperto il conto.
+  const chiSonoIo = () =>
+    auth.currentUser?.displayName ||
+    String(auth.currentUser?.email || '').split('@')[0] ||
+    null
+  const [showRipristino, setShowRipristino] = useState(false)
   const [askName, setAskName] = useState(false) // modale nome (creazione)
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   useEffect(() => subscribeSettings(setSettings, () => {}), [])
@@ -1375,6 +1385,22 @@ export default function OrderPosDetail({ order: orderProp = null }) {
         {telefono && <ZoomControl inline />}
       </div>
 
+      {/* PERCHÉ QUESTO CONTO È IN CORSO. Un conto riaperto, guardato mezz'ora
+          dopo, è indistinguibile da uno normale — e se dentro c'è un incasso
+          diventa un mistero. Il motivo sta qui, dove lo si legge senza
+          cercarlo; il resto della storia è nei ⋯. */}
+      {!isNew && (() => {
+        const r = ultimaRiapertura(order)
+        if (!r) return null
+        return (
+          <div className="riaperto-nota" style={{ margin: '8px 8px 0', flexShrink: 0 }}>
+            ♻️ <strong>Conto riaperto</strong> il {quando(r.at)}
+            {r.chi ? ` da ${r.chi}` : ''}
+            {r.motivo ? <> — « {r.motivo} »</> : ''}
+          </div>
+        )
+      })()}
+
       {error && <div className="banner" style={{ margin: '8px 8px 0', flexShrink: 0 }}>{error}</div>}
 
       {/* ── Corpo a 3 colonne: categorie · griglia · ordine ── */}
@@ -1493,6 +1519,30 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                 >
                   <IconReceipt /> Comande ({isNew ? 0 : comande.length})
                 </button>
+                {/* Sul telefono sta nei ⋯ insieme al resto; qui il ⋯ non
+                    c'è (sarebbe un doppione), quindi la storia ha il suo
+                    tasto. */}
+                <button
+                  className="btn ghost small"
+                  onClick={() => setShowStoria(true)}
+                  disabled={isNew}
+                  title={isNew ? 'Il conto non è ancora stato aperto' : 'Aperto, chiuso, annullato, riaperto'}
+                >
+                  🕘 Storia
+                </button>
+                {/* Questo compare e sparisce, al contrario degli altri: su un
+                    conto in corso non vuol dire niente, e un tasto che
+                    rimette in corso quello che è già in corso è solo un modo
+                    per far dubitare di aver capito. */}
+                {ripristinabile(order) && (
+                  <button
+                    className="btn ghost small"
+                    onClick={() => setShowRipristino(true)}
+                    title="Il conto torna fra quelli aperti"
+                  >
+                    ♻️ Rimetti in corso
+                  </button>
+                )}
             </div>
             {!isNew && order.table_label && (
               <div className="muted small">🍽 Tavolo {order.table_label}</div>
@@ -1811,6 +1861,22 @@ export default function OrderPosDetail({ order: orderProp = null }) {
             onClick: () => setShowInfo(true),
           },
           {
+            id: 'storia',
+            icon: '🕘',
+            label: 'Storia del conto',
+            hint: 'Aperto, chiuso, annullato, riaperto',
+            disabled: isNew,
+            onClick: () => setShowStoria(true),
+          },
+          {
+            id: 'ripristina',
+            icon: '♻️',
+            label: 'Rimetti in corso',
+            hint: ripristinabile(order) ? 'Il conto torna fra quelli aperti' : 'Il conto è già in corso',
+            disabled: !ripristinabile(order),
+            onClick: () => setShowRipristino(true),
+          },
+          {
             id: 'unisci',
             icon: '🔗',
             label: 'Unisci le righe uguali',
@@ -2086,6 +2152,24 @@ export default function OrderPosDetail({ order: orderProp = null }) {
           onBeforePay={flushAll}
           onError={setError}
           resolveOrderId={payOrder ? () => payIdRef.current : undefined}
+        />
+      )}
+
+      {showStoria && !isNew && (
+        <StoriaOrdineDialog order={order} onClose={() => setShowStoria(false)} />
+      )}
+
+      {showRipristino && !isNew && (
+        <RipristinaOrdineDialog
+          order={order}
+          onClose={() => setShowRipristino(false)}
+          onConferma={(motivo) => {
+            setShowRipristino(false)
+            mostraOrdine(order.id)
+            restoreOrder(order.id, { motivo, chi: chiSonoIo() }).catch((e) =>
+              setError(`Conto non ripristinato: ${e.message}`)
+            )
+          }}
         />
       )}
 

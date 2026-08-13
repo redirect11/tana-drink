@@ -65,3 +65,30 @@ export function expiryLabel(voucher, now = new Date()) {
 // Totale del credito in circolazione.
 export const totalOutstanding = (vouchers) =>
   round2((vouchers || []).reduce((s, v) => s + Math.max(0, Number(v.balance) || 0), 0))
+
+// ── Riaprire un conto annullato che era stato scontato con un buono ──
+// Annullando, il saldo era tornato al beneficiario (storno). Riaprendo, lo
+// sconto sul conto è ancora lì: se non si ri-addebita, quello sconto diventa
+// un regalo che nessuno ha pagato — e il credito in circolazione non torna
+// più con i conti.
+//
+// Se nel frattempo il buono è stato speso altrove e il saldo non basta, si
+// addebita quello che c'è e lo sconto si riduce a quella cifra (fino a
+// sparire): meglio un conto che chiede qualche euro in più che un buono in
+// rosso, che è credito inventato.
+//
+// Torna { addebito, discount, discount_amount }: `discount` è quello nuovo
+// da scrivere sul conto (null = sconto tolto).
+export function riaddebitoBuono(discount, saldo) {
+  const voluto = Math.max(0, round2(discount?.value))
+  const addebito = redeemable(saldo, voluto)
+  if (addebito === voluto) {
+    // Il saldo copre tutto: sul conto non cambia niente.
+    return { addebito, discount, discount_amount: voluto }
+  }
+  return {
+    addebito,
+    discount: addebito > 0 ? { ...discount, value: addebito } : null,
+    discount_amount: addebito,
+  }
+}

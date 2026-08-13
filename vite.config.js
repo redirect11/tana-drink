@@ -35,13 +35,22 @@ const commit = (
   process.env.GIT_COMMIT ||
   daGit('git rev-parse HEAD')
 ).slice(0, 7)
-// VERSIONE: l'ultimo tag raggiungibile. In produzione è l'unica cosa che
-// serve sapere. Se i tag non ci sono (checkout superficiale, cartella
-// senza git) si ripiega su package.json, che al rilascio viene allineato.
+// VERSIONE: la dice package.json, che al rilascio viene allineato.
+//
+// Prima veniva dall'ultimo TAG RAGGIUNGIBILE, e non funzionava: il tag di
+// rilascio si mette sul merge in `main`, che non è antenato di `develop` né
+// dei rami di lavoro — quindi lì `git describe` risaliva al tag PRECEDENTE e
+// l'ambiente di test diceva «v1.2.0» mentre ci girava sopra la 1.3.0. Un
+// numero di versione sbagliato è peggio di nessun numero: chi segnala un
+// problema dice una versione che non è quella che ha davanti.
+//
+// package.json invece sta su OGNI ramo e porta sempre l'ultima versione
+// rilasciata (vedi docs/gitflow.md: si allinea insieme alle note di
+// rilascio). Il tag resta come ripiego, per una cartella senza package.json.
 const versione =
   process.env.APP_VERSION ||
-  daGit('git describe --tags --abbrev=0') ||
   JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')).version ||
+  daGit('git describe --tags --abbrev=0') ||
   ''
 
 // https://vitejs.dev/config/
