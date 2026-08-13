@@ -5174,6 +5174,37 @@ body:has(.overlay) .zoom-control {
   border-left-style: solid !important;
 }
 
+/* ── La testata del magazzino: una riga di scelte ─────────────────────
+   Ricerca sopra, e sotto le cose che stanno ferme quasi sempre: due tendine
+   (filtri e fornitore), il valore di magazzino, come mostrare i prodotti e
+   il tasto per aggiungerne uno. Erano quattro righe piene di pastiglie. */
+.inv-testa {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.inv-testa-spinta {
+  flex: 1;
+}
+/* Card o lista: due icone attaccate, non due tasti con su scritto cosa
+   fanno. È una scelta che si fa una volta e resta. */
+.inv-vista {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.inv-vista .chip {
+  min-width: 34px;
+  justify-content: center;
+}
+@media (max-width: 700px) {
+  .inv-testa-spinta {
+    display: none;
+  }
+}
+
 /* ── I FILTRI DEL MAGAZZINO: una riga sola ────────────────────────────
    Erano tre file di pastiglie che sembravano un riepilogo — si leggevano i
    numeri senza capire che toccandoli la lista si restringeva. Ora è una
@@ -5271,4 +5302,66 @@ body.pagina-piena .pagina-inventario .inv-scroll {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+}
+
+/* ── Menu a tendina ───────────────────────────────────────────────────
+   Dove le scelte sono tante e stanno ferme quasi sempre: i filtri del
+   magazzino erano sette pastiglie sempre aperte, una riga di schermo
+   occupata tutto il giorno per una scelta che si cambia due volte a sera. */
+.tendina {
+  position: relative;
+  flex-shrink: 0;
+}
+.tendina-freccia {
+  opacity: 0.6;
+  font-size: 0.8em;
+}
+.tendina-pannello {
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + 4px);
+  left: 0;
+  max-width: 92vw;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg-2);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+/* Vicino al bordo destro si apre verso l'interno, se no metà pannello
+   finisce fuori schermo. */
+.tendina.tendina-destra .tendina-pannello {
+  left: auto;
+  right: 0;
+}
+.tendina-titolo {
+  margin: 6px 2px 4px;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.tendina-voce {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.tendina-voce:hover {
+  background: var(--tile-bg);
+}
+.tendina-voce.scelta {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
 }
