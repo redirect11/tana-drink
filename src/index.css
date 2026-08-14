@@ -4107,21 +4107,8 @@ body.fullbleed,
   border-right: 1px solid var(--line);
 }
 /* Riga di una singola unità nella vista "Separa" del pagamento. */
-.payscreen-unit {
-  width: 100%;
-  align-items: center;
-  gap: 8px;
-  margin-top: 2px;
-  padding: 4px 6px;
-  background: none;
-  border: none;
-  color: inherit;
-  cursor: pointer;
-  border-radius: 8px;
-}
-.payscreen-unit:hover {
-  background: var(--tile-bg);
-}
+/* (Le caselline della vista separata non ci sono più: le unità sono righe
+   come le altre, col contatore −/+ — vedi PaymentScreen.jsx.) */
 .payscreen-pad {
   flex: 1;
   min-width: 0;
