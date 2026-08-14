@@ -36,8 +36,10 @@ import {
 
 // Selezione "tutto il conto": la schermata si apre con ogni articolo già
 // in pagamento; si deseleziona solo per lo split del tavolo.
+// La selezione è per RIGA (`key`), non per prodotto: lo stesso prodotto può
+// stare su più righe, e muoverne una non deve muovere l'altra.
 const fullSelection = (order) =>
-  Object.fromEntries(remainingItems(order).map((r) => [r.drink_id, r.qty]))
+  Object.fromEntries(remainingItems(order).map((r) => [r.key, r.qty]))
 
 // Il display del tastierino lavora in CENTESIMI digitati ("350" → 3,50 €).
 const toDigits = (euro) => String(Math.max(0, Math.round(euro * 100)))
@@ -104,10 +106,10 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   }, [orderProp.discount_amount])
   const orderId = async () => (resolveOrderId ? await resolveOrderId() : order.id)
   const [saving, setSaving] = useState(false)
-  const [sel, setSel] = useState(() => fullSelection(order)) // drink_id -> qty da pagare ora
+  const [sel, setSel] = useState(() => fullSelection(order)) // riga -> quante unità pagare ora
   // Vista SEPARATA delle righe uguali (al volo, come nel riepilogo ordine):
-  // ogni unità è mostrata a sé e si sceglie fin dove pagare. Solo visuale, la
-  // selezione resta per prodotto (sel[drink_id] = quante unità pagate).
+  // ogni unità è mostrata a sé e si sceglie fin dove pagare. Solo visuale: la
+  // selezione resta per riga (sel[key] = quante unità di quella riga).
   const [separati, setSeparati] = useState(false)
   const [method, setMethod] = useState('banco')
   // Tastierino: null = importo automatico (dalla selezione); altrimenti
@@ -173,10 +175,10 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   const closed = order.payment_status === 'pagato'
 
   const selection = remaining
-    .filter((r) => (sel[r.drink_id] || 0) > 0)
-    .map((r) => ({ ...r, qty: Math.min(sel[r.drink_id], r.qty) }))
+    .filter((r) => (sel[r.key] || 0) > 0)
+    .map((r) => ({ ...r, qty: Math.min(sel[r.key], r.qty) }))
   const allSelected =
-    remaining.length > 0 && remaining.every((r) => (sel[r.drink_id] || 0) >= r.qty)
+    remaining.length > 0 && remaining.every((r) => (sel[r.key] || 0) >= r.qty)
   const splitting = !allSelected && selection.length > 0
   // Importo automatico: la selezione (o il residuo intero).
   const autoAmount =
@@ -237,8 +239,8 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
 
   const bump = (r, delta) =>
     setSel((s) => {
-      const next = Math.max(0, Math.min((s[r.drink_id] || 0) + delta, r.qty))
-      return { ...s, [r.drink_id]: next }
+      const next = Math.max(0, Math.min((s[r.key] || 0) + delta, r.qty))
+      return { ...s, [r.key]: next }
     })
 
   // ── Tastierino ──
@@ -481,11 +483,11 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
               </button>
             )}
             {remaining.map((r) => {
-              const s = Math.min(sel[r.drink_id] || 0, r.qty)
+              const s = Math.min(sel[r.key] || 0, r.qty)
               // Separata: una riga per unità; si tocca fin dove pagare.
               if (separati && r.qty > 1) {
                 return (
-                  <div key={r.drink_id} style={{ marginTop: 8 }}>
+                  <div key={r.key} style={{ marginTop: 8 }}>
                     {Array.from({ length: r.qty }, (_, i) => {
                       const on = i < s
                       return (
@@ -494,7 +496,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                           type="button"
                           className="payscreen-unit row between"
                           disabled={closed}
-                          onClick={() => setSel((st) => ({ ...st, [r.drink_id]: on ? i : i + 1 }))}
+                          onClick={() => setSel((st) => ({ ...st, [r.key]: on ? i : i + 1 }))}
                           style={{ opacity: on ? 1 : 0.5 }}
                         >
                           <span className="grow" style={{ fontSize: '0.92rem', textAlign: 'left' }}>
@@ -508,7 +510,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                 )
               }
               return (
-                <div className="row between" key={r.drink_id} style={{ alignItems: 'center', marginTop: 8 }}>
+                <div className="row between" key={r.key} style={{ alignItems: 'center', marginTop: 8 }}>
                   <span className="grow" style={{ fontSize: '0.92rem' }}>
                     {r.custom ? '✨ ' : ''}{r.name}
                     <span className="muted small"> · {r.qty}× {formatPrice(r.unit_price)}</span>
