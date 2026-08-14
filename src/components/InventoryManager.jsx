@@ -54,7 +54,7 @@ import CategoryRail from './CategoryRail.jsx'
 import SectionPanels from './SectionPanels.jsx'
 import { IconTag, IconCartelle, IconFornitore } from './Icons.jsx'
 import Tendina from './Tendina.jsx'
-import { useSottosezioni } from '../lib/sottosezioni.js'
+import SezioniPagina from './SezioniPagina.jsx'
 import { usePaginaPiena } from '../lib/paginaPiena.js'
 
 const STATUS_ITEM = [
@@ -167,21 +167,29 @@ const INV_VIEWS = [
 export default function InventoryManager() {
   const [view, setView] = useState('prodotti')
   usePaginaPiena()
-  useSottosezioni(
-    INV_VIEWS.map(([id, icona, label]) => ({ id, icona, label })),
-    view,
-    setView
-  )
   return (
     <div className="pagina-inventario">
-      {view === 'prodotti' && <ProductsPanel />}
-      {view === 'conta' && <StockCountPanel />}
-      {view === 'ordini' && <PurchaseOrdersPanel />}
-      {view === 'scadenzario' && <SupplierInvoicesPanel />}
-      {view === 'categorie' && <CategoriePanel />}
-      {view === 'macro' && <MacroPanel />}
-      {view === 'fornitori' && <FornitoriPanel />}
-      {view === 'movimenti' && <MovimentiPanel />}
+      {/* Le sezioni stanno QUI, aperte: dentro l'inventario si salta fra
+          Prodotti e Conta di continuo, e un menu da aprire ogni volta
+          copriva proprio la lista che si stava guardando. Si stringono a
+          icone col « — qui di solito conviene, che dentro c'è già la barra
+          delle categorie. */}
+      <SezioniPagina
+        voci={INV_VIEWS.map(([id, icona, label]) => ({ id, icona, label }))}
+        attiva={view}
+        scegli={setView}
+        chiave="inv-sezioni"
+        scorre={false}
+      >
+        {view === 'prodotti' && <ProductsPanel />}
+        {view === 'conta' && <StockCountPanel />}
+        {view === 'ordini' && <PurchaseOrdersPanel />}
+        {view === 'scadenzario' && <SupplierInvoicesPanel />}
+        {view === 'categorie' && <CategoriePanel />}
+        {view === 'macro' && <MacroPanel />}
+        {view === 'fornitori' && <FornitoriPanel />}
+        {view === 'movimenti' && <MovimentiPanel />}
+      </SezioniPagina>
     </div>
   )
 }

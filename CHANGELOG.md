@@ -22,8 +22,24 @@
   al tavolo, che ora per chi lavora ha anche la ricerca per nome o
   ingrediente.
 
+### Per chi gestisce
+
+- **Le sezioni di una pagina tornano nella pagina**, aperte a sinistra:
+  Impostazioni, Inventario e le altre si stringono per far loro posto
+  invece di finirci sotto. Chi ha bisogno di spazio le **riduce a icone**
+  col « in cima, e le ritrova strette la volta dopo. Erano finite tutte nel
+  menu a scomparsa: il conto lo pagava chi salta fra Prodotti e Conta venti
+  volte di seguito, aprendo il menu ogni volta e perdendo di vista dove
+  era. Restano anche nel menu, per arrivarci da un'altra pagina.
+
 ### Al banco
 
+- **Nella coda, «In servizio» torna vicino al ☰** e, sul telefono, sulla
+  sua stessa linea: il rientro era scritto a mano e lasciava un buco, e la
+  scritta si appoggiava all'altezza dei tasti scivolando sotto il ☰.
+- **Il pallino della stampante si legge come un tasto** anche mentre
+  controlla: prima, col pallino grigio, restava un'icona sospesa senza
+  cornice.
 - **Nel conto la riga dice quanto fa, non quanto costa uno.** Con tre
   birre uguali si leggeva «4,00 €»: il totale della riga non c'era
   proprio, e per sapere quanto faceva bisognava moltiplicare a mente col

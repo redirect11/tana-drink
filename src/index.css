@@ -1630,6 +1630,16 @@ body.fullbleed .bar-content {
     white-space: normal;
     min-width: 0;
     text-align: left;
+    /* IN LINEA COL ☰, non due pixel più giù. Il ☰ è fisso: parte a
+       12px + safe-top ed è alto 42, quindi il suo centro sta a 33px +
+       safe-top. La testata parte a 10px + safe-top (il respiro della
+       lavagna), quindi perché i due centri coincidano il titolo dev'essere
+       alto 2 × (33 − 10) = 46. Senza, la scritta si appoggiava all'altezza
+       della riga — che sul telefono la fanno i tasti — e scivolava sotto
+       la linea del ☰. */
+    display: flex;
+    align-items: center;
+    min-height: 46px;
   }
   .board-search {
     width: 100%;
@@ -1778,10 +1788,14 @@ body.fullbleed .bar-content {
   .board-title {
     display: flex;
     align-items: center;
-    /* Un dito d'aria fra il ☰ e «In servizio»: il ☰ flottante finisce a
-       12 + 42 = 54px, e col rientro di base (52px) la scritta gli stava
-       addosso. Sul telefono resta com'è: lì lo spazio è tutto. */
-    padding-left: 70px;
+    /* IL RIENTRO SI CALCOLA, non si sceglie a occhio. Il ☰ flottante sta a
+       left: 12px ed è largo 42px, quindi finisce a 54px dal bordo della
+       finestra; la lavagna ha già 12px di suo. Il rientro è quel che
+       serve ad arrivare a 54 più un dito d'aria:
+         12 (☰) + 42 (largh.) + 10 (aria) − 12 (rientro della lavagna).
+       Con 70px scritti a mano la scritta finiva 18px più in là del
+       dovuto, e fra il ☰ e «In servizio» restava un buco. */
+    padding-left: calc(12px + 42px + 10px - 12px);
   }
   /* La ricerca è anche una `.menu-search`, e quella regola — più in basso
      nel file, stesso peso — le rimetteva i 10px di margine sotto che
@@ -5534,21 +5548,39 @@ body.pagina-piena .pagina-inventario .inv-scroll {
   flex-shrink: 0;
 }
 .pallino-stampante {
+  /* Il vestito e' quello dei tasti della testata (btn ghost small): qui si
+     regolano solo altezza e allineamento, cosi' il pallino sta sulla stessa
+     linea del ⋯ e del +. Un bordo tutto suo, su misura, spariva sul tema
+     chiaro. */
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
+  min-width: 44px;
   height: 44px;
-  padding: 0 10px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 8px;
-  background: transparent;
-  color: inherit;
-  font-size: 0.85rem;
+  justify-content: center;
+  font-size: 1.1rem;
+  line-height: 1;
   white-space: nowrap;
-  cursor: pointer;
+}
+/* IL BORDO SI DEVE VEDERE ANCHE COL PALLINO GRIGIO. Il bordo del ghost e'
+   bianco quasi trasparente: sul tema chiaro sparisce, e mentre si controlla
+   la stampante — pallino grigio — restava un'icona sospesa che non sembrava
+   nemmeno un tasto. Il bordo si tinge del colore del testo, quindi si vede
+   su tutti e due i temi, e sotto c'e' un velo come sui chip: deve leggersi
+   come un tasto sempre, non solo quando la stampante risponde. */
+.pallino-stampante {
+  border: 1px solid currentColor;
+  border-color: color-mix(in srgb, currentColor 30%, transparent);
+  background: color-mix(in srgb, currentColor 6%, transparent);
+}
+@supports not (color: color-mix(in srgb, red 50%, transparent)) {
+  /* iPad vecchi: senza color-mix resta il bordo pieno, appena smorzato. */
+  .pallino-stampante {
+    opacity: 0.92;
+  }
 }
 .pallino-stampante.ko {
-  border-color: rgba(255, 90, 90, 0.5);
+  border-color: rgba(255, 90, 90, 0.55);
 }
 .pallino-stampante.rimbalzo {
   cursor: default;

@@ -26,7 +26,7 @@ export default function PallinoStampante({ gestore = false }) {
   // rosso che non si può sistemare.
   if (rimbalzo && !gestore) {
     return (
-      <span className="pallino-stampante rimbalzo" title="Le comande le stampa il banco">
+      <span className="btn ghost small pallino-stampante rimbalzo" title="Le comande le stampa il banco">
         🖨️ <span className="pallino-testo">Stampa il banco</span>
       </span>
     )
@@ -36,7 +36,7 @@ export default function PallinoStampante({ gestore = false }) {
     <span className="pallino-guscio">
       <button
         type="button"
-        className={`pallino-stampante ${stato}`}
+        className={`btn ghost small pallino-stampante ${stato}`}
         onClick={() => {
           setAperto((v) => !v)
           ricontrolla()

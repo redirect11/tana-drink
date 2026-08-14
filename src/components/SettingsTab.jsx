@@ -23,7 +23,7 @@ import {
   avvisoAttivo,
 } from '../lib/preferenzeNotifiche.js'
 import { devToolsEnabled } from '../dev/devActions.js'
-import { Sottosezioni } from '../lib/sottosezioni.js'
+import SezioniPagina from './SezioniPagina.jsx'
 import { usePaginaPiena } from '../lib/paginaPiena.js'
 
 // Impostazioni del bar (documento settings/bar). Ogni modifica viene salvata
@@ -808,13 +808,6 @@ export default function SettingsTab({ role = null }) {
 
   return (
     <div className="pagina-impostazioni">
-      {/* Il titolo sta nella barra in alto (vedi lib/sezioni.js), e con lui
-          l'elenco delle sezioni: in pagina costava una colonna intera. */}
-      <Sottosezioni
-        voci={sezioni.map((x) => ({ id: x.id, icona: x.icona, label: x.label }))}
-        attiva={attiva.id}
-        scegli={scegliSezione}
-      />
       {error && <div className="banner">Errore: {error}</div>}
 
       {confermaSpegni && (
@@ -843,10 +836,16 @@ export default function SettingsTab({ role = null }) {
         />
       )}
 
-      {/* Le sezioni stanno nella barra in alto (il titolo è il comando):
-          a sinistra costavano una colonna tutto il giorno per una scelta che
-          si fa ogni tanto. */}
-      <div className="tab-corpo">{attiva.nodo}</div>
+      {/* Le sezioni stanno nella pagina, aperte: si stringono a icone col
+          « quando serve spazio, e restano strette la volta dopo. */}
+      <SezioniPagina
+        voci={sezioni.map((x) => ({ id: x.id, icona: x.icona, label: x.label }))}
+        attiva={attiva.id}
+        scegli={scegliSezione}
+        chiave="impostazioni"
+      >
+        <div className="tab-corpo">{attiva.nodo}</div>
+      </SezioniPagina>
     </div>
   )
 }
