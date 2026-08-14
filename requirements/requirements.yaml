@@ -1547,9 +1547,11 @@ requirements:
       si salta fra Prodotti e Conta venti volte di seguito, e un menu che
       copre vuol dire aprirlo, cercare, scegliere — e intanto non vedere più
       dove si era.
-      Chi vuole tutta la larghezza lo chiude col ✕, e resta chiuso anche il
-      giorno dopo (la scelta è di chi lavora, non nostra); il 📌 lo
-      riaggancia. Sulle pagine senza sezioni proprie — la coda ordini —
+      Si apre e si chiude col ☰, lo stesso tasto di sempre: niente secondo
+      comando per «agganciarlo», che sarebbe una cosa in più da capire per
+      una differenza che a chi lavora non interessa — il menu c'è o non
+      c'è. La scelta resta anche il giorno dopo.
+      Sulle pagine senza sezioni proprie — la coda ordini —
       resta a scomparsa: lì sarebbe una colonna in meno di conti.
       Da dove in su è un conto sulla larghezza che avanza: sul telefono
       (360-430px) una colonna da 250px è più di metà schermo e il contenuto

@@ -53,8 +53,11 @@ sotto i 44px si sbaglia. Si **toglie**, in quest'ordine:
   venti volte di seguito, e un menu che copre significa aprire, cercare,
   scegliere — e intanto non vedere più dove si era.
 
-  Chi vuole tutta la larghezza lo **chiude col ✕**, e resta chiuso anche il
-  giorno dopo (`tana:drawer-agganciato`); il 📌 lo riaggancia. Sulla coda
+  **Si apre e si chiude col ☰**, come ovunque: niente secondo tasto per
+  «agganciarlo». A chi lavora interessa che il menu ci sia o non ci sia —
+  che resti dentro la pagina invece di coprirla è come si presenta, non
+  un'altra funzione. La scelta resta anche il giorno dopo
+  (`tana:drawer-agganciato`). Sulla coda
   ordini non si aggancia — lì non ci sono sezioni e sarebbe una colonna in
   meno di conti.
 

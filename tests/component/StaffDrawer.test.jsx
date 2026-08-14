@@ -6,7 +6,7 @@
 // e non c'era modo di vedere a nome di chi si stava battendo.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import '@testing-library/jest-dom/vitest'
@@ -147,17 +147,37 @@ describe('il menu agganciato alla pagina', () => {
     expect(document.body.classList.contains('drawer-agganciato')).toBe(false)
   })
 
-  it('si chiude per allargare la pagina, e resta chiuso anche la volta dopo', async () => {
-    const user = userEvent.setup()
-    const primo = conSezioni()
-    await user.click(screen.getByRole('button', { name: /Chiudi il menu/ }))
-    expect(document.body.classList.contains('drawer-agganciato')).toBe(false)
-    primo.unmount()
+  // SI APRE E SI CHIUDE COL ☰, come ovunque: non c'è un secondo tasto per
+  // «agganciarlo». A chi lavora interessa che il menu ci sia o non ci sia;
+  // che resti dentro la pagina invece di coprirla è come si presenta.
+  const tocca = () => act(() => { window.dispatchEvent(new Event('tana:toggle-drawer')) })
 
+  it('il ☰ lo chiude e lo riapre, sempre dentro la pagina', () => {
+    conSezioni()
+    tocca()
+    expect(document.body.classList.contains('drawer-agganciato')).toBe(false)
+    // Chiuso vuol dire chiuso: non ricompare come pannello che copre.
+    expect(document.querySelector('.bar-sidebar.open')).toBeNull()
+    tocca()
+    expect(document.body.classList.contains('drawer-agganciato')).toBe(true)
+  })
+
+  it('chiuso una volta, resta chiuso anche la volta dopo', () => {
+    const primo = conSezioni()
+    tocca()
+    primo.unmount()
     conSezioni()
     expect(document.body.classList.contains('drawer-agganciato')).toBe(false)
-    // …e si riaggancia quando lo si richiede.
-    await user.click(screen.getByRole('button', { name: /Tieni il menu aperto/ }))
-    expect(document.body.classList.contains('drawer-agganciato')).toBe(true)
+  })
+
+  it('dove non si aggancia, il ☰ apre il pannello come sempre', () => {
+    render(
+      <MemoryRouter initialEntries={['/bar']}>
+        <StaffDrawer role="admin" active="coda" />
+      </MemoryRouter>
+    )
+    tocca()
+    expect(document.querySelector('.bar-sidebar.open')).toBeTruthy()
+    expect(document.body.classList.contains('drawer-agganciato')).toBe(false)
   })
 })
