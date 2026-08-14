@@ -5623,8 +5623,14 @@ body.pagina-piena .pagina-inventario .inv-scroll {
    aperto DENTRO la pagina: il contenuto si stringe per fargli posto invece
    di finirci sotto. Chi vuole tutta la larghezza lo chiude col ✕.
 
-   Solo da tablet in su: sul telefono una colonna fissa da 250px sarebbe
-   piu' di meta' schermo, e li' il menu a scomparsa va benissimo. */
+   DA DOVE IN SU. Il conto e' la larghezza che resta al contenuto. Su un
+   telefono (360-430px) una colonna da 250px e' piu' di meta' schermo:
+   quello che avanza non e' un contenuto stretto, e' un contenuto
+   inutilizzabile — li' il menu a scomparsa e' la cosa giusta, non un
+   ripiego. Da 768px in su (l'iPad in verticale, cioe' il tablet del banco)
+   restano 500px e la scelta ha senso: si tiene aperto, e chi ha bisogno di
+   larghezza lo chiude. Fino ai 900px la colonna e' piu' stretta, che 50px
+   la' dentro si sentono. */
 .bar-nav-aggancia {
   margin-left: auto;
   width: 32px;
@@ -5639,7 +5645,7 @@ body.pagina-piena .pagina-inventario .inv-scroll {
   display: none; /* si accende solo dove la pagina puo' davvero stringersi */
 }
 
-@media (min-width: 901px) {
+@media (min-width: 768px) {
   .bar-nav-aggancia {
     display: inline-flex;
     align-items: center;
@@ -5690,5 +5696,15 @@ body.pagina-piena .pagina-inventario .inv-scroll {
   body.pagina-piena.drawer-agganciato .bar-sidebar.agganciata {
     min-height: 0;
     overflow-y: auto;
+  }
+}
+
+/* Tablet in verticale: la colonna si stringe, il contenuto respira. */
+@media (min-width: 768px) and (max-width: 900px) {
+  body.drawer-agganciato .bar-sidebar.agganciata {
+    width: 200px;
+  }
+  body.drawer-agganciato .bar-page {
+    gap: 10px;
   }
 }

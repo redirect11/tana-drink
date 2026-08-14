@@ -1542,7 +1542,7 @@ requirements:
     area: "src/components/StaffDrawer.jsx, src/index.css, docs/navigazione.md"
     description: >
       Nelle pagine con sottosezioni (Impostazioni, Inventario) il menu
-      laterale, da 901px in su, non copre il contenuto: è una colonna della
+      laterale, da 768px in su, non copre il contenuto: è una colonna della
       pagina e il contenuto si stringe per fargli posto. Dentro l'inventario
       si salta fra Prodotti e Conta venti volte di seguito, e un menu che
       copre vuol dire aprirlo, cercare, scegliere — e intanto non vedere più
@@ -1550,8 +1550,12 @@ requirements:
       Chi vuole tutta la larghezza lo chiude col ✕, e resta chiuso anche il
       giorno dopo (la scelta è di chi lavora, non nostra); il 📌 lo
       riaggancia. Sulle pagine senza sezioni proprie — la coda ordini —
-      resta a scomparsa: lì sarebbe una colonna in meno di conti. Sul
-      telefono mai: 250px fissi sono mezzo schermo.
+      resta a scomparsa: lì sarebbe una colonna in meno di conti.
+      Da dove in su è un conto sulla larghezza che avanza: sul telefono
+      (360-430px) una colonna da 250px è più di metà schermo e il contenuto
+      diventa inutilizzabile, quindi lì resta a scomparsa; da 768px —
+      l'iPad in verticale, il tablet del banco — restano 500px e la scelta
+      ha senso, con la colonna stretta a 200px fino ai 900px.
     status: implemented
     generate_issue: false
     labels: [ux, navigazione]

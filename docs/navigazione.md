@@ -47,7 +47,7 @@ sotto i 44px si sbaglia. Si **toglie**, in quest'ordine:
 
   Nel menu compaiono le sezioni della **pagina aperta**: sono le uniche che
   si conoscono senza esserci passati.
-- **Dove la pagina ha sezioni sue, il menu resta agganciato**: da 901px in
+- **Dove la pagina ha sezioni sue, il menu resta agganciato**: da 768px in
   su non copre il contenuto, è una colonna della pagina e il contenuto si
   stringe per fargli posto. Lì dentro si salta da una sezione all'altra
   venti volte di seguito, e un menu che copre significa aprire, cercare,
@@ -56,7 +56,13 @@ sotto i 44px si sbaglia. Si **toglie**, in quest'ordine:
   Chi vuole tutta la larghezza lo **chiude col ✕**, e resta chiuso anche il
   giorno dopo (`tana:drawer-agganciato`); il 📌 lo riaggancia. Sulla coda
   ordini non si aggancia — lì non ci sono sezioni e sarebbe una colonna in
-  meno di conti — e sul telefono mai: 250px fissi sarebbero mezzo schermo.
+  meno di conti.
+
+  **Da dove in su** è un conto sulla larghezza che resta: sul telefono
+  (360–430px) 250px sono più di metà schermo e il contenuto diventa
+  inutilizzabile, quindi lì il menu resta a scomparsa; da 768px — l'iPad in
+  verticale, il tablet del banco — restano 500px e la scelta ha senso. Fino
+  ai 900px la colonna si stringe a 200px.
 
 - **I filtri** stanno in una tendina sopra il contenuto, e il tasto dice cosa
   è scelto senza doverla aprire.
