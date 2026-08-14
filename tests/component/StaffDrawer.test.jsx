@@ -30,6 +30,7 @@ vi.mock('../../src/lib/api.js', () => ({
 }))
 
 import StaffDrawer from '../../src/components/StaffDrawer.jsx'
+import { Sottosezioni } from '../../src/lib/sottosezioni.js'
 
 function apri(role = 'admin') {
   const r = render(
@@ -107,5 +108,56 @@ describe('menu laterale', () => {
     apri('admin')
     await userEvent.click(screen.getByText('Nuovo ordine'))
     expect(screen.getByText('PAGINA POS')).toBeInTheDocument()
+  })
+})
+
+// ── IL MENU AGGANCIATO ALLA PAGINA ───────────────────────────────────
+// Dove la pagina ha sezioni sue (Impostazioni, Inventario) il menu resta
+// aperto dentro la pagina: si salta da una sezione all'altra venti volte di
+// seguito, e un menu che copre vuol dire aprirlo, cercare, scegliere — e
+// intanto non vedere piu' dove si era. Chi vuole tutta la larghezza lo
+// chiude, e resta chiuso anche domani.
+describe('il menu agganciato alla pagina', () => {
+  const SEZIONI = [
+    { id: 'aspetto', icona: '🎨', label: 'Aspetto' },
+    { id: 'stampante', icona: '🖨️', label: 'Stampante' },
+  ]
+
+  function conSezioni(voci = SEZIONI) {
+    return render(
+      <MemoryRouter initialEntries={['/bar']}>
+        <StaffDrawer role="admin" active="impostazioni" />
+        <Sottosezioni voci={voci} attiva="aspetto" scegli={() => {}} />
+      </MemoryRouter>
+    )
+  }
+
+  it('con le sezioni della pagina il menu e’ gia’ aperto, senza toccare niente', () => {
+    conSezioni()
+    expect(document.body.classList.contains('drawer-agganciato')).toBe(true)
+    expect(document.querySelector('.bar-sidebar.agganciata')).toBeTruthy()
+  })
+
+  it('sulle pagine senza sezioni resta a scomparsa: la coda non perde una colonna', () => {
+    render(
+      <MemoryRouter initialEntries={['/bar']}>
+        <StaffDrawer role="admin" active="coda" />
+      </MemoryRouter>
+    )
+    expect(document.body.classList.contains('drawer-agganciato')).toBe(false)
+  })
+
+  it('si chiude per allargare la pagina, e resta chiuso anche la volta dopo', async () => {
+    const user = userEvent.setup()
+    const primo = conSezioni()
+    await user.click(screen.getByRole('button', { name: /Chiudi il menu/ }))
+    expect(document.body.classList.contains('drawer-agganciato')).toBe(false)
+    primo.unmount()
+
+    conSezioni()
+    expect(document.body.classList.contains('drawer-agganciato')).toBe(false)
+    // …e si riaggancia quando lo si richiede.
+    await user.click(screen.getByRole('button', { name: /Tieni il menu aperto/ }))
+    expect(document.body.classList.contains('drawer-agganciato')).toBe(true)
   })
 })
