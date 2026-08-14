@@ -433,3 +433,102 @@ describe('scontrino: il metodo di pagamento', () => {
     expect(stampato.payment_method).toBe('banco')
   })
 })
+
+// ── Due righe dello stesso prodotto ──────────────────────────────────
+// Difetto visto in produzione: con «Negroni, Coca Cola, Negroni», premere
+// «+» sul primo Negroni alzava anche il secondo. La selezione era per
+// PRODOTTO e le due righe condividevano il contatore: si incassava una
+// quantità che nessuno aveva scelto.
+describe('due righe uguali si muovono una per volta', () => {
+  const dueNegroni = () =>
+    baseOrder({
+      total: 19,
+      comande: [],
+      order_items: [
+        { drink_id: 'negroni', name: 'Negroni', unit_price: 8, qty: 1 },
+        { drink_id: 'coca', name: 'Coca Cola', unit_price: 3, qty: 1 },
+        { drink_id: 'negroni', name: 'Negroni', unit_price: 8, qty: 1, custom: true },
+      ],
+    })
+
+  it('togliendo il primo Negroni, il secondo resta in pagamento', async () => {
+    const user = userEvent.setup()
+    mount(dueNegroni())
+    // Si apre con tutto selezionato: 8 + 3 + 8.
+    expect(payAmount()).toHaveTextContent('19,00')
+    const togli = screen.getAllByRole('button', { name: /Togli Negroni dal pagamento/ })
+    expect(togli).toHaveLength(2)
+    await user.click(togli[0])
+    // Se si muovessero insieme resterebbero solo 3,00 €.
+    expect(payAmount()).toHaveTextContent('11,00')
+  })
+
+  it('e si incassa solo la riga scelta', async () => {
+    const user = userEvent.setup()
+    mount(dueNegroni())
+    const togli = screen.getAllByRole('button', { name: /Togli Negroni dal pagamento/ })
+    await user.click(togli[0])
+    await user.click(screen.getByRole('button', { name: /Riscuotere/ }))
+    const [, dati] = registerPayment.mock.calls.at(-1)
+    expect(dati.amount).toBe(11)
+    // Un solo Negroni nel dettaglio dell'incasso.
+    const negroni = dati.items.filter((i) => i.drink_id === 'negroni')
+    expect(negroni).toHaveLength(1)
+    expect(negroni[0].qty).toBe(1)
+  })
+})
+
+// IL CASO DEL VIDEO (#45): due Negroni «liberi/modificati» (la ✨), ognuno
+// 1×, e in mezzo una Coca. Righe che NON si accorpano mai — quindi niente
+// tasto «Separa uguali», e prima premendo + su uno si muovevano tutti e due.
+describe('due prodotti liberi uguali, come nel conto #45', () => {
+  const comeNelVideo = () =>
+    baseOrder({
+      total: 15,
+      comande: [],
+      order_items: [
+        { drink_id: 'negroni', name: 'NEGRONI', unit_price: 6, qty: 1, custom: true },
+        { drink_id: 'coca', name: 'COCA ZERO VETRO', unit_price: 3, qty: 1, custom: true },
+        { drink_id: 'negroni', name: 'NEGRONI', unit_price: 6, qty: 1, custom: true },
+      ],
+    })
+
+  it('il tasto «Separa uguali» non c’è: non c’è niente da separare', () => {
+    mount(comeNelVideo())
+    expect(screen.queryByRole('button', { name: /Separa uguali/ })).toBeNull()
+    // Tre righe distinte, ognuna col suo contatore.
+    expect(screen.getAllByRole('button', { name: /Paga NEGRONI/ })).toHaveLength(2)
+  })
+
+  it('il + su un NEGRONI muove solo quello', async () => {
+    const user = userEvent.setup()
+    mount(comeNelVideo())
+    // Si parte da tutto selezionato: si toglie tutto e si riprende un solo
+    // Negroni, come nel video (0/1 su tutte le righe).
+    for (const b of screen.getAllByRole('button', { name: /Togli .* dal pagamento/ })) {
+      await user.click(b)
+    }
+    expect(payAmount()).toHaveTextContent('0,00')
+    await user.click(screen.getAllByRole('button', { name: /Paga NEGRONI/ })[0])
+    // Se si muovessero insieme sarebbero 12,00 €.
+    expect(payAmount()).toHaveTextContent('6,00')
+  })
+
+  // Prodotti liberi veri: senza nemmeno un id di catalogo.
+  it('anche due voci libere senza prodotto restano indipendenti', async () => {
+    const user = userEvent.setup()
+    mount(
+      baseOrder({
+        total: 10,
+        comande: [],
+        order_items: [
+          { drink_id: null, name: 'Extra', unit_price: 5, qty: 1, custom: true },
+          { drink_id: null, name: 'Extra', unit_price: 5, qty: 1, custom: true },
+        ],
+      })
+    )
+    expect(payAmount()).toHaveTextContent('10,00')
+    await user.click(screen.getAllByRole('button', { name: /Togli Extra dal pagamento/ })[0])
+    expect(payAmount()).toHaveTextContent('5,00')
+  })
+})
