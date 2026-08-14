@@ -37,6 +37,8 @@ function apri(role = 'admin') {
       <Routes>
         <Route path="/bar" element={<StaffDrawer role={role} />} />
         <Route path="/profilo-staff" element={<div>PAGINA PROFILO</div>} />
+        <Route path="/pos" element={<div>PAGINA POS</div>} />
+        <Route path="/menu" element={<div>PAGINA MENU</div>} />
       </Routes>
     </MemoryRouter>
   )
@@ -82,10 +84,28 @@ describe('menu laterale', () => {
     expect(screen.getByText('Staff')).toBeInTheDocument()
   })
 
-  it('lo staff di sala non vede il gestionale', () => {
+  it('lo staff di sala non vede il gestionale, ma lavora sulla stessa coda', () => {
     apri('staff')
     expect(screen.queryByText('Utenti e ruoli')).toBeNull()
+    // La home della sala è la coda del banco; «I miei ordini» non è più
+    // una pagina (è il filtro «Miei» della coda), «Da servire» resta.
+    expect(screen.getByText('Coda ordini')).toBeInTheDocument()
     expect(screen.getByText('Da servire')).toBeInTheDocument()
+    expect(screen.queryByText('I miei ordini')).toBeNull()
     expect(screen.getByText('Staff')).toBeInTheDocument() // il suo ruolo, in fondo
+  })
+
+  it('per la sala «Nuovo ordine» apre il menù, non il POS', async () => {
+    // Il POS è lo strumento del banco: la sala ordina dal menù che sta
+    // mostrando al tavolo, con la ricerca.
+    apri('staff')
+    await userEvent.click(screen.getByText('Nuovo ordine dal menù'))
+    expect(screen.getByText('PAGINA MENU')).toBeInTheDocument()
+  })
+
+  it('per il gestore «Nuovo ordine» apre il POS', async () => {
+    apri('admin')
+    await userEvent.click(screen.getByText('Nuovo ordine'))
+    expect(screen.getByText('PAGINA POS')).toBeInTheDocument()
   })
 })

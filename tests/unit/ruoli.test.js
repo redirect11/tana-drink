@@ -50,7 +50,7 @@ const RADICI = ['src', 'functions/lib']
 const CONFRONTO = /([A-Za-z_$][\w$.?[\]]*)\s*[=!]==\s*['"](admin|bartender|staff)['"]/g
 // Stesse parole, ma non sono ruoli: il nome di una scheda, chi ha annullato
 // un ordine, il tipo di una notifica.
-const OMONIMI = ['tab', 'sub', 'cancelled_by', 'cancel_phrase', 'kind', 'by', 'phrase']
+const OMONIMI = ['tab', 'tabEffettivo', 'sub', 'cancelled_by', 'cancel_phrase', 'kind', 'by', 'phrase']
 // Dove i confronti CI VOGLIONO: è il modulo che li definisce, e i due
 // elenchi lato Functions (non possono importare i moduli del client).
 const AMMESSI = ['src/lib/ruoli.js', 'functions/lib/push-core.js', 'functions/lib/staff-service.js', 'functions/lib/payment-service.js']

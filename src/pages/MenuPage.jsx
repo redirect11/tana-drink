@@ -185,10 +185,21 @@ export default function MenuPage() {
   // dal gestionale si trovava una pagina diversa da quella che stava
   // mostrando al tavolo. Ordinare da qui si può lo stesso, se le impostazioni
   // lo consentono (vedi `canOrder`).
+  // La ricerca dello staff riduce il menù alle voci che rispondono, per
+  // nome o ingrediente; le categorie rimaste vuote spariscono da sole.
+  const [ricerca, setRicerca] = useState('')
   const categories = useMemo(() => {
+    const ricercaAttiva = ricerca.trim().toLowerCase()
+    const visibili = ricercaAttiva
+      ? drinks.filter(
+          (d) =>
+            d.name?.toLowerCase().includes(ricercaAttiva) ||
+            (d.recipe_items || []).some((r) => r.name?.toLowerCase().includes(ricercaAttiva))
+        )
+      : drinks
     const byId = new Map(cats.map((c) => [c.id, c]))
     const groups = new Map() // key -> { name, sort, list }
-    for (const d of drinks) {
+    for (const d of visibili) {
       const cat = byId.get(d.category_id)
       const name = cat?.name || d.category || 'Altro'
       const sort = cat ? cat.sort_order : 9999
@@ -198,7 +209,7 @@ export default function MenuPage() {
     return [...groups.values()]
       .sort((a, b) => (a.sort - b.sort) || a.name.localeCompare(b.name))
       .map((g) => [g.name, g.list])
-  }, [drinks, cats])
+  }, [drinks, cats, ricerca])
 
   // ── Geofence: verificato AL CARICAMENTO del menu (lo staff è esente).
   // Finché la posizione non risulta nel raggio, i controlli per ordinare
@@ -352,6 +363,20 @@ export default function MenuPage() {
         </p>
       )}
 
+      {/* RICERCA, solo per lo staff: chi prende l'ordine col cliente davanti
+          non può scorrere otto categorie per trovare un drink. Il cliente
+          invece il menù lo sfoglia: per lui resta la vetrina com'è. */}
+      {staff && (
+        <input
+          type="search"
+          className="menu-search"
+          placeholder="🔍 Cerca nel menù…"
+          value={ricerca}
+          onChange={(e) => setRicerca(e.target.value)}
+          style={{ margin: '0 0 10px' }}
+        />
+      )}
+
       {/* Drink custom: solo il bartender compone voci fuori menù al volo. */}
       {isGestore(staff?.role) && !menuOnly && canOrder && (
         <button
@@ -465,6 +490,10 @@ export default function MenuPage() {
         <div className="empty">
           Nessun drink disponibile al momento.
         </div>
+      )}
+
+      {staff && ricerca.trim() && drinks.length > 0 && categories.length === 0 && (
+        <div className="empty">Niente nel menù che risponda a «{ricerca.trim()}».</div>
       )}
 
       {categories.length > 1 && (
