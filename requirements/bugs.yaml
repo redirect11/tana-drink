@@ -50,6 +50,7 @@ bugs:
       chiedere: succede su tutti i dispositivi o solo su uno? Comunque
       vada, la fix collaterale è azzerare il banner al primo snapshot
       buono e loggare gli errori dei listener oggi silenziati.
+    in_produzione: true
     status: todo
     generate_issue: true
     labels: [bug, produzione, sicurezza]
@@ -66,6 +67,7 @@ bugs:
       L'annullamento deve solo neutralizzare gli effetti: reintegro del
       magazzino (già REQ-ORD-005) e nessun cumulo nel guadagno di serata.
       Annullare non è svuotare.
+    in_produzione: true
     status: todo
     generate_issue: true
     labels: [bug, ordini, pos]
@@ -83,6 +85,7 @@ bugs:
       compare solo nella lista notifiche in-app (ordini annullati e
       ricevuti), e la si vede entrando nell'app, non aprendo l'ordine.
       Il cliente continua a ricevere la sua push come oggi.
+    in_produzione: true
     status: todo
     generate_issue: true
     labels: [bug, notifiche, staff]
@@ -99,6 +102,7 @@ bugs:
       (orderLines.js) e righe con note diverse restano già separate. Da
       chiarire in fase di fix se la separazione delle righe sostituisce il
       subtotale per riga o se servono entrambe le cose.
+    in_produzione: true
     status: todo
     generate_issue: true
     labels: [bug, pos]
@@ -115,6 +119,7 @@ bugs:
       lo schermo invece della stampante non la vede mai. Comportamento
       atteso: la nota dell'item compare sotto la riga anche nelle card
       delle code, come già avviene per la nota del conto.
+    in_produzione: true
     status: todo
     generate_issue: true
     labels: [bug, comande, ui]
