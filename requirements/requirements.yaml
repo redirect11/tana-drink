@@ -1065,6 +1065,31 @@ requirements:
     labels: [stampa, cassa]
     test_cases: []
 
+  - id: REQ-STAMPA-006
+    title: "Anche lo staff di sala può ristampare la comanda"
+    area: "src/pages/OrderStatusPage.jsx, src/components/PrinterSetup.jsx, src/lib/ruoli.js"
+    description: >
+      Oggi la comanda la stampa solo chi è admin o bartender: il dettaglio col
+      tasto 🖨 arriva a loro (isGestore, OrderStatusPage), e la sezione
+      Impostazioni → Stampante sta nel menu del gestionale, che lo staff di
+      sala non ha. Se la comanda non è uscita o si è persa fra i tavoli, chi
+      porta i vassoi deve andare a cercare il bartender per farsela ristampare
+      — cioè fermare chi sta preparando.
+      Comportamento atteso: chi è staff di sala può RISTAMPARE la comanda di un
+      ordine che vede, dalla schermata di stato e dalla coda del servizio, con
+      lo stesso tasto e la stessa stampa che usa il banco. Restano al
+      gestionale la configurazione della stampante e lo scontrino: alla sala
+      serve la comanda, non la cassa.
+      Da chiarire implementando: IP della stampante e certificato accettato
+      sono per DISPOSITIVO, non per account, quindi il telefono della sala va
+      comunque preparato una volta. O lo prepara un gestore su quel telefono,
+      o serve un modo per passargli le impostazioni della stampante senza
+      aprirgli tutto il gestionale.
+    status: todo
+    generate_issue: true
+    labels: [stampa, ruoli, sala]
+    test_cases: []
+
   # ══════════════════════════════════════════════════════════════════════
   #  NOTIFICHE
   # ══════════════════════════════════════════════════════════════════════
