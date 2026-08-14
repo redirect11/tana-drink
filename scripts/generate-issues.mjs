@@ -20,6 +20,11 @@
  * Il workflow `.github/workflows/generate-issues.yml` esegue questo script
  * automaticamente quando viene effettuato un push su uno dei due file.
  *
+ * Chiusura:
+ *   Una voce con `status: fixed` (o `implemented`/`done`) non genera un'issue nuova:
+ *   se ne esiste una aperta con quel titolo, lo script la commenta e la chiude. Il
+ *   registro (`bugs.yaml`) resta l'unica cosa da aggiornare a mano.
+ *
  * Idempotenza:
  *   Il titolo dell'issue viene prefissato con "[ID]", es. "[REQ-SUMUP-SYNC-001] Titolo"
  *   o "[BUG-001] Titolo".
@@ -67,6 +72,26 @@ async function searchIssues(title) {
   const { ok, body } = await githubFetch(`/search/issues?q=${q}&per_page=5`)
   if (!ok) return []
   return body.items || []
+}
+
+// Un bug risolto nel registro è un'issue da chiudere: così non si aggiorna la
+// stessa cosa in due posti (e non restano aperte issue di roba già sistemata).
+const STATI_CHIUSI = new Set(['fixed', 'implemented', 'done'])
+
+async function commentIssue(number, body) {
+  return githubFetch(`/repos/${OWNER}/${REPO}/issues/${number}/comments`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ body }),
+  })
+}
+
+async function closeIssue(number) {
+  return githubFetch(`/repos/${OWNER}/${REPO}/issues/${number}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ state: 'closed', state_reason: 'completed' }),
+  })
 }
 
 async function createIssue({ title, body, labels }) {
@@ -153,13 +178,22 @@ async function main() {
 
   let created = 0
   let skipped = 0
+  let closed = 0
   let errors = 0
 
   for (const req of toGenerate) {
     const issueTitle = `[${req.id}] ${req.title}`
     console.log(`▸ ${issueTitle}`)
 
+    const risolto = STATI_CHIUSI.has(String(req.status || '').toLowerCase())
+
     if (DRY_RUN) {
+      if (risolto) {
+        console.log(`  [DRY RUN] Risolto (${req.status}) — l'issue, se aperta, verrebbe chiusa.
+`)
+        closed++
+        continue
+      }
       console.log('  [DRY RUN] Payload:')
       console.log('  Title:', issueTitle)
       console.log('  Labels:', req.labels.join(', ') || '(nessuna)')
@@ -170,6 +204,32 @@ async function main() {
 
     // Check idempotenza: esiste già un'issue con questo titolo?
     const existing = await searchIssues(issueTitle)
+
+    if (risolto) {
+      const aperta = existing.find((i) => i.state === 'open')
+      if (!aperta) {
+        console.log(`  ⏭  Risolto (${req.status}) — nessuna issue aperta da chiudere.`)
+        skipped++
+        continue
+      }
+      await commentIssue(
+        aperta.number,
+        `Risolto: nel registro \`${req.source_file}\` la voce è passata a **${req.status}**.
+
+${req.description}`
+      )
+      const { ok, status, body } = await closeIssue(aperta.number)
+      if (ok) {
+        console.log(`  ✅ Issue chiusa: ${aperta.html_url}`)
+        closed++
+      } else {
+        console.error(`  ❌ Errore ${status} chiudendo #${aperta.number}:`, body.message || '')
+        errors++
+      }
+      await new Promise((r) => setTimeout(r, 200))
+      continue
+    }
+
     if (existing.length > 0) {
       console.log(`  ⏭  Saltato — issue già esistente: ${existing[0].html_url}`)
       skipped++
@@ -194,7 +254,7 @@ async function main() {
     await new Promise((r) => setTimeout(r, 200))
   }
 
-  console.log(`\n📊 Riepilogo: ${created} create, ${skipped} saltate, ${errors} errori`)
+  console.log(`\n📊 Riepilogo: ${created} create, ${closed} chiuse, ${skipped} saltate, ${errors} errori`)
   if (errors > 0) process.exit(1)
 }
 
