@@ -47,6 +47,11 @@ qui c'è il quadro completo, bug e non solo.
 - [ ] **Pulizia segreti dal repo** (da fare comunque, a prescindere):
       API key di produzione in `scripts/diagnostica-permessi.js:32`,
       client id/secret in `scripts/set-role.js` e `scripts/lib-firestore.js`.
+- [ ] **Segreti di produzione nell'environment `production`** con deployment
+      branch = `main` (si sposa con REQ-SIC-003, già nel registro): dieci
+      minuti nel browser, ma da fare con attenzione — un nome sbagliato
+      significa deploy di produzione rotto al primo giro, e ce ne si accorge
+      quando non pubblica più niente.
 - [ ] **Accendere l'export fatturazione Google Cloud → BigQuery** sull'account
       di fatturazione: gratis e **non retroattivo** — prima si accende,
       prima esistono i dati per il futuro backoffice (Fase 6).

@@ -5574,6 +5574,12 @@ body.pagina-piena .pagina-inventario .inv-scroll {
 .pallino-bolla p:last-child {
   margin-bottom: 0;
 }
+/* Il pallino di stato e' piccolo e appoggiato all'icona: e' un segnale
+   sopra un oggetto, non una seconda cosa da leggere. */
+.pallino-punto {
+  font-size: 0.7em;
+  margin-left: -3px;
+}
 @media (max-width: 700px) {
   .pallino-testo {
     display: none;

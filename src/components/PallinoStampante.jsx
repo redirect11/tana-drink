@@ -10,18 +10,16 @@ import { salaStampaDaSe, loadPrinterSettings } from '../lib/printer.js'
 // Sta qui e non nelle impostazioni perché la domanda viene in mente
 // mentre si prende un ordine, e in sala le impostazioni non ci sono.
 
-const FACCIA = {
-  ok: { punto: '🟢', testo: 'Stampante' },
-  ko: { punto: '🔴', testo: 'Stampante' },
-  spenta: { punto: '⚪', testo: 'Stampante' },
-  ignota: { punto: '⚪', testo: 'Stampante' },
-}
+// L'ICONA, non la parola: «Stampante» accanto a un pallino era una
+// didascalia di quello che si vede già, e in una riga dove lo spazio serve
+// alla ricerca. L'oggetto lo dice il disegno.
+const PUNTO = { ok: '🟢', ko: '🔴', spenta: '⚪', ignota: '⚪' }
 
 export default function PallinoStampante({ gestore = false }) {
   const { stato, motivo, ricontrolla } = useStatoStampante()
   const [aperto, setAperto] = useState(false)
   const rimbalzo = !salaStampaDaSe(loadPrinterSettings())
-  const faccia = FACCIA[stato] ?? FACCIA.ignota
+  const punto = PUNTO[stato] ?? PUNTO.ignota
 
   // In sala con la stampa "di rimbalzo" il pallino di QUESTO telefono non
   // vuol dire niente: a stampare è il banco. Dirlo, invece di mostrare un
@@ -46,7 +44,7 @@ export default function PallinoStampante({ gestore = false }) {
         aria-label={`Stampante: ${stato === 'ok' ? 'risponde' : motivo || 'in verifica'}`}
         title={stato === 'ok' ? 'La stampante risponde' : motivo || 'Controllo in corso…'}
       >
-        {faccia.punto} <span className="pallino-testo">{faccia.testo}</span>
+        🖨️ <span className="pallino-punto">{punto}</span>
       </button>
 
       {aperto && (
