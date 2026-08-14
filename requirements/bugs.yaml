@@ -95,18 +95,23 @@ bugs:
     title: "Nel dettaglio ordine il subtotale di riga non segue la quantità"
     area: "src/components/OrderPosDetail.jsx, src/lib/orderLines.js"
     description: >
-      Con 3× Tennent's Super la riga mostra sempre 4,00 € (il prezzo
-      unitario) invece del subtotale. Richiesta collegata: gli item vanno
-      mostrati come righe separate, non aggregati con la quantità — la
-      base c'è già, perché la nota fa parte dell'identità della riga
-      (orderLines.js) e righe con note diverse restano già separate. Da
-      chiarire in fase di fix se la separazione delle righe sostituisce il
-      subtotale per riga o se servono entrambe le cose.
+      Con 3× Tennent's Super la riga mostrava sempre 4,00 € (il prezzo
+      unitario). Non era un calcolo sbagliato: il subtotale non esisteva
+      proprio — nella riga c'erano nome, prezzo unitario e i tasti −/+ — e
+      per sapere quanto faceva quella riga si moltiplicava a mente, col
+      cliente davanti. Risolto il 14/08 come su uno scontrino: a sinistra
+      «3 × 4,00 €» (da dove viene il numero), a destra il totale della riga
+      accanto ai tasti; con un pezzo solo non compare, che ripeterebbe il
+      prezzo già scritto accanto al nome.
+      Resta aperta, e va trattata a parte, la richiesta collegata: mostrare
+      gli item come righe separate invece che aggregati con la quantità. La
+      base c'è (la nota fa parte dell'identità della riga, orderLines.js).
     in_produzione: true
-    status: todo
+    status: fixed
     generate_issue: true
     labels: [bug, pos]
-    test_cases: []
+    test_cases:
+      - tests/component/OrderPosDetail.test.jsx
 
   - id: BUG-005
     title: "Le note degli item non si vedono nelle code a schermo"

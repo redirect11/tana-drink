@@ -1693,8 +1693,15 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                           <span style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
                             {l.custom ? '✨ ' : ''}{l.name}
                           </span>
+                          {/* IL PREZZO DELLA RIGA, non quello di uno. Con
+                              3× Tennent's si leggeva «4,00 €» e basta: il
+                              subtotale non c'era proprio, e per sapere quanto
+                              faceva quella riga bisognava moltiplicare a
+                              mente. Con più di uno si scrive da dove viene il
+                              numero — «3 × 4,00 €» — e il totale sta a destra,
+                              accanto ai tasti, come su uno scontrino. */}
                           <span className="muted" style={{ whiteSpace: 'nowrap', flexShrink: 0, marginLeft: 5, fontSize: '0.85em' }}>
-                            · {formatPrice(l.unit_price)}
+                            · {l.qty > 1 ? `${l.qty} × ` : ''}{formatPrice(l.unit_price)}
                           </span>
                         </span>
                         {/* Nota della riga (es. "poco ghiaccio", o di chi è) */}
@@ -1709,6 +1716,14 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                       </span>
                     </span>
                     <span className="row" style={{ gap: 4, alignItems: 'center' }}>
+                      {l.qty > 1 && (
+                        <strong
+                          className="posd-riga-tot"
+                          title={`${l.qty} × ${formatPrice(l.unit_price)}`}
+                        >
+                          {formatPrice(l.qty * l.unit_price)}
+                        </strong>
+                      )}
                       <span className="qty" onPointerDown={(e) => e.stopPropagation()}>
                         {/* Etichette col nome: nella lista ci sono molte righe,
                             e i +/- della griglia hanno un altro significato. */}

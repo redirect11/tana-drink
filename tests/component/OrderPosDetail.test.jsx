@@ -1056,5 +1056,53 @@ describe('conto riaperto: le righe di prima si toccano', () => {
     // La modifica parte verso la comanda: le scorte si riallineano con la
     // differenza, come per ogni altra modifica.
     await vi.waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalled())
+// ── Il prezzo della riga, non quello di uno ──────────────────────────
+// Difetto visto in produzione (BUG-004): con 3× Tennent's la riga mostrava
+// «4,00 €», il prezzo unitario. Il subtotale non c'era proprio, e per sapere
+// quanto faceva quella riga bisognava moltiplicare a mente col cliente
+// davanti.
+describe('subtotale di riga', () => {
+  it('con più di un pezzo si vede il totale della riga, e da dove viene', () => {
+    mount(
+      baseOrder({
+        total: 21,
+        comande: [
+          {
+            id: 'c1',
+            seq: 1,
+            status: 'in_preparazione',
+            status_times: {},
+            items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 3 }],
+          },
+        ],
+        order_items: [
+          { id: 'ord1-0', drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 3 },
+        ],
+      })
+    )
+    // Da dove viene il numero…
+    expect(screen.getByText(/3 × 7,00/)).toBeInTheDocument()
+    // …e quanto fa la riga.
+    expect(screen.getAllByText('21,00 €').length).toBeGreaterThan(0)
+  })
+
+  it('con un pezzo solo non si ripete niente', () => {
+    mount(
+      baseOrder({
+        total: 7,
+        comande: [
+          {
+            id: 'c1',
+            seq: 1,
+            status: 'in_preparazione',
+            status_times: {},
+            items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1 }],
+          },
+        ],
+        order_items: [{ id: 'ord1-0', drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1 }],
+      })
+    )
+    expect(screen.queryByText(/1 × 7,00/)).toBeNull()
+    expect(document.querySelector('.posd-riga-tot')).toBeNull()
   })
 })

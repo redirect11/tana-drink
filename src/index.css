@@ -5512,3 +5512,13 @@ body.pagina-piena .pagina-inventario .inv-scroll {
   line-height: 1.2;
   overflow-wrap: anywhere;
 }
+
+/* Totale della riga del conto: sta a destra, accanto ai tasti, come su uno
+   scontrino. Compare solo con più di un pezzo — con uno solo ripeterebbe il
+   prezzo che sta già accanto al nome. */
+.posd-riga-tot {
+  flex-shrink: 0;
+  margin-right: 6px;
+  font-size: 0.95em;
+  white-space: nowrap;
+}
