@@ -53,6 +53,9 @@ import SupplierInvoicesPanel from './SupplierInvoicesPanel.jsx'
 import CategoryRail from './CategoryRail.jsx'
 import SectionPanels from './SectionPanels.jsx'
 import { IconTag, IconCartelle, IconFornitore } from './Icons.jsx'
+import Tendina from './Tendina.jsx'
+import { useSottosezioni } from '../lib/sottosezioni.js'
+import { usePaginaPiena } from '../lib/paginaPiena.js'
 
 const STATUS_ITEM = [
   { value: 'assortimento', label: 'In assortimento' },
@@ -77,6 +80,14 @@ const ASSORTIMENTO_LABEL = {
       <span className="badge-empty">OUT</span> Fuori assortimento
     </>
   ),
+}
+// Gli stessi nomi, in parole: servono al tasto della tendina, che deve dire
+// cosa è scelto senza doversi aprire.
+const ASSORTIMENTO_NOME = {
+  assortimento: 'In assortimento',
+  linea: 'In linea',
+  premium: 'Premium',
+  out: 'Fuori assortimento',
 }
 const ASSORTIMENTO_TITOLO = {
   assortimento: 'Si tiene, senza niente di speciale',
@@ -138,46 +149,117 @@ function UnitPrice({ item, markup }) {
 // Sezioni del magazzino: prodotti (giacenze), conta periodica, ordini
 // fornitore e scadenzario — la controparte software dei fogli Excel storici.
 const INV_VIEWS = [
-  ['prodotti', '📦 Prodotti'],
-  ['conta', '📋 Conta'],
-  ['ordini', '🛒 Ordini'],
-  ['scadenzario', '📄 Scadenzario'],
+  ['prodotti', '📦', 'Prodotti'],
+  ['conta', '📋', 'Conta'],
+  ['ordini', '🛒', 'Ordini'],
+  ['scadenzario', '📄', 'Scadenzario'],
+  ['categorie', '🏷', 'Categorie'],
+  ['macro', '🗂', 'Macro-categorie'],
+  ['fornitori', '🏭', 'Fornitori'],
+  ['movimenti', '📜', 'Movimenti'],
 ]
 
+// LE SEZIONI DEL MAGAZZINO STANNO NELLA BARRA IN ALTO. Le ho provate in due
+// modi sbagliati: a sinistra costavano una colonna (e dentro c'è già la barra
+// delle categorie), in orizzontale una riga. Sono una scelta che si fa ogni
+// tanto e non merita spazio fisso: ora è il TITOLO della pagina a diventare
+// il comando, e sul telefono si apre il foglio dal basso.
 export default function InventoryManager() {
   const [view, setView] = useState('prodotti')
+  usePaginaPiena()
+  useSottosezioni(
+    INV_VIEWS.map(([id, icona, label]) => ({ id, icona, label })),
+    view,
+    setView
+  )
   return (
-    <div>
-      <div className="chips-row" style={{ marginBottom: 8 }}>
-        {INV_VIEWS.map(([id, label]) => (
-          <button
-            key={id}
-            className={`chip ${view === id ? 'active' : ''}`}
-            onClick={() => setView(id)}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+    <div className="pagina-inventario">
       {view === 'prodotti' && <ProductsPanel />}
       {view === 'conta' && <StockCountPanel />}
       {view === 'ordini' && <PurchaseOrdersPanel />}
       {view === 'scadenzario' && <SupplierInvoicesPanel />}
+      {view === 'categorie' && <CategoriePanel />}
+      {view === 'macro' && <MacroPanel />}
+      {view === 'fornitori' && <FornitoriPanel />}
+      {view === 'movimenti' && <MovimentiPanel />}
     </div>
   )
+}
+
+// Le tre anagrafiche: si tirano su i dati che servono e basta. Prima
+// stavano dentro il pannello dei prodotti, che li aveva già in mano per
+// altri motivi — e infatti erano finite lì.
+function CategoriePanel() {
+  const [categories, setCategories] = useState([])
+  const ricarica = async () => setCategories(await fetchInventoryCategories())
+  useEffect(() => {
+    ricarica()
+  }, [])
+  return <InvCategoryManager categories={categories} onChange={ricarica} />
+}
+
+function MacroPanel() {
+  const [macros, setMacros] = useState([])
+  const [categories, setCategories] = useState([])
+  const ricarica = async () => {
+    const [macs, cats] = await Promise.all([fetchMacroCategories(), fetchInventoryCategories()])
+    setMacros(macs)
+    setCategories(cats)
+  }
+  useEffect(() => {
+    ricarica()
+  }, [])
+  return <MacroCategoryManager macros={macros} categories={categories} onChange={ricarica} />
+}
+
+// I MOVIMENTI HANNO UNA SEZIONE LORO. Stavano in fondo alla lista dei
+// prodotti dietro un tasto largo quanto lo schermo: fuori contesto (non
+// sono un prodotto), e in mezzo ai piedi a chi cercava una bottiglia.
+function MovimentiPanel() {
+  const [movements, setMovements] = useState([])
+  const [loading, setLoading] = useState(true)
+  useEffect(() => {
+    fetchStockMovements({ limit: 100 })
+      .then(setMovements)
+      .catch(() => setMovements([]))
+      .finally(() => setLoading(false))
+  }, [])
+  if (loading) return <div className="empty">Carico i movimenti…</div>
+  if (movements.length === 0) return <div className="empty">Ancora nessun movimento.</div>
+  return (
+    <div className="card inv-movimenti">
+      {movements.map((m) => (
+        <div className="row between" key={m.id}>
+          <span className="muted small">
+            {m.type === 'load' ? '⬆' : '⬇'} {m.item_name} · {m.reason}
+          </span>
+          <span className="muted small">
+            {m.type === 'load' ? '+' : '−'}
+            {formatQty(m.qty, m.unit)}
+          </span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function FornitoriPanel() {
+  const [suppliers, setSuppliers] = useState([])
+  const ricarica = async () => setSuppliers(await fetchSuppliers())
+  useEffect(() => {
+    ricarica()
+  }, [])
+  return <SupplierManager suppliers={suppliers} onChange={ricarica} />
 }
 
 function ProductsPanel() {
   const [items, setItems] = useState([])
   const [categories, setCategories] = useState([])
   const [suppliers, setSuppliers] = useState([])
-  const [movements, setMovements] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
   const [editing, setEditing] = useState(null) // null | 'new' | item
-  const [macros, setMacros] = useState([])
-  const [showMovs, setShowMovs] = useState(false)
 
   // Filtri
   const [query, setQuery] = useState('')
@@ -219,18 +301,14 @@ function ProductsPanel() {
   async function load() {
     setLoading(true)
     try {
-      const [its, cats, macs, sups, movs] = await Promise.all([
+      const [its, cats, sups] = await Promise.all([
         fetchInventoryItems(),
         fetchInventoryCategories().catch(() => []),
-        fetchMacroCategories().catch(() => []),
         fetchSuppliers().catch(() => []),
-        fetchStockMovements({ limit: 30 }).catch(() => []),
       ])
       setItems(its)
       setCategories(cats)
-      setMacros(macs)
       setSuppliers(sups)
-      setMovements(movs)
     } catch (e) {
       setError(e.message)
     } finally {
@@ -447,99 +525,27 @@ function ProductsPanel() {
     )
   }
 
-  function toggleStatus(s) {
-    setStatusFilter((cur) => (cur === s ? 'all' : s))
-  }
+  // Cosa dice il tasto della tendina: una tendina che non dice cosa è
+  // scelto costringe ad aprirla per ricordarselo.
+  const nomiStato = { all: null, low: 'In esaurimento', empty: 'Esauriti' }
+  const sceltiOra = [nomiStato[statusFilter], ...assortimenti.map((k) => ASSORTIMENTO_NOME[k])]
+    .filter(Boolean)
+  const riassuntoFiltri =
+    sceltiOra.length === 0
+      ? '⚗️ Filtra'
+      : sceltiOra.length === 1
+        ? `⚗️ ${sceltiOra[0]}`
+        : `⚗️ ${sceltiOra.length} filtri`
 
   return (
-    <div>
-      {/* Sottosezioni dell'inventario: sotto al titolo, come nelle altre
-          pagine. Erano tre tasti in mezzo alla lista e i pannelli si
-          aprivano dove capitava. */}
-      <SectionPanels
-        panels={[
-          {
-            id: 'cats',
-            label: <><IconTag /> Categorie</>,
-            render: () => (
-              <InvCategoryManager
-                categories={categories}
-                onChange={async () => setCategories(await fetchInventoryCategories())}
-              />
-            ),
-          },
-          {
-            id: 'macro',
-            label: <><IconCartelle /> Macro-categorie</>,
-            render: () => (
-              <MacroCategoryManager
-                macros={macros}
-                categories={categories}
-                onChange={async () => {
-                  const [macs, cats] = await Promise.all([
-                    fetchMacroCategories(),
-                    fetchInventoryCategories(),
-                  ])
-                  setMacros(macs)
-                  setCategories(cats)
-                }}
-              />
-            ),
-          },
-          {
-            id: 'forn',
-            label: <><IconFornitore /> Fornitori</>,
-            render: () => (
-              <SupplierManager
-                suppliers={suppliers}
-                onChange={async () => setSuppliers(await fetchSuppliers())}
-              />
-            ),
-          },
-        ]}
-      />
-
-      {/* Riepilogo a colpo d'occhio (anche filtri di stato) */}
-      <div className="inv-summary">
-        <button className={`chip ${statusFilter === 'all' ? 'active' : ''}`} onClick={() => setStatusFilter('all')}>
-          Totale <strong>{summary.total}</strong>
-        </button>
-        <button className={`chip warn ${statusFilter === 'low' ? 'active' : ''}`} onClick={() => toggleStatus('low')}>
-          In esaurimento <strong>{summary.low}</strong>
-        </button>
-        <button className={`chip danger ${statusFilter === 'empty' ? 'active' : ''}`} onClick={() => toggleStatus('empty')}>
-          Esauriti <strong>{summary.empty}</strong>
-        </button>
-      </div>
-
-      {/* ASSORTIMENTO: filtro a più scelte. "Nessuno acceso" vuol dire tutto,
-          così deselezionando non si resta con la lista vuota. */}
-      <div className="chips-row" style={{ marginBottom: 8 }}>
-        {ASSORTIMENTI.map((k) => {
-          const quanti = items.filter((it) => assortimentoDi(it) === k).length
-          return (
-            <button
-              key={k}
-              className={`chip ${assortimenti.includes(k) ? 'active' : ''}`}
-              onClick={() => toggleAssortimento(k)}
-              title={ASSORTIMENTO_TITOLO[k]}
-            >
-              {ASSORTIMENTO_LABEL[k]} <strong>{quanti}</strong>
-            </button>
-          )
-        })}
-        {assortimenti.length > 0 && (
-          <button className="chip" onClick={() => setAssortimenti([])}>
-            ✕ Tutti
-          </button>
-        )}
-      </div>
-
-      <div className="chip" style={{ width: '100%', justifyContent: 'center', marginBottom: 8, cursor: 'default' }}>
-        💶 Valore magazzino <strong>{formatPrice(totalValue)}</strong>
-      </div>
-
-      {/* Ricerca */}
+    <div className="inv-panel">
+      {/* LA TESTATA: ricerca, e sotto le scelte che stanno ferme quasi
+          sempre. I filtri erano sette pastiglie sempre aperte — una riga di
+          schermo occupata tutto il giorno per una scelta che si cambia due
+          volte a sera — più una riga per i fornitori, una per il tasto
+          nuovo prodotto e una per card/lista: quattro righe prima di vedere
+          un prodotto. Ora stanno in due tendine e due icone, su una riga, e
+          il tasto dice cosa è scelto senza doverlo aprire. */}
       <input
         className="inv-search"
         type="search"
@@ -548,45 +554,148 @@ function ProductsPanel() {
         placeholder="🔍 Cerca prodotto…"
       />
 
-      {/* Categorie a SINISTRA (come il POS), il resto a destra. */}
-      <CategoryRail items={catItems} selected={categoryFilter} onSelect={setCategoryFilter}>
-
-      {/* Filtro fornitori */}
-      {suppliers.length > 0 && (
-        <div className="chips-row">
-          <button className={`chip ${supplierFilter === 'all' ? 'active' : ''}`} onClick={() => setSupplierFilter('all')}>
-            🏭 Tutti
-          </button>
-          {suppliers.map((s) => (
+      <div className="inv-testa">
+        <Tendina
+          etichetta="Filtra i prodotti"
+          attivo={statusFilter !== 'all' || assortimenti.length > 0}
+          riassunto={riassuntoFiltri}
+        >
+          <div className="tendina-titolo">Come stanno a scorta</div>
+          {[
+            ['all', 'Tutti', summary.total],
+            ['low', 'In esaurimento', summary.low],
+            ['empty', 'Esauriti', summary.empty],
+          ].map(([k, label, n]) => (
             <button
-              key={s.id}
-              className={`chip ${supplierFilter === s.id ? 'active' : ''}`}
-              onClick={() => setSupplierFilter(s.id)}
+              key={k}
+              type="button"
+              className={`tendina-voce${statusFilter === k ? ' scelta' : ''}`}
+              onClick={() => setStatusFilter(k)}
             >
-              {s.name}
+              <span>{label}</span>
+              <strong>{n}</strong>
+            </button>
+          ))}
+          <div className="tendina-titolo">Assortimento</div>
+          {ASSORTIMENTI.map((k) => {
+            const quanti = items.filter((it) => assortimentoDi(it) === k).length
+            return (
+              <button
+                key={k}
+                type="button"
+                className={`tendina-voce${assortimenti.includes(k) ? ' scelta' : ''}`}
+                onClick={() => toggleAssortimento(k)}
+                title={ASSORTIMENTO_TITOLO[k]}
+              >
+                <span>{ASSORTIMENTO_LABEL[k]}</span>
+                <strong>{quanti}</strong>
+              </button>
+            )
+          })}
+          {(assortimenti.length > 0 || statusFilter !== 'all') && (
+            <button
+              type="button"
+              className="btn ghost small block"
+              style={{ marginTop: 6 }}
+              onClick={() => {
+                setAssortimenti([])
+                setStatusFilter('all')
+              }}
+            >
+              ✕ Togli i filtri
+            </button>
+          )}
+        </Tendina>
+
+        {suppliers.length > 0 && (
+          <Tendina
+            etichetta="Fornitore"
+            attivo={supplierFilter !== 'all'}
+            riassunto={
+              supplierFilter === 'all'
+                ? '🏭 Fornitore'
+                : `🏭 ${suppliers.find((x) => x.id === supplierFilter)?.name || 'Fornitore'}`
+            }
+          >
+            {(chiudi) => (
+              <>
+                <button
+                  type="button"
+                  className={`tendina-voce${supplierFilter === 'all' ? ' scelta' : ''}`}
+                  onClick={() => {
+                    setSupplierFilter('all')
+                    chiudi()
+                  }}
+                >
+                  <span>Tutti i fornitori</span>
+                </button>
+                {suppliers.map((sup) => (
+                  <button
+                    key={sup.id}
+                    type="button"
+                    className={`tendina-voce${supplierFilter === sup.id ? ' scelta' : ''}`}
+                    onClick={() => {
+                      setSupplierFilter(sup.id)
+                      chiudi()
+                    }}
+                  >
+                    <span>{sup.name}</span>
+                  </button>
+                ))}
+              </>
+            )}
+          </Tendina>
+        )}
+
+        {/* Un numero senza nome non vuol dire niente: si legge «6.823,82 €»
+            e ci si chiede di cosa. */}
+        <span className="inv-valore" title="Somma del costo di tutto quello che c'è in magazzino">
+          💶 <span className="inv-valore-eti">Valore magazzino</span>{' '}
+          <strong>{formatPrice(totalValue)}</strong>
+        </span>
+
+        <span className="inv-testa-spinta" />
+
+        {/* Card o lista: due icone, non due tasti con su scritto cosa fanno.
+            È una scelta che si fa una volta e resta. */}
+        <div className="inv-vista" role="group" aria-label="Come mostrare i prodotti">
+          {[
+            ['card', '▦', 'A card'],
+            ['lista', '☰', 'A lista'],
+          ].map(([k, icona, titolo]) => (
+            <button
+              key={k}
+              type="button"
+              className={`chip${invView === k ? ' active' : ''}`}
+              onClick={() => setInvView(k)}
+              title={titolo}
+              aria-label={titolo}
+              aria-pressed={invView === k}
+            >
+              {icona}
             </button>
           ))}
         </div>
-      )}
 
-      <button className="btn block" onClick={() => setEditing('new')}>+ Nuovo prodotto</button>
+        <button className="btn small" onClick={() => setEditing('new')}>
+          + Nuovo prodotto
+        </button>
+      </div>
+
+      {/* Categorie a SINISTRA (come il POS), il resto a destra. Si prende
+          quello che resta dell'altezza: a scorrere è la lista dei prodotti,
+          non la pagina — prima, per tornare alla ricerca dopo aver guardato
+          in fondo, si risaliva da capo. */}
+      <CategoryRail
+        items={catItems}
+        selected={categoryFilter}
+        onSelect={setCategoryFilter}
+        pieno
+        chiave="inv-categorie"
+      >
 
       {error && <div className="banner" style={{ marginTop: 8 }}>Errore: {error}</div>}
       {loading && <div className="empty">Carico l’inventario…</div>}
-
-      {/* Come visualizzare: card in griglia o lista condensata. */}
-      {!loading && items.length > 0 && (
-        <div className="chips-row" style={{ margin: '8px 0' }}>
-          {[
-            ['card', '▦ Card'],
-            ['lista', '☰ Lista'],
-          ].map(([k, label]) => (
-            <button key={k} className={`chip ${invView === k ? 'active' : ''}`} onClick={() => setInvView(k)}>
-              {label}
-            </button>
-          ))}
-        </div>
-      )}
 
       {/* TABELLA: colonne allineate (stato · prodotto · categoria · netto ·
           +IVA · scorte), riga cliccabile per aprire le azioni. */}
@@ -607,7 +716,15 @@ function ProductsPanel() {
             const bs = bottleSummary(it)
             const perCl = costPerUnit(it, 'cl') // già IVA inclusa
             return (
-              <div className={`inv-row inv-${st}${expanded ? ' open' : ''}`} key={it.id}>
+              /* DUE SEGNI, DUE COSE. Il PALLINO dice quanta roba c'è
+                 (verde/arancione/rosso), la STRISCIA che assortimento è —
+                 in linea, premium, in assortimento, fuori. Prima dicevano
+                 tutti e due la stessa cosa, e l'assortimento si leggeva
+                 solo dai bollini accanto al nome. */
+              <div
+                className={`inv-row ass-${assortimentoDi(it)}${expanded ? ' open' : ''}`}
+                key={it.id}
+              >
                 <button
                   type="button"
                   className="inv-row-main"
@@ -658,7 +775,7 @@ function ProductsPanel() {
           const st = stockStatus(it)
           const expanded = expandedId === it.id
           return (
-            <div className={`card grid-card admin-card inv-${st}`} key={it.id}>
+            <div className={`card grid-card admin-card ass-${assortimentoDi(it)}`} key={it.id}>
               <div
                 className="grid-card-main"
                 role="button"
@@ -730,26 +847,6 @@ function ProductsPanel() {
 
       </CategoryRail>
 
-      {/* Movimenti (collassabile) */}
-      {movements.length > 0 && (
-        <div className="card" style={{ marginTop: 12 }}>
-          <button className="btn ghost small block" onClick={() => setShowMovs((v) => !v)}>
-            {showMovs ? 'Nascondi movimenti' : '📜 Ultimi movimenti'}
-          </button>
-          {showMovs &&
-            movements.map((m) => (
-              <div className="row between" key={m.id} style={{ marginTop: 6 }}>
-                <span className="muted small">
-                  {m.type === 'load' ? '⬆' : '⬇'} {m.item_name} · {m.reason}
-                </span>
-                <span className="muted small">
-                  {m.type === 'load' ? '+' : '−'}
-                  {formatQty(m.qty, m.unit)}
-                </span>
-              </div>
-            ))}
-        </div>
-      )}
     </div>
   )
 }

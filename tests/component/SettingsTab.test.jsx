@@ -53,12 +53,40 @@ vi.mock('../../src/components/ThemeSettings.jsx', () => ({
 }))
 
 import SettingsTab from '../../src/components/SettingsTab.jsx'
+import { subscribeSottosezioni } from '../../src/lib/sottosezioni.js'
+import { useEffect, useState } from 'react'
+
+// LE SEZIONI STANNO NEL MENU A SCOMPARSA, sotto la pagina aperta: qui si
+// rifà quel pezzetto di menu, così le prove restano quelle di prima —
+// «scelgo una sezione, si apre il suo riquadro» — invece di frugare nella
+// tubatura.
+function BarraSezioni() {
+  const [sotto, setSotto] = useState({ voci: [], attiva: null, scegli: null })
+  useEffect(() => subscribeSottosezioni(setSotto), [])
+  return (
+    <div>
+      {(sotto.voci || []).map((v) => (
+        <button key={v.id} onClick={() => sotto.scegli?.(v.id)}>
+          {v.icona} {v.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+const mostra = (props = { role: 'admin' }) =>
+  render(
+    <>
+      <SettingsTab {...props} />
+      <BarraSezioni />
+    </>
+  )
 
 beforeEach(() => localStorage.clear())
 
 describe('impostazioni a schede', () => {
   it('si apre una sezione sola, non la pagina intera', async () => {
-    render(<SettingsTab role="admin" />)
+    mostra()
     expect(screen.getByText('PANNELLO ASPETTO')).toBeInTheDocument()
     // I riquadri delle altre sezioni NON sono in pagina.
     expect(screen.queryByRole('heading', { name: 'Pagamenti' })).toBeNull()
@@ -67,7 +95,7 @@ describe('impostazioni a schede', () => {
 
   it('scegliendo una voce si apre il suo riquadro e si chiude il precedente', async () => {
     const user = userEvent.setup()
-    render(<SettingsTab role="admin" />)
+    mostra()
     await user.click(screen.getByRole('button', { name: /Pagamenti/ }))
     expect(screen.getByRole('heading', { name: 'Pagamenti' })).toBeInTheDocument()
     expect(screen.queryByText('PANNELLO ASPETTO')).toBeNull()
@@ -79,17 +107,17 @@ describe('impostazioni a schede', () => {
 
   it('la sezione aperta si ricorda: a impostazioni si torna per lo stesso motivo', async () => {
     const user = userEvent.setup()
-    const primo = render(<SettingsTab role="admin" />)
+    const primo = mostra()
     await user.click(screen.getByRole('button', { name: /Coperto/ }))
     expect(screen.getByRole('heading', { name: 'Coperto' })).toBeInTheDocument()
     primo.unmount()
 
-    render(<SettingsTab role="admin" />)
+    mostra()
     expect(screen.getByRole('heading', { name: 'Coperto' })).toBeInTheDocument()
   })
 
   it('ci sono tutte le sezioni, nessun riquadro perso per strada', () => {
-    render(<SettingsTab role="admin" />)
+    mostra()
     for (const voce of [
       'Aspetto',
       'Modalità menù',
@@ -126,7 +154,7 @@ describe('impostazioni a schede', () => {
 describe('la ricerca della coda: filtra o accende', () => {
   it('di suo filtra, come è sempre stato', async () => {
     const user = userEvent.setup()
-    render(<SettingsTab role="admin" />)
+    mostra()
     await user.click(screen.getByRole('button', { name: /Coda ordini/ }))
     expect(screen.getByRole('button', { name: /Filtra la coda/ })).toHaveClass('active')
     expect(screen.getByRole('button', { name: /Accendi il conto e portami lì/ })).not.toHaveClass('active')
@@ -135,7 +163,7 @@ describe('la ricerca della coda: filtra o accende', () => {
   it('si può passare ad accendere il conto trovato', async () => {
     const user = userEvent.setup()
     const { updateSettings } = await import('../../src/lib/api.js')
-    render(<SettingsTab role="admin" />)
+    mostra()
     await user.click(screen.getByRole('button', { name: /Coda ordini/ }))
     await user.click(screen.getByRole('button', { name: /Accendi il conto e portami lì/ }))
     expect(updateSettings).toHaveBeenCalledWith(expect.objectContaining({ queue_search: 'evidenzia' }))

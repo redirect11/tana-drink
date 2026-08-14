@@ -70,6 +70,10 @@ sono la mappa di cosa esiste; da lì si generano le issue.
 - L'interfaccia va spiegata a chi ha in mano un vassoio: parole comuni,
   nessun gergo tecnico, nessun messaggio d'errore che scarica la colpa
   addosso a chi legge.
+- **La navigazione ha delle regole scritte**: barra in alto a tre zone, cosa
+  si toglie per primo quando lo spazio manca, dove stanno pagine,
+  sottosezioni e filtri. Stanno in [docs/navigazione.md](docs/navigazione.md)
+  e si seguono invece di ridiscuterle a ogni schermata.
 
 ## Regole del mestiere (imparate sbagliando)
 

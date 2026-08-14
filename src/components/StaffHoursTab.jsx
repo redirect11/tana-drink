@@ -182,7 +182,7 @@ export default function StaffHoursTab({ embedded = false }) {
     <div>
       {!embedded && (
         <>
-          <h2>👥 Staff</h2>
+          {/* Il titolo sta nella barra in alto (vedi lib/sezioni.js). */}
           <p className="muted small" style={{ margin: '-6px 0 10px' }}>
             Turni, ore lavorate e paghe. Account e ruoli stanno in “Utenti e ruoli”.
           </p>

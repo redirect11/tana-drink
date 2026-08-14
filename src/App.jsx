@@ -28,6 +28,9 @@ import { openCookiePreferences } from './lib/cookieConsent.js'
 import { subscribeUpdateAvailable } from './lib/appVersion.js'
 import { cosaFareAllAvvio, versioneVista, segnaVersioneVista } from './lib/novita.js'
 import { leggiAvvisi, avvisoAttivo } from './lib/preferenzeNotifiche.js'
+import { titoloPagina } from './lib/sezioni.js'
+import { subscribeSottosezioni } from './lib/sottosezioni.js'
+import Tendina from './components/Tendina.jsx'
 import { recordNotif } from './lib/notifyStore.js'
 import NovitaDialog from './components/NovitaDialog.jsx'
 import { useOnline } from './lib/useOnline.js'
@@ -269,6 +272,15 @@ export default function App() {
   const indietroQui =
     !!staffRole &&
     ((onBackoffice && tabGestionale !== 'coda') || location.pathname.startsWith('/profilo-staff'))
+  // Che pagina si sta guardando: il titolo va nella barra, non dentro.
+  const pagina = titoloPagina(location.pathname, location.search)
+  // …e se la pagina ha delle SOTTOSEZIONI, il titolo diventa il comando per
+  // cambiarle: in pagina costavano una riga (o una colonna) tutto il giorno
+  // per una scelta che si fa ogni tanto. Qui costano zero.
+  const [sotto, setSotto] = useState({ voci: [], attiva: null, scegli: null })
+  useEffect(() => subscribeSottosezioni(setSotto), [])
+  const vociSotto = sotto.voci || []
+  const sezioneAttiva = vociSotto.find((v) => v.id === sotto.attiva)
   const drawerDellaPagina =
     (onBackoffice && !!staffRole) ||
     (location.pathname.startsWith('/menu') && !!staffRole && !anteprimaCliente)
@@ -372,6 +384,20 @@ export default function App() {
           <img src={`${import.meta.env.BASE_URL}logo.png`} alt="" />
           <span className="brand-nome">La Tana del Coniglio</span>
         </Link>
+        {/* IL TITOLO DELLA PAGINA STA QUI, attaccato al marchio: dentro la
+            pagina si prendeva una riga in cima al contenuto, e su un tablet
+            al banco quella riga è roba che si vede. */}
+        {/* IL TITOLO DICE DOVE SEI, e basta: a navigare si va nel menu (☰),
+            che porta le pagine e — sotto quella aperta — le sue sezioni. Le
+            schede in barra reggono cinque voci, non ventidue; e una tendina
+            costringe ad aprirla per sapere cosa c'è dentro. Un posto solo,
+            uguale sul telefono e sul computer. */}
+        {pagina && (
+          <span className="topbar-pagina">
+            <span aria-hidden>·</span> {(sezioneAttiva?.icona) || pagina.icona}{' '}
+            {(sezioneAttiva?.label) || pagina.titolo}
+          </span>
+        )}
         <nav className="row">
           <StatusBell />
           {/* A tutto schermo ci va chi LAVORA sull'app per ore (banco, sala):

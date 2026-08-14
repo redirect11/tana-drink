@@ -72,41 +72,56 @@ versione è pronta si mergia su `develop`, si tagga e si va in `main`.
 
 ## I rilasci
 
-Ogni rilascio su `develop` ha una versione **x.y.z** semantica:
+Ogni rilascio ha una versione **x.y.z** semantica:
 
 - **x** cambia quando si rompe qualcosa di come si lavorava prima;
 - **y** quando si aggiunge una funzione;
-- **z** per correzioni.
+- **z** per le correzioni.
 
-Rilasciare vuol dire tre cose, in quest'ordine:
+### Come si susseguono i rami
 
-1. **allineare `package.json`** al numero della versione e datare le note in
-   `CHANGELOG.md`, sul ramo di rilascio;
-2. portare il ramo di rilascio in `develop` e poi in `main`;
-3. **taggare `main`**, spingendo il tag **prima** del ramo — la pipeline
-   legge i tag al checkout, e spingendo prima il ramo la build partirebbe
-   senza.
+Il ramo di lavoro porta il nome della **linea** su cui si sta: `release/1.4.x`
+è la linea della 1.4 — lì dentro finiscono correzioni e ritocchi, che alzano
+la **z** (1.4.1, 1.4.2…). Quando arriva una **funzione nuova** quella linea si
+chiude e se ne apre un'altra: `release/1.5.x`.
+
+```
+develop  ──●(v1.4.0)────────────────●(v1.4.1)──────────●(v1.5.0)──▶
+            \                      /                  /
+             release/1.4.x ──●──●──                   /
+                                    \               /
+                                     release/1.5.x ─
+```
+
+1. **Si rilascia su `develop`**: si allinea `package.json`, si datano le note
+   in `CHANGELOG.md`, si mergia il ramo di lavoro in `develop` e si **tagga
+   `develop`**.
+2. **Si apre subito la linea successiva** da `develop`: `release/1.4.x` per
+   continuare con le correzioni, `release/1.5.x` se si sta per aggiungere una
+   funzione. Su `develop` non si lavora mai: è il posto dove le cose arrivano
+   già fatte.
+3. **La produzione è una decisione a sé**: `develop` → `main` si fa quando lo
+   si dice, non a ogni rilascio.
 
 ```sh
-# 1. sul ramo di rilascio: package.json + CHANGELOG datato
+# 1. sul ramo di lavoro: package.json + CHANGELOG datato
 git commit -am "release: versione 1.4.0"
 
-# 2. develop, poi main
-git checkout develop && git pull && git merge --no-ff release/1.4.0
-git push origin develop
-git checkout main && git pull && git merge --no-ff release/1.4.0
-
-# 3. il tag, prima del ramo
+# 2. in develop, e si tagga lì
+git checkout develop && git pull && git merge --no-ff release/1.4.x
 git tag -a v1.4.0 -m "Descrizione del rilascio"
-git push origin v1.4.0
-git push origin main
+git push origin v1.4.0 && git push origin develop
+
+# 3. la linea successiva parte da develop
+git checkout -b release/1.4.x   # correzioni
+git checkout -b release/1.5.x   # oppure: funzione nuova
 ```
 
 **Il numero di versione che l'app mostra lo dice `package.json`, non il
-tag.** Il tag sta sul merge in `main`, che non è antenato di `develop` né dei
-rami di lavoro: lì `git describe` risalirebbe al tag precedente e l'ambiente
-di test direbbe una versione vecchia di un rilascio. È già successo. Il passo
-1 non è una formalità: se si salta, tutti gli ambienti mentono sul numero.
+tag.** Il tag può stare dove capita nella storia; `package.json` invece sta su
+ogni ramo e viene allineato al passo 1. Se si salta quel passo, tutti gli
+ambienti mentono sul numero — è già successo, e chi segnalava un problema
+dichiarava una versione che non era quella che aveva davanti.
 
 **Prima di ogni merge su `develop` e su `main` si chiede conferma.** Il
 push di un branch `feature/` invece è libero: serve proprio a provare.

@@ -1823,6 +1823,59 @@ body.fullbleed .bar-content {
 .topbar-back {
   margin-left: -6px;
 }
+/* Il titolo della pagina, attaccato al marchio — e, quando la pagina ha
+   sottosezioni, è anche il comando per cambiarle. Su schermo stretto resta
+   solo se è un comando: un titolo che non fa niente lì è spazio buttato. */
+.topbar-pagina-tasto {
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 6px 4px;
+}
+.topbar-pagina {
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+  opacity: 0.9;
+}
+/* ── SUL TELEFONO SI TOGLIE, NON SI RIMPICCIOLISCE ────────────────────
+   Nella barra c'erano otto cose in una riga e il nome del locale finiva in
+   «La …». I tasti non si stringono — al banco si tocca con le dita bagnate e
+   sotto i 44px si sbaglia — quindi si toglie, nell'ordine scritto in
+   docs/navigazione.md: prima il nome del locale (resta il logo), poi
+   l'«indietro» (il ☰ fa quello che fa lui e in più: dalla coda alle
+   impostazioni in un tocco solo). Il titolo della sezione si accorcia coi
+   puntini ma non sparisce: è l'unica cosa che dice dove sei. */
+@media (max-width: 700px) {
+  .topbar-pagina:not(.topbar-pagina-tasto) {
+    display: none;
+  }
+  .brand-nome {
+    display: none;
+  }
+  .topbar-back {
+    display: none;
+  }
+  .topbar-pagina-tasto {
+    max-width: 52vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+/* Schermi piccolissimi: va via anche il marchio. Restano menu, dove sono, e
+   cosa posso fare. */
+@media (max-width: 400px) {
+  .topbar .brand img {
+    display: none;
+  }
+}
 
 /* Dispositivi TOUCH (iPad al banco): i tasti che si usano di continuo — menu,
    voci del menu laterale, azioni della topbar — devono essere presi al volo,
@@ -2230,9 +2283,16 @@ body.bar-wide .app {
   border-bottom: 1px solid var(--line);
 }
 .inv-row:last-child { border-bottom: none; }
-.inv-row.inv-ok { border-left-color: #2ecc71; }
-.inv-row.inv-low { border-left-color: #f39c12; }
-.inv-row.inv-empty { border-left-color: #e74c3c; }
+/* LA STRISCIA DICE L'ASSORTIMENTO, il pallino dice la scorta: prima
+   dicevano tutti e due la stessa cosa, e l'assortimento — che decide se una
+   cosa si ricompra — si leggeva solo dai bollini accanto al nome.
+   I colori stanno con i segni che si usano già: oro come la corona dei
+   premium, rosso come il bollino OUT, blu per la linea (i primi da
+   controllare prima di una serata), grigio per la normalità. */
+.inv-row.ass-assortimento { border-left-color: var(--line); }
+.inv-row.ass-linea { border-left-color: #3498db; }
+.inv-row.ass-premium { border-left-color: #f0b429; }
+.inv-row.ass-out { border-left-color: #e74c3c; }
 .inv-row-main {
   display: flex;
   align-items: center;
@@ -2285,9 +2345,10 @@ body.bar-wide .app {
   opacity: 0.55;
 }
 /* Striscia sinistra per lo stato scorte (come le card ordini). */
-.admin-card.inv-ok { border-left: 4px solid #2ecc71; }
-.admin-card.inv-low { border-left: 4px solid #f39c12; }
-.admin-card.inv-empty { border-left: 4px solid #e74c3c; }
+.admin-card.ass-assortimento { border-left: 4px solid var(--line); }
+.admin-card.ass-linea { border-left: 4px solid #3498db; }
+.admin-card.ass-premium { border-left: 4px solid #f0b429; }
+.admin-card.ass-out { border-left: 4px solid #e74c3c; }
 /* Sul tema chiaro l'override generico dei bordi card non deve mangiarsi
    la striscia (stessa storia delle card ordini). */
 
@@ -4251,9 +4312,9 @@ body.fullbleed,
   border-right-color: rgba(0, 0, 0, 0.1);
   border-bottom-color: rgba(0, 0, 0, 0.1);
 }
-:root[data-luma='light'] .admin-card.inv-ok { border-left-color: #2ecc71; }
-:root[data-luma='light'] .admin-card.inv-low { border-left-color: #f39c12; }
-:root[data-luma='light'] .admin-card.inv-empty { border-left-color: #e74c3c; }
+:root[data-luma='light'] .admin-card.ass-linea { border-left-color: #2f7fbf; }
+:root[data-luma='light'] .admin-card.ass-premium { border-left-color: #d99a00; }
+:root[data-luma='light'] .admin-card.ass-out { border-left-color: #d64541; }
 :root[data-luma='light'] input,
 :root[data-luma='light'] select,
 :root[data-luma='light'] textarea {
@@ -4286,38 +4347,69 @@ body.fullbleed,
 }
 /* TUTTO DENTRO LO SCHERMO (impostazioni). Le sezioni sono più di venti: la
    barra era più alta della finestra, e per arrivare all'ultima voce si
-   scorreva la PAGINA — testata compresa, che intanto scorreva via. Qui la
-   coppia barra+contenuto è alta quanto lo schermo meno la testata, e a
-   scorrere sono i due pannelli, ognuno per conto suo.
-   Questo è solo il valore di PARTENZA, per non far saltare il riquadro al
-   primo disegno: l'altezza buona la misura CategoryRail.jsx, perché qui il
-   conto non può tenere insieme testata, zoom e piè di pagina. */
+   scorreva la PAGINA — testata compresa, che intanto scorreva via.
+   NON SI MISURA, SI ADATTA. Ci abbiamo provato col righello (100dvh meno la
+   testata, meno il piè di pagina, meno il respiro in fondo) e ogni volta
+   restava fuori un pezzo: prima la pagina sforava, poi avanzava un buco.
+   Qui la pagina è alta quanto la finestra e si divide in tre — testata,
+   quello che resta, piè di pagina — e a scorrere sono i due pannelli. */
+@media (min-width: 701px) {
+  body.pagina-piena .app {
+    /* `zoom` su #root: l'altezza della finestra va letta nella scala della
+       pagina, se no a zoom 125% la pagina è un quarto più alta dello schermo. */
+    height: calc(100dvh / var(--zoom, 1));
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 0; /* i 96px di respiro in fondo qui sono spazio perso */
+  }
+  body.pagina-piena .app > main,
+  body.pagina-piena .bar-page,
+  body.pagina-piena .bar-content,
+  body.pagina-piena .pagina-impostazioni {
+    flex: 1;
+    min-height: 0; /* senza, un figlio che scorre allunga il padre */
+    display: flex;
+    flex-direction: column;
+  }
+  body.pagina-piena .cat-layout.cat-pieno {
+    flex: 1;
+    min-height: 0;
+  }
+}
 .cat-layout.cat-pieno {
-  height: calc(100dvh / var(--zoom, 1) - var(--safe-top) - var(--barra-alta) - 18px);
   align-items: stretch;
 }
 .cat-layout.cat-pieno .cat-rail {
   position: static;
   max-height: none;
-  height: 100%;
+  /* Alta quanto la riga (align-items: stretch) e con lo scorrimento suo:
+     l'elenco delle sezioni è più lungo della finestra e deve scorrere per
+     conto proprio, non trascinarsi dietro la pagina. `min-height: 0` perché
+     un figlio che scorre, senza, allunga il padre invece di scorrere. */
+  min-height: 0;
+  height: auto;
+  overflow-y: auto;
+}
+/* Il contenuto si arrangia da sé: niente scorrimento qui, ce l'ha dentro
+   (una lista lunga con la sua testata fissa). Due barre di scorrimento una
+   dentro l'altra sono un modo per non trovare più niente. */
+.cat-layout.cat-pieno .cat-content-fisso {
+  min-height: 0;
+  height: auto;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 .cat-layout.cat-pieno .cat-content {
-  height: 100%;
+  min-height: 0;
+  height: auto;
   overflow-y: auto;
   /* La barra di scorrimento non deve stare addosso al testo. */
   padding-right: 4px;
 }
-/* A tutto schermo la testata non c'è: quello spazio torna al contenuto. */
-body.fullbleed .cat-layout.cat-pieno {
-  height: calc(100dvh / var(--zoom, 1) - var(--safe-top) - 18px);
-}
 /* Sul telefono la barra passa in orizzontale sopra al contenuto: un'altezza
    fissa lo strozzerebbe in una finestrella. Lì si scorre come sempre. */
 @media (max-width: 700px) {
-  .cat-layout.cat-pieno,
-  body.fullbleed .cat-layout.cat-pieno {
-    height: auto;
-  }
   .cat-layout.cat-pieno .cat-rail,
   .cat-layout.cat-pieno .cat-content {
     height: auto;
@@ -4395,25 +4487,40 @@ body.fullbleed .cat-rail {
    VERTICALE sulla destra, in una fascia riservata (la card si stringe di
    tanto) così NON copre il nome. Solo qui il touch è "drag"
    (touch-action:none); il resto della card scorre. */
+/* ── MODALITÀ ORGANIZZA ───────────────────────────────────────────────
+   La maniglia è ATTACCATA alla card, non affiancata: sono la stessa cosa,
+   e fra le due c'era una fessura con gli angoli tondi da tutte e due le
+   parti — sembravano due oggetti. Il colore è quello di casa (l'accento
+   smorzato sul fondo), non una macchia senape che non c'entra niente. */
 .reorder-cell {
-  padding-right: 44px;
+  position: relative;
+  padding-right: 38px;
+  border-radius: 12px;
+  will-change: transform;
+}
+/* La card perde gli angoli tondi dal lato della maniglia: il giro esterno
+   lo chiude lei. */
+.reorder-cell > [data-drink-id] {
+  border-top-right-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
 }
 .reorder-grip {
   position: absolute;
   top: 0;
   bottom: 0;
   right: 0;
-  width: 44px;
+  width: 38px;
   z-index: 3;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.5rem;
+  font-size: 1.3rem;
   line-height: 1;
-  color: #1c1305;
-  background: var(--accent-2, #f5b94a);
-  border-top-right-radius: 12px;
-  border-bottom-right-radius: 12px;
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 22%, var(--tile-bg));
+  border: 1px solid var(--line);
+  border-left: none;
+  border-radius: 0 12px 12px 0;
   cursor: grab;
   touch-action: none;
   user-select: none;
@@ -4422,23 +4529,18 @@ body.fullbleed .cat-rail {
   cursor: grabbing;
 }
 
-/* Card in trascinamento: si "solleva" — ingrandita, ombra profonda, sopra
-   le altre — così si vede bene che la stai spostando. */
-.reorder-cell {
-  position: relative;
-  border-radius: 12px;
-  transition: transform 0.14s ease, box-shadow 0.14s ease;
-  will-change: transform;
-}
+/* La card in mano si stacca dalle altre (ombra, e sopra tutte). Il
+   movimento — lei che segue il dito, le altre che fanno spazio — lo mette
+   dnd-kit: qui c'è solo l'aspetto. */
 .reorder-cell.dragging {
-  transform: scale(1.06) rotate(-1.5deg);
-  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.45);
   z-index: 5;
   cursor: grabbing;
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.45);
 }
 .reorder-cell.dragging .reorder-grip {
   cursor: grabbing;
 }
+
 
 /* ── RENDICONTO SERATA: tabella da rendiconto, non da scontrino ──────────
    Numeri a destra e incolonnati (si confrontano a colpo d'occhio), prima
@@ -4662,26 +4764,47 @@ body.fullbleed .cat-rail {
 /* La card del prodotto porta il suo colore: una fascia sul bordo sinistro,
    come la piastrella al banco. La pastiglia in alto a destra apre la
    tavolozza senza dover aprire le azioni. */
+/* LA STRISCIA A SINISTRA DICE COME STA IL PRODOTTO, come sulle card della
+   coda dice com'è messo il conto: verde si può fare, arancione un
+   ingrediente sta finendo, rosso non si può fare (spento a mano o
+   ingrediente esaurito — la riga sotto al nome dice quale dei due). */
+/* LA STRISCIA A SINISTRA DICE COM'È MESSO IL PRODOTTO:
+     grigia    → non è in menu (spento a mano)
+     verde     → in menu, le scorte ci sono
+     arancione → in menu, un ingrediente sta finendo
+     rossa     → in menu, un ingrediente è finito
+   Il rosso prima diceva due cose opposte — «l'ho tolto io» e «è finito il
+   rum» — che chiedono azioni diverse: una si riaccende, l'altra si compra. */
 .menu-card {
   position: relative;
-  border-left: 5px solid var(--menu-colore, transparent);
+  border-left: 5px solid var(--line) !important;
 }
+.menu-card.stato-nascosto { border-left-color: var(--line) !important; }
+.menu-card.stato-ok { border-left-color: #2ecc71 !important; }
+.menu-card.stato-low { border-left-color: #f39c12 !important; }
+.menu-card.stato-empty { border-left-color: #e74c3c !important; }
+
+/* LA LINGUETTA NELL'ANGOLO è il colore che il prodotto ha al banco, disegnata
+   come sulle tile del POS: là quel segno vuol dire già quello. Si tocca per
+   cambiarlo — prima era un quadratino che sembrava un'etichetta. */
 .menu-colore-spia {
   position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 18px;
-  height: 18px;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
   padding: 0;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--menu-colore, transparent);
+  border: none;
+  border-top: 1.7em solid var(--menu-colore, transparent);
+  border-right: 1.7em solid transparent;
+  border-top-left-radius: 12px;
+  background: none;
   cursor: pointer;
 }
 @media (pointer: coarse) {
   .menu-colore-spia {
-    width: 26px;
-    height: 26px;
+    border-top-width: 2.1em;
+    border-right-width: 2.1em;
   }
 }
 .menu-colori-riga {
@@ -5049,4 +5172,340 @@ body:has(.overlay) .zoom-control {
 /* Nello storico non c'è più niente da fare: si legge e basta. */
 .status-bell-item.letta {
   opacity: 0.65;
+}
+
+/* ── Barra delle sezioni STRETTA: solo le icone ───────────────────────
+   Dove dentro c'è già una barra di categorie (Inventario) due elenchi
+   affiancati mangiano mezzo schermo. Stretta resta l'icona; il nome torna
+   sfiorandola, e sta comunque nel titolo per chi usa le dita. */
+.cat-rail-stringi {
+  justify-content: center !important;
+  opacity: 0.7;
+  font-size: 0.8rem;
+  min-height: 26px;
+}
+/* SOLO LA PROPRIA barra, non quelle annidate: con il selettore discendente,
+   stringendo quella di fuori sparivano le etichette anche di quella dentro —
+   due elenchi di pastiglie vuote, illeggibili tutti e due. */
+.cat-stretta > .cat-rail {
+  min-width: 0;
+  width: auto;
+}
+.cat-stretta > .cat-rail .chip {
+  justify-content: center;
+  padding-inline: 10px;
+  position: relative;
+}
+.cat-stretta > .cat-rail .cat-rail-label,
+.cat-stretta > .cat-rail .cat-rail-count {
+  display: none;
+}
+/* Sfiorando la voce il nome torna, sopra il contenuto: serve a chi non ha
+   ancora in mente cosa c'è dietro a ogni icona. */
+.cat-stretta > .cat-rail .chip:hover .cat-rail-label {
+  display: block;
+  position: absolute;
+  left: calc(100% + 6px);
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 20;
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--bg-2);
+  white-space: nowrap;
+  pointer-events: none;
+}
+/* Sul telefono la barra è già una riga orizzontale che scorre: lì
+   "stringere" non vuol dire niente e il tasto non serve. */
+@media (max-width: 700px) {
+  .cat-rail-stringi {
+    display: none;
+  }
+  .cat-stretta > .cat-rail .cat-rail-label {
+    display: inline;
+  }
+}
+
+/* Le tile della griglia POS hanno la striscia a sinistra come tutte le altre
+   card (coda, menù): lo stesso oggetto — un prodotto, un conto — si riconosce
+   allo stesso modo ovunque, invece di cambiare linguaggio da una schermata
+   all'altra. */
+.pos-tile-striscia {
+  border-left-width: 5px !important;
+  border-left-style: solid !important;
+}
+/* IL NASTRO D'ANGOLO PARTE DAL BORDO. Sta in posizione assoluta, e per una
+   scatola con bordo «zero» vuol dire il bordo INTERNO: restava un dentino di
+   sfondo fra il nastro e la striscia, che a griglia piena si vede eccome. */
+.pos-tile-nastro {
+  top: -1px !important;
+  left: -5px !important;
+}
+
+/* ── La testata del magazzino: una riga di scelte ─────────────────────
+   Ricerca sopra, e sotto le cose che stanno ferme quasi sempre: due tendine
+   (filtri e fornitore), il valore di magazzino, come mostrare i prodotti e
+   il tasto per aggiungerne uno. Erano quattro righe piene di pastiglie. */
+.inv-testa {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.inv-testa-spinta {
+  flex: 1;
+}
+/* Card o lista: due icone attaccate, non due tasti con su scritto cosa
+   fanno. È una scelta che si fa una volta e resta. */
+.inv-vista {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.inv-vista .chip {
+  min-width: 34px;
+  justify-content: center;
+}
+@media (max-width: 700px) {
+  .inv-testa-spinta {
+    display: none;
+  }
+}
+
+/* ── I FILTRI DEL MAGAZZINO: una riga sola ────────────────────────────
+   Erano tre file di pastiglie che sembravano un riepilogo — si leggevano i
+   numeri senza capire che toccandoli la lista si restringeva. Ora è una
+   riga, con scritto che è un filtro; quando non ci sta, scorre in
+   orizzontale: meglio scorrere una riga che perderne tre. */
+.inv-filtri {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  min-width: 0;
+}
+.inv-filtri-eti {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.inv-filtri-riga {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  padding-bottom: 2px;
+}
+.inv-filtri-riga .chip {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+/* Stacco fra "come sta a scorta" e "che assortimento è": due domande
+   diverse sulla stessa riga. */
+.inv-filtri-sep {
+  flex-shrink: 0;
+  width: 1px;
+  align-self: stretch;
+  background: var(--line);
+  margin-inline: 2px;
+}
+/* Il valore di magazzino NON è un filtro: non si tocca e non si accende. */
+.inv-valore {
+  flex-shrink: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+@media (max-width: 700px) {
+  .inv-filtri-eti {
+    display: none;
+  }
+  .inv-valore {
+    font-size: 0.78rem;
+  }
+}
+
+/* ── Magazzino: le sezioni sono SCHEDE, sotto la testata ──────────────
+   In una barra a sinistra costavano una colonna, e dentro c'è già la barra
+   delle categorie: due elenchi affiancati mangiavano mezzo schermo. In
+   orizzontale costano una riga e scorrono se non ci stanno. */
+.tab-sezioni {
+  flex-shrink: 0;
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  padding-bottom: 6px;
+  margin-bottom: 8px;
+}
+.tab-sezioni .chip {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+body.pagina-piena .tab-corpo {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* L'INTESTAZIONE DELLA TABELLA NON SCORRE VIA. Scorrendo trecento prodotti
+   si perdevano i nomi delle colonne dopo dieci righe, e «6,20 €» senza
+   sapere se è con o senza IVA non vuol dire niente. */
+.inv-table .inv-thead {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  background: var(--bg-2);
+}
+
+/* ── Magazzino: la lista scorre, la testata resta ─────────────────────
+   Filtri, ricerca e categorie stanno fermi; a scorrere è solo l'elenco dei
+   prodotti. Prima scorreva tutta la pagina, e per tornare alla ricerca
+   dopo aver guardato in fondo si risaliva da capo. */
+body.pagina-piena .pagina-inventario,
+body.pagina-piena .pagina-inventario .inv-panel {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+body.pagina-piena .pagina-inventario .inv-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* ── Menu a tendina ───────────────────────────────────────────────────
+   Dove le scelte sono tante e stanno ferme quasi sempre: i filtri del
+   magazzino erano sette pastiglie sempre aperte, una riga di schermo
+   occupata tutto il giorno per una scelta che si cambia due volte a sera. */
+.tendina {
+  position: relative;
+  flex-shrink: 0;
+}
+/* La freccia dice «qui si apre»: piccola non la si vede, e la tendina
+   sembra un'etichetta. */
+.tendina-freccia {
+  opacity: 0.85;
+  font-size: 1.15em;
+  line-height: 1;
+  margin-left: 2px;
+}
+.tendina-pannello {
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + 4px);
+  left: 0;
+  max-width: 92vw;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg-2);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+/* LE SCHEDE DELLA PAGINA, dentro la barra. Da tablet in su lo spazio c'è e
+   le sezioni si vedono tutte: una tendina costringerebbe ad aprirla per
+   sapere cosa c'è dentro. Se sono tante, la fila scorre in orizzontale —
+   una riga che scorre, non una riga in più. */
+.topbar-tabs {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  padding: 2px 0;
+  margin-left: 4px;
+}
+.topbar-tabs .chip {
+  flex-shrink: 0;
+  white-space: nowrap;
+  font-size: 0.82rem;
+  padding: 6px 10px;
+}
+/* La barra di scorrimento delle schede non deve fare rumore. */
+.topbar-tabs::-webkit-scrollbar {
+  height: 4px;
+}
+
+/* Nella barra in alto: allineata al marchio, e col pannello che scende
+   sotto la barra. Il tasto non ha il fondo delle pastiglie — nella barra
+   sarebbe un bottone dentro un bottone. */
+.tendina-barra {
+  min-width: 0;
+}
+.tendina-barra .tendina-tasto {
+  max-width: 40vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Vicino al bordo destro si apre verso l'interno, se no metà pannello
+   finisce fuori schermo. */
+.tendina.tendina-destra .tendina-pannello {
+  left: auto;
+  right: 0;
+}
+.tendina-titolo {
+  margin: 6px 2px 4px;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.tendina-voce {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.tendina-voce:hover {
+  background: var(--tile-bg);
+}
+.tendina-voce.scelta {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+/* La storia del conto: sola icona in alto, accanto al numero. Da tasto
+   largo si prendeva una riga intera accanto a Unisci/Separa/Comande, per
+   una cosa che si guarda ogni tanto. */
+.posd-storia {
+  flex-shrink: 0;
+  min-width: 34px;
+  padding-inline: 8px;
+}
+/* IL SECONDO LIVELLO NEL MENU: le sezioni della pagina aperta, rientrate
+   sotto di lei. Un posto solo per navigare, uguale sul telefono e sul
+   computer. */
+.bar-nav-sotto {
+  margin: 2px 0 6px;
+  border-left: 2px solid var(--line);
+  margin-left: 14px;
+  padding-left: 6px;
+}
+.bar-nav-sottovoce {
+  font-size: 0.92rem;
+  opacity: 0.92;
 }

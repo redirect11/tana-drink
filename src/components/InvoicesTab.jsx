@@ -63,7 +63,7 @@ export default function InvoicesTab() {
 
   return (
     <div>
-      <h2>📄 Fatture</h2>
+      {/* Il titolo sta nella barra in alto (vedi lib/sezioni.js). */}
       <p className="muted small" style={{ marginTop: 0 }}>
         Fatture di cortesia emesse dalla schermata Pagamento. Non è
         fatturazione elettronica: per lo SDI passa i dati al commercialista.

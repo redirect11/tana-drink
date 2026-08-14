@@ -12,25 +12,9 @@ import {
   createManualGroup,
   DEFAULT_SETTINGS,
 } from '../lib/api.js'
-
-const BARTENDER_NAV = [
-  ['coda', '🧾', 'Coda ordini'],
-  ['pagamenti', '💶', 'Flusso cassa'],
-  ['storico', '📋', 'Lista ordini'],
-  ['fatture', '📄', 'Fatture'],
-  ['stats', '📊', 'Statistiche'],
-  ['menu', '🍸', 'Menù'],
-  ['inventario', '📦', 'Inventario'],
-  ['staff', '👥', 'Staff'],
-  ['utenti', '🧑‍🤝‍🧑', 'Utenti e ruoli'],
-  ['vista-cliente', '👀', 'Vista cliente'],
-  ['impostazioni', '⚙️', 'Impostazioni'],
-]
-
-const STAFF_NAV = [
-  ['servizio', '🫱', 'Da servire'],
-  ['miei-ordini', '🧾', 'I miei ordini'],
-]
+// Le voci stanno in un posto solo: le stesse fanno il titolo nella barra.
+import { NAV_GESTIONALE as BARTENDER_NAV, NAV_SALA as STAFF_NAV } from '../lib/sezioni.js'
+import { subscribeSottosezioni } from '../lib/sottosezioni.js'
 
 // Menu laterale dello staff: usato nel gestionale (onSelect cambia tab)
 // e nella vista menu per l'ordinazione manuale (naviga a /bar?tab=…).
@@ -38,6 +22,9 @@ export default function StaffDrawer({ role, active = null, onSelect = null }) {
   const [open, setOpen] = useState(false)
   // I gruppi restano chiusi finché non li si apre, e la scelta si ricorda:
   // chi lavora a gruppi non deve riaprirli a ogni giro.
+  // Le sottosezioni della pagina aperta: le dichiara la pagina stessa.
+  const [sotto, setSotto] = useState({ voci: [], attiva: null, scegli: null })
+  useEffect(() => subscribeSottosezioni(setSotto), [])
   const [gruppiAperti, setGruppiAperti] = useState(
     () => localStorage.getItem('tana:drawer-gruppi') === '1'
   )
@@ -136,13 +123,39 @@ export default function StaffDrawer({ role, active = null, onSelect = null }) {
           <img src={`${import.meta.env.BASE_URL}logo.png`} alt="" />
           Gestionale
         </div>
+        {/* IL SECONDO LIVELLO STA QUI DENTRO, sotto la pagina in cui ci si
+            trova. È il modo in cui si fa di solito con un menu a scomparsa:
+            un posto solo per navigare, uguale sul telefono e sul computer,
+            invece di schede in barra (che sopra le cinque voci non ci
+            stanno) o di una colonna in pagina (che costa spazio tutto il
+            giorno). Le sottosezioni compaiono per la pagina APERTA: sono le
+            uniche che si conoscono senza esserci passati. */}
         {items.map(([id, icon, label]) => (
-          <div
-            key={id}
-            className={`bar-nav-item${active === id ? ' active' : ''}`}
-            onClick={() => go(id)}
-          >
-            <span>{icon}</span> {label}
+          <div key={id}>
+            <div
+              className={`bar-nav-item${active === id ? ' active' : ''}`}
+              onClick={() => go(id)}
+            >
+              <span>{icon}</span> {label}
+            </div>
+            {active === id && sotto.voci.length > 0 && (
+              <div className="bar-nav-sotto">
+                {sotto.voci.map((v) => (
+                  <div
+                    key={v.id}
+                    className={`bar-nav-item bar-nav-sottovoce${
+                      v.id === sotto.attiva ? ' active' : ''
+                    }`}
+                    onClick={() => {
+                      sotto.scegli?.(v.id)
+                      setOpen(false)
+                    }}
+                  >
+                    <span>{v.icona}</span> {v.label}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         ))}
         <div className="bar-nav-sep" />

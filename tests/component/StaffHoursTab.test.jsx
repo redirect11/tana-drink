@@ -44,7 +44,9 @@ beforeEach(() => vi.clearAllMocks())
 describe('registro Ore staff', () => {
   it('si apre e valorizza le ore con la paga della persona', async () => {
     render(<StaffHoursTab />)
-    expect(screen.getByText('👥 Staff')).toBeInTheDocument()
+    // Il titolo della pagina non sta più qui dentro: è nella barra in alto
+    // (lib/sezioni.js), per non mangiarsi una riga di contenuto.
+    expect(screen.queryByText('👥 Staff')).toBeNull()
     // 5 h × 10 €/h = 50 € di costo del personale
     await waitFor(() => expect(screen.getByText('50,00 €')).toBeInTheDocument())
   })
