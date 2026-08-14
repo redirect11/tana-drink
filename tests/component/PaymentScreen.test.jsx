@@ -433,3 +433,47 @@ describe('scontrino: il metodo di pagamento', () => {
     expect(stampato.payment_method).toBe('banco')
   })
 })
+
+// ── Due righe dello stesso prodotto ──────────────────────────────────
+// Difetto visto in produzione: con «Negroni, Coca Cola, Negroni», premere
+// «+» sul primo Negroni alzava anche il secondo. La selezione era per
+// PRODOTTO e le due righe condividevano il contatore: si incassava una
+// quantità che nessuno aveva scelto.
+describe('due righe uguali si muovono una per volta', () => {
+  const dueNegroni = () =>
+    baseOrder({
+      total: 19,
+      comande: [],
+      order_items: [
+        { drink_id: 'negroni', name: 'Negroni', unit_price: 8, qty: 1 },
+        { drink_id: 'coca', name: 'Coca Cola', unit_price: 3, qty: 1 },
+        { drink_id: 'negroni', name: 'Negroni', unit_price: 8, qty: 1, custom: true },
+      ],
+    })
+
+  it('togliendo il primo Negroni, il secondo resta in pagamento', async () => {
+    const user = userEvent.setup()
+    mount(dueNegroni())
+    // Si apre con tutto selezionato: 8 + 3 + 8.
+    expect(payAmount()).toHaveTextContent('19,00')
+    const togli = screen.getAllByRole('button', { name: /Togli Negroni dal pagamento/ })
+    expect(togli).toHaveLength(2)
+    await user.click(togli[0])
+    // Se si muovessero insieme resterebbero solo 3,00 €.
+    expect(payAmount()).toHaveTextContent('11,00')
+  })
+
+  it('e si incassa solo la riga scelta', async () => {
+    const user = userEvent.setup()
+    mount(dueNegroni())
+    const togli = screen.getAllByRole('button', { name: /Togli Negroni dal pagamento/ })
+    await user.click(togli[0])
+    await user.click(screen.getByRole('button', { name: /Riscuotere/ }))
+    const [, dati] = registerPayment.mock.calls.at(-1)
+    expect(dati.amount).toBe(11)
+    // Un solo Negroni nel dettaglio dell'incasso.
+    const negroni = dati.items.filter((i) => i.drink_id === 'negroni')
+    expect(negroni).toHaveLength(1)
+    expect(negroni[0].qty).toBe(1)
+  })
+})
