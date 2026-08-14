@@ -47,3 +47,13 @@ costi-inventario.json
 backup/
 # Roba di passaggio (catture del markup, prove): non è codice.
 tmp/
+
+# VOCALI E FOTO DAL BANCO. Sono segnalazioni arrivate su WhatsApp: la voce
+# di persone vere e le foto del locale. Restano sul computer di chi lavora,
+# non nel repository — un repository si clona, si specchia e si condivide,
+# e quella roba non deve seguirlo.
+registrazioni/
+
+# I workspace di lavoro (git worktree) creati qui dentro: sono copie del
+# repository, non contenuto del repository.
+.claude/worktrees/
