@@ -2,8 +2,8 @@
 /**
  * scripts/generate-issues.mjs
  *
- * Legge `requirements/requirements.yaml` e crea issue GitHub per tutti i
- * requisiti con `generate_issue: true`.
+ * Legge `requirements/requirements.yaml` e `requirements/bugs.yaml` e crea
+ * issue GitHub per tutte le voci con `generate_issue: true`.
  *
  * Utilizzo:
  *   # Dry run (mostra le issue che verrebbero create, senza crearle)
@@ -18,10 +18,11 @@
  *   DRY_RUN        Se impostato a "true", non crea issue ma mostra il payload (default: false)
  *
  * Il workflow `.github/workflows/generate-issues.yml` esegue questo script
- * automaticamente quando viene effettuato un push su `requirements/requirements.yaml`.
+ * automaticamente quando viene effettuato un push su uno dei due file.
  *
  * Idempotenza:
- *   Il titolo dell'issue viene prefissato con "[REQ-ID]", es. "[REQ-SUMUP-SYNC-001] Titolo".
+ *   Il titolo dell'issue viene prefissato con "[ID]", es. "[REQ-SUMUP-SYNC-001] Titolo"
+ *   o "[BUG-001] Titolo".
  *   Prima di creare un'issue, lo script verifica se ne esiste già una con lo stesso
  *   titolo (aperta o chiusa). Se esiste, la salta.
  */
@@ -93,32 +94,45 @@ function buildIssueBody(req) {
 ${req.description}
 ${testCasesSection}
 ---
-*Issue generata automaticamente da \`scripts/generate-issues.mjs\` a partire da \`requirements/requirements.yaml\`.*
+*Issue generata automaticamente da \`scripts/generate-issues.mjs\` a partire da \`${req.source_file}\`.*
 `
 }
 
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
-  const yamlPath = join(ROOT, 'requirements', 'requirements.yaml')
-  let yamlText
-  try {
-    yamlText = readFileSync(yamlPath, 'utf8')
-  } catch (_e) {
-    console.error(`❌ File non trovato: ${yamlPath}`)
-    process.exit(1)
+  // requirements.yaml è la mappa di cosa esiste, bugs.yaml di cosa non va:
+  // stesso formato, stesso giro di issue. Il secondo può mancare (è nato dopo).
+  const sorgenti = [
+    { rel: 'requirements/requirements.yaml', obbligatorio: true },
+    { rel: 'requirements/bugs.yaml', obbligatorio: false },
+  ]
+
+  const toGenerate = []
+  for (const s of sorgenti) {
+    const yamlPath = join(ROOT, ...s.rel.split('/'))
+    let yamlText
+    try {
+      yamlText = readFileSync(yamlPath, 'utf8')
+    } catch (_e) {
+      if (s.obbligatorio) {
+        console.error(`❌ File non trovato: ${yamlPath}`)
+        process.exit(1)
+      }
+      continue
+    }
+    for (const voce of parseRequirementsYaml(yamlText)) {
+      if (voce.generate_issue) toGenerate.push({ ...voce, source_file: s.rel })
+    }
   }
 
-  const requirements = parseRequirementsYaml(yamlText)
-  const toGenerate = requirements.filter((r) => r.generate_issue)
-
   if (toGenerate.length === 0) {
-    console.log('ℹ️  Nessun requisito con generate_issue: true trovato. Nulla da fare.')
-    console.log('   Per creare un\'issue, imposta generate_issue: true in requirements/requirements.yaml')
+    console.log('ℹ️  Nessuna voce con generate_issue: true trovata. Nulla da fare.')
+    console.log('   Per creare un\'issue, imposta generate_issue: true in requirements/requirements.yaml o requirements/bugs.yaml')
     return
   }
 
-  console.log(`📋 ${toGenerate.length} requisito/i da processare:\n`)
+  console.log(`📋 ${toGenerate.length} voce/i da processare:\n`)
 
   if (DRY_RUN) {
     console.log('🔍 DRY RUN — nessuna issue sarà creata.\n')
