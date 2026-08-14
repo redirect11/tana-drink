@@ -1108,29 +1108,67 @@ requirements:
 
   - id: REQ-STAMPA-006
     title: "Lo staff di sala stampa le comande degli ordini che prende"
-    area: "src/components/OrderPosDetail.jsx, src/components/SettingsTab.jsx, src/pages/OrderStatusPage.jsx"
+    area: "src/pages/MenuPage.jsx, src/lib/printer.js"
     description: >
-      Chi è in sala prende ordini — «Nuovo ordine» è nel menu di tutti e la
-      cassa POS non chiede il ruolo — quindi deve poter STAMPARE la comanda di
-      quello che ha appena preso, come si fa al banco. Oggi non ci arriva:
-      l'IP della stampante si imposta in Impostazioni → Stampante, che sta nel
-      menu del gestionale, e quel menu lo staff di sala non ce l'ha. Sul suo
-      telefono la stampante resta non configurata e «Invia» fallisce.
-      Funziona solo di rimbalzo: se il tablet del banco è aperto sulla coda e
-      ha la stampa automatica accesa, la comanda esce lì. Se quella schermata
-      non è aperta, non esce niente e l'ordine resta solo a schermo.
-      Comportamento atteso: lo staff di sala stampa la comanda dell'ordine che
-      prende, e può ristamparla dopo dall'ordine che vede (oggi il 🖨 sul
-      dettaglio è solo di admin e bartender). Restano al gestionale lo
-      scontrino e la cassa: alla sala serve la comanda.
-      Da sciogliere implementando: IP e certificato sono per DISPOSITIVO, non
-      per account, quindi il telefono della sala va preparato una volta. O si
-      apre la sola sezione Stampante anche alla sala, o un gestore la prepara
-      su quel telefono, o si passano le impostazioni da un terminale all'altro.
-    status: todo
-    generate_issue: true
+      Chi è in sala prende ordini dal menù, e la comanda di quell'ordine deve
+      uscire. Prima non usciva niente: si sperava che al banco qualcuno
+      tenesse aperta la coda con la stampa automatica accesa: se quella
+      schermata non era aperta, l'ordine restava solo a schermo.
+      L'IP il telefono ce l'ha già — la configurazione della stampante è
+      condivisa e ogni dispositivo la riceve dal server (subscribePrinterConfig
+      in App.jsx) — quindi a mancare era solo l'ordine di stampare.
+      Ora l'ordine preso in sala stampa la sua comanda dal telefono che l'ha
+      preso, salvo che il locale abbia scelto il rimbalzo (REQ-STAMPA-008). La
+      stampa non si aspetta: l'ordine è salvato comunque, e se la stampa non
+      parte lo dice il pallino nella coda (REQ-STAMPA-007).
+      Resta da fare una volta, su ogni telefono, l'accettazione del
+      certificato della stampante: è REQ-STAMPA-003.
+    status: implemented
+    generate_issue: false
     labels: [stampa, ruoli, sala]
-    test_cases: []
+    test_cases: [tests/component/MenuPage.test.jsx]
+
+  - id: REQ-STAMPA-007
+    title: "Un pallino dice se la comanda uscirà, prima di averne bisogno"
+    area: "src/lib/statoStampante.js, src/components/PallinoStampante.jsx, src/pages/BartenderPage.jsx"
+    description: >
+      Nella coda ordini, per chiunque la guardi — banco e sala — un pallino
+      dice se la stampante risponde: verde esce, rosso adesso non uscirebbe,
+      bianco qui non c'è nessuna stampante impostata. Non è una stampa di
+      prova: è la stessa stretta di mano che farebbe la comanda, senza carta.
+      Si controlla ogni mezzo minuto finché qualcuno lo guarda e appena si
+      torna sull'app — è lì che si scopre caduta l'eccezione del certificato,
+      non a metà servizio. Toccandolo si legge il motivo e la strada per
+      rimetterlo a posto; a chi è in sala non si dice di andare nelle
+      impostazioni, che non ha. Una stretta di mano sola anche se a chiederla
+      sono in tre: la stampante ne regge poche.
+    status: implemented
+    generate_issue: false
+    labels: [stampa, ui]
+    test_cases:
+      - tests/unit/statoStampante.test.js
+      - tests/component/PallinoStampante.test.jsx
+
+  - id: REQ-STAMPA-008
+    title: "Il locale sceglie chi stampa le comande della sala"
+    area: "src/components/PrinterSetup.jsx, src/lib/printer.js"
+    description: >
+      In Impostazioni → Stampante si sceglie, una volta per tutto il locale
+      (la configurazione è condivisa), fra due modi: «la stampa il telefono»,
+      cioè chi prende l'ordine al tavolo stampa dal suo, e «la stampa il
+      banco», cioè la comanda esce al bancone all'arrivo dell'ordine. Di
+      partenza stampa il telefono, anche per le configurazioni salvate prima
+      che la scelta esistesse.
+      Scegliendo il banco con la stampa automatica spenta non stamperebbe
+      nessuno: l'impostazione lo dice, invece di lasciarlo scoprire a
+      servizio iniziato. E col rimbalzo il pallino della sala non finge di
+      sapere: dice che a stampare è il banco.
+    status: implemented
+    generate_issue: false
+    labels: [stampa, impostazioni]
+    test_cases:
+      - tests/component/MenuPage.test.jsx
+      - tests/unit/statoStampante.test.js
 
   # ══════════════════════════════════════════════════════════════════════
   #  NOTIFICHE

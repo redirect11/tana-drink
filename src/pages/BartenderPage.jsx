@@ -56,6 +56,7 @@ import MenuManager from '../components/MenuManager.jsx'
 import PrinterSetup from '../components/PrinterSetup.jsx'
 import InventoryManager from '../components/InventoryManager.jsx'
 import SettingsTab from '../components/SettingsTab.jsx'
+import PallinoStampante from '../components/PallinoStampante.jsx'
 import StatsTab from '../components/StatsTab.jsx'
 import StaffHoursTab from '../components/StaffHoursTab.jsx'
 import UtentiTab from '../components/UtentiTab.jsx'
@@ -234,7 +235,7 @@ export default function BartenderPage() {
         {/* L'«indietro» sta nella barra in alto, fra il ☰ e il marchio
             (vedi App.jsx): dentro la pagina si mangiava la prima riga di
             contenuto in ogni sezione. */}
-        {tabEffettivo === 'coda' && <OrderQueue mieiIniziale={salaMiei} />}
+        {tabEffettivo === 'coda' && <OrderQueue mieiIniziale={salaMiei} gestore={isGestore(role)} />}
         {/* «Da servire»: la sezione della sala (drink pronti da portare). */}
         {tabEffettivo === 'servizio' && <ServiceQueue />}
         {tabEffettivo === 'pagamenti' && <CashFlow canManageStaff={isGestore(role)} />}
@@ -409,7 +410,7 @@ function PortaInVista({ id }) {
   return null
 }
 
-function OrderQueue({ mieiIniziale = false }) {
+function OrderQueue({ mieiIniziale = false, gestore = false }) {
   const [ordersReady, setOrdersReady] = useState(false) // primo snapshot arrivato
   const [ordersRaw, setOrders] = useState([])
   // CONTI APPENA CHIUSI QUI: fuori dalla lista all'istante. La scrittura
@@ -1388,6 +1389,10 @@ function OrderQueue({ mieiIniziale = false }) {
             onChange={(e) => setSearch(e.target.value)}
           />
           <div className="board-actions">
+            {/* SI STAMPERÀ? La domanda viene in mente mentre si prende
+                l'ordine, non nelle impostazioni — e in sala le
+                impostazioni non ci sono affatto. */}
+            <PallinoStampante gestore={gestore} />
             {/* Un tasto solo per le cose che si fanno ogni tanto: i
                 pannelli (chiamate e gruppi) e il verso della lista. Erano
                 parole in fila in una riga che serve alla ricerca. */}
