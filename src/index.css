@@ -5617,3 +5617,78 @@ body.pagina-piena .pagina-inventario .inv-scroll {
     display: none;
   }
 }
+
+/* ── IL MENU AGGANCIATO ALLA PAGINA ────────────────────────────────────
+   Dove la pagina ha sezioni sue (Impostazioni, Inventario) il menu resta
+   aperto DENTRO la pagina: il contenuto si stringe per fargli posto invece
+   di finirci sotto. Chi vuole tutta la larghezza lo chiude col ✕.
+
+   Solo da tablet in su: sul telefono una colonna fissa da 250px sarebbe
+   piu' di meta' schermo, e li' il menu a scomparsa va benissimo. */
+.bar-nav-aggancia {
+  margin-left: auto;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font-size: 0.95rem;
+  line-height: 1;
+  cursor: pointer;
+  display: none; /* si accende solo dove la pagina puo' davvero stringersi */
+}
+
+@media (min-width: 901px) {
+  .bar-nav-aggancia {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* La pagina diventa una riga: menu a sinistra, contenuto a destra. */
+  body.drawer-agganciato .bar-page {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 14px;
+  }
+  body.drawer-agganciato .bar-content {
+    flex: 1;
+    min-width: 0; /* senza, una tabella larga sfonda la riga */
+  }
+
+  /* Il menu esce dal suo strato sopra la pagina e diventa una colonna. */
+  body.drawer-agganciato .bar-sidebar.agganciata {
+    position: static;
+    transform: none;
+    z-index: auto;
+    flex-shrink: 0;
+    align-self: stretch;
+    max-height: 100%;
+    padding-top: 18px;
+    border-radius: 14px;
+  }
+  /* Niente velo: non c'e' piu' niente da coprire. */
+  body.drawer-agganciato .bar-nav-overlay {
+    display: none;
+  }
+  /* E niente ☰ flottante: il menu e' gia' li', aperto. */
+  body.drawer-agganciato .bar-burger {
+    display: none;
+  }
+
+  /* Con la pagina che deve stare tutta nella finestra la catena delle
+     altezze scende per COLONNE: la riga menu+contenuto prende quel che
+     resta, e dentro ognuno scorre per conto suo. */
+  body.pagina-piena.drawer-agganciato .bar-page {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: row;
+  }
+  body.pagina-piena.drawer-agganciato .bar-sidebar.agganciata {
+    min-height: 0;
+    overflow-y: auto;
+  }
+}

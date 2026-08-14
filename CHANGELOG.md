@@ -24,13 +24,14 @@
 
 ### Per chi gestisce
 
-- **Le sezioni di una pagina tornano nella pagina**, aperte a sinistra:
-  Impostazioni, Inventario e le altre si stringono per far loro posto
-  invece di finirci sotto. Chi ha bisogno di spazio le **riduce a icone**
-  col « in cima, e le ritrova strette la volta dopo. Erano finite tutte nel
-  menu a scomparsa: il conto lo pagava chi salta fra Prodotti e Conta venti
-  volte di seguito, aprendo il menu ogni volta e perdendo di vista dove
-  era. Restano anche nel menu, per arrivarci da un'altra pagina.
+- **Nelle pagine con più sezioni il menu resta aperto**, da tablet in su:
+  in Impostazioni e in Inventario non copre più il contenuto, è una colonna
+  della pagina e il resto si stringe per fargli posto. Dentro l'inventario
+  si salta fra Prodotti e Conta venti volte di seguito, e ogni volta
+  bisognava aprire il menu, cercare, scegliere — e intanto non si vedeva
+  più dove si era. Chi vuole tutta la larghezza lo **chiude col ✕**, e
+  resta chiuso anche il giorno dopo; il 📌 lo riapre. Sulla coda ordini
+  resta a scomparsa, che lì sarebbe una colonna in meno di conti.
 
 ### Al banco
 

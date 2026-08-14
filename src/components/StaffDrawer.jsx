@@ -28,6 +28,17 @@ export default function StaffDrawer({ role, active = null, onSelect = null }) {
   const [gruppiAperti, setGruppiAperti] = useState(
     () => localStorage.getItem('tana:drawer-gruppi') === '1'
   )
+  // ── IL MENU AGGANCIATO ALLA PAGINA ────────────────────────────────
+  // Dove la pagina ha delle sezioni sue (Impostazioni, Inventario) il menu
+  // resta APERTO come parte della pagina: il contenuto si stringe per fargli
+  // posto invece di finirci sotto. Lì dentro si salta da una sezione
+  // all'altra venti volte di seguito, e un menu che copre significa aprire,
+  // cercare, scegliere — e intanto non vedere più dove si era.
+  // Chi ha bisogno di tutta la larghezza lo chiude col ✕, e resta chiuso
+  // anche domani: la scelta è di chi lavora, non nostra.
+  const [agganciato, setAgganciato] = useState(
+    () => localStorage.getItem('tana:drawer-agganciato') !== '0'
+  )
   const navigate = useNavigate()
   const utente = auth.currentUser
   const nomeUtente = utente?.displayName || String(utente?.email || '').split('@')[0] || 'Il mio profilo'
@@ -54,6 +65,25 @@ export default function StaffDrawer({ role, active = null, onSelect = null }) {
     document.body.classList.toggle('drawer-open', open)
     return () => document.body.classList.remove('drawer-open')
   }, [open])
+
+  // Solo le pagine con sezioni proprie tengono il menu agganciato: sulla
+  // coda ordini sarebbe una colonna in meno di conti. La classe sta sul
+  // body perché a diventare una riga dev'essere la PAGINA, che sta in un
+  // altro componente; sul telefono il CSS la ignora — lì una colonna fissa
+  // sarebbe mezzo schermo.
+  const dock = agganciato && sotto.voci.length > 0
+  useEffect(() => {
+    document.body.classList.toggle('drawer-agganciato', dock)
+    return () => document.body.classList.remove('drawer-agganciato')
+  }, [dock])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('tana:drawer-agganciato', agganciato ? '1' : '0')
+    } catch {
+      /* niente memoria: vale per questa volta */
+    }
+  }, [agganciato])
 
   // Gruppi nel drawer (quadratini): attivi se l'impostazione lo prevede.
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
@@ -119,10 +149,27 @@ export default function StaffDrawer({ role, active = null, onSelect = null }) {
         ☰
       </button>
       <div className={`bar-nav-overlay${open ? ' open' : ''}`} onClick={() => setOpen(false)} />
-      <nav className={`bar-sidebar${open ? ' open' : ''}`}>
+      <nav className={`bar-sidebar${open ? ' open' : ''}${dock ? ' agganciata' : ''}`}>
         <div className="brand-mini">
           <img src={`${import.meta.env.BASE_URL}logo.png`} alt="" />
           Gestionale
+          {/* Aggancia o stacca. Compare solo dove ha senso — pagine con
+              sezioni proprie, schermo largo — e dice cosa fa: chiuderlo
+              restituisce larghezza al contenuto. */}
+          {sotto.voci.length > 0 && (
+            <button
+              type="button"
+              className="bar-nav-aggancia"
+              onClick={() => {
+                setAgganciato((v) => !v)
+                setOpen(false)
+              }}
+              title={dock ? 'Chiudi il menu e allarga la pagina' : 'Tieni il menu aperto nella pagina'}
+              aria-label={dock ? 'Chiudi il menu' : 'Tieni il menu aperto'}
+            >
+              {dock ? '✕' : '📌'}
+            </button>
+          )}
         </div>
         {/* IL SECONDO LIVELLO STA QUI DENTRO, sotto la pagina in cui ci si
             trova. È il modo in cui si fa di solito con un menu a scomparsa:
