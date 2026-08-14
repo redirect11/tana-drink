@@ -129,3 +129,25 @@ bugs:
     generate_issue: true
     labels: [bug, comande, ui]
     test_cases: []
+
+  - id: BUG-006
+    title: "Nel pagamento a righe separate il meno spegne anche quelle sotto"
+    area: "src/components/PaymentScreen.jsx"
+    description: >
+      Con «Separa uguali», su tre birre uguali: premendo − su una si
+      spengono anche tutte quelle sotto, mentre premendo + se ne riaccende
+      una sola. Chi incassa vede sparire dal conto roba che non ha toccato,
+      e se non se ne accorge il cliente paga meno di quello che ha preso.
+      La causa è che le righe separate sono un modo di DISEGNARE una riga
+      sola: la selezione resta un numero per prodotto (sel[key] = quante
+      unità pagare) e le unità mostrate sono «le prime N accese». Toccare
+      la seconda di tre non vuol dire «questa sì, questa no», vuol dire
+      «portami il contatore a due» — e la terza si spegne per forza. Serve
+      una selezione per UNITÀ, non un contatore per prodotto.
+      In produzione (1.3.1) la stessa cosa succede con le caselline da
+      spuntare: spuntandone una in mezzo, si spengono quelle sotto.
+    in_produzione: true
+    status: todo
+    generate_issue: true
+    labels: [bug, pagamenti]
+    test_cases: []

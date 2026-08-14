@@ -498,6 +498,24 @@ requirements:
     labels: [pagamenti, stampa]
     test_cases: [tests/component/PaymentScreen.test.jsx]
 
+  - id: REQ-PAG-009
+    title: "Nel pagamento gli item sono separati di partenza"
+    area: "src/components/PaymentScreen.jsx, src/lib/pagamento.js"
+    description: >
+      La schermata di incasso mostra gli item UNO PER RIGA fin da subito,
+      senza dover premere «Separa uguali»: al banco si paga quasi sempre a
+      pezzi — uno paga il suo, un altro offre due birre — e partire dal
+      gruppo «3× Birra» vuol dire un tocco in piu' ogni volta, proprio
+      mentre c'e' gente alla cassa. Restano possibili sia il raggruppamento
+      («Unisci uguali», per un conto lungo che diventa illeggibile) sia
+      l'incasso completo con un colpo solo.
+      Ogni unita' e' una cosa a se': accenderne o spegnerne una non tocca
+      le altre (vedi BUG-006, che nasce dallo stesso punto).
+    status: todo
+    generate_issue: true
+    labels: [pagamenti, ui]
+    test_cases: []
+
   # ══════════════════════════════════════════════════════════════════════
   #  CASSA DI SERATA, STATISTICHE, RENDICONTO
   # ══════════════════════════════════════════════════════════════════════
@@ -1066,25 +1084,26 @@ requirements:
     test_cases: []
 
   - id: REQ-STAMPA-006
-    title: "Anche lo staff di sala può ristampare la comanda"
-    area: "src/pages/OrderStatusPage.jsx, src/components/PrinterSetup.jsx, src/lib/ruoli.js"
+    title: "Lo staff di sala stampa le comande degli ordini che prende"
+    area: "src/components/OrderPosDetail.jsx, src/components/SettingsTab.jsx, src/pages/OrderStatusPage.jsx"
     description: >
-      Oggi la comanda la stampa solo chi è admin o bartender: il dettaglio col
-      tasto 🖨 arriva a loro (isGestore, OrderStatusPage), e la sezione
-      Impostazioni → Stampante sta nel menu del gestionale, che lo staff di
-      sala non ha. Se la comanda non è uscita o si è persa fra i tavoli, chi
-      porta i vassoi deve andare a cercare il bartender per farsela ristampare
-      — cioè fermare chi sta preparando.
-      Comportamento atteso: chi è staff di sala può RISTAMPARE la comanda di un
-      ordine che vede, dalla schermata di stato e dalla coda del servizio, con
-      lo stesso tasto e la stessa stampa che usa il banco. Restano al
-      gestionale la configurazione della stampante e lo scontrino: alla sala
-      serve la comanda, non la cassa.
-      Da chiarire implementando: IP della stampante e certificato accettato
-      sono per DISPOSITIVO, non per account, quindi il telefono della sala va
-      comunque preparato una volta. O lo prepara un gestore su quel telefono,
-      o serve un modo per passargli le impostazioni della stampante senza
-      aprirgli tutto il gestionale.
+      Chi è in sala prende ordini — «Nuovo ordine» è nel menu di tutti e la
+      cassa POS non chiede il ruolo — quindi deve poter STAMPARE la comanda di
+      quello che ha appena preso, come si fa al banco. Oggi non ci arriva:
+      l'IP della stampante si imposta in Impostazioni → Stampante, che sta nel
+      menu del gestionale, e quel menu lo staff di sala non ce l'ha. Sul suo
+      telefono la stampante resta non configurata e «Invia» fallisce.
+      Funziona solo di rimbalzo: se il tablet del banco è aperto sulla coda e
+      ha la stampa automatica accesa, la comanda esce lì. Se quella schermata
+      non è aperta, non esce niente e l'ordine resta solo a schermo.
+      Comportamento atteso: lo staff di sala stampa la comanda dell'ordine che
+      prende, e può ristamparla dopo dall'ordine che vede (oggi il 🖨 sul
+      dettaglio è solo di admin e bartender). Restano al gestionale lo
+      scontrino e la cassa: alla sala serve la comanda.
+      Da sciogliere implementando: IP e certificato sono per DISPOSITIVO, non
+      per account, quindi il telefono della sala va preparato una volta. O si
+      apre la sola sezione Stampante anche alla sala, o un gestore la prepara
+      su quel telefono, o si passano le impostazioni da un terminale all'altro.
     status: todo
     generate_issue: true
     labels: [stampa, ruoli, sala]
