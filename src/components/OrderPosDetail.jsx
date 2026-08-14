@@ -46,7 +46,7 @@ import { isPersonale } from '../lib/ruoli.js'
 import {
   makeLineId,
   mergeLines,
-  splitLine,
+  splitAll,
   hasMergeable,
   moveLine,
   reconcileLayout,
@@ -855,11 +855,9 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   // Separa/Unisci agiscono su TUTTE le voci visibili: la bozza + gli item
   // delle comande modificabili (confermati). Sui confermati si programma il
   // salvataggio come per le altre modifiche per-riga.
-  const explode = (items) =>
-    (items || []).flatMap((it) => {
-      const q = Math.floor(Number(it.qty) || 0)
-      return q > 1 ? Array.from({ length: q }, () => ({ ...it, qty: 1 })) : [it]
-    })
+  // Separare vuol dire anche dare a ogni riga nuova un identificativo suo:
+  // vedi splitAll in lib/orderLines.js (le righe con lo stesso id sparivano).
+  const explode = (items) => splitAll(items)
   const transformEditableComande = (transform) => {
     for (const c of effComande) {
       if (!comandaEditable(c)) continue
@@ -876,7 +874,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
     transformEditableComande((items) => mergeLines(items))
   }
   const splitAllDraft = () => {
-    setDraft((items) => items.reduce((acc, l) => acc.concat(splitLine([l], l.line_id)), []))
+    setDraft((items) => splitAll(items))
     transformEditableComande(explode)
   }
   const editableComande = effComande.filter(comandaEditable)
@@ -1480,6 +1478,19 @@ export default function OrderPosDetail({ order: orderProp = null }) {
               <strong className="posd-title" style={{ display: 'block', flex: 1, minWidth: 0 }}>
                 {panelTitle}
               </strong>
+              {/* La storia sta qui, in alto, come SOLA ICONA: da tasto largo
+                  si prendeva una riga intera accanto a Unisci/Separa/Comande,
+                  per una cosa che si guarda ogni tanto. */}
+              {!isNew && (
+                <button
+                  className="btn ghost small posd-storia"
+                  onClick={() => setShowStoria(true)}
+                  aria-label="Storia del conto"
+                  title="Storia del conto: aperto, chiuso, annullato, riaperto"
+                >
+                  🕘
+                </button>
+              )}
               {telefono && (
                 <button
                   className="btn ghost small"
@@ -1518,17 +1529,6 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                   title={isNew ? 'Il conto non è ancora stato aperto' : 'Storico comande'}
                 >
                   <IconReceipt /> Comande ({isNew ? 0 : comande.length})
-                </button>
-                {/* Sul telefono sta nei ⋯ insieme al resto; qui il ⋯ non
-                    c'è (sarebbe un doppione), quindi la storia ha il suo
-                    tasto. */}
-                <button
-                  className="btn ghost small"
-                  onClick={() => setShowStoria(true)}
-                  disabled={isNew}
-                  title={isNew ? 'Il conto non è ancora stato aperto' : 'Aperto, chiuso, annullato, riaperto'}
-                >
-                  🕘 Storia
                 </button>
                 {/* Questo compare e sparisce, al contrario degli altri: su un
                     conto in corso non vuol dire niente, e un tasto che

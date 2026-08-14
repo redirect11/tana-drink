@@ -24,7 +24,7 @@ export function DrinkTile({
       onClick={onAdd}
       // Serve alla ricerca per ritrovare la card e portarcisi sopra.
       data-drink-id={drink.id}
-      className={acceso ? 'prodotto-acceso' : undefined}
+      className={`pos-tile-striscia${acceso ? ' prodotto-acceso' : ''}`}
       style={{
         background: inCart
           ? 'rgba(var(--accent-rgb, 180, 120, 60), 0.18)'
@@ -32,6 +32,9 @@ export function DrinkTile({
         border: inCart
           ? '2px solid rgba(var(--accent-rgb, 180, 120, 60), 0.7)'
           : '1px solid var(--line)',
+        // La striscia a sinistra col colore del prodotto: lo stesso segno
+        // delle card della coda e del menù (il CSS la ispessisce).
+        borderLeftColor: color || 'var(--line)',
         borderRadius: 12,
         padding: '0.5em 0.62em 0.38em',
         cursor: 'pointer',
@@ -88,6 +91,7 @@ export function DrinkTile({
       {color && (
         <div
           aria-hidden
+          className="pos-tile-nastro"
           style={{
             position: 'absolute',
             top: 0,

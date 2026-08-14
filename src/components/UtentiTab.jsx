@@ -212,7 +212,7 @@ export default function UtentiTab({ role = null }) {
 
   return (
     <div>
-      <h2>🧑‍🤝‍🧑 Utenti e ruoli</h2>
+      {/* Il titolo sta nella barra in alto (vedi lib/sezioni.js). */}
       {error && <div className="banner">Errore: {error}</div>}
 
       {!admin && (

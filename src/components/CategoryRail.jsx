@@ -1,15 +1,17 @@
-import { useEffect, useRef } from 'react'
+import { useState } from 'react'
+import { usePaginaPiena } from '../lib/paginaPiena.js'
 
 // CATEGORIE A SINISTRA, contenuto a destra — lo stesso schema del POS
-// (PosProductPicker), riusato nel backoffice per Inventario e Menù così la
-// navigazione per categoria è omogenea ovunque. Su schermo stretto la
-// barra passa in orizzontale scorrevole sopra il contenuto.
+// (PosProductPicker), riusato nel backoffice per Inventario, Menù e
+// Impostazioni, così la navigazione per sezione è omogenea ovunque. Su
+// schermo stretto la barra passa in orizzontale scorrevole sopra il
+// contenuto.
 //
-// La barra sta SEMPRE lì. C'è stato un tasto per farla sparire e allargare il
-// contenuto: sul telefono, dove le categorie sono già una riga che scorre, non
-// serviva a niente, e in cambio si perdeva l'unico modo di girare tra le
-// categorie. Se un giorno servisse davvero, la strada è un menu a scomparsa,
-// non una barra che si nasconde.
+// LA BARRA NON SPARISCE, SI STRINGE. C'è stato un tasto per farla sparire del
+// tutto: si perdeva l'unico modo di girare fra le sezioni, e sul telefono —
+// dove sono già una riga che scorre — non serviva a niente. Il modo giusto
+// era l'altro: restare, ma occupare poco. Stretta resta solo l'icona, il
+// nome torna sfiorandola col mouse (e nel titolo, per chi usa le dita).
 //
 //   items: [{ key, label, count, color, icon }] — `count`, `color` e `icon`
 //          opzionali: col colore la voce porta il pallino della categoria,
@@ -20,50 +22,58 @@ import { useEffect, useRef } from 'react'
 //          suo. Serve dove le voci sono tante (le impostazioni): per
 //          arrivare all'ultima si scorreva la pagina intera, testata
 //          compresa, e la barra spariva proprio mentre la si usava.
-export default function CategoryRail({ items, selected, onSelect, children, pieno = false }) {
-  const rif = useRef(null)
-
-  // L'ALTEZZA SI MISURA, NON SI INDOVINA. Prima era un conto in CSS
-  // (100dvh meno la testata, meno un margine): ma la testata cambia altezza
-  // con lo zoom e col telefono, sotto c'è il piè di pagina, e il conto era
-  // sempre un po' sbagliato — la pagina sforava e si scorreva lo stesso,
-  // che è esattamente quello che si voleva togliere. Qui si guarda dove
-  // comincia davvero il riquadro e cosa gli sta sotto.
-  useEffect(() => {
-    const el = rif.current
-    if (!pieno || !el) return undefined
-    const stretto = () => window.matchMedia('(max-width: 700px)').matches
-    const calcola = () => {
-      // Sul telefono la barra passa in orizzontale sopra al contenuto:
-      // un'altezza fissa lo strozzerebbe in una finestrella.
-      if (stretto()) {
-        el.style.removeProperty('height')
-        return
+//   chiave: dove ricordare "stretta o larga". Ogni pagina la sua: in
+//          Inventario serve stretta (dentro c'è già una barra di categorie),
+//          nelle Impostazioni di solito larga.
+//   scorre: false quando il contenuto si arrangia da sé con lo scorrimento
+//          (una lista lunga con la sua testata fissa): due barre di
+//          scorrimento una dentro l'altra sono un modo per non trovare più
+//          niente.
+export default function CategoryRail({
+  items,
+  selected,
+  onSelect,
+  children,
+  pieno = false,
+  chiave = 'cat',
+  scorre = true,
+}) {
+  const memoria = `tana:barra-stretta:${chiave}`
+  const [stretta, setStretta] = useState(() => {
+    try {
+      return localStorage.getItem(memoria) === '1'
+    } catch {
+      return false
+    }
+  })
+  const cambia = () =>
+    setStretta((v) => {
+      const nv = !v
+      try {
+        localStorage.setItem(memoria, nv ? '1' : '0')
+      } catch {
+        /* niente memoria: vale per questa volta */
       }
-      // `zoom` su #root: rect e innerHeight sono in pixel dello schermo,
-      // l'altezza che scriviamo è in pixel della pagina zoomata.
-      const z =
-        Number(getComputedStyle(document.documentElement).getPropertyValue('--zoom')) || 1
-      const sotto = document.querySelector('.app-footer')?.getBoundingClientRect().height || 0
-      const alto = (window.innerHeight - el.getBoundingClientRect().top - sotto - 10) / z
-      const nuova = `${Math.max(220, Math.floor(alto))}px`
-      if (el.style.height !== nuova) el.style.height = nuova
-    }
-    calcola()
-    window.addEventListener('resize', calcola)
-    // Quello che sta SOPRA può cambiare (un avviso, la barra che si apre):
-    // l'altezza va rifatta, se no torna a sforare.
-    const osserva = new ResizeObserver(calcola)
-    osserva.observe(document.body)
-    return () => {
-      window.removeEventListener('resize', calcola)
-      osserva.disconnect()
-    }
-  }, [pieno])
+      return nv
+    })
+
+  // La schermata sta tutta nella finestra: vedi lib/paginaPiena.js.
+  usePaginaPiena(pieno)
 
   return (
-    <div ref={rif} className={`cat-layout${pieno ? ' cat-pieno' : ''}`}>
+    <div
+      className={`cat-layout${pieno ? ' cat-pieno' : ''}${stretta ? ' cat-stretta' : ''}`}
+    >
       <aside className="cat-rail">
+        <button
+          type="button"
+          className="chip cat-rail-stringi"
+          onClick={cambia}
+          title={stretta ? 'Allarga il menu' : 'Stringi il menu a icone'}
+          aria-label={stretta ? 'Allarga il menu' : 'Stringi il menu a icone'}
+        >
+          {stretta ? '»' : '«'}
+        </button>
         {items.map((it) => (
           <button
             key={it.key}
@@ -82,7 +92,7 @@ export default function CategoryRail({ items, selected, onSelect, children, pien
           </button>
         ))}
       </aside>
-      <div className="cat-content">{children}</div>
+      <div className={`cat-content${scorre ? '' : ' cat-content-fisso'}`}>{children}</div>
     </div>
   )
 }

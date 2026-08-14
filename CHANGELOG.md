@@ -1,5 +1,77 @@
 # Cosa è cambiato
 
+## 1.4.1 — 14 agosto 2026
+
+### Al banco
+
+- **Le Impostazioni entrano tutte nella finestra**, senza scorrere la
+  pagina: la testata in alto, il piè di pagina in fondo, e in mezzo
+  l'elenco delle sezioni e il contenuto, che **scorrono ognuno per conto
+  suo** — l'elenco resta lì mentre si legge la sezione, invece di
+  trascinarsi via insieme alla pagina.
+- **Sulle card del menù i due segni dicono cose diverse, dove uno se le
+  aspetta.** La **striscia a sinistra** dice come sta il prodotto — verde
+  si può fare, arancione un ingrediente sta finendo, rosso non si può
+  fare — come sulle card della coda dice com'è messo il conto. Il colore
+  al banco è diventato una **linguetta nell'angolo**, disegnata come sulle
+  tile del POS: si tocca per cambiarlo. Prima erano un quadratino che
+  sembrava un'etichetta (ed era un tasto) e un pallino il cui rosso
+  diceva due cose opposte.
+- **Anche le tile del POS hanno la striscia a sinistra**, come le card
+  della coda e del menù: lo stesso oggetto si riconosce allo stesso modo
+  in ogni schermata.
+- **«Ultimi movimenti» non è più un tastone in fondo alla lista**: è una
+  sezione del menu del magazzino, con gli ultimi cento invece di trenta.
+- **«Separa» ora separa davvero tutte le righe.** Si univa tutto, si
+  premeva Separa e tornavano su solo le ultime voci: le altre mostravano
+  quantità 1 e le righe in più non comparivano. Nascevano tutte con lo
+  stesso identificativo, e a schermo le righe si distinguono per quello.
+- **Nel magazzino i due segni dicono due cose.** Il **pallino** dice
+  quanta roba c'è (verde/arancione/rosso), la **striscia** che assortimento
+  è: grigia in assortimento, blu in linea, oro premium, rossa fuori
+  assortimento. Prima dicevano tutti e due la stessa cosa.
+- **Nel menù la striscia dice com'è messo il prodotto**: grigia non è in
+  menu, verde le scorte ci sono, arancione un ingrediente sta finendo,
+  rossa un ingrediente è finito. Il rosso prima diceva due cose opposte —
+  «l'ho tolto io» e «è finito il rum» — che chiedono azioni diverse.
+- **L'intestazione della tabella del magazzino non scorre più via**:
+  scorrendo trecento prodotti si perdevano i nomi delle colonne, e «6,20 €»
+  senza sapere se è con o senza IVA non vuol dire niente.
+- **In «Organizza» il trascinamento funziona come ci si aspetta**: la card
+  segue il dito, le altre si spostano per farle posto, e lasciandola resta
+  dove l'hai messa. Si può riordinare anche **da tastiera**. La maniglia è
+  attaccata alla card — erano due oggetti con una fessura in mezzo — e ha
+  il colore di casa al posto della macchia senape.
+- **Le sezioni di una pagina stanno nel menu a scomparsa**, rientrate sotto
+  la pagina aperta: un posto solo per navigare, uguale sul telefono e sul
+  computer. In pagina costavano una colonna o una riga tutto il giorno;
+  nella barra reggevano cinque voci, non ventidue.
+- Nel conto, **la storia è un'icona in alto** accanto al numero: da tasto
+  largo si prendeva una riga intera accanto a Unisci, Separa e Comande.
+- **Sul telefono la barra in alto respira.** C'erano otto cose in una riga
+  e il nome del locale finiva in «La …»: ora sotto i 700px restano il
+  logo, il menu, dove sei e le azioni. L'«indietro» sparisce perché il
+  menu fa quello che fa lui e in più — dalla coda alle impostazioni in un
+  tocco solo. I tasti restano grandi: si toglie, non si rimpicciolisce.
+- **Le sezioni di una pagina si scelgono dalla barra in alto.** Nel
+  magazzino (Prodotti, Conta, Ordini, Scadenzario, Categorie,
+  Macro-categorie, Fornitori, Movimenti) e nelle Impostazioni: il **titolo
+  della pagina è il comando**, con la freccia. Prima erano file di tasti o
+  una colonna a sinistra — spazio occupato tutto il giorno per una scelta
+  che si fa ogni tanto. **Sul telefono** si apre il foglio dal basso, lo
+  stesso gesto di «⋯ Azioni».
+- **I filtri del magazzino stanno su una riga sola**, e ora c'è scritto
+  che sono filtri: sembravano un riepilogo, e nessuno pensava di toccarli.
+  Il valore di magazzino resta lì accanto, ma non si tocca: è un numero da
+  leggere.
+- **Nel magazzino scorre solo la lista**: filtri, ricerca e categorie
+  restano fermi. Prima si risaliva da capo per tornare alla ricerca.
+- **Il titolo della pagina è passato nella barra in alto**, accanto al
+  nome del locale: dentro la pagina si prendeva una riga in cima al
+  contenuto, e su un tablet al banco quella riga si vede.
+
+---
+
 ## 1.4.0 — 13 agosto 2026
 
 ### Al banco
