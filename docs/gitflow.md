@@ -117,6 +117,13 @@ git checkout -b release/1.4.x   # correzioni
 git checkout -b release/1.5.x   # oppure: funzione nuova
 ```
 
+**Mentre si lavora, `package.json` porta il numero della PROSSIMA versione
+col suffisso `-beta`** (es. `1.4.2-beta`): così l'app in test dice
+`v1.4.2-beta · release/1.4.x · <commit>` e non si confonde con quello che è
+davvero uscito. Al rilascio (passo 1) si toglie il `-beta`. Se le note in
+`CHANGELOG.md` parlano di una versione e l'app ne dice un'altra, chi segnala
+un problema dichiara un numero che non esiste.
+
 **Il numero di versione che l'app mostra lo dice `package.json`, non il
 tag.** Il tag può stare dove capita nella storia; `package.json` invece sta su
 ogni ramo e viene allineato al passo 1. Se si salta quel passo, tutti gli

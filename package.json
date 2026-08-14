@@ -1,7 +1,7 @@
 {
   "name": "karaoke-drink",
   "private": true,
-  "version": "1.4.2",
+  "version": "1.4.3-beta",
   "type": "module",
   "description": "App per la prenotazione dei drink del cocktail bar La Tana del Coniglio",
   "scripts": {
