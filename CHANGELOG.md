@@ -24,7 +24,8 @@
 
 ### Per chi gestisce
 
-- **Nelle pagine con più sezioni il menu resta aperto**, da tablet in su:
+- **Nelle pagine con più sezioni il menu resta aperto**, dal tablet in
+  verticale in su:
   in Impostazioni e in Inventario non copre più il contenuto, è una colonna
   della pagina e il resto si stringe per fargli posto. Dentro l'inventario
   si salta fra Prodotti e Conta venti volte di seguito, e ogni volta
