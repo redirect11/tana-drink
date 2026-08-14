@@ -29,6 +29,7 @@ import { onAuthStateChanged } from 'firebase/auth'
 import { useMenu } from '../lib/menuCache.js'
 import { isGestore, isPersonale } from '../lib/ruoli.js'
 import { idDispositivo } from '../lib/dispositivo.js'
+import { printComanda, salaStampaDaSe } from '../lib/printer.js'
 import OrderSummary from '../components/OrderSummary.jsx'
 import StaffDrawer from '../components/StaffDrawer.jsx'
 import CustomDrinkForm from '../components/CustomDrinkForm.jsx'
@@ -283,6 +284,18 @@ export default function MenuPage() {
         ...extraCharges,
       })
       rememberOrderId(order.id)
+      // LA COMANDA DI CHI PRENDE L'ORDINE AL TAVOLO. Prima non usciva
+      // niente: si sperava che al banco qualcuno avesse la coda aperta con
+      // la stampa automatica accesa. Ora la stampa il telefono che ha preso
+      // l'ordine — ha l'IP, la configurazione arriva dal server — a meno che
+      // il locale non abbia scelto di farla uscire al banco ('rimbalzo').
+      // La stampa non si aspetta: se fallisce lo dice il pallino nella coda,
+      // e l'ordine è comunque salvato.
+      if (staff && salaStampaDaSe()) {
+        printComanda(order, order.comande?.at(-1) ?? null).catch((e) =>
+          console.warn('[printer] comanda sala:', e.message)
+        )
+      }
       cart.clear()
       navigate(`/ordine/${order.id}`)
     } catch (e) {

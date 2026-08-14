@@ -25,6 +25,12 @@ export const DEFAULT_PRINTER_SETTINGS = {
   ivaRate: 10,      // aliquota IVA applicata sullo scontrino
   autoPrintComanda: false,  // stampa automatica comanda all'arrivo dell'ordine
   autoPrintScontrino: false, // stampa automatica scontrino al "pronto"
+  // CHI STAMPA LE COMANDE PRESE IN SALA: 'ip' = il telefono della sala parla
+  // da sé con la stampante (ha l'IP: la configurazione arriva dal server);
+  // 'rimbalzo' = la sala non stampa e la comanda esce al banco, che deve
+  // avere la coda aperta e la stampa automatica accesa. Lo decide il locale,
+  // una volta, dal terminale del banco.
+  stampaSala: 'ip',
   businessName: 'La Tana del Coniglio',
   businessAddress: 'Corso Tommaso Vitale 87/89',
   businessCity: '80035 Nola - Italy',
@@ -45,6 +51,12 @@ export function claimReceiptPrint(orderId) {
   } catch {
     return true // storage non disponibile: meglio stampare che non stampare
   }
+}
+
+// La sala stampa da sé? Una domanda sola, in un posto solo: la fanno la
+// schermata che prende l'ordine e il pallino che dice se si stamperà.
+export function salaStampaDaSe(s = loadPrinterSettings()) {
+  return s.stampaSala !== 'rimbalzo'
 }
 
 export function loadPrinterSettings() {

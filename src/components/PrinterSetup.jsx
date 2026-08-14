@@ -162,6 +162,48 @@ export default function PrinterSetup() {
         </label>
       </fieldset>
 
+      {/* ── Chi stampa le comande della sala ── */}
+      <fieldset style={{ border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: 12, marginBottom: 12 }}>
+        <legend className="muted" style={{ fontSize: '0.85rem', padding: '0 6px' }}>
+          Comande prese in sala
+        </legend>
+
+        {/* La sala l'IP ce l'ha (la configurazione qui sotto arriva a tutti i
+            dispositivi dal server): quello che il locale decide qui è se i
+            telefoni parlino con la stampante o se la comanda esca al banco. */}
+        <div className="mode-choice">
+          <button
+            type="button"
+            className={`mode-option${form.stampaSala !== 'rimbalzo' ? ' active' : ''}`}
+            onClick={() => { setForm((f) => ({ ...f, stampaSala: 'ip' })); setSaved(false) }}
+          >
+            📱 La stampa il telefono
+          </button>
+          <button
+            type="button"
+            className={`mode-option${form.stampaSala === 'rimbalzo' ? ' active' : ''}`}
+            onClick={() => { setForm((f) => ({ ...f, stampaSala: 'rimbalzo' })); setSaved(false) }}
+          >
+            🖨️ La stampa il banco
+          </button>
+        </div>
+
+        <p className="muted" style={{ fontSize: '0.8rem', margin: '8px 0 0' }}>
+          {form.stampaSala === 'rimbalzo'
+            ? 'La comanda esce al banco appena arriva l’ordine. Serve che al banco un terminale tenga aperta la coda ordini con la stampa automatica accesa.'
+            : 'Chi prende l’ordine al tavolo stampa la comanda dal suo telefono. La prima volta, su ogni telefono, va accettato l’avviso di sicurezza della stampante: il pallino nella coda ordini dice se funziona.'}
+        </p>
+
+        {/* Scegliere "la stampa il banco" e lasciare spenta la stampa
+            automatica vuol dire: non stampa nessuno. È successo. */}
+        {form.stampaSala === 'rimbalzo' && !form.autoPrintComanda && (
+          <div className="banner" style={{ marginTop: 8 }}>
+            ⚠️ La stampa automatica della comanda è <strong>spenta</strong>: così
+            le comande della sala non le stampa nessuno. Accendila qui sopra.
+          </div>
+        )}
+      </fieldset>
+
       {/* ── IVA ── */}
       <fieldset style={{ border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: 12, marginBottom: 12 }}>
         <legend className="muted" style={{ fontSize: '0.85rem', padding: '0 6px' }}>Scontrino</legend>

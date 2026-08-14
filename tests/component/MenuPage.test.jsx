@@ -29,7 +29,12 @@ vi.mock('../../src/lib/api.js', () => ({
   subscribeReadyOrders: vi.fn(() => () => {}),
   subscribeOpenGroups: vi.fn(() => () => {}),
   subscribeRecentGroups: vi.fn(() => () => {}),
-  createOrder: vi.fn(() => Promise.resolve({ id: 'o1' })),
+  createOrder: vi.fn(() => Promise.resolve({
+    id: 'o1',
+    daily_number: 7,
+    order_items: [{ drink_id: 'd1', name: 'Mojito', qty: 1, unit_price: 7 }],
+    comande: [{ id: 'c1', seq: 1, items: [{ drink_id: 'd1', name: 'Mojito', qty: 1, unit_price: 7 }] }],
+  })),
   DEFAULT_SETTINGS: { service_mode: 'tavolo' },
 }))
 
@@ -77,6 +82,15 @@ vi.mock('../../src/lib/push.js', () => ({ getPushToken: vi.fn(() => Promise.reso
 vi.mock('../../src/lib/notify.js', () => ({ ensureNotificationPermission: vi.fn() }))
 vi.mock('../../src/components/StaffDrawer.jsx', () => ({ default: () => null }))
 
+// La stampa non si prova davvero (non c'è nessuna Epson qui): si guarda se
+// l'ordine preso al tavolo chiede la sua comanda, e a chi.
+let stampaSala = 'ip'
+const stampata = vi.fn(() => Promise.resolve())
+vi.mock('../../src/lib/printer.js', () => ({
+  printComanda: (...a) => stampata(...a),
+  salaStampaDaSe: () => stampaSala !== 'rimbalzo',
+}))
+
 import MenuPage from '../../src/pages/MenuPage.jsx'
 
 function mostra(percorso = '/menu') {
@@ -94,6 +108,8 @@ const voci = () =>
 beforeEach(() => {
   mockSettings = {}
   ruoloClaim = 'bartender'
+  stampaSala = 'ip'
+  stampata.mockClear()
   localStorage.clear()
   // Al primo accesso il menù mostra il benvenuto a tutta pagina.
   localStorage.setItem('tana_welcome_v1', '1')
@@ -160,5 +176,47 @@ describe('il menù è uno solo, quello del cliente', () => {
     await screen.findByText('Mojito')
     expect(screen.queryByRole('button', { name: /Aggiungi/ })).toBeNull()
     expect(screen.getByText(/Rivolgersi allo staff per ordinare/)).toBeInTheDocument()
+  })
+})
+
+// ── LA COMANDA DI CHI PRENDE L'ORDINE AL TAVOLO ──────────────────────
+// Prima non usciva niente: si sperava che al banco qualcuno tenesse aperta
+// la coda con la stampa automatica accesa. Se quella schermata non era
+// aperta, l'ordine restava solo a schermo e al banco non lo sapeva nessuno.
+describe('la comanda dell’ordine preso in sala', () => {
+  // Il giro vero: prodotto nel carrello, riepilogo, nome del cliente
+  // (senza non si conferma) e conferma.
+  async function ordina(user) {
+    await user.click(screen.getAllByRole('button', { name: /Aggiungi/ })[0])
+    await user.click(screen.getByRole('button', { name: /Rivedi ordine/ }))
+    await user.type(await screen.findByPlaceholderText('es. Mario'), 'Anna')
+    await user.click(screen.getByRole('button', { name: /Conferma ordine/ }))
+  }
+
+  it('la stampa il telefono che ha preso l’ordine', async () => {
+    const user = userEvent.setup()
+    mostra()
+    await screen.findByText(/Inserimento ordine da/)
+    await ordina(user)
+    expect(stampata).toHaveBeenCalledTimes(1)
+    expect(stampata.mock.calls[0][0].id).toBe('o1')
+  })
+
+  it('col rimbalzo il telefono non stampa: esce al banco', async () => {
+    stampaSala = 'rimbalzo'
+    const user = userEvent.setup()
+    mostra()
+    await screen.findByText(/Inserimento ordine da/)
+    await ordina(user)
+    expect(stampata).not.toHaveBeenCalled()
+  })
+
+  it('l’ordine del cliente non stampa dal telefono del cliente', async () => {
+    ruoloClaim = null
+    const user = userEvent.setup()
+    mostra()
+    await screen.findByText('Mojito')
+    await ordina(user)
+    expect(stampata).not.toHaveBeenCalled()
   })
 })
