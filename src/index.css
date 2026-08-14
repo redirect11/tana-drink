@@ -5631,27 +5631,7 @@ body.pagina-piena .pagina-inventario .inv-scroll {
    restano 500px e la scelta ha senso: si tiene aperto, e chi ha bisogno di
    larghezza lo chiude. Fino ai 900px la colonna e' piu' stretta, che 50px
    la' dentro si sentono. */
-.bar-nav-aggancia {
-  margin-left: auto;
-  width: 32px;
-  height: 32px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: transparent;
-  color: inherit;
-  font-size: 0.95rem;
-  line-height: 1;
-  cursor: pointer;
-  display: none; /* si accende solo dove la pagina puo' davvero stringersi */
-}
-
 @media (min-width: 768px) {
-  .bar-nav-aggancia {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-  }
-
   /* La pagina diventa una riga: menu a sinistra, contenuto a destra. */
   body.drawer-agganciato .bar-page {
     display: flex;

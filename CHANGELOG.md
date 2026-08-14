@@ -30,9 +30,9 @@
   della pagina e il resto si stringe per fargli posto. Dentro l'inventario
   si salta fra Prodotti e Conta venti volte di seguito, e ogni volta
   bisognava aprire il menu, cercare, scegliere — e intanto non si vedeva
-  più dove si era. Chi vuole tutta la larghezza lo **chiude col ✕**, e
-  resta chiuso anche il giorno dopo; il 📌 lo riapre. Sulla coda ordini
-  resta a scomparsa, che lì sarebbe una colonna in meno di conti.
+  più dove si era. Si apre e si chiude **col ☰ di sempre**, e la scelta
+  resta anche il giorno dopo. Sulla coda ordini resta a scomparsa, che lì
+  sarebbe una colonna in meno di conti.
 
 ### Al banco
 

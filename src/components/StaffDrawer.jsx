@@ -4,6 +4,7 @@ import { auth } from '../lib/firebaseClient.js'
 import { logoutStaff } from '../lib/logout.js'
 import { devToolsEnabled } from '../dev/devActions.js'
 import { isGestore, RUOLO_ETICHETTA } from '../lib/ruoli.js'
+import { useSchermoLargo } from '../lib/useTelefono.js'
 import { IconGruppo, IconPersona } from './Icons.jsx'
 import VersionBadge from './VersionBadge.jsx'
 import {
@@ -29,16 +30,25 @@ export default function StaffDrawer({ role, active = null, onSelect = null }) {
     () => localStorage.getItem('tana:drawer-gruppi') === '1'
   )
   // ── IL MENU AGGANCIATO ALLA PAGINA ────────────────────────────────
-  // Dove la pagina ha delle sezioni sue (Impostazioni, Inventario) il menu
-  // resta APERTO come parte della pagina: il contenuto si stringe per fargli
-  // posto invece di finirci sotto. Lì dentro si salta da una sezione
-  // all'altra venti volte di seguito, e un menu che copre significa aprire,
-  // cercare, scegliere — e intanto non vedere più dove si era.
-  // Chi ha bisogno di tutta la larghezza lo chiude col ✕, e resta chiuso
-  // anche domani: la scelta è di chi lavora, non nostra.
+  // Dove la pagina ha delle sezioni sue (Impostazioni, Inventario) e c'è
+  // posto, il menu è APERTO come parte della pagina: il contenuto si
+  // stringe per fargli posto invece di finirci sotto. Lì dentro si salta da
+  // una sezione all'altra venti volte di seguito, e un menu che copre
+  // significa aprire, cercare, scegliere — e intanto non vedere più dove si
+  // era.
+  //
+  // SI APRE E SI CHIUDE COL ☰, come ovunque. Un secondo tasto per
+  // "agganciare" sarebbe una cosa in più da capire per una differenza che a
+  // chi lavora non interessa: il menu c'è o non c'è. Che poi resti aperto
+  // dentro la pagina invece di coprirla è come si presenta, non un'altra
+  // funzione. La scelta resta anche domani.
   const [agganciato, setAgganciato] = useState(
     () => localStorage.getItem('tana:drawer-agganciato') !== '0'
   )
+  // Dove il menu può stare dentro la pagina: sezioni proprie da mostrare e
+  // schermo abbastanza largo (sul telefono sarebbe mezzo schermo).
+  const largo = useSchermoLargo()
+  const agganciabile = largo && sotto.voci.length > 0
   const navigate = useNavigate()
   const utente = auth.currentUser
   const nomeUtente = utente?.displayName || String(utente?.email || '').split('@')[0] || 'Il mio profilo'
@@ -53,11 +63,17 @@ export default function StaffDrawer({ role, active = null, onSelect = null }) {
 
   // Il menu si apre dal ☰ della TOPBAR (che sta in App.jsx): il tasto flottante
   // resta solo nelle schermate a tutto schermo, dove la topbar è nascosta.
+  // Lo stesso tasto fa la stessa cosa nei due modi: dove il menu è parte
+  // della pagina apre e chiude quella colonna, altrove apre e chiude il
+  // pannello che scorre sopra.
   useEffect(() => {
-    const h = () => setOpen((o) => !o)
+    const h = () => {
+      if (agganciabile) setAgganciato((v) => !v)
+      else setOpen((o) => !o)
+    }
     window.addEventListener('tana:toggle-drawer', h)
     return () => window.removeEventListener('tana:toggle-drawer', h)
-  }, [])
+  }, [agganciabile])
 
   // Col menu aperto i tasti dello zoom devono passare DIETRO: stanno in
   // basso a sinistra, cioè esattamente sopra le ultime voci (Esci).
@@ -71,7 +87,7 @@ export default function StaffDrawer({ role, active = null, onSelect = null }) {
   // body perché a diventare una riga dev'essere la PAGINA, che sta in un
   // altro componente; sul telefono il CSS la ignora — lì una colonna fissa
   // sarebbe mezzo schermo.
-  const dock = agganciato && sotto.voci.length > 0
+  const dock = agganciato && agganciabile
   useEffect(() => {
     document.body.classList.toggle('drawer-agganciato', dock)
     return () => document.body.classList.remove('drawer-agganciato')
@@ -153,23 +169,6 @@ export default function StaffDrawer({ role, active = null, onSelect = null }) {
         <div className="brand-mini">
           <img src={`${import.meta.env.BASE_URL}logo.png`} alt="" />
           Gestionale
-          {/* Aggancia o stacca. Compare solo dove ha senso — pagine con
-              sezioni proprie, schermo largo — e dice cosa fa: chiuderlo
-              restituisce larghezza al contenuto. */}
-          {sotto.voci.length > 0 && (
-            <button
-              type="button"
-              className="bar-nav-aggancia"
-              onClick={() => {
-                setAgganciato((v) => !v)
-                setOpen(false)
-              }}
-              title={dock ? 'Chiudi il menu e allarga la pagina' : 'Tieni il menu aperto nella pagina'}
-              aria-label={dock ? 'Chiudi il menu' : 'Tieni il menu aperto'}
-            >
-              {dock ? '✕' : '📌'}
-            </button>
-          )}
         </div>
         {/* IL SECONDO LIVELLO STA QUI DENTRO, sotto la pagina in cui ci si
             trova. È il modo in cui si fa di solito con un menu a scomparsa:
