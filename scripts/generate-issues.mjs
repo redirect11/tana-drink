@@ -84,8 +84,18 @@ function buildIssueBody(req) {
     ? `\n## Test case associati\n${req.test_cases.map((tc) => `- ${tc}`).join('\n')}\n`
     : ''
 
-  return `## ${req.id} — ${req.title}
+  // DOVE MORDE. Un bug in produzione è un'altra cosa da uno visto in test:
+  // lì ci sono i conti veri del locale, e chi legge l'issue deve saperlo
+  // dalla prima riga, non dopo aver letto la descrizione.
+  const dove =
+    req.in_produzione === true
+      ? '\n> ⚠️ **In produzione**: succede sull’installazione che sta lavorando.\n'
+      : req.in_produzione === false
+        ? '\n> Visto solo in test.\n'
+        : ''
 
+  return `## ${req.id} — ${req.title}
+${dove}
 **Area**: \`${req.area}\`
 **Status**: ${req.status}
 

@@ -38,7 +38,7 @@ export function parseRequirementsYaml(text) {
         }
         requirements.push(current)
       }
-      current = { id: '', title: '', area: '', description: '', status: 'todo', generate_issue: false, labels: [], test_cases: [] }
+      current = { id: '', title: '', area: '', description: '', status: 'todo', generate_issue: false, labels: [], test_cases: [], in_produzione: null }
       current.id = line.replace(/^  - id:\s*/, '').trim()
       continue
     }
@@ -85,6 +85,12 @@ export function parseRequirementsYaml(text) {
         break
       case 'generate_issue':
         current.generate_issue = value.trim() === 'true'
+        break
+      // Solo per i bug: dice se succede sull'installazione che sta
+      // lavorando. Assente = non si sa, e l'issue non dichiara niente
+      // invece di dare per scontato che sia roba di test.
+      case 'in_produzione':
+        current.in_produzione = value.trim() === 'true'
         break
       case 'labels': {
         const labelsMatch = value.match(/\[([^\]]*)\]/)
