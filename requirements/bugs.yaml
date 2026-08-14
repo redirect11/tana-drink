@@ -1,0 +1,121 @@
+# requirements/bugs.yaml
+#
+# I BUG APERTI, gestiti con lo stesso formato dei requisiti.
+#
+# Un bug qui dentro è un comportamento sbagliato visto davvero (di solito
+# al banco), descritto con cosa succede e cosa dovrebbe succedere. Quando
+# viene sistemato, la fix segue il metodo di sempre: codice, test e
+# requisito aggiornati insieme — il test che dimostra la fix va citato nel
+# requisito dell'area in requirements.yaml, e qui lo stato passa a fixed.
+#
+# Formato (lo stesso di requirements.yaml, letto da lib-requisiti.mjs):
+#   id:             Identificatore stabile (es. BUG-001)
+#   title:          Cosa non va, in una riga
+#   area:           File o moduli coinvolti
+#   description:    Sintomo, comportamento atteso, e cosa si sa già
+#   status:         todo (da sistemare) | fixed (risolto, test citato nel
+#                   requisito dell'area) | wontfix (deciso di non farlo)
+#   generate_issue: true per creare l'issue GitHub
+#   labels:         Label GitHub (sempre anche "bug")
+#   test_cases:     I test della fix, quando esiste
+#
+# Per generare le issue da questo file:
+#   node scripts/generate-issues.mjs --dry-run     # anteprima
+#   GITHUB_TOKEN=<token> node scripts/generate-issues.mjs
+#
+# Le issue sono idempotenti come per i requisiti: titolo con [BUG-ID],
+# chi esiste già viene saltato.
+
+bugs:
+
+  - id: BUG-001
+    title: "In produzione l'admin vede «Missing or insufficient permissions» sulla coda"
+    area: "src/lib/firebaseClient.js (App Check), firestore.rules, src/pages/BartenderPage.jsx"
+    description: >
+      Banner giallo d'errore in cima alla coda «In servizio» e coda vuota
+      (0 aperti · 0 chiusi) per l'utente admin. Analisi del 14/08: il banner
+      ha una sola sorgente, l'onError di subscribeActiveOrders — ma la
+      collection orders è in lettura pubblica, quindi con le regole del repo
+      quel deny è impossibile. Candidati, in ordine: (1) App Check/reCAPTCHA
+      che non rilascia il gettone (incidente identico già documentato nei
+      commenti di scripts/appcheck.js e scripts/recaptcha-domini.js: nega
+      tutto, anche le collection pubbliche, e dipende dal dispositivo o dal
+      dominio, non dal ruolo); (2) regole live in produzione diverse dal
+      repo (prima del commit f8cd5ed il ruolo admin era rifiutato ovunque
+      tranne che su orders); (3) banner che non si azzera mai una volta
+      comparso, quindi basta una scrittura fallita per tenerlo fisso tutta
+      la sessione. Verifiche in sola lettura: diagnostica-permessi.js
+      (non passa da App Check: se lì è verde e il browser no, è App Check),
+      appcheck.js e recaptcha-domini.js, confronto rules live/repo. Da
+      chiedere: succede su tutti i dispositivi o solo su uno? Comunque
+      vada, la fix collaterale è azzerare il banner al primo snapshot
+      buono e loggare gli errori dei listener oggi silenziati.
+    status: todo
+    generate_issue: true
+    labels: [bug, produzione, sicurezza]
+    test_cases: []
+
+  - id: BUG-002
+    title: "L'ordine annullato si apre vuoto: niente item e totale a zero"
+    area: "src/components/OrderPosDetail.jsx, src/lib/api.js cancelOrder"
+    description: >
+      Un conto annullato con saldo maggiore di zero (es. #38, 12,00 € in
+      lista) aprendolo mostra 0,00 € e nessuna riga. Comportamento atteso:
+      l'ordine annullato resta la fotografia di com'era prima
+      dell'annullamento — item e totale visibili e coerenti con la lista.
+      L'annullamento deve solo neutralizzare gli effetti: reintegro del
+      magazzino (già REQ-ORD-005) e nessun cumulo nel guadagno di serata.
+      Annullare non è svuotare.
+    status: todo
+    generate_issue: true
+    labels: [bug, ordini, pos]
+    test_cases: []
+
+  - id: BUG-003
+    title: "L'annullamento fatto da un collega manda allo staff la notifica del cliente"
+    area: "functions/lib/push-core.js, src/lib/notify.js, src/lib/preferenzeNotifiche.js"
+    description: >
+      Un admin che apre un ordine annullato da un altro admin su un altro
+      dispositivo riceve la notifica pensata per il cliente («c'è un
+      problema con il tuo ordine»), che per chi lavora al banco non ha
+      senso. Comportamento atteso per admin, bartender e staff: testo
+      dedicato allo staff; NESSUNA notifica push sul dispositivo; l'evento
+      compare solo nella lista notifiche in-app (ordini annullati e
+      ricevuti), e la si vede entrando nell'app, non aprendo l'ordine.
+      Il cliente continua a ricevere la sua push come oggi.
+    status: todo
+    generate_issue: true
+    labels: [bug, notifiche, staff]
+    test_cases: []
+
+  - id: BUG-004
+    title: "Nel dettaglio ordine il subtotale di riga non segue la quantità"
+    area: "src/components/OrderPosDetail.jsx, src/lib/orderLines.js"
+    description: >
+      Con 3× Tennent's Super la riga mostra sempre 4,00 € (il prezzo
+      unitario) invece del subtotale. Richiesta collegata: gli item vanno
+      mostrati come righe separate, non aggregati con la quantità — la
+      base c'è già, perché la nota fa parte dell'identità della riga
+      (orderLines.js) e righe con note diverse restano già separate. Da
+      chiarire in fase di fix se la separazione delle righe sostituisce il
+      subtotale per riga o se servono entrambe le cose.
+    status: todo
+    generate_issue: true
+    labels: [bug, pos]
+    test_cases: []
+
+  - id: BUG-005
+    title: "Le note degli item non si vedono nelle code a schermo"
+    area: "src/pages/BartenderPage.jsx, src/components/ServiceQueue.jsx"
+    description: >
+      La nota della singola riga («senza ghiaccio», «per Anna») si vede
+      solo nel dettaglio POS e sulla comanda stampata. Le card della coda
+      del gestionale (BartenderPage) e della sala (ServiceQueue) mostrano
+      gli item come qty× nome, senza nota: chi prepara o serve guardando
+      lo schermo invece della stampante non la vede mai. Comportamento
+      atteso: la nota dell'item compare sotto la riga anche nelle card
+      delle code, come già avviene per la nota del conto.
+    status: todo
+    generate_issue: true
+    labels: [bug, comande, ui]
+    test_cases: []
