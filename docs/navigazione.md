@@ -35,20 +35,25 @@ sotto i 44px si sbaglia. Si **toglie**, in quest'ordine:
 
 - **Le pagine** stanno nel menu laterale (☰). Punto.
 - **Le sottosezioni di una pagina** (Inventario: Prodotti, Conta, Ordini…;
-  Impostazioni: Aspetto, Pagamenti…) stanno **nel menu a scomparsa**,
-  rientrate sotto la pagina aperta. Un posto solo per navigare, uguale sul
-  telefono e sul computer.
+  Impostazioni: Aspetto, Pagamenti…) stanno **nella pagina**, aperte, in una
+  barra a sinistra: il contenuto si stringe per far loro posto invece di
+  finirci sotto. Chi ha bisogno di spazio la **stringe a icone** col « in
+  cima, e la ritrova stretta la volta dopo (una memoria per pagina).
 
-  Le altre strade le abbiamo provate tutte, e non reggono: una **colonna in
-  pagina** costa spazio tutto il giorno per una scelta che si fa ogni tanto;
-  una **riga di schede** in pagina idem, e sul telefono non ci sta; le
-  **schede nella barra** reggono cinque voci, non ventidue; una **tendina**
-  costringe ad aprirla per sapere cosa c'è dentro. Il menu invece scorre, è
-  già il posto dove si va per cambiare pagina, e non toglie un pixel al
-  contenuto.
+  Un menu che copre il contenuto sembra gratis e non lo è: dentro
+  l'inventario si salta fra Prodotti e Conta venti volte di seguito, e ogni
+  volta bisogna aprirlo, cercare, scegliere — e mentre è aperto non si vede
+  più dove si era. Meglio spendere una colonna che si può chiudere.
 
-  Nel menu compaiono le sezioni della **pagina aperta**: sono le uniche che
-  si conoscono senza esserci passati.
+  Le sezioni compaiono **anche nel menu laterale**, rientrate sotto la pagina
+  aperta: da lì ci si arriva stando su un'altra pagina, dalla barra in pagina
+  ci si gira dentro. Due strade per la stessa cosa, non due cose diverse.
+
+  Le altre strade non reggono: una **riga di schede** in pagina costa altezza
+  e sul telefono non ci sta; le **schede nella barra** reggono cinque voci,
+  non ventidue; una **tendina** costringe ad aprirla per sapere cosa c'è
+  dentro.
+
 - **I filtri** stanno in una tendina sopra il contenuto, e il tasto dice cosa
   è scelto senza doverla aprire.
 - **Il contenuto non porta navigazione**: niente tasti «vai a…» in mezzo a una

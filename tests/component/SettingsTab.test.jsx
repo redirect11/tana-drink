@@ -54,33 +54,20 @@ vi.mock('../../src/components/ThemeSettings.jsx', () => ({
 
 import SettingsTab from '../../src/components/SettingsTab.jsx'
 import { subscribeSottosezioni } from '../../src/lib/sottosezioni.js'
-import { useEffect, useState } from 'react'
 
-// LE SEZIONI STANNO NEL MENU A SCOMPARSA, sotto la pagina aperta: qui si
-// rifà quel pezzetto di menu, così le prove restano quelle di prima —
-// «scelgo una sezione, si apre il suo riquadro» — invece di frugare nella
-// tubatura.
-function BarraSezioni() {
-  const [sotto, setSotto] = useState({ voci: [], attiva: null, scegli: null })
-  useEffect(() => subscribeSottosezioni(setSotto), [])
-  return (
-    <div>
-      {(sotto.voci || []).map((v) => (
-        <button key={v.id} onClick={() => sotto.scegli?.(v.id)}>
-          {v.icona} {v.label}
-        </button>
-      ))}
-    </div>
-  )
-}
+// LE SEZIONI STANNO NELLA PAGINA, aperte a sinistra: la pagina si stringe
+// per far loro posto invece di finirci sotto. Erano finite tutte nel menu a
+// scomparsa per non spendere una colonna tutto il giorno, ma il conto lo
+// pagava chi salta da una sezione all'altra venti volte di seguito: ogni
+// volta apri il menu, cerchi, scegli, e intanto non vedi più dove eri.
+// Restano dichiarate anche al menu (`subscribeSottosezioni`), che è la
+// strada per arrivarci da un'altra pagina.
 
-const mostra = (props = { role: 'admin' }) =>
-  render(
-    <>
-      <SettingsTab {...props} />
-      <BarraSezioni />
-    </>
-  )
+const mostra = (props = { role: 'admin' }) => render(<SettingsTab {...props} />)
+
+// Le voci come le vede chi le tocca: quelle della barra dentro la pagina.
+const sezioni = () =>
+  [...document.querySelectorAll('.cat-rail .cat-rail-label')].map((b) => b.textContent)
 
 beforeEach(() => localStorage.clear())
 
@@ -167,5 +154,35 @@ describe('la ricerca della coda: filtra o accende', () => {
     await user.click(screen.getByRole('button', { name: /Coda ordini/ }))
     await user.click(screen.getByRole('button', { name: /Accendi il conto e portami lì/ }))
     expect(updateSettings).toHaveBeenCalledWith(expect.objectContaining({ queue_search: 'evidenzia' }))
+  })
+})
+
+describe('le sezioni sono nella pagina, non sopra la pagina', () => {
+  it('si vedono tutte senza aprire niente', () => {
+    mostra()
+    const viste = sezioni()
+    expect(viste.some((t) => /Aspetto/.test(t))).toBe(true)
+    expect(viste.some((t) => /Stampante/.test(t))).toBe(true)
+    expect(viste.length).toBeGreaterThan(5)
+  })
+
+  it('si stringono a icone, e restano strette la volta dopo', async () => {
+    const user = userEvent.setup()
+    const primo = mostra()
+    await user.click(screen.getByRole('button', { name: /Stringi il menu/ }))
+    expect(document.querySelector('.cat-layout.cat-stretta')).toBeTruthy()
+    primo.unmount()
+    // Chi ha bisogno di spazio lo chiede una volta sola: riaprendo le
+    // impostazioni la barra è ancora stretta.
+    mostra()
+    expect(document.querySelector('.cat-layout.cat-stretta')).toBeTruthy()
+  })
+
+  it('restano anche nel menu laterale: da lì ci si arriva stando altrove', () => {
+    let visto = { voci: [] }
+    const stop = subscribeSottosezioni((s) => { visto = s })
+    mostra()
+    expect(visto.voci.map((v) => v.id)).toContain('stampante')
+    stop()
   })
 })
