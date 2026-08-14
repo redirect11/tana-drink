@@ -1,5 +1,13 @@
 # Cosa è cambiato
 
+## Non ancora rilasciata — 1.4.2
+
+### Al banco
+
+- Nel pagamento, **«Separa uguali» mostra le unità come tutte le altre
+  righe**: nome, prezzo e il contatore − 1/1 +. Prima erano caselline da
+  spuntare, e nella stessa colonna convivevano due modi diversi di dire la
+  stessa cosa.
 ## 1.4.2 — 16 agosto 2026
 
 Porta nella linea di sviluppo tutto quello che è uscito con la **1.3.2**
