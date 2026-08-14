@@ -17,10 +17,11 @@ on:
       - main
     paths:
       - "requirements/requirements.yaml"
+      - "requirements/bugs.yaml"
 
 jobs:
   generate-issues:
-    name: Generate issues from requirements.yaml
+    name: Generate issues from requirements.yaml + bugs.yaml
     runs-on: ubuntu-latest
 
     permissions:
