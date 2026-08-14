@@ -27,7 +27,7 @@ import {
   placedByName,
   placedByLetter,
 } from '../lib/orderStatus.js'
-import { bucketByStatus, ordersRecap, ordineCorrisponde, primoCorrispondente } from '../lib/coda.js'
+import { bucketByStatus, ordersRecap, ordineCorrisponde, primoCorrispondente, inseritiDa } from '../lib/coda.js'
 import { ripristinabile } from '../lib/storiaOrdine.js'
 import { StoriaOrdineDialog, RipristinaOrdineDialog } from '../components/StoriaOrdine.jsx'
 import StatusBell from '../components/StatusBell.jsx'
@@ -61,7 +61,6 @@ import StaffHoursTab from '../components/StaffHoursTab.jsx'
 import UtentiTab from '../components/UtentiTab.jsx'
 import VipTab from '../components/VipTab.jsx'
 import ServiceQueue from '../components/ServiceQueue.jsx'
-import StaffMyOrders from '../components/StaffMyOrders.jsx'
 import StaffCallList from '../components/StaffCallList.jsx'
 import GroupsPanel from '../components/GroupsPanel.jsx'
 import GroupView from '../components/GroupView.jsx'
@@ -207,27 +206,22 @@ export default function BartenderPage() {
     )
   }
 
-  // Lo staff (non bartender) vede la lista da servire e i propri ordini,
-  // col drawer laterale (Nuovo ordine, Esci). Il tab segue la query
-  // string, così la navigazione dal drawer funziona anche dal menu.
-  if (!isGestore(role)) {
-    const staffTab = params.get('tab') === 'miei-ordini' ? 'miei-ordini' : 'servizio'
-    return (
-      <div>
-        <StaffDrawer role="staff" active={staffTab} />
-        <div className="bar-content">
-          {staffTab === 'miei-ordini' ? <StaffMyOrders /> : <ServiceQueue />}
-        </div>
-      </div>
-    )
-  }
+  // LA SALA LAVORA SULLA STESSA CODA DEL BANCO. Aveva due pagine sue («Da
+  // servire» e «I miei ordini») e non vedeva mai quello che vedeva il
+  // bartender: ora la home è la stessa coda del gestionale, «I miei
+  // ordini» è diventato il filtro «Miei» della coda (il vecchio indirizzo
+  // ?tab=miei-ordini ci arriva col filtro già acceso) e «Da servire»
+  // resta come sezione. Tutto il resto è roba da gestori: un tab non suo
+  // riporta alla coda.
+  const salaMiei = !isGestore(role) && tab === 'miei-ordini'
+  const tabEffettivo = isGestore(role) ? tab : tab === 'servizio' ? 'servizio' : 'coda'
 
   return (
     // La classe serve alla catena delle altezze: da qui in giù, quando la
     // pagina deve stare tutta nella finestra, ogni contenitore passa al
     // figlio quello che gli resta. Un div senza nome la spezzava.
     <div className="bar-page">
-      <StaffDrawer role={role} active={tab} onSelect={goTab} />
+      <StaffDrawer role={role} active={tabEffettivo} onSelect={goTab} />
 
       {/* Toccando un gruppo (menu laterale) si ENTRA nella sua vista: la
           lista dei suoi ordini col conto. La coda resta com'è — lì ci
@@ -240,23 +234,25 @@ export default function BartenderPage() {
         {/* L'«indietro» sta nella barra in alto, fra il ☰ e il marchio
             (vedi App.jsx): dentro la pagina si mangiava la prima riga di
             contenuto in ogni sezione. */}
-        {tab === 'coda' && <OrderQueue />}
-        {tab === 'pagamenti' && <CashFlow canManageStaff={isGestore(role)} />}
-        {tab === 'storico' && <OrdersHistory />}
-        {tab === 'fatture' && <InvoicesTab />}
-        {tab === 'stats' && <StatsTab />}
-        {tab === 'menu' && <MenuTab />}
-        {tab === 'inventario' && <InventoryManager />}
-        {(tab === 'staff' || tab === 'ore') && <StaffHoursTab />}
-        {tab === 'utenti' && <UtentiTab role={role} />}
+        {tabEffettivo === 'coda' && <OrderQueue mieiIniziale={salaMiei} />}
+        {/* «Da servire»: la sezione della sala (drink pronti da portare). */}
+        {tabEffettivo === 'servizio' && <ServiceQueue />}
+        {tabEffettivo === 'pagamenti' && <CashFlow canManageStaff={isGestore(role)} />}
+        {tabEffettivo === 'storico' && <OrdersHistory />}
+        {tabEffettivo === 'fatture' && <InvoicesTab />}
+        {tabEffettivo === 'stats' && <StatsTab />}
+        {tabEffettivo === 'menu' && <MenuTab />}
+        {tabEffettivo === 'inventario' && <InventoryManager />}
+        {(tabEffettivo === 'staff' || tabEffettivo === 'ore') && <StaffHoursTab />}
+        {tabEffettivo === 'utenti' && <UtentiTab role={role} />}
         {/* I buoni VIP sono un pannello di "Utenti e ruoli": qui restano
             solo perché i vecchi collegamenti (?tab=vip) funzionino. */}
-        {tab === 'vip' && <VipTab />}
-        {tab === 'impostazioni' && <SettingsTab role={role} />}
+        {tabEffettivo === 'vip' && <VipTab />}
+        {tabEffettivo === 'impostazioni' && <SettingsTab role={role} />}
         {/* La stampante sta nelle Impostazioni: qui resta solo perché i
             vecchi collegamenti (?tab=stampante) continuino a funzionare. */}
-        {tab === 'stampante' && <PrinterSetup />}
-        {tab === 'dev' && devToolsEnabled && <DevTools />}
+        {tabEffettivo === 'stampante' && <PrinterSetup />}
+        {tabEffettivo === 'dev' && devToolsEnabled && <DevTools />}
       </div>
     </div>
   )
@@ -413,7 +409,7 @@ function PortaInVista({ id }) {
   return null
 }
 
-function OrderQueue() {
+function OrderQueue({ mieiIniziale = false }) {
   const [ordersReady, setOrdersReady] = useState(false) // primo snapshot arrivato
   const [ordersRaw, setOrders] = useState([])
   // CONTI APPENA CHIUSI QUI: fuori dalla lista all'istante. La scrittura
@@ -438,6 +434,10 @@ function OrderQueue() {
   const [statusTab, setStatusTab] = useState(ORDER_STATUSES.RICEVUTO)
   const [soloOggi, setSoloOggi] = useState(false) // nasconde i conti dei giorni scorsi
   const [nascondiPagati, setNascondiPagati] = useState(false) // pagati non ancora serviti
+  // «Miei»: solo i conti inseriti da chi è collegato. Ha preso il posto
+  // della pagina «I miei ordini» della sala: stessa coda per tutti, e chi
+  // vuole ritrovare i propri accende il filtro.
+  const [soloMiei, setSoloMiei] = useState(mieiIniziale)
 
   // Avanzamenti OTTIMISTICI dalla card: lo stato cambia al tap, il server
   // segue in background (in errore si torna allo stato reale).
@@ -837,10 +837,14 @@ function OrderQueue() {
   const ricercaEvidenzia = settings.queue_search === 'evidenzia'
   // Cercando esplicitamente si trovano anche i conti dei giorni scorsi
   // (altrimenti sarebbero raggiungibili solo dalla tab "Da chiudere").
-  const visibleOrders =
+  const visibleOrdersTutti =
     q && !ricercaEvidenzia
       ? ordersInVista.filter((o) => ordineCorrisponde(o, q))
       : ordersInVista
+  // Col filtro «Miei» acceso restano solo i conti con la propria firma
+  // (placed_by): vale per ogni vista della coda, griglia o lista.
+  const emailMia = auth.currentUser?.email || ''
+  const visibleOrders = soloMiei ? inseritiDa(visibleOrdersTutti, emailMia) : visibleOrdersTutti
   const buckets = bucketByStatus(visibleOrders)
   const listView = settings.queue_view === 'lista'
   const list = buckets[statusTab] || []
@@ -1500,6 +1504,15 @@ function OrderQueue() {
               {avvisoRicerca}
             </p>
           )}
+          <div className="chips-row" style={{ margin: '8px 0 12px' }}>
+            <button
+              className={`chip ${soloMiei ? 'active' : ''}`}
+              onClick={() => setSoloMiei((v) => !v)}
+              title="Solo i conti inseriti da te"
+            >
+              ✍️ Miei
+            </button>
+          </div>
         </>
       )}
 
@@ -1528,6 +1541,13 @@ function OrderQueue() {
                 {label}
               </button>
             ))}
+            <button
+              className={`chip ${soloMiei ? 'active' : ''}`}
+              onClick={() => setSoloMiei((v) => !v)}
+              title="Solo i conti inseriti da te"
+            >
+              ✍️ Miei
+            </button>
             {/* Conti dei giorni scorsi: di default sono in coda, sotto la
                 loro data. Questo tasto li nasconde e lascia solo oggi. */}
             {(pagatiDaServire.length > 0 || nascondiPagati) && (

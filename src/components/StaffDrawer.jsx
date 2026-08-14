@@ -88,9 +88,10 @@ export default function StaffDrawer({ role, active = null, onSelect = null }) {
 
   function nuovoOrdine() {
     setOpen(false)
-    // La creazione ordine è la CASSA in stile POS (segue il tema staff),
-    // non il menù cliente: /menu resta per la "vista cliente" e i gruppi.
-    navigate('/pos')
+    // Per i gestori la creazione ordine è la CASSA in stile POS (segue il
+    // tema staff). La sala invece ordina DAL MENÙ: lo stesso che mostra al
+    // tavolo, con la ricerca — il POS è lo strumento del banco.
+    navigate(isGestore(role) ? '/pos' : '/menu')
   }
 
   // Toccando un gruppo si aprono i SUOI ORDINI nella coda (non si entra
@@ -163,7 +164,7 @@ export default function StaffDrawer({ role, active = null, onSelect = null }) {
           className={`bar-nav-item${active === 'ordine' ? ' active' : ''}`}
           onClick={nuovoOrdine}
         >
-          <span>✍️</span> Nuovo ordine
+          <span>✍️</span> {isGestore(role) ? 'Nuovo ordine' : 'Nuovo ordine dal menù'}
         </div>
 
         {showGroups && (

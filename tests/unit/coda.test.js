@@ -9,6 +9,7 @@ import {
   openOrdersCount,
   ordineCorrisponde,
   primoCorrispondente,
+  inseritiDa,
 } from '../../src/lib/coda.js'
 
 const orders = [
@@ -56,6 +57,29 @@ describe('openOrdersCount', () => {
     // Nel modello conto/comande anche un ordine "ritirato" resta un conto
     // aperto finché non viene incassato.
     expect(openOrdersCount(orders)).toBe(5) // 1,2,3,4,5
+  })
+})
+
+// Il filtro «Miei» della coda: ha preso il posto della pagina «I miei
+// ordini» della sala, quindi deve rispondere come rispondeva lei — i conti
+// con la propria firma, nient'altro.
+describe('inseritiDa', () => {
+  const firmati = [
+    { id: 'a', placed_by: { email: 'Anna@tana.it' } },
+    { id: 'b', placed_by: { email: 'bruno@tana.it' } },
+    { id: 'c' }, // ordine del cliente: nessuna firma
+  ]
+  it('tiene solo i conti con la propria firma, maiuscole ignorate', () => {
+    expect(inseritiDa(firmati, 'anna@tana.it').map((o) => o.id)).toEqual(['a'])
+    expect(inseritiDa(firmati, 'BRUNO@tana.it').map((o) => o.id)).toEqual(['b'])
+  })
+  it('senza email non risponde nulla: mai tutta la coda per sbaglio', () => {
+    expect(inseritiDa(firmati, '')).toEqual([])
+    expect(inseritiDa(firmati, null)).toEqual([])
+  })
+  it('coda vuota o assente: lista vuota, niente errori', () => {
+    expect(inseritiDa([], 'anna@tana.it')).toEqual([])
+    expect(inseritiDa(null, 'anna@tana.it')).toEqual([])
   })
 })
 

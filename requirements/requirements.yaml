@@ -764,7 +764,10 @@ requirements:
       pagina diversa da quella che stava mostrando al tavolo. Ordinare da qui
       resta possibile quando le impostazioni lo consentono: a «solo menù» i
       tasti per aggiungere spariscono per il cliente, mentre chi è dello staff
-      può comunque inserire un ordine ed è segnato come autore.
+      può comunque inserire un ordine ed è segnato come autore. Allo staff la
+      pagina dà in più la barra di ricerca, sopra le categorie: filtra per
+      nome o ingrediente, perché chi prende l'ordine col cliente davanti non
+      scorre otto categorie. Il cliente sfoglia la vetrina senza barra.
     status: implemented
     generate_issue: false
     labels: [menu, ux]
@@ -867,8 +870,9 @@ requirements:
     area: "src/lib/ruoli.js, firestore.rules"
     description: >
       L'admin fa tutto quello che fa il bartender e in più nomina i ruoli; il
-      bartender ha il gestionale completo; lo staff di sala vede solo i drink
-      pronti da servire; il cliente il menù e i propri ordini. Il ruolo vive nei
+      bartender ha il gestionale completo; lo staff di sala lavora sulla stessa
+      coda del banco e vede cosa c'è da servire, senza le sezioni
+      amministrative; il cliente il menù e i propri ordini. Il ruolo vive nei
       claim del token e le regole del database guardano quello.
     status: implemented
     generate_issue: false
@@ -949,6 +953,25 @@ requirements:
     generate_issue: false
     labels: [staff, notifiche]
     test_cases: [tests/bdd/notify-staff-call.test.js]
+
+  - id: REQ-STAFF-008
+    title: "La sala lavora sulla stessa coda del banco"
+    area: "src/pages/BartenderPage.jsx, src/lib/sezioni.js, src/lib/coda.js"
+    description: >
+      La home dello staff di sala è la coda ordini, identica a quella del
+      gestionale: quello che vede il banco lo vede anche chi porta i vassoi.
+      Prima la sala aveva due pagine sue («Da servire» e «I miei ordini») e
+      non vedeva mai la coda vera. «I miei ordini» non è più una pagina: è
+      il filtro «Miei» della coda, che tiene solo i conti con la propria
+      firma (placed_by) — e il vecchio indirizzo ?tab=miei-ordini ci arriva
+      col filtro già acceso. «Da servire» resta come sezione. Le sezioni
+      amministrative restano ai gestori: per la sala un tab non suo riporta
+      alla coda. Dal menu laterale la sala apre «Nuovo ordine dal menù» (il
+      menù che mostra al tavolo, con la ricerca), non il POS del banco.
+    status: implemented
+    generate_issue: false
+    labels: [sala, coda, ruoli]
+    test_cases: [tests/unit/coda.test.js, tests/component/StaffDrawer.test.jsx]
 
   # ══════════════════════════════════════════════════════════════════════
   #  VISTA CLIENTE

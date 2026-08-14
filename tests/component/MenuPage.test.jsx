@@ -6,7 +6,9 @@
 // Quelli si battono al POS, e chi apriva il menù dal gestionale si trovava
 // una pagina diversa da quella che stava mostrando al tavolo. Ora chi lavora
 // vede lo stesso menù del cliente — e ci può ordinare, se le impostazioni lo
-// consentono.
+// consentono. La RICERCA è tornata, ma dentro la stessa pagina e solo per lo
+// staff: la sala prende l'ordine col cliente davanti e non può scorrere otto
+// categorie; il cliente invece sfoglia la vetrina, senza barra.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
@@ -106,7 +108,32 @@ describe('il menù è uno solo, quello del cliente', () => {
     expect(voci()).toEqual(['Mojito', 'Negroni', 'Ichnusa'])
     expect(document.querySelector('.staff-menu')).toBeNull()
     expect(document.querySelector('.staff-cats')).toBeNull()
-    expect(screen.queryByPlaceholderText(/Cerca drink/)).toBeNull()
+  })
+
+  it('lo staff ha la ricerca: filtra per nome e svuota le categorie mute', async () => {
+    const user = userEvent.setup()
+    mostra()
+    await screen.findByText(/Inserimento ordine da/)
+    await user.type(screen.getByPlaceholderText(/Cerca nel menù/), 'moj')
+    expect(voci()).toEqual(['Mojito'])
+    // La categoria rimasta senza voci sparisce con tutta la sua testata.
+    expect(screen.queryByRole('heading', { name: 'Birre' })).toBeNull()
+  })
+
+  it('la ricerca a vuoto lo dice, senza lasciare la pagina muta', async () => {
+    const user = userEvent.setup()
+    mostra()
+    await screen.findByText(/Inserimento ordine da/)
+    await user.type(screen.getByPlaceholderText(/Cerca nel menù/), 'ramazzotti')
+    expect(voci()).toEqual([])
+    expect(screen.getByText(/Niente nel menù che risponda/)).toBeInTheDocument()
+  })
+
+  it('il cliente la barra di ricerca non ce l’ha: per lui resta la vetrina', async () => {
+    ruoloClaim = null
+    mostra()
+    await screen.findByText('Mojito')
+    expect(screen.queryByPlaceholderText(/Cerca nel menù/)).toBeNull()
   })
 
   it('lo stesso menù per il cliente', async () => {

@@ -18,9 +18,11 @@ export const NAV_GESTIONALE = [
   ['impostazioni', '⚙️', 'Impostazioni'],
 ]
 
+// La sala parte dalla STESSA coda del banco; «I miei ordini» non è più una
+// pagina, è il filtro «Miei» dentro la coda.
 export const NAV_SALA = [
+  ['coda', '🧾', 'Coda ordini'],
   ['servizio', '🫱', 'Da servire'],
-  ['miei-ordini', '🧾', 'I miei ordini'],
 ]
 
 // Le pagine fuori dal gestionale che hanno comunque una testata visibile.
@@ -41,7 +43,8 @@ export function titoloPagina(pathname = '', search = '') {
   if (pathname.startsWith('/bar')) {
     const tab = new URLSearchParams(search).get('tab') || 'coda'
     if (tab === 'coda') return null
-    const voce = NAV_GESTIONALE.find(([id]) => id === tab)
+    const voce =
+      NAV_GESTIONALE.find(([id]) => id === tab) || NAV_SALA.find(([id]) => id === tab)
     return voce ? { icona: voce[1], titolo: voce[2] } : null
   }
   const voce = FUORI.find(([p]) => pathname === p || pathname.startsWith(`${p}/`))

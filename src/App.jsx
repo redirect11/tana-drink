@@ -504,8 +504,9 @@ export default function App() {
           },
           isSala(staffRole) && {
             id: 'servizio',
-            icon: '🫱',
-            label: 'Torna al servizio',
+            icon: '🧾',
+            label: 'Torna alla coda',
+            hint: 'La coda ordini, la stessa del banco',
             onClick: () => navigate('/bar'),
           },
           schermoIntero.disponibile && {

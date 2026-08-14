@@ -45,6 +45,15 @@ export function openOrdersCount(orders) {
   ).length
 }
 
+// I conti INSERITI DA una persona (placed_by). È il filtro «Miei» della
+// coda, che ha preso il posto della pagina «I miei ordini» della sala:
+// stessa coda per tutti, e chi vuole ritrovare i propri la filtra.
+export function inseritiDa(orders, email) {
+  const e = String(email || '').trim().toLowerCase()
+  if (!e) return []
+  return (orders || []).filter((o) => o.placed_by?.email?.toLowerCase() === e)
+}
+
 // "Questo conto risponde a quello che sto cercando?" — numero, cliente,
 // tavolo, chi l'ha battuto, drink dentro.
 //
