@@ -109,7 +109,13 @@ export function remainingItems(order) {
     for (const i of p.items || [])
       if (i.drink_id) paidQty[i.drink_id] = (paidQty[i.drink_id] || 0) + (Number(i.qty) || 0)
   return items
-    .map((i) => ({
+    .map((i, idx) => ({
+      // OGNI RIGA HA UNA CHIAVE SUA. Lo stesso prodotto può comparire su più
+      // righe (una modificata, una no; un prodotto libero uguale a un altro):
+      // indicizzando la selezione per prodotto, premere «+» su una alzava
+      // anche l'altra — al banco si vedevano due Negroni muoversi insieme, e
+      // si incassava una quantità che nessuno aveva scelto.
+      key: `${i.drink_id ?? 'libero'}#${idx}`,
       drink_id: i.drink_id ?? null,
       name: i.name,
       unit_price: Number(i.unit_price) || 0,
@@ -127,10 +133,14 @@ export function selectionAmount(order, selection) {
   const rows = selection.filter((i) => (Number(i.qty) || 0) > 0)
   if (rows.length === 0) return orderDue(order)
   const remaining = remainingItems(order)
+  // «La selezione copre tutto?» si guarda RIGA PER RIGA. Confrontando per
+  // prodotto, con due righe uguali (Negroni, Coca Cola, Negroni) toglierne
+  // una non cambiava niente: l'altra rispondeva per tutte e due, il conto
+  // risultava coperto per intero e si incassava tutto.
   const coversAll =
     remaining.length > 0 &&
     remaining.every((r) => {
-      const sel = rows.find((s) => s.drink_id === r.drink_id)
+      const sel = rows.find((s) => (r.key && s.key ? s.key === r.key : s.drink_id === r.drink_id))
       return sel && (Number(sel.qty) || 0) >= r.qty
     })
   if (coversAll) return orderDue(order)

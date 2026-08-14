@@ -186,3 +186,42 @@ describe('sconto quando cambiano le righe del conto', () => {
     expect(discountAfterChange({ discount: null, prevAmount: 0, prevTotal: 20, newTotal: 12 })).toBe(0)
   })
 })
+
+// DUE RIGHE DELLO STESSO PRODOTTO. Difetto visto in produzione: nella
+// schermata di pagamento, con «Negroni, Coca Cola, Negroni», premere «+» sul
+// primo Negroni alzava anche il secondo — la selezione era indicizzata per
+// PRODOTTO, e due righe dello stesso prodotto condividevano il contatore. Si
+// incassava una quantità che nessuno aveva scelto.
+describe('righe uguali ma distinte', () => {
+  const conto = {
+    id: 'o1',
+    total: 22,
+    payments: [],
+    order_items: [
+      { drink_id: 'negroni', name: 'Negroni', unit_price: 8, qty: 1 },
+      { drink_id: 'coca', name: 'Coca Cola', unit_price: 3, qty: 1 },
+      { drink_id: 'negroni', name: 'Negroni', unit_price: 8, qty: 1, custom: true },
+    ],
+  }
+
+  it('ogni riga ha una chiave sua, anche se il prodotto è lo stesso', () => {
+    const righe = remainingItems(conto)
+    expect(righe).toHaveLength(3)
+    const chiavi = righe.map((r) => r.key)
+    expect(new Set(chiavi).size).toBe(3)
+  })
+
+  it('le chiavi restano stabili fra due letture dello stesso conto', () => {
+    // Se cambiassero, la selezione fatta a mano si azzererebbe da sola
+    // mentre si sta scegliendo cosa incassare.
+    expect(remainingItems(conto).map((r) => r.key)).toEqual(
+      remainingItems(conto).map((r) => r.key)
+    )
+  })
+
+  it('la riga porta con sé il prodotto: l’incasso registrato non cambia', () => {
+    const righe = remainingItems(conto)
+    expect(righe[0]).toMatchObject({ drink_id: 'negroni', name: 'Negroni', qty: 1 })
+    expect(righe[2]).toMatchObject({ drink_id: 'negroni', custom: true })
+  })
+})

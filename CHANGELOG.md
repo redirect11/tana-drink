@@ -60,6 +60,18 @@
 
 ---
 
+## 1.3.1 — 14 agosto 2026
+
+### Al banco
+
+- **Nel pagamento, due righe uguali si muovono una per volta.** Con
+  «Negroni, Coca Cola, Negroni», premendo + o − su un Negroni si muoveva
+  anche l'altro: la selezione andava per prodotto e le due righe
+  condividevano il contatore. Peggio, togliendone una l'importo non
+  cambiava — il conto risultava coperto per intero — e si incassava tutto.
+
+---
+
 ## 1.3.0 — 12 agosto 2026
 
 ### Al banco
