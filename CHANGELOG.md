@@ -2,8 +2,37 @@
 
 ## Non ancora rilasciata — 1.4.2
 
+### In sala
+
+- **Chi prende l'ordine al tavolo stampa la sua comanda**, dal proprio
+  telefono. Prima non usciva niente: la comanda arrivava al banco solo se
+  lì qualcuno teneva aperta la coda ordini con la stampa automatica accesa
+  — che era spenta. L'indirizzo della stampante i telefoni ce l'avevano
+  già: mancava l'ordine di stamparla.
+- **Un pallino nella coda dice se la comanda uscirà**, prima di averne
+  bisogno: verde la stampante risponde, rosso adesso non uscirebbe — e
+  toccandolo si legge perché e come rimetterla a posto — bianco qui non
+  c'è nessuna stampante impostata. Non è una stampa di prova: è la stessa
+  chiamata che farebbe la comanda, senza carta. Si ricontrolla da sé, e
+  appena si torna sull'app: è lì che si scopre che il permesso di
+  sicurezza della stampante è scaduto, invece che a metà servizio.
+- **La sala lavora sulla stessa coda del banco.** «I miei ordini» non è
+  più una pagina a parte: è il filtro «Miei» dentro la coda. Dal menu
+  laterale si apre «Nuovo ordine dal menù» — lo stesso menù che si mostra
+  al tavolo, che ora per chi lavora ha anche la ricerca per nome o
+  ingrediente.
+
 ### Al banco
 
+- **Nel conto la riga dice quanto fa, non quanto costa uno.** Con tre
+  birre uguali si leggeva «4,00 €»: il totale della riga non c'era
+  proprio, e per sapere quanto faceva bisognava moltiplicare a mente col
+  cliente davanti. Ora, come su uno scontrino: «3 × 4,00 €» accanto al
+  nome e **12,00 €** a destra, vicino ai tasti.
+- **Si sceglie chi stampa le comande prese in sala** (Impostazioni →
+  Stampante): il telefono di chi prende l'ordine, oppure il banco. Se si
+  sceglie il banco e la stampa automatica è spenta, l'impostazione lo dice
+  subito — altrimenti non stamperebbe nessuno.
 - Nel pagamento, **«Separa uguali» mostra le unità come tutte le altre
   righe**: nome, prezzo e il contatore − 1/1 +. Prima erano caselline da
   spuntare, e nella stessa colonna convivevano due modi diversi di dire la
