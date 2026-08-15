@@ -4518,6 +4518,17 @@ body.fullbleed .cat-rail {
   position: relative;
   border-radius: 12px;
   will-change: transform;
+  /* LA CARD DENTRO E' ALTA QUANTO LA CELLA. Fuori da «organizza» la card
+     e' lei stessa la casella della griglia, e le caselle di una riga sono
+     tutte alte uguali (stretch). Dentro «organizza» in mezzo c'e' questo
+     guscio: si allungava lui e la card restava alta quanto il suo testo —
+     una riga di card tutte di altezze diverse, e una disposizione che non
+     assomiglia a quella che si usa. */
+  display: flex;
+}
+.reorder-cell > [data-drink-id] {
+  flex: 1;
+  min-width: 0;
 }
 .reorder-grip {
   position: absolute;

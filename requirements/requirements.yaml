@@ -349,6 +349,11 @@ requirements:
       «organizza» cambiava numero di card per riga e misura — si sistemava
       una disposizione diversa da quella che poi si usa davvero. La cella
       occupa esattamente quello che occupa fuori da qui.
+      Dentro «organizza» la card riempie la sua casella come fuori: la
+      griglia rende tutte le caselle di una riga alte uguali, ma in mezzo
+      c'è il guscio che porta il trascinamento — si allungava lui e la card
+      restava alta quanto il suo testo, con una riga di card di altezze
+      diverse.
       La card in mano è OPACA: il fondo delle card è un velo (--tile-bg,
       bianco al 5%), che appoggiate sulla pagina va bene ma alzandone una
       sopra le altre le faceva vedere attraverso — e non si capiva più
