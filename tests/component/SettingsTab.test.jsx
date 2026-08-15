@@ -52,6 +52,7 @@ vi.mock('../../src/components/ThemeSettings.jsx', () => ({
   default: () => <div>PANNELLO ASPETTO</div>,
 }))
 
+import { MemoryRouter } from 'react-router-dom'
 import SettingsTab from '../../src/components/SettingsTab.jsx'
 import { subscribeSottosezioni } from '../../src/lib/sottosezioni.js'
 import { useEffect, useState } from 'react'
@@ -74,12 +75,15 @@ function BarraSezioni() {
   )
 }
 
+// Col MemoryRouter: coi riquadri impilati per gruppo, in pagina finiscono
+// anche card che contengono dei Link (es. lo storico notifiche nel
+// profilo), e un Link senza router fa esplodere il render.
 const mostra = (props = { role: 'admin' }) =>
   render(
-    <>
+    <MemoryRouter>
       <SettingsTab {...props} />
       <BarraSezioni />
-    </>
+    </MemoryRouter>
   )
 
 beforeEach(() => localStorage.clear())
@@ -93,11 +97,14 @@ describe('impostazioni a schede', () => {
     expect(screen.queryByText('PANNELLO STAMPANTE')).toBeNull()
   })
 
-  it('scegliendo una voce si apre il suo riquadro e si chiude il precedente', async () => {
+  it('scegliendo un gruppo si aprono i SUOI riquadri, impilati, e si chiude il precedente', async () => {
+    // Le voci del sottomenu sono GRUPPI («a cosa afferisce» l'impostazione):
+    // un gruppo mostra tutti i riquadri che ha assorbito, uno sotto l'altro.
     const user = userEvent.setup()
     mostra()
-    await user.click(screen.getByRole('button', { name: /Pagamenti/ }))
+    await user.click(screen.getByRole('button', { name: /Cassa e giornata/ }))
     expect(screen.getByRole('heading', { name: 'Pagamenti' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Giornata/ })).toBeInTheDocument()
     expect(screen.queryByText('PANNELLO ASPETTO')).toBeNull()
 
     await user.click(screen.getByRole('button', { name: /Stampante/ }))
@@ -105,10 +112,10 @@ describe('impostazioni a schede', () => {
     expect(screen.queryByRole('heading', { name: 'Pagamenti' })).toBeNull()
   })
 
-  it('la sezione aperta si ricorda: a impostazioni si torna per lo stesso motivo', async () => {
+  it('il gruppo aperto si ricorda: a impostazioni si torna per lo stesso motivo', async () => {
     const user = userEvent.setup()
     const primo = mostra()
-    await user.click(screen.getByRole('button', { name: /Coperto/ }))
+    await user.click(screen.getByRole('button', { name: /Prezzi e supplementi/ }))
     expect(screen.getByRole('heading', { name: 'Coperto' })).toBeInTheDocument()
     primo.unmount()
 
@@ -116,34 +123,48 @@ describe('impostazioni a schede', () => {
     expect(screen.getByRole('heading', { name: 'Coperto' })).toBeInTheDocument()
   })
 
-  it('ci sono tutte le sezioni, nessun riquadro perso per strada', () => {
+  it('le voci del sottomenu sono DIECI gruppi, non ventitré sezioni', () => {
     mostra()
     for (const voce of [
       'Aspetto',
-      'Modalità menù',
-      'Vista ordine',
-      'Consegna ordine',
-      'Pagamenti',
+      'Menù e catalogo',
+      'Banco: coda e ordine',
+      'Servizio',
+      'Cassa e giornata',
+      'Prezzi e supplementi',
       'Gruppi di ordini',
-      'Gestione preparazione',
-      'Giornata di lavoro',
-      'Prezzo consigliato',
-      'Tempi di servizio',
-      'Sconto e righe del conto',
-      'Coperto',
-      'Servizio e mancia',
-      'Menù',
-      'Coda ordini',
-      'Catalogo prodotti',
-      'Account clienti',
-      'Posizione locale',
+      'Clienti',
       'Stampante',
-      'Backup e ripristino',
-      'Informazioni',
-      'Annullamenti',
+      'Sistema',
     ]) {
       expect(screen.getByRole('button', { name: new RegExp(voce) })).toBeInTheDocument()
     }
+  })
+
+  it('nei gruppi non si è perso nessun riquadro per strada', async () => {
+    // L'accorpamento sposta, non elimina: ogni gruppo deve contenere le
+    // intestazioni dei riquadri che ha assorbito.
+    const user = userEvent.setup()
+    mostra()
+    const attese = [
+      ['Menù e catalogo', [/Modalità menù/, /^Menù$/, /Catalogo/]],
+      ['Banco: coda e ordine', [/Coda ordini/, /Vista ordine/]],
+      [/Servizio$/, [/Consegna/, /preparazione/, /Tempi di servizio/, /Annullamenti/]],
+      ['Cassa e giornata', [/Pagamenti/, /Giornata/]],
+      ['Prezzi e supplementi', [/Prezzo consigliato/, /Sconto/, /^Coperto$/, /Servizio e mancia/]],
+      ['Clienti', [/Account clienti/, /Posizione/, /Notifiche/]],
+    ]
+    for (const [gruppo, headings] of attese) {
+      await user.click(screen.getByRole('button', { name: gruppo instanceof RegExp ? gruppo : new RegExp(gruppo) }))
+      for (const h of headings) {
+        expect(screen.getByRole('heading', { name: h })).toBeInTheDocument()
+      }
+    }
+    // Sistema: backup e informazioni (qui i pannelli sono finti, si vede
+    // il segnaposto).
+    await user.click(screen.getByRole('button', { name: /Sistema/ }))
+    expect(screen.getByText('PANNELLO BACKUP')).toBeInTheDocument()
+    expect(screen.getByText('PANNELLO INFORMAZIONI')).toBeInTheDocument()
   })
 })
 
@@ -155,7 +176,7 @@ describe('la ricerca della coda: filtra o accende', () => {
   it('di suo filtra, come è sempre stato', async () => {
     const user = userEvent.setup()
     mostra()
-    await user.click(screen.getByRole('button', { name: /Coda ordini/ }))
+    await user.click(screen.getByRole('button', { name: /Banco: coda e ordine/ }))
     expect(screen.getByRole('button', { name: /Filtra la coda/ })).toHaveClass('active')
     expect(screen.getByRole('button', { name: /Accendi il conto e portami lì/ })).not.toHaveClass('active')
   })
@@ -164,7 +185,7 @@ describe('la ricerca della coda: filtra o accende', () => {
     const user = userEvent.setup()
     const { updateSettings } = await import('../../src/lib/api.js')
     mostra()
-    await user.click(screen.getByRole('button', { name: /Coda ordini/ }))
+    await user.click(screen.getByRole('button', { name: /Banco: coda e ordine/ }))
     await user.click(screen.getByRole('button', { name: /Accendi il conto e portami lì/ }))
     expect(updateSettings).toHaveBeenCalledWith(expect.objectContaining({ queue_search: 'evidenzia' }))
   })
