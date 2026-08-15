@@ -61,6 +61,10 @@ sono la mappa di cosa esiste; da lì si generano le issue.
 
 ## Come si scrive qui
 
+- **L'interfaccia segue [DESIGN.md](DESIGN.md)**: tema, palette con ruoli,
+  componenti e guardrail. I valori operativi stanno in `src/lib/themes.js`
+  e `src/index.css`; se cambiano, DESIGN.md si aggiorna nello stesso commit.
+
 - **I commenti spiegano il perché, non il cosa.** Il codice dice già cosa
   fa. Il commento serve a chi tra sei mesi si chiederà "perché è fatto
   così?" — di solito la risposta è un guaio successo davvero.
