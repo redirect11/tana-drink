@@ -1,0 +1,128 @@
+{
+  "projectId": "94246ae1-fec9-4500-a55a-7d8f66b10357",
+  "shape": "package",
+  "pkg": "karaoke-drink",
+  "globalName": "TanaDrink",
+  "entry": ".design-sync/entry.jsx",
+  "srcDir": "src",
+  "cssEntry": "src/index.css",
+  "docsDir": ".design-sync/docs",
+  "guidelinesGlob": [
+    "docs/navigazione.md"
+  ],
+  "provider": {
+    "component": "AnteprimaProvider"
+  },
+  "componentSrcMap": {
+    "ConfirmDialog": "src/components/ConfirmDialog.jsx",
+    "ActionSheet": "src/components/ActionSheet.jsx",
+    "CancelOrderDialog": "src/components/CancelOrderDialog.jsx",
+    "NovitaDialog": "src/components/NovitaDialog.jsx",
+    "StoriaOrdineDialog": "src/components/StoriaOrdine.jsx",
+    "RipristinaOrdineDialog": "src/components/StoriaOrdine.jsx",
+    "DrinkTile": "src/components/PosBits.jsx",
+    "CategoryRail": "src/components/CategoryRail.jsx",
+    "Tendina": "src/components/Tendina.jsx",
+    "SectionPanels": "src/components/SectionPanels.jsx",
+    "Toasts": "src/components/Toasts.jsx",
+    "StatusBell": "src/components/StatusBell.jsx",
+    "ZoomControl": "src/components/ZoomControl.jsx",
+    "ThemeSettings": "src/components/ThemeSettings.jsx",
+    "Changelog": "src/components/Changelog.jsx",
+    "RendicontoSerata": "src/components/RendicontoSerata.jsx",
+    "IconPencil": "src/components/Icons.jsx",
+    "IconPrinter": "src/components/Icons.jsx",
+    "IconReceipt": "src/components/Icons.jsx",
+    "IconCard": "src/components/Icons.jsx",
+    "IconRefresh": "src/components/Icons.jsx",
+    "IconX": "src/components/Icons.jsx",
+    "IconCheck": "src/components/Icons.jsx",
+    "IconClose": "src/components/Icons.jsx",
+    "IconGruppo": "src/components/Icons.jsx",
+    "IconPersona": "src/components/Icons.jsx",
+    "IconTag": "src/components/Icons.jsx",
+    "IconCartelle": "src/components/Icons.jsx",
+    "IconFornitore": "src/components/Icons.jsx",
+    "IconGrafico": "src/components/Icons.jsx",
+    "IconPiu": "src/components/Icons.jsx",
+    "IconSoldi": "src/components/Icons.jsx",
+    "IconBuono": "src/components/Icons.jsx"
+  },
+  "dtsPropsFor": {
+    "ConfirmDialog": "title?: string; message?: string; confirmLabel?: string; cancelLabel?: string; danger?: boolean; onConfirm?: () => void; onCancel?: () => void;",
+    "ActionSheet": "open: boolean; onClose: () => void; titolo?: string; voci?: Array<{ id: string; label: string; icon?: React.ReactNode; hint?: string; danger?: boolean; disabled?: boolean; tieniAperto?: boolean; onClick?: () => void }>;",
+    "CancelOrderDialog": "order: { daily_number?: number; service_mode?: 'tavolo' | 'bancone' }; kind: 'ordine' | 'preparazione' | 'non_ritirato'; defaultPhrase?: 'bancone' | 'staff'; onConfirm: (esito: { phrase: 'bancone' | 'staff'; message: string | null; notify: boolean }) => void; onCancel: () => void;",
+    "NovitaDialog": "onClose: () => void;",
+    "StoriaOrdineDialog": "order: Record<string, unknown>; onClose: () => void;",
+    "RipristinaOrdineDialog": "order: { daily_number?: number; customer_name?: string; status?: string }; onConferma: (motivo: string | null) => void; onClose: () => void;",
+    "DrinkTile": "drink: { id: string; name: string; price: number }; qty: number; onAdd: () => void; onSetQty: (qty: number) => void; color?: string | null; favorite?: boolean; onToggleFav?: (() => void) | null; acceso?: boolean;",
+    "CategoryRail": "items: Array<{ key: string; label: string; count?: number; color?: string; icon?: React.ReactNode }>; selected: string; onSelect: (key: string) => void; children?: React.ReactNode; pieno?: boolean; chiave?: string; scorre?: boolean;",
+    "Tendina": "etichetta: string; riassunto?: string; attivo?: boolean; largo?: number; classe?: string; children?: React.ReactNode | ((chiudi: () => void) => React.ReactNode);",
+    "SectionPanels": "panels?: Array<{ id: string; label: React.ReactNode; title?: React.ReactNode; desc?: string; render: () => React.ReactNode }>; attivo?: string | null; onChange?: ((id: string | null) => void) | null;",
+    "Toasts": "/** Nessuna prop: la pila si iscrive allo store di `src/lib/toast.js`. */",
+    "StatusBell": "floating?: boolean;",
+    "ZoomControl": "inline?: boolean;",
+    "ThemeSettings": "settings: { theme_staff?: { preset?: string; custom?: Record<string, string> | null }; theme_client?: { preset?: string; custom?: Record<string, string> | null } }; onSave: (patch: Record<string, unknown>) => void;",
+    "Changelog": "testo: string;",
+    "RendicontoSerata": "session: { opened_at?: string; closed_at?: string | null }; orders: Array<Record<string, unknown>>; drinksById: Record<string, unknown>; itemsById: Record<string, unknown>; recap?: { byMethod?: Record<string, number> }; onClose: () => void;",
+    "IconPencil": "size?: string; label?: string;",
+    "IconPrinter": "size?: string; label?: string;",
+    "IconReceipt": "size?: string; label?: string;",
+    "IconCard": "size?: string; label?: string;",
+    "IconRefresh": "size?: string; label?: string;",
+    "IconX": "size?: string; label?: string;",
+    "IconCheck": "size?: string; label?: string;",
+    "IconClose": "size?: string; label?: string;",
+    "IconGruppo": "size?: string; label?: string;",
+    "IconPersona": "size?: string; label?: string;",
+    "IconTag": "size?: string; label?: string;",
+    "IconCartelle": "size?: string; label?: string;",
+    "IconFornitore": "size?: string; label?: string;",
+    "IconGrafico": "size?: string; label?: string;",
+    "IconPiu": "size?: string; label?: string;",
+    "IconSoldi": "size?: string; label?: string;",
+    "IconBuono": "size?: string; label?: string;"
+  },
+  "overrides": {
+    "ConfirmDialog": {
+      "cardMode": "single"
+    },
+    "ActionSheet": {
+      "cardMode": "single"
+    },
+    "CancelOrderDialog": {
+      "cardMode": "single"
+    },
+    "NovitaDialog": {
+      "cardMode": "single"
+    },
+    "StoriaOrdineDialog": {
+      "cardMode": "single"
+    },
+    "RipristinaOrdineDialog": {
+      "cardMode": "single"
+    },
+    "RendicontoSerata": {
+      "cardMode": "single"
+    },
+    "Toasts": {
+      "cardMode": "single",
+      "primaryStory": "Informazione"
+    },
+    "ZoomControl": {
+      "cardMode": "single",
+      "primaryStory": "InLinea"
+    },
+    "CategoryRail": {
+      "cardMode": "column"
+    },
+    "ThemeSettings": {
+      "cardMode": "column"
+    },
+    "StatusBell": {
+      "cardMode": "single",
+      "primaryStory": "NellaBarra"
+    }
+  },
+  "readmeHeader": ".design-sync/conventions.md"
+}
