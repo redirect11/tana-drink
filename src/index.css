@@ -5637,24 +5637,79 @@ body.pagina-piena .pagina-inventario .inv-scroll {
     display: flex;
     flex-direction: row;
     align-items: stretch;
-    gap: 14px;
+    gap: 0;
   }
   body.drawer-agganciato .bar-content {
     flex: 1;
     min-width: 0; /* senza, una tabella larga sfonda la riga */
+    padding-left: 14px;
   }
 
-  /* Il menu esce dal suo strato sopra la pagina e diventa una colonna. */
+  /* IL MENU E' UN PEZZO DELLA PAGINA, non una scheda appoggiata sopra.
+     Prima restava quello che era da pannello a scomparsa — angoli
+     arrotondati, staccato dal bordo, con la pagina crema che si vedeva
+     intorno — e sembrava una finestrella caduta lì. Attaccato in alto alla
+     barra e a filo del bordo sinistro, con la sua stessa superficie, i due
+     si leggono come una cosa sola. */
   body.drawer-agganciato .bar-sidebar.agganciata {
     position: static;
     transform: none;
     z-index: auto;
     flex-shrink: 0;
     align-self: stretch;
+    width: 178px;
+    /* Il respiro laterale della pagina (.app: 0 16px) lo annulla: se no
+       fra il menu e il bordo della finestra resta una striscia di fondo,
+       e la colonna sembra appoggiata sopra invece che incastrata. */
+    margin-left: -16px;
+    padding: 6px 0 12px;
     max-height: 100%;
-    padding-top: 18px;
-    border-radius: 14px;
+    border-radius: 0;
+    border-right: 1px solid var(--line);
+    background: var(--bg-2);
   }
+  /* Il marchio ce l'ha già la barra qui sopra: ripeterlo dentro il menu
+     costava 60px di altezza per dire una cosa che si vede. */
+  body.drawer-agganciato .bar-sidebar.agganciata .brand-mini {
+    display: none;
+  }
+  /* MENO INGOMBRO. Le voci sono parole corte: righe alte 52px e un
+     rientro da 18 lasciavano mezza colonna vuota a destra. */
+  body.drawer-agganciato .bar-sidebar.agganciata .bar-nav-item {
+    min-height: 0;
+    gap: 8px;
+    padding: 7px 10px;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+  body.drawer-agganciato .bar-sidebar.agganciata .bar-nav-sep {
+    margin: 6px 10px;
+  }
+
+  /* LE SEZIONI STANNO DENTRO LA LORO VOCE. Erano un blocco a parte,
+     staccato, con una lineetta grigia che non c'entrava con niente: ora
+     continuano il riquadro della pagina aperta — stesso velo, stessa
+     riga di accento a sinistra — e il testo parte dove parte il nome
+     della pagina sopra, non più in mezzo al nulla. */
+  body.drawer-agganciato .bar-sidebar.agganciata .bar-nav-sotto {
+    margin: 0 0 4px;
+    padding: 2px 0 4px;
+    border-left: 3px solid var(--accent-2);
+    background: rgba(245, 185, 74, 0.06);
+  }
+  body.drawer-agganciato .bar-sidebar.agganciata .bar-nav-sottovoce {
+    padding: 5px 10px 5px 22px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    border-left: 0;
+    opacity: 0.85;
+  }
+  body.drawer-agganciato .bar-sidebar.agganciata .bar-nav-sottovoce.active {
+    background: transparent;
+    opacity: 1;
+    font-weight: 700;
+  }
+
   /* Niente velo: non c'e' piu' niente da coprire. */
   body.drawer-agganciato .bar-nav-overlay {
     display: none;
@@ -5679,12 +5734,12 @@ body.pagina-piena .pagina-inventario .inv-scroll {
   }
 }
 
-/* Tablet in verticale: la colonna si stringe, il contenuto respira. */
+/* Tablet in verticale: la colonna si stringe ancora, il contenuto respira. */
 @media (min-width: 768px) and (max-width: 900px) {
   body.drawer-agganciato .bar-sidebar.agganciata {
-    width: 200px;
+    width: 156px;
   }
-  body.drawer-agganciato .bar-page {
-    gap: 10px;
+  body.drawer-agganciato .bar-content {
+    padding-left: 10px;
   }
 }
