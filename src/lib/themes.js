@@ -73,6 +73,37 @@ export const THEME_PRESETS = {
       '--muted': '#6c6f85',
     },
   },
+  'pico-scuro': {
+    // Palette di Pico CSS v2 (tema dark): ardesia blu e azzurro tecnico.
+    // Non carichiamo il CSS di Pico — farebbe a botte col nostro — ne
+    // adottiamo i colori dentro i nostri token. Vedi DESIGN.md.
+    label: '🔷 Pico scuro',
+    vars: {
+      '--bg': '#13171f',
+      '--bg-2': '#1a1f28',
+      '--card': '#181c25',
+      '--accent': '#01aaff',
+      '--accent-2': '#01aaff',
+      // Azzurro pastello per le campiture d'azione (testo scuro).
+      '--btn': '#7cc4ea',
+      '--text': '#c2c7d0',
+      '--muted': '#7b8495',
+    },
+  },
+  'pico-chiaro': {
+    // Pico v2 chiaro: bianco piatto e blu petrolio, il look "documento".
+    label: '💠 Pico chiaro',
+    vars: {
+      '--bg': '#fbfbfc',
+      '--bg-2': '#ffffff',
+      '--card': '#ffffff',
+      '--accent': '#0172ad',
+      '--accent-2': '#0172ad',
+      '--btn': '#8cc9e9',
+      '--text': '#373c44',
+      '--muted': '#646b79',
+    },
+  },
   chiaro: {
     label: '☀️ Chiaro',
     vars: {

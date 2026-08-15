@@ -45,7 +45,14 @@ primari**. Di default segue `--accent-2`; i preset chiari lo dichiarano a
 parte, perché lì l'accento-2 è scuro per reggere i link sul fondo chiaro
 e come fondo di un bottone diventerebbe una macchia (visto succedere: il
 «+» e «Pagamento» color senape). Regola: il fondo di un bottone primario
-è sempre un tono chiaro-caldo col testo scuro `#1c1305`.
+è sempre un tono chiaro col testo scuro `#1c1305`.
+
+Oltre alla coppia Catppuccin esiste la coppia **Pico** (`pico-scuro` /
+`pico-chiaro`): la palette di Pico CSS v2 — ardesia blu, azzurro tecnico
+`#01aaff`/`#0172ad`, look "documento" sul chiaro — adottata dentro i
+nostri token. Dei design system esterni si importano i **colori nei
+preset**, mai i fogli di stile: un CSS estraneo si sovrapporrebbe al
+nostro e i guardrail smetterebbero di valere.
 
 Colori di stato (fissi, fuori tema): `--ok #2ecc71`, `--warn #f39c12`;
 gli stati degli ordini hanno le loro pill (ricevuto/in preparazione/
