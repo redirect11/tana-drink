@@ -1270,25 +1270,34 @@ requirements:
     test_cases: [tests/unit/codaCache.test.js]
 
   - id: REQ-NOTIF-004
-    title: "Lo storico delle notifiche si trova anche nelle impostazioni"
-    area: "src/components/StoricoNotifiche.jsx, src/lib/notifyStore.js, src/components/SettingsTab.jsx"
+    title: "Avvisi e storico stanno nel profilo, non nelle impostazioni del locale"
+    area: "src/pages/StaffProfilePage.jsx, src/components/AvvisiPanel.jsx, src/components/StoricoNotifiche.jsx"
     description: >
-      Gli avvisi arrivati su questo dispositivo — da leggere e già letti
-      insieme, nell'ordine in cui sono arrivati — si rivedono in
-      Impostazioni → Notifiche, sotto gli interruttori: si viene lì per lo
-      stesso motivo («di questa cosa voglio essere avvisato», «cos'era
-      quell'avviso di prima?»). Prima lo storico stava solo dietro la
-      campanella, in un pannello che si chiude al primo tocco fuori e alto
-      quattro righe.
-      È lo STESSO elenco della campanella, non una copia: svuotarlo di qua
-      lo svuota anche di là, e le notifiche ancora da leggere non si
-      buttano insieme alle altre. Quelle già lette si distinguono
-      sbiadendo, e quelle con una destinazione restano porte: si toccano e
-      ci portano.
+      Quali avvisi arrivare e lo storico di quelli arrivati stanno nel
+      PROFILO di chi è collegato. La scelta è per persona e per dispositivo
+      (`tana:avvisi:<uid>`), non una regola del locale: lo stesso account
+      sul tablet della cassa e sul telefono in sala vuole cose diverse, e
+      due che si passano il tablet nel cambio turno non si sovrascrivono
+      niente. Nelle impostazioni del locale — dove stavano — non entra chi è
+      in sala, cioè proprio chi ha più bisogno di sapere quando un drink è
+      pronto: lì gli avvisi erano fuori portata per chi li usa. In
+      Impostazioni → Notifiche resta un cartello che porta al profilo.
+      Lo storico è lo STESSO elenco della campanella, non una copia:
+      svuotarlo di qua lo svuota anche di là, e le notifiche ancora da
+      leggere non si buttano insieme alle altre. Da leggere e già lette
+      compaiono insieme, nell'ordine in cui sono arrivate; quelle già lette
+      sbiadiscono e quelle con una destinazione restano porte.
+      Attenzione a cosa è di chi: gli INTERRUTTORI sono per persona e
+      dispositivo, lo STORICO è del dispositivo (`tana:notifs`, senza uid) —
+      sono gli avvisi arrivati su quello schermo, e chi prende il turno dopo
+      li vede. È voluto: servono a ricostruire cos'è successo qui, non a
+      chi era collegato.
     status: implemented
     generate_issue: false
     labels: [notifiche, ux]
-    test_cases: [tests/component/StoricoNotifiche.test.jsx]
+    test_cases:
+      - tests/component/StoricoNotifiche.test.jsx
+      - tests/component/AvvisiPanel.test.jsx
 
   - id: REQ-OFFLINE-003
     title: "Si vede quando si è offline"
