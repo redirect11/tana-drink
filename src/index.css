@@ -4985,3 +4985,14 @@ body.drawer-open .zoom-control {
   min-width: 34px;
   padding-inline: 8px;
 }
+
+/* LE SCRITTE DEI TASTI DEL CONTO VANNO A CAPO. Sono tasti a meta' riga:
+   «Riapri conto» su uno schermo stretto usciva dal bordo invece di
+   spezzarsi in due righe — e un tasto con la scritta tagliata non si sa
+   piu' cosa fa. */
+.posd-foot-azioni .btn,
+.posd-foot-telefono .btn {
+  white-space: normal;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}

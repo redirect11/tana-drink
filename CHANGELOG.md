@@ -13,13 +13,16 @@ una funzione, il terzo per le correzioni.
 
 ### Al banco
 
-- **Un conto chiuso o annullato si può rimettere in corso.** Chiuso sul
-  tavolo sbagliato, annullato per un malinteso, o il cliente che torna e
-  vuole ordinare ancora su quello: si riapre **dal tasto del pagamento**,
-  che su un conto chiuso era lì spento a non fare niente, scrivendo — se
-  si vuole — il perché. Gli incassi già presi restano dove sono e il
-  dovuto si ricalcola da sé; le comande già servite restano servite,
-  tornano da fare solo quelle annullate col conto.
+- **Un conto chiuso o annullato si può riaprire.** Chiuso sul tavolo
+  sbagliato, annullato per un malinteso, o il cliente che torna e vuole
+  ordinare ancora su quello: si riapre **dal tasto del pagamento**, che su
+  un conto chiuso era lì spento a non fare niente, scrivendo — se si vuole
+  — il perché.
+  Torna un conto **normale, come se non fosse mai stato pagato**: le righe
+  si modificano tutte e quello che era stato incassato **esce dagli
+  incassi della serata**, perché quel conto è di nuovo da incassare. Resta
+  scritto nella storia del conto quanto è stato tolto, e le comande già
+  servite restano servite.
 - **Ogni conto ha la sua storia**, dietro i ⋯: aperto, chiuso, annullato,
   riaperto — con l'ora, chi l'ha fatto e il motivo della riapertura. E il
   motivo si legge anche dentro il conto riaperto, senza cercarlo: un conto
@@ -30,6 +33,11 @@ una funzione, il terzo per le correzioni.
   restava sul conto senza che lo pagasse più nessuno — credito regalato e
   conti che non tornano. Se nel frattempo il buono è stato speso altrove,
   si prende quel che c'è e lo sconto si riduce di conseguenza.
+- **Nella coda, un conto chiuso compare subito sotto «Chiusi»**, e uno
+  riaperto torna subito fra quelli in corso: sparivano da tutte e tre le
+  liste fino a ricaricare la pagina. Sparire subito serve a «In corso» —
+  il conto chiuso non deve restare lì a far dubitare — ma non allo
+  storico, dove uno lo va a cercare apposta.
 - **Sul telefono, a barra nascosta, la coda non finisce più sotto
   l'orologio.** Il ➕ spariva a metà sotto la barra di sistema, il ☰ si
   sovrapponeva ai conteggi e «In servizio» restava dietro la striscia: la

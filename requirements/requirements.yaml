@@ -141,11 +141,22 @@ requirements:
       che dice cosa succederà e si può scrivere il perché — FACOLTATIVO, perché
       se fosse obbligatorio si scriverebbe "x" per passare oltre, e al banco i
       secondi non ci sono. Il conto torna aperto e si può battere di nuovo.
-      Non si tocca quello che è già successo: gli incassi registrati restano
-      dove sono (riaprire non è un rimborso, e la cassa deve continuare a
-      tornare) e il dovuto si ricalcola da sé; le comande già servite restano
-      servite, tornano da fare solo quelle annullate col conto. Se dei soldi
-      erano entrati, il conto riaperto risulta a ACCONTO, non pagato.
+      RIAPRIRE = COME SE NON FOSSE MAI STATO PAGATO. Gli incassi si tolgono:
+      il conto riaperto è un conto normale, da battere e da incassare, con
+      tutte le righe modificabili. Prima gli incassi restavano attaccati e il
+      conto tornava «ad acconto»: le righe già pagate erano bloccate — e
+      riaprire serve proprio a toccarle — e i soldi restavano nei guadagni
+      della serata di un conto che era di nuovo da incassare, quindi a fine
+      turno lo stesso conto risultava incassato due volte.
+      La cassa legge gli incassi dagli ordini, perciò toglierli dal conto li
+      toglie anche dal flusso di cassa. Non si butta via niente: quello che
+      era entrato resta in `payments_annullati` con l'ora in cui è stato
+      tolto, e il totale compare nella storia del conto («riaperto — tolti
+      15,50 € dagli incassi»), che è dove lo si va a cercare quando la cassa
+      non torna. Le comande già servite restano servite: tornano da fare solo
+      quelle annullate col conto.
+      Il tasto per riaprire NON è un tasto in più: è quello del PAGAMENTO,
+      che su un conto chiuso o annullato era lì spento a non fare niente.
       Se il conto annullato era stato scontato con un BUONO VIP, riaprendolo il
       saldo si ri-addebita: annullando era tornato al beneficiario, e lasciarlo
       lì significherebbe uno sconto che nessuno ha pagato e un credito in
@@ -162,7 +173,7 @@ requirements:
     status: implemented
     generate_issue: false
     labels: [ordini, difetto-risolto]
-    test_cases: [tests/unit/storiaOrdine.test.js, tests/component/OrderPosDetail.test.jsx, tests/unit/vouchers.test.js]
+    test_cases: [tests/unit/storiaOrdine.test.js, tests/component/OrderPosDetail.test.jsx, tests/unit/vouchers.test.js, tests/unit/ripristino.test.js]
 
   # ══════════════════════════════════════════════════════════════════════
   #  CASSA / POS — come si batte un ordine

@@ -25,6 +25,7 @@ import { splitAmounts } from './groups.js'
 import { createSumUpSale, updateSumUpSaleStatus, toSumUpStatus } from './sumupApi.js'
 import { computeConsumption, formatQty, qtyInStockUnit } from './inventory.js'
 import { consumptionDiff } from './warehouse.js'
+import { patchRipristino } from './ripristino.js'
 import { riaddebitoBuono } from './vouchers.js'
 import {
   ORDER_OPEN,
@@ -2667,17 +2668,6 @@ export async function restoreOrder(id, { motivo = null, chi = null } = {}) {
   }
   const nowIso = new Date().toISOString()
   const norm = normalizeOrderDoc(data)
-  // Le comande annullate tornano "da fare"; le altre restano come sono.
-  const comande = norm.comande.map((c) =>
-    c.status === ORDER_STATUSES.ANNULLATO
-      ? {
-          ...c,
-          status: ORDER_STATUSES.RICEVUTO,
-          status_times: { ...(c.status_times || {}), [ORDER_STATUSES.RICEVUTO]: nowIso },
-        }
-      : c
-  )
-  const incassato = (data.payments || []).reduce((s, p) => s + (Number(p.amount) || 0), 0)
 
   // BUONO VIP: annullando, il saldo era tornato al beneficiario. Riaprendo,
   // lo sconto è ancora sul conto: se non lo si ri-addebita diventa un regalo
@@ -2712,18 +2702,17 @@ export async function restoreOrder(id, { motivo = null, chi = null } = {}) {
     }
   }
 
-  const riaperture = [
-    ...(Array.isArray(data.riaperture) ? data.riaperture : []),
-    { at: nowIso, motivo: motivo || null, chi: chi || null },
-  ]
+  // La regola sta in lib/ripristino.js, pura e provata; qui si scrive.
+  const patch = patchRipristino(data, {
+    comande: norm.comande,
+    nowIso,
+    motivo,
+    chi,
+  })
   bgWrite(() => updateDoc(orderRef, {
     status: ORDER_OPEN,
-    comande,
-    comande_statuses: comandeStatuses(comande),
-    // Un conto riaperto NON è pagato, altrimenti tornerebbe subito fra i
-    // chiusi: se dei soldi erano entrati resta un acconto.
-    payment_status: incassato > 0 ? 'parziale' : 'non_richiesto',
-    riaperture,
+    ...patch,
+    comande_statuses: comandeStatuses(patch.comande),
     // Solo se il buono non copriva più tutto: se copre, il conto resta
     // identico a com'era.
     ...(scontoRiscritto || {}),
