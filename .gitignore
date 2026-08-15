@@ -57,3 +57,11 @@ registrazioni/
 # I workspace di lavoro (git worktree) creati qui dentro: sono copie del
 # repository, non contenuto del repository.
 .claude/worktrees/
+
+# /design-sync: script di appoggio e output rigenerabile (la parte durevole
+# di .design-sync/ resta versionata: config, note, convenzioni, anteprime).
+.ds-sync/
+ds-bundle/
+.design-sync/.cache/
+.design-sync/learnings/
+.design-sync/node_modules
