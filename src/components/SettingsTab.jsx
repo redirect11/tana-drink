@@ -10,6 +10,7 @@ import { parseCarteCsv, decodeCsvBuffer } from '../lib/carteImport.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import ThemeSettings from './ThemeSettings.jsx'
 import PrinterSetup from './PrinterSetup.jsx'
+import StoricoNotifiche from './StoricoNotifiche.jsx'
 import BackupPanel from './BackupPanel.jsx'
 import InfoTab from './InfoTab.jsx'
 import { pairSumUpReader, unpairSumUpReader } from '../lib/paymentsApi.js'
@@ -768,7 +769,15 @@ export default function SettingsTab({ role = null }) {
       id: 'notifiche',
       icona: '🔔',
       label: 'Notifiche',
-      nodo: <AvvisiPanel gestore={isGestore(role)} />,
+      // Gli interruttori e quello che è arrivato stanno insieme: si viene
+      // qui per lo stesso motivo — «di questa cosa voglio (o non voglio)
+      // essere avvisato», «cos'era quell'avviso di prima?».
+      nodo: (
+        <>
+          <AvvisiPanel gestore={isGestore(role)} />
+          <StoricoNotifiche />
+        </>
+      ),
     },
     { id: 'stampante', icona: '🖨️', label: 'Stampante', nodo: <PrinterSetup /> },
     { id: 'backup', icona: '💾', label: 'Backup e ripristino', nodo: <BackupPanel role={role} /> },

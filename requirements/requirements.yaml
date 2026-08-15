@@ -1269,6 +1269,27 @@ requirements:
     labels: [offline, coda]
     test_cases: [tests/unit/codaCache.test.js]
 
+  - id: REQ-NOTIF-004
+    title: "Lo storico delle notifiche si trova anche nelle impostazioni"
+    area: "src/components/StoricoNotifiche.jsx, src/lib/notifyStore.js, src/components/SettingsTab.jsx"
+    description: >
+      Gli avvisi arrivati su questo dispositivo — da leggere e già letti
+      insieme, nell'ordine in cui sono arrivati — si rivedono in
+      Impostazioni → Notifiche, sotto gli interruttori: si viene lì per lo
+      stesso motivo («di questa cosa voglio essere avvisato», «cos'era
+      quell'avviso di prima?»). Prima lo storico stava solo dietro la
+      campanella, in un pannello che si chiude al primo tocco fuori e alto
+      quattro righe.
+      È lo STESSO elenco della campanella, non una copia: svuotarlo di qua
+      lo svuota anche di là, e le notifiche ancora da leggere non si
+      buttano insieme alle altre. Quelle già lette si distinguono
+      sbiadendo, e quelle con una destinazione restano porte: si toccano e
+      ci portano.
+    status: implemented
+    generate_issue: false
+    labels: [notifiche, ux]
+    test_cases: [tests/component/StoricoNotifiche.test.jsx]
+
   - id: REQ-OFFLINE-003
     title: "Si vede quando si è offline"
     area: "src/App.jsx, src/components/StatusBell.jsx"
