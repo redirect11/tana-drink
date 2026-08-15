@@ -265,7 +265,9 @@ describe('aggiunte: la nuova comanda è gestita internamente', () => {
     expect(uniti[0].qty).toBe(5)
   })
 
-  it("Unisci e Separa convivono: si può separare anche quando c'è da unire", async () => {
+  it("il tasto è UNO: quando c'è da unire mostra Unisci, e Separa vive nel ⋯", async () => {
+    // Erano due tasti fissi, ma dei due ne serve uno alla volta: il tasto
+    // unico mostra l'azione possibile (vince Unisci), l'altra resta nel ⋯.
     const user = userEvent.setup()
     mount(
       baseOrder({
@@ -284,12 +286,12 @@ describe('aggiunte: la nuova comanda è gestita internamente', () => {
         ],
       })
     )
-    // entrambe le azioni sono possibili → entrambi i tasti sono lì
-    expect(screen.getByRole('button', { name: /Unisci/ })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Separa/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /🔗 Unisci/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /⑃ Separa/ })).toBeNull()
 
-    // Separa: il Mojito da 4 diventa 4 righe da 1
-    await user.click(screen.getByRole('button', { name: /Separa/ }))
+    // Separa non è persa: dal menu ⋯ il Mojito da 4 diventa 4 righe da 1
+    await user.click(screen.getByRole('button', { name: 'Azioni del conto' }))
+    await user.click(screen.getByRole('button', { name: /Separa le quantità/ }))
     await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalled())
     const dopo = bartenderUpdateComanda.mock.calls.at(-1)[2].items
     expect(dopo.filter((i) => i.drink_id === 'mojito')).toHaveLength(4)
@@ -587,15 +589,15 @@ describe('dati conto: il nome si salva comunque si chiuda', () => {
 // premere non era più dov'era. I tasti ci sono sempre: spenti quando l'azione
 // non è possibile, mai rimossi.
 describe('tasti sempre presenti, spenti se non servono', () => {
-  it('Unisci e Separa ci sono anche quando non c’è niente da unire', () => {
+  it('il tasto Unisci/Separa c’è anche quando non c’è niente da fare', () => {
     mount(baseOrder({ comande: [{ id: 'c1', seq: 1, status: 'in_preparazione', items: [] }] }))
-    expect(screen.getByRole('button', { name: /Unisci/ })).toBeDisabled()
-    expect(screen.getByRole('button', { name: /Separa/ })).toBeDisabled()
+    // Tasto unico: spento, non sparito.
+    expect(screen.getByRole('button', { name: /Separa|Unisci/ })).toBeDisabled()
   })
 
-  it('e si accendono quando l’azione diventa possibile', () => {
+  it('e si accende quando l’azione diventa possibile', () => {
     mount(baseOrder()) // 2 Mojito su una riga → si possono separare
-    expect(screen.getByRole('button', { name: /Separa/ })).toBeEnabled()
+    expect(screen.getByRole('button', { name: /⑃ Separa/ })).toBeEnabled()
   })
 
   it('Comande c’è sempre: sul conto aperto è attivo', () => {
@@ -1060,33 +1062,65 @@ describe('conto riaperto: le righe di prima si toccano', () => {
 // Difetto visto in produzione (BUG-004): con 3× Tennent's la riga mostrava
 // «4,00 €», il prezzo unitario. Il subtotale non c'era proprio, e per sapere
 // quanto faceva quella riga bisognava moltiplicare a mente col cliente
-// davanti.
+// davanti. Poi il calcolo esplicito in riga («3 × 7,00») si è rivelato
+// rumore accanto a ogni nome: ora la riga dice solo QUANTO FA, e il
+// calcolo si accende dal menù ⋯, comparendo sotto l'item come le note
+// (REQ-POS-014).
 describe('subtotale di riga', () => {
-  it('con più di un pezzo si vede il totale della riga, e da dove viene', () => {
-    mount(
-      baseOrder({
-        total: 21,
-        comande: [
-          {
-            id: 'c1',
-            seq: 1,
-            status: 'in_preparazione',
-            status_times: {},
-            items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 3 }],
-          },
-        ],
-        order_items: [
-          { id: 'ord1-0', drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 3 },
-        ],
-      })
-    )
-    // Da dove viene il numero…
-    expect(screen.getByText(/3 × 7,00/)).toBeInTheDocument()
-    // …e quanto fa la riga.
+  const ordineTriplo = () =>
+    baseOrder({
+      total: 21,
+      comande: [
+        {
+          id: 'c1',
+          seq: 1,
+          status: 'in_preparazione',
+          status_times: {},
+          items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 3 }],
+        },
+      ],
+      order_items: [
+        { id: 'ord1-0', drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 3 },
+      ],
+    })
+
+  it('la riga dice quanto fa; il calcolo di suo non appare', () => {
+    mount(ordineTriplo())
+    // Quanto fa la riga…
     expect(screen.getAllByText('21,00 €').length).toBeGreaterThan(0)
+    // …senza il calcolo esplicito accanto al nome.
+    expect(screen.queryByText(/3 × 7,00/)).toBeNull()
   })
 
-  it('con un pezzo solo non si ripete niente', () => {
+  it('col calcolo acceso (scelta ricordata sul dispositivo) appare sotto la riga', () => {
+    localStorage.setItem('tana:pos:calcoli', '1')
+    mount(ordineTriplo())
+    expect(screen.getByText(/↳ 3 × 7,00/)).toBeInTheDocument()
+    expect(screen.getAllByText('21,00 €').length).toBeGreaterThan(0)
+    localStorage.removeItem('tana:pos:calcoli')
+  })
+
+  it('i supplementi attivi si vedono uno per riga, sotto il Subtotale', () => {
+    // Prima una riga cumulativa («Coperto/servizio/mancia · 5,50 €») non
+    // diceva né cosa fosse attivo né quanto pesasse ognuno (REQ-POS-016).
+    mount(
+      baseOrder({
+        total: 18.5,
+        coperto_amount: 2,
+        tip_amount: 2.5,
+      })
+    )
+    // Il conto nudo…
+    expect(screen.getByText('Subtotale', { exact: false })).toBeInTheDocument()
+    // …le voci attive, ognuna con il suo importo…
+    expect(screen.getByText('Coperto')).toBeInTheDocument()
+    expect(screen.getByText('Mancia')).toBeInTheDocument()
+    // …e quella spenta non compare.
+    expect(screen.queryByText('Servizio')).toBeNull()
+  })
+
+  it('con un pezzo solo il subtotale c’è comunque, il calcolo mai', () => {
+    localStorage.setItem('tana:pos:calcoli', '1')
     mount(
       baseOrder({
         total: 7,
@@ -1102,7 +1136,10 @@ describe('subtotale di riga', () => {
         order_items: [{ id: 'ord1-0', drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1 }],
       })
     )
-    expect(screen.queryByText(/1 × 7,00/)).toBeNull()
-    expect(document.querySelector('.posd-riga-tot')).toBeNull()
+    // Senza il calcolo in riga, la riga singola senza subtotale resterebbe
+    // SENZA PREZZO: il subtotale ora c'è sempre.
+    expect(document.querySelector('.posd-riga-tot')).not.toBeNull()
+    expect(screen.queryByText(/↳ 1 × 7,00/)).toBeNull()
+    localStorage.removeItem('tana:pos:calcoli')
   })
 })

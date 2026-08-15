@@ -1008,6 +1008,42 @@ requirements:
     test_cases: [tests/unit/coda.test.js, tests/component/StaffDrawer.test.jsx]
 
   # ══════════════════════════════════════════════════════════════════════
+  #  TAVOLI E QR
+  # ══════════════════════════════════════════════════════════════════════
+
+  - id: REQ-TAVOLI-001
+    title: "I tavoli hanno un'anagrafica, e ognuno il suo QR generato in app"
+    area: "src/lib/api.js, firestore.rules, requirements"
+    description: >
+      Nasce l'anagrafica dei tavoli: un tavolo ha un NOME e/o un NUMERO —
+      almeno uno dei due, e nessuno dei due può essere una stringa vuota.
+      Per ogni tavolo l'app genera il suo QR code (il collegamento al menù
+      con il tavolo già agganciato), da stampare e mettere sul tavolo:
+      la scansione porta al menù cliente col tavolo prepopolato. Oggi il
+      tavolo è testo libero sull'ordine: l'anagrafica non lo sostituisce
+      di colpo, ci si aggancia (il campo dell'ordine resta com'è, ma può
+      venire da un tavolo censito).
+    status: todo
+    generate_issue: true
+    labels: [tavoli, clienti, qr]
+    test_cases: []
+
+  - id: REQ-TAVOLI-002
+    title: "Nome e tavolo nelle viste d'ordine: staff libero, cliente guidato"
+    area: "src/pages/MenuPage.jsx, src/components/OrderSummary.jsx"
+    description: >
+      Nella vista «Nuovo ordine dal menù» dello staff si possono inserire
+      NOME e numero del tavolo: il nome deve poterci stare (oggi c'è solo
+      il tavolo) e il numero è opzionale. Nella vista cliente: se si arriva
+      dal QR del tavolo (REQ-TAVOLI-001) il tavolo è prepopolato e NON
+      modificabile; senza QR il tavolo non serve, ma il nome sì — è quello
+      che permette al banco di chiamare l'ordine.
+    status: todo
+    generate_issue: true
+    labels: [tavoli, clienti, pos]
+    test_cases: []
+
+  # ══════════════════════════════════════════════════════════════════════
   #  VISTA CLIENTE
   # ══════════════════════════════════════════════════════════════════════
 
@@ -1441,12 +1477,16 @@ requirements:
     test_cases: [tests/component/SectionPanels.test.jsx]
 
   - id: REQ-UI-002
-    title: "Impostazioni a schede, una per riquadro"
+    title: "Impostazioni in dieci gruppi, coi riquadri impilati"
     area: "src/components/SettingsTab.jsx"
     description: >
-      Le impostazioni sono ventuno riquadri: sono voci di una barra laterale e se
-      ne apre una alla volta, con la scelta ricordata. Erano una pagina lunghissima
-      da scorrere a occhio. Da tablet in su la schermata sta TUTTA dentro il
+      I riquadri delle impostazioni sono più di venti, ma le voci del
+      sottomenu sono DIECI GRUPPI, accorpati per «a cosa afferisce»
+      l'impostazione (Menù e catalogo, Servizio, Cassa e giornata, Prezzi e
+      supplementi…): scegliendo un gruppo i suoi riquadri si impilano uno
+      sotto l'altro, e la scelta si ricorda. Con una voce per riquadro
+      l'elenco era più lungo delle impostazioni; prima ancora era una
+      pagina lunghissima da scorrere a occhio. Da tablet in su la schermata sta TUTTA dentro il
       viewport: a scorrere sono i due pannelli — l'elenco delle sezioni e il
       contenuto — ognuno per conto suo, e non la pagina con dentro la testata,
       che scorrendo via si portava dietro l'elenco proprio mentre lo si usava.
@@ -1740,6 +1780,90 @@ requirements:
     generate_issue: false
     labels: [pos, ux]
     test_cases: [tests/component/PosProductPicker.test.jsx]
+
+  - id: REQ-POS-014
+    title: "La riga del conto dice quanto fa; il calcolo è a richiesta"
+    area: "src/components/OrderPosDetail.jsx, src/components/SettingsTab.jsx"
+    description: >
+      Ogni riga del conto mostra nome e SUBTOTALE (quantità × prezzo, già
+      fatto), anche con un pezzo solo. Il calcolo per esteso — «2 × 5,00 €»
+      — non sta più accanto al nome, dov'era rumore su ogni riga: si
+      accende dal menù ⋯ del conto («Mostra i calcoli delle righe»),
+      compare sotto l'item come le note, e se una riga ha nota e calcolo
+      stanno su due righe distinte. La scelta si ricorda sul dispositivo.
+      Il ⋯ per questo è visibile a tutte le taglie, non solo su telefono.
+      E la dimensione del testo delle righe ha un MINIMO configurabile
+      (Impostazioni → Vista ordine): il testo segue la larghezza del
+      pannello ma sotto la soglia scelta non scende — il pavimento fisso
+      di prima per qualcuno era un manifesto.
+    status: implemented
+    generate_issue: false
+    labels: [pos, ux]
+    test_cases: [tests/component/OrderPosDetail.test.jsx]
+
+  - id: REQ-POS-015
+    title: "Unisci e Separa sono un tasto solo"
+    area: "src/components/OrderPosDetail.jsx"
+    description: >
+      Dei due, alla volta ne serve uno: il tasto mostra l'azione possibile e
+      cambia faccia da sé — se c'è da unire, unisce; altrimenti separa.
+      Quando servirebbero entrambe vince Unisci, e Separa resta raggiungibile
+      dal menù ⋯ (dove le due voci esplicite restano comunque). Spento, non
+      sparito, quando non c'è niente da fare: i tasti non ballano.
+    status: implemented
+    generate_issue: false
+    labels: [pos, ux]
+    test_cases: [tests/component/OrderPosDetail.test.jsx]
+
+  - id: REQ-POS-016
+    title: "I supplementi del conto in chiaro: subtotale, voci, totale"
+    area: "src/components/OrderPosDetail.jsx"
+    description: >
+      Nel riepilogo del conto prima c'era una riga cumulativa
+      («Coperto/servizio/mancia · 5,50 €») e non si capiva né cosa fosse
+      attivo né quanto pesasse ognuno. Ora: SUBTOTALE in evidenza (il conto
+      nudo, in grassetto, appena più grande delle voci), sotto le voci
+      attive una per riga in piccolo — Coperto, Servizio, Mancia, solo
+      quelle maggiori di zero — e in fondo il TOTALE grande che somma
+      tutto. Le righe sono strette: il blocco non deve crescere in altezza.
+      Sul telefono il dettaglio parte chiuso e si apre toccando il
+      Subtotale.
+    status: implemented
+    generate_issue: false
+    labels: [pos, ux]
+    test_cases: [tests/component/OrderPosDetail.test.jsx]
+
+  - id: REQ-POS-017
+    title: "Coperto, servizio e mancia si accendono e spengono sul singolo conto"
+    area: "src/components/OrderPosDetail.jsx, src/lib/pricing.js"
+    description: >
+      Dal menù ⋯ del conto si governano i supplementi PER QUEL CONTO: se
+      un supplemento è disattivato nelle impostazioni lo si può accendere
+      solo qui (uno, due o tutti e tre); se è attivo di default lo si può
+      spegnere solo qui. Spegnendoli, le rispettive voci spariscono dal
+      riepilogo — e se non resta nulla sparisce anche la riga Subtotale.
+      Tocca i calcoli del conto: va fatto con i test della logica prezzi,
+      non solo di interfaccia.
+    status: todo
+    generate_issue: true
+    labels: [pos, pagamenti]
+    test_cases: []
+
+  - id: REQ-POS-018
+    title: "La barra azioni del conto si organizza come quella del browser"
+    area: "src/components/OrderPosDetail.jsx"
+    description: >
+      Una modalità «organizza» per i comandi del dettaglio conto, come la
+      barra di Firefox o Chrome: si decide QUALI comandi stanno in vista
+      (Unisci/Separa, Dati conto, Prodotto libero, le voci oggi nascoste
+      nel ⋯) e DOVE, con posizionamento libero, e COME si mostrano — icona
+      e testo, solo testo o sola icona. Anche il riquadro del tavolo è un
+      elemento posizionabile. Il precedente è la griglia POS organizzabile
+      (REQ-POS-011): stessa filosofia, qui applicata ai comandi.
+    status: todo
+    generate_issue: true
+    labels: [pos, ux]
+    test_cases: []
 
   # ══════════════════════════════════════════════════════════════════════
   #  COME SI LAVORA AL PROGETTO
