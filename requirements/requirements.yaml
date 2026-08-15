@@ -349,14 +349,17 @@ requirements:
       «organizza» cambiava numero di card per riga e misura — si sistemava
       una disposizione diversa da quella che poi si usa davvero. La cella
       occupa esattamente quello che occupa fuori da qui.
-      Entrando in «organizza» la griglia finisce dentro il contesto di
-      trascinamento: per React è un altro posto nell'albero, quindi il
-      riquadro viene rifatto da capo. Il misuratore della larghezza — quello
+      Il contesto di trascinamento sta SEMPRE attorno alla griglia, anche
+      fuori da «organizza» (senza gesti attivi e senza niente di
+      trascinabile dentro, non fa nulla). Montarlo solo lì spostava la
+      griglia in un altro posto dell'albero, e React a quel punto buttava il
+      riquadro e ne faceva uno nuovo: il misuratore della larghezza — quello
       che decide quanto sono grandi le card e i loro testi — restava
-      attaccato al riquadro vecchio, staccato dalla pagina e quindi largo
-      zero: le card tornavano alla misura di partenza e i testi si
-      rimpicciolivano appena si toccava «Organizza». Il misuratore si
-      riaggancia al riquadro nuovo (ref-funzione) e prende subito la misura.
+      attaccato al vecchio, staccato dalla pagina e quindi largo zero, e le
+      card tornavano alla misura di partenza coi testi rimpiccioliti.
+      Sistemato quello restava comunque un lampo, il tempo di rifare il
+      riquadro e rimisurarlo. Il misuratore, per sicurezza, si riaggancia
+      comunque al riquadro che c'è (ref-funzione) e prende subito la misura.
       Dentro «organizza» la card riempie la sua casella come fuori: la
       griglia rende tutte le caselle di una riga alte uguali, ma in mezzo
       c'è il guscio che porta il trascinamento — si allungava lui e la card
