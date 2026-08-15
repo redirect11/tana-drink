@@ -522,6 +522,10 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   // ── LISTA UNICA: item confermati (per-riga, dalle comande) + bozza ──
   // Le quantità già pagate (acconti/split registrati) vengono scorporate in
   // righe "pagate" a sé, così si distinguono e si possono spostare in fondo.
+  // Un conto RIAPERTO si modifica tutto, righe vecchie comprese: è il
+  // motivo per cui lo si riapre. Vedi api.js/bartenderUpdateComanda.
+  const riaperto = Array.isArray(order?.riaperture) && order.riaperture.length > 0
+
   const confirmedLines = useMemo(() => {
     const remainingPaid = {}
     for (const p of order?.payments || [])
@@ -550,13 +554,13 @@ export default function OrderPosDetail({ order: orderProp = null }) {
         // nodo e non riparte da capo (vedi draftToItems).
         const chiave = it.line_id ? `d:${it.line_id}` : `c:${c.id}:${idx}`
         if (unpaidQty > 0)
-          out.push({ ...base, key: chiave, qty: unpaidQty, removable: comandaEditable(c) })
+          out.push({ ...base, key: chiave, qty: unpaidQty, removable: comandaEditable(c) || riaperto })
         if (paidHere > 0)
           out.push({ ...base, key: `${chiave}:paid`, qty: paidHere, removable: false, paid: true })
       })
     }
     return out
-  }, [effComande, order?.payments])
+  }, [effComande, order?.payments, riaperto])
 
   const draftLines = useMemo(
     () => draft.map((l) => ({ ...l, key: `d:${l.line_id}`, source: 'draft', status: 'draft', removable: true })),
@@ -781,7 +785,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
       return
     }
     const c = effComandeRef.current.find((x) => x.id === l.comandaId)
-    if (!c || !comandaEditable(c)) return
+    if (!c || !(comandaEditable(c) || riaperto)) return
     const items = (c.items || []).map((it, j) => (j === l.itemIndex ? { ...it, qty: it.qty + 1 } : it))
     setPendingEdits((p) => ({ ...p, [l.comandaId]: items }))
     clearTimeout(flushTimers.current[l.comandaId])

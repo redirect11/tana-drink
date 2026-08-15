@@ -25,6 +25,15 @@ una funzione, il terzo per le correzioni.
   servite restano servite. **Se era stato pagato con un buono, il saldo
   torna al cliente**: se no lo pagherebbe due volte, una col buono e una
   quando ripaga il conto.
+- **Nel conto riaperto si modificano anche le righe di prima.** Erano
+  bloccate perché quelle comande risultavano servite: ma riaprire serve
+  proprio a togliere il giro battuto sul tavolo sbagliato. Le scorte si
+  riallineano da sé.
+- **Chiudere, annullare e riaprire un conto non aspettano più la rete.**
+  Prima di scrivere, l'app rileggeva il conto dal server: con una rete
+  lenta la coda restava indietro e il conto chiuso compariva sotto
+  «Chiusi» solo dopo. Ora legge la copia locale, che è quella che la coda
+  sta già guardando.
 - **Annullando un conto pagato con un buono, il credito torna al
   cliente.** Prima restava scalato: il conto non veniva incassato e il
   buono era speso lo stesso.

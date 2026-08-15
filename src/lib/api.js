@@ -5,6 +5,7 @@ import {
   getDoc,
   getDocs,
   getDocsFromCache,
+  getDocFromCache,
   setDoc,
   updateDoc,
   deleteDoc,
@@ -825,6 +826,23 @@ export function subscribeServiceStats(onChange, onError) {
 // Ordini della CODA: i conti aperti (sempre, per sempre) più quelli già
 // chiusi nella giornata commerciale corrente (per ristampe e verifiche).
 // Due sottoscrizioni unite: Firestore non fa OR fra campi diversi.
+// LEGGE IL CONTO SENZA ASPETTARE LA RETE. Chiudere, annullare o riaprire un
+// conto vuol dire prima rileggerlo: `getDoc`, quando c'e' rete, va al
+// SERVER — e con una rete lenta (o collegata e che non passa) quel momento
+// diventa un'attesa in mezzo al servizio. Il conto pero' e' gia' in cache:
+// la coda ci sta sopra con un listener, quindi la copia locale e' quella
+// dell'ultimo aggiornamento arrivato.
+// Si legge da li'; solo se in cache non c'e' si va a chiedere.
+async function leggiOrdine(ref) {
+  try {
+    const c = await getDocFromCache(ref)
+    if (c.exists()) return c
+  } catch {
+    /* niente cache (primo avvio, storage pieno): si chiede al server */
+  }
+  return getDoc(ref)
+}
+
 export function subscribeActiveOrders(onChange, onError, { cutoffHour = DEFAULT_CUTOFF_HOUR } = {}) {
   let aperti = []
   let recenti = []
@@ -2014,7 +2032,7 @@ export async function registerPayment(id, { amount, method = 'banco', items = nu
 export async function markOrderPaid(id, method, { autoServe = true } = {}) {
   const ref = doc(db, 'orders', id)
   const nowIso = new Date().toISOString()
-  const snap = await getDoc(ref)
+  const snap = await leggiOrdine(ref)
   if (!snap.exists()) throw new Error('Ordine non trovato')
   const chiusura = chiusuraPagamento(snap.data(), nowIso, { autoServe })
   const lowStock = chiusura.comande
@@ -2483,7 +2501,7 @@ export async function bartenderUpdateComanda(orderId, comandaId, { items }) {
     ...(i.note ? { note: i.note } : {}),
   }))
 
-  const snap = await getDoc(ref)
+  const snap = await leggiOrdine(ref)
   if (!snap.exists()) throw new Error('Ordine non trovato')
   const cur = snap.data()
   const norm = normalizeOrderDoc(cur)
@@ -2491,7 +2509,17 @@ export async function bartenderUpdateComanda(orderId, comandaId, { items }) {
   const comande = norm.comande.map((c) => ({ ...c }))
   const comanda = comande.find((c) => c.id === comandaId)
   if (!comanda) throw new Error('Comanda non trovata')
-  if (comanda.status === ORDER_STATUSES.RITIRATO || comanda.status === ORDER_STATUSES.ANNULLATO) {
+  // SU UN CONTO RIAPERTO SI TOCCA TUTTO. Di norma una comanda servita non
+  // si modifica più: il drink è stato fatto e portato. Ma riaprire un conto
+  // serve ESATTAMENTE a rimettere a posto quello che c'è dentro — un giro
+  // battuto sul tavolo sbagliato, una birra di troppo — e se le righe di
+  // prima restano bloccate il conto riaperto non serve a niente. Le scorte
+  // si riallineano con la differenza, come per ogni altra modifica.
+  const riaperto = Array.isArray(cur.riaperture) && cur.riaperture.length > 0
+  if (comanda.status === ORDER_STATUSES.ANNULLATO) {
+    throw new Error('Comanda annullata: non più modificabile')
+  }
+  if (comanda.status === ORDER_STATUSES.RITIRATO && !riaperto) {
     throw new Error('Comanda già servita: non più modificabile')
   }
 
@@ -2535,7 +2563,7 @@ export async function cancelOrder(id, opts = {}) {
     notify: notifyClient = false,
   } = opts
   const orderRef = doc(db, 'orders', id)
-  const snap = await getDoc(orderRef)
+  const snap = await leggiOrdine(orderRef)
   if (!snap.exists()) throw new Error('Ordine non trovato')
   const order = snap.data()
   if (order.status === ORDER_STATUSES.ANNULLATO) return mapOrder(snap)
@@ -2632,7 +2660,7 @@ export async function cancelOrder(id, opts = {}) {
 // una volta sola. È giusto così: il drink va rifatto.
 export async function restoreOrder(id, { motivo = null, chi = null } = {}) {
   const orderRef = doc(db, 'orders', id)
-  const snap = await getDoc(orderRef)
+  const snap = await leggiOrdine(orderRef)
   if (!snap.exists()) throw new Error('Ordine non trovato')
   const data = snap.data()
   if (data.status !== ORDER_STATUSES.PAGATO && data.status !== ORDER_STATUSES.ANNULLATO) {
