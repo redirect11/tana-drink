@@ -349,6 +349,11 @@ requirements:
       «organizza» cambiava numero di card per riga e misura — si sistemava
       una disposizione diversa da quella che poi si usa davvero. La cella
       occupa esattamente quello che occupa fuori da qui.
+      La card in mano è OPACA: il fondo delle card è un velo (--tile-bg,
+      bianco al 5%), che appoggiate sulla pagina va bene ma alzandone una
+      sopra le altre le faceva vedere attraverso — e non si capiva più
+      quale si sta spostando. Sotto ci va il fondo della pagina, così in
+      mano ha l'aspetto identico a quando è posata.
       Sempre per non far ballare la griglia, lo spazio della barra di
       scorrimento è riservato (`scrollbar-gutter: stable`): compariva e
       spariva a seconda di quanti prodotti ha la categoria, e al confine

@@ -48,6 +48,8 @@
 
 ### Al banco
 
+- **La card che stai spostando non è più trasparente**: alzandola si
+  vedevano le altre attraverso, e non si capiva quale si stava spostando.
 - **«Organizza» non cambia più la disposizione della griglia.** La maniglia
   stava a fianco della card e allargava ogni riquadro: entrando in
   organizza le card cambiavano numero per riga e misura, e si finiva per
