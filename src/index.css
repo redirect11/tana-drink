@@ -5,6 +5,11 @@
   --card: #1a1a26;
   --accent: #e52e71;
   --accent-2: #f5b94a;
+  /* Colore-azione dei bottoni primari: segue l'accento-2, ma i preset
+     chiari lo dichiarano a parte (themes.js) — lì l'accento-2 è scuro
+     per reggere i link sul fondo chiaro, e come fondo di un bottone
+     diventava una macchia senape. */
+  --btn: var(--accent-2);
   --grad: linear-gradient(90deg, rgba(245, 185, 74, 0.9), rgba(245, 185, 74, 0.12));
   --text: #f5f5f7;
   --muted: #9b9ba8;
@@ -452,10 +457,19 @@ body.schermo-intero {
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
-  background: linear-gradient(135deg, #f7c45e, #e8a32e);
+  /* L'ORO DEI BOTTONI SEGUE IL TEMA. Era un gradiente cablato
+     (#f7c45e→#e8a32e): cambiando preset — Catppuccin su tutti — i bottoni
+     restavano dorati come se il tema non esistesse. Ora derivano
+     dall'accento-2, e su Tana scuro l'occhio non vede differenza:
+     quell'oro cablato ERA l'accento-2. */
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--btn) 92%, #fff),
+    color-mix(in srgb, var(--btn) 85%, #241500)
+  );
   color: #1c1305;
   transition: transform 0.05s ease, opacity 0.2s ease, box-shadow 0.2s ease;
-  box-shadow: 0 4px 14px rgba(245, 185, 74, 0.25);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--btn) 25%, transparent);
 }
 
 .btn:active {
