@@ -924,9 +924,16 @@ requirements:
     title: "Il banco sa quando arriva un ordine nuovo"
     area: "functions/lib/push-core.js decideNewOrderStaffPush"
     description: >
-      Un ordine nuovo — o un'aggiunta a un conto esistente — avvisa il banco. Non
-      avvisano gli ordini battuti al banco stesso: chi li ha appena inseriti non ha
-      bisogno che glielo dicano.
+      Un ordine nuovo — o un'aggiunta a un conto esistente — avvisa il banco.
+      A restare senza avviso è SOLO il dispositivo da cui è partito: sa già di
+      averlo mandato. Non si guarda il ruolo: prima si buttava via l'avviso di
+      ogni ordine battuto da un admin o da un bartender, dando per scontato che
+      chi ha quel ruolo stia al banco — e chi gira ai tavoli col telefono, con
+      un account da gestore, non faceva squillare niente a nessuno.
+      Il terminale viaggia con l'ordine (`placed_by.device`) e col token push
+      del dispositivo; chi si è registrato prima che il dispositivo venisse
+      segnato viene avvisato lo stesso — un avviso in più si chiude, uno in
+      meno è un drink che non parte.
     status: implemented
     generate_issue: false
     labels: [notifiche]

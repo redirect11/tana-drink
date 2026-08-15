@@ -11,8 +11,6 @@ const CANCEL_PHRASES = {
 // Chi sta al banco: batte gli ordini di persona, quindi non ha bisogno che
 // glieli annuncino. (Stessa coppia di src/lib/ruoli.js: qui non si possono
 // importare i moduli del client.)
-const BANCO = ['admin', 'bartender']
-
 // Conta le comande di un ordine in un dato stato. Retrocompatibile: i doc
 // legacy (senza `comande`) valgono come una sola comanda con lo stato
 // dell'ordine.
@@ -119,9 +117,13 @@ function payableReceivedCount(o) {
 // obbligatorio viene saldato (e solo allora entra in coda). Restituisce il
 // messaggio { title, body } o null se non c'è nulla di nuovo da notificare.
 function decideNewOrderStaffPush(before, after) {
-  // Ordine battuto al banco (admin o bartender): nessuna notifica —
-  // avvisano solo gli ordini di clienti o staff di sala.
-  if (after && after.placed_by && BANCO.includes(after.placed_by.role)) return null
+  // NON SI TACE PER RUOLO, SI TACE PER TERMINALE. Prima qui si buttava via
+  // l'avviso di ogni ordine battuto da un admin o da un bartender, dando per
+  // scontato che chi ha quel ruolo stia al banco e sappia gia' tutto. Chi
+  // gira ai tavoli col telefono e un account da gestore non faceva squillare
+  // niente a nessuno: al banco l'ordine arrivava in silenzio.
+  // A restare senza avviso e' SOLO il dispositivo che l'ha mandato — sa gia'
+  // di averlo mandato — e di quello si occupa destinatariPush().
   const now = payableReceivedCount(after)
   const prev = payableReceivedCount(before)
   if (now <= prev) return null // niente di nuovo in coda
@@ -140,8 +142,24 @@ function decideNewOrderStaffPush(before, after) {
       }
 }
 
+// A CHI MANDARLO. `tokens` sono i dispositivi registrati
+// ({ token, role, device }); `roles` limita per ruolo dove serve (i drink da
+// servire riguardano la sala); `dispositivoOrigine` e' il terminale da cui e'
+// partita la cosa che si sta annunciando, e quello si salta.
+//
+// Chi si e' registrato prima che il dispositivo venisse segnato non ha
+// `device`: nel dubbio lo si avvisa. Un avviso in piu' si chiude, uno in
+// meno e' un drink che non parte.
+function destinatariPush(tokens, { roles = null, dispositivoOrigine = null } = {}) {
+  return (tokens || [])
+    .filter((t) => t && t.token)
+    .filter((t) => (roles ? roles.includes(t.role || 'staff') : true))
+    .filter((t) => !(dispositivoOrigine && t.device && t.device === dispositivoOrigine))
+}
+
 module.exports = {
   countComande,
+  destinatariPush,
   decideOrderPush,
   decideStaffCallPush,
   decideStaffServePush,

@@ -34,6 +34,7 @@ import {
   formatPrice,
   placedByName,
 } from '../lib/orderStatus.js'
+import { idDispositivo } from '../lib/dispositivo.js'
 import {
   nextComandaStatus,
   activeComanda,
@@ -946,8 +947,13 @@ export default function OrderPosDetail({ order: orderProp = null }) {
       ...(l.note ? { note: l.note } : {}),
     }))
 
+  // DA QUALE TERMINALE. Serve a non avvisare chi l'ordine l'ha appena
+  // mandato — e solo lui: lo stesso account sta su tablet, telefono e
+  // portatile insieme, e chi e' rimasto al banco l'avviso lo vuole.
   const placedBy = () =>
-    staff ? { email: staff.email, name: staff.name, role: staff.role } : undefined
+    staff
+      ? { email: staff.email, name: staff.name, role: staff.role, device: idDispositivo() }
+      : undefined
 
   // Senza gestione della preparazione non c'è nulla da far avanzare:
   // l'ordine nasce "ricevuto" e da lì si chiude col pagamento.
@@ -1290,6 +1296,12 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   const nomeConto = isNew ? info.customer_name.trim() : order.customer_name
   const panelTitle = `${headTitle}${nomeConto ? ` · ${nomeConto}` : ''}`
   const canPay = !isNew && !closed && order.payment_status !== 'pagato'
+  // IL TASTO DEL PAGAMENTO, SU UN CONTO CHIUSO, RIMETTE IN CORSO. Lì era
+  // spento a non fare niente — e accanto ce n'era un secondo, che compariva
+  // solo in quel caso. Due tasti per due stati dello stesso conto: quello
+  // che serve è uno, che dice cosa si può fare adesso. È anche il posto
+  // dove il dito va già: su un conto chiuso per sbaglio si preme lì.
+  const daRiaprire = !isNew && ripristinabile(order)
   // QUANTO RESTA DA INCASSARE, scritto sul tasto Pagamento. Prima la cifra
   // compariva solo finché l'ordine non esisteva ancora: appena si creava da
   // sé — cioè un istante dopo il primo prodotto — spariva, e sembrava un
@@ -1530,19 +1542,6 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                 >
                   🕘 Storia
                 </button>
-                {/* Questo compare e sparisce, al contrario degli altri: su un
-                    conto in corso non vuol dire niente, e un tasto che
-                    rimette in corso quello che è già in corso è solo un modo
-                    per far dubitare di aver capito. */}
-                {ripristinabile(order) && (
-                  <button
-                    className="btn ghost small"
-                    onClick={() => setShowRipristino(true)}
-                    title="Il conto torna fra quelli aperti"
-                  >
-                    ♻️ Rimetti in corso
-                  </button>
-                )}
             </div>
             {!isNew && order.table_label && (
               <div className="muted small">🍽 Tavolo {order.table_label}</div>
@@ -1757,13 +1756,23 @@ export default function OrderPosDetail({ order: orderProp = null }) {
               <button className="btn ghost small" disabled={isNew} onClick={inviaComanda}>
                 <IconPrinter /> Invia comanda
               </button>
-              <button
-                className="btn small"
-                disabled={isNew ? draftCount === 0 : !canPay}
-                onClick={isNew ? handlePayNow : () => setShowPayment(true)}
-              >
-                <IconCard /> Pagamento{daIncassare > 0 ? ` · ${formatPrice(daIncassare)}` : ''}
-              </button>
+              {daRiaprire ? (
+                <button
+                  className="btn small"
+                  onClick={() => setShowRipristino(true)}
+                  title="Il conto torna fra quelli aperti"
+                >
+                  ♻️ Rimetti in corso
+                </button>
+              ) : (
+                <button
+                  className="btn small"
+                  disabled={isNew ? draftCount === 0 : !canPay}
+                  onClick={isNew ? handlePayNow : () => setShowPayment(true)}
+                >
+                  <IconCard /> Pagamento{daIncassare > 0 ? ` · ${formatPrice(daIncassare)}` : ''}
+                </button>
+              )}
             </div>
 
             {workflowOn && (
@@ -1802,16 +1811,27 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                   <IconPrinter />
                   {!soloIcone && ' Invia'}
                 </button>
-                <button
-                  className="btn"
-                  disabled={isNew ? draftCount === 0 : !canPay}
-                  onClick={isNew ? handlePayNow : () => setShowPayment(true)}
-                  aria-label="Paga"
-                  title="Incassa il conto"
-                >
-                  <IconCard />
-                  {!soloIcone && ' Paga'}
-                </button>
+                {daRiaprire ? (
+                  <button
+                    className="btn"
+                    onClick={() => setShowRipristino(true)}
+                    aria-label="Rimetti in corso"
+                    title="Il conto torna fra quelli aperti"
+                  >
+                    ♻️{!soloIcone && ' Rimetti in corso'}
+                  </button>
+                ) : (
+                  <button
+                    className="btn"
+                    disabled={isNew ? draftCount === 0 : !canPay}
+                    onClick={isNew ? handlePayNow : () => setShowPayment(true)}
+                    aria-label="Paga"
+                    title="Incassa il conto"
+                  >
+                    <IconCard />
+                    {!soloIcone && ' Paga'}
+                  </button>
+                )}
                 <button
                   className="btn ghost"
                   disabled={isNew || closed}
@@ -1867,14 +1887,6 @@ export default function OrderPosDetail({ order: orderProp = null }) {
             hint: 'Aperto, chiuso, annullato, riaperto',
             disabled: isNew,
             onClick: () => setShowStoria(true),
-          },
-          {
-            id: 'ripristina',
-            icon: '♻️',
-            label: 'Rimetti in corso',
-            hint: ripristinabile(order) ? 'Il conto torna fra quelli aperti' : 'Il conto è già in corso',
-            disabled: !ripristinabile(order),
-            onClick: () => setShowRipristino(true),
           },
           {
             id: 'unisci',

@@ -53,13 +53,19 @@ describe('decideStaffServePush / decideNewOrderStaffPush', () => {
     const after = ord([c('c1', 'ricevuto')])
     expect(decideNewOrderStaffPush(null, after)?.title).toContain('Nuovo ordine')
   })
-  it('ordine inserito dal bartender: niente notifica', () => {
+  // IL RUOLO NON DICE DOVE SEI. Queste due prove dicevano il contrario —
+  // «battuto da un gestore, nessuna notifica» — perché si dava per scontato
+  // che admin e bartender stessero al banco. Chi prende ordini ai tavoli col
+  // telefono e un account da gestore non faceva squillare niente a nessuno:
+  // al banco l'ordine arrivava in silenzio. Ora l'avviso parte sempre, e a
+  // saltarlo è il solo terminale che l'ha mandato (destinatariPush).
+  it('ordine inserito dal bartender: la notifica parte lo stesso', () => {
     const after = ord([c('c1', 'ricevuto')], { placed_by: { role: 'bartender' } })
-    expect(decideNewOrderStaffPush(null, after)).toBeNull()
+    expect(decideNewOrderStaffPush(null, after)?.title).toContain('Nuovo ordine')
   })
-  it("ordine inserito dall'admin: niente notifica (sta al banco anche lui)", () => {
+  it("ordine inserito dall'admin: la notifica parte lo stesso", () => {
     const after = ord([c('c1', 'ricevuto')], { placed_by: { role: 'admin' } })
-    expect(decideNewOrderStaffPush(null, after)).toBeNull()
+    expect(decideNewOrderStaffPush(null, after)?.title).toContain('Nuovo ordine')
   })
   it('ordine inserito dallo staff: notifica sì', () => {
     const after = ord([c('c1', 'ricevuto')], { placed_by: { role: 'staff' } })
