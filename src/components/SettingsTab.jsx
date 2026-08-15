@@ -128,6 +128,28 @@ export default function SettingsTab({ role = null }) {
               </div>
 
               <p className="muted" style={{ margin: '12px 0 6px', fontSize: '0.85rem' }}>
+                Quanto è grande, come minimo, il testo delle righe del conto.
+                Il testo segue la larghezza del pannello, ma sotto questa
+                soglia non scende.
+              </p>
+              <div className="mode-choice" style={{ gridTemplateColumns: '1fr 1fr 1fr 1fr' }}>
+                {[
+                  [0.85, 'Piccolo'],
+                  [1, 'Medio'],
+                  [1.1, 'Grande'],
+                  [1.25, 'Extra'],
+                ].map(([value, label]) => (
+                  <button
+                    key={value}
+                    className={`mode-option${(Number(settings.pos_testo_min) || 1.1) === value ? ' active' : ''}`}
+                    onClick={() => save({ pos_testo_min: value })}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              <p className="muted" style={{ margin: '12px 0 6px', fontSize: '0.85rem' }}>
                 Come mostrare le categorie nel POS. L’icona e il colore di ogni
                 categoria si impostano nel <strong>Menù → Categorie</strong>: se una
                 categoria non ha un’icona, al suo posto compare il pallino colore.
@@ -814,14 +836,62 @@ export default function SettingsTab({ role = null }) {
       ),
     },
   ]
-  const attiva = sezioni.find((s) => s.id === sezione) ?? sezioni[0]
+
+  // LE VOCI DEL SOTTOMENU SONO DIECI, NON VENTITRÉ. Ogni riquadro resta
+  // com'è, ma appartiene a un GRUPPO — accorpati per «a cosa afferisce»
+  // l'impostazione, non per la storia di come è nata: con ventitré voci
+  // l'elenco era più lungo delle impostazioni.
+  const GRUPPO_DI = {
+    aspetto: 'aspetto',
+    'modalita-menu': 'menu-catalogo',
+    menu: 'menu-catalogo',
+    catalogo: 'menu-catalogo',
+    coda: 'banco',
+    'vista-ordine': 'banco',
+    consegna: 'servizio',
+    preparazione: 'servizio',
+    tempi: 'servizio',
+    annullamenti: 'servizio',
+    pagamenti: 'cassa',
+    giornata: 'cassa',
+    prezzo: 'prezzi',
+    sconto: 'prezzi',
+    coperto: 'prezzi',
+    'servizio-mancia': 'prezzi',
+    gruppi: 'gruppi',
+    'account-clienti': 'clienti',
+    posizione: 'clienti',
+    notifiche: 'clienti',
+    stampante: 'stampante',
+    backup: 'sistema',
+    informazioni: 'sistema',
+  }
+  const GRUPPI = [
+    { id: 'aspetto', icona: '🎨', label: 'Aspetto' },
+    { id: 'menu-catalogo', icona: '🍹', label: 'Menù e catalogo' },
+    { id: 'banco', icona: '🧾', label: 'Banco: coda e ordine' },
+    { id: 'servizio', icona: '🛎', label: 'Servizio' },
+    { id: 'cassa', icona: '💳', label: 'Cassa e giornata' },
+    { id: 'prezzi', icona: '🏷', label: 'Prezzi e supplementi' },
+    { id: 'gruppi', icona: '👥', label: 'Gruppi di ordini' },
+    { id: 'clienti', icona: '🙋', label: 'Clienti' },
+    { id: 'stampante', icona: '🖨️', label: 'Stampante' },
+    { id: 'sistema', icona: '💾', label: 'Sistema' },
+  ]
+  // Compat coi collegamenti vecchi (?sezione=coperto): l'id di un riquadro
+  // porta al gruppo che lo contiene.
+  const attiva =
+    GRUPPI.find((g) => g.id === sezione) ??
+    GRUPPI.find((g) => g.id === GRUPPO_DI[sezione]) ??
+    GRUPPI[0]
+  const riquadri = sezioni.filter((s) => GRUPPO_DI[s.id] === attiva.id)
 
   return (
     <div className="pagina-impostazioni">
       {/* Il titolo sta nella barra in alto (vedi lib/sezioni.js), e con lui
           l'elenco delle sezioni: in pagina costava una colonna intera. */}
       <Sottosezioni
-        voci={sezioni.map((x) => ({ id: x.id, icona: x.icona, label: x.label }))}
+        voci={GRUPPI.map((x) => ({ id: x.id, icona: x.icona, label: x.label }))}
         attiva={attiva.id}
         scegli={scegliSezione}
       />
@@ -855,8 +925,12 @@ export default function SettingsTab({ role = null }) {
 
       {/* Le sezioni stanno nella barra in alto (il titolo è il comando):
           a sinistra costavano una colonna tutto il giorno per una scelta che
-          si fa ogni tanto. */}
-      <div className="tab-corpo">{attiva.nodo}</div>
+          si fa ogni tanto. I riquadri del gruppo scelto si impilano. */}
+      <div className="tab-corpo">
+        {riquadri.map((s) => (
+          <div key={s.id}>{s.nodo}</div>
+        ))}
+      </div>
     </div>
   )
 }
