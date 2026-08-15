@@ -50,12 +50,14 @@
 
 - **La card che stai spostando non è più trasparente**: alzandola si
   vedevano le altre attraverso, e non si capiva quale si stava spostando.
-- **«Organizza» non cambia più la disposizione della griglia.** La maniglia
-  stava a fianco della card e allargava ogni riquadro: entrando in
-  organizza le card cambiavano numero per riga e misura, e si finiva per
-  sistemare una disposizione diversa da quella che si usa davvero. Ora la
-  maniglia sta sopra la card, sul suo bordo. E la griglia non si riassesta
-  più da sola quando compare la barra di scorrimento.
+- **«Organizza» non cambia più la disposizione della griglia** — né
+  quante card per riga, né la loro altezza. La maniglia
+  stava a fianco della card e allargava ogni riquadro; e la card, dentro
+  «organizza», non si allungava più fino a riempire la sua casella. Si
+  finiva per sistemare una disposizione diversa da quella che si usa
+  davvero. Ora la maniglia sta sopra la card, sul suo bordo, e la card
+  riempie la casella come fuori. La griglia non si riassesta nemmeno più
+  da sola quando compare la barra di scorrimento.
 
 - **Nella coda, «In servizio» torna vicino al ☰** e, sul telefono, sulla
   sua stessa linea: il rientro era scritto a mano e lasciava un buco, e la
