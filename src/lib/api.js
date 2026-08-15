@@ -25,7 +25,7 @@ import { splitAmounts } from './groups.js'
 import { createSumUpSale, updateSumUpSaleStatus, toSumUpStatus } from './sumupApi.js'
 import { computeConsumption, formatQty, qtyInStockUnit } from './inventory.js'
 import { consumptionDiff } from './warehouse.js'
-import { patchRipristino, buoniDaRestituire } from './ripristino.js'
+import { patchRipristino, buoniDaRestituire, segnaBuoniRestituiti } from './ripristino.js'
 import { riaddebitoBuono } from './vouchers.js'
 import {
   ORDER_OPEN,
@@ -1882,46 +1882,6 @@ export async function deleteVoucher(id) {
   await deleteDoc(doc(vouchersCol, id))
 }
 
-// Scala un buono per pagare un ordine: registra il pagamento sull'ordine
-// (metodo 'buono') e decrementa il saldo, in un'unica transazione.
-// Ritorna { redeemed, closed }.
-export async function payWithVoucher(orderId, voucherId, requestedAmount, { autoServe = true } = {}) {
-  const orderRef = doc(db, 'orders', orderId)
-  const voucherRef = doc(vouchersCol, voucherId)
-  const nowIso = new Date().toISOString()
-  const [oSnap, vSnap] = await Promise.all([getDoc(orderRef), getDoc(voucherRef)])
-  if (!oSnap.exists()) throw new Error('Ordine non trovato')
-  if (!vSnap.exists()) throw new Error('Buono non trovato')
-  const o = oSnap.data()
-  const v = vSnap.data()
-  if (o.status === ORDER_STATUSES.ANNULLATO) throw new Error('Ordine annullato')
-  if (o.payment_status === 'pagato') throw new Error('Ordine già pagato')
-  const due = orderDue(o)
-  const balance = Math.max(0, Number(v.balance) || 0)
-  const redeemed = Math.round(Math.min(due, balance, Math.max(0, Number(requestedAmount) || 0)) * 100) / 100
-  if (!(redeemed > 0)) throw new Error('Saldo del buono insufficiente')
-
-  const payments = [
-    ...(o.payments || []),
-    { id: `pay-${Date.now()}`, amount: redeemed, method: 'buono', voucher_id: voucherId, voucher_name: v.holder_name, at: nowIso },
-  ]
-  const closed = paymentCloses(o, redeemed)
-  const chiusura = closed ? chiusuraPagamento(o, nowIso, { autoServe }) : null
-  // Due scritture accodabili (ordine + buono): offline si accodano entrambe.
-  // Il saldo scala con increment (commutativo).
-  await updateDoc(orderRef, {
-    payments,
-    ...(closed
-      ? { ...chiusura, payment_method: summaryMethod(payments) }
-      : { payment_status: 'parziale' }),
-  })
-  await updateDoc(voucherRef, {
-    balance: increment(-redeemed),
-    movements: [...(v.movements || []), { type: 'uso', amount: -redeemed, order_id: orderId, at: nowIso }],
-  })
-  return { redeemed, closed }
-}
-
 const r2 = (n) => Math.round((Number(n) || 0) * 100) / 100
 
 // Rimette `amount` sul saldo di un buono (storno di un buono-sconto rimosso o
@@ -2620,6 +2580,15 @@ export async function cancelOrder(id, opts = {}) {
   if (order.discount && order.discount.type === 'buono' && order.discount.voucher_id) {
     await refundVoucher(order.discount.voucher_id, order.discount.value, id, nowIso)
   }
+  // E ANCHE I BUONI USATI PER PAGARE. Annullando, il conto non si incassa
+  // più: se il saldo restasse scalato, il cliente avrebbe perso il credito
+  // per un conto che non è mai stato pagato. Le righe restituite si segnano
+  // (`restituito_at`), così riaprendo il conto non tornano una seconda
+  // volta — sarebbe credito inventato.
+  const buoniIncasso = buoniDaRestituire(order)
+  for (const b of buoniIncasso) {
+    await refundVoucher(b.voucher_id, b.amount, id, nowIso)
+  }
   for (const c of comande) {
     if (c.status !== ORDER_STATUSES.RITIRATO && c.status !== ORDER_STATUSES.ANNULLATO) {
       c.status = ORDER_STATUSES.ANNULLATO
@@ -2631,6 +2600,9 @@ export async function cancelOrder(id, opts = {}) {
     status: ORDER_STATUSES.ANNULLATO,
     comande,
     comande_statuses: comandeStatuses(comande),
+    ...(buoniIncasso.length
+      ? { payments: segnaBuoniRestituiti(order.payments, nowIso) }
+      : {}),
     [`status_times.${ORDER_STATUSES.ANNULLATO}`]: nowIso,
     cancelled_by: by,
     cancel_kind: kind,

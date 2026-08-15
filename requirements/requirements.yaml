@@ -157,6 +157,12 @@ requirements:
       quelle annullate col conto.
       Il tasto per riaprire NON è un tasto in più: è quello del PAGAMENTO,
       che su un conto chiuso o annullato era lì spento a non fare niente.
+      ANNULLANDO, il saldo di un buono usato per pagare torna al
+      beneficiario: il conto non si incassa più, e lasciarlo scalato
+      significherebbe fargli perdere il credito per un conto mai pagato. Le
+      righe restituite si segnano (`restituito_at`), così riaprendo lo
+      stesso conto non tornano una seconda volta — sarebbe credito
+      inventato, l'errore opposto.
       IL BUONO NON SI PAGA DUE VOLTE. Il saldo di un buono si scala quando
       lo si usa, non quando i soldi entrano in cassa. Se il conto era stato
       PAGATO con un buono, riaprendolo quella riga di incasso sparisce come

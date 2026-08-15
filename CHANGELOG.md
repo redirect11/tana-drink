@@ -25,6 +25,9 @@ una funzione, il terzo per le correzioni.
   servite restano servite. **Se era stato pagato con un buono, il saldo
   torna al cliente**: se no lo pagherebbe due volte, una col buono e una
   quando ripaga il conto.
+- **Annullando un conto pagato con un buono, il credito torna al
+  cliente.** Prima restava scalato: il conto non veniva incassato e il
+  buono era speso lo stesso.
 - **Ogni conto ha la sua storia**, dietro i ⋯: aperto, chiuso, annullato,
   riaperto — con l'ora, chi l'ha fatto e il motivo della riapertura. E il
   motivo si legge anche dentro il conto riaperto, senza cercarlo: un conto
