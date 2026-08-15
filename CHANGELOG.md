@@ -30,6 +30,14 @@ una funzione, il terzo per le correzioni.
   restava sul conto senza che lo pagasse più nessuno — credito regalato e
   conti che non tornano. Se nel frattempo il buono è stato speso altrove,
   si prende quel che c'è e lo sconto si riduce di conseguenza.
+- **Sul telefono, a barra nascosta, la coda non finisce più sotto
+  l'orologio.** Il ➕ spariva a metà sotto la barra di sistema, il ☰ si
+  sovrapponeva ai conteggi e «In servizio» restava dietro la striscia: la
+  coda si prendeva lo spazio dell'ora e della batteria invece di
+  scansarlo.
+- **La storia del conto è tornata un'icona in alto**, accanto al numero:
+  da tasto largo si prendeva una riga intera accanto a Unisci, Separa e
+  Comande, per una cosa che si guarda ogni tanto.
 - **Gli avvisi seguono il terminale, non il ruolo.** Chi prende ordini col
   telefono con un account da gestore non li faceva più arrivare a nessuno:
   al banco non squillava niente. Ora l'unico a non essere avvisato è il

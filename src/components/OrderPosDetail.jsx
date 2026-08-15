@@ -1492,6 +1492,19 @@ export default function OrderPosDetail({ order: orderProp = null }) {
               <strong className="posd-title" style={{ display: 'block', flex: 1, minWidth: 0 }}>
                 {panelTitle}
               </strong>
+              {/* La storia sta qui, in alto, come SOLA ICONA: da tasto largo
+                  si prendeva una riga intera accanto a Unisci/Separa/Comande,
+                  per una cosa che si guarda ogni tanto. */}
+              {!isNew && (
+                <button
+                  className="btn ghost small posd-storia"
+                  onClick={() => setShowStoria(true)}
+                  aria-label="Storia del conto"
+                  title="Storia del conto: aperto, chiuso, annullato, riaperto"
+                >
+                  🕘
+                </button>
+              )}
               {telefono && (
                 <button
                   className="btn ghost small"
@@ -1530,17 +1543,6 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                   title={isNew ? 'Il conto non è ancora stato aperto' : 'Storico comande'}
                 >
                   <IconReceipt /> Comande ({isNew ? 0 : comande.length})
-                </button>
-                {/* Sul telefono sta nei ⋯ insieme al resto; qui il ⋯ non
-                    c'è (sarebbe un doppione), quindi la storia ha il suo
-                    tasto. */}
-                <button
-                  className="btn ghost small"
-                  onClick={() => setShowStoria(true)}
-                  disabled={isNew}
-                  title={isNew ? 'Il conto non è ancora stato aperto' : 'Aperto, chiuso, annullato, riaperto'}
-                >
-                  🕘 Storia
                 </button>
             </div>
             {!isNew && order.table_label && (
