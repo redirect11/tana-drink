@@ -371,9 +371,15 @@ body.schermo-intero {
   }
   /* La coda: stessa cosa, ma con un rientro sulla LAVAGNA — il suo primo
      figlio è la campanella flottante, che non occupa spazio e quindi non
-     avrebbe spinto giù niente. */
+     avrebbe spinto giù niente.
+     LA FASCIA DI SISTEMA VA SOMMATA, non sostituita: con `20px` secchi qui
+     si buttava via lo scosto dell'ora e della batteria (--safe-top) che la
+     lavagna si era già presa. Su iPhone, a barra nascosta, la coda saliva
+     di una cinquantina di pixel: il ➕ finiva sotto l'orologio, il ☰ — che
+     invece lo scosto lo tiene — si sovrapponeva ai conteggi, e il titolo
+     spariva dietro la striscia. */
   body.fullbleed .queue-board {
-    padding-top: 20px;
+    padding-top: calc(20px + var(--safe-top));
   }
 
   /* BARRA APERTA: si sovrappone, e va bene così. Farla "fare spazio"
@@ -4969,4 +4975,13 @@ body.drawer-open .zoom-control {
   border: 1px solid var(--line);
   background: color-mix(in srgb, var(--accent) 12%, transparent);
   font-size: 0.85rem;
+}
+
+/* La storia del conto: sola icona in alto, accanto al numero. Da tasto
+   largo si prendeva una riga intera accanto a Unisci/Separa/Comande, per
+   una cosa che si guarda ogni tanto. */
+.posd-storia {
+  flex-shrink: 0;
+  min-width: 34px;
+  padding-inline: 8px;
 }
