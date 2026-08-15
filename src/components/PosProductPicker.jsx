@@ -49,12 +49,19 @@ import DrinkForm from './DrinkForm.jsx'
 // bartender fissa in alto) e 🕘 Recenti (gli ultimi item ordinati, passati
 // via `recentIds`). In "Tutti" le card si RIORDINANO col drag (attivando la
 // modalità riordino) e l'ordine è ricordato per dispositivo.
-// Il guscio del trascinamento: c'è solo quando si sta organizzando.
+// Il guscio del trascinamento. STA SEMPRE, anche fuori da «organizza»:
+// montarlo solo lì significava spostare la griglia in un altro posto
+// dell'albero, e React a quel punto butta il riquadro e ne fa uno nuovo.
+// Si vedeva: per un attimo le card cambiavano misura e poi tornavano —
+// il tempo di rifare il riquadro, rimisurarlo e ridisegnare. Senza gesti
+// attivi (sensori spenti) e senza niente di trascinabile dentro, qui non
+// fa nulla: è solo un contenitore che resta al suo posto.
+const SENSORI_SPENTI = []
+
 function Riordinabile({ attiva, sensori, ids, onFine, children }) {
-  if (!attiva) return children
   return (
     <DndContext
-      sensors={sensori}
+      sensors={attiva ? sensori : SENSORI_SPENTI}
       collisionDetection={closestCenter}
       onDragEnd={onFine}
     >

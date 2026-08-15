@@ -117,6 +117,21 @@ describe('modalità organizza', () => {
     expect(griglia(container).style.gridTemplateColumns).toBe(prima)
   })
 
+  it('la griglia non viene rifatta: nessun lampo di card della misura sbagliata', async () => {
+    // Montare il contesto di trascinamento solo in «organizza» spostava la
+    // griglia in un altro posto dell'albero: React buttava il riquadro e ne
+    // faceva uno nuovo, e per un attimo si vedevano le card cambiare misura
+    // — il tempo di rimisurare e ridisegnare. È lo STESSO riquadro, prima e
+    // dopo.
+    const user = userEvent.setup()
+    const { container } = mostra({ canReorder: true, onReorder: vi.fn() })
+    const prima = griglia(container)
+    await user.click(screen.getByLabelText('Organizza griglia'))
+    expect(griglia(container)).toBe(prima)
+    await user.click(screen.getByLabelText('Fine organizzazione'))
+    expect(griglia(container)).toBe(prima)
+  })
+
   it('la misura della griglia continua a essere presa dopo il cambio di modo', async () => {
     // Entrando in «organizza» la griglia finisce dentro il contesto di
     // trascinamento: per React è un altro posto nell'albero, quindi il

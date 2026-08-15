@@ -56,9 +56,10 @@
   «organizza», non si allungava più fino a riempire la sua casella. Si
   finiva per sistemare una disposizione diversa da quella che si usa
   davvero. Ora la maniglia sta sopra la card, sul suo bordo, e la card
-  riempie la casella come fuori; e le card non rimpiccioliscono più —
-  entrando in organizza l'app perdeva la misura della griglia e tornava
-  alle dimensioni di partenza, testi compresi. La griglia non si riassesta nemmeno più
+  riempie la casella come fuori; e le card non rimpiccioliscono più, né
+  lampeggiano cambiando modo — entrando in organizza la griglia veniva
+  rifatta da capo e per un attimo si vedevano le card della misura
+  sbagliata. La griglia non si riassesta nemmeno più
   da sola quando compare la barra di scorrimento.
 
 - **Nella coda, «In servizio» torna vicino al ☰** e, sul telefono, sulla
