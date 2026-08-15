@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   DndContext,
   closestCenter,
@@ -123,12 +123,27 @@ export default function PosProductPicker({
   // cambia quando si ridimensionano le colonne laterali. Vale in creazione e in
   // modifica (stesso picker).
   const [gridW, setGridW] = useState(0)
-  useEffect(() => {
-    const el = gridRef.current
+  // IL METRO VA RIATTACCATO QUANDO LA GRIGLIA RINASCE. Entrando in
+  // «organizza» la griglia finisce dentro il contesto di trascinamento: per
+  // React è un altro posto nell'albero, quindi butta via il riquadro e ne
+  // fa uno nuovo. Il misuratore restava attaccato a quello vecchio, ormai
+  // staccato dalla pagina, che misura zero: le card tornavano alla misura
+  // di partenza e i testi si rimpicciolivano di colpo, appena si toccava
+  // «Organizza». Con un ref-funzione lo si riaggancia al riquadro nuovo.
+  const osservatore = useRef(null)
+  const agganciaGriglia = useCallback((el) => {
+    gridRef.current = el
+    osservatore.current?.disconnect()
+    osservatore.current = null
     if (!el || typeof ResizeObserver === 'undefined') return
-    const ro = new ResizeObserver((entries) => setGridW(Math.round(entries[0].contentRect.width)))
+    const ro = new ResizeObserver((entries) =>
+      setGridW(Math.round(entries[0].contentRect.width))
+    )
     ro.observe(el)
-    return () => ro.disconnect()
+    osservatore.current = ro
+    // La prima misura senza aspettare il giro dell'osservatore: se no per
+    // un disegno le card sono della misura sbagliata.
+    setGridW(Math.round(el.getBoundingClientRect().width))
   }, [])
   const GRID_GAP = 8
   // Centro stretto (smartphone): barra alta compatta e font più piccoli.
@@ -412,7 +427,7 @@ export default function PosProductPicker({
           onFine={fineRiordino}
         >
         <div
-          ref={gridRef}
+          ref={agganciaGriglia}
           onScroll={() => onInteract?.()}
           style={{
             flex: 1,
