@@ -48,6 +48,13 @@
 
 ### Al banco
 
+- **«Organizza» non cambia più la disposizione della griglia.** La maniglia
+  stava a fianco della card e allargava ogni riquadro: entrando in
+  organizza le card cambiavano numero per riga e misura, e si finiva per
+  sistemare una disposizione diversa da quella che si usa davvero. Ora la
+  maniglia sta sopra la card, sul suo bordo. E la griglia non si riassesta
+  più da sola quando compare la barra di scorrimento.
+
 - **Nella coda, «In servizio» torna vicino al ☰** e, sul telefono, sulla
   sua stessa linea: il rientro era scritto a mano e lasciava un buco, e la
   scritta si appoggiava all'altezza dei tasti scivolando sotto il ☰.

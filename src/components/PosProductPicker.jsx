@@ -424,6 +424,12 @@ export default function PosProductPicker({
             overscrollBehavior: 'contain',
             WebkitOverflowScrolling: 'touch',
             padding: '10px 8px',
+            // LA BARRA DI SCORRIMENTO NON DEVE SPOSTARE LE COLONNE. Compare
+            // e sparisce a seconda di quanti prodotti ha la categoria, e
+            // con lei cambiava la larghezza utile: al confine fra tre e
+            // quattro card per riga la griglia si riassestava da sola
+            // mentre la si guardava. Lo spazio è sempre riservato.
+            scrollbarGutter: 'stable',
             display: 'grid',
             gridTemplateColumns: `repeat(auto-fill, minmax(${tileMin}px, 1fr))`,
             alignContent: 'start',

@@ -99,3 +99,36 @@ describe('ricerca prodotti: accendi e porta lì', () => {
     expect(screen.getByText(/Nessun prodotto per/)).toBeInTheDocument() // …quindi si scrive
   })
 })
+
+// ── ORGANIZZA NON DEVE CAMBIARE LA GRIGLIA ───────────────────────────
+// La maniglia stava a fianco della card e ogni cella cresceva di 38px:
+// entrando in «organizza» le card cambiavano numero per riga e misura, e
+// si finiva per sistemare una disposizione diversa da quella che poi si
+// usa davvero. La maniglia sta SOPRA la card, e la cella occupa quello
+// che occupa fuori da qui.
+describe('modalità organizza', () => {
+  const griglia = (c) => c.querySelector('[style*="grid-template-columns"]')
+
+  it('le colonne restano quelle di prima', async () => {
+    const user = userEvent.setup()
+    const { container } = mostra({ canReorder: true, onReorder: vi.fn() })
+    const prima = griglia(container).style.gridTemplateColumns
+    await user.click(screen.getByLabelText('Organizza griglia'))
+    expect(griglia(container).style.gridTemplateColumns).toBe(prima)
+  })
+
+  it('la maniglia sta dentro la card, non a fianco', async () => {
+    const user = userEvent.setup()
+    const { container, cards } = mostra({ canReorder: true, onReorder: vi.fn() })
+    const quante = cards().length
+    await user.click(screen.getByLabelText('Organizza griglia'))
+    // Stesse card di prima, ognuna con il suo appiglio dentro la cella.
+    expect(cards().length).toBe(quante)
+    const celle = container.querySelectorAll('.reorder-cell')
+    expect(celle.length).toBe(quante)
+    for (const cella of celle) {
+      expect(cella.querySelector('.reorder-grip')).toBeTruthy()
+      expect(cella.querySelector('[data-drink-id]')).toBeTruthy()
+    }
+  })
+})

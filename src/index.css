@@ -4508,24 +4508,25 @@ body.fullbleed .cat-rail {
    e fra le due c'era una fessura con gli angoli tondi da tutte e due le
    parti — sembravano due oggetti. Il colore è quello di casa (l'accento
    smorzato sul fondo), non una macchia senape che non c'entra niente. */
+/* LA MANIGLIA NON ALLARGA LA CARD. Stava a fianco, e ogni cella cresceva
+   di 38px: entrando in «organizza» la griglia si ricalcolava e le card
+   cambiavano numero e misura — si organizzava una disposizione diversa da
+   quella che poi si usa. Ora la maniglia sta SOPRA la card, sul suo bordo
+   destro: la cella occupa esattamente quello che occupa fuori da
+   «organizza», e la griglia resta quella. */
 .reorder-cell {
   position: relative;
-  padding-right: 38px;
   border-radius: 12px;
   will-change: transform;
-}
-/* La card perde gli angoli tondi dal lato della maniglia: il giro esterno
-   lo chiude lei. */
-.reorder-cell > [data-drink-id] {
-  border-top-right-radius: 0 !important;
-  border-bottom-right-radius: 0 !important;
 }
 .reorder-grip {
   position: absolute;
   top: 0;
   bottom: 0;
   right: 0;
-  width: 38px;
+  width: 34px;
+  border-top-right-radius: 12px;
+  border-bottom-right-radius: 12px;
   z-index: 3;
   display: flex;
   align-items: center;
@@ -4533,7 +4534,8 @@ body.fullbleed .cat-rail {
   font-size: 1.3rem;
   line-height: 1;
   color: var(--text);
-  background: color-mix(in srgb, var(--accent) 22%, var(--tile-bg));
+  /* Si vede che è un appiglio, ma sotto la card resta leggibile. */
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
   border: 1px solid var(--line);
   border-left: none;
   border-radius: 0 12px 12px 0;
