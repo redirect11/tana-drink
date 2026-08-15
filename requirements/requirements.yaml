@@ -157,6 +157,14 @@ requirements:
       quelle annullate col conto.
       Il tasto per riaprire NON è un tasto in più: è quello del PAGAMENTO,
       che su un conto chiuso o annullato era lì spento a non fare niente.
+      IL BUONO NON SI PAGA DUE VOLTE. Il saldo di un buono si scala quando
+      lo si usa, non quando i soldi entrano in cassa. Se il conto era stato
+      PAGATO con un buono, riaprendolo quella riga di incasso sparisce come
+      le altre: il saldo torna al beneficiario, altrimenti avrebbe pagato
+      due volte — una col buono che non torna, una quando ripaga il conto.
+      Il buono usato come SCONTO invece resta dov'è: lo sconto è ancora sul
+      conto, quindi qualcuno deve pagarlo, e ri-chiuderlo non lo scala una
+      seconda volta.
       Se il conto annullato era stato scontato con un BUONO VIP, riaprendolo il
       saldo si ri-addebita: annullando era tornato al beneficiario, e lasciarlo
       lì significherebbe uno sconto che nessuno ha pagato e un credito in

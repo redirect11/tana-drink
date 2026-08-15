@@ -9,7 +9,12 @@
 // incassare. A fine turno lo stesso conto risultava incassato due volte.
 
 import { describe, it, expect } from 'vitest'
-import { patchRipristino, incassatoSuConto, comandeRiaperte } from '../../src/lib/ripristino.js'
+import {
+  patchRipristino,
+  incassatoSuConto,
+  comandeRiaperte,
+  buoniDaRestituire,
+} from '../../src/lib/ripristino.js'
 import { ORDER_STATUSES } from '../../src/lib/orderStatus.js'
 
 const ORA = '2026-08-15T21:30:00.000Z'
@@ -82,5 +87,52 @@ describe('riaprire un conto', () => {
     expect(out[0].status).toBe(ORDER_STATUSES.RITIRATO)
     expect(out[1].status).toBe(ORDER_STATUSES.RICEVUTO)
     expect(out[1].status_times[ORDER_STATUSES.RICEVUTO]).toBe(ORA)
+  })
+})
+
+// IL BUONO NON SI PAGA DUE VOLTE. Il saldo si scala quando il buono si usa,
+// non quando i soldi entrano in cassa: se riaprendo il conto la riga di
+// incasso sparisce e il saldo resta scalato, il cliente ha pagato due volte
+// — una col buono che non torna, una quando ripaga il conto.
+describe('i buoni usati per pagare', () => {
+  it('tornano al beneficiario, per l’importo usato', () => {
+    const conto = {
+      payments: [
+        { amount: 6, method: 'buono', voucher_id: 'v1' },
+        { amount: 4, method: 'banco' },
+      ],
+    }
+    expect(buoniDaRestituire(conto)).toEqual([{ voucher_id: 'v1', amount: 6 }])
+  })
+
+  it('due usi dello stesso buono tornano insieme, non a rate', () => {
+    const conto = {
+      payments: [
+        { amount: 6, method: 'buono', voucher_id: 'v1' },
+        { amount: 2.5, method: 'buono', voucher_id: 'v1' },
+        { amount: 3, method: 'buono', voucher_id: 'v2' },
+      ],
+    }
+    expect(buoniDaRestituire(conto)).toEqual([
+      { voucher_id: 'v1', amount: 8.5 },
+      { voucher_id: 'v2', amount: 3 },
+    ])
+  })
+
+  it('senza buoni non torna niente', () => {
+    expect(buoniDaRestituire({ payments: [{ amount: 10, method: 'carta' }] })).toEqual([])
+    expect(buoniDaRestituire({})).toEqual([])
+  })
+
+  it('una riga rotta non fa restituire il nulla', () => {
+    // Un incasso col buono senza id, o a zero, non è qualcosa da rimettere
+    // a posto: è una riga da ignorare.
+    const conto = {
+      payments: [
+        { amount: 5, method: 'buono' },
+        { amount: 0, method: 'buono', voucher_id: 'v1' },
+      ],
+    }
+    expect(buoniDaRestituire(conto)).toEqual([])
   })
 })

@@ -25,7 +25,7 @@ import { splitAmounts } from './groups.js'
 import { createSumUpSale, updateSumUpSaleStatus, toSumUpStatus } from './sumupApi.js'
 import { computeConsumption, formatQty, qtyInStockUnit } from './inventory.js'
 import { consumptionDiff } from './warehouse.js'
-import { patchRipristino } from './ripristino.js'
+import { patchRipristino, buoniDaRestituire } from './ripristino.js'
 import { riaddebitoBuono } from './vouchers.js'
 import {
   ORDER_OPEN,
@@ -2700,6 +2700,14 @@ export async function restoreOrder(id, { motivo = null, chi = null } = {}) {
         scontoRiscritto = { discount: esito.discount, discount_amount: esito.discount_amount }
       }
     }
+  }
+
+  // PAGATO COL BUONO: il saldo torna. La riga di incasso sparisce insieme
+  // alle altre (il conto è di nuovo da incassare) e lasciare il saldo
+  // scalato vorrebbe dire farlo pagare due volte: una col buono che non
+  // torna, una quando ripaga il conto.
+  for (const b of buoniDaRestituire(data)) {
+    await refundVoucher(b.voucher_id, b.amount, id, nowIso)
   }
 
   // La regola sta in lib/ripristino.js, pura e provata; qui si scrive.

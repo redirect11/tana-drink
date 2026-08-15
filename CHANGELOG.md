@@ -22,7 +22,9 @@ una funzione, il terzo per le correzioni.
   si modificano tutte e quello che era stato incassato **esce dagli
   incassi della serata**, perché quel conto è di nuovo da incassare. Resta
   scritto nella storia del conto quanto è stato tolto, e le comande già
-  servite restano servite.
+  servite restano servite. **Se era stato pagato con un buono, il saldo
+  torna al cliente**: se no lo pagherebbe due volte, una col buono e una
+  quando ripaga il conto.
 - **Ogni conto ha la sua storia**, dietro i ⋯: aperto, chiuso, annullato,
   riaperto — con l'ora, chi l'ha fatto e il motivo della riapertura. E il
   motivo si legge anche dentro il conto riaperto, senza cercarlo: un conto
