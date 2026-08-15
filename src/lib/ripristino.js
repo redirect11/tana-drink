@@ -61,3 +61,27 @@ export function patchRipristino(order, { comande, nowIso, motivo = null, chi = n
     ],
   }
 }
+
+// I BUONI USATI PER PAGARE VANNO RIMESSI A POSTO.
+//
+// Il saldo di un buono si scala quando lo si usa, non quando i soldi
+// entrano in cassa: pagando con un buono nasce una riga di incasso
+// (`method: 'buono'`) e il saldo cala subito. Riaprendo il conto quella
+// riga sparisce insieme alle altre — il conto è di nuovo da incassare — e
+// se il saldo restasse scalato il cliente avrebbe pagato due volte: una col
+// buono che non torna, una quando ripaga il conto.
+//
+// Il buono-SCONTO invece resta dov'è: lo sconto è ancora sul conto, quindi
+// qualcuno deve pagarlo, e ri-chiudere il conto non lo scala una seconda
+// volta. (Su un conto ANNULLATO il saldo era tornato al beneficiario: lì lo
+// sconto si ri-addebita, vedi vouchers.js.)
+export function buoniDaRestituire(order) {
+  const per = new Map()
+  for (const p of order?.payments || []) {
+    if (p?.method !== 'buono' || !p.voucher_id) continue
+    const amt = r2(p.amount)
+    if (!(amt > 0)) continue
+    per.set(p.voucher_id, r2((per.get(p.voucher_id) || 0) + amt))
+  }
+  return [...per.entries()].map(([voucher_id, amount]) => ({ voucher_id, amount }))
+}
