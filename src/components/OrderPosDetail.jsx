@@ -207,6 +207,32 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   // legare i gruppi a `isNew` faceva sparire il tasto sotto le dita, proprio
   // mentre lo si stava per usare. I gruppi ci sono se sono ACCESI, punto.
   const groupsOn = settings.groups_enabled
+  // I CALCOLI DELLE RIGHE («2 × 5,00 €») si mostrano a richiesta, dal menù
+  // ⋯ del conto: in riga, accanto a ogni nome, erano rumore — il numero
+  // che conta è il subtotale. La scelta si ricorda sul dispositivo.
+  const [mostraCalcoli, setMostraCalcoli] = useState(() => {
+    try {
+      return localStorage.getItem('tana:pos:calcoli') === '1'
+    } catch {
+      return false
+    }
+  })
+  const toggleCalcoli = () =>
+    setMostraCalcoli((v) => {
+      const next = !v
+      try {
+        localStorage.setItem('tana:pos:calcoli', next ? '1' : '0')
+      } catch {
+        /* niente memoria: vale per questa sessione */
+      }
+      return next
+    })
+  // Il dettaglio dei supplementi (coperto/servizio/mancia) sotto il
+  // Subtotale: aperto dove lo spazio c'è, chiuso di suo sul telefono —
+  // si apre toccando il Subtotale.
+  const [mostraSupplementi, setMostraSupplementi] = useState(
+    () => !window.matchMedia('(max-width: 899px)').matches
+  )
   // Su un conto già creato il gruppo si scrive subito sull'ordine.
   const orderIdCorrente = order?.id
   useEffect(() => {
@@ -284,7 +310,14 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   // Base più grande su tablet/desktop (leggibile su iPad); su smartphone scala
   // fissa più contenuta (la colonna è comunque al 100%).
   const catsScale = isPhone ? 0.95 : clampScale(catsRz.width / 150, 1.1, 1.7)
-  const comandaScale = isPhone ? 0.95 : clampScale(comandaRz.width / 340, 1.1, 1.7)
+  // Il MINIMO della scala del testo delle righe è configurabile
+  // (Impostazioni → Vista ordine): il pavimento fisso a 1.1 per qualcuno
+  // era un manifesto — sotto la soglia scelta il testo non scende, per
+  // quanto si stringa il pannello.
+  const testoMin = clampScale(Number(settings.pos_testo_min) || 1.1, 0.8, 1.4)
+  const comandaScale = isPhone
+    ? Math.min(0.95, testoMin)
+    : clampScale(comandaRz.width / 340, testoMin, 1.7)
 
   // Pannello ordine in basso (solo smartphone): si RIMPICCIOLISCE quando si
   // lavora sulla griglia (scroll/ricerca/aggiunta) e si riapre toccandolo.
@@ -1507,36 +1540,41 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                   🕘
                 </button>
               )}
-              {telefono && (
-                <button
-                  className="btn ghost small"
-                  onClick={() => setShowAzioni(true)}
-                  aria-label="Azioni del conto"
-                  title="Azioni del conto"
-                >
-                  ⋯
-                </button>
-              )}
+              {/* Il ⋯ c'è a TUTTE le taglie: era solo da telefono, ma le
+                  azioni che non meritano un tasto sempre visibile (i
+                  calcoli delle righe, la storia) servono anche su tablet
+                  e desktop. */}
+              <button
+                className="btn ghost small"
+                onClick={() => setShowAzioni(true)}
+                aria-label="Azioni del conto"
+                title="Azioni del conto"
+              >
+                ⋯
+              </button>
             </div>
             <div className="posd-azioni">
               {/* I tasti ci sono SEMPRE, spenti quando non servono. Comparire e
                   sparire sposta tutto quello che sta sotto proprio mentre ci si
                   sta per premere sopra — e il tasto che cercavi non è più lì. */}
+                {/* UN TASTO SOLO per Unisci/Separa: dei due, alla volta ne
+                    serve uno — il tasto mostra l'azione possibile e cambia
+                    faccia da sé (se c'è da unire, unisce; altrimenti
+                    separa). Quando servono entrambe vince Unisci, e Separa
+                    resta comunque raggiungibile dal ⋯. */}
                 <button
                   className="btn ghost small"
-                  onClick={mergeDraft}
-                  disabled={!canMerge}
-                  title={canMerge ? 'Unisci le righe uguali' : 'Niente da unire'}
+                  onClick={canMerge ? mergeDraft : splitAllDraft}
+                  disabled={!canMerge && !canSplit}
+                  title={
+                    canMerge
+                      ? 'Unisci le righe uguali'
+                      : canSplit
+                        ? 'Separa le quantità'
+                        : 'Niente da unire o separare'
+                  }
                 >
-                  🔗 Unisci
-                </button>
-                <button
-                  className="btn ghost small"
-                  onClick={splitAllDraft}
-                  disabled={!canSplit}
-                  title={canSplit ? 'Separa le quantità' : 'Niente da separare'}
-                >
-                  ⑃ Separa
+                  {canMerge ? '🔗 Unisci' : '⑃ Separa'}
                 </button>
                 <button
                   className="btn secondary small"
@@ -1693,17 +1731,21 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                           <span style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
                             {l.custom ? '✨ ' : ''}{l.name}
                           </span>
-                          {/* IL PREZZO DELLA RIGA, non quello di uno. Con
-                              3× Tennent's si leggeva «4,00 €» e basta: il
-                              subtotale non c'era proprio, e per sapere quanto
-                              faceva quella riga bisognava moltiplicare a
-                              mente. Con più di uno si scrive da dove viene il
-                              numero — «3 × 4,00 €» — e il totale sta a destra,
-                              accanto ai tasti, come su uno scontrino. */}
-                          <span className="muted" style={{ whiteSpace: 'nowrap', flexShrink: 0, marginLeft: 5, fontSize: '0.85em' }}>
-                            · {l.qty > 1 ? `${l.qty} × ` : ''}{formatPrice(l.unit_price)}
-                          </span>
                         </span>
+                        {/* IL CALCOLO A RICHIESTA (⋯ → «Mostra i calcoli»).
+                            Stava in riga accanto a ogni nome ed era rumore:
+                            il numero che conta è il subtotale, a destra.
+                            Chi vuole vedere da dove viene lo accende, e
+                            compare qui sotto come le note — se una riga ha
+                            nota e calcolo, sono due righe distinte. */}
+                        {mostraCalcoli && l.qty > 1 && (
+                          <span
+                            className="muted"
+                            style={{ display: 'block', fontSize: '0.78em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                          >
+                            ↳ {l.qty} × {formatPrice(l.unit_price)}
+                          </span>
+                        )}
                         {/* Nota della riga (es. "poco ghiaccio", o di chi è) */}
                         {l.note && (
                           <span
@@ -1716,14 +1758,15 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                       </span>
                     </span>
                     <span className="row" style={{ gap: 4, alignItems: 'center' }}>
-                      {l.qty > 1 && (
-                        <strong
-                          className="posd-riga-tot"
-                          title={`${l.qty} × ${formatPrice(l.unit_price)}`}
-                        >
-                          {formatPrice(l.qty * l.unit_price)}
-                        </strong>
-                      )}
+                      {/* Il SUBTOTALE c'è sempre, anche con un pezzo solo:
+                          senza, le righe singole restavano senza prezzo
+                          quando il calcolo è spento. */}
+                      <strong
+                        className="posd-riga-tot"
+                        title={`${l.qty} × ${formatPrice(l.unit_price)}`}
+                      >
+                        {formatPrice(l.qty * l.unit_price)}
+                      </strong>
                       <span className="qty" onPointerDown={(e) => e.stopPropagation()}>
                         {/* Etichette col nome: nella lista ci sono molte righe,
                             e i +/- della griglia hanno un altro significato. */}
@@ -1763,13 +1806,49 @@ export default function OrderPosDetail({ order: orderProp = null }) {
               </div>
             )}
 
+            {/* I SUPPLEMENTI IN CHIARO. Prima una riga cumulativa diceva
+                «Coperto/servizio/mancia · 5,50 €» e non si capiva né cosa
+                fosse attivo né quanto pesasse ognuno. Ora: Subtotale (il
+                conto nudo) in evidenza, sotto le voci attive una per riga,
+                in piccolo e strette; in fondo il Totale che somma tutto.
+                Sul telefono il dettaglio parte chiuso: si apre dal
+                Subtotale. */}
             {extras > 0 && (
-              <div className="row between muted small">
-                <span>Coperto/servizio/mancia</span>
-                <span>{formatPrice(extras)}</span>
-              </div>
+              <>
+                <div
+                  className="row between"
+                  onClick={() => setMostraSupplementi((v) => !v)}
+                  style={{ cursor: 'pointer', margin: 0, lineHeight: 1.35 }}
+                  title="Il conto senza supplementi — tocca per il dettaglio"
+                >
+                  <strong style={{ fontSize: '0.95em' }}>
+                    Subtotale{' '}
+                    <span className="muted" style={{ fontWeight: 400, fontSize: '0.8em' }}>
+                      {mostraSupplementi ? '▾' : '▸'}
+                    </span>
+                  </strong>
+                  <strong style={{ fontSize: '0.95em' }}>{formatPrice(confirmedTotal + draftTotal)}</strong>
+                </div>
+                {mostraSupplementi &&
+                  [
+                    ['Coperto', Number(order?.coperto_amount || 0)],
+                    ['Servizio', Number(order?.service_charge_amount || 0)],
+                    ['Mancia', Number(order?.tip_amount || 0)],
+                  ]
+                    .filter(([, v]) => v > 0)
+                    .map(([label, v]) => (
+                      <div
+                        className="row between muted small"
+                        key={label}
+                        style={{ margin: 0, lineHeight: 1.3 }}
+                      >
+                        <span>{label}</span>
+                        <span>{formatPrice(v)}</span>
+                      </div>
+                    ))}
+              </>
             )}
-            <div className="row between">
+            <div className="row between" style={extras > 0 ? { marginTop: 2 } : undefined}>
               <strong>Totale</strong>
               <strong className="price">{formatPrice(confirmedTotal + draftTotal + extras)}</strong>
             </div>
@@ -1885,7 +1964,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
           una seconda logica da tenere allineata, solo un altro posto da
           cui chiamarla. */}
       <ActionSheet
-        open={showAzioni && telefono}
+        open={showAzioni}
         onClose={() => setShowAzioni(false)}
         titolo={panelTitle}
         voci={[
@@ -1933,6 +2012,13 @@ export default function OrderPosDetail({ order: orderProp = null }) {
             label: 'Separa le quantità',
             disabled: !canSplit,
             onClick: splitAllDraft,
+          },
+          {
+            id: 'calcoli',
+            icon: '🧮',
+            label: mostraCalcoli ? 'Nascondi i calcoli delle righe' : 'Mostra i calcoli delle righe',
+            hint: 'Sotto ogni riga, «2 × 5,00 €», come le note',
+            onClick: toggleCalcoli,
           },
           groupsOn && {
             id: 'gruppo',
