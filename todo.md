@@ -57,6 +57,11 @@ qui c'è il quadro completo, bug e non solo.
       prima esistono i dati per il futuro backoffice (Fase 6).
 - [ ] Decidere i nomi: prodotto/dominio, progetto demo (`drink-demo`?),
       progetto regia (`drink-fleet`?).
+- [ ] **Fase 4 con Terraform** (deciso 15/08): modulo `cliente` in
+      `infra/` (progetto, API, IAM, Secret Manager, budget), stato in un
+      bucket GCS della regia. Terraform per l'infrastruttura, la CI
+      esistente per gli artefatti. Primo collaudo: `import` del progetto
+      demo. Dettagli nel piano, Fase 4.
 
 ## Metodo e strumenti
 
