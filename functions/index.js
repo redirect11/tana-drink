@@ -28,6 +28,7 @@ const {
   decideStaffCallPush,
   decideStaffServePush,
   decideNewOrderStaffPush,
+  destinatariPush,
 } = require('./lib/push-core')
 const { staffAdmin } = require('./lib/staff-service')
 const {
@@ -165,7 +166,12 @@ exports.notifyOrderUpdate = onDocumentUpdated({ ...OPTS, document: 'orders/{orde
   //    obbligatorio viene saldato ed entra in coda (è "nuovo" per la cucina).
   const newOrderMsg = decideNewOrderStaffPush(before, after)
   if (newOrderMsg) {
-    await pushToStaff({ kind: 'new_order', orderId: event.params.orderId, msg: newOrderMsg })
+    await pushToStaff({
+      kind: 'new_order',
+      orderId: event.params.orderId,
+      msg: newOrderMsg,
+      dispositivoOrigine: after?.placed_by?.device ?? null,
+    })
   }
 
   // 3) Push allo staff DI SALA quando c'è un ordine pronto da servire al
@@ -185,15 +191,23 @@ exports.notifyOrderUpdate = onDocumentUpdated({ ...OPTS, document: 'orders/{orde
 // (staff_tokens). La notifica vera (titolo/corpo/vibrazione) la costruisce il
 // service worker dal campo `kind`, così arriva anche ad app in background o
 // chiusa. Rimuove in automatico i token scaduti.
-async function pushToStaff({ kind, orderId, msg, url = '/bar', roles = null }) {
+async function pushToStaff({ kind, orderId, msg, url = '/bar', roles = null, dispositivoOrigine = null }) {
   const tokensSnap = await db.collection('staff_tokens').get()
-  let docs = tokensSnap.docs.filter((d) => d.get('token'))
-  // `roles` limita i destinatari: i drink pronti DA SERVIRE riguardano la
-  // sala, non il bancone — al bartender arriverebbero come rumore, visto
-  // che è lui stesso a segnarli pronti. I token senza ruolo sono di
-  // dispositivi registrati prima di questa distinzione: li si considera
-  // di sala solo se non si sta filtrando sul bartender.
-  if (roles) docs = docs.filter((d) => roles.includes(d.get('role') || 'staff'))
+  // Chi avvisare lo decide destinatariPush (push-core, pura e provata):
+  // `roles` dove serve — i drink pronti DA SERVIRE riguardano la sala, non
+  // il bancone che li segna pronti — e mai il terminale da cui è partito
+  // l'ordine, che sa già di averlo mandato.
+  const ammessi = new Set(
+    destinatariPush(
+      tokensSnap.docs.map((d) => ({
+        token: d.get('token'),
+        role: d.get('role'),
+        device: d.get('device'),
+      })),
+      { roles, dispositivoOrigine }
+    ).map((t) => t.token)
+  )
+  const docs = tokensSnap.docs.filter((d) => ammessi.has(d.get('token')))
   if (docs.length === 0) return
 
   const res = await getMessaging().sendEachForMulticast({
@@ -221,7 +235,12 @@ exports.notifyNewOrder = onDocumentCreated({ ...OPTS, document: 'orders/{orderId
   const after = event.data?.data()
   const msg = decideNewOrderStaffPush(null, after)
   if (!msg) return
-  await pushToStaff({ kind: 'new_order', orderId: event.params.orderId, msg })
+  await pushToStaff({
+    kind: 'new_order',
+    orderId: event.params.orderId,
+    msg,
+    dispositivoOrigine: after?.placed_by?.device ?? null,
+  })
 })
 
 // ── Push cerca-persone allo staff (FCM) ───────────────────────────────────────

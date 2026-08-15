@@ -49,6 +49,7 @@ import MenuManager from '../components/MenuManager.jsx'
 import PrinterSetup from '../components/PrinterSetup.jsx'
 import InventoryManager from '../components/InventoryManager.jsx'
 import SettingsTab from '../components/SettingsTab.jsx'
+import { idDispositivo } from '../lib/dispositivo.js'
 import StatsTab from '../components/StatsTab.jsx'
 import StaffHoursTab from '../components/StaffHoursTab.jsx'
 import UtentiTab from '../components/UtentiTab.jsx'
@@ -506,7 +507,7 @@ function OrderQueue() {
       const token = await getPushToken()
       // Ruolo del TOKEN, non della persona: serve solo a distinguere i
       // dispositivi al banco da quelli di sala quando si smistano le push.
-      if (token) saveStaffToken(uid, token, 'bartender').catch(() => {})
+      if (token) saveStaffToken(uid, token, 'bartender', idDispositivo()).catch(() => {})
     })
   }, [])
 

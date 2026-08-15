@@ -7,6 +7,7 @@ import { describe, it, expect } from 'vitest'
 import {
   decideOrderPush,
   decideNewOrderStaffPush,
+  destinatariPush,
   CANCEL_PHRASES,
 } from '../../functions/lib/push-core.js'
 
@@ -90,6 +91,19 @@ describe('decideOrderPush', () => {
 describe('decideNewOrderStaffPush', () => {
   const ricevuto = { daily_number: 12, status: 'ricevuto' }
 
+  // IL CASO CHE HA MORSO AL BANCO. Flavio prende ordini ai tavoli col
+  // telefono, con un account da admin; Pelè sta al banco sull'iPad, altro
+  // account da admin. Sull'iPad non squillava niente: qui si buttava via
+  // l'avviso di OGNI ordine battuto da un admin o da un bartender, dando
+  // per scontato che chi ha quel ruolo stia al banco e sappia già tutto.
+  it('un ordine battuto da un gestore avvisa lo stesso: al banco deve arrivare', () => {
+    const msg = decideNewOrderStaffPush(null, {
+      ...ricevuto,
+      placed_by: { email: 'flavio@tana.local', role: 'admin', device: 'telefono-di-flavio' },
+    })
+    expect(msg.title).toContain('Nuovo ordine')
+  })
+
   it('notifica un ordine appena creato in stato ricevuto', () => {
     const msg = decideNewOrderStaffPush(null, ricevuto)
     expect(msg.title).toContain('Nuovo ordine')
@@ -127,5 +141,43 @@ describe('decideNewOrderStaffPush', () => {
   it('non notifica stati diversi da ricevuto', () => {
     expect(decideNewOrderStaffPush(null, { ...ricevuto, status: 'in_preparazione' })).toBeNull()
     expect(decideNewOrderStaffPush(null, { ...ricevuto, status: 'pronto' })).toBeNull()
+  })
+})
+
+// ── A CHI ARRIVA L'AVVISO ────────────────────────────────────────────
+// Non si tace per ruolo, si tace per TERMINALE: l'unico che non viene
+// avvisato è il dispositivo da cui l'ordine è partito, che sa già di
+// averlo mandato. Lo stesso account sta su tablet, telefono e portatile
+// insieme.
+describe('destinatariPush', () => {
+  const dispositivi = [
+    { token: 't-ipad', role: 'bartender', device: 'ipad-del-banco' },
+    { token: 't-telefono', role: 'bartender', device: 'telefono-di-flavio' },
+    { token: 't-sala', role: 'staff', device: 'telefono-di-sala' },
+  ]
+
+  it('l’iPad al banco viene avvisato dell’ordine battuto dal telefono', () => {
+    const chi = destinatariPush(dispositivi, { dispositivoOrigine: 'telefono-di-flavio' })
+    expect(chi.map((t) => t.token)).toEqual(['t-ipad', 't-sala'])
+  })
+
+  it('chi l’ha mandato non se lo sente dire', () => {
+    const chi = destinatariPush(dispositivi, { dispositivoOrigine: 'telefono-di-flavio' })
+    expect(chi.some((t) => t.device === 'telefono-di-flavio')).toBe(false)
+  })
+
+  it('i drink da servire restano roba di sala', () => {
+    const chi = destinatariPush(dispositivi, { roles: ['staff'] })
+    expect(chi.map((t) => t.token)).toEqual(['t-sala'])
+  })
+
+  it('chi si è registrato prima che il dispositivo si segnasse viene avvisato lo stesso', () => {
+    // Un avviso in più si chiude, uno in meno è un drink che non parte.
+    const vecchi = [{ token: 't-vecchio', role: 'bartender' }]
+    expect(destinatariPush(vecchi, { dispositivoOrigine: 'telefono-di-flavio' })).toHaveLength(1)
+  })
+
+  it('i token spariti non contano', () => {
+    expect(destinatariPush([{ role: 'bartender' }, null], {})).toEqual([])
   })
 })

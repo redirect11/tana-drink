@@ -3048,10 +3048,10 @@ export async function deleteStaffShift(id) {
 // Token push del dispositivo di un membro dello staff: la Cloud Function
 // lo usa per recapitare la chiamata cerca-persone anche quando l'app è
 // in background o chiusa.
-export async function saveStaffToken(uid, token, role = null) {
+export async function saveStaffToken(uid, token, role = null, device = null) {
   await setDoc(
     doc(db, 'staff_tokens', uid),
-    { token, role, updated_at: serverTimestamp() },
+    { token, role, device, updated_at: serverTimestamp() },
     { merge: true }
   )
 }
