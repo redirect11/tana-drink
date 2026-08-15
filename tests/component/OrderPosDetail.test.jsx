@@ -1017,3 +1017,44 @@ describe('rimettere in corso un conto', () => {
     expect(screen.getByText(/da Anna/)).toBeInTheDocument()
   })
 })
+
+// ── UN CONTO RIAPERTO SI MODIFICA TUTTO ──────────────────────────────
+// Riaprire serve esattamente a rimettere a posto quello che c'è dentro: un
+// giro battuto sul tavolo sbagliato, una birra di troppo. Se le righe di
+// prima restano bloccate — perché la comanda risultava servita — il conto
+// riaperto non serve a niente.
+describe('conto riaperto: le righe di prima si toccano', () => {
+  const servito = (extra = {}) =>
+    baseOrder({
+      total: 14,
+      comande: [
+        {
+          id: 'c1',
+          seq: 1,
+          status: 'ritirato',
+          status_times: {},
+          items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 }],
+        },
+      ],
+      order_items: [{ id: 'i1', drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 }],
+      ...extra,
+    })
+
+  const meno = () => screen.getAllByRole('button', { name: /Riduci Mojito/ })
+
+  it('senza riapertura una comanda servita resta bloccata', () => {
+    mount(servito())
+    expect(meno().every((b) => b.disabled)).toBe(true)
+  })
+
+  it('dopo una riapertura la riga si può scalare', async () => {
+    const user = userEvent.setup()
+    mount(servito({ riaperture: [{ at: '2026-08-15T21:00:00.000Z', motivo: 'tavolo sbagliato' }] }))
+    const tasti = meno().filter((b) => !b.disabled)
+    expect(tasti.length).toBeGreaterThan(0)
+    await user.click(tasti[0])
+    // La modifica parte verso la comanda: le scorte si riallineano con la
+    // differenza, come per ogni altra modifica.
+    await vi.waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalled())
+  })
+})
