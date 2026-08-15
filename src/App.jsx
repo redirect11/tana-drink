@@ -37,6 +37,7 @@ import { useOnline } from './lib/useOnline.js'
 import { toastSuccess } from './lib/toast.js'
 import Toasts from './components/Toasts.jsx'
 import ZoomControl from './components/ZoomControl.jsx'
+import { zoomDove } from './lib/zoomDove.js'
 import { useEffect, useRef, useState } from 'react'
 
 /* global __APP_VERSION__, __BUILD_ID__ */
@@ -329,8 +330,11 @@ export default function App() {
       )}
       {/* Notifiche IN APP (sync, ordini da staff/clienti, errori) */}
       <Toasts />
-      {/* Zoom della pagina: nella PWA a tutto schermo il browser non lo offre */}
-      <ZoomControl />
+      {/* Zoom della pagina: nella PWA a tutto schermo il browser non lo
+          offre. Solo dove serve davvero (vedi lib/zoomDove.js): altrove
+          erano due tasti nell'angolo che coprono il contenuto per una cosa
+          che lì nessuno usa. */}
+      {zoomDove(location.pathname, location.search, !!staffRole) && <ZoomControl />}
       {/* IL MENU CHE RISPONDE AL ☰. Le pagine che hanno una sezione attiva da
           evidenziare (gestionale, menù) montano il proprio; altrove lo monta
           l'app, perché il tasto in barra non resti a premere nel vuoto.

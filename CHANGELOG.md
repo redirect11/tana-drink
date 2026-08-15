@@ -24,6 +24,14 @@
 
 ### Per chi gestisce
 
+- **I tasti dello zoom stanno solo dove servono**: coda ordini, il conto
+  (mentre lo batti, riaprendolo, all'incasso) e flusso cassa. Nelle altre
+  schermate erano due tasti nell'angolo che coprivano il contenuto per una
+  cosa che lì nessuno usa. Il livello scelto resta: si smette solo di
+  poterlo cambiare da lì.
+- **Nel menu le ultime voci non si accavallano più**: quando lo spazio
+  finiva, «Capo Bar / Admin» e «Esci» si stringevano uno sopra l'altro.
+
 - **Nelle pagine con più sezioni il menu resta aperto**, dal tablet in
   verticale in su:
   in Impostazioni e in Inventario non copre più il contenuto, è una colonna
