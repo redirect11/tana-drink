@@ -344,13 +344,20 @@ requirements:
       Quello che resta nostro è la regola: l'ordine è UNO SOLO e globale,
       anche quando a schermo c'è una sola categoria — se no spostare una birra
       dentro «Birre» la lascerebbe al suo posto in «Tutti».
-      La maniglia è attaccata alla card, non affiancata: è la stessa cosa, e
-      fra le due c'era una fessura con gli angoli tondi da tutte e due le
-      parti.
+      La maniglia sta SOPRA la card, sul suo bordo destro, e non a fianco:
+      affiancata allargava ogni cella di 38px, e la griglia entrando in
+      «organizza» cambiava numero di card per riga e misura — si sistemava
+      una disposizione diversa da quella che poi si usa davvero. La cella
+      occupa esattamente quello che occupa fuori da qui.
+      Sempre per non far ballare la griglia, lo spazio della barra di
+      scorrimento è riservato (`scrollbar-gutter: stable`): compariva e
+      spariva a seconda di quanti prodotti ha la categoria, e al confine
+      fra tre e quattro card per riga la griglia si riassestava da sola
+      mentre la si guardava.
     status: implemented
     generate_issue: false
     labels: [pos, ux]
-    test_cases: []
+    test_cases: [tests/component/PosProductPicker.test.jsx]
 
   - id: REQ-POS-008
     title: "Le maniglie, col dito, si prendono solo tenendo premuto"
