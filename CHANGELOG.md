@@ -59,7 +59,9 @@
   riempie la casella come fuori; e le card non rimpiccioliscono più, né
   lampeggiano cambiando modo — entrando in organizza la griglia veniva
   rifatta da capo e per un attimo si vedevano le card della misura
-  sbagliata. La griglia non si riassesta nemmeno più
+  sbagliata. E **restringendo la griglia con la maniglia** non si vedono
+  più due colonne a metà trascinamento: il minimo lo calcola il browser
+  insieme al ridimensionamento, invece di una misura che arrivava dopo. La griglia non si riassesta nemmeno più
   da sola quando compare la barra di scorrimento.
 
 - **Nella coda, «In servizio» torna vicino al ☰** e, sul telefono, sulla

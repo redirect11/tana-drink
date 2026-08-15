@@ -109,6 +109,18 @@ describe('ricerca prodotti: accendi e porta lì', () => {
 describe('modalità organizza', () => {
   const griglia = (c) => c.querySelector('[style*="grid-template-columns"]')
 
+  it('il minimo delle colonne lo calcola il browser, non una misura in ritardo', () => {
+    // Trascinando la maniglia di fianco alla griglia, la larghezza misurata
+    // arriva sempre qualche fotogramma dopo: col conto fatto in JS, per un
+    // po' restava quella di prima — più larga — e ci stavano due colonne
+    // invece di tre, fino a quando la misura non arrivava. Il terzo di
+    // larghezza deve stare NEL CSS, così si rifà insieme al
+    // ridimensionamento.
+    const { container } = mostra()
+    const cols = griglia(container).style.gridTemplateColumns
+    expect(cols).toMatch(/calc\(\(100% - \d+px\) \/ 3\)/)
+  })
+
   it('le colonne restano quelle di prima', async () => {
     const user = userEvent.setup()
     const { container } = mostra({ canReorder: true, onReorder: vi.fn() })

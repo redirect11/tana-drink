@@ -370,6 +370,12 @@ requirements:
       sopra le altre le faceva vedere attraverso — e non si capiva più
       quale si sta spostando. Sotto ci va il fondo della pagina, così in
       mano ha l'aspetto identico a quando è posata.
+      Il minimo delle colonne — «almeno tre card per riga finché ci stanno»
+      — lo calcola il CSS con min()/max(), non il JavaScript sulla
+      larghezza misurata: la misura arriva sempre qualche fotogramma dopo, e
+      trascinando la maniglia di fianco alla griglia per un attimo ci
+      stavano due colonne invece di tre, fino a quando non arrivava. Nel
+      CSS il conto si rifà insieme al ridimensionamento.
       Sempre per non far ballare la griglia, lo spazio della barra di
       scorrimento è riservato (`scrollbar-gutter: stable`): compariva e
       spariva a seconda di quanti prodotti ha la categoria, e al confine

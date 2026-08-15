@@ -158,11 +158,19 @@ export default function PosProductPicker({
   // Base più grande su tablet/desktop (leggibile su iPad); su smartphone il
   // floor è più basso, così le card non escono enormi.
   const tileScale = gridW ? Math.max(compact ? 0.9 : 1.05, Math.min(1.5, gridW / 440)) : 1
-  // Card più grandi ma SEMPRE almeno 3 per riga: la min-width non supera mai un
-  // terzo della larghezza disponibile.
-  const tileMin = gridW
-    ? Math.max(112, Math.min(Math.round(172 * tileScale), Math.floor((gridW - 2 * GRID_GAP) / 3)))
-    : 172
+  // Card più grandi ma SEMPRE almeno 3 per riga (finché ci stanno: sotto
+  // una certa misura si toccano col dito e basta, e allora meglio due
+  // grandi che tre inservibili).
+  //
+  // IL TERZO DI LARGHEZZA LO CALCOLA IL BROWSER, non noi. Prima lo si
+  // faceva in JS con la larghezza misurata, che arriva SEMPRE in ritardo:
+  // trascinando la maniglia di fianco alla griglia, per qualche fotogramma
+  // la misura era ancora quella di prima — più larga — e il browser ci
+  // faceva stare due colonne invece di tre, fino a quando la misura non
+  // arrivava. Con min()/max() dentro il CSS il conto si rifà a ogni
+  // fotogramma insieme al ridimensionamento, e le colonne non ballano.
+  const tileBase = Math.max(112, Math.round(172 * tileScale))
+  const colonne = `repeat(auto-fill, minmax(max(112px, min(${tileBase}px, calc((100% - ${2 * GRID_GAP}px) / 3))), 1fr))`
 
   useEffect(() => {
     if (cats.length > 0 && selectedCat === null) setSelectedCat('__all__')
@@ -453,7 +461,7 @@ export default function PosProductPicker({
             // mentre la si guardava. Lo spazio è sempre riservato.
             scrollbarGutter: 'stable',
             display: 'grid',
-            gridTemplateColumns: `repeat(auto-fill, minmax(${tileMin}px, 1fr))`,
+            gridTemplateColumns: colonne,
             alignContent: 'start',
             gap: GRID_GAP,
             // il font-size della griglia guida i testi em delle card
