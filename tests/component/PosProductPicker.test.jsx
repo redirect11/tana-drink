@@ -117,6 +117,32 @@ describe('modalità organizza', () => {
     expect(griglia(container).style.gridTemplateColumns).toBe(prima)
   })
 
+  it('la misura della griglia continua a essere presa dopo il cambio di modo', async () => {
+    // Entrando in «organizza» la griglia finisce dentro il contesto di
+    // trascinamento: per React è un altro posto nell'albero, quindi il
+    // riquadro viene rifatto da capo. Il misuratore restava attaccato a
+    // quello vecchio — staccato dalla pagina, quindi largo zero — e le
+    // card tornavano alla misura di partenza coi testi rimpiccioliti.
+    const osservati = []
+    const vecchio = globalThis.ResizeObserver
+    globalThis.ResizeObserver = class {
+      observe(el) { osservati.push(el) }
+      disconnect() {}
+    }
+    try {
+      const user = userEvent.setup()
+      const { container } = mostra({ canReorder: true, onReorder: vi.fn() })
+      await user.click(screen.getByLabelText('Organizza griglia'))
+      const misurato = osservati.at(-1)
+      expect(misurato).toBeTruthy()
+      // Quello che si sta misurando è la griglia che si vede adesso.
+      expect(container.contains(misurato)).toBe(true)
+      expect(misurato).toBe(griglia(container))
+    } finally {
+      globalThis.ResizeObserver = vecchio
+    }
+  })
+
   it('la maniglia sta dentro la card, non a fianco', async () => {
     const user = userEvent.setup()
     const { container, cards } = mostra({ canReorder: true, onReorder: vi.fn() })
