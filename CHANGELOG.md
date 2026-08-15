@@ -30,8 +30,12 @@
   della pagina e il resto si stringe per fargli posto. Dentro l'inventario
   si salta fra Prodotti e Conta venti volte di seguito, e ogni volta
   bisognava aprire il menu, cercare, scegliere — e intanto non si vedeva
-  più dove si era. Si apre e si chiude **col ☰ di sempre**, e la scelta
-  resta anche il giorno dopo. Sulla coda ordini resta a scomparsa, che lì
+  più dove si era. È **incastrato nella pagina**, attaccato alla barra in
+  alto e a filo del bordo — non una scheda arrotondata appoggiata sopra —
+  e occupa poco: le voci sono parole corte, e prima mezza colonna restava
+  vuota. Le sezioni della pagina aperta stanno **dentro** la loro voce,
+  non in un blocco a parte. Si apre e si chiude **col ☰ di sempre**, e la
+  scelta resta anche il giorno dopo. Sulla coda ordini resta a scomparsa, che lì
   sarebbe una colonna in meno di conti.
 
 ### Al banco
