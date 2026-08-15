@@ -14,6 +14,7 @@ import {
   incassatoSuConto,
   comandeRiaperte,
   buoniDaRestituire,
+  segnaBuoniRestituiti,
 } from '../../src/lib/ripristino.js'
 import { ORDER_STATUSES } from '../../src/lib/orderStatus.js'
 
@@ -134,5 +135,31 @@ describe('i buoni usati per pagare', () => {
       ],
     }
     expect(buoniDaRestituire(conto)).toEqual([])
+  })
+})
+
+// UNA VOLTA SOLA. Annullando un conto pagato col buono il saldo torna;
+// riaprendo quello stesso conto non deve tornare di nuovo, o si crea
+// credito dal nulla — l'errore opposto a quello che si stava correggendo.
+describe('un buono non si restituisce due volte', () => {
+  const conto = () => ({
+    payments: [{ amount: 6, method: 'buono', voucher_id: 'v1' }],
+  })
+
+  it('segnata la restituzione, non c’è più niente da restituire', () => {
+    const dopoAnnullo = { payments: segnaBuoniRestituiti(conto().payments, ORA) }
+    expect(buoniDaRestituire(conto())).toHaveLength(1)
+    expect(buoniDaRestituire(dopoAnnullo)).toEqual([])
+  })
+
+  it('il segno dice quando: serve a ricostruire cos’è successo', () => {
+    expect(segnaBuoniRestituiti(conto().payments, ORA)[0].restituito_at).toBe(ORA)
+  })
+
+  it('gli altri incassi non si toccano', () => {
+    const misto = [{ amount: 4, method: 'carta' }, { amount: 6, method: 'buono', voucher_id: 'v1' }]
+    const out = segnaBuoniRestituiti(misto, ORA)
+    expect(out[0]).toEqual(misto[0])
+    expect(out[1].restituito_at).toBe(ORA)
   })
 })
