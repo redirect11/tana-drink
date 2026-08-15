@@ -4554,6 +4554,14 @@ body.fullbleed .cat-rail {
   z-index: 5;
   cursor: grabbing;
   box-shadow: 0 16px 34px rgba(0, 0, 0, 0.45);
+  /* LA CARD IN MANO NON E' UN VETRO. Il fondo delle card e' apposta un
+     velo (--tile-bg: bianco al 5%): appoggiate sulla pagina va benissimo,
+     ma alzandone una sopra le altre si vedevano attraverso — e non si
+     capiva piu' quale si sta spostando. Sotto ci va il fondo della
+     pagina, cosi' in mano ha l'aspetto identico a quando e' posata,
+     soltanto opaca. */
+  background: var(--bg);
+  border-radius: 12px;
 }
 .reorder-cell.dragging .reorder-grip {
   cursor: grabbing;
