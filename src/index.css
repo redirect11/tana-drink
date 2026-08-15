@@ -1371,6 +1371,15 @@ a.order-mini {
   transform: translateX(0);
 }
 
+/* LE VOCI NON SI SCHIACCIANO. Il menu e' una colonna flessibile: quando le
+   voci sono piu' alte dello spazio, flex le STRINGE — e una voce a due
+   righe (nome e ruolo) finisce sopra quella dopo. Si e' visto col menu
+   agganciato, che e' piu' corto: «Capo Bar / Admin» e «Esci» uno addosso
+   all'altro. Ognuna tiene la sua altezza e a scorrere e' il menu. */
+.bar-sidebar > * {
+  flex-shrink: 0;
+}
+
 .bar-sidebar .brand-mini {
   display: flex;
   align-items: center;

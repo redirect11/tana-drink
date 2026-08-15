@@ -1443,7 +1443,7 @@ requirements:
 
   - id: REQ-UI-004
     title: "Zoom della pagina per chi ci lavora ore"
-    area: "src/components/ZoomControl.jsx"
+    area: "src/components/ZoomControl.jsx, src/lib/zoomDove.js"
     description: >
       Nella PWA a tutto schermo il browser non offre lo zoom: l'app ha il suo, che
       scala la pagina senza deformarla. Sul telefono non flotta sull'angolo (dove
@@ -1451,10 +1451,19 @@ requirements:
       — il foglio dei ⋯, una conferma, il menu laterale — passa dietro e non si
       lascia toccare: stando in basso a sinistra finiva sopra le ultime voci, e si
       premeva lo zoom al posto della voce.
+      I tasti compaiono SOLO dove servono: coda ordini, il conto (creazione,
+      apertura, incasso) e flusso cassa — le schermate dove si legge tanta
+      roba fitta stando fermi a guardarla. Altrove sono due tasti flottanti
+      che coprono il contenuto per una cosa che lì nessuno usa: nel
+      magazzino e nelle impostazioni si scorre. Il livello scelto non si
+      azzera cambiando pagina: si smette solo di poterlo cambiare da lì. Al
+      cliente non servono, il suo browser lo zoom ce l'ha.
     status: implemented
     generate_issue: false
     labels: [ux]
-    test_cases: [tests/component/ZoomControl.test.jsx]
+    test_cases:
+      - tests/component/ZoomControl.test.jsx
+      - tests/unit/zoomDove.test.js
 
   - id: REQ-UI-005
     title: "Temi chiari e scuri, per il gestionale e per il cliente"
