@@ -507,7 +507,7 @@ describe('schermata Pagamento', () => {
     // «Pagamento» — che lì era spento a non fare niente — c'è «Rimetti in
     // corso», che è l'unica cosa sensata da fare su un conto chiuso.
     expect(screen.queryByRole('button', { name: /Pagamento/ })).toBeNull()
-    expect(azioni().getByRole('button', { name: /Rimetti in corso/ })).toBeEnabled()
+    expect(azioni().getByRole('button', { name: /Riapri conto/ })).toBeEnabled()
     expect(screen.getByRole('button', { name: /Annulla ordine/ })).toBeDisabled()
   })
 })
@@ -980,7 +980,7 @@ describe('rimettere in corso un conto', () => {
   it('si chiede una motivazione (facoltativa) e si conferma', async () => {
     const user = userEvent.setup()
     mount(chiuso())
-    await user.click(azioni().getByRole('button', { name: /Rimetti in corso/ }))
+    await user.click(azioni().getByRole('button', { name: /Riapri conto/ }))
     const box = within(screen.getByRole('dialog', { name: 'Ripristina il conto' }))
     await user.type(box.getByLabelText(/Perché lo riapri/), 'tavolo sbagliato')
     await user.click(box.getByRole('button', { name: /Rimetti in corso/ }))
@@ -990,7 +990,7 @@ describe('rimettere in corso un conto', () => {
   it('senza motivazione si ripristina lo stesso: al banco i secondi non ci sono', async () => {
     const user = userEvent.setup()
     mount(chiuso())
-    await user.click(azioni().getByRole('button', { name: /Rimetti in corso/ }))
+    await user.click(azioni().getByRole('button', { name: /Riapri conto/ }))
     const box = within(screen.getByRole('dialog', { name: 'Ripristina il conto' }))
     await user.click(box.getByRole('button', { name: /Rimetti in corso/ }))
     expect(restoreOrder).toHaveBeenCalledWith('ord1', expect.objectContaining({ motivo: null }))
@@ -998,7 +998,7 @@ describe('rimettere in corso un conto', () => {
 
   it('su un conto già in corso il tasto resta quello del pagamento', () => {
     mount(baseOrder())
-    expect(azioni().queryByRole('button', { name: /Rimetti in corso/ })).toBeNull()
+    expect(azioni().queryByRole('button', { name: /Riapri conto/ })).toBeNull()
     expect(azioni().getByRole('button', { name: /Pagamento/ })).toBeInTheDocument()
   })
 

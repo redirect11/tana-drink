@@ -1760,11 +1760,11 @@ export default function OrderPosDetail({ order: orderProp = null }) {
               </button>
               {daRiaprire ? (
                 <button
-                  className="btn small"
+                  className="btn small posd-riapri"
                   onClick={() => setShowRipristino(true)}
                   title="Il conto torna fra quelli aperti"
                 >
-                  ♻️ Rimetti in corso
+                  ♻️ Riapri conto
                 </button>
               ) : (
                 <button
@@ -1817,10 +1817,10 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                   <button
                     className="btn"
                     onClick={() => setShowRipristino(true)}
-                    aria-label="Rimetti in corso"
+                    aria-label="Riapri conto"
                     title="Il conto torna fra quelli aperti"
                   >
-                    ♻️{!soloIcone && ' Rimetti in corso'}
+                    ♻️{!soloIcone && ' Riapri conto'}
                   </button>
                 ) : (
                   <button

@@ -120,3 +120,28 @@ describe('tempi del conto contro tempi della comanda', () => {
     expect(s[1].at).toBe('2026-08-12T21:30:00.000Z')
   })
 })
+
+// I SOLDI TOLTI SI DICONO. Riaprendo, quello che era stato incassato esce
+// dai guadagni della serata: se la storia non lo dice, a fine turno la
+// cassa non torna e non si capisce perché.
+describe('la riapertura racconta anche i soldi', () => {
+  it('scrive quanto è stato tolto dagli incassi, accanto al motivo', () => {
+    const eventi = storiaOrdine({
+      created_at: '2026-08-15T20:00:00.000Z',
+      riaperture: [
+        { at: '2026-08-15T21:30:00.000Z', motivo: 'tavolo sbagliato', incassi_tolti: 15.5 },
+      ],
+    })
+    const riap = eventi.find((e) => e.tipo === 'riaperto')
+    expect(riap.dettaglio).toMatch(/tavolo sbagliato/)
+    expect(riap.dettaglio).toMatch(/15,50/)
+  })
+
+  it('senza incassi non inventa una riga sui soldi', () => {
+    const eventi = storiaOrdine({
+      created_at: '2026-08-15T20:00:00.000Z',
+      riaperture: [{ at: '2026-08-15T21:30:00.000Z', motivo: 'errore', incassi_tolti: 0 }],
+    })
+    expect(eventi.find((e) => e.tipo === 'riaperto').dettaglio).toBe('errore')
+  })
+})

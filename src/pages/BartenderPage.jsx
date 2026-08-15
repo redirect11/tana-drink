@@ -424,14 +424,19 @@ function OrderQueue() {
   // andata a buon fine.
   const [chiusiQui, setChiusiQui] = useState([])
   useEffect(() => subscribeNascosti(setChiusiQui), [])
+  const [boardFilter, setBoardFilter] = useState('attivi') // 'attivi' | 'chiusi' | 'tutti'
+  // NASCONDERE VALE SOLO PER I CONTI IN CORSO. Un conto chiuso da qui
+  // sparisce subito da «In corso» — è il suo mestiere — ma restava nascosto
+  // anche sotto «Chiusi» e in «Tutti»: si chiudeva un conto e nello storico
+  // non c'era, fino a ricaricare la pagina. E riaprendolo non tornava fra
+  // quelli in corso, perché era ancora nell'elenco dei nascosti.
   const orders = useMemo(
-    () => senzaNascosti(ordersRaw),
+    () => (boardFilter === 'attivi' ? senzaNascosti(ordersRaw) : ordersRaw),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [ordersRaw, chiusiQui]
+    [ordersRaw, chiusiQui, boardFilter]
   )
   const [error, setError] = useState(null)
   const [statusTab, setStatusTab] = useState(ORDER_STATUSES.RICEVUTO)
-  const [boardFilter, setBoardFilter] = useState('attivi') // 'attivi' | 'chiusi' | 'tutti'
   const [soloOggi, setSoloOggi] = useState(false) // nasconde i conti dei giorni scorsi
   const [nascondiPagati, setNascondiPagati] = useState(false) // pagati non ancora serviti
 

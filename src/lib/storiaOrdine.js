@@ -11,7 +11,7 @@
 //
 // Logica pura: niente Firebase, tutto testabile.
 
-import { ORDER_STATUSES, PAYMENT_METHOD_LABELS } from './orderStatus.js'
+import { ORDER_STATUSES, PAYMENT_METHOD_LABELS, formatPrice } from './orderStatus.js'
 
 const iso = (v) => {
   if (!v) return null
@@ -70,11 +70,16 @@ export function storiaOrdine(order) {
   }
 
   for (const r of order.riaperture || []) {
+    // I SOLDI TOLTI SI DICONO. Riaprendo, quello che era stato incassato
+    // esce dai guadagni della serata: se la storia non lo dice, a fine
+    // turno la cassa non torna e non si capisce perché.
+    const tolti = Number(r.incassi_tolti) || 0
+    const soldi = tolti > 0 ? `tolti ${formatPrice(tolti)} dagli incassi` : null
     eventi.push({
       at: iso(r.at),
       tipo: 'riaperto',
       titolo: 'Conto riaperto',
-      dettaglio: r.motivo || null,
+      dettaglio: [r.motivo || null, soldi].filter(Boolean).join(' · ') || null,
       chi: r.chi || null,
     })
   }
