@@ -379,8 +379,16 @@ requirements:
       messo a mano spariva dalla vista pur essendo ancora lì.
       Ogni scelta sta DOVE SI LAVORA quella schermata: la griglia del conto
       in Impostazioni → Vista ordine, le schede del catalogo in Menù e
-      catalogo. Il colore del «ce n'è abbastanza» è uno solo per tutte e
-      due: è la stessa domanda.
+      catalogo — modo della striscia e colore del «ce n'è abbastanza»,
+      separati per le due. Non è la stessa domanda: nel conto si batte di
+      corsa e una griglia tutta verde è rumore (lì interessano i guai),
+      nel catalogo si guarda con calma cosa si può fare e il verde è
+      un'informazione.
+      Il MENÙ ha tre sottosezioni nel menu laterale — modifica menù,
+      categorie, marginalità del listino — invece dei due pannelli a
+      scomparsa in cima al catalogo, che si aprivano spingendo giù la
+      griglia: chi voleva solo guardare i margini si portava dietro tutto
+      il listino sotto.
       Le scorte si leggono SOLO se servono: con gli altri modi ricette e
       giacenze non si caricano nemmeno.
     status: implemented

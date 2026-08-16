@@ -226,8 +226,8 @@ export default function SettingsTab({ role = null }) {
               </div>
 
               <p className="muted small" style={{ margin: '12px 0 4px' }}>
-                Con la striscia sulle <strong>scorte</strong>, «ce n&apos;è
-                abbastanza» come si scrive?
+                Con la striscia sulle <strong>scorte</strong>, qui nel conto,
+                «ce n&apos;è abbastanza» come si scrive?
               </p>
               <div className="mode-choice">
                 {[
@@ -696,12 +696,32 @@ export default function SettingsTab({ role = null }) {
                   </button>
                 ))}
               </div>
+              <p className="muted small" style={{ margin: '8px 0 4px' }}>
+                Con la striscia sulle <strong>scorte</strong>, «ce n&apos;è
+                abbastanza» come si scrive?
+              </p>
+              <div className="mode-choice">
+                {[
+                  [false, '⚪ Grigio (solo i guai si vedono)'],
+                  [true, '🟢 Verde'],
+                ].map(([value, label]) => (
+                  <button
+                    key={String(value)}
+                    className={`mode-option${
+                      !!settings.stripe_menu_ok_verde === value ? ' active' : ''
+                    }`}
+                    onClick={() => save({ stripe_menu_ok_verde: value })}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
               <p className="muted small" style={{ margin: '8px 0 0' }}>
-                Il colore del singolo prodotto resta comunque nella
-                <strong> linguetta</strong> in alto a sinistra, che si tocca per
-                cambiarlo. «Ce n&apos;è abbastanza» si scrive grigio o verde: la
-                scelta è in <strong>Vista ordine</strong>, e vale per tutte e due le
-                schermate.
+                È una scelta a sé, diversa da quella del conto: lì si batte di
+                corsa e una griglia tutta verde è rumore, qui si guarda con calma
+                cosa si può fare. Il colore del singolo prodotto resta comunque
+                nella <strong>linguetta</strong> in alto a sinistra, che si tocca
+                per cambiarlo.
               </p>
             </div>
       ),

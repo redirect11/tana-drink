@@ -15,6 +15,7 @@ import {
   DEFAULT_SETTINGS,
 } from '../lib/api.js'
 import { coloreStriscia } from '../lib/strisce.js'
+import { Sottosezioni } from '../lib/sottosezioni.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import { deleteDrinkImageByUrl } from '../lib/storage.js'
 import { formatQty, stockStatus } from '../lib/inventory.js'
@@ -22,7 +23,6 @@ import MarginList from './MarginList.jsx'
 import DrinkForm from './DrinkForm.jsx'
 import { saveDrinkFromForm } from '../lib/saveDrink.js'
 import CategoryRail from './CategoryRail.jsx'
-import { IconTag, IconGrafico } from './Icons.jsx'
 import {
   CATEGORY_ICONS,
   catColor,
@@ -46,8 +46,9 @@ export default function MenuManager() {
   // Impostazioni → Vista ordine (vedi lib/strisce.js).
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   useEffect(() => subscribeSettings(setSettings, () => {}), [])
+  const [sezione, setSezione] = useState('catalogo') // catalogo | categorie | margini
   const modoStriscia = settings.stripe_menu || 'scorte'
-  const scorteVerdi = !!settings.stripe_ok_verde
+  const scorteVerdi = !!settings.stripe_menu_ok_verde
   const [drinks, setDrinks] = useState([])
   const [categories, setCategories] = useState([])
   const [inventory, setInventory] = useState([])
@@ -275,35 +276,50 @@ export default function MenuManager() {
   const searching = search.trim().length > 0
   const availCount = drinks.filter((d) => d.available).length
 
+  // TRE SOTTOSEZIONI, nel menu laterale come nelle altre pagine. Categorie
+  // e marginalità erano due pannelli a scomparsa in cima al catalogo: si
+  // aprivano spingendo giù la griglia, e chi voleva solo guardare i
+  // margini si portava dietro tutto il listino sotto.
+  const sezioni = [
+    { id: 'catalogo', icona: '🍸', label: 'Modifica menù' },
+    { id: 'categorie', icona: '🏷', label: `Categorie (${categories.length})` },
+    { id: 'margini', icona: '📈', label: 'Marginalità listino' },
+  ]
+
+  if (sezione === 'categorie') {
+    return (
+      <div>
+        <Sottosezioni voci={sezioni} attiva={sezione} scegli={setSezione} />
+        <CategoryManager
+          categories={categories}
+          onChange={async () => setCategories(await fetchCategories())}
+        />
+      </div>
+    )
+  }
+
+  if (sezione === 'margini') {
+    return (
+      <div>
+        <Sottosezioni voci={sezioni} attiva={sezione} scegli={setSezione} />
+        <p className="muted small" style={{ margin: '0 0 8px' }}>
+          Quali drink rendono meno di quanto dovrebbero.
+        </p>
+        <MarginList
+          drinks={drinks}
+          inventory={inventory}
+          onEdit={(id) => {
+            setSezione('catalogo')
+            setEditing(drinks.find((d) => d.id === id) || null)
+          }}
+        />
+      </div>
+    )
+  }
+
   return (
     <div>
-      {/* Sottosezioni del menù: sotto al titolo, come nelle altre pagine. */}
-      <SectionPanels
-        panels={[
-          {
-            id: 'cats',
-            label: <><IconTag /> Categorie ({categories.length})</>,
-            render: () => (
-              <CategoryManager
-                categories={categories}
-                onChange={async () => setCategories(await fetchCategories())}
-              />
-            ),
-          },
-          {
-            id: 'margini',
-            label: <><IconGrafico /> Marginalità del listino</>,
-            desc: 'Quali drink rendono meno di quanto dovrebbero.',
-            render: () => (
-              <MarginList
-                drinks={drinks}
-                inventory={inventory}
-                onEdit={(id) => setEditing(drinks.find((d) => d.id === id) || null)}
-              />
-            ),
-          },
-        ]}
-      />
+      <Sottosezioni voci={sezioni} attiva={sezione} scegli={setSezione} />
 
       <button className="btn block" onClick={() => setEditing('new')}>
         + Aggiungi prodotto

@@ -4,6 +4,9 @@
 
 ### Al banco
 
+- **Il Menù ha tre sezioni nel menu laterale**: modifica menù, categorie,
+  marginalità del listino. Erano due pannelli a scomparsa in cima al
+  catalogo, e aprirli spingeva giù tutta la griglia.
 - **La striscia a sinistra delle card si sceglie.** Quattro modi:
   **spenta**, **colore del prodotto**, **colore della categoria** (quello
   del singolo prodotto resta nella linguetta) e **scorte** — rosso
@@ -12,7 +15,10 @@
   *Vista ordine*, le schede del catalogo in *Menù e catalogo*: dipende da
   come si lavora, e non c'era motivo che lo decidessimo noi. La
   **linguetta** nell'angolo continua a mostrare il colore del prodotto,
-  qualunque cosa dica la striscia.
+  qualunque cosa dica la striscia. Anche il verde/grigio del «ce n'è
+  abbastanza» si sceglie separatamente per le due schermate: nel conto si
+  batte di corsa e una griglia tutta verde è rumore, nel catalogo il verde
+  dice che si può fare.
 - **Le statistiche si aprono sull'ultima chiusura di cassa**, e quel
   periodo è il primo della riga: la domanda del mattino dopo è «com'è
   andata ieri sera», non «com'è andata la settimana». Chi sceglie un altro
