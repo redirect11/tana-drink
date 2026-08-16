@@ -64,6 +64,24 @@ jobs:
           fi
           echo "Deploy su $TARGET_PROJECT — versione ${{ inputs.versione || github.ref_name }}."
 
+      # QUALE RAMO STIAMO PUBBLICANDO. Il tag da solo non lo dice, e in
+      # fondo al menu il ramo serve a capire cosa si sta guardando sul
+      # test. Si guarda quali rami contengono il commit taggato, dando la
+      # precedenza a quelli che contano.
+      - name: Ramo del commit
+        run: |
+          for r in main develop; do
+            if git fetch --no-tags -q origin "+refs/heads/$r:refs/remotes/origin/$r" 2>/dev/null                && git merge-base --is-ancestor "$GITHUB_SHA" "origin/$r"; then
+              echo "GIT_BRANCH=$r" >> "$GITHUB_ENV"
+              exit 0
+            fi
+          done
+          git fetch --no-tags -q origin '+refs/heads/*:refs/remotes/origin/*' || true
+          ramo=$(git branch -r --contains "$GITHUB_SHA" --format='%(refname:lstrip=3)'                  | grep -v '^HEAD' | head -1)
+          # Senza un ramo che lo contenga resta il nome del tag: meglio di
+          # niente, e dice comunque cosa è stato pubblicato.
+          echo "GIT_BRANCH=${ramo:-$GITHUB_REF_NAME}" >> "$GITHUB_ENV"
+
       - name: Build
         env:
           # Su Firebase Hosting il sito è servito dalla radice.

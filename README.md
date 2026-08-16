@@ -25,6 +25,20 @@ Backend: **Firebase** (Cloud Firestore + realtime via `onSnapshot`). Deploy: **F
 
 ## Avvio in locale
 
+> **Per provare l'app come al bar** — con gli emulatori Firebase, i dati
+> finti e nessun progetto vero coinvolto — la ricetta completa (e i due
+> inciampi noti: **Java 21** e la **porta 8080 occupata**) sta in
+> [docs/ambiente-locale.md](docs/ambiente-locale.md). In breve:
+>
+> ```powershell
+> npx firebase emulators:start --project demo-tana-drink `
+>   --only auth,firestore,storage --config firebase.collaudo.json
+> node scripts/seed.js && node scripts/mock-orders.js
+> npm run dev -- --port 5175
+> ```
+
+### Contro un progetto Firebase vero
+
 1. Installa le dipendenze:
    ```bash
    npm install
