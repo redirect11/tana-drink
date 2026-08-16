@@ -136,9 +136,39 @@ export function bottleBreakdown(item) {
   return { full, openRemaining, hasOpen, finished, total }
 }
 
+// QUANTI PEZZI CI SONO, CON LA VIRGOLA.
+//
+// «3 bott.» diceva quante bottiglie si toccano, non quanto prodotto c'è
+// dentro: tre bottiglie di cui una quasi vuota contavano come tre, e per
+// sapere se bastavano per la serata bisognava aprire il dettaglio. Il
+// pezzo invece è frazionabile: una bottiglia da 100 cl con dentro 50 cl è
+// mezzo pezzo. Due piene e una a cui mancano 10 cl su 50 fanno 2,8.
+//
+// Il numero è comodo anche per il valore di magazzino: pezzi × costo.
+export function pezziInGiacenza(item) {
+  const bd = bottleBreakdown(item)
+  if (!bd) return null
+  // Giacenza già contata a pezzi (le bibite in bottiglia): il numero c'è
+  // di suo, decimali compresi — «17» sono diciassette bottiglie, «2,8»
+  // due e otto decimi di quella aperta.
+  if ((item?.unit || 'pz') === 'pz') return Math.max(0, Number(item?.stock) || 0)
+  const c = contentBase(item)
+  if (!c || !(c.size > 0)) return null
+  return bd.full + bd.openRemaining / c.size
+}
+
+// Il numero come si scrive: due decimali al massimo, senza zeri inutili in
+// coda («3 pz», non «3,00 pz») e con la virgola, che è come si legge qui.
+export function formatPezzi(n) {
+  const v = Math.max(0, Number(n) || 0)
+  const arrotondato = Math.round(v * 100) / 100
+  return arrotondato.toLocaleString('it-IT', { maximumFractionDigits: 2 })
+}
+
 // Giacenza di un item da DRINK (bottiglie/confezioni frazionabili), coi
 // tre dati che servono al banco, ognuno nella SUA unità:
-//   - bottles: quante bottiglie con contenuto (piene + quella aperta)
+//   - pezzi:   quanto prodotto c'è, in pezzi frazionati (2,8)
+//   - bottles: quante bottiglie si toccano (piene + quella aperta)
 //   - total:   contenuto totale nell'unità dell'item (cl/ml/g)
 //   - open:    residuo della bottiglia aperta, stessa unità (null se nessuna)
 // Il conteggio bottiglie è un numero di pezzi; il CONTENUTO non si misura
@@ -151,6 +181,7 @@ export function bottleSummary(item) {
   // chi sta versando.
   const unitaContenuto = item?.unit === 'pz' ? (item?.content_unit === 'g' ? 'g' : 'cl') : null
   return {
+    pezzi: pezziInGiacenza(item),
     bottles: bd.full + (bd.hasOpen ? 1 : 0),
     total: fmtItem(Math.max(0, Number(item?.stock) || 0), item),
     open: bd.hasOpen

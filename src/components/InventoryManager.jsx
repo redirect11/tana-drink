@@ -32,6 +32,8 @@ import {
   stockStatus,
   bottleSummary,
   bottleBreakdown,
+  pezziInGiacenza,
+  formatPezzi,
   inventorySummary,
   filterItems,
   formatIn,
@@ -251,8 +253,10 @@ function ProductsPanel() {
       <dl className="inv-info">
         {bd ? (
           <div className="inv-info-row">
-            <dt>Bottiglie</dt>
+            <dt>Pezzi</dt>
             <dd>
+              <strong>{formatPezzi(pezziInGiacenza(it))} pz</strong>
+              {' · '}
               {bd.full} piene
               {bd.hasOpen && ` · 1 aperta (${fmtItem(bd.openRemaining, it)})`}
               {bd.finished > 0 && ` · ${bd.finished} finite`}
@@ -316,8 +320,13 @@ function ProductsPanel() {
           >
             Contenuto reale
           </button>
-          <div className="grid-2" style={{ marginTop: 6, gap: 6 }}>
+          {/* Tre azioni sulla stessa riga: si modifica, si duplica, si
+              elimina. DUPLICA sta in mezzo perché è la via di mezzo — un
+              prodotto quasi uguale a questo — e a fianco dell'elimina si
+              ragiona due volte prima di premere. */}
+          <div className="inv-azioni" style={{ marginTop: 6 }}>
             <button className="btn ghost small" onClick={() => setEditing(it)}>✏️ Modifica</button>
+            <button className="btn ghost small" onClick={() => duplica(it)}>⧉ Duplica</button>
             <button className="btn ghost small" onClick={() => remove(it)}>🗑 Elimina</button>
           </div>
         </>
@@ -424,8 +433,34 @@ function ProductsPanel() {
     }
   }
 
+  // DUPLICA: lo stesso prodotto con un altro nome, da correggere. Al banco
+  // il magazzino è pieno di quasi-uguali — stessa bottiglia in due formati,
+  // lo stesso amaro di un altro fornitore — e rifarli da zero vuol dire
+  // ribattere costo, confezione, categoria, soglia e IVA.
+  //
+  // La copia nasce con la GIACENZA A ZERO e senza storia di carichi: è un
+  // prodotto nuovo che non è mai entrato in magazzino. Copiare anche le
+  // scorte vorrebbe dire inventarsi bottiglie che non ci sono.
+  async function duplica(item) {
+    const { id, created_at, stock, bottles_total, ...resto } = item // eslint-disable-line no-unused-vars
+    try {
+      const copia = await createInventoryItem({
+        ...resto,
+        name: `${item.name} (copia)`,
+        stock: 0,
+        bottles_total: 0,
+      })
+      setItems((prev) => [...prev, copia])
+      // Si apre subito la scheda: il nome «(copia)» va cambiato, ed è il
+      // motivo per cui si sta duplicando.
+      setEditing(copia)
+    } catch (e) {
+      setError(e.message)
+    }
+  }
+
   async function remove(item) {
-    if (!confirm(`Eliminare "${item.name}" dall'inventario?`)) return
+    if (!confirm(`Eliminare "${item.name}" dal magazzino?`)) return
     try {
       await deleteInventoryItem(item.id)
       setItems((prev) => prev.filter((x) => x.id !== item.id))
@@ -631,7 +666,7 @@ function ProductsPanel() {
                         {/* Niente emoji della bottiglia: il conteggio si
                             scrive. A zero non c'è nulla da chiamare "piena",
                             e si leggeva "0 🍾 · piena". */}
-                        {bs.bottles} bott.{' '}
+                        {formatPezzi(bs.pezzi)} pz{' '}
                         <span className="muted small">
                           {bs.bottles === 0
                             ? '· esaurito'
@@ -686,7 +721,7 @@ function ProductsPanel() {
                     return (
                       <span style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                         <span className="grid-card-tot" style={{ fontSize: '1.05rem' }}>
-                          {bs ? `${bs.bottles} bott.` : fmtItem(it.stock, it)}
+                          {bs ? `${formatPezzi(bs.pezzi)} pz` : fmtItem(it.stock, it)}
                         </span>
                         {bs && (
                           <span className="muted small" style={{ display: 'block' }}>

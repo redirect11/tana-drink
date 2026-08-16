@@ -9,6 +9,26 @@ una funzione, il terzo per le correzioni.
 
 ---
 
+## Non ancora rilasciata — 1.3.3
+
+### Al banco
+
+- **Le scorte si contano in pezzi, con la virgola.** Una bottiglia da
+  100 cl con dentro 50 cl è **0,5 pz**; due piene da mezzo litro e una a
+  cui mancano 10 cl fanno **2,8 pz**. Prima si leggeva «3 bott.», che dice
+  quante bottiglie si toccano e non quanto prodotto c'è: tre bottiglie di
+  cui una quasi vuota contavano come tre, e per sapere se bastavano per la
+  serata bisognava aprire il dettaglio. Le bottiglie — piene, aperta,
+  finite — restano nel dettaglio, per chi va a contarle sullo scaffale.
+- **«Inventario» si chiama Magazzino**, come lo chiama chi ci lavora.
+- **Un prodotto si può duplicare**, fra Modifica ed Elimina: il magazzino
+  è pieno di quasi-uguali — stessa bottiglia in due formati, lo stesso
+  amaro di un altro fornitore — e rifarli da zero vuol dire ribattere
+  costo, confezione, categoria, soglia e IVA. La copia parte **a zero** e
+  si apre subito, perché il nome va cambiato.
+
+---
+
 ## 1.3.2 — 15 agosto 2026
 
 ### Al banco

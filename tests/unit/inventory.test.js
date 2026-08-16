@@ -28,6 +28,8 @@ import {
   smallUnits,
   costPerUnit,
   inventoryTotalValue,
+  pezziInGiacenza,
+  formatPezzi,
 } from '../../src/lib/inventory.js'
 
 describe('toBaseQty', () => {
@@ -268,18 +270,18 @@ describe('computeConsumption', () => {
 describe('bottleSummary: bottiglie (pz) + contenuto (cl), unità distinte', () => {
   const gin = { unit: 'ml', package_size: 700 } // bottiglia da 70 cl
   it('bottiglie piene: conteggio + contenuto totale, nessuna aperta', () => {
-    expect(bottleSummary({ ...gin, stock: 700 })).toEqual({ bottles: 1, total: '70 cl', open: null })
-    expect(bottleSummary({ ...gin, stock: 2100 })).toEqual({ bottles: 3, total: '2,1 L', open: null })
+    expect(bottleSummary({ ...gin, stock: 700 })).toMatchObject({ bottles: 1, total: '70 cl', open: null })
+    expect(bottleSummary({ ...gin, stock: 2100 })).toMatchObject({ bottles: 3, total: '2,1 L', open: null })
   })
   it('una aperta: la conta come bottiglia e mostra il suo residuo in cl', () => {
     // 2 piene (1400 ml) + 300 ml aperti → 3 bottiglie, 1,7 L totali, 30 cl aperta
-    expect(bottleSummary({ ...gin, stock: 1700 })).toEqual({ bottles: 3, total: '1,7 L', open: '30 cl' })
+    expect(bottleSummary({ ...gin, stock: 1700 })).toMatchObject({ bottles: 3, total: '1,7 L', open: '30 cl' })
   })
   it('meno di una bottiglia: 1 aperta col suo contenuto', () => {
-    expect(bottleSummary({ ...gin, stock: 300 })).toEqual({ bottles: 1, total: '30 cl', open: '30 cl' })
+    expect(bottleSummary({ ...gin, stock: 300 })).toMatchObject({ bottles: 1, total: '30 cl', open: '30 cl' })
   })
   it('vuoto → nessuna bottiglia', () => {
-    expect(bottleSummary({ ...gin, stock: 0 })).toEqual({ bottles: 0, total: '0 ml', open: null })
+    expect(bottleSummary({ ...gin, stock: 0 })).toMatchObject({ bottles: 0, total: '0 ml', open: null })
   })
   it('il contenuto NON si misura in pezzi', () => {
     const s = bottleSummary({ ...gin, stock: 1700 })
@@ -563,5 +565,43 @@ describe('scarico secondo l’unità della ricetta', () => {
     const diff = consumptionDiff(prima, dopo)
     expect(diff.find((d) => d.unit === 'ml').delta).toBe(-40) // un cocktail in meno
     expect(diff.find((d) => d.unit === 'pz').delta).toBe(1) // una bottiglia in più
+  })
+})
+
+// ── QUANTI PEZZI CI SONO, CON LA VIRGOLA ─────────────────────────────
+// «3 bott.» diceva quante bottiglie si toccano, non quanto prodotto c'è
+// dentro: tre bottiglie di cui una quasi vuota contavano come tre, e per
+// sapere se bastavano per la serata bisognava aprire il dettaglio.
+describe('pezzi in giacenza', () => {
+  it('una bottiglia da 100 cl con dentro 50 cl è mezzo pezzo', () => {
+    const tanqueray = { unit: 'ml', package_size: 1000, stock: 500, bottles_total: 1 }
+    expect(pezziInGiacenza(tanqueray)).toBeCloseTo(0.5, 3)
+    expect(formatPezzi(pezziInGiacenza(tanqueray))).toBe('0,5')
+  })
+
+  it('due piene da 50 cl e una a cui mancano 10 cl fanno 2,8', () => {
+    const tre = { unit: 'ml', package_size: 500, stock: 2 * 500 + 400, bottles_total: 3 }
+    expect(formatPezzi(pezziInGiacenza(tre))).toBe('2,8')
+  })
+
+  it('le bibite contate a pezzo dicono il loro numero', () => {
+    const bibite = { unit: 'pz', package_size: 200, content_unit: 'ml', stock: 17 }
+    expect(formatPezzi(pezziInGiacenza(bibite))).toBe('17')
+  })
+
+  it('esaurito è zero, non «0 bott. piena»', () => {
+    const finito = { unit: 'ml', package_size: 700, stock: 0, bottles_total: 2 }
+    expect(formatPezzi(pezziInGiacenza(finito))).toBe('0')
+  })
+
+  it('gli interi non si scrivono con gli zeri in coda', () => {
+    expect(formatPezzi(3)).toBe('3')
+    expect(formatPezzi(2.5)).toBe('2,5')
+    // Due decimali bastano: al banco nessuno versa il millesimo di bottiglia.
+    expect(formatPezzi(2.456)).toBe('2,46')
+  })
+
+  it('senza confezione non c’è un pezzo da contare', () => {
+    expect(pezziInGiacenza({ unit: 'ml', stock: 900 })).toBeNull()
   })
 })
