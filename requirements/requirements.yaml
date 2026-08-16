@@ -348,6 +348,35 @@ requirements:
     labels: [pos, telefono, ux]
     test_cases: [tests/component/OrderPosDetail.test.jsx]
 
+  - id: REQ-POS-019
+    title: "La striscia delle card dice quello che serve a chi lavora"
+    area: "src/lib/strisce.js, src/components/SettingsTab.jsx"
+    description: >
+      La striscia a sinistra delle card — griglia del conto e schede del
+      menù — si sceglie, perché dipende da come si lavora: chi conosce il
+      listino a memoria vuole i colori delle categorie per trovare il
+      prodotto al tatto, chi sta finendo le bottiglie vuole vedere subito
+      cosa non si può più fare, chi ha già abbastanza colori addosso la
+      vuole spenta.
+      Quattro modi: SPENTA (grigia, il colore resta nella linguetta),
+      PRODOTTO (il suo colore, o quello della categoria se non ne ha uno),
+      CATEGORIA (sempre la categoria: il colore del singolo prodotto lo
+      dice la linguetta) e SCORTE (rosso ingrediente esaurito, arancione
+      in esaurimento, e «ce n'è abbastanza» a scelta fra grigio e verde).
+      Un prodotto fuori menu resta GRIGIO anche col verde acceso: è spento,
+      non rotto — il rosso qui diceva due cose opposte, «l'ho tolto io» e
+      «è finito il rum».
+      La scelta è del LOCALE (settings/bar) e vale per tutti i terminali: la
+      griglia dev'essere la stessa dovunque, o due persone parlano di due
+      schermate diverse. Le due schermate si impostano separatamente.
+      Le regole stanno in una funzione pura: la stessa striscia deve
+      significare la stessa cosa in tutte le schermate, e con la logica
+      dentro le pagine finiva per divergere.
+    status: todo
+    generate_issue: false
+    labels: [pos, menu, ux]
+    test_cases: [tests/unit/strisce.test.js]
+
   - id: REQ-POS-013
     title: "In «Organizza» la card segue il dito"
     area: "src/components/PosProductPicker.jsx, src/index.css"
