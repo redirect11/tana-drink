@@ -714,8 +714,12 @@ a.btn.block {
   font-size: 0.85rem;
   cursor: pointer;
 }
+/* IL TAB ACCESO E I TASTI SONO LA STESSA COSA. Erano due gradienti
+   scritti in due posti: cambiando quello dei tasti, il «+» della coda e il
+   tasto del pagamento restavano indietro rispetto al tab «In corso», e la
+   differenza si vedeva. Un colore solo, due variabili. */
 .chip.active {
-  background: linear-gradient(135deg, #f7c45e, #e8a32e);
+  background: linear-gradient(135deg, var(--btn-1), var(--btn-2));
   border-color: transparent;
   color: #1c1305;
 }
