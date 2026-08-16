@@ -39,6 +39,71 @@ export const THEME_PRESETS = {
       '--muted': '#8fa3bf',
     },
   },
+  catppuccin: {
+    // Catppuccin Mocha (palette ufficiale): sobrio ma caldo, pensato per
+    // il gestionale — base scura a tre livelli, malva come accento e
+    // pesca per bottoni e gradienti. Vedi DESIGN.md.
+    label: '🐈 Catppuccin scuro',
+    vars: {
+      '--bg': '#11111b',
+      '--bg-2': '#181825',
+      '--card': '#1e1e2e',
+      '--accent': '#cba6f7',
+      '--accent-2': '#fab387',
+      '--text': '#cdd6f4',
+      '--muted': '#a6adc8',
+    },
+  },
+  'catppuccin-chiaro': {
+    // Catppuccin Latte, la gemella chiara di Mocha: stessi livelli
+    // (crust → mantle → base), accenti più profondi perché sul chiaro
+    // il contrasto va conquistato, non regalato.
+    label: '🥛 Catppuccin chiaro',
+    vars: {
+      '--bg': '#dce0e8',
+      '--bg-2': '#e6e9ef',
+      '--card': '#eff1f5',
+      '--accent': '#8839ef',
+      '--accent-2': '#fe640b',
+      // Il pesca di Latte va bene per i piccoli accenti, ma come fondo
+      // dei bottoni satura troppo: per l'azione si usa il pesca pastello
+      // di Mocha, che resta di famiglia ed è morbido anche in campitura.
+      '--btn': '#fab387',
+      '--text': '#4c4f69',
+      '--muted': '#6c6f85',
+    },
+  },
+  'pico-scuro': {
+    // Palette di Pico CSS v2 (tema dark): ardesia blu e azzurro tecnico.
+    // Non carichiamo il CSS di Pico — farebbe a botte col nostro — ne
+    // adottiamo i colori dentro i nostri token. Vedi DESIGN.md.
+    label: '🔷 Pico scuro',
+    vars: {
+      '--bg': '#13171f',
+      '--bg-2': '#1a1f28',
+      '--card': '#181c25',
+      '--accent': '#01aaff',
+      '--accent-2': '#01aaff',
+      // Azzurro pastello per le campiture d'azione (testo scuro).
+      '--btn': '#7cc4ea',
+      '--text': '#c2c7d0',
+      '--muted': '#7b8495',
+    },
+  },
+  'pico-chiaro': {
+    // Pico v2 chiaro: bianco piatto e blu petrolio, il look "documento".
+    label: '💠 Pico chiaro',
+    vars: {
+      '--bg': '#fbfbfc',
+      '--bg-2': '#ffffff',
+      '--card': '#ffffff',
+      '--accent': '#0172ad',
+      '--accent-2': '#0172ad',
+      '--btn': '#8cc9e9',
+      '--text': '#373c44',
+      '--muted': '#646b79',
+    },
+  },
   chiaro: {
     label: '☀️ Chiaro',
     vars: {
@@ -47,6 +112,9 @@ export const THEME_PRESETS = {
       '--card': '#ffffff',
       '--accent': '#c2185b',
       '--accent-2': '#a8790a',
+      // L'accento-2 qui è scuro apposta (i link devono reggere sul
+      // bianco): i bottoni prendono l'oro chiaro di sempre da --btn.
+      '--btn': '#f0b83f',
       '--text': '#17171f',
       '--muted': '#5c5c6b',
     },
@@ -59,6 +127,7 @@ export const THEME_PRESETS = {
       '--card': '#fffdf7',
       '--accent': '#a3552b',
       '--accent-2': '#8c6d1f',
+      '--btn': '#e2b04a',
       '--text': '#241d12',
       '--muted': '#6f6353',
     },
@@ -91,6 +160,10 @@ export function resolveThemeVars(setting) {
 export function applyTheme(vars) {
   const root = document.documentElement
   for (const [k, v] of Object.entries(vars)) root.style.setProperty(k, v)
+  // Il colore-azione dei bottoni va SEMPRE riscritto: se il preset non lo
+  // dichiara, torna all'accento-2 — altrimenti cambiando tema resterebbe
+  // appiccicato quello del preset precedente.
+  if (!vars['--btn']) root.style.setProperty('--btn', vars['--accent-2'] || '')
   const a2 = vars['--accent-2']
   if (a2) {
     root.style.setProperty(

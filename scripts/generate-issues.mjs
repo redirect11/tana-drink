@@ -2,8 +2,8 @@
 /**
  * scripts/generate-issues.mjs
  *
- * Legge `requirements/requirements.yaml` e crea issue GitHub per tutti i
- * requisiti con `generate_issue: true`.
+ * Legge `requirements/requirements.yaml` e `requirements/bugs.yaml` e crea
+ * issue GitHub per tutte le voci con `generate_issue: true`.
  *
  * Utilizzo:
  *   # Dry run (mostra le issue che verrebbero create, senza crearle)
@@ -18,10 +18,16 @@
  *   DRY_RUN        Se impostato a "true", non crea issue ma mostra il payload (default: false)
  *
  * Il workflow `.github/workflows/generate-issues.yml` esegue questo script
- * automaticamente quando viene effettuato un push su `requirements/requirements.yaml`.
+ * automaticamente quando viene effettuato un push su uno dei due file.
+ *
+ * Chiusura:
+ *   Una voce con `status: fixed` (o `implemented`/`done`) non genera un'issue nuova:
+ *   se ne esiste una aperta con quel titolo, lo script la commenta e la chiude. Il
+ *   registro (`bugs.yaml`) resta l'unica cosa da aggiornare a mano.
  *
  * Idempotenza:
- *   Il titolo dell'issue viene prefissato con "[REQ-ID]", es. "[REQ-SUMUP-SYNC-001] Titolo".
+ *   Il titolo dell'issue viene prefissato con "[ID]", es. "[REQ-SUMUP-SYNC-001] Titolo"
+ *   o "[BUG-001] Titolo".
  *   Prima di creare un'issue, lo script verifica se ne esiste già una con lo stesso
  *   titolo (aperta o chiusa). Se esiste, la salta.
  */
@@ -68,6 +74,26 @@ async function searchIssues(title) {
   return body.items || []
 }
 
+// Un bug risolto nel registro è un'issue da chiudere: così non si aggiorna la
+// stessa cosa in due posti (e non restano aperte issue di roba già sistemata).
+const STATI_CHIUSI = new Set(['fixed', 'implemented', 'done'])
+
+async function commentIssue(number, body) {
+  return githubFetch(`/repos/${OWNER}/${REPO}/issues/${number}/comments`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ body }),
+  })
+}
+
+async function closeIssue(number) {
+  return githubFetch(`/repos/${OWNER}/${REPO}/issues/${number}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ state: 'closed', state_reason: 'completed' }),
+  })
+}
+
 async function createIssue({ title, body, labels }) {
   return githubFetch(`/repos/${OWNER}/${REPO}/issues`, {
     method: 'POST',
@@ -83,8 +109,18 @@ function buildIssueBody(req) {
     ? `\n## Test case associati\n${req.test_cases.map((tc) => `- ${tc}`).join('\n')}\n`
     : ''
 
-  return `## ${req.id} — ${req.title}
+  // DOVE MORDE. Un bug in produzione è un'altra cosa da uno visto in test:
+  // lì ci sono i conti veri del locale, e chi legge l'issue deve saperlo
+  // dalla prima riga, non dopo aver letto la descrizione.
+  const dove =
+    req.in_produzione === true
+      ? '\n> ⚠️ **In produzione**: succede sull’installazione che sta lavorando.\n'
+      : req.in_produzione === false
+        ? '\n> Visto solo in test.\n'
+        : ''
 
+  return `## ${req.id} — ${req.title}
+${dove}
 **Area**: \`${req.area}\`
 **Status**: ${req.status}
 
@@ -93,32 +129,45 @@ function buildIssueBody(req) {
 ${req.description}
 ${testCasesSection}
 ---
-*Issue generata automaticamente da \`scripts/generate-issues.mjs\` a partire da \`requirements/requirements.yaml\`.*
+*Issue generata automaticamente da \`scripts/generate-issues.mjs\` a partire da \`${req.source_file}\`.*
 `
 }
 
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
-  const yamlPath = join(ROOT, 'requirements', 'requirements.yaml')
-  let yamlText
-  try {
-    yamlText = readFileSync(yamlPath, 'utf8')
-  } catch (_e) {
-    console.error(`❌ File non trovato: ${yamlPath}`)
-    process.exit(1)
+  // requirements.yaml è la mappa di cosa esiste, bugs.yaml di cosa non va:
+  // stesso formato, stesso giro di issue. Il secondo può mancare (è nato dopo).
+  const sorgenti = [
+    { rel: 'requirements/requirements.yaml', obbligatorio: true },
+    { rel: 'requirements/bugs.yaml', obbligatorio: false },
+  ]
+
+  const toGenerate = []
+  for (const s of sorgenti) {
+    const yamlPath = join(ROOT, ...s.rel.split('/'))
+    let yamlText
+    try {
+      yamlText = readFileSync(yamlPath, 'utf8')
+    } catch (_e) {
+      if (s.obbligatorio) {
+        console.error(`❌ File non trovato: ${yamlPath}`)
+        process.exit(1)
+      }
+      continue
+    }
+    for (const voce of parseRequirementsYaml(yamlText)) {
+      if (voce.generate_issue) toGenerate.push({ ...voce, source_file: s.rel })
+    }
   }
 
-  const requirements = parseRequirementsYaml(yamlText)
-  const toGenerate = requirements.filter((r) => r.generate_issue)
-
   if (toGenerate.length === 0) {
-    console.log('ℹ️  Nessun requisito con generate_issue: true trovato. Nulla da fare.')
-    console.log('   Per creare un\'issue, imposta generate_issue: true in requirements/requirements.yaml')
+    console.log('ℹ️  Nessuna voce con generate_issue: true trovata. Nulla da fare.')
+    console.log('   Per creare un\'issue, imposta generate_issue: true in requirements/requirements.yaml o requirements/bugs.yaml')
     return
   }
 
-  console.log(`📋 ${toGenerate.length} requisito/i da processare:\n`)
+  console.log(`📋 ${toGenerate.length} voce/i da processare:\n`)
 
   if (DRY_RUN) {
     console.log('🔍 DRY RUN — nessuna issue sarà creata.\n')
@@ -129,13 +178,22 @@ async function main() {
 
   let created = 0
   let skipped = 0
+  let closed = 0
   let errors = 0
 
   for (const req of toGenerate) {
     const issueTitle = `[${req.id}] ${req.title}`
     console.log(`▸ ${issueTitle}`)
 
+    const risolto = STATI_CHIUSI.has(String(req.status || '').toLowerCase())
+
     if (DRY_RUN) {
+      if (risolto) {
+        console.log(`  [DRY RUN] Risolto (${req.status}) — l'issue, se aperta, verrebbe chiusa.
+`)
+        closed++
+        continue
+      }
       console.log('  [DRY RUN] Payload:')
       console.log('  Title:', issueTitle)
       console.log('  Labels:', req.labels.join(', ') || '(nessuna)')
@@ -146,6 +204,32 @@ async function main() {
 
     // Check idempotenza: esiste già un'issue con questo titolo?
     const existing = await searchIssues(issueTitle)
+
+    if (risolto) {
+      const aperta = existing.find((i) => i.state === 'open')
+      if (!aperta) {
+        console.log(`  ⏭  Risolto (${req.status}) — nessuna issue aperta da chiudere.`)
+        skipped++
+        continue
+      }
+      await commentIssue(
+        aperta.number,
+        `Risolto: nel registro \`${req.source_file}\` la voce è passata a **${req.status}**.
+
+${req.description}`
+      )
+      const { ok, status, body } = await closeIssue(aperta.number)
+      if (ok) {
+        console.log(`  ✅ Issue chiusa: ${aperta.html_url}`)
+        closed++
+      } else {
+        console.error(`  ❌ Errore ${status} chiudendo #${aperta.number}:`, body.message || '')
+        errors++
+      }
+      await new Promise((r) => setTimeout(r, 200))
+      continue
+    }
+
     if (existing.length > 0) {
       console.log(`  ⏭  Saltato — issue già esistente: ${existing[0].html_url}`)
       skipped++
@@ -170,7 +254,7 @@ async function main() {
     await new Promise((r) => setTimeout(r, 200))
   }
 
-  console.log(`\n📊 Riepilogo: ${created} create, ${skipped} saltate, ${errors} errori`)
+  console.log(`\n📊 Riepilogo: ${created} create, ${closed} chiuse, ${skipped} saltate, ${errors} errori`)
   if (errors > 0) process.exit(1)
 }
 

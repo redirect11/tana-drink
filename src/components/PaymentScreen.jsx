@@ -484,26 +484,44 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
             )}
             {remaining.map((r) => {
               const s = Math.min(sel[r.key] || 0, r.qty)
-              // Separata: una riga per unità; si tocca fin dove pagare.
+              // SEPARATA: una riga per unità, e le righe sono FATTE COME LE
+              // ALTRE — nome, prezzo e il contatore −/+ con «1/1». Prima
+              // erano caselline da spuntare: nella stessa colonna
+              // convivevano due modi diversi di dire la stessa cosa, e chi
+              // incassa doveva capire quale valesse per quale riga.
               if (separati && r.qty > 1) {
                 return (
-                  <div key={r.key} style={{ marginTop: 8 }}>
+                  <div key={r.key}>
                     {Array.from({ length: r.qty }, (_, i) => {
                       const on = i < s
                       return (
-                        <button
-                          key={i}
-                          type="button"
-                          className="payscreen-unit row between"
-                          disabled={closed}
-                          onClick={() => setSel((st) => ({ ...st, [r.key]: on ? i : i + 1 }))}
-                          style={{ opacity: on ? 1 : 0.5 }}
+                        <div
+                          className="row between"
+                          key={`${r.key}#${i}`}
+                          style={{ alignItems: 'center', marginTop: 8 }}
                         >
-                          <span className="grow" style={{ fontSize: '0.92rem', textAlign: 'left' }}>
-                            {on ? '☑' : '☐'} {r.custom ? '✨ ' : ''}{r.name}
+                          <span className="grow" style={{ fontSize: '0.92rem' }}>
+                            {r.custom ? '✨ ' : ''}{r.name}
+                            <span className="muted small"> · 1× {formatPrice(r.unit_price)}</span>
                           </span>
-                          <span className="muted small">{formatPrice(r.unit_price)}</span>
-                        </button>
+                          <span className="qty">
+                            <button
+                              aria-label={`Togli ${r.name} dal pagamento`}
+                              onClick={() => setSel((st) => ({ ...st, [r.key]: i }))}
+                              disabled={closed || !on}
+                            >
+                              −
+                            </button>
+                            <strong>{on ? 1 : 0}/1</strong>
+                            <button
+                              aria-label={`Paga ${r.name}`}
+                              onClick={() => setSel((st) => ({ ...st, [r.key]: i + 1 }))}
+                              disabled={closed || on}
+                            >
+                              +
+                            </button>
+                          </span>
+                        </div>
                       )
                     })}
                   </div>

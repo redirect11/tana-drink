@@ -95,17 +95,19 @@ function ThemeEditor({ title, hint, value, onSave, livePreview = false }) {
         </p>
       )}
 
-      <div className="chips-row">
+      {/* A TENDINA, non a chip: con otto preset (e cresceranno) la fila
+          di bottoni si mangiava la pagina due volte, gestionale e cliente. */}
+      <select
+        value={current.preset || DEFAULT_THEME}
+        onChange={(e) => pickPreset(e.target.value)}
+        style={{ width: '100%', margin: '2px 0 8px', padding: '10px 12px', fontSize: '1rem' }}
+      >
         {Object.entries(THEME_PRESETS).map(([id, p]) => (
-          <button
-            key={id}
-            className={`chip ${current.preset === id && !hasCustom ? 'active' : ''}`}
-            onClick={() => pickPreset(id)}
-          >
+          <option key={id} value={id}>
             {p.label}
-          </button>
+          </option>
         ))}
-      </div>
+      </select>
 
       {!customizing ? (
         <button className="btn ghost small" onClick={startCustomize}>

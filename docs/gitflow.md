@@ -159,6 +159,13 @@ git tag -a v1.4.0-prod -m "In produzione la 1.4.0" && git push origin v1.4.0-pro
 # → su GitHub, Actions: il deploy aspetta l'approvazione
 ```
 
+**Mentre si lavora, `package.json` porta il numero della PROSSIMA versione
+col suffisso `-beta`** (es. `1.4.2-beta`): così l'app in test dice
+`v1.4.2-beta · release/1.4.x · <commit>` e non si confonde con quello che è
+davvero uscito. Al rilascio (passo 1) si toglie il `-beta`. Se le note in
+`CHANGELOG.md` parlano di una versione e l'app ne dice un'altra, chi segnala
+un problema dichiara un numero che non esiste.
+
 **Il numero di versione che l'app mostra lo dice `package.json`, non il
 tag.** Il tag può stare dove capita nella storia; `package.json` invece sta su
 ogni ramo e viene allineato al passo 1. Se si salta quel passo, tutti gli
@@ -184,3 +191,37 @@ forza vuol dire non sapere più cosa è stato pubblicato quando.
    correzione non si perde al rilascio successivo
 4. tag sul commit di `main` → il deploy in produzione parte e **aspetta
    l'approvazione**
+
+### Quando l'hotfix riporta indietro una funzione già scritta
+
+Capita: una cosa è pronta sulla linea di sviluppo e serve in produzione
+subito. La si porta con un `git cherry-pick` dei commit che la fanno.
+
+**Nel messaggio del commit va scritto da dove viene**, con l'identificativo
+originale:
+
+```
+(cherry-pick da 729f718, release/1.4.x)
+```
+
+Non è formalità. Quel commit, alla fine, esiste **due volte**: l'originale
+sulla linea di sviluppo e la copia sull'hotfix — e la copia rientra in
+`develop` col merge dell'hotfix. Nella storia si vedono due commit con lo
+stesso titolo, e senza quella riga chi guarda si chiede se qualcosa sia
+stato fatto due volte.
+
+Tre cose da sapere, tutte già costate tempo:
+
+- **`git cherry` non li riconosce come duplicati.** La copia nasce sopra un
+  codice più vecchio, quindi la patch non è identica: per git sono due
+  modifiche diverse. Il rebase non li scarta da sé, e non c'è niente da
+  scartare a mano — vanno tenuti tutti e due.
+- **Il conto si paga in conflitti, non in codice doppio.** Rientrando in
+  `develop`, le due strade toccano le stesse righe: si sciolgono a mano,
+  tenendo la linea di sviluppo e portandoci dentro le correzioni
+  dell'hotfix. Dopo, si controlla che il contenuto sia UNO: nessun
+  requisito ripetuto, nessun `describe` doppio, una sola funzione.
+- **Dopo un rebase così, si fanno girare i test.** Sciogliendo un
+  conflitto è facile incollare un blocco dentro un altro: lint e build non
+  se ne accorgono, e un file di prove finisce saltato per intero. Se il
+  numero totale dei test cala, è quello.

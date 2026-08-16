@@ -532,3 +532,27 @@ describe('due prodotti liberi uguali, come nel conto #45', () => {
     expect(payAmount()).toHaveTextContent('5,00')
   })
 })
+
+// «Separa uguali» mostra le unità come le altre righe: nome, prezzo e il
+// contatore −/+. Prima erano caselline da spuntare, e nella stessa colonna
+// convivevano due modi diversi di dire la stessa cosa.
+describe('vista separata: righe come tutte le altre', () => {
+  it('separando due Mojito si vedono due righe col contatore, non caselle', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder()) // Mojito 2× + Gin Tonic
+    await user.click(screen.getByRole('button', { name: /Separa uguali/ }))
+    // Due unità di Mojito, ognuna col suo −/+ e il suo 1/1.
+    expect(screen.getAllByRole('button', { name: /Togli Mojito dal pagamento/ })).toHaveLength(2)
+    expect(screen.getAllByText('1/1').length).toBeGreaterThanOrEqual(3)
+    expect(screen.queryByText(/☑/)).toBeNull()
+  })
+
+  it('togliendo una sola unità si incassa solo l’altra', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.click(screen.getByRole('button', { name: /Separa uguali/ }))
+    // La seconda unità di Mojito esce dal pagamento: 22 − 7 = 15.
+    await user.click(screen.getAllByRole('button', { name: /Togli Mojito dal pagamento/ })[1])
+    expect(payAmount()).toHaveTextContent('15,00')
+  })
+})

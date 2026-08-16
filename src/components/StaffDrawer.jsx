@@ -4,6 +4,7 @@ import { auth } from '../lib/firebaseClient.js'
 import { logoutStaff } from '../lib/logout.js'
 import { devToolsEnabled } from '../dev/devActions.js'
 import { isGestore, RUOLO_ETICHETTA } from '../lib/ruoli.js'
+import { useSchermoLargo } from '../lib/useTelefono.js'
 import { IconGruppo, IconPersona } from './Icons.jsx'
 import VersionBadge from './VersionBadge.jsx'
 import {
@@ -28,6 +29,26 @@ export default function StaffDrawer({ role, active = null, onSelect = null }) {
   const [gruppiAperti, setGruppiAperti] = useState(
     () => localStorage.getItem('tana:drawer-gruppi') === '1'
   )
+  // ── IL MENU AGGANCIATO ALLA PAGINA ────────────────────────────────
+  // Dove la pagina ha delle sezioni sue (Impostazioni, Inventario) e c'è
+  // posto, il menu è APERTO come parte della pagina: il contenuto si
+  // stringe per fargli posto invece di finirci sotto. Lì dentro si salta da
+  // una sezione all'altra venti volte di seguito, e un menu che copre
+  // significa aprire, cercare, scegliere — e intanto non vedere più dove si
+  // era.
+  //
+  // SI APRE E SI CHIUDE COL ☰, come ovunque. Un secondo tasto per
+  // "agganciare" sarebbe una cosa in più da capire per una differenza che a
+  // chi lavora non interessa: il menu c'è o non c'è. Che poi resti aperto
+  // dentro la pagina invece di coprirla è come si presenta, non un'altra
+  // funzione. La scelta resta anche domani.
+  const [agganciato, setAgganciato] = useState(
+    () => localStorage.getItem('tana:drawer-agganciato') !== '0'
+  )
+  // Dove il menu può stare dentro la pagina: sezioni proprie da mostrare e
+  // schermo abbastanza largo (sul telefono sarebbe mezzo schermo).
+  const largo = useSchermoLargo()
+  const agganciabile = largo && sotto.voci.length > 0
   const navigate = useNavigate()
   const utente = auth.currentUser
   const nomeUtente = utente?.displayName || String(utente?.email || '').split('@')[0] || 'Il mio profilo'
@@ -42,11 +63,17 @@ export default function StaffDrawer({ role, active = null, onSelect = null }) {
 
   // Il menu si apre dal ☰ della TOPBAR (che sta in App.jsx): il tasto flottante
   // resta solo nelle schermate a tutto schermo, dove la topbar è nascosta.
+  // Lo stesso tasto fa la stessa cosa nei due modi: dove il menu è parte
+  // della pagina apre e chiude quella colonna, altrove apre e chiude il
+  // pannello che scorre sopra.
   useEffect(() => {
-    const h = () => setOpen((o) => !o)
+    const h = () => {
+      if (agganciabile) setAgganciato((v) => !v)
+      else setOpen((o) => !o)
+    }
     window.addEventListener('tana:toggle-drawer', h)
     return () => window.removeEventListener('tana:toggle-drawer', h)
-  }, [])
+  }, [agganciabile])
 
   // Col menu aperto i tasti dello zoom devono passare DIETRO: stanno in
   // basso a sinistra, cioè esattamente sopra le ultime voci (Esci).
@@ -54,6 +81,25 @@ export default function StaffDrawer({ role, active = null, onSelect = null }) {
     document.body.classList.toggle('drawer-open', open)
     return () => document.body.classList.remove('drawer-open')
   }, [open])
+
+  // Solo le pagine con sezioni proprie tengono il menu agganciato: sulla
+  // coda ordini sarebbe una colonna in meno di conti. La classe sta sul
+  // body perché a diventare una riga dev'essere la PAGINA, che sta in un
+  // altro componente; sul telefono il CSS la ignora — lì una colonna fissa
+  // sarebbe mezzo schermo.
+  const dock = agganciato && agganciabile
+  useEffect(() => {
+    document.body.classList.toggle('drawer-agganciato', dock)
+    return () => document.body.classList.remove('drawer-agganciato')
+  }, [dock])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('tana:drawer-agganciato', agganciato ? '1' : '0')
+    } catch {
+      /* niente memoria: vale per questa volta */
+    }
+  }, [agganciato])
 
   // Gruppi nel drawer (quadratini): attivi se l'impostazione lo prevede.
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
@@ -88,9 +134,10 @@ export default function StaffDrawer({ role, active = null, onSelect = null }) {
 
   function nuovoOrdine() {
     setOpen(false)
-    // La creazione ordine è la CASSA in stile POS (segue il tema staff),
-    // non il menù cliente: /menu resta per la "vista cliente" e i gruppi.
-    navigate('/pos')
+    // Per i gestori la creazione ordine è la CASSA in stile POS (segue il
+    // tema staff). La sala invece ordina DAL MENÙ: lo stesso che mostra al
+    // tavolo, con la ricerca — il POS è lo strumento del banco.
+    navigate(isGestore(role) ? '/pos' : '/menu')
   }
 
   // Toccando un gruppo si aprono i SUOI ORDINI nella coda (non si entra
@@ -118,7 +165,7 @@ export default function StaffDrawer({ role, active = null, onSelect = null }) {
         ☰
       </button>
       <div className={`bar-nav-overlay${open ? ' open' : ''}`} onClick={() => setOpen(false)} />
-      <nav className={`bar-sidebar${open ? ' open' : ''}`}>
+      <nav className={`bar-sidebar${open ? ' open' : ''}${dock ? ' agganciata' : ''}`}>
         <div className="brand-mini">
           <img src={`${import.meta.env.BASE_URL}logo.png`} alt="" />
           Gestionale
@@ -163,7 +210,7 @@ export default function StaffDrawer({ role, active = null, onSelect = null }) {
           className={`bar-nav-item${active === 'ordine' ? ' active' : ''}`}
           onClick={nuovoOrdine}
         >
-          <span>✍️</span> Nuovo ordine
+          <span>✍️</span> {isGestore(role) ? 'Nuovo ordine' : 'Nuovo ordine dal menù'}
         </div>
 
         {showGroups && (

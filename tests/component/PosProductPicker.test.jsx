@@ -99,3 +99,89 @@ describe('ricerca prodotti: accendi e porta lì', () => {
     expect(screen.getByText(/Nessun prodotto per/)).toBeInTheDocument() // …quindi si scrive
   })
 })
+
+// ── ORGANIZZA NON DEVE CAMBIARE LA GRIGLIA ───────────────────────────
+// La maniglia stava a fianco della card e ogni cella cresceva di 38px:
+// entrando in «organizza» le card cambiavano numero per riga e misura, e
+// si finiva per sistemare una disposizione diversa da quella che poi si
+// usa davvero. La maniglia sta SOPRA la card, e la cella occupa quello
+// che occupa fuori da qui.
+describe('modalità organizza', () => {
+  const griglia = (c) => c.querySelector('[style*="grid-template-columns"]')
+
+  it('il minimo delle colonne lo calcola il browser, non una misura in ritardo', () => {
+    // Trascinando la maniglia di fianco alla griglia, la larghezza misurata
+    // arriva sempre qualche fotogramma dopo: col conto fatto in JS, per un
+    // po' restava quella di prima — più larga — e ci stavano due colonne
+    // invece di tre, fino a quando la misura non arrivava. Il terzo di
+    // larghezza deve stare NEL CSS, così si rifà insieme al
+    // ridimensionamento.
+    const { container } = mostra()
+    const cols = griglia(container).style.gridTemplateColumns
+    expect(cols).toMatch(/calc\(\(100% - \d+px\) \/ 3\)/)
+  })
+
+  it('le colonne restano quelle di prima', async () => {
+    const user = userEvent.setup()
+    const { container } = mostra({ canReorder: true, onReorder: vi.fn() })
+    const prima = griglia(container).style.gridTemplateColumns
+    await user.click(screen.getByLabelText('Organizza griglia'))
+    expect(griglia(container).style.gridTemplateColumns).toBe(prima)
+  })
+
+  it('la griglia non viene rifatta: nessun lampo di card della misura sbagliata', async () => {
+    // Montare il contesto di trascinamento solo in «organizza» spostava la
+    // griglia in un altro posto dell'albero: React buttava il riquadro e ne
+    // faceva uno nuovo, e per un attimo si vedevano le card cambiare misura
+    // — il tempo di rimisurare e ridisegnare. È lo STESSO riquadro, prima e
+    // dopo.
+    const user = userEvent.setup()
+    const { container } = mostra({ canReorder: true, onReorder: vi.fn() })
+    const prima = griglia(container)
+    await user.click(screen.getByLabelText('Organizza griglia'))
+    expect(griglia(container)).toBe(prima)
+    await user.click(screen.getByLabelText('Fine organizzazione'))
+    expect(griglia(container)).toBe(prima)
+  })
+
+  it('la misura della griglia continua a essere presa dopo il cambio di modo', async () => {
+    // Entrando in «organizza» la griglia finisce dentro il contesto di
+    // trascinamento: per React è un altro posto nell'albero, quindi il
+    // riquadro viene rifatto da capo. Il misuratore restava attaccato a
+    // quello vecchio — staccato dalla pagina, quindi largo zero — e le
+    // card tornavano alla misura di partenza coi testi rimpiccioliti.
+    const osservati = []
+    const vecchio = globalThis.ResizeObserver
+    globalThis.ResizeObserver = class {
+      observe(el) { osservati.push(el) }
+      disconnect() {}
+    }
+    try {
+      const user = userEvent.setup()
+      const { container } = mostra({ canReorder: true, onReorder: vi.fn() })
+      await user.click(screen.getByLabelText('Organizza griglia'))
+      const misurato = osservati.at(-1)
+      expect(misurato).toBeTruthy()
+      // Quello che si sta misurando è la griglia che si vede adesso.
+      expect(container.contains(misurato)).toBe(true)
+      expect(misurato).toBe(griglia(container))
+    } finally {
+      globalThis.ResizeObserver = vecchio
+    }
+  })
+
+  it('la maniglia sta dentro la card, non a fianco', async () => {
+    const user = userEvent.setup()
+    const { container, cards } = mostra({ canReorder: true, onReorder: vi.fn() })
+    const quante = cards().length
+    await user.click(screen.getByLabelText('Organizza griglia'))
+    // Stesse card di prima, ognuna con il suo appiglio dentro la cella.
+    expect(cards().length).toBe(quante)
+    const celle = container.querySelectorAll('.reorder-cell')
+    expect(celle.length).toBe(quante)
+    for (const cella of celle) {
+      expect(cella.querySelector('.reorder-grip')).toBeTruthy()
+      expect(cella.querySelector('[data-drink-id]')).toBeTruthy()
+    }
+  })
+})

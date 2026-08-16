@@ -31,6 +31,12 @@ function snapshot() {
   return {
     items: daLeggere, // quello che la campanella mostra
     archivio: items.filter((n) => n.letta), // lo storico, dietro un tocco
+    // TUTTE, nell'ordine in cui sono arrivate. Serve allo storico delle
+    // impostazioni: chi cerca l'avviso di mezz'ora fa non sa (né gli
+    // importa) se nel frattempo è finito fra le lette. Rimetterle in fila
+    // fuori di qui vuol dire ordinarle per orario, e due arrivate nello
+    // stesso istante finiscono a caso.
+    tutte: items,
     unseen: daLeggere.length,
   }
 }

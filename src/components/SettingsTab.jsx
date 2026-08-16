@@ -10,18 +10,11 @@ import { parseCarteCsv, decodeCsvBuffer } from '../lib/carteImport.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import ThemeSettings from './ThemeSettings.jsx'
 import PrinterSetup from './PrinterSetup.jsx'
+
 import BackupPanel from './BackupPanel.jsx'
 import InfoTab from './InfoTab.jsx'
 import { pairSumUpReader, unpairSumUpReader } from '../lib/paymentsApi.js'
-import { auth } from '../lib/firebaseClient.js'
-import { isGestore } from '../lib/ruoli.js'
-import {
-  avvisiPerRuolo,
-  leggiAvvisi,
-  scriviAvviso,
-  subscribeAvvisi,
-  avvisoAttivo,
-} from '../lib/preferenzeNotifiche.js'
+import { Link } from 'react-router-dom'
 import { devToolsEnabled } from '../dev/devActions.js'
 import { Sottosezioni } from '../lib/sottosezioni.js'
 import { usePaginaPiena } from '../lib/paginaPiena.js'
@@ -128,6 +121,28 @@ export default function SettingsTab({ role = null }) {
                     key={String(value)}
                     className={`mode-option${!!settings.pos_add_top === value ? ' active' : ''}`}
                     onClick={() => save({ pos_add_top: value })}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              <p className="muted" style={{ margin: '12px 0 6px', fontSize: '0.85rem' }}>
+                Quanto è grande, come minimo, il testo delle righe del conto.
+                Il testo segue la larghezza del pannello, ma sotto questa
+                soglia non scende.
+              </p>
+              <div className="mode-choice" style={{ gridTemplateColumns: '1fr 1fr 1fr 1fr' }}>
+                {[
+                  [0.85, 'Piccolo'],
+                  [1, 'Medio'],
+                  [1.1, 'Grande'],
+                  [1.25, 'Extra'],
+                ].map(([value, label]) => (
+                  <button
+                    key={value}
+                    className={`mode-option${(Number(settings.pos_testo_min) || 1.1) === value ? ' active' : ''}`}
+                    onClick={() => save({ pos_testo_min: value })}
                   >
                     {label}
                   </button>
@@ -768,7 +783,24 @@ export default function SettingsTab({ role = null }) {
       id: 'notifiche',
       icona: '🔔',
       label: 'Notifiche',
-      nodo: <AvvisiPanel gestore={isGestore(role)} />,
+      // CARTELLO, non una seconda casa. Gli avvisi sono scelti per persona
+      // e per dispositivo, quindi stanno nel profilo — dove ci arriva
+      // anche chi è in sala, che qui dentro non entra proprio. Qui resta
+      // l'indicazione, perché chi li cercava li cercava qui.
+      nodo: (
+        <div className="card settings-section">
+          <h3>🔔 Notifiche</h3>
+          <p className="muted" style={{ margin: '0 0 12px', fontSize: '0.9rem' }}>
+            Gli avvisi sono una scelta <strong>tua e di questo dispositivo</strong> —
+            il tablet della cassa e il telefono in sala vogliono cose diverse,
+            anche con lo stesso accesso — quindi stanno nel tuo profilo,
+            insieme allo storico di quelli arrivati qui.
+          </p>
+          <Link className="btn small" to="/profilo-staff">
+            👤 Vai al mio profilo
+          </Link>
+        </div>
+      ),
     },
     { id: 'stampante', icona: '🖨️', label: 'Stampante', nodo: <PrinterSetup /> },
     { id: 'backup', icona: '💾', label: 'Backup e ripristino', nodo: <BackupPanel role={role} /> },
@@ -804,14 +836,62 @@ export default function SettingsTab({ role = null }) {
       ),
     },
   ]
-  const attiva = sezioni.find((s) => s.id === sezione) ?? sezioni[0]
+
+  // LE VOCI DEL SOTTOMENU SONO DIECI, NON VENTITRÉ. Ogni riquadro resta
+  // com'è, ma appartiene a un GRUPPO — accorpati per «a cosa afferisce»
+  // l'impostazione, non per la storia di come è nata: con ventitré voci
+  // l'elenco era più lungo delle impostazioni.
+  const GRUPPO_DI = {
+    aspetto: 'aspetto',
+    'modalita-menu': 'menu-catalogo',
+    menu: 'menu-catalogo',
+    catalogo: 'menu-catalogo',
+    coda: 'banco',
+    'vista-ordine': 'banco',
+    consegna: 'servizio',
+    preparazione: 'servizio',
+    tempi: 'servizio',
+    annullamenti: 'servizio',
+    pagamenti: 'cassa',
+    giornata: 'cassa',
+    prezzo: 'prezzi',
+    sconto: 'prezzi',
+    coperto: 'prezzi',
+    'servizio-mancia': 'prezzi',
+    gruppi: 'gruppi',
+    'account-clienti': 'clienti',
+    posizione: 'clienti',
+    notifiche: 'clienti',
+    stampante: 'stampante',
+    backup: 'sistema',
+    informazioni: 'sistema',
+  }
+  const GRUPPI = [
+    { id: 'aspetto', icona: '🎨', label: 'Aspetto' },
+    { id: 'menu-catalogo', icona: '🍹', label: 'Menù e catalogo' },
+    { id: 'banco', icona: '🧾', label: 'Banco: coda e ordine' },
+    { id: 'servizio', icona: '🛎', label: 'Servizio' },
+    { id: 'cassa', icona: '💳', label: 'Cassa e giornata' },
+    { id: 'prezzi', icona: '🏷', label: 'Prezzi e supplementi' },
+    { id: 'gruppi', icona: '👥', label: 'Gruppi di ordini' },
+    { id: 'clienti', icona: '🙋', label: 'Clienti' },
+    { id: 'stampante', icona: '🖨️', label: 'Stampante' },
+    { id: 'sistema', icona: '💾', label: 'Sistema' },
+  ]
+  // Compat coi collegamenti vecchi (?sezione=coperto): l'id di un riquadro
+  // porta al gruppo che lo contiene.
+  const attiva =
+    GRUPPI.find((g) => g.id === sezione) ??
+    GRUPPI.find((g) => g.id === GRUPPO_DI[sezione]) ??
+    GRUPPI[0]
+  const riquadri = sezioni.filter((s) => GRUPPO_DI[s.id] === attiva.id)
 
   return (
     <div className="pagina-impostazioni">
       {/* Il titolo sta nella barra in alto (vedi lib/sezioni.js), e con lui
           l'elenco delle sezioni: in pagina costava una colonna intera. */}
       <Sottosezioni
-        voci={sezioni.map((x) => ({ id: x.id, icona: x.icona, label: x.label }))}
+        voci={GRUPPI.map((x) => ({ id: x.id, icona: x.icona, label: x.label }))}
         attiva={attiva.id}
         scegli={scegliSezione}
       />
@@ -845,8 +925,12 @@ export default function SettingsTab({ role = null }) {
 
       {/* Le sezioni stanno nella barra in alto (il titolo è il comando):
           a sinistra costavano una colonna tutto il giorno per una scelta che
-          si fa ogni tanto. */}
-      <div className="tab-corpo">{attiva.nodo}</div>
+          si fa ogni tanto. I riquadri del gruppo scelto si impilano. */}
+      <div className="tab-corpo">
+        {riquadri.map((s) => (
+          <div key={s.id}>{s.nodo}</div>
+        ))}
+      </div>
     </div>
   )
 }
@@ -1050,42 +1134,6 @@ function ReaderPairing({ settings }) {
 // guarda QUESTO schermo — non una regola del bar — quindi resta sul
 // dispositivo e vale per la persona collegata: due che si passano lo stesso
 // tablet nei cambi turno non si sovrascrivono a vicenda.
-function AvvisiPanel({ gestore }) {
-  const uid = auth.currentUser?.uid
-  const [avvisi, setAvvisi] = useState(() => leggiAvvisi(uid))
-  useEffect(() => subscribeAvvisi(uid, setAvvisi), [uid])
-  const elenco = avvisiPerRuolo(gestore)
-  const spenti = elenco.filter((a) => !avvisoAttivo(avvisi, a.id)).length
-
-  return (
-    <div className="card settings-section">
-      <h3>🔔 Notifiche</h3>
-      <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
-        Valgono <strong>su questo dispositivo</strong> e per te: il tablet della
-        cassa e il telefono in sala possono volere avvisi diversi, anche con lo
-        stesso accesso. Chi manda un ordine non riceve l&apos;avviso di
-        quell&apos;ordine: sa già di averlo mandato.
-      </p>
-      {elenco.map((a) => (
-        <ToggleRow
-          key={a.id}
-          label={a.label}
-          desc={a.desc}
-          checked={avvisoAttivo(avvisi, a.id)}
-          onChange={(v) => setAvvisi(scriviAvviso(uid, a.id, v))}
-        />
-      ))}
-      {spenti > 0 && (
-        <p className="muted small" style={{ margin: '10px 0 0' }}>
-          {spenti === 1 ? 'Un avviso è spento' : `${spenti} avvisi sono spenti`} su
-          questo dispositivo: quello che succede lo vedi comunque nella coda,
-          ma nessuno te lo verrà a dire.
-        </p>
-      )}
-    </div>
-  )
-}
-
 function ToggleRow({ label, desc, checked, onChange, disabled }) {
   return (
     <div className="toggle-row">

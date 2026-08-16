@@ -5,6 +5,11 @@
   --card: #1a1a26;
   --accent: #e52e71;
   --accent-2: #f5b94a;
+  /* Colore-azione dei bottoni primari: segue l'accento-2, ma i preset
+     chiari lo dichiarano a parte (themes.js) — lì l'accento-2 è scuro
+     per reggere i link sul fondo chiaro, e come fondo di un bottone
+     diventava una macchia senape. */
+  --btn: var(--accent-2);
   --grad: linear-gradient(90deg, rgba(245, 185, 74, 0.9), rgba(245, 185, 74, 0.12));
   --text: #f5f5f7;
   --muted: #9b9ba8;
@@ -452,10 +457,19 @@ body.schermo-intero {
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
-  background: linear-gradient(135deg, #f7c45e, #e8a32e);
+  /* L'ORO DEI BOTTONI SEGUE IL TEMA. Era un gradiente cablato
+     (#f7c45e→#e8a32e): cambiando preset — Catppuccin su tutti — i bottoni
+     restavano dorati come se il tema non esistesse. Ora derivano
+     dall'accento-2, e su Tana scuro l'occhio non vede differenza:
+     quell'oro cablato ERA l'accento-2. */
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--btn) 92%, #fff),
+    color-mix(in srgb, var(--btn) 85%, #241500)
+  );
   color: #1c1305;
   transition: transform 0.05s ease, opacity 0.2s ease, box-shadow 0.2s ease;
-  box-shadow: 0 4px 14px rgba(245, 185, 74, 0.25);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--btn) 25%, transparent);
 }
 
 .btn:active {
@@ -1371,6 +1385,15 @@ a.order-mini {
   transform: translateX(0);
 }
 
+/* LE VOCI NON SI SCHIACCIANO. Il menu e' una colonna flessibile: quando le
+   voci sono piu' alte dello spazio, flex le STRINGE — e una voce a due
+   righe (nome e ruolo) finisce sopra quella dopo. Si e' visto col menu
+   agganciato, che e' piu' corto: «Capo Bar / Admin» e «Esci» uno addosso
+   all'altro. Ognuna tiene la sua altezza e a scorrere e' il menu. */
+.bar-sidebar > * {
+  flex-shrink: 0;
+}
+
 .bar-sidebar .brand-mini {
   display: flex;
   align-items: center;
@@ -1630,6 +1653,16 @@ body.fullbleed .bar-content {
     white-space: normal;
     min-width: 0;
     text-align: left;
+    /* IN LINEA COL ☰, non due pixel più giù. Il ☰ è fisso: parte a
+       12px + safe-top ed è alto 42, quindi il suo centro sta a 33px +
+       safe-top. La testata parte a 10px + safe-top (il respiro della
+       lavagna), quindi perché i due centri coincidano il titolo dev'essere
+       alto 2 × (33 − 10) = 46. Senza, la scritta si appoggiava all'altezza
+       della riga — che sul telefono la fanno i tasti — e scivolava sotto
+       la linea del ☰. */
+    display: flex;
+    align-items: center;
+    min-height: 46px;
   }
   .board-search {
     width: 100%;
@@ -1778,10 +1811,14 @@ body.fullbleed .bar-content {
   .board-title {
     display: flex;
     align-items: center;
-    /* Un dito d'aria fra il ☰ e «In servizio»: il ☰ flottante finisce a
-       12 + 42 = 54px, e col rientro di base (52px) la scritta gli stava
-       addosso. Sul telefono resta com'è: lì lo spazio è tutto. */
-    padding-left: 70px;
+    /* IL RIENTRO SI CALCOLA, non si sceglie a occhio. Il ☰ flottante sta a
+       left: 12px ed è largo 42px, quindi finisce a 54px dal bordo della
+       finestra; la lavagna ha già 12px di suo. Il rientro è quel che
+       serve ad arrivare a 54 più un dito d'aria:
+         12 (☰) + 42 (largh.) + 10 (aria) − 12 (rientro della lavagna).
+       Con 70px scritti a mano la scritta finiva 18px più in là del
+       dovuto, e fra il ☰ e «In servizio» restava un buco. */
+    padding-left: calc(12px + 42px + 10px - 12px);
   }
   /* La ricerca è anche una `.menu-search`, e quella regola — più in basso
      nel file, stesso peso — le rimetteva i 10px di margine sotto che
@@ -4107,21 +4144,8 @@ body.fullbleed,
   border-right: 1px solid var(--line);
 }
 /* Riga di una singola unità nella vista "Separa" del pagamento. */
-.payscreen-unit {
-  width: 100%;
-  align-items: center;
-  gap: 8px;
-  margin-top: 2px;
-  padding: 4px 6px;
-  background: none;
-  border: none;
-  color: inherit;
-  cursor: pointer;
-  border-radius: 8px;
-}
-.payscreen-unit:hover {
-  background: var(--tile-bg);
-}
+/* (Le caselline della vista separata non ci sono più: le unità sono righe
+   come le altre, col contatore −/+ — vedi PaymentScreen.jsx.) */
 .payscreen-pad {
   flex: 1;
   min-width: 0;
@@ -4498,24 +4522,36 @@ body.fullbleed .cat-rail {
    e fra le due c'era una fessura con gli angoli tondi da tutte e due le
    parti — sembravano due oggetti. Il colore è quello di casa (l'accento
    smorzato sul fondo), non una macchia senape che non c'entra niente. */
+/* LA MANIGLIA NON ALLARGA LA CARD. Stava a fianco, e ogni cella cresceva
+   di 38px: entrando in «organizza» la griglia si ricalcolava e le card
+   cambiavano numero e misura — si organizzava una disposizione diversa da
+   quella che poi si usa. Ora la maniglia sta SOPRA la card, sul suo bordo
+   destro: la cella occupa esattamente quello che occupa fuori da
+   «organizza», e la griglia resta quella. */
 .reorder-cell {
   position: relative;
-  padding-right: 38px;
   border-radius: 12px;
   will-change: transform;
+  /* LA CARD DENTRO E' ALTA QUANTO LA CELLA. Fuori da «organizza» la card
+     e' lei stessa la casella della griglia, e le caselle di una riga sono
+     tutte alte uguali (stretch). Dentro «organizza» in mezzo c'e' questo
+     guscio: si allungava lui e la card restava alta quanto il suo testo —
+     una riga di card tutte di altezze diverse, e una disposizione che non
+     assomiglia a quella che si usa. */
+  display: flex;
 }
-/* La card perde gli angoli tondi dal lato della maniglia: il giro esterno
-   lo chiude lei. */
 .reorder-cell > [data-drink-id] {
-  border-top-right-radius: 0 !important;
-  border-bottom-right-radius: 0 !important;
+  flex: 1;
+  min-width: 0;
 }
 .reorder-grip {
   position: absolute;
   top: 0;
   bottom: 0;
   right: 0;
-  width: 38px;
+  width: 34px;
+  border-top-right-radius: 12px;
+  border-bottom-right-radius: 12px;
   z-index: 3;
   display: flex;
   align-items: center;
@@ -4523,7 +4559,8 @@ body.fullbleed .cat-rail {
   font-size: 1.3rem;
   line-height: 1;
   color: var(--text);
-  background: color-mix(in srgb, var(--accent) 22%, var(--tile-bg));
+  /* Si vede che è un appiglio, ma sotto la card resta leggibile. */
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
   border: 1px solid var(--line);
   border-left: none;
   border-radius: 0 12px 12px 0;
@@ -4542,6 +4579,14 @@ body.fullbleed .cat-rail {
   z-index: 5;
   cursor: grabbing;
   box-shadow: 0 16px 34px rgba(0, 0, 0, 0.45);
+  /* LA CARD IN MANO NON E' UN VETRO. Il fondo delle card e' apposta un
+     velo (--tile-bg: bianco al 5%): appoggiate sulla pagina va benissimo,
+     ma alzandone una sopra le altre si vedevano attraverso — e non si
+     capiva piu' quale si sta spostando. Sotto ci va il fondo della
+     pagina, cosi' in mano ha l'aspetto identico a quando e' posata,
+     soltanto opaca. */
+  background: var(--bg);
+  border-radius: 12px;
 }
 .reorder-cell.dragging .reorder-grip {
   cursor: grabbing;
@@ -5524,4 +5569,250 @@ body.pagina-piena .pagina-inventario .inv-scroll {
   white-space: normal;
   line-height: 1.2;
   overflow-wrap: anywhere;
+}
+
+/* Totale della riga del conto: sta a destra, accanto ai tasti, come su uno
+   scontrino. Compare solo con più di un pezzo — con uno solo ripeterebbe il
+   prezzo che sta già accanto al nome. */
+.posd-riga-tot {
+  flex-shrink: 0;
+  margin-right: 6px;
+  font-size: 0.95em;
+  white-space: nowrap;
+}
+
+/* ── Il pallino della stampante ────────────────────────────────────────
+   Sta nella testata della coda, accanto agli altri tasti: stessa altezza
+   (44px) o si porta dietro l'allineamento di tutta la riga. Sul telefono
+   resta il solo pallino — la parola "Stampante" e' la prima cosa che si
+   puo' togliere quando lo spazio manca. */
+.pallino-guscio {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+.pallino-stampante {
+  /* Il vestito e' quello dei tasti della testata (btn ghost small): qui si
+     regolano solo altezza e allineamento, cosi' il pallino sta sulla stessa
+     linea del ⋯ e del +. Un bordo tutto suo, su misura, spariva sul tema
+     chiaro. */
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 44px;
+  height: 44px;
+  justify-content: center;
+  font-size: 1.1rem;
+  line-height: 1;
+  white-space: nowrap;
+}
+/* IL BORDO SI DEVE VEDERE ANCHE COL PALLINO GRIGIO. Il bordo del ghost e'
+   bianco quasi trasparente: sul tema chiaro sparisce, e mentre si controlla
+   la stampante — pallino grigio — restava un'icona sospesa che non sembrava
+   nemmeno un tasto. Il bordo si tinge del colore del testo, quindi si vede
+   su tutti e due i temi, e sotto c'e' un velo come sui chip: deve leggersi
+   come un tasto sempre, non solo quando la stampante risponde. */
+.pallino-stampante {
+  border: 1px solid currentColor;
+  border-color: color-mix(in srgb, currentColor 30%, transparent);
+  background: color-mix(in srgb, currentColor 6%, transparent);
+}
+@supports not (color: color-mix(in srgb, red 50%, transparent)) {
+  /* iPad vecchi: senza color-mix resta il bordo pieno, appena smorzato. */
+  .pallino-stampante {
+    opacity: 0.92;
+  }
+}
+.pallino-stampante.ko {
+  border-color: rgba(255, 90, 90, 0.55);
+}
+.pallino-stampante.rimbalzo {
+  cursor: default;
+  opacity: 0.75;
+}
+.pallino-bolla {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 40;
+  width: min(280px, 78vw);
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  background: var(--card, #1b1b22);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+.pallino-bolla p {
+  margin: 0 0 6px;
+}
+.pallino-bolla p:last-child {
+  margin-bottom: 0;
+}
+/* Il pallino di stato e' piccolo e appoggiato all'icona: e' un segnale
+   sopra un oggetto, non una seconda cosa da leggere. */
+.pallino-punto {
+  font-size: 0.7em;
+  margin-left: -3px;
+}
+@media (max-width: 700px) {
+  .pallino-testo {
+    display: none;
+  }
+}
+
+/* ── IL MENU AGGANCIATO ALLA PAGINA ────────────────────────────────────
+   Dove la pagina ha sezioni sue (Impostazioni, Inventario) il menu resta
+   aperto DENTRO la pagina: il contenuto si stringe per fargli posto invece
+   di finirci sotto. Chi vuole tutta la larghezza lo chiude col ✕.
+
+   DA DOVE IN SU. Il conto e' la larghezza che resta al contenuto. Su un
+   telefono (360-430px) una colonna da 250px e' piu' di meta' schermo:
+   quello che avanza non e' un contenuto stretto, e' un contenuto
+   inutilizzabile — li' il menu a scomparsa e' la cosa giusta, non un
+   ripiego. Da 768px in su (l'iPad in verticale, cioe' il tablet del banco)
+   restano 500px e la scelta ha senso: si tiene aperto, e chi ha bisogno di
+   larghezza lo chiude. Fino ai 900px la colonna e' piu' stretta, che 50px
+   la' dentro si sentono. */
+@media (min-width: 768px) {
+  /* La pagina diventa una riga: menu a sinistra, contenuto a destra. */
+  body.drawer-agganciato .bar-page {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 0;
+  }
+  body.drawer-agganciato .bar-content {
+    flex: 1;
+    min-width: 0; /* senza, una tabella larga sfonda la riga */
+    padding-left: 14px;
+  }
+
+  /* IL MENU E' UN PEZZO DELLA PAGINA, non una scheda appoggiata sopra.
+     Prima restava quello che era da pannello a scomparsa — angoli
+     arrotondati, staccato dal bordo, con la pagina crema che si vedeva
+     intorno — e sembrava una finestrella caduta lì. Attaccato in alto alla
+     barra e a filo del bordo sinistro, con la sua stessa superficie, i due
+     si leggono come una cosa sola. */
+  body.drawer-agganciato .bar-sidebar.agganciata {
+    position: static;
+    transform: none;
+    z-index: auto;
+    flex-shrink: 0;
+    align-self: stretch;
+    width: 178px;
+    /* Il respiro laterale della pagina (.app: 0 16px) lo annulla: se no
+       fra il menu e il bordo della finestra resta una striscia di fondo,
+       e la colonna sembra appoggiata sopra invece che incastrata. */
+    margin-left: -16px;
+    padding: 6px 0 12px;
+    max-height: 100%;
+    border-radius: 0;
+    border-right: 1px solid var(--line);
+    background: var(--bg-2);
+  }
+  /* Il marchio ce l'ha già la barra qui sopra: ripeterlo dentro il menu
+     costava 60px di altezza per dire una cosa che si vede. */
+  body.drawer-agganciato .bar-sidebar.agganciata .brand-mini {
+    display: none;
+  }
+  /* MENO INGOMBRO. Le voci sono parole corte: righe alte 52px e un
+     rientro da 18 lasciavano mezza colonna vuota a destra. */
+  body.drawer-agganciato .bar-sidebar.agganciata .bar-nav-item {
+    min-height: 0;
+    gap: 8px;
+    padding: 7px 10px;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+  body.drawer-agganciato .bar-sidebar.agganciata .bar-nav-sep {
+    margin: 6px 10px;
+  }
+
+  /* LE SEZIONI STANNO DENTRO LA LORO VOCE. Erano un blocco a parte,
+     staccato, con una lineetta grigia che non c'entrava con niente: ora
+     continuano il riquadro della pagina aperta — stesso velo, stessa
+     riga di accento a sinistra — e il testo parte dove parte il nome
+     della pagina sopra, non più in mezzo al nulla. */
+  body.drawer-agganciato .bar-sidebar.agganciata .bar-nav-sotto {
+    margin: 0 0 4px;
+    padding: 2px 0 4px;
+    border-left: 3px solid var(--accent-2);
+    background: rgba(245, 185, 74, 0.06);
+  }
+  body.drawer-agganciato .bar-sidebar.agganciata .bar-nav-sottovoce {
+    padding: 5px 10px 5px 22px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    border-left: 0;
+    opacity: 0.85;
+  }
+  body.drawer-agganciato .bar-sidebar.agganciata .bar-nav-sottovoce.active {
+    background: transparent;
+    opacity: 1;
+    font-weight: 700;
+  }
+
+  /* Niente velo: non c'e' piu' niente da coprire. */
+  body.drawer-agganciato .bar-nav-overlay {
+    display: none;
+  }
+  /* E niente ☰ flottante: il menu e' gia' li', aperto. */
+  body.drawer-agganciato .bar-burger {
+    display: none;
+  }
+
+  /* Con la pagina che deve stare tutta nella finestra la catena delle
+     altezze scende per COLONNE: la riga menu+contenuto prende quel che
+     resta, e dentro ognuno scorre per conto suo. */
+  body.pagina-piena.drawer-agganciato .bar-page {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: row;
+  }
+  body.pagina-piena.drawer-agganciato .bar-sidebar.agganciata {
+    min-height: 0;
+    overflow-y: auto;
+  }
+}
+
+/* Tablet in verticale: la colonna si stringe ancora, il contenuto respira. */
+@media (min-width: 768px) and (max-width: 900px) {
+  body.drawer-agganciato .bar-sidebar.agganciata {
+    width: 156px;
+  }
+  body.drawer-agganciato .bar-content {
+    padding-left: 10px;
+  }
+}
+
+/* Lo storico delle notifiche nelle impostazioni: una riga per avviso, con
+   l'ora a destra. Quelle gia' lette sbiadiscono — la differenza si vede
+   senza doverla leggere. */
+.storico-notifiche {
+  display: flex;
+  flex-direction: column;
+  max-height: 420px;
+  overflow-y: auto;
+}
+.storico-notifica {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--line);
+  color: inherit;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+.storico-notifica:last-child {
+  border-bottom: 0;
+}
+.storico-notifica.letta {
+  opacity: 0.62;
+}
+a.storico-notifica:hover {
+  background: rgba(245, 185, 74, 0.06);
 }

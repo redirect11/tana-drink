@@ -232,6 +232,18 @@ la Tana in produzione invariata; stesso commit → due deployment.
    in un doc; una pagina unica mostra chi è su cosa.
 5. **Regola d'oro**: tutti i clienti sulla stessa versione, sempre. Le
    differenze passano solo da licenza e settings, mai dal codice.
+6. **Infrastruttura come codice (deciso il 15/08)**: la fabbrica converge
+   su **Terraform** — un modulo `cliente` in `infra/` che dichiara
+   progetto GCP, API abilitate, database Firestore, web app, IAM, Secret
+   Manager e budget; lo stato vive in un bucket GCS del progetto regia.
+   Attivare un cliente = un blocco `module` + `terraform apply`; una
+   disdetta = `destroy` controllato; la configurazione della flotta è
+   versionata nel repo invece che nella console. Confine netto: Terraform
+   per l'**infrastruttura**, la pipeline esistente per gli **artefatti**
+   (build, hosting, functions, regole Firestore). Primo collaudo senza
+   rischi: `terraform import` del progetto demo già esistente.
+   `setup-firebase-env.sh` resta il ponte finché il modulo non lo
+   rimpiazza.
 
 ## Fase 5 — Il prodotto pubblico: landing, pricing, registrazione
 
