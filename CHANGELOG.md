@@ -1,5 +1,17 @@
 # Cosa è cambiato
 
+## Non ancora rilasciata — 1.4.6
+
+### Al banco
+
+- **Il «+» della coda e il tasto del pagamento hanno lo stesso oro del tab
+  acceso.** Sui temi chiari restavano più smorti: il colore dei tasti
+  seguiva il tema di contorno, quello del tab no. Ora è lo stesso, e i
+  temi di casa (Chiaro, Crema) non lo cambiano più — restano temi della
+  Tana, non di un altro locale.
+
+---
+
 ## 1.4.5 — 16 agosto 2026
 
 ### Al banco

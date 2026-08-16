@@ -113,8 +113,10 @@ export const THEME_PRESETS = {
       '--accent': '#c2185b',
       '--accent-2': '#a8790a',
       // L'accento-2 qui è scuro apposta (i link devono reggere sul
-      // bianco): i bottoni prendono l'oro chiaro di sempre da --btn.
-      '--btn': '#f0b83f',
+      // bianco): i bottoni restano l'oro di casa, che è lo stesso del tab
+      // acceso — un tasto che cambia colore col tema di contorno si
+      // riconosce meno, e il «+» della coda si prende di corsa.
+      '--btn': '#f5b94a',
       '--text': '#17171f',
       '--muted': '#5c5c6b',
     },
@@ -127,7 +129,8 @@ export const THEME_PRESETS = {
       '--card': '#fffdf7',
       '--accent': '#a3552b',
       '--accent-2': '#8c6d1f',
-      '--btn': '#e2b04a',
+      // Come sopra: Crema è una variante della Tana, non un altro locale.
+      '--btn': '#f5b94a',
       '--text': '#241d12',
       '--muted': '#6f6353',
     },
