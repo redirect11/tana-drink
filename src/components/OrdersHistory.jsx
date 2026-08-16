@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { subscribeOrdersHistory } from '../lib/api.js'
+import { subscribeOrdersHistory, fetchOrdersRange, subscribeSettings, DEFAULT_SETTINGS } from '../lib/api.js'
+import SelettorePeriodo from './SelettorePeriodo.jsx'
+import { businessDayKey } from '../lib/businessDay.js'
+import { isPersonale } from '../lib/ruoli.js'
 import { formatPrice, ORDER_STATUSES, PAYMENT_METHOD_LABELS } from '../lib/orderStatus.js'
 import { paidAmount, orderTotal } from '../lib/pagamento.js'
 import { printScontrino } from '../lib/printer.js'
@@ -15,6 +18,17 @@ const FILTRI = [
   ['aperti', 'Aperti'],
   ['chiusi', 'Chiusi'],
   ['annullati', 'Annullati'],
+]
+
+// CHI HA APERTO IL CONTO: il locale (banco o sala) o il cliente dal suo
+// telefono. Sono due mestieri diversi e ogni tanto si guarda solo uno dei
+// due — «quanto ci arriva dall'app?», «chi ha battuto questa serata?».
+const dalCliente = (o) => !isPersonale(o?.placed_by?.role)
+
+const ORIGINI = [
+  ['tutte', 'Tutti'],
+  ['locale', '🍸 Dal locale'],
+  ['clienti', '📱 Dai clienti'],
 ]
 
 const statoDi = (o) => {
@@ -52,7 +66,19 @@ export default function OrdersHistory() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [filtro, setFiltro] = useState('tutti')
+  const [origine, setOrigine] = useState('tutte')
   const [q, setQ] = useState('')
+  // Il periodo: vuoto = gli ultimi conti, in tempo reale. Scelto un
+  // periodo si va a prenderlo, anche se è di due settimane fa.
+  const [periodo, setPeriodo] = useState({ da: null, a: null, completo: true })
+  const [delPeriodo, setDelPeriodo] = useState(null)
+  const [cercando, setCercando] = useState(false)
+  const [cutoffHour, setCutoffHour] = useState(DEFAULT_SETTINGS.business_day_cutoff_hour)
+  useEffect(
+    () => subscribeSettings((s) => setCutoffHour(s.business_day_cutoff_hour), () => {}),
+    []
+  )
+  const oggi = businessDayKey(new Date(), cutoffHour)
   const navigate = useNavigate()
 
   // Realtime + LOCAL-FIRST: la lista compare subito (anche offline, dalla
@@ -72,10 +98,41 @@ export default function OrdersHistory() {
     []
   )
 
+  // Periodo scelto: si va a leggerlo dal database, perché la lista in tempo
+  // reale tiene solo gli ultimi conti e una serata di due settimane fa lì
+  // dentro non c'è.
+  useEffect(() => {
+    if (!periodo.da || !periodo.completo) return
+    let vivo = true
+    setCercando(true)
+    fetchOrdersRange(periodo.da, periodo.a, cutoffHour)
+      .then((list) => vivo && setDelPeriodo(list))
+      .catch((e) => vivo && setError(e.message))
+      .finally(() => vivo && setCercando(false))
+    return () => {
+      vivo = false
+    }
+  }, [periodo.da, periodo.a, periodo.completo, cutoffHour])
+
+  // Senza periodo si torna alla lista viva.
+  useEffect(() => {
+    if (!periodo.da) setDelPeriodo(null)
+  }, [periodo.da])
+
+  const lista = useMemo(
+    () => (periodo.da ? delPeriodo || [] : orders),
+    [periodo.da, delPeriodo, orders]
+  )
+  // I clienti ordinano dall'app solo se il locale glielo permette: dove non
+  // succede, un filtro sull'origine sarebbe una domanda senza risposta.
+  const ciSonoOrdiniCliente = useMemo(() => lista.some(dalCliente), [lista])
+
   const visibili = useMemo(() => {
     const needle = q.trim().toLowerCase()
-    return orders.filter((o) => {
+    return lista.filter((o) => {
       if (filtro !== 'tutti' && statoDi(o) !== filtro) return false
+      if (origine === 'clienti' && !dalCliente(o)) return false
+      if (origine === 'locale' && dalCliente(o)) return false
       if (!needle) return true
       return (
         String(o.daily_number ?? '').includes(needle) ||
@@ -83,7 +140,7 @@ export default function OrdersHistory() {
         (o.table_label || '').toLowerCase().includes(needle)
       )
     })
-  }, [orders, filtro, q])
+  }, [lista, filtro, origine, q])
 
   return (
     <div className="card" style={{ marginTop: 12 }}>
@@ -91,6 +148,8 @@ export default function OrdersHistory() {
       <div className="muted small" style={{ margin: '2px 0 8px' }}>
         Tutti i conti in ordine di tempo, dal più recente.
       </div>
+
+      <SelettorePeriodo periodo={periodo} onChange={setPeriodo} oggi={oggi} />
 
       <input
         type="search"
@@ -109,10 +168,23 @@ export default function OrdersHistory() {
           </button>
         ))}
       </div>
+      {ciSonoOrdiniCliente && (
+        <div className="chips-row" style={{ margin: '0 0 8px' }}>
+          {ORIGINI.map(([id, label]) => (
+            <button
+              key={id}
+              className={`chip ${origine === id ? 'active' : ''}`}
+              onClick={() => setOrigine(id)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {error && <div className="banner">Errore: {error}</div>}
-      {loading && <p className="muted small">Carico lo storico…</p>}
-      {!loading && visibili.length === 0 && (
+      {(loading || cercando) && <p className="muted small">Carico lo storico…</p>}
+      {!loading && !cercando && visibili.length === 0 && (
         <p className="muted small">Nessun ordine con questi filtri.</p>
       )}
 

@@ -5962,3 +5962,83 @@ a.storico-notifica:hover {
   text-decoration: line-through;
   text-decoration-color: color-mix(in srgb, currentColor 45%, transparent);
 }
+
+/* ── IL CALENDARIO DEL PERIODO (lista ordini) ─────────────────────────
+   Come sui siti degli alberghi: si tocca l'inizio, poi la fine, e in mezzo
+   si accende tutto. Il pannello sta SOPRA il resto (position: absolute)
+   perché aprendolo la lista sotto non deve saltare in basso: si perde il
+   punto in cui si stava guardando. */
+.periodo {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0;
+}
+.periodo-pannello {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 30;
+  width: min(320px, calc(100vw - 32px));
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+}
+.periodo-rapidi {
+  margin-bottom: 8px;
+}
+.periodo-testata {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.periodo-griglia {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+.periodo-intestazione {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  padding-bottom: 2px;
+}
+.periodo-giorno {
+  padding: 7px 0;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.periodo-giorno:disabled {
+  color: var(--muted);
+  opacity: 0.35;
+  cursor: default;
+}
+.periodo-giorno.oggi {
+  text-decoration: underline;
+}
+/* Dentro il periodo: una fascia continua, come su quei calendari. Gli
+   estremi sono pieni, così si vede dove comincia e dove finisce. */
+.periodo-giorno.dentro {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  border-radius: 0;
+}
+.periodo-giorno.estremo {
+  background: var(--accent);
+  color: #fff;
+  border-radius: 8px;
+  font-weight: 600;
+}
+.periodo-aiuto {
+  margin: 8px 0 0;
+}

@@ -4,6 +4,13 @@
 
 ### Al banco
 
+- **Nella lista ordini si cercano anche le serate passate.** C'è un
+  calendario come quelli degli alberghi: tocchi un giorno per vedere
+  quella serata, ne tocchi un altro per arrivare fin lì. Sopra, le
+  scorciatoie: oggi, ieri, ultimi 7 e 30 giorni.
+- **E si può guardare solo quello che arriva dai clienti**, o solo quello
+  battuto al banco e in sala. Il filtro compare solo se di ordini dai
+  clienti ce n'è.
 - **Le scorte si scalano quando il drink è servito**, non quando lo si
   prende in carico: un drink iniziato e poi non fatto — riga tolta,
   cliente che cambia idea — portava via gli ingredienti lo stesso. Fino a

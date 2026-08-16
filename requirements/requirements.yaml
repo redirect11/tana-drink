@@ -164,6 +164,30 @@ requirements:
     labels: [ordini, pagamenti, impostazioni]
     test_cases: [tests/component/PaymentScreen.test.jsx]
 
+  - id: REQ-ORD-015
+    title: "Nella lista ordini si cercano anche le serate passate"
+    area: "src/lib/periodo.js, src/components/SelettorePeriodo.jsx, src/components/OrdersHistory.jsx, src/lib/api.js"
+    description: >
+      La lista mostrava gli ultimi conti e basta: per ritrovare una serata di
+      due settimane fa non c'era strada. C'è un selettore a calendario come
+      quelli degli alberghi — si tocca il giorno d'inizio, poi quello di
+      fine, e in mezzo si accende tutto; un tocco solo vuol dire quella
+      serata e basta, che è il caso più frequente. Sopra ci sono le
+      scorciatoie (oggi, ieri, ultimi 7 e 30 giorni), perché quasi sempre si
+      cerca lì.
+      I giorni sono GIORNATE COMMERCIALI: la serata del venerdì finisce alle
+      quattro del sabato, e chi cerca «venerdì» cerca quella. I giorni futuri
+      sono spenti. Scelto un periodo, i conti si vanno a leggere dal
+      database: in tempo reale ci sono solo gli ultimi.
+      C'è anche un filtro su CHI ha aperto il conto — il locale (banco e
+      sala) o il cliente dal suo telefono — che compare solo se di ordini dai
+      clienti ce n'è davvero: dove non succede sarebbe una domanda senza
+      risposta.
+    status: implemented
+    generate_issue: false
+    labels: [ordini, cassa]
+    test_cases: [tests/unit/periodo.test.js]
+
   - id: REQ-ORD-008
     title: "Un conto chiuso o annullato si può rimettere in corso"
     area: "src/lib/storiaOrdine.js, src/lib/api.js, src/components/StoriaOrdine.jsx"
