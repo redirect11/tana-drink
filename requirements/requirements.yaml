@@ -686,6 +686,25 @@ requirements:
     labels: [cassa, statistiche]
     test_cases: [tests/unit/rendiconto.test.js]
 
+  - id: REQ-CASSA-006
+    title: "La cassa è una sola: flusso, lista ordini, chiusure"
+    area: "src/components/CassaTab.jsx, src/lib/sezioni.js"
+    description: >
+      «Cassa» (prima «Flusso cassa») ha tre sottosezioni nel menu laterale:
+      il FLUSSO della serata in corso, la LISTA ORDINI e le CHIUSURE. Erano
+      tre posti per la stessa domanda — quanto ho incassato — e due si
+      raggiungevano da tasti in fondo alla pagina del flusso, che si
+      trovano solo scorrendo fino in fondo; la lista ordini aveva perfino
+      una voce sua nel menu, accanto alla cassa, come se fosse un altro
+      mestiere.
+      Il vecchio indirizzo `?tab=storico` continua a funzionare: porta alla
+      cassa, aperta sulla lista ordini. Sta nei collegamenti salvati e nei
+      messaggi, e non deve finire in una pagina senza nome.
+    status: implemented
+    generate_issue: false
+    labels: [cassa, ux]
+    test_cases: [tests/unit/sezioni.test.js]
+
   - id: REQ-CASSA-005
     title: "Statistiche per serata, con tempi e margini"
     area: "src/lib/stats.js, src/lib/eta.js, src/components/StatsTab.jsx"
