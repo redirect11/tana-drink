@@ -73,8 +73,7 @@ import ServiceQueue from '../components/ServiceQueue.jsx'
 import StaffCallList from '../components/StaffCallList.jsx'
 import GroupsPanel from '../components/GroupsPanel.jsx'
 import GroupView from '../components/GroupView.jsx'
-import CashFlow from '../components/CashFlow.jsx'
-import OrdersHistory from '../components/OrdersHistory.jsx'
+import CassaTab from '../components/CassaTab.jsx'
 import InvoicesTab from '../components/InvoicesTab.jsx'
 import ConfirmDialog from '../components/ConfirmDialog.jsx'
 import CancelOrderDialog from '../components/CancelOrderDialog.jsx'
@@ -246,8 +245,15 @@ export default function BartenderPage() {
         {tabEffettivo === 'coda' && <OrderQueue mieiIniziale={salaMiei} gestore={isGestore(role)} />}
         {/* «Da servire»: la sezione della sala (drink pronti da portare). */}
         {tabEffettivo === 'servizio' && <ServiceQueue />}
-        {tabEffettivo === 'pagamenti' && <CashFlow canManageStaff={isGestore(role)} />}
-        {tabEffettivo === 'storico' && <OrdersHistory />}
+        {tabEffettivo === 'pagamenti' && (
+          <CassaTab canManageStaff={isGestore(role)} />
+        )}
+        {/* IL VECCHIO INDIRIZZO NON SI ROMPE. `?tab=storico` è nei
+            collegamenti salvati e nei messaggi: porta alla cassa, aperta
+            sulla lista ordini. */}
+        {tabEffettivo === 'storico' && (
+          <CassaTab canManageStaff={isGestore(role)} sezioneIniziale="ordini" />
+        )}
         {tabEffettivo === 'fatture' && <InvoicesTab />}
         {tabEffettivo === 'stats' && <StatsTab />}
         {tabEffettivo === 'menu' && <MenuTab />}

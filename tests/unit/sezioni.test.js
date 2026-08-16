@@ -46,3 +46,23 @@ describe('titoloPagina', () => {
     }
   })
 })
+
+// ── LA CASSA È UNA SOLA ──────────────────────────────────────────────
+// Flusso, lista ordini e chiusure erano tre posti per la stessa domanda —
+// «quanto ho incassato» — e due si raggiungevano da tasti in fondo alla
+// pagina, che si trovano solo scorrendo. «Lista ordini» aveva perfino una
+// voce sua nel menu, come se fosse un altro mestiere.
+describe('la voce Cassa', () => {
+  it('si chiama Cassa, non «Flusso cassa»', () => {
+    expect(titoloPagina('/bar', '?tab=pagamenti').titolo).toBe('Cassa')
+  })
+
+  it('«Lista ordini» non è più una voce del menu', () => {
+    expect(NAV_GESTIONALE.some(([id]) => id === 'storico')).toBe(false)
+  })
+
+  it('il vecchio indirizzo porta alla cassa, non nel vuoto', () => {
+    // `?tab=storico` sta nei collegamenti salvati e nei messaggi.
+    expect(titoloPagina('/bar', '?tab=storico').titolo).toBe('Cassa')
+  })
+})

@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
 import {
   subscribeActiveOrders,
   subscribeOpenCashSession,
@@ -11,7 +10,6 @@ import {
 import { auth } from '../lib/firebaseClient.js'
 import { cashRecap } from '../lib/cassa.js'
 import { formatPrice, cashMethodKeys, paymentMethodLabel } from '../lib/orderStatus.js'
-import CashSessionsList from './CashSessionsList.jsx'
 import { printChiusuraCassa } from '../lib/printer.js'
 import { toastError } from '../lib/toast.js'
 import StaffBadgePanel from './StaffBadgePanel.jsx'
@@ -55,27 +53,15 @@ export default function CashFlow({ canManageStaff = false }) {
 
   const recap = useMemo(() => cashRecap(orders, session, now), [orders, session, now])
   const by = { email: auth.currentUser?.email ?? null }
-  const [showChiusure, setShowChiusure] = useState(false)
 
   if (!session) {
     return (
       <>
         <ApriCassa cutoff={cutoff} by={by} />
         {canManageStaff && <StaffBadgePanel />}
-      {/* Lista ordini: sezione a sé (menu laterale), qui solo la scorciatoia. */}
-      <Link className="btn ghost small block" style={{ marginTop: 12 }} to="/bar?tab=storico">
-        📋 Lista ordini
-      </Link>
-
-      {/* Storico delle serate: da apertura a chiusura, col venduto di ognuna. */}
-      <button
-        className="btn ghost small block"
-        style={{ marginTop: 8 }}
-        onClick={() => setShowChiusure((v) => !v)}
-      >
-        {showChiusure ? '▴ Nascondi chiusure di cassa' : '📒 Chiusure di cassa'}
-      </button>
-      {showChiusure && <CashSessionsList />}
+      {/* Lista ordini e chiusure sono SOTTOSEZIONI della cassa (menu
+          laterale): erano due tasti in fondo alla pagina, che si trovano
+          solo scorrendo fino in fondo. */}
       </>
     )
   }
@@ -128,21 +114,6 @@ export default function CashFlow({ canManageStaff = false }) {
       {recap.perOra.length > 0 && <OraBars perOra={recap.perOra} />}
 
       <ChiudiCassa session={session} recap={recap} by={by} />
-
-      {/* Lista ordini: sezione a sé (menu laterale), qui solo la scorciatoia. */}
-      <Link className="btn ghost small block" style={{ marginTop: 12 }} to="/bar?tab=storico">
-        📋 Lista ordini
-      </Link>
-
-      {/* Storico delle serate: da apertura a chiusura, col venduto di ognuna. */}
-      <button
-        className="btn ghost small block"
-        style={{ marginTop: 8 }}
-        onClick={() => setShowChiusure((v) => !v)}
-      >
-        {showChiusure ? '▴ Nascondi chiusure di cassa' : '📒 Chiusure di cassa'}
-      </button>
-      {showChiusure && <CashSessionsList />}
 
     </div>
   )

@@ -4,6 +4,10 @@
 
 ### Al banco
 
+- **«Flusso cassa» si chiama Cassa e ha tre sezioni**: flusso, lista
+  ordini, chiusure. Erano tre posti per la stessa domanda, e due si
+  raggiungevano da tasti in fondo alla pagina — che si trovano solo
+  scorrendo fino in fondo.
 - **Il Menù ha tre sezioni nel menu laterale**: modifica menù, categorie,
   marginalità del listino. Erano due pannelli a scomparsa in cima al
   catalogo, e aprirli spingeva giù tutta la griglia.
