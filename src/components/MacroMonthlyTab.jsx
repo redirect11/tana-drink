@@ -81,7 +81,7 @@ export default function MacroMonthlyTab() {
       <p className="muted small" style={{ margin: '0 0 10px' }}>
         Valori al <strong>netto IVA</strong>: il fatturato è scorporato con
         l’IVA di rivendita (predefinita {settings.sale_vat}%, modificabile per
-        prodotto in Inventario). Acquisti = ordini fornitore segnati “ricevuto”.
+        prodotto in Magazzino). Acquisti = ordini fornitore segnati “ricevuto”.
       </p>
       {report && report.rows.some((r) => r.id === 'none' && r.tot.fatturato > 0) && (
         <p className="muted small" style={{ margin: '-4px 0 10px' }}>
@@ -95,7 +95,7 @@ export default function MacroMonthlyTab() {
 
       {!loading && data && data.macros.length === 0 && (
         <div className="empty">
-          Nessuna macro-categoria: creale in <strong>Inventario → 🗂 Macro-categorie</strong> e
+          Nessuna macro-categoria: creale in <strong>Magazzino → 🗂 Macro-categorie</strong> e
           collega le categorie, poi qui vedrai acquisti e fatturato per macro.
         </div>
       )}

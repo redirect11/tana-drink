@@ -937,6 +937,46 @@ requirements:
     labels: [stampa, cassa]
     test_cases: []
 
+  - id: REQ-MAG-011
+    title: "In magazzino si contano i pezzi, con la virgola"
+    area: "src/lib/inventory.js, src/components/InventoryManager.jsx"
+    description: >
+      La colonna delle scorte dice quanti PEZZI ci sono, decimali compresi:
+      una bottiglia da 100 cl con dentro 50 cl è «0,5 pz»; due piene da 50
+      cl e una a cui mancano 10 cl fanno «2,8 pz». Prima si leggeva «3
+      bott.», che dice quante bottiglie si toccano e non quanto prodotto
+      c'è dentro: tre bottiglie di cui una quasi vuota contavano come tre,
+      e per sapere se bastavano per la serata bisognava aprire il
+      dettaglio.
+      Gli articoli già contati a pezzo (le bibite) dicono il loro numero.
+      Accanto NON si scrive più «piena / aperta 46 cl / esaurito»: col
+      conteggio a pezzi quello stato è già nel numero — «0,5 pz» dice da sé
+      che è mezza, «0 pz» che è finita — e ripeterlo era una didascalia.
+      Nel dettaglio restano le bottiglie — piene, aperta, finite — che
+      servono a chi va a contarle sullo scaffale.
+      La parola in tutta l'app è MAGAZZINO, non «Inventario»: è come lo
+      chiama chi ci lavora. Gli identificativi interni (il tab
+      `inventario`, la collezione `inventory_items`) restano, che cambiarli
+      vorrebbe dire migrare dati e indirizzi per un nome.
+      LE UNITÀ RESTANO COERENTI: il pezzo è la bottiglia, il contenuto si
+      misura sempre in cl/ml (o g/mg), mai in pezzi — si leggeva «1 aperta
+      (40 pz) · 1 conf. = 200 pz». La scala è cartone → pezzi → contenuto:
+      caricando, dicendo quanti pezzi ha un cartone i pezzi si riempiono da
+      sé (2 × 24 = 48); chi carica bottiglie sfuse lascia il cartone da
+      parte e scrive i pezzi. Non tutti i prodotti arrivano in cartone,
+      quindi il cartone non è un dato del prodotto: è un modo di contare al
+      momento del carico.
+      Un prodotto si può DUPLICARE, fra Modifica ed Elimina: il magazzino è
+      pieno di quasi-uguali — stessa bottiglia in due formati, lo stesso
+      amaro di un altro fornitore — e rifarli da zero vuol dire ribattere
+      costo, confezione, categoria, soglia e IVA. La copia nasce con la
+      giacenza a ZERO (è un prodotto che non è mai entrato in magazzino) e
+      apre subito la scheda, perché il nome «(copia)» va cambiato.
+    status: implemented
+    generate_issue: false
+    labels: [magazzino, ux]
+    test_cases: [tests/unit/inventory.test.js]
+
   # ══════════════════════════════════════════════════════════════════════
   #  NOTIFICHE
   # ══════════════════════════════════════════════════════════════════════
