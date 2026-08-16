@@ -47,6 +47,31 @@ e come fondo di un bottone diventerebbe una macchia (visto succedere: il
 «+» e «Pagamento» color senape). Regola: il fondo di un bottone primario
 è sempre un tono chiaro col testo scuro `#1c1305`.
 
+### Il gradiente dell'azione: due token, un colore solo
+
+Il fondo dei bottoni primari è un gradiente fra **`--btn-1`** e
+**`--btn-2`**. Di partenza sono l'oro di casa — `#f7c45e → #e8a32e`,
+lo stesso che è in produzione — e sono i due token che usa **anche il tab
+acceso** (`.chip.active`). Classi diverse, colore uno solo: erano due
+gradienti scritti in due posti, e toccandone uno il «+» della coda e
+«Pagamento» restavano indietro rispetto a «In corso», con la differenza
+bene in vista.
+
+Regole:
+
+- **I temi di casa non toccano quei due token.** `chiaro` e `crema` sono
+  la stessa Tana con un altro contorno: i tasti restano l'oro di sempre.
+  Un tasto che cambia colore col tema di contorno si riconosce meno, e il
+  «+» è quello che si prende di corsa con le mani occupate.
+- **Un tema di un'altra famiglia** (Catppuccin, Pico) dichiara `--btn` e
+  i due estremi si ricalcolano da lì: schiarito da una parte, scaldato
+  dall'altra. Tornando a un tema di casa il ricalcolo **si toglie**, se no
+  i bottoni si tengono il colore del preset precedente.
+- **Non si derivano i due estremi dall'accento con mescole "a occhio".**
+  Provato: il risultato era più smorto dell'originale (`#e8a32e` →
+  `#d5a03f`) e al banco si vedeva. Se un tema vuole bottoni suoi, li
+  dichiara.
+
 Oltre alla coppia Catppuccin esiste la coppia **Pico** (`pico-scuro` /
 `pico-chiaro`): la palette di Pico CSS v2 — ardesia blu, azzurro tecnico
 `#01aaff`/`#0172ad`, look "documento" sul chiaro — adottata dentro i
