@@ -179,10 +179,22 @@ function decideNewOrderStaffPush(before, after) {
 // `device`: nel dubbio lo si avvisa. Un avviso in piu' si chiude, uno in
 // meno e' un drink che non parte.
 function destinatariPush(tokens, { roles = null, dispositivoOrigine = null } = {}) {
+  const righe = (tokens || []).filter((t) => t && t.token)
+  // SI SALTA IL TELEFONO, NON LA RIGA. Lo stesso apparecchio puo' avere piu'
+  // righe: quella nuova col dispositivo scritto e una vecchia intestata alla
+  // persona, senza. Scartando solo la riga col dispositivo, la vecchia
+  // restava e l'avviso tornava a chi l'ordine l'aveva appena mandato — che
+  // e' esattamente quello che non deve succedere. Si guarda il TOKEN: e' il
+  // nome dell'apparecchio, comunque sia intestata la riga.
+  const suoi = new Set(
+    dispositivoOrigine
+      ? righe.filter((t) => t.device && t.device === dispositivoOrigine).map((t) => t.token)
+      : []
+  )
   const visti = new Set()
-  return (tokens || [])
-    .filter((t) => t && t.token)
+  return righe
     .filter((t) => (roles ? roles.includes(t.role || 'staff') : true))
+    .filter((t) => !suoi.has(t.token))
     .filter((t) => !(dispositivoOrigine && t.device && t.device === dispositivoOrigine))
     // UNA VOLTA A DISPOSITIVO. Lo stesso telefono puo' comparire due volte:
     // la riga vecchia intestata alla persona e quella nuova intestata al

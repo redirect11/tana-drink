@@ -3057,6 +3057,14 @@ export async function saveStaffToken(uid, token, role = null, device = null) {
   const riga = { uid, token, role, device: device || null, updated_at: serverTimestamp() }
   try {
     await setDoc(doc(db, 'staff_tokens', device || uid), riga, { merge: true })
+    // La riga vecchia, intestata alla persona, va tolta se e' dello stesso
+    // apparecchio: altrimenti resta li' senza dispositivo scritto e chi ha
+    // appena mandato l'ordine si becca l'avviso del proprio ordine.
+    if (device && device !== uid) {
+      const vecchia = doc(db, 'staff_tokens', uid)
+      const s = await getDoc(vecchia).catch(() => null)
+      if (s?.exists() && s.get('token') === token) await deleteDoc(vecchia).catch(() => {})
+    }
   } catch (e) {
     // Le regole di sicurezza viaggiano col deploy, ma un terminale può
     // trovarsi davanti alle regole vecchie (che accettavano solo la riga
