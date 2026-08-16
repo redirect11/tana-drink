@@ -83,6 +83,18 @@ export default function StatusBell({ floating = false }) {
           <div className={`status-bell-panel${floating ? ' basso' : ''}`} role="dialog" aria-label="Notifiche e sincronizzazione">
             {/* Avvisi su questo dispositivo: c'è o non c'è, e dove si è
                 fermata la catena. */}
+            {push === 'ok' && (
+              <div className="status-bell-sync ok">
+                🔔 Gli avvisi arrivano su questo terminale.
+              </div>
+            )}
+            {push === 'non-attivo' && (
+              <div className="status-bell-sync err">
+                🔕 Su questo ambiente gli avvisi di sistema non sono
+                configurati (manca la chiave delle notifiche). Con l&apos;app
+                aperta gli ordini si vedono comunque nella coda.
+              </div>
+            )}
             {push && push !== 'ok' && push !== 'non-attivo' && (
               <div className="status-bell-sync err">
                 {push === 'da-permettere' && (
