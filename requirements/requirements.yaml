@@ -126,14 +126,43 @@ requirements:
       chiude e basta — e nella schermata di pagamento non compare l'avviso
       «comande non ancora servite», che senza preparazione non vuol dire niente
       e uscirebbe a ogni incasso.
-      E la coda è il lavoro di STASERA: un conto incassato o annullato in una
-      serata passata non compare, nemmeno nelle sue tab — sta in Cassa, nella
-      lista ordini. I conti APERTI dei giorni scorsi restano invece visibili:
-      quelli sono da chiudere.
+      E la coda è il lavoro di ADESSO: un conto incassato o annullato prima
+      dell'ultima chiusura di cassa non compare, in nessuna tab — chiusi,
+      annullati o tutti — perché quei conti sono già stati contati e
+      rendicontati; stanno in Cassa, nella lista ordini. Non basta guardare
+      la giornata: in una serata la cassa si chiude e si riapre. I conti
+      APERTI restano sempre, cassa chiusa compresa: quelli sono da chiudere,
+      e nasconderli vorrebbe dire perderli.
+      Il riepilogo in testata è di questa apertura di cassa — a cassa chiusa
+      sono zeri — e accanto ad aperti e chiusi dice quanti conti sono stati
+      ANNULLATI, che non fanno cassa ma sono un dato del banco. Chi la cassa
+      non la apre mai continua a vedere la giornata: è l'unico riferimento
+      che ha.
     status: implemented
     generate_issue: false
     labels: [ordini, coda]
     test_cases: [tests/unit/coda.test.js, tests/component/PaymentScreen.test.jsx]
+
+  - id: REQ-ORD-014
+    title: "Riscuoti, oppure riscuoti e servi in un colpo solo"
+    area: "src/components/PaymentScreen.jsx, src/lib/api.js"
+    description: >
+      Con gli stati del servizio, incassare non chiude il conto: si paga anche
+      in anticipo e restano drink da fare, e marcare tutto «servito» farebbe
+      sparire dalla coda lavoro ancora da fare. Il conto si riscuote sempre,
+      si chiude solo quando è servito.
+      Al banco però capita spessissimo il contrario — si consegna e si
+      incassa nello stesso gesto — e lì due passaggi sono uno di troppo: il
+      locale può accendere «Un tasto per incassare e servire insieme»
+      (Impostazioni → Gestione preparazione). Acceso, nella schermata di
+      pagamento compare anche «Riscuoti e servi», che chiude il conto in un
+      colpo. Spento di default: chi segue il servizio di solito lo segue
+      apposta. Il tasto non compare dove non serve — servizio spento, conto
+      già servito o già chiuso.
+    status: implemented
+    generate_issue: false
+    labels: [ordini, pagamenti, impostazioni]
+    test_cases: [tests/component/PaymentScreen.test.jsx]
 
   - id: REQ-ORD-008
     title: "Un conto chiuso o annullato si può rimettere in corso"
@@ -764,22 +793,35 @@ requirements:
     test_cases: [tests/unit/inventory.test.js]
 
   - id: REQ-MAG-003
-    title: "Le scorte si scalano quando il drink si fa"
-    area: "src/lib/inventory.js computeConsumption, src/lib/api.js"
+    title: "Le scorte si scalano quando il drink è servito"
+    area: "src/lib/inventory.js computeConsumption, src/lib/comande.js, src/lib/api.js"
     description: >
-      Passando una comanda in preparazione si scalano gli ingredienti secondo le
-      ricette, salvando lo snapshot del consumo sulla comanda: serve per stornare
-      in caso di annullo e per non scalare due volte. Il magazzino che non risponde
-      non blocca la comanda: viene segnata come non scaricata e si recupera dopo.
+      Il magazzino si scala quando la comanda risulta SERVITA: allora quel
+      drink è uscito per certo. Prima si scaricava alla presa in carico, e un
+      drink iniziato e poi non fatto — riga tolta, cliente che cambia idea,
+      comanda annullata — aveva già portato via gli ingredienti.
+      Con gli stati del servizio spenti non esistono comande da servire:
+      risultano servite alla riscossione, ed è lì che si scala. Incassare, di
+      per sé, non scala niente: seguendo il servizio si paga anche in
+      anticipo, con tre drink ancora da fare.
+      Fra l'una e l'altra cosa gli ingredienti sono IMPEGNATI e si leggono in
+      magazzino (REQ-MAG-012).
+      Si scala una volta sola, salvando lo snapshot del consumo sulla
+      comanda: serve per stornare in caso di annullo e per non scalare due
+      volte. Il magazzino che non risponde non blocca la comanda: resta
+      segnata come non scaricata e si recupera dopo.
       SOTTO ZERO NON SI SCENDE: si toglie al massimo quello che risulta in
-      giacenza, e un carico su una giacenza negativa riparte da zero. La vendita
-      passa comunque (il conto è già scritto) e il magazzino si ferma a zero:
-      altrimenti il buco resta, il carico dopo conta meno di una bottiglia e il
-      valore in euro va in negativo.
+      giacenza, e un carico su una giacenza negativa riparte da zero. La
+      vendita passa comunque (il conto è già scritto) e il magazzino si ferma
+      a zero: altrimenti il buco resta, il carico dopo conta meno di una
+      bottiglia e il valore in euro va in negativo.
     status: implemented
     generate_issue: false
     labels: [magazzino, offline]
-    test_cases: [tests/unit/inventory.test.js, tests/unit/incassoOffline.test.js]
+    test_cases:
+      - tests/unit/inventory.test.js
+      - tests/unit/incassoOffline.test.js
+      - tests/unit/comande.test.js
 
   - id: REQ-MAG-004
     title: "Modificare un ordine già scalato riallinea le scorte alla differenza"

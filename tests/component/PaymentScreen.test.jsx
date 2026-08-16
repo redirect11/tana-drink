@@ -6,7 +6,7 @@
 // "Riscuotere" al CENTRO, metodi di pagamento e Sconto a DESTRA.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, within, waitFor } from '@testing-library/react'
+import { render, screen, within, waitFor, cleanup } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom/vitest'
 
@@ -245,6 +245,53 @@ describe('metodi di pagamento', () => {
       { drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 },
     ] }] }))
     expect(screen.getByText(/Comande non ancora servite/)).toBeInTheDocument()
+  })
+
+  // IL CONTO SI RISCUOTE SEMPRE, SI CHIUDE SOLO SE SERVITO. Ma al banco si
+  // consegna e si incassa spesso nello stesso gesto: il locale può
+  // accendere il tasto che fa le due cose insieme.
+  const conComandaDaServire = () =>
+    baseOrder({
+      comande: [
+        {
+          id: 'c1',
+          seq: 1,
+          status: 'in_preparazione',
+          items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 }],
+        },
+      ],
+    })
+
+  it('«Riscuoti e servi» c’è solo se il locale lo ha chiesto', () => {
+    mount(conComandaDaServire())
+    expect(screen.queryByRole('button', { name: /Riscuoti e servi/ })).toBeNull()
+    cleanup()
+    mount(conComandaDaServire(), { ...noReader, riscuoti_e_servi: true })
+    expect(screen.getByRole('button', { name: /Riscuoti e servi/ })).toBeInTheDocument()
+  })
+
+  it('«Riscuoti e servi» incassa E serve; «Riscuotere» da solo no', async () => {
+    const user = userEvent.setup()
+    mount(conComandaDaServire(), { ...noReader, riscuoti_e_servi: true })
+    await user.click(screen.getByRole('button', { name: /Riscuoti e servi/ }))
+    expect(registerPayment).toHaveBeenCalledWith(
+      'ord1',
+      expect.objectContaining({ autoServe: true })
+    )
+    cleanup()
+    vi.clearAllMocks()
+    mount(conComandaDaServire(), { ...noReader, riscuoti_e_servi: true })
+    await user.click(screen.getByRole('button', { name: /Riscuotere/ }))
+    expect(registerPayment).toHaveBeenCalledWith(
+      'ord1',
+      expect.objectContaining({ autoServe: false })
+    )
+  })
+
+  it('senza gli stati del servizio il tasto in più non serve', () => {
+    // Lì incassare serve già tutto: due tasti direbbero la stessa cosa.
+    mount(conComandaDaServire(), { ...noReader, workflow_enabled: false, riscuoti_e_servi: true })
+    expect(screen.queryByRole('button', { name: /Riscuoti e servi/ })).toBeNull()
   })
 
   it('lettore NON configurato: SumUp spento, senza sottotitolo sul tasto', () => {

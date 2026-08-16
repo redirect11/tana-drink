@@ -34,9 +34,26 @@ describe('quali conti impegnano le scorte', () => {
     expect(contoImpegna(conto())).toBe(true)
   })
 
-  it('non quelli incassati: lì gli ingredienti li ha già scalati il pagamento', () => {
-    expect(contoImpegna(conto({ payment_status: 'pagato' }))).toBe(false)
-    expect(contoImpegna(conto({ status: 'pagato' }))).toBe(false)
+  it('anche quelli già incassati, se il servizio non è finito', () => {
+    // Con gli stati del servizio si paga anche in anticipo: un conto
+    // pagato può avere ancora tre drink da fare, e quegli ingredienti sono
+    // in ballo esattamente come prima. A dire la parola fine è la comanda
+    // servita — che è anche il momento in cui il magazzino scala davvero,
+    // e da lì la comanda smette da sola di contare.
+    expect(contoImpegna(conto({ payment_status: 'pagato' }))).toBe(true)
+    expect(
+      consumoImpegnato([conto({ payment_status: 'pagato' })], drinks)
+    ).toHaveLength(1)
+  })
+
+  it('il conto servito e scaricato non impegna più niente', () => {
+    const servito = conto({
+      payment_status: 'pagato',
+      comande: [
+        { id: 'c1', status: 'ritirato', inventory_applied: true, items: [{ drink_id: 'negroni', qty: 2 }] },
+      ],
+    })
+    expect(consumoImpegnato([servito], drinks)).toEqual([])
   })
 
   it('non quelli annullati', () => {

@@ -28,14 +28,22 @@ export function ordersRecap(orders, isClosed = () => false) {
   let total = 0
   let aperti = 0
   let chiusi = 0
+  // GLI ANNULLATI SI CONTANO A PARTE. Non sono incassi e non entrano nel
+  // totale — ci mancherebbe — ma sapere quanti conti sono saltati in questa
+  // apertura è un dato del banco: tre annullati in una serata sono una
+  // domanda da farsi.
+  let annullati = 0
   for (const o of orders || []) {
-    if (o.status === ORDER_STATUSES.ANNULLATO) continue
+    if (annullato(o) || o.status === ORDER_STATUSES.ANNULLATO) {
+      annullati += 1
+      continue
+    }
     count += 1
     total += Number(o.total) || 0
     if (isClosed(o)) chiusi += 1
     else aperti += 1
   }
-  return { count, total, aperti, chiusi }
+  return { count, total, aperti, chiusi, annullati }
 }
 
 // Conti ancora aperti (non pagati né annullati).
@@ -88,15 +96,22 @@ export function primoCorrispondente(orders, query) {
 // riaprire bisognava cercarlo in mezzo a quelli buoni.
 export const annullato = (o) => o?.workflow_status === ORDER_STATUSES.ANNULLATO
 
-// UN CONTO CHIUSO RESTA IN CODA SOLO PER LA SUA SERATA. La coda è il
-// lavoro di stasera: un conto incassato o annullato ieri non è lavoro, è
-// storia — sta in Cassa, nella lista ordini. Comparivano lo stesso, perché
-// la coda tiene d'occhio i conti APERTI senza limite di data (giusto: si
-// chiudono solo a mano) e un conto incassato ma rimasto indietro con gli
-// stati continuava a passare da lì, serate vecchie comprese.
-// I conti APERTI di giorni scorsi restano invece: quelli sono da chiudere.
-export function restaInCoda(o, { chiuso, giornata, oggi } = {}) {
+// UN CONTO CHIUSO RESTA IN CODA SOLO PER QUESTA APERTURA DI CASSA. La coda
+// è il lavoro di adesso: un conto incassato o annullato prima dell'ultima
+// chiusura non è lavoro, è storia — sta in Cassa, nella lista ordini. Non
+// basta guardare la giornata: in una serata la cassa si chiude e si riapre,
+// e i conti della tornata precedente sono già stati contati e rendicontati.
+// Comparivano lo stesso perché la coda tiene d'occhio i conti APERTI senza
+// limite di data (giusto: si chiudono solo a mano), e un conto incassato
+// rimasto indietro con gli stati continuava a passare da lì.
+//
+// I conti APERTI restano sempre, cassa chiusa compresa: quelli sono da
+// chiudere, e nasconderli vorrebbe dire perderli.
+// Chi la cassa non la apre mai — l'ordine non porta scritta nessuna
+// sessione — ricade sulla giornata, che è l'unico riferimento che ha.
+export function restaInCoda(o, { chiuso, cassa, giornata, oggi } = {}) {
   if (!chiuso) return true
+  if (o?.cash_session_id) return o.cash_session_id === cassa
   return !giornata || !oggi || giornata === oggi
 }
 

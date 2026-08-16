@@ -4,6 +4,18 @@
 
 ### Al banco
 
+- **Le scorte si scalano quando il drink è servito**, non quando lo si
+  prende in carico: un drink iniziato e poi non fatto — riga tolta,
+  cliente che cambia idea — portava via gli ingredienti lo stesso. Fino a
+  lì restano *impegnati* e si leggono nella colonna «a fine serata».
+  Senza gli stati del servizio non cambia niente: si scala alla riscossione.
+- **«Riscuoti e servi», se lo volete.** Con gli stati del servizio
+  incassare non chiude il conto (si paga anche in anticipo). Ma al banco
+  spesso si consegna e si incassa nello stesso gesto: da Impostazioni →
+  Gestione preparazione si accende un secondo tasto che fa le due cose
+  insieme.
+- **Nel riepilogo in cima alla coda ci sono anche gli annullati**, accanto
+  ad aperti e chiusi. Fuori dal totale, che sono i soldi veri.
 - **Il magazzino dice quello che ti ritrovi a fine serata.** Accanto alle
   scorte c'è una colonna con quello che resterà se tutti i conti aperti
   vengono incassati così come sono: i drink già fatti sui tavoli hanno
@@ -13,10 +25,11 @@
 - **I numeri in cima alla coda sono di questa apertura di cassa.** Dopo
   una chiusura e una riapertura si leggeva ancora l'incasso della serata
   prima: contavano la giornata, non l'apertura. A cassa chiusa sono zeri.
-- **Nella coda non compaiono più i conti chiusi delle serate passate.**
-  La coda è il lavoro di stasera; gli incassi vecchi stanno in Cassa →
-  lista ordini. I conti *aperti* dei giorni scorsi restano dov'erano:
-  quelli sono da chiudere.
+- **Nella coda ci sono solo i conti di questa apertura di cassa.** Chiusi
+  e annullati di prima dell'ultima chiusura non compaiono in nessuna tab:
+  sono già stati contati e rendicontati, e stanno in Cassa → lista ordini.
+  I conti *aperti* restano sempre, anche a cassa chiusa: quelli sono da
+  chiudere.
 - **Le impostazioni della stampante sono di chi è collegato**, oltre che
   del dispositivo: sullo stesso tablet ognuno ha il suo indirizzo e la sua
   stampa automatica. La prima volta si parte da quelle che il dispositivo

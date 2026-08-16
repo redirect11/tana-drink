@@ -886,11 +886,12 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
   const nascosti = new Set(nascondiPagati ? pagatiDaServire.map((o) => o.id) : [])
   const boardOrders = visibleOrders
     .filter((o) => !nascosti.has(o.id))
-    // Chiusi e annullati delle serate passate non sono coda: stanno in
-    // Cassa. Vedi restaInCoda.
+    // Chiusi e annullati di prima dell'ultima chiusura di cassa non sono
+    // coda: stanno in Cassa. Vedi restaInCoda.
     .filter((o) =>
       restaInCoda(o, {
         chiuso: isClosed(o) || annullato(o),
+        cassa: cassaAperta?.id ?? null,
         giornata: dayOf(o),
         oggi: oggiKey,
       })
@@ -1453,7 +1454,14 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
           <div className="board-sotto">
             <span className="muted board-conti">
               {recap.aperti} apert{recap.aperti === 1 ? 'o' : 'i'} · {recap.chiusi} chius
-              {recap.chiusi === 1 ? 'o' : 'i'} · {formatPrice(recap.total)}
+              {recap.chiusi === 1 ? 'o' : 'i'}
+              {/* Gli annullati solo se ce ne sono: una serata pulita non
+                  deve leggere «0 annullati». Fuori dal totale, che sono i
+                  soldi veri. */}
+              {recap.annullati > 0 &&
+                ` · ${recap.annullati} annullat${recap.annullati === 1 ? 'o' : 'i'}`}
+              {' · '}
+              {formatPrice(recap.total)}
             </span>
             {/* Cercando con l'evidenziazione la coda non cambia: se non si
                 trova niente, senza scritta non succede proprio nulla e si
@@ -1476,7 +1484,11 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
           <div className="card">
             <strong>Oggi</strong>
             <div className="muted">
-              {recap.aperti} apert{recap.aperti === 1 ? 'o' : 'i'} · {recap.chiusi} chius{recap.chiusi === 1 ? 'o' : 'i'} · {formatPrice(recap.total)}
+              {recap.aperti} apert{recap.aperti === 1 ? 'o' : 'i'} · {recap.chiusi} chius{recap.chiusi === 1 ? 'o' : 'i'}
+              {recap.annullati > 0 &&
+                ` · ${recap.annullati} annullat${recap.annullati === 1 ? 'o' : 'i'}`}
+              {' · '}
+              {formatPrice(recap.total)}
             </div>
           </div>
 

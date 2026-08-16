@@ -50,7 +50,7 @@ describe('ordersRecap', () => {
     expect(r.chiusi).toBe(orders.filter((o) => o.status !== 'annullato' && o.payment_status === 'pagato').length)
   })
   it('coda vuota', () => {
-    expect(ordersRecap([])).toEqual({ count: 0, total: 0, aperti: 0, chiusi: 0 })
+    expect(ordersRecap([])).toEqual({ count: 0, total: 0, aperti: 0, chiusi: 0, annullati: 0 })
   })
 })
 
@@ -207,30 +207,60 @@ describe('i filtri della coda', () => {
   })
 })
 
-// LA CODA È IL LAVORO DI STASERA. Le serate finte dell'ambiente locale
-// riportavano a galla conti incassati mesi prima, fra i «Chiusi» di oggi:
-// erano rimasti con lo stato di un conto in vita, e la coda i conti aperti
-// li tiene d'occhio senza limite di data — apposta, si chiudono a mano.
-describe('cosa resta in coda a fine serata', () => {
-  it('un conto incassato ieri non è coda: è storia', () => {
-    expect(
-      restaInCoda({}, { chiuso: true, giornata: '2026-08-15', oggi: '2026-08-16' })
-    ).toBe(false)
+// LA CODA È IL LAVORO DI ADESSO. Comparivano conti incassati serate prima,
+// e anche dopo una chiusura di cassa restavano quelli della tornata già
+// rendicontata: la coda i conti aperti li tiene d'occhio senza limite di
+// data — apposta, si chiudono a mano — e chi era rimasto indietro con gli
+// stati continuava a passare da lì.
+describe('cosa resta in coda', () => {
+  const cassa = 'cassa-2'
+
+  it('un conto incassato in un’altra apertura di cassa è storia', () => {
+    expect(restaInCoda({ cash_session_id: 'cassa-1' }, { chiuso: true, cassa })).toBe(false)
   })
 
-  it('quello incassato stasera resta, sono i soldi della serata', () => {
+  it('quello incassato in questa apertura resta: sono i soldi di adesso', () => {
+    expect(restaInCoda({ cash_session_id: 'cassa-2' }, { chiuso: true, cassa })).toBe(true)
+  })
+
+  it('a cassa chiusa non resta nessun conto chiuso', () => {
+    expect(restaInCoda({ cash_session_id: 'cassa-2' }, { chiuso: true, cassa: null })).toBe(false)
+  })
+
+  it('un conto APERTO resta comunque: quello è da chiudere', () => {
     expect(
-      restaInCoda({}, { chiuso: true, giornata: '2026-08-16', oggi: '2026-08-16' })
+      restaInCoda({ cash_session_id: 'cassa-1' }, { chiuso: false, cassa })
     ).toBe(true)
   })
 
-  it('un conto APERTO di ieri resta: quello è da chiudere', () => {
-    expect(
-      restaInCoda({}, { chiuso: false, giornata: '2026-08-15', oggi: '2026-08-16' })
-    ).toBe(true)
+  it('senza cassa scritta sull’ordine si guarda la giornata', () => {
+    // Chi la cassa non la apre mai non ha altro riferimento.
+    expect(restaInCoda({}, { chiuso: true, cassa: null, giornata: '2026-08-15', oggi: '2026-08-16' })).toBe(false)
+    expect(restaInCoda({}, { chiuso: true, cassa: null, giornata: '2026-08-16', oggi: '2026-08-16' })).toBe(true)
+    expect(restaInCoda({}, { chiuso: true, cassa: null, giornata: null, oggi: '2026-08-16' })).toBe(true)
+  })
+})
+
+// GLI ANNULLATI SI CONTANO A PARTE. Non sono soldi — fuori dal totale — ma
+// tre conti saltati in una serata sono una domanda da farsi, e chi sta al
+// banco deve poterli vedere senza cambiare tab.
+describe('gli annullati nel riepilogo', () => {
+  const ordini = [
+    { id: 'a', status: 'aperto', total: 20 },
+    { id: 'b', status: 'pagato', total: 30 },
+    { id: 'c', status: 'annullato', total: 50 },
+    { id: 'd', workflow_status: 'annullato', total: 10 },
+  ]
+  const chiuso = (o) => o.status === 'pagato'
+
+  it('si contano, ma non fanno numero fra aperti e chiusi', () => {
+    const r = ordersRecap(ordini, chiuso)
+    expect(r.annullati).toBe(2)
+    expect(r.aperti).toBe(1)
+    expect(r.chiusi).toBe(1)
   })
 
-  it('senza giornata non si butta fuori niente', () => {
-    expect(restaInCoda({}, { chiuso: true, giornata: null, oggi: '2026-08-16' })).toBe(true)
+  it('e non entrano nel totale: quelli sono i soldi veri', () => {
+    expect(ordersRecap(ordini, chiuso).total).toBe(50)
   })
 })
