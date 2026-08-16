@@ -957,13 +957,21 @@ requirements:
     area: "functions/lib/push-core.js decideNewOrderStaffPush"
     description: >
       Un ordine nuovo — o un'aggiunta a un conto esistente — avvisa il banco.
-      Conta quello che c'è DA FARE, cioè le comande «ricevuto» e «in
-      preparazione» insieme: un ordine battuto al POS nasce già in
-      preparazione (chi lo batte sta facendo il drink), e contando i soli
-      «ricevuto» non risultava mai nuovo in coda — al banco non arrivava
-      niente. Contarle insieme non fa doppioni: avanzando da ricevuto a in
-      preparazione il totale non cambia, cresce solo quando arriva una
-      comanda nuova.
+      Avvisa quello che prima non c'era: si guardano QUALI comande sono da
+      fare («ricevuto» o «in preparazione»), non quante. Un ordine battuto
+      al POS nasce già in preparazione — chi lo batte sta facendo il drink —
+      e guardando i soli «ricevuto» non risultava mai nuovo in coda: al
+      banco non arrivava niente.
+      Contarle non basterebbe: col cliente che ordina e gli stati accesi,
+      «ricevuto» e «in preparazione» sono due momenti diversi — arriva
+      l'ordine, poi qualcuno lo prende in mano — e un totale che non cambia
+      non distingue «è avanzata quella di prima» da «ne è arrivata una
+      nuova». Con gli identificativi, l'arrivo avvisa e l'avanzamento no:
+      quella comanda il banco la conosce già, ed è il banco stesso ad
+      averla presa in mano.
+      Un conto fermo in attesa del pagamento obbligatorio entra in coda
+      quando è saldato: lì è nuovo per il banco anche se le comande sono
+      le stesse.
       A restare senza avviso è SOLO il dispositivo da cui è partito: sa già di
       averlo mandato. Non si guarda il ruolo: prima si buttava via l'avviso di
       ogni ordine battuto da un admin o da un bartender, dando per scontato che

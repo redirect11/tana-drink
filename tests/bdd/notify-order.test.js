@@ -120,10 +120,35 @@ describe('decideNewOrderStaffPush', () => {
     expect(msg.title).toContain('Nuovo ordine')
   })
 
-  it('avanzare una comanda non ri-avvisa: non è arrivato niente di nuovo', () => {
+  // IL GIRO DEL CLIENTE, con gli stati della preparazione accesi: l'ordine
+  // arriva («ricevuto»), e più tardi qualcuno al banco lo prende in mano
+  // («in preparazione»). Sono due momenti diversi: il primo è un ordine
+  // nuovo da annunciare, il secondo no — quella comanda il banco la
+  // conosce già, ed è il banco stesso ad averla presa in mano.
+  it('avanzare una comanda non ri-avvisa: e’ la stessa di prima', () => {
     const prima = { daily_number: 5, comande: [{ id: 'c1', status: 'ricevuto' }] }
     const dopo = { daily_number: 5, comande: [{ id: 'c1', status: 'in_preparazione' }] }
     expect(decideNewOrderStaffPush(prima, dopo)).toBeNull()
+  })
+
+  it('l’ordine del cliente avvisa quando arriva, non quando lo si prende in mano', () => {
+    const arrivo = decideNewOrderStaffPush(null, {
+      daily_number: 9,
+      comande: [{ id: 'c1', status: 'ricevuto' }],
+    })
+    expect(arrivo.title).toContain('Nuovo ordine')
+  })
+
+  it('due comande, una avanza e una arriva: avvisa solo quella arrivata', () => {
+    const prima = { daily_number: 5, comande: [{ id: 'c1', status: 'ricevuto' }] }
+    const dopo = {
+      daily_number: 5,
+      comande: [
+        { id: 'c1', status: 'in_preparazione' },
+        { id: 'c2', status: 'ricevuto' },
+      ],
+    }
+    expect(decideNewOrderStaffPush(prima, dopo).title).toContain('Aggiunta')
   })
 
   it('una comanda in più sullo stesso conto avvisa come aggiunta', () => {
