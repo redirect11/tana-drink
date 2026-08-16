@@ -20,7 +20,7 @@ const BARTENDER_NAV = [
   ['fatture', '📄', 'Fatture'],
   ['stats', '📊', 'Statistiche'],
   ['menu', '🍸', 'Menù'],
-  ['inventario', '📦', 'Inventario'],
+  ['inventario', '📦', 'Magazzino'],
   ['staff', '👥', 'Staff'],
   ['utenti', '🧑‍🤝‍🧑', 'Utenti e ruoli'],
   ['vista-cliente', '👀', 'Vista cliente'],
