@@ -201,16 +201,13 @@ export default function SettingsTab({ role = null }) {
               {/* LA STRISCIA A SINISTRA DELLE CARD. È lo stesso segno in due
                   schermate e finora diceva una cosa decisa da noi: dipende
                   invece da come si lavora. */}
-              {/* IN PAGINA SI DICE COSA FA, non perché. Il perché — chi
-                  conosce il listino a memoria vuole i colori, chi sta
-                  finendo le bottiglie vuole vedere cosa non si può più
-                  fare — sta nel requisito e in lib/strisce.js, non addosso
-                  a chi deve solo scegliere. */}
+              {/* SOLO LA DOMANDA. Il perché — chi conosce il listino a
+                  memoria vuole i colori, chi sta finendo le bottiglie
+                  vuole vedere cosa non si può più fare — sta nel requisito
+                  e in lib/strisce.js. E dove sta l'altra impostazione lo
+                  si scopre andandoci: scriverlo qui è una nota per noi,
+                  non per chi sceglie. */}
               <h4 style={{ margin: '16px 0 4px' }}>La striscia a sinistra delle card</h4>
-              <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
-                Vale per tutti i terminali. Le schede del menù hanno la loro, in
-                <strong> Menù e catalogo</strong>.
-              </p>
               <div className="mode-choice" style={{ gridTemplateColumns: '1fr 1fr' }}>
                 {MODI_STRISCIA.map((m) => (
                   <button
@@ -227,11 +224,11 @@ export default function SettingsTab({ role = null }) {
               </div>
 
               <p className="muted small" style={{ margin: '12px 0 4px' }}>
-                Con le <strong>scorte</strong>, «ce n&apos;è abbastanza»:
+                Quale colore per «ci sono abbastanza scorte»?
               </p>
               <div className="mode-choice">
                 {[
-                  [false, '⚪ Grigio (solo i guai si vedono)'],
+                  [false, '⚪ Grigio'],
                   [true, '🟢 Verde'],
                 ].map(([value, label]) => (
                   <button
@@ -676,9 +673,6 @@ export default function SettingsTab({ role = null }) {
                   batte un conto. (La griglia del conto ha la sua, in Vista
                   ordine.) */}
               <h4 style={{ margin: '16px 0 4px' }}>La striscia delle schede</h4>
-              <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
-                Cosa dice la riga a sinistra di ogni scheda del catalogo.
-              </p>
               <div className="mode-choice" style={{ gridTemplateColumns: '1fr 1fr' }}>
                 {MODI_STRISCIA.map((m) => (
                   <button
@@ -694,11 +688,11 @@ export default function SettingsTab({ role = null }) {
                 ))}
               </div>
               <p className="muted small" style={{ margin: '8px 0 4px' }}>
-                Con le <strong>scorte</strong>, «ce n&apos;è abbastanza»:
+                Quale colore per «ci sono abbastanza scorte»?
               </p>
               <div className="mode-choice">
                 {[
-                  [false, '⚪ Grigio (solo i guai si vedono)'],
+                  [false, '⚪ Grigio'],
                   [true, '🟢 Verde'],
                 ].map(([value, label]) => (
                   <button
@@ -712,10 +706,7 @@ export default function SettingsTab({ role = null }) {
                   </button>
                 ))}
               </div>
-              <p className="muted small" style={{ margin: '8px 0 0' }}>
-                Il colore del prodotto resta nella <strong>linguetta</strong>
-                in alto a sinistra.
-              </p>
+
             </div>
       ),
     },
