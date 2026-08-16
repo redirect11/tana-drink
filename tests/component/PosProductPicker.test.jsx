@@ -109,6 +109,14 @@ describe('ricerca prodotti: accendi e porta lì', () => {
 describe('modalità organizza', () => {
   const griglia = (c) => c.querySelector('[style*="grid-template-columns"]')
 
+  it('la griglia non scorre di lato: va a capo', () => {
+    // Trascinando una card oltre il bordo destro, la griglia si allargava
+    // per contenerla e partiva uno scorrimento orizzontale senza fine: per
+    // rivedere le card bisognava riportare indietro la barra a mano.
+    const { container } = mostra()
+    expect(griglia(container).style.overflowX).toBe('hidden')
+  })
+
   it('il minimo delle colonne lo calcola il browser, non una misura in ritardo', () => {
     // Trascinando la maniglia di fianco alla griglia, la larghezza misurata
     // arriva sempre qualche fotogramma dopo: col conto fatto in JS, per un
