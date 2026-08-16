@@ -31,6 +31,7 @@ import {
   pezziInGiacenza,
   formatPezzi,
   copiaProdotto,
+  fmtContenuto,
 } from '../../src/lib/inventory.js'
 
 describe('toBaseQty', () => {
@@ -657,5 +658,32 @@ describe('copia di un prodotto', () => {
   it('il nome dice che è una copia, così si vede quale correggere', () => {
     expect(copiaProdotto(gin).name).toBe('Tanqueray (copia)')
     expect(copiaProdotto({ name: '' }).name).toBe('Prodotto (copia)')
+  })
+})
+
+// ── IL CONTENUTO NON SI MISURA IN PEZZI ──────────────────────────────
+// Un pezzo è la bottiglia; dentro ci sono cl (o grammi). Si leggeva «1
+// aperta (40 pz) · 1 conf. = 200 pz», che a chi sta versando non dice
+// niente.
+describe('unità del contenuto', () => {
+  const bibita = { unit: 'pz', package_size: 200, content_unit: 'ml' }
+  const solido = { unit: 'pz', package_size: 1000, content_unit: 'g' }
+  const gin = { unit: 'ml', package_size: 700 }
+
+  it('la capienza di una bottiglia contata a pezzo si legge in cl', () => {
+    expect(fmtContenuto(200, bibita)).toBe('20 cl')
+  })
+
+  it('e quello che resta nell’aperta pure', () => {
+    expect(fmtContenuto(40, bibita)).toBe('4 cl')
+  })
+
+  it('i solidi in grammi, non in pezzi', () => {
+    expect(fmtContenuto(1000, solido)).toMatch(/g$/)
+  })
+
+  it('gli articoli già a volume restano come sono', () => {
+    expect(fmtContenuto(700, gin)).toBe('70 cl')
+    expect(fmtContenuto(300, gin)).toBe('30 cl')
   })
 })

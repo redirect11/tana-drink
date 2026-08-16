@@ -424,6 +424,20 @@ export function computeConsumption(orderItems, drinksById) {
   return [...acc.values()]
 }
 
+// IL CONTENUTO NON SI MISURA MAI IN PEZZI.
+//
+// Un pezzo è la bottiglia; dentro ci sono cl (o grammi). Sugli articoli
+// contati a pezzo la giacenza è in pezzi ma il contenuto — quello della
+// bottiglia aperta, la capienza della confezione — resta in unità di
+// volume o di peso: si leggeva «1 aperta (40 pz) · 1 conf. = 200 pz», che
+// non vuol dire niente per chi sta versando.
+export function fmtContenuto(qty, item) {
+  const c = contentBase(item)
+  if (!c) return fmtItem(qty, item)
+  if ((item?.unit || 'pz') !== 'pz') return fmtItem(qty, item)
+  return formatIn(qty, c.base === 'g' ? 'g' : 'cl')
+}
+
 // ── DUPLICARE UN PRODOTTO ────────────────────────────────────────────
 // Cosa si porta dietro la copia, e cosa no. Sta qui e non nella
 // schermata perché è una regola sui dati: la giacenza NON si copia — la

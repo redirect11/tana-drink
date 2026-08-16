@@ -958,6 +958,14 @@ requirements:
       chiama chi ci lavora. Gli identificativi interni (il tab
       `inventario`, la collezione `inventory_items`) restano, che cambiarli
       vorrebbe dire migrare dati e indirizzi per un nome.
+      LE UNITÀ RESTANO COERENTI: il pezzo è la bottiglia, il contenuto si
+      misura sempre in cl/ml (o g/mg), mai in pezzi — si leggeva «1 aperta
+      (40 pz) · 1 conf. = 200 pz». La scala è cartone → pezzi → contenuto:
+      caricando, dicendo quanti pezzi ha un cartone i pezzi si riempiono da
+      sé (2 × 24 = 48); chi carica bottiglie sfuse lascia il cartone da
+      parte e scrive i pezzi. Non tutti i prodotti arrivano in cartone,
+      quindi il cartone non è un dato del prodotto: è un modo di contare al
+      momento del carico.
       Un prodotto si può DUPLICARE, fra Modifica ed Elimina: il magazzino è
       pieno di quasi-uguali — stessa bottiglia in due formati, lo stesso
       amaro di un altro fornitore — e rifarli da zero vuol dire ribattere
