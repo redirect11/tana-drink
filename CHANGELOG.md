@@ -1,6 +1,6 @@
 # Cosa è cambiato
 
-## Non ancora rilasciata — 1.4.4
+## 1.4.4 — 16 agosto 2026
 
 ### Per chi gestisce
 
