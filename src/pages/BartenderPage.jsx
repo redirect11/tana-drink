@@ -555,7 +555,13 @@ function OrderQueue() {
             if (isNew || awaiting.has(o.id)) {
               awaiting.delete(o.id)
               beep() // avviso sonoro: su iPad in primo piano il banner è soppresso
-              notify('🆕 Nuovo ordine', `Ordine #${o.daily_number} ricevuto.`)
+              // STESSO NOME della notifica che manda il server (sw.js):
+              // così il sistema le fonde in una invece di mostrarne due —
+              // l'app suona subito, la push arriva un istante dopo.
+              notify('🆕 Nuovo ordine', `Ordine #${o.daily_number} ricevuto.`, {
+                tag: `new-order-${o.id}`,
+                renotify: true,
+              })
               // Auto-stampa comanda se abilitata nelle impostazioni stampante.
               if (printerSettings.autoPrintComanda) {
                 printComanda(o, o.comande?.find((cc) => cc.id === o.active_comanda_id) ?? null).catch((e) => console.warn('[printer] auto-comanda:', e.message))
