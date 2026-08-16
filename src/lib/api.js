@@ -3054,11 +3054,34 @@ export async function deleteStaffShift(id) {
 // Senza id dispositivo (memoria locale non disponibile) si ripiega
 // sull'uid, che è meglio di niente.
 export async function saveStaffToken(uid, token, role = null, device = null) {
-  await setDoc(
-    doc(db, 'staff_tokens', device || uid),
-    { uid, token, role, device: device || null, updated_at: serverTimestamp() },
-    { merge: true }
-  )
+  const riga = { uid, token, role, device: device || null, updated_at: serverTimestamp() }
+  try {
+    await setDoc(doc(db, 'staff_tokens', device || uid), riga, { merge: true })
+  } catch (e) {
+    // Le regole di sicurezza viaggiano col deploy, ma un terminale può
+    // trovarsi davanti alle regole vecchie (che accettavano solo la riga
+    // intestata alla persona). Meglio registrarsi lì che restare senza
+    // avvisi: l'invio salta i doppioni per token.
+    if (device) {
+      await setDoc(doc(db, 'staff_tokens', uid), riga, { merge: true })
+    } else {
+      throw e
+    }
+  }
+}
+
+// Questo dispositivo è registrato per ricevere gli avvisi? Serve alla
+// campanella per rispondere alla domanda che al banco si fa per prima.
+export async function staffTokenRegistrato(uid, device) {
+  for (const id of [device, uid].filter(Boolean)) {
+    try {
+      const snap = await getDoc(doc(db, 'staff_tokens', id))
+      if (snap.exists() && snap.get('token')) return true
+    } catch {
+      /* non leggibile: si prova l'altra */
+    }
+  }
+  return false
 }
 
 // Il bartender chiama un membro dello staff (con messaggio opzionale).
