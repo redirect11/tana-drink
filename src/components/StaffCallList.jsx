@@ -23,7 +23,12 @@ const fmtOra = (iso) => {
   }
 }
 
-export default function StaffCallList() {
+// `mostraSeVuoto`: quando il pannello lo si è aperto APPOSTA (dal menu ⋯
+// della coda) e non c'è nessuno da chiamare, si dice — se no si tocca una
+// voce che promette qualcosa e non succede niente, e sembra rotto. Dove il
+// pannello compare da sé, invece, resta muto: una card «non c'è nessuno»
+// fissa in coda sarebbe rumore.
+export default function StaffCallList({ mostraSeVuoto = false }) {
   // Si parte dall'elenco già in cache: aprire il pannello non deve voler dire
   // aspettare una chiamata di rete per vedere i nomi.
   const [users, setUsers] = useState(staffFromCache)
@@ -83,8 +88,21 @@ export default function StaffCallList() {
   const myUid = auth.currentUser?.uid
   const list = (users || []).filter((u) => u.uid !== myUid && !u.disabled)
 
-  // Nessun altro membro dello staff: niente da mostrare.
-  if (users !== null && list.length === 0 && !error) return null
+  // Nessun altro membro dello staff: niente da mostrare (salvo che il
+  // pannello sia stato aperto apposta, e allora lo si dice).
+  const vuoto = users !== null && list.length === 0 && !error
+  if (vuoto && !mostraSeVuoto) return null
+  if (vuoto) {
+    return (
+      <div className="card" style={{ marginTop: 8 }}>
+        <strong>📟 Chiama lo staff</strong>
+        <p className="muted small" style={{ margin: '6px 0 0' }}>
+          Non c&apos;è nessun altro da chiamare: gli account dello staff si
+          creano in <strong>Utenti e ruoli</strong>.
+        </p>
+      </div>
+    )
+  }
 
   return (
     <div className="card" style={{ marginTop: 8 }}>

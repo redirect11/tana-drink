@@ -4,6 +4,13 @@
 
 ### Al banco
 
+- **Il conto annullato mostra cosa c'era dentro.** Si apriva vuoto, a zero
+  euro e senza una riga: non si capiva né cosa contenesse né se valesse la
+  pena riaprirlo. Ora le righe si vedono, barrate — non fanno somma,
+  perché quel conto non lo paga nessuno.
+- **«Chiamate staff e gruppi» non è più un tasto che non fa niente.** Con
+  un solo account non c'è nessuno da chiamare e il pannello spariva da sé:
+  ora lo dice, e dice dove si creano gli account.
 - **In «Organizza» la card non scappa più fuori dalla griglia.**
   Portandola oltre il bordo destro partiva uno scorrimento senza fine, e
   per rivedere le altre card bisognava riportare indietro la barra a mano.

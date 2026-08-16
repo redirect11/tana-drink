@@ -5895,3 +5895,12 @@ a.storico-notifica:hover {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* Le righe di un conto ANNULLATO: si vedono — serve sapere cosa c'era
+   dentro, e se vale la pena riaprirlo — ma si legge a colpo d'occhio che
+   non contano piu' niente. */
+.draft-line.riga-annullata {
+  opacity: 0.6;
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, currentColor 45%, transparent);
+}

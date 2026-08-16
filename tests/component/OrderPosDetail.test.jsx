@@ -1146,3 +1146,71 @@ describe('subtotale di riga', () => {
     localStorage.removeItem('tana:pos:calcoli')
   })
 })
+
+// ── UN CONTO ANNULLATO NON È UN CONTO VUOTO ──────────────────────────
+// Annullando, tutte le comande diventano «annullate» e la schermata le
+// saltava: si apriva un conto senza una riga e a zero euro, e non si
+// capiva né cosa ci fosse dentro né se valesse la pena riaprirlo (BUG-002).
+describe('il conto annullato mostra cosa c’era dentro', () => {
+  const annullato = () =>
+    baseOrder({
+      status: 'annullato',
+      workflow_status: 'annullato',
+      total: 0,
+      comande: [
+        {
+          id: 'c1',
+          seq: 1,
+          status: 'annullato',
+          status_times: {},
+          items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 }],
+        },
+      ],
+      order_items: [{ id: 'i1', drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 }],
+    })
+
+  it('le righe ci sono', () => {
+    mount(annullato())
+    expect(screen.getAllByText(/Mojito/).length).toBeGreaterThan(0)
+  })
+
+  it('si vede che non contano più: barrate', () => {
+    mount(annullato())
+    expect(document.querySelector('.draft-line.riga-annullata')).toBeTruthy()
+  })
+
+  it('ma non fanno somma: quel conto non lo paga nessuno', () => {
+    mount(annullato())
+    // Il totale resta a zero: un numero diverso lo farebbe sembrare ancora
+    // da incassare.
+    expect(screen.getAllByText('0,00 €').length).toBeGreaterThan(0)
+  })
+
+  it('dentro un conto APERTO una comanda annullata resta fuori', () => {
+    // Lì quella roba non si fa e non si paga: mostrarla vorrebbe dire
+    // rimetterla nel conto.
+    mount(
+      baseOrder({
+        total: 7,
+        comande: [
+          {
+            id: 'c1',
+            seq: 1,
+            status: 'in_preparazione',
+            status_times: {},
+            items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1 }],
+          },
+          {
+            id: 'c2',
+            seq: 2,
+            status: 'annullato',
+            status_times: {},
+            items: [{ drink_id: 'negroni', name: 'Negroni', unit_price: 8, qty: 1 }],
+          },
+        ],
+        order_items: [{ id: 'i1', drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1 }],
+      })
+    )
+    expect(screen.queryByText('Negroni')).toBeNull()
+  })
+})

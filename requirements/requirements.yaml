@@ -1070,10 +1070,18 @@ requirements:
     description: >
       Dal gestionale si chiama un membro dello staff con un messaggio: il suo
       dispositivo vibra con insistenza finché non risponde.
+      Il pannello si apre dal menu ⋯ della coda, e APERTO APPOSTA non resta
+      mai muto: se non c'è nessun altro da chiamare lo dice, e dice dove si
+      creano gli account. Prima spariva da sé — con un solo account l'elenco
+      è vuoto — e si toccava una voce che non faceva niente, sembrando
+      rotta. Dove il pannello compare da sé invece resta muto: una card
+      «non c'è nessuno» fissa in coda sarebbe rumore.
     status: implemented
     generate_issue: false
     labels: [staff, notifiche]
-    test_cases: [tests/bdd/notify-staff-call.test.js]
+    test_cases:
+      - tests/bdd/notify-staff-call.test.js
+      - tests/component/StaffCallList.test.jsx
 
   - id: REQ-STAFF-008
     title: "La sala lavora sulla stessa coda del banco"
