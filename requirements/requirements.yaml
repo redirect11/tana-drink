@@ -200,8 +200,12 @@ requirements:
     title: "Un ordine battuto altrove si vede su tutti gli altri terminali"
     area: "src/lib/dispositivo.js, src/pages/BartenderPage.jsx, src/lib/notifyStore.js"
     description: >
-      Chi manda un ordine non ha bisogno di un avviso che gli dica quello che
-      ha appena fatto; tutti gli altri terminali sì. Il metro è il
+      Chi manda un ordine — o lo annulla — non ha bisogno di un avviso che
+      gli dica quello che ha appena fatto; tutti gli altri terminali sì.
+      Vale anche per l'ANNULLAMENTO, che porta con sé il terminale
+      (`cancelled_device`): chi annulla lo fa quasi sempre dal conto e non
+      dalla coda, quindi «l'ho premuto io» non basterebbe — quella
+      schermata è un'altra. Il metro è il
       DISPOSITIVO, non il ruolo: prima si tacevano tutti gli ordini battuti da
       un gestore su qualunque terminale, e chi stava in sala col telefono non
       sapeva mai che al banco era entrato un ordine — lo stesso account sta su

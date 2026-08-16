@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { auth } from '../lib/firebaseClient.js'
 import { logoutStaff } from '../lib/logout.js'
 import { devToolsEnabled } from '../dev/devActions.js'
 import { isGestore, RUOLO_ETICHETTA } from '../lib/ruoli.js'
 import { useSchermoLargo } from '../lib/useTelefono.js'
+import { usePaginaPiena } from '../lib/paginaPiena.js'
 import { IconGruppo, IconPersona } from './Icons.jsx'
 import VersionBadge from './VersionBadge.jsx'
 import {
@@ -93,6 +94,29 @@ export default function StaffDrawer({ role, active = null, onSelect = null }) {
     return () => document.body.classList.remove('drawer-agganciato')
   }, [dock])
 
+  // OGNUNO SCORRE PER CONTO SUO. Col menu dentro la pagina, scorrendo il
+  // contenuto scorreva via anche il menu: le due colonne erano una pagina
+  // sola, alta quanto il contenuto. Qui si accende la catena delle altezze
+  // (lib/paginaPiena.js): la schermata sta nella finestra, e a scorrere
+  // sono il menu e il contenuto, separatamente.
+  usePaginaPiena(dock)
+
+  // CHIUDENDOLO NON DEVE PASSARE IL PANNELLONE. Togliendo l'aggancio il
+  // menu torna per un istante quello a scomparsa — largo, fisso — e si
+  // vedeva la SUA animazione di uscita scorrere via da sinistra. Per quel
+  // momento l'animazione si spegne: il menu agganciato se ne va e basta.
+  const [stacco, setStacco] = useState(false)
+  const primoGiro = useRef(true)
+  useEffect(() => {
+    if (primoGiro.current) {
+      primoGiro.current = false
+      return undefined
+    }
+    setStacco(true)
+    const t = setTimeout(() => setStacco(false), 260)
+    return () => clearTimeout(t)
+  }, [dock])
+
   useEffect(() => {
     try {
       localStorage.setItem('tana:drawer-agganciato', agganciato ? '1' : '0')
@@ -165,7 +189,11 @@ export default function StaffDrawer({ role, active = null, onSelect = null }) {
         ☰
       </button>
       <div className={`bar-nav-overlay${open ? ' open' : ''}`} onClick={() => setOpen(false)} />
-      <nav className={`bar-sidebar${open ? ' open' : ''}${dock ? ' agganciata' : ''}`}>
+      <nav
+        className={`bar-sidebar${open ? ' open' : ''}${dock ? ' agganciata' : ''}${
+          stacco ? ' stacco' : ''
+        }`}
+      >
         <div className="brand-mini">
           <img src={`${import.meta.env.BASE_URL}logo.png`} alt="" />
           Gestionale

@@ -60,3 +60,28 @@ describe('battutoDaQui', () => {
     expect(d.battutoDaQui(null)).toBe(false)
   })
 })
+
+// CHI ANNULLA NON SI AVVISA DA SOLO. Annullando un conto, l'avviso partiva
+// anche al terminale che l'aveva appena annullato: lo sa già, e in mezzo al
+// servizio è rumore. Come per gli ordini, il metro è il DISPOSITIVO — chi
+// annulla lo fa quasi sempre dal conto, non dalla coda, quindi «l'ho
+// premuto io» non basta: quella schermata è un'altra.
+describe('annullatoDaQui', () => {
+  it('l’ho annullato io, da questo terminale', async () => {
+    const { annullatoDaQui, idDispositivo } = await lib()
+    expect(annullatoDaQui({ cancelled_device: idDispositivo() })).toBe(true)
+  })
+
+  it('l’ha annullato un altro terminale: l’avviso arriva', async () => {
+    const { annullatoDaQui } = await lib()
+    expect(annullatoDaQui({ cancelled_device: 'telefono-di-flavio' })).toBe(false)
+  })
+
+  it('i conti annullati prima che il campo esistesse avvisano lo stesso', async () => {
+    // Un avviso in più si chiude, uno in meno è un conto che sparisce e
+    // nessuno sa perché.
+    const { annullatoDaQui } = await lib()
+    expect(annullatoDaQui({})).toBe(false)
+    expect(annullatoDaQui(null)).toBe(false)
+  })
+})

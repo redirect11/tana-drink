@@ -1389,6 +1389,14 @@ a.order-mini {
   transform: translateX(0);
 }
 
+/* NIENTE ANIMAZIONE MENTRE SI STACCA. Togliendo l'aggancio il menu torna
+   per un istante quello a scomparsa — largo e fisso — e si vedeva la SUA
+   uscita scorrere via da sinistra, come se si chiudesse un pannello che
+   non era mai stato aperto. Per quel momento l'animazione si spegne. */
+.bar-sidebar.stacco {
+  transition: none;
+}
+
 /* LE VOCI NON SI SCHIACCIANO. Il menu e' una colonna flessibile: quando le
    voci sono piu' alte dello spazio, flex le STRINGE — e una voce a due
    righe (nome e ruolo) finisce sopra quella dopo. Si e' visto col menu
@@ -5691,7 +5699,13 @@ body.pagina-piena .pagina-inventario .inv-scroll {
   body.drawer-agganciato .bar-content {
     flex: 1;
     min-width: 0; /* senza, una tabella larga sfonda la riga */
+    min-height: 0;
     padding-left: 14px;
+    /* IL CONTENUTO SCORRE NEL SUO RIQUADRO. Scorrendo la pagina se ne
+       andava anche il menu, che di suo non ha niente da scorrere: le due
+       colonne erano una pagina sola, alta quanto la più lunga. */
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 
   /* IL MENU E' UN PEZZO DELLA PAGINA, non una scheda appoggiata sopra.
@@ -5704,6 +5718,11 @@ body.pagina-piena .pagina-inventario .inv-scroll {
     position: static;
     transform: none;
     z-index: auto;
+    /* Il menu ha il SUO scorrimento: le voci sono tante e la finestra
+       piccola, ma non deve trascinarsi dietro il contenuto (né farsi
+       trascinare). */
+    overflow-y: auto;
+    overscroll-behavior: contain;
     flex-shrink: 0;
     align-self: stretch;
     width: 178px;
