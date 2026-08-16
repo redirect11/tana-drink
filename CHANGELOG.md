@@ -64,6 +64,14 @@ una funzione, il terzo per le correzioni.
   già «in preparazione» — chi li batte sta facendo il drink — e per
   l'avviso non contavano come lavoro nuovo: chi batteva dal telefono non
   faceva squillare il tablet al banco.
+- **Gli avvisi arrivano a tutti i terminali, non solo all'ultimo.** Erano
+  registrati per persona: lo stesso account sul tablet e sul telefono si
+  sovrascriveva, e squillava solo l'ultimo che aveva aperto il gestionale.
+  Ora ogni dispositivo ha la sua registrazione.
+- **La campanella dice se su questo schermo gli avvisi arrivano**, e se
+  sono spenti offre di attivarli. Su iPhone e iPad lo dice chiaro: la
+  notifica di sistema esiste solo con l'app installata sulla schermata
+  Home.
 - **Gli avvisi seguono il terminale, non il ruolo.** Chi prende ordini col
   telefono con un account da gestore non li faceva più arrivare a nessuno:
   al banco non squillava niente. Ora l'unico a non essere avvisato è il

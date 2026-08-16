@@ -240,6 +240,26 @@ describe('destinatariPush', () => {
     expect(destinatariPush(vecchi, { dispositivoOrigine: 'telefono-di-flavio' })).toHaveLength(1)
   })
 
+  it('lo stesso telefono non riceve due volte', () => {
+    // Puo' comparire due volte: la riga vecchia intestata alla persona e
+    // quella nuova intestata al dispositivo. Due righe con lo stesso token
+    // sono due avvisi identici sullo stesso schermo.
+    const doppio = [
+      { token: 't-ipad', role: 'bartender', device: 'ipad-del-banco' },
+      { token: 't-ipad', role: 'bartender' },
+    ]
+    expect(destinatariPush(doppio, {})).toHaveLength(1)
+  })
+
+  it('due terminali con lo stesso account vengono avvisati tutti e due', () => {
+    // E' il caso del banco: stesso account sul tablet e sul portatile.
+    const stessoAccount = [
+      { token: 't-tablet', role: 'bartender', device: 'tablet' },
+      { token: 't-portatile', role: 'bartender', device: 'portatile' },
+    ]
+    expect(destinatariPush(stessoAccount, { dispositivoOrigine: 'telefono' })).toHaveLength(2)
+  })
+
   it('i token spariti non contano', () => {
     expect(destinatariPush([{ role: 'bartender' }, null], {})).toEqual([])
   })

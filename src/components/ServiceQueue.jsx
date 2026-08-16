@@ -11,6 +11,7 @@ import {
   DEFAULT_SETTINGS,
 } from '../lib/api.js'
 import { getPushToken } from '../lib/push.js'
+import { idDispositivo } from '../lib/dispositivo.js'
 import { ORDER_STATUSES, formatPrice, placedByName } from '../lib/orderStatus.js'
 import { notify, ensureNotificationPermission } from '../lib/notify.js'
 
@@ -73,7 +74,7 @@ export default function ServiceQueue() {
     ensureNotificationPermission().then(async (ok) => {
       if (!ok) return
       const token = await getPushToken()
-      if (token) saveStaffToken(uid, token, 'staff').catch(() => {})
+      if (token) saveStaffToken(uid, token, 'staff', idDispositivo()).catch(() => {})
     })
   }, [])
 
