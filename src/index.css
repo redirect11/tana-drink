@@ -4856,10 +4856,10 @@ body.fullbleed .cat-rail {
   position: relative;
   border-left: 5px solid var(--line) !important;
 }
-.menu-card.stato-nascosto { border-left-color: var(--line) !important; }
-.menu-card.stato-ok { border-left-color: #2ecc71 !important; }
-.menu-card.stato-low { border-left-color: #f39c12 !important; }
-.menu-card.stato-empty { border-left-color: #e74c3c !important; }
+/* IL COLORE DELLA STRISCIA LO DECIDE LA PAGINA. Stava qui, in quattro
+   regole con !important, e diceva sempre e solo lo stato delle scorte: ora
+   il locale sceglie cosa deve dire (lib/strisce.js) e il colore arriva in
+   linea, quindi queste regole lo cancellerebbero. */
 
 /* LA LINGUETTA NELL'ANGOLO è il colore che il prodotto ha al banco, disegnata
    come sulle tile del POS: là quel segno vuol dire già quello. Si tocca per

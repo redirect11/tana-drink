@@ -3264,6 +3264,16 @@ export const DEFAULT_SETTINGS = {
   // niente — accende la prima card trovata e ci porta sopra la griglia. Chi
   // lavora a memoria di posizione la griglia la vuole sempre uguale.
   pos_search: 'filtra',
+  // COSA DICE LA STRISCIA A SINISTRA DELLE CARD (vedi lib/strisce.js):
+  // 'spenta' | 'prodotto' | 'categoria' | 'scorte'. Due scelte separate —
+  // la griglia del conto e le schede del menù si guardano per motivi
+  // diversi — e una terza per il colore del «ce n'è abbastanza»: grigio
+  // (discreto) o verde. La scelta è del LOCALE: la griglia dev'essere la
+  // stessa su tutti i terminali, o due persone parlano di due schermate
+  // diverse.
+  stripe_pos: 'prodotto',
+  stripe_menu: 'scorte',
+  stripe_ok_verde: false,
   // Pagamenti: online (SumUp Checkout) e lettore Solo (Cloud API).
   payments_online_enabled: false,
   payments_online_required: false,

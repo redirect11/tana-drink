@@ -19,6 +19,13 @@ import { DrinkTile } from './PosBits.jsx'
 import { catBtnStyle } from '../lib/posStyles.js'
 import { catColor, drinkCategoryColor, CATEGORY_PALETTE } from '../lib/categoryColors.js'
 import {
+  coloreStriscia,
+  scorteDelDrink,
+  striscaGuardaLeScorte,
+  MODO_STRISCIA_DEFAULT,
+} from '../lib/strisce.js'
+import { stockStatus } from '../lib/inventory.js'
+import {
   applyOrder,
   moveInOrder,
   toggleFavorite,
@@ -138,6 +145,9 @@ export default function PosProductPicker({
   // Cosa fa la ricerca: filtrare le card (come è sempre stato) oppure
   // lasciarle tutte in griglia e accendere la prima che risponde.
   ricercaEvidenzia = false,
+  // Cosa dice la striscia a sinistra delle tile (vedi lib/strisce.js).
+  modoStriscia = MODO_STRISCIA_DEFAULT,
+  scorteVerdi = false,
 }) {
   const [selectedCat, setSelectedCat] = useState(null)
   const [query, setQuery] = useState('')
@@ -201,12 +211,19 @@ export default function PosProductPicker({
     if (cats.length > 0 && selectedCat === null) setSelectedCat('__all__')
   }, [cats, selectedCat])
 
-  // Inventario: serve solo alla scheda prodotto (ricetta). Si carica alla
-  // prima apertura del menu prodotto, non all'avvio del POS.
+  // Inventario: serve alla scheda prodotto (ricetta) e, se la striscia
+  // dice le scorte, a disegnare la griglia. Si carica alla prima apertura
+  // del menu prodotto — o subito, ma SOLO quando le scorte servono
+  // davvero: sono ricette e giacenze, non si leggono per niente.
+  const serveMagazzino = striscaGuardaLeScorte(modoStriscia)
   useEffect(() => {
-    if (!menuDrink || inventory.length > 0) return
+    if ((!menuDrink && !serveMagazzino) || inventory.length > 0) return
     fetchInventoryItems().then((inv) => setInventory(inv || [])).catch(() => setInventory([]))
-  }, [menuDrink, inventory.length])
+  }, [menuDrink, serveMagazzino, inventory.length])
+  const scorteById = useMemo(
+    () => Object.fromEntries((inventory || []).map((i) => [i.id, i])),
+    [inventory]
+  )
   // localStorage = cache locale immediata (funziona offline al primo avvio).
   useEffect(() => saveOrder(order), [order])
   useEffect(() => saveFavorites(favorites), [favorites])
@@ -243,7 +260,16 @@ export default function PosProductPicker({
     setTileColors(next)
     savePosColors(next).catch(() => {})
   }
-  const tileColor = (d) => tileColors[d.id] || drinkCategoryColor(d, cats)
+  // Il colore della striscia: la regola sta in lib/strisce.js, così la
+  // stessa striscia significa la stessa cosa anche nelle schede del menù.
+  const tileColor = (d) =>
+    coloreStriscia({
+      modo: modoStriscia,
+      coloreProdotto: tileColors[d.id] || null,
+      coloreCategoria: drinkCategoryColor(d, cats),
+      scorte: serveMagazzino ? scorteDelDrink(d, scorteById, stockStatus) : null,
+      verdeQuandoOk: scorteVerdi,
+    })
   const catKey = (c) => c.id ?? c.name
   const favSet = useMemo(() => new Set(favorites), [favorites])
   const byId = useMemo(() => new Map((drinks || []).map((d) => [d.id, d])), [drinks])

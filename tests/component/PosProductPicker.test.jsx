@@ -193,3 +193,32 @@ describe('modalità organizza', () => {
     }
   })
 })
+
+// ── LA STRISCIA DELLE TILE DICE QUELLO CHE IL LOCALE HA SCELTO ───────
+// Lo stesso segno, quattro significati: il colore del prodotto, quello
+// della categoria, le scorte, o niente (REQ-POS-019).
+describe('la striscia delle tile', () => {
+  const bordo = (container, nome) => {
+    const card = [...container.querySelectorAll('[data-drink-id]')].find((el) =>
+      el.textContent.includes(nome)
+    )
+    return card?.style.borderLeftColor
+  }
+
+  it('«spenta»: grigia, anche se il prodotto ha il suo colore', () => {
+    const { container } = mostra({ modoStriscia: 'spenta' })
+    expect(bordo(container, 'Mojito')).toBe('var(--line)')
+  })
+
+  it('«scorte»: senza ricetta collegata non si inventa un allarme', () => {
+    // Un drink senza ingredienti in magazzino non è «esaurito»: non lo
+    // sappiamo, e col verde spento resta grigio.
+    const { container } = mostra({ modoStriscia: 'scorte' })
+    expect(bordo(container, 'Mojito')).toBe('var(--line)')
+  })
+
+  it('senza indicazioni resta il modo di sempre: il colore del prodotto', () => {
+    const { container } = mostra()
+    expect(bordo(container, 'Mojito')).not.toBe('')
+  })
+})

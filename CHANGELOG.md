@@ -4,6 +4,13 @@
 
 ### Al banco
 
+- **La striscia a sinistra delle card si sceglie.** Quattro modi:
+  **spenta**, **colore del prodotto**, **colore della categoria** (quello
+  del singolo prodotto resta nella linguetta) e **scorte** — rosso
+  ingrediente esaurito, arancione in esaurimento, e «ce n'è abbastanza»
+  grigio o verde, come preferisci. La griglia del conto si imposta in
+  *Vista ordine*, le schede del catalogo in *Menù e catalogo*: dipende da
+  come si lavora, e non c'era motivo che lo decidessimo noi.
 - **Le statistiche si aprono sull'ultima chiusura di cassa**, e quel
   periodo è il primo della riga: la domanda del mattino dopo è «com'è
   andata ieri sera», non «com'è andata la settimana». Chi sceglie un altro
