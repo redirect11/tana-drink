@@ -26,3 +26,29 @@ export async function getPushToken() {
     return null
   }
 }
+
+// ── QUESTO DISPOSITIVO PUÒ RICEVERE GLI AVVISI? ──────────────────────
+// Al banco è la prima domanda quando «non arrivano le notifiche», e finora
+// non c'era modo di rispondere se non provando a mandarsi un ordine. Qui si
+// guarda tutta la catena, e si dice DOVE si è fermata:
+//
+//   'ok'            — c'è il token: gli avvisi arrivano
+//   'da-permettere' — manca il consenso del browser (si può chiedere)
+//   'negato'        — consenso negato: si rimette dalle impostazioni del
+//                     sistema, l'app non può più chiederlo
+//   'non-supportato'— il browser non fa push. Su iPhone e iPad succede
+//                     finché l'app non è installata sulla schermata Home:
+//                     è l'unico modo in cui iOS le consente.
+//   'non-attivo'    — sviluppo o chiave VAPID mancante: qui non si prova
+export async function statoPush() {
+  if (!import.meta.env.PROD || !vapidKey) return 'non-attivo'
+  if (!('Notification' in window)) return 'non-supportato'
+  try {
+    if (!(await isSupported())) return 'non-supportato'
+  } catch {
+    return 'non-supportato'
+  }
+  if (Notification.permission === 'denied') return 'negato'
+  if (Notification.permission !== 'granted') return 'da-permettere'
+  return (await getPushToken()) ? 'ok' : 'non-supportato'
+}

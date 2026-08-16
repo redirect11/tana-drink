@@ -3045,10 +3045,18 @@ export async function deleteStaffShift(id) {
 // Token push del dispositivo di un membro dello staff: la Cloud Function
 // lo usa per recapitare la chiamata cerca-persone anche quando l'app è
 // in background o chiusa.
+// UN DISPOSITIVO, UNA RIGA. Prima si scriveva una riga per PERSONA
+// (`staff_tokens/<uid>`): lo stesso account su tablet e telefono si
+// sovrascriveva a vicenda, e gli avvisi arrivavano solo all'ultimo che
+// aveva aperto il gestionale — al banco, il tablet muto. La riga adesso è
+// del dispositivo, con dentro chi ci sta collegato: due terminali con lo
+// stesso account sono due righe, e tutti e due vengono avvisati.
+// Senza id dispositivo (memoria locale non disponibile) si ripiega
+// sull'uid, che è meglio di niente.
 export async function saveStaffToken(uid, token, role = null, device = null) {
   await setDoc(
-    doc(db, 'staff_tokens', uid),
-    { token, role, device, updated_at: serverTimestamp() },
+    doc(db, 'staff_tokens', device || uid),
+    { uid, token, role, device: device || null, updated_at: serverTimestamp() },
     { merge: true }
   )
 }

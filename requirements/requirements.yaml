@@ -977,6 +977,17 @@ requirements:
       ogni ordine battuto da un admin o da un bartender, dando per scontato che
       chi ha quel ruolo stia al banco — e chi gira ai tavoli col telefono, con
       un account da gestore, non faceva squillare niente a nessuno.
+      I token push sono UNO PER DISPOSITIVO (`staff_tokens/<device>`), non
+      per persona: prima lo stesso account su tablet e telefono si
+      sovrascriveva la riga a vicenda e l'avviso arrivava solo all'ultimo
+      che aveva aperto il gestionale — al banco, il tablet muto. Se lo
+      stesso token compare due volte (la riga vecchia intestata alla
+      persona e quella nuova al dispositivo) si avvisa una volta sola.
+      Chi lavora può vedere se su QUESTO schermo gli avvisi arrivano:
+      aprendo la campanella lo dice, e dove serve offre di attivarli. Su
+      iPhone e iPad la push di sistema esiste solo con l'app installata
+      sulla schermata Home, e questo va detto invece di lasciare pensare a
+      un guasto.
       Il terminale viaggia con l'ordine (`placed_by.device`) e col token push
       del dispositivo; chi si è registrato prima che il dispositivo venisse
       segnato viene avvisato lo stesso — un avviso in più si chiude, uno in

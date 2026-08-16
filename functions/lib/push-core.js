@@ -179,10 +179,20 @@ function decideNewOrderStaffPush(before, after) {
 // `device`: nel dubbio lo si avvisa. Un avviso in piu' si chiude, uno in
 // meno e' un drink che non parte.
 function destinatariPush(tokens, { roles = null, dispositivoOrigine = null } = {}) {
+  const visti = new Set()
   return (tokens || [])
     .filter((t) => t && t.token)
     .filter((t) => (roles ? roles.includes(t.role || 'staff') : true))
     .filter((t) => !(dispositivoOrigine && t.device && t.device === dispositivoOrigine))
+    // UNA VOLTA A DISPOSITIVO. Lo stesso telefono puo' comparire due volte:
+    // la riga vecchia intestata alla persona e quella nuova intestata al
+    // dispositivo. Due righe con lo stesso token vogliono dire due avvisi
+    // identici sullo stesso schermo.
+    .filter((t) => {
+      if (visti.has(t.token)) return false
+      visti.add(t.token)
+      return true
+    })
 }
 
 module.exports = {
