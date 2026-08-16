@@ -156,6 +156,11 @@ export function resolveThemeVars(setting) {
   return vars
 }
 
+// L'oro dei bottoni del tema di casa: quando è questo, il gradiente resta
+// quello scritto nel CSS (identico alla produzione) invece di essere
+// ricalcolato — ricalcolandolo veniva più smorto.
+const ORO_DI_CASA = '#f5b94a'
+
 // Applica le variabili al documento (e deriva il gradiente dall'accento 2).
 export function applyTheme(vars) {
   const root = document.documentElement
@@ -163,7 +168,20 @@ export function applyTheme(vars) {
   // Il colore-azione dei bottoni va SEMPRE riscritto: se il preset non lo
   // dichiara, torna all'accento-2 — altrimenti cambiando tema resterebbe
   // appiccicato quello del preset precedente.
-  if (!vars['--btn']) root.style.setProperty('--btn', vars['--accent-2'] || '')
+  const btn = vars['--btn'] || vars['--accent-2'] || ''
+  if (!vars['--btn']) root.style.setProperty('--btn', btn)
+  // I DUE ESTREMI DEL GRADIENTE DEI BOTTONI. Sul tema di casa restano
+  // quelli di sempre — l'oro che al banco si riconosce senza guardare, lo
+  // stesso che c'è in produzione — e li lascia stare il CSS. Su un tema
+  // che cambia i bottoni si derivano dal suo colore: schiarito da una
+  // parte, scaldato dall'altra, come faceva il gradiente cablato.
+  if (btn && btn.toLowerCase() !== ORO_DI_CASA) {
+    root.style.setProperty('--btn-1', `color-mix(in srgb, ${btn} 92%, #fff)`)
+    root.style.setProperty('--btn-2', `color-mix(in srgb, ${btn} 88%, #241500)`)
+  } else {
+    root.style.removeProperty('--btn-1')
+    root.style.removeProperty('--btn-2')
+  }
   const a2 = vars['--accent-2']
   if (a2) {
     root.style.setProperty(
