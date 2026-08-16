@@ -18,8 +18,11 @@ una funzione, il terzo per le correzioni.
   cui mancano 10 cl fanno **2,8 pz**. Prima si leggeva «3 bott.», che dice
   quante bottiglie si toccano e non quanto prodotto c'è: tre bottiglie di
   cui una quasi vuota contavano come tre, e per sapere se bastavano per la
-  serata bisognava aprire il dettaglio. Le bottiglie — piene, aperta,
-  finite — restano nel dettaglio, per chi va a contarle sullo scaffale.
+  serata bisognava aprire il dettaglio. Sparisce anche il «piena / aperta
+  46 cl / esaurito» di fianco: col conteggio a pezzi è già nel numero —
+  «0,5 pz» dice da sé che è mezza, «0 pz» che è finita. Le bottiglie —
+  piene, aperta, finite — restano nel dettaglio, per chi va a contarle
+  sullo scaffale.
 - **«Inventario» si chiama Magazzino**, come lo chiama chi ci lavora.
 - **Un prodotto si può duplicare**, fra Modifica ed Elimina: il magazzino
   è pieno di quasi-uguali — stessa bottiglia in due formati, lo stesso

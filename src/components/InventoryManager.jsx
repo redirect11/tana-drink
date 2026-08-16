@@ -658,15 +658,13 @@ function ProductsPanel() {
                   <span className="inv-cell-num inv-row-stock">
                     {bs ? (
                       <>
-                        {/* Niente emoji della bottiglia: il conteggio si
-                            scrive. A zero non c'è nulla da chiamare "piena",
-                            e si leggeva "0 🍾 · piena". */}
-                        {formatPezzi(bs.pezzi)} pz{' '}
-                        <span className="muted small">
-                          {bs.bottles === 0
-                            ? '· esaurito'
-                            : `· ${bs.open ? `aperta ${bs.open}` : bs.bottles > 1 ? 'piene' : 'piena'}`}
-                        </span>
+                        {/* SOLO IL NUMERO. «piena / aperta 46 cl /
+                            esaurito» raccontava lo stato della bottiglia,
+                            che col conteggio a pezzi è già nel numero:
+                            «0,5 pz» dice da sé che è mezza, «0 pz» che è
+                            finita. Il dettaglio delle bottiglie resta
+                            aperto sotto, per chi va a contarle. */}
+                        {formatPezzi(bs.pezzi)} pz
                       </>
                     ) : (
                       fmtItem(it.stock, it)
@@ -720,12 +718,7 @@ function ProductsPanel() {
                         </span>
                         {bs && (
                           <span className="muted small" style={{ display: 'block' }}>
-                            {bs.total} ·{' '}
-                            {bs.open
-                              ? `aperta ${bs.open}`
-                              : bs.bottles > 1
-                                ? 'piene'
-                                : 'piena'}
+                            {bs.total}
                           </span>
                         )}
                       </span>
