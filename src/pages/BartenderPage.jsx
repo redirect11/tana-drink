@@ -37,6 +37,7 @@ import {
   passaFiltroCoda,
   restaInCoda,
 } from '../lib/coda.js'
+import { ordiniDellaCassaAperta } from '../lib/cassa.js'
 import { ripristinabile } from '../lib/storiaOrdine.js'
 import { StoriaOrdineDialog, RipristinaOrdineDialog } from '../components/StoriaOrdine.jsx'
 import StatusBell from '../components/StatusBell.jsx'
@@ -827,9 +828,11 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
   }
   const ordersOggi = effOrders.filter((o) => !arretratiIds.has(o.id))
   const ordersInVista = soloOggi ? ordersOggi : effOrders
-  // Riepilogo di testata: solo la giornata corrente (gli arretrati stanno
-  // nella loro tab e non devono gonfiare i totali di oggi).
-  const recap = ordersRecap(ordersOggi, isChiuso)
+  // Riepilogo di testata: i conti di QUESTA apertura di cassa. Non la
+  // giornata — dentro una giornata ci stanno anche le serate già chiuse e
+  // rendicontate, e a cassa appena riaperta il banco leggeva «425 chiusi ·
+  // 10.228,40 €», soldi di un'altra sera. Vedi ordiniDellaCassaAperta.
+  const recap = ordersRecap(ordiniDellaCassaAperta(ordersOggi, cassaAperta), isChiuso)
 
   // Leggenda "chi ha aperto l'ordine": lettera → nome per lo staff che ha
   // battuto ordini oggi, più l'eventuale voce Cliente (ordini dall'app).

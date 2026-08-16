@@ -1440,6 +1440,33 @@ requirements:
     test_cases:
       - tests/component/MenuPage.test.jsx
       - tests/unit/statoStampante.test.js
+  - id: REQ-MAG-012
+    title: "Le scorte dicono anche quello che ti ritrovi a fine serata"
+    area: "src/lib/impegnato.js, src/components/InventoryManager.jsx"
+    description: >
+      A metà serata, sui tavoli, ci sono drink già fatti e conti non ancora
+      chiusi: quel gin è promesso anche se il magazzino non l'ha ancora
+      scalato. Accanto alla giacenza c'è una colonna «A fine serata» con
+      quello che resterà se tutti i conti aperti vengono incassati così come
+      sono — perché la domanda vera, quando si guardano le scorte durante il
+      servizio, è «mando qualcuno a prendere una bottiglia?».
+      Si conta appena l'item entra nel conto, e si conta solo quello che il
+      magazzino non ha GIÀ scalato: contare anche le comande già scaricate
+      vorrebbe dire togliere due volte lo stesso drink. Lo scarico vero
+      resta dov'è (comanda presa in carico o riscossione): questa è la parte
+      ancora incerta, non un movimento di magazzino.
+      Non si scrive niente sul database: il numero si rifà ogni volta dai
+      conti aperti. Una prenotazione scritta andrebbe disfatta a ogni riga
+      tolta, a ogni conto annullato o riaperto, e alla prima strada che salta
+      resterebbe un impegno fantasma che nessuno sa più togliere.
+      La colonna sparisce quando non c'è niente in ballo — cassa chiusa, o
+      nessun conto aperto che chieda quel prodotto — invece di ripetere la
+      giacenza che si legge accanto.
+    status: implemented
+    generate_issue: false
+    labels: [magazzino, ordini]
+    test_cases: [tests/unit/impegnato.test.js]
+
   - id: REQ-MAG-011
     title: "In magazzino si contano i pezzi, con la virgola"
     area: "src/lib/inventory.js, src/components/InventoryManager.jsx"

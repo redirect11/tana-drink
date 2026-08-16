@@ -21,8 +21,12 @@ import {
   updateSupplier,
   deleteSupplier,
   subscribeSettings,
+  subscribeActiveOrders,
+  subscribeDrinks,
   DEFAULT_SETTINGS,
 } from '../lib/api.js'
+import { useCashSession } from '../lib/cashSession.js'
+import { impegnatoPerArticolo, articoloPrevisto } from '../lib/impegnato.js'
 import {
   formatQty,
   fmtItem,
@@ -261,6 +265,40 @@ function FornitoriPanel() {
   return <SupplierManager suppliers={suppliers} onChange={ricarica} />
 }
 
+// LA CELLA «A FINE SERATA». Si legge con le stesse regole della giacenza —
+// pezzi per le bottiglie, unità per il resto — perché è la stessa cosa
+// guardata più avanti nel tempo: due modi di scrivere lo stesso numero
+// farebbero sembrare due dati diversi. Senza impegno resta un trattino:
+// vuol dire che nessun conto aperto ha chiesto quel prodotto.
+function CellaFineSerata({ item, impegnato }) {
+  const previsto = articoloPrevisto(item, impegnato)
+  if (!previsto) return <span className="inv-cell-num muted">—</span>
+  const bs = bottleSummary(previsto)
+  const finito = (Number(previsto.stock) || 0) <= 0
+  return (
+    <span className={`inv-cell-num inv-row-previsto${finito ? ' finito' : ''}`}>
+      {bs ? `${formatPezzi(bs.pezzi)} pz` : fmtItem(previsto.stock, previsto)}
+    </span>
+  )
+}
+
+// La stessa previsione nella vista a CARD, dove non ci sono colonne: si
+// scrive per esteso sotto la giacenza, e solo se quel prodotto è in ballo.
+function PrevisioneCard({ item, impegnato }) {
+  const previsto = articoloPrevisto(item, impegnato)
+  if (!previsto) return null
+  const bs = bottleSummary(previsto)
+  const finito = (Number(previsto.stock) || 0) <= 0
+  return (
+    <span
+      className={`small${finito ? ' inv-row-previsto finito' : ' muted'}`}
+      style={{ display: 'block' }}
+    >
+      a fine serata {bs ? `${formatPezzi(bs.pezzi)} pz` : fmtItem(previsto.stock, previsto)}
+    </span>
+  )
+}
+
 function ProductsPanel() {
   const [items, setItems] = useState([])
   const [categories, setCategories] = useState([])
@@ -290,6 +328,33 @@ function ProductsPanel() {
   const [expandedId, setExpandedId] = useState(null)
   const [caricoFor, setCaricoFor] = useState(null)
   const [rettificaFor, setRettificaFor] = useState(null)
+
+  // QUELLO CHE TI RITROVI A FINE SERATA. I conti ancora aperti hanno già
+  // promesso degli ingredienti: si guardano gli ordini e il listino e si
+  // toglie dalla giacenza quello che il magazzino non ha ancora scalato.
+  // A cassa chiusa la colonna non c'è: non c'è una serata in corso di cui
+  // dire come finirà.
+  const { open: cassaAperta } = useCashSession()
+  const [ordiniVivi, setOrdiniVivi] = useState([])
+  const [drinksById, setDrinksById] = useState({})
+  useEffect(() => subscribeActiveOrders(setOrdiniVivi, () => {}), [])
+  useEffect(
+    () =>
+      subscribeDrinks(
+        {},
+        (ds) => setDrinksById(Object.fromEntries(ds.map((d) => [d.id, d]))),
+        () => {}
+      ),
+    []
+  )
+  const itemsById = useMemo(() => Object.fromEntries(items.map((i) => [i.id, i])), [items])
+  const impegnato = useMemo(
+    () => (cassaAperta ? impegnatoPerArticolo(ordiniVivi, drinksById, itemsById) : {}),
+    [cassaAperta, ordiniVivi, drinksById, itemsById]
+  )
+  // La colonna compare solo se c'è davvero qualcosa in ballo: a serata
+  // ferma sarebbe una colonna di trattini.
+  const mostraPrevisione = Object.keys(impegnato).length > 0
 
   // Ricarico (×N) per il prezzo consigliato mostrato accanto al costo.
   const [markup, setMarkup] = useState(DEFAULT_SETTINGS.price_markup)
@@ -336,6 +401,27 @@ function ProductsPanel() {
   const itemActions = (it, bd) => (
     <div className="grid-card-actions">
       <dl className="inv-info">
+        {impegnato[it.id] > 0 && (
+          <div className="inv-info-row">
+            <dt>A fine serata</dt>
+            <dd>
+              {/* Il numero da solo non basta: chi legge vuole sapere
+                  QUANTO è promesso, per capire se vale la pena aprire
+                  un'altra bottiglia adesso o aspettare. */}
+              <strong>
+                {(() => {
+                  const p = articoloPrevisto(it, impegnato[it.id])
+                  const bs = bottleSummary(p)
+                  return bs ? `${formatPezzi(bs.pezzi)} pz` : fmtItem(p.stock, p)
+                })()}
+              </strong>
+              <span className="muted">
+                {' · '}
+                {fmtItem(impegnato[it.id], it)} sui conti ancora aperti
+              </span>
+            </dd>
+          </div>
+        )}
         {bd ? (
           <div className="inv-info-row">
             <dt>Pezzi</dt>
@@ -443,6 +529,7 @@ function ProductsPanel() {
         case 'gross': return it.cost != null ? costWithVat(it.cost, it.vat) : null
         case 'percl': return costPerUnit(it, 'cl')
         case 'stock': return Number(it.stock) || 0
+        case 'previsto': return (Number(it.stock) || 0) - (impegnato[it.id] || 0)
         default: return it.name || ''
       }
     }
@@ -459,7 +546,7 @@ function ProductsPanel() {
       return String(x).localeCompare(String(y), 'it') * mul
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible, sort, categories])
+  }, [visible, sort, categories, impegnato])
 
   // Conteggi per categoria (su tutto l'inventario) per la barra a sinistra.
   const catItems = useMemo(() => {
@@ -738,7 +825,7 @@ function ProductsPanel() {
       {/* TABELLA: colonne allineate (stato · prodotto · categoria · netto ·
           +IVA · scorte), riga cliccabile per aprire le azioni. */}
       {invView === 'lista' && (
-        <div className="inv-list inv-table">
+        <div className={`inv-list inv-table${mostraPrevisione ? ' con-previsione' : ''}`}>
           <div className="inv-thead">
             <span aria-hidden />
             <SortTh label="Prodotto" col="name" sort={sort} onSort={toggleSort} />
@@ -747,6 +834,9 @@ function ProductsPanel() {
             <SortTh label="IVA inclusa" col="gross" sort={sort} onSort={toggleSort} num />
             <SortTh label="€/cl" col="percl" sort={sort} onSort={toggleSort} num />
             <SortTh label="Scorte" col="stock" sort={sort} onSort={toggleSort} num />
+            {mostraPrevisione && (
+              <SortTh label="A fine serata" col="previsto" sort={sort} onSort={toggleSort} num />
+            )}
           </div>
           {sortedVisible.map((it) => {
             const st = stockStatus(it)
@@ -795,6 +885,7 @@ function ProductsPanel() {
                       fmtItem(it.stock, it)
                     )}
                   </span>
+                  {mostraPrevisione && <CellaFineSerata item={it} impegnato={impegnato[it.id]} />}
                 </button>
                 {expanded && itemActions(it, bottleBreakdown(it))}
               </div>
@@ -846,6 +937,7 @@ function ProductsPanel() {
                             {bs.total}
                           </span>
                         )}
+                        <PrevisioneCard item={it} impegnato={impegnato[it.id]} />
                       </span>
                     )
                   })()}
