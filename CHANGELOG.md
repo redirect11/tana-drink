@@ -4,6 +4,13 @@
 
 ### Al banco
 
+- **Le statistiche si aprono sull'ultima chiusura di cassa**, e quel
+  periodo è il primo della riga: la domanda del mattino dopo è «com'è
+  andata ieri sera», non «com'è andata la settimana». Chi sceglie un altro
+  periodo se lo tiene.
+- **Giornaliero e Mensile per macro sono passati nel menu**, come le
+  sezioni di Magazzino e Impostazioni: una riga di chip in meno sopra una
+  schermata già fatta di tabelle.
 - **Il conto annullato mostra cosa c'era dentro.** Si apriva vuoto, a zero
   euro e senza una riga: non si capiva né cosa contenesse né se valesse la
   pena riaprirlo. Ora le righe si vedono, barrate — non fanno somma,
