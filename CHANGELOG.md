@@ -1,5 +1,17 @@
 # Cosa è cambiato
 
+## Non ancora rilasciata — 1.4.5
+
+### Al banco
+
+- **I tasti tornano dell'oro di sempre.** Facendoli seguire il tema erano
+  venuti più smorti — l'estremo scuro del gradiente non era più lo stesso
+  — e il «+» della coda si riconosceva meno. Sul tema di casa il colore è
+  identico a quello in produzione; sui temi che cambiano i bottoni resta
+  il loro.
+
+---
+
 ## 1.4.4 — 16 agosto 2026
 
 ### Per chi gestisce
