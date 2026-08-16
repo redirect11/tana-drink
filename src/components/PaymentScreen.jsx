@@ -164,7 +164,10 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   const paid = paidAmount(order)
   // Incassare non vuol dire aver consegnato: seguendo la preparazione il
   // conto resta aperto finché le comande non sono servite.
-  const autoServe = settings?.workflow_enabled === false
+  const autoServeBase = settings?.workflow_enabled === false
+  // Il tasto in più lo decide il locale (Impostazioni → Gestione
+  // preparazione): serve dove si consegna e si incassa nello stesso gesto.
+  const riscuotiEServi = settings?.riscuoti_e_servi === true
   const due = orderDue(order)
   // Sconto più grande del conto: capita solo con la strategia "avvisa"
   // (Impostazioni → Sconto e righe del conto), quando si sconta e poi si
@@ -273,7 +276,10 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
     setOp(null)
   }
 
-  const riscuoti = () => {
+  // «Riscuoti» e «Riscuoti e servi» sono lo stesso incasso: cambia solo se
+  // le comande risultano servite — e quindi se il conto si chiude adesso.
+  const riscuoti = ({ servi = false } = {}) => {
+    const autoServe = autoServeBase || servi
     const items = !manual && splitting ? selection : null
     // Conto già coperto (sconto totale, buono o acconti): non c'è nulla da
     // incassare ma il conto va CHIUSO lo stesso, altrimenti resta aperto per
@@ -620,10 +626,13 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
               gestione spenta non esistono comande "da servire" — sono servite
               per definizione — e leggerlo a ogni incasso era un allarme che non
               voleva dire niente. */}
-          {!autoServe && !served && !closed && (
+          {/* Col servizio seguito, incassare NON chiude: il conto resta
+              aperto finché le comande non sono servite. Prima qui c'era
+              scritto il contrario. */}
+          {!autoServeBase && !served && !closed && (
             <p className="muted small" style={{ margin: '2px 0 0', flexShrink: 0 }}>
-              ⚠️ Comande non ancora servite: saldando tutto, il conto si chiude
-              e risultano tutte servite.
+              ⚠️ Comande non ancora servite: il conto resta aperto anche dopo
+              l'incasso{riscuotiEServi ? ', a meno di «Riscuoti e servi»' : ''}.
             </p>
           )}
           {readerStarted && order.payment_status === 'in_attesa' && (
@@ -667,9 +676,21 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
             <button
               className="btn block payscreen-collect"
               disabled={saving || scontoFuoriMisura || (due > 0 && !(toPay > 0))}
-              onClick={riscuoti}
+              onClick={() => riscuoti()}
             >
               {due <= 0 ? 'Chiudi conto · 0,00 €' : `Riscuotere · ${formatPrice(toPay)}`}
+            </button>
+          )}
+          {/* Consegnato e incassato nello stesso gesto: un tasto solo invece
+              di incassare qui e poi servire dalla coda. Solo dove il locale
+              lo ha chiesto, e solo se c'è ancora qualcosa da servire. */}
+          {!closed && riscuotiEServi && !autoServeBase && !served && (
+            <button
+              className="btn block ghost payscreen-collect-servi"
+              disabled={saving || scontoFuoriMisura || (due > 0 && !(toPay > 0))}
+              onClick={() => riscuoti({ servi: true })}
+            >
+              Riscuoti e servi · chiude il conto
             </button>
           )}
 

@@ -44,6 +44,7 @@ import {
   serveAllComande,
   aggregateItems,
   comandeStatuses,
+  comandaDaScaricare,
   itemsTotal as sumItems,
 } from './comande.js'
 import {
@@ -2261,10 +2262,15 @@ export async function advanceComanda(orderId, comandaId, newStatus) {
     : activeComanda({ comande })
   if (!comanda) throw new Error('Comanda non trovata')
 
-  // Scarico inventario alla presa in carico della comanda (una volta sola),
-  // ma DOPO aver salvato l'avanzamento: vedi scaricaInSottofondo.
-  const daScaricare =
-    newStatus === ORDER_STATUSES.IN_PREPARAZIONE && comanda.inventory_applied !== true
+  // IL MAGAZZINO SI SCALA QUANDO LA COMANDA È SERVITA, non quando la si
+  // prende in carico. Prima si scaricava allo «in preparazione»: un drink
+  // iniziato e poi non fatto — riga tolta, cliente che cambia idea, comanda
+  // annullata — aveva già portato via gli ingredienti. Servito vuol dire
+  // che quel drink è uscito davvero, ed è l'unico momento in cui gli
+  // ingredienti se ne sono andati per certo. Fino a lì sono IMPEGNATI, e si
+  // leggono in magazzino nella colonna «a fine serata» (lib/impegnato.js).
+  // Sempre una volta sola, e DOPO aver salvato l'avanzamento.
+  const daScaricare = comandaDaScaricare(comanda, newStatus)
 
   comanda.status = newStatus
   comanda.status_times = { ...(comanda.status_times || {}), [newStatus]: nowIso }
@@ -2513,8 +2519,12 @@ export async function addComanda(orderId, items, { note = null } = {}) {
     // più il significato che aveva quando è stato deciso.
     ...(nuovoSconto != null ? { discount_amount: nuovoSconto } : {}),
   }), 'aggiunta al conto')
-  // Le scorte si scalano DOPO: la vendita non deve aspettare il magazzino.
-  scaricaInSottofondo(orderId, nuova.id)
+  // LE SCORTE NON SI SCALANO QUI. Aggiungere una riga al conto non vuol
+  // dire aver versato niente: la riga si toglie, il conto si annulla, il
+  // cliente cambia idea. Da adesso quegli ingredienti sono IMPEGNATI — si
+  // vedono in magazzino, colonna «a fine serata» — e se ne vanno davvero
+  // quando la comanda risulta servita (o, senza gli stati del servizio,
+  // alla riscossione, che è il momento in cui tutto risulta servito).
   return mapOrder(await getDoc(ref))
 }
 
@@ -3198,6 +3208,14 @@ export const DEFAULT_SETTINGS = {
   // stima ETA e notifiche di "pronto". Disattivata di default: la si accende
   // solo se si vuole tracciare la preparazione.
   workflow_enabled: false,
+  // RISCUOTI E SERVI: col servizio seguito, incassare non chiude il conto —
+  // si può pagare in anticipo con tre drink ancora da fare. Ma al banco
+  // capita spessissimo il contrario: si consegna e si incassa nello stesso
+  // gesto, e in quel caso due passaggi sono uno di troppo. Acceso, nella
+  // schermata di pagamento compare anche «Riscuoti e servi», che chiude
+  // tutto in un colpo. Spento di default: chi segue il servizio di solito
+  // lo segue apposta.
+  riscuoti_e_servi: false,
   price_markup: DEFAULT_MARKUP,
   price_round_step: DEFAULT_ROUND_STEP,
   // IVA di vendita (somministrazione bar = 10%): serve a scorporare l'IVA dal

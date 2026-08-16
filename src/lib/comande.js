@@ -141,6 +141,17 @@ export function comandeStatuses(comande) {
 // ancora modificabili. Una comanda pronta o servita non si tocca più.
 
 // Modificabile = non ancora pronta/servita/annullata.
+// QUANDO IL MAGAZZINO SI SCALA DAVVERO. Alla comanda SERVITA, non alla
+// presa in carico: un drink iniziato e poi non fatto — riga tolta, cliente
+// che cambia idea, comanda annullata — aveva già portato via gli
+// ingredienti. Servito vuol dire che quel drink è uscito per certo.
+// Una volta sola: se lo scarico è già stato applicato non si ripete.
+// Senza gli stati del servizio le comande risultano servite alla
+// riscossione, ed è lì che si scala (vedi unappliedEntries in api.js).
+export function comandaDaScaricare(comanda, nuovoStato) {
+  return nuovoStato === ORDER_STATUSES.RITIRATO && comanda?.inventory_applied !== true
+}
+
 export function comandaEditable(c) {
   return c.status === ORDER_STATUSES.RICEVUTO || c.status === ORDER_STATUSES.IN_PREPARAZIONE
 }

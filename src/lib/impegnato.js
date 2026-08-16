@@ -27,19 +27,17 @@
 import { computeConsumption, qtyInStockUnit } from './inventory.js'
 import { ORDER_STATUSES } from './orderStatus.js'
 
-// Un conto «apre un impegno» finché non è chiuso: incassato o annullato.
-// Un conto annullato non impegna niente — il drink potrebbe essere stato
-// fatto, ma se c'era da scalarlo lo ha già fatto il suo scarico.
+// Un conto impegna finché non è annullato. INCASSATO NON BASTA: con gli
+// stati del servizio si paga anche in anticipo, e un conto pagato può avere
+// ancora tre drink da fare — quegli ingredienti sono ancora in ballo. Quello
+// che dice la parola fine è la comanda SERVITA, che è anche il momento in
+// cui il magazzino scala davvero: da lì in poi la comanda risulta scaricata
+// e smette da sola di contare (vedi comandeImpegnate).
+// Il conto annullato invece no: se c'era da scalare qualcosa lo ha già
+// fatto il suo scarico, e riaggiungerlo qui sarebbe contarlo due volte.
 export function contoImpegna(o) {
   if (!o) return false
-  // Si guardano ENTRAMBI gli stati: quello del conto (aperto · pagato ·
-  // annullato) e quello della lavorazione. Un conto incassato ma non
-  // ancora consegnato è `ritirato` di lavorazione e `pagato` di conto: i
-  // soldi ci sono, gli ingredienti li ha già scalati il pagamento.
-  for (const stato of [o.status, o.workflow_status]) {
-    if (stato === ORDER_STATUSES.ANNULLATO || stato === ORDER_STATUSES.PAGATO) return false
-  }
-  return o.payment_status !== 'pagato'
+  return o.status !== ORDER_STATUSES.ANNULLATO && o.workflow_status !== ORDER_STATUSES.ANNULLATO
 }
 
 // Le comande che pesano ancora: non annullate e non già scaricate.

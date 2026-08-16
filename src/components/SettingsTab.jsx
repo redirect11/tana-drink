@@ -399,6 +399,14 @@ export default function SettingsTab({ role = null }) {
                 checked={settings.workflow_enabled !== false}
                 onChange={(v) => (v ? save({ workflow_enabled: true }) : setConfermaSpegni(true))}
               />
+              {settings.workflow_enabled !== false && (
+                <ToggleRow
+                  label="Un tasto per incassare e servire insieme"
+                  desc="Nella schermata di pagamento compare anche «Riscuoti e servi»: chiude il conto in un colpo, per quando si consegna e si incassa nello stesso gesto."
+                  checked={settings.riscuoti_e_servi === true}
+                  onChange={(v) => save({ riscuoti_e_servi: v })}
+                />
+              )}
               {esitoReset != null && (
                 <div className="muted small" style={{ marginTop: 6 }}>
                   ✅ {esitoReset === 0

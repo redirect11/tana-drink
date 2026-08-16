@@ -20,6 +20,7 @@ import {
   comandaEditable,
   lockedQtyByItem,
   planDecrement,
+  comandaDaScaricare,
 } from '../../src/lib/comande.js'
 
 const c = (seq, status, items = []) => ({ id: `c${seq}`, seq, status, items })
@@ -211,5 +212,24 @@ describe('vista aggregata: aumenti/diminuzioni gestite internamente', () => {
     expect(planDecrement(comande, 'birra')).toBeNull()
     const soloServite = [{ id: 'c1', status: 'ritirato', items: [{ drink_id: 'x', qty: 3 }] }]
     expect(planDecrement(soloServite, 'x')).toBeNull()
+  })
+})
+
+// IL MAGAZZINO SI SCALA QUANDO LA COMANDA È SERVITA. Prima si scaricava
+// alla presa in carico: un drink iniziato e poi non fatto — riga tolta,
+// cliente che cambia idea, comanda annullata — aveva già portato via gli
+// ingredienti. Fino al servito sono impegnati, non consumati.
+describe('quando si scala il magazzino', () => {
+  it('quando la comanda risulta servita', () => {
+    expect(comandaDaScaricare({ inventory_applied: false }, 'ritirato')).toBe(true)
+  })
+
+  it('non quando la si prende in carico', () => {
+    expect(comandaDaScaricare({ inventory_applied: false }, 'in_preparazione')).toBe(false)
+    expect(comandaDaScaricare({ inventory_applied: false }, 'pronto')).toBe(false)
+  })
+
+  it('una volta sola', () => {
+    expect(comandaDaScaricare({ inventory_applied: true }, 'ritirato')).toBe(false)
   })
 })
