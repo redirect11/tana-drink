@@ -50,6 +50,7 @@ vi.mock('../../src/lib/api.js', async () => {
   void vero
   return {
     DEFAULT_SETTINGS: { pickup_mode: 'bancone', groups_enabled: false },
+    settingsIniziali: () => ({ pickup_mode: 'bancone', groups_enabled: false }),
     fetchOrder: vi.fn(() => Promise.resolve(ORDINE)),
     subscribeOrder: vi.fn((id, cb) => {
       cb(ORDINE)

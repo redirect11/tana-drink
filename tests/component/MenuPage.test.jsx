@@ -36,6 +36,7 @@ vi.mock('../../src/lib/api.js', () => ({
     comande: [{ id: 'c1', seq: 1, items: [{ drink_id: 'd1', name: 'Mojito', qty: 1, unit_price: 7 }] }],
   })),
   DEFAULT_SETTINGS: { service_mode: 'tavolo' },
+  settingsIniziali: () => ({ service_mode: 'tavolo' }),
 }))
 
 const DRINKS = [

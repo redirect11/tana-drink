@@ -63,6 +63,7 @@ vi.mock('../../src/lib/api.js', () => ({
     return () => {}
   }),
   DEFAULT_SETTINGS: {},
+  settingsIniziali: () => ({}),
   advanceComanda: vi.fn(() => Promise.resolve()),
   addComanda: vi.fn(() => Promise.resolve({ comande: [] })),
   bartenderUpdateComanda: vi.fn(() => Promise.resolve()),

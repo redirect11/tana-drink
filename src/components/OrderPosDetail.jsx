@@ -16,6 +16,7 @@ import {
   subscribeSettings,
   peekNextDailyNumber,
   DEFAULT_SETTINGS,
+  settingsIniziali,
 } from '../lib/api.js'
 import { useDraft, loadLayout, saveLayout, saveDraft } from '../lib/useDraft.js'
 import { dismissKeyboard } from '../lib/keyboard.js'
@@ -191,7 +192,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
     null
   const [showRipristino, setShowRipristino] = useState(false)
   const [askName, setAskName] = useState(false) // modale nome (creazione)
-  const [settings, setSettings] = useState(DEFAULT_SETTINGS)
+  const [settings, setSettings] = useState(settingsIniziali)
   useEffect(() => subscribeSettings(setSettings, () => {}), [])
 
   // CONTO DI GRUPPO (solo in creazione): si arriva qui da /pos?group=<id>

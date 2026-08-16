@@ -7,6 +7,10 @@
 - **Il Menù ha tre sezioni nel menu laterale**: modifica menù, categorie,
   marginalità del listino. Erano due pannelli a scomparsa in cima al
   catalogo, e aprirli spingeva giù tutta la griglia.
+- **Le schermate si aprono già com'erano.** Aprendo un conto le strisce
+  comparivano colorate per un istante e poi sparivano, in un locale che le
+  aveva spente: le impostazioni arrivano dal server e per quel momento non
+  c'erano. Ora si riparte dall'ultima volta.
 - **La striscia a sinistra delle card si sceglie.** Quattro modi:
   **spenta**, **colore del prodotto**, **colore della categoria** (quello
   del singolo prodotto resta nella linguetta) e **scorte** — rosso

@@ -32,6 +32,7 @@ vi.mock('../../src/lib/api.js', () => {
     resetOpenOrdersToReceived: vi.fn(() => Promise.resolve(0)),
     replaceCatalog: vi.fn(() => Promise.resolve()),
     DEFAULT_SETTINGS: impostazioni,
+    settingsIniziali: () => (impostazioni),
   }
 })
 vi.mock('../../src/lib/firebaseClient.js', () => ({ auth: { currentUser: null }, db: {} }))

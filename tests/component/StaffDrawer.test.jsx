@@ -18,6 +18,7 @@ vi.mock('../../src/lib/logout.js', () => ({ logoutStaff: vi.fn() }))
 vi.mock('../../src/dev/devActions.js', () => ({ devToolsEnabled: false }))
 vi.mock('../../src/lib/api.js', () => ({
   DEFAULT_SETTINGS: { groups_enabled: false, groups_in_drawer: false },
+  settingsIniziali: () => ({ groups_enabled: false, groups_in_drawer: false }),
   subscribeSettings: vi.fn((cb) => {
     cb({ groups_enabled: true, groups_in_drawer: true })
     return () => {}
