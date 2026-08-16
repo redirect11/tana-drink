@@ -76,7 +76,7 @@ export default function PriceSuggestion({ rows, itemsById, price, onUse }) {
       {missing.length > 0 && (
         <div className="muted small" style={{ marginTop: 6 }}>
           ⚠️ Stima parziale: manca il costo al dettaglio di {missing.join(', ')}.
-          Impostalo in Inventario per avere il prezzo reale.
+          Impostalo in Magazzino per avere il prezzo reale.
         </div>
       )}
     </div>

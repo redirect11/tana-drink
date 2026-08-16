@@ -159,7 +159,7 @@ export default function RendicontoSerata({ session, orders, drinksById, itemsByI
 
       {totConti.parziale && (
         <div className="banner">
-          Il costo di qualche ingrediente non è in inventario: le righe segnate con ~ hanno un
+          Il costo di qualche ingrediente non è in magazzino: le righe segnate con ~ hanno un
           guadagno <strong>ottimistico</strong>, non un dato certo.
         </div>
       )}

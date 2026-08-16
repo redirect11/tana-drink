@@ -937,6 +937,35 @@ requirements:
     labels: [stampa, cassa]
     test_cases: []
 
+  - id: REQ-MAG-011
+    title: "In magazzino si contano i pezzi, con la virgola"
+    area: "src/lib/inventory.js, src/components/InventoryManager.jsx"
+    description: >
+      La colonna delle scorte dice quanti PEZZI ci sono, decimali compresi:
+      una bottiglia da 100 cl con dentro 50 cl è «0,5 pz»; due piene da 50
+      cl e una a cui mancano 10 cl fanno «2,8 pz». Prima si leggeva «3
+      bott.», che dice quante bottiglie si toccano e non quanto prodotto
+      c'è dentro: tre bottiglie di cui una quasi vuota contavano come tre,
+      e per sapere se bastavano per la serata bisognava aprire il
+      dettaglio.
+      Gli articoli già contati a pezzo (le bibite) dicono il loro numero.
+      Nel dettaglio restano le bottiglie — piene, aperta, finite — che
+      servono a chi va a contarle sullo scaffale.
+      La parola in tutta l'app è MAGAZZINO, non «Inventario»: è come lo
+      chiama chi ci lavora. Gli identificativi interni (il tab
+      `inventario`, la collezione `inventory_items`) restano, che cambiarli
+      vorrebbe dire migrare dati e indirizzi per un nome.
+      Un prodotto si può DUPLICARE, fra Modifica ed Elimina: il magazzino è
+      pieno di quasi-uguali — stessa bottiglia in due formati, lo stesso
+      amaro di un altro fornitore — e rifarli da zero vuol dire ribattere
+      costo, confezione, categoria, soglia e IVA. La copia nasce con la
+      giacenza a ZERO (è un prodotto che non è mai entrato in magazzino) e
+      apre subito la scheda, perché il nome «(copia)» va cambiato.
+    status: implemented
+    generate_issue: false
+    labels: [magazzino, ux]
+    test_cases: [tests/unit/inventory.test.js]
+
   # ══════════════════════════════════════════════════════════════════════
   #  NOTIFICHE
   # ══════════════════════════════════════════════════════════════════════
