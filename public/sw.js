@@ -78,22 +78,21 @@ self.addEventListener('push', (event) => {
         )
       }
 
-      // Nuovo ordine al bancone (push allo staff): saltata solo se il
-      // gestionale è già in primo piano — lì il listener realtime emette il
-      // bip e aggiorna la lista, quindi la notifica di sistema sarebbe doppia.
+      // Nuovo ordine al bancone (push allo staff): la notifica di sistema
+      // ESCE SEMPRE, anche col gestionale aperto.
+      //
+      // Prima si saltava quando la coda era in primo piano, per non
+      // mostrarla doppia: là suonava l'app. Il patto però non reggeva —
+      // il tablet al banco sta sulla coda tutta la sera, quindi cadeva
+      // sempre in quel ramo, e dall'altra parte l'avviso in pagina
+      // scartava proprio gli ordini battuti dagli altri terminali: in
+      // mezzo, il silenzio. Un avviso in più si chiude; uno in meno è un
+      // drink che non parte.
+      // Il doppione lo evita il `tag`: la notifica dell'app e questa
+      // portano lo stesso nome, quindi il sistema le fonde in una.
+      // (Quando arriveranno le preferenze per dispositivo, questo diventa
+      // un interruttore invece di una regola cablata.)
       if (payload.data?.kind === 'new_order') {
-        const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
-        const onBar = wins.some((w) => {
-          try {
-            return (
-              (w.focused || w.visibilityState === 'visible') &&
-              new URL(w.url).pathname.startsWith('/bar')
-            )
-          } catch {
-            return false
-          }
-        })
-        if (onBar) return
         return self.registration.showNotification(
           payload.data.title || '🆕 Nuovo ordine',
           {

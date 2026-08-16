@@ -20,33 +20,69 @@ quello che serve è provare le modifiche **insieme**, com'è la serata vera.
 
 | Ramo | Nasce da | Finisce in | Dove viene pubblicato |
 |---|---|---|---|
-| `release/<versione>` | `develop` | `develop`, poi `main` | **test** (`tana-drink-test`) |
-| `feature/<nome>` | `release/**` o `develop` | da dove è nato | **test** |
-| `develop` | — | `main` | **test** |
-| `hotfix/<nome>` | `main` | `main` **e** `develop` | **test**, poi produzione |
-| `main` | — | — | **produzione** (`tana-drink`) |
+| `release/<versione>` | `develop` | `develop`, poi `main` | col tag: **test** (`tana-drink-test`) |
+| `feature/<nome>` | `release/**` o `develop` | da dove è nato | col tag: **test** |
+| `develop` | — | `main` | col tag: **test** |
+| `hotfix/<nome>` | `main` | `main` **e** `develop` | col tag: **test**, poi produzione |
+| `main` | — | — | col tag: **produzione** (`tana-drink`), da approvare |
+
+Nessun ramo pubblica da sé: a pubblicare è il **tag**. Vedi «Il deploy».
 
 Su `develop` e `main` non si committa mai direttamente.
 
 ## Il deploy
 
-Ogni push su `main`, `develop`, `feature/**`, `release/**`, `hotfix/**` fa partire
-[la pipeline](../.github/workflows/firebase-hosting.yml): **prima lint e
-test**, e solo se sono verdi compila e deploya hosting, Functions e regole.
-Se un test fallisce non viene pubblicato niente — prima erano due
-workflow che partivano insieme, e la roba rotta finiva online lo stesso. Il progetto di destinazione è `tana-drink`
-solo per `main`; per tutto il resto è `tana-drink-test`.
+**Si pubblica solo con un tag.** Un push su un ramo — qualunque ramo, `main`
+compreso — fa girare **lint, test e build**
+([test.yml](../.github/workflows/test.yml)) e finisce lì: non pubblica
+niente.
 
-**L'ambiente di test è uno solo.** Ci finiscono a turno `develop` e i
-branch in lavorazione: l'ultimo push è quello pubblicato, e i deploy dello
-stesso ambiente si annullano a vicenda invece di sovrapporsi. Per sapere
-cosa si sta guardando, l'app lo scrive in fondo al menu laterale (si tocca
-per copiarlo in un messaggio):
+| Cosa fai | Cosa succede |
+|---|---|
+| push su un ramo qualsiasi | lint + test + build. Nessun deploy. |
+| tag su un commit **non** in `main` | va **online sul test**, subito |
+| tag su un commit **di `main`** | parte la pipeline, e il deploy in **produzione aspetta un'approvazione** |
+
+Il ramo non c'entra più: conta **dove sta il commit taggato**. Un `v1.5.0`
+messo su `develop` mentre matura pubblica sul test; lo stesso numero, dopo
+che quel commit è entrato in `main`, chiede il via libera e va in
+produzione.
+
+Perché è cambiato: pubblicare a ogni push voleva dire due cose fastidiose.
+L'ambiente di prova cambiava **sotto le mani** di chi ci stava provando
+sopra — bastava che un altro spingesse il suo ramo — e un merge su `main`
+mandava in produzione **senza che nessuno lo avesse deciso in quel
+momento**: la decisione era stata presa mergiando, magari un'ora prima.
+Il tag invece è un gesto solo, esplicito: si tagga quando si vuole
+pubblicare quella cosa lì.
+
+```sh
+# provare sul test quello che si sta facendo
+git tag prova-stampa-sala && git push origin prova-stampa-sala
+
+# rilasciare in produzione (poi si approva su GitHub)
+git tag -a v1.4.2 -m "Versione 1.4.2" && git push origin v1.4.2
+```
+
+Il nome del tag è libero per le prove; per i rilasci resta `vX.Y.Z`, che è
+quello che l'app mostra come numero di versione.
+
+**L'approvazione della produzione non sta nel codice**: è una regola del
+repository, in *Settings → Environments → `production` → Required
+reviewers*. Va messa una volta; senza quella spunta un tag su `main`
+pubblicherebbe da sé, e la pipeline non se ne accorgerebbe. Chi approva
+vede il deploy in attesa nella scheda Actions.
+
+**L'ambiente di test è uno solo.** Ci finisce l'ultimo tag pubblicato, da
+qualunque ramo venga. I deploy non si annullano a vicenda: si mettono in
+fila, così uno fermo in attesa di approvazione non sparisce perché nel
+frattempo è stato taggato altro. Per sapere cosa si sta guardando, l'app lo
+scrive in fondo al menu laterale (si tocca per copiarlo in un messaggio):
 
 | Dove | Cosa si legge |
 |---|---|
-| produzione (`main`) | `v1.1.0` — solo il numero: il ramo è sempre quello |
-| test (`develop`, `feature/**`, `hotfix/**`) | `v1.1.0 · develop · b50bb1c` |
+| produzione | `v1.1.0` — solo il numero: là non c'è altro da sapere |
+| test | `v1.1.0 · develop · b50bb1c` |
 
 La versione è **l'ultimo tag raggiungibile**; senza tag si ripiega su
 `package.json`. Gli stessi valori stanno in `/version.json`.
@@ -78,22 +114,36 @@ Ogni rilascio su `develop` ha una versione **x.y.z** semantica:
 - **y** quando si aggiunge una funzione;
 - **z** per correzioni.
 
-Il tag si mette **su `develop`, subito prima del merge su `main`**:
+Il tag si mette **su `develop`, subito prima del merge su `main`**; poi,
+per pubblicare in produzione, se ne mette uno **sul commit di `main`** — è
+quello a far partire il deploy, che aspetta l'approvazione.
 
 ```sh
 git checkout develop && git pull
-git tag -a v1.4.0 -m "Descrizione del rilascio"
-git push origin v1.4.0
+git tag -a v1.3.2 -m "Descrizione del rilascio"
+git push origin v1.3.2                 # → pubblica sul TEST
 git checkout main && git merge develop --no-ff
-git push origin main
+git push origin main                   # → non pubblica niente
+git tag -a v1.3.2-prod -m "In produzione la 1.3.2"
+git push origin v1.3.2-prod            # → produzione, da approvare
 ```
 
-**Prima di ogni merge su `develop` e su `main` si chiede conferma.** Il
-push di un branch `feature/` invece è libero: serve proprio a provare.
+**Prima di ogni merge su `develop` e su `main` si chiede conferma**, e lo
+stesso vale per i **tag**: sono loro a pubblicare. Il push di un branch
+`feature/` invece è libero — non pubblica niente, fa solo girare i test.
+
+**Un tag per la produzione non si riusa.** Se `v1.3.2` è già stato spinto
+su `develop` (e ha pubblicato sul test), per la produzione serve un tag
+nuovo sul commit di `main`: un tag esiste una volta sola, e spostarlo a
+forza vuol dire non sapere più cosa è stato pubblicato quando.
 
 ## Urgenze in produzione
 
 1. `hotfix/<nome>` da `main`
-2. push → si prova su test
-3. merge in `main` (produzione) **e** in `develop`, così la correzione non
-   si perde al rilascio successivo.
+2. push → girano lint e test; per **provarlo davvero** si tagga il ramo
+   (`git tag prova-hotfix-x && git push origin prova-hotfix-x`), e quel tag
+   pubblica sul test
+3. merge in `main` (che non pubblica) **e** in `develop`, così la
+   correzione non si perde al rilascio successivo
+4. tag sul commit di `main` → il deploy in produzione parte e **aspetta
+   l'approvazione**

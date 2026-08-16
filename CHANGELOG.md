@@ -9,6 +9,83 @@ una funzione, il terzo per le correzioni.
 
 ---
 
+## 1.3.2 — 15 agosto 2026
+
+### Al banco
+
+- **Un conto chiuso o annullato si può riaprire.** Chiuso sul tavolo
+  sbagliato, annullato per un malinteso, o il cliente che torna e vuole
+  ordinare ancora su quello: si riapre **dal tasto del pagamento**, che su
+  un conto chiuso era lì spento a non fare niente, scrivendo — se si vuole
+  — il perché.
+  Torna un conto **normale, come se non fosse mai stato pagato**: le righe
+  si modificano tutte e quello che era stato incassato **esce dagli
+  incassi della serata**, perché quel conto è di nuovo da incassare. Resta
+  scritto nella storia del conto quanto è stato tolto, e le comande già
+  servite restano servite. **Se era stato pagato con un buono, il saldo
+  torna al cliente**: se no lo pagherebbe due volte, una col buono e una
+  quando ripaga il conto.
+- **Nel conto riaperto si modificano anche le righe di prima.** Erano
+  bloccate perché quelle comande risultavano servite: ma riaprire serve
+  proprio a togliere il giro battuto sul tavolo sbagliato. Le scorte si
+  riallineano da sé.
+- **Chiudere, annullare e riaprire un conto non aspettano più la rete.**
+  Prima di scrivere, l'app rileggeva il conto dal server: con una rete
+  lenta la coda restava indietro e il conto chiuso compariva sotto
+  «Chiusi» solo dopo. Ora legge la copia locale, che è quella che la coda
+  sta già guardando.
+- **Annullando un conto pagato con un buono, il credito torna al
+  cliente.** Prima restava scalato: il conto non veniva incassato e il
+  buono era speso lo stesso.
+- **Ogni conto ha la sua storia**, dietro i ⋯: aperto, chiuso, annullato,
+  riaperto — con l'ora, chi l'ha fatto e il motivo della riapertura. E il
+  motivo si legge anche dentro il conto riaperto, senza cercarlo: un conto
+  in corso con dentro un incasso, senza una spiegazione, è solo un
+  mistero.
+- **Riaprendo un conto annullato, il buono VIP torna a pagare lo sconto.**
+  Annullando, il saldo tornava al beneficiario; riaprendo, lo sconto
+  restava sul conto senza che lo pagasse più nessuno — credito regalato e
+  conti che non tornano. Se nel frattempo il buono è stato speso altrove,
+  si prende quel che c'è e lo sconto si riduce di conseguenza.
+- **Nella coda, un conto chiuso compare subito sotto «Chiusi»**, e uno
+  riaperto torna subito fra quelli in corso: sparivano da tutte e tre le
+  liste fino a ricaricare la pagina. Sparire subito serve a «In corso» —
+  il conto chiuso non deve restare lì a far dubitare — ma non allo
+  storico, dove uno lo va a cercare apposta.
+- **Sul telefono, a barra nascosta, la coda non finisce più sotto
+  l'orologio.** Il ➕ spariva a metà sotto la barra di sistema, il ☰ si
+  sovrapponeva ai conteggi e «In servizio» restava dietro la striscia: la
+  coda si prendeva lo spazio dell'ora e della batteria invece di
+  scansarlo.
+- **La storia del conto è tornata un'icona in alto**, accanto al numero:
+  da tasto largo si prendeva una riga intera accanto a Unisci, Separa e
+  Comande, per una cosa che si guarda ogni tanto.
+- **La notifica di un ordine nuovo arriva anche col gestionale aperto.**
+  Prima veniva saltata apposta quando la coda era in primo piano — «là
+  suona l'app» — ma il tablet del banco sta sulla coda tutta la sera, e
+  l'avviso in pagina scartava proprio gli ordini battuti dagli altri
+  terminali: in mezzo alle due regole restava il silenzio. Ora esce
+  sempre, e le due notifiche si fondono in una invece di raddoppiarsi.
+- **Gli ordini battuti alla cassa avvisano gli altri terminali.** Nascono
+  già «in preparazione» — chi li batte sta facendo il drink — e per
+  l'avviso non contavano come lavoro nuovo: chi batteva dal telefono non
+  faceva squillare il tablet al banco.
+- **Gli avvisi arrivano a tutti i terminali, non solo all'ultimo.** Erano
+  registrati per persona: lo stesso account sul tablet e sul telefono si
+  sovrascriveva, e squillava solo l'ultimo che aveva aperto il gestionale.
+  Ora ogni dispositivo ha la sua registrazione.
+- **La campanella dice se su questo schermo gli avvisi arrivano**, e se
+  sono spenti — o se il terminale non risulta fra quelli avvisati — offre
+  di sistemarlo lì. Su iPhone e iPad lo dice chiaro: la
+  notifica di sistema esiste solo con l'app installata sulla schermata
+  Home.
+- **Gli avvisi seguono il terminale, non il ruolo.** Chi prende ordini col
+  telefono con un account da gestore non li faceva più arrivare a nessuno:
+  al banco non squillava niente. Ora l'unico a non essere avvisato è il
+  dispositivo che ha battuto l'ordine — sa già di averlo mandato.
+
+---
+
 ## 1.3.1 — 14 agosto 2026
 
 ### Al banco

@@ -23,8 +23,10 @@ Regole non negoziabili, per intero in [docs/gitflow.md](docs/gitflow.md).
   si chiede esplicitamente.
 - **Mai commit diretti su `develop` o `main`.**
 - `hotfix/<nome>` nasce da `main` e torna in `main` **e** in `develop`.
-- Ogni push su `release/**`, `feature/**`, `hotfix/**` e `develop`
-  pubblica sull'ambiente di **test**. Solo `main` va in produzione.
+- **A pubblicare è il tag, non il push.** Un push fa girare lint, test e
+  build e finisce lì. Un **tag su un commit non in `main`** va sul **test**;
+  un **tag su un commit di `main`** manda in **produzione**, e quel deploy
+  aspetta un'approvazione a mano su GitHub.
 - La versione `x.y.z` si tagga su `develop` subito prima del merge su
   `main`.
 
@@ -41,7 +43,7 @@ npm run build     # deve compilare
 ```
 
 La pipeline fa girare lint e test **prima** del deploy: se sono rossi non
-viene pubblicato niente. Non aggirarla e non "sistemare" un test per farlo
+viene pubblicato niente (e senza un tag non si pubblica comunque). Non aggirarla e non "sistemare" un test per farlo
 passare: se un test fallisce, o il codice è sbagliato o il test descriveva
 una cosa che abbiamo deciso di cambiare — e in quel secondo caso si cambia
 il test spiegando perché.
@@ -125,8 +127,8 @@ e requisito, nello stesso commit. Se nasce una funzione, prima il requisito.
 **Non si scrive mai in produzione di propria iniziativa.** Gli script che
 toccano Firestore (import, seed, migrazioni, travasi) girano su
 `tana-drink-test`; la produzione va nominata a mano e aspetta il via libera
-esplicito. Vale anche per il merge `develop` → `main`, che è un deploy in
-produzione. In produzione ci sono i dati veri del locale: un import
+esplicito. Vale anche per il **tag su `main`**, che è quello che manda in
+produzione: il merge da solo non pubblica più niente. In produzione ci sono i dati veri del locale: un import
 sbagliato lì non è una prova da rifare, è un danno.
 
 **Deploy delle Functions (Gen2, girano su Cloud Run).** Il service account

@@ -14,6 +14,7 @@ import {
   subscribeSettings,
   DEFAULT_SETTINGS,
   saveStaffToken,
+  restoreOrder,
 } from '../lib/api.js'
 import { getPushToken } from '../lib/push.js'
 import {
@@ -27,10 +28,12 @@ import {
   placedByLetter,
 } from '../lib/orderStatus.js'
 import { bucketByStatus, ordersRecap, ordineCorrisponde, primoCorrispondente } from '../lib/coda.js'
+import { ripristinabile } from '../lib/storiaOrdine.js'
+import { StoriaOrdineDialog, RipristinaOrdineDialog } from '../components/StoriaOrdine.jsx'
 import StatusBell from '../components/StatusBell.jsx'
 import ActionSheet from '../components/ActionSheet.jsx'
 import { isGestore, isPersonale } from '../lib/ruoli.js'
-import { senzaNascosti, subscribeNascosti } from '../lib/ordiniNascosti.js'
+import { senzaNascosti, subscribeNascosti, mostraOrdine } from '../lib/ordiniNascosti.js'
 import { allServed } from '../lib/comande.js'
 import { paidAmount, orderTotal } from '../lib/pagamento.js'
 import { businessDayKey, businessDayLabel, businessDayShort } from '../lib/businessDay.js'
@@ -46,6 +49,7 @@ import MenuManager from '../components/MenuManager.jsx'
 import PrinterSetup from '../components/PrinterSetup.jsx'
 import InventoryManager from '../components/InventoryManager.jsx'
 import SettingsTab from '../components/SettingsTab.jsx'
+import { idDispositivo, battutoDaQui } from '../lib/dispositivo.js'
 import StatsTab from '../components/StatsTab.jsx'
 import StaffHoursTab from '../components/StaffHoursTab.jsx'
 import UtentiTab from '../components/UtentiTab.jsx'
@@ -420,14 +424,19 @@ function OrderQueue() {
   // andata a buon fine.
   const [chiusiQui, setChiusiQui] = useState([])
   useEffect(() => subscribeNascosti(setChiusiQui), [])
+  const [boardFilter, setBoardFilter] = useState('attivi') // 'attivi' | 'chiusi' | 'tutti'
+  // NASCONDERE VALE SOLO PER I CONTI IN CORSO. Un conto chiuso da qui
+  // sparisce subito da «In corso» — è il suo mestiere — ma restava nascosto
+  // anche sotto «Chiusi» e in «Tutti»: si chiudeva un conto e nello storico
+  // non c'era, fino a ricaricare la pagina. E riaprendolo non tornava fra
+  // quelli in corso, perché era ancora nell'elenco dei nascosti.
   const orders = useMemo(
-    () => senzaNascosti(ordersRaw),
+    () => (boardFilter === 'attivi' ? senzaNascosti(ordersRaw) : ordersRaw),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [ordersRaw, chiusiQui]
+    [ordersRaw, chiusiQui, boardFilter]
   )
   const [error, setError] = useState(null)
   const [statusTab, setStatusTab] = useState(ORDER_STATUSES.RICEVUTO)
-  const [boardFilter, setBoardFilter] = useState('attivi') // 'attivi' | 'chiusi' | 'tutti'
   const [soloOggi, setSoloOggi] = useState(false) // nasconde i conti dei giorni scorsi
   const [nascondiPagati, setNascondiPagati] = useState(false) // pagati non ancora serviti
 
@@ -437,6 +446,9 @@ function OrderQueue() {
   const [slowLoad, setSlowLoad] = useState(false)
   const [confirmAction, setConfirmAction] = useState(null) // { title, message, danger, run }
   const [cancelTarget, setCancelTarget] = useState(null) // { order, kind }
+  // Storia del conto e ripristino: due pannelli, un conto alla volta.
+  const [storiaTarget, setStoriaTarget] = useState(null)
+  const [ripristinoTarget, setRipristinoTarget] = useState(null)
   const [search, setSearch] = useState('')
   const [showPanels, setShowPanels] = useState(false) // pannelli (chiamate/gruppi) nella griglia
   const [menuBoard, setMenuBoard] = useState(false) // menu ⋯ della lavagna
@@ -500,7 +512,7 @@ function OrderQueue() {
       const token = await getPushToken()
       // Ruolo del TOKEN, non della persona: serve solo a distinguere i
       // dispositivi al banco da quelli di sala quando si smistano le push.
-      if (token) saveStaffToken(uid, token, 'bartender').catch(() => {})
+      if (token) saveStaffToken(uid, token, 'bartender', idDispositivo()).catch(() => {})
     })
   }, [])
 
@@ -520,10 +532,22 @@ function OrderQueue() {
           const printerSettings = loadPrinterSettings()
           for (const o of data) {
             const isNew = !knownIds.current.has(o.id)
-            if (o.workflow_status !== ORDER_STATUSES.RICEVUTO) continue
-            // Niente notifica per gli ordini battuti al banco da chi sta
-            // guardando: avvisano solo quelli di clienti o staff di sala.
-            if (isGestore(o.placed_by?.role)) continue
+            // C'È QUALCOSA DA FARE? Un ordine battuto alla cassa nasce già
+            // «in preparazione» — chi lo batte sta facendo il drink —
+            // mentre quelli dal menù nascono «ricevuto». Guardando i soli
+            // «ricevuto», un ordine preso al POS da un altro terminale non
+            // faceva suonare niente qui.
+            if (
+              o.workflow_status !== ORDER_STATUSES.RICEVUTO &&
+              o.workflow_status !== ORDER_STATUSES.IN_PREPARAZIONE
+            )
+              continue
+            // NIENTE AVVISO SOLO A CHI L'HA MANDATO. Prima si tacevano tutti
+            // gli ordini battuti da un gestore, su QUALUNQUE dispositivo:
+            // col telefono in mano a un admin, al banco non suonava niente.
+            // Il metro giusto non è il ruolo, è il terminale — lo stesso
+            // account sta su tablet, telefono e portatile insieme.
+            if (battutoDaQui(o.placed_by)) continue
             if (isAwaitingPayment(o)) {
               if (isNew) awaiting.add(o.id)
               continue
@@ -531,7 +555,13 @@ function OrderQueue() {
             if (isNew || awaiting.has(o.id)) {
               awaiting.delete(o.id)
               beep() // avviso sonoro: su iPad in primo piano il banner è soppresso
-              notify('🆕 Nuovo ordine', `Ordine #${o.daily_number} ricevuto.`)
+              // STESSO NOME della notifica che manda il server (sw.js):
+              // così il sistema le fonde in una invece di mostrarne due —
+              // l'app suona subito, la push arriva un istante dopo.
+              notify('🆕 Nuovo ordine', `Ordine #${o.daily_number} ricevuto.`, {
+                tag: `new-order-${o.id}`,
+                renotify: true,
+              })
               // Auto-stampa comanda se abilitata nelle impostazioni stampante.
               if (printerSettings.autoPrintComanda) {
                 printComanda(o, o.comande?.find((cc) => cc.id === o.active_comanda_id) ?? null).catch((e) => console.warn('[printer] auto-comanda:', e.message))
@@ -861,6 +891,13 @@ function OrderQueue() {
     }
   }
 
+  // Chi sta usando l'app in questo momento: la storia deve dire CHI ha
+  // riaperto un conto, non solo che è stato riaperto.
+  const chiSonoIo = () =>
+    auth.currentUser?.displayName ||
+    String(auth.currentUser?.email || '').split('@')[0] ||
+    null
+
   const toggleCard = (id) =>
     setOpenCards((s) => {
       const n = new Set(s)
@@ -998,6 +1035,22 @@ function OrderQueue() {
             🚫 {o.service_mode === 'tavolo' ? 'Non servito' : 'Non ritirato'}
           </button>
         )}
+        {/* La storia c'è per tutti i conti: è come si spiega, un'ora dopo,
+            un conto che qualcuno ha riaperto. Il ripristino compare solo
+            dove ha senso — su un conto chiuso o annullato. */}
+        <div className="grid-2" style={{ marginTop: 8 }}>
+          <button className="btn ghost small" onClick={() => setStoriaTarget(o)}>
+            🕘 Storia
+          </button>
+          <button
+            className="btn ghost small"
+            disabled={!ripristinabile(o)}
+            title={ripristinabile(o) ? undefined : 'Il conto è già in corso'}
+            onClick={() => setRipristinoTarget(o)}
+          >
+            ♻️ Ripristina
+          </button>
+        </div>
       </>
     )
   }
@@ -1548,6 +1601,28 @@ function OrderQueue() {
           defaultPhrase={settings.cancel_phrase_default}
           onCancel={() => setCancelTarget(null)}
           onConfirm={confirmCancel}
+        />
+      )}
+
+      {storiaTarget && (
+        <StoriaOrdineDialog order={storiaTarget} onClose={() => setStoriaTarget(null)} />
+      )}
+
+      {ripristinoTarget && (
+        <RipristinaOrdineDialog
+          order={ripristinoTarget}
+          onClose={() => setRipristinoTarget(null)}
+          onConferma={(motivo) => {
+            const o = ripristinoTarget
+            setRipristinoTarget(null)
+            // Il conto era stato nascosto dalla coda quando l'avevamo
+            // chiuso qui: riaprendolo deve tornare a vedersi subito, senza
+            // aspettare il giro del server.
+            mostraOrdine(o.id)
+            restoreOrder(o.id, { motivo, chi: chiSonoIo() }).catch((e) =>
+              setError(`Conto non ripristinato: ${e.message}`)
+            )
+          }}
         />
       )}
     </div>
