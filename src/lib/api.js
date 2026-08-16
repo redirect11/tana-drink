@@ -3273,7 +3273,12 @@ export const DEFAULT_SETTINGS = {
   // diverse.
   stripe_pos: 'prodotto',
   stripe_menu: 'scorte',
+  // «Ce n'è abbastanza» in verde o in grigio: SEPARATO per le due
+  // schermate. Nel conto si batte di corsa e una griglia tutta verde è
+  // rumore — lì interessano i guai; nel catalogo invece si guarda con
+  // calma cosa si può fare, e il verde è un'informazione.
   stripe_ok_verde: false,
+  stripe_menu_ok_verde: false,
   // Pagamenti: online (SumUp Checkout) e lettore Solo (Cloud API).
   payments_online_enabled: false,
   payments_online_required: false,
