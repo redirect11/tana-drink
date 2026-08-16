@@ -112,6 +112,7 @@ Un database vuoto non si prova: si semina.
 npm run seed:dev      # menù, inventario, impostazioni
 npm run mock:orders   # ordini di una serata
 npm run mock:history  # storico per le statistiche
+npm run mock:casse    # chiude quelle serate: casse e incassi divisi per metodo
 ```
 
 Le utenze si creano dal pannello emulatori
