@@ -141,11 +141,43 @@ requirements:
       che dice cosa succederà e si può scrivere il perché — FACOLTATIVO, perché
       se fosse obbligatorio si scriverebbe "x" per passare oltre, e al banco i
       secondi non ci sono. Il conto torna aperto e si può battere di nuovo.
-      Non si tocca quello che è già successo: gli incassi registrati restano
-      dove sono (riaprire non è un rimborso, e la cassa deve continuare a
-      tornare) e il dovuto si ricalcola da sé; le comande già servite restano
-      servite, tornano da fare solo quelle annullate col conto. Se dei soldi
-      erano entrati, il conto riaperto risulta a ACCONTO, non pagato.
+      RIAPRIRE = COME SE NON FOSSE MAI STATO PAGATO. Gli incassi si tolgono:
+      il conto riaperto è un conto normale, da battere e da incassare, con
+      tutte le righe modificabili. Prima gli incassi restavano attaccati e il
+      conto tornava «ad acconto»: le righe già pagate erano bloccate — e
+      riaprire serve proprio a toccarle — e i soldi restavano nei guadagni
+      della serata di un conto che era di nuovo da incassare, quindi a fine
+      turno lo stesso conto risultava incassato due volte.
+      La cassa legge gli incassi dagli ordini, perciò toglierli dal conto li
+      toglie anche dal flusso di cassa. Non si butta via niente: quello che
+      era entrato resta in `payments_annullati` con l'ora in cui è stato
+      tolto, e il totale compare nella storia del conto («riaperto — tolti
+      15,50 € dagli incassi»), che è dove lo si va a cercare quando la cassa
+      non torna. Le comande già servite restano servite: tornano da fare solo
+      quelle annullate col conto.
+      SU UN CONTO RIAPERTO SI TOCCA TUTTO, righe vecchie comprese. Di norma
+      una comanda servita non si modifica più — il drink è stato fatto e
+      portato — ma riaprire serve ESATTAMENTE a rimettere a posto quello che
+      c'è dentro: un giro battuto sul tavolo sbagliato, una birra di troppo.
+      Se le righe di prima restano bloccate, il conto riaperto non serve a
+      niente. Le scorte si riallineano con la differenza, come per ogni
+      altra modifica.
+      Il tasto per riaprire NON è un tasto in più: è quello del PAGAMENTO,
+      che su un conto chiuso o annullato era lì spento a non fare niente.
+      ANNULLANDO, il saldo di un buono usato per pagare torna al
+      beneficiario: il conto non si incassa più, e lasciarlo scalato
+      significherebbe fargli perdere il credito per un conto mai pagato. Le
+      righe restituite si segnano (`restituito_at`), così riaprendo lo
+      stesso conto non tornano una seconda volta — sarebbe credito
+      inventato, l'errore opposto.
+      IL BUONO NON SI PAGA DUE VOLTE. Il saldo di un buono si scala quando
+      lo si usa, non quando i soldi entrano in cassa. Se il conto era stato
+      PAGATO con un buono, riaprendolo quella riga di incasso sparisce come
+      le altre: il saldo torna al beneficiario, altrimenti avrebbe pagato
+      due volte — una col buono che non torna, una quando ripaga il conto.
+      Il buono usato come SCONTO invece resta dov'è: lo sconto è ancora sul
+      conto, quindi qualcuno deve pagarlo, e ri-chiuderlo non lo scala una
+      seconda volta.
       Se il conto annullato era stato scontato con un BUONO VIP, riaprendolo il
       saldo si ri-addebita: annullando era tornato al beneficiario, e lasciarlo
       lì significherebbe uno sconto che nessuno ha pagato e un credito in
@@ -162,7 +194,7 @@ requirements:
     status: implemented
     generate_issue: false
     labels: [ordini, difetto-risolto]
-    test_cases: [tests/unit/storiaOrdine.test.js, tests/component/OrderPosDetail.test.jsx, tests/unit/vouchers.test.js]
+    test_cases: [tests/unit/storiaOrdine.test.js, tests/component/OrderPosDetail.test.jsx, tests/unit/vouchers.test.js, tests/unit/ripristino.test.js]
 
   - id: REQ-ORD-009
     title: "Un ordine battuto altrove si vede su tutti gli altri terminali"
@@ -1052,9 +1084,42 @@ requirements:
     title: "Il banco sa quando arriva un ordine nuovo"
     area: "functions/lib/push-core.js decideNewOrderStaffPush"
     description: >
-      Un ordine nuovo — o un'aggiunta a un conto esistente — avvisa il banco. Non
-      avvisano gli ordini battuti al banco stesso: chi li ha appena inseriti non ha
-      bisogno che glielo dicano.
+      Un ordine nuovo — o un'aggiunta a un conto esistente — avvisa il banco.
+      Avvisa quello che prima non c'era: si guardano QUALI comande sono da
+      fare («ricevuto» o «in preparazione»), non quante. Un ordine battuto
+      al POS nasce già in preparazione — chi lo batte sta facendo il drink —
+      e guardando i soli «ricevuto» non risultava mai nuovo in coda: al
+      banco non arrivava niente.
+      Contarle non basterebbe: col cliente che ordina e gli stati accesi,
+      «ricevuto» e «in preparazione» sono due momenti diversi — arriva
+      l'ordine, poi qualcuno lo prende in mano — e un totale che non cambia
+      non distingue «è avanzata quella di prima» da «ne è arrivata una
+      nuova». Con gli identificativi, l'arrivo avvisa e l'avanzamento no:
+      quella comanda il banco la conosce già, ed è il banco stesso ad
+      averla presa in mano.
+      Un conto fermo in attesa del pagamento obbligatorio entra in coda
+      quando è saldato: lì è nuovo per il banco anche se le comande sono
+      le stesse.
+      A restare senza avviso è SOLO il dispositivo da cui è partito: sa già di
+      averlo mandato. Non si guarda il ruolo: prima si buttava via l'avviso di
+      ogni ordine battuto da un admin o da un bartender, dando per scontato che
+      chi ha quel ruolo stia al banco — e chi gira ai tavoli col telefono, con
+      un account da gestore, non faceva squillare niente a nessuno.
+      I token push sono UNO PER DISPOSITIVO (`staff_tokens/<device>`), non
+      per persona: prima lo stesso account su tablet e telefono si
+      sovrascriveva la riga a vicenda e l'avviso arrivava solo all'ultimo
+      che aveva aperto il gestionale — al banco, il tablet muto. Se lo
+      stesso token compare due volte (la riga vecchia intestata alla
+      persona e quella nuova al dispositivo) si avvisa una volta sola.
+      Chi lavora può vedere se su QUESTO schermo gli avvisi arrivano:
+      aprendo la campanella lo dice, e dove serve offre di attivarli. Su
+      iPhone e iPad la push di sistema esiste solo con l'app installata
+      sulla schermata Home, e questo va detto invece di lasciare pensare a
+      un guasto.
+      Il terminale viaggia con l'ordine (`placed_by.device`) e col token push
+      del dispositivo; chi si è registrato prima che il dispositivo venisse
+      segnato viene avvisato lo stesso — un avviso in più si chiude, uno in
+      meno è un drink che non parte.
     status: implemented
     generate_issue: false
     labels: [notifiche]

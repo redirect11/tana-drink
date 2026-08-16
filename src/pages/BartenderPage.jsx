@@ -34,7 +34,7 @@ import StatusBell from '../components/StatusBell.jsx'
 import ActionSheet from '../components/ActionSheet.jsx'
 import { isGestore, isPersonale } from '../lib/ruoli.js'
 import { senzaNascosti, subscribeNascosti, mostraOrdine } from '../lib/ordiniNascosti.js'
-import { battutoDaQui } from '../lib/dispositivo.js'
+import { battutoDaQui, idDispositivo } from '../lib/dispositivo.js'
 import {
   leggiAvvisi,
   subscribeAvvisi,
@@ -423,14 +423,19 @@ function OrderQueue() {
   // andata a buon fine.
   const [chiusiQui, setChiusiQui] = useState([])
   useEffect(() => subscribeNascosti(setChiusiQui), [])
+  const [boardFilter, setBoardFilter] = useState('attivi') // 'attivi' | 'chiusi' | 'tutti'
+  // NASCONDERE VALE SOLO PER I CONTI IN CORSO. Un conto chiuso da qui
+  // sparisce subito da «In corso» — è il suo mestiere — ma restava nascosto
+  // anche sotto «Chiusi» e in «Tutti»: si chiudeva un conto e nello storico
+  // non c'era, fino a ricaricare la pagina. E riaprendolo non tornava fra
+  // quelli in corso, perché era ancora nell'elenco dei nascosti.
   const orders = useMemo(
-    () => senzaNascosti(ordersRaw),
+    () => (boardFilter === 'attivi' ? senzaNascosti(ordersRaw) : ordersRaw),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [ordersRaw, chiusiQui]
+    [ordersRaw, chiusiQui, boardFilter]
   )
   const [error, setError] = useState(null)
   const [statusTab, setStatusTab] = useState(ORDER_STATUSES.RICEVUTO)
-  const [boardFilter, setBoardFilter] = useState('attivi') // 'attivi' | 'chiusi' | 'tutti'
   const [soloOggi, setSoloOggi] = useState(false) // nasconde i conti dei giorni scorsi
   const [nascondiPagati, setNascondiPagati] = useState(false) // pagati non ancora serviti
 
@@ -517,7 +522,7 @@ function OrderQueue() {
       const token = await getPushToken()
       // Ruolo del TOKEN, non della persona: serve solo a distinguere i
       // dispositivi al banco da quelli di sala quando si smistano le push.
-      if (token) saveStaffToken(uid, token, 'bartender').catch(() => {})
+      if (token) saveStaffToken(uid, token, 'bartender', idDispositivo()).catch(() => {})
     })
   }, [])
 
@@ -537,13 +542,21 @@ function OrderQueue() {
           const printerSettings = loadPrinterSettings()
           for (const o of data) {
             const isNew = !knownIds.current.has(o.id)
-            if (o.workflow_status !== ORDER_STATUSES.RICEVUTO) continue
+            // C'È QUALCOSA DA FARE? Un ordine battuto alla cassa nasce già
+            // «in preparazione» — chi lo batte sta facendo il drink —
+            // mentre quelli dal menù nascono «ricevuto». Guardando i soli
+            // «ricevuto», un ordine preso al POS da un altro terminale non
+            // faceva suonare niente qui.
+            if (
+              o.workflow_status !== ORDER_STATUSES.RICEVUTO &&
+              o.workflow_status !== ORDER_STATUSES.IN_PREPARAZIONE
+            )
+              continue
             // NIENTE AVVISO SOLO A CHI L'HA MANDATO. Prima si tacevano tutti
-            // gli ordini battuti da un gestore, su QUALUNQUE dispositivo: chi
-            // stava in sala col telefono non sapeva mai che al banco era
-            // entrato un ordine. Il metro giusto non è il ruolo, è il
-            // terminale — lo stesso account sta su tablet, telefono e
-            // portatile insieme.
+            // gli ordini battuti da un gestore, su QUALUNQUE dispositivo:
+            // col telefono in mano a un admin, al banco non suonava niente.
+            // Il metro giusto non è il ruolo, è il terminale — lo stesso
+            // account sta su tablet, telefono e portatile insieme.
             if (battutoDaQui(o.placed_by)) continue
             if (isAwaitingPayment(o)) {
               if (isNew) awaiting.add(o.id)
@@ -553,7 +566,13 @@ function OrderQueue() {
               awaiting.delete(o.id)
               if (avvisoAttivo(avvisi.current, 'nuovo_ordine')) {
                 beep() // su iPad in primo piano il banner di sistema è soppresso
-                notify('🆕 Nuovo ordine', `Ordine #${o.daily_number} ricevuto.`)
+                // STESSO NOME della notifica che manda il server (sw.js):
+                // così il sistema le fonde in una invece di mostrarne due —
+                // l'app suona subito, la push arriva un istante dopo.
+                notify('🆕 Nuovo ordine', `Ordine #${o.daily_number} ricevuto.`, {
+                  tag: `new-order-${o.id}`,
+                  renotify: true,
+                })
               }
               // Auto-stampa comanda se abilitata nelle impostazioni stampante.
               if (printerSettings.autoPrintComanda) {

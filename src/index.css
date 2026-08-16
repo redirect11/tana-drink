@@ -371,9 +371,15 @@ body.schermo-intero {
   }
   /* La coda: stessa cosa, ma con un rientro sulla LAVAGNA — il suo primo
      figlio è la campanella flottante, che non occupa spazio e quindi non
-     avrebbe spinto giù niente. */
+     avrebbe spinto giù niente.
+     LA FASCIA DI SISTEMA VA SOMMATA, non sostituita: con `20px` secchi qui
+     si buttava via lo scosto dell'ora e della batteria (--safe-top) che la
+     lavagna si era già presa. Su iPhone, a barra nascosta, la coda saliva
+     di una cinquantina di pixel: il ➕ finiva sotto l'orologio, il ☰ — che
+     invece lo scosto lo tiene — si sovrapponeva ai conteggi, e il titolo
+     spariva dietro la striscia. */
   body.fullbleed .queue-board {
-    padding-top: 20px;
+    padding-top: calc(20px + var(--safe-top));
   }
 
   /* BARRA APERTA: si sovrappone, e va bene così. Farla "fare spazio"
@@ -5508,4 +5514,14 @@ body.pagina-piena .pagina-inventario .inv-scroll {
 .bar-nav-sottovoce {
   font-size: 0.92rem;
   opacity: 0.92;
+
+/* LE SCRITTE DEI TASTI DEL CONTO VANNO A CAPO. Sono tasti a meta' riga:
+   «Riapri conto» su uno schermo stretto usciva dal bordo invece di
+   spezzarsi in due righe — e un tasto con la scritta tagliata non si sa
+   piu' cosa fa. */
+.posd-foot-azioni .btn,
+.posd-foot-telefono .btn {
+  white-space: normal;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
 }
