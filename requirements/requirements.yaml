@@ -385,6 +385,12 @@ requirements:
       c'è il guscio che porta il trascinamento — si allungava lui e la card
       restava alta quanto il suo testo, con una riga di card di altezze
       diverse.
+      La card in mano NON ESCE DALLA GRIGLIA. Trascinandola verso destra
+      finiva oltre il bordo: lì fuori non c'è niente da riordinare, ma il
+      riquadro — che scorre — si allargava per contenerla e partiva uno
+      scorrimento orizzontale senza fine, da riportare indietro a mano. Il
+      movimento si ferma ai bordi del riquadro (un modifier di dnd-kit) e
+      la griglia non scorre di lato: va a capo.
       La card in mano è OPACA: il fondo delle card è un velo (--tile-bg,
       bianco al 5%), che appoggiate sulla pagina va bene ma alzandone una
       sopra le altre le faceva vedere attraverso — e non si capiva più

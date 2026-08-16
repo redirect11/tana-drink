@@ -58,11 +58,36 @@ import DrinkForm from './DrinkForm.jsx'
 // fa nulla: è solo un contenitore che resta al suo posto.
 const SENSORI_SPENTI = []
 
+// LA CARD IN MANO NON ESCE DALLA GRIGLIA.
+//
+// Trascinandola verso destra finiva oltre il bordo: lì fuori non c'è
+// niente da riordinare, ma la griglia — che scorre — si allargava per
+// contenerla e partiva uno scorrimento orizzontale senza fine. Per
+// tornare a vedere le card bisognava riportare indietro la barra a mano.
+//
+// Qui il movimento si ferma ai bordi del riquadro che scorre: si può
+// prendere una card e portarla dove ha senso lasciarla, e basta. È un
+// «modifier» di dnd-kit, cioè una funzione che corregge lo spostamento
+// prima che venga applicato.
+function dentroLaGriglia({ transform, draggingNodeRect, containerNodeRect }) {
+  if (!draggingNodeRect || !containerNodeRect) return transform
+  const minX = containerNodeRect.left - draggingNodeRect.left
+  const maxX = containerNodeRect.right - draggingNodeRect.right
+  const minY = containerNodeRect.top - draggingNodeRect.top
+  const maxY = containerNodeRect.bottom - draggingNodeRect.bottom
+  return {
+    ...transform,
+    x: Math.min(Math.max(transform.x, minX), maxX),
+    y: Math.min(Math.max(transform.y, minY), maxY),
+  }
+}
+
 function Riordinabile({ attiva, sensori, ids, onFine, children }) {
   return (
     <DndContext
       sensors={attiva ? sensori : SENSORI_SPENTI}
       collisionDetection={closestCenter}
+      modifiers={[dentroLaGriglia]}
       onDragEnd={onFine}
     >
       <SortableContext items={ids} strategy={rectSortingStrategy}>
@@ -451,6 +476,11 @@ export default function PosProductPicker({
             // Arrivati in cima, il trascinamento si ferma qui: non passa al
             // documento, dove Android farebbe partire il ricaricamento
             // della pagina in mezzo a un ordine.
+            // Niente scorrimento LATERALE: la griglia va a capo, non di
+            // lato. Restava aperto perché `overflow-y: auto` porta con sé
+            // l'orizzontale, e bastava una card trascinata oltre il bordo
+            // per allargare tutto.
+            overflowX: 'hidden',
             overscrollBehavior: 'contain',
             WebkitOverflowScrolling: 'touch',
             padding: '10px 8px',

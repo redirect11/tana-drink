@@ -4,6 +4,9 @@
 
 ### Al banco
 
+- **In «Organizza» la card non scappa più fuori dalla griglia.**
+  Portandola oltre il bordo destro partiva uno scorrimento senza fine, e
+  per rivedere le altre card bisognava riportare indietro la barra a mano.
 - **Nella coda c'è la tab «✖️ Annullati».** Stavano fra i «Chiusi», che
   sono i soldi della serata: facevano numero senza essere incassi, e per
   ritrovarne uno da riaprire si cercava in mezzo a quelli buoni.
