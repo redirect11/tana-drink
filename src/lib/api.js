@@ -199,6 +199,7 @@ function mapOrder(snap) {
     tempi_conto: o.status_times ?? {},
     riaperture: (o.riaperture || []).map((r) => ({ ...r, at: toIso(r.at) })),
     cancelled_by: o.cancelled_by ?? null,
+    cancelled_device: o.cancelled_device ?? null,
     cancel_kind: o.cancel_kind ?? null,
     cancel_phrase: o.cancel_phrase ?? null,
     cancel_message: o.cancel_message ?? null,
@@ -2645,6 +2646,9 @@ export async function cancelOrder(id, opts = {}) {
       : {}),
     [`status_times.${ORDER_STATUSES.ANNULLATO}`]: nowIso,
     cancelled_by: by,
+    // DA QUALE TERMINALE. Serve a non ripetere l'avviso a chi ha appena
+    // annullato: lo sa già. Stesso metro degli ordini (placed_by.device).
+    cancelled_device: idDispositivo(),
     cancel_kind: kind,
     cancel_phrase: phrase,
     cancel_message: message || null,

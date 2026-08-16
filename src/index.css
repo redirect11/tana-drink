@@ -10,6 +10,11 @@
      per reggere i link sul fondo chiaro, e come fondo di un bottone
      diventava una macchia senape. */
   --btn: var(--accent-2);
+  /* I DUE ESTREMI DEL GRADIENTE DEI BOTTONI. Di partenza l'oro di sempre,
+     identico a quello in produzione: è il colore che al banco si riconosce
+     senza guardare. I temi che cambiano i bottoni li riscrivono. */
+  --btn-1: #f7c45e;
+  --btn-2: #e8a32e;
   --grad: linear-gradient(90deg, rgba(245, 185, 74, 0.9), rgba(245, 185, 74, 0.12));
   --text: #f5f5f7;
   --muted: #9b9ba8;
@@ -457,16 +462,15 @@ body.schermo-intero {
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
-  /* L'ORO DEI BOTTONI SEGUE IL TEMA. Era un gradiente cablato
-     (#f7c45e→#e8a32e): cambiando preset — Catppuccin su tutti — i bottoni
-     restavano dorati come se il tema non esistesse. Ora derivano
-     dall'accento-2, e su Tana scuro l'occhio non vede differenza:
-     quell'oro cablato ERA l'accento-2. */
-  background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--btn) 92%, #fff),
-    color-mix(in srgb, var(--btn) 85%, #241500)
-  );
+  /* L'ORO DEI BOTTONI SEGUE IL TEMA, ma di suo è QUELLO DI SEMPRE.
+     Il gradiente era cablato (#f7c45e→#e8a32e) e cambiando preset i
+     bottoni restavano dorati come se il tema non esistesse. Derivandolo
+     dall'accento con due mescole, però, il risultato veniva più smorto —
+     l'estremo scuro passava da #e8a32e a #d5a03f, e al banco si vede.
+     Ora i due estremi sono due variabili: di partenza sono esattamente
+     quelli di prima, e un tema che cambia i bottoni li ridefinisce (o li
+     lascia derivare da --btn, vedi lib/themes.js). */
+  background: linear-gradient(135deg, var(--btn-1), var(--btn-2));
   color: #1c1305;
   transition: transform 0.05s ease, opacity 0.2s ease, box-shadow 0.2s ease;
   box-shadow: 0 4px 14px color-mix(in srgb, var(--btn) 25%, transparent);
@@ -1383,6 +1387,14 @@ a.order-mini {
 
 .bar-sidebar.open {
   transform: translateX(0);
+}
+
+/* NIENTE ANIMAZIONE MENTRE SI STACCA. Togliendo l'aggancio il menu torna
+   per un istante quello a scomparsa — largo e fisso — e si vedeva la SUA
+   uscita scorrere via da sinistra, come se si chiudesse un pannello che
+   non era mai stato aperto. Per quel momento l'animazione si spegne. */
+.bar-sidebar.stacco {
+  transition: none;
 }
 
 /* LE VOCI NON SI SCHIACCIANO. Il menu e' una colonna flessibile: quando le
@@ -5687,7 +5699,13 @@ body.pagina-piena .pagina-inventario .inv-scroll {
   body.drawer-agganciato .bar-content {
     flex: 1;
     min-width: 0; /* senza, una tabella larga sfonda la riga */
+    min-height: 0;
     padding-left: 14px;
+    /* IL CONTENUTO SCORRE NEL SUO RIQUADRO. Scorrendo la pagina se ne
+       andava anche il menu, che di suo non ha niente da scorrere: le due
+       colonne erano una pagina sola, alta quanto la più lunga. */
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 
   /* IL MENU E' UN PEZZO DELLA PAGINA, non una scheda appoggiata sopra.
@@ -5700,6 +5718,11 @@ body.pagina-piena .pagina-inventario .inv-scroll {
     position: static;
     transform: none;
     z-index: auto;
+    /* Il menu ha il SUO scorrimento: le voci sono tante e la finestra
+       piccola, ma non deve trascinarsi dietro il contenuto (né farsi
+       trascinare). */
+    overflow-y: auto;
+    overscroll-behavior: contain;
     flex-shrink: 0;
     align-self: stretch;
     width: 178px;

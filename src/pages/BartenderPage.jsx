@@ -34,7 +34,7 @@ import StatusBell from '../components/StatusBell.jsx'
 import ActionSheet from '../components/ActionSheet.jsx'
 import { isGestore, isPersonale } from '../lib/ruoli.js'
 import { senzaNascosti, subscribeNascosti, mostraOrdine } from '../lib/ordiniNascosti.js'
-import { battutoDaQui, idDispositivo } from '../lib/dispositivo.js'
+import { battutoDaQui, annullatoDaQui, idDispositivo } from '../lib/dispositivo.js'
 import {
   leggiAvvisi,
   subscribeAvvisi,
@@ -616,6 +616,11 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
               avanzatiDaMe.current.delete(`${o.id}:${ora}`)
               continue
             }
+            // ANNULLATO DA QUESTO TERMINALE: niente avviso. Chi annulla lo
+            // fa quasi sempre dal conto, non da qui, quindi «l'ho premuto
+            // io» (avanzatiDaMe) non basta: quella schermata è un'altra.
+            // Il metro è il terminale, come per gli ordini nuovi.
+            if (ora === ORDER_STATUSES.ANNULLATO && annullatoDaQui(o)) continue
             if (!avvisoAttivo(avvisi.current, idAvvisoStato(ora))) continue
             const nome = ora === ORDER_STATUSES.RITIRATO
               ? ritiratoLabel(o.service_mode)

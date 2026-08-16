@@ -41,3 +41,11 @@ export function idDispositivo() {
 export function battutoDaQui(placedBy, id = idDispositivo()) {
   return !!placedBy?.device && placedBy.device === id
 }
+
+// L'ho annullato io, da qui? Come sopra: chi l'ha appena annullato non ha
+// bisogno di un avviso che gli dica quello che ha appena fatto — tutti gli
+// altri terminali sì. I conti annullati prima che esistesse questo campo
+// non lo dicono: nel dubbio si avvisa.
+export function annullatoDaQui(order, id = idDispositivo()) {
+  return !!order?.cancelled_device && order.cancelled_device === id
+}
