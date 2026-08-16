@@ -28,8 +28,20 @@ function daGit(comando, fallback = '') {
     return fallback
   }
 }
-const branch =
-  process.env.GITHUB_REF_NAME || process.env.GIT_BRANCH || daGit('git rev-parse --abbrev-ref HEAD')
+// IL RAMO, NON IL TAG. Da quando si pubblica taggando, in CI
+// `GITHUB_REF_NAME` è il nome del TAG: preso così, in fondo al menu si
+// leggeva «v1.4.3 · v1.4.3 · 11783f5» — la versione due volte e il ramo da
+// nessuna parte, proprio l'informazione che serve per sapere cosa si sta
+// guardando. `GITHUB_REF_TYPE` dice se quel nome è un ramo o un tag; il
+// ramo che contiene il commit taggato lo passa la pipeline in `GIT_BRANCH`
+// (vedi .github/workflows/deploy.yml).
+// In locale resta il ramo su cui si sta lavorando; con HEAD staccata non
+// c'è un ramo da dire, e allora meglio niente che una bugia.
+const ramoDetto =
+  process.env.GIT_BRANCH ||
+  (process.env.GITHUB_REF_TYPE === 'branch' ? process.env.GITHUB_REF_NAME : '') ||
+  daGit('git rev-parse --abbrev-ref HEAD')
+const branch = ramoDetto === 'HEAD' ? '' : ramoDetto
 const commit = (
   process.env.GITHUB_SHA ||
   process.env.GIT_COMMIT ||

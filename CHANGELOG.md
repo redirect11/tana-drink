@@ -1,5 +1,19 @@
 # Cosa è cambiato
 
+## Non ancora rilasciata — 1.4.4
+
+### Per chi gestisce
+
+- **Il menu torna a restare aperto** in Impostazioni e Inventario: non si
+  apriva più e il tasto non rispondeva. Una parentesi graffa mancante nel
+  foglio di stile — arrivata sciogliendo un conflitto — faceva ignorare al
+  browser trecento righe, quelle del menu agganciato comprese.
+- **In fondo al menu si legge di nuovo il ramo**: c'era la versione due
+  volte (`v1.4.3 · v1.4.3 · …`). Da quando si pubblica taggando, al posto
+  del ramo arrivava il nome del tag.
+
+---
+
 ## 1.4.3 — 16 agosto 2026
 
 ### In sala
