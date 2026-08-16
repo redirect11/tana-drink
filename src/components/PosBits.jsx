@@ -12,7 +12,15 @@ export function DrinkTile({
   qty,
   onAdd,
   onSetQty,
+  // DUE SEGNI, DUE COSE. `color` è il colore del PRODOTTO e sta nella
+  // linguetta in alto a sinistra: si tocca per cambiarlo. `striscia` è
+  // quello del bordo sinistro, che dice quello che il locale ha scelto —
+  // colore, categoria, scorte o niente (lib/strisce.js).
+  // Erano lo stesso valore, e scegliendo «categoria» per la striscia anche
+  // la linguetta diventava della categoria: il colore scelto a mano
+  // spariva dalla vista, pur essendo ancora lì.
   color = null,
+  striscia = null,
   favorite = false,
   onToggleFav = null,
   acceso = false, // acceso dalla ricerca: è la card che si sta cercando
@@ -34,7 +42,7 @@ export function DrinkTile({
           : '1px solid var(--line)',
         // La striscia a sinistra col colore del prodotto: lo stesso segno
         // delle card della coda e del menù (il CSS la ispessisce).
-        borderLeftColor: color || 'var(--line)',
+        borderLeftColor: striscia || color || 'var(--line)',
         borderRadius: 12,
         padding: '0.5em 0.62em 0.38em',
         cursor: 'pointer',

@@ -372,6 +372,11 @@ requirements:
       Le regole stanno in una funzione pura: la stessa striscia deve
       significare la stessa cosa in tutte le schermate, e con la logica
       dentro le pagine finiva per divergere.
+      L'IMPOSTAZIONE È SOLO DELLA STRISCIA. La linguetta nell'angolo in
+      alto a sinistra tiene sempre il colore del PRODOTTO — è quella che si
+      tocca per cambiarlo — qualunque cosa dica la striscia. I due segni
+      condividevano lo stesso valore, e scegliendo «categoria» il colore
+      messo a mano spariva dalla vista pur essendo ancora lì.
       Ogni scelta sta DOVE SI LAVORA quella schermata: la griglia del conto
       in Impostazioni → Vista ordine, le schede del catalogo in Menù e
       catalogo. Il colore del «ce n'è abbastanza» è uno solo per tutte e

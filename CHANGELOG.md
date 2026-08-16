@@ -10,7 +10,9 @@
   ingrediente esaurito, arancione in esaurimento, e «ce n'è abbastanza»
   grigio o verde, come preferisci. La griglia del conto si imposta in
   *Vista ordine*, le schede del catalogo in *Menù e catalogo*: dipende da
-  come si lavora, e non c'era motivo che lo decidessimo noi.
+  come si lavora, e non c'era motivo che lo decidessimo noi. La
+  **linguetta** nell'angolo continua a mostrare il colore del prodotto,
+  qualunque cosa dica la striscia.
 - **Le statistiche si aprono sull'ultima chiusura di cassa**, e quel
   periodo è il primo della riga: la domanda del mattino dopo è «com'è
   andata ieri sera», non «com'è andata la settimana». Chi sceglie un altro
