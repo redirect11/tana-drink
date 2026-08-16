@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react'
 import { subscribeSync, retryAllSync, retryLastSync } from '../lib/sync.js'
 import { subscribeNotifs, markNotifsSeen, clearNotifs } from '../lib/notifyStore.js'
-import { statoPush } from '../lib/push.js'
+import { statoPush, getPushToken } from '../lib/push.js'
+import { staffTokenRegistrato, saveStaffToken } from '../lib/api.js'
+import { idDispositivo } from '../lib/dispositivo.js'
+import { auth } from '../lib/firebaseClient.js'
 import { ensureNotificationPermission } from '../lib/notify.js'
 
 // Campanella unica in topbar: mostra lo storico delle notifiche e, con un
@@ -36,7 +39,20 @@ export default function StatusBell({ floating = false }) {
   useEffect(() => {
     if (!open) return
     let vivo = true
-    statoPush().then((st) => vivo && setPush(st))
+    ;(async () => {
+      const st = await statoPush()
+      if (!vivo) return
+      // Il permesso c'è, ma questo terminale è davvero nell'elenco di chi
+      // viene avvisato? È l'altra metà della domanda: senza la sua riga,
+      // la push non parte per lui e non se ne accorge nessuno.
+      if (st === 'ok') {
+        const uid = auth.currentUser?.uid
+        const registrato = uid ? await staffTokenRegistrato(uid, idDispositivo()) : false
+        if (vivo) setPush(registrato ? 'ok' : 'da-registrare')
+        return
+      }
+      setPush(st)
+    })()
     return () => { vivo = false }
   }, [open])
 
@@ -81,6 +97,28 @@ export default function StatusBell({ floating = false }) {
                       }}
                     >
                       🔔 Attiva gli avvisi qui
+                    </button>
+                  </>
+                )}
+                {push === 'da-registrare' && (
+                  <>
+                    <div>
+                      🔕 Questo terminale non risulta fra quelli avvisati: gli
+                      ordini degli altri non gli arrivano.
+                    </div>
+                    <button
+                      className="btn small"
+                      style={{ marginTop: 8 }}
+                      onClick={async () => {
+                        const uid = auth.currentUser?.uid
+                        const token = await getPushToken()
+                        if (uid && token) {
+                          await saveStaffToken(uid, token, 'bartender', idDispositivo()).catch(() => {})
+                        }
+                        setPush(await statoPush())
+                      }}
+                    >
+                      🔔 Registra questo terminale
                     </button>
                   </>
                 )}

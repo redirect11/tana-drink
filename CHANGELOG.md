@@ -69,7 +69,8 @@ una funzione, il terzo per le correzioni.
   sovrascriveva, e squillava solo l'ultimo che aveva aperto il gestionale.
   Ora ogni dispositivo ha la sua registrazione.
 - **La campanella dice se su questo schermo gli avvisi arrivano**, e se
-  sono spenti offre di attivarli. Su iPhone e iPad lo dice chiaro: la
+  sono spenti — o se il terminale non risulta fra quelli avvisati — offre
+  di sistemarlo lì. Su iPhone e iPad lo dice chiaro: la
   notifica di sistema esiste solo con l'app installata sulla schermata
   Home.
 - **Gli avvisi seguono il terminale, non il ruolo.** Chi prende ordini col
