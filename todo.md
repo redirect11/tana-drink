@@ -63,6 +63,25 @@ qui c'è il quadro completo, bug e non solo.
       esistente per gli artefatti. Primo collaudo: `import` del progetto
       demo. Dettagli nel piano, Fase 4.
 
+## Notifiche: da riprendere qui, dove ci sono le preferenze
+
+- [ ] **Interruttore «notifica di sistema anche col gestionale aperto»**.
+      Sulla 1.3.2 la push del nuovo ordine esce sempre, anche con la coda in
+      primo piano: la regola cablata «non mostrare, tanto suona l'app»
+      lasciava muto il tablet del banco. Con le preferenze per dispositivo —
+      che stanno su questa linea — diventa una scelta di chi lavora invece
+      di una regola nostra.
+- [ ] **Push per il passaggio «in preparazione»** (e per gli altri stati):
+      oggi quegli avvisi esistono solo dentro l'app. Per mandarli come
+      notifica di sistema la Cloud Function deve conoscere le preferenze del
+      dispositivo: si salvano accanto al token in `staff_tokens`, che ora è
+      una riga per dispositivo.
+- [ ] **Portare qui le correzioni della 1.3.2**: token per dispositivo,
+      avviso per terminale e non per ruolo, comande «da fare» (un ordine
+      battuto al POS nasce in preparazione), regole Firestore di
+      `staff_tokens`. Arrivano col merge di main in develop, ma vanno
+      ricontrollate insieme alle preferenze.
+
 ## Metodo e strumenti
 
 - [ ] **Skill del metodo in `.claude/skills/`** (poi plugin per altri
