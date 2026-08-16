@@ -8,6 +8,7 @@ import {
   decideOrderPush,
   decideNewOrderStaffPush,
   destinatariPush,
+  comandeDaFare,
   CANCEL_PHRASES,
 } from '../../functions/lib/push-core.js'
 
@@ -104,6 +105,39 @@ describe('decideNewOrderStaffPush', () => {
     expect(msg.title).toContain('Nuovo ordine')
   })
 
+  // L'ALTRO PEZZO DELLO STESSO CASO. Un ordine battuto al POS nasce già
+  // «in preparazione» — chi lo batte sta già facendo il drink — mentre
+  // quelli dal menù nascono «ricevuto». Contando solo i «ricevuto», un
+  // ordine preso al POS da un altro terminale non risultava mai nuovo in
+  // coda: danieleadmin batteva dal telefono e sul tablet di capobar non
+  // squillava niente.
+  it('un ordine battuto al POS (nasce in preparazione) avvisa il banco', () => {
+    const msg = decideNewOrderStaffPush(null, {
+      daily_number: 5,
+      comande: [{ id: 'c1', status: 'in_preparazione' }],
+      placed_by: { role: 'admin', device: 'telefono-di-daniele' },
+    })
+    expect(msg.title).toContain('Nuovo ordine')
+  })
+
+  it('avanzare una comanda non ri-avvisa: non è arrivato niente di nuovo', () => {
+    const prima = { daily_number: 5, comande: [{ id: 'c1', status: 'ricevuto' }] }
+    const dopo = { daily_number: 5, comande: [{ id: 'c1', status: 'in_preparazione' }] }
+    expect(decideNewOrderStaffPush(prima, dopo)).toBeNull()
+  })
+
+  it('una comanda in più sullo stesso conto avvisa come aggiunta', () => {
+    const prima = { daily_number: 5, comande: [{ id: 'c1', status: 'in_preparazione' }] }
+    const dopo = {
+      daily_number: 5,
+      comande: [
+        { id: 'c1', status: 'in_preparazione' },
+        { id: 'c2', status: 'ricevuto' },
+      ],
+    }
+    expect(decideNewOrderStaffPush(prima, dopo).title).toContain('Aggiunta')
+  })
+
   it('notifica un ordine appena creato in stato ricevuto', () => {
     const msg = decideNewOrderStaffPush(null, ricevuto)
     expect(msg.title).toContain('Nuovo ordine')
@@ -138,9 +172,13 @@ describe('decideNewOrderStaffPush', () => {
     expect(decideNewOrderStaffPush(ricevuto, ricevuto)).toBeNull()
   })
 
-  it('non notifica stati diversi da ricevuto', () => {
-    expect(decideNewOrderStaffPush(null, { ...ricevuto, status: 'in_preparazione' })).toBeNull()
+  // «In preparazione» ORA avvisa: è così che nascono gli ordini battuti al
+  // POS, e da un altro terminale sono lavoro nuovo che arriva. Quello che
+  // non avvisa è ciò che da fare non ha più niente.
+  it('non avvisa quello che non è più da fare', () => {
     expect(decideNewOrderStaffPush(null, { ...ricevuto, status: 'pronto' })).toBeNull()
+    expect(decideNewOrderStaffPush(null, { ...ricevuto, status: 'ritirato' })).toBeNull()
+    expect(decideNewOrderStaffPush(null, { ...ricevuto, status: 'annullato' })).toBeNull()
   })
 })
 
@@ -179,5 +217,22 @@ describe('destinatariPush', () => {
 
   it('i token spariti non contano', () => {
     expect(destinatariPush([{ role: 'bartender' }, null], {})).toEqual([])
+  })
+})
+
+describe('comandeDaFare', () => {
+  it('conta quelle da fare, comunque siano nate', () => {
+    expect(comandeDaFare({ comande: [{ status: 'ricevuto' }, { status: 'in_preparazione' }] })).toBe(2)
+  })
+
+  it('non conta quelle finite o annullate', () => {
+    expect(
+      comandeDaFare({ comande: [{ status: 'pronto' }, { status: 'ritirato' }, { status: 'annullato' }] })
+    ).toBe(0)
+  })
+
+  it('i conti vecchi, senza comande, valgono per il loro stato', () => {
+    expect(comandeDaFare({ status: 'ricevuto' })).toBe(1)
+    expect(comandeDaFare({ status: 'pagato' })).toBe(0)
   })
 })

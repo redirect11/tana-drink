@@ -60,6 +60,10 @@ una funzione, il terzo per le correzioni.
 - **La storia del conto è tornata un'icona in alto**, accanto al numero:
   da tasto largo si prendeva una riga intera accanto a Unisci, Separa e
   Comande, per una cosa che si guarda ogni tanto.
+- **Gli ordini battuti alla cassa avvisano gli altri terminali.** Nascono
+  già «in preparazione» — chi li batte sta facendo il drink — e per
+  l'avviso non contavano come lavoro nuovo: chi batteva dal telefono non
+  faceva squillare il tablet al banco.
 - **Gli avvisi seguono il terminale, non il ruolo.** Chi prende ordini col
   telefono con un account da gestore non li faceva più arrivare a nessuno:
   al banco non squillava niente. Ora l'unico a non essere avvisato è il
