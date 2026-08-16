@@ -49,7 +49,7 @@ import MenuManager from '../components/MenuManager.jsx'
 import PrinterSetup from '../components/PrinterSetup.jsx'
 import InventoryManager from '../components/InventoryManager.jsx'
 import SettingsTab from '../components/SettingsTab.jsx'
-import { idDispositivo } from '../lib/dispositivo.js'
+import { idDispositivo, battutoDaQui } from '../lib/dispositivo.js'
 import StatsTab from '../components/StatsTab.jsx'
 import StaffHoursTab from '../components/StaffHoursTab.jsx'
 import UtentiTab from '../components/UtentiTab.jsx'
@@ -532,10 +532,22 @@ function OrderQueue() {
           const printerSettings = loadPrinterSettings()
           for (const o of data) {
             const isNew = !knownIds.current.has(o.id)
-            if (o.workflow_status !== ORDER_STATUSES.RICEVUTO) continue
-            // Niente notifica per gli ordini battuti al banco da chi sta
-            // guardando: avvisano solo quelli di clienti o staff di sala.
-            if (isGestore(o.placed_by?.role)) continue
+            // C'È QUALCOSA DA FARE? Un ordine battuto alla cassa nasce già
+            // «in preparazione» — chi lo batte sta facendo il drink —
+            // mentre quelli dal menù nascono «ricevuto». Guardando i soli
+            // «ricevuto», un ordine preso al POS da un altro terminale non
+            // faceva suonare niente qui.
+            if (
+              o.workflow_status !== ORDER_STATUSES.RICEVUTO &&
+              o.workflow_status !== ORDER_STATUSES.IN_PREPARAZIONE
+            )
+              continue
+            // NIENTE AVVISO SOLO A CHI L'HA MANDATO. Prima si tacevano tutti
+            // gli ordini battuti da un gestore, su QUALUNQUE dispositivo:
+            // col telefono in mano a un admin, al banco non suonava niente.
+            // Il metro giusto non è il ruolo, è il terminale — lo stesso
+            // account sta su tablet, telefono e portatile insieme.
+            if (battutoDaQui(o.placed_by)) continue
             if (isAwaitingPayment(o)) {
               if (isNew) awaiting.add(o.id)
               continue

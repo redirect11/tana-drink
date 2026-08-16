@@ -80,7 +80,15 @@ self.addEventListener('push', (event) => {
 
       // Nuovo ordine al bancone (push allo staff): saltata solo se il
       // gestionale è già in primo piano — lì il listener realtime emette il
-      // bip e aggiorna la lista, quindi la notifica di sistema sarebbe doppia.
+      // bip e aggiorna la lista, quindi la notifica di sistema sarebbe
+      // doppia.
+      //
+      // ATTENZIONE, È UN PATTO: quel «lì suona da sé» deve essere vero. Ha
+      // già morso una volta — il tablet al banco sta sulla coda tutta la
+      // sera, quindi cadeva sempre in questo ramo, e dall'altra parte
+      // l'avviso in pagina scartava gli ordini battuti dai gestori: due
+      // regole diverse, e in mezzo il silenzio. Chi tocca una delle due
+      // guardi anche l'altra (BartenderPage, subscribeActiveOrders).
       if (payload.data?.kind === 'new_order') {
         const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
         const onBar = wins.some((w) => {
