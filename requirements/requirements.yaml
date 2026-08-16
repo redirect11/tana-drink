@@ -196,6 +196,22 @@ requirements:
     labels: [ordini, difetto-risolto]
     test_cases: [tests/unit/storiaOrdine.test.js, tests/component/OrderPosDetail.test.jsx, tests/unit/vouchers.test.js, tests/unit/ripristino.test.js]
 
+  - id: REQ-ORD-010
+    title: "Gli annullati hanno una tab loro nella coda"
+    area: "src/lib/coda.js, src/pages/BartenderPage.jsx"
+    description: >
+      La coda si filtra con «In corso», «Chiusi», «Annullati» e «Tutti».
+      Gli annullati stavano fra i chiusi: facevano numero senza essere
+      incassi — «Chiusi» sono i soldi della serata — e per ritrovarne uno
+      da riaprire bisognava cercarlo in mezzo a quelli buoni. Un conto
+      annullato non è un conto chiuso: è un conto che non c'è più.
+      La regola è pura (`passaFiltroCoda`), così il filtro non si sposta
+      di significato fra la griglia e i conteggi.
+    status: implemented
+    generate_issue: false
+    labels: [ordini, ux]
+    test_cases: [tests/unit/coda.test.js]
+
   - id: REQ-ORD-009
     title: "Un ordine battuto altrove si vede su tutti gli altri terminali"
     area: "src/lib/dispositivo.js, src/pages/BartenderPage.jsx, src/lib/notifyStore.js"

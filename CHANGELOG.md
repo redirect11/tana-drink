@@ -4,6 +4,9 @@
 
 ### Al banco
 
+- **Nella coda c'è la tab «✖️ Annullati».** Stavano fra i «Chiusi», che
+  sono i soldi della serata: facevano numero senza essere incassi, e per
+  ritrovarne uno da riaprire si cercava in mezzo a quelli buoni.
 - **Il «+» della coda e il tasto del pagamento hanno lo stesso oro del tab
   acceso.** Sui temi chiari restavano più smorti: il colore dei tasti
   seguiva il tema di contorno, quello del tab no. Ora è lo stesso, e i
