@@ -1082,6 +1082,34 @@ export function subscribeOrdersHistory(cb, onError, { limit = 300 } = {}) {
   }
 }
 
+// ORDINI DI UN PERIODO, per la ricerca nella lista ordini. La lista in
+// tempo reale tiene gli ultimi conti: per ritrovare una serata di due
+// settimane fa serve andarla a prendere. Si legge una finestra larga
+// attorno alle date e si taglia con la giornata commerciale, come per la
+// singola giornata qui sotto.
+export async function fetchOrdersRange(daKey, aKey, cutoffHour = DEFAULT_CUTOFF_HOUR) {
+  if (!daKey) return []
+  const fine = aKey || daKey
+  const from = new Date(`${daKey}T00:00:00Z`)
+  from.setUTCDate(from.getUTCDate() - 1)
+  const to = new Date(`${fine}T00:00:00Z`)
+  to.setUTCDate(to.getUTCDate() + 2)
+  const snap = await getDocs(
+    query(
+      ordersCol,
+      where('created_at', '>=', Timestamp.fromDate(from)),
+      where('created_at', '<', Timestamp.fromDate(to))
+    )
+  )
+  return snap.docs
+    .map(mapOrder)
+    .filter((o) => {
+      const g = o.order_date || businessDayKey(o.created_at, cutoffHour)
+      return g && g >= daKey && g <= fine
+    })
+    .sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')))
+}
+
 // Ordini di una giornata commerciale (per statistiche e storico).
 export async function fetchOrdersForBusinessDay(dayKey, cutoffHour = DEFAULT_CUTOFF_HOUR) {
   // Prendo una finestra larga attorno al giorno e taglio con businessDayKey.
