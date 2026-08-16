@@ -1331,6 +1331,27 @@ requirements:
     labels: [stampa, cassa]
     test_cases: []
 
+  - id: REQ-STAMPA-009
+    title: "In locale la stampante è di carta finta"
+    area: "src/lib/stampanteFinta.js, src/lib/printer.js"
+    description: >
+      Sull'ambiente di sviluppo la stampante non c'è — è un apparecchio
+      sulla rete del locale — e ogni modifica a comande e scontrini si
+      provava a occhio nel codice, o andando al bar. In locale l'app parla
+      con una stampante finta che raccoglie le righe e le apre nella
+      finestra di stampa del browser, da cui si salva in PDF: si prova
+      quello che ESCE, che è la domanda vera («questa comanda si legge?»).
+      SOLO IN LOCALE, e questo è il punto: sull'ambiente di TEST resta la
+      stampante vera, perché è lì che si prova il collegamento — certificato,
+      rete, riconnessione — e chi prova le funzioni sul test la vuole
+      collegata davvero. Il segnale è il server di sviluppo, la build
+      «locale» o gli emulatori: se il database è finto, lo è anche il bar.
+      Si può forzare nei due versi con VITE_STAMPANTE_FINTA.
+    status: implemented
+    generate_issue: false
+    labels: [stampa, strumenti]
+    test_cases: [tests/unit/stampanteFinta.test.js]
+
   - id: REQ-STAMPA-006
     title: "Lo staff di sala stampa le comande degli ordini che prende"
     area: "src/pages/MenuPage.jsx, src/lib/printer.js"
