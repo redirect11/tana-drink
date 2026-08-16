@@ -77,7 +77,10 @@ vi.mock('../../src/lib/api.js', () => ({
   subscribePrinterConfig: () => () => {},
 }))
 
-vi.mock('../../src/lib/printer.js', () => ({ savePrinterSettings: vi.fn() }))
+vi.mock('../../src/lib/printer.js', () => ({
+  savePrinterSettings: vi.fn(),
+  impostaUtenteStampante: vi.fn(),
+}))
 vi.mock('../../src/lib/appVersion.js', () => ({ subscribeUpdateAvailable: () => () => {} }))
 vi.mock('../../src/lib/cookieConsent.js', () => ({ openCookiePreferences: vi.fn() }))
 vi.mock('../../src/dev/devActions.js', () => ({ envLabel: '', devToolsEnabled: false }))

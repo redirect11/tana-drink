@@ -17,7 +17,37 @@ const COL = 48
 
 // ── Impostazioni persistite in localStorage ───────────────────────────────────
 
+// LE IMPOSTAZIONI DELLA STAMPANTE SONO DEL DISPOSITIVO **E** DI CHI CI
+// LAVORA. Del dispositivo, perché l'indirizzo della stampante dipende da
+// dove sei: il tablet del banco la raggiunge, il telefono della sala forse
+// no. Di chi ci lavora, perché sullo stesso tablet si alternano persone
+// diverse, e la stampa automatica delle comande la vuole accesa chi sta al
+// banco, non chi passa di lì a battere due conti.
 const SETTINGS_KEY = 'tana_printer_v2'
+const UTENTE_KEY = 'tana_printer_utente'
+
+// L'ultimo utente lo si ricorda: le impostazioni si leggono anche prima che
+// Firebase abbia finito di riconoscere chi è collegato, e senza memoria per
+// un istante si leggerebbe la scheda di un altro — «nessuna stampante
+// impostata» che compare e sparisce.
+let _utente = null
+try {
+  _utente = localStorage.getItem(UTENTE_KEY) || null
+} catch {
+  /* storage negato: si lavora senza memoria, come prima */
+}
+
+export function impostaUtenteStampante(uid) {
+  _utente = uid || null
+  try {
+    if (uid) localStorage.setItem(UTENTE_KEY, uid)
+    else localStorage.removeItem(UTENTE_KEY)
+  } catch {
+    /* niente memoria: le impostazioni restano quelle del dispositivo */
+  }
+}
+
+const chiaveImpostazioni = () => (_utente ? `${SETTINGS_KEY}:${_utente}` : SETTINGS_KEY)
 
 export const DEFAULT_PRINTER_SETTINGS = {
   ip: '',
@@ -62,7 +92,14 @@ export function salaStampaDaSe(s = loadPrinterSettings()) {
 
 export function loadPrinterSettings() {
   try {
-    return { ...DEFAULT_PRINTER_SETTINGS, ...JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}') }
+    const mie = JSON.parse(localStorage.getItem(chiaveImpostazioni()) || 'null')
+    if (mie) return { ...DEFAULT_PRINTER_SETTINGS, ...mie }
+    // PRIMA VOLTA DI QUESTA PERSONA SU QUESTO DISPOSITIVO: eredita quelle
+    // del dispositivo. Senza, il giorno del passaggio a impostazioni per
+    // utente ogni tablet del locale avrebbe perso l'indirizzo della
+    // stampante — e la comanda non esce.
+    const delDispositivo = JSON.parse(localStorage.getItem(SETTINGS_KEY) || 'null')
+    return { ...DEFAULT_PRINTER_SETTINGS, ...(delDispositivo || {}) }
   } catch {
     return { ...DEFAULT_PRINTER_SETTINGS }
   }
@@ -71,7 +108,11 @@ export function loadPrinterSettings() {
 export function savePrinterSettings(patch) {
   const current = loadPrinterSettings()
   const next = { ...current, ...patch }
-  localStorage.setItem(SETTINGS_KEY, JSON.stringify(next))
+  try {
+    localStorage.setItem(chiaveImpostazioni(), JSON.stringify(next))
+  } catch {
+    /* storage pieno o negato: si continua con quelle in memoria */
+  }
   return next
 }
 

@@ -155,11 +155,18 @@ async function main() {
           o.payment_status = 'pagato'
           o.payment_method = m
           o.paid_at = at
+          // E IL CONTO SI CHIUDE DAVVERO. Segnarlo solo «pagato» lasciava
+          // lo stato a `ritirato`, che per la coda vuol dire conto ancora
+          // in vita: le serate finte tornavano a galla fra i «Chiusi» di
+          // oggi, mesi dopo. Un conto incassato è `pagato`, punto.
+          o.status = 'pagato'
           batch.update(db.collection('orders').doc(o.id), {
             payments: o.payments,
             payment_status: 'pagato',
             payment_method: m,
             paid_at: at,
+            status: 'pagato',
+            'status_times.pagato': at,
           })
           saldati += 1
         }

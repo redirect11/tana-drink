@@ -35,6 +35,7 @@ import {
   primoCorrispondente,
   inseritiDa,
   passaFiltroCoda,
+  restaInCoda,
 } from '../lib/coda.js'
 import { ripristinabile } from '../lib/storiaOrdine.js'
 import { StoriaOrdineDialog, RipristinaOrdineDialog } from '../components/StoriaOrdine.jsx'
@@ -882,6 +883,15 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
   const nascosti = new Set(nascondiPagati ? pagatiDaServire.map((o) => o.id) : [])
   const boardOrders = visibleOrders
     .filter((o) => !nascosti.has(o.id))
+    // Chiusi e annullati delle serate passate non sono coda: stanno in
+    // Cassa. Vedi restaInCoda.
+    .filter((o) =>
+      restaInCoda(o, {
+        chiuso: isClosed(o) || annullato(o),
+        giornata: dayOf(o),
+        oggi: oggiKey,
+      })
+    )
     .filter((o) =>
       passaFiltroCoda(o, boardFilter, isClosed)
     )

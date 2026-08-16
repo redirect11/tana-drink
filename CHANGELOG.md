@@ -4,6 +4,14 @@
 
 ### Al banco
 
+- **Nella coda non compaiono più i conti chiusi delle serate passate.**
+  La coda è il lavoro di stasera; gli incassi vecchi stanno in Cassa →
+  lista ordini. I conti *aperti* dei giorni scorsi restano dov'erano:
+  quelli sono da chiudere.
+- **Le impostazioni della stampante sono di chi è collegato**, oltre che
+  del dispositivo: sullo stesso tablet ognuno ha il suo indirizzo e la sua
+  stampa automatica. La prima volta si parte da quelle che il dispositivo
+  aveva già, così nessuno resta senza stampante a servizio iniziato.
 - **Le schede della griglia hanno il rilievo delle card della coda**:
   ombra e una sfumatura appena accennata. Erano riquadri piatti su fondo
   piatto, e con le colonne strette si leggevano come un blocco solo.

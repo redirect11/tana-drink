@@ -88,6 +88,18 @@ export function primoCorrispondente(orders, query) {
 // riaprire bisognava cercarlo in mezzo a quelli buoni.
 export const annullato = (o) => o?.workflow_status === ORDER_STATUSES.ANNULLATO
 
+// UN CONTO CHIUSO RESTA IN CODA SOLO PER LA SUA SERATA. La coda è il
+// lavoro di stasera: un conto incassato o annullato ieri non è lavoro, è
+// storia — sta in Cassa, nella lista ordini. Comparivano lo stesso, perché
+// la coda tiene d'occhio i conti APERTI senza limite di data (giusto: si
+// chiudono solo a mano) e un conto incassato ma rimasto indietro con gli
+// stati continuava a passare da lì, serate vecchie comprese.
+// I conti APERTI di giorni scorsi restano invece: quelli sono da chiudere.
+export function restaInCoda(o, { chiuso, giornata, oggi } = {}) {
+  if (!chiuso) return true
+  return !giornata || !oggi || giornata === oggi
+}
+
 export function passaFiltroCoda(o, filtro, isChiuso = () => false) {
   if (filtro === 'tutti') return true
   if (filtro === 'annullati') return annullato(o)
