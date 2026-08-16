@@ -125,8 +125,12 @@ node scripts/set-role.js --emulator --email tu@bar.it --role admin
 
 ## Cosa NON si prova in locale
 
-- **La stampante**: è un apparecchio sulla rete del bar, e da qui non si
-  raggiunge.
+- **La stampante vera**: è un apparecchio sulla rete del bar, e da qui non
+  si raggiunge. In locale però ce n'è una **finta**: le comande e gli
+  scontrini si aprono nella finestra di stampa del browser, da cui si
+  salvano in PDF. Si accende da sé (server di sviluppo, build `locale` o
+  emulatori) e **non** vale sull'ambiente di test, dove ci si collega a
+  quella vera. Per spegnerla: `VITE_STAMPANTE_FINTA=false`.
 - **SumUp**: le chiamate vere vogliono le credenziali del locale; in
   emulatore si simulano dai DevTools.
 - **App Check / reCAPTCHA**: in locale è disattivato (non c'è dominio da

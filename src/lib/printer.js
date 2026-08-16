@@ -10,6 +10,7 @@
 //   4. Da quel momento la connessione WSS funziona senza dialoghi
 
 import { CASH_METHOD_ORDER, cashMethodKeys, PAYMENT_METHOD_PRINT } from './orderStatus.js'
+import { stampanteFintaAttiva, creaStampanteFinta } from './stampanteFinta.js'
 
 // Larghezza colonne stamante 80 mm (TM-m30II / TM-m30III): 48 chars std.
 const COL = 48
@@ -139,6 +140,8 @@ function avviaBattito() {
 // Se il certificato non è più accettato, l'errore esce ADESSO — quando c'è
 // tempo per sistemarlo — invece che al primo scontrino della serata.
 export async function preparaStampante() {
+  // Con la stampante finta non c'è niente da scaldare: risponde sempre.
+  if (stampanteFintaAttiva()) return { ok: true }
   const s = loadPrinterSettings()
   if (!s.ip) return { ok: false, motivo: 'non configurata' }
   try {
@@ -171,6 +174,14 @@ if (typeof document !== 'undefined') {
 // Restituisce il printer object, connettendosi se necessario.
 // Riusa la connessione esistente tra stampe consecutive.
 async function getPrinter() {
+  // IN LOCALE LA STAMPANTE È DI CARTA FINTA. Da un computer di sviluppo
+  // l'apparecchio del bar non si raggiunge, e ogni modifica a comande e
+  // scontrini si provava a occhio. Sull'ambiente di TEST no: lì ci si
+  // collega a quella vera, ed è il posto dove provarla davvero.
+  if (stampanteFintaAttiva()) {
+    if (!_printer) _printer = creaStampanteFinta('La Tana del Coniglio')
+    return _printer
+  }
   if (_printer) return _printer
   if (_connectPromise) return _connectPromise
 
