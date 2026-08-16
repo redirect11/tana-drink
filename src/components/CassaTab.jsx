@@ -21,7 +21,7 @@ const SEZIONI = [
   { id: 'chiusure', icona: '📒', label: 'Chiusure' },
 ]
 
-export default function CassaTab({ canManageStaff = false, sezioneIniziale = 'flusso' }) {
+export default function CassaTab({ sezioneIniziale = 'flusso' }) {
   const [sezione, setSezione] = useState(sezioneIniziale)
   return (
     <div>
@@ -31,7 +31,7 @@ export default function CassaTab({ canManageStaff = false, sezioneIniziale = 'fl
       ) : sezione === 'chiusure' ? (
         <CashSessionsList />
       ) : (
-        <CashFlow canManageStaff={canManageStaff} />
+        <CashFlow />
       )}
     </div>
   )

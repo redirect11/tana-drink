@@ -245,14 +245,12 @@ export default function BartenderPage() {
         {tabEffettivo === 'coda' && <OrderQueue mieiIniziale={salaMiei} gestore={isGestore(role)} />}
         {/* «Da servire»: la sezione della sala (drink pronti da portare). */}
         {tabEffettivo === 'servizio' && <ServiceQueue />}
-        {tabEffettivo === 'pagamenti' && (
-          <CassaTab canManageStaff={isGestore(role)} />
-        )}
+        {tabEffettivo === 'pagamenti' && <CassaTab />}
         {/* IL VECCHIO INDIRIZZO NON SI ROMPE. `?tab=storico` è nei
             collegamenti salvati e nei messaggi: porta alla cassa, aperta
             sulla lista ordini. */}
         {tabEffettivo === 'storico' && (
-          <CassaTab canManageStaff={isGestore(role)} sezioneIniziale="ordini" />
+          <CassaTab sezioneIniziale="ordini" />
         )}
         {tabEffettivo === 'fatture' && <InvoicesTab />}
         {tabEffettivo === 'stats' && <StatsTab />}
