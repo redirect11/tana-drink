@@ -957,6 +957,13 @@ requirements:
     area: "functions/lib/push-core.js decideNewOrderStaffPush"
     description: >
       Un ordine nuovo — o un'aggiunta a un conto esistente — avvisa il banco.
+      Conta quello che c'è DA FARE, cioè le comande «ricevuto» e «in
+      preparazione» insieme: un ordine battuto al POS nasce già in
+      preparazione (chi lo batte sta facendo il drink), e contando i soli
+      «ricevuto» non risultava mai nuovo in coda — al banco non arrivava
+      niente. Contarle insieme non fa doppioni: avanzando da ricevuto a in
+      preparazione il totale non cambia, cresce solo quando arriva una
+      comanda nuova.
       A restare senza avviso è SOLO il dispositivo da cui è partito: sa già di
       averlo mandato. Non si guarda il ruolo: prima si buttava via l'avviso di
       ogni ordine battuto da un admin o da un bartender, dando per scontato che

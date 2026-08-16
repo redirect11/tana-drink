@@ -100,8 +100,24 @@ function decideStaffServePush(before, after) {
 // regola del gestionale (src/lib/payments.js → isAwaitingPayment): un ordine
 // con pagamento OBBLIGATORIO non si prepara — e quindi non si notifica —
 // finché non risulta pagato.
+// COMANDE DA FARE: 'ricevuto' E 'in_preparazione'.
+//
+// Un ordine battuto al POS NASCE in preparazione — chi lo batte sta gia'
+// facendo il drink — mentre quelli dal menu' nascono 'ricevuto'. Contando
+// solo 'ricevuto', un ordine preso al POS da un altro terminale non
+// risultava mai «nuovo in coda» e al banco non arrivava niente: e' il caso
+// visto al banco, un admin che batte dal telefono e il tablet muto.
+//
+// Contarle insieme non fa doppioni: quando una comanda passa da 'ricevuto'
+// a 'in_preparazione' il totale non cambia, quindi nessun secondo avviso.
+// Cresce solo quando arriva una comanda nuova, che e' esattamente quando
+// c'e' qualcosa di nuovo da fare.
+function comandeDaFare(o) {
+  return countComande(o, 'ricevuto') + countComande(o, 'in_preparazione')
+}
+
 function isPayableReceived(o) {
-  if (!o || countComande(o, 'ricevuto') === 0) return false
+  if (!o || comandeDaFare(o) === 0) return false
   if (o.payment_required && o.payment_status !== 'pagato') return false
   return true
 }
@@ -109,7 +125,7 @@ function isPayableReceived(o) {
 // Numero di comande "in coda" pagabili (0 se il pagamento obbligatorio manca).
 function payableReceivedCount(o) {
   if (!isPayableReceived(o)) return 0
-  return countComande(o, 'ricevuto')
+  return comandeDaFare(o)
 }
 
 // Nuovo ordine da preparare → notifica allo staff al bancone. Vale sia alla
@@ -159,6 +175,7 @@ function destinatariPush(tokens, { roles = null, dispositivoOrigine = null } = {
 
 module.exports = {
   countComande,
+  comandeDaFare,
   destinatariPush,
   decideOrderPush,
   decideStaffCallPush,
