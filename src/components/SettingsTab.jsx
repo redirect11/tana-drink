@@ -17,6 +17,7 @@ import { pairSumUpReader, unpairSumUpReader } from '../lib/paymentsApi.js'
 import { Link } from 'react-router-dom'
 import { devToolsEnabled } from '../dev/devActions.js'
 import { Sottosezioni } from '../lib/sottosezioni.js'
+import { MODI_STRISCIA, MODO_STRISCIA_DEFAULT } from '../lib/strisce.js'
 import { usePaginaPiena } from '../lib/paginaPiena.js'
 
 // Impostazioni del bar (documento settings/bar). Ogni modifica viene salvata
@@ -191,6 +192,54 @@ export default function SettingsTab({ role = null }) {
                       (settings.pos_search || 'filtra') === value ? ' active' : ''
                     }`}
                     onClick={() => save({ pos_search: value })}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {/* LA STRISCIA A SINISTRA DELLE CARD. È lo stesso segno in due
+                  schermate e finora diceva una cosa decisa da noi: dipende
+                  invece da come si lavora. */}
+              <h4 style={{ margin: '16px 0 4px' }}>La striscia a sinistra delle card</h4>
+              <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
+                Chi conosce il listino a memoria vuole i <strong>colori</strong> per
+                trovare il prodotto al tatto; chi sta finendo le bottiglie vuole
+                vedere subito <strong>cosa non si può più fare</strong>; chi ha già
+                abbastanza colori addosso la vuole spenta. Vale per tutti i
+                terminali. (Le schede del menù hanno la loro, in
+                <strong> Menù e catalogo</strong>.)
+              </p>
+              <div className="mode-choice" style={{ gridTemplateColumns: '1fr 1fr' }}>
+                {MODI_STRISCIA.map((m) => (
+                  <button
+                    key={m.id}
+                    className={`mode-option${
+                      (settings.stripe_pos || MODO_STRISCIA_DEFAULT) === m.id ? ' active' : ''
+                    }`}
+                    onClick={() => save({ stripe_pos: m.id })}
+                    title={m.desc}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+
+              <p className="muted small" style={{ margin: '12px 0 4px' }}>
+                Con la striscia sulle <strong>scorte</strong>, «ce n&apos;è
+                abbastanza» come si scrive?
+              </p>
+              <div className="mode-choice">
+                {[
+                  [false, '⚪ Grigio (solo i guai si vedono)'],
+                  [true, '🟢 Verde'],
+                ].map(([value, label]) => (
+                  <button
+                    key={String(value)}
+                    className={`mode-option${
+                      !!settings.stripe_ok_verde === value ? ' active' : ''
+                    }`}
+                    onClick={() => save({ stripe_ok_verde: value })}
                   >
                     {label}
                   </button>
@@ -621,6 +670,39 @@ export default function SettingsTab({ role = null }) {
                 checked={settings.show_serving_board}
                 onChange={(v) => save({ show_serving_board: v })}
               />
+
+              {/* LA STRISCIA DELLE SCHEDE sta qui, dove si lavora il menù:
+                  è una scelta su come si guarda il catalogo, non su come si
+                  batte un conto. (La griglia del conto ha la sua, in Vista
+                  ordine.) */}
+              <h4 style={{ margin: '16px 0 4px' }}>La striscia delle schede</h4>
+              <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
+                Cosa dice la riga colorata a sinistra di ogni scheda, qui nel
+                catalogo. Con le <strong>scorte</strong> si vede a colpo d&apos;occhio
+                cosa non si può più fare; coi <strong>colori</strong> si ritrova il
+                prodotto al tatto, come nella griglia del conto.
+              </p>
+              <div className="mode-choice" style={{ gridTemplateColumns: '1fr 1fr' }}>
+                {MODI_STRISCIA.map((m) => (
+                  <button
+                    key={m.id}
+                    className={`mode-option${
+                      (settings.stripe_menu || 'scorte') === m.id ? ' active' : ''
+                    }`}
+                    onClick={() => save({ stripe_menu: m.id })}
+                    title={m.desc}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+              <p className="muted small" style={{ margin: '8px 0 0' }}>
+                Il colore del singolo prodotto resta comunque nella
+                <strong> linguetta</strong> in alto a sinistra, che si tocca per
+                cambiarlo. «Ce n&apos;è abbastanza» si scrive grigio o verde: la
+                scelta è in <strong>Vista ordine</strong>, e vale per tutte e due le
+                schermate.
+              </p>
             </div>
       ),
     },

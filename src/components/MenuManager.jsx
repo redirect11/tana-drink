@@ -11,7 +11,10 @@ import {
   fetchInventoryItems,
   subscribePosPrefs,
   savePosColors,
+  subscribeSettings,
+  DEFAULT_SETTINGS,
 } from '../lib/api.js'
+import { coloreStriscia } from '../lib/strisce.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import { deleteDrinkImageByUrl } from '../lib/storage.js'
 import { formatQty, stockStatus } from '../lib/inventory.js'
@@ -39,6 +42,12 @@ const EMPTY = {
 }
 
 export default function MenuManager() {
+  // Cosa dice la striscia delle schede: lo sceglie il locale, in
+  // Impostazioni → Vista ordine (vedi lib/strisce.js).
+  const [settings, setSettings] = useState(DEFAULT_SETTINGS)
+  useEffect(() => subscribeSettings(setSettings, () => {}), [])
+  const modoStriscia = settings.stripe_menu || 'scorte'
+  const scorteVerdi = !!settings.stripe_ok_verde
   const [drinks, setDrinks] = useState([])
   const [categories, setCategories] = useState([])
   const [inventory, setInventory] = useState([])
@@ -372,9 +381,23 @@ export default function MenuManager() {
                          e invece era un tasto) e un pallino il cui rosso
                          diceva due cose opposte: «l'ho spento io» e «è finito
                          il rum». */
-                      className={`card grid-card admin-card menu-card stato-${statoMenu(d).dot}${d.available ? '' : ' off'}`}
+                      /* La striscia dice quello che il locale ha scelto
+                         (Impostazioni → Vista ordine): il colore del
+                         prodotto, quello della categoria, le scorte, o
+                         niente. La regola sta in lib/strisce.js, la stessa
+                         che usa la griglia del conto. */
+                      className={`card grid-card admin-card menu-card${d.available ? '' : ' off'}`}
                       key={d.id}
-                      style={{ '--menu-colore': tileColors[d.id] || drinkCategoryColor(d, categories) }}
+                      style={{
+                        '--menu-colore': tileColors[d.id] || drinkCategoryColor(d, categories),
+                        borderLeftColor: coloreStriscia({
+                          modo: modoStriscia,
+                          coloreProdotto: tileColors[d.id] || null,
+                          coloreCategoria: drinkCategoryColor(d, categories),
+                          scorte: statoMenu(d).dot,
+                          verdeQuandoOk: scorteVerdi,
+                        }),
+                      }}
                     >
                       <button
                         type="button"
