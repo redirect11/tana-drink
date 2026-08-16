@@ -78,10 +78,11 @@ bugs:
       magazzino (già REQ-ORD-005) e nessun cumulo nel guadagno di serata.
       Annullare non è svuotare.
     in_produzione: true
-    status: todo
+    status: fixed
     generate_issue: true
     labels: [bug, ordini, pos]
-    test_cases: []
+    test_cases:
+      - tests/component/OrderPosDetail.test.jsx
 
   - id: BUG-003
     title: "L'annullamento fatto da un collega manda allo staff la notifica del cliente"

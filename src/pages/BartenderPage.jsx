@@ -1499,9 +1499,24 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
           «Pannelli»; nelle altre viste restano sempre visibili. */}
       {(!gridView || showPanels) && (
         <>
-          <StaffCallList />
-          {settings.groups_enabled && settings.groups_in_queue && (
+          {/* Aperti APPOSTA dal menu ⋯: se non c'è niente da mostrare lo
+              si dice. Prima si toccava «Chiamate staff e gruppi» e non
+              succedeva niente — senza altri account lo staff è vuoto e i
+              gruppi possono essere spenti — e sembrava un tasto rotto. */}
+          <StaffCallList mostraSeVuoto={showPanels} />
+          {settings.groups_enabled && settings.groups_in_queue ? (
             <GroupsPanel orders={orders} role="bartender" />
+          ) : (
+            showPanels && (
+              <div className="card" style={{ marginTop: 8 }}>
+                <strong>👥 Gruppi</strong>
+                <p className="muted small" style={{ margin: '6px 0 0' }}>
+                  {settings.groups_enabled
+                    ? 'I gruppi non si mostrano in coda: si accendono in Impostazioni → Gruppi.'
+                    : 'I gruppi sono spenti: si accendono in Impostazioni → Gruppi.'}
+                </p>
+              </div>
+            )
           )}
         </>
       )}

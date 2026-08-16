@@ -558,6 +558,13 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   // Un conto RIAPERTO si modifica tutto, righe vecchie comprese: è il
   // motivo per cui lo si riapre. Vedi api.js/bartenderUpdateComanda.
   const riaperto = Array.isArray(order?.riaperture) && order.riaperture.length > 0
+  // IL CONTO ANNULLATO NON È UN CONTO VUOTO. Annullando, tutte le sue
+  // comande diventano «annullate» e qui venivano saltate: si apriva un
+  // conto senza una riga e a zero euro, e non si capiva né cosa ci fosse
+  // dentro né se valesse la pena riaprirlo. Dentro un conto ancora aperto
+  // invece una comanda annullata resta fuori: quella roba non si fa e non
+  // si paga.
+  const contoAnnullato = !isNew && order?.workflow_status === ORDER_STATUSES.ANNULLATO
 
   const confirmedLines = useMemo(() => {
     const remainingPaid = {}
@@ -566,7 +573,8 @@ export default function OrderPosDetail({ order: orderProp = null }) {
         if (it.drink_id) remainingPaid[it.drink_id] = (remainingPaid[it.drink_id] || 0) + (Number(it.qty) || 0)
     const out = []
     for (const c of effComande) {
-      if (c.status === ORDER_STATUSES.ANNULLATO) continue
+      const comandaAnnullata = c.status === ORDER_STATUSES.ANNULLATO
+      if (comandaAnnullata && !contoAnnullato) continue
       ;(c.items || []).forEach((it, idx) => {
         const base = {
           source: 'comanda',
@@ -587,13 +595,19 @@ export default function OrderPosDetail({ order: orderProp = null }) {
         // nodo e non riparte da capo (vedi draftToItems).
         const chiave = it.line_id ? `d:${it.line_id}` : `c:${c.id}:${idx}`
         if (unpaidQty > 0)
-          out.push({ ...base, key: chiave, qty: unpaidQty, removable: comandaEditable(c) || riaperto })
+          out.push({
+            ...base,
+            key: chiave,
+            qty: unpaidQty,
+            removable: !comandaAnnullata && (comandaEditable(c) || riaperto),
+            annullata: comandaAnnullata,
+          })
         if (paidHere > 0)
           out.push({ ...base, key: `${chiave}:paid`, qty: paidHere, removable: false, paid: true })
       })
     }
     return out
-  }, [effComande, order?.payments, riaperto])
+  }, [effComande, order?.payments, riaperto, contoAnnullato])
 
   const draftLines = useMemo(
     () => draft.map((l) => ({ ...l, key: `d:${l.line_id}`, source: 'draft', status: 'draft', removable: true })),
@@ -716,7 +730,13 @@ export default function OrderPosDetail({ order: orderProp = null }) {
 
   const draftCount = draft.reduce((s, i) => s + i.qty, 0)
   const draftTotal = draft.reduce((s, i) => s + i.qty * i.unit_price, 0)
-  const confirmedTotal = confirmedLines.reduce((s, l) => s + l.qty * l.unit_price, 0)
+  // Le righe di un conto annullato si vedono ma non fanno somma: quel
+  // conto non lo paga nessuno, e un totale diverso da zero lo farebbe
+  // sembrare ancora da incassare.
+  const confirmedTotal = confirmedLines.reduce(
+    (s, l) => s + (l.annullata ? 0 : l.qty * l.unit_price),
+    0
+  )
   const qtyByDrink = useMemo(() => {
     const m = {}
     for (const l of confirmedLines) if (!l.custom) m[l.drink_id] = (m[l.drink_id] || 0) + l.qty
@@ -1697,7 +1717,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                     </div>
                   )}
                   <div
-                    className="row between draft-line"
+                    className={`row between draft-line${l.annullata ? ' riga-annullata' : ''}`}
                     data-line-index={idx}
                     data-line-key={l.key}
                     onPointerDown={(e) => !isPaid && startDrag(e, idx)}
