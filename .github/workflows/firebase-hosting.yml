@@ -1,43 +1,48 @@
 name: Deploy to Firebase
 
-# GitFlow, una pipeline sola:
-#   push su main        → PRODUZIONE (progetto tana-drink)
-#   push su develop     → TEST       (progetto tana-drink-test)
-#   push su feature/**  → TEST       (si prova il branch prima del merge)
-#   push su release/**  → TEST       (si prova il rilascio candidato)
-#   push su hotfix/**   → TEST       (si prova l'urgenza prima della produzione)
-# L'ambiente di test è UNO e vale per tutti: l'ultimo push è quello
-# pubblicato. Per sapere cosa si sta guardando, l'app mostra ramo e commit
-# in fondo al menu (vedi VersionBadge).
+# SI PUBBLICA SOLO CON UN TAG.
+#
+#   tag su un commit di `main`  → PRODUZIONE, ma il deploy lo approva una
+#                                 persona (environment "production")
+#   tag su qualsiasi altro ramo → TEST, subito, senza chiedere niente
+#   push su un ramo             → NON pubblica: girano solo lint e test
+#                                 (test.yml)
+#
+# Perché: pubblicare a ogni push voleva dire che l'ambiente di prova
+# cambiava sotto le mani di chi ci stava provando sopra, e che bastava un
+# merge su `main` per mandare in produzione senza che nessuno lo avesse
+# deciso in quel momento. Il tag è una decisione esplicita: si tagga quando
+# si vuole pubblicare quella cosa lì.
+#
+# L'ambiente di test è UNO e vale per tutti: l'ultimo tag pubblicato è
+# quello che si vede. Per sapere cosa si sta guardando, l'app mostra
+# versione, ramo e commit in fondo al menu (vedi VersionBadge).
+#
 # I segreti per-ambiente vivono nelle GitHub Environments "production" e
-# "test" (stessi NOMI, valori diversi). La produzione, senza segreti
-# d'ambiente, usa i segreti a livello repo già esistenti: invariata.
+# "test" (stessi NOMI, valori diversi).
+#
+# L'APPROVAZIONE NON STA QUI: si configura una volta su GitHub, in
+# Settings → Environments → production → "Required reviewers". Senza quella
+# spunta un tag su main pubblicherebbe da sé. È scritto in docs/gitflow.md.
 on:
   push:
-    branches:
-      - main
-      - develop
-      - 'feature/**'
-      - 'release/**'
-      - 'hotfix/**'
+    tags:
+      - '**'
   workflow_dispatch:
 
 permissions:
   contents: read
 
-# Un deploy alla volta PER AMBIENTE, non per ramo: su test ci finiscono a
-# turno develop e i branch feature, e due deploy in parallelo sullo stesso
-# progetto si sovrascrivono a metà. L'ultimo push vince, i precedenti si
-# annullano.
+# Un deploy alla volta. Non si annulla quello in corso: un deploy fermo in
+# attesa di approvazione non deve sparire perché nel frattempo è stato
+# taggato qualcos'altro.
 concurrency:
-  group: firebase-deploy-${{ github.ref_name == 'main' && 'produzione' || 'test' }}
-  cancel-in-progress: true
+  group: firebase-deploy
+  cancel-in-progress: false
 
 jobs:
-  # PRIMA I TEST, POI IL DEPLOY. Erano due workflow separati che partivano
-  # insieme: se i test fallivano, la roba rotta era già online — e su test
-  # ci lavora il locale. Ora il deploy ASPETTA (needs) e se qui qualcosa è
-  # rosso non parte proprio.
+  # PRIMA I TEST, POI IL DEPLOY. Se qui qualcosa è rosso non si pubblica
+  # niente — né in test né in produzione.
   test:
     name: Lint e test
     runs-on: ubuntu-latest
@@ -54,94 +59,49 @@ jobs:
       - name: Test
         run: npm test
 
-  build_and_deploy:
+  # DOVE VA QUESTO TAG? Non lo dice il suo nome — un `v1.4.2` può stare su
+  # develop mentre matura — lo dice DOVE SI TROVA il commit: se è dentro
+  # `main` è roba di produzione, altrimenti è una prova.
+  destinazione:
+    name: Dove va
     needs: test
     runs-on: ubuntu-latest
-    environment: ${{ github.ref_name == 'main' && 'production' || 'test' }}
-    env:
-      # ID di progetto per ramo (pubblici, non segreti).
-      TARGET_PROJECT: ${{ github.ref_name == 'main' && 'tana-drink' || 'tana-drink-test' }}
+    outputs:
+      ambiente: ${{ steps.scelta.outputs.ambiente }}
     steps:
       - uses: actions/checkout@v4
         with:
-          # I TAG SERVONO: la versione mostrata nell'app è l'ultimo tag
-          # raggiungibile, e con il checkout superficiale di default non
-          # arriverebbe nessun tag (in produzione resterebbe senza numero).
           fetch-depth: 0
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Install Functions dependencies
-        run: npm ci --prefix functions
-
-      # SICUREZZA: la config del build deve corrispondere al progetto del
-      # ramo. Se i segreti dell'ambiente test mancassero, qui si fallisce
-      # invece di deployare codice di test sul progetto di produzione.
-      - name: Guardia ambiente
-        env:
-          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+      - id: scelta
         run: |
-          if [ "$VITE_FIREBASE_PROJECT_ID" != "$TARGET_PROJECT" ]; then
-            echo "::error::Config ($VITE_FIREBASE_PROJECT_ID) ≠ progetto del ramo ($TARGET_PROJECT). Configura i segreti dell'environment GitHub."
-            exit 1
+          # `main` non arriva col checkout di un tag: va chiesto a parte.
+          git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
+          if git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "ambiente=production" >> "$GITHUB_OUTPUT"
+            echo "Il tag ${GITHUB_REF_NAME} è su main → PRODUZIONE (con approvazione)."
+          else
+            echo "ambiente=test" >> "$GITHUB_OUTPUT"
+            echo "Il tag ${GITHUB_REF_NAME} non è su main → ambiente di TEST."
           fi
-          echo "Deploy su $TARGET_PROJECT (ramo ${GITHUB_REF_NAME})."
 
-      - name: Build
-        env:
-          # Su Firebase Hosting il sito è servito dalla radice.
-          BASE_PATH: /
-          # Ambiente (dal ramo): abilita DevTools + nastro "TEST" sul test.
-          VITE_APP_ENV: ${{ github.ref_name == 'main' && 'production' || 'test' }}
-          # Google Analytics measurement ID per ambiente (pubblico, non segreto).
-          # Attivato in app solo dietro consenso cookie (categoria statistiche).
-          VITE_FIREBASE_MEASUREMENT_ID: ${{ github.ref_name == 'main' && 'G-3Y4TH7G346' || 'G-FX9GGRW06Y' }}
-          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
-          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
-          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
-          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
-          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
-          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
-          # Chiave VAPID per le notifiche push (Console → Cloud Messaging → Web Push certificates)
-          VITE_FIREBASE_VAPID_KEY: ${{ secrets.VITE_FIREBASE_VAPID_KEY }}
-          # Chiave reCAPTCHA v3 per App Check (captcha ordini)
-          VITE_RECAPTCHA_SITE_KEY: ${{ secrets.VITE_RECAPTCHA_SITE_KEY }}
-        run: npm run build
+  prova:
+    name: Test
+    needs: destinazione
+    if: needs.destinazione.outputs.ambiente == 'test'
+    uses: ./.github/workflows/deploy.yml
+    with:
+      ambiente: test
+      progetto: tana-drink-test
+      versione: ${{ github.ref_name }}
+    secrets: inherit
 
-      # Deploy delle Functions (richiede la Cloud Build API, attiva col piano Blaze).
-      - name: Deploy Firebase Functions
-        env:
-          SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-        run: |
-          echo "$SA_JSON" > /tmp/sa.json
-          GOOGLE_APPLICATION_CREDENTIALS=/tmp/sa.json \
-            npx firebase-tools deploy --only functions \
-            --project "$TARGET_PROJECT" --force
-          rm /tmp/sa.json
-
-      # Deploy di regole Firestore (+ indici da firestore.indexes.json) e
-      # regole Storage. Il service account ha i ruoli necessari
-      # (firebaserules.admin, datastore.indexAdmin, serviceUsageConsumer).
-      - name: Deploy Firestore rules & indexes + Storage rules
-        env:
-          SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-        run: |
-          echo "$SA_JSON" > /tmp/sa.json
-          GOOGLE_APPLICATION_CREDENTIALS=/tmp/sa.json \
-            npx firebase-tools deploy --only firestore,storage \
-            --project "$TARGET_PROJECT"
-          rm /tmp/sa.json
-
-      - name: Deploy to Firebase Hosting (live)
-        uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          projectId: ${{ env.TARGET_PROJECT }}
-          channelId: live
+  produzione:
+    name: Produzione
+    needs: destinazione
+    if: needs.destinazione.outputs.ambiente == 'production'
+    uses: ./.github/workflows/deploy.yml
+    with:
+      ambiente: production
+      progetto: tana-drink
+      versione: ${{ github.ref_name }}
+    secrets: inherit
