@@ -5312,6 +5312,31 @@ body:has(.overlay) .zoom-control {
   }
 }
 
+/* LE TILE HANNO IL VESTITO DELLE CARD. Erano riquadri piatti su fondo
+   piatto: in una griglia piena, con le colonne strette, il rilievo è
+   quello che fa leggere una card come una cosa a sé. Stessa sfumatura e
+   stessa ombra delle card della coda (.card), un filo più contenute
+   perché qui ce ne sono trenta a schermo. */
+.pos-tile-striscia {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent 55%),
+    var(--card);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+}
+.pos-tile-striscia.in-carrello {
+  background: linear-gradient(
+      180deg,
+      rgba(var(--accent-rgb, 180, 120, 60), 0.22),
+      rgba(var(--accent-rgb, 180, 120, 60), 0.12) 60%
+    ),
+    var(--card);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.24);
+}
+/* Sui temi chiari la sfumatura bianca non si vede: si scurisce appena. */
+:root[data-luma='light'] .pos-tile-striscia {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.035), transparent 55%), var(--card);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
 /* Le tile della griglia POS hanno la striscia a sinistra come tutte le altre
    card (coda, menù): lo stesso oggetto — un prodotto, un conto — si riconosce
    allo stesso modo ovunque, invece di cambiare linguaggio da una schermata

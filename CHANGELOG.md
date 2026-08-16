@@ -4,6 +4,9 @@
 
 ### Al banco
 
+- **Le schede della griglia hanno il rilievo delle card della coda**:
+  ombra e una sfumatura appena accennata. Erano riquadri piatti su fondo
+  piatto, e con le colonne strette si leggevano come un blocco solo.
 - **Le timbrature dello staff sono passate in Staff**, in cima alle ore:
   stavano in fondo alla cassa, e per battere l'ingresso di chi arriva
   bisognava passare dal flusso di cassa.
