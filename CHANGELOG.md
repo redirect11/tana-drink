@@ -60,6 +60,12 @@ una funzione, il terzo per le correzioni.
 - **La storia del conto è tornata un'icona in alto**, accanto al numero:
   da tasto largo si prendeva una riga intera accanto a Unisci, Separa e
   Comande, per una cosa che si guarda ogni tanto.
+- **Al banco l'avviso suona anche quando il gestionale è aperto.** Il
+  tablet sta sulla coda tutta la sera: la notifica di sistema veniva
+  saltata apposta (là suona l'app), ma l'avviso in pagina scartava gli
+  ordini battuti da un gestore e quelli nati «in preparazione» — cioè
+  tutti quelli battuti da un altro terminale. In mezzo alle due regole
+  restava il silenzio.
 - **Gli ordini battuti alla cassa avvisano gli altri terminali.** Nascono
   già «in preparazione» — chi li batte sta facendo il drink — e per
   l'avviso non contavano come lavoro nuovo: chi batteva dal telefono non
