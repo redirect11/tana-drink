@@ -124,6 +124,11 @@ function mount(order) {
   )
 }
 
+// I tasti in fondo al conto. Serve cercarli QUI dentro: la finestra del
+// ripristino ha un tasto che si chiama come quello che l'ha aperta, e
+// cercandolo in tutta la pagina se ne trovano due.
+const azioni = () => within(document.querySelector('.posd-foot-azioni'))
+
 beforeEach(() => {
   vi.clearAllMocks()
   // La bozza è persistita in localStorage per ordine: pulisco tra i test.
@@ -497,8 +502,12 @@ describe('schermata Pagamento', () => {
         ],
       })
     )
-    // I tasti azione ci sono SEMPRE, ma su un conto chiuso sono disabilitati.
-    expect(screen.getByRole('button', { name: /Pagamento/ })).toBeDisabled()
+    // I tasti azione ci sono SEMPRE, ma su un conto chiuso non fanno più
+    // quello che facevano: «Annulla ordine» è spento, e al posto di
+    // «Pagamento» — che lì era spento a non fare niente — c'è «Rimetti in
+    // corso», che è l'unica cosa sensata da fare su un conto chiuso.
+    expect(screen.queryByRole('button', { name: /Pagamento/ })).toBeNull()
+    expect(azioni().getByRole('button', { name: /Riapri conto/ })).toBeEnabled()
     expect(screen.getByRole('button', { name: /Annulla ordine/ })).toBeDisabled()
   })
 })
@@ -971,7 +980,7 @@ describe('rimettere in corso un conto', () => {
   it('si chiede una motivazione (facoltativa) e si conferma', async () => {
     const user = userEvent.setup()
     mount(chiuso())
-    await user.click(screen.getByRole('button', { name: /Rimetti in corso/ }))
+    await user.click(azioni().getByRole('button', { name: /Riapri conto/ }))
     const box = within(screen.getByRole('dialog', { name: 'Ripristina il conto' }))
     await user.type(box.getByLabelText(/Perché lo riapri/), 'tavolo sbagliato')
     await user.click(box.getByRole('button', { name: /Rimetti in corso/ }))
@@ -981,15 +990,16 @@ describe('rimettere in corso un conto', () => {
   it('senza motivazione si ripristina lo stesso: al banco i secondi non ci sono', async () => {
     const user = userEvent.setup()
     mount(chiuso())
-    await user.click(screen.getByRole('button', { name: /Rimetti in corso/ }))
+    await user.click(azioni().getByRole('button', { name: /Riapri conto/ }))
     const box = within(screen.getByRole('dialog', { name: 'Ripristina il conto' }))
     await user.click(box.getByRole('button', { name: /Rimetti in corso/ }))
     expect(restoreOrder).toHaveBeenCalledWith('ord1', expect.objectContaining({ motivo: null }))
   })
 
-  it('su un conto già in corso il ripristino non si può nemmeno chiedere', () => {
+  it('su un conto già in corso il tasto resta quello del pagamento', () => {
     mount(baseOrder())
-    expect(screen.queryByRole('button', { name: /Rimetti in corso/ })).toBeNull()
+    expect(azioni().queryByRole('button', { name: /Riapri conto/ })).toBeNull()
+    expect(azioni().getByRole('button', { name: /Pagamento/ })).toBeInTheDocument()
   })
 
   // Un conto riaperto, guardato mezz'ora dopo, è identico a uno normale: se
@@ -1005,5 +1015,46 @@ describe('rimettere in corso un conto', () => {
     expect(screen.getByText(/Conto riaperto/)).toBeInTheDocument()
     expect(screen.getByText(/chiuso sul tavolo sbagliato/)).toBeInTheDocument()
     expect(screen.getByText(/da Anna/)).toBeInTheDocument()
+  })
+})
+
+// ── UN CONTO RIAPERTO SI MODIFICA TUTTO ──────────────────────────────
+// Riaprire serve esattamente a rimettere a posto quello che c'è dentro: un
+// giro battuto sul tavolo sbagliato, una birra di troppo. Se le righe di
+// prima restano bloccate — perché la comanda risultava servita — il conto
+// riaperto non serve a niente.
+describe('conto riaperto: le righe di prima si toccano', () => {
+  const servito = (extra = {}) =>
+    baseOrder({
+      total: 14,
+      comande: [
+        {
+          id: 'c1',
+          seq: 1,
+          status: 'ritirato',
+          status_times: {},
+          items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 }],
+        },
+      ],
+      order_items: [{ id: 'i1', drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 }],
+      ...extra,
+    })
+
+  const meno = () => screen.getAllByRole('button', { name: /Riduci Mojito/ })
+
+  it('senza riapertura una comanda servita resta bloccata', () => {
+    mount(servito())
+    expect(meno().every((b) => b.disabled)).toBe(true)
+  })
+
+  it('dopo una riapertura la riga si può scalare', async () => {
+    const user = userEvent.setup()
+    mount(servito({ riaperture: [{ at: '2026-08-15T21:00:00.000Z', motivo: 'tavolo sbagliato' }] }))
+    const tasti = meno().filter((b) => !b.disabled)
+    expect(tasti.length).toBeGreaterThan(0)
+    await user.click(tasti[0])
+    // La modifica parte verso la comanda: le scorte si riallineano con la
+    // differenza, come per ogni altra modifica.
+    await vi.waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalled())
   })
 })

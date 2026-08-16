@@ -11,8 +11,6 @@ const CANCEL_PHRASES = {
 // Chi sta al banco: batte gli ordini di persona, quindi non ha bisogno che
 // glieli annuncino. (Stessa coppia di src/lib/ruoli.js: qui non si possono
 // importare i moduli del client.)
-const BANCO = ['admin', 'bartender']
-
 // Conta le comande di un ordine in un dato stato. Retrocompatibile: i doc
 // legacy (senza `comande`) valgono come una sola comanda con lo stato
 // dell'ordine.
@@ -102,16 +100,40 @@ function decideStaffServePush(before, after) {
 // regola del gestionale (src/lib/payments.js → isAwaitingPayment): un ordine
 // con pagamento OBBLIGATORIO non si prepara — e quindi non si notifica —
 // finché non risulta pagato.
-function isPayableReceived(o) {
-  if (!o || countComande(o, 'ricevuto') === 0) return false
-  if (o.payment_required && o.payment_status !== 'pagato') return false
-  return true
+// COMANDE DA FARE: 'ricevuto' E 'in_preparazione'.
+//
+// Un ordine battuto al POS NASCE in preparazione — chi lo batte sta gia'
+// facendo il drink — mentre quelli dal menu' nascono 'ricevuto'. Guardando
+// i soli 'ricevuto', un ordine preso al POS da un altro terminale non
+// risultava mai «nuovo in coda» e al banco non arrivava niente: e' il caso
+// visto al banco, un admin che batte dal telefono e il tablet muto.
+const DA_FARE = ['ricevuto', 'in_preparazione']
+
+function comandeDaFare(o) {
+  return DA_FARE.reduce((n, st) => n + countComande(o, st), 0)
 }
 
-// Numero di comande "in coda" pagabili (0 se il pagamento obbligatorio manca).
-function payableReceivedCount(o) {
-  if (!isPayableReceived(o)) return 0
-  return countComande(o, 'ricevuto')
+// QUALI comande sono da fare, non quante. Contarle non basta: col cliente
+// che ordina, «ricevuto» e «in preparazione» sono due momenti diversi —
+// arriva l'ordine, poi qualcuno lo prende in mano — e un totale che non
+// cambia non saprebbe distinguere «e' avanzata quella di prima» da «ne e'
+// arrivata una nuova». Si guardano gli identificativi: avvisa solo quello
+// che prima non c'era.
+// I conti vecchi non hanno l'elenco delle comande: valgono per uno solo.
+function idsDaFare(o) {
+  if (!o) return []
+  if (Array.isArray(o.comande)) {
+    return o.comande
+      .filter((c) => c && DA_FARE.includes(c.status))
+      .map((c, i) => c.id || `#${i}`)
+  }
+  return DA_FARE.includes(o.status) ? ['#legacy'] : []
+}
+
+function isPayableReceived(o) {
+  if (!o || comandeDaFare(o) === 0) return false
+  if (o.payment_required && o.payment_status !== 'pagato') return false
+  return true
 }
 
 // Nuovo ordine da preparare → notifica allo staff al bancone. Vale sia alla
@@ -119,12 +141,20 @@ function payableReceivedCount(o) {
 // obbligatorio viene saldato (e solo allora entra in coda). Restituisce il
 // messaggio { title, body } o null se non c'è nulla di nuovo da notificare.
 function decideNewOrderStaffPush(before, after) {
-  // Ordine battuto al banco (admin o bartender): nessuna notifica —
-  // avvisano solo gli ordini di clienti o staff di sala.
-  if (after && after.placed_by && BANCO.includes(after.placed_by.role)) return null
-  const now = payableReceivedCount(after)
-  const prev = payableReceivedCount(before)
-  if (now <= prev) return null // niente di nuovo in coda
+  // NON SI TACE PER RUOLO, SI TACE PER TERMINALE. Prima qui si buttava via
+  // l'avviso di ogni ordine battuto da un admin o da un bartender, dando per
+  // scontato che chi ha quel ruolo stia al banco e sappia gia' tutto. Chi
+  // gira ai tavoli col telefono e un account da gestore non faceva squillare
+  // niente a nessuno: al banco l'ordine arrivava in silenzio.
+  // A restare senza avviso e' SOLO il dispositivo che l'ha mandato — sa gia'
+  // di averlo mandato — e di quello si occupa destinatariPush().
+  if (!isPayableReceived(after)) return null // niente da fare, o pagamento obbligatorio non saldato
+  // Se prima il conto era fermo in attesa del pagamento obbligatorio, adesso
+  // che e' saldato entra in coda TUTTO INSIEME: e' nuovo per il banco anche
+  // se le comande sono le stesse di prima.
+  const prima = isPayableReceived(before) ? idsDaFare(before) : []
+  const nuove = idsDaFare(after).filter((id) => !prima.includes(id))
+  if (nuove.length === 0) return null // niente di nuovo in coda
   const tavolo = after.table_label ? ` · Tavolo ${after.table_label}` : ''
   const nome = after.customer_name ? ` — ${after.customer_name}` : ''
   // Aggiunta a un conto già esistente (seconda comanda in poi) vs primo invio.
@@ -140,8 +170,48 @@ function decideNewOrderStaffPush(before, after) {
       }
 }
 
+// A CHI MANDARLO. `tokens` sono i dispositivi registrati
+// ({ token, role, device }); `roles` limita per ruolo dove serve (i drink da
+// servire riguardano la sala); `dispositivoOrigine` e' il terminale da cui e'
+// partita la cosa che si sta annunciando, e quello si salta.
+//
+// Chi si e' registrato prima che il dispositivo venisse segnato non ha
+// `device`: nel dubbio lo si avvisa. Un avviso in piu' si chiude, uno in
+// meno e' un drink che non parte.
+function destinatariPush(tokens, { roles = null, dispositivoOrigine = null } = {}) {
+  const righe = (tokens || []).filter((t) => t && t.token)
+  // SI SALTA IL TELEFONO, NON LA RIGA. Lo stesso apparecchio puo' avere piu'
+  // righe: quella nuova col dispositivo scritto e una vecchia intestata alla
+  // persona, senza. Scartando solo la riga col dispositivo, la vecchia
+  // restava e l'avviso tornava a chi l'ordine l'aveva appena mandato — che
+  // e' esattamente quello che non deve succedere. Si guarda il TOKEN: e' il
+  // nome dell'apparecchio, comunque sia intestata la riga.
+  const suoi = new Set(
+    dispositivoOrigine
+      ? righe.filter((t) => t.device && t.device === dispositivoOrigine).map((t) => t.token)
+      : []
+  )
+  const visti = new Set()
+  return righe
+    .filter((t) => (roles ? roles.includes(t.role || 'staff') : true))
+    .filter((t) => !suoi.has(t.token))
+    .filter((t) => !(dispositivoOrigine && t.device && t.device === dispositivoOrigine))
+    // UNA VOLTA A DISPOSITIVO. Lo stesso telefono puo' comparire due volte:
+    // la riga vecchia intestata alla persona e quella nuova intestata al
+    // dispositivo. Due righe con lo stesso token vogliono dire due avvisi
+    // identici sullo stesso schermo.
+    .filter((t) => {
+      if (visti.has(t.token)) return false
+      visti.add(t.token)
+      return true
+    })
+}
+
 module.exports = {
   countComande,
+  comandeDaFare,
+  idsDaFare,
+  destinatariPush,
   decideOrderPush,
   decideStaffCallPush,
   decideStaffServePush,
