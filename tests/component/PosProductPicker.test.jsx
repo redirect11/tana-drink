@@ -221,4 +221,28 @@ describe('la striscia delle tile', () => {
     const { container } = mostra()
     expect(bordo(container, 'Mojito')).not.toBe('')
   })
+
+  it('la LINGUETTA tiene il colore del prodotto, qualunque cosa dica la striscia', () => {
+    // Sono due segni diversi: la striscia dice quello che il locale ha
+    // scelto, la linguetta il colore che il prodotto ha al banco — e si
+    // tocca per cambiarlo. Condividendo lo stesso valore, scegliendo
+    // «categoria» per la striscia il colore scelto a mano spariva dalla
+    // vista pur essendo ancora lì.
+    const { container } = mostra({
+      modoStriscia: 'spenta',
+      // Il drink deve stare in una categoria, se no un colore non ce l'ha
+      // e la linguetta non si disegna proprio.
+      drinks: [{ id: '4', name: 'Mojito', price: 7, available: true, category_id: 'c1' }],
+      cats: [{ id: 'c1', name: 'Cocktail', color: '#ff00aa' }],
+    })
+    const card = [...container.querySelectorAll('[data-drink-id]')].find((el) =>
+      el.textContent.includes('Mojito')
+    )
+    // La striscia tace…
+    expect(card.style.borderLeftColor).toBe('var(--line)')
+    // …ma la linguetta no.
+    const nastro = card.querySelector('.pos-tile-nastro')
+    expect(nastro).toBeTruthy()
+    expect(nastro.style.borderTopColor).not.toBe('var(--line)')
+  })
 })

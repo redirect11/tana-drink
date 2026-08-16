@@ -107,7 +107,7 @@ function Riordinabile({ attiva, sensori, ids, onFine, children }) {
 // Una cella della griglia in modalità organizza: la maniglia porta i
 // gesti, la card dentro resta com'è. Il movimento — la card che segue il
 // dito e le altre che fanno spazio — lo mette dnd-kit.
-function CellaOrdinabile({ drink, qty, color, onApri }) {
+function CellaOrdinabile({ drink, qty, color, striscia, onApri }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: drink.id })
   return (
@@ -125,7 +125,14 @@ function CellaOrdinabile({ drink, qty, color, onApri }) {
       >
         ⠿
       </div>
-      <DrinkTile drink={drink} qty={qty} color={color} onAdd={onApri} onSetQty={() => {}} />
+      <DrinkTile
+        drink={drink}
+        qty={qty}
+        color={color}
+        striscia={striscia}
+        onAdd={onApri}
+        onSetQty={() => {}}
+      />
     </div>
   )
 }
@@ -260,7 +267,11 @@ export default function PosProductPicker({
     setTileColors(next)
     savePosColors(next).catch(() => {})
   }
-  // Il colore della striscia: la regola sta in lib/strisce.js, così la
+  // Il colore del PRODOTTO: la linguetta in alto a sinistra, che si tocca
+  // per cambiarlo. Non dipende dall'impostazione della striscia — un
+  // colore scelto a mano deve restare visibile.
+  const coloreProdotto = (d) => tileColors[d.id] || drinkCategoryColor(d, cats)
+  // Il colore della STRISCIA: la regola sta in lib/strisce.js, così la
   // stessa striscia significa la stessa cosa anche nelle schede del menù.
   const tileColor = (d) =>
     coloreStriscia({
@@ -544,7 +555,8 @@ export default function PosProductPicker({
                 key={d.id}
                 drink={d}
                 qty={qtyByDrink[d.id] ?? 0}
-                color={tileColor(d)}
+                color={coloreProdotto(d)}
+                striscia={tileColor(d)}
                 onApri={() => setMenuDrink(d)}
               />
             ) : (
@@ -552,7 +564,8 @@ export default function PosProductPicker({
                 key={d.id}
                 drink={d}
                 qty={qtyByDrink[d.id] ?? 0}
-                color={tileColor(d)}
+                color={coloreProdotto(d)}
+                striscia={tileColor(d)}
                 acceso={d.id === idAcceso}
                 favorite={favSet.has(d.id)}
                 onToggleFav={() => toggleFav(d.id)}
