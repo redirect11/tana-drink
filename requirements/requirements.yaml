@@ -1513,7 +1513,7 @@ requirements:
     status: implemented
     generate_issue: false
     labels: [ux, telefono]
-    test_cases: [tests/component/StaffDrawer.test.jsx]
+    test_cases: [tests/component/StaffDrawer.test.jsx, tests/unit/css.test.js]
 
   - id: REQ-UI-004
     title: "Zoom della pagina per chi ci lavora ore"

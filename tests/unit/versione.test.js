@@ -46,3 +46,23 @@ describe('etichetta della versione', () => {
     expect(inProduzione('feature/x')).toBe(false)
   })
 })
+
+// IL RAMO NON RIPETE LA VERSIONE. Da quando si pubblica taggando, in CI il
+// nome del ref è il TAG: dove ci si aspettava il ramo arrivava «v1.4.3», e
+// in fondo al menu si leggeva la stessa cosa due volte.
+describe('quando il ramo non si sa', () => {
+  it('col nome del tag al posto del ramo, lo dice una volta sola', () => {
+    expect(etichettaVersione({ branch: 'v1.4.3', commit: '11783f5', versione: '1.4.3' }))
+      .toBe('v1.4.3 · 11783f5')
+  })
+
+  it('anche senza la v davanti', () => {
+    expect(etichettaVersione({ branch: '1.4.3', commit: '11783f5', versione: '1.4.3' }))
+      .toBe('v1.4.3 · 11783f5')
+  })
+
+  it('un ramo vero invece si legge', () => {
+    expect(etichettaVersione({ branch: 'develop', commit: '11783f5', versione: '1.4.3' }))
+      .toBe('v1.4.3 · develop · 11783f5')
+  })
+})
