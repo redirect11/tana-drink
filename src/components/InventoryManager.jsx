@@ -35,6 +35,7 @@ import {
   pezziInGiacenza,
   formatPezzi,
   copiaProdotto,
+  fmtContenuto,
   inventorySummary,
   filterItems,
   formatIn,
@@ -259,9 +260,11 @@ function ProductsPanel() {
               <strong>{formatPezzi(pezziInGiacenza(it))} pz</strong>
               {' · '}
               {bd.full} piene
-              {bd.hasOpen && ` · 1 aperta (${fmtItem(bd.openRemaining, it)})`}
+              {bd.hasOpen && ` · 1 aperta (${fmtContenuto(bd.openRemaining, it)})`}
               {bd.finished > 0 && ` · ${bd.finished} finite`}
-              <span className="muted"> · 1 conf. = {fmtItem(it.package_size, it)}</span>
+              {/* Il contenuto in cl (o g): un pezzo è la bottiglia, dentro
+                  non ci sono pezzi. */}
+              <span className="muted"> · 1 pz = {fmtContenuto(it.package_size, it)}</span>
             </dd>
           </div>
         ) : (
@@ -1192,15 +1195,25 @@ function CaricoForm({ item, onCancel, onConfirm }) {
   const [unitCost, setUnitCost] = useState(item.cost != null ? String(item.cost) : '')
   const [perCollo, setPerCollo] = useState('')
   const [colloTot, setColloTot] = useState('')
+  // Quanti cartoni si stanno caricando: i pezzi li riempie lui.
+  const [cartoni, setCartoni] = useState('')
 
   const onUnit = (v) => {
     setUnitCost(v)
     const p = num(perCollo)
     if (p > 0) setColloTot(num(v) > 0 ? String(r2(num(v) * p)) : '')
   }
+  const onCartoni = (v) => {
+    setCartoni(v)
+    const p = num(perCollo)
+    if (p > 0) setCount(num(v) > 0 ? String(num(v) * p) : '')
+  }
   const onCollo = (v) => {
     setPerCollo(v)
     const p = num(v)
+    // Cambiando quanti pezzi ha il cartone, i pezzi si rifanno: se no
+    // resterebbe il conto vecchio, e si caricherebbe la quantità sbagliata.
+    if (p > 0 && num(cartoni) > 0) setCount(String(num(cartoni) * p))
     if (p <= 0) return
     if (num(unitCost) > 0) setColloTot(String(r2(num(unitCost) * p)))
     else if (num(colloTot) > 0) setUnitCost(String(r2(num(colloTot) / p)))
@@ -1227,8 +1240,31 @@ function CaricoForm({ item, onCancel, onConfirm }) {
     <div style={{ marginTop: 8 }}>
       {isPz ? (
         <>
-          <label>Quanti pezzi aggiungi?</label>
+          {/* CARTONI → PEZZI. Il fornitore consegna cartoni, il magazzino
+              conta bottiglie: dicendo quanti pezzi ha un cartone, i pezzi
+              si riempiono da sé. Chi carica bottiglie sfuse lascia il
+              cartone vuoto e scrive i pezzi, come sempre. */}
+          {perN > 0 && (
+            <>
+              <label htmlFor="cf-cartoni">Quanti cartoni? (1 cartone = {perN} pz)</label>
+              <input
+                id="cf-cartoni"
+                type="number"
+                step="1"
+                min="0"
+                value={cartoni}
+                onChange={(e) => onCartoni(e.target.value)}
+                placeholder="Es. 2"
+              />
+            </>
+          )}
+          <label style={perN > 0 ? { marginTop: 8 } : undefined}>Quanti pezzi aggiungi?</label>
           <input type="number" step="1" min="0" value={count} onChange={(e) => setCount(e.target.value)} autoFocus />
+          {perN > 0 && num(cartoni) > 0 && (
+            <div className="muted small" style={{ marginTop: 4 }}>
+              {num(cartoni)} × {perN} = <strong>{num(cartoni) * perN} pz</strong>
+            </div>
+          )}
         </>
       ) : (
         <>

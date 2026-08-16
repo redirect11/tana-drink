@@ -23,6 +23,12 @@ una funzione, il terzo per le correzioni.
   «0,5 pz» dice da sé che è mezza, «0 pz» che è finita. Le bottiglie —
   piene, aperta, finite — restano nel dettaglio, per chi va a contarle
   sullo scaffale.
+- **Le unità restano coerenti**: il pezzo è la bottiglia, il contenuto si
+  legge sempre in cl (o in grammi). Nel dettaglio si leggeva «1 aperta
+  (40 pz) · 1 conf. = 200 pz», che a chi sta versando non dice niente.
+- **Caricando si può contare a cartoni**: dicendo quanti pezzi ha un
+  cartone, i pezzi si riempiono da sé (2 × 24 = 48). Chi carica bottiglie
+  sfuse lascia il cartone da parte e scrive i pezzi, come sempre.
 - **«Inventario» si chiama Magazzino**, come lo chiama chi ci lavora.
 - **Un prodotto si può duplicare**, fra Modifica ed Elimina: il magazzino
   è pieno di quasi-uguali — stessa bottiglia in due formati, lo stesso
