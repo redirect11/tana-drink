@@ -1,6 +1,6 @@
 # Cosa è cambiato
 
-## Non ancora rilasciata — 1.4.5
+## 1.4.5 — 16 agosto 2026
 
 ### Al banco
 
