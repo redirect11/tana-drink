@@ -1,10 +1,16 @@
 name: Tests
 
-# Sui push i test girano dentro la pipeline di deploy, che senza il loro
-# verde non pubblica niente (firebase-hosting.yml). Qui restano le pull
-# request — dove non c'è nessun deploy da bloccare — e la copertura, che
-# nella pipeline sarebbe solo tempo in più prima di andare online.
+# QUESTO GIRA SEMPRE, a ogni push su qualunque ramo. Da quando si pubblica
+# solo coi tag, il push su un ramo non fa più partire nessun deploy: resta
+# questo, che dice se il lavoro regge. Il verde qui non pubblica niente —
+# per pubblicare si tagga (firebase-hosting.yml).
+#
+# Sulle pull request gira lo stesso, e in più la copertura: lì c'è il tempo
+# di guardarla, mentre in mezzo al lavoro sarebbe solo attesa.
 on:
+  push:
+    branches:
+      - '**'
   pull_request:
     branches:
       - main
@@ -16,7 +22,7 @@ permissions:
 
 jobs:
   test:
-    name: Vitest – unit & BDD tests
+    name: Lint, test e build
     runs-on: ubuntu-latest
 
     steps:
@@ -32,14 +38,23 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Lint
+        run: npm run lint
+
       - name: Run tests
         run: npm test
 
+      - name: Build
+        run: npm run build
+
+      # La copertura solo sulle pull request: in mezzo al lavoro sarebbe
+      # tempo in più a ogni push.
       - name: Run tests with coverage
+        if: github.event_name == 'pull_request'
         run: npm run test:coverage
 
       - name: Upload coverage report
-        if: always()
+        if: github.event_name == 'pull_request' && always()
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
