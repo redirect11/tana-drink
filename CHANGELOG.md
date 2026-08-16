@@ -1,5 +1,18 @@
 # Cosa è cambiato
 
+## 1.4.2 — 16 agosto 2026
+
+Porta nella linea di sviluppo tutto quello che è uscito con la **1.3.2**
+(qui sotto): il conto che si riapre dal tasto del pagamento e torna un
+conto normale — incassi tolti anche dal flusso di cassa, righe di prima
+modificabili, buoni rimessi a posto — e gli avvisi che arrivano davvero a
+tutti i terminali tranne quello che ha battuto l'ordine.
+
+Chi lavora sulla versione di prova trova in più, rispetto alla 1.3.2, le
+cose che erano già in 1.4.0 e 1.4.1.
+
+---
+
 ## 1.4.1 — 14 agosto 2026
 
 ### Al banco
