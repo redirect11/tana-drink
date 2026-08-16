@@ -4,6 +4,9 @@
 
 ### Al banco
 
+- **Le timbrature dello staff sono passate in Staff**, in cima alle ore:
+  stavano in fondo alla cassa, e per battere l'ingresso di chi arriva
+  bisognava passare dal flusso di cassa.
 - **«Flusso cassa» si chiama Cassa e ha tre sezioni**: flusso, lista
   ordini, chiusure. Erano tre posti per la stessa domanda, e due si
   raggiungevano da tasti in fondo alla pagina — che si trovano solo

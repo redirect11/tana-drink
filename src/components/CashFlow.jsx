@@ -12,7 +12,6 @@ import { cashRecap } from '../lib/cassa.js'
 import { formatPrice, cashMethodKeys, paymentMethodLabel } from '../lib/orderStatus.js'
 import { printChiusuraCassa } from '../lib/printer.js'
 import { toastError } from '../lib/toast.js'
-import StaffBadgePanel from './StaffBadgePanel.jsx'
 
 // FLUSSO CASSA: apertura/chiusura della serata e andamento in tempo reale
 // degli incassi della sessione aperta. I numeri vengono dagli ordini nella
@@ -35,7 +34,7 @@ const durata = (fromIso, toIso) => {
   return h > 0 ? `${h}h ${min % 60}m` : `${min}m`
 }
 
-export default function CashFlow({ canManageStaff = false }) {
+export default function CashFlow() {
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   const [session, setSession] = useState(null)
   const [orders, setOrders] = useState([])
@@ -58,7 +57,6 @@ export default function CashFlow({ canManageStaff = false }) {
     return (
       <>
         <ApriCassa cutoff={cutoff} by={by} />
-        {canManageStaff && <StaffBadgePanel />}
       {/* Lista ordini e chiusure sono SOTTOSEZIONI della cassa (menu
           laterale): erano due tasti in fondo alla pagina, che si trovano
           solo scorrendo fino in fondo. */}
@@ -68,7 +66,6 @@ export default function CashFlow({ canManageStaff = false }) {
 
   return (
     <div>
-      {canManageStaff && <StaffBadgePanel />}
       <div className="card cassa-open">
         <div className="row between" style={{ alignItems: 'center' }}>
           <div>

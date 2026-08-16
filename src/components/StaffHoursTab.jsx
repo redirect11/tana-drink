@@ -24,6 +24,7 @@ import {
 } from '../lib/ore.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import SectionPanels from './SectionPanels.jsx'
+import StaffBadgePanel from './StaffBadgePanel.jsx'
 import { IconPiu, IconSoldi } from './Icons.jsx'
 
 // RAPP ORE + BADGE VIRTUALE: registro ore dello staff con vista calendario
@@ -92,6 +93,9 @@ function normalizeEntries(hoursRows, shiftRows) {
   return out
 }
 
+// CHI È IN TURNO ADESSO sta in cima alle ore: era in fondo alla cassa,
+// dove ci si va per i soldi — e per timbrare l'ingresso bisognava passare
+// dal flusso di cassa, che con le ore non c'entra niente.
 export default function StaffHoursTab({ embedded = false }) {
   const [mode, setMode] = useState('mese') // 'giorno' | 'settimana' | 'mese'
   const [cursor, setCursor] = useState(oggi) // data di riferimento
@@ -189,6 +193,12 @@ export default function StaffHoursTab({ embedded = false }) {
         </>
       )}
       {error && <div className="banner">Errore: {error}</div>}
+
+      {/* CHI TIMBRA ADESSO, in cima: era in fondo alla pagina della cassa,
+          dove ci si va per i soldi. Per battere l'ingresso di chi arriva
+          bisognava passare dal flusso di cassa, che con le ore non c'entra
+          niente. */}
+      <StaffBadgePanel />
 
       {/* Quello che si fa ogni tanto — le paghe, un turno a mano — sta qui
           sotto al titolo, non in fondo alla pagina dopo il calendario. */}
