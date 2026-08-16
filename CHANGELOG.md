@@ -1,6 +1,6 @@
 # Cosa è cambiato
 
-## Non ancora rilasciata — 1.4.3
+## 1.4.3 — 16 agosto 2026
 
 ### In sala
 
