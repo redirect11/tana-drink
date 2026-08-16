@@ -13,7 +13,9 @@ describe('titoloPagina', () => {
       icona: '⚙️',
       titolo: 'Impostazioni',
     })
-    expect(titoloPagina('/bar', '?tab=inventario').titolo).toBe('Inventario')
+    // Il tab si chiama ancora `inventario` (cambiarlo vorrebbe dire
+    // migrare indirizzi salvati), ma a schermo si legge Magazzino.
+    expect(titoloPagina('/bar', '?tab=inventario').titolo).toBe('Magazzino')
   })
 
   // La coda è la schermata di partenza e si presenta da sé: un titolo lì

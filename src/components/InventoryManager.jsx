@@ -32,6 +32,10 @@ import {
   stockStatus,
   bottleSummary,
   bottleBreakdown,
+  pezziInGiacenza,
+  formatPezzi,
+  copiaProdotto,
+  fmtContenuto,
   inventorySummary,
   filterItems,
   formatIn,
@@ -329,12 +333,16 @@ function ProductsPanel() {
       <dl className="inv-info">
         {bd ? (
           <div className="inv-info-row">
-            <dt>Bottiglie</dt>
+            <dt>Pezzi</dt>
             <dd>
+              <strong>{formatPezzi(pezziInGiacenza(it))} pz</strong>
+              {' · '}
               {bd.full} piene
-              {bd.hasOpen && ` · 1 aperta (${fmtItem(bd.openRemaining, it)})`}
+              {bd.hasOpen && ` · 1 aperta (${fmtContenuto(bd.openRemaining, it)})`}
               {bd.finished > 0 && ` · ${bd.finished} finite`}
-              <span className="muted"> · 1 conf. = {fmtItem(it.package_size, it)}</span>
+              {/* Il contenuto in cl (o g): un pezzo è la bottiglia, dentro
+                  non ci sono pezzi. */}
+              <span className="muted"> · 1 pz = {fmtContenuto(it.package_size, it)}</span>
             </dd>
           </div>
         ) : (
@@ -394,8 +402,13 @@ function ProductsPanel() {
           >
             Contenuto reale
           </button>
-          <div className="grid-2" style={{ marginTop: 6, gap: 6 }}>
+          {/* Tre azioni sulla stessa riga: si modifica, si duplica, si
+              elimina. DUPLICA sta in mezzo perché è la via di mezzo — un
+              prodotto quasi uguale a questo — e a fianco dell'elimina si
+              ragiona due volte prima di premere. */}
+          <div className="inv-azioni" style={{ marginTop: 6 }}>
             <button className="btn ghost small" onClick={() => setEditing(it)}>✏️ Modifica</button>
+            <button className="btn ghost small" onClick={() => duplica(it)}>⧉ Duplica</button>
             <button className="btn ghost small" onClick={() => remove(it)}>🗑 Elimina</button>
           </div>
         </>
@@ -502,8 +515,28 @@ function ProductsPanel() {
     }
   }
 
+  // DUPLICA: lo stesso prodotto con un altro nome, da correggere. Al banco
+  // il magazzino è pieno di quasi-uguali — stessa bottiglia in due formati,
+  // lo stesso amaro di un altro fornitore — e rifarli da zero vuol dire
+  // ribattere costo, confezione, categoria, soglia e IVA.
+  //
+  // La copia nasce con la GIACENZA A ZERO e senza storia di carichi: è un
+  // prodotto nuovo che non è mai entrato in magazzino. Copiare anche le
+  // scorte vorrebbe dire inventarsi bottiglie che non ci sono.
+  async function duplica(item) {
+    try {
+      const copia = await createInventoryItem(copiaProdotto(item))
+      setItems((prev) => [...prev, copia])
+      // Si apre subito la scheda: il nome «(copia)» va cambiato, ed è il
+      // motivo per cui si sta duplicando.
+      setEditing(copia)
+    } catch (e) {
+      setError(e.message)
+    }
+  }
+
   async function remove(item) {
-    if (!confirm(`Eliminare "${item.name}" dall'inventario?`)) return
+    if (!confirm(`Eliminare "${item.name}" dal magazzino?`)) return
     try {
       await deleteInventoryItem(item.id)
       setItems((prev) => prev.filter((x) => x.id !== item.id))
@@ -745,15 +778,13 @@ function ProductsPanel() {
                   <span className="inv-cell-num inv-row-stock">
                     {bs ? (
                       <>
-                        {/* Niente emoji della bottiglia: il conteggio si
-                            scrive. A zero non c'è nulla da chiamare "piena",
-                            e si leggeva "0 🍾 · piena". */}
-                        {bs.bottles} bott.{' '}
-                        <span className="muted small">
-                          {bs.bottles === 0
-                            ? '· esaurito'
-                            : `· ${bs.open ? `aperta ${bs.open}` : bs.bottles > 1 ? 'piene' : 'piena'}`}
-                        </span>
+                        {/* SOLO IL NUMERO. «piena / aperta 46 cl /
+                            esaurito» raccontava lo stato della bottiglia,
+                            che col conteggio a pezzi è già nel numero:
+                            «0,5 pz» dice da sé che è mezza, «0 pz» che è
+                            finita. Il dettaglio delle bottiglie resta
+                            aperto sotto, per chi va a contarle. */}
+                        {formatPezzi(bs.pezzi)} pz
                       </>
                     ) : (
                       fmtItem(it.stock, it)
@@ -803,16 +834,11 @@ function ProductsPanel() {
                     return (
                       <span style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                         <span className="grid-card-tot" style={{ fontSize: '1.05rem' }}>
-                          {bs ? `${bs.bottles} bott.` : fmtItem(it.stock, it)}
+                          {bs ? `${formatPezzi(bs.pezzi)} pz` : fmtItem(it.stock, it)}
                         </span>
                         {bs && (
                           <span className="muted small" style={{ display: 'block' }}>
-                            {bs.total} ·{' '}
-                            {bs.open
-                              ? `aperta ${bs.open}`
-                              : bs.bottles > 1
-                                ? 'piene'
-                                : 'piena'}
+                            {bs.total}
                           </span>
                         )}
                       </span>
@@ -1266,15 +1292,25 @@ function CaricoForm({ item, onCancel, onConfirm }) {
   const [unitCost, setUnitCost] = useState(item.cost != null ? String(item.cost) : '')
   const [perCollo, setPerCollo] = useState('')
   const [colloTot, setColloTot] = useState('')
+  // Quanti cartoni si stanno caricando: i pezzi li riempie lui.
+  const [cartoni, setCartoni] = useState('')
 
   const onUnit = (v) => {
     setUnitCost(v)
     const p = num(perCollo)
     if (p > 0) setColloTot(num(v) > 0 ? String(r2(num(v) * p)) : '')
   }
+  const onCartoni = (v) => {
+    setCartoni(v)
+    const p = num(perCollo)
+    if (p > 0) setCount(num(v) > 0 ? String(num(v) * p) : '')
+  }
   const onCollo = (v) => {
     setPerCollo(v)
     const p = num(v)
+    // Cambiando quanti pezzi ha il cartone, i pezzi si rifanno: se no
+    // resterebbe il conto vecchio, e si caricherebbe la quantità sbagliata.
+    if (p > 0 && num(cartoni) > 0) setCount(String(num(cartoni) * p))
     if (p <= 0) return
     if (num(unitCost) > 0) setColloTot(String(r2(num(unitCost) * p)))
     else if (num(colloTot) > 0) setUnitCost(String(r2(num(colloTot) / p)))
@@ -1301,8 +1337,31 @@ function CaricoForm({ item, onCancel, onConfirm }) {
     <div style={{ marginTop: 8 }}>
       {isPz ? (
         <>
-          <label>Quanti pezzi aggiungi?</label>
+          {/* CARTONI → PEZZI. Il fornitore consegna cartoni, il magazzino
+              conta bottiglie: dicendo quanti pezzi ha un cartone, i pezzi
+              si riempiono da sé. Chi carica bottiglie sfuse lascia il
+              cartone vuoto e scrive i pezzi, come sempre. */}
+          {perN > 0 && (
+            <>
+              <label htmlFor="cf-cartoni">Quanti cartoni? (1 cartone = {perN} pz)</label>
+              <input
+                id="cf-cartoni"
+                type="number"
+                step="1"
+                min="0"
+                value={cartoni}
+                onChange={(e) => onCartoni(e.target.value)}
+                placeholder="Es. 2"
+              />
+            </>
+          )}
+          <label style={perN > 0 ? { marginTop: 8 } : undefined}>Quanti pezzi aggiungi?</label>
           <input type="number" step="1" min="0" value={count} onChange={(e) => setCount(e.target.value)} autoFocus />
+          {perN > 0 && num(cartoni) > 0 && (
+            <div className="muted small" style={{ marginTop: 4 }}>
+              {num(cartoni)} × {perN} = <strong>{num(cartoni) * perN} pz</strong>
+            </div>
+          )}
         </>
       ) : (
         <>

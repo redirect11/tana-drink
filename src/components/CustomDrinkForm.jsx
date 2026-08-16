@@ -113,7 +113,7 @@ export default function CustomDrinkForm({ onCancel, onAdd, initial = null, warnN
         <p className="muted small" style={{ margin: '0 0 10px' }}>
           {initial
             ? 'Modifica nome, prezzo e ingredienti solo per questa riga: diventa una voce a sé e non si unisce più con gli originali.'
-            : 'Nome e prezzo bastano (es. voce non in inventario). Gli ingredienti servono solo se vuoi lo scarico magazzino.'}
+            : 'Nome e prezzo bastano (es. voce non in magazzino). Gli ingredienti servono solo se vuoi lo scarico magazzino.'}
         </p>
 
         <label htmlFor="cd-name">Nome *</label>

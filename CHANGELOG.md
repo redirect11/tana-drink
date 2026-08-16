@@ -273,6 +273,35 @@ cose che erano già in 1.4.0 e 1.4.1.
 
 ---
 
+## Non ancora rilasciata — 1.3.3
+
+### Al banco
+
+- **Le scorte si contano in pezzi, con la virgola.** Una bottiglia da
+  100 cl con dentro 50 cl è **0,5 pz**; due piene da mezzo litro e una a
+  cui mancano 10 cl fanno **2,8 pz**. Prima si leggeva «3 bott.», che dice
+  quante bottiglie si toccano e non quanto prodotto c'è: tre bottiglie di
+  cui una quasi vuota contavano come tre, e per sapere se bastavano per la
+  serata bisognava aprire il dettaglio. Sparisce anche il «piena / aperta
+  46 cl / esaurito» di fianco: col conteggio a pezzi è già nel numero —
+  «0,5 pz» dice da sé che è mezza, «0 pz» che è finita. Le bottiglie —
+  piene, aperta, finite — restano nel dettaglio, per chi va a contarle
+  sullo scaffale.
+- **Le unità restano coerenti**: il pezzo è la bottiglia, il contenuto si
+  legge sempre in cl (o in grammi). Nel dettaglio si leggeva «1 aperta
+  (40 pz) · 1 conf. = 200 pz», che a chi sta versando non dice niente.
+- **Caricando si può contare a cartoni**: dicendo quanti pezzi ha un
+  cartone, i pezzi si riempiono da sé (2 × 24 = 48). Chi carica bottiglie
+  sfuse lascia il cartone da parte e scrive i pezzi, come sempre.
+- **«Inventario» si chiama Magazzino**, come lo chiama chi ci lavora.
+- **Un prodotto si può duplicare**, fra Modifica ed Elimina: il magazzino
+  è pieno di quasi-uguali — stessa bottiglia in due formati, lo stesso
+  amaro di un altro fornitore — e rifarli da zero vuol dire ribattere
+  costo, confezione, categoria, soglia e IVA. La copia parte **a zero** e
+  si apre subito, perché il nome va cambiato.
+
+---
+
 ## 1.3.2 — 15 agosto 2026
 
 ### Al banco

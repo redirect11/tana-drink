@@ -453,7 +453,7 @@ export default function SettingsTab({ role = null }) {
               </div>
               <p className="muted small" style={{ margin: '4px 0 0' }}>
                 IVA delle fatture fornitore (ordinaria: <strong>22%</strong>): è il
-                valore predefinito dei nuovi prodotti in Inventario. Ogni prodotto può
+                valore predefinito dei nuovi prodotti in Magazzino. Ogni prodotto può
                 comunque indicarne una diversa (campo IVA).
               </p>
             </div>

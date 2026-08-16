@@ -5844,3 +5844,16 @@ body.pagina-piena .pagina-inventario .inv-scroll {
 a.storico-notifica:hover {
   background: rgba(245, 185, 74, 0.06);
 }
+/* Le tre azioni di un prodotto in magazzino: modifica, duplica, elimina.
+   In riga da tre stanno larghe uguali; sul telefono vanno a capo da se'
+   invece di stringersi fino a non leggersi piu'. */
+.inv-azioni {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+@media (max-width: 480px) {
+  .inv-azioni {
+    grid-template-columns: 1fr 1fr;
+  }
+}
