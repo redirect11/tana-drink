@@ -107,7 +107,7 @@ export default function PurchaseOrdersPanel() {
   }
 
   // Invia l'ordine al fornitore: client di posta precompilato (l'email si
-  // imposta sull'anagrafica fornitore, bottone 📧 in Inventario → Fornitori).
+  // imposta sull'anagrafica fornitore, bottone 📧 in Magazzino → Fornitori).
   function inviaEmail(order) {
     const sup = suppliers.find((x) => x.id === order.supplier_id)
     const body = purchaseOrderText(order)
@@ -171,7 +171,7 @@ export default function PurchaseOrdersPanel() {
         {supplierId && supplierItems.length === 0 && (
           <p className="muted small" style={{ marginTop: 8 }}>
             Nessun prodotto assegnato a questo fornitore (assegna il fornitore ai
-            prodotti dall'inventario).
+            prodotti dal magazzino).
           </p>
         )}
 

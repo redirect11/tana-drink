@@ -171,7 +171,7 @@ export default function DrinkForm({ initial, categories, inventory, onCreateCate
       <label style={{ marginTop: 12 }}>Ricetta / ingredienti</label>
       {inventory.length === 0 && (
         <div className="muted" style={{ fontSize: '0.85rem' }}>
-          Nessun prodotto in inventario: aggiungili nella tab “Inventario” per
+          Nessun prodotto in magazzino: aggiungili nella tab “Magazzino” per
           comporre la ricetta.
         </div>
       )}

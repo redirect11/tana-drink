@@ -28,6 +28,10 @@ import {
   smallUnits,
   costPerUnit,
   inventoryTotalValue,
+  pezziInGiacenza,
+  formatPezzi,
+  copiaProdotto,
+  fmtContenuto,
 } from '../../src/lib/inventory.js'
 
 describe('toBaseQty', () => {
@@ -268,18 +272,18 @@ describe('computeConsumption', () => {
 describe('bottleSummary: bottiglie (pz) + contenuto (cl), unità distinte', () => {
   const gin = { unit: 'ml', package_size: 700 } // bottiglia da 70 cl
   it('bottiglie piene: conteggio + contenuto totale, nessuna aperta', () => {
-    expect(bottleSummary({ ...gin, stock: 700 })).toEqual({ bottles: 1, total: '70 cl', open: null })
-    expect(bottleSummary({ ...gin, stock: 2100 })).toEqual({ bottles: 3, total: '2,1 L', open: null })
+    expect(bottleSummary({ ...gin, stock: 700 })).toMatchObject({ bottles: 1, total: '70 cl', open: null })
+    expect(bottleSummary({ ...gin, stock: 2100 })).toMatchObject({ bottles: 3, total: '2,1 L', open: null })
   })
   it('una aperta: la conta come bottiglia e mostra il suo residuo in cl', () => {
     // 2 piene (1400 ml) + 300 ml aperti → 3 bottiglie, 1,7 L totali, 30 cl aperta
-    expect(bottleSummary({ ...gin, stock: 1700 })).toEqual({ bottles: 3, total: '1,7 L', open: '30 cl' })
+    expect(bottleSummary({ ...gin, stock: 1700 })).toMatchObject({ bottles: 3, total: '1,7 L', open: '30 cl' })
   })
   it('meno di una bottiglia: 1 aperta col suo contenuto', () => {
-    expect(bottleSummary({ ...gin, stock: 300 })).toEqual({ bottles: 1, total: '30 cl', open: '30 cl' })
+    expect(bottleSummary({ ...gin, stock: 300 })).toMatchObject({ bottles: 1, total: '30 cl', open: '30 cl' })
   })
   it('vuoto → nessuna bottiglia', () => {
-    expect(bottleSummary({ ...gin, stock: 0 })).toEqual({ bottles: 0, total: '0 ml', open: null })
+    expect(bottleSummary({ ...gin, stock: 0 })).toMatchObject({ bottles: 0, total: '0 ml', open: null })
   })
   it('il contenuto NON si misura in pezzi', () => {
     const s = bottleSummary({ ...gin, stock: 1700 })
@@ -563,5 +567,123 @@ describe('scarico secondo l’unità della ricetta', () => {
     const diff = consumptionDiff(prima, dopo)
     expect(diff.find((d) => d.unit === 'ml').delta).toBe(-40) // un cocktail in meno
     expect(diff.find((d) => d.unit === 'pz').delta).toBe(1) // una bottiglia in più
+  })
+})
+
+// ── QUANTI PEZZI CI SONO, CON LA VIRGOLA ─────────────────────────────
+// «3 bott.» diceva quante bottiglie si toccano, non quanto prodotto c'è
+// dentro: tre bottiglie di cui una quasi vuota contavano come tre, e per
+// sapere se bastavano per la serata bisognava aprire il dettaglio.
+describe('pezzi in giacenza', () => {
+  it('una bottiglia da 100 cl con dentro 50 cl è mezzo pezzo', () => {
+    const tanqueray = { unit: 'ml', package_size: 1000, stock: 500, bottles_total: 1 }
+    expect(pezziInGiacenza(tanqueray)).toBeCloseTo(0.5, 3)
+    expect(formatPezzi(pezziInGiacenza(tanqueray))).toBe('0,5')
+  })
+
+  it('due piene da 50 cl e una a cui mancano 10 cl fanno 2,8', () => {
+    const tre = { unit: 'ml', package_size: 500, stock: 2 * 500 + 400, bottles_total: 3 }
+    expect(formatPezzi(pezziInGiacenza(tre))).toBe('2,8')
+  })
+
+  it('le bibite contate a pezzo dicono il loro numero', () => {
+    const bibite = { unit: 'pz', package_size: 200, content_unit: 'ml', stock: 17 }
+    expect(formatPezzi(pezziInGiacenza(bibite))).toBe('17')
+  })
+
+  it('esaurito è zero, non «0 bott. piena»', () => {
+    const finito = { unit: 'ml', package_size: 700, stock: 0, bottles_total: 2 }
+    expect(formatPezzi(pezziInGiacenza(finito))).toBe('0')
+  })
+
+  it('gli interi non si scrivono con gli zeri in coda', () => {
+    expect(formatPezzi(3)).toBe('3')
+    expect(formatPezzi(2.5)).toBe('2,5')
+    // Due decimali bastano: al banco nessuno versa il millesimo di bottiglia.
+    expect(formatPezzi(2.456)).toBe('2,46')
+  })
+
+  it('senza confezione non c’è un pezzo da contare', () => {
+    expect(pezziInGiacenza({ unit: 'ml', stock: 900 })).toBeNull()
+  })
+})
+
+// ── DUPLICARE UN PRODOTTO ────────────────────────────────────────────
+// Il magazzino è pieno di quasi-uguali: stessa bottiglia in due formati,
+// lo stesso amaro di un altro fornitore. Rifarli da zero vuol dire
+// ribattere costo, confezione, categoria, soglia e IVA.
+describe('copia di un prodotto', () => {
+  const gin = {
+    id: 'inv1',
+    created_at: '2026-01-01T00:00:00.000Z',
+    name: 'Tanqueray',
+    unit: 'ml',
+    package_size: 1000,
+    cost: 18,
+    vat: 22,
+    category_id: 'gin',
+    supplier_id: 'metro',
+    low_threshold: 500,
+    stock: 2500,
+    bottles_total: 4,
+  }
+
+  it('porta con sé quello che costa tempo ribattere', () => {
+    const copia = copiaProdotto(gin)
+    expect(copia).toMatchObject({
+      unit: 'ml',
+      package_size: 1000,
+      cost: 18,
+      vat: 22,
+      category_id: 'gin',
+      supplier_id: 'metro',
+      low_threshold: 500,
+    })
+  })
+
+  it('nasce VUOTA: la giacenza non si copia', () => {
+    // Portarsi dietro le bottiglie vorrebbe dire inventarsele: la copia in
+    // magazzino non è mai entrata.
+    const copia = copiaProdotto(gin)
+    expect(copia.stock).toBe(0)
+    expect(copia.bottles_total).toBe(0)
+  })
+
+  it('non porta l’identità dell’originale', () => {
+    const copia = copiaProdotto(gin)
+    expect(copia.id).toBeUndefined()
+    expect(copia.created_at).toBeUndefined()
+  })
+
+  it('il nome dice che è una copia, così si vede quale correggere', () => {
+    expect(copiaProdotto(gin).name).toBe('Tanqueray (copia)')
+    expect(copiaProdotto({ name: '' }).name).toBe('Prodotto (copia)')
+  })
+})
+
+// ── IL CONTENUTO NON SI MISURA IN PEZZI ──────────────────────────────
+// Un pezzo è la bottiglia; dentro ci sono cl (o grammi). Si leggeva «1
+// aperta (40 pz) · 1 conf. = 200 pz», che a chi sta versando non dice
+// niente.
+describe('unità del contenuto', () => {
+  const bibita = { unit: 'pz', package_size: 200, content_unit: 'ml' }
+  const solido = { unit: 'pz', package_size: 1000, content_unit: 'g' }
+  const gin = { unit: 'ml', package_size: 700 }
+
+  it('la capienza di una bottiglia contata a pezzo si legge in cl', () => {
+    expect(fmtContenuto(200, bibita)).toBe('20 cl')
+  })
+
+  it('e quello che resta nell’aperta pure', () => {
+    expect(fmtContenuto(40, bibita)).toBe('4 cl')
+  })
+
+  it('i solidi in grammi, non in pezzi', () => {
+    expect(fmtContenuto(1000, solido)).toMatch(/g$/)
+  })
+
+  it('gli articoli già a volume restano come sono', () => {
+    expect(fmtContenuto(700, gin)).toBe('70 cl')
+    expect(fmtContenuto(300, gin)).toBe('30 cl')
   })
 })
