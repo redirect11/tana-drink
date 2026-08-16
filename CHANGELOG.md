@@ -4,6 +4,15 @@
 
 ### Al banco
 
+- **Il magazzino dice quello che ti ritrovi a fine serata.** Accanto alle
+  scorte c'è una colonna con quello che resterà se tutti i conti aperti
+  vengono incassati così come sono: i drink già fatti sui tavoli hanno
+  promesso quegli ingredienti, e la domanda a metà servizio è «mando
+  qualcuno a prendere una bottiglia?». Il numero cambia appena l'item
+  entra nel conto; a cassa chiusa la colonna non c'è.
+- **I numeri in cima alla coda sono di questa apertura di cassa.** Dopo
+  una chiusura e una riapertura si leggeva ancora l'incasso della serata
+  prima: contavano la giornata, non l'apertura. A cassa chiusa sono zeri.
 - **Nella coda non compaiono più i conti chiusi delle serate passate.**
   La coda è il lavoro di stasera; gli incassi vecchi stanno in Cassa →
   lista ordini. I conti *aperti* dei giorni scorsi restano dov'erano:
