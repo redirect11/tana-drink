@@ -1,5 +1,24 @@
 # Cosa è cambiato
 
+## 1.4.5 — 16 agosto 2026
+
+### Al banco
+
+- **Nelle pagine col menu aperto, menu e contenuto scorrono ognuno per
+  conto suo.** Scorrendo il contenuto se ne andava via anche il menu, che
+  di suo non ha niente da scorrere. E chiudendolo non passa più, per un
+  istante, il pannellone a scomparsa che scivola via da sinistra.
+- **Chi annulla un conto non riceve l'avviso del proprio annullamento.**
+  Arrivava anche a lui: lo sa già, e in mezzo al servizio è rumore. Agli
+  altri terminali arriva come prima.
+- **I tasti tornano dell'oro di sempre.** Facendoli seguire il tema erano
+  venuti più smorti — l'estremo scuro del gradiente non era più lo stesso
+  — e il «+» della coda si riconosceva meno. Sul tema di casa il colore è
+  identico a quello in produzione; sui temi che cambiano i bottoni resta
+  il loro.
+
+---
+
 ## 1.4.4 — 16 agosto 2026
 
 ### Per chi gestisce
