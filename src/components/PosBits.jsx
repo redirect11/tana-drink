@@ -32,11 +32,13 @@ export function DrinkTile({
       onClick={onAdd}
       // Serve alla ricerca per ritrovare la card e portarcisi sopra.
       data-drink-id={drink.id}
-      className={`pos-tile-striscia${acceso ? ' prodotto-acceso' : ''}`}
+      // Le tile hanno lo stesso vestito delle card della coda — sfumatura
+      // leggera e ombra — invece di essere riquadri piatti: in una griglia
+      // piena il rilievo è quello che fa leggere le colonne.
+      className={`pos-tile-striscia${acceso ? ' prodotto-acceso' : ''}${
+        inCart ? ' in-carrello' : ''
+      }`}
       style={{
-        background: inCart
-          ? 'rgba(var(--accent-rgb, 180, 120, 60), 0.18)'
-          : 'var(--tile-bg)',
         border: inCart
           ? '2px solid rgba(var(--accent-rgb, 180, 120, 60), 0.7)'
           : '1px solid var(--line)',
