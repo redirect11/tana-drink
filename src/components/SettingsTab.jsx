@@ -207,7 +207,9 @@ export default function SettingsTab({ role = null }) {
                   e in lib/strisce.js. E dove sta l'altra impostazione lo
                   si scopre andandoci: scriverlo qui è una nota per noi,
                   non per chi sceglie. */}
-              <h4 style={{ margin: '16px 0 4px' }}>La striscia a sinistra delle card</h4>
+              <h4 style={{ margin: '16px 0 4px' }}>
+                Cosa dice la riga a sinistra di ogni scheda della griglia?
+              </h4>
               <div className="mode-choice" style={{ gridTemplateColumns: '1fr 1fr' }}>
                 {MODI_STRISCIA.map((m) => (
                   <button
@@ -672,7 +674,9 @@ export default function SettingsTab({ role = null }) {
                   è una scelta su come si guarda il catalogo, non su come si
                   batte un conto. (La griglia del conto ha la sua, in Vista
                   ordine.) */}
-              <h4 style={{ margin: '16px 0 4px' }}>La striscia delle schede</h4>
+              <h4 style={{ margin: '16px 0 4px' }}>
+                Cosa dice la riga a sinistra di ogni scheda del catalogo?
+              </h4>
               <div className="mode-choice" style={{ gridTemplateColumns: '1fr 1fr' }}>
                 {MODI_STRISCIA.map((m) => (
                   <button
