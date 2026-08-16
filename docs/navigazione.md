@@ -39,16 +39,34 @@ sotto i 44px si sbaglia. Si **toglie**, in quest'ordine:
   rientrate sotto la pagina aperta. Un posto solo per navigare, uguale sul
   telefono e sul computer.
 
-  Le altre strade le abbiamo provate tutte, e non reggono: una **colonna in
-  pagina** costa spazio tutto il giorno per una scelta che si fa ogni tanto;
-  una **riga di schede** in pagina idem, e sul telefono non ci sta; le
-  **schede nella barra** reggono cinque voci, non ventidue; una **tendina**
-  costringe ad aprirla per sapere cosa c'è dentro. Il menu invece scorre, è
-  già il posto dove si va per cambiare pagina, e non toglie un pixel al
-  contenuto.
+  Le altre strade le abbiamo provate tutte, e non reggono: una **riga di
+  schede** in pagina costa altezza e sul telefono non ci sta; le **schede
+  nella barra** reggono cinque voci, non ventidue; una **tendina** costringe
+  ad aprirla per sapere cosa c'è dentro. Il menu invece scorre, ed è già il
+  posto dove si va per cambiare pagina.
 
   Nel menu compaiono le sezioni della **pagina aperta**: sono le uniche che
   si conoscono senza esserci passati.
+- **Dove la pagina ha sezioni sue, il menu resta agganciato**: da 768px in
+  su non copre il contenuto, è una colonna della pagina e il contenuto si
+  stringe per fargli posto. Lì dentro si salta da una sezione all'altra
+  venti volte di seguito, e un menu che copre significa aprire, cercare,
+  scegliere — e intanto non vedere più dove si era.
+
+  **Si apre e si chiude col ☰**, come ovunque: niente secondo tasto per
+  «agganciarlo». A chi lavora interessa che il menu ci sia o non ci sia —
+  che resti dentro la pagina invece di coprirla è come si presenta, non
+  un'altra funzione. La scelta resta anche il giorno dopo
+  (`tana:drawer-agganciato`). Sulla coda
+  ordini non si aggancia — lì non ci sono sezioni e sarebbe una colonna in
+  meno di conti.
+
+  **Da dove in su** è un conto sulla larghezza che resta: sul telefono
+  (360–430px) 250px sono più di metà schermo e il contenuto diventa
+  inutilizzabile, quindi lì il menu resta a scomparsa; da 768px — l'iPad in
+  verticale, il tablet del banco — restano 500px e la scelta ha senso. Fino
+  ai 900px la colonna si stringe a 200px.
+
 - **I filtri** stanno in una tendina sopra il contenuto, e il tasto dice cosa
   è scelto senza doverla aprire.
 - **Il contenuto non porta navigazione**: niente tasti «vai a…» in mezzo a una

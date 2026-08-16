@@ -3226,6 +3226,10 @@ export const DEFAULT_SETTINGS = {
   // Dove finisce l'item appena aggiunto nella lista ordine: in fondo (default,
   // e la lista scorre a mostrarlo) o in cima (subito visibile senza scorrere).
   pos_add_top: false,
+  // Il MINIMO della scala del testo nelle righe del conto (il testo segue
+  // la larghezza del pannello, ma sotto questa soglia non scende): 1.1 è
+  // com'era da sempre; chi lo trova un manifesto lo abbassa.
+  pos_testo_min: 1.1,
   // Come mostrare le categorie nel POS: 'dot' (pallino + testo, come ora),
   // 'icon_text' (icona + testo) o 'icon' (solo icona).
   category_display: 'dot',

@@ -344,13 +344,47 @@ requirements:
       Quello che resta nostro è la regola: l'ordine è UNO SOLO e globale,
       anche quando a schermo c'è una sola categoria — se no spostare una birra
       dentro «Birre» la lascerebbe al suo posto in «Tutti».
-      La maniglia è attaccata alla card, non affiancata: è la stessa cosa, e
-      fra le due c'era una fessura con gli angoli tondi da tutte e due le
-      parti.
+      La maniglia sta SOPRA la card, sul suo bordo destro, e non a fianco:
+      affiancata allargava ogni cella di 38px, e la griglia entrando in
+      «organizza» cambiava numero di card per riga e misura — si sistemava
+      una disposizione diversa da quella che poi si usa davvero. La cella
+      occupa esattamente quello che occupa fuori da qui.
+      Il contesto di trascinamento sta SEMPRE attorno alla griglia, anche
+      fuori da «organizza» (senza gesti attivi e senza niente di
+      trascinabile dentro, non fa nulla). Montarlo solo lì spostava la
+      griglia in un altro posto dell'albero, e React a quel punto buttava il
+      riquadro e ne faceva uno nuovo: il misuratore della larghezza — quello
+      che decide quanto sono grandi le card e i loro testi — restava
+      attaccato al vecchio, staccato dalla pagina e quindi largo zero, e le
+      card tornavano alla misura di partenza coi testi rimpiccioliti.
+      Sistemato quello restava comunque un lampo, il tempo di rifare il
+      riquadro e rimisurarlo. Il misuratore, per sicurezza, si riaggancia
+      comunque al riquadro che c'è (ref-funzione) e prende subito la misura.
+      Dentro «organizza» la card riempie la sua casella come fuori: la
+      griglia rende tutte le caselle di una riga alte uguali, ma in mezzo
+      c'è il guscio che porta il trascinamento — si allungava lui e la card
+      restava alta quanto il suo testo, con una riga di card di altezze
+      diverse.
+      La card in mano è OPACA: il fondo delle card è un velo (--tile-bg,
+      bianco al 5%), che appoggiate sulla pagina va bene ma alzandone una
+      sopra le altre le faceva vedere attraverso — e non si capiva più
+      quale si sta spostando. Sotto ci va il fondo della pagina, così in
+      mano ha l'aspetto identico a quando è posata.
+      Il minimo delle colonne — «almeno tre card per riga finché ci stanno»
+      — lo calcola il CSS con min()/max(), non il JavaScript sulla
+      larghezza misurata: la misura arriva sempre qualche fotogramma dopo, e
+      trascinando la maniglia di fianco alla griglia per un attimo ci
+      stavano due colonne invece di tre, fino a quando non arrivava. Nel
+      CSS il conto si rifà insieme al ridimensionamento.
+      Sempre per non far ballare la griglia, lo spazio della barra di
+      scorrimento è riservato (`scrollbar-gutter: stable`): compariva e
+      spariva a seconda di quanti prodotti ha la categoria, e al confine
+      fra tre e quattro card per riga la griglia si riassestava da sola
+      mentre la si guardava.
     status: implemented
     generate_issue: false
     labels: [pos, ux]
-    test_cases: []
+    test_cases: [tests/component/PosProductPicker.test.jsx]
 
   - id: REQ-POS-008
     title: "Le maniglie, col dito, si prendono solo tenendo premuto"
@@ -497,6 +531,24 @@ requirements:
     generate_issue: false
     labels: [pagamenti, stampa]
     test_cases: [tests/component/PaymentScreen.test.jsx]
+
+  - id: REQ-PAG-009
+    title: "Nel pagamento gli item sono separati di partenza"
+    area: "src/components/PaymentScreen.jsx, src/lib/pagamento.js"
+    description: >
+      La schermata di incasso mostra gli item UNO PER RIGA fin da subito,
+      senza dover premere «Separa uguali»: al banco si paga quasi sempre a
+      pezzi — uno paga il suo, un altro offre due birre — e partire dal
+      gruppo «3× Birra» vuol dire un tocco in piu' ogni volta, proprio
+      mentre c'e' gente alla cassa. Restano possibili sia il raggruppamento
+      («Unisci uguali», per un conto lungo che diventa illeggibile) sia
+      l'incasso completo con un colpo solo.
+      Ogni unita' e' una cosa a se': accenderne o spegnerne una non tocca
+      le altre (vedi BUG-006, che nasce dallo stesso punto).
+    status: todo
+    generate_issue: true
+    labels: [pagamenti, ui]
+    test_cases: []
 
   # ══════════════════════════════════════════════════════════════════════
   #  CASSA DI SERATA, STATISTICHE, RENDICONTO
@@ -746,7 +798,10 @@ requirements:
       pagina diversa da quella che stava mostrando al tavolo. Ordinare da qui
       resta possibile quando le impostazioni lo consentono: a «solo menù» i
       tasti per aggiungere spariscono per il cliente, mentre chi è dello staff
-      può comunque inserire un ordine ed è segnato come autore.
+      può comunque inserire un ordine ed è segnato come autore. Allo staff la
+      pagina dà in più la barra di ricerca, sopra le categorie: filtra per
+      nome o ingrediente, perché chi prende l'ordine col cliente davanti non
+      scorre otto categorie. Il cliente sfoglia la vetrina senza barra.
     status: implemented
     generate_issue: false
     labels: [menu, ux]
@@ -849,8 +904,9 @@ requirements:
     area: "src/lib/ruoli.js, firestore.rules"
     description: >
       L'admin fa tutto quello che fa il bartender e in più nomina i ruoli; il
-      bartender ha il gestionale completo; lo staff di sala vede solo i drink
-      pronti da servire; il cliente il menù e i propri ordini. Il ruolo vive nei
+      bartender ha il gestionale completo; lo staff di sala lavora sulla stessa
+      coda del banco e vede cosa c'è da servire, senza le sezioni
+      amministrative; il cliente il menù e i propri ordini. Il ruolo vive nei
       claim del token e le regole del database guardano quello.
     status: implemented
     generate_issue: false
@@ -931,6 +987,61 @@ requirements:
     generate_issue: false
     labels: [staff, notifiche]
     test_cases: [tests/bdd/notify-staff-call.test.js]
+
+  - id: REQ-STAFF-008
+    title: "La sala lavora sulla stessa coda del banco"
+    area: "src/pages/BartenderPage.jsx, src/lib/sezioni.js, src/lib/coda.js"
+    description: >
+      La home dello staff di sala è la coda ordini, identica a quella del
+      gestionale: quello che vede il banco lo vede anche chi porta i vassoi.
+      Prima la sala aveva due pagine sue («Da servire» e «I miei ordini») e
+      non vedeva mai la coda vera. «I miei ordini» non è più una pagina: è
+      il filtro «Miei» della coda, che tiene solo i conti con la propria
+      firma (placed_by) — e il vecchio indirizzo ?tab=miei-ordini ci arriva
+      col filtro già acceso. «Da servire» resta come sezione. Le sezioni
+      amministrative restano ai gestori: per la sala un tab non suo riporta
+      alla coda. Dal menu laterale la sala apre «Nuovo ordine dal menù» (il
+      menù che mostra al tavolo, con la ricerca), non il POS del banco.
+    status: implemented
+    generate_issue: false
+    labels: [sala, coda, ruoli]
+    test_cases: [tests/unit/coda.test.js, tests/component/StaffDrawer.test.jsx]
+
+  # ══════════════════════════════════════════════════════════════════════
+  #  TAVOLI E QR
+  # ══════════════════════════════════════════════════════════════════════
+
+  - id: REQ-TAVOLI-001
+    title: "I tavoli hanno un'anagrafica, e ognuno il suo QR generato in app"
+    area: "src/lib/api.js, firestore.rules, requirements"
+    description: >
+      Nasce l'anagrafica dei tavoli: un tavolo ha un NOME e/o un NUMERO —
+      almeno uno dei due, e nessuno dei due può essere una stringa vuota.
+      Per ogni tavolo l'app genera il suo QR code (il collegamento al menù
+      con il tavolo già agganciato), da stampare e mettere sul tavolo:
+      la scansione porta al menù cliente col tavolo prepopolato. Oggi il
+      tavolo è testo libero sull'ordine: l'anagrafica non lo sostituisce
+      di colpo, ci si aggancia (il campo dell'ordine resta com'è, ma può
+      venire da un tavolo censito).
+    status: todo
+    generate_issue: true
+    labels: [tavoli, clienti, qr]
+    test_cases: []
+
+  - id: REQ-TAVOLI-002
+    title: "Nome e tavolo nelle viste d'ordine: staff libero, cliente guidato"
+    area: "src/pages/MenuPage.jsx, src/components/OrderSummary.jsx"
+    description: >
+      Nella vista «Nuovo ordine dal menù» dello staff si possono inserire
+      NOME e numero del tavolo: il nome deve poterci stare (oggi c'è solo
+      il tavolo) e il numero è opzionale. Nella vista cliente: se si arriva
+      dal QR del tavolo (REQ-TAVOLI-001) il tavolo è prepopolato e NON
+      modificabile; senza QR il tavolo non serve, ma il nome sì — è quello
+      che permette al banco di chiamare l'ordine.
+    status: todo
+    generate_issue: true
+    labels: [tavoli, clienti, pos]
+    test_cases: []
 
   # ══════════════════════════════════════════════════════════════════════
   #  VISTA CLIENTE
@@ -1065,6 +1176,70 @@ requirements:
     labels: [stampa, cassa]
     test_cases: []
 
+  - id: REQ-STAMPA-006
+    title: "Lo staff di sala stampa le comande degli ordini che prende"
+    area: "src/pages/MenuPage.jsx, src/lib/printer.js"
+    description: >
+      Chi è in sala prende ordini dal menù, e la comanda di quell'ordine deve
+      uscire. Prima non usciva niente: si sperava che al banco qualcuno
+      tenesse aperta la coda con la stampa automatica accesa: se quella
+      schermata non era aperta, l'ordine restava solo a schermo.
+      L'IP il telefono ce l'ha già — la configurazione della stampante è
+      condivisa e ogni dispositivo la riceve dal server (subscribePrinterConfig
+      in App.jsx) — quindi a mancare era solo l'ordine di stampare.
+      Ora l'ordine preso in sala stampa la sua comanda dal telefono che l'ha
+      preso, salvo che il locale abbia scelto il rimbalzo (REQ-STAMPA-008). La
+      stampa non si aspetta: l'ordine è salvato comunque, e se la stampa non
+      parte lo dice il pallino nella coda (REQ-STAMPA-007).
+      Resta da fare una volta, su ogni telefono, l'accettazione del
+      certificato della stampante: è REQ-STAMPA-003.
+    status: implemented
+    generate_issue: false
+    labels: [stampa, ruoli, sala]
+    test_cases: [tests/component/MenuPage.test.jsx]
+
+  - id: REQ-STAMPA-007
+    title: "Un pallino dice se la comanda uscirà, prima di averne bisogno"
+    area: "src/lib/statoStampante.js, src/components/PallinoStampante.jsx, src/pages/BartenderPage.jsx"
+    description: >
+      Nella coda ordini, per chiunque la guardi — banco e sala — un pallino
+      dice se la stampante risponde: verde esce, rosso adesso non uscirebbe,
+      bianco qui non c'è nessuna stampante impostata. Non è una stampa di
+      prova: è la stessa stretta di mano che farebbe la comanda, senza carta.
+      Si controlla ogni mezzo minuto finché qualcuno lo guarda e appena si
+      torna sull'app — è lì che si scopre caduta l'eccezione del certificato,
+      non a metà servizio. Toccandolo si legge il motivo e la strada per
+      rimetterlo a posto; a chi è in sala non si dice di andare nelle
+      impostazioni, che non ha. Una stretta di mano sola anche se a chiederla
+      sono in tre: la stampante ne regge poche.
+    status: implemented
+    generate_issue: false
+    labels: [stampa, ui]
+    test_cases:
+      - tests/unit/statoStampante.test.js
+      - tests/component/PallinoStampante.test.jsx
+
+  - id: REQ-STAMPA-008
+    title: "Il locale sceglie chi stampa le comande della sala"
+    area: "src/components/PrinterSetup.jsx, src/lib/printer.js"
+    description: >
+      In Impostazioni → Stampante si sceglie, una volta per tutto il locale
+      (la configurazione è condivisa), fra due modi: «la stampa il telefono»,
+      cioè chi prende l'ordine al tavolo stampa dal suo, e «la stampa il
+      banco», cioè la comanda esce al bancone all'arrivo dell'ordine. Di
+      partenza stampa il telefono, anche per le configurazioni salvate prima
+      che la scelta esistesse.
+      Scegliendo il banco con la stampa automatica spenta non stamperebbe
+      nessuno: l'impostazione lo dice, invece di lasciarlo scoprire a
+      servizio iniziato. E col rimbalzo il pallino della sala non finge di
+      sapere: dice che a stampare è il banco.
+    status: implemented
+    generate_issue: false
+    labels: [stampa, impostazioni]
+    test_cases:
+      - tests/component/MenuPage.test.jsx
+      - tests/unit/statoStampante.test.js
+
   # ══════════════════════════════════════════════════════════════════════
   #  NOTIFICHE
   # ══════════════════════════════════════════════════════════════════════
@@ -1163,6 +1338,36 @@ requirements:
     generate_issue: false
     labels: [offline, coda]
     test_cases: [tests/unit/codaCache.test.js]
+
+  - id: REQ-NOTIF-004
+    title: "Avvisi e storico stanno nel profilo, non nelle impostazioni del locale"
+    area: "src/pages/StaffProfilePage.jsx, src/components/AvvisiPanel.jsx, src/components/StoricoNotifiche.jsx"
+    description: >
+      Quali avvisi arrivare e lo storico di quelli arrivati stanno nel
+      PROFILO di chi è collegato. La scelta è per persona e per dispositivo
+      (`tana:avvisi:<uid>`), non una regola del locale: lo stesso account
+      sul tablet della cassa e sul telefono in sala vuole cose diverse, e
+      due che si passano il tablet nel cambio turno non si sovrascrivono
+      niente. Nelle impostazioni del locale — dove stavano — non entra chi è
+      in sala, cioè proprio chi ha più bisogno di sapere quando un drink è
+      pronto: lì gli avvisi erano fuori portata per chi li usa. In
+      Impostazioni → Notifiche resta un cartello che porta al profilo.
+      Lo storico è lo STESSO elenco della campanella, non una copia:
+      svuotarlo di qua lo svuota anche di là, e le notifiche ancora da
+      leggere non si buttano insieme alle altre. Da leggere e già lette
+      compaiono insieme, nell'ordine in cui sono arrivate; quelle già lette
+      sbiadiscono e quelle con una destinazione restano porte.
+      Attenzione a cosa è di chi: gli INTERRUTTORI sono per persona e
+      dispositivo, lo STORICO è del dispositivo (`tana:notifs`, senza uid) —
+      sono gli avvisi arrivati su quello schermo, e chi prende il turno dopo
+      li vede. È voluto: servono a ricostruire cos'è successo qui, non a
+      chi era collegato.
+    status: implemented
+    generate_issue: false
+    labels: [notifiche, ux]
+    test_cases:
+      - tests/component/StoricoNotifiche.test.jsx
+      - tests/component/AvvisiPanel.test.jsx
 
   - id: REQ-OFFLINE-003
     title: "Si vede quando si è offline"
@@ -1272,12 +1477,16 @@ requirements:
     test_cases: [tests/component/SectionPanels.test.jsx]
 
   - id: REQ-UI-002
-    title: "Impostazioni a schede, una per riquadro"
+    title: "Impostazioni in dieci gruppi, coi riquadri impilati"
     area: "src/components/SettingsTab.jsx"
     description: >
-      Le impostazioni sono ventuno riquadri: sono voci di una barra laterale e se
-      ne apre una alla volta, con la scelta ricordata. Erano una pagina lunghissima
-      da scorrere a occhio. Da tablet in su la schermata sta TUTTA dentro il
+      I riquadri delle impostazioni sono più di venti, ma le voci del
+      sottomenu sono DIECI GRUPPI, accorpati per «a cosa afferisce»
+      l'impostazione (Menù e catalogo, Servizio, Cassa e giornata, Prezzi e
+      supplementi…): scegliendo un gruppo i suoi riquadri si impilano uno
+      sotto l'altro, e la scelta si ricorda. Con una voce per riquadro
+      l'elenco era più lungo delle impostazioni; prima ancora era una
+      pagina lunghissima da scorrere a occhio. Da tablet in su la schermata sta TUTTA dentro il
       viewport: a scorrere sono i due pannelli — l'elenco delle sezioni e il
       contenuto — ognuno per conto suo, e non la pagina con dentro la testata,
       che scorrendo via si portava dietro l'elenco proprio mentre lo si usava.
@@ -1308,7 +1517,7 @@ requirements:
 
   - id: REQ-UI-004
     title: "Zoom della pagina per chi ci lavora ore"
-    area: "src/components/ZoomControl.jsx"
+    area: "src/components/ZoomControl.jsx, src/lib/zoomDove.js"
     description: >
       Nella PWA a tutto schermo il browser non offre lo zoom: l'app ha il suo, che
       scala la pagina senza deformarla. Sul telefono non flotta sull'angolo (dove
@@ -1316,10 +1525,19 @@ requirements:
       — il foglio dei ⋯, una conferma, il menu laterale — passa dietro e non si
       lascia toccare: stando in basso a sinistra finiva sopra le ultime voci, e si
       premeva lo zoom al posto della voce.
+      I tasti compaiono SOLO dove servono: coda ordini, il conto (creazione,
+      apertura, incasso) e flusso cassa — le schermate dove si legge tanta
+      roba fitta stando fermi a guardarla. Altrove sono due tasti flottanti
+      che coprono il contenuto per una cosa che lì nessuno usa: nel
+      magazzino e nelle impostazioni si scorre. Il livello scelto non si
+      azzera cambiando pagina: si smette solo di poterlo cambiare da lì. Al
+      cliente non servono, il suo browser lo zoom ce l'ha.
     status: implemented
     generate_issue: false
     labels: [ux]
-    test_cases: [tests/component/ZoomControl.test.jsx]
+    test_cases:
+      - tests/component/ZoomControl.test.jsx
+      - tests/unit/zoomDove.test.js
 
   - id: REQ-UI-005
     title: "Temi chiari e scuri, per il gestionale e per il cliente"
@@ -1432,6 +1650,32 @@ requirements:
     labels: [ux, coda]
     test_cases: [tests/unit/coda.test.js, tests/component/SettingsTab.test.jsx]
 
+  - id: REQ-UI-012
+    title: "Dove la pagina ha sezioni sue, il menu resta aperto nella pagina"
+    area: "src/components/StaffDrawer.jsx, src/index.css, docs/navigazione.md"
+    description: >
+      Nelle pagine con sottosezioni (Impostazioni, Inventario) il menu
+      laterale, da 768px in su, non copre il contenuto: è una colonna della
+      pagina e il contenuto si stringe per fargli posto. Dentro l'inventario
+      si salta fra Prodotti e Conta venti volte di seguito, e un menu che
+      copre vuol dire aprirlo, cercare, scegliere — e intanto non vedere più
+      dove si era.
+      Si apre e si chiude col ☰, lo stesso tasto di sempre: niente secondo
+      comando per «agganciarlo», che sarebbe una cosa in più da capire per
+      una differenza che a chi lavora non interessa — il menu c'è o non
+      c'è. La scelta resta anche il giorno dopo.
+      Sulle pagine senza sezioni proprie — la coda ordini —
+      resta a scomparsa: lì sarebbe una colonna in meno di conti.
+      Da dove in su è un conto sulla larghezza che avanza: sul telefono
+      (360-430px) una colonna da 250px è più di metà schermo e il contenuto
+      diventa inutilizzabile, quindi lì resta a scomparsa; da 768px —
+      l'iPad in verticale, il tablet del banco — restano 500px e la scelta
+      ha senso, con la colonna stretta a 200px fino ai 900px.
+    status: implemented
+    generate_issue: false
+    labels: [ux, navigazione]
+    test_cases: [tests/component/StaffDrawer.test.jsx]
+
   - id: REQ-UI-011
     title: "La navigazione ha delle regole, e sono scritte"
     area: "docs/navigazione.md, src/App.jsx, src/index.css"
@@ -1536,6 +1780,90 @@ requirements:
     generate_issue: false
     labels: [pos, ux]
     test_cases: [tests/component/PosProductPicker.test.jsx]
+
+  - id: REQ-POS-014
+    title: "La riga del conto dice quanto fa; il calcolo è a richiesta"
+    area: "src/components/OrderPosDetail.jsx, src/components/SettingsTab.jsx"
+    description: >
+      Ogni riga del conto mostra nome e SUBTOTALE (quantità × prezzo, già
+      fatto), anche con un pezzo solo. Il calcolo per esteso — «2 × 5,00 €»
+      — non sta più accanto al nome, dov'era rumore su ogni riga: si
+      accende dal menù ⋯ del conto («Mostra i calcoli delle righe»),
+      compare sotto l'item come le note, e se una riga ha nota e calcolo
+      stanno su due righe distinte. La scelta si ricorda sul dispositivo.
+      Il ⋯ per questo è visibile a tutte le taglie, non solo su telefono.
+      E la dimensione del testo delle righe ha un MINIMO configurabile
+      (Impostazioni → Vista ordine): il testo segue la larghezza del
+      pannello ma sotto la soglia scelta non scende — il pavimento fisso
+      di prima per qualcuno era un manifesto.
+    status: implemented
+    generate_issue: false
+    labels: [pos, ux]
+    test_cases: [tests/component/OrderPosDetail.test.jsx]
+
+  - id: REQ-POS-015
+    title: "Unisci e Separa sono un tasto solo"
+    area: "src/components/OrderPosDetail.jsx"
+    description: >
+      Dei due, alla volta ne serve uno: il tasto mostra l'azione possibile e
+      cambia faccia da sé — se c'è da unire, unisce; altrimenti separa.
+      Quando servirebbero entrambe vince Unisci, e Separa resta raggiungibile
+      dal menù ⋯ (dove le due voci esplicite restano comunque). Spento, non
+      sparito, quando non c'è niente da fare: i tasti non ballano.
+    status: implemented
+    generate_issue: false
+    labels: [pos, ux]
+    test_cases: [tests/component/OrderPosDetail.test.jsx]
+
+  - id: REQ-POS-016
+    title: "I supplementi del conto in chiaro: subtotale, voci, totale"
+    area: "src/components/OrderPosDetail.jsx"
+    description: >
+      Nel riepilogo del conto prima c'era una riga cumulativa
+      («Coperto/servizio/mancia · 5,50 €») e non si capiva né cosa fosse
+      attivo né quanto pesasse ognuno. Ora: SUBTOTALE in evidenza (il conto
+      nudo, in grassetto, appena più grande delle voci), sotto le voci
+      attive una per riga in piccolo — Coperto, Servizio, Mancia, solo
+      quelle maggiori di zero — e in fondo il TOTALE grande che somma
+      tutto. Le righe sono strette: il blocco non deve crescere in altezza.
+      Sul telefono il dettaglio parte chiuso e si apre toccando il
+      Subtotale.
+    status: implemented
+    generate_issue: false
+    labels: [pos, ux]
+    test_cases: [tests/component/OrderPosDetail.test.jsx]
+
+  - id: REQ-POS-017
+    title: "Coperto, servizio e mancia si accendono e spengono sul singolo conto"
+    area: "src/components/OrderPosDetail.jsx, src/lib/pricing.js"
+    description: >
+      Dal menù ⋯ del conto si governano i supplementi PER QUEL CONTO: se
+      un supplemento è disattivato nelle impostazioni lo si può accendere
+      solo qui (uno, due o tutti e tre); se è attivo di default lo si può
+      spegnere solo qui. Spegnendoli, le rispettive voci spariscono dal
+      riepilogo — e se non resta nulla sparisce anche la riga Subtotale.
+      Tocca i calcoli del conto: va fatto con i test della logica prezzi,
+      non solo di interfaccia.
+    status: todo
+    generate_issue: true
+    labels: [pos, pagamenti]
+    test_cases: []
+
+  - id: REQ-POS-018
+    title: "La barra azioni del conto si organizza come quella del browser"
+    area: "src/components/OrderPosDetail.jsx"
+    description: >
+      Una modalità «organizza» per i comandi del dettaglio conto, come la
+      barra di Firefox o Chrome: si decide QUALI comandi stanno in vista
+      (Unisci/Separa, Dati conto, Prodotto libero, le voci oggi nascoste
+      nel ⋯) e DOVE, con posizionamento libero, e COME si mostrano — icona
+      e testo, solo testo o sola icona. Anche il riquadro del tavolo è un
+      elemento posizionabile. Il precedente è la griglia POS organizzabile
+      (REQ-POS-011): stessa filosofia, qui applicata ai comandi.
+    status: todo
+    generate_issue: true
+    labels: [pos, ux]
+    test_cases: []
 
   # ══════════════════════════════════════════════════════════════════════
   #  COME SI LAVORA AL PROGETTO

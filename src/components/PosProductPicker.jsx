@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   DndContext,
   closestCenter,
@@ -49,12 +49,19 @@ import DrinkForm from './DrinkForm.jsx'
 // bartender fissa in alto) e 🕘 Recenti (gli ultimi item ordinati, passati
 // via `recentIds`). In "Tutti" le card si RIORDINANO col drag (attivando la
 // modalità riordino) e l'ordine è ricordato per dispositivo.
-// Il guscio del trascinamento: c'è solo quando si sta organizzando.
+// Il guscio del trascinamento. STA SEMPRE, anche fuori da «organizza»:
+// montarlo solo lì significava spostare la griglia in un altro posto
+// dell'albero, e React a quel punto butta il riquadro e ne fa uno nuovo.
+// Si vedeva: per un attimo le card cambiavano misura e poi tornavano —
+// il tempo di rifare il riquadro, rimisurarlo e ridisegnare. Senza gesti
+// attivi (sensori spenti) e senza niente di trascinabile dentro, qui non
+// fa nulla: è solo un contenitore che resta al suo posto.
+const SENSORI_SPENTI = []
+
 function Riordinabile({ attiva, sensori, ids, onFine, children }) {
-  if (!attiva) return children
   return (
     <DndContext
-      sensors={sensori}
+      sensors={attiva ? sensori : SENSORI_SPENTI}
       collisionDetection={closestCenter}
       onDragEnd={onFine}
     >
@@ -123,12 +130,27 @@ export default function PosProductPicker({
   // cambia quando si ridimensionano le colonne laterali. Vale in creazione e in
   // modifica (stesso picker).
   const [gridW, setGridW] = useState(0)
-  useEffect(() => {
-    const el = gridRef.current
+  // IL METRO VA RIATTACCATO QUANDO LA GRIGLIA RINASCE. Entrando in
+  // «organizza» la griglia finisce dentro il contesto di trascinamento: per
+  // React è un altro posto nell'albero, quindi butta via il riquadro e ne
+  // fa uno nuovo. Il misuratore restava attaccato a quello vecchio, ormai
+  // staccato dalla pagina, che misura zero: le card tornavano alla misura
+  // di partenza e i testi si rimpicciolivano di colpo, appena si toccava
+  // «Organizza». Con un ref-funzione lo si riaggancia al riquadro nuovo.
+  const osservatore = useRef(null)
+  const agganciaGriglia = useCallback((el) => {
+    gridRef.current = el
+    osservatore.current?.disconnect()
+    osservatore.current = null
     if (!el || typeof ResizeObserver === 'undefined') return
-    const ro = new ResizeObserver((entries) => setGridW(Math.round(entries[0].contentRect.width)))
+    const ro = new ResizeObserver((entries) =>
+      setGridW(Math.round(entries[0].contentRect.width))
+    )
     ro.observe(el)
-    return () => ro.disconnect()
+    osservatore.current = ro
+    // La prima misura senza aspettare il giro dell'osservatore: se no per
+    // un disegno le card sono della misura sbagliata.
+    setGridW(Math.round(el.getBoundingClientRect().width))
   }, [])
   const GRID_GAP = 8
   // Centro stretto (smartphone): barra alta compatta e font più piccoli.
@@ -136,11 +158,19 @@ export default function PosProductPicker({
   // Base più grande su tablet/desktop (leggibile su iPad); su smartphone il
   // floor è più basso, così le card non escono enormi.
   const tileScale = gridW ? Math.max(compact ? 0.9 : 1.05, Math.min(1.5, gridW / 440)) : 1
-  // Card più grandi ma SEMPRE almeno 3 per riga: la min-width non supera mai un
-  // terzo della larghezza disponibile.
-  const tileMin = gridW
-    ? Math.max(112, Math.min(Math.round(172 * tileScale), Math.floor((gridW - 2 * GRID_GAP) / 3)))
-    : 172
+  // Card più grandi ma SEMPRE almeno 3 per riga (finché ci stanno: sotto
+  // una certa misura si toccano col dito e basta, e allora meglio due
+  // grandi che tre inservibili).
+  //
+  // IL TERZO DI LARGHEZZA LO CALCOLA IL BROWSER, non noi. Prima lo si
+  // faceva in JS con la larghezza misurata, che arriva SEMPRE in ritardo:
+  // trascinando la maniglia di fianco alla griglia, per qualche fotogramma
+  // la misura era ancora quella di prima — più larga — e il browser ci
+  // faceva stare due colonne invece di tre, fino a quando la misura non
+  // arrivava. Con min()/max() dentro il CSS il conto si rifà a ogni
+  // fotogramma insieme al ridimensionamento, e le colonne non ballano.
+  const tileBase = Math.max(112, Math.round(172 * tileScale))
+  const colonne = `repeat(auto-fill, minmax(max(112px, min(${tileBase}px, calc((100% - ${2 * GRID_GAP}px) / 3))), 1fr))`
 
   useEffect(() => {
     if (cats.length > 0 && selectedCat === null) setSelectedCat('__all__')
@@ -412,7 +442,7 @@ export default function PosProductPicker({
           onFine={fineRiordino}
         >
         <div
-          ref={gridRef}
+          ref={agganciaGriglia}
           onScroll={() => onInteract?.()}
           style={{
             flex: 1,
@@ -424,8 +454,14 @@ export default function PosProductPicker({
             overscrollBehavior: 'contain',
             WebkitOverflowScrolling: 'touch',
             padding: '10px 8px',
+            // LA BARRA DI SCORRIMENTO NON DEVE SPOSTARE LE COLONNE. Compare
+            // e sparisce a seconda di quanti prodotti ha la categoria, e
+            // con lei cambiava la larghezza utile: al confine fra tre e
+            // quattro card per riga la griglia si riassestava da sola
+            // mentre la si guardava. Lo spazio è sempre riservato.
+            scrollbarGutter: 'stable',
             display: 'grid',
-            gridTemplateColumns: `repeat(auto-fill, minmax(${tileMin}px, 1fr))`,
+            gridTemplateColumns: colonne,
             alignContent: 'start',
             gap: GRID_GAP,
             // il font-size della griglia guida i testi em delle card

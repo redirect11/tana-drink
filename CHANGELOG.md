@@ -1,5 +1,88 @@
 # Cosa è cambiato
 
+## 1.4.3 — 16 agosto 2026
+
+### In sala
+
+- **Chi prende l'ordine al tavolo stampa la sua comanda**, dal proprio
+  telefono. Prima non usciva niente: la comanda arrivava al banco solo se
+  lì qualcuno teneva aperta la coda ordini con la stampa automatica accesa
+  — che era spenta. L'indirizzo della stampante i telefoni ce l'avevano
+  già: mancava l'ordine di stamparla.
+- **Un pallino nella coda dice se la comanda uscirà**, prima di averne
+  bisogno: verde la stampante risponde, rosso adesso non uscirebbe — e
+  toccandolo si legge perché e come rimetterla a posto — bianco qui non
+  c'è nessuna stampante impostata. Non è una stampa di prova: è la stessa
+  chiamata che farebbe la comanda, senza carta. Si ricontrolla da sé, e
+  appena si torna sull'app: è lì che si scopre che il permesso di
+  sicurezza della stampante è scaduto, invece che a metà servizio.
+- **La sala lavora sulla stessa coda del banco.** «I miei ordini» non è
+  più una pagina a parte: è il filtro «Miei» dentro la coda. Dal menu
+  laterale si apre «Nuovo ordine dal menù» — lo stesso menù che si mostra
+  al tavolo, che ora per chi lavora ha anche la ricerca per nome o
+  ingrediente.
+
+### Per chi gestisce
+
+- **I tasti dello zoom stanno solo dove servono**: coda ordini, il conto
+  (mentre lo batti, riaprendolo, all'incasso) e flusso cassa. Nelle altre
+  schermate erano due tasti nell'angolo che coprivano il contenuto per una
+  cosa che lì nessuno usa. Il livello scelto resta: si smette solo di
+  poterlo cambiare da lì.
+- **Nel menu le ultime voci non si accavallano più**: quando lo spazio
+  finiva, «Capo Bar / Admin» e «Esci» si stringevano uno sopra l'altro.
+
+- **Nelle pagine con più sezioni il menu resta aperto**, dal tablet in
+  verticale in su:
+  in Impostazioni e in Inventario non copre più il contenuto, è una colonna
+  della pagina e il resto si stringe per fargli posto. Dentro l'inventario
+  si salta fra Prodotti e Conta venti volte di seguito, e ogni volta
+  bisognava aprire il menu, cercare, scegliere — e intanto non si vedeva
+  più dove si era. È **incastrato nella pagina**, attaccato alla barra in
+  alto e a filo del bordo — non una scheda arrotondata appoggiata sopra —
+  e occupa poco: le voci sono parole corte, e prima mezza colonna restava
+  vuota. Le sezioni della pagina aperta stanno **dentro** la loro voce,
+  non in un blocco a parte. Si apre e si chiude **col ☰ di sempre**, e la
+  scelta resta anche il giorno dopo. Sulla coda ordini resta a scomparsa, che lì
+  sarebbe una colonna in meno di conti.
+
+### Al banco
+
+- **La card che stai spostando non è più trasparente**: alzandola si
+  vedevano le altre attraverso, e non si capiva quale si stava spostando.
+- **«Organizza» non cambia più la disposizione della griglia** — né
+  quante card per riga, né la loro altezza. La maniglia
+  stava a fianco della card e allargava ogni riquadro; e la card, dentro
+  «organizza», non si allungava più fino a riempire la sua casella. Si
+  finiva per sistemare una disposizione diversa da quella che si usa
+  davvero. Ora la maniglia sta sopra la card, sul suo bordo, e la card
+  riempie la casella come fuori; e le card non rimpiccioliscono più, né
+  lampeggiano cambiando modo — entrando in organizza la griglia veniva
+  rifatta da capo e per un attimo si vedevano le card della misura
+  sbagliata. E **restringendo la griglia con la maniglia** non si vedono
+  più due colonne a metà trascinamento: il minimo lo calcola il browser
+  insieme al ridimensionamento, invece di una misura che arrivava dopo. La griglia non si riassesta nemmeno più
+  da sola quando compare la barra di scorrimento.
+
+- **Nella coda, «In servizio» torna vicino al ☰** e, sul telefono, sulla
+  sua stessa linea: il rientro era scritto a mano e lasciava un buco, e la
+  scritta si appoggiava all'altezza dei tasti scivolando sotto il ☰.
+- **Il pallino della stampante si legge come un tasto** anche mentre
+  controlla: prima, col pallino grigio, restava un'icona sospesa senza
+  cornice.
+- **Nel conto la riga dice quanto fa, non quanto costa uno.** Con tre
+  birre uguali si leggeva «4,00 €»: il totale della riga non c'era
+  proprio, e per sapere quanto faceva bisognava moltiplicare a mente col
+  cliente davanti. Ora, come su uno scontrino: «3 × 4,00 €» accanto al
+  nome e **12,00 €** a destra, vicino ai tasti.
+- **Si sceglie chi stampa le comande prese in sala** (Impostazioni →
+  Stampante): il telefono di chi prende l'ordine, oppure il banco. Se si
+  sceglie il banco e la stampa automatica è spenta, l'impostazione lo dice
+  subito — altrimenti non stamperebbe nessuno.
+- Nel pagamento, **«Separa uguali» mostra le unità come tutte le altre
+  righe**: nome, prezzo e il contatore − 1/1 +. Prima erano caselline da
+  spuntare, e nella stessa colonna convivevano due modi diversi di dire la
+  stessa cosa.
 ## 1.4.2 — 16 agosto 2026
 
 Porta nella linea di sviluppo tutto quello che è uscito con la **1.3.2**

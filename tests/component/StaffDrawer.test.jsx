@@ -6,7 +6,7 @@
 // e non c'era modo di vedere a nome di chi si stava battendo.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import '@testing-library/jest-dom/vitest'
@@ -30,6 +30,7 @@ vi.mock('../../src/lib/api.js', () => ({
 }))
 
 import StaffDrawer from '../../src/components/StaffDrawer.jsx'
+import { Sottosezioni } from '../../src/lib/sottosezioni.js'
 
 function apri(role = 'admin') {
   const r = render(
@@ -37,6 +38,8 @@ function apri(role = 'admin') {
       <Routes>
         <Route path="/bar" element={<StaffDrawer role={role} />} />
         <Route path="/profilo-staff" element={<div>PAGINA PROFILO</div>} />
+        <Route path="/pos" element={<div>PAGINA POS</div>} />
+        <Route path="/menu" element={<div>PAGINA MENU</div>} />
       </Routes>
     </MemoryRouter>
   )
@@ -82,10 +85,99 @@ describe('menu laterale', () => {
     expect(screen.getByText('Staff')).toBeInTheDocument()
   })
 
-  it('lo staff di sala non vede il gestionale', () => {
+  it('lo staff di sala non vede il gestionale, ma lavora sulla stessa coda', () => {
     apri('staff')
     expect(screen.queryByText('Utenti e ruoli')).toBeNull()
+    // La home della sala è la coda del banco; «I miei ordini» non è più
+    // una pagina (è il filtro «Miei» della coda), «Da servire» resta.
+    expect(screen.getByText('Coda ordini')).toBeInTheDocument()
     expect(screen.getByText('Da servire')).toBeInTheDocument()
+    expect(screen.queryByText('I miei ordini')).toBeNull()
     expect(screen.getByText('Staff')).toBeInTheDocument() // il suo ruolo, in fondo
+  })
+
+  it('per la sala «Nuovo ordine» apre il menù, non il POS', async () => {
+    // Il POS è lo strumento del banco: la sala ordina dal menù che sta
+    // mostrando al tavolo, con la ricerca.
+    apri('staff')
+    await userEvent.click(screen.getByText('Nuovo ordine dal menù'))
+    expect(screen.getByText('PAGINA MENU')).toBeInTheDocument()
+  })
+
+  it('per il gestore «Nuovo ordine» apre il POS', async () => {
+    apri('admin')
+    await userEvent.click(screen.getByText('Nuovo ordine'))
+    expect(screen.getByText('PAGINA POS')).toBeInTheDocument()
+  })
+})
+
+// ── IL MENU AGGANCIATO ALLA PAGINA ───────────────────────────────────
+// Dove la pagina ha sezioni sue (Impostazioni, Inventario) il menu resta
+// aperto dentro la pagina: si salta da una sezione all'altra venti volte di
+// seguito, e un menu che copre vuol dire aprirlo, cercare, scegliere — e
+// intanto non vedere piu' dove si era. Chi vuole tutta la larghezza lo
+// chiude, e resta chiuso anche domani.
+describe('il menu agganciato alla pagina', () => {
+  const SEZIONI = [
+    { id: 'aspetto', icona: '🎨', label: 'Aspetto' },
+    { id: 'stampante', icona: '🖨️', label: 'Stampante' },
+  ]
+
+  function conSezioni(voci = SEZIONI) {
+    return render(
+      <MemoryRouter initialEntries={['/bar']}>
+        <StaffDrawer role="admin" active="impostazioni" />
+        <Sottosezioni voci={voci} attiva="aspetto" scegli={() => {}} />
+      </MemoryRouter>
+    )
+  }
+
+  it('con le sezioni della pagina il menu e’ gia’ aperto, senza toccare niente', () => {
+    conSezioni()
+    expect(document.body.classList.contains('drawer-agganciato')).toBe(true)
+    expect(document.querySelector('.bar-sidebar.agganciata')).toBeTruthy()
+  })
+
+  it('sulle pagine senza sezioni resta a scomparsa: la coda non perde una colonna', () => {
+    render(
+      <MemoryRouter initialEntries={['/bar']}>
+        <StaffDrawer role="admin" active="coda" />
+      </MemoryRouter>
+    )
+    expect(document.body.classList.contains('drawer-agganciato')).toBe(false)
+  })
+
+  // SI APRE E SI CHIUDE COL ☰, come ovunque: non c'è un secondo tasto per
+  // «agganciarlo». A chi lavora interessa che il menu ci sia o non ci sia;
+  // che resti dentro la pagina invece di coprirla è come si presenta.
+  const tocca = () => act(() => { window.dispatchEvent(new Event('tana:toggle-drawer')) })
+
+  it('il ☰ lo chiude e lo riapre, sempre dentro la pagina', () => {
+    conSezioni()
+    tocca()
+    expect(document.body.classList.contains('drawer-agganciato')).toBe(false)
+    // Chiuso vuol dire chiuso: non ricompare come pannello che copre.
+    expect(document.querySelector('.bar-sidebar.open')).toBeNull()
+    tocca()
+    expect(document.body.classList.contains('drawer-agganciato')).toBe(true)
+  })
+
+  it('chiuso una volta, resta chiuso anche la volta dopo', () => {
+    const primo = conSezioni()
+    tocca()
+    primo.unmount()
+    conSezioni()
+    expect(document.body.classList.contains('drawer-agganciato')).toBe(false)
+  })
+
+  it('dove non si aggancia, il ☰ apre il pannello come sempre', () => {
+    render(
+      <MemoryRouter initialEntries={['/bar']}>
+        <StaffDrawer role="admin" active="coda" />
+      </MemoryRouter>
+    )
+    tocca()
+    expect(document.querySelector('.bar-sidebar.open')).toBeTruthy()
+    expect(document.body.classList.contains('drawer-agganciato')).toBe(false)
   })
 })

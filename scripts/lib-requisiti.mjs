@@ -20,6 +20,7 @@ export function parseRequirementsYaml(text) {
   let current = null
   let inDescription = false
   let descriptionLines = []
+  let inTestCases = false
 
   for (let i = 0; i < lines.length; i++) {
     const raw = lines[i]
@@ -38,7 +39,8 @@ export function parseRequirementsYaml(text) {
         }
         requirements.push(current)
       }
-      current = { id: '', title: '', area: '', description: '', status: 'todo', generate_issue: false, labels: [], test_cases: [] }
+      inTestCases = false
+      current = { id: '', title: '', area: '', description: '', status: 'todo', generate_issue: false, labels: [], test_cases: [], in_produzione: null }
       current.id = line.replace(/^  - id:\s*/, '').trim()
       continue
     }
@@ -61,7 +63,23 @@ export function parseRequirementsYaml(text) {
       }
     }
 
-    const fieldMatch = line.match(/^    ([a-z_]+): (.*)/)
+    // ELENCO DEI TEST SU PIÙ RIGHE. In YAML una lista si scrive anche
+    // così, e con quattro file citati è l'unico modo leggibile:
+    //   test_cases:
+    //     - tests/unit/x.test.js
+    // Prima si leggeva solo la forma [a, b]: le righe col trattino non
+    // davano errore, sparivano — e il requisito risultava senza prove
+    // pur avendole scritte lì sotto.
+    if (inTestCases) {
+      const voce = line.match(/^\s+- (.+)/)
+      if (voce) {
+        current.test_cases.push(voce[1].trim())
+        continue
+      }
+      inTestCases = false
+    }
+
+    const fieldMatch = line.match(/^    ([a-z_]+):[ ]?(.*)/)
     if (!fieldMatch) continue
     const [, key, value] = fieldMatch
 
@@ -86,6 +104,12 @@ export function parseRequirementsYaml(text) {
       case 'generate_issue':
         current.generate_issue = value.trim() === 'true'
         break
+      // Solo per i bug: dice se succede sull'installazione che sta
+      // lavorando. Assente = non si sa, e l'issue non dichiara niente
+      // invece di dare per scontato che sia roba di test.
+      case 'in_produzione':
+        current.in_produzione = value.trim() === 'true'
+        break
       case 'labels': {
         const labelsMatch = value.match(/\[([^\]]*)\]/)
         if (labelsMatch) {
@@ -97,6 +121,9 @@ export function parseRequirementsYaml(text) {
         const tcMatch = value.match(/\[([^\]]*)\]/)
         if (tcMatch) {
           current.test_cases = tcMatch[1].split(',').map((t) => t.trim()).filter(Boolean)
+        } else if (value.trim() === '') {
+          current.test_cases = []
+          inTestCases = true
         }
         break
       }
