@@ -240,6 +240,20 @@ describe('destinatariPush', () => {
     expect(destinatariPush(vecchi, { dispositivoOrigine: 'telefono-di-flavio' })).toHaveLength(1)
   })
 
+  it('chi ha mandato l’ordine non se lo becca nemmeno dalla riga vecchia', () => {
+    // Lo stesso apparecchio puo' avere due righe: quella nuova col
+    // dispositivo scritto e una vecchia intestata alla persona, senza.
+    // Scartando solo la prima, l'avviso tornava a chi l'ordine l'aveva
+    // appena mandato.
+    const conVecchia = [
+      { token: 't-telefono', role: 'bartender', device: 'telefono-di-flavio' },
+      { token: 't-telefono', role: 'bartender' },
+      { token: 't-ipad', role: 'bartender', device: 'ipad-del-banco' },
+    ]
+    const chi = destinatariPush(conVecchia, { dispositivoOrigine: 'telefono-di-flavio' })
+    expect(chi.map((t) => t.token)).toEqual(['t-ipad'])
+  })
+
   it('lo stesso telefono non riceve due volte', () => {
     // Puo' comparire due volte: la riga vecchia intestata alla persona e
     // quella nuova intestata al dispositivo. Due righe con lo stesso token
