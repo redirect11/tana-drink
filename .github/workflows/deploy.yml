@@ -1,0 +1,118 @@
+name: Deploy (riusabile)
+
+# IL DEPLOY VERO, chiamato da firebase-hosting.yml. Sta a parte perché i
+# due ambienti hanno bisogno di un `environment:` SCRITTO A CHIARE LETTERE:
+# è quello che fa scattare l'approvazione manuale sulla produzione (GitHub
+# la chiede solo se il nome dell'ambiente è noto in anticipo). Con un solo
+# job e il nome calcolato al volo, l'approvazione non si potrebbe imporre.
+on:
+  workflow_call:
+    inputs:
+      ambiente:
+        description: "Nome dell'environment GitHub (production | test)"
+        required: true
+        type: string
+      progetto:
+        description: 'Progetto Firebase di destinazione'
+        required: true
+        type: string
+      versione:
+        description: 'Etichetta della versione pubblicata (il tag)'
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Pubblica su ${{ inputs.progetto }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.ambiente }}
+    env:
+      TARGET_PROJECT: ${{ inputs.progetto }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # I TAG SERVONO: la versione mostrata nell'app è l'ultimo tag
+          # raggiungibile, e con il checkout superficiale di default non
+          # arriverebbe nessun tag (in produzione resterebbe senza numero).
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Functions dependencies
+        run: npm ci --prefix functions
+
+      # SICUREZZA: la config del build deve corrispondere al progetto di
+      # destinazione. Se i segreti dell'ambiente test mancassero, qui si
+      # fallisce invece di deployare codice di test sulla produzione.
+      - name: Guardia ambiente
+        env:
+          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+        run: |
+          if [ "$VITE_FIREBASE_PROJECT_ID" != "$TARGET_PROJECT" ]; then
+            echo "::error::Config ($VITE_FIREBASE_PROJECT_ID) ≠ progetto di destinazione ($TARGET_PROJECT). Configura i segreti dell'environment GitHub."
+            exit 1
+          fi
+          echo "Deploy su $TARGET_PROJECT — versione ${{ inputs.versione || github.ref_name }}."
+
+      - name: Build
+        env:
+          # Su Firebase Hosting il sito è servito dalla radice.
+          BASE_PATH: /
+          # Ambiente: abilita DevTools + nastro "TEST" fuori dalla produzione.
+          VITE_APP_ENV: ${{ inputs.ambiente == 'production' && 'production' || 'test' }}
+          # Google Analytics measurement ID per ambiente (pubblico, non segreto).
+          # Attivato in app solo dietro consenso cookie (categoria statistiche).
+          VITE_FIREBASE_MEASUREMENT_ID: ${{ inputs.ambiente == 'production' && 'G-3Y4TH7G346' || 'G-FX9GGRW06Y' }}
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+          # Chiave VAPID per le notifiche push (Console → Cloud Messaging → Web Push certificates)
+          VITE_FIREBASE_VAPID_KEY: ${{ secrets.VITE_FIREBASE_VAPID_KEY }}
+          # Chiave reCAPTCHA v3 per App Check (captcha ordini)
+          VITE_RECAPTCHA_SITE_KEY: ${{ secrets.VITE_RECAPTCHA_SITE_KEY }}
+        run: npm run build
+
+      # Deploy delle Functions (richiede la Cloud Build API, attiva col piano Blaze).
+      - name: Deploy Firebase Functions
+        env:
+          SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          echo "$SA_JSON" > /tmp/sa.json
+          GOOGLE_APPLICATION_CREDENTIALS=/tmp/sa.json \
+            npx firebase-tools deploy --only functions \
+            --project "$TARGET_PROJECT" --force
+          rm /tmp/sa.json
+
+      # Deploy di regole Firestore (+ indici da firestore.indexes.json) e
+      # regole Storage. Il service account ha i ruoli necessari
+      # (firebaserules.admin, datastore.indexAdmin, serviceUsageConsumer).
+      - name: Deploy Firestore rules & indexes + Storage rules
+        env:
+          SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          echo "$SA_JSON" > /tmp/sa.json
+          GOOGLE_APPLICATION_CREDENTIALS=/tmp/sa.json \
+            npx firebase-tools deploy --only firestore,storage \
+            --project "$TARGET_PROJECT"
+          rm /tmp/sa.json
+
+      - name: Deploy to Firebase Hosting (live)
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          projectId: ${{ env.TARGET_PROJECT }}
+          channelId: live
