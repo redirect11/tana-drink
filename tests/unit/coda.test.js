@@ -10,6 +10,7 @@ import {
   ordineCorrisponde,
   primoCorrispondente,
   inseritiDa,
+  passaFiltroCoda,
 } from '../../src/lib/coda.js'
 
 const orders = [
@@ -169,5 +170,38 @@ describe('primoCorrispondente', () => {
     expect(primoCorrispondente(lista, 'zzz')).toBe(null)
     expect(primoCorrispondente(lista, '')).toBe(null)
     expect(primoCorrispondente(null, 'marc')).toBe(null)
+  })
+})
+
+// ── GLI ANNULLATI HANNO UNA TAB LORO ─────────────────────────────────
+// Stavano fra i «Chiusi»: facevano numero senza essere incassi, e per
+// ritrovarne uno da riaprire bisognava cercarlo in mezzo a quelli buoni.
+describe('i filtri della coda', () => {
+  const chiuso = (o) => o.workflow_status === 'pagato' || o.workflow_status === 'annullato'
+  const aperto = { workflow_status: 'in_preparazione' }
+  const pagato = { workflow_status: 'pagato' }
+  const buttato = { workflow_status: 'annullato' }
+
+  it('«In corso» lascia solo quello che c’è da fare', () => {
+    expect(passaFiltroCoda(aperto, 'attivi', chiuso)).toBe(true)
+    expect(passaFiltroCoda(pagato, 'attivi', chiuso)).toBe(false)
+    expect(passaFiltroCoda(buttato, 'attivi', chiuso)).toBe(false)
+  })
+
+  it('«Chiusi» sono i soldi della serata: gli annullati non ci stanno', () => {
+    expect(passaFiltroCoda(pagato, 'chiusi', chiuso)).toBe(true)
+    expect(passaFiltroCoda(buttato, 'chiusi', chiuso)).toBe(false)
+  })
+
+  it('«Annullati» solo quelli', () => {
+    expect(passaFiltroCoda(buttato, 'annullati', chiuso)).toBe(true)
+    expect(passaFiltroCoda(pagato, 'annullati', chiuso)).toBe(false)
+    expect(passaFiltroCoda(aperto, 'annullati', chiuso)).toBe(false)
+  })
+
+  it('«Tutti» non toglie niente, annullati compresi', () => {
+    for (const o of [aperto, pagato, buttato]) {
+      expect(passaFiltroCoda(o, 'tutti', chiuso)).toBe(true)
+    }
   })
 })

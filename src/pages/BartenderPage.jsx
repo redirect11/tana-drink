@@ -27,7 +27,14 @@ import {
   placedByName,
   placedByLetter,
 } from '../lib/orderStatus.js'
-import { bucketByStatus, ordersRecap, ordineCorrisponde, primoCorrispondente, inseritiDa } from '../lib/coda.js'
+import {
+  bucketByStatus,
+  ordersRecap,
+  ordineCorrisponde,
+  primoCorrispondente,
+  inseritiDa,
+  passaFiltroCoda,
+} from '../lib/coda.js'
 import { ripristinabile } from '../lib/storiaOrdine.js'
 import { StoriaOrdineDialog, RipristinaOrdineDialog } from '../components/StoriaOrdine.jsx'
 import StatusBell from '../components/StatusBell.jsx'
@@ -871,7 +878,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
   const boardOrders = visibleOrders
     .filter((o) => !nascosti.has(o.id))
     .filter((o) =>
-      boardFilter === 'tutti' ? true : boardFilter === 'chiusi' ? isClosed(o) : !isClosed(o)
+      passaFiltroCoda(o, boardFilter, isClosed)
     )
     .sort((a, b) => ((a.daily_number || 0) - (b.daily_number || 0)) * (ordineDesc ? -1 : 1))
   // Ordini POS in invio. Finché il placeholder è attivo l'ordine reale
@@ -1541,6 +1548,10 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
             {[
               ['attivi', 'In corso'],
               ['chiusi', '💶 Chiusi'],
+              // Gli annullati hanno una tab loro: fra i chiusi facevano
+              // numero senza essere incassi, e per ritrovarne uno da
+              // riaprire si cercava in mezzo a quelli buoni.
+              ['annullati', '✖️ Annullati'],
               ['tutti', 'Tutti'],
             ].map(([k, label]) => (
               <button
@@ -1582,7 +1593,15 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
           {/* Griglia: ordini in invio (grigi) + ordini secondo il filtro */}
           {pend.pending.length === 0 && visibleBoard.length === 0 && (
             <div className="empty">
-              {`Nessun ordine${boardFilter === 'chiusi' ? ' chiuso' : boardFilter === 'attivi' ? ' in corso' : ''}${soloOggi ? ' oggi' : ''}.`}
+              {`Nessun ordine${
+                boardFilter === 'chiusi'
+                  ? ' chiuso'
+                  : boardFilter === 'annullati'
+                    ? ' annullato'
+                    : boardFilter === 'attivi'
+                      ? ' in corso'
+                      : ''
+              }${soloOggi ? ' oggi' : ''}.`}
             </div>
           )}
           {/* I nuovi ordini vanno IN FONDO (numeri più alti): il placeholder

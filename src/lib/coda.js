@@ -80,3 +80,18 @@ export function ordineCorrisponde(o, query) {
 export function primoCorrispondente(orders, query) {
   return (orders || []).find((o) => ordineCorrisponde(o, query)) || null
 }
+
+// ── I FILTRI DELLA CODA ──────────────────────────────────────────────
+// «In corso» è quello che c'è da fare; «Chiusi» sono i conti incassati —
+// i soldi della serata — e gli ANNULLATI hanno una tab loro: mescolati ai
+// chiusi facevano numero senza essere incassi, e per ritrovarne uno da
+// riaprire bisognava cercarlo in mezzo a quelli buoni.
+export const annullato = (o) => o?.workflow_status === ORDER_STATUSES.ANNULLATO
+
+export function passaFiltroCoda(o, filtro, isChiuso = () => false) {
+  if (filtro === 'tutti') return true
+  if (filtro === 'annullati') return annullato(o)
+  // Un annullato non è un conto chiuso: è un conto che non c'è più.
+  if (filtro === 'chiusi') return isChiuso(o) && !annullato(o)
+  return !isChiuso(o)
+}
