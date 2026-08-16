@@ -4854,7 +4854,15 @@ body.fullbleed .cat-rail {
    rum» — che chiedono azioni diverse: una si riaccende, l'altra si compra. */
 .menu-card {
   position: relative;
-  border-left: 5px solid var(--line) !important;
+  /* La striscia: SPESSA qui, il colore lo mette la pagina in linea (vedi
+     lib/strisce.js). C'era un `!important` sul bordo intero — messo per
+     vincere sulle regole delle card — e si portava dietro anche il
+     COLORE: qualunque cosa scegliesse la pagina, la striscia restava
+     grigia. L'important resta dov'è utile (la larghezza), non dove
+     cancella una scelta. */
+  border-left-width: 5px !important;
+  border-left-style: solid !important;
+  border-left-color: var(--line);
 }
 /* IL COLORE DELLA STRISCIA LO DECIDE LA PAGINA. Stava qui, in quattro
    regole con !important, e diceva sempre e solo lo stato delle scorte: ora
