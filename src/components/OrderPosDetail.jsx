@@ -7,6 +7,7 @@ import {
   updateOrderInfo,
   setOrderGroup,
   cancelOrder,
+  restoreOrder,
   closePaidOrder,
   createOrder,
   subscribeOpenGroups,
@@ -33,6 +34,7 @@ import {
   formatPrice,
   placedByName,
 } from '../lib/orderStatus.js'
+import { idDispositivo } from '../lib/dispositivo.js'
 import {
   nextComandaStatus,
   activeComanda,
@@ -58,6 +60,8 @@ import { IconPrinter, IconReceipt, IconCard, IconRefresh, IconX, IconCheck, Icon
 import CustomDrinkForm from './CustomDrinkForm.jsx'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import ActionSheet from './ActionSheet.jsx'
+import { StoriaOrdineDialog, RipristinaOrdineDialog } from './StoriaOrdine.jsx'
+import { ripristinabile, ultimaRiapertura, quando } from '../lib/storiaOrdine.js'
 import PaymentScreen from './PaymentScreen.jsx'
 
 // ── Schermata UNICA POS creazione/modifica ordine (stile SumUp) ───────────
@@ -179,6 +183,13 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   // pagina, e un ⋯ in più sarebbe solo un doppione da capire.
   const telefono = useTelefono()
   const [showPayment, setShowPayment] = useState(false)
+  const [showStoria, setShowStoria] = useState(false)
+  // Chi sta usando l'app: la storia deve dire CHI ha riaperto il conto.
+  const chiSonoIo = () =>
+    auth.currentUser?.displayName ||
+    String(auth.currentUser?.email || '').split('@')[0] ||
+    null
+  const [showRipristino, setShowRipristino] = useState(false)
   const [askName, setAskName] = useState(false) // modale nome (creazione)
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   useEffect(() => subscribeSettings(setSettings, () => {}), [])
@@ -511,6 +522,10 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   // ── LISTA UNICA: item confermati (per-riga, dalle comande) + bozza ──
   // Le quantità già pagate (acconti/split registrati) vengono scorporate in
   // righe "pagate" a sé, così si distinguono e si possono spostare in fondo.
+  // Un conto RIAPERTO si modifica tutto, righe vecchie comprese: è il
+  // motivo per cui lo si riapre. Vedi api.js/bartenderUpdateComanda.
+  const riaperto = Array.isArray(order?.riaperture) && order.riaperture.length > 0
+
   const confirmedLines = useMemo(() => {
     const remainingPaid = {}
     for (const p of order?.payments || [])
@@ -539,13 +554,13 @@ export default function OrderPosDetail({ order: orderProp = null }) {
         // nodo e non riparte da capo (vedi draftToItems).
         const chiave = it.line_id ? `d:${it.line_id}` : `c:${c.id}:${idx}`
         if (unpaidQty > 0)
-          out.push({ ...base, key: chiave, qty: unpaidQty, removable: comandaEditable(c) })
+          out.push({ ...base, key: chiave, qty: unpaidQty, removable: comandaEditable(c) || riaperto })
         if (paidHere > 0)
           out.push({ ...base, key: `${chiave}:paid`, qty: paidHere, removable: false, paid: true })
       })
     }
     return out
-  }, [effComande, order?.payments])
+  }, [effComande, order?.payments, riaperto])
 
   const draftLines = useMemo(
     () => draft.map((l) => ({ ...l, key: `d:${l.line_id}`, source: 'draft', status: 'draft', removable: true })),
@@ -770,7 +785,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
       return
     }
     const c = effComandeRef.current.find((x) => x.id === l.comandaId)
-    if (!c || !comandaEditable(c)) return
+    if (!c || !(comandaEditable(c) || riaperto)) return
     const items = (c.items || []).map((it, j) => (j === l.itemIndex ? { ...it, qty: it.qty + 1 } : it))
     setPendingEdits((p) => ({ ...p, [l.comandaId]: items }))
     clearTimeout(flushTimers.current[l.comandaId])
@@ -936,8 +951,13 @@ export default function OrderPosDetail({ order: orderProp = null }) {
       ...(l.note ? { note: l.note } : {}),
     }))
 
+  // DA QUALE TERMINALE. Serve a non avvisare chi l'ordine l'ha appena
+  // mandato — e solo lui: lo stesso account sta su tablet, telefono e
+  // portatile insieme, e chi e' rimasto al banco l'avviso lo vuole.
   const placedBy = () =>
-    staff ? { email: staff.email, name: staff.name, role: staff.role } : undefined
+    staff
+      ? { email: staff.email, name: staff.name, role: staff.role, device: idDispositivo() }
+      : undefined
 
   // Senza gestione della preparazione non c'è nulla da far avanzare:
   // l'ordine nasce "ricevuto" e da lì si chiude col pagamento.
@@ -1280,6 +1300,12 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   const nomeConto = isNew ? info.customer_name.trim() : order.customer_name
   const panelTitle = `${headTitle}${nomeConto ? ` · ${nomeConto}` : ''}`
   const canPay = !isNew && !closed && order.payment_status !== 'pagato'
+  // IL TASTO DEL PAGAMENTO, SU UN CONTO CHIUSO, RIMETTE IN CORSO. Lì era
+  // spento a non fare niente — e accanto ce n'era un secondo, che compariva
+  // solo in quel caso. Due tasti per due stati dello stesso conto: quello
+  // che serve è uno, che dice cosa si può fare adesso. È anche il posto
+  // dove il dito va già: su un conto chiuso per sbaglio si preme lì.
+  const daRiaprire = !isNew && ripristinabile(order)
   // QUANTO RESTA DA INCASSARE, scritto sul tasto Pagamento. Prima la cifra
   // compariva solo finché l'ordine non esisteva ancora: appena si creava da
   // sé — cioè un istante dopo il primo prodotto — spariva, e sembrava un
@@ -1375,6 +1401,22 @@ export default function OrderPosDetail({ order: orderProp = null }) {
         {telefono && <ZoomControl inline />}
       </div>
 
+      {/* PERCHÉ QUESTO CONTO È IN CORSO. Un conto riaperto, guardato mezz'ora
+          dopo, è indistinguibile da uno normale — e se dentro c'è un incasso
+          diventa un mistero. Il motivo sta qui, dove lo si legge senza
+          cercarlo; il resto della storia è nei ⋯. */}
+      {!isNew && (() => {
+        const r = ultimaRiapertura(order)
+        if (!r) return null
+        return (
+          <div className="riaperto-nota" style={{ margin: '8px 8px 0', flexShrink: 0 }}>
+            ♻️ <strong>Conto riaperto</strong> il {quando(r.at)}
+            {r.chi ? ` da ${r.chi}` : ''}
+            {r.motivo ? <> — « {r.motivo} »</> : ''}
+          </div>
+        )
+      })()}
+
       {error && <div className="banner" style={{ margin: '8px 8px 0', flexShrink: 0 }}>{error}</div>}
 
       {/* ── Corpo a 3 colonne: categorie · griglia · ordine ── */}
@@ -1454,6 +1496,19 @@ export default function OrderPosDetail({ order: orderProp = null }) {
               <strong className="posd-title" style={{ display: 'block', flex: 1, minWidth: 0 }}>
                 {panelTitle}
               </strong>
+              {/* La storia sta qui, in alto, come SOLA ICONA: da tasto largo
+                  si prendeva una riga intera accanto a Unisci/Separa/Comande,
+                  per una cosa che si guarda ogni tanto. */}
+              {!isNew && (
+                <button
+                  className="btn ghost small posd-storia"
+                  onClick={() => setShowStoria(true)}
+                  aria-label="Storia del conto"
+                  title="Storia del conto: aperto, chiuso, annullato, riaperto"
+                >
+                  🕘
+                </button>
+              )}
               {telefono && (
                 <button
                   className="btn ghost small"
@@ -1707,13 +1762,23 @@ export default function OrderPosDetail({ order: orderProp = null }) {
               <button className="btn ghost small" disabled={isNew} onClick={inviaComanda}>
                 <IconPrinter /> Invia comanda
               </button>
-              <button
-                className="btn small"
-                disabled={isNew ? draftCount === 0 : !canPay}
-                onClick={isNew ? handlePayNow : () => setShowPayment(true)}
-              >
-                <IconCard /> Pagamento{daIncassare > 0 ? ` · ${formatPrice(daIncassare)}` : ''}
-              </button>
+              {daRiaprire ? (
+                <button
+                  className="btn small posd-riapri"
+                  onClick={() => setShowRipristino(true)}
+                  title="Il conto torna fra quelli aperti"
+                >
+                  ♻️ Riapri conto
+                </button>
+              ) : (
+                <button
+                  className="btn small"
+                  disabled={isNew ? draftCount === 0 : !canPay}
+                  onClick={isNew ? handlePayNow : () => setShowPayment(true)}
+                >
+                  <IconCard /> Pagamento{daIncassare > 0 ? ` · ${formatPrice(daIncassare)}` : ''}
+                </button>
+              )}
             </div>
 
             {workflowOn && (
@@ -1752,16 +1817,27 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                   <IconPrinter />
                   {!soloIcone && ' Invia'}
                 </button>
-                <button
-                  className="btn"
-                  disabled={isNew ? draftCount === 0 : !canPay}
-                  onClick={isNew ? handlePayNow : () => setShowPayment(true)}
-                  aria-label="Paga"
-                  title="Incassa il conto"
-                >
-                  <IconCard />
-                  {!soloIcone && ' Paga'}
-                </button>
+                {daRiaprire ? (
+                  <button
+                    className="btn"
+                    onClick={() => setShowRipristino(true)}
+                    aria-label="Riapri conto"
+                    title="Il conto torna fra quelli aperti"
+                  >
+                    ♻️{!soloIcone && ' Riapri conto'}
+                  </button>
+                ) : (
+                  <button
+                    className="btn"
+                    disabled={isNew ? draftCount === 0 : !canPay}
+                    onClick={isNew ? handlePayNow : () => setShowPayment(true)}
+                    aria-label="Paga"
+                    title="Incassa il conto"
+                  >
+                    <IconCard />
+                    {!soloIcone && ' Paga'}
+                  </button>
+                )}
                 <button
                   className="btn ghost"
                   disabled={isNew || closed}
@@ -1809,6 +1885,14 @@ export default function OrderPosDetail({ order: orderProp = null }) {
             label: 'Dati conto',
             hint: 'Nome, tavolo, note',
             onClick: () => setShowInfo(true),
+          },
+          {
+            id: 'storia',
+            icon: '🕘',
+            label: 'Storia del conto',
+            hint: 'Aperto, chiuso, annullato, riaperto',
+            disabled: isNew,
+            onClick: () => setShowStoria(true),
           },
           {
             id: 'unisci',
@@ -2086,6 +2170,24 @@ export default function OrderPosDetail({ order: orderProp = null }) {
           onBeforePay={flushAll}
           onError={setError}
           resolveOrderId={payOrder ? () => payIdRef.current : undefined}
+        />
+      )}
+
+      {showStoria && !isNew && (
+        <StoriaOrdineDialog order={order} onClose={() => setShowStoria(false)} />
+      )}
+
+      {showRipristino && !isNew && (
+        <RipristinaOrdineDialog
+          order={order}
+          onClose={() => setShowRipristino(false)}
+          onConferma={(motivo) => {
+            setShowRipristino(false)
+            mostraOrdine(order.id)
+            restoreOrder(order.id, { motivo, chi: chiSonoIo() }).catch((e) =>
+              setError(`Conto non ripristinato: ${e.message}`)
+            )
+          }}
         />
       )}
 

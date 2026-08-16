@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react'
 import { subscribeSync, retryAllSync, retryLastSync } from '../lib/sync.js'
 import { subscribeNotifs, markNotifsSeen, clearNotifs } from '../lib/notifyStore.js'
+import { statoPush, getPushToken } from '../lib/push.js'
+import { staffTokenRegistrato, saveStaffToken } from '../lib/api.js'
+import { idDispositivo } from '../lib/dispositivo.js'
+import { auth } from '../lib/firebaseClient.js'
+import { ensureNotificationPermission } from '../lib/notify.js'
 
 // Campanella unica in topbar: mostra lo storico delle notifiche e, con un
 // pallino animato, lo STATO DELLA SINCRONIZZAZIONE local-first (idle / in
@@ -25,6 +30,31 @@ export default function StatusBell({ floating = false }) {
 
   useEffect(() => subscribeSync(setSync), [])
   useEffect(() => subscribeNotifs(setNotifs), [])
+
+  // GLI AVVISI ARRIVANO SU QUESTO SCHERMO? Al banco è la prima domanda
+  // quando «non arrivano le notifiche», e finora l'unico modo di
+  // rispondere era farsi mandare un ordine e vedere se squillava. Si
+  // controlla aprendo la campanella, che è dove uno viene a guardare.
+  const [push, setPush] = useState(null)
+  useEffect(() => {
+    if (!open) return
+    let vivo = true
+    ;(async () => {
+      const st = await statoPush()
+      if (!vivo) return
+      // Il permesso c'è, ma questo terminale è davvero nell'elenco di chi
+      // viene avvisato? È l'altra metà della domanda: senza la sua riga,
+      // la push non parte per lui e non se ne accorge nessuno.
+      if (st === 'ok') {
+        const uid = auth.currentUser?.uid
+        const registrato = uid ? await staffTokenRegistrato(uid, idDispositivo()) : false
+        if (vivo) setPush(registrato ? 'ok' : 'da-registrare')
+        return
+      }
+      setPush(st)
+    })()
+    return () => { vivo = false }
+  }, [open])
 
   const toggle = () => {
     if (open) return setOpen(false)
@@ -51,6 +81,78 @@ export default function StatusBell({ floating = false }) {
         <>
           <div className="status-bell-backdrop" onClick={() => setOpen(false)} />
           <div className={`status-bell-panel${floating ? ' basso' : ''}`} role="dialog" aria-label="Notifiche e sincronizzazione">
+            {/* Avvisi su questo dispositivo: c'è o non c'è, e dove si è
+                fermata la catena. */}
+            {push === 'ok' && (
+              <div className="status-bell-sync ok">
+                🔔 Gli avvisi arrivano su questo terminale.
+              </div>
+            )}
+            {push === 'non-attivo' && (
+              <div className="status-bell-sync err">
+                🔕 Su questo ambiente gli avvisi di sistema non sono
+                configurati (manca la chiave delle notifiche). Con l&apos;app
+                aperta gli ordini si vedono comunque nella coda.
+              </div>
+            )}
+            {push && push !== 'ok' && push !== 'non-attivo' && (
+              <div className="status-bell-sync err">
+                {push === 'da-permettere' && (
+                  <>
+                    <div>🔕 Su questo dispositivo gli avvisi sono spenti.</div>
+                    <button
+                      className="btn small"
+                      style={{ marginTop: 8 }}
+                      onClick={async () => {
+                        await ensureNotificationPermission()
+                        setPush(await statoPush())
+                      }}
+                    >
+                      🔔 Attiva gli avvisi qui
+                    </button>
+                  </>
+                )}
+                {push === 'da-registrare' && (
+                  <>
+                    <div>
+                      🔕 Questo terminale non risulta fra quelli avvisati: gli
+                      ordini degli altri non gli arrivano.
+                    </div>
+                    <button
+                      className="btn small"
+                      style={{ marginTop: 8 }}
+                      onClick={async () => {
+                        const uid = auth.currentUser?.uid
+                        const token = await getPushToken()
+                        if (uid && token) {
+                          await saveStaffToken(uid, token, 'bartender', idDispositivo()).catch(() => {})
+                        }
+                        setPush(await statoPush())
+                      }}
+                    >
+                      🔔 Registra questo terminale
+                    </button>
+                  </>
+                )}
+                {push === 'negato' && (
+                  <div>
+                    🔕 Gli avvisi sono stati bloccati per questo sito: si
+                    riattivano dalle impostazioni del telefono o del browser,
+                    da qui non si può più chiedere.
+                  </div>
+                )}
+                {push === 'non-supportato' && (
+                  <div>
+                    🔕 Qui gli avvisi di sistema non arrivano. Su iPhone e
+                    iPad succede finché l&apos;app non è <strong>installata
+                    sulla schermata Home</strong>: è l&apos;unico modo in cui
+                    iOS li consente. Con l&apos;app aperta gli ordini si
+                    vedono lo stesso nella coda.
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Stato sincronizzazione */}
             {sync.phase === 'error' ? (
               <div className="status-bell-sync err">

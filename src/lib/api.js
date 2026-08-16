@@ -5,6 +5,7 @@ import {
   getDoc,
   getDocs,
   getDocsFromCache,
+  getDocFromCache,
   setDoc,
   updateDoc,
   deleteDoc,
@@ -25,6 +26,8 @@ import { splitAmounts } from './groups.js'
 import { createSumUpSale, updateSumUpSaleStatus, toSumUpStatus } from './sumupApi.js'
 import { computeConsumption, formatQty, qtyInStockUnit } from './inventory.js'
 import { consumptionDiff } from './warehouse.js'
+import { patchRipristino, buoniDaRestituire, segnaBuoniRestituiti } from './ripristino.js'
+import { riaddebitoBuono } from './vouchers.js'
 import {
   ORDER_OPEN,
   normalizeOrderDoc,
@@ -187,6 +190,12 @@ function mapOrder(snap) {
     customer_uid: o.customer_uid ?? null,
     // Tempi di lavorazione: quelli della comanda attiva (o gli ultimi).
     status_times: (active ?? comande[comande.length - 1])?.status_times ?? o.status_times ?? {},
+    // TEMPI DEL CONTO, non della comanda: `status_times` qui sopra è quello
+    // della comanda attiva (serve ai tempi di preparazione), e lì dentro non
+    // c'è né la chiusura né l'annullo del conto. La storia del conto legge
+    // questi.
+    tempi_conto: o.status_times ?? {},
+    riaperture: (o.riaperture || []).map((r) => ({ ...r, at: toIso(r.at) })),
     cancelled_by: o.cancelled_by ?? null,
     cancel_kind: o.cancel_kind ?? null,
     cancel_phrase: o.cancel_phrase ?? null,
@@ -817,6 +826,23 @@ export function subscribeServiceStats(onChange, onError) {
 // Ordini della CODA: i conti aperti (sempre, per sempre) più quelli già
 // chiusi nella giornata commerciale corrente (per ristampe e verifiche).
 // Due sottoscrizioni unite: Firestore non fa OR fra campi diversi.
+// LEGGE IL CONTO SENZA ASPETTARE LA RETE. Chiudere, annullare o riaprire un
+// conto vuol dire prima rileggerlo: `getDoc`, quando c'e' rete, va al
+// SERVER — e con una rete lenta (o collegata e che non passa) quel momento
+// diventa un'attesa in mezzo al servizio. Il conto pero' e' gia' in cache:
+// la coda ci sta sopra con un listener, quindi la copia locale e' quella
+// dell'ultimo aggiornamento arrivato.
+// Si legge da li'; solo se in cache non c'e' si va a chiedere.
+async function leggiOrdine(ref) {
+  try {
+    const c = await getDocFromCache(ref)
+    if (c.exists()) return c
+  } catch {
+    /* niente cache (primo avvio, storage pieno): si chiede al server */
+  }
+  return getDoc(ref)
+}
+
 export function subscribeActiveOrders(onChange, onError, { cutoffHour = DEFAULT_CUTOFF_HOUR } = {}) {
   let aperti = []
   let recenti = []
@@ -1874,46 +1900,6 @@ export async function deleteVoucher(id) {
   await deleteDoc(doc(vouchersCol, id))
 }
 
-// Scala un buono per pagare un ordine: registra il pagamento sull'ordine
-// (metodo 'buono') e decrementa il saldo, in un'unica transazione.
-// Ritorna { redeemed, closed }.
-export async function payWithVoucher(orderId, voucherId, requestedAmount, { autoServe = true } = {}) {
-  const orderRef = doc(db, 'orders', orderId)
-  const voucherRef = doc(vouchersCol, voucherId)
-  const nowIso = new Date().toISOString()
-  const [oSnap, vSnap] = await Promise.all([getDoc(orderRef), getDoc(voucherRef)])
-  if (!oSnap.exists()) throw new Error('Ordine non trovato')
-  if (!vSnap.exists()) throw new Error('Buono non trovato')
-  const o = oSnap.data()
-  const v = vSnap.data()
-  if (o.status === ORDER_STATUSES.ANNULLATO) throw new Error('Ordine annullato')
-  if (o.payment_status === 'pagato') throw new Error('Ordine già pagato')
-  const due = orderDue(o)
-  const balance = Math.max(0, Number(v.balance) || 0)
-  const redeemed = Math.round(Math.min(due, balance, Math.max(0, Number(requestedAmount) || 0)) * 100) / 100
-  if (!(redeemed > 0)) throw new Error('Saldo del buono insufficiente')
-
-  const payments = [
-    ...(o.payments || []),
-    { id: `pay-${Date.now()}`, amount: redeemed, method: 'buono', voucher_id: voucherId, voucher_name: v.holder_name, at: nowIso },
-  ]
-  const closed = paymentCloses(o, redeemed)
-  const chiusura = closed ? chiusuraPagamento(o, nowIso, { autoServe }) : null
-  // Due scritture accodabili (ordine + buono): offline si accodano entrambe.
-  // Il saldo scala con increment (commutativo).
-  await updateDoc(orderRef, {
-    payments,
-    ...(closed
-      ? { ...chiusura, payment_method: summaryMethod(payments) }
-      : { payment_status: 'parziale' }),
-  })
-  await updateDoc(voucherRef, {
-    balance: increment(-redeemed),
-    movements: [...(v.movements || []), { type: 'uso', amount: -redeemed, order_id: orderId, at: nowIso }],
-  })
-  return { redeemed, closed }
-}
-
 const r2 = (n) => Math.round((Number(n) || 0) * 100) / 100
 
 // Rimette `amount` sul saldo di un buono (storno di un buono-sconto rimosso o
@@ -2046,7 +2032,7 @@ export async function registerPayment(id, { amount, method = 'banco', items = nu
 export async function markOrderPaid(id, method, { autoServe = true } = {}) {
   const ref = doc(db, 'orders', id)
   const nowIso = new Date().toISOString()
-  const snap = await getDoc(ref)
+  const snap = await leggiOrdine(ref)
   if (!snap.exists()) throw new Error('Ordine non trovato')
   const chiusura = chiusuraPagamento(snap.data(), nowIso, { autoServe })
   const lowStock = chiusura.comande
@@ -2515,7 +2501,7 @@ export async function bartenderUpdateComanda(orderId, comandaId, { items }) {
     ...(i.note ? { note: i.note } : {}),
   }))
 
-  const snap = await getDoc(ref)
+  const snap = await leggiOrdine(ref)
   if (!snap.exists()) throw new Error('Ordine non trovato')
   const cur = snap.data()
   const norm = normalizeOrderDoc(cur)
@@ -2523,7 +2509,17 @@ export async function bartenderUpdateComanda(orderId, comandaId, { items }) {
   const comande = norm.comande.map((c) => ({ ...c }))
   const comanda = comande.find((c) => c.id === comandaId)
   if (!comanda) throw new Error('Comanda non trovata')
-  if (comanda.status === ORDER_STATUSES.RITIRATO || comanda.status === ORDER_STATUSES.ANNULLATO) {
+  // SU UN CONTO RIAPERTO SI TOCCA TUTTO. Di norma una comanda servita non
+  // si modifica più: il drink è stato fatto e portato. Ma riaprire un conto
+  // serve ESATTAMENTE a rimettere a posto quello che c'è dentro — un giro
+  // battuto sul tavolo sbagliato, una birra di troppo — e se le righe di
+  // prima restano bloccate il conto riaperto non serve a niente. Le scorte
+  // si riallineano con la differenza, come per ogni altra modifica.
+  const riaperto = Array.isArray(cur.riaperture) && cur.riaperture.length > 0
+  if (comanda.status === ORDER_STATUSES.ANNULLATO) {
+    throw new Error('Comanda annullata: non più modificabile')
+  }
+  if (comanda.status === ORDER_STATUSES.RITIRATO && !riaperto) {
     throw new Error('Comanda già servita: non più modificabile')
   }
 
@@ -2567,7 +2563,7 @@ export async function cancelOrder(id, opts = {}) {
     notify: notifyClient = false,
   } = opts
   const orderRef = doc(db, 'orders', id)
-  const snap = await getDoc(orderRef)
+  const snap = await leggiOrdine(orderRef)
   if (!snap.exists()) throw new Error('Ordine non trovato')
   const order = snap.data()
   if (order.status === ORDER_STATUSES.ANNULLATO) return mapOrder(snap)
@@ -2612,6 +2608,15 @@ export async function cancelOrder(id, opts = {}) {
   if (order.discount && order.discount.type === 'buono' && order.discount.voucher_id) {
     await refundVoucher(order.discount.voucher_id, order.discount.value, id, nowIso)
   }
+  // E ANCHE I BUONI USATI PER PAGARE. Annullando, il conto non si incassa
+  // più: se il saldo restasse scalato, il cliente avrebbe perso il credito
+  // per un conto che non è mai stato pagato. Le righe restituite si segnano
+  // (`restituito_at`), così riaprendo il conto non tornano una seconda
+  // volta — sarebbe credito inventato.
+  const buoniIncasso = buoniDaRestituire(order)
+  for (const b of buoniIncasso) {
+    await refundVoucher(b.voucher_id, b.amount, id, nowIso)
+  }
   for (const c of comande) {
     if (c.status !== ORDER_STATUSES.RITIRATO && c.status !== ORDER_STATUSES.ANNULLATO) {
       c.status = ORDER_STATUSES.ANNULLATO
@@ -2623,6 +2628,9 @@ export async function cancelOrder(id, opts = {}) {
     status: ORDER_STATUSES.ANNULLATO,
     comande,
     comande_statuses: comandeStatuses(comande),
+    ...(buoniIncasso.length
+      ? { payments: segnaBuoniRestituiti(order.payments, nowIso) }
+      : {}),
     [`status_times.${ORDER_STATUSES.ANNULLATO}`]: nowIso,
     cancelled_by: by,
     cancel_kind: kind,
@@ -2630,6 +2638,93 @@ export async function cancelOrder(id, opts = {}) {
     cancel_message: message || null,
     cancel_notify: !!notifyClient,
   }), 'annullo ordine')
+  return mapOrder(await getDoc(orderRef))
+}
+
+// RIPRISTINO DI UN CONTO CHIUSO O ANNULLATO. Capita: si chiude un conto sul
+// tavolo sbagliato, si annulla per un malinteso, il cliente torna e ordina
+// ancora sullo stesso conto. Finora l'unica strada era batterlo da capo, e
+// il conto vero restava lì a sporcare la serata.
+//
+// Cosa NON si tocca, apposta:
+//   • gli incassi già registrati restano dove sono. Riaprire un conto non è
+//     un rimborso: i soldi presi sono presi, e la cassa deve continuare a
+//     tornare. Il dovuto si ricalcola da sé (totale − incassato).
+//   • la storia resta tutta: l'annullo, la chiusura, i tempi. In più si
+//     scrive la riapertura, con chi e perché.
+//   • le comande GIÀ SERVITE restano servite: quei drink sono usciti davvero.
+//     Tornano da fare solo quelle annullate insieme al conto.
+//
+// Sul magazzino: annullando, le scorte erano state rimesse dentro e le
+// comande segnate come non scalate — quindi rifacendole si scalano di nuovo,
+// una volta sola. È giusto così: il drink va rifatto.
+export async function restoreOrder(id, { motivo = null, chi = null } = {}) {
+  const orderRef = doc(db, 'orders', id)
+  const snap = await leggiOrdine(orderRef)
+  if (!snap.exists()) throw new Error('Ordine non trovato')
+  const data = snap.data()
+  if (data.status !== ORDER_STATUSES.PAGATO && data.status !== ORDER_STATUSES.ANNULLATO) {
+    throw new Error('Il conto è già in corso')
+  }
+  const nowIso = new Date().toISOString()
+  const norm = normalizeOrderDoc(data)
+
+  // BUONO VIP: annullando, il saldo era tornato al beneficiario. Riaprendo,
+  // lo sconto è ancora sul conto: se non lo si ri-addebita diventa un regalo
+  // che nessuno ha pagato, e il credito in circolazione non torna più con i
+  // conti. Solo per i conti ANNULLATI: su uno chiuso il buono non era mai
+  // stato ristornato, e riprenderlo lo scalerebbe due volte.
+  let scontoRiscritto = null
+  const buono = data.status === ORDER_STATUSES.ANNULLATO && data.discount?.type === 'buono'
+    ? data.discount
+    : null
+  if (buono?.voucher_id) {
+    const vRef = doc(vouchersCol, buono.voucher_id)
+    const vSnap = await getDoc(vRef)
+    if (!vSnap.exists()) {
+      // Buono sparito: lo sconto non ha più un padrone e si toglie.
+      scontoRiscritto = { discount: null, discount_amount: 0 }
+    } else {
+      const v = vSnap.data()
+      const esito = riaddebitoBuono(buono, v.balance)
+      if (esito.addebito > 0) {
+        await updateDoc(vRef, {
+          balance: increment(-esito.addebito),
+          movements: [
+            ...(v.movements || []),
+            { type: 'uso', amount: -esito.addebito, order_id: id, at: nowIso },
+          ],
+        })
+      }
+      if (esito.discount_amount !== r2(buono.value)) {
+        scontoRiscritto = { discount: esito.discount, discount_amount: esito.discount_amount }
+      }
+    }
+  }
+
+  // PAGATO COL BUONO: il saldo torna. La riga di incasso sparisce insieme
+  // alle altre (il conto è di nuovo da incassare) e lasciare il saldo
+  // scalato vorrebbe dire farlo pagare due volte: una col buono che non
+  // torna, una quando ripaga il conto.
+  for (const b of buoniDaRestituire(data)) {
+    await refundVoucher(b.voucher_id, b.amount, id, nowIso)
+  }
+
+  // La regola sta in lib/ripristino.js, pura e provata; qui si scrive.
+  const patch = patchRipristino(data, {
+    comande: norm.comande,
+    nowIso,
+    motivo,
+    chi,
+  })
+  bgWrite(() => updateDoc(orderRef, {
+    status: ORDER_OPEN,
+    ...patch,
+    comande_statuses: comandeStatuses(patch.comande),
+    // Solo se il buono non copriva più tutto: se copre, il conto resta
+    // identico a com'era.
+    ...(scontoRiscritto || {}),
+  }), 'ripristino conto')
   return mapOrder(await getDoc(orderRef))
 }
 
@@ -2950,12 +3045,51 @@ export async function deleteStaffShift(id) {
 // Token push del dispositivo di un membro dello staff: la Cloud Function
 // lo usa per recapitare la chiamata cerca-persone anche quando l'app è
 // in background o chiusa.
-export async function saveStaffToken(uid, token, role = null) {
-  await setDoc(
-    doc(db, 'staff_tokens', uid),
-    { token, role, updated_at: serverTimestamp() },
-    { merge: true }
-  )
+// UN DISPOSITIVO, UNA RIGA. Prima si scriveva una riga per PERSONA
+// (`staff_tokens/<uid>`): lo stesso account su tablet e telefono si
+// sovrascriveva a vicenda, e gli avvisi arrivavano solo all'ultimo che
+// aveva aperto il gestionale — al banco, il tablet muto. La riga adesso è
+// del dispositivo, con dentro chi ci sta collegato: due terminali con lo
+// stesso account sono due righe, e tutti e due vengono avvisati.
+// Senza id dispositivo (memoria locale non disponibile) si ripiega
+// sull'uid, che è meglio di niente.
+export async function saveStaffToken(uid, token, role = null, device = null) {
+  const riga = { uid, token, role, device: device || null, updated_at: serverTimestamp() }
+  try {
+    await setDoc(doc(db, 'staff_tokens', device || uid), riga, { merge: true })
+    // La riga vecchia, intestata alla persona, va tolta se e' dello stesso
+    // apparecchio: altrimenti resta li' senza dispositivo scritto e chi ha
+    // appena mandato l'ordine si becca l'avviso del proprio ordine.
+    if (device && device !== uid) {
+      const vecchia = doc(db, 'staff_tokens', uid)
+      const s = await getDoc(vecchia).catch(() => null)
+      if (s?.exists() && s.get('token') === token) await deleteDoc(vecchia).catch(() => {})
+    }
+  } catch (e) {
+    // Le regole di sicurezza viaggiano col deploy, ma un terminale può
+    // trovarsi davanti alle regole vecchie (che accettavano solo la riga
+    // intestata alla persona). Meglio registrarsi lì che restare senza
+    // avvisi: l'invio salta i doppioni per token.
+    if (device) {
+      await setDoc(doc(db, 'staff_tokens', uid), riga, { merge: true })
+    } else {
+      throw e
+    }
+  }
+}
+
+// Questo dispositivo è registrato per ricevere gli avvisi? Serve alla
+// campanella per rispondere alla domanda che al banco si fa per prima.
+export async function staffTokenRegistrato(uid, device) {
+  for (const id of [device, uid].filter(Boolean)) {
+    try {
+      const snap = await getDoc(doc(db, 'staff_tokens', id))
+      if (snap.exists() && snap.get('token')) return true
+    } catch {
+      /* non leggibile: si prova l'altra */
+    }
+  }
+  return false
 }
 
 // Il bartender chiama un membro dello staff (con messaggio opzionale).

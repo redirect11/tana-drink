@@ -28,6 +28,7 @@ import { useCustomer } from '../lib/customerAuth.js'
 import { onAuthStateChanged } from 'firebase/auth'
 import { useMenu } from '../lib/menuCache.js'
 import { isGestore, isPersonale } from '../lib/ruoli.js'
+import { idDispositivo } from '../lib/dispositivo.js'
 import OrderSummary from '../components/OrderSummary.jsx'
 import StaffDrawer from '../components/StaffDrawer.jsx'
 import CustomDrinkForm from '../components/CustomDrinkForm.jsx'
@@ -260,7 +261,9 @@ export default function MenuPage() {
         table_label: tableLabel,
         items: cart.items,
         push_token,
-        placed_by: staff, // null per i clienti
+        // Con il terminale da cui e' partito: l'avviso lo salta solo chi
+        // l'ha mandato, non tutti quelli con lo stesso ruolo.
+        placed_by: staff ? { ...staff, device: idDispositivo() } : null,
         customer_uid: customer?.uid ?? null,
         // Pagamento online: il checkout avviene sulla pagina ordine.
         payment_method: pay_online ? 'online' : null,
