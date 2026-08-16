@@ -201,14 +201,15 @@ export default function SettingsTab({ role = null }) {
               {/* LA STRISCIA A SINISTRA DELLE CARD. È lo stesso segno in due
                   schermate e finora diceva una cosa decisa da noi: dipende
                   invece da come si lavora. */}
+              {/* IN PAGINA SI DICE COSA FA, non perché. Il perché — chi
+                  conosce il listino a memoria vuole i colori, chi sta
+                  finendo le bottiglie vuole vedere cosa non si può più
+                  fare — sta nel requisito e in lib/strisce.js, non addosso
+                  a chi deve solo scegliere. */}
               <h4 style={{ margin: '16px 0 4px' }}>La striscia a sinistra delle card</h4>
               <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
-                Chi conosce il listino a memoria vuole i <strong>colori</strong> per
-                trovare il prodotto al tatto; chi sta finendo le bottiglie vuole
-                vedere subito <strong>cosa non si può più fare</strong>; chi ha già
-                abbastanza colori addosso la vuole spenta. Vale per tutti i
-                terminali. (Le schede del menù hanno la loro, in
-                <strong> Menù e catalogo</strong>.)
+                Vale per tutti i terminali. Le schede del menù hanno la loro, in
+                <strong> Menù e catalogo</strong>.
               </p>
               <div className="mode-choice" style={{ gridTemplateColumns: '1fr 1fr' }}>
                 {MODI_STRISCIA.map((m) => (
@@ -226,8 +227,7 @@ export default function SettingsTab({ role = null }) {
               </div>
 
               <p className="muted small" style={{ margin: '12px 0 4px' }}>
-                Con la striscia sulle <strong>scorte</strong>, qui nel conto,
-                «ce n&apos;è abbastanza» come si scrive?
+                Con le <strong>scorte</strong>, «ce n&apos;è abbastanza»:
               </p>
               <div className="mode-choice">
                 {[
@@ -677,10 +677,7 @@ export default function SettingsTab({ role = null }) {
                   ordine.) */}
               <h4 style={{ margin: '16px 0 4px' }}>La striscia delle schede</h4>
               <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
-                Cosa dice la riga colorata a sinistra di ogni scheda, qui nel
-                catalogo. Con le <strong>scorte</strong> si vede a colpo d&apos;occhio
-                cosa non si può più fare; coi <strong>colori</strong> si ritrova il
-                prodotto al tatto, come nella griglia del conto.
+                Cosa dice la riga a sinistra di ogni scheda del catalogo.
               </p>
               <div className="mode-choice" style={{ gridTemplateColumns: '1fr 1fr' }}>
                 {MODI_STRISCIA.map((m) => (
@@ -697,8 +694,7 @@ export default function SettingsTab({ role = null }) {
                 ))}
               </div>
               <p className="muted small" style={{ margin: '8px 0 4px' }}>
-                Con la striscia sulle <strong>scorte</strong>, «ce n&apos;è
-                abbastanza» come si scrive?
+                Con le <strong>scorte</strong>, «ce n&apos;è abbastanza»:
               </p>
               <div className="mode-choice">
                 {[
@@ -717,11 +713,8 @@ export default function SettingsTab({ role = null }) {
                 ))}
               </div>
               <p className="muted small" style={{ margin: '8px 0 0' }}>
-                È una scelta a sé, diversa da quella del conto: lì si batte di
-                corsa e una griglia tutta verde è rumore, qui si guarda con calma
-                cosa si può fare. Il colore del singolo prodotto resta comunque
-                nella <strong>linguetta</strong> in alto a sinistra, che si tocca
-                per cambiarlo.
+                Il colore del prodotto resta nella <strong>linguetta</strong>
+                in alto a sinistra.
               </p>
             </div>
       ),
