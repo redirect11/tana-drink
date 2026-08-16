@@ -139,3 +139,37 @@ push di un branch `feature/` invece è libero: serve proprio a provare.
 2. push → si prova su test
 3. merge in `main` (produzione) **e** in `develop`, così la correzione non
    si perde al rilascio successivo.
+
+### Quando l'hotfix riporta indietro una funzione già scritta
+
+Capita: una cosa è pronta sulla linea di sviluppo e serve in produzione
+subito. La si porta con un `git cherry-pick` dei commit che la fanno.
+
+**Nel messaggio del commit va scritto da dove viene**, con l'identificativo
+originale:
+
+```
+(cherry-pick da 729f718, release/1.4.x)
+```
+
+Non è formalità. Quel commit, alla fine, esiste **due volte**: l'originale
+sulla linea di sviluppo e la copia sull'hotfix — e la copia rientra in
+`develop` col merge dell'hotfix. Nella storia si vedono due commit con lo
+stesso titolo, e senza quella riga chi guarda si chiede se qualcosa sia
+stato fatto due volte.
+
+Tre cose da sapere, tutte già costate tempo:
+
+- **`git cherry` non li riconosce come duplicati.** La copia nasce sopra un
+  codice più vecchio, quindi la patch non è identica: per git sono due
+  modifiche diverse. Il rebase non li scarta da sé, e non c'è niente da
+  scartare a mano — vanno tenuti tutti e due.
+- **Il conto si paga in conflitti, non in codice doppio.** Rientrando in
+  `develop`, le due strade toccano le stesse righe: si sciolgono a mano,
+  tenendo la linea di sviluppo e portandoci dentro le correzioni
+  dell'hotfix. Dopo, si controlla che il contenuto sia UNO: nessun
+  requisito ripetuto, nessun `describe` doppio, una sola funzione.
+- **Dopo un rebase così, si fanno girare i test.** Sciogliendo un
+  conflitto è facile incollare un blocco dentro un altro: lint e build non
+  se ne accorgono, e un file di prove finisce saltato per intero. Se il
+  numero totale dei test cala, è quello.
