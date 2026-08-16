@@ -423,3 +423,21 @@ export function computeConsumption(orderItems, drinksById) {
   }
   return [...acc.values()]
 }
+
+// ── DUPLICARE UN PRODOTTO ────────────────────────────────────────────
+// Cosa si porta dietro la copia, e cosa no. Sta qui e non nella
+// schermata perché è una regola sui dati: la giacenza NON si copia — la
+// copia è un prodotto che in magazzino non è mai entrato, e portarsi
+// dietro le bottiglie vorrebbe dire inventarsele. Nemmeno l'identità
+// (id, data di creazione) e nemmeno il conteggio delle bottiglie
+// caricate, che appartiene alla storia dell'originale.
+export function copiaProdotto(item) {
+  if (!item) return null
+  const { id, created_at, stock, bottles_total, ...resto } = item // eslint-disable-line no-unused-vars
+  return {
+    ...resto,
+    name: `${item.name || 'Prodotto'} (copia)`,
+    stock: 0,
+    bottles_total: 0,
+  }
+}

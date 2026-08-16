@@ -34,6 +34,7 @@ import {
   bottleBreakdown,
   pezziInGiacenza,
   formatPezzi,
+  copiaProdotto,
   inventorySummary,
   filterItems,
   formatIn,
@@ -442,14 +443,8 @@ function ProductsPanel() {
   // prodotto nuovo che non è mai entrato in magazzino. Copiare anche le
   // scorte vorrebbe dire inventarsi bottiglie che non ci sono.
   async function duplica(item) {
-    const { id, created_at, stock, bottles_total, ...resto } = item // eslint-disable-line no-unused-vars
     try {
-      const copia = await createInventoryItem({
-        ...resto,
-        name: `${item.name} (copia)`,
-        stock: 0,
-        bottles_total: 0,
-      })
+      const copia = await createInventoryItem(copiaProdotto(item))
       setItems((prev) => [...prev, copia])
       // Si apre subito la scheda: il nome «(copia)» va cambiato, ed è il
       // motivo per cui si sta duplicando.

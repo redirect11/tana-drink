@@ -30,6 +30,7 @@ import {
   inventoryTotalValue,
   pezziInGiacenza,
   formatPezzi,
+  copiaProdotto,
 } from '../../src/lib/inventory.js'
 
 describe('toBaseQty', () => {
@@ -603,5 +604,58 @@ describe('pezzi in giacenza', () => {
 
   it('senza confezione non c’è un pezzo da contare', () => {
     expect(pezziInGiacenza({ unit: 'ml', stock: 900 })).toBeNull()
+  })
+})
+
+// ── DUPLICARE UN PRODOTTO ────────────────────────────────────────────
+// Il magazzino è pieno di quasi-uguali: stessa bottiglia in due formati,
+// lo stesso amaro di un altro fornitore. Rifarli da zero vuol dire
+// ribattere costo, confezione, categoria, soglia e IVA.
+describe('copia di un prodotto', () => {
+  const gin = {
+    id: 'inv1',
+    created_at: '2026-01-01T00:00:00.000Z',
+    name: 'Tanqueray',
+    unit: 'ml',
+    package_size: 1000,
+    cost: 18,
+    vat: 22,
+    category_id: 'gin',
+    supplier_id: 'metro',
+    low_threshold: 500,
+    stock: 2500,
+    bottles_total: 4,
+  }
+
+  it('porta con sé quello che costa tempo ribattere', () => {
+    const copia = copiaProdotto(gin)
+    expect(copia).toMatchObject({
+      unit: 'ml',
+      package_size: 1000,
+      cost: 18,
+      vat: 22,
+      category_id: 'gin',
+      supplier_id: 'metro',
+      low_threshold: 500,
+    })
+  })
+
+  it('nasce VUOTA: la giacenza non si copia', () => {
+    // Portarsi dietro le bottiglie vorrebbe dire inventarsele: la copia in
+    // magazzino non è mai entrata.
+    const copia = copiaProdotto(gin)
+    expect(copia.stock).toBe(0)
+    expect(copia.bottles_total).toBe(0)
+  })
+
+  it('non porta l’identità dell’originale', () => {
+    const copia = copiaProdotto(gin)
+    expect(copia.id).toBeUndefined()
+    expect(copia.created_at).toBeUndefined()
+  })
+
+  it('il nome dice che è una copia, così si vede quale correggere', () => {
+    expect(copiaProdotto(gin).name).toBe('Tanqueray (copia)')
+    expect(copiaProdotto({ name: '' }).name).toBe('Prodotto (copia)')
   })
 })
