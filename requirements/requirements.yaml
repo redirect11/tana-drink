@@ -126,6 +126,10 @@ requirements:
       chiude e basta — e nella schermata di pagamento non compare l'avviso
       «comande non ancora servite», che senza preparazione non vuol dire niente
       e uscirebbe a ogni incasso.
+      E la coda è il lavoro di STASERA: un conto incassato o annullato in una
+      serata passata non compare, nemmeno nelle sue tab — sta in Cassa, nella
+      lista ordini. I conti APERTI dei giorni scorsi restano invece visibili:
+      quelli sono da chiudere.
     status: implemented
     generate_issue: false
     labels: [ordini, coda]
@@ -1395,12 +1399,33 @@ requirements:
       - tests/unit/statoStampante.test.js
       - tests/component/PallinoStampante.test.jsx
 
+  - id: REQ-STAMPA-010
+    title: "Le impostazioni della stampante sono del dispositivo e di chi ci lavora"
+    area: "src/lib/printer.js, src/App.jsx"
+    description: >
+      Indirizzo della stampante, stampa automatica di comande e scontrini,
+      dati del locale sullo scontrino: stanno nel dispositivo — l'indirizzo
+      dipende da dove sei, il tablet del banco la raggiunge e il telefono
+      della sala forse no — e sono di chi è collegato, perché sullo stesso
+      tablet si alternano persone diverse e la stampa automatica la vuole
+      accesa chi sta al banco, non chi passa a battere due conti.
+      Chi entra per la prima volta su un dispositivo eredita le impostazioni
+      che quel dispositivo aveva: al passaggio nessuno si è ritrovato senza
+      stampante a servizio iniziato. Da lì in poi la scheda è sua.
+      Conseguenza da sapere: su un ambiente diverso (test, produzione) la
+      memoria è un'altra, e la stampante va impostata una volta anche lì.
+    status: implemented
+    generate_issue: false
+    labels: [stampa, impostazioni]
+    test_cases: [tests/unit/impostazioniStampante.test.js]
+
   - id: REQ-STAMPA-008
     title: "Il locale sceglie chi stampa le comande della sala"
     area: "src/components/PrinterSetup.jsx, src/lib/printer.js"
     description: >
-      In Impostazioni → Stampante si sceglie, una volta per tutto il locale
-      (la configurazione è condivisa), fra due modi: «la stampa il telefono»,
+      In Impostazioni → Stampante si sceglie, sul terminale del banco, fra
+      due modi (le impostazioni sono del dispositivo e di chi ci lavora:
+      REQ-STAMPA-010): «la stampa il telefono»,
       cioè chi prende l'ordine al tavolo stampa dal suo, e «la stampa il
       banco», cioè la comanda esce al bancone all'arrivo dell'ordine. Di
       partenza stampa il telefono, anche per le configurazioni salvate prima

@@ -59,7 +59,6 @@ function mostra(righe, titolo) {
   const testo = righe.join('\n')
   const w = typeof window !== 'undefined' ? window.open('', '_blank', 'width=420,height=700') : null
   if (!w) {
-    // eslint-disable-next-line no-console
     console.info(`[stampante finta] ${titolo}\n${testo}`)
     return
   }

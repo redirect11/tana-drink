@@ -12,7 +12,7 @@ import { isFirebaseConfigured, auth } from './lib/firebaseClient.js'
 import { isPersonale, isSala } from './lib/ruoli.js'
 import { onAuthStateChanged } from 'firebase/auth'
 import { subscribeSettings, DEFAULT_SETTINGS, clockIn, subscribePrinterConfig } from './lib/api.js'
-import { savePrinterSettings } from './lib/printer.js'
+import { savePrinterSettings, impostaUtenteStampante } from './lib/printer.js'
 import { dismissKeyboard } from './lib/keyboard.js'
 import StatusBell from './components/StatusBell.jsx'
 import ActionSheet from './components/ActionSheet.jsx'
@@ -177,6 +177,9 @@ export default function App() {
   useEffect(() => {
     if (!isFirebaseConfigured) return
     return onAuthStateChanged(auth, async (u) => {
+      // Le impostazioni della stampante sono di chi è collegato su QUESTO
+      // dispositivo: cambiando persona cambia la scheda.
+      impostaUtenteStampante(u?.uid || null)
       if (!u) return setStaffRole(null)
       try {
         const token = await u.getIdTokenResult()

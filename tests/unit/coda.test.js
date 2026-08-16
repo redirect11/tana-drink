@@ -11,6 +11,7 @@ import {
   primoCorrispondente,
   inseritiDa,
   passaFiltroCoda,
+  restaInCoda,
 } from '../../src/lib/coda.js'
 
 const orders = [
@@ -203,5 +204,33 @@ describe('i filtri della coda', () => {
     for (const o of [aperto, pagato, buttato]) {
       expect(passaFiltroCoda(o, 'tutti', chiuso)).toBe(true)
     }
+  })
+})
+
+// LA CODA È IL LAVORO DI STASERA. Le serate finte dell'ambiente locale
+// riportavano a galla conti incassati mesi prima, fra i «Chiusi» di oggi:
+// erano rimasti con lo stato di un conto in vita, e la coda i conti aperti
+// li tiene d'occhio senza limite di data — apposta, si chiudono a mano.
+describe('cosa resta in coda a fine serata', () => {
+  it('un conto incassato ieri non è coda: è storia', () => {
+    expect(
+      restaInCoda({}, { chiuso: true, giornata: '2026-08-15', oggi: '2026-08-16' })
+    ).toBe(false)
+  })
+
+  it('quello incassato stasera resta, sono i soldi della serata', () => {
+    expect(
+      restaInCoda({}, { chiuso: true, giornata: '2026-08-16', oggi: '2026-08-16' })
+    ).toBe(true)
+  })
+
+  it('un conto APERTO di ieri resta: quello è da chiudere', () => {
+    expect(
+      restaInCoda({}, { chiuso: false, giornata: '2026-08-15', oggi: '2026-08-16' })
+    ).toBe(true)
+  })
+
+  it('senza giornata non si butta fuori niente', () => {
+    expect(restaInCoda({}, { chiuso: true, giornata: null, oggi: '2026-08-16' })).toBe(true)
   })
 })
