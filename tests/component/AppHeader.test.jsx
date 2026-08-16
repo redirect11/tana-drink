@@ -57,6 +57,7 @@ const TEMA_STAFF = { preset: 'notte-blu', custom: null }
 const TEMA_CLIENTE = { preset: 'crema', custom: null }
 vi.mock('../../src/lib/api.js', () => ({
   DEFAULT_SETTINGS: {},
+  settingsIniziali: () => ({}),
   subscribeSettings: (cb) => {
     cb({
       customer_accounts_enabled: true,

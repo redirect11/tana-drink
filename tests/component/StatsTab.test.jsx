@@ -75,6 +75,7 @@ vi.mock('../../src/lib/api.js', () => ({
     return () => {}
   },
   DEFAULT_SETTINGS: { business_day_cutoff_hour: 5 },
+  settingsIniziali: () => ({ business_day_cutoff_hour: 5 }),
 }))
 vi.mock('../../src/components/MacroMonthlyTab.jsx', () => ({ default: () => <div /> }))
 

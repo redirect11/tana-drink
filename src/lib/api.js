@@ -60,6 +60,7 @@ import { recentDrinkIds } from './posCatalog.js'
 import { DEFAULT_MARKUP, DEFAULT_ROUND_STEP } from './pricing.js'
 import { notify } from './notify.js'
 import { bgWrite } from './sync.js'
+import { ricordaImpostazioni, impostazioniRicordate } from './impostazioniLocali.js'
 
 const drinksCol = collection(db, 'drinks')
 const ordersCol = collection(db, 'orders')
@@ -3304,6 +3305,11 @@ export const DEFAULT_SETTINGS = {
 // legge una volta sola, dalla cache offline se serve.
 let settingsCache = null
 
+// I valori con cui disegnare la prima volta, prima che il server risponda:
+// l'ultima risposta ricordata, o i default. Serve dove l'impostazione
+// decide un colore — se no si vede il lampo.
+export const settingsIniziali = () => impostazioniRicordate(DEFAULT_SETTINGS)
+
 // SUBITO, senza aspettare NIENTE. Una preferenza non deve poter ritardare —
 // né tantomeno impedire — il salvataggio di un ordine: se la cache non c'è
 // ancora si parte dai default e la si riempie in sottofondo, per la prossima
@@ -3344,6 +3350,9 @@ export function subscribeSettings(onChange, onError) {
       if (!snap.exists()) return onChange({ ...DEFAULT_SETTINGS })
       const data = snap.data()
       settingsCache = data
+      // Per la PROSSIMA apertura: si disegna con l'ultima verità nota
+      // invece che coi valori di partenza (vedi impostazioniLocali.js).
+      ricordaImpostazioni(data)
       const merged = { ...DEFAULT_SETTINGS, ...data }
       // Retrocompatibilità col vecchio flag booleano della scelta consegna.
       if (!data.service_mode && data.service_mode_choice_enabled) {

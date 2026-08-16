@@ -13,6 +13,7 @@ import {
   savePosColors,
   subscribeSettings,
   DEFAULT_SETTINGS,
+  settingsIniziali,
 } from '../lib/api.js'
 import { coloreStriscia } from '../lib/strisce.js'
 import { Sottosezioni } from '../lib/sottosezioni.js'
@@ -44,7 +45,7 @@ const EMPTY = {
 export default function MenuManager() {
   // Cosa dice la striscia delle schede: lo sceglie il locale, in
   // Impostazioni → Vista ordine (vedi lib/strisce.js).
-  const [settings, setSettings] = useState(DEFAULT_SETTINGS)
+  const [settings, setSettings] = useState(settingsIniziali)
   useEffect(() => subscribeSettings(setSettings, () => {}), [])
   const [sezione, setSezione] = useState('catalogo') // catalogo | categorie | margini
   const modoStriscia = settings.stripe_menu || 'scorte'

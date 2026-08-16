@@ -391,12 +391,19 @@ requirements:
       il listino sotto.
       Le scorte si leggono SOLO se servono: con gli altri modi ricette e
       giacenze non si caricano nemmeno.
+      NIENTE LAMPO ALL'APERTURA. Le impostazioni arrivano dal server e per
+      un istante non ci sono: aprendo un conto le strisce comparivano
+      colorate e sparivano un attimo dopo, in un locale che le aveva
+      spente. L'ultima risposta del server resta in memoria locale
+      (`impostazioniLocali.js`) e la schermata parte da lì — l'ultima
+      verità nota, non i valori di fabbrica.
     status: implemented
     generate_issue: false
     labels: [pos, menu, ux]
     test_cases:
       - tests/unit/strisce.test.js
       - tests/component/PosProductPicker.test.jsx
+      - tests/unit/impostazioniLocali.test.js
 
   - id: REQ-POS-013
     title: "In «Organizza» la card segue il dito"

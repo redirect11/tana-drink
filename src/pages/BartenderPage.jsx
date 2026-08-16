@@ -13,6 +13,7 @@ import {
   subscribeActiveOrders,
   subscribeSettings,
   DEFAULT_SETTINGS,
+  settingsIniziali,
   saveStaffToken,
   restoreOrder,
 } from '../lib/api.js'
@@ -491,7 +492,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
     })
   const [openCards, setOpenCards] = useState(() => new Set()) // card-griglia coi tasti aperti
   const [pend, setPend] = useState({ pending: [], banners: [] }) // ordini POS in invio
-  const [settings, setSettings] = useState(DEFAULT_SETTINGS)
+  const [settings, setSettings] = useState(settingsIniziali)
   const knownIds = useRef(new Set())
   const knownComande = useRef(new Map()) // id ordine -> n. comande (per il toast aggiunte)
   const navigate = useNavigate()

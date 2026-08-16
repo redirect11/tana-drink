@@ -37,6 +37,7 @@ vi.mock('../../src/lib/api.js', () => ({
   savePosOrder: vi.fn(() => Promise.resolve()),
   savePosFavorites: vi.fn(() => Promise.resolve()),
   DEFAULT_SETTINGS: {},
+  settingsIniziali: () => ({}),
   peekNextDailyNumber: vi.fn(() => Promise.resolve(5)),
   subscribeSettings: vi.fn((cb) => {
     cb(mockSettings)
