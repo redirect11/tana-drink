@@ -1,6 +1,6 @@
 # Cosa è cambiato
 
-## Non ancora rilasciata — 1.4.2
+## Non ancora rilasciata — 1.4.3
 
 ### In sala
 

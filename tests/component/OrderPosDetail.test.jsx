@@ -1058,6 +1058,9 @@ describe('conto riaperto: le righe di prima si toccano', () => {
     // La modifica parte verso la comanda: le scorte si riallineano con la
     // differenza, come per ogni altra modifica.
     await vi.waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalled())
+  })
+})
+
 // ── Il prezzo della riga, non quello di uno ──────────────────────────
 // Difetto visto in produzione (BUG-004): con 3× Tennent's la riga mostrava
 // «4,00 €», il prezzo unitario. Il subtotale non c'era proprio, e per sapere
