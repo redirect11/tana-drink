@@ -7,6 +7,11 @@ import {
   scriviAvviso,
   subscribeAvvisi,
 } from '../lib/preferenzeNotifiche.js'
+import {
+  stileAvvisiInApp,
+  scegliStileAvvisi,
+  subscribeStileAvvisi,
+} from '../lib/avvisiInApp.js'
 
 // ── QUALI AVVISI VOGLIO ARRIVINO QUI ─────────────────────────────────
 // Sta nel PROFILO e non nelle impostazioni del locale: la scelta è per
@@ -18,6 +23,9 @@ export default function AvvisiPanel({ gestore }) {
   const uid = auth.currentUser?.uid
   const [avvisi, setAvvisi] = useState(() => leggiAvvisi(uid))
   useEffect(() => subscribeAvvisi(uid, setAvvisi), [uid])
+  // DOVE compaiono, oltre a QUALI arrivano: stessa natura, stesso posto.
+  const [stile, setStile] = useState(stileAvvisiInApp)
+  useEffect(() => subscribeStileAvvisi(setStile), [])
   const elenco = avvisiPerRuolo(gestore)
   const spenti = elenco.filter((a) => !avvisoAttivo(avvisi, a.id)).length
 
@@ -39,6 +47,31 @@ export default function AvvisiPanel({ gestore }) {
           onChange={(v) => setAvvisi(scriviAvviso(uid, a.id, v))}
         />
       ))}
+      {/* DOVE COMPAIONO, ad app aperta. La strisciolina non si perde ma
+          interrompe: arriva mentre stai battendo un conto o contando la
+          cassa. Il fumetto sta solo nella coda ordini — che è il posto dove
+          gli ordini si aspettano — e toccandolo apre gli avvisi. */}
+      <h4 style={{ margin: '16px 0 4px' }}>Dove compaiono, ad app aperta</h4>
+      <div className="mode-choice">
+        {[
+          ['toast', '🔔 In alto, ovunque'],
+          ['fumetto', '💬 Dalla campanella, solo in coda'],
+        ].map(([value, label]) => (
+          <button
+            key={value}
+            className={`mode-option${stile === value ? ' active' : ''}`}
+            onClick={() => setStile(scegliStileAvvisi(value))}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      <p className="muted small" style={{ margin: '8px 0 0' }}>
+        {stile === 'fumetto'
+          ? 'Fuori dalla coda non compare niente: gli avvisi restano nella campanella, col loro numero.'
+          : 'La strisciolina compare su qualunque schermata, anche in cassa o in magazzino.'}
+      </p>
+
       {spenti > 0 && (
         <p className="muted small" style={{ margin: '10px 0 0' }}>
           {spenti === 1 ? 'Un avviso è spento' : `${spenti} avvisi sono spenti`} su

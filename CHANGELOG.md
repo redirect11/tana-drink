@@ -12,8 +12,11 @@
 
 ### Al banco
 
-- **Gli avvisi si possono spostare nella campanella.** In Impostazioni →
-  Notifiche si sceglie: la strisciolina in alto su ogni schermata (come
+- **«Salva modifiche» dice che ha salvato** e riporta alla coda: prima il
+  tasto tornava com'era e non si capiva se fosse andata.
+
+- **Gli avvisi si possono spostare nella campanella.** Nel profilo, accanto
+  a quali avvisi ricevere, si sceglie: la strisciolina in alto su ogni schermata (come
   adesso), oppure un fumetto che esce dalla campanella e compare **solo
   nella coda ordini** — toccandolo si aprono gli avvisi. Chi sta in cassa o
   in magazzino non viene più interrotto.

@@ -69,3 +69,18 @@ describe('quali avvisi voglio qui', () => {
     expect(avvisoAttivo(leggiAvvisi('anna'), 'nuovo_ordine')).toBe(false)
   })
 })
+
+// DOVE compaiono, non solo QUALI arrivano: stessa natura — una scelta di
+// questo dispositivo — quindi stesso posto. La strisciolina non si perde ma
+// interrompe anche chi sta contando la cassa; il fumetto sta solo nella
+// coda, dove gli ordini si aspettano.
+describe('dove compaiono gli avvisi', () => {
+  it('si sceglie dal profilo, accanto a quali riceverne', async () => {
+    const user = userEvent.setup()
+    render(<AvvisiPanel gestore />)
+    await user.click(screen.getByRole('button', { name: /Dalla campanella/ }))
+    expect(screen.getByText(/Fuori dalla coda non compare niente/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /In alto, ovunque/ }))
+    expect(screen.getByText(/compare su qualunque schermata/)).toBeInTheDocument()
+  })
+})
