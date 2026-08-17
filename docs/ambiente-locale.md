@@ -33,6 +33,30 @@ Firestore **8081**, pannello **4001**, hub **4401** — e si passa con
 Chi non ha quel servizio può ignorarlo e usare `firebase.json`; chi ce l'ha
 ha una ricetta che funziona senza doverla ritrovare ogni volta.
 
+## Una linea di rilascio nuova: cosa NON arriva col ramo
+
+Ogni ramo si lavora nel suo git worktree ([docs/gitflow.md](gitflow.md)), e
+un worktree appena creato ha solo i file **versionati**. Tre cose restano
+indietro, e finché mancano l'ambiente non parte:
+
+```sh
+git worktree add ../tana-drink-1.5.x -b release/1.5.x origin/develop
+cd ../tana-drink-1.5.x
+cp ../tana-drink-1.4.x/.env .          # ← senza, «Firebase non è configurato»
+npm ci                                  # ← node_modules non si eredita
+```
+
+Il terzo è l'**export dell'emulatore** (`.emulatori/`): se non lo si copia,
+il database parte vuoto e va rifatto il seed (`npm run seed:dev`) più
+l'account di prova. Nessuna delle tre è versionata, e ha senso così — il
+`.env` porta le chiavi — ma vanno portate a mano.
+
+Vale anche per il **dev server**: legge `.env` e il numero di versione
+all'AVVIO, e resta agganciato alla cartella da cui è partito. Cambiando
+linea va fermato e rilanciato da quella nuova, se no si prova il codice
+vecchio sui dati nuovi — con la versione sbagliata scritta in fondo alla
+pagina.
+
 ## Due modi
 
 ### 1. Sviluppo, per lavorare (ricarica a ogni salvataggio)
