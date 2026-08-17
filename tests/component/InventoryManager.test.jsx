@@ -110,6 +110,20 @@ vi.mock('../../src/lib/api.js', () => ({
   createSupplier: vi.fn(),
   updateSupplier: vi.fn(),
   deleteSupplier: vi.fn(),
+  // La colonna «a fine serata» guarda la cassa aperta e i conti in corso
+  // (REQ-MAG-012): qui non c'è nessuna cassa aperta, quindi non compare.
+  subscribeOpenCashSession: vi.fn((cb) => {
+    cb(null)
+    return () => {}
+  }),
+  subscribeActiveOrders: vi.fn((cb) => {
+    cb([])
+    return () => {}
+  }),
+  subscribeDrinks: vi.fn((_opts, cb) => {
+    cb([])
+    return () => {}
+  }),
   subscribeSettings: vi.fn((cb) => {
     cb({ price_markup: 3, purchase_vat: 22 })
     return () => {}
