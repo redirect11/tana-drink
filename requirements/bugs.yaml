@@ -455,6 +455,12 @@ bugs:
       stato React: fra un tap e l'uscita non c'è il tempo di un altro
       disegno, e chi manda le righe al server legge da lì. È la stessa
       ragione per cui la bozza si salva fuori dagli updater di React.
+      STESSA RADICE, altro sintomo: modificando una ricetta al volo — il gin
+      buono al posto di quello di listino — e uscendo subito, il conto
+      tornava al prodotto di catalogo, col suo prezzo e il suo costo. Anche
+      quella modifica aspettava il suo mezzo secondo. Adesso ogni cambio a
+      una comanda passa da una porta sola (`segnaModifica`), che scrive nel
+      riferimento e nello stato insieme.
     in_produzione: true
     status: fixed
     generate_issue: false

@@ -1432,6 +1432,32 @@ requirements:
     labels: [ui, tema]
     test_cases: [tests/unit/temi.test.js, tests/unit/css.test.js]
 
+  - id: REQ-MENU-012
+    title: "In carta due tipi di voce: il prodotto e la ricetta"
+    area: "src/components/MenuManager.jsx, src/lib/inventory.js, src/lib/saveDrink.js"
+    description: >
+      Idea di Daniele (17/08) per semplificare la vita a chi carica il menù.
+      Oggi ogni voce di carta è una RICETTA: anche la birra in bottiglia
+      vuole la sua riga «1 pz di Birra», che è una scrittura in più per dire
+      una cosa ovvia — e chi la dimentica si ritrova un prodotto che non
+      scarica niente.
+      La proposta: due tipi di voce.
+      PRODOTTO — è un articolo di magazzino venduto così com'è: si sceglie
+      l'articolo, si mette il prezzo di vendita, e basta. Carico e scarico
+      seguono le regole di sempre (una birra venduta = una birra scaricata),
+      il costo arriva dal costo dell'articolo — al pezzo o al cl, secondo
+      come lo si usa — e da lì escono margine e prezzo consigliato senza che
+      nessuno scriva una ricetta.
+      RICETTA — quello che c'è adesso: più ingredienti con le loro dosi.
+      Da decidere: se il tipo è un campo sulla voce di menù o si deduce
+      (ricetta con un solo ingrediente in quantità «1 pz» = prodotto); e
+      cosa succede a chi oggi ha già scritto le ricette a un ingrediente —
+      la conversione dovrebbe essere automatica e senza perdite.
+    status: todo
+    generate_issue: true
+    labels: [menu, magazzino, ux]
+    test_cases: []
+
   - id: REQ-MAG-016
     title: "Un prodotto si compra in un modo e si usa in un altro: due unità e una resa"
     area: "src/lib/inventory.js, src/components/InventoryManager.jsx"
