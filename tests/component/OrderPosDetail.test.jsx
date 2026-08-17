@@ -37,6 +37,7 @@ vi.mock('../../src/lib/api.js', () => ({
   savePosOrder: vi.fn(() => Promise.resolve()),
   savePosFavorites: vi.fn(() => Promise.resolve()),
   DEFAULT_SETTINGS: {},
+  settingsIniziali: () => ({}),
   peekNextDailyNumber: vi.fn(() => Promise.resolve(5)),
   subscribeSettings: vi.fn((cb) => {
     cb(mockSettings)
@@ -727,14 +728,18 @@ describe('menu azioni del telefono', () => {
     )
   })
 
-  it('su un ordine NUOVO le azioni che richiedono un conto aperto sono spente', () => {
+  // «Annulla» stava in questo elenco, e non ci sta più: mentre si batte un
+  // conto nuovo è la VIA D'USCITA di chi l'ha aperto per sbaglio o ha
+  // cambiato idea. Spento restava solo la freccia in alto, che nessuno
+  // cerca. Vedi BUG-011.
+  it('su un ordine NUOVO «Invia» è spento, «Annulla» no', () => {
     render(
       <MemoryRouter>
         <OrderPosDetail order={null} />
       </MemoryRouter>
     )
     expect(screen.getByRole('button', { name: /Invia$/ })).toBeDisabled()
-    expect(screen.getByRole('button', { name: /Annulla$/ })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /Annulla$/ })).not.toBeDisabled()
   })
 })
 
@@ -1144,5 +1149,179 @@ describe('subtotale di riga', () => {
     expect(document.querySelector('.posd-riga-tot')).not.toBeNull()
     expect(screen.queryByText(/↳ 1 × 7,00/)).toBeNull()
     localStorage.removeItem('tana:pos:calcoli')
+  })
+})
+
+// ── UN CONTO ANNULLATO NON È UN CONTO VUOTO ──────────────────────────
+// Annullando, tutte le comande diventano «annullate» e la schermata le
+// saltava: si apriva un conto senza una riga e a zero euro, e non si
+// capiva né cosa ci fosse dentro né se valesse la pena riaprirlo (BUG-002).
+describe('il conto annullato mostra cosa c’era dentro', () => {
+  const annullato = () =>
+    baseOrder({
+      status: 'annullato',
+      workflow_status: 'annullato',
+      total: 0,
+      comande: [
+        {
+          id: 'c1',
+          seq: 1,
+          status: 'annullato',
+          status_times: {},
+          items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 }],
+        },
+      ],
+      order_items: [{ id: 'i1', drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 }],
+    })
+
+  it('le righe ci sono', () => {
+    mount(annullato())
+    expect(screen.getAllByText(/Mojito/).length).toBeGreaterThan(0)
+  })
+
+  it('si vede che non contano più: barrate', () => {
+    mount(annullato())
+    expect(document.querySelector('.draft-line.riga-annullata')).toBeTruthy()
+  })
+
+  it('ma non fanno somma: quel conto non lo paga nessuno', () => {
+    mount(annullato())
+    // Il totale resta a zero: un numero diverso lo farebbe sembrare ancora
+    // da incassare.
+    expect(screen.getAllByText('0,00 €').length).toBeGreaterThan(0)
+  })
+
+  it('dentro un conto APERTO una comanda annullata resta fuori', () => {
+    // Lì quella roba non si fa e non si paga: mostrarla vorrebbe dire
+    // rimetterla nel conto.
+    mount(
+      baseOrder({
+        total: 7,
+        comande: [
+          {
+            id: 'c1',
+            seq: 1,
+            status: 'in_preparazione',
+            status_times: {},
+            items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1 }],
+          },
+          {
+            id: 'c2',
+            seq: 2,
+            status: 'annullato',
+            status_times: {},
+            items: [{ drink_id: 'negroni', name: 'Negroni', unit_price: 8, qty: 1 }],
+          },
+        ],
+        order_items: [{ id: 'i1', drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1 }],
+      })
+    )
+    expect(screen.queryByText('Negroni')).toBeNull()
+  })
+})
+
+// RIORDINARE LE RIGHE DEL CONTO. Si potevano già spostare, ma a
+// lungo-premuto e con un movimento fatto a mano: la riga saltava, le altre
+// no, e capitava di spostarne una mentre si voleva solo toccarla. Ora è la
+// stessa libreria della griglia, e si entra in «organizza» come lì: fuori
+// di lì toccare una riga la APRE, che è quello che si fa mille volte a
+// sera.
+describe('organizza le righe del conto', () => {
+  it('le maniglie compaiono solo in «organizza»', async () => {
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter>
+        <OrderPosDetail order={baseOrder()} />
+      </MemoryRouter>
+    )
+    expect(screen.queryAllByLabelText('Sposta la riga')).toHaveLength(0)
+    await user.click(await screen.findByRole('button', { name: /Organizza le righe/ }))
+    expect((await screen.findAllByLabelText('Sposta la riga')).length).toBeGreaterThan(0)
+    // E si esce come si è entrati.
+    await user.click(screen.getByRole('button', { name: /Fine riordino/ }))
+    expect(screen.queryAllByLabelText('Sposta la riga')).toHaveLength(0)
+  })
+})
+
+// IL NUMERO SULLA CARD E LE RIGHE DEL CONTO DEVONO DIRE LA STESSA COSA.
+// Un conto può portarsi dietro l'id di un prodotto che non c'è più —
+// cancellato e rifatto, o un catalogo reimportato — e la card restava senza
+// numero mentre le righe erano lì sotto, a vista: sembrava che il conto e
+// la griglia parlassero di due cose diverse.
+describe('la card segna quello che c’è nel conto', () => {
+  it('anche se il conto porta un id di prodotto vecchio', async () => {
+    const conIdVecchio = baseOrder({
+      comande: [
+        {
+          id: 'c1',
+          seq: 1,
+          status: 'in_preparazione',
+          items: [
+            // Stesso nome del drink in griglia, id di un catalogo passato.
+            { drink_id: 'id-di-un-tempo', name: 'Mojito', unit_price: 7, qty: 2 },
+          ],
+        },
+      ],
+    })
+    render(
+      <MemoryRouter>
+        <OrderPosDetail order={conIdVecchio} />
+      </MemoryRouter>
+    )
+    // Sulla card del Mojito compare il contatore: il conto e la griglia
+    // dicono la stessa cosa. (Il «−» accanto alla quantità esiste solo
+    // sulle card con qualcosa dentro.)
+    // La card mostra il contatore col «2»: sulle card senza niente dentro
+    // quel gruppo è nascosto.
+    const contatore = await screen.findByText('2', { selector: 'span' })
+    expect(contatore).toBeInTheDocument()
+  })
+})
+
+// I +/− NON APRONO LA RIGA. Toccare la riga apre la scheda dell'item — è
+// così che si cambia il prezzo o si mette una nota — ma il clic sui tasti
+// della quantità risaliva fin lì: si aumentava di uno e ci si ritrovava
+// dentro la modifica, ogni volta.
+describe('i tasti della quantità nel conto', () => {
+  it('il «+» aumenta e basta: non apre la scheda dell’item', async () => {
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter>
+        <OrderPosDetail order={baseOrder()} />
+      </MemoryRouter>
+    )
+    await user.click((await screen.findAllByRole('button', { name: /Aumenta Mojito/ }))[0])
+    expect(screen.queryByRole('dialog', { name: /Modifica/i })).toBeNull()
+    // E la scheda si apre ancora toccando la riga.
+    await user.click(screen.getAllByText('Mojito')[1])
+    expect(await screen.findByLabelText(/Prezzo/i)).toBeInTheDocument()
+  })
+})
+
+// LA ⓘ SI PUÒ SPEGNERE. Dove il listino lo sanno tutti a memoria è un
+// segno in più su ogni card, e le card sono cento; dove invece cambia
+// spesso, o si dà una mano il sabato, è la differenza fra saper fare un
+// drink e doverlo chiedere. Lo decide il locale.
+describe('la ⓘ delle ricette', () => {
+  it('c’è di suo', async () => {
+    render(
+      <MemoryRouter>
+        <OrderPosDetail order={baseOrder()} />
+      </MemoryRouter>
+    )
+    expect((await screen.findAllByRole('button', { name: /Come si fa/ })).length).toBeGreaterThan(0)
+  })
+
+  it('e sparisce se il locale la spegne', async () => {
+    mockSettings.pos_ricetta_info = false
+    render(
+      <MemoryRouter>
+        <OrderPosDetail order={baseOrder()} />
+      </MemoryRouter>
+    )
+    await waitFor(() =>
+      expect(screen.queryAllByRole('button', { name: /Come si fa/ })).toHaveLength(0)
+    )
+    delete mockSettings.pos_ricetta_info
   })
 })

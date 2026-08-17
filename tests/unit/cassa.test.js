@@ -162,3 +162,82 @@ describe('gli annullati non contano', () => {
     expect(r.nAperti).toBe(0)
   })
 })
+
+// COSA SERVE VEDERE DURANTE LA SERATA, non solo alla chiusura: quanto deve
+// esserci in cassa adesso, quanto lascia un conto, chi ha incassato e come
+// sta andando l'ultima ora. Alla chiusura sono un verdetto; durante il
+// servizio sono decisioni — cambio turno, un'altra cassa, una pausa.
+describe('il flusso cassa durante la serata', () => {
+  const sessione = { opened_at: '2026-08-16T18:00:00.000Z', fondo_cassa: 100 }
+  const adesso = '2026-08-16T23:00:00.000Z'
+  const conti = [
+    {
+      payment_status: 'pagato',
+      coperto_persons: 4,
+      paid_at: '2026-08-16T19:00:00.000Z',
+      payments: [
+        {
+          amount: 40,
+          method: 'banco',
+          at: '2026-08-16T19:00:00.000Z',
+          by: { name: 'Flavio' },
+        },
+      ],
+    },
+    {
+      payment_status: 'pagato',
+      coperto_persons: 2,
+      paid_at: '2026-08-16T22:30:00.000Z',
+      payments: [
+        {
+          amount: 20,
+          method: 'carta',
+          at: '2026-08-16T22:30:00.000Z',
+          by: { email: 'sara@tana.local' },
+        },
+      ],
+    },
+  ]
+
+  it('quanto deve esserci in cassa: fondo più i contanti', () => {
+    const r = cashRecap(conti, sessione, adesso)
+    expect(r.contanteAtteso).toBe(140)
+  })
+
+  it('il conto medio, e quanto lascia una persona', () => {
+    const r = cashRecap(conti, sessione, adesso)
+    expect(r.contoMedio).toBe(30)
+    expect(r.coperti).toBe(6)
+    expect(r.perCoperto).toBe(10)
+  })
+
+  it('niente conti chiusi, niente media: non è una media di zero', () => {
+    expect(cashRecap([], sessione, adesso).contoMedio).toBe(null)
+  })
+
+  it('chi ha incassato, dal più grosso al più piccolo', () => {
+    const r = cashRecap(conti, sessione, adesso)
+    expect(r.perChi).toEqual([
+      { chi: 'Flavio', importo: 40, n: 1 },
+      { chi: 'sara', importo: 20, n: 1 },
+    ])
+  })
+
+  it('l’ultima ora è solo l’ultima ora', () => {
+    const r = cashRecap(conti, sessione, adesso)
+    expect(r.ultimaOra).toBe(20)
+    expect(r.nUltimaOra).toBe(1)
+  })
+
+  it('sui conti vecchi, senza chi ha incassato, vale chi ha aperto il conto', () => {
+    const vecchio = [
+      {
+        payment_status: 'pagato',
+        paid_at: '2026-08-16T20:00:00.000Z',
+        placed_by: { name: 'Peppe' },
+        payments: [{ amount: 15, method: 'banco', at: '2026-08-16T20:00:00.000Z' }],
+      },
+    ]
+    expect(cashRecap(vecchio, sessione, adesso).perChi[0].chi).toBe('Peppe')
+  })
+})

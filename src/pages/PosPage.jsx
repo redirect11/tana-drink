@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import OrderPosDetail from '../components/OrderPosDetail.jsx'
 import { useCashSession } from '../lib/cashSession.js'
+import Caricamento from '../components/Caricamento.jsx'
 
 // ── POS cassa: CREAZIONE di un ordine nuovo ────────────────────────────────
 // Stessa identica schermata della modifica: un solo componente
@@ -11,7 +12,7 @@ import { useCashSession } from '../lib/cashSession.js'
 export default function PosPage() {
   const { open, loading } = useCashSession()
 
-  if (loading) return <div className="empty">Verifico la cassa…</div>
+  if (loading) return <Caricamento testo="Apro la cassa…" />
 
   if (!open) {
     return (

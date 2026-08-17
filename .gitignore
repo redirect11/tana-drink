@@ -65,3 +65,16 @@ ds-bundle/
 .design-sync/.cache/
 .design-sync/learnings/
 .design-sync/node_modules
+
+# Dati degli emulatori locali: si salvano uscendo e si ricaricano al via
+# successivo (--import/--export-on-exit). Sono la SANDBOX di chi sviluppa,
+# non dati del locale: fuori dal repo.
+.emulatori/
+
+# Log degli emulatori: crescono senza freno (visti a 34 GB) e non servono a
+# nessuno fuori da qui.
+*-debug.log
+
+# Esportazioni degli emulatori (`firebase emulators:export`): fotografie del
+# database di prova, a volte mezzo giga. Restano sul computer di chi le fa.
+firebase-export-*/

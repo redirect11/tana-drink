@@ -25,6 +25,10 @@ import {
   discountAmount,
   paymentCloses,
   round2,
+  dettaglioIncassi,
+  unitaDaConteggio,
+  conteggioDaUnita,
+  toccaUnita,
 } from '../lib/pagamento.js'
 
 // ── Schermata Pagamento in stile POS SumUp (vedi foto di riferimento) ──
@@ -107,6 +111,20 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   const orderId = async () => (resolveOrderId ? await resolveOrderId() : order.id)
   const [saving, setSaving] = useState(false)
   const [sel, setSel] = useState(() => fullSelection(order)) // riga -> quante unità pagare ora
+  // QUALI unità, quando le righe uguali sono separate. Il conteggio dice
+  // «due di questi tre»; separandole ognuna è una voce a sé e deve avere la
+  // sua quantità — spegnendo la prima si spegne la prima, non le ultime
+  // come farebbe un contatore che scende. Le due forme si convertono
+  // (lib/pagamento.js) e restano allineate: il conteggio è quante ne sono
+  // accese.
+  const [selUnita, setSelUnita] = useState({})
+  const unitaDi = (r) =>
+    selUnita[r.key]?.length === r.qty ? selUnita[r.key] : unitaDaConteggio(r.qty, sel[r.key] ?? 0)
+  const toccaLaUnita = (r, i, acceso) => {
+    const nuove = toccaUnita(selUnita[r.key], r.qty, i, acceso)
+    setSelUnita((st) => ({ ...st, [r.key]: nuove }))
+    setSel((st) => ({ ...st, [r.key]: conteggioDaUnita(nuove) }))
+  }
   // Vista SEPARATA delle righe uguali (al volo, come nel riepilogo ordine):
   // ogni unità è mostrata a sé e si sceglie fin dove pagare. Solo visuale: la
   // selezione resta per riga (sel[key] = quante unità di quella riga).
@@ -146,6 +164,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   const paymentsCount = (order.payments || []).length
   useEffect(() => {
     setSel(fullSelection(order))
+    setSelUnita({})
     setDisplay(null)
     setAcc(null)
     setOp(null)
@@ -164,7 +183,10 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   const paid = paidAmount(order)
   // Incassare non vuol dire aver consegnato: seguendo la preparazione il
   // conto resta aperto finché le comande non sono servite.
-  const autoServe = settings?.workflow_enabled === false
+  const autoServeBase = settings?.workflow_enabled === false
+  // Il tasto in più lo decide il locale (Impostazioni → Gestione
+  // preparazione): serve dove si consegna e si incassa nello stesso gesto.
+  const riscuotiEServi = settings?.riscuoti_e_servi === true
   const due = orderDue(order)
   // Sconto più grande del conto: capita solo con la strategia "avvisa"
   // (Impostazioni → Sconto e righe del conto), quando si sconta e poi si
@@ -237,11 +259,13 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
     }
   }
 
-  const bump = (r, delta) =>
-    setSel((s) => {
-      const next = Math.max(0, Math.min((s[r.key] || 0) + delta, r.qty))
-      return { ...s, [r.key]: next }
-    })
+  const bump = (r, delta) => {
+    const next = Math.max(0, Math.min((sel[r.key] || 0) + delta, r.qty))
+    setSel((s) => ({ ...s, [r.key]: next }))
+    // Le unità seguono il conteggio: dalla vista unita si torna a «le prime
+    // N accese», che è l'unica lettura sensata di un numero.
+    setSelUnita((st) => ({ ...st, [r.key]: unitaDaConteggio(r.qty, next) }))
+  }
 
   // ── Tastierino ──
   const current = () => (display !== null ? digitsToEuro(display) : autoAmount)
@@ -273,7 +297,10 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
     setOp(null)
   }
 
-  const riscuoti = () => {
+  // «Riscuoti» e «Riscuoti e servi» sono lo stesso incasso: cambia solo se
+  // le comande risultano servite — e quindi se il conto si chiude adesso.
+  const riscuoti = ({ servi = false } = {}) => {
+    const autoServe = autoServeBase || servi
     const items = !manual && splitting ? selection : null
     // Conto già coperto (sconto totale, buono o acconti): non c'è nulla da
     // incassare ma il conto va CHIUSO lo stesso, altrimenti resta aperto per
@@ -473,6 +500,10 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
             {order.customer_name && (
               <p style={{ margin: '10px 0 2px', fontWeight: 600 }}>{order.customer_name}</p>
             )}
+            {/* Niente istruzioni sopra le righe: chi incassa le tocca e vede
+                il totale muoversi. A dire da dove viene il numero ci pensa
+                l'etichetta sopra l'importo — «RIGHE SCELTE» o «IMPORTO A
+                MANO» — che si legge nel momento in cui serve. */}
             {remaining.some((r) => r.qty > 1) && (
               <button
                 className="btn ghost small"
@@ -490,10 +521,11 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
               // convivevano due modi diversi di dire la stessa cosa, e chi
               // incassa doveva capire quale valesse per quale riga.
               if (separati && r.qty > 1) {
+                const unita = unitaDi(r)
                 return (
                   <div key={r.key}>
                     {Array.from({ length: r.qty }, (_, i) => {
-                      const on = i < s
+                      const on = !!unita[i]
                       return (
                         <div
                           className="row between"
@@ -505,9 +537,17 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                             <span className="muted small"> · 1× {formatPrice(r.unit_price)}</span>
                           </span>
                           <span className="qty">
+                            {/* UNO ALLA VOLTA. Il «−» scriveva la nuova
+                                quantità come «tutte quelle prima di questa»:
+                                premendolo sulla PRIMA di tre si spegnevano
+                                tutte e tre insieme, e chi stava dividendo il
+                                conto si ritrovava da capo. Le unità sono
+                                identiche — quale si toglie non cambia
+                                niente — quindi si toglie e si aggiunge una
+                                unità per volta. */}
                             <button
                               aria-label={`Togli ${r.name} dal pagamento`}
-                              onClick={() => setSel((st) => ({ ...st, [r.key]: i }))}
+                              onClick={() => toccaLaUnita(r, i, false)}
                               disabled={closed || !on}
                             >
                               −
@@ -515,7 +555,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                             <strong>{on ? 1 : 0}/1</strong>
                             <button
                               aria-label={`Paga ${r.name}`}
-                              onClick={() => setSel((st) => ({ ...st, [r.key]: i + 1 }))}
+                              onClick={() => toccaLaUnita(r, i, true)}
                               disabled={closed || on}
                             >
                               +
@@ -548,7 +588,10 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
               <button
                 className="btn ghost small block"
                 style={{ marginTop: 10 }}
-                onClick={() => setSel(fullSelection(order))}
+                onClick={() => {
+                  setSel(fullSelection(order))
+                  setSelUnita({})
+                }}
               >
                 Rimetti tutto in pagamento
               </button>
@@ -557,13 +600,26 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
             {(order.payments || []).length > 0 && (
               <div style={{ marginTop: 14 }}>
                 <span className="muted small" style={{ letterSpacing: 0.5 }}>GIÀ PAGATO</span>
-                {order.payments.map((p) => (
-                  <div className="row between muted small" key={p.id} style={{ marginTop: 4 }}>
-                    <span>
-                      {PAYMENT_METHOD_LABELS[p.method] || p.method}
-                      {p.at ? ` · ${String(p.at).slice(11, 16)}` : ''}
-                    </span>
-                    <span>{formatPrice(p.amount)}</span>
+                {dettaglioIncassi(order).incassi.map((p, idx) => (
+                  <div key={idx} style={{ marginTop: 4 }}>
+                    <div className="row between muted small">
+                      <span>
+                        {/* «Acconto» quando l'importo è stato battuto a mano:
+                            quei 30 € non coprono nessuna riga in
+                            particolare, sono soldi lasciati sul conto. Le
+                            righe le copre solo chi le sceglie qui a
+                            sinistra. */}
+                        {p.cosa ? 'Pagate' : 'Acconto'}
+                        {p.metodo ? ` · ${PAYMENT_METHOD_LABELS[p.metodo] || p.metodo}` : ''}
+                        {p.quando ? ` · ${String(p.quando).slice(11, 16)}` : ''}
+                      </span>
+                      <span>{formatPrice(p.importo)}</span>
+                    </div>
+                    {p.cosa && (
+                      <div className="muted small" style={{ paddingLeft: 10, opacity: 0.8 }}>
+                        {p.cosa.join(' · ')}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -603,7 +659,17 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
             </span>
             <span style={{ textAlign: 'right' }}>
               <span className="muted small" style={{ letterSpacing: 0.5 }}>
-                PAGAMENTO{op ? ` (${acc != null ? formatPrice(acc) : ''} ${op === 'x' ? '×' : op})` : ''}
+                {/* DA DOVE VIENE QUESTO NUMERO. «Pagamento» non distingue due
+                    cose diverse: le righe scelte (che coprono esattamente
+                    quelle) e un importo battuto a mano (che non copre
+                    niente, è un acconto). Dirlo qui evita di scoprirlo dopo,
+                    a conto chiuso. */}
+                {manual
+                  ? 'IMPORTO A MANO'
+                  : splitting
+                    ? `RIGHE SCELTE (${selection.reduce((n, r) => n + (Number(r.qty) || 0), 0)})`
+                    : 'PAGAMENTO'}
+                {op ? ` (${acc != null ? formatPrice(acc) : ''} ${op === 'x' ? '×' : op})` : ''}
               </span>
               <br />
               <strong style={{ fontSize: '2rem', color: '#3f7ce0' }} data-testid="pay-amount">
@@ -611,6 +677,15 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
               </strong>
             </span>
           </div>
+          {/* Un importo battuto a mano che non salda il conto è un ACCONTO:
+              resta sul conto e non copre righe precise. Meglio dirlo prima di
+              incassare che scoprirlo dopo, quando restano righe «da pagare»
+              che qualcuno credeva pagate. */}
+          {manual && amount > 0 && amount < due && (
+            <p className="muted small" style={{ margin: '2px 0 0', textAlign: 'right' }}>
+              Acconto: resta sul conto, non copre righe precise.
+            </p>
+          )}
           {change > 0 && method === 'banco' && (
             <p className="small" style={{ margin: '2px 0 0', textAlign: 'right', flexShrink: 0 }}>
               Resto: <strong>{formatPrice(change)}</strong> (si incassano {formatPrice(toPay)})
@@ -620,10 +695,13 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
               gestione spenta non esistono comande "da servire" — sono servite
               per definizione — e leggerlo a ogni incasso era un allarme che non
               voleva dire niente. */}
-          {!autoServe && !served && !closed && (
+          {/* Col servizio seguito, incassare NON chiude: il conto resta
+              aperto finché le comande non sono servite. Prima qui c'era
+              scritto il contrario. */}
+          {!autoServeBase && !served && !closed && (
             <p className="muted small" style={{ margin: '2px 0 0', flexShrink: 0 }}>
-              ⚠️ Comande non ancora servite: saldando tutto, il conto si chiude
-              e risultano tutte servite.
+              ⚠️ Comande non ancora servite: il conto resta aperto anche dopo
+              l'incasso{riscuotiEServi ? ', a meno di «Riscuoti e servi»' : ''}.
             </p>
           )}
           {readerStarted && order.payment_status === 'in_attesa' && (
@@ -667,9 +745,21 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
             <button
               className="btn block payscreen-collect"
               disabled={saving || scontoFuoriMisura || (due > 0 && !(toPay > 0))}
-              onClick={riscuoti}
+              onClick={() => riscuoti()}
             >
               {due <= 0 ? 'Chiudi conto · 0,00 €' : `Riscuotere · ${formatPrice(toPay)}`}
+            </button>
+          )}
+          {/* Consegnato e incassato nello stesso gesto: un tasto solo invece
+              di incassare qui e poi servire dalla coda. Solo dove il locale
+              lo ha chiesto, e solo se c'è ancora qualcosa da servire. */}
+          {!closed && riscuotiEServi && !autoServeBase && !served && (
+            <button
+              className="btn block ghost payscreen-collect-servi"
+              disabled={saving || scontoFuoriMisura || (due > 0 && !(toPay > 0))}
+              onClick={() => riscuoti({ servi: true })}
+            >
+              Riscuoti e servi · chiude il conto
             </button>
           )}
 

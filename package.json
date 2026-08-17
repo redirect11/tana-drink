@@ -17,8 +17,9 @@
     "seed:dev": "VITE_USE_FIREBASE_EMULATOR=true VITE_FIREBASE_PROJECT_ID=demo-tana-drink VITE_FIRESTORE_EMULATOR_HOST=localhost VITE_FIRESTORE_EMULATOR_PORT=8080 node scripts/seed.js",
     "mock:orders": "VITE_FIREBASE_PROJECT_ID=demo-tana-drink VITE_FIRESTORE_EMULATOR_HOST=localhost VITE_FIRESTORE_EMULATOR_PORT=8080 node scripts/mock-orders.js",
     "mock:history": "VITE_FIREBASE_PROJECT_ID=demo-tana-drink VITE_FIRESTORE_EMULATOR_HOST=localhost VITE_FIRESTORE_EMULATOR_PORT=8080 node scripts/mock-history.js",
-    "emulators": "firebase emulators:start --project demo-tana-drink --only auth,firestore,storage",
-    "emulatori": "firebase emulators:start --project demo-tana-drink --only auth,firestore,storage,functions,hosting",
+    "mock:casse": "VITE_FIREBASE_PROJECT_ID=demo-tana-drink VITE_FIRESTORE_EMULATOR_HOST=localhost VITE_FIRESTORE_EMULATOR_PORT=8080 node scripts/mock-casse.js",
+    "emulators": "firebase emulators:start --project demo-tana-drink --only auth,firestore,storage --import=.emulatori --export-on-exit",
+    "emulatori": "firebase emulators:start --project demo-tana-drink --only auth,firestore,storage,functions,hosting --import=.emulatori --export-on-exit",
     "locale": "vite build --mode locale && npm run emulatori"
   },
   "dependencies": {

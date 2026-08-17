@@ -8,7 +8,7 @@ import {
 import { CANCEL_PHRASES } from '../lib/orderStatus.js'
 import { parseCarteCsv, decodeCsvBuffer } from '../lib/carteImport.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
-import ThemeSettings from './ThemeSettings.jsx'
+import ThemeSettings, { TemaMenuClienti } from './ThemeSettings.jsx'
 import PrinterSetup from './PrinterSetup.jsx'
 
 import BackupPanel from './BackupPanel.jsx'
@@ -17,6 +17,7 @@ import { pairSumUpReader, unpairSumUpReader } from '../lib/paymentsApi.js'
 import { Link } from 'react-router-dom'
 import { devToolsEnabled } from '../dev/devActions.js'
 import { Sottosezioni } from '../lib/sottosezioni.js'
+import { MODI_STRISCIA, MODO_STRISCIA_DEFAULT } from '../lib/strisce.js'
 import { usePaginaPiena } from '../lib/paginaPiena.js'
 
 // Impostazioni del bar (documento settings/bar). Ogni modifica viene salvata
@@ -80,22 +81,6 @@ export default function SettingsTab({ role = null }) {
   const sezioni = [
     { id: 'aspetto', icona: '🎨', label: 'Aspetto', nodo: <ThemeSettings settings={settings} onSave={save} /> },
     {
-      id: 'modalita-menu',
-      icona: '📖',
-      label: 'Modalità menù',
-      nodo: (
-            <div className="card settings-section">
-              <h3>Modalità menù</h3>
-              <ToggleRow
-                label="Solo menù (consultazione)"
-                desc="I clienti vedono il menù ma non possono ordinare."
-                checked={settings.menu_only}
-                onChange={(v) => save({ menu_only: v })}
-              />
-            </div>
-      ),
-    },
-    {
       id: 'vista-ordine',
       icona: '🧾',
       label: 'Vista ordine',
@@ -126,6 +111,17 @@ export default function SettingsTab({ role = null }) {
                   </button>
                 ))}
               </div>
+
+              {/* LA ⓘ DELLE RICETTE. Dove il listino lo sanno tutti a memoria
+                  è un segno in più su ogni card, e le card sono cento. Dove
+                  invece cambia spesso, o si dà una mano il sabato, è la
+                  differenza fra saper fare un drink e doverlo chiedere. */}
+              <ToggleRow
+                label="La ⓘ con la ricetta sulle card"
+                desc="Apre ingredienti, quantità e come si prepara. Spenta, le card restano pulite."
+                checked={settings.pos_ricetta_info !== false}
+                onChange={(v) => save({ pos_ricetta_info: v })}
+              />
 
               <p className="muted" style={{ margin: '12px 0 6px', fontSize: '0.85rem' }}>
                 Quanto è grande, come minimo, il testo delle righe del conto.
@@ -191,6 +187,53 @@ export default function SettingsTab({ role = null }) {
                       (settings.pos_search || 'filtra') === value ? ' active' : ''
                     }`}
                     onClick={() => save({ pos_search: value })}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {/* LA STRISCIA A SINISTRA DELLE CARD. È lo stesso segno in due
+                  schermate e finora diceva una cosa decisa da noi: dipende
+                  invece da come si lavora. */}
+              {/* SOLO LA DOMANDA. Il perché — chi conosce il listino a
+                  memoria vuole i colori, chi sta finendo le bottiglie
+                  vuole vedere cosa non si può più fare — sta nel requisito
+                  e in lib/strisce.js. E dove sta l'altra impostazione lo
+                  si scopre andandoci: scriverlo qui è una nota per noi,
+                  non per chi sceglie. */}
+              <h4 style={{ margin: '16px 0 4px' }}>
+                Cosa dice la riga a sinistra di ogni scheda della griglia?
+              </h4>
+              <div className="mode-choice" style={{ gridTemplateColumns: '1fr 1fr' }}>
+                {MODI_STRISCIA.map((m) => (
+                  <button
+                    key={m.id}
+                    className={`mode-option${
+                      (settings.stripe_pos || MODO_STRISCIA_DEFAULT) === m.id ? ' active' : ''
+                    }`}
+                    onClick={() => save({ stripe_pos: m.id })}
+                    title={m.desc}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+
+              <p className="muted small" style={{ margin: '12px 0 4px' }}>
+                Quale colore per «ci sono abbastanza scorte»?
+              </p>
+              <div className="mode-choice">
+                {[
+                  [false, '⚪ Grigio'],
+                  [true, '🟢 Verde'],
+                ].map(([value, label]) => (
+                  <button
+                    key={String(value)}
+                    className={`mode-option${
+                      !!settings.stripe_ok_verde === value ? ' active' : ''
+                    }`}
+                    onClick={() => save({ stripe_ok_verde: value })}
                   >
                     {label}
                   </button>
@@ -351,6 +394,14 @@ export default function SettingsTab({ role = null }) {
                 checked={settings.workflow_enabled !== false}
                 onChange={(v) => (v ? save({ workflow_enabled: true }) : setConfermaSpegni(true))}
               />
+              {settings.workflow_enabled !== false && (
+                <ToggleRow
+                  label="Un tasto per incassare e servire insieme"
+                  desc="Nella schermata di pagamento compare anche «Riscuoti e servi»: chiude il conto in un colpo, per quando si consegna e si incassa nello stesso gesto."
+                  checked={settings.riscuoti_e_servi === true}
+                  onChange={(v) => save({ riscuoti_e_servi: v })}
+                />
+              )}
               {esitoReset != null && (
                 <div className="muted small" style={{ marginTop: 6 }}>
                   ✅ {esitoReset === 0
@@ -603,25 +654,91 @@ export default function SettingsTab({ role = null }) {
       ),
     },
     {
-      id: 'menu',
-      icona: '🍹',
-      label: 'Menù',
+      // MENÙ CLIENTI: tutto quello che riguarda la schermata di chi ordina —
+      // cosa può fare, cosa vede, di che colore. Stava sparso fra «Modalità
+      // menù», «Menù» e «Aspetto», e davanti a un interruttore non si
+      // capiva se parlasse del menù dei clienti o della schermata con cui
+      // si modifica il listino.
+      id: 'menu-clienti',
+      icona: '📖',
+      label: 'Menù clienti',
       nodo: (
-            <div className="card settings-section">
-              <h3>Menù</h3>
-              <ToggleRow
-                label="Mostra quantità ingredienti"
-                desc="Es. «Gin 50 ml» invece di solo «Gin» nelle voci del menù."
-                checked={settings.show_ingredient_quantities}
-                onChange={(v) => save({ show_ingredient_quantities: v })}
-              />
-              <ToggleRow
-                label="Tabellone «stiamo servendo»"
-                desc="Mostra nel menù i numeri degli ordini pronti al servizio/ritiro. Nascosto in modalità solo menù."
-                checked={settings.show_serving_board}
-                onChange={(v) => save({ show_serving_board: v })}
-              />
-            </div>
+        <div className="card settings-section">
+          <h3>Menù clienti</h3>
+          <p className="muted small" style={{ margin: '0 0 10px' }}>
+            La schermata che vedono i clienti sul telefono.
+          </p>
+          <ToggleRow
+            label="Solo menù (consultazione)"
+            desc="I clienti vedono il menù ma non possono ordinare."
+            checked={settings.menu_only}
+            onChange={(v) => save({ menu_only: v })}
+          />
+          <ToggleRow
+            label="Mostra quantità ingredienti"
+            desc="Es. «Gin 50 ml» invece di solo «Gin» nelle voci del menù."
+            checked={settings.show_ingredient_quantities}
+            onChange={(v) => save({ show_ingredient_quantities: v })}
+          />
+          <ToggleRow
+            label="Tabellone «stiamo servendo»"
+            desc="Mostra nel menù i numeri degli ordini pronti al servizio/ritiro. Nascosto in modalità solo menù."
+            checked={settings.show_serving_board}
+            onChange={(v) => save({ show_serving_board: v })}
+          />
+          <TemaMenuClienti settings={settings} onSave={save} />
+        </div>
+      ),
+    },
+    {
+      // GESTIONE MENÙ: la schermata con cui si lavora il listino. Le sue
+      // impostazioni non c'entrano niente con quello che vede il cliente.
+      id: 'gestione-menu',
+      icona: '🍹',
+      label: 'Gestione menù',
+      nodo: (
+        <div className="card settings-section">
+          <h3>Gestione menù</h3>
+          <p className="muted small" style={{ margin: '0 0 10px' }}>
+            La schermata con cui si modifica il listino, non quella dei clienti.
+          </p>
+          <h4 style={{ margin: '4px 0' }}>
+            Cosa dice la riga a sinistra di ogni scheda?
+          </h4>
+          <div className="mode-choice" style={{ gridTemplateColumns: '1fr 1fr' }}>
+            {MODI_STRISCIA.map((m) => (
+              <button
+                key={m.id}
+                className={`mode-option${
+                  (settings.stripe_menu || 'scorte') === m.id ? ' active' : ''
+                }`}
+                onClick={() => save({ stripe_menu: m.id })}
+                title={m.desc}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
+          <p className="muted small" style={{ margin: '8px 0 4px' }}>
+            Quale colore per «ci sono abbastanza scorte»?
+          </p>
+          <div className="mode-choice">
+            {[
+              [false, '⚪ Grigio'],
+              [true, '🟢 Verde'],
+            ].map(([value, label]) => (
+              <button
+                key={String(value)}
+                className={`mode-option${
+                  !!settings.stripe_menu_ok_verde === value ? ' active' : ''
+                }`}
+                onClick={() => save({ stripe_menu_ok_verde: value })}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
       ),
     },
     {
@@ -799,6 +916,7 @@ export default function SettingsTab({ role = null }) {
           <Link className="btn small" to="/profilo-staff">
             👤 Vai al mio profilo
           </Link>
+
         </div>
       ),
     },
@@ -843,9 +961,13 @@ export default function SettingsTab({ role = null }) {
   // l'elenco era più lungo delle impostazioni.
   const GRUPPO_DI = {
     aspetto: 'aspetto',
-    'modalita-menu': 'menu-catalogo',
-    menu: 'menu-catalogo',
-    catalogo: 'menu-catalogo',
+    // Tre cose diverse, tre voci: quello che vedono i clienti, la
+    // schermata con cui si lavora il listino, e l'importazione del
+    // catalogo. Messe insieme, davanti a un interruttore non si capiva a
+    // quale delle tre appartenesse.
+    'menu-clienti': 'menu-clienti',
+    'gestione-menu': 'gestione-menu',
+    catalogo: 'catalogo',
     coda: 'banco',
     'vista-ordine': 'banco',
     consegna: 'servizio',
@@ -868,7 +990,9 @@ export default function SettingsTab({ role = null }) {
   }
   const GRUPPI = [
     { id: 'aspetto', icona: '🎨', label: 'Aspetto' },
-    { id: 'menu-catalogo', icona: '🍹', label: 'Menù e catalogo' },
+    { id: 'menu-clienti', icona: '📖', label: 'Menù clienti' },
+    { id: 'gestione-menu', icona: '🍹', label: 'Gestione menù' },
+    { id: 'catalogo', icona: '📥', label: 'Catalogo prodotti' },
     { id: 'banco', icona: '🧾', label: 'Banco: coda e ordine' },
     { id: 'servizio', icona: '🛎', label: 'Servizio' },
     { id: 'cassa', icona: '💳', label: 'Cassa e giornata' },

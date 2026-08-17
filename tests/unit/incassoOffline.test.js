@@ -216,6 +216,30 @@ describe('aggiunte al conto col magazzino che non risponde', () => {
     stato.magazzinoAppeso = true // il caso peggiore
   })
 
+  // IL CONTO SI CHIUDE PRIMA DEL MAGAZZINO. Lo scarico legge ricette e
+  // articoli: aspettarlo voleva dire che il conto risultava pagato solo dopo
+  // quelle letture, e nella coda compariva fra i chiusi mezzo secondo più
+  // tardi — di più, con la linea del locale. Chi sta al banco deve vedere
+  // subito dov'è finito il conto che ha appena incassato.
+  it('incassare non aspetta il magazzino: il conto risulta chiuso subito', async () => {
+    stato.ordine = contoDa(20, {
+      comande: [
+        {
+          id: 'c1',
+          seq: 1,
+          status: 'ritirato',
+          items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 20, qty: 1 }],
+          inventory_applied: false,
+        },
+      ],
+    })
+    const esito = await entroUnSecondo(registerPayment('ord-1', { amount: 20, method: 'banco' }))
+    expect(esito.closed).toBe(true)
+    const patch = stato.scritture.find((s) => s.tipo === 'update')?.patch
+    expect(patch.payment_status).toBe('pagato')
+    expect(patch.status).toBe('pagato')
+  })
+
   it('la comanda si aggiunge lo stesso, con gli item dentro', async () => {
     await entroUnSecondo(
       addComanda('ord-1', [{ drink_id: 'mojito', name: 'Mojito', unit_price: 8, qty: 2 }])

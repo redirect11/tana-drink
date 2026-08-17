@@ -10,9 +10,18 @@ import { qtyBtnStyle } from '../lib/posStyles.js'
 export function DrinkTile({
   drink,
   qty,
+  onInfo,
   onAdd,
   onSetQty,
+  // DUE SEGNI, DUE COSE. `color` è il colore del PRODOTTO e sta nella
+  // linguetta in alto a sinistra: si tocca per cambiarlo. `striscia` è
+  // quello del bordo sinistro, che dice quello che il locale ha scelto —
+  // colore, categoria, scorte o niente (lib/strisce.js).
+  // Erano lo stesso valore, e scegliendo «categoria» per la striscia anche
+  // la linguetta diventava della categoria: il colore scelto a mano
+  // spariva dalla vista, pur essendo ancora lì.
   color = null,
+  striscia = null,
   favorite = false,
   onToggleFav = null,
   acceso = false, // acceso dalla ricerca: è la card che si sta cercando
@@ -24,17 +33,19 @@ export function DrinkTile({
       onClick={onAdd}
       // Serve alla ricerca per ritrovare la card e portarcisi sopra.
       data-drink-id={drink.id}
-      className={`pos-tile-striscia${acceso ? ' prodotto-acceso' : ''}`}
+      // Le tile hanno lo stesso vestito delle card della coda — sfumatura
+      // leggera e ombra — invece di essere riquadri piatti: in una griglia
+      // piena il rilievo è quello che fa leggere le colonne.
+      className={`pos-tile-striscia${acceso ? ' prodotto-acceso' : ''}${
+        inCart ? ' in-carrello' : ''
+      }`}
       style={{
-        background: inCart
-          ? 'rgba(var(--accent-rgb, 180, 120, 60), 0.18)'
-          : 'var(--tile-bg)',
         border: inCart
           ? '2px solid rgba(var(--accent-rgb, 180, 120, 60), 0.7)'
           : '1px solid var(--line)',
         // La striscia a sinistra col colore del prodotto: lo stesso segno
         // delle card della coda e del menù (il CSS la ispessisce).
-        borderLeftColor: color || 'var(--line)',
+        borderLeftColor: striscia || color || 'var(--line)',
         borderRadius: 12,
         padding: '0.5em 0.62em 0.38em',
         cursor: 'pointer',
@@ -81,6 +92,38 @@ export function DrinkTile({
           }}
         >
           {favorite ? '★' : '☆'}
+        </button>
+      )}
+
+      {/* LA ⓘ: com'è fatto questo drink. La domanda «quanto gin ci va?» al
+          banco si fa a voce e a voce si perde — chi entra a dare una mano
+          il sabato non ha le dosi in testa. Sta in basso a destra, lontana
+          dai +/− e dalla stella: si guarda, non si preme per sbaglio. */}
+      {onInfo && (
+        <button
+          type="button"
+          aria-label={`Come si fa ${drink.name}`}
+          title={`Come si fa ${drink.name}`}
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation()
+            onInfo()
+          }}
+          style={{
+            position: 'absolute',
+            bottom: 2,
+            right: 4,
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: '0.8em',
+            lineHeight: 1,
+            padding: 2,
+            opacity: 0.4,
+            zIndex: 2,
+          }}
+        >
+          ⓘ
         </button>
       )}
 

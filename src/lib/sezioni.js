@@ -6,8 +6,10 @@
 
 export const NAV_GESTIONALE = [
   ['coda', '🧾', 'Coda ordini'],
-  ['pagamenti', '💶', 'Flusso cassa'],
-  ['storico', '📋', 'Lista ordini'],
+  // La cassa è una sola: dentro ci sono flusso, lista ordini e chiusure
+  // (vedi CassaTab). «Lista ordini» aveva una voce sua qui accanto, come
+  // se fosse un altro mestiere.
+  ['pagamenti', '💶', 'Cassa'],
   ['fatture', '📄', 'Fatture'],
   ['stats', '📊', 'Statistiche'],
   ['menu', '🍸', 'Menù'],
@@ -24,6 +26,9 @@ export const NAV_SALA = [
   ['coda', '🧾', 'Coda ordini'],
   ['servizio', '🫱', 'Da servire'],
 ]
+
+// Dove sono finite le sezioni che non ci sono più.
+const VECCHI_INDIRIZZI = { storico: 'pagamenti' }
 
 // Le pagine fuori dal gestionale che hanno comunque una testata visibile.
 const FUORI = [
@@ -43,8 +48,13 @@ export function titoloPagina(pathname = '', search = '') {
   if (pathname.startsWith('/bar')) {
     const tab = new URLSearchParams(search).get('tab') || 'coda'
     if (tab === 'coda') return null
+    // Gli indirizzi VECCHI non restano senza nome: `?tab=storico` era la
+    // lista ordini, che adesso è una sottosezione della cassa — e i
+    // collegamenti salvati e i messaggi ce l'hanno ancora dentro.
+    const effettivo = VECCHI_INDIRIZZI[tab] || tab
     const voce =
-      NAV_GESTIONALE.find(([id]) => id === tab) || NAV_SALA.find(([id]) => id === tab)
+      NAV_GESTIONALE.find(([id]) => id === effettivo) ||
+      NAV_SALA.find(([id]) => id === effettivo)
     return voce ? { icona: voce[1], titolo: voce[2] } : null
   }
   const voce = FUORI.find(([p]) => pathname === p || pathname.startsWith(`${p}/`))

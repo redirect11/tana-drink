@@ -15,6 +15,10 @@ import {
   summaryMethod,
   discountAfterChange,
   scontoEccessivo,
+  dettaglioIncassi,
+  unitaDaConteggio,
+  conteggioDaUnita,
+  toccaUnita,
 } from '../../src/lib/pagamento.js'
 
 const order = (over = {}) => ({
@@ -223,5 +227,87 @@ describe('righe uguali ma distinte', () => {
     const righe = remainingItems(conto)
     expect(righe[0]).toMatchObject({ drink_id: 'negroni', name: 'Negroni', qty: 1 })
     expect(righe[2]).toMatchObject({ drink_id: 'negroni', custom: true })
+  })
+})
+
+// CHE COSA È STATO PAGATO. In fondo al conto c'era una riga sola — «Sconto
+// e acconti già incassati −15,00 €» — e quindici euro di che non lo diceva
+// nessuno. Al banco, davanti al cliente che chiede, quella riga non
+// risponde a niente.
+//
+// E la distinzione che conta: un importo battuto a mano (30 €) NON copre
+// nessuna riga — sono soldi lasciati sul conto — mentre un pagamento fatto
+// scegliendo le righe copre esattamente quelle. Dire il contrario sarebbe
+// inventarselo.
+describe('che cosa è stato pagato', () => {
+  it('sconto e incassi si leggono separati, non sommati in una riga sola', () => {
+    const d = dettaglioIncassi({
+      discount_amount: 5,
+      payments: [{ amount: 10, method: 'banco', at: '2026-08-17T21:08:00.000Z' }],
+    })
+    expect(d.sconto).toBe(5)
+    expect(d.totaleIncassato).toBe(10)
+    expect(d.incassi[0]).toMatchObject({ importo: 10, metodo: 'banco' })
+  })
+
+  it('un importo a mano non copre nessuna riga: è un acconto', () => {
+    const d = dettaglioIncassi({ payments: [{ amount: 30, method: 'banco' }] })
+    expect(d.incassi[0].cosa).toBe(null)
+  })
+
+  it('scegliendo le righe, invece, si sa esattamente cosa copre', () => {
+    const d = dettaglioIncassi({
+      payments: [
+        {
+          amount: 21,
+          method: 'carta',
+          items: [
+            { name: 'Daiquiri', qty: 2 },
+            { name: 'Birra in Bottiglia', qty: 1 },
+          ],
+        },
+      ],
+    })
+    expect(d.incassi[0].cosa).toEqual(['2× Daiquiri', '1× Birra in Bottiglia'])
+  })
+
+  it('senza sconti né incassi non c’è niente da mostrare', () => {
+    const d = dettaglioIncassi({})
+    expect(d.sconto).toBe(0)
+    expect(d.incassi).toEqual([])
+  })
+})
+
+// SEPARANDO LE RIGHE UGUALI, OGNI UNITÀ HA LA SUA QUANTITÀ. Fuori di lì la
+// selezione è un conteggio — «di questi tre, due li paga lui» — e va
+// benissimo; ma con le voci separate spegnere la prima deve spegnere la
+// PRIMA, non le ultime come fa un contatore che scende.
+describe('le unità delle righe separate', () => {
+  it('da un conteggio: le prime N accese', () => {
+    expect(unitaDaConteggio(3, 2)).toEqual([true, true, false])
+    expect(unitaDaConteggio(3, 0)).toEqual([false, false, false])
+    expect(unitaDaConteggio(3, 9)).toEqual([true, true, true])
+  })
+
+  it('e viceversa: il conteggio è quante ne sono accese', () => {
+    expect(conteggioDaUnita([true, false, true])).toBe(2)
+    expect(conteggioDaUnita([])).toBe(0)
+    expect(conteggioDaUnita(undefined)).toBe(0)
+  })
+
+  it('spegnendo la PRIMA di tre, le altre due restano accese', () => {
+    expect(toccaUnita([true, true, true], 3, 0, false)).toEqual([false, true, true])
+  })
+
+  it('e si riaccende proprio quella', () => {
+    expect(toccaUnita([false, true, true], 3, 0, true)).toEqual([true, true, true])
+  })
+
+  it('senza stato si parte da tutte accese', () => {
+    expect(toccaUnita(undefined, 2, 1, false)).toEqual([true, false])
+  })
+
+  it('un indice fuori misura non rompe niente', () => {
+    expect(toccaUnita([true, true], 2, 5, false)).toEqual([true, true])
   })
 })

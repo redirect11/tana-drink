@@ -6,10 +6,13 @@ import { describe, it, expect } from 'vitest'
 import {
   bucketByStatus,
   ordersRecap,
+  voceCassa,
   openOrdersCount,
   ordineCorrisponde,
   primoCorrispondente,
   inseritiDa,
+  passaFiltroCoda,
+  restaInCoda,
 } from '../../src/lib/coda.js'
 
 const orders = [
@@ -48,7 +51,7 @@ describe('ordersRecap', () => {
     expect(r.chiusi).toBe(orders.filter((o) => o.status !== 'annullato' && o.payment_status === 'pagato').length)
   })
   it('coda vuota', () => {
-    expect(ordersRecap([])).toEqual({ count: 0, total: 0, aperti: 0, chiusi: 0 })
+    expect(ordersRecap([])).toEqual({ count: 0, total: 0, aperti: 0, chiusi: 0, annullati: 0 })
   })
 })
 
@@ -169,5 +172,150 @@ describe('primoCorrispondente', () => {
     expect(primoCorrispondente(lista, 'zzz')).toBe(null)
     expect(primoCorrispondente(lista, '')).toBe(null)
     expect(primoCorrispondente(null, 'marc')).toBe(null)
+  })
+})
+
+// ── GLI ANNULLATI HANNO UNA TAB LORO ─────────────────────────────────
+// Stavano fra i «Chiusi»: facevano numero senza essere incassi, e per
+// ritrovarne uno da riaprire bisognava cercarlo in mezzo a quelli buoni.
+describe('i filtri della coda', () => {
+  const chiuso = (o) => o.workflow_status === 'pagato' || o.workflow_status === 'annullato'
+  const aperto = { workflow_status: 'in_preparazione' }
+  const pagato = { workflow_status: 'pagato' }
+  const buttato = { workflow_status: 'annullato' }
+
+  it('«In corso» lascia solo quello che c’è da fare', () => {
+    expect(passaFiltroCoda(aperto, 'attivi', chiuso)).toBe(true)
+    expect(passaFiltroCoda(pagato, 'attivi', chiuso)).toBe(false)
+    expect(passaFiltroCoda(buttato, 'attivi', chiuso)).toBe(false)
+  })
+
+  it('«Chiusi» sono i soldi della serata: gli annullati non ci stanno', () => {
+    expect(passaFiltroCoda(pagato, 'chiusi', chiuso)).toBe(true)
+    expect(passaFiltroCoda(buttato, 'chiusi', chiuso)).toBe(false)
+  })
+
+  it('«Annullati» solo quelli', () => {
+    expect(passaFiltroCoda(buttato, 'annullati', chiuso)).toBe(true)
+    expect(passaFiltroCoda(pagato, 'annullati', chiuso)).toBe(false)
+    expect(passaFiltroCoda(aperto, 'annullati', chiuso)).toBe(false)
+  })
+
+  it('«Tutti» non toglie niente, annullati compresi', () => {
+    for (const o of [aperto, pagato, buttato]) {
+      expect(passaFiltroCoda(o, 'tutti', chiuso)).toBe(true)
+    }
+  })
+})
+
+// LA CODA È IL LAVORO DI ADESSO. Comparivano conti incassati serate prima,
+// e anche dopo una chiusura di cassa restavano quelli della tornata già
+// rendicontata: la coda i conti aperti li tiene d'occhio senza limite di
+// data — apposta, si chiudono a mano — e chi era rimasto indietro con gli
+// stati continuava a passare da lì.
+describe('cosa resta in coda', () => {
+  const cassa = 'cassa-2'
+  const apertaDa = '2026-08-16T18:00:00.000Z'
+
+  it('un conto annullato ADESSO resta, anche se era aperto da ieri', () => {
+    // Era il caso che spariva: si annulla un conto vecchio e quello
+    // svanisce nell'istante in cui lo si annulla, senza sapere se
+    // l'operazione è andata a buon fine.
+    const vecchioAnnullatoOra = {
+      cash_session_id: 'cassa-1',
+      tempi_conto: { annullato: '2026-08-16T22:10:00.000Z' },
+    }
+    expect(restaInCoda(vecchioAnnullatoOra, { chiuso: true, cassa, apertaDa })).toBe(true)
+  })
+
+  it('quello annullato o incassato PRIMA di questa apertura è storia', () => {
+    const primaDiOggi = {
+      cash_session_id: 'cassa-1',
+      paid_at: '2026-08-15T23:00:00.000Z',
+    }
+    expect(restaInCoda(primaDiOggi, { chiuso: true, cassa, apertaDa })).toBe(false)
+  })
+
+  it('quello incassato in questa apertura resta: sono i soldi di adesso', () => {
+    const ora = { cash_session_id: 'cassa-2', paid_at: '2026-08-16T21:00:00.000Z' }
+    expect(restaInCoda(ora, { chiuso: true, cassa, apertaDa })).toBe(true)
+  })
+
+  it('senza orario di chiusura vale la sessione scritta sull’ordine', () => {
+    expect(restaInCoda({ cash_session_id: 'cassa-1' }, { chiuso: true, cassa, apertaDa })).toBe(false)
+    expect(restaInCoda({ cash_session_id: 'cassa-2' }, { chiuso: true, cassa, apertaDa })).toBe(true)
+  })
+
+  it('a cassa chiusa non resta nessun conto chiuso', () => {
+    expect(
+      restaInCoda({ cash_session_id: 'cassa-2' }, { chiuso: true, cassa: null, apertaDa: null })
+    ).toBe(false)
+  })
+
+  it('un conto APERTO resta comunque: quello è da chiudere', () => {
+    expect(restaInCoda({ cash_session_id: 'cassa-1' }, { chiuso: false, cassa, apertaDa })).toBe(true)
+  })
+
+  it('senza cassa e senza orario si guarda la giornata', () => {
+    // Chi la cassa non la apre mai non ha altro riferimento.
+    expect(restaInCoda({}, { chiuso: true, giornata: '2026-08-15', oggi: '2026-08-16' })).toBe(false)
+    expect(restaInCoda({}, { chiuso: true, giornata: '2026-08-16', oggi: '2026-08-16' })).toBe(true)
+    expect(restaInCoda({}, { chiuso: true, giornata: null, oggi: '2026-08-16' })).toBe(true)
+  })
+})
+
+// GLI ANNULLATI SI CONTANO A PARTE. Non sono soldi — fuori dal totale — ma
+// tre conti saltati in una serata sono una domanda da farsi, e chi sta al
+// banco deve poterli vedere senza cambiare tab.
+describe('gli annullati nel riepilogo', () => {
+  const ordini = [
+    { id: 'a', status: 'aperto', total: 20 },
+    { id: 'b', status: 'pagato', total: 30 },
+    { id: 'c', status: 'annullato', total: 50 },
+    { id: 'd', workflow_status: 'annullato', total: 10 },
+  ]
+  const chiuso = (o) => o.status === 'pagato'
+
+  it('si contano, ma non fanno numero fra aperti e chiusi', () => {
+    const r = ordersRecap(ordini, chiuso)
+    expect(r.annullati).toBe(2)
+    expect(r.aperti).toBe(1)
+    expect(r.chiusi).toBe(1)
+  })
+
+  it('e non entrano nel totale: quelli sono i soldi veri', () => {
+    expect(ordersRecap(ordini, chiuso).total).toBe(50)
+  })
+})
+
+// LA CASSA È DEL BANCO. Aprirla e chiuderla si fa dalla schermata in cui si
+// sta già, ma chi serve ai tavoli non ci mette mano: un tasto che risponde
+// «non puoi» è peggio di un tasto che non c'è.
+describe('la voce della cassa nel menu della coda', () => {
+  it('alla sala non compare affatto', () => {
+    expect(voceCassa({ gestore: false, cassaAperta: false })).toBe(null)
+    expect(voceCassa({ gestore: false, cassaAperta: true })).toBe(null)
+  })
+
+  it('cassa chiusa: al banco compare «Apri cassa»', () => {
+    expect(voceCassa({ gestore: true, cassaAperta: false })).toMatchObject({
+      id: 'apri-cassa',
+      disabled: false,
+    })
+  })
+
+  it('cassa aperta e conti tutti incassati: si può chiudere', () => {
+    expect(voceCassa({ gestore: true, cassaAperta: true, contiAperti: 0 })).toMatchObject({
+      id: 'chiudi-cassa',
+      disabled: false,
+    })
+  })
+
+  it('con conti aperti la chiusura è spenta, e dice quanti sono', () => {
+    // Un conto aperto è un incasso che manca: chiudere così vorrebbe dire
+    // far quadrare una serata con dentro un buco.
+    const v = voceCassa({ gestore: true, cassaAperta: true, contiAperti: 3 })
+    expect(v.disabled).toBe(true)
+    expect(v.hint).toContain('3')
   })
 })

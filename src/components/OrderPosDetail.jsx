@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   advanceComanda,
@@ -16,6 +16,7 @@ import {
   subscribeSettings,
   peekNextDailyNumber,
   DEFAULT_SETTINGS,
+  settingsIniziali,
 } from '../lib/api.js'
 import { useDraft, loadLayout, saveLayout, saveDraft } from '../lib/useDraft.js'
 import { dismissKeyboard } from '../lib/keyboard.js'
@@ -33,6 +34,7 @@ import {
   ritiratoLabel,
   formatPrice,
   placedByName,
+  paymentMethodLabel,
 } from '../lib/orderStatus.js'
 import { idDispositivo } from '../lib/dispositivo.js'
 import {
@@ -42,7 +44,7 @@ import {
   comandaEditable,
   ORDER_OPEN,
 } from '../lib/comande.js'
-import { paidAmount } from '../lib/pagamento.js'
+import { paidAmount, dettaglioIncassi } from '../lib/pagamento.js'
 import { isPersonale } from '../lib/ruoli.js'
 import {
   makeLineId,
@@ -51,13 +53,26 @@ import {
   hasMergeable,
   moveLine,
   reconcileLayout,
-  qtyByDrink as draftQtyByDrink,
 } from '../lib/orderLines.js'
 import { toastSuccess, toastError } from '../lib/toast.js'
 import { printComanda, printScontrino } from '../lib/printer.js'
 import PosProductPicker from './PosProductPicker.jsx'
 import { IconPrinter, IconReceipt, IconCard, IconRefresh, IconX, IconCheck, IconClose, IconGruppo, IconPersona, IconTag } from './Icons.jsx'
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import CustomDrinkForm from './CustomDrinkForm.jsx'
+import SchedaDrink from './SchedaDrink.jsx'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import ActionSheet from './ActionSheet.jsx'
 import { StoriaOrdineDialog, RipristinaOrdineDialog } from './StoriaOrdine.jsx'
@@ -142,6 +157,45 @@ function ricordaNumeroPrevisto(n) {
   }
 }
 
+// ── RIORDINARE LE RIGHE DEL CONTO ────────────────────────────────────
+//
+// Si potevano già spostare, ma a lungo-premuto e con un movimento fatto a
+// mano: la riga saltava, le altre no, e capitava di spostarne una mentre si
+// voleva solo toccarla. Ora è la stessa libreria della griglia dei prodotti
+// (dnd-kit): la riga segue il dito e le altre si scansano da sole.
+//
+// E come nella griglia si entra in «organizza»: fuori di lì le righe non si
+// muovono — toccarle apre la riga, che è quello che si fa mille volte a
+// sera — e dentro compare la maniglia, che è l'unica cosa che trascina.
+const SENSORI_SPENTI = []
+
+function RigaOrdinabile({ id, attiva, bloccata, children }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id,
+    disabled: !attiva || bloccata,
+  })
+  return (
+    <div
+      ref={setNodeRef}
+      className={`posd-riga-wrap${isDragging ? ' dragging' : ''}`}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+    >
+      {attiva && !bloccata && (
+        <span
+          className="posd-riga-grip"
+          title="Trascina per spostare"
+          aria-label="Sposta la riga"
+          {...attributes}
+          {...listeners}
+        >
+          ⠿
+        </span>
+      )}
+      {children}
+    </div>
+  )
+}
+
 // Quando è stato aperto il conto: data breve + ora. "oggi" per la giornata in
 // corso, perché scrivere la data di oggi accanto al numero è rumore.
 function apertoIl(iso) {
@@ -158,7 +212,11 @@ function apertoIl(iso) {
   return `${d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' })} ${ora}`
 }
 
-export default function OrderPosDetail({ order: orderProp = null }) {
+// `apriPagamento`: la schermata si apre già sul pagamento. Serve a chi ci
+// arriva dal dettaglio di un ordine premendo «Pagamento» — al tavolo il
+// gesto è uno solo, e passare per il conto per poi premere un altro tasto
+// sarebbe un giro in più mentre il cliente aspetta col portafogli in mano.
+export default function OrderPosDetail({ order: orderProp = null, apriPagamento = false }) {
   const navigate = useNavigate()
   // Ordine auto-creato IN PLACE alla prima aggiunta (creazione): NON si naviga
   // altrove, così il layout non si ricarica. Da lì la schermata è identica alla
@@ -176,22 +234,45 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   const [editLine, setEditLine] = useState(null) // riga bozza in modifica (editor)
   const [showComande, setShowComande] = useState(false)
   const [confirmCancel, setConfirmCancel] = useState(false)
+  const [confirmSvuota, setConfirmSvuota] = useState(false)
+  // La scheda del drink (ingredienti e preparazione), dalla ⓘ sulla card.
+  const [schedaDrink, setSchedaDrink] = useState(null)
+  // «Organizza» per la lista del conto: come nella griglia, è un
+  // interruttore che fa comparire le maniglie. Fuori di lì toccare una riga
+  // la apre — è quello che si fa mille volte a sera — e niente si sposta per
+  // sbaglio.
+  const [organizzaLista, setOrganizzaLista] = useState(false)
+  const sensoriLista = useSensors(
+    // Otto pixel prima di considerarlo un trascinamento: sotto quella soglia
+    // è un tocco, e il tocco apre la riga.
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+  )
   // Menu delle azioni: esiste solo sul telefono, dove i tasti non ci stanno
   // tutti in pagina senza mangiarsi le righe del conto.
   const [showAzioni, setShowAzioni] = useState(false)
   // Il menu delle azioni vale SOLO sul telefono: altrove i tasti stanno in
   // pagina, e un ⋯ in più sarebbe solo un doppione da capire.
   const telefono = useTelefono()
-  const [showPayment, setShowPayment] = useState(false)
+  const [showPayment, setShowPayment] = useState(apriPagamento)
   const [showStoria, setShowStoria] = useState(false)
   // Chi sta usando l'app: la storia deve dire CHI ha riaperto il conto.
+  // CHI SONO IO, nella forma che la storia sa scrivere: nome e, se si sa,
+  // ruolo. Prima era una stringa e basta, e nella stessa storia la stessa
+  // persona compariva con tre etichette diverse.
   const chiSonoIo = () =>
-    auth.currentUser?.displayName ||
-    String(auth.currentUser?.email || '').split('@')[0] ||
-    null
+    auth.currentUser
+      ? {
+          name: auth.currentUser.displayName || null,
+          email: auth.currentUser.email || null,
+          role: staffRef.current?.role || null,
+        }
+      : null
+  // Il proprio ruolo, sempre a portata: serve a firmare le cose che si fanno
+  // (vedi chiSonoIo) senza dipendere dall'ordine dei render.
+  const staffRef = useRef(null)
   const [showRipristino, setShowRipristino] = useState(false)
   const [askName, setAskName] = useState(false) // modale nome (creazione)
-  const [settings, setSettings] = useState(DEFAULT_SETTINGS)
+  const [settings, setSettings] = useState(settingsIniziali)
   useEffect(() => subscribeSettings(setSettings, () => {}), [])
 
   // CONTO DI GRUPPO (solo in creazione): si arriva qui da /pos?group=<id>
@@ -263,7 +344,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   // AGGIUNTE in composizione (BOZZA persistente). In creazione la chiave
   // tiene conto del gruppo: bozze di gruppi diversi non si mescolano.
   const draftKey = order ? order.id : groupParam ? `new:${groupParam}` : 'new'
-  const [draft, setDraft, clearDraft] = useDraft(draftKey)
+  const [draft, setDraft, clearDraft, dimenticaBozzaSalvata] = useDraft(draftKey)
   const draftRef = useRef(draft)
   draftRef.current = draft
 
@@ -358,7 +439,9 @@ export default function OrderPosDetail({ order: orderProp = null }) {
         const token = await u.getIdTokenResult()
         const role = token.claims.role
         if (isPersonale(role)) {
-          setStaff({ email: u.email, name: u.displayName || u.email, role })
+          const io = { email: u.email, name: u.displayName || u.email, role }
+          staffRef.current = io
+          setStaff(io)
         }
       } catch {
         setStaff(null)
@@ -390,6 +473,50 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   // altro e lasciare il primo per strada, con dentro quello che era già
   // stato battuto. Solo se è ancora aperto: un conto chiuso non si
   // riapre.
+  // LA SCHERMATA È ANCORA QUI? La creazione va avanti anche dopo che si è
+  // usciti — è quello che la rende immediata — ma quello che scrive PER la
+  // schermata (il conto in corso, lo stato locale) non deve più toccare
+  // niente: si usciva, la creazione finiva un istante dopo e si rimetteva in
+  // memoria «il conto in corso», così il «+» seguente riapriva quello — e
+  // per un attimo si vedevano i suoi prodotti segnati nella griglia.
+  const montatoRef = useRef(true)
+  useEffect(
+    () => () => {
+      montatoRef.current = false
+    },
+    []
+  )
+
+  // USCENDO DA QUI, LA BOZZA SI CHIUDE. Da qualunque parte si esca — la
+  // freccia, il menu, il tasto indietro del browser — quello che è stato
+  // battuto diventa un CONTO (si crea da sé, in locale) e la copia salvata
+  // sparisce.
+  //
+  // È la regola che mancava: la schermata del conto nuovo si deve aprire
+  // PULITA, senza pulizie all'apertura. Prima la bozza restava sotto la
+  // chiave 'new' e il conto dopo se la ritrovava dentro — le righe di quello
+  // prima, pronte a essere battute due volte. La «bozza che non si perde»
+  // continua a valere: non si perde perché diventa un conto, non perché
+  // resta in un cassetto.
+  const uscitaRef = useRef(null)
+  uscitaRef.current = () => {
+    if (orderProp) return
+    ricordaContoInCorso(null)
+    if (draftRef.current.length > 0) createFromDraftRef.current()
+    saveDraft('new', [])
+  }
+  useEffect(
+    () => () => {
+      uscitaRef.current?.()
+    },
+    []
+  )
+
+  // USCENDO DAL POS SI DIMENTICA. Il «+» deve aprire un conto NUOVO: la
+  // memoria del conto in corso serve solo a riprenderlo dopo un
+  // RICARICAMENTO della pagina — dove questa pulizia non gira, perché il
+  // programma muore e basta. Uscendo a mano invece gira, e premendo «+» non
+  // ci si ritrova dentro il conto appena battuto.
   useEffect(() => {
     if (orderProp || selfOrder) return undefined
     const id = contoInCorso()
@@ -558,6 +685,13 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   // Un conto RIAPERTO si modifica tutto, righe vecchie comprese: è il
   // motivo per cui lo si riapre. Vedi api.js/bartenderUpdateComanda.
   const riaperto = Array.isArray(order?.riaperture) && order.riaperture.length > 0
+  // IL CONTO ANNULLATO NON È UN CONTO VUOTO. Annullando, tutte le sue
+  // comande diventano «annullate» e qui venivano saltate: si apriva un
+  // conto senza una riga e a zero euro, e non si capiva né cosa ci fosse
+  // dentro né se valesse la pena riaprirlo. Dentro un conto ancora aperto
+  // invece una comanda annullata resta fuori: quella roba non si fa e non
+  // si paga.
+  const contoAnnullato = !isNew && order?.workflow_status === ORDER_STATUSES.ANNULLATO
 
   const confirmedLines = useMemo(() => {
     const remainingPaid = {}
@@ -566,7 +700,8 @@ export default function OrderPosDetail({ order: orderProp = null }) {
         if (it.drink_id) remainingPaid[it.drink_id] = (remainingPaid[it.drink_id] || 0) + (Number(it.qty) || 0)
     const out = []
     for (const c of effComande) {
-      if (c.status === ORDER_STATUSES.ANNULLATO) continue
+      const comandaAnnullata = c.status === ORDER_STATUSES.ANNULLATO
+      if (comandaAnnullata && !contoAnnullato) continue
       ;(c.items || []).forEach((it, idx) => {
         const base = {
           source: 'comanda',
@@ -587,13 +722,19 @@ export default function OrderPosDetail({ order: orderProp = null }) {
         // nodo e non riparte da capo (vedi draftToItems).
         const chiave = it.line_id ? `d:${it.line_id}` : `c:${c.id}:${idx}`
         if (unpaidQty > 0)
-          out.push({ ...base, key: chiave, qty: unpaidQty, removable: comandaEditable(c) || riaperto })
+          out.push({
+            ...base,
+            key: chiave,
+            qty: unpaidQty,
+            removable: !comandaAnnullata && (comandaEditable(c) || riaperto),
+            annullata: comandaAnnullata,
+          })
         if (paidHere > 0)
           out.push({ ...base, key: `${chiave}:paid`, qty: paidHere, removable: false, paid: true })
       })
     }
     return out
-  }, [effComande, order?.payments, riaperto])
+  }, [effComande, order?.payments, riaperto, contoAnnullato])
 
   const draftLines = useMemo(
     () => draft.map((l) => ({ ...l, key: `d:${l.line_id}`, source: 'draft', status: 'draft', removable: true })),
@@ -716,14 +857,42 @@ export default function OrderPosDetail({ order: orderProp = null }) {
 
   const draftCount = draft.reduce((s, i) => s + i.qty, 0)
   const draftTotal = draft.reduce((s, i) => s + i.qty * i.unit_price, 0)
-  const confirmedTotal = confirmedLines.reduce((s, l) => s + l.qty * l.unit_price, 0)
-  const qtyByDrink = useMemo(() => {
-    const m = {}
-    for (const l of confirmedLines) if (!l.custom) m[l.drink_id] = (m[l.drink_id] || 0) + l.qty
-    const d = draftQtyByDrink(draft)
-    for (const k of Object.keys(d)) m[k] = (m[k] || 0) + d[k]
+  // Le righe di un conto annullato si vedono ma non fanno somma: quel
+  // conto non lo paga nessuno, e un totale diverso da zero lo farebbe
+  // sembrare ancora da incassare.
+  const confirmedTotal = confirmedLines.reduce(
+    (s, l) => s + (l.annullata ? 0 : l.qty * l.unit_price),
+    0
+  )
+  // QUANTI PEZZI DI OGNI PRODOTTO CI SONO NEL CONTO: è il numero sulla card
+  // della griglia. Si conta per id, ma un conto può portarsi dietro l'id di
+  // un prodotto che NON C'È PIÙ — cancellato e rifatto, o un catalogo
+  // reimportato — e allora la card restava senza numero mentre le righe
+  // erano lì sotto, a vista: sembrava che il conto e la griglia parlassero
+  // di due cose diverse. In quel caso si ripiega sul NOME, che è quello che
+  // legge chi sta al banco.
+  const idPerNome = useMemo(() => {
+    const m = new Map()
+    for (const d of drinks || []) if (d?.name) m.set(d.name.trim().toLowerCase(), d.id)
     return m
-  }, [confirmedLines, draft])
+  }, [drinks])
+  const qtyByDrink = useMemo(() => {
+    const vivi = new Set((drinks || []).map((d) => d.id))
+    const chiave = (id, nome) =>
+      id && vivi.has(id) ? id : idPerNome.get(String(nome || '').trim().toLowerCase()) || id
+    const m = {}
+    for (const l of confirmedLines) {
+      if (l.custom) continue
+      const k = chiave(l.drink_id, l.name)
+      if (k) m[k] = (m[k] || 0) + l.qty
+    }
+    for (const l of draft) {
+      if (l.custom) continue
+      const k = chiave(l.drink_id, l.name)
+      if (k) m[k] = (m[k] || 0) + l.qty
+    }
+    return m
+  }, [confirmedLines, draft, drinks, idPerNome])
 
   // MODIFICA: l'item entra DIRETTAMENTE nella comanda modificabile (modifica
   // ottimistica, chiave riga stabile) e si sincronizza in background — così NON
@@ -825,61 +994,13 @@ export default function OrderPosDetail({ order: orderProp = null }) {
     flushTimers.current[l.comandaId] = setTimeout(() => flushComanda(l.comandaId), 600)
   }
 
-  // ── Riordino della lista per DRAG (tieni premuto e trascina) ──
-  // Tutti gli item sono spostabili. Il riordino delle righe di bozza viene
-  // reso persistente (allineo l'array bozza all'ordine visivo).
-  const [dragIndex, setDragIndex] = useState(null)
-  const dragRef = useRef({ timer: null, startY: 0 })
-  const startDrag = (e, index) => {
-    if (closed) return
-    try { e.currentTarget.setPointerCapture(e.pointerId) } catch { /* ok */ }
-    dragRef.current.startY = e.clientY
-    dragRef.current.startX = e.clientX
-    dragRef.current.startIndex = index
-    dragRef.current.moved = false
-    clearTimeout(dragRef.current.timer)
-    dragRef.current.timer = setTimeout(() => setDragIndex(index), 300)
-  }
-  const moveDrag = (e) => {
-    if (dragIndex == null) {
-      const moved =
-        Math.abs(e.clientY - dragRef.current.startY) > 8 ||
-        Math.abs(e.clientX - dragRef.current.startX) > 8
-      if (moved) {
-        dragRef.current.moved = true
-        clearTimeout(dragRef.current.timer)
-      }
-      return
-    }
-    e.preventDefault()
-    const el = document.elementFromPoint(e.clientX, e.clientY)
-    const target = el?.closest('[data-line-index]')
-    if (!target) return
-    const to = Number(target.dataset.lineIndex)
-    if (!Number.isInteger(to) || to === dragIndex) return
-    // Non si scavalcano le righe pagate (stanno in fondo, bloccate).
-    if (orderedLines[to]?.paid) return
-    // Gli indici sono quelli VISIBILI (lista partizionata): traduco in indici
-    // del layout tramite le chiavi, così il riordino resta corretto.
-    const fromKey = orderedLines[dragIndex]?.key
-    const toKey = orderedLines[to]?.key
-    if (fromKey && toKey) {
-      setLayout((lay) => moveLine(lay, lay.indexOf(fromKey), lay.indexOf(toKey)))
-      setDragIndex(to)
-    }
-  }
-  const endDrag = (e) => {
-    clearTimeout(dragRef.current.timer)
-    const wasDragging = dragIndex != null
-    if (wasDragging) syncDraftOrder()
-    setDragIndex(null)
-    // TAP (nessun drag, nessun movimento) sull'item → apre l'editor per-riga.
-    // Serve qui perché il pointer-capture del drag "mangia" il click sul figlio.
-    if (!wasDragging && !dragRef.current.moved && e?.type === 'pointerup') {
-      const l = orderedLines[dragRef.current.startIndex]
-      if (l && !closed && (l.source === 'draft' || l.removable)) setEditLine(l)
-    }
-  }
+  // ── Riordino della lista ──
+  // Lo fa dnd-kit, la stessa libreria della griglia dei prodotti: la riga
+  // segue il dito e le altre si scansano da sole (vedi RigaOrdinabile).
+  // Prima era fatto a mano, a lungo-premuto: la riga saltava, le altre no, e
+  // capitava di spostarne una mentre si voleva solo toccarla.
+  // Il riordino delle righe di bozza si rende persistente allineando
+  // l'array della bozza all'ordine visivo.
   // Allinea l'ordine della bozza (persistito) alla sequenza visiva corrente.
   const syncDraftOrder = () => {
     const draftIds = layoutRef.current.filter((k) => k.startsWith('d:')).map((k) => k.slice(2))
@@ -1059,10 +1180,22 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   // continua come nella modifica (aggiunte confermate al volo). Il nome si
   // chiede solo all'uscita, se manca.
   const creatingRef = useRef(false)
+  // LA CHIAVE DELLA BATTUTA. Identifica QUESTA creazione: se la richiesta
+  // parte due volte — l'auto-creazione mentre si preme «Paga», un doppio
+  // tocco — il conto resta uno solo (vedi createOrder). Non cambia finché
+  // la schermata resta in creazione.
+  const chiaveBattutaRef = useRef(null)
+  const chiaveBattuta = () => {
+    if (!chiaveBattutaRef.current) {
+      chiaveBattutaRef.current = `pos-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    }
+    return chiaveBattutaRef.current
+  }
   // Promise dell'ordine in creazione: chi arriva mentre la creazione è in volo
   // (es. il tasto Pagamento) deve ASPETTARE questo, non creare un secondo
   // ordine — altrimenti si ritrovano due conti con lo stesso nome/tavolo.
   const creatingPromiseRef = useRef(null)
+  const itemsInVoloRef = useRef(null)
   const createFromDraft = async () => {
     if (!isNew) return null
     if (creatingRef.current) return creatingPromiseRef.current
@@ -1074,6 +1207,21 @@ export default function OrderPosDetail({ order: orderProp = null }) {
     // via con le altre.
     const inviate = new Set(items.map((i) => i.line_id))
     creatingRef.current = true
+    // LA BOZZA SI SVUOTA SUBITO, non quando il server risponde. Aspettare la
+    // scrittura voleva dire che, uscendo prima della sincronizzazione, il
+    // conto DOPO si apriva con dentro la roba di quello prima — righe già
+    // battute su un altro conto, pronte a essere battute due volte.
+    // Le righe arrivate mentre l'ordine nasceva restano da parte: appena
+    // c'è l'id vanno nella bozza sua.
+    // Le righe restano a schermo mentre il conto nasce: quello che si vede e
+    // quello che si ritrova riaprendo sono due cose diverse (vedi useDraft).
+    const partite = draftRef.current.filter((r) => inviate.has(r.line_id))
+    // Le righe che stanno partendo restano a portata di mano: chi preme
+    // «Pagamento» in quell'istante deve vedere il conto, non una schermata
+    // vuota perché la bozza è già stata svuotata.
+    itemsInVoloRef.current = items
+    const restanti = draftRef.current.filter((r) => !inviate.has(r.line_id))
+    dimenticaBozzaSalvata()
     const run = async () => {
       try {
         const created = await createOrder({
@@ -1081,30 +1229,33 @@ export default function OrderPosDetail({ order: orderProp = null }) {
           note: info.note || null,
           customer_name: info.customer_name.trim() || null,
           items,
+          client_temp_id: chiaveBattuta(),
           placed_by: placedBy(),
           status: statoIniziale,
           service_mode: modoConsegna,
           group_id: group && !groupIsContainer ? group.id : null,
           group_name_snapshot: group && !groupIsContainer ? group.name : null,
         })
-        // LE RIGHE BATTUTE MENTRE L'ORDINE NASCEVA NON SI BUTTANO.
-        // La creazione dura qualche decimo di secondo e al banco in quei
-        // decimi si continua a battere. Qui succedevano due cose: si
-        // svuotava tutta la bozza (comprese le righe arrivate dopo lo
-        // scatto), e soprattutto la bozza cambia CHIAVE — da 'new' all'id
-        // dell'ordine — quindi anche salvandole restavano in un cassetto
-        // che nessuno riapriva più. Si passano a mano alla chiave nuova:
-        // un istante dopo l'auto-conferma le manda dentro l'ordine.
-        const restanti = draftRef.current.filter((r) => !inviate.has(r.line_id))
-        clearDraft()
-        if (restanti.length) saveDraft(created.id, restanti)
-        selfOrderJsonRef.current = JSON.stringify(created) // evita un re-render doppio dalla subscription
-        ricordaContoInCorso(created.id) // se la pagina ricarica, si riprende da qui
-        setSelfOrder(created) // diventa "modifica" in place, niente reload
+        // LE RIGHE BATTUTE MENTRE L'ORDINE NASCEVA NON SI BUTTANO: la bozza
+        // cambia CHIAVE — da 'new' all'id dell'ordine — e vanno passate a
+        // mano, altrimenti restano in un cassetto che nessuno riapre più.
+        // Un istante dopo, l'auto-conferma le manda dentro l'ordine.
+        const arrivateDopo = draftRef.current.filter((r) => !inviate.has(r.line_id))
+        const daPortare = [...restanti, ...arrivateDopo]
+        if (daPortare.length) saveDraft(created.id, daPortare)
+        itemsInVoloRef.current = null
+        if (montatoRef.current) {
+          selfOrderJsonRef.current = JSON.stringify(created) // evita un re-render doppio dalla subscription
+          ricordaContoInCorso(created.id) // se la pagina ricarica, si riprende da qui
+          setSelfOrder(created) // diventa "modifica" in place, niente reload
+        }
         return created
       } catch (e) {
         creatingRef.current = false
         creatingPromiseRef.current = null
+        // Il conto non è nato: le righe tornano in bozza. Averle svuotate
+        // subito non deve costare quello che si era battuto.
+        saveDraft('new', [...partite, ...restanti])
         toastError(`Ordine non creato: ${e.message}`)
         return null
       }
@@ -1120,10 +1271,14 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   const submitNew = (name) => {
     setAskName(false)
     const nm = (name || '').trim() || null
-    if (order?.id && nm) {
-      updateOrderInfo(order.id, { customer_name: nm }).catch((e) =>
-        toastError(`Nome non salvato: ${e.message}`)
-      )
+    // Il conto può essere ancora in fase di nascita: il nome lo si mette
+    // appena c'è, in sottofondo. Nessuno resta a guardare una schermata
+    // ferma per un campo di testo.
+    if (nm) {
+      const dove = order?.id ? Promise.resolve(order) : creatingPromiseRef.current
+      Promise.resolve(dove)
+        .then((o) => (o?.id ? updateOrderInfo(o.id, { customer_name: nm }) : null))
+        .catch((e) => toastError(`Nome non salvato: ${e.message}`))
     }
     setInfo({ customer_name: '', table_label: '', note: '' })
     navigate('/bar')
@@ -1134,6 +1289,20 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   // fatte. Sta qui e non dentro il tasto perché la usano in due: il footer
   // sul tablet e il menu delle azioni sul telefono.
   function inviaComanda() {
+    // ANCHE SU UN CONTO APPENA BATTUTO. Prima il tasto era spento finché
+    // l'ordine non esisteva sul server: al banco vuol dire aspettare la rete
+    // per mandare in stampa una comanda che si ha già davanti. Il conto si
+    // crea qui (in locale, immediato) e la stampa parte appena c'è.
+    if (isNew) {
+      const nascita = createFromDraftRef.current()
+      Promise.resolve(nascita).then((o) => {
+        if (!o) return
+        printComanda(o, (o.comande || []).at(-1) || null)
+          .then(() => toastSuccess('Comanda inviata al banco'))
+          .catch((e) => setError(`Stampa: ${e.message}`))
+      })
+      return
+    }
     flushAll()
     flushAdditions()
     const daStampare =
@@ -1145,8 +1314,53 @@ export default function OrderPosDetail({ order: orderProp = null }) {
       .catch((e) => setError(`Stampa: ${e.message}`))
   }
 
+  // C'È QUALCOSA SU CUI LAVORARE? In creazione sono le righe in bozza —
+  // oppure quelle appena partite per la creazione, perché la bozza si svuota
+  // subito e i tasti non devono spegnersi in quell'istante.
+  const conRighe = draftCount > 0 || (itemsInVoloRef.current || []).length > 0 || !isNew
+
+  // ANNULLARE SI PUÒ FINCHÉ IL CONTO È APERTO, e in creazione sempre: è la
+  // via d'uscita di chi ha aperto un conto per sbaglio o ha cambiato idea.
+  // I tasti «annulla» sono due (il pannello e la barra azioni) e avevano due
+  // regole diverse — quello della barra era spento per tutta la creazione,
+  // anche a righe battute. Da qui in poi la regola è una sola.
+  const annullaSpento = isNew ? false : closed
+  const annullaOrdine = () => {
+    // Senza righe non c'è niente da buttare né da annullare: si torna in
+    // coda e basta, senza far confermare una cosa che non succede.
+    if (isNew && !conRighe) {
+      ricordaContoInCorso(null)
+      navigate('/bar')
+      return
+    }
+    setConfirmCancel(true)
+  }
+
+  // Quante righe si porterebbe via il «svuota»: in creazione la bozza, su un
+  // conto aperto anche quelle già confermate ma ancora modificabili.
+  const righeDaSvuotare = isNew
+    ? draftCount
+    : draftCount + confirmedLines.filter((l) => l.removable !== false).length
+
+  function svuotaTutto() {
+    clearDraft()
+    if (isNew) return
+    // Sul conto vero le righe si tolgono UNA PER UNA con la strada di
+    // sempre (reduceComandaLine): così comande e magazzino restano in pari,
+    // e non c'è una seconda logica di cancellazione che un giorno dirà una
+    // cosa diversa dalla prima.
+    for (const l of confirmedLines.filter((r) => r.removable)) {
+      for (let i = 0; i < (Number(l.qty) || 0); i++) {
+        reduceComandaLine(l.comandaId, l.itemIndex)
+      }
+    }
+  }
+
   function handlePayNow() {
-    if (draft.length === 0 || payOrder) return
+    // Le righe possono essere già partite per la creazione: la bozza si
+    // svuota subito (vedi createFromDraft) e restano lì.
+    const inVolo = itemsInVoloRef.current || []
+    if ((draft.length === 0 && inVolo.length === 0) || payOrder) return
     // Se una creazione è GIÀ in volo (auto-creazione appena scattata), il
     // pagamento si aggancia a quella: creare qui un secondo ordine
     // duplicherebbe il conto.
@@ -1154,7 +1368,14 @@ export default function OrderPosDetail({ order: orderProp = null }) {
     // Il pagamento diretto crea l'ordine: blocca l'auto-creazione della bozza.
     creatingRef.current = true
     setError(null)
-    const items = draftToItems()
+    const items = draft.length ? draftToItems() : inVolo
+    // LE RIGHE SONO ANDATE IN PAGAMENTO: la copia salvata della bozza si
+    // dimentica subito. Restava lì, e il conto DOPO si apriva con dentro
+    // quello che si era appena incassato — la stessa roba, pronta a essere
+    // battuta due volte. A schermo restano finché la schermata è aperta:
+    // vedi createFromDraft, sono due cose diverse.
+    itemsInVoloRef.current = items
+    dimenticaBozzaSalvata()
     const mapped = items.map((i) => ({
       drink_id: i.drink_id,
       name: i.name,
@@ -1162,6 +1383,13 @@ export default function OrderPosDetail({ order: orderProp = null }) {
       qty: i.qty,
       ...(i.custom ? { custom: true } : {}),
     }))
+    // Il totale si fa sulle righe che si stanno pagando, non sulla bozza:
+    // quando le righe sono già partite per la creazione la bozza è vuota, e
+    // il pagamento si apriva a zero euro.
+    const totaleRighe = items.reduce(
+      (s, i) => s + (Number(i.price) || 0) * (Number(i.qty) || 0),
+      0
+    )
     setPayOrder({
       id: null,
       daily_number: null,
@@ -1169,7 +1397,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
       payment_status: 'non_richiesto',
       customer_name: info.customer_name.trim() || null,
       table_label: info.table_label || null,
-      total: draftTotal,
+      total: Math.round(totaleRighe * 100) / 100,
       discount: null,
       discount_amount: 0,
       payments: [],
@@ -1191,6 +1419,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
         note: info.note || null,
         customer_name: info.customer_name.trim() || null,
         items,
+        client_temp_id: chiaveBattuta(),
         placed_by: placedBy(),
         status: statoIniziale,
         service_mode: modoConsegna,
@@ -1311,14 +1540,16 @@ export default function OrderPosDetail({ order: orderProp = null }) {
       if (createdInPlace && !nameAskedRef.current && needsName(order)) return askNameThenExit()
       return navigate('/bar')
     }
-    // Nulla ancora creato (uscita prima dell'auto-creazione): con item in bozza
-    // si crea ora e — se manca il nome — lo si chiede; altrimenti si esce.
+    // Nulla ancora creato (uscita prima dell'auto-creazione): il conto si crea
+    // ORA, ma NON SI ASPETTA. Prima si aspettava che fosse nato per sapere se
+    // chiedere il nome — e siccome il nome lo si sa già da qui (è quello che
+    // si è scritto, o non si è scritto, in questa schermata), l'unica cosa
+    // che quell'attesa produceva era il box che compariva in ritardo.
     if (draftCount === 0) return navigate('/bar')
-    createFromDraftRef.current().then((o) => {
-      if (!o) return
-      if (needsName(o)) return askNameThenExit()
-      navigate('/bar')
-    })
+    createFromDraftRef.current()
+    const senzaNome = !info.customer_name.trim() && !info.table_label.trim()
+    if (!nameAskedRef.current && senzaNome) return askNameThenExit()
+    navigate('/bar')
   }
 
   // In creazione si mostra GIÀ il progressivo che l'ordine avrà (letto dal
@@ -1465,8 +1696,11 @@ export default function OrderPosDetail({ order: orderProp = null }) {
           cats={cats}
           loading={loading}
           qtyByDrink={qtyByDrink}
+          onInfo={settings.pos_ricetta_info === false ? undefined : setSchedaDrink}
           categoryDisplay={settings.category_display}
           ricercaEvidenzia={settings.pos_search === 'evidenzia'}
+          modoStriscia={settings.stripe_pos}
+          scorteVerdi={!!settings.stripe_ok_verde}
           catsHandleProps={catsRz.handleProps}
           recentIds={recentIds}
           onAdd={(d) => {
@@ -1538,6 +1772,38 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                   title="Storia del conto: aperto, chiuso, annullato, riaperto"
                 >
                   🕘
+                </button>
+              )}
+              {/* ORGANIZZA: come nella griglia dei prodotti, un interruttore
+                  che fa comparire le maniglie. Fuori di lì toccare una riga
+                  la apre — è quello che si fa mille volte a sera — e niente
+                  si sposta per sbaglio. */}
+              {righeDaSvuotare > 0 && !closed && (
+                <button
+                  className={`btn ghost small${organizzaLista ? ' active' : ''}`}
+                  onClick={() => setOrganizzaLista((v) => !v)}
+                  aria-label={organizzaLista ? 'Fine riordino' : 'Organizza le righe'}
+                  title={
+                    organizzaLista
+                      ? 'Fine: le righe tornano a aprirsi al tocco'
+                      : 'Organizza: compaiono le maniglie per spostare le righe'
+                  }
+                >
+                  {organizzaLista ? '✓' : '↕'}
+                </button>
+              )}
+              {/* SVUOTA TUTTO, una icona sola. Togliere venti righe una per
+                  una col «−» è il modo peggiore di ricominciare: capita di
+                  battere il conto sbagliato e accorgersene alla fine. Chiede
+                  conferma, che è irreversibile. */}
+              {righeDaSvuotare > 0 && !closed && (
+                <button
+                  className="btn ghost small"
+                  onClick={() => setConfirmSvuota(true)}
+                  aria-label="Svuota il conto"
+                  title="Svuota il conto: toglie tutte le righe"
+                >
+                  🧹
                 </button>
               )}
               {/* Il ⋯ c'è a TUTTE le taglie: era solo da telefono, ma le
@@ -1684,37 +1950,54 @@ export default function OrderPosDetail({ order: orderProp = null }) {
               </button>
             )}
 
+            <DndContext
+              sensors={organizzaLista ? sensoriLista : SENSORI_SPENTI}
+              collisionDetection={closestCenter}
+              onDragEnd={({ active, over }) => {
+                if (!over || active.id === over.id) return
+                setLayout((lay) => {
+                  const da = lay.indexOf(active.id)
+                  const a = lay.indexOf(over.id)
+                  return da < 0 || a < 0 ? lay : moveLine(lay, da, a)
+                })
+                syncDraftOrder()
+              }}
+            >
+            <SortableContext
+              items={orderedLines.filter((l) => !l.paid).map((l) => l.key)}
+              strategy={verticalListSortingStrategy}
+            >
             {orderedLines.map((l, idx) => {
               const isDraft = l.source === 'draft'
               const isPaid = !!l.paid
               const canMinus = !closed && !isPaid && (isDraft || l.removable)
               const firstPaid = isPaid && !orderedLines[idx - 1]?.paid
               return (
-                <div key={l.key}>
+                // La riga «💳 Pagati» sta FUORI dal riquadro trascinabile:
+                // dentro finiva sulla stessa linea della prima riga pagata,
+                // perché quel riquadro è una fila.
+                <Fragment key={l.key}>
                   {firstPaid && (
                     <div className="muted small" style={{ margin: '10px 0 2px', borderTop: '1px dashed var(--line)', paddingTop: 6 }}>
                       💳 Pagati
                     </div>
                   )}
+                  <RigaOrdinabile id={l.key} attiva={organizzaLista} bloccata={isPaid || closed}>
                   <div
-                    className="row between draft-line"
-                    data-line-index={idx}
+                    className={`row between draft-line${l.annullata ? ' riga-annullata' : ''}`}
                     data-line-key={l.key}
-                    onPointerDown={(e) => !isPaid && startDrag(e, idx)}
-                    onPointerMove={moveDrag}
-                    onPointerUp={endDrag}
-                    onPointerCancel={endDrag}
+                    // Toccare la riga la apre: il trascinamento sta nella
+                    // maniglia, e solo in «organizza».
+                    onClick={() => {
+                      if (closed || isPaid || organizzaLista) return
+                      if (isDraft || l.removable) setEditLine(l)
+                    }}
                     style={{
                       alignItems: 'center',
                       marginTop: 2,
-                      // pan-y: lo scroll verticale della lista resta possibile su
-                      // touch (prima 'none' lo bloccava); il drag parte dal long-press.
-                      touchAction: 'pan-y',
-                      cursor: closed || isPaid ? 'default' : 'grab',
+                      cursor: closed || isPaid || organizzaLista ? 'default' : 'pointer',
                       borderRadius: 8,
-                      background: dragIndex === idx ? 'var(--tile-bg)' : 'transparent',
-                      boxShadow: dragIndex === idx ? '0 4px 14px rgba(0,0,0,0.35)' : 'none',
-                      opacity: isPaid ? 0.6 : dragIndex != null && dragIndex !== idx ? 0.85 : 1,
+                      opacity: isPaid ? 0.6 : 1,
                     }}
                   >
                     {/* L'item è CLICCABILE per modificarlo (niente tasto matita):
@@ -1725,7 +2008,6 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                       style={{ fontSize: '1.08em', display: 'flex', alignItems: 'center', minWidth: 0, cursor: !closed && (isDraft || l.removable) ? 'pointer' : 'inherit' }}
                       title={!closed && (isDraft || l.removable) ? `Modifica ${l.name}` : undefined}
                     >
-                      {!closed && !isPaid && <span aria-hidden style={{ opacity: 0.35, marginRight: 4, flexShrink: 0, fontSize: '0.85em' }}>⠿</span>}
                       <span style={{ minWidth: 0, overflow: 'hidden' }}>
                         <span style={{ display: 'flex', alignItems: 'baseline', minWidth: 0 }}>
                           <span style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
@@ -1767,7 +2049,15 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                       >
                         {formatPrice(l.qty * l.unit_price)}
                       </strong>
-                      <span className="qty" onPointerDown={(e) => e.stopPropagation()}>
+                      {/* I +/− NON APRONO LA RIGA. Toccare la riga apre la
+                          scheda dell'item, e il clic sui tasti risaliva fin
+                          lì: si aumentava di uno e si finiva dentro la
+                          modifica, ogni volta. */}
+                      <span
+                        className="qty"
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         {/* Etichette col nome: nella lista ci sono molte righe,
                             e i +/- della griglia hanno un altro significato. */}
                         <button aria-label={`Riduci ${l.name}`} onClick={() => minusRow(l)} disabled={!canMinus}>−</button>
@@ -1776,9 +2066,12 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                       </span>
                     </span>
                   </div>
-                </div>
+                  </RigaOrdinabile>
+                </Fragment>
               )
             })}
+            </SortableContext>
+            </DndContext>
 
           </div>
 
@@ -1852,19 +2145,53 @@ export default function OrderPosDetail({ order: orderProp = null }) {
               <strong>Totale</strong>
               <strong className="price">{formatPrice(confirmedTotal + draftTotal + extras)}</strong>
             </div>
-            {!isNew && ((order.discount_amount || 0) > 0 || (order.payments || []).length > 0) && (
-              <div className="row between muted small">
-                <span>Sconto e acconti già incassati</span>
-                <span>−{formatPrice((order.discount_amount || 0) + paidAmount(order))}</span>
-              </div>
-            )}
+            {/* CHE COSA È STATO PAGATO. C'era una riga sola — «Sconto e acconti
+                già incassati −15,00 €» — e quindici euro di che non lo diceva
+                nessuno: uno sconto, un acconto, con che metodo, per quali
+                righe. Davanti al cliente che chiede, quella riga non
+                rispondeva a niente. */}
+            {!isNew &&
+              (() => {
+                const d = dettaglioIncassi(order)
+                if (d.sconto <= 0 && d.incassi.length === 0) return null
+                return (
+                  <div className="posd-incassi">
+                    {d.sconto > 0 && (
+                      <div className="row between muted small">
+                        <span>Sconto</span>
+                        <span>−{formatPrice(d.sconto)}</span>
+                      </div>
+                    )}
+                    {d.incassi.map((i, idx) => (
+                      <div key={idx} className="posd-incasso">
+                        <div className="row between muted small">
+                          <span>
+                            {/* UN IMPORTO BATTUTO A MANO NON COPRE NESSUNA
+                                RIGA: sono soldi lasciati sul conto, e dire il
+                                contrario sarebbe inventarselo. Le righe le
+                                copre solo chi le sceglie nella schermata di
+                                pagamento. */}
+                            {i.cosa ? 'Pagate' : 'Acconto'}
+                            {i.metodo ? ` · ${paymentMethodLabel(i.metodo)}` : ''}
+                            {i.quando ? ` · ${apertoIl(i.quando)}` : ''}
+                          </span>
+                          <span>−{formatPrice(i.importo)}</span>
+                        </div>
+                        {i.cosa && (
+                          <div className="muted small posd-incasso-cosa">{i.cosa.join(' · ')}</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )
+              })()}
 
             {/* Niente tasto Conferma: gli item si confermano da soli (si torna
                 con "← Ordini"). I tasti azione sono SEMPRE presenti: quelli non
                 applicabili sono disabilitati, non spariscono. */}
             <div className="posd-foot-azioni">
             <div className="grid-2">
-              <button className="btn ghost small" disabled={isNew} onClick={inviaComanda}>
+              <button className="btn ghost small" disabled={!conRighe} onClick={inviaComanda}>
                 <IconPrinter /> Invia comanda
               </button>
               {daRiaprire ? (
@@ -1878,7 +2205,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
               ) : (
                 <button
                   className="btn small"
-                  disabled={isNew ? draftCount === 0 : !canPay}
+                  disabled={isNew ? !conRighe : !canPay}
                   onClick={isNew ? handlePayNow : () => setShowPayment(true)}
                 >
                   <IconCard /> Pagamento{daIncassare > 0 ? ` · ${formatPrice(daIncassare)}` : ''}
@@ -1898,8 +2225,8 @@ export default function OrderPosDetail({ order: orderProp = null }) {
 
             <button
               className="btn ghost small block"
-              disabled={isNew || closed}
-              onClick={() => setConfirmCancel(true)}
+              disabled={annullaSpento}
+              onClick={annullaOrdine}
             >
               <IconX /> Annulla ordine
             </button>
@@ -1914,7 +2241,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
               <div className="posd-foot-telefono">
                 <button
                   className="btn ghost"
-                  disabled={isNew}
+                  disabled={!conRighe}
                   onClick={inviaComanda}
                   aria-label="Invia"
                   title="Invia la comanda al banco"
@@ -1934,7 +2261,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                 ) : (
                   <button
                     className="btn"
-                    disabled={isNew ? draftCount === 0 : !canPay}
+                    disabled={isNew ? !conRighe : !canPay}
                     onClick={isNew ? handlePayNow : () => setShowPayment(true)}
                     aria-label="Paga"
                     title="Incassa il conto"
@@ -1945,8 +2272,8 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                 )}
                 <button
                   className="btn ghost"
-                  disabled={isNew || closed}
-                  onClick={() => setConfirmCancel(true)}
+                  disabled={annullaSpento}
+                  onClick={annullaOrdine}
                   aria-label="Annulla"
                   title="Annulla l'ordine"
                 >
@@ -2271,6 +2598,8 @@ export default function OrderPosDetail({ order: orderProp = null }) {
             creatingRef.current = false // pagamento annullato: riabilita l'auto-creazione
           }}
           onPaid={() => {
+            // Incassato: la bozza non serve più, né salvata né a schermo.
+            clearDraft()
             // In creazione l'id arriva da una PROMESSA: va attesa, se no si
             // "nasconde" un oggetto Promise e il conto pagato resta a
             // schermo nella coda finché il server non lo conferma.
@@ -2352,16 +2681,63 @@ export default function OrderPosDetail({ order: orderProp = null }) {
         </div>
       )}
 
+      {schedaDrink && (
+        <SchedaDrink drink={schedaDrink} onClose={() => setSchedaDrink(null)} />
+      )}
+
+      {confirmSvuota && (
+        <ConfirmDialog
+          title="🧹 Svuotare il conto?"
+          message={`Le ${righeDaSvuotare} righe battute finora vengono tolte. Il conto resta aperto, vuoto.`}
+          confirmLabel="Svuota"
+          cancelLabel="Indietro"
+          danger
+          onCancel={() => setConfirmSvuota(false)}
+          onConfirm={() => {
+            setConfirmSvuota(false)
+            svuotaTutto()
+          }}
+        />
+      )}
+
       {confirmCancel && (
         <ConfirmDialog
           title="✖️ Annullare l'ordine?"
-          message={`L'ordine #${order?.daily_number ?? ''} verrà annullato e le scorte già scalate torneranno a magazzino.`}
+          message={
+            isNew
+              ? 'Le righe battute finora vengono buttate e si torna alla coda. Il conto non è ancora stato aperto.'
+              : `L'ordine #${order?.daily_number ?? ''} verrà annullato e le scorte già scalate torneranno a magazzino.`
+          }
           confirmLabel="Annulla ordine"
           cancelLabel="Indietro"
           danger
           onCancel={() => setConfirmCancel(false)}
           onConfirm={() => {
             setConfirmCancel(false)
+            // Conto «nuovo»: la bozza si butta e si torna indietro. MA se
+            // nel frattempo l'ordine è nato — l'auto-creazione scatta poco
+            // dopo l'ultima riga, e battere quattro cose ci mette di più —
+            // quello va ANNULLATO davvero, altrimenti resta aperto in coda
+            // con dentro la roba che si è appena buttata. Era il conto
+            // fantasma che poi ricompariva aprendo il conto dopo.
+            // ANNULLARE LASCIA SEMPRE UN CONTO ANNULLATO. Anche se l'ordine
+            // non era ancora nato: il numero è già stato mostrato e preso, e
+            // di quello che è stato battuto deve restare traccia — un conto
+            // sparito nel nulla non si può nemmeno controllare. Quindi si
+            // crea (in locale, immediato) e si annulla.
+            if (isNew) {
+              const nato = creatingPromiseRef.current || createFromDraftRef.current()
+              clearDraft()
+              ricordaContoInCorso(null)
+              Promise.resolve(nato)
+                .then((o) => {
+                  if (!o?.id) return null
+                  nascondiOrdine(o.id)
+                  return cancelOrder(o.id, { by: 'bartender' })
+                })
+                .catch((e) => toastError(`Annullo non riuscito: ${e.message}`))
+              return navigate('/bar')
+            }
             cancelOrder(order.id, { by: 'bartender' }).catch((e) => {
               // Non è andata: torni a vederlo in coda, com'è giusto.
               mostraOrdine(order.id)

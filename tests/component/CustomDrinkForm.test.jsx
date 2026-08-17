@@ -18,6 +18,7 @@ vi.mock('../../src/lib/api.js', () => ({
     ])
   ),
   DEFAULT_SETTINGS: { price_markup: 3, price_round_step: 0.5 },
+  settingsIniziali: () => ({ price_markup: 3, price_round_step: 0.5 }),
   subscribeSettings: vi.fn((cb) => {
     cb({ price_markup: 3, price_round_step: 0.5 })
     return () => {}

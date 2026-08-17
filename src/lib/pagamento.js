@@ -163,3 +163,66 @@ export function summaryMethod(payments) {
   if (methods.length === 0) return null
   return methods.length === 1 ? methods[0] : 'misto'
 }
+
+// ── CHE COSA È STATO PAGATO ──────────────────────────────────────────
+//
+// In fondo al conto c'era una riga sola: «Sconto e acconti già incassati
+// −15,00 €». Quindici euro di che? Uno sconto, un acconto, tutti e due? Chi
+// li ha presi e con che metodo? Al banco, davanti al cliente che chiede,
+// quella riga non risponde a niente — e per saperlo bisognava aprire la
+// storia del conto.
+//
+// Qui la si spacchetta: lo sconto per conto suo, e ogni incasso con il suo
+// metodo, la sua ora e — se era un conto diviso — quello che copriva.
+export function dettaglioIncassi(order) {
+  const sconto = round2(order?.discount_amount || 0)
+  const incassi = (order?.payments || [])
+    .filter((p) => (Number(p.amount) || 0) !== 0)
+    .map((p) => ({
+      importo: round2(p.amount),
+      metodo: p.method || null,
+      quando: p.at || null,
+      // Le righe coperte da quell'incasso, quando il conto è stato diviso:
+      // «2 Daiquiri, 1 Birra» dice cosa ha già pagato quello che se n'è
+      // andato — che è la domanda vera quando restano gli altri al tavolo.
+      cosa: Array.isArray(p.items) && p.items.length
+        ? p.items
+            .filter((i) => (Number(i.qty) || 0) > 0)
+            .map((i) => `${Number(i.qty) || 1}× ${i.name || 'riga'}`)
+        : null,
+    }))
+  return {
+    sconto,
+    incassi,
+    totaleIncassato: round2(incassi.reduce((s, i) => s + i.importo, 0)),
+  }
+}
+
+// ── LE UNITÀ, QUANDO SI SEPARANO LE RIGHE UGUALI ─────────────────────
+//
+// Fuori da «separa uguali» la selezione è un CONTEGGIO per riga: «di questi
+// tre Spritz, due li paga lui». Separandole, ogni unità è una voce a sé e
+// deve avere la SUA quantità: spegnendo la prima si deve spegnere la
+// prima — non le ultime, come fa un contatore che scende.
+//
+// Le due forme dicono la stessa cosa e si convertono l'una nell'altra: il
+// conteggio è quante unità sono accese, le unità sono le prime N accese
+// quando si arriva da un conteggio.
+export function unitaDaConteggio(qty, conteggio) {
+  const n = Math.max(0, Math.min(Number(conteggio) || 0, Number(qty) || 0))
+  return Array.from({ length: Number(qty) || 0 }, (_, i) => i < n)
+}
+
+export function conteggioDaUnita(unita) {
+  return (unita || []).filter(Boolean).length
+}
+
+// Accende o spegne UNA unità, e restituisce l'array nuovo. Se lo stato
+// delle unità non c'è ancora (si è appena entrati in «separa»), si parte
+// dal conteggio.
+export function toccaUnita(unita, qty, indice, acceso) {
+  const base = Array.isArray(unita) && unita.length === qty ? [...unita] : unitaDaConteggio(qty, qty)
+  if (indice < 0 || indice >= base.length) return base
+  base[indice] = !!acceso
+  return base
+}

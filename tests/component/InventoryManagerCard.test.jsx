@@ -54,6 +54,22 @@ vi.mock('../../src/lib/api.js', () => {
       cb({ price_markup: 3, purchase_vat: 22 })
       return () => {}
     },
+    // La colonna «a fine serata» (REQ-MAG-014) legge anche la cassa aperta,
+    // i conti in corso e il listino: qui la serata non è aperta, quindi la
+    // colonna non compare — ma senza queste tre voci la schermata non si
+    // monta proprio.
+    subscribeOpenCashSession: (cb) => {
+      cb(null)
+      return () => {}
+    },
+    subscribeActiveOrders: (cb) => {
+      cb([])
+      return () => {}
+    },
+    subscribeDrinks: (_opts, cb) => {
+      cb([])
+      return () => {}
+    },
     DEFAULT_SETTINGS: { price_markup: 3, purchase_vat: 22 },
   }
 })

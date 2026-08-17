@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import {
   fetchOrder,
   subscribeOrder,
@@ -28,6 +28,7 @@ import {
 import { onAuthStateChanged } from 'firebase/auth'
 import { auth } from '../lib/firebaseClient.js'
 import { queueEtaMinutes } from '../lib/eta.js'
+import { toastSuccess, toastError } from '../lib/toast.js'
 import { ensureNotificationPermission, notify } from '../lib/notify.js'
 import { rememberOrderId } from '../lib/cart.js'
 import { isGestore, isPersonale } from '../lib/ruoli.js'
@@ -46,7 +47,17 @@ export default function OrderStatusPage() {
   const [notifMsg, setNotifMsg] = useState(null)
   const [edits, setEdits] = useState(null) // copia editabile degli item (prima della preparazione)
   const [saving, setSaving] = useState(false)
+  const navigate = useNavigate()
   const [confirmCancel, setConfirmCancel] = useState(false)
+  // MODIFICARE VUOL DIRE POTER AGGIUNGERE. Qui si cambiavano solo le
+  // quantità di quello che c'era già: chi ha preso l'ordine e si sente dire
+  // «aggiungi anche una birra» doveva battere un secondo conto. Il tasto
+  // apre la schermata del conto — la stessa del banco, con la griglia dei
+  // prodotti — senza la cassa, che non è cosa della sala.
+  const [modificaPos, setModificaPos] = useState(false)
+  // Stessa schermata, aperta però sul pagamento: chi serve al tavolo incassa
+  // lì, e non deve passare dal conto per premere un secondo tasto.
+  const [pagamentoPos, setPagamentoPos] = useState(false)
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   const [serviceStats, setServiceStats] = useState({})
   const [queue, setQueue] = useState([])
@@ -223,15 +234,37 @@ export default function OrderStatusPage() {
     )
   }
 
+  // SALVARE DEVE DIRE CHE HA SALVATO, E RIPORTARE INDIETRO. Prima il tasto
+  // tornava «Salva modifiche» e basta: identico a prima di premerlo. Chi
+  // aveva cambiato una quantità restava lì a chiedersi se fosse andata, e
+  // spesso ripremeva. Ora lo dice e riporta alla coda, che è da dove si è
+  // arrivati e dove si vede il conto aggiornato.
   async function saveEdits() {
-    if (!edits || edits.length === 0) return setConfirmCancel(true)
+    // NIENTE DA SALVARE non è «annulla l'ordine». Con la lista mai toccata
+    // (`edits` nullo) si finiva nella finestra dell'annullo: si preme
+    // «Salva modifiche» e ti viene chiesto se buttare il conto. Si torna
+    // indietro e basta. Se invece le righe sono state tolte TUTTE, allora
+    // sì: un conto senza niente dentro è un conto annullato, e lo si
+    // chiede.
+    if (!edits) {
+      navigate('/bar')
+      return
+    }
+    // Righe tolte TUTTE: un conto senza niente dentro è un conto annullato,
+    // e lo si chiede.
+    if (edits.length === 0) return setConfirmCancel(true)
     setSaving(true)
     setError(null)
     try {
       await updateOrderItems(order.id, edits)
+      toastSuccess('Modifiche salvate')
+      navigate('/bar')
     } catch (e) {
+      // L'avviso in fondo alla pagina, su un conto lungo, sta fuori
+      // schermo: chi ha premuto «Salva» vede il tasto tornare com'era e
+      // crede che non sia successo niente. Il toast si vede ovunque.
       setError(e.message)
-    } finally {
+      toastError(`Modifiche non salvate: ${e.message}`)
       setSaving(false)
     }
   }
@@ -257,6 +290,15 @@ export default function OrderStatusPage() {
   // gestione completa. Lo staff di sala e il cliente vedono lo stato.
   if (isGestore(viewerRole)) {
     return <OrderPosDetail order={order} />
+  }
+
+  // Sala che ha premuto «Modifica ordine»: la schermata del banco, quella
+  // vera. Niente versioni ridotte: chi prende un ordine al tavolo ci fa le
+  // stesse cose — aggiunge, corregge e, se il cliente paga lì, incassa. Un
+  // tasto spento in una schermata e acceso nell'altra è solo una cosa che
+  // non si capisce.
+  if ((modificaPos || pagamentoPos) && viewerIsStaff) {
+    return <OrderPosDetail order={order} apriPagamento={pagamentoPos} />
   }
 
   const currentIdx = STATUS_FLOW.indexOf(order.workflow_status)
@@ -471,6 +513,39 @@ export default function OrderStatusPage() {
           </button>
         </div>
       )}
+      {/* AGGIUNGERE È UN'ALTRA COSA DA CAMBIARE UNA QUANTITÀ. Qui sopra si
+          correggono le righe che ci sono; per mettere dentro un altro drink
+          serve la griglia dei prodotti, cioè la schermata del conto — la
+          stessa del banco, senza la cassa. Chi ha preso l'ordine e si sente
+          dire «aggiungi anche una birra» non deve battere un secondo
+          conto. */}
+      {viewerIsStaff && (
+        <div className="grid-2" style={{ marginTop: 8 }}>
+          {editable && (
+            <button
+              className="btn ghost"
+              onClick={() => setModificaPos(true)}
+              disabled={saving}
+            >
+              ✏️ Modifica ordine
+            </button>
+          )}
+          {/* E IL PAGAMENTO. Al tavolo si incassa lì: senza questo tasto
+              bisognava tornare in coda, riaprire il conto dal banco e
+              incassare da lì, col cliente che aspetta col portafogli in
+              mano. Su un conto già saldato non compare. */}
+          {order.payment_status !== 'pagato' &&
+            order.workflow_status !== ORDER_STATUSES.ANNULLATO && (
+              <button
+                className="btn"
+                onClick={() => setPagamentoPos(true)}
+                disabled={saving}
+              >
+                💳 Pagamento
+              </button>
+            )}
+        </div>
+      )}
       {!editable && cancellable && (
         <button
           className="btn ghost block"
@@ -555,9 +630,14 @@ export default function OrderStatusPage() {
           <p className="muted" style={{ marginTop: 0, fontSize: '0.85rem' }}>
             ✍️ Ordine inserito da {placedByName(order.placed_by)}
           </p>
+          {/* IL QR SERVE SE C'È QUALCOSA DA SEGUIRE. Il cliente lo scansiona
+              per vedere a che punto è il suo drink: senza gli stati del
+              servizio non c'è nessun punto da vedere — la pagina dice solo
+              cosa ha ordinato — e offrirlo è promettere una cosa che non
+              succede. */}
           {viewerIsStaff && (
             <>
-              {!showQr ? (
+              {settings.workflow_enabled === false ? null : !showQr ? (
                 <button className="btn secondary block" onClick={() => setShowQr(true)}>
                   📲 Mostra QR al cliente
                 </button>

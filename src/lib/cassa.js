@@ -12,6 +12,7 @@ import { orderDue } from './pagamento.js'
 import { CASH_METHOD_ORDER } from './orderStatus.js'
 
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100
+const nomeDi = (chi) => chi?.name || String(chi?.email || '').split('@')[0] || null
 const inRange = (ts, from, to) => !!ts && ts >= from && (!to || ts <= to)
 
 // Recap della cassa aperta. `session` = { opened_at, closed_at?, fondo_cassa? }.
@@ -36,9 +37,33 @@ export function cashRecap(orders, session, nowIso) {
   let apertoDaIncassare = 0
   let nAperti = 0
   let sconti = 0 // sconti applicati ai conti chiusi nella finestra
+  // CHI HA INCASSATO. In una serata al banco si alternano in due o tre alla
+  // cassa: se il contante non torna, sapere chi ha battuto cosa è la prima
+  // domanda che ci si fa — e senza, l'unica risposta possibile è «boh».
+  const perChi = new Map()
+  // L'ULTIMA ORA. La curva dice com'è andata la serata; questo dice come sta
+  // andando ADESSO, che è quello che serve per decidere se aprire un'altra
+  // cassa o mandare qualcuno in pausa.
+  const daUnOra = to ? new Date(new Date(to).getTime() - 60 * 60 * 1000).toISOString() : null
+  let ultimaOra = 0
+  let nUltimaOra = 0
+  // I COPERTI: quante persone, non quanti conti. Il conto medio per tavolo e
+  // la spesa a testa sono due numeri diversi, e in un cocktail bar il secondo
+  // dice più del primo.
+  let coperti = 0
 
-  const bump = (ts, amt, method) => {
+  const bump = (ts, amt, method, chi) => {
     if (!(amt > 0)) return
+    if (chi) {
+      const cur = perChi.get(chi) || { chi, importo: 0, n: 0 }
+      cur.importo = round2(cur.importo + amt)
+      cur.n += 1
+      perChi.set(chi, cur)
+    }
+    if (daUnOra && ts && ts >= daUnOra) {
+      ultimaOra = round2(ultimaOra + amt)
+      nUltimaOra += 1
+    }
     incassato = round2(incassato + amt)
     // Niente rimappature: un metodo sconosciuto si porta dietro il suo nome
     // e si vede nel riepilogo, non viene assorbito dal contante.
@@ -59,16 +84,22 @@ export function cashRecap(orders, session, nowIso) {
       for (const p of entries) {
         if (!inRange(p.at, from, to)) continue
         const a = round2(Number(p.amount) || 0)
-        bump(p.at, a, p.method || 'banco')
+        // Chi ha incassato è scritto sul pagamento; sui conti vecchi non
+        // c'è, e allora si ripiega su chi ha aperto il conto — meglio un
+        // nome vicino al vero che una riga «sconosciuto».
+        bump(p.at, a, p.method || 'banco', nomeDi(p.by) || nomeDi(o.placed_by))
         collected += a
       }
     } else if (o?.payment_status === 'pagato' && inRange(o?.paid_at, from, to)) {
       // Chiusura "secca" (contanti/singolo ordine): l'intero conto scontato.
       const amt = round2((Number(o.total) || 0) - (Number(o.discount_amount) || 0))
-      bump(o.paid_at, amt, o.payment_method || 'banco')
+      bump(o.paid_at, amt, o.payment_method || 'banco', nomeDi(o.placed_by))
       collected += amt
     }
-    if (collected > 0 && o?.payment_status === 'pagato') nPagati += 1
+    if (collected > 0 && o?.payment_status === 'pagato') {
+      nPagati += 1
+      coperti += Number(o.coperto_persons) || 0
+    }
     // Sconti concessi sui conti chiusi in questa cassa: sono già dedotti dagli
     // incassi, ma vanno mostrati per sapere quanto si è "lasciato sul tavolo".
     if (o?.payment_status === 'pagato' && inRange(o?.paid_at, from, to)) {
@@ -99,5 +130,13 @@ export function cashRecap(orders, session, nowIso) {
     fondo: round2(session.fondo_cassa || 0),
     // Contante atteso in cassa a fine serata = fondo + incassato in contanti.
     contanteAtteso: round2((session.fondo_cassa || 0) + byMethod.banco),
+    // Lo «scontrino medio»: quanto lascia un conto. Zero conti chiusi vuol
+    // dire nessuna media, non una media di zero.
+    contoMedio: nPagati > 0 ? round2(incassato / nPagati) : null,
+    coperti,
+    perCoperto: coperti > 0 ? round2(incassato / coperti) : null,
+    perChi: [...perChi.values()].sort((a, b) => b.importo - a.importo),
+    ultimaOra,
+    nUltimaOra,
   }
 }
