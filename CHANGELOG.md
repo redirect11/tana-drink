@@ -50,10 +50,10 @@
   invece di «quante confezioni piene».
 - **Il tasto indietro chiude la scheda prodotto** e riporta al magazzino,
   invece di uscire dalla pagina buttando via quello che si stava scrivendo.
-- **La scheda prodotto chiede meno**: «Lo uso come lo compro» è acceso di
-  suo, e solo spegnendolo compare «Quanto rende». Sparisce la domanda su
-  quanto contiene una confezione: comprando a chili, una confezione è un
-  chilo.
+- **La scheda prodotto chiede meno**: sparisce la domanda su quanto contiene
+  una confezione (comprando a chili, una confezione è un chilo), e il
+  contenuto di un pezzo — o la resa — resta a vista, da compilare solo se
+  serve.
 - **La soglia di avviso è sempre nell'unità in cui si compra** — è il
   prodotto comprato che sta finendo — e l'etichetta lo dice.
 - **Il prezzo si scrive nell'unità in cui si compra**: «€/kg» per i limoni,
