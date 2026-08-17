@@ -531,13 +531,15 @@ describe('il contenuto di un pezzo, spiegato', () => {
 // Aprendo un prodotto si leggevano soglia, costo e prezzo consigliato, ma
 // non la giacenza — che è la cosa per cui lo si apre.
 describe('il dettaglio del prodotto dice quanto ce n’è', () => {
-  it('la giacenza è la prima riga', async () => {
+  it('quanto ce n’è è la prima riga', async () => {
     const user = userEvent.setup()
     render(<InventoryManager />)
     await user.click(await screen.findByText('Campari'))
-    const giacenza = await screen.findByText('Giacenza')
-    const riga = giacenza.closest('.inv-info-row')
-    // Il numero c'è, con la sua unità: è quello che si cerca aprendo.
-    expect(riga.textContent).toMatch(/Giacenza\s*[\d.,]+\s*(pz|cl|ml|L|g|kg|U)/)
+    // Dove si conta a pezzi lo dice la riga «Pezzi», che è più precisa
+    // (quante piene, quella aperta, quanto fa una): una riga «Giacenza»
+    // sopra direbbe lo stesso numero due volte.
+    const prima = document.querySelector('.inv-info .inv-info-row')
+    expect(prima.textContent).toMatch(/^(Pezzi|Giacenza)/)
+    expect(prima.textContent).toMatch(/[\d.,]+\s*(pz|cl|ml|L|g|kg|U)/)
   })
 })

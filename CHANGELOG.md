@@ -28,8 +28,9 @@
 - **Battendo in fretta e uscendo subito non si perde più niente** (BUG-016):
   tre tap sullo stesso drink e via verso la coda ne lasciavano uno. Adesso
   quello che si è battuto parte nell'istante in cui si esce.
-- **Aprendo un prodotto si legge quanto ce n'è**: la giacenza è la prima
-  riga del dettaglio — prima c'erano soglia, costo e prezzo consigliato, ma
+- **Aprendo un prodotto si legge quanto ce n'è, per primo**: dove si conta a
+  pezzi lo dice la riga «Pezzi» (quante piene, quella aperta, quanto fa una),
+  altrove la giacenza. Prima c'erano soglia, costo e prezzo consigliato, ma
   non il numero per cui lo si apre.
 - **«A quanto corrisponde un pezzo» adesso si spiega**: è quanto CONTIENE un
   pezzo, non quanto ne va in un drink — quello lo decide la ricetta. Si può

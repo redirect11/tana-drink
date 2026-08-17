@@ -430,23 +430,46 @@ function ProductsPanel() {
   const itemActions = (it, bd) => (
     <div className="grid-card-actions">
       <dl className="inv-info">
-        {/* QUANTO CE N'È, per primo. Nel dettaglio si leggevano soglia,
-            costo e prezzo consigliato, ma non la giacenza — che è la prima
-            cosa per cui si apre un prodotto: «quante ne ho?». Nella vista a
-            lista il numero sta a destra, ma aperto il dettaglio finiva
-            fuori campo. */}
-        <div className="inv-info-row">
-          <dt>Giacenza</dt>
-          <dd>
-            <strong>{fmtItem(it.stock, it)}</strong>
-            {(() => {
-              // Contato a pezzi con il contenuto noto: accanto ai pezzi
-              // quanto fa in tutto, che è come si guarda uno scaffale.
-              const bs = bottleSummary(it)
-              return bs ? <span className="muted"> · {bs.total}</span> : null
-            })()}
-          </dd>
-        </div>
+        {/* QUANTO CE N'È, PER PRIMO — è la ragione per cui un prodotto si
+            apre. Dove si conta a pezzi lo dice la riga «Pezzi», che è più
+            precisa (quante piene, quella aperta, quanto fa una): una riga
+            «Giacenza» sopra ripeteva lo stesso numero due volte. */}
+        {bd ? (
+          <div className="inv-info-row">
+            <dt>Pezzi</dt>
+            <dd>
+              <strong>{formatPezzi(pezziInGiacenza(it))} pz</strong>
+              {' · '}
+              {bd.full} piene
+              {bd.hasOpen && ` · 1 aperta (${fmtContenuto(bd.openRemaining, it)})`}
+              {bd.finished > 0 && ` · ${bd.finished} finite`}
+              {/* Il contenuto in cl (o g): un pezzo è la bottiglia, dentro
+                  non ci sono pezzi. */}
+              <span className="muted"> · 1 pz = {fmtContenuto(it.package_size, it)}</span>
+            </dd>
+          </div>
+        ) : (
+          <>
+            <div className="inv-info-row">
+              <dt>Giacenza</dt>
+              <dd>
+                <strong>{fmtItem(it.stock, it)}</strong>
+              </dd>
+            </div>
+            {Number(it.package_size) > 0 && (
+              <div className="inv-info-row">
+                <dt>Confezione</dt>
+                <dd>
+                  {it.unit === 'pz' ? (
+                    <>1 pz = {formatIn(it.package_size, it.content_unit === 'g' ? 'g' : 'cl')}</>
+                  ) : (
+                    <>1 conf. = {fmtItem(it.package_size, it)}</>
+                  )}
+                </dd>
+              </div>
+            )}
+          </>
+        )}
         {impegnato[it.id] > 0 && (
           <div className="inv-info-row">
             <dt>A fine serata</dt>
@@ -467,34 +490,6 @@ function ProductsPanel() {
               </span>
             </dd>
           </div>
-        )}
-        {bd ? (
-          <div className="inv-info-row">
-            <dt>Pezzi</dt>
-            <dd>
-              <strong>{formatPezzi(pezziInGiacenza(it))} pz</strong>
-              {' · '}
-              {bd.full} piene
-              {bd.hasOpen && ` · 1 aperta (${fmtContenuto(bd.openRemaining, it)})`}
-              {bd.finished > 0 && ` · ${bd.finished} finite`}
-              {/* Il contenuto in cl (o g): un pezzo è la bottiglia, dentro
-                  non ci sono pezzi. */}
-              <span className="muted"> · 1 pz = {fmtContenuto(it.package_size, it)}</span>
-            </dd>
-          </div>
-        ) : (
-          Number(it.package_size) > 0 && (
-            <div className="inv-info-row">
-              <dt>Confezione</dt>
-              <dd>
-                {it.unit === 'pz' ? (
-                  <>1 pz = {formatIn(it.package_size, it.content_unit === 'g' ? 'g' : 'cl')}</>
-                ) : (
-                  <>1 conf. = {fmtItem(it.package_size, it)}</>
-                )}
-              </dd>
-            </div>
-          )
         )}
         {Number(it.low_threshold) > 0 && (
           <div className="inv-info-row">
