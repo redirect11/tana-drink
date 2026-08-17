@@ -506,7 +506,11 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
   useEffect(() => subscribePending(setPend), [])
   // Senza cassa aperta non si battono ordini: il «+» è spento e in cima
   // compare l'avviso con la scorciatoia per aprirla.
-  const { open: cassaAperta, loading: cassaLoading } = useCashSession()
+  // ATTENZIONE ALLA FORMA: `open` è un BOOLEANO, la cassa vera sta in
+  // `session`. Leggendo `cassaAperta?.id` da un booleano viene `undefined`,
+  // e allora ogni conto chiuso o annullato spariva dalla coda — sembrava un
+  // problema di filtri e invece era questa riga.
+  const { session: cassaAperta, loading: cassaLoading } = useCashSession()
 
   // Vista a griglia: a tutto schermo. Aggiunge `fullbleed` al body così la
   // pagina esce dal contenitore centrato (.app, max 760px) e riempie larghezza
@@ -831,7 +835,10 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
   // i numeri non tornavano con quello che c'era sotto: «0 chiusi» sopra una
   // tab piena di conti chiusi. Se cambia la regola di cosa resta in coda,
   // cambia anche il riepilogo, perché è la stessa lista.
-  const inCoda = ordersOggi.filter((o) =>
+  // Si parte dagli ordini GREZZI, non da quelli che la tab sta mostrando:
+  // «in corso» nasconde i conti appena chiusi qui e le altre tab no, e il
+  // riepilogo cambiava numero solo perché si toccava un filtro.
+  const inCoda = ordersRaw.filter((o) =>
     restaInCoda(o, {
       chiuso: isChiuso(o) || annullato(o),
       cassa: cassaAperta?.id ?? null,

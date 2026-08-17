@@ -145,6 +145,11 @@ requirements:
       la sessione in cui era nato spariva dalla tab «annullati» nell'istante
       in cui lo si annullava — si agisce su un conto e quello svanisce, senza
       sapere se l'operazione è andata a buon fine.
+      Il riepilogo in testata NON cambia cambiando tab: è cumulativo — aperti,
+      chiusi e annullati di questa apertura — e si calcola sugli ordini
+      grezzi, non su quelli che la tab sta mostrando. «In corso» nasconde i
+      conti appena chiusi da qui e le altre tab no: il numero ballava solo
+      perché si toccava un filtro.
       Il riepilogo in testata è di questa apertura di cassa — a cassa chiusa
       sono zeri — e accanto ad aperti e chiusi dice quanti conti sono stati
       ANNULLATI, che non fanno cassa ma sono un dato del banco. Chi la cassa
@@ -156,6 +161,7 @@ requirements:
     test_cases:
       - tests/unit/coda.test.js
       - tests/unit/codaCache.test.js
+      - tests/unit/cashSessionHook.test.js
       - tests/component/PaymentScreen.test.jsx
 
   - id: REQ-ORD-014
