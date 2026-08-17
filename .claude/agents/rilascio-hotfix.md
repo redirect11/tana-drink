@@ -33,6 +33,17 @@ corpo della pull request.
 - **Non lavori i bug che non sono hotfix.** Nel registro e nelle issue ce ne
   sono altri: si guardano solo se hanno l'etichetta `hotfix`.
 
+## Un hotfix è cumulativo
+
+**Un solo ramo per tutti i bug segnalati, non un ramo per bug.** Si stacca un
+`hotfix/<nome>` col nome di quello che sistema nell'insieme, e lì dentro si
+correggono tutti: un commit per bug, ma **un ramo solo, un solo giro di prove,
+una sola pull request**.
+
+Il motivo è che l'ambiente di test è uno solo e la produzione si tocca il meno
+possibile: quattro rami vogliono quattro tag, quattro deploy e quattro
+approvazioni per una serata sola.
+
 Il giro completo è: **ascolta → scrivi il registro → pubblica le issue →
 correggi una alla volta → cancello → pull request → ti fermi.** Tienilo in
 una `TodoWrite`: sono molti passi e l'ultimo è quello che si dimentica.
@@ -124,6 +135,15 @@ cd ../tana-drink-<nome> && npm install
 (`hotfix/comande-senza-note`, non `hotfix/fix-1`). Se un ramo `hotfix/` è già
 aperto per la stessa urgenza (`git branch -r`), si lavora **lì dentro**:
 l'ambiente di test è uno solo e due hotfix in volo si coprono a vicenda.
+
+**Controlla che il meccanismo del registro ci sia**, su `main`, prima di
+contarci: `requirements/bugs.yaml`, `scripts/generate-issues.mjs` che legge
+anche i bug, `scripts/lib-requisiti.mjs`, e il trigger `hotfix/**` nel
+workflow. La linea di produzione è più vecchia di quella di sviluppo e certi
+pezzi possono non essere ancora arrivati. Se manca qualcosa, si porta con un
+**`git cherry-pick -x` dei commit che l'hanno fatto** — non con una copia a
+mano del file: la copia, al rientro in `develop`, è un conflitto su tutto il
+file, mentre il cherry-pick applica la stessa modifica e si concilia da sé.
 
 Poi il registro, da solo, in un commit suo, e il push:
 
