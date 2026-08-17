@@ -48,6 +48,12 @@
   «Quanto contiene una confezione che compri?» e «A quanto corrisponde un
   pezzo?», con scritto sotto che non toccano la giacenza. E un pezzo può
   contenere **unità** (1 pz = 10 U), che in ricetta si dosano a unità.
+- **Il carico a colli sta dietro un interruttore**, e quando è acceso il
+  riquadro del cartone viene prima: si scrive quanti pezzi ha e quanti ne
+  arrivano, e la quantità si conta da sé — non si corregge a mano.
+- **Le righe appena aggiunte non spariscono più**, nemmeno quando devono
+  aprire una comanda nuova: restano a schermo mentre volano al server, e se
+  la scrittura non passa tornano in bozza.
 - **Il pagamento vede le righe appena battute** (BUG-015): battendo di corsa
   e aprendo subito il pagamento, le ultime righe restavano fuori — nel conto
   27 €, nel pagamento 21 € — perché la schermata guardava il conto come lo

@@ -1252,6 +1252,11 @@ function CaricoForm({ item, onCancel, onConfirm }) {
   const [colloTot, setColloTot] = useState('')
   // Quanti cartoni si stanno caricando: i pezzi li riempie lui.
   const [cartoni, setCartoni] = useState('')
+  // IL COLLO E' UN'ECCEZIONE, NON LA REGOLA. Chi carica due bottiglie prese
+  // dal fornitore sotto casa non ha nessun cartone da dichiarare, e si
+  // trovava tre campi in piu' da capire. Sta dietro un interruttore: da
+  // spento la scheda e' quella di sempre — quanti pezzi, e il prezzo.
+  const [aColli, setAColli] = useState(false)
 
   const onUnit = (v) => {
     setUnitCost(v)
@@ -1293,15 +1298,44 @@ function CaricoForm({ item, onCancel, onConfirm }) {
 
   return (
     <div style={{ marginTop: 8 }}>
-      {isPz ? (
-        <>
-          {/* CARTONI → PEZZI. Il fornitore consegna cartoni, il magazzino
-              conta bottiglie: dicendo quanti pezzi ha un cartone, i pezzi
-              si riempiono da sé. Chi carica bottiglie sfuse lascia il
-              cartone vuoto e scrive i pezzi, come sempre. */}
-          {perN > 0 && (
-            <>
-              <label htmlFor="cf-cartoni">Quanti cartoni? (1 cartone = {perN} pz)</label>
+      {/* IL COLLO STA SOPRA, perché è da lì che si parte: si guarda il
+          cartone, si scrive quanti pezzi ha e quanti ne sono arrivati, e la
+          quantità si riempie da sé. Prima i suoi campi stavano in fondo,
+          dentro il riquadro del prezzo, e i pezzi andavano scritti a mano
+          sperando che il conto tornasse. */}
+      <label className="row between" style={{ alignItems: 'center', gap: 8 }}>
+        <span>
+          Carico a colli
+          <span className="muted small"> — un cartone, una cassa</span>
+        </span>
+        <input
+          type="checkbox"
+          className="toggle"
+          checked={aColli}
+          onChange={(e) => {
+            setAColli(e.target.checked)
+            if (!e.target.checked) setCartoni('')
+          }}
+        />
+      </label>
+
+      {aColli && (
+        <div className="card" style={{ marginTop: 8, padding: 10 }}>
+          <div className="grid-2">
+            <div>
+              <label htmlFor="cf-collo">{isPz ? 'Pezzi per collo' : 'Confezioni per collo'}</label>
+              <input
+                id="cf-collo"
+                type="number"
+                step="any"
+                min="0"
+                value={perCollo}
+                onChange={(e) => onCollo(e.target.value)}
+                placeholder="Es. 24"
+              />
+            </div>
+            <div>
+              <label htmlFor="cf-cartoni">Quanti colli arrivano?</label>
               <input
                 id="cf-cartoni"
                 type="number"
@@ -1311,20 +1345,60 @@ function CaricoForm({ item, onCancel, onConfirm }) {
                 onChange={(e) => onCartoni(e.target.value)}
                 placeholder="Es. 2"
               />
-            </>
-          )}
-          <label style={perN > 0 ? { marginTop: 8 } : undefined}>Quanti pezzi aggiungi?</label>
-          <input type="number" step="1" min="0" value={count} onChange={(e) => setCount(e.target.value)} autoFocus />
+            </div>
+          </div>
+          <label htmlFor="cf-tot" style={{ marginTop: 6 }}>Totale collo (€, netto)</label>
+          <input
+            id="cf-tot"
+            type="number"
+            step="any"
+            min="0"
+            value={colloTot}
+            onChange={(e) => onTot(e.target.value)}
+            placeholder="Prezzo del cartone dal fornitore"
+          />
           {perN > 0 && num(cartoni) > 0 && (
             <div className="muted small" style={{ marginTop: 4 }}>
-              {num(cartoni)} × {perN} = <strong>{num(cartoni) * perN} pz</strong>
+              {num(cartoni)} × {perN} = <strong>{num(cartoni) * perN} {isPz ? 'pz' : 'conf.'}</strong>
             </div>
           )}
+        </div>
+      )}
+
+      {isPz ? (
+        <>
+          {/* A colli la quantità la fa il conto: si legge, non si scrive.
+              Cambiarla a mano vorrebbe dire caricare un numero che non torna
+              con quello che è arrivato. */}
+          <label htmlFor="cf-pezzi" style={{ marginTop: 8 }}>Quanti pezzi aggiungi?</label>
+          <input
+            id="cf-pezzi"
+            type="number"
+            step="1"
+            min="0"
+            value={count}
+            onChange={(e) => setCount(e.target.value)}
+            readOnly={aColli}
+            aria-readonly={aColli}
+            autoFocus={!aColli}
+          />
         </>
       ) : (
         <>
-          <label>Quante confezioni piene? (1 conf. = {formatQty(size, item.unit)})</label>
-          <input type="number" step="1" min="0" value={count} onChange={(e) => setCount(e.target.value)} autoFocus />
+          <label htmlFor="cf-pezzi" style={{ marginTop: 8 }}>
+            Quante confezioni piene? (1 conf. = {formatQty(size, item.unit)})
+          </label>
+          <input
+            id="cf-pezzi"
+            type="number"
+            step="1"
+            min="0"
+            value={count}
+            onChange={(e) => setCount(e.target.value)}
+            readOnly={aColli}
+            aria-readonly={aColli}
+            autoFocus={!aColli}
+          />
           <label style={{ marginTop: 8 }}>Bottiglia aperta — contenuto ({item.unit}) — opzionale</label>
           <input type="number" step="any" min="0" value={open} onChange={(e) => setOpen(e.target.value)} placeholder="Es. 400 se ne aggiungi una già aperta" />
         </>
@@ -1333,22 +1407,12 @@ function CaricoForm({ item, onCancel, onConfirm }) {
       {/* Prezzo: unitario ↔ totale collo (per confrontare col fornitore) */}
       <div className="card" style={{ marginTop: 10, padding: 10 }}>
         <div className="muted small">💶 Prezzo — aggiorna se il fornitore l'ha cambiato</div>
-        <div className="grid-2" style={{ marginTop: 6 }}>
-          <div>
-            <label htmlFor="cf-unit">Costo unitario (€, netto)</label>
-            <input id="cf-unit" type="number" step="any" min="0" value={unitCost} onChange={(e) => onUnit(e.target.value)} />
-          </div>
-          <div>
-            <label htmlFor="cf-collo">Pezzi per collo/cartone</label>
-            <input id="cf-collo" type="number" step="any" min="0" value={perCollo} onChange={(e) => onCollo(e.target.value)} placeholder="Es. 24" />
-          </div>
-        </div>
-        <label htmlFor="cf-tot" style={{ marginTop: 6 }}>Totale collo (€, netto)</label>
-        <input id="cf-tot" type="number" step="any" min="0" value={colloTot} onChange={(e) => onTot(e.target.value)} placeholder="Prezzo del cartone dal fornitore" />
+        <label htmlFor="cf-unit" style={{ marginTop: 6 }}>Costo unitario (€, netto)</label>
+        <input id="cf-unit" type="number" step="any" min="0" value={unitCost} onChange={(e) => onUnit(e.target.value)} />
         {unitN > 0 && (
           <div className="muted small" style={{ marginTop: 4 }}>
             Unitario +IVA {formatPrice(costWithVat(unitN, item.vat))}
-            {perN > 0 && ` · Totale collo +IVA ${formatPrice(costWithVat(unitN * perN, item.vat))}`}
+            {aColli && perN > 0 && ` · Totale collo +IVA ${formatPrice(costWithVat(unitN * perN, item.vat))}`}
           </div>
         )}
       </div>
