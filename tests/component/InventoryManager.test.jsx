@@ -388,10 +388,16 @@ describe('le unità nel modulo del prodotto (REQ-MAG-013)', () => {
     mostra()
     await aspettaLista()
     await user.click(screen.getByRole('button', { name: /Nuovo prodotto/ }))
-    expect(screen.getByLabelText(/Soglia di avviso \(cl\)/)).toBeInTheDocument()
+    // La scheda parte dal tipo (REQ-MAG-016): lo sfuso compra a chili di
+    // suo, e la soglia lo dice nell'etichetta.
+    await user.click(screen.getByRole('radio', { name: /Sfuso/ }))
+    expect(screen.getByLabelText(/Soglia di avviso \(kg\)/)).toBeInTheDocument()
     expect(screen.queryByLabelText('Unità della soglia di avviso')).toBeNull()
     // Cambiando come si compra, cambia anche lei.
-    await user.selectOptions(screen.getByLabelText(/Unità d.acquisto/), 'pz')
+    await user.selectOptions(screen.getByLabelText('Come lo compri'), 'l')
+    expect(screen.getByLabelText(/Soglia di avviso \(L\)/)).toBeInTheDocument()
+    // E coi tipi a pezzo la soglia è in pezzi, senza chiederlo.
+    await user.click(screen.getByRole('radio', { name: /Lo vendo intero/ }))
     expect(screen.getByLabelText(/Soglia di avviso \(pz\)/)).toBeInTheDocument()
   })
 })

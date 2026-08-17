@@ -1533,6 +1533,25 @@ requirements:
       comportamento. Senza resa dichiarata non si inventa niente: costo
       null e consumo invariato, che è meglio di un numero uscito da una
       moltiplicazione a caso.
+      RIVISTA (1.4.8, secondo giro, approvato): la scheda parte da UNA
+      domanda — «che tipo di prodotto è?» — con quattro card illustrate in
+      griglia 2×2. «Lo vendo intero» (bottiglie e lattine: pezzi, contenuto
+      facoltativo che serve solo al costo al cl di confronto), «Lo verso
+      nei drink» (pezzi, e «una bottiglia fa…» è OBBLIGATORIO: senza,
+      niente costo al cl né scarico frazionato, e il salvataggio si ferma
+      spiegandolo), «Sfuso, a peso o volume» (limoni al chilo, spina,
+      ghiaccio: unità d'acquisto a scelta fra kg/l/cl/g/U, resa facoltativa
+      «5 kg fanno 1,5 l» con la quantità sui due lati), «Lavoro o servizio»
+      (solo costo per unità: niente giacenza, mai esaurito, in carta non
+      compare). Il tipo decide unità e scorta: spariscono il selettore
+      «Unità d'acquisto» a famiglie, la casella «È una scorta» e ogni «lo
+      uso come lo compro». Il MODELLO DATI NON CAMBIA: si aggiunge solo un
+      campo `tipo` sull'item per le prossime aperture; le schede vecchie,
+      che non ce l'hanno, si riaprono nel tipo dedotto da unità, contenuto
+      e scorta (U non-scorta → lavoro, U con scorta → sfuso, pezzo con
+      contenuto → versato, pezzo senza → intero, il resto → sfuso), senza
+      migrazione. Cambiando tipo su un prodotto esistente valgono gli
+      avvisi di conversione della giacenza di sempre.
     status: todo
     generate_issue: true
     labels: [magazzino, ux]
