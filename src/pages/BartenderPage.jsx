@@ -74,6 +74,7 @@ import ServiceQueue from '../components/ServiceQueue.jsx'
 import StaffCallList from '../components/StaffCallList.jsx'
 import Caricamento from '../components/Caricamento.jsx'
 import ApriCassaBox from '../components/ApriCassaBox.jsx'
+import ChiudiCassaBox from '../components/ChiudiCassaBox.jsx'
 import GroupsPanel from '../components/GroupsPanel.jsx'
 import GroupView from '../components/GroupView.jsx'
 import CassaTab from '../components/CassaTab.jsx'
@@ -479,6 +480,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
   const [showPanels, setShowPanels] = useState(false) // pannelli (chiamate/gruppi) nella griglia
   const [menuBoard, setMenuBoard] = useState(false) // menu ⋯ della lavagna
   const [apriCassa, setApriCassa] = useState(false) // box «apri la cassa»
+  const [chiudiCassa, setChiudiCassa] = useState(false) // box «chiudi la cassa»
   // Verso della lista: dal più vecchio (come nasce la serata) o dal più
   // recente (utile quando i conti sono tanti e l'ultimo è quello che
   // serve). Si ricorda, perché è una preferenza di chi lavora.
@@ -1563,7 +1565,10 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
                   recap.aperti > 0
                     ? `Prima incassa i ${recap.aperti} conti ancora aperti.`
                     : 'Conta il contante e chiudi la serata.',
-                onClick: () => navigate('/bar?tab=pagamenti'),
+                // Si chiude da qui: prima portava alla pagina della cassa —
+                // un viaggio di andata e ritorno per premere un tasto, con
+                // la coda che sparisce proprio mentre si finisce.
+                onClick: () => setChiudiCassa(true),
               }
             : {
                 id: 'apri-cassa',
@@ -1574,6 +1579,13 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
               },
         ]}
       />
+
+      {chiudiCassa && (
+        <ChiudiCassaBox
+          by={auth.currentUser ? { uid: auth.currentUser.uid, email: auth.currentUser.email } : null}
+          onClose={() => setChiudiCassa(false)}
+        />
+      )}
 
       {apriCassa && (
         <ApriCassaBox
