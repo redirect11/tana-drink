@@ -40,7 +40,6 @@ import {
   gruppiInCoda,
   schedeCoda,
 } from '../lib/coda.js'
-import { ripristinabile } from '../lib/storiaOrdine.js'
 import { StoriaOrdineDialog, RipristinaOrdineDialog } from '../components/StoriaOrdine.jsx'
 import StatusBell from '../components/StatusBell.jsx'
 import ActionSheet from '../components/ActionSheet.jsx'
@@ -1154,22 +1153,12 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
             🚫 {o.service_mode === 'tavolo' ? 'Non servito' : 'Non ritirato'}
           </button>
         )}
-        {/* La storia c'è per tutti i conti: è come si spiega, un'ora dopo,
-            un conto che qualcuno ha riaperto. Il ripristino compare solo
-            dove ha senso — su un conto chiuso o annullato. */}
-        <div className="grid-2" style={{ marginTop: 8 }}>
-          <button className="btn ghost small" onClick={() => setStoriaTarget(o)}>
-            🕘 Storia
-          </button>
-          <button
-            className="btn ghost small"
-            disabled={!ripristinabile(o)}
-            title={ripristinabile(o) ? undefined : 'Il conto è già in corso'}
-            onClick={() => setRipristinoTarget(o)}
-          >
-            ♻️ Ripristina
-          </button>
-        </div>
+        {/* STORIA E RIPRISTINA NON STANNO QUI. Sono due cose che si fanno
+            una volta ogni tanto — «com'è che questo conto è stato
+            riaperto?» — e in coda occupavano una riga intera su ogni card,
+            per tutta la serata, sul telefono dove lo spazio è quello che
+            serve agli ordini. Si trovano dentro il conto (⋯ Azioni), che è
+            dove si va quando quella domanda ce la si fa davvero. */}
       </>
     )
   }

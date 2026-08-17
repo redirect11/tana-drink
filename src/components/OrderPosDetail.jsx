@@ -1950,7 +1950,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                   una col «−» è il modo peggiore di ricominciare: capita di
                   battere il conto sbagliato e accorgersene alla fine. Chiede
                   conferma, che è irreversibile. */}
-              {righeDaSvuotare > 0 && !closed && (
+              {righeDaSvuotare > 0 && !closed && !telefono && (
                 <button
                   className="btn ghost small"
                   onClick={() => setConfirmSvuota(true)}
@@ -2472,19 +2472,28 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
             disabled: isNew,
             onClick: () => setShowStoria(true),
           },
+          // UNA VOCE SOLA, come il tasto in barra: delle due, alla volta ne
+          // serve una — o le righe uguali stanno insieme (e allora si
+          // separano) o sono separate (e allora si uniscono). Erano due voci
+          // e una delle due era sempre spenta: due righe di menu per dirne
+          // una. Quando servono entrambe vince «unisci», la rimessa in
+          // ordine. (Qui siamo in un array: i commenti sono `//`, non JSX.)
+          ((canMerge || canSplit) && {
+            id: 'unisci-separa',
+            icon: canMerge ? '🔗' : '⑃',
+            label: canMerge ? 'Unisci le righe uguali' : 'Separa le quantità',
+            hint: canMerge
+              ? 'Le stesse voci tornano una riga sola'
+              : 'Ogni pezzo diventa una riga a sé',
+            onClick: canMerge ? mergeDraft : splitAllDraft,
+          }),
           {
-            id: 'unisci',
-            icon: '🔗',
-            label: 'Unisci le righe uguali',
-            disabled: !canMerge,
-            onClick: mergeDraft,
-          },
-          {
-            id: 'separa',
-            icon: '⑃',
-            label: 'Separa le quantità',
-            disabled: !canSplit,
-            onClick: splitAllDraft,
+            id: 'svuota',
+            icon: '🧹',
+            label: 'Svuota il conto',
+            hint: 'Toglie tutte le righe: chiede conferma',
+            disabled: !(righeDaSvuotare > 0) || closed,
+            onClick: () => setConfirmSvuota(true),
           },
           {
             id: 'calcoli',
