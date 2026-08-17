@@ -12,6 +12,11 @@
 
 ### Al banco
 
+- **Le modifiche che non passeranno mai ora si capiscono e si scartano.**
+  Se una scheda del magazzino (o un conto) non esiste più, riprovare non
+  serve: la campanella lo dice a parole e offre di toglierle, invece di
+  restare rossa per sempre con un errore in inglese.
+
 - **Le timbrature hanno la loro voce in Staff**: erano in cima al
   calendario, e per battere l'ingresso di chi arriva bisognava passare
   dalla schermata dei turni.
