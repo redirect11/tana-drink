@@ -480,6 +480,16 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
             {order.customer_name && (
               <p style={{ margin: '10px 0 2px', fontWeight: 600 }}>{order.customer_name}</p>
             )}
+            {/* IL MECCANISMO C'ERA MA NON SI VEDEVA. Le righe col −/+ sembrano
+                un riepilogo, e invece scegliendole si compone il totale da
+                pagare: chi non lo sapeva batteva l'importo a mano — che è
+                un'altra cosa, un acconto che non copre nessuna riga. Una
+                frase, sopra le righe, prima che si tocchi qualcosa. */}
+            {remaining.length > 0 && !splitting && !manual && (
+              <p className="muted small" style={{ margin: '8px 0 2px' }}>
+                Scegli le righe che sta pagando: il totale si compone da sé.
+              </p>
+            )}
             {remaining.some((r) => r.qty > 1) && (
               <button
                 className="btn ghost small"
@@ -623,7 +633,17 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
             </span>
             <span style={{ textAlign: 'right' }}>
               <span className="muted small" style={{ letterSpacing: 0.5 }}>
-                PAGAMENTO{op ? ` (${acc != null ? formatPrice(acc) : ''} ${op === 'x' ? '×' : op})` : ''}
+                {/* DA DOVE VIENE QUESTO NUMERO. «Pagamento» non distingue due
+                    cose diverse: le righe scelte (che coprono esattamente
+                    quelle) e un importo battuto a mano (che non copre
+                    niente, è un acconto). Dirlo qui evita di scoprirlo dopo,
+                    a conto chiuso. */}
+                {manual
+                  ? 'IMPORTO A MANO'
+                  : splitting
+                    ? `RIGHE SCELTE (${selection.reduce((n, r) => n + (Number(r.qty) || 0), 0)})`
+                    : 'PAGAMENTO'}
+                {op ? ` (${acc != null ? formatPrice(acc) : ''} ${op === 'x' ? '×' : op})` : ''}
               </span>
               <br />
               <strong style={{ fontSize: '2rem', color: '#3f7ce0' }} data-testid="pay-amount">
@@ -631,6 +651,15 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
               </strong>
             </span>
           </div>
+          {/* Un importo battuto a mano che non salda il conto è un ACCONTO:
+              resta sul conto e non copre righe precise. Meglio dirlo prima di
+              incassare che scoprirlo dopo, quando restano righe «da pagare»
+              che qualcuno credeva pagate. */}
+          {manual && amount > 0 && amount < due && (
+            <p className="muted small" style={{ margin: '2px 0 0', textAlign: 'right' }}>
+              Acconto: resta sul conto, non copre righe precise.
+            </p>
+          )}
           {change > 0 && method === 'banco' && (
             <p className="small" style={{ margin: '2px 0 0', textAlign: 'right', flexShrink: 0 }}>
               Resto: <strong>{formatPrice(change)}</strong> (si incassano {formatPrice(toPay)})

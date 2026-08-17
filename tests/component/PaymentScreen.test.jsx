@@ -603,3 +603,36 @@ describe('vista separata: righe come tutte le altre', () => {
     expect(payAmount()).toHaveTextContent('15,00')
   })
 })
+
+// DUE MODI DI INCASSARE, E VANNO DISTINTI. Scegliere le righe compone il
+// totale e copre esattamente quelle; battere un importo a mano è un
+// ACCONTO, che resta sul conto e non copre niente in particolare. Il
+// meccanismo c'era, ma le righe col −/+ sembravano un riepilogo: chi non lo
+// sapeva batteva l'importo a mano e poi non capiva cosa fosse stato pagato.
+describe('righe scelte o importo a mano', () => {
+  it('lo dice prima che si tocchi qualcosa', () => {
+    mount(baseOrder())
+    expect(screen.getByText(/il totale si compone da sé/i)).toBeInTheDocument()
+  })
+
+  it('scegliendo le righe il totale si compone, e si vede da dove viene', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    // Si toglie una unità di Mojito dalla selezione (parte tutto scelto):
+    // il totale cala di 7 e l'etichetta dice che sono righe.
+    await user.click(screen.getByRole('button', { name: /Togli Mojito dal pagamento/ }))
+    expect(await screen.findByText(/RIGHE SCELTE/)).toBeInTheDocument()
+    expect(payAmount()).toHaveTextContent('15,00')
+  })
+
+  it('un importo a mano si chiama col suo nome, e dice che resta sul conto', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.click(screen.getByRole('button', { name: '1' }))
+    await user.click(screen.getByRole('button', { name: '0' }))
+    await user.click(screen.getByRole('button', { name: '0' }))
+    await user.click(screen.getByRole('button', { name: '0' }))
+    expect(screen.getByText('IMPORTO A MANO')).toBeInTheDocument()
+    expect(screen.getByText(/Acconto: resta sul conto/)).toBeInTheDocument()
+  })
+})

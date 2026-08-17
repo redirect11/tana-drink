@@ -4,6 +4,17 @@
 
 ### Al banco
 
+- **Il conto nuovo non eredita più le righe di quello prima.** La bozza
+  aspettava la sincronizzazione per svuotarsi: uscendo prima, il conto
+  dopo si apriva con dentro la roba già battuta.
+- **«Invia comanda» e «Annulla ordine» funzionano subito**, anche su un
+  conto appena battuto: prima erano spenti finché il server non
+  rispondeva. Annullare un conto non ancora aperto butta la bozza e
+  riporta alla coda.
+- **Nella schermata di pagamento si capisce da dove viene il numero**:
+  «RIGHE SCELTE» quando lo componi toccando le righe, «IMPORTO A MANO»
+  quando lo batti — e in quel caso è un acconto, scritto lì sotto.
+
 - **Si capisce che cosa è stato pagato.** Al posto di «Sconto e acconti già
   incassati −15,00 €» ci sono righe distinte: lo sconto, e ogni incasso col
   metodo e l'ora. Un importo battuto a mano si chiama **acconto** e non
