@@ -73,6 +73,7 @@ import VipTab from '../components/VipTab.jsx'
 import ServiceQueue from '../components/ServiceQueue.jsx'
 import StaffCallList from '../components/StaffCallList.jsx'
 import Caricamento from '../components/Caricamento.jsx'
+import CampoPassword from '../components/CampoPassword.jsx'
 import ApriCassaBox from '../components/ApriCassaBox.jsx'
 import ChiudiCassaBox from '../components/ChiudiCassaBox.jsx'
 import GroupsPanel from '../components/GroupsPanel.jsx'
@@ -365,9 +366,8 @@ function LoginForm() {
         required
       />
       <label htmlFor="password" style={{ marginTop: 10 }}>Password</label>
-      <input
+      <CampoPassword
         id="password"
-        type="password"
         autoComplete="current-password"
         value={password}
         onChange={(e) => { setPassword(e.target.value); setErr(null) }}

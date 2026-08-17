@@ -6194,3 +6194,37 @@ a.storico-notifica:hover {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* ── LA PASSWORD, CON L'OCCHIO PER GUARDARLA ──────────────────────────
+   L'occhio sta DENTRO il campo, a destra: fuori sarebbe un tasto in più in
+   una colonna di campi, e la riga della password si allungherebbe rispetto
+   alle altre. Il campo si stringe quel tanto che basta perché il testo non
+   ci finisca sotto. */
+.campo-password {
+  position: relative;
+  display: block;
+}
+.campo-password input {
+  width: 100%;
+  padding-right: 44px;
+}
+.campo-password-occhio {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 1rem;
+  cursor: pointer;
+  opacity: 0.75;
+}
+.campo-password-occhio:hover,
+.campo-password-occhio:focus-visible {
+  opacity: 1;
+}
