@@ -1491,6 +1491,35 @@ requirements:
       - tests/unit/statoStampante.test.js
       - tests/component/PallinoStampante.test.jsx
 
+  - id: REQ-AVVISI-004
+    title: "Uscendo si spengono gli avvisi, rientrando si riaccendono"
+    area: "src/lib/logout.js, src/lib/api.js, src/App.jsx, src/components/AvvisiSpenti.jsx"
+    description: >
+      Il token push è del DISPOSITIVO, non della persona, e dopo il logout
+      restava valido: chi si era scollegato continuava a sentire suonare gli
+      ordini del locale sul telefono di casa. Uscendo, quel dispositivo viene
+      tolto dai destinatari; al primo accesso successivo si registra da sé,
+      senza aspettare che si passi dalla coda.
+      Se non ci riesce — offline, regole — si esce lo stesso: restare dentro
+      sarebbe peggio, e il token scade da solo.
+      E QUANDO GLI AVVISI SONO SPENTI SI VEDE. Il permesso lo chiede il
+      browser una volta sola, con una finestrella in alto che chi sta
+      lavorando scarta senza leggerla: da quel momento quel tablet non suona
+      più, e nessuno se ne accorge finché non manca un ordine. Una riga in
+      cima lo dice su ogni schermata del gestionale, con il tasto per
+      attivarli; rifiutando ricompare — non c'è «non mostrare più», perché è
+      proprio il rifiuto per sbaglio il caso da coprire. Se il browser li ha
+      bloccati del tutto, l'app non può più chiedere: si spiega dove
+      riaccenderli invece di mostrare un tasto che non farebbe niente.
+      Non è una finestra modale: al banco non si blocca il lavoro per una
+      impostazione.
+    status: implemented
+    generate_issue: false
+    labels: [avvisi, staff]
+    test_cases:
+      - tests/unit/logoutAvvisi.test.js
+      - tests/component/AvvisiSpenti.test.jsx
+
   - id: REQ-STAMPA-010
     title: "Le impostazioni della stampante sono del dispositivo e di chi ci lavora"
     area: "src/lib/printer.js, src/App.jsx"

@@ -3167,6 +3167,27 @@ export async function saveStaffToken(uid, token, role = null, device = null) {
   }
 }
 
+// USCENDO SI SPENGONO GLI AVVISI DI QUESTO DISPOSITIVO. Il token resta
+// valido anche dopo il logout — è del browser, non della persona — e chi si
+// era scollegato continuava a sentire suonare gli ordini del locale sul
+// telefono di casa. Al prossimo accesso il dispositivo si registra di
+// nuovo, quindi non si perde niente.
+// Si toglie sia la riga del dispositivo sia quella vecchia intestata alla
+// persona, se e' rimasta in giro.
+export async function rimuoviStaffToken(uid, device) {
+  for (const id of [device, uid].filter(Boolean)) {
+    try {
+      const snap = await getDoc(doc(db, 'staff_tokens', id))
+      if (snap.exists() && (!uid || snap.get('uid') === uid)) {
+        await deleteDoc(doc(db, 'staff_tokens', id))
+      }
+    } catch {
+      /* non si riesce: peggio che vada, restano gli avvisi finche' il
+         token non scade. Non e' un motivo per non far uscire nessuno. */
+    }
+  }
+}
+
 // Questo dispositivo è registrato per ricevere gli avvisi? Serve alla
 // campanella per rispondere alla domanda che al banco si fa per prima.
 export async function staffTokenRegistrato(uid, device) {

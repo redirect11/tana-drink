@@ -6042,3 +6042,15 @@ a.storico-notifica:hover {
 .periodo-aiuto {
   margin: 8px 0 0;
 }
+
+/* «Gli avvisi sono spenti»: una riga in cima, non una finestra modale — al
+   banco non si blocca il lavoro per una impostazione. Ritorna finché gli
+   avvisi non funzionano: vedi AvvisiSpenti.jsx. */
+.avvisi-spenti {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 8px 12px;
+}
