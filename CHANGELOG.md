@@ -4,6 +4,10 @@
 
 ### Al banco
 
+- **Stringendo le categorie a lato non restano più le pastiglie grigie.**
+  Dove le voci non hanno un'icona non c'era modo di capire quale fosse
+  quale: ora si tolgono di mezzo e resta il tasto per rimetterle.
+
 - **Il menu laterale si allarga tirando il bordo**, e cresce tutto
   insieme — testo e icone. Doppio clic sulla maniglia per tornare alla
   misura di partenza; la larghezza scelta resta anche domani.
