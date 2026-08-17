@@ -109,8 +109,15 @@ versione è pronta si mergia su `develop`, si tagga e si va in `main`.
 ## Il cancello di qualità: prima di ogni merge in `develop`
 
 Il merge in `develop` non è un gesto tecnico, è la promessa che quel
-lavoro è finito. Prima di chiederlo (o di farlo) si passa il cancello,
-tutto quanto:
+lavoro è finito. **E si chiede con una pull request**: `develop` e `main`
+sono rami protetti — niente push diretti, niente merge fatti in locale e
+spinti su. La PR è il posto dove la CI fa rispettare il cancello da sola
+(il check «Lint, test e build», con la coverage e le sue soglie, è
+obbligatorio per il merge). I rami `release/**` restano scrivibili
+direttamente — sono il posto di lavoro quotidiano — ma protetti da
+cancellazione e force-push.
+
+Prima di aprire la PR si passa il cancello, tutto quanto:
 
 1. **Requisiti allineati.** Ogni richiesta lavorata ha il suo requisito
    (`REQ-*` in `requirements/requirements.yaml`) o la sua voce nel

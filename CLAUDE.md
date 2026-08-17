@@ -21,7 +21,9 @@ Regole non negoziabili, per intero in [docs/gitflow.md](docs/gitflow.md).
   Se ne esiste già uno aperto, si lavora lì.
 - Un branch `feature/<nome>` solo per una funzione **grossa**, o quando lo
   si chiede esplicitamente.
-- **Mai commit diretti su `develop` o `main`.**
+- **Mai commit diretti su `develop` o `main`** — e i merge ci arrivano
+  solo via **pull request**: sono rami protetti, il check della CI
+  (lint, test, coverage con le soglie) è obbligatorio per mergiare.
 - `hotfix/<nome>` nasce da `main` e torna in `main` **e** in `develop`.
 - **A pubblicare è il tag, non il push.** Un push fa girare lint, test e
   build e finisce lì. Un **tag su un commit non in `main`** va sul **test**;
