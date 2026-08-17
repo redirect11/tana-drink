@@ -29,6 +29,18 @@ export default defineConfig({
       include: ['functions/lib/**/*.js'],
       reporter: ['text', 'html', 'lcov'],
       reportsDirectory: './coverage',
+      // IL CANCELLO: sotto queste soglie `npm run test:coverage` fallisce,
+      // e con lui la CI delle pull request. Sono un CRICCHETTO tarato
+      // appena sotto il misurato (16/08: 94,8 / 79,2 / 91,1 / 94,8):
+      // si alzano quando la copertura cresce, non si abbassano mai per
+      // far passare un merge. Oggi misurano functions/lib; estenderle a
+      // src/lib è REQ-DEV-005.
+      thresholds: {
+        statements: 92,
+        branches: 76,
+        functions: 88,
+        lines: 92,
+      },
     },
   },
 })
