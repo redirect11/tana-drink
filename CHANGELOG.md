@@ -1,5 +1,21 @@
 # Cosa è cambiato
 
+## Non ancora rilasciata — 1.4.8
+
+### Al banco
+
+- **Un drink si duplica**: nelle azioni della card del menù c'è «📋
+  Duplica». Si apre la scheda già piena, col nome marcato «(copia)»: la
+  ricetta non si riscrive ingrediente per ingrediente. Si salva quando è
+  pronta, e l'originale non si tocca.
+- **Niente più cartello «I gruppi sono spenti»** in coda per chi i gruppi
+  non li usa: resta solo a chi li ha accesi ma tenuti fuori dalla coda.
+- **Uscendo, il telefono smette davvero di suonare**: si spegne il token
+  degli avvisi di quel browser, non solo la riga nell'elenco dello staff.
+  Prima continuavano ad arrivare le notifiche degli ordini del cliente.
+  Rientrando si riaccende da sé.
+- **«Esci» non resta più appeso** quando la rete non c'è.
+
 ## 1.4.7 — 17 agosto 2026
 
 ### Sotto il cofano

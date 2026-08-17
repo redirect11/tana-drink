@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   signInWithEmailAndPassword,
-  signOut,
   onAuthStateChanged,
 } from 'firebase/auth'
 import { auth } from '../lib/firebaseClient.js'
@@ -18,6 +17,7 @@ import {
   restoreOrder,
 } from '../lib/api.js'
 import { getPushToken } from '../lib/push.js'
+import { logoutStaff } from '../lib/logout.js'
 import {
   ORDER_STATUSES,
   STATUS_LABELS,
@@ -37,6 +37,7 @@ import {
   restaInCoda,
   ordiniInCoda,
   voceCassa,
+  gruppiInCoda,
 } from '../lib/coda.js'
 import { ripristinabile } from '../lib/storiaOrdine.js'
 import { StoriaOrdineDialog, RipristinaOrdineDialog } from '../components/StoriaOrdine.jsx'
@@ -214,7 +215,10 @@ export default function BartenderPage() {
       <div className="empty">
         🔒 Quest’area è riservata allo staff.
         <br />
-        <button className="btn ghost" style={{ marginTop: 14 }} onClick={() => signOut(auth)}>
+        {/* Anche da qui si esce dalla porta giusta: il signOut secco
+            lasciava la timbratura aperta e questo terminale nella rubrica
+            degli avvisi. */}
+        <button className="btn ghost" style={{ marginTop: 14 }} onClick={() => logoutStaff()}>
           Esci e accedi come staff
         </button>
       </div>
@@ -1605,19 +1609,24 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
               succedeva niente — senza altri account lo staff è vuoto e i
               gruppi possono essere spenti — e sembrava un tasto rotto. */}
           <StaffCallList mostraSeVuoto={showPanels} />
-          {settings.groups_enabled && settings.groups_in_queue ? (
-            <GroupsPanel orders={orders} role="bartender" />
-          ) : (
-            showPanels && (
-              <div className="card" style={{ marginTop: 8 }}>
-                <strong>👥 Gruppi</strong>
-                <p className="muted small" style={{ margin: '6px 0 0' }}>
-                  {settings.groups_enabled
-                    ? 'I gruppi non si mostrano in coda: si accendono in Impostazioni → Gruppi.'
-                    : 'I gruppi sono spenti: si accendono in Impostazioni → Gruppi.'}
-                </p>
-              </div>
-            )
+          {/* Pannello, cartello o niente: la regola sta in lib/coda.js. */}
+          {gruppiInCoda({
+            accesi: settings.groups_enabled,
+            inCoda: settings.groups_in_queue,
+            pannelli: showPanels,
+          }) === 'pannello' && <GroupsPanel orders={orders} role="bartender" />}
+          {gruppiInCoda({
+            accesi: settings.groups_enabled,
+            inCoda: settings.groups_in_queue,
+            pannelli: showPanels,
+          }) === 'cartello' && (
+            <div className="card" style={{ marginTop: 8 }}>
+              <strong>👥 Gruppi</strong>
+              <p className="muted small" style={{ margin: '6px 0 0' }}>
+                I gruppi non si mostrano in coda: si accendono in
+                Impostazioni → Gruppi.
+              </p>
+            </div>
           )}
         </>
       )}

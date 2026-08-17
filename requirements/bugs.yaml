@@ -322,3 +322,43 @@ bugs:
     generate_issue: false
     labels: [bug, ui, pos]
     test_cases: [tests/component/PosPage.test.jsx]
+
+  - id: BUG-012
+    title: "In coda compare il cartello «I gruppi sono spenti» a chi i gruppi non li usa"
+    area: "src/pages/BartenderPage.jsx, src/lib/coda.js"
+    description: >
+      Aprendo i «Pannelli» dal ⋯ della coda, chi ha i gruppi spenti si
+      ritrova un riquadro che dice «I gruppi sono spenti: si accendono in
+      Impostazioni → Gruppi». È un cartello su una cosa che non ha, nello
+      spazio che serve agli ordini.
+      RISOLTO: la regola sta in `gruppiInCoda` (src/lib/coda.js) — pannello
+      se i gruppi sono accesi e si mostrano in coda, cartello solo a chi li
+      ha ACCESI ma tenuti fuori dalla coda (lì spiega perché il pannello è
+      vuoto), niente a chi li ha spenti.
+    in_produzione: true
+    status: fixed
+    generate_issue: false
+    labels: [bug, ui, coda]
+    test_cases: [tests/unit/coda.test.js]
+
+  - id: BUG-013
+    title: "Le notifiche arrivano anche a chi si è scollegato"
+    area: "src/lib/logout.js, src/lib/push.js, src/lib/customerAuth.js, src/pages/BartenderPage.jsx"
+    description: >
+      Dopo il logout il telefono continua a suonare. Uscendo si toglieva la
+      riga da `staff_tokens`, ma quella è solo la RUBRICA dello staff: il
+      token è del browser e resta valido, e gli avvisi al cliente («il tuo
+      drink è pronto», «ordine annullato») lo tengono scritto sull'ORDINE.
+      Da lì continuavano ad arrivare.
+      Due strade in più lo lasciavano acceso: «Esci e accedi come staff»
+      passava dal signOut secco (niente timbratura, niente rubrica), e il
+      logout del cliente non toglieva niente.
+      RISOLTO: uscendo si CANCELLA il token del browser (`spegniPush`),
+      quindi non resta nessun indirizzo a cui bussare, chiunque sia il
+      mittente; rientrando se ne fa uno nuovo e il dispositivo si registra
+      da sé. Le due strade passano ora dalla porta giusta.
+    in_produzione: true
+    status: fixed
+    generate_issue: false
+    labels: [bug, avvisi]
+    test_cases: [tests/unit/logoutAvvisi.test.js]
