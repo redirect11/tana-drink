@@ -870,6 +870,19 @@ export function subscribeServiceStats(onChange, onError) {
 // Il rischio: si lavora su una fotografia di un istante fa, come prima
 // (anche il server dà una fotografia). Se nel frattempo ha scritto un altro
 // terminale, l'ultimo che scrive vince — ed è il comportamento che c'era già.
+// Come leggiOrdine, per qualunque documento: cache se c'è, server solo se
+// manca. Lo scarico di magazzino legge ricette e articoli — roba che l'app
+// ha già in cache perché il listino e il magazzino sono sottoscritti.
+async function leggiDoc(ref) {
+  try {
+    const c = await getDocFromCache(ref)
+    if (c.exists()) return c
+  } catch {
+    /* niente cache: si chiede al server */
+  }
+  return getDoc(ref)
+}
+
 async function leggiOrdine(ref) {
   try {
     const c = await getDocFromCache(ref)
@@ -1064,11 +1077,17 @@ export async function closePaidOrder(id) {
   }
   const nowIso = new Date().toISOString()
   const chiusura = conTimbro(chiusuraPagamento(data, nowIso, { autoServe: true }), nowIso)
-  const lowStock = chiusura.comande
-    ? await depleteComandeInventory(unappliedEntries(id, chiusura.comande))
-    : []
+  // PRIMA SI CHIUDE IL CONTO. Lo scarico di magazzino ha bisogno di leggere
+  // ricette e articoli, e finché quelle letture non tornavano il conto non
+  // risultava chiuso: si incassava e la coda si muoveva mezzo secondo dopo
+  // — di più, con la linea del locale. Il magazzino si allinea subito dopo,
+  // per conto suo (vedi scaricaInSottofondo, stessa idea).
   bgWrite(() => updateDoc(ref, chiusura), 'chiusura conto')
-  notifyLowStock(lowStock)
+  if (chiusura.comande) {
+    depleteComandeInventory(unappliedEntries(id, chiusura.comande))
+      .then(notifyLowStock)
+      .catch(() => {})
+  }
 }
 
 // PREFERENZE POS condivise (ordine card e preferiti): stanno sul server
@@ -1422,9 +1441,7 @@ export async function payGroupCash({
     ref,
     comande: serveAllComande(normalizeOrderDoc(raw).comande, nowIso),
   }))
-  const lowStock = await depleteComandeInventory(
-    served.flatMap(({ ref, comande }) => unappliedEntries(ref.id, comande))
-  )
+  const timbro = timbroChiusura(nowIso)
   for (const { ref, comande } of served) {
     bgWrite(() => updateDoc(ref, {
       payment_status: 'pagato',
@@ -1433,10 +1450,15 @@ export async function payGroupCash({
       payment_id: settlementId,
       status: ORDER_STATUSES.PAGATO,
       [`status_times.${ORDER_STATUSES.PAGATO}`]: nowIso,
+      ...timbro,
       comande,
       comande_statuses: comandeStatuses(comande),
     }), 'pagamento gruppo')
   }
+  // Il magazzino dopo, per conto suo: vedi closePaidOrder.
+  depleteComandeInventory(served.flatMap(({ ref, comande }) => unappliedEntries(ref.id, comande)))
+    .then(notifyLowStock)
+    .catch(() => {})
 
   const orderIdsCovered = covered.map((c) => c.ref.id)
   const baseDoc = {
@@ -1465,7 +1487,6 @@ export async function payGroupCash({
   } else {
     bgWrite(() => addDoc(paymentsCol, { ...baseDoc, amount: Math.round(total * 100) / 100, split_count: null, split_index: null }), 'ledger pagamento')
   }
-  notifyLowStock(lowStock)
   return settlementId
 }
 
@@ -2120,20 +2141,23 @@ export async function registerPayment(id, { amount, method = 'banco', items = nu
     },
   ]
   const closed = paymentCloses(o, paid)
-  let lowStock = []
   const chiusura = closed ? conTimbro(chiusuraPagamento(o, nowIso, { autoServe }), nowIso) : null
-  if (chiusura?.comande) {
-    // Conto saldato E servito ⇒ le comande mai prese in carico vengono
-    // scaricate a magazzino adesso.
-    lowStock = await depleteComandeInventory(unappliedEntries(id, chiusura.comande))
-  }
+  // PRIMA L'INCASSO, POI IL MAGAZZINO. Lo scarico legge ricette e articoli:
+  // aspettarlo voleva dire che il conto risultava pagato solo dopo quelle
+  // letture, e nella coda compariva fra i chiusi mezzo secondo più tardi.
   bgWrite(() => updateDoc(ref, {
     payments,
     ...(closed
       ? { ...chiusura, payment_method: summaryMethod(payments) }
       : { payment_status: 'parziale' }),
   }), 'incasso ordine')
-  notifyLowStock(lowStock)
+  if (chiusura?.comande) {
+    // Conto saldato E servito ⇒ le comande mai prese in carico vengono
+    // scaricate a magazzino adesso, in sottofondo.
+    depleteComandeInventory(unappliedEntries(id, chiusura.comande))
+      .then(notifyLowStock)
+      .catch(() => {})
+  }
   return { closed }
 }
 
@@ -2148,11 +2172,13 @@ export async function markOrderPaid(id, method, { autoServe = true } = {}) {
   const snap = await leggiOrdine(ref)
   if (!snap.exists()) throw new Error('Ordine non trovato')
   const chiusura = conTimbro(chiusuraPagamento(snap.data(), nowIso, { autoServe }), nowIso)
-  const lowStock = chiusura.comande
-    ? await depleteComandeInventory(unappliedEntries(id, chiusura.comande))
-    : []
+  // Prima il conto, poi il magazzino: vedi closePaidOrder.
   bgWrite(() => updateDoc(ref, { ...chiusura, payment_method: method }), 'pagamento ordine')
-  notifyLowStock(lowStock)
+  if (chiusura.comande) {
+    depleteComandeInventory(unappliedEntries(id, chiusura.comande))
+      .then(notifyLowStock)
+      .catch(() => {})
+  }
 }
 
 // Avanza lo stato di UNA COMANDA (il ticket di lavorazione). È qui che vive
@@ -2213,7 +2239,7 @@ function riallineaInSottofondo(orderId, comandaId) {
       if (!comanda) return
       const items = Array.isArray(comanda.items) ? comanda.items : []
       const drinkIds = [...new Set(items.filter((i) => !i.custom).map((i) => i.drink_id).filter(Boolean))]
-      const drinkSnaps = await Promise.all(drinkIds.map((d) => getDoc(doc(db, 'drinks', d))))
+      const drinkSnaps = await Promise.all(drinkIds.map((d) => leggiDoc(doc(db, 'drinks', d))))
       const drinksById = {}
       drinkSnaps.forEach((sn, idx) => {
         drinksById[drinkIds[idx]] = sn.exists() ? sn.data() : null
@@ -2260,7 +2286,7 @@ async function depleteComandeInventory(entries) {
   for (const { orderId, comanda } of entries) {
     const items = Array.isArray(comanda.items) ? comanda.items : []
     const drinkIds = [...new Set(items.filter((i) => !i.custom).map((i) => i.drink_id).filter(Boolean))]
-    const drinkSnaps = await Promise.all(drinkIds.map((d) => getDoc(doc(db, 'drinks', d))))
+    const drinkSnaps = await Promise.all(drinkIds.map((d) => leggiDoc(doc(db, 'drinks', d))))
     const drinksById = {}
     drinkSnaps.forEach((sn, idx) => {
       drinksById[drinkIds[idx]] = sn.exists() ? sn.data() : null
@@ -2268,7 +2294,7 @@ async function depleteComandeInventory(entries) {
     plans.push({ orderId, comanda, consumption: computeConsumption(items, drinksById) })
   }
   const itemIds = [...new Set(plans.flatMap((p) => p.consumption.map((c) => c.inventory_item_id)))]
-  const itemSnaps = await Promise.all(itemIds.map((id) => getDoc(doc(db, 'inventory_items', id))))
+  const itemSnaps = await Promise.all(itemIds.map((id) => leggiDoc(doc(db, 'inventory_items', id))))
   const itemsById = {}
   itemSnaps.forEach((sn, idx) => {
     if (sn.exists()) itemsById[itemIds[idx]] = sn.data()
@@ -2713,47 +2739,15 @@ export async function cancelOrder(id, opts = {}) {
     .filter((c) => c.inventory_applied === true && Array.isArray(c.inventory_consumption))
     .flatMap((c) => c.inventory_consumption)
   const restoreStock = kind !== 'non_ritirato'
-  if (restoreStock && consumption.length > 0) {
-    const itemSnaps = await Promise.all(
-      consumption.map((c) => getDoc(doc(db, 'inventory_items', c.inventory_item_id)))
-    )
-    // Ripristino stock con increment(+qty): commutativo, si accoda offline.
-    for (let idx = 0; idx < consumption.length; idx++) {
-      const c = consumption[idx]
-      const s = itemSnaps[idx]
-      if (!s.exists()) continue
-      const cur = s.data()
-      bgWrite(() => updateDoc(doc(db, 'inventory_items', c.inventory_item_id), {
-        stock: increment(qtyInStockUnit(c.qty, c.unit, cur)),
-      }), 'storno scorta')
-      bgWrite(() => addDoc(movementsCol, {
-        item_id: c.inventory_item_id,
-        item_name: cur.name,
-        type: 'load',
-        qty: c.qty,
-        unit: cur.unit ?? null,
-        reason: 'storno',
-        order_id: id,
-        created_at: serverTimestamp(),
-      }), 'movimento scorta')
-    }
-  }
 
   // Le comande non servite diventano annullate (le servite restano a storico).
   const nowIso = new Date().toISOString()
-  // Buono-sconto applicato: il saldo torna al beneficiario (l'ordine salta).
-  if (order.discount && order.discount.type === 'buono' && order.discount.voucher_id) {
-    await refundVoucher(order.discount.voucher_id, order.discount.value, id, nowIso)
-  }
-  // E ANCHE I BUONI USATI PER PAGARE. Annullando, il conto non si incassa
-  // più: se il saldo restasse scalato, il cliente avrebbe perso il credito
-  // per un conto che non è mai stato pagato. Le righe restituite si segnano
+  // I BUONI TORNANO AL LORO POSTO, MA DOPO. Annullando, il conto non si
+  // incassa più: se il saldo restasse scalato il cliente avrebbe perso il
+  // credito per un conto mai pagato. Le righe restituite si segnano
   // (`restituito_at`), così riaprendo il conto non tornano una seconda
   // volta — sarebbe credito inventato.
   const buoniIncasso = buoniDaRestituire(order)
-  for (const b of buoniIncasso) {
-    await refundVoucher(b.voucher_id, b.amount, id, nowIso)
-  }
   for (const c of comande) {
     if (c.status !== ORDER_STATUSES.RITIRATO && c.status !== ORDER_STATUSES.ANNULLATO) {
       c.status = ORDER_STATUSES.ANNULLATO
@@ -2761,6 +2755,11 @@ export async function cancelOrder(id, opts = {}) {
     }
     if (restoreStock) c.inventory_applied = false
   }
+  // PRIMA SI ANNULLA IL CONTO. Storni di magazzino e buoni hanno bisogno di
+  // leggere altri documenti, e finché quelle letture non tornavano il conto
+  // non risultava annullato: si annullava e nella tab «Annullati» compariva
+  // mezzo secondo dopo — chi guarda, in quel mezzo secondo, non sa se
+  // l'operazione è andata. Il resto si sistema subito dopo, per conto suo.
   const timbro = timbroChiusura(nowIso)
   bgWrite(() => updateDoc(orderRef, {
     status: ORDER_STATUSES.ANNULLATO,
@@ -2780,7 +2779,50 @@ export async function cancelOrder(id, opts = {}) {
     cancel_message: message || null,
     cancel_notify: !!notifyClient,
   }), 'annullo ordine')
+
+  // E ADESSO IL RESTO, per conto suo: le scorte tornano dentro e i buoni
+  // tornano al loro posto. Sono letture di altri documenti, e aspettarle
+  // teneva il conto «non ancora annullato» a schermo.
+  if (restoreStock && consumption.length > 0) stornaScorte(id, consumption)
+  if (order.discount && order.discount.type === 'buono' && order.discount.voucher_id) {
+    refundVoucher(order.discount.voucher_id, order.discount.value, id, nowIso).catch(() => {})
+  }
+  for (const b of buoniIncasso) {
+    refundVoucher(b.voucher_id, b.amount, id, nowIso).catch(() => {})
+  }
   return mapOrder(await leggiOrdine(orderRef))
+}
+
+// Rimette dentro quello che era stato scalato, dallo snapshot del consumo.
+// Con `increment(+qty)`: commutativo, si accoda offline e non litiga con le
+// altre scritture sullo stesso articolo.
+async function stornaScorte(orderId, consumption) {
+  try {
+    const snaps = await Promise.all(
+      consumption.map((c) => leggiDoc(doc(db, 'inventory_items', c.inventory_item_id)))
+    )
+    for (let idx = 0; idx < consumption.length; idx++) {
+      const c = consumption[idx]
+      const s = snaps[idx]
+      if (!s.exists()) continue
+      const cur = s.data()
+      bgWrite(() => updateDoc(doc(db, 'inventory_items', c.inventory_item_id), {
+        stock: increment(qtyInStockUnit(c.qty, c.unit, cur)),
+      }), 'storno scorta')
+      bgWrite(() => addDoc(movementsCol, {
+        item_id: c.inventory_item_id,
+        item_name: cur.name,
+        type: 'load',
+        qty: c.qty,
+        unit: cur.unit ?? null,
+        reason: 'storno',
+        order_id: orderId,
+        created_at: serverTimestamp(),
+      }), 'movimento scorta')
+    }
+  } catch {
+    /* il magazzino si riallinea alla prossima occasione */
+  }
 }
 
 // RIPRISTINO DI UN CONTO CHIUSO O ANNULLATO. Capita: si chiude un conto sul

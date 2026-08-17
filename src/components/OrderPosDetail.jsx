@@ -265,7 +265,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   // AGGIUNTE in composizione (BOZZA persistente). In creazione la chiave
   // tiene conto del gruppo: bozze di gruppi diversi non si mescolano.
   const draftKey = order ? order.id : groupParam ? `new:${groupParam}` : 'new'
-  const [draft, setDraft, clearDraft] = useDraft(draftKey)
+  const [draft, setDraft, clearDraft, dimenticaBozzaSalvata] = useDraft(draftKey)
   const draftRef = useRef(draft)
   draftRef.current = draft
 
@@ -392,6 +392,20 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   // altro e lasciare il primo per strada, con dentro quello che era già
   // stato battuto. Solo se è ancora aperto: un conto chiuso non si
   // riapre.
+  // LA SCHERMATA È ANCORA QUI? La creazione va avanti anche dopo che si è
+  // usciti — è quello che la rende immediata — ma quello che scrive PER la
+  // schermata (il conto in corso, lo stato locale) non deve più toccare
+  // niente: si usciva, la creazione finiva un istante dopo e si rimetteva in
+  // memoria «il conto in corso», così il «+» seguente riapriva quello — e
+  // per un attimo si vedevano i suoi prodotti segnati nella griglia.
+  const montatoRef = useRef(true)
+  useEffect(
+    () => () => {
+      montatoRef.current = false
+    },
+    []
+  )
+
   // USCENDO DAL POS SI DIMENTICA. Il «+» deve aprire un conto NUOVO: la
   // memoria del conto in corso serve solo a riprenderlo dopo un
   // RICARICAMENTO della pagina — dove questa pulizia non gira, perché il
@@ -1126,13 +1140,15 @@ export default function OrderPosDetail({ order: orderProp = null }) {
     // battute su un altro conto, pronte a essere battute due volte.
     // Le righe arrivate mentre l'ordine nasceva restano da parte: appena
     // c'è l'id vanno nella bozza sua.
+    // Le righe restano a schermo mentre il conto nasce: quello che si vede e
+    // quello che si ritrova riaprendo sono due cose diverse (vedi useDraft).
     const partite = draftRef.current.filter((r) => inviate.has(r.line_id))
     // Le righe che stanno partendo restano a portata di mano: chi preme
     // «Pagamento» in quell'istante deve vedere il conto, non una schermata
     // vuota perché la bozza è già stata svuotata.
     itemsInVoloRef.current = items
     const restanti = draftRef.current.filter((r) => !inviate.has(r.line_id))
-    clearDraft()
+    dimenticaBozzaSalvata()
     const run = async () => {
       try {
         const created = await createOrder({
@@ -1155,16 +1171,18 @@ export default function OrderPosDetail({ order: orderProp = null }) {
         const daPortare = [...restanti, ...arrivateDopo]
         if (daPortare.length) saveDraft(created.id, daPortare)
         itemsInVoloRef.current = null
-        selfOrderJsonRef.current = JSON.stringify(created) // evita un re-render doppio dalla subscription
-        ricordaContoInCorso(created.id) // se la pagina ricarica, si riprende da qui
-        setSelfOrder(created) // diventa "modifica" in place, niente reload
+        if (montatoRef.current) {
+          selfOrderJsonRef.current = JSON.stringify(created) // evita un re-render doppio dalla subscription
+          ricordaContoInCorso(created.id) // se la pagina ricarica, si riprende da qui
+          setSelfOrder(created) // diventa "modifica" in place, niente reload
+        }
         return created
       } catch (e) {
         creatingRef.current = false
         creatingPromiseRef.current = null
         // Il conto non è nato: le righe tornano in bozza. Averle svuotate
         // subito non deve costare quello che si era battuto.
-        saveDraft('new', [...partite, ...restanti, ...draftRef.current])
+        saveDraft('new', [...partite, ...restanti])
         toastError(`Ordine non creato: ${e.message}`)
         return null
       }
@@ -2498,13 +2516,25 @@ export default function OrderPosDetail({ order: orderProp = null }) {
           onCancel={() => setConfirmCancel(false)}
           onConfirm={() => {
             setConfirmCancel(false)
-            // Conto non ancora aperto: non c'è niente da annullare sul
-            // database, si butta la bozza e si torna indietro. Prima il
-            // tasto era spento e l'unico modo era togliere le righe una per
-            // una.
+            // Conto «nuovo»: la bozza si butta e si torna indietro. MA se
+            // nel frattempo l'ordine è nato — l'auto-creazione scatta poco
+            // dopo l'ultima riga, e battere quattro cose ci mette di più —
+            // quello va ANNULLATO davvero, altrimenti resta aperto in coda
+            // con dentro la roba che si è appena buttata. Era il conto
+            // fantasma che poi ricompariva aprendo il conto dopo.
             if (isNew) {
               clearDraft()
               ricordaContoInCorso(null)
+              const nato = creatingPromiseRef.current
+              if (nato) {
+                Promise.resolve(nato)
+                  .then((o) => {
+                    if (!o?.id) return
+                    nascondiOrdine(o.id)
+                    return cancelOrder(o.id, { by: 'bartender' })
+                  })
+                  .catch((e) => toastError(`Annullo non riuscito: ${e.message}`))
+              }
               return navigate('/bar')
             }
             cancelOrder(order.id, { by: 'bartender' }).catch((e) => {
