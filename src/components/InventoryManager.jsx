@@ -33,6 +33,7 @@ import {
   baseUnit,
   fromBaseQty,
   toBaseQty,
+  qtyInStockUnit,
   stockStatus,
   bottleSummary,
   bottleBreakdown,
@@ -1540,6 +1541,13 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
         : '',
     content_unit: initial?.content_unit === 'g' ? 'g' : 'cl',
     low_threshold: initial?.low_threshold ? String(fromBaseQty(initial.low_threshold, initUnit)) : '',
+    // CON CHE UNITÀ SI SCRIVONO QUESTI DUE NUMERI. La soglia di avviso di
+    // un liquido si pensa in bottiglie («avvisami quando ne resta una»),
+    // non in 700 ml; e il contenuto di una bottiglia si scrive «0,7 l»
+    // com'è stampato sull'etichetta, non 700 se l'articolo è in ml.
+    // Il valore salvato non cambia: cambia solo come lo si digita.
+    low_threshold_unit: initUnit,
+    package_size_unit: initUnit,
     bottles: '',
     open_content: '',
   })
@@ -1594,13 +1602,14 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
     setSaving(true)
     try {
       // A pezzo il contenuto arriva dal suo campo (33 cl), altrimenti dal
-      // contenuto per confezione nell'unità scelta. In unità generiche non
-      // c'è nessun contenuto: dentro una unità di lavoro non c'è niente.
+      // contenuto per confezione nell'unità scelta per QUEL campo. In unità
+      // generiche non c'è nessun contenuto: dentro una unità di lavoro non
+      // c'è niente.
       const packBase = isGenerico
         ? null
         : isPz
           ? toBaseQty(num(form.content_size), form.content_unit) || null
-          : toBaseQty(num(form.package_size), form.unit) || null
+          : toBaseQty(num(form.package_size), form.package_size_unit) || null
       const base = {
         name: form.name.trim(),
         unit: baseUnit(form.unit), // base in cui è salvato lo stock
@@ -1613,7 +1622,14 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
         package_size: packBase,
         // Serve solo a pezzo: dice se quel contenuto è un volume o un peso.
         content_unit: isPz && packBase ? baseUnit(form.content_unit) : null,
-        low_threshold: toBaseQty(num(form.low_threshold), form.unit),
+        // La soglia scritta in pezzi diventa contenuto (2 bottiglie da 70 cl
+        // = 1400 ml) e viceversa: è lo stesso passaggio che fa lo scarico
+        // dalla ricetta alla giacenza, quindi i due numeri non litigano.
+        low_threshold: qtyInStockUnit(num(form.low_threshold), form.low_threshold_unit, {
+          unit: baseUnit(form.unit),
+          package_size: packBase,
+          content_unit: isPz && packBase ? baseUnit(form.content_unit) : null,
+        }),
       }
       // ARTICOLO IN UNITÀ GENERICHE: non è una scorta, quindi non c'è nessuna
       // giacenza da salvare né bottiglie da contare — e nessuna conversione da
@@ -1774,8 +1790,25 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
         </p>
       ) : !isPz ? (
         <>
-          <label htmlFor="ipkg">Contenuto per confezione ({form.unit})</label>
-          <input id="ipkg" type="number" step="any" min="0" value={form.package_size} onChange={set('package_size')} placeholder={`Es. ${form.unit === 'l' ? '1' : form.unit === 'cl' ? '100' : '1000'} per una bottiglia da 1 L`} />
+          <label htmlFor="ipkg">Contenuto per confezione</label>
+          <div className="row" style={{ gap: 6 }}>
+            <input
+              id="ipkg"
+              type="number"
+              step="any"
+              min="0"
+              className="grow"
+              value={form.package_size}
+              onChange={set('package_size')}
+              placeholder="Es. 0,7 per una bottiglia da 70 cl"
+            />
+            <ScegliUnita
+              valore={form.package_size_unit}
+              unita={form.unit}
+              onChange={set('package_size_unit')}
+              etichetta="Unità del contenuto per confezione"
+            />
+          </div>
         </>
       ) : (
         <>
@@ -1829,8 +1862,31 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
           da avvisare e niente da riordinare al fornitore. */}
       {!isGenerico && (
         <>
-          <label htmlFor="ithr">Soglia di avviso ({form.unit})</label>
-          <input id="ithr" type="number" step="any" min="0" value={form.low_threshold} onChange={set('low_threshold')} placeholder={`Es. ${form.unit === 'l' ? '0,2' : form.unit === 'cl' ? '20' : form.unit === 'mg' ? '2000' : form.unit === 'g' ? '100' : form.unit === 'pz' ? '2' : '200'}`} />
+        <label htmlFor="ithr">Soglia di avviso</label>
+        <div className="row" style={{ gap: 6 }}>
+          <input
+            id="ithr"
+            type="number"
+            step="any"
+            min="0"
+            className="grow"
+            value={form.low_threshold}
+            onChange={set('low_threshold')}
+            placeholder="Es. 2 se vuoi l’avviso quando ne restano due"
+          />
+          <ScegliUnita
+            valore={form.low_threshold_unit}
+            unita={form.unit}
+            conPezzi
+            onChange={set('low_threshold_unit')}
+            etichetta="Unità della soglia di avviso"
+          />
+        </div>
+        <p className="muted small" style={{ margin: '2px 0 8px' }}>
+          {form.low_threshold_unit === 'pz' && baseUnit(form.unit) !== 'pz'
+            ? 'In pezzi: l’avviso scatta quando resta questo numero di confezioni intere.'
+            : 'Sotto questo livello l’articolo compare fra quelli in esaurimento.'}
+        </p>
         </>
       )}
 
@@ -1839,6 +1895,34 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
         <button type="submit" className="btn" disabled={saving}>{saving ? 'Salvataggio…' : 'Salva'}</button>
       </div>
     </form>
+  )
+}
+
+// LA SCELTA DELL'UNITÀ accanto a un campo. Le opzioni sono quelle
+// compatibili con come si conta l'articolo (litri, cl, ml per un liquido;
+// kg e grammi per un peso) più i PEZZI dove ha senso: la soglia di avviso
+// di un liquido si pensa in bottiglie — «avvisami quando ne resta una» —
+// e nessuno la vuole scrivere in 700 ml.
+const UNITA_COMPATIBILI = {
+  ml: ['l', 'cl', 'ml'],
+  g: ['kg', 'g'],
+  pz: ['pz'],
+}
+
+function ScegliUnita({ valore, unita, onChange, etichetta, conPezzi = false }) {
+  const base = baseUnit(unita)
+  const opzioni = [...(UNITA_COMPATIBILI[base] || [unita])]
+  // Per un articolo contato a pezzi il «pezzo» c'è già; per un liquido lo si
+  // aggiunge solo dove la conversione ha senso.
+  if (conPezzi && base !== 'pz') opzioni.push('pz')
+  return (
+    <select value={valore} onChange={onChange} aria-label={etichetta} style={{ width: 90 }}>
+      {opzioni.map((u) => (
+        <option key={u} value={u}>
+          {u}
+        </option>
+      ))}
+    </select>
   )
 }
 

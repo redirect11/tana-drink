@@ -1588,6 +1588,26 @@ requirements:
     labels: [magazzino, ordini]
     test_cases: [tests/unit/impegnato.test.js]
 
+  - id: REQ-MAG-013
+    title: "I numeri del magazzino si scrivono come li si pensa"
+    area: "src/components/InventoryManager.jsx, src/lib/inventory.js"
+    description: >
+      Nel modulo di un prodotto, il contenuto per confezione e la soglia di
+      avviso hanno accanto la scelta dell'unità. Il contenuto si scrive «0,7
+      l» com'è stampato sull'etichetta, invece di 700 su un articolo contato
+      in ml; la soglia si scrive in PEZZI — «avvisami quando resta una
+      bottiglia» — che è il modo in cui la domanda si fa al banco, e non in
+      700 ml.
+      Le opzioni sono solo quelle che hanno senso per come si conta
+      l'articolo (litri, cl, ml per un liquido; kg e grammi per un peso), più
+      i pezzi sulla soglia. Il valore salvato non cambia: cambia come lo si
+      digita, e la conversione è la stessa che usa lo scarico dalla ricetta —
+      altrimenti la soglia direbbe una cosa e il magazzino un'altra.
+    status: implemented
+    generate_issue: false
+    labels: [magazzino]
+    test_cases: [tests/unit/inventory.test.js]
+
   - id: REQ-MAG-011
     title: "In magazzino si contano i pezzi, con la virgola"
     area: "src/lib/inventory.js, src/components/InventoryManager.jsx"

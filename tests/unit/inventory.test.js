@@ -893,3 +893,28 @@ describe('la giacenza non scende sotto zero', () => {
     expect(stockValue({ unit: 'ml', package_size: 700, stock: -350, cost: 18, vat: 22 })).toBe(0)
   })
 })
+
+// LA SOGLIA DI AVVISO SI SCRIVE COME LA SI PENSA. «Avvisami quando resta
+// una bottiglia» è il modo in cui la domanda si fa al banco: nessuno la
+// pensa in 700 ml. Nel modulo si sceglie l'unità accanto al campo, e la
+// conversione è la stessa che usa lo scarico dalla ricetta — se fosse
+// un'altra, la soglia direbbe una cosa e il magazzino un'altra.
+describe('la soglia di avviso, scritta in pezzi o nell’unità', () => {
+  const gin = { unit: 'ml', package_size: 700 } // bottiglia da 70 cl, contata a volume
+  const birra = { unit: 'pz', package_size: 330, content_unit: 'ml' } // contata a pezzi
+
+  it('due bottiglie di un liquido sono il loro contenuto', () => {
+    expect(qtyInStockUnit(2, 'pz', gin)).toBe(1400)
+  })
+
+  it('e in litri resta quello che è', () => {
+    expect(qtyInStockUnit(0.7, 'l', gin)).toBe(700)
+  })
+
+  it('su un articolo a pezzi, i pezzi restano pezzi', () => {
+    expect(qtyInStockUnit(2, 'pz', birra)).toBe(2)
+  })
+
+  it('e un contenuto diventa la frazione di pezzo che è', () => {
+    expect(qtyInStockUnit(33, 'cl', birra)).toBeCloseTo(1, 5)  })
+})
