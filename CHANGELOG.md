@@ -12,6 +12,12 @@
 
 ### Al banco
 
+- **Gli avvisi si possono spostare nella campanella.** In Impostazioni →
+  Notifiche si sceglie: la strisciolina in alto su ogni schermata (come
+  adesso), oppure un fumetto che esce dalla campanella e compare **solo
+  nella coda ordini** — toccandolo si aprono gli avvisi. Chi sta in cassa o
+  in magazzino non viene più interrotto.
+
 - **La ⓘ si può spegnere** (Impostazioni → Vista ordine), per chi il
   listino lo sa a memoria e vuole le card pulite.
 - **La riga «💳 Pagati» torna sulla sua riga**: finiva accanto al primo
