@@ -1432,6 +1432,28 @@ requirements:
     labels: [ui, tema]
     test_cases: [tests/unit/temi.test.js, tests/unit/css.test.js]
 
+  - id: REQ-MAG-015
+    title: "Macro-categorie di magazzino e di menù, per incrociare speso e incassato"
+    area: "src/lib/macros.js, src/components/InventoryManager.jsx, src/components/StatsTab.jsx"
+    description: >
+      Chiesto da Flavio a voce (17/08, nota delle 20:13). Le macro-categorie
+      oggi sono una cosa sola e stanno sul MAGAZZINO: raggruppano le
+      categorie dei prodotti che si comprano. Servono anche sul MENÙ, sulle
+      categorie dei drink che si vendono — e le due cose vanno tenute
+      distinte («macro-categorie magazzino» e «macro-categorie menù»).
+      A cosa servono davvero: incrociarle. Da una parte quanto si è SPESO in
+      una macro d'acquisto, dall'altra quanto si è INCASSATO in una macro di
+      vendita, e il confronto fra le due — che è la domanda che il locale si
+      fa a fine mese e a cui oggi si risponde a mano.
+      Da decidere prima di scrivere codice: se le due macro vivono nella
+      stessa collezione con un campo che dice a chi appartengono o in due
+      separate; e come si aggancia una macro d'acquisto alla macro di
+      vendita corrispondente (una a una, o molte a molte).
+    status: todo
+    generate_issue: true
+    labels: [magazzino, menu, statistiche]
+    test_cases: []
+
   - id: REQ-MENU-011
     title: "Un drink si duplica: la ricetta non si riscrive a mano"
     area: "src/components/MenuManager.jsx"
