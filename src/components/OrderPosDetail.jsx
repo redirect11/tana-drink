@@ -500,6 +500,14 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   // resta in un cassetto.
   const uscitaRef = useRef(null)
   uscitaRef.current = () => {
+    // QUELLO CHE È STATO BATTUTO PARTE ADESSO. La bozza diventa comanda e le
+    // comande in sospeso vanno al server senza aspettare il mezzo secondo
+    // dell'auto-conferma: fra un istante questa schermata non esiste più e i
+    // suoi timer muoiono con lei. Battendo in fretta lo stesso prodotto e
+    // tornando subito in coda ne arrivava UNO SOLO — l'ultimo giro moriva
+    // col timer.
+    flushAdditionsRef.current?.()
+    flushAllRef.current?.()
     if (orderProp) return
     ricordaContoInCorso(null)
     if (draftRef.current.length > 0) createFromDraftRef.current()
@@ -597,6 +605,9 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
       // "ricaricamento" alla sync). Lo toglie l'effetto sotto, quando la comanda
       // dal server combacia davvero con l'override.
     } catch (e) {
+      // Se nel frattempo si è usciti dalla schermata non c'è più niente da
+      // aggiornare: la scrittura resta in coda a Firestore e riparte da sé.
+      if (!montatoRef.current) return
       setError(e.message)
       setPendingEdits((p) => omit(p, comandaId))
     }
@@ -606,8 +617,13 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     await Promise.all(Object.keys(latestPending.current).map((id) => flushComanda(id)))
   }, [flushComanda])
 
+  const flushAllRef = useRef(flushAll)
+  flushAllRef.current = flushAll
+
   useEffect(() => {
     const timers = flushTimers.current
+    // I timer si spengono, ma quello che aspettavano è già partito: ci pensa
+    // l'uscita (uscitaRef), che gira prima di questa pulizia.
     return () => Object.values(timers).forEach(clearTimeout)
   }, [])
 
@@ -1161,6 +1177,11 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
       // si svuota la bozza), così non spariscono un istante = niente flicker. Il
       // sync col server (e la pulizia dell'override) li fa flushComanda.
       const merged = [...(target.items || []), ...additions]
+      // SUBITO ANCHE NEL RIFERIMENTO, non solo nello stato: uscendo dalla
+      // schermata questo componente si smonta prima del prossimo disegno, e
+      // chi deve mandare le righe al server legge da qui. È la stessa
+      // ragione per cui la bozza si salva fuori dagli updater di React.
+      latestPending.current = { ...latestPending.current, [target.id]: merged }
       setPendingEdits((p) => ({ ...p, [target.id]: merged }))
       clearDraft()
       clearTimeout(flushTimers.current[target.id])

@@ -440,3 +440,23 @@ bugs:
     generate_issue: false
     labels: [bug, pos, pagamenti]
     test_cases: [tests/component/OrderPosDetail.test.jsx, tests/component/PosPage.test.jsx]
+
+  - id: BUG-016
+    title: "Battendo in fretta lo stesso prodotto e uscendo subito, ne arriva uno solo"
+    area: "src/components/OrderPosDetail.jsx"
+    description: >
+      Tre tap sullo stesso drink e via verso la coda: nel conto ne restava
+      uno. Le aggiunte non partono al tap — aspettano un attimo che la mano
+      si fermi (l'auto-conferma), poi la comanda va al server — e uscendo la
+      schermata si smontava portandosi dietro i suoi timer: l'ultimo giro di
+      righe non partiva mai.
+      RISOLTO: uscendo si manda tutto ADESSO, senza aspettare. E l'override
+      locale delle comande si scrive anche nel riferimento, non solo nello
+      stato React: fra un tap e l'uscita non c'è il tempo di un altro
+      disegno, e chi manda le righe al server legge da lì. È la stessa
+      ragione per cui la bozza si salva fuori dagli updater di React.
+    in_produzione: true
+    status: fixed
+    generate_issue: false
+    labels: [bug, pos]
+    test_cases: [tests/component/OrderPosDetail.test.jsx]
