@@ -121,7 +121,7 @@ vi.mock('../../src/lib/api.js', () => ({
   createSupplier: vi.fn(),
   updateSupplier: vi.fn(),
   deleteSupplier: vi.fn(),
-  // La colonna «a fine serata» (REQ-MAG-012) guarda la cassa aperta, i
+  // La colonna «a fine serata» (REQ-MAG-014) guarda la cassa aperta, i
   // conti in corso e il listino: il test le decide di volta in volta.
   subscribeOpenCashSession: vi.fn((cb) => {
     cb(stato.cassa)
@@ -321,14 +321,14 @@ describe('le scorte parlano a pezzi (REQ-MAG-011)', () => {
   })
 })
 
-// ── QUELLO CHE TI RITROVI A FINE SERATA (REQ-MAG-012) ────────────────
+// ── QUELLO CHE TI RITROVI A FINE SERATA (REQ-MAG-014) ────────────────
 //
 // A metà serata, sui tavoli, ci sono drink già fatti e conti non ancora
 // chiusi: quel gin è promesso anche se il magazzino non l'ha ancora
 // scalato. Chi guarda le scorte per decidere se mandare qualcuno a
 // prendere una bottiglia deve vedere quello, non la giacenza di questo
 // istante.
-describe('la colonna «a fine serata» (REQ-MAG-012)', () => {
+describe('la colonna «a fine serata» (REQ-MAG-014)', () => {
   const cassaAperta = { id: 'cassa-1', opened_at: '2026-08-17T18:00:00.000Z' }
   const negroni = {
     id: 'negroni',
