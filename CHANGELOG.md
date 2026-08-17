@@ -4,6 +4,11 @@
 
 ### Al banco
 
+- **Nel magazzino i numeri si scrivono come li si pensa**: il contenuto
+  per confezione in litri o cl («0,7 l», com'è sull'etichetta) e la soglia
+  di avviso **in pezzi** — «avvisami quando resta una bottiglia» — invece
+  che in millilitri.
+
 - **Uscendo, gli avvisi di quel dispositivo si spengono** — chi si era
   scollegato sentiva ancora suonare gli ordini del locale sul telefono di
   casa — e rientrando si riaccendono da soli.
