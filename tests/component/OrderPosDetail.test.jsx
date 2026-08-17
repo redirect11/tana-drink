@@ -728,14 +728,18 @@ describe('menu azioni del telefono', () => {
     )
   })
 
-  it('su un ordine NUOVO le azioni che richiedono un conto aperto sono spente', () => {
+  // «Annulla» stava in questo elenco, e non ci sta più: mentre si batte un
+  // conto nuovo è la VIA D'USCITA di chi l'ha aperto per sbaglio o ha
+  // cambiato idea. Spento restava solo la freccia in alto, che nessuno
+  // cerca. Vedi BUG-011.
+  it('su un ordine NUOVO «Invia» è spento, «Annulla» no', () => {
     render(
       <MemoryRouter>
         <OrderPosDetail order={null} />
       </MemoryRouter>
     )
     expect(screen.getByRole('button', { name: /Invia$/ })).toBeDisabled()
-    expect(screen.getByRole('button', { name: /Annulla$/ })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /Annulla$/ })).not.toBeDisabled()
   })
 })
 
