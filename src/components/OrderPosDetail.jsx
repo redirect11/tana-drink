@@ -178,6 +178,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   const [editLine, setEditLine] = useState(null) // riga bozza in modifica (editor)
   const [showComande, setShowComande] = useState(false)
   const [confirmCancel, setConfirmCancel] = useState(false)
+  const [confirmSvuota, setConfirmSvuota] = useState(false)
   // Menu delle azioni: esiste solo sul telefono, dove i tasti non ci stanno
   // tutti in pagina senza mangiarsi le righe del conto.
   const [showAzioni, setShowAzioni] = useState(false)
@@ -406,18 +407,36 @@ export default function OrderPosDetail({ order: orderProp = null }) {
     []
   )
 
+  // USCENDO DA QUI, LA BOZZA SI CHIUDE. Da qualunque parte si esca — la
+  // freccia, il menu, il tasto indietro del browser — quello che è stato
+  // battuto diventa un CONTO (si crea da sé, in locale) e la copia salvata
+  // sparisce.
+  //
+  // È la regola che mancava: la schermata del conto nuovo si deve aprire
+  // PULITA, senza pulizie all'apertura. Prima la bozza restava sotto la
+  // chiave 'new' e il conto dopo se la ritrovava dentro — le righe di quello
+  // prima, pronte a essere battute due volte. La «bozza che non si perde»
+  // continua a valere: non si perde perché diventa un conto, non perché
+  // resta in un cassetto.
+  const uscitaRef = useRef(null)
+  uscitaRef.current = () => {
+    if (orderProp) return
+    ricordaContoInCorso(null)
+    if (draftRef.current.length > 0) createFromDraftRef.current()
+    saveDraft('new', [])
+  }
+  useEffect(
+    () => () => {
+      uscitaRef.current?.()
+    },
+    []
+  )
+
   // USCENDO DAL POS SI DIMENTICA. Il «+» deve aprire un conto NUOVO: la
   // memoria del conto in corso serve solo a riprenderlo dopo un
   // RICARICAMENTO della pagina — dove questa pulizia non gira, perché il
   // programma muore e basta. Uscendo a mano invece gira, e premendo «+» non
   // ci si ritrova dentro il conto appena battuto.
-  useEffect(
-    () => () => {
-      if (!orderProp) ricordaContoInCorso(null)
-    },
-    [orderProp]
-  )
-
   useEffect(() => {
     if (orderProp || selfOrder) return undefined
     const id = contoInCorso()
@@ -1246,6 +1265,26 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   // subito e i tasti non devono spegnersi in quell'istante.
   const conRighe = draftCount > 0 || (itemsInVoloRef.current || []).length > 0 || !isNew
 
+  // Quante righe si porterebbe via il «svuota»: in creazione la bozza, su un
+  // conto aperto anche quelle già confermate ma ancora modificabili.
+  const righeDaSvuotare = isNew
+    ? draftCount
+    : draftCount + confirmedLines.filter((l) => l.removable !== false).length
+
+  function svuotaTutto() {
+    clearDraft()
+    if (isNew) return
+    // Sul conto vero le righe si tolgono UNA PER UNA con la strada di
+    // sempre (reduceComandaLine): così comande e magazzino restano in pari,
+    // e non c'è una seconda logica di cancellazione che un giorno dirà una
+    // cosa diversa dalla prima.
+    for (const l of confirmedLines.filter((r) => r.removable)) {
+      for (let i = 0; i < (Number(l.qty) || 0); i++) {
+        reduceComandaLine(l.comandaId, l.itemIndex)
+      }
+    }
+  }
+
   function handlePayNow() {
     // Le righe possono essere già partite per la creazione: la bozza si
     // svuota subito (vedi createFromDraft) e restano lì.
@@ -1259,6 +1298,13 @@ export default function OrderPosDetail({ order: orderProp = null }) {
     creatingRef.current = true
     setError(null)
     const items = draft.length ? draftToItems() : inVolo
+    // LE RIGHE SONO ANDATE IN PAGAMENTO: la copia salvata della bozza si
+    // dimentica subito. Restava lì, e il conto DOPO si apriva con dentro
+    // quello che si era appena incassato — la stessa roba, pronta a essere
+    // battuta due volte. A schermo restano finché la schermata è aperta:
+    // vedi createFromDraft, sono due cose diverse.
+    itemsInVoloRef.current = items
+    dimenticaBozzaSalvata()
     const mapped = items.map((i) => ({
       drink_id: i.drink_id,
       name: i.name,
@@ -1654,6 +1700,20 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                   title="Storia del conto: aperto, chiuso, annullato, riaperto"
                 >
                   🕘
+                </button>
+              )}
+              {/* SVUOTA TUTTO, una icona sola. Togliere venti righe una per
+                  una col «−» è il modo peggiore di ricominciare: capita di
+                  battere il conto sbagliato e accorgersene alla fine. Chiede
+                  conferma, che è irreversibile. */}
+              {righeDaSvuotare > 0 && !closed && (
+                <button
+                  className="btn ghost small"
+                  onClick={() => setConfirmSvuota(true)}
+                  aria-label="Svuota il conto"
+                  title="Svuota il conto: toglie tutte le righe"
+                >
+                  🧹
                 </button>
               )}
               {/* Il ⋯ c'è a TUTTE le taglie: era solo da telefono, ma le
@@ -2421,6 +2481,8 @@ export default function OrderPosDetail({ order: orderProp = null }) {
             creatingRef.current = false // pagamento annullato: riabilita l'auto-creazione
           }}
           onPaid={() => {
+            // Incassato: la bozza non serve più, né salvata né a schermo.
+            clearDraft()
             // In creazione l'id arriva da una PROMESSA: va attesa, se no si
             // "nasconde" un oggetto Promise e il conto pagato resta a
             // schermo nella coda finché il server non lo conferma.
@@ -2502,6 +2564,21 @@ export default function OrderPosDetail({ order: orderProp = null }) {
         </div>
       )}
 
+      {confirmSvuota && (
+        <ConfirmDialog
+          title="🧹 Svuotare il conto?"
+          message={`Le ${righeDaSvuotare} righe battute finora vengono tolte. Il conto resta aperto, vuoto.`}
+          confirmLabel="Svuota"
+          cancelLabel="Indietro"
+          danger
+          onCancel={() => setConfirmSvuota(false)}
+          onConfirm={() => {
+            setConfirmSvuota(false)
+            svuotaTutto()
+          }}
+        />
+      )}
+
       {confirmCancel && (
         <ConfirmDialog
           title="✖️ Annullare l'ordine?"
@@ -2522,19 +2599,22 @@ export default function OrderPosDetail({ order: orderProp = null }) {
             // quello va ANNULLATO davvero, altrimenti resta aperto in coda
             // con dentro la roba che si è appena buttata. Era il conto
             // fantasma che poi ricompariva aprendo il conto dopo.
+            // ANNULLARE LASCIA SEMPRE UN CONTO ANNULLATO. Anche se l'ordine
+            // non era ancora nato: il numero è già stato mostrato e preso, e
+            // di quello che è stato battuto deve restare traccia — un conto
+            // sparito nel nulla non si può nemmeno controllare. Quindi si
+            // crea (in locale, immediato) e si annulla.
             if (isNew) {
+              const nato = creatingPromiseRef.current || createFromDraftRef.current()
               clearDraft()
               ricordaContoInCorso(null)
-              const nato = creatingPromiseRef.current
-              if (nato) {
-                Promise.resolve(nato)
-                  .then((o) => {
-                    if (!o?.id) return
-                    nascondiOrdine(o.id)
-                    return cancelOrder(o.id, { by: 'bartender' })
-                  })
-                  .catch((e) => toastError(`Annullo non riuscito: ${e.message}`))
-              }
+              Promise.resolve(nato)
+                .then((o) => {
+                  if (!o?.id) return null
+                  nascondiOrdine(o.id)
+                  return cancelOrder(o.id, { by: 'bartender' })
+                })
+                .catch((e) => toastError(`Annullo non riuscito: ${e.message}`))
               return navigate('/bar')
             }
             cancelOrder(order.id, { by: 'bartender' }).catch((e) => {

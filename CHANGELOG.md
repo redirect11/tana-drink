@@ -4,6 +4,21 @@
 
 ### Al banco
 
+- **La schermata del conto nuovo si apre pulita, sempre.** Uscendo da
+  qualunque parte, quello che è stato battuto diventa un conto e la bozza
+  si chiude: non ci si ritrova più dentro le righe di quello prima.
+- **Un tasto 🧹 per svuotare il conto**, invece di togliere venti righe una
+  per una col «−». Chiede conferma.
+- **Annullare un conto appena battuto lascia un conto annullato**, anche se
+  l'ordine non era ancora nato: il numero era già stato preso e di quello
+  che si è battuto resta traccia.
+- **La storia del conto non perde più pezzi**: «Conto aperto» compare anche
+  prima che il server risponda, e restano tutte le chiusure, non solo
+  l'ultima.
+- **Le impostazioni del menù sono tre voci distinte**: «Menù clienti» (con
+  anche i suoi colori), «Gestione menù» e «Catalogo prodotti». Davanti a un
+  interruttore non si capiva a quale delle tre appartenesse.
+
 - **Quello che non è riuscito a partire riparte da solo** quando la rete
   torna: prima restava lì finché qualcuno non apriva la campanella e
   premeva «riprova» — e al banco non lo fa nessuno. Dopo tre tentativi si

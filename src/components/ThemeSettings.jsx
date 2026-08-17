@@ -17,6 +17,11 @@ import {
 // proprio profilo, la lista ordini, il menù per gli ordini manuali; chi
 // ordina vede il suo. Per questo le etichette dicono a chi tocca cosa: da
 // sole, "Gestionale" e "Vista cliente" sembravano due pagine.
+// I DUE TEMI STANNO DOVE STA LA COSA CHE COLORANO: quello del gestionale
+// in «Aspetto», quello del menù dei clienti in «Menù clienti», insieme a
+// tutto il resto di quella schermata. Messi uno sotto l'altro sembravano
+// due varianti della stessa cosa, e non si capiva quale delle due si stesse
+// toccando.
 export default function ThemeSettings({ settings, onSave }) {
   return (
     <div className="card settings-section">
@@ -29,13 +34,19 @@ export default function ThemeSettings({ settings, onSave }) {
         livePreview
         onSave={(t) => onSave({ theme_staff: t })}
       />
-      <ThemeEditor
-        title="Vista cliente — come lo vedono i clienti"
-        hint="I colori del menù sul telefono di chi ordina. Per provarli: menu ▸ Vista cliente."
-        value={settings.theme_client}
-        onSave={(t) => onSave({ theme_client: t })}
-      />
     </div>
+  )
+}
+
+// Il tema del menù dei clienti, da mostrare nella sua sezione.
+export function TemaMenuClienti({ settings, onSave }) {
+  return (
+    <ThemeEditor
+      title="Colori del menù"
+      hint="Come lo vedono i clienti sul telefono. Per provarlo: menu ▸ Vista cliente."
+      value={settings.theme_client}
+      onSave={(t) => onSave({ theme_client: t })}
+    />
   )
 }
 

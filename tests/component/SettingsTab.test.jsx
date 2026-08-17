@@ -51,6 +51,7 @@ vi.mock('../../src/components/InfoTab.jsx', () => ({
 }))
 vi.mock('../../src/components/ThemeSettings.jsx', () => ({
   default: () => <div>PANNELLO ASPETTO</div>,
+  TemaMenuClienti: () => <div>COLORI MENÙ CLIENTI</div>,
 }))
 
 import { MemoryRouter } from 'react-router-dom'
@@ -124,11 +125,13 @@ describe('impostazioni a schede', () => {
     expect(screen.getByRole('heading', { name: 'Coperto' })).toBeInTheDocument()
   })
 
-  it('le voci del sottomenu sono DIECI gruppi, non ventitré sezioni', () => {
+  it('le voci del sottomenu sono GRUPPI, non ventitré sezioni', () => {
     mostra()
     for (const voce of [
       'Aspetto',
-      'Menù e catalogo',
+      'Menù clienti',
+      'Gestione menù',
+      'Catalogo prodotti',
       'Banco: coda e ordine',
       'Servizio',
       'Cassa e giornata',
@@ -148,7 +151,9 @@ describe('impostazioni a schede', () => {
     const user = userEvent.setup()
     mostra()
     const attese = [
-      ['Menù e catalogo', [/Modalità menù/, /^Menù$/, /Catalogo/]],
+      ['Menù clienti', [/Menù clienti/]],
+      ['Gestione menù', [/Gestione menù/]],
+      ['Catalogo prodotti', [/Catalogo/]],
       ['Banco: coda e ordine', [/Coda ordini/, /Vista ordine/]],
       [/Servizio$/, [/Consegna/, /preparazione/, /Tempi di servizio/, /Annullamenti/]],
       ['Cassa e giornata', [/Pagamenti/, /Giornata/]],

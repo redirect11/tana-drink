@@ -8,7 +8,7 @@ import {
 import { CANCEL_PHRASES } from '../lib/orderStatus.js'
 import { parseCarteCsv, decodeCsvBuffer } from '../lib/carteImport.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
-import ThemeSettings from './ThemeSettings.jsx'
+import ThemeSettings, { TemaMenuClienti } from './ThemeSettings.jsx'
 import PrinterSetup from './PrinterSetup.jsx'
 
 import BackupPanel from './BackupPanel.jsx'
@@ -80,22 +80,6 @@ export default function SettingsTab({ role = null }) {
   // e Menù) si va dritti dove serve, e la scelta resta per la volta dopo.
   const sezioni = [
     { id: 'aspetto', icona: '🎨', label: 'Aspetto', nodo: <ThemeSettings settings={settings} onSave={save} /> },
-    {
-      id: 'modalita-menu',
-      icona: '📖',
-      label: 'Modalità menù',
-      nodo: (
-            <div className="card settings-section">
-              <h3>Modalità menù</h3>
-              <ToggleRow
-                label="Solo menù (consultazione)"
-                desc="I clienti vedono il menù ma non possono ordinare."
-                checked={settings.menu_only}
-                onChange={(v) => save({ menu_only: v })}
-              />
-            </div>
-      ),
-    },
     {
       id: 'vista-ordine',
       icona: '🧾',
@@ -659,67 +643,91 @@ export default function SettingsTab({ role = null }) {
       ),
     },
     {
-      id: 'menu',
-      icona: '🍹',
-      label: 'Menù',
+      // MENÙ CLIENTI: tutto quello che riguarda la schermata di chi ordina —
+      // cosa può fare, cosa vede, di che colore. Stava sparso fra «Modalità
+      // menù», «Menù» e «Aspetto», e davanti a un interruttore non si
+      // capiva se parlasse del menù dei clienti o della schermata con cui
+      // si modifica il listino.
+      id: 'menu-clienti',
+      icona: '📖',
+      label: 'Menù clienti',
       nodo: (
-            <div className="card settings-section">
-              <h3>Menù</h3>
-              <ToggleRow
-                label="Mostra quantità ingredienti"
-                desc="Es. «Gin 50 ml» invece di solo «Gin» nelle voci del menù."
-                checked={settings.show_ingredient_quantities}
-                onChange={(v) => save({ show_ingredient_quantities: v })}
-              />
-              <ToggleRow
-                label="Tabellone «stiamo servendo»"
-                desc="Mostra nel menù i numeri degli ordini pronti al servizio/ritiro. Nascosto in modalità solo menù."
-                checked={settings.show_serving_board}
-                onChange={(v) => save({ show_serving_board: v })}
-              />
-
-              {/* LA STRISCIA DELLE SCHEDE sta qui, dove si lavora il menù:
-                  è una scelta su come si guarda il catalogo, non su come si
-                  batte un conto. (La griglia del conto ha la sua, in Vista
-                  ordine.) */}
-              <h4 style={{ margin: '16px 0 4px' }}>
-                Cosa dice la riga a sinistra di ogni scheda del catalogo?
-              </h4>
-              <div className="mode-choice" style={{ gridTemplateColumns: '1fr 1fr' }}>
-                {MODI_STRISCIA.map((m) => (
-                  <button
-                    key={m.id}
-                    className={`mode-option${
-                      (settings.stripe_menu || 'scorte') === m.id ? ' active' : ''
-                    }`}
-                    onClick={() => save({ stripe_menu: m.id })}
-                    title={m.desc}
-                  >
-                    {m.label}
-                  </button>
-                ))}
-              </div>
-              <p className="muted small" style={{ margin: '8px 0 4px' }}>
-                Quale colore per «ci sono abbastanza scorte»?
-              </p>
-              <div className="mode-choice">
-                {[
-                  [false, '⚪ Grigio'],
-                  [true, '🟢 Verde'],
-                ].map(([value, label]) => (
-                  <button
-                    key={String(value)}
-                    className={`mode-option${
-                      !!settings.stripe_menu_ok_verde === value ? ' active' : ''
-                    }`}
-                    onClick={() => save({ stripe_menu_ok_verde: value })}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-
-            </div>
+        <div className="card settings-section">
+          <h3>Menù clienti</h3>
+          <p className="muted small" style={{ margin: '0 0 10px' }}>
+            La schermata che vedono i clienti sul telefono.
+          </p>
+          <ToggleRow
+            label="Solo menù (consultazione)"
+            desc="I clienti vedono il menù ma non possono ordinare."
+            checked={settings.menu_only}
+            onChange={(v) => save({ menu_only: v })}
+          />
+          <ToggleRow
+            label="Mostra quantità ingredienti"
+            desc="Es. «Gin 50 ml» invece di solo «Gin» nelle voci del menù."
+            checked={settings.show_ingredient_quantities}
+            onChange={(v) => save({ show_ingredient_quantities: v })}
+          />
+          <ToggleRow
+            label="Tabellone «stiamo servendo»"
+            desc="Mostra nel menù i numeri degli ordini pronti al servizio/ritiro. Nascosto in modalità solo menù."
+            checked={settings.show_serving_board}
+            onChange={(v) => save({ show_serving_board: v })}
+          />
+          <TemaMenuClienti settings={settings} onSave={save} />
+        </div>
+      ),
+    },
+    {
+      // GESTIONE MENÙ: la schermata con cui si lavora il listino. Le sue
+      // impostazioni non c'entrano niente con quello che vede il cliente.
+      id: 'gestione-menu',
+      icona: '🍹',
+      label: 'Gestione menù',
+      nodo: (
+        <div className="card settings-section">
+          <h3>Gestione menù</h3>
+          <p className="muted small" style={{ margin: '0 0 10px' }}>
+            La schermata con cui si modifica il listino, non quella dei clienti.
+          </p>
+          <h4 style={{ margin: '4px 0' }}>
+            Cosa dice la riga a sinistra di ogni scheda?
+          </h4>
+          <div className="mode-choice" style={{ gridTemplateColumns: '1fr 1fr' }}>
+            {MODI_STRISCIA.map((m) => (
+              <button
+                key={m.id}
+                className={`mode-option${
+                  (settings.stripe_menu || 'scorte') === m.id ? ' active' : ''
+                }`}
+                onClick={() => save({ stripe_menu: m.id })}
+                title={m.desc}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
+          <p className="muted small" style={{ margin: '8px 0 4px' }}>
+            Quale colore per «ci sono abbastanza scorte»?
+          </p>
+          <div className="mode-choice">
+            {[
+              [false, '⚪ Grigio'],
+              [true, '🟢 Verde'],
+            ].map(([value, label]) => (
+              <button
+                key={String(value)}
+                className={`mode-option${
+                  !!settings.stripe_menu_ok_verde === value ? ' active' : ''
+                }`}
+                onClick={() => save({ stripe_menu_ok_verde: value })}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
       ),
     },
     {
@@ -941,9 +949,13 @@ export default function SettingsTab({ role = null }) {
   // l'elenco era più lungo delle impostazioni.
   const GRUPPO_DI = {
     aspetto: 'aspetto',
-    'modalita-menu': 'menu-catalogo',
-    menu: 'menu-catalogo',
-    catalogo: 'menu-catalogo',
+    // Tre cose diverse, tre voci: quello che vedono i clienti, la
+    // schermata con cui si lavora il listino, e l'importazione del
+    // catalogo. Messe insieme, davanti a un interruttore non si capiva a
+    // quale delle tre appartenesse.
+    'menu-clienti': 'menu-clienti',
+    'gestione-menu': 'gestione-menu',
+    catalogo: 'catalogo',
     coda: 'banco',
     'vista-ordine': 'banco',
     consegna: 'servizio',
@@ -966,7 +978,9 @@ export default function SettingsTab({ role = null }) {
   }
   const GRUPPI = [
     { id: 'aspetto', icona: '🎨', label: 'Aspetto' },
-    { id: 'menu-catalogo', icona: '🍹', label: 'Menù e catalogo' },
+    { id: 'menu-clienti', icona: '📖', label: 'Menù clienti' },
+    { id: 'gestione-menu', icona: '🍹', label: 'Gestione menù' },
+    { id: 'catalogo', icona: '📥', label: 'Catalogo prodotti' },
     { id: 'banco', icona: '🧾', label: 'Banco: coda e ordine' },
     { id: 'servizio', icona: '🛎', label: 'Servizio' },
     { id: 'cassa', icona: '💳', label: 'Cassa e giornata' },
