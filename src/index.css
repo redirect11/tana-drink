@@ -6493,9 +6493,57 @@ a.storico-notifica:hover {
   border-color: var(--accent-2);
 }
 
-/* I titoli delle tre domande della scheda prodotto: piccoli, ma dicono dove
+/* Il titolo della domanda della scheda prodotto: piccolo, ma dice dove
    si è. */
 .inv-domanda {
   margin: 18px 0 2px;
   font-size: 0.95rem;
+}
+
+/* LA SCHEDA PRODOTTO PARTE DA UNA DOMANDA: che tipo di prodotto è? Le
+   quattro risposte sono card, non voci di una tendina: si leggono tutte
+   insieme, ognuna col suo esempio, e si sceglie con un tocco. Griglia
+   2×2 — quattro voci si abbracciano con lo sguardo — che si impila su una
+   colonna dove lo schermo è stretto. */
+.inv-tipi {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 6px 0 10px;
+}
+.inv-tipo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+.inv-tipo-icona {
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+/* Icona, titolo ed esempio su UNA riga: se il posto non basta si tronca
+   l'esempio, non si sfonda la card. */
+.inv-tipo-testo {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* La scelta si vede dal bordo acceso col colore del tema, non da un
+   colore scritto a mano: coi temi cambia anche lei. */
+.inv-tipo.scelto {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent) inset;
+}
+@media (max-width: 480px) {
+  .inv-tipi {
+    grid-template-columns: 1fr;
+  }
 }

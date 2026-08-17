@@ -10,6 +10,14 @@
 
 ### Al banco
 
+- **La scheda prodotto parte da una domanda: che tipo è?** Quattro card —
+  «Lo vendo intero», «Lo verso nei drink», «Sfuso, a peso o volume»,
+  «Lavoro o servizio» — e ognuna mostra solo i suoi campi: spariscono la
+  tendina delle unità a famiglie e la casella «è una scorta», che adesso
+  le decide il tipo. Per chi versa, «una bottiglia fa…» va scritto per
+  forza: senza, non si sa il costo al cl e il magazzino non scala quello
+  che si versa — e la scheda si ferma spiegandolo. Le schede già salvate
+  si riaprono da sole nel tipo giusto.
 - **Un drink si duplica**: nelle azioni della card del menù c'è «📋
   Duplica». Si apre la scheda già piena, col nome marcato «(copia)»: la
   ricetta non si riscrive ingrediente per ingrediente. Si salva quando è
