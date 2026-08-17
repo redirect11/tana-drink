@@ -34,6 +34,9 @@ import {
   fmtContenuto,
   scaricoPossibile,
   giacenzaPerCarico,
+  BASE_UNITS,
+  contentBase,
+  unitaGenerica,
 } from '../../src/lib/inventory.js'
 
 describe('toBaseQty', () => {
@@ -723,6 +726,122 @@ describe('unità del contenuto', () => {
   it('gli articoli già a volume restano come sono', () => {
     expect(fmtContenuto(700, gin)).toBe('70 cl')
     expect(fmtContenuto(300, gin)).toBe('30 cl')
+  })
+})
+
+// ── L'ARTICOLO IN UNITÀ GENERICHE «U»: LA MANODOPERA A LISTINO ───────
+//
+// «Tempo di Lavorazione» è una voce di magazzino creata di proposito per
+// mettere a listino il lavoro: si aggancia come ingrediente ai drink che
+// richiedono lavorazione, così il tempo entra nel costo della ricetta e
+// quindi nel prezzo consigliato. Ha un costo per unità, e basta.
+//
+// Non è un liquido, non è un peso e non è un pezzo che contiene qualcosa:
+// si misura in unità generiche, senza conversioni. Prima l'unica scelta
+// possibile era il grammo, e nella ricetta del Daiquiri si leggeva «Tempo
+// di Lavorazione 1 g».
+//
+// E soprattutto NON È UNA SCORTA: non si scarica e non finisce mai. Al
+// primo Daiquiri la manodopera sarebbe andata a zero, il drink avrebbe
+// detto «Ingrediente esaurito» e sarebbe sparito dalla carta — e da lì
+// non si sarebbe più mosso.
+describe('articolo in unità generiche (U)', () => {
+  // Tre unità di lavoro costano 0,50 € + IVA l'una.
+  const tempo = { id: 'tempo', name: 'Tempo di Lavorazione', unit: 'U', display_unit: 'U', cost: 0.5, vat: 22, stock: 0 }
+
+  it('riconosce l’unità generica, scritta come capita', () => {
+    expect(unitaGenerica('U')).toBe(true)
+    expect(unitaGenerica('u')).toBe(true)
+    expect(unitaGenerica('ml')).toBe(false)
+    expect(unitaGenerica('pz')).toBe(false)
+    expect(unitaGenerica(undefined)).toBe(false)
+  })
+
+  it('è un’unità base come ml, g e pz', () => {
+    expect(BASE_UNITS).toContain('U')
+    expect(baseUnit('U')).toBe('U')
+    expect(baseUnit('u')).toBe('U')
+  })
+
+  it('non si converte in niente: una U è una U', () => {
+    expect(toBaseQty(3, 'U')).toBe(3)
+    expect(fromBaseQty(3, 'U')).toBe(3)
+    expect(qtyInStockUnit(3, 'U', tempo)).toBe(3)
+  })
+
+  it('si scrive «3 U», mai «3 pz» e mai «3 g»', () => {
+    expect(formatIn(3, 'U')).toBe('3 U')
+    expect(formatQty(3, 'U')).toBe('3 U')
+    expect(fmtItem(3, tempo)).toBe('3 U')
+    // Anche senza unità di visualizzazione salvata (i doc vecchi).
+    expect(fmtItem(3, { unit: 'U' })).toBe('3 U')
+  })
+
+  it('nella ricetta si dosa in U, e non c’è altro da scegliere', () => {
+    expect(entryUnits(tempo)).toEqual(['U'])
+    expect(smallUnits(tempo)).toEqual(['U'])
+  })
+
+  it('non ha contenuto: non c’è niente dentro da misurare', () => {
+    expect(contentBase(tempo)).toBeNull()
+    expect(bottleBreakdown(tempo)).toBeNull()
+    expect(bottleSummary(tempo)).toBeNull()
+  })
+
+  it('il costo è per unità: una U costa quello che costa', () => {
+    expect(costPerUnit(tempo, 'U')).toBeCloseTo(0.61, 3) // 0,50 + IVA 22%
+    // Senza confezione: il costo non dipende da un contenuto che non c'è.
+    expect(costPerUnit({ ...tempo, package_size: null }, 'U')).toBeCloseTo(0.61, 3)
+  })
+
+  it('ma non si mescola con volumi e pesi', () => {
+    expect(costPerUnit(tempo, 'cl')).toBeNull()
+    expect(costPerUnit(tempo, 'g')).toBeNull()
+    expect(costPerCl(tempo)).toBeNull()
+    expect(costPerUnit({ unit: 'ml', package_size: 700, cost: 10, vat: 22 }, 'U')).toBeNull()
+  })
+
+  it('NON È UNA SCORTA: non è mai esaurito, nemmeno a zero', () => {
+    // Se fosse «esaurito», il menù direbbe «Ingrediente esaurito» e il
+    // drink sparirebbe dalla carta al primo che se ne fa.
+    expect(stockStatus(tempo)).toBe('ok')
+    expect(stockStatus({ ...tempo, stock: 0, low_threshold: 10 })).toBe('ok')
+    expect(stockStatus({ ...tempo, stock: -5 })).toBe('ok')
+    expect(inventorySummary([tempo])).toEqual({ total: 1, low: 0, empty: 0 })
+  })
+
+  it('e non vale niente in magazzino: il lavoro non sta sullo scaffale', () => {
+    expect(unitsInStock({ ...tempo, stock: 100 })).toBe(0)
+    expect(stockValue({ ...tempo, stock: 100 })).toBe(0)
+  })
+
+  it('non si scarica: la manodopera non si consuma', () => {
+    const drinks = {
+      daiquiri: {
+        recipe_items: [
+          { inventory_item_id: 'rum', name: 'Rum', unit: 'ml', qty: 50 },
+          { inventory_item_id: 'tempo', name: 'Tempo di Lavorazione', unit: 'U', qty: 3 },
+        ],
+      },
+    }
+    const cons = computeConsumption([{ drink_id: 'daiquiri', qty: 2 }], drinks)
+    expect(cons).toEqual([{ inventory_item_id: 'rum', name: 'Rum', unit: 'ml', qty: 100 }])
+    expect(cons.some((c) => c.inventory_item_id === 'tempo')).toBe(false)
+  })
+
+  it('e nemmeno quando la ricetta è incorporata in un drink al volo', () => {
+    const cons = computeConsumption(
+      [
+        {
+          drink_id: 'custom-1',
+          custom: true,
+          qty: 1,
+          recipe_items: [{ inventory_item_id: 'tempo', name: 'Tempo', unit: 'U', qty: 1 }],
+        },
+      ],
+      {}
+    )
+    expect(cons).toEqual([])
   })
 })
 

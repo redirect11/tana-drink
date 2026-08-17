@@ -62,6 +62,42 @@ describe('recipeCost', () => {
   })
 })
 
+// LA MANODOPERA NEL COSTO DEL DRINK, ed è il punto per cui esiste.
+// «Tempo di Lavorazione» è una voce di magazzino in unità generiche (U), con
+// un costo per unità: agganciata alla ricetta fa salire il costo del drink e
+// quindi il prezzo consigliato. Un drink che richiede lavorazione costa di
+// più, e il listino lo dice.
+describe('recipeCost con la manodopera in U', () => {
+  const tempo = { id: 'tempo', name: 'Tempo di Lavorazione', unit: 'U', cost: 0.5, vat: 22 }
+  const conTempo = { ...itemsById, tempo }
+
+  it('le righe in U contano col loro costo per unità', () => {
+    const { cost, missing } = recipeCost(
+      [
+        { inventory_item_id: 'gin', unit: 'cl', qty: 4 },
+        { inventory_item_id: 'tempo', name: 'Tempo di Lavorazione', unit: 'U', qty: 3 },
+      ],
+      conTempo
+    )
+    // 4 × 0,18056 + 3 × 0,61 (0,50 + IVA 22%)
+    expect(cost).toBeCloseTo(0.72224 + 1.83, 3)
+    expect(missing).toEqual([])
+  })
+
+  it('e il prezzo consigliato sale di conseguenza', () => {
+    const senza = recipeCost([{ inventory_item_id: 'gin', unit: 'cl', qty: 4 }], conTempo)
+    const con = recipeCost(
+      [
+        { inventory_item_id: 'gin', unit: 'cl', qty: 4 },
+        { inventory_item_id: 'tempo', unit: 'U', qty: 3 },
+      ],
+      conTempo
+    )
+    expect(con.cost).toBeGreaterThan(senza.cost)
+    expect(suggestedPrice(con.cost)).toBeGreaterThan(suggestedPrice(senza.cost))
+  })
+})
+
 describe('roundPrice / suggestedPrice', () => {
   it('arrotonda per eccesso al passo di 0,50', () => {
     expect(roundPrice(6.01)).toBe(6.5)
