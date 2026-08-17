@@ -1454,10 +1454,14 @@ requirements:
       = 50 cl, 1 sacco = 5000 g, 1 confezione = 10 U. Niente sotto-unità,
       niente divisioni, e le famiglie non c'entrano più: la resa la dichiara
       chi compra.
-      Da decidere con lui: la giacenza si conta in quello che si COMPRA (i
-      chili di limoni sullo scaffale) — che è la proposta, perché
-      l'inventario si fa contando la merce — o in quello che si usa.
-      Quando questo è deciso, BUG-014 si chiude da sé.
+      DECISO da Flavio (17/08): la giacenza si conta in QUELLO CHE SI
+      COMPRA — i chili di limoni, i sacchi di ghiaccio, le bottiglie —
+      perché l'inventario si fa contando quello che c'è sullo scaffale, non
+      il succo che ne uscirà. Le ricette dosano nell'unità d'uso e scalano
+      la loro frazione, come già fanno i cl di gin su una bottiglia.
+      Il modello è quindi completo e si può scrivere: unità d'acquisto
+      (giacenza e prezzo), unità d'uso (ricette), resa fra le due quando
+      sono diverse. Con questo, BUG-014 si chiude da sé.
     status: todo
     generate_issue: true
     labels: [magazzino, ux]
