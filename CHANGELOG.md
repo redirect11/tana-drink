@@ -1,6 +1,6 @@
 # Cosa è cambiato
 
-## Non ancora rilasciata — 1.4.6
+## 1.4.7 — 17 agosto 2026
 
 ### Sotto il cofano
 
