@@ -38,6 +38,13 @@ vi.mock('../../src/lib/api.js', () => ({
   DEFAULT_SETTINGS: { service_mode: 'tavolo' },
 }))
 
+const DRINKS = [
+  { id: 'd1', name: 'Mojito', price: 7, category_id: 'c1', available: true },
+  { id: 'd2', name: 'Negroni', price: 8, category_id: 'c1', available: true },
+  { id: 'd3', name: 'Ichnusa', price: 4, category_id: 'c2', available: true },
+]
+let mockDrinks = DRINKS
+
 vi.mock('../../src/lib/menuCache.js', () => ({
   useMenu: () => ({
     loading: false,
@@ -45,11 +52,7 @@ vi.mock('../../src/lib/menuCache.js', () => ({
       { id: 'c1', name: 'Cocktail', sort_order: 1 },
       { id: 'c2', name: 'Birre', sort_order: 2 },
     ],
-    drinks: [
-      { id: 'd1', name: 'Mojito', price: 7, category_id: 'c1', available: true },
-      { id: 'd2', name: 'Negroni', price: 8, category_id: 'c1', available: true },
-      { id: 'd3', name: 'Ichnusa', price: 4, category_id: 'c2', available: true },
-    ],
+    drinks: mockDrinks,
   }),
 }))
 
@@ -107,6 +110,7 @@ const voci = () =>
 
 beforeEach(() => {
   mockSettings = {}
+  mockDrinks = DRINKS
   ruoloClaim = 'bartender'
   stampaSala = 'ip'
   stampata.mockClear()
@@ -167,6 +171,60 @@ describe('il menù è uno solo, quello del cliente', () => {
     const aggiungi = screen.getAllByRole('button', { name: /Aggiungi/ })
     await user.click(aggiungi[0])
     expect(screen.getByText(/Rivedi ordine/)).toBeInTheDocument()
+  })
+
+  // IN CARTA CI VA QUELLO CHE SI BEVE.
+  // La lista ingredienti sotto al drink stampa le righe della ricetta, e fra
+  // quelle righe adesso c'è anche la manodopera, che è una voce di magazzino
+  // in unità generiche (U) messa lì per far entrare il lavoro nel costo:
+  // «Tempo di Lavorazione 3 U» non è roba da far leggere a chi ordina.
+  it('la manodopera non si mostra al cliente', async () => {
+    ruoloClaim = null
+    mockSettings = { show_ingredient_quantities: true }
+    mockDrinks = [
+      {
+        id: 'd4',
+        name: 'Daiquiri',
+        price: 8,
+        category_id: 'c1',
+        available: true,
+        recipe_items: [
+          { inventory_item_id: 'rum', name: 'Rum', unit: 'ml', qty: 50 },
+          { inventory_item_id: 'lime', name: 'Lime', unit: 'pz', qty: 1 },
+          { inventory_item_id: 'tempo', name: 'Tempo di Lavorazione', unit: 'U', qty: 3 },
+        ],
+      },
+    ]
+    mostra()
+    await screen.findByText('Daiquiri')
+    const ingredienti = document.querySelector('.ingredients').textContent
+    expect(ingredienti).toContain('Rum')
+    expect(ingredienti).toContain('Lime')
+    expect(ingredienti).not.toContain('Tempo di Lavorazione')
+    expect(ingredienti).not.toMatch(/\bU\b/)
+  })
+
+  it('e un drink con un solo ingrediente vero non elenca niente', async () => {
+    // La lista si mostra da due ingredienti in su: contano quelli che si
+    // vedono, non le righe della ricetta.
+    ruoloClaim = null
+    mockSettings = { show_ingredient_quantities: true }
+    mockDrinks = [
+      {
+        id: 'd5',
+        name: 'Shot di Rum',
+        price: 4,
+        category_id: 'c1',
+        available: true,
+        recipe_items: [
+          { inventory_item_id: 'rum', name: 'Rum', unit: 'ml', qty: 40 },
+          { inventory_item_id: 'tempo', name: 'Tempo di Lavorazione', unit: 'U', qty: 1 },
+        ],
+      },
+    ]
+    mostra()
+    await screen.findByText('Shot di Rum')
+    expect(document.querySelector('.ingredients')).toBeNull()
   })
 
   it('a «solo menù» il cliente guarda e basta: niente tasti per aggiungere', async () => {

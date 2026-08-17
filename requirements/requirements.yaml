@@ -656,6 +656,11 @@ requirements:
       ricette, salvando lo snapshot del consumo sulla comanda: serve per stornare
       in caso di annullo e per non scalare due volte. Il magazzino che non risponde
       non blocca la comanda: viene segnata come non scaricata e si recupera dopo.
+      SOTTO ZERO NON SI SCENDE: si toglie al massimo quello che risulta in
+      giacenza, e un carico su una giacenza negativa riparte da zero. La vendita
+      passa comunque (il conto è già scritto) e il magazzino si ferma a zero:
+      altrimenti il buco resta, il carico dopo conta meno di una bottiglia e il
+      valore in euro va in negativo.
     status: implemented
     generate_issue: false
     labels: [magazzino, offline]
@@ -752,6 +757,33 @@ requirements:
     generate_issue: false
     labels: [magazzino, ux]
     test_cases: [tests/component/InventoryManager.test.jsx]
+
+  - id: REQ-MAG-012
+    title: "Unità generiche: la manodopera entra nel costo del drink"
+    area: "src/lib/inventory.js, src/lib/pricing.js, src/components/InventoryManager.jsx, src/pages/MenuPage.jsx"
+    description: >
+      Un articolo di magazzino si può misurare in unità generiche «U», senza
+      contenuto e senza conversioni: serve per quello che non si versa e non si
+      pesa — il «Tempo di Lavorazione», che si aggancia come ingrediente ai
+      drink che richiedono lavorazione perché il lavoro entri nel costo della
+      ricetta e quindi nel prezzo consigliato. Ha un costo per unità, e basta.
+      Prima l'unica scelta possibile era il grammo, e nella ricetta del
+      Daiquiri si leggeva «Tempo di Lavorazione 1 g».
+      Un articolo in U NON È UNA SCORTA, e da qui vengono tre regole: non si
+      scarica quando il drink si fa (resta fuori dal consumo, quindi non si
+      reintegra nemmeno all'annullo); non è mai «esaurito» né «in
+      esaurimento», così il drink che lo usa non sparisce dalla carta al primo
+      che se ne fa e non finisce nelle proposte d'ordine al fornitore; non vale
+      niente nel valore del magazzino, che il lavoro non sta sullo scaffale.
+      Al cliente non si mostra: le righe in unità generiche restano fuori dalla
+      lista ingredienti in carta — «Tempo di Lavorazione 3 U» non è roba da far
+      leggere a chi ordina — e la lista compare da due ingredienti veri in su.
+      Restano visibili dove servono a chi gestisce: ricetta, costi, margini e
+      prezzo consigliato.
+    status: implemented
+    generate_issue: false
+    labels: [magazzino, prezzi, menu]
+    test_cases: [tests/unit/inventory.test.js, tests/unit/pricing.test.js, tests/component/InventoryManagerCard.test.jsx, tests/component/MenuPage.test.jsx]
 
   # ══════════════════════════════════════════════════════════════════════
   #  MENÙ E CATALOGO
@@ -1278,6 +1310,20 @@ requirements:
       costo, confezione, categoria, soglia e IVA. La copia nasce con la
       giacenza a ZERO (è un prodotto che non è mai entrato in magazzino) e
       apre subito la scheda, perché il nome «(copia)» va cambiato.
+      I NUMERI SI SCRIVONO COME SI LEGGONO: due decimali al massimo e la
+      virgola, mai il numero grezzo del calcolo — sulla card del Campari si
+      leggeva «7.49000000001 pz». E sotto al numero grande dei pezzi ci va il
+      CONTENUTO in cl (o in g), che è quello che serve a chi sta versando: per
+      gli articoli contati a pezzo ripeteva lo stesso dato di sopra.
+      Il dettaglio aperto STA DENTRO LA CARD: etichetta sopra e valore sotto,
+      perché la griglia a due colonne della vista a Lista, dentro una card
+      stretta, lascia al valore una colonna larga un dito e manda il testo a
+      capo a fisarmonica. Vale anche per la fila dei tasti in fondo (modifica,
+      duplica, elimina): le colonne si stringono e vanno a capo da sé secondo
+      la larghezza della CARD e non della finestra — una @media non vedrebbe
+      mai una card stretta su un monitor grande — e nel caso peggiore la parola
+      si tronca invece di sfondare il bordo. Nella vista a Lista, dove lo
+      spazio c'è, non cambia niente.
     status: implemented
     generate_issue: false
     labels: [magazzino, ux]

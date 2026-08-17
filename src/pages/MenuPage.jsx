@@ -18,7 +18,7 @@ import {
   formatPrice,
   placedByName,
 } from '../lib/orderStatus.js'
-import { formatQty } from '../lib/inventory.js'
+import { formatQty, unitaGenerica } from '../lib/inventory.js'
 import { etaForMode } from '../lib/eta.js'
 import { checkGeofence, geofenceConfigured } from '../lib/geo.js'
 import { ensureNotificationPermission } from '../lib/notify.js'
@@ -540,18 +540,30 @@ export default function MenuPage() {
                         {d.description}
                       </p>
                     )}
-                    {/* Con un solo ingrediente la lista è ridondante (es. shot). */}
-                    {d.recipe_items && d.recipe_items.length > 1 && (
-                      <p className="ingredients">
-                        {d.recipe_items
-                          .map((r) =>
-                            settings.show_ingredient_quantities
-                              ? `${r.name} ${formatQty(r.qty, r.unit)}`
-                              : r.name
-                          )
-                          .join(' · ')}
-                      </p>
-                    )}
+                    {/* IN CARTA CI VA QUELLO CHE SI BEVE. Le righe in unità
+                        generiche (il «Tempo di Lavorazione», che sta nella
+                        ricetta per far entrare il lavoro nel costo del drink)
+                        restano fuori: «Tempo di Lavorazione 3 U» non è roba da
+                        far leggere a chi ordina. Con un solo ingrediente la
+                        lista è ridondante (es. shot), e contano quelli che si
+                        vedono. */}
+                    {(() => {
+                      const ingredienti = (d.recipe_items || []).filter(
+                        (r) => !unitaGenerica(r.unit)
+                      )
+                      if (ingredienti.length <= 1) return null
+                      return (
+                        <p className="ingredients">
+                          {ingredienti
+                            .map((r) =>
+                              settings.show_ingredient_quantities
+                                ? `${r.name} ${formatQty(r.qty, r.unit)}`
+                                : r.name
+                            )
+                            .join(' · ')}
+                        </p>
+                      )
+                    })()}
                     <span className="price">{formatPrice(d.price)}</span>
                   </div>
                   {canOrder && (
