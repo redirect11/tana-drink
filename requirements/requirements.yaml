@@ -718,6 +718,32 @@ requirements:
     labels: [cassa]
     test_cases: [tests/unit/cassa.test.js]
 
+  - id: REQ-CASSA-007
+    title: "Il flusso cassa serve DURANTE la serata, non solo alla chiusura"
+    area: "src/lib/cassa.js, src/components/CashFlow.jsx"
+    description: >
+      Alla chiusura i numeri sono un verdetto; durante il servizio sono
+      decisioni. La schermata dice, in tempo reale:
+      quanto deve esserci in cassa ADESSO (fondo più i contanti incassati) —
+      prima si sapeva solo alla chiusura, e serve al cambio turno o quando
+      due numeri non tornano;
+      il conto medio, con quanti conti e quanti coperti, e quanto lascia una
+      persona — in un cocktail bar un tavolo da sei e uno da due fanno due
+      serate diverse con lo stesso «conto medio»;
+      chi ha incassato e quanto, perché in una serata si alternano in due o
+      tre alla cassa e se il contante non torna è la prima domanda che ci si
+      fa (l'elenco compare solo se sono stati in più di uno);
+      com'è andata l'ultima ora, non solo la curva della serata: dice come
+      sta andando adesso, se aprire un'altra cassa o mandare qualcuno in
+      pausa.
+      Chi ha incassato è scritto sul pagamento; sui conti battuti prima non
+      c'è e si ripiega su chi ha aperto il conto — meglio un nome vicino al
+      vero che una riga «sconosciuto».
+    status: implemented
+    generate_issue: false
+    labels: [cassa]
+    test_cases: [tests/unit/cassa.test.js]
+
   - id: REQ-CASSA-003
     title: "La carta non finisce mai nei contanti"
     area: "src/lib/cassa.js"

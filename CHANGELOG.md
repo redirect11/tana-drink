@@ -4,6 +4,12 @@
 
 ### Al banco
 
+- **Il flusso cassa parla durante la serata, non solo alla chiusura**:
+  quanto deve esserci in cassa adesso (fondo + contanti), il conto medio
+  con i coperti e quanto lascia una persona, chi ha incassato e quanto —
+  se alla cassa si sono alternati in più d'uno — e com'è andata l'ultima
+  ora, non solo la curva.
+
 - **Nella lista ordini si cercano anche le serate passate.** C'è un
   calendario come quelli degli alberghi: tocchi un giorno per vedere
   quella serata, ne tocchi un altro per arrivare fin lì. Sopra, le
