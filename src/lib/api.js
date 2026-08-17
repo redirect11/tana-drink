@@ -24,7 +24,13 @@ import { db } from './firebaseClient.js'
 import { ORDER_STATUSES } from './orderStatus.js'
 import { splitAmounts } from './groups.js'
 import { createSumUpSale, updateSumUpSaleStatus, toSumUpStatus } from './sumupApi.js'
-import { computeConsumption, formatQty, qtyInStockUnit } from './inventory.js'
+import {
+  computeConsumption,
+  formatQty,
+  qtyInStockUnit,
+  scaricoPossibile,
+  giacenzaPerCarico,
+} from './inventory.js'
 import { consumptionDiff } from './warehouse.js'
 import { patchRipristino, buoniDaRestituire, segnaBuoniRestituiti } from './ripristino.js'
 import { riaddebitoBuono } from './vouchers.js'
@@ -478,7 +484,12 @@ export async function loadStock(itemId, qty, { reason = 'carico' } = {}) {
   const s = await getDoc(ref)
   if (!s.exists()) throw new Error('Prodotto non trovato')
   const cur = s.data()
-  await updateDoc(ref, { stock: (Number(cur.stock) || 0) + qty })
+  // Un carico parte da quello che c'è, e quello che c'è non è mai negativo:
+  // una bottiglia caricata su −0,04 deve valere una bottiglia. Lo scarico a
+  // mano, dall'altra parte, non può scavare sotto lo zero.
+  const partenza = giacenzaPerCarico(cur.stock)
+  const nuovo = qty >= 0 ? partenza + qty : partenza - scaricoPossibile(partenza, -qty)
+  await updateDoc(ref, { stock: nuovo })
   await addDoc(movementsCol, {
     item_id: itemId,
     item_name: cur.name,
@@ -500,7 +511,10 @@ export async function receiveBottles(itemId, count, openQty = 0) {
   if (!s.exists()) throw new Error('Prodotto non trovato')
   const cur = s.data()
   const size = Number(cur.package_size) || 0
-  const stock = Number(cur.stock) || 0
+  // Il carico riparte da zero se la giacenza era andata sotto: altrimenti la
+  // bottiglia appena comprata copre il buco e in magazzino ne risulta meno
+  // di una, mentre sullo scaffale c'è tutta.
+  const stock = giacenzaPerCarico(cur.stock)
   const full = size ? Math.floor(stock / size) : 0
   const hasOpen = size ? stock - full * size > 1e-9 : false
   const withContent = full + (hasOpen ? 1 : 0)
@@ -2116,8 +2130,11 @@ function riallineaInSottofondo(orderId, comandaId) {
         const sn = invSnaps[idx]
         if (!sn.exists()) continue
         const curItem = sn.data()
+        // Anche qui non si scende sotto zero: una comanda modificata al rialzo
+        // su un prodotto già finito toglieva l'aggiunta comunque.
+        const scarico = scaricoPossibile(curItem.stock, qtyInStockUnit(d.delta, d.unit, curItem))
         bgWrite(() => updateDoc(doc(db, 'inventory_items', d.inventory_item_id), {
-          stock: increment(-qtyInStockUnit(d.delta, d.unit, curItem)),
+          stock: increment(-scarico),
         }), 'riallineo scorta')
         bgWrite(() => addDoc(movementsCol, {
           item_id: d.inventory_item_id,
@@ -2186,8 +2203,13 @@ async function depleteComandeInventory(entries) {
   const lowStock = []
   for (const [id, qty] of Object.entries(delta)) {
     const cur = itemsById[id]
-    const newStock = (Number(cur.stock) || 0) - qty
-    bgWrite(() => updateDoc(doc(db, 'inventory_items', id), { stock: increment(-qty) }), 'scarico scorta')
+    // NON SI SCENDE SOTTO ZERO. Si toglie al massimo quello che risulta in
+    // giacenza: continuando a battere un prodotto finito si arrivava a
+    // −0,04 pz, e il carico successivo ripartiva da quel buco. L'increment
+    // resta (commutativo, si accoda offline): cambia solo quanto si chiede.
+    const scarico = scaricoPossibile(cur.stock, qty)
+    const newStock = giacenzaPerCarico(cur.stock) - scarico
+    bgWrite(() => updateDoc(doc(db, 'inventory_items', id), { stock: increment(-scarico) }), 'scarico scorta')
     if (newStock <= (Number(cur.low_threshold) || 0)) {
       lowStock.push({ name: cur.name, stock: newStock, unit: cur.unit })
     }

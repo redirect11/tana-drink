@@ -46,6 +46,7 @@ import {
   smallUnits,
   costPerUnit,
   inventoryTotalValue,
+  unitaGenerica,
 } from '../lib/inventory.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import { parseSupplierList } from '../lib/warehouse.js'
@@ -66,6 +67,10 @@ const STATUS_ITEM = [
 ]
 
 const STATUS_LABEL = { ok: '', low: 'in esaurimento', empty: 'esaurito' }
+
+// Come si chiama, a parole, il modo in cui un articolo è gestito: è quello che
+// si legge nell'avviso quando lo si cambia in modifica.
+const GESTIONE_LABEL = { pz: 'pezzi', g: 'peso', ml: 'liquidi', U: 'unità generiche' }
 
 // Come si legge l'assortimento in lista: OUT accanto al nome (si deve vedere
 // subito che non si ricompra) e una coroncina piccola sui premium. Chi è "in
@@ -1345,9 +1350,15 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
   const num = (v) => Number(String(v).replace(',', '.')) || 0
   const isPz = baseUnit(form.unit) === 'pz'
+  // ARTICOLO IN UNITÀ GENERICHE (il «Tempo di Lavorazione»): non ha contenuto,
+  // non ha confezione e non è una scorta. Di suo serve solo il COSTO PER
+  // UNITÀ — è il motivo per cui la voce esiste, mettere il lavoro nel costo
+  // del drink. Chiedere confezione, giacenza iniziale e soglia di avviso
+  // vorrebbe dire far riempire campi che non vogliono dire niente.
+  const isGenerico = unitaGenerica(baseUnit(form.unit))
   const costNum = num(form.cost)
   // Contenuto per confezione nell'unità scelta (per il costo unitario).
-  const packInUnit = !isPz ? num(form.package_size) : 0
+  const packInUnit = !isPz && !isGenerico ? num(form.package_size) : 0
   const initialBase = baseUnit(initUnit)
   const baseChanged = isEdit && baseUnit(form.unit) !== initialBase
   // Conversione possibile solo con il contenuto per confezione: verso i pezzi
@@ -1386,10 +1397,13 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
     setSaving(true)
     try {
       // A pezzo il contenuto arriva dal suo campo (33 cl), altrimenti dal
-      // contenuto per confezione nell'unità scelta.
-      const packBase = isPz
-        ? toBaseQty(num(form.content_size), form.content_unit) || null
-        : toBaseQty(num(form.package_size), form.unit) || null
+      // contenuto per confezione nell'unità scelta. In unità generiche non
+      // c'è nessun contenuto: dentro una unità di lavoro non c'è niente.
+      const packBase = isGenerico
+        ? null
+        : isPz
+          ? toBaseQty(num(form.content_size), form.content_unit) || null
+          : toBaseQty(num(form.package_size), form.unit) || null
       const base = {
         name: form.name.trim(),
         unit: baseUnit(form.unit), // base in cui è salvato lo stock
@@ -1403,6 +1417,13 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
         // Serve solo a pezzo: dice se quel contenuto è un volume o un peso.
         content_unit: isPz && packBase ? baseUnit(form.content_unit) : null,
         low_threshold: toBaseQty(num(form.low_threshold), form.unit),
+      }
+      // ARTICOLO IN UNITÀ GENERICHE: non è una scorta, quindi non c'è nessuna
+      // giacenza da salvare né bottiglie da contare — e nessuna conversione da
+      // fare passando da un'altra unità, perché non c'è niente da convertire.
+      if (isGenerico) {
+        await onSave({ ...base, stock: 0, bottles_total: 0 })
+        return
       }
       // Cambio del modo di gestire l'articolo SENZA il contenuto per confezione:
       // la conversione non è calcolabile e si salverebbe una giacenza falsa
@@ -1470,7 +1491,9 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
 
       <div className="grid-2">
         <div>
-          <label htmlFor="icost">Costo €/pz (netto)</label>
+          {/* In unità generiche il costo è PER UNITÀ: è tutto quello che
+              serve sapere di una voce come il tempo di lavorazione. */}
+          <label htmlFor="icost">Costo €/{isGenerico ? 'U' : 'pz'} (netto)</label>
           <input id="icost" type="number" step="any" min="0" value={form.cost} onChange={set('cost')} placeholder="Es. 12,9" />
         </div>
         <div>
@@ -1498,6 +1521,11 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
           ['Liquidi', [['l', 'Litri (L)'], ['cl', 'Centilitri (cl)'], ['ml', 'Millilitri (ml)']]],
           ['Solidi', [['g', 'Grammi (g)'], ['mg', 'Milligrammi (mg)']]],
           ['Pezzi', [['pz', 'Pezzi / unità (bottiglie, lattine, confezioni…)']]],
+          // GENERICO: quello che non si versa, non si pesa e non è una
+          // bottiglia — il tempo di lavorazione messo a listino. Senza,
+          // l'unica scelta possibile era il grammo, e nella ricetta si
+          // leggeva «Tempo di Lavorazione 1 g».
+          ['Generico', [['U', 'Unità generiche (U) — es. tempo di lavorazione']]],
         ].map(([grp, units]) => (
           <optgroup key={grp} label={grp}>
             {units.map(([u, label]) => (
@@ -1513,14 +1541,24 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
       </select>
 
       {/* Cambio del modo di gestire l'articolo: si dice CHIARAMENTE come
-          finisce la giacenza, prima di salvare. */}
+          finisce la giacenza, prima di salvare. Passando alle unità generiche
+          la giacenza sparisce del tutto: quella voce non è una scorta. */}
       {baseChanged && (
         <div className="banner" style={{ marginTop: 8 }}>
-          ⚠️ Cambi la gestione da <strong>{initialBase === 'pz' ? 'pezzi' : initialBase === 'g' ? 'peso' : 'liquidi'}</strong>{' '}
-          a <strong>{isPz ? 'pezzi' : baseUnit(form.unit) === 'g' ? 'peso' : 'liquidi'}</strong>: la giacenza attuale
-          ({fmtItem(initial?.stock, initial)}) diventerà{' '}
-          <strong>{formatQty(convertedStock(), baseUnit(form.unit))}</strong>.
-          {!convertible && (
+          ⚠️ Cambi la gestione da <strong>{GESTIONE_LABEL[initialBase]}</strong>{' '}
+          a <strong>{GESTIONE_LABEL[baseUnit(form.unit)]}</strong>:{' '}
+          {isGenerico ? (
+            <>
+              la giacenza attuale ({fmtItem(initial?.stock, initial)}) non serve più e
+              viene <strong>azzerata</strong> — le unità generiche non sono una scorta.
+            </>
+          ) : (
+            <>
+              la giacenza attuale ({fmtItem(initial?.stock, initial)}) diventerà{' '}
+              <strong>{formatQty(convertedStock(), baseUnit(form.unit))}</strong>.
+            </>
+          )}
+          {!convertible && !isGenerico && (
             <div style={{ marginTop: 6 }}>
               ⛔ Indica prima il <strong>contenuto per confezione</strong>: senza,
               la giacenza non si può convertire.
@@ -1529,7 +1567,15 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
         </div>
       )}
 
-      {!isPz ? (
+      {isGenerico ? (
+        <p className="muted small" style={{ margin: '2px 0 8px' }}>
+          Si conta a unità, senza contenuto e senza conversioni: serve per quello che
+          non si versa e non si pesa — il tempo di lavorazione, per dire. Non è una
+          scorta: non si scarica quando il drink si fa e non è mai esaurito. Nella
+          ricetta di un drink entra col suo <strong>costo per unità</strong>, e in
+          carta al cliente non compare.
+        </p>
+      ) : !isPz ? (
         <>
           <label htmlFor="ipkg">Contenuto per confezione ({form.unit})</label>
           <input id="ipkg" type="number" step="any" min="0" value={form.package_size} onChange={set('package_size')} placeholder={`Es. ${form.unit === 'l' ? '1' : form.unit === 'cl' ? '100' : '1000'} per una bottiglia da 1 L`} />
@@ -1566,7 +1612,7 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
         </>
       )}
 
-      {!isEdit && (
+      {!isEdit && !isGenerico && (
         isPz ? (
           <>
             <label htmlFor="ibottles">Quantità iniziale (pezzi)</label>
@@ -1582,8 +1628,14 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
         )
       )}
 
-      <label htmlFor="ithr">Soglia di avviso ({form.unit})</label>
-      <input id="ithr" type="number" step="any" min="0" value={form.low_threshold} onChange={set('low_threshold')} placeholder={`Es. ${form.unit === 'l' ? '0,2' : form.unit === 'cl' ? '20' : form.unit === 'mg' ? '2000' : form.unit === 'g' ? '100' : form.unit === 'pz' ? '2' : '200'}`} />
+      {/* Niente soglia in unità generiche: non finisce, quindi non c'è niente
+          da avvisare e niente da riordinare al fornitore. */}
+      {!isGenerico && (
+        <>
+          <label htmlFor="ithr">Soglia di avviso ({form.unit})</label>
+          <input id="ithr" type="number" step="any" min="0" value={form.low_threshold} onChange={set('low_threshold')} placeholder={`Es. ${form.unit === 'l' ? '0,2' : form.unit === 'cl' ? '20' : form.unit === 'mg' ? '2000' : form.unit === 'g' ? '100' : form.unit === 'pz' ? '2' : '200'}`} />
+        </>
+      )}
 
       <div className="grid-2" style={{ marginTop: 16 }}>
         <button type="button" className="btn ghost" onClick={onCancel} disabled={saving}>Annulla</button>

@@ -32,6 +32,11 @@ import {
   formatPezzi,
   copiaProdotto,
   fmtContenuto,
+  scaricoPossibile,
+  giacenzaPerCarico,
+  BASE_UNITS,
+  contentBase,
+  unitaGenerica,
 } from '../../src/lib/inventory.js'
 
 describe('toBaseQty', () => {
@@ -59,6 +64,28 @@ describe('formatQty', () => {
     expect(formatQty(3, 'pz')).toBe('3 pz')
     expect(formatQty(500, 'g')).toBe('500 g')
     expect(formatQty(2000, 'g')).toBe('2 kg')
+  })
+})
+
+// I NUMERI SI SCRIVONO COME SI LEGGONO.
+// Sulla card del Campari si leggeva «7.49000000001 pz»: il numero grezzo
+// uscito da una moltiplicazione di ricetta, col punto al posto della virgola
+// e la coda di decimali dietro. formatPezzi e formatIn arrotondavano già a
+// due decimali: qui si allinea anche formatQty, che è quello che finisce
+// nelle card, nei movimenti e negli avvisi di scorta.
+describe('formatQty: due decimali e la virgola', () => {
+  it('niente code di decimali sui pezzi', () => {
+    expect(formatQty(7.49000000000001, 'pz')).toBe('7,49 pz')
+    expect(formatQty(2.456, 'pz')).toBe('2,46 pz')
+    expect(formatQty(3, 'pz')).toBe('3 pz')
+  })
+  it('niente code di decimali su millilitri e grammi', () => {
+    expect(formatQty(40.00000000000001, 'ml')).toBe('40 ml')
+    expect(formatQty(7.49000000000001, 'g')).toBe('7,49 g')
+  })
+  it('e la virgola anche oltre il litro o il chilo', () => {
+    expect(formatQty(1500.0000001, 'ml')).toBe('1,5 L')
+    expect(formatQty(2000.0000001, 'g')).toBe('2 kg')
   })
 })
 
@@ -292,6 +319,20 @@ describe('bottleSummary: bottiglie (pz) + contenuto (cl), unità distinte', () =
   })
   it('articolo a pezzo: nessun conteggio bottiglie', () => {
     expect(bottleSummary({ unit: 'pz', stock: 12 })).toBeNull()
+  })
+
+  // Sulla card, sotto al numero grande dei pezzi, ci va il CONTENUTO — è
+  // quello che serve a chi sta versando. Per gli articoli contati a pezzo
+  // ripeteva lo stesso dato di sopra: «7,49 pz» e sotto «7.49000000001 pz».
+  it('anche contando a pezzi, il totale è il contenuto in cl', () => {
+    const campari = { unit: 'pz', package_size: 1000, content_unit: 'ml', stock: 7.49 }
+    expect(bottleSummary(campari).total).toBe('749 cl')
+    expect(bottleSummary(campari).total).not.toMatch(/pz/)
+  })
+
+  it('e per i solidi in grammi', () => {
+    const zucchero = { unit: 'pz', package_size: 500, content_unit: 'g', stock: 3 }
+    expect(bottleSummary(zucchero).total).toBe('1.500 g')
   })
 })
 
@@ -685,5 +726,170 @@ describe('unità del contenuto', () => {
   it('gli articoli già a volume restano come sono', () => {
     expect(fmtContenuto(700, gin)).toBe('70 cl')
     expect(fmtContenuto(300, gin)).toBe('30 cl')
+  })
+})
+
+// ── L'ARTICOLO IN UNITÀ GENERICHE «U»: LA MANODOPERA A LISTINO ───────
+//
+// «Tempo di Lavorazione» è una voce di magazzino creata di proposito per
+// mettere a listino il lavoro: si aggancia come ingrediente ai drink che
+// richiedono lavorazione, così il tempo entra nel costo della ricetta e
+// quindi nel prezzo consigliato. Ha un costo per unità, e basta.
+//
+// Non è un liquido, non è un peso e non è un pezzo che contiene qualcosa:
+// si misura in unità generiche, senza conversioni. Prima l'unica scelta
+// possibile era il grammo, e nella ricetta del Daiquiri si leggeva «Tempo
+// di Lavorazione 1 g».
+//
+// E soprattutto NON È UNA SCORTA: non si scarica e non finisce mai. Al
+// primo Daiquiri la manodopera sarebbe andata a zero, il drink avrebbe
+// detto «Ingrediente esaurito» e sarebbe sparito dalla carta — e da lì
+// non si sarebbe più mosso.
+describe('articolo in unità generiche (U)', () => {
+  // Tre unità di lavoro costano 0,50 € + IVA l'una.
+  const tempo = { id: 'tempo', name: 'Tempo di Lavorazione', unit: 'U', display_unit: 'U', cost: 0.5, vat: 22, stock: 0 }
+
+  it('riconosce l’unità generica, scritta come capita', () => {
+    expect(unitaGenerica('U')).toBe(true)
+    expect(unitaGenerica('u')).toBe(true)
+    expect(unitaGenerica('ml')).toBe(false)
+    expect(unitaGenerica('pz')).toBe(false)
+    expect(unitaGenerica(undefined)).toBe(false)
+  })
+
+  it('è un’unità base come ml, g e pz', () => {
+    expect(BASE_UNITS).toContain('U')
+    expect(baseUnit('U')).toBe('U')
+    expect(baseUnit('u')).toBe('U')
+  })
+
+  it('non si converte in niente: una U è una U', () => {
+    expect(toBaseQty(3, 'U')).toBe(3)
+    expect(fromBaseQty(3, 'U')).toBe(3)
+    expect(qtyInStockUnit(3, 'U', tempo)).toBe(3)
+  })
+
+  it('si scrive «3 U», mai «3 pz» e mai «3 g»', () => {
+    expect(formatIn(3, 'U')).toBe('3 U')
+    expect(formatQty(3, 'U')).toBe('3 U')
+    expect(fmtItem(3, tempo)).toBe('3 U')
+    // Anche senza unità di visualizzazione salvata (i doc vecchi).
+    expect(fmtItem(3, { unit: 'U' })).toBe('3 U')
+  })
+
+  it('nella ricetta si dosa in U, e non c’è altro da scegliere', () => {
+    expect(entryUnits(tempo)).toEqual(['U'])
+    expect(smallUnits(tempo)).toEqual(['U'])
+  })
+
+  it('non ha contenuto: non c’è niente dentro da misurare', () => {
+    expect(contentBase(tempo)).toBeNull()
+    expect(bottleBreakdown(tempo)).toBeNull()
+    expect(bottleSummary(tempo)).toBeNull()
+  })
+
+  it('il costo è per unità: una U costa quello che costa', () => {
+    expect(costPerUnit(tempo, 'U')).toBeCloseTo(0.61, 3) // 0,50 + IVA 22%
+    // Senza confezione: il costo non dipende da un contenuto che non c'è.
+    expect(costPerUnit({ ...tempo, package_size: null }, 'U')).toBeCloseTo(0.61, 3)
+  })
+
+  it('ma non si mescola con volumi e pesi', () => {
+    expect(costPerUnit(tempo, 'cl')).toBeNull()
+    expect(costPerUnit(tempo, 'g')).toBeNull()
+    expect(costPerCl(tempo)).toBeNull()
+    expect(costPerUnit({ unit: 'ml', package_size: 700, cost: 10, vat: 22 }, 'U')).toBeNull()
+  })
+
+  it('NON È UNA SCORTA: non è mai esaurito, nemmeno a zero', () => {
+    // Se fosse «esaurito», il menù direbbe «Ingrediente esaurito» e il
+    // drink sparirebbe dalla carta al primo che se ne fa.
+    expect(stockStatus(tempo)).toBe('ok')
+    expect(stockStatus({ ...tempo, stock: 0, low_threshold: 10 })).toBe('ok')
+    expect(stockStatus({ ...tempo, stock: -5 })).toBe('ok')
+    expect(inventorySummary([tempo])).toEqual({ total: 1, low: 0, empty: 0 })
+  })
+
+  it('e non vale niente in magazzino: il lavoro non sta sullo scaffale', () => {
+    expect(unitsInStock({ ...tempo, stock: 100 })).toBe(0)
+    expect(stockValue({ ...tempo, stock: 100 })).toBe(0)
+  })
+
+  it('non si scarica: la manodopera non si consuma', () => {
+    const drinks = {
+      daiquiri: {
+        recipe_items: [
+          { inventory_item_id: 'rum', name: 'Rum', unit: 'ml', qty: 50 },
+          { inventory_item_id: 'tempo', name: 'Tempo di Lavorazione', unit: 'U', qty: 3 },
+        ],
+      },
+    }
+    const cons = computeConsumption([{ drink_id: 'daiquiri', qty: 2 }], drinks)
+    expect(cons).toEqual([{ inventory_item_id: 'rum', name: 'Rum', unit: 'ml', qty: 100 }])
+    expect(cons.some((c) => c.inventory_item_id === 'tempo')).toBe(false)
+  })
+
+  it('e nemmeno quando la ricetta è incorporata in un drink al volo', () => {
+    const cons = computeConsumption(
+      [
+        {
+          drink_id: 'custom-1',
+          custom: true,
+          qty: 1,
+          recipe_items: [{ inventory_item_id: 'tempo', name: 'Tempo', unit: 'U', qty: 1 }],
+        },
+      ],
+      {}
+    )
+    expect(cons).toEqual([])
+  })
+})
+
+// ── SOTTO ZERO NON SI SCENDE ─────────────────────────────────────────
+// Il 17 agosto il Jagermeister era a −0,04 pz, con «valore −0,67 €» e la
+// conta che si apriva già in rosso: continuando a battere un prodotto
+// finito lo scarico toglie comunque, perché increment(-qty) non guarda
+// quanto c'è (ed è giusto che non lo guardi: è commutativo e si accoda
+// offline — quello che va deciso prima è QUANTO chiedere di togliere).
+// Il danno vero arriva dopo: comprando e caricando una bottiglia il
+// carico riparte dal negativo e ne conta meno di una, mentre sullo
+// scaffale c'è tutta.
+describe('la giacenza non scende sotto zero', () => {
+  it('si scarica al massimo quello che risulta in giacenza', () => {
+    expect(scaricoPossibile(10, 4)).toBe(4)
+    expect(scaricoPossibile(10, 12)).toBe(10)
+    // Il Jager quasi finito: resta 0,02 pz e la ricetta ne chiede 0,057.
+    expect(scaricoPossibile(0.02, 0.057)).toBeCloseTo(0.02, 6)
+  })
+
+  it('la vendita passa comunque: il magazzino si ferma a zero, non a −2', () => {
+    expect(10 - scaricoPossibile(10, 12)).toBe(0)
+  })
+
+  it('da una giacenza già a zero (o negativa) non si toglie più niente', () => {
+    expect(scaricoPossibile(0, 3)).toBe(0)
+    expect(scaricoPossibile(-0.04, 1)).toBe(0)
+  })
+
+  it('un delta nullo o al contrario non muove la giacenza', () => {
+    expect(scaricoPossibile(10, 0)).toBe(0)
+    expect(scaricoPossibile(10, -5)).toBe(0)
+  })
+
+  it('il carico parte da quello che c’è, mai dal negativo', () => {
+    // Una bottiglia caricata su −0,04 deve valere UNA bottiglia: il buco
+    // di prima è un errore vecchio, non un debito da ripagare.
+    expect(giacenzaPerCarico(-0.04) + 1).toBe(1)
+    expect(giacenzaPerCarico(3)).toBe(3)
+    expect(giacenzaPerCarico(undefined)).toBe(0)
+    expect(giacenzaPerCarico('boh')).toBe(0)
+  })
+
+  it('e il valore in euro non è mai negativo: niente «valore −0,67 €»', () => {
+    const jager = { unit: 'pz', stock: -0.04, cost: 13.6, vat: 22 }
+    expect(unitsInStock(jager)).toBe(0)
+    expect(stockValue(jager)).toBe(0)
+    // Anche a volume: mezzo litro in meno di zero non vale meno di zero.
+    expect(stockValue({ unit: 'ml', package_size: 700, stock: -350, cost: 18, vat: 22 })).toBe(0)
   })
 })
