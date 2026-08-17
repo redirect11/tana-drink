@@ -1471,8 +1471,21 @@ requirements:
       buono quello che c'era — `content_unit` + `package_size` — quindi i
       prodotti già in magazzino non si toccano e si comportano come prima.
       La scheda prodotto è rifatta sulle tre domande, col «?» in alto che le
-      spiega, e la terza («si usa in un'altra unità?») compare solo a chi non
-      si conta a pezzi.
+      spiega. La seconda è un interruttore acceso di suo — «Lo uso come lo
+      compro» — e solo spegnendolo compare la terza, «Quanto rende»: quasi
+      tutti i prodotti si usano come si comprano, e a quelli non si chiede
+      niente. Sui pezzi l'interruttore non c'è: la stessa cosa la dice già
+      «A quanto corrisponde un pezzo?».
+      Sparisce anche la domanda «quanto contiene una confezione» per chi non
+      conta a pezzi: comprando a chili, una confezione È un chilo. Il prezzo
+      si scrive nell'unità d'acquisto (€/kg, €/cl, €/pz, €/U) e sotto resta
+      salvato il costo per confezione, che è quello che il resto dell'app
+      legge da sempre; i prodotti già caricati tengono il loro contenuto e i
+      loro numeri, perché riscriverli vorrebbe dire cambiare i conti di un
+      articolo che nessuno ha toccato.
+      E la SOGLIA DI AVVISO si scrive sempre nell'unità d'acquisto — è il
+      prodotto comprato che sta finendo, ed è quello che si va a
+      ricomprare: niente più tendina, e l'etichetta dice l'unità.
       E «SI SCARICA DAL MAGAZZINO?» LO DECIDE IL PRODOTTO, non la sua unità
       (`eScorta`). La regola stava sull'unità — quello che si conta a unità
       generiche non si scarica — ed è giusta per la manodopera, che non sta

@@ -1587,6 +1587,12 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
   // restava segnato come scorta perché lo era la scheda vuota.
   const scorteRif = useRef(form.scorta)
   scorteRif.current = form.scorta
+  // La soglia si scrive nell'unità in cui si compra, sempre: se cambia
+  // quella, cambia anche lei.
+  useEffect(() => {
+    setForm((f) => (f.low_threshold_unit === f.unit ? f : { ...f, low_threshold_unit: f.unit }))
+  }, [form.unit])
+
   useEffect(() => {
     const atteso = !unitaGenerica(baseUnit(form.unit))
     const dichiarata = typeof initial?.scorta === 'boolean' ? initial.scorta : null
@@ -1653,11 +1659,18 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
       // contenuto per confezione nell'unità scelta per QUEL campo. In unità
       // generiche non c'è nessun contenuto: dentro una unità di lavoro non
       // c'è niente.
+      // QUANTO CONTIENE UNA CONFEZIONE non si chiede più a chi non conta a
+      // pezzi: la confezione È una unità d'acquisto (1 kg, 1 L). Quello che
+      // era già scritto resta com'era — le bottiglie gestite a volume hanno
+      // il loro contenuto e il loro costo — perché riscriverlo qui vorrebbe
+      // dire cambiare i numeri di un prodotto che nessuno ha toccato.
       const packBase = isGenerico
         ? null
         : isPz
           ? toBaseQty(num(form.content_size), form.content_unit) || null
-          : toBaseQty(num(form.package_size), form.package_size_unit) || null
+          : Number(initial?.package_size) > 0 && baseUnit(form.unit) === initialBase
+            ? Number(initial.package_size)
+            : toBaseQty(1, form.unit)
       // La resa vale per chi NON si conta a pezzi: sul pezzo la stessa cosa
       // la dice già «a quanto corrisponde un pezzo».
       const resaBase = (() => {
@@ -1946,62 +1959,28 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
         </>
       ) : !isPz ? (
         <>
-          {/* LA DOMANDA PARLA DELLA CONFEZIONE CHE SI COMPRA, non della
-              giacenza. Scritta «contenuto per confezione» si leggeva come
-              «in quante parti divido il centilitro», e mettendo «100 cl»
-              sembrava che moltiplicasse per cento ogni cl (Flavio, 17/08).
-              La giacenza resta quella che è: questo serve al costo al cl e
-              agli ordini al fornitore. */}
-          <label htmlFor="ipkg">Quanto contiene una confezione che compri?</label>
-          <div className="row" style={{ gap: 6 }}>
-            <input
-              id="ipkg"
-              type="number"
-              step="any"
-              min="0"
-              className="grow"
-              value={form.package_size}
-              onChange={set('package_size')}
-              placeholder="Es. 0,7 se compri bottiglie da 70 cl"
-            />
-            <ScegliUnita
-              valore={form.package_size_unit}
-              unita={form.unit}
-              onChange={set('package_size_unit')}
-              etichetta="Unità del contenuto per confezione"
-            />
-          </div>
-          <p className="muted small" style={{ margin: '2px 0 8px' }}>
-            Non tocca la giacenza: serve a sapere quanto costa quello che
-            c&apos;è dentro e a ordinare al fornitore.
-          </p>
-
-          {/* ── COME LO USI, SE NON È COME LO COMPRI ──────────────────
-              I limoni si comprano al chilo e si spremono in cl: peso e
-              volume non si convertono l'uno nell'altro, e infatti questa
-              non è una conversione — è la RESA, e la sa chi li spreme.
-              Facoltativa: quasi tutti i prodotti si usano come si comprano,
-              e a quelli questa riga non serve. */}
-          {/* UN INTERRUTTORE, NON UN CAMPO SEMPRE APERTO. Quasi tutti i
-              prodotti si usano come si comprano: lasciare la riga a vista
-              faceva leggere cose senza senso — «1 cl rende … cl» — e
-              chiedeva una risposta a chi non aveva la domanda. */}
-          <label className="row between" style={{ alignItems: 'center', gap: 8, marginTop: 10 }}>
+          {/* UNA DOMANDA SOLA, E LA RISPOSTA GIÀ DATA. Quasi tutti i
+              prodotti si usano come si comprano: l'interruttore parte acceso
+              e non c'è altro da scrivere. Prima qui si chiedeva quanto
+              contiene una confezione — una domanda che cambia senso a
+              seconda dell'unità scelta sopra, e a cui quasi nessuno doveva
+              rispondere. */}
+          <label className="row between" style={{ alignItems: 'center', gap: 8 }}>
             <span>
-              Si usa in un&apos;altra unità
-              <span className="muted small"> — es. i limoni: si comprano al chilo, si spremono in cl</span>
+              Lo uso come lo compro
+              <span className="muted small"> — stessa unità per il carico e per le ricette</span>
             </span>
             <input
               type="checkbox"
               className="toggle"
-              checked={!!form.usa_altra_unita}
-              onChange={(e) => setForm((f) => ({ ...f, usa_altra_unita: e.target.checked }))}
+              checked={!form.usa_altra_unita}
+              onChange={(e) => setForm((f) => ({ ...f, usa_altra_unita: !e.target.checked }))}
             />
           </label>
 
           {form.usa_altra_unita && (
             <>
-              <label htmlFor="iresa">Quanto rende</label>
+              <label htmlFor="iresa" style={{ marginTop: 8 }}>Quanto rende</label>
               <div className="row" style={{ gap: 6, alignItems: 'center' }}>
                 <span className="muted small" style={{ whiteSpace: 'nowrap' }}>
                   1 {UNIT_LABEL[String(form.unit).toLowerCase()] || form.unit} rende
@@ -2028,8 +2007,9 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
                 </select>
               </div>
               <p className="muted small" style={{ margin: '2px 0 8px' }}>
-                Le ricette lo dosano nell&apos;unità d&apos;uso; la giacenza
-                resta quella che conti sullo scaffale.
+                Es. i limoni: si comprano al chilo, si spremono in cl. Le
+                ricette lo dosano nell&apos;unità d&apos;uso; la giacenza resta
+                quella che conti sullo scaffale.
               </p>
             </>
           )}
@@ -2096,30 +2076,24 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
           da avvisare e niente da riordinare al fornitore. */}
       {!isGenerico && (
         <>
-        <label htmlFor="ithr">Soglia di avviso</label>
-        <div className="row" style={{ gap: 6 }}>
-          <input
-            id="ithr"
-            type="number"
-            step="any"
-            min="0"
-            className="grow"
-            value={form.low_threshold}
-            onChange={set('low_threshold')}
-            placeholder="Es. 2 se vuoi l’avviso quando ne restano due"
-          />
-          <ScegliUnita
-            valore={form.low_threshold_unit}
-            unita={form.unit}
-            conPezzi
-            onChange={set('low_threshold_unit')}
-            etichetta="Unità della soglia di avviso"
-          />
-        </div>
+        {/* LA SOGLIA È SEMPRE NELL'UNITÀ D'ACQUISTO: è il prodotto comprato
+            che sta finendo, ed è quello che si va a ricomprare. Prima
+            l'unità si sceglieva, e la stessa soglia poteva essere scritta in
+            un modo e riletta in un altro. */}
+        <label htmlFor="ithr">
+          Soglia di avviso ({UNIT_LABEL[String(form.unit).toLowerCase()] || form.unit})
+        </label>
+        <input
+          id="ithr"
+          type="number"
+          step="any"
+          min="0"
+          value={form.low_threshold}
+          onChange={set('low_threshold')}
+          placeholder="Es. 2 se vuoi l’avviso quando ne restano due"
+        />
         <p className="muted small" style={{ margin: '2px 0 8px' }}>
-          {form.low_threshold_unit === 'pz' && baseUnit(form.unit) !== 'pz'
-            ? 'In pezzi: l’avviso scatta quando resta questo numero di confezioni intere.'
-            : 'Sotto questo livello l’articolo compare fra quelli in esaurimento.'}
+          Sotto questo livello l’articolo compare fra quelli in esaurimento.
         </p>
         </>
       )}

@@ -25,6 +25,12 @@
   a mano in una dozzina di posti — il tab acceso, il «+», i tasti dei
   pannelli, gli aloni del fondo — e quelli restavano dorati con qualunque
   tema.
+- **La scheda prodotto chiede meno**: «Lo uso come lo compro» è acceso di
+  suo, e solo spegnendolo compare «Quanto rende». Sparisce la domanda su
+  quanto contiene una confezione: comprando a chili, una confezione è un
+  chilo.
+- **La soglia di avviso è sempre nell'unità in cui si compra** — è il
+  prodotto comprato che sta finendo — e l'etichetta lo dice.
 - **Il prezzo si scrive nell'unità in cui si compra**: «€/kg» per i limoni,
   «€/pz» per le bottiglie, «€/U» per il tempo di lavorazione. L'etichetta
   diceva sempre «€/pz» anche per un prodotto comprato a chili, e chi
