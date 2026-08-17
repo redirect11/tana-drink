@@ -72,6 +72,7 @@ import UtentiTab from '../components/UtentiTab.jsx'
 import VipTab from '../components/VipTab.jsx'
 import ServiceQueue from '../components/ServiceQueue.jsx'
 import StaffCallList from '../components/StaffCallList.jsx'
+import ApriCassaBox from '../components/ApriCassaBox.jsx'
 import GroupsPanel from '../components/GroupsPanel.jsx'
 import GroupView from '../components/GroupView.jsx'
 import CassaTab from '../components/CassaTab.jsx'
@@ -476,6 +477,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
   const [search, setSearch] = useState('')
   const [showPanels, setShowPanels] = useState(false) // pannelli (chiamate/gruppi) nella griglia
   const [menuBoard, setMenuBoard] = useState(false) // menu ⋯ della lavagna
+  const [apriCassa, setApriCassa] = useState(false) // box «apri la cassa»
   // Verso della lista: dal più vecchio (come nasce la serata) o dal più
   // recente (utile quando i conti sono tanti e l'ultimo è quello che
   // serve). Si ricorda, perché è una preferenza di chi lavora.
@@ -1414,9 +1416,16 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
       {!cassaLoading && !cassaAperta && (
         <div className="banner cassa-chiusa-banner">
           🔴 <strong>Cassa chiusa</strong> — per battere ordini apri prima la cassa.{' '}
-          <Link className="btn small" to="/bar?tab=pagamenti" style={{ marginLeft: 8 }}>
+          {/* Si apre da qui: mandare al flusso di cassa per premere un tasto e
+              tornare indietro sono tre passaggi per una cosa che ne vale uno. */}
+          <button
+            type="button"
+            className="btn small"
+            style={{ marginLeft: 8 }}
+            onClick={() => setApriCassa(true)}
+          >
             🟢 Apri cassa
-          </Link>
+          </button>
         </div>
       )}
 
@@ -1537,8 +1546,41 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
             hint: ordineDesc ? 'Adesso: prima gli ultimi' : 'Adesso: prima i primi della serata',
             onClick: cambiaOrdine,
           },
+          // LA CASSA SI APRE E SI CHIUDE DA QUI. Sono le due cose che si
+          // fanno a inizio e fine serata, dalla schermata in cui si sta già:
+          // andarle a cercare nel flusso di cassa vuol dire uscire dalla
+          // coda proprio mentre la si sta guardando.
+          cassaAperta
+            ? {
+                id: 'chiudi-cassa',
+                icon: '🔒',
+                label: 'Chiudi cassa',
+                // Un conto aperto è un incasso che manca: chiudere così
+                // vorrebbe dire far quadrare una serata con dentro un buco.
+                disabled: recap.aperti > 0,
+                hint:
+                  recap.aperti > 0
+                    ? `Prima incassa i ${recap.aperti} conti ancora aperti.`
+                    : 'Conta il contante e chiudi la serata.',
+                onClick: () => navigate('/bar?tab=pagamenti'),
+              }
+            : {
+                id: 'apri-cassa',
+                icon: '🟢',
+                label: 'Apri cassa',
+                hint: 'Senza cassa aperta non si battono ordini.',
+                onClick: () => setApriCassa(true),
+              },
         ]}
       />
+
+      {apriCassa && (
+        <ApriCassaBox
+          cutoffHour={cutoffHour}
+          by={auth.currentUser ? { uid: auth.currentUser.uid, email: auth.currentUser.email } : null}
+          onClose={() => setApriCassa(false)}
+        />
+      )}
 
       {/* Pannelli chiamate/gruppi: nella griglia compaiono solo col toggle
           «Pannelli»; nelle altre viste restano sempre visibili. */}
