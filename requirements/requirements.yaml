@@ -1061,7 +1061,7 @@ requirements:
       per sé, non scala niente: seguendo il servizio si paga anche in
       anticipo, con tre drink ancora da fare.
       Fra l'una e l'altra cosa gli ingredienti sono IMPEGNATI e si leggono in
-      magazzino (REQ-MAG-012).
+      magazzino (REQ-MAG-014).
       Si scala una volta sola, salvando lo snapshot del consumo sulla
       comanda: serve per stornare in caso di annullo e per non scalare due
       volte. Il magazzino che non risponde non blocca la comanda: resta
@@ -1926,7 +1926,7 @@ requirements:
     test_cases:
       - tests/component/MenuPage.test.jsx
       - tests/unit/statoStampante.test.js
-  - id: REQ-MAG-012
+  - id: REQ-MAG-014
     title: "Le scorte dicono anche quello che ti ritrovi a fine serata"
     area: "src/lib/impegnato.js, src/components/InventoryManager.jsx"
     description: >
