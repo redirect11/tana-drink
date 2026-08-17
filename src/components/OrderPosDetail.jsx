@@ -2206,10 +2206,23 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
               </button>
             )}
 
+            {/* SU UN CONTO VUOTO «ANNULLA» È LA VIA D'USCITA. Era spento
+                finché non si batteva qualcosa: chi apriva il conto per
+                sbaglio si trovava l'unico tasto di uscita disabilitato e
+                doveva cercare la freccia in alto. Senza righe non c'è
+                niente da buttare, quindi non si chiede nemmeno conferma: si
+                torna in coda. */}
             <button
               className="btn ghost small block"
-              disabled={isNew ? !conRighe : closed}
-              onClick={() => setConfirmCancel(true)}
+              disabled={isNew ? false : closed}
+              onClick={() => {
+                if (isNew && !conRighe) {
+                  ricordaContoInCorso(null)
+                  navigate('/bar')
+                  return
+                }
+                setConfirmCancel(true)
+              }}
             >
               <IconX /> Annulla ordine
             </button>

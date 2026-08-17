@@ -527,3 +527,20 @@ describe('annullare un conto appena battuto', () => {
     expect(navigateSpy).toHaveBeenCalledWith('/bar')
   })
 })
+
+// SU UN CONTO VUOTO «ANNULLA» È LA VIA D'USCITA. Era spento finché non si
+// batteva qualcosa: chi apriva il conto per sbaglio — o cambiava idea prima
+// di battere — si trovava l'unico tasto d'uscita disabilitato, e doveva
+// cercare la freccia in alto.
+describe('annullare un conto ancora vuoto', () => {
+  it('il tasto è acceso, e riporta in coda senza chiedere niente', async () => {
+    const user = userEvent.setup()
+    mount()
+    const annulla = await screen.findByRole('button', { name: /Annulla ordine/ })
+    expect(annulla).not.toBeDisabled()
+    await user.click(annulla)
+    // Niente da buttare, niente da confermare: si esce.
+    expect(navigateSpy).toHaveBeenCalledWith('/bar')
+    expect(createOrder).not.toHaveBeenCalled()
+  })
+})

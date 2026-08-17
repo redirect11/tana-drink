@@ -12,6 +12,10 @@
 
 ### Al banco
 
+- **Su un conto ancora vuoto «Annulla ordine» funziona**: era spento finché
+  non si batteva qualcosa, e chi apriva il conto per sbaglio non aveva un
+  modo evidente di uscire. Senza righe non chiede nemmeno conferma.
+
 - **Nella vista menù, chi lavora non vede più i propri ordini in cima**:
   lì si prende un ordine, gli ordini stanno in coda.
 - **In «Da servire» il tasto è «Aggiungi ordine»** e porta alla schermata
