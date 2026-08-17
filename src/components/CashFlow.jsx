@@ -75,7 +75,12 @@ export default function CashFlow() {
   }
 
   return (
-    <div>
+    // A COLONNA SOLA CI STA UN TELEFONO, non un monitor. Su schermi larghi
+    // le stesse tessere si dispongono in griglia — quello che serve a chi
+    // guarda la cassa si legge in un colpo, senza scorrere — e le due che
+    // vogliono spazio (l'andamento per ora e la chiusura) restano larghe
+    // tutta la riga. Il CSS sta in .cassa-flusso: qui non si decide niente.
+    <div className="cassa-flusso">
       <div className="card cassa-open">
         <div className="row between" style={{ alignItems: 'center' }}>
           <div>
@@ -182,9 +187,15 @@ export default function CashFlow() {
       )}
 
       {/* Andamento per ora */}
-      {recap.perOra.length > 0 && <OraBars perOra={recap.perOra} />}
+      {recap.perOra.length > 0 && (
+        <div className="cassa-larga">
+          <OraBars perOra={recap.perOra} />
+        </div>
+      )}
 
-      <ChiudiCassa session={session} recap={recap} by={by} />
+      <div className="cassa-larga">
+        <ChiudiCassa session={session} recap={recap} by={by} />
+      </div>
 
     </div>
   )
