@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import {
   fetchOrder,
   subscribeOrder,
@@ -28,6 +28,7 @@ import {
 import { onAuthStateChanged } from 'firebase/auth'
 import { auth } from '../lib/firebaseClient.js'
 import { queueEtaMinutes } from '../lib/eta.js'
+import { toastSuccess } from '../lib/toast.js'
 import { ensureNotificationPermission, notify } from '../lib/notify.js'
 import { rememberOrderId } from '../lib/cart.js'
 import { isGestore, isPersonale } from '../lib/ruoli.js'
@@ -46,6 +47,7 @@ export default function OrderStatusPage() {
   const [notifMsg, setNotifMsg] = useState(null)
   const [edits, setEdits] = useState(null) // copia editabile degli item (prima della preparazione)
   const [saving, setSaving] = useState(false)
+  const navigate = useNavigate()
   const [confirmCancel, setConfirmCancel] = useState(false)
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   const [serviceStats, setServiceStats] = useState({})
@@ -223,15 +225,21 @@ export default function OrderStatusPage() {
     )
   }
 
+  // SALVARE DEVE DIRE CHE HA SALVATO, E RIPORTARE INDIETRO. Prima il tasto
+  // tornava «Salva modifiche» e basta: identico a prima di premerlo. Chi
+  // aveva cambiato una quantità restava lì a chiedersi se fosse andata, e
+  // spesso ripremeva. Ora lo dice e riporta alla coda, che è da dove si è
+  // arrivati e dove si vede il conto aggiornato.
   async function saveEdits() {
     if (!edits || edits.length === 0) return setConfirmCancel(true)
     setSaving(true)
     setError(null)
     try {
       await updateOrderItems(order.id, edits)
+      toastSuccess('Modifiche salvate')
+      navigate('/bar')
     } catch (e) {
       setError(e.message)
-    } finally {
       setSaving(false)
     }
   }

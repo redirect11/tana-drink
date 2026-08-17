@@ -10,6 +10,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
   stileAvvisiInApp,
+  scegliStileAvvisi,
+  subscribeStileAvvisi,
   annunciaFumetto,
   ascoltaFumetto,
 } from '../../src/lib/avvisiInApp.js'
@@ -18,22 +20,27 @@ beforeEach(() => localStorage.clear())
 
 describe('lo stile degli avvisi in app', () => {
   it('di suo è la strisciolina: è come ha sempre funzionato', () => {
-    expect(stileAvvisiInApp({})).toBe('toast')
     expect(stileAvvisiInApp()).toBe('toast')
   })
 
-  it('il locale può scegliere il fumetto', () => {
-    expect(stileAvvisiInApp({ avvisi_in_app: 'fumetto' })).toBe('fumetto')
+  it('si sceglie il fumetto, e resta scelto su questo dispositivo', () => {
+    expect(scegliStileAvvisi('fumetto')).toBe('fumetto')
+    expect(stileAvvisiInApp()).toBe('fumetto')
   })
 
   it('un valore che non conosciamo non spegne gli avvisi', () => {
     // Meglio la strisciolina di un avviso che non compare da nessuna parte.
-    expect(stileAvvisiInApp({ avvisi_in_app: 'boh' })).toBe('toast')
+    expect(scegliStileAvvisi('boh')).toBe('toast')
+    expect(stileAvvisiInApp()).toBe('toast')
   })
 
-  it('si legge dalle impostazioni ricordate, senza chiedere al server', () => {
-    localStorage.setItem('tana:impostazioni', JSON.stringify({ avvisi_in_app: 'fumetto' }))
-    expect(stileAvvisiInApp()).toBe('fumetto')
+  it('chi guarda il pannello vede il cambio all’istante', () => {
+    const visto = vi.fn()
+    const stop = subscribeStileAvvisi(visto)
+    expect(visto).toHaveBeenCalledWith('toast')
+    scegliStileAvvisi('fumetto')
+    expect(visto).toHaveBeenCalledWith('fumetto')
+    stop()
   })
 
   it('l’annuncio arriva a chi disegna il fumetto', () => {

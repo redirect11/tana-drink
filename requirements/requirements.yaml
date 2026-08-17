@@ -185,6 +185,21 @@ requirements:
     labels: [ordini, pagamenti, impostazioni]
     test_cases: [tests/component/PaymentScreen.test.jsx]
 
+  - id: REQ-ORD-018
+    title: "Salvare le modifiche a un ordine lo dice, e riporta indietro"
+    area: "src/pages/OrderStatusPage.jsx"
+    description: >
+      Nel dettaglio ordine della vista staff, «Salva modifiche» tornava
+      «Salva modifiche» e basta: identico a prima di premerlo. Chi aveva
+      cambiato una quantità restava lì a chiedersi se fosse andata, e spesso
+      ripremeva. Ora la conferma si vede e si torna alla coda — da dove si è
+      arrivati, e dove il conto si rilegge aggiornato. In errore invece si
+      resta, con il motivo scritto.
+    status: implemented
+    generate_issue: false
+    labels: [ordini, ux]
+    test_cases: [tests/component/OrderStatusPage.test.jsx]
+
   - id: REQ-ORD-017
     title: "Il QR per il cliente c'è solo se c'è qualcosa da seguire"
     area: "src/pages/OrderStatusPage.jsx"
@@ -1249,15 +1264,18 @@ requirements:
       Di suo resta la strisciolina, che è come ha sempre funzionato. Un
       valore sconosciuto ricade lì: meglio la strisciolina di un avviso che
       non compare da nessuna parte.
-      Questa è una scelta del LOCALE (come lavora il banco), non della
-      persona: quali avvisi ricevere resta per utente e dispositivo, nel
-      profilo.
+      La scelta sta nel PROFILO, accanto a «quali avvisi ricevere»: è della
+      stessa natura — vale per QUESTO dispositivo — e quello è il posto dove
+      chi lavora li va a cercare. Nelle impostazioni del locale nessuno
+      cercherebbe una cosa sua, e chi è in sala quel menu non ce l'ha
+      nemmeno.
     status: implemented
     generate_issue: false
     labels: [avvisi, ux]
     test_cases:
       - tests/unit/avvisiInApp.test.js
       - tests/component/FumettoAvvisi.test.jsx
+      - tests/component/AvvisiPanel.test.jsx
 
   - id: REQ-UI-014
     title: "La barra delle sezioni si stringe a icone, o si toglie di mezzo"

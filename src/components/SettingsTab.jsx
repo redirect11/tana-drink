@@ -917,32 +917,6 @@ export default function SettingsTab({ role = null }) {
             👤 Vai al mio profilo
           </Link>
 
-          {/* COME SI VEDONO DENTRO L'APP. Questa invece è una scelta del
-              LOCALE, non della persona: riguarda come lavora il banco.
-              La strisciolina non si perde ma interrompe chiunque, anche chi
-              sta contando la cassa; il fumetto sta solo nella coda, dove gli
-              ordini si aspettano — lì non interrompe, è il motivo per cui si
-              sta guardando quella schermata. */}
-          <h4 style={{ margin: '16px 0 4px' }}>Dove compaiono gli avvisi, ad app aperta</h4>
-          <div className="mode-choice">
-            {[
-              ['toast', '🔔 In alto, su ogni schermata'],
-              ['fumetto', '💬 Dalla campanella, solo in coda'],
-            ].map(([value, label]) => (
-              <button
-                key={value}
-                className={`mode-option${(settings.avvisi_in_app || 'toast') === value ? ' active' : ''}`}
-                onClick={() => save({ avvisi_in_app: value })}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          <p className="muted small" style={{ margin: '8px 0 0' }}>
-            {(settings.avvisi_in_app || 'toast') === 'fumetto'
-              ? 'Il fumetto esce dalla campanella e si apre toccandolo. Fuori dalla coda non compare niente: gli avvisi restano nella campanella.'
-              : 'La strisciolina compare ovunque, anche in cassa o in magazzino.'}
-          </p>
         </div>
       ),
     },
