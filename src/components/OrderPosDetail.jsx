@@ -2020,7 +2020,15 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                       >
                         {formatPrice(l.qty * l.unit_price)}
                       </strong>
-                      <span className="qty" onPointerDown={(e) => e.stopPropagation()}>
+                      {/* I +/− NON APRONO LA RIGA. Toccare la riga apre la
+                          scheda dell'item, e il clic sui tasti risaliva fin
+                          lì: si aumentava di uno e si finiva dentro la
+                          modifica, ogni volta. */}
+                      <span
+                        className="qty"
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         {/* Etichette col nome: nella lista ci sono molte righe,
                             e i +/- della griglia hanno un altro significato. */}
                         <button aria-label={`Riduci ${l.name}`} onClick={() => minusRow(l)} disabled={!canMinus}>−</button>

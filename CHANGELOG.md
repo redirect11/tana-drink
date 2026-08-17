@@ -12,6 +12,9 @@
 
 ### Al banco
 
+- **Il «+» sulla riga del conto aumenta e basta**: apriva anche la scheda
+  dell'item, ogni volta.
+
 - **Separando le righe uguali, il «−» ne toglie una sola.** Prima, premuto
   sulla prima di tre, le spegneva tutte e tre: chi divideva il conto si
   ritrovava da capo, e se non se ne accorgeva il cliente pagava meno di
