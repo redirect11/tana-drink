@@ -1449,10 +1449,22 @@ requirements:
       stessa collezione con un campo che dice a chi appartengono o in due
       separate; e come si aggancia una macro d'acquisto alla macro di
       vendita corrispondente (una a una, o molte a molte).
+      FATTO (1.4.8) il primo pezzo: i due elenchi esistono davvero. Le macro
+      hanno un `ambito` ('magazzino' o 'menu', le righe vecchie sono tutte di
+      magazzino), il menù ha la sua sottosezione «Macro-categorie» che
+      raggruppa le categorie dei drink, e su ogni macro di spesa si sceglie a
+      quale macro di vendita corrisponde (`macro_menu_id`). Il pannello è uno
+      solo, condiviso dalle due schermate.
+      DA FARE: il confronto vero e proprio — speso su una macro d'acquisto
+      contro incassato sulla macro di vendita agganciata. Attenzione: la
+      tabella «Mensile per macro» che c'è già confronta acquisti e fatturato
+      sulle macro di MAGAZZINO, spalmando l'incasso di ogni drink sugli
+      ingredienti in proporzione al costo. Le due letture rispondono a
+      domande diverse e vanno tenute distinte, non sovrapposte.
     status: todo
     generate_issue: true
     labels: [magazzino, menu, statistiche]
-    test_cases: []
+    test_cases: [tests/component/MacroCategoryManager.test.jsx]
 
   - id: REQ-MENU-011
     title: "Un drink si duplica: la ricetta non si riscrive a mano"

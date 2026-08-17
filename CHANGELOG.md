@@ -19,6 +19,11 @@
   a mano in una dozzina di posti — il tab acceso, il «+», i tasti dei
   pannelli, gli aloni del fondo — e quelli restavano dorati con qualunque
   tema.
+- **Le macro-categorie sono due elenchi**: quelle del magazzino (quello che
+  si compra) e quelle del menù (quello che si vende, nella nuova
+  sottosezione «Macro-categorie» del menù). Su ogni macro di spesa si sceglie
+  a quale macro di vendita corrisponde: è l'aggancio che servirà a confrontare
+  speso e incassato.
 - **Le griglie hanno tutte lo stesso vestito**: magazzino, modifica menù e
   griglia del conto, con la stessa striscia a sinistra. E il colore del
   prodotto prende la forma del tema: il nastro d'angolo di casa, la

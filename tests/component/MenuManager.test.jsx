@@ -39,6 +39,12 @@ vi.mock('../../src/lib/api.js', () => ({
   subscribePosPrefs: vi.fn(() => () => {}),
   savePosColors: vi.fn(() => Promise.resolve()),
   subscribeSettings: vi.fn(() => () => {}),
+  fetchMacroCategories: vi.fn((ambito) =>
+    Promise.resolve(ambito === 'menu' ? [{ id: 'm1', name: 'Cocktail', sort_order: 0 }] : [])
+  ),
+  createMacroCategory: vi.fn(() => Promise.resolve({ id: 'm2', name: 'Nuova' })),
+  updateMacroCategory: vi.fn(() => Promise.resolve()),
+  deleteMacroCategory: vi.fn(() => Promise.resolve()),
   DEFAULT_SETTINGS: { stripe_menu: 'scorte' },
   settingsIniziali: () => ({ stripe_menu: 'scorte' }),
 }))
