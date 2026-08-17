@@ -23,6 +23,11 @@
   insieme.
 - **Nel riepilogo in cima alla coda ci sono anche gli annullati**, accanto
   ad aperti e chiusi. Fuori dal totale, che sono i soldi veri.
+- **«A fine serata» contava anche i conti già chiusi**, e con un tavolo
+  solo segnava mezzo listino in esaurimento. Ora guarda solo i conti
+  ancora aperti — quelli incassati e serviti il magazzino l'hanno già
+  scalato. E il riepilogo in cima alla coda conta esattamente i conti che
+  si vedono sotto, qualunque tab sia aperta.
 - **Il magazzino dice quello che ti ritrovi a fine serata.** Accanto alle
   scorte c'è una colonna con quello che resterà se tutti i conti aperti
   vengono incassati così come sono: i drink già fatti sui tavoli hanno

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { cashRecap, ordiniDellaCassaAperta } from '../../src/lib/cassa.js'
+import { cashRecap } from '../../src/lib/cassa.js'
 
 const session = { opened_at: '2026-07-21T18:00:00.000Z', fondo_cassa: 50 }
 
@@ -160,34 +160,5 @@ describe('gli annullati non contano', () => {
     const r = cashRecap([annullato], session, '2026-08-10T02:00:00.000Z')
     expect(r.apertoDaIncassare).toBe(0)
     expect(r.nAperti).toBe(0)
-  })
-})
-
-// I NUMERI IN TESTATA SONO DI QUESTA APERTURA DI CASSA. Chiusa la cassa e
-// riaperta, il banco leggeva «0 aperti · 425 chiusi · 10.228,40 €»: erano i
-// soldi della serata prima, contati un'altra volta perché il riepilogo
-// guardava la GIORNATA e non l'apertura.
-describe('i conti di questa apertura di cassa', () => {
-  const sessione = { id: 'cassa-2' }
-  const ordini = [
-    { id: 'a', cash_session_id: 'cassa-1', total: 40 },
-    { id: 'b', cash_session_id: 'cassa-2', total: 12 },
-    { id: 'c', cash_session_id: 'cassa-2', total: 8 },
-  ]
-
-  it('restano solo quelli battuti da quando si è aperto', () => {
-    expect(ordiniDellaCassaAperta(ordini, sessione).map((o) => o.id)).toEqual(['b', 'c'])
-  })
-
-  it('a cassa chiusa non c’è niente da contare', () => {
-    expect(ordiniDellaCassaAperta(ordini, null)).toEqual([])
-  })
-
-  it('chi la cassa non la apre mai continua a vedere la giornata', () => {
-    // Senza sessione scritta sugli ordini non c'è un'apertura a cui
-    // riferirsi: togliere i numeri vorrebbe dire togliere l'unico
-    // riepilogo che quel locale ha.
-    const senza = [{ id: 'x', total: 10 }, { id: 'y', total: 5 }]
-    expect(ordiniDellaCassaAperta(senza, null)).toHaveLength(2)
   })
 })

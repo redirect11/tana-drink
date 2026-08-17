@@ -37,7 +37,6 @@ import {
   passaFiltroCoda,
   restaInCoda,
 } from '../lib/coda.js'
-import { ordiniDellaCassaAperta } from '../lib/cassa.js'
 import { ripristinabile } from '../lib/storiaOrdine.js'
 import { StoriaOrdineDialog, RipristinaOrdineDialog } from '../components/StoriaOrdine.jsx'
 import StatusBell from '../components/StatusBell.jsx'
@@ -51,7 +50,7 @@ import {
   avvisoAttivo,
   idAvvisoStato,
 } from '../lib/preferenzeNotifiche.js'
-import { allServed } from '../lib/comande.js'
+import { allServed, contoChiuso } from '../lib/comande.js'
 import { paidAmount, orderTotal } from '../lib/pagamento.js'
 import { businessDayKey, businessDayLabel, businessDayShort } from '../lib/businessDay.js'
 import { isAwaitingPayment } from '../lib/payments.js'
@@ -787,9 +786,8 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
   const pagato = (o) =>
     o.payment_status === 'pagato' || o.workflow_status === ORDER_STATUSES.PAGATO
   const servito = (o) => allServed(o) || o.workflow_status === ORDER_STATUSES.RITIRATO
-  const isChiuso = (o) =>
-    o.workflow_status === ORDER_STATUSES.ANNULLATO ||
-    (workflowOn ? pagato(o) && servito(o) : pagato(o))
+  // La regola sta in comande.js: la usano anche il riepilogo e il magazzino.
+  const isChiuso = (o) => contoChiuso(o, { workflowOn })
   // Pagati ma non ancora serviti: restano in coda, si possono nascondere.
   const pagatiDaServire = effOrders.filter((o) => workflowOn && pagato(o) && !servito(o))
   const arretrati = effOrders
@@ -828,11 +826,20 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
   }
   const ordersOggi = effOrders.filter((o) => !arretratiIds.has(o.id))
   const ordersInVista = soloOggi ? ordersOggi : effOrders
-  // Riepilogo di testata: i conti di QUESTA apertura di cassa. Non la
-  // giornata — dentro una giornata ci stanno anche le serate già chiuse e
-  // rendicontate, e a cassa appena riaperta il banco leggeva «425 chiusi ·
-  // 10.228,40 €», soldi di un'altra sera. Vedi ordiniDellaCassaAperta.
-  const recap = ordersRecap(ordiniDellaCassaAperta(ordersOggi, cassaAperta), isChiuso)
+  // RIEPILOGO DI TESTATA: conta ESATTAMENTE i conti che si vedono in coda,
+  // qualunque tab sia aperta. Prima contava una lista sua — la giornata — e
+  // i numeri non tornavano con quello che c'era sotto: «0 chiusi» sopra una
+  // tab piena di conti chiusi. Se cambia la regola di cosa resta in coda,
+  // cambia anche il riepilogo, perché è la stessa lista.
+  const inCoda = ordersOggi.filter((o) =>
+    restaInCoda(o, {
+      chiuso: isChiuso(o) || annullato(o),
+      cassa: cassaAperta?.id ?? null,
+      giornata: dayOf(o),
+      oggi: oggiKey,
+    })
+  )
+  const recap = ordersRecap(inCoda, isChiuso)
 
   // Leggenda "chi ha aperto l'ordine": lettera → nome per lo staff che ha
   // battuto ordini oggi, più l'eventuale voce Cliente (ordini dall'app).
