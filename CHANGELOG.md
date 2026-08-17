@@ -25,6 +25,13 @@
   a mano in una dozzina di posti — il tab acceso, il «+», i tasti dei
   pannelli, gli aloni del fondo — e quelli restavano dorati con qualunque
   tema.
+- **Con gli stati di servizio spenti, la vista a schede ha tre schede**: In
+  corso, Chiusi e Annullati — le stesse della griglia, con le stesse regole.
+  Prima mostrava i cinque passi del lavoro, quasi tutti vuoti, e i conti
+  stavano tutti sotto «Ordine ricevuto». Ricerca e «Miei» filtrano dentro la
+  scheda in cui si sta.
+- **Il database di prova si apre sulla griglia**, che è la vista di casa: il
+  seed imponeva la vista a schede.
 - **Una ricetta cambiata al volo non si dimentica più**: il gin buono messo
   a mano su una riga tornava quello di listino, col suo costo, se si usciva
   subito.
