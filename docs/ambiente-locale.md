@@ -76,7 +76,9 @@ ruolo con `set-role.js`. Per le prove va bene
 toglie il dubbio (Vite altrimenti ne sceglie una a caso e poi non si sa
 dove guardare).
 
-**Gli emulatori partono vuoti a ogni riavvio**: niente persistenza, si
+**Gli emulatori si ricordano i dati fra un avvio e l'altro**
+(`--export-on-exit=.emulatori`, e `--import` quando la cartella c'è):
+uscendo li salvano, ripartendo li ricaricano. Se la cartella non c'è, si
 risemina — sono dieci secondi. E tutto vive sul progetto finto
 `demo-tana-drink`: né il test né la produzione vengono sfiorati.
 
@@ -159,8 +161,21 @@ prima è il firewall di Windows sulle porte degli emulatori (8081 Firestore,
 
 ## Quando l'emulatore si impianta
 
-Capita: il Firestore emulato accetta le connessioni e **non risponde più** —
-né all'app né agli script. Da fuori sembra un problema di rete, e l'app
+Capita, e la prima volta è costata mezza giornata a capirlo: il Firestore
+emulato accetta le connessioni e **non risponde più** — né all'app né agli
+script.
+
+**Guarda subito i log.** L'emulatore scrive `firestore-debug.log` e
+`firebase-debug.log` nella cartella del progetto, e li scrive con un
+dettaglio altissimo: dopo qualche giorno di uso erano **16 GB e 34 GB**, il
+disco al 96%, e il processo si è fermato lì — non morto, bloccato a
+scrivere. Si cancellano e basta (sono log di debug, non dati):
+
+```powershell
+Remove-Item firebase-debug.log, firestore-debug.log
+```
+
+Vale la pena guardarli ogni tanto, o cancellarli quando si riavvia. Da fuori sembra un problema di rete, e l'app
 infatti scrive «il wifi risulta collegato ma non sta passando niente»; in
 locale però la causa è quasi sempre questa. Il modo per esserne sicuri, in
 due secondi:
