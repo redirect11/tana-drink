@@ -1348,3 +1348,28 @@ describe('aprire il pagamento subito dopo aver battuto', () => {
     expect(within(pagamento).getAllByText('22,00 €').length).toBeGreaterThan(0)
   })
 })
+
+// ── BATTERE IN FRETTA E USCIRE ───────────────────────────────────────
+// Tre tap sullo stesso prodotto e via, di corsa, verso la coda: ne arrivava
+// UNO SOLO. Le aggiunte aspettano un attimo prima di partire (l'auto-
+// conferma), e uscendo i loro timer morivano con la schermata.
+describe('uscendo, quello che si è battuto parte lo stesso', () => {
+  it('tre tap veloci e via: al server arrivano tutti e tre', async () => {
+    const user = userEvent.setup()
+    const { unmount } = mount(baseOrder())
+    const gin = screen.getAllByText('Gin Tonic')[0]
+    await user.click(gin)
+    await user.click(gin)
+    await user.click(gin)
+    // Via subito, senza aspettare l'auto-conferma.
+    unmount()
+
+    await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalled())
+    const ultimo = bartenderUpdateComanda.mock.calls.at(-1)[2]
+    // Righe unite o separate poco importa: al server devono arrivare tre.
+    const gt = (ultimo.items || [])
+      .filter((i) => i.drink_id === 'gin')
+      .reduce((s, i) => s + (Number(i.qty) || 0), 0)
+    expect(gt).toBe(3)
+  })
+})

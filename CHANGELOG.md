@@ -25,6 +25,9 @@
   a mano in una dozzina di posti — il tab acceso, il «+», i tasti dei
   pannelli, gli aloni del fondo — e quelli restavano dorati con qualunque
   tema.
+- **Battendo in fretta e uscendo subito non si perde più niente** (BUG-016):
+  tre tap sullo stesso drink e via verso la coda ne lasciavano uno. Adesso
+  quello che si è battuto parte nell'istante in cui si esce.
 - **Aprendo un prodotto si legge quanto ce n'è**: la giacenza è la prima
   riga del dettaglio — prima c'erano soglia, costo e prezzo consigliato, ma
   non il numero per cui lo si apre.
