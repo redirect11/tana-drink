@@ -12,9 +12,11 @@
 
 ### Al banco
 
-- **Su un conto ancora vuoto «Annulla ordine» funziona**: era spento finché
-  non si batteva qualcosa, e chi apriva il conto per sbaglio non aveva un
-  modo evidente di uscire. Senza righe non chiede nemmeno conferma.
+- **«Annulla» funziona mentre si batte un conto nuovo**: il tasto della barra
+  azioni era spento per tutta la creazione, anche a righe già battute, e chi
+  aveva aperto il conto per sbaglio non aveva un modo evidente di uscire.
+  Adesso i due tasti «annulla» seguono la stessa regola; a conto ancora vuoto
+  non chiede nemmeno conferma, torna in coda.
 
 - **Nella vista menù, chi lavora non vede più i propri ordini in cima**:
   lì si prende un ordine, gli ordini stanno in coda.

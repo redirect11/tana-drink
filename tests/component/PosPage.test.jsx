@@ -532,15 +532,31 @@ describe('annullare un conto appena battuto', () => {
 // batteva qualcosa: chi apriva il conto per sbaglio — o cambiava idea prima
 // di battere — si trovava l'unico tasto d'uscita disabilitato, e doveva
 // cercare la freccia in alto.
-describe('annullare un conto ancora vuoto', () => {
-  it('il tasto è acceso, e riporta in coda senza chiedere niente', async () => {
+describe('annullare un conto in creazione', () => {
+  // I tasti «annulla» sono due — il pannello e la barra azioni — e avevano
+  // due regole diverse: quello della barra restava spento per tutta la
+  // creazione, anche a righe battute. Si controllano TUTTI, o la prossima
+  // volta ne resta indietro uno.
+  const tastiAnnulla = () =>
+    screen.getAllByRole('button', { name: /^Annulla/ })
+
+  it('senza righe è acceso, e riporta in coda senza chiedere niente', async () => {
     const user = userEvent.setup()
     mount()
-    const annulla = await screen.findByRole('button', { name: /Annulla ordine/ })
-    expect(annulla).not.toBeDisabled()
-    await user.click(annulla)
+    await waitFor(() => expect(tastiAnnulla().length).toBeGreaterThan(0))
+    tastiAnnulla().forEach((b) => expect(b).not.toBeDisabled())
+    await user.click(tastiAnnulla()[0])
     // Niente da buttare, niente da confermare: si esce.
     expect(navigateSpy).toHaveBeenCalledWith('/bar')
     expect(createOrder).not.toHaveBeenCalled()
+  })
+
+  it('con le righe battute resta acceso e chiede conferma', async () => {
+    const user = userEvent.setup()
+    mount()
+    await user.click(screen.getByText('Mojito'))
+    tastiAnnulla().forEach((b) => expect(b).not.toBeDisabled())
+    await user.click(tastiAnnulla()[0])
+    expect(await screen.findByText(/Annullare l’ordine\?|Annullare l'ordine\?/)).toBeInTheDocument()
   })
 })

@@ -301,3 +301,24 @@ bugs:
     generate_issue: true
     labels: [bug, hotfix, magazzino]
     test_cases: [tests/unit/inventory.test.js, tests/unit/pricing.test.js, tests/component/InventoryManagerCard.test.jsx, tests/component/MenuPage.test.jsx]
+
+  - id: BUG-011
+    title: "In creazione ordine il tasto «Annulla» della barra azioni è spento"
+    area: "src/components/OrderPosDetail.jsx"
+    description: >
+      Battendo un conto nuovo, il tasto «Annulla» della barra azioni resta
+      disabilitato: prima e dopo aver aggiunto le righe, sempre. Chi apre un
+      conto per sbaglio — o cambia idea a metà — non ha un modo evidente di
+      uscire e deve cercare la freccia «← Ordini» in alto.
+      CAUSA: i tasti «annulla» sono due, quello del pannello e quello della
+      barra azioni, e avevano due regole diverse (`isNew ? !conRighe : closed`
+      contro `isNew || closed`). Il secondo, che è quello che si usa, spegneva
+      tutta la creazione.
+      RISOLTO: una regola sola per entrambi — si annulla finché il conto è
+      aperto, e in creazione sempre. A conto ancora vuoto non c'è niente da
+      buttare, quindi non si chiede conferma: si torna in coda.
+    in_produzione: false
+    status: fixed
+    generate_issue: false
+    labels: [bug, ui, pos]
+    test_cases: [tests/component/PosPage.test.jsx]

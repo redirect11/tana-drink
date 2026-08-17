@@ -1319,6 +1319,23 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   // subito e i tasti non devono spegnersi in quell'istante.
   const conRighe = draftCount > 0 || (itemsInVoloRef.current || []).length > 0 || !isNew
 
+  // ANNULLARE SI PUÒ FINCHÉ IL CONTO È APERTO, e in creazione sempre: è la
+  // via d'uscita di chi ha aperto un conto per sbaglio o ha cambiato idea.
+  // I tasti «annulla» sono due (il pannello e la barra azioni) e avevano due
+  // regole diverse — quello della barra era spento per tutta la creazione,
+  // anche a righe battute. Da qui in poi la regola è una sola.
+  const annullaSpento = isNew ? false : closed
+  const annullaOrdine = () => {
+    // Senza righe non c'è niente da buttare né da annullare: si torna in
+    // coda e basta, senza far confermare una cosa che non succede.
+    if (isNew && !conRighe) {
+      ricordaContoInCorso(null)
+      navigate('/bar')
+      return
+    }
+    setConfirmCancel(true)
+  }
+
   // Quante righe si porterebbe via il «svuota»: in creazione la bozza, su un
   // conto aperto anche quelle già confermate ma ancora modificabili.
   const righeDaSvuotare = isNew
@@ -2206,23 +2223,10 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
               </button>
             )}
 
-            {/* SU UN CONTO VUOTO «ANNULLA» È LA VIA D'USCITA. Era spento
-                finché non si batteva qualcosa: chi apriva il conto per
-                sbaglio si trovava l'unico tasto di uscita disabilitato e
-                doveva cercare la freccia in alto. Senza righe non c'è
-                niente da buttare, quindi non si chiede nemmeno conferma: si
-                torna in coda. */}
             <button
               className="btn ghost small block"
-              disabled={isNew ? false : closed}
-              onClick={() => {
-                if (isNew && !conRighe) {
-                  ricordaContoInCorso(null)
-                  navigate('/bar')
-                  return
-                }
-                setConfirmCancel(true)
-              }}
+              disabled={annullaSpento}
+              onClick={annullaOrdine}
             >
               <IconX /> Annulla ordine
             </button>
@@ -2268,8 +2272,8 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                 )}
                 <button
                   className="btn ghost"
-                  disabled={isNew || closed}
-                  onClick={() => setConfirmCancel(true)}
+                  disabled={annullaSpento}
+                  onClick={annullaOrdine}
                   aria-label="Annulla"
                   title="Annulla l'ordine"
                 >
