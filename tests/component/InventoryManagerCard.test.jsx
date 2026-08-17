@@ -69,9 +69,13 @@ import InventoryManager from '../../src/components/InventoryManager.jsx'
 import { createInventoryItem } from '../../src/lib/api.js'
 
 // Apre la vista a CARD (il default è la lista) e aspetta il prodotto.
+// Card e lista sono DUE ICONE, e si cercano dalla loro etichetta: sulla linea
+// di produzione era un tasto scritto «▦ Card», e con questo merge diventa
+// l'icona «A card» (REQ-MAG-010). Il comportamento provato qui sotto è lo
+// stesso: cambia solo come si arriva alla vista.
 async function apriCard(user) {
   await screen.findByText('Campari')
-  await user.click(screen.getByRole('button', { name: '▦ Card' }))
+  await user.click(screen.getByRole('button', { name: 'A card' }))
 }
 
 describe('la card del magazzino', () => {
