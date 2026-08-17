@@ -1165,10 +1165,14 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   const submitNew = (name) => {
     setAskName(false)
     const nm = (name || '').trim() || null
-    if (order?.id && nm) {
-      updateOrderInfo(order.id, { customer_name: nm }).catch((e) =>
-        toastError(`Nome non salvato: ${e.message}`)
-      )
+    // Il conto può essere ancora in fase di nascita: il nome lo si mette
+    // appena c'è, in sottofondo. Nessuno resta a guardare una schermata
+    // ferma per un campo di testo.
+    if (nm) {
+      const dove = order?.id ? Promise.resolve(order) : creatingPromiseRef.current
+      Promise.resolve(dove)
+        .then((o) => (o?.id ? updateOrderInfo(o.id, { customer_name: nm }) : null))
+        .catch((e) => toastError(`Nome non salvato: ${e.message}`))
     }
     setInfo({ customer_name: '', table_label: '', note: '' })
     navigate('/bar')
@@ -1357,14 +1361,16 @@ export default function OrderPosDetail({ order: orderProp = null }) {
       if (createdInPlace && !nameAskedRef.current && needsName(order)) return askNameThenExit()
       return navigate('/bar')
     }
-    // Nulla ancora creato (uscita prima dell'auto-creazione): con item in bozza
-    // si crea ora e — se manca il nome — lo si chiede; altrimenti si esce.
+    // Nulla ancora creato (uscita prima dell'auto-creazione): il conto si crea
+    // ORA, ma NON SI ASPETTA. Prima si aspettava che fosse nato per sapere se
+    // chiedere il nome — e siccome il nome lo si sa già da qui (è quello che
+    // si è scritto, o non si è scritto, in questa schermata), l'unica cosa
+    // che quell'attesa produceva era il box che compariva in ritardo.
     if (draftCount === 0) return navigate('/bar')
-    createFromDraftRef.current().then((o) => {
-      if (!o) return
-      if (needsName(o)) return askNameThenExit()
-      navigate('/bar')
-    })
+    createFromDraftRef.current()
+    const senzaNome = !info.customer_name.trim() && !info.table_label.trim()
+    if (!nameAskedRef.current && senzaNome) return askNameThenExit()
+    navigate('/bar')
   }
 
   // In creazione si mostra GIÀ il progressivo che l'ordine avrà (letto dal

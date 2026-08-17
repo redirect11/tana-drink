@@ -236,10 +236,28 @@ requirements:
       E il «+» apre sempre un conto NUOVO: la memoria del conto in corso
       serve a riprenderlo dopo un ricaricamento della pagina, non a
       rimetterci dentro chi esce e rientra.
+      DUE TERMINALI, LO STESSO NUMERO: la disputa la chiude il SERVER, che è
+      l'unico posto dove esiste un «prima» e un «dopo» veri. Tiene il numero
+      chi è arrivato prima; chi arriva dopo prende il primo libero dopo il
+      più alto — un buco in mezzo sarebbe di un conto ancora per strada, e la
+      disputa ricomincerebbe. A parità di istante decide l'id del documento:
+      arbitrario, ma UGUALE per i due terminali, che è l'unica cosa che
+      conta. Tutto automatico: al banco non si ferma una serata per un
+      numero. Il numero cambia solo a chi ha perso, e resta scritto da dove
+      veniva (`daily_number_precedente`), perché la comanda può essere già
+      uscita dalla stampante col numero vecchio.
+      E USCIRE DAL CONTO NON ASPETTA NIENTE. Il box del nome aspettava che il
+      conto fosse nato per sapere se chiederlo — ma il nome si sa già dalla
+      schermata: l'unica cosa che quell'attesa produceva era il box in
+      ritardo. Il conto nasce per conto suo, e il nome lo raggiunge appena
+      c'è.
     status: implemented
     generate_issue: false
     labels: [ordini, offline, difetto-risolto]
-    test_cases: [tests/unit/progressivi.test.js]
+    test_cases:
+      - tests/unit/progressivi.test.js
+      - tests/bdd/numerazione.test.js
+      - tests/component/PosPage.test.jsx
 
   - id: REQ-ORD-008
     title: "Un conto chiuso o annullato si può rimettere in corso"
