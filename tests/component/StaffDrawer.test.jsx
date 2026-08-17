@@ -6,7 +6,7 @@
 // e non c'era modo di vedere a nome di chi si stava battendo.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, act } from '@testing-library/react'
+import { render, screen, act, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import '@testing-library/jest-dom/vitest'
@@ -137,6 +137,44 @@ describe('il menu agganciato alla pagina', () => {
     conSezioni()
     expect(document.body.classList.contains('drawer-agganciato')).toBe(true)
     expect(document.querySelector('.bar-sidebar.agganciata')).toBeTruthy()
+  })
+
+  // LA MANIGLIA. Le voci sono parole corte, le sottosezioni no —
+  // «Marginalità listino» a 178px si taglia — e su un monitor grande quella
+  // colonna stretta è spazio sprecato. Cresce tutto insieme, testo
+  // compreso: una colonna larga con la scritta piccola sembra rotta.
+  it('il menu agganciato si allarga tirando il bordo, e se lo ricorda', () => {
+    conSezioni()
+    const menu = document.querySelector('.bar-sidebar.agganciata')
+    const maniglia = document.querySelector('.bar-sidebar-maniglia')
+    expect(maniglia).toBeTruthy()
+    expect(menu.style.width).toBe('178px')
+
+    fireEvent.pointerDown(maniglia, { clientX: 200 })
+    fireEvent.pointerMove(maniglia, { clientX: 300 })
+    fireEvent.pointerUp(maniglia, { clientX: 300 })
+
+    expect(document.querySelector('.bar-sidebar.agganciata').style.width).toBe('278px')
+    // Il testo cresce con la colonna.
+    expect(parseFloat(document.querySelector('.bar-sidebar.agganciata').style.fontSize)).toBeGreaterThan(0.85)
+    expect(localStorage.getItem('tana:menu-largo')).toBe('278')
+  })
+
+  it('non si può tirare oltre misura: mezza pagina di menu non serve a nessuno', () => {
+    conSezioni()
+    const maniglia = document.querySelector('.bar-sidebar-maniglia')
+    fireEvent.pointerDown(maniglia, { clientX: 200 })
+    fireEvent.pointerMove(maniglia, { clientX: 2000 })
+    fireEvent.pointerUp(maniglia, { clientX: 2000 })
+    expect(document.querySelector('.bar-sidebar.agganciata').style.width).toBe('360px')
+  })
+
+  it('doppio clic sulla maniglia: si torna alla misura di partenza', () => {
+    localStorage.setItem('tana:menu-largo', '300')
+    conSezioni()
+    expect(document.querySelector('.bar-sidebar.agganciata').style.width).toBe('300px')
+    fireEvent.doubleClick(document.querySelector('.bar-sidebar-maniglia'))
+    expect(document.querySelector('.bar-sidebar.agganciata').style.width).toBe('178px')
   })
 
   it('sulle pagine senza sezioni resta a scomparsa: la coda non perde una colonna', () => {

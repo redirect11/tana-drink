@@ -2093,6 +2093,13 @@ requirements:
       diventa inutilizzabile, quindi lì resta a scomparsa; da 768px —
       l'iPad in verticale, il tablet del banco — restano 500px e la scelta
       ha senso, con la colonna stretta a 200px fino ai 900px.
+      E SI ALLARGA TIRANDO IL BORDO. Le voci sono parole corte, le
+      sottosezioni no — «Marginalità listino» a 178px si taglia — e su un
+      monitor grande quella colonna stretta è spazio sprecato. La maniglia
+      sul bordo destro la porta fra 150 e 360px, doppio clic per tornare
+      alla misura di partenza, e la larghezza scelta resta anche domani.
+      Cresce tutto insieme, testo e icone: una colonna larga con la scritta
+      piccola in mezzo sembra rotta.
     status: implemented
     generate_issue: false
     labels: [ux, navigazione]

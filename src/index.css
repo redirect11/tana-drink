@@ -5797,7 +5797,10 @@ body.pagina-piena .pagina-inventario .inv-scroll {
     overscroll-behavior: contain;
     flex-shrink: 0;
     align-self: stretch;
+    /* La larghezza la scrive la maniglia (StaffDrawer); questa è la misura
+       di partenza per chi non l'ha mai toccata. */
     width: 178px;
+    position: relative;
     /* Il respiro laterale della pagina (.app: 0 16px) lo annulla: se no
        fra il menu e il bordo della finestra resta una striscia di fondo,
        e la colonna sembra appoggiata sopra invece che incastrata. */
@@ -5815,11 +5818,14 @@ body.pagina-piena .pagina-inventario .inv-scroll {
   }
   /* MENO INGOMBRO. Le voci sono parole corte: righe alte 52px e un
      rientro da 18 lasciavano mezza colonna vuota a destra. */
+  /* MISURE IN «EM»: tirando la maniglia cresce la colonna e cresce il
+     testo con lei. Una colonna larga con la scritta piccola in mezzo
+     sembra rotta. Il font di partenza lo mette il menu stesso. */
   body.drawer-agganciato .bar-sidebar.agganciata .bar-nav-item {
     min-height: 0;
-    gap: 8px;
-    padding: 7px 10px;
-    font-size: 0.85rem;
+    gap: 0.6em;
+    padding: 0.5em 0.75em;
+    font-size: 1em;
     font-weight: 600;
   }
   body.drawer-agganciato .bar-sidebar.agganciata .bar-nav-sep {
@@ -5838,8 +5844,8 @@ body.pagina-piena .pagina-inventario .inv-scroll {
     background: rgba(245, 185, 74, 0.06);
   }
   body.drawer-agganciato .bar-sidebar.agganciata .bar-nav-sottovoce {
-    padding: 5px 10px 5px 22px;
-    font-size: 0.8rem;
+    padding: 0.36em 0.75em 0.36em 1.6em;
+    font-size: 0.94em;
     font-weight: 500;
     border-left: 0;
     opacity: 0.85;
@@ -5848,6 +5854,25 @@ body.pagina-piena .pagina-inventario .inv-scroll {
     background: transparent;
     opacity: 1;
     font-weight: 700;
+  }
+
+  /* LA MANIGLIA. Una striscia sul bordo destro, larga abbastanza da
+     prendersi col dito ma invisibile finché non ci si passa sopra: è un
+     bordo che si può tirare, non un elemento dell'interfaccia. Doppio clic
+     per tornare alla misura di partenza. */
+  .bar-sidebar-maniglia {
+    position: absolute;
+    top: 0;
+    right: -3px;
+    width: 7px;
+    height: 100%;
+    cursor: col-resize;
+    touch-action: none;
+    z-index: 2;
+  }
+  .bar-sidebar-maniglia:hover,
+  .bar-sidebar-maniglia:active {
+    background: color-mix(in srgb, var(--accent-2) 55%, transparent);
   }
 
   /* Niente velo: non c'e' piu' niente da coprire. */
