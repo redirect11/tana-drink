@@ -25,6 +25,12 @@
   a mano in una dozzina di posti — il tab acceso, il «+», i tasti dei
   pannelli, gli aloni del fondo — e quelli restavano dorati con qualunque
   tema.
+- **La scheda prodotto fa tre domande, sempre le stesse**: come lo compri,
+  come lo usi in ricetta, e — solo se sono diverse — **quanto rende**. Così i
+  limoni si comprano al chilo e si spremono in cl («1 kg rende 50 cl»), il
+  ghiaccio a sacchi e si usa a grammi, il gin a bottiglia e si versa a cl. In
+  alto c'è un **«?»** che spiega le tre domande con gli esempi. I prodotti già
+  in magazzino non cambiano di una virgola.
 - **Le domande sulle unità del magazzino sono scritte come si parla**:
   «Quanto contiene una confezione che compri?» e «A quanto corrisponde un
   pezzo?», con scritto sotto che non toccano la giacenza. E un pezzo può

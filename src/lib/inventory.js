@@ -36,6 +36,37 @@ export const ENTRY_UNITS = {
   [UNITA_GENERICA]: [UNITA_GENERICA],
 }
 
+// ── COME LO COMPRI, COME LO USI, E QUANTO RENDE ──────────────────────
+//
+// Un prodotto si compra in un modo e si usa in un altro: il gin si compra a
+// bottiglia e si versa a cl, i limoni si comprano al CHILO e si spremono in
+// CL. Le due misure non appartengono nemmeno alla stessa famiglia, e infatti
+// non esiste una conversione universale fra peso e volume — ma questa non è
+// una conversione: è la RESA, e la dichiara chi compra («da un chilo di
+// limoni esce mezzo litro di succo», Flavio, 17/08).
+//
+// La giacenza si conta sempre in QUELLO CHE SI COMPRA — i chili, i sacchi,
+// le bottiglie — perché l'inventario si fa contando quello che sta sullo
+// scaffale, non il succo che ne uscirà.
+//
+// `resaUso` risponde a: «una unità BASE d'acquisto quante unità base d'uso
+// rende?». Null se non c'è niente da convertire.
+//
+//   bottiglia da 70 cl → { base: 'ml', per: 700 }   (1 pz = 700 ml)
+//   limoni al chilo    → { base: 'ml', per: 0.5 }   (1 g  = 0,5 ml di succo)
+//
+// I due campi nuovi (`resa_unit`, `resa`) valgono per qualunque articolo. Per
+// i pezzi resta valido quello che c'era prima — `content_unit` +
+// `package_size` — così i prodotti già in magazzino non si toccano.
+export function resaUso(item) {
+  const perDichiarata = Number(item?.resa) || 0
+  const baseDichiarata = item?.resa_unit ? baseUnit(item.resa_unit) : null
+  if (perDichiarata > 0 && baseDichiarata) return { base: baseDichiarata, per: perDichiarata }
+  const c = contentBase(item)
+  if (c && (item?.unit || 'pz') === 'pz') return { base: c.base, per: c.size }
+  return null
+}
+
 // Unità con cui si dosa QUESTO ingrediente in una ricetta.
 //
 // La giacenza si conta a bottiglie (si carica la merce a pezzi), ma un
@@ -48,12 +79,14 @@ export const ENTRY_UNITS = {
 // perché una Coca in un drink si mette intera.
 export function entryUnits(item) {
   const unit = item?.unit || 'pz'
-  if (unit !== 'pz') return ENTRY_UNITS[unit] ?? [unit]
-  const c = contentBase(item)
-  if (c?.base === 'ml') return ['cl', 'ml', 'pz']
-  if (c?.base === 'g') return ['g', 'mg', 'pz']
-  if (c && unitaGenerica(c.base)) return [UNITA_GENERICA, 'pz']
-  return ['pz']
+  const proprie = unit !== 'pz' ? (ENTRY_UNITS[unit] ?? [unit]) : ['pz']
+  const r = resaUso(item)
+  if (!r || r.base === unit) return proprie
+  // Le unità d'uso vengono PRIMA: nelle ricette sono il caso normale (si
+  // dosano 4 cl di gin, non 0,057 bottiglie). Quella d'acquisto resta, che
+  // una Coca in un drink si mette intera.
+  const uso = ENTRY_UNITS[r.base] ?? [r.base]
+  return [...uso, ...proprie.filter((u) => !uso.includes(u))]
 }
 
 // Converte una quantità dall'unità inserita all'unità base dell'item.
@@ -123,7 +156,7 @@ const numero = (n) =>
 
 // Formatta una quantità BASE nell'unità ESATTA scelta (niente auto-scaling:
 // se l'utente lavora in cl, vede cl). Etichette: L, cl, ml, kg, g, mg, pz, U.
-const UNIT_LABEL = { l: 'L', cl: 'cl', ml: 'ml', kg: 'kg', g: 'g', mg: 'mg', pz: 'pz', u: 'U' }
+export const UNIT_LABEL = { l: 'L', cl: 'cl', ml: 'ml', kg: 'kg', g: 'g', mg: 'mg', pz: 'pz', u: 'U' }
 export function formatIn(base, unit) {
   return `${numero(fromBaseQty(base, unit))} ${UNIT_LABEL[String(unit || '').toLowerCase()] || unit}`
 }
@@ -414,19 +447,25 @@ export function costPerUnit(item, unit, { gross = true } = {}) {
     }
     return null
   }
-  if ((item?.unit || 'pz') === 'pz') {
-    // Il pezzo costa quello che costa. Il costo al cl si ricava solo se si
-    // sa quanto contiene la bottiglia: altrimenti null, che vuol dire "non
-    // lo so" e non "zero".
-    if (unit === 'pz') return packCost
-    const c = contentBase(item)
-    if (!c || !per || baseUnit(unit) !== c.base) return null
-    return packCost / (c.size / per)
+  const acquisto = item?.unit || 'pz'
+  // Quanto costa UNA unità base d'acquisto: un pezzo costa quello che costa,
+  // il resto è il costo della confezione diviso quanto contiene.
+  const costoBaseAcquisto = (() => {
+    if (acquisto === 'pz') return packCost
+    const size = Number(item?.package_size) || 0
+    return size > 0 ? packCost / size : null
+  })()
+  if (costoBaseAcquisto == null) return null
+  if (baseUnit(unit) === acquisto) {
+    if (!per) return null
+    return costoBaseAcquisto * per
   }
-  if (!per || baseUnit(unit) !== item.unit) return null
-  const size = Number(item?.package_size) || 0
-  if (size <= 0) return null
-  return packCost / (size / per)
+  // UNITÀ D'USO: ci si arriva con la resa. Un cl di succo di limone costa
+  // quanto costano i grammi di limoni che ci vogliono per farlo. Senza resa
+  // null, che vuol dire «non lo so» e non «zero».
+  const r = resaUso(item)
+  if (!r || !per || baseUnit(unit) !== r.base || !(r.per > 0)) return null
+  return (costoBaseAcquisto / r.per) * per
 }
 
 // Valore totale del magazzino.
@@ -484,13 +523,13 @@ export function qtyInStockUnit(qty, unit, item) {
     return size > 0 ? q * size : q
   }
   const base = toBaseQty(q, u)
-  if (stockUnit === 'pz') {
-    const c = contentBase(item)
-    if (!c || baseUnit(u) !== c.base || !(c.size > 0)) return q
-    return base / c.size
-  }
-  if (baseUnit(u) !== stockUnit) return q
-  return base
+  if (baseUnit(u) === stockUnit) return base
+  // Unità d'uso: si torna a quella d'acquisto con la resa. Vale per la
+  // bottiglia (40 ml da una da 700 sono 0,057 pezzi) e per il chilo di
+  // limoni (4 cl di succo sono 80 g di limoni).
+  const r = resaUso(item)
+  if (!r || baseUnit(u) !== r.base || !(r.per > 0)) return q
+  return base / r.per
 }
 
 // Calcola il consumo totale per ingrediente da una lista di order_items.

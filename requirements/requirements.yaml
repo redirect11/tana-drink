@@ -1462,10 +1462,23 @@ requirements:
       Il modello è quindi completo e si può scrivere: unità d'acquisto
       (giacenza e prezzo), unità d'uso (ricette), resa fra le due quando
       sono diverse. Con questo, BUG-014 si chiude da sé.
+      FATTO (1.4.8). `resaUso` (lib/inventory.js) risponde a «una unità base
+      d'acquisto quante unità base d'uso rende?», e da lì passano tutti e
+      tre i conti che contano: lo scarico dal magazzino (qtyInStockUnit), il
+      costo di quello che si versa (costPerUnit) e le unità che si possono
+      scrivere in ricetta (entryUnits). La resa vive su due campi nuovi
+      (`resa`, `resa_unit`) validi per qualunque articolo; per i PEZZI resta
+      buono quello che c'era — `content_unit` + `package_size` — quindi i
+      prodotti già in magazzino non si toccano e si comportano come prima.
+      La scheda prodotto è rifatta sulle tre domande, col «?» in alto che le
+      spiega, e la terza («si usa in un'altra unità?») compare solo a chi non
+      si conta a pezzi. Senza resa dichiarata non si inventa niente: costo
+      null e consumo invariato, che è meglio di un numero uscito da una
+      moltiplicazione a caso.
     status: todo
     generate_issue: true
     labels: [magazzino, ux]
-    test_cases: []
+    test_cases: [tests/unit/inventory.test.js, tests/component/InventoryManagerCard.test.jsx]
 
   - id: REQ-MAG-015
     title: "Macro-categorie di magazzino e di menù, per incrociare speso e incassato"

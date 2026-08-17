@@ -37,6 +37,7 @@ import {
   BASE_UNITS,
   contentBase,
   unitaGenerica,
+  resaUso,
 } from '../../src/lib/inventory.js'
 
 describe('toBaseQty', () => {
@@ -950,5 +951,63 @@ describe('pezzi con dentro unità generiche', () => {
 
   it('il contenuto si legge in unità, non in centilitri', () => {
     expect(fmtContenuto(10, conUnita)).toMatch(/10\s*U/)
+  })
+})
+
+// ── SI COMPRA IN UN MODO, SI USA IN UN ALTRO ─────────────────────────
+//
+// «Io i limoni li compro al chilo, ma li spremo e ci faccio i cl: da un
+// chilo esce mezzo litro di succo» (Flavio, 17/08). Peso e volume non si
+// convertono l'uno nell'altro — e infatti questa non è una conversione, è
+// la RESA, e la sa chi spreme. La giacenza resta quella che si conta sullo
+// scaffale: i chili.
+describe('la resa: dal chilo di limoni ai cl di succo', () => {
+  // 1 kg = 1000 g di giacenza, e rende 500 ml di succo → 0,5 ml per grammo.
+  const limoni = {
+    unit: 'g',
+    package_size: 1000, // si compra a cassette da 1 kg
+    cost: 2, // 2 € al chilo
+    vat: 0,
+    stock: 5000, // 5 kg
+    resa: 0.5,
+    resa_unit: 'ml',
+  }
+
+  it('la resa si legge come l’ha scritta chi compra', () => {
+    expect(resaUso(limoni)).toEqual({ base: 'ml', per: 0.5 })
+  })
+
+  it('in ricetta si dosa in cl, non in grammi di limone', () => {
+    expect(entryUnits(limoni)).toContain('cl')
+    expect(entryUnits(limoni)[0]).toBe('cl') // il caso normale viene per primo
+  })
+
+  it('4 cl di succo scalano 80 g di limoni', () => {
+    // 4 cl = 40 ml di succo; a 0,5 ml per grammo servono 80 g di limoni.
+    expect(qtyInStockUnit(4, 'cl', limoni)).toBeCloseTo(80, 6)
+  })
+
+  it('e il cl di succo costa quanto i limoni che ci vogliono', () => {
+    // 2 €/kg = 0,002 €/g; un ml di succo costa 0,002/0,5 = 0,004 €;
+    // un cl dieci volte tanto.
+    expect(costPerUnit(limoni, 'cl')).toBeCloseTo(0.04, 6)
+    // E il grammo di limoni resta quello che è.
+    expect(costPerUnit(limoni, 'g')).toBeCloseTo(0.002, 6)
+  })
+
+  it('senza resa dichiarata non si inventa niente', () => {
+    // Meglio «non lo so» che un numero uscito da una moltiplicazione a caso.
+    const senzaResa = { ...limoni, resa: null, resa_unit: null }
+    expect(resaUso(senzaResa)).toBe(null)
+    expect(costPerUnit(senzaResa, 'cl')).toBe(null)
+    expect(qtyInStockUnit(4, 'cl', senzaResa)).toBe(4)
+  })
+
+  it('la bottiglia continua a funzionare come prima: è la stessa regola', () => {
+    // 40 ml da una bottiglia da 700 restano 0,057 pezzi, come sempre.
+    const gin = { unit: 'pz', package_size: 700, content_unit: 'ml', cost: 14, vat: 0 }
+    expect(resaUso(gin)).toEqual({ base: 'ml', per: 700 })
+    expect(qtyInStockUnit(40, 'ml', gin)).toBeCloseTo(40 / 700, 6)
+    expect(costPerUnit(gin, 'cl')).toBeCloseTo(14 / 70, 6)
   })
 })
