@@ -123,8 +123,12 @@ sono rami protetti — niente push diretti, niente merge fatti in locale e
 spinti su. La PR è il posto dove la CI fa rispettare il cancello da sola
 (il check «Lint, test e build», con la coverage e le sue soglie, è
 obbligatorio per il merge). I rami `release/**` restano scrivibili
-direttamente — sono il posto di lavoro quotidiano — ma protetti da
-cancellazione e force-push.
+direttamente — sono il posto di lavoro quotidiano — e protetti dalla sola
+cancellazione: **si devono poter ribasare**. Un ramo di lavoro che nasce
+da `develop` va tenuto allineato riscrivendogli sotto la base
+(`git rebase origin/develop`), non impilandoci merge che poi finiscono in
+`develop` a raccontare un giro che non interessa a nessuno. Chi lavora
+sullo stesso ramo lo riallinea con `git pull --rebase`.
 
 Prima di aprire la PR si passa il cancello, tutto quanto:
 
