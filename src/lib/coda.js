@@ -94,7 +94,8 @@ export function primoCorrispondente(orders, query) {
 // i soldi della serata — e gli ANNULLATI hanno una tab loro: mescolati ai
 // chiusi facevano numero senza essere incassi, e per ritrovarne uno da
 // riaprire bisognava cercarlo in mezzo a quelli buoni.
-export const annullato = (o) => o?.workflow_status === ORDER_STATUSES.ANNULLATO
+export const annullato = (o) =>
+  o?.status === ORDER_STATUSES.ANNULLATO || o?.workflow_status === ORDER_STATUSES.ANNULLATO
 
 // UN CONTO CHIUSO RESTA IN CODA SOLO PER QUESTA APERTURA DI CASSA. La coda
 // è il lavoro di adesso: un conto incassato o annullato prima dell'ultima
@@ -138,4 +139,26 @@ export function passaFiltroCoda(o, filtro, isChiuso = () => false) {
   // Un annullato non è un conto chiuso: è un conto che non c'è più.
   if (filtro === 'chiusi') return isChiuso(o) && !annullato(o)
   return !isChiuso(o)
+}
+
+// COSA MOSTRA LA CODA, in una funzione sola: quello che resta in coda per
+// questa apertura di cassa, filtrato per la tab scelta. Sta qui e non nella
+// pagina perché è la cosa da provare — «annullo un conto e lo ritrovo sotto
+// Annullati» — e a provarla a pezzi si finisce col dimostrare che le regole
+// funzionano mentre a schermo non compare niente.
+export function ordiniInCoda(
+  orders,
+  { filtro = 'attivi', isChiuso = () => false, cassa = null, apertaDa = null, giornataDi = () => null, oggi = null } = {}
+) {
+  return (orders || [])
+    .filter((o) =>
+      restaInCoda(o, {
+        chiuso: isChiuso(o) || annullato(o),
+        cassa,
+        apertaDa,
+        giornata: giornataDi(o),
+        oggi,
+      })
+    )
+    .filter((o) => passaFiltroCoda(o, filtro, isChiuso))
 }

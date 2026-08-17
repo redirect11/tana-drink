@@ -34,8 +34,8 @@ import {
   ordineCorrisponde,
   primoCorrispondente,
   inseritiDa,
-  passaFiltroCoda,
   restaInCoda,
+  ordiniInCoda,
 } from '../lib/coda.js'
 import { ripristinabile } from '../lib/storiaOrdine.js'
 import { StoriaOrdineDialog, RipristinaOrdineDialog } from '../components/StoriaOrdine.jsx'
@@ -656,10 +656,10 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
         setError(e.message)
         setOrdersReady(true) // errore visibile in pagina, niente spinner infinito
       },
-      { cutoffHour }
+      { cutoffHour, cashSessionId: cassaAperta?.id ?? null }
     )
     return unsub
-  }, [cutoffHour])
+  }, [cutoffHour, cassaAperta?.id])
 
   // Scambio placeholder → ordine reale: appena l'ordine con il
   // client_temp_id del placeholder arriva dalla sottoscrizione, il
@@ -892,22 +892,21 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
   // anche i chiusi/pagati o TUTTI gli ordini in vista.
   const isClosed = isChiuso
   const nascosti = new Set(nascondiPagati ? pagatiDaServire.map((o) => o.id) : [])
-  const boardOrders = visibleOrders
-    .filter((o) => !nascosti.has(o.id))
-    // Chiusi e annullati di prima dell'ultima chiusura di cassa non sono
-    // coda: stanno in Cassa. Vedi restaInCoda.
-    .filter((o) =>
-      restaInCoda(o, {
-        chiuso: isClosed(o) || annullato(o),
-        cassa: cassaAperta?.id ?? null,
-        apertaDa: cassaAperta?.opened_at ?? null,
-        giornata: dayOf(o),
-        oggi: oggiKey,
-      })
-    )
-    .filter((o) =>
-      passaFiltroCoda(o, boardFilter, isClosed)
-    )
+  // Chiusi e annullati di prima dell'ultima chiusura di cassa non sono coda:
+  // stanno in Cassa. La composizione sta in coda.js, ed è quella provata dai
+  // test.
+  const boardOrders = ordiniInCoda(
+    visibleOrders.filter((o) => !nascosti.has(o.id)),
+    {
+      filtro: boardFilter,
+      isChiuso: isClosed,
+      cassa: cassaAperta?.id ?? null,
+      apertaDa: cassaAperta?.opened_at ?? null,
+      giornataDi: dayOf,
+      oggi: oggiKey,
+    }
+  )
+    .slice()
     .sort((a, b) => ((a.daily_number || 0) - (b.daily_number || 0)) * (ordineDesc ? -1 : 1))
   // Ordini POS in invio. Finché il placeholder è attivo l'ordine reale
   // resta nascosto: il match usa il client_temp_id scritto sull'ordine
