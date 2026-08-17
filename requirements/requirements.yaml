@@ -1634,6 +1634,26 @@ requirements:
       - tests/bdd/notify-staff-call.test.js
       - tests/component/StaffCallList.test.jsx
 
+  - id: REQ-STAFF-013
+    title: "Per chi lavora, la vista menù serve a battere un ordine"
+    area: "src/pages/MenuPage.jsx, src/components/ServiceQueue.jsx"
+    description: >
+      Nella vista menù il personale non vede più i propri ordini attivi in
+      cima: quella schermata, per chi lavora, serve a UNA cosa — prendere un
+      ordine dalla carta com'è fatta per il cliente. Gli ordini stanno in
+      coda, che è un'altra pagina, e vederli anche qui mescolava due
+      mestieri. Al cliente invece restano: è l'unico posto dove ritrova
+      quello che ha ordinato.
+      E in «Da servire» il tasto è «Aggiungi ordine», e porta dove porta il
+      «+» della coda: la schermata del conto, con la griglia. Prima mandava
+      al menù — la vista del cliente — che per prendere un ordine al tavolo
+      è la strada lunga: si scorre una carta fatta per chi ordina, invece
+      della griglia fatta per chi batte.
+    status: implemented
+    generate_issue: false
+    labels: [staff, ux]
+    test_cases: [tests/component/MenuPage.test.jsx]
+
   - id: REQ-STAFF-008
     title: "La sala lavora sulla stessa coda del banco"
     area: "src/pages/BartenderPage.jsx, src/lib/sezioni.js, src/lib/coda.js"
