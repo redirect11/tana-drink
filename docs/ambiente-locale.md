@@ -136,3 +136,23 @@ node scripts/set-role.js --emulator --email tu@bar.it --role admin
 - **App Check / reCAPTCHA**: in locale è disattivato (non c'è dominio da
   verificare). È acceso solo in produzione.
 - **Le push**: vogliono un dominio in HTTPS e le chiavi vere.
+
+## Da un altro dispositivo della rete
+
+Il server di sviluppo e gli emulatori ascoltano su tutte le interfacce
+(`firebase.collaudo.json`), quindi da un altro computer o dal telefono si
+apre `http://<ip-del-pc>:5175`. L'app capisce da sola a quale indirizzo
+chiedere i dati: usa lo stesso host da cui è stata servita, non
+`localhost` — che sull'altro dispositivo sarebbe l'altro dispositivo.
+
+**Col Firestore emulato si parla in long-polling** (`firebaseClient.js`).
+Il canale veloce di Firestore, raggiunto da un'altra macchina, a volte si
+apre e non consegna mai niente: la pagina si carica, le connessioni si
+vedono aperte, e i dati non arrivano — a schermo compare «il wifi risulta
+collegato ma non sta passando niente», che è esattamente quello che
+succede. In produzione resta il canale veloce, che è più leggero.
+
+Se da un altro dispositivo non arriva comunque niente, la cosa da guardare
+prima è il firewall di Windows sulle porte degli emulatori (8081 Firestore,
+9099 Auth): `netstat -ano | findstr :8081` deve mostrare l'ascolto su
+`0.0.0.0` e una connessione dall'IP dell'altro dispositivo.

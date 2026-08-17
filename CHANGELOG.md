@@ -2,6 +2,14 @@
 
 ## Non ancora rilasciata — 1.4.6
 
+### Sotto il cofano
+
+- **In locale, da un altro dispositivo della rete, i dati adesso
+  arrivano**: col Firestore emulato si parla in long-polling. Prima la
+  pagina si caricava, le connessioni c'erano, ma non consegnavano niente —
+  e a schermo restava «il wifi risulta collegato ma non sta passando
+  niente».
+
 ### Al banco
 
 - **La schermata del conto nuovo si apre pulita, sempre.** Uscendo da
