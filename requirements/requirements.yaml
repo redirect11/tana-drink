@@ -328,6 +328,12 @@ requirements:
     description: >
       Capita di chiudere un conto sul tavolo sbagliato, di annullarlo per un
       malinteso, o che il cliente torni e voglia ordinare ancora su quello.
+      Nella storia CHI ha fatto una cosa si scrive sempre allo stesso modo:
+      il NOME, col ruolo fra parentesi se si sa. Mai l'email, che è un
+      indirizzo e non una persona. Prima la stessa persona compariva tre
+      volte con tre etichette diverse — l'email all'apertura, il ruolo
+      all'annullo (l'unica cosa che quella strada scriveva), il nome alla
+      riapertura — e chi leggeva non poteva dire «è stato lui».
       Chi ha il gestionale può rimetterlo in corso: si conferma in un pannello
       che dice cosa succederà e si può scrivere il perché — FACOLTATIVO, perché
       se fosse obbligatorio si scriverebbe "x" per passare oltre, e al banco i
