@@ -1034,3 +1034,27 @@ describe('la resa: dal chilo di limoni ai cl di succo', () => {
     expect(costPerUnit(gin, 'cl')).toBeCloseTo(14 / 70, 6)
   })
 })
+
+// ── IL CONTENUTO DECIDE COME SI DOSA IN RICETTA ──────────────────────
+// Scritto, la ricetta può dosare a pezzo o nell'unità del contenuto;
+// lasciato vuoto si dosa solo a pezzi — la birra si serve intera. Quanto ne
+// va in un drink lo decide la ricetta, non questo campo.
+describe('cosa si può scrivere in ricetta, secondo il contenuto', () => {
+  it('col contenuto scritto: pezzo o unità del contenuto', () => {
+    const gin = { unit: 'pz', package_size: 1000, content_unit: 'ml' }
+    expect(entryUnits(gin)).toEqual(['cl', 'ml', 'pz'])
+  })
+
+  it('senza contenuto: solo a pezzi', () => {
+    expect(entryUnits({ unit: 'pz' })).toEqual(['pz'])
+    expect(entryUnits({ unit: 'pz', package_size: 0, content_unit: 'ml' })).toEqual(['pz'])
+  })
+
+  it('e le unità d’uso vengono per prime: è il caso normale', () => {
+    // Comprato al chilo e usato in cl: nella ricetta si scrive 4 cl, non
+    // 0,08 chili.
+    const limoni = { unit: 'g', resa: 0.5, resa_unit: 'ml' }
+    expect(entryUnits(limoni)[0]).toBe('cl')
+    expect(entryUnits(limoni)).toContain('g')
+  })
+})

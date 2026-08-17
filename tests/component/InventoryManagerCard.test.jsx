@@ -502,3 +502,27 @@ describe('la resa si scrive con le quantità di tutti e due i lati', () => {
     expect(salvato.unit).toBe('g') // la giacenza resta quella che si compra
   })
 })
+
+// ── «A QUANTO CORRISPONDE UN PEZZO» NON È LA DOSE DEL DRINK ──────────
+// La domanda si legge facilmente per un'altra — «quanto ne va in un
+// drink?» — e quella la decide la ricetta. Chi le confonde riempie il campo
+// con la dose di un cocktail e scarica il magazzino con numeri sbagliati.
+describe('il contenuto di un pezzo, spiegato', () => {
+  it('la didascalia dice che si può lasciare vuoto, e il «?» spiega il resto', async () => {
+    const user = userEvent.setup()
+    render(<InventoryManager />)
+    await screen.findByText('Campari')
+    await user.click(screen.getByRole('button', { name: '+ Nuovo prodotto' }))
+    await user.selectOptions(screen.getByLabelText(/Unità d.acquisto/), 'pz')
+    await user.click(screen.getByRole('checkbox', { name: /Lo uso come lo compro/ }))
+
+    expect(
+      screen.getByText(/da lasciare vuoto per decidere la quantità direttamente nella ricetta/)
+    ).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /Come funziona «a quanto corrisponde un pezzo»/ }))
+    const box = await screen.findByRole('dialog', { name: /A quanto corrisponde un pezzo/ })
+    expect(within(box).getByText(/Se lo lasci vuoto/)).toBeInTheDocument()
+    expect(within(box).getByText(/solo a pezzi/)).toBeInTheDocument()
+  })
+})
