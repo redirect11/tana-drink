@@ -516,9 +516,17 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                             <span className="muted small"> · 1× {formatPrice(r.unit_price)}</span>
                           </span>
                           <span className="qty">
+                            {/* UNO ALLA VOLTA. Il «−» scriveva la nuova
+                                quantità come «tutte quelle prima di questa»:
+                                premendolo sulla PRIMA di tre si spegnevano
+                                tutte e tre insieme, e chi stava dividendo il
+                                conto si ritrovava da capo. Le unità sono
+                                identiche — quale si toglie non cambia
+                                niente — quindi si toglie e si aggiunge una
+                                unità per volta. */}
                             <button
                               aria-label={`Togli ${r.name} dal pagamento`}
-                              onClick={() => setSel((st) => ({ ...st, [r.key]: i }))}
+                              onClick={() => bump(r, -1)}
                               disabled={closed || !on}
                             >
                               −
@@ -526,7 +534,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                             <strong>{on ? 1 : 0}/1</strong>
                             <button
                               aria-label={`Paga ${r.name}`}
-                              onClick={() => setSel((st) => ({ ...st, [r.key]: i + 1 }))}
+                              onClick={() => bump(r, 1)}
                               disabled={closed || on}
                             >
                               +

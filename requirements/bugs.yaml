@@ -157,11 +157,19 @@ bugs:
       una selezione per UNITÀ, non un contatore per prodotto.
       In produzione (1.3.1) la stessa cosa succede con le caselline da
       spuntare: spuntandone una in mezzo, si spengono quelle sotto.
+      RISOLTO: il «−» toglie UNA unità e il «+» ne rimette una, invece di
+      riscrivere il contatore a «tutte quelle prima di questa». La
+      selezione resta un numero — le unità sono identiche, quale delle tre
+      si toglie non cambia niente per il conto né per chi paga — ma quello
+      che si vede a schermo torna a corrispondere a quello che si è
+      premuto: ne esce una sola.
     in_produzione: true
-    status: todo
+    status: fixed
     generate_issue: true
     labels: [bug, pagamenti]
-    test_cases: []
+    test_cases:
+      - tests/component/PaymentScreen.test.jsx
+      - tests/unit/pagamento.test.js
 
   # ── I guai raccontati dal banco il 17 agosto 2026 ────────────────────────
   # Quattro note vocali e tre schermate, trascritte con

@@ -631,3 +631,34 @@ describe('righe scelte o importo a mano', () => {
     expect(screen.getByText(/Acconto: resta sul conto/)).toBeInTheDocument()
   })
 })
+
+// SEPARANDO LE UGUALI SI TOGLIE UNA UNITÀ ALLA VOLTA. Il «−» scriveva la
+// nuova quantità come «tutte quelle prima di questa»: premuto sulla PRIMA
+// di tre le spegneva tutte e tre insieme, e chi stava dividendo il conto si
+// ritrovava da capo.
+describe('separa uguali: una unità alla volta', () => {
+  it('togliendo la prima, le altre restano scelte', async () => {
+    const user = userEvent.setup()
+    // Due Mojito sulla stessa riga: separandoli diventano due unità.
+    mount(baseOrder())
+    await user.click(screen.getByRole('button', { name: /Separa uguali/ }))
+    const meno = screen.getAllByRole('button', { name: /Togli Mojito dal pagamento/ })
+    expect(meno).toHaveLength(2)
+    await user.click(meno[0])
+    // Una sola unità è uscita dal pagamento: il totale cala di 7, non di 14.
+    expect(payAmount()).toHaveTextContent('15,00')
+  })
+
+  it('e si rimette dentro una alla volta', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.click(screen.getByRole('button', { name: /Separa uguali/ }))
+    await user.click(screen.getAllByRole('button', { name: /Togli Mojito dal pagamento/ })[0])
+    // Le unità sono identiche: quella rimessa dentro è la prima libera.
+    const piu = screen
+      .getAllByRole('button', { name: /Paga Mojito/ })
+      .find((b) => !b.disabled)
+    await user.click(piu)
+    expect(payAmount()).toHaveTextContent('22,00')
+  })
+})
