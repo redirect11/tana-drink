@@ -24,7 +24,10 @@ Regole non negoziabili, per intero in [docs/gitflow.md](docs/gitflow.md).
 - **Mai commit diretti su `develop` o `main`** — e i merge ci arrivano
   solo via **pull request**: sono rami protetti, il check della CI
   (lint, test, coverage con le soglie) è obbligatorio per mergiare.
-- `hotfix/<nome>` nasce da `main` e torna in `main` **e** in `develop`.
+- `hotfix/<nome>` nasce da `main` e torna in `main` **e** in `develop`. I
+  bug urgenti stanno nelle issue con etichetta **`hotfix`**, e a lavorarli
+  c'è l'agente
+  [`rilascio-hotfix`](.claude/agents/rilascio-hotfix.md).
 - **A pubblicare è il tag, non il push.** Un push fa girare lint, test e
   build e finisce lì. Un **tag su un commit non in `main`** va sul **test**;
   un **tag su un commit di `main`** manda in **produzione**, e quel deploy

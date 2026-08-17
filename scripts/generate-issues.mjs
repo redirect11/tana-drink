@@ -46,6 +46,17 @@ const GITHUB_TOKEN = process.env.GITHUB_TOKEN || ''
 const GITHUB_REPO = process.env.GITHUB_REPO || 'redirect11/tana-drink'
 const DRY_RUN = process.env.DRY_RUN === 'true' || process.argv.includes('--dry-run')
 
+// APRIRE le issue si può da qualunque ramo; CHIUDERLE no. Una voce del
+// registro passa a `fixed` sul ramo di hotfix appena la correzione è scritta,
+// ma in produzione non c'è ancora niente: chiudendo lì, chi ha segnalato il
+// guaio vede l'issue chiusa e l'app che sbaglia ancora. È successo il 17
+// agosto 2026, con tre issue chiuse mentre l'hotfix era ancora da provare.
+//
+// Perciò si chiude SOLO se lo si chiede: in CI lo fa il workflow quando gira
+// su `main` (la linea della produzione), a mano si scrive
+// `CHIUDE_RISOLTI=true node scripts/generate-issues.mjs`.
+const CHIUDE_RISOLTI = process.env.CHIUDE_RISOLTI === 'true'
+
 const [OWNER, REPO] = GITHUB_REPO.split('/')
 const GITHUB_API = 'https://api.github.com'
 
@@ -186,6 +197,14 @@ async function main() {
     console.log(`▸ ${issueTitle}`)
 
     const risolto = STATI_CHIUSI.has(String(req.status || '').toLowerCase())
+
+    // Risolto sul ramo di lavoro non vuol dire risolto per chi sta al banco:
+    // l'issue si chiude quando la correzione arriva in produzione.
+    if (risolto && !CHIUDE_RISOLTI) {
+      console.log(`  ⏭  Risolto (${req.status}) — l'issue si chiude da main, non da qui.`)
+      skipped++
+      continue
+    }
 
     if (DRY_RUN) {
       if (risolto) {

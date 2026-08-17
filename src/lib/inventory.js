@@ -1,8 +1,28 @@
 // Logica pura dell'inventario (niente Firebase): unità, formattazione,
 // stato scorte e calcolo del consumo. Interamente testabile a unità.
 
-// Unità base in cui è salvato lo stock: volumi in ml, pesi in g, conteggi in pz.
-export const BASE_UNITS = ['ml', 'g', 'pz']
+// ── L'UNITÀ GENERICA «U» ───────────────────────────────────────────────
+//
+// C'è roba a listino che non si versa, non si pesa e non è una bottiglia: il
+// «Tempo di Lavorazione» è una voce di magazzino creata di proposito per
+// mettere il LAVORO nel costo del drink. Si aggancia come ingrediente ai drink
+// che richiedono lavorazione, ha un costo per unità, e da lì entra nel costo
+// della ricetta e nel prezzo consigliato. Fino a ieri l'unica scelta possibile
+// era il grammo, e nella ricetta del Daiquiri si leggeva «1 g».
+//
+// Una U non si converte in niente e NON È UNA SCORTA: non si scarica quando il
+// drink si fa, non è mai esaurita e non vale niente in magazzino — il lavoro
+// non sta sullo scaffale. Senza questo, al primo Daiquiri la manodopera
+// sarebbe andata a zero, il menù avrebbe detto «Ingrediente esaurito» e il
+// drink sarebbe sparito dalla carta, per non tornare più.
+export const UNITA_GENERICA = 'U'
+export function unitaGenerica(unit) {
+  return String(unit || '').toUpperCase() === UNITA_GENERICA
+}
+
+// Unità base in cui è salvato lo stock: volumi in ml, pesi in g, conteggi in
+// pz, e la U di quello che si conta a unità generiche.
+export const BASE_UNITS = ['ml', 'g', 'pz', UNITA_GENERICA]
 
 // Unità selezionabili in fase di inserimento ricetta, per unità base dell'item.
 // Sono le unità "piccole" con cui si dosa un drink (mai L/kg in una ricetta):
@@ -12,6 +32,8 @@ export const ENTRY_UNITS = {
   ml: ['cl', 'ml'],
   g: ['g', 'mg'],
   pz: ['pz'],
+  // Il generico non ha sottomultipli: si dosa a unità.
+  [UNITA_GENERICA]: [UNITA_GENERICA],
 }
 
 // Unità con cui si dosa QUESTO ingrediente in una ricetta.
@@ -34,7 +56,9 @@ export function entryUnits(item) {
 }
 
 // Converte una quantità dall'unità inserita all'unità base dell'item.
-//   cl→ml (×10), L→ml (×1000), kg→g (×1000); ml/g/pz invariati.
+//   cl→ml (×10), L→ml (×1000), kg→g (×1000); ml/g/pz/U invariati.
+// La U passa dal default, ed è esattamente quello che deve fare: non c'è
+// niente in cui convertirla.
 export function toBaseQty(qty, unit) {
   const n = Number(qty) || 0
   switch ((unit || '').toLowerCase()) {
@@ -52,15 +76,17 @@ export function toBaseQty(qty, unit) {
 }
 
 // Unità base (in cui è salvato lo stock) a partire dall'unità scelta
-// dall'utente: liquidi → ml, pesi → g, pezzi → pz.
+// dall'utente: liquidi → ml, pesi → g, generico → U, pezzi → pz.
 export function baseUnit(u) {
   const x = String(u || '').toLowerCase()
   if (['l', 'cl', 'ml'].includes(x)) return 'ml'
   if (['kg', 'g', 'mg'].includes(x)) return 'g'
+  if (unitaGenerica(x)) return UNITA_GENERICA
   return 'pz'
 }
 
-// Inverso di toBaseQty: da unità base al numero nell'unità scelta.
+// Inverso di toBaseQty: da unità base al numero nell'unità scelta (la U, che
+// non converte niente, passa dal default).
 export function fromBaseQty(base, unit) {
   const n = Number(base) || 0
   switch (String(unit || '').toLowerCase()) {
@@ -76,18 +102,29 @@ export function fromBaseQty(base, unit) {
   }
 }
 
+// IL NUMERO, COME SI SCRIVE QUI: due decimali al massimo e la virgola.
+//
+// Il numero grezzo finiva a schermo così com'era uscito dal calcolo — sulla
+// card del Campari si leggeva «7.49000000001 pz», col punto al posto della
+// virgola e la coda di decimali che si porta dietro qualunque
+// moltiplicazione di ricetta.
+//
+// `useGrouping: 'always'`: senza, il punto delle migliaia dipende da quanto
+// è aggiornata la tabella delle lingue del dispositivo — le versioni
+// recenti non raggruppano i numeri di quattro cifre in italiano, quelle
+// vecchie sì. Lo stesso magazzino si leggeva "2.000 mg" sul portatile e
+// "2000 mg" sull'iPad. Qui si sceglie una forma sola, uguale ovunque.
+const numero = (n) =>
+  (Math.round((Number(n) || 0) * 100) / 100).toLocaleString('it-IT', {
+    maximumFractionDigits: 2,
+    useGrouping: 'always',
+  })
+
 // Formatta una quantità BASE nell'unità ESATTA scelta (niente auto-scaling:
-// se l'utente lavora in cl, vede cl). Etichette: L, cl, ml, kg, g, mg, pz.
-const UNIT_LABEL = { l: 'L', cl: 'cl', ml: 'ml', kg: 'kg', g: 'g', mg: 'mg', pz: 'pz' }
+// se l'utente lavora in cl, vede cl). Etichette: L, cl, ml, kg, g, mg, pz, U.
+const UNIT_LABEL = { l: 'L', cl: 'cl', ml: 'ml', kg: 'kg', g: 'g', mg: 'mg', pz: 'pz', u: 'U' }
 export function formatIn(base, unit) {
-  const n = Math.round(fromBaseQty(base, unit) * 100) / 100
-  // `useGrouping: 'always'`: senza, il punto delle migliaia dipende da quanto
-  // è aggiornata la tabella delle lingue del dispositivo — le versioni
-  // recenti non raggruppano i numeri di quattro cifre in italiano, quelle
-  // vecchie sì. Lo stesso magazzino si leggeva "2.000 mg" sul portatile e
-  // "2000 mg" sull'iPad. Qui si sceglie una forma sola, uguale ovunque.
-  const numero = n.toLocaleString('it-IT', { maximumFractionDigits: 2, useGrouping: 'always' })
-  return `${numero} ${UNIT_LABEL[String(unit || '').toLowerCase()] || unit}`
+  return `${numero(fromBaseQty(base, unit))} ${UNIT_LABEL[String(unit || '').toLowerCase()] || unit}`
 }
 
 // Formatta la giacenza di un ITEM: nell'unità scelta se impostata, altrimenti
@@ -100,15 +137,18 @@ export function fmtItem(base, item) {
 export function formatQty(qty, unit) {
   const n = Number(qty) || 0
   if (unit === 'ml') {
-    if (n >= 1000) return `${(n / 1000).toLocaleString('it-IT', { maximumFractionDigits: 2, useGrouping: 'always' })} L`
-    if (n >= 100 && n % 10 === 0) return `${n / 10} cl`
-    return `${n} ml`
+    if (n >= 1000) return `${numero(n / 1000)} L`
+    if (n >= 100 && n % 10 === 0) return `${numero(n / 10)} cl`
+    return `${numero(n)} ml`
   }
   if (unit === 'g') {
-    if (n >= 1000) return `${(n / 1000).toLocaleString('it-IT', { maximumFractionDigits: 2, useGrouping: 'always' })} kg`
-    return `${n} g`
+    if (n >= 1000) return `${numero(n / 1000)} kg`
+    return `${numero(n)} g`
   }
-  return `${n} pz`
+  // Il generico non ha multipli né sottomultipli, e non è un pezzo: senza
+  // questo ramo la manodopera si leggeva «3 pz».
+  if (unitaGenerica(unit)) return `${numero(n)} ${UNITA_GENERICA}`
+  return `${numero(n)} pz`
 }
 
 // Scompone la giacenza (in unità base) nelle bottiglie/confezioni:
@@ -176,24 +216,32 @@ export function formatPezzi(n) {
 export function bottleSummary(item) {
   const bd = bottleBreakdown(item)
   if (!bd) return null
-  // Il residuo della bottiglia aperta si legge SEMPRE in cl (o in g): anche
-  // quando la giacenza è contata a pezzi, "aperta 0,8 pz" non dice niente a
-  // chi sta versando.
-  const unitaContenuto = item?.unit === 'pz' ? (item?.content_unit === 'g' ? 'g' : 'cl') : null
+  const c = contentBase(item)
+  // Il TOTALE è il contenuto, non un altro modo di scrivere i pezzi: sulla
+  // card si leggeva «7,49 pz» col numero grande e «7.49000000001 pz» sotto,
+  // cioè lo stesso dato due volte. Con la giacenza contata a pezzi il
+  // contenuto sono i pezzi × la capienza della confezione; contata a volume
+  // (o a peso) la giacenza È già il contenuto.
+  const stock = Math.max(0, Number(item?.stock) || 0)
+  const aPezzo = (item?.unit || 'pz') === 'pz'
   return {
     pezzi: pezziInGiacenza(item),
     bottles: bd.full + (bd.hasOpen ? 1 : 0),
-    total: fmtItem(Math.max(0, Number(item?.stock) || 0), item),
-    open: bd.hasOpen
-      ? unitaContenuto
-        ? formatIn(Math.round(bd.openRemaining), unitaContenuto)
-        : fmtItem(Math.round(bd.openRemaining), item)
-      : null,
+    total: fmtContenuto(aPezzo ? stock * c.size : stock, item),
+    // Il residuo della bottiglia aperta si legge SEMPRE in cl (o in g): anche
+    // quando la giacenza è contata a pezzi, "aperta 0,8 pz" non dice niente a
+    // chi sta versando.
+    open: bd.hasOpen ? fmtContenuto(Math.round(bd.openRemaining), item) : null,
   }
 }
 
 // Stato scorta di un item: 'empty' (≤0), 'low' (≤ soglia), 'ok'.
 export function stockStatus(item) {
+  // Un articolo in unità generiche NON È UNA SCORTA: la manodopera non
+  // finisce. Se rispondesse 'empty' — e a giacenza zero risponderebbe sempre
+  // — il menù direbbe «Ingrediente esaurito» e il drink che la usa sparirebbe
+  // dalla carta, oltre a finire nelle proposte d'ordine al fornitore.
+  if (unitaGenerica(item?.unit)) return 'ok'
   const stock = Number(item?.stock) || 0
   if (stock <= 0) return 'empty'
   if (stock <= (Number(item?.low_threshold) || 0)) return 'low'
@@ -271,8 +319,14 @@ export function costWithVat(cost, vat = 22) {
 }
 
 // Numero di confezioni/bottiglie equivalenti in giacenza.
+// La giacenza si legge SEMPRE da zero in su: con un −0,04 pz rimasto in
+// magazzino si leggeva «valore −0,67 €», cioè un magazzino che vale meno di
+// niente. Quello che manca è un errore da correggere, non un credito.
 export function unitsInStock(item) {
-  const stock = Number(item?.stock) || 0
+  // Il lavoro non sta sullo scaffale: un articolo in unità generiche non è
+  // giacenza e non entra nel valore del magazzino.
+  if (unitaGenerica(item?.unit)) return 0
+  const stock = giacenzaPerCarico(item?.stock)
   if (item?.unit === 'pz') return stock
   const size = Number(item?.package_size) || 0
   return size > 0 ? stock / size : 0
@@ -299,6 +353,8 @@ export function costPerCl(item, { gross = true } = {}) {
 // non c'è) la giacenza è in pezzi, ma la bottiglia un contenuto ce l'ha
 // lo stesso — 33 cl — e senza saperlo non si può dire quanto costa al cl.
 // `content_unit` dice di che famiglia è quel numero.
+// Un articolo in unità generiche non ha contenuto: dentro una unità di lavoro
+// non c'è niente da misurare, e resta null.
 export function contentBase(item) {
   const size = Number(item?.package_size) || 0
   if (!(size > 0)) return null
@@ -314,6 +370,7 @@ export function contentBase(item) {
 export function smallUnits(item) {
   if (item?.unit === 'ml') return ['cl', 'ml']
   if (item?.unit === 'g') return ['g', 'mg']
+  if (unitaGenerica(item?.unit)) return [UNITA_GENERICA]
   const c = contentBase(item)
   if (c?.base === 'ml') return ['pz', 'cl', 'ml']
   if (c?.base === 'g') return ['pz', 'g', 'mg']
@@ -324,9 +381,9 @@ export function smallUnits(item) {
 // gestite (comprese L/kg), non solo le "piccole": così un costo non va mai
 // perso in silenzio per un'unità non prevista. Deve restare coerente con
 // toBaseQty (stessi fattori di conversione).
-const BASE_PER_UNIT = { l: 1000, cl: 10, ml: 1, kg: 1000, g: 1, mg: 0.001, pz: 1 }
+const BASE_PER_UNIT = { l: 1000, cl: 10, ml: 1, kg: 1000, g: 1, mg: 0.001, pz: 1, u: 1 }
 
-// Costo di una singola unità (L/cl/ml/kg/g/mg/pz) partendo dal costo per
+// Costo di una singola unità (L/cl/ml/kg/g/mg/pz/U) partendo dal costo per
 // confezione: cost / (package_size / base-per-unità). Null se non calcolabile.
 // L'unità richiesta deve appartenere alla stessa famiglia dell'item
 // (liquido↔ml, solido↔g): chiedere il costo al ml di un solido non ha senso.
@@ -334,6 +391,12 @@ export function costPerUnit(item, unit, { gross = true } = {}) {
   const packCost = gross ? costWithVat(item?.cost, item?.vat) : Number(item?.cost) || 0
   if (!(packCost > 0)) return null
   const per = BASE_PER_UNIT[String(unit || '').toLowerCase()]
+  // ARTICOLO IN UNITÀ GENERICHE: il costo è per unità e non c'è nessuna
+  // confezione da dividere — una unità di lavoro costa quello che costa. E non
+  // si mescola con volumi e pesi: quanto costa al cl un'ora di lavoro non
+  // vuol dire niente, quindi null («non lo so», non «zero»).
+  if (unitaGenerica(item?.unit)) return unitaGenerica(unit) ? packCost : null
+  if (unitaGenerica(unit)) return null
   if ((item?.unit || 'pz') === 'pz') {
     // Il pezzo costa quello che costa. Il costo al cl si ricava solo se si
     // sa quanto contiene la bottiglia: altrimenti null, che vuol dire "non
@@ -352,6 +415,33 @@ export function costPerUnit(item, unit, { gross = true } = {}) {
 // Valore totale del magazzino.
 export function inventoryTotalValue(items, opts) {
   return (items || []).reduce((s, it) => s + stockValue(it, opts), 0)
+}
+
+// ── SOTTO ZERO NON SI SCENDE ──────────────────────────────────────────
+// Il 17 agosto il Jagermeister era a −0,04 pz, con «valore −0,67 €» e la
+// conta che si apriva già in rosso: si continua a battere un prodotto finito
+// e lo scarico toglie comunque, perché `increment(-qty)` non guarda quanto
+// c'è. L'increment resta — è commutativo e si accoda offline, e al banco
+// niente aspetta la rete: quello che si decide prima di chiederlo è QUANTO
+// togliere.
+
+// Quanto si può DAVVERO scaricare: mai più di quello che risulta in
+// giacenza, e da una giacenza già a zero (o negativa) niente. La vendita
+// passa comunque — il conto è già scritto — e il magazzino si ferma a zero.
+export function scaricoPossibile(stock, qty) {
+  const richiesta = Number(qty) || 0
+  if (!(richiesta > 0)) return 0
+  const giacenza = Number(stock) || 0
+  if (!(giacenza > 0)) return 0
+  return Math.min(richiesta, giacenza)
+}
+
+// La giacenza da cui parte un CARICO, che non è mai negativa: comprando una
+// bottiglia e caricandola su −0,04 se ne deve contare UNA. Partendo dal
+// negativo il carico ne conta meno di una, sullo scaffale però c'è tutta, e
+// da quel momento il magazzino mente su quanto prodotto c'è davvero.
+export function giacenzaPerCarico(stock) {
+  return Math.max(0, Number(stock) || 0)
 }
 
 // QUANTO TOGLIERE DALLA GIACENZA per una riga di ricetta.
@@ -402,6 +492,11 @@ export function computeConsumption(orderItems, drinksById) {
     const mult = Number(oi.qty) || 0
     for (const ri of recipe) {
       if (!ri.inventory_item_id) continue
+      // LA MANODOPERA NON SI CONSUMA. Le righe in unità generiche (il tempo di
+      // lavorazione) servono al costo del drink, non al magazzino: restano
+      // fuori dal consumo, quindi non si scaricano, non si reintegrano
+      // all'annullo e non fanno finire niente.
+      if (unitaGenerica(ri.unit)) continue
       const add = (Number(ri.qty) || 0) * mult
       if (add <= 0) continue
       // Si somma per ARTICOLO **E UNITÀ**: la stessa bottiglia può comparire

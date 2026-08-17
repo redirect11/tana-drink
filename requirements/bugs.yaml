@@ -16,15 +16,25 @@
 #   status:         todo (da sistemare) | fixed (risolto, test citato nel
 #                   requisito dell'area) | wontfix (deciso di non farlo)
 #   generate_issue: true per creare l'issue GitHub
-#   labels:         Label GitHub (sempre anche "bug")
+#   labels:         Label GitHub (sempre anche "bug"; "hotfix" se va
+#                   sistemato d'urgenza in produzione — è quella che
+#                   l'agente rilascio-hotfix va a cercare)
+#   in_produzione:  true se morde sull'installazione che sta lavorando
 #   test_cases:     I test della fix, quando esiste
 #
 # Per generare le issue da questo file:
 #   node scripts/generate-issues.mjs --dry-run     # anteprima
 #   GITHUB_TOKEN=<token> node scripts/generate-issues.mjs
 #
+# E da sé: un push su main o su un ramo hotfix/** che tocca questo file fa
+# girare .github/workflows/generate-issues.yml, che crea le issue mancanti.
+#
 # Le issue sono idempotenti come per i requisiti: titolo con [BUG-ID],
 # chi esiste già viene saltato.
+#
+# I bug urgenti arrivano di solito come note vocali dal banco: si mettono in
+# registrazioni/ (ignorata da git) e si trascrivono con
+# `python scripts/trascrivi-registrazioni.py`.
 
 bugs:
 
@@ -151,3 +161,131 @@ bugs:
     generate_issue: true
     labels: [bug, pagamenti]
     test_cases: []
+
+  # ── I guai raccontati dal banco il 17 agosto 2026 ────────────────────────
+  # Quattro note vocali e tre schermate, trascritte con
+  # scripts/trascrivi-registrazioni.py. Tutti e quattro nel Magazzino, tutti
+  # e quattro da sistemare adesso: vanno in un hotfix solo.
+
+  - id: BUG-007
+    title: "Il magazzino scende sotto zero, e il carico dopo parte dal negativo"
+    area: "src/lib/api.js (scarico delle comande), src/lib/inventory.js"
+    description: >
+      Continuando a battere un prodotto finito la giacenza scende sotto zero
+      invece di fermarsi a zero. Il 17 agosto il Jagermeister era a −0,04 pz,
+      con «valore −0,67 €» e la conta che si apriva già a −0,04. Il danno
+      vero arriva dopo: comprando e caricando una bottiglia, il carico parte
+      dal negativo e ne conta meno di una — sullo scaffale però c'è tutta, e
+      da quel momento il magazzino mente su quanto prodotto c'è davvero.
+      La causa è che lo scarico fa increment(-qty) senza guardare quanto c'è
+      (scelto apposta: è commutativo e si accoda offline, e così deve
+      restare). Va tolto al massimo quello che risulta in giacenza, sia allo
+      scarico della comanda sia quando si ricalcola una comanda modificata; e
+      un carico su una giacenza negativa deve ripartire da zero, altrimenti
+      il buco resta. Sotto zero non si scende mai.
+      RISOLTO il 17/08 (hotfix 1.3.4): due funzioni pure in inventory.js —
+      scaricoPossibile (mai più di quello che c'è) e giacenzaPerCarico (un
+      carico non parte dal negativo) — usate nello scarico al pagamento, nel
+      riallineo della comanda modificata, in loadStock e in receiveBottles.
+      L'increment resta com'era; anche unitsInStock si ferma a zero, che è da
+      lì che nasceva il «valore −0,67 €».
+    in_produzione: true
+    status: fixed
+    generate_issue: true
+    labels: [bug, hotfix, magazzino]
+    test_cases: [tests/unit/inventory.test.js]
+
+  - id: BUG-008
+    title: "Sulla card del magazzino compare «7.49000000000001 pz»"
+    area: "src/lib/inventory.js (formatQty), src/components/InventoryManager.jsx"
+    description: >
+      Sotto al numero grande, scritto bene («7,49 pz»), la card del Campari
+      ne ripete uno lungo così com'è uscito dal calcolo: 7.49000000000001 pz,
+      col punto al posto della virgola e la coda di decimali che si porta
+      dietro qualunque moltiplicazione di ricetta. formatQty stampa il numero
+      grezzo, mentre formatPezzi e formatIn arrotondano a due decimali: basta
+      che lo faccia anche lui.
+      Già che quella riga si tocca: per gli articoli a pezzi ripete lo stesso
+      dato del numero grande, mentre lì sotto dovrebbe esserci il CONTENUTO
+      in cl (o in g) — è scritto anche nel commento del codice, ed è quello
+      che serve a chi sta versando.
+      RISOLTO il 17/08 (hotfix 1.3.4): formatQty arrotonda a due decimali e
+      usa la virgola come già facevano formatPezzi e formatIn (una funzione
+      sola, condivisa con formatIn), e il `total` di bottleSummary è il
+      contenuto anche per gli articoli contati a pezzo — pezzi × capienza
+      della confezione, letto in cl o in g.
+    in_produzione: true
+    status: fixed
+    generate_issue: true
+    labels: [bug, hotfix, magazzino, ui]
+    test_cases: [tests/unit/inventory.test.js, tests/component/InventoryManagerCard.test.jsx]
+
+  - id: BUG-009
+    title: "Il dettaglio della card del magazzino esce fuori dalla card"
+    area: "src/index.css (.inv-info), src/components/InventoryManager.jsx"
+    description: >
+      Aprendo un prodotto nella vista a Card, il pannello dei dettagli sborda
+      e il testo si incolonna a fisarmonica: «0 pz · 0 piene · 1 pz = 100 cl»
+      va a capo quattro volte, e costo, IVA e prezzo consigliato si
+      accavallano l'uno sull'altro. La coppia etichetta/valore usa la stessa
+      griglia a due colonne della vista a Lista, dove però c'è tutta la
+      larghezza dello schermo: dentro una card stretta la colonna del valore
+      resta larga un dito. Nelle card va incolonnato — etichetta sopra,
+      valore sotto — come già succede sugli schermi piccoli.
+      PRIMO GIRO il 17/08 (hotfix 1.3.4): una regola in index.css
+      (.grid-card .grid-card-actions .inv-info .inv-info-row a una colonna).
+      La vista a Lista, che ha tutta la larghezza dello schermo, resta a due
+      colonne: il blocco delle azioni è lo stesso per le due viste, quindi la
+      regola è agganciata alla card.
+      NON BASTAVA — provato sul test: le righe di testo si leggevano, ma la
+      fila dei tre tasti (Modifica · Duplica · Elimina) usciva ancora dai
+      bordi. Stesso errore un piano sotto: .inv-azioni era repeat(3, 1fr), e
+      1fr vale minmax(auto, 1fr), che non scende sotto la larghezza del
+      contenuto — tre bottoni con emoji e parola hanno un minimo più largo di
+      quello che una card da 175px può dargli. La regola che li mandava a capo
+      era una @media sulla FINESTRA, quindi non scattava con la finestra
+      grande e la card stretta.
+      SECONDO GIRO: .grid-card .inv-azioni usa
+      repeat(auto-fit, minmax(min(112px, 100%), 1fr)) — colonne che si
+      stringono davvero e vanno a capo da sé secondo la larghezza della CARD,
+      mai più larghe della card — e i bottoni hanno min-width: 0 con la parola
+      troncata come ultima difesa. La vista a Lista resta a tre colonne.
+      Il layout non si misura in happy-dom (le larghezze sono zero): il test
+      applica il foglio di stile vero al DOM vero e controlla quale regola
+      vince su quell'elemento. Che la fila stia dentro la card va guardato con
+      gli occhi.
+    in_produzione: true
+    status: fixed
+    generate_issue: true
+    labels: [bug, hotfix, magazzino, ui]
+    test_cases: [tests/component/InventoryManagerCard.test.jsx]
+
+  - id: BUG-010
+    title: "Manca un'unità di misura generica: il tempo di lavorazione si legge «1 g»"
+    area: "src/components/InventoryManager.jsx (form articolo), src/lib/inventory.js"
+    description: >
+      Nel «Contenuto di un pezzo» si può scegliere solo fra cl, ml e g. Per
+      quello che non si versa e non si pesa — il tempo di lavorazione, per
+      dire — non c'è niente di adatto, e si finisce a scrivere grammi: nella
+      ricetta del Daiquiri si legge «Tempo di Lavorazione 1 g», che a chi
+      prepara non dice niente. Serve un'unità generica «U», senza
+      conversioni, accanto a cl, ml e g in quel menu a tendina.
+      CHIARITO il 17/08 nell'issue #20: «Tempo di Lavorazione» non è un errore
+      da togliere, è una voce di magazzino creata di proposito per mettere la
+      MANODOPERA a listino — si aggancia come ingrediente ai drink che
+      richiedono lavorazione, ha un costo per unità, e da lì entra nel costo
+      della ricetta e nel prezzo consigliato.
+      RISOLTO (hotfix 1.3.4): la «U» è un'unità di misura dell'ARTICOLO (non un
+      contenuto), retta da tutta la catena — BASE_UNITS, ENTRY_UNITS,
+      toBaseQty/fromBaseQty, baseUnit, UNIT_LABEL, formatQty, smallUnits,
+      costPerUnit, recipeCost — e si sceglie nel form dalle «Unità di
+      misura».
+      Non essendo una scorta: niente scarico (resta fuori da
+      computeConsumption), mai «esaurito» (stockStatus), nessun valore di
+      magazzino (unitsInStock), e in carta al cliente non compare (MenuPage).
+      Vedi REQ-MAG-012.
+    in_produzione: true
+    status: fixed
+    generate_issue: true
+    labels: [bug, hotfix, magazzino]
+    test_cases: [tests/unit/inventory.test.js, tests/unit/pricing.test.js, tests/component/InventoryManagerCard.test.jsx, tests/component/MenuPage.test.jsx]
