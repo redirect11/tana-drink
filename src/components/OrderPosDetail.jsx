@@ -1108,6 +1108,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   // (es. il tasto Pagamento) deve ASPETTARE questo, non creare un secondo
   // ordine — altrimenti si ritrovano due conti con lo stesso nome/tavolo.
   const creatingPromiseRef = useRef(null)
+  const itemsInVoloRef = useRef(null)
   const createFromDraft = async () => {
     if (!isNew) return null
     if (creatingRef.current) return creatingPromiseRef.current
@@ -1119,6 +1120,19 @@ export default function OrderPosDetail({ order: orderProp = null }) {
     // via con le altre.
     const inviate = new Set(items.map((i) => i.line_id))
     creatingRef.current = true
+    // LA BOZZA SI SVUOTA SUBITO, non quando il server risponde. Aspettare la
+    // scrittura voleva dire che, uscendo prima della sincronizzazione, il
+    // conto DOPO si apriva con dentro la roba di quello prima — righe già
+    // battute su un altro conto, pronte a essere battute due volte.
+    // Le righe arrivate mentre l'ordine nasceva restano da parte: appena
+    // c'è l'id vanno nella bozza sua.
+    const partite = draftRef.current.filter((r) => inviate.has(r.line_id))
+    // Le righe che stanno partendo restano a portata di mano: chi preme
+    // «Pagamento» in quell'istante deve vedere il conto, non una schermata
+    // vuota perché la bozza è già stata svuotata.
+    itemsInVoloRef.current = items
+    const restanti = draftRef.current.filter((r) => !inviate.has(r.line_id))
+    clearDraft()
     const run = async () => {
       try {
         const created = await createOrder({
@@ -1133,17 +1147,14 @@ export default function OrderPosDetail({ order: orderProp = null }) {
           group_id: group && !groupIsContainer ? group.id : null,
           group_name_snapshot: group && !groupIsContainer ? group.name : null,
         })
-        // LE RIGHE BATTUTE MENTRE L'ORDINE NASCEVA NON SI BUTTANO.
-        // La creazione dura qualche decimo di secondo e al banco in quei
-        // decimi si continua a battere. Qui succedevano due cose: si
-        // svuotava tutta la bozza (comprese le righe arrivate dopo lo
-        // scatto), e soprattutto la bozza cambia CHIAVE — da 'new' all'id
-        // dell'ordine — quindi anche salvandole restavano in un cassetto
-        // che nessuno riapriva più. Si passano a mano alla chiave nuova:
-        // un istante dopo l'auto-conferma le manda dentro l'ordine.
-        const restanti = draftRef.current.filter((r) => !inviate.has(r.line_id))
-        clearDraft()
-        if (restanti.length) saveDraft(created.id, restanti)
+        // LE RIGHE BATTUTE MENTRE L'ORDINE NASCEVA NON SI BUTTANO: la bozza
+        // cambia CHIAVE — da 'new' all'id dell'ordine — e vanno passate a
+        // mano, altrimenti restano in un cassetto che nessuno riapre più.
+        // Un istante dopo, l'auto-conferma le manda dentro l'ordine.
+        const arrivateDopo = draftRef.current.filter((r) => !inviate.has(r.line_id))
+        const daPortare = [...restanti, ...arrivateDopo]
+        if (daPortare.length) saveDraft(created.id, daPortare)
+        itemsInVoloRef.current = null
         selfOrderJsonRef.current = JSON.stringify(created) // evita un re-render doppio dalla subscription
         ricordaContoInCorso(created.id) // se la pagina ricarica, si riprende da qui
         setSelfOrder(created) // diventa "modifica" in place, niente reload
@@ -1151,6 +1162,9 @@ export default function OrderPosDetail({ order: orderProp = null }) {
       } catch (e) {
         creatingRef.current = false
         creatingPromiseRef.current = null
+        // Il conto non è nato: le righe tornano in bozza. Averle svuotate
+        // subito non deve costare quello che si era battuto.
+        saveDraft('new', [...partite, ...restanti, ...draftRef.current])
         toastError(`Ordine non creato: ${e.message}`)
         return null
       }
@@ -1184,6 +1198,20 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   // fatte. Sta qui e non dentro il tasto perché la usano in due: il footer
   // sul tablet e il menu delle azioni sul telefono.
   function inviaComanda() {
+    // ANCHE SU UN CONTO APPENA BATTUTO. Prima il tasto era spento finché
+    // l'ordine non esisteva sul server: al banco vuol dire aspettare la rete
+    // per mandare in stampa una comanda che si ha già davanti. Il conto si
+    // crea qui (in locale, immediato) e la stampa parte appena c'è.
+    if (isNew) {
+      const nascita = createFromDraftRef.current()
+      Promise.resolve(nascita).then((o) => {
+        if (!o) return
+        printComanda(o, (o.comande || []).at(-1) || null)
+          .then(() => toastSuccess('Comanda inviata al banco'))
+          .catch((e) => setError(`Stampa: ${e.message}`))
+      })
+      return
+    }
     flushAll()
     flushAdditions()
     const daStampare =
@@ -1195,8 +1223,16 @@ export default function OrderPosDetail({ order: orderProp = null }) {
       .catch((e) => setError(`Stampa: ${e.message}`))
   }
 
+  // C'È QUALCOSA SU CUI LAVORARE? In creazione sono le righe in bozza —
+  // oppure quelle appena partite per la creazione, perché la bozza si svuota
+  // subito e i tasti non devono spegnersi in quell'istante.
+  const conRighe = draftCount > 0 || (itemsInVoloRef.current || []).length > 0 || !isNew
+
   function handlePayNow() {
-    if (draft.length === 0 || payOrder) return
+    // Le righe possono essere già partite per la creazione: la bozza si
+    // svuota subito (vedi createFromDraft) e restano lì.
+    const inVolo = itemsInVoloRef.current || []
+    if ((draft.length === 0 && inVolo.length === 0) || payOrder) return
     // Se una creazione è GIÀ in volo (auto-creazione appena scattata), il
     // pagamento si aggancia a quella: creare qui un secondo ordine
     // duplicherebbe il conto.
@@ -1204,7 +1240,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
     // Il pagamento diretto crea l'ordine: blocca l'auto-creazione della bozza.
     creatingRef.current = true
     setError(null)
-    const items = draftToItems()
+    const items = draft.length ? draftToItems() : inVolo
     const mapped = items.map((i) => ({
       drink_id: i.drink_id,
       name: i.name,
@@ -1212,6 +1248,13 @@ export default function OrderPosDetail({ order: orderProp = null }) {
       qty: i.qty,
       ...(i.custom ? { custom: true } : {}),
     }))
+    // Il totale si fa sulle righe che si stanno pagando, non sulla bozza:
+    // quando le righe sono già partite per la creazione la bozza è vuota, e
+    // il pagamento si apriva a zero euro.
+    const totaleRighe = items.reduce(
+      (s, i) => s + (Number(i.price) || 0) * (Number(i.qty) || 0),
+      0
+    )
     setPayOrder({
       id: null,
       daily_number: null,
@@ -1219,7 +1262,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
       payment_status: 'non_richiesto',
       customer_name: info.customer_name.trim() || null,
       table_label: info.table_label || null,
-      total: draftTotal,
+      total: Math.round(totaleRighe * 100) / 100,
       discount: null,
       discount_amount: 0,
       payments: [],
@@ -1953,7 +1996,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                 applicabili sono disabilitati, non spariscono. */}
             <div className="posd-foot-azioni">
             <div className="grid-2">
-              <button className="btn ghost small" disabled={isNew} onClick={inviaComanda}>
+              <button className="btn ghost small" disabled={!conRighe} onClick={inviaComanda}>
                 <IconPrinter /> Invia comanda
               </button>
               {daRiaprire ? (
@@ -1967,7 +2010,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
               ) : (
                 <button
                   className="btn small"
-                  disabled={isNew ? draftCount === 0 : !canPay}
+                  disabled={isNew ? !conRighe : !canPay}
                   onClick={isNew ? handlePayNow : () => setShowPayment(true)}
                 >
                   <IconCard /> Pagamento{daIncassare > 0 ? ` · ${formatPrice(daIncassare)}` : ''}
@@ -1987,7 +2030,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
 
             <button
               className="btn ghost small block"
-              disabled={isNew || closed}
+              disabled={isNew ? !conRighe : closed}
               onClick={() => setConfirmCancel(true)}
             >
               <IconX /> Annulla ordine
@@ -2003,7 +2046,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
               <div className="posd-foot-telefono">
                 <button
                   className="btn ghost"
-                  disabled={isNew}
+                  disabled={!conRighe}
                   onClick={inviaComanda}
                   aria-label="Invia"
                   title="Invia la comanda al banco"
@@ -2023,7 +2066,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                 ) : (
                   <button
                     className="btn"
-                    disabled={isNew ? draftCount === 0 : !canPay}
+                    disabled={isNew ? !conRighe : !canPay}
                     onClick={isNew ? handlePayNow : () => setShowPayment(true)}
                     aria-label="Paga"
                     title="Incassa il conto"
@@ -2444,13 +2487,26 @@ export default function OrderPosDetail({ order: orderProp = null }) {
       {confirmCancel && (
         <ConfirmDialog
           title="✖️ Annullare l'ordine?"
-          message={`L'ordine #${order?.daily_number ?? ''} verrà annullato e le scorte già scalate torneranno a magazzino.`}
+          message={
+            isNew
+              ? 'Le righe battute finora vengono buttate e si torna alla coda. Il conto non è ancora stato aperto.'
+              : `L'ordine #${order?.daily_number ?? ''} verrà annullato e le scorte già scalate torneranno a magazzino.`
+          }
           confirmLabel="Annulla ordine"
           cancelLabel="Indietro"
           danger
           onCancel={() => setConfirmCancel(false)}
           onConfirm={() => {
             setConfirmCancel(false)
+            // Conto non ancora aperto: non c'è niente da annullare sul
+            // database, si butta la bozza e si torna indietro. Prima il
+            // tasto era spento e l'unico modo era togliere le righe una per
+            // una.
+            if (isNew) {
+              clearDraft()
+              ricordaContoInCorso(null)
+              return navigate('/bar')
+            }
             cancelOrder(order.id, { by: 'bartender' }).catch((e) => {
               // Non è andata: torni a vederlo in coda, com'è giusto.
               mostraOrdine(order.id)

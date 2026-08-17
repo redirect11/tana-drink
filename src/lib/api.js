@@ -62,7 +62,12 @@ import { DEFAULT_MARKUP, DEFAULT_ROUND_STEP } from './pricing.js'
 import { notify } from './notify.js'
 import { bgWrite } from './sync.js'
 import { ricordaImpostazioni, impostazioniRicordate } from './impostazioniLocali.js'
-import { cassaCorrente, prendiNumero } from './progressivi.js'
+import {
+  cassaCorrente,
+  prendiNumero,
+  numeroPrevisto,
+  contatoreCorrente,
+} from './progressivi.js'
 
 const drinksCol = collection(db, 'drinks')
 const ordersCol = collection(db, 'orders')
@@ -1102,11 +1107,11 @@ export async function fetchRecentDrinkIds(limit = 20) {
 // PROSSIMO numero d'ordine (senza consumarlo): serve al POS per mostrare il
 // progressivo già all'apertura della schermata, prima ancora del primo item.
 // Segue lo stesso contatore di createOrder (sessione di cassa, o giornata).
-export async function peekNextDailyNumber({ cutoffHour = DEFAULT_CUTOFF_HOUR } = {}) {
-  const cashSessionId = await currentCashSessionId()
-  const key = cashSessionId ? `cash-${cashSessionId}` : businessDayKey(new Date(), cutoffHour)
-  const snap = await getDoc(doc(db, 'counters', key))
-  return ((snap.exists() ? snap.data().last : 0) || 0) + 1
+export function peekNextDailyNumber({ cutoffHour = DEFAULT_CUTOFF_HOUR } = {}) {
+  // Anche questo senza chiedere niente a nessuno: il numero si sa già (vedi
+  // lib/progressivi.js). Aprire il POS non deve aspettare due risposte dal
+  // server per scrivere «#21» in cima.
+  return Promise.resolve(numeroPrevisto(contatoreCorrente(cutoffHour)))
 }
 
 // STORICO ordini in ordine cronologico (più recenti prima), qualunque sia lo
@@ -1560,35 +1565,13 @@ function mapCashSession(snap) {
 }
 
 // Id della sessione di cassa APERTA (o null). Letta anche dalla cache offline.
-// Serve al progressivo degli ordini, che segue la CASSA e non il giorno.
-// Puntatore PUBBLICO alla sessione di cassa aperta. Serve perché `cash_sessions`
-// è leggibile solo dallo staff (contiene incassi e nomi), ma il progressivo
-// dev'essere lo stesso ANCHE per gli ordini che arrivano dai clienti: senza
-// questo, i loro ordini userebbero il contatore del giorno e si avrebbero
-// numeri duplicati in coda.
+// Puntatore PUBBLICO alla sessione di cassa aperta: `cash_sessions` è
+// leggibile solo dallo staff (dentro ci sono incassi e nomi), ma il
+// progressivo dev'essere lo stesso ANCHE per gli ordini dei clienti. Chi lo
+// legge è lib/progressivi.js, che lo tiene aggiornato con un ascolto: qui lo
+// si scrive e basta.
 const activeCashRef = doc(db, 'counters', '_active_cash')
 
-async function currentCashSessionId() {
-  // 1) puntatore pubblico (funziona per tutti, cliente compreso)
-  try {
-    const snap = await getDoc(activeCashRef)
-    if (snap.exists()) return snap.data().session_id ?? null
-  } catch {
-    /* si prova con la lettura diretta qui sotto */
-  }
-  // 2) fallback per lo staff: sessioni aperte prima che esistesse il puntatore
-  try {
-    const snap = await getDocs(query(cashSessionsCol, where('status', '==', 'open')))
-    if (snap.empty) return null
-    const list = snap.docs.map((d) => ({ id: d.id, opened_at: toIso(d.data().opened_at) }))
-    list.sort((a, b) => String(b.opened_at || '').localeCompare(String(a.opened_at || '')))
-    // Riallinea il puntatore, così anche i clienti prendono il numero giusto.
-    setDoc(activeCashRef, { session_id: list[0].id }, { merge: true }).catch(() => {})
-    return list[0].id
-  } catch {
-    return null
-  }
-}
 
 // Sessione di cassa attualmente aperta (una sola alla volta), in realtime.
 // Niente orderBy nella query (eviterebbe un indice composito e, soprattutto,

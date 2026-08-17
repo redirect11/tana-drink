@@ -105,6 +105,13 @@ export function contatoreCorrente(cutoffHour = DEFAULT_CUTOFF_HOUR) {
   return sessioneCassa ? `cash-${sessioneCassa}` : businessDayKey(new Date(), cutoffHour)
 }
 
+// CHE NUMERO AVRÀ il prossimo conto, senza prenderlo: serve al POS per
+// scrivere «#21» in cima appena si apre, prima ancora del primo prodotto.
+export function numeroPrevisto(idContatore) {
+  ascolta(idContatore)
+  return prossimo(dalServer.get(idContatore), assegnati[idContatore])
+}
+
 // IL NUMERO, SUBITO. Nessuna attesa: si legge quello che si ha, si segna
 // che è stato dato, e la scrittura del contatore parte per conto suo.
 export function prendiNumero(idContatore) {

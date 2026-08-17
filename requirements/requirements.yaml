@@ -246,6 +246,17 @@ requirements:
       numero. Il numero cambia solo a chi ha perso, e resta scritto da dove
       veniva (`daily_number_precedente`), perché la comanda può essere già
       uscita dalla stampante col numero vecchio.
+      LE TRE SCHERMATE DEL SERVIZIO — coda, conto, pagamento — LAVORANO IN
+      LOCALE. Leggono dalla cache, scrivono in sottofondo e si aggiornano da
+      sole quando il server manda qualcosa di nuovo. Niente attese per far
+      vedere l'esito di un gesto: incassare, annullare, aggiungere una riga
+      si vedono nell'istante in cui si tocca, e i numeri in cima si muovono
+      con loro. Il dato che serve si PRECARICA — i progressivi, la cassa
+      aperta — invece di andarlo a chiedere al momento del bisogno.
+      Anche i tasti: «invia comanda» e «annulla ordine» funzionano su un
+      conto appena battuto, senza aspettare che esista sul server. E la
+      bozza si svuota all'istante: aspettare la scrittura voleva dire
+      aprire il conto dopo e trovarci dentro le righe di quello prima.
       E NIENTE ASPETTA IL SERVER. Ogni azione su un conto — incassare,
       annullare, avanzare, aggiungere righe — leggeva il documento dal
       SERVER prima di scrivere: da lì il ritardo fra il tocco e la coda che
