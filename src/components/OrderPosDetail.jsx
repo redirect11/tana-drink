@@ -1568,6 +1568,47 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   // che serve è uno, che dice cosa si può fare adesso. È anche il posto
   // dove il dito va già: su un conto chiuso per sbaglio si preme lì.
   const daRiaprire = !isNew && ripristinabile(order)
+
+  // ── IL PAGAMENTO GUARDA IL CONTO COM'È A SCHERMO ───────────────────
+  //
+  // `order` è quello che sa il SERVER. Le righe appena battute stanno
+  // ancora nella bozza (si confermano da sole poco dopo) o in una scrittura
+  // in volo: chi batteva due drink e apriva subito il pagamento si trovava
+  // il conto di prima — quattro righe a schermo, tre nel pagamento, col
+  // cliente davanti e il totale sbagliato.
+  //
+  // Qui il conto si ricompone in locale, come vuole la regola di casa
+  // (docs/architettura.md): le comande con dentro le modifiche in volo, la
+  // bozza come se fosse una comanda in più, e il totale che si vede sotto
+  // le righe. Il server lo raggiunge un istante dopo — ci pensa
+  // `onBeforePay`, che manda tutto prima di registrare l'incasso.
+  const ordineDaPagare = useMemo(() => {
+    if (!order) return order
+    const bozza = draftToItems().map((i) => ({
+      drink_id: i.drink_id,
+      name: i.name,
+      unit_price: i.price,
+      qty: i.qty,
+      ...(i.custom ? { custom: true } : {}),
+    }))
+    const comandeLocali = bozza.length
+      ? [...effComande, { id: '__bozza', status: ORDER_STATUSES.RICEVUTO, items: bozza }]
+      : effComande
+    return {
+      ...order,
+      comande: comandeLocali,
+      total: confirmedTotal + draftTotal + extras,
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [order, effComande, draft, confirmedTotal, draftTotal, extras])
+
+  // Aprendo il pagamento la bozza si conferma SUBITO, senza aspettare il
+  // mezzo secondo dell'auto-conferma: da lì in poi quelle righe sono del
+  // conto, e non c'è una finestra in cui esistono solo a schermo.
+  const apriIlPagamento = useCallback(() => {
+    flushAdditions()
+    setShowPayment(true)
+  }, [flushAdditions])
   // QUANTO RESTA DA INCASSARE, scritto sul tasto Pagamento. Prima la cifra
   // compariva solo finché l'ordine non esisteva ancora: appena si creava da
   // sé — cioè un istante dopo il primo prodotto — spariva, e sembrava un
@@ -1850,19 +1891,11 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                 >
                   <IconReceipt /> Comande ({isNew ? 0 : comande.length})
                 </button>
-                {/* Questo compare e sparisce, al contrario degli altri: su un
-                    conto in corso non vuol dire niente, e un tasto che
-                    rimette in corso quello che è già in corso è solo un modo
-                    per far dubitare di aver capito. */}
-                {ripristinabile(order) && (
-                  <button
-                    className="btn ghost small"
-                    onClick={() => setShowRipristino(true)}
-                    title="Il conto torna fra quelli aperti"
-                  >
-                    ♻️ Rimetti in corso
-                  </button>
-                )}
+                {/* «RIMETTI IN CORSO» STA NELLA BARRA IN FONDO, dove su un
+                    conto chiuso ha già preso il posto di «Pagamento»: era
+                    lo stesso tasto due volte nella stessa schermata, a un
+                    dito di distanza, e due tasti uguali fanno pensare che
+                    facciano due cose diverse. */}
             </div>
             {!isNew && order.table_label && (
               <div className="muted small">🍽 Tavolo {order.table_label}</div>
@@ -2206,7 +2239,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                 <button
                   className="btn small"
                   disabled={isNew ? !conRighe : !canPay}
-                  onClick={isNew ? handlePayNow : () => setShowPayment(true)}
+                  onClick={isNew ? handlePayNow : apriIlPagamento}
                 >
                   <IconCard /> Pagamento{daIncassare > 0 ? ` · ${formatPrice(daIncassare)}` : ''}
                 </button>
@@ -2262,7 +2295,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                   <button
                     className="btn"
                     disabled={isNew ? !conRighe : !canPay}
-                    onClick={isNew ? handlePayNow : () => setShowPayment(true)}
+                    onClick={isNew ? handlePayNow : apriIlPagamento}
                     aria-label="Paga"
                     title="Incassa il conto"
                   >
@@ -2590,7 +2623,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
           nato un istante prima o mezz'ora prima. */}
       {(payOrder || (showPayment && order)) && (
         <PaymentScreen
-          order={payOrder || order}
+          order={payOrder || ordineDaPagare}
           settings={settings}
           onClose={() => {
             setPayOrder(null)

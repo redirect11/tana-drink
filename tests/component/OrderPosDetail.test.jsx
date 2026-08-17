@@ -1325,3 +1325,26 @@ describe('la ⓘ delle ricette', () => {
     delete mockSettings.pos_ricetta_info
   })
 })
+
+// ── IL PAGAMENTO VEDE IL CONTO COM'È A SCHERMO ───────────────────────
+//
+// Battendo di corsa e aprendo subito il pagamento, quello che si vedeva era
+// il conto che sapeva IL SERVER: le righe appena battute stavano ancora
+// nella bozza, e nella schermata di pagamento non c'erano — quattro righe di
+// qua, tre di là, col cliente davanti. Le righe sono locali: il pagamento
+// deve leggerle da lì, non aspettare che il server risponda.
+describe('aprire il pagamento subito dopo aver battuto', () => {
+  it('le righe appena battute ci sono già, e il totale le conta', async () => {
+    const user = userEvent.setup()
+    // Conto da 2 Mojito (14 €). Se ne battono altri due Gin Tonic (16 €) e
+    // si apre il pagamento nello stesso respiro.
+    mount(baseOrder())
+    await user.click(screen.getAllByText('Gin Tonic')[0])
+    await user.click(screen.getAllByRole('button', { name: /Pagamento/ })[0])
+
+    const pagamento = await screen.findByRole('dialog', { name: /Pagamento/ })
+    expect(within(pagamento).getByText(/Gin Tonic/)).toBeInTheDocument()
+    // 2 Mojito (14 €) + il Gin Tonic appena battuto (8 €).
+    expect(within(pagamento).getAllByText('22,00 €').length).toBeGreaterThan(0)
+  })
+})

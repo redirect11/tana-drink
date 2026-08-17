@@ -19,6 +19,12 @@
   a mano in una dozzina di posti — il tab acceso, il «+», i tasti dei
   pannelli, gli aloni del fondo — e quelli restavano dorati con qualunque
   tema.
+- **Il pagamento vede le righe appena battute** (BUG-015): battendo di corsa
+  e aprendo subito il pagamento, le ultime righe restavano fuori — nel conto
+  27 €, nel pagamento 21 € — perché la schermata guardava il conto come lo
+  sapeva il server.
+- **Su un conto chiuso «Rimetti in corso» c'è una volta sola**: stava sia in
+  cima al pannello sia in fondo, al posto di «Pagamento».
 - **Le macro-categorie sono due elenchi**: quelle del magazzino (quello che
   si compra) e quelle del menù (quello che si vende, nella nuova
   sottosezione «Macro-categorie» del menù). Su ogni macro di spesa si sceglie
