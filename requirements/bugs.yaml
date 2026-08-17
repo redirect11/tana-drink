@@ -322,3 +322,182 @@ bugs:
     generate_issue: false
     labels: [bug, ui, pos]
     test_cases: [tests/component/PosPage.test.jsx]
+
+  - id: BUG-012
+    title: "In coda compare il cartello «I gruppi sono spenti» a chi i gruppi non li usa"
+    area: "src/pages/BartenderPage.jsx, src/lib/coda.js"
+    description: >
+      Aprendo i «Pannelli» dal ⋯ della coda, chi ha i gruppi spenti si
+      ritrova un riquadro che dice «I gruppi sono spenti: si accendono in
+      Impostazioni → Gruppi». È un cartello su una cosa che non ha, nello
+      spazio che serve agli ordini.
+      RISOLTO: la regola sta in `gruppiInCoda` (src/lib/coda.js) — pannello
+      se i gruppi sono accesi e si mostrano in coda, cartello solo a chi li
+      ha ACCESI ma tenuti fuori dalla coda (lì spiega perché il pannello è
+      vuoto), niente a chi li ha spenti.
+    in_produzione: true
+    status: fixed
+    generate_issue: false
+    labels: [bug, ui, coda]
+    test_cases: [tests/unit/coda.test.js]
+
+  - id: BUG-013
+    title: "Le notifiche arrivano anche a chi si è scollegato"
+    area: "src/lib/logout.js, src/lib/push.js, src/lib/customerAuth.js, src/pages/BartenderPage.jsx"
+    description: >
+      Dopo il logout il telefono continua a suonare. Uscendo si toglieva la
+      riga da `staff_tokens`, ma quella è solo la RUBRICA dello staff: il
+      token è del browser e resta valido, e gli avvisi al cliente («il tuo
+      drink è pronto», «ordine annullato») lo tengono scritto sull'ORDINE.
+      Da lì continuavano ad arrivare.
+      Due strade in più lo lasciavano acceso: «Esci e accedi come staff»
+      passava dal signOut secco (niente timbratura, niente rubrica), e il
+      logout del cliente non toglieva niente.
+      RISOLTO: uscendo si CANCELLA il token del browser (`spegniPush`),
+      quindi non resta nessun indirizzo a cui bussare, chiunque sia il
+      mittente; rientrando se ne fa uno nuovo e il dispositivo si registra
+      da sé. Le due strade passano ora dalla porta giusta.
+    in_produzione: true
+    status: fixed
+    generate_issue: false
+    labels: [bug, avvisi]
+    test_cases: [tests/unit/logoutAvvisi.test.js]
+
+  - id: BUG-014
+    title: "Unità di misura: la «U» sta nella domanda sbagliata, e il contenuto si chiede anche a chi non ha pezzi"
+    area: "src/components/InventoryManager.jsx (form articolo), src/lib/inventory.js"
+    description: >
+      Segnalato da Flavio a voce (17/08, nota delle 20:25). Due cose nel
+      form del prodotto, nessuna delle due urgente — «per ora non fa niente,
+      tanto tutti i prodotti hanno pezzi come prima unità».
+      1) «Unità generiche (U)» sta nella PRIMA domanda, quella sul tipo di
+      unità di misura dell'articolo. Secondo Flavio doveva stare nella
+      SECONDA — «a quanto corrisponde un pezzo» — dove si vorrebbe poter
+      scrivere «10 U». Attenzione: la U nella prima domanda ci è finita di
+      proposito con BUG-010/REQ-MAG-012, per mettere la MANODOPERA a
+      listino («Tempo di Lavorazione»), e ci sono già articoli in
+      produzione fatti così: spostarla non è una riga di CSS, è una
+      migrazione. E perché «10 U per pezzo» serva davvero, deve reggerla
+      tutta la catena (entryUnitsFor oggi, con contenuto in U, lascia
+      dosare solo a pezzi).
+      2) Scegliendo un'unità di volume o peso (cl, ml, g…) il form chiede
+      lo stesso «contenuto per confezione»: mettendo «100 cl» sembra di
+      moltiplicare per cento ogni singolo cl. Da chiarire cosa deve
+      chiedere il form quando l'articolo NON si conta a pezzi.
+      CHIARITO da Flavio a voce (17/08, note delle 21:06 e 21:11). La regola
+      che vuole: se la prima unità è una misura standard — capacità (l, cl,
+      ml) o peso (kg, g) — sotto NON si chiede in quante parti dividerla; se
+      invece è «pezzi» o «U», sotto si chiede a quanto corrisponde
+      (1 pz = 100 cl, 1 confezione = 10 U). E il tempo di lavoro lo vuole «in
+      pezzi e dopo unità, oppure solo unità».
+      FATTO (1.4.8), la parte che non tocca i dati di produzione: un pezzo
+      può contenere UNITÀ (1 pz = 10 U) e in ricetta si dosa a U, col costo
+      per unità che ne discende; le due domande sono riscritte come si
+      parla — «Quanto contiene una confezione che compri?» e «A quanto
+      corrisponde un pezzo?» — con scritto sotto che non toccano la
+      giacenza. Era quello il fraintendimento: «contenuto per confezione»
+      con dentro «100 cl» si leggeva come una moltiplicazione.
+      RESTA APERTO: la «U» nella prima domanda (ci sono articoli in
+      produzione fatti così) e il caso del limone — comprato al chilo, usato
+      in cl. Vedi REQ-MAG-016, che rifà il modello invece di rattopparlo.
+    in_produzione: true
+    status: todo
+    generate_issue: true
+    labels: [bug, magazzino]
+    test_cases: [tests/unit/inventory.test.js]
+
+  - id: BUG-015
+    title: "Battendo di corsa, il pagamento non vede le ultime righe"
+    area: "src/components/OrderPosDetail.jsx"
+    description: >
+      Si battono tre Negroni e una IPA e si apre subito il pagamento: nel
+      conto 27,00 €, nella schermata di pagamento 21,00 € e la IPA non c'è.
+      CAUSA: la schermata di pagamento riceveva `order`, cioè il conto come
+      lo sa il SERVER. Le righe appena battute stanno ancora nella bozza —
+      si confermano da sole poco dopo — o in una scrittura in volo, e da lì
+      il pagamento non le vedeva. Contro la regola di casa: coda, conto e
+      pagamento lavorano sui dati che hanno già (docs/architettura.md).
+      RISOLTO: il conto per il pagamento si ricompone in locale — le comande
+      con dentro le modifiche in volo, la bozza come una comanda in più, e
+      il totale che si vede sotto le righe — e aprendo il pagamento la bozza
+      si conferma subito, senza aspettare l'auto-conferma. Il server lo
+      raggiunge un istante dopo: manda tutto `onBeforePay`, prima che
+      l'incasso venga registrato.
+      ANCORA (stessa serata): chiudendo il pagamento, aggiungendo altro e
+      riaprendolo, le righe nuove non c'erano. Due cause diverse, tutte e due
+      sistemate. La prima: il pagamento diretto CREA il conto, ma la
+      schermata restava «in creazione» con un conto vero dietro — adesso
+      appena l'ordine nasce diventa la sua modifica, come faceva già la
+      creazione da bozza. La seconda, più profonda: quando l'aggiunta non
+      trova una comanda modificabile ne va creata una NUOVA, e lì la bozza
+      si svuotava subito mentre la comanda partiva per il server — per tutto
+      il tempo della risposta quelle righe non esistevano da nessuna parte.
+      Adesso resta a schermo una comanda provvisoria, che se ne va solo
+      quando dal server arriva quella vera (e se la scrittura fallisce le
+      righe tornano in bozza, invece di sparire in silenzio).
+    in_produzione: true
+    status: fixed
+    generate_issue: false
+    labels: [bug, pos, pagamenti]
+    test_cases: [tests/component/OrderPosDetail.test.jsx, tests/component/PosPage.test.jsx]
+
+  - id: BUG-016
+    title: "Battendo in fretta lo stesso prodotto e uscendo subito, ne arriva uno solo"
+    area: "src/components/OrderPosDetail.jsx"
+    description: >
+      Tre tap sullo stesso drink e via verso la coda: nel conto ne restava
+      uno. Le aggiunte non partono al tap — aspettano un attimo che la mano
+      si fermi (l'auto-conferma), poi la comanda va al server — e uscendo la
+      schermata si smontava portandosi dietro i suoi timer: l'ultimo giro di
+      righe non partiva mai.
+      RISOLTO: uscendo si manda tutto ADESSO, senza aspettare. E l'override
+      locale delle comande si scrive anche nel riferimento, non solo nello
+      stato React: fra un tap e l'uscita non c'è il tempo di un altro
+      disegno, e chi manda le righe al server legge da lì. È la stessa
+      ragione per cui la bozza si salva fuori dagli updater di React.
+      STESSA RADICE, altro sintomo: modificando una ricetta al volo — il gin
+      buono al posto di quello di listino — e uscendo subito, il conto
+      tornava al prodotto di catalogo, col suo prezzo e il suo costo. Anche
+      quella modifica aspettava il suo mezzo secondo. Adesso ogni cambio a
+      una comanda passa da una porta sola (`segnaModifica`), che scrive nel
+      riferimento e nello stato insieme.
+    in_produzione: true
+    status: fixed
+    generate_issue: false
+    labels: [bug, pos]
+    test_cases: [tests/component/OrderPosDetail.test.jsx]
+
+  - id: BUG-017
+    title: "Pagamento aperto mentre il conto nasce: righe congelate, poi schermata vuota"
+    area: "src/components/OrderPosDetail.jsx"
+    description: >
+      Conto #30: si battono 2 Negroni Sbagliato e 6 IPA (8 righe, 50 €), si
+      apre il pagamento e ci sono SOLO i 2 Negroni — 14 € dovuti. Si chiude
+      il pagamento e la schermata del conto è VUOTA, «Tocca i prodotti…»,
+      totale zero, con l'ordine #30 vivo in coda. Su #28 la variante: item,
+      pagamento, chiudi, secondo item, riapri → un item solo e incasso
+      sbagliato sulla card, che si aggiusta solo alla sincronizzazione — e
+      sincronizza SOLO il primo giro di righe.
+      TRE CAUSE, tutte nella stessa corsa fra la creazione in sottofondo e
+      il pagamento. La prima: «Paga» in creazione faceva una SECONDA
+      createOrder con le righe congelate al momento del tocco, e alla
+      risposta svuotava la bozza — buttando anche le righe battute dopo,
+      che al conto non arrivavano MAI. La seconda: appena il server
+      rispondeva, il pagamento scambiava il conto locale con quello del
+      server, che le righe nuove non le aveva ancora. La terza, solo in
+      sviluppo ma è dove si prova ogni sera: StrictMode monta, finge di
+      smontare e rimonta, e il riferimento «sono montato?» restava false —
+      il passaggio a modifica non scattava mai e ogni corsa durava per
+      sempre.
+      RISOLTO: il conto nasce per UNA strada sola (createFromDraft, che al
+      ritorno porta con sé le righe battute nel frattempo e passa la
+      schermata a modifica); il pagamento legge SEMPRE il conto ricomposto
+      in locale, in creazione come in modifica (regola di casa,
+      docs/architettura.md); e le righe già inviate ma ritoccate mentre
+      l'ordine nasceva — prezzo, ricetta, quantità — partono come
+      correzione della comanda appena nata, anche a schermata già chiusa.
+    in_produzione: true
+    status: fixed
+    generate_issue: false
+    labels: [bug, pos, pagamenti]
+    test_cases: [tests/component/PosPage.test.jsx, tests/component/OrderPosDetail.test.jsx]

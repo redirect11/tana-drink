@@ -12,6 +12,7 @@ import {
   subscribePosPrefs,
   savePosColors,
   subscribeSettings,
+  fetchMacroCategories,
   DEFAULT_SETTINGS,
   settingsIniziali,
 } from '../lib/api.js'
@@ -21,6 +22,7 @@ import { formatPrice } from '../lib/orderStatus.js'
 import { deleteDrinkImageByUrl } from '../lib/storage.js'
 import { formatQty, stockStatus } from '../lib/inventory.js'
 import MarginList from './MarginList.jsx'
+import MacroCategoryManager from './MacroCategoryManager.jsx'
 import DrinkForm from './DrinkForm.jsx'
 import { saveDrinkFromForm } from '../lib/saveDrink.js'
 import CategoryRail from './CategoryRail.jsx'
@@ -56,6 +58,7 @@ export default function MenuManager() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [editing, setEditing] = useState(null) // null | 'new' | drink object
+  const [copiaDa, setCopiaDa] = useState(null) // il drink duplicato, prima di salvarlo
   // Filtri della lista (catalogo grande: ricerca + categoria + disponibilità).
   const [search, setSearch] = useState('')
   const [catFilter, setCatFilter] = useState('all') // 'all' | 'none' | categoryId
@@ -125,7 +128,7 @@ export default function MenuManager() {
         inventory,
         categories,
       })
-      setEditing(null)
+      chiudiForm()
       await load()
     } catch (e) {
       setError(e.message)
@@ -142,6 +145,36 @@ export default function MenuManager() {
     } catch (e) {
       setError(e.message)
     }
+  }
+
+  // ── DUPLICARE UN DRINK ───────────────────────────────────────────
+  //
+  // Mezzo listino sono variazioni: lo stesso drink col gin diverso, la
+  // versione analcolica, il formato grande. Rifare a mano prezzo,
+  // categoria, descrizione e soprattutto la RICETTA — che è la parte
+  // lunga, ingrediente per ingrediente — è dove si sbaglia una dose e poi
+  // il magazzino scala storto.
+  //
+  // La copia NON si salva da sola: si apre il form già pieno, così il nome
+  // e quello che cambia si sistemano PRIMA che il drink esista. Un
+  // doppione salvato di nascosto finirebbe in carta al cliente.
+  function duplica(d) {
+    setCopiaDa({
+      ...d,
+      id: undefined,
+      name: `${d.name} (copia)`,
+      // La foto resta all'originale: il file è agganciato al drink che
+      // l'ha caricata e cancellandolo sparirebbe anche dalla copia
+      // (handleDelete cancella l'immagine insieme al drink).
+      image_url: null,
+      recipe_items: (d.recipe_items || []).map((r) => ({ ...r })),
+    })
+    setEditing('new')
+  }
+
+  function chiudiForm() {
+    setEditing(null)
+    setCopiaDa(null)
   }
 
   async function handleDelete(d) {
@@ -264,11 +297,11 @@ export default function MenuManager() {
   if (editing) {
     return (
       <DrinkForm
-        initial={editing === 'new' ? EMPTY : editing}
+        initial={editing === 'new' ? copiaDa || EMPTY : editing}
         categories={categories}
         inventory={inventory}
         onCreateCategory={handleCreateCategory}
-        onCancel={() => setEditing(null)}
+        onCancel={chiudiForm}
         onSave={handleSave}
       />
     )
@@ -277,15 +310,28 @@ export default function MenuManager() {
   const searching = search.trim().length > 0
   const availCount = drinks.filter((d) => d.available).length
 
-  // TRE SOTTOSEZIONI, nel menu laterale come nelle altre pagine. Categorie
+  // LE SOTTOSEZIONI, nel menu laterale come nelle altre pagine. Categorie
   // e marginalità erano due pannelli a scomparsa in cima al catalogo: si
   // aprivano spingendo giù la griglia, e chi voleva solo guardare i
   // margini si portava dietro tutto il listino sotto.
   const sezioni = [
     { id: 'catalogo', icona: '🍸', label: 'Modifica menù' },
     { id: 'categorie', icona: '🏷', label: `Categorie (${categories.length})` },
+    { id: 'macro', icona: '🗂', label: 'Macro-categorie' },
     { id: 'margini', icona: '📈', label: 'Marginalità listino' },
   ]
+
+  if (sezione === 'macro') {
+    return (
+      <div>
+        <Sottosezioni voci={sezioni} attiva={sezione} scegli={setSezione} />
+        <MacroMenuPanel
+          categories={categories}
+          onChange={async () => setCategories(await fetchCategories())}
+        />
+      </div>
+    )
+  }
 
   if (sezione === 'categorie') {
     return (
@@ -322,7 +368,14 @@ export default function MenuManager() {
     <div>
       <Sottosezioni voci={sezioni} attiva={sezione} scegli={setSezione} />
 
-      <button className="btn block" onClick={() => setEditing('new')}>
+      <button
+        className="btn block"
+        onClick={() => {
+          // Da capo: un drink nuovo non eredita la copia rimasta in giro.
+          setCopiaDa(null)
+          setEditing('new')
+        }}
+      >
         + Aggiungi prodotto
       </button>
 
@@ -484,6 +537,13 @@ export default function MenuManager() {
                           <button
                             className="btn ghost small block"
                             style={{ marginTop: 6 }}
+                            onClick={() => duplica(d)}
+                          >
+                            📋 Duplica
+                          </button>
+                          <button
+                            className="btn ghost small block"
+                            style={{ marginTop: 6 }}
                             onClick={() => toggleAvailable(d)}
                           >
                             {d.available ? 'Rendi non disp.' : 'Rendi disponibile'}
@@ -513,6 +573,34 @@ export default function MenuManager() {
         <div className="empty">Nessun drink nel menù. Aggiungine uno!</div>
       )}
     </div>
+  )
+}
+
+// ── MACRO-CATEGORIE DEL MENÙ ─────────────────────────────────────────
+//
+// Le stesse macro del magazzino, ma dall'altro lato del banco: qui si
+// raggruppa quello che si VENDE. Servono per sapere quanto è entrato su
+// «Cocktail classici» e confrontarlo con quanto è uscito sulla macro di
+// spesa corrispondente — l'aggancio si sceglie in Magazzino, dove stanno
+// le macro di acquisto.
+function MacroMenuPanel({ categories, onChange }) {
+  const [macros, setMacros] = useState([])
+  const ricarica = async () => {
+    setMacros(await fetchMacroCategories('menu'))
+    await onChange()
+  }
+  useEffect(() => {
+    fetchMacroCategories('menu').then(setMacros).catch(() => {})
+  }, [])
+  return (
+    <MacroCategoryManager
+      ambito="menu"
+      macros={macros}
+      categories={categories}
+      onChange={ricarica}
+      aggiornaCategoria={updateCategory}
+      creaCategoria={createCategory}
+    />
   )
 }
 

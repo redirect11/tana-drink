@@ -277,6 +277,23 @@ manda in produzione), la sua approvazione e la seconda pull request verso
 Chiuderle prima vuol dire dire a chi ha segnalato il guaio che è sistemato
 quando non lo è — è successo il 17 agosto 2026 con tre issue.
 
+### Le issue nascono anche dai rami di rilascio
+
+Lo stesso vale per **`release/**`**, che è dove si lavora tutti i giorni: un
+push che tocca `requirements/requirements.yaml` o `requirements/bugs.yaml`
+apre le issue che mancano. Aspettare `main` voleva dire che una richiesta
+arrivata a voce restava scritta solo dentro un file: chi guardava le issue
+non la vedeva per giorni, e nel frattempo la si raccontava di nuovo.
+
+Due cose lo rendono innocuo:
+
+- **non si duplica.** Lo script cerca per titolo esatto fra le issue aperte
+  *e* chiuse prima di crearne una: spingere dieci volte lo stesso registro
+  non fa dieci issue, nascono solo quelle che mancano;
+- **non si chiude niente.** Come per l'hotfix, `CHIUDE_RISOLTI` vale solo su
+  `main`: da un ramo di rilascio le issue si aprono e basta. In produzione la
+  correzione non c'è ancora.
+
 ### Quando l'hotfix riporta indietro una funzione già scritta
 
 Capita: una cosa è pronta sulla linea di sviluppo e serve in produzione

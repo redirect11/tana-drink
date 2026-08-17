@@ -14,6 +14,71 @@ export const THEME_FIELDS = [
   { key: '--muted', label: 'Testo attenuato' },
 ]
 
+// ── LE FORME, NON SOLO I COLORI ──────────────────────────────────────
+//
+// Un tema non è una tavolozza. Pico e Catppuccin hanno un MODO di fare le
+// cose — quanto sono tondi gli angoli, se un bottone è una campitura piatta
+// o un gradiente, se le superfici hanno un'ombra o un bordo — e prendendone
+// solo i colori restava tutto con la faccia della Tana ridipinta: chi
+// sceglieva «Pico» si aspettava il look documento e trovava i nostri tasti
+// dorati con gli angoli morbidi.
+//
+// Sono pochi token apposta: sono quelli che si vedono da lontano. Ogni
+// famiglia li dichiara TUTTI, perché applyTheme scrive sullo stile di
+// :root e un token lasciato indietro resterebbe appiccicato al tema
+// successivo (già successo con i bottoni, vedi sotto).
+export const FORME = {
+  // La Tana: angoli morbidi, gradiente sui tasti, titoli col serif del
+  // locale. È il vestito di casa — i temi «chiaro» e «crema» sono la
+  // stessa Tana con un altro contorno.
+  tana: {
+    '--raggio-card': '16px',
+    '--raggio-btn': '12px',
+    '--raggio-pill': '999px',
+    '--raggio-campo': '10px',
+    '--btn-bg': 'linear-gradient(135deg, var(--btn-1), var(--btn-2))',
+    '--ombra-btn': '0 4px 14px color-mix(in srgb, var(--btn) 25%, transparent)',
+    '--ombra-card': '0 4px 18px rgba(0, 0, 0, 0.25)',
+    '--forma-titoli': "'Playfair Display', Georgia, 'Times New Roman', serif",
+    // IL SEGNO DEL COLORE sulle card di una griglia: il nastro d'angolo di
+    // casa, largo e squillante, oppure il pallino sobrio in alto a destra
+    // (come le card del magazzino). Il nastro sta bene addosso alla Tana,
+    // che è un locale, non un foglio di calcolo.
+    '--segno-prodotto': 'nastro',
+  },
+  // Catppuccin: tondo ma contenuto, campiture piatte, niente aloni. La
+  // palette è morbida di suo e il gradiente la sporcava.
+  catppuccin: {
+    '--raggio-card': '10px',
+    '--raggio-btn': '8px',
+    '--raggio-pill': '8px',
+    '--raggio-campo': '8px',
+    '--btn-bg': 'var(--btn)',
+    '--ombra-btn': 'none',
+    '--ombra-card': '0 2px 10px rgba(0, 0, 0, 0.18)',
+    '--forma-titoli': 'inherit',
+    // Catppuccin non è squadrato come Pico né sbandierato come la Tana:
+    // un quadratino stondato, che è il suo modo di fare gli angoli.
+    '--segno-prodotto': 'pastiglia',
+  },
+  // Pico CSS v2: il look «documento». Angoli appena smussati (0.25rem),
+  // tasti piatti, nessuna ombra — la gerarchia la fanno i bordi e lo
+  // spazio, non la profondità.
+  pico: {
+    '--raggio-card': '4px',
+    '--raggio-btn': '4px',
+    '--raggio-pill': '4px',
+    '--raggio-campo': '4px',
+    '--btn-bg': 'var(--btn)',
+    '--ombra-btn': 'none',
+    '--ombra-card': 'none',
+    '--forma-titoli': 'inherit',
+    // Pico è il look documento: una bandiera colorata larga mezza card
+    // sarebbe la cosa più rumorosa della pagina.
+    '--segno-prodotto': 'pallino',
+  },
+}
+
 export const THEME_PRESETS = {
   'tana-scuro': {
     label: '🌑 Tana scuro',
@@ -40,6 +105,7 @@ export const THEME_PRESETS = {
     },
   },
   catppuccin: {
+    forme: 'catppuccin',
     // Catppuccin Mocha (palette ufficiale): sobrio ma caldo, pensato per
     // il gestionale — base scura a tre livelli, malva come accento e
     // pesca per bottoni e gradienti. Vedi DESIGN.md.
@@ -55,6 +121,7 @@ export const THEME_PRESETS = {
     },
   },
   'catppuccin-chiaro': {
+    forme: 'catppuccin',
     // Catppuccin Latte, la gemella chiara di Mocha: stessi livelli
     // (crust → mantle → base), accenti più profondi perché sul chiaro
     // il contrasto va conquistato, non regalato.
@@ -74,6 +141,7 @@ export const THEME_PRESETS = {
     },
   },
   'pico-scuro': {
+    forme: 'pico',
     // Palette di Pico CSS v2 (tema dark): ardesia blu e azzurro tecnico.
     // Non carichiamo il CSS di Pico — farebbe a botte col nostro — ne
     // adottiamo i colori dentro i nostri token. Vedi DESIGN.md.
@@ -91,6 +159,7 @@ export const THEME_PRESETS = {
     },
   },
   'pico-chiaro': {
+    forme: 'pico',
     // Pico v2 chiaro: bianco piatto e blu petrolio, il look "documento".
     label: '💠 Pico chiaro',
     vars: {
@@ -152,7 +221,10 @@ export function resolveThemeVars(setting) {
   const presetId = setting?.preset && THEME_PRESETS[setting.preset] ? setting.preset : DEFAULT_THEME
   const base = THEME_PRESETS[presetId].vars
   const custom = setting?.custom && typeof setting.custom === 'object' ? setting.custom : {}
-  const vars = { ...base }
+  // Le forme della famiglia stanno SOTTO ai colori del preset: un preset
+  // che volesse un raggio suo lo dichiara fra le sue vars e vince.
+  const forme = FORME[THEME_PRESETS[presetId].forme || 'tana']
+  const vars = { ...forme, ...base }
   for (const f of THEME_FIELDS) {
     if (custom[f.key]) vars[f.key] = custom[f.key]
   }
@@ -185,6 +257,10 @@ export function applyTheme(vars) {
     root.style.removeProperty('--btn-1')
     root.style.removeProperty('--btn-2')
   }
+  // L'INCHIOSTRO SUL TASTO. Era cablato scuro (#1c1305, che è nato per
+  // l'oro): su un tema con l'azione scura sarebbe nero su nero. Si decide
+  // dal colore del tasto, non dal tema.
+  root.style.setProperty('--btn-ink', isLightColor(btn) ? '#1c1305' : '#ffffff')
   const a2 = vars['--accent-2']
   if (a2) {
     root.style.setProperty(
@@ -195,6 +271,10 @@ export function applyTheme(vars) {
   // Tema chiaro/scuro: guida i controlli nativi (color-scheme) e le varianti
   // CSS dei colori di stato (pill/badge), che altrimenti — pensati per lo
   // scuro — risulterebbero illeggibili sui temi chiari.
+  // Il segno del colore sulle card (nastro o pallino) è una FORMA, e il CSS
+  // deve poterci cambiare disegno sopra: una variabile non basta a scegliere
+  // fra due geometrie, serve un aggancio nel selettore.
+  root.dataset.segno = String(vars['--segno-prodotto'] || 'nastro').trim()
   const light = isLightColor(vars['--bg'])
   root.style.setProperty('color-scheme', light ? 'light' : 'dark')
   root.dataset.luma = light ? 'light' : 'dark'

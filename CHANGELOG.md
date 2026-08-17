@@ -1,5 +1,132 @@
 # Cosa è cambiato
 
+## Non ancora rilasciata — 1.4.8
+
+### Sotto il cofano
+
+- **Le issue nascono anche dai rami di rilascio**: un push che tocca i
+  registri (requisiti e bug) apre quelle che mancano, senza duplicarle e
+  senza chiuderne nessuna. Prima bisognava aspettare `main`.
+
+### Al banco
+
+- **La scheda prodotto parte da una domanda: che tipo è?** Quattro card —
+  «Lo vendo intero», «Lo verso nei drink», «Sfuso, a peso o volume»,
+  «Lavoro o servizio» — e ognuna mostra solo i suoi campi: spariscono la
+  tendina delle unità a famiglie e la casella «è una scorta», che adesso
+  le decide il tipo. Per chi versa, «una bottiglia fa…» va scritto per
+  forza: senza, non si sa il costo al cl e il magazzino non scala quello
+  che si versa — e la scheda si ferma spiegandolo. Le schede già salvate
+  si riaprono da sole nel tipo giusto.
+- **Un drink si duplica**: nelle azioni della card del menù c'è «📋
+  Duplica». Si apre la scheda già piena, col nome marcato «(copia)»: la
+  ricetta non si riscrive ingrediente per ingrediente. Si salva quando è
+  pronta, e l'originale non si tocca.
+- **Niente più cartello «I gruppi sono spenti»** in coda per chi i gruppi
+  non li usa: resta solo a chi li ha accesi ma tenuti fuori dalla coda.
+- **Uscendo, il telefono smette davvero di suonare**: si spegne il token
+  degli avvisi di quel browser, non solo la riga nell'elenco dello staff.
+  Prima continuavano ad arrivare le notifiche degli ordini del cliente.
+  Rientrando si riaccende da sé.
+- **«Esci» non resta più appeso** quando la rete non c'è.
+- **I temi cambiano davvero tutta la schermata**: l'oro di casa era scritto
+  a mano in una dozzina di posti — il tab acceso, il «+», i tasti dei
+  pannelli, gli aloni del fondo — e quelli restavano dorati con qualunque
+  tema.
+- **Con gli stati di servizio spenti, la vista a schede ha tre schede**: In
+  corso, Chiusi e Annullati — le stesse della griglia, con le stesse regole.
+  Prima mostrava i cinque passi del lavoro, quasi tutti vuoti, e i conti
+  stavano tutti sotto «Ordine ricevuto». Ricerca e «Miei» filtrano dentro la
+  scheda in cui si sta.
+- **Il database di prova si apre sulla griglia**, che è la vista di casa: il
+  seed imponeva la vista a schede.
+- **Una ricetta cambiata al volo non si dimentica più**: il gin buono messo
+  a mano su una riga tornava quello di listino, col suo costo, se si usciva
+  subito.
+- **Battendo in fretta e uscendo subito non si perde più niente** (BUG-016):
+  tre tap sullo stesso drink e via verso la coda ne lasciavano uno. Adesso
+  quello che si è battuto parte nell'istante in cui si esce.
+- **Il pagamento vede sempre tutto il conto, anche mentre il conto nasce**
+  (BUG-017): battendo di corsa e aprendo subito il pagamento — o
+  chiudendolo, battendo ancora e riaprendolo prima che il server
+  rispondesse — si vedeva solo il primo giro di righe, e chiudendo il
+  pagamento il conto restava vuoto a schermo. Adesso il pagamento legge il
+  conto com'è a schermo, le righe battute mentre l'ordine nasceva lo
+  raggiungono da sole, e un prezzo o una ricetta ritoccati in quell'attimo
+  non tornano più di listino.
+- **Aprendo un prodotto si legge quanto ce n'è, per primo**: dove si conta a
+  pezzi lo dice la riga «Pezzi» (quante piene, quella aperta, quanto fa una),
+  altrove la giacenza. Prima c'erano soglia, costo e prezzo consigliato, ma
+  non il numero per cui lo si apre.
+- **«A quanto corrisponde un pezzo» adesso si spiega**: è quanto CONTIENE un
+  pezzo, non quanto ne va in un drink — quello lo decide la ricetta. Si può
+  lasciare vuoto (e in ricetta si dosa a pezzi, come la birra), e accanto
+  c'è un «?» che racconta i due casi.
+- **Il chilo fra le unità d'acquisto**: i limoni si comprano al chilo, e
+  prima c'era solo il grammo.
+- **La resa si scrive come si dice**: «5 kg rendono 1,5 l», con la quantità
+  su tutti e due i lati, e l'unità d'uso si sceglie fra tutte — l'Aperol si
+  compra a bottiglia e si versa in cl. Lo scarico fa la proporzione.
+- **Anche pezzi e unità generiche hanno «Lo uso come lo compro»**: una birra
+  si compra e si serve a bottiglia, e non le si chiede altro.
+- **In creazione si scrive quanto se ne ha, nell'unità in cui si compra**,
+  invece di «quante confezioni piene».
+- **Il tasto indietro chiude la scheda prodotto** e riporta al magazzino,
+  invece di uscire dalla pagina buttando via quello che si stava scrivendo.
+- **La scheda prodotto chiede meno**: sparisce la domanda su quanto contiene
+  una confezione (comprando a chili, una confezione è un chilo), e il
+  contenuto di un pezzo — o la resa — resta a vista, da compilare solo se
+  serve.
+- **La soglia di avviso è sempre nell'unità in cui si compra** — è il
+  prodotto comprato che sta finendo — e l'etichetta lo dice.
+- **Il prezzo si scrive nell'unità in cui si compra**: «€/kg» per i limoni,
+  «€/pz» per le bottiglie, «€/U» per il tempo di lavorazione. L'etichetta
+  diceva sempre «€/pz» anche per un prodotto comprato a chili, e chi
+  scriveva il numero non sapeva a cosa si riferisse.
+- **Cambiando il modo di gestire un prodotto, l'avviso dice su cosa fa il
+  conto** (il contenuto di una confezione) e avverte se la resa dichiarata
+  non serve più.
+- **Un prodotto contato a unità può essere una scorta**: il ghiaccio si
+  conta a unità come il tempo di lavorazione, ma finisce — e ora si scarica.
+  Nella scheda c'è la casella «È una scorta: si scarica quando si usa»,
+  spenta di suo, così la manodopera resta com'era.
+- **La scheda prodotto fa tre domande, sempre le stesse**: come lo compri,
+  come lo usi in ricetta, e — solo se sono diverse — **quanto rende**. Così i
+  limoni si comprano al chilo e si spremono in cl («1 kg rende 50 cl» —
+  dietro un interruttore, perché quasi tutti i prodotti si usano come si
+  comprano), il
+  ghiaccio a sacchi e si usa a grammi, il gin a bottiglia e si versa a cl. In
+  alto c'è un **«?»** che spiega le tre domande con gli esempi. I prodotti già
+  in magazzino non cambiano di una virgola.
+- **Le domande sulle unità del magazzino sono scritte come si parla**:
+  «Quanto contiene una confezione che compri?» e «A quanto corrisponde un
+  pezzo?», con scritto sotto che non toccano la giacenza. E un pezzo può
+  contenere **unità** (1 pz = 10 U), che in ricetta si dosano a unità.
+- **Il carico a colli sta dietro un interruttore**, e quando è acceso il
+  riquadro del cartone viene prima: si scrive quanti pezzi ha e quanti ne
+  arrivano, e la quantità si conta da sé — non si corregge a mano.
+- **Le righe appena aggiunte non spariscono più**, nemmeno quando devono
+  aprire una comanda nuova: restano a schermo mentre volano al server, e se
+  la scrittura non passa tornano in bozza.
+- **Il pagamento vede le righe appena battute** (BUG-015): battendo di corsa
+  e aprendo subito il pagamento, le ultime righe restavano fuori — nel conto
+  27 €, nel pagamento 21 € — perché la schermata guardava il conto come lo
+  sapeva il server.
+- **Su un conto chiuso «Rimetti in corso» c'è una volta sola**: stava sia in
+  cima al pannello sia in fondo, al posto di «Pagamento».
+- **Le macro-categorie sono due elenchi**: quelle del magazzino (quello che
+  si compra) e quelle del menù (quello che si vende, nella nuova
+  sottosezione «Macro-categorie» del menù). Su ogni macro di spesa si sceglie
+  a quale macro di vendita corrisponde: è l'aggancio che servirà a confrontare
+  speso e incassato.
+- **Le griglie hanno tutte lo stesso vestito**: magazzino, modifica menù e
+  griglia del conto, con la stessa striscia a sinistra. E il colore del
+  prodotto prende la forma del tema: il nastro d'angolo di casa, la
+  pastiglia stondata di Catppuccin, il pallino di Pico — questi ultimi in
+  alto a destra, dov'è quello delle scorte in magazzino.
+- **E un tema porta anche le forme**, non solo i colori: Pico è squadrato e
+  piatto, Catppuccin tondo e senza aloni, la Tana resta la Tana.
+
 ## 1.4.7 — 17 agosto 2026
 
 ### Sotto il cofano

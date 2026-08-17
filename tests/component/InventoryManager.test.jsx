@@ -378,20 +378,26 @@ describe('la colonna «a fine serata» (REQ-MAG-014)', () => {
 
 // ── I NUMERI SI SCRIVONO COME LI SI PENSA (REQ-MAG-013) ──────────────
 //
-// «Avvisami quando resta una bottiglia» è il modo in cui la domanda si fa
-// al banco: nessuno la pensa in 700 ml. E il contenuto si scrive «0,7 l»
-// com'è stampato sull'etichetta.
+// «Avvisami quando resta una bottiglia» è il modo in cui la domanda si fa al
+// banco: nessuno la pensa in 700 ml. Dal 1.4.8 la soglia non ha più una
+// tendina per l'unità — è SEMPRE quella d'acquisto, perché è il prodotto
+// comprato che sta finendo ed è quello che si va a ricomprare.
 describe('le unità nel modulo del prodotto (REQ-MAG-013)', () => {
-  it('contenuto e soglia hanno la scelta dell’unità accanto', async () => {
+  it('la soglia si scrive nell’unità in cui si compra, e lo dice', async () => {
     const user = userEvent.setup()
     mostra()
     await aspettaLista()
     await user.click(screen.getByRole('button', { name: /Nuovo prodotto/ }))
-    expect(
-      screen.getByLabelText('Unità del contenuto per confezione')
-    ).toBeInTheDocument()
-    const soglia = screen.getByLabelText('Unità della soglia di avviso')
-    // Sulla soglia ci sono anche i PEZZI: è così che la si pensa.
-    expect(within(soglia).getByRole('option', { name: 'pz' })).toBeInTheDocument()
+    // La scheda parte dal tipo (REQ-MAG-016): lo sfuso compra a chili di
+    // suo, e la soglia lo dice nell'etichetta.
+    await user.click(screen.getByRole('radio', { name: /Sfuso/ }))
+    expect(screen.getByLabelText(/Soglia di avviso \(kg\)/)).toBeInTheDocument()
+    expect(screen.queryByLabelText('Unità della soglia di avviso')).toBeNull()
+    // Cambiando come si compra, cambia anche lei.
+    await user.selectOptions(screen.getByLabelText('Come lo compri'), 'l')
+    expect(screen.getByLabelText(/Soglia di avviso \(L\)/)).toBeInTheDocument()
+    // E coi tipi a pezzo la soglia è in pezzi, senza chiederlo.
+    await user.click(screen.getByRole('radio', { name: /Lo vendo intero/ }))
+    expect(screen.getByLabelText(/Soglia di avviso \(pz\)/)).toBeInTheDocument()
   })
 })

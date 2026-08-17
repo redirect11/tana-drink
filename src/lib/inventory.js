@@ -36,6 +36,37 @@ export const ENTRY_UNITS = {
   [UNITA_GENERICA]: [UNITA_GENERICA],
 }
 
+// ── COME LO COMPRI, COME LO USI, E QUANTO RENDE ──────────────────────
+//
+// Un prodotto si compra in un modo e si usa in un altro: il gin si compra a
+// bottiglia e si versa a cl, i limoni si comprano al CHILO e si spremono in
+// CL. Le due misure non appartengono nemmeno alla stessa famiglia, e infatti
+// non esiste una conversione universale fra peso e volume — ma questa non è
+// una conversione: è la RESA, e la dichiara chi compra («da un chilo di
+// limoni esce mezzo litro di succo», Flavio, 17/08).
+//
+// La giacenza si conta sempre in QUELLO CHE SI COMPRA — i chili, i sacchi,
+// le bottiglie — perché l'inventario si fa contando quello che sta sullo
+// scaffale, non il succo che ne uscirà.
+//
+// `resaUso` risponde a: «una unità BASE d'acquisto quante unità base d'uso
+// rende?». Null se non c'è niente da convertire.
+//
+//   bottiglia da 70 cl → { base: 'ml', per: 700 }   (1 pz = 700 ml)
+//   limoni al chilo    → { base: 'ml', per: 0.5 }   (1 g  = 0,5 ml di succo)
+//
+// I due campi nuovi (`resa_unit`, `resa`) valgono per qualunque articolo. Per
+// i pezzi resta valido quello che c'era prima — `content_unit` +
+// `package_size` — così i prodotti già in magazzino non si toccano.
+export function resaUso(item) {
+  const perDichiarata = Number(item?.resa) || 0
+  const baseDichiarata = item?.resa_unit ? baseUnit(item.resa_unit) : null
+  if (perDichiarata > 0 && baseDichiarata) return { base: baseDichiarata, per: perDichiarata }
+  const c = contentBase(item)
+  if (c && (item?.unit || 'pz') === 'pz') return { base: c.base, per: c.size }
+  return null
+}
+
 // Unità con cui si dosa QUESTO ingrediente in una ricetta.
 //
 // La giacenza si conta a bottiglie (si carica la merce a pezzi), ma un
@@ -48,11 +79,14 @@ export const ENTRY_UNITS = {
 // perché una Coca in un drink si mette intera.
 export function entryUnits(item) {
   const unit = item?.unit || 'pz'
-  if (unit !== 'pz') return ENTRY_UNITS[unit] ?? [unit]
-  const c = contentBase(item)
-  if (c?.base === 'ml') return ['cl', 'ml', 'pz']
-  if (c?.base === 'g') return ['g', 'mg', 'pz']
-  return ['pz']
+  const proprie = unit !== 'pz' ? (ENTRY_UNITS[unit] ?? [unit]) : ['pz']
+  const r = resaUso(item)
+  if (!r || r.base === unit) return proprie
+  // Le unità d'uso vengono PRIMA: nelle ricette sono il caso normale (si
+  // dosano 4 cl di gin, non 0,057 bottiglie). Quella d'acquisto resta, che
+  // una Coca in un drink si mette intera.
+  const uso = ENTRY_UNITS[r.base] ?? [r.base]
+  return [...uso, ...proprie.filter((u) => !uso.includes(u))]
 }
 
 // Converte una quantità dall'unità inserita all'unità base dell'item.
@@ -122,7 +156,7 @@ const numero = (n) =>
 
 // Formatta una quantità BASE nell'unità ESATTA scelta (niente auto-scaling:
 // se l'utente lavora in cl, vede cl). Etichette: L, cl, ml, kg, g, mg, pz, U.
-const UNIT_LABEL = { l: 'L', cl: 'cl', ml: 'ml', kg: 'kg', g: 'g', mg: 'mg', pz: 'pz', u: 'U' }
+export const UNIT_LABEL = { l: 'L', cl: 'cl', ml: 'ml', kg: 'kg', g: 'g', mg: 'mg', pz: 'pz', u: 'U' }
 export function formatIn(base, unit) {
   return `${numero(fromBaseQty(base, unit))} ${UNIT_LABEL[String(unit || '').toLowerCase()] || unit}`
 }
@@ -235,13 +269,31 @@ export function bottleSummary(item) {
   }
 }
 
+// ── SI SCARICA DAL MAGAZZINO? ────────────────────────────────────────
+//
+// Lo decide IL PRODOTTO, non la sua unità di misura. La regola stava
+// sull'unità — «quello che si conta a unità generiche non si scarica» — ed è
+// giusta per la manodopera, che non sta su nessuno scaffale, ma non per il
+// GHIACCIO: si conta a unità e finisce eccome, e chi lo finisce a mezzanotte
+// vorrebbe averlo visto scendere.
+//
+// Il valore di partenza resta quello di prima, così i prodotti già in
+// magazzino non cambiano comportamento: le unità generiche non sono una
+// scorta finché qualcuno non dice il contrario, tutto il resto sì.
+export function eScorta(item) {
+  if (typeof item?.scorta === 'boolean') return item.scorta
+  return !unitaGenerica(item?.unit)
+}
+
 // Stato scorta di un item: 'empty' (≤0), 'low' (≤ soglia), 'ok'.
 export function stockStatus(item) {
-  // Un articolo in unità generiche NON È UNA SCORTA: la manodopera non
-  // finisce. Se rispondesse 'empty' — e a giacenza zero risponderebbe sempre
-  // — il menù direbbe «Ingrediente esaurito» e il drink che la usa sparirebbe
-  // dalla carta, oltre a finire nelle proposte d'ordine al fornitore.
-  if (unitaGenerica(item?.unit)) return 'ok'
+  // Quello che non è una scorta non finisce mai: la manodopera non sta su
+  // nessuno scaffale. Se rispondesse 'empty' — e a giacenza zero
+  // risponderebbe sempre — il menù direbbe «Ingrediente esaurito» e il drink
+  // che la usa sparirebbe dalla carta, oltre a finire nelle proposte
+  // d'ordine al fornitore. Il ghiaccio, che invece è una scorta anche se si
+  // conta a unità, passa di qui come tutti gli altri.
+  if (!eScorta(item)) return 'ok'
   const stock = Number(item?.stock) || 0
   if (stock <= 0) return 'empty'
   if (stock <= (Number(item?.low_threshold) || 0)) return 'low'
@@ -323,11 +375,13 @@ export function costWithVat(cost, vat = 22) {
 // magazzino si leggeva «valore −0,67 €», cioè un magazzino che vale meno di
 // niente. Quello che manca è un errore da correggere, non un credito.
 export function unitsInStock(item) {
-  // Il lavoro non sta sullo scaffale: un articolo in unità generiche non è
+  // Il lavoro non sta sullo scaffale: quello che non è una scorta non è
   // giacenza e non entra nel valore del magazzino.
-  if (unitaGenerica(item?.unit)) return 0
+  if (!eScorta(item)) return 0
   const stock = giacenzaPerCarico(item?.stock)
-  if (item?.unit === 'pz') return stock
+  // Il pezzo conta se stesso — e così l'unità, quando è una scorta: un
+  // sacchetto di ghiaccio è uno, non una frazione di confezione.
+  if (item?.unit === 'pz' || unitaGenerica(item?.unit)) return stock
   const size = Number(item?.package_size) || 0
   return size > 0 ? stock / size : 0
 }
@@ -359,6 +413,11 @@ export function contentBase(item) {
   const size = Number(item?.package_size) || 0
   if (!(size > 0)) return null
   const base = (item?.unit || 'pz') === 'pz' ? item?.content_unit || null : item.unit
+  // UN PEZZO PUÒ CONTENERE UNITÀ. «Il tempo di lavoro in pezzi e dopo unità»
+  // (Flavio, 17/08): una confezione da 10 U, che in ricetta si dosa a U. Le
+  // unità restano quello che sono — non si convertono in niente e non si
+  // scaricano dal magazzino, vedi computeConsumption.
+  if (unitaGenerica(base)) return { size, base: UNITA_GENERICA }
   if (base !== 'ml' && base !== 'g') return null
   return { size, base }
 }
@@ -374,6 +433,7 @@ export function smallUnits(item) {
   const c = contentBase(item)
   if (c?.base === 'ml') return ['pz', 'cl', 'ml']
   if (c?.base === 'g') return ['pz', 'g', 'mg']
+  if (c && unitaGenerica(c.base)) return ['pz', UNITA_GENERICA]
   return ['pz']
 }
 
@@ -395,21 +455,46 @@ export function costPerUnit(item, unit, { gross = true } = {}) {
   // confezione da dividere — una unità di lavoro costa quello che costa. E non
   // si mescola con volumi e pesi: quanto costa al cl un'ora di lavoro non
   // vuol dire niente, quindi null («non lo so», non «zero»).
-  if (unitaGenerica(item?.unit)) return unitaGenerica(unit) ? packCost : null
-  if (unitaGenerica(unit)) return null
-  if ((item?.unit || 'pz') === 'pz') {
-    // Il pezzo costa quello che costa. Il costo al cl si ricava solo se si
-    // sa quanto contiene la bottiglia: altrimenti null, che vuol dire "non
-    // lo so" e non "zero".
-    if (unit === 'pz') return packCost
-    const c = contentBase(item)
-    if (!c || !per || baseUnit(unit) !== c.base) return null
-    return packCost / (c.size / per)
+  if (unitaGenerica(item?.unit)) {
+    if (unitaGenerica(unit)) return packCost
+    // Una unità può rendere qualcosa che si dosa: un sacchetto di ghiaccio
+    // (1 U) fa 5000 g. Allora il grammo costa quello che costa il sacchetto
+    // diviso quanto ne fa. Senza resa, «non lo so».
+    const r = resaUso(item)
+    const per = BASE_PER_UNIT[String(unit || '').toLowerCase()]
+    if (!r || !per || baseUnit(unit) !== r.base || !(r.per > 0)) return null
+    return (packCost / r.per) * per
   }
-  if (!per || baseUnit(unit) !== item.unit) return null
-  const size = Number(item?.package_size) || 0
-  if (size <= 0) return null
-  return packCost / (size / per)
+  if (unitaGenerica(unit)) {
+    // Pezzo che CONTIENE unità (1 pz = 10 U): la singola unità costa la
+    // confezione diviso quante ne fa. Fuori da questo caso il generico non
+    // si mescola con volumi e pesi: quanto costa al cl un'ora di lavoro non
+    // vuol dire niente.
+    const c = contentBase(item)
+    if ((item?.unit || 'pz') === 'pz' && c && unitaGenerica(c.base) && c.size > 0) {
+      return packCost / c.size
+    }
+    return null
+  }
+  const acquisto = item?.unit || 'pz'
+  // Quanto costa UNA unità base d'acquisto: un pezzo costa quello che costa,
+  // il resto è il costo della confezione diviso quanto contiene.
+  const costoBaseAcquisto = (() => {
+    if (acquisto === 'pz') return packCost
+    const size = Number(item?.package_size) || 0
+    return size > 0 ? packCost / size : null
+  })()
+  if (costoBaseAcquisto == null) return null
+  if (baseUnit(unit) === acquisto) {
+    if (!per) return null
+    return costoBaseAcquisto * per
+  }
+  // UNITÀ D'USO: ci si arriva con la resa. Un cl di succo di limone costa
+  // quanto costano i grammi di limoni che ci vogliono per farlo. Senza resa
+  // null, che vuol dire «non lo so» e non «zero».
+  const r = resaUso(item)
+  if (!r || !per || baseUnit(unit) !== r.base || !(r.per > 0)) return null
+  return (costoBaseAcquisto / r.per) * per
 }
 
 // Valore totale del magazzino.
@@ -467,13 +552,13 @@ export function qtyInStockUnit(qty, unit, item) {
     return size > 0 ? q * size : q
   }
   const base = toBaseQty(q, u)
-  if (stockUnit === 'pz') {
-    const c = contentBase(item)
-    if (!c || baseUnit(u) !== c.base || !(c.size > 0)) return q
-    return base / c.size
-  }
-  if (baseUnit(u) !== stockUnit) return q
-  return base
+  if (baseUnit(u) === stockUnit) return base
+  // Unità d'uso: si torna a quella d'acquisto con la resa. Vale per la
+  // bottiglia (40 ml da una da 700 sono 0,057 pezzi) e per il chilo di
+  // limoni (4 cl di succo sono 80 g di limoni).
+  const r = resaUso(item)
+  if (!r || baseUnit(u) !== r.base || !(r.per > 0)) return q
+  return base / r.per
 }
 
 // Calcola il consumo totale per ingrediente da una lista di order_items.
@@ -492,11 +577,11 @@ export function computeConsumption(orderItems, drinksById) {
     const mult = Number(oi.qty) || 0
     for (const ri of recipe) {
       if (!ri.inventory_item_id) continue
-      // LA MANODOPERA NON SI CONSUMA. Le righe in unità generiche (il tempo di
-      // lavorazione) servono al costo del drink, non al magazzino: restano
-      // fuori dal consumo, quindi non si scaricano, non si reintegrano
-      // all'annullo e non fanno finire niente.
-      if (unitaGenerica(ri.unit)) continue
+      // QUI SI CONTA TUTTO QUELLO CHE LA RICETTA CHIEDE, manodopera compresa:
+      // cosa poi vada tolto dalla giacenza lo decide il PRODOTTO (eScorta),
+      // e lo decide chi scrive la giacenza, che l'articolo ce l'ha in mano.
+      // Filtrare qui sull'unità significava che il ghiaccio — contato a
+      // unità ma scorta vera — non si scaricava mai.
       const add = (Number(ri.qty) || 0) * mult
       if (add <= 0) continue
       // Si somma per ARTICOLO **E UNITÀ**: la stessa bottiglia può comparire
@@ -530,6 +615,7 @@ export function fmtContenuto(qty, item) {
   const c = contentBase(item)
   if (!c) return fmtItem(qty, item)
   if ((item?.unit || 'pz') !== 'pz') return fmtItem(qty, item)
+  if (unitaGenerica(c.base)) return formatQty(qty, UNITA_GENERICA)
   return formatIn(qty, c.base === 'g' ? 'g' : 'cl')
 }
 
