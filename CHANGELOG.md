@@ -38,6 +38,14 @@
 - **Battendo in fretta e uscendo subito non si perde più niente** (BUG-016):
   tre tap sullo stesso drink e via verso la coda ne lasciavano uno. Adesso
   quello che si è battuto parte nell'istante in cui si esce.
+- **Il pagamento vede sempre tutto il conto, anche mentre il conto nasce**
+  (BUG-017): battendo di corsa e aprendo subito il pagamento — o
+  chiudendolo, battendo ancora e riaprendolo prima che il server
+  rispondesse — si vedeva solo il primo giro di righe, e chiudendo il
+  pagamento il conto restava vuoto a schermo. Adesso il pagamento legge il
+  conto com'è a schermo, le righe battute mentre l'ordine nasceva lo
+  raggiungono da sole, e un prezzo o una ricetta ritoccati in quell'attimo
+  non tornano più di listino.
 - **Aprendo un prodotto si legge quanto ce n'è, per primo**: dove si conta a
   pezzi lo dice la riga «Pezzi» (quante piene, quella aperta, quanto fa una),
   altrove la giacenza. Prima c'erano soglia, costo e prezzo consigliato, ma

@@ -466,3 +466,38 @@ bugs:
     generate_issue: false
     labels: [bug, pos]
     test_cases: [tests/component/OrderPosDetail.test.jsx]
+
+  - id: BUG-017
+    title: "Pagamento aperto mentre il conto nasce: righe congelate, poi schermata vuota"
+    area: "src/components/OrderPosDetail.jsx"
+    description: >
+      Conto #30: si battono 2 Negroni Sbagliato e 6 IPA (8 righe, 50 €), si
+      apre il pagamento e ci sono SOLO i 2 Negroni — 14 € dovuti. Si chiude
+      il pagamento e la schermata del conto è VUOTA, «Tocca i prodotti…»,
+      totale zero, con l'ordine #30 vivo in coda. Su #28 la variante: item,
+      pagamento, chiudi, secondo item, riapri → un item solo e incasso
+      sbagliato sulla card, che si aggiusta solo alla sincronizzazione — e
+      sincronizza SOLO il primo giro di righe.
+      TRE CAUSE, tutte nella stessa corsa fra la creazione in sottofondo e
+      il pagamento. La prima: «Paga» in creazione faceva una SECONDA
+      createOrder con le righe congelate al momento del tocco, e alla
+      risposta svuotava la bozza — buttando anche le righe battute dopo,
+      che al conto non arrivavano MAI. La seconda: appena il server
+      rispondeva, il pagamento scambiava il conto locale con quello del
+      server, che le righe nuove non le aveva ancora. La terza, solo in
+      sviluppo ma è dove si prova ogni sera: StrictMode monta, finge di
+      smontare e rimonta, e il riferimento «sono montato?» restava false —
+      il passaggio a modifica non scattava mai e ogni corsa durava per
+      sempre.
+      RISOLTO: il conto nasce per UNA strada sola (createFromDraft, che al
+      ritorno porta con sé le righe battute nel frattempo e passa la
+      schermata a modifica); il pagamento legge SEMPRE il conto ricomposto
+      in locale, in creazione come in modifica (regola di casa,
+      docs/architettura.md); e le righe già inviate ma ritoccate mentre
+      l'ordine nasceva — prezzo, ricetta, quantità — partono come
+      correzione della comanda appena nata, anche a schermata già chiusa.
+    in_produzione: true
+    status: fixed
+    generate_issue: false
+    labels: [bug, pos, pagamenti]
+    test_cases: [tests/component/PosPage.test.jsx, tests/component/OrderPosDetail.test.jsx]
