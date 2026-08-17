@@ -4,6 +4,13 @@
 
 ### Al banco
 
+- **Uscendo, gli avvisi di quel dispositivo si spengono** — chi si era
+  scollegato sentiva ancora suonare gli ordini del locale sul telefono di
+  casa — e rientrando si riaccendono da soli.
+- **Se gli avvisi sono spenti, ora si vede.** Una riga in cima lo dice e
+  offre il tasto per attivarli; se si rifiuta per sbaglio ricompare,
+  perché è proprio quello il caso da coprire.
+
 - **Il flusso cassa parla durante la serata, non solo alla chiusura**:
   quanto deve esserci in cassa adesso (fondo + contanti), il conto medio
   con i coperti e quanto lascia una persona, chi ha incassato e quanto —

@@ -11,8 +11,17 @@ import { useCustomer, useHasOrders } from './lib/customerAuth.js'
 import { isFirebaseConfigured, auth } from './lib/firebaseClient.js'
 import { isPersonale, isSala } from './lib/ruoli.js'
 import { onAuthStateChanged } from 'firebase/auth'
-import { subscribeSettings, DEFAULT_SETTINGS, clockIn, subscribePrinterConfig } from './lib/api.js'
+import {
+  subscribeSettings,
+  DEFAULT_SETTINGS,
+  clockIn,
+  subscribePrinterConfig,
+  saveStaffToken,
+} from './lib/api.js'
+import { getPushToken } from './lib/push.js'
+import { idDispositivo } from './lib/dispositivo.js'
 import { savePrinterSettings, impostaUtenteStampante } from './lib/printer.js'
+import AvvisiSpenti from './components/AvvisiSpenti.jsx'
 import { dismissKeyboard } from './lib/keyboard.js'
 import StatusBell from './components/StatusBell.jsx'
 import ActionSheet from './components/ActionSheet.jsx'
@@ -191,6 +200,16 @@ export default function App() {
         // Badge virtuale: timbra l'entrata (idempotente, non duplica al
         // refresh). Best-effort: se fallisce non blocca l'accesso.
         if (isStaff) clockIn({ uid: u.uid, name: nome }).catch(() => {})
+        // E GLI AVVISI SI RIACCENDONO. Uscendo, il dispositivo viene tolto
+        // dai destinatari (vedi logoutStaff): rientrando va rimesso, senza
+        // aspettare che si passi dalla coda.
+        if (isStaff) {
+          getPushToken()
+            .then((token) => {
+              if (token) saveStaffToken(u.uid, token, role, idDispositivo()).catch(() => {})
+            })
+            .catch(() => {})
+        }
       } catch {
         setStaffRole(null)
       }
@@ -538,6 +557,11 @@ export default function App() {
           <code>firestore.rules</code>).
         </div>
       )}
+
+      {/* Gli avvisi spenti si dicono a chi lavora, su ogni schermata: è
+          l'unico modo perché chi ha scartato la finestrella del browser lo
+          scopra prima di perdere un ordine. */}
+      <AvvisiSpenti ruolo={staffRole} />
 
       <main>
         <Routes>
