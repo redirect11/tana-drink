@@ -14,6 +14,11 @@
 - **Il flusso di cassa si allarga sugli schermi grandi**: le tessere si
   affiancano invece di incolonnarsi in una striscia da scorrere, e restano
   larghe solo l'andamento per ora e la chiusura. Sul telefono niente cambia.
+- **L'andamento per ora è un grafico nel tempo**: una colonna per ora, da
+  sinistra a destra, così si vede la forma della serata — il picco, la coda.
+  Era una riga per ora, una sotto l'altra.
+- **I metodi di pagamento stanno dentro «Incassato serata»**, non più in un
+  riquadro a sé che non si capiva a quale numero appartenesse.
 - **Da sloggati la campanella non c'è**: chi non è entrato è un cliente
   qualunque sulla parte pubblica, e gli avvisi parlano di ordini che non ha
   fatto. Spariscono anche «registra questo terminale» e lo storico, che sono
