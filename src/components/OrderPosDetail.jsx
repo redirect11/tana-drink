@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   advanceComanda,
@@ -1675,7 +1675,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
           cats={cats}
           loading={loading}
           qtyByDrink={qtyByDrink}
-          onInfo={setSchedaDrink}
+          onInfo={settings.pos_ricetta_info === false ? undefined : setSchedaDrink}
           categoryDisplay={settings.category_display}
           ricercaEvidenzia={settings.pos_search === 'evidenzia'}
           modoStriscia={settings.stripe_pos}
@@ -1952,12 +1952,16 @@ export default function OrderPosDetail({ order: orderProp = null }) {
               const canMinus = !closed && !isPaid && (isDraft || l.removable)
               const firstPaid = isPaid && !orderedLines[idx - 1]?.paid
               return (
-                <RigaOrdinabile key={l.key} id={l.key} attiva={organizzaLista} bloccata={isPaid || closed}>
+                // La riga «💳 Pagati» sta FUORI dal riquadro trascinabile:
+                // dentro finiva sulla stessa linea della prima riga pagata,
+                // perché quel riquadro è una fila.
+                <Fragment key={l.key}>
                   {firstPaid && (
                     <div className="muted small" style={{ margin: '10px 0 2px', borderTop: '1px dashed var(--line)', paddingTop: 6 }}>
                       💳 Pagati
                     </div>
                   )}
+                  <RigaOrdinabile id={l.key} attiva={organizzaLista} bloccata={isPaid || closed}>
                   <div
                     className={`row between draft-line${l.annullata ? ' riga-annullata' : ''}`}
                     data-line-key={l.key}
@@ -2041,7 +2045,8 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                       </span>
                     </span>
                   </div>
-                </RigaOrdinabile>
+                  </RigaOrdinabile>
+                </Fragment>
               )
             })}
             </SortableContext>

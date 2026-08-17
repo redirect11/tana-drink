@@ -12,6 +12,10 @@
 
 ### Al banco
 
+- **La ⓘ si può spegnere** (Impostazioni → Vista ordine), per chi il
+  listino lo sa a memoria e vuole le card pulite.
+- **La riga «💳 Pagati» torna sulla sua riga**: finiva accanto al primo
+  item pagato.
 - **La ⓘ su ogni card dice come si fa il drink**: ingredienti con le
   quantità e la preparazione a parole. Nella scheda del prodotto c'è un
   campo nuovo, «Come si prepara» — shakerato o mescolato, il ghiaccio, il

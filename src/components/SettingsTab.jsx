@@ -112,6 +112,17 @@ export default function SettingsTab({ role = null }) {
                 ))}
               </div>
 
+              {/* LA ⓘ DELLE RICETTE. Dove il listino lo sanno tutti a memoria
+                  è un segno in più su ogni card, e le card sono cento. Dove
+                  invece cambia spesso, o si dà una mano il sabato, è la
+                  differenza fra saper fare un drink e doverlo chiedere. */}
+              <ToggleRow
+                label="La ⓘ con la ricetta sulle card"
+                desc="Apre ingredienti, quantità e come si prepara. Spenta, le card restano pulite."
+                checked={settings.pos_ricetta_info !== false}
+                onChange={(v) => save({ pos_ricetta_info: v })}
+              />
+
               <p className="muted" style={{ margin: '12px 0 6px', fontSize: '0.85rem' }}>
                 Quanto è grande, come minimo, il testo delle righe del conto.
                 Il testo segue la larghezza del pannello, ma sotto questa
