@@ -613,6 +613,24 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     }
   }, [order?.id])
 
+  // ── SEGNARE UNA MODIFICA IN SOSPESO ────────────────────────────────
+  //
+  // Ogni cambio a una comanda (una riga in più, una quantità in meno, una
+  // ricetta cambiata al volo) si vede subito a schermo e parte poco dopo,
+  // in un colpo solo. Il punto delicato è che va scritto SUBITO anche nel
+  // riferimento: fra l'ultimo gesto e l'uscita dalla schermata non c'è il
+  // tempo di un altro disegno, e chi manda le righe al server legge da lì.
+  // Passando solo dallo stato di React, uscendo di corsa si perdeva
+  // l'ultima modifica — un gin più pregiato messo a mano tornava quello di
+  // listino, col suo costo. Stessa lezione della bozza, che si salva fuori
+  // dagli updater.
+  const segnaModifica = useCallback((comandaId, items, ritardo = 600) => {
+    latestPending.current = { ...latestPending.current, [comandaId]: items }
+    setPendingEdits((p) => ({ ...p, [comandaId]: items }))
+    clearTimeout(flushTimers.current[comandaId])
+    flushTimers.current[comandaId] = setTimeout(() => flushComanda(comandaId), ritardo)
+  }, [flushComanda])
+
   const flushAll = useCallback(async () => {
     await Promise.all(Object.keys(latestPending.current).map((id) => flushComanda(id)))
   }, [flushComanda])
@@ -950,9 +968,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     const cur = target.items || []
     const items = [...cur, item]
     const scrollIdx = items.length - 1
-    setPendingEdits((p) => ({ ...p, [target.id]: items }))
-    clearTimeout(flushTimers.current[target.id])
-    flushTimers.current[target.id] = setTimeout(() => flushComanda(target.id), 500)
+    segnaModifica(target.id, items, 500)
     scrollToLine(`c:${target.id}:${scrollIdx}`)
   }
 
@@ -1007,9 +1023,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     const items = (c.items || [])
       .map((it, j) => (j === itemIndex ? { ...it, qty: it.qty - 1 } : it))
       .filter((it) => it.qty > 0)
-    setPendingEdits((p) => ({ ...p, [comandaId]: items }))
-    clearTimeout(flushTimers.current[comandaId])
-    flushTimers.current[comandaId] = setTimeout(() => flushComanda(comandaId), 600)
+    segnaModifica(comandaId, items)
   }
 
   // − su una qualsiasi riga della lista, secondo lo stato.
@@ -1029,9 +1043,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     const c = effComandeRef.current.find((x) => x.id === l.comandaId)
     if (!c || !(comandaEditable(c) || riaperto)) return
     const items = (c.items || []).map((it, j) => (j === l.itemIndex ? { ...it, qty: it.qty + 1 } : it))
-    setPendingEdits((p) => ({ ...p, [l.comandaId]: items }))
-    clearTimeout(flushTimers.current[l.comandaId])
-    flushTimers.current[l.comandaId] = setTimeout(() => flushComanda(l.comandaId), 600)
+    segnaModifica(l.comandaId, items)
   }
 
   // ── Riordino della lista ──
@@ -1063,9 +1075,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
       const cur = c.items || []
       const items = transform(cur)
       if (items.length === cur.length) continue // niente da unire/separare qui
-      setPendingEdits((p) => ({ ...p, [c.id]: items }))
-      clearTimeout(flushTimers.current[c.id])
-      flushTimers.current[c.id] = setTimeout(() => flushComanda(c.id), 600)
+      segnaModifica(c.id, items)
     }
   }
   const mergeDraft = () => {
@@ -1102,9 +1112,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     const c = effComandeRef.current.find((x) => x.id === l.comandaId)
     if (!c) return
     const items = (c.items || []).map((it, idx) => (idx === l.itemIndex ? { ...it, ...patch } : it))
-    setPendingEdits((p) => ({ ...p, [l.comandaId]: items }))
-    clearTimeout(flushTimers.current[l.comandaId])
-    flushTimers.current[l.comandaId] = setTimeout(() => flushComanda(l.comandaId), 600)
+    segnaModifica(l.comandaId, items)
   }
 
   // Dati di partenza dell'editor per-item: se la riga è già stata
@@ -1177,15 +1185,8 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
       // si svuota la bozza), così non spariscono un istante = niente flicker. Il
       // sync col server (e la pulizia dell'override) li fa flushComanda.
       const merged = [...(target.items || []), ...additions]
-      // SUBITO ANCHE NEL RIFERIMENTO, non solo nello stato: uscendo dalla
-      // schermata questo componente si smonta prima del prossimo disegno, e
-      // chi deve mandare le righe al server legge da qui. È la stessa
-      // ragione per cui la bozza si salva fuori dagli updater di React.
-      latestPending.current = { ...latestPending.current, [target.id]: merged }
-      setPendingEdits((p) => ({ ...p, [target.id]: merged }))
       clearDraft()
-      clearTimeout(flushTimers.current[target.id])
-      flushTimers.current[target.id] = setTimeout(() => flushComanda(target.id), 250)
+      segnaModifica(target.id, merged, 250)
     } else {
       // NESSUNA COMANDA MODIFICABILE → NE NASCE UNA. E resta a schermo
       // mentre vola al server: prima si svuotava la bozza e si aspettava la
@@ -1216,7 +1217,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
         }
       })()
     }
-  }, [isNew, order?.id, flushAll, clearDraft, flushComanda])
+  }, [isNew, order?.id, flushAll, clearDraft, segnaModifica])
 
   // Auto-conferma in MODIFICA: poco dopo l'ultima aggiunta gli item vengono
   // confermati da soli (niente tasto Conferma, niente stato "non confermato"

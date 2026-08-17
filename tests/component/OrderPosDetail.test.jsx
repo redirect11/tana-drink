@@ -1373,3 +1373,26 @@ describe('uscendo, quello che si è battuto parte lo stesso', () => {
     expect(gt).toBe(3)
   })
 })
+
+// ── UNA RICETTA CAMBIATA AL VOLO NON SI DIMENTICA ────────────────────
+// Si tocca la riga, si mette il gin buono, il prezzo sale — e uscendo
+// tornava quello di listino, col suo costo. Le modifiche a una comanda
+// aspettano un attimo prima di partire, e uscendo il loro timer moriva con
+// la schermata.
+describe('la riga modificata a mano resta modificata', () => {
+  it('cambio prezzo e via: al server arriva quello nuovo', async () => {
+    const user = userEvent.setup()
+    const { unmount } = mount(baseOrder())
+    // La riga del conto (comanda in preparazione): toccarla la apre.
+    await user.click(screen.getAllByText('Mojito')[1] ?? screen.getAllByText('Mojito')[0])
+    const prezzo = await screen.findByLabelText(/Prezzo/)
+    await user.clear(prezzo)
+    await user.type(prezzo, '12')
+    await user.click(screen.getByRole('button', { name: /^Salva/ }))
+    unmount()
+
+    await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalled())
+    const items = bartenderUpdateComanda.mock.calls.at(-1)[2].items || []
+    expect(items.some((i) => Number(i.unit_price) === 12)).toBe(true)
+  })
+})

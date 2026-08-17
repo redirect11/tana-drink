@@ -25,6 +25,9 @@
   a mano in una dozzina di posti — il tab acceso, il «+», i tasti dei
   pannelli, gli aloni del fondo — e quelli restavano dorati con qualunque
   tema.
+- **Una ricetta cambiata al volo non si dimentica più**: il gin buono messo
+  a mano su una riga tornava quello di listino, col suo costo, se si usciva
+  subito.
 - **Battendo in fretta e uscendo subito non si perde più niente** (BUG-016):
   tre tap sullo stesso drink e via verso la coda ne lasciavano uno. Adesso
   quello che si è battuto parte nell'istante in cui si esce.
