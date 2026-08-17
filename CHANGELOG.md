@@ -25,6 +25,10 @@
   a mano in una dozzina di posti — il tab acceso, il «+», i tasti dei
   pannelli, gli aloni del fondo — e quelli restavano dorati con qualunque
   tema.
+- **«A quanto corrisponde un pezzo» adesso si spiega**: è quanto CONTIENE un
+  pezzo, non quanto ne va in un drink — quello lo decide la ricetta. Si può
+  lasciare vuoto (e in ricetta si dosa a pezzi, come la birra), e accanto
+  c'è un «?» che racconta i due casi.
 - **Il chilo fra le unità d'acquisto**: i limoni si comprano al chilo, e
   prima c'era solo il grammo.
 - **La resa si scrive come si dice**: «5 kg rendono 1,5 l», con la quantità

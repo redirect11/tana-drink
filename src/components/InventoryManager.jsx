@@ -1518,6 +1518,51 @@ const UNITA_USO = [
   ['U', 'U'],
 ]
 
+// ── COSA VUOL DIRE «A QUANTO CORRISPONDE UN PEZZO» ───────────────────
+//
+// La domanda si legge facilmente per un'altra: «quanto ne va in un drink?».
+// Sono due cose diverse — quella la decide la ricetta, drink per drink — e
+// confonderle vuol dire riempire il campo con la dose di un cocktail e
+// scaricare il magazzino con numeri che non tornano.
+function AiutoPezzo({ onClose }) {
+  return (
+    <div className="overlay confirm-overlay" onClick={onClose}>
+      <div
+        className="confirm-box"
+        role="dialog"
+        aria-label="A quanto corrisponde un pezzo"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 style={{ marginTop: 0 }}>A quanto corrisponde un pezzo</h3>
+        <p className="small" style={{ marginTop: 0 }}>
+          È <strong>quanto contiene</strong> un pezzo: una bottiglia da 100 cl,
+          un sacco da 5 kg, una confezione da 10 U. Non è quanto ne va in un
+          drink: quello si decide nella ricetta, drink per drink.
+        </p>
+
+        <h4 style={{ margin: '14px 0 2px' }}>Se lo scrivi</h4>
+        <p className="small" style={{ margin: 0 }}>
+          Nelle ricette puoi scegliere l&apos;unità: a <strong>pezzi</strong>
+          (una lattina intera) o nell&apos;unità del contenuto —{' '}
+          <strong>cl</strong>, g, U. Versando 4 cl da una bottiglia da 100 cl
+          il magazzino scala 0,04 pezzi, e si sa quanto costa al cl.
+        </p>
+
+        <h4 style={{ margin: '14px 0 2px' }}>Se lo lasci vuoto</h4>
+        <p className="small" style={{ margin: 0 }}>
+          Nelle ricette si dosa <strong>solo a pezzi</strong>: è il caso della
+          birra in bottiglia, che si serve intera. Il costo resta quello del
+          pezzo, e non c&apos;è nessun costo al cl da calcolare.
+        </p>
+
+        <button type="button" className="btn block" style={{ marginTop: 16 }} onClick={onClose}>
+          Chiudi
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, onSave }) {
   const isEdit = !!initial
   // Unità scelta dall'utente (L/cl/ml, g/mg, pz). Lo stock è salvato in
@@ -1528,6 +1573,7 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
   const defaultUnit = (base) => (base === 'g' ? 'g' : base === 'pz' ? 'pz' : 'cl')
   const initUnit = initial?.display_unit ?? defaultUnit(initial?.unit)
   const [aiuto, setAiuto] = useState(false)
+  const [aiutoPezzo, setAiutoPezzo] = useState(false)
   const [form, setForm] = useState({
     name: initial?.name ?? '',
     unit: initUnit,
@@ -2120,7 +2166,19 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
           {/* «A quanto corrisponde un pezzo»: è la domanda che si fa chi
               carica la merce — una bottiglia fa 100 cl, una confezione fa
               10 U. Da qui esce il costo al cl (o all'unità). */}
-          <label htmlFor="icontent" style={{ marginTop: 8 }}>A quanto corrisponde un pezzo?</label>
+          <div className="row" style={{ gap: 6, alignItems: 'center', marginTop: 8 }}>
+            <label htmlFor="icontent" style={{ margin: 0 }}>A quanto corrisponde un pezzo?</label>
+            <button
+              type="button"
+              className="inv-aiuto piccolo"
+              aria-label="Come funziona «a quanto corrisponde un pezzo»"
+              title="Come funziona"
+              onClick={() => setAiutoPezzo(true)}
+            >
+              ?
+            </button>
+          </div>
+          {aiutoPezzo && <AiutoPezzo onClose={() => setAiutoPezzo(false)} />}
           <div className="row" style={{ gap: 6 }}>
             <input
               id="icontent"
@@ -2146,8 +2204,8 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
             </select>
           </div>
           <p className="muted small" style={{ margin: '2px 0 8px' }}>
-            La giacenza si conta a pezzi. Questo serve a sapere quanto costa al cl
-            (o al grammo, o all&apos;unità) quello che c&apos;è dentro
+            Quanto CONTIENE un pezzo, non quanto ne va in un drink: da lasciare
+            vuoto per decidere la quantità direttamente nella ricetta
             {form.content_unit === 'U'
               ? '. Le unità non si scaricano dal magazzino: servono al costo.'
               : '.'}

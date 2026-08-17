@@ -6481,6 +6481,13 @@ a.storico-notifica:hover {
   cursor: pointer;
   opacity: 0.75;
 }
+/* Accanto a un'etichetta, non in cima a una scheda: più piccolo, così non
+   ruba la riga alla domanda. */
+.inv-aiuto.piccolo {
+  width: 20px;
+  height: 20px;
+  font-size: 0.78rem;
+}
 .inv-aiuto:hover {
   opacity: 1;
   border-color: var(--accent-2);
