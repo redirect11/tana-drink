@@ -1,6 +1,6 @@
 ---
 name: rilascio-hotfix
-description: Prepara un hotfix per la produzione. Da usare quando si chiede di sistemare uno o più bug urgenti visti al banco ("serve un hotfix", "questo va sistemato in produzione", "risolvi il bug con etichetta hotfix"). Legge le issue GitHub etichettate `hotfix`, chiede quale sistemare se non è già detto, stacca `hotfix/<nome>` da `main`, implementa la correzione con i suoi test, tiene aggiornata l'issue e spinge il ramo. Il tag e il deploy restano a chi comanda.
+description: Prepara un hotfix per la produzione, dal racconto del banco alla pull request. Da usare quando si chiede di sistemare uno o più bug urgenti ("serve un hotfix", "ho caricato delle registrazioni", "risolvi i bug con etichetta hotfix"). Ascolta le note vocali in registrazioni/, ne scrive le voci in requirements/bugs.yaml, le pubblica come issue GitHub etichettate `hotfix` spingendo il ramo, poi le prende in carico una alla volta e le corregge. Si ferma alla pull request verso `main`: il tag e il deploy restano a chi comanda.
 tools: Bash, Read, Write, Edit, Glob, Grep, AskUserQuestion, TodoWrite
 ---
 
@@ -13,57 +13,106 @@ tutte le regole che seguono.
 
 Leggi [CLAUDE.md](../../CLAUDE.md) e [docs/gitflow.md](../../docs/gitflow.md)
 prima di muovere qualcosa: valgono per intero anche qui. **Tutto in italiano**
-— codice, commenti, commit, commenti sull'issue.
+— codice, commenti, commit, voci del registro, commenti sulle issue, titolo e
+corpo della pull request.
 
 ## Cosa non fai mai
 
 - **Non taggare e non pubblicare.** A pubblicare è il tag, e il tag lo mette
-  la persona. Tu ti fermi al `git push` del ramo `hotfix/`.
-- **Non mergiare in `main` né in `develop`.** Sono rami protetti: si passa da
-  una pull request, e quel passo è una decisione di chi comanda.
-- **Non scrivere sulla produzione.** Nessuno script su `tana-drink`: si lavora
-  su `tana-drink-test` e la produzione va nominata a mano.
-- **Non allargare il perimetro.** Un hotfix corregge il difetto segnalato e
+  la persona dal suo computer. Anche il deploy sull'ambiente di test parte da
+  un tag suo: tu non ne metti nessuno, nemmeno di prova.
+- **Non mergiare.** Apri la pull request e ti fermi. Il merge in `main` — che
+  di suo non pubblica niente, e **deve restare così** — è una decisione di
+  chi comanda.
+- **Non scrivere sulla produzione.** Nessuno script su `tana-drink`.
+- **Non allargare il perimetro.** Un hotfix corregge i difetti segnalati e
   basta: niente refactoring di passaggio, niente rinomini, niente ritocchi
   d'interfaccia "già che c'ero". Quel codice va in produzione stasera e va
-  riletto in dieci minuti. Se vedi altro da sistemare, scrivilo nel rapporto
-  finale — non nel diff.
+  riletto in dieci minuti. Se vedi altro, va nel rapporto finale — non nel
+  diff.
+- **Non lavori i bug che non sono hotfix.** Nel registro e nelle issue ce ne
+  sono altri: si guardano solo se hanno l'etichetta `hotfix`.
 
-## 1. Trovare i bug da sistemare
+Il giro completo è: **ascolta → scrivi il registro → pubblica le issue →
+correggi una alla volta → cancello → pull request → ti fermi.** Tienilo in
+una `TodoWrite`: sono molti passi e l'ultimo è quello che si dimentica.
+
+## 1. Ascoltare il banco
+
+I guai arrivano come note vocali di WhatsApp e foto dello schermo, non come
+issue scritte bene: chi racconta ha le mani occupate.
 
 ```sh
-gh issue list --label hotfix --state open
+python scripts/trascrivi-registrazioni.py     # solo le nuove
 ```
 
-Se l'elenco è vuoto, guarda anche:
+Le trascrizioni finiscono in `registrazioni/trascrizioni/*.txt` (la cartella
+è ignorata da git: quella roba non si committa). Gira in locale e offline —
+dentro ci sono le voci di chi lavora qui e i nomi dei clienti, non escono
+dalla macchina.
 
-- le issue con etichetta `produzione` (prima che nascesse `hotfix` erano
-  segnate così);
-- `requirements/bugs.yaml`, le voci con `in_produzione: true` e
-  `status: todo` — è il registro dei bug, e ogni voce `BUG-*` ha di solito
-  la sua issue col titolo `[BUG-00x] …`.
+Poi, in questo ordine:
 
-Di ogni candidato leggi **l'issue intera, commenti compresi**
-(`gh issue view <n> --comments`): spesso il difetto è già stato indagato
-metà e la diagnosi sta in un commento.
+1. **Leggi tutte le trascrizioni.** Una nota vocale spesso ne corregge
+   un'altra («nella nota ho detto inventario, ma adesso si chiama
+   magazzino»): l'ultima parola vince, e il vecchio nome non va nel registro.
+2. **Guarda le immagini** della cartella con lo strumento di lettura: sono
+   schermate, e mostrano il difetto meglio di qualunque descrizione (numeri
+   sbagliati, testo che sborda, il banner d'errore).
+3. **Se c'è un video**, la sua traccia audio la trascrive lo stesso script;
+   per vedere cosa succede sullo schermo tira fuori qualche fotogramma
+   (`ffmpeg -i <video> -vf fps=1/3 <cartella>/frame%03d.png`, dentro
+   `registrazioni/`) e guardali.
+4. **Incrocia con quello che c'è già**: `requirements/bugs.yaml`, le issue
+   aperte (`gh issue list --state open`), il CHANGELOG. Un guaio raccontato
+   oggi è spesso una voce che esiste già — in quel caso si aggiorna quella,
+   con quello che si è saputo di nuovo, e non se ne apre un'altra.
 
-## 2. Scegliere
+## 2. Chiedere quando non hai capito
 
-- **Se nel contesto è già detto quale bug** (numero dell'issue, `BUG-00x`, o
-  la descrizione del guaio), parti da quello e non chiedere niente.
-- **Altrimenti chiedi**, con `AskUserQuestion`: elenca i candidati — numero,
-  titolo, e una riga su cosa morde — a scelta multipla, perché un hotfix
-  spesso ne chiude più di uno.
-- **Se non puoi chiedere** (nessuno che risponde), fermati subito: restituisci
-  l'elenco dei candidati con la tua proposta e non toccare una riga di codice.
+Una nota vocale detta di corsa lascia sempre dei buchi, e un bug capito a
+metà diventa una correzione sbagliata **in produzione**. Quindi, prima di
+scrivere il registro, con `AskUserQuestion`:
 
-Un hotfix che tocca più bug è normale, ma tienili distinti: **un commit per
-bug**, così se uno va tolto si toglie da solo.
+- riassumi **in una riga per guaio** quello che hai capito, così può essere
+  smentito;
+- chiedi quello che ti manca davvero — dove succede (quale schermata, quale
+  ruolo, quale dispositivo), cosa dovrebbe succedere invece, se è sempre o a
+  volte, se blocca il servizio o è solo brutto da vedere;
+- chiedi **quali sono hotfix** e quali possono aspettare la prossima
+  versione: non tutto quello che è stato raccontato è urgente, e l'urgenza la
+  decide chi sta al banco, non tu.
 
-## 3. Il ramo
+Non inventare mai un sintomo per riempire un buco. Se un guaio resta troppo
+vago dopo la domanda, la sua voce nel registro dice quello che si sa e resta
+`todo` senza etichetta `hotfix`: si sistemerà quando sarà chiaro.
 
-Nasce da `main`, non da `develop`, e vive in un workspace suo — così la
-release a metà non viene toccata:
+## 3. Scrivere il registro
+
+In `requirements/bugs.yaml`, una voce per guaio, col formato che c'è già:
+
+```yaml
+  - id: BUG-00N            # il primo numero libero: guarda l'ultimo del file
+    title: "Cosa non va, in una riga, come lo direbbe chi sta al banco"
+    area: "i file o i moduli coinvolti"
+    description: >
+      Il sintomo visto davvero, cosa dovrebbe succedere, e cosa si sa già
+      (compreso da quale nota vocale o schermata viene, e la data).
+    in_produzione: true
+    status: todo
+    generate_issue: true
+    labels: [bug, hotfix, <area>]
+    test_cases: []
+```
+
+L'etichetta **`hotfix`** è quella che fa la differenza: è quella che cerchi
+al passo 5, ed è quella che dice a chi guarda le issue che quel bug morde
+adesso. Senza, il bug esiste ma nessuno lo prende in carico d'urgenza.
+
+## 4. Pubblicare le issue con un push
+
+Il ramo nasce da `main`, non da `develop`, e vive in un workspace suo — così
+la release a metà non viene toccata:
 
 ```sh
 git fetch origin
@@ -72,26 +121,70 @@ cd ../tana-drink-<nome> && npm install
 ```
 
 `<nome>` dice cosa sistema, in italiano e in due o tre parole
-(`hotfix/comande-senza-note`, non `hotfix/fix-1`).
+(`hotfix/comande-senza-note`, non `hotfix/fix-1`). Se un ramo `hotfix/` è già
+aperto per la stessa urgenza (`git branch -r`), si lavora **lì dentro**:
+l'ambiente di test è uno solo e due hotfix in volo si coprono a vicenda.
 
-**Se un ramo `hotfix/` è già aperto** per la stessa urgenza (`git branch -r`),
-si lavora lì dentro invece di aprirne un altro: l'ambiente di test è uno solo
-e due hotfix in volo si coprono a vicenda.
+Poi il registro, da solo, in un commit suo, e il push:
 
-Il workspace nuovo ha i suoi `node_modules`: `npm install` prima di lint,
-test e build, sempre.
+```sh
+git add requirements/bugs.yaml && git commit -m "docs(bug): i guai raccontati dal banco il <data>"
+git push -u origin hotfix/<nome>
+```
 
-## 4. Capire prima di correggere
+Quel push fa girare
+[generate-issues.yml](../../.github/workflows/generate-issues.yml), che crea
+le issue mancanti dal registro — titolo `[BUG-00N] …`, etichette comprese.
+È idempotente: quelle che esistono le salta.
 
-**I test sono la specifica.** Quindi:
+**Controlla che siano nate davvero** prima di andare avanti:
 
-1. Riproduci il difetto **con un test che fallisce**. Se non riesci a
-   scriverlo, non hai ancora capito il bug: scrivi sull'issue cosa hai
-   provato e cosa ti manca (quale dispositivo, quale ordine, che ora) e
-   chiedi, invece di indovinare.
-2. Solo dopo, la correzione minima che fa passare quel test.
-3. Il commento sul codice spiega **perché**, cioè il guaio vero che hai
-   visto — non cosa fa la riga.
+```sh
+gh run list --workflow generate-issues.yml --limit 1
+gh issue list --label hotfix --state open
+```
+
+Se il workflow non è partito (di solito: il commit non tocca
+`requirements/bugs.yaml`, o il ramo non si chiama `hotfix/…`), non forzare
+niente a mano: dillo e fermati. Le issue sono il posto dove questo lavoro si
+vede, e senza issue non c'è niente da prendere in carico.
+
+## 5. Prenderli in carico, uno alla volta
+
+```sh
+gh issue list --label hotfix --state open
+gh issue view <n> --comments
+```
+
+**Solo l'etichetta `hotfix`.** Se l'elenco è vuoto guarda anche l'etichetta
+`produzione` (prima che nascesse `hotfix` erano segnati così) e le voci
+`in_produzione: true` del registro. Se nel contesto è già detto quali
+sistemare, fai quelli e non chiedere niente; se sono tanti e non è detto,
+chiedi da quali partire.
+
+Poi, **un bug per volta, fino in fondo, e un commit per bug** — così se uno
+va tolto si toglie da solo:
+
+1. **Scrivi sull'issue che lo prendi in mano**, con la diagnosi e il ramo
+   (`gh issue comment <n> --body "…"`).
+2. **Riproduci il difetto con un test che fallisce.** I test sono la
+   specifica. Se non riesci a scriverlo non hai ancora capito il bug: scrivi
+   sull'issue cosa hai provato e cosa ti manca, e chiedi — non indovinare.
+3. **La correzione minima** che fa passare quel test. Il commento sul codice
+   spiega **perché**, cioè il guaio vero, non cosa fa la riga.
+4. **Nel commit, tutto insieme**: codice, test (`tests/unit/`,
+   `tests/component/`, `tests/bdd/`), la voce del registro a `status: fixed`
+   coi `test_cases`, il test citato nei `test_cases` del requisito dell'area
+   in `requirements.yaml` (c'è un test che verifica il legame: senza, la
+   suite diventa rossa), e la riga di `CHANGELOG.md` scritta per chi ha in
+   mano un vassoio — cosa si vedeva prima, cosa si vede adesso.
+   Messaggio: `fix(<area>): <cosa cambia per chi lavora>`, e nel corpo il
+   perché e `Chiude #<n>`.
+5. **Scrivi sull'issue com'è andata**: cosa cambia e **cosa provare al
+   banco** per vedere che è a posto, in due righe senza gergo. L'issue
+   **non la chiudi tu**: si chiude quando la correzione è in produzione e ha
+   funzionato — col merge in `main`, per via del `Chiude #<n>`.
+6. Solo adesso passi al bug successivo.
 
 Attenzione alle regole del mestiere che qui si pagano care: niente `await` su
 una scrittura Firestore (offline non torna mai), il magazzino si scala con lo
@@ -99,38 +192,25 @@ snapshot, le quantità in unità base, i ruoli solo via `src/lib/ruoli.js`.
 
 **Se la correzione esiste già** su `develop` o su una `release/`, non
 riscriverla: `git cherry-pick`, e nel messaggio del commit la riga
-`(cherry-pick da <sha>, <ramo>)`. Serve a chi, rientrando in `develop`, si
+`(cherry-pick da <sha>, <ramo>)` — serve a chi, rientrando in `develop`, si
 troverà lo stesso titolo due volte.
 
-## 5. Cosa entra nel commit, insieme
+Prima di ogni push del ramo, allinea `package.json` alla patch successiva
+alla versione di `main`, col suffisso `-beta` (se `main` è a `1.3.3`, qui
+`1.3.4-beta`): mentre si prova, l'app deve dire di essere una prova. Il
+`-beta` lo toglie chi rilascia.
 
-Codice, test e documenti si muovono **nello stesso commit**:
+## 6. Il cancello, sull'ultimo commit
 
-- **il test** che dimostra la correzione (`tests/unit/`, `tests/component/`,
-  `tests/bdd/`);
-- **`requirements/bugs.yaml`**: la voce passa a `status: fixed`;
-- **`requirements/requirements.yaml`**: il test va citato nei `test_cases`
-  del requisito dell'area — c'è un test che verifica il legame, e senza
-  quello la suite diventa rossa;
-- **`CHANGELOG.md`**: sotto `## Non ancora rilasciata — x.y.z`, scritto per
-  chi ha in mano un vassoio (cosa si vedeva prima, cosa si vede adesso);
-- **`package.json`**: la patch successiva alla versione di `main` col
-  suffisso `-beta` (se `main` è a `1.3.3`, qui diventa `1.3.4-beta`). Il
-  `-beta` lo toglie chi rilascia, non tu: mentre si prova, l'app deve dire
-  di essere una prova.
-
-Messaggi di commit in italiano, nello stile del repository:
-`fix(<area>): <cosa cambia per chi lavora>`, e nel corpo il perché e
-`Chiude #<numero issue>`.
-
-## 6. Il cancello, prima di spingere
+Il cancello si passa **una volta, quando l'ultimo bug è chiuso**: farlo dopo
+ognuno è tempo buttato, non farlo affatto è un rilascio al buio.
 
 ```sh
-npm run lint      # attenzione: qui può uscire con codice 1 senza stampare
-                  # niente — conta l'esito, non l'output
+npm run lint      # può uscire con codice 1 SENZA stampare niente:
+                  # conta l'esito, non l'output
 npm test          # verde, tutti
 npm run build     # deve compilare
-node scripts/requisiti.mjs   # requisiti e test allineati
+node scripts/requisiti.mjs   # requisiti, bug e test allineati
 ```
 
 Se hai toccato `src/lib/` o `functions/`, anche `npm run test:coverage`: le
@@ -140,47 +220,41 @@ Un test che fallisce non si aggiusta per farlo passare: o il codice è
 sbagliato, o il test descriveva una cosa che abbiamo deciso di cambiare — e
 in quel caso lo cambi spiegando perché.
 
-## 7. Tenere aggiornata l'issue
+Poi il push finale del ramo: `git push`. Un push fa girare lint, test e build
+e **non pubblica niente**.
 
-L'issue è il posto dove si vede a che punto è la correzione, e la legge anche
-chi non guarda il codice. Ci scrivi **nei momenti che contano**, non a ogni
-passo:
+## 7. La pull request, e lo stop
 
-1. **Preso in mano**: cosa hai capito del difetto, su quale ramo stai
-   lavorando.
-2. **Corretto e spinto**: il ramo, il commit, cosa cambia, e **cosa provare
-   al banco** per vedere che è a posto — in due righe, senza gergo.
-3. **Se non è un bug, o non si sistema adesso**: perché, e cosa serve per
-   riprenderlo.
+Un hotfix è l'unico caso in cui la pull request va **verso `main`**:
 
 ```sh
-gh issue comment <n> --body "…"
+gh pr create --base main --title "hotfix: <cosa sistema>" --body "…"
 ```
 
-L'issue **non la chiudi tu**: si chiude quando la correzione è in produzione
-e ha funzionato. Se il commit dice `Chiude #<n>`, si chiuderà da sé col merge
-in `main` — ed è giusto così.
+Nel corpo, in italiano: i bug chiusi con `Chiude #<n>` uno per riga, cosa
+cambia per chi sta al banco, l'esito del cancello, e **cosa resta da fare a
+mano** — che è la parte che si dimentica:
 
-## 8. Spingere, e fermarsi
+- il merge in `main` (che **non** pubblica: la produzione parte solo da un
+  tag, e così deve restare);
+- il **tag su `main`**, messo dalla persona dal suo computer e spinto: è
+  quello che fa partire il deploy in produzione, che poi va **approvato** su
+  GitHub;
+- la stessa correzione **anche in `develop`**, con una seconda pull request
+  dallo stesso ramo, altrimenti al rilascio successivo il bug torna.
 
-```sh
-git push -u origin hotfix/<nome>
-```
+Poi **ti fermi**. Non mergiare, non taggare, non chiudere le issue.
 
-Il push fa girare lint, test e build e **non pubblica niente**. Per provarlo
-davvero serve un tag, e il tag — come il deploy sul test e la produzione — è
-di chi comanda. Non lo metti tu, nemmeno se sembra il passo ovvio.
-
-## 9. Il rapporto finale
+## 8. Il rapporto finale
 
 Chiudi restituendo, corto e in italiano:
 
-- **i bug lavorati**, con numero dell'issue e cosa cambia per chi sta al
-  banco;
-- **il ramo e i commit** spinti;
+- **cosa hai capito dalle registrazioni**, e cosa hai chiesto;
+- **i bug aperti**, con numero dell'issue e cosa cambia per chi sta al banco;
+- **il ramo e i commit**, uno per bug;
 - **l'esito del cancello**: lint, test (quanti), build, coverage se serviva;
-- **cosa provare sul test**, passo per passo, dopo che il tag sarà stato
-  messo;
-- **cosa hai lasciato fuori**: quello che hai visto e non hai toccato, e i
-  passi che restano alla persona (tag di prova, PR verso `main` **e**
-  `develop`, tag di produzione da approvare).
+- **la pull request** verso `main`, col link;
+- **cosa resta a chi comanda**: merge, tag da spingere, approvazione del
+  deploy, e la seconda pull request verso `develop`;
+- **cosa hai lasciato fuori**: i guai raccontati che non erano hotfix, quelli
+  rimasti troppo vaghi, e quello che hai visto e non hai toccato.

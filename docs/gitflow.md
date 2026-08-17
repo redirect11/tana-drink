@@ -148,12 +148,25 @@ forza vuol dire non sapere più cosa è stato pubblicato quando.
 4. tag sul commit di `main` → il deploy in produzione parte e **aspetta
    l'approvazione**
 
-I bug da sistemare d'urgenza si segnano su GitHub con l'etichetta **`hotfix`**.
-I passi 1 e 2 (fino al push, tag escluso) li fa l'agente
-[`rilascio-hotfix`](../.claude/agents/rilascio-hotfix.md): legge quelle issue,
-chiede quale sistemare, stacca il ramo da `main`, corregge con i suoi test,
-tiene aggiornata l'issue e spinge. Lì si ferma: il tag di prova, i merge e il
-tag di produzione restano una decisione di chi comanda.
+I bug da sistemare d'urgenza portano l'etichetta **`hotfix`**, e il giro dal
+racconto del banco alla pull request lo fa l'agente
+[`rilascio-hotfix`](../.claude/agents/rilascio-hotfix.md):
+
+1. **ascolta** le note vocali e guarda le schermate lasciate in
+   `registrazioni/` (`python scripts/trascrivi-registrazioni.py`, in locale e
+   offline), e chiede quello che non ha capito — un bug capito a metà diventa
+   una correzione sbagliata in produzione;
+2. ne scrive le voci in `requirements/bugs.yaml` con l'etichetta `hotfix`, e
+   **le pubblica come issue spingendo il ramo**: un push su `hotfix/**` che
+   tocca quel file fa girare
+   [generate-issues.yml](../.github/workflows/generate-issues.yml);
+3. le prende in carico **una alla volta** — un commit per bug, col test che
+   dimostra la correzione — tenendo aggiornata l'issue;
+4. sull'ultimo commit passa il cancello e apre la **pull request verso
+   `main`**.
+
+Lì si ferma. Il merge, il **tag** (che è l'unica cosa che pubblica), la sua
+approvazione e la seconda pull request verso `develop` restano di chi comanda.
 
 ### Quando l'hotfix riporta indietro una funzione già scritta
 

@@ -12,9 +12,16 @@ on:
           - "true"
           - "false"
 
+  # Le issue nascono dal registro, non a mano. Su `main` per i requisiti; sui
+  # rami `hotfix/**` perché lì il registro dei bug arriva PRIMA della
+  # correzione: si scrive la voce, si spinge, e le issue esistono — con la
+  # loro etichetta `hotfix` — prima che qualcuno tocchi il codice. Così chi
+  # corregge lavora su un'issue vera, e quello che è stato raccontato a voce
+  # dal banco resta scritto anche se la correzione slitta.
   push:
     branches:
       - main
+      - "hotfix/**"
     paths:
       - "requirements/requirements.yaml"
       - "requirements/bugs.yaml"
