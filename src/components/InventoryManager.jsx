@@ -49,6 +49,7 @@ import {
   costPerUnit,
   inventoryTotalValue,
   unitaGenerica,
+  UNIT_LABEL,
 } from '../lib/inventory.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import { parseSupplierList } from '../lib/warehouse.js'
@@ -1362,6 +1363,65 @@ function CaricoForm({ item, onCancel, onConfirm }) {
 
 // --- Form prodotto (creazione + modifica) -------------------------------
 
+// ── COME SI COMPILA UNA SCHEDA PRODOTTO ──────────────────────────────
+//
+// Tre domande, sempre le stesse, e la terza compare solo quando serve. È il
+// modello nato dalle note di Flavio del 17 agosto (REQ-MAG-016): in
+// magazzino ci finiscono cose lontanissime — il gin a bottiglia, i limoni al
+// chilo, il ghiaccio a sacchi, il tempo di lavoro — e prima ognuna chiedeva
+// la sua configurazione.
+function AiutoProdotto({ onClose }) {
+  return (
+    <div className="overlay confirm-overlay" onClick={onClose}>
+      <div
+        className="confirm-box"
+        role="dialog"
+        aria-label="Come si compila questa scheda"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 style={{ marginTop: 0 }}>Come si compila</h3>
+        <p className="muted small" style={{ marginTop: 0 }}>
+          Tre domande, e la terza quasi sempre si salta.
+        </p>
+
+        <h4 style={{ margin: '14px 0 4px' }}>1 · Come lo compri</h4>
+        <p className="small" style={{ margin: 0 }}>
+          L&apos;unità in cui <strong>conti la giacenza</strong> sullo scaffale
+          e in cui c&apos;è il <strong>prezzo</strong>: bottiglie, chili,
+          litri, sacchi. L&apos;inventario si fa contando quello che si vede.
+        </p>
+
+        <h4 style={{ margin: '14px 0 4px' }}>2 · Come lo usi in ricetta</h4>
+        <p className="small" style={{ margin: 0 }}>
+          Con che unità lo dosi in un drink: cl, grammi, pezzi, unità. Il gin
+          si compra a bottiglia e si versa a <strong>cl</strong>; una Coca si
+          compra e si serve a <strong>pezzo</strong>.
+        </p>
+
+        <h4 style={{ margin: '14px 0 4px' }}>3 · Quanto rende</h4>
+        <p className="small" style={{ margin: 0 }}>
+          Solo se le prime due sono diverse: <strong>1 bottiglia = 70 cl</strong>,{' '}
+          <strong>1 kg di limoni = 50 cl</strong> di succo,{' '}
+          <strong>1 confezione = 10 U</strong>. Non è una conversione da
+          manuale — peso e volume non si convertono — è la <strong>resa</strong>,
+          e la sa chi spreme i limoni. Da lì escono lo scarico dal magazzino e
+          il costo di quello che si versa.
+        </p>
+
+        <p className="muted small" style={{ marginTop: 14 }}>
+          Il <strong>tempo di lavorazione</strong> e le altre voci in «unità
+          generiche» non sono una scorta: entrano nel costo del drink, ma non
+          si scaricano, non finiscono mai e in carta non compaiono.
+        </p>
+
+        <button type="button" className="btn block" style={{ marginTop: 16 }} onClick={onClose}>
+          Ho capito
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, onSave }) {
   const isEdit = !!initial
   // Unità scelta dall'utente (L/cl/ml, g/mg, pz). Lo stock è salvato in
@@ -1371,6 +1431,7 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
   // vecchi salvati in ml senza unità di visualizzazione.
   const defaultUnit = (base) => (base === 'g' ? 'g' : base === 'pz' ? 'pz' : 'cl')
   const initUnit = initial?.display_unit ?? defaultUnit(initial?.unit)
+  const [aiuto, setAiuto] = useState(false)
   const [form, setForm] = useState({
     name: initial?.name ?? '',
     unit: initUnit,
@@ -1390,7 +1451,24 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
       initial?.unit === 'pz' && Number(initial?.package_size) > 0
         ? String(fromBaseQty(initial.package_size, initial?.content_unit === 'g' ? 'g' : 'cl'))
         : '',
-    content_unit: initial?.content_unit === 'g' ? 'g' : 'cl',
+    content_unit: unitaGenerica(initial?.content_unit)
+      ? 'U'
+      : initial?.content_unit === 'g'
+        ? 'g'
+        : 'cl',
+    // LA RESA: quanto rende una unità di quello che si compra, quando si usa
+    // in un'altra unità (1 kg di limoni = 50 cl di succo). Si scrive
+    // nell'unità in cui la si pensa, non in unità base.
+    resa_qty:
+      Number(initial?.resa) > 0 && initial?.resa_unit
+        ? String(
+            fromBaseQty(
+              Number(initial.resa) * toBaseQty(1, initUnit),
+              baseUnit(initial.resa_unit) === 'g' ? 'g' : 'cl'
+            )
+          )
+        : '',
+    resa_unit: baseUnit(initial?.resa_unit) === 'g' ? 'g' : 'cl',
     low_threshold: initial?.low_threshold ? String(fromBaseQty(initial.low_threshold, initUnit)) : '',
     // CON CHE UNITÀ SI SCRIVONO QUESTI DUE NUMERI. La soglia di avviso di
     // un liquido si pensa in bottiglie («avvisami quando ne resta una»),
@@ -1461,6 +1539,15 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
         : isPz
           ? toBaseQty(num(form.content_size), form.content_unit) || null
           : toBaseQty(num(form.package_size), form.package_size_unit) || null
+      // La resa vale per chi NON si conta a pezzi: sul pezzo la stessa cosa
+      // la dice già «a quanto corrisponde un pezzo».
+      const resaBase = (() => {
+        if (isPz || isGenerico) return null
+        const uso = toBaseQty(num(form.resa_qty), form.resa_unit)
+        if (!(uso > 0)) return null
+        const perAcquisto = toBaseQty(1, form.unit) || 1
+        return uso / perAcquisto
+      })()
       const base = {
         name: form.name.trim(),
         unit: baseUnit(form.unit), // base in cui è salvato lo stock
@@ -1471,8 +1558,14 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
         vat: Number(form.vat) || 0,
         status: form.status || 'assortimento',
         package_size: packBase,
-        // Serve solo a pezzo: dice se quel contenuto è un volume o un peso.
+        // Serve solo a pezzo: dice se quel contenuto è un volume, un peso o
+        // delle unità.
         content_unit: isPz && packBase ? baseUnit(form.content_unit) : null,
+        // LA RESA, per chi compra in un modo e usa in un altro. Sta in unità
+        // base d'uso per UNA unità base d'acquisto: 1 kg di limoni = 50 cl
+        // di succo diventa 0,5 ml per grammo. Vedi resaUso in lib/inventory.
+        resa: resaBase,
+        resa_unit: resaBase ? baseUnit(form.resa_unit) : null,
         // La soglia scritta in pezzi diventa contenuto (2 bottiglie da 70 cl
         // = 1400 ml) e viceversa: è lo stesso passaggio che fa lo scarico
         // dalla ricetta alla giacenza, quindi i due numeri non litigano.
@@ -1480,6 +1573,8 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
           unit: baseUnit(form.unit),
           package_size: packBase,
           content_unit: isPz && packBase ? baseUnit(form.content_unit) : null,
+          resa: resaBase,
+          resa_unit: resaBase ? baseUnit(form.resa_unit) : null,
         }),
       }
       // ARTICOLO IN UNITÀ GENERICHE: non è una scorta, quindi non c'è nessuna
@@ -1532,7 +1627,23 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
 
   return (
     <form className="card" onSubmit={submit}>
-      <h3 style={{ marginTop: 0 }}>{isEdit ? 'Modifica prodotto' : 'Nuovo prodotto'}</h3>
+      <div className="row between" style={{ alignItems: 'center', gap: 8 }}>
+        <h3 style={{ margin: 0 }}>{isEdit ? 'Modifica prodotto' : 'Nuovo prodotto'}</h3>
+        {/* IL PUNTO INTERROGATIVO. Questa scheda decide come si scala il
+            magazzino e quanto costa un drink: chi la compila la prima volta
+            non deve indovinare cosa vogliono dire le domande. La spiegazione
+            sta dietro un tasto, non in pagina: a chi la sa già non serve. */}
+        <button
+          type="button"
+          className="inv-aiuto"
+          aria-label="Come si compila questa scheda"
+          title="Come si compila questa scheda"
+          onClick={() => setAiuto(true)}
+        >
+          ?
+        </button>
+      </div>
+      {aiuto && <AiutoProdotto onClose={() => setAiuto(false)} />}
 
       <label htmlFor="iname">Nome *</label>
       <input id="iname" value={form.name} onChange={set('name')} placeholder="Es. Rum Zacapa" required />
@@ -1553,25 +1664,6 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
         ))}
       </select>
 
-      <div className="grid-2">
-        <div>
-          {/* In unità generiche il costo è PER UNITÀ: è tutto quello che
-              serve sapere di una voce come il tempo di lavorazione. */}
-          <label htmlFor="icost">Costo €/{isGenerico ? 'U' : 'pz'} (netto)</label>
-          <input id="icost" type="number" step="any" min="0" value={form.cost} onChange={set('cost')} placeholder="Es. 12,9" />
-        </div>
-        <div>
-          <label htmlFor="ivat">IVA acquisto %</label>
-          <input id="ivat" type="number" step="any" min="0" value={form.vat} onChange={set('vat')} />
-        </div>
-      </div>
-      {costNum > 0 && (
-        <div className="muted small">
-          +IVA {formatPrice(costWithVat(costNum, form.vat))}
-          {packInUnit > 0 && ` · ${formatPrice(costWithVat(costNum, form.vat) / packInUnit)}/${form.unit}`}
-        </div>
-      )}
-
       <label htmlFor="istatus">Stato</label>
       <select id="istatus" value={form.status} onChange={set('status')}>
         {STATUS_ITEM.map((s) => (
@@ -1579,7 +1671,20 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
         ))}
       </select>
 
-      <label htmlFor="iunit">Unità di misura</label>
+      {/* ── LE TRE DOMANDE ────────────────────────────────────────
+          Un prodotto si compra in un modo e si usa in un altro, e in
+          magazzino ci finiscono cose lontanissime fra loro: il gin a
+          bottiglia, i limoni al chilo, il ghiaccio a sacchi, il tempo di
+          lavoro. Prima ogni tipo chiedeva la sua configurazione; adesso
+          sono sempre le stesse domande, e la terza compare solo quando
+          serve davvero. Vedi REQ-MAG-016. */}
+      <h4 className="inv-domanda">Come lo compri</h4>
+      <p className="muted small" style={{ margin: '0 0 6px' }}>
+        L&apos;unità in cui conti la giacenza sullo scaffale, e in cui c&apos;è
+        il prezzo.
+      </p>
+
+      <label htmlFor="iunit">Unità d&apos;acquisto</label>
       <select id="iunit" value={form.unit} onChange={set('unit')}>
         {[
           ['Liquidi', [['l', 'Litri (L)'], ['cl', 'Centilitri (cl)'], ['ml', 'Millilitri (ml)']]],
@@ -1603,6 +1708,25 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
           </optgroup>
         ))}
       </select>
+
+      <div className="grid-2">
+        <div>
+          {/* In unità generiche il costo è PER UNITÀ: è tutto quello che
+              serve sapere di una voce come il tempo di lavorazione. */}
+          <label htmlFor="icost">Costo €/{isGenerico ? 'U' : 'pz'} (netto)</label>
+          <input id="icost" type="number" step="any" min="0" value={form.cost} onChange={set('cost')} placeholder="Es. 12,9" />
+        </div>
+        <div>
+          <label htmlFor="ivat">IVA acquisto %</label>
+          <input id="ivat" type="number" step="any" min="0" value={form.vat} onChange={set('vat')} />
+        </div>
+      </div>
+      {costNum > 0 && (
+        <div className="muted small">
+          +IVA {formatPrice(costWithVat(costNum, form.vat))}
+          {packInUnit > 0 && ` · ${formatPrice(costWithVat(costNum, form.vat) / packInUnit)}/${form.unit}`}
+        </div>
+      )}
 
       {/* Cambio del modo di gestire l'articolo: si dice CHIARAMENTE come
           finisce la giacenza, prima di salvare. Passando alle unità generiche
@@ -1629,6 +1753,17 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
             </div>
           )}
         </div>
+      )}
+
+      {!isGenerico && (
+        <>
+          <h4 className="inv-domanda">Come lo usi in ricetta</h4>
+          <p className="muted small" style={{ margin: '0 0 6px' }}>
+            {isPz
+              ? 'Un pezzo, nelle ricette, quanto vale: da qui esce il costo al cl (o al grammo, o all’unità).'
+              : 'Quasi sempre come lo compri — e allora qui non c’è niente da scrivere.'}
+          </p>
+        </>
       )}
 
       {isGenerico ? (
@@ -1669,6 +1804,47 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
           <p className="muted small" style={{ margin: '2px 0 8px' }}>
             Non tocca la giacenza: serve a sapere quanto costa quello che
             c&apos;è dentro e a ordinare al fornitore.
+          </p>
+
+          {/* ── COME LO USI, SE NON È COME LO COMPRI ──────────────────
+              I limoni si comprano al chilo e si spremono in cl: peso e
+              volume non si convertono l'uno nell'altro, e infatti questa
+              non è una conversione — è la RESA, e la sa chi li spreme.
+              Facoltativa: quasi tutti i prodotti si usano come si comprano,
+              e a quelli questa riga non serve. */}
+          <label htmlFor="iresa">
+            Si usa in un&apos;altra unità? <span className="muted">(facoltativo)</span>
+          </label>
+          <div className="row" style={{ gap: 6, alignItems: 'center' }}>
+            <span className="muted small" style={{ whiteSpace: 'nowrap' }}>
+              1 {UNIT_LABEL[String(form.unit).toLowerCase()] || form.unit} rende
+            </span>
+            <input
+              id="iresa"
+              type="number"
+              step="any"
+              min="0"
+              className="grow"
+              value={form.resa_qty}
+              onChange={set('resa_qty')}
+              placeholder="Es. 50"
+            />
+            <select
+              value={form.resa_unit}
+              onChange={set('resa_unit')}
+              aria-label="Unità d'uso"
+              style={{ width: 80 }}
+            >
+              <option value="cl">cl</option>
+              <option value="ml">ml</option>
+              <option value="g">g</option>
+            </select>
+          </div>
+          <p className="muted small" style={{ margin: '2px 0 8px' }}>
+            Da compilare solo se lo compri in un modo e lo usi in un altro —
+            i limoni si comprano al chilo e si spremono in cl. Le ricette lo
+            dosano nell&apos;unità d&apos;uso, la giacenza resta quella che
+            conti sullo scaffale.
           </p>
         </>
       ) : (

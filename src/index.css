@@ -6465,3 +6465,30 @@ a.storico-notifica:hover {
     animation: none;
   }
 }
+
+/* Il «?» della scheda prodotto: un tondino, non un tasto — chiede attenzione
+   solo a chi la sta cercando. */
+.inv-aiuto {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.75;
+}
+.inv-aiuto:hover {
+  opacity: 1;
+  border-color: var(--accent-2);
+}
+
+/* I titoli delle tre domande della scheda prodotto: piccoli, ma dicono dove
+   si è. */
+.inv-domanda {
+  margin: 18px 0 2px;
+  font-size: 0.95rem;
+}

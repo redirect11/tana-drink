@@ -8,7 +8,7 @@
 
 import { describe, it, expect, vi } from 'vitest'
 import { readFileSync } from 'node:fs'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom/vitest'
 
@@ -261,7 +261,7 @@ describe('il form del prodotto: unità generiche', () => {
     const user = userEvent.setup()
     render(<InventoryManager />)
     await nuovoProdotto(user)
-    const misura = screen.getByLabelText('Unità di misura')
+    const misura = screen.getByLabelText(/Unità d.acquisto/)
     expect([...misura.options].map((o) => o.value)).toContain('U')
   })
 
@@ -269,7 +269,7 @@ describe('il form del prodotto: unità generiche', () => {
     const user = userEvent.setup()
     render(<InventoryManager />)
     await nuovoProdotto(user)
-    await user.selectOptions(screen.getByLabelText('Unità di misura'), 'U')
+    await user.selectOptions(screen.getByLabelText(/Unità d.acquisto/), 'U')
     // Niente confezione, niente contenuto del pezzo, niente soglia di
     // avviso: non è una scorta, non finisce e non si riordina.
     expect(screen.queryByLabelText(/Contenuto per confezione/)).toBeNull()
@@ -283,7 +283,7 @@ describe('il form del prodotto: unità generiche', () => {
     const user = userEvent.setup()
     render(<InventoryManager />)
     await nuovoProdotto(user)
-    await user.selectOptions(screen.getByLabelText('Unità di misura'), 'U')
+    await user.selectOptions(screen.getByLabelText(/Unità d.acquisto/), 'U')
     await user.type(screen.getByLabelText('Nome *'), 'Tempo di Lavorazione')
     await user.type(screen.getByLabelText(/Costo €\/U/), '0.5')
     await user.click(screen.getByRole('button', { name: 'Salva' }))
@@ -297,5 +297,41 @@ describe('il form del prodotto: unità generiche', () => {
         low_threshold: 0,
       })
     )
+  })
+})
+
+// ── LE TRE DOMANDE, E IL «?» CHE LE SPIEGA ───────────────────────────
+// La scheda decide come si scala il magazzino e quanto costa un drink: chi
+// la compila la prima volta non deve indovinare cosa vogliono dire le
+// domande. Vedi REQ-MAG-016.
+describe('la scheda prodotto chiede tre cose', () => {
+  async function apriForm(user) {
+    render(<InventoryManager />)
+    await screen.findByText('Campari')
+    await user.click(screen.getByRole('button', { name: '+ Nuovo prodotto' }))
+  }
+
+  it('«come lo compri» e «come lo usi», con il tasto che le spiega', async () => {
+    const user = userEvent.setup()
+    await apriForm(user)
+    expect(screen.getByText('Come lo compri')).toBeInTheDocument()
+    expect(screen.getByLabelText(/Unità d.acquisto/)).toBeInTheDocument()
+    expect(screen.getByText('Come lo usi in ricetta')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /Come si compila/ }))
+    const box = await screen.findByRole('dialog', { name: /Come si compila/ })
+    expect(within(box).getByText(/1 kg di limoni = 50 cl/)).toBeInTheDocument()
+  })
+
+  it('la terza domanda — quanto rende — c’è per chi non si conta a pezzi', async () => {
+    const user = userEvent.setup()
+    await apriForm(user)
+    // Di suo la scheda parte a cl (un liquido): la resa si può dichiarare.
+    expect(screen.getByLabelText(/Si usa in un.altra unità/)).toBeInTheDocument()
+    // Passando ai pezzi, quella riga sparisce: lì la stessa cosa la dice già
+    // «a quanto corrisponde un pezzo».
+    await user.selectOptions(screen.getByLabelText(/Unità d.acquisto/), 'pz')
+    expect(screen.queryByLabelText(/Si usa in un.altra unità/)).toBeNull()
+    expect(screen.getByLabelText(/A quanto corrisponde un pezzo/)).toBeInTheDocument()
   })
 })
