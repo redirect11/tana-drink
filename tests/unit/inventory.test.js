@@ -64,6 +64,28 @@ describe('formatQty', () => {
   })
 })
 
+// I NUMERI SI SCRIVONO COME SI LEGGONO.
+// Sulla card del Campari si leggeva «7.49000000001 pz»: il numero grezzo
+// uscito da una moltiplicazione di ricetta, col punto al posto della virgola
+// e la coda di decimali dietro. formatPezzi e formatIn arrotondavano già a
+// due decimali: qui si allinea anche formatQty, che è quello che finisce
+// nelle card, nei movimenti e negli avvisi di scorta.
+describe('formatQty: due decimali e la virgola', () => {
+  it('niente code di decimali sui pezzi', () => {
+    expect(formatQty(7.49000000000001, 'pz')).toBe('7,49 pz')
+    expect(formatQty(2.456, 'pz')).toBe('2,46 pz')
+    expect(formatQty(3, 'pz')).toBe('3 pz')
+  })
+  it('niente code di decimali su millilitri e grammi', () => {
+    expect(formatQty(40.00000000000001, 'ml')).toBe('40 ml')
+    expect(formatQty(7.49000000000001, 'g')).toBe('7,49 g')
+  })
+  it('e la virgola anche oltre il litro o il chilo', () => {
+    expect(formatQty(1500.0000001, 'ml')).toBe('1,5 L')
+    expect(formatQty(2000.0000001, 'g')).toBe('2 kg')
+  })
+})
+
 describe('stockStatus', () => {
   it('empty quando ≤ 0', () => {
     expect(stockStatus({ stock: 0, low_threshold: 5 })).toBe('empty')
@@ -294,6 +316,20 @@ describe('bottleSummary: bottiglie (pz) + contenuto (cl), unità distinte', () =
   })
   it('articolo a pezzo: nessun conteggio bottiglie', () => {
     expect(bottleSummary({ unit: 'pz', stock: 12 })).toBeNull()
+  })
+
+  // Sulla card, sotto al numero grande dei pezzi, ci va il CONTENUTO — è
+  // quello che serve a chi sta versando. Per gli articoli contati a pezzo
+  // ripeteva lo stesso dato di sopra: «7,49 pz» e sotto «7.49000000001 pz».
+  it('anche contando a pezzi, il totale è il contenuto in cl', () => {
+    const campari = { unit: 'pz', package_size: 1000, content_unit: 'ml', stock: 7.49 }
+    expect(bottleSummary(campari).total).toBe('749 cl')
+    expect(bottleSummary(campari).total).not.toMatch(/pz/)
+  })
+
+  it('e per i solidi in grammi', () => {
+    const zucchero = { unit: 'pz', package_size: 500, content_unit: 'g', stock: 3 }
+    expect(bottleSummary(zucchero).total).toBe('1.500 g')
   })
 })
 

@@ -20,6 +20,11 @@ una funzione, il terzo per le correzioni.
   c'era tutta. Adesso si scarica al massimo quello che c'è, un carico riparte
   sempre da zero e il valore in euro non va mai in negativo. Al banco non
   cambia niente: il conto si batte come prima, anche se la scorta è finita.
+- **Sulle card del magazzino i numeri si scrivono come si leggono.** Sotto al
+  Campari si leggeva «7.49000000001 pz», col punto e la coda di decimali del
+  calcolo: adesso sono due decimali e la virgola, in tutto il magazzino. E
+  sotto al numero grande dei pezzi ci va il **contenuto** — «749 cl» — invece
+  di ripetere gli stessi pezzi: è il dato che serve a chi sta versando.
 
 ---
 
