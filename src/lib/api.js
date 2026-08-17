@@ -26,6 +26,7 @@ import { splitAmounts } from './groups.js'
 import { createSumUpSale, updateSumUpSaleStatus, toSumUpStatus } from './sumupApi.js'
 import {
   computeConsumption,
+  eScorta,
   formatQty,
   qtyInStockUnit,
   scaricoPossibile,
@@ -396,25 +397,42 @@ export async function deleteInventoryCategory(id) {
 // i conti aggregati di acquisti/fatturato. Il legame vive sulla categoria
 // (campo macro_id), così una categoria sta in al più una macro.
 
+// DUE ELENCHI, NON UNO. Le macro nascono sul MAGAZZINO — raggruppano quello
+// che si compra — ma servono anche sul MENÙ, sulle categorie dei drink che
+// si vendono: sono due mestieri diversi (si compra «Distillati», si vende
+// «Cocktail classici») e mescolarli farebbe due somme sbagliate.
+// Stessa collezione, campo `ambito`: le righe vecchie non ce l'hanno e sono
+// tutte di magazzino, che è come stavano prima.
+export const AMBITI_MACRO = ['magazzino', 'menu']
+
 function mapMacro(snap) {
   const m = snap.data() || {}
   return {
     id: snap.id,
     name: m.name ?? '',
     sort_order: m.sort_order ?? 0,
+    ambito: m.ambito === 'menu' ? 'menu' : 'magazzino',
+    // Solo sulle macro di magazzino: a quale macro di VENDITA corrisponde
+    // questa spesa. È l'aggancio che fa il confronto speso/incassato.
+    macro_menu_id: m.macro_menu_id ?? null,
     created_at: toIso(m.created_at),
   }
 }
 
-export async function fetchMacroCategories() {
+export async function fetchMacroCategories(ambito = 'magazzino') {
   const snap = await getDocs(macroCategoriesCol)
-  const list = snap.docs.map(mapMacro)
+  const list = snap.docs.map(mapMacro).filter((m) => m.ambito === ambito)
   list.sort((a, b) => (a.sort_order - b.sort_order) || (a.name || '').localeCompare(b.name || ''))
   return list
 }
 
-export async function createMacroCategory({ name, sort_order = 0 }) {
-  const ref = await addDoc(macroCategoriesCol, { name, sort_order, created_at: serverTimestamp() })
+export async function createMacroCategory({ name, sort_order = 0, ambito = 'magazzino' }) {
+  const ref = await addDoc(macroCategoriesCol, {
+    name,
+    sort_order,
+    ambito: ambito === 'menu' ? 'menu' : 'magazzino',
+    created_at: serverTimestamp(),
+  })
   return mapMacro(await getDoc(ref))
 }
 
@@ -425,10 +443,18 @@ export async function updateMacroCategory(id, patch) {
 }
 
 // Eliminando una macro, le sue categorie tornano "senza macro" (non si
-// perdono): si azzera macro_id su quelle che la puntano.
-export async function deleteMacroCategory(id) {
-  const cats = await getDocs(query(inventoryCategoriesCol, where('macro_id', '==', id)))
+// perdono): si azzera macro_id su quelle che la puntano — quelle del
+// magazzino o quelle del menù, secondo l'ambito. E si sgancia da chi la
+// indicava come macro di vendita, altrimenti resterebbe un aggancio a un
+// gruppo che non esiste più e il confronto mostrerebbe una riga vuota.
+export async function deleteMacroCategory(id, ambito = 'magazzino') {
+  const collezione = ambito === 'menu' ? categoriesCol : inventoryCategoriesCol
+  const cats = await getDocs(query(collezione, where('macro_id', '==', id)))
   await Promise.all(cats.docs.map((d) => updateDoc(d.ref, { macro_id: null })))
+  if (ambito === 'menu') {
+    const agganciate = await getDocs(query(macroCategoriesCol, where('macro_menu_id', '==', id)))
+    await Promise.all(agganciate.docs.map((d) => updateDoc(d.ref, { macro_menu_id: null })))
+  }
   await deleteDoc(doc(db, 'macro_categories', id))
 }
 
@@ -2261,6 +2287,10 @@ function riallineaInSottofondo(orderId, comandaId) {
         const sn = invSnaps[idx]
         if (!sn.exists()) continue
         const curItem = sn.data()
+        // QUELLO CHE NON È UNA SCORTA NON SI TOCCA: la manodopera entra nel
+        // costo del drink, non nel magazzino. Lo dice il prodotto, non la sua
+        // unità — il ghiaccio si conta a unità e si scarica eccome.
+        if (!eScorta(curItem)) continue
         // Anche qui non si scende sotto zero: una comanda modificata al rialzo
         // su un prodotto già finito toglieva l'aggiunta comunque.
         const scarico = scaricoPossibile(curItem.stock, qtyInStockUnit(d.delta, d.unit, curItem))
@@ -2334,6 +2364,8 @@ async function depleteComandeInventory(entries) {
   const lowStock = []
   for (const [id, qty] of Object.entries(delta)) {
     const cur = itemsById[id]
+    // Come sopra: si scarica solo quello che sta davvero su uno scaffale.
+    if (!eScorta(cur)) continue
     // NON SI SCENDE SOTTO ZERO. Si toglie al massimo quello che risulta in
     // giacenza: continuando a battere un prodotto finito si arrivava a
     // −0,04 pz, e il carico successivo ripartiva da quel buco. L'increment
@@ -2816,6 +2848,10 @@ async function stornaScorte(orderId, consumption) {
       const s = snaps[idx]
       if (!s.exists()) continue
       const cur = s.data()
+      // Si rimette a posto solo quello che era stato tolto: se non è una
+      // scorta non era mai uscito dal magazzino, e rimetterlo dentro
+      // regalerebbe giacenza dal nulla.
+      if (!eScorta(cur)) continue
       bgWrite(() => updateDoc(doc(db, 'inventory_items', c.inventory_item_id), {
         stock: increment(qtyInStockUnit(c.qty, c.unit, cur)),
       }), 'storno scorta')

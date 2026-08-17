@@ -5,7 +5,8 @@
 // ordine, conferma con modale nome e pagamento diretto.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { StrictMode } from 'react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 
@@ -112,7 +113,13 @@ vi.mock('firebase/auth', () => ({
 
 import PosPage from '../../src/pages/PosPage.jsx'
 import { submitPosOrder } from '../../src/lib/pendingOrders.js'
-import { createOrder, updateOrderInfo, subscribeSettings, cancelOrder } from '../../src/lib/api.js'
+import {
+  createOrder,
+  updateOrderInfo,
+  subscribeSettings,
+  cancelOrder,
+  bartenderUpdateComanda,
+} from '../../src/lib/api.js'
 import { printComanda } from '../../src/lib/printer.js'
 
 function mount() {
@@ -558,5 +565,202 @@ describe('annullare un conto in creazione', () => {
     tastiAnnulla().forEach((b) => expect(b).not.toBeDisabled())
     await user.click(tastiAnnulla()[0])
     expect(await screen.findByText(/Annullare l’ordine\?|Annullare l'ordine\?/)).toBeInTheDocument()
+  })
+})
+
+// ── IL PAGAMENTO MENTRE IL SERVER TACE (BUG-017) ─────────────────────
+//
+// La serata vera: si battono due prodotti di corsa, si apre il pagamento
+// PRIMA che la creazione in sottofondo sia risposta, si chiude, si batte
+// ancora, si riapre. Prima il pagamento mostrava solo il primo giro di
+// righe — il conto nasceva con quelle congelate al tocco, e alla risposta
+// del server la bozza si svuotava buttando anche il resto: la schermata
+// restava VUOTA e le righe nuove non arrivavano mai. Il pagamento deve
+// leggere il conto com'è A SCHERMO (regola di casa, docs/architettura.md),
+// e quello che si batte nel frattempo deve raggiungere il conto appena
+// il server si fa vivo.
+
+// L'ordine che il server restituirebbe per la creazione richiesta: le
+// righe sono QUELLE della richiesta (line_id compreso, che è l'identità
+// con cui la schermata riconosce le sue righe).
+const ordineDaParams = (params) => ({
+  id: 'ord-nuovo',
+  daily_number: 9,
+  status: 'aperto',
+  payment_status: 'non_richiesto',
+  total: params.items.reduce((s, i) => s + i.qty * i.price, 0),
+  payments: [],
+  discount_amount: 0,
+  customer_name: params.customer_name ?? null,
+  table_label: params.table_label ?? null,
+  comande: [
+    {
+      id: 'c1',
+      seq: 1,
+      status: params.status || 'in_preparazione',
+      status_times: {},
+      items: params.items.map((i) => ({
+        drink_id: i.drink_id,
+        name: i.name,
+        unit_price: i.price,
+        qty: i.qty,
+        ...(i.line_id ? { line_id: i.line_id } : {}),
+      })),
+    },
+  ],
+  order_items: params.items.map((i) => ({
+    drink_id: i.drink_id,
+    name: i.name,
+    unit_price: i.price,
+    qty: i.qty,
+  })),
+})
+
+describe('il pagamento mentre il server tace (BUG-017)', () => {
+  it('due prodotti di corsa e Pagamento: ci sono tutti e due, col totale giusto', async () => {
+    const user = userEvent.setup()
+    // Il server non risponde MAI: il pagamento non deve accorgersene.
+    createOrder.mockImplementationOnce(() => new Promise(() => {}))
+    mount()
+    await user.click(screen.getAllByText('Mojito')[0])
+    await user.click(screen.getAllByText('Gin Tonic')[0])
+    await user.click(screen.getAllByRole('button', { name: /Pagamento/ })[0])
+
+    const pagamento = await screen.findByRole('dialog', { name: 'Pagamento' })
+    expect(within(pagamento).getByText(/Mojito/)).toBeInTheDocument()
+    expect(within(pagamento).getByText(/Gin Tonic/)).toBeInTheDocument()
+    // 7 € + 8 €: il totale conta TUTTE le righe battute.
+    expect(screen.getByTestId('pay-amount')).toHaveTextContent('15,00')
+  })
+
+  it('chiudi, batti ancora, riapri: c’è tutto — e alla risposta arriva tutto al conto', async () => {
+    const user = userEvent.setup()
+    let rispondeIlServer
+    createOrder.mockImplementationOnce(
+      (params) =>
+        new Promise((res) => {
+          rispondeIlServer = () => res(ordineDaParams(params))
+        })
+    )
+    mount()
+    // Si battono Mojito e Gin Tonic e si apre subito il pagamento.
+    await user.click(screen.getAllByText('Mojito')[0])
+    await user.click(screen.getAllByText('Gin Tonic')[0])
+    await user.click(screen.getAllByRole('button', { name: /Pagamento/ })[0])
+    await screen.findByRole('dialog', { name: 'Pagamento' })
+    expect(screen.getByTestId('pay-amount')).toHaveTextContent('15,00')
+
+    // Il cliente aggiunge qualcosa: si chiude senza incassare. La schermata
+    // NON deve essere vuota — è il conto, con le sue righe.
+    await user.click(screen.getByRole('button', { name: /Chiudi/ }))
+    expect(screen.getAllByText('Mojito').length).toBeGreaterThan(1)
+    expect(screen.getAllByText('Gin Tonic').length).toBeGreaterThan(1)
+
+    // Si batte il terzo prodotto e si riapre il pagamento: ci sono tutti.
+    await user.click(screen.getAllByText('Mojito')[0])
+    await user.click(screen.getAllByRole('button', { name: /Pagamento/ })[0])
+    const pagamento = await screen.findByRole('dialog', { name: 'Pagamento' })
+    expect(within(pagamento).getByText(/Gin Tonic/)).toBeInTheDocument()
+    expect(screen.getByTestId('pay-amount')).toHaveTextContent('22,00')
+
+    // ORA il server risponde — con le sole righe del primo giro. Le altre
+    // non devono sparire: raggiungono il conto come aggiunte.
+    rispondeIlServer()
+    await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalled(), { timeout: 3000 })
+    const items = bartenderUpdateComanda.mock.calls.at(-1)[2].items
+    const mojito = items
+      .filter((i) => i.drink_id === 'mojito')
+      .reduce((s, i) => s + (Number(i.qty) || 0), 0)
+    expect(mojito).toBe(2)
+    expect(items.some((i) => i.drink_id === 'gin')).toBe(true)
+    // Il pagamento è rimasto aperto, sempre col conto intero.
+    expect(within(pagamento).getByText(/Gin Tonic/)).toBeInTheDocument()
+    expect(screen.getByTestId('pay-amount')).toHaveTextContent('22,00')
+    // E il conto è UNO solo: niente doppioni alla riapertura.
+    expect(createOrder).toHaveBeenCalledTimes(1)
+  })
+
+  it('il prezzo ritoccato mentre l’ordine nasce non torna di listino, nemmeno uscendo subito', async () => {
+    const user = userEvent.setup()
+    let rispondeIlServer
+    createOrder.mockImplementationOnce(
+      (params) =>
+        new Promise((res) => {
+          rispondeIlServer = () => res(ordineDaParams(params))
+        })
+    )
+    const { unmount } = mount()
+    await user.click(screen.getAllByText('Mojito')[0])
+    // L'auto-creazione parte col prezzo di listino (7 €)…
+    await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1), { timeout: 2000 })
+    // …e mentre è in volo si ritocca il prezzo della riga.
+    await user.click(screen.getAllByTitle(/Modifica Mojito/).at(-1))
+    const prezzo = await screen.findByLabelText(/Prezzo/)
+    await user.clear(prezzo)
+    await user.type(prezzo, '12')
+    await user.click(screen.getByRole('button', { name: /^Salva/ }))
+    // Via subito, senza aspettare la risposta.
+    unmount()
+
+    // Il server risponde a schermata già chiusa: la correzione parte da
+    // sola, e il conto porta 12 €, non 7.
+    rispondeIlServer()
+    await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalled(), { timeout: 3000 })
+    const items = bartenderUpdateComanda.mock.calls.at(-1)[2].items
+    expect(items.some((i) => Number(i.unit_price) === 12)).toBe(true)
+    expect(items.some((i) => Number(i.unit_price) === 7)).toBe(false)
+  })
+})
+
+// ── IN SVILUPPO (StrictMode) COME AL BANCO ───────────────────────────
+// StrictMode monta, finge di smontare e rimonta: un riferimento «sono
+// montato?» rimasto a false spegneva il passaggio a modifica, e sugli
+// emulatori la schermata restava «in creazione» per sempre — righe orfane,
+// pagamento col solo primo giro, conto vuoto. I sintomi del banco, ma
+// sempre. Qui si prova la creazione dentro StrictMode vero.
+describe('in sviluppo (StrictMode) la creazione funziona come al banco', () => {
+  it('l’ordine nato passa a modifica anche col montaggio doppio', async () => {
+    const user = userEvent.setup()
+    localStorage.clear()
+    render(
+      <StrictMode>
+        <MemoryRouter>
+          <PosPage />
+        </MemoryRouter>
+      </StrictMode>
+    )
+    await user.click(screen.getAllByText('Mojito')[0])
+    await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1), { timeout: 2000 })
+    // La schermata è diventata la modifica del conto: la comanda c'è.
+    expect(await screen.findByRole('button', { name: /Comande \(1\)/ })).toBeInTheDocument()
+  })
+})
+
+// ── PAGAMENTO CHIUSO, SI CONTINUA A BATTERE (server già risposto) ─────
+//
+// Si battono i primi drink, si apre il pagamento, si chiude perché il
+// cliente aggiunge qualcosa, si batte ancora e si riapre il pagamento: i
+// prodotti nuovi non c'erano. Il pagamento diretto CREA il conto, ma la
+// schermata restava «in creazione» con un conto vero dietro: le righe
+// battute dopo finivano in un altro cassetto.
+describe('battere ancora dopo aver chiuso il pagamento (server già risposto)', () => {
+  it('le righe aggiunte dopo si ritrovano riaprendo il pagamento', async () => {
+    const user = userEvent.setup()
+    mount()
+    await user.click(screen.getByText('Mojito'))
+    await user.click(screen.getAllByRole('button', { name: /Paga/ })[0])
+    await screen.findByRole('dialog', { name: /Pagamento/ })
+    // Il conto è nato: da qui in poi questa schermata è la sua MODIFICA.
+    await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1))
+
+    await user.click(screen.getByRole('button', { name: /Chiudi/ }))
+    await user.click(screen.getByText('Gin Tonic'))
+    await user.click(screen.getAllByRole('button', { name: /Paga|Pagamento/ })[0])
+
+    const pagamento = await screen.findByRole('dialog', { name: /Pagamento/ })
+    expect(within(pagamento).getByText(/Mojito/)).toBeInTheDocument()
+    expect(within(pagamento).getByText(/Gin Tonic/)).toBeInTheDocument()
+    // E il conto è UNO: il secondo giro non ne apre un altro.
+    expect(createOrder).toHaveBeenCalledTimes(1)
   })
 })

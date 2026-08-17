@@ -1325,3 +1325,74 @@ describe('la ⓘ delle ricette', () => {
     delete mockSettings.pos_ricetta_info
   })
 })
+
+// ── IL PAGAMENTO VEDE IL CONTO COM'È A SCHERMO ───────────────────────
+//
+// Battendo di corsa e aprendo subito il pagamento, quello che si vedeva era
+// il conto che sapeva IL SERVER: le righe appena battute stavano ancora
+// nella bozza, e nella schermata di pagamento non c'erano — quattro righe di
+// qua, tre di là, col cliente davanti. Le righe sono locali: il pagamento
+// deve leggerle da lì, non aspettare che il server risponda.
+describe('aprire il pagamento subito dopo aver battuto', () => {
+  it('le righe appena battute ci sono già, e il totale le conta', async () => {
+    const user = userEvent.setup()
+    // Conto da 2 Mojito (14 €). Se ne battono altri due Gin Tonic (16 €) e
+    // si apre il pagamento nello stesso respiro.
+    mount(baseOrder())
+    await user.click(screen.getAllByText('Gin Tonic')[0])
+    await user.click(screen.getAllByRole('button', { name: /Pagamento/ })[0])
+
+    const pagamento = await screen.findByRole('dialog', { name: /Pagamento/ })
+    expect(within(pagamento).getByText(/Gin Tonic/)).toBeInTheDocument()
+    // 2 Mojito (14 €) + il Gin Tonic appena battuto (8 €).
+    expect(within(pagamento).getAllByText('22,00 €').length).toBeGreaterThan(0)
+  })
+})
+
+// ── BATTERE IN FRETTA E USCIRE ───────────────────────────────────────
+// Tre tap sullo stesso prodotto e via, di corsa, verso la coda: ne arrivava
+// UNO SOLO. Le aggiunte aspettano un attimo prima di partire (l'auto-
+// conferma), e uscendo i loro timer morivano con la schermata.
+describe('uscendo, quello che si è battuto parte lo stesso', () => {
+  it('tre tap veloci e via: al server arrivano tutti e tre', async () => {
+    const user = userEvent.setup()
+    const { unmount } = mount(baseOrder())
+    const gin = screen.getAllByText('Gin Tonic')[0]
+    await user.click(gin)
+    await user.click(gin)
+    await user.click(gin)
+    // Via subito, senza aspettare l'auto-conferma.
+    unmount()
+
+    await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalled())
+    const ultimo = bartenderUpdateComanda.mock.calls.at(-1)[2]
+    // Righe unite o separate poco importa: al server devono arrivare tre.
+    const gt = (ultimo.items || [])
+      .filter((i) => i.drink_id === 'gin')
+      .reduce((s, i) => s + (Number(i.qty) || 0), 0)
+    expect(gt).toBe(3)
+  })
+})
+
+// ── UNA RICETTA CAMBIATA AL VOLO NON SI DIMENTICA ────────────────────
+// Si tocca la riga, si mette il gin buono, il prezzo sale — e uscendo
+// tornava quello di listino, col suo costo. Le modifiche a una comanda
+// aspettano un attimo prima di partire, e uscendo il loro timer moriva con
+// la schermata.
+describe('la riga modificata a mano resta modificata', () => {
+  it('cambio prezzo e via: al server arriva quello nuovo', async () => {
+    const user = userEvent.setup()
+    const { unmount } = mount(baseOrder())
+    // La riga del conto (comanda in preparazione): toccarla la apre.
+    await user.click(screen.getAllByText('Mojito')[1] ?? screen.getAllByText('Mojito')[0])
+    const prezzo = await screen.findByLabelText(/Prezzo/)
+    await user.clear(prezzo)
+    await user.type(prezzo, '12')
+    await user.click(screen.getByRole('button', { name: /^Salva/ }))
+    unmount()
+
+    await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalled())
+    const items = bartenderUpdateComanda.mock.calls.at(-1)[2].items || []
+    expect(items.some((i) => Number(i.unit_price) === 12)).toBe(true)
+  })
+})

@@ -13,9 +13,6 @@ import {
   updateInventoryCategory,
   deleteInventoryCategory,
   fetchMacroCategories,
-  createMacroCategory,
-  updateMacroCategory,
-  deleteMacroCategory,
   fetchSuppliers,
   createSupplier,
   updateSupplier,
@@ -52,10 +49,12 @@ import {
   costPerUnit,
   inventoryTotalValue,
   unitaGenerica,
+  UNIT_LABEL,
 } from '../lib/inventory.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import { parseSupplierList } from '../lib/warehouse.js'
-import { groupCategoriesByMacro } from '../lib/macros.js'
+import MacroCategoryManager from './MacroCategoryManager.jsx'
+import { useChiudiConIndietro } from '../lib/schermate.js'
 import { toastSuccess, toastError } from '../lib/toast.js'
 import StockCountPanel from './StockCountPanel.jsx'
 import PurchaseOrdersPanel from './PurchaseOrdersPanel.jsx'
@@ -215,15 +214,33 @@ function CategoriePanel() {
 function MacroPanel() {
   const [macros, setMacros] = useState([])
   const [categories, setCategories] = useState([])
+  // Le macro del MENÙ servono qui solo per l'aggancio: su ogni macro di
+  // spesa si sceglie a quale macro di vendita corrisponde.
+  const [macroMenu, setMacroMenu] = useState([])
   const ricarica = async () => {
-    const [macs, cats] = await Promise.all([fetchMacroCategories(), fetchInventoryCategories()])
+    const [macs, cats, menu] = await Promise.all([
+      fetchMacroCategories('magazzino'),
+      fetchInventoryCategories(),
+      fetchMacroCategories('menu').catch(() => []),
+    ])
     setMacros(macs)
     setCategories(cats)
+    setMacroMenu(menu)
   }
   useEffect(() => {
     ricarica()
   }, [])
-  return <MacroCategoryManager macros={macros} categories={categories} onChange={ricarica} />
+  return (
+    <MacroCategoryManager
+      ambito="magazzino"
+      macros={macros}
+      categories={categories}
+      onChange={ricarica}
+      aggiornaCategoria={updateInventoryCategory}
+      creaCategoria={createInventoryCategory}
+      macroDiVendita={macroMenu}
+    />
+  )
 }
 
 // I MOVIMENTI HANNO UNA SEZIONE LORO. Stavano in fondo alla lista dei
@@ -308,6 +325,9 @@ function ProductsPanel() {
   const [error, setError] = useState(null)
 
   const [editing, setEditing] = useState(null) // null | 'new' | item
+  // Aperta la scheda, «indietro» torna al magazzino invece di uscire dalla
+  // pagina: vedi lib/schermate.js.
+  useChiudiConIndietro(!!editing, () => setEditing(null))
 
   // Filtri
   const [query, setQuery] = useState('')
@@ -410,6 +430,46 @@ function ProductsPanel() {
   const itemActions = (it, bd) => (
     <div className="grid-card-actions">
       <dl className="inv-info">
+        {/* QUANTO CE N'È, PER PRIMO — è la ragione per cui un prodotto si
+            apre. Dove si conta a pezzi lo dice la riga «Pezzi», che è più
+            precisa (quante piene, quella aperta, quanto fa una): una riga
+            «Giacenza» sopra ripeteva lo stesso numero due volte. */}
+        {bd ? (
+          <div className="inv-info-row">
+            <dt>Pezzi</dt>
+            <dd>
+              <strong>{formatPezzi(pezziInGiacenza(it))} pz</strong>
+              {' · '}
+              {bd.full} piene
+              {bd.hasOpen && ` · 1 aperta (${fmtContenuto(bd.openRemaining, it)})`}
+              {bd.finished > 0 && ` · ${bd.finished} finite`}
+              {/* Il contenuto in cl (o g): un pezzo è la bottiglia, dentro
+                  non ci sono pezzi. */}
+              <span className="muted"> · 1 pz = {fmtContenuto(it.package_size, it)}</span>
+            </dd>
+          </div>
+        ) : (
+          <>
+            <div className="inv-info-row">
+              <dt>Giacenza</dt>
+              <dd>
+                <strong>{fmtItem(it.stock, it)}</strong>
+              </dd>
+            </div>
+            {Number(it.package_size) > 0 && (
+              <div className="inv-info-row">
+                <dt>Confezione</dt>
+                <dd>
+                  {it.unit === 'pz' ? (
+                    <>1 pz = {formatIn(it.package_size, it.content_unit === 'g' ? 'g' : 'cl')}</>
+                  ) : (
+                    <>1 conf. = {fmtItem(it.package_size, it)}</>
+                  )}
+                </dd>
+              </div>
+            )}
+          </>
+        )}
         {impegnato[it.id] > 0 && (
           <div className="inv-info-row">
             <dt>A fine serata</dt>
@@ -430,34 +490,6 @@ function ProductsPanel() {
               </span>
             </dd>
           </div>
-        )}
-        {bd ? (
-          <div className="inv-info-row">
-            <dt>Pezzi</dt>
-            <dd>
-              <strong>{formatPezzi(pezziInGiacenza(it))} pz</strong>
-              {' · '}
-              {bd.full} piene
-              {bd.hasOpen && ` · 1 aperta (${fmtContenuto(bd.openRemaining, it)})`}
-              {bd.finished > 0 && ` · ${bd.finished} finite`}
-              {/* Il contenuto in cl (o g): un pezzo è la bottiglia, dentro
-                  non ci sono pezzi. */}
-              <span className="muted"> · 1 pz = {fmtContenuto(it.package_size, it)}</span>
-            </dd>
-          </div>
-        ) : (
-          Number(it.package_size) > 0 && (
-            <div className="inv-info-row">
-              <dt>Confezione</dt>
-              <dd>
-                {it.unit === 'pz' ? (
-                  <>1 pz = {formatIn(it.package_size, it.content_unit === 'g' ? 'g' : 'cl')}</>
-                ) : (
-                  <>1 conf. = {fmtItem(it.package_size, it)}</>
-                )}
-              </dd>
-            </div>
-          )
         )}
         {Number(it.low_threshold) > 0 && (
           <div className="inv-info-row">
@@ -1047,170 +1079,6 @@ function InvCategoryManager({ categories, onChange }) {
   )
 }
 
-// --- Macro-categorie -----------------------------------------------------
-// Raggruppano le categorie d'inventario (Distillati, Birre+Bibite, Vino,
-// Food+Moka…) per i conti aggregati di acquisti/fatturato. Si creano/
-// modificano/eliminano, e a ciascuna si collegano categorie esistenti (o se
-// ne creano di nuove dentro la macro). Una categoria sta in al più una macro.
-
-function MacroCategoryManager({ macros, categories, onChange }) {
-  const [name, setName] = useState('')
-  const [busy, setBusy] = useState(false)
-  const { groups, unassigned } = groupCategoriesByMacro(macros, categories)
-
-  async function addMacro() {
-    if (!name.trim()) return
-    setBusy(true)
-    try {
-      await createMacroCategory({ name: name.trim(), sort_order: macros.length })
-      setName('')
-      await onChange()
-    } finally {
-      setBusy(false)
-    }
-  }
-  async function renameMacro(m) {
-    const n = prompt('Nuovo nome macro-categoria:', m.name)
-    if (n == null || !n.trim()) return
-    await updateMacroCategory(m.id, { name: n.trim() })
-    await onChange()
-  }
-  async function removeMacro(m) {
-    if (!confirm(`Eliminare la macro “${m.name}”? Le sue categorie restano, senza macro.`)) return
-    await deleteMacroCategory(m.id)
-    await onChange()
-  }
-  async function moveMacro(idx, dir) {
-    const j = idx + dir
-    if (j < 0 || j >= groups.length) return
-    const a = groups[idx]
-    const b = groups[j]
-    await Promise.all([
-      updateMacroCategory(a.id, { sort_order: b.sort_order }),
-      updateMacroCategory(b.id, { sort_order: a.sort_order }),
-    ])
-    await onChange()
-  }
-  // Aggancia/sgancia una categoria a una macro (scrive macro_id sulla categoria).
-  const setCatMacro = async (catId, macroId) => {
-    await updateInventoryCategory(catId, { macro_id: macroId })
-    await onChange()
-  }
-
-  return (
-    <div className="card" style={{ marginTop: 8 }}>
-      <p className="muted small" style={{ margin: '0 0 8px' }}>
-        Le macro-categorie raggruppano le categorie del magazzino per i conti di
-        acquisti e fatturato. Una categoria può stare in una sola macro.
-      </p>
-      <div className="row" style={{ gap: 8 }}>
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nuova macro (es. Distillati)" />
-        <button className="btn small" onClick={addMacro} disabled={busy}>Aggiungi</button>
-      </div>
-
-      {groups.length === 0 && (
-        <div className="muted small" style={{ marginTop: 8 }}>Nessuna macro-categoria.</div>
-      )}
-
-      {groups.map((g, idx) => (
-        <div key={g.id} className="macro-group">
-          <div className="row between" style={{ alignItems: 'center' }}>
-            <strong>🗂 {g.name}</strong>
-            <span className="row" style={{ gap: 4 }}>
-              <button className="btn ghost small" onClick={() => moveMacro(idx, -1)} disabled={idx === 0}>↑</button>
-              <button className="btn ghost small" onClick={() => moveMacro(idx, 1)} disabled={idx === groups.length - 1}>↓</button>
-              <button className="btn ghost small" onClick={() => renameMacro(g)}>✏️</button>
-              <button className="btn ghost small" onClick={() => removeMacro(g)}>🗑</button>
-            </span>
-          </div>
-          {g.categories.length === 0 ? (
-            <div className="muted small" style={{ margin: '4px 0' }}>Nessuna categoria collegata.</div>
-          ) : (
-            <div className="chips-row" style={{ margin: '6px 0' }}>
-              {g.categories.map((c) => (
-                <span key={c.id} className="chip" style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
-                  {c.name}
-                  <button
-                    type="button"
-                    aria-label={`Togli ${c.name} da ${g.name}`}
-                    className="chip-x"
-                    onClick={() => setCatMacro(c.id, null)}
-                  >
-                    ✕
-                  </button>
-                </span>
-              ))}
-            </div>
-          )}
-          <AddCategoryToMacro macro={g} unassigned={unassigned} onChange={onChange} />
-        </div>
-      ))}
-
-      {unassigned.length > 0 && (
-        <div style={{ marginTop: 10, borderTop: '1px solid var(--line)', paddingTop: 8 }}>
-          <span className="muted small">Categorie senza macro: </span>
-          <span className="small">{unassigned.map((c) => c.name).join(', ')}</span>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// Aggancio di una categoria a una macro: sceglie una categoria "libera" già
-// esistente, oppure ne crea una nuova direttamente dentro la macro.
-function AddCategoryToMacro({ macro, unassigned, onChange }) {
-  const [pick, setPick] = useState('')
-  const [newName, setNewName] = useState('')
-  const [busy, setBusy] = useState(false)
-
-  async function attach() {
-    if (!pick) return
-    setBusy(true)
-    try {
-      await updateInventoryCategory(pick, { macro_id: macro.id })
-      setPick('')
-      await onChange()
-    } finally {
-      setBusy(false)
-    }
-  }
-  async function createInto() {
-    if (!newName.trim()) return
-    setBusy(true)
-    try {
-      await createInventoryCategory({ name: newName.trim(), macro_id: macro.id })
-      setNewName('')
-      await onChange()
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  return (
-    <div className="row" style={{ gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-      {unassigned.length > 0 && (
-        <>
-          <select value={pick} onChange={(e) => setPick(e.target.value)} style={{ maxWidth: 180 }}>
-            <option value="">+ collega categoria…</option>
-            {unassigned.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
-          <button className="btn ghost small" onClick={attach} disabled={!pick || busy}>Collega</button>
-          <span className="muted small">oppure</span>
-        </>
-      )}
-      <input
-        value={newName}
-        onChange={(e) => setNewName(e.target.value)}
-        placeholder="nuova categoria…"
-        style={{ maxWidth: 160 }}
-      />
-      <button className="btn ghost small" onClick={createInto} disabled={!newName.trim() || busy}>+ Crea</button>
-    </div>
-  )
-}
-
 // --- Gestione fornitori --------------------------------------------------
 
 function SupplierManager({ suppliers, onChange }) {
@@ -1400,6 +1268,11 @@ function CaricoForm({ item, onCancel, onConfirm }) {
   const [colloTot, setColloTot] = useState('')
   // Quanti cartoni si stanno caricando: i pezzi li riempie lui.
   const [cartoni, setCartoni] = useState('')
+  // IL COLLO E' UN'ECCEZIONE, NON LA REGOLA. Chi carica due bottiglie prese
+  // dal fornitore sotto casa non ha nessun cartone da dichiarare, e si
+  // trovava tre campi in piu' da capire. Sta dietro un interruttore: da
+  // spento la scheda e' quella di sempre — quanti pezzi, e il prezzo.
+  const [aColli, setAColli] = useState(false)
 
   const onUnit = (v) => {
     setUnitCost(v)
@@ -1441,15 +1314,44 @@ function CaricoForm({ item, onCancel, onConfirm }) {
 
   return (
     <div style={{ marginTop: 8 }}>
-      {isPz ? (
-        <>
-          {/* CARTONI → PEZZI. Il fornitore consegna cartoni, il magazzino
-              conta bottiglie: dicendo quanti pezzi ha un cartone, i pezzi
-              si riempiono da sé. Chi carica bottiglie sfuse lascia il
-              cartone vuoto e scrive i pezzi, come sempre. */}
-          {perN > 0 && (
-            <>
-              <label htmlFor="cf-cartoni">Quanti cartoni? (1 cartone = {perN} pz)</label>
+      {/* IL COLLO STA SOPRA, perché è da lì che si parte: si guarda il
+          cartone, si scrive quanti pezzi ha e quanti ne sono arrivati, e la
+          quantità si riempie da sé. Prima i suoi campi stavano in fondo,
+          dentro il riquadro del prezzo, e i pezzi andavano scritti a mano
+          sperando che il conto tornasse. */}
+      <label className="row between" style={{ alignItems: 'center', gap: 8 }}>
+        <span>
+          Carico a colli
+          <span className="muted small"> — un cartone, una cassa</span>
+        </span>
+        <input
+          type="checkbox"
+          className="toggle"
+          checked={aColli}
+          onChange={(e) => {
+            setAColli(e.target.checked)
+            if (!e.target.checked) setCartoni('')
+          }}
+        />
+      </label>
+
+      {aColli && (
+        <div className="card" style={{ marginTop: 8, padding: 10 }}>
+          <div className="grid-2">
+            <div>
+              <label htmlFor="cf-collo">{isPz ? 'Pezzi per collo' : 'Confezioni per collo'}</label>
+              <input
+                id="cf-collo"
+                type="number"
+                step="any"
+                min="0"
+                value={perCollo}
+                onChange={(e) => onCollo(e.target.value)}
+                placeholder="Es. 24"
+              />
+            </div>
+            <div>
+              <label htmlFor="cf-cartoni">Quanti colli arrivano?</label>
               <input
                 id="cf-cartoni"
                 type="number"
@@ -1459,44 +1361,87 @@ function CaricoForm({ item, onCancel, onConfirm }) {
                 onChange={(e) => onCartoni(e.target.value)}
                 placeholder="Es. 2"
               />
-            </>
-          )}
-          <label style={perN > 0 ? { marginTop: 8 } : undefined}>Quanti pezzi aggiungi?</label>
-          <input type="number" step="1" min="0" value={count} onChange={(e) => setCount(e.target.value)} autoFocus />
+            </div>
+          </div>
+          <label htmlFor="cf-tot" style={{ marginTop: 6 }}>Totale collo (€, netto)</label>
+          <input
+            id="cf-tot"
+            type="number"
+            step="any"
+            min="0"
+            value={colloTot}
+            onChange={(e) => onTot(e.target.value)}
+            placeholder="Prezzo del cartone dal fornitore"
+          />
           {perN > 0 && num(cartoni) > 0 && (
             <div className="muted small" style={{ marginTop: 4 }}>
-              {num(cartoni)} × {perN} = <strong>{num(cartoni) * perN} pz</strong>
+              {num(cartoni)} × {perN} = <strong>{num(cartoni) * perN} {isPz ? 'pz' : 'conf.'}</strong>
             </div>
           )}
+        </div>
+      )}
+
+      {isPz ? (
+        <>
+          {/* A colli la quantità la fa il conto: si legge, non si scrive.
+              Cambiarla a mano vorrebbe dire caricare un numero che non torna
+              con quello che è arrivato. */}
+          <label htmlFor="cf-pezzi" style={{ marginTop: 8 }}>Quanti pezzi aggiungi?</label>
+          <input
+            id="cf-pezzi"
+            type="number"
+            step="1"
+            min="0"
+            value={count}
+            onChange={(e) => setCount(e.target.value)}
+            readOnly={aColli}
+            aria-readonly={aColli}
+            autoFocus={!aColli}
+          />
         </>
       ) : (
         <>
-          <label>Quante confezioni piene? (1 conf. = {formatQty(size, item.unit)})</label>
-          <input type="number" step="1" min="0" value={count} onChange={(e) => setCount(e.target.value)} autoFocus />
-          <label style={{ marginTop: 8 }}>Bottiglia aperta — contenuto ({item.unit}) — opzionale</label>
-          <input type="number" step="any" min="0" value={open} onChange={(e) => setOpen(e.target.value)} placeholder="Es. 400 se ne aggiungi una già aperta" />
+          <label htmlFor="cf-pezzi" style={{ marginTop: 8 }}>
+            Quante confezioni piene? (1 conf. = {formatQty(size, item.unit)})
+          </label>
+          <input
+            id="cf-pezzi"
+            type="number"
+            step="1"
+            min="0"
+            value={count}
+            onChange={(e) => setCount(e.target.value)}
+            readOnly={aColli}
+            aria-readonly={aColli}
+            autoFocus={!aColli}
+          />
+          {/* NON SEMPRE È UNA BOTTIGLIA: qui dentro ci sono sacchi di
+              ghiaccio, barattoli, buste. La parola giusta è quella che vale
+              per tutti. */}
+          <label htmlFor="cf-aperta" style={{ marginTop: 8 }}>
+            Confezione aperta — contenuto ({item.unit}) — opzionale
+          </label>
+          <input
+            id="cf-aperta"
+            type="number"
+            step="any"
+            min="0"
+            value={open}
+            onChange={(e) => setOpen(e.target.value)}
+            placeholder="Es. 400 se ne aggiungi una già aperta"
+          />
         </>
       )}
 
       {/* Prezzo: unitario ↔ totale collo (per confrontare col fornitore) */}
       <div className="card" style={{ marginTop: 10, padding: 10 }}>
         <div className="muted small">💶 Prezzo — aggiorna se il fornitore l'ha cambiato</div>
-        <div className="grid-2" style={{ marginTop: 6 }}>
-          <div>
-            <label htmlFor="cf-unit">Costo unitario (€, netto)</label>
-            <input id="cf-unit" type="number" step="any" min="0" value={unitCost} onChange={(e) => onUnit(e.target.value)} />
-          </div>
-          <div>
-            <label htmlFor="cf-collo">Pezzi per collo/cartone</label>
-            <input id="cf-collo" type="number" step="any" min="0" value={perCollo} onChange={(e) => onCollo(e.target.value)} placeholder="Es. 24" />
-          </div>
-        </div>
-        <label htmlFor="cf-tot" style={{ marginTop: 6 }}>Totale collo (€, netto)</label>
-        <input id="cf-tot" type="number" step="any" min="0" value={colloTot} onChange={(e) => onTot(e.target.value)} placeholder="Prezzo del cartone dal fornitore" />
+        <label htmlFor="cf-unit" style={{ marginTop: 6 }}>Costo unitario (€, netto)</label>
+        <input id="cf-unit" type="number" step="any" min="0" value={unitCost} onChange={(e) => onUnit(e.target.value)} />
         {unitN > 0 && (
           <div className="muted small" style={{ marginTop: 4 }}>
             Unitario +IVA {formatPrice(costWithVat(unitN, item.vat))}
-            {perN > 0 && ` · Totale collo +IVA ${formatPrice(costWithVat(unitN * perN, item.vat))}`}
+            {aColli && perN > 0 && ` · Totale collo +IVA ${formatPrice(costWithVat(unitN * perN, item.vat))}`}
           </div>
         )}
       </div>
@@ -1511,177 +1456,475 @@ function CaricoForm({ item, onCancel, onConfirm }) {
 
 // --- Form prodotto (creazione + modifica) -------------------------------
 
+// ── I QUATTRO TIPI DI PRODOTTO ───────────────────────────────────────
+//
+// La scheda partiva dalle unità di misura — «unità d'acquisto» a famiglie,
+// la casella «è una scorta», «lo uso come lo compro» — e chi la compilava
+// doveva tradurre il suo prodotto in quel gergo, una domanda alla volta.
+// La domanda vera è UNA: che tipo di prodotto è? Dalle quattro risposte
+// escono da sole l'unità, la scorta e i campi da mostrare. Il modello dati
+// sotto NON cambia (REQ-MAG-016): unit, package_size, content_unit, resa,
+// scorta sono gli stessi di prima.
+const TIPI_PRODOTTO = [
+  ['intero', '🍺', 'Lo vendo intero', 'bottiglie, lattine'],
+  ['versato', '🍸', 'Lo verso nei drink', 'gin, vermut, amari'],
+  ['sfuso', '🍋', 'Sfuso, a peso o volume', 'limoni, spina, ghiaccio'],
+  ['lavoro', '⏱', 'Lavoro o servizio', 'tempo di lavorazione'],
+]
+
+// Il tipo di un prodotto già salvato: le schede nuove lo portano scritto
+// (`tipo`); quelle vecchie non ce l'hanno e si deduce da com'erano
+// configurate, senza nessuna migrazione. La regola ricalca eScorta: una U
+// è lavoro finché qualcuno non ha detto che è una scorta (il ghiaccio).
+function tipoDerivato(item) {
+  if (!item) return null
+  if (TIPI_PRODOTTO.some(([t]) => t === item.tipo)) return item.tipo
+  if (unitaGenerica(item.unit)) return item.scorta === true ? 'sfuso' : 'lavoro'
+  if ((item.unit || 'pz') === 'pz') return Number(item.package_size) > 0 ? 'versato' : 'intero'
+  return 'sfuso'
+}
+
+// ── COME SI COMPILA UNA SCHEDA PRODOTTO ──────────────────────────────
+//
+// Una domanda sola — che tipo di prodotto è? — e un esempio per tipo. Il
+// testo è asciutto di proposito: chi lo apre sta compilando, non leggendo
+// (REQ-MAG-016).
+function AiutoProdotto({ onClose }) {
+  return (
+    <div className="overlay confirm-overlay" onClick={onClose}>
+      <div
+        className="confirm-box"
+        role="dialog"
+        aria-label="Come si compila questa scheda"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 style={{ marginTop: 0 }}>Che tipo di prodotto è?</h3>
+
+        <h4 style={{ margin: '14px 0 2px' }}>🍺 Lo vendo intero</h4>
+        <p className="small" style={{ margin: 0 }}>
+          Si compra e si serve a pezzi: una Ichnusa costa a bottiglia e si
+          vende a bottiglia. Il contenuto (33 cl) è facoltativo: serve solo
+          a confrontare il costo al cl con le altre bottiglie.
+        </p>
+
+        <h4 style={{ margin: '14px 0 2px' }}>🍸 Lo verso nei drink</h4>
+        <p className="small" style={{ margin: 0 }}>
+          Si compra a bottiglie e si dosa a cl: il gin. «Una bottiglia fa
+          70 cl» qui è obbligatorio — da quel numero escono il costo al cl
+          e lo scarico di quello che si versa.
+        </p>
+
+        <h4 style={{ margin: '14px 0 2px' }}>🍋 Sfuso, a peso o volume</h4>
+        <p className="small" style={{ margin: 0 }}>
+          Si compra a chili o a litri: i limoni al kg, la birra alla spina,
+          il ghiaccio a sacchi. Se si usa in un&apos;altra misura — 1 kg di
+          limoni fa 50 cl di succo — lo si scrive nella riga apposta.
+        </p>
+
+        <h4 style={{ margin: '14px 0 2px' }}>⏱ Lavoro o servizio</h4>
+        <p className="small" style={{ margin: 0 }}>
+          Il tempo di lavorazione: non è merce, niente giacenza, mai
+          esaurito, e in carta al cliente non compare. Entra solo nel costo
+          del drink.
+        </p>
+
+        <button type="button" className="btn block" style={{ marginTop: 16 }} onClick={onClose}>
+          Chiudi
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// Quanto contiene una confezione, letto nell'unità con cui si sta
+// compilando: serve a passare dal prezzo della confezione a quello
+// dell'unità e viceversa. Zero (o niente) = la confezione è l'unità.
+function contenutoInUnita(item, unita) {
+  if ((item?.unit || 'pz') === 'pz' || unitaGenerica(item?.unit)) return 0
+  const base = Number(item?.package_size) || 0
+  return base > 0 ? fromBaseQty(base, unita) : 0
+}
+
+// I prezzi si tengono ai centesimi: dividere e rimoltiplicare per il
+// contenuto lasciava code di decimali che a schermo si vedevano.
+const arrotonda = (n) => Math.round((Number(n) || 0) * 10000) / 10000
+
+// L'UNITÀ D'USO SI SCEGLIE LIBERAMENTE. I limoni si comprano al chilo e si
+// spremono in cl: le famiglie (peso, volume) qui non c'entrano, perché a
+// dire quanto rende una cosa nell'altra è chi compra. Le conversioni fra
+// unità della stessa famiglia restano automatiche.
+const UNITA_USO = [
+  ['l', 'L'],
+  ['cl', 'cl'],
+  ['ml', 'ml'],
+  ['kg', 'kg'],
+  ['g', 'g'],
+  ['mg', 'mg'],
+  ['U', 'U'],
+]
+
+// Le unità con cui si compra lo SFUSO: chili e litri per la merce vera,
+// centilitri e grammi per chi tiene i conti fini, U per quello che si
+// conta a sacchi o confezioni (il ghiaccio).
+const UNITA_SFUSO = [
+  ['kg', 'Chili (kg)'],
+  ['l', 'Litri (L)'],
+  ['cl', 'Centilitri (cl)'],
+  ['g', 'Grammi (g)'],
+  ['U', 'Unità (U) — sacchi, confezioni'],
+]
+
+// Il contenuto di un pezzo si scrive in quello che c'è dentro: cl (o ml)
+// per le bottiglie, g per i barattoli, U per le confezioni di cose contate.
+const CONTENUTO_UNITA = ['cl', 'ml', 'g', 'U']
+
+// ── COSA VUOL DIRE IL CONTENUTO DI UN PEZZO ──────────────────────────
+//
+// La domanda si legge facilmente per un'altra: «quanto ne va in un drink?».
+// Sono due cose diverse — quella la decide la ricetta, drink per drink — e
+// confonderle vuol dire riempire il campo con la dose di un cocktail e
+// scaricare il magazzino con numeri che non tornano.
+function AiutoPezzo({ onClose }) {
+  return (
+    <div className="overlay confirm-overlay" onClick={onClose}>
+      <div
+        className="confirm-box"
+        role="dialog"
+        aria-label="A quanto corrisponde un pezzo"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 style={{ marginTop: 0 }}>A quanto corrisponde un pezzo</h3>
+        <p className="small" style={{ marginTop: 0 }}>
+          È <strong>quanto contiene</strong> un pezzo: una bottiglia da 100 cl,
+          un sacco da 5 kg, una confezione da 10 U. Non è quanto ne va in un
+          drink: quello si decide nella ricetta, drink per drink.
+        </p>
+
+        <h4 style={{ margin: '14px 0 2px' }}>Se lo scrivi</h4>
+        <p className="small" style={{ margin: 0 }}>
+          Nelle ricette puoi scegliere l&apos;unità: a <strong>pezzi</strong>
+          (una lattina intera) o nell&apos;unità del contenuto —{' '}
+          <strong>cl</strong>, g, U. Versando 4 cl da una bottiglia da 100 cl
+          il magazzino scala 0,04 pezzi, e si sa quanto costa al cl.
+        </p>
+
+        <h4 style={{ margin: '14px 0 2px' }}>Se lo lasci vuoto</h4>
+        <p className="small" style={{ margin: 0 }}>
+          Nelle ricette si dosa <strong>solo a pezzi</strong>: è il caso della
+          birra in bottiglia, che si serve intera. Il costo resta quello del
+          pezzo, e non c&apos;è nessun costo al cl da calcolare.
+        </p>
+
+        <button type="button" className="btn block" style={{ marginTop: 16 }} onClick={onClose}>
+          Chiudi
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, onSave }) {
   const isEdit = !!initial
-  // Unità scelta dall'utente (L/cl/ml, g/mg, pz). Lo stock è salvato in
-  // base (ml/g/pz); i campi si inseriscono e si mostrano nell'unità scelta.
-  // Default dei LIQUIDI in cl (non ml): al banco le bottiglie si dosano in cl,
-  // quindi contenuto e soglia si inseriscono in cl. Vale anche per gli item
-  // vecchi salvati in ml senza unità di visualizzazione.
-  const defaultUnit = (base) => (base === 'g' ? 'g' : base === 'pz' ? 'pz' : 'cl')
+  // Unità con cui si rileggono i numeri di un prodotto salvato: quella di
+  // visualizzazione se c'è, altrimenti quella «parlata» della sua base —
+  // i liquidi in cl, che è come si dosa al banco.
+  const defaultUnit = (base) =>
+    base === 'g' ? 'g' : base === 'pz' ? 'pz' : unitaGenerica(base) ? 'U' : 'cl'
   const initUnit = initial?.display_unit ?? defaultUnit(initial?.unit)
+  const initialBase = baseUnit(initUnit)
+  // LA DOMANDA INIZIALE: che tipo di prodotto è? Un prodotto nuovo parte
+  // senza risposta — i campi giusti compaiono dopo, e senza risposta non si
+  // salva. Un prodotto già salvato riparte dal suo tipo (vedi tipoDerivato).
+  const tipoIniziale = tipoDerivato(initial)
+  const [tipo, setTipo] = useState(tipoIniziale)
+  // L'unità d'acquisto dello SFUSO: per gli altri tipi la decide il tipo
+  // (pezzi, U). Riaprendo uno sfuso si riparte dalla sua; per il resto dal
+  // chilo, che è il caso dei limoni.
+  const [unitSfuso, setUnitSfuso] = useState(tipoIniziale === 'sfuso' ? initUnit : 'kg')
+  const unita = tipo === 'sfuso' ? unitSfuso : tipo === 'lavoro' ? 'U' : 'pz'
+  const [aiuto, setAiuto] = useState(false)
+  const [aiutoPezzo, setAiutoPezzo] = useState(false)
+  // Il salvataggio bloccato si spiega QUI, sopra i tasti, e resta finché
+  // non si corregge: un toast passa e chi stava guardando la tastiera non
+  // lo vede.
+  const [avviso, setAvviso] = useState(null)
+
+  // Il contenuto di un pezzo com'era salvato, nell'unità in cui si legge
+  // (una bottiglia è «70 cl», non 700 ml). Si prefigura anche per i
+  // prodotti storici gestiti a volume: se uno diventa «versato», quel
+  // numero serve e ribatterlo a mano sarebbe un invito a sbagliarlo.
+  // NON si prefigura la confezione convenzionale (1 kg, 1 L) degli sfusi
+  // nati dopo: non è il contenuto di una bottiglia, è solo l'unità.
+  const contFamiglia = (initial?.unit || 'pz') === 'pz' ? initial?.content_unit : initial?.unit
+  const contUnita = unitaGenerica(contFamiglia) ? 'U' : contFamiglia === 'g' ? 'g' : 'cl'
+  const packIniziale = Number(initial?.package_size) || 0
+  const packConvenzionale =
+    (initial?.unit || 'pz') !== 'pz' && packIniziale === toBaseQty(1, initUnit)
   const [form, setForm] = useState({
     name: initial?.name ?? '',
-    unit: initUnit,
     category_id: initial?.category_id ?? '',
     supplier_id: initial?.supplier_id ?? '',
-    cost: initial?.cost ?? '',
+    // IL COSTO SI SCRIVE NELL'UNITÀ IN CUI SI COMPRA: «2 € al chilo», come
+    // lo dice chi ordina. Sotto resta salvato il costo della CONFEZIONE —
+    // è quello che usano il costo al cl e gli ordini al fornitore — e la
+    // conversione la fa la scheda, non chi la compila. Vedi REQ-MAG-016.
+    cost: (() => {
+      const c = Number(initial?.cost)
+      if (!(c > 0)) return initial?.cost ?? ''
+      const contenuto = contenutoInUnita(initial, initUnit)
+      return String(contenuto > 0 ? arrotonda(c / contenuto) : c)
+    })(),
     vat: initial?.vat ?? defaultVat,
     status: initial?.status ?? 'assortimento',
-    package_size:
-      initial?.package_size != null && initial?.package_size !== ''
-        ? String(fromBaseQty(initial.package_size, initUnit))
-        : '',
-    // Contenuto di UN pezzo, per gli articoli contati a pezzo: la bottiglia
-    // si conta a bottiglie, ma 33 cl li contiene lo stesso — e senza quel
-    // numero non esiste un costo al cl.
     content_size:
-      initial?.unit === 'pz' && Number(initial?.package_size) > 0
-        ? String(fromBaseQty(initial.package_size, initial?.content_unit === 'g' ? 'g' : 'cl'))
+      packIniziale > 0 && !packConvenzionale ? String(fromBaseQty(packIniziale, contUnita)) : '',
+    content_unit: contUnita,
+    // LA RESA: quanto rende una unità di quello che si compra, quando si usa
+    // in un'altra unità (1 kg di limoni = 50 cl di succo). Si scrive
+    // nell'unità in cui la si pensa, non in unità base. Riaprendo si legge
+    // sempre riferita a UNA unità: è lo stesso rapporto, scritto nel modo
+    // più corto.
+    resa_qty:
+      Number(initial?.resa) > 0 && initial?.resa_unit
+        ? String(
+            fromBaseQty(
+              Number(initial.resa) * toBaseQty(1, initUnit),
+              baseUnit(initial.resa_unit) === 'g' ? 'g' : 'cl'
+            )
+          )
         : '',
-    content_unit: initial?.content_unit === 'g' ? 'g' : 'cl',
+    resa_unit: baseUnit(initial?.resa_unit) === 'g' ? 'g' : 'cl',
+    resa_da_qty: '1',
     low_threshold: initial?.low_threshold ? String(fromBaseQty(initial.low_threshold, initUnit)) : '',
-    // CON CHE UNITÀ SI SCRIVONO QUESTI DUE NUMERI. La soglia di avviso di
-    // un liquido si pensa in bottiglie («avvisami quando ne resta una»),
-    // non in 700 ml; e il contenuto di una bottiglia si scrive «0,7 l»
-    // com'è stampato sull'etichetta, non 700 se l'articolo è in ml.
-    // Il valore salvato non cambia: cambia solo come lo si digita.
-    low_threshold_unit: initUnit,
-    package_size_unit: initUnit,
     bottles: '',
     open_content: '',
   })
   const [saving, setSaving] = useState(false)
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
   const num = (v) => Number(String(v).replace(',', '.')) || 0
-  const isPz = baseUnit(form.unit) === 'pz'
-  // ARTICOLO IN UNITÀ GENERICHE (il «Tempo di Lavorazione»): non ha contenuto,
-  // non ha confezione e non è una scorta. Di suo serve solo il COSTO PER
-  // UNITÀ — è il motivo per cui la voce esiste, mettere il lavoro nel costo
-  // del drink. Chiedere confezione, giacenza iniziale e soglia di avviso
-  // vorrebbe dire far riempire campi che non vogliono dire niente.
-  const isGenerico = unitaGenerica(baseUnit(form.unit))
   const costNum = num(form.cost)
-  // Contenuto per confezione nell'unità scelta (per il costo unitario).
-  const packInUnit = !isPz && !isGenerico ? num(form.package_size) : 0
-  const initialBase = baseUnit(initUnit)
-  const baseChanged = isEdit && baseUnit(form.unit) !== initialBase
-  // Conversione possibile solo con il contenuto per confezione: verso i pezzi
-  // serve quello salvato, dai pezzi quello appena inserito nel form.
+  // I due tipi che si contano a pezzi: la bottiglia venduta intera e quella
+  // versata. Condividono la domanda sul contenuto; cambia solo se è
+  // facoltativa (intero: serve al confronto) o obbligatoria (versato: senza
+  // non si scarica).
+  const aPezzo = tipo === 'intero' || tipo === 'versato'
+  // Il contenuto di un pezzo, in unità base della sua famiglia.
+  const contenutoPezzo = toBaseQty(num(form.content_size), form.content_unit)
+
+  // Il costo si scrive per unità d'acquisto ma sotto resta salvato PER
+  // CONFEZIONE, che è quello che il resto dell'app legge da sempre. I
+  // prodotti storici gestiti a volume hanno una confezione vera (la
+  // bottiglia da 700 ml): il suo contenuto, letto nell'unità del prezzo, è
+  // il fattore fra i due. Per tutto il resto la confezione È una unità.
+  const packInUnit =
+    tipo === 'sfuso' && !unitaGenerica(unita) && packIniziale > 0 && baseUnit(unita) === initialBase
+      ? fromBaseQty(packIniziale, unita)
+      : 0
+
+  const baseChanged = isEdit && !!tipo && baseUnit(unita) !== initialBase
+  // Passare a «lavoro» azzera la giacenza anche quando la base non cambia
+  // (il ghiaccio in U che diventa servizio): l'avviso serve uguale.
+  const diventaLavoro = isEdit && tipo === 'lavoro' && tipoIniziale !== 'lavoro'
+  // Conversione possibile solo sapendo quanto contiene un pezzo: verso i
+  // pezzi vale il contenuto appena scritto (o quello già salvato), dai
+  // pezzi quello salvato — il form non lo chiede più da nessun'altra parte.
   const convertible = (() => {
     if (!baseChanged) return true
-    const toPz = baseUnit(form.unit) === 'pz'
+    const toPz = baseUnit(unita) === 'pz'
     const fromPz = initialBase === 'pz'
-    if (toPz && !fromPz) return Number(initial?.package_size) > 0
-    if (fromPz && !toPz) return num(form.package_size) > 0
+    if (toPz && !fromPz) return contenutoPezzo > 0 || packIniziale > 0
+    if (fromPz && !toPz) return packIniziale > 0
     return true // liquidi ↔ solidi: nessuna conversione, il numero resta
   })()
   // Giacenza convertita quando si cambia il modo di gestire l'articolo:
-  //   liquido/peso → pezzi  : quante confezioni sono (stock / contenuto conf.)
-  //   pezzi → liquido/peso  : contenuto totale (pezzi × contenuto conf.)
+  //   liquido/peso → pezzi  : quante bottiglie sono (stock / contenuto pezzo)
+  //   pezzi → liquido/peso  : contenuto totale (pezzi × contenuto pezzo)
   // Fra liquidi e pesi non c'è conversione sensata: il numero resta com'è
   // (è una ri-catalogazione, non un travaso).
   const convertedStock = () => {
     const cur = Number(initial?.stock) || 0
-    const toPz = baseUnit(form.unit) === 'pz'
+    const toPz = baseUnit(unita) === 'pz'
     const fromPz = initialBase === 'pz'
     if (toPz && !fromPz) {
-      const size = Number(initial?.package_size) || 0
+      const size = contenutoPezzo > 0 ? contenutoPezzo : packIniziale
       return size > 0 ? Math.round((cur / size) * 100) / 100 : cur
     }
     if (fromPz && !toPz) {
-      const size = toBaseQty(num(form.package_size), form.unit) || 0
-      return size > 0 ? cur * size : cur
+      return packIniziale > 0 ? cur * packIniziale : cur
     }
     return cur
   }
+  // Quanto contiene un pezzo, scritto com'è leggibile: è il numero su cui
+  // si fa la conversione, ed è la prima domanda di chi legge l'avviso.
+  const contenutoDiRiferimento = (() => {
+    const versoPz = baseUnit(unita) === 'pz'
+    const base = versoPz && contenutoPezzo > 0 ? contenutoPezzo : packIniziale
+    if (!(base > 0)) return null
+    return formatQty(base, versoPz && contenutoPezzo > 0 ? baseUnit(form.content_unit) : initialBase)
+  })()
+
+  // Cosa finisce salvato, per tipo (il modello dati è quello di sempre):
+  //   intero  → unit 'pz', contenuto facoltativo (solo costo al cl), scorta
+  //   versato → unit 'pz', contenuto OBBLIGATORIO, scorta
+  //   sfuso   → unit scelta, resa facoltativa, scorta (anche il ghiaccio)
+  //   lavoro  → unit 'U', niente giacenza né soglia, NON scorta
+  const packBase = (() => {
+    if (!tipo || tipo === 'lavoro') return null
+    if (aPezzo) return contenutoPezzo > 0 ? contenutoPezzo : null
+    if (unitaGenerica(unita)) return null
+    // Lo sfuso tiene la confezione che aveva (la bottiglia da 700 ml dei
+    // prodotti storici): riscriverla vorrebbe dire cambiare i conti di un
+    // articolo che nessuno ha toccato. Per il resto, una confezione È una
+    // unità d'acquisto.
+    return packIniziale > 0 && baseUnit(unita) === initialBase
+      ? packIniziale
+      : toBaseQty(1, unita)
+  })()
 
   async function submit(e) {
     e.preventDefault()
     if (!form.name.trim()) return
+    // Senza il tipo non si sa nemmeno in che unità salvare: la domanda
+    // iniziale non si salta.
+    if (!tipo) {
+      setAvviso('Scegli prima che tipo di prodotto è: da lì escono i campi giusti.')
+      return
+    }
+    // Un «versato» senza contenuto è una bottiglia di cui non si sa quanto
+    // fa: niente costo al cl e niente scarico di quello che si versa.
+    // Meglio fermarsi e dirlo che salvare un prodotto che non scala.
+    if (tipo === 'versato' && !(contenutoPezzo > 0)) {
+      setAvviso(
+        'Scrivi quanto fa una bottiglia (es. 70 cl): senza quel numero non si può calcolare il costo al cl né scalare il magazzino quando si versa.'
+      )
+      return
+    }
+    setAvviso(null)
     setSaving(true)
     try {
-      // A pezzo il contenuto arriva dal suo campo (33 cl), altrimenti dal
-      // contenuto per confezione nell'unità scelta per QUEL campo. In unità
-      // generiche non c'è nessun contenuto: dentro una unità di lavoro non
-      // c'è niente.
-      const packBase = isGenerico
-        ? null
-        : isPz
-          ? toBaseQty(num(form.content_size), form.content_unit) || null
-          : toBaseQty(num(form.package_size), form.package_size_unit) || null
+      // LA RESA SI SALVA COME RAPPORTO: quante unità base d'uso rende UNA
+      // unità base d'acquisto. Scritta «5 kg fanno 1,5 l» diventa 0,3 ml
+      // per grammo, e da lì lo scarico fa la proporzione su qualunque
+      // quantità si versi. Vedi resaUso in lib/inventory. Solo per lo
+      // sfuso: sul pezzo la stessa cosa la dice già il contenuto.
+      const resaBase = (() => {
+        if (tipo !== 'sfuso') return null
+        const uso = toBaseQty(num(form.resa_qty), form.resa_unit)
+        const preso = toBaseQty(num(form.resa_da_qty) || 1, unita)
+        if (!(uso > 0) || !(preso > 0)) return null
+        return uso / preso
+      })()
       const base = {
         name: form.name.trim(),
-        unit: baseUnit(form.unit), // base in cui è salvato lo stock
-        display_unit: form.unit, // unità scelta per inserimento/visualizzazione
+        // Il tipo si salva sull'item: alla prossima apertura non si deduce
+        // più. Le schede vecchie, che non ce l'hanno, passano da
+        // tipoDerivato.
+        tipo,
+        unit: baseUnit(unita), // base in cui è salvato lo stock
+        display_unit: unita, // unità scelta per inserimento/visualizzazione
         category_id: form.category_id || null,
         supplier_id: form.supplier_id || null,
-        cost: form.cost === '' ? null : costNum,
+        // Si risale al costo della confezione: quello che il resto dell'app
+        // sa leggere da sempre (costPerUnit, valore di magazzino, ordini).
+        cost: form.cost === '' ? null : arrotonda(costNum * (packInUnit > 0 ? packInUnit : 1)),
         vat: Number(form.vat) || 0,
         status: form.status || 'assortimento',
         package_size: packBase,
-        // Serve solo a pezzo: dice se quel contenuto è un volume o un peso.
-        content_unit: isPz && packBase ? baseUnit(form.content_unit) : null,
-        // La soglia scritta in pezzi diventa contenuto (2 bottiglie da 70 cl
-        // = 1400 ml) e viceversa: è lo stesso passaggio che fa lo scarico
-        // dalla ricetta alla giacenza, quindi i due numeri non litigano.
-        low_threshold: qtyInStockUnit(num(form.low_threshold), form.low_threshold_unit, {
-          unit: baseUnit(form.unit),
+        // Serve solo a pezzo: dice se quel contenuto è un volume, un peso o
+        // delle unità.
+        content_unit: aPezzo && packBase ? baseUnit(form.content_unit) : null,
+        resa: resaBase,
+        resa_unit: resaBase ? baseUnit(form.resa_unit) : null,
+        // La scorta la decide il tipo: tutto si scarica — anche il ghiaccio,
+        // che si conta a unità ma a mezzanotte è finito — tranne il lavoro,
+        // che non sta su nessuno scaffale.
+        scorta: tipo !== 'lavoro',
+        // La soglia è scritta nell'unità d'acquisto: qtyInStockUnit la porta
+        // in quella della giacenza, lo stesso passaggio che fa lo scarico.
+        low_threshold: qtyInStockUnit(num(form.low_threshold), unita, {
+          unit: baseUnit(unita),
           package_size: packBase,
-          content_unit: isPz && packBase ? baseUnit(form.content_unit) : null,
+          content_unit: aPezzo && packBase ? baseUnit(form.content_unit) : null,
+          resa: resaBase,
+          resa_unit: resaBase ? baseUnit(form.resa_unit) : null,
         }),
       }
-      // ARTICOLO IN UNITÀ GENERICHE: non è una scorta, quindi non c'è nessuna
-      // giacenza da salvare né bottiglie da contare — e nessuna conversione da
-      // fare passando da un'altra unità, perché non c'è niente da convertire.
-      if (isGenerico) {
-        await onSave({ ...base, stock: 0, bottles_total: 0 })
+      // LAVORO O SERVIZIO: non è una scorta, quindi non c'è nessuna giacenza
+      // da salvare né bottiglie da contare — e nessuna conversione da fare,
+      // perché non c'è niente da convertire.
+      if (tipo === 'lavoro') {
+        await onSave({ ...base, stock: 0, bottles_total: 0, low_threshold: 0 })
         return
       }
-      // Cambio del modo di gestire l'articolo SENZA il contenuto per confezione:
-      // la conversione non è calcolabile e si salverebbe una giacenza falsa
-      // (24 pezzi → 24 ml). Meglio fermarsi e chiederlo.
+      // Cambio del modo di gestire l'articolo SENZA sapere quanto contiene
+      // un pezzo: la conversione non è calcolabile e si salverebbe una
+      // giacenza falsa (24 pezzi → 24 ml). Meglio fermarsi e chiederlo.
       if (baseChanged && !convertible) {
-        setSaving(false)
-        toastError('Indica il contenuto per confezione: senza, la giacenza non si può convertire.')
+        setAvviso('Scrivi prima quanto fa un pezzo: senza, la giacenza non si può convertire.')
         return
       }
       if (isEdit) {
-        // In modifica la giacenza NON si tocca... a meno che si cambi il modo di
-        // gestire l'articolo (es. da centilitri a pezzi): allora si converte,
-        // altrimenti il numero salvato vorrebbe dire un'altra cosa.
+        // In modifica la giacenza NON si tocca... a meno che si cambi il modo
+        // di gestire l'articolo (es. da centilitri a pezzi): allora si
+        // converte, altrimenti il numero salvato vorrebbe dire un'altra cosa.
         if (baseChanged) {
           const stock = convertedStock()
           await onSave({
             ...base,
             stock,
-            bottles_total: baseUnit(form.unit) === 'pz' ? Math.round(stock) : Math.floor(stock / (packBase || 1)),
+            bottles_total:
+              baseUnit(unita) === 'pz' ? Math.round(stock) : Math.floor(stock / (packBase || 1)),
           })
         } else {
           await onSave(base)
         }
       } else {
-        const n = Number(form.bottles) || 0
+        // In creazione la giacenza è quello che si scrive: i pezzi per chi
+        // conta a pezzi — più la frazione della bottiglia già aperta, che
+        // non è né zero né uno — la quantità nell'unità d'acquisto per lo
+        // sfuso.
         let stock
-        let bottles_total = 0
-        if (isPz) {
-          stock = n
+        if (aPezzo) {
+          const pieni = Math.max(0, Math.round(num(form.bottles)))
+          const apertaBase =
+            tipo === 'versato' ? toBaseQty(num(form.open_content), form.content_unit) : 0
+          stock = pieni + (apertaBase > 0 && contenutoPezzo > 0 ? apertaBase / contenutoPezzo : 0)
         } else {
-          const size = packBase || 0
-          const open = toBaseQty(num(form.open_content), form.unit)
-          stock = n * size + open
-          bottles_total = n + (open > 0 ? 1 : 0)
+          stock = toBaseQty(num(form.bottles), unita)
         }
-        await onSave({ ...base, stock, bottles_total })
+        await onSave({ ...base, stock, bottles_total: 0 })
       }
     } finally {
       setSaving(false)
     }
   }
 
+  const etichettaUnita = UNIT_LABEL[String(unita).toLowerCase()] || unita
+  // L'unità di uno sfuso storico scritto in ml o mg resta in lista: se
+  // sparisse dal select il prodotto sembrerebbe un altro.
+  const opzioniSfuso = UNITA_SFUSO.some(([u]) => u === unitSfuso)
+    ? UNITA_SFUSO
+    : [...UNITA_SFUSO, [unitSfuso, UNIT_LABEL[String(unitSfuso).toLowerCase()] || unitSfuso]]
+
   return (
-    <form className="card" onSubmit={submit}>
-      <h3 style={{ marginTop: 0 }}>{isEdit ? 'Modifica prodotto' : 'Nuovo prodotto'}</h3>
+    <form className="card inv-scheda" onSubmit={submit}>
+      <div className="row between" style={{ alignItems: 'center', gap: 8 }}>
+        <h3 style={{ margin: 0 }}>{isEdit ? 'Modifica prodotto' : 'Nuovo prodotto'}</h3>
+        {/* IL PUNTO INTERROGATIVO. Questa scheda decide come si scala il
+            magazzino e quanto costa un drink: chi la compila la prima volta
+            non deve indovinare cosa vogliono dire le domande. La spiegazione
+            sta dietro un tasto, non in pagina: a chi la sa già non serve. */}
+        <button
+          type="button"
+          className="inv-aiuto"
+          aria-label="Come si compila questa scheda"
+          title="Come si compila questa scheda"
+          onClick={() => setAiuto(true)}
+        >
+          ?
+        </button>
+      </div>
+      {aiuto && <AiutoProdotto onClose={() => setAiuto(false)} />}
 
       <label htmlFor="iname">Nome *</label>
       <input id="iname" value={form.name} onChange={set('name')} placeholder="Es. Rum Zacapa" required />
@@ -1702,25 +1945,6 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
         ))}
       </select>
 
-      <div className="grid-2">
-        <div>
-          {/* In unità generiche il costo è PER UNITÀ: è tutto quello che
-              serve sapere di una voce come il tempo di lavorazione. */}
-          <label htmlFor="icost">Costo €/{isGenerico ? 'U' : 'pz'} (netto)</label>
-          <input id="icost" type="number" step="any" min="0" value={form.cost} onChange={set('cost')} placeholder="Es. 12,9" />
-        </div>
-        <div>
-          <label htmlFor="ivat">IVA acquisto %</label>
-          <input id="ivat" type="number" step="any" min="0" value={form.vat} onChange={set('vat')} />
-        </div>
-      </div>
-      {costNum > 0 && (
-        <div className="muted small">
-          +IVA {formatPrice(costWithVat(costNum, form.vat))}
-          {packInUnit > 0 && ` · ${formatPrice(costWithVat(costNum, form.vat) / packInUnit)}/${form.unit}`}
-        </div>
-      )}
-
       <label htmlFor="istatus">Stato</label>
       <select id="istatus" value={form.status} onChange={set('status')}>
         {STATUS_ITEM.map((s) => (
@@ -1728,91 +1952,133 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
         ))}
       </select>
 
-      <label htmlFor="iunit">Unità di misura</label>
-      <select id="iunit" value={form.unit} onChange={set('unit')}>
-        {[
-          ['Liquidi', [['l', 'Litri (L)'], ['cl', 'Centilitri (cl)'], ['ml', 'Millilitri (ml)']]],
-          ['Solidi', [['g', 'Grammi (g)'], ['mg', 'Milligrammi (mg)']]],
-          ['Pezzi', [['pz', 'Pezzi / unità (bottiglie, lattine, confezioni…)']]],
-          // GENERICO: quello che non si versa, non si pesa e non è una
-          // bottiglia — il tempo di lavorazione messo a listino. Senza,
-          // l'unica scelta possibile era il grammo, e nella ricetta si
-          // leggeva «Tempo di Lavorazione 1 g».
-          ['Generico', [['U', 'Unità generiche (U) — es. tempo di lavorazione']]],
-        ].map(([grp, units]) => (
-          <optgroup key={grp} label={grp}>
-            {units.map(([u, label]) => (
-              // Ogni articolo può essere gestito come si vuole (litri, peso o
-              // pezzi): cambiando base in modifica la giacenza viene CONVERTITA
-              // (vedi l'avviso qui sotto), non reinterpretata a caso.
-              <option key={u} value={u}>
-                {label}
-              </option>
-            ))}
-          </optgroup>
+      {/* ── LA DOMANDA INIZIALE ───────────────────────────────────
+          Quattro card, non una tendina: si leggono tutte insieme, con
+          l'esempio accanto, e si sceglie con un tocco. Da qui escono
+          unità, scorta e campi: il resto della scheda è conseguenza. */}
+      <h4 className="inv-domanda">Che tipo di prodotto è?</h4>
+      <div className="inv-tipi" role="radiogroup" aria-label="Che tipo di prodotto è?">
+        {TIPI_PRODOTTO.map(([t, icona, titolo, esempio]) => (
+          <button
+            key={t}
+            type="button"
+            role="radio"
+            aria-checked={tipo === t}
+            className={`inv-tipo${tipo === t ? ' scelto' : ''}`}
+            onClick={() => {
+              setTipo(t)
+              setAvviso(null)
+            }}
+          >
+            <span className="inv-tipo-icona" aria-hidden>{icona}</span>
+            <span className="inv-tipo-testo">
+              <strong>{titolo}</strong> <span className="muted small">{esempio}</span>
+            </span>
+          </button>
         ))}
-      </select>
+      </div>
+
+      {tipo === 'lavoro' && (
+        <p className="muted small" style={{ margin: '2px 0 8px' }}>
+          Non è merce: niente giacenza, mai esaurito, e in carta al cliente
+          non compare. Entra nelle ricette col suo costo per unità.
+        </p>
+      )}
+
+      {tipo === 'sfuso' && (
+        <>
+          <label htmlFor="iunit">Come lo compri</label>
+          <select id="iunit" value={unitSfuso} onChange={(e) => setUnitSfuso(e.target.value)}>
+            {opzioniSfuso.map(([u, label]) => (
+              <option key={u} value={u}>{label}</option>
+            ))}
+          </select>
+        </>
+      )}
+
+      {tipo && (
+        <>
+          <div className="grid-2">
+            <div>
+              {/* L'etichetta segue come si compra: €/pz per le bottiglie,
+                  €/kg per i limoni, €/U per il tempo di lavorazione. */}
+              <label htmlFor="icost">Costo €/{etichettaUnita} (netto)</label>
+              <input id="icost" type="number" step="any" min="0" value={form.cost} onChange={set('cost')} placeholder="Es. 12,9" />
+            </div>
+            <div>
+              <label htmlFor="ivat">IVA acquisto %</label>
+              <input id="ivat" type="number" step="any" min="0" value={form.vat} onChange={set('vat')} />
+            </div>
+          </div>
+          {costNum > 0 && (
+            <div className="muted small">
+              +IVA {formatPrice(costWithVat(costNum, form.vat))}/{etichettaUnita}
+              {/* Quanto viene la confezione intera: è la cifra che si
+                  ritrova sulla fattura del fornitore. */}
+              {packInUnit > 0 && packInUnit !== 1 &&
+                ` · confezione ${formatPrice(costWithVat(costNum * packInUnit, form.vat))}`}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Passando a «lavoro» la giacenza sparisce del tutto: quella voce
+          non è una scorta, e va detto PRIMA di salvare. */}
+      {diventaLavoro && (Number(initial?.stock) || 0) > 0 && (
+        <div className="banner" style={{ marginTop: 8 }}>
+          ⚠️ Il lavoro non è una scorta: la giacenza attuale (
+          {fmtItem(initial?.stock, initial)}) non serve più e viene{' '}
+          <strong>azzerata</strong>.
+        </div>
+      )}
 
       {/* Cambio del modo di gestire l'articolo: si dice CHIARAMENTE come
-          finisce la giacenza, prima di salvare. Passando alle unità generiche
-          la giacenza sparisce del tutto: quella voce non è una scorta. */}
-      {baseChanged && (
+          finisce la giacenza, prima di salvare. */}
+      {baseChanged && tipo !== 'lavoro' && (
         <div className="banner" style={{ marginTop: 8 }}>
           ⚠️ Cambi la gestione da <strong>{GESTIONE_LABEL[initialBase]}</strong>{' '}
-          a <strong>{GESTIONE_LABEL[baseUnit(form.unit)]}</strong>:{' '}
-          {isGenerico ? (
-            <>
-              la giacenza attuale ({fmtItem(initial?.stock, initial)}) non serve più e
-              viene <strong>azzerata</strong> — le unità generiche non sono una scorta.
-            </>
-          ) : (
-            <>
-              la giacenza attuale ({fmtItem(initial?.stock, initial)}) diventerà{' '}
-              <strong>{formatQty(convertedStock(), baseUnit(form.unit))}</strong>.
-            </>
+          a <strong>{GESTIONE_LABEL[baseUnit(unita)]}</strong>: la giacenza
+          attuale ({fmtItem(initial?.stock, initial)}) diventerà{' '}
+          <strong>{formatQty(convertedStock(), baseUnit(unita))}</strong>.
+          {/* IN BASE A COSA. Il conto è sempre quello: quanto contiene un
+              pezzo. Scritto qui perché è la prima domanda di chi legge
+              l'avviso, e prima non c'era risposta. */}
+          {contenutoDiRiferimento && (
+            <span className="muted">
+              {' '}
+              Il conto si fa sul contenuto di un pezzo ({contenutoDiRiferimento}).
+            </span>
           )}
-          {!convertible && !isGenerico && (
+          {!convertible && (
             <div style={{ marginTop: 6 }}>
-              ⛔ Indica prima il <strong>contenuto per confezione</strong>: senza,
-              la giacenza non si può convertire.
+              ⛔ Scrivi prima <strong>quanto fa un pezzo</strong>: senza, la
+              giacenza non si può convertire.
             </div>
           )}
         </div>
       )}
 
-      {isGenerico ? (
-        <p className="muted small" style={{ margin: '2px 0 8px' }}>
-          Si conta a unità, senza contenuto e senza conversioni: serve per quello che
-          non si versa e non si pesa — il tempo di lavorazione, per dire. Non è una
-          scorta: non si scarica quando il drink si fa e non è mai esaurito. Nella
-          ricetta di un drink entra col suo <strong>costo per unità</strong>, e in
-          carta al cliente non compare.
-        </p>
-      ) : !isPz ? (
+      {aPezzo && (
         <>
-          <label htmlFor="ipkg">Contenuto per confezione</label>
-          <div className="row" style={{ gap: 6 }}>
-            <input
-              id="ipkg"
-              type="number"
-              step="any"
-              min="0"
-              className="grow"
-              value={form.package_size}
-              onChange={set('package_size')}
-              placeholder="Es. 0,7 per una bottiglia da 70 cl"
-            />
-            <ScegliUnita
-              valore={form.package_size_unit}
-              unita={form.unit}
-              onChange={set('package_size_unit')}
-              etichetta="Unità del contenuto per confezione"
-            />
+          {/* Il contenuto di un pezzo: per chi VERSA è il numero da cui
+              escono costo al cl e scarico; per chi vende intero serve solo
+              al confronto. La domanda che si fa chi carica la merce — una
+              bottiglia fa 70 cl — non «quanto ne va in un drink». */}
+          <div className="row" style={{ gap: 6, alignItems: 'center', marginTop: 8 }}>
+            <label htmlFor="icontent" style={{ margin: 0 }}>
+              {tipo === 'versato' ? 'Una bottiglia fa…' : 'Dentro c’è… (facoltativo)'}
+            </label>
+            <button
+              type="button"
+              className="inv-aiuto piccolo"
+              aria-label="Come funziona il contenuto di un pezzo"
+              title="Come funziona"
+              onClick={() => setAiutoPezzo(true)}
+            >
+              ?
+            </button>
           </div>
-        </>
-      ) : (
-        <>
-          <label htmlFor="icontent">Contenuto di un pezzo</label>
+          {aiutoPezzo && <AiutoPezzo onClose={() => setAiutoPezzo(false)} />}
           <div className="row" style={{ gap: 6 }}>
             <input
               id="icontent"
@@ -1822,7 +2088,11 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
               className="grow"
               value={form.content_size}
               onChange={set('content_size')}
-              placeholder="Es. 33 per una bottiglia da 33 cl"
+              placeholder={
+                tipo === 'versato'
+                  ? 'Es. 70 per una bottiglia da 70 cl'
+                  : 'Es. 33 per una lattina da 33 cl'
+              }
             />
             <select
               value={form.content_unit}
@@ -1830,64 +2100,135 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
               aria-label="Unità del contenuto"
               style={{ width: 90 }}
             >
-              <option value="cl">cl</option>
-              <option value="ml">ml</option>
-              <option value="g">g</option>
+              {CONTENUTO_UNITA.map((u) => (
+                <option key={u} value={u}>{UNIT_LABEL[u.toLowerCase()] || u}</option>
+              ))}
             </select>
           </div>
           <p className="muted small" style={{ margin: '2px 0 8px' }}>
-            La giacenza si conta a pezzi. Il contenuto serve solo a sapere quanto costa
-            al cl (o al grammo) quello che c&apos;è dentro.
+            {tipo === 'versato'
+              ? 'Da qui escono il costo al cl e lo scarico: 4 cl da una bottiglia da 70 scalano la loro frazione.'
+              : 'Solo per confrontare il costo al cl con le altre bottiglie: si vende intero e il magazzino conta pezzi.'}
           </p>
         </>
       )}
 
-      {!isEdit && !isGenerico && (
-        isPz ? (
-          <>
-            <label htmlFor="ibottles">Quantità iniziale (pezzi)</label>
-            <input id="ibottles" type="number" step="1" min="0" value={form.bottles} onChange={set('bottles')} />
-          </>
-        ) : (
-          <>
-            <label htmlFor="ibottles">Numero di confezioni piene</label>
-            <input id="ibottles" type="number" step="1" min="0" value={form.bottles} onChange={set('bottles')} placeholder="Es. 3" />
-            <label htmlFor="iopen">Bottiglia aperta — contenuto ({form.unit}) — opzionale</label>
-            <input id="iopen" type="number" step="any" min="0" value={form.open_content} onChange={set('open_content')} placeholder={`Es. ${form.unit === 'l' ? '0,35' : form.unit === 'ml' ? '350' : '35'} se ne hai una già aperta`} />
-          </>
-        )
+      {tipo === 'sfuso' && (
+        <>
+          {/* ── SI USA IN UN'ALTRA MISURA? ────────────────────────────
+              LA QUANTITÀ SI SCRIVE SU TUTTI E DUE I LATI. «Cinque chili di
+              limoni fanno un litro e mezzo di succo» è come si dice al
+              banco; costringere a scrivere quanto ne fa UN chilo vuol dire
+              far fare a mano una divisione, e sbagliarla. Sotto resta un
+              rapporto, ed è quello che usa lo scarico: la proporzione vale
+              per qualunque quantità. */}
+          <label htmlFor="iresa" style={{ marginTop: 8 }}>
+            Si usa in un&apos;altra misura? (facoltativo)
+          </label>
+          <div className="row" style={{ gap: 6, alignItems: 'center' }}>
+            <input
+              id="iresa-da"
+              type="number"
+              step="any"
+              min="0"
+              value={form.resa_da_qty}
+              onChange={set('resa_da_qty')}
+              aria-label="Quanto ne prendi"
+              style={{ width: 80 }}
+            />
+            <span className="muted small" style={{ whiteSpace: 'nowrap' }}>
+              {etichettaUnita} fanno
+            </span>
+            <input
+              id="iresa"
+              type="number"
+              step="any"
+              min="0"
+              className="grow"
+              value={form.resa_qty}
+              onChange={set('resa_qty')}
+              placeholder="Es. 50"
+            />
+            <select
+              value={form.resa_unit}
+              onChange={set('resa_unit')}
+              aria-label="Unità d'uso"
+              style={{ width: 80 }}
+            >
+              {UNITA_USO.map(([u, label]) => (
+                <option key={u} value={u}>{label}</option>
+              ))}
+            </select>
+          </div>
+          <p className="muted small" style={{ margin: '2px 0 8px' }}>
+            Es. i limoni: si comprano al chilo, si spremono in cl. Le ricette
+            lo dosano nell&apos;unità d&apos;uso; la giacenza resta quella che
+            conti sullo scaffale.
+          </p>
+        </>
       )}
 
-      {/* Niente soglia in unità generiche: non finisce, quindi non c'è niente
-          da avvisare e niente da riordinare al fornitore. */}
-      {!isGenerico && (
+      {!isEdit && aPezzo && (
         <>
-        <label htmlFor="ithr">Soglia di avviso</label>
-        <div className="row" style={{ gap: 6 }}>
+          <label htmlFor="ibottles">Quantità iniziale (pezzi)</label>
+          <input id="ibottles" type="number" step="1" min="0" value={form.bottles} onChange={set('bottles')} />
+          {tipo === 'versato' && (
+            <>
+              {/* La bottiglia già aperta al momento del censimento: mezzo
+                  gin non è né zero né uno, è la sua frazione di pezzo. */}
+              <label htmlFor="iopen">
+                Confezione aperta — contenuto (
+                {UNIT_LABEL[String(form.content_unit).toLowerCase()] || form.content_unit}) —
+                opzionale
+              </label>
+              <input
+                id="iopen"
+                type="number"
+                step="any"
+                min="0"
+                value={form.open_content}
+                onChange={set('open_content')}
+                placeholder="Es. 40 se una è aperta a metà"
+              />
+            </>
+          )}
+        </>
+      )}
+      {!isEdit && tipo === 'sfuso' && (
+        <>
+          {/* SI SCRIVE QUANTO SE NE HA, nell'unità in cui si compra:
+              l'inventario si fa contando quello che sta sullo scaffale. */}
+          <label htmlFor="ibottles">Quantità iniziale ({etichettaUnita})</label>
+          <input id="ibottles" type="number" step="any" min="0" value={form.bottles} onChange={set('bottles')} placeholder="Es. 3" />
+        </>
+      )}
+
+      {/* Niente soglia per il lavoro: non finisce, quindi non c'è niente
+          da avvisare e niente da riordinare al fornitore. */}
+      {tipo && tipo !== 'lavoro' && (
+        <>
+          {/* LA SOGLIA È SEMPRE NELL'UNITÀ D'ACQUISTO: è il prodotto
+              comprato che sta finendo, ed è quello che si va a ricomprare. */}
+          <label htmlFor="ithr">Soglia di avviso ({etichettaUnita})</label>
           <input
             id="ithr"
             type="number"
             step="any"
             min="0"
-            className="grow"
             value={form.low_threshold}
             onChange={set('low_threshold')}
             placeholder="Es. 2 se vuoi l’avviso quando ne restano due"
           />
-          <ScegliUnita
-            valore={form.low_threshold_unit}
-            unita={form.unit}
-            conPezzi
-            onChange={set('low_threshold_unit')}
-            etichetta="Unità della soglia di avviso"
-          />
-        </div>
-        <p className="muted small" style={{ margin: '2px 0 8px' }}>
-          {form.low_threshold_unit === 'pz' && baseUnit(form.unit) !== 'pz'
-            ? 'In pezzi: l’avviso scatta quando resta questo numero di confezioni intere.'
-            : 'Sotto questo livello l’articolo compare fra quelli in esaurimento.'}
-        </p>
+          <p className="muted small" style={{ margin: '2px 0 8px' }}>
+            Sotto questo livello l’articolo compare fra quelli in esaurimento.
+          </p>
         </>
+      )}
+
+      {avviso && (
+        <div className="banner" role="alert" style={{ marginTop: 8 }}>
+          {avviso}
+        </div>
       )}
 
       <div className="grid-2" style={{ marginTop: 16 }}>

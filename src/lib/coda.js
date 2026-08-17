@@ -196,3 +196,42 @@ export function voceCassa({ gestore = false, cassaAperta = false, contiAperti = 
         : 'Conta il contante e chiudi la serata.',
   }
 }
+
+// ── I GRUPPI IN CODA: PANNELLO, CARTELLO O NIENTE ────────────────────
+//
+// Tre situazioni, e vanno tenute distinte perché a schermo lo spazio è
+// quello che serve agli ordini:
+//
+//   'pannello'   — i gruppi sono accesi e si mostrano qui: si vedono.
+//   'cartello'   — accesi, ma il locale ha scelto di non mostrarli in
+//                  coda. Chi apre i «Pannelli» dal ⋯ e non trova niente
+//                  penserebbe a un tasto rotto: una riga dice dove si
+//                  cambia idea.
+//   null         — GRUPPI SPENTI: niente. Chi non usa i gruppi si
+//                  ritrovava in coda un riquadro che parlava di una cosa
+//                  che non ha, e non è un'informazione che serve mentre si
+//                  battono ordini: sta in Impostazioni, dove si accendono.
+export function gruppiInCoda({ accesi = false, inCoda = false, pannelli = false } = {}) {
+  if (!accesi) return null
+  if (inCoda) return 'pannello'
+  return pannelli ? 'cartello' : null
+}
+
+// ── LE SCHEDE DELLA VISTA «SCHEDE PER STATO» ─────────────────────────
+//
+// Con gli stati di servizio ACCESI le schede sono i cinque passi del
+// lavoro (ricevuto → in preparazione → pronto → ritirato → pagato). Ma con
+// gli stati SPENTI quei passi non esistono: si mostravano lo stesso, quasi
+// tutti vuoti, e i conti stavano tutti sotto «Ordine ricevuto» — cinque
+// linguette per dirne una. Spenti gli stati, un conto è solo in corso,
+// chiuso o annullato: le stesse tre voci della griglia, con le stesse
+// regole (passaFiltroCoda), così le due viste non litigano mai.
+export function schedeCoda(workflowOn) {
+  if (workflowOn) return null // ci pensano gli stati di servizio
+  return [
+    ['attivi', 'In corso'],
+    ['chiusi', '💶 Chiusi'],
+    ['annullati', '✖️ Annullati'],
+  ]
+}
+

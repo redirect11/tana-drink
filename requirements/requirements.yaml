@@ -1403,6 +1403,215 @@ requirements:
     labels: [menu, magazzino]
     test_cases: []
 
+  - id: REQ-UI-019
+    title: "Un tema porta anche le forme, e arriva su tutti i colori"
+    area: "src/lib/themes.js, src/index.css, DESIGN.md"
+    description: >
+      Un tema non è una tavolozza. Pico e Catppuccin hanno un MODO di fare
+      le cose — angoli, tasti piatti o col gradiente, ombre — e
+      prendendone solo i colori restava tutto con la faccia della Tana
+      ridipinta: si sceglieva «Pico» e si trovavano i tasti dorati con gli
+      angoli morbidi.
+      Le forme stanno in `FORME` (tre famiglie: tana, catppuccin, pico) e
+      ogni preset dichiara la sua. Sono otto token — raggio di card,
+      bottoni, pillole e campi, fondo del bottone, ombra del bottone e
+      della card, font dei titoli — e OGNI famiglia li dichiara tutti,
+      perché applyTheme scrive sullo stile di :root e un token lasciato
+      indietro resterebbe appiccicato al tema successivo.
+      E il tema arriva dappertutto: l'oro di casa era scritto a mano in una
+      dozzina di posti (il tab acceso, il «+», i tasti dei pannelli, gli
+      aloni del fondo pagina) e quelli ignoravano il tema. Adesso il colore
+      dell'azione è uno solo e viene dai token; il testo sul tasto
+      (`--btn-ink`) si decide dalla luminanza del colore d'azione, perché
+      cablato scuro sarebbe stato nero su nero su un tema con l'azione
+      scura. Un test boccia il dorato riscritto a mano nel foglio di stile.
+      La personalizzazione a mano resta ai soli colori: le forme vengono
+      dal preset.
+    status: implemented
+    generate_issue: false
+    labels: [ui, tema]
+    test_cases: [tests/unit/temi.test.js, tests/unit/css.test.js]
+
+  - id: REQ-MENU-012
+    title: "In carta due tipi di voce: il prodotto e la ricetta"
+    area: "src/components/MenuManager.jsx, src/lib/inventory.js, src/lib/saveDrink.js"
+    description: >
+      Idea di Daniele (17/08) per semplificare la vita a chi carica il menù.
+      Oggi ogni voce di carta è una RICETTA: anche la birra in bottiglia
+      vuole la sua riga «1 pz di Birra», che è una scrittura in più per dire
+      una cosa ovvia — e chi la dimentica si ritrova un prodotto che non
+      scarica niente.
+      La proposta: due tipi di voce.
+      PRODOTTO — è un articolo di magazzino venduto così com'è: si sceglie
+      l'articolo, si mette il prezzo di vendita, e basta. Carico e scarico
+      seguono le regole di sempre (una birra venduta = una birra scaricata),
+      il costo arriva dal costo dell'articolo — al pezzo o al cl, secondo
+      come lo si usa — e da lì escono margine e prezzo consigliato senza che
+      nessuno scriva una ricetta.
+      RICETTA — quello che c'è adesso: più ingredienti con le loro dosi.
+      Da decidere: se il tipo è un campo sulla voce di menù o si deduce
+      (ricetta con un solo ingrediente in quantità «1 pz» = prodotto); e
+      cosa succede a chi oggi ha già scritto le ricette a un ingrediente —
+      la conversione dovrebbe essere automatica e senza perdite.
+    status: todo
+    generate_issue: true
+    labels: [menu, magazzino, ux]
+    test_cases: []
+
+  - id: REQ-MAG-016
+    title: "Un prodotto si compra in un modo e si usa in un altro: due unità e una resa"
+    area: "src/lib/inventory.js, src/components/InventoryManager.jsx"
+    description: >
+      Da tre note di Flavio (17/08, 21:11-21:14). Il modello delle unità
+      regge i distillati e poco altro: in magazzino ci finiscono cose molto
+      diverse — il ghiaccio a sacchi, i limoni al chilo, il tempo di lavoro —
+      e ognuna oggi chiede una configurazione sua. Parole sue: «bisogna
+      trovare una soluzione per unificare tutti questi elementi».
+      Il caso che rompe il modello attuale: i LIMONI si comprano al chilo e
+      si usano in cl (da 1 kg esce mezzo litro di succo). Oggi non si può
+      dire, perché peso e volume sono famiglie separate — e giustamente, non
+      esiste una conversione universale fra le due. Ma questa non è una
+      conversione: è una RESA, dichiarata dal locale per quel prodotto.
+      PROPOSTA da approvare con lui: ogni prodotto risponde sempre alle
+      stesse due domande — «come lo compri» (l'unità in cui conti la merce e
+      in cui c'è il prezzo) e «come lo usi in ricetta» — più una terza che
+      compare SOLO se sono diverse: «una unità di acquisto quanto rende?».
+      Una riga sola, letta come si parla: 1 bottiglia = 70 cl, 1 kg di limoni
+      = 50 cl, 1 sacco = 5000 g, 1 confezione = 10 U. Niente sotto-unità,
+      niente divisioni, e le famiglie non c'entrano più: la resa la dichiara
+      chi compra.
+      DECISO da Flavio (17/08): la giacenza si conta in QUELLO CHE SI
+      COMPRA — i chili di limoni, i sacchi di ghiaccio, le bottiglie —
+      perché l'inventario si fa contando quello che c'è sullo scaffale, non
+      il succo che ne uscirà. Le ricette dosano nell'unità d'uso e scalano
+      la loro frazione, come già fanno i cl di gin su una bottiglia.
+      Il modello è quindi completo e si può scrivere: unità d'acquisto
+      (giacenza e prezzo), unità d'uso (ricette), resa fra le due quando
+      sono diverse. Con questo, BUG-014 si chiude da sé.
+      FATTO (1.4.8). `resaUso` (lib/inventory.js) risponde a «una unità base
+      d'acquisto quante unità base d'uso rende?», e da lì passano tutti e
+      tre i conti che contano: lo scarico dal magazzino (qtyInStockUnit), il
+      costo di quello che si versa (costPerUnit) e le unità che si possono
+      scrivere in ricetta (entryUnits). La resa vive su due campi nuovi
+      (`resa`, `resa_unit`) validi per qualunque articolo; per i PEZZI resta
+      buono quello che c'era — `content_unit` + `package_size` — quindi i
+      prodotti già in magazzino non si toccano e si comportano come prima.
+      La scheda prodotto è rifatta sulle tre domande, col «?» in alto che le
+      spiega. La terza — «Quanto rende», o «A quanto corrisponde un pezzo?»
+      per chi si conta a pezzi — è sempre a vista ed è FACOLTATIVA: vuota
+      vuol dire «si usa come si compra». Era dietro un interruttore, ma
+      nasconderla costringeva a cercarla anche a chi la voleva scrivere —
+      una birra, per sapere quanto costa al cl.
+      Sparisce anche la domanda «quanto contiene una confezione» per chi non
+      conta a pezzi: comprando a chili, una confezione È un chilo. Il prezzo
+      si scrive nell'unità d'acquisto (€/kg, €/cl, €/pz, €/U) e sotto resta
+      salvato il costo per confezione, che è quello che il resto dell'app
+      legge da sempre; i prodotti già caricati tengono il loro contenuto e i
+      loro numeri, perché riscriverli vorrebbe dire cambiare i conti di un
+      articolo che nessuno ha toccato.
+      «A QUANTO CORRISPONDE UN PEZZO» È IL CONTENUTO, non la dose del drink:
+      quella la decide la ricetta, drink per drink, e chi confonde le due
+      cose scrive lì i centilitri di un cocktail e scarica il magazzino con
+      numeri che non tornano. Si può lasciare VUOTO — e allora in ricetta si
+      dosa solo a pezzi, che è il caso della birra servita intera — oppure
+      scriverlo, e allora la ricetta sceglie fra il pezzo e l'unità del
+      contenuto (4 cl da una bottiglia da 100 cl scalano 0,04 pezzi). Lo
+      dicono una didascalia sotto al campo e un «?» accanto alla domanda.
+      E la SOGLIA DI AVVISO si scrive sempre nell'unità d'acquisto — è il
+      prodotto comprato che sta finendo, ed è quello che si va a
+      ricomprare: niente più tendina, e l'etichetta dice l'unità.
+      E «SI SCARICA DAL MAGAZZINO?» LO DECIDE IL PRODOTTO, non la sua unità
+      (`eScorta`). La regola stava sull'unità — quello che si conta a unità
+      generiche non si scarica — ed è giusta per la manodopera, che non sta
+      su nessuno scaffale, ma non per il GHIACCIO: si conta a unità e finisce
+      eccome. Il consumo ora conta tutto quello che la ricetta chiede, e a
+      decidere cosa togliere dalla giacenza è chi la scrive, che l'articolo
+      ce l'ha in mano — scarico, riallineo di una comanda modificata,
+      reintegro all'annullo e previsione «a fine serata». Nella scheda, per i
+      soli articoli a unità, c'è la casella «È una scorta: si scarica quando
+      si usa»; di suo è spenta, così la manodopera già a listino non cambia
+      comportamento. Senza resa dichiarata non si inventa niente: costo
+      null e consumo invariato, che è meglio di un numero uscito da una
+      moltiplicazione a caso.
+      RIVISTA (1.4.8, secondo giro, approvato): la scheda parte da UNA
+      domanda — «che tipo di prodotto è?» — con quattro card illustrate in
+      griglia 2×2. «Lo vendo intero» (bottiglie e lattine: pezzi, contenuto
+      facoltativo che serve solo al costo al cl di confronto), «Lo verso
+      nei drink» (pezzi, e «una bottiglia fa…» è OBBLIGATORIO: senza,
+      niente costo al cl né scarico frazionato, e il salvataggio si ferma
+      spiegandolo), «Sfuso, a peso o volume» (limoni al chilo, spina,
+      ghiaccio: unità d'acquisto a scelta fra kg/l/cl/g/U, resa facoltativa
+      «5 kg fanno 1,5 l» con la quantità sui due lati), «Lavoro o servizio»
+      (solo costo per unità: niente giacenza, mai esaurito, in carta non
+      compare). Il tipo decide unità e scorta: spariscono il selettore
+      «Unità d'acquisto» a famiglie, la casella «È una scorta» e ogni «lo
+      uso come lo compro». Il MODELLO DATI NON CAMBIA: si aggiunge solo un
+      campo `tipo` sull'item per le prossime aperture; le schede vecchie,
+      che non ce l'hanno, si riaprono nel tipo dedotto da unità, contenuto
+      e scorta (U non-scorta → lavoro, U con scorta → sfuso, pezzo con
+      contenuto → versato, pezzo senza → intero, il resto → sfuso), senza
+      migrazione. Cambiando tipo su un prodotto esistente valgono gli
+      avvisi di conversione della giacenza di sempre.
+    status: todo
+    generate_issue: true
+    labels: [magazzino, ux]
+    test_cases: [tests/unit/inventory.test.js, tests/component/InventoryManagerCard.test.jsx]
+
+  - id: REQ-MAG-015
+    title: "Macro-categorie di magazzino e di menù, per incrociare speso e incassato"
+    area: "src/lib/macros.js, src/components/InventoryManager.jsx, src/components/StatsTab.jsx"
+    description: >
+      Chiesto da Flavio a voce (17/08, nota delle 20:13). Le macro-categorie
+      oggi sono una cosa sola e stanno sul MAGAZZINO: raggruppano le
+      categorie dei prodotti che si comprano. Servono anche sul MENÙ, sulle
+      categorie dei drink che si vendono — e le due cose vanno tenute
+      distinte («macro-categorie magazzino» e «macro-categorie menù»).
+      A cosa servono davvero: incrociarle. Da una parte quanto si è SPESO in
+      una macro d'acquisto, dall'altra quanto si è INCASSATO in una macro di
+      vendita, e il confronto fra le due — che è la domanda che il locale si
+      fa a fine mese e a cui oggi si risponde a mano.
+      Da decidere prima di scrivere codice: se le due macro vivono nella
+      stessa collezione con un campo che dice a chi appartengono o in due
+      separate; e come si aggancia una macro d'acquisto alla macro di
+      vendita corrispondente (una a una, o molte a molte).
+      FATTO (1.4.8) il primo pezzo: i due elenchi esistono davvero. Le macro
+      hanno un `ambito` ('magazzino' o 'menu', le righe vecchie sono tutte di
+      magazzino), il menù ha la sua sottosezione «Macro-categorie» che
+      raggruppa le categorie dei drink, e su ogni macro di spesa si sceglie a
+      quale macro di vendita corrisponde (`macro_menu_id`). Il pannello è uno
+      solo, condiviso dalle due schermate.
+      DA FARE: il confronto vero e proprio — speso su una macro d'acquisto
+      contro incassato sulla macro di vendita agganciata. Attenzione: la
+      tabella «Mensile per macro» che c'è già confronta acquisti e fatturato
+      sulle macro di MAGAZZINO, spalmando l'incasso di ogni drink sugli
+      ingredienti in proporzione al costo. Le due letture rispondono a
+      domande diverse e vanno tenute distinte, non sovrapposte.
+    status: todo
+    generate_issue: true
+    labels: [magazzino, menu, statistiche]
+    test_cases: [tests/component/MacroCategoryManager.test.jsx]
+
+  - id: REQ-MENU-011
+    title: "Un drink si duplica: la ricetta non si riscrive a mano"
+    area: "src/components/MenuManager.jsx"
+    description: >
+      Nelle azioni della card del menù c'è «📋 Duplica». Mezzo listino sono
+      variazioni — lo stesso drink col gin diverso, la versione analcolica,
+      il formato grande — e rifarle a mano vuol dire riscrivere prezzo,
+      categoria, descrizione e soprattutto la RICETTA ingrediente per
+      ingrediente: è lì che si sbaglia una dose, e poi il magazzino scala
+      storto.
+      La copia NON si salva da sola: si apre la scheda già piena, col nome
+      marcato «(copia)», così quello che cambia si sistema PRIMA che il
+      drink esista — un doppione salvato di nascosto finirebbe in carta al
+      cliente. Salvando nasce un prodotto nuovo: l'originale non si tocca.
+      La foto resta all'originale: il file è agganciato al drink che l'ha
+      caricata, e cancellando quello sparirebbe anche dalla copia.
+    status: implemented
+    generate_issue: false
+    labels: [menu, ux]
+    test_cases: [tests/component/MenuManager.test.jsx]
+
   - id: REQ-MENU-006
     title: "Sulle card i segni dicono cose diverse, dove uno se le aspetta"
     area: "src/components/MenuManager.jsx, src/components/PosBits.jsx, src/index.css"
@@ -1412,17 +1621,29 @@ requirements:
       conto, sulle card del menù se il prodotto si può fare (verde), se un
       ingrediente sta finendo (arancione) o se non si può fare (rosso, e la
       riga sotto al nome dice se è spento a mano o se manca l'ingrediente).
-      La LINGUETTA NELL'ANGOLO è il colore che il prodotto ha al banco,
-      disegnata come sulle tile del POS, dove quel segno vuol dire già quello;
-      nel menù si tocca per cambiarlo. Anche le tile del POS portano la
-      striscia a sinistra, come tutte le altre card.
+      IL SEGNO NELL'ANGOLO è il colore che il prodotto ha al banco, e nel
+      menù si tocca per cambiarlo. Che forma abbia lo decide il TEMA
+      (`--segno-prodotto`, lib/themes.js, scritto anche come `data-segno`
+      sul documento): di casa è il nastro d'angolo, largo e squillante; per
+      Catppuccin una pastiglia (quadratino stondato), che è il suo modo di
+      fare gli angoli; per Pico, look documento, il pallino. Gli ultimi due
+      stanno in alto a destra sulle card del menù, dove le card del
+      magazzino tengono lo stato delle scorte, e in alto a SINISTRA sulle
+      tile del conto: lì a destra c'è la stella dei preferiti, che è un
+      tasto e non si copre.
+      Con trenta prodotti a schermo trenta bandiere colorate, su una
+      palette da foglio di calcolo, restavano la cosa più rumorosa della
+      pagina.
+      Le tile del POS portano gli stessi due segni del menù, e la striscia
+      è 4px come in magazzino (era 5): la griglia è la stessa in tutte e
+      tre le schermate.
       Prima il menù aveva un quadratino che sembrava un'etichetta e invece era
       un tasto, e un pallino il cui rosso diceva due cose opposte — «l'ho
       spento io» e «è finito il rum» — che chiedono azioni diverse.
     status: implemented
     generate_issue: false
     labels: [menu, ux]
-    test_cases: []
+    test_cases: [tests/unit/temi.test.js]
 
   - id: REQ-MENU-005
     title: "Il menù è uno solo, quello che vede il cliente"
@@ -1908,7 +2129,7 @@ requirements:
 
   - id: REQ-AVVISI-004
     title: "Uscendo si spengono gli avvisi, rientrando si riaccendono"
-    area: "src/lib/logout.js, src/lib/api.js, src/App.jsx, src/components/AvvisiSpenti.jsx"
+    area: "src/lib/logout.js, src/lib/push.js, src/lib/customerAuth.js, src/lib/api.js, src/App.jsx, src/components/AvvisiSpenti.jsx"
     description: >
       Il token push è del DISPOSITIVO, non della persona, e dopo il logout
       restava valido: chi si era scollegato continuava a sentire suonare gli
@@ -1916,7 +2137,18 @@ requirements:
       tolto dai destinatari; al primo accesso successivo si registra da sé,
       senza aspettare che si passi dalla coda.
       Se non ci riesce — offline, regole — si esce lo stesso: restare dentro
-      sarebbe peggio, e il token scade da solo.
+      sarebbe peggio, e il token scade da solo. E non ci si impianta
+      aspettando: timbratura e rubrica sono scritture su Firestore, e una
+      scrittura offline non torna mai — passati due secondi e mezzo si esce
+      comunque.
+      NON BASTA LA RUBRICA: si spegne il TOKEN. `staff_tokens` è solo
+      l'elenco dello staff; il token è del browser e resta valido, e gli
+      avvisi al cliente («il tuo drink è pronto», «ordine annullato») lo
+      tengono scritto sull'ORDINE, non nell'elenco. Chi si era scollegato
+      continuava a sentire suonare il telefono. Uscendo si cancella il
+      token: non resta nessun indirizzo a cui bussare, chiunque sia il
+      mittente. Vale anche per il cliente che esce, e per «Esci e accedi
+      come staff», che passava dal signOut secco e non toglieva niente.
       E QUANDO GLI AVVISI SONO SPENTI SI VEDE. Il permesso lo chiede il
       browser una volta sola, con una finestrella in alto che chi sta
       lavorando scarta senza leggerla: da quel momento quel tablet non suona

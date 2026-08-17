@@ -21,6 +21,20 @@
   --ok: #2ecc71;
   --warn: #f39c12;
   --radius: 16px;
+  /* ── LE FORME DEL TEMA ──────────────────────────────────────────
+     Un tema non è solo una tavolozza: Pico e Catppuccin hanno un modo
+     di fare gli angoli, i tasti e le ombre (vedi lib/themes.js, FORME).
+     Qui stanno i valori della Tana, che è quello che si vede se il tema
+     non li dichiara. */
+  --raggio-card: var(--radius);
+  --raggio-btn: 12px;
+  --raggio-pill: 999px;
+  --raggio-campo: 10px;
+  --btn-bg: linear-gradient(135deg, var(--btn-1), var(--btn-2));
+  --btn-ink: #1c1305;
+  --ombra-btn: 0 4px 14px color-mix(in srgb, var(--btn) 25%, transparent);
+  --ombra-card: 0 4px 18px rgba(0, 0, 0, 0.25);
+  --forma-titoli: 'Playfair Display', Georgia, 'Times New Roman', serif;
   --serif: 'Playfair Display', Georgia, 'Times New Roman', serif;
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial,
     sans-serif;
@@ -39,9 +53,20 @@ body,
 }
 
 body {
+  /* I DUE ALONI SEGUONO IL TEMA. Erano l'oro e il cremisi della Tana
+     scritti a mano: su Pico o Catppuccin restavano lì, e il fondo aveva
+     ancora il calore del locale sotto una palette fredda. */
   background:
-    radial-gradient(900px 500px at 85% -10%, rgba(245, 185, 74, 0.07), transparent 60%),
-    radial-gradient(700px 420px at -10% 25%, rgba(229, 46, 113, 0.06), transparent 60%),
+    radial-gradient(
+      900px 500px at 85% -10%,
+      color-mix(in srgb, var(--accent-2) 7%, transparent),
+      transparent 60%
+    ),
+    radial-gradient(
+      700px 420px at -10% 25%,
+      color-mix(in srgb, var(--accent) 6%, transparent),
+      transparent 60%
+    ),
     linear-gradient(170deg, var(--bg), var(--bg-2));
   background-attachment: fixed;
   color: var(--text);
@@ -52,7 +77,7 @@ body {
 h1,
 h2,
 h3 {
-  font-family: var(--serif);
+  font-family: var(--forma-titoli);
   letter-spacing: 0.2px;
 }
 
@@ -434,10 +459,10 @@ body.schermo-intero {
 .card {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 50%), var(--card);
   border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: var(--radius);
+  border-radius: var(--raggio-card);
   padding: 16px;
   margin: 12px 0;
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25);
+  box-shadow: var(--ombra-card);
 }
 
 .row {
@@ -457,7 +482,7 @@ body.schermo-intero {
 .btn {
   appearance: none;
   border: none;
-  border-radius: 12px;
+  border-radius: var(--raggio-btn);
   padding: 12px 16px;
   font-size: 1rem;
   font-weight: 600;
@@ -470,10 +495,10 @@ body.schermo-intero {
      Ora i due estremi sono due variabili: di partenza sono esattamente
      quelli di prima, e un tema che cambia i bottoni li ridefinisce (o li
      lascia derivare da --btn, vedi lib/themes.js). */
-  background: linear-gradient(135deg, var(--btn-1), var(--btn-2));
-  color: #1c1305;
+  background: var(--btn-bg);
+  color: var(--btn-ink);
   transition: transform 0.05s ease, opacity 0.2s ease, box-shadow 0.2s ease;
-  box-shadow: 0 4px 14px color-mix(in srgb, var(--btn) 25%, transparent);
+  box-shadow: var(--ombra-btn);
 }
 
 .btn:active {
@@ -508,7 +533,7 @@ a.btn {
   display: inline-block;
   text-align: center;
   text-decoration: none;
-  color: #1c1305;
+  color: var(--btn-ink);
 }
 
 a.btn.ghost,
@@ -707,7 +732,7 @@ a.btn.block {
   gap: 6px;
   white-space: nowrap;
   padding: 6px 12px;
-  border-radius: 999px;
+  border-radius: var(--raggio-pill);
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: rgba(255, 255, 255, 0.05);
   color: var(--text, #fff);
@@ -721,7 +746,7 @@ a.btn.block {
 .chip.active {
   background: linear-gradient(135deg, var(--btn-1), var(--btn-2));
   border-color: transparent;
-  color: #1c1305;
+  color: var(--btn-ink);
 }
 .chip.warn strong {
   color: #ffd54f;
@@ -866,8 +891,8 @@ a.btn.block {
 }
 
 .step.active {
-  background: linear-gradient(135deg, #f7c45e, #e8a32e);
-  color: #1c1305;
+  background: var(--btn-bg);
+  color: var(--btn-ink);
   font-weight: 700;
 }
 
@@ -881,7 +906,7 @@ textarea,
 select {
   width: 100%;
   padding: 11px 12px;
-  border-radius: 10px;
+  border-radius: var(--raggio-campo);
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: rgba(0, 0, 0, 0.2);
   color: var(--text);
@@ -912,8 +937,8 @@ label {
 }
 
 .tabs .tab.active {
-  background: linear-gradient(135deg, #f7c45e, #e8a32e);
-  color: #1c1305;
+  background: var(--btn-bg);
+  color: var(--btn-ink);
 }
 
 /* SOTTOSEZIONI DI UNA PAGINA (SectionPanels): la fila di tasti sotto al
@@ -941,9 +966,9 @@ label {
 }
 .section-tab:hover { border-color: rgba(245, 185, 74, 0.5); }
 .section-tab.active {
-  background: linear-gradient(135deg, #f7c45e, #e8a32e);
+  background: var(--btn-bg);
   border-color: transparent;
-  color: #1c1305;
+  color: var(--btn-ink);
 }
 .section-panel {
   margin-bottom: 12px;
@@ -1265,7 +1290,7 @@ a.order-mini {
 
 .vbar-fill {
   width: 100%;
-  background: linear-gradient(180deg, #f7c45e, #b9821f);
+  background: linear-gradient(180deg, var(--btn-1), var(--btn-2));
   border-radius: 6px 6px 0 0;
   min-height: 2px;
 }
@@ -1307,7 +1332,7 @@ a.order-mini {
 
 .hbar-fill {
   height: 100%;
-  background: linear-gradient(90deg, #b9821f, #f7c45e);
+  background: linear-gradient(90deg, var(--btn-2), var(--btn-1));
   border-radius: 6px;
   min-width: 2px;
 }
@@ -2996,9 +3021,9 @@ body.drawer-open .status-bell-float { display: none; }
 
 .cat-chip:hover,
 .cat-chip:active {
-  background: linear-gradient(135deg, #f7c45e, #e8a32e);
+  background: var(--btn-bg);
   border-color: transparent;
-  color: #1c1305;
+  color: var(--btn-ink);
 }
 
 /* ── Intestazione categoria ──────────────────────────────────── */
@@ -3194,9 +3219,9 @@ body.drawer-open .status-bell-float { display: none; }
 }
 
 .mode-option.active {
-  background: linear-gradient(135deg, #f7c45e, #e8a32e);
+  background: var(--btn-bg);
   border-color: transparent;
-  color: #1c1305;
+  color: var(--btn-ink);
 }
 
 .persons-counter {
@@ -3277,8 +3302,8 @@ body.drawer-open .status-bell-float { display: none; }
    specificità più alta: va ribadito anche lì, altrimenti resta grigio). */
 .toggle:checked,
 :root[data-luma='light'] .toggle:checked {
-  background: linear-gradient(135deg, #f7c45e, #e8a32e);
-  border-color: #e8a32e;
+  background: var(--btn-bg);
+  border-color: var(--btn-2);
 }
 
 .toggle::before {
@@ -3799,7 +3824,7 @@ body.fullbleed,
   transition: background 0.12s ease, width 0.12s ease;
 }
 .posd-altezza-handle.attiva::before {
-  background: var(--accent, #e8a32e);
+  background: var(--accent);
   width: 64px;
 }
 
@@ -4383,8 +4408,8 @@ body.fullbleed,
    lo sfondo (i filtri sembravano sempre inattivi nel backoffice). */
 :root[data-luma='light'] .chip.active {
   border-color: transparent;
-  background: linear-gradient(135deg, #f7c45e, #e8a32e);
-  color: #1c1305;
+  background: var(--btn-bg);
+  color: var(--btn-ink);
 }
 :root[data-luma='light'] .qty button {
   background: rgba(0, 0, 0, 0.08);
@@ -4902,7 +4927,10 @@ body.fullbleed .cat-rail {
      COLORE: qualunque cosa scegliesse la pagina, la striscia restava
      grigia. L'important resta dov'è utile (la larghezza), non dove
      cancella una scelta. */
-  border-left-width: 5px !important;
+  /* Larghezza uguale a quella delle card del magazzino (4px): lo stesso
+     oggetto — un prodotto — non può avere due strisce diverse a seconda
+     della schermata. */
+  border-left-width: 4px !important;
   border-left-style: solid !important;
   border-left-color: var(--line);
 }
@@ -4914,6 +4942,9 @@ body.fullbleed .cat-rail {
 /* LA LINGUETTA NELL'ANGOLO è il colore che il prodotto ha al banco, disegnata
    come sulle tile del POS: là quel segno vuol dire già quello. Si tocca per
    cambiarlo — prima era un quadratino che sembrava un'etichetta. */
+/* IL SEGNO DEL COLORE LO DECIDE IL TEMA (--segno-prodotto, lib/themes.js).
+   Di casa è il NASTRO d'angolo: largo, squillante, si vede da un metro —
+   il vestito della Tana, che è un locale e non un foglio di calcolo. */
 .menu-colore-spia {
   position: absolute;
   top: 0;
@@ -4934,6 +4965,51 @@ body.fullbleed .cat-rail {
     border-right-width: 2.1em;
   }
 }
+/* Sui temi sobri il colore diventa un PUNTO in alto a destra, dove le card
+   del magazzino mettono lo stato delle scorte: stesso segno, stesso posto,
+   tutte e tre le griglie. Tondo per Pico (look documento), quadratino
+   stondato per Catppuccin, che è il suo modo di fare gli angoli.
+   Resta un TASTO — si tocca per cambiare colore — quindi l'area di tocco
+   è più larga del segno che si vede. */
+:root[data-segno='pallino'] .menu-colore-spia,
+:root[data-segno='pastiglia'] .menu-colore-spia {
+  top: 4px;
+  right: 4px;
+  left: auto;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  z-index: 2;
+}
+:root[data-segno='pallino'] .menu-colore-spia::after,
+:root[data-segno='pastiglia'] .menu-colore-spia::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--menu-colore, transparent);
+  /* Un filo di contorno: i colori chiari sul fondo bianco di Pico
+     sparivano del tutto. */
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--text) 22%, transparent);
+}
+@media (pointer: coarse) {
+  :root[data-segno='pallino'] .menu-colore-spia,
+  :root[data-segno='pastiglia'] .menu-colore-spia {
+    border-top-width: 0;
+    border-right-width: 0;
+  }
+}
+:root[data-segno='pastiglia'] .menu-colore-spia::after {
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+}
 .menu-colori-riga {
   display: flex;
   flex-wrap: wrap;
@@ -4947,7 +5023,7 @@ body.fullbleed .cat-rail {
   border: 2px solid transparent;
   border-radius: 8px;
   cursor: pointer;
-  color: #1c1305;
+  color: var(--btn-ink);
   font-size: 0.7rem;
   font-weight: 800;
   line-height: 1;
@@ -5392,15 +5468,44 @@ body:has(.overlay) .zoom-control {
    allo stesso modo ovunque, invece di cambiare linguaggio da una schermata
    all'altra. */
 .pos-tile-striscia {
-  border-left-width: 5px !important;
+  border-left-width: 4px !important;
   border-left-style: solid !important;
 }
-/* IL NASTRO D'ANGOLO PARTE DAL BORDO. Sta in posizione assoluta, e per una
-   scatola con bordo «zero» vuol dire il bordo INTERNO: restava un dentino di
+/* IL COLORE DELLA CATEGORIA sulla tile: come nel menù, la forma la decide
+   il tema. Di casa è il nastro d'angolo (nato dalle tile di SumUp).
+   IL NASTRO PARTE DAL BORDO: sta in posizione assoluta, e per una scatola
+   con bordo «zero» vuol dire il bordo INTERNO — restava un dentino di
    sfondo fra il nastro e la striscia, che a griglia piena si vede eccome. */
 .pos-tile-nastro {
-  top: -1px !important;
-  left: -5px !important;
+  top: -1px;
+  left: -4px;
+  width: 0;
+  height: 0;
+  /* in em: il segnalibro scala con la dimensione della tile */
+  border-top: 1.9em solid var(--pastiglia, transparent);
+  border-right: 1.9em solid transparent;
+  border-top-left-radius: 14px;
+}
+/* SULLA TILE IL SEGNO RESTA A SINISTRA. In alto a destra c'è la stella dei
+   preferiti — un tasto — e un pallino appiccicato sopra sarebbe finito
+   sotto il dito di chi la cerca. Il colore sta nell'angolo dov'è sempre
+   stato, solo che invece di una bandiera è un punto. */
+:root[data-segno='pallino'] .pos-tile-nastro,
+:root[data-segno='pastiglia'] .pos-tile-nastro {
+  top: 6px;
+  left: 6px;
+  right: auto;
+  width: 10px;
+  height: 10px;
+  border: none;
+  border-radius: 50%;
+  background: var(--pastiglia, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--text) 22%, transparent);
+}
+:root[data-segno='pastiglia'] .pos-tile-nastro {
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
 }
 
 /* ── La testata del magazzino: una riga di scelte ─────────────────────
@@ -6359,4 +6464,97 @@ a.storico-notifica:hover {
   .fumetto-avviso {
     animation: none;
   }
+}
+
+/* Il «?» della scheda prodotto: un tondino, non un tasto — chiede attenzione
+   solo a chi la sta cercando. */
+.inv-aiuto {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.75;
+}
+/* Accanto a un'etichetta, non in cima a una scheda: più piccolo, così non
+   ruba la riga alla domanda. */
+.inv-aiuto.piccolo {
+  width: 20px;
+  height: 20px;
+  font-size: 0.78rem;
+}
+.inv-aiuto:hover {
+  opacity: 1;
+  border-color: var(--accent-2);
+}
+
+/* Il titolo della domanda della scheda prodotto: piccolo, ma dice dove
+   si è. */
+.inv-domanda {
+  margin: 18px 0 2px;
+  font-size: 0.95rem;
+}
+
+/* LA SCHEDA PRODOTTO PARTE DA UNA DOMANDA: che tipo di prodotto è? Le
+   quattro risposte sono card, non voci di una tendina: si leggono tutte
+   insieme, ognuna col suo esempio, e si sceglie con un tocco. Griglia
+   2×2 — quattro voci si abbracciano con lo sguardo — che si impila su una
+   colonna dove lo schermo è stretto. */
+.inv-tipi {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 6px 0 10px;
+}
+.inv-tipo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+.inv-tipo-icona {
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+/* Icona, titolo ed esempio su UNA riga: se il posto non basta si tronca
+   l'esempio, non si sfonda la card. */
+.inv-tipo-testo {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* La scelta si vede dal bordo acceso col colore del tema, non da un
+   colore scritto a mano: coi temi cambia anche lei. */
+.inv-tipo.scelto {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent) inset;
+}
+@media (max-width: 480px) {
+  .inv-tipi {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* LA SCHEDA PRODOTTO SCORRE PER CONTO SUO. Il magazzino vive a pagina
+   piena (body.pagina-piena): l'altezza è quella della finestra e a scorrere
+   sono i pannelli. La scheda, più alta dello schermo, sbordava dal
+   contenitore e il footer — che di quel contenitore è l'ultima riga —
+   compariva dipinto in mezzo ai campi. */
+body.pagina-piena .inv-scheda {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }

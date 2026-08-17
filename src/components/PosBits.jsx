@@ -127,25 +127,17 @@ export function DrinkTile({
         </button>
       )}
 
-      {/* SEGNALIBRO colorato della categoria (come sulle tile di SumUp POS).
-          Era una linguetta da 1em: a colpo d'occhio, su una griglia piena, non
-          si distingueva. Ora è quasi il doppio — deve essere il primo segno
-          che si vede, non un dettaglio da cercare. */}
+      {/* IL COLORE DELLA CATEGORIA, UN PALLINO IN ALTO A DESTRA — lo stesso
+          segno, nello stesso posto, delle card del magazzino e del menù.
+          Era un nastro d'angolo copiato dalle tile di SumUp: con trenta
+          tile a schermo erano trenta bandiere, e su un tema sobrio non
+          restava altro. La forma sta nel CSS (.pos-tile-nastro), qui c'è
+          solo il colore. */}
       {color && (
         <div
           aria-hidden
           className="pos-tile-nastro"
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: 0,
-            height: 0,
-            // in em: il segnalibro scala con la dimensione della card
-            borderTop: `1.9em solid ${color}`,
-            borderRight: '1.9em solid transparent',
-            borderTopLeftRadius: 14,
-          }}
+          style={{ position: 'absolute', '--pastiglia': color }}
         />
       )}
 
