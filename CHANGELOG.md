@@ -59,6 +59,8 @@
 - **I numeri in cima alla coda sono di questa apertura di cassa.** Dopo
   una chiusura e una riapertura si leggeva ancora l'incasso della serata
   prima: contavano la giornata, non l'apertura. A cassa chiusa sono zeri.
+- **I numeri in cima alla coda non cambiano più cambiando tab**: sono
+  cumulativi — aperti, chiusi e annullati di questa apertura di cassa.
 - **Un conto annullato adesso resta nella sua tab**, anche se era aperto
   giorni prima: spariva dallo schermo nell'istante in cui lo si annullava,
   e non si capiva se l'operazione fosse andata a buon fine. Stessa cosa
