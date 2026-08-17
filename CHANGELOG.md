@@ -12,6 +12,12 @@
 
 ### Al banco
 
+- **La ⓘ su ogni card dice come si fa il drink**: ingredienti con le
+  quantità e la preparazione a parole. Nella scheda del prodotto c'è un
+  campo nuovo, «Come si prepara» — shakerato o mescolato, il ghiaccio, il
+  bicchiere — perché la ricetta dice cosa ci va, non il gesto. I drink di
+  esempio ce l'hanno già tutti.
+
 - **Il «+» sulla riga del conto aumenta e basta**: apriva anche la scheda
   dell'item, ogni volta.
 

@@ -72,6 +72,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import CustomDrinkForm from './CustomDrinkForm.jsx'
+import SchedaDrink from './SchedaDrink.jsx'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import ActionSheet from './ActionSheet.jsx'
 import { StoriaOrdineDialog, RipristinaOrdineDialog } from './StoriaOrdine.jsx'
@@ -230,6 +231,8 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   const [showComande, setShowComande] = useState(false)
   const [confirmCancel, setConfirmCancel] = useState(false)
   const [confirmSvuota, setConfirmSvuota] = useState(false)
+  // La scheda del drink (ingredienti e preparazione), dalla ⓘ sulla card.
+  const [schedaDrink, setSchedaDrink] = useState(null)
   // «Organizza» per la lista del conto: come nella griglia, è un
   // interruttore che fa comparire le maniglie. Fuori di lì toccare una riga
   // la apre — è quello che si fa mille volte a sera — e niente si sposta per
@@ -1672,6 +1675,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
           cats={cats}
           loading={loading}
           qtyByDrink={qtyByDrink}
+          onInfo={setSchedaDrink}
           categoryDisplay={settings.category_display}
           ricercaEvidenzia={settings.pos_search === 'evidenzia'}
           modoStriscia={settings.stripe_pos}
@@ -2649,6 +2653,10 @@ export default function OrderPosDetail({ order: orderProp = null }) {
             )}
           </div>
         </div>
+      )}
+
+      {schedaDrink && (
+        <SchedaDrink drink={schedaDrink} onClose={() => setSchedaDrink(null)} />
       )}
 
       {confirmSvuota && (

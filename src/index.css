@@ -6267,3 +6267,24 @@ a.storico-notifica:hover {
   border-radius: 8px;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
 }
+
+/* La scheda del drink dietro la ⓘ: si legge mentre si versa, quindi righe
+   larghe e niente fronzoli. */
+.scheda-drink-righe {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.scheda-drink-righe li {
+  padding: 3px 0;
+  border-bottom: 1px dashed var(--line);
+}
+.scheda-drink-righe li:last-child {
+  border-bottom: 0;
+}
+/* Gli a capo dove li ha messi chi l'ha scritta: una preparazione è una
+   sequenza di gesti, non un paragrafo. */
+.scheda-drink-preparazione {
+  margin: 0;
+  white-space: pre-wrap;
+}

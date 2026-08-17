@@ -143,6 +143,7 @@ export default function PosProductPicker({
   cats,
   loading,
   qtyByDrink,
+  onInfo,
   onAdd,
   onSetQty,
   onInteract = null, // notifica il parent quando si lavora sulla griglia (scroll/ricerca)
@@ -569,6 +570,7 @@ export default function PosProductPicker({
                 key={d.id}
                 drink={d}
                 qty={qtyByDrink[d.id] ?? 0}
+                onInfo={onInfo ? () => onInfo(d) : undefined}
                 color={coloreProdotto(d)}
                 striscia={tileColor(d)}
                 acceso={d.id === idAcceso}
