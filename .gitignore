@@ -70,3 +70,7 @@ ds-bundle/
 # successivo (--import/--export-on-exit). Sono la SANDBOX di chi sviluppa,
 # non dati del locale: fuori dal repo.
 .emulatori/
+
+# Log degli emulatori: crescono senza freno (visti a 34 GB) e non servono a
+# nessuno fuori da qui.
+*-debug.log
