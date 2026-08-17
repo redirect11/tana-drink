@@ -765,6 +765,29 @@ requirements:
     labels: [cassa]
     test_cases: [tests/unit/cassa.test.js]
 
+  - id: REQ-CASSA-008
+    title: "La cassa si apre e si chiude dalla coda, senza cambiare pagina"
+    area: "src/components/ApriCassaBox.jsx, src/pages/BartenderPage.jsx"
+    description: >
+      Aprire e chiudere la cassa sono le due cose che si fanno a inizio e
+      fine serata, e si fanno dalla schermata in cui si sta già: nel menu ⋯
+      della coda c'è «Apri cassa» quando è chiusa e «Chiudi cassa» quando è
+      aperta. Andarle a cercare nel flusso di cassa vuol dire uscire dalla
+      coda proprio mentre la si sta guardando.
+      «Chiudi cassa» è spento finché ci sono conti aperti, e lo dice: un
+      conto aperto è un incasso che manca, e chiudere così vorrebbe dire far
+      quadrare una serata con dentro un buco. Acceso, porta al flusso di
+      cassa, dove si conta il contante.
+      «Apri cassa» — dal menu o dal banner della cassa chiusa — apre un box
+      che chiede il fondo, facoltativo perché non tutti lo mettono, con
+      «Apri» e «Annulla». Annulla lascia la cassa chiusa: premere per sbaglio
+      e ritrovarsi una serata aperta col fondo sbagliato si sistema solo
+      chiudendo e riaprendo.
+    status: implemented
+    generate_issue: false
+    labels: [cassa, ux]
+    test_cases: [tests/component/ApriCassaBox.test.jsx]
+
   - id: REQ-CASSA-003
     title: "La carta non finisce mai nei contanti"
     area: "src/lib/cassa.js"

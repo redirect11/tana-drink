@@ -4,6 +4,11 @@
 
 ### Al banco
 
+- **La cassa si apre e si chiude dalla coda**: nel menu ⋯ c'è «Apri cassa»
+  se è chiusa e «Chiudi cassa» se è aperta — spento, con il perché
+  scritto, finché ci sono conti aperti. «Apri cassa» chiede il fondo
+  (facoltativo) in un box con Apri e Annulla, anche dal banner in alto.
+
 - **Staff e Utenti hanno tre sezioni nel menu laterale**: calendario,
   nuovo turno, paghe orarie; utenze registrate, nuovo account, buoni VIP.
   Erano pannelli che aprendosi spingevano giù quello che si era venuti a
