@@ -389,3 +389,26 @@ bugs:
     generate_issue: true
     labels: [bug, magazzino]
     test_cases: []
+
+  - id: BUG-015
+    title: "Battendo di corsa, il pagamento non vede le ultime righe"
+    area: "src/components/OrderPosDetail.jsx"
+    description: >
+      Si battono tre Negroni e una IPA e si apre subito il pagamento: nel
+      conto 27,00 €, nella schermata di pagamento 21,00 € e la IPA non c'è.
+      CAUSA: la schermata di pagamento riceveva `order`, cioè il conto come
+      lo sa il SERVER. Le righe appena battute stanno ancora nella bozza —
+      si confermano da sole poco dopo — o in una scrittura in volo, e da lì
+      il pagamento non le vedeva. Contro la regola di casa: coda, conto e
+      pagamento lavorano sui dati che hanno già (docs/architettura.md).
+      RISOLTO: il conto per il pagamento si ricompone in locale — le comande
+      con dentro le modifiche in volo, la bozza come una comanda in più, e
+      il totale che si vede sotto le righe — e aprendo il pagamento la bozza
+      si conferma subito, senza aspettare l'auto-conferma. Il server lo
+      raggiunge un istante dopo: manda tutto `onBeforePay`, prima che
+      l'incasso venga registrato.
+    in_produzione: true
+    status: fixed
+    generate_issue: false
+    labels: [bug, pos, pagamenti]
+    test_cases: [tests/component/OrderPosDetail.test.jsx]
