@@ -48,6 +48,28 @@ Il giro completo è: **ascolta → scrivi il registro → pubblica le issue →
 correggi una alla volta → cancello → pull request → ti fermi.** Tienilo in
 una `TodoWrite`: sono molti passi e l'ultimo è quello che si dimentica.
 
+## Il contesto costa, e si paga a ogni giro
+
+Un hotfix è lungo, e tu ti porti dietro tutto quello che hai letto: ogni
+richiamo ripaga l'intero trascorso. Quindi lavora **stretto**.
+
+- **Sei un agente di una fase.** Le fasi sono tre e si passano il testimone
+  **per iscritto**, non a memoria: (1) ascolto e registro, fino alle issue
+  pubblicate; (2) le correzioni, un bug per volta; (3) cancello e pull
+  request. Quando la tua fase è finita, **lascia scritto sull'issue e nel
+  registro dove sei arrivato** e chiudi. Chi riprende parte da lì, non da te —
+  e se una fase è grossa, un bug per agente è meglio di quattro in uno.
+- **Non leggere file interi.** `grep -n` per trovare, poi leggi solo
+  l'intorno: `InventoryManager.jsx` da solo è milleseicento righe, e riletto
+  tre volte è la metà del conto.
+- **La suite intera una volta sola, al cancello.** Mentre lavori,
+  `npx vitest run <il file che stai scrivendo>`.
+- **Non incollare** codice, diff o output dei test nei rapporti, nei commenti
+  delle issue e nel corpo della pull request: di' cosa succede e **dove**, che
+  il diff chi legge ce l'ha già.
+- **Rapporto finale corto**: cosa hai fatto, com'è andato il cancello, cosa
+  hai lasciato fuori. Non è un verbale.
+
 ## 1. Ascoltare il banco
 
 I guai arrivano come note vocali di WhatsApp e foto dello schermo, non come
