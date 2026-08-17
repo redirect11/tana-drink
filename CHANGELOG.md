@@ -12,6 +12,9 @@
 
 ### Al banco
 
+- **Le card del magazzino sono un po' più larghe**: aperto il dettaglio,
+  costo, IVA e prezzo consigliato non si spezzano più su tre righe.
+
 - **«Salva modifiche» dice che ha salvato** e riporta alla coda: prima il
   tasto tornava com'era e non si capiva se fosse andata.
 

@@ -2223,7 +2223,13 @@ body.fullbleed .bar-content {
    ordini in griglia — compatte, azioni a scomparsa con «⋯». ── */
 .admin-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+  /* PIÙ LARGHE DI PRIMA (175px). Aperto il dettaglio — pezzi, costo, prezzo
+     al pz col ricarico — in una card da 175px quei numeri si incolonnano
+     tutti e la card diventa una striscia verticale da leggere a fatica:
+     «13,00 €/conf. (+IVA 15,86 €)» andava a capo tre volte. Con 215px le
+     tre righe stanno in piedi, e su uno schermo largo si perde al massimo
+     una card per riga. */
+  grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
   gap: 10px;
   margin-top: 10px;
   align-items: start;
@@ -2736,11 +2742,13 @@ body.drawer-open .status-bell-float { display: none; }
   gap: 4px 12px;
 }
 /* DENTRO UNA CARD SI INCOLONNA. Le due colonne sopra sono giuste nella vista
-   a Lista, che ha tutta la larghezza dello schermo; in una card larga 175px
-   la colonna del valore resta larga un dito e il testo va a capo a
-   fisarmonica — «0 pz · 0 piene · 1 pz = 100 cl» su quattro righe, con costo,
-   IVA e prezzo consigliato accavallati. Etichetta sopra, valore sotto, come
-   già fa la regola per gli schermi piccoli qui in basso. */
+   a Lista, che ha tutta la larghezza dello schermo; in una card la colonna
+   del valore resta larga un dito e il testo va a capo a fisarmonica — «0 pz
+   · 0 piene · 1 pz = 100 cl» su quattro righe, con costo, IVA e prezzo
+   consigliato accavallati. Etichetta sopra, valore sotto, come già fa la
+   regola per gli schermi piccoli qui in basso.
+   La card ora è più larga (215px) e i valori ci stanno per intero: qui si
+   incolonna solo l'etichetta, non si spezza più il numero. */
 .grid-card .grid-card-actions .inv-info .inv-info-row {
   grid-template-columns: 1fr;
   gap: 1px;
