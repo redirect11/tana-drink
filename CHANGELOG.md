@@ -12,6 +12,14 @@
 
 ### Al banco
 
+- **Dal dettaglio di un ordine si aggiunge e si incassa.** «Modifica
+  ordine» apre la schermata del conto con la griglia dei prodotti,
+  «Pagamento» la apre già sul pagamento: prima si potevano solo cambiare le
+  quantità di quello che c'era, e per una birra in più — o per incassare al
+  tavolo — si tornava in coda a riaprire il conto dal banco.
+- **Nel magazzino i titoletti del dettaglio sono in grassetto**: a fine
+  serata, pezzi, soglia, costo e prezzo al cl si distinguono dai numeri.
+
 - **Le card del magazzino sono un po' più larghe**: aperto il dettaglio,
   costo, IVA e prezzo consigliato non si spezzano più su tre righe.
 

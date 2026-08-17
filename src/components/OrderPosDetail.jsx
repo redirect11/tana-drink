@@ -212,7 +212,11 @@ function apertoIl(iso) {
   return `${d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' })} ${ora}`
 }
 
-export default function OrderPosDetail({ order: orderProp = null }) {
+// `apriPagamento`: la schermata si apre già sul pagamento. Serve a chi ci
+// arriva dal dettaglio di un ordine premendo «Pagamento» — al tavolo il
+// gesto è uno solo, e passare per il conto per poi premere un altro tasto
+// sarebbe un giro in più mentre il cliente aspetta col portafogli in mano.
+export default function OrderPosDetail({ order: orderProp = null, apriPagamento = false }) {
   const navigate = useNavigate()
   // Ordine auto-creato IN PLACE alla prima aggiunta (creazione): NON si naviga
   // altrove, così il layout non si ricarica. Da lì la schermata è identica alla
@@ -249,7 +253,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   // Il menu delle azioni vale SOLO sul telefono: altrove i tasti stanno in
   // pagina, e un ⋯ in più sarebbe solo un doppione da capire.
   const telefono = useTelefono()
-  const [showPayment, setShowPayment] = useState(false)
+  const [showPayment, setShowPayment] = useState(apriPagamento)
   const [showStoria, setShowStoria] = useState(false)
   // Chi sta usando l'app: la storia deve dire CHI ha riaperto il conto.
   // CHI SONO IO, nella forma che la storia sa scrivere: nome e, se si sa,

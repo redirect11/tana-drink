@@ -2728,6 +2728,11 @@ body.drawer-open .status-bell-float { display: none; }
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.02em;
+  /* GRASSETTO: dentro la card i titoletti («A fine serata», «Pezzi»,
+     «Soglia avviso», «Costo», «Al cl») stanno sopra i loro valori, non a
+     fianco. Scritti leggeri come il resto del grigio, l'occhio non trovava
+     dove comincia un blocco e dove finisce quello prima. */
+  font-weight: 700;
   display: inline-flex;
   align-items: center;
   gap: 4px;
