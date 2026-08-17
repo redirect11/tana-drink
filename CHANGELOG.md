@@ -4,6 +4,10 @@
 
 ### Al banco
 
+- **Il menu laterale si allarga tirando il bordo**, e cresce tutto
+  insieme — testo e icone. Doppio clic sulla maniglia per tornare alla
+  misura di partenza; la larghezza scelta resta anche domani.
+
 - **Nel magazzino i numeri si scrivono come li si pensa**: il contenuto
   per confezione in litri o cl («0,7 l», com'è sull'etichetta) e la soglia
   di avviso **in pezzi** — «avvisami quando resta una bottiglia» — invece
