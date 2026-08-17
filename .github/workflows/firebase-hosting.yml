@@ -1,10 +1,15 @@
 name: Deploy to Firebase
 
-# SI PUBBLICA SOLO CON UN TAG.
+# UN PUSH NON PUBBLICA. Ci vuole un gesto esplicito, e sono due: il tag,
+# oppure il lancio a mano di questo workflow.
 #
 #   tag su un commit di `main`  → PRODUZIONE, ma il deploy lo approva una
 #                                 persona (environment "production")
 #   tag su qualsiasi altro ramo → TEST, subito, senza chiedere niente
+#   lancio a mano (workflow_dispatch: Actions → Run workflow → il ramo)
+#                               → TEST. È così che si prova un ramo di
+#                                 lavoro: nessun tag, nessuna traccia nella
+#                                 storia. Sul ramo di hotfix si fa così.
 #   push su un ramo             → NON pubblica: girano solo lint e test
 #                                 (test.yml)
 #

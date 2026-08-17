@@ -9,7 +9,45 @@ una funzione, il terzo per le correzioni.
 
 ---
 
-## Non ancora rilasciata — 1.3.3
+## Non ancora rilasciata — 1.3.4
+
+### Al banco
+
+- **Il magazzino non scende più sotto zero.** Battendo un prodotto finito la
+  giacenza andava in negativo (il Jagermeister a −0,04 pz, con «valore
+  −0,67 €»), e il guaio si vedeva dopo: caricando la bottiglia comprata il
+  conto ripartiva dal buco e ne risultava meno di una, mentre sullo scaffale
+  c'era tutta. Adesso si scarica al massimo quello che c'è, un carico riparte
+  sempre da zero e il valore in euro non va mai in negativo. Al banco non
+  cambia niente: il conto si batte come prima, anche se la scorta è finita.
+- **Sulle card del magazzino i numeri si scrivono come si leggono.** Sotto al
+  Campari si leggeva «7.49000000001 pz», col punto e la coda di decimali del
+  calcolo: adesso sono due decimali e la virgola, in tutto il magazzino. E
+  sotto al numero grande dei pezzi ci va il **contenuto** — «749 cl» — invece
+  di ripetere gli stessi pezzi: è il dato che serve a chi sta versando.
+- **Il dettaglio di un prodotto resta dentro la card.** Aprendo un prodotto
+  nella vista a Card il pannello sbordava e il testo si spezzava a
+  fisarmonica, con costo, IVA e prezzo consigliato uno sopra l'altro. Adesso
+  ogni voce è incolonnata — etichetta sopra, valore sotto — e si legge tutta.
+  Anche la fila dei tasti **Modifica · Duplica · Elimina** sta nel riquadro:
+  quando la card è stretta i tasti vanno a capo e si leggono per intero, invece
+  di sfondare i bordi a destra e a sinistra. Nella vista a Lista, dove lo
+  spazio c'è, non cambia niente.
+- **La manodopera si mette a listino, in unità generiche.** Un prodotto del
+  magazzino si può misurare in **U** — «Unità generiche», nel menu delle unità
+  di misura — per quello che non si versa e non si pesa: il **tempo di
+  lavorazione**. Si mette nella ricetta dei drink che richiedono preparazione,
+  col suo costo per unità, e così il lavoro entra nel costo del drink e quindi
+  nel prezzo consigliato. Prima si potevano scegliere solo litri, centilitri,
+  grammi o pezzi, e nel Daiquiri si leggeva «Tempo di Lavorazione 1 g». Tre
+  cose che contano: **non è una scorta** — non si scala quando il drink si fa e
+  non risulta mai esaurito, quindi il drink non sparisce dalla carta e il tempo
+  non finisce negli ordini al fornitore — **non entra nel valore del
+  magazzino**, e **in carta al cliente non si vede**.
+
+---
+
+## 1.3.3 — 16 agosto 2026
 
 ### Al banco
 
