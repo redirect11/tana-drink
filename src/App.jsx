@@ -183,12 +183,17 @@ export default function App() {
   // mostra il ruolo ed «Esci» al posto di «Accedi».
   const [staffRole, setStaffRole] = useState(null)
   const [staffName, setStaffName] = useState('')
+  // C'È QUALCUNO DENTRO? Serve a decidere cosa mostrare a chi non è
+  // entrato: da sloggati si è un cliente qualunque, e la campanella degli
+  // avvisi non lo riguarda.
+  const [collegato, setCollegato] = useState(false)
   useEffect(() => {
     if (!isFirebaseConfigured) return
     return onAuthStateChanged(auth, async (u) => {
       // Le impostazioni della stampante sono di chi è collegato su QUESTO
       // dispositivo: cambiando persona cambia la scheda.
       impostaUtenteStampante(u?.uid || null)
+      setCollegato(!!u)
       if (!u) return setStaffRole(null)
       try {
         const token = await u.getIdTokenResult()
@@ -425,7 +430,13 @@ export default function App() {
           </span>
         )}
         <nav className="row">
-          <StatusBell />
+          {/* NIENTE CAMPANELLA A CHI NON È ENTRATO. Da sloggati si è un
+              cliente qualunque sulla parte pubblica del sito: gli avvisi
+              parlano di ordini che non ha ancora fatto, e «registra questo
+              terminale» è una domanda del gestionale — a un cliente non
+              vuol dire niente e non deve nemmeno comparire. Chi ordina o
+              scansiona il QR li riavrà, e saranno i suoi. */}
+          {collegato && <StatusBell />}
           {/* A tutto schermo ci va chi LAVORA sull'app per ore (banco, sala):
               al cliente che apre il menù dal telefono non serve, e in mezzo
               ai tasti era solo un'icona in più da capire. */}
