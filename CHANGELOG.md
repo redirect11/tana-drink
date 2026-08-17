@@ -2,8 +2,294 @@
 
 ## Non ancora rilasciata — 1.4.6
 
+### Sotto il cofano
+
+- **In locale, da un altro dispositivo della rete, i dati adesso
+  arrivano**: col Firestore emulato si parla in long-polling. Prima la
+  pagina si caricava, le connessioni c'erano, ma non consegnavano niente —
+  e a schermo restava «il wifi risulta collegato ma non sta passando
+  niente».
+
 ### Al banco
 
+- **«Annulla» funziona mentre si batte un conto nuovo**: il tasto della barra
+  azioni era spento per tutta la creazione, anche a righe già battute, e chi
+  aveva aperto il conto per sbaglio non aveva un modo evidente di uscire.
+  Adesso i due tasti «annulla» seguono la stessa regola; a conto ancora vuoto
+  non chiede nemmeno conferma, torna in coda.
+
+- **Nella vista menù, chi lavora non vede più i propri ordini in cima**:
+  lì si prende un ordine, gli ordini stanno in coda.
+- **In «Da servire» il tasto è «Aggiungi ordine»** e porta alla schermata
+  del conto, la stessa del «+» in coda: prima mandava al menù del cliente.
+
+- **Dal dettaglio di un ordine si aggiunge e si incassa.** «Modifica
+  ordine» apre la schermata del conto con la griglia dei prodotti,
+  «Pagamento» la apre già sul pagamento: prima si potevano solo cambiare le
+  quantità di quello che c'era, e per una birra in più — o per incassare al
+  tavolo — si tornava in coda a riaprire il conto dal banco.
+- **Nel magazzino i titoletti del dettaglio sono in grassetto**: a fine
+  serata, pezzi, soglia, costo e prezzo al cl si distinguono dai numeri.
+
+- **Le card del magazzino sono un po' più larghe**: aperto il dettaglio,
+  costo, IVA e prezzo consigliato non si spezzano più su tre righe.
+
+- **«Salva modifiche» dice che ha salvato** e riporta alla coda: prima il
+  tasto tornava com'era e non si capiva se fosse andata.
+
+- **Gli avvisi si possono spostare nella campanella.** Nel profilo, accanto
+  a quali avvisi ricevere, si sceglie: la strisciolina in alto su ogni schermata (come
+  adesso), oppure un fumetto che esce dalla campanella e compare **solo
+  nella coda ordini** — toccandolo si aprono gli avvisi. Chi sta in cassa o
+  in magazzino non viene più interrotto.
+
+- **La ⓘ si può spegnere** (Impostazioni → Vista ordine), per chi il
+  listino lo sa a memoria e vuole le card pulite.
+- **La riga «💳 Pagati» torna sulla sua riga**: finiva accanto al primo
+  item pagato.
+- **La ⓘ su ogni card dice come si fa il drink**: ingredienti con le
+  quantità e la preparazione a parole. Nella scheda del prodotto c'è un
+  campo nuovo, «Come si prepara» — shakerato o mescolato, il ghiaccio, il
+  bicchiere — perché la ricetta dice cosa ci va, non il gesto. I drink di
+  esempio ce l'hanno già tutti.
+
+- **Il «+» sulla riga del conto aumenta e basta**: apriva anche la scheda
+  dell'item, ogni volta.
+
+- **Separando le righe uguali, ognuna ha la sua quantità.** Prima il «−»
+  sulla prima di tre le spegneva tutte e tre: chi divideva il conto si
+  ritrovava da capo, e se non se ne accorgeva il cliente pagava meno di
+  quello che aveva preso. Ora si spegne quella che tocchi.
+
+- **Il numero sulla card e le righe del conto dicono la stessa cosa** anche
+  quando il conto porta l'id di un prodotto che non c'è più (cancellato e
+  rifatto, o catalogo reimportato): si riconosce dal nome, invece di
+  lasciare la card senza contatore con le righe lì sotto a vista.
+
+- **Le modifiche che non passeranno mai ora si capiscono e si scartano.**
+  Se una scheda del magazzino (o un conto) non esiste più, riprovare non
+  serve: la campanella lo dice a parole e offre di toglierle, invece di
+  restare rossa per sempre con un errore in inglese.
+
+- **Le timbrature hanno la loro voce in Staff**: erano in cima al
+  calendario, e per battere l'ingresso di chi arriva bisognava passare
+  dalla schermata dei turni.
+
+- **Le righe del conto si riordinano davvero**: tasto «organizza», maniglie,
+  e la riga che segue il dito mentre le altre si scansano — la stessa cosa
+  della griglia dei prodotti. Fuori da «organizza», toccare una riga la apre.
+- **Aprendo le azioni di una card in coda cresce solo quella**, e le card
+  sotto scendono: prima si allungavano tutte quelle della riga.
+
+- **Aprire e chiudere la cassa è del banco**: alla sala quelle voci non
+  compaiono più, né nel menu ⋯ né come tasto sul banner della cassa
+  chiusa — dove ora legge che la deve aprire il banco.
+- **«Mostra QR al cliente» compare solo con gli stati del servizio
+  attivi**: senza, non ci sarebbe niente da seguire.
+
+- **La password si può guardare**: l'occhio accanto al campo, all'accesso e
+  nel profilo. Parte sempre coperta.
+
+- **La schermata del conto nuovo si apre pulita, sempre.** Uscendo da
+  qualunque parte, quello che è stato battuto diventa un conto e la bozza
+  si chiude: non ci si ritrova più dentro le righe di quello prima.
+- **Un tasto 🧹 per svuotare il conto**, invece di togliere venti righe una
+  per una col «−». Chiede conferma.
+- **Annullare un conto appena battuto lascia un conto annullato**, anche se
+  l'ordine non era ancora nato: il numero era già stato preso e di quello
+  che si è battuto resta traccia.
+- **Nella storia del conto la stessa persona si chiama sempre allo stesso
+  modo**: il nome, con il ruolo fra parentesi. Prima compariva tre volte
+  con tre etichette diverse — l'email all'apertura, il ruolo all'annullo,
+  il nome alla riapertura.
+- **La storia del conto non perde più pezzi**: «Conto aperto» compare anche
+  prima che il server risponda, e restano tutte le chiusure, non solo
+  l'ultima.
+- **Le impostazioni del menù sono tre voci distinte**: «Menù clienti» (con
+  anche i suoi colori), «Gestione menù» e «Catalogo prodotti». Davanti a un
+  interruttore non si capiva a quale delle tre appartenesse.
+
+- **Quello che non è riuscito a partire riparte da solo** quando la rete
+  torna: prima restava lì finché qualcuno non apriva la campanella e
+  premeva «riprova» — e al banco non lo fa nessuno. Dopo tre tentativi si
+  ferma e lo segnala, perché a quel punto serve una persona.
+
+- **Il conto nuovo non eredita più le righe di quello prima.** La bozza
+  aspettava la sincronizzazione per svuotarsi: uscendo prima, il conto
+  dopo si apriva con dentro la roba già battuta.
+- **«Invia comanda» e «Annulla ordine» funzionano subito**, anche su un
+  conto appena battuto: prima erano spenti finché il server non
+  rispondeva. Annullare un conto non ancora aperto butta la bozza e
+  riporta alla coda.
+- **Nella schermata di pagamento si capisce da dove viene il numero**:
+  «RIGHE SCELTE» quando lo componi toccando le righe, «IMPORTO A MANO»
+  quando lo batti — e in quel caso è un acconto, scritto lì sotto.
+
+- **Si capisce che cosa è stato pagato.** Al posto di «Sconto e acconti già
+  incassati −15,00 €» ci sono righe distinte: lo sconto, e ogni incasso col
+  metodo e l'ora. Un importo battuto a mano si chiama **acconto** e non
+  finge di coprire delle righe; chi paga scegliendo le righe le vede
+  elencate sotto l'incasso.
+- **Niente più attese del server quando si tocca un conto**: incassare,
+  annullare, avanzare o aggiungere righe si vede all'istante, e il
+  riepilogo in cima alla coda si muove con te.
+
+- **Le attese ora si vedono**: entrando, aprendo la cassa o cercando nello
+  storico, tre bollicine dicono che l'app sta lavorando — e dicono anche
+  cosa sta aspettando, invece di una scritta ferma che sembra un blocco.
+
+- **Il conto nasce all'istante e non si sdoppia.** Prima di scrivere un
+  ordine l'app faceva tre domande al server: da lì l'attesa fra
+  «Conferma» e il conto a schermo, e due conti battuti di fila potevano
+  prendere lo stesso numero (i due #15 della stessa serata). Ora i numeri
+  sono già in casa e ci si ricorda quelli dati.
+- **Due terminali che battono insieme non litigano più sul numero**: se il
+  telefono della sala e il tablet del banco prendono lo stesso #15, il
+  server decide — tiene il numero chi è arrivato prima, l'altro passa al
+  primo libero da solo, e sul conto resta scritto da quale numero veniva
+  (la comanda può essere già uscita dalla stampante).
+- **Tornare agli ordini non aspetta più il server**: il box del nome
+  compare subito e il conto si scrive per conto suo.
+- **Il «+» apre sempre un conto nuovo**: capitava che riaprisse quello
+  appena battuto.
+
+- **La cassa si apre e si chiude dalla coda**: nel menu ⋯ c'è «Apri cassa»
+  se è chiusa e «Chiudi cassa» se è aperta — spento, con il perché
+  scritto, finché ci sono conti aperti. «Apri cassa» chiede il fondo
+  (facoltativo) in un box con Apri e Annulla, anche dal banner in alto.
+
+- **Staff e Utenti hanno tre sezioni nel menu laterale**: calendario,
+  nuovo turno, paghe orarie; utenze registrate, nuovo account, buoni VIP.
+  Erano pannelli che aprendosi spingevano giù quello che si era venuti a
+  guardare.
+- **La maniglia del menu si prende davvero**: sta fra il menu e la pagina,
+  non più sotto la barra di scorrimento. E nel menu non si scorre più in
+  orizzontale: allargandolo, i nomi ci stanno.
+
+- **Stringendo le categorie a lato non restano più le pastiglie grigie.**
+  Dove le voci non hanno un'icona non c'era modo di capire quale fosse
+  quale: ora si tolgono di mezzo e resta il tasto per rimetterle.
+
+- **Il menu laterale si allarga tirando il bordo**, e cresce tutto
+  insieme — testo e icone. Doppio clic sulla maniglia per tornare alla
+  misura di partenza; la larghezza scelta resta anche domani.
+
+- **Nel magazzino i numeri si scrivono come li si pensa**: il contenuto
+  per confezione in litri o cl («0,7 l», com'è sull'etichetta) e la soglia
+  di avviso **in pezzi** — «avvisami quando resta una bottiglia» — invece
+  che in millilitri.
+
+- **Uscendo, gli avvisi di quel dispositivo si spengono** — chi si era
+  scollegato sentiva ancora suonare gli ordini del locale sul telefono di
+  casa — e rientrando si riaccendono da soli.
+- **Se gli avvisi sono spenti, ora si vede.** Una riga in cima lo dice e
+  offre il tasto per attivarli; se si rifiuta per sbaglio ricompare,
+  perché è proprio quello il caso da coprire.
+
+- **Il flusso cassa parla durante la serata, non solo alla chiusura**:
+  quanto deve esserci in cassa adesso (fondo + contanti), il conto medio
+  con i coperti e quanto lascia una persona, chi ha incassato e quanto —
+  se alla cassa si sono alternati in più d'uno — e com'è andata l'ultima
+  ora, non solo la curva.
+
+- **Nella lista ordini si cercano anche le serate passate.** C'è un
+  calendario come quelli degli alberghi: tocchi un giorno per vedere
+  quella serata, ne tocchi un altro per arrivare fin lì. Sopra, le
+  scorciatoie: oggi, ieri, ultimi 7 e 30 giorni.
+- **E si può guardare solo quello che arriva dai clienti**, o solo quello
+  battuto al banco e in sala. Il filtro compare solo se di ordini dai
+  clienti ce n'è.
+- **Le scorte si scalano quando il drink è servito**, non quando lo si
+  prende in carico: un drink iniziato e poi non fatto — riga tolta,
+  cliente che cambia idea — portava via gli ingredienti lo stesso. Fino a
+  lì restano *impegnati* e si leggono nella colonna «a fine serata».
+  Senza gli stati del servizio non cambia niente: si scala alla riscossione.
+- **«Riscuoti e servi», se lo volete.** Con gli stati del servizio
+  incassare non chiude il conto (si paga anche in anticipo). Ma al banco
+  spesso si consegna e si incassa nello stesso gesto: da Impostazioni →
+  Gestione preparazione si accende un secondo tasto che fa le due cose
+  insieme.
+- **Nel riepilogo in cima alla coda ci sono anche gli annullati**, accanto
+  ad aperti e chiusi. Fuori dal totale, che sono i soldi veri.
+- **«A fine serata» contava anche i conti già chiusi**, e con un tavolo
+  solo segnava mezzo listino in esaurimento. Ora guarda solo i conti
+  ancora aperti — quelli incassati e serviti il magazzino l'hanno già
+  scalato. E il riepilogo in cima alla coda conta esattamente i conti che
+  si vedono sotto, qualunque tab sia aperta.
+- **Il magazzino dice quello che ti ritrovi a fine serata.** Accanto alle
+  scorte c'è una colonna con quello che resterà se tutti i conti aperti
+  vengono incassati così come sono: i drink già fatti sui tavoli hanno
+  promesso quegli ingredienti, e la domanda a metà servizio è «mando
+  qualcuno a prendere una bottiglia?». Il numero cambia appena l'item
+  entra nel conto; a cassa chiusa la colonna non c'è.
+- **I numeri in cima alla coda sono di questa apertura di cassa.** Dopo
+  una chiusura e una riapertura si leggeva ancora l'incasso della serata
+  prima: contavano la giornata, non l'apertura. A cassa chiusa sono zeri.
+- **I numeri in cima alla coda non cambiano più cambiando tab**: sono
+  cumulativi — aperti, chiusi e annullati di questa apertura di cassa.
+- **Un conto annullato adesso resta nella sua tab**, anche se era aperto
+  giorni prima: spariva dallo schermo nell'istante in cui lo si annullava,
+  e non si capiva se l'operazione fosse andata a buon fine. Stessa cosa
+  per la cassa: un tavolo aperto ieri e incassato stasera è incasso di
+  stasera.
+- **Nella coda ci sono solo i conti di questa apertura di cassa.** Chiusi
+  e annullati di prima dell'ultima chiusura non compaiono in nessuna tab:
+  sono già stati contati e rendicontati, e stanno in Cassa → lista ordini.
+  I conti *aperti* restano sempre, anche a cassa chiusa: quelli sono da
+  chiudere.
+- **Le impostazioni della stampante sono di chi è collegato**, oltre che
+  del dispositivo: sullo stesso tablet ognuno ha il suo indirizzo e la sua
+  stampa automatica. La prima volta si parte da quelle che il dispositivo
+  aveva già, così nessuno resta senza stampante a servizio iniziato.
+- **Le schede della griglia hanno il rilievo delle card della coda**:
+  ombra e una sfumatura appena accennata. Erano riquadri piatti su fondo
+  piatto, e con le colonne strette si leggevano come un blocco solo.
+- **Le timbrature dello staff sono passate in Staff**, in cima alle ore:
+  stavano in fondo alla cassa, e per battere l'ingresso di chi arriva
+  bisognava passare dal flusso di cassa.
+- **«Flusso cassa» si chiama Cassa e ha tre sezioni**: flusso, lista
+  ordini, chiusure. Erano tre posti per la stessa domanda, e due si
+  raggiungevano da tasti in fondo alla pagina — che si trovano solo
+  scorrendo fino in fondo.
+- **Il Menù ha tre sezioni nel menu laterale**: modifica menù, categorie,
+  marginalità del listino. Erano due pannelli a scomparsa in cima al
+  catalogo, e aprirli spingeva giù tutta la griglia.
+- **Le schermate si aprono già com'erano.** Aprendo un conto le strisce
+  comparivano colorate per un istante e poi sparivano, in un locale che le
+  aveva spente: le impostazioni arrivano dal server e per quel momento non
+  c'erano. Ora si riparte dall'ultima volta.
+- **La striscia a sinistra delle card si sceglie.** Quattro modi:
+  **spenta**, **colore del prodotto**, **colore della categoria** (quello
+  del singolo prodotto resta nella linguetta) e **scorte** — rosso
+  ingrediente esaurito, arancione in esaurimento, e «ce n'è abbastanza»
+  grigio o verde, come preferisci. La griglia del conto si imposta in
+  *Vista ordine*, le schede del catalogo in *Menù e catalogo*: dipende da
+  come si lavora, e non c'era motivo che lo decidessimo noi. La
+  **linguetta** nell'angolo continua a mostrare il colore del prodotto,
+  qualunque cosa dica la striscia. Anche il verde/grigio del «ce n'è
+  abbastanza» si sceglie separatamente per le due schermate: nel conto si
+  batte di corsa e una griglia tutta verde è rumore, nel catalogo il verde
+  dice che si può fare.
+- **Le statistiche si aprono sull'ultima chiusura di cassa**, e quel
+  periodo è il primo della riga: la domanda del mattino dopo è «com'è
+  andata ieri sera», non «com'è andata la settimana». Chi sceglie un altro
+  periodo se lo tiene.
+- **Giornaliero e Mensile per macro sono passati nel menu**, come le
+  sezioni di Magazzino e Impostazioni: una riga di chip in meno sopra una
+  schermata già fatta di tabelle.
+- **Il conto annullato mostra cosa c'era dentro.** Si apriva vuoto, a zero
+  euro e senza una riga: non si capiva né cosa contenesse né se valesse la
+  pena riaprirlo. Ora le righe si vedono, barrate — non fanno somma,
+  perché quel conto non lo paga nessuno.
+- **«Chiamate staff e gruppi» non è più un tasto che non fa niente.** Con
+  un solo account non c'è nessuno da chiamare e il pannello spariva da sé:
+  ora lo dice, e dice dove si creano gli account.
+- **In «Organizza» la card non scappa più fuori dalla griglia.**
+  Portandola oltre il bordo destro partiva uno scorrimento senza fine, e
+  per rivedere le altre card bisognava riportare indietro la barra a mano.
+- **Nella coda c'è la tab «✖️ Annullati».** Stavano fra i «Chiusi», che
+  sono i soldi della serata: facevano numero senza essere incassi, e per
+  ritrovarne uno da riaprire si cercava in mezzo a quelli buoni.
 - **Il «+» della coda e il tasto del pagamento hanno lo stesso oro del tab
   acceso.** Sui temi chiari restavano più smorti: il colore dei tasti
   seguiva il tema di contorno, quello del tab no. Ora è lo stesso, e i

@@ -11,7 +11,7 @@
 // categorie; il cliente invece sfoglia la vetrina, senza barra.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import '@testing-library/jest-dom/vitest'
@@ -25,7 +25,10 @@ vi.mock('../../src/lib/api.js', () => ({
     cb({ service_mode: 'tavolo', menu_only: false, ...mockSettings })
     return () => {}
   }),
-  subscribeOrder: vi.fn(() => () => {}),
+  subscribeOrder: vi.fn((id, cb) => {
+    cb(ordineRicordato)
+    return () => {}
+  }),
   subscribeReadyOrders: vi.fn(() => () => {}),
   subscribeOpenGroups: vi.fn(() => () => {}),
   subscribeRecentGroups: vi.fn(() => () => {}),
@@ -36,6 +39,7 @@ vi.mock('../../src/lib/api.js', () => ({
     comande: [{ id: 'c1', seq: 1, items: [{ drink_id: 'd1', name: 'Mojito', qty: 1, unit_price: 7 }] }],
   })),
   DEFAULT_SETTINGS: { service_mode: 'tavolo' },
+  settingsIniziali: () => ({ service_mode: 'tavolo' }),
 }))
 
 const DRINKS = [
@@ -55,6 +59,16 @@ vi.mock('../../src/lib/menuCache.js', () => ({
     drinks: mockDrinks,
   }),
 }))
+
+// L'ordine che questo dispositivo si ricorda (il cliente lo ritrova in cima
+// al menù; chi lavora no).
+const ordineRicordato = {
+  id: 'o-mio',
+  daily_number: 7,
+  workflow_status: 'ricevuto',
+  total: 8,
+  order_items: [{ drink_id: 'd1', name: 'Negroni', qty: 1, unit_price: 8 }],
+}
 
 vi.mock('../../src/lib/firebaseClient.js', () => ({
   isFirebaseConfigured: true,
@@ -276,5 +290,25 @@ describe('la comanda dell’ordine preso in sala', () => {
     await screen.findByText('Mojito')
     await ordina(user)
     expect(stampata).not.toHaveBeenCalled()
+  })
+})
+
+// LA VISTA MENÙ, PER CHI LAVORA, SERVE A UNA COSA: battere un ordine. La
+// coda è un'altra pagina — vedersi in mezzo i propri ordini attivi
+// mescolava due mestieri. Al cliente invece servono: è l'unico posto dove
+// ritrova quello che ha ordinato.
+describe('gli ordini in cima al menù', () => {
+  it('il cliente ritrova il suo', async () => {
+    localStorage.setItem('tana_my_orders_v1', JSON.stringify(['o-mio']))
+    ruoloClaim = null
+    mostra()
+    expect(await screen.findByText(/Ordine #7/)).toBeInTheDocument()
+  })
+
+  it('chi lavora no: gli ordini stanno in coda', async () => {
+    localStorage.setItem('tana_my_orders_v1', JSON.stringify(['o-mio']))
+    ruoloClaim = 'bartender'
+    mostra()
+    await waitFor(() => expect(screen.queryByText(/Ordine #7/)).toBeNull())
   })
 })

@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { subscribeSync, retryAllSync, retryLastSync } from '../lib/sync.js'
+import {
+  subscribeSync,
+  retryAllSync,
+  retryLastSync,
+  scartaFalliteDefinitive,
+} from '../lib/sync.js'
 import {
   subscribeNotifs,
   segnaLetta,
@@ -39,6 +44,17 @@ export default function StatusBell({ floating = false }) {
 
   useEffect(() => subscribeSync(setSync), [])
   useEffect(() => subscribeNotifs(setNotifs), [])
+  // IL FUMETTO APRE GLI AVVISI. Chi lo tocca vuole vedere cos'è successo,
+  // e quello che è successo sta qui dentro: un evento, perché il fumetto è
+  // disegnato dalla coda e la campanella sta nella barra in alto.
+  useEffect(() => {
+    const apri = () => {
+      setOpen(true)
+      setStorico(false)
+    }
+    window.addEventListener('tana:apri-avvisi', apri)
+    return () => window.removeEventListener('tana:apri-avvisi', apri)
+  }, [])
 
   // APRIRE NON È LEGGERE. Prima bastava aprire la campanella perché tutto
   // risultasse visto: si dava un'occhiata di corsa fra due ordini e l'avviso
@@ -173,9 +189,28 @@ export default function StatusBell({ floating = false }) {
                   ⚠️ <strong>{sync.failedCount}</strong> modifica{sync.failedCount === 1 ? '' : 'e'} non sincronizzat{sync.failedCount === 1 ? 'a' : 'e'}
                   {sync.lastError ? <span className="muted"> · {sync.lastError}</span> : null}
                 </div>
-                <div className="row" style={{ gap: 6, marginTop: 8 }}>
-                  <button className="btn small" onClick={retryLastSync}>↻ Riprova ultima</button>
-                  <button className="btn secondary small" onClick={retryAllSync}>↻ Riprova tutte</button>
+                {/* QUELLE CHE NON PASSERANNO. Un documento cancellato o un
+                    permesso mancante non cambiano riprovando: senza un modo
+                    per toglierle, la campanella resta rossa per sempre. */}
+                {sync.definitiveCount > 0 && (
+                  <div className="muted small" style={{ marginTop: 4 }}>
+                    {sync.definitiveCount === sync.failedCount
+                      ? 'Riprovare non serve: riguardano roba che non c’è più.'
+                      : `${sync.definitiveCount} riguardano roba che non c’è più: riprovare non serve.`}
+                  </div>
+                )}
+                <div className="row" style={{ gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+                  {sync.definitiveCount < sync.failedCount && (
+                    <>
+                      <button className="btn small" onClick={retryLastSync}>↻ Riprova ultima</button>
+                      <button className="btn secondary small" onClick={retryAllSync}>↻ Riprova tutte</button>
+                    </>
+                  )}
+                  {sync.definitiveCount > 0 && (
+                    <button className="btn ghost small" onClick={scartaFalliteDefinitive}>
+                      ✖️ Scarta quelle perse
+                    </button>
+                  )}
                 </div>
               </div>
             ) : (

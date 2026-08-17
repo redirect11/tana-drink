@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import Caricamento from './Caricamento.jsx'
 import {
   DndContext,
   closestCenter,
@@ -18,6 +19,13 @@ import { CSS } from '@dnd-kit/utilities'
 import { DrinkTile } from './PosBits.jsx'
 import { catBtnStyle } from '../lib/posStyles.js'
 import { catColor, drinkCategoryColor, CATEGORY_PALETTE } from '../lib/categoryColors.js'
+import {
+  coloreStriscia,
+  scorteDelDrink,
+  striscaGuardaLeScorte,
+  MODO_STRISCIA_DEFAULT,
+} from '../lib/strisce.js'
+import { stockStatus } from '../lib/inventory.js'
 import {
   applyOrder,
   moveInOrder,
@@ -58,11 +66,36 @@ import DrinkForm from './DrinkForm.jsx'
 // fa nulla: è solo un contenitore che resta al suo posto.
 const SENSORI_SPENTI = []
 
+// LA CARD IN MANO NON ESCE DALLA GRIGLIA.
+//
+// Trascinandola verso destra finiva oltre il bordo: lì fuori non c'è
+// niente da riordinare, ma la griglia — che scorre — si allargava per
+// contenerla e partiva uno scorrimento orizzontale senza fine. Per
+// tornare a vedere le card bisognava riportare indietro la barra a mano.
+//
+// Qui il movimento si ferma ai bordi del riquadro che scorre: si può
+// prendere una card e portarla dove ha senso lasciarla, e basta. È un
+// «modifier» di dnd-kit, cioè una funzione che corregge lo spostamento
+// prima che venga applicato.
+function dentroLaGriglia({ transform, draggingNodeRect, containerNodeRect }) {
+  if (!draggingNodeRect || !containerNodeRect) return transform
+  const minX = containerNodeRect.left - draggingNodeRect.left
+  const maxX = containerNodeRect.right - draggingNodeRect.right
+  const minY = containerNodeRect.top - draggingNodeRect.top
+  const maxY = containerNodeRect.bottom - draggingNodeRect.bottom
+  return {
+    ...transform,
+    x: Math.min(Math.max(transform.x, minX), maxX),
+    y: Math.min(Math.max(transform.y, minY), maxY),
+  }
+}
+
 function Riordinabile({ attiva, sensori, ids, onFine, children }) {
   return (
     <DndContext
       sensors={attiva ? sensori : SENSORI_SPENTI}
       collisionDetection={closestCenter}
+      modifiers={[dentroLaGriglia]}
       onDragEnd={onFine}
     >
       <SortableContext items={ids} strategy={rectSortingStrategy}>
@@ -75,7 +108,7 @@ function Riordinabile({ attiva, sensori, ids, onFine, children }) {
 // Una cella della griglia in modalità organizza: la maniglia porta i
 // gesti, la card dentro resta com'è. Il movimento — la card che segue il
 // dito e le altre che fanno spazio — lo mette dnd-kit.
-function CellaOrdinabile({ drink, qty, color, onApri }) {
+function CellaOrdinabile({ drink, qty, color, striscia, onApri }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: drink.id })
   return (
@@ -93,7 +126,14 @@ function CellaOrdinabile({ drink, qty, color, onApri }) {
       >
         ⠿
       </div>
-      <DrinkTile drink={drink} qty={qty} color={color} onAdd={onApri} onSetQty={() => {}} />
+      <DrinkTile
+        drink={drink}
+        qty={qty}
+        color={color}
+        striscia={striscia}
+        onAdd={onApri}
+        onSetQty={() => {}}
+      />
     </div>
   )
 }
@@ -103,6 +143,7 @@ export default function PosProductPicker({
   cats,
   loading,
   qtyByDrink,
+  onInfo,
   onAdd,
   onSetQty,
   onInteract = null, // notifica il parent quando si lavora sulla griglia (scroll/ricerca)
@@ -113,6 +154,9 @@ export default function PosProductPicker({
   // Cosa fa la ricerca: filtrare le card (come è sempre stato) oppure
   // lasciarle tutte in griglia e accendere la prima che risponde.
   ricercaEvidenzia = false,
+  // Cosa dice la striscia a sinistra delle tile (vedi lib/strisce.js).
+  modoStriscia = MODO_STRISCIA_DEFAULT,
+  scorteVerdi = false,
 }) {
   const [selectedCat, setSelectedCat] = useState(null)
   const [query, setQuery] = useState('')
@@ -176,12 +220,19 @@ export default function PosProductPicker({
     if (cats.length > 0 && selectedCat === null) setSelectedCat('__all__')
   }, [cats, selectedCat])
 
-  // Inventario: serve solo alla scheda prodotto (ricetta). Si carica alla
-  // prima apertura del menu prodotto, non all'avvio del POS.
+  // Inventario: serve alla scheda prodotto (ricetta) e, se la striscia
+  // dice le scorte, a disegnare la griglia. Si carica alla prima apertura
+  // del menu prodotto — o subito, ma SOLO quando le scorte servono
+  // davvero: sono ricette e giacenze, non si leggono per niente.
+  const serveMagazzino = striscaGuardaLeScorte(modoStriscia)
   useEffect(() => {
-    if (!menuDrink || inventory.length > 0) return
+    if ((!menuDrink && !serveMagazzino) || inventory.length > 0) return
     fetchInventoryItems().then((inv) => setInventory(inv || [])).catch(() => setInventory([]))
-  }, [menuDrink, inventory.length])
+  }, [menuDrink, serveMagazzino, inventory.length])
+  const scorteById = useMemo(
+    () => Object.fromEntries((inventory || []).map((i) => [i.id, i])),
+    [inventory]
+  )
   // localStorage = cache locale immediata (funziona offline al primo avvio).
   useEffect(() => saveOrder(order), [order])
   useEffect(() => saveFavorites(favorites), [favorites])
@@ -218,7 +269,20 @@ export default function PosProductPicker({
     setTileColors(next)
     savePosColors(next).catch(() => {})
   }
-  const tileColor = (d) => tileColors[d.id] || drinkCategoryColor(d, cats)
+  // Il colore del PRODOTTO: la linguetta in alto a sinistra, che si tocca
+  // per cambiarlo. Non dipende dall'impostazione della striscia — un
+  // colore scelto a mano deve restare visibile.
+  const coloreProdotto = (d) => tileColors[d.id] || drinkCategoryColor(d, cats)
+  // Il colore della STRISCIA: la regola sta in lib/strisce.js, così la
+  // stessa striscia significa la stessa cosa anche nelle schede del menù.
+  const tileColor = (d) =>
+    coloreStriscia({
+      modo: modoStriscia,
+      coloreProdotto: tileColors[d.id] || null,
+      coloreCategoria: drinkCategoryColor(d, cats),
+      scorte: serveMagazzino ? scorteDelDrink(d, scorteById, stockStatus) : null,
+      verdeQuandoOk: scorteVerdi,
+    })
   const catKey = (c) => c.id ?? c.name
   const favSet = useMemo(() => new Set(favorites), [favorites])
   const byId = useMemo(() => new Map((drinks || []).map((d) => [d.id, d])), [drinks])
@@ -451,6 +515,11 @@ export default function PosProductPicker({
             // Arrivati in cima, il trascinamento si ferma qui: non passa al
             // documento, dove Android farebbe partire il ricaricamento
             // della pagina in mezzo a un ordine.
+            // Niente scorrimento LATERALE: la griglia va a capo, non di
+            // lato. Restava aperto perché `overflow-y: auto` porta con sé
+            // l'orizzontale, e bastava una card trascinata oltre il bordo
+            // per allargare tutto.
+            overflowX: 'hidden',
             overscrollBehavior: 'contain',
             WebkitOverflowScrolling: 'touch',
             padding: '10px 8px',
@@ -470,7 +539,11 @@ export default function PosProductPicker({
             pointerEvents: disabled ? 'none' : 'auto',
           }}
         >
-          {loading && <div className="empty" style={{ gridColumn: '1/-1' }}>Carico…</div>}
+          {loading && (
+            <div style={{ gridColumn: '1/-1' }}>
+              <Caricamento testo="Preparo il listino…" />
+            </div>
+          )}
           {!loading && visibleDrinks.length === 0 && (
             <div className="empty" style={{ gridColumn: '1/-1' }}>
               {selectedCat === '__fav__'
@@ -488,7 +561,8 @@ export default function PosProductPicker({
                 key={d.id}
                 drink={d}
                 qty={qtyByDrink[d.id] ?? 0}
-                color={tileColor(d)}
+                color={coloreProdotto(d)}
+                striscia={tileColor(d)}
                 onApri={() => setMenuDrink(d)}
               />
             ) : (
@@ -496,7 +570,9 @@ export default function PosProductPicker({
                 key={d.id}
                 drink={d}
                 qty={qtyByDrink[d.id] ?? 0}
-                color={tileColor(d)}
+                onInfo={onInfo ? () => onInfo(d) : undefined}
+                color={coloreProdotto(d)}
+                striscia={tileColor(d)}
                 acceso={d.id === idAcceso}
                 favorite={favSet.has(d.id)}
                 onToggleFav={() => toggleFav(d.id)}

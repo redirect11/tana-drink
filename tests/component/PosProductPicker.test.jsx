@@ -109,6 +109,14 @@ describe('ricerca prodotti: accendi e porta lì', () => {
 describe('modalità organizza', () => {
   const griglia = (c) => c.querySelector('[style*="grid-template-columns"]')
 
+  it('la griglia non scorre di lato: va a capo', () => {
+    // Trascinando una card oltre il bordo destro, la griglia si allargava
+    // per contenerla e partiva uno scorrimento orizzontale senza fine: per
+    // rivedere le card bisognava riportare indietro la barra a mano.
+    const { container } = mostra()
+    expect(griglia(container).style.overflowX).toBe('hidden')
+  })
+
   it('il minimo delle colonne lo calcola il browser, non una misura in ritardo', () => {
     // Trascinando la maniglia di fianco alla griglia, la larghezza misurata
     // arriva sempre qualche fotogramma dopo: col conto fatto in JS, per un
@@ -183,5 +191,58 @@ describe('modalità organizza', () => {
       expect(cella.querySelector('.reorder-grip')).toBeTruthy()
       expect(cella.querySelector('[data-drink-id]')).toBeTruthy()
     }
+  })
+})
+
+// ── LA STRISCIA DELLE TILE DICE QUELLO CHE IL LOCALE HA SCELTO ───────
+// Lo stesso segno, quattro significati: il colore del prodotto, quello
+// della categoria, le scorte, o niente (REQ-POS-019).
+describe('la striscia delle tile', () => {
+  const bordo = (container, nome) => {
+    const card = [...container.querySelectorAll('[data-drink-id]')].find((el) =>
+      el.textContent.includes(nome)
+    )
+    return card?.style.borderLeftColor
+  }
+
+  it('«spenta»: grigia, anche se il prodotto ha il suo colore', () => {
+    const { container } = mostra({ modoStriscia: 'spenta' })
+    expect(bordo(container, 'Mojito')).toBe('var(--line)')
+  })
+
+  it('«scorte»: senza ricetta collegata non si inventa un allarme', () => {
+    // Un drink senza ingredienti in magazzino non è «esaurito»: non lo
+    // sappiamo, e col verde spento resta grigio.
+    const { container } = mostra({ modoStriscia: 'scorte' })
+    expect(bordo(container, 'Mojito')).toBe('var(--line)')
+  })
+
+  it('senza indicazioni resta il modo di sempre: il colore del prodotto', () => {
+    const { container } = mostra()
+    expect(bordo(container, 'Mojito')).not.toBe('')
+  })
+
+  it('la LINGUETTA tiene il colore del prodotto, qualunque cosa dica la striscia', () => {
+    // Sono due segni diversi: la striscia dice quello che il locale ha
+    // scelto, la linguetta il colore che il prodotto ha al banco — e si
+    // tocca per cambiarlo. Condividendo lo stesso valore, scegliendo
+    // «categoria» per la striscia il colore scelto a mano spariva dalla
+    // vista pur essendo ancora lì.
+    const { container } = mostra({
+      modoStriscia: 'spenta',
+      // Il drink deve stare in una categoria, se no un colore non ce l'ha
+      // e la linguetta non si disegna proprio.
+      drinks: [{ id: '4', name: 'Mojito', price: 7, available: true, category_id: 'c1' }],
+      cats: [{ id: 'c1', name: 'Cocktail', color: '#ff00aa' }],
+    })
+    const card = [...container.querySelectorAll('[data-drink-id]')].find((el) =>
+      el.textContent.includes('Mojito')
+    )
+    // La striscia tace…
+    expect(card.style.borderLeftColor).toBe('var(--line)')
+    // …ma la linguetta no.
+    const nastro = card.querySelector('.pos-tile-nastro')
+    expect(nastro).toBeTruthy()
+    expect(nastro.style.borderTopColor).not.toBe('var(--line)')
   })
 })

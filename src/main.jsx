@@ -4,6 +4,13 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App.jsx'
 import './index.css'
 import { initCookieConsent } from './lib/cookieConsent.js'
+import { avviaProgressivi } from './lib/progressivi.js'
+
+// I NUMERI DEGLI ORDINI SI PRECARICANO. Battere un conto non deve aspettare
+// la rete: quale cassa è aperta e a che punto sono i progressivi si tengono
+// aggiornati da qui in avanti, così alla creazione non si chiede niente a
+// nessuno (vedi lib/progressivi.js).
+avviaProgressivi()
 
 // basename per il router: ricavato dalla base di Vite (BASE_URL).
 // Su Firebase Hosting il sito è servito dalla radice ("/"); su GitHub Pages

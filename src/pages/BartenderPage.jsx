@@ -13,6 +13,7 @@ import {
   subscribeActiveOrders,
   subscribeSettings,
   DEFAULT_SETTINGS,
+  settingsIniziali,
   saveStaffToken,
   restoreOrder,
 } from '../lib/api.js'
@@ -27,7 +28,16 @@ import {
   placedByName,
   placedByLetter,
 } from '../lib/orderStatus.js'
-import { bucketByStatus, ordersRecap, ordineCorrisponde, primoCorrispondente, inseritiDa } from '../lib/coda.js'
+import {
+  bucketByStatus,
+  ordersRecap,
+  ordineCorrisponde,
+  primoCorrispondente,
+  inseritiDa,
+  restaInCoda,
+  ordiniInCoda,
+  voceCassa,
+} from '../lib/coda.js'
 import { ripristinabile } from '../lib/storiaOrdine.js'
 import { StoriaOrdineDialog, RipristinaOrdineDialog } from '../components/StoriaOrdine.jsx'
 import StatusBell from '../components/StatusBell.jsx'
@@ -41,7 +51,7 @@ import {
   avvisoAttivo,
   idAvvisoStato,
 } from '../lib/preferenzeNotifiche.js'
-import { allServed } from '../lib/comande.js'
+import { allServed, contoChiuso } from '../lib/comande.js'
 import { paidAmount, orderTotal } from '../lib/pagamento.js'
 import { businessDayKey, businessDayLabel, businessDayShort } from '../lib/businessDay.js'
 import { isAwaitingPayment } from '../lib/payments.js'
@@ -63,10 +73,14 @@ import UtentiTab from '../components/UtentiTab.jsx'
 import VipTab from '../components/VipTab.jsx'
 import ServiceQueue from '../components/ServiceQueue.jsx'
 import StaffCallList from '../components/StaffCallList.jsx'
+import Caricamento from '../components/Caricamento.jsx'
+import FumettoAvvisi from '../components/FumettoAvvisi.jsx'
+import CampoPassword from '../components/CampoPassword.jsx'
+import ApriCassaBox from '../components/ApriCassaBox.jsx'
+import ChiudiCassaBox from '../components/ChiudiCassaBox.jsx'
 import GroupsPanel from '../components/GroupsPanel.jsx'
 import GroupView from '../components/GroupView.jsx'
-import CashFlow from '../components/CashFlow.jsx'
-import OrdersHistory from '../components/OrdersHistory.jsx'
+import CassaTab from '../components/CassaTab.jsx'
 import InvoicesTab from '../components/InvoicesTab.jsx'
 import ConfirmDialog from '../components/ConfirmDialog.jsx'
 import CancelOrderDialog from '../components/CancelOrderDialog.jsx'
@@ -190,7 +204,7 @@ export default function BartenderPage() {
   }, [wideTab, tab])
 
   if (user === undefined || (user && role === null)) {
-    return <div className="empty">Verifica accesso…</div>
+    return <Caricamento testo="Ti sto facendo entrare…" />
   }
   if (!user) return <LoginForm />
 
@@ -238,8 +252,13 @@ export default function BartenderPage() {
         {tabEffettivo === 'coda' && <OrderQueue mieiIniziale={salaMiei} gestore={isGestore(role)} />}
         {/* «Da servire»: la sezione della sala (drink pronti da portare). */}
         {tabEffettivo === 'servizio' && <ServiceQueue />}
-        {tabEffettivo === 'pagamenti' && <CashFlow canManageStaff={isGestore(role)} />}
-        {tabEffettivo === 'storico' && <OrdersHistory />}
+        {tabEffettivo === 'pagamenti' && <CassaTab />}
+        {/* IL VECCHIO INDIRIZZO NON SI ROMPE. `?tab=storico` è nei
+            collegamenti salvati e nei messaggi: porta alla cassa, aperta
+            sulla lista ordini. */}
+        {tabEffettivo === 'storico' && (
+          <CassaTab sezioneIniziale="ordini" />
+        )}
         {tabEffettivo === 'fatture' && <InvoicesTab />}
         {tabEffettivo === 'stats' && <StatsTab />}
         {tabEffettivo === 'menu' && <MenuTab />}
@@ -349,9 +368,8 @@ function LoginForm() {
         required
       />
       <label htmlFor="password" style={{ marginTop: 10 }}>Password</label>
-      <input
+      <CampoPassword
         id="password"
-        type="password"
         autoComplete="current-password"
         value={password}
         onChange={(e) => { setPassword(e.target.value); setErr(null) }}
@@ -463,6 +481,8 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
   const [search, setSearch] = useState('')
   const [showPanels, setShowPanels] = useState(false) // pannelli (chiamate/gruppi) nella griglia
   const [menuBoard, setMenuBoard] = useState(false) // menu ⋯ della lavagna
+  const [apriCassa, setApriCassa] = useState(false) // box «apri la cassa»
+  const [chiudiCassa, setChiudiCassa] = useState(false) // box «chiudi la cassa»
   // Verso della lista: dal più vecchio (come nasce la serata) o dal più
   // recente (utile quando i conti sono tanti e l'ultimo è quello che
   // serve). Si ricorda, perché è una preferenza di chi lavora.
@@ -484,7 +504,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
     })
   const [openCards, setOpenCards] = useState(() => new Set()) // card-griglia coi tasti aperti
   const [pend, setPend] = useState({ pending: [], banners: [] }) // ordini POS in invio
-  const [settings, setSettings] = useState(DEFAULT_SETTINGS)
+  const [settings, setSettings] = useState(settingsIniziali)
   const knownIds = useRef(new Set())
   const knownComande = useRef(new Map()) // id ordine -> n. comande (per il toast aggiunte)
   const navigate = useNavigate()
@@ -493,7 +513,11 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
   useEffect(() => subscribePending(setPend), [])
   // Senza cassa aperta non si battono ordini: il «+» è spento e in cima
   // compare l'avviso con la scorciatoia per aprirla.
-  const { open: cassaAperta, loading: cassaLoading } = useCashSession()
+  // ATTENZIONE ALLA FORMA: `open` è un BOOLEANO, la cassa vera sta in
+  // `session`. Leggendo `cassaAperta?.id` da un booleano viene `undefined`,
+  // e allora ogni conto chiuso o annullato spariva dalla coda — sembrava un
+  // problema di filtri e invece era questa riga.
+  const { session: cassaAperta, loading: cassaLoading } = useCashSession()
 
   // Vista a griglia: a tutto schermo. Aggiunge `fullbleed` al body così la
   // pagina esce dal contenitore centrato (.app, max 760px) e riempie larghezza
@@ -643,10 +667,10 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
         setError(e.message)
         setOrdersReady(true) // errore visibile in pagina, niente spinner infinito
       },
-      { cutoffHour }
+      { cutoffHour, cashSessionId: cassaAperta?.id ?? null }
     )
     return unsub
-  }, [cutoffHour])
+  }, [cutoffHour, cassaAperta?.id])
 
   // Scambio placeholder → ordine reale: appena l'ordine con il
   // client_temp_id del placeholder arriva dalla sottoscrizione, il
@@ -733,11 +757,15 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
                   emulatori non gli dicono niente. La causa quasi sempre è una
                   rete che RISULTA collegata ma non passa (wifi del locale che
                   fa i capricci): lì l'app aspetta il server invece di
-                  arrendersi alla cache. */}
+                  arrendersi alla cache.
+                  In LOCALE però la causa è quasi sempre un'altra — il
+                  database finto che si è impiantato: accetta le connessioni
+                  e non risponde più. Dire «controlla il wifi» a chi sta
+                  sviluppando è mandarlo a cercare dalla parte sbagliata. */}
               <p className="muted" style={{ fontSize: '0.85rem', marginTop: 12 }}>
-                Il wifi risulta collegato ma non sta passando niente. Prova a
-                spegnere e riaccendere il wifi, oppure passa alla rete del
-                telefono: gli ordini già presi restano al sicuro.
+                {import.meta.env.VITE_USE_FIREBASE_EMULATOR === 'true'
+                  ? 'Il database locale (emulatore) non risponde: accetta le connessioni ma non manda niente. Riavvia gli emulatori — «npm run emulators».'
+                  : 'Il wifi risulta collegato ma non sta passando niente. Prova a spegnere e riaccendere il wifi, oppure passa alla rete del telefono: gli ordini già presi restano al sicuro.'}
               </p>
               <button
                 className="btn ghost small"
@@ -773,9 +801,8 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
   const pagato = (o) =>
     o.payment_status === 'pagato' || o.workflow_status === ORDER_STATUSES.PAGATO
   const servito = (o) => allServed(o) || o.workflow_status === ORDER_STATUSES.RITIRATO
-  const isChiuso = (o) =>
-    o.workflow_status === ORDER_STATUSES.ANNULLATO ||
-    (workflowOn ? pagato(o) && servito(o) : pagato(o))
+  // La regola sta in comande.js: la usano anche il riepilogo e il magazzino.
+  const isChiuso = (o) => contoChiuso(o, { workflowOn })
   // Pagati ma non ancora serviti: restano in coda, si possono nascondere.
   const pagatiDaServire = effOrders.filter((o) => workflowOn && pagato(o) && !servito(o))
   const arretrati = effOrders
@@ -814,9 +841,24 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
   }
   const ordersOggi = effOrders.filter((o) => !arretratiIds.has(o.id))
   const ordersInVista = soloOggi ? ordersOggi : effOrders
-  // Riepilogo di testata: solo la giornata corrente (gli arretrati stanno
-  // nella loro tab e non devono gonfiare i totali di oggi).
-  const recap = ordersRecap(ordersOggi, isChiuso)
+  // RIEPILOGO DI TESTATA: conta ESATTAMENTE i conti che si vedono in coda,
+  // qualunque tab sia aperta. Prima contava una lista sua — la giornata — e
+  // i numeri non tornavano con quello che c'era sotto: «0 chiusi» sopra una
+  // tab piena di conti chiusi. Se cambia la regola di cosa resta in coda,
+  // cambia anche il riepilogo, perché è la stessa lista.
+  // Si parte dagli ordini GREZZI, non da quelli che la tab sta mostrando:
+  // «in corso» nasconde i conti appena chiusi qui e le altre tab no, e il
+  // riepilogo cambiava numero solo perché si toccava un filtro.
+  const inCoda = ordersRaw.filter((o) =>
+    restaInCoda(o, {
+      chiuso: isChiuso(o) || annullato(o),
+      cassa: cassaAperta?.id ?? null,
+      apertaDa: cassaAperta?.opened_at ?? null,
+      giornata: dayOf(o),
+      oggi: oggiKey,
+    })
+  )
+  const recap = ordersRecap(inCoda, isChiuso)
 
   // Leggenda "chi ha aperto l'ordine": lettera → nome per lo staff che ha
   // battuto ordini oggi, più l'eventuale voce Cliente (ordini dall'app).
@@ -868,11 +910,21 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
   // anche i chiusi/pagati o TUTTI gli ordini in vista.
   const isClosed = isChiuso
   const nascosti = new Set(nascondiPagati ? pagatiDaServire.map((o) => o.id) : [])
-  const boardOrders = visibleOrders
-    .filter((o) => !nascosti.has(o.id))
-    .filter((o) =>
-      boardFilter === 'tutti' ? true : boardFilter === 'chiusi' ? isClosed(o) : !isClosed(o)
-    )
+  // Chiusi e annullati di prima dell'ultima chiusura di cassa non sono coda:
+  // stanno in Cassa. La composizione sta in coda.js, ed è quella provata dai
+  // test.
+  const boardOrders = ordiniInCoda(
+    visibleOrders.filter((o) => !nascosti.has(o.id)),
+    {
+      filtro: boardFilter,
+      isChiuso: isClosed,
+      cassa: cassaAperta?.id ?? null,
+      apertaDa: cassaAperta?.opened_at ?? null,
+      giornataDi: dayOf,
+      oggi: oggiKey,
+    }
+  )
+    .slice()
     .sort((a, b) => ((a.daily_number || 0) - (b.daily_number || 0)) * (ordineDesc ? -1 : 1))
   // Ordini POS in invio. Finché il placeholder è attivo l'ordine reale
   // resta nascosto: il match usa il client_temp_id scritto sull'ordine
@@ -1367,15 +1419,31 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
           notifiche e stato della sincronizzazione: torna come tasto tondo in
           basso a destra (il CSS la mostra solo quando serve). */}
       {gridView && <StatusBell floating />}
+      {/* L'avviso a fumetto, se il locale ha scelto quello: sta SOLO qui,
+          nella coda, che è il posto dove gli ordini si aspettano. Toccandolo
+          si aprono gli avvisi (la campanella ascolta l'evento). */}
+      <FumettoAvvisi onApri={() => window.dispatchEvent(new Event('tana:apri-avvisi'))} />
       {error && <div className="banner">Errore: {error}</div>}
 
       {/* Cassa chiusa: non si battono ordini finché non la si apre. */}
       {!cassaLoading && !cassaAperta && (
         <div className="banner cassa-chiusa-banner">
-          🔴 <strong>Cassa chiusa</strong> — per battere ordini apri prima la cassa.{' '}
-          <Link className="btn small" to="/bar?tab=pagamenti" style={{ marginLeft: 8 }}>
-            🟢 Apri cassa
-          </Link>
+          🔴 <strong>Cassa chiusa</strong> —{' '}
+          {gestore ? 'per battere ordini apri prima la cassa.' : 'per battere ordini la deve aprire il banco.'}{' '}
+          {/* Si apre da qui: mandare al flusso di cassa per premere un tasto e
+              tornare indietro sono tre passaggi per una cosa che ne vale uno.
+              La sala invece legge e basta: aprirla non è cosa sua, e un tasto
+              che dà «permesso negato» è peggio di nessun tasto. */}
+          {gestore && (
+            <button
+              type="button"
+              className="btn small"
+              style={{ marginLeft: 8 }}
+              onClick={() => setApriCassa(true)}
+            >
+              🟢 Apri cassa
+            </button>
+          )}
         </div>
       )}
 
@@ -1428,7 +1496,14 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
           <div className="board-sotto">
             <span className="muted board-conti">
               {recap.aperti} apert{recap.aperti === 1 ? 'o' : 'i'} · {recap.chiusi} chius
-              {recap.chiusi === 1 ? 'o' : 'i'} · {formatPrice(recap.total)}
+              {recap.chiusi === 1 ? 'o' : 'i'}
+              {/* Gli annullati solo se ce ne sono: una serata pulita non
+                  deve leggere «0 annullati». Fuori dal totale, che sono i
+                  soldi veri. */}
+              {recap.annullati > 0 &&
+                ` · ${recap.annullati} annullat${recap.annullati === 1 ? 'o' : 'i'}`}
+              {' · '}
+              {formatPrice(recap.total)}
             </span>
             {/* Cercando con l'evidenziazione la coda non cambia: se non si
                 trova niente, senza scritta non succede proprio nulla e si
@@ -1451,7 +1526,11 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
           <div className="card">
             <strong>Oggi</strong>
             <div className="muted">
-              {recap.aperti} apert{recap.aperti === 1 ? 'o' : 'i'} · {recap.chiusi} chius{recap.chiusi === 1 ? 'o' : 'i'} · {formatPrice(recap.total)}
+              {recap.aperti} apert{recap.aperti === 1 ? 'o' : 'i'} · {recap.chiusi} chius{recap.chiusi === 1 ? 'o' : 'i'}
+              {recap.annullati > 0 &&
+                ` · ${recap.annullati} annullat${recap.annullati === 1 ? 'o' : 'i'}`}
+              {' · '}
+              {formatPrice(recap.total)}
             </div>
           </div>
 
@@ -1485,16 +1564,60 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
             hint: ordineDesc ? 'Adesso: prima gli ultimi' : 'Adesso: prima i primi della serata',
             onClick: cambiaOrdine,
           },
-        ]}
+          // La voce della cassa (apri/chiudi, o niente per la sala) sta in
+          // coda.js: è una regola, e le regole si provano.
+          (() => {
+            const v = voceCassa({
+              gestore,
+              cassaAperta: !!cassaAperta,
+              contiAperti: recap.aperti,
+            })
+            if (!v) return null
+            return {
+              ...v,
+              onClick: () => (v.id === 'apri-cassa' ? setApriCassa(true) : setChiudiCassa(true)),
+            }
+          })(),
+        ].filter(Boolean)}
       />
+
+      {chiudiCassa && (
+        <ChiudiCassaBox
+          by={auth.currentUser ? { uid: auth.currentUser.uid, email: auth.currentUser.email } : null}
+          onClose={() => setChiudiCassa(false)}
+        />
+      )}
+
+      {apriCassa && (
+        <ApriCassaBox
+          cutoffHour={cutoffHour}
+          by={auth.currentUser ? { uid: auth.currentUser.uid, email: auth.currentUser.email } : null}
+          onClose={() => setApriCassa(false)}
+        />
+      )}
 
       {/* Pannelli chiamate/gruppi: nella griglia compaiono solo col toggle
           «Pannelli»; nelle altre viste restano sempre visibili. */}
       {(!gridView || showPanels) && (
         <>
-          <StaffCallList />
-          {settings.groups_enabled && settings.groups_in_queue && (
+          {/* Aperti APPOSTA dal menu ⋯: se non c'è niente da mostrare lo
+              si dice. Prima si toccava «Chiamate staff e gruppi» e non
+              succedeva niente — senza altri account lo staff è vuoto e i
+              gruppi possono essere spenti — e sembrava un tasto rotto. */}
+          <StaffCallList mostraSeVuoto={showPanels} />
+          {settings.groups_enabled && settings.groups_in_queue ? (
             <GroupsPanel orders={orders} role="bartender" />
+          ) : (
+            showPanels && (
+              <div className="card" style={{ marginTop: 8 }}>
+                <strong>👥 Gruppi</strong>
+                <p className="muted small" style={{ margin: '6px 0 0' }}>
+                  {settings.groups_enabled
+                    ? 'I gruppi non si mostrano in coda: si accendono in Impostazioni → Gruppi.'
+                    : 'I gruppi sono spenti: si accendono in Impostazioni → Gruppi.'}
+                </p>
+              </div>
+            )
           )}
         </>
       )}
@@ -1541,6 +1664,10 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
             {[
               ['attivi', 'In corso'],
               ['chiusi', '💶 Chiusi'],
+              // Gli annullati hanno una tab loro: fra i chiusi facevano
+              // numero senza essere incassi, e per ritrovarne uno da
+              // riaprire si cercava in mezzo a quelli buoni.
+              ['annullati', '✖️ Annullati'],
               ['tutti', 'Tutti'],
             ].map(([k, label]) => (
               <button
@@ -1582,7 +1709,15 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
           {/* Griglia: ordini in invio (grigi) + ordini secondo il filtro */}
           {pend.pending.length === 0 && visibleBoard.length === 0 && (
             <div className="empty">
-              {`Nessun ordine${boardFilter === 'chiusi' ? ' chiuso' : boardFilter === 'attivi' ? ' in corso' : ''}${soloOggi ? ' oggi' : ''}.`}
+              {`Nessun ordine${
+                boardFilter === 'chiusi'
+                  ? ' chiuso'
+                  : boardFilter === 'annullati'
+                    ? ' annullato'
+                    : boardFilter === 'attivi'
+                      ? ' in corso'
+                      : ''
+              }${soloOggi ? ' oggi' : ''}.`}
             </div>
           )}
           {/* I nuovi ordini vanno IN FONDO (numeri più alti): il placeholder

@@ -21,14 +21,19 @@ import {
   updateSupplier,
   deleteSupplier,
   subscribeSettings,
+  subscribeActiveOrders,
+  subscribeDrinks,
   DEFAULT_SETTINGS,
 } from '../lib/api.js'
+import { useCashSession } from '../lib/cashSession.js'
+import { impegnatoPerArticolo, articoloPrevisto } from '../lib/impegnato.js'
 import {
   formatQty,
   fmtItem,
   baseUnit,
   fromBaseQty,
   toBaseQty,
+  qtyInStockUnit,
   stockStatus,
   bottleSummary,
   bottleBreakdown,
@@ -261,6 +266,40 @@ function FornitoriPanel() {
   return <SupplierManager suppliers={suppliers} onChange={ricarica} />
 }
 
+// LA CELLA «A FINE SERATA». Si legge con le stesse regole della giacenza —
+// pezzi per le bottiglie, unità per il resto — perché è la stessa cosa
+// guardata più avanti nel tempo: due modi di scrivere lo stesso numero
+// farebbero sembrare due dati diversi. Senza impegno resta un trattino:
+// vuol dire che nessun conto aperto ha chiesto quel prodotto.
+function CellaFineSerata({ item, impegnato }) {
+  const previsto = articoloPrevisto(item, impegnato)
+  if (!previsto) return <span className="inv-cell-num muted">—</span>
+  const bs = bottleSummary(previsto)
+  const finito = (Number(previsto.stock) || 0) <= 0
+  return (
+    <span className={`inv-cell-num inv-row-previsto${finito ? ' finito' : ''}`}>
+      {bs ? `${formatPezzi(bs.pezzi)} pz` : fmtItem(previsto.stock, previsto)}
+    </span>
+  )
+}
+
+// La stessa previsione nella vista a CARD, dove non ci sono colonne: si
+// scrive per esteso sotto la giacenza, e solo se quel prodotto è in ballo.
+function PrevisioneCard({ item, impegnato }) {
+  const previsto = articoloPrevisto(item, impegnato)
+  if (!previsto) return null
+  const bs = bottleSummary(previsto)
+  const finito = (Number(previsto.stock) || 0) <= 0
+  return (
+    <span
+      className={`small${finito ? ' inv-row-previsto finito' : ' muted'}`}
+      style={{ display: 'block' }}
+    >
+      a fine serata {bs ? `${formatPezzi(bs.pezzi)} pz` : fmtItem(previsto.stock, previsto)}
+    </span>
+  )
+}
+
 function ProductsPanel() {
   const [items, setItems] = useState([])
   const [categories, setCategories] = useState([])
@@ -291,6 +330,40 @@ function ProductsPanel() {
   const [caricoFor, setCaricoFor] = useState(null)
   const [rettificaFor, setRettificaFor] = useState(null)
 
+  // QUELLO CHE TI RITROVI A FINE SERATA. I conti ancora aperti hanno già
+  // promesso degli ingredienti: si guardano gli ordini e il listino e si
+  // toglie dalla giacenza quello che il magazzino non ha ancora scalato.
+  // A cassa chiusa la colonna non c'è: non c'è una serata in corso di cui
+  // dire come finirà.
+  const { open: cassaAperta } = useCashSession()
+  // Con gli stati del servizio un conto pagato ma non servito è ancora
+  // aperto, e i suoi ingredienti sono ancora in ballo; senza, il pagamento
+  // chiude e il magazzino è già stato scalato.
+  const [workflowOn, setWorkflowOn] = useState(DEFAULT_SETTINGS.workflow_enabled !== false)
+  const [ordiniVivi, setOrdiniVivi] = useState([])
+  const [drinksById, setDrinksById] = useState({})
+  useEffect(() => subscribeActiveOrders(setOrdiniVivi, () => {}), [])
+  useEffect(
+    () =>
+      subscribeDrinks(
+        {},
+        (ds) => setDrinksById(Object.fromEntries(ds.map((d) => [d.id, d]))),
+        () => {}
+      ),
+    []
+  )
+  const itemsById = useMemo(() => Object.fromEntries(items.map((i) => [i.id, i])), [items])
+  const impegnato = useMemo(
+    () =>
+      cassaAperta
+        ? impegnatoPerArticolo(ordiniVivi, drinksById, itemsById, { workflowOn })
+        : {},
+    [cassaAperta, ordiniVivi, drinksById, itemsById, workflowOn]
+  )
+  // La colonna compare solo se c'è davvero qualcosa in ballo: a serata
+  // ferma sarebbe una colonna di trattini.
+  const mostraPrevisione = Object.keys(impegnato).length > 0
+
   // Ricarico (×N) per il prezzo consigliato mostrato accanto al costo.
   const [markup, setMarkup] = useState(DEFAULT_SETTINGS.price_markup)
   // IVA di ACQUISTO (fatture fornitore, 22%): è il default dei prodotti qui.
@@ -298,6 +371,7 @@ function ProductsPanel() {
   useEffect(
     () =>
       subscribeSettings((s) => {
+        setWorkflowOn(s.workflow_enabled !== false)
         setMarkup(s.price_markup)
         setPurchaseVat(s.purchase_vat ?? DEFAULT_SETTINGS.purchase_vat)
       }, () => {}),
@@ -336,6 +410,27 @@ function ProductsPanel() {
   const itemActions = (it, bd) => (
     <div className="grid-card-actions">
       <dl className="inv-info">
+        {impegnato[it.id] > 0 && (
+          <div className="inv-info-row">
+            <dt>A fine serata</dt>
+            <dd>
+              {/* Il numero da solo non basta: chi legge vuole sapere
+                  QUANTO è promesso, per capire se vale la pena aprire
+                  un'altra bottiglia adesso o aspettare. */}
+              <strong>
+                {(() => {
+                  const p = articoloPrevisto(it, impegnato[it.id])
+                  const bs = bottleSummary(p)
+                  return bs ? `${formatPezzi(bs.pezzi)} pz` : fmtItem(p.stock, p)
+                })()}
+              </strong>
+              <span className="muted">
+                {' · '}
+                {fmtItem(impegnato[it.id], it)} sui conti ancora aperti
+              </span>
+            </dd>
+          </div>
+        )}
         {bd ? (
           <div className="inv-info-row">
             <dt>Pezzi</dt>
@@ -443,6 +538,7 @@ function ProductsPanel() {
         case 'gross': return it.cost != null ? costWithVat(it.cost, it.vat) : null
         case 'percl': return costPerUnit(it, 'cl')
         case 'stock': return Number(it.stock) || 0
+        case 'previsto': return (Number(it.stock) || 0) - (impegnato[it.id] || 0)
         default: return it.name || ''
       }
     }
@@ -459,7 +555,7 @@ function ProductsPanel() {
       return String(x).localeCompare(String(y), 'it') * mul
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible, sort, categories])
+  }, [visible, sort, categories, impegnato])
 
   // Conteggi per categoria (su tutto l'inventario) per la barra a sinistra.
   const catItems = useMemo(() => {
@@ -738,7 +834,7 @@ function ProductsPanel() {
       {/* TABELLA: colonne allineate (stato · prodotto · categoria · netto ·
           +IVA · scorte), riga cliccabile per aprire le azioni. */}
       {invView === 'lista' && (
-        <div className="inv-list inv-table">
+        <div className={`inv-list inv-table${mostraPrevisione ? ' con-previsione' : ''}`}>
           <div className="inv-thead">
             <span aria-hidden />
             <SortTh label="Prodotto" col="name" sort={sort} onSort={toggleSort} />
@@ -747,6 +843,9 @@ function ProductsPanel() {
             <SortTh label="IVA inclusa" col="gross" sort={sort} onSort={toggleSort} num />
             <SortTh label="€/cl" col="percl" sort={sort} onSort={toggleSort} num />
             <SortTh label="Scorte" col="stock" sort={sort} onSort={toggleSort} num />
+            {mostraPrevisione && (
+              <SortTh label="A fine serata" col="previsto" sort={sort} onSort={toggleSort} num />
+            )}
           </div>
           {sortedVisible.map((it) => {
             const st = stockStatus(it)
@@ -795,6 +894,7 @@ function ProductsPanel() {
                       fmtItem(it.stock, it)
                     )}
                   </span>
+                  {mostraPrevisione && <CellaFineSerata item={it} impegnato={impegnato[it.id]} />}
                 </button>
                 {expanded && itemActions(it, bottleBreakdown(it))}
               </div>
@@ -846,6 +946,7 @@ function ProductsPanel() {
                             {bs.total}
                           </span>
                         )}
+                        <PrevisioneCard item={it} impegnato={impegnato[it.id]} />
                       </span>
                     )
                   })()}
@@ -1440,6 +1541,13 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
         : '',
     content_unit: initial?.content_unit === 'g' ? 'g' : 'cl',
     low_threshold: initial?.low_threshold ? String(fromBaseQty(initial.low_threshold, initUnit)) : '',
+    // CON CHE UNITÀ SI SCRIVONO QUESTI DUE NUMERI. La soglia di avviso di
+    // un liquido si pensa in bottiglie («avvisami quando ne resta una»),
+    // non in 700 ml; e il contenuto di una bottiglia si scrive «0,7 l»
+    // com'è stampato sull'etichetta, non 700 se l'articolo è in ml.
+    // Il valore salvato non cambia: cambia solo come lo si digita.
+    low_threshold_unit: initUnit,
+    package_size_unit: initUnit,
     bottles: '',
     open_content: '',
   })
@@ -1494,13 +1602,14 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
     setSaving(true)
     try {
       // A pezzo il contenuto arriva dal suo campo (33 cl), altrimenti dal
-      // contenuto per confezione nell'unità scelta. In unità generiche non
-      // c'è nessun contenuto: dentro una unità di lavoro non c'è niente.
+      // contenuto per confezione nell'unità scelta per QUEL campo. In unità
+      // generiche non c'è nessun contenuto: dentro una unità di lavoro non
+      // c'è niente.
       const packBase = isGenerico
         ? null
         : isPz
           ? toBaseQty(num(form.content_size), form.content_unit) || null
-          : toBaseQty(num(form.package_size), form.unit) || null
+          : toBaseQty(num(form.package_size), form.package_size_unit) || null
       const base = {
         name: form.name.trim(),
         unit: baseUnit(form.unit), // base in cui è salvato lo stock
@@ -1513,7 +1622,14 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
         package_size: packBase,
         // Serve solo a pezzo: dice se quel contenuto è un volume o un peso.
         content_unit: isPz && packBase ? baseUnit(form.content_unit) : null,
-        low_threshold: toBaseQty(num(form.low_threshold), form.unit),
+        // La soglia scritta in pezzi diventa contenuto (2 bottiglie da 70 cl
+        // = 1400 ml) e viceversa: è lo stesso passaggio che fa lo scarico
+        // dalla ricetta alla giacenza, quindi i due numeri non litigano.
+        low_threshold: qtyInStockUnit(num(form.low_threshold), form.low_threshold_unit, {
+          unit: baseUnit(form.unit),
+          package_size: packBase,
+          content_unit: isPz && packBase ? baseUnit(form.content_unit) : null,
+        }),
       }
       // ARTICOLO IN UNITÀ GENERICHE: non è una scorta, quindi non c'è nessuna
       // giacenza da salvare né bottiglie da contare — e nessuna conversione da
@@ -1674,8 +1790,25 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
         </p>
       ) : !isPz ? (
         <>
-          <label htmlFor="ipkg">Contenuto per confezione ({form.unit})</label>
-          <input id="ipkg" type="number" step="any" min="0" value={form.package_size} onChange={set('package_size')} placeholder={`Es. ${form.unit === 'l' ? '1' : form.unit === 'cl' ? '100' : '1000'} per una bottiglia da 1 L`} />
+          <label htmlFor="ipkg">Contenuto per confezione</label>
+          <div className="row" style={{ gap: 6 }}>
+            <input
+              id="ipkg"
+              type="number"
+              step="any"
+              min="0"
+              className="grow"
+              value={form.package_size}
+              onChange={set('package_size')}
+              placeholder="Es. 0,7 per una bottiglia da 70 cl"
+            />
+            <ScegliUnita
+              valore={form.package_size_unit}
+              unita={form.unit}
+              onChange={set('package_size_unit')}
+              etichetta="Unità del contenuto per confezione"
+            />
+          </div>
         </>
       ) : (
         <>
@@ -1729,8 +1862,31 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
           da avvisare e niente da riordinare al fornitore. */}
       {!isGenerico && (
         <>
-          <label htmlFor="ithr">Soglia di avviso ({form.unit})</label>
-          <input id="ithr" type="number" step="any" min="0" value={form.low_threshold} onChange={set('low_threshold')} placeholder={`Es. ${form.unit === 'l' ? '0,2' : form.unit === 'cl' ? '20' : form.unit === 'mg' ? '2000' : form.unit === 'g' ? '100' : form.unit === 'pz' ? '2' : '200'}`} />
+        <label htmlFor="ithr">Soglia di avviso</label>
+        <div className="row" style={{ gap: 6 }}>
+          <input
+            id="ithr"
+            type="number"
+            step="any"
+            min="0"
+            className="grow"
+            value={form.low_threshold}
+            onChange={set('low_threshold')}
+            placeholder="Es. 2 se vuoi l’avviso quando ne restano due"
+          />
+          <ScegliUnita
+            valore={form.low_threshold_unit}
+            unita={form.unit}
+            conPezzi
+            onChange={set('low_threshold_unit')}
+            etichetta="Unità della soglia di avviso"
+          />
+        </div>
+        <p className="muted small" style={{ margin: '2px 0 8px' }}>
+          {form.low_threshold_unit === 'pz' && baseUnit(form.unit) !== 'pz'
+            ? 'In pezzi: l’avviso scatta quando resta questo numero di confezioni intere.'
+            : 'Sotto questo livello l’articolo compare fra quelli in esaurimento.'}
+        </p>
         </>
       )}
 
@@ -1739,6 +1895,34 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
         <button type="submit" className="btn" disabled={saving}>{saving ? 'Salvataggio…' : 'Salva'}</button>
       </div>
     </form>
+  )
+}
+
+// LA SCELTA DELL'UNITÀ accanto a un campo. Le opzioni sono quelle
+// compatibili con come si conta l'articolo (litri, cl, ml per un liquido;
+// kg e grammi per un peso) più i PEZZI dove ha senso: la soglia di avviso
+// di un liquido si pensa in bottiglie — «avvisami quando ne resta una» —
+// e nessuno la vuole scrivere in 700 ml.
+const UNITA_COMPATIBILI = {
+  ml: ['l', 'cl', 'ml'],
+  g: ['kg', 'g'],
+  pz: ['pz'],
+}
+
+function ScegliUnita({ valore, unita, onChange, etichetta, conPezzi = false }) {
+  const base = baseUnit(unita)
+  const opzioni = [...(UNITA_COMPATIBILI[base] || [unita])]
+  // Per un articolo contato a pezzi il «pezzo» c'è già; per un liquido lo si
+  // aggiunge solo dove la conversione ha senso.
+  if (conPezzi && base !== 'pz') opzioni.push('pz')
+  return (
+    <select value={valore} onChange={onChange} aria-label={etichetta} style={{ width: 90 }}>
+      {opzioni.map((u) => (
+        <option key={u} value={u}>
+          {u}
+        </option>
+      ))}
+    </select>
   )
 }
 

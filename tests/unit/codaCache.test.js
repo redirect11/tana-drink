@@ -13,6 +13,8 @@
 // arriva dal server appena la rete torna.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { ordiniInCoda } from '../../src/lib/coda.js'
+import { contoChiuso } from '../../src/lib/comande.js'
 
 // Documenti finti: `data()` restituisce il documento grezzo, come Firestore.
 const docFinto = (id, data) => ({ id, data: () => data })
@@ -39,7 +41,11 @@ vi.mock('firebase/firestore', () => {
   // delle due query è: gli aperti filtrano su `status`, i recenti su `created_at`.
   const where = (field, op, value) => ({ field, op, value })
   const query = (_col, ...clausole) => ({
-    tipo: clausole.find((c) => c.field === 'status') ? 'aperti' : 'recenti',
+    tipo: clausole.find((c) => c.field === 'closed_in_session')
+      ? 'chiusi-qui'
+      : clausole.find((c) => c.field === 'status')
+        ? 'aperti'
+        : 'recenti',
   })
   return {
     collection: () => ({}),
@@ -134,5 +140,102 @@ describe('coda: prima la cache, poi il server', () => {
     stato.listeners.find((x) => x.tipo === 'aperti').cb({ docs: [docFinto('a', ordine('a', 'dal server'))] })
     await new Promise((r) => setTimeout(r, 10))
     expect(visti[visti.length - 1].map((o) => o.customer_name)).toEqual(['dal server'])
+  })
+})
+
+// ANNULLO UN CONTO E LO DEVO RITROVARE SOTTO «ANNULLATI». Sembra ovvio, e
+// invece non succedeva: un conto aperto ieri e annullato stasera usciva
+// dall'elenco dei conti APERTI e non entrava in quello di oggi — che guarda
+// la data di apertura — quindi spariva dallo schermo nell'istante in cui lo
+// si annullava. Si agisce su un conto e quello svanisce: non si sa nemmeno
+// se l'operazione è andata a buon fine.
+//
+// Il test parte dai dati come ARRIVANO (le query di Firestore) e finisce
+// dove guarda chi lavora (la tab). Provare le regole a pezzi dimostrava che
+// funzionavano tutte mentre a schermo non c'era niente.
+describe('un conto annullato finisce nella tab Annullati', () => {
+  const CASSA = 'cassa-di-stasera'
+  const APERTA_DA = '2026-08-16T18:00:00.000Z'
+
+  const annullatoStasera = {
+    status: 'annullato',
+    customer_name: 'Peppe',
+    daily_number: 7,
+    // Aperto DUE GIORNI FA e rimasto lì: è il caso che spariva.
+    created_at: '2026-08-14T21:00:00.000Z',
+    order_date: '2026-08-14',
+    cash_session_id: 'una-cassa-vecchia',
+    closed_in_session: CASSA,
+    status_times: { annullato: '2026-08-16T23:40:00.000Z' },
+    comande: [],
+    payments: [],
+  }
+
+  beforeEach(() => {
+    stato.cache = { aperti: [], recenti: [] }
+    stato.listeners = []
+  })
+
+  it('lo si vede anche se il conto era di due giorni fa', async () => {
+    const visti = []
+    subscribeActiveOrders((list) => visti.push(list), null, { cashSessionId: CASSA })
+
+    // Le due query di sempre non lo contengono: non è più aperto, e non è
+    // nato oggi. A trovarlo è l'ascolto sui conti chiusi in QUESTA cassa.
+    stato.listeners.find((x) => x.tipo === 'aperti').cb({ docs: [] })
+    stato.listeners.find((x) => x.tipo === 'recenti').cb({ docs: [] })
+    const chiusiQui = stato.listeners.find((x) => x.tipo === 'chiusi-qui')
+    expect(chiusiQui).toBeTruthy()
+    chiusiQui.cb({ docs: [docFinto('vecchio', annullatoStasera)] })
+
+    const dallaCoda = visti[visti.length - 1]
+    expect(dallaCoda).toHaveLength(1)
+
+    // E adesso la parte che guarda chi lavora: la tab Annullati.
+    const opzioni = {
+      isChiuso: (o) => contoChiuso(o, { workflowOn: true }),
+      cassa: CASSA,
+      apertaDa: APERTA_DA,
+      giornataDi: (o) => o.order_date,
+      oggi: '2026-08-16',
+    }
+    expect(ordiniInCoda(dallaCoda, { ...opzioni, filtro: 'annullati' })).toHaveLength(1)
+    expect(ordiniInCoda(dallaCoda, { ...opzioni, filtro: 'tutti' })).toHaveLength(1)
+    // Non è un incasso: fra i chiusi non ci va, e in corso nemmeno.
+    expect(ordiniInCoda(dallaCoda, { ...opzioni, filtro: 'chiusi' })).toHaveLength(0)
+    expect(ordiniInCoda(dallaCoda, { ...opzioni, filtro: 'attivi' })).toHaveLength(0)
+  })
+
+  it('quello annullato in una cassa precedente non torna a galla', async () => {
+    const visti = []
+    subscribeActiveOrders((list) => visti.push(list), null, { cashSessionId: CASSA })
+    stato.listeners.find((x) => x.tipo === 'aperti').cb({ docs: [] })
+    stato.listeners
+      .find((x) => x.tipo === 'recenti')
+      .cb({
+        docs: [
+          docFinto('altraserata', {
+            ...annullatoStasera,
+            closed_in_session: 'cassa-di-ieri',
+            status_times: { annullato: '2026-08-15T23:00:00.000Z' },
+          }),
+        ],
+      })
+    const dallaCoda = visti[visti.length - 1] || []
+    expect(
+      ordiniInCoda(dallaCoda, {
+        filtro: 'annullati',
+        isChiuso: (o) => contoChiuso(o, { workflowOn: true }),
+        cassa: CASSA,
+        apertaDa: APERTA_DA,
+        giornataDi: (o) => o.order_date,
+        oggi: '2026-08-16',
+      })
+    ).toHaveLength(0)
+  })
+
+  it('senza cassa aperta non si ascolta niente di chiuso', () => {
+    subscribeActiveOrders(() => {}, null, {})
+    expect(stato.listeners.find((x) => x.tipo === 'chiusi-qui')).toBeFalsy()
   })
 })

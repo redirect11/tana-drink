@@ -150,8 +150,13 @@ export default function ServiceQueue() {
         <div className="muted">
           {`${daServire.length} da servire`}
         </div>
-        <Link className="btn block" style={{ marginTop: 12 }} to="/menu">
-          ✍️ Nuovo ordine dal menù
+        {/* «Aggiungi ordine» porta dove porta il «+» della coda: la
+            schermata del conto, con la griglia. Prima mandava al menù —
+            la vista del cliente — che per prendere un ordine al tavolo è
+            la strada lunga: si scorre una carta fatta per chi ordina,
+            invece della griglia fatta per chi batte. */}
+        <Link className="btn block" style={{ marginTop: 12 }} to="/pos">
+          ➕ Aggiungi ordine
         </Link>
       </div>
 

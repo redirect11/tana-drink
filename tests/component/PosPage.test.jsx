@@ -63,6 +63,7 @@ vi.mock('../../src/lib/api.js', () => ({
     return () => {}
   }),
   DEFAULT_SETTINGS: {},
+  settingsIniziali: () => ({}),
   advanceComanda: vi.fn(() => Promise.resolve()),
   addComanda: vi.fn(() => Promise.resolve({ comande: [] })),
   bartenderUpdateComanda: vi.fn(() => Promise.resolve()),
@@ -111,7 +112,7 @@ vi.mock('firebase/auth', () => ({
 
 import PosPage from '../../src/pages/PosPage.jsx'
 import { submitPosOrder } from '../../src/lib/pendingOrders.js'
-import { createOrder, updateOrderInfo, subscribeSettings } from '../../src/lib/api.js'
+import { createOrder, updateOrderInfo, subscribeSettings, cancelOrder } from '../../src/lib/api.js'
 import { printComanda } from '../../src/lib/printer.js'
 
 function mount() {
@@ -451,5 +452,111 @@ describe('box del nome: modale', () => {
     await user.click(screen.getByRole('button', { name: /Chiudi senza dare un nome/ }))
     await waitFor(() => expect(navigateSpy).toHaveBeenCalledWith('/bar'))
     expect(updateOrderInfo).not.toHaveBeenCalled()
+  })
+})
+
+// IL BOX DEL NOME NON ASPETTA LA CREAZIONE. Prima si aspettava che il conto
+// fosse nato per sapere se chiedere il nome — e siccome il nome lo si sa già
+// dalla schermata (è quello che si è scritto, o non si è scritto, lì),
+// l'unica cosa che quell'attesa produceva era il box in ritardo: al banco,
+// col server lento, secondi buoni con la schermata ferma.
+describe('uscire dal conto non aspetta il server', () => {
+  it('il box del nome compare subito, la creazione va avanti da sé', async () => {
+    const user = userEvent.setup()
+    // La creazione non risponde: prima bastava a tenere fermo tutto.
+    createOrder.mockImplementationOnce(() => new Promise(() => {}))
+    mount()
+    await user.click(screen.getByText('Mojito'))
+    await user.click(screen.getByRole('button', { name: /Torna agli ordini/ }))
+    expect(await screen.findByLabelText('Nome')).toBeInTheDocument()
+  })
+
+})
+
+// IL CONTO NUOVO NON EREDITA NIENTE. La bozza è persistente apposta — le
+// righe non confermate non si perdono uscendo — ma quando quelle righe sono
+// ANDATE (in un conto creato, o in pagamento) la copia salvata va
+// dimenticata subito: restava lì, e il conto dopo si apriva con dentro la
+// roba appena battuta, pronta a essere battuta due volte.
+describe('la bozza si consuma quando le righe partono', () => {
+  it('creando il conto, la copia salvata sparisce subito', async () => {
+    const user = userEvent.setup()
+    // La creazione non risponde: la copia salvata deve sparire lo stesso.
+    createOrder.mockImplementationOnce(() => new Promise(() => {}))
+    mount()
+    await user.click(screen.getByText('Mojito'))
+    await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1), { timeout: 2000 })
+    expect(localStorage.getItem('tana:draft:new')).toBeNull()
+  })
+
+  it('ma a schermo le righe restano: la pagina non deve sembrare resettata', async () => {
+    const user = userEvent.setup()
+    createOrder.mockImplementationOnce(() => new Promise(() => {}))
+    mount()
+    await user.click(screen.getByText('Mojito'))
+    await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1), { timeout: 2000 })
+    // La riga del conto è ancora lì, col suo prezzo.
+    expect(screen.getAllByText('Mojito').length).toBeGreaterThan(1)
+  })
+
+  it('mandando le righe in pagamento, idem', async () => {
+    const user = userEvent.setup()
+    createOrder.mockImplementationOnce(() => new Promise(() => {}))
+    mount()
+    await user.click(screen.getByText('Mojito'))
+    await user.click(screen.getByRole('button', { name: /Pagamento/ }))
+    await waitFor(() => expect(localStorage.getItem('tana:draft:new')).toBeNull())
+  })
+})
+
+// ANNULLARE LASCIA SEMPRE UN CONTO ANNULLATO, anche se l'ordine non era
+// ancora nato: il numero è già stato mostrato e preso, e di quello che è
+// stato battuto deve restare traccia — un conto sparito nel nulla non si può
+// nemmeno controllare.
+describe('annullare un conto appena battuto', () => {
+  it('crea il conto e lo annulla: nella lista annullati ci deve essere', async () => {
+    const user = userEvent.setup()
+    mount()
+    await user.click(screen.getByText('Mojito'))
+    await user.click(screen.getByRole('button', { name: /Annulla ordine/ }))
+    // Nel box di conferma, il tasto che conferma davvero.
+    const conferme = screen.getAllByRole('button', { name: /^Annulla ordine$/ })
+    await user.click(conferme[conferme.length - 1])
+    await waitFor(() => expect(createOrder).toHaveBeenCalled())
+    await waitFor(() => expect(cancelOrder).toHaveBeenCalled())
+    expect(navigateSpy).toHaveBeenCalledWith('/bar')
+  })
+})
+
+// SU UN CONTO VUOTO «ANNULLA» È LA VIA D'USCITA. Era spento finché non si
+// batteva qualcosa: chi apriva il conto per sbaglio — o cambiava idea prima
+// di battere — si trovava l'unico tasto d'uscita disabilitato, e doveva
+// cercare la freccia in alto.
+describe('annullare un conto in creazione', () => {
+  // I tasti «annulla» sono due — il pannello e la barra azioni — e avevano
+  // due regole diverse: quello della barra restava spento per tutta la
+  // creazione, anche a righe battute. Si controllano TUTTI, o la prossima
+  // volta ne resta indietro uno.
+  const tastiAnnulla = () =>
+    screen.getAllByRole('button', { name: /^Annulla/ })
+
+  it('senza righe è acceso, e riporta in coda senza chiedere niente', async () => {
+    const user = userEvent.setup()
+    mount()
+    await waitFor(() => expect(tastiAnnulla().length).toBeGreaterThan(0))
+    tastiAnnulla().forEach((b) => expect(b).not.toBeDisabled())
+    await user.click(tastiAnnulla()[0])
+    // Niente da buttare, niente da confermare: si esce.
+    expect(navigateSpy).toHaveBeenCalledWith('/bar')
+    expect(createOrder).not.toHaveBeenCalled()
+  })
+
+  it('con le righe battute resta acceso e chiede conferma', async () => {
+    const user = userEvent.setup()
+    mount()
+    await user.click(screen.getByText('Mojito'))
+    tastiAnnulla().forEach((b) => expect(b).not.toBeDisabled())
+    await user.click(tastiAnnulla()[0])
+    expect(await screen.findByText(/Annullare l’ordine\?|Annullare l'ordine\?/)).toBeInTheDocument()
   })
 })

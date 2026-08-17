@@ -126,10 +126,267 @@ requirements:
       chiude e basta — e nella schermata di pagamento non compare l'avviso
       «comande non ancora servite», che senza preparazione non vuol dire niente
       e uscirebbe a ogni incasso.
+      E la coda è il lavoro di ADESSO: un conto incassato o annullato prima
+      dell'ultima chiusura di cassa non compare, in nessuna tab — chiusi,
+      annullati o tutti — perché quei conti sono già stati contati e
+      rendicontati; stanno in Cassa, nella lista ordini. Non basta guardare
+      la giornata: in una serata la cassa si chiude e si riapre. I conti
+      APERTI restano sempre, cassa chiusa compresa: quelli sono da chiudere,
+      e nasconderli vorrebbe dire perderli.
+      Chiudendo o annullando un conto si scrive in QUALE cassa è successo, e
+      la coda tiene d'occhio anche quelli: senza, un conto aperto giorni
+      prima e annullato stasera usciva dall'elenco dei conti aperti, non
+      entrava in quello di oggi — che guarda la data di apertura — e spariva
+      dallo schermo nell'istante in cui lo si annullava. Vale anche per il
+      rendiconto di cassa: un tavolo aperto ieri e incassato stasera è
+      incasso di stasera.
+      Conta QUANDO è stato chiuso, non quando è stato aperto: un conto di
+      ieri rimasto aperto e annullato stasera è successo stasera, e guardando
+      la sessione in cui era nato spariva dalla tab «annullati» nell'istante
+      in cui lo si annullava — si agisce su un conto e quello svanisce, senza
+      sapere se l'operazione è andata a buon fine.
+      Il riepilogo in testata NON cambia cambiando tab: è cumulativo — aperti,
+      chiusi e annullati di questa apertura — e si calcola sugli ordini
+      grezzi, non su quelli che la tab sta mostrando. «In corso» nasconde i
+      conti appena chiusi da qui e le altre tab no: il numero ballava solo
+      perché si toccava un filtro.
+      Il riepilogo in testata è di questa apertura di cassa — a cassa chiusa
+      sono zeri — e accanto ad aperti e chiusi dice quanti conti sono stati
+      ANNULLATI, che non fanno cassa ma sono un dato del banco. Chi la cassa
+      non la apre mai continua a vedere la giornata: è l'unico riferimento
+      che ha.
     status: implemented
     generate_issue: false
     labels: [ordini, coda]
-    test_cases: [tests/unit/coda.test.js, tests/component/PaymentScreen.test.jsx]
+    test_cases:
+      - tests/unit/coda.test.js
+      - tests/unit/codaCache.test.js
+      - tests/unit/cashSessionHook.test.js
+      - tests/component/PaymentScreen.test.jsx
+
+  - id: REQ-ORD-014
+    title: "Riscuoti, oppure riscuoti e servi in un colpo solo"
+    area: "src/components/PaymentScreen.jsx, src/lib/api.js"
+    description: >
+      Con gli stati del servizio, incassare non chiude il conto: si paga anche
+      in anticipo e restano drink da fare, e marcare tutto «servito» farebbe
+      sparire dalla coda lavoro ancora da fare. Il conto si riscuote sempre,
+      si chiude solo quando è servito.
+      Al banco però capita spessissimo il contrario — si consegna e si
+      incassa nello stesso gesto — e lì due passaggi sono uno di troppo: il
+      locale può accendere «Un tasto per incassare e servire insieme»
+      (Impostazioni → Gestione preparazione). Acceso, nella schermata di
+      pagamento compare anche «Riscuoti e servi», che chiude il conto in un
+      colpo. Spento di default: chi segue il servizio di solito lo segue
+      apposta. Il tasto non compare dove non serve — servizio spento, conto
+      già servito o già chiuso.
+    status: implemented
+    generate_issue: false
+    labels: [ordini, pagamenti, impostazioni]
+    test_cases: [tests/component/PaymentScreen.test.jsx]
+
+  - id: REQ-ORD-019
+    title: "Chi ha preso l'ordine lo modifica davvero: anche aggiungendo"
+    area: "src/pages/OrderStatusPage.jsx, src/components/OrderPosDetail.jsx"
+    description: >
+      Nel dettaglio di un ordine, la sala poteva solo cambiare le QUANTITÀ di
+      quello che c'era già: chi aveva preso l'ordine e si sentiva dire
+      «aggiungi anche una birra» doveva battere un secondo conto.
+      «Modifica ordine · aggiungi prodotti» apre la schermata del conto: la
+      stessa del banco, quella vera, con la griglia dei prodotti. Niente
+      versione ridotta — chi prende un ordine al tavolo ci fa le stesse
+      cose, e un tasto spento in una schermata e acceso nell'altra è solo
+      una cosa che non si capisce. Aprire e chiudere la CASSA resta invece
+      del banco (REQ-CASSA-008): quella è la serata, non il conto.
+      «Salva modifiche» resta dov'è: correggere una quantità e aggiungere un
+      drink sono due gesti diversi, e chi fa il primo non deve passare per
+      una schermata intera.
+      E c'è «Pagamento», che apre la stessa schermata già sul pagamento: al
+      tavolo si incassa lì, e senza quel tasto bisognava tornare in coda,
+      riaprire il conto dal banco e incassare da lì — col cliente che
+      aspetta col portafogli in mano. Su un conto già saldato o annullato
+      non compare.
+      Al cliente niente di tutto questo: dal suo telefono modifica le
+      quantità del proprio ordine finché è ricevuto, e basta.
+    status: implemented
+    generate_issue: false
+    labels: [ordini, staff]
+    test_cases: [tests/component/OrderStatusPage.test.jsx]
+
+  - id: REQ-ORD-018
+    title: "Salvare le modifiche a un ordine lo dice, e riporta indietro"
+    area: "src/pages/OrderStatusPage.jsx"
+    description: >
+      Nel dettaglio ordine della vista staff, «Salva modifiche» tornava
+      «Salva modifiche» e basta: identico a prima di premerlo. Chi aveva
+      cambiato una quantità restava lì a chiedersi se fosse andata, e spesso
+      ripremeva. Ora la conferma si vede e si torna alla coda — da dove si è
+      arrivati, e dove il conto si rilegge aggiornato. In errore invece si
+      resta, e il motivo si dice anche col toast: l'avviso in fondo alla
+      pagina, su un conto lungo, sta fuori schermo — chi ha premuto vede il
+      tasto tornare com'era e crede che non sia successo niente.
+    status: implemented
+    generate_issue: false
+    labels: [ordini, ux]
+    test_cases: [tests/component/OrderStatusPage.test.jsx]
+
+  - id: REQ-ORD-017
+    title: "Il QR per il cliente c'è solo se c'è qualcosa da seguire"
+    area: "src/pages/OrderStatusPage.jsx"
+    description: >
+      Sul dettaglio di un ordine battuto al banco, allo staff compare «Mostra
+      QR al cliente»: chi lo scansiona segue il proprio drink dal telefono.
+      Con gli stati del servizio SPENTI non c'è niente da seguire — la
+      pagina dice solo cosa è stato ordinato — e offrirlo è promettere una
+      cosa che non succede: lì il tasto non compare.
+    status: implemented
+    generate_issue: false
+    labels: [ordini, clienti]
+    test_cases: [tests/component/OrderStatusPage.test.jsx]
+
+  - id: REQ-ORD-015
+    title: "Nella lista ordini si cercano anche le serate passate"
+    area: "src/lib/periodo.js, src/components/SelettorePeriodo.jsx, src/components/OrdersHistory.jsx, src/lib/api.js"
+    description: >
+      La lista mostrava gli ultimi conti e basta: per ritrovare una serata di
+      due settimane fa non c'era strada. C'è un selettore a calendario come
+      quelli degli alberghi — si tocca il giorno d'inizio, poi quello di
+      fine, e in mezzo si accende tutto; un tocco solo vuol dire quella
+      serata e basta, che è il caso più frequente. Sopra ci sono le
+      scorciatoie (oggi, ieri, ultimi 7 e 30 giorni), perché quasi sempre si
+      cerca lì.
+      I giorni sono GIORNATE COMMERCIALI: la serata del venerdì finisce alle
+      quattro del sabato, e chi cerca «venerdì» cerca quella. I giorni futuri
+      sono spenti. Scelto un periodo, i conti si vanno a leggere dal
+      database: in tempo reale ci sono solo gli ultimi.
+      C'è anche un filtro su CHI ha aperto il conto — il locale (banco e
+      sala) o il cliente dal suo telefono — che compare solo se di ordini dai
+      clienti ce n'è davvero: dove non succede sarebbe una domanda senza
+      risposta.
+    status: implemented
+    generate_issue: false
+    labels: [ordini, cassa]
+    test_cases: [tests/unit/periodo.test.js]
+
+  - id: REQ-ORD-016
+    title: "Battere un conto non aspetta la rete, e non ne nascono due"
+    area: "src/lib/progressivi.js, src/lib/api.js, src/components/OrderPosDetail.jsx"
+    description: >
+      Prima di scrivere un ordine si facevano TRE letture al server — quale
+      cassa è aperta, il progressivo della serata, quello assoluto — e solo
+      dopo il conto compariva: era il mezzo secondo fra «Conferma» e il conto
+      a schermo. Adesso quei numeri stanno in memoria, tenuti aggiornati da
+      ascolti che partono all'avvio dell'app: alla creazione non si chiede
+      niente a nessuno.
+      E DUE CONTI NON PRENDONO PIÙ LO STESSO NUMERO. Il numero è il più
+      grande fra quello del server e l'ultimo dato da questo dispositivo, più
+      uno: due creazioni ravvicinate non possono più leggere lo stesso valore
+      solo perché la scrittura del contatore è ancora per strada — è così che
+      sono nati due conti #15 nella stessa serata. Quello che si è assegnato
+      resta scritto anche dopo un ricaricamento, e il contatore si scrive con
+      un incremento, che non torna mai indietro.
+      Resta scoperto un solo caso: due DISPOSITIVI che battono nello stesso
+      istante. Escluderlo vorrebbe dire una transazione, cioè aspettare il
+      server a ogni ordine — il contrario di quello che serve al banco.
+      UNA BATTUTA, UN CONTO. La schermata può chiedere la creazione due volte
+      (l'auto-creazione che scatta mentre si preme «Paga», un doppio tocco):
+      la chiave della battuta fa restituire il conto che sta già nascendo
+      invece di farne un altro.
+      E il «+» apre sempre un conto NUOVO: la memoria del conto in corso
+      serve a riprenderlo dopo un ricaricamento della pagina, non a
+      rimetterci dentro chi esce e rientra.
+      DUE TERMINALI, LO STESSO NUMERO: la disputa la chiude il SERVER, che è
+      l'unico posto dove esiste un «prima» e un «dopo» veri. Tiene il numero
+      chi è arrivato prima; chi arriva dopo prende il primo libero dopo il
+      più alto — un buco in mezzo sarebbe di un conto ancora per strada, e la
+      disputa ricomincerebbe. A parità di istante decide l'id del documento:
+      arbitrario, ma UGUALE per i due terminali, che è l'unica cosa che
+      conta. Tutto automatico: al banco non si ferma una serata per un
+      numero. Il numero cambia solo a chi ha perso, e resta scritto da dove
+      veniva (`daily_number_precedente`), perché la comanda può essere già
+      uscita dalla stampante col numero vecchio.
+      LE TRE SCHERMATE DEL SERVIZIO — coda, conto, pagamento — LAVORANO IN
+      LOCALE. Leggono dalla cache, scrivono in sottofondo e si aggiornano da
+      sole quando il server manda qualcosa di nuovo. Niente attese per far
+      vedere l'esito di un gesto: incassare, annullare, aggiungere una riga
+      si vedono nell'istante in cui si tocca, e i numeri in cima si muovono
+      con loro. Il dato che serve si PRECARICA — i progressivi, la cassa
+      aperta — invece di andarlo a chiedere al momento del bisogno.
+      Anche i tasti: «invia comanda» e «annulla ordine» funzionano su un
+      conto appena battuto, senza aspettare che esista sul server. E
+      annullare lascia SEMPRE un conto annullato, anche se l'ordine non era
+      ancora nato: il numero è già stato mostrato e preso, e di quello che è
+      stato battuto deve restare traccia.
+      LA SCHERMATA DEL CONTO NUOVO SI APRE PULITA, senza pulizie
+      all'apertura: uscendo — dalla freccia, dal menu, dal tasto indietro —
+      quello che è stato battuto diventa un conto e la bozza si chiude. La
+      «bozza che non si perde» continua a valere: non si perde perché
+      diventa un conto, non perché resta in un cassetto da cui il conto dopo
+      se la ritrova dentro.
+      Un tasto 🧹 svuota tutte le righe in un colpo (con conferma), invece
+      di toglierle una per una. E la
+      bozza si svuota all'istante: aspettare la scrittura voleva dire
+      aprire il conto dopo e trovarci dentro le righe di quello prima.
+      LE MODIFICHE CHE NON PASSERANNO MAI si dicono e si scartano. «Il
+      documento non esiste più» o «non hai i permessi» non cambiano al
+      secondo tentativo — succede quando qualcuno cancella un prodotto
+      mentre tu ne stavi scalando la scorta — quindi non si riprovano da
+      sole, si spiegano a parole («una scheda del magazzino non esiste
+      più») e si tolgono dalla lista con un tasto. Senza, la campanella
+      resta rossa per sempre su roba che non si può salvare.
+      E QUELLO CHE SI SCRIVE ARRIVA AGLI ALTRI DA SÉ. Ogni modifica entra
+      prima nella memoria locale e parte per il server in sottofondo: gli
+      altri terminali la vedono comparire senza che nessuno prema niente.
+      Offline le scritture non falliscono — restano in coda dentro Firestore,
+      che le conserva anche a app chiusa, e partono appena c'è linea. Quelle
+      RIFIUTATE (un errore vero, la rete che si chiude a metà) si riprovano
+      da sole al ritorno della rete, fino a tre volte: oltre, restano lì e lo
+      dice la campanella, perché una scrittura che continua a essere
+      rifiutata ha bisogno di una persona, non di un altro tentativo.
+      E NIENTE ASPETTA IL SERVER. Ogni azione su un conto — incassare,
+      annullare, avanzare, aggiungere righe — leggeva il documento dal
+      SERVER prima di scrivere: da lì il ritardo fra il tocco e la coda che
+      si muove, e il riepilogo in cima che sembrava aggiornarsi solo alla
+      risposta del server. Si legge dalla cache, che l'ascolto della coda
+      tiene già allineata.
+      E USCIRE DAL CONTO NON ASPETTA NIENTE. Il box del nome aspettava che il
+      conto fosse nato per sapere se chiederlo — ma il nome si sa già dalla
+      schermata: l'unica cosa che quell'attesa produceva era il box in
+      ritardo. Il conto nasce per conto suo, e il nome lo raggiunge appena
+      c'è.
+    status: implemented
+    generate_issue: false
+    labels: [ordini, offline, difetto-risolto]
+    test_cases:
+      - tests/unit/progressivi.test.js
+      - tests/bdd/numerazione.test.js
+      - tests/component/PosPage.test.jsx
+      - tests/unit/sync.test.js
+
+  - id: REQ-PAG-010
+    title: "Si vede che cosa è stato pagato, e cosa copre"
+    area: "src/lib/pagamento.js, src/components/OrderPosDetail.jsx, src/components/PaymentScreen.jsx"
+    description: >
+      In fondo al conto c'era una riga sola: «Sconto e acconti già incassati
+      −15,00 €». Quindici euro di che? Uno sconto, un acconto, con che
+      metodo, per quali righe? Al banco, davanti al cliente che chiede,
+      quella riga non risponde a niente.
+      Ora sono righe distinte: lo sconto per conto suo, e ogni incasso col
+      suo metodo e la sua ora.
+      E si dice cosa copre. Un importo battuto a mano — «30 €» — NON copre
+      nessuna riga: sono soldi lasciati sul conto, e si chiama ACCONTO.
+      Chi paga scegliendo le righe copre esattamente quelle, e sotto
+      l'incasso si leggono («2× Daiquiri · 1× Birra»). Non c'è una riga di
+      istruzioni sopra le righe: a dire da dove viene il numero ci pensa
+      l'etichetta sopra l'importo — «RIGHE SCELTE» o «IMPORTO A MANO» — che
+      si legge nel momento in cui serve. Attribuire delle
+      righe a un importo battuto a mano vorrebbe dire inventarselo: se
+      servono attribuite, si scelgono nella schermata di pagamento — che è
+      esattamente a cosa serve la selezione a sinistra.
+    status: implemented
+    generate_issue: false
+    labels: [pagamenti, ux]
+    test_cases: [tests/unit/pagamento.test.js]
 
   - id: REQ-ORD-008
     title: "Un conto chiuso o annullato si può rimettere in corso"
@@ -137,6 +394,12 @@ requirements:
     description: >
       Capita di chiudere un conto sul tavolo sbagliato, di annullarlo per un
       malinteso, o che il cliente torni e voglia ordinare ancora su quello.
+      Nella storia CHI ha fatto una cosa si scrive sempre allo stesso modo:
+      il NOME, col ruolo fra parentesi se si sa. Mai l'email, che è un
+      indirizzo e non una persona. Prima la stessa persona compariva tre
+      volte con tre etichette diverse — l'email all'apertura, il ruolo
+      all'annullo (l'unica cosa che quella strada scriveva), il nome alla
+      riapertura — e chi leggeva non poteva dire «è stato lui».
       Chi ha il gestionale può rimetterlo in corso: si conferma in un pannello
       che dice cosa succederà e si può scrivere il perché — FACOLTATIVO, perché
       se fosse obbligatorio si scriverebbe "x" per passare oltre, e al banco i
@@ -195,6 +458,22 @@ requirements:
     generate_issue: false
     labels: [ordini, difetto-risolto]
     test_cases: [tests/unit/storiaOrdine.test.js, tests/component/OrderPosDetail.test.jsx, tests/unit/vouchers.test.js, tests/unit/ripristino.test.js]
+
+  - id: REQ-ORD-010
+    title: "Gli annullati hanno una tab loro nella coda"
+    area: "src/lib/coda.js, src/pages/BartenderPage.jsx"
+    description: >
+      La coda si filtra con «In corso», «Chiusi», «Annullati» e «Tutti».
+      Gli annullati stavano fra i chiusi: facevano numero senza essere
+      incassi — «Chiusi» sono i soldi della serata — e per ritrovarne uno
+      da riaprire bisognava cercarlo in mezzo a quelli buoni. Un conto
+      annullato non è un conto chiuso: è un conto che non c'è più.
+      La regola è pura (`passaFiltroCoda`), così il filtro non si sposta
+      di significato fra la griglia e i conteggi.
+    status: implemented
+    generate_issue: false
+    labels: [ordini, ux]
+    test_cases: [tests/unit/coda.test.js]
 
   - id: REQ-ORD-009
     title: "Un ordine battuto altrove si vede su tutti gli altri terminali"
@@ -332,6 +611,63 @@ requirements:
     labels: [pos, telefono, ux]
     test_cases: [tests/component/OrderPosDetail.test.jsx]
 
+  - id: REQ-POS-019
+    title: "La striscia delle card dice quello che serve a chi lavora"
+    area: "src/lib/strisce.js, src/components/SettingsTab.jsx"
+    description: >
+      La striscia a sinistra delle card — griglia del conto e schede del
+      menù — si sceglie, perché dipende da come si lavora: chi conosce il
+      listino a memoria vuole i colori delle categorie per trovare il
+      prodotto al tatto, chi sta finendo le bottiglie vuole vedere subito
+      cosa non si può più fare, chi ha già abbastanza colori addosso la
+      vuole spenta.
+      Quattro modi: SPENTA (grigia, il colore resta nella linguetta),
+      PRODOTTO (il suo colore, o quello della categoria se non ne ha uno),
+      CATEGORIA (sempre la categoria: il colore del singolo prodotto lo
+      dice la linguetta) e SCORTE (rosso ingrediente esaurito, arancione
+      in esaurimento, e «ce n'è abbastanza» a scelta fra grigio e verde).
+      Un prodotto fuori menu resta GRIGIO anche col verde acceso: è spento,
+      non rotto — il rosso qui diceva due cose opposte, «l'ho tolto io» e
+      «è finito il rum».
+      La scelta è del LOCALE (settings/bar) e vale per tutti i terminali: la
+      griglia dev'essere la stessa dovunque, o due persone parlano di due
+      schermate diverse. Le due schermate si impostano separatamente.
+      Le regole stanno in una funzione pura: la stessa striscia deve
+      significare la stessa cosa in tutte le schermate, e con la logica
+      dentro le pagine finiva per divergere.
+      L'IMPOSTAZIONE È SOLO DELLA STRISCIA. La linguetta nell'angolo in
+      alto a sinistra tiene sempre il colore del PRODOTTO — è quella che si
+      tocca per cambiarlo — qualunque cosa dica la striscia. I due segni
+      condividevano lo stesso valore, e scegliendo «categoria» il colore
+      messo a mano spariva dalla vista pur essendo ancora lì.
+      Ogni scelta sta DOVE SI LAVORA quella schermata: la griglia del conto
+      in Impostazioni → Vista ordine, le schede del catalogo in Menù e
+      catalogo — modo della striscia e colore del «ce n'è abbastanza»,
+      separati per le due. Non è la stessa domanda: nel conto si batte di
+      corsa e una griglia tutta verde è rumore (lì interessano i guai),
+      nel catalogo si guarda con calma cosa si può fare e il verde è
+      un'informazione.
+      Il MENÙ ha tre sottosezioni nel menu laterale — modifica menù,
+      categorie, marginalità del listino — invece dei due pannelli a
+      scomparsa in cima al catalogo, che si aprivano spingendo giù la
+      griglia: chi voleva solo guardare i margini si portava dietro tutto
+      il listino sotto.
+      Le scorte si leggono SOLO se servono: con gli altri modi ricette e
+      giacenze non si caricano nemmeno.
+      NIENTE LAMPO ALL'APERTURA. Le impostazioni arrivano dal server e per
+      un istante non ci sono: aprendo un conto le strisce comparivano
+      colorate e sparivano un attimo dopo, in un locale che le aveva
+      spente. L'ultima risposta del server resta in memoria locale
+      (`impostazioniLocali.js`) e la schermata parte da lì — l'ultima
+      verità nota, non i valori di fabbrica.
+    status: implemented
+    generate_issue: false
+    labels: [pos, menu, ux]
+    test_cases:
+      - tests/unit/strisce.test.js
+      - tests/component/PosProductPicker.test.jsx
+      - tests/unit/impostazioniLocali.test.js
+
   - id: REQ-POS-013
     title: "In «Organizza» la card segue il dito"
     area: "src/components/PosProductPicker.jsx, src/index.css"
@@ -369,6 +705,12 @@ requirements:
       c'è il guscio che porta il trascinamento — si allungava lui e la card
       restava alta quanto il suo testo, con una riga di card di altezze
       diverse.
+      La card in mano NON ESCE DALLA GRIGLIA. Trascinandola verso destra
+      finiva oltre il bordo: lì fuori non c'è niente da riordinare, ma il
+      riquadro — che scorre — si allargava per contenerla e partiva uno
+      scorrimento orizzontale senza fine, da riportare indietro a mano. Il
+      movimento si ferma ai bordi del riquadro (un modifier di dnd-kit) e
+      la griglia non scorre di lato: va a capo.
       La card in mano è OPACA: il fondo delle card è un velo (--tile-bg,
       bianco al 5%), che appoggiate sulla pagina va bene ma alzandone una
       sopra le altre le faceva vedere attraverso — e non si capiva più
@@ -582,6 +924,60 @@ requirements:
     labels: [cassa]
     test_cases: [tests/unit/cassa.test.js]
 
+  - id: REQ-CASSA-007
+    title: "Il flusso cassa serve DURANTE la serata, non solo alla chiusura"
+    area: "src/lib/cassa.js, src/components/CashFlow.jsx"
+    description: >
+      Alla chiusura i numeri sono un verdetto; durante il servizio sono
+      decisioni. La schermata dice, in tempo reale:
+      quanto deve esserci in cassa ADESSO (fondo più i contanti incassati) —
+      prima si sapeva solo alla chiusura, e serve al cambio turno o quando
+      due numeri non tornano;
+      il conto medio, con quanti conti e quanti coperti, e quanto lascia una
+      persona — in un cocktail bar un tavolo da sei e uno da due fanno due
+      serate diverse con lo stesso «conto medio»;
+      chi ha incassato e quanto, perché in una serata si alternano in due o
+      tre alla cassa e se il contante non torna è la prima domanda che ci si
+      fa (l'elenco compare solo se sono stati in più di uno);
+      com'è andata l'ultima ora, non solo la curva della serata: dice come
+      sta andando adesso, se aprire un'altra cassa o mandare qualcuno in
+      pausa.
+      Chi ha incassato è scritto sul pagamento; sui conti battuti prima non
+      c'è e si ripiega su chi ha aperto il conto — meglio un nome vicino al
+      vero che una riga «sconosciuto».
+    status: implemented
+    generate_issue: false
+    labels: [cassa]
+    test_cases: [tests/unit/cassa.test.js]
+
+  - id: REQ-CASSA-008
+    title: "La cassa si apre e si chiude dalla coda, ed è cosa del banco"
+    area: "src/components/ApriCassaBox.jsx, src/pages/BartenderPage.jsx"
+    description: >
+      Aprire e chiudere la cassa sono le due cose che si fanno a inizio e
+      fine serata, e si fanno dalla schermata in cui si sta già: nel menu ⋯
+      della coda c'è «Apri cassa» quando è chiusa e «Chiudi cassa» quando è
+      aperta. SONO DEL BANCO: alla sala non compaiono affatto — né nel menu
+      né come tasto sul banner della cassa chiusa, dove legge che la deve
+      aprire il banco. Un tasto che risponde «non puoi» è peggio di un tasto
+      che non c'è. Andarle a cercare nel flusso di cassa vuol dire uscire dalla
+      coda proprio mentre la si sta guardando.
+      «Chiudi cassa» è spento finché ci sono conti aperti, e lo dice: un
+      conto aperto è un incasso che manca, e chiudere così vorrebbe dire far
+      quadrare una serata con dentro un buco. Acceso, porta al flusso di
+      cassa, dove si conta il contante.
+      «Apri cassa» — dal menu o dal banner della cassa chiusa — apre un box
+      che chiede il fondo, facoltativo perché non tutti lo mettono, con
+      «Apri» e «Annulla». Annulla lascia la cassa chiusa: premere per sbaglio
+      e ritrovarsi una serata aperta col fondo sbagliato si sistema solo
+      chiudendo e riaprendo.
+    status: implemented
+    generate_issue: false
+    labels: [cassa, ux]
+    test_cases:
+      - tests/component/ApriCassaBox.test.jsx
+      - tests/unit/coda.test.js
+
   - id: REQ-CASSA-003
     title: "La carta non finisce mai nei contanti"
     area: "src/lib/cassa.js"
@@ -607,6 +1003,28 @@ requirements:
     labels: [cassa, statistiche]
     test_cases: [tests/unit/rendiconto.test.js]
 
+  - id: REQ-CASSA-006
+    title: "La cassa è una sola: flusso, lista ordini, chiusure"
+    area: "src/components/CassaTab.jsx, src/lib/sezioni.js"
+    description: >
+      «Cassa» (prima «Flusso cassa») ha tre sottosezioni nel menu laterale:
+      il FLUSSO della serata in corso, la LISTA ORDINI e le CHIUSURE. Erano
+      tre posti per la stessa domanda — quanto ho incassato — e due si
+      raggiungevano da tasti in fondo alla pagina del flusso, che si
+      trovano solo scorrendo fino in fondo; la lista ordini aveva perfino
+      una voce sua nel menu, accanto alla cassa, come se fosse un altro
+      mestiere.
+      Le TIMBRATURE stanno in Staff, in cima alle ore, non in cassa: erano
+      in fondo alla pagina del flusso — dove ci si va per i soldi — e per
+      battere l'ingresso di chi arriva bisognava passare di lì.
+      Il vecchio indirizzo `?tab=storico` continua a funzionare: porta alla
+      cassa, aperta sulla lista ordini. Sta nei collegamenti salvati e nei
+      messaggi, e non deve finire in una pagina senza nome.
+    status: implemented
+    generate_issue: false
+    labels: [cassa, ux]
+    test_cases: [tests/unit/sezioni.test.js]
+
   - id: REQ-CASSA-005
     title: "Statistiche per serata, con tempi e margini"
     area: "src/lib/stats.js, src/lib/eta.js, src/components/StatsTab.jsx"
@@ -614,6 +1032,16 @@ requirements:
       Statistiche per serata: incassi, prodotti più venduti, tempi di preparazione
       e consegna misurati, preparazione più lunga. I tempi misurati raffinano
       progressivamente la stima mostrata al cliente.
+      SI APRONO SULL'ULTIMA CHIUSURA di cassa, e quel periodo sta PRIMA
+      degli altri nella riga: la domanda del mattino dopo è «com'è andata
+      ieri sera», non «com'è andata la settimana». Prima partivano da sette
+      giorni — un'altra domanda — e la serata era in fondo alla riga. Chi
+      sceglie un altro periodo se lo tiene: la preselezione vale solo alla
+      prima apertura.
+      Le due viste (giornaliero e mensile per macro) sono SOTTOSEZIONI
+      della pagina, come in Magazzino e Impostazioni: stanno nel menu
+      invece che in una riga di chip sopra il contenuto, che costava
+      altezza a una schermata già fatta di tabelle.
     status: implemented
     generate_issue: false
     labels: [statistiche]
@@ -646,25 +1074,40 @@ requirements:
     status: implemented
     generate_issue: false
     labels: [magazzino]
-    test_cases: [tests/unit/inventory.test.js]
+    test_cases:
+      - tests/unit/inventory.test.js
+      - tests/component/InventoryManager.test.jsx
 
   - id: REQ-MAG-003
-    title: "Le scorte si scalano quando il drink si fa"
-    area: "src/lib/inventory.js computeConsumption, src/lib/api.js"
+    title: "Le scorte si scalano quando il drink è servito"
+    area: "src/lib/inventory.js computeConsumption, src/lib/comande.js, src/lib/api.js"
     description: >
-      Passando una comanda in preparazione si scalano gli ingredienti secondo le
-      ricette, salvando lo snapshot del consumo sulla comanda: serve per stornare
-      in caso di annullo e per non scalare due volte. Il magazzino che non risponde
-      non blocca la comanda: viene segnata come non scaricata e si recupera dopo.
+      Il magazzino si scala quando la comanda risulta SERVITA: allora quel
+      drink è uscito per certo. Prima si scaricava alla presa in carico, e un
+      drink iniziato e poi non fatto — riga tolta, cliente che cambia idea,
+      comanda annullata — aveva già portato via gli ingredienti.
+      Con gli stati del servizio spenti non esistono comande da servire:
+      risultano servite alla riscossione, ed è lì che si scala. Incassare, di
+      per sé, non scala niente: seguendo il servizio si paga anche in
+      anticipo, con tre drink ancora da fare.
+      Fra l'una e l'altra cosa gli ingredienti sono IMPEGNATI e si leggono in
+      magazzino (REQ-MAG-014).
+      Si scala una volta sola, salvando lo snapshot del consumo sulla
+      comanda: serve per stornare in caso di annullo e per non scalare due
+      volte. Il magazzino che non risponde non blocca la comanda: resta
+      segnata come non scaricata e si recupera dopo.
       SOTTO ZERO NON SI SCENDE: si toglie al massimo quello che risulta in
-      giacenza, e un carico su una giacenza negativa riparte da zero. La vendita
-      passa comunque (il conto è già scritto) e il magazzino si ferma a zero:
-      altrimenti il buco resta, il carico dopo conta meno di una bottiglia e il
-      valore in euro va in negativo.
+      giacenza, e un carico su una giacenza negativa riparte da zero. La
+      vendita passa comunque (il conto è già scritto) e il magazzino si ferma
+      a zero: altrimenti il buco resta, il carico dopo conta meno di una
+      bottiglia e il valore in euro va in negativo.
     status: implemented
     generate_issue: false
     labels: [magazzino, offline]
-    test_cases: [tests/unit/inventory.test.js, tests/unit/incassoOffline.test.js]
+    test_cases:
+      - tests/unit/inventory.test.js
+      - tests/unit/incassoOffline.test.js
+      - tests/unit/comande.test.js
 
   - id: REQ-MAG-004
     title: "Modificare un ordine già scalato riallinea le scorte alla differenza"
@@ -726,6 +1169,165 @@ requirements:
     generate_issue: true
     labels: [magazzino, menu, dati]
     test_cases: []
+
+  - id: REQ-UI-015
+    title: "Staff e Utenti hanno tre sezioni, come le altre pagine"
+    area: "src/components/StaffHoursTab.jsx, src/components/UtentiTab.jsx"
+    description: >
+      Staff: calendario, timbrature, nuovo turno, paghe orarie.
+      Utenti e ruoli: utenze registrate,
+      nuovo account, buoni VIP.
+      Erano pannelli a scomparsa in cima alla pagina: aprirli spingeva giù
+      quello che si era venuti a guardare — il calendario, l'elenco delle
+      utenze — e per tornarci bisognava richiuderli. Nel menu laterale
+      costano zero e si raggiungono da qualsiasi punto della pagina.
+      Chi non è amministratore, in Utenti, ha solo l'elenco: le altre due
+      non sono cose sue.
+    status: implemented
+    generate_issue: false
+    labels: [ux, navigazione]
+    test_cases:
+      - tests/component/UtentiTab.test.jsx
+      - tests/component/StaffHoursTab.test.jsx
+
+  - id: REQ-UI-016
+    title: "Le attese si vedono, e dicono cosa stanno aspettando"
+    area: "src/components/Caricamento.jsx"
+    description: >
+      Dove l'app deve aspettare — l'accesso, la cassa, il listino, la ricerca
+      nello storico — c'è un'attesa animata con scritto CHE COSA si sta
+      aspettando. Una scritta ferma su una pagina vuota non si distingue da
+      un'app piantata: chi guarda non sa se aspettare o ricaricare.
+      Non c'è una percentuale: non si sa quanto ci vuole, e una barra che si
+      ferma a metà è peggio del silenzio. Chi ha chiesto meno animazioni vede
+      i pallini respirare invece di saltare.
+    status: implemented
+    generate_issue: false
+    labels: [ux]
+    test_cases: [tests/component/Caricamento.test.jsx]
+
+  - id: REQ-UI-017
+    title: "La password si può guardare"
+    area: "src/components/CampoPassword.jsx"
+    description: >
+      Accanto a ogni campo password — accesso del banco, accesso e
+      registrazione dei clienti, cambio password nel profilo, conferma per
+      eliminare l'account — c'è l'occhio che la mostra. Al banco si entra da
+      un tablet, spesso con le mani bagnate e una tastiera a schermo che
+      sbaglia da sola: scritta a pallini, davanti a un «credenziali errate»
+      non si sa se è sbagliata la password o una lettera partita male.
+      Parte sempre COPERTA: al bancone c'è sempre qualcuno dietro le spalle,
+      e mostrarla dev'essere una scelta, non la condizione di partenza.
+      L'occhio sta fuori dal giro del tabulatore: chi compila con la
+      tastiera passa dalla password al tasto «entra», non da un interruttore
+      in mezzo.
+    status: implemented
+    generate_issue: false
+    labels: [ux, accesso]
+    test_cases: [tests/component/CampoPassword.test.jsx]
+
+  - id: REQ-UI-018
+    title: "Le righe del conto si riordinano come le card della griglia"
+    area: "src/components/OrderPosDetail.jsx, src/index.css"
+    description: >
+      Nel dettaglio del conto le righe si spostano trascinandole, con la
+      stessa libreria della griglia dei prodotti: la riga segue il dito e le
+      altre si scansano da sole. Prima era fatto a mano, a lungo-premuto: la
+      riga saltava, le altre no, e capitava di spostarne una mentre si
+      voleva solo toccarla.
+      Si entra in «organizza» come nella griglia — un interruttore che fa
+      comparire le maniglie — e fuori di lì toccare una riga la APRE, che è
+      quello che si fa mille volte a sera. Le righe già pagate non si
+      spostano: stanno in fondo, ferme.
+      E nella coda, aprendo le azioni di una card, cresce SOLO quella: le
+      altre della stessa riga restano come sono e quelle sotto scendono.
+      Prima si allungavano tutte insieme — mezzo schermo di riquadri vuoti
+      per un menu di sei tasti.
+    status: implemented
+    generate_issue: false
+    labels: [ux, ordini]
+    test_cases: [tests/component/OrderPosDetail.test.jsx]
+
+  - id: REQ-MENU-010
+    title: "Come si fa questo drink: la ⓘ sulla card"
+    area: "src/components/SchedaDrink.jsx, src/components/PosBits.jsx, src/components/DrinkForm.jsx"
+    description: >
+      Ogni card della griglia ha una ⓘ che apre la scheda del prodotto:
+      ingredienti CON LE QUANTITÀ e come si prepara. «Quanto gin ci va nel
+      Negroni?» al banco si chiede a voce, e a voce si perde: chi entra a
+      dare una mano il sabato non ha le dosi in testa, e l'unico che le sa
+      sta facendo drink.
+      La ricetta strutturata c'era già — serve al magazzino per scalare le
+      scorte — ma non la vedeva nessuno; e non basta: dice COSA ci va, non
+      il gesto. Nella scheda del prodotto (Menù) c'è quindi anche «Come si
+      prepara», scrittura libera: shakerato o mescolato, il ghiaccio,
+      l'ordine, il bicchiere. Gli a capo restano dove li ha messi chi l'ha
+      scritta, perché una preparazione è una sequenza di gesti.
+      La ⓘ sta in basso a destra, lontana dai +/− e dalla stella: si guarda
+      mentre si versa e non si preme per sbaglio. In «organizza» non c'è:
+      lì le card si spostano, non si leggono.
+      SI PUÒ SPEGNERE (Impostazioni → Vista ordine): dove il listino lo
+      sanno tutti a memoria è un segno in più su ogni card, e le card sono
+      cento; dove invece cambia spesso, o si dà una mano il sabato, è la
+      differenza fra saper fare un drink e doverlo chiedere. Accesa di suo.
+    status: implemented
+    generate_issue: false
+    labels: [menu, ux]
+    test_cases:
+      - tests/component/SchedaDrink.test.jsx
+      - tests/component/OrderPosDetail.test.jsx
+
+  - id: REQ-AVVISI-005
+    title: "Dove compaiono gli avvisi ad app aperta, lo sceglie il locale"
+    area: "src/lib/avvisiInApp.js, src/components/FumettoAvvisi.jsx, src/lib/notify.js"
+    description: >
+      Due modi, in Impostazioni → Notifiche:
+      «in alto, su ogni schermata» — la strisciolina di sempre: non si
+      perde, ma interrompe chiunque, anche chi sta contando la cassa o
+      caricando il magazzino;
+      «dalla campanella, solo in coda» — un fumetto che esce dalla
+      campanella e compare SOLO nella coda ordini, che è il posto dove gli
+      ordini si aspettano: lì un avviso non interrompe niente, è la ragione
+      per cui si sta guardando quella schermata.
+      Il fumetto sparisce da sé dopo qualche secondo — è un richiamo, non
+      una finestra da chiudere — e toccandolo si aprono gli avvisi, perché
+      chi lo tocca vuole vedere cos'è successo. Fuori dalla coda non compare
+      niente: gli avvisi restano nella campanella, col loro conto.
+      Di suo resta la strisciolina, che è come ha sempre funzionato. Un
+      valore sconosciuto ricade lì: meglio la strisciolina di un avviso che
+      non compare da nessuna parte.
+      La scelta sta nel PROFILO, accanto a «quali avvisi ricevere»: è della
+      stessa natura — vale per QUESTO dispositivo — e quello è il posto dove
+      chi lavora li va a cercare. Nelle impostazioni del locale nessuno
+      cercherebbe una cosa sua, e chi è in sala quel menu non ce l'ha
+      nemmeno.
+    status: implemented
+    generate_issue: false
+    labels: [avvisi, ux]
+    test_cases:
+      - tests/unit/avvisiInApp.test.js
+      - tests/component/FumettoAvvisi.test.jsx
+      - tests/component/AvvisiPanel.test.jsx
+
+  - id: REQ-UI-014
+    title: "La barra delle sezioni si stringe a icone, o si toglie di mezzo"
+    area: "src/components/CategoryRail.jsx, src/index.css"
+    description: >
+      La barra delle sezioni a sinistra (magazzino, menù, impostazioni) si
+      stringe col tasto in cima e la scelta resta, pagina per pagina.
+      Stringere vuol dire «a icone» — ma solo dove le icone ci sono: se le
+      voci non hanno né icona né colore, come le categorie del magazzino,
+      restava una colonna di pastiglie grigie tutte uguali, brutte e mute,
+      perché non c'era modo di sapere quale fosse quale. Lì le voci si
+      tolgono di mezzo del tutto e resta il solo tasto per rimetterle: le
+      sezioni sono a un clic invece che a un indovinello.
+      Non c'è un modo per farla sparire senza ritorno: il tasto per
+      riaprirla resta sempre visibile, altrimenti si perde l'unico modo di
+      girare fra le sezioni.
+    status: implemented
+    generate_issue: false
+    labels: [ux, navigazione]
+    test_cases: [tests/component/CategoryRail.test.jsx]
 
   - id: REQ-MAG-010
     title: "Il magazzino sta in una schermata, con le sezioni a lato"
@@ -1019,10 +1621,38 @@ requirements:
     description: >
       Dal gestionale si chiama un membro dello staff con un messaggio: il suo
       dispositivo vibra con insistenza finché non risponde.
+      Il pannello si apre dal menu ⋯ della coda, e APERTO APPOSTA non resta
+      mai muto: se non c'è nessun altro da chiamare lo dice, e dice dove si
+      creano gli account. Prima spariva da sé — con un solo account l'elenco
+      è vuoto — e si toccava una voce che non faceva niente, sembrando
+      rotta. Dove il pannello compare da sé invece resta muto: una card
+      «non c'è nessuno» fissa in coda sarebbe rumore.
     status: implemented
     generate_issue: false
     labels: [staff, notifiche]
-    test_cases: [tests/bdd/notify-staff-call.test.js]
+    test_cases:
+      - tests/bdd/notify-staff-call.test.js
+      - tests/component/StaffCallList.test.jsx
+
+  - id: REQ-STAFF-013
+    title: "Per chi lavora, la vista menù serve a battere un ordine"
+    area: "src/pages/MenuPage.jsx, src/components/ServiceQueue.jsx"
+    description: >
+      Nella vista menù il personale non vede più i propri ordini attivi in
+      cima: quella schermata, per chi lavora, serve a UNA cosa — prendere un
+      ordine dalla carta com'è fatta per il cliente. Gli ordini stanno in
+      coda, che è un'altra pagina, e vederli anche qui mescolava due
+      mestieri. Al cliente invece restano: è l'unico posto dove ritrova
+      quello che ha ordinato.
+      E in «Da servire» il tasto è «Aggiungi ordine», e porta dove porta il
+      «+» della coda: la schermata del conto, con la griglia. Prima mandava
+      al menù — la vista del cliente — che per prendere un ordine al tavolo
+      è la strada lunga: si scorre una carta fatta per chi ordina, invece
+      della griglia fatta per chi batte.
+    status: implemented
+    generate_issue: false
+    labels: [staff, ux]
+    test_cases: [tests/component/MenuPage.test.jsx]
 
   - id: REQ-STAFF-008
     title: "La sala lavora sulla stessa coda del banco"
@@ -1212,6 +1842,27 @@ requirements:
     labels: [stampa, cassa]
     test_cases: []
 
+  - id: REQ-STAMPA-009
+    title: "In locale la stampante è di carta finta"
+    area: "src/lib/stampanteFinta.js, src/lib/printer.js"
+    description: >
+      Sull'ambiente di sviluppo la stampante non c'è — è un apparecchio
+      sulla rete del locale — e ogni modifica a comande e scontrini si
+      provava a occhio nel codice, o andando al bar. In locale l'app parla
+      con una stampante finta che raccoglie le righe e le apre nella
+      finestra di stampa del browser, da cui si salva in PDF: si prova
+      quello che ESCE, che è la domanda vera («questa comanda si legge?»).
+      SOLO IN LOCALE, e questo è il punto: sull'ambiente di TEST resta la
+      stampante vera, perché è lì che si prova il collegamento — certificato,
+      rete, riconnessione — e chi prova le funzioni sul test la vuole
+      collegata davvero. Il segnale è il server di sviluppo, la build
+      «locale» o gli emulatori: se il database è finto, lo è anche il bar.
+      Si può forzare nei due versi con VITE_STAMPANTE_FINTA.
+    status: implemented
+    generate_issue: false
+    labels: [stampa, strumenti]
+    test_cases: [tests/unit/stampanteFinta.test.js]
+
   - id: REQ-STAMPA-006
     title: "Lo staff di sala stampa le comande degli ordini che prende"
     area: "src/pages/MenuPage.jsx, src/lib/printer.js"
@@ -1255,12 +1906,62 @@ requirements:
       - tests/unit/statoStampante.test.js
       - tests/component/PallinoStampante.test.jsx
 
+  - id: REQ-AVVISI-004
+    title: "Uscendo si spengono gli avvisi, rientrando si riaccendono"
+    area: "src/lib/logout.js, src/lib/api.js, src/App.jsx, src/components/AvvisiSpenti.jsx"
+    description: >
+      Il token push è del DISPOSITIVO, non della persona, e dopo il logout
+      restava valido: chi si era scollegato continuava a sentire suonare gli
+      ordini del locale sul telefono di casa. Uscendo, quel dispositivo viene
+      tolto dai destinatari; al primo accesso successivo si registra da sé,
+      senza aspettare che si passi dalla coda.
+      Se non ci riesce — offline, regole — si esce lo stesso: restare dentro
+      sarebbe peggio, e il token scade da solo.
+      E QUANDO GLI AVVISI SONO SPENTI SI VEDE. Il permesso lo chiede il
+      browser una volta sola, con una finestrella in alto che chi sta
+      lavorando scarta senza leggerla: da quel momento quel tablet non suona
+      più, e nessuno se ne accorge finché non manca un ordine. Una riga in
+      cima lo dice su ogni schermata del gestionale, con il tasto per
+      attivarli; rifiutando ricompare — non c'è «non mostrare più», perché è
+      proprio il rifiuto per sbaglio il caso da coprire. Se il browser li ha
+      bloccati del tutto, l'app non può più chiedere: si spiega dove
+      riaccenderli invece di mostrare un tasto che non farebbe niente.
+      Non è una finestra modale: al banco non si blocca il lavoro per una
+      impostazione.
+    status: implemented
+    generate_issue: false
+    labels: [avvisi, staff]
+    test_cases:
+      - tests/unit/logoutAvvisi.test.js
+      - tests/component/AvvisiSpenti.test.jsx
+
+  - id: REQ-STAMPA-010
+    title: "Le impostazioni della stampante sono del dispositivo e di chi ci lavora"
+    area: "src/lib/printer.js, src/App.jsx"
+    description: >
+      Indirizzo della stampante, stampa automatica di comande e scontrini,
+      dati del locale sullo scontrino: stanno nel dispositivo — l'indirizzo
+      dipende da dove sei, il tablet del banco la raggiunge e il telefono
+      della sala forse no — e sono di chi è collegato, perché sullo stesso
+      tablet si alternano persone diverse e la stampa automatica la vuole
+      accesa chi sta al banco, non chi passa a battere due conti.
+      Chi entra per la prima volta su un dispositivo eredita le impostazioni
+      che quel dispositivo aveva: al passaggio nessuno si è ritrovato senza
+      stampante a servizio iniziato. Da lì in poi la scheda è sua.
+      Conseguenza da sapere: su un ambiente diverso (test, produzione) la
+      memoria è un'altra, e la stampante va impostata una volta anche lì.
+    status: implemented
+    generate_issue: false
+    labels: [stampa, impostazioni]
+    test_cases: [tests/unit/impostazioniStampante.test.js]
+
   - id: REQ-STAMPA-008
     title: "Il locale sceglie chi stampa le comande della sala"
     area: "src/components/PrinterSetup.jsx, src/lib/printer.js"
     description: >
-      In Impostazioni → Stampante si sceglie, una volta per tutto il locale
-      (la configurazione è condivisa), fra due modi: «la stampa il telefono»,
+      In Impostazioni → Stampante si sceglie, sul terminale del banco, fra
+      due modi (le impostazioni sono del dispositivo e di chi ci lavora:
+      REQ-STAMPA-010): «la stampa il telefono»,
       cioè chi prende l'ordine al tavolo stampa dal suo, e «la stampa il
       banco», cioè la comanda esce al bancone all'arrivo dell'ordine. Di
       partenza stampa il telefono, anche per le configurazioni salvate prima
@@ -1275,6 +1976,55 @@ requirements:
     test_cases:
       - tests/component/MenuPage.test.jsx
       - tests/unit/statoStampante.test.js
+  - id: REQ-MAG-014
+    title: "Le scorte dicono anche quello che ti ritrovi a fine serata"
+    area: "src/lib/impegnato.js, src/components/InventoryManager.jsx"
+    description: >
+      A metà serata, sui tavoli, ci sono drink già fatti e conti non ancora
+      chiusi: quel gin è promesso anche se il magazzino non l'ha ancora
+      scalato. Accanto alla giacenza c'è una colonna «A fine serata» con
+      quello che resterà se tutti i conti aperti vengono incassati così come
+      sono — perché la domanda vera, quando si guardano le scorte durante il
+      servizio, è «mando qualcuno a prendere una bottiglia?».
+      Si conta appena l'item entra nel conto, e si conta solo quello che il
+      magazzino non ha GIÀ scalato: contare anche le comande già scaricate
+      vorrebbe dire togliere due volte lo stesso drink. Lo scarico vero
+      resta dov'è (comanda presa in carico o riscossione): questa è la parte
+      ancora incerta, non un movimento di magazzino.
+      Non si scrive niente sul database: il numero si rifà ogni volta dai
+      conti aperti. Una prenotazione scritta andrebbe disfatta a ogni riga
+      tolta, a ogni conto annullato o riaperto, e alla prima strada che salta
+      resterebbe un impegno fantasma che nessuno sa più togliere.
+      La colonna sparisce quando non c'è niente in ballo — cassa chiusa, o
+      nessun conto aperto che chieda quel prodotto — invece di ripetere la
+      giacenza che si legge accanto.
+    status: implemented
+    generate_issue: false
+    labels: [magazzino, ordini]
+    test_cases:
+      - tests/unit/impegnato.test.js
+      - tests/component/InventoryManager.test.jsx
+
+  - id: REQ-MAG-013
+    title: "I numeri del magazzino si scrivono come li si pensa"
+    area: "src/components/InventoryManager.jsx, src/lib/inventory.js"
+    description: >
+      Nel modulo di un prodotto, il contenuto per confezione e la soglia di
+      avviso hanno accanto la scelta dell'unità. Il contenuto si scrive «0,7
+      l» com'è stampato sull'etichetta, invece di 700 su un articolo contato
+      in ml; la soglia si scrive in PEZZI — «avvisami quando resta una
+      bottiglia» — che è il modo in cui la domanda si fa al banco, e non in
+      700 ml.
+      Le opzioni sono solo quelle che hanno senso per come si conta
+      l'articolo (litri, cl, ml per un liquido; kg e grammi per un peso), più
+      i pezzi sulla soglia. Il valore salvato non cambia: cambia come lo si
+      digita, e la conversione è la stessa che usa lo scarico dalla ricetta —
+      altrimenti la soglia direbbe una cosa e il magazzino un'altra.
+    status: implemented
+    generate_issue: false
+    labels: [magazzino]
+    test_cases: [tests/unit/inventory.test.js]
+
   - id: REQ-MAG-011
     title: "In magazzino si contano i pezzi, con la virgola"
     area: "src/lib/inventory.js, src/components/InventoryManager.jsx"
@@ -1760,6 +2510,17 @@ requirements:
       diventa inutilizzabile, quindi lì resta a scomparsa; da 768px —
       l'iPad in verticale, il tablet del banco — restano 500px e la scelta
       ha senso, con la colonna stretta a 200px fino ai 900px.
+      E SI ALLARGA TIRANDO IL BORDO. Le voci sono parole corte, le
+      sottosezioni no — «Marginalità listino» a 178px si taglia — e su un
+      monitor grande quella colonna stretta è spazio sprecato. La maniglia
+      sul bordo destro la porta fra 150 e 360px, doppio clic per tornare
+      alla misura di partenza, e la larghezza scelta resta anche domani.
+      Cresce tutto insieme, testo e icone: una colonna larga con la scritta
+      piccola in mezzo sembra rotta. Il nome che non ci sta va a capo: nel
+      menu non si scorre mai in orizzontale, e la maniglia è una colonna sua
+      fra menu e contenuto — dentro al menu scorreva col contenuto e finiva
+      sotto la barra di scorrimento, e per prenderla bisognava azzeccare due
+      pixel.
     status: implemented
     generate_issue: false
     labels: [ux, navigazione]

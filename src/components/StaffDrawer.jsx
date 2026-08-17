@@ -1,4 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
+
+// Quanto può essere largo il menu agganciato. Sotto i 150px le voci si
+// spezzano; sopra i 360 si mangia la pagina.
+const MENU_DEFAULT = 178
+const MIN_MENU = 150
+const MAX_MENU = 360
 import { useNavigate } from 'react-router-dom'
 import { auth } from '../lib/firebaseClient.js'
 import { logoutStaff } from '../lib/logout.js'
@@ -105,6 +111,37 @@ export default function StaffDrawer({ role, active = null, onSelect = null }) {
   // menu torna per un istante quello a scomparsa — largo, fisso — e si
   // vedeva la SUA animazione di uscita scorrere via da sinistra. Per quel
   // momento l'animazione si spegne: il menu agganciato se ne va e basta.
+  // LA MANIGLIA: il menu agganciato si allarga e si stringe tirando il suo
+  // bordo destro. Le voci sono parole («Cassa», «Magazzino») ma le
+  // sottosezioni no — «Marginalità listino» a 178px va a capo o si taglia —
+  // e su un monitor grande quella colonna stretta è solo spazio sprecato.
+  // Cresce tutto insieme, testo compreso: una colonna larga con la scritta
+  // piccola in mezzo sembra rotta.
+  const [largh, setLargh] = useState(() => {
+    const v = Number(localStorage.getItem('tana:menu-largo'))
+    return v >= MIN_MENU && v <= MAX_MENU ? v : MENU_DEFAULT
+  })
+  const tiraDaX = useRef(null)
+  const tira = (e) => {
+    e.preventDefault()
+    tiraDaX.current = { x0: e.clientX, l0: largh }
+    e.currentTarget.setPointerCapture?.(e.pointerId)
+  }
+  const muovi = (e) => {
+    if (!tiraDaX.current) return
+    const { x0, l0 } = tiraDaX.current
+    setLargh(Math.min(MAX_MENU, Math.max(MIN_MENU, Math.round(l0 + (e.clientX - x0)))))
+  }
+  const lascia = () => {
+    if (!tiraDaX.current) return
+    tiraDaX.current = null
+    try {
+      localStorage.setItem('tana:menu-largo', String(largh))
+    } catch {
+      /* niente memoria: la larghezza vale per questa sessione */
+    }
+  }
+
   const [stacco, setStacco] = useState(false)
   const primoGiro = useRef(true)
   useEffect(() => {
@@ -193,6 +230,9 @@ export default function StaffDrawer({ role, active = null, onSelect = null }) {
         className={`bar-sidebar${open ? ' open' : ''}${dock ? ' agganciata' : ''}${
           stacco ? ' stacco' : ''
         }`}
+        // Il testo cresce con la colonna: dentro il menu le misure sono in
+        // «em», quindi basta questa.
+        style={dock ? { width: largh, fontSize: `${(0.85 * largh) / MENU_DEFAULT}rem` } : undefined}
       >
         <div className="brand-mini">
           <img src={`${import.meta.env.BASE_URL}logo.png`} alt="" />
@@ -322,6 +362,34 @@ export default function StaffDrawer({ role, active = null, onSelect = null }) {
             guardando prima di dire "non funziona". */}
         <VersionBadge className="drawer-versione" />
       </nav>
+      {/* LA MANIGLIA STA FUORI DAL MENU. Dentro scorreva col contenuto e
+          finiva sotto la barra di scorrimento: per prenderla bisognava
+          azzeccare due pixel. Qui è una colonna sua, alta quanto la pagina,
+          fra il menu e il contenuto. */}
+      {dock && (
+        <div
+          className="bar-sidebar-maniglia"
+          role="separator"
+          aria-label="Larghezza del menu"
+          title="Trascina per allargare · doppio clic per rimetterlo com'era"
+          onPointerDown={tira}
+          onPointerMove={muovi}
+          onPointerUp={lascia}
+          onPointerCancel={lascia}
+          onDoubleClick={() => {
+            // Doppio clic: si torna alla misura di partenza. Tirandola
+            // troppo si finisce con mezza pagina di menu, e rimetterla a
+            // occhio è una seccatura.
+            setLargh(MENU_DEFAULT)
+            try {
+              localStorage.setItem('tana:menu-largo', String(MENU_DEFAULT))
+            } catch {
+              /* pazienza */
+            }
+          }}
+        />
+      )}
+
     </>
   )
 }

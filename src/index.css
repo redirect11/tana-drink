@@ -2003,10 +2003,14 @@ body.fullbleed .bar-content {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 12px;
-  /* STESSA ALTEZZA per le card della stessa riga: con `start` ognuna teneva
-     la sua e la fila risultava sfrangiata — un conto col tavolo era piu'
-     alto di uno senza. Le righe restano indipendenti fra loro. */
-  align-items: stretch;
+  /* OGNI CARD LA SUA ALTEZZA. Con `stretch` aprivi le azioni di UNA e si
+     allungavano tutte quelle della riga: mezzo schermo di riquadri vuoti
+     per un menu di sei tasti. Ora cresce solo quella aperta e le altre
+     scendono, che è quello che uno si aspetta.
+     La fila resta comunque pari a colpo d'occhio: il corpo della card ha
+     un'altezza minima (.grid-card-main), quindi la differenza fra un conto
+     col tavolo e uno senza è di una riga di testo, non di mezza card. */
+  align-items: start;
   margin-bottom: 8px;
 }
 
@@ -2219,7 +2223,13 @@ body.fullbleed .bar-content {
    ordini in griglia — compatte, azioni a scomparsa con «⋯». ── */
 .admin-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+  /* PIÙ LARGHE DI PRIMA (175px). Aperto il dettaglio — pezzi, costo, prezzo
+     al pz col ricarico — in una card da 175px quei numeri si incolonnano
+     tutti e la card diventa una striscia verticale da leggere a fatica:
+     «13,00 €/conf. (+IVA 15,86 €)» andava a capo tre volte. Con 215px le
+     tre righe stanno in piedi, e su uno schermo largo si perde al massimo
+     una card per riga. */
+  grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
   gap: 10px;
   margin-top: 10px;
   align-items: start;
@@ -2263,6 +2273,24 @@ body.bar-wide .app {
    e righe) ── */
 .inv-table {
   --inv-cols: 20px minmax(140px, 2fr) minmax(90px, 1fr) 96px 100px 84px minmax(96px, 1.1fr);
+}
+/* L'ottava colonna esiste solo quando c'è qualcosa da prevedere: una
+   traccia vuota lascerebbe un buco a destra tutte le sere in cui la sala è
+   ferma. */
+.inv-table.con-previsione {
+  --inv-cols: 20px minmax(140px, 2fr) minmax(90px, 1fr) 96px 100px 84px minmax(96px, 1.1fr)
+    minmax(96px, 1.1fr);
+}
+/* «A fine serata»: è una previsione, non un dato contato. Si legge un po'
+   più tenue della giacenza vera — tranne quando dice che il prodotto
+   finisce, che invece deve saltare all'occhio: è il motivo per cui la
+   colonna esiste. */
+.inv-row-previsto {
+  color: var(--muted);
+}
+.inv-row-previsto.finito {
+  color: #e74c3c;
+  font-weight: 600;
 }
 .inv-thead,
 .inv-table .inv-row-main {
@@ -2313,13 +2341,20 @@ body.bar-wide .app {
   font-variant-numeric: tabular-nums;
 }
 @media (max-width: 900px) {
-  /* Stretto: stato · prodotto · IVA esclusa · scorte (via categoria, IVA
-     inclusa e €/cl, che stanno comunque nel dettaglio della riga). */
+  /* Stretto: stato · prodotto · scorte · a fine serata (via categoria e i
+     prezzi, che stanno comunque nel dettaglio della riga). Durante il
+     servizio, sul telefono, la domanda è «quanto ne resta», non «quanto
+     costa». */
   .inv-table {
-    --inv-cols: 18px minmax(120px, 1.7fr) 78px minmax(72px, 1fr);
+    --inv-cols: 18px minmax(120px, 1.7fr) minmax(72px, 1fr);
+  }
+  .inv-table.con-previsione {
+    --inv-cols: 18px minmax(110px, 1.7fr) minmax(66px, 1fr) minmax(66px, 1fr);
   }
   .inv-thead > :nth-child(3),
   .inv-table .inv-row-main > :nth-child(3),
+  .inv-thead > :nth-child(4),
+  .inv-table .inv-row-main > :nth-child(4),
   .inv-thead > :nth-child(5),
   .inv-table .inv-row-main > :nth-child(5),
   .inv-thead > :nth-child(6),
@@ -2693,6 +2728,11 @@ body.drawer-open .status-bell-float { display: none; }
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.02em;
+  /* GRASSETTO: dentro la card i titoletti («A fine serata», «Pezzi»,
+     «Soglia avviso», «Costo», «Al cl») stanno sopra i loro valori, non a
+     fianco. Scritti leggeri come il resto del grigio, l'occhio non trovava
+     dove comincia un blocco e dove finisce quello prima. */
+  font-weight: 700;
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -2707,11 +2747,13 @@ body.drawer-open .status-bell-float { display: none; }
   gap: 4px 12px;
 }
 /* DENTRO UNA CARD SI INCOLONNA. Le due colonne sopra sono giuste nella vista
-   a Lista, che ha tutta la larghezza dello schermo; in una card larga 175px
-   la colonna del valore resta larga un dito e il testo va a capo a
-   fisarmonica — «0 pz · 0 piene · 1 pz = 100 cl» su quattro righe, con costo,
-   IVA e prezzo consigliato accavallati. Etichetta sopra, valore sotto, come
-   già fa la regola per gli schermi piccoli qui in basso. */
+   a Lista, che ha tutta la larghezza dello schermo; in una card la colonna
+   del valore resta larga un dito e il testo va a capo a fisarmonica — «0 pz
+   · 0 piene · 1 pz = 100 cl» su quattro righe, con costo, IVA e prezzo
+   consigliato accavallati. Etichetta sopra, valore sotto, come già fa la
+   regola per gli schermi piccoli qui in basso.
+   La card ora è più larga (215px) e i valori ci stanno per intero: qui si
+   incolonna solo l'etichetta, non si spezza più il numero. */
 .grid-card .grid-card-actions .inv-info .inv-info-row {
   grid-template-columns: 1fr;
   gap: 1px;
@@ -4854,12 +4896,20 @@ body.fullbleed .cat-rail {
    rum» — che chiedono azioni diverse: una si riaccende, l'altra si compra. */
 .menu-card {
   position: relative;
-  border-left: 5px solid var(--line) !important;
+  /* La striscia: SPESSA qui, il colore lo mette la pagina in linea (vedi
+     lib/strisce.js). C'era un `!important` sul bordo intero — messo per
+     vincere sulle regole delle card — e si portava dietro anche il
+     COLORE: qualunque cosa scegliesse la pagina, la striscia restava
+     grigia. L'important resta dov'è utile (la larghezza), non dove
+     cancella una scelta. */
+  border-left-width: 5px !important;
+  border-left-style: solid !important;
+  border-left-color: var(--line);
 }
-.menu-card.stato-nascosto { border-left-color: var(--line) !important; }
-.menu-card.stato-ok { border-left-color: #2ecc71 !important; }
-.menu-card.stato-low { border-left-color: #f39c12 !important; }
-.menu-card.stato-empty { border-left-color: #e74c3c !important; }
+/* IL COLORE DELLA STRISCIA LO DECIDE LA PAGINA. Stava qui, in quattro
+   regole con !important, e diceva sempre e solo lo stato delle scorte: ora
+   il locale sceglie cosa deve dire (lib/strisce.js) e il colore arriva in
+   linea, quindi queste regole lo cancellerebbero. */
 
 /* LA LINGUETTA NELL'ANGOLO è il colore che il prodotto ha al banco, disegnata
    come sulle tile del POS: là quel segno vuol dire già quello. Si tocca per
@@ -5293,6 +5343,14 @@ body:has(.overlay) .zoom-control {
   white-space: nowrap;
   pointer-events: none;
 }
+/* Barra stretta e SENZA voci (quando le voci non hanno icone): resta il
+   solo tasto, appoggiato in alto, che non deve sembrare una colonna vuota. */
+.cat-stretta > .cat-rail:has(> .cat-rail-stringi:only-child) {
+  padding-right: 0;
+  border-right: 0;
+  background: none;
+}
+
 /* Sul telefono la barra è già una riga orizzontale che scorre: lì
    "stringere" non vuol dire niente e il tasto non serve. */
 @media (max-width: 700px) {
@@ -5302,6 +5360,31 @@ body:has(.overlay) .zoom-control {
   .cat-stretta > .cat-rail .cat-rail-label {
     display: inline;
   }
+}
+
+/* LE TILE HANNO IL VESTITO DELLE CARD. Erano riquadri piatti su fondo
+   piatto: in una griglia piena, con le colonne strette, il rilievo è
+   quello che fa leggere una card come una cosa a sé. Stessa sfumatura e
+   stessa ombra delle card della coda (.card), un filo più contenute
+   perché qui ce ne sono trenta a schermo. */
+.pos-tile-striscia {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent 55%),
+    var(--card);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+}
+.pos-tile-striscia.in-carrello {
+  background: linear-gradient(
+      180deg,
+      rgba(var(--accent-rgb, 180, 120, 60), 0.22),
+      rgba(var(--accent-rgb, 180, 120, 60), 0.12) 60%
+    ),
+    var(--card);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.24);
+}
+/* Sui temi chiari la sfumatura bianca non si vede: si scurisce appena. */
+:root[data-luma='light'] .pos-tile-striscia {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.035), transparent 55%), var(--card);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 /* Le tile della griglia POS hanno la striscia a sinistra come tutte le altre
@@ -5734,12 +5817,18 @@ body.pagina-piena .pagina-inventario .inv-scroll {
     z-index: auto;
     /* Il menu ha il SUO scorrimento: le voci sono tante e la finestra
        piccola, ma non deve trascinarsi dietro il contenuto (né farsi
-       trascinare). */
+       trascinare). In orizzontale non si scorre MAI: allargando la colonna
+       il testo ci deve stare, non scappare di lato. */
     overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-gutter: stable;
     overscroll-behavior: contain;
     flex-shrink: 0;
     align-self: stretch;
+    /* La larghezza la scrive la maniglia (StaffDrawer); questa è la misura
+       di partenza per chi non l'ha mai toccata. */
     width: 178px;
+    position: relative;
     /* Il respiro laterale della pagina (.app: 0 16px) lo annulla: se no
        fra il menu e il bordo della finestra resta una striscia di fondo,
        e la colonna sembra appoggiata sopra invece che incastrata. */
@@ -5757,12 +5846,19 @@ body.pagina-piena .pagina-inventario .inv-scroll {
   }
   /* MENO INGOMBRO. Le voci sono parole corte: righe alte 52px e un
      rientro da 18 lasciavano mezza colonna vuota a destra. */
+  /* MISURE IN «EM»: tirando la maniglia cresce la colonna e cresce il
+     testo con lei. Una colonna larga con la scritta piccola in mezzo
+     sembra rotta. Il font di partenza lo mette il menu stesso. */
   body.drawer-agganciato .bar-sidebar.agganciata .bar-nav-item {
     min-height: 0;
-    gap: 8px;
-    padding: 7px 10px;
-    font-size: 0.85rem;
+    gap: 0.6em;
+    padding: 0.5em 0.75em;
+    font-size: 1em;
     font-weight: 600;
+    /* Colonna stretta: il nome va a capo invece di sfondare la colonna e
+       tirarsi dietro una barra di scorrimento orizzontale. */
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
   body.drawer-agganciato .bar-sidebar.agganciata .bar-nav-sep {
     margin: 6px 10px;
@@ -5780,8 +5876,8 @@ body.pagina-piena .pagina-inventario .inv-scroll {
     background: rgba(245, 185, 74, 0.06);
   }
   body.drawer-agganciato .bar-sidebar.agganciata .bar-nav-sottovoce {
-    padding: 5px 10px 5px 22px;
-    font-size: 0.8rem;
+    padding: 0.36em 0.75em 0.36em 1.6em;
+    font-size: 0.94em;
     font-weight: 500;
     border-left: 0;
     opacity: 0.85;
@@ -5790,6 +5886,37 @@ body.pagina-piena .pagina-inventario .inv-scroll {
     background: transparent;
     opacity: 1;
     font-weight: 700;
+  }
+
+  /* LA MANIGLIA È UNA COLONNA SUA, fra il menu e il contenuto: dentro al
+     menu scorreva col contenuto e finiva sotto la barra di scorrimento, e
+     per prenderla bisognava azzeccare due pixel. Larga 10px — un bersaglio
+     che si prende anche col dito — con una lineetta che compare passandoci
+     sopra: è un bordo che si può tirare, non un oggetto in più da capire. */
+  .bar-sidebar-maniglia {
+    flex: 0 0 10px;
+    align-self: stretch;
+    position: relative;
+    cursor: col-resize;
+    touch-action: none;
+  }
+  .bar-sidebar-maniglia::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 3px;
+    height: 34px;
+    transform: translate(-50%, -50%);
+    border-radius: 2px;
+    background: var(--line);
+    opacity: 0;
+    transition: opacity 0.12s ease;
+  }
+  .bar-sidebar-maniglia:hover::before,
+  .bar-sidebar-maniglia:active::before {
+    opacity: 1;
+    background: var(--accent-2);
   }
 
   /* Niente velo: non c'e' piu' niente da coprire. */
@@ -5894,4 +6021,342 @@ a.storico-notifica:hover {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Le righe di un conto ANNULLATO: si vedono — serve sapere cosa c'era
+   dentro, e se vale la pena riaprirlo — ma si legge a colpo d'occhio che
+   non contano piu' niente. */
+.draft-line.riga-annullata {
+  opacity: 0.6;
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, currentColor 45%, transparent);
+}
+
+/* ── IL CALENDARIO DEL PERIODO (lista ordini) ─────────────────────────
+   Come sui siti degli alberghi: si tocca l'inizio, poi la fine, e in mezzo
+   si accende tutto. Il pannello sta SOPRA il resto (position: absolute)
+   perché aprendolo la lista sotto non deve saltare in basso: si perde il
+   punto in cui si stava guardando. */
+.periodo {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0;
+}
+.periodo-pannello {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 30;
+  width: min(320px, calc(100vw - 32px));
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+}
+.periodo-rapidi {
+  margin-bottom: 8px;
+}
+.periodo-testata {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.periodo-griglia {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+.periodo-intestazione {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  padding-bottom: 2px;
+}
+.periodo-giorno {
+  padding: 7px 0;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.periodo-giorno:disabled {
+  color: var(--muted);
+  opacity: 0.35;
+  cursor: default;
+}
+.periodo-giorno.oggi {
+  text-decoration: underline;
+}
+/* Dentro il periodo: una fascia continua, come su quei calendari. Gli
+   estremi sono pieni, così si vede dove comincia e dove finisce. */
+.periodo-giorno.dentro {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  border-radius: 0;
+}
+.periodo-giorno.estremo {
+  background: var(--accent);
+  color: #fff;
+  border-radius: 8px;
+  font-weight: 600;
+}
+.periodo-aiuto {
+  margin: 8px 0 0;
+}
+
+/* «Gli avvisi sono spenti»: una riga in cima, non una finestra modale — al
+   banco non si blocca il lavoro per una impostazione. Ritorna finché gli
+   avvisi non funzionano: vedi AvvisiSpenti.jsx. */
+.avvisi-spenti {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 8px 12px;
+}
+
+/* ── «UN ATTIMO» DETTO BENE ───────────────────────────────────────────
+   Una scritta ferma su una pagina vuota non si distingue da un'app
+   piantata. Tre bollicine che salgono dicono la stessa cosa e dicono anche
+   che qualcosa si muove. Niente percentuale: non sappiamo quanto ci vuole,
+   e una barra che si ferma a metà è peggio del silenzio. */
+.caricamento {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 40px 16px;
+  color: var(--muted);
+}
+.caricamento.piccolo {
+  flex-direction: row;
+  gap: 8px;
+  padding: 6px 0;
+}
+.caricamento-bolle {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 22px;
+}
+.caricamento-bolle i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--accent-2);
+  opacity: 0.85;
+  animation: bollicina 1.1s ease-in-out infinite;
+}
+.caricamento.piccolo .caricamento-bolle i {
+  width: 6px;
+  height: 6px;
+}
+.caricamento-bolle i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.caricamento-bolle i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+.caricamento-testo {
+  font-size: 0.9rem;
+}
+@keyframes bollicina {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.35;
+  }
+  50% {
+    transform: translateY(-9px);
+    opacity: 1;
+  }
+}
+/* Chi ha chiesto meno animazioni non deve vedere niente saltare: restano
+   tre pallini che respirano. */
+@media (prefers-reduced-motion: reduce) {
+  .caricamento-bolle i {
+    animation: respiro 1.6s ease-in-out infinite;
+  }
+  @keyframes respiro {
+    0%,
+    100% {
+      opacity: 0.35;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+}
+
+/* Che cosa è stato pagato, in fondo al conto: sconto e incassi uno per
+   riga, con metodo e ora. Le righe coperte da un incasso parziale stanno
+   sotto, rientrate: sono un dettaglio dell'incasso, non un'altra voce. */
+.posd-incassi {
+  margin-top: 2px;
+}
+.posd-incasso-cosa {
+  padding-left: 10px;
+  opacity: 0.8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── LA PASSWORD, CON L'OCCHIO PER GUARDARLA ──────────────────────────
+   L'occhio sta DENTRO il campo, a destra: fuori sarebbe un tasto in più in
+   una colonna di campi, e la riga della password si allungherebbe rispetto
+   alle altre. Il campo si stringe quel tanto che basta perché il testo non
+   ci finisca sotto. */
+.campo-password {
+  position: relative;
+  display: block;
+}
+.campo-password input {
+  width: 100%;
+  padding-right: 44px;
+}
+.campo-password-occhio {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 1rem;
+  cursor: pointer;
+  opacity: 0.75;
+}
+.campo-password-occhio:hover,
+.campo-password-occhio:focus-visible {
+  opacity: 1;
+}
+
+/* ── LE RIGHE DEL CONTO SI RIORDINANO ─────────────────────────────────
+   La maniglia compare solo in «organizza» e prende il posto a sinistra:
+   la riga si sposta di quel tanto, senza saltare da un'altra parte quando
+   si entra e si esce dal modo. */
+.posd-riga-wrap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.posd-riga-wrap > .row {
+  flex: 1;
+  min-width: 0;
+}
+.posd-riga-grip {
+  flex-shrink: 0;
+  padding: 2px 2px;
+  color: var(--muted);
+  cursor: grab;
+  touch-action: none;
+  font-size: 0.9em;
+  opacity: 0.7;
+}
+.posd-riga-grip:active {
+  cursor: grabbing;
+}
+/* La riga in mano: si stacca dal foglio, e le altre le fanno posto (il
+   movimento lo mette dnd-kit). */
+.posd-riga-wrap.dragging {
+  position: relative;
+  z-index: 5;
+  background: var(--card);
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+}
+
+/* La scheda del drink dietro la ⓘ: si legge mentre si versa, quindi righe
+   larghe e niente fronzoli. */
+.scheda-drink-righe {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.scheda-drink-righe li {
+  padding: 3px 0;
+  border-bottom: 1px dashed var(--line);
+}
+.scheda-drink-righe li:last-child {
+  border-bottom: 0;
+}
+/* Gli a capo dove li ha messi chi l'ha scritta: una preparazione è una
+   sequenza di gesti, non un paragrafo. */
+.scheda-drink-preparazione {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+/* ── IL FUMETTO DELLA CAMPANELLA ──────────────────────────────────────
+   Esce da dove poi l'avviso si ritrova: in alto a destra, sotto la barra,
+   con la punta rivolta alla campanella. È un richiamo, non una finestra:
+   niente tasto per chiuderlo, sparisce da sé. */
+.fumetto-avviso {
+  position: fixed;
+  top: 58px;
+  right: 12px;
+  z-index: 60;
+  max-width: min(320px, calc(100vw - 24px));
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  text-align: left;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.9rem;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  animation: fumetto-entra 0.18s ease-out;
+}
+/* La punta verso la campanella. */
+.fumetto-avviso::before {
+  content: '';
+  position: absolute;
+  top: -7px;
+  right: 16px;
+  width: 12px;
+  height: 12px;
+  transform: rotate(45deg);
+  background: var(--card);
+  border-left: 1px solid var(--line);
+  border-top: 1px solid var(--line);
+}
+.fumetto-avviso-corpo {
+  color: var(--muted);
+  font-size: 0.85em;
+}
+@keyframes fumetto-entra {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fumetto-avviso {
+    animation: none;
+  }
 }

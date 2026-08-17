@@ -10,13 +10,44 @@
 //   4. Da quel momento la connessione WSS funziona senza dialoghi
 
 import { CASH_METHOD_ORDER, cashMethodKeys, PAYMENT_METHOD_PRINT } from './orderStatus.js'
+import { stampanteFintaAttiva, creaStampanteFinta } from './stampanteFinta.js'
 
 // Larghezza colonne stamante 80 mm (TM-m30II / TM-m30III): 48 chars std.
 const COL = 48
 
 // ── Impostazioni persistite in localStorage ───────────────────────────────────
 
+// LE IMPOSTAZIONI DELLA STAMPANTE SONO DEL DISPOSITIVO **E** DI CHI CI
+// LAVORA. Del dispositivo, perché l'indirizzo della stampante dipende da
+// dove sei: il tablet del banco la raggiunge, il telefono della sala forse
+// no. Di chi ci lavora, perché sullo stesso tablet si alternano persone
+// diverse, e la stampa automatica delle comande la vuole accesa chi sta al
+// banco, non chi passa di lì a battere due conti.
 const SETTINGS_KEY = 'tana_printer_v2'
+const UTENTE_KEY = 'tana_printer_utente'
+
+// L'ultimo utente lo si ricorda: le impostazioni si leggono anche prima che
+// Firebase abbia finito di riconoscere chi è collegato, e senza memoria per
+// un istante si leggerebbe la scheda di un altro — «nessuna stampante
+// impostata» che compare e sparisce.
+let _utente = null
+try {
+  _utente = localStorage.getItem(UTENTE_KEY) || null
+} catch {
+  /* storage negato: si lavora senza memoria, come prima */
+}
+
+export function impostaUtenteStampante(uid) {
+  _utente = uid || null
+  try {
+    if (uid) localStorage.setItem(UTENTE_KEY, uid)
+    else localStorage.removeItem(UTENTE_KEY)
+  } catch {
+    /* niente memoria: le impostazioni restano quelle del dispositivo */
+  }
+}
+
+const chiaveImpostazioni = () => (_utente ? `${SETTINGS_KEY}:${_utente}` : SETTINGS_KEY)
 
 export const DEFAULT_PRINTER_SETTINGS = {
   ip: '',
@@ -61,7 +92,14 @@ export function salaStampaDaSe(s = loadPrinterSettings()) {
 
 export function loadPrinterSettings() {
   try {
-    return { ...DEFAULT_PRINTER_SETTINGS, ...JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}') }
+    const mie = JSON.parse(localStorage.getItem(chiaveImpostazioni()) || 'null')
+    if (mie) return { ...DEFAULT_PRINTER_SETTINGS, ...mie }
+    // PRIMA VOLTA DI QUESTA PERSONA SU QUESTO DISPOSITIVO: eredita quelle
+    // del dispositivo. Senza, il giorno del passaggio a impostazioni per
+    // utente ogni tablet del locale avrebbe perso l'indirizzo della
+    // stampante — e la comanda non esce.
+    const delDispositivo = JSON.parse(localStorage.getItem(SETTINGS_KEY) || 'null')
+    return { ...DEFAULT_PRINTER_SETTINGS, ...(delDispositivo || {}) }
   } catch {
     return { ...DEFAULT_PRINTER_SETTINGS }
   }
@@ -70,7 +108,11 @@ export function loadPrinterSettings() {
 export function savePrinterSettings(patch) {
   const current = loadPrinterSettings()
   const next = { ...current, ...patch }
-  localStorage.setItem(SETTINGS_KEY, JSON.stringify(next))
+  try {
+    localStorage.setItem(chiaveImpostazioni(), JSON.stringify(next))
+  } catch {
+    /* storage pieno o negato: si continua con quelle in memoria */
+  }
   return next
 }
 
@@ -139,6 +181,8 @@ function avviaBattito() {
 // Se il certificato non è più accettato, l'errore esce ADESSO — quando c'è
 // tempo per sistemarlo — invece che al primo scontrino della serata.
 export async function preparaStampante() {
+  // Con la stampante finta non c'è niente da scaldare: risponde sempre.
+  if (stampanteFintaAttiva()) return { ok: true }
   const s = loadPrinterSettings()
   if (!s.ip) return { ok: false, motivo: 'non configurata' }
   try {
@@ -171,6 +215,14 @@ if (typeof document !== 'undefined') {
 // Restituisce il printer object, connettendosi se necessario.
 // Riusa la connessione esistente tra stampe consecutive.
 async function getPrinter() {
+  // IN LOCALE LA STAMPANTE È DI CARTA FINTA. Da un computer di sviluppo
+  // l'apparecchio del bar non si raggiunge, e ogni modifica a comande e
+  // scontrini si provava a occhio. Sull'ambiente di TEST no: lì ci si
+  // collega a quella vera, ed è il posto dove provarla davvero.
+  if (stampanteFintaAttiva()) {
+    if (!_printer) _printer = creaStampanteFinta('La Tana del Coniglio')
+    return _printer
+  }
   if (_printer) return _printer
   if (_connectPromise) return _connectPromise
 

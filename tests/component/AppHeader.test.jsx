@@ -57,6 +57,7 @@ const TEMA_STAFF = { preset: 'notte-blu', custom: null }
 const TEMA_CLIENTE = { preset: 'crema', custom: null }
 vi.mock('../../src/lib/api.js', () => ({
   DEFAULT_SETTINGS: {},
+  settingsIniziali: () => ({}),
   subscribeSettings: (cb) => {
     cb({
       customer_accounts_enabled: true,
@@ -76,7 +77,10 @@ vi.mock('../../src/lib/api.js', () => ({
   subscribePrinterConfig: () => () => {},
 }))
 
-vi.mock('../../src/lib/printer.js', () => ({ savePrinterSettings: vi.fn() }))
+vi.mock('../../src/lib/printer.js', () => ({
+  savePrinterSettings: vi.fn(),
+  impostaUtenteStampante: vi.fn(),
+}))
 vi.mock('../../src/lib/appVersion.js', () => ({ subscribeUpdateAvailable: () => () => {} }))
 vi.mock('../../src/lib/cookieConsent.js', () => ({ openCookiePreferences: vi.fn() }))
 vi.mock('../../src/dev/devActions.js', () => ({ envLabel: '', devToolsEnabled: false }))
