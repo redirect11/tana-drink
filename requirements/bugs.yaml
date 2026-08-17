@@ -208,11 +208,28 @@ bugs:
       larghezza dello schermo: dentro una card stretta la colonna del valore
       resta larga un dito. Nelle card va incolonnato — etichetta sopra,
       valore sotto — come già succede sugli schermi piccoli.
-      RISOLTO il 17/08 (hotfix 1.3.4): una regola sola in index.css
+      PRIMO GIRO il 17/08 (hotfix 1.3.4): una regola in index.css
       (.grid-card .grid-card-actions .inv-info .inv-info-row a una colonna).
       La vista a Lista, che ha tutta la larghezza dello schermo, resta a due
       colonne: il blocco delle azioni è lo stesso per le due viste, quindi la
       regola è agganciata alla card.
+      NON BASTAVA — provato sul test: le righe di testo si leggevano, ma la
+      fila dei tre tasti (Modifica · Duplica · Elimina) usciva ancora dai
+      bordi. Stesso errore un piano sotto: .inv-azioni era repeat(3, 1fr), e
+      1fr vale minmax(auto, 1fr), che non scende sotto la larghezza del
+      contenuto — tre bottoni con emoji e parola hanno un minimo più largo di
+      quello che una card da 175px può dargli. La regola che li mandava a capo
+      era una @media sulla FINESTRA, quindi non scattava con la finestra
+      grande e la card stretta.
+      SECONDO GIRO: .grid-card .inv-azioni usa
+      repeat(auto-fit, minmax(min(112px, 100%), 1fr)) — colonne che si
+      stringono davvero e vanno a capo da sé secondo la larghezza della CARD,
+      mai più larghe della card — e i bottoni hanno min-width: 0 con la parola
+      troncata come ultima difesa. La vista a Lista resta a tre colonne.
+      Il layout non si misura in happy-dom (le larghezze sono zero): il test
+      applica il foglio di stile vero al DOM vero e controlla quale regola
+      vince su quell'elemento. Che la fila stia dentro la card va guardato con
+      gli occhi.
     in_produzione: true
     status: fixed
     generate_issue: true

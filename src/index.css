@@ -5020,3 +5020,31 @@ body.drawer-open .zoom-control {
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* DENTRO UNA CARD LA FILA NON DEVE SFONDARE I BORDI.
+   Provato al banco: nella vista a Card i tre tasti uscivano dalla card a
+   destra e a sinistra. `repeat(3, 1fr)` non stringe — `1fr` vale
+   `minmax(auto, 1fr)`, e `auto` non scende sotto la larghezza del contenuto:
+   tre bottoni con emoji e parola («✏️ Modifica») hanno un minimo piu' largo
+   di quello che una card da 175px puo' dargli, quindi la griglia sborda
+   invece di andare a capo.
+   La @media qui sopra non c'entra: quella guarda la FINESTRA, mentre qui e' la
+   CARD a essere stretta — succedeva anche su un monitor grande. La regola va
+   agganciata al contenitore.
+   `auto-fit` tiene solo le colonne che entrano davvero: in una card stretta ne
+   resta UNA e i tasti si incolonnano, leggibili per intero; in una card larga
+   tornano due o tre. `min(112px, 100%)` e' la larghezza minima perche' la
+   parola si legga, ma senza mai superare la card: se lo spazio e' meno di
+   quello, la colonna si adegua alla card e non viceversa. */
+.grid-card .inv-azioni {
+  grid-template-columns: repeat(auto-fit, minmax(min(112px, 100%), 1fr));
+}
+/* Un bottone incomprimibile allargherebbe la colonna e si tornerebbe al punto
+   di partenza: qui puo' stringersi, e nel caso peggiore la parola si tronca
+   invece di uscire dalla card. */
+.grid-card .inv-azioni .btn {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
