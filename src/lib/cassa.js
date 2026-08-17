@@ -14,24 +14,6 @@ import { CASH_METHOD_ORDER } from './orderStatus.js'
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100
 const inRange = (ts, from, to) => !!ts && ts >= from && (!to || ts <= to)
 
-// I CONTI DI QUESTA APERTURA DI CASSA. Il riepilogo in cima alla coda
-// diceva «0 aperti · 425 chiusi · 10.228,40 €» a cassa appena riaperta:
-// contava la GIORNATA, e nella giornata ci stanno anche le serate già
-// chiuse e rendicontate. I numeri in testata sono di questa apertura —
-// cassa chiusa, sono zeri — perché è quello il metro con cui si guarda il
-// banco: da quando ho aperto, quanto ho fatto.
-//
-// Gli ordini portano scritta la sessione che li ha numerati
-// (`cash_session_id`), quindi non serve confrontare orari. Chi la cassa non
-// la apre mai — nessun ordine ha la sessione — continua a vedere la
-// giornata: togliergli i numeri sarebbe togliergli l'unico riepilogo che ha.
-export function ordiniDellaCassaAperta(orders, sessione) {
-  const lista = orders || []
-  if (!lista.some((o) => o.cash_session_id)) return lista
-  if (!sessione?.id) return []
-  return lista.filter((o) => o.cash_session_id === sessione.id)
-}
-
 // Recap della cassa aperta. `session` = { opened_at, closed_at?, fondo_cassa? }.
 // `nowIso` è il limite superiore per la sessione ancora aperta. Ritorna null
 // se non c'è una sessione. Incassato e acconti sono contati nella finestra;

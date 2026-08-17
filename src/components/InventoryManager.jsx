@@ -335,6 +335,10 @@ function ProductsPanel() {
   // A cassa chiusa la colonna non c'è: non c'è una serata in corso di cui
   // dire come finirà.
   const { open: cassaAperta } = useCashSession()
+  // Con gli stati del servizio un conto pagato ma non servito è ancora
+  // aperto, e i suoi ingredienti sono ancora in ballo; senza, il pagamento
+  // chiude e il magazzino è già stato scalato.
+  const [workflowOn, setWorkflowOn] = useState(DEFAULT_SETTINGS.workflow_enabled !== false)
   const [ordiniVivi, setOrdiniVivi] = useState([])
   const [drinksById, setDrinksById] = useState({})
   useEffect(() => subscribeActiveOrders(setOrdiniVivi, () => {}), [])
@@ -349,8 +353,11 @@ function ProductsPanel() {
   )
   const itemsById = useMemo(() => Object.fromEntries(items.map((i) => [i.id, i])), [items])
   const impegnato = useMemo(
-    () => (cassaAperta ? impegnatoPerArticolo(ordiniVivi, drinksById, itemsById) : {}),
-    [cassaAperta, ordiniVivi, drinksById, itemsById]
+    () =>
+      cassaAperta
+        ? impegnatoPerArticolo(ordiniVivi, drinksById, itemsById, { workflowOn })
+        : {},
+    [cassaAperta, ordiniVivi, drinksById, itemsById, workflowOn]
   )
   // La colonna compare solo se c'è davvero qualcosa in ballo: a serata
   // ferma sarebbe una colonna di trattini.
@@ -363,6 +370,7 @@ function ProductsPanel() {
   useEffect(
     () =>
       subscribeSettings((s) => {
+        setWorkflowOn(s.workflow_enabled !== false)
         setMarkup(s.price_markup)
         setPurchaseVat(s.purchase_vat ?? DEFAULT_SETTINGS.purchase_vat)
       }, () => {}),

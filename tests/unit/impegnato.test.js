@@ -34,16 +34,31 @@ describe('quali conti impegnano le scorte', () => {
     expect(contoImpegna(conto())).toBe(true)
   })
 
+  it('NON quelli chiusi: il loro scarico l’ha già fatto la riscossione', () => {
+    // Era il numero che non tornava: con un conto solo sul tavolo il
+    // magazzino segnava mezzo listino in esaurimento, perché contava anche
+    // i conti incassati e serviti della serata.
+    const chiuso = conto({
+      payment_status: 'pagato',
+      comande: [{ id: 'c1', status: 'ritirato', items: [{ drink_id: 'negroni', qty: 2 }] }],
+    })
+    expect(contoImpegna(chiuso, { workflowOn: true })).toBe(false)
+    expect(consumoImpegnato([chiuso], drinks, { workflowOn: true })).toEqual([])
+  })
+
+  it('senza stati del servizio, incassato vuol dire chiuso', () => {
+    expect(contoImpegna(conto({ payment_status: 'pagato' }), { workflowOn: false })).toBe(false)
+  })
+
   it('anche quelli già incassati, se il servizio non è finito', () => {
     // Con gli stati del servizio si paga anche in anticipo: un conto
     // pagato può avere ancora tre drink da fare, e quegli ingredienti sono
     // in ballo esattamente come prima. A dire la parola fine è la comanda
     // servita — che è anche il momento in cui il magazzino scala davvero,
     // e da lì la comanda smette da sola di contare.
-    expect(contoImpegna(conto({ payment_status: 'pagato' }))).toBe(true)
-    expect(
-      consumoImpegnato([conto({ payment_status: 'pagato' })], drinks)
-    ).toHaveLength(1)
+    const pagatoDaServire = conto({ payment_status: 'pagato' })
+    expect(contoImpegna(pagatoDaServire, { workflowOn: true })).toBe(true)
+    expect(consumoImpegnato([pagatoDaServire], drinks, { workflowOn: true })).toHaveLength(1)
   })
 
   it('il conto servito e scaricato non impegna più niente', () => {

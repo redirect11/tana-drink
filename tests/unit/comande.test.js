@@ -21,6 +21,7 @@ import {
   lockedQtyByItem,
   planDecrement,
   comandaDaScaricare,
+  contoChiuso,
 } from '../../src/lib/comande.js'
 
 const c = (seq, status, items = []) => ({ id: `c${seq}`, seq, status, items })
@@ -231,5 +232,43 @@ describe('quando si scala il magazzino', () => {
 
   it('una volta sola', () => {
     expect(comandaDaScaricare({ inventory_applied: true }, 'ritirato')).toBe(false)
+  })
+})
+
+// QUANDO UN CONTO È CHIUSO. La regola sta in un posto solo perché la usano
+// in tre — coda, riepilogo di testata e magazzino — e quando stava scritta
+// in tre posti il magazzino contava fra gli aperti conti già incassati:
+// con un tavolo solo segnava mezzo listino in esaurimento.
+describe('conto chiuso: non c’è più niente da fare', () => {
+  const servito = (over = {}) => ({
+    comande: [{ id: 'c1', status: 'ritirato', items: [{ drink_id: 'x', qty: 1 }] }],
+    ...over,
+  })
+
+  it('con gli stati del servizio servono incasso E consegna', () => {
+    expect(contoChiuso(servito({ payment_status: 'pagato' }), { workflowOn: true })).toBe(true)
+    // Pagato in anticipo, drink ancora da fare: lavoro da fare, non chiuso.
+    const daServire = {
+      payment_status: 'pagato',
+      comande: [{ id: 'c1', status: 'in_preparazione', items: [{ drink_id: 'x', qty: 1 }] }],
+    }
+    expect(contoChiuso(daServire, { workflowOn: true })).toBe(false)
+  })
+
+  it('senza gli stati del servizio il pagamento chiude e basta', () => {
+    const daServire = {
+      payment_status: 'pagato',
+      comande: [{ id: 'c1', status: 'in_preparazione', items: [{ drink_id: 'x', qty: 1 }] }],
+    }
+    expect(contoChiuso(daServire, { workflowOn: false })).toBe(true)
+  })
+
+  it('l’annullato è chiuso in ogni caso', () => {
+    expect(contoChiuso({ status: 'annullato' }, { workflowOn: true })).toBe(true)
+    expect(contoChiuso({ workflow_status: 'annullato' }, { workflowOn: false })).toBe(true)
+  })
+
+  it('un conto servito ma non incassato resta aperto: mancano i soldi', () => {
+    expect(contoChiuso(servito(), { workflowOn: true })).toBe(false)
   })
 })

@@ -26,18 +26,18 @@
 
 import { computeConsumption, qtyInStockUnit } from './inventory.js'
 import { ORDER_STATUSES } from './orderStatus.js'
+import { contoChiuso } from './comande.js'
 
-// Un conto impegna finché non è annullato. INCASSATO NON BASTA: con gli
-// stati del servizio si paga anche in anticipo, e un conto pagato può avere
-// ancora tre drink da fare — quegli ingredienti sono ancora in ballo. Quello
-// che dice la parola fine è la comanda SERVITA, che è anche il momento in
-// cui il magazzino scala davvero: da lì in poi la comanda risulta scaricata
-// e smette da sola di contare (vedi comandeImpegnate).
-// Il conto annullato invece no: se c'era da scalare qualcosa lo ha già
-// fatto il suo scarico, e riaggiungerlo qui sarebbe contarlo due volte.
-export function contoImpegna(o) {
-  if (!o) return false
-  return o.status !== ORDER_STATUSES.ANNULLATO && o.workflow_status !== ORDER_STATUSES.ANNULLATO
+// SOLO I CONTI ANCORA APERTI. Un conto incassato e servito è finito: il suo
+// scarico l'ha già fatto, e riaggiungerlo qui vuol dire togliere due volte
+// lo stesso drink — era il motivo per cui il magazzino segnava mezzo
+// listino in esaurimento con un solo conto sul tavolo. Un conto annullato,
+// idem: non impegna niente.
+// «Chiuso» non vuol dire «pagato»: con gli stati del servizio si paga anche
+// in anticipo, e finché quei drink non sono usciti gli ingredienti sono in
+// ballo. La regola è una sola, in comande.js, la stessa che usa la coda.
+export function contoImpegna(o, opzioni) {
+  return !!o && !contoChiuso(o, opzioni)
 }
 
 // Le comande che pesano ancora: non annullate e non già scaricate.
@@ -54,10 +54,10 @@ export function comandeImpegnate(o) {
 
 // Gli ingredienti promessi da tutti i conti aperti, nella stessa forma che
 // usa lo scarico: [{ inventory_item_id, unit, qty }], per articolo E unità.
-export function consumoImpegnato(ordini, drinksById) {
+export function consumoImpegnato(ordini, drinksById, opzioni) {
   const righe = []
   for (const o of ordini || []) {
-    if (!contoImpegna(o)) continue
+    if (!contoImpegna(o, opzioni)) continue
     for (const c of comandeImpegnate(o)) righe.push(...c.items)
   }
   return computeConsumption(righe, drinksById)
@@ -67,9 +67,9 @@ export function consumoImpegnato(ordini, drinksById) {
 // ricetta (40 ml) all'unità in cui si conta lo scaffale (0,05 pz). È lo
 // stesso passaggio che fa lo scarico — se qui si contasse in un altro modo,
 // la previsione non tornerebbe mai con quello che succede davvero.
-export function impegnatoPerArticolo(ordini, drinksById, itemsById) {
+export function impegnatoPerArticolo(ordini, drinksById, itemsById, opzioni) {
   const out = {}
-  for (const c of consumoImpegnato(ordini, drinksById)) {
+  for (const c of consumoImpegnato(ordini, drinksById, opzioni)) {
     const item = itemsById?.[c.inventory_item_id]
     if (!item) continue
     out[c.inventory_item_id] = (out[c.inventory_item_id] || 0) + qtyInStockUnit(c.qty, c.unit, item)

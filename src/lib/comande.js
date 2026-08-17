@@ -141,6 +141,28 @@ export function comandeStatuses(comande) {
 // ancora modificabili. Una comanda pronta o servita non si tocca più.
 
 // Modificabile = non ancora pronta/servita/annullata.
+// QUANDO UN CONTO È CHIUSO — cioè non c'è più niente da fare. Con gli stati
+// del servizio servono DUE cose: incassato E servito. Un conto pagato in
+// anticipo ma non ancora consegnato è lavoro ancora da fare, e sparire
+// sarebbe il modo migliore per dimenticarselo. Senza gli stati del servizio
+// il pagamento chiude e basta.
+// La regola sta qui perché la usano in tre: la coda (chi resta a schermo),
+// il riepilogo di testata (quanti aperti e quanti chiusi) e il magazzino
+// (quali conti hanno ancora ingredienti in ballo). Quando stava scritta in
+// tre posti, il magazzino contava fra gli aperti conti già incassati e
+// dava numeri da paura.
+export function contoChiuso(o, { workflowOn = false } = {}) {
+  if (!o) return false
+  if (o.status === ORDER_STATUSES.ANNULLATO || o.workflow_status === ORDER_STATUSES.ANNULLATO)
+    return true
+  const pagato =
+    o.payment_status === 'pagato' ||
+    o.status === ORDER_STATUSES.PAGATO ||
+    o.workflow_status === ORDER_STATUSES.PAGATO
+  const servito = allServed(o) || o.workflow_status === ORDER_STATUSES.RITIRATO
+  return workflowOn ? pagato && servito : pagato
+}
+
 // QUANDO IL MAGAZZINO SI SCALA DAVVERO. Alla comanda SERVITA, non alla
 // presa in carico: un drink iniziato e poi non fatto — riga tolta, cliente
 // che cambia idea, comanda annullata — aveva già portato via gli
