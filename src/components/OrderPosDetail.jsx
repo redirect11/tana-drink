@@ -53,7 +53,6 @@ import {
   hasMergeable,
   moveLine,
   reconcileLayout,
-  qtyByDrink as draftQtyByDrink,
 } from '../lib/orderLines.js'
 import { toastSuccess, toastError } from '../lib/toast.js'
 import { printComanda, printScontrino } from '../lib/printer.js'
@@ -858,13 +857,35 @@ export default function OrderPosDetail({ order: orderProp = null }) {
     (s, l) => s + (l.annullata ? 0 : l.qty * l.unit_price),
     0
   )
-  const qtyByDrink = useMemo(() => {
-    const m = {}
-    for (const l of confirmedLines) if (!l.custom) m[l.drink_id] = (m[l.drink_id] || 0) + l.qty
-    const d = draftQtyByDrink(draft)
-    for (const k of Object.keys(d)) m[k] = (m[k] || 0) + d[k]
+  // QUANTI PEZZI DI OGNI PRODOTTO CI SONO NEL CONTO: è il numero sulla card
+  // della griglia. Si conta per id, ma un conto può portarsi dietro l'id di
+  // un prodotto che NON C'È PIÙ — cancellato e rifatto, o un catalogo
+  // reimportato — e allora la card restava senza numero mentre le righe
+  // erano lì sotto, a vista: sembrava che il conto e la griglia parlassero
+  // di due cose diverse. In quel caso si ripiega sul NOME, che è quello che
+  // legge chi sta al banco.
+  const idPerNome = useMemo(() => {
+    const m = new Map()
+    for (const d of drinks || []) if (d?.name) m.set(d.name.trim().toLowerCase(), d.id)
     return m
-  }, [confirmedLines, draft])
+  }, [drinks])
+  const qtyByDrink = useMemo(() => {
+    const vivi = new Set((drinks || []).map((d) => d.id))
+    const chiave = (id, nome) =>
+      id && vivi.has(id) ? id : idPerNome.get(String(nome || '').trim().toLowerCase()) || id
+    const m = {}
+    for (const l of confirmedLines) {
+      if (l.custom) continue
+      const k = chiave(l.drink_id, l.name)
+      if (k) m[k] = (m[k] || 0) + l.qty
+    }
+    for (const l of draft) {
+      if (l.custom) continue
+      const k = chiave(l.drink_id, l.name)
+      if (k) m[k] = (m[k] || 0) + l.qty
+    }
+    return m
+  }, [confirmedLines, draft, drinks, idPerNome])
 
   // MODIFICA: l'item entra DIRETTAMENTE nella comanda modificabile (modifica
   // ottimistica, chiave riga stabile) e si sincronizza in background — così NON

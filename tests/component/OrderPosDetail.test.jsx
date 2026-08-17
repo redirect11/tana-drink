@@ -1238,3 +1238,38 @@ describe('organizza le righe del conto', () => {
     expect(screen.queryAllByLabelText('Sposta la riga')).toHaveLength(0)
   })
 })
+
+// IL NUMERO SULLA CARD E LE RIGHE DEL CONTO DEVONO DIRE LA STESSA COSA.
+// Un conto può portarsi dietro l'id di un prodotto che non c'è più —
+// cancellato e rifatto, o un catalogo reimportato — e la card restava senza
+// numero mentre le righe erano lì sotto, a vista: sembrava che il conto e
+// la griglia parlassero di due cose diverse.
+describe('la card segna quello che c’è nel conto', () => {
+  it('anche se il conto porta un id di prodotto vecchio', async () => {
+    const conIdVecchio = baseOrder({
+      comande: [
+        {
+          id: 'c1',
+          seq: 1,
+          status: 'in_preparazione',
+          items: [
+            // Stesso nome del drink in griglia, id di un catalogo passato.
+            { drink_id: 'id-di-un-tempo', name: 'Mojito', unit_price: 7, qty: 2 },
+          ],
+        },
+      ],
+    })
+    render(
+      <MemoryRouter>
+        <OrderPosDetail order={conIdVecchio} />
+      </MemoryRouter>
+    )
+    // Sulla card del Mojito compare il contatore: il conto e la griglia
+    // dicono la stessa cosa. (Il «−» accanto alla quantità esiste solo
+    // sulle card con qualcosa dentro.)
+    // La card mostra il contatore col «2»: sulle card senza niente dentro
+    // quel gruppo è nascosto.
+    const contatore = await screen.findByText('2', { selector: 'span' })
+    expect(contatore).toBeInTheDocument()
+  })
+})
