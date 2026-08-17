@@ -327,17 +327,18 @@ describe('la scheda prodotto chiede tre cose', () => {
   it('la terza domanda — quanto rende — c’è per chi non si conta a pezzi', async () => {
     const user = userEvent.setup()
     await apriForm(user)
-    // Di suo è un interruttore spento: quasi tutti i prodotti si usano come
-    // si comprano, e la domanda non si fa a chi non ce l'ha.
-    const interruttore = screen.getByRole('checkbox', { name: /Si usa in un.altra unità/ })
-    expect(interruttore).not.toBeChecked()
+    // La risposta è già data: quasi tutti i prodotti si usano come si
+    // comprano, e a quelli non si chiede niente.
+    const interruttore = screen.getByRole('checkbox', { name: /Lo uso come lo compro/ })
+    expect(interruttore).toBeChecked()
     expect(screen.queryByLabelText('Quanto rende')).toBeNull()
+    // Spegnendolo compare la resa, e nient'altro.
     await user.click(interruttore)
     expect(screen.getByLabelText('Quanto rende')).toBeInTheDocument()
-    // Passando ai pezzi sparisce: lì la stessa cosa la dice già «a quanto
-    // corrisponde un pezzo».
+    // Passando ai pezzi l'interruttore sparisce: lì la stessa cosa la dice
+    // già «a quanto corrisponde un pezzo».
     await user.selectOptions(screen.getByLabelText(/Unità d.acquisto/), 'pz')
-    expect(screen.queryByRole('checkbox', { name: /Si usa in un.altra unità/ })).toBeNull()
+    expect(screen.queryByRole('checkbox', { name: /Lo uso come lo compro/ })).toBeNull()
     expect(screen.getByLabelText(/A quanto corrisponde un pezzo/)).toBeInTheDocument()
   })
 })
@@ -403,19 +404,20 @@ describe('il costo segue l’unità d’acquisto', () => {
     expect(screen.getByLabelText(/Costo €\/U/)).toBeInTheDocument()
   })
 
-  it('scritto per unità, si salva come costo della confezione', async () => {
-    // Sotto resta il costo della CONFEZIONE, che è quello che il resto
-    // dell'app legge da sempre: 0,20 €/cl su una bottiglia da 70 cl fa 14 €.
+  it('per chi non conta a pezzi, una confezione è una unità', async () => {
+    // Non si chiede più quanto contiene una confezione: comprando a cl, la
+    // confezione È un cl. Il prezzo scritto vale per quello.
     const user = userEvent.setup()
     await apri(user)
+    expect(screen.queryByLabelText(/Quanto contiene una confezione/)).toBeNull()
     await user.type(screen.getByLabelText('Nome *'), 'Gin sfuso')
     await user.type(screen.getByLabelText(/Costo €\/cl/), '0.2')
-    await user.type(screen.getByLabelText(/Quanto contiene una confezione/), '70')
     await user.click(screen.getByRole('button', { name: /^Salva/ }))
     await waitFor(() => expect(createInventoryItem).toHaveBeenCalled())
     expect(createInventoryItem.mock.calls.at(-1)[0]).toMatchObject({
       name: 'Gin sfuso',
-      cost: 14,
+      cost: 0.2,
+      package_size: 10, // un cl, in unità base
     })
   })
 })
