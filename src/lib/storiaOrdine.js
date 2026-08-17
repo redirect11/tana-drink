@@ -69,6 +69,22 @@ export function storiaOrdine(order) {
     })
   }
 
+  // LE CHIUSURE PASSATE. I tempi del conto tengono solo l'ULTIMA: chiudendo
+  // e riaprendo due volte, la prima spariva e restavano riaperture che non
+  // riaprivano niente. Ogni riapertura si porta dietro cosa stava annullando
+  // (vedi patchRipristino), e da lì la storia si ricompone.
+  for (const r of order.riaperture || []) {
+    const prima = iso(r.chiudeva_at)
+    if (!prima || prima === chiusura || prima === annullo) continue
+    eventi.push({
+      at: prima,
+      tipo: r.chiudeva === 'annullato' ? 'annullato' : 'chiuso',
+      titolo: r.chiudeva === 'annullato' ? 'Conto annullato' : 'Conto chiuso',
+      dettaglio: null,
+      chi: null,
+    })
+  }
+
   for (const r of order.riaperture || []) {
     // I SOLDI TOLTI SI DICONO. Riaprendo, quello che era stato incassato
     // esce dai guadagni della serata: se la storia non lo dice, a fine

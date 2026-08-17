@@ -1781,6 +1781,11 @@ async function creaOrdine({
     daily_number: dailyNumber, // progressivo della SESSIONE DI CASSA (o del giorno se la cassa è chiusa)
     serial, // progressivo assoluto di sistema (non riparte mai)
     order_date: orderDate, // giornata commerciale (YYYY-MM-DD)
+    // QUANDO È STATO APERTO, secondo l'orologio di qui. `created_at` è un
+    // orario del SERVER e finché la scrittura non arriva vale null: la
+    // storia del conto restava senza la riga «Conto aperto» — proprio sul
+    // conto appena battuto, che è quello che si guarda.
+    status_times: { [ORDER_OPEN]: nowIso },
     cash_session_id: cashSessionId, // sessione di cassa che numera l'ordine
     table_label: table_label || null,
     note: note || null,

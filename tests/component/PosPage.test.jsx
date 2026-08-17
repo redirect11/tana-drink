@@ -112,7 +112,7 @@ vi.mock('firebase/auth', () => ({
 
 import PosPage from '../../src/pages/PosPage.jsx'
 import { submitPosOrder } from '../../src/lib/pendingOrders.js'
-import { createOrder, updateOrderInfo, subscribeSettings } from '../../src/lib/api.js'
+import { createOrder, updateOrderInfo, subscribeSettings, cancelOrder } from '../../src/lib/api.js'
 import { printComanda } from '../../src/lib/printer.js'
 
 function mount() {
@@ -471,4 +471,59 @@ describe('uscire dal conto non aspetta il server', () => {
     expect(await screen.findByLabelText('Nome')).toBeInTheDocument()
   })
 
+})
+
+// IL CONTO NUOVO NON EREDITA NIENTE. La bozza è persistente apposta — le
+// righe non confermate non si perdono uscendo — ma quando quelle righe sono
+// ANDATE (in un conto creato, o in pagamento) la copia salvata va
+// dimenticata subito: restava lì, e il conto dopo si apriva con dentro la
+// roba appena battuta, pronta a essere battuta due volte.
+describe('la bozza si consuma quando le righe partono', () => {
+  it('creando il conto, la copia salvata sparisce subito', async () => {
+    const user = userEvent.setup()
+    // La creazione non risponde: la copia salvata deve sparire lo stesso.
+    createOrder.mockImplementationOnce(() => new Promise(() => {}))
+    mount()
+    await user.click(screen.getByText('Mojito'))
+    await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1), { timeout: 2000 })
+    expect(localStorage.getItem('tana:draft:new')).toBeNull()
+  })
+
+  it('ma a schermo le righe restano: la pagina non deve sembrare resettata', async () => {
+    const user = userEvent.setup()
+    createOrder.mockImplementationOnce(() => new Promise(() => {}))
+    mount()
+    await user.click(screen.getByText('Mojito'))
+    await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1), { timeout: 2000 })
+    // La riga del conto è ancora lì, col suo prezzo.
+    expect(screen.getAllByText('Mojito').length).toBeGreaterThan(1)
+  })
+
+  it('mandando le righe in pagamento, idem', async () => {
+    const user = userEvent.setup()
+    createOrder.mockImplementationOnce(() => new Promise(() => {}))
+    mount()
+    await user.click(screen.getByText('Mojito'))
+    await user.click(screen.getByRole('button', { name: /Pagamento/ }))
+    await waitFor(() => expect(localStorage.getItem('tana:draft:new')).toBeNull())
+  })
+})
+
+// ANNULLARE LASCIA SEMPRE UN CONTO ANNULLATO, anche se l'ordine non era
+// ancora nato: il numero è già stato mostrato e preso, e di quello che è
+// stato battuto deve restare traccia — un conto sparito nel nulla non si può
+// nemmeno controllare.
+describe('annullare un conto appena battuto', () => {
+  it('crea il conto e lo annulla: nella lista annullati ci deve essere', async () => {
+    const user = userEvent.setup()
+    mount()
+    await user.click(screen.getByText('Mojito'))
+    await user.click(screen.getByRole('button', { name: /Annulla ordine/ }))
+    // Nel box di conferma, il tasto che conferma davvero.
+    const conferme = screen.getAllByRole('button', { name: /^Annulla ordine$/ })
+    await user.click(conferme[conferme.length - 1])
+    await waitFor(() => expect(createOrder).toHaveBeenCalled())
+    await waitFor(() => expect(cancelOrder).toHaveBeenCalled())
+    expect(navigateSpy).toHaveBeenCalledWith('/bar')
+  })
 })

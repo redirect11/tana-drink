@@ -254,7 +254,18 @@ requirements:
       con loro. Il dato che serve si PRECARICA — i progressivi, la cassa
       aperta — invece di andarlo a chiedere al momento del bisogno.
       Anche i tasti: «invia comanda» e «annulla ordine» funzionano su un
-      conto appena battuto, senza aspettare che esista sul server. E la
+      conto appena battuto, senza aspettare che esista sul server. E
+      annullare lascia SEMPRE un conto annullato, anche se l'ordine non era
+      ancora nato: il numero è già stato mostrato e preso, e di quello che è
+      stato battuto deve restare traccia.
+      LA SCHERMATA DEL CONTO NUOVO SI APRE PULITA, senza pulizie
+      all'apertura: uscendo — dalla freccia, dal menu, dal tasto indietro —
+      quello che è stato battuto diventa un conto e la bozza si chiude. La
+      «bozza che non si perde» continua a valere: non si perde perché
+      diventa un conto, non perché resta in un cassetto da cui il conto dopo
+      se la ritrova dentro.
+      Un tasto 🧹 svuota tutte le righe in un colpo (con conferma), invece
+      di toglierle una per una. E la
       bozza si svuota all'istante: aspettare la scrittura voleva dire
       aprire il conto dopo e trovarci dentro le righe di quello prima.
       E QUELLO CHE SI SCRIVE ARRIVA AGLI ALTRI DA SÉ. Ogni modifica entra
