@@ -335,11 +335,20 @@ describe('la scheda prodotto chiede tre cose', () => {
     // Spegnendolo compare la resa, e nient'altro.
     await user.click(interruttore)
     expect(screen.getByLabelText('Quanto rende')).toBeInTheDocument()
-    // Passando ai pezzi l'interruttore sparisce: lì la stessa cosa la dice
-    // già «a quanto corrisponde un pezzo».
+    // Anche sui pezzi c'è, ed è acceso: la birra si compra e si serve a
+    // bottiglia. Spegnendolo si dice a quanto corrisponde un pezzo — è così
+    // che l'Aperol, comprato a bottiglia, si versa in cl.
     await user.selectOptions(screen.getByLabelText(/Unità d.acquisto/), 'pz')
-    expect(screen.queryByRole('checkbox', { name: /Lo uso come lo compro/ })).toBeNull()
+    const suiPezzi = screen.getByRole('checkbox', { name: /Lo uso come lo compro/ })
+    expect(suiPezzi).toBeChecked()
+    expect(screen.queryByLabelText(/A quanto corrisponde un pezzo/)).toBeNull()
+    await user.click(suiPezzi)
     expect(screen.getByLabelText(/A quanto corrisponde un pezzo/)).toBeInTheDocument()
+    // E l'unità d'uso si sceglie fra tutte, non solo dentro la sua famiglia.
+    const unita = screen.getByLabelText('Unità del contenuto')
+    expect([...unita.options].map((o) => o.value)).toEqual(
+      expect.arrayContaining(['l', 'cl', 'ml', 'kg', 'g', 'mg', 'U'])
+    )
   })
 })
 
@@ -461,5 +470,35 @@ describe('carico: il collo dietro un interruttore', () => {
     // E non si corregge a mano: sarebbe un numero che non torna con quello
     // che è arrivato.
     expect(pezzi).toHaveAttribute('readonly')
+  })
+})
+
+// ── «CINQUE CHILI DI LIMONI FANNO UN LITRO E MEZZO» ──────────────────
+// Si scrive come si dice, con la quantità su tutte e due i lati. Sotto
+// resta un rapporto, ed è quello che usa lo scarico: la proporzione vale
+// per qualunque quantità si versi.
+describe('la resa si scrive con le quantità di tutti e due i lati', () => {
+  it('5 kg → 1,5 l diventa il rapporto giusto, e il carico resta in chili', async () => {
+    const user = userEvent.setup()
+    render(<InventoryManager />)
+    await screen.findByText('Campari')
+    await user.click(screen.getByRole('button', { name: '+ Nuovo prodotto' }))
+    await user.type(screen.getByLabelText('Nome *'), 'Limoni')
+    await user.selectOptions(screen.getByLabelText(/Unità d.acquisto/), 'kg')
+    await user.click(screen.getByRole('checkbox', { name: /Lo uso come lo compro/ }))
+
+    const daQty = screen.getByLabelText('Quanto ne prendi')
+    await user.clear(daQty)
+    await user.type(daQty, '5')
+    await user.type(screen.getByLabelText('Quanto rende'), '1.5')
+    await user.selectOptions(screen.getByLabelText(/Unità d.uso/), 'l')
+    await user.click(screen.getByRole('button', { name: /^Salva/ }))
+
+    await waitFor(() => expect(createInventoryItem).toHaveBeenCalled())
+    const salvato = createInventoryItem.mock.calls.at(-1)[0]
+    // 1500 ml ogni 5000 g = 0,3 ml per grammo.
+    expect(salvato.resa).toBeCloseTo(0.3, 6)
+    expect(salvato.resa_unit).toBe('ml')
+    expect(salvato.unit).toBe('g') // la giacenza resta quella che si compra
   })
 })

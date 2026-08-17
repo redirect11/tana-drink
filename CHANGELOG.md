@@ -25,6 +25,17 @@
   a mano in una dozzina di posti — il tab acceso, il «+», i tasti dei
   pannelli, gli aloni del fondo — e quelli restavano dorati con qualunque
   tema.
+- **Il chilo fra le unità d'acquisto**: i limoni si comprano al chilo, e
+  prima c'era solo il grammo.
+- **La resa si scrive come si dice**: «5 kg rendono 1,5 l», con la quantità
+  su tutti e due i lati, e l'unità d'uso si sceglie fra tutte — l'Aperol si
+  compra a bottiglia e si versa in cl. Lo scarico fa la proporzione.
+- **Anche pezzi e unità generiche hanno «Lo uso come lo compro»**: una birra
+  si compra e si serve a bottiglia, e non le si chiede altro.
+- **In creazione si scrive quanto se ne ha, nell'unità in cui si compra**,
+  invece di «quante confezioni piene».
+- **Il tasto indietro chiude la scheda prodotto** e riporta al magazzino,
+  invece di uscire dalla pagina buttando via quello che si stava scrivendo.
 - **La scheda prodotto chiede meno**: «Lo uso come lo compro» è acceso di
   suo, e solo spegnendolo compare «Quanto rende». Sparisce la domanda su
   quanto contiene una confezione: comprando a chili, una confezione è un
