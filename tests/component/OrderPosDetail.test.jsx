@@ -290,12 +290,18 @@ describe('aggiunte: la nuova comanda è gestita internamente', () => {
     expect(screen.getByRole('button', { name: /🔗 Unisci/ })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /⑃ Separa/ })).toBeNull()
 
-    // Separa non è persa: dal menu ⋯ il Mojito da 4 diventa 4 righe da 1
+    // ANCHE NEL ⋯ LA VOCE È UNA SOLA, e dice la stessa cosa del tasto:
+    // erano due righe di menu con una sempre spenta. Qui c'è da unire,
+    // quindi si legge «Unisci» e basta.
     await user.click(screen.getByRole('button', { name: 'Azioni del conto' }))
-    await user.click(screen.getByRole('button', { name: /Separa le quantità/ }))
+    expect(screen.getByRole('button', { name: /Unisci le righe uguali/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Separa le quantità/ })).toBeNull()
+
+    // Unito quello che c'era da unire, la stessa voce diventa «Separa».
+    await user.click(screen.getByRole('button', { name: /Unisci le righe uguali/ }))
     await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalled())
     const dopo = bartenderUpdateComanda.mock.calls.at(-1)[2].items
-    expect(dopo.filter((i) => i.drink_id === 'mojito')).toHaveLength(4)
+    expect(dopo.filter((i) => i.drink_id === 'gin')).toHaveLength(1)
   })
 
   it("il + su un item del conto è un'aggiunta che si conferma da sola", async () => {
@@ -685,15 +691,15 @@ describe('menu azioni del telefono', () => {
     const user = userEvent.setup()
     mount(baseOrder())
     const menu = await apriMenu(user)
-    for (const voce of [
-      /Comande \(1\)/,
-      /Prodotto libero/,
-      /Dati conto/,
-      /Unisci le righe uguali/,
-      /Separa le quantità/,
-    ]) {
+    for (const voce of [/Comande \(1\)/, /Prodotto libero/, /Dati conto/]) {
       expect(menu.getByRole('button', { name: voce })).toBeInTheDocument()
     }
+    // Unisci/Separa è UNA voce che cambia secondo quello che si può fare
+    // (qui il conto ha 2 Mojito su una riga: c'è da separare), e il
+    // «svuota» sta qui perché sul telefono in barra non ci sta.
+    expect(menu.getByRole('button', { name: /Separa le quantità/ })).toBeInTheDocument()
+    expect(menu.queryByRole('button', { name: /Unisci le righe uguali/ })).toBeNull()
+    expect(menu.getByRole('button', { name: /Svuota il conto/ })).toBeInTheDocument()
   })
 
   it('quello che si usa sempre NON è nel menu: sta in fondo, su una riga', async () => {
