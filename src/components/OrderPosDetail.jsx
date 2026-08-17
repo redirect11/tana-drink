@@ -224,6 +224,12 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   const [selfOrder, setSelfOrder] = useState(null)
   const order = orderProp || selfOrder
   const isNew = !order
+  // L'ID DEL CONTO IN UN RIFERIMENTO. Chi scrive al server in ritardo —
+  // il flush col debounce, le correzioni delle righe cambiate mentre
+  // l'ordine nasceva — non può dipendere dal giro di render: la chiusura
+  // vecchia aveva ancora `order` nullo e la scrittura cadeva nel vuoto.
+  const orderIdRef = useRef(null)
+  if (order?.id) orderIdRef.current = order.id
   // Ordine appena creato in place e ancora senza nome: all'uscita lo si chiede
   // una volta (poi non più).
   const createdInPlace = !orderProp && !!selfOrder
@@ -480,12 +486,18 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   // memoria «il conto in corso», così il «+» seguente riapriva quello — e
   // per un attimo si vedevano i suoi prodotti segnati nella griglia.
   const montatoRef = useRef(true)
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    // Rimesso a `true` nel corpo, non solo all'inizializzazione: in sviluppo
+    // StrictMode monta, finge di smontare e rimonta — e il riferimento
+    // restava `false` per tutta la sessione. Sull'emulatore la creazione non
+    // passava mai a modifica (setSelfOrder saltato), le righe battute dopo
+    // restavano orfane e il pagamento mostrava solo il primo giro: gli
+    // stessi sintomi del banco, ma sempre, e senza rete di mezzo.
+    montatoRef.current = true
+    return () => {
       montatoRef.current = false
-    },
-    []
-  )
+    }
+  }, [])
 
   // USCENDO DA QUI, LA BOZZA SI CHIUDE. Da qualunque parte si esca — la
   // freccia, il menu, il tasto indietro del browser — quello che è stato
@@ -515,7 +527,15 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   }
   useEffect(
     () => () => {
-      uscitaRef.current?.()
+      // Non subito: in sviluppo StrictMode smonta e rimonta al volo per
+      // scovare proprio questi errori, e l'uscita partiva a schermata appena
+      // aperta — buttava la memoria del conto in corso e, con una bozza
+      // salvata, creava un conto a vuoto. Un microtask dopo, se si è ancora
+      // smontati, l'uscita è quella vera; se si è stati rimontati non si è
+      // usciti affatto.
+      queueMicrotask(() => {
+        if (!montatoRef.current) uscitaRef.current?.()
+      })
     },
     []
   )
@@ -555,15 +575,16 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderProp])
 
-  // PAGAMENTO DIRETTO (creazione): la schermata si apre subito su un ordine
-  // locale; la creazione gira in background (resolveOrderId).
+  // PAGAMENTO DIRETTO (creazione): la schermata si apre subito su un GUSCIO
+  // locale (id nullo) mentre il conto nasce in sottofondo. Righe e totale
+  // non stanno qui dentro: li ricompone sempre `ordineDaPagare`, dallo
+  // stato a schermo — è la regola di casa, e l'unica versione del conto che
+  // non mente mai. Prima il guscio portava le righe congelate al momento
+  // del tocco, e appena il server rispondeva prendeva il SUO conto: quello
+  // che si era battuto dopo spariva dal pagamento fino alla
+  // sincronizzazione (BUG-017).
   const [payOrder, setPayOrder] = useState(null)
   const payIdRef = useRef(null)
-  const payOrderId = payOrder?.id
-  useEffect(() => {
-    if (!payOrderId) return
-    return subscribeOrder(payOrderId, (o) => o && setPayOrder(o), () => {})
-  }, [payOrderId])
 
   // POS a tutto schermo, come la cassa.
   useEffect(() => {
@@ -597,9 +618,13 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     clearTimeout(flushTimers.current[comandaId])
     delete flushTimers.current[comandaId]
     const items = latestPending.current[comandaId]
-    if (!items) return
+    // L'id dal riferimento, non dalla chiusura: la scrittura può partire
+    // dopo l'uscita, o nell'attimo in cui il conto è appena nato e `order`
+    // nel render di questa funzione era ancora nullo.
+    const oid = orderIdRef.current
+    if (!items || !oid) return
     try {
-      await bartenderUpdateComanda(order.id, comandaId, { items })
+      await bartenderUpdateComanda(oid, comandaId, { items })
       // L'override NON si toglie qui: la scrittura risponde PRIMA dello snapshot,
       // e toglierlo subito farebbe sparire+riapparire l'item nella lista (il
       // "ricaricamento" alla sync). Lo toglie l'effetto sotto, quando la comanda
@@ -611,7 +636,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
       setError(e.message)
       setPendingEdits((p) => omit(p, comandaId))
     }
-  }, [order?.id])
+  }, [])
 
   // ── SEGNARE UNA MODIFICA IN SOSPESO ────────────────────────────────
   //
@@ -640,8 +665,9 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
 
   useEffect(() => {
     const timers = flushTimers.current
-    // I timer si spengono, ma quello che aspettavano è già partito: ci pensa
-    // l'uscita (uscitaRef), che gira prima di questa pulizia.
+    // I timer si spengono, ma quello che aspettavano parte lo stesso: ci
+    // pensa l'uscita (uscitaRef), che manda tutto da sé senza passare dai
+    // timer — un microtask dopo lo smontaggio.
     return () => Object.values(timers).forEach(clearTimeout)
   }, [])
 
@@ -737,6 +763,25 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   const effComandeRef = useRef(effComande)
   effComandeRef.current = effComande
 
+  // LA STESSA RIGA NON SI CONTA DUE VOLTE. Nell'attimo in cui il conto
+  // nasce, le righe inviate stanno già nelle comande ma la bozza non ha
+  // ancora cambiato chiave: per un render la stessa riga vive in due posti.
+  // La lista si difendeva da sola (stessa chiave = stesso nodo); totali e
+  // pagamento no, e il conto raddoppiava per un battito. Qui la bozza è
+  // depurata delle righe che una comanda porta già (stessa identità,
+  // line_id) — e un cassetto rimasto sporco da un crash si ripulisce da sé.
+  const bozzaViva = useMemo(() => {
+    if (draft.length === 0) return draft
+    const confermate = new Set()
+    for (const c of effComande)
+      for (const it of c.items || []) if (it.line_id) confermate.add(it.line_id)
+    if (confermate.size === 0) return draft
+    const resta = draft.filter((l) => !confermate.has(l.line_id))
+    return resta.length === draft.length ? draft : resta
+  }, [draft, effComande])
+  const bozzaVivaRef = useRef(bozzaViva)
+  bozzaVivaRef.current = bozzaViva
+
   // ── LISTA UNICA: item confermati (per-riga, dalle comande) + bozza ──
   // Le quantità già pagate (acconti/split registrati) vengono scorporate in
   // righe "pagate" a sé, così si distinguono e si possono spostare in fondo.
@@ -795,8 +840,8 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   }, [effComande, order?.payments, riaperto, contoAnnullato])
 
   const draftLines = useMemo(
-    () => draft.map((l) => ({ ...l, key: `d:${l.line_id}`, source: 'draft', status: 'draft', removable: true })),
-    [draft]
+    () => bozzaViva.map((l) => ({ ...l, key: `d:${l.line_id}`, source: 'draft', status: 'draft', removable: true })),
+    [bozzaViva]
   )
 
   const allByKey = useMemo(() => {
@@ -913,8 +958,8 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     if (closed) clearDraft()
   }, [closed, clearDraft])
 
-  const draftCount = draft.reduce((s, i) => s + i.qty, 0)
-  const draftTotal = draft.reduce((s, i) => s + i.qty * i.unit_price, 0)
+  const draftCount = bozzaViva.reduce((s, i) => s + i.qty, 0)
+  const draftTotal = bozzaViva.reduce((s, i) => s + i.qty * i.unit_price, 0)
   // Le righe di un conto annullato si vedono ma non fanno somma: quel
   // conto non lo paga nessuno, e un totale diverso da zero lo farebbe
   // sembrare ancora da incassare.
@@ -944,13 +989,13 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
       const k = chiave(l.drink_id, l.name)
       if (k) m[k] = (m[k] || 0) + l.qty
     }
-    for (const l of draft) {
+    for (const l of bozzaViva) {
       if (l.custom) continue
       const k = chiave(l.drink_id, l.name)
       if (k) m[k] = (m[k] || 0) + l.qty
     }
     return m
-  }, [confirmedLines, draft, drinks, idPerNome])
+  }, [confirmedLines, bozzaViva, drinks, idPerNome])
 
   // MODIFICA: l'item entra DIRETTAMENTE nella comanda modificabile (modifica
   // ottimistica, chiave riga stabile) e si sincronizza in background — così NON
@@ -1104,7 +1149,21 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     // dal prodotto di catalogo al prossimo giro.
     const patch = { name, unit_price: price, custom: true, recipe_items: recipe_items || [], note: note || null }
     if (l.source === 'draft') {
-      setDraft((items) => items.map((x) => (x.line_id === l.line_id ? { ...x, ...patch } : x)))
+      if (draftRef.current.some((x) => x.line_id === l.line_id)) {
+        setDraft((items) => items.map((x) => (x.line_id === l.line_id ? { ...x, ...patch } : x)))
+        return
+      }
+      // La riga è DIVENTATA un item confermato mentre l'editor era aperto:
+      // il conto nasce da solo sotto le dita, la bozza cambia chiave e il
+      // ritocco cadeva nel vuoto. La si insegue nella comanda che se l'è
+      // presa — stessa identità, il line_id.
+      for (const c of effComandeRef.current) {
+        const idx = (c.items || []).findIndex((it) => it.line_id === l.line_id)
+        if (idx >= 0) {
+          segnaModifica(c.id, c.items.map((it, j) => (j === idx ? { ...it, ...patch } : it)))
+          return
+        }
+      }
       return
     }
     // Item già CONFERMATO (comanda in preparazione): modifica ottimistica sulla
@@ -1139,8 +1198,8 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   // confermato. Senza, la chiave React cambiava (d:… → c:…), il nodo veniva
   // ricreato e l'item appena aggiunto rifaceva il suo effetto di comparsa —
   // il "piccolo relayout" che si vedeva a ogni primo drink.
-  const draftToItems = () =>
-    draft.map((l) => ({
+  const draftToItems = (righe = draft) =>
+    righe.map((l) => ({
       drink_id: l.drink_id,
       name: l.name,
       price: l.unit_price,
@@ -1176,8 +1235,14 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   // aggiunta è confermata subito) e all'uscita per non perdere nulla.
   const flushAdditions = useCallback(() => {
     if (isNew || !order?.id) return
-    const additions = draftRef.current
-    if (!additions || additions.length === 0) return
+    // La bozza DEPURATA delle righe che una comanda porta già: un cassetto
+    // rimasto sporco (crash, corse alla nascita del conto) non deve battere
+    // due volte le stesse righe. `clearDraft` sotto pulisce comunque tutto.
+    const additions = bozzaVivaRef.current
+    if (!additions || additions.length === 0) {
+      if (draftRef.current.length > 0) clearDraft()
+      return
+    }
     const target = effComandeRef.current.find(comandaEditable)
     const oid = order.id
     if (target) {
@@ -1307,6 +1372,17 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
         const arrivateDopo = draftRef.current.filter((r) => !inviate.has(r.line_id))
         const daPortare = [...restanti, ...arrivateDopo]
         if (daPortare.length) saveDraft(created.id, daPortare)
+        // LE RIGHE PARTITE POSSONO ESSERE CAMBIATE NEL FRATTEMPO. Mentre il
+        // conto nasceva si può aver ritoccato una riga già inviata — il
+        // prezzo, la ricetta, la quantità, perfino toglierla. Quelle
+        // modifiche non stanno in `daPortare` (la riga è fra le inviate) né
+        // nell'ordine creato (è nato con la versione vecchia): andavano
+        // perse — il gin buono messo a mano tornava di listino (BUG-016, ma
+        // in creazione). Qui si confronta la comanda nata con la bozza
+        // com'è ADESSO e la differenza parte come una modifica qualsiasi.
+        orderIdRef.current = created.id
+        const correzione = correggiComandaNata(created, inviate, draftRef.current)
+        if (correzione) segnaModifica(correzione.comandaId, correzione.items, 0)
         itemsInVoloRef.current = null
         if (montatoRef.current) {
           selfOrderJsonRef.current = JSON.stringify(created) // evita un re-render doppio dalla subscription
@@ -1327,23 +1403,6 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     creatingPromiseRef.current = run()
     return creatingPromiseRef.current
   }
-  // ── IL CONTO È NATO: DA QUI IN POI SI MODIFICA ─────────────────────
-  //
-  // La creazione da bozza lo faceva già; il pagamento diretto no, e restava
-  // una schermata «in creazione» con un conto vero dietro. Chiudendo il
-  // pagamento e battendo altro, quelle righe finivano in un secondo conto —
-  // o non arrivavano al pagamento, che intanto guardava il conto di prima.
-  // Nato l'ordine, questa schermata diventa la modifica DI QUELL'ORDINE, e
-  // tutto il resto (aggiunte, auto-conferma, pagamento) segue la strada
-  // normale.
-  const passaAModifica = (creato) => {
-    if (!creato || orderProp || !montatoRef.current) return
-    itemsInVoloRef.current = null
-    selfOrderJsonRef.current = JSON.stringify(creato)
-    ricordaContoInCorso(creato.id)
-    setSelfOrder((cur) => cur || creato)
-  }
-
   const createFromDraftRef = useRef(createFromDraft)
   createFromDraftRef.current = createFromDraft
 
@@ -1437,86 +1496,52 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     }
   }
 
+  // PAGAMENTO IN CREAZIONE. La schermata si apre SUBITO su un guscio locale
+  // (righe e totale li ricompone `ordineDaPagare`, sempre da quello che c'è
+  // a schermo) e il conto nasce per la strada di sempre — createFromDraft —
+  // che al ritorno porta con sé le righe battute nel frattempo e passa la
+  // schermata a modifica. Prima qui viveva una SECONDA creazione, con le
+  // righe congelate al momento del tocco: quello che si batteva dopo —
+  // chiudendo il pagamento e riaprendolo — restava orfano, e alla risposta
+  // del server la bozza si svuotava buttando anche quello. Il pagamento
+  // mostrava solo il primo giro finché il server non risincronizzava, e a
+  // volte per sempre (BUG-017).
   function handlePayNow() {
     // Le righe possono essere già partite per la creazione: la bozza si
-    // svuota subito (vedi createFromDraft) e restano lì.
+    // svuota subito (vedi createFromDraft) e restano in volo.
     const inVolo = itemsInVoloRef.current || []
-    if ((draft.length === 0 && inVolo.length === 0) || payOrder) return
-    // Se una creazione è GIÀ in volo (auto-creazione appena scattata), il
-    // pagamento si aggancia a quella: creare qui un secondo ordine
-    // duplicherebbe il conto.
-    const giaInCreazione = creatingRef.current && creatingPromiseRef.current
-    // Il pagamento diretto crea l'ordine: blocca l'auto-creazione della bozza.
-    creatingRef.current = true
+    if ((draft.length === 0 && inVolo.length === 0) || showPayment || payOrder) return
     setError(null)
-    const items = draft.length ? draftToItems() : inVolo
-    // LE RIGHE SONO ANDATE IN PAGAMENTO: la copia salvata della bozza si
-    // dimentica subito. Restava lì, e il conto DOPO si apriva con dentro
-    // quello che si era appena incassato — la stessa roba, pronta a essere
-    // battuta due volte. A schermo restano finché la schermata è aperta:
-    // vedi createFromDraft, sono due cose diverse.
-    itemsInVoloRef.current = items
-    dimenticaBozzaSalvata()
-    const mapped = items.map((i) => ({
-      drink_id: i.drink_id,
-      name: i.name,
-      unit_price: i.price,
-      qty: i.qty,
-      ...(i.custom ? { custom: true } : {}),
-    }))
-    // Il totale si fa sulle righe che si stanno pagando, non sulla bozza:
-    // quando le righe sono già partite per la creazione la bozza è vuota, e
-    // il pagamento si apriva a zero euro.
-    const totaleRighe = items.reduce(
-      (s, i) => s + (Number(i.price) || 0) * (Number(i.qty) || 0),
-      0
-    )
+    // Il guscio fa aprire la schermata prima che l'ordine esista. Numero e
+    // dati sono quelli che la testata mostra già.
     setPayOrder({
       id: null,
-      daily_number: null,
-      status: 'aperto',
+      daily_number: nextNum,
+      status: ORDER_OPEN,
       payment_status: 'non_richiesto',
       customer_name: info.customer_name.trim() || null,
       table_label: info.table_label || null,
-      total: Math.round(totaleRighe * 100) / 100,
       discount: null,
       discount_amount: 0,
       payments: [],
       lottery_code: null,
       invoice_number: null,
-      comande: [{ id: 'c1', seq: 1, status: statoIniziale, items: mapped }],
-      order_items: mapped,
+      comande: [],
+      order_items: [],
     })
-    payIdRef.current = (async () => {
-      if (giaInCreazione) {
-        const gia = await creatingPromiseRef.current
-        if (gia) {
-          setPayOrder((cur) => (cur && cur.id === null ? gia : cur))
-          passaAModifica(gia)
-          return gia.id
-        }
-      }
-      const created = await createOrder({
-        table_label: info.table_label || null,
-        note: info.note || null,
-        customer_name: info.customer_name.trim() || null,
-        items,
-        client_temp_id: chiaveBattuta(),
-        placed_by: placedBy(),
-        status: statoIniziale,
-        service_mode: modoConsegna,
-        group_id: group && !groupIsContainer ? group.id : null,
-        group_name_snapshot: group && !groupIsContainer ? group.name : null,
-      })
-      setPayOrder((cur) => (cur && cur.id === null ? created : cur))
-      passaAModifica(created)
-      clearDraft()
-      setInfo({ customer_name: '', table_label: '', note: '' })
-      return created.id
-    })()
-    payIdRef.current.catch((e) => {
-      toastError(`Ordine non creato: ${e.message}`)
-      setPayOrder(null) // la bozza è intatta: si riprova
+    setShowPayment(true)
+    // Una sola strada per nascere: se l'auto-creazione è già in volo,
+    // createFromDraft restituisce QUELLA (creatingRef), non un secondo conto.
+    payIdRef.current = createFromDraftRef.current().then((o) => {
+      if (!o?.id) throw new Error('Ordine non creato')
+      return o.id
+    })
+    payIdRef.current.catch(() => {
+      // Il motivo lo ha già detto il toast della creazione: qui si chiude il
+      // pagamento; la bozza è tornata intatta e si riprova.
+      if (!montatoRef.current) return
+      setPayOrder(null)
+      setShowPayment(false)
       payIdRef.current = null
     })
   }
@@ -1654,7 +1679,8 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
 
   // ── IL PAGAMENTO GUARDA IL CONTO COM'È A SCHERMO ───────────────────
   //
-  // `order` è quello che sa il SERVER. Le righe appena battute stanno
+  // `order` è quello che sa il SERVER — e in creazione non c'è nemmeno: al
+  // suo posto c'è il guscio `payOrder`. Le righe appena battute stanno
   // ancora nella bozza (si confermano da sole poco dopo) o in una scrittura
   // in volo: chi batteva due drink e apriva subito il pagamento si trovava
   // il conto di prima — quattro righe a schermo, tre nel pagamento, col
@@ -1662,28 +1688,32 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   //
   // Qui il conto si ricompone in locale, come vuole la regola di casa
   // (docs/architettura.md): le comande con dentro le modifiche in volo, la
-  // bozza come se fosse una comanda in più, e il totale che si vede sotto
-  // le righe. Il server lo raggiunge un istante dopo — ci pensa
-  // `onBeforePay`, che manda tutto prima di registrare l'incasso.
+  // bozza VIVA (senza le righe che una comanda porta già) come una comanda
+  // in più, e il totale che si vede sotto le righe. Vale in modifica E in
+  // creazione: il pagamento mostra sempre quello che si è battuto, che il
+  // server abbia già risposto o no. Il server lo raggiunge un istante dopo
+  // — ci pensa `onBeforePay`, che manda tutto prima di registrare l'incasso.
   const ordineDaPagare = useMemo(() => {
-    if (!order) return order
-    const bozza = draftToItems().map((i) => ({
+    const base = order || payOrder
+    if (!base) return null
+    const bozza = draftToItems(bozzaViva).map((i) => ({
       drink_id: i.drink_id,
       name: i.name,
       unit_price: i.price,
       qty: i.qty,
+      ...(i.line_id ? { line_id: i.line_id } : {}),
       ...(i.custom ? { custom: true } : {}),
     }))
     const comandeLocali = bozza.length
       ? [...effComande, { id: '__bozza', status: ORDER_STATUSES.RICEVUTO, items: bozza }]
       : effComande
     return {
-      ...order,
+      ...base,
       comande: comandeLocali,
       total: confirmedTotal + draftTotal + extras,
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [order, effComande, draft, confirmedTotal, draftTotal, extras])
+  }, [order, payOrder, effComande, bozzaViva, confirmedTotal, draftTotal, extras])
 
   // Aprendo il pagamento la bozza si conferma SUBITO, senza aspettare il
   // mezzo secondo dell'auto-conferma: da lì in poi quelle righe sono del
@@ -2694,39 +2724,42 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
       )}
 
       {/* ── Schermata Pagamento ──
-          UNA SOLA, e NON appesa a `isNew`. Erano due rami, uno per la
-          creazione (`isNew && payOrder`) e uno per la modifica
-          (`!isNew && showPayment`). Al banco: si battono due acque di
-          corsa e si preme subito Pagamento, mentre la creazione automatica
-          della bozza è ancora in volo. Quando il server risponde, il conto
-          esiste — `isNew` diventa falso, il primo ramo sparisce e il
-          secondo non ha `showPayment` — e la schermata di pagamento si
-          chiudeva DA SOLA, col cliente davanti che stava pagando. Ora
-          quello che comanda è "c'è un pagamento in corso", che il conto sia
-          nato un istante prima o mezz'ora prima. */}
-      {(payOrder || (showPayment && order)) && (
+          UNA SOLA, e NON appesa a `isNew`: quello che comanda è "c'è un
+          pagamento in corso", che il conto sia nato un istante prima o
+          mezz'ora prima. E il conto che riceve è SEMPRE `ordineDaPagare`,
+          la ricomposizione locale: prima, in creazione, riceveva il guscio
+          con le righe congelate al tocco — e appena il server rispondeva,
+          il SUO conto: le righe battute nel frattempo sparivano dal
+          pagamento fino alla sincronizzazione, o per sempre (BUG-017). */}
+      {showPayment && ordineDaPagare && (
         <PaymentScreen
-          order={payOrder || ordineDaPagare}
+          order={ordineDaPagare}
           settings={settings}
           onClose={() => {
             setPayOrder(null)
             setShowPayment(false)
-            creatingRef.current = false // pagamento annullato: riabilita l'auto-creazione
           }}
           onPaid={() => {
-            // Incassato: la bozza non serve più, né salvata né a schermo.
-            clearDraft()
+            // Niente pulizie della bozza qui: se qualche riga non è ancora
+            // partita, all'uscita ci pensa `uscitaRef` a mandarla. Buttarla
+            // adesso perdeva quello che si era battuto mentre l'incasso era
+            // in corso.
             // In creazione l'id arriva da una PROMESSA: va attesa, se no si
             // "nasconde" un oggetto Promise e il conto pagato resta a
             // schermo nella coda finché il server non lo conferma.
-            Promise.resolve(payOrder ? payIdRef.current : order?.id)
-              .then((id) => nascondiOrdine(id))
+            Promise.resolve(order?.id || payIdRef.current)
+              .then((id) => id && nascondiOrdine(id))
               .catch(() => {})
             navigate('/bar')
           }}
-          onBeforePay={flushAll}
+          onBeforePay={async () => {
+            // Prima dell'incasso parte TUTTO quello che è a schermo: la
+            // bozza (che diventa comanda) e le modifiche in sospeso.
+            flushAdditionsRef.current?.()
+            await flushAll()
+          }}
           onError={setError}
-          resolveOrderId={payOrder ? () => payIdRef.current : undefined}
+          resolveOrderId={order?.id ? undefined : () => payIdRef.current}
         />
       )}
 
@@ -2880,4 +2913,52 @@ function omit(obj, key) {
   const next = { ...obj }
   delete next[key]
   return next
+}
+
+// LA COMANDA APPENA NATA, CONFRONTATA CON LA BOZZA DI ADESSO. L'ordine
+// nasce con le righe com'erano quando la creazione è partita; nei decimi di
+// secondo della nascita quelle righe possono essere state ritoccate (prezzo,
+// ricetta, quantità) o tolte. Restituisce gli item corretti della prima
+// comanda — quella nata con l'ordine — o null se non c'è niente da
+// correggere. Le righe di altre battute (line_id non fra le inviate) non si
+// toccano.
+function correggiComandaNata(created, inviate, bozzaAttuale) {
+  const comanda = (created?.comande || [])[0]
+  if (!comanda) return null
+  const perId = new Map(bozzaAttuale.map((r) => [r.line_id, r]))
+  let cambiata = false
+  const items = []
+  for (const it of comanda.items || []) {
+    if (!it.line_id || !inviate.has(it.line_id)) {
+      items.push(it)
+      continue
+    }
+    const ora = perId.get(it.line_id)
+    if (!ora) {
+      // Tolta mentre l'ordine nasceva: non deve rispuntare dal server.
+      cambiata = true
+      continue
+    }
+    const aggiornato = {
+      ...it,
+      name: ora.name,
+      unit_price: ora.unit_price,
+      qty: ora.qty,
+      ...(ora.custom ? { custom: true } : {}),
+      ...(ora.recipe_items ? { recipe_items: ora.recipe_items } : {}),
+      note: ora.note || null,
+    }
+    if (
+      aggiornato.name !== it.name ||
+      aggiornato.unit_price !== it.unit_price ||
+      aggiornato.qty !== it.qty ||
+      !!aggiornato.custom !== !!it.custom ||
+      (aggiornato.note || null) !== (it.note || null) ||
+      JSON.stringify(aggiornato.recipe_items || []) !== JSON.stringify(it.recipe_items || [])
+    ) {
+      cambiata = true
+    }
+    items.push(aggiornato)
+  }
+  return cambiata ? { comandaId: comanda.id, items } : null
 }
