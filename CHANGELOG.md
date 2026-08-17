@@ -4,6 +4,9 @@
 
 ### Al banco
 
+- **Il flusso di cassa si allarga sugli schermi grandi**: le tessere si
+  affiancano invece di incolonnarsi in una striscia da scorrere, e restano
+  larghe solo l'andamento per ora e la chiusura. Sul telefono niente cambia.
 - **Da sloggati la campanella non c'è**: chi non è entrato è un cliente
   qualunque sulla parte pubblica, e gli avvisi parlano di ordini che non ha
   fatto. Spariscono anche «registra questo terminale» e lo storico, che sono
