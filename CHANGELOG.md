@@ -44,7 +44,7 @@ una funzione, il terzo per le correzioni.
 
 ---
 
-## Non ancora rilasciata — 1.3.3
+## 1.3.3 — 16 agosto 2026
 
 ### Al banco
 
