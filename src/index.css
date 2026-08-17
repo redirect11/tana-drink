@@ -6576,7 +6576,14 @@ body.pagina-piena .inv-scheda {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
-    align-items: start;
+    /* Tessere alte uguali riga per riga: `start` le lasciava a scalini, e
+       una fila di numeri disallineati si legge peggio di una in riga. */
+    align-items: stretch;
+  }
+  .cassa-flusso > .card {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
   }
   .cassa-flusso > .card,
   .cassa-flusso > .cassa-larga {
