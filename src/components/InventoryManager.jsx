@@ -1415,8 +1415,21 @@ function CaricoForm({ item, onCancel, onConfirm }) {
             aria-readonly={aColli}
             autoFocus={!aColli}
           />
-          <label style={{ marginTop: 8 }}>Bottiglia aperta — contenuto ({item.unit}) — opzionale</label>
-          <input type="number" step="any" min="0" value={open} onChange={(e) => setOpen(e.target.value)} placeholder="Es. 400 se ne aggiungi una già aperta" />
+          {/* NON SEMPRE È UNA BOTTIGLIA: qui dentro ci sono sacchi di
+              ghiaccio, barattoli, buste. La parola giusta è quella che vale
+              per tutti. */}
+          <label htmlFor="cf-aperta" style={{ marginTop: 8 }}>
+            Confezione aperta — contenuto ({item.unit}) — opzionale
+          </label>
+          <input
+            id="cf-aperta"
+            type="number"
+            step="any"
+            min="0"
+            value={open}
+            onChange={(e) => setOpen(e.target.value)}
+            placeholder="Es. 400 se ne aggiungi una già aperta"
+          />
         </>
       )}
 
