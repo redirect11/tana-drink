@@ -16,49 +16,55 @@ export const INV_CATS = [
 
 // ── Ingredienti (unit base: ml per liquidi, g per solidi, pz per pezzi)
 //    package_size in unità base (ml o g); stock = 3 bottiglie aperte
+// I COSTI CI SONO, se no il magazzino non sa fare il suo mestiere: senza
+// `cost` non escono il costo al cl, il valore di magazzino, il margine di un
+// drink e il prezzo consigliato — cioe' meta' delle schermate che si vogliono
+// provare. Sono prezzi netti PER CONFEZIONE (una bottiglia, un fusto, un
+// chilo), plausibili per un bar nel 2026, con l'IVA d'acquisto che cambia
+// per famiglia: 22% alcolici, 10% bibite e dispensa, 4% ortofrutta.
 export const INV_ITEMS = [
   // Distillati
-  { cat: 'distillati', name: 'Rum Bianco',         unit: 'ml', package_size: 700, stock: 2100, low_threshold: 700 },
-  { cat: 'distillati', name: 'Rum Scuro',           unit: 'ml', package_size: 700, stock: 1400, low_threshold: 700 },
-  { cat: 'distillati', name: 'Gin',                 unit: 'ml', package_size: 700, stock: 2100, low_threshold: 700 },
-  { cat: 'distillati', name: 'Vodka',               unit: 'ml', package_size: 700, stock: 2100, low_threshold: 700 },
-  { cat: 'distillati', name: 'Tequila Blanco',      unit: 'ml', package_size: 700, stock: 1400, low_threshold: 700 },
-  { cat: 'distillati', name: 'Bourbon',             unit: 'ml', package_size: 700, stock: 1400, low_threshold: 700 },
+  { cat: 'distillati', name: 'Rum Bianco',         unit: 'ml', package_size: 700, stock: 2100, low_threshold: 700, cost: 12.0, vat: 22 },
+  { cat: 'distillati', name: 'Rum Scuro',           unit: 'ml', package_size: 700, stock: 1400, low_threshold: 700, cost: 14.5, vat: 22 },
+  { cat: 'distillati', name: 'Gin',                 unit: 'ml', package_size: 700, stock: 2100, low_threshold: 700, cost: 13.0, vat: 22 },
+  { cat: 'distillati', name: 'Vodka',               unit: 'ml', package_size: 700, stock: 2100, low_threshold: 700, cost: 11.0, vat: 22 },
+  { cat: 'distillati', name: 'Tequila Blanco',      unit: 'ml', package_size: 700, stock: 1400, low_threshold: 700, cost: 16.0, vat: 22 },
+  { cat: 'distillati', name: 'Bourbon',             unit: 'ml', package_size: 700, stock: 1400, low_threshold: 700, cost: 18.0, vat: 22 },
   // Liquori e Amari
-  { cat: 'liquori', name: 'Aperol',                 unit: 'ml', package_size: 700, stock: 2100, low_threshold: 700 },
-  { cat: 'liquori', name: 'Campari',                unit: 'ml', package_size: 700, stock: 1400, low_threshold: 700 },
-  { cat: 'liquori', name: 'Cointreau',              unit: 'ml', package_size: 700, stock: 700,  low_threshold: 350 },
-  { cat: 'liquori', name: 'Vermouth Rosso',         unit: 'ml', package_size: 750, stock: 1500, low_threshold: 750 },
-  { cat: 'liquori', name: 'Limoncello',             unit: 'ml', package_size: 700, stock: 700,  low_threshold: 350 },
-  { cat: 'liquori', name: 'Baileys',                unit: 'ml', package_size: 700, stock: 700,  low_threshold: 350 },
-  { cat: 'liquori', name: 'Amaretto',               unit: 'ml', package_size: 700, stock: 700,  low_threshold: 350 },
+  { cat: 'liquori', name: 'Aperol',                 unit: 'ml', package_size: 700, stock: 2100, low_threshold: 700, cost: 11.0, vat: 22 },
+  { cat: 'liquori', name: 'Campari',                unit: 'ml', package_size: 700, stock: 1400, low_threshold: 700, cost: 12.5, vat: 22 },
+  { cat: 'liquori', name: 'Cointreau',              unit: 'ml', package_size: 700, stock: 700,  low_threshold: 350, cost: 19.0, vat: 22 },
+  { cat: 'liquori', name: 'Vermouth Rosso',         unit: 'ml', package_size: 750, stock: 1500, low_threshold: 750, cost: 7.5, vat: 22 },
+  { cat: 'liquori', name: 'Limoncello',             unit: 'ml', package_size: 700, stock: 700,  low_threshold: 350, cost: 9.0, vat: 22 },
+  { cat: 'liquori', name: 'Baileys',                unit: 'ml', package_size: 700, stock: 700,  low_threshold: 350, cost: 13.5, vat: 22 },
+  { cat: 'liquori', name: 'Amaretto',               unit: 'ml', package_size: 700, stock: 700,  low_threshold: 350, cost: 10.5, vat: 22 },
   // Vini e Bollicine
-  { cat: 'bollicine', name: 'Prosecco',             unit: 'ml', package_size: 750, stock: 3750, low_threshold: 750 },
-  { cat: 'bollicine', name: 'Vino Bianco',          unit: 'ml', package_size: 750, stock: 750,  low_threshold: 750 },
+  { cat: 'bollicine', name: 'Prosecco',             unit: 'ml', package_size: 750, stock: 3750, low_threshold: 750, cost: 5.5, vat: 22 },
+  { cat: 'bollicine', name: 'Vino Bianco',          unit: 'ml', package_size: 750, stock: 750,  low_threshold: 750, cost: 4.5, vat: 22 },
   // Birre
-  { cat: 'birre', name: 'Birra Pils (spina)',       unit: 'ml', package_size: 20000, stock: 40000, low_threshold: 5000 },
-  { cat: 'birre', name: 'Birra IPA (spina)',        unit: 'ml', package_size: 20000, stock: 20000, low_threshold: 5000 },
-  { cat: 'birre', name: 'Birra Bottiglia',          unit: 'pz', package_size: null, stock: 24, low_threshold: 6 },
+  { cat: 'birre', name: 'Birra Pils (spina)',       unit: 'ml', package_size: 20000, stock: 40000, low_threshold: 5000, cost: 58.0, vat: 22 },
+  { cat: 'birre', name: 'Birra IPA (spina)',        unit: 'ml', package_size: 20000, stock: 20000, low_threshold: 5000, cost: 72.0, vat: 22 },
+  { cat: 'birre', name: 'Birra Bottiglia',          unit: 'pz', package_size: null, stock: 24, low_threshold: 6, cost: 1.1, vat: 22 },
   // Mixer e Soft Drink
-  { cat: 'mixer', name: 'Soda Water',               unit: 'ml', package_size: 1000, stock: 10000, low_threshold: 2000 },
-  { cat: 'mixer', name: 'Acqua Tonica',             unit: 'ml', package_size: 200,  stock: 4000,  low_threshold: 600 },
-  { cat: 'mixer', name: 'Ginger Beer',              unit: 'ml', package_size: 200,  stock: 2000,  low_threshold: 400 },
-  { cat: 'mixer', name: 'Cola',                     unit: 'ml', package_size: 250,  stock: 5000,  low_threshold: 500 },
-  { cat: 'mixer', name: 'Succo di Lime',            unit: 'ml', package_size: 1000, stock: 2000,  low_threshold: 500 },
-  { cat: 'mixer', name: 'Succo di Limone',          unit: 'ml', package_size: 1000, stock: 2000,  low_threshold: 500 },
-  { cat: 'mixer', name: 'Succo di Ananas',          unit: 'ml', package_size: 1000, stock: 2000,  low_threshold: 500 },
-  { cat: 'mixer', name: 'Succo di Cranberry',       unit: 'ml', package_size: 1000, stock: 2000,  low_threshold: 500 },
-  { cat: 'mixer', name: "Succo d'Arancia",          unit: 'ml', package_size: 1000, stock: 2000,  low_threshold: 500 },
+  { cat: 'mixer', name: 'Soda Water',               unit: 'ml', package_size: 1000, stock: 10000, low_threshold: 2000, cost: 0.9, vat: 10 },
+  { cat: 'mixer', name: 'Acqua Tonica',             unit: 'ml', package_size: 200,  stock: 4000,  low_threshold: 600, cost: 0.55, vat: 10 },
+  { cat: 'mixer', name: 'Ginger Beer',              unit: 'ml', package_size: 200,  stock: 2000,  low_threshold: 400, cost: 0.8, vat: 10 },
+  { cat: 'mixer', name: 'Cola',                     unit: 'ml', package_size: 250,  stock: 5000,  low_threshold: 500, cost: 0.6, vat: 10 },
+  { cat: 'mixer', name: 'Succo di Lime',            unit: 'ml', package_size: 1000, stock: 2000,  low_threshold: 500, cost: 3.2, vat: 10 },
+  { cat: 'mixer', name: 'Succo di Limone',          unit: 'ml', package_size: 1000, stock: 2000,  low_threshold: 500, cost: 2.8, vat: 10 },
+  { cat: 'mixer', name: 'Succo di Ananas',          unit: 'ml', package_size: 1000, stock: 2000,  low_threshold: 500, cost: 2.4, vat: 10 },
+  { cat: 'mixer', name: 'Succo di Cranberry',       unit: 'ml', package_size: 1000, stock: 2000,  low_threshold: 500, cost: 3.0, vat: 10 },
+  { cat: 'mixer', name: "Succo d'Arancia",          unit: 'ml', package_size: 1000, stock: 2000,  low_threshold: 500, cost: 2.2, vat: 10 },
   // Freschi e Garnish
-  { cat: 'freschi', name: 'Lime Fresco',            unit: 'pz', package_size: null, stock: 20, low_threshold: 5 },
-  { cat: 'freschi', name: 'Limone Fresco',          unit: 'pz', package_size: null, stock: 20, low_threshold: 5 },
-  { cat: 'freschi', name: 'Menta Fresca',           unit: 'pz', package_size: null, stock: 10, low_threshold: 3 },
-  { cat: 'freschi', name: 'Arancia',                unit: 'pz', package_size: null, stock: 10, low_threshold: 3 },
+  { cat: 'freschi', name: 'Lime Fresco',            unit: 'pz', package_size: null, stock: 20, low_threshold: 5, cost: 0.35, vat: 4 },
+  { cat: 'freschi', name: 'Limone Fresco',          unit: 'pz', package_size: null, stock: 20, low_threshold: 5, cost: 0.3, vat: 4 },
+  { cat: 'freschi', name: 'Menta Fresca',           unit: 'pz', package_size: null, stock: 10, low_threshold: 3, cost: 0.9, vat: 4 },
+  { cat: 'freschi', name: 'Arancia',                unit: 'pz', package_size: null, stock: 10, low_threshold: 3, cost: 0.4, vat: 4 },
   // Ingredienti Base
-  { cat: 'base', name: 'Sciroppo di Zucchero',      unit: 'ml', package_size: 700, stock: 1400, low_threshold: 350 },
-  { cat: 'base', name: 'Zucchero di Canna',         unit: 'g',  package_size: 1000, stock: 2000, low_threshold: 200 },
-  { cat: 'base', name: 'Sale Fino',                 unit: 'g',  package_size: 1000, stock: 1000, low_threshold: 100 },
-  { cat: 'base', name: 'Panna Fresca',              unit: 'ml', package_size: 200,  stock: 400,  low_threshold: 100 },
+  { cat: 'base', name: 'Sciroppo di Zucchero',      unit: 'ml', package_size: 700, stock: 1400, low_threshold: 350, cost: 4.5, vat: 10 },
+  { cat: 'base', name: 'Zucchero di Canna',         unit: 'g',  package_size: 1000, stock: 2000, low_threshold: 200, cost: 2.2, vat: 10 },
+  { cat: 'base', name: 'Sale Fino',                 unit: 'g',  package_size: 1000, stock: 1000, low_threshold: 100, cost: 0.9, vat: 4 },
+  { cat: 'base', name: 'Panna Fresca',              unit: 'ml', package_size: 200,  stock: 400,  low_threshold: 100, cost: 1.6, vat: 10 },
 ]
 
 // ── Categorie drink ───────────────────────────────────────────────────
@@ -454,3 +460,21 @@ export const SEED_SETTINGS = {
   venue_lng: null,
   venue_radius_m: 150,
 }
+
+// ── UNA UTENZA PER RUOLO ─────────────────────────────────────────────
+//
+// Provare l'app vuol dire provarla DAI QUATTRO PUNTI DI VISTA: quello che
+// vede l'admin non è quello che vede la sala, e i guai peggiori nascono
+// proprio lì (un tasto che c'è per chi comanda e non per chi serve). Senza
+// utenze pronte, chi prova ne crea una sola e prova sempre da quella.
+//
+// Solo per l'EMULATORE: la stessa password per tutte, scritta in chiaro,
+// perché è un ambiente finto che si butta. Sul progetto vero il seed non le
+// crea (vedi scripts/seed.js).
+export const SEED_UTENTI = [
+  { email: 'banco@tana.local', password: 'collaudo123', nome: 'Banco', role: 'admin' },
+  { email: 'bartender@tana.local', password: 'collaudo123', nome: 'Marzia — Bartender', role: 'bartender' },
+  { email: 'sala@tana.local', password: 'collaudo123', nome: 'Ciro — Sala', role: 'staff' },
+  { email: 'cliente@tana.local', password: 'collaudo123', nome: 'Giulia Cliente', role: 'cliente' },
+]
+
