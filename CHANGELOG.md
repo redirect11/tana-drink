@@ -1,6 +1,10 @@
 # Cosa è cambiato
 
-## Non ancora rilasciata — 1.4.8
+## Non ancora rilasciata — 1.5.0
+
+_(qui le novità della linea 1.5)_
+
+## 1.4.8 — in collaudo
 
 ### Sotto il cofano
 
