@@ -208,6 +208,7 @@ function destinatariPush(tokens, { roles = null, dispositivoOrigine = null } = {
 }
 
 module.exports = {
+  terminaliDi,
   countComande,
   comandeDaFare,
   idsDaFare,
@@ -220,3 +221,30 @@ module.exports = {
   CANCEL_PHRASES,
   STAFF_CALL_VIBRATION,
 }
+
+// ── I TERMINALI DI UNA PERSONA ───────────────────────────────────────
+//
+// La chiamata cerca-persone deve suonare su TUTTI i terminali di chi viene
+// cercato: al banco si lavora con il tablet acceso e il telefono in tasca,
+// e non si sa quale ha in mano.
+//
+// `righe` sono i documenti di `staff_tokens` come stanno scritti: uno per
+// DISPOSITIVO, col campo `uid` di chi ci è collegato. Si accettano anche le
+// righe vecchie intestate alla persona (id del documento = uid), rimaste in
+// giro da prima. Un token può comparire due volte — la stessa riga salvata
+// in tutti e due i modi — e mandarlo due volte farebbe vibrare due volte:
+// si tiene una volta sola.
+function terminaliDi(righe, uid) {
+  if (!uid) return []
+  const visti = new Set()
+  const fuori = []
+  for (const r of righe || []) {
+    if (!r || !r.token) continue
+    const suo = r.uid === uid || r.id === uid
+    if (!suo || visti.has(r.token)) continue
+    visti.add(r.token)
+    fuori.push(r)
+  }
+  return fuori
+}
+
