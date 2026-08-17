@@ -982,6 +982,10 @@ requirements:
       leggeva «7.49000000001 pz». E sotto al numero grande dei pezzi ci va il
       CONTENUTO in cl (o in g), che è quello che serve a chi sta versando: per
       gli articoli contati a pezzo ripeteva lo stesso dato di sopra.
+      Il dettaglio aperto STA DENTRO LA CARD: etichetta sopra e valore sotto,
+      perché la griglia a due colonne della vista a Lista, dentro una card
+      stretta, lascia al valore una colonna larga un dito e manda il testo a
+      capo a fisarmonica.
     status: implemented
     generate_issue: false
     labels: [magazzino, ux]

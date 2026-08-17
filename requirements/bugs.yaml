@@ -208,11 +208,16 @@ bugs:
       larghezza dello schermo: dentro una card stretta la colonna del valore
       resta larga un dito. Nelle card va incolonnato — etichetta sopra,
       valore sotto — come già succede sugli schermi piccoli.
+      RISOLTO il 17/08 (hotfix 1.3.4): una regola sola in index.css
+      (.grid-card .grid-card-actions .inv-info .inv-info-row a una colonna).
+      La vista a Lista, che ha tutta la larghezza dello schermo, resta a due
+      colonne: il blocco delle azioni è lo stesso per le due viste, quindi la
+      regola è agganciata alla card.
     in_produzione: true
-    status: todo
+    status: fixed
     generate_issue: true
     labels: [bug, hotfix, magazzino, ui]
-    test_cases: []
+    test_cases: [tests/component/InventoryManager.test.jsx]
 
   - id: BUG-010
     title: "Manca un'unità di misura generica: il tempo di lavorazione si legge «1 g»"
