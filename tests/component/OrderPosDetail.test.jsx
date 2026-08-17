@@ -1293,3 +1293,31 @@ describe('i tasti della quantità nel conto', () => {
     expect(await screen.findByLabelText(/Prezzo/i)).toBeInTheDocument()
   })
 })
+
+// LA ⓘ SI PUÒ SPEGNERE. Dove il listino lo sanno tutti a memoria è un
+// segno in più su ogni card, e le card sono cento; dove invece cambia
+// spesso, o si dà una mano il sabato, è la differenza fra saper fare un
+// drink e doverlo chiedere. Lo decide il locale.
+describe('la ⓘ delle ricette', () => {
+  it('c’è di suo', async () => {
+    render(
+      <MemoryRouter>
+        <OrderPosDetail order={baseOrder()} />
+      </MemoryRouter>
+    )
+    expect((await screen.findAllByRole('button', { name: /Come si fa/ })).length).toBeGreaterThan(0)
+  })
+
+  it('e sparisce se il locale la spegne', async () => {
+    mockSettings.pos_ricetta_info = false
+    render(
+      <MemoryRouter>
+        <OrderPosDetail order={baseOrder()} />
+      </MemoryRouter>
+    )
+    await waitFor(() =>
+      expect(screen.queryAllByRole('button', { name: /Come si fa/ })).toHaveLength(0)
+    )
+    delete mockSettings.pos_ricetta_info
+  })
+})

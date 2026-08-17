@@ -3373,6 +3373,9 @@ export const DEFAULT_SETTINGS = {
   // tutto ciò che ne dipende: avanzamenti di stato, tempi di servizio,
   // stima ETA e notifiche di "pronto". Disattivata di default: la si accende
   // solo se si vuole tracciare la preparazione.
+  // LA ⓘ CON LA RICETTA sulle card della griglia: accesa di suo. Dove il
+  // listino lo sanno tutti a memoria si spegne, e le card restano pulite.
+  pos_ricetta_info: true,
   workflow_enabled: false,
   // RISCUOTI E SERVI: col servizio seguito, incassare non chiude il conto —
   // si può pagare in anticipo con tre drink ancora da fare. Ma al banco

@@ -1219,10 +1219,16 @@ requirements:
       La ⓘ sta in basso a destra, lontana dai +/− e dalla stella: si guarda
       mentre si versa e non si preme per sbaglio. In «organizza» non c'è:
       lì le card si spostano, non si leggono.
+      SI PUÒ SPEGNERE (Impostazioni → Vista ordine): dove il listino lo
+      sanno tutti a memoria è un segno in più su ogni card, e le card sono
+      cento; dove invece cambia spesso, o si dà una mano il sabato, è la
+      differenza fra saper fare un drink e doverlo chiedere. Accesa di suo.
     status: implemented
     generate_issue: false
     labels: [menu, ux]
-    test_cases: [tests/component/SchedaDrink.test.jsx]
+    test_cases:
+      - tests/component/SchedaDrink.test.jsx
+      - tests/component/OrderPosDetail.test.jsx
 
   - id: REQ-UI-014
     title: "La barra delle sezioni si stringe a icone, o si toglie di mezzo"
