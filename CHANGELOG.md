@@ -29,7 +29,10 @@ una funzione, il terzo per le correzioni.
   nella vista a Card il pannello sbordava e il testo si spezzava a
   fisarmonica, con costo, IVA e prezzo consigliato uno sopra l'altro. Adesso
   ogni voce è incolonnata — etichetta sopra, valore sotto — e si legge tutta.
-  Nella vista a Lista, dove lo spazio c'è, non cambia niente.
+  Anche la fila dei tasti **Modifica · Duplica · Elimina** sta nel riquadro:
+  quando la card è stretta i tasti vanno a capo e si leggono per intero, invece
+  di sfondare i bordi a destra e a sinistra. Nella vista a Lista, dove lo
+  spazio c'è, non cambia niente.
 - **La manodopera si mette a listino, in unità generiche.** Un prodotto del
   magazzino si può misurare in **U** — «Unità generiche», nel menu delle unità
   di misura — per quello che non si versa e non si pesa: il **tempo di

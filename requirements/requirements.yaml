@@ -1012,7 +1012,12 @@ requirements:
       Il dettaglio aperto STA DENTRO LA CARD: etichetta sopra e valore sotto,
       perché la griglia a due colonne della vista a Lista, dentro una card
       stretta, lascia al valore una colonna larga un dito e manda il testo a
-      capo a fisarmonica.
+      capo a fisarmonica. Vale anche per la fila dei tasti in fondo (modifica,
+      duplica, elimina): le colonne si stringono e vanno a capo da sé secondo
+      la larghezza della CARD e non della finestra — una @media non vedrebbe
+      mai una card stretta su un monitor grande — e nel caso peggiore la parola
+      si tronca invece di sfondare il bordo. Nella vista a Lista, dove lo
+      spazio c'è, non cambia niente.
     status: implemented
     generate_issue: false
     labels: [magazzino, ux]

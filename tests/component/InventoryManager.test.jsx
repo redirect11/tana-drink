@@ -134,6 +134,98 @@ describe('il dettaglio della card non sborda', () => {
   })
 })
 
+// E NEMMENO LA FILA DEI TRE TASTI DEVE SFONDARE LA CARD.
+//
+// Primo giro di correzione: le righe di testo si sono sistemate, ma provando
+// sul test i tasti «✏️ Modifica · ⧉ Duplica · 🗑 Elimina» uscivano ancora dai
+// bordi. Stesso errore un piano sotto: `.inv-azioni` era `repeat(3, 1fr)`, e
+// `1fr` vale `minmax(auto, 1fr)` — non scende sotto la larghezza del
+// contenuto. Tre bottoni con emoji e parola hanno un minimo più largo di
+// quello che una card da 175px può dargli, quindi la griglia sborda invece di
+// stringersi. La regola che li mandava a capo era una @media sulla finestra, e
+// la finestra qui è grande: è la CARD a essere stretta.
+//
+// ATTENZIONE A COSA PROVA QUESTO TEST. happy-dom non fa layout — le larghezze
+// e scrollWidth sono zero — quindi «la fila non esce dalla card» non si può
+// MISURARE qui: quello si guarda con gli occhi, in un browser o al banco. Qui
+// si prova il MECCANISMO, e non è poco: il foglio di stile vero viene applicato
+// al DOM vero prodotto dal componente, e si controlla quale regola vince su
+// quell'elemento — colonne che si stringono e vanno a capo da sé, guidate dal
+// contenitore e non dalla finestra.
+describe('la fila dei tasti dentro una card', () => {
+  const css = readFileSync('src/index.css', 'utf8')
+
+  // Il foglio di stile del progetto, addosso al DOM del componente.
+  function applicaCss() {
+    const style = document.createElement('style')
+    style.textContent = css
+    document.head.appendChild(style)
+    return () => style.remove()
+  }
+
+  async function apriAzioniInCard(user) {
+    render(<InventoryManager />)
+    await apriCard(user)
+    await user.click(screen.getByRole('button', { name: '⋯ Azioni' }))
+  }
+
+  it('le colonne possono stringersi e vanno a capo da sé', async () => {
+    const user = userEvent.setup()
+    await apriAzioniInCard(user)
+    const via = applicaCss()
+    const fila = document.querySelector('.grid-card .inv-azioni')
+    expect(fila).not.toBeNull()
+    const colonne = getComputedStyle(fila).gridTemplateColumns
+    // `auto-fit`: tiene solo le colonne che entrano DAVVERO nella card, le
+    // altre vanno a capo. Niente più tre colonne per forza.
+    expect(colonne).toContain('auto-fit')
+    expect(colonne).not.toContain('repeat(3')
+    // `min(…, 100%)`: una colonna non è mai più larga della card, nemmeno nel
+    // caso peggiore.
+    expect(colonne).toMatch(/min\(\s*\d+px\s*,\s*100%\s*\)/)
+    via()
+  })
+
+  it('e se la parola non ci sta si tronca, invece di sfondare', async () => {
+    const user = userEvent.setup()
+    await apriAzioniInCard(user)
+    const via = applicaCss()
+    const tasto = document.querySelector('.grid-card .inv-azioni .btn')
+    const stile = getComputedStyle(tasto)
+    // Senza `min-width: 0` un bottone resta incomprimibile, allarga la colonna
+    // e si torna al punto di partenza.
+    expect(['0', '0px']).toContain(stile.minWidth)
+    expect(stile.overflow).toBe('hidden')
+    expect(stile.textOverflow).toBe('ellipsis')
+    via()
+  })
+
+  it('nella vista a Lista la fila resta a tre, che lo spazio c’è', async () => {
+    const user = userEvent.setup()
+    render(<InventoryManager />)
+    // Vista a Lista: è il default, basta aprire la riga del prodotto.
+    await user.click(await screen.findByRole('button', { name: /Campari/ }))
+    const via = applicaCss()
+    const fila = document.querySelector('.inv-row .inv-azioni')
+    expect(fila).not.toBeNull()
+    expect(getComputedStyle(fila).gridTemplateColumns).toBe('repeat(3, 1fr)')
+    via()
+  })
+
+  it('il comportamento è agganciato alla card, non alla finestra', () => {
+    // Una @media guarda la finestra: dentro una card stretta, su un monitor
+    // grande, non scatterebbe mai. La regola delle card deve quindi stare al
+    // primo livello del foglio di stile, fuori da qualunque blocco @media —
+    // e lo si vede dalle graffe ancora aperte prima di lei.
+    const pulito = css.replace(/\/\*[\s\S]*?\*\//g, '')
+    const dove = pulito.search(/\.grid-card\s+\.inv-azioni\s*\{[^}]*auto-fit/)
+    expect(dove).toBeGreaterThan(-1)
+    const prima = pulito.slice(0, dove)
+    const aperte = (prima.match(/\{/g) || []).length - (prima.match(/\}/g) || []).length
+    expect(aperte).toBe(0)
+  })
+})
+
 // LA MANODOPERA È UN ARTICOLO IN UNITÀ GENERICHE.
 // «Tempo di Lavorazione» si crea come voce di magazzino per mettere il lavoro
 // a listino: ha un costo per unità e niente altro. Prima si potevano scegliere
