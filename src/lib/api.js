@@ -62,11 +62,11 @@ import { DEFAULT_MARKUP, DEFAULT_ROUND_STEP } from './pricing.js'
 import { notify } from './notify.js'
 import { bgWrite } from './sync.js'
 import { ricordaImpostazioni, impostazioniRicordate } from './impostazioniLocali.js'
+import { cassaCorrente, prendiNumero } from './progressivi.js'
 
 const drinksCol = collection(db, 'drinks')
 const ordersCol = collection(db, 'orders')
 // Progressivo assoluto degli ordini (id interno che non riparte mai).
-const serialCounterRef = doc(db, 'counters', 'serial')
 const categoriesCol = collection(db, 'categories')
 const inventoryCol = collection(db, 'inventory_items')
 const inventoryCategoriesCol = collection(db, 'inventory_categories')
@@ -1021,13 +1021,13 @@ export async function resetOpenOrdersToReceived() {
 // Il timbro si mette solo se il conto si sta davvero CHIUDENDO: un incasso
 // parziale, o un pagamento che lascia il conto aperto perché non è ancora
 // servito, non è una chiusura.
-async function conTimbro(chiusura, nowIso) {
+function conTimbro(chiusura, nowIso) {
   if (chiusura?.status !== ORDER_STATUSES.PAGATO) return chiusura
-  return { ...chiusura, ...(await timbroChiusura(nowIso)) }
+  return { ...chiusura, ...timbroChiusura(nowIso) }
 }
 
-async function timbroChiusura(nowIso) {
-  const cassa = await currentCashSessionId().catch(() => null)
+function timbroChiusura(nowIso) {
+  const cassa = cassaCorrente()
   return cassa ? { closed_in_session: cassa, closed_at: nowIso } : { closed_at: nowIso }
 }
 
@@ -1045,7 +1045,7 @@ export async function closePaidOrder(id) {
     throw new Error('Il conto non è ancora pagato.')
   }
   const nowIso = new Date().toISOString()
-  const chiusura = await conTimbro(chiusuraPagamento(data, nowIso, { autoServe: true }), nowIso)
+  const chiusura = conTimbro(chiusuraPagamento(data, nowIso, { autoServe: true }), nowIso)
   const lowStock = chiusura.comande
     ? await depleteComandeInventory(unappliedEntries(id, chiusura.comande))
     : []
@@ -1646,10 +1646,36 @@ export async function fetchCashSessions({ limit = 30 } = {}) {
 
 // --- ORDERS ---
 
+// Conti già creati in questa sessione dell'app, per chiave di battuta: vedi
+// createOrder. Serve a non far nascere due conti dalla stessa battuta.
+const creazioniInCorso = new Map()
+
 // Crea un ordine con i relativi item. Il numero progressivo riparte ad ogni
 // giornata commerciale: è assegnato da un contatore per giornata
 // (counters/{YYYY-MM-DD}), che riparte a ogni nuova giornata.
-export async function createOrder({
+// UNA BATTUTA, UN CONTO. La schermata può chiedere la creazione due volte —
+// l'auto-creazione che scatta mentre si preme «Paga», un doppio tocco, due
+// copie della schermata aperte — e ogni chiamata creava un conto suo: sono
+// nati due #15 nella stessa serata, con dentro le stesse quattro righe. La
+// chiave della battuta dice che è la stessa cosa: la seconda volta si
+// restituisce il conto che sta già nascendo, invece di farne un altro.
+export function createOrder(params) {
+  const chiave = params?.client_temp_id
+  if (!chiave) return creaOrdine(params)
+  const gia = creazioniInCorso.get(chiave)
+  if (gia) return gia
+  const nascita = creaOrdine(params)
+  creazioniInCorso.set(chiave, nascita)
+  // Non si tiene per sempre: è una guardia contro il doppio scatto, non una
+  // cronologia. Mezz'ora copre qualunque doppione ravvicinato.
+  setTimeout(() => creazioniInCorso.delete(chiave), 30 * 60 * 1000)
+  // Se la creazione fallisce, la chiave si libera subito: al secondo
+  // tentativo il conto deve nascere davvero.
+  nascita.catch(() => creazioniInCorso.delete(chiave))
+  return nascita
+}
+
+async function creaOrdine({
   table_label,
   note,
   items,
@@ -1692,32 +1718,19 @@ export async function createOrder({
   // Giornata commerciale: raggruppa e fa ripartire il progressivo #N. La
   // nottata oltre la mezzanotte resta nella giornata in cui è cominciata.
   const orderDate = businessDayKey(new Date(), cutoff_hour)
-  // PROGRESSIVO legato alla SESSIONE DI CASSA: finché la cassa resta aperta i
-  // numeri continuano (anche a cavallo di più giorni) e riprendono da 1 solo
-  // alla nuova apertura. Senza cassa aperta si ricade sulla giornata
-  // commerciale, come prima.
-  const cashSessionId = await currentCashSessionId()
-  const counterRef = doc(db, 'counters', cashSessionId ? `cash-${cashSessionId}` : orderDate)
+  // I NUMERI CI SONO GIÀ: nessuna lettura, nessuna attesa. Stanno in memoria,
+  // tenuti aggiornati dagli ascolti che partono all'avvio (lib/progressivi.js).
+  // Prima si aspettavano TRE risposte dal server prima di scrivere l'ordine —
+  // il mezzo secondo fra «Conferma» e il conto che compare — e due creazioni
+  // ravvicinate leggevano lo stesso numero: sono nati due conti #15 nella
+  // stessa serata.
+  const cashSessionId = cassaCorrente()
+  const idContatore = cashSessionId ? `cash-${cashSessionId}` : orderDate
   const newOrderRef = doc(ordersCol)
-
-  // Numero giornaliero: letto dalla cache (offline compreso) e incrementato.
-  // Su un singolo dispositivo resta univoco anche offline (la cache riflette
-  // subito le scritture in coda); su più dispositivi offline in contemporanea
-  // può collidere, si riconcilia al sync.
-  const counterSnap = await getDoc(counterRef)
-  const last = counterSnap.exists() ? counterSnap.data().last || 0 : 0
-  const dailyNumber = last + 1
-  // LOCAL-FIRST: la scrittura è già applicata alla cache in modo sincrono, non
-  // si attende l'ack del server (offline `await setDoc` non si risolverebbe mai
-  // e bloccherebbe la creazione dell'ordine). Il sync va in background.
-  setDoc(counterRef, { last: dailyNumber }, { merge: true }).catch(() => {})
-
+  const dailyNumber = prendiNumero(idContatore)
   // Progressivo ASSOLUTO del sistema: non riparte mai, identifica l'ordine
-  // per sempre (id interno mostrato in piccolo nel dettaglio). Stessa
-  // lettura da cache del progressivo giornaliero.
-  const serialSnap = await getDoc(serialCounterRef)
-  const serial = (serialSnap.exists() ? serialSnap.data().last || 0 : 0) + 1
-  setDoc(serialCounterRef, { last: serial }, { merge: true }).catch(() => {})
+  // per sempre (id interno mostrato in piccolo nel dettaglio).
+  const serial = prendiNumero('serial')
 
   const nowIso = new Date().toISOString()
   const mappedItems = items.map((i) => ({
@@ -2112,7 +2125,7 @@ export async function registerPayment(id, { amount, method = 'banco', items = nu
   ]
   const closed = paymentCloses(o, paid)
   let lowStock = []
-  const chiusura = closed ? await conTimbro(chiusuraPagamento(o, nowIso, { autoServe }), nowIso) : null
+  const chiusura = closed ? conTimbro(chiusuraPagamento(o, nowIso, { autoServe }), nowIso) : null
   if (chiusura?.comande) {
     // Conto saldato E servito ⇒ le comande mai prese in carico vengono
     // scaricate a magazzino adesso.
@@ -2138,7 +2151,7 @@ export async function markOrderPaid(id, method, { autoServe = true } = {}) {
   const nowIso = new Date().toISOString()
   const snap = await leggiOrdine(ref)
   if (!snap.exists()) throw new Error('Ordine non trovato')
-  const chiusura = await conTimbro(chiusuraPagamento(snap.data(), nowIso, { autoServe }), nowIso)
+  const chiusura = conTimbro(chiusuraPagamento(snap.data(), nowIso, { autoServe }), nowIso)
   const lowStock = chiusura.comande
     ? await depleteComandeInventory(unappliedEntries(id, chiusura.comande))
     : []
@@ -2752,7 +2765,7 @@ export async function cancelOrder(id, opts = {}) {
     }
     if (restoreStock) c.inventory_applied = false
   }
-  const timbro = await timbroChiusura(nowIso)
+  const timbro = timbroChiusura(nowIso)
   bgWrite(() => updateDoc(orderRef, {
     status: ORDER_STATUSES.ANNULLATO,
     ...timbro,

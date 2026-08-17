@@ -209,6 +209,38 @@ requirements:
     labels: [ordini, cassa]
     test_cases: [tests/unit/periodo.test.js]
 
+  - id: REQ-ORD-016
+    title: "Battere un conto non aspetta la rete, e non ne nascono due"
+    area: "src/lib/progressivi.js, src/lib/api.js, src/components/OrderPosDetail.jsx"
+    description: >
+      Prima di scrivere un ordine si facevano TRE letture al server — quale
+      cassa è aperta, il progressivo della serata, quello assoluto — e solo
+      dopo il conto compariva: era il mezzo secondo fra «Conferma» e il conto
+      a schermo. Adesso quei numeri stanno in memoria, tenuti aggiornati da
+      ascolti che partono all'avvio dell'app: alla creazione non si chiede
+      niente a nessuno.
+      E DUE CONTI NON PRENDONO PIÙ LO STESSO NUMERO. Il numero è il più
+      grande fra quello del server e l'ultimo dato da questo dispositivo, più
+      uno: due creazioni ravvicinate non possono più leggere lo stesso valore
+      solo perché la scrittura del contatore è ancora per strada — è così che
+      sono nati due conti #15 nella stessa serata. Quello che si è assegnato
+      resta scritto anche dopo un ricaricamento, e il contatore si scrive con
+      un incremento, che non torna mai indietro.
+      Resta scoperto un solo caso: due DISPOSITIVI che battono nello stesso
+      istante. Escluderlo vorrebbe dire una transazione, cioè aspettare il
+      server a ogni ordine — il contrario di quello che serve al banco.
+      UNA BATTUTA, UN CONTO. La schermata può chiedere la creazione due volte
+      (l'auto-creazione che scatta mentre si preme «Paga», un doppio tocco):
+      la chiave della battuta fa restituire il conto che sta già nascendo
+      invece di farne un altro.
+      E il «+» apre sempre un conto NUOVO: la memoria del conto in corso
+      serve a riprenderlo dopo un ricaricamento della pagina, non a
+      rimetterci dentro chi esce e rientra.
+    status: implemented
+    generate_issue: false
+    labels: [ordini, offline, difetto-risolto]
+    test_cases: [tests/unit/progressivi.test.js]
+
   - id: REQ-ORD-008
     title: "Un conto chiuso o annullato si può rimettere in corso"
     area: "src/lib/storiaOrdine.js, src/lib/api.js, src/components/StoriaOrdine.jsx"
