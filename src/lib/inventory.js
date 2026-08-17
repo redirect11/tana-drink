@@ -269,13 +269,31 @@ export function bottleSummary(item) {
   }
 }
 
+// ── SI SCARICA DAL MAGAZZINO? ────────────────────────────────────────
+//
+// Lo decide IL PRODOTTO, non la sua unità di misura. La regola stava
+// sull'unità — «quello che si conta a unità generiche non si scarica» — ed è
+// giusta per la manodopera, che non sta su nessuno scaffale, ma non per il
+// GHIACCIO: si conta a unità e finisce eccome, e chi lo finisce a mezzanotte
+// vorrebbe averlo visto scendere.
+//
+// Il valore di partenza resta quello di prima, così i prodotti già in
+// magazzino non cambiano comportamento: le unità generiche non sono una
+// scorta finché qualcuno non dice il contrario, tutto il resto sì.
+export function eScorta(item) {
+  if (typeof item?.scorta === 'boolean') return item.scorta
+  return !unitaGenerica(item?.unit)
+}
+
 // Stato scorta di un item: 'empty' (≤0), 'low' (≤ soglia), 'ok'.
 export function stockStatus(item) {
-  // Un articolo in unità generiche NON È UNA SCORTA: la manodopera non
-  // finisce. Se rispondesse 'empty' — e a giacenza zero risponderebbe sempre
-  // — il menù direbbe «Ingrediente esaurito» e il drink che la usa sparirebbe
-  // dalla carta, oltre a finire nelle proposte d'ordine al fornitore.
-  if (unitaGenerica(item?.unit)) return 'ok'
+  // Quello che non è una scorta non finisce mai: la manodopera non sta su
+  // nessuno scaffale. Se rispondesse 'empty' — e a giacenza zero
+  // risponderebbe sempre — il menù direbbe «Ingrediente esaurito» e il drink
+  // che la usa sparirebbe dalla carta, oltre a finire nelle proposte
+  // d'ordine al fornitore. Il ghiaccio, che invece è una scorta anche se si
+  // conta a unità, passa di qui come tutti gli altri.
+  if (!eScorta(item)) return 'ok'
   const stock = Number(item?.stock) || 0
   if (stock <= 0) return 'empty'
   if (stock <= (Number(item?.low_threshold) || 0)) return 'low'
@@ -357,11 +375,13 @@ export function costWithVat(cost, vat = 22) {
 // magazzino si leggeva «valore −0,67 €», cioè un magazzino che vale meno di
 // niente. Quello che manca è un errore da correggere, non un credito.
 export function unitsInStock(item) {
-  // Il lavoro non sta sullo scaffale: un articolo in unità generiche non è
+  // Il lavoro non sta sullo scaffale: quello che non è una scorta non è
   // giacenza e non entra nel valore del magazzino.
-  if (unitaGenerica(item?.unit)) return 0
+  if (!eScorta(item)) return 0
   const stock = giacenzaPerCarico(item?.stock)
-  if (item?.unit === 'pz') return stock
+  // Il pezzo conta se stesso — e così l'unità, quando è una scorta: un
+  // sacchetto di ghiaccio è uno, non una frazione di confezione.
+  if (item?.unit === 'pz' || unitaGenerica(item?.unit)) return stock
   const size = Number(item?.package_size) || 0
   return size > 0 ? stock / size : 0
 }
@@ -548,11 +568,11 @@ export function computeConsumption(orderItems, drinksById) {
     const mult = Number(oi.qty) || 0
     for (const ri of recipe) {
       if (!ri.inventory_item_id) continue
-      // LA MANODOPERA NON SI CONSUMA. Le righe in unità generiche (il tempo di
-      // lavorazione) servono al costo del drink, non al magazzino: restano
-      // fuori dal consumo, quindi non si scaricano, non si reintegrano
-      // all'annullo e non fanno finire niente.
-      if (unitaGenerica(ri.unit)) continue
+      // QUI SI CONTA TUTTO QUELLO CHE LA RICETTA CHIEDE, manodopera compresa:
+      // cosa poi vada tolto dalla giacenza lo decide il PRODOTTO (eScorta),
+      // e lo decide chi scrive la giacenza, che l'articolo ce l'ha in mano.
+      // Filtrare qui sull'unità significava che il ghiaccio — contato a
+      // unità ma scorta vera — non si scaricava mai.
       const add = (Number(ri.qty) || 0) * mult
       if (add <= 0) continue
       // Si somma per ARTICOLO **E UNITÀ**: la stessa bottiglia può comparire

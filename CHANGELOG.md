@@ -25,6 +25,10 @@
   a mano in una dozzina di posti — il tab acceso, il «+», i tasti dei
   pannelli, gli aloni del fondo — e quelli restavano dorati con qualunque
   tema.
+- **Un prodotto contato a unità può essere una scorta**: il ghiaccio si
+  conta a unità come il tempo di lavorazione, ma finisce — e ora si scarica.
+  Nella scheda c'è la casella «È una scorta: si scarica quando si usa»,
+  spenta di suo, così la manodopera resta com'era.
 - **La scheda prodotto fa tre domande, sempre le stesse**: come lo compri,
   come lo usi in ricetta, e — solo se sono diverse — **quanto rende**. Così i
   limoni si comprano al chilo e si spremono in cl («1 kg rende 50 cl»), il
