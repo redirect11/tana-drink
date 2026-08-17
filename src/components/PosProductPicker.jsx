@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import Caricamento from './Caricamento.jsx'
 import {
   DndContext,
   closestCenter,
@@ -537,7 +538,11 @@ export default function PosProductPicker({
             pointerEvents: disabled ? 'none' : 'auto',
           }}
         >
-          {loading && <div className="empty" style={{ gridColumn: '1/-1' }}>Carico…</div>}
+          {loading && (
+            <div style={{ gridColumn: '1/-1' }}>
+              <Caricamento testo="Preparo il listino…" />
+            </div>
+          )}
           {!loading && visibleDrinks.length === 0 && (
             <div className="empty" style={{ gridColumn: '1/-1' }}>
               {selectedCat === '__fav__'

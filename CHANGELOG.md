@@ -4,6 +4,10 @@
 
 ### Al banco
 
+- **Le attese ora si vedono**: entrando, aprendo la cassa o cercando nello
+  storico, tre bollicine dicono che l'app sta lavorando — e dicono anche
+  cosa sta aspettando, invece di una scritta ferma che sembra un blocco.
+
 - **Il conto nasce all'istante e non si sdoppia.** Prima di scrivere un
   ordine l'app faceva tre domande al server: da lì l'attesa fra
   «Conferma» e il conto a schermo, e due conti battuti di fila potevano

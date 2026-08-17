@@ -1030,6 +1030,22 @@ requirements:
       - tests/component/UtentiTab.test.jsx
       - tests/component/StaffHoursTab.test.jsx
 
+  - id: REQ-UI-016
+    title: "Le attese si vedono, e dicono cosa stanno aspettando"
+    area: "src/components/Caricamento.jsx"
+    description: >
+      Dove l'app deve aspettare — l'accesso, la cassa, il listino, la ricerca
+      nello storico — c'è un'attesa animata con scritto CHE COSA si sta
+      aspettando. Una scritta ferma su una pagina vuota non si distingue da
+      un'app piantata: chi guarda non sa se aspettare o ricaricare.
+      Non c'è una percentuale: non si sa quanto ci vuole, e una barra che si
+      ferma a metà è peggio del silenzio. Chi ha chiesto meno animazioni vede
+      i pallini respirare invece di saltare.
+    status: implemented
+    generate_issue: false
+    labels: [ux]
+    test_cases: [tests/component/Caricamento.test.jsx]
+
   - id: REQ-UI-014
     title: "La barra delle sezioni si stringe a icone, o si toglie di mezzo"
     area: "src/components/CategoryRail.jsx, src/index.css"
