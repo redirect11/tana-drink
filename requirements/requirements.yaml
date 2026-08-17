@@ -1462,17 +1462,29 @@ requirements:
       conto, sulle card del menù se il prodotto si può fare (verde), se un
       ingrediente sta finendo (arancione) o se non si può fare (rosso, e la
       riga sotto al nome dice se è spento a mano o se manca l'ingrediente).
-      La LINGUETTA NELL'ANGOLO è il colore che il prodotto ha al banco,
-      disegnata come sulle tile del POS, dove quel segno vuol dire già quello;
-      nel menù si tocca per cambiarlo. Anche le tile del POS portano la
-      striscia a sinistra, come tutte le altre card.
+      IL SEGNO NELL'ANGOLO è il colore che il prodotto ha al banco, e nel
+      menù si tocca per cambiarlo. Che forma abbia lo decide il TEMA
+      (`--segno-prodotto`, lib/themes.js, scritto anche come `data-segno`
+      sul documento): di casa è il nastro d'angolo, largo e squillante; per
+      Catppuccin una pastiglia (quadratino stondato), che è il suo modo di
+      fare gli angoli; per Pico, look documento, il pallino. Gli ultimi due
+      stanno in alto a destra sulle card del menù, dove le card del
+      magazzino tengono lo stato delle scorte, e in alto a SINISTRA sulle
+      tile del conto: lì a destra c'è la stella dei preferiti, che è un
+      tasto e non si copre.
+      Con trenta prodotti a schermo trenta bandiere colorate, su una
+      palette da foglio di calcolo, restavano la cosa più rumorosa della
+      pagina.
+      Le tile del POS portano gli stessi due segni del menù, e la striscia
+      è 4px come in magazzino (era 5): la griglia è la stessa in tutte e
+      tre le schermate.
       Prima il menù aveva un quadratino che sembrava un'etichetta e invece era
       un tasto, e un pallino il cui rosso diceva due cose opposte — «l'ho
       spento io» e «è finito il rum» — che chiedono azioni diverse.
     status: implemented
     generate_issue: false
     labels: [menu, ux]
-    test_cases: []
+    test_cases: [tests/unit/temi.test.js]
 
   - id: REQ-MENU-005
     title: "Il menù è uno solo, quello che vede il cliente"

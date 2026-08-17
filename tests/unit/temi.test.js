@@ -56,6 +56,23 @@ describe('le forme viaggiano col tema', () => {
     expect(v['--raggio-btn']).toBe('4px')
   })
 
+  // IL SEGNO DEL COLORE sulle card di una griglia: nastro d'angolo o
+  // pallino. Non è una variabile qualunque — il CSS ci cambia GEOMETRIA
+  // sopra, e per farlo serve un aggancio nel selettore (data-segno).
+  it('ogni famiglia ha il suo segno: nastro, pastiglia, pallino', () => {
+    expect(resolveThemeVars({ preset: 'crema' })['--segno-prodotto']).toBe('nastro')
+    expect(resolveThemeVars({ preset: 'chiaro' })['--segno-prodotto']).toBe('nastro')
+    expect(resolveThemeVars({ preset: 'catppuccin' })['--segno-prodotto']).toBe('pastiglia')
+    expect(resolveThemeVars({ preset: 'pico-chiaro' })['--segno-prodotto']).toBe('pallino')
+  })
+
+  it('e il documento lo espone come data-segno, per il CSS', () => {
+    applyTheme(resolveThemeVars({ preset: 'pico-scuro' }))
+    expect(document.documentElement.dataset.segno).toBe('pallino')
+    applyTheme(resolveThemeVars({ preset: 'crema' }))
+    expect(document.documentElement.dataset.segno).toBe('nastro')
+  })
+
   it('cambiando tema le forme cambiano davvero sul documento', () => {
     applyTheme(resolveThemeVars({ preset: 'tana-scuro' }))
     expect(leggi('--raggio-btn')).toBe('12px')
