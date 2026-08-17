@@ -5,7 +5,7 @@
 // ordine, conferma con modale nome e pagamento diretto.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 
@@ -558,5 +558,34 @@ describe('annullare un conto in creazione', () => {
     tastiAnnulla().forEach((b) => expect(b).not.toBeDisabled())
     await user.click(tastiAnnulla()[0])
     expect(await screen.findByText(/Annullare l’ordine\?|Annullare l'ordine\?/)).toBeInTheDocument()
+  })
+})
+
+// ── PAGAMENTO CHIUSO, SI CONTINUA A BATTERE ──────────────────────────
+//
+// Si battono i primi drink, si apre il pagamento, si chiude perché il
+// cliente aggiunge qualcosa, si batte ancora e si riapre il pagamento: i
+// prodotti nuovi non c'erano. Il pagamento diretto CREA il conto, ma la
+// schermata restava «in creazione» con un conto vero dietro: le righe
+// battute dopo finivano in un altro cassetto.
+describe('battere ancora dopo aver chiuso il pagamento', () => {
+  it('le righe aggiunte dopo si ritrovano riaprendo il pagamento', async () => {
+    const user = userEvent.setup()
+    mount()
+    await user.click(screen.getByText('Mojito'))
+    await user.click(screen.getAllByRole('button', { name: /Paga/ })[0])
+    await screen.findByRole('dialog', { name: /Pagamento/ })
+    // Il conto è nato: da qui in poi questa schermata è la sua MODIFICA.
+    await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1))
+
+    await user.click(screen.getByRole('button', { name: /Chiudi/ }))
+    await user.click(screen.getByText('Gin Tonic'))
+    await user.click(screen.getAllByRole('button', { name: /Paga|Pagamento/ })[0])
+
+    const pagamento = await screen.findByRole('dialog', { name: /Pagamento/ })
+    expect(within(pagamento).getByText(/Mojito/)).toBeInTheDocument()
+    expect(within(pagamento).getByText(/Gin Tonic/)).toBeInTheDocument()
+    // E il conto è UNO: il secondo giro non ne apre un altro.
+    expect(createOrder).toHaveBeenCalledTimes(1)
   })
 })

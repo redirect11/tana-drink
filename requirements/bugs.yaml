@@ -384,11 +384,27 @@ bugs:
       lo stesso «contenuto per confezione»: mettendo «100 cl» sembra di
       moltiplicare per cento ogni singolo cl. Da chiarire cosa deve
       chiedere il form quando l'articolo NON si conta a pezzi.
+      CHIARITO da Flavio a voce (17/08, note delle 21:06 e 21:11). La regola
+      che vuole: se la prima unità è una misura standard — capacità (l, cl,
+      ml) o peso (kg, g) — sotto NON si chiede in quante parti dividerla; se
+      invece è «pezzi» o «U», sotto si chiede a quanto corrisponde
+      (1 pz = 100 cl, 1 confezione = 10 U). E il tempo di lavoro lo vuole «in
+      pezzi e dopo unità, oppure solo unità».
+      FATTO (1.4.8), la parte che non tocca i dati di produzione: un pezzo
+      può contenere UNITÀ (1 pz = 10 U) e in ricetta si dosa a U, col costo
+      per unità che ne discende; le due domande sono riscritte come si
+      parla — «Quanto contiene una confezione che compri?» e «A quanto
+      corrisponde un pezzo?» — con scritto sotto che non toccano la
+      giacenza. Era quello il fraintendimento: «contenuto per confezione»
+      con dentro «100 cl» si leggeva come una moltiplicazione.
+      RESTA APERTO: la «U» nella prima domanda (ci sono articoli in
+      produzione fatti così) e il caso del limone — comprato al chilo, usato
+      in cl. Vedi REQ-MAG-016, che rifà il modello invece di rattopparlo.
     in_produzione: true
     status: todo
     generate_issue: true
     labels: [bug, magazzino]
-    test_cases: []
+    test_cases: [tests/unit/inventory.test.js]
 
   - id: BUG-015
     title: "Battendo di corsa, il pagamento non vede le ultime righe"

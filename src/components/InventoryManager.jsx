@@ -1641,7 +1641,13 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
         </p>
       ) : !isPz ? (
         <>
-          <label htmlFor="ipkg">Contenuto per confezione</label>
+          {/* LA DOMANDA PARLA DELLA CONFEZIONE CHE SI COMPRA, non della
+              giacenza. Scritta «contenuto per confezione» si leggeva come
+              «in quante parti divido il centilitro», e mettendo «100 cl»
+              sembrava che moltiplicasse per cento ogni cl (Flavio, 17/08).
+              La giacenza resta quella che è: questo serve al costo al cl e
+              agli ordini al fornitore. */}
+          <label htmlFor="ipkg">Quanto contiene una confezione che compri?</label>
           <div className="row" style={{ gap: 6 }}>
             <input
               id="ipkg"
@@ -1651,7 +1657,7 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
               className="grow"
               value={form.package_size}
               onChange={set('package_size')}
-              placeholder="Es. 0,7 per una bottiglia da 70 cl"
+              placeholder="Es. 0,7 se compri bottiglie da 70 cl"
             />
             <ScegliUnita
               valore={form.package_size_unit}
@@ -1660,10 +1666,17 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
               etichetta="Unità del contenuto per confezione"
             />
           </div>
+          <p className="muted small" style={{ margin: '2px 0 8px' }}>
+            Non tocca la giacenza: serve a sapere quanto costa quello che
+            c&apos;è dentro e a ordinare al fornitore.
+          </p>
         </>
       ) : (
         <>
-          <label htmlFor="icontent">Contenuto di un pezzo</label>
+          {/* «A quanto corrisponde un pezzo»: è la domanda che si fa chi
+              carica la merce — una bottiglia fa 100 cl, una confezione fa
+              10 U. Da qui esce il costo al cl (o all'unità). */}
+          <label htmlFor="icontent">A quanto corrisponde un pezzo?</label>
           <div className="row" style={{ gap: 6 }}>
             <input
               id="icontent"
@@ -1684,11 +1697,18 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
               <option value="cl">cl</option>
               <option value="ml">ml</option>
               <option value="g">g</option>
+              {/* UN PEZZO PUÒ CONTENERE UNITÀ: «il tempo di lavoro in pezzi
+                  e dopo unità» (Flavio, 17/08). Le unità non si scaricano dal
+                  magazzino — servono al costo — ma in ricetta si dosano. */}
+              <option value="U">U</option>
             </select>
           </div>
           <p className="muted small" style={{ margin: '2px 0 8px' }}>
-            La giacenza si conta a pezzi. Il contenuto serve solo a sapere quanto costa
-            al cl (o al grammo) quello che c&apos;è dentro.
+            La giacenza si conta a pezzi. Questo serve a sapere quanto costa al cl
+            (o al grammo, o all&apos;unità) quello che c&apos;è dentro
+            {form.content_unit === 'U'
+              ? '. Le unità non si scaricano dal magazzino: servono al costo.'
+              : '.'}
           </p>
         </>
       )}

@@ -1263,6 +1263,23 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     creatingPromiseRef.current = run()
     return creatingPromiseRef.current
   }
+  // ── IL CONTO È NATO: DA QUI IN POI SI MODIFICA ─────────────────────
+  //
+  // La creazione da bozza lo faceva già; il pagamento diretto no, e restava
+  // una schermata «in creazione» con un conto vero dietro. Chiudendo il
+  // pagamento e battendo altro, quelle righe finivano in un secondo conto —
+  // o non arrivavano al pagamento, che intanto guardava il conto di prima.
+  // Nato l'ordine, questa schermata diventa la modifica DI QUELL'ORDINE, e
+  // tutto il resto (aggiunte, auto-conferma, pagamento) segue la strada
+  // normale.
+  const passaAModifica = (creato) => {
+    if (!creato || orderProp || !montatoRef.current) return
+    itemsInVoloRef.current = null
+    selfOrderJsonRef.current = JSON.stringify(creato)
+    ricordaContoInCorso(creato.id)
+    setSelfOrder((cur) => cur || creato)
+  }
+
   const createFromDraftRef = useRef(createFromDraft)
   createFromDraftRef.current = createFromDraft
 
@@ -1411,6 +1428,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
         const gia = await creatingPromiseRef.current
         if (gia) {
           setPayOrder((cur) => (cur && cur.id === null ? gia : cur))
+          passaAModifica(gia)
           return gia.id
         }
       }
@@ -1427,6 +1445,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
         group_name_snapshot: group && !groupIsContainer ? group.name : null,
       })
       setPayOrder((cur) => (cur && cur.id === null ? created : cur))
+      passaAModifica(created)
       clearDraft()
       setInfo({ customer_name: '', table_label: '', note: '' })
       return created.id

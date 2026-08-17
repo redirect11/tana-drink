@@ -52,6 +52,7 @@ export function entryUnits(item) {
   const c = contentBase(item)
   if (c?.base === 'ml') return ['cl', 'ml', 'pz']
   if (c?.base === 'g') return ['g', 'mg', 'pz']
+  if (c && unitaGenerica(c.base)) return [UNITA_GENERICA, 'pz']
   return ['pz']
 }
 
@@ -359,6 +360,11 @@ export function contentBase(item) {
   const size = Number(item?.package_size) || 0
   if (!(size > 0)) return null
   const base = (item?.unit || 'pz') === 'pz' ? item?.content_unit || null : item.unit
+  // UN PEZZO PUÒ CONTENERE UNITÀ. «Il tempo di lavoro in pezzi e dopo unità»
+  // (Flavio, 17/08): una confezione da 10 U, che in ricetta si dosa a U. Le
+  // unità restano quello che sono — non si convertono in niente e non si
+  // scaricano dal magazzino, vedi computeConsumption.
+  if (unitaGenerica(base)) return { size, base: UNITA_GENERICA }
   if (base !== 'ml' && base !== 'g') return null
   return { size, base }
 }
@@ -374,6 +380,7 @@ export function smallUnits(item) {
   const c = contentBase(item)
   if (c?.base === 'ml') return ['pz', 'cl', 'ml']
   if (c?.base === 'g') return ['pz', 'g', 'mg']
+  if (c && unitaGenerica(c.base)) return ['pz', UNITA_GENERICA]
   return ['pz']
 }
 
@@ -396,7 +403,17 @@ export function costPerUnit(item, unit, { gross = true } = {}) {
   // si mescola con volumi e pesi: quanto costa al cl un'ora di lavoro non
   // vuol dire niente, quindi null («non lo so», non «zero»).
   if (unitaGenerica(item?.unit)) return unitaGenerica(unit) ? packCost : null
-  if (unitaGenerica(unit)) return null
+  if (unitaGenerica(unit)) {
+    // Pezzo che CONTIENE unità (1 pz = 10 U): la singola unità costa la
+    // confezione diviso quante ne fa. Fuori da questo caso il generico non
+    // si mescola con volumi e pesi: quanto costa al cl un'ora di lavoro non
+    // vuol dire niente.
+    const c = contentBase(item)
+    if ((item?.unit || 'pz') === 'pz' && c && unitaGenerica(c.base) && c.size > 0) {
+      return packCost / c.size
+    }
+    return null
+  }
   if ((item?.unit || 'pz') === 'pz') {
     // Il pezzo costa quello che costa. Il costo al cl si ricava solo se si
     // sa quanto contiene la bottiglia: altrimenti null, che vuol dire "non
@@ -530,6 +547,7 @@ export function fmtContenuto(qty, item) {
   const c = contentBase(item)
   if (!c) return fmtItem(qty, item)
   if ((item?.unit || 'pz') !== 'pz') return fmtItem(qty, item)
+  if (unitaGenerica(c.base)) return formatQty(qty, UNITA_GENERICA)
   return formatIn(qty, c.base === 'g' ? 'g' : 'cl')
 }
 

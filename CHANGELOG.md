@@ -19,6 +19,10 @@
   a mano in una dozzina di posti — il tab acceso, il «+», i tasti dei
   pannelli, gli aloni del fondo — e quelli restavano dorati con qualunque
   tema.
+- **Le domande sulle unità del magazzino sono scritte come si parla**:
+  «Quanto contiene una confezione che compri?» e «A quanto corrisponde un
+  pezzo?», con scritto sotto che non toccano la giacenza. E un pezzo può
+  contenere **unità** (1 pz = 10 U), che in ricetta si dosano a unità.
 - **Il pagamento vede le righe appena battute** (BUG-015): battendo di corsa
   e aprendo subito il pagamento, le ultime righe restavano fuori — nel conto
   27 €, nel pagamento 21 € — perché la schermata guardava il conto come lo
