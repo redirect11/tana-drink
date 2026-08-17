@@ -12,6 +12,11 @@
 
 ### Al banco
 
+- **Nella vista menù, chi lavora non vede più i propri ordini in cima**:
+  lì si prende un ordine, gli ordini stanno in coda.
+- **In «Da servire» il tasto è «Aggiungi ordine»** e porta alla schermata
+  del conto, la stessa del «+» in coda: prima mandava al menù del cliente.
+
 - **Dal dettaglio di un ordine si aggiunge e si incassa.** «Modifica
   ordine» apre la schermata del conto con la griglia dei prodotti,
   «Pagamento» la apre già sul pagamento: prima si potevano solo cambiare le

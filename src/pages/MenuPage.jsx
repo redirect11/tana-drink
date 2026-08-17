@@ -481,7 +481,13 @@ export default function MenuPage() {
 
       {error && <div className="banner">Errore: {error}</div>}
 
-      {myOrders.map((o) => (
+      {/* GLI ORDINI QUI NON CI STANNO, per chi lavora. Questa schermata, per
+          il personale, serve a UNA cosa: battere un ordine dalla vista del
+          menù. La coda è un'altra pagina, e vederci in mezzo i propri
+          ordini attivi confondeva due mestieri — al cliente invece servono,
+          perché è l'unico posto dove ritrova quello che ha ordinato. */}
+      {!staff &&
+        myOrders.map((o) => (
         <Link key={o.id} to={`/ordine/${o.id}`} className="card order-mini row between">
           <div>
             <div>
@@ -497,7 +503,7 @@ export default function MenuPage() {
           </div>
           <span className="order-mini-chev">›</span>
         </Link>
-      ))}
+        ))}
 
       {drinks.length === 0 && !error && (
         <div className="empty">
