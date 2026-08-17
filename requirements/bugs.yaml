@@ -423,8 +423,20 @@ bugs:
       si conferma subito, senza aspettare l'auto-conferma. Il server lo
       raggiunge un istante dopo: manda tutto `onBeforePay`, prima che
       l'incasso venga registrato.
+      ANCORA (stessa serata): chiudendo il pagamento, aggiungendo altro e
+      riaprendolo, le righe nuove non c'erano. Due cause diverse, tutte e due
+      sistemate. La prima: il pagamento diretto CREA il conto, ma la
+      schermata restava «in creazione» con un conto vero dietro — adesso
+      appena l'ordine nasce diventa la sua modifica, come faceva già la
+      creazione da bozza. La seconda, più profonda: quando l'aggiunta non
+      trova una comanda modificabile ne va creata una NUOVA, e lì la bozza
+      si svuotava subito mentre la comanda partiva per il server — per tutto
+      il tempo della risposta quelle righe non esistevano da nessuna parte.
+      Adesso resta a schermo una comanda provvisoria, che se ne va solo
+      quando dal server arriva quella vera (e se la scrittura fallisce le
+      righe tornano in bozza, invece di sparire in silenzio).
     in_produzione: true
     status: fixed
     generate_issue: false
     labels: [bug, pos, pagamenti]
-    test_cases: [tests/component/OrderPosDetail.test.jsx]
+    test_cases: [tests/component/OrderPosDetail.test.jsx, tests/component/PosPage.test.jsx]

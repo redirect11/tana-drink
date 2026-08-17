@@ -419,3 +419,45 @@ describe('il costo segue l’unità d’acquisto', () => {
     })
   })
 })
+
+// ── IL CARICO A COLLI È UN'ECCEZIONE ─────────────────────────────────
+// Chi carica due bottiglie prese dal fornitore sotto casa non ha nessun
+// cartone da dichiarare: i campi del collo stavano sempre a vista, in fondo
+// e dentro il riquadro del prezzo, e la quantità andava scritta a mano
+// sperando che il conto tornasse.
+describe('carico: il collo dietro un interruttore', () => {
+  // Il tasto «Carico» sta nel dettaglio del prodotto: prima si apre la riga.
+  async function apriCarico(user) {
+    render(<InventoryManager />)
+    await user.click(await screen.findByText('Campari'))
+    await user.click(await screen.findByRole('button', { name: /Carico/ }))
+  }
+
+  it('di suo non si vede: si scrivono i pezzi e basta', async () => {
+    const user = userEvent.setup()
+    await apriCarico(user)
+    expect(screen.getByRole('checkbox', { name: /Carico a colli/ })).not.toBeChecked()
+    expect(screen.queryByLabelText(/per collo/)).toBeNull()
+    expect(screen.getByLabelText(/Quanti pezzi aggiungi/)).not.toHaveAttribute('readonly')
+  })
+
+  it('acceso, il collo sta SOPRA e i pezzi si contano da soli', async () => {
+    const user = userEvent.setup()
+    await apriCarico(user)
+    await user.click(screen.getByRole('checkbox', { name: /Carico a colli/ }))
+
+    const perCollo = screen.getByLabelText(/Pezzi per collo/)
+    const colli = screen.getByLabelText(/Quanti colli arrivano/)
+    // Il riquadro del collo viene prima della quantità, che è l'ordine in cui
+    // si guarda il cartone.
+    const pezzi = screen.getByLabelText(/Quanti pezzi aggiungi/)
+    expect(perCollo.compareDocumentPosition(pezzi) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+
+    await user.type(perCollo, '24')
+    await user.type(colli, '2')
+    expect(pezzi).toHaveValue(48)
+    // E non si corregge a mano: sarebbe un numero che non torna con quello
+    // che è arrivato.
+    expect(pezzi).toHaveAttribute('readonly')
+  })
+})

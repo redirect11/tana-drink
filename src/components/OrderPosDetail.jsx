@@ -611,6 +611,11 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     return () => Object.values(timers).forEach(clearTimeout)
   }, [])
 
+  // Comande appena mandate al server e non ancora tornate indietro: si
+  // vedono come tutte le altre finché lo snapshot non porta la vera.
+  const [nuoveInVolo, setNuoveInVolo] = useState([])
+  const contatoreVolo = useRef(0)
+
   // ── Avanzamenti di stato OTTIMISTICI (modifica) ──
   const [statusOverrides, setStatusOverrides] = useState({})
   const advance = (comandaId, ns) => {
@@ -665,15 +670,34 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     })
   }, [comande])
 
-  // Comande "effettive": server + override locali in volo.
+  // La provvisoria se ne va quando dal server arriva una comanda con le
+  // stesse righe: si toglie SOLO allora, se no le righe sparirebbero e
+  // riapparirebbero (il "ricaricamento" alla sincronizzazione).
+  useEffect(() => {
+    if (nuoveInVolo.length === 0) return
+    const sig = (arr) =>
+      (arr || []).map((i) => `${i.drink_id}~${i.qty}~${i.unit_price}`).sort().join('|')
+    const arrivate = new Set(comande.map((c) => sig(c.items)))
+    setNuoveInVolo((v) => {
+      const resta = v.filter((c) => !arrivate.has(sig(c.items)))
+      return resta.length === v.length ? v : resta
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [comande])
+
+  // Comande "effettive": server + override locali in volo (le modifiche
+  // ottimistiche e le comande appena nate che il server non ha ancora
+  // rimandato indietro).
   const effComande = useMemo(
-    () =>
-      comande.map((c) => {
+    () => [
+      ...comande.map((c) => {
         let x = pendingEdits[c.id] ? { ...c, items: pendingEdits[c.id] } : c
         if (statusOverrides[c.id]) x = { ...x, status: statusOverrides[c.id] }
         return x
       }),
-    [comande, pendingEdits, statusOverrides]
+      ...nuoveInVolo,
+    ],
+    [comande, pendingEdits, statusOverrides, nuoveInVolo]
   )
   // Riferimenti sempre aggiornati per l'auto-conferma e la conferma all'uscita.
   const effComandeRef = useRef(effComande)
@@ -1142,13 +1166,31 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
       clearTimeout(flushTimers.current[target.id])
       flushTimers.current[target.id] = setTimeout(() => flushComanda(target.id), 250)
     } else {
-      // Nessuna comanda modificabile → nuova comanda (dal server).
+      // NESSUNA COMANDA MODIFICABILE → NE NASCE UNA. E resta a schermo
+      // mentre vola al server: prima si svuotava la bozza e si aspettava la
+      // risposta, quindi per un attimo — o per tutto il tempo che la rete si
+      // prendeva — quelle righe non esistevano da nessuna parte. Chi in
+      // quell'attimo apriva il pagamento non le trovava, e il conto era
+      // giusto solo dopo la sincronizzazione. Qui non si aspetta niente:
+      // vedi docs/architettura.md.
       clearDraft()
+      contatoreVolo.current += 1
+      const provvisoria = {
+        id: `__volo-${contatoreVolo.current}`,
+        seq: 0,
+        status: ORDER_STATUSES.RICEVUTO,
+        items: additions,
+      }
+      setNuoveInVolo((v) => [...v, provvisoria])
       ;(async () => {
         try {
           await flushAll()
           await addComanda(oid, additions)
         } catch (e) {
+          // Non è arrivata: le righe tornano in bozza, così si vedono ancora
+          // e si può riprovare. Sparire in silenzio sarebbe peggio.
+          setNuoveInVolo((v) => v.filter((c) => c.id !== provvisoria.id))
+          saveDraft(oid, additions)
           toastError(`Aggiunte non inviate: ${e.message}`)
         }
       })()
