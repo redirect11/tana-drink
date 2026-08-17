@@ -18,10 +18,18 @@ on:
   # loro etichetta `hotfix` — prima che qualcuno tocchi il codice. Così chi
   # corregge lavora su un'issue vera, e quello che è stato raccontato a voce
   # dal banco resta scritto anche se la correzione slitta.
+  #
+  # E SUI RAMI DI RILASCIO, che è dove si lavora tutti i giorni. Aspettare
+  # `main` voleva dire che una richiesta arrivata a voce restava scritta solo
+  # in un file: chi guardava le issue non la vedeva per giorni, e nel
+  # frattempo la si raccontava di nuovo. Lo script è idempotente — cerca per
+  # titolo esatto fra le issue aperte E chiuse — quindi spingere dieci volte
+  # lo stesso registro non crea dieci issue: nascono solo quelle che mancano.
   push:
     branches:
       - main
       - "hotfix/**"
+      - "release/**"
     paths:
       - "requirements/requirements.yaml"
       - "requirements/bugs.yaml"
@@ -50,9 +58,10 @@ jobs:
           GITHUB_REPO: ${{ github.repository }}
           # Su push automatico crea le issue; su run manuale rispetta la scelta dry_run.
           DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || 'false' }}
-          # Le issue si CHIUDONO solo da main, la linea della produzione. Sul
-          # ramo di hotfix la voce passa a `fixed` appena la correzione è
-          # scritta, ma al banco l'app sbaglia ancora: chiudere lì vuol dire
-          # dire a chi ha segnalato il guaio che è sistemato quando non lo è.
+          # Le issue si CHIUDONO solo da main, la linea della produzione. Su
+          # un ramo di hotfix o di rilascio la voce passa a `fixed` appena la
+          # correzione è scritta, ma al banco l'app sbaglia ancora: chiudere
+          # lì vuol dire dire a chi ha segnalato il guaio che è sistemato
+          # quando non lo è. Da quei rami le issue si aprono soltanto.
           CHIUDE_RISOLTI: ${{ github.ref == 'refs/heads/main' }}
         run: node scripts/generate-issues.mjs
