@@ -25,6 +25,11 @@ una funzione, il terzo per le correzioni.
   calcolo: adesso sono due decimali e la virgola, in tutto il magazzino. E
   sotto al numero grande dei pezzi ci va il **contenuto** — «749 cl» — invece
   di ripetere gli stessi pezzi: è il dato che serve a chi sta versando.
+- **Il dettaglio di un prodotto resta dentro la card.** Aprendo un prodotto
+  nella vista a Card il pannello sbordava e il testo si spezzava a
+  fisarmonica, con costo, IVA e prezzo consigliato uno sopra l'altro. Adesso
+  ogni voce è incolonnata — etichetta sopra, valore sotto — e si legge tutta.
+  Nella vista a Lista, dove lo spazio c'è, non cambia niente.
 
 ---
 

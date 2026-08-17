@@ -2585,6 +2585,16 @@ body.drawer-open .status-bell-float { display: none; }
   flex-wrap: wrap;
   gap: 4px 12px;
 }
+/* DENTRO UNA CARD SI INCOLONNA. Le due colonne sopra sono giuste nella vista
+   a Lista, che ha tutta la larghezza dello schermo; in una card larga 175px
+   la colonna del valore resta larga un dito e il testo va a capo a
+   fisarmonica — «0 pz · 0 piene · 1 pz = 100 cl» su quattro righe, con costo,
+   IVA e prezzo consigliato accavallati. Etichetta sopra, valore sotto, come
+   già fa la regola per gli schermi piccoli qui in basso. */
+.grid-card .grid-card-actions .inv-info .inv-info-row {
+  grid-template-columns: 1fr;
+  gap: 1px;
+}
 @media (max-width: 460px) {
   .inv-info .inv-info-row {
     grid-template-columns: 1fr;

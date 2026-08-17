@@ -7,6 +7,7 @@
 // si controlla che arrivino davanti a chi lavora nella forma giusta.
 
 import { describe, it, expect, vi } from 'vitest'
+import { readFileSync } from 'node:fs'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom/vitest'
@@ -91,5 +92,43 @@ describe('la card del magazzino', () => {
     // deve arrivare a schermo da nessuna parte.
     expect(document.body.textContent).not.toMatch(/7\.49/)
     expect(document.body.textContent).not.toMatch(/\d\.\d{4}/)
+  })
+})
+
+// IL DETTAGLIO DI UNA CARD DEVE STARE DENTRO LA CARD.
+//
+// Aprendo un prodotto nella vista a Card il pannello dei dettagli sbordava e
+// il testo si incolonnava a fisarmonica: «0 pz · 0 piene · 1 pz = 100 cl» a
+// capo quattro volte, e costo, IVA e prezzo consigliato accavallati. La
+// coppia etichetta/valore usa la griglia a due colonne della vista a Lista,
+// dove c'è tutta la larghezza dello schermo; in una card larga 175px la
+// colonna del valore resta larga un dito.
+//
+// Il layout non si prova in jsdom (le larghezze non esistono): quello che si
+// prova qui è che la struttura colpita dalla regola sia davvero quella che
+// finisce a schermo, e che la regola nel foglio di stile ci sia.
+describe('il dettaglio della card non sborda', () => {
+  const css = readFileSync('src/index.css', 'utf8')
+
+  it('la scheda aperta di una card è dentro la card', async () => {
+    const user = userEvent.setup()
+    render(<InventoryManager />)
+    await apriCard(user)
+    await user.click(screen.getByRole('button', { name: '⋯ Azioni' }))
+    expect(
+      document.querySelector('.grid-card .grid-card-actions .inv-info .inv-info-row')
+    ).not.toBeNull()
+  })
+
+  it('dentro una card etichetta e valore si incolonnano', () => {
+    expect(css).toMatch(
+      /\.grid-card\s+\.grid-card-actions\s+\.inv-info\s+\.inv-info-row\s*\{[^}]*grid-template-columns:\s*1fr/
+    )
+  })
+
+  it('nella lista, dove lo spazio c’è, restano due colonne', () => {
+    // La vista a Lista occupa tutta la larghezza: là la coppia
+    // etichetta/valore su una riga sola si legge meglio, e resta com'era.
+    expect(css).toMatch(/\.inv-info \.inv-info-row \{[^}]*grid-template-columns: 96px 1fr/)
   })
 })
