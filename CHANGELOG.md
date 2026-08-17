@@ -12,6 +12,11 @@
 
 ### Al banco
 
+- **Il numero sulla card e le righe del conto dicono la stessa cosa** anche
+  quando il conto porta l'id di un prodotto che non c'è più (cancellato e
+  rifatto, o catalogo reimportato): si riconosce dal nome, invece di
+  lasciare la card senza contatore con le righe lì sotto a vista.
+
 - **Le modifiche che non passeranno mai ora si capiscono e si scartano.**
   Se una scheda del magazzino (o un conto) non esiste più, riprovare non
   serve: la campanella lo dice a parole e offre di toglierle, invece di
