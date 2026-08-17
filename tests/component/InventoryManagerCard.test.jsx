@@ -321,6 +321,7 @@ describe('la scheda prodotto chiede tre cose', () => {
     await user.click(screen.getByRole('button', { name: /Come si compila/ }))
     const box = await screen.findByRole('dialog', { name: /Come si compila/ })
     expect(within(box).getByText(/1 kg di limoni = 50 cl/)).toBeInTheDocument()
+    expect(within(box).getByText(/Unità generiche/)).toBeInTheDocument()
   })
 
   it('la terza domanda — quanto rende — c’è per chi non si conta a pezzi', async () => {
