@@ -74,6 +74,7 @@ import VipTab from '../components/VipTab.jsx'
 import ServiceQueue from '../components/ServiceQueue.jsx'
 import StaffCallList from '../components/StaffCallList.jsx'
 import Caricamento from '../components/Caricamento.jsx'
+import FumettoAvvisi from '../components/FumettoAvvisi.jsx'
 import CampoPassword from '../components/CampoPassword.jsx'
 import ApriCassaBox from '../components/ApriCassaBox.jsx'
 import ChiudiCassaBox from '../components/ChiudiCassaBox.jsx'
@@ -1418,6 +1419,10 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
           notifiche e stato della sincronizzazione: torna come tasto tondo in
           basso a destra (il CSS la mostra solo quando serve). */}
       {gridView && <StatusBell floating />}
+      {/* L'avviso a fumetto, se il locale ha scelto quello: sta SOLO qui,
+          nella coda, che è il posto dove gli ordini si aspettano. Toccandolo
+          si aprono gli avvisi (la campanella ascolta l'evento). */}
+      <FumettoAvvisi onApri={() => window.dispatchEvent(new Event('tana:apri-avvisi'))} />
       {error && <div className="banner">Errore: {error}</div>}
 
       {/* Cassa chiusa: non si battono ordini finché non la si apre. */}

@@ -44,6 +44,17 @@ export default function StatusBell({ floating = false }) {
 
   useEffect(() => subscribeSync(setSync), [])
   useEffect(() => subscribeNotifs(setNotifs), [])
+  // IL FUMETTO APRE GLI AVVISI. Chi lo tocca vuole vedere cos'è successo,
+  // e quello che è successo sta qui dentro: un evento, perché il fumetto è
+  // disegnato dalla coda e la campanella sta nella barra in alto.
+  useEffect(() => {
+    const apri = () => {
+      setOpen(true)
+      setStorico(false)
+    }
+    window.addEventListener('tana:apri-avvisi', apri)
+    return () => window.removeEventListener('tana:apri-avvisi', apri)
+  }, [])
 
   // APRIRE NON È LEGGERE. Prima bastava aprire la campanella perché tutto
   // risultasse visto: si dava un'occhiata di corsa fra due ordini e l'avviso

@@ -6288,3 +6288,62 @@ a.storico-notifica:hover {
   margin: 0;
   white-space: pre-wrap;
 }
+
+/* ── IL FUMETTO DELLA CAMPANELLA ──────────────────────────────────────
+   Esce da dove poi l'avviso si ritrova: in alto a destra, sotto la barra,
+   con la punta rivolta alla campanella. È un richiamo, non una finestra:
+   niente tasto per chiuderlo, sparisce da sé. */
+.fumetto-avviso {
+  position: fixed;
+  top: 58px;
+  right: 12px;
+  z-index: 60;
+  max-width: min(320px, calc(100vw - 24px));
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  text-align: left;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.9rem;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  animation: fumetto-entra 0.18s ease-out;
+}
+/* La punta verso la campanella. */
+.fumetto-avviso::before {
+  content: '';
+  position: absolute;
+  top: -7px;
+  right: 16px;
+  width: 12px;
+  height: 12px;
+  transform: rotate(45deg);
+  background: var(--card);
+  border-left: 1px solid var(--line);
+  border-top: 1px solid var(--line);
+}
+.fumetto-avviso-corpo {
+  color: var(--muted);
+  font-size: 0.85em;
+}
+@keyframes fumetto-entra {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fumetto-avviso {
+    animation: none;
+  }
+}

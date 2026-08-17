@@ -1230,6 +1230,35 @@ requirements:
       - tests/component/SchedaDrink.test.jsx
       - tests/component/OrderPosDetail.test.jsx
 
+  - id: REQ-AVVISI-005
+    title: "Dove compaiono gli avvisi ad app aperta, lo sceglie il locale"
+    area: "src/lib/avvisiInApp.js, src/components/FumettoAvvisi.jsx, src/lib/notify.js"
+    description: >
+      Due modi, in Impostazioni → Notifiche:
+      «in alto, su ogni schermata» — la strisciolina di sempre: non si
+      perde, ma interrompe chiunque, anche chi sta contando la cassa o
+      caricando il magazzino;
+      «dalla campanella, solo in coda» — un fumetto che esce dalla
+      campanella e compare SOLO nella coda ordini, che è il posto dove gli
+      ordini si aspettano: lì un avviso non interrompe niente, è la ragione
+      per cui si sta guardando quella schermata.
+      Il fumetto sparisce da sé dopo qualche secondo — è un richiamo, non
+      una finestra da chiudere — e toccandolo si aprono gli avvisi, perché
+      chi lo tocca vuole vedere cos'è successo. Fuori dalla coda non compare
+      niente: gli avvisi restano nella campanella, col loro conto.
+      Di suo resta la strisciolina, che è come ha sempre funzionato. Un
+      valore sconosciuto ricade lì: meglio la strisciolina di un avviso che
+      non compare da nessuna parte.
+      Questa è una scelta del LOCALE (come lavora il banco), non della
+      persona: quali avvisi ricevere resta per utente e dispositivo, nel
+      profilo.
+    status: implemented
+    generate_issue: false
+    labels: [avvisi, ux]
+    test_cases:
+      - tests/unit/avvisiInApp.test.js
+      - tests/component/FumettoAvvisi.test.jsx
+
   - id: REQ-UI-014
     title: "La barra delle sezioni si stringe a icone, o si toglie di mezzo"
     area: "src/components/CategoryRail.jsx, src/index.css"
