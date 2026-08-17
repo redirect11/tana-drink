@@ -4,6 +4,14 @@
 
 ### Al banco
 
+- **Staff e Utenti hanno tre sezioni nel menu laterale**: calendario,
+  nuovo turno, paghe orarie; utenze registrate, nuovo account, buoni VIP.
+  Erano pannelli che aprendosi spingevano giù quello che si era venuti a
+  guardare.
+- **La maniglia del menu si prende davvero**: sta fra il menu e la pagina,
+  non più sotto la barra di scorrimento. E nel menu non si scorre più in
+  orizzontale: allargandolo, i nomi ci stanno.
+
 - **Stringendo le categorie a lato non restano più le pastiglie grigie.**
   Dove le voci non hanno un'icona non c'era modo di capire quale fosse
   quale: ora si tolgono di mezzo e resta il tasto per rimetterle.

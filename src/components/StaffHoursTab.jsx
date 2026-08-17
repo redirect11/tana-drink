@@ -23,9 +23,8 @@ import {
   peopleOfDay,
 } from '../lib/ore.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
-import SectionPanels from './SectionPanels.jsx'
 import StaffBadgePanel from './StaffBadgePanel.jsx'
-import { IconPiu, IconSoldi } from './Icons.jsx'
+import { Sottosezioni } from '../lib/sottosezioni.js'
 
 // RAPP ORE + BADGE VIRTUALE: registro ore dello staff con vista calendario
 // giornaliera, settimanale e mensile. Distingue le ore EFFETTIVE (badge:
@@ -96,7 +95,16 @@ function normalizeEntries(hoursRows, shiftRows) {
 // CHI È IN TURNO ADESSO sta in cima alle ore: era in fondo alla cassa,
 // dove ci si va per i soldi — e per timbrare l'ingresso bisognava passare
 // dal flusso di cassa, che con le ore non c'entra niente.
-export default function StaffHoursTab({ embedded = false }) {
+const SEZIONI_STAFF = [
+  { id: 'calendario', icona: '📅', label: 'Calendario' },
+  { id: 'turno', icona: '➕', label: 'Nuovo turno' },
+  { id: 'paghe', icona: '💶', label: 'Paghe orarie' },
+]
+
+export default function StaffHoursTab({ embedded = false, sezioneIniziale = 'calendario' }) {
+  // Tre sezioni come nelle altre pagine: il calendario è quella che si apre,
+  // perché è il motivo per cui si viene qui.
+  const [sezione, setSezione] = useState(sezioneIniziale)
   const [mode, setMode] = useState('mese') // 'giorno' | 'settimana' | 'mese'
   const [cursor, setCursor] = useState(oggi) // data di riferimento
   const [hoursRows, setHoursRows] = useState([])
@@ -192,41 +200,30 @@ export default function StaffHoursTab({ embedded = false }) {
           </p>
         </>
       )}
+      {!embedded && <Sottosezioni voci={SEZIONI_STAFF} attiva={sezione} scegli={setSezione} />}
       {error && <div className="banner">Errore: {error}</div>}
 
       {/* CHI TIMBRA ADESSO, in cima: era in fondo alla pagina della cassa,
           dove ci si va per i soldi. Per battere l'ingresso di chi arriva
           bisognava passare dal flusso di cassa, che con le ore non c'entra
           niente. */}
-      <StaffBadgePanel />
+      {sezione === 'calendario' && <StaffBadgePanel />}
 
-      {/* Quello che si fa ogni tanto — le paghe, un turno a mano — sta qui
-          sotto al titolo, non in fondo alla pagina dopo il calendario. */}
-      <SectionPanels
-        panels={[
-          {
-            id: 'turno',
-            label: <><IconPiu /> Nuovo turno</>,
-            desc: 'Per un giorno preciso conviene cliccarlo nel calendario: si assegna lì, con gli orari.',
-            render: () => <ShiftForm membri={membri} onAdd={addTurno} />,
-          },
-          {
-            id: 'paghe',
-            label: <><IconSoldi /> Paghe orarie</>,
-            desc: 'Tariffa oraria per persona. Resta storicizzata: i turni già registrati mantengono quella in vigore quel giorno.',
-            render: () => (
-              <PagheManager
-                membri={membri}
-                rates={rates}
-                onSave={(membro, list) =>
-                  saveStaffRates(membro, list).catch((e) => setError(e.message))
-                }
-              />
-            ),
-          },
-        ]}
-      />
+      {/* NUOVO TURNO E PAGHE SONO SEZIONI, non pannelli a scomparsa in cima
+          alla pagina: aprirli spingeva giù il calendario, che è la cosa per
+          cui si viene qui. Stanno nel menu laterale come nelle altre
+          pagine. */}
+      {sezione === 'turno' && <ShiftForm membri={membri} onAdd={addTurno} />}
+      {sezione === 'paghe' && (
+        <PagheManager
+          membri={membri}
+          rates={rates}
+          onSave={(membro, list) => saveStaffRates(membro, list).catch((e) => setError(e.message))}
+        />
+      )}
 
+      {sezione === 'calendario' && (
+        <>
       {/* Vista: giorno / settimana / mese */}
       <div className="chips-row" style={{ marginBottom: 8 }}>
         {[
@@ -319,8 +316,8 @@ export default function StaffHoursTab({ embedded = false }) {
           </div>
         ))}
       </div>
-
-
+        </>
+      )}
 
       {/* Dettaglio giorno (dal calendario mensile o settimanale): chi è di
           turno con orari programmati/effettivi + assegnazione staff. */}

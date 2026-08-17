@@ -955,6 +955,26 @@ requirements:
     labels: [magazzino, menu, dati]
     test_cases: []
 
+  - id: REQ-UI-015
+    title: "Staff e Utenti hanno tre sezioni, come le altre pagine"
+    area: "src/components/StaffHoursTab.jsx, src/components/UtentiTab.jsx"
+    description: >
+      Staff: calendario (quello che si apre, ed è il motivo per cui si viene
+      qui), nuovo turno, paghe orarie. Utenti e ruoli: utenze registrate,
+      nuovo account, buoni VIP.
+      Erano pannelli a scomparsa in cima alla pagina: aprirli spingeva giù
+      quello che si era venuti a guardare — il calendario, l'elenco delle
+      utenze — e per tornarci bisognava richiuderli. Nel menu laterale
+      costano zero e si raggiungono da qualsiasi punto della pagina.
+      Chi non è amministratore, in Utenti, ha solo l'elenco: le altre due
+      non sono cose sue.
+    status: implemented
+    generate_issue: false
+    labels: [ux, navigazione]
+    test_cases:
+      - tests/component/UtentiTab.test.jsx
+      - tests/component/StaffHoursTab.test.jsx
+
   - id: REQ-UI-014
     title: "La barra delle sezioni si stringe a icone, o si toglie di mezzo"
     area: "src/components/CategoryRail.jsx, src/index.css"
@@ -2140,7 +2160,11 @@ requirements:
       sul bordo destro la porta fra 150 e 360px, doppio clic per tornare
       alla misura di partenza, e la larghezza scelta resta anche domani.
       Cresce tutto insieme, testo e icone: una colonna larga con la scritta
-      piccola in mezzo sembra rotta.
+      piccola in mezzo sembra rotta. Il nome che non ci sta va a capo: nel
+      menu non si scorre mai in orizzontale, e la maniglia è una colonna sua
+      fra menu e contenuto — dentro al menu scorreva col contenuto e finiva
+      sotto la barra di scorrimento, e per prenderla bisognava azzeccare due
+      pixel.
     status: implemented
     generate_issue: false
     labels: [ux, navigazione]
