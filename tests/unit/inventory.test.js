@@ -32,6 +32,8 @@ import {
   formatPezzi,
   copiaProdotto,
   fmtContenuto,
+  scaricoPossibile,
+  giacenzaPerCarico,
 } from '../../src/lib/inventory.js'
 
 describe('toBaseQty', () => {
@@ -685,5 +687,54 @@ describe('unità del contenuto', () => {
   it('gli articoli già a volume restano come sono', () => {
     expect(fmtContenuto(700, gin)).toBe('70 cl')
     expect(fmtContenuto(300, gin)).toBe('30 cl')
+  })
+})
+
+// ── SOTTO ZERO NON SI SCENDE ─────────────────────────────────────────
+// Il 17 agosto il Jagermeister era a −0,04 pz, con «valore −0,67 €» e la
+// conta che si apriva già in rosso: continuando a battere un prodotto
+// finito lo scarico toglie comunque, perché increment(-qty) non guarda
+// quanto c'è (ed è giusto che non lo guardi: è commutativo e si accoda
+// offline — quello che va deciso prima è QUANTO chiedere di togliere).
+// Il danno vero arriva dopo: comprando e caricando una bottiglia il
+// carico riparte dal negativo e ne conta meno di una, mentre sullo
+// scaffale c'è tutta.
+describe('la giacenza non scende sotto zero', () => {
+  it('si scarica al massimo quello che risulta in giacenza', () => {
+    expect(scaricoPossibile(10, 4)).toBe(4)
+    expect(scaricoPossibile(10, 12)).toBe(10)
+    // Il Jager quasi finito: resta 0,02 pz e la ricetta ne chiede 0,057.
+    expect(scaricoPossibile(0.02, 0.057)).toBeCloseTo(0.02, 6)
+  })
+
+  it('la vendita passa comunque: il magazzino si ferma a zero, non a −2', () => {
+    expect(10 - scaricoPossibile(10, 12)).toBe(0)
+  })
+
+  it('da una giacenza già a zero (o negativa) non si toglie più niente', () => {
+    expect(scaricoPossibile(0, 3)).toBe(0)
+    expect(scaricoPossibile(-0.04, 1)).toBe(0)
+  })
+
+  it('un delta nullo o al contrario non muove la giacenza', () => {
+    expect(scaricoPossibile(10, 0)).toBe(0)
+    expect(scaricoPossibile(10, -5)).toBe(0)
+  })
+
+  it('il carico parte da quello che c’è, mai dal negativo', () => {
+    // Una bottiglia caricata su −0,04 deve valere UNA bottiglia: il buco
+    // di prima è un errore vecchio, non un debito da ripagare.
+    expect(giacenzaPerCarico(-0.04) + 1).toBe(1)
+    expect(giacenzaPerCarico(3)).toBe(3)
+    expect(giacenzaPerCarico(undefined)).toBe(0)
+    expect(giacenzaPerCarico('boh')).toBe(0)
+  })
+
+  it('e il valore in euro non è mai negativo: niente «valore −0,67 €»', () => {
+    const jager = { unit: 'pz', stock: -0.04, cost: 13.6, vat: 22 }
+    expect(unitsInStock(jager)).toBe(0)
+    expect(stockValue(jager)).toBe(0)
+    // Anche a volume: mezzo litro in meno di zero non vale meno di zero.
+    expect(stockValue({ unit: 'ml', package_size: 700, stock: -350, cost: 18, vat: 22 })).toBe(0)
   })
 })

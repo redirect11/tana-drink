@@ -541,6 +541,11 @@ requirements:
       ricette, salvando lo snapshot del consumo sulla comanda: serve per stornare
       in caso di annullo e per non scalare due volte. Il magazzino che non risponde
       non blocca la comanda: viene segnata come non scaricata e si recupera dopo.
+      SOTTO ZERO NON SI SCENDE: si toglie al massimo quello che risulta in
+      giacenza, e un carico su una giacenza negativa riparte da zero. La vendita
+      passa comunque (il conto è già scritto) e il magazzino si ferma a zero:
+      altrimenti il buco resta, il carico dopo conta meno di una bottiglia e il
+      valore in euro va in negativo.
     status: implemented
     generate_issue: false
     labels: [magazzino, offline]

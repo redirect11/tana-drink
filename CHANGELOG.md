@@ -9,6 +9,20 @@ una funzione, il terzo per le correzioni.
 
 ---
 
+## Non ancora rilasciata — 1.3.4
+
+### Al banco
+
+- **Il magazzino non scende più sotto zero.** Battendo un prodotto finito la
+  giacenza andava in negativo (il Jagermeister a −0,04 pz, con «valore
+  −0,67 €»), e il guaio si vedeva dopo: caricando la bottiglia comprata il
+  conto ripartiva dal buco e ne risultava meno di una, mentre sullo scaffale
+  c'era tutta. Adesso si scarica al massimo quello che c'è, un carico riparte
+  sempre da zero e il valore in euro non va mai in negativo. Al banco non
+  cambia niente: il conto si batte come prima, anche se la scorta è finita.
+
+---
+
 ## Non ancora rilasciata — 1.3.3
 
 ### Al banco

@@ -271,8 +271,11 @@ export function costWithVat(cost, vat = 22) {
 }
 
 // Numero di confezioni/bottiglie equivalenti in giacenza.
+// La giacenza si legge SEMPRE da zero in su: con un −0,04 pz rimasto in
+// magazzino si leggeva «valore −0,67 €», cioè un magazzino che vale meno di
+// niente. Quello che manca è un errore da correggere, non un credito.
 export function unitsInStock(item) {
-  const stock = Number(item?.stock) || 0
+  const stock = giacenzaPerCarico(item?.stock)
   if (item?.unit === 'pz') return stock
   const size = Number(item?.package_size) || 0
   return size > 0 ? stock / size : 0
@@ -352,6 +355,33 @@ export function costPerUnit(item, unit, { gross = true } = {}) {
 // Valore totale del magazzino.
 export function inventoryTotalValue(items, opts) {
   return (items || []).reduce((s, it) => s + stockValue(it, opts), 0)
+}
+
+// ── SOTTO ZERO NON SI SCENDE ──────────────────────────────────────────
+// Il 17 agosto il Jagermeister era a −0,04 pz, con «valore −0,67 €» e la
+// conta che si apriva già in rosso: si continua a battere un prodotto finito
+// e lo scarico toglie comunque, perché `increment(-qty)` non guarda quanto
+// c'è. L'increment resta — è commutativo e si accoda offline, e al banco
+// niente aspetta la rete: quello che si decide prima di chiederlo è QUANTO
+// togliere.
+
+// Quanto si può DAVVERO scaricare: mai più di quello che risulta in
+// giacenza, e da una giacenza già a zero (o negativa) niente. La vendita
+// passa comunque — il conto è già scritto — e il magazzino si ferma a zero.
+export function scaricoPossibile(stock, qty) {
+  const richiesta = Number(qty) || 0
+  if (!(richiesta > 0)) return 0
+  const giacenza = Number(stock) || 0
+  if (!(giacenza > 0)) return 0
+  return Math.min(richiesta, giacenza)
+}
+
+// La giacenza da cui parte un CARICO, che non è mai negativa: comprando una
+// bottiglia e caricandola su −0,04 se ne deve contare UNA. Partendo dal
+// negativo il carico ne conta meno di una, sullo scaffale però c'è tutta, e
+// da quel momento il magazzino mente su quanto prodotto c'è davvero.
+export function giacenzaPerCarico(stock) {
+  return Math.max(0, Number(stock) || 0)
 }
 
 // QUANTO TOGLIERE DALLA GIACENZA per una riga di ricetta.
