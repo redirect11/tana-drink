@@ -26,6 +26,9 @@ const ORDINE = {
   comande: [{ id: 'c1', seq: 1, status: 'ricevuto', items: [] }],
   total: 8,
   payments: [],
+  // Ordine battuto al banco: è il caso in cui allo staff si offre il QR da
+  // far scansionare al cliente.
+  placed_by: { name: 'banco', email: 'banco@tana.local', role: 'admin' },
 }
 
 // Il ruolo di chi guarda, deciso dal singolo test.
@@ -57,7 +60,7 @@ vi.mock('../../src/lib/api.js', async () => {
       return () => {}
     }),
     subscribeSettings: vi.fn((cb) => {
-      cb({ pickup_mode: 'bancone', groups_enabled: false })
+      cb({ pickup_mode: 'bancone', groups_enabled: false, ...impostazioniCorrenti })
       return () => {}
     }),
     subscribeServiceStats: vi.fn((cb) => {
@@ -88,6 +91,8 @@ vi.mock('../../src/components/OrderPosDetail.jsx', () => ({
 
 import OrderStatusPage from '../../src/pages/OrderStatusPage.jsx'
 
+let impostazioniCorrenti = {}
+
 const apri = () =>
   render(
     <MemoryRouter initialEntries={['/ordine/o1']}>
@@ -95,7 +100,10 @@ const apri = () =>
     </MemoryRouter>
   )
 
-beforeEach(() => vi.clearAllMocks())
+beforeEach(() => {
+  vi.clearAllMocks()
+  impostazioniCorrenti = {}
+})
 
 describe('dettaglio ordine: a ciascuno la sua schermata', () => {
   it("l'admin lavora sull'ordine (POS), non lo guarda soltanto", async () => {
@@ -120,5 +128,25 @@ describe('dettaglio ordine: a ciascuno la sua schermata', () => {
     ruoloCorrente = undefined
     apri()
     await waitFor(() => expect(screen.queryByTestId('pos')).toBeNull())
+  })
+})
+
+// IL QR SERVE SE C'È QUALCOSA DA SEGUIRE. Il cliente lo scansiona per vedere
+// a che punto è il suo drink: senza gli stati del servizio non c'è nessun
+// punto da vedere — la pagina dice solo cosa ha ordinato — e offrirlo è
+// promettere una cosa che non succede.
+describe('il QR per il cliente', () => {
+  it('con gli stati del servizio, la sala lo può mostrare', async () => {
+    ruoloCorrente = 'staff'
+    impostazioniCorrenti = { workflow_enabled: true }
+    apri()
+    expect(await screen.findByRole('button', { name: /Mostra QR/ })).toBeInTheDocument()
+  })
+
+  it('senza stati del servizio non compare: non ci sarebbe niente da seguire', async () => {
+    ruoloCorrente = 'staff'
+    impostazioniCorrenti = { workflow_enabled: false }
+    apri()
+    await waitFor(() => expect(screen.queryByRole('button', { name: /Mostra QR/ })).toBeNull())
   })
 })

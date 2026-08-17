@@ -36,6 +36,7 @@ import {
   inseritiDa,
   restaInCoda,
   ordiniInCoda,
+  voceCassa,
 } from '../lib/coda.js'
 import { ripristinabile } from '../lib/storiaOrdine.js'
 import { StoriaOrdineDialog, RipristinaOrdineDialog } from '../components/StoriaOrdine.jsx'
@@ -1422,17 +1423,22 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
       {/* Cassa chiusa: non si battono ordini finché non la si apre. */}
       {!cassaLoading && !cassaAperta && (
         <div className="banner cassa-chiusa-banner">
-          🔴 <strong>Cassa chiusa</strong> — per battere ordini apri prima la cassa.{' '}
+          🔴 <strong>Cassa chiusa</strong> —{' '}
+          {gestore ? 'per battere ordini apri prima la cassa.' : 'per battere ordini la deve aprire il banco.'}{' '}
           {/* Si apre da qui: mandare al flusso di cassa per premere un tasto e
-              tornare indietro sono tre passaggi per una cosa che ne vale uno. */}
-          <button
-            type="button"
-            className="btn small"
-            style={{ marginLeft: 8 }}
-            onClick={() => setApriCassa(true)}
-          >
-            🟢 Apri cassa
-          </button>
+              tornare indietro sono tre passaggi per una cosa che ne vale uno.
+              La sala invece legge e basta: aprirla non è cosa sua, e un tasto
+              che dà «permesso negato» è peggio di nessun tasto. */}
+          {gestore && (
+            <button
+              type="button"
+              className="btn small"
+              style={{ marginLeft: 8 }}
+              onClick={() => setApriCassa(true)}
+            >
+              🟢 Apri cassa
+            </button>
+          )}
         </div>
       )}
 
@@ -1553,35 +1559,21 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
             hint: ordineDesc ? 'Adesso: prima gli ultimi' : 'Adesso: prima i primi della serata',
             onClick: cambiaOrdine,
           },
-          // LA CASSA SI APRE E SI CHIUDE DA QUI. Sono le due cose che si
-          // fanno a inizio e fine serata, dalla schermata in cui si sta già:
-          // andarle a cercare nel flusso di cassa vuol dire uscire dalla
-          // coda proprio mentre la si sta guardando.
-          cassaAperta
-            ? {
-                id: 'chiudi-cassa',
-                icon: '🔒',
-                label: 'Chiudi cassa',
-                // Un conto aperto è un incasso che manca: chiudere così
-                // vorrebbe dire far quadrare una serata con dentro un buco.
-                disabled: recap.aperti > 0,
-                hint:
-                  recap.aperti > 0
-                    ? `Prima incassa i ${recap.aperti} conti ancora aperti.`
-                    : 'Conta il contante e chiudi la serata.',
-                // Si chiude da qui: prima portava alla pagina della cassa —
-                // un viaggio di andata e ritorno per premere un tasto, con
-                // la coda che sparisce proprio mentre si finisce.
-                onClick: () => setChiudiCassa(true),
-              }
-            : {
-                id: 'apri-cassa',
-                icon: '🟢',
-                label: 'Apri cassa',
-                hint: 'Senza cassa aperta non si battono ordini.',
-                onClick: () => setApriCassa(true),
-              },
-        ]}
+          // La voce della cassa (apri/chiudi, o niente per la sala) sta in
+          // coda.js: è una regola, e le regole si provano.
+          (() => {
+            const v = voceCassa({
+              gestore,
+              cassaAperta: !!cassaAperta,
+              contiAperti: recap.aperti,
+            })
+            if (!v) return null
+            return {
+              ...v,
+              onClick: () => (v.id === 'apri-cassa' ? setApriCassa(true) : setChiudiCassa(true)),
+            }
+          })(),
+        ].filter(Boolean)}
       />
 
       {chiudiCassa && (

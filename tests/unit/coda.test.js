@@ -6,6 +6,7 @@ import { describe, it, expect } from 'vitest'
 import {
   bucketByStatus,
   ordersRecap,
+  voceCassa,
   openOrdersCount,
   ordineCorrisponde,
   primoCorrispondente,
@@ -284,5 +285,37 @@ describe('gli annullati nel riepilogo', () => {
 
   it('e non entrano nel totale: quelli sono i soldi veri', () => {
     expect(ordersRecap(ordini, chiuso).total).toBe(50)
+  })
+})
+
+// LA CASSA È DEL BANCO. Aprirla e chiuderla si fa dalla schermata in cui si
+// sta già, ma chi serve ai tavoli non ci mette mano: un tasto che risponde
+// «non puoi» è peggio di un tasto che non c'è.
+describe('la voce della cassa nel menu della coda', () => {
+  it('alla sala non compare affatto', () => {
+    expect(voceCassa({ gestore: false, cassaAperta: false })).toBe(null)
+    expect(voceCassa({ gestore: false, cassaAperta: true })).toBe(null)
+  })
+
+  it('cassa chiusa: al banco compare «Apri cassa»', () => {
+    expect(voceCassa({ gestore: true, cassaAperta: false })).toMatchObject({
+      id: 'apri-cassa',
+      disabled: false,
+    })
+  })
+
+  it('cassa aperta e conti tutti incassati: si può chiudere', () => {
+    expect(voceCassa({ gestore: true, cassaAperta: true, contiAperti: 0 })).toMatchObject({
+      id: 'chiudi-cassa',
+      disabled: false,
+    })
+  })
+
+  it('con conti aperti la chiusura è spenta, e dice quanti sono', () => {
+    // Un conto aperto è un incasso che manca: chiudere così vorrebbe dire
+    // far quadrare una serata con dentro un buco.
+    const v = voceCassa({ gestore: true, cassaAperta: true, contiAperti: 3 })
+    expect(v.disabled).toBe(true)
+    expect(v.hint).toContain('3')
   })
 })

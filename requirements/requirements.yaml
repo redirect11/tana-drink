@@ -185,6 +185,20 @@ requirements:
     labels: [ordini, pagamenti, impostazioni]
     test_cases: [tests/component/PaymentScreen.test.jsx]
 
+  - id: REQ-ORD-017
+    title: "Il QR per il cliente c'è solo se c'è qualcosa da seguire"
+    area: "src/pages/OrderStatusPage.jsx"
+    description: >
+      Sul dettaglio di un ordine battuto al banco, allo staff compare «Mostra
+      QR al cliente»: chi lo scansiona segue il proprio drink dal telefono.
+      Con gli stati del servizio SPENTI non c'è niente da seguire — la
+      pagina dice solo cosa è stato ordinato — e offrirlo è promettere una
+      cosa che non succede: lì il tasto non compare.
+    status: implemented
+    generate_issue: false
+    labels: [ordini, clienti]
+    test_cases: [tests/component/OrderStatusPage.test.jsx]
+
   - id: REQ-ORD-015
     title: "Nella lista ordini si cercano anche le serate passate"
     area: "src/lib/periodo.js, src/components/SelettorePeriodo.jsx, src/components/OrdersHistory.jsx, src/lib/api.js"
@@ -885,13 +899,16 @@ requirements:
     test_cases: [tests/unit/cassa.test.js]
 
   - id: REQ-CASSA-008
-    title: "La cassa si apre e si chiude dalla coda, senza cambiare pagina"
+    title: "La cassa si apre e si chiude dalla coda, ed è cosa del banco"
     area: "src/components/ApriCassaBox.jsx, src/pages/BartenderPage.jsx"
     description: >
       Aprire e chiudere la cassa sono le due cose che si fanno a inizio e
       fine serata, e si fanno dalla schermata in cui si sta già: nel menu ⋯
       della coda c'è «Apri cassa» quando è chiusa e «Chiudi cassa» quando è
-      aperta. Andarle a cercare nel flusso di cassa vuol dire uscire dalla
+      aperta. SONO DEL BANCO: alla sala non compaiono affatto — né nel menu
+      né come tasto sul banner della cassa chiusa, dove legge che la deve
+      aprire il banco. Un tasto che risponde «non puoi» è peggio di un tasto
+      che non c'è. Andarle a cercare nel flusso di cassa vuol dire uscire dalla
       coda proprio mentre la si sta guardando.
       «Chiudi cassa» è spento finché ci sono conti aperti, e lo dice: un
       conto aperto è un incasso che manca, e chiudere così vorrebbe dire far
@@ -905,7 +922,9 @@ requirements:
     status: implemented
     generate_issue: false
     labels: [cassa, ux]
-    test_cases: [tests/component/ApriCassaBox.test.jsx]
+    test_cases:
+      - tests/component/ApriCassaBox.test.jsx
+      - tests/unit/coda.test.js
 
   - id: REQ-CASSA-003
     title: "La carta non finisce mai nei contanti"

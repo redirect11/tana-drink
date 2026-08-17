@@ -555,9 +555,14 @@ export default function OrderStatusPage() {
           <p className="muted" style={{ marginTop: 0, fontSize: '0.85rem' }}>
             ✍️ Ordine inserito da {placedByName(order.placed_by)}
           </p>
+          {/* IL QR SERVE SE C'È QUALCOSA DA SEGUIRE. Il cliente lo scansiona
+              per vedere a che punto è il suo drink: senza gli stati del
+              servizio non c'è nessun punto da vedere — la pagina dice solo
+              cosa ha ordinato — e offrirlo è promettere una cosa che non
+              succede. */}
           {viewerIsStaff && (
             <>
-              {!showQr ? (
+              {settings.workflow_enabled === false ? null : !showQr ? (
                 <button className="btn secondary block" onClick={() => setShowQr(true)}>
                   📲 Mostra QR al cliente
                 </button>
