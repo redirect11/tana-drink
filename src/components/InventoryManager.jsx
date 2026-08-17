@@ -1365,11 +1365,9 @@ function CaricoForm({ item, onCancel, onConfirm }) {
 
 // ── COME SI COMPILA UNA SCHEDA PRODOTTO ──────────────────────────────
 //
-// Tre domande, sempre le stesse, e la terza compare solo quando serve. È il
-// modello nato dalle note di Flavio del 17 agosto (REQ-MAG-016): in
-// magazzino ci finiscono cose lontanissime — il gin a bottiglia, i limoni al
-// chilo, il ghiaccio a sacchi, il tempo di lavoro — e prima ognuna chiedeva
-// la sua configurazione.
+// Tre domande, sempre le stesse (REQ-MAG-016). Il testo è asciutto di
+// proposito: chi lo apre sta compilando, non leggendo — deve trovare la
+// definizione e l'esempio, e chiudere.
 function AiutoProdotto({ onClose }) {
   return (
     <div className="overlay confirm-overlay" onClick={onClose}>
@@ -1380,42 +1378,44 @@ function AiutoProdotto({ onClose }) {
         onClick={(e) => e.stopPropagation()}
       >
         <h3 style={{ marginTop: 0 }}>Come si compila</h3>
-        <p className="muted small" style={{ marginTop: 0 }}>
-          Tre domande, e la terza quasi sempre si salta.
-        </p>
 
-        <h4 style={{ margin: '14px 0 4px' }}>1 · Come lo compri</h4>
+        <h4 style={{ margin: '14px 0 2px' }}>1 · Come lo compri</h4>
         <p className="small" style={{ margin: 0 }}>
-          L&apos;unità in cui <strong>conti la giacenza</strong> sullo scaffale
-          e in cui c&apos;è il <strong>prezzo</strong>: bottiglie, chili,
-          litri, sacchi. L&apos;inventario si fa contando quello che si vede.
+          L&apos;unità in cui conti la giacenza e in cui è espresso il prezzo:
+          bottiglia, chilo, litro, sacco.
         </p>
 
-        <h4 style={{ margin: '14px 0 4px' }}>2 · Come lo usi in ricetta</h4>
+        <h4 style={{ margin: '14px 0 2px' }}>2 · Come lo usi in ricetta</h4>
         <p className="small" style={{ margin: 0 }}>
-          Con che unità lo dosi in un drink: cl, grammi, pezzi, unità. Il gin
-          si compra a bottiglia e si versa a <strong>cl</strong>; una Coca si
-          compra e si serve a <strong>pezzo</strong>.
+          L&apos;unità con cui lo dosi in un drink: cl, grammi, pezzi, unità.
         </p>
 
-        <h4 style={{ margin: '14px 0 4px' }}>3 · Quanto rende</h4>
+        <h4 style={{ margin: '14px 0 2px' }}>3 · Quanto rende</h4>
         <p className="small" style={{ margin: 0 }}>
-          Solo se le prime due sono diverse: <strong>1 bottiglia = 70 cl</strong>,{' '}
-          <strong>1 kg di limoni = 50 cl</strong> di succo,{' '}
-          <strong>1 confezione = 10 U</strong>. Non è una conversione da
-          manuale — peso e volume non si convertono — è la <strong>resa</strong>,
-          e la sa chi spreme i limoni. Da lì escono lo scarico dal magazzino e
-          il costo di quello che si versa.
+          Compare solo se le prime due sono diverse. Dice quanto rende una
+          unità di quello che compri:
+        </p>
+        <ul className="small" style={{ margin: '4px 0 0', paddingLeft: 18 }}>
+          <li>1 bottiglia = 70 cl</li>
+          <li>1 kg di limoni = 50 cl di succo</li>
+          <li>1 confezione = 10 U</li>
+        </ul>
+        <p className="small" style={{ margin: '4px 0 0' }}>
+          Da questo numero escono lo scarico dal magazzino e il costo di
+          quello che si versa. Senza, il costo resta ignoto e la giacenza non
+          si scala.
         </p>
 
-        <p className="muted small" style={{ marginTop: 14 }}>
-          Il <strong>tempo di lavorazione</strong> e le altre voci in «unità
-          generiche» non sono una scorta: entrano nel costo del drink, ma non
-          si scaricano, non finiscono mai e in carta non compaiono.
+        <h4 style={{ margin: '14px 0 2px' }}>Unità generiche (U)</h4>
+        <p className="small" style={{ margin: 0 }}>
+          Per quello che non si versa e non si pesa. In carta non compare.
+          Se è una scorta — il ghiaccio — va segnata la casella: si scarica
+          come gli altri prodotti. Il tempo di lavorazione no: entra solo nel
+          costo del drink.
         </p>
 
         <button type="button" className="btn block" style={{ marginTop: 16 }} onClick={onClose}>
-          Ho capito
+          Chiudi
         </button>
       </div>
     </div>
