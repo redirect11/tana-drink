@@ -188,10 +188,20 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   const [showPayment, setShowPayment] = useState(false)
   const [showStoria, setShowStoria] = useState(false)
   // Chi sta usando l'app: la storia deve dire CHI ha riaperto il conto.
+  // CHI SONO IO, nella forma che la storia sa scrivere: nome e, se si sa,
+  // ruolo. Prima era una stringa e basta, e nella stessa storia la stessa
+  // persona compariva con tre etichette diverse.
   const chiSonoIo = () =>
-    auth.currentUser?.displayName ||
-    String(auth.currentUser?.email || '').split('@')[0] ||
-    null
+    auth.currentUser
+      ? {
+          name: auth.currentUser.displayName || null,
+          email: auth.currentUser.email || null,
+          role: staffRef.current?.role || null,
+        }
+      : null
+  // Il proprio ruolo, sempre a portata: serve a firmare le cose che si fanno
+  // (vedi chiSonoIo) senza dipendere dall'ordine dei render.
+  const staffRef = useRef(null)
   const [showRipristino, setShowRipristino] = useState(false)
   const [askName, setAskName] = useState(false) // modale nome (creazione)
   const [settings, setSettings] = useState(settingsIniziali)
@@ -361,7 +371,9 @@ export default function OrderPosDetail({ order: orderProp = null }) {
         const token = await u.getIdTokenResult()
         const role = token.claims.role
         if (isPersonale(role)) {
-          setStaff({ email: u.email, name: u.displayName || u.email, role })
+          const io = { email: u.email, name: u.displayName || u.email, role }
+          staffRef.current = io
+          setStaff(io)
         }
       } catch {
         setStaff(null)

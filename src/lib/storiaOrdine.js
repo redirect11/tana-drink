@@ -22,6 +22,42 @@ const iso = (v) => {
   return null
 }
 
+// CHI HA FATTO LA COSA, scritto sempre allo stesso modo. La stessa persona
+// compariva tre volte con tre nomi diversi nella stessa storia:
+// «banco@tana.local» all'apertura (l'email), «bartender» all'annullo (il
+// RUOLO, che era l'unica cosa che quella strada scriveva) e «banco» alla
+// riapertura. Chi legge deve poter dire «è stato lui» a colpo d'occhio.
+//
+// Si scrive il NOME. Il ruolo, se si sa, va fra parentesi — a volte serve
+// («chi l'ha annullato aveva le chiavi?»). L'email non serve mai: è un
+// indirizzo, non una persona.
+const RUOLI_NOTI = new Set(['admin', 'bartender', 'staff', 'cliente'])
+
+export function attore(chi) {
+  if (!chi) return null
+  if (typeof chi === 'string') {
+    const v = chi.trim()
+    if (!v) return null
+    // Una strada vecchia scriveva solo il ruolo: meglio quello che niente.
+    if (RUOLI_NOTI.has(v.toLowerCase())) return v.toLowerCase()
+    return soloNome(v)
+  }
+  const nome = soloNome(chi.name) || soloNome(chi.email)
+  const ruolo = chi.role || chi.ruolo || null
+  if (!nome) return ruolo ? String(ruolo).toLowerCase() : null
+  return ruolo && String(ruolo).toLowerCase() !== nome.toLowerCase()
+    ? `${nome} (${String(ruolo).toLowerCase()})`
+    : nome
+}
+
+// «banco@tana.local» → «banco». Quello che sta prima della chiocciola è il
+// nome con cui si chiamano fra loro; il dominio non lo legge nessuno.
+function soloNome(v) {
+  const s = String(v || '').trim()
+  if (!s) return null
+  return s.includes('@') ? s.split('@')[0] : s
+}
+
 // Un evento: { at, tipo, titolo, dettaglio, chi }
 // tipo ∈ 'aperto' | 'chiuso' | 'annullato' | 'riaperto'
 export function storiaOrdine(order) {
@@ -40,7 +76,7 @@ export function storiaOrdine(order) {
       tipo: 'aperto',
       titolo: 'Conto aperto',
       dettaglio: null,
-      chi: order.placed_by?.name || order.placed_by?.email || null,
+      chi: attore(order.placed_by),
     })
   }
 
@@ -65,7 +101,9 @@ export function storiaOrdine(order) {
       tipo: 'annullato',
       titolo: 'Conto annullato',
       dettaglio: order.cancel_message || order.cancel_phrase || null,
-      chi: order.cancelled_by || null,
+      // La persona se c'è; sui conti annullati prima che la si scrivesse
+      // resta il ruolo, che è quello che c'era.
+      chi: attore(order.cancelled_persona) || attore(order.cancelled_by),
     })
   }
 
@@ -96,7 +134,7 @@ export function storiaOrdine(order) {
       tipo: 'riaperto',
       titolo: 'Conto riaperto',
       dettaglio: [r.motivo || null, soldi].filter(Boolean).join(' · ') || null,
-      chi: r.chi || null,
+      chi: attore(r.chi),
     })
   }
 

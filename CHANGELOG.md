@@ -12,6 +12,10 @@
 - **Annullare un conto appena battuto lascia un conto annullato**, anche se
   l'ordine non era ancora nato: il numero era già stato preso e di quello
   che si è battuto resta traccia.
+- **Nella storia del conto la stessa persona si chiama sempre allo stesso
+  modo**: il nome, con il ruolo fra parentesi. Prima compariva tre volte
+  con tre etichette diverse — l'email all'apertura, il ruolo all'annullo,
+  il nome alla riapertura.
 - **La storia del conto non perde più pezzi**: «Conto aperto» compare anche
   prima che il server risponda, e restano tutte le chiusure, non solo
   l'ultima.

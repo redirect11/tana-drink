@@ -212,6 +212,7 @@ function mapOrder(snap) {
     tempi_conto: o.status_times ?? {},
     riaperture: (o.riaperture || []).map((r) => ({ ...r, at: toIso(r.at) })),
     cancelled_by: o.cancelled_by ?? null,
+    cancelled_persona: o.cancelled_persona ?? null,
     cancelled_device: o.cancelled_device ?? null,
     cancel_kind: o.cancel_kind ?? null,
     cancel_phrase: o.cancel_phrase ?? null,
@@ -2776,6 +2777,10 @@ export async function cancelOrder(id, opts = {}) {
       : {}),
     [`status_times.${ORDER_STATUSES.ANNULLATO}`]: nowIso,
     cancelled_by: by,
+    // E CHI, di persona: `cancelled_by` dice solo se è stato il cliente o il
+    // banco, e nella storia del conto compariva «bartender» mentre le altre
+    // righe dicevano il nome. Tre etichette diverse per la stessa persona.
+    cancelled_persona: chiIncassa(),
     // DA QUALE TERMINALE. Serve a non ripetere l'avviso a chi ha appena
     // annullato: lo sa già. Stesso metro degli ordini (placed_by.device).
     cancelled_device: idDispositivo(),

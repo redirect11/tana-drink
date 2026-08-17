@@ -6,7 +6,12 @@
 // misteri, a fine serata, diventano una cassa che non torna.
 
 import { describe, it, expect } from 'vitest'
-import { storiaOrdine, ultimaRiapertura, ripristinabile } from '../../src/lib/storiaOrdine.js'
+import {
+  storiaOrdine,
+  ultimaRiapertura,
+  ripristinabile,
+  attore,
+} from '../../src/lib/storiaOrdine.js'
 
 const conto = (over = {}) => ({
   id: 'o1',
@@ -203,5 +208,55 @@ describe('la storia del conto non perde pezzi', () => {
       ],
     })
     expect(eventi.filter((e) => e.tipo === 'chiuso')).toHaveLength(1)
+  })
+})
+
+// LA STESSA PERSONA, SCRITTA SEMPRE ALLO STESSO MODO. Nella stessa storia
+// compariva tre volte con tre etichette diverse: «banco@tana.local»
+// all'apertura (l'email), «bartender» all'annullo (il ruolo, l'unica cosa
+// che quella strada scriveva) e «banco» alla riapertura. Chi legge deve
+// poter dire «è stato lui» a colpo d'occhio.
+describe('chi ha fatto la cosa', () => {
+  it('si scrive il nome, non l’email', () => {
+    expect(attore({ email: 'banco@tana.local' })).toBe('banco')
+    expect(attore('banco@tana.local')).toBe('banco')
+  })
+
+  it('il ruolo sta fra parentesi, se si sa', () => {
+    expect(attore({ name: 'Flavio', email: 'f@tana.local', role: 'bartender' })).toBe(
+      'Flavio (bartender)'
+    )
+  })
+
+  it('e non si ripete quando nome e ruolo sono la stessa parola', () => {
+    expect(attore({ name: 'banco', role: 'banco' })).toBe('banco')
+  })
+
+  it('sui conti vecchi resta il ruolo: è quello che c’era', () => {
+    expect(attore('bartender')).toBe('bartender')
+  })
+
+  it('senza niente, niente', () => {
+    expect(attore(null)).toBe(null)
+    expect(attore({})).toBe(null)
+    expect(attore('  ')).toBe(null)
+  })
+
+  it('nella storia le tre righe dicono lo stesso nome', () => {
+    const eventi = storiaOrdine({
+      created_at: '2026-08-17T10:00:00.000Z',
+      status_times: { aperto: '2026-08-17T10:00:00.000Z', annullato: '2026-08-17T10:03:00.000Z' },
+      placed_by: { email: 'banco@tana.local', name: 'banco@tana.local', role: 'admin' },
+      cancelled_by: 'bartender',
+      cancelled_persona: { email: 'banco@tana.local', name: null, role: 'admin' },
+      riaperture: [
+        { at: '2026-08-17T10:04:00.000Z', chi: { name: 'banco', role: 'admin' } },
+      ],
+    })
+    expect(eventi.map((e) => e.chi)).toEqual([
+      'banco (admin)',
+      'banco (admin)',
+      'banco (admin)',
+    ])
   })
 })
