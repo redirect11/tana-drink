@@ -13,6 +13,13 @@
   «Conferma» e il conto a schermo, e due conti battuti di fila potevano
   prendere lo stesso numero (i due #15 della stessa serata). Ora i numeri
   sono già in casa e ci si ricorda quelli dati.
+- **Due terminali che battono insieme non litigano più sul numero**: se il
+  telefono della sala e il tablet del banco prendono lo stesso #15, il
+  server decide — tiene il numero chi è arrivato prima, l'altro passa al
+  primo libero da solo, e sul conto resta scritto da quale numero veniva
+  (la comanda può essere già uscita dalla stampante).
+- **Tornare agli ordini non aspetta più il server**: il box del nome
+  compare subito e il conto si scrive per conto suo.
 - **Il «+» apre sempre un conto nuovo**: capitava che riaprisse quello
   appena battuto.
 

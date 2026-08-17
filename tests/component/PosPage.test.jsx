@@ -454,3 +454,21 @@ describe('box del nome: modale', () => {
     expect(updateOrderInfo).not.toHaveBeenCalled()
   })
 })
+
+// IL BOX DEL NOME NON ASPETTA LA CREAZIONE. Prima si aspettava che il conto
+// fosse nato per sapere se chiedere il nome — e siccome il nome lo si sa già
+// dalla schermata (è quello che si è scritto, o non si è scritto, lì),
+// l'unica cosa che quell'attesa produceva era il box in ritardo: al banco,
+// col server lento, secondi buoni con la schermata ferma.
+describe('uscire dal conto non aspetta il server', () => {
+  it('il box del nome compare subito, la creazione va avanti da sé', async () => {
+    const user = userEvent.setup()
+    // La creazione non risponde: prima bastava a tenere fermo tutto.
+    createOrder.mockImplementationOnce(() => new Promise(() => {}))
+    mount()
+    await user.click(screen.getByText('Mojito'))
+    await user.click(screen.getByRole('button', { name: /Torna agli ordini/ }))
+    expect(await screen.findByLabelText('Nome')).toBeInTheDocument()
+  })
+
+})
