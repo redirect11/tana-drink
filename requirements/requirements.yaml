@@ -257,6 +257,15 @@ requirements:
       conto appena battuto, senza aspettare che esista sul server. E la
       bozza si svuota all'istante: aspettare la scrittura voleva dire
       aprire il conto dopo e trovarci dentro le righe di quello prima.
+      E QUELLO CHE SI SCRIVE ARRIVA AGLI ALTRI DA SÉ. Ogni modifica entra
+      prima nella memoria locale e parte per il server in sottofondo: gli
+      altri terminali la vedono comparire senza che nessuno prema niente.
+      Offline le scritture non falliscono — restano in coda dentro Firestore,
+      che le conserva anche a app chiusa, e partono appena c'è linea. Quelle
+      RIFIUTATE (un errore vero, la rete che si chiude a metà) si riprovano
+      da sole al ritorno della rete, fino a tre volte: oltre, restano lì e lo
+      dice la campanella, perché una scrittura che continua a essere
+      rifiutata ha bisogno di una persona, non di un altro tentativo.
       E NIENTE ASPETTA IL SERVER. Ogni azione su un conto — incassare,
       annullare, avanzare, aggiungere righe — leggeva il documento dal
       SERVER prima di scrivere: da lì il ritardo fra il tocco e la coda che
@@ -275,6 +284,7 @@ requirements:
       - tests/unit/progressivi.test.js
       - tests/bdd/numerazione.test.js
       - tests/component/PosPage.test.jsx
+      - tests/unit/sync.test.js
 
   - id: REQ-PAG-010
     title: "Si vede che cosa è stato pagato, e cosa copre"
@@ -289,7 +299,10 @@ requirements:
       E si dice cosa copre. Un importo battuto a mano — «30 €» — NON copre
       nessuna riga: sono soldi lasciati sul conto, e si chiama ACCONTO.
       Chi paga scegliendo le righe copre esattamente quelle, e sotto
-      l'incasso si leggono («2× Daiquiri · 1× Birra»). Attribuire delle
+      l'incasso si leggono («2× Daiquiri · 1× Birra»). Non c'è una riga di
+      istruzioni sopra le righe: a dire da dove viene il numero ci pensa
+      l'etichetta sopra l'importo — «RIGHE SCELTE» o «IMPORTO A MANO» — che
+      si legge nel momento in cui serve. Attribuire delle
       righe a un importo battuto a mano vorrebbe dire inventarselo: se
       servono attribuite, si scelgono nella schermata di pagamento — che è
       esattamente a cosa serve la selezione a sinistra.

@@ -480,16 +480,10 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
             {order.customer_name && (
               <p style={{ margin: '10px 0 2px', fontWeight: 600 }}>{order.customer_name}</p>
             )}
-            {/* IL MECCANISMO C'ERA MA NON SI VEDEVA. Le righe col −/+ sembrano
-                un riepilogo, e invece scegliendole si compone il totale da
-                pagare: chi non lo sapeva batteva l'importo a mano — che è
-                un'altra cosa, un acconto che non copre nessuna riga. Una
-                frase, sopra le righe, prima che si tocchi qualcosa. */}
-            {remaining.length > 0 && !splitting && !manual && (
-              <p className="muted small" style={{ margin: '8px 0 2px' }}>
-                Scegli le righe che sta pagando: il totale si compone da sé.
-              </p>
-            )}
+            {/* Niente istruzioni sopra le righe: chi incassa le tocca e vede
+                il totale muoversi. A dire da dove viene il numero ci pensa
+                l'etichetta sopra l'importo — «RIGHE SCELTE» o «IMPORTO A
+                MANO» — che si legge nel momento in cui serve. */}
             {remaining.some((r) => r.qty > 1) && (
               <button
                 className="btn ghost small"

@@ -610,11 +610,6 @@ describe('vista separata: righe come tutte le altre', () => {
 // meccanismo c'era, ma le righe col −/+ sembravano un riepilogo: chi non lo
 // sapeva batteva l'importo a mano e poi non capiva cosa fosse stato pagato.
 describe('righe scelte o importo a mano', () => {
-  it('lo dice prima che si tocchi qualcosa', () => {
-    mount(baseOrder())
-    expect(screen.getByText(/il totale si compone da sé/i)).toBeInTheDocument()
-  })
-
   it('scegliendo le righe il totale si compone, e si vede da dove viene', async () => {
     const user = userEvent.setup()
     mount(baseOrder())
