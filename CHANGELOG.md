@@ -4,6 +4,14 @@
 
 ### Al banco
 
+- **Il conto nasce all'istante e non si sdoppia.** Prima di scrivere un
+  ordine l'app faceva tre domande al server: da lì l'attesa fra
+  «Conferma» e il conto a schermo, e due conti battuti di fila potevano
+  prendere lo stesso numero (i due #15 della stessa serata). Ora i numeri
+  sono già in casa e ci si ricorda quelli dati.
+- **Il «+» apre sempre un conto nuovo**: capitava che riaprisse quello
+  appena battuto.
+
 - **La cassa si apre e si chiude dalla coda**: nel menu ⋯ c'è «Apri cassa»
   se è chiusa e «Chiudi cassa» se è aperta — spento, con il perché
   scritto, finché ci sono conti aperti. «Apri cassa» chiede il fondo

@@ -391,6 +391,18 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   // altro e lasciare il primo per strada, con dentro quello che era già
   // stato battuto. Solo se è ancora aperto: un conto chiuso non si
   // riapre.
+  // USCENDO DAL POS SI DIMENTICA. Il «+» deve aprire un conto NUOVO: la
+  // memoria del conto in corso serve solo a riprenderlo dopo un
+  // RICARICAMENTO della pagina — dove questa pulizia non gira, perché il
+  // programma muore e basta. Uscendo a mano invece gira, e premendo «+» non
+  // ci si ritrova dentro il conto appena battuto.
+  useEffect(
+    () => () => {
+      if (!orderProp) ricordaContoInCorso(null)
+    },
+    [orderProp]
+  )
+
   useEffect(() => {
     if (orderProp || selfOrder) return undefined
     const id = contoInCorso()
@@ -1080,6 +1092,17 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   // continua come nella modifica (aggiunte confermate al volo). Il nome si
   // chiede solo all'uscita, se manca.
   const creatingRef = useRef(false)
+  // LA CHIAVE DELLA BATTUTA. Identifica QUESTA creazione: se la richiesta
+  // parte due volte — l'auto-creazione mentre si preme «Paga», un doppio
+  // tocco — il conto resta uno solo (vedi createOrder). Non cambia finché
+  // la schermata resta in creazione.
+  const chiaveBattutaRef = useRef(null)
+  const chiaveBattuta = () => {
+    if (!chiaveBattutaRef.current) {
+      chiaveBattutaRef.current = `pos-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    }
+    return chiaveBattutaRef.current
+  }
   // Promise dell'ordine in creazione: chi arriva mentre la creazione è in volo
   // (es. il tasto Pagamento) deve ASPETTARE questo, non creare un secondo
   // ordine — altrimenti si ritrovano due conti con lo stesso nome/tavolo.
@@ -1102,6 +1125,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
           note: info.note || null,
           customer_name: info.customer_name.trim() || null,
           items,
+          client_temp_id: chiaveBattuta(),
           placed_by: placedBy(),
           status: statoIniziale,
           service_mode: modoConsegna,
@@ -1212,6 +1236,7 @@ export default function OrderPosDetail({ order: orderProp = null }) {
         note: info.note || null,
         customer_name: info.customer_name.trim() || null,
         items,
+        client_temp_id: chiaveBattuta(),
         placed_by: placedBy(),
         status: statoIniziale,
         service_mode: modoConsegna,
