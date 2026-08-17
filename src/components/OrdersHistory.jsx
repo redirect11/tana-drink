@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { subscribeOrdersHistory, fetchOrdersRange, subscribeSettings, DEFAULT_SETTINGS } from '../lib/api.js'
 import SelettorePeriodo from './SelettorePeriodo.jsx'
+import Caricamento from './Caricamento.jsx'
 import { businessDayKey } from '../lib/businessDay.js'
 import { isPersonale } from '../lib/ruoli.js'
 import { formatPrice, ORDER_STATUSES, PAYMENT_METHOD_LABELS } from '../lib/orderStatus.js'
@@ -183,7 +184,7 @@ export default function OrdersHistory() {
       )}
 
       {error && <div className="banner">Errore: {error}</div>}
-      {(loading || cercando) && <p className="muted small">Carico lo storico…</p>}
+      {(loading || cercando) && <Caricamento piccolo testo="Cerco i conti…" />}
       {!loading && !cercando && visibili.length === 0 && (
         <p className="muted small">Nessun ordine con questi filtri.</p>
       )}

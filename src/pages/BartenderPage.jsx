@@ -72,6 +72,7 @@ import UtentiTab from '../components/UtentiTab.jsx'
 import VipTab from '../components/VipTab.jsx'
 import ServiceQueue from '../components/ServiceQueue.jsx'
 import StaffCallList from '../components/StaffCallList.jsx'
+import Caricamento from '../components/Caricamento.jsx'
 import ApriCassaBox from '../components/ApriCassaBox.jsx'
 import GroupsPanel from '../components/GroupsPanel.jsx'
 import GroupView from '../components/GroupView.jsx'
@@ -199,7 +200,7 @@ export default function BartenderPage() {
   }, [wideTab, tab])
 
   if (user === undefined || (user && role === null)) {
-    return <div className="empty">Verifica accesso…</div>
+    return <Caricamento testo="Ti sto facendo entrare…" />
   }
   if (!user) return <LoginForm />
 

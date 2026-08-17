@@ -6106,3 +6106,77 @@ a.storico-notifica:hover {
   flex-wrap: wrap;
   margin: 8px 12px;
 }
+
+/* ── «UN ATTIMO» DETTO BENE ───────────────────────────────────────────
+   Una scritta ferma su una pagina vuota non si distingue da un'app
+   piantata. Tre bollicine che salgono dicono la stessa cosa e dicono anche
+   che qualcosa si muove. Niente percentuale: non sappiamo quanto ci vuole,
+   e una barra che si ferma a metà è peggio del silenzio. */
+.caricamento {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 40px 16px;
+  color: var(--muted);
+}
+.caricamento.piccolo {
+  flex-direction: row;
+  gap: 8px;
+  padding: 6px 0;
+}
+.caricamento-bolle {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 22px;
+}
+.caricamento-bolle i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--accent-2);
+  opacity: 0.85;
+  animation: bollicina 1.1s ease-in-out infinite;
+}
+.caricamento.piccolo .caricamento-bolle i {
+  width: 6px;
+  height: 6px;
+}
+.caricamento-bolle i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.caricamento-bolle i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+.caricamento-testo {
+  font-size: 0.9rem;
+}
+@keyframes bollicina {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.35;
+  }
+  50% {
+    transform: translateY(-9px);
+    opacity: 1;
+  }
+}
+/* Chi ha chiesto meno animazioni non deve vedere niente saltare: restano
+   tre pallini che respirano. */
+@media (prefers-reduced-motion: reduce) {
+  .caricamento-bolle i {
+    animation: respiro 1.6s ease-in-out infinite;
+  }
+  @keyframes respiro {
+    0%,
+    100% {
+      opacity: 0.35;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+}
