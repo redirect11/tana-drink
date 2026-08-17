@@ -108,3 +108,19 @@ export function svuotaArchivio() {
   persist()
   emit()
 }
+
+// ── USCENDO SI DIMENTICA TUTTO ───────────────────────────────────────
+//
+// Gli avvisi sono di CHI li ha ricevuti: parlano dei suoi ordini, dei conti
+// del suo locale. Restando in memoria dopo il logout, il telefono passato a
+// un altro — o il tablet ripreso da un cliente — mostrava la serata di prima
+// dentro la campanella. Non è «archivio», è roba di qualcun altro.
+//
+// Diverso da svuotaArchivio, che tiene quelle ancora da leggere: qui non
+// resta niente, perché non c'è più nessuno a cui potrebbero servire.
+export function dimenticaTutto() {
+  items = []
+  persist()
+  emit()
+}
+
