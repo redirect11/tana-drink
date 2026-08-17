@@ -1201,6 +1201,29 @@ requirements:
     labels: [ux, ordini]
     test_cases: [tests/component/OrderPosDetail.test.jsx]
 
+  - id: REQ-MENU-010
+    title: "Come si fa questo drink: la ⓘ sulla card"
+    area: "src/components/SchedaDrink.jsx, src/components/PosBits.jsx, src/components/DrinkForm.jsx"
+    description: >
+      Ogni card della griglia ha una ⓘ che apre la scheda del prodotto:
+      ingredienti CON LE QUANTITÀ e come si prepara. «Quanto gin ci va nel
+      Negroni?» al banco si chiede a voce, e a voce si perde: chi entra a
+      dare una mano il sabato non ha le dosi in testa, e l'unico che le sa
+      sta facendo drink.
+      La ricetta strutturata c'era già — serve al magazzino per scalare le
+      scorte — ma non la vedeva nessuno; e non basta: dice COSA ci va, non
+      il gesto. Nella scheda del prodotto (Menù) c'è quindi anche «Come si
+      prepara», scrittura libera: shakerato o mescolato, il ghiaccio,
+      l'ordine, il bicchiere. Gli a capo restano dove li ha messi chi l'ha
+      scritta, perché una preparazione è una sequenza di gesti.
+      La ⓘ sta in basso a destra, lontana dai +/− e dalla stella: si guarda
+      mentre si versa e non si preme per sbaglio. In «organizza» non c'è:
+      lì le card si spostano, non si leggono.
+    status: implemented
+    generate_issue: false
+    labels: [menu, ux]
+    test_cases: [tests/component/SchedaDrink.test.jsx]
+
   - id: REQ-UI-014
     title: "La barra delle sezioni si stringe a icone, o si toglie di mezzo"
     area: "src/components/CategoryRail.jsx, src/index.css"

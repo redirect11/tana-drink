@@ -10,6 +10,7 @@ import { qtyBtnStyle } from '../lib/posStyles.js'
 export function DrinkTile({
   drink,
   qty,
+  onInfo,
   onAdd,
   onSetQty,
   // DUE SEGNI, DUE COSE. `color` è il colore del PRODOTTO e sta nella
@@ -91,6 +92,38 @@ export function DrinkTile({
           }}
         >
           {favorite ? '★' : '☆'}
+        </button>
+      )}
+
+      {/* LA ⓘ: com'è fatto questo drink. La domanda «quanto gin ci va?» al
+          banco si fa a voce e a voce si perde — chi entra a dare una mano
+          il sabato non ha le dosi in testa. Sta in basso a destra, lontana
+          dai +/− e dalla stella: si guarda, non si preme per sbaglio. */}
+      {onInfo && (
+        <button
+          type="button"
+          aria-label={`Come si fa ${drink.name}`}
+          title={`Come si fa ${drink.name}`}
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation()
+            onInfo()
+          }}
+          style={{
+            position: 'absolute',
+            bottom: 2,
+            right: 4,
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: '0.8em',
+            lineHeight: 1,
+            padding: 2,
+            opacity: 0.4,
+            zIndex: 2,
+          }}
+        >
+          ⓘ
         </button>
       )}
 

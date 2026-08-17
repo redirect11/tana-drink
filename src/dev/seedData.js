@@ -91,7 +91,7 @@ export const DRINKS = [
   {
     cat: 'aperitivi', name: 'Spritz Campari', price: 6.0,
     description: 'Amaro e vivace, con Campari',
-    recipe: '4cl Campari, 6cl prosecco, soda, arancia',
+    recipe: 'Ghiaccio nel calice, Campari e prosecco, un dito di soda.\nMescola piano e fetta d’arancia.',
     recipe_items: [
       { item: 'Campari', qty: 40 },
       { item: 'Prosecco', qty: 60 },
@@ -102,7 +102,7 @@ export const DRINKS = [
   {
     cat: 'aperitivi', name: 'Negroni Sbagliato', price: 7.0,
     description: 'Il Negroni col prosecco al posto del gin',
-    recipe: '3cl Campari, 3cl vermouth rosso, 4cl prosecco',
+    recipe: 'Ghiaccio nel tumbler, Campari e vermouth, prosecco per ultimo.\nMescola una volta sola: le bollicine non si girano. Mezza fetta d’arancia.',
     recipe_items: [
       { item: 'Campari', qty: 30 },
       { item: 'Vermouth Rosso', qty: 30 },
@@ -112,7 +112,7 @@ export const DRINKS = [
   {
     cat: 'aperitivi', name: 'Hugo', price: 7.0,
     description: 'Fresco e floreale con sciroppo di sambuco e menta',
-    recipe: '8cl prosecco, soda, menta, lime',
+    recipe: 'Calice pieno di ghiaccio, menta schiacciata appena con le mani.\nProsecco, un dito di soda, lime.',
     recipe_items: [
       { item: 'Prosecco', qty: 80 },
       { item: 'Soda Water', qty: 20 },
@@ -124,7 +124,7 @@ export const DRINKS = [
   {
     cat: 'classici', name: 'Negroni', price: 8.0,
     description: 'Il classico italiano per eccellenza',
-    recipe: '3cl gin, 3cl Campari, 3cl vermouth rosso',
+    recipe: 'Tumbler basso, ghiaccio grande. Gin, Campari, vermouth.\nMescola dieci secondi, scorza d’arancia strizzata sopra.',
     recipe_items: [
       { item: 'Gin', qty: 30 },
       { item: 'Campari', qty: 30 },
@@ -134,7 +134,7 @@ export const DRINKS = [
   {
     cat: 'classici', name: 'Old Fashioned', price: 9.0,
     description: 'Bourbon, zucchero e angostura',
-    recipe: '6cl bourbon, zucchero di canna, angostura',
+    recipe: 'Zucchero e angostura sul fondo, bagna col bourbon e sciogli.\nGhiaccio grande, resto del bourbon, mescola. Scorza d’arancia.',
     recipe_items: [
       { item: 'Bourbon', qty: 60 },
       { item: 'Zucchero di Canna', qty: 5 },
@@ -143,7 +143,7 @@ export const DRINKS = [
   {
     cat: 'classici', name: 'Manhattan', price: 9.0,
     description: 'Bourbon e vermouth, elegante e deciso',
-    recipe: '5cl bourbon, 2.5cl vermouth rosso, angostura',
+    recipe: 'Mixing glass col ghiaccio: bourbon, vermouth, due gocce di angostura.\nMescola, filtra in coppetta fredda. Ciliegia.',
     recipe_items: [
       { item: 'Bourbon', qty: 50 },
       { item: 'Vermouth Rosso', qty: 25 },
@@ -152,7 +152,7 @@ export const DRINKS = [
   {
     cat: 'classici', name: 'Mojito', price: 8.0,
     description: 'Rum, lime, menta e soda: il fresco cubano',
-    recipe: '5cl rum bianco, lime, menta, zucchero, soda',
+    recipe: 'Lime a spicchi e zucchero nel bicchiere, pesta piano.\nMenta schiacciata con le mani, rum, ghiaccio tritato, soda.\nMescola dal fondo verso l’alto.',
     recipe_items: [
       { item: 'Rum Bianco', qty: 50 },
       { item: 'Lime Fresco', qty: 0.5 },
@@ -164,7 +164,7 @@ export const DRINKS = [
   {
     cat: 'classici', name: 'Daiquiri', price: 8.0,
     description: 'Rum, lime e sciroppo: semplice e perfetto',
-    recipe: '5cl rum bianco, 2cl succo lime, 1.5cl sciroppo',
+    recipe: 'Shaker con ghiaccio: rum, lime, sciroppo.\nShakera forte, filtra in coppetta fredda.',
     recipe_items: [
       { item: 'Rum Bianco', qty: 50 },
       { item: 'Succo di Lime', qty: 20 },
@@ -174,7 +174,7 @@ export const DRINKS = [
   {
     cat: 'classici', name: 'Margarita', price: 8.0,
     description: 'Tequila, Cointreau e lime sul bordo salato',
-    recipe: '5cl tequila, 2cl Cointreau, 2cl succo lime, sale',
+    recipe: 'Bordo del bicchiere col sale, solo mezzo giro.\nShaker: tequila, Cointreau, lime. Shakera e filtra.',
     recipe_items: [
       { item: 'Tequila Blanco', qty: 50 },
       { item: 'Cointreau', qty: 20 },
@@ -185,7 +185,7 @@ export const DRINKS = [
   {
     cat: 'classici', name: 'Cosmopolitan', price: 8.0,
     description: 'Vodka, Cointreau, cranberry e lime',
-    recipe: '4cl vodka, 1.5cl Cointreau, 3cl cranberry, 1cl lime',
+    recipe: 'Shaker con ghiaccio: vodka, Cointreau, cranberry, lime.\nShakera, filtra in coppetta. Scorza di limone.',
     recipe_items: [
       { item: 'Vodka', qty: 40 },
       { item: 'Cointreau', qty: 15 },
@@ -196,7 +196,7 @@ export const DRINKS = [
   {
     cat: 'classici', name: 'Gin Tonic', price: 8.0,
     description: 'Gin e tonica artigianale, guarnito con botaniche',
-    recipe: '5cl gin, 15cl acqua tonica',
+    recipe: 'Balloon pieno di ghiaccio, gin, tonica versata sul cucchiaio.\nMescola una volta. Scorza di limone.',
     recipe_items: [
       { item: 'Gin', qty: 50 },
       { item: 'Acqua Tonica', qty: 150 },
@@ -205,7 +205,7 @@ export const DRINKS = [
   {
     cat: 'classici', name: 'Moscow Mule', price: 8.0,
     description: 'Vodka, ginger beer e lime nel mug di rame',
-    recipe: '5cl vodka, 15cl ginger beer, 1.5cl lime',
+    recipe: 'Tazza di rame col ghiaccio: vodka, lime, ginger beer.\nMescola piano, lime a spicchio.',
     recipe_items: [
       { item: 'Vodka', qty: 50 },
       { item: 'Ginger Beer', qty: 150 },
@@ -215,7 +215,7 @@ export const DRINKS = [
   {
     cat: 'classici', name: 'Americano', price: 6.0,
     description: 'Campari, vermouth e soda: leggero e bitter',
-    recipe: '3cl Campari, 3cl vermouth rosso, soda',
+    recipe: 'Tumbler col ghiaccio: Campari e vermouth, soda a colmare.\nFetta d’arancia.',
     recipe_items: [
       { item: 'Campari', qty: 30 },
       { item: 'Vermouth Rosso', qty: 30 },
@@ -226,7 +226,7 @@ export const DRINKS = [
   {
     cat: 'signature', name: 'Il Coniglio', price: 10.0,
     description: 'Il nostro signature: gin, Aperol, lime e prosecco',
-    recipe: '4cl gin, 2cl Aperol, 1.5cl lime, 4cl prosecco',
+    recipe: 'Shaker: gin, Aperol, lime. Shakera e filtra nel calice col ghiaccio.\nProsecco per ultimo, mescola una volta.',
     recipe_items: [
       { item: 'Gin', qty: 40 },
       { item: 'Aperol', qty: 20 },
@@ -237,7 +237,7 @@ export const DRINKS = [
   {
     cat: 'signature', name: 'Tana Sour', price: 9.0,
     description: 'Bourbon, limone, sciroppo e schiuma di panna',
-    recipe: '5cl bourbon, 2.5cl limone, 1.5cl sciroppo, panna',
+    recipe: 'Shaker: bourbon, limone, sciroppo, un cucchiaio di panna.\nShakera forte (fa la schiuma), filtra nel tumbler col ghiaccio.',
     recipe_items: [
       { item: 'Bourbon', qty: 50 },
       { item: 'Succo di Limone', qty: 25 },
@@ -248,7 +248,7 @@ export const DRINKS = [
   {
     cat: 'signature', name: 'White Rabbit', price: 9.0,
     description: 'Vodka, Cointreau, ananas e ginger beer',
-    recipe: '4cl vodka, 2cl Cointreau, 4cl ananas, 6cl ginger beer',
+    recipe: 'Shaker: vodka, Cointreau, ananas. Filtra nel tumbler col ghiaccio.\nGinger beer a colmare.',
     recipe_items: [
       { item: 'Vodka', qty: 40 },
       { item: 'Cointreau', qty: 20 },
@@ -260,7 +260,7 @@ export const DRINKS = [
   {
     cat: 'long', name: 'Cuba Libre', price: 7.0,
     description: 'Rum scuro, Cola e una spruzzata di lime',
-    recipe: '5cl rum scuro, 15cl Cola, 1cl lime',
+    recipe: 'Ghiaccio, rum, lime strizzato dentro, cola a colmare.\nMescola una volta.',
     recipe_items: [
       { item: 'Rum Scuro', qty: 50 },
       { item: 'Cola', qty: 150 },
@@ -270,7 +270,7 @@ export const DRINKS = [
   {
     cat: 'long', name: 'Vodka Soda', price: 7.0,
     description: 'Semplice, leggero, con un twist di lime',
-    recipe: '5cl vodka, 15cl soda, lime',
+    recipe: 'Ghiaccio, vodka, soda. Lime strizzato e lasciato dentro.',
     recipe_items: [
       { item: 'Vodka', qty: 50 },
       { item: 'Soda Water', qty: 150 },
@@ -280,7 +280,7 @@ export const DRINKS = [
   {
     cat: 'long', name: 'Gin Fizz', price: 8.0,
     description: 'Gin, succo di limone e soda: fresco e frizzante',
-    recipe: '5cl gin, 2cl limone, 1.5cl sciroppo, soda',
+    recipe: 'Shaker: gin, limone, sciroppo. Shakera, filtra nel tumbler col ghiaccio.\nSoda a colmare.',
     recipe_items: [
       { item: 'Gin', qty: 50 },
       { item: 'Succo di Limone', qty: 20 },
@@ -291,7 +291,7 @@ export const DRINKS = [
   {
     cat: 'long', name: 'Tequila Sunrise', price: 8.0,
     description: 'Tequila, arancia e granatina: tramonto nel bicchiere',
-    recipe: '5cl tequila, 10cl succo arancia, granatina',
+    recipe: 'Ghiaccio, tequila e arancia. La granatina versata piano sul fondo,\nsenza mescolare: deve restare l’alba.',
     recipe_items: [
       { item: 'Tequila Blanco', qty: 50 },
       { item: "Succo d'Arancia", qty: 100 },
@@ -301,7 +301,7 @@ export const DRINKS = [
   {
     cat: 'analcolici', name: 'Virgin Mojito', price: 5.0,
     description: 'Tutta la freschezza del Mojito, senza alcol',
-    recipe: 'Lime, menta, zucchero, soda',
+    recipe: 'Come il Mojito ma senza rum: lime e zucchero pestati piano,\nmenta, ghiaccio tritato, soda.',
     recipe_items: [
       { item: 'Lime Fresco', qty: 0.5 },
       { item: 'Menta Fresca', qty: 1 },
@@ -312,7 +312,7 @@ export const DRINKS = [
   {
     cat: 'analcolici', name: 'Tana Detox', price: 5.0,
     description: 'Ananas, lime e ginger beer: dissetante e speziato',
-    recipe: '8cl ananas, 2cl lime, 6cl ginger beer',
+    recipe: 'Ghiaccio, ananas e lime, ginger beer a colmare.\nMescola dal fondo.',
     recipe_items: [
       { item: 'Succo di Ananas', qty: 80 },
       { item: 'Succo di Lime', qty: 20 },
@@ -322,7 +322,7 @@ export const DRINKS = [
   {
     cat: 'analcolici', name: 'Sunrise Analcolico', price: 5.0,
     description: 'Arancia, cranberry e soda: colorato e fresco',
-    recipe: '10cl arancia, 4cl cranberry, soda',
+    recipe: 'Ghiaccio, arancia e cranberry, un dito di soda.\nSpicchio d’arancia.',
     recipe_items: [
       { item: "Succo d'Arancia", qty: 100 },
       { item: 'Succo di Cranberry', qty: 40 },
@@ -333,39 +333,39 @@ export const DRINKS = [
   {
     cat: 'birre', name: 'Pils alla Spina 0,4L', price: 5.5,
     description: 'Birra artigianale bionda, leggera e fresca',
-    recipe: 'Birra Pils 0,4L',
+    recipe: 'Bicchiere bagnato, inclinato a 45°. Due dita di schiuma.',
     recipe_items: [{ item: 'Birra Pils (spina)', qty: 400 }],
   },
   {
     cat: 'birre', name: 'IPA alla Spina 0,4L', price: 6.0,
     description: 'India Pale Ale artigianale, luppolata e amara',
-    recipe: 'Birra IPA 0,4L',
+    recipe: 'Bicchiere bagnato, inclinato a 45°. Due dita di schiuma.',
     recipe_items: [{ item: 'Birra IPA (spina)', qty: 400 }],
   },
   {
     cat: 'birre', name: 'Birra in Bottiglia', price: 5.0,
     description: 'Birra in bottiglia da 33cl',
-    recipe: '1 bottiglia da 33cl',
+    recipe: 'Si serve stappata, col bicchiere accanto.',
     recipe_items: [{ item: 'Birra Bottiglia', qty: 1 }],
   },
   // --- Bollicine ---
   {
     cat: 'bollicine', name: 'Prosecco al Calice', price: 5.0,
     description: 'Prosecco DOC frizzante, 12cl',
-    recipe: 'Prosecco 12cl',
+    recipe: 'Calice freddo, versato piano lungo la parete.',
     recipe_items: [{ item: 'Prosecco', qty: 120 }],
   },
   {
     cat: 'bollicine', name: 'Vino Bianco al Calice', price: 5.0,
     description: 'Vino bianco secco, 12cl',
-    recipe: 'Vino bianco 12cl',
+    recipe: 'Calice freddo, versato piano lungo la parete.',
     recipe_items: [{ item: 'Vino Bianco', qty: 120 }],
   },
   // --- Shots ---
   {
     cat: 'shots', name: 'Tequila Shot', price: 4.0,
     description: 'Con sale e lime',
-    recipe: 'Tequila 4cl, sale, lime',
+    recipe: 'Sale sulla mano, shot, spicchio di lime.',
     recipe_items: [
       { item: 'Tequila Blanco', qty: 40 },
       { item: 'Sale Fino', qty: 2 },
@@ -375,19 +375,19 @@ export const DRINKS = [
   {
     cat: 'shots', name: 'Limoncello Shot', price: 3.5,
     description: 'Freddo e agrumato',
-    recipe: 'Limoncello 4cl',
+    recipe: 'Dal congelatore, bicchierino freddo.',
     recipe_items: [{ item: 'Limoncello', qty: 40 }],
   },
   {
     cat: 'shots', name: 'Baileys Shot', price: 4.0,
     description: 'Cremoso e dolce',
-    recipe: 'Baileys 4cl',
+    recipe: 'Bicchierino, senza ghiaccio.',
     recipe_items: [{ item: 'Baileys', qty: 40 }],
   },
   {
     cat: 'shots', name: 'Amaretto Shot', price: 4.0,
     description: 'Dolce e mandorlato',
-    recipe: 'Amaretto 4cl',
+    recipe: 'Bicchierino, a temperatura.',
     recipe_items: [{ item: 'Amaretto', qty: 40 }],
   },
 ]
