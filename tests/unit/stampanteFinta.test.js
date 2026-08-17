@@ -38,7 +38,11 @@ describe('quando si accende la stampante finta', () => {
 })
 
 describe('quello che esce dalla stampante finta', () => {
-  it('mette insieme le righe e le manda alla stampa del browser', () => {
+  // LA FINESTRA SI GUARDA, NON SI STAMPA. Prima partiva da sola la stampa
+  // in PDF: per leggere una comanda si passava ogni volta da una finestra
+  // di sistema, con un file da buttare a ogni prova. Chi vuole la carta ha
+  // il suo tasto dentro la pagina.
+  it('mostra il facsimile e NON fa partire la stampa da sola', () => {
     const stampa = vi.fn()
     const doc = { write: vi.fn(), close: vi.fn() }
     vi.spyOn(window, 'open').mockReturnValue({ document: doc, focus: vi.fn(), print: stampa })
@@ -56,8 +60,21 @@ describe('quello che esce dalla stampante finta', () => {
     const scritto = doc.write.mock.calls[0][0]
     expect(scritto).toContain('LA TANA')
     expect(scritto).toContain('Negroni')
-    expect(stampa).toHaveBeenCalled()
+    expect(scritto).toContain('facsimile')
+    expect(stampa).not.toHaveBeenCalled()
     vi.useRealTimers()
+    vi.restoreAllMocks()
+  })
+
+  it('il logo, se c’è, sta in cima al facsimile', () => {
+    const doc = { write: vi.fn(), close: vi.fn() }
+    vi.spyOn(window, 'open').mockReturnValue({ document: doc, focus: vi.fn(), print: vi.fn() })
+    const p = creaStampanteFinta('Scontrino')
+    p.addImageUrl('/logo.png')
+    p.addText('LA TANA\n')
+    p.send()
+    const scritto = doc.write.mock.calls[0][0]
+    expect(scritto).toContain('<img src="/logo.png"')
     vi.restoreAllMocks()
   })
 

@@ -5,9 +5,14 @@
 // scontrini si provava a occhio nel codice — oppure andando al bar.
 //
 // Qui la stampante c'è, ma è di carta finta: raccoglie le righe che l'app
-// le manda e le apre in una finestra pronta per la stampa, dove si sceglie
-// «Salva come PDF». Si prova quello che ESCE, che è la domanda vera
-// («questa comanda si legge?»), non il collegamento.
+// le manda e le apre in una finestra col FACSIMILE dello scontrino. Si
+// prova quello che ESCE, che è la domanda vera («questa comanda si
+// legge?»), non il collegamento.
+//
+// La finestra si guarda e si chiude: prima partiva da sola la stampa in
+// PDF, e per leggere una comanda bisognava passare ogni volta da una
+// finestra di sistema — con un file da buttare a ogni prova. Chi la stampa
+// davvero la vuole ha il suo tasto.
 //
 // SOLO IN LOCALE. Sull'ambiente di test non si accende, perché lì ci si
 // collega alla stampante VERA per provarla davvero; in produzione, va da
@@ -55,24 +60,38 @@ function componi(pezzi) {
 // Apre la finestra di stampa del browser con lo scontrino dentro: da lì
 // «Salva come PDF». Se il browser blocca la finestra (succede), il testo
 // finisce in console — meglio che perderlo.
-function mostra(righe, titolo) {
+function mostra(righe, titolo, logo) {
   const testo = righe.join('\n')
   const w = typeof window !== 'undefined' ? window.open('', '_blank', 'width=420,height=700') : null
   if (!w) {
     console.info(`[stampante finta] ${titolo}\n${testo}`)
     return
   }
+  const scampato = (t) => String(t).replace(/[<&]/g, (c) => (c === '<' ? '&lt;' : '&amp;'))
+  // Lo scontrino come esce dalla testina: carta stretta, fondo bianco,
+  // monospaziato. Il logo, se c'è, sta in cima come sulla carta vera.
   w.document.write(
-    `<!doctype html><meta charset="utf-8"><title>${titolo}</title>` +
-      '<style>body{margin:0;padding:12px;background:#fff}' +
+    `<!doctype html><meta charset="utf-8"><title>${scampato(titolo)}</title>` +
+      '<style>' +
+      'body{margin:0;padding:16px;background:#e8e8ee;font-family:system-ui,sans-serif}' +
+      '.scontrino{width:80mm;max-width:100%;margin:0 auto;background:#fff;padding:6mm 4mm;' +
+      'box-shadow:0 2px 10px rgba(0,0,0,.18)}' +
+      '.scontrino img{display:block;margin:0 auto 6px;max-width:40mm}' +
       'pre{font:12px/1.35 "Courier New",monospace;color:#000;white-space:pre-wrap;margin:0}' +
+      '.barra{max-width:80mm;margin:0 auto 10px;display:flex;gap:8px;align-items:center;' +
+      'font:13px system-ui,sans-serif;color:#333}' +
+      '.barra button{font:inherit;padding:6px 12px;border-radius:8px;border:1px solid #bbb;' +
+      'background:#fff;cursor:pointer}' +
+      '@media print{body{background:#fff;padding:0}.barra{display:none}' +
+      '.scontrino{width:auto;box-shadow:none;padding:0}}' +
       '@page{size:80mm auto;margin:4mm}</style>' +
-      `<pre>${testo.replace(/[<&]/g, (c) => (c === '<' ? '&lt;' : '&amp;'))}</pre>`
+      `<div class="barra"><span>${scampato(titolo)} — facsimile</span>` +
+      '<button onclick="window.print()">🖨 Stampa</button>' +
+      '<button onclick="window.close()">Chiudi</button></div>' +
+      `<div class="scontrino">${logo ? `<img src="${logo}" alt="">` : ''}<pre>${scampato(testo)}</pre></div>`
   )
   w.document.close()
   w.focus()
-  // Un attimo per il layout, poi la finestra di stampa: da lì si salva in PDF.
-  setTimeout(() => w.print(), 150)
 }
 
 // L'oggetto che l'app crede una stampante: gli stessi metodi dell'SDK
@@ -93,8 +112,12 @@ export function creaStampanteFinta(titolo = 'Stampa') {
     addText: (t) => (pezzi.push({ tipo: 'text', testo: t }), finta),
     addFeedLine: (n) => (pezzi.push({ tipo: 'feed', righe: Number(n) || 1 }), finta),
     addCut: () => (pezzi.push({ tipo: 'cut' }), finta),
+    // Il logo: la stampante vera riceve un'immagine, qui basta l'indirizzo
+    // per rimetterlo in cima al facsimile.
+    addImageUrl: (url) => (pezzi.push({ tipo: 'logo', url }), finta),
     send: () => {
-      mostra(componi(pezzi), titolo)
+      const logo = pezzi.find((p) => p.tipo === 'logo')?.url || null
+      mostra(componi(pezzi), titolo, logo)
       pezzi.length = 0
       // L'SDK vero avvisa così: qualcuno guarda `onreceive`.
       finta.onreceive?.({ success: true, code: '', status: 0 })
