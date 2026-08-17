@@ -8,6 +8,7 @@ import {
   decideStaffCallPush,
   decideStaffServePush,
   STAFF_CALL_VIBRATION,
+  terminaliDi,
 } from '../../functions/lib/push-core.js'
 
 const base = {
@@ -93,5 +94,49 @@ describe('decideStaffServePush', () => {
     const spoglio = { daily_number: 3, status: 'in_preparazione', service_mode: 'tavolo' }
     const msg = decideStaffServePush(spoglio, { ...spoglio, status: 'pronto' })
     expect(msg.body).toBe('Ordine #3')
+  })
+})
+
+// ── A CHI SUONA LA CHIAMATA ──────────────────────────────────────────
+//
+// La riga del token è del DISPOSITIVO (`staff_tokens/<device>`, col campo
+// `uid` di chi ci sta collegato). La chiamata invece cercava il documento
+// all'indirizzo `staff_tokens/<uid>`: non trovava niente, e il telefono di
+// chi veniva cercato non vibrava mai.
+describe('terminaliDi: i dispositivi di chi viene cercato', () => {
+  const righe = [
+    { id: 'tablet-banco', uid: 'capo', token: 'T-capo-tablet' },
+    { id: 'telefono-giulia', uid: 'giulia', token: 'T-giulia-tel' },
+    { id: 'tablet-sala', uid: 'giulia', token: 'T-giulia-tablet' },
+    { id: 'senza-token', uid: 'giulia', token: null },
+  ]
+
+  it('trova TUTTI i terminali di quella persona', () => {
+    // Due terminali accesi, e non si sa quale ha in mano: suonano entrambi.
+    expect(terminaliDi(righe, 'giulia').map((r) => r.token)).toEqual([
+      'T-giulia-tel',
+      'T-giulia-tablet',
+    ])
+  })
+
+  it('non suona sui terminali degli altri', () => {
+    expect(terminaliDi(righe, 'capo').map((r) => r.token)).toEqual(['T-capo-tablet'])
+    expect(terminaliDi(righe, 'nessuno')).toEqual([])
+    expect(terminaliDi(righe, null)).toEqual([])
+  })
+
+  it('regge le righe vecchie, intestate alla persona', () => {
+    // Prima dell'«un dispositivo, una riga» il documento aveva per id l'uid:
+    // qualcuna è rimasta in giro e deve continuare a squillare.
+    const vecchia = [{ id: 'giulia', uid: 'giulia', token: 'T-vecchio' }]
+    expect(terminaliDi(vecchia, 'giulia').map((r) => r.token)).toEqual(['T-vecchio'])
+  })
+
+  it('lo stesso token non fa vibrare due volte', () => {
+    const doppia = [
+      { id: 'telefono', uid: 'giulia', token: 'T-uno' },
+      { id: 'giulia', uid: 'giulia', token: 'T-uno' },
+    ]
+    expect(terminaliDi(doppia, 'giulia')).toHaveLength(1)
   })
 })
