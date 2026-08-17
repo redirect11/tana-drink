@@ -1907,7 +1907,7 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
     : [...UNITA_SFUSO, [unitSfuso, UNIT_LABEL[String(unitSfuso).toLowerCase()] || unitSfuso]]
 
   return (
-    <form className="card" onSubmit={submit}>
+    <form className="card inv-scheda" onSubmit={submit}>
       <div className="row between" style={{ alignItems: 'center', gap: 8 }}>
         <h3 style={{ margin: 0 }}>{isEdit ? 'Modifica prodotto' : 'Nuovo prodotto'}</h3>
         {/* IL PUNTO INTERROGATIVO. Questa scheda decide come si scala il

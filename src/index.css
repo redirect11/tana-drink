@@ -6547,3 +6547,14 @@ a.storico-notifica:hover {
     grid-template-columns: 1fr;
   }
 }
+
+/* LA SCHEDA PRODOTTO SCORRE PER CONTO SUO. Il magazzino vive a pagina
+   piena (body.pagina-piena): l'altezza è quella della finestra e a scorrere
+   sono i pannelli. La scheda, più alta dello schermo, sbordava dal
+   contenitore e il footer — che di quel contenitore è l'ultima riga —
+   compariva dipinto in mezzo ai campi. */
+body.pagina-piena .inv-scheda {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
