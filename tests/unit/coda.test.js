@@ -214,30 +214,52 @@ describe('i filtri della coda', () => {
 // stati continuava a passare da lì.
 describe('cosa resta in coda', () => {
   const cassa = 'cassa-2'
+  const apertaDa = '2026-08-16T18:00:00.000Z'
 
-  it('un conto incassato in un’altra apertura di cassa è storia', () => {
-    expect(restaInCoda({ cash_session_id: 'cassa-1' }, { chiuso: true, cassa })).toBe(false)
+  it('un conto annullato ADESSO resta, anche se era aperto da ieri', () => {
+    // Era il caso che spariva: si annulla un conto vecchio e quello
+    // svanisce nell'istante in cui lo si annulla, senza sapere se
+    // l'operazione è andata a buon fine.
+    const vecchioAnnullatoOra = {
+      cash_session_id: 'cassa-1',
+      tempi_conto: { annullato: '2026-08-16T22:10:00.000Z' },
+    }
+    expect(restaInCoda(vecchioAnnullatoOra, { chiuso: true, cassa, apertaDa })).toBe(true)
+  })
+
+  it('quello annullato o incassato PRIMA di questa apertura è storia', () => {
+    const primaDiOggi = {
+      cash_session_id: 'cassa-1',
+      paid_at: '2026-08-15T23:00:00.000Z',
+    }
+    expect(restaInCoda(primaDiOggi, { chiuso: true, cassa, apertaDa })).toBe(false)
   })
 
   it('quello incassato in questa apertura resta: sono i soldi di adesso', () => {
-    expect(restaInCoda({ cash_session_id: 'cassa-2' }, { chiuso: true, cassa })).toBe(true)
+    const ora = { cash_session_id: 'cassa-2', paid_at: '2026-08-16T21:00:00.000Z' }
+    expect(restaInCoda(ora, { chiuso: true, cassa, apertaDa })).toBe(true)
+  })
+
+  it('senza orario di chiusura vale la sessione scritta sull’ordine', () => {
+    expect(restaInCoda({ cash_session_id: 'cassa-1' }, { chiuso: true, cassa, apertaDa })).toBe(false)
+    expect(restaInCoda({ cash_session_id: 'cassa-2' }, { chiuso: true, cassa, apertaDa })).toBe(true)
   })
 
   it('a cassa chiusa non resta nessun conto chiuso', () => {
-    expect(restaInCoda({ cash_session_id: 'cassa-2' }, { chiuso: true, cassa: null })).toBe(false)
+    expect(
+      restaInCoda({ cash_session_id: 'cassa-2' }, { chiuso: true, cassa: null, apertaDa: null })
+    ).toBe(false)
   })
 
   it('un conto APERTO resta comunque: quello è da chiudere', () => {
-    expect(
-      restaInCoda({ cash_session_id: 'cassa-1' }, { chiuso: false, cassa })
-    ).toBe(true)
+    expect(restaInCoda({ cash_session_id: 'cassa-1' }, { chiuso: false, cassa, apertaDa })).toBe(true)
   })
 
-  it('senza cassa scritta sull’ordine si guarda la giornata', () => {
+  it('senza cassa e senza orario si guarda la giornata', () => {
     // Chi la cassa non la apre mai non ha altro riferimento.
-    expect(restaInCoda({}, { chiuso: true, cassa: null, giornata: '2026-08-15', oggi: '2026-08-16' })).toBe(false)
-    expect(restaInCoda({}, { chiuso: true, cassa: null, giornata: '2026-08-16', oggi: '2026-08-16' })).toBe(true)
-    expect(restaInCoda({}, { chiuso: true, cassa: null, giornata: null, oggi: '2026-08-16' })).toBe(true)
+    expect(restaInCoda({}, { chiuso: true, giornata: '2026-08-15', oggi: '2026-08-16' })).toBe(false)
+    expect(restaInCoda({}, { chiuso: true, giornata: '2026-08-16', oggi: '2026-08-16' })).toBe(true)
+    expect(restaInCoda({}, { chiuso: true, giornata: null, oggi: '2026-08-16' })).toBe(true)
   })
 })
 

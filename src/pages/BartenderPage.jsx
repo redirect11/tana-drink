@@ -835,6 +835,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
     restaInCoda(o, {
       chiuso: isChiuso(o) || annullato(o),
       cassa: cassaAperta?.id ?? null,
+      apertaDa: cassaAperta?.opened_at ?? null,
       giornata: dayOf(o),
       oggi: oggiKey,
     })
@@ -899,6 +900,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
       restaInCoda(o, {
         chiuso: isClosed(o) || annullato(o),
         cassa: cassaAperta?.id ?? null,
+        apertaDa: cassaAperta?.opened_at ?? null,
         giornata: dayOf(o),
         oggi: oggiKey,
       })
