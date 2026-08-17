@@ -13,6 +13,7 @@ import {
   inseritiDa,
   passaFiltroCoda,
   restaInCoda,
+  gruppiInCoda,
 } from '../../src/lib/coda.js'
 
 const orders = [
@@ -317,5 +318,27 @@ describe('la voce della cassa nel menu della coda', () => {
     const v = voceCassa({ gestore: true, cassaAperta: true, contiAperti: 3 })
     expect(v.disabled).toBe(true)
     expect(v.hint).toContain('3')
+  })
+})
+
+// ── I GRUPPI IN CODA ─────────────────────────────────────────────────
+// Chi non usa i gruppi si ritrovava in coda un riquadro che diceva «i
+// gruppi sono spenti»: un cartello su una cosa che non ha, nello spazio
+// che serve agli ordini.
+describe('gruppi: pannello, cartello o niente', () => {
+  it('spenti: niente, nemmeno coi pannelli aperti', () => {
+    expect(gruppiInCoda({ accesi: false, inCoda: false, pannelli: true })).toBe(null)
+    expect(gruppiInCoda({ accesi: false, inCoda: true, pannelli: true })).toBe(null)
+  })
+
+  it('accesi e da mostrare in coda: il pannello', () => {
+    expect(gruppiInCoda({ accesi: true, inCoda: true, pannelli: false })).toBe('pannello')
+  })
+
+  it('accesi ma tenuti fuori dalla coda: il cartello, e solo a pannelli aperti', () => {
+    // Chi apre i «Pannelli» dal ⋯ e non trova niente pensa a un tasto
+    // rotto: la riga dice dove si cambia idea.
+    expect(gruppiInCoda({ accesi: true, inCoda: false, pannelli: true })).toBe('cartello')
+    expect(gruppiInCoda({ accesi: true, inCoda: false, pannelli: false })).toBe(null)
   })
 })

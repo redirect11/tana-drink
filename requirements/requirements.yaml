@@ -1403,6 +1403,27 @@ requirements:
     labels: [menu, magazzino]
     test_cases: []
 
+  - id: REQ-MENU-011
+    title: "Un drink si duplica: la ricetta non si riscrive a mano"
+    area: "src/components/MenuManager.jsx"
+    description: >
+      Nelle azioni della card del menù c'è «📋 Duplica». Mezzo listino sono
+      variazioni — lo stesso drink col gin diverso, la versione analcolica,
+      il formato grande — e rifarle a mano vuol dire riscrivere prezzo,
+      categoria, descrizione e soprattutto la RICETTA ingrediente per
+      ingrediente: è lì che si sbaglia una dose, e poi il magazzino scala
+      storto.
+      La copia NON si salva da sola: si apre la scheda già piena, col nome
+      marcato «(copia)», così quello che cambia si sistema PRIMA che il
+      drink esista — un doppione salvato di nascosto finirebbe in carta al
+      cliente. Salvando nasce un prodotto nuovo: l'originale non si tocca.
+      La foto resta all'originale: il file è agganciato al drink che l'ha
+      caricata, e cancellando quello sparirebbe anche dalla copia.
+    status: implemented
+    generate_issue: false
+    labels: [menu, ux]
+    test_cases: [tests/component/MenuManager.test.jsx]
+
   - id: REQ-MENU-006
     title: "Sulle card i segni dicono cose diverse, dove uno se le aspetta"
     area: "src/components/MenuManager.jsx, src/components/PosBits.jsx, src/index.css"
@@ -1908,7 +1929,7 @@ requirements:
 
   - id: REQ-AVVISI-004
     title: "Uscendo si spengono gli avvisi, rientrando si riaccendono"
-    area: "src/lib/logout.js, src/lib/api.js, src/App.jsx, src/components/AvvisiSpenti.jsx"
+    area: "src/lib/logout.js, src/lib/push.js, src/lib/customerAuth.js, src/lib/api.js, src/App.jsx, src/components/AvvisiSpenti.jsx"
     description: >
       Il token push è del DISPOSITIVO, non della persona, e dopo il logout
       restava valido: chi si era scollegato continuava a sentire suonare gli
@@ -1916,7 +1937,18 @@ requirements:
       tolto dai destinatari; al primo accesso successivo si registra da sé,
       senza aspettare che si passi dalla coda.
       Se non ci riesce — offline, regole — si esce lo stesso: restare dentro
-      sarebbe peggio, e il token scade da solo.
+      sarebbe peggio, e il token scade da solo. E non ci si impianta
+      aspettando: timbratura e rubrica sono scritture su Firestore, e una
+      scrittura offline non torna mai — passati due secondi e mezzo si esce
+      comunque.
+      NON BASTA LA RUBRICA: si spegne il TOKEN. `staff_tokens` è solo
+      l'elenco dello staff; il token è del browser e resta valido, e gli
+      avvisi al cliente («il tuo drink è pronto», «ordine annullato») lo
+      tengono scritto sull'ORDINE, non nell'elenco. Chi si era scollegato
+      continuava a sentire suonare il telefono. Uscendo si cancella il
+      token: non resta nessun indirizzo a cui bussare, chiunque sia il
+      mittente. Vale anche per il cliente che esce, e per «Esci e accedi
+      come staff», che passava dal signOut secco e non toglieva niente.
       E QUANDO GLI AVVISI SONO SPENTI SI VEDE. Il permesso lo chiede il
       browser una volta sola, con una finestrella in alto che chi sta
       lavorando scarta senza leggerla: da quel momento quel tablet non suona
