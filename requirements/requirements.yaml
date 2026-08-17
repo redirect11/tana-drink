@@ -1120,8 +1120,8 @@ requirements:
     title: "Staff e Utenti hanno tre sezioni, come le altre pagine"
     area: "src/components/StaffHoursTab.jsx, src/components/UtentiTab.jsx"
     description: >
-      Staff: calendario (quello che si apre, ed è il motivo per cui si viene
-      qui), nuovo turno, paghe orarie. Utenti e ruoli: utenze registrate,
+      Staff: calendario, timbrature, nuovo turno, paghe orarie.
+      Utenti e ruoli: utenze registrate,
       nuovo account, buoni VIP.
       Erano pannelli a scomparsa in cima alla pagina: aprirli spingeva giù
       quello che si era venuti a guardare — il calendario, l'elenco delle

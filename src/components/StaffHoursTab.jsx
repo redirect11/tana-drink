@@ -97,6 +97,11 @@ function normalizeEntries(hoursRows, shiftRows) {
 // dal flusso di cassa, che con le ore non c'entra niente.
 const SEZIONI_STAFF = [
   { id: 'calendario', icona: '📅', label: 'Calendario' },
+  // LE TIMBRATURE HANNO LA LORO VOCE. Sono la cosa che si tocca all'inizio
+  // e alla fine del turno — «chi c'è adesso» — e stavano in cima al
+  // calendario: per battere l'ingresso di chi arriva bisognava passare
+  // dalla schermata dei turni, che con quel gesto non c'entra.
+  { id: 'timbrature', icona: '⏱', label: 'Timbrature' },
   { id: 'turno', icona: '➕', label: 'Nuovo turno' },
   { id: 'paghe', icona: '💶', label: 'Paghe orarie' },
 ]
@@ -203,11 +208,12 @@ export default function StaffHoursTab({ embedded = false, sezioneIniziale = 'cal
       {!embedded && <Sottosezioni voci={SEZIONI_STAFF} attiva={sezione} scegli={setSezione} />}
       {error && <div className="banner">Errore: {error}</div>}
 
-      {/* CHI TIMBRA ADESSO, in cima: era in fondo alla pagina della cassa,
-          dove ci si va per i soldi. Per battere l'ingresso di chi arriva
-          bisognava passare dal flusso di cassa, che con le ore non c'entra
-          niente. */}
-      {sezione === 'calendario' && <StaffBadgePanel />}
+      {/* CHI TIMBRA ADESSO, in una sezione sua. Prima stava in fondo alla
+          pagina della cassa — dove ci si va per i soldi — poi in cima al
+          calendario: in tutti e due i casi, per battere l'ingresso di chi
+          arriva bisognava passare da una schermata che con quel gesto non
+          c'entra. */}
+      {sezione === 'timbrature' && <StaffBadgePanel />}
 
       {/* NUOVO TURNO E PAGHE SONO SEZIONI, non pannelli a scomparsa in cima
           alla pagina: aprirli spingeva giù il calendario, che è la cosa per
