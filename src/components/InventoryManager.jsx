@@ -1648,13 +1648,6 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
         : '',
     resa_unit: baseUnit(initial?.resa_unit) === 'g' ? 'g' : 'cl',
     resa_da_qty: '1',
-    // Acceso vuol dire «lo uso come lo compro»: la birra si compra a
-    // bottiglia e si serve a bottiglia, e non c'è altro da dire. Sui
-    // prodotti che ce l'hanno già scritto (il contenuto di un pezzo, o una
-    // resa) parte spento, così la scheda si riapre come la si era lasciata.
-    usa_altra_unita:
-      (Number(initial?.resa) > 0 && !!initial?.resa_unit) ||
-      (initial?.unit === 'pz' && Number(initial?.package_size) > 0),
     // SI SCARICA DAL MAGAZZINO? Lo decide il prodotto: la manodopera no, il
     // ghiaccio — contato a unità come lei — sì. Di suo vale la regola di
     // sempre, così i prodotti già caricati non cambiano comportamento.
@@ -1697,13 +1690,6 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
     const dichiarata = typeof initial?.scorta === 'boolean' ? initial.scorta : null
     const nuovo = atteso ? true : (dichiarata ?? false)
     if (scorteRif.current !== nuovo) setForm((f) => ({ ...f, scorta: nuovo }))
-    // CAMBIANDO COME LO COMPRI, la risposta su come lo usi ricomincia: era
-    // data su un'altra unità, e tenerla vorrebbe dire dare per buona una
-    // resa scritta per i chili su un prodotto passato ai pezzi.
-    const usava =
-      (Number(initial?.resa) > 0 && !!initial?.resa_unit) ||
-      (initial?.unit === 'pz' && Number(initial?.package_size) > 0)
-    setForm((f) => (f.usa_altra_unita === usava ? f : { ...f, usa_altra_unita: usava }))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.unit])
   const costNum = num(form.cost)
@@ -1770,12 +1756,12 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
       // era già scritto resta com'era — le bottiglie gestite a volume hanno
       // il loro contenuto e il loro costo — perché riscriverlo qui vorrebbe
       // dire cambiare i numeri di un prodotto che nessuno ha toccato.
+      // Vuoto vuol dire «si usa come si compra»: non c'è nessun contenuto
+      // da dichiarare, e in ricetta si dosa a pezzi.
       const packBase = isGenerico
         ? null
         : isPz
-          ? (form.usa_altra_unita
-              ? toBaseQty(num(form.content_size), form.content_unit) || null
-              : null)
+          ? toBaseQty(num(form.content_size), form.content_unit) || null
           : Number(initial?.package_size) > 0 && baseUnit(form.unit) === initialBase
             ? Number(initial.package_size)
             : toBaseQty(1, form.unit)
@@ -1786,7 +1772,7 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
       // per grammo, e da lì lo scarico fa la proporzione su qualunque
       // quantità si versi. Vedi resaUso in lib/inventory.
       const resaBase = (() => {
-        if (isPz || !form.usa_altra_unita) return null
+        if (isPz) return null
         const uso = toBaseQty(num(form.resa_qty), form.resa_unit)
         const preso = toBaseQty(num(form.resa_da_qty) || 1, form.unit)
         if (!(uso > 0) || !(preso > 0)) return null
@@ -2126,68 +2112,14 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
             </span>
           </label>
 
-          {/* L'interruttore c'è anche qui: un sacchetto di ghiaccio si conta
-              a unità ma nelle ricette si dosa a grammi, e senza questa riga
-              non c'era modo di dirlo. */}
-          <label className="row between" style={{ alignItems: 'center', gap: 8 }}>
-            <span>
-              Lo uso come lo compro
-              <span className="muted small"> — stessa unità per il carico e per le ricette</span>
-            </span>
-            <input
-              type="checkbox"
-              className="toggle"
-              checked={!form.usa_altra_unita}
-              onChange={(e) => setForm((f) => ({ ...f, usa_altra_unita: !e.target.checked }))}
-            />
-          </label>
-          {form.usa_altra_unita && rigaResa}
+          {rigaResa}
         </>
       ) : !isPz ? (
         <>
-          {/* UNA DOMANDA SOLA, E LA RISPOSTA GIÀ DATA. Quasi tutti i
-              prodotti si usano come si comprano: l'interruttore parte acceso
-              e non c'è altro da scrivere. Prima qui si chiedeva quanto
-              contiene una confezione — una domanda che cambia senso a
-              seconda dell'unità scelta sopra, e a cui quasi nessuno doveva
-              rispondere. */}
-          <label className="row between" style={{ alignItems: 'center', gap: 8 }}>
-            <span>
-              Lo uso come lo compro
-              <span className="muted small"> — stessa unità per il carico e per le ricette</span>
-            </span>
-            <input
-              type="checkbox"
-              className="toggle"
-              checked={!form.usa_altra_unita}
-              onChange={(e) => setForm((f) => ({ ...f, usa_altra_unita: !e.target.checked }))}
-            />
-          </label>
-
-          {form.usa_altra_unita && rigaResa}
+          {rigaResa}
         </>
       ) : (
         <>
-          {/* ANCHE IL PEZZO SI USA QUASI SEMPRE COM'È: una birra si compra a
-              bottiglia e si serve a bottiglia. La domanda sul contenuto
-              serve solo a quello che si versa — il gin, lo sciroppo — e
-              stava a vista su tutto, chiedendo i centilitri di una lattina
-              che nessuno apre a metà. */}
-          <label className="row between" style={{ alignItems: 'center', gap: 8 }}>
-            <span>
-              Lo uso come lo compro
-              <span className="muted small"> — es. la birra: si compra e si serve a bottiglia</span>
-            </span>
-            <input
-              type="checkbox"
-              className="toggle"
-              checked={!form.usa_altra_unita}
-              onChange={(e) => setForm((f) => ({ ...f, usa_altra_unita: !e.target.checked }))}
-            />
-          </label>
-
-          {form.usa_altra_unita && (
-          <>
           {/* «A quanto corrisponde un pezzo»: è la domanda che si fa chi
               carica la merce — una bottiglia fa 100 cl, una confezione fa
               10 U. Da qui esce il costo al cl (o all'unità). */}
@@ -2235,8 +2167,6 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
               ? '. Le unità non si scaricano dal magazzino: servono al costo.'
               : '.'}
           </p>
-          </>
-          )}
         </>
       )}
 

@@ -327,22 +327,12 @@ describe('la scheda prodotto chiede tre cose', () => {
   it('la terza domanda — quanto rende — c’è per chi non si conta a pezzi', async () => {
     const user = userEvent.setup()
     await apriForm(user)
-    // La risposta è già data: quasi tutti i prodotti si usano come si
-    // comprano, e a quelli non si chiede niente.
-    const interruttore = screen.getByRole('checkbox', { name: /Lo uso come lo compro/ })
-    expect(interruttore).toBeChecked()
-    expect(screen.queryByLabelText('Quanto rende')).toBeNull()
-    // Spegnendolo compare la resa, e nient'altro.
-    await user.click(interruttore)
+    // I campi si vedono SEMPRE: sono facoltativi di loro (vuoto = si usa
+    // come si compra), e nasconderli dietro un interruttore costringeva a
+    // cercarli anche a chi il contenuto lo voleva scrivere — la birra, per
+    // sapere quanto costa al cl.
     expect(screen.getByLabelText('Quanto rende')).toBeInTheDocument()
-    // Anche sui pezzi c'è, ed è acceso: la birra si compra e si serve a
-    // bottiglia. Spegnendolo si dice a quanto corrisponde un pezzo — è così
-    // che l'Aperol, comprato a bottiglia, si versa in cl.
     await user.selectOptions(screen.getByLabelText(/Unità d.acquisto/), 'pz')
-    const suiPezzi = screen.getByRole('checkbox', { name: /Lo uso come lo compro/ })
-    expect(suiPezzi).toBeChecked()
-    expect(screen.queryByLabelText(/A quanto corrisponde un pezzo/)).toBeNull()
-    await user.click(suiPezzi)
     expect(screen.getByLabelText(/A quanto corrisponde un pezzo/)).toBeInTheDocument()
     // E l'unità d'uso si sceglie fra tutte, non solo dentro la sua famiglia.
     const unita = screen.getByLabelText('Unità del contenuto')
@@ -485,7 +475,6 @@ describe('la resa si scrive con le quantità di tutti e due i lati', () => {
     await user.click(screen.getByRole('button', { name: '+ Nuovo prodotto' }))
     await user.type(screen.getByLabelText('Nome *'), 'Limoni')
     await user.selectOptions(screen.getByLabelText(/Unità d.acquisto/), 'kg')
-    await user.click(screen.getByRole('checkbox', { name: /Lo uso come lo compro/ }))
 
     const daQty = screen.getByLabelText('Quanto ne prendi')
     await user.clear(daQty)
@@ -514,7 +503,6 @@ describe('il contenuto di un pezzo, spiegato', () => {
     await screen.findByText('Campari')
     await user.click(screen.getByRole('button', { name: '+ Nuovo prodotto' }))
     await user.selectOptions(screen.getByLabelText(/Unità d.acquisto/), 'pz')
-    await user.click(screen.getByRole('checkbox', { name: /Lo uso come lo compro/ }))
 
     expect(
       screen.getByText(/da lasciare vuoto per decidere la quantità direttamente nella ricetta/)
