@@ -12,6 +12,10 @@
 
 ### Al banco
 
+- **Le timbrature hanno la loro voce in Staff**: erano in cima al
+  calendario, e per battere l'ingresso di chi arriva bisognava passare
+  dalla schermata dei turni.
+
 - **Le righe del conto si riordinano davvero**: tasto «organizza», maniglie,
   e la riga che segue il dito mentre le altre si scansano — la stessa cosa
   della griglia dei prodotti. Fuori da «organizza», toccare una riga la apre.

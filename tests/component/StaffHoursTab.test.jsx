@@ -81,3 +81,19 @@ describe('registro Ore staff', () => {
     expect(list[0].rate).toBe(12)
   })
 })
+
+// LE TIMBRATURE HANNO LA LORO VOCE. Sono il gesto d'inizio e fine turno —
+// «chi c'è adesso» — e stavano in cima al calendario: per battere
+// l'ingresso di chi arriva bisognava passare dalla schermata dei turni, che
+// con quel gesto non c'entra.
+describe('le sezioni di Staff', () => {
+  it('il calendario si apre senza il pannello delle timbrature', async () => {
+    render(<StaffHoursTab />)
+    await waitFor(() => expect(screen.queryByText(/Timbrature/i)).toBeNull())
+  })
+
+  it('le timbrature stanno nella loro sezione', async () => {
+    render(<StaffHoursTab sezioneIniziale="timbrature" />)
+    expect(await screen.findByText(/Timbrature/i)).toBeInTheDocument()
+  })
+})
