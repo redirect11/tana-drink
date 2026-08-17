@@ -66,6 +66,7 @@ vi.mock('../../src/components/SupplierInvoicesPanel.jsx', () => ({
 }))
 
 import InventoryManager from '../../src/components/InventoryManager.jsx'
+import { createInventoryItem } from '../../src/lib/api.js'
 
 // Apre la vista a CARD (il default è la lista) e aspetta il prodotto.
 async function apriCard(user) {
@@ -130,5 +131,59 @@ describe('il dettaglio della card non sborda', () => {
     // La vista a Lista occupa tutta la larghezza: là la coppia
     // etichetta/valore su una riga sola si legge meglio, e resta com'era.
     expect(css).toMatch(/\.inv-info \.inv-info-row \{[^}]*grid-template-columns: 96px 1fr/)
+  })
+})
+
+// LA MANODOPERA È UN ARTICOLO IN UNITÀ GENERICHE.
+// «Tempo di Lavorazione» si crea come voce di magazzino per mettere il lavoro
+// a listino: ha un costo per unità e niente altro. Prima si potevano scegliere
+// solo litri, centilitri, millilitri, grammi, milligrammi o pezzi, e si
+// finiva a contare il tempo in grammi.
+describe('il form del prodotto: unità generiche', () => {
+  async function nuovoProdotto(user) {
+    await screen.findByText('Campari')
+    await user.click(screen.getByRole('button', { name: '+ Nuovo prodotto' }))
+  }
+
+  it('fra le unità di misura c’è il generico', async () => {
+    const user = userEvent.setup()
+    render(<InventoryManager />)
+    await nuovoProdotto(user)
+    const misura = screen.getByLabelText('Unità di misura')
+    expect([...misura.options].map((o) => o.value)).toContain('U')
+  })
+
+  it('scelto il generico non si chiede un contenuto che non c’è', async () => {
+    const user = userEvent.setup()
+    render(<InventoryManager />)
+    await nuovoProdotto(user)
+    await user.selectOptions(screen.getByLabelText('Unità di misura'), 'U')
+    // Niente confezione, niente contenuto del pezzo, niente soglia di
+    // avviso: non è una scorta, non finisce e non si riordina.
+    expect(screen.queryByLabelText(/Contenuto per confezione/)).toBeNull()
+    expect(screen.queryByLabelText('Contenuto di un pezzo')).toBeNull()
+    expect(screen.queryByLabelText(/Soglia di avviso/)).toBeNull()
+    // Il costo però è il cuore della voce, e si legge per unità.
+    expect(screen.getByLabelText(/Costo €\/U/)).toBeInTheDocument()
+  })
+
+  it('e si salva come articolo in U, senza giacenza', async () => {
+    const user = userEvent.setup()
+    render(<InventoryManager />)
+    await nuovoProdotto(user)
+    await user.selectOptions(screen.getByLabelText('Unità di misura'), 'U')
+    await user.type(screen.getByLabelText('Nome *'), 'Tempo di Lavorazione')
+    await user.type(screen.getByLabelText(/Costo €\/U/), '0.5')
+    await user.click(screen.getByRole('button', { name: 'Salva' }))
+    expect(createInventoryItem).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'Tempo di Lavorazione',
+        unit: 'U',
+        display_unit: 'U',
+        package_size: null,
+        stock: 0,
+        low_threshold: 0,
+      })
+    )
   })
 })

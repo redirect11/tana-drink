@@ -229,8 +229,22 @@ bugs:
       ricetta del Daiquiri si legge «Tempo di Lavorazione 1 g», che a chi
       prepara non dice niente. Serve un'unità generica «U», senza
       conversioni, accanto a cl, ml e g in quel menu a tendina.
+      CHIARITO il 17/08 nell'issue #20: «Tempo di Lavorazione» non è un errore
+      da togliere, è una voce di magazzino creata di proposito per mettere la
+      MANODOPERA a listino — si aggancia come ingrediente ai drink che
+      richiedono lavorazione, ha un costo per unità, e da lì entra nel costo
+      della ricetta e nel prezzo consigliato.
+      RISOLTO (hotfix 1.3.4): la «U» è un'unità di misura dell'ARTICOLO (non un
+      contenuto), retta da tutta la catena — BASE_UNITS, ENTRY_UNITS,
+      toBaseQty/fromBaseQty, baseUnit, UNIT_LABEL, formatQty, smallUnits,
+      costPerUnit, recipeCost — e si sceglie nel form dalle «Unità di
+      misura».
+      Non essendo una scorta: niente scarico (resta fuori da
+      computeConsumption), mai «esaurito» (stockStatus), nessun valore di
+      magazzino (unitsInStock), e in carta al cliente non compare (MenuPage).
+      Vedi REQ-MAG-010.
     in_produzione: true
-    status: todo
+    status: fixed
     generate_issue: true
     labels: [bug, hotfix, magazzino]
-    test_cases: []
+    test_cases: [tests/unit/inventory.test.js, tests/unit/pricing.test.js, tests/component/InventoryManager.test.jsx, tests/component/MenuPage.test.jsx]

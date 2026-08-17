@@ -612,6 +612,33 @@ requirements:
     labels: [magazzino, menu, dati]
     test_cases: []
 
+  - id: REQ-MAG-010
+    title: "Unità generiche: la manodopera entra nel costo del drink"
+    area: "src/lib/inventory.js, src/lib/pricing.js, src/components/InventoryManager.jsx, src/pages/MenuPage.jsx"
+    description: >
+      Un articolo di magazzino si può misurare in unità generiche «U», senza
+      contenuto e senza conversioni: serve per quello che non si versa e non si
+      pesa — il «Tempo di Lavorazione», che si aggancia come ingrediente ai
+      drink che richiedono lavorazione perché il lavoro entri nel costo della
+      ricetta e quindi nel prezzo consigliato. Ha un costo per unità, e basta.
+      Prima l'unica scelta possibile era il grammo, e nella ricetta del
+      Daiquiri si leggeva «Tempo di Lavorazione 1 g».
+      Un articolo in U NON È UNA SCORTA, e da qui vengono tre regole: non si
+      scarica quando il drink si fa (resta fuori dal consumo, quindi non si
+      reintegra nemmeno all'annullo); non è mai «esaurito» né «in
+      esaurimento», così il drink che lo usa non sparisce dalla carta al primo
+      che se ne fa e non finisce nelle proposte d'ordine al fornitore; non vale
+      niente nel valore del magazzino, che il lavoro non sta sullo scaffale.
+      Al cliente non si mostra: le righe in unità generiche restano fuori dalla
+      lista ingredienti in carta — «Tempo di Lavorazione 3 U» non è roba da far
+      leggere a chi ordina — e la lista compare da due ingredienti veri in su.
+      Restano visibili dove servono a chi gestisce: ricetta, costi, margini e
+      prezzo consigliato.
+    status: implemented
+    generate_issue: false
+    labels: [magazzino, prezzi, menu]
+    test_cases: [tests/unit/inventory.test.js, tests/unit/pricing.test.js, tests/component/InventoryManager.test.jsx, tests/component/MenuPage.test.jsx]
+
   # ══════════════════════════════════════════════════════════════════════
   #  MENÙ E CATALOGO
   # ══════════════════════════════════════════════════════════════════════

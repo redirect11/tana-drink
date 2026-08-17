@@ -30,6 +30,17 @@ una funzione, il terzo per le correzioni.
   fisarmonica, con costo, IVA e prezzo consigliato uno sopra l'altro. Adesso
   ogni voce è incolonnata — etichetta sopra, valore sotto — e si legge tutta.
   Nella vista a Lista, dove lo spazio c'è, non cambia niente.
+- **La manodopera si mette a listino, in unità generiche.** Un prodotto del
+  magazzino si può misurare in **U** — «Unità generiche», nel menu delle unità
+  di misura — per quello che non si versa e non si pesa: il **tempo di
+  lavorazione**. Si mette nella ricetta dei drink che richiedono preparazione,
+  col suo costo per unità, e così il lavoro entra nel costo del drink e quindi
+  nel prezzo consigliato. Prima si potevano scegliere solo litri, centilitri,
+  grammi o pezzi, e nel Daiquiri si leggeva «Tempo di Lavorazione 1 g». Tre
+  cose che contano: **non è una scorta** — non si scala quando il drink si fa e
+  non risulta mai esaurito, quindi il drink non sparisce dalla carta e il tempo
+  non finisce negli ordini al fornitore — **non entra nel valore del
+  magazzino**, e **in carta al cliente non si vede**.
 
 ---
 
