@@ -1469,6 +1469,7 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
           )
         : '',
     resa_unit: baseUnit(initial?.resa_unit) === 'g' ? 'g' : 'cl',
+    usa_altra_unita: Number(initial?.resa) > 0 && !!initial?.resa_unit,
     // SI SCARICA DAL MAGAZZINO? Lo decide il prodotto: la manodopera no, il
     // ghiaccio — contato a unità come lei — sì. Di suo vale la regola di
     // sempre, così i prodotti già caricati non cambiano comportamento.
@@ -1559,7 +1560,7 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
       // La resa vale per chi NON si conta a pezzi: sul pezzo la stessa cosa
       // la dice già «a quanto corrisponde un pezzo».
       const resaBase = (() => {
-        if (isPz || isGenerico) return null
+        if (isPz || isGenerico || !form.usa_altra_unita) return null
         const uso = toBaseQty(num(form.resa_qty), form.resa_unit)
         if (!(uso > 0)) return null
         const perAcquisto = toBaseQty(1, form.unit) || 1
@@ -1850,40 +1851,57 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
               non è una conversione — è la RESA, e la sa chi li spreme.
               Facoltativa: quasi tutti i prodotti si usano come si comprano,
               e a quelli questa riga non serve. */}
-          <label htmlFor="iresa">
-            Si usa in un&apos;altra unità? <span className="muted">(facoltativo)</span>
-          </label>
-          <div className="row" style={{ gap: 6, alignItems: 'center' }}>
-            <span className="muted small" style={{ whiteSpace: 'nowrap' }}>
-              1 {UNIT_LABEL[String(form.unit).toLowerCase()] || form.unit} rende
+          {/* UN INTERRUTTORE, NON UN CAMPO SEMPRE APERTO. Quasi tutti i
+              prodotti si usano come si comprano: lasciare la riga a vista
+              faceva leggere cose senza senso — «1 cl rende … cl» — e
+              chiedeva una risposta a chi non aveva la domanda. */}
+          <label className="row between" style={{ alignItems: 'center', gap: 8, marginTop: 10 }}>
+            <span>
+              Si usa in un&apos;altra unità
+              <span className="muted small"> — es. i limoni: si comprano al chilo, si spremono in cl</span>
             </span>
             <input
-              id="iresa"
-              type="number"
-              step="any"
-              min="0"
-              className="grow"
-              value={form.resa_qty}
-              onChange={set('resa_qty')}
-              placeholder="Es. 50"
+              type="checkbox"
+              className="toggle"
+              checked={!!form.usa_altra_unita}
+              onChange={(e) => setForm((f) => ({ ...f, usa_altra_unita: e.target.checked }))}
             />
-            <select
-              value={form.resa_unit}
-              onChange={set('resa_unit')}
-              aria-label="Unità d'uso"
-              style={{ width: 80 }}
-            >
-              <option value="cl">cl</option>
-              <option value="ml">ml</option>
-              <option value="g">g</option>
-            </select>
-          </div>
-          <p className="muted small" style={{ margin: '2px 0 8px' }}>
-            Da compilare solo se lo compri in un modo e lo usi in un altro —
-            i limoni si comprano al chilo e si spremono in cl. Le ricette lo
-            dosano nell&apos;unità d&apos;uso, la giacenza resta quella che
-            conti sullo scaffale.
-          </p>
+          </label>
+
+          {form.usa_altra_unita && (
+            <>
+              <label htmlFor="iresa">Quanto rende</label>
+              <div className="row" style={{ gap: 6, alignItems: 'center' }}>
+                <span className="muted small" style={{ whiteSpace: 'nowrap' }}>
+                  1 {UNIT_LABEL[String(form.unit).toLowerCase()] || form.unit} rende
+                </span>
+                <input
+                  id="iresa"
+                  type="number"
+                  step="any"
+                  min="0"
+                  className="grow"
+                  value={form.resa_qty}
+                  onChange={set('resa_qty')}
+                  placeholder="Es. 50"
+                />
+                <select
+                  value={form.resa_unit}
+                  onChange={set('resa_unit')}
+                  aria-label="Unità d'uso"
+                  style={{ width: 80 }}
+                >
+                  <option value="cl">cl</option>
+                  <option value="ml">ml</option>
+                  <option value="g">g</option>
+                </select>
+              </div>
+              <p className="muted small" style={{ margin: '2px 0 8px' }}>
+                Le ricette lo dosano nell&apos;unità d&apos;uso; la giacenza
+                resta quella che conti sullo scaffale.
+              </p>
+            </>
+          )}
         </>
       ) : (
         <>
