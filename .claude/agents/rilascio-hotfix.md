@@ -169,6 +169,15 @@ Se il workflow non è partito (di solito: il commit non tocca
 niente a mano: dillo e fermati. Le issue sono il posto dove questo lavoro si
 vede, e senza issue non c'è niente da prendere in carico.
 
+**Il ramo si lega alle issue con la pull request, non con `gh issue develop`.**
+Non perderci tempo: l'aggancio nativo (la colonna «Development» dell'issue) si
+ottiene solo *creando* il ramo dall'issue, e qui il ramo nasce prima — è il suo
+push che fa nascere le issue. Su un ramo che esiste già l'API non fa niente e
+torna vuota. Quindi il legame lo fanno due cose: il **ramo scritto nel
+commento di presa in carico** e i `Chiude #<n>` nella **pull request**, da cui
+ogni issue mostra la PR e si chiude col merge. Se serve anche il collegamento
+nella colonna, è un clic a mano dall'interfaccia — non tuo.
+
 ## 5. Prenderli in carico, uno alla volta
 
 ```sh
@@ -204,7 +213,22 @@ va tolto si toglie da solo:
    banco** per vedere che è a posto, in due righe senza gergo. L'issue
    **non la chiudi tu**: si chiude quando la correzione è in produzione e ha
    funzionato — col merge in `main`, per via del `Chiude #<n>`.
-6. Solo adesso passi al bug successivo.
+6. **Rileggi le issue, tutte, prima di passare al prossimo.**
+   ```sh
+   gh issue view <n> --comments   # una per una, anche quelle non tue
+   ```
+   Le issue sono il canale con cui chi sta al banco ti parla mentre lavori:
+   un commento arrivato dopo la tua presa in carico può correggere il
+   sintomo, aggiungere il dettaglio che cambia la soluzione, o dire che
+   quella correzione non basta. Se c'è qualcosa di nuovo:
+   - riguarda un bug **già committato** → **rilavoralo**, con un commit in
+     più (non si riscrive la storia, si aggiunge);
+   - riguarda un bug **non ancora fatto** → tienine conto prima di iniziarlo;
+   - **cambia il senso** del bug → rispondi sull'issue dicendo come l'hai
+     capita, e solo dopo mettici mano;
+   - **contraddice quello che hai fatto** → vince il commento. È chi sta al
+     banco che sa cosa succede la sera.
+7. Solo adesso passi al bug successivo.
 
 Attenzione alle regole del mestiere che qui si pagano care: niente `await` su
 una scrittura Firestore (offline non torna mai), il magazzino si scala con lo
@@ -253,15 +277,23 @@ gh pr create --base main --title "hotfix: <cosa sistema>" --body "…"
 
 Nel corpo, in italiano: i bug chiusi con `Chiude #<n>` uno per riga, cosa
 cambia per chi sta al banco, l'esito del cancello, e **cosa resta da fare a
-mano** — che è la parte che si dimentica:
+mano** — che è la parte che si dimentica, **in quest'ordine**:
 
-- il merge in `main` (che **non** pubblica: la produzione parte solo da un
-  tag, e così deve restare);
-- il **tag su `main`**, messo dalla persona dal suo computer e spinto: è
-  quello che fa partire il deploy in produzione, che poi va **approvato** su
-  GitHub;
+- la **prova sul test**, lanciando a mano «Deploy to Firebase» da GitHub
+  Actions su questo ramo (*Actions → Deploy to Firebase → Run workflow → il
+  ramo*, oppure `gh workflow run firebase-hosting.yml --ref <ramo>`).
+  **Sul ramo non si tagga niente**: il tag esiste solo per i rilasci;
+- il **merge, solo dopo che la correzione è stata provata al banco**: prima in
+  `main` (che **non** pubblica), poi in `develop`;
+- il **tag sul commit di `main`**, messo dalla persona dal suo computer: è
+  l'unica cosa che manda in produzione, e quel deploy va anche **approvato**
+  su GitHub;
 - la stessa correzione **anche in `develop`**, con una seconda pull request
   dallo stesso ramo, altrimenti al rilascio successivo il bug torna.
+
+Nel corpo scrivi anche che **le issue restano aperte** finché la correzione non
+è in produzione: nel registro la voce è già `fixed`, ma
+`generate-issues.mjs` chiude solo girando su `main` (`CHIUDE_RISOLTI`).
 
 Poi **ti fermi**. Non mergiare, non taggare, non chiudere le issue.
 

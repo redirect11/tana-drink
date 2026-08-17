@@ -32,16 +32,23 @@ Su `develop` e `main` non si committa mai direttamente.
 
 ## Il deploy
 
-**Si pubblica solo con un tag.** Un push su un ramo — qualunque ramo, `main`
-compreso — fa girare **lint, test e build**
-([test.yml](../.github/workflows/test.yml)) e finisce lì: non pubblica
-niente.
+**Un push non pubblica niente.** Su qualunque ramo, `main` compreso, fa
+girare **lint, test e build** ([test.yml](../.github/workflows/test.yml)) e
+finisce lì. A pubblicare ci vuole un gesto esplicito, e sono due: il **tag**
+o il **lancio a mano** del workflow.
 
 | Cosa fai | Cosa succede |
 |---|---|
 | push su un ramo qualsiasi | lint + test + build. Nessun deploy. |
+| lancio a mano «Deploy to Firebase» su un ramo | va **online sul test** (è così che si prova un ramo: niente tag) |
 | tag su un commit **non** in `main` | va **online sul test**, subito |
 | tag su un commit **di `main`** | parte la pipeline, e il deploy in **produzione aspetta un'approvazione** |
+
+Il lancio a mano si fa da GitHub, *Actions → Deploy to Firebase → Run
+workflow*, scegliendo il ramo. Non serve nessun tag, e non lascia tracce
+nella storia: è la strada normale per provare un ramo di lavoro. **Il tag
+resta per i rilasci** — quello su `main` è l'unica cosa che manda in
+produzione.
 
 Il ramo non c'entra più: conta **dove sta il commit taggato**. Un `v1.5.0`
 messo su `develop` mentre matura pubblica sul test; lo stesso numero, dopo
@@ -57,15 +64,17 @@ Il tag invece è un gesto solo, esplicito: si tagga quando si vuole
 pubblicare quella cosa lì.
 
 ```sh
-# provare sul test quello che si sta facendo
-git tag prova-stampa-sala && git push origin prova-stampa-sala
+# provare sul test quello che si sta facendo: dall'interfaccia di GitHub,
+# Actions → Deploy to Firebase → Run workflow → il tuo ramo.
+# Da riga di comando è la stessa cosa:
+gh workflow run firebase-hosting.yml --ref hotfix/magazzino-numeri-e-unita
 
 # rilasciare in produzione (poi si approva su GitHub)
 git tag -a v1.4.2 -m "Versione 1.4.2" && git push origin v1.4.2
 ```
 
-Il nome del tag è libero per le prove; per i rilasci resta `vX.Y.Z`, che è
-quello che l'app mostra come numero di versione.
+Per i rilasci il tag resta `vX.Y.Z`, che è quello che l'app mostra come
+numero di versione.
 
 **L'approvazione della produzione non sta nel codice**: è una regola del
 repository, in *Settings → Environments → `production` → Required
@@ -139,12 +148,14 @@ forza vuol dire non sapere più cosa è stato pubblicato quando.
 
 ## Urgenze in produzione
 
-1. `hotfix/<nome>` da `main`
-2. push → girano lint e test; per **provarlo davvero** si tagga il ramo
-   (`git tag prova-hotfix-x && git push origin prova-hotfix-x`), e quel tag
-   pubblica sul test
-3. merge in `main` (che non pubblica) **e** in `develop`, così la
-   correzione non si perde al rilascio successivo
+1. `hotfix/<nome>` da `main`, **un ramo solo per tutti i bug** di quel giro:
+   quattro rami vogliono quattro deploy e quattro prove per una serata sola
+2. push → girano lint e test; per **provarlo davvero** si lancia a mano
+   «Deploy to Firebase» da GitHub Actions scegliendo quel ramo, e va sul test.
+   **Sul ramo non si tagga niente**
+3. **si prova al banco**, e solo dopo quel via libera si mergia: in `main`
+   (che non pubblica) **e** in `develop`, così la correzione non si perde al
+   rilascio successivo
 4. tag sul commit di `main` → il deploy in produzione parte e **aspetta
    l'approvazione**
 
@@ -161,12 +172,21 @@ racconto del banco alla pull request lo fa l'agente
    tocca quel file fa girare
    [generate-issues.yml](../.github/workflows/generate-issues.yml);
 3. le prende in carico **una alla volta** — un commit per bug, col test che
-   dimostra la correzione — tenendo aggiornata l'issue;
+   dimostra la correzione — tenendo aggiornata l'issue, e **dopo ogni commit
+   rilegge le issue**: un commento arrivato nel frattempo può cambiare la
+   soluzione, e in quel caso il bug si rilavora;
 4. sull'ultimo commit passa il cancello e apre la **pull request verso
    `main`**.
 
-Lì si ferma. Il merge, il **tag** (che è l'unica cosa che pubblica), la sua
-approvazione e la seconda pull request verso `develop` restano di chi comanda.
+Lì si ferma. La prova sul test, il merge, il **tag** (che è l'unica cosa che
+manda in produzione), la sua approvazione e la seconda pull request verso
+`develop` restano di chi comanda.
+
+**Le issue non si chiudono dal ramo di hotfix.** Nel registro la voce passa a
+`fixed` appena la correzione è scritta, ma al banco l'app sbaglia ancora:
+`generate-issues.mjs` chiude solo quando gira su `main` (`CHIUDE_RISOLTI`).
+Chiuderle prima vuol dire dire a chi ha segnalato il guaio che è sistemato
+quando non lo è — è successo il 17 agosto 2026 con tre issue.
 
 ### Quando l'hotfix riporta indietro una funzione già scritta
 

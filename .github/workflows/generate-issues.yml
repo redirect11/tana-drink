@@ -50,4 +50,9 @@ jobs:
           GITHUB_REPO: ${{ github.repository }}
           # Su push automatico crea le issue; su run manuale rispetta la scelta dry_run.
           DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || 'false' }}
+          # Le issue si CHIUDONO solo da main, la linea della produzione. Sul
+          # ramo di hotfix la voce passa a `fixed` appena la correzione è
+          # scritta, ma al banco l'app sbaglia ancora: chiudere lì vuol dire
+          # dire a chi ha segnalato il guaio che è sistemato quando non lo è.
+          CHIUDE_RISOLTI: ${{ github.ref == 'refs/heads/main' }}
         run: node scripts/generate-issues.mjs
