@@ -2003,10 +2003,14 @@ body.fullbleed .bar-content {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 12px;
-  /* STESSA ALTEZZA per le card della stessa riga: con `start` ognuna teneva
-     la sua e la fila risultava sfrangiata — un conto col tavolo era piu'
-     alto di uno senza. Le righe restano indipendenti fra loro. */
-  align-items: stretch;
+  /* OGNI CARD LA SUA ALTEZZA. Con `stretch` aprivi le azioni di UNA e si
+     allungavano tutte quelle della riga: mezzo schermo di riquadri vuoti
+     per un menu di sei tasti. Ora cresce solo quella aperta e le altre
+     scendono, che è quello che uno si aspetta.
+     La fila resta comunque pari a colpo d'occhio: il corpo della card ha
+     un'altezza minima (.grid-card-main), quindi la differenza fra un conto
+     col tavolo e uno senza è di una riga di testo, non di mezza card. */
+  align-items: start;
   margin-bottom: 8px;
 }
 
@@ -6227,4 +6231,39 @@ a.storico-notifica:hover {
 .campo-password-occhio:hover,
 .campo-password-occhio:focus-visible {
   opacity: 1;
+}
+
+/* ── LE RIGHE DEL CONTO SI RIORDINANO ─────────────────────────────────
+   La maniglia compare solo in «organizza» e prende il posto a sinistra:
+   la riga si sposta di quel tanto, senza saltare da un'altra parte quando
+   si entra e si esce dal modo. */
+.posd-riga-wrap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.posd-riga-wrap > .row {
+  flex: 1;
+  min-width: 0;
+}
+.posd-riga-grip {
+  flex-shrink: 0;
+  padding: 2px 2px;
+  color: var(--muted);
+  cursor: grab;
+  touch-action: none;
+  font-size: 0.9em;
+  opacity: 0.7;
+}
+.posd-riga-grip:active {
+  cursor: grabbing;
+}
+/* La riga in mano: si stacca dal foglio, e le altre le fanno posto (il
+   movimento lo mette dnd-kit). */
+.posd-riga-wrap.dragging {
+  position: relative;
+  z-index: 5;
+  background: var(--card);
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
 }

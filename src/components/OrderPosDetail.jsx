@@ -59,6 +59,19 @@ import { toastSuccess, toastError } from '../lib/toast.js'
 import { printComanda, printScontrino } from '../lib/printer.js'
 import PosProductPicker from './PosProductPicker.jsx'
 import { IconPrinter, IconReceipt, IconCard, IconRefresh, IconX, IconCheck, IconClose, IconGruppo, IconPersona, IconTag } from './Icons.jsx'
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import CustomDrinkForm from './CustomDrinkForm.jsx'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import ActionSheet from './ActionSheet.jsx'
@@ -144,6 +157,45 @@ function ricordaNumeroPrevisto(n) {
   }
 }
 
+// ── RIORDINARE LE RIGHE DEL CONTO ────────────────────────────────────
+//
+// Si potevano già spostare, ma a lungo-premuto e con un movimento fatto a
+// mano: la riga saltava, le altre no, e capitava di spostarne una mentre si
+// voleva solo toccarla. Ora è la stessa libreria della griglia dei prodotti
+// (dnd-kit): la riga segue il dito e le altre si scansano da sole.
+//
+// E come nella griglia si entra in «organizza»: fuori di lì le righe non si
+// muovono — toccarle apre la riga, che è quello che si fa mille volte a
+// sera — e dentro compare la maniglia, che è l'unica cosa che trascina.
+const SENSORI_SPENTI = []
+
+function RigaOrdinabile({ id, attiva, bloccata, children }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id,
+    disabled: !attiva || bloccata,
+  })
+  return (
+    <div
+      ref={setNodeRef}
+      className={`posd-riga-wrap${isDragging ? ' dragging' : ''}`}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+    >
+      {attiva && !bloccata && (
+        <span
+          className="posd-riga-grip"
+          title="Trascina per spostare"
+          aria-label="Sposta la riga"
+          {...attributes}
+          {...listeners}
+        >
+          ⠿
+        </span>
+      )}
+      {children}
+    </div>
+  )
+}
+
 // Quando è stato aperto il conto: data breve + ora. "oggi" per la giornata in
 // corso, perché scrivere la data di oggi accanto al numero è rumore.
 function apertoIl(iso) {
@@ -179,6 +231,16 @@ export default function OrderPosDetail({ order: orderProp = null }) {
   const [showComande, setShowComande] = useState(false)
   const [confirmCancel, setConfirmCancel] = useState(false)
   const [confirmSvuota, setConfirmSvuota] = useState(false)
+  // «Organizza» per la lista del conto: come nella griglia, è un
+  // interruttore che fa comparire le maniglie. Fuori di lì toccare una riga
+  // la apre — è quello che si fa mille volte a sera — e niente si sposta per
+  // sbaglio.
+  const [organizzaLista, setOrganizzaLista] = useState(false)
+  const sensoriLista = useSensors(
+    // Otto pixel prima di considerarlo un trascinamento: sotto quella soglia
+    // è un tocco, e il tocco apre la riga.
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+  )
   // Menu delle azioni: esiste solo sul telefono, dove i tasti non ci stanno
   // tutti in pagina senza mangiarsi le righe del conto.
   const [showAzioni, setShowAzioni] = useState(false)
@@ -904,61 +966,13 @@ export default function OrderPosDetail({ order: orderProp = null }) {
     flushTimers.current[l.comandaId] = setTimeout(() => flushComanda(l.comandaId), 600)
   }
 
-  // ── Riordino della lista per DRAG (tieni premuto e trascina) ──
-  // Tutti gli item sono spostabili. Il riordino delle righe di bozza viene
-  // reso persistente (allineo l'array bozza all'ordine visivo).
-  const [dragIndex, setDragIndex] = useState(null)
-  const dragRef = useRef({ timer: null, startY: 0 })
-  const startDrag = (e, index) => {
-    if (closed) return
-    try { e.currentTarget.setPointerCapture(e.pointerId) } catch { /* ok */ }
-    dragRef.current.startY = e.clientY
-    dragRef.current.startX = e.clientX
-    dragRef.current.startIndex = index
-    dragRef.current.moved = false
-    clearTimeout(dragRef.current.timer)
-    dragRef.current.timer = setTimeout(() => setDragIndex(index), 300)
-  }
-  const moveDrag = (e) => {
-    if (dragIndex == null) {
-      const moved =
-        Math.abs(e.clientY - dragRef.current.startY) > 8 ||
-        Math.abs(e.clientX - dragRef.current.startX) > 8
-      if (moved) {
-        dragRef.current.moved = true
-        clearTimeout(dragRef.current.timer)
-      }
-      return
-    }
-    e.preventDefault()
-    const el = document.elementFromPoint(e.clientX, e.clientY)
-    const target = el?.closest('[data-line-index]')
-    if (!target) return
-    const to = Number(target.dataset.lineIndex)
-    if (!Number.isInteger(to) || to === dragIndex) return
-    // Non si scavalcano le righe pagate (stanno in fondo, bloccate).
-    if (orderedLines[to]?.paid) return
-    // Gli indici sono quelli VISIBILI (lista partizionata): traduco in indici
-    // del layout tramite le chiavi, così il riordino resta corretto.
-    const fromKey = orderedLines[dragIndex]?.key
-    const toKey = orderedLines[to]?.key
-    if (fromKey && toKey) {
-      setLayout((lay) => moveLine(lay, lay.indexOf(fromKey), lay.indexOf(toKey)))
-      setDragIndex(to)
-    }
-  }
-  const endDrag = (e) => {
-    clearTimeout(dragRef.current.timer)
-    const wasDragging = dragIndex != null
-    if (wasDragging) syncDraftOrder()
-    setDragIndex(null)
-    // TAP (nessun drag, nessun movimento) sull'item → apre l'editor per-riga.
-    // Serve qui perché il pointer-capture del drag "mangia" il click sul figlio.
-    if (!wasDragging && !dragRef.current.moved && e?.type === 'pointerup') {
-      const l = orderedLines[dragRef.current.startIndex]
-      if (l && !closed && (l.source === 'draft' || l.removable)) setEditLine(l)
-    }
-  }
+  // ── Riordino della lista ──
+  // Lo fa dnd-kit, la stessa libreria della griglia dei prodotti: la riga
+  // segue il dito e le altre si scansano da sole (vedi RigaOrdinabile).
+  // Prima era fatto a mano, a lungo-premuto: la riga saltava, le altre no, e
+  // capitava di spostarne una mentre si voleva solo toccarla.
+  // Il riordino delle righe di bozza si rende persistente allineando
+  // l'array della bozza all'ordine visivo.
   // Allinea l'ordine della bozza (persistito) alla sequenza visiva corrente.
   const syncDraftOrder = () => {
     const draftIds = layoutRef.current.filter((k) => k.startsWith('d:')).map((k) => k.slice(2))
@@ -1714,6 +1728,24 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                   🕘
                 </button>
               )}
+              {/* ORGANIZZA: come nella griglia dei prodotti, un interruttore
+                  che fa comparire le maniglie. Fuori di lì toccare una riga
+                  la apre — è quello che si fa mille volte a sera — e niente
+                  si sposta per sbaglio. */}
+              {righeDaSvuotare > 0 && !closed && (
+                <button
+                  className={`btn ghost small${organizzaLista ? ' active' : ''}`}
+                  onClick={() => setOrganizzaLista((v) => !v)}
+                  aria-label={organizzaLista ? 'Fine riordino' : 'Organizza le righe'}
+                  title={
+                    organizzaLista
+                      ? 'Fine: le righe tornano a aprirsi al tocco'
+                      : 'Organizza: compaiono le maniglie per spostare le righe'
+                  }
+                >
+                  {organizzaLista ? '✓' : '↕'}
+                </button>
+              )}
               {/* SVUOTA TUTTO, una icona sola. Togliere venti righe una per
                   una col «−» è il modo peggiore di ricominciare: capita di
                   battere il conto sbagliato e accorgersene alla fine. Chiede
@@ -1872,13 +1904,30 @@ export default function OrderPosDetail({ order: orderProp = null }) {
               </button>
             )}
 
+            <DndContext
+              sensors={organizzaLista ? sensoriLista : SENSORI_SPENTI}
+              collisionDetection={closestCenter}
+              onDragEnd={({ active, over }) => {
+                if (!over || active.id === over.id) return
+                setLayout((lay) => {
+                  const da = lay.indexOf(active.id)
+                  const a = lay.indexOf(over.id)
+                  return da < 0 || a < 0 ? lay : moveLine(lay, da, a)
+                })
+                syncDraftOrder()
+              }}
+            >
+            <SortableContext
+              items={orderedLines.filter((l) => !l.paid).map((l) => l.key)}
+              strategy={verticalListSortingStrategy}
+            >
             {orderedLines.map((l, idx) => {
               const isDraft = l.source === 'draft'
               const isPaid = !!l.paid
               const canMinus = !closed && !isPaid && (isDraft || l.removable)
               const firstPaid = isPaid && !orderedLines[idx - 1]?.paid
               return (
-                <div key={l.key}>
+                <RigaOrdinabile key={l.key} id={l.key} attiva={organizzaLista} bloccata={isPaid || closed}>
                   {firstPaid && (
                     <div className="muted small" style={{ margin: '10px 0 2px', borderTop: '1px dashed var(--line)', paddingTop: 6 }}>
                       💳 Pagati
@@ -1886,23 +1935,19 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                   )}
                   <div
                     className={`row between draft-line${l.annullata ? ' riga-annullata' : ''}`}
-                    data-line-index={idx}
                     data-line-key={l.key}
-                    onPointerDown={(e) => !isPaid && startDrag(e, idx)}
-                    onPointerMove={moveDrag}
-                    onPointerUp={endDrag}
-                    onPointerCancel={endDrag}
+                    // Toccare la riga la apre: il trascinamento sta nella
+                    // maniglia, e solo in «organizza».
+                    onClick={() => {
+                      if (closed || isPaid || organizzaLista) return
+                      if (isDraft || l.removable) setEditLine(l)
+                    }}
                     style={{
                       alignItems: 'center',
                       marginTop: 2,
-                      // pan-y: lo scroll verticale della lista resta possibile su
-                      // touch (prima 'none' lo bloccava); il drag parte dal long-press.
-                      touchAction: 'pan-y',
-                      cursor: closed || isPaid ? 'default' : 'grab',
+                      cursor: closed || isPaid || organizzaLista ? 'default' : 'pointer',
                       borderRadius: 8,
-                      background: dragIndex === idx ? 'var(--tile-bg)' : 'transparent',
-                      boxShadow: dragIndex === idx ? '0 4px 14px rgba(0,0,0,0.35)' : 'none',
-                      opacity: isPaid ? 0.6 : dragIndex != null && dragIndex !== idx ? 0.85 : 1,
+                      opacity: isPaid ? 0.6 : 1,
                     }}
                   >
                     {/* L'item è CLICCABILE per modificarlo (niente tasto matita):
@@ -1913,7 +1958,6 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                       style={{ fontSize: '1.08em', display: 'flex', alignItems: 'center', minWidth: 0, cursor: !closed && (isDraft || l.removable) ? 'pointer' : 'inherit' }}
                       title={!closed && (isDraft || l.removable) ? `Modifica ${l.name}` : undefined}
                     >
-                      {!closed && !isPaid && <span aria-hidden style={{ opacity: 0.35, marginRight: 4, flexShrink: 0, fontSize: '0.85em' }}>⠿</span>}
                       <span style={{ minWidth: 0, overflow: 'hidden' }}>
                         <span style={{ display: 'flex', alignItems: 'baseline', minWidth: 0 }}>
                           <span style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
@@ -1964,9 +2008,11 @@ export default function OrderPosDetail({ order: orderProp = null }) {
                       </span>
                     </span>
                   </div>
-                </div>
+                </RigaOrdinabile>
               )
             })}
+            </SortableContext>
+            </DndContext>
 
           </div>
 

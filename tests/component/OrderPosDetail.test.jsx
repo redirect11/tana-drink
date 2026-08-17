@@ -1215,3 +1215,26 @@ describe('il conto annullato mostra cosa c’era dentro', () => {
     expect(screen.queryByText('Negroni')).toBeNull()
   })
 })
+
+// RIORDINARE LE RIGHE DEL CONTO. Si potevano già spostare, ma a
+// lungo-premuto e con un movimento fatto a mano: la riga saltava, le altre
+// no, e capitava di spostarne una mentre si voleva solo toccarla. Ora è la
+// stessa libreria della griglia, e si entra in «organizza» come lì: fuori
+// di lì toccare una riga la APRE, che è quello che si fa mille volte a
+// sera.
+describe('organizza le righe del conto', () => {
+  it('le maniglie compaiono solo in «organizza»', async () => {
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter>
+        <OrderPosDetail order={baseOrder()} />
+      </MemoryRouter>
+    )
+    expect(screen.queryAllByLabelText('Sposta la riga')).toHaveLength(0)
+    await user.click(await screen.findByRole('button', { name: /Organizza le righe/ }))
+    expect((await screen.findAllByLabelText('Sposta la riga')).length).toBeGreaterThan(0)
+    // E si esce come si è entrati.
+    await user.click(screen.getByRole('button', { name: /Fine riordino/ }))
+    expect(screen.queryAllByLabelText('Sposta la riga')).toHaveLength(0)
+  })
+})
