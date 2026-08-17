@@ -455,7 +455,16 @@ export function costPerUnit(item, unit, { gross = true } = {}) {
   // confezione da dividere — una unità di lavoro costa quello che costa. E non
   // si mescola con volumi e pesi: quanto costa al cl un'ora di lavoro non
   // vuol dire niente, quindi null («non lo so», non «zero»).
-  if (unitaGenerica(item?.unit)) return unitaGenerica(unit) ? packCost : null
+  if (unitaGenerica(item?.unit)) {
+    if (unitaGenerica(unit)) return packCost
+    // Una unità può rendere qualcosa che si dosa: un sacchetto di ghiaccio
+    // (1 U) fa 5000 g. Allora il grammo costa quello che costa il sacchetto
+    // diviso quanto ne fa. Senza resa, «non lo so».
+    const r = resaUso(item)
+    const per = BASE_PER_UNIT[String(unit || '').toLowerCase()]
+    if (!r || !per || baseUnit(unit) !== r.base || !(r.per > 0)) return null
+    return (packCost / r.per) * per
+  }
   if (unitaGenerica(unit)) {
     // Pezzo che CONTIENE unità (1 pz = 10 U): la singola unità costa la
     // confezione diviso quante ne fa. Fuori da questo caso il generico non

@@ -54,6 +54,7 @@ import {
 import { formatPrice } from '../lib/orderStatus.js'
 import { parseSupplierList } from '../lib/warehouse.js'
 import MacroCategoryManager from './MacroCategoryManager.jsx'
+import { useChiudiConIndietro } from '../lib/schermate.js'
 import { toastSuccess, toastError } from '../lib/toast.js'
 import StockCountPanel from './StockCountPanel.jsx'
 import PurchaseOrdersPanel from './PurchaseOrdersPanel.jsx'
@@ -324,6 +325,9 @@ function ProductsPanel() {
   const [error, setError] = useState(null)
 
   const [editing, setEditing] = useState(null) // null | 'new' | item
+  // Aperta la scheda, «indietro» torna al magazzino invece di uscire dalla
+  // pagina: vedi lib/schermate.js.
+  useChiudiConIndietro(!!editing, () => setEditing(null))
 
   // Filtri
   const [query, setQuery] = useState('')
@@ -1499,6 +1503,21 @@ function contenutoInUnita(item, unita) {
 // contenuto lasciava code di decimali che a schermo si vedevano.
 const arrotonda = (n) => Math.round((Number(n) || 0) * 10000) / 10000
 
+// L'UNITÀ D'USO SI SCEGLIE LIBERAMENTE. L'Aperol si compra a bottiglia e si
+// versa in cl, i limoni si comprano al chilo e si spremono in ml o in litri:
+// le famiglie (peso, volume) qui non c'entrano, perché a dire quanto rende
+// una cosa nell'altra è chi compra. Le conversioni fra unità della stessa
+// famiglia restano automatiche.
+const UNITA_USO = [
+  ['l', 'L'],
+  ['cl', 'cl'],
+  ['ml', 'ml'],
+  ['kg', 'kg'],
+  ['g', 'g'],
+  ['mg', 'mg'],
+  ['U', 'U'],
+]
+
 function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, onSave }) {
   const isEdit = !!initial
   // Unità scelta dall'utente (L/cl/ml, g/mg, pz). Lo stock è salvato in
@@ -1541,10 +1560,12 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
       ? 'U'
       : initial?.content_unit === 'g'
         ? 'g'
-        : 'cl',
+        : 'cl', // di suo i cl: è come si legge una bottiglia
     // LA RESA: quanto rende una unità di quello che si compra, quando si usa
     // in un'altra unità (1 kg di limoni = 50 cl di succo). Si scrive
     // nell'unità in cui la si pensa, non in unità base.
+    // Riaprendo si legge sempre riferita a UNA unità: è lo stesso rapporto,
+    // scritto nel modo più corto.
     resa_qty:
       Number(initial?.resa) > 0 && initial?.resa_unit
         ? String(
@@ -1555,7 +1576,14 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
           )
         : '',
     resa_unit: baseUnit(initial?.resa_unit) === 'g' ? 'g' : 'cl',
-    usa_altra_unita: Number(initial?.resa) > 0 && !!initial?.resa_unit,
+    resa_da_qty: '1',
+    // Acceso vuol dire «lo uso come lo compro»: la birra si compra a
+    // bottiglia e si serve a bottiglia, e non c'è altro da dire. Sui
+    // prodotti che ce l'hanno già scritto (il contenuto di un pezzo, o una
+    // resa) parte spento, così la scheda si riapre come la si era lasciata.
+    usa_altra_unita:
+      (Number(initial?.resa) > 0 && !!initial?.resa_unit) ||
+      (initial?.unit === 'pz' && Number(initial?.package_size) > 0),
     // SI SCARICA DAL MAGAZZINO? Lo decide il prodotto: la manodopera no, il
     // ghiaccio — contato a unità come lei — sì. Di suo vale la regola di
     // sempre, così i prodotti già caricati non cambiano comportamento.
@@ -1598,6 +1626,13 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
     const dichiarata = typeof initial?.scorta === 'boolean' ? initial.scorta : null
     const nuovo = atteso ? true : (dichiarata ?? false)
     if (scorteRif.current !== nuovo) setForm((f) => ({ ...f, scorta: nuovo }))
+    // CAMBIANDO COME LO COMPRI, la risposta su come lo usi ricomincia: era
+    // data su un'altra unità, e tenerla vorrebbe dire dare per buona una
+    // resa scritta per i chili su un prodotto passato ai pezzi.
+    const usava =
+      (Number(initial?.resa) > 0 && !!initial?.resa_unit) ||
+      (initial?.unit === 'pz' && Number(initial?.package_size) > 0)
+    setForm((f) => (f.usa_altra_unita === usava ? f : { ...f, usa_altra_unita: usava }))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.unit])
   const costNum = num(form.cost)
@@ -1667,18 +1702,24 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
       const packBase = isGenerico
         ? null
         : isPz
-          ? toBaseQty(num(form.content_size), form.content_unit) || null
+          ? (form.usa_altra_unita
+              ? toBaseQty(num(form.content_size), form.content_unit) || null
+              : null)
           : Number(initial?.package_size) > 0 && baseUnit(form.unit) === initialBase
             ? Number(initial.package_size)
             : toBaseQty(1, form.unit)
       // La resa vale per chi NON si conta a pezzi: sul pezzo la stessa cosa
       // la dice già «a quanto corrisponde un pezzo».
+      // LA RESA SI SALVA COME RAPPORTO: quante unità base d'uso rende UNA
+      // unità base d'acquisto. Scritta «5 kg rendono 1,5 l» diventa 0,3 ml
+      // per grammo, e da lì lo scarico fa la proporzione su qualunque
+      // quantità si versi. Vedi resaUso in lib/inventory.
       const resaBase = (() => {
-        if (isPz || isGenerico || !form.usa_altra_unita) return null
+        if (isPz || !form.usa_altra_unita) return null
         const uso = toBaseQty(num(form.resa_qty), form.resa_unit)
-        if (!(uso > 0)) return null
-        const perAcquisto = toBaseQty(1, form.unit) || 1
-        return uso / perAcquisto
+        const preso = toBaseQty(num(form.resa_da_qty) || 1, form.unit)
+        if (!(uso > 0) || !(preso > 0)) return null
+        return uso / preso
       })()
       const base = {
         name: form.name.trim(),
@@ -1744,16 +1785,16 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
           await onSave(base)
         }
       } else {
-        const n = Number(form.bottles) || 0
+        const n = num(form.bottles)
         let stock
         let bottles_total = 0
         if (isPz) {
-          stock = n
+          stock = Math.round(n)
         } else {
-          const size = packBase || 0
-          const open = toBaseQty(num(form.open_content), form.unit)
-          stock = n * size + open
-          bottles_total = n + (open > 0 ? 1 : 0)
+          // La quantità è scritta nell'unità d'acquisto: si porta in unità
+          // base e basta, senza passare da nessuna confezione.
+          stock = toBaseQty(n, form.unit)
+          bottles_total = 0
         }
         await onSave({ ...base, stock, bottles_total })
       }
@@ -1761,6 +1802,61 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
       setSaving(false)
     }
   }
+
+  // ── QUANTO RENDE UNA UNITÀ DI QUELLO CHE SI COMPRA ─────────────────
+  // La stessa riga serve ai chili di limoni, ai litri sfusi e alle unità
+  // generiche: cambia solo l'unità scritta a sinistra, che è quella con cui
+  // si compra.
+  const rigaResa = (
+    <>
+      <label htmlFor="iresa" style={{ marginTop: 8 }}>Quanto rende</label>
+      {/* LA QUANTITÀ SI SCRIVE ANCHE A SINISTRA. «Cinque chili di limoni fanno
+          un litro e mezzo di succo» è come si dice al banco; costringere a
+          scrivere quanto ne fa UN chilo vuol dire far fare a mano una
+          divisione, e sbagliarla. Sotto resta un rapporto, ed è quello che
+          usa lo scarico: la proporzione vale per qualunque quantità. */}
+      <div className="row" style={{ gap: 6, alignItems: 'center' }}>
+        <input
+          id="iresa-da"
+          type="number"
+          step="any"
+          min="0"
+          value={form.resa_da_qty}
+          onChange={set('resa_da_qty')}
+          aria-label="Quanto ne prendi"
+          style={{ width: 80 }}
+        />
+        <span className="muted small" style={{ whiteSpace: 'nowrap' }}>
+          {UNIT_LABEL[String(form.unit).toLowerCase()] || form.unit} rendono
+        </span>
+        <input
+          id="iresa"
+          type="number"
+          step="any"
+          min="0"
+          className="grow"
+          value={form.resa_qty}
+          onChange={set('resa_qty')}
+          placeholder="Es. 50"
+        />
+        <select
+          value={form.resa_unit}
+          onChange={set('resa_unit')}
+          aria-label="Unità d'uso"
+          style={{ width: 80 }}
+        >
+          {UNITA_USO.map(([u, label]) => (
+            <option key={u} value={u}>{label}</option>
+          ))}
+        </select>
+      </div>
+      <p className="muted small" style={{ margin: '2px 0 8px' }}>
+        Es. i limoni: si comprano al chilo, si spremono in cl. Le ricette lo
+        dosano nell&apos;unità d&apos;uso; la giacenza resta quella che conti
+        sullo scaffale.
+      </p>
+    </>
+  )
 
   return (
     <form className="card" onSubmit={submit}>
@@ -1825,7 +1921,9 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
       <select id="iunit" value={form.unit} onChange={set('unit')}>
         {[
           ['Liquidi', [['l', 'Litri (L)'], ['cl', 'Centilitri (cl)'], ['ml', 'Millilitri (ml)']]],
-          ['Solidi', [['g', 'Grammi (g)'], ['mg', 'Milligrammi (mg)']]],
+          // IL CHILO MANCAVA, e i limoni si comprano al chilo: restava solo
+          // il grammo, e chi caricava una cassetta doveva scrivere 5000.
+          ['Solidi', [['kg', 'Chili (kg)'], ['g', 'Grammi (g)'], ['mg', 'Milligrammi (mg)']]],
           ['Pezzi', [['pz', 'Pezzi / unità (bottiglie, lattine, confezioni…)']]],
           // GENERICO: quello che non si versa, non si pesa e non è una
           // bottiglia — il tempo di lavorazione messo a listino. Senza,
@@ -1956,6 +2054,23 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
               <span className="muted small"> — es. il ghiaccio. Il tempo di lavorazione no.</span>
             </span>
           </label>
+
+          {/* L'interruttore c'è anche qui: un sacchetto di ghiaccio si conta
+              a unità ma nelle ricette si dosa a grammi, e senza questa riga
+              non c'era modo di dirlo. */}
+          <label className="row between" style={{ alignItems: 'center', gap: 8 }}>
+            <span>
+              Lo uso come lo compro
+              <span className="muted small"> — stessa unità per il carico e per le ricette</span>
+            </span>
+            <input
+              type="checkbox"
+              className="toggle"
+              checked={!form.usa_altra_unita}
+              onChange={(e) => setForm((f) => ({ ...f, usa_altra_unita: !e.target.checked }))}
+            />
+          </label>
+          {form.usa_altra_unita && rigaResa}
         </>
       ) : !isPz ? (
         <>
@@ -1978,48 +2093,34 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
             />
           </label>
 
-          {form.usa_altra_unita && (
-            <>
-              <label htmlFor="iresa" style={{ marginTop: 8 }}>Quanto rende</label>
-              <div className="row" style={{ gap: 6, alignItems: 'center' }}>
-                <span className="muted small" style={{ whiteSpace: 'nowrap' }}>
-                  1 {UNIT_LABEL[String(form.unit).toLowerCase()] || form.unit} rende
-                </span>
-                <input
-                  id="iresa"
-                  type="number"
-                  step="any"
-                  min="0"
-                  className="grow"
-                  value={form.resa_qty}
-                  onChange={set('resa_qty')}
-                  placeholder="Es. 50"
-                />
-                <select
-                  value={form.resa_unit}
-                  onChange={set('resa_unit')}
-                  aria-label="Unità d'uso"
-                  style={{ width: 80 }}
-                >
-                  <option value="cl">cl</option>
-                  <option value="ml">ml</option>
-                  <option value="g">g</option>
-                </select>
-              </div>
-              <p className="muted small" style={{ margin: '2px 0 8px' }}>
-                Es. i limoni: si comprano al chilo, si spremono in cl. Le
-                ricette lo dosano nell&apos;unità d&apos;uso; la giacenza resta
-                quella che conti sullo scaffale.
-              </p>
-            </>
-          )}
+          {form.usa_altra_unita && rigaResa}
         </>
       ) : (
         <>
+          {/* ANCHE IL PEZZO SI USA QUASI SEMPRE COM'È: una birra si compra a
+              bottiglia e si serve a bottiglia. La domanda sul contenuto
+              serve solo a quello che si versa — il gin, lo sciroppo — e
+              stava a vista su tutto, chiedendo i centilitri di una lattina
+              che nessuno apre a metà. */}
+          <label className="row between" style={{ alignItems: 'center', gap: 8 }}>
+            <span>
+              Lo uso come lo compro
+              <span className="muted small"> — es. la birra: si compra e si serve a bottiglia</span>
+            </span>
+            <input
+              type="checkbox"
+              className="toggle"
+              checked={!form.usa_altra_unita}
+              onChange={(e) => setForm((f) => ({ ...f, usa_altra_unita: !e.target.checked }))}
+            />
+          </label>
+
+          {form.usa_altra_unita && (
+          <>
           {/* «A quanto corrisponde un pezzo»: è la domanda che si fa chi
               carica la merce — una bottiglia fa 100 cl, una confezione fa
               10 U. Da qui esce il costo al cl (o all'unità). */}
-          <label htmlFor="icontent">A quanto corrisponde un pezzo?</label>
+          <label htmlFor="icontent" style={{ marginTop: 8 }}>A quanto corrisponde un pezzo?</label>
           <div className="row" style={{ gap: 6 }}>
             <input
               id="icontent"
@@ -2031,19 +2132,17 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
               onChange={set('content_size')}
               placeholder="Es. 33 per una bottiglia da 33 cl"
             />
+            {/* Anche qui si sceglie fra tutte: una bottiglia rende cl, un
+                sacco rende chili, una confezione rende unità. */}
             <select
               value={form.content_unit}
               onChange={set('content_unit')}
               aria-label="Unità del contenuto"
               style={{ width: 90 }}
             >
-              <option value="cl">cl</option>
-              <option value="ml">ml</option>
-              <option value="g">g</option>
-              {/* UN PEZZO PUÒ CONTENERE UNITÀ: «il tempo di lavoro in pezzi
-                  e dopo unità» (Flavio, 17/08). Le unità non si scaricano dal
-                  magazzino — servono al costo — ma in ricetta si dosano. */}
-              <option value="U">U</option>
+              {UNITA_USO.map(([u, label]) => (
+                <option key={u} value={u}>{label}</option>
+              ))}
             </select>
           </div>
           <p className="muted small" style={{ margin: '2px 0 8px' }}>
@@ -2053,6 +2152,8 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
               ? '. Le unità non si scaricano dal magazzino: servono al costo.'
               : '.'}
           </p>
+          </>
+          )}
         </>
       )}
 
@@ -2064,10 +2165,14 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
           </>
         ) : (
           <>
-            <label htmlFor="ibottles">Numero di confezioni piene</label>
-            <input id="ibottles" type="number" step="1" min="0" value={form.bottles} onChange={set('bottles')} placeholder="Es. 3" />
-            <label htmlFor="iopen">Bottiglia aperta — contenuto ({form.unit}) — opzionale</label>
-            <input id="iopen" type="number" step="any" min="0" value={form.open_content} onChange={set('open_content')} placeholder={`Es. ${form.unit === 'l' ? '0,35' : form.unit === 'ml' ? '350' : '35'} se ne hai una già aperta`} />
+            {/* SI SCRIVE QUANTO SE NE HA, nell'unità in cui si compra.
+                Chiedere «quante confezioni piene» a chi compra a chili o a
+                centilitri non voleva dire niente: la confezione, per lui, è
+                l'unità. */}
+            <label htmlFor="ibottles">
+              Quantità iniziale ({UNIT_LABEL[String(form.unit).toLowerCase()] || form.unit})
+            </label>
+            <input id="ibottles" type="number" step="any" min="0" value={form.bottles} onChange={set('bottles')} placeholder="Es. 3" />
           </>
         )
       )}
