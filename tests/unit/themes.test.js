@@ -11,15 +11,20 @@ import {
 } from '../../src/lib/themes.js'
 
 describe('resolveThemeVars', () => {
+  // Dal 1.4.8 la risposta porta anche le FORME della famiglia (angoli,
+  // fondo dei tasti, ombre): i colori del preset ci stanno dentro tutti,
+  // ma non sono più tutto quello che c'è. Vedi tests/unit/temi.test.js.
   it('usa il preset richiesto', () => {
     const vars = resolveThemeVars({ preset: 'chiaro', custom: null })
-    expect(vars).toEqual(THEME_PRESETS.chiaro.vars)
+    expect(vars).toMatchObject(THEME_PRESETS.chiaro.vars)
+    expect(vars['--raggio-btn']).toBeTruthy()
   })
 
   it('fallback al default per preset sconosciuto o mancante', () => {
-    expect(resolveThemeVars({ preset: 'boh' })).toEqual(THEME_PRESETS[DEFAULT_THEME].vars)
-    expect(resolveThemeVars(null)).toEqual(THEME_PRESETS[DEFAULT_THEME].vars)
-    expect(resolveThemeVars(undefined)).toEqual(THEME_PRESETS[DEFAULT_THEME].vars)
+    const atteso = THEME_PRESETS[DEFAULT_THEME].vars
+    expect(resolveThemeVars({ preset: 'boh' })).toMatchObject(atteso)
+    expect(resolveThemeVars(null)).toMatchObject(atteso)
+    expect(resolveThemeVars(undefined)).toMatchObject(atteso)
   })
 
   it('gli override custom vincono sul preset', () => {

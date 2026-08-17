@@ -1403,6 +1403,35 @@ requirements:
     labels: [menu, magazzino]
     test_cases: []
 
+  - id: REQ-UI-019
+    title: "Un tema porta anche le forme, e arriva su tutti i colori"
+    area: "src/lib/themes.js, src/index.css, DESIGN.md"
+    description: >
+      Un tema non è una tavolozza. Pico e Catppuccin hanno un MODO di fare
+      le cose — angoli, tasti piatti o col gradiente, ombre — e
+      prendendone solo i colori restava tutto con la faccia della Tana
+      ridipinta: si sceglieva «Pico» e si trovavano i tasti dorati con gli
+      angoli morbidi.
+      Le forme stanno in `FORME` (tre famiglie: tana, catppuccin, pico) e
+      ogni preset dichiara la sua. Sono otto token — raggio di card,
+      bottoni, pillole e campi, fondo del bottone, ombra del bottone e
+      della card, font dei titoli — e OGNI famiglia li dichiara tutti,
+      perché applyTheme scrive sullo stile di :root e un token lasciato
+      indietro resterebbe appiccicato al tema successivo.
+      E il tema arriva dappertutto: l'oro di casa era scritto a mano in una
+      dozzina di posti (il tab acceso, il «+», i tasti dei pannelli, gli
+      aloni del fondo pagina) e quelli ignoravano il tema. Adesso il colore
+      dell'azione è uno solo e viene dai token; il testo sul tasto
+      (`--btn-ink`) si decide dalla luminanza del colore d'azione, perché
+      cablato scuro sarebbe stato nero su nero su un tema con l'azione
+      scura. Un test boccia il dorato riscritto a mano nel foglio di stile.
+      La personalizzazione a mano resta ai soli colori: le forme vengono
+      dal preset.
+    status: implemented
+    generate_issue: false
+    labels: [ui, tema]
+    test_cases: [tests/unit/temi.test.js, tests/unit/css.test.js]
+
   - id: REQ-MENU-011
     title: "Un drink si duplica: la ricetta non si riscrive a mano"
     area: "src/components/MenuManager.jsx"
