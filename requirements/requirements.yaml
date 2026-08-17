@@ -1133,6 +1133,26 @@ requirements:
     labels: [ux]
     test_cases: [tests/component/Caricamento.test.jsx]
 
+  - id: REQ-UI-017
+    title: "La password si può guardare"
+    area: "src/components/CampoPassword.jsx"
+    description: >
+      Accanto a ogni campo password — accesso del banco, accesso e
+      registrazione dei clienti, cambio password nel profilo, conferma per
+      eliminare l'account — c'è l'occhio che la mostra. Al banco si entra da
+      un tablet, spesso con le mani bagnate e una tastiera a schermo che
+      sbaglia da sola: scritta a pallini, davanti a un «credenziali errate»
+      non si sa se è sbagliata la password o una lettera partita male.
+      Parte sempre COPERTA: al bancone c'è sempre qualcuno dietro le spalle,
+      e mostrarla dev'essere una scelta, non la condizione di partenza.
+      L'occhio sta fuori dal giro del tabulatore: chi compila con la
+      tastiera passa dalla password al tasto «entra», non da un interruttore
+      in mezzo.
+    status: implemented
+    generate_issue: false
+    labels: [ux, accesso]
+    test_cases: [tests/component/CampoPassword.test.jsx]
+
   - id: REQ-UI-014
     title: "La barra delle sezioni si stringe a icone, o si toglie di mezzo"
     area: "src/components/CategoryRail.jsx, src/index.css"

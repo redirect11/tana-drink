@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import CampoPassword from '../components/CampoPassword.jsx'
 import { Link, useNavigate } from 'react-router-dom'
 import { useEffect } from 'react'
 import { subscribeSettings, DEFAULT_SETTINGS } from '../lib/api.js'
@@ -114,9 +115,8 @@ export function AccediPage() {
           onChange={(e) => setEmail(e.target.value)}
         />
         <label htmlFor="acc-password" style={{ marginTop: 10 }}>Password</label>
-        <input
+        <CampoPassword
           id="acc-password"
-          type="password"
           required
           autoComplete="current-password"
           value={password}
@@ -191,7 +191,7 @@ export function RegistratiPage() {
         <label htmlFor="reg-email" style={{ marginTop: 10 }}>Email *</label>
         <input id="reg-email" type="email" required autoComplete="username" value={form.email} onChange={set('email')} />
         <label htmlFor="reg-password" style={{ marginTop: 10 }}>Password * (min 6 caratteri)</label>
-        <input id="reg-password" type="password" required minLength={6} autoComplete="new-password" value={form.password} onChange={set('password')} />
+        <CampoPassword id="reg-password" required minLength={6} autoComplete="new-password" value={form.password} onChange={set('password')} />
         {err && <div className="banner" style={{ marginTop: 10 }}>{err}</div>}
         <button className="btn block" style={{ marginTop: 14 }} type="submit" disabled={busy}>
           {busy ? 'Creo…' : 'Registrati'}
@@ -362,7 +362,7 @@ export function ProfiloPage() {
         {hasPasswordProvider(user) && (
           <>
             <label htmlFor="del-pwd">Conferma la password</label>
-            <input id="del-pwd" type="password" value={delPwd} onChange={(e) => setDelPwd(e.target.value)} autoComplete="current-password" />
+            <CampoPassword id="del-pwd" value={delPwd} onChange={(e) => setDelPwd(e.target.value)} autoComplete="current-password" />
           </>
         )}
         {delErr && <div className="banner" style={{ marginTop: 10 }}>{delErr}</div>}

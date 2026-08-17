@@ -12,6 +12,9 @@
 
 ### Al banco
 
+- **La password si può guardare**: l'occhio accanto al campo, all'accesso e
+  nel profilo. Parte sempre coperta.
+
 - **La schermata del conto nuovo si apre pulita, sempre.** Uscendo da
   qualunque parte, quello che è stato battuto diventa un conto e la bozza
   si chiude: non ci si ritrova più dentro le righe di quello prima.
