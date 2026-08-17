@@ -2,6 +2,13 @@
 
 ## Non ancora rilasciata — 1.5.0
 
+### Sotto il cofano
+
+- **Il database di prova nasce completo**: ogni articolo ha costo e IVA
+  d'acquisto (così margini e prezzo consigliato hanno da lavorare) e ci sono
+  quattro utenze, una per ruolo — admin, bartender, sala, cliente — con
+  password `collaudo123`.
+
 ### Al banco
 
 - **Il flusso di cassa si allarga sugli schermi grandi**: le tessere si

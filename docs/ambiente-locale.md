@@ -149,6 +149,25 @@ con:
 node scripts/set-role.js --emulator --email tu@bar.it --role admin
 ```
 
+Il seed crea anche **quattro utenze, una per ruolo** (solo sull'emulatore:
+sul progetto vero non tocca gli account):
+
+| Utenza | Ruolo |
+|---|---|
+| `banco@tana.local` | admin |
+| `bartender@tana.local` | bartender |
+| `sala@tana.local` | staff (sala) |
+| `cliente@tana.local` | cliente |
+
+Password per tutte: `collaudo123`. Servono perché quello che vede l'admin non
+è quello che vede la sala, e i guai peggiori nascono lì — un tasto che c'è
+per chi comanda e non per chi serve. Con una utenza sola quelle differenze
+non le vede nessuno.
+
+Gli articoli di magazzino hanno anche **costo e IVA d'acquisto**: senza,
+costo al cl, valore di magazzino, margine e prezzo consigliato restano vuoti
+— cioè metà delle schermate che si vogliono provare.
+
 ## Cosa NON si prova in locale
 
 - **La stampante vera**: è un apparecchio sulla rete del bar, e da qui non
