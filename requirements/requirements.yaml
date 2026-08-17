@@ -1172,6 +1172,28 @@ requirements:
     labels: [ux, accesso]
     test_cases: [tests/component/CampoPassword.test.jsx]
 
+  - id: REQ-UI-018
+    title: "Le righe del conto si riordinano come le card della griglia"
+    area: "src/components/OrderPosDetail.jsx, src/index.css"
+    description: >
+      Nel dettaglio del conto le righe si spostano trascinandole, con la
+      stessa libreria della griglia dei prodotti: la riga segue il dito e le
+      altre si scansano da sole. Prima era fatto a mano, a lungo-premuto: la
+      riga saltava, le altre no, e capitava di spostarne una mentre si
+      voleva solo toccarla.
+      Si entra in «organizza» come nella griglia — un interruttore che fa
+      comparire le maniglie — e fuori di lì toccare una riga la APRE, che è
+      quello che si fa mille volte a sera. Le righe già pagate non si
+      spostano: stanno in fondo, ferme.
+      E nella coda, aprendo le azioni di una card, cresce SOLO quella: le
+      altre della stessa riga restano come sono e quelle sotto scendono.
+      Prima si allungavano tutte insieme — mezzo schermo di riquadri vuoti
+      per un menu di sei tasti.
+    status: implemented
+    generate_issue: false
+    labels: [ux, ordini]
+    test_cases: [tests/component/OrderPosDetail.test.jsx]
+
   - id: REQ-UI-014
     title: "La barra delle sezioni si stringe a icone, o si toglie di mezzo"
     area: "src/components/CategoryRail.jsx, src/index.css"

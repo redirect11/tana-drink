@@ -12,6 +12,12 @@
 
 ### Al banco
 
+- **Le righe del conto si riordinano davvero**: tasto «organizza», maniglie,
+  e la riga che segue il dito mentre le altre si scansano — la stessa cosa
+  della griglia dei prodotti. Fuori da «organizza», toccare una riga la apre.
+- **Aprendo le azioni di una card in coda cresce solo quella**, e le card
+  sotto scendono: prima si allungavano tutte quelle della riga.
+
 - **Aprire e chiudere la cassa è del banco**: alla sala quelle voci non
   compaiono più, né nel menu ⋯ né come tasto sul banner della cassa
   chiusa — dove ora legge che la deve aprire il banco.
