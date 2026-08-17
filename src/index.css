@@ -4927,7 +4927,10 @@ body.fullbleed .cat-rail {
      COLORE: qualunque cosa scegliesse la pagina, la striscia restava
      grigia. L'important resta dov'è utile (la larghezza), non dove
      cancella una scelta. */
-  border-left-width: 5px !important;
+  /* Larghezza uguale a quella delle card del magazzino (4px): lo stesso
+     oggetto — un prodotto — non può avere due strisce diverse a seconda
+     della schermata. */
+  border-left-width: 4px !important;
   border-left-style: solid !important;
   border-left-color: var(--line);
 }
@@ -4939,6 +4942,9 @@ body.fullbleed .cat-rail {
 /* LA LINGUETTA NELL'ANGOLO è il colore che il prodotto ha al banco, disegnata
    come sulle tile del POS: là quel segno vuol dire già quello. Si tocca per
    cambiarlo — prima era un quadratino che sembrava un'etichetta. */
+/* IL SEGNO DEL COLORE LO DECIDE IL TEMA (--segno-prodotto, lib/themes.js).
+   Di casa è il NASTRO d'angolo: largo, squillante, si vede da un metro —
+   il vestito della Tana, che è un locale e non un foglio di calcolo. */
 .menu-colore-spia {
   position: absolute;
   top: 0;
@@ -4958,6 +4964,51 @@ body.fullbleed .cat-rail {
     border-top-width: 2.1em;
     border-right-width: 2.1em;
   }
+}
+/* Sui temi sobri il colore diventa un PUNTO in alto a destra, dove le card
+   del magazzino mettono lo stato delle scorte: stesso segno, stesso posto,
+   tutte e tre le griglie. Tondo per Pico (look documento), quadratino
+   stondato per Catppuccin, che è il suo modo di fare gli angoli.
+   Resta un TASTO — si tocca per cambiare colore — quindi l'area di tocco
+   è più larga del segno che si vede. */
+:root[data-segno='pallino'] .menu-colore-spia,
+:root[data-segno='pastiglia'] .menu-colore-spia {
+  top: 4px;
+  right: 4px;
+  left: auto;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  z-index: 2;
+}
+:root[data-segno='pallino'] .menu-colore-spia::after,
+:root[data-segno='pastiglia'] .menu-colore-spia::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--menu-colore, transparent);
+  /* Un filo di contorno: i colori chiari sul fondo bianco di Pico
+     sparivano del tutto. */
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--text) 22%, transparent);
+}
+@media (pointer: coarse) {
+  :root[data-segno='pallino'] .menu-colore-spia,
+  :root[data-segno='pastiglia'] .menu-colore-spia {
+    border-top-width: 0;
+    border-right-width: 0;
+  }
+}
+:root[data-segno='pastiglia'] .menu-colore-spia::after {
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
 }
 .menu-colori-riga {
   display: flex;
@@ -5417,15 +5468,44 @@ body:has(.overlay) .zoom-control {
    allo stesso modo ovunque, invece di cambiare linguaggio da una schermata
    all'altra. */
 .pos-tile-striscia {
-  border-left-width: 5px !important;
+  border-left-width: 4px !important;
   border-left-style: solid !important;
 }
-/* IL NASTRO D'ANGOLO PARTE DAL BORDO. Sta in posizione assoluta, e per una
-   scatola con bordo «zero» vuol dire il bordo INTERNO: restava un dentino di
+/* IL COLORE DELLA CATEGORIA sulla tile: come nel menù, la forma la decide
+   il tema. Di casa è il nastro d'angolo (nato dalle tile di SumUp).
+   IL NASTRO PARTE DAL BORDO: sta in posizione assoluta, e per una scatola
+   con bordo «zero» vuol dire il bordo INTERNO — restava un dentino di
    sfondo fra il nastro e la striscia, che a griglia piena si vede eccome. */
 .pos-tile-nastro {
-  top: -1px !important;
-  left: -5px !important;
+  top: -1px;
+  left: -4px;
+  width: 0;
+  height: 0;
+  /* in em: il segnalibro scala con la dimensione della tile */
+  border-top: 1.9em solid var(--pastiglia, transparent);
+  border-right: 1.9em solid transparent;
+  border-top-left-radius: 14px;
+}
+/* SULLA TILE IL SEGNO RESTA A SINISTRA. In alto a destra c'è la stella dei
+   preferiti — un tasto — e un pallino appiccicato sopra sarebbe finito
+   sotto il dito di chi la cerca. Il colore sta nell'angolo dov'è sempre
+   stato, solo che invece di una bandiera è un punto. */
+:root[data-segno='pallino'] .pos-tile-nastro,
+:root[data-segno='pastiglia'] .pos-tile-nastro {
+  top: 6px;
+  left: 6px;
+  right: auto;
+  width: 10px;
+  height: 10px;
+  border: none;
+  border-radius: 50%;
+  background: var(--pastiglia, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--text) 22%, transparent);
+}
+:root[data-segno='pastiglia'] .pos-tile-nastro {
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
 }
 
 /* ── La testata del magazzino: una riga di scelte ─────────────────────

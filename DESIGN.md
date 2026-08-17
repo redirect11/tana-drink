@@ -81,10 +81,10 @@ colori restava tutto con la faccia della Tana ridipinta: si sceglieva
 «Pico» e si trovavano i nostri tasti dorati con gli angoli morbidi.
 
 Le forme stanno in `FORME` (`src/lib/themes.js`), tre famiglie, e ogni
-preset dichiara la sua con `forme:`. Sono otto token, quelli che si vedono
+preset dichiara la sua con `forme:`. Sono i token che si vedono
 da lontano: `--raggio-card`, `--raggio-btn`, `--raggio-pill`,
 `--raggio-campo`, `--btn-bg`, `--ombra-btn`, `--ombra-card`,
-`--forma-titoli`.
+`--forma-titoli`, `--segno-prodotto`.
 
 | Famiglia | Angoli | Tasti | Ombre | Titoli |
 |---|---|---|---|---|
@@ -92,9 +92,14 @@ da lontano: `--raggio-card`, `--raggio-btn`, `--raggio-pill`,
 | `catppuccin` | 10/8px | campitura piatta | ombra tenue | come il testo |
 | `pico` | 4px ovunque | campitura piatta | nessuna | come il testo |
 
+Il segno del colore sulle card (`--segno-prodotto`) è `nastro` per `tana`,
+`pastiglia` per `catppuccin`, `pallino` per `pico`. `applyTheme` lo scrive anche come
+`data-segno` sul documento, perché una variabile CSS non basta a scegliere
+fra due geometrie: serve un aggancio nel selettore.
+
 Regole:
 
-- **Ogni famiglia dichiara TUTTI e otto i token.** `applyTheme` scrive
+- **Ogni famiglia dichiara TUTTI i token.** `applyTheme` scrive
   sullo stile di `:root`, e un token lasciato indietro resterebbe
   appiccicato al tema successivo — è già successo coi bottoni, che
   restavano dorati cambiando preset.
@@ -150,6 +155,22 @@ Regole:
 - **Card ordine**: bordo colorato per stato, contenuto essenziale
   (numero, cliente/tavolo, righe, totale). Le note (📝 conto, ↳ riga)
   si mostrano sempre dove si prepara o si serve.
+- **Le card di una griglia hanno tutte lo stesso vestito** — magazzino,
+  menù e griglia del conto. Due segni, sempre gli stessi due: la **striscia
+  a sinistra** (4px) dice come sta la cosa; il **colore** (lo stato delle
+  scorte in magazzino, il colore che il prodotto ha al banco nel menù e nel
+  POS) sta nell'angolo in alto. Nel menù e nel POS quel segno è anche il
+  tasto che apre la tavolozza.
+  **Che forma abbia quel segno lo decide il tema** (`--segno-prodotto`),
+  e ogni famiglia ha il suo: **nastro** d'angolo per la Tana, largo e
+  squillante — è un locale, non un foglio di calcolo; **pastiglia**
+  (quadratino stondato) per Catppuccin, che è il suo modo di fare gli
+  angoli; **pallino** per Pico, il look documento. Gli ultimi due stanno
+  nell'angolo in alto: a destra sulle card del menù, come lo stato delle
+  scorte in magazzino, e **a sinistra sulle tile del conto**, dove a destra
+  c'è la stella dei preferiti — un tasto, che non si copre.
+  In magazzino è sempre un pallino: lì il segno è uno STATO, non un colore
+  scelto a mano.
 - **Chip e filtri**: pillole compatte, stato attivo con `--accent`;
   i filtri della coda stanno su una riga sola.
 - **Toast e banner**: brevi, in linguaggio comune, mai colpevolizzanti.

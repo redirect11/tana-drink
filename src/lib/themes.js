@@ -40,6 +40,11 @@ export const FORME = {
     '--ombra-btn': '0 4px 14px color-mix(in srgb, var(--btn) 25%, transparent)',
     '--ombra-card': '0 4px 18px rgba(0, 0, 0, 0.25)',
     '--forma-titoli': "'Playfair Display', Georgia, 'Times New Roman', serif",
+    // IL SEGNO DEL COLORE sulle card di una griglia: il nastro d'angolo di
+    // casa, largo e squillante, oppure il pallino sobrio in alto a destra
+    // (come le card del magazzino). Il nastro sta bene addosso alla Tana,
+    // che è un locale, non un foglio di calcolo.
+    '--segno-prodotto': 'nastro',
   },
   // Catppuccin: tondo ma contenuto, campiture piatte, niente aloni. La
   // palette è morbida di suo e il gradiente la sporcava.
@@ -52,6 +57,9 @@ export const FORME = {
     '--ombra-btn': 'none',
     '--ombra-card': '0 2px 10px rgba(0, 0, 0, 0.18)',
     '--forma-titoli': 'inherit',
+    // Catppuccin non è squadrato come Pico né sbandierato come la Tana:
+    // un quadratino stondato, che è il suo modo di fare gli angoli.
+    '--segno-prodotto': 'pastiglia',
   },
   // Pico CSS v2: il look «documento». Angoli appena smussati (0.25rem),
   // tasti piatti, nessuna ombra — la gerarchia la fanno i bordi e lo
@@ -65,6 +73,9 @@ export const FORME = {
     '--ombra-btn': 'none',
     '--ombra-card': 'none',
     '--forma-titoli': 'inherit',
+    // Pico è il look documento: una bandiera colorata larga mezza card
+    // sarebbe la cosa più rumorosa della pagina.
+    '--segno-prodotto': 'pallino',
   },
 }
 
@@ -260,6 +271,10 @@ export function applyTheme(vars) {
   // Tema chiaro/scuro: guida i controlli nativi (color-scheme) e le varianti
   // CSS dei colori di stato (pill/badge), che altrimenti — pensati per lo
   // scuro — risulterebbero illeggibili sui temi chiari.
+  // Il segno del colore sulle card (nastro o pallino) è una FORMA, e il CSS
+  // deve poterci cambiare disegno sopra: una variabile non basta a scegliere
+  // fra due geometrie, serve un aggancio nel selettore.
+  root.dataset.segno = String(vars['--segno-prodotto'] || 'nastro').trim()
   const light = isLightColor(vars['--bg'])
   root.style.setProperty('color-scheme', light ? 'light' : 'dark')
   root.dataset.luma = light ? 'light' : 'dark'

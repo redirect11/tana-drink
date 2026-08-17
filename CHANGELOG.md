@@ -19,6 +19,11 @@
   a mano in una dozzina di posti — il tab acceso, il «+», i tasti dei
   pannelli, gli aloni del fondo — e quelli restavano dorati con qualunque
   tema.
+- **Le griglie hanno tutte lo stesso vestito**: magazzino, modifica menù e
+  griglia del conto, con la stessa striscia a sinistra. E il colore del
+  prodotto prende la forma del tema: il nastro d'angolo di casa, la
+  pastiglia stondata di Catppuccin, il pallino di Pico — questi ultimi in
+  alto a destra, dov'è quello delle scorte in magazzino.
 - **E un tema porta anche le forme**, non solo i colori: Pico è squadrato e
   piatto, Catppuccin tondo e senza aloni, la Tana resta la Tana.
 
