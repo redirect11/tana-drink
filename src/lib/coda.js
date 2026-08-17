@@ -162,3 +162,37 @@ export function ordiniInCoda(
     )
     .filter((o) => passaFiltroCoda(o, filtro, isChiuso))
 }
+
+// ── LA VOCE DELLA CASSA NEL MENU DELLA CODA ──────────────────────────
+//
+// Aprire e chiudere la cassa sono le due cose che si fanno a inizio e fine
+// serata, e si fanno dalla schermata in cui si sta già. Ma sono del BANCO:
+// chi serve ai tavoli non ci mette mano, e un tasto che risponde «non puoi»
+// è peggio di un tasto che non c'è.
+//
+// Chiudere, poi, non si può con dei conti ancora aperti: un conto aperto è
+// un incasso che manca, e far quadrare una serata con dentro un buco non si
+// può. La voce resta, spenta, con scritto perché — sparire mentre si cerca
+// è il modo migliore per far pensare che l'app sia rotta.
+export function voceCassa({ gestore = false, cassaAperta = false, contiAperti = 0 } = {}) {
+  if (!gestore) return null
+  if (!cassaAperta) {
+    return {
+      id: 'apri-cassa',
+      icon: '🟢',
+      label: 'Apri cassa',
+      hint: 'Senza cassa aperta non si battono ordini.',
+      disabled: false,
+    }
+  }
+  return {
+    id: 'chiudi-cassa',
+    icon: '🔒',
+    label: 'Chiudi cassa',
+    disabled: contiAperti > 0,
+    hint:
+      contiAperti > 0
+        ? `Prima incassa i ${contiAperti} conti ancora aperti.`
+        : 'Conta il contante e chiudi la serata.',
+  }
+}

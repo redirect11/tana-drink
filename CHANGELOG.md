@@ -12,6 +12,12 @@
 
 ### Al banco
 
+- **Aprire e chiudere la cassa è del banco**: alla sala quelle voci non
+  compaiono più, né nel menu ⋯ né come tasto sul banner della cassa
+  chiusa — dove ora legge che la deve aprire il banco.
+- **«Mostra QR al cliente» compare solo con gli stati del servizio
+  attivi**: senza, non ci sarebbe niente da seguire.
+
 - **La password si può guardare**: l'occhio accanto al campo, all'accesso e
   nel profilo. Parte sempre coperta.
 
