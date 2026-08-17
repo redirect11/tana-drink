@@ -327,12 +327,17 @@ describe('la scheda prodotto chiede tre cose', () => {
   it('la terza domanda — quanto rende — c’è per chi non si conta a pezzi', async () => {
     const user = userEvent.setup()
     await apriForm(user)
-    // Di suo la scheda parte a cl (un liquido): la resa si può dichiarare.
-    expect(screen.getByLabelText(/Si usa in un.altra unità/)).toBeInTheDocument()
-    // Passando ai pezzi, quella riga sparisce: lì la stessa cosa la dice già
-    // «a quanto corrisponde un pezzo».
+    // Di suo è un interruttore spento: quasi tutti i prodotti si usano come
+    // si comprano, e la domanda non si fa a chi non ce l'ha.
+    const interruttore = screen.getByRole('checkbox', { name: /Si usa in un.altra unità/ })
+    expect(interruttore).not.toBeChecked()
+    expect(screen.queryByLabelText('Quanto rende')).toBeNull()
+    await user.click(interruttore)
+    expect(screen.getByLabelText('Quanto rende')).toBeInTheDocument()
+    // Passando ai pezzi sparisce: lì la stessa cosa la dice già «a quanto
+    // corrisponde un pezzo».
     await user.selectOptions(screen.getByLabelText(/Unità d.acquisto/), 'pz')
-    expect(screen.queryByLabelText(/Si usa in un.altra unità/)).toBeNull()
+    expect(screen.queryByRole('checkbox', { name: /Si usa in un.altra unità/ })).toBeNull()
     expect(screen.getByLabelText(/A quanto corrisponde un pezzo/)).toBeInTheDocument()
   })
 })

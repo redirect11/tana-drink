@@ -31,7 +31,9 @@
   spenta di suo, così la manodopera resta com'era.
 - **La scheda prodotto fa tre domande, sempre le stesse**: come lo compri,
   come lo usi in ricetta, e — solo se sono diverse — **quanto rende**. Così i
-  limoni si comprano al chilo e si spremono in cl («1 kg rende 50 cl»), il
+  limoni si comprano al chilo e si spremono in cl («1 kg rende 50 cl» —
+  dietro un interruttore, perché quasi tutti i prodotti si usano come si
+  comprano), il
   ghiaccio a sacchi e si usa a grammi, il gin a bottiglia e si versa a cl. In
   alto c'è un **«?»** che spiega le tre domande con gli esempi. I prodotti già
   in magazzino non cambiano di una virgola.
