@@ -1432,6 +1432,37 @@ requirements:
     labels: [ui, tema]
     test_cases: [tests/unit/temi.test.js, tests/unit/css.test.js]
 
+  - id: REQ-MAG-016
+    title: "Un prodotto si compra in un modo e si usa in un altro: due unità e una resa"
+    area: "src/lib/inventory.js, src/components/InventoryManager.jsx"
+    description: >
+      Da tre note di Flavio (17/08, 21:11-21:14). Il modello delle unità
+      regge i distillati e poco altro: in magazzino ci finiscono cose molto
+      diverse — il ghiaccio a sacchi, i limoni al chilo, il tempo di lavoro —
+      e ognuna oggi chiede una configurazione sua. Parole sue: «bisogna
+      trovare una soluzione per unificare tutti questi elementi».
+      Il caso che rompe il modello attuale: i LIMONI si comprano al chilo e
+      si usano in cl (da 1 kg esce mezzo litro di succo). Oggi non si può
+      dire, perché peso e volume sono famiglie separate — e giustamente, non
+      esiste una conversione universale fra le due. Ma questa non è una
+      conversione: è una RESA, dichiarata dal locale per quel prodotto.
+      PROPOSTA da approvare con lui: ogni prodotto risponde sempre alle
+      stesse due domande — «come lo compri» (l'unità in cui conti la merce e
+      in cui c'è il prezzo) e «come lo usi in ricetta» — più una terza che
+      compare SOLO se sono diverse: «una unità di acquisto quanto rende?».
+      Una riga sola, letta come si parla: 1 bottiglia = 70 cl, 1 kg di limoni
+      = 50 cl, 1 sacco = 5000 g, 1 confezione = 10 U. Niente sotto-unità,
+      niente divisioni, e le famiglie non c'entrano più: la resa la dichiara
+      chi compra.
+      Da decidere con lui: la giacenza si conta in quello che si COMPRA (i
+      chili di limoni sullo scaffale) — che è la proposta, perché
+      l'inventario si fa contando la merce — o in quello che si usa.
+      Quando questo è deciso, BUG-014 si chiude da sé.
+    status: todo
+    generate_issue: true
+    labels: [magazzino, ux]
+    test_cases: []
+
   - id: REQ-MAG-015
     title: "Macro-categorie di magazzino e di menù, per incrociare speso e incassato"
     area: "src/lib/macros.js, src/components/InventoryManager.jsx, src/components/StatsTab.jsx"

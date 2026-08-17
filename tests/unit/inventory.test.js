@@ -918,3 +918,37 @@ describe('la soglia di avviso, scritta in pezzi o nell’unità', () => {
   it('e un contenuto diventa la frazione di pezzo che è', () => {
     expect(qtyInStockUnit(33, 'cl', birra)).toBeCloseTo(1, 5)  })
 })
+
+// ── UN PEZZO PUÒ CONTENERE UNITÀ ─────────────────────────────────────
+// «Vorrei che il tempo lavoro fosse in pezzi e dopo unità» (Flavio, 17/08).
+// Una confezione da 10 U, che in ricetta si dosa a U: le unità non si
+// convertono in niente e non si scaricano dal magazzino — servono al costo.
+describe('pezzi con dentro unità generiche', () => {
+  const conUnita = {
+    unit: 'pz',
+    package_size: 10,
+    content_unit: 'U',
+    cost: 20,
+    vat: 0,
+    stock: 3,
+  }
+
+  it('il contenuto si riconosce, e resta in unità', () => {
+    expect(contentBase(conUnita)).toEqual({ size: 10, base: 'U' })
+  })
+
+  it('in ricetta si dosa a unità, o a pezzo intero', () => {
+    expect(entryUnits(conUnita)).toEqual(['U', 'pz'])
+  })
+
+  it('la singola unità costa la confezione diviso quante ne fa', () => {
+    expect(costPerUnit(conUnita, 'U')).toBeCloseTo(2, 6) // 20 € / 10 U
+    expect(costPerUnit(conUnita, 'pz')).toBe(20)
+    // Quanto costa al cl una confezione di unità non vuol dire niente.
+    expect(costPerUnit(conUnita, 'cl')).toBe(null)
+  })
+
+  it('il contenuto si legge in unità, non in centilitri', () => {
+    expect(fmtContenuto(10, conUnita)).toMatch(/10\s*U/)
+  })
+})
