@@ -1422,6 +1422,19 @@ function AiutoProdotto({ onClose }) {
   )
 }
 
+// Quanto contiene una confezione, letto nell'unità con cui si sta
+// compilando: serve a passare dal prezzo della confezione a quello
+// dell'unità e viceversa. Zero (o niente) = la confezione è l'unità.
+function contenutoInUnita(item, unita) {
+  if ((item?.unit || 'pz') === 'pz' || unitaGenerica(item?.unit)) return 0
+  const base = Number(item?.package_size) || 0
+  return base > 0 ? fromBaseQty(base, unita) : 0
+}
+
+// I prezzi si tengono ai centesimi: dividere e rimoltiplicare per il
+// contenuto lasciava code di decimali che a schermo si vedevano.
+const arrotonda = (n) => Math.round((Number(n) || 0) * 10000) / 10000
+
 function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, onSave }) {
   const isEdit = !!initial
   // Unità scelta dall'utente (L/cl/ml, g/mg, pz). Lo stock è salvato in
@@ -1437,7 +1450,16 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
     unit: initUnit,
     category_id: initial?.category_id ?? '',
     supplier_id: initial?.supplier_id ?? '',
-    cost: initial?.cost ?? '',
+    // IL COSTO SI SCRIVE NELL'UNITÀ IN CUI SI COMPRA: «2 € al chilo», come
+    // lo dice chi ordina. Sotto resta salvato il costo della CONFEZIONE —
+    // è quello che usano il costo al cl e gli ordini al fornitore — e la
+    // conversione la fa la scheda, non chi la compila. Vedi REQ-MAG-016.
+    cost: (() => {
+      const c = Number(initial?.cost)
+      if (!(c > 0)) return initial?.cost ?? ''
+      const contenuto = contenutoInUnita(initial, initUnit)
+      return String(contenuto > 0 ? arrotonda(c / contenuto) : c)
+    })(),
     vat: initial?.vat ?? defaultVat,
     status: initial?.status ?? 'assortimento',
     package_size:
@@ -1510,7 +1532,13 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
   }, [form.unit])
   const costNum = num(form.cost)
   // Contenuto per confezione nell'unità scelta (per il costo unitario).
-  const packInUnit = !isPz && !isGenerico ? num(form.package_size) : 0
+  // Quanto contiene la confezione, letto NELL'UNITÀ DEL PREZZO: i due campi
+  // possono essere scritti in unità diverse (la confezione in litri, il
+  // prezzo al cl), e moltiplicarli così com'erano dava un costo sballato.
+  const packInUnit =
+    !isPz && !isGenerico
+      ? fromBaseQty(toBaseQty(num(form.package_size), form.package_size_unit), form.unit)
+      : 0
   const initialBase = baseUnit(initUnit)
   const baseChanged = isEdit && baseUnit(form.unit) !== initialBase
   // Conversione possibile solo con il contenuto per confezione: verso i pezzi
@@ -1528,6 +1556,15 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
   //   pezzi → liquido/peso  : contenuto totale (pezzi × contenuto conf.)
   // Fra liquidi e pesi non c'è conversione sensata: il numero resta com'è
   // (è una ri-catalogazione, non un travaso).
+  // Quanto contiene una confezione, scritto com'è leggibile: è il numero su
+  // cui si fa la conversione della giacenza quando si cambia gestione.
+  const contenutoDiRiferimento = (() => {
+    const versoPz = baseUnit(form.unit) === 'pz'
+    const base = versoPz ? Number(initial?.package_size) || 0 : toBaseQty(num(form.package_size), form.package_size_unit)
+    if (!(base > 0)) return null
+    return formatQty(base, versoPz ? initialBase : baseUnit(form.unit))
+  })()
+
   const convertedStock = () => {
     const cur = Number(initial?.stock) || 0
     const toPz = baseUnit(form.unit) === 'pz'
@@ -1572,7 +1609,9 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
         display_unit: form.unit, // unità scelta per inserimento/visualizzazione
         category_id: form.category_id || null,
         supplier_id: form.supplier_id || null,
-        cost: form.cost === '' ? null : costNum,
+        // Si risale al costo della confezione: quello che il resto dell'app
+        // sa leggere da sempre (costPerUnit, valore di magazzino, ordini).
+        cost: form.cost === '' ? null : arrotonda(costNum * (packInUnit > 0 ? packInUnit : 1)),
         vat: Number(form.vat) || 0,
         status: form.status || 'assortimento',
         package_size: packBase,
@@ -1732,9 +1771,13 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
 
       <div className="grid-2">
         <div>
-          {/* In unità generiche il costo è PER UNITÀ: è tutto quello che
-              serve sapere di una voce come il tempo di lavorazione. */}
-          <label htmlFor="icost">Costo €/{isGenerico ? 'U' : 'pz'} (netto)</label>
+          {/* L'etichetta segue «come lo compri»: €/kg per i limoni, €/pz
+              per le bottiglie, €/U per il tempo di lavorazione. Diceva
+              sempre «€/pz» anche quando il prodotto si comprava a chili, e
+              chi scriveva il prezzo non sapeva a cosa si riferiva. */}
+          <label htmlFor="icost">
+            Costo €/{UNIT_LABEL[String(form.unit).toLowerCase()] || form.unit} (netto)
+          </label>
           <input id="icost" type="number" step="any" min="0" value={form.cost} onChange={set('cost')} placeholder="Es. 12,9" />
         </div>
         <div>
@@ -1744,8 +1787,12 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
       </div>
       {costNum > 0 && (
         <div className="muted small">
-          +IVA {formatPrice(costWithVat(costNum, form.vat))}
-          {packInUnit > 0 && ` · ${formatPrice(costWithVat(costNum, form.vat) / packInUnit)}/${form.unit}`}
+          +IVA {formatPrice(costWithVat(costNum, form.vat))}/
+          {UNIT_LABEL[String(form.unit).toLowerCase()] || form.unit}
+          {/* Quanto viene la confezione intera: è la cifra che si ritrova
+              sulla fattura del fornitore. */}
+          {packInUnit > 0 &&
+            ` · confezione ${formatPrice(costWithVat(costNum * packInUnit, form.vat))}`}
         </div>
       )}
 
@@ -1765,6 +1812,26 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
             <>
               la giacenza attuale ({fmtItem(initial?.stock, initial)}) diventerà{' '}
               <strong>{formatQty(convertedStock(), baseUnit(form.unit))}</strong>.
+              {/* IN BASE A COSA. Il conto è sempre quello: quanto contiene
+                  una confezione. Scritto qui perché è la prima domanda di
+                  chi legge l'avviso, e prima non c'era risposta. */}
+              {contenutoDiRiferimento && (
+                <span className="muted">
+                  {' '}
+                  Il conto si fa sul contenuto di una confezione (
+                  {contenutoDiRiferimento}).
+                </span>
+              )}
+              {/* Passando ai pezzi la resa non serve più: la stessa cosa la
+                  dice «A quanto corrisponde un pezzo?». Meglio dirlo che
+                  farla sparire in silenzio. */}
+              {baseUnit(form.unit) === 'pz' && Number(initial?.resa) > 0 && (
+                <div style={{ marginTop: 6 }}>
+                  La resa che avevi scritto non vale più: contando a pezzi la
+                  stessa cosa si dice in <strong>«A quanto corrisponde un
+                  pezzo?»</strong>.
+                </div>
+              )}
             </>
           )}
           {!convertible && !isGenerico && (

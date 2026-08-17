@@ -379,3 +379,43 @@ describe('a unità, ma è una scorta', () => {
     })
   })
 })
+
+// ── IL PREZZO SI SCRIVE COM'È SULLA FATTURA ──────────────────────────
+// «2 € al chilo», non «10 € la cassetta da 5». L'etichetta diceva sempre
+// «€/pz» anche per un prodotto comprato a chili, e chi scriveva il numero
+// non sapeva a cosa si riferiva.
+describe('il costo segue l’unità d’acquisto', () => {
+  async function apri(user) {
+    render(<InventoryManager />)
+    await screen.findByText('Campari')
+    await user.click(screen.getByRole('button', { name: '+ Nuovo prodotto' }))
+  }
+
+  it('l’etichetta cambia con l’unità scelta', async () => {
+    const user = userEvent.setup()
+    await apri(user)
+    expect(screen.getByLabelText(/Costo €\/cl/)).toBeInTheDocument()
+    await user.selectOptions(screen.getByLabelText(/Unità d.acquisto/), 'pz')
+    expect(screen.getByLabelText(/Costo €\/pz/)).toBeInTheDocument()
+    await user.selectOptions(screen.getByLabelText(/Unità d.acquisto/), 'g')
+    expect(screen.getByLabelText(/Costo €\/g/)).toBeInTheDocument()
+    await user.selectOptions(screen.getByLabelText(/Unità d.acquisto/), 'U')
+    expect(screen.getByLabelText(/Costo €\/U/)).toBeInTheDocument()
+  })
+
+  it('scritto per unità, si salva come costo della confezione', async () => {
+    // Sotto resta il costo della CONFEZIONE, che è quello che il resto
+    // dell'app legge da sempre: 0,20 €/cl su una bottiglia da 70 cl fa 14 €.
+    const user = userEvent.setup()
+    await apri(user)
+    await user.type(screen.getByLabelText('Nome *'), 'Gin sfuso')
+    await user.type(screen.getByLabelText(/Costo €\/cl/), '0.2')
+    await user.type(screen.getByLabelText(/Quanto contiene una confezione/), '70')
+    await user.click(screen.getByRole('button', { name: /^Salva/ }))
+    await waitFor(() => expect(createInventoryItem).toHaveBeenCalled())
+    expect(createInventoryItem.mock.calls.at(-1)[0]).toMatchObject({
+      name: 'Gin sfuso',
+      cost: 14,
+    })
+  })
+})
