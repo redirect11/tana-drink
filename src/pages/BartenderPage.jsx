@@ -38,6 +38,7 @@ import {
   ordiniInCoda,
   voceCassa,
   gruppiInCoda,
+  schedeCoda,
 } from '../lib/coda.js'
 import { ripristinabile } from '../lib/storiaOrdine.js'
 import { StoriaOrdineDialog, RipristinaOrdineDialog } from '../components/StoriaOrdine.jsx'
@@ -455,6 +456,9 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
   )
   const [error, setError] = useState(null)
   const [statusTab, setStatusTab] = useState(ORDER_STATUSES.RICEVUTO)
+  // La scheda attiva quando gli stati di servizio sono SPENTI: in corso,
+  // chiusi o annullati — le stesse voci della griglia.
+  const [tabSemplice, setTabSemplice] = useState('attivi')
   const [soloOggi, setSoloOggi] = useState(false) // nasconde i conti dei giorni scorsi
   const [nascondiPagati, setNascondiPagati] = useState(false) // pagati non ancora serviti
   // «Miei»: solo i conti inseriti da chi è collegato. Ha preso il posto
@@ -917,6 +921,18 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
   // Chiusi e annullati di prima dell'ultima chiusura di cassa non sono coda:
   // stanno in Cassa. La composizione sta in coda.js, ed è quella provata dai
   // test.
+  // Le tre schede della vista a schede SENZA stati di servizio: contate e
+  // riempite con le stesse regole della griglia.
+  const schedeSemplici = schedeCoda(workflowOn)
+  const contiScheda = (filtro) =>
+    ordiniInCoda(visibleOrders, {
+      filtro,
+      isChiuso: isClosed,
+      cassa: cassaAperta?.id ?? null,
+      apertaDa: cassaAperta?.opened_at ?? null,
+      giornataDi: dayOf,
+      oggi: oggiKey,
+    })
   const boardOrders = ordiniInCoda(
     visibleOrders.filter((o) => !nascosti.has(o.id)),
     {
@@ -1771,6 +1787,39 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
           {evasi.map(renderCard)}
         </>
       ) : (
+        schedeSemplici ? (
+        <>
+          {/* STATI DI SERVIZIO SPENTI: i cinque passi del lavoro non
+              esistono, e mostrarli lasciava quattro linguette vuote con
+              tutti i conti sotto «Ordine ricevuto». Restano le tre cose che
+              un conto può essere — in corso, chiuso, annullato — con le
+              stesse regole della griglia (ordiniInCoda), così le due viste
+              raccontano la stessa storia. Ricerca e «Miei» valgono qui
+              come dappertutto: filtrano dentro la scheda in cui si sta. */}
+          <div className="tabs" style={{ marginTop: 8 }}>
+            {schedeSemplici.map(([k, label]) => (
+              <div
+                key={k}
+                className={`tab ${tabSemplice === k ? 'active' : ''}`}
+                onClick={() => setTabSemplice(k)}
+              >
+                {label} ({contiScheda(k).length})
+              </div>
+            ))}
+          </div>
+
+          {contiScheda(tabSemplice).length === 0 && (
+            <div className="empty">
+              {tabSemplice === 'attivi'
+                ? 'Nessun conto in corso.'
+                : tabSemplice === 'chiusi'
+                  ? 'Nessun conto chiuso in questa cassa.'
+                  : 'Nessun conto annullato in questa cassa.'}
+            </div>
+          )}
+          {contiScheda(tabSemplice).map(renderCard)}
+        </>
+        ) : (
         <>
           {/* Sotto-tab per stato */}
           <div className="tabs" style={{ marginTop: 8 }}>
@@ -1788,6 +1837,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
           {list.length === 0 && <div className="empty">Nessun ordine in questo stato.</div>}
           {list.map(renderCard)}
         </>
+        )
       )}
 
       {confirmAction && (

@@ -216,3 +216,22 @@ export function gruppiInCoda({ accesi = false, inCoda = false, pannelli = false 
   if (inCoda) return 'pannello'
   return pannelli ? 'cartello' : null
 }
+
+// ── LE SCHEDE DELLA VISTA «SCHEDE PER STATO» ─────────────────────────
+//
+// Con gli stati di servizio ACCESI le schede sono i cinque passi del
+// lavoro (ricevuto → in preparazione → pronto → ritirato → pagato). Ma con
+// gli stati SPENTI quei passi non esistono: si mostravano lo stesso, quasi
+// tutti vuoti, e i conti stavano tutti sotto «Ordine ricevuto» — cinque
+// linguette per dirne una. Spenti gli stati, un conto è solo in corso,
+// chiuso o annullato: le stesse tre voci della griglia, con le stesse
+// regole (passaFiltroCoda), così le due viste non litigano mai.
+export function schedeCoda(workflowOn) {
+  if (workflowOn) return null // ci pensano gli stati di servizio
+  return [
+    ['attivi', 'In corso'],
+    ['chiusi', '💶 Chiusi'],
+    ['annullati', '✖️ Annullati'],
+  ]
+}
+

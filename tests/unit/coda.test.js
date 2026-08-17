@@ -14,6 +14,7 @@ import {
   passaFiltroCoda,
   restaInCoda,
   gruppiInCoda,
+  schedeCoda,
 } from '../../src/lib/coda.js'
 
 const orders = [
@@ -340,5 +341,21 @@ describe('gruppi: pannello, cartello o niente', () => {
     // rotto: la riga dice dove si cambia idea.
     expect(gruppiInCoda({ accesi: true, inCoda: false, pannelli: true })).toBe('cartello')
     expect(gruppiInCoda({ accesi: true, inCoda: false, pannelli: false })).toBe(null)
+  })
+})
+
+// ── LE SCHEDE DELLA VISTA A SCHEDE ───────────────────────────────────
+// Con gli stati di servizio spenti i cinque passi del lavoro non esistono:
+// si mostravano lo stesso, quasi tutti vuoti, e i conti stavano tutti sotto
+// «Ordine ricevuto».
+describe('schede per stato: cosa si mostra', () => {
+  it('con gli stati accesi decide il flusso di lavoro', () => {
+    expect(schedeCoda(true)).toBe(null)
+  })
+
+  it('con gli stati spenti restano in corso, chiusi e annullati', () => {
+    // Le stesse tre voci della griglia, con le stesse chiavi di
+    // passaFiltroCoda: le due viste devono raccontare la stessa storia.
+    expect(schedeCoda(false).map(([k]) => k)).toEqual(['attivi', 'chiusi', 'annullati'])
   })
 })

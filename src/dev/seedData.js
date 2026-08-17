@@ -443,7 +443,10 @@ export const SEED_SETTINGS = {
   eta_base_minutes: 10,
   cancel_phrase_default: 'bancone',
   show_serving_board: true,
-  queue_view: 'tabs',
+  // La GRIGLIA è la vista di casa (è il default dell'app): il seed non deve
+  // decidere diversamente — un database appena riempito si apriva sulla
+  // vista a schede e sembrava il comportamento normale.
+  queue_view: 'griglia',
   customer_accounts_enabled: true,
   geofence_enabled: false,
   venue_address: '',
