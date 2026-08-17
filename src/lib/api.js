@@ -862,13 +862,25 @@ async function leggiOrdine(ref) {
   return getDoc(ref)
 }
 
-export function subscribeActiveOrders(onChange, onError, { cutoffHour = DEFAULT_CUTOFF_HOUR } = {}) {
+export function subscribeActiveOrders(
+  onChange,
+  onError,
+  { cutoffHour = DEFAULT_CUTOFF_HOUR, cashSessionId = null } = {}
+) {
   let aperti = []
   let recenti = []
+  // CHIUSI O ANNULLATI IN QUESTA CASSA, anche se il conto era di ieri.
+  // Senza questo terzo ascolto un conto vecchio rimasto aperto spariva
+  // dallo schermo nell'istante in cui lo si annullava: usciva dalla query
+  // dei conti aperti e non entrava in quella di oggi, che guarda la data di
+  // APERTURA. Si agisce su un conto e quello svanisce, senza sapere se
+  // l'operazione è andata a buon fine.
+  let chiusiQui = []
   const emit = () => {
     const byId = new Map()
     for (const o of aperti) byId.set(o.id, o)
     for (const o of recenti) byId.set(o.id, o)
+    for (const o of chiusiQui) byId.set(o.id, o)
     const list = [...byId.values()]
     list.sort((a, b) => String(a.created_at || '').localeCompare(String(b.created_at || '')))
     onChange(list)
@@ -940,7 +952,21 @@ export function subscribeActiveOrders(onChange, onError, { cutoffHour = DEFAULT_
     fail
   )
 
+  // Il terzo ascolto c'è solo a cassa aperta: senza una cassa non c'è
+  // «questa serata» a cui appartenere.
+  const unsubChiusi = cashSessionId
+    ? onSnapshot(
+        query(ordersCol, where('closed_in_session', '==', cashSessionId)),
+        (snap) => {
+          chiusiQui = snap.docs.map(mapOrder)
+          emit()
+        },
+        fail
+      )
+    : () => {}
+
   return () => {
+    unsubChiusi()
     unsubAperti()
     unsubRecenti()
   }
@@ -987,6 +1013,24 @@ export async function resetOpenOrdersToReceived() {
   return toccati
 }
 
+// IL TIMBRO DI CHIUSURA. Quando un conto si chiude — incassato o annullato
+// — si scrive in quale cassa è successo: è così che la coda sa tenerlo a
+// schermo per questa serata, anche se il conto era stato aperto giorni
+// prima (vedi subscribeActiveOrders). Senza cassa aperta non si scrive
+// niente: non c'è una serata a cui riferirsi.
+// Il timbro si mette solo se il conto si sta davvero CHIUDENDO: un incasso
+// parziale, o un pagamento che lascia il conto aperto perché non è ancora
+// servito, non è una chiusura.
+async function conTimbro(chiusura, nowIso) {
+  if (chiusura?.status !== ORDER_STATUSES.PAGATO) return chiusura
+  return { ...chiusura, ...(await timbroChiusura(nowIso)) }
+}
+
+async function timbroChiusura(nowIso) {
+  const cassa = await currentCashSessionId().catch(() => null)
+  return cassa ? { closed_in_session: cassa, closed_at: nowIso } : { closed_at: nowIso }
+}
+
 // CHIUDE SUBITO un conto già pagato: serve tutte le comande e porta
 // l'ordine a "pagato", senza far avanzare gli stati uno per uno. È la
 // scorciatoia per quando si è incassato in anticipo e poi si consegna
@@ -1001,7 +1045,7 @@ export async function closePaidOrder(id) {
     throw new Error('Il conto non è ancora pagato.')
   }
   const nowIso = new Date().toISOString()
-  const chiusura = chiusuraPagamento(data, nowIso, { autoServe: true })
+  const chiusura = await conTimbro(chiusuraPagamento(data, nowIso, { autoServe: true }), nowIso)
   const lowStock = chiusura.comande
     ? await depleteComandeInventory(unappliedEntries(id, chiusura.comande))
     : []
@@ -2068,7 +2112,7 @@ export async function registerPayment(id, { amount, method = 'banco', items = nu
   ]
   const closed = paymentCloses(o, paid)
   let lowStock = []
-  const chiusura = closed ? chiusuraPagamento(o, nowIso, { autoServe }) : null
+  const chiusura = closed ? await conTimbro(chiusuraPagamento(o, nowIso, { autoServe }), nowIso) : null
   if (chiusura?.comande) {
     // Conto saldato E servito ⇒ le comande mai prese in carico vengono
     // scaricate a magazzino adesso.
@@ -2094,7 +2138,7 @@ export async function markOrderPaid(id, method, { autoServe = true } = {}) {
   const nowIso = new Date().toISOString()
   const snap = await leggiOrdine(ref)
   if (!snap.exists()) throw new Error('Ordine non trovato')
-  const chiusura = chiusuraPagamento(snap.data(), nowIso, { autoServe })
+  const chiusura = await conTimbro(chiusuraPagamento(snap.data(), nowIso, { autoServe }), nowIso)
   const lowStock = chiusura.comande
     ? await depleteComandeInventory(unappliedEntries(id, chiusura.comande))
     : []
@@ -2708,8 +2752,10 @@ export async function cancelOrder(id, opts = {}) {
     }
     if (restoreStock) c.inventory_applied = false
   }
+  const timbro = await timbroChiusura(nowIso)
   bgWrite(() => updateDoc(orderRef, {
     status: ORDER_STATUSES.ANNULLATO,
+    ...timbro,
     comande,
     comande_statuses: comandeStatuses(comande),
     ...(buoniIncasso.length

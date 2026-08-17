@@ -43,7 +43,17 @@ export default function CashFlow() {
 
   useEffect(() => subscribeSettings(setSettings, () => {}), [])
   useEffect(() => subscribeOpenCashSession(setSession, () => {}), [])
-  useEffect(() => subscribeActiveOrders(setOrders, () => {}, { cutoffHour: cutoff }), [cutoff])
+  // Anche i conti CHIUSI IN QUESTA CASSA: un tavolo aperto ieri e incassato
+  // stasera è incasso di stasera, e senza questo non entrava nel rendiconto
+  // (le altre due letture guardano i conti aperti e quelli nati oggi).
+  useEffect(
+    () =>
+      subscribeActiveOrders(setOrders, () => {}, {
+        cutoffHour: cutoff,
+        cashSessionId: session?.id ?? null,
+      }),
+    [cutoff, session?.id]
+  )
   // Tick per aggiornare durata e finestra "fino ad ora".
   useEffect(() => {
     const t = setInterval(() => setNow(new Date().toISOString()), 60000)

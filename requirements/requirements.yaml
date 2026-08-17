@@ -133,6 +133,13 @@ requirements:
       la giornata: in una serata la cassa si chiude e si riapre. I conti
       APERTI restano sempre, cassa chiusa compresa: quelli sono da chiudere,
       e nasconderli vorrebbe dire perderli.
+      Chiudendo o annullando un conto si scrive in QUALE cassa è successo, e
+      la coda tiene d'occhio anche quelli: senza, un conto aperto giorni
+      prima e annullato stasera usciva dall'elenco dei conti aperti, non
+      entrava in quello di oggi — che guarda la data di apertura — e spariva
+      dallo schermo nell'istante in cui lo si annullava. Vale anche per il
+      rendiconto di cassa: un tavolo aperto ieri e incassato stasera è
+      incasso di stasera.
       Conta QUANDO è stato chiuso, non quando è stato aperto: un conto di
       ieri rimasto aperto e annullato stasera è successo stasera, e guardando
       la sessione in cui era nato spariva dalla tab «annullati» nell'istante
@@ -146,7 +153,10 @@ requirements:
     status: implemented
     generate_issue: false
     labels: [ordini, coda]
-    test_cases: [tests/unit/coda.test.js, tests/component/PaymentScreen.test.jsx]
+    test_cases:
+      - tests/unit/coda.test.js
+      - tests/unit/codaCache.test.js
+      - tests/component/PaymentScreen.test.jsx
 
   - id: REQ-ORD-014
     title: "Riscuoti, oppure riscuoti e servi in un colpo solo"

@@ -60,8 +60,10 @@
   una chiusura e una riapertura si leggeva ancora l'incasso della serata
   prima: contavano la giornata, non l'apertura. A cassa chiusa sono zeri.
 - **Un conto annullato adesso resta nella sua tab**, anche se era aperto
-  da ieri: prima spariva nell'istante in cui lo si annullava, e non si
-  capiva se l'operazione fosse andata a buon fine.
+  giorni prima: spariva dallo schermo nell'istante in cui lo si annullava,
+  e non si capiva se l'operazione fosse andata a buon fine. Stessa cosa
+  per la cassa: un tavolo aperto ieri e incassato stasera è incasso di
+  stasera.
 - **Nella coda ci sono solo i conti di questa apertura di cassa.** Chiusi
   e annullati di prima dell'ultima chiusura non compaiono in nessuna tab:
   sono già stati contati e rendicontati, e stanno in Cassa → lista ordini.
