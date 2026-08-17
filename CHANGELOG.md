@@ -25,6 +25,13 @@
   a mano in una dozzina di posti — il tab acceso, il «+», i tasti dei
   pannelli, gli aloni del fondo — e quelli restavano dorati con qualunque
   tema.
+- **Il prezzo si scrive nell'unità in cui si compra**: «€/kg» per i limoni,
+  «€/pz» per le bottiglie, «€/U» per il tempo di lavorazione. L'etichetta
+  diceva sempre «€/pz» anche per un prodotto comprato a chili, e chi
+  scriveva il numero non sapeva a cosa si riferisse.
+- **Cambiando il modo di gestire un prodotto, l'avviso dice su cosa fa il
+  conto** (il contenuto di una confezione) e avverte se la resa dichiarata
+  non serve più.
 - **Un prodotto contato a unità può essere una scorta**: il ghiaccio si
   conta a unità come il tempo di lavorazione, ma finisce — e ora si scarica.
   Nella scheda c'è la casella «È una scorta: si scarica quando si usa»,
