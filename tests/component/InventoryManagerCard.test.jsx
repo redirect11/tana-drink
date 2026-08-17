@@ -526,3 +526,18 @@ describe('il contenuto di un pezzo, spiegato', () => {
     expect(within(box).getByText(/solo a pezzi/)).toBeInTheDocument()
   })
 })
+
+// ── «QUANTE NE HO?» È LA PRIMA DOMANDA ───────────────────────────────
+// Aprendo un prodotto si leggevano soglia, costo e prezzo consigliato, ma
+// non la giacenza — che è la cosa per cui lo si apre.
+describe('il dettaglio del prodotto dice quanto ce n’è', () => {
+  it('la giacenza è la prima riga', async () => {
+    const user = userEvent.setup()
+    render(<InventoryManager />)
+    await user.click(await screen.findByText('Campari'))
+    const giacenza = await screen.findByText('Giacenza')
+    const riga = giacenza.closest('.inv-info-row')
+    // Il numero c'è, con la sua unità: è quello che si cerca aprendo.
+    expect(riga.textContent).toMatch(/Giacenza\s*[\d.,]+\s*(pz|cl|ml|L|g|kg|U)/)
+  })
+})

@@ -25,6 +25,9 @@
   a mano in una dozzina di posti — il tab acceso, il «+», i tasti dei
   pannelli, gli aloni del fondo — e quelli restavano dorati con qualunque
   tema.
+- **Aprendo un prodotto si legge quanto ce n'è**: la giacenza è la prima
+  riga del dettaglio — prima c'erano soglia, costo e prezzo consigliato, ma
+  non il numero per cui lo si apre.
 - **«A quanto corrisponde un pezzo» adesso si spiega**: è quanto CONTIENE un
   pezzo, non quanto ne va in un drink — quello lo decide la ricetta. Si può
   lasciare vuoto (e in ricetta si dosa a pezzi, come la birra), e accanto

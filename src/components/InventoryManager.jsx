@@ -430,6 +430,23 @@ function ProductsPanel() {
   const itemActions = (it, bd) => (
     <div className="grid-card-actions">
       <dl className="inv-info">
+        {/* QUANTO CE N'È, per primo. Nel dettaglio si leggevano soglia,
+            costo e prezzo consigliato, ma non la giacenza — che è la prima
+            cosa per cui si apre un prodotto: «quante ne ho?». Nella vista a
+            lista il numero sta a destra, ma aperto il dettaglio finiva
+            fuori campo. */}
+        <div className="inv-info-row">
+          <dt>Giacenza</dt>
+          <dd>
+            <strong>{fmtItem(it.stock, it)}</strong>
+            {(() => {
+              // Contato a pezzi con il contenuto noto: accanto ai pezzi
+              // quanto fa in tutto, che è come si guarda uno scaffale.
+              const bs = bottleSummary(it)
+              return bs ? <span className="muted"> · {bs.total}</span> : null
+            })()}
+          </dd>
+        </div>
         {impegnato[it.id] > 0 && (
           <div className="inv-info-row">
             <dt>A fine serata</dt>
