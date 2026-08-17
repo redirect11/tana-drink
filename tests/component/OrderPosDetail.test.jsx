@@ -1273,3 +1273,23 @@ describe('la card segna quello che c’è nel conto', () => {
     expect(contatore).toBeInTheDocument()
   })
 })
+
+// I +/− NON APRONO LA RIGA. Toccare la riga apre la scheda dell'item — è
+// così che si cambia il prezzo o si mette una nota — ma il clic sui tasti
+// della quantità risaliva fin lì: si aumentava di uno e ci si ritrovava
+// dentro la modifica, ogni volta.
+describe('i tasti della quantità nel conto', () => {
+  it('il «+» aumenta e basta: non apre la scheda dell’item', async () => {
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter>
+        <OrderPosDetail order={baseOrder()} />
+      </MemoryRouter>
+    )
+    await user.click((await screen.findAllByRole('button', { name: /Aumenta Mojito/ }))[0])
+    expect(screen.queryByRole('dialog', { name: /Modifica/i })).toBeNull()
+    // E la scheda si apre ancora toccando la riga.
+    await user.click(screen.getAllByText('Mojito')[1])
+    expect(await screen.findByLabelText(/Prezzo/i)).toBeInTheDocument()
+  })
+})
