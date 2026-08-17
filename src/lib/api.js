@@ -2035,6 +2035,15 @@ export async function setOrderDiscount(id, discount) {
 // pagamento e, se il residuo va a zero, chiude il conto come "pagato" —
 // anche con comande non servite (l'avviso sta nella UI, come concordato).
 // `items` è la selezione pagata (null = importo sul residuo, senza dettaglio).
+// CHI STA INCASSANDO, per il rendiconto: in una serata si alternano in due
+// o tre alla cassa, e se il contante non torna è la prima domanda che ci si
+// fa. Si scrive sul pagamento, che è la riga a cui la domanda si riferisce.
+function chiIncassa() {
+  const u = auth.currentUser
+  if (!u) return null
+  return { uid: u.uid, email: u.email || null, name: u.displayName || null }
+}
+
 export async function registerPayment(id, { amount, method = 'banco', items = null, autoServe = true } = {}) {
   const ref = doc(db, 'orders', id)
   const nowIso = new Date().toISOString()
@@ -2054,6 +2063,7 @@ export async function registerPayment(id, { amount, method = 'banco', items = nu
       method,
       items: items?.length ? items : null,
       at: nowIso,
+      by: chiIncassa(),
     },
   ]
   const closed = paymentCloses(o, paid)

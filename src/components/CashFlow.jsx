@@ -100,6 +100,70 @@ export default function CashFlow() {
         </div>
       )}
 
+      {/* QUANTO DEVE ESSERCI IN CASSA ADESSO. Il conto lo si faceva solo alla
+          chiusura, quando ormai è un verdetto: durante la serata serve per
+          controllare il cassetto quando si cambia turno, o quando due numeri
+          non tornano e si vuole capirlo subito. */}
+      <div className="card row between" style={{ alignItems: 'center' }}>
+        <div>
+          <strong>💰 In cassa adesso</strong>
+          <div className="muted small">
+            fondo {formatPrice(recap.fondo)} + contanti {formatPrice(recap.byMethod.banco || 0)}
+          </div>
+        </div>
+        <strong className="price">{formatPrice(recap.contanteAtteso)}</strong>
+      </div>
+
+      {/* COM'È ANDATA L'ULTIMA ORA. La curva racconta la serata; questo dice
+          come sta andando adesso — se vale la pena aprire un'altra cassa o
+          mandare qualcuno in pausa. */}
+      {recap.nUltimaOra > 0 && (
+        <div className="card row between" style={{ alignItems: 'center' }}>
+          <span className="muted">
+            ⏱ Nell'ultima ora · {recap.nUltimaOra} incass{recap.nUltimaOra === 1 ? 'o' : 'i'}
+          </span>
+          <strong>{formatPrice(recap.ultimaOra)}</strong>
+        </div>
+      )}
+
+      {/* IL CONTO MEDIO, e quanto lascia una persona: in un cocktail bar il
+          secondo dice più del primo, perché un tavolo da sei e uno da due
+          fanno due serate diverse con lo stesso «conto medio». */}
+      {recap.contoMedio != null && (
+        <div className="card row between" style={{ alignItems: 'center' }}>
+          <div>
+            <strong>🧾 Conto medio</strong>
+            <div className="muted small">
+              {recap.nPagati} cont{recap.nPagati === 1 ? 'o' : 'i'} chius{recap.nPagati === 1 ? 'o' : 'i'}
+              {recap.coperti > 0 && ` · ${recap.coperti} copert${recap.coperti === 1 ? 'o' : 'i'}`}
+            </div>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <strong className="price">{formatPrice(recap.contoMedio)}</strong>
+            {recap.perCoperto != null && (
+              <div className="muted small">{formatPrice(recap.perCoperto)} a testa</div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* CHI HA INCASSATO. Se il contante non torna è la prima domanda che ci
+          si fa; e a fine turno ognuno sa cosa ha battuto. Una persona sola
+          alla cassa non ha bisogno di leggerlo. */}
+      {recap.perChi.length > 1 && (
+        <div className="card">
+          <strong>👤 Chi ha incassato</strong>
+          {recap.perChi.map((r) => (
+            <div className="row between" key={r.chi} style={{ marginTop: 4 }}>
+              <span className="muted">
+                {r.chi} · {r.n} incass{r.n === 1 ? 'o' : 'i'}
+              </span>
+              <strong>{formatPrice(r.importo)}</strong>
+            </div>
+          ))}
+        </div>
+      )}
+
       {recap.apertoDaIncassare > 0 && (
         <div className="card row between" style={{ alignItems: 'center' }}>
           <span className="muted">🟡 Ancora da incassare · {recap.nAperti} conti aperti</span>
