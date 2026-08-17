@@ -362,3 +362,30 @@ bugs:
     generate_issue: false
     labels: [bug, avvisi]
     test_cases: [tests/unit/logoutAvvisi.test.js]
+
+  - id: BUG-014
+    title: "Unità di misura: la «U» sta nella domanda sbagliata, e il contenuto si chiede anche a chi non ha pezzi"
+    area: "src/components/InventoryManager.jsx (form articolo), src/lib/inventory.js"
+    description: >
+      Segnalato da Flavio a voce (17/08, nota delle 20:25). Due cose nel
+      form del prodotto, nessuna delle due urgente — «per ora non fa niente,
+      tanto tutti i prodotti hanno pezzi come prima unità».
+      1) «Unità generiche (U)» sta nella PRIMA domanda, quella sul tipo di
+      unità di misura dell'articolo. Secondo Flavio doveva stare nella
+      SECONDA — «a quanto corrisponde un pezzo» — dove si vorrebbe poter
+      scrivere «10 U». Attenzione: la U nella prima domanda ci è finita di
+      proposito con BUG-010/REQ-MAG-012, per mettere la MANODOPERA a
+      listino («Tempo di Lavorazione»), e ci sono già articoli in
+      produzione fatti così: spostarla non è una riga di CSS, è una
+      migrazione. E perché «10 U per pezzo» serva davvero, deve reggerla
+      tutta la catena (entryUnitsFor oggi, con contenuto in U, lascia
+      dosare solo a pezzi).
+      2) Scegliendo un'unità di volume o peso (cl, ml, g…) il form chiede
+      lo stesso «contenuto per confezione»: mettendo «100 cl» sembra di
+      moltiplicare per cento ogni singolo cl. Da chiarire cosa deve
+      chiedere il form quando l'articolo NON si conta a pezzi.
+    in_produzione: true
+    status: todo
+    generate_issue: true
+    labels: [bug, magazzino]
+    test_cases: []
