@@ -6558,3 +6558,37 @@ body.pagina-piena .inv-scheda {
   min-height: 0;
   overflow-y: auto;
 }
+
+/* ── IL FLUSSO DI CASSA, IN GRIGLIA SUGLI SCHERMI LARGHI ─────────────
+   Le tessere del flusso (incassato, in cassa, ultima ora, conto medio,
+   ancora da incassare…) erano una colonna sola: sul telefono è giusto, su
+   un monitor diventavano una striscia lunghissima da scorrere, con dentro
+   numeri da leggere di corsa mentre si conta la cassa. Sono tessere
+   indipendenti: su schermi larghi si affiancano.
+   L'andamento per ora e il riquadro di chiusura restano larghi tutta la
+   riga: uno è un grafico, l'altro è la cosa che si fa a fine serata e non
+   va confusa con una tessera qualunque. */
+.cassa-flusso > .card {
+  margin: 12px 0;
+}
+@media (min-width: 760px) {
+  .cassa-flusso {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    align-items: start;
+  }
+  .cassa-flusso > .card,
+  .cassa-flusso > .cassa-larga {
+    margin: 0;
+  }
+  .cassa-flusso > .cassa-larga,
+  .cassa-flusso > .cassa-open {
+    grid-column: 1 / -1;
+  }
+}
+@media (min-width: 1200px) {
+  .cassa-flusso {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
