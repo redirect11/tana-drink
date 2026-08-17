@@ -12,6 +12,7 @@ import {
   subscribePosPrefs,
   savePosColors,
   subscribeSettings,
+  fetchMacroCategories,
   DEFAULT_SETTINGS,
   settingsIniziali,
 } from '../lib/api.js'
@@ -21,6 +22,7 @@ import { formatPrice } from '../lib/orderStatus.js'
 import { deleteDrinkImageByUrl } from '../lib/storage.js'
 import { formatQty, stockStatus } from '../lib/inventory.js'
 import MarginList from './MarginList.jsx'
+import MacroCategoryManager from './MacroCategoryManager.jsx'
 import DrinkForm from './DrinkForm.jsx'
 import { saveDrinkFromForm } from '../lib/saveDrink.js'
 import CategoryRail from './CategoryRail.jsx'
@@ -308,15 +310,28 @@ export default function MenuManager() {
   const searching = search.trim().length > 0
   const availCount = drinks.filter((d) => d.available).length
 
-  // TRE SOTTOSEZIONI, nel menu laterale come nelle altre pagine. Categorie
+  // LE SOTTOSEZIONI, nel menu laterale come nelle altre pagine. Categorie
   // e marginalità erano due pannelli a scomparsa in cima al catalogo: si
   // aprivano spingendo giù la griglia, e chi voleva solo guardare i
   // margini si portava dietro tutto il listino sotto.
   const sezioni = [
     { id: 'catalogo', icona: '🍸', label: 'Modifica menù' },
     { id: 'categorie', icona: '🏷', label: `Categorie (${categories.length})` },
+    { id: 'macro', icona: '🗂', label: 'Macro-categorie' },
     { id: 'margini', icona: '📈', label: 'Marginalità listino' },
   ]
+
+  if (sezione === 'macro') {
+    return (
+      <div>
+        <Sottosezioni voci={sezioni} attiva={sezione} scegli={setSezione} />
+        <MacroMenuPanel
+          categories={categories}
+          onChange={async () => setCategories(await fetchCategories())}
+        />
+      </div>
+    )
+  }
 
   if (sezione === 'categorie') {
     return (
@@ -558,6 +573,34 @@ export default function MenuManager() {
         <div className="empty">Nessun drink nel menù. Aggiungine uno!</div>
       )}
     </div>
+  )
+}
+
+// ── MACRO-CATEGORIE DEL MENÙ ─────────────────────────────────────────
+//
+// Le stesse macro del magazzino, ma dall'altro lato del banco: qui si
+// raggruppa quello che si VENDE. Servono per sapere quanto è entrato su
+// «Cocktail classici» e confrontarlo con quanto è uscito sulla macro di
+// spesa corrispondente — l'aggancio si sceglie in Magazzino, dove stanno
+// le macro di acquisto.
+function MacroMenuPanel({ categories, onChange }) {
+  const [macros, setMacros] = useState([])
+  const ricarica = async () => {
+    setMacros(await fetchMacroCategories('menu'))
+    await onChange()
+  }
+  useEffect(() => {
+    fetchMacroCategories('menu').then(setMacros).catch(() => {})
+  }, [])
+  return (
+    <MacroCategoryManager
+      ambito="menu"
+      macros={macros}
+      categories={categories}
+      onChange={ricarica}
+      aggiornaCategoria={updateCategory}
+      creaCategoria={createCategory}
+    />
   )
 }
 
