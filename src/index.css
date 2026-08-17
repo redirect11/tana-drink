@@ -5326,6 +5326,14 @@ body:has(.overlay) .zoom-control {
   white-space: nowrap;
   pointer-events: none;
 }
+/* Barra stretta e SENZA voci (quando le voci non hanno icone): resta il
+   solo tasto, appoggiato in alto, che non deve sembrare una colonna vuota. */
+.cat-stretta > .cat-rail:has(> .cat-rail-stringi:only-child) {
+  padding-right: 0;
+  border-right: 0;
+  background: none;
+}
+
 /* Sul telefono la barra è già una riga orizzontale che scorre: lì
    "stringere" non vuol dire niente e il tasto non serve. */
 @media (max-width: 700px) {

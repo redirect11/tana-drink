@@ -60,6 +60,15 @@ export default function CategoryRail({
   // La schermata sta tutta nella finestra: vedi lib/paginaPiena.js.
   usePaginaPiena(pieno)
 
+  // STRETTA VUOL DIRE A ICONE — ma solo se le icone ci sono. Dove le voci
+  // non hanno né icona né colore (le categorie del magazzino, per dirne
+  // una) stringendo restava una colonna di pastiglie grigie tutte uguali:
+  // brutte e per giunta mute, perché non c'è modo di sapere quale sia
+  // quale. Lì la barra si toglie di mezzo del tutto e resta solo il tasto
+  // per riaprirla: le sezioni sono a un clic, invece che a un indovinello.
+  const aIcone = items.length > 0 && items.every((it) => it.icon || it.color)
+  const vociVisibili = stretta && !aIcone ? [] : items
+
   return (
     <div
       className={`cat-layout${pieno ? ' cat-pieno' : ''}${stretta ? ' cat-stretta' : ''}`}
@@ -69,12 +78,20 @@ export default function CategoryRail({
           type="button"
           className="chip cat-rail-stringi"
           onClick={cambia}
-          title={stretta ? 'Allarga il menu' : 'Stringi il menu a icone'}
-          aria-label={stretta ? 'Allarga il menu' : 'Stringi il menu a icone'}
+          title={
+            stretta
+              ? aIcone
+                ? 'Allarga il menu'
+                : 'Mostra le sezioni'
+              : aIcone
+                ? 'Stringi il menu a icone'
+                : 'Nascondi le sezioni'
+          }
+          aria-label={stretta ? 'Mostra le sezioni' : 'Nascondi le sezioni'}
         >
           {stretta ? '»' : '«'}
         </button>
-        {items.map((it) => (
+        {vociVisibili.map((it) => (
           <button
             key={it.key}
             type="button"

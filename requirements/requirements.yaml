@@ -955,6 +955,26 @@ requirements:
     labels: [magazzino, menu, dati]
     test_cases: []
 
+  - id: REQ-UI-014
+    title: "La barra delle sezioni si stringe a icone, o si toglie di mezzo"
+    area: "src/components/CategoryRail.jsx, src/index.css"
+    description: >
+      La barra delle sezioni a sinistra (magazzino, menù, impostazioni) si
+      stringe col tasto in cima e la scelta resta, pagina per pagina.
+      Stringere vuol dire «a icone» — ma solo dove le icone ci sono: se le
+      voci non hanno né icona né colore, come le categorie del magazzino,
+      restava una colonna di pastiglie grigie tutte uguali, brutte e mute,
+      perché non c'era modo di sapere quale fosse quale. Lì le voci si
+      tolgono di mezzo del tutto e resta il solo tasto per rimetterle: le
+      sezioni sono a un clic invece che a un indovinello.
+      Non c'è un modo per farla sparire senza ritorno: il tasto per
+      riaprirla resta sempre visibile, altrimenti si perde l'unico modo di
+      girare fra le sezioni.
+    status: implemented
+    generate_issue: false
+    labels: [ux, navigazione]
+    test_cases: [tests/component/CategoryRail.test.jsx]
+
   - id: REQ-MAG-010
     title: "Il magazzino sta in una schermata, con le sezioni a lato"
     area: "src/components/InventoryManager.jsx, src/components/CategoryRail.jsx"
