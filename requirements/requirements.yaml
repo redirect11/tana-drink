@@ -1044,7 +1044,9 @@ requirements:
     status: implemented
     generate_issue: false
     labels: [magazzino]
-    test_cases: [tests/unit/inventory.test.js]
+    test_cases:
+      - tests/unit/inventory.test.js
+      - tests/component/InventoryManager.test.jsx
 
   - id: REQ-MAG-003
     title: "Le scorte si scalano quando il drink è servito"
@@ -1949,7 +1951,9 @@ requirements:
     status: implemented
     generate_issue: false
     labels: [magazzino, ordini]
-    test_cases: [tests/unit/impegnato.test.js]
+    test_cases:
+      - tests/unit/impegnato.test.js
+      - tests/component/InventoryManager.test.jsx
 
   - id: REQ-MAG-013
     title: "I numeri del magazzino si scrivono come li si pensa"

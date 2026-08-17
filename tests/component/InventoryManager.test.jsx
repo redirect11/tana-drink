@@ -89,6 +89,17 @@ const SUPS = [
   { id: 's2', name: 'ENOFEL' },
 ]
 
+// Quello che la serata sta facendo, quando serve: cassa aperta, conti in
+// corso, listino. Di suo il locale è chiuso e non c'è niente in ballo.
+const stato = { cassa: null, ordini: [], drinks: [] }
+
+// La cassa aperta la tiene un modulo solo per tutta l'app (una
+// sottoscrizione sola, vedi lib/cashSession.js): fra un test e l'altro
+// resterebbe quella del primo. Qui la si legge di volta in volta.
+vi.mock('../../src/lib/cashSession.js', () => ({
+  useCashSession: () => ({ session: stato.cassa, open: !!stato.cassa, loading: false }),
+}))
+
 vi.mock('../../src/lib/api.js', () => ({
   fetchInventoryItems: vi.fn(async () => ITEMS),
   fetchInventoryCategories: vi.fn(async () => CATS),
@@ -110,18 +121,18 @@ vi.mock('../../src/lib/api.js', () => ({
   createSupplier: vi.fn(),
   updateSupplier: vi.fn(),
   deleteSupplier: vi.fn(),
-  // La colonna «a fine serata» guarda la cassa aperta e i conti in corso
-  // (REQ-MAG-012): qui non c'è nessuna cassa aperta, quindi non compare.
+  // La colonna «a fine serata» (REQ-MAG-012) guarda la cassa aperta, i
+  // conti in corso e il listino: il test le decide di volta in volta.
   subscribeOpenCashSession: vi.fn((cb) => {
-    cb(null)
+    cb(stato.cassa)
     return () => {}
   }),
   subscribeActiveOrders: vi.fn((cb) => {
-    cb([])
+    cb(stato.ordini)
     return () => {}
   }),
   subscribeDrinks: vi.fn((_opts, cb) => {
-    cb([])
+    cb(stato.drinks)
     return () => {}
   }),
   subscribeSettings: vi.fn((cb) => {
@@ -162,7 +173,12 @@ const mostra = () =>
 // La lista è pronta quando c'è il primo prodotto.
 const aspettaLista = () => screen.findByText('Gin Mare')
 
-beforeEach(() => vi.clearAllMocks())
+beforeEach(() => {
+  vi.clearAllMocks()
+  stato.cassa = null
+  stato.ordini = []
+  stato.drinks = []
+})
 
 describe('la schermata del magazzino (REQ-MAG-010)', () => {
   it('le sezioni stanno nella barra: otto voci, e ognuna apre il suo pannello', async () => {
@@ -302,5 +318,80 @@ describe('le scorte parlano a pezzi (REQ-MAG-011)', () => {
     expect(within(vodka).getByText('OUT')).toBeInTheDocument()
     const rum = screen.getByText('Rum Diplomatico').closest('.inv-row')
     expect(within(rum).getByTitle('Premium')).toBeInTheDocument()
+  })
+})
+
+// ── QUELLO CHE TI RITROVI A FINE SERATA (REQ-MAG-012) ────────────────
+//
+// A metà serata, sui tavoli, ci sono drink già fatti e conti non ancora
+// chiusi: quel gin è promesso anche se il magazzino non l'ha ancora
+// scalato. Chi guarda le scorte per decidere se mandare qualcuno a
+// prendere una bottiglia deve vedere quello, non la giacenza di questo
+// istante.
+describe('la colonna «a fine serata» (REQ-MAG-012)', () => {
+  const cassaAperta = { id: 'cassa-1', opened_at: '2026-08-17T18:00:00.000Z' }
+  const negroni = {
+    id: 'negroni',
+    name: 'Negroni',
+    recipe_items: [{ inventory_item_id: 'i1', name: 'Gin Mare', unit: 'ml', qty: 250 }],
+  }
+  const contoAperto = {
+    id: 'o1',
+    status: 'aperto',
+    payment_status: 'non_richiesto',
+    comande: [
+      { id: 'c1', status: 'ricevuto', items: [{ drink_id: 'negroni', qty: 1 }] },
+    ],
+  }
+
+  it('a cassa chiusa non c’è: non c’è una serata di cui dire come finirà', async () => {
+    mostra()
+    await aspettaLista()
+    expect(screen.queryByRole('button', { name: /A fine serata/i })).toBeNull()
+  })
+
+  it('coi conti aperti compare, e toglie quello che è già promesso', async () => {
+    stato.cassa = cassaAperta
+    stato.drinks = [negroni]
+    stato.ordini = [contoAperto]
+    mostra()
+    await aspettaLista()
+    // Il Gin Mare ha mezza bottiglia (0,5 pz da 100 cl): un Negroni ne
+    // impegna 250 ml, cioè un quarto di bottiglia → resta 0,25 pz.
+    expect(await screen.findByRole('button', { name: /A fine serata/i })).toBeInTheDocument()
+    const riga = screen.getByText('Gin Mare').closest('.inv-row')
+    expect(within(riga).getByText('0,25 pz')).toBeInTheDocument()
+  })
+
+  it('i prodotti che nessuno ha chiesto restano com’erano', async () => {
+    stato.cassa = cassaAperta
+    stato.drinks = [negroni]
+    stato.ordini = [contoAperto]
+    mostra()
+    await aspettaLista()
+    // Il Rum non è in quel drink: la sua previsione è un trattino, non un
+    // numero inventato.
+    const riga = screen.getByText('Rum Diplomatico').closest('.inv-row')
+    expect(within(riga).getByText('—')).toBeInTheDocument()
+  })
+})
+
+// ── I NUMERI SI SCRIVONO COME LI SI PENSA (REQ-MAG-013) ──────────────
+//
+// «Avvisami quando resta una bottiglia» è il modo in cui la domanda si fa
+// al banco: nessuno la pensa in 700 ml. E il contenuto si scrive «0,7 l»
+// com'è stampato sull'etichetta.
+describe('le unità nel modulo del prodotto (REQ-MAG-013)', () => {
+  it('contenuto e soglia hanno la scelta dell’unità accanto', async () => {
+    const user = userEvent.setup()
+    mostra()
+    await aspettaLista()
+    await user.click(screen.getByRole('button', { name: /Nuovo prodotto/ }))
+    expect(
+      screen.getByLabelText('Unità del contenuto per confezione')
+    ).toBeInTheDocument()
+    const soglia = screen.getByLabelText('Unità della soglia di avviso')
+    // Sulla soglia ci sono anche i PEZZI: è così che la si pensa.
+    expect(within(soglia).getByRole('option', { name: 'pz' })).toBeInTheDocument()
   })
 })
