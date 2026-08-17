@@ -65,3 +65,8 @@ ds-bundle/
 .design-sync/.cache/
 .design-sync/learnings/
 .design-sync/node_modules
+
+# Dati degli emulatori locali: si salvano uscendo e si ricaricano al via
+# successivo (--import/--export-on-exit). Sono la SANDBOX di chi sviluppa,
+# non dati del locale: fuori dal repo.
+.emulatori/

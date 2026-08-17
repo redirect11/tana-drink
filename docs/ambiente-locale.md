@@ -156,3 +156,25 @@ Se da un altro dispositivo non arriva comunque niente, la cosa da guardare
 prima è il firewall di Windows sulle porte degli emulatori (8081 Firestore,
 9099 Auth): `netstat -ano | findstr :8081` deve mostrare l'ascolto su
 `0.0.0.0` e una connessione dall'IP dell'altro dispositivo.
+
+## Quando l'emulatore si impianta
+
+Capita: il Firestore emulato accetta le connessioni e **non risponde più** —
+né all'app né agli script. Da fuori sembra un problema di rete, e l'app
+infatti scrive «il wifi risulta collegato ma non sta passando niente»; in
+locale però la causa è quasi sempre questa. Il modo per esserne sicuri, in
+due secondi:
+
+```sh
+curl -m 5 "http://127.0.0.1:8081/v1/projects/demo-tana-drink/databases/(default)/documents/orders?pageSize=1"
+```
+
+Se va in timeout con zero byte, l'emulatore è impiantato: si riavvia e basta.
+Un dettaglio che inganna: **l'app sullo stesso computer sembra funzionare**
+perché legge dalla sua cache locale e accoda le scritture; un secondo
+dispositivo, che la cache non ce l'ha, resta a mani vuote.
+
+I dati dell'emulatore si salvano uscendo e si ricaricano al via successivo
+(`--import=.emulatori --export-on-exit`): un riavvio non costa più la
+serata di prova. Se la cartella non c'è ancora, la si ricrea con
+`npm run seed:dev`, `npm run mock:history`, `npm run mock:casse`.

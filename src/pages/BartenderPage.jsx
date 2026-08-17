@@ -755,11 +755,15 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
                   emulatori non gli dicono niente. La causa quasi sempre è una
                   rete che RISULTA collegata ma non passa (wifi del locale che
                   fa i capricci): lì l'app aspetta il server invece di
-                  arrendersi alla cache. */}
+                  arrendersi alla cache.
+                  In LOCALE però la causa è quasi sempre un'altra — il
+                  database finto che si è impiantato: accetta le connessioni
+                  e non risponde più. Dire «controlla il wifi» a chi sta
+                  sviluppando è mandarlo a cercare dalla parte sbagliata. */}
               <p className="muted" style={{ fontSize: '0.85rem', marginTop: 12 }}>
-                Il wifi risulta collegato ma non sta passando niente. Prova a
-                spegnere e riaccendere il wifi, oppure passa alla rete del
-                telefono: gli ordini già presi restano al sicuro.
+                {import.meta.env.VITE_USE_FIREBASE_EMULATOR === 'true'
+                  ? 'Il database locale (emulatore) non risponde: accetta le connessioni ma non manda niente. Riavvia gli emulatori — «npm run emulators».'
+                  : 'Il wifi risulta collegato ma non sta passando niente. Prova a spegnere e riaccendere il wifi, oppure passa alla rete del telefono: gli ordini già presi restano al sicuro.'}
               </p>
               <button
                 className="btn ghost small"
