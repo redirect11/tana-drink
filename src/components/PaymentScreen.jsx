@@ -26,6 +26,9 @@ import {
   paymentCloses,
   round2,
   dettaglioIncassi,
+  unitaDaConteggio,
+  conteggioDaUnita,
+  toccaUnita,
 } from '../lib/pagamento.js'
 
 // ── Schermata Pagamento in stile POS SumUp (vedi foto di riferimento) ──
@@ -108,6 +111,20 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   const orderId = async () => (resolveOrderId ? await resolveOrderId() : order.id)
   const [saving, setSaving] = useState(false)
   const [sel, setSel] = useState(() => fullSelection(order)) // riga -> quante unità pagare ora
+  // QUALI unità, quando le righe uguali sono separate. Il conteggio dice
+  // «due di questi tre»; separandole ognuna è una voce a sé e deve avere la
+  // sua quantità — spegnendo la prima si spegne la prima, non le ultime
+  // come farebbe un contatore che scende. Le due forme si convertono
+  // (lib/pagamento.js) e restano allineate: il conteggio è quante ne sono
+  // accese.
+  const [selUnita, setSelUnita] = useState({})
+  const unitaDi = (r) =>
+    selUnita[r.key]?.length === r.qty ? selUnita[r.key] : unitaDaConteggio(r.qty, sel[r.key] ?? 0)
+  const toccaLaUnita = (r, i, acceso) => {
+    const nuove = toccaUnita(selUnita[r.key], r.qty, i, acceso)
+    setSelUnita((st) => ({ ...st, [r.key]: nuove }))
+    setSel((st) => ({ ...st, [r.key]: conteggioDaUnita(nuove) }))
+  }
   // Vista SEPARATA delle righe uguali (al volo, come nel riepilogo ordine):
   // ogni unità è mostrata a sé e si sceglie fin dove pagare. Solo visuale: la
   // selezione resta per riga (sel[key] = quante unità di quella riga).
@@ -147,6 +164,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   const paymentsCount = (order.payments || []).length
   useEffect(() => {
     setSel(fullSelection(order))
+    setSelUnita({})
     setDisplay(null)
     setAcc(null)
     setOp(null)
@@ -241,11 +259,13 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
     }
   }
 
-  const bump = (r, delta) =>
-    setSel((s) => {
-      const next = Math.max(0, Math.min((s[r.key] || 0) + delta, r.qty))
-      return { ...s, [r.key]: next }
-    })
+  const bump = (r, delta) => {
+    const next = Math.max(0, Math.min((sel[r.key] || 0) + delta, r.qty))
+    setSel((s) => ({ ...s, [r.key]: next }))
+    // Le unità seguono il conteggio: dalla vista unita si torna a «le prime
+    // N accese», che è l'unica lettura sensata di un numero.
+    setSelUnita((st) => ({ ...st, [r.key]: unitaDaConteggio(r.qty, next) }))
+  }
 
   // ── Tastierino ──
   const current = () => (display !== null ? digitsToEuro(display) : autoAmount)
@@ -501,10 +521,11 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
               // convivevano due modi diversi di dire la stessa cosa, e chi
               // incassa doveva capire quale valesse per quale riga.
               if (separati && r.qty > 1) {
+                const unita = unitaDi(r)
                 return (
                   <div key={r.key}>
                     {Array.from({ length: r.qty }, (_, i) => {
-                      const on = i < s
+                      const on = !!unita[i]
                       return (
                         <div
                           className="row between"
@@ -526,7 +547,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                                 unità per volta. */}
                             <button
                               aria-label={`Togli ${r.name} dal pagamento`}
-                              onClick={() => bump(r, -1)}
+                              onClick={() => toccaLaUnita(r, i, false)}
                               disabled={closed || !on}
                             >
                               −
@@ -534,7 +555,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                             <strong>{on ? 1 : 0}/1</strong>
                             <button
                               aria-label={`Paga ${r.name}`}
-                              onClick={() => bump(r, 1)}
+                              onClick={() => toccaLaUnita(r, i, true)}
                               disabled={closed || on}
                             >
                               +
@@ -567,7 +588,10 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
               <button
                 className="btn ghost small block"
                 style={{ marginTop: 10 }}
-                onClick={() => setSel(fullSelection(order))}
+                onClick={() => {
+                  setSel(fullSelection(order))
+                  setSelUnita({})
+                }}
               >
                 Rimetti tutto in pagamento
               </button>

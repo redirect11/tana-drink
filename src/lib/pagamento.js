@@ -197,3 +197,32 @@ export function dettaglioIncassi(order) {
     totaleIncassato: round2(incassi.reduce((s, i) => s + i.importo, 0)),
   }
 }
+
+// ── LE UNITÀ, QUANDO SI SEPARANO LE RIGHE UGUALI ─────────────────────
+//
+// Fuori da «separa uguali» la selezione è un CONTEGGIO per riga: «di questi
+// tre Spritz, due li paga lui». Separandole, ogni unità è una voce a sé e
+// deve avere la SUA quantità: spegnendo la prima si deve spegnere la
+// prima — non le ultime, come fa un contatore che scende.
+//
+// Le due forme dicono la stessa cosa e si convertono l'una nell'altra: il
+// conteggio è quante unità sono accese, le unità sono le prime N accese
+// quando si arriva da un conteggio.
+export function unitaDaConteggio(qty, conteggio) {
+  const n = Math.max(0, Math.min(Number(conteggio) || 0, Number(qty) || 0))
+  return Array.from({ length: Number(qty) || 0 }, (_, i) => i < n)
+}
+
+export function conteggioDaUnita(unita) {
+  return (unita || []).filter(Boolean).length
+}
+
+// Accende o spegne UNA unità, e restituisce l'array nuovo. Se lo stato
+// delle unità non c'è ancora (si è appena entrati in «separa»), si parte
+// dal conteggio.
+export function toccaUnita(unita, qty, indice, acceso) {
+  const base = Array.isArray(unita) && unita.length === qty ? [...unita] : unitaDaConteggio(qty, qty)
+  if (indice < 0 || indice >= base.length) return base
+  base[indice] = !!acceso
+  return base
+}

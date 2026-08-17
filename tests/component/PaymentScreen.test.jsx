@@ -636,8 +636,8 @@ describe('righe scelte o importo a mano', () => {
 // nuova quantità come «tutte quelle prima di questa»: premuto sulla PRIMA
 // di tre le spegneva tutte e tre insieme, e chi stava dividendo il conto si
 // ritrovava da capo.
-describe('separa uguali: una unità alla volta', () => {
-  it('togliendo la prima, le altre restano scelte', async () => {
+describe('separa uguali: ognuna ha la sua quantità', () => {
+  it('si spegne QUELLA che si tocca, non le altre', async () => {
     const user = userEvent.setup()
     // Due Mojito sulla stessa riga: separandoli diventano due unità.
     mount(baseOrder())
@@ -645,8 +645,13 @@ describe('separa uguali: una unità alla volta', () => {
     const meno = screen.getAllByRole('button', { name: /Togli Mojito dal pagamento/ })
     expect(meno).toHaveLength(2)
     await user.click(meno[0])
-    // Una sola unità è uscita dal pagamento: il totale cala di 7, non di 14.
+    // Una sola unità è uscita: il totale cala di 7, non di 14.
     expect(payAmount()).toHaveTextContent('15,00')
+    // E la spenta è la PRIMA: il suo «−» ora è disabilitato, quello della
+    // seconda no. Con un contatore che scende sarebbe stato il contrario.
+    const dopo = screen.getAllByRole('button', { name: /Togli Mojito dal pagamento/ })
+    expect(dopo[0]).toBeDisabled()
+    expect(dopo[1]).not.toBeDisabled()
   })
 
   it('e si rimette dentro una alla volta', async () => {
@@ -654,11 +659,8 @@ describe('separa uguali: una unità alla volta', () => {
     mount(baseOrder())
     await user.click(screen.getByRole('button', { name: /Separa uguali/ }))
     await user.click(screen.getAllByRole('button', { name: /Togli Mojito dal pagamento/ })[0])
-    // Le unità sono identiche: quella rimessa dentro è la prima libera.
-    const piu = screen
-      .getAllByRole('button', { name: /Paga Mojito/ })
-      .find((b) => !b.disabled)
-    await user.click(piu)
+    // Si rimette dentro proprio quella: il «+» della prima riga.
+    await user.click(screen.getAllByRole('button', { name: /Paga Mojito/ })[0])
     expect(payAmount()).toHaveTextContent('22,00')
   })
 })

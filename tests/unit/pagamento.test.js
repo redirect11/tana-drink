@@ -16,6 +16,9 @@ import {
   discountAfterChange,
   scontoEccessivo,
   dettaglioIncassi,
+  unitaDaConteggio,
+  conteggioDaUnita,
+  toccaUnita,
 } from '../../src/lib/pagamento.js'
 
 const order = (over = {}) => ({
@@ -272,5 +275,39 @@ describe('che cosa è stato pagato', () => {
     const d = dettaglioIncassi({})
     expect(d.sconto).toBe(0)
     expect(d.incassi).toEqual([])
+  })
+})
+
+// SEPARANDO LE RIGHE UGUALI, OGNI UNITÀ HA LA SUA QUANTITÀ. Fuori di lì la
+// selezione è un conteggio — «di questi tre, due li paga lui» — e va
+// benissimo; ma con le voci separate spegnere la prima deve spegnere la
+// PRIMA, non le ultime come fa un contatore che scende.
+describe('le unità delle righe separate', () => {
+  it('da un conteggio: le prime N accese', () => {
+    expect(unitaDaConteggio(3, 2)).toEqual([true, true, false])
+    expect(unitaDaConteggio(3, 0)).toEqual([false, false, false])
+    expect(unitaDaConteggio(3, 9)).toEqual([true, true, true])
+  })
+
+  it('e viceversa: il conteggio è quante ne sono accese', () => {
+    expect(conteggioDaUnita([true, false, true])).toBe(2)
+    expect(conteggioDaUnita([])).toBe(0)
+    expect(conteggioDaUnita(undefined)).toBe(0)
+  })
+
+  it('spegnendo la PRIMA di tre, le altre due restano accese', () => {
+    expect(toccaUnita([true, true, true], 3, 0, false)).toEqual([false, true, true])
+  })
+
+  it('e si riaccende proprio quella', () => {
+    expect(toccaUnita([false, true, true], 3, 0, true)).toEqual([true, true, true])
+  })
+
+  it('senza stato si parte da tutte accese', () => {
+    expect(toccaUnita(undefined, 2, 1, false)).toEqual([true, false])
+  })
+
+  it('un indice fuori misura non rompe niente', () => {
+    expect(toccaUnita([true, true], 2, 5, false)).toEqual([true, true])
   })
 })

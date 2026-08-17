@@ -15,10 +15,10 @@
 - **Il «+» sulla riga del conto aumenta e basta**: apriva anche la scheda
   dell'item, ogni volta.
 
-- **Separando le righe uguali, il «−» ne toglie una sola.** Prima, premuto
-  sulla prima di tre, le spegneva tutte e tre: chi divideva il conto si
+- **Separando le righe uguali, ognuna ha la sua quantità.** Prima il «−»
+  sulla prima di tre le spegneva tutte e tre: chi divideva il conto si
   ritrovava da capo, e se non se ne accorgeva il cliente pagava meno di
-  quello che aveva preso.
+  quello che aveva preso. Ora si spegne quella che tocchi.
 
 - **Il numero sulla card e le righe del conto dicono la stessa cosa** anche
   quando il conto porta l'id di un prodotto che non c'è più (cancellato e
