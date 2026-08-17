@@ -8,6 +8,13 @@
   qualunque sulla parte pubblica, e gli avvisi parlano di ordini che non ha
   fatto. Spariscono anche «registra questo terminale» e lo storico, che sono
   cose del gestionale.
+- **In coda le card non hanno più «Storia» e «Ripristina»**: una riga intera
+  su ogni conto, tutta la sera, per due cose che si fanno ogni tanto. Si
+  trovano dentro il conto, in «⋯ Azioni».
+- **Unisci e separa sono una voce sola** anche nel menu ⋯, come il tasto in
+  barra: mostra quella che si può fare adesso.
+- **Sul telefono «svuota il conto» sta nel ⋯**, dove c'è posto per dirlo a
+  parole invece che con la sola icona.
 - **Uscendo, gli avvisi si cancellano**: erano di chi li ha ricevuti, e il
   telefono passato a un altro mostrava la serata di prima.
 
