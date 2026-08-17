@@ -15,6 +15,12 @@
   Prima continuavano ad arrivare le notifiche degli ordini del cliente.
   Rientrando si riaccende da sé.
 - **«Esci» non resta più appeso** quando la rete non c'è.
+- **I temi cambiano davvero tutta la schermata**: l'oro di casa era scritto
+  a mano in una dozzina di posti — il tab acceso, il «+», i tasti dei
+  pannelli, gli aloni del fondo — e quelli restavano dorati con qualunque
+  tema.
+- **E un tema porta anche le forme**, non solo i colori: Pico è squadrato e
+  piatto, Catppuccin tondo e senza aloni, la Tana resta la Tana.
 
 ## 1.4.7 — 17 agosto 2026
 

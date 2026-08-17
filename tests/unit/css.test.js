@@ -58,3 +58,25 @@ describe('i fogli di stile sono ben formati', () => {
     })
   }
 })
+
+// ── IL TEMA DEVE ARRIVARE DAPPERTUTTO ────────────────────────────────
+//
+// L'oro di casa era scritto a mano in una dozzina di posti — il tab
+// acceso, il «+», i tasti dei pannelli — e cambiando tema quelli
+// restavano dorati: si sceglieva Pico e metà schermata non se ne
+// accorgeva. Il colore dell'azione è UNO, e sta nei token.
+describe('i colori dell’azione vengono dal tema, non dal foglio', () => {
+  const CABLATI = ['#f7c45e', '#e8a32e', '#1c1305']
+
+  for (const foglio of fogli) {
+    it(foglio + ': l’oro compare solo dove si dichiarano i token', () => {
+      const righe = readFileSync(join(CARTELLA, foglio), 'utf8')
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .split(String.fromCharCode(10))
+      const colpevoli = righe.filter(
+        (r) => CABLATI.some((c) => r.toLowerCase().includes(c)) && !/^\s*--/.test(r)
+      )
+      expect(colpevoli).toEqual([])
+    })
+  }
+})

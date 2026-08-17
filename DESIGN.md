@@ -72,6 +72,44 @@ Regole:
   `#d5a03f`) e al banco si vedeva. Se un tema vuole bottoni suoi, li
   dichiara.
 
+### Un tema porta anche le forme
+
+Un tema non è una tavolozza. Pico e Catppuccin hanno un **modo di fare le
+cose** — quanto sono tondi gli angoli, se un bottone è una campitura piatta
+o un gradiente, se le superfici hanno un'ombra — e prendendone solo i
+colori restava tutto con la faccia della Tana ridipinta: si sceglieva
+«Pico» e si trovavano i nostri tasti dorati con gli angoli morbidi.
+
+Le forme stanno in `FORME` (`src/lib/themes.js`), tre famiglie, e ogni
+preset dichiara la sua con `forme:`. Sono otto token, quelli che si vedono
+da lontano: `--raggio-card`, `--raggio-btn`, `--raggio-pill`,
+`--raggio-campo`, `--btn-bg`, `--ombra-btn`, `--ombra-card`,
+`--forma-titoli`.
+
+| Famiglia | Angoli | Tasti | Ombre | Titoli |
+|---|---|---|---|---|
+| `tana` | 16/12px, pillole tonde | gradiente | alone sotto il tasto | serif Playfair |
+| `catppuccin` | 10/8px | campitura piatta | ombra tenue | come il testo |
+| `pico` | 4px ovunque | campitura piatta | nessuna | come il testo |
+
+Regole:
+
+- **Ogni famiglia dichiara TUTTI e otto i token.** `applyTheme` scrive
+  sullo stile di `:root`, e un token lasciato indietro resterebbe
+  appiccicato al tema successivo — è già successo coi bottoni, che
+  restavano dorati cambiando preset.
+- **La personalizzazione tocca solo i colori.** I campi in Impostazioni
+  sono i sette di `THEME_FIELDS`: le forme vengono dal preset, non si
+  regolano a mano.
+- **Il testo sui tasti è `--btn-ink`**, deciso dalla luminanza del colore
+  d'azione: scuro sui tasti chiari, bianco su quelli scuri. Era cablato
+  `#1c1305` — nato per l'oro — e su un tema con l'azione scura sarebbe
+  stato nero su nero.
+- **Il dorato non si riscrive a mano nel foglio di stile.** C'era in una
+  dozzina di posti (il tab acceso, il «+», i tasti dei pannelli) e quelli
+  ignoravano il tema: c'è un test in `tests/unit/css.test.js` che boccia
+  `#f7c45e`, `#e8a32e` e `#1c1305` fuori dalla dichiarazione dei token.
+
 Oltre alla coppia Catppuccin esiste la coppia **Pico** (`pico-scuro` /
 `pico-chiaro`): la palette di Pico CSS v2 — ardesia blu, azzurro tecnico
 `#01aaff`/`#0172ad`, look "documento" sul chiaro — adottata dentro i
@@ -120,7 +158,9 @@ Regole:
 
 - Il gestionale usa **tutta la larghezza** (niente colonna centrale);
   solo testo lungo e moduli si stringono a ~900px.
-- Raggio superfici 16px (`--radius`), bottoni 12px.
+- Raggio superfici 16px (`--raggio-card`), bottoni 12px
+  (`--raggio-btn`) — sui temi Pico e Catppuccin li decide la famiglia di
+  forme, vedi sopra.
 - Aria tra i blocchi funzionali (i chip non devono sembrare la prima
   riga delle card); dentro le card la densità è alta: è un POS, i dati
   contano più del bianco.
