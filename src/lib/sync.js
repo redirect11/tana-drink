@@ -65,7 +65,7 @@ function settle() {
 // Esegue una scrittura in BACKGROUND tracciandone lo stato. `run` è una
 // funzione che ritorna la Promise della write Firestore. La cache è già
 // aggiornata dal chiamante: qui si segue solo la sincronizzazione.
-export function bgWrite(run, label = '') {
+export function bgWrite(run, label = '', tentativi = 0) {
   pending += 1
   if (phase !== 'error') {
     phase = 'syncing'
@@ -82,7 +82,7 @@ export function bgWrite(run, label = '') {
       },
       (err) => {
         pending -= 1
-        failed.push({ run, label, error: err?.message || String(err), at: Date.now() })
+        failed.push({ run, label, tentativi, error: err?.message || String(err), at: Date.now() })
         settle()
       }
     )
@@ -97,6 +97,46 @@ export function retryAllSync() {
     return
   }
   for (const it of items) bgWrite(it.run, it.label)
+}
+
+// ── QUANDO LA RETE TORNA, SI RIPROVA DA SOLI ─────────────────────────
+//
+// Le scritture fatte OFFLINE non falliscono: restano in coda dentro
+// Firestore (in memoria persistente, quindi sopravvivono anche a un
+// ricaricamento) e partono da sole appena c'è linea. Qui finisce l'altra
+// categoria: quelle RIFIUTATE — un errore vero, una regola, un attimo di
+// rete che si è chiusa a metà scrittura.
+//
+// Quelle restavano lì finché qualcuno non apriva la campanella e premeva
+// «riprova». Al banco non lo fa nessuno: si scopre il giorno dopo che un
+// incasso non è mai arrivato. Ora, appena la rete torna, si riprovano da
+// sole.
+//
+// Un tetto ai tentativi c'è apposta: una scrittura rifiutata per un motivo
+// che non cambia — permessi, dato non valido — riproverebbe a ogni
+// riconnessione per sempre. Dopo tre volte resta lì e lo dice la campanella,
+// che è il posto giusto per una cosa che ha bisogno di una persona.
+const TENTATIVI_MAX = 3
+
+export function riprovaAlRitornoDellaRete() {
+  if (failed.length === 0) return 0
+  const daRiprovare = failed.filter((it) => (it.tentativi || 0) < TENTATIVI_MAX)
+  if (daRiprovare.length === 0) return 0
+  failed = failed.filter((it) => (it.tentativi || 0) >= TENTATIVI_MAX)
+  for (const it of daRiprovare) bgWrite(it.run, it.label, (it.tentativi || 0) + 1)
+  return daRiprovare.length
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('online', () => riprovaAlRitornoDellaRete())
+}
+
+// Solo per i test: dimentica quello che è rimasto indietro.
+export function _azzeraSync() {
+  failed = []
+  pending = 0
+  phase = 'idle'
+  emit()
 }
 
 // Ripete solo l'ultima sincronizzazione fallita.

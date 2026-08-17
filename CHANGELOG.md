@@ -4,6 +4,11 @@
 
 ### Al banco
 
+- **Quello che non è riuscito a partire riparte da solo** quando la rete
+  torna: prima restava lì finché qualcuno non apriva la campanella e
+  premeva «riprova» — e al banco non lo fa nessuno. Dopo tre tentativi si
+  ferma e lo segnala, perché a quel punto serve una persona.
+
 - **Il conto nuovo non eredita più le righe di quello prima.** La bozza
   aspettava la sincronizzazione per svuotarsi: uscendo prima, il conto
   dopo si apriva con dentro la roba già battuta.
