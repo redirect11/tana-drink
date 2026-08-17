@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   fetchInventoryItems,
   createInventoryItem,
@@ -1469,6 +1469,10 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
           )
         : '',
     resa_unit: baseUnit(initial?.resa_unit) === 'g' ? 'g' : 'cl',
+    // SI SCARICA DAL MAGAZZINO? Lo decide il prodotto: la manodopera no, il
+    // ghiaccio — contato a unità come lei — sì. Di suo vale la regola di
+    // sempre, così i prodotti già caricati non cambiano comportamento.
+    scorta: typeof initial?.scorta === 'boolean' ? initial.scorta : !unitaGenerica(initial?.unit),
     low_threshold: initial?.low_threshold ? String(fromBaseQty(initial.low_threshold, initUnit)) : '',
     // CON CHE UNITÀ SI SCRIVONO QUESTI DUE NUMERI. La soglia di avviso di
     // un liquido si pensa in bottiglie («avvisami quando ne resta una»),
@@ -1490,6 +1494,19 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
   // del drink. Chiedere confezione, giacenza iniziale e soglia di avviso
   // vorrebbe dire far riempire campi che non vogliono dire niente.
   const isGenerico = unitaGenerica(baseUnit(form.unit))
+  // LA DOMANDA SEGUE L'UNITÀ. Cambiando «come lo compri» il valore di
+  // partenza si aggiorna: fuori dalle generiche è sempre una scorta, dentro
+  // no finché non lo si dice. Senza questo, un prodotto nuovo passato a «U»
+  // restava segnato come scorta perché lo era la scheda vuota.
+  const scorteRif = useRef(form.scorta)
+  scorteRif.current = form.scorta
+  useEffect(() => {
+    const atteso = !unitaGenerica(baseUnit(form.unit))
+    const dichiarata = typeof initial?.scorta === 'boolean' ? initial.scorta : null
+    const nuovo = atteso ? true : (dichiarata ?? false)
+    if (scorteRif.current !== nuovo) setForm((f) => ({ ...f, scorta: nuovo }))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.unit])
   const costNum = num(form.cost)
   // Contenuto per confezione nell'unità scelta (per il costo unitario).
   const packInUnit = !isPz && !isGenerico ? num(form.package_size) : 0
@@ -1566,6 +1583,9 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
         // di succo diventa 0,5 ml per grammo. Vedi resaUso in lib/inventory.
         resa: resaBase,
         resa_unit: resaBase ? baseUnit(form.resa_unit) : null,
+        // Fuori dalle unità generiche è sempre una scorta: la domanda si fa
+        // solo dove ha senso, e la risposta non si inventa.
+        scorta: isGenerico ? !!form.scorta : true,
         // La soglia scritta in pezzi diventa contenuto (2 bottiglie da 70 cl
         // = 1400 ml) e viceversa: è lo stesso passaggio che fa lo scarico
         // dalla ricetta alla giacenza, quindi i due numeri non litigano.
@@ -1767,13 +1787,31 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
       )}
 
       {isGenerico ? (
-        <p className="muted small" style={{ margin: '2px 0 8px' }}>
-          Si conta a unità, senza contenuto e senza conversioni: serve per quello che
-          non si versa e non si pesa — il tempo di lavorazione, per dire. Non è una
-          scorta: non si scarica quando il drink si fa e non è mai esaurito. Nella
-          ricetta di un drink entra col suo <strong>costo per unità</strong>, e in
-          carta al cliente non compare.
-        </p>
+        <>
+          <p className="muted small" style={{ margin: '2px 0 8px' }}>
+            Si conta a unità, senza contenuto e senza conversioni: serve per quello
+            che non si versa e non si pesa. Nella ricetta di un drink entra col suo{' '}
+            <strong>costo per unità</strong>, e in carta al cliente non compare.
+          </p>
+          {/* NON TUTTO QUELLO CHE SI CONTA A UNITÀ È MANODOPERA. Il tempo di
+              lavoro non sta su nessuno scaffale e non finisce mai; il
+              GHIACCIO si conta a unità uguale, ma sta nel freezer e a
+              mezzanotte è finito — e chi lo usa vuole vederlo scendere. La
+              differenza non la può indovinare l'app: la sa chi carica il
+              prodotto. */}
+          <label className="row" style={{ gap: 8, alignItems: 'center', margin: '2px 0 8px' }}>
+            <input
+              type="checkbox"
+              checked={!!form.scorta}
+              onChange={(e) => setForm((f) => ({ ...f, scorta: e.target.checked }))}
+              style={{ width: 'auto' }}
+            />
+            <span>
+              È una scorta: si scarica quando si usa
+              <span className="muted small"> — es. il ghiaccio. Il tempo di lavorazione no.</span>
+            </span>
+          </label>
+        </>
       ) : !isPz ? (
         <>
           {/* LA DOMANDA PARLA DELLA CONFEZIONE CHE SI COMPRA, non della

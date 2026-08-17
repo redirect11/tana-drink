@@ -1472,7 +1472,18 @@ requirements:
       prodotti già in magazzino non si toccano e si comportano come prima.
       La scheda prodotto è rifatta sulle tre domande, col «?» in alto che le
       spiega, e la terza («si usa in un'altra unità?») compare solo a chi non
-      si conta a pezzi. Senza resa dichiarata non si inventa niente: costo
+      si conta a pezzi.
+      E «SI SCARICA DAL MAGAZZINO?» LO DECIDE IL PRODOTTO, non la sua unità
+      (`eScorta`). La regola stava sull'unità — quello che si conta a unità
+      generiche non si scarica — ed è giusta per la manodopera, che non sta
+      su nessuno scaffale, ma non per il GHIACCIO: si conta a unità e finisce
+      eccome. Il consumo ora conta tutto quello che la ricetta chiede, e a
+      decidere cosa togliere dalla giacenza è chi la scrive, che l'articolo
+      ce l'ha in mano — scarico, riallineo di una comanda modificata,
+      reintegro all'annullo e previsione «a fine serata». Nella scheda, per i
+      soli articoli a unità, c'è la casella «È una scorta: si scarica quando
+      si usa»; di suo è spenta, così la manodopera già a listino non cambia
+      comportamento. Senza resa dichiarata non si inventa niente: costo
       null e consumo invariato, che è meglio di un numero uscito da una
       moltiplicazione a caso.
     status: todo

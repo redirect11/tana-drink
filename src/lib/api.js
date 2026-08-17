@@ -26,6 +26,7 @@ import { splitAmounts } from './groups.js'
 import { createSumUpSale, updateSumUpSaleStatus, toSumUpStatus } from './sumupApi.js'
 import {
   computeConsumption,
+  eScorta,
   formatQty,
   qtyInStockUnit,
   scaricoPossibile,
@@ -2286,6 +2287,10 @@ function riallineaInSottofondo(orderId, comandaId) {
         const sn = invSnaps[idx]
         if (!sn.exists()) continue
         const curItem = sn.data()
+        // QUELLO CHE NON È UNA SCORTA NON SI TOCCA: la manodopera entra nel
+        // costo del drink, non nel magazzino. Lo dice il prodotto, non la sua
+        // unità — il ghiaccio si conta a unità e si scarica eccome.
+        if (!eScorta(curItem)) continue
         // Anche qui non si scende sotto zero: una comanda modificata al rialzo
         // su un prodotto già finito toglieva l'aggiunta comunque.
         const scarico = scaricoPossibile(curItem.stock, qtyInStockUnit(d.delta, d.unit, curItem))
@@ -2359,6 +2364,8 @@ async function depleteComandeInventory(entries) {
   const lowStock = []
   for (const [id, qty] of Object.entries(delta)) {
     const cur = itemsById[id]
+    // Come sopra: si scarica solo quello che sta davvero su uno scaffale.
+    if (!eScorta(cur)) continue
     // NON SI SCENDE SOTTO ZERO. Si toglie al massimo quello che risulta in
     // giacenza: continuando a battere un prodotto finito si arrivava a
     // −0,04 pz, e il carico successivo ripartiva da quel buco. L'increment
@@ -2841,6 +2848,10 @@ async function stornaScorte(orderId, consumption) {
       const s = snaps[idx]
       if (!s.exists()) continue
       const cur = s.data()
+      // Si rimette a posto solo quello che era stato tolto: se non è una
+      // scorta non era mai uscito dal magazzino, e rimetterlo dentro
+      // regalerebbe giacenza dal nulla.
+      if (!eScorta(cur)) continue
       bgWrite(() => updateDoc(doc(db, 'inventory_items', c.inventory_item_id), {
         stock: increment(qtyInStockUnit(c.qty, c.unit, cur)),
       }), 'storno scorta')

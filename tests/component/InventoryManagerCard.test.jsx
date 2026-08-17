@@ -8,7 +8,7 @@
 
 import { describe, it, expect, vi } from 'vitest'
 import { readFileSync } from 'node:fs'
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, within, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom/vitest'
 
@@ -333,5 +333,43 @@ describe('la scheda prodotto chiede tre cose', () => {
     await user.selectOptions(screen.getByLabelText(/Unità d.acquisto/), 'pz')
     expect(screen.queryByLabelText(/Si usa in un.altra unità/)).toBeNull()
     expect(screen.getByLabelText(/A quanto corrisponde un pezzo/)).toBeInTheDocument()
+  })
+})
+
+// ── NON TUTTO QUELLO CHE SI CONTA A UNITÀ È MANODOPERA ───────────────
+// Il tempo di lavoro non sta su nessuno scaffale; il ghiaccio si conta a
+// unità uguale, ma a mezzanotte è finito. La differenza la sa chi carica il
+// prodotto, non l'app.
+describe('a unità, ma è una scorta', () => {
+  async function apri(user) {
+    render(<InventoryManager />)
+    await screen.findByText('Campari')
+    await user.click(screen.getByRole('button', { name: '+ Nuovo prodotto' }))
+    await user.selectOptions(screen.getByLabelText(/Unità d.acquisto/), 'U')
+  }
+
+  it('la domanda compare solo per le unità generiche, e di suo è spenta', async () => {
+    const user = userEvent.setup()
+    render(<InventoryManager />)
+    await screen.findByText('Campari')
+    await user.click(screen.getByRole('button', { name: '+ Nuovo prodotto' }))
+    // Un liquido è una scorta e basta: non gli si chiede.
+    expect(screen.queryByRole('checkbox', { name: /È una scorta/ })).toBeNull()
+    await user.selectOptions(screen.getByLabelText(/Unità d.acquisto/), 'U')
+    expect(screen.getByRole('checkbox', { name: /È una scorta/ })).not.toBeChecked()
+  })
+
+  it('accendendola, il prodotto si salva come scorta', async () => {
+    const user = userEvent.setup()
+    await apri(user)
+    await user.type(screen.getByLabelText('Nome *'), 'Ghiaccio')
+    await user.click(screen.getByRole('checkbox', { name: /È una scorta/ }))
+    await user.click(screen.getByRole('button', { name: /^Salva/ }))
+    await waitFor(() => expect(createInventoryItem).toHaveBeenCalled())
+    expect(createInventoryItem.mock.calls.at(-1)[0]).toMatchObject({
+      name: 'Ghiaccio',
+      unit: 'U',
+      scorta: true,
+    })
   })
 })

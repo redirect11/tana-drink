@@ -24,7 +24,7 @@
 // Lo scarico VERO — il «commit» — resta dov'è: alla comanda presa in
 // carico o alla riscossione. Questo è quello che c'è nel mezzo.
 
-import { computeConsumption, qtyInStockUnit } from './inventory.js'
+import { computeConsumption, qtyInStockUnit, eScorta } from './inventory.js'
 import { ORDER_STATUSES } from './orderStatus.js'
 import { contoChiuso } from './comande.js'
 
@@ -72,6 +72,10 @@ export function impegnatoPerArticolo(ordini, drinksById, itemsById, opzioni) {
   for (const c of consumoImpegnato(ordini, drinksById, opzioni)) {
     const item = itemsById?.[c.inventory_item_id]
     if (!item) continue
+    // Quello che non è una scorta non si impegna: la manodopera promessa dai
+    // conti aperti non toglie niente da nessuno scaffale, e messa qui
+    // farebbe comparire una previsione per una cosa che non finisce mai.
+    if (!eScorta(item)) continue
     out[c.inventory_item_id] = (out[c.inventory_item_id] || 0) + qtyInStockUnit(c.qty, c.unit, item)
   }
   return out

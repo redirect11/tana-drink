@@ -38,6 +38,7 @@ import {
   contentBase,
   unitaGenerica,
   resaUso,
+  eScorta,
 } from '../../src/lib/inventory.js'
 
 describe('toBaseQty', () => {
@@ -816,7 +817,12 @@ describe('articolo in unità generiche (U)', () => {
     expect(stockValue({ ...tempo, stock: 100 })).toBe(0)
   })
 
-  it('non si scarica: la manodopera non si consuma', () => {
+  // LA REGOLA STA SUL PRODOTTO, NON SULL'UNITÀ. Il consumo conta tutto
+  // quello che la ricetta chiede — manodopera compresa, che serve al costo
+  // del drink — e chi scrive la giacenza toglie solo quello che è una
+  // scorta. Prima si filtrava qui, sull'unità: e il GHIACCIO, contato a
+  // unità ma scorta vera, non si scaricava mai.
+  it('la manodopera si conta nel consumo, ma non è una scorta', () => {
     const drinks = {
       daiquiri: {
         recipe_items: [
@@ -826,11 +832,26 @@ describe('articolo in unità generiche (U)', () => {
       },
     }
     const cons = computeConsumption([{ drink_id: 'daiquiri', qty: 2 }], drinks)
-    expect(cons).toEqual([{ inventory_item_id: 'rum', name: 'Rum', unit: 'ml', qty: 100 }])
-    expect(cons.some((c) => c.inventory_item_id === 'tempo')).toBe(false)
+    expect(cons).toContainEqual({ inventory_item_id: 'rum', name: 'Rum', unit: 'ml', qty: 100 })
+    expect(cons.some((c) => c.inventory_item_id === 'tempo')).toBe(true)
+    // È `eScorta` a dire chi tocca la giacenza: il tempo no, il rum sì.
+    expect(eScorta(tempo)).toBe(false)
+    expect(eScorta({ unit: 'ml' })).toBe(true)
   })
 
-  it('e nemmeno quando la ricetta è incorporata in un drink al volo', () => {
+  it('ma un prodotto a unità PUÒ essere una scorta: il ghiaccio finisce', () => {
+    // Si conta a unità come la manodopera, ma sta in un freezer e a
+    // mezzanotte è finito: chi lo usa vuole vederlo scendere.
+    const ghiaccio = { unit: 'U', scorta: true, stock: 40, low_threshold: 10 }
+    expect(eScorta(ghiaccio)).toBe(true)
+    expect(stockStatus(ghiaccio)).toBe('ok')
+    expect(stockStatus({ ...ghiaccio, stock: 5 })).toBe('low')
+    expect(stockStatus({ ...ghiaccio, stock: 0 })).toBe('empty')
+    // E vale qualcosa in magazzino, al contrario del tempo di lavoro.
+    expect(unitsInStock({ ...ghiaccio, stock: 40 })).toBe(40)
+  })
+
+  it('e la ricetta al volo conta il tempo come tutto il resto', () => {
     const cons = computeConsumption(
       [
         {
@@ -842,7 +863,9 @@ describe('articolo in unità generiche (U)', () => {
       ],
       {}
     )
-    expect(cons).toEqual([])
+    expect(cons).toEqual([
+      { inventory_item_id: 'tempo', name: 'Tempo', unit: 'U', qty: 1 },
+    ])
   })
 })
 
