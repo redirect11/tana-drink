@@ -93,27 +93,32 @@ export default function CashFlow() {
         </div>
       </div>
 
-      {/* Incassato della serata + metodi */}
-      <div className="card row between" style={{ alignItems: 'center' }}>
-        <div>
-          <strong>💶 Incassato serata</strong>
-          <div className="muted small">{recap.nPagati} conti chiusi</div>
+      {/* INCASSATO DELLA SERATA, coi metodi DENTRO la sua tessera: erano
+          una riga a sé, e in griglia diventavano un riquadro orfano che non
+          si capiva a quale numero appartenesse. */}
+      <div className="card">
+        <div className="row between" style={{ alignItems: 'center' }}>
+          <div>
+            <strong>💶 Incassato serata</strong>
+            <div className="muted small">{recap.nPagati} conti chiusi</div>
+          </div>
+          <strong className="price" style={{ fontSize: '1.4rem' }}>{formatPrice(recap.incassato)}</strong>
         </div>
-        <strong className="price" style={{ fontSize: '1.4rem' }}>{formatPrice(recap.incassato)}</strong>
+        {/* Un chip per ogni metodo BATTUTO, anche uno mai visto prima:
+            l'elenco si costruisce dagli incassi, non da una lista scritta a
+            mano. */}
+        {cashMethodKeys(recap.byMethod).some((k) => recap.byMethod[k] > 0) && (
+          <div className="chips-row" style={{ marginTop: 8 }}>
+            {cashMethodKeys(recap.byMethod)
+              .filter((k) => recap.byMethod[k] > 0)
+              .map((k) => (
+                <span className="chip" key={k}>
+                  {paymentMethodLabel(k)} {formatPrice(recap.byMethod[k])}
+                </span>
+              ))}
+          </div>
+        )}
       </div>
-      {/* Un chip per ogni metodo BATTUTO, anche uno mai visto prima: l'elenco
-          si costruisce dagli incassi, non da una lista scritta a mano. */}
-      {cashMethodKeys(recap.byMethod).some((k) => recap.byMethod[k] > 0) && (
-        <div className="chips-row" style={{ marginBottom: 8 }}>
-          {cashMethodKeys(recap.byMethod)
-            .filter((k) => recap.byMethod[k] > 0)
-            .map((k) => (
-              <span className="chip" key={k}>
-                {paymentMethodLabel(k)} {formatPrice(recap.byMethod[k])}
-              </span>
-            ))}
-        </div>
-      )}
 
       {/* QUANTO DEVE ESSERCI IN CASSA ADESSO. Il conto lo si faceva solo alla
           chiusura, quando ormai è un verdetto: durante la serata serve per
@@ -302,19 +307,24 @@ function ChiudiCassa({ session, recap, by }) {
 }
 
 // Barre dell'andamento incassi per ora.
+// L'ANDAMENTO SI LEGGE NEL TEMPO, e il tempo va da sinistra a destra. Era
+// una riga per ora, una sotto l'altra: una serata lunga diventava una
+// colonna da scorrere, e «com'è andata stasera?» — che è una domanda sulla
+// FORMA della serata, il picco, la coda — non si vedeva più. Sono le stesse
+// barre delle statistiche (.vbars), che quel mestiere lo fanno già.
 function OraBars({ perOra }) {
   const max = Math.max(...perOra.map((x) => x.importo), 1)
   return (
     <div className="card">
       <strong className="small">📈 Andamento per ora</strong>
-      <div style={{ marginTop: 8, display: 'grid', gap: 4 }}>
+      <div className="vbars" style={{ marginTop: 8 }}>
         {perOra.map((x) => (
-          <div key={x.ora} className="row" style={{ gap: 8, alignItems: 'center' }}>
-            <span className="muted small" style={{ width: 34 }}>{x.ora}:00</span>
-            <div style={{ flex: 1, background: 'var(--line)', borderRadius: 4, height: 14, overflow: 'hidden' }}>
-              <div style={{ width: `${(x.importo / max) * 100}%`, background: 'var(--accent-2, #f5b94a)', height: '100%' }} />
+          <div className="vbar-col" key={x.ora} title={`${x.ora}:00 — ${formatPrice(x.importo)}`}>
+            <div className="vbar-value">{formatPrice(x.importo)}</div>
+            <div className="vbar-track">
+              <div className="vbar-fill" style={{ height: `${(x.importo / max) * 100}%` }} />
             </div>
-            <span className="small" style={{ width: 64, textAlign: 'right' }}>{formatPrice(x.importo)}</span>
+            <div className="vbar-label">{x.ora}:00</div>
           </div>
         ))}
       </div>
