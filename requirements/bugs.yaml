@@ -16,15 +16,25 @@
 #   status:         todo (da sistemare) | fixed (risolto, test citato nel
 #                   requisito dell'area) | wontfix (deciso di non farlo)
 #   generate_issue: true per creare l'issue GitHub
-#   labels:         Label GitHub (sempre anche "bug")
+#   labels:         Label GitHub (sempre anche "bug"; "hotfix" se va
+#                   sistemato d'urgenza in produzione — è quella che
+#                   l'agente rilascio-hotfix va a cercare)
+#   in_produzione:  true se morde sull'installazione che sta lavorando
 #   test_cases:     I test della fix, quando esiste
 #
 # Per generare le issue da questo file:
 #   node scripts/generate-issues.mjs --dry-run     # anteprima
 #   GITHUB_TOKEN=<token> node scripts/generate-issues.mjs
 #
+# E da sé: un push su main o su un ramo hotfix/** che tocca questo file fa
+# girare .github/workflows/generate-issues.yml, che crea le issue mancanti.
+#
 # Le issue sono idempotenti come per i requisiti: titolo con [BUG-ID],
 # chi esiste già viene saltato.
+#
+# I bug urgenti arrivano di solito come note vocali dal banco: si mettono in
+# registrazioni/ (ignorata da git) e si trascrivono con
+# `python scripts/trascrivi-registrazioni.py`.
 
 bugs:
 
