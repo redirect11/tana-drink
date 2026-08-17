@@ -185,11 +185,16 @@ bugs:
       dato del numero grande, mentre lì sotto dovrebbe esserci il CONTENUTO
       in cl (o in g) — è scritto anche nel commento del codice, ed è quello
       che serve a chi sta versando.
+      RISOLTO il 17/08 (hotfix 1.3.4): formatQty arrotonda a due decimali e
+      usa la virgola come già facevano formatPezzi e formatIn (una funzione
+      sola, condivisa con formatIn), e il `total` di bottleSummary è il
+      contenuto anche per gli articoli contati a pezzo — pezzi × capienza
+      della confezione, letto in cl o in g.
     in_produzione: true
-    status: todo
+    status: fixed
     generate_issue: true
     labels: [bug, hotfix, magazzino, ui]
-    test_cases: []
+    test_cases: [tests/unit/inventory.test.js, tests/component/InventoryManager.test.jsx]
 
   - id: BUG-009
     title: "Il dettaglio della card del magazzino esce fuori dalla card"

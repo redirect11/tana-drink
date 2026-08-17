@@ -76,18 +76,29 @@ export function fromBaseQty(base, unit) {
   }
 }
 
+// IL NUMERO, COME SI SCRIVE QUI: due decimali al massimo e la virgola.
+//
+// Il numero grezzo finiva a schermo così com'era uscito dal calcolo — sulla
+// card del Campari si leggeva «7.49000000001 pz», col punto al posto della
+// virgola e la coda di decimali che si porta dietro qualunque
+// moltiplicazione di ricetta.
+//
+// `useGrouping: 'always'`: senza, il punto delle migliaia dipende da quanto
+// è aggiornata la tabella delle lingue del dispositivo — le versioni
+// recenti non raggruppano i numeri di quattro cifre in italiano, quelle
+// vecchie sì. Lo stesso magazzino si leggeva "2.000 mg" sul portatile e
+// "2000 mg" sull'iPad. Qui si sceglie una forma sola, uguale ovunque.
+const numero = (n) =>
+  (Math.round((Number(n) || 0) * 100) / 100).toLocaleString('it-IT', {
+    maximumFractionDigits: 2,
+    useGrouping: 'always',
+  })
+
 // Formatta una quantità BASE nell'unità ESATTA scelta (niente auto-scaling:
 // se l'utente lavora in cl, vede cl). Etichette: L, cl, ml, kg, g, mg, pz.
 const UNIT_LABEL = { l: 'L', cl: 'cl', ml: 'ml', kg: 'kg', g: 'g', mg: 'mg', pz: 'pz' }
 export function formatIn(base, unit) {
-  const n = Math.round(fromBaseQty(base, unit) * 100) / 100
-  // `useGrouping: 'always'`: senza, il punto delle migliaia dipende da quanto
-  // è aggiornata la tabella delle lingue del dispositivo — le versioni
-  // recenti non raggruppano i numeri di quattro cifre in italiano, quelle
-  // vecchie sì. Lo stesso magazzino si leggeva "2.000 mg" sul portatile e
-  // "2000 mg" sull'iPad. Qui si sceglie una forma sola, uguale ovunque.
-  const numero = n.toLocaleString('it-IT', { maximumFractionDigits: 2, useGrouping: 'always' })
-  return `${numero} ${UNIT_LABEL[String(unit || '').toLowerCase()] || unit}`
+  return `${numero(fromBaseQty(base, unit))} ${UNIT_LABEL[String(unit || '').toLowerCase()] || unit}`
 }
 
 // Formatta la giacenza di un ITEM: nell'unità scelta se impostata, altrimenti
@@ -100,15 +111,15 @@ export function fmtItem(base, item) {
 export function formatQty(qty, unit) {
   const n = Number(qty) || 0
   if (unit === 'ml') {
-    if (n >= 1000) return `${(n / 1000).toLocaleString('it-IT', { maximumFractionDigits: 2, useGrouping: 'always' })} L`
-    if (n >= 100 && n % 10 === 0) return `${n / 10} cl`
-    return `${n} ml`
+    if (n >= 1000) return `${numero(n / 1000)} L`
+    if (n >= 100 && n % 10 === 0) return `${numero(n / 10)} cl`
+    return `${numero(n)} ml`
   }
   if (unit === 'g') {
-    if (n >= 1000) return `${(n / 1000).toLocaleString('it-IT', { maximumFractionDigits: 2, useGrouping: 'always' })} kg`
-    return `${n} g`
+    if (n >= 1000) return `${numero(n / 1000)} kg`
+    return `${numero(n)} g`
   }
-  return `${n} pz`
+  return `${numero(n)} pz`
 }
 
 // Scompone la giacenza (in unità base) nelle bottiglie/confezioni:
@@ -176,19 +187,22 @@ export function formatPezzi(n) {
 export function bottleSummary(item) {
   const bd = bottleBreakdown(item)
   if (!bd) return null
-  // Il residuo della bottiglia aperta si legge SEMPRE in cl (o in g): anche
-  // quando la giacenza è contata a pezzi, "aperta 0,8 pz" non dice niente a
-  // chi sta versando.
-  const unitaContenuto = item?.unit === 'pz' ? (item?.content_unit === 'g' ? 'g' : 'cl') : null
+  const c = contentBase(item)
+  // Il TOTALE è il contenuto, non un altro modo di scrivere i pezzi: sulla
+  // card si leggeva «7,49 pz» col numero grande e «7.49000000001 pz» sotto,
+  // cioè lo stesso dato due volte. Con la giacenza contata a pezzi il
+  // contenuto sono i pezzi × la capienza della confezione; contata a volume
+  // (o a peso) la giacenza È già il contenuto.
+  const stock = Math.max(0, Number(item?.stock) || 0)
+  const aPezzo = (item?.unit || 'pz') === 'pz'
   return {
     pezzi: pezziInGiacenza(item),
     bottles: bd.full + (bd.hasOpen ? 1 : 0),
-    total: fmtItem(Math.max(0, Number(item?.stock) || 0), item),
-    open: bd.hasOpen
-      ? unitaContenuto
-        ? formatIn(Math.round(bd.openRemaining), unitaContenuto)
-        : fmtItem(Math.round(bd.openRemaining), item)
-      : null,
+    total: fmtContenuto(aPezzo ? stock * c.size : stock, item),
+    // Il residuo della bottiglia aperta si legge SEMPRE in cl (o in g): anche
+    // quando la giacenza è contata a pezzi, "aperta 0,8 pz" non dice niente a
+    // chi sta versando.
+    open: bd.hasOpen ? fmtContenuto(Math.round(bd.openRemaining), item) : null,
   }
 }
 
