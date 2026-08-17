@@ -1968,6 +1968,40 @@ requirements:
     labels: [metodo, ux]
     test_cases: [tests/unit/novita.test.js, tests/component/AppHeader.test.jsx, tests/unit/notifyStore.test.js]
 
+  - id: REQ-DEV-004
+    title: "Il cancello di qualità prima del merge in develop"
+    area: "docs/gitflow.md, vitest.config.mjs, .github/workflows/test.yml"
+    description: >
+      Il merge in develop passa un cancello, descritto in docs/gitflow.md:
+      requisiti e registro bug aggiornati coi test citati; lint, test e
+      build; la COVERAGE sopra le soglie di vitest.config.mjs — un
+      cricchetto tarato appena sotto il misurato, che si alza quando la
+      copertura cresce e non si abbassa mai per far passare un merge
+      (npm run test:coverage fallisce da solo, e con lui la CI delle
+      pull request); e un giro di refactoring sul diff (riuso,
+      complessità, commenti sul perché) prima di chiedere il merge.
+    status: implemented
+    generate_issue: false
+    labels: [metodo, qualita]
+    test_cases: []
+
+  - id: REQ-DEV-005
+    title: "Coverage anche su src/lib, e standard di complessità nel lint"
+    area: "vitest.config.mjs, eslint.config.js"
+    description: >
+      Oggi la coverage misura solo functions/lib: la logica pura del
+      client (src/lib — coda, prezzi, magazzino, giornata) è provata dai
+      test ma non misurata, quindi il cricchetto non la protegge. Va
+      estesa la misura a src/lib con una baseline onesta e soglie sue.
+      Insieme, gli standard di complessità nel lint (complexity,
+      max-depth, dimensione delle funzioni): prima come avvisi per vedere
+      dove siamo, poi come errori — i numeri esatti si decidono guardando
+      il misurato, non a tavolino.
+    status: todo
+    generate_issue: true
+    labels: [metodo, qualita]
+    test_cases: []
+
   # ══════════════════════════════════════════════════════════════════════
   #  INTEGRAZIONE SUMUP (Cloud Functions)
   # ══════════════════════════════════════════════════════════════════════

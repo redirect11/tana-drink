@@ -34,13 +34,20 @@ Per un agente che apre una pull request: la PR va **verso il
 `release/x.y.z` aperto** (o verso `develop` se non ce n'è uno), mai verso
 `main`.
 
-## Prima di aprire una PR
+## Prima di una PR — e il cancello del merge in `develop`
 
 ```sh
-npm run lint      # deve essere pulito
-npm test          # deve essere verde (744+ test)
-npm run build     # deve compilare
+npm run lint             # deve essere pulito (può uscire 1 SENZA stampare: guarda l'esito)
+npm test                 # deve essere verde (990+ test)
+npm run build            # deve compilare
+npm run test:coverage    # deve passare le soglie (vitest.config.mjs)
 ```
+
+Per il **merge in `develop`** c'è un cancello in più, descritto per
+intero in [docs/gitflow.md](docs/gitflow.md): requisiti e registro bug
+aggiornati coi test citati, coverage sopra le soglie (sono un cricchetto:
+si alzano, mai si abbassano), e **un giro di refactoring sul diff**
+(riuso, complessità, commenti sul perché) — con Claude, `/simplify`.
 
 La pipeline fa girare lint e test **prima** del deploy: se sono rossi non
 viene pubblicato niente (e senza un tag non si pubblica comunque). Non aggirarla e non "sistemare" un test per farlo
@@ -59,7 +66,11 @@ comportamento aggiunge o aggiorna il test corrispondente.
 - `tests/bdd/` — le Cloud Functions
 
 I requisiti in [requirements/requirements.yaml](requirements/requirements.yaml)
-sono la mappa di cosa esiste; da lì si generano le issue.
+sono la mappa di cosa esiste; i difetti veri stanno nel registro
+[requirements/bugs.yaml](requirements/bugs.yaml) (stesso formato, stati
+`todo`/`fixed`/`wontfix`, campo `in_produzione`). Da entrambi nascono le
+issue GitHub, idempotenti; un bug `fixed` nel registro **chiude** la sua
+issue da solo.
 
 ## Come si scrive qui
 
@@ -83,6 +94,19 @@ sono la mappa di cosa esiste; da lì si generano le issue.
 
 ## Regole del mestiere (imparate sbagliando)
 
+Il disegno completo — modello dati, i cinque attrezzi del local-first,
+flusso di un conto, sicurezza — sta in
+[docs/architettura.md](docs/architettura.md): **da leggere prima di
+toccare coda, conto, pagamento o il modello dati.** Qui i vincoli secchi:
+
+- **Coda, conto e pagamento lavorano in locale.** Quelle tre schermate
+  fanno tutto sui dati che hanno già: leggono dalla cache, scrivono in
+  sottofondo, e si aggiornano da sole quando il server manda qualcosa di
+  nuovo. Niente `await` su una lettura prima di far vedere l'esito di un
+  gesto — un conto incassato, annullato, una riga aggiunta si devono
+  vedere nell'istante in cui si tocca. Se un dato serve e non c'è, si
+  precarica (vedi `src/lib/progressivi.js`), non si va a chiederlo al
+  momento del bisogno.
 - **Niente aspetta la rete.** Le scritture partono in sottofondo; le
   schermate si aggiornano subito. Un `await` su una scrittura Firestore
   offline non torna mai: al banco significa l'app bloccata.
@@ -127,8 +151,10 @@ Tre stati che contano:
 - ⬜ **da fare** — `todo`, e da lì nascono le issue GitHub
   (`scripts/generate-issues.mjs`)
 
-**Quindi:** se cambia un comportamento, si aggiornano insieme codice, test
-e requisito, nello stesso commit. Se nasce una funzione, prima il requisito.
+**Quindi:** OGNI richiesta lavorata — funzione o difetto — nasce o
+aggiorna la sua voce (`REQ-*` o `BUG-*`), e codice, test e requisito
+viaggiano insieme, nello stesso commit. Se nasce una funzione, prima il
+requisito.
 
 ## Cose da sapere sull'infrastruttura
 
@@ -173,3 +199,15 @@ scarta l'updater e la cancellazione non avviene. Si salva in modo sincrono.
 | `src/lib/ruoli.js` | chi può fare cosa |
 | `functions/lib/` | logica delle Cloud Functions (pura e testabile) |
 | `scripts/` | manutenzione: backup, travasi, ruoli, diagnostica |
+
+## La biblioteca: cosa leggere prima di toccare cosa
+
+| Prima di… | Leggi |
+|---|---|
+| coda, conto, pagamento, modello dati | [docs/architettura.md](docs/architettura.md) |
+| qualunque interfaccia | [DESIGN.md](DESIGN.md) e [docs/navigazione.md](docs/navigazione.md) |
+| branch, merge, rilasci, cancello di qualità | [docs/gitflow.md](docs/gitflow.md) |
+| provare in locale | [docs/ambiente-locale.md](docs/ambiente-locale.md) |
+| Cloud Functions / SumUp | [docs/functions.md](docs/functions.md) |
+| capire cosa fa (o non fa) l'app | [requirements/requirements.yaml](requirements/requirements.yaml) + [requirements/bugs.yaml](requirements/bugs.yaml) |
+| ragionare sul futuro del prodotto (federazione, white-label) | [docs/piano-sbrandizzazione.md](docs/piano-sbrandizzazione.md) |
