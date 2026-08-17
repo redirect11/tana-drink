@@ -5800,8 +5800,11 @@ body.pagina-piena .pagina-inventario .inv-scroll {
     z-index: auto;
     /* Il menu ha il SUO scorrimento: le voci sono tante e la finestra
        piccola, ma non deve trascinarsi dietro il contenuto (né farsi
-       trascinare). */
+       trascinare). In orizzontale non si scorre MAI: allargando la colonna
+       il testo ci deve stare, non scappare di lato. */
     overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-gutter: stable;
     overscroll-behavior: contain;
     flex-shrink: 0;
     align-self: stretch;
@@ -5835,6 +5838,10 @@ body.pagina-piena .pagina-inventario .inv-scroll {
     padding: 0.5em 0.75em;
     font-size: 1em;
     font-weight: 600;
+    /* Colonna stretta: il nome va a capo invece di sfondare la colonna e
+       tirarsi dietro una barra di scorrimento orizzontale. */
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
   body.drawer-agganciato .bar-sidebar.agganciata .bar-nav-sep {
     margin: 6px 10px;
@@ -5864,23 +5871,35 @@ body.pagina-piena .pagina-inventario .inv-scroll {
     font-weight: 700;
   }
 
-  /* LA MANIGLIA. Una striscia sul bordo destro, larga abbastanza da
-     prendersi col dito ma invisibile finché non ci si passa sopra: è un
-     bordo che si può tirare, non un elemento dell'interfaccia. Doppio clic
-     per tornare alla misura di partenza. */
+  /* LA MANIGLIA È UNA COLONNA SUA, fra il menu e il contenuto: dentro al
+     menu scorreva col contenuto e finiva sotto la barra di scorrimento, e
+     per prenderla bisognava azzeccare due pixel. Larga 10px — un bersaglio
+     che si prende anche col dito — con una lineetta che compare passandoci
+     sopra: è un bordo che si può tirare, non un oggetto in più da capire. */
   .bar-sidebar-maniglia {
-    position: absolute;
-    top: 0;
-    right: -3px;
-    width: 7px;
-    height: 100%;
+    flex: 0 0 10px;
+    align-self: stretch;
+    position: relative;
     cursor: col-resize;
     touch-action: none;
-    z-index: 2;
   }
-  .bar-sidebar-maniglia:hover,
-  .bar-sidebar-maniglia:active {
-    background: color-mix(in srgb, var(--accent-2) 55%, transparent);
+  .bar-sidebar-maniglia::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 3px;
+    height: 34px;
+    transform: translate(-50%, -50%);
+    border-radius: 2px;
+    background: var(--line);
+    opacity: 0;
+    transition: opacity 0.12s ease;
+  }
+  .bar-sidebar-maniglia:hover::before,
+  .bar-sidebar-maniglia:active::before {
+    opacity: 1;
+    background: var(--accent-2);
   }
 
   /* Niente velo: non c'e' piu' niente da coprire. */

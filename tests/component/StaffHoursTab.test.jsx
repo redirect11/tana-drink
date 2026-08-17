@@ -53,9 +53,8 @@ describe('registro Ore staff', () => {
 
   it('il turno si assegna scegliendo un MEMBRO, non digitando un nome', async () => {
     const user = userEvent.setup()
-    render(<StaffHoursTab />)
-    // Il form sta nel pannello "Nuovo turno", sotto al titolo.
-    await user.click(screen.getByRole('button', { name: /Nuovo turno/ }))
+    // Il form sta nella sezione «Nuovo turno», nel menu laterale.
+    render(<StaffHoursTab sezioneIniziale="turno" />)
     await waitFor(() => expect(screen.getByLabelText('Chi *')).toBeInTheDocument())
     const chi = screen.getByLabelText('Chi *')
     expect(chi.tagName).toBe('SELECT') // niente campo libero
@@ -71,8 +70,7 @@ describe('registro Ore staff', () => {
 
   it('le paghe si impostano sui membri dello staff, uid compreso', async () => {
     const user = userEvent.setup()
-    render(<StaffHoursTab />)
-    await user.click(screen.getByRole('button', { name: /Paghe orarie/ }))
+    render(<StaffHoursTab sezioneIniziale="paghe" />)
     await waitFor(() => expect(screen.getByLabelText('Chi')).toBeInTheDocument())
     await user.selectOptions(screen.getByLabelText('Chi'), 'u2')
     await user.type(screen.getByLabelText('€/ora'), '12')

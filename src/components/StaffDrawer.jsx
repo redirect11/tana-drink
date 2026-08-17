@@ -234,28 +234,6 @@ export default function StaffDrawer({ role, active = null, onSelect = null }) {
         // «em», quindi basta questa.
         style={dock ? { width: largh, fontSize: `${(0.85 * largh) / MENU_DEFAULT}rem` } : undefined}
       >
-        {dock && (
-          <div
-            className="bar-sidebar-maniglia"
-            role="separator"
-            aria-label="Larghezza del menu"
-            onPointerDown={tira}
-            onPointerMove={muovi}
-            onPointerUp={lascia}
-            onPointerCancel={lascia}
-            onDoubleClick={() => {
-              // Doppio clic: si torna alla misura di partenza. Tirandola
-              // troppo si finisce con mezza pagina di menu, e rimetterla a
-              // occhio è una seccatura.
-              setLargh(MENU_DEFAULT)
-              try {
-                localStorage.setItem('tana:menu-largo', String(MENU_DEFAULT))
-              } catch {
-                /* pazienza */
-              }
-            }}
-          />
-        )}
         <div className="brand-mini">
           <img src={`${import.meta.env.BASE_URL}logo.png`} alt="" />
           Gestionale
@@ -384,6 +362,34 @@ export default function StaffDrawer({ role, active = null, onSelect = null }) {
             guardando prima di dire "non funziona". */}
         <VersionBadge className="drawer-versione" />
       </nav>
+      {/* LA MANIGLIA STA FUORI DAL MENU. Dentro scorreva col contenuto e
+          finiva sotto la barra di scorrimento: per prenderla bisognava
+          azzeccare due pixel. Qui è una colonna sua, alta quanto la pagina,
+          fra il menu e il contenuto. */}
+      {dock && (
+        <div
+          className="bar-sidebar-maniglia"
+          role="separator"
+          aria-label="Larghezza del menu"
+          title="Trascina per allargare · doppio clic per rimetterlo com'era"
+          onPointerDown={tira}
+          onPointerMove={muovi}
+          onPointerUp={lascia}
+          onPointerCancel={lascia}
+          onDoubleClick={() => {
+            // Doppio clic: si torna alla misura di partenza. Tirandola
+            // troppo si finisce con mezza pagina di menu, e rimetterla a
+            // occhio è una seccatura.
+            setLargh(MENU_DEFAULT)
+            try {
+              localStorage.setItem('tana:menu-largo', String(MENU_DEFAULT))
+            } catch {
+              /* pazienza */
+            }
+          }}
+        />
+      )}
+
     </>
   )
 }

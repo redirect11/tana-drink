@@ -17,9 +17,8 @@ import {
   isAdmin,
 } from '../lib/ruoli.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
-import SectionPanels from './SectionPanels.jsx'
 import VipTab from './VipTab.jsx'
-import { IconPiu, IconBuono } from './Icons.jsx'
+import { Sottosezioni } from '../lib/sottosezioni.js'
 
 // GESTIONE UTENTI. Due elenchi in uno: il personale (admin/bartender/staff)
 // e i clienti registrati dal sito. La nomina dei ruoli è dell'admin: da qui
@@ -28,8 +27,17 @@ import { IconPiu, IconBuono } from './Icons.jsx'
 //
 // Il bartender vede gli elenchi e può chiamare col cerca-persone, ma non
 // tocca i ruoli: dare le chiavi del locale è dell'amministratore.
-export default function UtentiTab({ role = null }) {
+const SEZIONI_UTENTI = [
+  { id: 'utenze', icona: '👥', label: 'Utenze registrate' },
+  { id: 'nuovo', icona: '➕', label: 'Nuovo account' },
+  { id: 'vip', icona: '🎟', label: 'Buoni VIP' },
+]
+
+export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
   const admin = isAdmin(role)
+  // Tre sezioni come nelle altre pagine; si apre sull'elenco, che è il
+  // motivo per cui si viene qui. Chi non è amministratore ha solo quello.
+  const [sezione, setSezione] = useState(sezioneIniziale)
   const [users, setUsers] = useState(null)
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(false)
@@ -213,6 +221,11 @@ export default function UtentiTab({ role = null }) {
   return (
     <div>
       {/* Il titolo sta nella barra in alto (vedi lib/sezioni.js). */}
+      <Sottosezioni
+        voci={admin ? SEZIONI_UTENTI : SEZIONI_UTENTI.slice(0, 1)}
+        attiva={sezione}
+        scegli={setSezione}
+      />
       {error && <div className="banner">Errore: {error}</div>}
 
       {!admin && (
@@ -224,16 +237,17 @@ export default function UtentiTab({ role = null }) {
         </div>
       )}
 
-      {/* Sottosezioni: stessa convenzione di tutte le pagine — tasti sotto
-          al titolo, il pannello si apre lì. */}
-      {admin && (
-        <SectionPanels
-          panels={[
-            {
-              id: 'nuovo',
-              label: <><IconPiu /> Nuovo account</>,
-              desc: 'Serve solo per creare un account al posto di qualcuno. Chi si registra da sé compare qui sotto fra i clienti: gli dai il ruolo e basta.',
-              render: () => (
+      {/* NUOVO ACCOUNT E BUONI VIP SONO SEZIONI, non pannelli a scomparsa in
+          cima: aprirli spingeva giù l'elenco delle utenze, che è la cosa per
+          cui si viene qui. Stanno nel menu laterale come nelle altre
+          pagine. */}
+      {admin && sezione === 'nuovo' && (
+        <div className="card settings-section">
+          <p className="muted small" style={{ margin: '0 0 10px' }}>
+            Serve solo per creare un account al posto di qualcuno. Chi si registra
+            da sé compare fra i clienti: gli dai il ruolo e basta.
+          </p>
+          {(
             <form onSubmit={handleCreate}>
               <label htmlFor="staff-name">Nome</label>
               <input
@@ -283,19 +297,16 @@ export default function UtentiTab({ role = null }) {
                 {busy ? 'Creo…' : '➕ Crea account'}
               </button>
             </form>
-              ),
-            },
-            {
-              id: 'vip',
-              label: <><IconBuono /> Buoni VIP</>,
-              // I buoni sono credito intestato a una persona: stanno con le
-              // persone, non in una voce di menu tutta loro.
-              render: () => <VipTab embedded />,
-            },
-          ]}
-        />
+          )}
+        </div>
       )}
 
+      {/* I buoni sono credito intestato a una persona: stanno con le persone,
+          non in una voce di menu tutta loro. */}
+      {admin && sezione === 'vip' && <VipTab embedded />}
+
+      {sezione === 'utenze' && (
+        <>
       <div className="card settings-section">
         <h3>Personale ({personale.length})</h3>
         {personale.length === 0 && <div className="empty">Nessun account con un ruolo.</div>}
@@ -331,6 +342,8 @@ export default function UtentiTab({ role = null }) {
             </button>
           )}
         </div>
+      )}
+        </>
       )}
 
       {cambioRuolo && (
