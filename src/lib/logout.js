@@ -7,6 +7,7 @@ import { auth } from './firebaseClient.js'
 import { clockOut, rimuoviStaffToken } from './api.js'
 import { idDispositivo } from './dispositivo.js'
 import { spegniPush } from './push.js'
+import { dimenticaTutto } from './notifyStore.js'
 
 // NIENTE PUÒ TENERE DENTRO CHI VUOLE USCIRE. Timbratura e rubrica degli
 // avvisi sono scritture su Firestore, e una scrittura offline non torna
@@ -36,5 +37,7 @@ export async function logoutStaff() {
   // gli avvisi scritti sugli ORDINI arriverebbero lo stesso. Si spegne il
   // token, e allora non suona più niente da nessun mittente.
   await conScadenza(spegniPush())
+  // Gli avvisi erano suoi: chi entra dopo non deve trovarli.
+  dimenticaTutto()
   return signOut(auth)
 }

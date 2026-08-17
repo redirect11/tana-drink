@@ -85,7 +85,9 @@ vi.mock('../../src/lib/appVersion.js', () => ({ subscribeUpdateAvailable: () => 
 vi.mock('../../src/lib/cookieConsent.js', () => ({ openCookiePreferences: vi.fn() }))
 vi.mock('../../src/dev/devActions.js', () => ({ envLabel: '', devToolsEnabled: false }))
 vi.mock('../../src/lib/logout.js', () => ({ logoutStaff: vi.fn() }))
-vi.mock('../../src/components/StatusBell.jsx', () => ({ default: () => null }))
+vi.mock('../../src/components/StatusBell.jsx', () => ({
+  default: () => <div data-testid="campanella" />,
+}))
 vi.mock('../../src/components/VersionBadge.jsx', () => ({ default: () => null }))
 vi.mock('../../src/components/ZoomControl.jsx', () => ({ default: () => null }))
 vi.mock('../../src/components/Toasts.jsx', () => ({ default: () => null }))
@@ -371,5 +373,27 @@ describe('le novità dopo un aggiornamento', () => {
     await screen.findByText('PAGINA MENU')
     expect(screen.queryByRole('dialog', { name: 'Novità di questa versione' })).toBeNull()
     expect(JSON.parse(localStorage.getItem('tana:notifs') || '[]')).toEqual([])
+  })
+})
+
+// ── DA SLOGGATI NON C'È NESSUNA CAMPANELLA ───────────────────────────
+// Chi non è entrato è un cliente qualunque sulla parte pubblica: gli avvisi
+// parlano di ordini che non ha fatto, e «registra questo terminale» è una
+// domanda del gestionale. Sulla schermata d'accesso comparivano tutte e
+// due, sopra al modulo.
+describe('la campanella e chi non è entrato', () => {
+  it('non c’è finché nessuno è collegato', async () => {
+    ruoloClaim = null
+    clienteLoggato = null
+    apri('/')
+    expect(await screen.findByText('PAGINA HOME')).toBeInTheDocument()
+    expect(screen.queryByTestId('campanella')).toBeNull()
+  })
+
+  it('c’è per chi lavora', async () => {
+    ruoloClaim = 'bartender'
+    clienteLoggato = null
+    apri('/')
+    expect(await screen.findByTestId('campanella')).toBeInTheDocument()
   })
 })

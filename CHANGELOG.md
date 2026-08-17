@@ -2,7 +2,14 @@
 
 ## Non ancora rilasciata — 1.5.0
 
-_(qui le novità della linea 1.5)_
+### Al banco
+
+- **Da sloggati la campanella non c'è**: chi non è entrato è un cliente
+  qualunque sulla parte pubblica, e gli avvisi parlano di ordini che non ha
+  fatto. Spariscono anche «registra questo terminale» e lo storico, che sono
+  cose del gestionale.
+- **Uscendo, gli avvisi si cancellano**: erano di chi li ha ricevuti, e il
+  telefono passato a un altro mostrava la serata di prima.
 
 ## 1.4.8 — in collaudo
 
