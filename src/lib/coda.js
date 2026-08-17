@@ -100,19 +100,36 @@ export const annullato = (o) => o?.workflow_status === ORDER_STATUSES.ANNULLATO
 // è il lavoro di adesso: un conto incassato o annullato prima dell'ultima
 // chiusura non è lavoro, è storia — sta in Cassa, nella lista ordini. Non
 // basta guardare la giornata: in una serata la cassa si chiude e si riapre,
-// e i conti della tornata precedente sono già stati contati e rendicontati.
-// Comparivano lo stesso perché la coda tiene d'occhio i conti APERTI senza
-// limite di data (giusto: si chiudono solo a mano), e un conto incassato
-// rimasto indietro con gli stati continuava a passare da lì.
+// e i conti della tornata precedente sono già stati contati.
+//
+// CONTA QUANDO È STATO CHIUSO, NON QUANDO È STATO APERTO. Un conto di ieri
+// rimasto aperto e annullato stasera è successo STASERA: guardando la
+// sessione in cui era nato spariva dalla tab «annullati» nell'istante in cui
+// lo si annullava — si agisce su un conto e quello svanisce, senza sapere se
+// l'operazione è andata a buon fine.
 //
 // I conti APERTI restano sempre, cassa chiusa compresa: quelli sono da
 // chiudere, e nasconderli vorrebbe dire perderli.
-// Chi la cassa non la apre mai — l'ordine non porta scritta nessuna
-// sessione — ricade sulla giornata, che è l'unico riferimento che ha.
-export function restaInCoda(o, { chiuso, cassa, giornata, oggi } = {}) {
+// Senza un orario di chiusura leggibile si ripiega sulla sessione scritta
+// sull'ordine, e in mancanza anche di quella sulla giornata: chi la cassa non
+// la apre mai non ha altro riferimento.
+export function restaInCoda(o, { chiuso, cassa, apertaDa, giornata, oggi } = {}) {
   if (!chiuso) return true
+  const quando = chiusuraDelConto(o)
+  if (quando && apertaDa) return quando >= apertaDa
   if (o?.cash_session_id) return o.cash_session_id === cassa
   return !giornata || !oggi || giornata === oggi
+}
+
+// Quando il conto è stato chiuso: incassato o annullato.
+export function chiusuraDelConto(o) {
+  return (
+    o?.tempi_conto?.[ORDER_STATUSES.ANNULLATO] ||
+    o?.status_times?.[ORDER_STATUSES.ANNULLATO] ||
+    o?.paid_at ||
+    o?.tempi_conto?.[ORDER_STATUSES.PAGATO] ||
+    null
+  )
 }
 
 export function passaFiltroCoda(o, filtro, isChiuso = () => false) {
