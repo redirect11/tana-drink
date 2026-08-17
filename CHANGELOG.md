@@ -2,6 +2,12 @@
 
 ## Non ancora rilasciata — 1.4.8
 
+### Sotto il cofano
+
+- **Le issue nascono anche dai rami di rilascio**: un push che tocca i
+  registri (requisiti e bug) apre quelle che mancano, senza duplicarle e
+  senza chiuderne nessuna. Prima bisognava aspettare `main`.
+
 ### Al banco
 
 - **Un drink si duplica**: nelle azioni della card del menù c'è «📋
