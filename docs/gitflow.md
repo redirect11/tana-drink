@@ -122,10 +122,12 @@ tutto quanto:
    può uscire con codice 1 senza stampare nulla — si guarda l'esito, non
    l'output), `npm test` verde, `npm run build` che compila.
 3. **Coverage**: `npm run test:coverage` deve passare. Le soglie stanno
-   in `vitest.config.mjs` e sono un **cricchetto**: tarate appena sotto
-   il misurato, si alzano quando la copertura cresce e non si abbassano
-   mai per far passare un merge. (Oggi misurano `functions/lib`;
-   l'estensione a `src/lib` è REQ-DEV-005.)
+   in `vitest.config.mjs`, una per area (functions, `src/lib`,
+   componenti, pagine), e sono un **cricchetto**: tarate appena sotto il
+   misurato di quell'area, si alzano quando la copertura cresce e non si
+   abbassano mai per far passare un merge. Le pagine partono basse
+   perché così stanno: la soglia non certifica qualità, impedisce di
+   peggiorare — alzarle è REQ-DEV-005.
 4. **Un giro di refactoring sul diff.** Prima del merge si rilegge il
    *diff intero* cercando: duplicazioni da riusare, funzioni cresciute
    oltre lo scopo, complessità che si può togliere, commenti che

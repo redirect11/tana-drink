@@ -1986,13 +1986,16 @@ requirements:
     test_cases: []
 
   - id: REQ-DEV-005
-    title: "Coverage anche su src/lib, e standard di complessità nel lint"
+    title: "Alzare il cricchetto della coverage, e standard di complessità nel lint"
     area: "vitest.config.mjs, eslint.config.js"
     description: >
-      Oggi la coverage misura solo functions/lib: la logica pura del
-      client (src/lib — coda, prezzi, magazzino, giornata) è provata dai
-      test ma non misurata, quindi il cricchetto non la protegge. Va
-      estesa la misura a src/lib con una baseline onesta e soglie sue.
+      Il cancello ora misura TUTTO il codice di prodotto, con una soglia
+      per area tarata sul misurato del 16/08: functions/lib 92/76/88,
+      src/lib 64/74/62, componenti 40/72/43, pagine 17/52/16 (src/dev è
+      fuori: attrezzi, non prodotto). Le soglie basse — pagine su tutte —
+      non certificano qualità: impediscono di peggiorare. Questo
+      requisito è il lavoro di ALZARLE: coprire la logica delle pagine
+      (BartenderPage e MenuPage in testa) e portare il cricchetto su.
       Insieme, gli standard di complessità nel lint (complexity,
       max-depth, dimensione delle funzioni): prima come avvisi per vedere
       dove siamo, poi come errori — i numeri esatti si decidono guardando
