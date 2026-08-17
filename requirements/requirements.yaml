@@ -185,6 +185,34 @@ requirements:
     labels: [ordini, pagamenti, impostazioni]
     test_cases: [tests/component/PaymentScreen.test.jsx]
 
+  - id: REQ-ORD-019
+    title: "Chi ha preso l'ordine lo modifica davvero: anche aggiungendo"
+    area: "src/pages/OrderStatusPage.jsx, src/components/OrderPosDetail.jsx"
+    description: >
+      Nel dettaglio di un ordine, la sala poteva solo cambiare le QUANTITÀ di
+      quello che c'era già: chi aveva preso l'ordine e si sentiva dire
+      «aggiungi anche una birra» doveva battere un secondo conto.
+      «Modifica ordine · aggiungi prodotti» apre la schermata del conto: la
+      stessa del banco, quella vera, con la griglia dei prodotti. Niente
+      versione ridotta — chi prende un ordine al tavolo ci fa le stesse
+      cose, e un tasto spento in una schermata e acceso nell'altra è solo
+      una cosa che non si capisce. Aprire e chiudere la CASSA resta invece
+      del banco (REQ-CASSA-008): quella è la serata, non il conto.
+      «Salva modifiche» resta dov'è: correggere una quantità e aggiungere un
+      drink sono due gesti diversi, e chi fa il primo non deve passare per
+      una schermata intera.
+      E c'è «Pagamento», che apre la stessa schermata già sul pagamento: al
+      tavolo si incassa lì, e senza quel tasto bisognava tornare in coda,
+      riaprire il conto dal banco e incassare da lì — col cliente che
+      aspetta col portafogli in mano. Su un conto già saldato o annullato
+      non compare.
+      Al cliente niente di tutto questo: dal suo telefono modifica le
+      quantità del proprio ordine finché è ricevuto, e basta.
+    status: implemented
+    generate_issue: false
+    labels: [ordini, staff]
+    test_cases: [tests/component/OrderStatusPage.test.jsx]
+
   - id: REQ-ORD-018
     title: "Salvare le modifiche a un ordine lo dice, e riporta indietro"
     area: "src/pages/OrderStatusPage.jsx"
@@ -194,7 +222,9 @@ requirements:
       cambiato una quantità restava lì a chiedersi se fosse andata, e spesso
       ripremeva. Ora la conferma si vede e si torna alla coda — da dove si è
       arrivati, e dove il conto si rilegge aggiornato. In errore invece si
-      resta, con il motivo scritto.
+      resta, e il motivo si dice anche col toast: l'avviso in fondo alla
+      pagina, su un conto lungo, sta fuori schermo — chi ha premuto vede il
+      tasto tornare com'era e crede che non sia successo niente.
     status: implemented
     generate_issue: false
     labels: [ordini, ux]
