@@ -4,6 +4,15 @@
 
 ### Al banco
 
+- **Si capisce che cosa è stato pagato.** Al posto di «Sconto e acconti già
+  incassati −15,00 €» ci sono righe distinte: lo sconto, e ogni incasso col
+  metodo e l'ora. Un importo battuto a mano si chiama **acconto** e non
+  finge di coprire delle righe; chi paga scegliendo le righe le vede
+  elencate sotto l'incasso.
+- **Niente più attese del server quando si tocca un conto**: incassare,
+  annullare, avanzare o aggiungere righe si vede all'istante, e il
+  riepilogo in cima alla coda si muove con te.
+
 - **Le attese ora si vedono**: entrando, aprendo la cassa o cercando nello
   storico, tre bollicine dicono che l'app sta lavorando — e dicono anche
   cosa sta aspettando, invece di una scritta ferma che sembra un blocco.

@@ -852,6 +852,19 @@ export function subscribeServiceStats(onChange, onError) {
 // la coda ci sta sopra con un listener, quindi la copia locale e' quella
 // dell'ultimo aggiornamento arrivato.
 // Si legge da li'; solo se in cache non c'e' si va a chiedere.
+// TUTTO QUELLO CHE TOCCA UN CONTO PASSA DA QUI, e parte dalla CACHE. Ogni
+// azione — incassare, annullare, avanzare, aggiungere righe — leggeva prima
+// il documento dal SERVER: da lì il mezzo secondo (o i due secondi) fra il
+// tocco e la coda che si muove, e il riepilogo in cima che sembrava
+// aggiornarsi «solo quando risponde il server». Perché in effetti era così.
+//
+// La cache è già allineata: la coda tiene un ascolto vivo su quei conti, e
+// le scritture locali ci finiscono dentro subito. Leggendo da lì, l'azione
+// si vede all'istante e la scrittura va per conto suo.
+//
+// Il rischio: si lavora su una fotografia di un istante fa, come prima
+// (anche il server dà una fotografia). Se nel frattempo ha scritto un altro
+// terminale, l'ultimo che scrive vince — ed è il comportamento che c'era già.
 async function leggiOrdine(ref) {
   try {
     const c = await getDocFromCache(ref)
@@ -1038,7 +1051,7 @@ function timbroChiusura(nowIso) {
 // magazzino adesso (una sola volta, come sempre).
 export async function closePaidOrder(id) {
   const ref = doc(db, 'orders', id)
-  const snap = await getDoc(ref)
+  const snap = await leggiOrdine(ref)
   if (!snap.exists()) throw new Error('Ordine non trovato')
   const data = snap.data()
   if (data.payment_status !== 'pagato') {
@@ -2070,7 +2083,7 @@ export async function applyVoucherDiscount(orderId, voucherId, requestedAmount) 
 // lo si ristorna prima (il buono torna al beneficiario).
 export async function setOrderDiscount(id, discount) {
   const ref = doc(db, 'orders', id)
-  const snap = await getDoc(ref)
+  const snap = await leggiOrdine(ref)
   if (!snap.exists()) throw new Error('Ordine non trovato')
   const o = snap.data()
   if (o.payment_status === 'pagato') throw new Error('Ordine già pagato')
@@ -2104,7 +2117,7 @@ function chiIncassa() {
 export async function registerPayment(id, { amount, method = 'banco', items = null, autoServe = true } = {}) {
   const ref = doc(db, 'orders', id)
   const nowIso = new Date().toISOString()
-  const snap = await getDoc(ref)
+  const snap = await leggiOrdine(ref)
   if (!snap.exists()) throw new Error('Ordine non trovato')
   const o = snap.data()
   if (o.status === ORDER_STATUSES.ANNULLATO) throw new Error('Ordine annullato')
@@ -2186,7 +2199,7 @@ function scaricaInSottofondo(orderId, comandaId) {
   ;(async () => {
     try {
       const ref = doc(db, 'orders', orderId)
-      const snap = await getDoc(ref)
+      const snap = await leggiOrdine(ref)
       if (!snap.exists()) return
       const norm = normalizeOrderDoc(snap.data())
       const comande = norm.comande.map((c) => ({ ...c }))
@@ -2209,7 +2222,7 @@ function riallineaInSottofondo(orderId, comandaId) {
   ;(async () => {
     try {
       const ref = doc(db, 'orders', orderId)
-      const snap = await getDoc(ref)
+      const snap = await leggiOrdine(ref)
       if (!snap.exists()) return
       const norm = normalizeOrderDoc(snap.data())
       const comande = norm.comande.map((c) => ({ ...c }))
@@ -2347,7 +2360,7 @@ export async function advanceComanda(orderId, comandaId, newStatus) {
   let lowStock = []
   let statComanda = null
 
-  const orderSnap = await getDoc(orderRef)
+  const orderSnap = await leggiOrdine(orderRef)
   if (!orderSnap.exists()) throw new Error('Ordine non trovato')
   const raw = orderSnap.data()
   const norm = normalizeOrderDoc(raw)
@@ -2406,7 +2419,7 @@ export async function advanceComanda(orderId, comandaId, newStatus) {
       .catch((e) => console.error('[SumUp] updateStatus failed:', e))
   }
 
-  return mapOrder(await getDoc(orderRef))
+  return mapOrder(await leggiOrdine(orderRef))
 }
 
 // Retrocompatibilità: avanza la comanda ATTIVA dell'ordine (le viste che
@@ -2481,7 +2494,7 @@ export async function updateOrderPushToken(id, token) {
 // e l'aggregato dell'ordine, ricalcolando il totale.
 export async function updateOrderItems(id, items) {
   const ref = doc(db, 'orders', id)
-  const snap = await getDoc(ref)
+  const snap = await leggiOrdine(ref)
   if (!snap.exists()) throw new Error('Ordine non trovato')
   const cur = snap.data()
   const norm = normalizeOrderDoc(cur)
@@ -2520,7 +2533,7 @@ export async function updateOrderItems(id, items) {
     total: nuovoTotale,
     ...(nuovoSconto != null ? { discount_amount: nuovoSconto } : {}),
   }), 'modifica ordine')
-  return mapOrder(await getDoc(ref))
+  return mapOrder(await leggiOrdine(ref))
 }
 
 // Campi "anagrafici" del conto (nome, tavolo, note): modificabili dal
@@ -2544,7 +2557,7 @@ export async function setOrderGroup(id, groupId) {
     () => updateDoc(ref, { group_id: groupId || null, group_name_snapshot: nome }),
     'gruppo del conto'
   )
-  return mapOrder(await getDoc(ref))
+  return mapOrder(await leggiOrdine(ref))
 }
 
 export async function updateOrderInfo(id, { table_label, note, customer_name }) {
@@ -2565,7 +2578,7 @@ export async function updateOrderInfo(id, { table_label, note, customer_name }) 
 export async function addComanda(orderId, items, { note = null } = {}) {
   const ref = doc(db, 'orders', orderId)
   const nowIso = new Date().toISOString()
-  const snap = await getDoc(ref)
+  const snap = await leggiOrdine(ref)
   if (!snap.exists()) throw new Error('Ordine non trovato')
   const cur = snap.data()
   const norm = normalizeOrderDoc(cur)
@@ -2620,7 +2633,7 @@ export async function addComanda(orderId, items, { note = null } = {}) {
   // vedono in magazzino, colonna «a fine serata» — e se ne vanno davvero
   // quando la comanda risulta servita (o, senza gli stati del servizio,
   // alla riscossione, che è il momento in cui tutto risulta servito).
-  return mapOrder(await getDoc(ref))
+  return mapOrder(await leggiOrdine(ref))
 }
 
 // Modifica di UNA COMANDA da parte del bartender (quantità, rimozioni,
@@ -2688,7 +2701,7 @@ export async function bartenderUpdateComanda(orderId, comandaId, { items }) {
   }), 'modifica comanda')
   // Scorte dopo: se erano già state scalate si applica solo la differenza.
   if (daRiallineare) riallineaInSottofondo(orderId, comandaId)
-  return mapOrder(await getDoc(ref))
+  return mapOrder(await leggiOrdine(ref))
 }
 
 // Annulla un ordine. Se lo stock era già stato scalato lo ripristina dallo
@@ -2784,7 +2797,7 @@ export async function cancelOrder(id, opts = {}) {
     cancel_message: message || null,
     cancel_notify: !!notifyClient,
   }), 'annullo ordine')
-  return mapOrder(await getDoc(orderRef))
+  return mapOrder(await leggiOrdine(orderRef))
 }
 
 // RIPRISTINO DI UN CONTO CHIUSO O ANNULLATO. Capita: si chiude un conto sul
@@ -2873,7 +2886,7 @@ export async function restoreOrder(id, { motivo = null, chi = null } = {}) {
     // identico a com'era.
     ...(scontoRiscritto || {}),
   }), 'ripristino conto')
-  return mapOrder(await getDoc(orderRef))
+  return mapOrder(await leggiOrdine(orderRef))
 }
 
 // --- REALTIME ---

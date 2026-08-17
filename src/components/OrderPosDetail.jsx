@@ -34,6 +34,7 @@ import {
   ritiratoLabel,
   formatPrice,
   placedByName,
+  paymentMethodLabel,
 } from '../lib/orderStatus.js'
 import { idDispositivo } from '../lib/dispositivo.js'
 import {
@@ -43,7 +44,7 @@ import {
   comandaEditable,
   ORDER_OPEN,
 } from '../lib/comande.js'
-import { paidAmount } from '../lib/pagamento.js'
+import { paidAmount, dettaglioIncassi } from '../lib/pagamento.js'
 import { isPersonale } from '../lib/ruoli.js'
 import {
   makeLineId,
@@ -1906,12 +1907,46 @@ export default function OrderPosDetail({ order: orderProp = null }) {
               <strong>Totale</strong>
               <strong className="price">{formatPrice(confirmedTotal + draftTotal + extras)}</strong>
             </div>
-            {!isNew && ((order.discount_amount || 0) > 0 || (order.payments || []).length > 0) && (
-              <div className="row between muted small">
-                <span>Sconto e acconti già incassati</span>
-                <span>−{formatPrice((order.discount_amount || 0) + paidAmount(order))}</span>
-              </div>
-            )}
+            {/* CHE COSA È STATO PAGATO. C'era una riga sola — «Sconto e acconti
+                già incassati −15,00 €» — e quindici euro di che non lo diceva
+                nessuno: uno sconto, un acconto, con che metodo, per quali
+                righe. Davanti al cliente che chiede, quella riga non
+                rispondeva a niente. */}
+            {!isNew &&
+              (() => {
+                const d = dettaglioIncassi(order)
+                if (d.sconto <= 0 && d.incassi.length === 0) return null
+                return (
+                  <div className="posd-incassi">
+                    {d.sconto > 0 && (
+                      <div className="row between muted small">
+                        <span>Sconto</span>
+                        <span>−{formatPrice(d.sconto)}</span>
+                      </div>
+                    )}
+                    {d.incassi.map((i, idx) => (
+                      <div key={idx} className="posd-incasso">
+                        <div className="row between muted small">
+                          <span>
+                            {/* UN IMPORTO BATTUTO A MANO NON COPRE NESSUNA
+                                RIGA: sono soldi lasciati sul conto, e dire il
+                                contrario sarebbe inventarselo. Le righe le
+                                copre solo chi le sceglie nella schermata di
+                                pagamento. */}
+                            {i.cosa ? 'Pagate' : 'Acconto'}
+                            {i.metodo ? ` · ${paymentMethodLabel(i.metodo)}` : ''}
+                            {i.quando ? ` · ${apertoIl(i.quando)}` : ''}
+                          </span>
+                          <span>−{formatPrice(i.importo)}</span>
+                        </div>
+                        {i.cosa && (
+                          <div className="muted small posd-incasso-cosa">{i.cosa.join(' · ')}</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )
+              })()}
 
             {/* Niente tasto Conferma: gli item si confermano da soli (si torna
                 con "← Ordini"). I tasti azione sono SEMPRE presenti: quelli non

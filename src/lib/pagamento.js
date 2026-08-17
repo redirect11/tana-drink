@@ -163,3 +163,37 @@ export function summaryMethod(payments) {
   if (methods.length === 0) return null
   return methods.length === 1 ? methods[0] : 'misto'
 }
+
+// ── CHE COSA È STATO PAGATO ──────────────────────────────────────────
+//
+// In fondo al conto c'era una riga sola: «Sconto e acconti già incassati
+// −15,00 €». Quindici euro di che? Uno sconto, un acconto, tutti e due? Chi
+// li ha presi e con che metodo? Al banco, davanti al cliente che chiede,
+// quella riga non risponde a niente — e per saperlo bisognava aprire la
+// storia del conto.
+//
+// Qui la si spacchetta: lo sconto per conto suo, e ogni incasso con il suo
+// metodo, la sua ora e — se era un conto diviso — quello che copriva.
+export function dettaglioIncassi(order) {
+  const sconto = round2(order?.discount_amount || 0)
+  const incassi = (order?.payments || [])
+    .filter((p) => (Number(p.amount) || 0) !== 0)
+    .map((p) => ({
+      importo: round2(p.amount),
+      metodo: p.method || null,
+      quando: p.at || null,
+      // Le righe coperte da quell'incasso, quando il conto è stato diviso:
+      // «2 Daiquiri, 1 Birra» dice cosa ha già pagato quello che se n'è
+      // andato — che è la domanda vera quando restano gli altri al tavolo.
+      cosa: Array.isArray(p.items) && p.items.length
+        ? p.items
+            .filter((i) => (Number(i.qty) || 0) > 0)
+            .map((i) => `${Number(i.qty) || 1}× ${i.name || 'riga'}`)
+        : null,
+    }))
+  return {
+    sconto,
+    incassi,
+    totaleIncassato: round2(incassi.reduce((s, i) => s + i.importo, 0)),
+  }
+}

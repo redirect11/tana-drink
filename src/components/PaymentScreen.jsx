@@ -25,6 +25,7 @@ import {
   discountAmount,
   paymentCloses,
   round2,
+  dettaglioIncassi,
 } from '../lib/pagamento.js'
 
 // ── Schermata Pagamento in stile POS SumUp (vedi foto di riferimento) ──
@@ -563,13 +564,26 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
             {(order.payments || []).length > 0 && (
               <div style={{ marginTop: 14 }}>
                 <span className="muted small" style={{ letterSpacing: 0.5 }}>GIÀ PAGATO</span>
-                {order.payments.map((p) => (
-                  <div className="row between muted small" key={p.id} style={{ marginTop: 4 }}>
-                    <span>
-                      {PAYMENT_METHOD_LABELS[p.method] || p.method}
-                      {p.at ? ` · ${String(p.at).slice(11, 16)}` : ''}
-                    </span>
-                    <span>{formatPrice(p.amount)}</span>
+                {dettaglioIncassi(order).incassi.map((p, idx) => (
+                  <div key={idx} style={{ marginTop: 4 }}>
+                    <div className="row between muted small">
+                      <span>
+                        {/* «Acconto» quando l'importo è stato battuto a mano:
+                            quei 30 € non coprono nessuna riga in
+                            particolare, sono soldi lasciati sul conto. Le
+                            righe le copre solo chi le sceglie qui a
+                            sinistra. */}
+                        {p.cosa ? 'Pagate' : 'Acconto'}
+                        {p.metodo ? ` · ${PAYMENT_METHOD_LABELS[p.metodo] || p.metodo}` : ''}
+                        {p.quando ? ` · ${String(p.quando).slice(11, 16)}` : ''}
+                      </span>
+                      <span>{formatPrice(p.importo)}</span>
+                    </div>
+                    {p.cosa && (
+                      <div className="muted small" style={{ paddingLeft: 10, opacity: 0.8 }}>
+                        {p.cosa.join(' · ')}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

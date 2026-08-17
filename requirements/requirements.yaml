@@ -246,6 +246,12 @@ requirements:
       numero. Il numero cambia solo a chi ha perso, e resta scritto da dove
       veniva (`daily_number_precedente`), perché la comanda può essere già
       uscita dalla stampante col numero vecchio.
+      E NIENTE ASPETTA IL SERVER. Ogni azione su un conto — incassare,
+      annullare, avanzare, aggiungere righe — leggeva il documento dal
+      SERVER prima di scrivere: da lì il ritardo fra il tocco e la coda che
+      si muove, e il riepilogo in cima che sembrava aggiornarsi solo alla
+      risposta del server. Si legge dalla cache, che l'ascolto della coda
+      tiene già allineata.
       E USCIRE DAL CONTO NON ASPETTA NIENTE. Il box del nome aspettava che il
       conto fosse nato per sapere se chiederlo — ma il nome si sa già dalla
       schermata: l'unica cosa che quell'attesa produceva era il box in
@@ -258,6 +264,28 @@ requirements:
       - tests/unit/progressivi.test.js
       - tests/bdd/numerazione.test.js
       - tests/component/PosPage.test.jsx
+
+  - id: REQ-PAG-010
+    title: "Si vede che cosa è stato pagato, e cosa copre"
+    area: "src/lib/pagamento.js, src/components/OrderPosDetail.jsx, src/components/PaymentScreen.jsx"
+    description: >
+      In fondo al conto c'era una riga sola: «Sconto e acconti già incassati
+      −15,00 €». Quindici euro di che? Uno sconto, un acconto, con che
+      metodo, per quali righe? Al banco, davanti al cliente che chiede,
+      quella riga non risponde a niente.
+      Ora sono righe distinte: lo sconto per conto suo, e ogni incasso col
+      suo metodo e la sua ora.
+      E si dice cosa copre. Un importo battuto a mano — «30 €» — NON copre
+      nessuna riga: sono soldi lasciati sul conto, e si chiama ACCONTO.
+      Chi paga scegliendo le righe copre esattamente quelle, e sotto
+      l'incasso si leggono («2× Daiquiri · 1× Birra»). Attribuire delle
+      righe a un importo battuto a mano vorrebbe dire inventarselo: se
+      servono attribuite, si scelgono nella schermata di pagamento — che è
+      esattamente a cosa serve la selezione a sinistra.
+    status: implemented
+    generate_issue: false
+    labels: [pagamenti, ux]
+    test_cases: [tests/unit/pagamento.test.js]
 
   - id: REQ-ORD-008
     title: "Un conto chiuso o annullato si può rimettere in corso"

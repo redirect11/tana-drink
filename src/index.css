@@ -6180,3 +6180,17 @@ a.storico-notifica:hover {
     }
   }
 }
+
+/* Che cosa è stato pagato, in fondo al conto: sconto e incassi uno per
+   riga, con metodo e ora. Le righe coperte da un incasso parziale stanno
+   sotto, rientrate: sono un dettaglio dell'incasso, non un'altra voce. */
+.posd-incassi {
+  margin-top: 2px;
+}
+.posd-incasso-cosa {
+  padding-left: 10px;
+  opacity: 0.8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
