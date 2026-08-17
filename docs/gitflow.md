@@ -106,6 +106,47 @@ Ci finisce dentro tutto quello che si fa; ogni push lo pubblica su test,
 quindi si prova sempre l'insieme e non il pezzo singolo. Quando la
 versione è pronta si mergia su `develop`, si tagga e si va in `main`.
 
+## Il cancello di qualità: prima di ogni merge in `develop`
+
+Il merge in `develop` non è un gesto tecnico, è la promessa che quel
+lavoro è finito. **E si chiede con una pull request**: `develop` e `main`
+sono rami protetti — niente push diretti, niente merge fatti in locale e
+spinti su. La PR è il posto dove la CI fa rispettare il cancello da sola
+(il check «Lint, test e build», con la coverage e le sue soglie, è
+obbligatorio per il merge). I rami `release/**` restano scrivibili
+direttamente — sono il posto di lavoro quotidiano — ma protetti da
+cancellazione e force-push.
+
+Prima di aprire la PR si passa il cancello, tutto quanto:
+
+1. **Requisiti allineati.** Ogni richiesta lavorata ha il suo requisito
+   (`REQ-*` in `requirements/requirements.yaml`) o la sua voce nel
+   registro bug (`BUG-*` in `requirements/bugs.yaml`), aggiornati nello
+   stesso giro, coi **test citati** nei `test_cases`. Il test dei
+   requisiti verifica il legame; `node scripts/requisiti.mjs` dice a che
+   punto siamo.
+2. **Lint, test, build**: `npm run lint` pulito (attenzione: qui il lint
+   può uscire con codice 1 senza stampare nulla — si guarda l'esito, non
+   l'output), `npm test` verde, `npm run build` che compila.
+3. **Coverage**: `npm run test:coverage` deve passare. Le soglie stanno
+   in `vitest.config.mjs`, una per area (functions, `src/lib`,
+   componenti, pagine), e sono un **cricchetto**: tarate appena sotto il
+   misurato di quell'area, si alzano quando la copertura cresce e non si
+   abbassano mai per far passare un merge. Le pagine partono basse
+   perché così stanno: la soglia non certifica qualità, impedisce di
+   peggiorare — alzarle è REQ-DEV-005.
+4. **Un giro di refactoring sul diff.** Prima del merge si rilegge il
+   *diff intero* cercando: duplicazioni da riusare, funzioni cresciute
+   oltre lo scopo, complessità che si può togliere, commenti che
+   spiegano il "cosa" invece del "perché". Con Claude: `/simplify` fa
+   questo giro e applica; le trovate si trattano come il resto — codice,
+   test e requisiti insieme.
+
+La CI ripete 2 e 3 sulle pull request verso `develop` e `main` (la
+coverage gira solo lì: in mezzo al lavoro sarebbe solo attesa). Il punto
+1 lo ripete il test dei requisiti. Il punto 4 non lo può fare nessuna
+macchina da sola: è la parte del mestiere.
+
 ## I rilasci
 
 Ogni rilascio ha una versione **x.y.z** semantica:

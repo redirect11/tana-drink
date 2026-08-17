@@ -26,9 +26,26 @@ export default defineConfig({
     include: ['tests/**/*.test.js', 'tests/**/*.test.jsx'],
     coverage: {
       provider: 'v8',
-      include: ['functions/lib/**/*.js'],
+      include: ['functions/lib/**/*.js', 'src/**/*.js', 'src/**/*.jsx'],
+      // Gli attrezzi da sviluppatore non sono prodotto: fuori dal conto.
+      exclude: ['src/dev/**'],
       reporter: ['text', 'html', 'lcov'],
       reportsDirectory: './coverage',
+      // IL CANCELLO: sotto queste soglie `npm run test:coverage` fallisce,
+      // e con lui la CI delle pull request. Ogni area ha la SUA soglia,
+      // tarata appena sotto il misurato del 16/08 — un CRICCHETTO: si
+      // alzano quando la copertura cresce, non si abbassano mai per far
+      // passare un merge. Le pagine partono basse perché così stanno
+      // (19,8% stmts): la soglia non certifica qualità, impedisce di
+      // peggiorare — alzarla è REQ-DEV-005.
+      thresholds: {
+        'functions/lib/**/*.js': { statements: 92, branches: 76, functions: 88, lines: 92 },
+        'src/lib/**': { statements: 64, branches: 74, functions: 62, lines: 64 },
+        'src/components/**': { statements: 40, branches: 72, functions: 43, lines: 40 },
+        'src/pages/**': { statements: 17, branches: 52, functions: 16, lines: 17 },
+        // src/ alla radice: App.jsx e main.jsx (misurato 72,8 / 65,9 / 31,6).
+        'src/*.{js,jsx}': { statements: 70, branches: 63, functions: 28, lines: 70 },
+      },
     },
   },
 })

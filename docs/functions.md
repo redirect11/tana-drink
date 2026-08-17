@@ -1,8 +1,15 @@
 # Firebase Functions — Integrazione SumUp POS Pro
 
-Documentazione delle Cloud Functions di Tana Drink. Tutte le functions implementano
-l'integrazione con **SumUp POS Pro** (sistema Goodtill) come proxy server-side: le
-credenziali API non vengono mai esposte al client.
+Documentazione delle Cloud Functions di Tana Drink dedicate a **SumUp POS
+Pro** (sistema Goodtill), usate come proxy server-side: le credenziali API
+non vengono mai esposte al client.
+
+> Nota: da quando è nato questo documento le functions sono cresciute —
+> pagamenti (checkout e lettore Solo), notifiche push sui trigger degli
+> ordini, gestione utenze (`staffAdmin`), chiusura automatica dei conti
+> pagati. La mappa completa e aggiornata è il wiring in
+> [functions/index.js](../functions/index.js); qui sotto resta il
+> dettaglio del blocco SumUp POS Pro.
 
 - **Regione**: `europe-west1`
 - **Runtime**: Node.js 20
