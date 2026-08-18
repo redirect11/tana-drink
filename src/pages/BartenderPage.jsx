@@ -62,7 +62,8 @@ import {
   avvisoAttivo,
   idAvvisoStato,
 } from '../lib/preferenzeNotifiche.js'
-import { allServed, contoChiuso, firmaComande, nextComandaStatus } from '../lib/comande.js'
+import { allServed, contoChiuso, nextComandaStatus } from '../lib/comande.js'
+import { useComandeLocali } from '../lib/comandeLocali.js'
 import { paidAmount, orderTotal } from '../lib/pagamento.js'
 import { businessDayKey, businessDayLabel, businessDayShort } from '../lib/businessDay.js'
 import { isAwaitingPayment } from '../lib/payments.js'
@@ -473,12 +474,11 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   const [corsiaAperta, setCorsiaAperta] = useState(null)
   // Quale card mostra tutte le righe (i conti lunghi si aprono a richiesta).
   const [corsiaEspansa, setCorsiaEspansa] = useState(null)
-  // LE COMANDE COME LE VEDE CHI STA QUI, ADESSO. Nelle corsie del banco il
-  // gesto è sulla singola comanda — la si prende in carico — e deve
-  // vedersi nell'istante in cui si tocca: la scrittura parte in sottofondo
-  // e lo snapshot arriva dopo. Qui sta la copia locale, id del conto →
-  // comande, e se ne va appena il server racconta la stessa cosa.
-  const [comandeLocali, setComandeLocali] = useState({})
+  // Le comande come le vede chi sta qui adesso: il gesto è sulla singola
+  // comanda e deve vedersi nell'istante in cui si tocca. La copia locale e
+  // la sua pulizia stanno in lib/comandeLocali.js, uguali per la coda, il
+  // conto e il dettaglio della comanda.
+  const comandeLocali = useComandeLocali(orders)
   // Quali colonne chi sta a QUESTO terminale ha spento, e se guarda i conti
   // o le comande: preferenze del dispositivo, non del locale — al banco e
   // alla cassa non si guardano le stesse cose.
@@ -787,42 +787,19 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
     const ns = nextComandaStatus(comanda.status)
     if (!ns) return
     const adesso = new Date().toISOString()
-    const comande = (comandeLocali[order.id] || order.comande || []).map((c) =>
-      c.id === comanda.id
-        ? { ...c, status: ns, status_times: { ...(c.status_times || {}), [ns]: adesso } }
-        : c
+    comandeLocali.applica(order, (comande) =>
+      comande.map((c) =>
+        c.id === comanda.id
+          ? { ...c, status: ns, status_times: { ...(c.status_times || {}), [ns]: adesso } }
+          : c
+      )
     )
-    setComandeLocali((m) => ({ ...m, [order.id]: comande }))
     advanceComanda(order.id, comanda.id, ns).catch((e) => {
       setError(e.message)
       showToast(`⚠️ Avanzamento non riuscito: ${e.message}`, { kind: 'error' })
-      setComandeLocali((m) => {
-        const n = { ...m }
-        delete n[order.id]
-        return n
-      })
+      comandeLocali.scarta(order.id)
     })
   }
-
-  // La copia locale delle comande se ne va quando il server racconta la
-  // stessa cosa. Si confronta la FIRMA e non gli oggetti interi: dal server
-  // tornano con campi in più — orari, snapshot del magazzino — che non
-  // cambiano niente di quello che si vede, e che terrebbero la copia
-  // locale attaccata per sempre.
-  useEffect(() => {
-    setComandeLocali((m) => {
-      if (Object.keys(m).length === 0) return m
-      const next = { ...m }
-      let cambiato = false
-      for (const o of orders) {
-        if (next[o.id] && firmaComande(o.comande) === firmaComande(next[o.id])) {
-          delete next[o.id]
-          cambiato = true
-        }
-      }
-      return cambiato ? next : m
-    })
-  }, [orders])
 
   // L'override ottimistico vive finché il server non è allineato: appena
   // l'ordine arriva con lo stato atteso (o più avanti), si toglie.
@@ -1094,7 +1071,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
     .sort((a, b) => ((a.daily_number || 0) - (b.daily_number || 0)) * (ordineDesc ? -1 : 1))
     // Le comande come le vede questo terminale: quelle del server con sopra
     // l'ultimo gesto fatto da qui, finché lo snapshot non lo racconta.
-    .map((o) => (comandeLocali[o.id] ? { ...o, comande: comandeLocali[o.id] } : o))
+    .map(comandeLocali.conComande)
 
   // CHI GUARDA DECIDE COSA VEDE. Sono due domande diverse davanti allo
   // stesso schermo, e rispondere a tutti e due con la stessa vista vuol

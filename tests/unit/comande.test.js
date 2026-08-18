@@ -286,7 +286,7 @@ describe('conto chiuso: non c’è più niente da fare', () => {
 import {
   dividiComanda,
   comandaDivisibile,
-  firmaComande,
+  firmaLavoro,
   annullataPerDivisione,
 } from '../../src/lib/comande.js'
 
@@ -380,17 +380,17 @@ describe('su quali comande si propone la preparazione parziale', () => {
   })
 })
 
-// La firma dice se il server ha ormai recepito il gesto fatto qui: serve a
-// buttare via la copia locale senza far «rimbalzare» la card allo stato di
-// prima.
-describe('la firma delle comande', () => {
+// LA FIRMA DEL LAVORO dice se il server ha ormai recepito il gesto fatto
+// qui: serve a buttare via la copia locale senza far «rimbalzare» la card
+// allo stato di prima.
+describe('la firma del lavoro di un conto', () => {
   const c = (id, status, qty) => ({ id, status, items: [{ drink_id: 'x', qty }] })
 
   it('cambia quando cambia il passo o quante unità ci sono', () => {
-    expect(firmaComande([c('c1', 'ricevuto', 2)])).not.toBe(
-      firmaComande([c('c1', 'in_preparazione', 2)])
+    expect(firmaLavoro([c('c1', 'ricevuto', 2)])).not.toBe(
+      firmaLavoro([c('c1', 'in_preparazione', 2)])
     )
-    expect(firmaComande([c('c1', 'ricevuto', 2)])).not.toBe(firmaComande([c('c1', 'ricevuto', 3)]))
+    expect(firmaLavoro([c('c1', 'ricevuto', 2)])).not.toBe(firmaLavoro([c('c1', 'ricevuto', 3)]))
   })
 
   it('non cambia per i campi che non si vedono', () => {
@@ -402,7 +402,40 @@ describe('la firma delle comande', () => {
       status_times: { ricevuto: '2026-08-16T21:00:00.000Z' },
       inventory_consumption: [{ id: 'gin', qty: 40 }],
     }
-    expect(firmaComande([dalServer])).toBe(firmaComande([c('c1', 'ricevuto', 2)]))
+    expect(firmaLavoro([dalServer])).toBe(firmaLavoro([c('c1', 'ricevuto', 2)]))
+  })
+
+  it('NON GUARDA GLI ID, ed è il punto', () => {
+    // Una comanda appena creata qui non ha ancora il nome che le darà il
+    // server: confrontando gli id, la copia locale di una divisione non se
+    // ne sarebbe andata mai più. Quello che conta è se a schermo cambia
+    // qualcosa.
+    expect(firmaLavoro([c('__volo-1', 'in_preparazione', 2)])).toBe(
+      firmaLavoro([c('c3', 'in_preparazione', 2)])
+    )
+  })
+
+  it('non guarda nemmeno l’ordine in cui stanno', () => {
+    // Il server appende le comande nate da una divisione nell'ordine suo.
+    expect(firmaLavoro([c('c1', 'ricevuto', 3), c('c2', 'in_preparazione', 2)])).toBe(
+      firmaLavoro([c('c2', 'in_preparazione', 2), c('c1', 'ricevuto', 3)])
+    )
+  })
+
+  it('una divisione: la firma combacia quando arrivano le comande vere', () => {
+    // Locale: la vecchia annullata più due provvisorie. Server: la stessa
+    // cosa, con gli id veri e i campi in più.
+    const locale = [
+      c('c1', 'annullato', 5),
+      c('__volo-1', 'in_preparazione', 2),
+      c('__volo-2', 'ricevuto', 3),
+    ]
+    const server = [
+      { ...c('c1', 'annullato', 5), annullata_per: 'divisione', divisa_in: ['c2', 'c3'] },
+      { ...c('c2', 'in_preparazione', 2), divisa_da: 'c1' },
+      { ...c('c3', 'ricevuto', 3), divisa_da: 'c1' },
+    ]
+    expect(firmaLavoro(locale)).toBe(firmaLavoro(server))
   })
 })
 

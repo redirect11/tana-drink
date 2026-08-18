@@ -47,6 +47,7 @@ import {
   comandeStatuses,
   comandaDaScaricare,
   dividiComanda,
+  STATO_COMANDA_NUOVA,
   ANNULLATA_PER_DIVISIONE,
   itemsTotal as sumItems,
 } from './comande.js'
@@ -2261,6 +2262,37 @@ export async function markOrderPaid(id, method, { autoServe = false } = {}) {
 // Qui l'ordine è già scritto. Se lo scarico non riesce, la comanda resta
 // `inventory_applied: false` e viene ripresa al pagamento (unappliedEntries):
 // le scorte si allineano più tardi, la vendita non si perde mai.
+// ── UNA SCRITTURA IN SOTTOFONDO TOCCA SOLO I CAMPI CHE LE COMPETONO ──
+//
+// `comande` è un ARRAY, e Firestore un array lo riscrive intero: non
+// esiste un percorso tipo `comande.2.inventory_applied`. Chi scrive in
+// sottofondo si rilegge quindi il documento — ma la rilettura NON può
+// stare all'inizio del lavoro, perché in mezzo ci sono le letture di
+// ricette e articoli, che vanno in rete e ci mettono quello che ci mettono.
+// Con l'array letto prima di tutto quello, il magazzino riscriveva sopra
+// gli avanzamenti fatti nel frattempo: si premeva «Ritirato/Servito», la
+// card tornava indietro, e bisognava premere due volte.
+//
+// Quindi: si rilegge NELL'ISTANTE PRIMA DI SCRIVERE, e si cambiano solo i
+// due campi del magazzino — tutto il resto della comanda resta com'è
+// arrivato dalla rilettura, stato compreso. La finestra fra rilettura e
+// scrittura resta di microsecondi, invece che lunga quanto la rete.
+function scriviCampiComanda(ref, comandaId, campi, etichetta) {
+  // La rilettura sta DENTRO la scrittura in sottofondo, non prima: cosi'
+  // fra il leggere e lo scrivere non passa niente, nemmeno il giro di coda
+  // che separa le due cose. E se la scrittura viene ritentata, si rilegge
+  // — un tentativo con l'array di dieci secondi fa rimetterebbe indietro
+  // quello che nel frattempo e' stato fatto al banco.
+  bgWrite(async () => {
+    const snap = await leggiOrdine(ref)
+    if (!snap.exists()) return
+    const comande = normalizeOrderDoc(snap.data()).comande.map((c) =>
+      c.id === comandaId ? { ...c, ...campi } : { ...c }
+    )
+    await updateDoc(ref, { comande })
+  }, etichetta)
+}
+
 function scaricaInSottofondo(orderId, comandaId) {
   ;(async () => {
     try {
@@ -2268,11 +2300,21 @@ function scaricaInSottofondo(orderId, comandaId) {
       const snap = await leggiOrdine(ref)
       if (!snap.exists()) return
       const norm = normalizeOrderDoc(snap.data())
-      const comande = norm.comande.map((c) => ({ ...c }))
-      const comanda = comande.find((c) => c.id === comandaId)
+      const comanda = norm.comande.find((c) => c.id === comandaId)
       if (!comanda || comanda.inventory_applied === true) return
-      const lowStock = await depleteComandeInventory([{ orderId, comanda }])
-      bgWrite(() => updateDoc(ref, { comande }), 'scarico scorte')
+      // depleteComandeInventory segna sulla copia che le si passa cosa ha
+      // scaricato: si prende quello, e si scrive solo quello.
+      const copia = { ...comanda }
+      const lowStock = await depleteComandeInventory([{ orderId, comanda: copia }])
+      await scriviCampiComanda(
+        ref,
+        comandaId,
+        {
+          inventory_applied: copia.inventory_applied === true,
+          inventory_consumption: copia.inventory_consumption ?? null,
+        },
+        'scarico scorte'
+      )
       notifyLowStock(lowStock)
     } catch {
       /* si riprende al pagamento */
@@ -2291,8 +2333,7 @@ function riallineaInSottofondo(orderId, comandaId) {
       const snap = await leggiOrdine(ref)
       if (!snap.exists()) return
       const norm = normalizeOrderDoc(snap.data())
-      const comande = norm.comande.map((c) => ({ ...c }))
-      const comanda = comande.find((c) => c.id === comandaId)
+      const comanda = norm.comande.find((c) => c.id === comandaId)
       if (!comanda) return
       const items = Array.isArray(comanda.items) ? comanda.items : []
       const drinkIds = [...new Set(items.filter((i) => !i.custom).map((i) => i.drink_id).filter(Boolean))]
@@ -2333,8 +2374,10 @@ function riallineaInSottofondo(orderId, comandaId) {
           created_at: serverTimestamp(),
         }), 'movimento scorta')
       }
-      comanda.inventory_consumption = newCons
-      bgWrite(() => updateDoc(ref, { comande }), 'consumo comanda')
+      // Stesso motivo dello scarico: fin qui si è andati in rete a leggere
+      // ricette e articoli, e l'array letto all'inizio è vecchio. Si
+      // rilegge adesso e si scrive SOLO il consumo.
+      await scriviCampiComanda(ref, comandaId, { inventory_consumption: newCons }, 'consumo comanda')
     } catch {
       /* il magazzino si riallinea alla prossima occasione */
     }
@@ -2670,10 +2713,10 @@ export async function addComanda(orderId, items, { note = null } = {}) {
       ...(i.custom ? { custom: true, recipe_items: i.recipe_items ?? [] } : {}),
       ...(i.note ? { note: i.note } : {}),
     })),
-    status: ORDER_STATUSES.IN_PREPARAZIONE,
+    status: STATO_COMANDA_NUOVA,
     status_times: {
       [ORDER_STATUSES.RICEVUTO]: nowIso,
-      [ORDER_STATUSES.IN_PREPARAZIONE]: nowIso,
+      [STATO_COMANDA_NUOVA]: nowIso,
     },
     note: note || null,
     inventory_applied: false,
