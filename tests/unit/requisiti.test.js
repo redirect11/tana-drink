@@ -15,7 +15,7 @@
 import { describe, it, expect } from 'vitest'
 import { readdirSync, statSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
-import { caricaRequisiti, parseRequirementsYaml, etichetteClassificazione } from '../../scripts/lib-requisiti.mjs'
+import { caricaRequisiti, parseRequirementsYaml, etichetteClassificazione, riconciliaEtichette, corpoGenerato } from '../../scripts/lib-requisiti.mjs'
 
 const requisiti = caricaRequisiti()
 const STATI = ['implemented', 'partial', 'todo', 'deprecated']
@@ -98,6 +98,46 @@ describe('severity e priority', () => {
     // la sola priority, e il campo vuoto e' un'informazione onesta.
     expect(etichetteClassificazione({ priority: 'P2' })).toEqual(['P2'])
     expect(etichetteClassificazione({})).toEqual([])
+  })
+})
+
+// RIALLINEARE UN’ISSUE CHE ESISTE GIA’. Prima si saltava e basta: un requisito
+// che cambiava restava scritto solo nel registro, e su GitHub — dove la gente
+// guarda — non arrivava mai.
+describe('le issue che esistono gia’ si riallineano', () => {
+  it('mette quelle che mancano e toglie quelle vecchie, ma solo le sue', () => {
+    const r = riconciliaEtichette(
+      ['bug', 'magazzino', 'P2', 'severity-lieve', 'hotfix'],
+      { labels: ['bug', 'magazzino'], priority: 'P1', severity: 'grave' },
+    )
+    expect(r.daAggiungere).toEqual(['P1', 'severity-grave'])
+    expect(r.daTogliere).toEqual(['P2', 'severity-lieve'])
+    // «hotfix» l’ha messa una persona guardando le issue: non e’ roba nostra
+    // e non si tocca, altrimenti a ogni push si cancella il suo lavoro.
+    expect(r.finali).toContain('hotfix')
+    expect(r.finali).toContain('magazzino')
+  })
+
+  it('se e’ gia’ a posto non chiede di cambiare niente', () => {
+    const r = riconciliaEtichette(['bug', 'P1'], { labels: ['bug'], priority: 'P1' })
+    expect(r.daAggiungere).toEqual([])
+    expect(r.daTogliere).toEqual([])
+  })
+
+  it('una voce senza giudizio non porta via le etichette di area', () => {
+    const r = riconciliaEtichette(['pos', 'ux'], { labels: ['pos', 'ux'] })
+    expect(r.daTogliere).toEqual([])
+    expect(r.finali).toEqual(['pos', 'ux'])
+  })
+
+  it('il testo si riscrive solo se e’ ancora il nostro', () => {
+    expect(corpoGenerato('## REQ-1
+
+*Issue generata automaticamente da `scripts/generate-issues.mjs`*')).toBe(true)
+    // Se qualcuno ci ha scritto dentro un’analisi, quella vale piu’ del testo
+    // generato: si lascia stare.
+    expect(corpoGenerato('Ho guardato: succede solo sull’iPad del banco.')).toBe(false)
+    expect(corpoGenerato(null)).toBe(false)
   })
 })
 
