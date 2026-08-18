@@ -809,6 +809,8 @@ bugs:
     status: todo
     generate_issue: true
     labels: [bug, coda, pagamenti]
+    severity: grave
+    priority: P0
     test_cases: []
 
   - id: BUG-028
@@ -836,6 +838,8 @@ bugs:
     status: todo
     generate_issue: true
     labels: [bug, coda, local-first]
+    severity: media
+    priority: P1
     test_cases: []
 
   - id: BUG-029
@@ -862,6 +866,8 @@ bugs:
     status: todo
     generate_issue: true
     labels: [bug, magazzino]
+    severity: grave
+    priority: P1
     test_cases: []
 
   - id: BUG-030
@@ -883,6 +889,8 @@ bugs:
     status: todo
     generate_issue: true
     labels: [bug, clienti, menu]
+    severity: grave
+    priority: P1
     test_cases: []
 
   - id: BUG-031
@@ -905,6 +913,8 @@ bugs:
     status: todo
     generate_issue: true
     labels: [bug, local-first, banco]
+    severity: media
+    priority: P1
     test_cases: []
 
   - id: BUG-032
@@ -921,6 +931,8 @@ bugs:
     status: todo
     generate_issue: true
     labels: [bug, stampa]
+    severity: lieve
+    priority: P2
     test_cases: []
 
   - id: BUG-033
