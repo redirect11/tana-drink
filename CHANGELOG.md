@@ -26,6 +26,13 @@
 - **Le ore della serata sono in ordine di serata**: le 8 del mattino dopo
   venivano prima delle 23 della sera, perché contava l'orologio e non la
   nottata. Quando una serata tocca due giorni, ogni colonna porta la data.
+- **Le card delle corsie non crescono più a dismisura**: si vedono sei
+  righe, le altre sfumano e un piccolo «▾ altre 12» le apre. Ogni riga porta
+  il suo prezzo e la sua nota, e la nota del conto respira.
+- **Sulle card «⋯ Azioni» e il tasto della corsia stanno sulla stessa riga**,
+  invece di occupare due fasce larghe tutta la card.
+- **Le note del conto si scrivono in un riquadro grande**: in una casella da
+  una riga una frase si scriveva alla cieca.
 - **Nella coda, su tablet e computer i tasti stanno fuori dal ⋯**: pannelli,
   verso della lista e cassa sono icone accanto alla ricerca, e si vede quando
   i pannelli sono accesi. Sul telefono restano nel menu, che lì lo spazio non

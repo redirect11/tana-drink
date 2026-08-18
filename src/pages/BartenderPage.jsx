@@ -456,6 +456,8 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
   // Quale card delle corsie ha le azioni aperte: una alla volta, se no la
   // colonna diventa un muro di tasti.
   const [corsiaAperta, setCorsiaAperta] = useState(null)
+  // Quale card mostra tutte le righe (i conti lunghi si aprono a richiesta).
+  const [corsiaEspansa, setCorsiaEspansa] = useState(null)
   // Barra stretta o larga: da questo dipende se le azioni della testata
   // stanno dietro il ⋯ o a vista come icone.
   const telefono = useTelefono()
@@ -1882,6 +1884,8 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
             azioni={orderActions}
             aperta={corsiaAperta}
             onApriAzioni={setCorsiaAperta}
+            espansa={corsiaEspansa}
+            onEspandi={setCorsiaEspansa}
             // «Incassa» apre il pagamento del conto, quello vero: sconto,
             // conto diviso, contanti, carta e lettore stanno lì. Rifarne una
             // versione ridotta qui vorrebbe dire due casse che si comportano
