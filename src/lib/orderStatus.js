@@ -64,8 +64,12 @@ export const STATUS_EMOJI = {
 export const PAYMENT_METHOD_PRINT = {
   banco: 'Contante',
   contanti: 'Contante',
-  carta: 'Carta di credito',
-  lettore: 'Carta di credito (POS)',
+  carta: 'Carta di Credito',
+  // IL NOME DEL LETTORE È QUELLO SCRITTO SULL'APPARECCHIO. «Carta di
+  // credito (POS)» era una descrizione: chi confronta la chiusura con
+  // l'estratto conto di SumUp cerca «SumUp», e due parole diverse per la
+  // stessa cosa costringono a tradurre a mente mentre si contano i soldi.
+  lettore: 'SumUp',
   online: 'Online',
   buono: 'Buono VIP',
 }
