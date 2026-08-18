@@ -45,7 +45,7 @@ import {
   orderIsClosed,
   comandaEditable,
   comandaDivisibile,
-  STATO_COMANDA_NUOVA,
+  statoComandaNuova,
   annullataPerDivisione,
   ANNULLATA_PER_DIVISIONE,
   dividiComanda,
@@ -1329,15 +1329,15 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
       ? { email: staff.email, name: staff.name, role: staff.role, device: idDispositivo() }
       : undefined
 
-  // UN CONTO NASCE «RICEVUTO», anche col banco che lo batte. Nasceva già
-  // «in preparazione» — l'idea era che chi lo prende al banco lo sta già
-  // facendo — ma non è così: si battono tre conti di fila e poi si comincia
-  // a versare. Con le corsie si vedeva il difetto in faccia: «Da fare»
-  // restava sempre vuota e tutto compariva «Al banco», cioè la colonna
-  // diceva una cosa falsa. È «Lo preparo io» a dire quando si comincia, e
-  // dice anche CHI.
+  // In che passo nasce un conto lo dice il locale, e lo dice in un posto
+  // solo (statoComandaNuova): qui non si decide niente, si chiede.
   const workflowOn = settings.workflow_enabled !== false
-  const statoIniziale = ORDER_STATUSES.RICEVUTO
+  const statoIniziale = statoComandaNuova(settings)
+  // Stesso motivo per il passo in cui nasce una comanda: l'impostazione può
+  // cambiare mentre la schermata è aperta, e il callback dell'aggiunta è
+  // già stato creato.
+  const statoNuovaRef = useRef(statoIniziale)
+  statoNuovaRef.current = statoIniziale
   // Il POS eredita la modalità di consegna del locale (se non è "sceglie
   // il cliente"), così l'ordine sa se sarà servito o ritirato.
   const modoConsegna =
@@ -1378,12 +1378,13 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
       // vedi docs/architettura.md.
       clearDraft()
       // NASCE COME NASCERÀ DAVVERO: stesso passo e stesso numero che le
-      // darà il server (STATO_COMANDA_NUOVA). Prima la provvisoria diceva
+      // darà il server (statoComandaNuova, letto dalla stessa regola).
+      // Prima la provvisoria diceva
       // «da fare» e «comanda 0», e un istante dopo cambiava tutte e due le
       // cose da sé, sotto gli occhi di chi stava leggendo quale preparare.
       const inVolo = comandaProvvisoria({
         seq: effComandeRef.current.reduce((m, x) => Math.max(m, x.seq || 0), 0) + 1,
-        status: STATO_COMANDA_NUOVA,
+        status: statoNuovaRef.current,
         items: additions,
       })
       comandeLocaliRef.current.applica({ id: oid, comande: effComandeRef.current }, (arr) => [

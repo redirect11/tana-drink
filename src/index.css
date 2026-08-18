@@ -1726,6 +1726,24 @@ body.fullbleed .bar-content {
   flex-shrink: 0;
 }
 
+/* IL «+» E IL CAMBIO VISTA, IN COLONNA. Sono i due tasti che si toccano
+   di più guardando la coda, e l'occhio li cerca in alto a destra: stanno
+   incolonnati, il «+» sopra perché è quello di corsa. Il secondo si
+   allarga quanto il primo, o due tasti sovrapposti di larghezza diversa
+   sembrano un errore di disegno. */
+.board-nuovo {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.board-vista {
+  white-space: nowrap;
+  text-align: center;
+}
+
 /* Testata COMPATTA su smartphone: riga 1 = titolo + azioni (Pannelli e «+»
    ridimensionati), riga 2 = ricerca a tutta larghezza. Niente più tasti
    sparsi a metà schermo. */
