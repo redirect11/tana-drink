@@ -45,3 +45,14 @@ export function macroOfItem(item, catToMacro) {
   if (!catId) return null
   return catToMacro?.get?.(catId) ?? null
 }
+
+// Macro di un DRINK di catalogo, risalendo dalla sua categoria di MENÙ.
+// Stessa catena dell'item, altro elenco: le macro del menù raggruppano le
+// categorie dei drink che si vendono (`ambito: 'menu'`), quelle di
+// magazzino le categorie dei prodotti che si comprano. Null se il drink non
+// ha categoria o la categoria non è in nessuna macro.
+export function macroOfDrink(drink, menuCatToMacro) {
+  const catId = drink?.category_id
+  if (!catId) return null
+  return menuCatToMacro?.get?.(catId) ?? null
+}

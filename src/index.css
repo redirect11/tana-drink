@@ -2780,10 +2780,12 @@ body.drawer-open .status-bell-float { display: none; }
   font-weight: 800;
   border-left: 1px solid var(--line);
 }
-.macro-tab .r-fat td {
+/* L'INCASSO è la riga che si cerca per prima: ha il colore dell'accento.
+   Il MARGINE è quella su cui si decide: in grassetto. */
+.macro-tab .r-inc td {
   color: var(--accent-2, #f5b94a);
 }
-.macro-tab .r-uti td {
+.macro-tab .r-mar td {
   font-weight: 700;
 }
 .macro-tab td.neg {
