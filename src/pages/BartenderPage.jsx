@@ -42,6 +42,7 @@ import {
   corsieDiStato,
 } from '../lib/coda.js'
 import { StoriaOrdineDialog, RipristinaOrdineDialog } from '../components/StoriaOrdine.jsx'
+import { useTelefono } from '../lib/useTelefono.js'
 import StatusBell from '../components/StatusBell.jsx'
 import ActionSheet from '../components/ActionSheet.jsx'
 import { isGestore, isPersonale } from '../lib/ruoli.js'
@@ -455,6 +456,9 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
   // Quale card delle corsie ha le azioni aperte: una alla volta, se no la
   // colonna diventa un muro di tasti.
   const [corsiaAperta, setCorsiaAperta] = useState(null)
+  // Barra stretta o larga: da questo dipende se le azioni della testata
+  // stanno dietro il ⋯ o a vista come icone.
+  const telefono = useTelefono()
   const [soloOggi, setSoloOggi] = useState(false) // nasconde i conti dei giorni scorsi
   const [nascondiPagati, setNascondiPagati] = useState(false) // pagati non ancora serviti
   // «Miei»: solo i conti inseriti da chi è collegato. Ha preso il posto
@@ -961,7 +965,16 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
   // quello che resta in coda per questa apertura di cassa, già passato per
   // ricerca e «Miei» — e la smistano. Le regole di cosa sta dove stanno in
   // lib/coda.js, che è dove si provano.
-  const corsie = corsieDiStato(contiScheda('tutti'), { isChiuso: isClosed, workflowOn })
+  // ORDINATE COME LE ALTRE VISTE. Il tasto «↕» girava solo la griglia: qui
+  // la lista arrivava com'era, e premerlo non faceva niente di visibile —
+  // un tasto che non risponde fa dubitare dell'app, non del tasto. L'ordine
+  // vale per TUTTE le corsie insieme: si guarda la coda, non una colonna.
+  const corsie = corsieDiStato(
+    contiScheda('tutti')
+      .slice()
+      .sort((a, b) => ((a.daily_number || 0) - (b.daily_number || 0)) * (ordineDesc ? -1 : 1)),
+    { isChiuso: isClosed, workflowOn }
+  )
 
   // IL CONTO ACCESO. Solo nel modo "evidenzia": è il primo che risponde
   // NELL'ORDINE IN CUI STA SULLO SCHERMO — non nell'ordine in cui arrivano
@@ -1033,6 +1046,29 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
   // Pulsanti azione di un ordine (avanza stato, incasso, stampe, annullo).
   // Condivisi dalla card piena (liste) e dalla card-griglia (a scomparsa).
   const orderActions = (o) => {
+    // CONTO CHIUSO O ANNULLATO: due cose sole. Non c'è più niente da
+    // preparare né da incassare, e i tasti spenti in fila — «Contanti» e
+    // «Carta» grigi su un conto già pagato — sono solo rumore addosso a chi
+    // cerca l'unica cosa che serve: ristampare lo scontrino a chi lo chiede,
+    // o riaprire il conto quando ci si accorge di un errore.
+    if (isChiuso(o) || annullato(o)) {
+      return (
+        <div className="grid-2" style={{ marginTop: 8 }}>
+          <button
+            className="btn ghost small"
+            onClick={() => printScontrino(o).catch((e) => setError(`Stampa: ${e.message}`))}
+          >
+            🧾 Scontrino
+          </button>
+          <button
+            className="btn ghost small"
+            onClick={() => setRipristinoTarget(o)}
+          >
+            ♻️ Riapri conto
+          </button>
+        </div>
+      )
+    }
     const ns = nextStatus(o.workflow_status)
     const awaiting = isAwaitingPayment(o) && o.workflow_status === ORDER_STATUSES.RICEVUTO
     const readerReady = settings.payments_reader_enabled && settings.sumup_reader_id
@@ -1484,17 +1520,68 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
                 l'ordine, non nelle impostazioni — e in sala le
                 impostazioni non ci sono affatto. */}
             <PallinoStampante gestore={gestore} />
-            {/* Un tasto solo per le cose che si fanno ogni tanto: i
-                pannelli (chiamate e gruppi) e il verso della lista. Erano
-                parole in fila in una riga che serve alla ricerca. */}
-            <button
-              className={`btn ghost small board-pannelli${showPanels ? ' active' : ''}`}
-              onClick={() => setMenuBoard(true)}
-              title="Altro: pannelli e ordinamento"
-              aria-label="Altro"
-            >
-              ⋯
-            </button>
+            {/* SUL TELEFONO IL ⋯, SUGLI SCHERMI LARGHI LE ICONE. In una
+                barra stretta le azioni che si fanno ogni tanto stanno
+                dietro un tasto solo; su tablet e computer lo spazio accanto
+                alla ricerca c'è, e nasconderle dietro un menu vuol dire due
+                gesti per una cosa che ne vale uno — e non vedere nemmeno se
+                i pannelli sono accesi. Stesse azioni, stessi handler: qui
+                cambia solo dove stanno. */}
+            {telefono ? (
+              <button
+                className={`btn ghost small board-pannelli${showPanels ? ' active' : ''}`}
+                onClick={() => setMenuBoard(true)}
+                title="Altro: pannelli e ordinamento"
+                aria-label="Altro"
+              >
+                ⋯
+              </button>
+            ) : (
+              <>
+                <button
+                  className={`btn ghost small board-icona${showPanels ? ' active' : ''}`}
+                  onClick={() => setShowPanels((v) => !v)}
+                  title={showPanels ? 'Nascondi i pannelli' : 'Chiamate staff e gruppi'}
+                  aria-label={showPanels ? 'Nascondi i pannelli' : 'Chiamate staff e gruppi'}
+                  aria-pressed={showPanels}
+                >
+                  📟
+                </button>
+                <button
+                  className="btn ghost small board-icona"
+                  onClick={cambiaOrdine}
+                  title={
+                    ordineDesc
+                      ? 'Adesso: prima gli ultimi — tocca per partire dai primi'
+                      : 'Adesso: prima i primi della serata — tocca per partire dagli ultimi'
+                  }
+                  aria-label={ordineDesc ? 'Ordina dal meno recente' : 'Ordina dal più recente'}
+                >
+                  ↕
+                </button>
+                {(() => {
+                  // La voce della cassa (apri/chiudi, o niente per la sala)
+                  // la decide coda.js: è una regola, e le regole si provano.
+                  const v = voceCassa({
+                    gestore,
+                    cassaAperta: !!cassaAperta,
+                    contiAperti: recap.aperti,
+                  })
+                  if (!v) return null
+                  return (
+                    <button
+                      className="btn ghost small board-icona"
+                      disabled={v.disabled}
+                      title={`${v.label} — ${v.hint}`}
+                      aria-label={v.label}
+                      onClick={() => (v.id === 'apri-cassa' ? setApriCassa(true) : setChiudiCassa(true))}
+                    >
+                      {v.icon}
+                    </button>
+                  )
+                })()}
+              </>
+            )}
             {cassaAperta || cassaLoading ? (
               <Link className="btn board-add" to="/pos" aria-label="Nuovo ordine" title="Nuovo ordine" />
             ) : (

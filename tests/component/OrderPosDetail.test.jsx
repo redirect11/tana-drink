@@ -996,7 +996,7 @@ describe('rimettere in corso un conto', () => {
     await user.click(azioni().getByRole('button', { name: /Riapri conto/ }))
     const box = within(screen.getByRole('dialog', { name: 'Ripristina il conto' }))
     await user.type(box.getByLabelText(/Perché lo riapri/), 'tavolo sbagliato')
-    await user.click(box.getByRole('button', { name: /Rimetti in corso/ }))
+    await user.click(box.getByRole('button', { name: /Riapri/ }))
     expect(restoreOrder).toHaveBeenCalledWith('ord1', expect.objectContaining({ motivo: 'tavolo sbagliato' }))
   })
 
@@ -1005,7 +1005,7 @@ describe('rimettere in corso un conto', () => {
     mount(chiuso())
     await user.click(azioni().getByRole('button', { name: /Riapri conto/ }))
     const box = within(screen.getByRole('dialog', { name: 'Ripristina il conto' }))
-    await user.click(box.getByRole('button', { name: /Rimetti in corso/ }))
+    await user.click(box.getByRole('button', { name: /Riapri/ }))
     expect(restoreOrder).toHaveBeenCalledWith('ord1', expect.objectContaining({ motivo: null }))
   })
 
