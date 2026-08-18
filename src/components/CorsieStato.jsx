@@ -48,13 +48,23 @@ export default function CorsieStato({
   onScarta,
   inArrivo = [],
   attesaPagamento = () => false,
+  // TUTTO IL RESTO CHE SI FA SU UN CONTO — incassare in contanti, stampare
+  // la comanda, annullare — sta dietro un «⋯ Azioni» come nelle altre
+  // viste. Il tasto grande resta uno, quello che porta avanti il lavoro;
+  // ma chi incassa al volo non deve cambiare vista per farlo.
+  azioni = null,
+  aperta = null,
+  onApriAzioni,
 }) {
   // Un solo «adesso» per tutta la vista: card diverse non devono dire tempi
   // diversi solo perché sono state disegnate a un secondo di distanza.
   const adesso = Date.now()
 
   return (
-    <div className="corsie">
+    // QUANTE COLONNE QUANTE SONO LE CORSIE. Erano quattro fisse: con gli
+    // stati di servizio spenti le corsie diventano tre e restavano
+    // schiacciate a sinistra, con un quarto di schermo vuoto a destra.
+    <div className="corsie" style={{ '--corsie-n': corsie.length }}>
       {corsie.map((corsia) => {
         const azione = AZIONI[corsia.id] || null
         // «Da incassare» non mostra i drink ma la cifra: lì la domanda è una
@@ -141,6 +151,25 @@ export default function CorsieStato({
                       </div>
                     )}
                     {o.note && <div className="order-note small corsia-nota">{o.note}</div>}
+                    {azioni && (
+                      <>
+                        <button
+                          className="btn ghost small block corsia-altre"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onApriAzioni?.(aperta === o.id ? null : o.id)
+                          }}
+                          aria-expanded={aperta === o.id}
+                        >
+                          {aperta === o.id ? '▴ Chiudi' : '⋯ Azioni'}
+                        </button>
+                        {aperta === o.id && (
+                          // Le azioni sono quelle della coda, disegnate qui:
+                          // una regola sola, in un posto solo.
+                          <div onClick={(e) => e.stopPropagation()}>{azioni(o)}</div>
+                        )}
+                      </>
+                    )}
                     {azione && (
                       <button
                         className="btn small block corsia-azione"

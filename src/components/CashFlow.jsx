@@ -318,15 +318,28 @@ function OraBars({ perOra }) {
     <div className="card">
       <strong className="small">📈 Andamento per ora</strong>
       <div className="vbars" style={{ marginTop: 8 }}>
-        {perOra.map((x) => (
-          <div className="vbar-col" key={x.ora} title={`${x.ora}:00 — ${formatPrice(x.importo)}`}>
-            <div className="vbar-value">{formatPrice(x.importo)}</div>
-            <div className="vbar-track">
-              <div className="vbar-fill" style={{ height: `${(x.importo / max) * 100}%` }} />
+        {perOra.map((x) => {
+          // Il giorno si scrive solo se la serata ne tocca due: «08:00» del
+          // mattino dopo, in fondo al grafico, senza data si legge come un
+          // errore. Giorno e mese bastano — l'anno lo sa chi sta contando.
+          const giorno = x.giorno ? x.giorno.slice(8, 10) + '/' + x.giorno.slice(5, 7) : null
+          return (
+            <div
+              className="vbar-col"
+              key={x.giorno ? `${x.giorno}-${x.ora}` : x.ora}
+              title={`${giorno ? `${giorno} ` : ''}${x.ora}:00 — ${formatPrice(x.importo)}`}
+            >
+              <div className="vbar-value">{formatPrice(x.importo)}</div>
+              <div className="vbar-track">
+                <div className="vbar-fill" style={{ height: `${(x.importo / max) * 100}%` }} />
+              </div>
+              <div className="vbar-label">
+                {x.ora}:00
+                {giorno && <span className="vbar-giorno">{giorno}</span>}
+              </div>
             </div>
-            <div className="vbar-label">{x.ora}:00</div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )
