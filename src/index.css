@@ -6599,3 +6599,153 @@ body.pagina-piena .inv-scheda {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
+
+/* ── LA CODA A CORSIE DI STATO ────────────────────────────────────────
+   Una colonna per passo del lavoro. Sul tablet del banco le quattro
+   colonne stanno tutte a schermo e OGNUNA SCORRE PER CONTO SUO: con una
+   pagina sola che scorre, per arrivare in fondo a «Da fare» ci si portava
+   via anche le intestazioni delle altre tre, e la vista serve proprio a
+   tenerle sott'occhio insieme.
+   Sul telefono no: quattro colonne larghe un pollice non sono usabili, e
+   lì la pagina torna a scorrere tutta insieme su due colonne. */
+.corsie {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  align-items: start;
+}
+
+.corsia {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* Il filo sotto l'intestazione è il colore dello stato: gli stessi tre
+   della striscia sulle card (.order-card.ricevuto e compagnia), più l'oro
+   del tema per l'incasso. */
+.corsia-testa {
+  padding: 0 4px 8px;
+  margin-bottom: 8px;
+  border-bottom: 2px solid var(--line);
+}
+
+.corsia-titolo {
+  font-weight: 700;
+}
+
+.corsia-titolo .muted {
+  font-weight: 400;
+}
+
+.corsia-da-fare {
+  border-bottom-color: #f39c12;
+}
+
+.corsia-al-banco {
+  border-bottom-color: #3498db;
+}
+
+.corsia-al-ritiro {
+  border-bottom-color: #2ecc71;
+}
+
+.corsia-da-incassare {
+  border-bottom-color: var(--accent-2);
+}
+
+/* Stati di servizio spenti: le tre corsie sono quelle della griglia, coi
+   colori che l'app usa già per la stessa distinzione (vedi .ordhist-*). */
+.corsia-attivi {
+  border-bottom-color: #3498db;
+}
+
+.corsia-chiusi {
+  border-bottom-color: #2ecc71;
+}
+
+.corsia-annullati {
+  border-bottom-color: #8a8a8a;
+}
+
+.corsia-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+
+.corsia-card {
+  padding: 10px;
+  margin: 0;
+  cursor: pointer;
+}
+
+/* Conto appena battuto, ancora in volo: c'è, si legge, ma si vede che non
+   ha ancora il suo posto — come il grigio della griglia (.grid-card-pending). */
+.corsia-card.in-arrivo {
+  opacity: 0.6;
+}
+
+/* In corsia un conto «ritirato» non è roba archiviata: è quello da
+   incassare, cioè la colonna dei soldi. Lo sbiadito che ha nelle liste —
+   dove ritirato vuol dire «fatto» — qui renderebbe pallida proprio la
+   cifra da chiedere al cliente. */
+.corsia-card.ritirato {
+  opacity: 1;
+}
+
+.corsia-num {
+  font-weight: 600;
+}
+
+.corsia-dove {
+  margin-top: 2px;
+}
+
+.corsia-righe {
+  margin-top: 6px;
+  line-height: 1.5;
+}
+
+.corsia-cifra {
+  font-size: 1.5rem;
+  margin-top: 6px;
+}
+
+.corsia-nota {
+  margin: 6px 0 0;
+  padding: 4px 8px;
+}
+
+/* Il tasto è l'unico bersaglio della card: grosso, per il pollice, di
+   corsa, al buio. */
+.corsia-azione {
+  margin-top: 8px;
+  min-height: 44px;
+}
+
+@media (min-width: 901px) {
+  .corsie {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    /* La griglia prende quello che resta sotto la testata e non un pixel
+       di più: è dentro quell'altezza che le colonne scorrono. */
+    flex: 1;
+    min-height: 0;
+    align-items: stretch;
+  }
+  .corsia-lista {
+    flex: 1;
+    overflow-y: auto;
+    /* Lo scorrimento di una corsia resta suo: arrivati in fondo non deve
+       trascinarsi dietro la pagina. */
+    overscroll-behavior: contain;
+  }
+  .queue-board.corsie-board {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh / var(--zoom, 1));
+    min-height: 0;
+    overflow: hidden;
+  }
+}

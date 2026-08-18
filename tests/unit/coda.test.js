@@ -359,3 +359,178 @@ describe('schede per stato: cosa si mostra', () => {
     expect(schedeCoda(false).map(([k]) => k)).toEqual(['attivi', 'chiusi', 'annullati'])
   })
 })
+
+// ── LE CORSIE DI STATO ─────────────────────────────────────────────────
+//
+// La quarta vista della coda: una colonna per passo del lavoro. Le corsie
+// non sono un elenco a parte — si riempiono con le stesse regole della
+// griglia — e i due casi che al banco fanno la differenza sono questi: il
+// conto pagato in anticipo che NON deve sparire prima di essere
+// consegnato, e il conto di una cassa già chiusa che in coda non ci deve
+// tornare.
+import { corsieDiStato, daQuanto, ordiniInCoda } from '../../src/lib/coda.js'
+import { contoChiuso } from '../../src/lib/comande.js'
+
+describe('le corsie di stato', () => {
+  const chiusoConStati = (o) => contoChiuso(o, { workflowOn: true })
+  const conto = (patch) => ({
+    payment_status: 'non_richiesto',
+    total: 10,
+    comande: [{ id: 'c1', status: patch.workflow_status ?? 'ricevuto' }],
+    ...patch,
+  })
+  const coda = [
+    conto({ id: 'a', workflow_status: 'ricevuto', total: 12 }),
+    conto({ id: 'b', workflow_status: 'ricevuto', total: 8 }),
+    conto({ id: 'c', workflow_status: 'in_preparazione', total: 20 }),
+    conto({ id: 'd', workflow_status: 'pronto', total: 15 }),
+    conto({ id: 'e', workflow_status: 'ritirato', total: 30 }),
+    conto({ id: 'f', workflow_status: 'annullato', total: 99 }),
+    // pagato E consegnato: non ha più niente da fare, esce dalla coda
+    conto({ id: 'g', workflow_status: 'ritirato', payment_status: 'pagato', total: 40 }),
+  ]
+
+  it('sono quattro, in ordine di lavoro, coi conti nella corsia giusta', () => {
+    const corsie = corsieDiStato(coda, { isChiuso: chiusoConStati })
+    expect(corsie.map((c) => [c.id, c.titolo, c.stato])).toEqual([
+      ['da-fare', 'Da fare', 'ricevuto'],
+      ['al-banco', 'Al banco', 'in_preparazione'],
+      ['al-ritiro', 'Al ritiro', 'pronto'],
+      ['da-incassare', 'Da incassare', 'ritirato'],
+    ])
+    expect(corsie.map((c) => c.ordini.map((o) => o.id))).toEqual([
+      ['a', 'b'],
+      ['c'],
+      ['d'],
+      ['e'],
+    ])
+  })
+
+  it('conteggi e totali sono quelli dei conti che si vedono', () => {
+    const corsie = corsieDiStato(coda, { isChiuso: chiusoConStati })
+    expect(corsie.map((c) => c.ordini.length)).toEqual([2, 1, 1, 1])
+    expect(corsie.map((c) => c.totale)).toEqual([20, 20, 15, 30])
+  })
+
+  it('lo sconto è già tolto dal totale della corsia: è quello che si incassa', () => {
+    const [daFare] = corsieDiStato(
+      [conto({ id: 'x', workflow_status: 'ricevuto', total: 30, discount_amount: 5 })],
+      { isChiuso: chiusoConStati }
+    )
+    expect(daFare.totale).toBe(25)
+  })
+
+  it('un conto annullato non sta in nessuna corsia', () => {
+    const corsie = corsieDiStato(coda, { isChiuso: chiusoConStati })
+    expect(corsie.flatMap((c) => c.ordini).some((o) => o.id === 'f')).toBe(false)
+  })
+
+  it('PAGATO MA NON CONSEGNATO: resta al ritiro, col suo bollo', () => {
+    // Pagare in anticipo è normale; farlo sparire vorrebbe dire
+    // dimenticarsi di consegnare il drink.
+    const pagatoDaServire = conto({
+      id: 'p',
+      workflow_status: 'pronto',
+      payment_status: 'pagato',
+      total: 18,
+    })
+    const corsie = corsieDiStato([...coda, pagatoDaServire], { isChiuso: chiusoConStati })
+    const alRitiro = corsie.find((c) => c.id === 'al-ritiro')
+    expect(alRitiro.ordini.map((o) => o.id)).toEqual(['d', 'p'])
+    expect(alRitiro.ordini.find((o) => o.id === 'p').pagatoDaServire).toBe(true)
+    expect(alRitiro.totale).toBe(33)
+    // e non finisce fra quelli da incassare: non c'è più niente da chiedere
+    expect(corsie.find((c) => c.id === 'da-incassare').ordini.some((o) => o.id === 'p')).toBe(
+      false
+    )
+  })
+
+  it('«Da incassare» sono i consegnati non saldati, e basta', () => {
+    const corsie = corsieDiStato(coda, { isChiuso: chiusoConStati })
+    const daIncassare = corsie.find((c) => c.id === 'da-incassare')
+    expect(daIncassare.ordini.map((o) => o.id)).toEqual(['e'])
+    expect(daIncassare.totale).toBe(30)
+  })
+
+  it('un conto di una cassa già chiusa in corsia non ci torna', () => {
+    // La regola è quella di sempre (ordiniInCoda): le corsie si riempiono
+    // con la lista che la coda mostra, non con tutto quello che c'è.
+    const cassa = 'cassa-2'
+    const apertaDa = '2026-08-16T18:00:00.000Z'
+    const vecchioIncassato = conto({
+      id: 'vecchio',
+      workflow_status: 'ritirato',
+      payment_status: 'pagato',
+      cash_session_id: 'cassa-1',
+      paid_at: '2026-08-15T23:00:00.000Z',
+      total: 50,
+    })
+    const inCoda = ordiniInCoda([...coda, vecchioIncassato], {
+      filtro: 'tutti',
+      isChiuso: chiusoConStati,
+      cassa,
+      apertaDa,
+    })
+    const corsie = corsieDiStato(inCoda, { isChiuso: chiusoConStati })
+    expect(corsie.flatMap((c) => c.ordini).some((o) => o.id === 'vecchio')).toBe(false)
+  })
+
+  it('senza stati di servizio le corsie diventano tre: in corso, chiusi, annullati', () => {
+    // I quattro passi non esistono: quattro colonne quasi vuote non sono
+    // una vista. Restano le tre cose che un conto può essere, con le
+    // etichette e le regole già usate dalla griglia e dalle schede.
+    const senzaStati = (o) => contoChiuso(o, { workflowOn: false })
+    const corsie = corsieDiStato(coda, { isChiuso: senzaStati, workflowOn: false })
+    expect(corsie.map((c) => [c.id, c.titolo])).toEqual([
+      ['attivi', 'In corso'],
+      ['chiusi', '💶 Chiusi'],
+      ['annullati', '✖️ Annullati'],
+    ])
+    expect(corsie.map((c) => c.titolo)).toEqual(schedeCoda(false).map(([, t]) => t))
+    expect(corsie.find((c) => c.id === 'chiusi').ordini.map((o) => o.id)).toEqual(['g'])
+    expect(corsie.find((c) => c.id === 'annullati').ordini.map((o) => o.id)).toEqual(['f'])
+    // in corso: tutto quello che non è né chiuso né annullato
+    expect(corsie.find((c) => c.id === 'attivi').ordini.map((o) => o.id)).toEqual([
+      'a',
+      'b',
+      'c',
+      'd',
+      'e',
+    ])
+  })
+
+  it('con gli stati accesi restano quattro', () => {
+    expect(corsieDiStato(coda, { isChiuso: chiusoConStati }).length).toBe(4)
+    expect(corsieDiStato(coda, { isChiuso: chiusoConStati, workflowOn: true }).length).toBe(4)
+  })
+
+  it('coda vuota: le corsie ci sono lo stesso, a zero', () => {
+    const corsie = corsieDiStato([])
+    expect(corsie.length).toBe(4)
+    expect(corsie.every((c) => c.ordini.length === 0 && c.totale === 0)).toBe(true)
+  })
+})
+
+// DA QUANTO STA LÌ. Sulla card conta l'ordine di grandezza: un conto
+// «appena ora» e uno da «38 min» si trattano in modo diverso, i secondi
+// esatti non li guarda nessuno.
+describe('da quanto è lì', () => {
+  const adesso = Date.parse('2026-08-16T21:00:00.000Z')
+  const fa = (ms) => new Date(adesso - ms).toISOString()
+
+  it('i primi secondi sono «appena ora»', () => {
+    expect(daQuanto(fa(3000), adesso)).toBe('appena ora')
+  })
+
+  it('poi i secondi, poi i minuti, poi le ore', () => {
+    expect(daQuanto(fa(40000), adesso)).toBe('40 s')
+    expect(daQuanto(fa(60000), adesso)).toBe('1 min')
+    expect(daQuanto(fa(38 * 60000), adesso)).toBe('38 min')
+    expect(daQuanto(fa(2 * 3600000), adesso)).toBe('2 h')
+  })
+
+  it('senza data non si inventa niente', () => {
+    expect(daQuanto(null, adesso)).toBe('')
+    expect(daQuanto('boh', adesso)).toBe('')
+  })
+})
