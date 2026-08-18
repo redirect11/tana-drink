@@ -140,7 +140,13 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   // Vista SEPARATA delle righe uguali (al volo, come nel riepilogo ordine):
   // ogni unità è mostrata a sé e si sceglie fin dove pagare. Solo visuale: la
   // selezione resta per riga (sel[key] = quante unità di quella riga).
-  const [separati, setSeparati] = useState(false)
+  //
+  // SI PARTE SEPARATI. Al banco si paga quasi sempre a pezzi — uno paga il
+  // suo, un altro offre due birre — e partire da «3× Birra» voleva dire un
+  // tocco in più ogni volta, con la fila alla cassa. Chi ha un conto lungo
+  // e illeggibile fa il contrario con «Unisci uguali», e chi incassa tutto
+  // non tocca niente: la selezione parte piena in ogni caso.
+  const [separati, setSeparati] = useState(true)
   const [method, setMethod] = useState('banco')
   // Tastierino: null = importo automatico (dalla selezione); altrimenti
   // la stringa di cifre digitata. `acc`/`op` per la calcolatrice.

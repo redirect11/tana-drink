@@ -1058,11 +1058,19 @@ requirements:
       l'incasso completo con un colpo solo.
       Ogni unita' e' una cosa a se': accenderne o spegnerne una non tocca
       le altre (vedi BUG-006, che nasce dallo stesso punto).
-    status: todo
+      FATTO (1.5.x). La schermata di incasso nasce con le righe uguali già
+      separate: «2× Mojito» sono due righe da «1/1». Il tasto che c'era
+      resta ed e' lo stesso — cambia solo faccia: adesso all'apertura offre
+      «🔗 Unisci uguali», e unendo ripropone «≣ Separa uguali». Dove non
+      c'e' niente da unire ne' da separare (righe tutte da uno) non compare
+      affatto, come prima. La selezione parte PIENA come sempre: chi incassa
+      tutto preme «Riscuotere» senza toccare niente, e l'incasso pieno
+      continua a partire senza dettaglio articoli.
+    status: implemented
     generate_issue: true
     labels: [pagamenti, ui]
     priority: P1
-    test_cases: []
+    test_cases: [tests/component/PaymentScreen.test.jsx]
 
   # ══════════════════════════════════════════════════════════════════════
   #  CASSA DI SERATA, STATISTICHE, RENDICONTO
