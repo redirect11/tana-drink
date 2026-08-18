@@ -3623,6 +3623,29 @@ requirements:
       - tests/unit/comande.test.js
       - tests/component/ComandaDetail.test.jsx
 
+  - id: REQ-CODA-003
+    title: "La nota di una riga si legge in ogni coda a schermo"
+    area: "src/pages/BartenderPage.jsx, src/components/ServiceQueue.jsx, src/components/RigheCorsia.jsx, src/components/ComandaDetail.jsx, src/index.css"
+    description: >
+      «Senza ghiaccio», «per Anna»: la nota della SINGOLA RIGA dice come si
+      prepara quel drink e a chi va consegnato, ed è una cosa diversa dalla
+      nota del CONTO — che vale per tutte le righe e resta in fondo alla
+      card. Dovunque si veda l'elenco dei prodotti a schermo — la coda del
+      gestionale, la coda di sala, le viste a corsie, il dettaglio della
+      comanda — la nota compare sotto la sua riga, non a fianco: accanto al
+      nome veniva tagliata dal prezzo allineato a destra, e «senza ghi…» non
+      dice niente a chi prepara. La griglia compatta è l'eccezione voluta:
+      non elenca i prodotti, mostra solo quanti sono.
+      Nasce da BUG-005: la nota si vedeva solo dentro il conto e sulla
+      comanda stampata, e chi lavora guardando lo schermo invece della
+      stampante non la leggeva mai.
+    status: implemented
+    generate_issue: false
+    labels: [coda, comande, ui]
+    test_cases:
+      - tests/component/NoteRigheCoda.test.jsx
+      - tests/component/ComandaDetail.test.jsx
+
   - id: REQ-UI-012
     title: "Dove la pagina ha sezioni sue, il menu resta aperto nella pagina"
     area: "src/components/StaffDrawer.jsx, src/index.css, docs/navigazione.md"

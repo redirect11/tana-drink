@@ -4,6 +4,12 @@
 
 ### Al banco
 
+- **Le note dei singoli drink si leggono anche a schermo**: «senza ghiaccio»,
+  «per Anna» comparivano solo dentro il conto e sulla comanda stampata. Ora
+  stanno sotto il loro prodotto anche sulle card della coda del gestionale e
+  di quella di sala: chi prepara o chi porta il vassoio le vede senza aprire
+  niente.
+
 - **Nel pagamento si vede subito di chi è il conto**: tavolo e nome stanno in
   testata accanto al numero, non più in mezzo alle righe dei drink dove
   sembravano una voce del conto.
