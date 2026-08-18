@@ -131,9 +131,7 @@ describe('le issue che esistono gia’ si riallineano', () => {
   })
 
   it('il testo si riscrive solo se e’ ancora il nostro', () => {
-    expect(corpoGenerato('## REQ-1
-
-*Issue generata automaticamente da `scripts/generate-issues.mjs`*')).toBe(true)
+    expect(corpoGenerato(`*Issue generata automaticamente da scripts/generate-issues.mjs*`)).toBe(true)
     // Se qualcuno ci ha scritto dentro un’analisi, quella vale piu’ del testo
     // generato: si lascia stare.
     expect(corpoGenerato('Ho guardato: succede solo sull’iPad del banco.')).toBe(false)
