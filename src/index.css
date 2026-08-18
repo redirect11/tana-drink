@@ -6912,6 +6912,17 @@ body.pagina-piena .inv-scheda {
   border-left: 2px solid var(--line);
 }
 
+/* LA NOTA DI UNA RIGA nelle card delle code (coda del gestionale, coda di
+   sala). Va a capo sotto il nome del prodotto e non a fianco: accanto
+   veniva tagliata dal prezzo a destra, e una nota tagliata a metà è
+   peggio di nessuna nota — «senza ghi…» non dice niente a chi prepara. */
+.riga-nota {
+  display: block;
+  color: var(--muted);
+  font-size: 0.85em;
+  font-style: italic;
+}
+
 /* PAGATO MA ANCORA DA FARE: la card che si deve notare. È il caso strano
    — i soldi li hai già presi, il drink lo devi ancora fare — e con lo
    sbiadito da voce archiviata era proprio quella che spariva. Il filo

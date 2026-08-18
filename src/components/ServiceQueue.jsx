@@ -193,7 +193,12 @@ export default function ServiceQueue() {
           <div style={{ margin: '8px 0' }}>
             {(o.order_items || []).map((i) => (
               <div className="row between" key={i.id}>
-                <span>{i.qty}× {i.name}</span>
+                <span>
+                  {i.qty}× {i.name}
+                  {/* Chi serve deve sapere che quel drink è «senza ghiaccio» o
+                      «per Anna» PRIMA di posarlo sul tavolo sbagliato. */}
+                  {i.note && <span className="riga-nota">↳ {i.note}</span>}
+                </span>
               </div>
             ))}
           </div>
