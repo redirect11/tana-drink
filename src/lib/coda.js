@@ -2,7 +2,7 @@
 // riepilogo. Il servizio è perpetuo: non esistono più "serate", i conti
 // restano aperti finché non li si chiude a mano. Testabile a unità.
 
-import { ORDER_STATUSES } from './orderStatus.js'
+import { ORDER_STATUSES, STATUS_LABELS, ritiratoLabel } from './orderStatus.js'
 // Il totale di un conto è quello EFFETTIVO (sconto già tolto): la regola sta
 // in pagamento.js e non si riscrive qui, o le corsie direbbero una cifra e
 // la card un'altra.
@@ -11,6 +11,7 @@ import { orderTotal } from './pagamento.js'
 // una per una, e le regole su cosa è servito e quanto vale una riga stanno
 // in comande.js — qui non si riscrivono.
 import {
+  nextComandaStatus,
   aggregateItems,
   allServed,
   itemsTotal,
@@ -423,11 +424,6 @@ export const AZIONI_CORSIA = {
   'al-banco': { etichetta: 'È pronto', tipo: 'avanza' },
   'al-ritiro': { etichetta: 'Ritirato/Servito', tipo: 'avanza' },
   'da-incassare': { etichetta: 'Incassa', tipo: 'incassa' },
-  // LE COMANDE SERVITE non chiedono soldi: dicono che quei drink sono
-  // usciti. Ma il conto è ancora aperto — lo dice il bollo sulla card — e
-  // chi li ha appena portati al tavolo è spesso quello che incassa: il
-  // tasto porta in cassa senza far cercare il conto.
-  ritirati: { etichetta: 'Incassa', tipo: 'incassa' },
   // Stati di servizio spenti: l'unica cosa che resta da fare a un conto in
   // corso è incassarlo, come sulla griglia.
   attivi: { etichetta: 'Incassa', tipo: 'incassa' },
@@ -646,6 +642,49 @@ export function corsieComande(ordini, { isChiuso = () => false, prontoDiviso = n
       )
     ),
   }))
+}
+
+// ── IL TASTO DI UNA CARD DI COMANDA ───────────────────────────
+//
+// DIPENDE DALLO STATO DELLA COMANDA, NON DALLA COLONNA. La colonna è solo
+// un modo di raggruppare: la stessa comanda pronta ha lo stesso tasto sia
+// che le colonne siano unite sia che siano divise.
+//
+// Prima l'azione si pescava da AZIONI_CORSIA, una mappa per ID DI CORSIA.
+// Dividendo la colonna del pronto nascono due corsie con id nuovi
+// (`al-ritiro-banco`), che in quella mappa non c'erano: niente voce,
+// niente tasto — e nella colonna «Da ritirare» la card restava senza il
+// tasto che porta la comanda a «Ritirato/Servito» (BUG-026). Una funzione
+// che spariva a seconda di come uno guarda la coda. Legandola allo stato
+// non si ripresenta al prossimo modo di dividere le colonne.
+//
+// Chi non ha niente da fare resta senza tasto: le annullate, e le servite
+// di un conto già saldato — niente da preparare, niente da chiedere.
+export function azioneComanda(comanda, order) {
+  // Card del CONTO (la colonna dei soldi): lì non c'è un ticket da far
+  // avanzare, c'è un conto da incassare.
+  if (!comanda) return { etichetta: 'Incassa', tipo: 'incassa' }
+  if (comanda.status === ORDER_STATUSES.ANNULLATO) return null
+  if (comanda.status === ORDER_STATUSES.RITIRATO) {
+    // SERVITA: quei drink sono usciti. Se il conto è ancora aperto chi li
+    // ha appena portati al tavolo è spesso quello che incassa, e il tasto
+    // porta in cassa senza far cercare il conto.
+    const saldato = contoSaldato(order) || order?.status === ORDER_STATUSES.PAGATO
+    return saldato ? null : { etichetta: 'Incassa', tipo: 'incassa' }
+  }
+  const dopo = nextComandaStatus(comanda.status)
+  if (!dopo) return null
+  return { etichetta: etichettaAvanzamento(dopo, order?.service_mode), tipo: 'avanza' }
+}
+
+// La parola sul tasto è quella dello STATO IN CUI IL DRINK FINISCE: si vede
+// dove va a finire prima di premere. Sull'ultimo passo dipende da come si
+// consegna — «Ritirato» al banco, «Servito» al tavolo — perché è la parola
+// che si usa davvero: nessuno dice «ritirato» di un drink portato al tavolo.
+function etichettaAvanzamento(stato, serviceMode) {
+  if (stato === ORDER_STATUSES.RITIRATO) return ritiratoLabel(serviceMode)
+  if (stato === ORDER_STATUSES.PRONTO) return 'È pronto'
+  return STATUS_LABELS[stato]
 }
 
 // ── QUALI CORSIE SI VEDONO ──────────────────────────────────

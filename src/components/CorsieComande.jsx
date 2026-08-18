@@ -1,6 +1,6 @@
 import { ORDER_STATUSES, formatPrice } from '../lib/orderStatus.js'
 import { paidAmount } from '../lib/pagamento.js'
-import { AZIONI_CORSIA, daQuanto, destinazioneConto } from '../lib/coda.js'
+import { azioneComanda, daQuanto, destinazioneConto } from '../lib/coda.js'
 import { ETICHETTA_ANNULLO } from '../lib/comande.js'
 import RigheCorsia from './RigheCorsia.jsx'
 
@@ -55,7 +55,6 @@ export default function CorsieComande({
   return (
     <div className="corsie" style={{ '--corsie-n': corsie.length }}>
       {corsie.map((corsia) => {
-        const azione = AZIONI_CORSIA[corsia.id] || null
         const prima = corsie[0]?.id === corsia.id
         return (
           <section className="corsia" key={corsia.id}>
@@ -100,6 +99,10 @@ export default function CorsieComande({
                 ))}
               {corsia.schede.map((s) => {
                 const o = s.ordine
+                // IL TASTO DIPENDE DALLO STATO DELLA COMANDA, non dalla
+                // colonna: la stessa comanda pronta ha lo stesso tasto sia
+                // che le colonne siano unite sia che siano divise.
+                const azione = azioneComanda(s.comanda, o)
                 const attesa = azione?.tipo === 'avanza' && attesaPagamento(o)
                 return (
                   <article

@@ -7040,6 +7040,15 @@ body.pagina-piena .inv-scheda {
   margin-top: 10px;
 }
 
+/* «Come lo prende» nel dettaglio della comanda: staccato dai tasti che
+   fanno avanzare il lavoro, perché non è un passo del servizio — è una
+   cosa del conto che si decide guardando il ticket. */
+.comanda-det-consegna {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
 .comanda-det-stampa {
   margin-top: 12px;
 }

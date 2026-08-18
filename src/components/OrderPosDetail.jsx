@@ -39,7 +39,8 @@ import {
   paymentMethodLabel,
 } from '../lib/orderStatus.js'
 import { idDispositivo } from '../lib/dispositivo.js'
-import { MODI_CONSEGNA, cambioModoPermesso, modoAllaNascita } from '../lib/consegna.js'
+import { modoAllaNascita } from '../lib/consegna.js'
+import ScegliConsegna from './ScegliConsegna.jsx'
 import {
   nextComandaStatus,
   activeComanda,
@@ -1757,14 +1758,8 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   // quello che si ha in mano. E cambia i SOLDI: il ritiro azzera coperto e
   // servizio. Le regole stanno in lib/consegna.js.
   const modoDelConto = isNew ? modoConsegna : order?.service_mode || null
-  const cambioModo = isNew ? 'si' : cambioModoPermesso(order)
-  // Cosa succede ai soldi premendo: si legge PRIMA, non si scopre dopo.
-  const avvisoSupplementi =
-    settings.coperto_enabled || settings.service_charge_enabled
-      ? 'Col ritiro al banco coperto e servizio si azzerano.'
-      : 'Cambia solo come arriva il drink: qui non ci sono coperto né servizio.'
   const cambiaModoConsegna = (modo) => {
-    if (isNew || modo === modoDelConto || cambioModo === 'no') return
+    if (isNew) return
     setOrderServiceMode(order.id, modo).catch((e) =>
       toastError(`Modo non cambiato: ${e.message}`)
     )
@@ -2890,36 +2885,17 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                 />
               </div>
             </div>
-            {/* ── SERVIZIO O RITIRO ─────────────────────────────
-                Sta qui, coi dati del conto, perché è di quel conto — come
-                il tavolo e il nome. Ma tocca i SOLDI (il ritiro azzera
-                coperto e servizio), quindi l'importo si vede prima di
-                premere e non si scopre dopo. */}
+            {/* Sta qui, coi dati del conto, perché è di quel conto — come
+                il tavolo e il nome. Da qui non serve dire che vale per
+                tutte le comande: si sta guardando il conto intero. */}
             <div style={{ marginTop: 12 }}>
-              <label style={{ display: 'block' }}>Come lo prende</label>
-              <div className="chips-row" style={{ marginTop: 4 }}>
-                {MODI_CONSEGNA.map(([valore, etichetta]) => (
-                  <button
-                    key={valore}
-                    type="button"
-                    className={`chip ${modoDelConto === valore ? 'active' : ''}`}
-                    disabled={isNew || cambioModo === 'no'}
-                    aria-pressed={modoDelConto === valore}
-                    onClick={() => cambiaModoConsegna(valore)}
-                  >
-                    {etichetta}
-                  </button>
-                ))}
-              </div>
-              <p className="muted small" style={{ margin: '4px 0 0' }}>
-                {isNew
-                  ? 'Si sceglie appena il conto esiste.'
-                  : cambioModo === 'no'
-                    ? 'Conto chiuso: per cambiarlo riaprilo prima.'
-                    : cambioModo === 'senza-soldi'
-                      ? 'C’è già un acconto: il modo si cambia, coperto e servizio restano quelli su cui hai incassato.'
-                      : avvisoSupplementi}
-              </p>
+              <ScegliConsegna
+                order={order}
+                modo={modoDelConto}
+                inCreazione={isNew}
+                senzaSupplementi={!settings.coperto_enabled && !settings.service_charge_enabled}
+                onCambia={cambiaModoConsegna}
+              />
             </div>
             {!closed && (
               <button

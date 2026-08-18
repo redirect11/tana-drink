@@ -5,6 +5,7 @@ import { auth } from '../lib/firebaseClient.js'
 import {
   advanceComanda,
   preparazioneParziale,
+  setOrderServiceMode,
   settingsIniziali,
   subscribeOrder,
   subscribeSettings,
@@ -16,6 +17,7 @@ import {
 } from '../lib/comande.js'
 import { useComandeLocali } from '../lib/comandeLocali.js'
 import { ORDER_STATUSES } from '../lib/orderStatus.js'
+import { mondoConsegna } from '../lib/consegna.js'
 import { isGestore } from '../lib/ruoli.js'
 import { showToast } from '../lib/toast.js'
 import { printComanda } from '../lib/printer.js'
@@ -182,6 +184,13 @@ export default function ComandaPage() {
       comanda={comanda}
       workflowOn={settings.workflow_enabled !== false}
       passoDiNascita={statoComandaNuova(settings)}
+      ritiroEsiste={mondoConsegna(settings) === 'entrambi'}
+      senzaSupplementi={!settings.coperto_enabled && !settings.service_charge_enabled}
+      onCambiaConsegna={(modo) =>
+        setOrderServiceMode(order.id, modo).catch((e) =>
+          showToast(`⚠️ Modo non cambiato: ${e.message}`, { kind: 'error' })
+        )
+      }
       onAvanza={porta}
       onTornaA={porta}
       onDividi={dividi}

@@ -11,6 +11,16 @@
 
 ### Al banco
 
+- **Servizio o ritiro si sceglie anche dal ticket**: nel dettaglio di una
+  comanda ancora da fare o in preparazione ci sono «🍸 Servizio» e «🚶
+  Ritiro», con scritto accanto che valgono per tutto il conto — perché il
+  modo è del conto, e da un ticket non sarebbe ovvio. Da «pronto» in poi
+  non si cambia più: il drink è già uscito.
+- **Con le colonne del pronto divise, «Da ritirare» aveva perso il suo
+  tasto**: la card mostrava solo «Conto» e la comanda non si poteva far
+  avanzare. Adesso il tasto dipende dallo stato della comanda e non dalla
+  colonna, quindi è lo stesso comunque si guardi la coda.
+
 - **In un locale a solo servizio non si propone più «Prego recarsi al
   bancone»** quando si annulla un ordine: manderebbe il cliente dove nessuno
   lo aspetta. In Impostazioni la voce resta visibile ma spenta, col perché e

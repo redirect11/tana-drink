@@ -1098,3 +1098,49 @@ describe('quali corsie si vedono', () => {
     expect(CORSIE_SPENTE_ALL_INIZIO).toEqual(['chiusi', 'annullati'])
   })
 })
+
+// ── IL TASTO DI UNA CARD DI COMANDA (BUG-026) ────────────────────────
+//
+// Dividendo la colonna del pronto in «Da servire» e «Da ritirare» nascono
+// due corsie con id nuovi. L'azione si pescava da una mappa PER ID, e
+// quelli lì dentro non c'erano: la card «Da ritirare» restava senza il
+// tasto per far avanzare la comanda. Una funzione che spariva a seconda di
+// come uno guardava la coda — e chi la subiva pensava che l'app si fosse
+// impuntata.
+import { azioneComanda } from '../../src/lib/coda.js'
+
+describe('il tasto di una card di comanda', () => {
+  const conto = (patch = {}) => ({ id: 'o1', status: 'aperto', payment_status: 'non_richiesto', ...patch })
+  const com = (status) => ({ id: 'c1', seq: 1, status, items: [] })
+
+  it('dice il passo dopo, qualunque colonna la ospiti', () => {
+    expect(azioneComanda(com('ricevuto'), conto())).toMatchObject({ tipo: 'avanza' })
+    expect(azioneComanda(com('in_preparazione'), conto())).toMatchObject({ tipo: 'avanza' })
+    // È il caso del difetto: comanda pronta di un conto DA RITIRARE, che
+    // con le colonne divise finisce in «Da ritirare».
+    const daRitirare = azioneComanda(com('pronto'), conto({ service_mode: 'banco' }))
+    expect(daRitirare).toMatchObject({ tipo: 'avanza' })
+    expect(daRitirare.etichetta).toMatch(/ritirat/i)
+    // Lo stesso passo su un conto servito al tavolo si chiama con l'altra
+    // parola: il gesto è lo stesso, il mestiere no.
+    expect(azioneComanda(com('pronto'), conto({ service_mode: 'tavolo' })).etichetta).toMatch(
+      /servit/i
+    )
+  })
+
+  it('chi non ha più niente da fare resta senza tasto', () => {
+    // Annullata: quei drink non si fanno e non si pagano.
+    expect(azioneComanda(com('annullato'), conto())).toBeNull()
+    // Servita e già pagata: niente da preparare, niente da chiedere.
+    expect(azioneComanda(com('ritirato'), conto({ payment_status: 'pagato' }))).toBeNull()
+    // Servita ma non pagata: chi l'ha appena portata al tavolo è spesso
+    // quello che incassa, e il tasto gli evita di cercare il conto.
+    expect(azioneComanda(com('ritirato'), conto())).toMatchObject({ tipo: 'incassa' })
+  })
+
+  it('la card del CONTO chiede soldi, non lavoro', () => {
+    // Nella colonna dei soldi la card è il conto intero: lì non c'è un
+    // ticket da far avanzare.
+    expect(azioneComanda(null, conto())).toMatchObject({ tipo: 'incassa' })
+  })
+})
