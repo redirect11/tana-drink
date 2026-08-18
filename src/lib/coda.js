@@ -10,7 +10,13 @@ import { orderTotal } from './pagamento.js'
 // Le comande sono il LAVORO del banco: le corsie del bartender le mostrano
 // una per una, e le regole su cosa è servito e quanto vale una riga stanno
 // in comande.js — qui non si riscrivono.
-import { aggregateItems, itemsTotal, MOTIVO_ANNULLO, motivoAnnullo } from './comande.js'
+import {
+  aggregateItems,
+  allServed,
+  itemsTotal,
+  MOTIVO_ANNULLO,
+  motivoAnnullo,
+} from './comande.js'
 
 // Smista gli ordini negli stati di lavorazione della COMANDA ATTIVA
 // (workflow_status; esclude gli annullati).
@@ -156,7 +162,15 @@ export function passaFiltroCoda(o, filtro, isChiuso = () => false) {
 // funzionano mentre a schermo non compare niente.
 export function ordiniInCoda(
   orders,
-  { filtro = 'attivi', isChiuso = () => false, cassa = null, apertaDa = null, giornataDi = () => null, oggi = null } = {}
+  {
+    filtro = 'attivi',
+    sottoChiusi = 'tutti',
+    isChiuso = () => false,
+    cassa = null,
+    apertaDa = null,
+    giornataDi = () => null,
+    oggi = null,
+  } = {}
 ) {
   return (orders || [])
     .filter((o) =>
@@ -169,6 +183,34 @@ export function ordiniInCoda(
       })
     )
     .filter((o) => passaFiltroCoda(o, filtro, isChiuso))
+    .filter((o) => filtro !== 'chiusi' || passaSottofiltroChiusi(o, sottoChiusi))
+}
+
+// ── DENTRO I CHIUSI: SERVITI E NON SERVITI ──────────────────────
+//
+// Un conto chiuso è un conto INCASSATO, e basta: i soldi sono presi. Ma
+// incassato non vuol dire uscito — si paga in anticipo tutte le sere — e
+// quei drink vanno fatti lo stesso. La domanda «quali dei conti chiusi
+// hanno ancora roba da consegnare?» ha un posto suo, qui dentro, invece di
+// tenere quei conti in mezzo a quelli aperti.
+//
+// SI GUARDANO LE COMANDE, non lo stato del conto: è l'ordine a sapere se
+// tutte le sue comande sono uscite (allServed). E le comande ANNULLATE non
+// contano — quella roba non si fa e non si serve — se no un conto con
+// dentro un drink annullato non risulterebbe servito mai più.
+export const SOTTOFILTRI_CHIUSI = [
+  ['tutti', 'Tutti'],
+  ['serviti', '✅ Serviti'],
+  ['non-serviti', '⏳ Da servire'],
+]
+
+export function passaSottofiltroChiusi(o, sotto = 'tutti') {
+  if (sotto !== 'serviti' && sotto !== 'non-serviti') return true
+  // Un conto ANNULLATO non è né servito né da servire: non c'è più niente
+  // da portare a nessuno. Sta sotto la sua tab, non qui.
+  if (annullato(o)) return false
+  const tutto = allServed(o) || o?.workflow_status === ORDER_STATUSES.RITIRATO
+  return sotto === 'serviti' ? tutto : !tutto
 }
 
 // ── LA VOCE DELLA CASSA NEL MENU DELLA CODA ──────────────────────────
@@ -182,7 +224,33 @@ export function ordiniInCoda(
 // un incasso che manca, e far quadrare una serata con dentro un buco non si
 // può. La voce resta, spenta, con scritto perché — sparire mentre si cerca
 // è il modo migliore per far pensare che l'app sia rotta.
-export function voceCassa({ gestore = false, cassaAperta = false, contiAperti = 0 } = {}) {
+// QUANTI DRINK SONO ANCORA DA FARE. Non si conta guardando i conti: un
+// conto può essere già incassato e avere ancora comande al banco — si paga
+// in anticipo tutte le sere — e sono proprio quelle che non devono restare
+// indietro. Si contano i TICKET: quelli non ancora serviti e non annullati,
+// dei conti che esistono ancora. Chi chiama passa la lista che ha in coda
+// per questa apertura di cassa.
+export function comandeDaServire(ordini) {
+  let quante = 0
+  for (const o of ordini || []) {
+    if (annullato(o)) continue
+    for (const c of o.comande || []) {
+      if (c.status === ORDER_STATUSES.RITIRATO || c.status === ORDER_STATUSES.ANNULLATO) continue
+      quante += 1
+    }
+  }
+  return quante
+}
+
+const quantiConti = (n) => `${n} cont${n === 1 ? 'o' : 'i'}`
+const quanteComande = (n) => `${n} comand${n === 1 ? 'a' : 'e'}`
+
+export function voceCassa({
+  gestore = false,
+  cassaAperta = false,
+  contiAperti = 0,
+  daServire = 0,
+} = {}) {
   if (!gestore) return null
   if (!cassaAperta) {
     return {
@@ -193,18 +261,29 @@ export function voceCassa({ gestore = false, cassaAperta = false, contiAperti = 
       disabled: false,
     }
   }
+  // DUE MOTIVI PER NON CHIUDERE, non più uno.
+  //
+  // Il primo è di sempre: un conto aperto è un incasso che manca, e far
+  // quadrare una serata con dentro un buco non si può.
+  //
+  // Il secondo è arrivato con gli stati del servizio: un conto può essere
+  // incassato e avere ancora drink da fare, quindi «zero conti aperti» non
+  // vuol più dire «non c'è più niente in ballo». Chiudere la cassa con tre
+  // comande al banco vuol dire mandare a casa la serata con tre drink
+  // pagati e mai usciti.
+  //
+  // LA FRASE RESTA UNA RIGA. Sta sotto il tasto, in cima alla coda, dove lo
+  // spazio è quello che avanza: due frasi incolonnate non si leggono in
+  // un'occhiata, e quello che serve capire è «non si chiude, e perché».
+  const manca = []
+  if (contiAperti > 0) manca.push(`chiudi ${quantiConti(contiAperti)}`)
+  if (daServire > 0) manca.push(`servi ${quanteComande(daServire)}`)
   return {
     id: 'chiudi-cassa',
     icon: '🔒',
     label: 'Chiudi cassa',
-    disabled: contiAperti > 0,
-    hint:
-      contiAperti > 0
-        ? // CORTA. In cima alla coda lo spazio è quello che avanza al tasto,
-          // e una frase lunga andava a capo o finiva altrove: qui basta
-          // dire quanti conti restano.
-          `Prima chiudi ${contiAperti} cont${contiAperti === 1 ? 'o' : 'i'}`
-        : 'Conta il contante e chiudi la serata.',
+    disabled: manca.length > 0,
+    hint: manca.length > 0 ? `Prima ${manca.join(' e ')}` : 'Conta il contante e chiudi la serata.',
   }
 }
 
@@ -283,7 +362,10 @@ const arrotonda = (n) => Math.round(n * 100) / 100
 const totaleCorsia = (ordini) =>
   arrotonda(ordini.reduce((s, o) => s + orderTotal(o), 0))
 
-export function corsieDiStato(ordini, { isChiuso = () => false, workflowOn = true } = {}) {
+export function corsieDiStato(
+  ordini,
+  { isChiuso = () => false, workflowOn = true, sottoChiusi = 'tutti' } = {}
+) {
   const lista = ordini || []
 
   // STATI DI SERVIZIO SPENTI: i quattro passi non esistono proprio, e
@@ -293,7 +375,13 @@ export function corsieDiStato(ordini, { isChiuso = () => false, workflowOn = tru
   // le viste non raccontano mai due storie diverse.
   if (!workflowOn) {
     return schedeCoda(false).map(([id, titolo]) => {
-      const dentro = lista.filter((o) => passaFiltroCoda(o, id, isChiuso))
+      const dentro = lista.filter(
+        (o) =>
+          passaFiltroCoda(o, id, isChiuso) &&
+          // Il sottofiltro vale solo dentro i chiusi: è una domanda su
+          // quelli, e sugli altri non vuol dire niente.
+          (id !== 'chiusi' || passaSottofiltroChiusi(o, sottoChiusi))
+      )
       return { id, titolo, stato: null, ordini: dentro, totale: totaleCorsia(dentro) }
     })
   }

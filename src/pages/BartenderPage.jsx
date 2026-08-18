@@ -39,12 +39,14 @@ import {
   restaInCoda,
   ordiniInCoda,
   voceCassa,
+  comandeDaServire,
   gruppiInCoda,
   schedeCoda,
   corsieDiStato,
   corsieComande,
   corsieVisibili,
   CORSIE_SPENTE_ALL_INIZIO,
+  SOTTOFILTRI_CHIUSI,
 } from '../lib/coda.js'
 import { StoriaOrdineDialog, RipristinaOrdineDialog } from '../components/StoriaOrdine.jsx'
 import { useTelefono } from '../lib/useTelefono.js'
@@ -445,6 +447,12 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   const [chiusiQui, setChiusiQui] = useState([])
   useEffect(() => subscribeNascosti(setChiusiQui), [])
   const [boardFilter, setBoardFilter] = useState('attivi') // 'attivi' | 'chiusi' | 'tutti'
+  // DENTRO I CHIUSI: tutti, quelli usciti per intero, quelli con ancora
+  // qualcosa da portare. Un conto chiuso è un conto incassato — si paga in
+  // anticipo tutte le sere — e «quali dei chiusi hanno ancora roba da
+  // consegnare» è una domanda vera, che prima si rispondeva tenendo quei
+  // conti in mezzo a quelli aperti.
+  const [sottoChiusi, setSottoChiusi] = useState('tutti')
   // NASCONDERE VALE SOLO PER I CONTI IN CORSO. Un conto chiuso da qui
   // sparisce subito da «In corso» — è il suo mestiere — ma restava nascosto
   // anche sotto «Chiusi» e in «Tutti»: si chiudeva un conto e nello storico
@@ -481,7 +489,6 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // stanno dietro il ⋯ o a vista come icone.
   const telefono = useTelefono()
   const [soloOggi, setSoloOggi] = useState(false) // nasconde i conti dei giorni scorsi
-  const [nascondiPagati, setNascondiPagati] = useState(false) // pagati non ancora serviti
   // «Miei»: solo i conti inseriti da chi è collegato. Ha preso il posto
   // della pagina «I miei ordini» della sala: stessa coda per tutti, e chi
   // vuole ritrovare i propri accende il filtro.
@@ -906,13 +913,24 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // servito. Un ordine pagato in anticipo ma non ancora consegnato è
   // lavoro ancora da fare, e sparire sarebbe il modo migliore per
   // dimenticarselo. Senza la preparazione, invece, il pagamento chiude.
+  // UN CONTO CHIUSO È UN CONTO INCASSATO. Punto: i soldi sono presi, e per
+  // la coda dei CONTI — griglia, lista, schede, conteggi e corsie — non
+  // c'è altro da chiedersi. Prima con gli stati del servizio ne servivano
+  // due, pagato E servito, e un conto appena riscosso restava fra quelli
+  // «in corso» finché qualcuno non lo serviva: chi aveva appena preso i
+  // soldi lo cercava fra i chiusi e non lo trovava. Il lavoro ancora da
+  // fare si guarda dove è il suo posto — le corsie delle COMANDE — e,
+  // dentro i chiusi, col sottofiltro «Da servire».
+  // La regola con gli stati resta viva altrove: il magazzino (impegnato.js)
+  // deve sapere che un conto pagato e non servito ha ancora ingredienti in
+  // ballo, e lì `contoChiuso` si chiama col workflow acceso.
+  const isChiuso = (o) => contoChiuso(o, { workflowOn: false })
+  // PAGATO MA NON ANCORA USCITO: non cambia dove sta il conto — sta fra i
+  // chiusi, coi soldi presi — ma la card lo dice lo stesso, che è il caso
+  // strano e non deve sfuggire a chi ci passa sopra gli occhi.
   const pagato = (o) =>
     o.payment_status === 'pagato' || o.workflow_status === ORDER_STATUSES.PAGATO
   const servito = (o) => allServed(o) || o.workflow_status === ORDER_STATUSES.RITIRATO
-  // La regola sta in comande.js: la usano anche il riepilogo e il magazzino.
-  const isChiuso = (o) => contoChiuso(o, { workflowOn })
-  // Pagati ma non ancora serviti: restano in coda, si possono nascondere.
-  const pagatiDaServire = effOrders.filter((o) => workflowOn && pagato(o) && !servito(o))
   const arretrati = effOrders
     .filter((o) => !isChiuso(o) && dayOf(o) && dayOf(o) !== oggiKey)
     .sort((a, b) => String(dayOf(a)).localeCompare(String(dayOf(b))))
@@ -967,6 +985,11 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
     })
   )
   const recap = ordersRecap(inCoda, isChiuso)
+  // Quanti ticket sono ancora al banco, fra i conti di questa apertura di
+  // cassa. Senza gli stati del servizio non vuol dire niente: lì le comande
+  // risultano servite alla riscossione, e a bloccare la chiusura basta e
+  // avanza il conto ancora aperto.
+  const ticketDaServire = workflowOn ? comandeDaServire(inCoda) : 0
 
   // Leggenda "chi ha aperto l'ordine": lettera → nome per lo staff che ha
   // battuto ordini oggi, più l'eventuale voce Cliente (ordini dall'app).
@@ -1017,7 +1040,6 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // Vista a griglia: di default gli ordini in corso; col filtro si vedono
   // anche i chiusi/pagati o TUTTI gli ordini in vista.
   const isClosed = isChiuso
-  const nascosti = new Set(nascondiPagati ? pagatiDaServire.map((o) => o.id) : [])
   // Chiusi e annullati di prima dell'ultima chiusura di cassa non sono coda:
   // stanno in Cassa. La composizione sta in coda.js, ed è quella provata dai
   // test.
@@ -1034,9 +1056,10 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
       oggi: oggiKey,
     })
   const boardOrders = ordiniInCoda(
-    visibleOrders.filter((o) => !nascosti.has(o.id)),
+    visibleOrders,
     {
       filtro: boardFilter,
+      sottoChiusi,
       isChiuso: isClosed,
       cassa: cassaAperta?.id ?? null,
       apertaDa: cassaAperta?.opened_at ?? null,
@@ -1107,17 +1130,11 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   const corsieDelBanco = corsieBanco ? corsieComande(contiInCorsia, { isChiuso: isClosed }) : []
   // LE CORSIE DEI CONTI PARLANO DEL CONTO, non del lavoro: «In corso»,
   // «Chiusi», «Annullati» sono le tre cose che un CONTO può essere, e per
-  // un conto chiuso vuol dire incassato. Qui non si usa la chiusura della
-  // coda (che con gli stati accesi chiede anche che sia stato servito, per
-  // non far sparire dal banco un drink pagato in anticipo): con quella un
-  // conto appena riscosso restava fra quelli in corso finché il bartender
-  // non serviva, e chi aveva appena incassato non lo trovava fra i chiusi.
-  // Il lavoro ancora da fare si vede dove è il suo posto: nelle corsie
-  // delle comande.
-  const contoIncassato = (o) => contoChiuso(o, { workflowOn: false })
+  // un conto chiuso vuol dire incassato — la stessa regola di tutta la coda
+  // dei conti (isChiuso, qui sopra).
   const corsie = corsieBanco
     ? []
-    : corsieDiStato(contiInCorsia, { isChiuso: contoIncassato, workflowOn: false })
+    : corsieDiStato(contiInCorsia, { isChiuso, workflowOn: false, sottoChiusi })
   // Le colonne spente su questo terminale si tolgono qui, DOPO che sono
   // state riempite: così i conteggi non cambiano a seconda di cosa si
   // guarda, e riaccendendone una la si trova già piena.
@@ -1142,6 +1159,27 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
     setVista(nuova)
     ricordaVistaCorsie(nuova)
   }
+  // I SOTTOFILTRI DEI CHIUSI. Compaiono solo dentro «Chiusi»: sono una
+  // domanda su quei conti, e fuori di lì non vogliono dire niente. Senza
+  // gli stati del servizio nemmeno: se non si segue la preparazione, tutto
+  // quello che è stato pagato è uscito per definizione.
+  const righeSottoChiusi = (attivo) =>
+    workflowOn && attivo ? (
+      <div className="chips-row chips-sotto" style={{ margin: '-8px 0 16px' }}>
+        <span className="muted small">Dei chiusi:</span>
+        {SOTTOFILTRI_CHIUSI.map(([k, label]) => (
+          <button
+            key={k}
+            className={`chip small ${sottoChiusi === k ? 'active' : ''}`}
+            onClick={() => setSottoChiusi(k)}
+            aria-pressed={sottoChiusi === k}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+    ) : null
+
   const pastigliaComande = puoScegliere ? (
     <button
       className={`chip ${corsieBanco ? 'active' : ''}`}
@@ -1769,6 +1807,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                     gestore,
                     cassaAperta: !!cassaAperta,
                     contiAperti: recap.aperti,
+                    daServire: ticketDaServire,
                   })
                   if (!v) return null
                   return (
@@ -1894,6 +1933,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
               gestore,
               cassaAperta: !!cassaAperta,
               contiAperti: recap.aperti,
+              daServire: ticketDaServire,
             })
             if (!v) return null
             return {
@@ -2015,17 +2055,15 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
               ✍️ Miei
             </button>
             {pastigliaComande}
+            {/* C'ERA UN «NASCONDI PAGATI», E NON SERVE PIÙ. Serviva a togliere
+                dagli occhi i conti già incassati ma non ancora serviti,
+                perché restavano in mezzo a quelli in corso: adesso un conto
+                pagato è chiuso, sta fra i chiusi, e chi vuole sapere quali
+                hanno ancora roba da portare lo chiede lì dentro («Da
+                servire»). Un tasto per nascondere una cosa che non c'è più
+                in mezzo ai piedi è solo un tasto in più. */}
             {/* Conti dei giorni scorsi: di default sono in coda, sotto la
                 loro data. Questo tasto li nasconde e lascia solo oggi. */}
-            {(pagatiDaServire.length > 0 || nascondiPagati) && (
-              <button
-                className={`chip ${nascondiPagati ? 'active' : ''}`}
-                onClick={() => setNascondiPagati((v) => !v)}
-                title="Nascondi i conti già pagati ma non ancora serviti"
-              >
-                💶 Nascondi pagati{pagatiDaServire.length ? ` (${pagatiDaServire.length})` : ''}
-              </button>
-            )}
             {(arretrati.length > 0 || soloOggi) && (
               <button
                 className={`chip ${soloOggi ? 'active' : ''}`}
@@ -2036,6 +2074,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
               </button>
             )}
           </div>
+          {righeSottoChiusi(boardFilter === 'chiusi')}
           {/* Griglia: ordini in invio (grigi) + ordini secondo il filtro */}
           {pend.pending.length === 0 && visibleBoard.length === 0 && (
             <div className="empty">
@@ -2101,6 +2140,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
               </button>
             )}
           </div>
+          {righeSottoChiusi(!corsieBanco)}
           {corsieBanco && scegliCorsie && (
             <div className="chips-row corsie-scelta" style={{ margin: '0 0 12px' }}>
               {corsieDelBanco.map((c) => (

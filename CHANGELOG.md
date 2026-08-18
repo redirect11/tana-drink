@@ -11,6 +11,32 @@
 
 ### Al banco
 
+- **La cassa non si chiude con dei drink ancora da fare.** Prima bastava non
+  avere conti aperti — ma un conto si paga in anticipo e resta con le sue
+  comande al banco: si poteva chiudere la serata con tre drink pagati e mai
+  usciti. Adesso il tasto resta spento e dice cosa manca, in una riga:
+  «Prima servi 3 comande», o «Prima chiudi 2 conti e servi 3 comande».
+- **La striscia di stato si vede anche sui temi chiari.** Nelle colonne
+  «Ritirato/Servito», «Chiuse» e «Annullate» il bordo a sinistra delle card
+  era bianco trasparente: sul fondo chiaro spariva, e una card senza
+  striscia è una card senza stato.
+- **La card non si spacca più con tante colonne aperte.** Con sei corsie
+  accese le righe andavano su due colonne di testo anche dove non ci
+  stavano, spezzando i nomi e mandando i prezzi fuori dal riquadro: adesso
+  è la card a sapere quanto spazio ha, e si adatta da sé al numero di
+  corsie, alla larghezza dello schermo e allo zoom.
+- **Un conto incassato è un conto chiuso.** Prima, con gli stati del servizio,
+  restava fra quelli «in corso» finché qualcuno non lo serviva: si prendevano
+  i soldi e il conto non si trovava fra i chiusi. Adesso ci va subito — in
+  griglia, in lista, a schede, nei conteggi e nelle corsie — e dentro
+  «💶 Chiusi» c'è un filtro in più: **tutti · ✅ Serviti · ⏳ Da servire**,
+  per sapere quali hanno ancora qualcosa da portare al tavolo. Le comande
+  annullate non contano: un drink annullato non deve tenere un conto «da
+  servire» per sempre.
+- **Via «Nascondi pagati»**: serviva a togliersi dagli occhi i conti già
+  incassati quando restavano in mezzo a quelli in corso. Adesso non ci sono
+  più in mezzo ai piedi, e un tasto per nascondere una cosa che non c'è è
+  solo un tasto in più.
 - **Incassare non vuol dire aver servito.** Si segnava pagato un ordine e
   alcune comande ancora in preparazione risultavano servite: quei drink
   sparivano dagli occhi di chi doveva farli, e il magazzino veniva scaricato
