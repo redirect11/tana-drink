@@ -1,6 +1,7 @@
 import { formatPrice } from '../lib/orderStatus.js'
 import { paidAmount } from '../lib/pagamento.js'
 import { AZIONI_CORSIA, daQuanto, destinazioneConto } from '../lib/coda.js'
+import { ETICHETTA_ANNULLO } from '../lib/comande.js'
 import RigheCorsia from './RigheCorsia.jsx'
 
 // ── LE CORSIE DEL BANCO: UNA CARD PER COMANDA ────────────────────────
@@ -26,8 +27,6 @@ import RigheCorsia from './RigheCorsia.jsx'
 // Le corsie e cosa ci sta dentro arrivano già fatte da lib/coda.js
 // (corsieComande): qui non si decide niente, si disegna soltanto.
 
-const quantiDrink = (items) => (items || []).reduce((s, i) => s + (Number(i.qty) || 0), 0)
-
 export default function CorsieComande({
   corsie,
   idAcceso = null,
@@ -49,10 +48,6 @@ export default function CorsieComande({
     <div className="corsie" style={{ '--corsie-n': corsie.length }}>
       {corsie.map((corsia) => {
         const azione = AZIONI_CORSIA[corsia.id] || null
-        // «Da incassare» è l'unica colonna che non parla di lavoro: lì la
-        // domanda è una sola — quanto devo chiedere — e la card torna a
-        // essere il conto intero, con la cifra al posto delle righe.
-        const soloCifra = corsia.id === 'da-incassare'
         const prima = corsie[0]?.id === corsia.id
         return (
           <section className="corsia" key={corsia.id}>
@@ -131,7 +126,18 @@ export default function CorsieComande({
                           💳 Acconto
                         </span>
                       )}
-                      {s.pagatoDaServire ? (
+                      {/* PERCHÉ È QUI. Nella colonna delle annullate la
+                          domanda non è «da quanto sta lì» ma «che fine ha
+                          fatto», e le risposte sono tre: tolta a mano,
+                          divisa in due, o caduta col conto. Una divisione
+                          non è un drink saltato — quei drink si stanno
+                          facendo — e leggere «Annullata» su tutte e tre
+                          manderebbe a cercare un guaio che non c'è. */}
+                      {s.motivo ? (
+                        <span className="pill annullato small">
+                          {ETICHETTA_ANNULLO[s.motivo]}
+                        </span>
+                      ) : s.pagatoDaServire ? (
                         <span className="pill pagato small">Pagato</span>
                       ) : (
                         <span className="muted small">
@@ -139,22 +145,12 @@ export default function CorsieComande({
                         </span>
                       )}
                     </div>
-                    <div className="muted small corsia-dove">
-                      {destinazioneConto(o)}
-                      {/* Nella colonna dei soldi le righe non si vedono: al
-                          loro posto quanti drink sono, che è quello che serve
-                          per riconoscere il tavolo mentre si legge la cifra. */}
-                      {soloCifra && ` · ${quantiDrink(s.items)} drink`}
-                    </div>
-                    {soloCifra ? (
-                      <div className="bignum corsia-cifra">{formatPrice(s.totale)}</div>
-                    ) : (
-                      <RigheCorsia
-                        items={s.items}
-                        aperto={espansa === s.id}
-                        onApri={() => onEspandi?.(espansa === s.id ? null : s.id)}
-                      />
-                    )}
+                    <div className="muted small corsia-dove">{destinazioneConto(o)}</div>
+                    <RigheCorsia
+                      items={s.items}
+                      aperto={espansa === s.id}
+                      onApri={() => onEspandi?.(espansa === s.id ? null : s.id)}
+                    />
                     {/* La nota del CONTO — «tavolo di fuori», «allergia alle
                         noci» — vale per tutte le sue comande: si porta dietro
                         anche il pezzo diviso, o chi prepara la seconda metà

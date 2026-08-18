@@ -420,3 +420,57 @@ export function tappeComanda(comanda) {
   }
   return tappe
 }
+
+// LA COMANDA CHE SI STA PREPARANDO ADESSO, dopo una divisione. Dividendo
+// nascono due figlie: quella che si è detto di preparare (già in
+// preparazione) e il resto, che torna «da fare». Chi ha appena diviso ha in
+// mano la prima — è quella che sta facendo — e lì va portato: la comanda
+// che aveva davanti non esiste più.
+//
+// Si riconosce dal legame scritto sulle figlie (`divisa_da`) e dal passo in
+// cui nasce, non dalla posizione nell'elenco: l'ordine di un array è la
+// prima cosa che cambia quando qualcuno tocca il codice attorno.
+export function comandaNataDallaDivisione(order, comandaId) {
+  if (!comandaId) return null
+  return (
+    (order?.comande || []).find(
+      (c) => c.divisa_da === comandaId && c.status === ORDER_STATUSES.IN_PREPARAZIONE
+    ) || null
+  )
+}
+
+// ── PERCHÉ QUESTA COMANDA È ANNULLATA ────────────────────────────────
+//
+// La colonna «Annullate» raccoglie OGNI comanda in stato annullato: quelle
+// tolte a mano dal banco, quelle sparite dividendone una in due, e quelle
+// cadute insieme a un conto annullato per intero. Ci vanno tutte perché la
+// domanda a cui quella colonna risponde è una sola — «questa comanda che
+// fine ha fatto?» — e una comanda che non si trova da nessuna parte è
+// esattamente la cosa che manda a cercare un guasto.
+//
+// Ma le tre cose non sono la stessa cosa, e chi guarda deve capirlo a colpo
+// d'occhio: una divisione non è un drink saltato (quei drink si stanno
+// facendo, in due ticket), un conto annullato non è una decisione presa su
+// quella comanda. Il motivo si legge dai dati, non si indovina: il marchio
+// della divisione sulla comanda, lo stato sul conto.
+export const MOTIVO_ANNULLO = {
+  DIVISIONE: 'divisione',
+  CONTO: 'conto',
+  MANO: 'mano',
+}
+
+export const ETICHETTA_ANNULLO = {
+  [MOTIVO_ANNULLO.DIVISIONE]: '✂️ Divisa',
+  [MOTIVO_ANNULLO.CONTO]: '✖️ Conto annullato',
+  [MOTIVO_ANNULLO.MANO]: '✖️ Annullata',
+}
+
+export function motivoAnnullo(comanda, order) {
+  // La divisione vince: quella comanda è sparita perché è stata divisa,
+  // anche se più tardi è caduto pure il conto.
+  if (annullataPerDivisione(comanda)) return MOTIVO_ANNULLO.DIVISIONE
+  const contoMorto =
+    order?.status === ORDER_STATUSES.ANNULLATO ||
+    order?.workflow_status === ORDER_STATUSES.ANNULLATO
+  return contoMorto ? MOTIVO_ANNULLO.CONTO : MOTIVO_ANNULLO.MANO
+}

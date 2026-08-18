@@ -589,9 +589,10 @@ describe('le corsie delle comande', () => {
       ['al-banco', 'In preparazione'],
       ['al-ritiro', 'Ritiro/Servizio'],
       // Il lavoro finito ha una colonna sua, che nella vista dei conti non
-      // c'è: lì un conto servito è solo roba da incassare.
+      // c'è: lì un conto servito è solo roba da incassare. E qui NON c'è
+      // una colonna «Da incassare»: conteneva gli stessi drink di questa,
+      // solo raggruppati per conto invece che per ticket.
       ['ritirati', 'Ritirato/Servito'],
-      ['da-incassare', 'Da incassare'],
       // Al femminile: qui dentro non ci sono conti, ci sono comande.
       ['chiusi', '💶 Chiuse'],
       ['annullati', '✖️ Annullate'],
@@ -600,7 +601,7 @@ describe('le corsie delle comande', () => {
     expect(dove['da-fare']).toEqual(['o41:c2'])
     expect(dove['al-banco']).toEqual(['o42:c1'])
     expect(dove['al-ritiro']).toEqual(['o41:c1'])
-    expect(dove['da-incassare']).toEqual([])
+    expect(dove.ritirati).toEqual([])
   })
 
   it('ogni card porta il numero del conto E quello della comanda', () => {
@@ -613,12 +614,30 @@ describe('le corsie delle comande', () => {
     expect(daFare.schede[0].ordine.id).toBe('o41')
   })
 
-  it('le comande annullate restano fuori: quella roba non si prepara', () => {
+  it('le comande annullate non sono lavoro: fuori dalle corsie del banco', () => {
     const corsie = corsieComande(coda, { isChiuso: chiusoConStati })
-    const tutte = corsie.flatMap((c) => c.schede)
-    expect(tutte.some((s) => s.id === 'o42:c2')).toBe(false)
-    // e le sue righe non gonfiano nessun totale
-    expect(corsie.reduce((s, c) => s + c.totale, 0)).toBe(2 * 9 + 1 * 6 + 3 * 7)
+    const lavoro = corsie
+      .filter((c) => c.id !== 'annullati')
+      .flatMap((c) => c.schede)
+    expect(lavoro.some((s) => s.id === 'o42:c2')).toBe(false)
+    // e le sue righe non gonfiano nessun totale del lavoro
+    expect(
+      corsie.filter((c) => c.id !== 'annullati').reduce((s, c) => s + c.totale, 0)
+    ).toBe(2 * 9 + 1 * 6 + 3 * 7)
+  })
+
+  it('ma si ritrovano fra le ANNULLATE, anche su un conto vivo', () => {
+    // Prima non comparivano da nessuna parte: si toglieva una comanda e
+    // quella si volatilizzava. È la domanda a cui quella colonna serve a
+    // rispondere — «questa comanda che fine ha fatto?» — e una comanda che
+    // non si trova manda a cercare un guasto che non c'è.
+    const annullate = corsieComande(coda, { isChiuso: chiusoConStati }).find(
+      (c) => c.id === 'annullati'
+    )
+    expect(annullate.schede.map((s) => s.id)).toEqual(['o42:c2'])
+    // e c'è scritto PERCHÉ: questa è stata tolta a mano, non divisa né
+    // caduta con un conto annullato
+    expect(annullate.schede[0].motivo).toBe('mano')
   })
 
   it('il totale di una corsia è quello delle righe che ci stanno dentro', () => {
@@ -627,12 +646,16 @@ describe('le corsie delle comande', () => {
     expect(totali['da-fare']).toBe(6)
     expect(totali['al-banco']).toBe(21)
     expect(totali['al-ritiro']).toBe(18)
-    expect(totali['da-incassare']).toBe(0)
+    expect(totali.ritirati).toBe(0)
   })
 
-  it('tutto servito e non ancora saldato: il conto passa in cassa, una card sola', () => {
-    // Si incassa un CONTO, non un ticket: tre comande servite dello stesso
-    // tavolo diventerebbero tre card che chiedono tre volte gli stessi soldi.
+  it('servito e non ancora saldato: le comande restano ticket, una card ognuna', () => {
+    // C'era una colonna «Da incassare» con dentro il CONTO, una card sola:
+    // la paura era che tre comande servite dello stesso tavolo diventassero
+    // tre tasti che chiedono tre volte gli stessi soldi. Ma quella colonna
+    // conteneva esattamente questi drink, solo raggruppati per conto: due
+    // colonne per la stessa cosa. La card resta il ticket e non chiede
+    // soldi — dice che quei drink sono usciti.
     const servito = contoC(
       'o50',
       50,
@@ -642,12 +665,12 @@ describe('le corsie delle comande', () => {
       ],
       { total: 16 }
     )
-    const daIncassare = corsieComande([servito], { isChiuso: chiusoConStati }).find(
-      (c) => c.id === 'da-incassare'
-    )
-    expect(daIncassare.schede.length).toBe(1)
-    expect(daIncassare.schede[0].comanda).toBe(null)
-    expect(daIncassare.totale).toBe(16)
+    const corsie = corsieComande([servito], { isChiuso: chiusoConStati })
+    const ritirati = corsie.find((c) => c.id === 'ritirati')
+    expect(ritirati.schede.map((s) => s.id)).toEqual(['o50:c1', 'o50:c2'])
+    expect(ritirati.schede.every((s) => s.comanda)).toBe(true)
+    expect(ritirati.totale).toBe(16)
+    expect(corsie.some((c) => c.id === 'da-incassare')).toBe(false)
   })
 
   it('un conto senza comande non compare da nessuna parte', () => {
@@ -655,7 +678,7 @@ describe('le corsie delle comande', () => {
     // non ha niente da chiedere a nessuno.
     const corsie = corsieComande([contoC('o60', 60, [])], { isChiuso: chiusoConStati })
     expect(corsie.flatMap((c) => c.schede)).toEqual([])
-    expect(corsie.length).toBe(7)
+    expect(corsie.length).toBe(6)
   })
 
   it('con UNA comanda sola il numero del ticket non si scrive', () => {
@@ -687,39 +710,76 @@ describe('le corsie delle comande', () => {
     expect(dove.chiusi).toBe(0)
   })
 
-  it('DIVIDERE NON RIEMPIE GLI ANNULLATI', () => {
-    // Dividere una comanda la annulla — resta come storia — ma quello è
-    // contabilità interna: quei drink non sono spariti, sono diventati le
-    // due comande lì accanto. La corsia degli annullati risponde a «questa
-    // comanda che fine ha fatto»: farcela vedere vorrebbe dire mostrare
-    // due volte la stessa roba e far pensare a un guaio che non c'è.
-    const prima = contoC(
-      'o93',
-      93,
-      [{ id: 'c1', seq: 1, status: 'ricevuto', items: [riga('Gin tonic', 5, 8)] }],
+  // ABBIAMO CAMBIATO IDEA, e vale la pena dire perché. All'inizio la
+  // comanda annullata da una divisione stava FUORI da questa colonna: il
+  // ragionamento era che quei drink non sono spariti — si stanno facendo,
+  // in due ticket — e mostrarla sembrava raccontare un guaio che non c'era.
+  // Al banco è andata al contrario: si separano due comande, quella di
+  // partenza si volatilizza, e chi la cerca per capire che fine abbia fatto
+  // non ha un posto dove guardare. Quella colonna serve ESATTAMENTE a
+  // rispondere a quella domanda, quindi ci vanno TUTTE le comande
+  // annullate — a mano, per divisione, o con tutto il conto — e a non far
+  // pensare a un guaio ci pensa la parola scritta sulla card.
+  it('dividere riempie gli annullati: la comanda di partenza si ritrova, e dice che è stata divisa', () => {
+    const dopo = contoC('o93', 93, [
+      {
+        id: 'c1',
+        seq: 1,
+        status: 'annullato',
+        annullata_per: 'divisione',
+        items: [riga('Gin tonic', 5, 8)],
+      },
+      { id: 'c2', seq: 2, status: 'in_preparazione', items: [riga('Gin tonic', 2, 8)] },
+      { id: 'c3', seq: 3, status: 'ricevuto', items: [riga('Gin tonic', 3, 8)] },
+    ])
+    const corsie = corsieComande([dopo], { isChiuso: chiusoConStati })
+    const annullate = corsie.find((c) => c.id === 'annullati')
+    expect(annullate.schede.map((s) => s.id)).toEqual(['o93:c1'])
+    expect(annullate.schede[0].motivo).toBe('divisione')
+
+    // I due pezzi nati dalla divisione sono LAVORO, e stanno nelle loro
+    // colonne: la comanda annullata non li sostituisce e non li duplica.
+    const dove = Object.fromEntries(corsie.map((c) => [c.id, c.schede.map((x) => x.id)]))
+    expect(dove['al-banco']).toEqual(['o93:c2'])
+    expect(dove['da-fare']).toEqual(['o93:c3'])
+
+    // MA NON È UN INCASSO PERSO: quei 40 € si stanno facendo, in due
+    // ticket. Contarli nel totale delle annullate direbbe «sono saltati
+    // 40 €» mentre sono ancora tutti lì.
+    expect(annullate.totale).toBe(0)
+  })
+
+  it('le tre cose che possono essere successe si distinguono', () => {
+    // A mano, per divisione, o caduta col conto: sono tre fatti diversi, e
+    // chi guarda la colonna deve capire a colpo d'occhio quale.
+    const aMano = contoC('o94', 94, [
+      { id: 'c1', seq: 1, status: 'annullato', items: [riga('Rum', 1, 5)] },
+      { id: 'c2', seq: 2, status: 'ricevuto', items: [riga('Rum', 1, 5)] },
+    ])
+    const divisa = contoC('o95', 95, [
+      {
+        id: 'c1',
+        seq: 1,
+        status: 'annullato',
+        annullata_per: 'divisione',
+        items: [riga('Rum', 2, 5)],
+      },
+      { id: 'c2', seq: 2, status: 'in_preparazione', items: [riga('Rum', 2, 5)] },
+    ])
+    const colConto = contoC(
+      'o96',
+      96,
+      [{ id: 'c1', seq: 1, status: 'annullato', items: [riga('Rum', 1, 5)] }],
       { status: 'annullato' }
     )
-    const dopo = contoC(
-      'o93',
-      93,
-      [
-        {
-          id: 'c1',
-          seq: 1,
-          status: 'annullato',
-          annullata_per: 'divisione',
-          items: [riga('Gin tonic', 5, 8)],
-        },
-        { id: 'c2', seq: 2, status: 'in_preparazione', items: [riga('Gin tonic', 2, 8)] },
-        { id: 'c3', seq: 3, status: 'ricevuto', items: [riga('Gin tonic', 3, 8)] },
-      ],
-      { status: 'annullato' }
-    )
-    const annullatiDi = (conto) =>
-      corsieComande([conto], { isChiuso: chiusoConStati }).find((c) => c.id === 'annullati').schede
-    // una card prima, una card dopo: la divisione non si vede qui
-    expect(annullatiDi(prima).length).toBe(1)
-    expect(annullatiDi(dopo).map((s) => s.id)).toEqual(['o93:c2', 'o93:c3'])
+    const annullate = corsieComande([aMano, divisa, colConto], {
+      isChiuso: chiusoConStati,
+    }).find((c) => c.id === 'annullati')
+    expect(annullate.schede.map((s) => [s.id, s.motivo])).toEqual([
+      ['o94:c1', 'mano'],
+      ['o95:c1', 'divisione'],
+      ['o96:c1', 'conto'],
+    ])
   })
 
   it('un conto incassato sta fra i chiusi, e non chiede più niente in cassa', () => {
@@ -732,7 +792,7 @@ describe('le corsie delle comande', () => {
     const corsie = corsieComande([pagato], { isChiuso: chiusoConStati })
     const dove = Object.fromEntries(corsie.map((c) => [c.id, c.schede.length]))
     expect(dove.chiusi).toBe(1)
-    expect(dove['da-incassare']).toBe(0)
+    expect(dove.ritirati).toBe(0)
   })
 
   it('PAGATO MA NON ANCORA SERVITO: resta al banco col bollo, e non è chiuso', () => {
@@ -751,7 +811,7 @@ describe('le corsie delle comande', () => {
     expect(dove['da-fare']).toBe(1)
     expect(corsie[0].schede[0].pagatoDaServire).toBe(true)
     expect(dove.chiusi).toBe(0)
-    expect(dove['da-incassare']).toBe(0)
+    expect(dove.ritirati).toBe(0)
   })
 
   it('servita e pagata: chiusa. Servita e non pagata: il conto va in cassa', () => {
@@ -770,10 +830,10 @@ describe('le corsie delle comande', () => {
     const corsie = corsieComande([servitoEPagato, servitoDaPagare], { isChiuso: chiusoConStati })
     const dove = Object.fromEntries(corsie.map((c) => [c.id, c.schede.map((x) => x.id)]))
     expect(dove.chiusi).toEqual(['o91:c1'])
-    // in cassa la card è il CONTO, non il ticket: si chiedono i soldi una
-    // volta sola anche quando le comande servite sono tre
-    expect(dove['da-incassare']).toEqual(['o92'])
-    expect(corsie.find((c) => c.id === 'da-incassare').totale).toBe(10)
+    // servita e non pagata: resta un ticket, in «Ritirato/Servito» — il
+    // lavoro è finito, i soldi no, e a dirlo è il bollo sulla card
+    expect(dove.ritirati).toEqual(['o92:c1'])
+    expect(corsie.find((c) => c.id === 'ritirati').totale).toBe(10)
     // IL LAVORO FINITO SI VEDE FINITO: la comanda servita e non ancora
     // pagata sta in «Ritirato/Servito». Chi ha appena servito deve sapere
     // dov'e' andato quello che ha fatto — i soldi sono un'altra domanda, e
