@@ -965,3 +965,23 @@ bugs:
     generate_issue: false
     labels: [bug, pos, comande]
     test_cases: [tests/component/OrderPosDetail.test.jsx, tests/unit/comande.test.js]
+
+  - id: BUG-034
+    title: "Il facsimile dello scontrino andava a capo dove la stampante non va"
+    area: "src/lib/stampanteFinta.js"
+    description: >
+      Segnalato dall'utente il 18/08, con lo screenshot: nella finestra del
+      facsimile «La Tana del Conigli / o» e ogni riga di un drink spezzata
+      in due, con il prezzo sotto al nome.
+      CAUSA: la carta è larga 48 caratteri (COL in printer.js) e il testo è
+      già impaginato su quella misura, ma il facsimile era largo 80mm con un
+      corpo fisso e `pre-wrap`: due misure diverse, e vinceva quella
+      sbagliata. Quello che si vedeva a schermo non era quello che esce
+      dalla stampante — che è l'unica cosa che quella finestra deve fare.
+      RISOLTO: la larghezza la decide il testo (48ch di monospaziato) e le
+      righe non vanno più a capo. Il logo si misura nella stessa unità.
+    in_produzione: false
+    status: fixed
+    generate_issue: false
+    labels: [bug, stampa]
+    test_cases: [tests/unit/stampanteFinta.test.js]
