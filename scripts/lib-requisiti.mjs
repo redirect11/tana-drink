@@ -206,3 +206,20 @@ export function riconciliaEtichette(attuali, req, { inTest = false } = {}) {
 // testo vale piu' del nostro, e si lascia stare.
 export const corpoGenerato = (corpo) =>
   typeof corpo === 'string' && corpo.includes('Issue generata automaticamente')
+
+// DOVE VA LA SCHEDA SULLA BACHECA, e soprattutto quando NON si tocca.
+// L'ordine delle colonne e' quello del progetto: To triage, Backlog, Ready,
+// In progress, In test, In review, Done.
+export const STATO_IN_TEST = 'In test'
+export const STATO_FATTO = 'Done'
+const PIU_AVANTI = [STATO_IN_TEST, 'In review', STATO_FATTO]
+
+export function prossimoStato(attuale, { chiuso = false } = {}) {
+  if (chiuso) return attuale === STATO_FATTO ? null : STATO_FATTO
+  // Non si tira MAI indietro una scheda che sta gia' piu' avanti: se qualcuno
+  // l'ha spostata in «In review» o in «Done» l'ha fatto guardandola in faccia,
+  // e un automatismo che gliela riporta indietro a ogni push glielo fa
+  // smettere di usare.
+  if (PIU_AVANTI.includes(attuale)) return null
+  return STATO_IN_TEST
+}

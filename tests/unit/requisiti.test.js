@@ -15,7 +15,7 @@
 import { describe, it, expect } from 'vitest'
 import { readdirSync, statSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
-import { caricaRequisiti, parseRequirementsYaml, etichetteClassificazione, riconciliaEtichette, corpoGenerato, IN_TEST } from '../../scripts/lib-requisiti.mjs'
+import { caricaRequisiti, parseRequirementsYaml, etichetteClassificazione, riconciliaEtichette, corpoGenerato, IN_TEST, prossimoStato } from '../../scripts/lib-requisiti.mjs'
 
 const requisiti = caricaRequisiti()
 const STATI = ['implemented', 'partial', 'todo', 'deprecated']
@@ -140,6 +140,23 @@ describe('le issue che esistono gia’ si riallineano', () => {
     const tolta = riconciliaEtichette(['bug', 'P1', IN_TEST], { labels: ['bug'], priority: 'P1' })
     expect(tolta.daTogliere).toEqual([IN_TEST])
     expect(tolta.finali).toEqual(['bug', 'P1'])
+  })
+
+  it('la scheda sulla bacheca segue, ma non si tira mai indietro', () => {
+    // Dalle colonne di partenza si va in prova.
+    expect(prossimoStato('To triage')).toBe('In test')
+    expect(prossimoStato('In progress')).toBe('In test')
+    expect(prossimoStato(null)).toBe('In test')
+    // Se qualcuno l'ha gia' portata piu' avanti, l'ha fatto guardandola in
+    // faccia: un automatismo che gliela riporta indietro a ogni push glielo
+    // fa smettere di usare.
+    expect(prossimoStato('In review')).toBeNull()
+    expect(prossimoStato('In test')).toBeNull()
+    expect(prossimoStato('Done')).toBeNull()
+    // Chiudendo da main si arriva in fondo, da qualunque colonna.
+    expect(prossimoStato('In review', { chiuso: true })).toBe('Done')
+    expect(prossimoStato('To triage', { chiuso: true })).toBe('Done')
+    expect(prossimoStato('Done', { chiuso: true })).toBeNull()
   })
 
   it('il testo si riscrive solo se e’ ancora il nostro', () => {
