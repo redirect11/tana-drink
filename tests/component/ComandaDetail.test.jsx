@@ -61,12 +61,17 @@ vi.mock('../../src/lib/api.js', () => ({
   settingsIniziali: () => ({ ...impostazioni }),
   advanceComanda: vi.fn(() => Promise.resolve()),
   preparazioneParziale: vi.fn(() => Promise.resolve()),
+  setOrderServiceMode: vi.fn(() => Promise.resolve({})),
 }))
 vi.mock('../../src/lib/printer.js', () => ({ printComanda: vi.fn(async () => {}) }))
 vi.mock('../../src/lib/toast.js', () => ({ showToast: vi.fn() }))
 
 import ComandaPage from '../../src/pages/ComandaPage.jsx'
-import { advanceComanda, preparazioneParziale } from '../../src/lib/api.js'
+import {
+  advanceComanda,
+  preparazioneParziale,
+  setOrderServiceMode,
+} from '../../src/lib/api.js'
 import { printComanda } from '../../src/lib/printer.js'
 
 const ORA = '2026-08-18T21:00:00.000Z'
@@ -121,7 +126,7 @@ function monta(comandaId = 'c2') {
 beforeEach(() => {
   vi.clearAllMocks()
   ruolo = 'bartender'
-  impostazioni = { workflow_enabled: true }
+  impostazioni = { workflow_enabled: true, service_mode: 'entrambi' }
   ordine = conto()
 })
 
@@ -213,6 +218,76 @@ describe('il dettaglio di una comanda', () => {
     await screen.findByText(/Cosa c’è da fare/)
     expect(screen.getByRole('button', { name: /In preparazione/ })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Da fare/ })).not.toBeInTheDocument()
+  })
+
+  // ── SERVIZIO O RITIRO, DAL TICKET ────────────────────────────────
+  //
+  // «Questo se lo porta via» si decide col bicchiere in mano, guardando il
+  // ticket: prima bisognava risalire al conto, aprirlo, entrare in «Dati
+  // conto» e scorrere fino in fondo. Tre passaggi per un tocco.
+  const comandaCon = (status, over = {}) =>
+    conto({
+      comande: [
+        {
+          id: 'c2',
+          seq: 2,
+          status,
+          created_at: ORA,
+          status_times: { ricevuto: ORA },
+          items: [{ drink_id: 'negroni', name: 'Negroni', qty: 2, unit_price: 9 }],
+        },
+      ],
+      ...over,
+    })
+
+  it('da una comanda «da fare» si passa a ritiro', async () => {
+    const utente = userEvent.setup()
+    ordine = comandaCon('ricevuto')
+    monta('c2')
+    await screen.findByText(/Cosa c’è da fare/)
+    await utente.click(screen.getByRole('button', { name: /Ritiro/ }))
+    expect(setOrderServiceMode).toHaveBeenCalledWith('o41', 'banco')
+  })
+
+  it('e lo dice che vale per TUTTO IL CONTO', async () => {
+    // Guardando un ticket uno crede di star marcando quello che ha in
+    // mano: il modo sta sul conto, e cambia anche per le altre comande.
+    impostazioni = { ...impostazioni, coperto_enabled: true }
+    ordine = comandaCon('in_preparazione')
+    monta('c2')
+    await screen.findByText(/Cosa c’è da fare/)
+    expect(screen.getByText(/Vale per tutto il conto/i)).toBeInTheDocument()
+    // e cosa succede ai soldi si legge prima di premere
+    expect(screen.getByText(/coperto e servizio si azzerano/i)).toBeInTheDocument()
+  })
+
+  it('da una comanda PRONTA non si cambia più: il drink è già uscito', async () => {
+    ordine = comandaCon('pronto')
+    monta('c2')
+    await screen.findByText(/Cosa c’è da fare/)
+    expect(screen.queryByRole('button', { name: /Ritiro/ })).not.toBeInTheDocument()
+  })
+
+  it('col SOLO SERVIZIO non c’è niente da scegliere', async () => {
+    impostazioni = { workflow_enabled: true, service_mode: 'tavolo' }
+    ordine = comandaCon('ricevuto')
+    monta('c2')
+    await screen.findByText(/Cosa c’è da fare/)
+    expect(screen.queryByRole('button', { name: /Ritiro/ })).not.toBeInTheDocument()
+  })
+
+  it('con un acconto si cambia il modo, ma i soldi restano quelli', async () => {
+    const utente = userEvent.setup()
+    impostazioni = { ...impostazioni, coperto_enabled: true }
+    ordine = comandaCon('ricevuto', {
+      payment_status: 'parziale',
+      payments: [{ amount: 10, method: 'banco' }],
+    })
+    monta('c2')
+    await screen.findByText(/Cosa c’è da fare/)
+    expect(screen.getByText(/coperto e servizio restano quelli/i)).toBeInTheDocument()
+    await utente.click(screen.getByRole('button', { name: /Ritiro/ }))
+    expect(setOrderServiceMode).toHaveBeenCalledWith('o41', 'banco')
   })
 
   it('DA QUI SI RISALE AL CONTO: è lì che si incassa e si aggiunge', async () => {
@@ -325,72 +400,6 @@ describe('il dettaglio di una comanda', () => {
     expect(screen.queryByRole('button', { name: /Preparazione parziale/ })).not.toBeInTheDocument()
   })
 
-  it('DA QUI SI RISALE AL CONTO: è lì che si incassa e si aggiunge', async () => {
-    const utente = userEvent.setup()
-    monta()
-    await screen.findByText(/Cosa c’è da fare/)
-    await utente.click(screen.getByRole('button', { name: /Apri il conto #41/ }))
-    expect(navigateSpy).toHaveBeenCalledWith('/ordine/o41')
-  })
-
-  it('e si torna alla coda da dove si era arrivati', async () => {
-    const utente = userEvent.setup()
-    monta()
-    await screen.findByText(/Cosa c’è da fare/)
-    await utente.click(screen.getByRole('button', { name: /Torna alla coda/ }))
-    expect(navigateSpy).toHaveBeenCalledWith('/bar')
-  })
-
-  it('la comanda si ristampa: la copia al banco si perde, si strappa, si bagna', async () => {
-    const utente = userEvent.setup()
-    monta()
-    await screen.findByText(/Cosa c’è da fare/)
-    await utente.click(screen.getByRole('button', { name: /Ristampa/ }))
-    expect(printComanda).toHaveBeenCalledTimes(1)
-    expect(printComanda.mock.calls[0][1].id).toBe('c2')
-  })
-
-  it('un conto già pagato non ha tasti: non c’è più niente da fare', async () => {
-    ordine = conto({ status: 'pagato', payment_status: 'pagato' })
-    monta()
-    await screen.findByText(/Cosa c’è da fare/)
-    expect(screen.queryByRole('button', { name: 'Pronto al servizio' })).not.toBeInTheDocument()
-    expect(screen.getByText('💶 Pagato')).toBeInTheDocument()
-  })
-
-  it('l’acconto si vede anche da qui', async () => {
-    // Chi finisce la comanda spesso è quello che poi porta il conto al
-    // tavolo: senza dirlo qui, chiede l'intero — ed è successo.
-    ordine = conto({ payment_status: 'parziale', payments: [{ amount: 10 }] })
-    monta()
-    await screen.findByText(/Cosa c’è da fare/)
-    expect(screen.getByText('💳 Acconto')).toBeInTheDocument()
-  })
-
-  // ── DIVIDERE DA QUI ────────────────────────────────────
-  //
-  // Preparare tre gin tonic su cinque è una decisione che si prende
-  // guardando IL TICKET, non il conto: sta qui perché qui c'è chi la
-  // prende. Farlo risalire al conto per dividere quello che ha già davanti
-  // sono due schermate indietro per una cosa che riguarda solo questa
-  // comanda. La strada è la stessa del conto — dividiComanda +
-  // preparazioneParziale — e resta l'unica.
-  it('si sceglie quante unità preparare adesso, e parte la stessa strada del conto', async () => {
-    const utente = userEvent.setup()
-    monta('c1') // due gin tonic, ancora «da fare»: si può dividere
-    await screen.findByText(/Cosa c’è da fare/)
-
-    await utente.click(screen.getByRole('button', { name: /Preparazione parziale/ }))
-    await utente.click(screen.getByRole('button', { name: 'Uno in più di Gin Tonic' }))
-    await utente.click(screen.getByRole('button', { name: 'Preparo questi' }))
-
-    expect(preparazioneParziale).toHaveBeenCalledWith('o41', 'c1', [1])
-  })
-
-  // COL SALTO ACCESO la comanda nasce «in preparazione», e lì si divide:
-  // quel passo È la nascita, non vuol dire che qualcuno abbia cominciato a
-  // versare. Chiedendo «ricevuto» e basta il tasto era sparito da tutte le
-  // schermate senza che nessuno l'avesse tolto (BUG-025).
   it('col salto acceso si divide la comanda «in preparazione»', async () => {
     const utente = userEvent.setup()
     impostazioni = { workflow_enabled: true, comande_in_preparazione: true }

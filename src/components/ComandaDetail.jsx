@@ -17,6 +17,7 @@ import {
   tappeComanda,
 } from '../lib/comande.js'
 import PreparazioneParziale from './PreparazioneParziale.jsx'
+import ScegliConsegna from './ScegliConsegna.jsx'
 
 // ── IL DETTAGLIO DI UNA COMANDA ──────────────────────────────────────
 //
@@ -42,6 +43,11 @@ export default function ComandaDetail({
   workflowOn = true,
   // In che passo nasce il lavoro in questo locale (statoComandaNuova).
   passoDiNascita = ORDER_STATUSES.RICEVUTO,
+  // Il ritiro esiste in questo locale? Col solo servizio non c'è niente da
+  // scegliere, e un tasto che non cambia niente è peggio di nessun tasto.
+  ritiroEsiste = false,
+  senzaSupplementi = false,
+  onCambiaConsegna,
   onAvanza,
   onTornaA,
   onDividi,
@@ -58,6 +64,12 @@ export default function ComandaDetail({
   const chiusa =
     order.status === ORDER_STATUSES.PAGATO || order.status === ORDER_STATUSES.ANNULLATO
   const divisa = annullataPerDivisione(comanda)
+  // Il modo si cambia finché il drink non è uscito dal banco: da «pronto»
+  // in poi la decisione è presa. Stessa soglia della divisione, e per lo
+  // stesso motivo.
+  const cambiabileIlModo =
+    comanda.status === ORDER_STATUSES.RICEVUTO ||
+    comanda.status === ORDER_STATUSES.IN_PREPARAZIONE
   // Fin dove si può tornare: sotto il passo in cui nasce il lavoro non c'è
   // niente da guardare in questo locale.
   const indietro = statiPrimaComanda(comanda.status, passoDiNascita)
@@ -205,6 +217,28 @@ export default function ComandaDetail({
               ✂️ Preparazione parziale
             </button>
           ))}
+        {/* ── SERVIZIO O RITIRO ──────────────────────────────
+            «Questo se lo porta via» si decide col bicchiere in mano,
+            guardando il ticket: prima bisognava risalire al conto, aprirlo,
+            entrare in «Dati conto» e scorrere fino in fondo — tre
+            passaggi per un tocco.
+            Finché il drink non è uscito dal banco: da «pronto» in poi la
+            decisione è presa, il drink è già lì. E solo dove il ritiro
+            esiste: col solo servizio non c'è niente da scegliere.
+            Il modo sta sul CONTO, non sulla comanda: da qui la riga lo
+            dice, perché guardando un ticket uno crede di star marcando
+            quello che ha in mano. */}
+        {ritiroEsiste && !chiusa && cambiabileIlModo && (
+          <div className="comanda-det-consegna">
+            <ScegliConsegna
+              order={order}
+              modo={order.service_mode || null}
+              perTuttoIlConto
+              senzaSupplementi={senzaSupplementi}
+              onCambia={onCambiaConsegna}
+            />
+          </div>
+        )}
         <button className="btn ghost small block comanda-det-stampa" onClick={onStampa}>
           🖨 Ristampa la comanda
         </button>
