@@ -707,7 +707,13 @@ describe('dentro i conti chiusi: serviti e da servire', () => {
 // fuori (quella roba non si fa) e che i totali di colonna sono la somma
 // delle righe che ci stanno dentro — non del conto intero, o al banco si
 // leggerebbero i soldi di un tavolo nella colonna del lavoro.
-import { corsieComande, corsieVisibili, CORSIE_SPENTE_ALL_INIZIO } from '../../src/lib/coda.js'
+import {
+  corsieComande,
+  corsieVisibili,
+  corsieDaMostrare,
+  corsieSceglibili,
+  CORSIE_SPENTE_ALL_INIZIO,
+} from '../../src/lib/coda.js'
 
 describe('le corsie delle comande', () => {
   const chiusoConStati = (o) => contoChiuso(o, { workflowOn: true })
@@ -1014,6 +1020,61 @@ describe('le corsie delle comande', () => {
 
 // Le colonne spente su questo terminale: chi sta al banco guarda «Da fare»
 // e «Al banco», chi sta alla cassa «Da incassare».
+// ── LA COLONNA CHE IL LOCALE NON USA ────────────────────────
+//
+// Col salto acceso «Da fare» non si riempie: sparisce dall'elenco delle
+// colonne da accendere — un tasto che non fa niente è peggio di nessun
+// tasto — ma non è vietata. Se una comanda ci finisce lo stesso la colonna
+// compare da sé: il lavoro non si nasconde mai.
+describe('la colonna che il locale non usa', () => {
+  const corsie = (quanteDaFare) => [
+    { id: 'da-fare', schede: Array(quanteDaFare).fill({}) },
+    { id: 'al-banco', schede: [{}] },
+    { id: 'al-ritiro', schede: [] },
+  ]
+
+  it('senza salto si sceglie tutto, come sempre', () => {
+    expect(
+      corsieSceglibili(corsie(0), { passoDiNascita: 'ricevuto' }).map((c) => c.id)
+    ).toEqual(['da-fare', 'al-banco', 'al-ritiro'])
+  })
+
+  it('col salto «Da fare» non si sceglie più', () => {
+    expect(
+      corsieSceglibili(corsie(0), { passoDiNascita: 'in_preparazione' }).map((c) => c.id)
+    ).toEqual(['al-banco', 'al-ritiro'])
+  })
+
+  it('e se è vuota non si vede', () => {
+    expect(
+      corsieDaMostrare(corsie(0), [], { passoDiNascita: 'in_preparazione' }).map((c) => c.id)
+    ).toEqual(['al-banco', 'al-ritiro'])
+  })
+
+  it('MA CON UNA COMANDA DENTRO SI VEDE ECCOME', () => {
+    // Riportata indietro prima che il salto fosse acceso, o un conto di
+    // ieri: quel drink va fatto, e non può restare invisibile.
+    expect(
+      corsieDaMostrare(corsie(1), [], { passoDiNascita: 'in_preparazione' }).map((c) => c.id)
+    ).toEqual(['da-fare', 'al-banco', 'al-ritiro'])
+  })
+
+  it('e vince anche su chi l’aveva spenta a mano', () => {
+    // La scelta di prima resta scritta, ma il lavoro viene prima.
+    expect(
+      corsieDaMostrare(corsie(1), ['da-fare'], { passoDiNascita: 'in_preparazione' }).map(
+        (c) => c.id
+      )
+    ).toContain('da-fare')
+  })
+
+  it('senza salto, spegnerla a mano continua a funzionare', () => {
+    expect(
+      corsieDaMostrare(corsie(1), ['da-fare'], { passoDiNascita: 'ricevuto' }).map((c) => c.id)
+    ).toEqual(['al-banco', 'al-ritiro'])
+  })
+})
+
 describe('quali corsie si vedono', () => {
   const corsie = [{ id: 'a' }, { id: 'b' }, { id: 'c' }]
 

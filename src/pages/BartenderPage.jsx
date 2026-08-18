@@ -26,7 +26,7 @@ import {
   ritiratoLabel,
   formatPrice,
   nextStatus,
-  statiPrima,
+  statoAlBanco,
   placedByName,
   placedByLetter,
 } from '../lib/orderStatus.js'
@@ -45,7 +45,8 @@ import {
   schedeCoda,
   corsieDiStato,
   corsieComande,
-  corsieVisibili,
+  corsieDaMostrare,
+  corsieSceglibili,
   corsieDelPronto,
   CORSIE_SPENTE_ALL_INIZIO,
   SOTTOFILTRI_CHIUSI,
@@ -72,7 +73,13 @@ import {
   avvisoAttivo,
   idAvvisoStato,
 } from '../lib/preferenzeNotifiche.js'
-import { allServed, contoChiuso, nextComandaStatus } from '../lib/comande.js'
+import {
+  allServed,
+  contoChiuso,
+  nextComandaStatus,
+  statiPrimaComanda,
+  statoComandaNuova,
+} from '../lib/comande.js'
 import { useComandeLocali } from '../lib/comandeLocali.js'
 import { paidAmount, orderTotal } from '../lib/pagamento.js'
 import { businessDayKey, businessDayLabel, businessDayShort } from '../lib/businessDay.js'
@@ -576,6 +583,11 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
 
   // Gestione preparazione: se spenta spariscono stati e avanzamenti.
   const workflowOn = settings.workflow_enabled !== false
+  // In che passo nasce il lavoro in questo locale: lo dice comande.js, in
+  // un posto solo. Serve a sapere fin dove si può tornare indietro — sotto
+  // quel passo non c'è niente da guardare — e quali colonne ha senso
+  // accendere.
+  const passoDiNascita = statoComandaNuova(settings)
 
   // GLI STATI DEL SERVIZIO ACCENDONO LA VISTA DEL BANCO. Chi sta allo
   // shaker non guarda i conti, guarda il lavoro: le comande, nei passi in
@@ -1140,7 +1152,9 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // Le colonne spente su questo terminale si tolgono qui, DOPO che sono
   // state riempite: così i conteggi non cambiano a seconda di cosa si
   // guarda, e riaccendendone una la si trova già piena.
-  const corsieMostrate = corsieBanco ? corsieVisibili(corsieDelBanco, nascoste) : corsie
+  const corsieMostrate = corsieBanco
+    ? corsieDaMostrare(corsieDelBanco, nascoste, { passoDiNascita })
+    : corsie
   const cambiaPronto = () => {
     const nuovo = !prontoSeparato
     setProntoSeparato(nuovo)
@@ -1321,17 +1335,17 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             l'unica strada era annullare e ribattere, perdendo orario e
             storia. Sta accanto al passo avanti, più piccolo: si sbaglia meno
             spesso di quanto si lavori. */}
-        {workflowOn && statiPrima(o.workflow_status).length > 0 && (
+        {workflowOn && statiPrimaComanda(o.workflow_status, passoDiNascita).length > 0 && (
           <div className="row" style={{ gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
             <span className="muted small">Torna a</span>
-            {statiPrima(o.workflow_status).map((st) => (
+            {statiPrimaComanda(o.workflow_status, passoDiNascita).map((st) => (
               <button
                 key={st}
                 className="chip"
                 onClick={() => advance(o, st)}
-                title={`Riporta il conto a «${STATUS_LABELS[st]}»`}
+                title={`Riporta il conto a «${statoAlBanco(st, o.service_mode)}»`}
               >
-                ↩︎ {STATUS_LABELS[st]}
+                ↩︎ {statoAlBanco(st, o.service_mode)}
               </button>
             ))}
           </div>
@@ -2155,7 +2169,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
           {righeSottoChiusi(!corsieBanco)}
           {corsieBanco && scegliCorsie && (
             <div className="chips-row corsie-scelta" style={{ margin: '0 0 12px' }}>
-              {corsieDelBanco.map((c) => (
+              {corsieSceglibili(corsieDelBanco, { passoDiNascita }).map((c) => (
                 <button
                   key={c.id}
                   className={`chip ${nascoste.includes(c.id) ? '' : 'active'}`}

@@ -577,6 +577,50 @@ describe('le corsie del banco: una card per comanda', () => {
     expect(screen.queryByText('#91')).not.toBeInTheDocument()
   })
 
+  // ── COL SALTO ACCESO, «DA FARE» NON ESISTE ───────────────────────
+  //
+  // Se il locale fa nascere le comande già in preparazione, quel passo non
+  // si usa: nessuna comanda ci nasce, nessuno guarda quella colonna. Non
+  // si deve poterci rimandare una comanda a mano, e non si deve poter
+  // accendere una colonna che resterà vuota. Ma il lavoro non si nasconde
+  // mai: se una comanda ci è finita lo stesso, la colonna compare da sé.
+  it('col salto acceso «Da fare» sparisce dal filtro delle colonne', async () => {
+    const utente = userEvent.setup()
+    impostazioni = { ...impostazioni, comande_in_preparazione: true }
+    ordini = [
+      {
+        ...CODA[0],
+        id: 'o95',
+        daily_number: 95,
+        workflow_status: 'in_preparazione',
+        comande: [{ id: 'c1', seq: 1, status: 'in_preparazione', created_at: ORA, items: [] }],
+      },
+    ]
+    montaCoda()
+    await screen.findByText('In preparazione')
+
+    // la colonna non c'è, e non si può nemmeno accendere
+    expect(corsia('da-fare')).toBeFalsy()
+    await utente.click(screen.getByRole('button', { name: /Colonne/ }))
+    expect(screen.queryByRole('button', { name: 'Da fare' })).not.toBeInTheDocument()
+  })
+
+  it('ma una comanda ferma a «da fare» fa comparire la colonna lo stesso', async () => {
+    impostazioni = { ...impostazioni, comande_in_preparazione: true }
+    ordini = [
+      {
+        ...CODA[0],
+        id: 'o96',
+        daily_number: 96,
+        workflow_status: 'ricevuto',
+        comande: [{ id: 'c1', seq: 1, status: 'ricevuto', created_at: ORA, items: [] }],
+      },
+    ]
+    montaCoda()
+    await screen.findByText('Da fare')
+    expect(within(corsia('da-fare')).getByText('#96')).toBeInTheDocument()
+  })
+
   // ── IL PRONTO, UNITO O DIVISO ────────────────────────────────────
   //
   // Quella colonna tiene due lavori diversi: roba da portare a un tavolo e

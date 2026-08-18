@@ -32,9 +32,8 @@ import { useMenu } from '../lib/menuCache.js'
 import {
   ORDER_STATUSES,
   STATUS_LABELS,
-  statiPrima,
+  statoAlBanco,
   STATUS_EMOJI,
-  ritiratoLabel,
   formatPrice,
   placedByName,
   paymentMethodLabel,
@@ -48,6 +47,7 @@ import {
   comandaEditable,
   comandaPerLeAggiunte,
   comandaDivisibile,
+  statiPrimaComanda,
   statoComandaNuova,
   annullataPerDivisione,
   ANNULLATA_PER_DIVISIONE,
@@ -2082,7 +2082,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                   conto, quindi le due schermate non possono discordare. */}
               {!isNew && workflowOn && active && !closed && (
                 <span className={`pill ${active.status} posd-stato`}>
-                  {STATUS_EMOJI[active.status]} {STATUS_LABELS[active.status]}
+                  {STATUS_EMOJI[active.status]} {statoAlBanco(active.status, order.service_mode)}
                 </span>
               )}
               {/* LA STORIA E LO SVUOTA STANNO NEL ⋯. Erano due icone qui in
@@ -2731,9 +2731,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                       ) : (
                         <>
                           {STATUS_EMOJI[c.status]}{' '}
-                          {c.status === ORDER_STATUSES.RITIRATO
-                            ? ritiratoLabel(order.service_mode)
-                            : STATUS_LABELS[c.status]}
+                          {statoAlBanco(c.status, order.service_mode)}
                         </>
                       )}
                     </span>
@@ -2756,7 +2754,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                     </button>
                     {ns && workflowOn && !closed ? (
                       <button className="btn small" onClick={() => advance(c.id, ns)}>
-                        Segna “{ns === ORDER_STATUSES.RITIRATO ? ritiratoLabel(order.service_mode) : STATUS_LABELS[ns]}”
+                        Segna “{statoAlBanco(ns, order.service_mode)}”
                       </button>
                     ) : (
                       <span />
@@ -2794,21 +2792,23 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                       vassoio è ancora al banco: senza questo restava solo
                       annullare il conto e ribatterlo. Gli stati già passati
                       sono lì, in fila: si sceglie quello giusto. */}
-                  {workflowOn && !closed && statiPrima(c.status).length > 0 && (
-                    <div className="row" style={{ gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
-                      <span className="muted small">Torna a</span>
-                      {statiPrima(c.status).map((st) => (
-                        <button
-                          key={st}
-                          className="chip"
-                          onClick={() => advance(c.id, st)}
-                          title={`Riporta la comanda ${c.seq} a «${STATUS_LABELS[st]}»`}
-                        >
-                          ↩︎ {STATUS_LABELS[st]}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                  {workflowOn &&
+                    !closed &&
+                    statiPrimaComanda(c.status, statoIniziale).length > 0 && (
+                      <div className="row" style={{ gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+                        <span className="muted small">Torna a</span>
+                        {statiPrimaComanda(c.status, statoIniziale).map((st) => (
+                          <button
+                            key={st}
+                            className="chip"
+                            onClick={() => advance(c.id, st)}
+                            title={`Riporta la comanda ${c.seq} a «${statoAlBanco(st, order.service_mode)}»`}
+                          >
+                            ↩︎ {statoAlBanco(st, order.service_mode)}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                 </div>
               )
             })}

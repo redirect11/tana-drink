@@ -1,10 +1,8 @@
 import {
   ORDER_STATUSES,
   STATUS_EMOJI,
-  STATUS_LABELS,
   formatPrice,
-  ritiratoLabel,
-  statiPrima,
+  statoAlBanco,
 } from '../lib/orderStatus.js'
 import { useState } from 'react'
 import { hhmm } from '../lib/ore.js'
@@ -15,6 +13,7 @@ import {
   comandaDivisibile,
   itemsTotal,
   nextComandaStatus,
+  statiPrimaComanda,
   tappeComanda,
 } from '../lib/comande.js'
 import PreparazioneParziale from './PreparazioneParziale.jsx'
@@ -32,15 +31,17 @@ import PreparazioneParziale from './PreparazioneParziale.jsx'
 // flusso in lib/comande.js, i nomi degli stati in lib/orderStatus.js, la
 // destinazione in lib/coda.js. Qui c'è solo il disegno.
 
-// Come si chiama un passo, con la parola giusta per come si consegna
-// («Ritirato» al banco, «Servito» al tavolo).
-const nomeStato = (stato, serviceMode) =>
-  stato === ORDER_STATUSES.RITIRATO ? ritiratoLabel(serviceMode) : STATUS_LABELS[stato]
+// Le parole del BANCO: «Da fare» e non «Ordine ricevuto», e la parola
+// giusta per come si consegna. Stanno in lib/orderStatus.js (statoAlBanco)
+// perché le usano tutte le schermate di chi lavora.
+const nomeStato = statoAlBanco
 
 export default function ComandaDetail({
   order,
   comanda,
   workflowOn = true,
+  // In che passo nasce il lavoro in questo locale (statoComandaNuova).
+  passoDiNascita = ORDER_STATUSES.RICEVUTO,
   onAvanza,
   onTornaA,
   onDividi,
@@ -57,7 +58,9 @@ export default function ComandaDetail({
   const chiusa =
     order.status === ORDER_STATUSES.PAGATO || order.status === ORDER_STATUSES.ANNULLATO
   const divisa = annullataPerDivisione(comanda)
-  const indietro = statiPrima(comanda.status)
+  // Fin dove si può tornare: sotto il passo in cui nasce il lavoro non c'è
+  // niente da guardare in questo locale.
+  const indietro = statiPrimaComanda(comanda.status, passoDiNascita)
 
   return (
     <div className="comanda-det">

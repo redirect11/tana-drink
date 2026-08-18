@@ -365,6 +365,19 @@ requirements:
       server. È una FUNZIONE e non una costante esportata apposta: con un
       valore da copiare basta che una strada scriva un «ricevuto» a mano
       per non seguire l'impostazione, e non se ne accorge nessuno.
+      COL SALTO ACCESO IL PASSO «DA FARE» NON ESISTE, e non deve comparire
+      da nessuna parte come destinazione: sparisce dalle pastiglie
+      «↩︎ Torna a…» (statiPrimaComanda in comande.js: i passi già fatti,
+      meno quelli PRIMA di dove nasce il lavoro) e dall'elenco delle
+      colonne che si accendono a mano (corsieSceglibili). Non si tocca
+      però quello che c'è già: una comanda ferma a «da fare» resta dov'è e
+      va avanti normalmente, e la sua colonna compare da sé
+      (corsieDaMostrare) — il lavoro non si nasconde mai, e a mostrarlo è
+      l'app, non una voce di menu che l'utente deve trovare.
+      LE PAROLE DEL BANCO NON SONO QUELLE DEL CLIENTE: al banco il passo si
+      chiama «Da fare» come la colonna (statoAlBanco in orderStatus.js), al
+      cliente «Ordine ricevuto», che è quello che gli serve sapere — non è
+      lui che lo deve fare. Due etichette, non una sola «giusta».
       E UNA SCRITTURA IN SOTTOFONDO TOCCA SOLO I CAMPI CHE LE COMPETONO:
       `comande` è un array e Firestore lo riscrive intero, quindi chi scrive
       si rilegge il documento NELL'ISTANTE PRIMA DI SCRIVERE, non all'inizio

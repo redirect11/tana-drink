@@ -234,6 +234,24 @@ export function comandaEditable(c) {
 // da fare, non due ticket per la stessa cosa. Se non c'è, ne nasce una —
 // anche con una comanda in preparazione accanto. Una comanda PRONTA o
 // SERVITA non risponde mai: non è nel passo di nascita, e viene da sé.
+// ── FIN DOVE SI PUÒ TORNARE INDIETRO ─────────────────────────
+//
+// I passi già passati, meno quelli PRIMA di dove nasce il lavoro. Col
+// locale che fa nascere le comande già in preparazione, «da fare» non
+// esiste: nessuna comanda ci nasce, nessuno guarda quella colonna, e
+// rimandarci una comanda a mano vuol dire nasconderla in un posto dove non
+// la cerca più nessuno.
+//
+// NON SI TOCCA QUELLO CHE C'È GIÀ: una comanda ferma a «da fare» da prima
+// resta dov'è e va avanti normalmente. Qui si toglie solo la strada per
+// andarci.
+export function statiPrimaComanda(status, passo) {
+  const daDove = Math.max(0, COMANDA_FLOW.indexOf(passo))
+  const arrivata = COMANDA_FLOW.indexOf(status)
+  if (arrivata <= daDove) return []
+  return COMANDA_FLOW.slice(daDove, arrivata)
+}
+
 export function comandaPerLeAggiunte(comande, passo) {
   return (comande || []).find((c) => c.status === passo) || null
 }
