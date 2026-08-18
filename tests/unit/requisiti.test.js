@@ -15,7 +15,7 @@
 import { describe, it, expect } from 'vitest'
 import { readdirSync, statSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
-import { caricaRequisiti, parseRequirementsYaml, etichetteClassificazione, riconciliaEtichette, corpoGenerato, IN_TEST, prossimoStato, deveNascere, famigliaDi } from '../../scripts/lib-requisiti.mjs'
+import { caricaRequisiti, parseRequirementsYaml, etichetteClassificazione, riconciliaEtichette, corpoGenerato, IN_TEST, prossimoStato, deveNascere, famigliaDi, indicizzaPerId } from '../../scripts/lib-requisiti.mjs'
 
 const requisiti = caricaRequisiti()
 const STATI = ['implemented', 'partial', 'todo', 'deprecated']
@@ -155,6 +155,33 @@ describe('le issue che esistono gia’ si riallineano', () => {
     const tolta = riconciliaEtichette(['bug', 'P1', IN_TEST], { labels: ['bug'], priority: 'P1' })
     expect(tolta.daTogliere).toEqual([IN_TEST])
     expect(tolta.finali).toEqual(['bug', 'P1'])
+  })
+
+  // IL DOPPIONE VERO, capitato il 18 agosto: la #55 per BUG-005, che esisteva
+  // gia' come #14 col titolo identico. Nasceva perche' si cercava una issue
+  // alla volta con la API di ricerca e una ricerca FALLITA veniva letta come
+  // «non esiste». Adesso l'elenco si chiede una volta e si indicizza qui.
+  it('l’elenco si indicizza per identificativo, e col doppione tiene quella aperta', () => {
+    const avvisi = []
+    const indice = indicizzaPerId([
+      { number: 14, title: '[BUG-005] Le note degli item non si vedono', state: 'open' },
+      { number: 55, title: '[BUG-005] Le note degli item non si vedono', state: 'open' },
+      { number: 27, title: '[REQ-MAG-016] Titolo vecchio', state: 'closed' },
+      { number: 44, title: '[REQ-MAG-016] Titolo nuovo', state: 'open' },
+      { number: 99, title: 'Una issue scritta a mano, senza identificativo', state: 'open' },
+    ], (m) => avvisi.push(m))
+
+    // Fra due aperte vince la piu' vecchia: e' quella con la storia dentro.
+    expect(indice.get('BUG-005').number).toBe(14)
+    // Ma una chiusa non vince su una aperta, anche se e' piu' vecchia: quella
+    // aperta e' dove si sta lavorando.
+    expect(indice.get('REQ-MAG-016').number).toBe(44)
+    // Chi non ha identificativo non entra: non e' roba del registro.
+    expect(indice.has('99')).toBe(false)
+    expect(indice.size).toBe(2)
+    // E il doppione si segnala, perche' va chiuso da una persona: chiuderlo
+    // da uno script vorrebbe dire cancellare commenti che non ha scritto lui.
+    expect(avvisi).toHaveLength(2)
   })
 
   it('la famiglia si ricava dal registro, non si scrive a mano', () => {
