@@ -4,6 +4,13 @@
 
 ### Al banco
 
+- **Nel pagamento i drink sono già separati**: la schermata di incasso si apre
+  con «2× Mojito» diviso in due righe da una, perché al banco si paga quasi
+  sempre a pezzi — uno paga il suo, un altro offre due birre — e ogni volta
+  serviva un tocco in più con la fila alla cassa. Chi incassa tutto preme
+  «Riscuotere» come prima, senza toccare niente; chi ha un conto lungo e
+  illeggibile lo rimette in gruppo con «Unisci uguali».
+
 - **Le note dei singoli drink si leggono anche a schermo**: «senza ghiaccio»,
   «per Anna» comparivano solo dentro il conto e sulla comanda stampata. Ora
   stanno sotto il loro prodotto anche sulle card della coda del gestionale e
