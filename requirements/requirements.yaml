@@ -1533,7 +1533,7 @@ requirements:
     test_cases: []
 
   - id: REQ-MAG-016
-    title: "Un prodotto si compra in un modo e si usa in un altro: due unità e una resa"
+    title: "L'unità è sempre il pezzo: si sceglie solo a cosa corrisponde"
     area: "src/lib/inventory.js, src/components/InventoryManager.jsx"
     description: >
       Da tre note di Flavio (17/08, 21:11-21:14). Il modello delle unità
@@ -1626,11 +1626,258 @@ requirements:
       contenuto → versato, pezzo senza → intero, il resto → sfuso), senza
       migrazione. Cambiando tipo su un prodotto esistente valgono gli
       avvisi di conversione della giacenza di sempre.
+      RIPENSATO (18/08, tre vocali di Flavio uno via l'altro — 14:53, 15:17,
+      15:22 — vince l'ultimo, che è la sintesi e decide). Prima idea (14:53):
+      «l'unità di misura sono i pezzi, poi dopo i pezzi vengono divisi in
+      cl, grammi e unità di misura non definita» — non più la resa fra
+      unità d'acquisto e unità d'uso di sopra: sempre e solo PEZZO,
+      frazionato da una seconda unità.
+      Guardando l'app (15:17), Flavio boccia la domanda RIVISTA qui sopra
+      («che tipo di prodotto è?», le quattro card): «questa cosa non è
+      male, però secondo me non è molto corretta per un gestionale, cioè va
+      un po' troppo nello specifico». Lo stesso articolo si vende in più
+      modi — il Jägermeister va nel Jägerbombo E si vende a cicchetto da
+      solo, mai la bottiglia intera — e una card sola per prodotto non lo
+      permette. Segnala anche diciture da rivedere: «una bottiglia fa»
+      (100 cl) «non credo sia molto italiana» — la scheda va riletta con
+      questo in mente, non solo quella frase.
+      DECISO (15:22, l'ultima parola: qui non è più una proposta da
+      confermare). «L'unità di misura iniziale deve scomparire, perché non
+      è più selezionabile, in automatico è il pezzo» — FISSO E BLOCCATO, non
+      un campo `tipo` né una scelta fra famiglie. Il campo `tipo` previsto
+      nella revisione qui sopra NON si aggiunge più, e con lui cadono il
+      selettore a quattro card e ogni distinzione fra «lo vendo intero / lo
+      verso nel drink / sfuso / lavoro». La SOLA domanda che il modulo fa è
+      «a quanto corrisponde un pezzo», con tre risposte possibili: unità di
+      CAPACITÀ (l, cl, ml), di PESO (kg, g), o «U» non definita — mai una
+      quarta a piacere: «potremmo caricare tantissime cose con tantissime
+      unità di misura che non sappiamo, e non ce le possiamo mettere a
+      creare ogni volta» — la U resta volutamente generica, il significato
+      sta in testa a chi la usa («lo so io che sono minuti, ma non fa
+      niente»). NESSUN REQUISITO deve prevedere unità di misura
+      personalizzabili dall'utente.
+      CHI DECIDE, TOLTA LA DOMANDA: nessuno dichiara più come si vende un
+      prodotto — la domanda «lo vendo intero / sfuso a peso o volume /
+      lavoro a servizio» sparisce e NON SI SOSTITUISCE con un'altra: quello
+      che decideva lei lo decide adesso la RICETTA. Sue parole: «bisogna
+      fare i conti rispetto all'utilizzo che viene fatto della merce.
+      Quando la merce viene usata in una ricetta, allora la scarichiamo
+      dell'unità di misura che può essere una qualsiasi che sia
+      convertibile dall'unità di misura del prodotto». La quantità di un
+      ingrediente in ricetta si scrive a PEZZI — sempre disponibile, perché
+      è la base — o nell'unità in cui si frazionava (cl, g, U). A rendere
+      possibile il passaggio è proprio «a quanto corrisponde un pezzo»
+      (1 pz = 25 cl, per dire): con quel dato, quello che la ricetta chiede
+      in cl si converte in pezzi per la giacenza. LA GIACENZA NON CAMBIA MAI
+      UNITÀ — resta sempre in pezzi — a convertirsi è solo quello che la
+      ricetta chiede.
+      CASO LIMITE (deduzione di chi scrive questo requisito, non parola sua
+      — DA CONFERMARE): un prodotto senza corrispondenza impostata (nessun
+      «1 pz = …») si può usare SOLO A PEZZI, perché non c'è niente con cui
+      convertire; l'app deve dirlo — proponendo solo i pezzi in ricetta, o
+      chiedendo di compilare la corrispondenza — invece di lasciare
+      scrivere «40 ml» di una cosa di cui non si sa quanto contiene un
+      pezzo, che è il modo più veloce per scaricare numeri a caso. E la «U»
+      non si converte con nulla: un prodotto in unità non definite si usa
+      in pezzi o in U, e va bene così — non è un buco, è la natura di
+      quell'unità.
+      La scelta pezzo-o-frazione non è solo del CARICO, come diceva il
+      primo vocale: vale per QUALUNQUE movimento — «se farmo un carico, uno
+      scarico, qualsiasi cosa esso sia di movimentazione» — chiedendo ogni
+      volta se muovere a pezzi o nell'unità che compone il pezzo. Casi-prova
+      citati a voce: un distillato codificato «1 pezzo = X cl» chiede se
+      caricare a pezzi o a centilitri; il ghiaccio codificato «1 pezzo = X
+      grammi» chiede pezzi o grammi (il numero detto a voce, «8 grammi», è
+      il peso di UN CUBETTO, non di una confezione — vedi sotto); il tempo
+      di lavorazione, pezzi o «U» (minuti, nella testa di chi lo carica).
+      I TRE LIVELLI, e risolvono anche lo SFUSO (chiarito 18/08, oltre i tre
+      vocali sopra): il PEZZO è quello che si prende in mano — un cubetto,
+      un limone, un barattolo, una bottiglia; il CONTENUTO dice a quanto
+      corrisponde quel pezzo, in capacità, peso o U — un cubetto 8 g, una
+      bottiglia 70 cl; il COLLO dice quanti pezzi ci sono nella confezione
+      che si compra — 30 cubetti, 24 birre, una cassetta di limoni. Sono i
+      tre concetti che c'erano già (pezzo, contenuto, collo — quest'ultimo
+      in REQ-MAG-011): il ghiaccio è il caso-prova buono, 1 pz = 8 g e un
+      collo = 30 pz, quindi caricando «1 collo» entrano 30 pezzi, cioè
+      240 g. Con questo si chiude anche il caso dei LIMONI (comprati al
+      chilo, usati in cl) che era rimasto apertissimo dalla prima nota di
+      Flavio: un limone è un pezzo, e il fatto che si comprino al chilo non
+      rompe niente — è proprio per questo che Flavio vuole poter scegliere
+      l'unità a ogni movimento; si compra 5 kg, si carica A GRAMMI, e i
+      pezzi si ricavano dal contenuto del pezzo. AVVERTENZA ONESTA da
+      scrivere in interfaccia:
+      per la roba comprata a peso il conteggio in pezzi è una STIMA — un
+      limone non pesa sempre uguale — e va bene finché quello che conta
+      davvero è il peso, ma chi legge «47 pz» di limoni deve sapere che
+      nessuno li ha contati uno per uno.
+      IL CARICO A COLLO RESTA (vedi REQ-MAG-011, dove la parola che usa il
+      codice è già «collo», non «cartone»): comprando confezioni intere —
+      24 birre, per dire — si scrive il prezzo totale del collo e si
+      scompone da sé, prima al singolo pezzo, poi al singolo cl (una
+      bottiglia a 33 cl, non gli «8 cl» della trascrizione del vocale delle
+      15:17 — il senso è quello della birra da 33, ripetuto poco prima nella
+      stessa frase).
+      Con questo si scioglie anche il punto rimasto aperto in BUG-014 (la
+      «U» nella prima domanda): la prima domanda non c'è più, è sempre
+      pezzo, e la «U» sta sempre — e solo — nella seconda.
+      La MIGRAZIONE dei prodotti già in magazzino a questo modello è un
+      lavoro separato, che si prova diversamente e può essere pronto in un
+      momento diverso da questo requisito: vedi REQ-MAG-018.
+      DA CHIARIRE (AskUserQuestion non disponibile in questo passaggio,
+      quindi non deciso qui): 1) nel vocale delle 15:22 (min 1:00) il
+      distillato d'esempio suona come «il Tangerai» — quasi certamente
+      Tanqueray, ma la trascrizione non è chiara; 2) nel vocale delle 15:17
+      (min 2:01) un prodotto suona come «la maro del capo», trascrizione
+      poco chiara — non si capisce a cosa si riferisse l'esempio.
     status: todo
     generate_issue: true
     labels: [magazzino, ux]
     priority: P1
     test_cases: [tests/unit/inventory.test.js, tests/component/InventoryManagerCard.test.jsx]
+
+  - id: REQ-MAG-018
+    title: "I 388 prodotti che ci sono già si travasano al modello nuovo, non li riapre uno per uno chi sta al banco"
+    area: "scripts/ (migrazione), src/lib/inventory.js"
+    description: >
+      Nasce da REQ-MAG-016 (unità sempre pezzo, con una corrispondenza in
+      capacità/peso/U) ma è un lavoro A PARTE: il modello nuovo e il
+      travaso dei dati vecchi si provano in modo diverso, e uno può essere
+      pronto quando l'altro non lo è ancora — per questo è un requisito suo,
+      non un paragrafo dentro l'altro.
+      IL FATTO: oggi i 388 prodotti di magazzino hanno unità diverse fra
+      loro — liquidi in cl, solidi in grammi, alcuni già a pezzi — e il
+      modello nuovo li vuole tutti a PEZZO con una sola corrispondenza
+      (capacità, peso o U).
+      DECISO da Flavio (18/08): «credo che dobbiamo migrare noi i prodotti
+      al nuovo modello, poi capiamo come» — il travaso lo fa uno SCRIPT
+      nostro, una volta, non chi sta al banco riaprendo 388 schede a mano.
+      NON DECISO, e va scritto qui come domanda aperta finché non si
+      implementa: con quale corrispondenza si converte ogni famiglia. Per
+      una bottiglia da 70 cl è ovvio — 1 pz = 70 cl, e la giacenza in cl
+      diventa pezzi frazionati, senza stime. Per lo sfuso (limoni al chilo,
+      spezie, ghiaccio) la REGOLA c'è già (REQ-MAG-016, i tre livelli
+      pezzo/contenuto/collo) ma applicarla in automatico a 388 righe
+      storiche — capire cos'è «un pezzo» per ciascuna, senza che nessuno lo
+      dichiari a mano prodotto per prodotto — resta da progettare quando si
+      scrive lo script.
+      QUATTRO VINCOLI DEL MESTIERE, che qui si dimenticano facile:
+      1) GLI SCRIPT NON TOCCANO LA PRODUZIONE DI PROPRIA INIZIATIVA (CLAUDE.md):
+      girano su `tana-drink-test`; la produzione — con le giacenze vere del
+      locale — si nomina a mano e aspetta il via libera esplicito. Una
+      conversione storta lì non è una prova da rifare, è un danno.
+      2) IL TRAVASO DEVE ESSERE VERIFICABILE: prima e dopo, il VALORE di
+      magazzino e la QUANTITÀ di prodotto (in pezzi, nell'unità che era, e
+      nel contenuto) devono tornare uguali. Se cambiano, la conversione ha
+      mentito — ed è l'unico controllo che se ne accorge da solo, perché un
+      numero sbagliato in pezzi sembra comunque plausibile a chi lo legge.
+      3) IL TRAVASO TOCCA SOLO IL MODO DI MISURARE, NIENT'ALTRO (Flavio,
+      18/08 ore 15:35): in produzione ha già sistemato a mano, uno per uno,
+      menù e prodotti con i prezzi corretti e le ricette del menù — «con
+      l'aggiornamento mi casi modificano, resta tutto invariato qua». La
+      migrazione non deve toccare prezzi, ricette né voci di menù: quelli
+      sono lavoro fatto a mano, e riscriverli è il modo migliore per fare
+      perdere una giornata a chi l'ha fatto. Converte solo unità, contenuto
+      e giacenza.
+      4) C'È UNA FINESTRA DI TEMPO, e va rispettata (stesso vocale, 15:35):
+      l'unica cosa che Flavio non ha ancora fatto è il CARICO REALE delle
+      giacenze — «quello penso che me lo faccio domani». Oggi (18/08) i
+      prodotti hanno quindi giacenze vecchie o vuote: il travaso va fatto
+      PRIMA che lui carichi le quantità vere, non dopo — se arriva dopo,
+      converte numeri veri e un errore di conversione pesa il doppio.
+    status: todo
+    generate_issue: true
+    labels: [magazzino, dati]
+    priority: P1
+    test_cases: []
+
+  - id: REQ-MAG-017
+    title: "Il fornitore si aggiunge dalla tendina del prodotto, come già la categoria nel menù"
+    area: "src/components/InventoryManager.jsx (select #isup, form prodotto), src/components/DrinkForm.jsx onCategoryChange (il comportamento da copiare)"
+    description: >
+      Scritto da Flavio (18/08, due messaggi di seguito, 15:33 e 15:34 — il
+      secondo semplifica il primo e vince), commentando il modulo «Modifica
+      prodotto» del magazzino in test («Acqua Brillante Tonica»). La tendina
+      Fornitore elenca solo i fornitori che esistono già: se manca quello
+      giusto, oggi bisogna uscire dal prodotto, andare in Fornitori, crearlo,
+      e tornare indietro a ricominciare la scheda — proprio nel momento in
+      cui ci si accorge che manca.
+      Sue parole (15:33): «nella tendina deve comparire il tab AGGIUNGI
+      FORNITORE ed aggiungerlo direttamente da una finestra di info dove
+      basterà confermare solo il nome per poi aggiungere in un secondo
+      momento altre info aziendali».
+      Come deve comportarsi (15:34) non è da inventare: il modello esiste
+      già nell'app, e lui lo indica come esempio — «proprio come succede nel
+      MENU che quando apri la tendina appare NUOVA CATEGORIA». Nel modulo
+      del drink (src/components/DrinkForm.jsx) la tendina Categoria ha in
+      fondo la voce «➕ Nuova categoria…», che apre al volo una finestra dove
+      basta il nome per confermare (onCategoryChange, valore `__new__`). La
+      tendina Fornitore del prodotto di magazzino deve comportarsi allo
+      stesso modo: ultima voce che apre la creazione al volo, basta il nome
+      — il resto dei dati aziendali (indirizzo, contatti…) si compila dopo,
+      con tempo, dalla sezione Fornitori — e il fornitore appena creato resta
+      SELEZIONATO sul prodotto che si stava compilando, senza doverlo
+      riselezionare a mano: se toccasse rifarlo, il giro non si sarebbe
+      accorciato.
+      DA CHIEDERE (segnalato, non deciso qui — per esplicita richiesta di
+      Flavio di non allargare la richiesta da soli): nello stesso modulo, la
+      tendina Categoria del prodotto di MAGAZZINO (non quella del menù, che
+      il comportamento ce l'ha già) è oggi un elenco semplice, senza
+      «+ Nuova categoria» — la stessa mancanza del fornitore, mai segnalata
+      a voce finora. Vale lo stesso trattamento anche lì?
+    status: todo
+    generate_issue: true
+    labels: [magazzino, fornitori, ux]
+    priority: P2
+    test_cases: []
+
+  - id: REQ-MAG-019
+    title: "«pz» al posto di «bottiglie», dappertutto sullo schermo"
+    area: "src/components/InventoryManager.jsx"
+    description: >
+      Decisione di Flavio (18/08), sulle diciture segnalate in REQ-MAG-016
+      («una bottiglia fa 100 cl» «non credo sia molto italiana»). Testuale:
+      «non dobbiamo vincolarci troppo a un gestionale per un bar. "Bottiglie"
+      non è generico per un gestionale che in qualche modo deve essere
+      generico. Quindi PZ DEVE ESSERE USATO AL POSTO DI BOTTIGLIE OVUNQUE».
+      Riguarda le PAROLE CHE SI LEGGONO A SCHERMO — etichette, placeholder,
+      testi d'aiuto, messaggi d'avviso — non i nomi interni del codice:
+      `bottles_total`, `bottleBreakdown`, `bottleSummary` e i commenti
+      restano come sono, che qui si cambia solo quello che legge chi ha in
+      mano un vassoio.
+      I PUNTI TROVATI (`grep -rn "bottigli" src/ --include=*.jsx`), perché
+      chi implementa non debba ricercarli:
+      1) l'etichetta del campo contenuto, nel form del prodotto: «Una
+      bottiglia fa…»; 2) il suo placeholder: «Es. 70 per una bottiglia da
+      70 cl»; 3) le due didascalie sotto lo stesso campo, una per «lo verso
+      nei drink» («4 cl da una bottiglia da 70») e una per «lo vendo
+      intero» («con le altre bottiglie»); 4) il messaggio d'avviso al
+      salvataggio quando il contenuto obbligatorio manca: «Scrivi quanto fa
+      una bottiglia (es. 70 cl)…»; 5) l'aiuto «A quanto corrisponde un
+      pezzo» (tre paragrafi: «una bottiglia da 100 cl» due volte, «la birra
+      in bottiglia»); 6) il sottotitolo «bottiglie, lattine» del tipo «Lo
+      vendo intero», e l'aiuto della domanda «che tipo di prodotto è?», che
+      ripete «bottiglia/bottiglie» cinque volte in tre paragrafi. Gli ultimi
+      due (punto 6) vivono
+      dentro la schermata a quattro card che REQ-MAG-016 (ripensamento
+      18/08) toglie di mezzo: se le due implementazioni si fanno insieme,
+      quel testo semplicemente non c'è più e non va corretto due volte; se
+      REQ-MAG-016 arriva dopo, va corretto comunque perché nel frattempo
+      resta a schermo.
+      DUE AVVERTENZE. La prima: «una bottiglia fa 100 cl» era sbagliato due
+      volte — la parola (bottiglia → pz) e il VERBO (fa → corrisponde),
+      perché la sostanza del modello deciso il 18/08 è «a quanto
+      corrisponde un pezzo», non «quanto fa» — chi corregge la parola senza
+      correggere il verbo lascia la frase sbagliata a metà. La seconda: nel
+      dettaglio aperto di un articolo (REQ-MAG-002, REQ-MAG-011) restano le
+      «bottiglie piene / aperta / finite» che servono a chi va a contarle
+      sullo scaffale — quella non è la dicitura da cambiare, è un'altra
+      cosa: lì «bottiglia» descrive l'oggetto fisico, non l'unità di
+      misura.
+    status: todo
+    generate_issue: true
+    labels: [magazzino, ux]
+    priority: P2
+    test_cases: []
 
   - id: REQ-MAG-015
     title: "Macro-categorie di magazzino e di menù, per incrociare speso e incassato"
@@ -1661,10 +1908,39 @@ requirements:
       sulle macro di MAGAZZINO, spalmando l'incasso di ogni drink sugli
       ingredienti in proporzione al costo. Le due letture rispondono a
       domande diverse e vanno tenute distinte, non sovrapposte.
+      RIPENSATO (18/08, vocale delle 15:47 — «discorso abbastanza complesso»,
+      parole sue). Il confronto sopra non basta quando un ingrediente
+      finisce in un drink di una macro DIVERSA dalla propria: «un prodotto
+      può essere venduto in due macro categorie differenti». Il gin è
+      semplice — comprato in «distillati», venduto nel Gin Tonic che sta in
+      «alcolici e distillati»: stessa macro, nessun conflitto. Il caso
+      complesso è la SCHWEPPES: comprata come bibita (macro magazzino
+      «birre e bibite»), ma quando finisce in un Gin Tonic — che nel menù
+      sta in «alcolici e distillati» — quella porzione «deve migrare nei
+      distillati». Stesso schema per la RED BULL, comprata come bibita e
+      venduta in uno Jäger Bomb (alcolici e distillati). Sintesi sua: «il
+      menù alla fine controlla il magazzino».
+      INTERPRETAZIONE DA CONFERMARE (non è la sua frase testuale, è la
+      lettura che ne dà chi scrive questo requisito — riportata perché presa
+      alla lettera la frase è irrealizzabile): non è il PRODOTTO a cambiare
+      macro-categoria — la stessa Schweppes si vende anche da sola, quindi
+      non può stare in una macro sola, e cambiarla nell'anagrafica romperebbe
+      il magazzino. A migrare, ai soli fini del CONFRONTO acquistato/venduto/
+      margine, è il singolo CONSUMO: la porzione di Schweppes versata in quel
+      Gin Tonic si attribuisce alla macro di vendita del drink (distillati),
+      non alla macro d'acquisto del prodotto (bibite). L'anagrafica del
+      prodotto — la sua macro di magazzino — non si tocca mai.
+      Se questa lettura è sbagliata, il rischio è concreto: al primo Gin
+      Tonic venduto il magazzino sballa.
+      CASI DI PROVA (le sue parole, non inventati): la Schweppes comprata in
+      «birre e bibite» e venduta dentro un Gin Tonic conta, in quel consumo,
+      su «alcolici e distillati»; la Red Bull comprata in «birre e bibite» e
+      venduta dentro uno Jäger Bomb conta, in quel consumo, su «alcolici e
+      distillati».
     status: todo
     generate_issue: true
     labels: [magazzino, menu, statistiche]
-    priority: P2
+    priority: P1
     test_cases: [tests/component/MacroCategoryManager.test.jsx]
 
   - id: REQ-MENU-011
@@ -2386,6 +2662,17 @@ requirements:
       mai una card stretta su un monitor grande — e nel caso peggiore la parola
       si tronca invece di sfondare il bordo. Nella vista a Lista, dove lo
       spazio c'è, non cambia niente.
+      CONFERMATO (18/08, ore 15:17 — Flavio chiedeva a voce che la scala
+      cartone → pezzi → contenuto valesse anche per il PREZZO): c'è già,
+      dentro il form del prodotto (`InventoryManager.jsx`), dove il
+      «cartone» si chiama COLLO. Si scrive «Totale collo (€, netto)» e il
+      costo unitario si ricava dividendo per i pezzi del collo
+      (`colloTot / p`); si legge anche il totale +IVA, per confrontarlo con
+      quello del fornitore. Dal costo al pezzo discende il costo al cl
+      (`costPerCl`, mostrato da `UnitPrice`) come per ogni altro prodotto.
+      Nessun lavoro da fare qui: annotato perché la parola detta a voce
+      («cartone») non è quella del codice («collo»), e cercandola con
+      quella non si trova.
     status: implemented
     generate_issue: false
     labels: [magazzino, ux]
