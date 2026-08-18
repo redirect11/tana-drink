@@ -453,7 +453,7 @@ bugs:
       10 travasati alla lettura, 0 da sistemare).
     in_produzione: true
     status: fixed
-    generate_issue: false
+    generate_issue: true
     labels: [bug, magazzino]
     severity: lieve
     priority: P3
