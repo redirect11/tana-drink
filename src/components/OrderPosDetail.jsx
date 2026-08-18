@@ -979,10 +979,17 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   // i drink stanno nello stesso passo, e un titolo per dire una cosa sola
   // è rumore. Dividere una comanda è la deroga, ed è lì che questi titoli
   // servono davvero.
-  const gruppiVisibili = useMemo(
-    () => gruppiDelConto([...allByKey.values()], { conServizio: workflowOn }).length > 1,
+  // QUALI TITOLI HANNO SENSO. Col servizio acceso: i passi, se sono più
+  // d'uno. Col servizio spento: solo «💳 Pagati», che c'era da sempre e
+  // parla di soldi, non di lavoro — e quello si mostra appena c'è una riga
+  // pagata, perché la sua ragione è separarla da quelle ancora da pagare.
+  const gruppiMostrati = useMemo(
+    () => gruppiDelConto([...allByKey.values()], { conServizio: workflowOn }),
     [allByKey, workflowOn]
   )
+  const gruppiVisibili = workflowOn
+    ? gruppiMostrati.length > 1
+    : gruppiMostrati.includes('pagati')
   const orderedLines = useMemo(() => {
     const arr = layout.map((k) => allByKey.get(k)).filter(Boolean)
     const unpaid = arr.filter((l) => !l.paid)
@@ -993,16 +1000,18 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     // righe si mettono in fila per passo del servizio, o i titoli si
     // ripeterebbero tre volte lungo la lista; senza gruppi (il caso
     // normale) resta esattamente com'è stata sistemata.
-    const ordine = gruppiDelConto(lista, { conServizio: workflowOn })
     // La chiave si calcola UNA volta per riga, non a ogni confronto: dentro
     // il comparatore un `indexOf` su un conto da quaranta righe diventa
-    // qualche centinaio di giri per mettere in fila quaranta cose.
-    const posto = new Map(ordine.map((g, i) => [g, i]))
+    // qualche centinaio di giri per mettere in fila quaranta cose. E chi non
+    // sta in nessun gruppo mostrato viene PRIMA: col servizio spento sono le
+    // righe ancora da pagare, e i pagati vanno in fondo — è lì che si
+    // guardano.
+    const posto = new Map(gruppiMostrati.map((g, i) => [g, i]))
     return lista
-      .map((l, i) => [l, posto.get(gruppoDiRiga(l)) ?? ordine.length, i])
+      .map((l, i) => [l, posto.get(gruppoDiRiga(l)) ?? -1, i])
       .sort((a, b) => a[1] - b[1] || a[2] - b[2])
       .map(([l]) => l)
-  }, [layout, allByKey, hidePaid, gruppiVisibili, workflowOn])
+  }, [layout, allByKey, hidePaid, gruppiVisibili, gruppiMostrati])
   const paidCount = useMemo(
     () => [...allByKey.values()].filter((l) => l.paid).reduce((s, l) => s + l.qty, 0),
     [allByKey]
@@ -2307,11 +2316,13 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
               // E le due cose convivono: un conto si incassa in qualunque
               // passo del servizio — dalla cassa è chiuso, dal banco magari
               // no — e i due titoli lo dicono insieme senza contraddirsi.
-              const gruppo = gruppoDiRiga(l)
+              const gruppo = gruppiMostrati.includes(gruppoDiRiga(l)) ? gruppoDiRiga(l) : null
+              const primaDi = orderedLines[idx - 1]
+              const gruppoPrima = gruppiMostrati.includes(gruppoDiRiga(primaDi))
+                ? gruppoDiRiga(primaDi)
+                : null
               const titolo =
-                gruppiVisibili && gruppo && gruppo !== gruppoDiRiga(orderedLines[idx - 1])
-                  ? titoloGruppo(gruppo)
-                  : null
+                gruppiVisibili && gruppo && gruppo !== gruppoPrima ? titoloGruppo(gruppo) : null
               return (
                 // Il titolo del gruppo sta FUORI dal riquadro trascinabile:
                 // dentro finiva sulla stessa linea della prima riga, perché
