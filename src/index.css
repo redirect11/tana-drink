@@ -741,17 +741,30 @@ a.btn.block {
   flex-shrink: 0;
 }
 
+/* LA PASTIGLIA SI LEGGE E SI PRENDE COL DITO, AL 100%. Era tarata
+   guardandola col browser allo zoom 110: alla dimensione vera il testo era
+   piccolo e il bersaglio pure (una trentina di pixel d'altezza, sotto
+   qualunque soglia comoda). Adesso la misura è quella giusta a zoom 1, e
+   chi ingrandisce ingrandisce.
+   L'altezza minima è esplicita e non lasciata al padding: il testo di una
+   pastiglia cambia («Miei», «Solo oggi (3 da chiudere)») e con la sola
+   imbottitura l'altezza ballava da un chip all'altro. 40px: questi si
+   premono col dito su un tablet montato al banco. È sotto i 44px del
+   guardrail in DESIGN.md, e apposta — sono filtri secondari in una riga
+   che scorre, non le azioni grosse del conto; a 44 la riga dei filtri
+   diventa una fascia. */
 .chip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   white-space: nowrap;
-  padding: 6px 12px;
+  min-height: 40px;
+  padding: 8px 14px;
   border-radius: var(--raggio-pill);
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: rgba(255, 255, 255, 0.05);
   color: var(--text, #fff);
-  font-size: 0.85rem;
+  font-size: 0.95rem;
   cursor: pointer;
 }
 /* IL TAB ACCESO E I TASTI SONO LA STESSA COSA. Erano due gradienti
