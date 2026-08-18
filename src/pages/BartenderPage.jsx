@@ -1161,10 +1161,18 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // che si accendeva quando le comande le stavi già guardando: un
   // interruttore che si legge solo sapendo com'è messo adesso, e per
   // saperlo bisognava guardare le colonne. Un tasto si legge da sé — c'è
-  // scritto quello che succede a premerlo — e così vale anche per chi
-  // arriva davanti allo schermo senza sapere chi c'è stato prima.
+  // scritto quello che succede a premerlo — e vale anche per chi arriva
+  // davanti allo schermo senza sapere chi c'è stato prima.
+  //
+  // STA NELLA RIGA DEI FILTRI, MA A DESTRA. È stato provato sotto il «+»:
+  // lì restava appeso nel vuoto, rettangolare sotto un tondo, disallineato
+  // da tutto. Nella riga dei filtri ha la forma e il peso delle pastiglie
+  // che ci sono già, e ci sta senza inventare geometrie. Ma non è un
+  // filtro: a sinistra c'è quello che RESTRINGE la lista, a destra quello
+  // che CAMBIA VISTA — stessa riga, staccati, così nessuno lo legge come
+  // un filtro in più.
   const pastigliaComande = puoScegliere ? (
-    <button className="btn ghost small board-vista" onClick={cambiaVista}>
+    <button className="chip chip-vista" onClick={cambiaVista}>
       {corsieBanco ? '🧾 Ordini' : '🍸 Comande'}
     </button>
   ) : null
@@ -1813,25 +1821,16 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                 })()}
               </>
             )}
-            {/* IL «+» E IL CAMBIO VISTA, IN COLONNA. Il tasto stava in mezzo
-                ai filtri, sotto la ricerca: chi guarda la coda tiene gli
-                occhi in alto a destra, dov'è il «+», e per cambiare vista
-                doveva scendere a cercarlo fra «Miei», «Solo oggi» e
-                compagnia. Sono i due che si toccano di più: stanno
-                insieme. */}
-            <span className="board-nuovo">
-              {cassaAperta || cassaLoading ? (
-                <Link className="btn board-add" to="/pos" aria-label="Nuovo ordine" title="Nuovo ordine" />
-              ) : (
-                <button
-                  className="btn board-add"
-                  disabled
-                  aria-label="Nuovo ordine (apri prima la cassa)"
-                  title="Apri la cassa per battere ordini"
-                />
-              )}
-              {pastigliaComande}
-            </span>
+            {cassaAperta || cassaLoading ? (
+              <Link className="btn board-add" to="/pos" aria-label="Nuovo ordine" title="Nuovo ordine" />
+            ) : (
+              <button
+                className="btn board-add"
+                disabled
+                aria-label="Nuovo ordine (apri prima la cassa)"
+                title="Apri la cassa per battere ordini"
+              />
+            )}
           </div>
           {/* SECONDA RIGA: conteggi e legenda degli autori. Stavano dentro
               il titolo, e il titolo diventava alto due o tre righe: la
@@ -2055,6 +2054,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                 📅 Solo oggi{arretrati.length ? ` (${arretrati.length} da chiudere)` : ''}
               </button>
             )}
+            {pastigliaComande}
           </div>
           {righeSottoChiusi(boardFilter === 'chiusi')}
           {/* Griglia: ordini in invio (grigi) + ordini secondo il filtro */}
@@ -2120,6 +2120,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                 ▦ Colonne
               </button>
             )}
+            {pastigliaComande}
           </div>
           {righeSottoChiusi(!corsieBanco)}
           {corsieBanco && scegliCorsie && (
