@@ -2263,6 +2263,18 @@ requirements:
       serve piu' a nessuno, e due letture diverse della stessa serata
       convivendo sono il modo migliore per non fidarsi di nessuna delle
       due.
+      RESTA APERTA UNA COSA del vocale delle 15:47, e qui non e' decisa:
+      lui dice che le macro-categorie «sono indissolubilmente legate»,
+      che magazzino e menu «convogliano insieme nelle macro categorie che
+      sono le stesse, non sono separabili». Oggi invece gli elenchi sono
+      DUE (campo `ambito`, magazzino e menu) con un aggancio dall'uno
+      all'altro, e sono due perche' il 17/08 aveva chiesto di tenerli
+      distinti. Le due frasi possono voler dire la stessa cosa — stessa
+      famiglia di nomi, guardata da due parti — oppure che l'elenco
+      dev'essere uno solo: da chiedere, perche' se e' uno solo l'aggancio
+      `macro_menu_id` non serve piu' e le due sottosezioni tornano una.
+      IN QUALE MESE cade quello che si e' comprato e' un'altra domanda
+      ancora, e sta a parte in REQ-MAG-021 (vocali del 18/08 sera).
     status: todo
     generate_issue: true
     labels: [magazzino, menu, statistiche]
@@ -4173,3 +4185,68 @@ requirements:
     labels: [magazzino, ui]
     priority: P3
     test_cases: [tests/component/InventoryManagerCard.test.jsx]
+
+  - id: REQ-MAG-021
+    title: "Un acquisto conta nel mese in cui si consuma, non in quello in cui si compra"
+    area: "src/lib/macroStats.js, src/lib/stats.js, src/components/StatsTab.jsx (vista «Mensile per macro»)"
+    description: >
+      Chiesto da Flavio a voce (18/08, sei vocali di fila fra le 21:34 e le
+      21:40). Oggi un acquisto conta nel mese in cui è stato caricato. Lui
+      vuole che conti nel mese in cui la merce viene CONSUMATA, cioè
+      venduta: «in realtà non conta quando l'acquisto tanto quanto quando
+      lo vendo». La tabella mensile serve a mettere di fronte quello che è
+      entrato e quello che è uscito, e due numeri che parlano di merci
+      diverse non si confrontano.
+      COME SI MUOVE. L'acquisto nasce nel mese in cui si carica; poi, man
+      mano che quella merce viene consumata, la quota consumata ESCE dal
+      mese di carico ed ENTRA nel mese del consumo. Parole sue: «me la
+      toglie da febbraio e me la mette a marzo». Conseguenza che ha detto
+      lui stesso, e che va accettata: i mesi passati non restano fermi,
+      «gli acquisti non restano sempre uguali, possono aumentare possono
+      diminuire a seconda di dove ho utilizzato quella materia».
+      LA GRANA È LA PORZIONE, non la fattura e non la bottiglia. Il suo
+      esempio più chiaro: un rum Bumbu da 50 euro comprato il 20 febbraio,
+      il primo Bumbu servito il 3 marzo. Quella porzione va su marzo, e
+      «mano a mano che la vado a consumare a marzo, me la toglie da
+      febbraio e me la mette a marzo»; se la bottiglia avanza, quello che
+      si consuma ad aprile finisce ad aprile, «finché non acquisto una
+      nuova bottiglia o finché non finisco quella».
+      SECONDO ESEMPIO, a unità intere: il 20 febbraio ci sono 10 Schweppes
+      in casa e si compra un cartone da 24. A febbraio si consumano solo
+      le 10 vecchie. Il 1° marzo il primo gin tonic prende la prima delle
+      24: quella singola unità passa a marzo.
+      PERCHÉ NASCE. Non è teoria contabile, è quello che gli sballa i
+      conti: «finché queste cose succedono a inizio mese è probabile che
+      acquisto in un mese e vendo nello stesso mese, ma quando faccio un
+      acquisto a fine mese, quell'acquisto io probabilmente lo utilizzerò
+      nel mese entrante». Una spesa grossa fatta il 30 del mese oggi
+      affonda il mese che finisce e regala margine a quello che comincia.
+      DA CONFERMARE — quale carico si consuma per primo. Dalle sue parole
+      («finché non acquisto una nuova bottiglia o finché non finisco
+      quella») si legge che si consuma prima la merce più vecchia, e che a
+      migrare è il costo del carico da cui si sta attingendo. Non l'ha
+      però detto come regola, e cambia i numeri quando lo stesso prodotto
+      è stato comprato a prezzi diversi: va confermato prima di scrivere
+      codice.
+      DOMANDE APERTE, da portare a chi ha parlato e non da indovinare:
+      (1) la merce che non viene MAI venduta — rotture, cali, sfrido,
+      quello che sparisce e si scopre all'inventario — resta nel mese di
+      acquisto per sempre, o esce nel mese in cui l'inventario la scarica?
+      (2) un mese già guardato cambia anche mesi dopo: va bene che febbraio
+      letto a maggio dia numeri diversi da come si leggeva a marzo, o a un
+      certo punto un mese si chiude e non si tocca più?
+      (3) questa regola vale solo per la vista mensile degli acquisti, o
+      anche per il registro delle fatture e per la valorizzazione
+      dell'inventario, dove l'acquisto è un fatto con la sua data?
+      DA SAPERE PRIMA DI STIMARLA: per dire da quale carico esce quello che
+      si consuma serve tenere traccia dei carichi uno per uno, e oggi il
+      magazzino tiene la giacenza, non i lotti. Il lavoro grosso è lì, non
+      nella tabella.
+      SI INCASTRA CON REQ-MAG-015, e le due non si confondono: quella dice
+      a quale MACRO va attribuita una vendita, questa dice in quale MESE va
+      attribuito un acquisto. Vivono nella stessa tabella e vanno pensate
+      insieme.
+    status: todo
+    generate_issue: true
+    labels: [magazzino, statistiche]
+    test_cases: []
