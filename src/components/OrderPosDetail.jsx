@@ -66,6 +66,7 @@ import {
 import { toastSuccess, toastError } from '../lib/toast.js'
 import { printComanda, printScontrino } from '../lib/printer.js'
 import PosProductPicker from './PosProductPicker.jsx'
+import PreparazioneParziale from './PreparazioneParziale.jsx'
 import { IconPrinter, IconReceipt, IconCard, IconRefresh, IconX, IconCheck, IconClose, IconGruppo, IconPersona, IconTag } from './Icons.jsx'
 import {
   DndContext,
@@ -715,23 +716,16 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   // impedisce, lo REGISTRA, così il conto resta giusto e la coda dice
   // davvero cosa è al banco e cosa aspetta ancora.
   //
-  // Quale comanda si sta dividendo e quante unità per riga:
-  // { comandaId, scelte: { indice della riga → quante se ne fanno adesso } }.
+  // QUALE comanda si sta dividendo. Le quantità le tiene il riquadro, che
+  // sta in un file suo (PreparazioneParziale) perché lo stesso gesto si fa
+  // anche dal dettaglio della comanda: due schermate che dividono in due
+  // modi diversi sarebbero due modi diversi di sbagliare il conto.
   const [parziale, setParziale] = useState(null)
   // Quali comande sono state divise DA QUI, in attesa che lo dica il
   // server: senza, per un istante si leggerebbe «Annullato» al posto di
   // «Divisa», cioè «un drink è saltato» invece di «è diventato quei due».
   const [divise, setDivise] = useState([])
-  const sceltaRiga = (i) => Number(parziale?.scelte?.[i]) || 0
-  const cambiaScelta = (i, delta, massimo) =>
-    setParziale((p) => {
-      if (!p) return p
-      const ora = Math.min(massimo, Math.max(0, (Number(p.scelte[i]) || 0) + delta))
-      return { ...p, scelte: { ...p.scelte, [i]: ora } }
-    })
-
-  const confermaParziale = (c) => {
-    const scelte = (c.items || []).map((_, i) => sceltaRiga(i))
+  const confermaParziale = (c, scelte) => {
     const divisa = dividiComanda(c, scelte)
     if (!divisa) return
     setParziale(null)
@@ -2725,59 +2719,17 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                       Solo su una comanda ancora DA FARE: quello che è già
                       al banco non si divide, il lavoro è cominciato. */}
                   {workflowOn && !closed && comandaDivisibile(c) && (
-                    parziale?.comandaId === c.id ? (
-                      <div className="comanda-parziale">
-                        <div className="muted small" style={{ marginBottom: 4 }}>
-                          Quanti ne prepari adesso?
-                        </div>
-                        {(c.items || []).map((i, idx) => (
-                          <div className="row between comanda-parziale-riga" key={idx}>
-                            <span className="small">
-                              {i.custom ? '✨ ' : ''}
-                              {i.name}{' '}
-                              <span className="muted">di {i.qty}</span>
-                            </span>
-                            <span className="row" style={{ gap: 6, alignItems: 'center' }}>
-                              <button
-                                className="btn ghost small"
-                                aria-label={`Uno in meno di ${i.name}`}
-                                disabled={sceltaRiga(idx) === 0}
-                                onClick={() => cambiaScelta(idx, -1, i.qty)}
-                              >
-                                −
-                              </button>
-                              <strong style={{ minWidth: '1.5em', textAlign: 'center' }}>
-                                {sceltaRiga(idx)}
-                              </strong>
-                              <button
-                                className="btn ghost small"
-                                aria-label={`Uno in più di ${i.name}`}
-                                disabled={sceltaRiga(idx) >= i.qty}
-                                onClick={() => cambiaScelta(idx, +1, i.qty)}
-                              >
-                                +
-                              </button>
-                            </span>
-                          </div>
-                        ))}
-                        <div className="grid-2" style={{ marginTop: 8, gap: 6 }}>
-                          <button className="btn ghost small" onClick={() => setParziale(null)}>
-                            Lascia stare
-                          </button>
-                          <button
-                            className="btn small"
-                            disabled={(c.items || []).every((_, idx) => sceltaRiga(idx) === 0)}
-                            onClick={() => confermaParziale(c)}
-                          >
-                            Preparo questi
-                          </button>
-                        </div>
-                      </div>
+                    parziale === c.id ? (
+                      <PreparazioneParziale
+                        comanda={c}
+                        onAnnulla={() => setParziale(null)}
+                        onConferma={(scelte) => confermaParziale(c, scelte)}
+                      />
                     ) : (
                       <button
                         className="btn ghost small block"
                         style={{ marginTop: 6 }}
-                        onClick={() => setParziale({ comandaId: c.id, scelte: {} })}
+                        onClick={() => setParziale(c.id)}
                       >
                         ✂️ Preparazione parziale
                       </button>

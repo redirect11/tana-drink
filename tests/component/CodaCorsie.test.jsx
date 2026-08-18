@@ -315,6 +315,28 @@ describe('le corsie di chi guarda la serata (admin)', () => {
     expect(within(corsia('attivi')).queryByText('#48')).not.toBeInTheDocument()
   })
 
+  // ABBIAMO CAMBIATO IDEA: prima la pastiglia c'era solo se la coda era
+  // già disegnata a corsie. Ma la vista del banco è una vista A SÉ, non una
+  // variante delle corsie: chi tiene la cassa lavora in GRIGLIA perché è
+  // quella che gli serve per i conti, e a metà serata vuole dare
+  // un'occhiata a com'è messa la preparazione senza andare in Impostazioni
+  // a cambiare vista, guardare, e tornare a rimetterla com'era.
+  it('la pastiglia «Comande» c’è anche a griglia, e tornando indietro la griglia è lì', async () => {
+    const utente = userEvent.setup()
+    impostazioni = { ...impostazioni, queue_view: 'griglia' }
+    montaCoda()
+    await screen.findByText(/In servizio/)
+    expect(document.querySelector('.order-grid')).toBeTruthy()
+
+    await utente.click(screen.getByRole('button', { name: /Comande/ }))
+    expect(await screen.findByText('Da fare')).toBeInTheDocument()
+    expect(document.querySelector('.order-grid')).toBe(null)
+
+    await utente.click(screen.getByRole('button', { name: /Comande/ }))
+    await waitFor(() => expect(document.querySelector('.order-grid')).toBeTruthy())
+    expect(screen.queryByText('Da fare')).not.toBeInTheDocument()
+  })
+
   it('niente tasto «Colonne»: tre corsie ci stanno tutte, non c’è niente da spegnere', async () => {
     montaCoda()
     await screen.findByText('In corso')
@@ -399,7 +421,6 @@ describe('le corsie del banco: una card per comanda', () => {
       'In preparazione',
       'Ritiro/Servizio',
       'Ritirato/Servito',
-      'Da incassare',
     ]) {
       expect(titoli.some((t) => t.startsWith(titolo))).toBe(true)
     }
@@ -420,11 +441,16 @@ describe('le corsie del banco: una card per comanda', () => {
     expect(within(alRitiro).getByText('#36')).toBeInTheDocument()
     expect(within(alRitiro).getByText('Pagato')).toBeInTheDocument()
 
-    // Da incassare: il conto consegnato e non saldato, con la cifra grande
-    const daIncassare = corsia('da-incassare')
-    expect(within(daIncassare).getByText('#33')).toBeInTheDocument()
-    expect(within(daIncassare).getByText('Tavolo 9 · 6 drink')).toBeInTheDocument()
-    expect(daIncassare.querySelector('.corsia-cifra')).toHaveTextContent('58,00 €')
+    // Ritirato/Servito: la comanda consegnata di un conto non saldato.
+    // C'era una colonna «Da incassare» con dentro il CONTO: conteneva gli
+    // stessi drink di questa, solo raggruppati per conto invece che per
+    // ticket. La card resta il ticket e non chiede soldi — dice che quei
+    // drink sono usciti — e il tasto porta in cassa.
+    const ritirati = corsia('ritirati')
+    expect(within(ritirati).getByText('#33')).toBeInTheDocument()
+    expect(within(ritirati).getByText('Tavolo 9')).toBeInTheDocument()
+    expect(within(ritirati).getByText(/Spritz/)).toBeInTheDocument()
+    expect(document.querySelector('.corsia-da-incassare')).toBe(null)
   })
 
   it('il tasto fa avanzare QUELLA comanda, non tutto il conto', async () => {
@@ -451,7 +477,7 @@ describe('le corsie del banco: una card per comanda', () => {
       within(corsia('al-ritiro')).getAllByRole('button', { name: 'Ritirato/Servito' })[0]
     ).toBeInTheDocument()
     expect(
-      within(corsia('da-incassare')).getByRole('button', { name: 'Incassa' })
+      within(corsia('ritirati')).getByRole('button', { name: 'Incassa' })
     ).toBeInTheDocument()
   })
 
@@ -471,16 +497,15 @@ describe('le corsie del banco: una card per comanda', () => {
     await utente.click(within(card).getByRole('button', { name: /Conto/ }))
     expect(navigateSpy).toHaveBeenCalledWith('/ordine/o41')
 
-    // NELLA COLONNA DEI SOLDI la card è già il conto: non c'è una comanda
-    // sola da aprire, e un secondo tasto «Conto» sarebbe un doppione.
-    const cassa = within(corsia('da-incassare')).getByText('#33').closest('.corsia-card')
-    expect(within(cassa).queryByRole('button', { name: /Conto/ })).not.toBeInTheDocument()
-    await utente.click(within(corsia('da-incassare')).getByText('#33'))
-    expect(navigateSpy).toHaveBeenCalledWith('/ordine/o33')
+    // ANCHE LA COMANDA SERVITA È UN TICKET: si apre come le altre, e ha il
+    // suo tasto per il conto. Prima quella colonna conteneva il CONTO, e
+    // toccarla apriva direttamente il conto.
+    await utente.click(within(corsia('ritirati')).getByText('#33'))
+    expect(navigateSpy).toHaveBeenCalledWith('/ordine/o33/comanda/c-o33')
 
     // «Incassa» invece porta dritto al pagamento del conto, che è il flusso
     // esistente: sconto, conto diviso, contanti, carta e lettore stanno lì.
-    await utente.click(within(corsia('da-incassare')).getByRole('button', { name: 'Incassa' }))
+    await utente.click(within(corsia('ritirati')).getByRole('button', { name: 'Incassa' }))
     expect(navigateSpy).toHaveBeenCalledWith('/ordine/o33?pagamento=1')
   })
 
@@ -497,7 +522,7 @@ describe('le corsie del banco: una card per comanda', () => {
     // le colonne restano tutte, anche svuotate: la loro posizione si
     // impara a memoria
     const titoli = [...document.querySelectorAll('.corsia-titolo')].map((n) => n.textContent)
-    for (const titolo of ['Da fare', 'In preparazione', 'Ritiro/Servizio', 'Da incassare']) {
+    for (const titolo of ['Da fare', 'In preparazione', 'Ritiro/Servizio', 'Ritirato/Servito']) {
       expect(titoli.some((t) => t.startsWith(titolo))).toBe(true)
     }
   })
@@ -611,7 +636,7 @@ describe('le corsie del banco: una card per comanda', () => {
     // la card si nota: non è una voce archiviata sbiadita
     expect(daFare.querySelector('.corsia-card')).toHaveClass('pagato-da-servire')
     // e non chiede soldi a nessuno: è già saldato
-    expect(within(corsia('da-incassare')).queryByText('#45')).not.toBeInTheDocument()
+    expect(within(corsia('ritirati')).queryByText('#45')).not.toBeInTheDocument()
 
     // «Chiuse» non ingombra il banco, ma si accende dal filtro — e lì
     // dentro questo conto NON c'è: il drink è ancora da fare.
@@ -623,15 +648,15 @@ describe('le corsie del banco: una card per comanda', () => {
 
   // CHI STA ALLO SHAKER NON INCASSA: quella colonna gli ruba spazio, e si
   // spegne come tutte le altre. Chi sta in cassa la tiene.
-  it('anche «Da incassare» si nasconde dal filtro', async () => {
+  it('anche «Ritirato/Servito» si nasconde dal filtro', async () => {
     const utente = userEvent.setup()
     montaCoda()
     await screen.findByText('Da fare')
-    expect(corsia('da-incassare')).toBeTruthy()
+    expect(corsia('ritirati')).toBeTruthy()
 
     await utente.click(screen.getByRole('button', { name: /Colonne/ }))
-    await utente.click(screen.getByRole('button', { name: 'Da incassare', pressed: true }))
-    expect(corsia('da-incassare')).toBeFalsy()
+    await utente.click(screen.getByRole('button', { name: 'Ritirato/Servito', pressed: true }))
+    expect(corsia('ritirati')).toBeFalsy()
     expect(corsia('da-fare')).toBeTruthy()
   })
 
