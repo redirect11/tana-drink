@@ -922,3 +922,25 @@ bugs:
     generate_issue: true
     labels: [bug, stampa]
     test_cases: []
+
+  - id: BUG-033
+    title: "I passi del servizio si vedevano nel conto anche col servizio spento"
+    area: "src/lib/comande.js, src/components/OrderPosDetail.jsx"
+    description: >
+      Segnalato dall'utente il 18/08, con lo screenshot: nel conto le righe
+      erano intestate «🍹 In preparazione» e «💳 Pagati» in un locale che
+      NON segue la preparazione. Quei passi lì non esistono per nessuno, e
+      leggerli in mezzo alle righe è una parola che parla di una cosa che
+      quel locale non fa.
+      CAUSA: il raggruppamento delle righe guardava solo se i gruppi erano
+      più d'uno, non se il locale segue il servizio. Le comande hanno uno
+      stato comunque, anche a preparazione spenta, quindi i titoli
+      comparivano lo stesso.
+      RISOLTO: `gruppiDelConto` sa se il servizio è acceso; a spento resta
+      la sola divisione dei PAGATI, che c'era da prima e riguarda i soldi,
+      non il lavoro.
+    in_produzione: false
+    status: fixed
+    generate_issue: false
+    labels: [bug, pos, comande]
+    test_cases: [tests/component/OrderPosDetail.test.jsx, tests/unit/comande.test.js]

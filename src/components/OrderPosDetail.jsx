@@ -300,6 +300,10 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   const [showRipristino, setShowRipristino] = useState(false)
   const [askName, setAskName] = useState(false) // modale nome (creazione)
   const [settings, setSettings] = useState(settingsIniziali)
+  // Il locale segue la preparazione? Sta qui in alto perché lo chiedono in
+  // due punti lontani fra loro: come si raggruppano le righe (qui sotto) e
+  // quali tasti di avanzamento esistono (più giù).
+  const workflowOn = settings.workflow_enabled !== false
   useEffect(() => subscribeSettings(setSettings, () => {}), [])
 
   // CONTO DI GRUPPO (solo in creazione): si arriva qui da /pos?group=<id>
@@ -976,8 +980,8 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   // è rumore. Dividere una comanda è la deroga, ed è lì che questi titoli
   // servono davvero.
   const gruppiVisibili = useMemo(
-    () => gruppiDelConto([...allByKey.values()]).length > 1,
-    [allByKey]
+    () => gruppiDelConto([...allByKey.values()], { conServizio: workflowOn }).length > 1,
+    [allByKey, workflowOn]
   )
   const orderedLines = useMemo(() => {
     const arr = layout.map((k) => allByKey.get(k)).filter(Boolean)
@@ -989,7 +993,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     // righe si mettono in fila per passo del servizio, o i titoli si
     // ripeterebbero tre volte lungo la lista; senza gruppi (il caso
     // normale) resta esattamente com'è stata sistemata.
-    const ordine = gruppiDelConto(lista)
+    const ordine = gruppiDelConto(lista, { conServizio: workflowOn })
     // La chiave si calcola UNA volta per riga, non a ogni confronto: dentro
     // il comparatore un `indexOf` su un conto da quaranta righe diventa
     // qualche centinaio di giri per mettere in fila quaranta cose.
@@ -998,7 +1002,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
       .map((l, i) => [l, posto.get(gruppoDiRiga(l)) ?? ordine.length, i])
       .sort((a, b) => a[1] - b[1] || a[2] - b[2])
       .map(([l]) => l)
-  }, [layout, allByKey, hidePaid, gruppiVisibili])
+  }, [layout, allByKey, hidePaid, gruppiVisibili, workflowOn])
   const paidCount = useMemo(
     () => [...allByKey.values()].filter((l) => l.paid).reduce((s, l) => s + l.qty, 0),
     [allByKey]
@@ -1349,7 +1353,6 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
 
   // In che passo nasce un conto lo dice il locale, e lo dice in un posto
   // solo (statoComandaNuova): qui non si decide niente, si chiede.
-  const workflowOn = settings.workflow_enabled !== false
   const statoIniziale = statoComandaNuova(settings)
   // Stesso motivo per il passo in cui nasce una comanda: l'impostazione può
   // cambiare mentre la schermata è aperta, e il callback dell'aggiunta è

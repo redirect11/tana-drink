@@ -1793,6 +1793,34 @@ describe('le righe del conto dicono a che punto sono', () => {
     expect(titoli()).toEqual([])
   })
 
+  // SENZA GLI STATI DEL SERVIZIO QUEI TITOLI NON ESISTONO. Il locale che
+  // non segue la preparazione non ha un «in preparazione» da nessuna parte:
+  // vederselo comparire in mezzo alle righe di un conto è una parola che
+  // parla di una cosa che lì non si fa (BUG-033). Resta la divisione dei
+  // pagati, che c'era da prima e riguarda i soldi, non il lavoro.
+  it('col servizio spento i passi non si vedono, i pagati sì', () => {
+    mockSettings.workflow_enabled = false
+    try {
+      mount(
+        baseOrder({
+          comande: [
+            {
+              id: 'c1', seq: 1, status: 'in_preparazione', status_times: {},
+              items: [{ drink_id: 'gin', name: 'Gin Tonic', unit_price: 8, qty: 2 }],
+            },
+            {
+              id: 'c2', seq: 2, status: 'ricevuto', status_times: {},
+              items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1 }],
+            },
+          ],
+        })
+      )
+      expect(titoli()).toEqual([])
+    } finally {
+      delete mockSettings.workflow_enabled
+    }
+  })
+
   it('divisa la comanda, le righe si raggruppano per passo', () => {
     mount(
       baseOrder({

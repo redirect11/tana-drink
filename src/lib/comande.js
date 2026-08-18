@@ -487,9 +487,17 @@ export function gruppoDiRiga(riga) {
 // I gruppi presenti nella lista, in ordine di lavorazione e coi pagati in
 // fondo. Serve a decidere se intestarli: con UN gruppo solo non si mette un
 // titolo per dire una cosa sola.
-export function gruppiDelConto(righe) {
+// `conServizio` a false quando il locale NON segue la preparazione: lì i
+// passi del servizio non esistono per nessuno, e vedersi comparire «In
+// preparazione» in mezzo alle righe di un conto è una parola che parla di
+// una cosa che quel locale non fa. Resta la divisione che c'era già da
+// sempre: quello che è stato pagato con un acconto, sotto «💳 Pagati».
+export function gruppiDelConto(righe, { conServizio = true } = {}) {
   const visti = new Set((righe || []).map(gruppoDiRiga).filter(Boolean))
-  return [...COMANDA_FLOW, ORDER_STATUSES.ANNULLATO, 'pagati'].filter((g) => visti.has(g))
+  const possibili = conServizio
+    ? [...COMANDA_FLOW, ORDER_STATUSES.ANNULLATO, 'pagati']
+    : ['pagati']
+  return possibili.filter((g) => visti.has(g))
 }
 
 export function titoloGruppo(gruppo) {
