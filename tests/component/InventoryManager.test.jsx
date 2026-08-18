@@ -247,6 +247,22 @@ describe('la schermata del magazzino (REQ-MAG-010)', () => {
     expect(screen.getByText('Gin Mare')).toBeInTheDocument()
   })
 
+  it('«In scorta» lascia quello che c’è, esaurimento compreso', async () => {
+    // Mancava la domanda più ovvia di tutte: al banco c'erano 232 esauriti
+    // su 388, e per vedere cosa c'era davvero bisognava guardare «Tutti» e
+    // saltare a occhio due terzi di righe.
+    const user = userEvent.setup()
+    mostra()
+    await aspettaLista()
+    await user.click(screen.getByRole('button', { name: /⚗️ Filtra/ }))
+    const voce = screen.getByRole('button', { name: /In scorta/ })
+    // Il conteggio c'è come sulle altre voci: Gin Mare, Rum e Ichnusa.
+    expect(voce).toHaveTextContent('3')
+    await user.click(voce)
+    expect(screen.getByText('Gin Mare')).toBeInTheDocument()
+    expect(screen.queryByText('Vodka Vecchia')).toBeNull()
+  })
+
   it('l’assortimento filtra a più valori insieme (linea + premium)', async () => {
     // REQ-MAG-007 visto dalla schermata: la domanda vera è quasi sempre
     // combinata («linea e premium, senza gli out»).

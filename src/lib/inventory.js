@@ -465,18 +465,42 @@ export function stockStatus(item) {
   return 'ok'
 }
 
-// Conteggi per i chip di riepilogo: totale prodotti, in esaurimento, esauriti.
+// ── C'È O NON C'È ────────────────────────────────────────────────────
+//
+// La domanda più ovvia di tutte — cosa c'è davvero sullo scaffale — nel
+// filtro non c'era: si poteva chiedere solo cosa sta finendo e cosa è
+// finito, e per vedere il resto bisognava guardare «Tutti» e saltare a
+// occhio due terzi di righe esaurite (232 su 388, al banco, il 18/08).
+//
+// GLI «IN ESAURIMENTO» CI STANNO DENTRO: sono in magazzino, solo pochi.
+// «In esaurimento» è una lente più stretta dentro la stessa famiglia, non
+// un'altra famiglia — e chi guarda cosa c'è vuole vedere anche l'ultima
+// bottiglia di gin, che è proprio quella che gli serve sapere.
+//
+// Quello che NON È UNA SCORTA — il tempo di lavorazione, il lavoro a
+// servizio — non sta né di qua né di là: non ha giacenza, non è né
+// disponibile né esaurito. Metterlo fra i disponibili vorrebbe dire dire
+// che c'è sullo scaffale una cosa che sullo scaffale non ci va.
+export function haGiacenza(item) {
+  return eScorta(item) && (Number(item?.stock) || 0) > 0
+}
+
+// Conteggi per i chip di riepilogo: totale prodotti, in scorta, in
+// esaurimento, esauriti. In scorta ed esauriti si dividono tutte le scorte,
+// e in esaurimento è un sottoinsieme del primo.
 export function inventorySummary(items) {
   let total = 0
+  let inScorta = 0
   let low = 0
   let empty = 0
   for (const it of items || []) {
     total += 1
+    if (haGiacenza(it)) inScorta += 1
     const st = stockStatus(it)
     if (st === 'low') low += 1
     else if (st === 'empty') empty += 1
   }
-  return { total, low, empty }
+  return { total, inScorta, low, empty }
 }
 
 // Filtra/ordina la lista inventario per ricerca (nome), categoria, fornitore e stato.
@@ -516,7 +540,11 @@ export function filterItems(
     } else if (supplierId !== 'all') {
       if (it.supplier_id !== supplierId) return false
     }
-    if (status !== 'all' && stockStatus(it) !== status) return false
+    // «In scorta» non è uno stato di stockStatus: è la domanda «c'è?», e
+    // comprende anche quello che sta finendo (vedi haGiacenza).
+    if (status === 'in_scorta') {
+      if (!haGiacenza(it)) return false
+    } else if (status !== 'all' && stockStatus(it) !== status) return false
     // null o lista vuota = nessun filtro: si vede tutto (non "niente", che
     // farebbe sparire l'inventario a chi deseleziona per sbaglio).
     if (Array.isArray(assortimenti) && assortimenti.length > 0) {

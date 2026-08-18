@@ -16,6 +16,7 @@ import {
   formatIn,
   fmtItem,
   inventorySummary,
+  haGiacenza,
   filterItems,
   qtyInStockUnit,
   entryUnits,
@@ -133,11 +134,41 @@ describe('inventorySummary', () => {
     { stock: 0, low_threshold: 10 }, // empty
     { stock: 8, low_threshold: 10 }, // low
   ]
-  it('conta totale, low e empty', () => {
-    expect(inventorySummary(items)).toEqual({ total: 4, low: 2, empty: 1 })
+  it('conta totale, in scorta, low e empty', () => {
+    // In scorta sono i tre che ci sono davvero: gli «in esaurimento» ci
+    // stanno dentro, perché sono in magazzino, solo pochi.
+    expect(inventorySummary(items)).toEqual({ total: 4, inScorta: 3, low: 2, empty: 1 })
   })
   it('lista vuota', () => {
-    expect(inventorySummary([])).toEqual({ total: 0, low: 0, empty: 0 })
+    expect(inventorySummary([])).toEqual({ total: 0, inScorta: 0, low: 0, empty: 0 })
+  })
+  it('in scorta ed esauriti si dividono tutte le scorte', () => {
+    // È il conto che chi guarda fa a occhio: se non torna, i numeri del
+    // menu sembrano sbagliati anche quando non lo sono.
+    const r = inventorySummary(items)
+    expect(r.inScorta + r.empty).toBe(r.total)
+  })
+})
+
+// ── QUELLO CHE NON STA SU NESSUNO SCAFFALE ───────────────────────────
+// Il «Tempo di Lavorazione» è a listino per mettere il lavoro nel costo di
+// un drink: non ha giacenza, e non è né disponibile né esaurito. Contarlo
+// fra i disponibili vorrebbe dire dire che c'è sullo scaffale una cosa che
+// sullo scaffale non ci va; fra gli esauriti, mandare a comprare il tempo.
+describe('haGiacenza', () => {
+  it('c’è quello che sta sopra zero, esaurimento compreso', () => {
+    expect(haGiacenza({ stock: 100, low_threshold: 10 })).toBe(true)
+    expect(haGiacenza({ stock: 5, low_threshold: 10 })).toBe(true)
+    expect(haGiacenza({ stock: 0 })).toBe(false)
+    // Una giacenza andata sotto zero è un errore da correggere, non merce.
+    expect(haGiacenza({ stock: -0.04 })).toBe(false)
+  })
+
+  it('e quello che non è una scorta non c’è né manca', () => {
+    const lavoro = { name: 'Tempo di Lavorazione', unit: 'pz', scorta: false, stock: 12 }
+    expect(haGiacenza(lavoro)).toBe(false)
+    expect(stockStatus(lavoro)).toBe('ok') // e non risulta nemmeno esaurito
+    expect(inventorySummary([lavoro])).toEqual({ total: 1, inScorta: 0, low: 0, empty: 0 })
   })
 })
 
@@ -811,7 +842,9 @@ describe('articolo in unità generiche (U)', () => {
     expect(stockStatus(tempo)).toBe('ok')
     expect(stockStatus({ ...tempo, stock: 0, low_threshold: 10 })).toBe('ok')
     expect(stockStatus({ ...tempo, stock: -5 })).toBe('ok')
-    expect(inventorySummary([tempo])).toEqual({ total: 1, low: 0, empty: 0 })
+    // E nemmeno «in scorta»: non sta su nessuno scaffale, quindi non è né
+    // disponibile né esaurito.
+    expect(inventorySummary([tempo])).toEqual({ total: 1, inScorta: 0, low: 0, empty: 0 })
   })
 
   it('e non vale niente in magazzino: il lavoro non sta sullo scaffale', () => {
@@ -1115,5 +1148,27 @@ describe('dalla giacenza all’unità scelta', () => {
     // Meglio il numero vero che uno inventato con una moltiplicazione a caso.
     expect(fromStockUnit(5, 'cl', { unit: 'pz' })).toBe(5)
     expect(fromStockUnit(0, 'cl', gin)).toBe(0)
+  })
+})
+
+// Il filtro che mancava: «cosa c'è davvero sullo scaffale». Prima si poteva
+// chiedere solo cosa sta finendo e cosa è finito.
+describe('filterItems: in scorta', () => {
+  const items = [
+    { id: 'a', name: 'Gin', stock: 100, low_threshold: 10 },
+    { id: 'b', name: 'Vodka', stock: 5, low_threshold: 10 },
+    { id: 'c', name: 'Rum', stock: 0, low_threshold: 10 },
+    { id: 'd', name: 'Tempo di Lavorazione', scorta: false, stock: 3 },
+  ]
+
+  it('lascia quello che c’è, con dentro anche quello che sta finendo', () => {
+    const out = filterItems(items, { status: 'in_scorta' }).map((i) => i.id)
+    expect(out).toEqual(['a', 'b'])
+  })
+
+  it('e le altre lenti restano quelle di prima', () => {
+    expect(filterItems(items, { status: 'low' }).map((i) => i.id)).toEqual(['b'])
+    expect(filterItems(items, { status: 'empty' }).map((i) => i.id)).toEqual(['c'])
+    expect(filterItems(items, { status: 'all' })).toHaveLength(4)
   })
 })
