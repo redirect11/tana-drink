@@ -133,3 +133,27 @@ export function cambioModoPermesso(order) {
   const incassato = (order.payments || []).reduce((s, p) => s + (Number(p.amount) || 0), 0)
   return incassato > 0 ? 'senza-soldi' : 'si'
 }
+
+// ── LA FRASE DELL'ANNULLO SEGUE IL MONDO DELLA CONSEGNA ───────────
+//
+// Annullando un ordine si propone al cliente una frase: «Prego recarsi al
+// bancone» oppure «Lo staff sarà subito da te». La prima ha senso solo
+// dove il RITIRO esiste — in un locale a solo servizio manda una persona a
+// un bancone dove nessuno la aspetta, che è peggio di non dirle niente.
+//
+// Come per «Lo sceglie il cliente»: la voce impossibile non sparisce, si
+// spegne col motivo — sparire fa dubitare di averla immaginata — e la
+// frase di partenza torna a quella valida invece di restare
+// un'impostazione che non si può applicare.
+export function fraseAnnulloPossibile(chiave, settings) {
+  if (chiave !== 'bancone') return true
+  return mondoConsegna(settings) === 'entrambi'
+}
+
+export function fraseAnnulloDefault(settings) {
+  const scelta = settings?.cancel_phrase_default
+  if (scelta && fraseAnnulloPossibile(scelta, settings)) return scelta
+  // In un locale a solo servizio l'unica che si può dire è quella dello
+  // staff; altrove resta il bancone, che è come ha sempre funzionato.
+  return mondoConsegna(settings) === 'entrambi' ? 'bancone' : 'staff'
+}

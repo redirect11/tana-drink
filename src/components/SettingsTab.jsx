@@ -9,6 +9,8 @@ import { CANCEL_PHRASES } from '../lib/orderStatus.js'
 import {
   MODI_CONSEGNA,
   clienteSceglie,
+  fraseAnnulloDefault,
+  fraseAnnulloPossibile,
   modoAllaNascita,
   mondoConsegna,
 } from '../lib/consegna.js'
@@ -1058,17 +1060,49 @@ export default function SettingsTab({ role = null }) {
                 Frase proposta di default quando annulli un ordine (modificabile di
                 volta in volta nel dialog di annullamento).
               </p>
+              {/* LA FRASE SEGUE IL MONDO DELLA CONSEGNA. «Prego recarsi al
+                  bancone» ha senso solo dove il RITIRO esiste: in un locale a
+                  solo servizio manda una persona a un bancone dove nessuno
+                  la aspetta. La voce impossibile si spegne col motivo, non
+                  sparisce — sparire fa dubitare di averla immaginata — e
+                  quella evidenziata è quella che si applica davvero
+                  (fraseAnnulloDefault), non l'impostazione impossibile
+                  rimasta scritta. */}
               <div className="mode-choice">
-                {Object.entries(CANCEL_PHRASES).map(([key, text]) => (
-                  <button
-                    key={key}
-                    className={`mode-option${settings.cancel_phrase_default === key ? ' active' : ''}`}
-                    onClick={() => save({ cancel_phrase_default: key })}
-                  >
-                    {text}
-                  </button>
-                ))}
+                {Object.entries(CANCEL_PHRASES).map(([key, text]) => {
+                  const possibile = fraseAnnulloPossibile(key, settings)
+                  return (
+                    <button
+                      key={key}
+                      className={`mode-option${
+                        fraseAnnulloDefault(settings) === key ? ' active' : ''
+                      }`}
+                      disabled={!possibile}
+                      title={
+                        possibile
+                          ? undefined
+                          : 'Qui non si ritira al banco: la frase manderebbe il cliente dove nessuno lo aspetta.'
+                      }
+                      onClick={() => save({ cancel_phrase_default: key })}
+                    >
+                      {text}
+                    </button>
+                  )
+                })}
               </div>
+              {!fraseAnnulloPossibile('bancone', settings) && (
+                <p className="muted small" style={{ margin: '8px 0 0' }}>
+                  «Prego recarsi al bancone» non si può usare: il locale è a solo
+                  servizio.{' '}
+                  <button
+                    type="button"
+                    className="link-inline"
+                    onClick={() => scegliSezione('consegna')}
+                  >
+                    Vai a Consegna ordine
+                  </button>
+                </p>
+              )}
             </div>
       ),
     },

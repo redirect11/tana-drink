@@ -15,6 +15,8 @@ import {
   cambioModoPermesso,
   clienteSceglie,
   clienteScegliePossibile,
+  fraseAnnulloDefault,
+  fraseAnnulloPossibile,
   modoAllaNascita,
   mondoConsegna,
   supplementiPerModo,
@@ -136,5 +138,39 @@ describe('si può cambiare il modo di questo conto?', () => {
     expect(cambioModoPermesso({ status: 'annullato' })).toBe('no')
     expect(cambioModoPermesso({ status: 'aperto', payment_status: 'pagato' })).toBe('no')
     expect(cambioModoPermesso(null)).toBe('no')
+  })
+})
+
+// ── LA FRASE DELL'ANNULLO SEGUE IL MONDO DELLA CONSEGNA ───────────
+//
+// «Prego recarsi al bancone» ha senso solo dove il ritiro esiste: in un
+// locale a solo servizio manda una persona a un bancone dove nessuno la
+// aspetta, che è peggio di non dirle niente.
+describe('la frase proposta annullando un ordine', () => {
+  it('col ritiro c’è sempre stata, e resta', () => {
+    const conRitiro = { service_mode: 'entrambi' }
+    expect(fraseAnnulloPossibile('bancone', conRitiro)).toBe(true)
+    expect(fraseAnnulloPossibile('staff', conRitiro)).toBe(true)
+    expect(fraseAnnulloDefault({ ...conRitiro, cancel_phrase_default: 'bancone' })).toBe('bancone')
+  })
+
+  it('col SOLO SERVIZIO quella del bancone non si può usare', () => {
+    const soloServizio = { service_mode: 'tavolo' }
+    expect(fraseAnnulloPossibile('bancone', soloServizio)).toBe(false)
+    expect(fraseAnnulloPossibile('staff', soloServizio)).toBe(true)
+  })
+
+  it('E SE ERA GIÀ SCELTA, si torna a quella valida', () => {
+    // Non si lascia un'impostazione impossibile a fare da default: chi
+    // annulla un ordine si troverebbe proposta una frase che manda il
+    // cliente da nessuna parte.
+    expect(
+      fraseAnnulloDefault({ service_mode: 'tavolo', cancel_phrase_default: 'bancone' })
+    ).toBe('staff')
+  })
+
+  it('senza niente di scelto, dipende dal mondo', () => {
+    expect(fraseAnnulloDefault({ service_mode: 'tavolo' })).toBe('staff')
+    expect(fraseAnnulloDefault({ service_mode: 'entrambi' })).toBe('bancone')
   })
 })

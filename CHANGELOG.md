@@ -11,6 +11,18 @@
 
 ### Al banco
 
+- **In un locale a solo servizio non si propone più «Prego recarsi al
+  bancone»** quando si annulla un ordine: manderebbe il cliente dove nessuno
+  lo aspetta. In Impostazioni la voce resta visibile ma spenta, col perché e
+  il rimando; nel dialogo di annullo non compare, e la frase proposta è
+  quella dello staff.
+- **La comanda si divide anche mentre la stai preparando.** «✂️ Preparazione
+  parziale» era sparita del tutto nei locali che fanno nascere le comande già
+  in preparazione, e comunque non si poteva dividere un giro già al banco —
+  che è proprio il caso vero: sto facendo cinque gin tonic, ne mando fuori tre
+  adesso e due dopo. Adesso si divide finché il drink non è uscito dal banco, e
+  le due parti restano tutte e due in preparazione. Da «pronto» in poi il tasto
+  non c'è: quella è roba sul vassoio.
 - **Col salto «nascono già in preparazione», il passo «da fare» sparisce dove
   non serve**: niente pastiglia «↩︎ Da fare» per rimandarci una comanda — in
   quel locale nessuno guarda quella colonna — e niente voce nel filtro

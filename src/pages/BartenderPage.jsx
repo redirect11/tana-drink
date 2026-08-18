@@ -66,7 +66,11 @@ import {
   prontoDiviso,
   ricordaProntoDiviso,
 } from '../lib/impostazioniLocali.js'
-import { mondoConsegna } from '../lib/consegna.js'
+import {
+  fraseAnnulloDefault,
+  fraseAnnulloPossibile,
+  mondoConsegna,
+} from '../lib/consegna.js'
 import {
   leggiAvvisi,
   subscribeAvvisi,
@@ -2351,7 +2355,11 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
         <CancelOrderDialog
           order={cancelTarget.order}
           kind={cancelTarget.kind}
-          defaultPhrase={settings.cancel_phrase_default}
+          // La frase che si applica DAVVERO: se il locale è a solo servizio,
+          // quella del bancone non si propone nemmeno qui — manderebbe il
+          // cliente dove nessuno lo aspetta.
+          defaultPhrase={fraseAnnulloDefault(settings)}
+          ritiroPossibile={fraseAnnulloPossibile('bancone', settings)}
           onCancel={() => setCancelTarget(null)}
           onConfirm={confirmCancel}
         />

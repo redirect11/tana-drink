@@ -47,6 +47,7 @@ import {
   comandaEditable,
   comandaPerLeAggiunte,
   comandaDivisibile,
+  statiDopoLaDivisione,
   statiPrimaComanda,
   statoComandaNuova,
   annullataPerDivisione,
@@ -739,6 +740,10 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     if (!divisa) return
     setParziale(null)
     const adesso = new Date().toISOString()
+    // In che passo nascono le due parti lo dice quella di partenza
+    // (statiDopoLaDivisione): da «da fare» la parte scelta è quella che si
+    // comincia adesso, da «in preparazione» sono tutte e due già al banco.
+    const passi = statiDopoLaDivisione(c.status)
     // SI VEDE SUBITO. La comanda di partenza risulta annullata e al suo
     // posto compaiono le due nuove: chi ha appena scelto tre gin tonic su
     // cinque deve vederli al banco nell'istante in cui tocca, non quando
@@ -746,15 +751,15 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     // la stessa cosa.
     comandeLocali.applica(contoPerLocali, (arr) => {
       if (divisa.tutta) {
+        // Prese tutte le unità non c'è niente da dividere: se è già dove
+        // dovrebbe andare non si muove niente.
+        if (c.status === passi.nuova) return arr
         return arr.map((x) =>
           x.id === c.id
             ? {
                 ...x,
-                status: ORDER_STATUSES.IN_PREPARAZIONE,
-                status_times: {
-                  ...(x.status_times || {}),
-                  [ORDER_STATUSES.IN_PREPARAZIONE]: adesso,
-                },
+                status: passi.nuova,
+                status_times: { ...(x.status_times || {}), [passi.nuova]: adesso },
               }
             : x
         )
@@ -784,13 +789,13 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
         ),
         comandaProvvisoria({
           seq: prossimo + 1,
-          status: ORDER_STATUSES.IN_PREPARAZIONE,
+          status: passi.nuova,
           items: divisa.nuova,
           created_at: c.created_at || null,
         }),
         comandaProvvisoria({
           seq: prossimo + 2,
-          status: ORDER_STATUSES.RICEVUTO,
+          status: passi.resta,
           items: divisa.resta,
           created_at: c.created_at || null,
         }),
@@ -2768,8 +2773,9 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                       scelgono le unità che si preparano ADESSO, quelle
                       partono in una comanda nuova e il resto resta «da
                       fare», così il conto non perde niente per strada.
-                      Solo su una comanda ancora DA FARE: quello che è già
-                      al banco non si divide, il lavoro è cominciato. */}
+                      Finché il drink non è uscito dal banco: a «da fare» e
+                      a «in preparazione». Da «pronto» in poi è roba sul
+                      vassoio. */}
                   {workflowOn && !closed && comandaDivisibile(c) && (
                     parziale === c.id ? (
                       <PreparazioneParziale

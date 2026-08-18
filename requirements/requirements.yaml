@@ -595,6 +595,15 @@ requirements:
       il ritiro esiste. «Ritirato/Servito» NON si divide: lì il drink è
       già uscito e come sia uscito non cambia più niente da fare — è il
       traguardo, non una destinazione.
+
+      ANCHE LA FRASE DELL'ANNULLO segue il mondo: «Prego recarsi al
+      bancone» ha senso solo dove il ritiro esiste, e con «solo servizio»
+      manderebbe una persona a un bancone dove nessuno la aspetta. In
+      Impostazioni la voce si spegne col motivo e il rimando (non sparisce:
+      sparire fa dubitare di averla immaginata) e quella evidenziata è
+      quella che si applica DAVVERO (fraseAnnulloDefault), non
+      l'impostazione impossibile rimasta scritta. Nel dialogo di annullo,
+      dove c'è il cliente davanti, quella frase non si propone affatto.
     status: implemented
     generate_issue: false
     labels: [ordini, pos, impostazioni]

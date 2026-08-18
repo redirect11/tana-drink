@@ -181,10 +181,10 @@ export default function ComandaDetail({
             qui perché qui c'è chi la prende, e farlo risalire al conto per
             dividere quello che ha già davanti sono due schermate indietro
             per una cosa che riguarda solo questa comanda.
-            Solo su una comanda ancora DA FARE e con più di un'unità
-            (comandaDivisibile): quello che è già al banco non si divide, il
-            lavoro è cominciato, e su un drink solo la scelta sarebbe fra
-            tutto e niente — cioè il tasto grande qui sopra. */}
+            Finché il drink non è uscito dal banco — a «da fare» e a «in
+            preparazione» — e con più di un'unità (comandaDivisibile): da
+            «pronto» in poi è roba sul vassoio, e su un drink solo la scelta
+            sarebbe fra tutto e niente, cioè il tasto grande qui sopra. */}
         {workflowOn &&
           !chiusa &&
           comandaDivisibile(comanda) &&

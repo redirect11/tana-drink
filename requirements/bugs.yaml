@@ -703,3 +703,33 @@ bugs:
     generate_issue: false
     labels: [bug, pos, coda]
     test_cases: [tests/unit/comande.test.js, tests/component/OrderPosDetail.test.jsx]
+
+  - id: BUG-025
+    title: "Il tasto per dividere la comanda era sparito"
+    area: "src/lib/comande.js, src/lib/api.js, src/components/ComandaDetail.jsx, src/components/OrderPosDetail.jsx"
+    description: >
+      Col locale che fa nascere le comande già in preparazione,
+      «✂️ Preparazione parziale» non compariva più da nessuna parte: né nel
+      dettaglio comanda né nel riquadro Comande del conto. Una funzione
+      scomparsa senza che nessuno l'avesse tolta.
+      CAUSA: `comandaDivisibile` chiedeva `status === 'ricevuto'`, cioè «da
+      fare». Con quel salto acceso nessuna comanda ci sta mai, quindi
+      nessuna risultava divisibile. Il ragionamento di prima — «quello che è
+      già al banco non si divide, il lavoro è cominciato» — valeva quando i
+      due passi c'erano tutti e due.
+      RISOLTO: una comanda si divide FINCHÉ IL DRINK NON È USCITO DAL BANCO,
+      cioè a «da fare» e a «in preparazione». Da «pronto» in poi no: è roba
+      sul vassoio. Resta la soglia di più di un'unità.
+      E lo stato delle due parti segue quello di partenza
+      (`statiDopoLaDivisione`, un posto solo per chi scrive e per chi
+      disegna): da «da fare» la parte scelta va in preparazione e il resto
+      resta da fare; da «in preparazione» vanno tutte e due in preparazione
+      — il lavoro è cominciato su entrambe, e mandarne una indietro direbbe
+      che quei drink non li ha ancora presi in mano nessuno. La comanda di
+      partenza si annulla come sempre col motivo «divisione», e non compare
+      fra le annullate per finta.
+    in_produzione: false
+    status: fixed
+    generate_issue: false
+    labels: [bug, pos, coda]
+    test_cases: [tests/unit/comande.test.js, tests/component/ComandaDetail.test.jsx, tests/component/OrderPosDetail.test.jsx]

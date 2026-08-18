@@ -49,7 +49,9 @@ import {
   aggregateItems,
   comandeStatuses,
   comandaDaScaricare,
+  comandaDivisibile,
   dividiComanda,
+  statiDopoLaDivisione,
   statoComandaNuova,
   ANNULLATA_PER_DIVISIONE,
   itemsTotal as sumItems,
@@ -2877,19 +2879,28 @@ export async function preparazioneParziale(orderId, comandaId, righeScelte) {
   const comande = norm.comande.map((c) => ({ ...c }))
   const comanda = comande.find((c) => c.id === comandaId)
   if (!comanda) throw new Error('Comanda non trovata')
-  // Solo su una comanda ANCORA DA FARE: dividere quello che è già al banco
-  // non vuol dire niente, e su una comanda già servita gli ingredienti sono
-  // già stati scalati.
-  if (comanda.status !== ORDER_STATUSES.RICEVUTO) {
-    throw new Error('La comanda è già in lavorazione: non si divide')
+  // Finché il drink non è uscito dal banco: da «pronto» in poi è roba sul
+  // vassoio, e su una comanda servita gli ingredienti sono già stati
+  // scalati. La regola sta in comande.js, che è dove si prova.
+  if (!comandaDivisibile(comanda)) {
+    throw new Error('Questa comanda non si divide più')
   }
 
   const divisa = dividiComanda(comanda, righeScelte)
   if (!divisa) throw new Error('Non hai scelto niente da preparare')
+  // In che passo nascono le due parti lo dice quella di partenza: da «da
+  // fare» la parte scelta è quella che si comincia adesso; da «in
+  // preparazione» sono tutte e due già al banco.
+  const passi = statiDopoLaDivisione(comanda.status)
   // Prese tutte le righe non c'è niente da dividere: la comanda avanza e
-  // basta. Annullarla per rifarla identica lascerebbe in giro una comanda
-  // annullata che non racconta niente.
-  if (divisa.tutta) return advanceComanda(orderId, comandaId, ORDER_STATUSES.IN_PREPARAZIONE)
+  // basta — e se è già dove dovrebbe andare non si tocca niente.
+  // Annullarla per rifarla identica lascerebbe in giro una comanda annullata
+  // che non racconta niente.
+  if (divisa.tutta) {
+    return comanda.status === passi.nuova
+      ? mapOrder(snap)
+      : advanceComanda(orderId, comandaId, passi.nuova)
+  }
 
   comanda.status = ORDER_STATUSES.ANNULLATO
   comanda.status_times = {
@@ -2929,8 +2940,8 @@ export async function preparazioneParziale(orderId, comandaId, righeScelte) {
       divisa_da: comanda.id,
     }
   }
-  const inPreparazione = figlia(divisa.nuova, ORDER_STATUSES.IN_PREPARAZIONE)
-  const daFare = figlia(divisa.resta, ORDER_STATUSES.RICEVUTO)
+  const inPreparazione = figlia(divisa.nuova, passi.nuova)
+  const daFare = figlia(divisa.resta, passi.resta)
   comanda.divisa_in = [inPreparazione.id, daFare.id]
   comande.push(inPreparazione, daFare)
 
