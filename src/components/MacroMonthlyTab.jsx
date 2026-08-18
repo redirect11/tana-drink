@@ -3,18 +3,23 @@ import {
   fetchOrdersBetween,
   fetchDrinks,
   fetchInventoryItems,
-  fetchInventoryCategories,
+  fetchCategories,
   fetchMacroCategories,
-  fetchPurchaseOrders,
   subscribeSettings,
   DEFAULT_SETTINGS,
 } from '../lib/api.js'
 import { categoryToMacro } from '../lib/macros.js'
 import { macroMonthlyReport } from '../lib/macroStats.js'
 
-// DASHBOARD A — andamento MENSILE per MACRO-CATEGORIA: acquisti (ordini
-// fornitore ricevuti nel mese), fatturato (incasso ripartito sugli ingredienti
-// venduti), utile e rapporto Fat/Acq. Replica il cruscotto Excel per macro.
+// ANDAMENTO MENSILE PER MACRO-CATEGORIA DI MENÙ: quanto ha incassato ogni
+// gruppo di voci del menù, quanto è costata la merce che ha venduto, che
+// margine ne resta.
+//
+// La vendita di una voce va INTERA alla macro di quella voce, incasso e
+// costo insieme (vedi lib/macroStats.js): la Schweppes versata in un Gin
+// Tonic conta sui distillati, perché lì è stata venduta. Da qui non si
+// legge «quanto ho speso in bibite» — quella è la domanda degli ACQUISTI e
+// vive con le fatture, non in una tabella che parla del venduto.
 
 const MESI = ['GEN', 'FEB', 'MAR', 'APR', 'MAG', 'GIU', 'LUG', 'AGO', 'SET', 'OTT', 'NOV', 'DIC']
 const monthsOfYear = (year) => MESI.map((_, i) => `${year}-${String(i + 1).padStart(2, '0')}`)
@@ -27,7 +32,7 @@ export default function MacroMonthlyTab() {
   useEffect(() => subscribeSettings(setSettings, () => {}), [])
   const cutoff = settings.business_day_cutoff_hour
 
-  const [data, setData] = useState(null) // { orders, drinks, items, cats, macros, pos }
+  const [data, setData] = useState(null) // { orders, drinks, items, cats, macros }
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -37,14 +42,15 @@ export default function MacroMonthlyTab() {
     Promise.all([
       fetchOrdersBetween(`${year}-01-01`, `${year}-12-31`, cutoff).catch(() => []),
       fetchDrinks({}).catch(() => []),
+      // I prodotti servono ancora, ma solo per il COSTO di quello che è
+      // uscito: le categorie e le macro qui sono quelle del MENÙ.
       fetchInventoryItems().catch(() => []),
-      fetchInventoryCategories().catch(() => []),
-      fetchMacroCategories().catch(() => []),
-      fetchPurchaseOrders({ limit: 500 }).catch(() => []),
+      fetchCategories().catch(() => []),
+      fetchMacroCategories('menu').catch(() => []),
     ])
-      .then(([orders, drinks, items, cats, macros, pos]) => {
+      .then(([orders, drinks, items, cats, macros]) => {
         if (!active) return
-        setData({ orders, drinks, items, cats, macros, pos })
+        setData({ orders, drinks, items, cats, macros })
         setLoading(false)
       })
       .catch((e) => active && (setError(e.message), setLoading(false)))
@@ -57,10 +63,9 @@ export default function MacroMonthlyTab() {
     if (!data) return null
     return macroMonthlyReport({
       orders: data.orders,
-      purchaseOrders: data.pos,
       drinksById: Object.fromEntries(data.drinks.map((d) => [d.id, d])),
       itemsById: Object.fromEntries(data.items.map((i) => [i.id, i])),
-      catToMacro: categoryToMacro(data.cats),
+      menuCatToMacro: categoryToMacro(data.cats),
       macros: data.macros,
       months: monthsOfYear(year),
       cutoffHour: cutoff,
@@ -79,15 +84,17 @@ export default function MacroMonthlyTab() {
       </div>
 
       <p className="muted small" style={{ margin: '0 0 10px' }}>
-        Valori al <strong>netto IVA</strong>: il fatturato è scorporato con
-        l’IVA di rivendita (predefinita {settings.sale_vat}%, modificabile per
-        prodotto in Magazzino). Acquisti = ordini fornitore segnati “ricevuto”.
+        Ogni voce del menù conta <strong>intera</strong> sulla sua
+        macro-categoria: incasso e costo dei suoi ingredienti insieme. Valori
+        al <strong>netto IVA</strong> — l’incasso scorporato al{' '}
+        {settings.sale_vat}% di rivendita, il costo al netto dell’IVA
+        d’acquisto.
       </p>
-      {report && report.rows.some((r) => r.id === 'none' && r.tot.fatturato > 0) && (
+      {report && report.rows.some((r) => r.id === 'none' && r.tot.incasso > 0) && (
         <p className="muted small" style={{ margin: '-4px 0 10px' }}>
           ℹ️ In <strong>“Non attribuito”</strong> finisce l’incasso dei drink
-          senza ricetta collegata all’inventario (cocktail, food, ecc.):
-          aggiungendo le ricette si sposta sulle macro giuste.
+          la cui categoria di menù non sta in nessuna macro: assegnala in{' '}
+          <strong>Menù → 🗂 Macro-categorie</strong> e si sposta al posto suo.
         </p>
       )}
 
@@ -95,8 +102,9 @@ export default function MacroMonthlyTab() {
 
       {!loading && data && data.macros.length === 0 && (
         <div className="empty">
-          Nessuna macro-categoria: creale in <strong>Magazzino → 🗂 Macro-categorie</strong> e
-          collega le categorie, poi qui vedrai acquisti e fatturato per macro.
+          Nessuna macro-categoria di menù: creale in{' '}
+          <strong>Menù → 🗂 Macro-categorie</strong> e collega le categorie dei
+          drink, poi qui vedrai incasso e costo per macro.
         </div>
       )}
 
@@ -119,7 +127,8 @@ function MacroBlock({ row, months }) {
       <div className="row between" style={{ alignItems: 'baseline', marginBottom: 6 }}>
         <strong>🗂 {row.name}</strong>
         <span className="muted small">
-          Fat/Acq anno: <strong>{row.tot.rapporto != null ? `×${row.tot.rapporto}` : '—'}</strong>
+          Inc/Costo anno:{' '}
+          <strong>{row.tot.rapporto != null ? `×${row.tot.rapporto}` : '—'}</strong>
         </span>
       </div>
       <MonthTable months={months} byMonth={row.byMonth} tot={row.tot} />
@@ -139,9 +148,10 @@ function TotalBlock({ report }) {
   )
 }
 
-// Tabella mesi × metriche (acquisti/fatturato/utile/rapporto) con colonna TOT.
+// Tabella mesi × metriche (incasso/costo del venduto/margine/rapporto) con
+// colonna TOT.
 function MonthTable({ months, byMonth, tot }) {
-  const cell = (m) => byMonth.get(m) || { acquisti: 0, fatturato: 0, utile: 0, rapporto: null }
+  const cell = (m) => byMonth.get(m) || { incasso: 0, costo: 0, margine: 0, rapporto: null }
   return (
     <div className="table-scroll">
       <table className="macro-tab">
@@ -155,25 +165,25 @@ function MonthTable({ months, byMonth, tot }) {
           </tr>
         </thead>
         <tbody>
-          <tr className="r-acq">
-            <th className="rowhead">Acquisti</th>
-            {months.map((m) => <td key={m}>{eur0(cell(m).acquisti)}</td>)}
-            <td className="tot">{eur0(tot.acquisti)}</td>
+          <tr className="r-inc">
+            <th className="rowhead">Incassato</th>
+            {months.map((m) => <td key={m}>{eur0(cell(m).incasso)}</td>)}
+            <td className="tot">{eur0(tot.incasso)}</td>
           </tr>
-          <tr className="r-fat">
-            <th className="rowhead">Fatturato</th>
-            {months.map((m) => <td key={m}>{eur0(cell(m).fatturato)}</td>)}
-            <td className="tot">{eur0(tot.fatturato)}</td>
+          <tr className="r-cos">
+            <th className="rowhead">Costo del venduto</th>
+            {months.map((m) => <td key={m}>{eur0(cell(m).costo)}</td>)}
+            <td className="tot">{eur0(tot.costo)}</td>
           </tr>
-          <tr className="r-uti">
-            <th className="rowhead">Utile</th>
+          <tr className="r-mar">
+            <th className="rowhead">Margine</th>
             {months.map((m) => (
-              <td key={m} className={cell(m).utile < 0 ? 'neg' : ''}>{eur0(cell(m).utile)}</td>
+              <td key={m} className={cell(m).margine < 0 ? 'neg' : ''}>{eur0(cell(m).margine)}</td>
             ))}
-            <td className={`tot ${tot.utile < 0 ? 'neg' : ''}`}>{eur0(tot.utile)}</td>
+            <td className={`tot ${tot.margine < 0 ? 'neg' : ''}`}>{eur0(tot.margine)}</td>
           </tr>
           <tr className="r-rap">
-            <th className="rowhead">Fat/Acq</th>
+            <th className="rowhead">Inc/Costo</th>
             {months.map((m) => (
               <td key={m}>{cell(m).rapporto != null ? `×${cell(m).rapporto}` : '—'}</td>
             ))}
