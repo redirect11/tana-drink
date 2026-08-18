@@ -32,17 +32,33 @@ export const COMANDA_FLOW = [
   ORDER_STATUSES.RITIRATO,
 ]
 
-// IN CHE PASSO NASCE UNA COMANDA NUOVA aggiunta a un conto già aperto: in
-// preparazione. Le righe aggiunte a metà serata sono roba che il banco sta
-// già facendo — le si batte mentre si versa — e farle nascere «da fare»
-// vorrebbe dire un passo in più da premere per ogni aggiunta.
+// ── IN CHE PASSO NASCE UNA COMANDA ──────────────────────────
 //
-// STA QUI PERCHÉ LO DEVONO SAPERE IN DUE: chi scrive (api.js/addComanda) e
-// chi disegna la comanda provvisoria mentre la scrittura vola (il conto).
-// Quando erano due valori scritti a mano non combaciavano: la card
-// compariva «da fare» e un istante dopo diventava «in preparazione» da
-// sola, sotto gli occhi di chi stava leggendo quale preparare.
-export const STATO_COMANDA_NUOVA = ORDER_STATUSES.IN_PREPARAZIONE
+// Di suo «da fare»: si battono tre conti di fila e poi si comincia a
+// versare, ed è «Lo preparo io» a dire quando si comincia — e chi. Con le
+// corsie il difetto si vedeva in faccia: «Da fare» restava sempre vuota e
+// tutto compariva già al banco, cioè la colonna diceva una cosa falsa.
+//
+// Ma non tutti i locali lavorano così: dove si prepara nell'istante in cui
+// si batte, quel passo è un tocco in più per ogni comanda, tutta la sera.
+// Lo decide il locale («Le comande nascono già in preparazione»), e vale
+// per tutte allo stesso modo: la prima di un conto nuovo e le aggiunte a
+// metà serata. Prima erano due regole diverse scritte in due posti — il
+// conto nasceva «da fare» e le aggiunte «in preparazione» — e nessuno
+// l'aveva deciso: era rimasto così.
+//
+// È UNA FUNZIONE, E NON C'È NESSUNA COSTANTE DA COPIARE. Chi scrive la
+// comanda e chi la disegna mentre la scrittura vola devono dire la stessa
+// cosa, o la card cambia passo da sola un istante dopo esser comparsa. Con
+// un valore esportato bastava che qualcuno domani scrivesse un
+// «ricevuto» a mano da qualche parte: quella strada non avrebbe seguito
+// l'impostazione, e non se ne sarebbe accorto nessuno. Passando di qui,
+// l'impostazione o vale dappertutto o non vale da nessuna parte.
+export function statoComandaNuova(settings) {
+  return settings?.comande_in_preparazione === true
+    ? ORDER_STATUSES.IN_PREPARAZIONE
+    : ORDER_STATUSES.RICEVUTO
+}
 
 export function nextComandaStatus(status) {
   const idx = COMANDA_FLOW.indexOf(status)

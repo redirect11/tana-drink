@@ -6,6 +6,7 @@ import { describe, it, expect } from 'vitest'
 import {
   ORDER_OPEN,
   nextComandaStatus,
+  statoComandaNuova,
   activeComanda,
   serveAllComande,
   comandeSummary,
@@ -25,6 +26,38 @@ import {
 } from '../../src/lib/comande.js'
 
 const c = (seq, status, items = []) => ({ id: `c${seq}`, seq, status, items })
+
+// ── IN CHE PASSO NASCE UNA COMANDA ──────────────────────────
+//
+// Di suo «da fare»: si battono tre conti di fila e poi si comincia a
+// versare, ed è «Lo preparo io» a dire quando si comincia — e chi. Dove
+// invece si prepara nell'istante in cui si batte, quel passo è un tocco in
+// più per ogni comanda, tutta la sera: lo decide il locale.
+//
+// È UNA FUNZIONE E NON UNA COSTANTE apposta: con un valore da copiare
+// bastava che una strada scrivesse un «ricevuto» a mano per non seguire
+// l'impostazione, e non se ne sarebbe accorto nessuno. Era già successo
+// tre volte — il conto nuovo, le aggiunte, il placeholder in coda — e le
+// tre risposte non combaciavano.
+describe('in che passo nasce una comanda', () => {
+  it('di suo nasce DA FARE', () => {
+    expect(statoComandaNuova({})).toBe('ricevuto')
+    expect(statoComandaNuova()).toBe('ricevuto')
+    expect(statoComandaNuova({ comande_in_preparazione: false })).toBe('ricevuto')
+  })
+
+  it('col locale che lo chiede, nasce già in preparazione', () => {
+    expect(statoComandaNuova({ comande_in_preparazione: true })).toBe('in_preparazione')
+  })
+
+  it('solo il vero acceso conta', () => {
+    // Un valore storto letto da Firestore non deve far nascere le comande
+    // in un posto a caso.
+    for (const v of ['si', 1, 'true', null, undefined]) {
+      expect(statoComandaNuova({ comande_in_preparazione: v })).toBe('ricevuto')
+    }
+  })
+})
 
 describe('nextComandaStatus', () => {
   it('flusso ricevuto→in_preparazione→pronto→ritirato→null', () => {

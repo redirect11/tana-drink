@@ -11,6 +11,17 @@
 
 ### Al banco
 
+- **Le comande possono nascere già in preparazione** (Impostazioni → Gestione
+  preparazione). Di suo una comanda nuova sta in «Da fare» finché qualcuno non
+  tocca «Lo preparo io» — che dice anche chi — ma dove si versa nell'istante
+  in cui si batte quel passo è un tocco in più a ogni comanda, tutta la sera.
+  Vale allo stesso modo per il primo giro di un conto nuovo e per le aggiunte a
+  metà serata: prima erano due regole diverse, e la card in coda cambiava
+  colonna da sola appena arrivava dal server.
+- **Il tasto per guardare il lavoro sta sotto il «+»**, dove l'occhio va a
+  cercare i comandi della coda, invece che in mezzo ai filtri sotto la ricerca.
+  E dice dove porta: «🍸 Comande» guardando i conti, «🧾 Ordini» guardando le
+  comande.
 - **«Ritirato/Servito» si preme una volta sola.** La card tornava indietro da
   sé e bisognava ripremere: lo scarico del magazzino, che lavora in
   sottofondo, riscriveva le comande com'erano prima di partire e si portava

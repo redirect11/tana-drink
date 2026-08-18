@@ -347,8 +347,19 @@ requirements:
       toglierla lì farebbe riapparire per un battito lo stato di prima.
       Erano tre copie della stessa idea (la coda, il conto, il dettaglio
       della comanda) e si comportavano già in modo diverso. Una comanda
-      provvisoria nasce col passo e il numero che avrà DAVVERO
-      (STATO_COMANDA_NUOVA), o si vedrebbe cambiare da sé un istante dopo.
+      provvisoria nasce col passo e il numero che avrà DAVVERO, o si
+      vedrebbe cambiare da sé un istante dopo.
+      IN CHE PASSO NASCE UNA COMANDA lo decide il locale
+      («Le comande nascono già in preparazione», Impostazioni → Gestione
+      preparazione; di suo SPENTA, quindi «da fare») e lo si chiede a
+      `statoComandaNuova(settings)` in comande.js. Vale allo stesso modo per
+      la prima comanda di un conto nuovo e per le aggiunte a metà serata:
+      prima erano due regole diverse scritte in due posti, più una terza nel
+      placeholder della coda, e le tre risposte non combaciavano — la card
+      compariva «Al banco» e saltava in «Da fare» appena arrivava dal
+      server. È una FUNZIONE e non una costante esportata apposta: con un
+      valore da copiare basta che una strada scriva un «ricevuto» a mano
+      per non seguire l'impostazione, e non se ne accorge nessuno.
       E UNA SCRITTURA IN SOTTOFONDO TOCCA SOLO I CAMPI CHE LE COMPETONO:
       `comande` è un array e Firestore lo riscrive intero, quindi chi scrive
       si rilegge il documento NELL'ISTANTE PRIMA DI SCRIVERE, non all'inizio
@@ -2863,9 +2874,15 @@ requirements:
       i chiusi e solo con gli stati del servizio accesi — senza, tutto
       quello che è stato pagato è uscito per definizione.
 
-      Chi guarda la serata, con la pastiglia «Comande», può andare a
-      guardare il lavoro come il bartender: è un passaggio a mano di quel terminale (vistaCorsie), non
-      il suo default. La pastiglia c'è con QUALUNQUE vista della coda —
+      Chi guarda la serata può andare a guardare il lavoro come il
+      bartender: è un passaggio a mano di quel terminale (vistaCorsie), non
+      il suo default. IL TASTO DICE DOVE PORTA, non dove si è —
+      «🍸 Comande» guardando i conti, «🧾 Ordini» guardando le comande —
+      perché un interruttore che si legge solo sapendo com'è messo adesso
+      obbliga a guardare le colonne per capirlo. E sta SOTTO IL «+», in
+      colonna: sono i due tasti che si toccano di più e l'occhio li cerca in
+      alto a destra, mentre prima bisognava scendere a cercarlo in mezzo ai
+      filtri. C'è con QUALUNQUE vista della coda —
       griglia, lista, schede, corsie — perché la vista del banco è una vista
       a sé, non una variante delle corsie: chi tiene la cassa lavora in
       griglia e a metà serata vuole dare un'occhiata alla preparazione senza

@@ -398,20 +398,31 @@ describe('le corsie di chi guarda la serata (admin)', () => {
   // quella che gli serve per i conti, e a metà serata vuole dare
   // un'occhiata a com'è messa la preparazione senza andare in Impostazioni
   // a cambiare vista, guardare, e tornare a rimetterla com'era.
-  it('la pastiglia «Comande» c’è anche a griglia, e tornando indietro la griglia è lì', async () => {
+  it('il tasto c’è anche a griglia, e tornando indietro la griglia è lì', async () => {
     const utente = userEvent.setup()
     impostazioni = { ...impostazioni, queue_view: 'griglia' }
     montaCoda()
     await screen.findByText(/In servizio/)
     expect(document.querySelector('.order-grid')).toBeTruthy()
 
+    // IL TASTO DICE DOVE PORTA, non dove si è: si legge da sé, senza
+    // dover prima capire com'è messa la vista adesso.
     await utente.click(screen.getByRole('button', { name: /Comande/ }))
     expect(await screen.findByText('Da fare')).toBeInTheDocument()
     expect(document.querySelector('.order-grid')).toBe(null)
 
-    await utente.click(screen.getByRole('button', { name: /Comande/ }))
+    await utente.click(screen.getByRole('button', { name: /Ordini/ }))
     await waitFor(() => expect(document.querySelector('.order-grid')).toBeTruthy())
     expect(screen.queryByText('Da fare')).not.toBeInTheDocument()
+  })
+
+  it('sta sotto il «+», che è dove l’occhio va a cercare i tasti della coda', async () => {
+    montaCoda()
+    await screen.findByText('In corso')
+    const colonna = document.querySelector('.board-nuovo')
+    expect(colonna).toBeTruthy()
+    expect(within(colonna).getByRole('button', { name: /Comande/ })).toBeInTheDocument()
+    expect(colonna.querySelector('.board-add')).toBeTruthy()
   })
 
   it('niente tasto «Colonne»: tre corsie ci stanno tutte, non c’è niente da spegnere', async () => {
@@ -437,8 +448,8 @@ describe('le corsie di chi guarda la serata (admin)', () => {
     montaCoda()
     expect(await screen.findByText('Da fare')).toBeInTheDocument()
 
-    // e si torna indietro dallo stesso tasto
-    await utente.click(screen.getByRole('button', { name: /Comande/ }))
+    // e si torna indietro dallo stesso tasto, che adesso dice «Ordini»
+    await utente.click(screen.getByRole('button', { name: /Ordini/ }))
     expect(await screen.findByText('In corso')).toBeInTheDocument()
   })
 })
