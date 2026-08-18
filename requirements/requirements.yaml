@@ -1827,8 +1827,8 @@ requirements:
     test_cases: [tests/unit/inventory.test.js, tests/component/InventoryManagerCard.test.jsx]
 
   - id: REQ-MAG-018
-    title: "I 388 prodotti che ci sono già si travasano al modello nuovo, non li riapre uno per uno chi sta al banco"
-    area: "scripts/ (migrazione), src/lib/inventory.js"
+    title: "I prodotti che ci sono già si travasano al modello nuovo aggiornando l'app, non li riapre uno per uno chi sta al banco"
+    area: "src/lib/inventory.js (articoloNormalizzato), src/lib/api.js (mapItem, loadStock, adjustStock)"
     description: >
       Nasce da REQ-MAG-016 (unità sempre pezzo, con una corrispondenza in
       capacità/peso/U) ma è un lavoro A PARTE: il modello nuovo e il
@@ -1840,46 +1840,91 @@ requirements:
       modello nuovo li vuole tutti a PEZZO con una sola corrispondenza
       (capacità, peso o U).
       DECISO da Flavio (18/08): «credo che dobbiamo migrare noi i prodotti
-      al nuovo modello, poi capiamo come» — il travaso lo fa uno SCRIPT
-      nostro, una volta, non chi sta al banco riaprendo 388 schede a mano.
-      NON DECISO, e va scritto qui come domanda aperta finché non si
-      implementa: con quale corrispondenza si converte ogni famiglia. Per
-      una bottiglia da 70 cl è ovvio — 1 pz = 70 cl, e la giacenza in cl
-      diventa pezzi frazionati, senza stime. Per lo sfuso (limoni al chilo,
-      spezie, ghiaccio) la REGOLA c'è già (REQ-MAG-016, i tre livelli
-      pezzo/contenuto/collo) ma applicarla in automatico a 388 righe
-      storiche — capire cos'è «un pezzo» per ciascuna, senza che nessuno lo
-      dichiari a mano prodotto per prodotto — resta da progettare quando si
-      scrive lo script.
+      al nuovo modello, poi capiamo come» — il travaso non lo fa chi sta al
+      banco riaprendo 388 schede a mano.
+      COME, precisato da lui poco dopo (18/08): «il travaso deve avvenire in
+      fase di aggiornamento. Cioè non dobbiamo farlo direttamente sui db:
+      quando si aggiorna il bundle si aggiornano i prodotti». Niente script
+      di migrazione lanciato contro Firestore, quindi — né in test né
+      altrove. Il travaso è dell'APP, e si fa come si è sempre fatto con gli
+      ordini vecchi, che nessuno ha mai migrato: li rimette in riga
+      `normalizeOrderDoc` alla lettura (REQ-ORD-002).
+      FATTO (1.5.0), in due pezzi.
+      1) LETTURA TOLLERANTE: `articoloNormalizzato` (src/lib/inventory.js)
+      prende un articolo com'è scritto sul database e ne restituisce la forma
+      nuova; ci passa `mapItem` in src/lib/api.js, che è il punto da cui
+      entrano nell'app tutti gli articoli — magazzino, ricette, menù, costi.
+      Da lì in poi il resto del codice non sa più che esistono due forme.
+      Chi è già a posto torna identico (stessa identità: sta sulla strada di
+      ogni lettura).
+      2) RISCRITTURA QUANDO CAPITA: l'articolo si salva nella forma nuova la
+      prima volta che qualcuno lo tocca per un motivo suo — una modifica
+      (la scheda salva già la forma nuova), un carico (`loadStock`), una
+      conta (`adjustStock`). Nessuno deve aprire 388 schede, e non si
+      scrivono 388 documenti tutti insieme.
+      LE REGOLE DELLA CONVERSIONE, e il perché di ognuna. Il PEZZO è la
+      confezione che si comprava: una bottiglia da 70 cl era già «una
+      confezione da 700 ml», e la giacenza in ml diventa pezzi frazionati,
+      senza stime. Per la «U» il pezzo è l'unità: un sacco di ghiaccio era
+      uno, resta uno. La RESA diventa il contenuto, ma solo quando le due
+      misure sono della stessa famiglia (il fusto comprato a litri e versato
+      a cl): chi si comprava a chili e si dosava in cl di succo — i limoni —
+      nel modello nuovo può corrispondere a una cosa sola, e sceglierla al
+      posto di chi lavora vuol dire buttare via l'altra; se una ricetta
+      dosava nella misura buttata, da quel momento scarica un chilo dove
+      voleva un grammo. Quelli restano come sono. `scorta` va scritta nero su
+      bianco: «si scarica dal magazzino?» aveva un valore di partenza legato
+      all'unità, e portando tutto a pezzi il «Tempo di Lavorazione»
+      diventerebbe merce — a zero al primo drink, e il menù farebbe sparire
+      dalla carta i drink che lo usano.
+      IL TRAVASO NON È SILENZIOSO SU UNA GIACENZA: l'articolo letto si porta
+      dietro `formaVecchia` (solo in memoria, non si salva), e la scheda
+      scrive «era scritto a litri: la giacenza (18,4 L) si legge come 0,92 pz
+      e salvando resta scritta così».
+      SI PROVA IN LOCALE PRIMA, con dati come quelli veri: «dobbiamo fare
+      degli script di seeding da provare in locale» (Flavio, 18/08).
+      `npm run seed:vecchi` (scripts/seed-magazzino-vecchio.js) riempie
+      l'emulatore di prodotti scritti in TUTTE le forme vecchie che esistono
+      davvero — a pezzo con e senza contenuto, a volume, a peso, a volume
+      senza confezione, «U» con e senza scorta, con la resa della stessa
+      famiglia e di due famiglie, col campo `tipo` delle quattro card, con la
+      giacenza sotto zero — più una ricetta che li usa. Gira solo
+      sull'emulatore, su progetto `demo-`, e sta fuori da `seed:tutto`:
+      sporca il magazzino di prova con roba che serve per una verifica
+      precisa. `node scripts/diagnosi-travaso.js` dice a che punto sta il
+      travaso e, soprattutto, se leggerli a pezzi muove valore, pezzi o
+      costi: non scrive niente, mai, da nessuna parte.
       QUATTRO VINCOLI DEL MESTIERE, che qui si dimenticano facile:
-      1) GLI SCRIPT NON TOCCANO LA PRODUZIONE DI PROPRIA INIZIATIVA (CLAUDE.md):
-      girano su `tana-drink-test`; la produzione — con le giacenze vere del
-      locale — si nomina a mano e aspetta il via libera esplicito. Una
-      conversione storta lì non è una prova da rifare, è un danno.
+      1) GLI SCRIPT NON TOCCANO LA PRODUZIONE DI PROPRIA INIZIATIVA
+      (CLAUDE.md). Con il travaso fatto dall'app il problema non si pone
+      nemmeno: non c'è niente da lanciare contro le giacenze vere.
       2) IL TRAVASO DEVE ESSERE VERIFICABILE: prima e dopo, il VALORE di
-      magazzino e la QUANTITÀ di prodotto (in pezzi, nell'unità che era, e
-      nel contenuto) devono tornare uguali. Se cambiano, la conversione ha
-      mentito — ed è l'unico controllo che se ne accorge da solo, perché un
-      numero sbagliato in pezzi sembra comunque plausibile a chi lo legge.
+      magazzino, la QUANTITÀ in pezzi e il COSTO delle ricette devono tornare
+      uguali. Se cambiano, la conversione ha mentito — ed è l'unico controllo
+      che se ne accorge da solo, perché un numero sbagliato in pezzi sembra
+      comunque plausibile a chi lo legge. Lo controllano
+      tests/unit/travasoInventario.test.js (compreso il costo di un drink
+      intero, al centesimo) e lo script di diagnosi sui dati veri.
       3) IL TRAVASO TOCCA SOLO IL MODO DI MISURARE, NIENT'ALTRO (Flavio,
       18/08 ore 15:35): in produzione ha già sistemato a mano, uno per uno,
-      menù e prodotti con i prezzi corretti e le ricette del menù — «con
-      l'aggiornamento mi casi modificano, resta tutto invariato qua». La
-      migrazione non deve toccare prezzi, ricette né voci di menù: quelli
-      sono lavoro fatto a mano, e riscriverli è il modo migliore per fare
-      perdere una giornata a chi l'ha fatto. Converte solo unità, contenuto
-      e giacenza.
-      4) C'È UNA FINESTRA DI TEMPO, e va rispettata (stesso vocale, 15:35):
-      l'unica cosa che Flavio non ha ancora fatto è il CARICO REALE delle
-      giacenze — «quello penso che me lo faccio domani». Oggi (18/08) i
-      prodotti hanno quindi giacenze vecchie o vuote: il travaso va fatto
-      PRIMA che lui carichi le quantità vere, non dopo — se arriva dopo,
-      converte numeri veri e un errore di conversione pesa il doppio.
-    status: todo
-    generate_issue: true
+      menù e prodotti con i prezzi corretti e le ricette del menù. La
+      conversione tocca unità, contenuto, giacenza, soglia e `scorta`: non
+      prezzi, non ricette, non voci di menù.
+      4) C'È UNA FINESTRA DI TEMPO (stesso vocale, 15:35): l'unica cosa che
+      Flavio non ha ancora fatto è il CARICO REALE delle giacenze. Con il
+      travaso alla lettura la finestra conta meno — non c'è un momento in cui
+      qualcuno converte tutto — ma resta vero che è meglio aggiornare prima
+      che dopo.
+      RESTA APERTO: gli articoli comprati in una misura e usati in un'altra
+      (i limoni al chilo, spremuti in cl) non si convertono da soli e si
+      leggono ancora nella forma vecchia. Vanno sistemati a mano, decidendo
+      cos'è un pezzo — un limone, e quanto pesa — e sono pochi: la diagnosi
+      li elenca per nome.
+    status: implemented
+    generate_issue: false
     labels: [magazzino, dati]
     priority: P1
-    test_cases: []
+    test_cases: [tests/unit/travasoInventario.test.js]
 
   - id: REQ-MAG-017
     title: "Il fornitore si aggiunge dalla tendina del prodotto, come già la categoria nel menù"

@@ -285,6 +285,103 @@ export function eScorta(item) {
   return !unitaGenerica(item?.unit)
 }
 
+// ── LEGGERE UN ARTICOLO SCRITTO COL MODELLO VECCHIO ──────────────────
+//
+// I 388 prodotti in magazzino sono stati scritti con i modelli di ieri:
+// liquidi in cl, solidi in grammi, sacchi e manodopera in «U», qualcuno con
+// la resa fra unità d'acquisto e unità d'uso. Il modello di oggi li vuole
+// tutti a PEZZO con una corrispondenza sola (REQ-MAG-016).
+//
+// NON si travasano con uno script lanciato contro il database: «il travaso
+// deve avvenire in fase di aggiornamento — quando si aggiorna il bundle si
+// aggiornano i prodotti» (18/08). Si fa come con gli ordini vecchi, che
+// nessuno ha mai migrato: `normalizeOrderDoc` li rimette in riga alla
+// lettura (REQ-ORD-002), e da lì in poi il resto del codice non sa nemmeno
+// che esistono due forme. Qui vale lo stesso: si legge tollerante, e
+// l'articolo si riscrive nella forma nuova la prima volta che qualcuno lo
+// tocca per un motivo suo — una modifica, un carico, una conta.
+//
+// LE REGOLE, e il perché di ognuna:
+//   IL PEZZO È LA CONFEZIONE CHE SI COMPRAVA. Una bottiglia da 70 cl era già
+//   «una confezione da 700 ml»: diventa un pezzo, e la giacenza in ml
+//   diventa pezzi frazionati — senza stime, senza inventare niente. Per la
+//   «U» il pezzo è l'unità: un sacco di ghiaccio era uno, resta uno.
+//   LA RESA DIVENTA IL CONTENUTO, ma solo quando le due misure sono della
+//   stessa famiglia (il fusto comprato a litri e versato a cl). Chi si
+//   comprava a chili e si dosava in cl di succo — i limoni — nel modello
+//   nuovo può corrispondere a una cosa sola, e sceglierla al posto di chi
+//   lavora vuol dire buttare via l'altra: se una ricetta dosava nella misura
+//   buttata, da quel momento scarica un chilo dove voleva un grammo. Quelli
+//   restano come sono, e li si sistema a mano.
+//   `scorta` VA SCRITTA. «Si scarica dal magazzino?» aveva un valore di
+//   partenza legato all'unità: quello che si contava a «U» non era una
+//   scorta. Portando tutto a pezzi quel valore cambierebbe risposta da solo,
+//   e il «Tempo di Lavorazione» diventerebbe merce: andrebbe a zero al primo
+//   drink e il menù farebbe sparire dalla carta i drink che lo usano.
+//
+// NIENTE ALTRO SI TOCCA: prezzi, ricette e voci di menù restano dove sono —
+// in produzione sono stati sistemati a mano, uno per uno.
+
+// Cosa andrebbe riscritto per portare l'articolo alla forma nuova, o null se
+// è già a posto (o se non si può convertire senza inventare). Serve sia alla
+// lettura tollerante sia a chi lo riscrive davvero.
+export function patchNormalizza(item) {
+  if (!item) return null
+  const unit = String(item.unit || 'pz').toLowerCase()
+  const stock = Number(item.stock) || 0
+  const soglia = Number(item.low_threshold) || 0
+  const pack = Number(item.package_size) || 0
+  const resa = Number(item.resa) || 0
+  const resaBase = item.resa_unit ? baseUnit(item.resa_unit) : null
+  const resaValida = resa > 0 && !!resaBase
+
+  if (unit === 'pz') {
+    // Già a pezzi: resta solo la resa da riassorbire nel contenuto, che dice
+    // la stessa cosa (resaUso preferisce la resa, quindi i numeri non si
+    // muovono).
+    if (!resaValida) return null
+    return { package_size: resa, content_unit: resaBase, resa: null, resa_unit: null }
+  }
+
+  // Quante unità base d'acquisto fa un pezzo: la confezione. Per la «U»,
+  // quando non c'è confezione, il pezzo è la unità stessa.
+  const basePerPezzo = unitaGenerica(unit) ? pack || 1 : pack
+  if (!(basePerPezzo > 0)) return null // non si sa cosa sia un pezzo: si lascia stare
+  if (resaValida && resaBase !== unit) return null // due famiglie: decide una persona
+
+  return {
+    unit: 'pz',
+    display_unit: 'pz',
+    stock: arrotondaPezzi(stock / basePerPezzo),
+    low_threshold: arrotondaPezzi(soglia / basePerPezzo),
+    package_size: resaValida ? resa * basePerPezzo : basePerPezzo,
+    content_unit: resaValida ? resaBase : unitaGenerica(unit) ? UNITA_GENERICA : unit,
+    resa: null,
+    resa_unit: null,
+    scorta: eScorta(item),
+  }
+}
+
+// I pezzi si scrivono con qualche decimale e basta: 2,0200000000000005 è la
+// coda della divisione, e se la porterebbe dietro ogni conto successivo.
+const arrotondaPezzi = (n) => Math.round((Number(n) || 0) * 1e6) / 1e6
+
+// L'articolo come lo vede il resto dell'app: sempre nella forma nuova. Chi è
+// già a posto torna com'è — stessa identità, che questa funzione sta sulla
+// strada di ogni lettura.
+// `formaVecchia` resta attaccato a quelli convertiti al volo: serve alla
+// scheda per dire che quella giacenza si sta leggendo tradotta, e non si
+// salva da nessuna parte.
+export function articoloNormalizzato(item) {
+  const patch = patchNormalizza(item)
+  if (!patch) return item
+  return {
+    ...item,
+    ...patch,
+    formaVecchia: { unit: item.unit || 'pz', stock: Number(item.stock) || 0 },
+  }
+}
+
 // Stato scorta di un item: 'empty' (≤0), 'low' (≤ soglia), 'ok'.
 export function stockStatus(item) {
   // Quello che non è una scorta non finisce mai: la manodopera non sta su

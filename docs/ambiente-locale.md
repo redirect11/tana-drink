@@ -147,6 +147,34 @@ npm run mock:history  # storico per le statistiche
 npm run mock:casse    # chiude quelle serate: casse e incassi divisi per metodo
 ```
 
+### I prodotti scritti col modello vecchio
+
+```sh
+npm run seed:vecchi                              # li aggiunge
+node scripts/seed-magazzino-vecchio.js --pulisci # li toglie
+node scripts/diagnosi-travaso.js                 # come si leggono adesso
+```
+
+Dal 1.5 il magazzino si conta solo a **pezzi**, e i prodotti scritti coi
+modelli di ieri si adeguano da soli **alla lettura**: non c'è nessuno
+script che migra il database, è l'app che legge tollerante e riscrive
+l'articolo la prima volta che qualcuno lo tocca (REQ-MAG-018). Il rischio
+è scoprire al primo aggiornamento che una forma vecchia non l'avevamo
+prevista — e scoprirlo sulle giacenze vere del locale.
+
+`seed:vecchi` riempie l'emulatore con **tutte** le forme che esistono
+davvero: a pezzo con e senza contenuto, a volume, a peso, a volume senza
+confezione, «U» con e senza scorta, con la resa fra due unità, col campo
+`tipo` delle quattro card, con la giacenza sotto zero — più una ricetta
+che li usa, perché il numero che non deve muoversi è il costo del drink.
+Sta **fuori** da `seed:tutto`: sporca il magazzino di prova con roba che
+serve per una verifica precisa, non tutti i giorni.
+
+`diagnosi-travaso.js` **non scrive niente**, mai: dice quanti articoli
+sono ancora nella forma vecchia e se leggerli a pezzi muove valore, pezzi
+o costi. Con `--project tana-drink-test` (o `tana-drink`) guarda gli
+stessi numeri sui dati veri, sempre in sola lettura.
+
 **Le chiusure servono più di quanto sembri**: le statistiche si aprono
 sull'ultima serata chiusa, e senza nemmeno una chiusura ripiegano sulle
 «ultime 10 giornate» — sembra un difetto e invece è un database a metà.

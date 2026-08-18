@@ -18,6 +18,7 @@
     "mock:orders": "node scripts/mock-orders.js",
     "mock:history": "node scripts/mock-history.js",
     "mock:casse": "node scripts/mock-casse.js",
+    "seed:vecchi": "node scripts/seed-magazzino-vecchio.js",
     "seed:tutto": "npm run seed:dev && npm run mock:history && npm run mock:casse",
     "emulators": "firebase emulators:start --project demo-tana-drink --only auth,firestore,storage --import=.emulatori --export-on-exit",
     "emulatori": "firebase emulators:start --project demo-tana-drink --only auth,firestore,storage,functions,hosting --import=.emulatori --export-on-exit",

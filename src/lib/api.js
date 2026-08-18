@@ -31,6 +31,8 @@ import {
   qtyInStockUnit,
   scaricoPossibile,
   giacenzaPerCarico,
+  articoloNormalizzato,
+  patchNormalizza,
 } from './inventory.js'
 import { consumptionDiff } from './warehouse.js'
 import { cambioModoPermesso, supplementiPerModo } from './consegna.js'
@@ -132,9 +134,16 @@ function mapCategory(snap) {
 }
 
 // Mappa un item di inventario.
+//
+// QUI PASSA IL TRAVASO AL MODELLO A PEZZI (REQ-MAG-018). I prodotti scritti
+// coi modelli di ieri — liquidi in cl, sacchi in «U», la resa fra due unità —
+// arrivano al resto dell'app già nella forma nuova, senza che nessuno abbia
+// lanciato niente contro il database: si aggiorna il bundle e i prodotti si
+// leggono adeguati. È lo stesso trucco degli ordini vecchi, che nessuno ha
+// mai migrato (normalizeOrderDoc, REQ-ORD-002).
 function mapItem(snap) {
   const i = snap.data() || {}
-  return {
+  return articoloNormalizzato({
     id: snap.id,
     name: i.name ?? '',
     unit: i.unit ?? 'pz',
@@ -143,6 +152,16 @@ function mapItem(snap) {
     // Famiglia del contenuto per gli articoli contati a pezzo: senza, una
     // bottiglia da 33 cl non ha un costo al cl (vedi contentBase).
     content_unit: i.content_unit ?? null,
+    display_unit: i.display_unit ?? null,
+    // La resa dei prodotti scritti col modello vecchio: la legge solo il
+    // travaso, che la riassorbe nel contenuto del pezzo.
+    resa: i.resa != null ? Number(i.resa) : null,
+    resa_unit: i.resa_unit ?? null,
+    // SI SCARICA DAL MAGAZZINO? Lo dice il PRODOTTO, non la sua unità: senza
+    // questo campo il «Tempo di Lavorazione», appena l'unità passa al pezzo,
+    // ridiventerebbe merce — a zero al primo drink, e il menù farebbe
+    // sparire dalla carta i drink che lo usano.
+    scorta: typeof i.scorta === 'boolean' ? i.scorta : null,
     bottles_total: Number(i.bottles_total) || 0,
     low_threshold: Number(i.low_threshold) || 0,
     category_id: i.category_id ?? null,
@@ -153,7 +172,7 @@ function mapItem(snap) {
     // scelta esplicita (i prodotti che non devono mancare), non il default.
     status: i.status ?? 'assortimento',
     created_at: toIso(i.created_at),
-  }
+  })
 }
 
 function mapMovement(snap) {
@@ -528,15 +547,21 @@ export async function loadStock(itemId, qty, { reason = 'carico' } = {}) {
   // Un carico parte da quello che c'è, e quello che c'è non è mai negativo:
   // una bottiglia caricata su −0,04 deve valere una bottiglia. Lo scarico a
   // mano, dall'altra parte, non può scavare sotto lo zero.
-  const partenza = giacenzaPerCarico(cur.stock)
+  // IL TRAVASO SUCCEDE QUI, la prima volta che qualcuno tocca l'articolo per
+  // un motivo suo (REQ-MAG-018): la quantità arriva già nell'unità del
+  // modello nuovo — i pezzi — perché è quello che la schermata ha letto.
+  // Sommarla alla giacenza scritta col modello vecchio darebbe pezzi sommati
+  // a centilitri.
+  const norm = articoloNormalizzato(cur)
+  const partenza = giacenzaPerCarico(norm.stock)
   const nuovo = qty >= 0 ? partenza + qty : partenza - scaricoPossibile(partenza, -qty)
-  await updateDoc(ref, { stock: nuovo })
+  await updateDoc(ref, { ...(patchNormalizza(cur) || {}), stock: nuovo })
   await addDoc(movementsCol, {
     item_id: itemId,
     item_name: cur.name,
     type: qty >= 0 ? 'load' : 'unload',
     qty: Math.abs(qty),
-    unit: cur.unit ?? null,
+    unit: norm.unit ?? null,
     reason,
     created_at: serverTimestamp(),
   })
@@ -583,11 +608,17 @@ export async function adjustStock(itemId, newStock) {
   const s = await getDoc(ref)
   if (!s.exists()) throw new Error('Prodotto non trovato')
   const cur = s.data()
-  const delta = newStock - (Number(cur.stock) || 0)
-  const size = Number(cur.package_size) || 0
+  // Come nel carico: la conta arriva nell'unità del modello nuovo, e
+  // l'articolo si riscrive lì per lì nella forma nuova (REQ-MAG-018).
+  const norm = articoloNormalizzato(cur)
+  const delta = newStock - (Number(norm.stock) || 0)
+  const size = Number(norm.package_size) || 0
   // Mantieni coerente il numero totale di bottiglie con la nuova giacenza.
-  const minTotal = size ? Math.ceil(newStock / size) : 0
-  const patch = { stock: newStock }
+  // Contando a pezzi le bottiglie SONO i pezzi: dividerle per il contenuto
+  // darebbe «1» su venti lattine da 33 cl.
+  const minTotal =
+    (norm.unit || 'pz') === 'pz' ? Math.ceil(newStock) : size ? Math.ceil(newStock / size) : 0
+  const patch = { ...(patchNormalizza(cur) || {}), stock: newStock }
   if (minTotal > (Number(cur.bottles_total) || 0)) patch.bottles_total = minTotal
   await updateDoc(ref, patch)
   if (delta !== 0) {

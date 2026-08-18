@@ -47,6 +47,17 @@
   dosa solo a pezzi). Lo stesso prodotto si vende in più modi — il
   Jägermeister va nel Jägerbombo e si serve a cicchetto — e dichiararlo una
   volta per tutte non funzionava.
+- **I prodotti che c'erano già si adeguano da soli, aggiornando l'app.** Le
+  388 schede scritte con le unità di ieri — litri, chili, «U», la resa fra
+  due misure — si leggono da subito in pezzi, con giacenze, costi e ricette
+  che dicono esattamente quello che dicevano prima: nessuno deve riaprire
+  niente. La scheda di un prodotto ancora da riscrivere lo dice a chiare
+  lettere («era scritto a litri: la giacenza si legge come 0,92 pz»), e la
+  forma nuova si salva la prima volta che qualcuno lo tocca — una modifica,
+  un carico, una conta. Restano indietro solo i prodotti comprati in una
+  misura e usati in un'altra (i limoni al chilo, spremuti in centilitri):
+  lì cosa sia un pezzo lo deve decidere una persona, e finché non lo fa
+  quel prodotto funziona come prima.
 - **Carico e conta si scrivono nell'unità che si ha in mano.** Accanto alla
   quantità c'è la scelta fra pezzi e contenuto: la cassetta di limoni si
   carica a chili, i centilitri rimasti in una bottiglia si contano in
