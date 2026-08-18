@@ -39,6 +39,11 @@ function destinazione(o) {
 
 const quantiDrink = (o) => (o.order_items || []).reduce((s, i) => s + (Number(i.qty) || 0), 0)
 
+// Quante righe si vedono senza chiedere. Sei: è quello che ci sta in una
+// card senza far scomparire le corsie accanto, ed è anche più di quanto ha
+// un conto normale — chi ne ha venti è l'eccezione, e la apre.
+const RIGHE_A_VISTA = 6
+
 export default function CorsieStato({
   corsie,
   idAcceso = null,
@@ -55,6 +60,9 @@ export default function CorsieStato({
   azioni = null,
   aperta = null,
   onApriAzioni,
+  // Quale card mostra TUTTE le righe: una alla volta, come per le azioni.
+  espansa = null,
+  onEspandi,
 }) {
   // Un solo «adesso» per tutta la vista: card diverse non devono dire tempi
   // diversi solo perché sono state disegnate a un secondo di distanza.
@@ -142,49 +150,95 @@ export default function CorsieStato({
                     {soloCifra ? (
                       <div className="bignum corsia-cifra">{formatPrice(orderTotal(o))}</div>
                     ) : (
-                      <div className="small corsia-righe">
-                        {(o.order_items || []).map((i) => (
-                          <div key={i.id ?? `${i.drink_id}-${i.name}`}>
-                            {i.qty}× {i.name}
+                      <div
+                        className={`small corsia-righe${
+                          (o.order_items || []).length > RIGHE_A_VISTA && espansa !== o.id
+                            ? ' corsia-righe-sfuma'
+                            : ''
+                        }`}
+                      >
+                        {(espansa === o.id
+                          ? o.order_items || []
+                          : (o.order_items || []).slice(0, RIGHE_A_VISTA)
+                        ).map((i, idx) => (
+                          <div key={i.id ?? `${i.drink_id}-${i.name}-${idx}`} className="corsia-riga">
+                            <span className="corsia-riga-nome">
+                              {i.qty}× {i.name}
+                            </span>
+                            {/* IL PREZZO DELLA RIGA: chi guarda la card sta
+                                spesso rispondendo a «quanto viene?», e
+                                doveva aprire il conto per saperlo. */}
+                            <span className="corsia-riga-prezzo">
+                              {formatPrice((Number(i.qty) || 0) * (Number(i.unit_price) || 0))}
+                            </span>
+                            {/* La nota della RIGA — «senza ghiaccio» — è
+                                quella che cambia come si prepara: sta
+                                attaccata alla riga, non in fondo al conto. */}
+                            {i.note && <span className="corsia-riga-nota">{i.note}</span>}
                           </div>
                         ))}
+                        {/* UN CONTO LUNGO NON DEVE MANGIARSI LA COLONNA. Con
+                            venti righe la card diventava una pagina, e le
+                            altre corsie sparivano sotto: si vedono le prime,
+                            e chi vuole il resto lo chiede. */}
+                        {(o.order_items || []).length > RIGHE_A_VISTA && (
+                          <button
+                            className="corsia-piu"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              onEspandi?.(espansa === o.id ? null : o.id)
+                            }}
+                            aria-expanded={espansa === o.id}
+                          >
+                            {espansa === o.id
+                              ? '▴ meno'
+                              : `▾ altre ${(o.order_items || []).length - RIGHE_A_VISTA}`}
+                          </button>
+                        )}
                       </div>
                     )}
                     {o.note && <div className="order-note small corsia-nota">{o.note}</div>}
-                    {azioni && (
-                      <>
-                        <button
-                          className="btn ghost small block corsia-altre"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            onApriAzioni?.(aperta === o.id ? null : o.id)
-                          }}
-                          aria-expanded={aperta === o.id}
-                        >
-                          {aperta === o.id ? '▴ Chiudi' : '⋯ Azioni'}
-                        </button>
-                        {aperta === o.id && (
-                          // Le azioni sono quelle della coda, disegnate qui:
-                          // una regola sola, in un posto solo.
-                          <div onClick={(e) => e.stopPropagation()}>{azioni(o)}</div>
+                    {/* IL PIEDE DELLA CARD, IN UNA RIGA SOLA. «⋯ Azioni» e
+                        il tasto che porta avanti il lavoro erano due blocchi
+                        larghi tutta la card, uno sotto l'altro: due righe di
+                        altezza per ogni conto, moltiplicate per una colonna
+                        intera. */}
+                    {(azioni || azione) && (
+                      <div className="corsia-piede">
+                        {azioni && (
+                          <button
+                            className="btn ghost small corsia-azioni"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              onApriAzioni?.(aperta === o.id ? null : o.id)
+                            }}
+                            aria-expanded={aperta === o.id}
+                          >
+                            {aperta === o.id ? '▴ Chiudi' : '⋯ Azioni'}
+                          </button>
                         )}
-                      </>
+                        {azione && (
+                          <button
+                            className="btn small corsia-azione"
+                            disabled={attesa}
+                            title={attesa ? 'In attesa del pagamento: non si prepara' : undefined}
+                            onClick={(e) => {
+                              // Il tasto non è la card: toccandolo si fa
+                              // quello che c'è scritto, non si apre il conto.
+                              e.stopPropagation()
+                              if (azione.tipo === 'avanza') onAvanza?.(o)
+                              else onIncassa?.(o)
+                            }}
+                          >
+                            {azione.etichetta}
+                          </button>
+                        )}
+                      </div>
                     )}
-                    {azione && (
-                      <button
-                        className="btn small block corsia-azione"
-                        disabled={attesa}
-                        title={attesa ? 'In attesa del pagamento: non si prepara' : undefined}
-                        onClick={(e) => {
-                          // Il tasto non è la card: toccando il tasto si fa
-                          // quello che c'è scritto, non si apre il conto.
-                          e.stopPropagation()
-                          if (azione.tipo === 'avanza') onAvanza?.(o)
-                          else onIncassa?.(o)
-                        }}
-                      >
-                        {azione.etichetta}
-                      </button>
+                    {azioni && aperta === o.id && (
+                      // Le azioni sono quelle della coda, disegnate qui:
+                      // una regola sola, in un posto solo.
+                      <div onClick={(e) => e.stopPropagation()}>{azioni(o)}</div>
                     )}
                   </article>
                 )
