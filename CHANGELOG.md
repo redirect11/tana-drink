@@ -26,6 +26,9 @@
 - **Le ore della serata sono in ordine di serata**: le 8 del mattino dopo
   venivano prima delle 23 della sera, perché contava l'orologio e non la
   nottata. Quando una serata tocca due giorni, ogni colonna porta la data.
+- **Un conto nuovo nasce «da fare»**, non già «in preparazione»: si battono
+  tre conti di fila e poi si comincia a versare. È «Lo preparo io» a dire
+  quando si comincia — e chi.
 - **Un ordine può tornare indietro**: nelle azioni della card e nel dettaglio
   ci sono le pastiglie «↩︎ Torna a…» con tutti gli stati già passati — non
   solo il precedente. Prima, se si segnava «pronto» il conto sbagliato,

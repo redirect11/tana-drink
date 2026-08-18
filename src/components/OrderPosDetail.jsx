@@ -1219,10 +1219,15 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
       ? { email: staff.email, name: staff.name, role: staff.role, device: idDispositivo() }
       : undefined
 
-  // Senza gestione della preparazione non c'è nulla da far avanzare:
-  // l'ordine nasce "ricevuto" e da lì si chiude col pagamento.
+  // UN CONTO NASCE «RICEVUTO», anche col banco che lo batte. Nasceva già
+  // «in preparazione» — l'idea era che chi lo prende al banco lo sta già
+  // facendo — ma non è così: si battono tre conti di fila e poi si comincia
+  // a versare. Con le corsie si vedeva il difetto in faccia: «Da fare»
+  // restava sempre vuota e tutto compariva «Al banco», cioè la colonna
+  // diceva una cosa falsa. È «Lo preparo io» a dire quando si comincia, e
+  // dice anche CHI.
   const workflowOn = settings.workflow_enabled !== false
-  const statoIniziale = workflowOn ? ORDER_STATUSES.IN_PREPARAZIONE : ORDER_STATUSES.RICEVUTO
+  const statoIniziale = ORDER_STATUSES.RICEVUTO
   // Il POS eredita la modalità di consegna del locale (se non è "sceglie
   // il cliente"), così l'ordine sa se sarà servito o ritirato.
   const modoConsegna =
