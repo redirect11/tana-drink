@@ -452,6 +452,9 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
   // La scheda attiva quando gli stati di servizio sono SPENTI: in corso,
   // chiusi o annullati — le stesse voci della griglia.
   const [tabSemplice, setTabSemplice] = useState('attivi')
+  // Quale card delle corsie ha le azioni aperte: una alla volta, se no la
+  // colonna diventa un muro di tasti.
+  const [corsiaAperta, setCorsiaAperta] = useState(null)
   const [soloOggi, setSoloOggi] = useState(false) // nasconde i conti dei giorni scorsi
   const [nascondiPagati, setNascondiPagati] = useState(false) // pagati non ancora serviti
   // «Miei»: solo i conti inseriti da chi è collegato. Ha preso il posto
@@ -1789,6 +1792,9 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
               navigate(`/ordine/${o.id}`)
             }}
             onAvanza={advance}
+            azioni={orderActions}
+            aperta={corsiaAperta}
+            onApriAzioni={setCorsiaAperta}
             // «Incassa» apre il pagamento del conto, quello vero: sconto,
             // conto diviso, contanti, carta e lettore stanno lì. Rifarne una
             // versione ridotta qui vorrebbe dire due casse che si comportano

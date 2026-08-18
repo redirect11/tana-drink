@@ -23,6 +23,14 @@
 - **Il flusso di cassa si allarga sugli schermi grandi**: le tessere si
   affiancano invece di incolonnarsi in una striscia da scorrere, e restano
   larghe solo l'andamento per ora e la chiusura. Sul telefono niente cambia.
+- **Le ore della serata sono in ordine di serata**: le 8 del mattino dopo
+  venivano prima delle 23 della sera, perché contava l'orologio e non la
+  nottata. Quando una serata tocca due giorni, ogni colonna porta la data.
+- **Nelle corsie di stato le card hanno «⋯ Azioni»**: incassare, stampare
+  comanda o scontrino, annullare — le stesse azioni della coda, senza
+  cambiare vista.
+- **Le corsie prendono tutta la larghezza**: con gli stati di servizio
+  spenti sono tre, e restavano schiacciate a sinistra.
 - **L'andamento per ora è un grafico nel tempo**: una colonna per ora, da
   sinistra a destra, così si vede la forma della serata — il picco, la coda.
   Era una riga per ora, una sotto l'altra.

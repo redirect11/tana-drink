@@ -33,7 +33,12 @@ describe('cashRecap', () => {
     expect(r.byMethod.banco).toBe(20)
     expect(r.byMethod.lettore).toBe(15)
     expect(r.nPagati).toBe(2)
-    expect(r.perOra).toEqual([{ ora: '19', importo: 20 }, { ora: '20', importo: 15 }])
+    // `giorno` è null finché la serata sta in un giorno solo: scrivere la
+    // data su ogni colonna sarebbe rumore.
+    expect(r.perOra).toEqual([
+      { ora: '19', giorno: null, importo: 20 },
+      { ora: '20', giorno: null, importo: 15 },
+    ])
     // contante atteso = fondo 50 + contanti 20
     expect(r.contanteAtteso).toBe(70)
   })
@@ -239,5 +244,24 @@ describe('il flusso cassa durante la serata', () => {
       },
     ]
     expect(cashRecap(vecchio, sessione, adesso).perChi[0].chi).toBe('Peppe')
+  })
+})
+
+// ── UNA SERATA SCAVALCA LA MEZZANOTTE ────────────────────────────────
+// Le 8 del mattino dopo venivano PRIMA delle 23 della sera prima: l'ordine
+// era quello dell'orologio, non quello della serata, e il grafico
+// raccontava la nottata al contrario.
+describe('le ore di una serata che passa la mezzanotte', () => {
+  it('vanno in ordine di serata, e portano il giorno', () => {
+    const session = { opened_at: '2026-07-21T20:00:00.000Z', fondo_cassa: 0 }
+    const orders = [
+      { status: 'pagato', payments: [{ amount: 42.5, method: 'banco', at: '2026-07-21T23:10:00.000Z' }] },
+      { status: 'pagato', payments: [{ amount: 47, method: 'banco', at: '2026-07-22T08:05:00.000Z' }] },
+    ]
+    const r = cashRecap(orders, session, '2026-07-22T09:00:00.000Z')
+    expect(r.perOra.map((x) => x.ora)).toEqual(['23', '08'])
+    // Toccando due giorni, ognuna dice il suo: «08:00» in fondo, senza data,
+    // si legge come un errore.
+    expect(r.perOra.map((x) => x.giorno)).toEqual(['2026-07-21', '2026-07-22'])
   })
 })
