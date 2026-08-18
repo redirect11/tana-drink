@@ -61,6 +61,12 @@ con una prova a vuoto che dice cosa cambierebbe prima di toccare niente.
 
 ### Al banco
 
+- **«In attesa del pagamento: non si prepara» funziona anche col salto
+  acceso**: dove il pagamento è obbligatorio il blocco valeva solo per i conti
+  fermi a «da fare», e in un locale che fa nascere le comande già in
+  preparazione non scattava mai. Adesso guarda il passo in cui il lavoro
+  nasce, comunque sia messo il locale.
+
 - **Senza gli stati del servizio, il conto non parla di passi**: le righe si
   intestavano «In preparazione» anche in un locale che non segue la
   preparazione. La divisione dei pagati invece resta sempre — quella parla di
