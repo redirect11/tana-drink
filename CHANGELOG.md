@@ -11,6 +11,32 @@
 
 ### Al banco
 
+- **Incassare non vuol dire aver servito.** Si segnava pagato un ordine e
+  alcune comande ancora in preparazione risultavano servite: quei drink
+  sparivano dagli occhi di chi doveva farli, e il magazzino veniva scaricato
+  per roba mai uscita. Succedeva soprattutto pagando un tavolo intero. Adesso
+  il pagamento non tocca il servizio: il conto resta aperto finché non è
+  uscito tutto, e a chiudere è solo chi lo dice — «Riscuoti e servi», o gli
+  stati del servizio spenti.
+- **Dal ticket si divide.** «✂️ Preparazione parziale» adesso c'è anche nel
+  dettaglio della comanda: preparare tre gin tonic su cinque si decide
+  guardando il ticket, ed è lì che sta chi lo guarda. Dopo la divisione la
+  schermata porta da sé sul pezzo che si è detto di preparare adesso, che è
+  quello che si ha in mano.
+- **Le comande annullate si ritrovano.** Se ne separava una e quella di
+  partenza si volatilizzava: adesso la colonna «Annullate» le raccoglie
+  tutte — tolte a mano, divise in due, o cadute con un conto annullato — e
+  sulla card c'è scritto quale delle tre è stata, perché una divisione non è
+  un drink saltato.
+- **Una colonna in meno al banco.** «Da incassare» conteneva gli stessi drink
+  di «Ritirato/Servito», solo raggruppati per conto invece che per ticket:
+  due colonne per la stessa cosa. Resta «Ritirato/Servito», con le comande
+  come le altre; se il conto è ancora da pagare lo dice il bollo sulla card,
+  e il tasto porta in cassa.
+- **«🍸 Comande» si trova anche in griglia.** Chi tiene la cassa lavora in
+  griglia perché è quella che gli serve per i conti: adesso può dare
+  un'occhiata a com'è messa la preparazione senza passare dalle Impostazioni
+  a cambiare vista e poi tornare a rimetterla com'era.
 - **La comanda ha una schermata sua.** Toccando una card nella coda del banco
   si apre il ticket: le sue righe per intero con prezzi e note, i quattro
   passi del servizio con l’ORA in cui sono stati toccati — così si vede se

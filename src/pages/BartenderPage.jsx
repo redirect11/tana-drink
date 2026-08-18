@@ -568,10 +568,17 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // — stanno a tutto schermo: aggiungono `fullbleed` al body così la pagina
   // esce dal contenitore centrato (.app, max 760px) e riempie larghezza e
   // altezza. Rimosso quando si lascia la lavagna o si smonta la coda.
-  const gridView = !vistaBanco && settings.queue_view === 'griglia'
+  // CHI NON È AL BANCO PUÒ ANDARE A GUARDARE IL LAVORO, da qualunque vista
+  // della coda: è una pastiglia sopra le corsie (vedi puoScegliere), e la
+  // scelta è di questo terminale. Tornando indietro la coda si ritrova
+  // com'era — griglia compresa — perché quella resta l'impostazione del
+  // locale e nessuno l'ha toccata.
+  const guardaComande = workflowOn && !vistaBanco && vista === 'comande'
+  const gridView = !vistaBanco && !guardaComande && settings.queue_view === 'griglia'
   // LA CODA DELL'ADMIN NON CAMBIA: con «corsie di stato» continua a vedere
   // i CONTI — in corso, chiusi, annullati — come ha sempre fatto.
-  const corsieView = bancoCorsie || (!vistaBanco && settings.queue_view === 'corsie')
+  const corsieView =
+    bancoCorsie || guardaComande || (!vistaBanco && settings.queue_view === 'corsie')
   const lavagna = gridView || corsieView
   useEffect(() => {
     if (!lavagna) return undefined
@@ -1088,8 +1095,15 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   //
   // Senza gli stati del servizio i passi non esistono per nessuno — un
   // conto è solo aperto, chiuso o annullato — e restano le tre corsie.
-  const puoScegliere = corsieView && workflowOn && !vistaBanco
-  const corsieBanco = bancoCorsie || (puoScegliere && vista === 'comande')
+  // LA PASTIGLIA C'È CON QUALUNQUE VISTA DELLA CODA, non solo a corsie: la
+  // vista del banco è una vista a sé, non una variante delle corsie. Chi
+  // tiene la cassa lavora in griglia perché è quella che gli serve per i
+  // conti, ma a metà serata vuole dare un'occhiata a com'è messa la
+  // preparazione: senza questo tasto doveva cambiare vista in Impostazioni,
+  // guardare, e tornare a rimetterla com'era. Al banco la pastiglia non
+  // c'è: lì non c'è niente da scegliere.
+  const puoScegliere = workflowOn && !vistaBanco
+  const corsieBanco = bancoCorsie || guardaComande
   const corsieDelBanco = corsieBanco ? corsieComande(contiInCorsia, { isChiuso: isClosed }) : []
   // LE CORSIE DEI CONTI PARLANO DEL CONTO, non del lavoro: «In corso»,
   // «Chiusi», «Annullati» sono le tre cose che un CONTO può essere, e per
@@ -1113,11 +1127,35 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
     setNascoste(via)
     ricordaCorsieNascoste(via)
   }
+  // LE DUE DOMANDE, in una pastiglia sola. Chi guarda la serata vuole
+  // sapere sia come sta andando (i CONTI) sia a che punto è la preparazione
+  // (le COMANDE): l'interruttore passa dall'una all'altra e si ricorda su
+  // questo terminale. Sta in tutte le viste della coda — griglia, lista,
+  // schede, corsie — perché la vista del banco è una vista A SÉ, non una
+  // variante delle corsie: chi tiene la cassa lavora in griglia, e per dare
+  // un'occhiata al banco non deve passare dalle Impostazioni e poi tornare
+  // a rimettere tutto com'era. È scritta qui una volta e appesa dove serve.
+  // Al banco non c'è: lì la risposta è sempre il lavoro, e un tasto che
+  // porta altrove è solo un modo per perdersi la coda a metà serata.
   const cambiaVista = () => {
     const nuova = corsieBanco ? 'conti' : 'comande'
     setVista(nuova)
     ricordaVistaCorsie(nuova)
   }
+  const pastigliaComande = puoScegliere ? (
+    <button
+      className={`chip ${corsieBanco ? 'active' : ''}`}
+      onClick={cambiaVista}
+      aria-pressed={corsieBanco}
+      title={
+        corsieBanco
+          ? 'Adesso: le comande, nei passi del servizio — tocca per tornare ai conti'
+          : 'Adesso: i conti — tocca per vedere a che punto sta la preparazione'
+      }
+    >
+      🍸 Comande
+    </button>
+  ) : null
 
   // IL CONTO ACCESO. Solo nel modo "evidenzia": è il primo che risponde
   // NELL'ORDINE IN CUI STA SULLO SCHERMO — non nell'ordine in cui arrivano
@@ -1935,6 +1973,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             >
               ✍️ Miei
             </button>
+            {pastigliaComande}
           </div>
         </>
       )}
@@ -1975,6 +2014,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             >
               ✍️ Miei
             </button>
+            {pastigliaComande}
             {/* Conti dei giorni scorsi: di default sono in coda, sotto la
                 loro data. Questo tasto li nasconde e lascia solo oggi. */}
             {(pagatiDaServire.length > 0 || nascondiPagati) && (
@@ -2045,26 +2085,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             >
               ✍️ Miei
             </button>
-            {/* LE DUE DOMANDE. Chi guarda la serata vuole sapere sia come
-                sta andando (i conti) sia a che punto è la preparazione (le
-                comande): l'interruttore passa dall'una all'altra e si
-                ricorda. Al banco non c'è: lì la risposta è sempre il
-                lavoro, e un tasto che porta altrove è solo un modo per
-                perdersi la coda a metà serata. */}
-            {puoScegliere && (
-              <button
-                className={`chip ${corsieBanco ? 'active' : ''}`}
-                onClick={cambiaVista}
-                aria-pressed={corsieBanco}
-                title={
-                  corsieBanco
-                    ? 'Adesso: le comande, nei passi del servizio — tocca per tornare ai conti'
-                    : 'Adesso: i conti — tocca per vedere a che punto sta la preparazione'
-                }
-              >
-                🍸 Comande
-              </button>
-            )}
+            {pastigliaComande}
             {/* QUALI COLONNE TENERE A SCHERMO. A metà serata chi sta allo
                 shaker guarda «Da fare» e «Al banco», e le altre due gli
                 mangiano mezzo schermo per roba che in quel momento non lo

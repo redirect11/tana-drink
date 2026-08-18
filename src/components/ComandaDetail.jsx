@@ -6,15 +6,18 @@ import {
   ritiratoLabel,
   statiPrima,
 } from '../lib/orderStatus.js'
+import { useState } from 'react'
 import { hhmm } from '../lib/ore.js'
 import { paidAmount } from '../lib/pagamento.js'
 import { destinazioneConto, daQuanto } from '../lib/coda.js'
 import {
   annullataPerDivisione,
+  comandaDivisibile,
   itemsTotal,
   nextComandaStatus,
   tappeComanda,
 } from '../lib/comande.js'
+import PreparazioneParziale from './PreparazioneParziale.jsx'
 
 // ── IL DETTAGLIO DI UNA COMANDA ──────────────────────────────────────
 //
@@ -37,12 +40,18 @@ const nomeStato = (stato, serviceMode) =>
 export default function ComandaDetail({
   order,
   comanda,
+  workflowOn = true,
   onAvanza,
   onTornaA,
+  onDividi,
   onApriConto,
   onStampa,
   onIndietro,
 }) {
+  // Il riquadro delle quantità è aperto? Sta chiuso di suo: dividere è la
+  // deroga, non la regola, e sei tastini +/− sempre aperti sotto il tasto
+  // grande sono sei modi di toccare quello sbagliato di corsa.
+  const [dividendo, setDividendo] = useState(false)
   const righe = comanda.items || []
   const prossimo = nextComandaStatus(comanda.status)
   const chiusa =
@@ -162,6 +171,37 @@ export default function ComandaDetail({
             ))}
           </div>
         )}
+        {/* ── PREPARAZIONE PARZIALE ───────────────────────────
+            Tre gin tonic qui e due nella comanda del tavolo accanto si
+            preparano insieme, per farli uscire in una volta. È una
+            decisione che si prende guardando IL TICKET, non il conto: sta
+            qui perché qui c'è chi la prende, e farlo risalire al conto per
+            dividere quello che ha già davanti sono due schermate indietro
+            per una cosa che riguarda solo questa comanda.
+            Solo su una comanda ancora DA FARE e con più di un'unità
+            (comandaDivisibile): quello che è già al banco non si divide, il
+            lavoro è cominciato, e su un drink solo la scelta sarebbe fra
+            tutto e niente — cioè il tasto grande qui sopra. */}
+        {workflowOn &&
+          !chiusa &&
+          comandaDivisibile(comanda) &&
+          (dividendo ? (
+            <PreparazioneParziale
+              comanda={comanda}
+              onAnnulla={() => setDividendo(false)}
+              onConferma={(scelte) => {
+                setDividendo(false)
+                onDividi?.(scelte)
+              }}
+            />
+          ) : (
+            <button
+              className="btn ghost small block comanda-det-dividi"
+              onClick={() => setDividendo(true)}
+            >
+              ✂️ Preparazione parziale
+            </button>
+          ))}
         <button className="btn ghost small block comanda-det-stampa" onClick={onStampa}>
           🖨 Ristampa la comanda
         </button>

@@ -16,7 +16,7 @@
 //   · al CONTO si risale sempre, perché è lì che si incassa e si aggiunge.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, within, waitFor } from '@testing-library/react'
+import { act, render, screen, within, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import '@testing-library/jest-dom/vitest'
@@ -42,18 +42,31 @@ vi.mock('firebase/auth', () => ({
 
 // L'ordine come lo manda il server: la sottoscrizione lo consegna subito.
 let ordine = null
+// Le impostazioni del locale: gli stati del servizio accendono i passi — e
+// con essi la divisione della comanda.
+let impostazioni = { workflow_enabled: true }
+// La sottoscrizione resta in mano al test: dopo un gesto si può far
+// arrivare lo snapshot successivo, come farebbe il server.
+let mandaOrdine = null
 vi.mock('../../src/lib/api.js', () => ({
   subscribeOrder: (_id, cb) => {
+    mandaOrdine = cb
     cb(ordine)
     return () => {}
   },
+  subscribeSettings: (cb) => {
+    cb({ ...impostazioni })
+    return () => {}
+  },
+  settingsIniziali: () => ({ ...impostazioni }),
   advanceComanda: vi.fn(() => Promise.resolve()),
+  preparazioneParziale: vi.fn(() => Promise.resolve()),
 }))
 vi.mock('../../src/lib/printer.js', () => ({ printComanda: vi.fn(async () => {}) }))
 vi.mock('../../src/lib/toast.js', () => ({ showToast: vi.fn() }))
 
 import ComandaPage from '../../src/pages/ComandaPage.jsx'
-import { advanceComanda } from '../../src/lib/api.js'
+import { advanceComanda, preparazioneParziale } from '../../src/lib/api.js'
 import { printComanda } from '../../src/lib/printer.js'
 
 const ORA = '2026-08-18T21:00:00.000Z'
@@ -92,20 +105,23 @@ const conto = (over = {}) => ({
   ...over,
 })
 
+const albero = (comandaId) => (
+  <MemoryRouter initialEntries={[`/ordine/o41/comanda/${comandaId}`]}>
+    <Routes>
+      <Route path="/ordine/:id/comanda/:comandaId" element={<ComandaPage />} />
+      <Route path="/ordine/:id" element={<div>schermata del conto</div>} />
+    </Routes>
+  </MemoryRouter>
+)
+
 function monta(comandaId = 'c2') {
-  return render(
-    <MemoryRouter initialEntries={[`/ordine/o41/comanda/${comandaId}`]}>
-      <Routes>
-        <Route path="/ordine/:id/comanda/:comandaId" element={<ComandaPage />} />
-        <Route path="/ordine/:id" element={<div>schermata del conto</div>} />
-      </Routes>
-    </MemoryRouter>
-  )
+  return render(albero(comandaId))
 }
 
 beforeEach(() => {
   vi.clearAllMocks()
   ruolo = 'bartender'
+  impostazioni = { workflow_enabled: true }
   ordine = conto()
 })
 
@@ -207,6 +223,86 @@ describe('il dettaglio di una comanda', () => {
     monta()
     await screen.findByText(/Cosa c’è da fare/)
     expect(screen.getByText('💳 Acconto')).toBeInTheDocument()
+  })
+
+  // ── DIVIDERE DA QUI ────────────────────────────────────
+  //
+  // Preparare tre gin tonic su cinque è una decisione che si prende
+  // guardando IL TICKET, non il conto: sta qui perché qui c'è chi la
+  // prende. Farlo risalire al conto per dividere quello che ha già davanti
+  // sono due schermate indietro per una cosa che riguarda solo questa
+  // comanda. La strada è la stessa del conto — dividiComanda +
+  // preparazioneParziale — e resta l'unica.
+  it('si sceglie quante unità preparare adesso, e parte la stessa strada del conto', async () => {
+    const utente = userEvent.setup()
+    monta('c1') // due gin tonic, ancora «da fare»: si può dividere
+    await screen.findByText(/Cosa c’è da fare/)
+
+    await utente.click(screen.getByRole('button', { name: /Preparazione parziale/ }))
+    await utente.click(screen.getByRole('button', { name: 'Uno in più di Gin Tonic' }))
+    await utente.click(screen.getByRole('button', { name: 'Preparo questi' }))
+
+    expect(preparazioneParziale).toHaveBeenCalledWith('o41', 'c1', [1])
+  })
+
+  it('non si propone dove non ha senso', async () => {
+    // Su una comanda già al banco il lavoro è cominciato, e su un drink
+    // solo la scelta sarebbe fra tutto e niente — cioè il tasto grande.
+    monta('c2') // in preparazione
+    await screen.findByText(/Cosa c’è da fare/)
+    expect(screen.queryByRole('button', { name: /Preparazione parziale/ })).not.toBeInTheDocument()
+  })
+
+  it('senza gli stati del servizio non si divide niente', async () => {
+    impostazioni = { workflow_enabled: false }
+    monta('c1')
+    await screen.findByText(/Cosa c’è da fare/)
+    expect(screen.queryByRole('button', { name: /Preparazione parziale/ })).not.toBeInTheDocument()
+  })
+
+  it('DOPO LA DIVISIONE si va sul pezzo che si è detto di preparare adesso', async () => {
+    // Quella comanda non esiste più: al suo posto ne nascono due, e chi ha
+    // appena diviso ha in mano la prima. Restare lì vorrebbe dire guardare
+    // un ticket che non c'è. Si sostituisce il passo nella storia del
+    // browser: «indietro» deve riportare alla coda.
+    const utente = userEvent.setup()
+    monta('c1')
+    await screen.findByText(/Cosa c’è da fare/)
+    await utente.click(screen.getByRole('button', { name: /Preparazione parziale/ }))
+    await utente.click(screen.getByRole('button', { name: 'Uno in più di Gin Tonic' }))
+    await utente.click(screen.getByRole('button', { name: 'Preparo questi' }))
+
+    // il server risponde: la vecchia è annullata, e ne sono nate due
+    ordine = conto({
+      comande: [
+        {
+          id: 'c1',
+          seq: 1,
+          status: 'annullato',
+          annullata_per: 'divisione',
+          divisa_in: ['c3', 'c4'],
+          items: [{ drink_id: 'gin', name: 'Gin Tonic', qty: 2, unit_price: 8 }],
+        },
+        {
+          id: 'c3',
+          seq: 3,
+          status: 'in_preparazione',
+          divisa_da: 'c1',
+          items: [{ drink_id: 'gin', name: 'Gin Tonic', qty: 1, unit_price: 8 }],
+        },
+        {
+          id: 'c4',
+          seq: 4,
+          status: 'ricevuto',
+          divisa_da: 'c1',
+          items: [{ drink_id: 'gin', name: 'Gin Tonic', qty: 1, unit_price: 8 }],
+        },
+      ],
+    })
+    act(() => mandaOrdine(ordine))
+    await waitFor(() =>
+      expect(navigateSpy).toHaveBeenCalledWith('/ordine/o41/comanda/c3', { replace: true })
+    )
   })
 
   it('chi non gestisce finisce sul conto, non davanti a un «non puoi»', async () => {

@@ -543,3 +543,30 @@ bugs:
     generate_issue: false
     labels: [bug, coda]
     test_cases: [tests/component/CodaCorsie.test.jsx]
+
+  - id: BUG-019
+    title: "Incassare marcava «servite» comande che nessuno aveva preparato"
+    area: "src/lib/api.js"
+    description: >
+      Con gli stati del servizio accesi si segnava pagato un ordine e alcune
+      comande ancora IN PREPARAZIONE risultavano servite. Due danni, tutti e
+      due silenziosi: quei drink sparivano dagli occhi di chi doveva farli, e
+      il magazzino veniva scaricato per roba mai uscita.
+      CAUSA: due strade. `payGroupCash` (pagamento di un gruppo/tavolo)
+      chiamava serveAllComande SEMPRE, senza guardare a che punto stessero le
+      comande — un tavolo che paga insieme mentre due giri sono al banco li
+      faceva sparire già «serviti». E il valore di partenza di `autoServe`
+      era acceso in chiusuraPagamento, registerPayment e markOrderPaid: ogni
+      strada che si dimenticava di dirlo serviva tutto in silenzio.
+      RISOLTO: `autoServe` parte SPENTO dappertutto — sbagliando in questo
+      verso resta un conto aperto e si chiude, sbagliando nell'altro si
+      perde un drink e si scarica una scorta mai uscita — e il pagamento di
+      gruppo passa dalla regola di tutti (chiusuraPagamento). A servire resta
+      una strada sola, ed è un gesto esplicito: «Riscuoti e servi» nella
+      schermata di pagamento. Senza gli stati del servizio non cambia niente:
+      lì i passi non esistono e il pagamento chiude, come ha sempre fatto.
+    in_produzione: false
+    status: fixed
+    generate_issue: false
+    labels: [bug, pagamenti, coda]
+    test_cases: [tests/unit/pagamentoNonServe.test.js]

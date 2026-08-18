@@ -2,7 +2,15 @@ import { useEffect, useState } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { onAuthStateChanged } from 'firebase/auth'
 import { auth } from '../lib/firebaseClient.js'
-import { advanceComanda, subscribeOrder } from '../lib/api.js'
+import {
+  advanceComanda,
+  preparazioneParziale,
+  settingsIniziali,
+  subscribeOrder,
+  subscribeSettings,
+} from '../lib/api.js'
+import { comandaNataDallaDivisione, dividiComanda } from '../lib/comande.js'
+import { ORDER_STATUSES } from '../lib/orderStatus.js'
 import { isGestore } from '../lib/ruoli.js'
 import { showToast } from '../lib/toast.js'
 import { printComanda } from '../lib/printer.js'
@@ -16,8 +24,9 @@ import ComandaDetail from '../components/ComandaDetail.jsx'
 // si apre, si guarda cosa manca, si preme, si torna indietro — e con un
 // indirizzo suo il tasto «indietro» del telefono fa la cosa giusta.
 //
-// Da qui si risale sempre al CONTO: incassare, aggiungere righe, dividere
-// sono cose del conto, e stanno nella sua schermata.
+// Da qui si risale sempre al CONTO: incassare e aggiungere righe sono cose
+// del conto, e stanno nella sua schermata. La preparazione parziale no:
+// quella si decide guardando il ticket, ed è qui che sta chi lo guarda.
 
 export default function ComandaPage() {
   const { id, comandaId } = useParams()
@@ -27,6 +36,10 @@ export default function ComandaPage() {
   // Lo stato appena premuto, finché il server non lo racconta: al banco un
   // gesto che non si vede subito è un gesto che si ripete.
   const [statoLocale, setStatoLocale] = useState(null)
+  // La comanda che si è appena divisa: si aspetta che dalla divisione nasca
+  // il pezzo da preparare, e ci si va sopra. Vedi sotto.
+  const [divisa, setDivisa] = useState(null)
+  const [settings, setSettings] = useState(settingsIniziali)
   // Chi sta guardando: la comanda è il lavoro del banco, e chi non lo
   // gestisce non ci ha niente da fare. `undefined` finché non si sa — non
   // si manda via nessuno prima di aver letto il ruolo.
@@ -46,6 +59,8 @@ export default function ComandaPage() {
     []
   )
 
+  useEffect(() => subscribeSettings(setSettings), [])
+
   useEffect(() => {
     if (!id) return undefined
     return subscribeOrder(
@@ -63,6 +78,24 @@ export default function ComandaPage() {
     if (statoLocale && comandaVera?.status === statoLocale) setStatoLocale(null)
   }, [comandaVera?.status, statoLocale])
 
+  // DOPO UNA DIVISIONE, QUESTA COMANDA NON ESISTE PIÙ: al suo posto ne
+  // nascono due, e chi ha appena diviso ha in mano la prima — quella che ha
+  // detto di preparare adesso. Ci si va sopra, e SI SOSTITUISCE il passo
+  // nella storia del browser: «indietro» deve riportare alla coda, non a un
+  // ticket che non c'è più.
+  //
+  // Non si aspetta il server: la scrittura entra in cache e lo snapshot
+  // arriva da sé un istante dopo, anche senza linea. È lo stesso motivo per
+  // cui non si calcola qui il numero della comanda nuova — lo decide chi
+  // scrive, e indovinarlo da fuori vorrebbe dire avere due regole.
+  useEffect(() => {
+    if (!divisa) return
+    const nata = comandaNataDallaDivisione(order, divisa)
+    if (!nata) return
+    setDivisa(null)
+    navigate(`/ordine/${id}/comanda/${nata.id}`, { replace: true })
+  }, [order, divisa, id, navigate])
+
   if (error) return <div className="banner">Errore: {error}</div>
   // Chi non gestisce va sul CONTO: quella pagina sa già cosa far vedere a
   // ognuno, e mandarci chi capita qui per sbaglio è meglio di un «non
@@ -70,6 +103,12 @@ export default function ComandaPage() {
   if (gestore === false) return <Navigate to={`/ordine/${id}`} replace />
   if (order === undefined || gestore === undefined) return <Caricamento testo="Apro la comanda…" />
   if (!order) return <div className="empty">Questo conto non c’è più.</div>
+
+  // DIVISIONE APPENA PARTITA: la comanda di prima c'è ancora (annullata)
+  // finché non arriva lo snapshot, ma se sparisse del tutto non si sbatte
+  // in faccia «non c'è più» a chi ha appena premuto — si aspetta il
+  // pezzo nuovo, che sta arrivando.
+  if (!comandaVera && divisa) return <Caricamento testo="Divido la comanda…" />
 
   if (!comandaVera) {
     // Comanda sparita (conto rifatto, divisione): non si lascia una pagina
@@ -93,12 +132,32 @@ export default function ComandaPage() {
     })
   }
 
+  // DIVIDERE. Le quantità le conta `dividiComanda` e a scrivere è
+  // `preparazioneParziale`: sono le stesse del conto, e restano le uniche —
+  // due posti che dividono una comanda in due modi diversi sono due modi
+  // diversi di sbagliare il conto.
+  const dividi = (scelte) => {
+    const esito = dividiComanda(comanda, scelte)
+    if (!esito) return
+    // Prese TUTTE le unità non c'è niente da dividere: la comanda avanza e
+    // basta, e resta questa. Si vede subito, come col tasto grande.
+    if (esito.tutta) setStatoLocale(ORDER_STATUSES.IN_PREPARAZIONE)
+    else setDivisa(comanda.id)
+    preparazioneParziale(order.id, comanda.id, scelte).catch((e) => {
+      setStatoLocale(null)
+      setDivisa(null)
+      showToast(`⚠️ Divisione non riuscita: ${e.message}`, { kind: 'error' })
+    })
+  }
+
   return (
     <ComandaDetail
       order={order}
       comanda={comanda}
+      workflowOn={settings.workflow_enabled !== false}
       onAvanza={porta}
       onTornaA={porta}
+      onDividi={dividi}
       onApriConto={() => navigate(`/ordine/${order.id}`)}
       onIndietro={() => navigate('/bar')}
       onStampa={() =>

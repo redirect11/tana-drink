@@ -191,10 +191,23 @@ requirements:
       colpo. Spento di default: chi segue il servizio di solito lo segue
       apposta. Il tasto non compare dove non serve — servizio spento, conto
       già servito o già chiuso.
+
+      E È L'UNICA STRADA CHE SERVE LE COMANDE. Il pagamento non può portare
+      avanti nel flusso una comanda che sta a «da fare», «in preparazione» o
+      «pronto»: quei drink vanno fatti lo stesso, e una comanda che risulta
+      servita senza esserlo sparisce dagli occhi di chi doveva prepararla e
+      scarica il magazzino per roba mai uscita. `autoServe` parte SPENTO in
+      chiusuraPagamento, registerPayment e markOrderPaid, e il pagamento di
+      un gruppo (payGroupCash) passa dalla stessa regola: sbagliando in
+      questo verso resta un conto aperto e si chiude, sbagliando nell'altro
+      non si torna indietro. Senza gli stati del servizio i passi non
+      esistono e il pagamento chiude, come ha sempre fatto.
     status: implemented
     generate_issue: false
     labels: [ordini, pagamenti, impostazioni]
-    test_cases: [tests/component/PaymentScreen.test.jsx]
+    test_cases:
+      - tests/component/PaymentScreen.test.jsx
+      - tests/unit/pagamentoNonServe.test.js
 
   - id: REQ-ORD-019
     title: "Chi ha preso l'ordine lo modifica davvero: anche aggiungendo"
@@ -2798,7 +2811,12 @@ requirements:
       CONTI — in corso, chiusi, annullati — esattamente come prima, e con
       la pastiglia «Comande» può andare a guardare il lavoro come il
       bartender: è un passaggio a mano di quel terminale (vistaCorsie), non
-      il suo default.
+      il suo default. La pastiglia c'è con QUALUNQUE vista della coda —
+      griglia, lista, schede, corsie — perché la vista del banco è una vista
+      a sé, non una variante delle corsie: chi tiene la cassa lavora in
+      griglia e a metà serata vuole dare un'occhiata alla preparazione senza
+      passare dalle Impostazioni e poi tornare a rimettere tutto com'era.
+      Tornando indietro la coda è come l'aveva lasciata.
 
       Nella vista a comande le corsie sono sei: i tre passi del lavoro (una
       card per comanda), «Da incassare» (una card per CONTO — si incassa un

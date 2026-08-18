@@ -1407,16 +1407,32 @@ export function subscribeRecentGroups(onChange, onError, limitN = 20) {
 
 // --- PAGAMENTI DI GRUPPO (contanti) + ledger ---
 
+// ── INCASSARE NON VUOL DIRE AVER SERVITO ─────────────────────
+//
+// Il pagamento NON può portare avanti nel flusso una comanda che sta a «da
+// fare», «in preparazione» o «pronto»: quei drink vanno fatti lo stesso.
+// Una comanda che risulta servita senza esserlo fa due danni, tutti e due
+// silenziosi — sparisce dagli occhi di chi doveva prepararla, e scarica il
+// magazzino per roba mai uscita. Pagare in anticipo è normale: il conto
+// resta APERTO finché non è uscito tutto.
+//
+// A servire c'è UNA strada sola, ed è un gesto esplicito: «Riscuoti e
+// servi» nella schermata di pagamento, cioè qualcuno che dice «è tutto
+// fuori, prendo i soldi». Senza gli stati del servizio i passi non
+// esistono e il pagamento chiude, come ha sempre fatto: lì `autoServe`
+// arriva acceso da chi chiama.
+//
+// IL VALORE DI PARTENZA È «NON SERVIRE», e non per pignoleria: era acceso,
+// e ogni strada che si dimenticava di dirlo — il pagamento di un gruppo, per
+// esempio — serviva tutto in silenzio. Sbagliando in questo verso resta un
+// conto aperto, e si chiude; sbagliando nell'altro si perde un drink e si
+// scarica una scorta che non è mai uscita, e da lì non si torna indietro.
+//
 // Incassa in contanti un insieme di ordini (un (sotto)gruppo o una sua
 // quota). In un'unica transazione: marca pagati gli ordini non ancora
 // saldati e scrive nel ledger `payments` (1 documento, o N se diviso per
 // N). `split` = { count } per il conto diviso. Restituisce settlement_id.
-// Il pagamento CHIUDE il conto solo se non resta nulla da consegnare.
-// Con la gestione della preparazione attiva, incassare non significa aver
-// servito: pagare in anticipo è normale, e marcare tutto "servito" farebbe
-// sparire dalla coda un ordine ancora da preparare. Senza quella gestione
-// non esistono stati di consegna, quindi il pagamento chiude e basta.
-function chiusuraPagamento(rawOrder, nowIso, { autoServe = true } = {}) {
+function chiusuraPagamento(rawOrder, nowIso, { autoServe = false } = {}) {
   const norm = normalizeOrderDoc(rawOrder)
   if (!autoServe && !allServed(norm)) {
     // Resta APERTO: pagato, ma ancora da consegnare.
@@ -1464,28 +1480,34 @@ export async function payGroupCash({
   })
   if (covered.length === 0) return null
 
-  // Il pagamento chiude i conti: tutte le comande risultano SERVITE e quelle
-  // mai prese in carico si scaricano a magazzino ora.
-  const served = covered.map(({ ref, raw }) => ({
+  // PAGARE UN GRUPPO NON SERVE I DRINK. Qui si serviva tutto, sempre, senza
+  // guardare a che punto stessero le comande: un tavolo di sei che paga
+  // insieme mentre due giri sono ancora al banco faceva sparire dalla coda
+  // quei due giri, già «serviti», e ne scaricava gli ingredienti. Adesso
+  // passa dalla regola di tutti (chiusuraPagamento): il conto si chiude solo
+  // se non resta niente da consegnare, e in un gruppo non c'è nessuno che
+  // possa dire è tutto fuori — quel gesto sta nella schermata del conto.
+  const chiusure = covered.map(({ ref, raw }) => ({
     ref,
-    comande: serveAllComande(normalizeOrderDoc(raw).comande, nowIso),
+    chiusura: chiusuraPagamento(raw, nowIso, { autoServe: false }),
   }))
   const timbro = timbroChiusura(nowIso)
-  for (const { ref, comande } of served) {
+  for (const { ref, chiusura } of chiusure) {
     bgWrite(() => updateDoc(ref, {
-      payment_status: 'pagato',
+      ...chiusura,
       payment_method: method,
-      paid_at: nowIso,
       payment_id: settlementId,
-      status: ORDER_STATUSES.PAGATO,
-      [`status_times.${ORDER_STATUSES.PAGATO}`]: nowIso,
       ...timbro,
-      comande,
-      comande_statuses: comandeStatuses(comande),
     }), 'pagamento gruppo')
   }
-  // Il magazzino dopo, per conto suo: vedi closePaidOrder.
-  depleteComandeInventory(served.flatMap(({ ref, comande }) => unappliedEntries(ref.id, comande)))
+  // Il magazzino dopo, per conto suo: vedi closePaidOrder. Si scarica solo
+  // quello che è davvero risultato servito — cioè niente, se è rimasta
+  // roba da preparare.
+  depleteComandeInventory(
+    chiusure.flatMap(({ ref, chiusura }) =>
+      chiusura.comande ? unappliedEntries(ref.id, chiusura.comande) : []
+    )
+  )
     .then(notifyLowStock)
     .catch(() => {})
 
@@ -2152,7 +2174,7 @@ function chiIncassa() {
   return { uid: u.uid, email: u.email || null, name: u.displayName || null }
 }
 
-export async function registerPayment(id, { amount, method = 'banco', items = null, autoServe = true } = {}) {
+export async function registerPayment(id, { amount, method = 'banco', items = null, autoServe = false } = {}) {
   const ref = doc(db, 'orders', id)
   const nowIso = new Date().toISOString()
   const snap = await leggiOrdine(ref)
@@ -2198,9 +2220,10 @@ export async function registerPayment(id, { amount, method = 'banco', items = nu
 // Chiude definitivamente l'ordine come pagato, registrando il metodo
 // d'incasso ('banco' per contanti/POS esterno, 'lettore', 'online').
 // Conto pagato. Con `autoServe` le comande risultano anche SERVITE (e
-// quelle mai prese in carico vengono scaricate a magazzino); seguendo la
-// preparazione invece il conto resta aperto finché non si consegna.
-export async function markOrderPaid(id, method, { autoServe = true } = {}) {
+// quelle mai prese in carico vengono scaricate a magazzino): lo dice solo
+// chi sa che è uscito tutto — gli stati del servizio spenti, o il gesto
+// «Riscuoti e servi». Di suo NO: vedi chiusuraPagamento.
+export async function markOrderPaid(id, method, { autoServe = false } = {}) {
   const ref = doc(db, 'orders', id)
   const nowIso = new Date().toISOString()
   const snap = await leggiOrdine(ref)
