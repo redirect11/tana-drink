@@ -15,7 +15,7 @@
 import { describe, it, expect } from 'vitest'
 import { readdirSync, statSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
-import { caricaRequisiti, parseRequirementsYaml, etichetteClassificazione, riconciliaEtichette, corpoGenerato, IN_TEST, prossimoStato } from '../../scripts/lib-requisiti.mjs'
+import { caricaRequisiti, parseRequirementsYaml, etichetteClassificazione, riconciliaEtichette, corpoGenerato, IN_TEST, prossimoStato, deveNascere } from '../../scripts/lib-requisiti.mjs'
 
 const requisiti = caricaRequisiti()
 const STATI = ['implemented', 'partial', 'todo', 'deprecated']
@@ -51,11 +51,26 @@ describe('il file dei requisiti è scritto bene', () => {
     expect(strani).toEqual([])
   })
 
-  it('si apre un’issue solo per quello che c’è ancora da fare', () => {
-    const sbagliati = requisiti
-      .filter((r) => r.generate_issue && r.status === 'implemented')
-      .map((r) => r.id)
-    expect(sbagliati, 'un requisito già fatto non deve generare issue').toEqual([])
+  // `generate_issue` vuol dire «questa voce e' SEGUITA su GitHub», non
+  // «creane una adesso». Prima erano la stessa cosa e si mordevano la coda:
+  // appena un requisito veniva finito gli si metteva false, e da quel momento
+  // usciva dal giro — nessuno poteva piu' metterlo in prova ne' chiudergli
+  // l'issue. Adesso una voce finita resta seguita, e a non nascere e' solo
+  // l'issue NUOVA: aprirla vorrebbe dire chiedere un lavoro gia' fatto.
+  it('un’issue nuova nasce solo per quello che c’è ancora da fare', () => {
+    expect(deveNascere({ generate_issue: true, status: 'todo' }, false)).toBe(true)
+    expect(deveNascere({ generate_issue: true, status: 'implemented' }, false)).toBe(false)
+    expect(deveNascere({ generate_issue: true, status: 'fixed' }, false)).toBe(false)
+    // Se l'issue c'e' gia' non se ne apre una seconda: si riallinea quella.
+    expect(deveNascere({ generate_issue: true, status: 'todo' }, true)).toBe(false)
+    // E chi non vuole essere seguito non lo e'.
+    expect(deveNascere({ generate_issue: false, status: 'todo' }, false)).toBe(false)
+  })
+
+  it('una voce finita puo’ restare seguita, per potersi chiudere', () => {
+    // Era proibito, ed era il motivo per cui le schede non avanzavano mai.
+    const seguite = requisiti.filter((r) => r.generate_issue && r.status === 'implemented')
+    expect(Array.isArray(seguite)).toBe(true)
   })
 })
 

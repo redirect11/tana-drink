@@ -15,7 +15,13 @@
 #   description:    Sintomo, comportamento atteso, e cosa si sa già
 #   status:         todo (da sistemare) | fixed (risolto, test citato nel
 #                   requisito dell'area) | wontfix (deciso di non farlo)
-#   generate_issue: true per creare l'issue GitHub
+#   generate_issue: true se questa voce e' SEGUITA su GitHub. Non vuol dire
+#                   «creane una adesso»: l'issue NUOVA nasce solo finche' la
+#                   voce e' da fare. Quando viene finita il flag RESTA true,
+#                   altrimenti la voce esce dal giro e nessuno puo' piu'
+#                   metterla «in prova» su develop ne' chiuderle l'issue da
+#                   main. Si mette false solo per quello che su GitHub non
+#                   deve comparire affatto.
 #   labels:         Label GitHub (sempre anche "bug"; "hotfix" se va
 #                   sistemato d'urgenza in produzione — è quella che
 #                   l'agente rilascio-hotfix va a cercare)
