@@ -990,12 +990,13 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     // ripeterebbero tre volte lungo la lista; senza gruppi (il caso
     // normale) resta esattamente com'è stata sistemata.
     const ordine = gruppiDelConto(lista)
+    // La chiave si calcola UNA volta per riga, non a ogni confronto: dentro
+    // il comparatore un `indexOf` su un conto da quaranta righe diventa
+    // qualche centinaio di giri per mettere in fila quaranta cose.
+    const posto = new Map(ordine.map((g, i) => [g, i]))
     return lista
-      .map((l, i) => [l, i])
-      .sort(
-        (a, b) =>
-          ordine.indexOf(gruppoDiRiga(a[0])) - ordine.indexOf(gruppoDiRiga(b[0])) || a[1] - b[1]
-      )
+      .map((l, i) => [l, posto.get(gruppoDiRiga(l)) ?? ordine.length, i])
+      .sort((a, b) => a[1] - b[1] || a[2] - b[2])
       .map(([l]) => l)
   }, [layout, allByKey, hidePaid, gruppiVisibili])
   const paidCount = useMemo(

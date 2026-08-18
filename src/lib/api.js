@@ -568,16 +568,46 @@ export async function travasaMagazzinoAPezzi({ onAvanzamento, lotto = 25 } = {})
   // tornerebbero nella lista a ogni giro, e il giro non finirebbe mai.
   const spariti = new Set()
   const bloccati = new Set()
+  // Chi è già stato scritto: la lista in memoria porta ancora i dati di
+  // prima, e senza questo lo si riconoscerebbe «da fare» a ogni giro.
+  const fatti = new Set()
+  // SI RILEGGE, MA NON A OGNI LOTTO. La rilettura serve a prendere chi è
+  // nato o cambiato mentre l'aggiornamento gira — e a non riscrivere chi
+  // nel frattempo è sparito — ma rifarla per ognuno dei sedici lotti vuol
+  // dire leggere quattrocento articoli sedici volte: soldi veri e sedici
+  // attese in fila, con chi sta al banco che guarda la barra. Si legge
+  // all'inizio, si lavora dalla lista, e si rilegge quando la lista finisce
+  // — che è l'unico momento in cui la risposta può cambiare qualcosa.
+  let elenco = null
   for (;;) {
-    const snap = await getDocs(inventoryCol)
+    if (!elenco) {
+      const snap = await getDocs(inventoryCol)
+      elenco = snap.docs.map((d) => ({ id: d.id, dati: d.data() }))
+    }
     const daFare = []
-    for (const d of snap.docs) {
-      if (spariti.has(d.id) || bloccati.has(d.id)) continue
-      const patch = patchNormalizza({ id: d.id, ...d.data() })
+    for (const d of elenco) {
+      if (spariti.has(d.id) || bloccati.has(d.id) || fatti.has(d.id)) continue
+      const patch = patchNormalizza({ id: d.id, ...d.dati })
       if (patch) daFare.push({ id: d.id, patch })
     }
     onAvanzamento?.(scritti, scritti + daFare.length)
-    if (daFare.length === 0) break
+    if (daFare.length === 0) {
+      // Finita la lista in mano: si rilegge una volta sola per vedere se
+      // nel frattempo è arrivato altro. Se non c'è più niente, è finita
+      // davvero.
+      if (elenco === null) break
+      elenco = null
+      const snap = await getDocs(inventoryCol)
+      const ancora = snap.docs.filter(
+        (d) =>
+          !spariti.has(d.id) &&
+          !bloccati.has(d.id) &&
+          patchNormalizza({ id: d.id, ...d.data() })
+      )
+      if (ancora.length === 0) break
+      elenco = snap.docs.map((d) => ({ id: d.id, dati: d.data() }))
+      continue
+    }
     const gruppo = daFare.slice(0, lotto)
     // allSettled e non all: uno che va storto non si porta dietro gli altri
     // ventiquattro del lotto, che sono a posto.
@@ -588,6 +618,7 @@ export async function travasaMagazzinoAPezzi({ onAvanzamento, lotto = 25 } = {})
       const { id } = gruppo[i]
       if (esito.status === 'fulfilled') {
         scritti += 1
+        fatti.add(id)
         return
       }
       if (nonEsistePiu(esito.reason)) {

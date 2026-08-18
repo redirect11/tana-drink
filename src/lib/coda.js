@@ -6,7 +6,7 @@ import { ORDER_STATUSES, STATUS_LABELS, ritiratoLabel } from './orderStatus.js'
 // Il totale di un conto è quello EFFETTIVO (sconto già tolto): la regola sta
 // in pagamento.js e non si riscrive qui, o le corsie direbbero una cifra e
 // la card un'altra.
-import { orderTotal } from './pagamento.js'
+import { orderTotal, round2 } from './pagamento.js'
 // Le comande sono il LAVORO del banco: le corsie del bartender le mostrano
 // una per una, e le regole su cosa è servito e quanto vale una riga stanno
 // in comande.js — qui non si riscrivono.
@@ -367,12 +367,11 @@ const CORSIE_LAVORO = [
 const contoSaldato = (o) =>
   o?.payment_status === 'pagato' || o?.workflow_status === ORDER_STATUSES.PAGATO
 
-const arrotonda = (n) => Math.round(n * 100) / 100
 
 // Totale di una corsia: il totale EFFETTIVO dei conti (sconto già tolto),
 // perché è la cifra che si incassa davvero.
 const totaleCorsia = (ordini) =>
-  arrotonda(ordini.reduce((s, o) => s + orderTotal(o), 0))
+  round2(ordini.reduce((s, o) => s + orderTotal(o), 0))
 
 export function corsieDiStato(
   ordini,
@@ -578,7 +577,7 @@ export function corsieComande(ordini, { isChiuso = () => false, prontoDiviso = n
         numero: o.daily_number ?? null,
         seq: c && numerate ? (c.seq ?? null) : null,
         items: righe,
-        totale: arrotonda(c ? itemsTotal(righe) : orderTotal(o)),
+        totale: round2(c ? itemsTotal(righe) : orderTotal(o)),
         pagatoDaServire: false,
         // Perché è finita fra le annullate: lo porta solo chi ci sta.
         motivo: null,
@@ -635,7 +634,7 @@ export function corsieComande(ordini, { isChiuso = () => false, prontoDiviso = n
     // facendo, in due ticket che stanno nelle colonne del lavoro. Contarla
     // nel totale delle annullate direbbe «sono saltati 27 €» mentre quei
     // 27 € sono ancora tutti lì.
-    totale: arrotonda(
+    totale: round2(
       secchi[id].reduce(
         (s, x) => s + (x.motivo === MOTIVO_ANNULLO.DIVISIONE ? 0 : x.totale),
         0
