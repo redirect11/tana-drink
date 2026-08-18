@@ -2833,6 +2833,15 @@ requirements:
       «Pagati», e i titoli compaiono solo quando i gruppi sono più d'uno. Un
       conto si incassa in qualunque stato di servizio: pagato in cassa e in
       preparazione al banco si dicono insieme, senza contraddirsi.
+
+      DOVE PORTANO I TOCCHI, nella vista del banco: toccando la card si apre
+      il DETTAGLIO DELLA COMANDA (REQ-CODA-002), perché da lì la prima
+      domanda è «cosa devo fare qui»; al conto si va da un tasto suo
+      — «🧾 Conto» — piccolo e scritto, accanto a quello grande
+      dell'avanzamento e non al suo posto: quello si preme di corsa, e un
+      secondo tasto nella stessa posizione è un incasso aperto per sbaglio.
+      Nella colonna «Da incassare» non c'è: lì la card è già il conto, e si
+      apre toccandola. Nelle corsie dei CONTI non cambia niente.
     status: implemented
     generate_issue: false
     labels: [ux, coda]
@@ -2843,6 +2852,52 @@ requirements:
       - tests/component/CodaCorsie.test.jsx
       - tests/component/OrderPosDetail.test.jsx
       - tests/component/SettingsTab.test.jsx
+
+  - id: REQ-CODA-002
+    title: "Il dettaglio di una comanda: cosa devo fare adesso, e per chi"
+    area: "src/pages/ComandaPage.jsx, src/components/ComandaDetail.jsx, src/lib/comande.js, src/components/CorsieComande.jsx, src/App.jsx"
+    description: >
+      Schermata di una singola COMANDA, all'indirizzo
+      /ordine/:id/comanda/:comandaId. Ci si arriva toccando la card nella
+      vista del banco (REQ-CODA-001). È fatta come il dettaglio del conto ma
+      risponde a un'altra domanda: quella del conto è della cassa — quanto
+      fa, chi paga, cosa aggiungo — questa è del banco: cosa devo fare
+      adesso, per chi, da quanto sta lì. Per questo sono due schermate e non
+      una: riusare quella del conto avrebbe voluto dire portarsi dietro la
+      griglia dei prodotti, lo sconto e il pagamento su un ticket, che sono
+      tutte cose del conto. Quello che è di tutte e due sta già in comune:
+      il flusso in lib/comande.js, i nomi degli stati in lib/orderStatus.js,
+      la destinazione in lib/coda.js.
+
+      Mostra: il numero del conto e quello del ticket, dove va (tavolo o
+      bancone, col nome), a che punto sta, da quanto; i quattro passi del
+      servizio con l'ORA in cui sono stati toccati (tappeComanda in
+      lib/comande.js), perché al banco quei minuti sono la differenza fra
+      «siamo indietro» e «questo ticket è stato dimenticato»; le righe di
+      QUELLA comanda con prezzi e note di riga, e il totale suo — non
+      quello del conto; le note del conto e della comanda; il bollo
+      dell'acconto o del pagato, che chi finisce la comanda è spesso quello
+      che poi porta il conto al tavolo.
+
+      Si fa: il tasto grande che porta la comanda al passo dopo (uno solo,
+      è quello che si preme di corsa) e le pastiglie «↩︎ Torna a…» per
+      riportarla indietro anche di più di un passo (statiPrima); la
+      ristampa; il ritorno alla coda. Gli avanzamenti passano da
+      advanceComanda e si vedono subito, con la scrittura in sottofondo. Su
+      un conto chiuso o annullato non c'è nessun tasto di lavorazione.
+
+      DA QUI SI RISALE SEMPRE AL CONTO, con un tasto in evidenza in testata
+      («Apri il conto #41»): incassare, aggiungere righe e dividere sono
+      cose del conto e stanno nella sua schermata. La pagina è di chi
+      gestisce: chi non lo è viene mandato sul conto, che sa già cosa
+      mostrare a ognuno, invece di trovarsi davanti un «non puoi». Se la
+      comanda non c'è più (divisa, conto rifatto) lo dice e offre il conto.
+    status: implemented
+    generate_issue: false
+    labels: [ux, coda]
+    test_cases:
+      - tests/unit/comande.test.js
+      - tests/component/ComandaDetail.test.jsx
 
   - id: REQ-UI-012
     title: "Dove la pagina ha sezioni sue, il menu resta aperto nella pagina"

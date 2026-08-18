@@ -383,3 +383,40 @@ export function titoloGruppo(gruppo) {
   if (gruppo === 'pagati') return '💳 Pagati'
   return SERVIZIO_ETICHETTA[gruppo] || null
 }
+
+// ── I PASSI DI UNA COMANDA, CON L'ORA ────────────────────────────────
+//
+// «Da quanto sta lì» sulla card risponde a una domanda sola; aperta la
+// comanda le domande diventano altre: quando è entrata, quando qualcuno
+// l'ha presa in carico, quanto è rimasta pronta prima che partisse.
+// Al banco quei minuti sono la differenza fra «siamo indietro» e «questo
+// ticket è stato dimenticato», e senza gli orari accanto ai passi non c'è
+// modo di dirlo — restava solo il totale.
+//
+// I passi sono quelli di sempre (COMANDA_FLOW): qui si dice solo quali
+// sono già stati toccati, quando, e a quale si è fermi adesso. Una comanda
+// ANNULLATA non torna indietro nel flusso: tiene gli orari che aveva e si
+// porta in fondo il passo che l'ha chiusa.
+export function tappeComanda(comanda) {
+  const tempi = comanda?.status_times || {}
+  const stato = comanda?.status
+  const arrivata = COMANDA_FLOW.indexOf(stato)
+  const tappe = COMANDA_FLOW.map((s, i) => ({
+    stato: s,
+    quando: tempi[s] || null,
+    // Fuori dal flusso (annullata) l'unica prova di essere passati di lì è
+    // l'orario segnato: contare i passi darebbe «mai arrivata» a una
+    // comanda che al banco c'era stata davvero.
+    fatta: arrivata >= 0 ? i <= arrivata : !!tempi[s],
+    adesso: s === stato,
+  }))
+  if (stato === ORDER_STATUSES.ANNULLATO) {
+    tappe.push({
+      stato: ORDER_STATUSES.ANNULLATO,
+      quando: tempi[ORDER_STATUSES.ANNULLATO] || null,
+      fatta: true,
+      adesso: true,
+    })
+  }
+  return tappe
+}

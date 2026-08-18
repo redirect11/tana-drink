@@ -463,3 +463,72 @@ describe('a che punto sta ogni riga del conto', () => {
     expect(titoloGruppo('boh')).toBe(null)
   })
 })
+
+
+// ── I PASSI DI UNA COMANDA, CON L'ORA ────────────────────────
+//
+// Sulla card basta «da quanto sta lì»; aperta la comanda le domande
+// diventano altre — quando è entrata, quando qualcuno l'ha presa in
+// carico, quanto è rimasta pronta prima di partire. Al banco quei minuti
+// sono la differenza fra «siamo indietro» e «questo ticket è stato
+// dimenticato».
+import { tappeComanda } from '../../src/lib/comande.js'
+
+describe('i passi di una comanda', () => {
+  const ORA = '2026-08-18T21:00:00.000Z'
+  const POI = '2026-08-18T21:04:00.000Z'
+
+  it('quelli già toccati portano l’ora, quelli davanti no', () => {
+    const tappe = tappeComanda({
+      status: 'in_preparazione',
+      status_times: { ricevuto: ORA, in_preparazione: POI },
+    })
+    expect(tappe.map((t) => [t.stato, t.fatta, t.adesso, t.quando])).toEqual([
+      ['ricevuto', true, false, ORA],
+      ['in_preparazione', true, true, POI],
+      ['pronto', false, false, null],
+      ['ritirato', false, false, null],
+    ])
+  })
+
+  it('appena entrata: un passo solo alle spalle', () => {
+    const tappe = tappeComanda({ status: 'ricevuto', status_times: { ricevuto: ORA } })
+    expect(tappe.filter((t) => t.fatta).map((t) => t.stato)).toEqual(['ricevuto'])
+    expect(tappe.find((t) => t.adesso).stato).toBe('ricevuto')
+  })
+
+  it('servita: sono tutti fatti, e nessuno resta davanti', () => {
+    const tappe = tappeComanda({ status: 'ritirato', status_times: { ritirato: POI } })
+    expect(tappe.every((t) => t.fatta)).toBe(true)
+    expect(tappe.at(-1).adesso).toBe(true)
+  })
+
+  it('ANNULLATA: tiene gli orari che aveva e si porta in fondo il passo che l’ha chiusa', () => {
+    // Fuori dal flusso l'unica prova di essere passati di lì è l'orario
+    // segnato: contando i passi, una comanda che al banco c'era stata
+    // davvero risulterebbe «mai arrivata».
+    const tappe = tappeComanda({
+      status: 'annullato',
+      status_times: { ricevuto: ORA, in_preparazione: POI, annullato: POI },
+    })
+    expect(tappe.map((t) => t.stato)).toEqual([
+      'ricevuto',
+      'in_preparazione',
+      'pronto',
+      'ritirato',
+      'annullato',
+    ])
+    expect(tappe.filter((t) => t.fatta).map((t) => t.stato)).toEqual([
+      'ricevuto',
+      'in_preparazione',
+      'annullato',
+    ])
+    expect(tappe.at(-1).adesso).toBe(true)
+  })
+
+  it('senza orari non si inventa niente', () => {
+    const tappe = tappeComanda({ status: 'ricevuto' })
+    expect(tappe.every((t) => t.quando === null)).toBe(true)
+    expect(tappeComanda(null).length).toBe(4)
+  })
+})

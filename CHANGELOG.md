@@ -11,6 +11,17 @@
 
 ### Al banco
 
+- **La comanda ha una schermata sua.** Toccando una card nella coda del banco
+  si apre il ticket: le sue righe per intero con prezzi e note, i quattro
+  passi del servizio con l’ORA in cui sono stati toccati — così si vede se
+  siamo indietro o se quella comanda è stata dimenticata — il tavolo, il
+  nome, e il tasto grande per portarla avanti (o le pastiglie per riportarla
+  indietro, anche di più di un passo). Prima toccando la card si apriva il
+  conto: dal banco quella è la seconda domanda, non la prima.
+- **Al conto si risale sempre**: c’è un tasto in cima alla comanda («Apri il
+  conto #41») e uno piccolo sulla card in coda («🧾 Conto»), accanto a quello
+  dell’avanzamento e non al suo posto — quello si preme di corsa. Incassare,
+  aggiungere righe e dividere restano cose del conto.
 - **Chi ha il ruolo bartender ha una coda sua: quella del LAVORO.** Chi prepara
   non lavora un conto per volta, lavora un ticket per volta — e adesso ogni
   card è una comanda, col numero del conto e (solo se il conto ne ha più d'una)

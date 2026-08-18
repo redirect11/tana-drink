@@ -14,6 +14,15 @@ import RigheCorsia from './RigheCorsia.jsx'
 // 2»), perché è così che si chiama un ordine da dietro il banco, e il tasto
 // fa avanzare QUELLA comanda: le altre del conto restano dove sono.
 //
+// DOVE PORTANO I TOCCHI. Toccando la card si apre il DETTAGLIO DELLA
+// COMANDA: le sue righe per intero, gli orari dei passi, e i tasti per
+// portarla avanti o riportarla indietro. Prima si apriva il conto, ma dal
+// banco quella è la seconda domanda, non la prima — la prima è «cosa devo
+// fare qui». Al conto si va da un tasto suo, piccolo e scritto, accanto a
+// quello dell'avanzamento: incassare e aggiungere righe sono cose del
+// conto, e capitano di continuo. Il tasto grande resta uno solo, quello
+// che si preme di corsa.
+//
 // Le corsie e cosa ci sta dentro arrivano già fatte da lib/coda.js
 // (corsieComande): qui non si decide niente, si disegna soltanto.
 
@@ -23,6 +32,7 @@ export default function CorsieComande({
   corsie,
   idAcceso = null,
   onApri,
+  onApriConto,
   onAvanza,
   onIncassa,
   onScarta,
@@ -97,7 +107,7 @@ export default function CorsieComande({
                     }${o.id === idAcceso ? ' conto-acceso' : ''}`}
                     key={s.id}
                     id={`comanda-${s.id}`}
-                    onClick={() => onApri?.(o)}
+                    onClick={() => onApri?.(o, s.comanda)}
                   >
                     <div className="row between">
                       <span className="corsia-num">
@@ -150,22 +160,44 @@ export default function CorsieComande({
                         anche il pezzo diviso, o chi prepara la seconda metà
                         non la legge. */}
                     {o.note && <div className="order-note small corsia-nota">{o.note}</div>}
-                    {azione && (
+                    {(azione || s.comanda) && (
                       <div className="corsia-piede">
-                        <button
-                          className="btn small corsia-azione"
-                          disabled={attesa}
-                          title={attesa ? 'In attesa del pagamento: non si prepara' : undefined}
-                          onClick={(e) => {
-                            // Il tasto non è la card: toccandolo si fa quello
-                            // che c'è scritto, non si apre il conto.
-                            e.stopPropagation()
-                            if (azione.tipo === 'avanza') onAvanza?.(o, s.comanda)
-                            else onIncassa?.(o)
-                          }}
-                        >
-                          {azione.etichetta}
-                        </button>
+                        {/* AL CONTO SI VA DA QUI. La card apre la comanda —
+                            «cosa devo fare» — e il conto è l'altra domanda:
+                            quanto fa, cosa aggiungo, chi paga. Scritto e
+                            piccolo, accanto al tasto grande e non al suo
+                            posto: quello si preme di corsa, e un tasto in
+                            più nella stessa posizione è un incasso aperto
+                            per sbaglio. Nella colonna dei soldi non c'è: lì
+                            la card è già il conto. */}
+                        {s.comanda && (
+                          <button
+                            className="btn ghost small corsia-azioni"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              onApriConto?.(o)
+                            }}
+                            title={`Apri il conto #${s.numero ?? ''}`}
+                          >
+                            🧾 Conto
+                          </button>
+                        )}
+                        {azione && (
+                          <button
+                            className="btn small corsia-azione"
+                            disabled={attesa}
+                            title={attesa ? 'In attesa del pagamento: non si prepara' : undefined}
+                            onClick={(e) => {
+                              // Il tasto non è la card: toccandolo si fa
+                              // quello che c'è scritto.
+                              e.stopPropagation()
+                              if (azione.tipo === 'avanza') onAvanza?.(o, s.comanda)
+                              else onIncassa?.(o)
+                            }}
+                          >
+                            {azione.etichetta}
+                          </button>
+                        )}
                       </div>
                     )}
                   </article>
