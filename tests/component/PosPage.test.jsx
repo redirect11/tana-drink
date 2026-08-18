@@ -210,14 +210,16 @@ describe('pagamento diretto dal POS', () => {
     expect(screen.getByRole('button', { name: /Riscuotere/ })).toBeInTheDocument()
   })
 
-  it('la creazione in background parte con lo stato in preparazione', async () => {
+  it('la creazione in background parte da «ricevuto», come le altre', async () => {
+    // Anche col pagamento diretto il conto nasce da fare: chi lo batte non
+    // ha ancora versato niente, e chi prepara lo prende quando comincia.
     const user = userEvent.setup()
     mount()
     await user.click(screen.getByText('Mojito'))
     await user.click(screen.getByRole('button', { name: /Pagamento/ }))
     await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1))
     expect(createOrder.mock.calls[0][0]).toMatchObject({
-      status: 'in_preparazione',
+      status: 'ricevuto',
     })
   })
 })
@@ -299,12 +301,16 @@ describe('gestione preparazione opzionale', () => {
     )
   }
 
-  it('ATTIVA: l’ordine nasce già in preparazione', async () => {
+  // Nasceva «in preparazione»: l'idea era che chi lo batte al banco lo stia
+  // già facendo. Ma si battono tre conti di fila e poi si comincia a
+  // versare — e nelle corsie «Da fare» restava sempre vuota mentre tutto
+  // compariva «Al banco». È «Lo preparo io» a dire quando si comincia.
+  it('ATTIVA: l’ordine nasce «ricevuto», da fare', async () => {
     const user = userEvent.setup()
     mountConWorkflow(true)
     await user.click(screen.getByText('Mojito'))
     await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1))
-    expect(createOrder.mock.calls[0][0].status).toBe('in_preparazione')
+    expect(createOrder.mock.calls[0][0].status).toBe('ricevuto')
   })
 
   it('SPENTA: l’ordine nasce e resta "ricevuto"', async () => {
