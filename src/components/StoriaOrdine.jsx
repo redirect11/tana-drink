@@ -95,9 +95,13 @@ export function RipristinaOrdineDialog({ order, onConferma, onClose }) {
           placeholder="Es. chiuso sul tavolo sbagliato"
           style={{ width: '100%' }}
         />
+        {/* DUE PAROLE, NON UNA FRASE. «Lascia com'è» e «Rimetti in corso»
+            costringevano a leggerle tutte e due per capire quale fosse
+            quale, e sul tasto andavano a capo: si sceglie di corsa, col
+            cliente davanti. «Annulla» esce, «Riapri» fa la cosa. */}
         <div className="grid-2" style={{ marginTop: 12 }}>
           <button className="btn ghost" onClick={onClose} disabled={inCorso}>
-            Lascia com&apos;è
+            Annulla
           </button>
           <button
             className="btn"
@@ -107,7 +111,7 @@ export function RipristinaOrdineDialog({ order, onConferma, onClose }) {
               onConferma(motivo.trim() || null)
             }}
           >
-            ♻️ Rimetti in corso
+            ♻️ Riapri
           </button>
         </div>
       </div>

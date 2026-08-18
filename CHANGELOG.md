@@ -26,6 +26,17 @@
 - **Le ore della serata sono in ordine di serata**: le 8 del mattino dopo
   venivano prima delle 23 della sera, perché contava l'orologio e non la
   nottata. Quando una serata tocca due giorni, ogni colonna porta la data.
+- **Nella coda, su tablet e computer i tasti stanno fuori dal ⋯**: pannelli,
+  verso della lista e cassa sono icone accanto alla ricerca, e si vede quando
+  i pannelli sono accesi. Sul telefono restano nel menu, che lì lo spazio non
+  c'è.
+- **Su un conto chiuso o annullato ci sono due sole azioni**: ristampare lo
+  scontrino e riaprire il conto. Prima c'erano anche «Contanti» e «Carta»
+  spenti, che sono solo rumore addosso a chi cerca l'unica cosa che serve.
+- **Nelle corsie il tasto «↕» inverte davvero l'ordine**, in tutte le
+  colonne insieme: prima girava solo la griglia e lì non faceva niente.
+- **Nel riquadro di riapertura i tasti dicono «Annulla» e «Riapri»**, due
+  parole invece di due frasi che andavano a capo.
 - **Nelle corsie di stato le card hanno «⋯ Azioni»**: incassare, stampare
   comanda o scontrino, annullare — le stesse azioni della coda, senza
   cambiare vista.
