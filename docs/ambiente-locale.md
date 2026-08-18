@@ -135,11 +135,29 @@ delle Functions installate una volta (`cd functions && npm install`).
 Un database vuoto non si prova: si semina.
 
 ```sh
+npm run seed:tutto    # tutto quello qui sotto, in fila
+```
+
+Oppure un pezzo per volta:
+
+```sh
 npm run seed:dev      # menù, inventario, impostazioni
 npm run mock:orders   # ordini di una serata
 npm run mock:history  # storico per le statistiche
 npm run mock:casse    # chiude quelle serate: casse e incassi divisi per metodo
 ```
+
+**Le chiusure servono più di quanto sembri**: le statistiche si aprono
+sull'ultima serata chiusa, e senza nemmeno una chiusura ripiegano sulle
+«ultime 10 giornate» — sembra un difetto e invece è un database a metà.
+Per lo stesso motivo `seed:tutto` le fa in fondo: una cassa si chiude
+attorno a ordini che esistono già.
+
+Gli script **cercano l'emulatore da soli** (`scripts/lib-emulatore.js`):
+provano le porte scritte nelle configurazioni del progetto — 8081 del
+collaudo, 8080 di quella normale — e usano la prima che risponde. Se
+l'emulatore non c'è si fermano dicendolo, invece di scrivere «fatto» senza
+aver scritto niente. Per puntarli altrove: `VITE_FIRESTORE_EMULATOR_PORT`.
 
 Le utenze si creano dal pannello emulatori
 (http://localhost:4000 → Authentication → Add user) e il ruolo si assegna
