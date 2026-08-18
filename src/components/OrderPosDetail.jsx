@@ -2182,6 +2182,23 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                     {canMerge ? '🔗 Unisci' : '⑃ Separa'}
                   </button>
                 )}
+                {/* NASCONDI I PAGATI sta qui, in riga con gli altri: da
+                    sopra la lista si portava via una riga di schermo tutta
+                    per sé e sembrava un titolo delle righe, non un tasto.
+                    Compare solo quando c'è qualcosa di pagato da nascondere. */}
+                {paidCount > 0 && (
+                  <button
+                    className="btn ghost small"
+                    onClick={() => setHidePaid((v) => !v)}
+                    title={
+                      hidePaid
+                        ? 'Rimetti in lista le righe già incassate'
+                        : 'Lascia in lista solo quello che resta da pagare'
+                    }
+                  >
+                    {hidePaid ? `💳 Mostra pagati (${paidCount})` : `💳 Nascondi pagati (${paidCount})`}
+                  </button>
+                )}
                 <button
                   className="btn secondary small"
                   onClick={() => setShowComande(true)}
@@ -2274,16 +2291,6 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
               </p>
             )}
 
-
-            {paidCount > 0 && (
-              <button
-                className="btn ghost small"
-                style={{ marginBottom: 2 }}
-                onClick={() => setHidePaid((v) => !v)}
-              >
-                {hidePaid ? `💳 Mostra pagati (${paidCount})` : `💳 Nascondi pagati (${paidCount})`}
-              </button>
-            )}
 
             <DndContext
               sensors={organizzaLista ? sensoriLista : SENSORI_SPENTI}
