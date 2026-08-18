@@ -802,16 +802,22 @@ bugs:
       non mostra il tasto «modifica»; riaprendo un conto annullato le sue
       comande tornano in una colonna che quel locale non guarda.
       Nessun test lo vede, perché girano tutti col default.
-      COME SI SISTEMA: il confronto si fa col passo di nascita, non con la
-      costante — e il predicato «in attesa del pagamento» va scritto una
-      volta in coda.js invece che copiato cinque volte nella pagina.
+      RISOLTO (1.5.0, prima che uscisse): il predicato sta scritto una volta
+      in coda.js (`attesaPagamento`) e confronta col PASSO DI NASCITA, non
+      con la costante — così il blocco scatta comunque sia messo il locale,
+      e non c'è più una riga da ricordarsi di copiare. Nella pagina era
+      ripetuto in cinque punti: adesso in nessuno.
+      RESTANO da portare alla stessa regola gli altri quattro punti dove
+      «ricevuto» è ancora cablato (modifica dell'ordine dal cliente, lato
+      client e lato regole Firestore; aggancio del token push; ripristino di
+      un conto annullato): non toccano i soldi, e vanno guardati insieme.
     in_produzione: false
-    status: todo
-    generate_issue: true
+    status: fixed
+    generate_issue: false
     labels: [bug, coda, pagamenti]
     severity: grave
     priority: P0
-    test_cases: []
+    test_cases: [tests/unit/coda.test.js]
 
   - id: BUG-028
     title: "Due memorie di «l'ho appena fatto io» sulla stessa schermata"
