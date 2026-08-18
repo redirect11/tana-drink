@@ -2090,7 +2090,16 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
               idAcceso={idAcceso}
               inArrivo={pend.pending}
               onScarta={dismissPending}
-              onApri={(o) => {
+              // TOCCANDO LA CARD SI APRE LA COMANDA, non il conto: dal
+              // banco la prima domanda è «cosa devo fare qui», e la
+              // risposta è il ticket. Nella colonna dei soldi la card è
+              // già il conto (non c'è una comanda sola da aprire) e allora
+              // si va lì, come prima.
+              onApri={(o, comanda) => {
+                contoToccato()
+                navigate(comanda ? `/ordine/${o.id}/comanda/${comanda.id}` : `/ordine/${o.id}`)
+              }}
+              onApriConto={(o) => {
                 contoToccato()
                 navigate(`/ordine/${o.id}`)
               }}

@@ -6862,6 +6862,110 @@ body.pagina-piena .inv-scheda {
   border-top: 1px dashed var(--line);
 }
 
+/* ── IL DETTAGLIO DI UNA COMANDA ──────────────────────────
+   Fatto come il dettaglio del conto, ma per il ticket: numero, dove va, a
+   che punto sta, cosa c'è da fare. Riusa le classi che ci sono già (.card,
+   .pill, .steps, .chip): qui c'è solo quello che manca. */
+.comanda-det-testa {
+  text-align: center;
+}
+
+.comanda-det-riga1 {
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+/* Il numero è la cosa che si cerca per prima, arrivando da uno schermo
+   con l'ordine già in mano. Quello della comanda sta accanto, più piccolo:
+   il primo colpo d'occhio va al conto, che è il numero che si urla. */
+.comanda-det-num {
+  line-height: 1.1;
+}
+
+.comanda-det-seq {
+  font-size: 0.5em;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.comanda-det-dove {
+  margin-top: 2px;
+}
+
+.comanda-det-bolli {
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+/* I passi con l'ora sotto: la colonna è più alta di quella del cliente
+   perché porta una riga in più, e sul telefono va a capo invece di
+   spezzare le parole a metà. */
+.comanda-det-passi {
+  flex-wrap: wrap;
+}
+
+.comanda-det-passi .step {
+  min-width: 88px;
+  line-height: 1.35;
+}
+
+.comanda-det-titolo {
+  margin: 0 0 8px;
+}
+
+.comanda-det-riga {
+  align-items: baseline;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px dashed var(--line);
+}
+
+.comanda-det-nome {
+  min-width: 0;
+  font-size: 1.05em;
+}
+
+/* La nota della riga sotto al nome, non in coda: è quella che cambia come
+   si prepara, e va letta insieme al drink a cui appartiene. */
+.comanda-det-nota {
+  display: block;
+  font-style: italic;
+}
+
+.comanda-det-totale {
+  padding-top: 10px;
+}
+
+.comanda-det-notaconto {
+  margin-top: 10px;
+}
+
+.comanda-det-azioni {
+  margin-top: 14px;
+}
+
+/* IL TASTO CHE PORTA AVANTI IL LAVORO: grande, perché è quello che si
+   preme di corsa e spesso senza guardare. */
+.comanda-det-avanti {
+  padding: 16px;
+  font-size: 1.1rem;
+}
+
+.comanda-det-indietro {
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.comanda-det-stampa {
+  margin-top: 12px;
+}
+
 /* IL NUMERO DELLA COMANDA accanto a quello del conto, nelle corsie del
    banco. Più smorto del numero del conto perché il primo colpo d'occhio
    va lì — è il numero che si urla — ma c'è, perché due comande dello

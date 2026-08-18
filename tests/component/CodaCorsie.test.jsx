@@ -433,13 +433,28 @@ describe('le corsie del banco: una card per comanda', () => {
     ).toBeInTheDocument()
   })
 
-  it('toccando la card (non il tasto) si apre il conto', async () => {
+  // DOVE PORTANO I TOCCHI. Dal banco la prima domanda è «cosa devo fare
+  // qui», e la risposta è il TICKET: la card apre la comanda. Il conto è
+  // l'altra domanda — quanto fa, cosa aggiungo, chi paga — e ha un tasto
+  // suo, piccolo e scritto, che non ruba il posto a quello grande.
+  it('toccando la card si apre la COMANDA; al conto si va da un tasto suo', async () => {
     const utente = userEvent.setup()
     montaCoda()
     await screen.findByText('Da fare')
 
     await utente.click(within(corsia('da-fare')).getByText('#41'))
+    expect(navigateSpy).toHaveBeenCalledWith('/ordine/o41/comanda/c-o41')
+
+    const card = within(corsia('da-fare')).getByText('#41').closest('.corsia-card')
+    await utente.click(within(card).getByRole('button', { name: /Conto/ }))
     expect(navigateSpy).toHaveBeenCalledWith('/ordine/o41')
+
+    // NELLA COLONNA DEI SOLDI la card è già il conto: non c'è una comanda
+    // sola da aprire, e un secondo tasto «Conto» sarebbe un doppione.
+    const cassa = within(corsia('da-incassare')).getByText('#33').closest('.corsia-card')
+    expect(within(cassa).queryByRole('button', { name: /Conto/ })).not.toBeInTheDocument()
+    await utente.click(within(corsia('da-incassare')).getByText('#33'))
+    expect(navigateSpy).toHaveBeenCalledWith('/ordine/o33')
 
     // «Incassa» invece porta dritto al pagamento del conto, che è il flusso
     // esistente: sconto, conto diviso, contanti, carta e lettore stanno lì.
