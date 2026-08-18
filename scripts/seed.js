@@ -8,6 +8,7 @@
 // =====================================================================
 import { readFileSync } from 'node:fs'
 import admin from 'firebase-admin'
+import { puntaAllEmulatore } from './lib-emulatore.js'
 
 function loadEnv() {
   try {
@@ -30,10 +31,15 @@ const firebaseConfig = {
   appId: process.env.VITE_FIREBASE_APP_ID,
 }
 
-const useEmulator = process.env.VITE_USE_FIREBASE_EMULATOR === 'true'
+// «--dev» = riempi l'EMULATORE, senza dover mettere variabili d'ambiente
+// davanti al comando: su Windows npm passa gli script a cmd, che quella
+// forma non la capisce — «VITE_...=true non è riconosciuto come comando»,
+// ed è il motivo per cui questi comandi non partivano.
+const dev = process.argv.includes('--dev')
+const useEmulator = dev || process.env.VITE_USE_FIREBASE_EMULATOR === 'true'
 const force = process.argv.includes('--force')
 
-const projectId = firebaseConfig.projectId
+const projectId = firebaseConfig.projectId || (dev ? 'demo-tana-drink' : null)
 if (!projectId || (!useEmulator && !firebaseConfig.apiKey)) {
   console.error('[seed] Configurazione Firebase mancante.')
   process.exit(1)
@@ -52,14 +58,14 @@ async function clearCollection(db, name) {
 
 async function main() {
   if (useEmulator) {
-    const host = process.env.VITE_FIRESTORE_EMULATOR_HOST || 'localhost'
-    const port = Number(process.env.VITE_FIRESTORE_EMULATOR_PORT) || 8080
-    process.env.FIRESTORE_EMULATOR_HOST = `${host}:${port}`
+    // La porta non si dà per scontata: si cerca (vedi lib-emulatore.js).
+    const dove = await puntaAllEmulatore('seed')
+    const host = dove.split(':')[0]
     // Anche Auth: senza, le utenze di prova finirebbero (o proverebbero ad
     // andare) sul progetto vero.
     process.env.FIREBASE_AUTH_EMULATOR_HOST =
       process.env.FIREBASE_AUTH_EMULATOR_HOST || `${host}:9099`
-    console.log(`[seed] Emulatore Firestore: ${host}:${port}`)
+    console.log(`[seed] Emulatore Firestore: ${dove}`)
   }
 
   // Admin SDK bypassa le security rules — perfetto per seed e migrazioni.
