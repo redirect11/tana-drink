@@ -157,21 +157,24 @@ describe('le issue che esistono gia’ si riallineano', () => {
     expect(tolta.finali).toEqual(['bug', 'P1'])
   })
 
-  it('la scheda sulla bacheca segue, ma non si tira mai indietro', () => {
-    // Dalle colonne di partenza si va in prova.
-    expect(prossimoStato('To triage')).toBe('In test')
-    expect(prossimoStato('In progress')).toBe('In test')
-    expect(prossimoStato(null)).toBe('In test')
-    // Se qualcuno l'ha gia' portata piu' avanti, l'ha fatto guardandola in
-    // faccia: un automatismo che gliela riporta indietro a ogni push glielo
-    // fa smettere di usare.
-    expect(prossimoStato('In review')).toBeNull()
-    expect(prossimoStato('In test')).toBeNull()
-    expect(prossimoStato('Done')).toBeNull()
-    // Chiudendo da main si arriva in fondo, da qualunque colonna.
-    expect(prossimoStato('In review', { chiuso: true })).toBe('Done')
-    expect(prossimoStato('To triage', { chiuso: true })).toBe('Done')
-    expect(prossimoStato('Done', { chiuso: true })).toBeNull()
+  it('la scheda segue la linea, e non si tira mai indietro', () => {
+    // Ogni linea ha la sua tappa: un ramo di lavoro la scrive, develop la
+    // manda a provare, main la chiude.
+    expect(prossimoStato('To triage', 'Implemented')).toBe('Implemented')
+    expect(prossimoStato('Implemented', 'In test')).toBe('In test')
+    expect(prossimoStato('In test', 'Done')).toBe('Done')
+    // Gia' arrivata dove la manderemmo: non si tocca. Cosi' il giro si puo'
+    // ripetere senza riscrivere venticinque volte la stessa cosa.
+    expect(prossimoStato('Implemented', 'Implemented')).toBeNull()
+    // E non si torna MAI indietro: se qualcuno l'ha portata piu' in la',
+    // l'ha fatto guardandola in faccia.
+    expect(prossimoStato('In test', 'Implemented')).toBeNull()
+    expect(prossimoStato('In review', 'In test')).toBeNull()
+    expect(prossimoStato('Done', 'Done')).toBeNull()
+    // Da «In review» a «Done» invece si va: e' avanti.
+    expect(prossimoStato('In review', 'Done')).toBe('Done')
+    // Una scheda senza stato parte da zero.
+    expect(prossimoStato(null, 'Implemented')).toBe('Implemented')
   })
 
   it('il testo si riscrive solo se e’ ancora il nostro', () => {

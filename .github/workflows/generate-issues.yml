@@ -26,7 +26,9 @@ on:
   # titolo esatto fra le issue aperte E chiuse — quindi spingere dieci volte
   # lo stesso registro non crea dieci issue: nascono solo quelle che mancano.
   # TRE LINEE, TRE COSE DIVERSE sulla stessa voce del registro:
-  #   release/** -> si scrive e si riallinea (l'issue nasce, o si aggiorna)
+  #   feature/** e release/** -> si scrive e si riallinea; una voce finita
+  #                 porta la scheda su «Implemented»: e' scritta, sta su un
+  #                 ramo, non l'ha ancora provata nessuno
   #   develop    -> si mette IN PROVA: e' finita, ma al banco non l'ha vista
   #                 ancora nessuno
   #   main       -> si chiude: adesso e' davvero in mano a chi lavora
@@ -36,6 +38,7 @@ on:
       - develop
       - "hotfix/**"
       - "release/**"
+      - "feature/**"
     paths:
       - "requirements/requirements.yaml"
       - "requirements/bugs.yaml"
@@ -74,6 +77,9 @@ jobs:
           # di mezzo che prima non si vedeva da nessuna parte — una correzione
           # scritta e non ancora provata era indistinguibile da una da fare.
           SEGNA_IN_TEST: ${{ github.ref == 'refs/heads/develop' }}
+          # Sui rami di lavoro la voce finita muove la scheda su «Implemented»:
+          # sulla bacheca era indistinguibile da una ancora da fare.
+          SEGNA_IMPLEMENTATA: ${{ startsWith(github.ref, 'refs/heads/feature/') || startsWith(github.ref, 'refs/heads/release/') }}
           # LA BACHECA vuole un token suo: i Projects v2 vivono sull'account,
           # non nel repository, e il token che Actions da' da se' non li vede.
           # Se il segreto manca non si rompe niente: le issue si aggiornano
