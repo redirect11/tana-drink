@@ -205,6 +205,12 @@ Regole:
 - Aria tra i blocchi funzionali (i chip non devono sembrare la prima
   riga delle card); dentro le card la densità è alta: è un POS, i dati
   contano più del bianco.
+- **Le pastiglie** (`.chip`: filtri della coda, periodi, sezioni) misurano
+  `font-size: 0.95rem`, `padding: 8px 14px`, `min-height: 40px`. Sono
+  numeri tarati **a zoom 100**: prima erano stati guardati col browser al
+  110 e alla dimensione vera risultavano piccoli, testo e bersaglio.
+  L'altezza minima è esplicita e non lasciata all'imbottitura, o balla da
+  una pastiglia all'altra a seconda di quanto è lungo il testo.
 - La topbar è sticky, traslucida sul tema (`color-mix` su `--bg-2`),
   e rispetta le safe-area dei tablet.
 
@@ -220,7 +226,10 @@ sole per contrasto: non aggiungerne di dedicate.
    soglia di comodità; le informazioni critiche mai affidate solo a
    `--muted` o solo al colore.
 2. **Si tocca col pollice**: bersagli ≥ 44px, azioni distruttive lontane
-   da quelle frequenti.
+   da quelle frequenti. Unica deroga scritta: le **pastiglie** dei filtri
+   stanno a 40px — sono secondarie e vivono in una riga che scorre, e a 44
+   quella riga diventa una fascia. Tutto il resto (tasti del conto, della
+   card, della testata) resta ≥ 44px.
 3. **Le parole sono da vassoio**: comuni, brevi, in italiano; nessun
    gergo tecnico; nessun messaggio che scarichi la colpa su chi legge.
 4. **Niente aspetta la rete**: ogni interazione risponde subito; spinner
