@@ -68,6 +68,12 @@
   misura e usati in un'altra (i limoni al chilo, spremuti in centilitri):
   lì cosa sia un pezzo lo deve decidere una persona, e finché non lo fa
   quel prodotto funziona come prima.
+- **Il fornitore che manca si aggiunge dalla scheda del prodotto.** In fondo
+  alla tendina Fornitore c'è «➕ Nuovo fornitore…»: basta il nome, e resta
+  già selezionato sul prodotto che si stava compilando. Prima bisognava
+  uscire, andare in Fornitori, crearlo e ricominciare la scheda da capo —
+  proprio nel momento in cui ci si accorgeva che mancava. Gli altri dati
+  (indirizzo, contatti, email per gli ordini) si mettono dopo, con calma.
 - **«pz» al posto di «bottiglie», dappertutto.** Qui dentro ci sono cubetti,
   limoni, barattoli e ore di lavoro: la parola che vale per tutti è il pezzo.
   Il costo di un prodotto si legge «€/pz» e non più «€/conf.», il segno dei

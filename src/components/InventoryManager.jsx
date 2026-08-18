@@ -608,6 +608,15 @@ function ProductsPanel() {
     ]
   }, [items, categories])
 
+  // Un fornitore creato dalla scheda di un prodotto: basta il nome, e
+  // l'elenco si aggiorna subito senza ricaricare tutto il magazzino — la
+  // scheda che lo aspetta è aperta, e ricaricare la chiuderebbe.
+  async function creaFornitoreAlVolo(nome) {
+    const creato = await createSupplier({ name: nome, sort_order: suppliers.length })
+    setSuppliers((prev) => [...prev, creato])
+    return creato
+  }
+
   async function handleSave(payload) {
     setError(null)
     try {
@@ -692,6 +701,7 @@ function ProductsPanel() {
         defaultVat={purchaseVat}
         onCancel={() => setEditing(null)}
         onSave={handleSave}
+        onCreateSupplier={creaFornitoreAlVolo}
       />
     )
   }
@@ -1594,7 +1604,7 @@ function AiutoPezzo({ onClose }) {
   )
 }
 
-function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, onSave }) {
+function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, onSave, onCreateSupplier }) {
   const isEdit = !!initial
   // L'articolo arriva SEMPRE nella forma nuova, anche quando sul database è
   // ancora scritto a litri o a «U»: a rimetterlo in riga è la lettura
@@ -1603,6 +1613,14 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
   const daTravasare = initial?.formaVecchia || null
   const [aiuto, setAiuto] = useState(false)
   const [aiutoPezzo, setAiutoPezzo] = useState(false)
+  // ── IL FORNITORE CHE MANCA SI AGGIUNGE DA QUI ──────────────────────
+  // Accorgersi che il fornitore non c'è mentre si compila la scheda voleva
+  // dire uscire, andare in Fornitori, crearlo e tornare a ricominciare da
+  // capo. Il modello ce l'abbiamo già nel modulo del drink («➕ Nuova
+  // categoria…»): basta il nome, il resto dei dati aziendali si mette dopo,
+  // con calma, dalla sezione Fornitori (REQ-MAG-017).
+  const [nuovoFornitore, setNuovoFornitore] = useState(null) // null = tendina normale
+  const [salvandoFornitore, setSalvandoFornitore] = useState(false)
   // Il salvataggio bloccato si spiega QUI, sopra i tasti, e resta finché
   // non si corregge: un toast passa e chi stava guardando la tastiera non
   // lo vede.
@@ -1648,6 +1666,24 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
   // contenuto è un peso, il numero è una stima e va detto (un limone non
   // pesa sempre uguale).
   const aPeso = contenutoPezzo > 0 && contenutoBase === 'g'
+
+  // Il fornitore appena creato resta SELEZIONATO sul prodotto che si stava
+  // compilando: se toccasse riselezionarlo a mano il giro non si sarebbe
+  // accorciato di niente.
+  async function creaFornitore() {
+    const nome = String(nuovoFornitore || '').trim()
+    if (!nome || salvandoFornitore) return
+    setSalvandoFornitore(true)
+    try {
+      const creato = await onCreateSupplier(nome)
+      if (creato?.id) setForm((f) => ({ ...f, supplier_id: creato.id }))
+      setNuovoFornitore(null)
+    } catch (e) {
+      setAvviso(`Il fornitore non si è salvato: ${e.message}`)
+    } finally {
+      setSalvandoFornitore(false)
+    }
+  }
 
   async function submit(e) {
     e.preventDefault()
@@ -1738,12 +1774,50 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
       </select>
 
       <label htmlFor="isup">Fornitore</label>
-      <select id="isup" value={form.supplier_id || ''} onChange={set('supplier_id')}>
-        <option value="">— Nessuno —</option>
-        {(suppliers || []).map((s) => (
-          <option key={s.id} value={s.id}>{s.name}</option>
-        ))}
-      </select>
+      {nuovoFornitore != null ? (
+        <div className="row" style={{ gap: 8 }}>
+          <input
+            aria-label="Nome nuovo fornitore"
+            value={nuovoFornitore}
+            onChange={(e) => setNuovoFornitore(e.target.value)}
+            placeholder="Nome nuovo fornitore"
+            autoFocus
+          />
+          <button
+            type="button"
+            className="btn small"
+            disabled={salvandoFornitore || !nuovoFornitore.trim()}
+            onClick={creaFornitore}
+          >
+            OK
+          </button>
+          <button
+            type="button"
+            className="btn ghost small"
+            onClick={() => setNuovoFornitore(null)}
+          >
+            ✕
+          </button>
+        </div>
+      ) : (
+        <select
+          id="isup"
+          value={form.supplier_id || ''}
+          onChange={(e) => {
+            if (e.target.value === '__new__') {
+              setNuovoFornitore('')
+              return
+            }
+            setForm((f) => ({ ...f, supplier_id: e.target.value }))
+          }}
+        >
+          <option value="">— Nessuno —</option>
+          {(suppliers || []).map((s) => (
+            <option key={s.id} value={s.id}>{s.name}</option>
+          ))}
+          {onCreateSupplier && <option value="__new__">➕ Nuovo fornitore…</option>}
+        </select>
+      )}
 
       <label htmlFor="istatus">Stato</label>
       <select id="istatus" value={form.status} onChange={set('status')}>

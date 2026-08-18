@@ -1973,11 +1973,26 @@ requirements:
       il comportamento ce l'ha già) è oggi un elenco semplice, senza
       «+ Nuova categoria» — la stessa mancanza del fornitore, mai segnalata
       a voce finora. Vale lo stesso trattamento anche lì?
-    status: todo
-    generate_issue: true
+      FATTO (1.5.0). La tendina Fornitore della scheda prodotto ha in fondo
+      «➕ Nuovo fornitore…», identica alla «➕ Nuova categoria…» del modulo
+      del drink: si sceglie, compare una riga dove basta scrivere il nome e
+      confermare, e il fornitore appena creato resta SELEZIONATO sul
+      prodotto che si stava compilando — se toccasse riselezionarlo a mano
+      il giro non si sarebbe accorciato di niente. Il resto dei dati
+      aziendali (indirizzo, contatti, email per gli ordini) si mette dopo,
+      con calma, dalla sezione Fornitori. L'elenco in memoria si aggiorna da
+      sé senza ricaricare il magazzino: la scheda che lo aspetta è aperta, e
+      ricaricare la chiuderebbe. Ci si può anche ripensare («✕») senza aver
+      creato niente.
+      RESTA DA CHIEDERE, e non l'abbiamo allargato di nostra iniziativa: la
+      tendina Categoria dello stesso modulo (quella del prodotto di
+      MAGAZZINO, non del menù) è ancora un elenco semplice. Vale lo stesso
+      trattamento anche lì?
+    status: implemented
+    generate_issue: false
     labels: [magazzino, fornitori, ux]
     priority: P2
-    test_cases: []
+    test_cases: [tests/component/InventoryManagerCard.test.jsx]
 
   - id: REQ-MAG-019
     title: "«pz» al posto di «bottiglie», dappertutto sullo schermo"

@@ -75,7 +75,7 @@ vi.mock('../../src/lib/api.js', () => {
     updateMacroCategory: vi.fn(() => Promise.resolve({})),
     deleteMacroCategory: vi.fn(() => Promise.resolve()),
     fetchSuppliers: vi.fn(() => Promise.resolve([])),
-    createSupplier: vi.fn(() => Promise.resolve({})),
+    createSupplier: vi.fn((s) => Promise.resolve({ id: 'nuovo-fornitore', ...s })),
     updateSupplier: vi.fn(() => Promise.resolve({})),
     deleteSupplier: vi.fn(() => Promise.resolve()),
     subscribeSettings: (cb) => {
@@ -110,7 +110,7 @@ vi.mock('../../src/components/SupplierInvoicesPanel.jsx', () => ({
 }))
 
 import InventoryManager from '../../src/components/InventoryManager.jsx'
-import { createInventoryItem, loadStock, adjustStock } from '../../src/lib/api.js'
+import { createInventoryItem, loadStock, adjustStock, createSupplier } from '../../src/lib/api.js'
 
 // Apre la vista a CARD (il default è la lista) e aspetta il prodotto.
 // Card e lista sono DUE ICONE, e si cercano dalla loro etichetta: sulla linea
@@ -646,5 +646,55 @@ describe('le parole a schermo non danno per scontata la bottiglia', () => {
       .filter((r) => !r.trim().startsWith('//'))
       .join(String.fromCharCode(10))
     expect(titoli).not.toMatch(/ottigli/)
+  })
+})
+
+// ── IL FORNITORE CHE MANCA SI AGGIUNGE DA QUI (REQ-MAG-017) ──────────
+// Accorgersi che il fornitore non c'è mentre si compila la scheda voleva
+// dire uscire, andare in Fornitori, crearlo e tornare a ricominciare da
+// capo — proprio nel momento in cui si stava facendo un'altra cosa. Il
+// modello esiste già nel modulo del drink: «➕ Nuova categoria…».
+describe('il fornitore si aggiunge dalla tendina del prodotto', () => {
+  it('basta il nome, e resta selezionato su quello che si stava compilando', async () => {
+    const user = userEvent.setup()
+    createSupplier.mockClear()
+    createInventoryItem.mockClear()
+    render(<InventoryManager />)
+    await screen.findByText('Campari')
+    await user.click(screen.getByRole('button', { name: '+ Nuovo prodotto' }))
+
+    // Ultima voce della tendina, come nel menù.
+    const tendina = screen.getByLabelText('Fornitore')
+    expect([...tendina.options].at(-1).textContent).toMatch(/Nuovo fornitore/)
+    await user.selectOptions(tendina, '__new__')
+
+    // Una finestra dove basta confermare il nome: il resto dei dati
+    // aziendali si mette dopo, con calma, dalla sezione Fornitori.
+    await user.type(screen.getByLabelText('Nome nuovo fornitore'), 'NOVA')
+    await user.click(screen.getByRole('button', { name: 'OK' }))
+    await waitFor(() => expect(createSupplier).toHaveBeenCalled())
+    expect(createSupplier.mock.calls.at(-1)[0]).toMatchObject({ name: 'NOVA' })
+
+    // E il prodotto se lo tiene: se toccasse riselezionarlo a mano il giro
+    // non si sarebbe accorciato di niente.
+    await waitFor(() => expect(screen.getByLabelText('Fornitore')).toHaveValue('nuovo-fornitore'))
+    await user.type(screen.getByLabelText('Nome *'), 'Acqua Brillante Tonica')
+    await user.click(screen.getByRole('button', { name: 'Salva' }))
+    await waitFor(() => expect(createInventoryItem).toHaveBeenCalled())
+    expect(createInventoryItem.mock.calls.at(-1)[0]).toMatchObject({
+      supplier_id: 'nuovo-fornitore',
+    })
+  })
+
+  it('e ci si può ripensare senza aver creato niente', async () => {
+    const user = userEvent.setup()
+    createSupplier.mockClear()
+    render(<InventoryManager />)
+    await screen.findByText('Campari')
+    await user.click(screen.getByRole('button', { name: '+ Nuovo prodotto' }))
+    await user.selectOptions(screen.getByLabelText('Fornitore'), '__new__')
+    await user.click(screen.getByRole('button', { name: '✕' }))
+    expect(createSupplier).not.toHaveBeenCalled()
+    expect(screen.getByLabelText('Fornitore')).toBeInTheDocument()
   })
 })
