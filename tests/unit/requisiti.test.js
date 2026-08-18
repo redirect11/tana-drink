@@ -15,7 +15,7 @@
 import { describe, it, expect } from 'vitest'
 import { readdirSync, statSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
-import { caricaRequisiti, parseRequirementsYaml, etichetteClassificazione, riconciliaEtichette, corpoGenerato } from '../../scripts/lib-requisiti.mjs'
+import { caricaRequisiti, parseRequirementsYaml, etichetteClassificazione, riconciliaEtichette, corpoGenerato, IN_TEST } from '../../scripts/lib-requisiti.mjs'
 
 const requisiti = caricaRequisiti()
 const STATI = ['implemented', 'partial', 'todo', 'deprecated']
@@ -128,6 +128,18 @@ describe('le issue che esistono gia’ si riallineano', () => {
     const r = riconciliaEtichette(['pos', 'ux'], { labels: ['pos', 'ux'] })
     expect(r.daTogliere).toEqual([])
     expect(r.finali).toEqual(['pos', 'ux'])
+  })
+
+  it('su develop una voce finita si segna in prova, su main perde il segno', () => {
+    // develop: e' finita, ma al banco non l'ha vista ancora nessuno.
+    const messa = riconciliaEtichette(['bug', 'P1'], { labels: ['bug'], priority: 'P1' }, { inTest: true })
+    expect(messa.daAggiungere).toEqual([IN_TEST])
+    // La stessa voce riaperta (o guardata da una linea che non e' develop)
+    // il segno lo perde: se restasse, filtrando per in-test si troverebbe
+    // roba gia' in produzione o roba ancora da fare.
+    const tolta = riconciliaEtichette(['bug', 'P1', IN_TEST], { labels: ['bug'], priority: 'P1' })
+    expect(tolta.daTogliere).toEqual([IN_TEST])
+    expect(tolta.finali).toEqual(['bug', 'P1'])
   })
 
   it('il testo si riscrive solo se e’ ancora il nostro', () => {
