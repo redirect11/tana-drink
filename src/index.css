@@ -6610,7 +6610,10 @@ body.pagina-piena .inv-scheda {
    lì la pagina torna a scorrere tutta insieme su due colonne. */
 .corsie {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  /* Quante colonne quante sono le corsie (--corsie-n, dal componente), ma
+     sul telefono mai più di due: tre o quattro colonne larghe un pollice
+     non si usano. */
+  grid-template-columns: repeat(min(2, var(--corsie-n, 2)), minmax(0, 1fr));
   gap: 10px;
   align-items: start;
 }
@@ -6727,7 +6730,7 @@ body.pagina-piena .inv-scheda {
 
 @media (min-width: 901px) {
   .corsie {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(var(--corsie-n, 4), minmax(0, 1fr));
     /* La griglia prende quello che resta sotto la testata e non un pixel
        di più: è dentro quell'altezza che le colonne scorrono. */
     flex: 1;
@@ -6749,3 +6752,13 @@ body.pagina-piena .inv-scheda {
     overflow: hidden;
   }
 }
+
+/* La data sotto l'ora, nelle serate che scavalcano la mezzanotte: piccola,
+   perché la domanda è «a che ora», e il giorno serve solo a non far leggere
+   le 8 del mattino come le 8 di sera. */
+.vbar-giorno {
+  display: block;
+  font-size: 0.9em;
+  opacity: 0.75;
+}
+
