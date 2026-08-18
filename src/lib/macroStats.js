@@ -1,123 +1,111 @@
-// FATTURATO per MACRO-CATEGORIA.
+// QUANTO RENDE OGNI MACRO-CATEGORIA DI QUELLO CHE VENDO.
 //
-// L'incasso di un drink composto NON si attribuisce al drink intero, ma si
-// RIPARTISCE tra le macro-categorie degli ingredienti che contiene, in
-// proporzione al VALORE (costo) di ciascun ingrediente al cl/g. La somma delle
-// quote è SEMPRE il prezzo davvero incassato: nessun euro inventato o perso,
-// così il "fatturato per macro" coincide con l'incasso reale.
+// La domanda a cui questo conto risponde è una sola: per ogni gruppo di
+// voci del MENÙ — «alcolici e distillati», «birre e bibite», «food» —
+// quanti soldi sono entrati, e quanto è costata la merce uscita per farli
+// entrare.
 //
-// Es. Negroni 7 € = 3cl gin + 3cl bitter + 3cl vermouth → le quote di 7 €
-// vanno su Distillati (gin, bitter) e Vino (vermouth) secondo i loro pesi.
+// LA REGOLA, in una riga: la vendita di una voce di menù si attribuisce
+// INTERA alla macro di quella voce — incasso e costo di tutti i suoi
+// ingredienti insieme. Non si scompone niente.
 //
-// Gli ingredienti senza macro o senza costo confluiscono nella chiave `none`
-// (non attribuito): restano nel totale ma segnalati a parte.
+// Perché. Una Schweppes comprata come bibita, quando finisce in un Gin
+// Tonic, «l'ho venduta come se fosse un distillato in quel momento»: quel
+// consumo appartiene alla macro del DRINK, non a quella del prodotto. E il
+// costo segue la vendita, altrimenti il margine di una macro non torna — in
+// «birre e bibite» resta solo quello che è stato venduto COME bibita,
+// incasso e costo.
+//
+// Prima si faceva il contrario: l'incasso di ogni drink veniva spalmato
+// sulle macro degli INGREDIENTI in proporzione al costo. Quella lettura è
+// stata tolta, non affiancata: due letture diverse della stessa serata che
+// convivono sono il modo migliore per non fidarsi di nessuna delle due.
+//
+// IL ROVESCIO È VOLUTO: da qui non si legge più «quanto ho speso in
+// bibite». È una domanda vera, ma è degli ACQUISTI — le fatture, quello che
+// è entrato dalla porta — e vive dove stanno gli acquisti (purchasesByMacro
+// qui sotto, sulle macro di MAGAZZINO).
+//
+// L'anagrafica del prodotto non si tocca mai: la sua macro di magazzino
+// resta quella che è. Questa attribuzione vive solo nel conto di fine mese.
 //
 // Logica pura (niente Firebase), interamente testabile.
 
-import { costPerUnit } from './inventory.js'
-import { macroOfItem } from './macros.js'
+import { macroOfItem, macroOfDrink } from './macros.js'
+import { lineCost, orderLines } from './rendiconto.js'
 import { businessDayKey, DEFAULT_CUTOFF_HOUR } from './businessDay.js'
 import { ORDER_STATUSES } from './orderStatus.js'
 import { discountFactor } from './eta.js'
 
-// Chiave usata per l'incasso non attribuibile a nessuna macro.
+// Chiave di quello che non si sa attribuire: un drink senza categoria di
+// menù, o con una categoria che non sta in nessuna macro.
 export const UNASSIGNED = 'none'
 
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100
 
-// Ripartisce l'incasso di UNA riga d'ordine tra le macro degli ingredienti.
+// Cella vuota: le due sole grandezze di cui parla questa tabella.
+const emptyCell = () => ({ incasso: 0, costo: 0 })
+
+// UNA RIGA VENDUTA: a quale macro va, quanto ha incassato, quanto è costata.
 //   line:  { drink_id, qty, unit_price, recipe_items? }  (recipe_items sui custom)
-//   drink: il drink di catalogo (per la ricetta se la riga non ce l'ha)
-//   itemsById:  { [inventory_item_id]: item }
-//   catToMacro: Map id-categoria → id-macro (da macros.categoryToMacro)
-// Ritorna Map macroKey → incasso (arrotondato ai centesimi; la somma = incasso
-// della riga). Riga senza ricetta/costi → tutto su `none`.
+//   drink: il drink di catalogo (per la ricetta e per la categoria di menù)
+//   itemsById:      { [inventory_item_id]: item }  — per il costo
+//   menuCatToMacro: Map id-categoria-menù → id-macro-menù
 // opts:
-//   netByVat    → scorpora l'IVA da ogni quota usando l'aliquota del PRODOTTO
-//                 (item.vat: può differire per food/acqua/alcolici).
-//   fallbackVat → aliquota per le quote senza prodotto (ingredienti/drink non
-//                 collegati all'inventario).
-//   factor      → quota di prezzo davvero incassata (1 = nessuno sconto). Il
-//                 margine si calcola su quello che è entrato, non sul listino.
-export function splitLineRevenueByMacro(line, drink, itemsById, catToMacro, opts = {}) {
-  const { netByVat = false, fallbackVat = 0, factor = 1 } = opts
-  const out = new Map()
-  const revenue = round2(
-    (Number(line?.qty) || 0) * (Number(line?.unit_price) || 0) * (Number(factor) || 0)
-  )
-  if (revenue <= 0) return out
-  const net = (val, vat) => (netByVat ? val / (1 + (Number(vat) || 0) / 100) : val)
-  const add = (k, val) => out.set(k, round2((out.get(k) || 0) + val))
-
-  const recipe = Array.isArray(line?.recipe_items)
-    ? line.recipe_items
-    : Array.isArray(drink?.recipe_items)
-      ? drink.recipe_items
-      : []
-
-  // Un pezzo per ingrediente: peso = costo (qty × costo unitario), macro e
-  // aliquota IVA del prodotto (per lo scorporo al netto per-prodotto).
-  const parts = []
-  let tot = 0
-  for (const ri of recipe) {
-    const item = itemsById?.[ri.inventory_item_id]
-    // Peso = costo NETTO dell'ingrediente: la ripartizione non deve dipendere
-    // dall'IVA (che si scorpora dopo, per prodotto).
-    const per = item ? costPerUnit(item, ri.unit, { gross: false }) : null
-    const w = per != null ? per * (Number(ri.qty) || 0) : 0
-    if (w <= 0) continue
-    parts.push({
-      macro: (item && macroOfItem(item, catToMacro)) || UNASSIGNED,
-      w,
-      vat: item?.vat ?? fallbackVat,
-    })
-    tot += w
+//   saleVat → aliquota di rivendita, per scorporare l'IVA dall'incasso: il
+//             costo arriva netto, e due numeri che contengono cose diverse
+//             non si sottraggono.
+//   factor  → quota di prezzo davvero incassata (1 = nessuno sconto). Lo
+//             sconto abbassa l'incasso e NON il costo: il drink è costato
+//             quello che è costato anche se l'hai regalato.
+export function lineByMacro(line, drink, itemsById, menuCatToMacro, opts = {}) {
+  const { saleVat = 0, factor = 1 } = opts
+  const lordo = (Number(line?.qty) || 0) * (Number(line?.unit_price) || 0) * (Number(factor) || 0)
+  const { costo } = lineCost(line, drink, itemsById, { gross: false })
+  return {
+    macro: macroOfDrink(drink, menuCatToMacro) || UNASSIGNED,
+    incasso: round2(lordo / (1 + (Number(saleVat) || 0) / 100)),
+    costo: round2(costo),
   }
-
-  if (tot <= 0) {
-    // Nessun ingrediente valorizzato: tutto non attribuito (netto col ripiego).
-    add(UNASSIGNED, net(revenue, fallbackVat))
-    return out
-  }
-
-  // Ripartisci l'incasso REALE in proporzione ai pesi. La quota LORDA dell'
-  // ultimo pezzo prende il resto, così le quote lorde tornano esatte al
-  // centesimo; poi ogni quota si scorpora con l'IVA del suo prodotto.
-  let assigned = 0
-  parts.forEach((p, i) => {
-    const gross = i === parts.length - 1 ? round2(revenue - assigned) : round2((revenue * p.w) / tot)
-    assigned = round2(assigned + gross)
-    add(p.macro, net(gross, p.vat))
-  })
-  return out
 }
 
-// Estrae le righe vendute di un ordine (order_items o, in mancanza, le comande).
-function orderLines(o) {
-  return o?.order_items || (o?.comande || []).flatMap((c) => c.items || []) || []
+// Somma le righe vendute nelle celle di un accumulatore Map → { incasso, costo }.
+// Ci passano tutte e due le letture qui sotto: il totale del periodo e la
+// tabella mese per mese.
+function accumula(acc, chiave, r) {
+  const cell = acc.get(chiave) || emptyCell()
+  cell.incasso = round2(cell.incasso + r.incasso)
+  cell.costo = round2(cell.costo + r.costo)
+  acc.set(chiave, cell)
+  return cell
 }
 
-// Fatturato per macro su un insieme di ordini. Salta gli annullati. Ritorna
-// Map macroKey → incasso.
-export function revenueByMacro(orders, { drinksById, itemsById, catToMacro }) {
+// Vendite per macro di MENÙ su un insieme di ordini. Salta gli annullati.
+// Ritorna Map macroKey → { incasso, costo }.
+export function venditeByMacro(orders, { drinksById, itemsById, menuCatToMacro, saleVat = 0 }) {
   const acc = new Map()
   for (const o of orders || []) {
     if (o?.status === ORDER_STATUSES.ANNULLATO) continue
     const factor = discountFactor(o)
     for (const li of orderLines(o)) {
-      const split = splitLineRevenueByMacro(li, drinksById?.[li.drink_id], itemsById, catToMacro, {
+      const r = lineByMacro(li, drinksById?.[li.drink_id], itemsById, menuCatToMacro, {
+        saleVat,
         factor,
       })
-      for (const [k, v] of split) acc.set(k, round2((acc.get(k) || 0) + v))
+      accumula(acc, r.macro, r)
     }
   }
   return acc
 }
 
-// ── ACQUISTI per macro ─────────────────────────────────────────────────
+// ── ACQUISTI per macro di MAGAZZINO ────────────────────────────────────
 // Dagli ordini fornitori RICEVUTI: per ogni riga, importo netto
-// (unit_cost × qty_packages) attribuito alla macro dell'articolo
-// (articolo → categoria → macro). Righe di articoli senza macro → `none`.
+// (unit_cost × qty_packages) attribuito alla macro dell'ARTICOLO
+// (articolo → categoria di magazzino → macro). Righe di articoli senza
+// macro → `none`.
+//
+// È l'altra domanda — «quanto ho speso in bibite» — e vive per conto suo:
+// non entra nel mensile per macro, che parla di quello che si è VENDUTO.
 export function purchasesByMacro(purchaseOrders, { itemsById, catToMacro, onlyReceived = true }) {
   const acc = new Map()
   for (const po of purchaseOrders || []) {
@@ -133,93 +121,62 @@ export function purchasesByMacro(purchaseOrders, { itemsById, catToMacro, onlyRe
   return acc
 }
 
-// ── Report MENSILE per macro (Dashboard A) ─────────────────────────────
-// Mese del fatturato = giornata commerciale dell'ordine; mese degli acquisti =
-// data di arrivo (received_at) dell'ordine fornitore ricevuto.
-const monthOfReceived = (po) => String(po?.received_at || po?.created_at || '').slice(0, 7)
+// ── Report MENSILE per macro di MENÙ ───────────────────────────────────
+// Mese = giornata commerciale dell'ordine: una serata che finisce alle tre
+// di notte è ancora la serata di ieri.
 
-// Riga vuota di metriche mensili.
-const emptyCell = () => ({ acquisti: 0, fatturato: 0 })
 const withDerived = (c) => {
-  const utile = round2(c.fatturato - c.acquisti)
-  return { ...c, utile, rapporto: c.acquisti > 0 ? round2(c.fatturato / c.acquisti) : null }
+  const margine = round2(c.incasso - c.costo)
+  return { ...c, margine, rapporto: c.costo > 0 ? round2(c.incasso / c.costo) : null }
 }
 
-// Costruisce la tabella mensile per macro.
+// Costruisce la tabella mensile per macro di menù.
 //   months: elenco di 'YYYY-MM' da mostrare (colonne), es. i 12 mesi dell'anno.
-//   macros: [{ id, name }] nell'ordine voluto.
-// Ritorna { months, rows, totByMonth, grand } dove rows ha una voce per macro
-// (più "Non attribuito" se ci sono importi orfani), ognuna con byMonth e tot.
+//   macros: [{ id, name }] — le macro del MENÙ, nell'ordine voluto.
+// Ritorna { months, rows, totByMonth, grand }: rows ha una voce per macro
+// (più «Non attribuito» se ci sono importi orfani), ognuna con byMonth e tot.
 export function macroMonthlyReport({
   orders,
-  purchaseOrders,
   drinksById,
   itemsById,
-  catToMacro,
+  menuCatToMacro,
   macros,
   months,
   cutoffHour = DEFAULT_CUTOFF_HOUR,
   saleVat = 0,
 }) {
   const monthSet = new Set(months || [])
-  // Fatturato al NETTO IVA per prodotto (item.vat), col ripiego `saleVat` per
-  // ciò che non ha un articolo collegato: così il confronto con gli acquisti
-  // (già netti) è coerente, come si fa per l'utile.
-  const netOpts = { netByVat: true, fallbackVat: Number(saleVat) || 0 }
-  // cell[macroKey][month] = { acquisti, fatturato }
+  // cells: Map 'macroKey|mese' → { incasso, costo }
   const cells = new Map()
-  const ensure = (macroKey, month) => {
-    let m = cells.get(macroKey)
-    if (!m) cells.set(macroKey, (m = new Map()))
-    let c = m.get(month)
-    if (!c) m.set(month, (c = emptyCell()))
-    return c
-  }
 
-  // Fatturato: per ordine, mese = giornata commerciale, poi ripartizione macro.
   for (const o of orders || []) {
     if (o?.status === ORDER_STATUSES.ANNULLATO) continue
     const month = (businessDayKey(o?.created_at, cutoffHour) || '').slice(0, 7)
     if (!monthSet.has(month)) continue
     const factor = discountFactor(o)
     for (const li of orderLines(o)) {
-      const split = splitLineRevenueByMacro(li, drinksById?.[li.drink_id], itemsById, catToMacro, {
-        ...netOpts,
+      const r = lineByMacro(li, drinksById?.[li.drink_id], itemsById, menuCatToMacro, {
+        saleVat,
         factor,
       })
-      for (const [k, v] of split) {
-        const cell = ensure(k, month)
-        cell.fatturato = round2(cell.fatturato + v) // già al netto IVA per prodotto
-      }
+      accumula(cells, `${r.macro}|${month}`, r)
     }
   }
 
-  // Acquisti: per ordine fornitore ricevuto, mese = arrivo.
-  for (const po of purchaseOrders || []) {
-    if (po?.status !== 'ricevuto') continue
-    const month = monthOfReceived(po)
-    if (!monthSet.has(month)) continue
-    for (const l of po?.lines || []) {
-      const amount = round2((Number(l.unit_cost) || 0) * (Number(l.qty_packages) || 0))
-      if (amount <= 0) continue
-      const item = itemsById?.[l.item_id]
-      const macroKey = (item && macroOfItem(item, catToMacro)) || UNASSIGNED
-      ensure(macroKey, month).acquisti = round2(ensure(macroKey, month).acquisti + amount)
-    }
-  }
-
-  // Righe: le macro nell'ordine dato, più "Non attribuito" se ha importi.
+  // Righe: le macro nell'ordine dato, più «Non attribuito» se ha importi.
   const macroRows = [...(macros || [])]
-  if (cells.has(UNASSIGNED)) macroRows.push({ id: UNASSIGNED, name: 'Non attribuito' })
+  if ([...cells.keys()].some((k) => k.startsWith(`${UNASSIGNED}|`))) {
+    macroRows.push({ id: UNASSIGNED, name: 'Non attribuito' })
+  }
 
   const rows = macroRows.map((m) => {
     const byMonth = new Map()
     const tot = emptyCell()
     for (const month of months || []) {
-      const c = cells.get(m.id)?.get(month) || emptyCell()
+      const c = cells.get(`${m.id}|${month}`) || emptyCell()
       byMonth.set(month, withDerived(c))
-      tot.acquisti = round2(tot.acquisti + c.acquisti)
-      tot.fatturato = round2(tot.fatturato + c.fatturato)
+      tot.incasso = round2(tot.incasso + c.incasso)
+      tot.costo = round2(tot.costo + c.costo)
     }
     return { id: m.id, name: m.name, byMonth, tot: withDerived(tot) }
   })
@@ -231,12 +188,12 @@ export function macroMonthlyReport({
     const t = emptyCell()
     for (const r of rows) {
       const c = r.byMonth.get(month)
-      t.acquisti = round2(t.acquisti + c.acquisti)
-      t.fatturato = round2(t.fatturato + c.fatturato)
+      t.incasso = round2(t.incasso + c.incasso)
+      t.costo = round2(t.costo + c.costo)
     }
     totByMonth.set(month, withDerived(t))
-    grand.acquisti = round2(grand.acquisti + t.acquisti)
-    grand.fatturato = round2(grand.fatturato + t.fatturato)
+    grand.incasso = round2(grand.incasso + t.incasso)
+    grand.costo = round2(grand.costo + t.costo)
   }
 
   return { months: months || [], rows, totByMonth, grand: withDerived(grand) }

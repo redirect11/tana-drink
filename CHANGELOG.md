@@ -4,6 +4,16 @@
 
 ### Al banco
 
+- **«Mensile per macro» dice quanto rende davvero ogni gruppo del menù**: le
+  righe sono le macro-categorie del **menù**, e ogni drink venduto ci conta
+  intero — incasso e costo di tutti i suoi ingredienti insieme. La Schweppes
+  finita in un Gin Tonic conta sui distillati, perché lì l'hai venduta; in
+  «birre e bibite» resta solo quello venduto come bibita. Al posto di
+  «Acquisti / Fatturato / Utile» ci sono ora **Incassato / Costo del venduto /
+  Margine**: così il margine di una macro non si porta dentro merce comprata e
+  non ancora venduta. «Quanto ho speso in bibite» è un'altra domanda, e la si
+  chiederà alle fatture.
+
 - **Nel pagamento i drink sono già separati**: la schermata di incasso si apre
   con «2× Mojito» diviso in due righe da una, perché al banco si paga quasi
   sempre a pezzi — uno paga il suo, un altro offre due birre — e ogni volta
