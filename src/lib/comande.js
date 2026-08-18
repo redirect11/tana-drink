@@ -378,13 +378,47 @@ export function annullataPerDivisione(c) {
   return c?.status === ORDER_STATUSES.ANNULLATO && c?.annullata_per === ANNULLATA_PER_DIVISIONE
 }
 
-// Su quali comande ha senso proporre la preparazione parziale: solo quelle
-// ANCORA DA FARE e con più di una unità dentro. Su una comanda già presa in
-// carico dividere non vuol dire niente (il lavoro è già cominciato), e su
-// una riga singola la scelta sarebbe fra «tutto» e «niente».
+// ── SU QUALI COMANDE SI PROPONE LA PREPARAZIONE PARZIALE ──────────
+//
+// FINCHÉ IL DRINK NON È USCITO DAL BANCO: a «da fare» e a «in
+// preparazione». Da «pronto» in poi no — quello che è già sul vassoio non
+// si divide più, e per sbagli del genere c'è il ritorno indietro.
+//
+// Chiedeva «ricevuto» e basta, e col locale che fa nascere le comande già
+// in preparazione il tasto era sparito da tutte le schermate: nessuna
+// comanda stava più in «da fare» (BUG-025). Ma nemmeno legarlo al passo di
+// nascita bastava: dividere una comanda GIÀ al banco è il caso vero — sto
+// preparando cinque gin tonic, ne faccio uscire tre adesso e due dopo — e
+// non c'entra niente con dove sia nata.
+//
+// Più la soglia di sempre: più di un'unità dentro, o la scelta sarebbe fra
+// tutto e niente, cioè il tasto grande.
 export function comandaDivisibile(c) {
-  if (!c || c.status !== ORDER_STATUSES.RICEVUTO) return false
+  if (c?.status !== ORDER_STATUSES.RICEVUTO && c?.status !== ORDER_STATUSES.IN_PREPARAZIONE) {
+    return false
+  }
   return (c.items || []).reduce((s, i) => s + (Number(i.qty) || 0), 0) > 1
+}
+
+// ── IN CHE PASSO NASCONO LE DUE COMANDE DI UNA DIVISIONE ──────────
+//
+// Lo dice quella di partenza, e non è fisso:
+//
+//   da «DA FARE»   la parte scelta è quella che si comincia adesso e va
+//                   in preparazione; il resto resta da fare, che nessuno
+//                   l'ha ancora toccato.
+//   da «IN PREPARAZIONE»  tutte e due in preparazione. Il lavoro è
+//                   cominciato su entrambe: mandarne indietro una a «da
+//                   fare» vorrebbe dire dire che quei drink non li ha
+//                   ancora presi in mano nessuno, e non è vero.
+//
+// Sta qui perché lo devono sapere in due — chi scrive la divisione
+// (api.js) e chi la disegna mentre la scrittura vola (il conto) — e due
+// valori a mano finirebbero per non combaciare.
+export function statiDopoLaDivisione(status) {
+  return status === ORDER_STATUSES.IN_PREPARAZIONE
+    ? { nuova: ORDER_STATUSES.IN_PREPARAZIONE, resta: ORDER_STATUSES.IN_PREPARAZIONE }
+    : { nuova: ORDER_STATUSES.IN_PREPARAZIONE, resta: ORDER_STATUSES.RICEVUTO }
 }
 
 // ── LA FIRMA DEL LAVORO DI UN CONTO ─────────────────────────

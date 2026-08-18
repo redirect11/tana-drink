@@ -1722,14 +1722,43 @@ describe('preparazione parziale di una comanda', () => {
     expect(preparazioneParziale).not.toHaveBeenCalled()
   })
 
-  it('non si propone su quello che è già al banco, né su un drink solo', async () => {
-    // Dividere una comanda già presa in carico non vuol dire niente: il
-    // lavoro è cominciato. E su una riga da uno la scelta sarebbe fra
-    // tutto e niente, cioè il tasto che c'è già.
+  it('UNA COMANDA IN PREPARAZIONE SI DIVIDE, e le due parti restano al banco', async () => {
+    // È il caso vero: sto preparando cinque gin tonic, ne faccio uscire
+    // tre adesso e due dopo. Nessuna delle due parti torna indietro.
+    const user = userEvent.setup()
+    mount(daFare({ comande: [
+      {
+        id: 'c1', seq: 1, status: 'in_preparazione', status_times: {},
+        items: [{ drink_id: 'gin', name: 'Gin Tonic', unit_price: 8, qty: 5 }],
+      },
+    ] }))
+    await apriComande(user)
+    await user.click(screen.getByRole('button', { name: /Preparazione parziale/ }))
+    for (let i = 0; i < 3; i++) {
+      await user.click(screen.getByRole('button', { name: 'Uno in più di Gin Tonic' }))
+    }
+    await user.click(screen.getByRole('button', { name: 'Preparo questi' }))
+    expect(preparazioneParziale).toHaveBeenCalledWith('ord1', 'c1', [3])
+
+    // e si vede subito: la vecchia divisa, le due nuove TUTTE E DUE al
+    // banco, cinque unità in totale
+    const cards = [...document.querySelectorAll('.confirm-box .card')]
+    const testo = cards.map((c) => c.textContent)
+    expect(testo[0]).toMatch(/Divisa/)
+    expect(testo[1]).toMatch(/In preparazione/)
+    expect(testo[1]).toMatch(/3× Gin Tonic/)
+    expect(testo[2]).toMatch(/In preparazione/)
+    expect(testo[2]).toMatch(/2× Gin Tonic/)
+    // nessuna delle due torna indietro: sono due pill «In preparazione»,
+    // non una in preparazione e una da fare
+    expect(cards.filter((c) => c.querySelector('.pill.in_preparazione')).length).toBe(2)
+  })
+
+  it('non si propone su quello che è già sul vassoio, né su un drink solo', async () => {
     const user = userEvent.setup()
     const { unmount } = mount(daFare({ comande: [
       {
-        id: 'c1', seq: 1, status: 'in_preparazione', status_times: {},
+        id: 'c1', seq: 1, status: 'pronto', status_times: {},
         items: [{ drink_id: 'gin', name: 'Gin Tonic', unit_price: 8, qty: 5 }],
       },
     ] }))
@@ -1747,7 +1776,6 @@ describe('preparazione parziale di una comanda', () => {
     expect(screen.queryByRole('button', { name: /Preparazione parziale/ })).not.toBeInTheDocument()
   })
 })
-
 
 // ── A CHE PUNTO È QUESTO CONTO, RIGA PER RIGA ───────────────────
 //

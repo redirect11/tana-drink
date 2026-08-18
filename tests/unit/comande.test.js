@@ -9,6 +9,7 @@ import {
   statoComandaNuova,
   comandaPerLeAggiunte,
   statiPrimaComanda,
+  statiDopoLaDivisione,
   activeComanda,
   serveAllComande,
   comandeSummary,
@@ -470,20 +471,48 @@ describe('annullata davvero o annullata perché divisa', () => {
 
 describe('su quali comande si propone la preparazione parziale', () => {
   const riga = (qty) => ({ drink_id: 'gin', name: 'Gin tonic', qty, unit_price: 8 })
+  const con = (status, qty = 2) => ({ status, items: [riga(qty)] })
 
-  it('solo su una comanda ancora DA FARE', () => {
-    // Quello che è già al banco non si divide: il lavoro è cominciato.
-    expect(comandaDivisibile({ status: 'ricevuto', items: [riga(2)] })).toBe(true)
-    for (const st of ['in_preparazione', 'pronto', 'ritirato', 'annullato']) {
-      expect(comandaDivisibile({ status: st, items: [riga(2)] })).toBe(false)
+  it('FINCHÉ IL DRINK NON È USCITO DAL BANCO', () => {
+    // Dividere una comanda già al banco è il caso vero: sto preparando
+    // cinque gin tonic, ne faccio uscire tre adesso e due dopo.
+    expect(comandaDivisibile(con('ricevuto'))).toBe(true)
+    expect(comandaDivisibile(con('in_preparazione'))).toBe(true)
+  })
+
+  it('da «pronto» in poi no: è roba sul vassoio', () => {
+    for (const st of ['pronto', 'ritirato', 'annullato']) {
+      expect(comandaDivisibile(con(st))).toBe(false)
     }
     expect(comandaDivisibile(null)).toBe(false)
   })
 
   it('e solo se c’è più di un drink: su uno solo la scelta è tutto o niente', () => {
-    expect(comandaDivisibile({ status: 'ricevuto', items: [riga(1)] })).toBe(false)
+    expect(comandaDivisibile(con('ricevuto', 1))).toBe(false)
+    expect(comandaDivisibile(con('in_preparazione', 1))).toBe(false)
     expect(comandaDivisibile({ status: 'ricevuto', items: [] })).toBe(false)
     expect(comandaDivisibile({ status: 'ricevuto', items: [riga(1), riga(1)] })).toBe(true)
+  })
+})
+
+// ── IN CHE PASSO NASCONO LE DUE PARTI ──────────────────────────
+//
+// Lo dice quella di partenza, e non è fisso.
+describe('gli stati dopo una divisione', () => {
+  it('da «da fare»: la parte scelta parte, il resto resta da fare', () => {
+    expect(statiDopoLaDivisione('ricevuto')).toEqual({
+      nuova: 'in_preparazione',
+      resta: 'ricevuto',
+    })
+  })
+
+  it('da «in preparazione»: TUTTE E DUE in preparazione', () => {
+    // Il lavoro è cominciato su entrambe: mandarne indietro una a «da
+    // fare» direbbe che quei drink non li ha ancora presi in mano nessuno.
+    expect(statiDopoLaDivisione('in_preparazione')).toEqual({
+      nuova: 'in_preparazione',
+      resta: 'in_preparazione',
+    })
   })
 })
 

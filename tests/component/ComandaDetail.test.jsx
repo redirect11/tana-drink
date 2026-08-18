@@ -277,10 +277,159 @@ describe('il dettaglio di una comanda', () => {
     expect(preparazioneParziale).toHaveBeenCalledWith('o41', 'c1', [1])
   })
 
-  it('non si propone dove non ha senso', async () => {
-    // Su una comanda già al banco il lavoro è cominciato, e su un drink
-    // solo la scelta sarebbe fra tutto e niente — cioè il tasto grande.
-    monta('c2') // in preparazione
+  // SI DIVIDE FINCHÉ IL DRINK NON È USCITO DAL BANCO: a «da fare» e a «in
+  // preparazione». Dividere una comanda già al banco è il caso vero —
+  // sto preparando cinque gin tonic, ne faccio uscire tre adesso e due
+  // dopo — e le due parti restano tutte e due in preparazione: il lavoro è
+  // cominciato su entrambe.
+  it('una comanda in preparazione si divide, e le due parti restano al banco', async () => {
+    const utente = userEvent.setup()
+    ordine = conto({
+      comande: [
+        {
+          id: 'c2',
+          seq: 2,
+          status: 'in_preparazione',
+          created_at: ORA,
+          status_times: { ricevuto: ORA, in_preparazione: POI },
+          items: [{ drink_id: 'negroni', name: 'Negroni', qty: 5, unit_price: 9 }],
+        },
+      ],
+    })
+    monta('c2')
+    await screen.findByText(/Cosa c’è da fare/)
+
+    await utente.click(screen.getByRole('button', { name: /Preparazione parziale/ }))
+    for (let i = 0; i < 3; i++) {
+      await utente.click(screen.getByRole('button', { name: 'Uno in più di Negroni' }))
+    }
+    await utente.click(screen.getByRole('button', { name: 'Preparo questi' }))
+    expect(preparazioneParziale).toHaveBeenCalledWith('o41', 'c2', [3])
+  })
+
+  it('ma una comanda PRONTA non si divide più: è roba sul vassoio', async () => {
+    ordine = conto({
+      comande: [
+        {
+          id: 'c2',
+          seq: 2,
+          status: 'pronto',
+          created_at: ORA,
+          status_times: { ricevuto: ORA, in_preparazione: POI, pronto: POI },
+          items: [{ drink_id: 'negroni', name: 'Negroni', qty: 5, unit_price: 9 }],
+        },
+      ],
+    })
+    monta('c2')
+    await screen.findByText(/Cosa c’è da fare/)
+    expect(screen.queryByRole('button', { name: /Preparazione parziale/ })).not.toBeInTheDocument()
+  })
+
+  it('DA QUI SI RISALE AL CONTO: è lì che si incassa e si aggiunge', async () => {
+    const utente = userEvent.setup()
+    monta()
+    await screen.findByText(/Cosa c’è da fare/)
+    await utente.click(screen.getByRole('button', { name: /Apri il conto #41/ }))
+    expect(navigateSpy).toHaveBeenCalledWith('/ordine/o41')
+  })
+
+  it('e si torna alla coda da dove si era arrivati', async () => {
+    const utente = userEvent.setup()
+    monta()
+    await screen.findByText(/Cosa c’è da fare/)
+    await utente.click(screen.getByRole('button', { name: /Torna alla coda/ }))
+    expect(navigateSpy).toHaveBeenCalledWith('/bar')
+  })
+
+  it('la comanda si ristampa: la copia al banco si perde, si strappa, si bagna', async () => {
+    const utente = userEvent.setup()
+    monta()
+    await screen.findByText(/Cosa c’è da fare/)
+    await utente.click(screen.getByRole('button', { name: /Ristampa/ }))
+    expect(printComanda).toHaveBeenCalledTimes(1)
+    expect(printComanda.mock.calls[0][1].id).toBe('c2')
+  })
+
+  it('un conto già pagato non ha tasti: non c’è più niente da fare', async () => {
+    ordine = conto({ status: 'pagato', payment_status: 'pagato' })
+    monta()
+    await screen.findByText(/Cosa c’è da fare/)
+    expect(screen.queryByRole('button', { name: 'Pronto al servizio' })).not.toBeInTheDocument()
+    expect(screen.getByText('💶 Pagato')).toBeInTheDocument()
+  })
+
+  it('l’acconto si vede anche da qui', async () => {
+    // Chi finisce la comanda spesso è quello che poi porta il conto al
+    // tavolo: senza dirlo qui, chiede l'intero — ed è successo.
+    ordine = conto({ payment_status: 'parziale', payments: [{ amount: 10 }] })
+    monta()
+    await screen.findByText(/Cosa c’è da fare/)
+    expect(screen.getByText('💳 Acconto')).toBeInTheDocument()
+  })
+
+  // ── DIVIDERE DA QUI ────────────────────────────────────
+  //
+  // Preparare tre gin tonic su cinque è una decisione che si prende
+  // guardando IL TICKET, non il conto: sta qui perché qui c'è chi la
+  // prende. Farlo risalire al conto per dividere quello che ha già davanti
+  // sono due schermate indietro per una cosa che riguarda solo questa
+  // comanda. La strada è la stessa del conto — dividiComanda +
+  // preparazioneParziale — e resta l'unica.
+  it('si sceglie quante unità preparare adesso, e parte la stessa strada del conto', async () => {
+    const utente = userEvent.setup()
+    monta('c1') // due gin tonic, ancora «da fare»: si può dividere
+    await screen.findByText(/Cosa c’è da fare/)
+
+    await utente.click(screen.getByRole('button', { name: /Preparazione parziale/ }))
+    await utente.click(screen.getByRole('button', { name: 'Uno in più di Gin Tonic' }))
+    await utente.click(screen.getByRole('button', { name: 'Preparo questi' }))
+
+    expect(preparazioneParziale).toHaveBeenCalledWith('o41', 'c1', [1])
+  })
+
+  // COL SALTO ACCESO la comanda nasce «in preparazione», e lì si divide:
+  // quel passo È la nascita, non vuol dire che qualcuno abbia cominciato a
+  // versare. Chiedendo «ricevuto» e basta il tasto era sparito da tutte le
+  // schermate senza che nessuno l'avesse tolto (BUG-025).
+  it('col salto acceso si divide la comanda «in preparazione»', async () => {
+    const utente = userEvent.setup()
+    impostazioni = { workflow_enabled: true, comande_in_preparazione: true }
+    ordine = conto({
+      comande: [
+        {
+          id: 'c2',
+          seq: 2,
+          status: 'in_preparazione',
+          created_at: ORA,
+          status_times: { ricevuto: ORA, in_preparazione: POI },
+          items: [{ drink_id: 'negroni', name: 'Negroni', qty: 3, unit_price: 9 }],
+        },
+      ],
+    })
+    monta('c2')
+    await screen.findByText(/Cosa c’è da fare/)
+
+    await utente.click(screen.getByRole('button', { name: /Preparazione parziale/ }))
+    await utente.click(screen.getByRole('button', { name: 'Uno in più di Negroni' }))
+    await utente.click(screen.getByRole('button', { name: 'Preparo questi' }))
+    expect(preparazioneParziale).toHaveBeenCalledWith('o41', 'c2', [1])
+  })
+
+  it('su un drink solo non si propone: sarebbe tutto o niente', async () => {
+    // Cioè il tasto grande, che c'è già.
+    ordine = conto({
+      comande: [
+        {
+          id: 'c2',
+          seq: 2,
+          status: 'in_preparazione',
+          created_at: ORA,
+          status_times: { ricevuto: ORA, in_preparazione: POI },
+          items: [{ drink_id: 'negroni', name: 'Negroni', qty: 1, unit_price: 9 }],
+        },
+      ],
+    })
+    monta('c2')
     await screen.findByText(/Cosa c’è da fare/)
     expect(screen.queryByRole('button', { name: /Preparazione parziale/ })).not.toBeInTheDocument()
   })
