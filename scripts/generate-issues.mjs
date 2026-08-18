@@ -33,7 +33,7 @@
  */
 
 import { readFileSync } from 'node:fs'
-import { parseRequirementsYaml, etichetteClassificazione, riconciliaEtichette, corpoGenerato, IN_TEST, prossimoStato } from './lib-requisiti.mjs'
+import { STATI_CHIUSI, parseRequirementsYaml, etichetteClassificazione, riconciliaEtichette, corpoGenerato, IN_TEST, prossimoStato, deveNascere } from './lib-requisiti.mjs'
 import { bachecaAttiva, schedaDellaIssue, spostaScheda } from './bacheca.mjs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -115,7 +115,6 @@ async function aggiornaIssue(numero, patch) {
 
 // Un bug risolto nel registro è un'issue da chiudere: così non si aggiorna la
 // stessa cosa in due posti (e non restano aperte issue di roba già sistemata).
-const STATI_CHIUSI = new Set(['fixed', 'implemented', 'done'])
 
 async function commentIssue(number, body) {
   return githubFetch(`/repos/${OWNER}/${REPO}/issues/${number}/comments`, {
@@ -376,6 +375,12 @@ ${req.description}`
         errors++
       }
       await new Promise((r) => setTimeout(r, 200))
+      continue
+    }
+
+    if (!deveNascere(req, existing.length > 0)) {
+      console.log(`  ⏭  Gia' fatta e senza issue: non se ne apre una nuova.`)
+      skipped++
       continue
     }
 
