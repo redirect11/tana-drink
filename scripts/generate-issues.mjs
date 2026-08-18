@@ -33,7 +33,8 @@
  */
 
 import { readFileSync } from 'node:fs'
-import { parseRequirementsYaml, etichetteClassificazione, riconciliaEtichette, corpoGenerato, IN_TEST } from './lib-requisiti.mjs'
+import { parseRequirementsYaml, etichetteClassificazione, riconciliaEtichette, corpoGenerato, IN_TEST, prossimoStato } from './lib-requisiti.mjs'
+import { bachecaAttiva, schedaDellaIssue, spostaScheda } from './bacheca.mjs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -138,6 +139,28 @@ async function createIssue({ title, body, labels }) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ title, body, labels }),
   })
+}
+
+// LA BACHECA SEGUE L'ETICHETTA. L'informazione vera sta nel registro e
+// nell'issue; il progetto e' una vista comoda, e si muove di conseguenza.
+// Se manca PROJECT_TOKEN non si rompe niente: si salta, e le schede restano
+// come le muove una persona.
+async function seguiSullaBacheca(numeroIssue, { chiuso }) {
+  if (!bachecaAttiva()) return null
+  try {
+    const scheda = await schedaDellaIssue(GITHUB_REPO, numeroIssue)
+    if (!scheda) return null
+    const destinazione = prossimoStato(scheda.stato, { chiuso })
+    if (!destinazione) return null
+    if (DRY_RUN) return `bacheca: ${scheda.stato || 'senza stato'} -> ${destinazione}`
+    await spostaScheda(scheda.id, destinazione)
+    return `bacheca: ${destinazione}`
+  } catch (e) {
+    // Un guaio sulla bacheca non deve far fallire il giro delle issue: quella
+    // e' la sostanza, questa e' la vetrina.
+    console.error(`  ⚠️  Bacheca non aggiornata per #${numeroIssue}: ${e.message}`)
+    return null
+  }
 }
 
 // ── Issue body builder ────────────────────────────────────────────────────────
@@ -249,13 +272,15 @@ async function main() {
         continue
       }
       if (DRY_RUN) {
-        console.log(`  [DRY RUN] Da mettere in prova (+${IN_TEST}): ${aperta.html_url}`)
+        const mossa = await seguiSullaBacheca(aperta.number, { chiuso: false })
+        console.log(`  [DRY RUN] Da mettere in prova (+${IN_TEST}${mossa ? ', ' + mossa : ''}): ${aperta.html_url}`)
         updated++
         continue
       }
       const esito = await aggiornaIssue(aperta.number, { labels: [...attuali, IN_TEST] })
       if (esito.ok) {
-        console.log(`  🧪 In prova (+${IN_TEST}): ${aperta.html_url}`)
+        const mossa = await seguiSullaBacheca(aperta.number, { chiuso: false })
+        console.log(`  🧪 In prova (+${IN_TEST}${mossa ? ', ' + mossa : ''}): ${aperta.html_url}`)
         updated++
       } else {
         console.error(`  ❌ Errore ${esito.status} su #${aperta.number}:`, esito.body.message || '')
@@ -292,7 +317,8 @@ ${req.description}`
       }
       const { ok, status, body } = await closeIssue(aperta.number)
       if (ok) {
-        console.log(`  ✅ Issue chiusa: ${aperta.html_url}`)
+        const mossa = await seguiSullaBacheca(aperta.number, { chiuso: true })
+        console.log(`  ✅ Issue chiusa${mossa ? ' (' + mossa + ')' : ''}: ${aperta.html_url}`)
         closed++
       } else {
         console.error(`  ❌ Errore ${status} chiudendo #${aperta.number}:`, body.message || '')
