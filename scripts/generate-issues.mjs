@@ -33,7 +33,7 @@
  */
 
 import { readFileSync } from 'node:fs'
-import { parseRequirementsYaml } from './lib-requisiti.mjs'
+import { parseRequirementsYaml, etichetteClassificazione } from './lib-requisiti.mjs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -133,6 +133,8 @@ function buildIssueBody(req) {
   return `## ${req.id} — ${req.title}
 ${dove}
 **Area**: \`${req.area}\`
+${req.severity || req.priority ? `**Quanto fa male**: ${req.severity || '—'} · **Quando si fa**: ${req.priority || 'da decidere'}
+` : ''}
 **Status**: ${req.status}
 
 ## Descrizione
@@ -215,7 +217,7 @@ async function main() {
       }
       console.log('  [DRY RUN] Payload:')
       console.log('  Title:', issueTitle)
-      console.log('  Labels:', req.labels.join(', ') || '(nessuna)')
+      console.log('  Labels:', [...new Set([...req.labels, ...etichetteClassificazione(req)])].join(', ') || '(nessuna)')
       console.log('  Body (anteprima):', buildIssueBody(req).slice(0, 200) + '...\n')
       created++
       continue
@@ -258,7 +260,7 @@ ${req.description}`
     const { ok, status, body } = await createIssue({
       title: issueTitle,
       body: buildIssueBody(req),
-      labels: req.labels,
+      labels: [...new Set([...req.labels, ...etichetteClassificazione(req)])],
     })
 
     if (ok) {

@@ -40,7 +40,7 @@ export function parseRequirementsYaml(text) {
         requirements.push(current)
       }
       inTestCases = false
-      current = { id: '', title: '', area: '', description: '', status: 'todo', generate_issue: false, labels: [], test_cases: [], in_produzione: null }
+      current = { id: '', title: '', area: '', description: '', status: 'todo', generate_issue: false, labels: [], test_cases: [], in_produzione: null, severity: null, priority: null }
       current.id = line.replace(/^  - id:\s*/, '').trim()
       continue
     }
@@ -107,6 +107,16 @@ export function parseRequirementsYaml(text) {
       // Solo per i bug: dice se succede sull'installazione che sta
       // lavorando. Assente = non si sa, e l'issue non dichiara niente
       // invece di dare per scontato che sia roba di test.
+      // QUANTO FA MALE, e QUANDO lo sistemiamo. Due cose diverse: la
+      // severity e' una proprieta' del guaio (la misura chi lo vede al
+      // banco), la priority e' una decisione nostra. Un difetto grave puo'
+      // stare in P2, e uno lieve in P0 se lo vedono tutti i clienti.
+      case 'severity':
+        current.severity = value.trim() || null
+        break
+      case 'priority':
+        current.priority = value.trim() || null
+        break
       case 'in_produzione':
         current.in_produzione = value.trim() === 'true'
         break
@@ -149,4 +159,16 @@ export const FILE_REQUISITI = join(
 
 export function caricaRequisiti(file = FILE_REQUISITI) {
   return parseRequirementsYaml(readFileSync(file, 'utf8'))
+}
+
+// DAL REGISTRO ALLE ETICHETTE. severity e priority stanno nei loro campi —
+// il registro e' la fonte — e da li' scendono sull'issue come etichette, che
+// e' l'unico posto dove GitHub sa filtrarle. Scriverle anche a mano in
+// `labels` vorrebbe dire tenerle allineate in due posti, cioe' non tenerle
+// allineate.
+export function etichetteClassificazione(req) {
+  const e = []
+  if (req.priority) e.push(req.priority)
+  if (req.severity) e.push(`severity-${req.severity}`)
+  return e
 }

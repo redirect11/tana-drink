@@ -15,7 +15,7 @@
 import { describe, it, expect } from 'vitest'
 import { readdirSync, statSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
-import { caricaRequisiti } from '../../scripts/lib-requisiti.mjs'
+import { caricaRequisiti, parseRequirementsYaml, etichetteClassificazione } from '../../scripts/lib-requisiti.mjs'
 
 const requisiti = caricaRequisiti()
 const STATI = ['implemented', 'partial', 'todo', 'deprecated']
@@ -56,6 +56,48 @@ describe('il file dei requisiti è scritto bene', () => {
       .filter((r) => r.generate_issue && r.status === 'implemented')
       .map((r) => r.id)
     expect(sbagliati, 'un requisito già fatto non deve generare issue').toEqual([])
+  })
+})
+
+// QUANTO FA MALE, E QUANDO SI FA. Due giudizi separati, e separati devono
+// restare: la severity e' una proprieta' del guaio (la misura chi lo vede al
+// banco), la priority e' una decisione nostra. Il registro e' la fonte; le
+// etichette dell'issue e i campi della bacheca ne sono la copia, e una copia
+// che si scrive a mano prima o poi mente.
+describe('severity e priority', () => {
+  const SEVERITY = ['bloccante', 'grave', 'media', 'lieve']
+  const PRIORITY = ['P0', 'P1', 'P2', 'P3']
+
+  it('quando ci sono, usano le parole previste', () => {
+    const strani = requisiti
+      .filter((r) => (r.severity && !SEVERITY.includes(r.severity)) || (r.priority && !PRIORITY.includes(r.priority)))
+      .map((r) => `${r.id}: ${r.severity} / ${r.priority}`)
+    expect(strani, 'severity: ' + SEVERITY.join('|') + ' — priority: ' + PRIORITY.join('|')).toEqual([])
+  })
+
+  it('il parser li legge, e chi non li ha resta senza giudizio', () => {
+    const voci = parseRequirementsYaml(`bugs:
+  - id: BUG-999
+    title: "Prova"
+    severity: grave
+    priority: P1
+    labels: [bug, magazzino]
+  - id: BUG-998
+    title: "Senza giudizio"
+    labels: [bug]
+`)
+    expect(voci[0].severity).toBe('grave')
+    expect(voci[0].priority).toBe('P1')
+    expect(voci[1].severity).toBeNull()
+    expect(voci[1].priority).toBeNull()
+  })
+
+  it('dai campi si ricavano le etichette dell’issue, senza riscriverle a mano', () => {
+    expect(etichetteClassificazione({ severity: 'grave', priority: 'P1' })).toEqual(['P1', 'severity-grave'])
+    // Una funzione non ha severity: una cosa che non c'e' non fa male. Resta
+    // la sola priority, e il campo vuoto e' un'informazione onesta.
+    expect(etichetteClassificazione({ priority: 'P2' })).toEqual(['P2'])
+    expect(etichetteClassificazione({})).toEqual([])
   })
 })
 
