@@ -211,6 +211,11 @@ Regole:
   110 e alla dimensione vera risultavano piccoli, testo e bersaglio.
   L'altezza minima è esplicita e non lasciata all'imbottitura, o balla da
   una pastiglia all'altra a seconda di quanto è lungo il testo.
+- **La pastiglia minuta** (`.chip.mini`: le unità dentro una riga di testo,
+  come «Al pz · pz · cl · ml» nella scheda di un prodotto) resta a
+  `min-height: 22px` e `0.68rem`. Non è un bersaglio da barra: sta dentro
+  una riga, e con la misura piena mandava a capo l'ultima unità, che
+  restava appesa da sola sotto il resto.
 - La topbar è sticky, traslucida sul tema (`color-mix` su `--bg-2`),
   e rispetta le safe-area dei tablet.
 

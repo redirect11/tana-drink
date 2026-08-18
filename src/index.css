@@ -784,6 +784,27 @@ a.btn.block {
    scritti in due posti: cambiando quello dei tasti, il «+» della coda e il
    tasto del pagamento restavano indietro rispetto al tab «In corso», e la
    differenza si vedeva. Un colore solo, due variabili. */
+/* LA PASTIGLIA MINUTA vive dentro una riga di testo — le unità accanto a
+   «Al pz» nella scheda di un prodotto — e non è un bersaglio da barra dei
+   filtri: con l'altezza piena mandava a capo l'ultima unità, che restava
+   appesa da sola sotto la riga. Piccola, ma sempre premibile col dito
+   perché ha attorno l'area della riga. */
+.chip.mini {
+  min-height: 22px;
+  padding: 0 6px;
+  font-size: 0.68rem;
+  gap: 4px;
+}
+/* Le unità restano in riga con la loro etichetta: la riga semmai scorre,
+   ma non si spezza lasciando «ml» orfano. */
+.inv-unita {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
 .chip.active {
   background: linear-gradient(135deg, var(--btn-1), var(--btn-2));
   border-color: transparent;
