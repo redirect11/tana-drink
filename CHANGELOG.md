@@ -1,6 +1,14 @@
 # Cosa è cambiato
 
-## Non ancora rilasciata — 1.5.0
+## 1.5.0 — 18 agosto 2026
+
+Questa versione porta al banco una coda tutta sua. Chi prepara non lavora un
+conto per volta, lavora un ticket per volta: le comande diventano le card,
+si dividono quando si prepara mezza ordinazione, hanno una schermata loro e
+si portano avanti con un tocco. Il magazzino cambia modello — si conta
+sempre a pezzi — e i prodotti di prima si aggiornano quando lo decidi tu,
+con una prova a vuoto che dice cosa cambierebbe prima di toccare niente.
+
 
 ### Sotto il cofano
 
