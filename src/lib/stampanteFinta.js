@@ -62,7 +62,7 @@ function componi(pezzi) {
 // finisce in console — meglio che perderlo.
 function mostra(righe, titolo, logo) {
   const testo = righe.join('\n')
-  const w = typeof window !== 'undefined' ? window.open('', '_blank', 'width=420,height=700') : null
+  const w = typeof window !== 'undefined' ? window.open('', '_blank', 'width=520,height=760') : null
   if (!w) {
     console.info(`[stampante finta] ${titolo}\n${testo}`)
     return
@@ -74,11 +74,17 @@ function mostra(righe, titolo, logo) {
     `<!doctype html><meta charset="utf-8"><title>${scampato(titolo)}</title>` +
       '<style>' +
       'body{margin:0;padding:16px;background:#e8e8ee;font-family:system-ui,sans-serif}' +
-      '.scontrino{width:80mm;max-width:100%;margin:0 auto;background:#fff;padding:6mm 4mm;' +
+      // LA CARTA È LARGA 48 CARATTERI, e il facsimile deve esserlo. Con una
+      // misura in millimetri e un corpo fisso le righe andavano a capo dove
+      // la stampante vera non le manda: «La Tana del Conigli / o», e ogni
+      // riga di un drink spezzata in due. Qui la larghezza la decide il
+      // TESTO — 48 caratteri di un monospaziato (48ch) — così quello che si
+      // vede è quello che esce dalla stampante.
+      '.scontrino{width:calc(48ch + 8mm);max-width:100%;margin:0 auto;background:#fff;padding:6mm 4mm;' +
       'box-shadow:0 2px 10px rgba(0,0,0,.18)}' +
-      '.scontrino img{display:block;margin:0 auto 6px;max-width:40mm}' +
-      'pre{font:12px/1.35 "Courier New",monospace;color:#000;white-space:pre-wrap;margin:0}' +
-      '.barra{max-width:80mm;margin:0 auto 10px;display:flex;gap:8px;align-items:center;' +
+      '.scontrino img{display:block;margin:0 auto 6px;max-width:24ch}' +
+      'pre{font:12px/1.35 "Courier New",monospace;color:#000;white-space:pre;margin:0;overflow-x:auto}' +
+      '.barra{max-width:calc(48ch + 8mm);margin:0 auto 10px;display:flex;gap:8px;align-items:center;' +
       'font:13px system-ui,sans-serif;color:#333}' +
       '.barra button{font:inherit;padding:6px 12px;border-radius:8px;border:1px solid #bbb;' +
       'background:#fff;cursor:pointer}' +
