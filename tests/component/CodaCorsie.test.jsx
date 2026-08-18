@@ -17,7 +17,7 @@
 //     corsie diventano le tre della griglia (in corso, chiusi, annullati).
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, within, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import '@testing-library/jest-dom/vitest'
@@ -337,5 +337,27 @@ describe('la coda a corsie di stato', () => {
     expect(
       within(corsia('attivi')).getAllByRole('button', { name: 'Incassa' })[0]
     ).toBeInTheDocument()
+  })
+
+  // IL VERSO DELLA CODA VALE PER TUTTE LE CORSIE. Il «↕» girava solo la
+  // griglia: nelle corsie premerlo non faceva niente di visibile, e un
+  // tasto che non risponde fa dubitare dell'app.
+  it('il tasto «↕» inverte l’ordine delle card in ogni corsia', async () => {
+    const user = userEvent.setup()
+    montaCoda()
+    // I numeri corsia per corsia: l'ordine si gira DENTRO ogni colonna, non
+    // fra colonne diverse — le corsie restano dove sono.
+    const perCorsia = () =>
+      [...document.querySelectorAll('.corsia')].map((c) =>
+        [...c.querySelectorAll('.corsia-num')].map((n) => n.textContent.trim().split(' ')[0])
+      )
+    const prima = await waitFor(() => {
+      const c = perCorsia()
+      expect(c.some((col) => col.length > 1)).toBe(true)
+      return c
+    })
+    await user.click(screen.getByRole('button', { name: /Ordina dal/ }))
+    await waitFor(() => expect(perCorsia()).not.toEqual(prima))
+    expect(perCorsia()).toEqual(prima.map((col) => [...col].reverse()))
   })
 })

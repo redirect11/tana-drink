@@ -6762,3 +6762,19 @@ body.pagina-piena .inv-scheda {
   opacity: 0.75;
 }
 
+/* Le azioni della testata della coda su schermi larghi: icone quadrate
+   accanto alla ricerca, alte quanto lei. Il bersaglio resta grosso — si
+   preme col pollice, di corsa — e quella accesa si vede (i pannelli). */
+.board-icona {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  flex-shrink: 0;
+  font-size: 1.05rem;
+  line-height: 1;
+}
+.board-icona.active {
+  border-color: var(--accent-2);
+  color: var(--accent-2);
+}
+
