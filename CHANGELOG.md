@@ -61,6 +61,10 @@ con una prova a vuoto che dice cosa cambierebbe prima di toccare niente.
 
 ### Al banco
 
+- **Il facsimile dello scontrino è largo quanto la carta**: le righe andavano
+  a capo dove la stampante vera non le manda, e si leggeva «La Tana del
+  Conigli / o». Adesso quello che si vede è quello che esce.
+
 - **«In attesa del pagamento: non si prepara» funziona anche col salto
   acceso**: dove il pagamento è obbligatorio il blocco valeva solo per i conti
   fermi a «da fare», e in un locale che fa nascere le comande già in
