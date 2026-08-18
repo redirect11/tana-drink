@@ -75,6 +75,7 @@ vi.mock('../../src/lib/api.js', () => ({
     return () => {}
   },
   DEFAULT_SETTINGS: { business_day_cutoff_hour: 5 },
+  settingsIniziali: () => ({ business_day_cutoff_hour: 5 }),
 }))
 vi.mock('../../src/components/MacroMonthlyTab.jsx', () => ({ default: () => <div /> }))
 
@@ -88,8 +89,32 @@ const paragrafo = (re) => (_, el) =>
 describe('Statistiche per serata', () => {
   beforeEach(() => vi.clearAllMocks())
 
-  it('di default guarda le ultime giornate', async () => {
+  // SI APRE SULL'ULTIMA CHIUSURA. La domanda del mattino dopo è «com'è
+  // andata ieri sera», non «com'è andata la settimana»: prima si apriva su
+  // sette giorni, che è un'altra domanda, e la serata stava in fondo alla
+  // riga dei periodi.
+  it('di partenza guarda l’ultima chiusura di cassa', async () => {
     render(<StatsTab />)
+    expect(
+      await screen.findByText(paragrafo(/dall’apertura alla chiusura della cassa/i))
+    ).toBeTruthy()
+    expect(screen.getByLabelText(/scegli la serata/i)).toBeTruthy()
+  })
+
+  it('e la serata sta PRIMA dei periodi a giornate', async () => {
+    render(<StatsTab />)
+    const chips = await screen.findAllByRole('button')
+    const nomi = chips.map((b) => b.textContent)
+    const iSerata = nomi.findIndex((t) => /ultima chiusura/i.test(t))
+    const iSette = nomi.findIndex((t) => /^Ultime 7$/.test(t))
+    expect(iSerata).toBeGreaterThanOrEqual(0)
+    expect(iSerata).toBeLessThan(iSette)
+  })
+
+  it('si può passare alle ultime giornate', async () => {
+    const user = userEvent.setup()
+    render(<StatsTab />)
+    await user.click(await screen.findByRole('button', { name: 'Ultime 7' }))
     // Nei dati di prova ci sono 2 giornate: la didascalia dice quante ne ha.
     expect(await screen.findByText(paragrafo(/ultime 2 giornate/i))).toBeTruthy()
   })
@@ -99,9 +124,10 @@ describe('Statistiche per serata', () => {
     expect(await screen.findByRole('button', { name: /ultima chiusura/i })).toBeTruthy()
   })
 
-  it('scegliendo la serata mostra la finestra della cassa e l’elenco', async () => {
+  it('tornando alla serata si rivede la finestra della cassa', async () => {
     const user = userEvent.setup()
     render(<StatsTab />)
+    await user.click(await screen.findByRole('button', { name: 'Ultime 7' }))
     await user.click(await screen.findByRole('button', { name: /ultima chiusura/i }))
     // Didascalia della serata al posto delle "ultime N giornate".
     await waitFor(() =>
@@ -113,19 +139,17 @@ describe('Statistiche per serata', () => {
   })
 
   it('la serata conta anche gli ordini dopo la mezzanotte, e solo i suoi', async () => {
-    const user = userEvent.setup()
     render(<StatsTab />)
-    await user.click(await screen.findByRole('button', { name: /ultima chiusura/i }))
     // 100 + 50 della serata dell'8; i 999 della sera prima restano fuori.
     await waitFor(() => expect(screen.getAllByText(/150,00/).length).toBeGreaterThan(0))
     expect(screen.queryByText(/999,00/)).toBeNull()
   })
 
-  it('si può tornare alle giornate', async () => {
-    const user = userEvent.setup()
+  it('le due viste stanno nel menu, non in una riga sopra il contenuto', async () => {
+    // Erano l'unica pagina con le sue sezioni in pagina: una riga di chip
+    // che costa altezza a una schermata già fatta di tabelle.
     render(<StatsTab />)
-    await user.click(await screen.findByRole('button', { name: /ultima chiusura/i }))
-    await user.click(screen.getByRole('button', { name: 'Ultime 7' }))
-    expect(await screen.findByText(paragrafo(/ultime \d+ giornate/i))).toBeTruthy()
+    await screen.findByText(paragrafo(/dall’apertura alla chiusura della cassa/i))
+    expect(screen.queryByRole('button', { name: /Mensile per macro/i })).toBeNull()
   })
 })

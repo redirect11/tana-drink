@@ -34,3 +34,40 @@ describe('applyTheme (DOM)', () => {
     expect(document.documentElement.style.getPropertyValue('--accent')).toBe('#123456')
   })
 })
+
+// L'ORO DEI BOTTONI. Derivarlo dall'accento con due mescole lo rendeva più
+// smorto di quello di sempre — l'estremo scuro passava da #e8a32e a
+// #d5a03f, e al banco si vede. Sul tema di casa il gradiente resta quello
+// scritto nel CSS; su un tema che cambia i bottoni si ricalcola, o sarebbe
+// dorato su un preset che dorato non è.
+describe('il gradiente dei bottoni', () => {
+  const root = () => document.documentElement
+
+  it('sul tema di casa non lo tocca: resta quello del CSS', () => {
+    applyTheme(resolveThemeVars({ preset: 'tana-scuro' }))
+    expect(root().style.getPropertyValue('--btn-1')).toBe('')
+    expect(root().style.getPropertyValue('--btn-2')).toBe('')
+  })
+
+  it('anche sulle varianti di casa (chiaro, crema) resta quello', () => {
+    // Sono la stessa Tana con un altro contorno: un tasto che cambia
+    // colore col tema si riconosce meno, e il «+» si prende di corsa.
+    for (const preset of ['chiaro', 'crema']) {
+      applyTheme(resolveThemeVars({ preset }))
+      expect(root().style.getPropertyValue('--btn-1')).toBe('')
+    }
+  })
+
+  it('su un tema con bottoni suoi lo ricalcola da quel colore', () => {
+    applyTheme(resolveThemeVars({ preset: 'catppuccin-chiaro' }))
+    expect(root().style.getPropertyValue('--btn-1')).toContain('#fab387')
+  })
+
+  it('tornando al tema di casa il gradiente ricalcolato se ne va', () => {
+    // Se restasse appiccicato, i bottoni terrebbero il colore del preset
+    // di prima: è il difetto che aveva già morso con --btn.
+    applyTheme(resolveThemeVars({ preset: 'catppuccin-chiaro' }))
+    applyTheme(resolveThemeVars({ preset: 'tana-scuro' }))
+    expect(root().style.getPropertyValue('--btn-1')).toBe('')
+  })
+})

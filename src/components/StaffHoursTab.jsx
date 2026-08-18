@@ -23,8 +23,8 @@ import {
   peopleOfDay,
 } from '../lib/ore.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
-import SectionPanels from './SectionPanels.jsx'
-import { IconPiu, IconSoldi } from './Icons.jsx'
+import StaffBadgePanel from './StaffBadgePanel.jsx'
+import { Sottosezioni } from '../lib/sottosezioni.js'
 
 // RAPP ORE + BADGE VIRTUALE: registro ore dello staff con vista calendario
 // giornaliera, settimanale e mensile. Distingue le ore EFFETTIVE (badge:
@@ -92,7 +92,24 @@ function normalizeEntries(hoursRows, shiftRows) {
   return out
 }
 
-export default function StaffHoursTab({ embedded = false }) {
+// CHI È IN TURNO ADESSO sta in cima alle ore: era in fondo alla cassa,
+// dove ci si va per i soldi — e per timbrare l'ingresso bisognava passare
+// dal flusso di cassa, che con le ore non c'entra niente.
+const SEZIONI_STAFF = [
+  { id: 'calendario', icona: '📅', label: 'Calendario' },
+  // LE TIMBRATURE HANNO LA LORO VOCE. Sono la cosa che si tocca all'inizio
+  // e alla fine del turno — «chi c'è adesso» — e stavano in cima al
+  // calendario: per battere l'ingresso di chi arriva bisognava passare
+  // dalla schermata dei turni, che con quel gesto non c'entra.
+  { id: 'timbrature', icona: '⏱', label: 'Timbrature' },
+  { id: 'turno', icona: '➕', label: 'Nuovo turno' },
+  { id: 'paghe', icona: '💶', label: 'Paghe orarie' },
+]
+
+export default function StaffHoursTab({ embedded = false, sezioneIniziale = 'calendario' }) {
+  // Tre sezioni come nelle altre pagine: il calendario è quella che si apre,
+  // perché è il motivo per cui si viene qui.
+  const [sezione, setSezione] = useState(sezioneIniziale)
   const [mode, setMode] = useState('mese') // 'giorno' | 'settimana' | 'mese'
   const [cursor, setCursor] = useState(oggi) // data di riferimento
   const [hoursRows, setHoursRows] = useState([])
@@ -182,41 +199,37 @@ export default function StaffHoursTab({ embedded = false }) {
     <div>
       {!embedded && (
         <>
-          <h2>👥 Staff</h2>
+          {/* Il titolo sta nella barra in alto (vedi lib/sezioni.js). */}
           <p className="muted small" style={{ margin: '-6px 0 10px' }}>
             Turni, ore lavorate e paghe. Account e ruoli stanno in “Utenti e ruoli”.
           </p>
         </>
       )}
+      {!embedded && <Sottosezioni voci={SEZIONI_STAFF} attiva={sezione} scegli={setSezione} />}
       {error && <div className="banner">Errore: {error}</div>}
 
-      {/* Quello che si fa ogni tanto — le paghe, un turno a mano — sta qui
-          sotto al titolo, non in fondo alla pagina dopo il calendario. */}
-      <SectionPanels
-        panels={[
-          {
-            id: 'turno',
-            label: <><IconPiu /> Nuovo turno</>,
-            desc: 'Per un giorno preciso conviene cliccarlo nel calendario: si assegna lì, con gli orari.',
-            render: () => <ShiftForm membri={membri} onAdd={addTurno} />,
-          },
-          {
-            id: 'paghe',
-            label: <><IconSoldi /> Paghe orarie</>,
-            desc: 'Tariffa oraria per persona. Resta storicizzata: i turni già registrati mantengono quella in vigore quel giorno.',
-            render: () => (
-              <PagheManager
-                membri={membri}
-                rates={rates}
-                onSave={(membro, list) =>
-                  saveStaffRates(membro, list).catch((e) => setError(e.message))
-                }
-              />
-            ),
-          },
-        ]}
-      />
+      {/* CHI TIMBRA ADESSO, in una sezione sua. Prima stava in fondo alla
+          pagina della cassa — dove ci si va per i soldi — poi in cima al
+          calendario: in tutti e due i casi, per battere l'ingresso di chi
+          arriva bisognava passare da una schermata che con quel gesto non
+          c'entra. */}
+      {sezione === 'timbrature' && <StaffBadgePanel />}
 
+      {/* NUOVO TURNO E PAGHE SONO SEZIONI, non pannelli a scomparsa in cima
+          alla pagina: aprirli spingeva giù il calendario, che è la cosa per
+          cui si viene qui. Stanno nel menu laterale come nelle altre
+          pagine. */}
+      {sezione === 'turno' && <ShiftForm membri={membri} onAdd={addTurno} />}
+      {sezione === 'paghe' && (
+        <PagheManager
+          membri={membri}
+          rates={rates}
+          onSave={(membro, list) => saveStaffRates(membro, list).catch((e) => setError(e.message))}
+        />
+      )}
+
+      {sezione === 'calendario' && (
+        <>
       {/* Vista: giorno / settimana / mese */}
       <div className="chips-row" style={{ marginBottom: 8 }}>
         {[
@@ -309,8 +322,8 @@ export default function StaffHoursTab({ embedded = false }) {
           </div>
         ))}
       </div>
-
-
+        </>
+      )}
 
       {/* Dettaglio giorno (dal calendario mensile o settimanale): chi è di
           turno con orari programmati/effettivi + assegnazione staff. */}

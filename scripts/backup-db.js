@@ -23,6 +23,15 @@ import { accessToken, client, idDi, arg, flag } from './lib-firestore.js'
 
 const PROGETTO = arg('project', 'tana-drink-test')
 const PROFONDO = flag('profondo') // cerca sottocollezioni documento per documento
+// SOLO ALCUNE COLLEZIONI. Un backup di solito le vuole tutte — ma quando si
+// scarica dalla PRODUZIONE per farne dati di prova, tutte vuol dire portarsi
+// dietro i clienti, gli ordini con i nomi, le ore e le paghe di chi lavora.
+// Il magazzino e il menù bastano a provare, e di persone non ne spostano
+// nessuna: --solo inventory_items,inventory_categories,suppliers,drinks
+const SOLO = (arg('solo', '') || '')
+  .split(',')
+  .map((x) => x.trim())
+  .filter(Boolean)
 
 const oggi = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')
 const OUT = arg('out', `backup/${PROGETTO}-${oggi}.json`)
@@ -30,8 +39,20 @@ const OUT = arg('out', `backup/${PROGETTO}-${oggi}.json`)
 const db = client(PROGETTO, await accessToken())
 
 console.log(`[backup] ${PROGETTO} → ${OUT}`)
-const collezioni = await db.collezioni()
-console.log(`  collezioni: ${collezioni.length}`)
+const tutte = await db.collezioni()
+if (SOLO.length) {
+  const mancanti = SOLO.filter((c) => !tutte.includes(c))
+  if (mancanti.length) {
+    console.error(`[backup] Collezioni inesistenti su ${PROGETTO}: ${mancanti.join(', ')}`)
+    process.exit(1)
+  }
+}
+const collezioni = SOLO.length ? SOLO : tutte
+console.log(
+  SOLO.length
+    ? `  collezioni: ${collezioni.length} di ${tutte.length} (solo quelle chieste)`
+    : `  collezioni: ${collezioni.length}`
+)
 
 const dati = {}
 let totale = 0

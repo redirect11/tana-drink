@@ -9,14 +9,45 @@
 //   3. Dal browser dell'iPad: vai su https://<IP>:8043 e accetta il certificato
 //   4. Da quel momento la connessione WSS funziona senza dialoghi
 
-import { CASH_METHOD_ORDER, cashMethodKeys } from './orderStatus.js'
+import { CASH_METHOD_ORDER, cashMethodKeys, PAYMENT_METHOD_PRINT } from './orderStatus.js'
+import { stampanteFintaAttiva, creaStampanteFinta } from './stampanteFinta.js'
 
 // Larghezza colonne stamante 80 mm (TM-m30II / TM-m30III): 48 chars std.
 const COL = 48
 
 // ── Impostazioni persistite in localStorage ───────────────────────────────────
 
+// LE IMPOSTAZIONI DELLA STAMPANTE SONO DEL DISPOSITIVO **E** DI CHI CI
+// LAVORA. Del dispositivo, perché l'indirizzo della stampante dipende da
+// dove sei: il tablet del banco la raggiunge, il telefono della sala forse
+// no. Di chi ci lavora, perché sullo stesso tablet si alternano persone
+// diverse, e la stampa automatica delle comande la vuole accesa chi sta al
+// banco, non chi passa di lì a battere due conti.
 const SETTINGS_KEY = 'tana_printer_v2'
+const UTENTE_KEY = 'tana_printer_utente'
+
+// L'ultimo utente lo si ricorda: le impostazioni si leggono anche prima che
+// Firebase abbia finito di riconoscere chi è collegato, e senza memoria per
+// un istante si leggerebbe la scheda di un altro — «nessuna stampante
+// impostata» che compare e sparisce.
+let _utente = null
+try {
+  _utente = localStorage.getItem(UTENTE_KEY) || null
+} catch {
+  /* storage negato: si lavora senza memoria, come prima */
+}
+
+export function impostaUtenteStampante(uid) {
+  _utente = uid || null
+  try {
+    if (uid) localStorage.setItem(UTENTE_KEY, uid)
+    else localStorage.removeItem(UTENTE_KEY)
+  } catch {
+    /* niente memoria: le impostazioni restano quelle del dispositivo */
+  }
+}
+
+const chiaveImpostazioni = () => (_utente ? `${SETTINGS_KEY}:${_utente}` : SETTINGS_KEY)
 
 export const DEFAULT_PRINTER_SETTINGS = {
   ip: '',
@@ -25,6 +56,12 @@ export const DEFAULT_PRINTER_SETTINGS = {
   ivaRate: 10,      // aliquota IVA applicata sullo scontrino
   autoPrintComanda: false,  // stampa automatica comanda all'arrivo dell'ordine
   autoPrintScontrino: false, // stampa automatica scontrino al "pronto"
+  // CHI STAMPA LE COMANDE PRESE IN SALA: 'ip' = il telefono della sala parla
+  // da sé con la stampante (ha l'IP: la configurazione arriva dal server);
+  // 'rimbalzo' = la sala non stampa e la comanda esce al banco, che deve
+  // avere la coda aperta e la stampa automatica accesa. Lo decide il locale,
+  // una volta, dal terminale del banco.
+  stampaSala: 'ip',
   businessName: 'La Tana del Coniglio',
   businessAddress: 'Corso Tommaso Vitale 87/89',
   businessCity: '80035 Nola - Italy',
@@ -47,9 +84,22 @@ export function claimReceiptPrint(orderId) {
   }
 }
 
+// La sala stampa da sé? Una domanda sola, in un posto solo: la fanno la
+// schermata che prende l'ordine e il pallino che dice se si stamperà.
+export function salaStampaDaSe(s = loadPrinterSettings()) {
+  return s.stampaSala !== 'rimbalzo'
+}
+
 export function loadPrinterSettings() {
   try {
-    return { ...DEFAULT_PRINTER_SETTINGS, ...JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}') }
+    const mie = JSON.parse(localStorage.getItem(chiaveImpostazioni()) || 'null')
+    if (mie) return { ...DEFAULT_PRINTER_SETTINGS, ...mie }
+    // PRIMA VOLTA DI QUESTA PERSONA SU QUESTO DISPOSITIVO: eredita quelle
+    // del dispositivo. Senza, il giorno del passaggio a impostazioni per
+    // utente ogni tablet del locale avrebbe perso l'indirizzo della
+    // stampante — e la comanda non esce.
+    const delDispositivo = JSON.parse(localStorage.getItem(SETTINGS_KEY) || 'null')
+    return { ...DEFAULT_PRINTER_SETTINGS, ...(delDispositivo || {}) }
   } catch {
     return { ...DEFAULT_PRINTER_SETTINGS }
   }
@@ -58,7 +108,11 @@ export function loadPrinterSettings() {
 export function savePrinterSettings(patch) {
   const current = loadPrinterSettings()
   const next = { ...current, ...patch }
-  localStorage.setItem(SETTINGS_KEY, JSON.stringify(next))
+  try {
+    localStorage.setItem(chiaveImpostazioni(), JSON.stringify(next))
+  } catch {
+    /* storage pieno o negato: si continua con quelle in memoria */
+  }
   return next
 }
 
@@ -127,6 +181,8 @@ function avviaBattito() {
 // Se il certificato non è più accettato, l'errore esce ADESSO — quando c'è
 // tempo per sistemarlo — invece che al primo scontrino della serata.
 export async function preparaStampante() {
+  // Con la stampante finta non c'è niente da scaldare: risponde sempre.
+  if (stampanteFintaAttiva()) return { ok: true }
   const s = loadPrinterSettings()
   if (!s.ip) return { ok: false, motivo: 'non configurata' }
   try {
@@ -159,6 +215,14 @@ if (typeof document !== 'undefined') {
 // Restituisce il printer object, connettendosi se necessario.
 // Riusa la connessione esistente tra stampe consecutive.
 async function getPrinter() {
+  // IN LOCALE LA STAMPANTE È DI CARTA FINTA. Da un computer di sviluppo
+  // l'apparecchio del bar non si raggiunge, e ogni modifica a comande e
+  // scontrini si provava a occhio. Sull'ambiente di TEST no: lì ci si
+  // collega a quella vera, ed è il posto dove provarla davvero.
+  if (stampanteFintaAttiva()) {
+    if (!_printer) _printer = creaStampanteFinta('La Tana del Coniglio')
+    return _printer
+  }
   if (_printer) return _printer
   if (_connectPromise) return _connectPromise
 
@@ -328,6 +392,67 @@ export async function printComanda(order, comanda = null) {
 // Per il cliente: intestazione locale, articoli con prezzi, IVA, totale.
 // Formato ispirato al template fotografato di SumUp POS Pro.
 
+// ── IL LOGO IN CIMA ALLO SCONTRINO ───────────────────────────────────
+//
+// Il preconto è il pezzo di carta che resta in mano al cliente: senza segno
+// del locale è un tabulato, e non si distingue da quello del bar accanto.
+//
+// La testina stampa immagini in bianco e nero, riga per riga: l'immagine va
+// portata su un canvas e passata come contesto 2D (è l'unica forma che
+// l'SDK Epson accetta). Si tiene STRETTA — 220 punti, meno di metà della
+// carta da 80 mm — perché una testina termica disegna a puntini e un logo
+// grande esce sporco e mangia carta a ogni conto.
+//
+// Se non si carica non se ne fa niente: uno scontrino senza logo è ancora
+// uno scontrino, uno scontrino che non esce è un cliente che aspetta.
+const LARGHEZZA_LOGO = 220
+
+let _logoCanvas = null
+
+async function logoPerStampa() {
+  if (typeof document === 'undefined') return null
+  if (_logoCanvas !== null) return _logoCanvas
+  try {
+    const url = `${import.meta.env.BASE_URL || '/'}logo.png`
+    const img = await new Promise((ok, ko) => {
+      const i = new Image()
+      i.onload = () => ok(i)
+      i.onerror = ko
+      i.src = url
+    })
+    const h = Math.round((img.height / img.width) * LARGHEZZA_LOGO)
+    const canvas = document.createElement('canvas')
+    canvas.width = LARGHEZZA_LOGO
+    canvas.height = h
+    const ctx = canvas.getContext('2d')
+    // Fondo bianco: la carta è bianca, e un PNG trasparente diventerebbe
+    // una macchia nera.
+    ctx.fillStyle = '#fff'
+    ctx.fillRect(0, 0, LARGHEZZA_LOGO, h)
+    ctx.drawImage(img, 0, 0, LARGHEZZA_LOGO, h)
+    _logoCanvas = { ctx, larghezza: LARGHEZZA_LOGO, altezza: h, url }
+  } catch {
+    _logoCanvas = null
+  }
+  return _logoCanvas
+}
+
+// Mette il logo in cima, se la stampante sa farlo e l'immagine c'è.
+async function stampaLogo(prn) {
+  const logo = await logoPerStampa()
+  if (!logo) return
+  try {
+    prn.addTextAlign(prn.ALIGN_CENTER)
+    // La stampante finta vuole solo l'indirizzo: lo mostra nel facsimile.
+    if (typeof prn.addImageUrl === 'function') prn.addImageUrl(logo.url)
+    else if (typeof prn.addImage === 'function') {
+      prn.addImage(logo.ctx, 0, 0, logo.larghezza, logo.altezza, prn.COLOR_1)
+    }
+  } catch {
+    /* la carta esce lo stesso: il logo è un di più */
+  }
+}
+
 export async function printScontrino(order, opts = {}) {
   const prn = await getPrinter()
   const s = loadPrinterSettings()
@@ -345,6 +470,7 @@ export async function printScontrino(order, opts = {}) {
   prn.addTextSmooth(true)
 
   // ── Intestazione ──
+  await stampaLogo(prn)
   prn.addTextAlign(prn.ALIGN_CENTER)
   prn.addTextSize(2, 2)
   prn.addTextStyle(false, false, true, prn.COLOR_1)
@@ -417,18 +543,10 @@ export async function printScontrino(order, opts = {}) {
   prn.addTextStyle(false, false, true, prn.COLOR_1)
   prn.addText('Pagamenti\n')
   prn.addTextStyle(false, false, false, prn.COLOR_1)
-  const nomeMetodo = (m) =>
-    ({
-      banco: 'Contante',
-      contanti: 'Contante',
-      carta: 'Carta',
-      online: 'Online',
-      lettore: 'Carta (POS)',
-      buono: 'Buono',
-      // Metodo sconosciuto o assente: si scrive che non è indicato. Prima si
-      // ripiegava su "Contante", e uno scontrino pagato con la carta usciva
-      // con scritto contante — una dichiarazione falsa, non un default.
-    })[m] || 'Non indicato'
+  // Metodo sconosciuto o assente: si scrive che non è indicato. Prima si
+  // ripiegava su "Contante", e uno scontrino pagato con la carta usciva
+  // con scritto contante — una dichiarazione falsa, non un default.
+  const nomeMetodo = (m) => PAYMENT_METHOD_PRINT[m] || 'Non indicato'
   // Se ci sono incassi registrati si elencano uno per uno (conti divisi o
   // acconti): così su ogni scontrino si legge quanto in contanti e quanto in
   // carta. Altrimenti si usa il metodo di chiusura del conto.
@@ -576,16 +694,10 @@ export async function printOrdineFornitore(order) {
 // Riepilogo di fine serata da allegare al fondo: incassato per metodo
 // (contante, carta, POS, online), sconti concessi, conti chiusi e contante
 // atteso in cassa. `recap` è quello di cashRecap().
-// Etichette per la stampante termica: niente emoji (la testina stampa
-// caratteri, non icone) e nomi come li chiama chi legge la striscia.
-const NOMI_STAMPA = {
-  banco: 'Contante',
-  carta: 'Carta di credito',
-  lettore: 'Carta (POS SumUp)',
-  online: 'Online',
-  buono: 'Buoni VIP',
-}
-const scontrinoMetodo = (k) => NOMI_STAMPA[k] || k
+// Gli stessi nomi dello scontrino: la chiusura di cassa si confronta con la
+// striscia degli scontrini, e due parole diverse per la stessa cosa
+// costringono a tradurre a mente mentre si contano i soldi.
+const scontrinoMetodo = (k) => PAYMENT_METHOD_PRINT[k] || k
 
 export async function printChiusuraCassa(recap, session, opts = {}) {
   const prn = await getPrinter()

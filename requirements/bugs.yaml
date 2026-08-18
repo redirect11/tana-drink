@@ -15,11 +15,31 @@
 #   description:    Sintomo, comportamento atteso, e cosa si sa già
 #   status:         todo (da sistemare) | fixed (risolto, test citato nel
 #                   requisito dell'area) | wontfix (deciso di non farlo)
-#   generate_issue: true per creare l'issue GitHub
-#   labels:         Label GitHub (sempre anche "bug"; "hotfix" se va
-#                   sistemato d'urgenza in produzione — è quella che
-#                   l'agente rilascio-hotfix va a cercare)
+#   generate_issue: true se questa voce e' SEGUITA su GitHub. Non vuol dire
+#                   «creane una adesso»: l'issue NUOVA nasce solo finche' la
+#                   voce e' da fare. Quando viene finita il flag RESTA true,
+#                   altrimenti la voce esce dal giro e nessuno puo' piu'
+#                   metterla «in prova» su develop ne' chiuderle l'issue da
+#                   main. Si mette false solo per quello che su GitHub non
+#                   deve comparire affatto.
+#   labels:         Label GitHub dell'AREA (pos, magazzino, stampa...) e
+#                   «hotfix» se va sistemato d'urgenza. La FAMIGLIA non si
+#                   scrive a mano: «requirements» o «bug» si ricava dal file da
+#                   cui la voce arriva, cosi' non se ne dimentica una e non
+#                   finisce «requirements» su un bug. Anche P0..P3 e
+#                   severity-* si ricavano dai loro campi.
 #   in_produzione:  true se morde sull'installazione che sta lavorando
+#   severity:       Quanto fa male QUANDO SUCCEDE, e non dipende da noi:
+#                   bloccante (il servizio si ferma) | grave (i numeri
+#                   sbagliano, o lo vede il cliente) | media (si aggira) |
+#                   lieve (estetica e comodita'). Sulle funzioni si lascia
+#                   vuota: una cosa che non c'e' non fa male.
+#   priority:       QUANDO lo sistemiamo, ed e' una decisione nostra:
+#                   P0 (adesso; in produzione e' un hotfix) | P1 (questa
+#                   versione) | P2 (la prossima) | P3 (quando capita).
+#                   Da severity e priority scendono da se' le etichette
+#                   dell'issue (P1, severity-grave): non si riscrivono in
+#                   `labels`, che si terrebbero allineate in due posti.
 #   test_cases:     I test della fix, quando esiste
 #
 # Per generare le issue da questo file:
@@ -64,6 +84,8 @@ bugs:
     status: todo
     generate_issue: true
     labels: [bug, produzione, sicurezza]
+    severity: bloccante
+    priority: P1
     test_cases: []
 
   - id: BUG-002
@@ -78,10 +100,11 @@ bugs:
       magazzino (già REQ-ORD-005) e nessun cumulo nel guadagno di serata.
       Annullare non è svuotare.
     in_produzione: true
-    status: todo
+    status: fixed
     generate_issue: true
     labels: [bug, ordini, pos]
-    test_cases: []
+    test_cases:
+      - tests/component/OrderPosDetail.test.jsx
 
   - id: BUG-003
     title: "L'annullamento fatto da un collega manda allo staff la notifica del cliente"
@@ -99,27 +122,31 @@ bugs:
     status: todo
     generate_issue: true
     labels: [bug, notifiche, staff]
+    severity: lieve
+    priority: P2
     test_cases: []
 
   - id: BUG-004
     title: "Nel dettaglio ordine il subtotale di riga non segue la quantità"
     area: "src/components/OrderPosDetail.jsx, src/lib/orderLines.js"
     description: >
-      Con 3× Tennent's Super la riga mostra sempre 4,00 € (il prezzo
-      unitario) invece del subtotale. Richiesta collegata: gli item vanno
-      mostrati come righe separate, non aggregati con la quantità — la
-      base c'è già, perché la nota fa parte dell'identità della riga
-      (orderLines.js) e righe con note diverse restano già separate. Da
-      chiarire in fase di fix se la separazione delle righe sostituisce il
-      subtotale per riga o se servono entrambe le cose.
+      Con 3× Tennent's Super la riga mostrava sempre 4,00 € (il prezzo
+      unitario). Non era un calcolo sbagliato: il subtotale non esisteva
+      proprio — nella riga c'erano nome, prezzo unitario e i tasti −/+ — e
+      per sapere quanto faceva quella riga si moltiplicava a mente, col
+      cliente davanti. Risolto il 14/08 come su uno scontrino: a sinistra
+      «3 × 4,00 €» (da dove viene il numero), a destra il totale della riga
+      accanto ai tasti; con un pezzo solo non compare, che ripeterebbe il
+      prezzo già scritto accanto al nome.
+      Resta aperta, e va trattata a parte, la richiesta collegata: mostrare
+      gli item come righe separate invece che aggregati con la quantità. La
+      base c'è (la nota fa parte dell'identità della riga, orderLines.js).
     in_produzione: true
-    status: todo
-    # Niente issue da QUESTA linea: sulla linea di sviluppo è già corretto
-    # (commit 6ae16cc, col suo test) e arriva in produzione col prossimo
-    # rilascio. Aprirla adesso vorrebbe dire chiedere un lavoro già fatto.
-    generate_issue: false
+    status: fixed
+    generate_issue: true
     labels: [bug, pos]
-    test_cases: []
+    test_cases:
+      - tests/component/OrderPosDetail.test.jsx
 
   - id: BUG-005
     title: "Le note degli item non si vedono nelle code a schermo"
@@ -136,7 +163,42 @@ bugs:
     status: todo
     generate_issue: true
     labels: [bug, comande, ui]
+    severity: grave
+    priority: P1
     test_cases: []
+
+  - id: BUG-006
+    title: "Nel pagamento a righe separate il meno spegne anche quelle sotto"
+    area: "src/components/PaymentScreen.jsx"
+    description: >
+      Con «Separa uguali», su tre birre uguali: premendo − su una si
+      spengono anche tutte quelle sotto, mentre premendo + se ne riaccende
+      una sola. Chi incassa vede sparire dal conto roba che non ha toccato,
+      e se non se ne accorge il cliente paga meno di quello che ha preso.
+      La causa è che le righe separate sono un modo di DISEGNARE una riga
+      sola: la selezione resta un numero per prodotto (sel[key] = quante
+      unità pagare) e le unità mostrate sono «le prime N accese». Toccare
+      la seconda di tre non vuol dire «questa sì, questa no», vuol dire
+      «portami il contatore a due» — e la terza si spegne per forza. Serve
+      una selezione per UNITÀ, non un contatore per prodotto.
+      In produzione (1.3.1) la stessa cosa succede con le caselline da
+      spuntare: spuntandone una in mezzo, si spengono quelle sotto.
+      RISOLTO: separando le righe, ogni unità ha la SUA quantità. Fuori da
+      «separa uguali» la selezione resta un conteggio — «di questi tre, due
+      li paga lui» — e va benissimo; dentro, spegnere la prima spegne la
+      prima. Le due forme si convertono l'una nell'altra (unitaDaConteggio /
+      conteggioDaUnita) e restano allineate, così il totale da incassare
+      continua a leggersi da un numero solo.
+      Un primo tentativo aveva fatto scendere il contatore di uno: ne usciva
+      una sola, ma la spenta era l'ultima e non quella toccata — a schermo
+      restava un gesto che non corrispondeva a niente.
+    in_produzione: true
+    status: fixed
+    generate_issue: true
+    labels: [bug, pagamenti]
+    test_cases:
+      - tests/component/PaymentScreen.test.jsx
+      - tests/unit/pagamento.test.js
 
   # ── I guai raccontati dal banco il 17 agosto 2026 ────────────────────────
   # Quattro note vocali e tre schermate, trascritte con
@@ -194,7 +256,7 @@ bugs:
     status: fixed
     generate_issue: true
     labels: [bug, hotfix, magazzino, ui]
-    test_cases: [tests/unit/inventory.test.js, tests/component/InventoryManager.test.jsx]
+    test_cases: [tests/unit/inventory.test.js, tests/component/InventoryManagerCard.test.jsx]
 
   - id: BUG-009
     title: "Il dettaglio della card del magazzino esce fuori dalla card"
@@ -234,7 +296,7 @@ bugs:
     status: fixed
     generate_issue: true
     labels: [bug, hotfix, magazzino, ui]
-    test_cases: [tests/component/InventoryManager.test.jsx]
+    test_cases: [tests/component/InventoryManagerCard.test.jsx]
 
   - id: BUG-010
     title: "Manca un'unità di misura generica: il tempo di lavorazione si legge «1 g»"
@@ -259,9 +321,629 @@ bugs:
       Non essendo una scorta: niente scarico (resta fuori da
       computeConsumption), mai «esaurito» (stockStatus), nessun valore di
       magazzino (unitsInStock), e in carta al cliente non compare (MenuPage).
-      Vedi REQ-MAG-010.
+      Vedi REQ-MAG-012.
     in_produzione: true
     status: fixed
     generate_issue: true
     labels: [bug, hotfix, magazzino]
-    test_cases: [tests/unit/inventory.test.js, tests/unit/pricing.test.js, tests/component/InventoryManager.test.jsx, tests/component/MenuPage.test.jsx]
+    test_cases: [tests/unit/inventory.test.js, tests/unit/pricing.test.js, tests/component/InventoryManagerCard.test.jsx, tests/component/MenuPage.test.jsx]
+
+  - id: BUG-011
+    title: "In creazione ordine il tasto «Annulla» della barra azioni è spento"
+    area: "src/components/OrderPosDetail.jsx"
+    description: >
+      Battendo un conto nuovo, il tasto «Annulla» della barra azioni resta
+      disabilitato: prima e dopo aver aggiunto le righe, sempre. Chi apre un
+      conto per sbaglio — o cambia idea a metà — non ha un modo evidente di
+      uscire e deve cercare la freccia «← Ordini» in alto.
+      CAUSA: i tasti «annulla» sono due, quello del pannello e quello della
+      barra azioni, e avevano due regole diverse (`isNew ? !conRighe : closed`
+      contro `isNew || closed`). Il secondo, che è quello che si usa, spegneva
+      tutta la creazione.
+      RISOLTO: una regola sola per entrambi — si annulla finché il conto è
+      aperto, e in creazione sempre. A conto ancora vuoto non c'è niente da
+      buttare, quindi non si chiede conferma: si torna in coda.
+    in_produzione: false
+    status: fixed
+    generate_issue: false
+    labels: [bug, ui, pos]
+    test_cases: [tests/component/PosPage.test.jsx]
+
+  - id: BUG-012
+    title: "In coda compare il cartello «I gruppi sono spenti» a chi i gruppi non li usa"
+    area: "src/pages/BartenderPage.jsx, src/lib/coda.js"
+    description: >
+      Aprendo i «Pannelli» dal ⋯ della coda, chi ha i gruppi spenti si
+      ritrova un riquadro che dice «I gruppi sono spenti: si accendono in
+      Impostazioni → Gruppi». È un cartello su una cosa che non ha, nello
+      spazio che serve agli ordini.
+      RISOLTO: la regola sta in `gruppiInCoda` (src/lib/coda.js) — pannello
+      se i gruppi sono accesi e si mostrano in coda, cartello solo a chi li
+      ha ACCESI ma tenuti fuori dalla coda (lì spiega perché il pannello è
+      vuoto), niente a chi li ha spenti.
+    in_produzione: true
+    status: fixed
+    generate_issue: false
+    labels: [bug, ui, coda]
+    test_cases: [tests/unit/coda.test.js]
+
+  - id: BUG-013
+    title: "Le notifiche arrivano anche a chi si è scollegato"
+    area: "src/lib/logout.js, src/lib/push.js, src/lib/customerAuth.js, src/pages/BartenderPage.jsx"
+    description: >
+      Dopo il logout il telefono continua a suonare. Uscendo si toglieva la
+      riga da `staff_tokens`, ma quella è solo la RUBRICA dello staff: il
+      token è del browser e resta valido, e gli avvisi al cliente («il tuo
+      drink è pronto», «ordine annullato») lo tengono scritto sull'ORDINE.
+      Da lì continuavano ad arrivare.
+      Due strade in più lo lasciavano acceso: «Esci e accedi come staff»
+      passava dal signOut secco (niente timbratura, niente rubrica), e il
+      logout del cliente non toglieva niente.
+      RISOLTO: uscendo si CANCELLA il token del browser (`spegniPush`),
+      quindi non resta nessun indirizzo a cui bussare, chiunque sia il
+      mittente; rientrando se ne fa uno nuovo e il dispositivo si registra
+      da sé. Le due strade passano ora dalla porta giusta.
+    in_produzione: true
+    status: fixed
+    generate_issue: false
+    labels: [bug, avvisi]
+    test_cases: [tests/unit/logoutAvvisi.test.js]
+
+  - id: BUG-014
+    title: "Unità di misura: la «U» sta nella domanda sbagliata, e il contenuto si chiede anche a chi non ha pezzi"
+    area: "src/components/InventoryManager.jsx (form articolo), src/lib/inventory.js"
+    description: >
+      Segnalato da Flavio a voce (17/08, nota delle 20:25). Due cose nel
+      form del prodotto, nessuna delle due urgente — «per ora non fa niente,
+      tanto tutti i prodotti hanno pezzi come prima unità».
+      1) «Unità generiche (U)» sta nella PRIMA domanda, quella sul tipo di
+      unità di misura dell'articolo. Secondo Flavio doveva stare nella
+      SECONDA — «a quanto corrisponde un pezzo» — dove si vorrebbe poter
+      scrivere «10 U». Attenzione: la U nella prima domanda ci è finita di
+      proposito con BUG-010/REQ-MAG-012, per mettere la MANODOPERA a
+      listino («Tempo di Lavorazione»), e ci sono già articoli in
+      produzione fatti così: spostarla non è una riga di CSS, è una
+      migrazione. E perché «10 U per pezzo» serva davvero, deve reggerla
+      tutta la catena (entryUnitsFor oggi, con contenuto in U, lascia
+      dosare solo a pezzi).
+      2) Scegliendo un'unità di volume o peso (cl, ml, g…) il form chiede
+      lo stesso «contenuto per confezione»: mettendo «100 cl» sembra di
+      moltiplicare per cento ogni singolo cl. Da chiarire cosa deve
+      chiedere il form quando l'articolo NON si conta a pezzi.
+      CHIARITO da Flavio a voce (17/08, note delle 21:06 e 21:11). La regola
+      che vuole: se la prima unità è una misura standard — capacità (l, cl,
+      ml) o peso (kg, g) — sotto NON si chiede in quante parti dividerla; se
+      invece è «pezzi» o «U», sotto si chiede a quanto corrisponde
+      (1 pz = 100 cl, 1 confezione = 10 U). E il tempo di lavoro lo vuole «in
+      pezzi e dopo unità, oppure solo unità».
+      FATTO (1.4.8), la parte che non tocca i dati di produzione: un pezzo
+      può contenere UNITÀ (1 pz = 10 U) e in ricetta si dosa a U, col costo
+      per unità che ne discende; le due domande sono riscritte come si
+      parla — «Quanto contiene una confezione che compri?» e «A quanto
+      corrisponde un pezzo?» — con scritto sotto che non toccano la
+      giacenza. Era quello il fraintendimento: «contenuto per confezione»
+      con dentro «100 cl» si leggeva come una moltiplicazione.
+      RESTA APERTO: la «U» nella prima domanda (ci sono articoli in
+      produzione fatti così) e il caso del limone — comprato al chilo, usato
+      in cl. Vedi REQ-MAG-016, che rifà il modello invece di rattopparlo.
+      CONFERMATO (18/08, tre vocali su REQ-MAG-016): la prima domanda sparisce
+      del tutto, non solo la «U» — l'unità iniziale è sempre e sola il
+      pezzo, fisso e bloccato, e la «U» (insieme a cl/ml/l e kg/g) sta solo
+      nella seconda domanda, «a quanto corrisponde un pezzo». Il caso del
+      limone resta senza risposta anche nei nuovi vocali: vedi il punto
+      aperto in REQ-MAG-016.
+      RISOLTO (1.5.0) rifacendo il modello, non rattoppando il form
+      (REQ-MAG-016 e REQ-MAG-018). Delle due segnalazioni:
+      1) la «U» non sta più nella domanda sbagliata perché QUELLA DOMANDA
+      NON C'È PIÙ: l'unità è sempre il pezzo, e cl/ml/l, kg/g e U vivono
+      solo nella seconda — «a quanto corrisponde un pezzo», che si può
+      anche lasciare vuota. Gli articoli fatti alla vecchia maniera non si
+      sono persi: si leggono giusti da subito e si riscrivono con
+      l'aggiornamento del magazzino, che l'utente fa quando vuole (banner,
+      prova a vuoto, conferma);
+      2) il form non chiede più «il contenuto per confezione» a chi non ha
+      pezzi: la domanda è una sola e parla di un pezzo.
+      RESTA IL CASO DEL LIMONE — comprato al chilo, usato in cl — e resta
+      aperto APPOSTA: un pezzo può corrispondere a una cosa sola, e
+      sceglierla al posto di chi lavora farebbe scaricare un chilo a una
+      ricetta che voleva un grammo. Quei prodotti non si travasano da soli:
+      l'aggiornamento del magazzino li elenca per nome fra quelli «da
+      sistemare», e si decide a mano quanto pesa un limone. Sui dati veri
+      della produzione non ce n'è nessuno (388 articoli, 378 già a pezzi,
+      10 travasati alla lettura, 0 da sistemare).
+    in_produzione: true
+    status: fixed
+    generate_issue: false
+    labels: [bug, magazzino]
+    severity: lieve
+    priority: P3
+    test_cases: [tests/unit/inventory.test.js, tests/unit/travasoInventario.test.js]
+
+  - id: BUG-015
+    title: "Battendo di corsa, il pagamento non vede le ultime righe"
+    area: "src/components/OrderPosDetail.jsx"
+    description: >
+      Si battono tre Negroni e una IPA e si apre subito il pagamento: nel
+      conto 27,00 €, nella schermata di pagamento 21,00 € e la IPA non c'è.
+      CAUSA: la schermata di pagamento riceveva `order`, cioè il conto come
+      lo sa il SERVER. Le righe appena battute stanno ancora nella bozza —
+      si confermano da sole poco dopo — o in una scrittura in volo, e da lì
+      il pagamento non le vedeva. Contro la regola di casa: coda, conto e
+      pagamento lavorano sui dati che hanno già (docs/architettura.md).
+      RISOLTO: il conto per il pagamento si ricompone in locale — le comande
+      con dentro le modifiche in volo, la bozza come una comanda in più, e
+      il totale che si vede sotto le righe — e aprendo il pagamento la bozza
+      si conferma subito, senza aspettare l'auto-conferma. Il server lo
+      raggiunge un istante dopo: manda tutto `onBeforePay`, prima che
+      l'incasso venga registrato.
+      ANCORA (stessa serata): chiudendo il pagamento, aggiungendo altro e
+      riaprendolo, le righe nuove non c'erano. Due cause diverse, tutte e due
+      sistemate. La prima: il pagamento diretto CREA il conto, ma la
+      schermata restava «in creazione» con un conto vero dietro — adesso
+      appena l'ordine nasce diventa la sua modifica, come faceva già la
+      creazione da bozza. La seconda, più profonda: quando l'aggiunta non
+      trova una comanda modificabile ne va creata una NUOVA, e lì la bozza
+      si svuotava subito mentre la comanda partiva per il server — per tutto
+      il tempo della risposta quelle righe non esistevano da nessuna parte.
+      Adesso resta a schermo una comanda provvisoria, che se ne va solo
+      quando dal server arriva quella vera (e se la scrittura fallisce le
+      righe tornano in bozza, invece di sparire in silenzio).
+    in_produzione: true
+    status: fixed
+    generate_issue: false
+    labels: [bug, pos, pagamenti]
+    test_cases: [tests/component/OrderPosDetail.test.jsx, tests/component/PosPage.test.jsx]
+
+  - id: BUG-016
+    title: "Battendo in fretta lo stesso prodotto e uscendo subito, ne arriva uno solo"
+    area: "src/components/OrderPosDetail.jsx"
+    description: >
+      Tre tap sullo stesso drink e via verso la coda: nel conto ne restava
+      uno. Le aggiunte non partono al tap — aspettano un attimo che la mano
+      si fermi (l'auto-conferma), poi la comanda va al server — e uscendo la
+      schermata si smontava portandosi dietro i suoi timer: l'ultimo giro di
+      righe non partiva mai.
+      RISOLTO: uscendo si manda tutto ADESSO, senza aspettare. E l'override
+      locale delle comande si scrive anche nel riferimento, non solo nello
+      stato React: fra un tap e l'uscita non c'è il tempo di un altro
+      disegno, e chi manda le righe al server legge da lì. È la stessa
+      ragione per cui la bozza si salva fuori dagli updater di React.
+      STESSA RADICE, altro sintomo: modificando una ricetta al volo — il gin
+      buono al posto di quello di listino — e uscendo subito, il conto
+      tornava al prodotto di catalogo, col suo prezzo e il suo costo. Anche
+      quella modifica aspettava il suo mezzo secondo. Adesso ogni cambio a
+      una comanda passa da una porta sola (`segnaModifica`), che scrive nel
+      riferimento e nello stato insieme.
+    in_produzione: true
+    status: fixed
+    generate_issue: false
+    labels: [bug, pos]
+    test_cases: [tests/component/OrderPosDetail.test.jsx]
+
+  - id: BUG-017
+    title: "Pagamento aperto mentre il conto nasce: righe congelate, poi schermata vuota"
+    area: "src/components/OrderPosDetail.jsx"
+    description: >
+      Conto #30: si battono 2 Negroni Sbagliato e 6 IPA (8 righe, 50 €), si
+      apre il pagamento e ci sono SOLO i 2 Negroni — 14 € dovuti. Si chiude
+      il pagamento e la schermata del conto è VUOTA, «Tocca i prodotti…»,
+      totale zero, con l'ordine #30 vivo in coda. Su #28 la variante: item,
+      pagamento, chiudi, secondo item, riapri → un item solo e incasso
+      sbagliato sulla card, che si aggiusta solo alla sincronizzazione — e
+      sincronizza SOLO il primo giro di righe.
+      TRE CAUSE, tutte nella stessa corsa fra la creazione in sottofondo e
+      il pagamento. La prima: «Paga» in creazione faceva una SECONDA
+      createOrder con le righe congelate al momento del tocco, e alla
+      risposta svuotava la bozza — buttando anche le righe battute dopo,
+      che al conto non arrivavano MAI. La seconda: appena il server
+      rispondeva, il pagamento scambiava il conto locale con quello del
+      server, che le righe nuove non le aveva ancora. La terza, solo in
+      sviluppo ma è dove si prova ogni sera: StrictMode monta, finge di
+      smontare e rimonta, e il riferimento «sono montato?» restava false —
+      il passaggio a modifica non scattava mai e ogni corsa durava per
+      sempre.
+      RISOLTO: il conto nasce per UNA strada sola (createFromDraft, che al
+      ritorno porta con sé le righe battute nel frattempo e passa la
+      schermata a modifica); il pagamento legge SEMPRE il conto ricomposto
+      in locale, in creazione come in modifica (regola di casa,
+      docs/architettura.md); e le righe già inviate ma ritoccate mentre
+      l'ordine nasceva — prezzo, ricetta, quantità — partono come
+      correzione della comanda appena nata, anche a schermata già chiusa.
+    in_produzione: true
+    status: fixed
+    generate_issue: false
+    labels: [bug, pos, pagamenti]
+    test_cases: [tests/component/PosPage.test.jsx, tests/component/OrderPosDetail.test.jsx]
+
+  - id: BUG-018
+    title: "Un conto appena incassato restava fra quelli «in corso»"
+    area: "src/pages/BartenderPage.jsx"
+    description: >
+      Coda a corsie di stato, con gli stati del servizio accesi: si preme
+      «Incassa» sul conto #2 e la card resta in «In corso», mentre «Chiusi»
+      segna 0. Chi ha appena preso i soldi cerca il conto fra i chiusi e non
+      lo trova.
+      CAUSA: le corsie usavano la chiusura della CODA, che con gli stati
+      accesi chiede pagato E servito — una regola che esiste per non far
+      sparire dal banco un drink pagato in anticipo. Ma quelle corsie
+      parlano del CONTO — in corso, chiuso, annullato — e per un conto
+      chiuso vuol dire incassato: il lavoro ancora da fare si guarda nelle
+      corsie delle comande, che è il loro mestiere.
+      RISOLTO: le corsie dei conti usano contoChiuso senza stati di
+      servizio. Le corsie delle comande non cambiano: la comanda pagata e
+      non ancora servita resta nel suo passo, col bollo «Pagato».
+    in_produzione: false
+    status: fixed
+    generate_issue: false
+    labels: [bug, coda]
+    test_cases: [tests/component/CodaCorsie.test.jsx]
+
+  - id: BUG-019
+    title: "Incassare marcava «servite» comande che nessuno aveva preparato"
+    area: "src/lib/api.js"
+    description: >
+      Con gli stati del servizio accesi si segnava pagato un ordine e alcune
+      comande ancora IN PREPARAZIONE risultavano servite. Due danni, tutti e
+      due silenziosi: quei drink sparivano dagli occhi di chi doveva farli, e
+      il magazzino veniva scaricato per roba mai uscita.
+      CAUSA: due strade. `payGroupCash` (pagamento di un gruppo/tavolo)
+      chiamava serveAllComande SEMPRE, senza guardare a che punto stessero le
+      comande — un tavolo che paga insieme mentre due giri sono al banco li
+      faceva sparire già «serviti». E il valore di partenza di `autoServe`
+      era acceso in chiusuraPagamento, registerPayment e markOrderPaid: ogni
+      strada che si dimenticava di dirlo serviva tutto in silenzio.
+      RISOLTO: `autoServe` parte SPENTO dappertutto — sbagliando in questo
+      verso resta un conto aperto e si chiude, sbagliando nell'altro si
+      perde un drink e si scarica una scorta mai uscita — e il pagamento di
+      gruppo passa dalla regola di tutti (chiusuraPagamento). A servire resta
+      una strada sola, ed è un gesto esplicito: «Riscuoti e servi» nella
+      schermata di pagamento. Senza gli stati del servizio non cambia niente:
+      lì i passi non esistono e il pagamento chiude, come ha sempre fatto.
+    in_produzione: false
+    status: fixed
+    generate_issue: false
+    labels: [bug, pagamenti, coda]
+    test_cases: [tests/unit/pagamentoNonServe.test.js]
+
+  - id: BUG-020
+    title: "Sul tema chiaro la striscia di stato spariva dalle card spente"
+    area: "src/index.css, DESIGN.md"
+    description: >
+      Corsie del banco su un tema chiaro: nelle colonne «Ritirato/Servito»,
+      «Chiuse» e «Annullate» le card non avevano più il bordo a sinistra.
+      CAUSA: `.order-card.ritirato` (e `.grid-card-pending`) coloravano la
+      striscia con un bianco trasparente — nato per il fondo scuro, e sul
+      chiaro bianco su bianco. Il bordo c'era, non si vedeva. In più
+      l'opacità 0.75 della card sbiadiva anche la striscia.
+      RISOLTO: un token solo, `--strip-spenta` (segue `--muted`, quindi il
+      tema), per tutti gli stati «spenti» — servito, in invio, conto
+      annullato — e la card servita sbiadisce meno (0.85). Una striscia
+      invisibile è una card senza stato, ed è così che si riconosce lo stato
+      scorrendo trenta card uguali.
+    in_produzione: false
+    status: fixed
+    generate_issue: false
+    labels: [bug, ui, tema]
+    test_cases: [tests/unit/css.test.js]
+
+  - id: BUG-021
+    title: "Con molte corsie il contenuto della card sbordava su due colonne"
+    area: "src/index.css, src/components/RigheCorsia.jsx"
+    description: >
+      Sei corsie accese, quindi colonne strette: nelle card lunghe le righe
+      andavano su due colonne di testo, i nomi si spezzavano a metà e i
+      prezzi finivano fuori dal riquadro. Peggiorava con lo zoom del browser.
+      CAUSA: la seconda colonna si accendeva con una media query sulla
+      FINESTRA (min-width 1200px) più un conteggio di righe. Ma con sei
+      corsie la finestra è larga e la CARD è una striscia: il criterio non
+      misurava lo spazio che c'era davvero.
+      RISOLTO: il blocco delle righe è un contenitore
+      (`container-type: inline-size`) e la soglia si misura su di lui
+      (`@container min-width 360px`). Così la card si adatta da sé al numero
+      di corsie accese, alla larghezza dello schermo e allo zoom. Il
+      conteggio delle righe resta, ma dice solo se CONVIENE dividere, non se
+      ci sta. In più: nome che si accorcia (`overflow-wrap: anywhere`,
+      `min-width: 0`) e prezzo che non va mai a capo.
+    in_produzione: false
+    status: fixed
+    generate_issue: false
+    labels: [bug, ui, coda]
+    test_cases: [tests/unit/css.test.js]
+
+  - id: BUG-022
+    title: "«Ritirato/Servito» andava premuto due volte"
+    area: "src/lib/api.js"
+    description: >
+      Al banco si premeva «Ritirato/Servito» su una comanda, la card tornava
+      indietro da sola e bisognava premere una seconda volta.
+      CAUSA: `comande` è un ARRAY, e Firestore un array lo riscrive intero —
+      non esiste un percorso tipo `comande.2.inventory_applied`. Lo scarico
+      del magazzino (scaricaInSottofondo) si rileggeva il documento
+      all'INIZIO del suo lavoro, poi andava in rete a leggere ricette e
+      articoli, e alla fine riscriveva quell'array vecchio: l'avanzamento
+      scritto nel frattempo ci finiva sotto. Stessa forma in
+      riallineaInSottofondo, dopo una modifica di comanda già scaricata.
+      RISOLTO: chi scrive in sottofondo si rilegge il documento
+      NELL'ISTANTE PRIMA DI SCRIVERE e cambia solo i campi che le competono
+      (scriviCampiComanda). La finestra fra rilettura e scrittura resta di
+      microsecondi invece che lunga quanto la rete, e tutto il resto della
+      comanda — lo stato compreso — resta com'è arrivato.
+    in_produzione: false
+    status: fixed
+    generate_issue: false
+    labels: [bug, coda, magazzino]
+    test_cases: [tests/unit/scritturaComande.test.js]
+
+  - id: BUG-023
+    title: "Incassando un conto sparivano dal banco i drink ancora da fare"
+    area: "src/lib/ordiniNascosti.js, src/pages/BartenderPage.jsx"
+    description: >
+      Si incassa un conto che ha ancora comande «da fare» o «in
+      preparazione» e quelle spariscono dalla coda del banco. Ricaricando la
+      pagina tornano al loro posto.
+      CAUSA: NON è quella di BUG-019 — il pagamento non le serve più, e
+      infatti dal server tornano giuste. È la vista. Chiudendo un conto lo
+      si nasconde dalla coda all'istante (`ordiniNascosti`), per non
+      vederselo lì mentre la scrittura viaggia; ma quel filtro toglie il
+      CONTO, e con lui le sue comande. Nella vista del banco le card sono i
+      ticket, e un conto pagato in anticipo ha ancora lavoro da fare.
+      L'elenco dei nascosti vive in memoria: per questo il ricaricamento
+      «aggiustava» tutto, ed era il sintomo che diceva dove guardare.
+      RISOLTO: nascondere un conto non vuol dire nascondere il suo lavoro.
+      `senzaNascosti` accetta cosa TENERE comunque, e la coda le passa
+      `haLavoroDaFare` (coda.js): un conto con una comanda non servita e non
+      annullata resta a schermo. Un conto annullato, o servito per intero,
+      si nasconde come prima — che è il motivo per cui il nascondere esiste.
+    in_produzione: false
+    status: fixed
+    generate_issue: false
+    labels: [bug, coda, pagamenti]
+    test_cases: [tests/component/CodaCorsie.test.jsx]
+
+  - id: BUG-024
+    title: "Le righe aggiunte a un conto nascevano già «in preparazione»"
+    area: "src/lib/comande.js, src/components/OrderPosDetail.jsx"
+    description: >
+      Conto con una comanda in preparazione, si aggiungono altre righe:
+      quelle risultavano anche loro in preparazione, cioè già prese in
+      carico da qualcuno. Al banco sparivano dalla colonna «Da fare» e non
+      le cominciava nessuno — lo stesso danno del ticket che non compare, ma
+      più subdolo, perché la card c'è: sta nella colonna sbagliata.
+      CAUSA: la comanda che accoglieva le righe nuove si sceglieva con
+      `comandaEditable`, che vuol dire «si può ancora toccare» ed è vera sia
+      per «da fare» sia per «in preparazione» — quindi le righe finivano
+      nella prima toccabile, qualunque passo avesse. Era la regola di prima,
+      di quando non c'era una risposta sola alla domanda «in che passo nasce
+      il lavoro nuovo»; da quando c'è (`statoComandaNuova`) quella strada
+      decideva per conto suo.
+      RISOLTO: `comandaPerLeAggiunte(comande, passo)` in comande.js, un
+      punto solo, usato da tutte e due le strade che aggiungono righe (il
+      tocco sulla griglia e l'auto-conferma della bozza). Le righe vanno
+      nella comanda che sta già in quel passo; se non c'è, ne nasce una —
+      anche con una comanda in preparazione accanto. Una comanda pronta o
+      servita non risponde mai, quindi il vecchio caso «ordine già servito →
+      nuova comanda» viene da sé, senza una seconda regola.
+      In più: senza una comanda in quel passo, i tocchi sulla griglia
+      passano ora dalla BOZZA invece di chiamare `addComanda` uno per uno —
+      tre tocchi di fila facevano tre ticket da una riga per lo stesso giro.
+    in_produzione: false
+    status: fixed
+    generate_issue: false
+    labels: [bug, pos, coda]
+    test_cases: [tests/unit/comande.test.js, tests/component/OrderPosDetail.test.jsx]
+
+  - id: BUG-025
+    title: "Il tasto per dividere la comanda era sparito"
+    area: "src/lib/comande.js, src/lib/api.js, src/components/ComandaDetail.jsx, src/components/OrderPosDetail.jsx"
+    description: >
+      Col locale che fa nascere le comande già in preparazione,
+      «✂️ Preparazione parziale» non compariva più da nessuna parte: né nel
+      dettaglio comanda né nel riquadro Comande del conto. Una funzione
+      scomparsa senza che nessuno l'avesse tolta.
+      CAUSA: `comandaDivisibile` chiedeva `status === 'ricevuto'`, cioè «da
+      fare». Con quel salto acceso nessuna comanda ci sta mai, quindi
+      nessuna risultava divisibile. Il ragionamento di prima — «quello che è
+      già al banco non si divide, il lavoro è cominciato» — valeva quando i
+      due passi c'erano tutti e due.
+      RISOLTO: una comanda si divide FINCHÉ IL DRINK NON È USCITO DAL BANCO,
+      cioè a «da fare» e a «in preparazione». Da «pronto» in poi no: è roba
+      sul vassoio. Resta la soglia di più di un'unità.
+      E lo stato delle due parti segue quello di partenza
+      (`statiDopoLaDivisione`, un posto solo per chi scrive e per chi
+      disegna): da «da fare» la parte scelta va in preparazione e il resto
+      resta da fare; da «in preparazione» vanno tutte e due in preparazione
+      — il lavoro è cominciato su entrambe, e mandarne una indietro direbbe
+      che quei drink non li ha ancora presi in mano nessuno. La comanda di
+      partenza si annulla come sempre col motivo «divisione», e non compare
+      fra le annullate per finta.
+    in_produzione: false
+    status: fixed
+    generate_issue: false
+    labels: [bug, pos, coda]
+    test_cases: [tests/unit/comande.test.js, tests/component/ComandaDetail.test.jsx, tests/component/OrderPosDetail.test.jsx]
+
+  - id: BUG-026
+    title: "Con le colonne del pronto divise, la card «Da ritirare» non aveva il tasto per avanzare"
+    area: "src/lib/coda.js, src/components/CorsieComande.jsx"
+    description: >
+      Corsie del banco con la colonna del pronto divisa in «Da servire» e
+      «Da ritirare»: la card in «Da ritirare» mostrava solo «🧾 Conto», e
+      il tasto grande che porta la comanda a «Ritirato/Servito» non
+      compariva. Con le colonne unite lo stesso ticket ce l'aveva.
+      CAUSA: l'azione della card si pescava da AZIONI_CORSIA, una mappa per
+      ID DI CORSIA. Dividendo il pronto nascono corsie con id nuovi, che in
+      quella mappa non esistevano: niente voce, niente tasto.
+      RISOLTO: l'azione dipende dallo STATO della comanda, non dalla
+      colonna — la colonna è solo un modo di raggruppare, e la stessa
+      comanda pronta ha lo stesso tasto comunque la si guardi. Così non si
+      ripresenta al prossimo modo di dividere le colonne. L'etichetta segue
+      la consegna: «Ritirato» dove si ritira, «Servito» dove si serve.
+    in_produzione: false
+    status: fixed
+    generate_issue: false
+    labels: [bug, coda]
+    test_cases: [tests/unit/coda.test.js, tests/component/CodaCorsie.test.jsx]
+
+  - id: BUG-027
+    title: "Col salto acceso, «in attesa del pagamento» smette di proteggere l'incasso"
+    area: "src/pages/BartenderPage.jsx, src/lib/api.js, firestore.rules, src/pages/OrderStatusPage.jsx, src/lib/ripristino.js"
+    description: >
+      Trovato dalla rilettura del diff della 1.5.0, non ancora visto al
+      banco. Il passo in cui nasce una comanda adesso è una scelta del
+      locale (`statoComandaNuova`), ma «ricevuto» è rimasto scritto a mano
+      in cinque punti che lo davano per scontato. Il più grave: il blocco
+      «In attesa del pagamento: non si prepara» chiede
+      `workflow_status === RICEVUTO`. Con l'impostazione «la comanda nasce
+      già in preparazione» quel confronto non è mai vero, e il blocco NON
+      SCATTA: si prepara un ordine con pagamento obbligatorio non pagato.
+      Gli altri quattro, stessa causa: il cliente non può più modificare il
+      proprio ordine (api.js), e la regola Firestore lo rifiuta comunque;
+      la pagina del cliente non aggancia più il token per le notifiche e
+      non mostra il tasto «modifica»; riaprendo un conto annullato le sue
+      comande tornano in una colonna che quel locale non guarda.
+      Nessun test lo vede, perché girano tutti col default.
+      COME SI SISTEMA: il confronto si fa col passo di nascita, non con la
+      costante — e il predicato «in attesa del pagamento» va scritto una
+      volta in coda.js invece che copiato cinque volte nella pagina.
+    in_produzione: false
+    status: todo
+    generate_issue: true
+    labels: [bug, coda, pagamenti]
+    test_cases: []
+
+  - id: BUG-028
+    title: "Due memorie di «l'ho appena fatto io» sulla stessa schermata"
+    area: "src/pages/BartenderPage.jsx, src/lib/comandeLocali.js"
+    description: >
+      Trovato dalla rilettura del diff della 1.5.0. `comandeLocali` (nato
+      proprio per unificare tre copie sparse) convive con `queueOverrides`,
+      il meccanismo vecchio: uno tiene le comande, l'altro lo stato del
+      conto, e ogni vista ne legge uno solo. La vista dei conti avanza con
+      `queueOverrides` e le sue comande restano quelle del server; la vista
+      del banco avanza con `comandeLocali` e lo stato del conto resta
+      quello del server.
+      Prima non si notava. Adesso la pastiglia «🍸 Comande / 🧾 Ordini» —
+      nuova in questa versione — mette le due viste a un tocco di distanza
+      sullo stesso terminale: si avanza un ticket, si gira la pastiglia, e
+      il conto è ancora dov'era finché non arriva lo snapshot. Offline non
+      arriva. È il rimbalzo che `comandeLocali` è stato scritto per
+      togliere, spostato di una vista.
+      COME SI SISTEMA: far derivare lo stato del conto dalle comande locali
+      (`activeComanda`) e togliere `queueOverrides`. Non è un refactoring
+      di comodo: finché sono due, ogni gesto nuovo va ricordato in due
+      posti.
+    in_produzione: false
+    status: todo
+    generate_issue: true
+    labels: [bug, coda, local-first]
+    test_cases: []
+
+  - id: BUG-029
+    title: "Il magazzino si legge da una porta e si scrive da sette finestre"
+    area: "src/lib/api.js, src/components/PurchaseOrdersPanel.jsx"
+    description: >
+      Trovato dalla rilettura del diff della 1.5.0. La lettura tollerante
+      del modello vecchio (`articoloNormalizzato`) è applicata in un punto
+      solo, `mapItem`. Tutti i percorsi di SCRITTURA rileggono il documento
+      grezzo e ragionano ancora col modello vecchio, e il controllo «prima
+      aggiorna il magazzino» (`ATTESA_TRAVASO`) è stato copiato a mano in
+      due casi su sette: ce l'hanno il carico e la conta, non ce l'hanno
+      `receiveBottles`, `receivePurchaseOrder`, l'allineamento d'ordine e
+      lo scarico delle comande.
+      Il buco concreto: da Acquisti → «ricevi ordine» si scrive su un
+      magazzino non ancora aggiornato, e quella schermata non è bloccata
+      perché il blocco vive dentro `InventoryManager`.
+      COME SI SISTEMA: una `leggiArticoloPerScrittura(ref)` sola, che
+      rilegge, controlla e restituisce l'articolo — e il blocco «in sola
+      lettura» derivato dallo stato del travaso, non ricostruito nella
+      schermata che se lo ricorda. Finché è una riga da ricopiare, ogni
+      percorso nuovo nasce senza.
+    in_produzione: false
+    status: todo
+    generate_issue: true
+    labels: [bug, magazzino]
+    test_cases: []
+
+  - id: BUG-030
+    title: "Il menù del cliente decide da solo come si consegna"
+    area: "src/pages/MenuPage.jsx"
+    description: >
+      Trovato dalla rilettura del diff della 1.5.0. `consegna.js` dice che
+      i mondi sono due e che `'banco'` è un valore vecchio da leggere con
+      tolleranza; il conto, le impostazioni e il riepilogo sono stati
+      portati lì, il MENÙ DEL CLIENTE no: legge ancora `service_mode`
+      grezzo in quattro punti (tabellone, ETA, etichette).
+      Conseguenza: un locale storicamente `'banco'` mostra una colonna
+      sola; basta che un admin apra Impostazioni → Consegna e tocchi
+      qualunque cosa perché il valore diventi quello nuovo e il tabellone
+      del menù passi a due colonne, senza che nessuno abbia deciso niente
+      sul menù. La migrazione del valore vecchio funziona in tre schermate
+      su quattro, e la quarta è quella che vede il cliente.
+    in_produzione: false
+    status: todo
+    generate_issue: true
+    labels: [bug, clienti, menu]
+    test_cases: []
+
+  - id: BUG-031
+    title: "Aprire una comanda dal banco aspetta il ruolo dal server"
+    area: "src/pages/ComandaPage.jsx"
+    description: >
+      Trovato dalla rilettura del diff della 1.5.0. La schermata della
+      comanda resta su «Apro la comanda…» finché non arrivano DUE cose: lo
+      snapshot dell'ordine (che la coda aveva già in mano un istante prima)
+      e il ruolo, ricavato da capo con `getIdTokenResult()`. Il token dura
+      un'ora: quando scade, quella chiamata va in rete — e con la linea del
+      locale che non passa, il tocco resta sotto lo spinner.
+      È il divieto scritto in docs/architettura.md (niente letture al
+      server nel percorso di un gesto), su un gesto che si fa 300-450 volte
+      a sera.
+      COME SI SISTEMA: il ruolo è già noto altrove (App, BartenderPage):
+      tenerlo dove si legge senza rete e disegnare subito con l'ultimo
+      valore noto; l'ordine può arrivare dalla card che l'ha già in mano.
+    in_produzione: false
+    status: todo
+    generate_issue: true
+    labels: [bug, local-first, banco]
+    test_cases: []
+
+  - id: BUG-032
+    title: "Il logo dello scontrino si ritenta a ogni stampa se manca"
+    area: "src/lib/printer.js"
+    description: >
+      Trovato dalla rilettura del diff della 1.5.0. La cache del logo usa
+      `null` per dire due cose diverse — «mai provato» e «provato, non
+      c'è» — quindi se `logo.png` manca o non è nella cache del service
+      worker, ogni scontrino rifà il caricamento e aspetta l'errore prima
+      di stampare. La carta esce dopo, ogni volta.
+      Si sistema con un terzo valore (o un flag «già tentato»): due righe.
+    in_produzione: false
+    status: todo
+    generate_issue: true
+    labels: [bug, stampa]
+    test_cases: []
+
+  - id: BUG-033
+    title: "I passi del servizio si vedevano nel conto anche col servizio spento"
+    area: "src/lib/comande.js, src/components/OrderPosDetail.jsx"
+    description: >
+      Segnalato dall'utente il 18/08, con lo screenshot: nel conto le righe
+      erano intestate «🍹 In preparazione» e «💳 Pagati» in un locale che
+      NON segue la preparazione. Quei passi lì non esistono per nessuno, e
+      leggerli in mezzo alle righe è una parola che parla di una cosa che
+      quel locale non fa.
+      CAUSA: il raggruppamento delle righe guardava solo se i gruppi erano
+      più d'uno, non se il locale segue il servizio. Le comande hanno uno
+      stato comunque, anche a preparazione spenta, quindi i titoli
+      comparivano lo stesso.
+      RISOLTO: `gruppiDelConto` sa se il servizio è acceso; a spento resta
+      la sola divisione dei PAGATI, che c'era da prima e riguarda i soldi,
+      non il lavoro — e quella si vede SEMPRE, appena c'è una riga pagata:
+      senza i passi del servizio è l'unica cosa che divide le righe, e
+      toglierla sarebbe stato peggio del difetto. Le righe ancora da pagare
+      restano prima, i pagati in fondo.
+    in_produzione: false
+    status: fixed
+    generate_issue: false
+    labels: [bug, pos, comande]
+    test_cases: [tests/component/OrderPosDetail.test.jsx, tests/unit/comande.test.js]

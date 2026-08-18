@@ -5,30 +5,37 @@ import {
   updateInventoryItem,
   deleteInventoryItem,
   loadStock,
-  receiveBottles,
   adjustStock,
+  travasaMagazzinoAPezzi,
   fetchStockMovements,
   fetchInventoryCategories,
   createInventoryCategory,
   updateInventoryCategory,
   deleteInventoryCategory,
   fetchMacroCategories,
-  createMacroCategory,
-  updateMacroCategory,
-  deleteMacroCategory,
   fetchSuppliers,
   createSupplier,
   updateSupplier,
   deleteSupplier,
   subscribeSettings,
+  subscribeActiveOrders,
+  subscribeDrinks,
   DEFAULT_SETTINGS,
 } from '../lib/api.js'
+import { useCashSession } from '../lib/cashSession.js'
+import { impegnatoPerArticolo, articoloPrevisto } from '../lib/impegnato.js'
 import {
   formatQty,
   fmtItem,
   baseUnit,
   fromBaseQty,
   toBaseQty,
+  qtyInStockUnit,
+  unitaMovimento,
+  statoTravaso,
+  motivoNonMigrabile,
+  fromStockUnit,
+  eScorta,
   stockStatus,
   bottleSummary,
   bottleBreakdown,
@@ -36,9 +43,9 @@ import {
   formatPezzi,
   copiaProdotto,
   fmtContenuto,
+  contenutoDelPezzo,
   inventorySummary,
   filterItems,
-  formatIn,
   ASSORTIMENTI,
   assortimentoDi,
   costWithVat,
@@ -47,10 +54,12 @@ import {
   costPerUnit,
   inventoryTotalValue,
   unitaGenerica,
+  UNIT_LABEL,
 } from '../lib/inventory.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import { parseSupplierList } from '../lib/warehouse.js'
-import { groupCategoriesByMacro } from '../lib/macros.js'
+import MacroCategoryManager from './MacroCategoryManager.jsx'
+import { useChiudiConIndietro } from '../lib/schermate.js'
 import { toastSuccess, toastError } from '../lib/toast.js'
 import StockCountPanel from './StockCountPanel.jsx'
 import PurchaseOrdersPanel from './PurchaseOrdersPanel.jsx'
@@ -58,6 +67,9 @@ import SupplierInvoicesPanel from './SupplierInvoicesPanel.jsx'
 import CategoryRail from './CategoryRail.jsx'
 import SectionPanels from './SectionPanels.jsx'
 import { IconTag, IconCartelle, IconFornitore } from './Icons.jsx'
+import Tendina from './Tendina.jsx'
+import { useSottosezioni } from '../lib/sottosezioni.js'
+import { usePaginaPiena } from '../lib/paginaPiena.js'
 
 const STATUS_ITEM = [
   { value: 'assortimento', label: 'In assortimento' },
@@ -87,10 +99,20 @@ const ASSORTIMENTO_LABEL = {
     </>
   ),
 }
+// Gli stessi nomi, in parole: servono al tasto della tendina, che deve dire
+// cosa è scelto senza doversi aprire.
+const ASSORTIMENTO_NOME = {
+  assortimento: 'In assortimento',
+  linea: 'In linea',
+  premium: 'Premium',
+  out: 'Fuori assortimento',
+}
 const ASSORTIMENTO_TITOLO = {
   assortimento: 'Si tiene, senza niente di speciale',
   linea: 'I primi da controllare prima di una serata',
-  premium: 'Bottiglie premium',
+  // «Bottiglie premium» dava per scontato che qui dentro ci fossero solo
+  // bottiglie: un gestionale deve restare generico (REQ-MAG-019).
+  premium: 'I prodotti buoni',
   out: 'Fuori assortimento: non si ricompra',
 }
 function SegnoAssortimento({ item }) {
@@ -117,15 +139,18 @@ function UnitPrice({ item, markup }) {
   const guadagno = consigliato - cost
   return (
     <div className="inv-info-row">
-      <dt>
+      <dt className="inv-unita">
         Al {unit}
         {units.length > 1 &&
           units.map((u) => (
             <button
               key={u}
               type="button"
-              className={`chip ${u === unit ? 'active' : ''}`}
-              style={{ padding: '0 6px', fontSize: '0.68rem' }}
+              // Pastiglia MINUTA: sta dentro una riga di testo, non in una
+              // barra di filtri. Con la misura piena (40px d'altezza) la
+              // terza unità andava a capo da sola, e «ml» restava appeso
+              // sotto il resto della riga.
+              className={`chip mini ${u === unit ? 'active' : ''}`}
               onClick={(e) => {
                 e.stopPropagation()
                 setUnit(u)
@@ -147,32 +172,158 @@ function UnitPrice({ item, markup }) {
 // Sezioni del magazzino: prodotti (giacenze), conta periodica, ordini
 // fornitore e scadenzario — la controparte software dei fogli Excel storici.
 const INV_VIEWS = [
-  ['prodotti', '📦 Prodotti'],
-  ['conta', '📋 Conta'],
-  ['ordini', '🛒 Ordini'],
-  ['scadenzario', '📄 Scadenzario'],
+  ['prodotti', '📦', 'Prodotti'],
+  ['conta', '📋', 'Conta'],
+  ['ordini', '🛒', 'Ordini'],
+  ['scadenzario', '📄', 'Scadenzario'],
+  ['categorie', '🏷', 'Categorie'],
+  ['macro', '🗂', 'Macro-categorie'],
+  ['fornitori', '🏭', 'Fornitori'],
+  ['movimenti', '📜', 'Movimenti'],
 ]
 
+// LE SEZIONI DEL MAGAZZINO STANNO NELLA BARRA IN ALTO. Le ho provate in due
+// modi sbagliati: a sinistra costavano una colonna (e dentro c'è già la barra
+// delle categorie), in orizzontale una riga. Sono una scelta che si fa ogni
+// tanto e non merita spazio fisso: ora è il TITOLO della pagina a diventare
+// il comando, e sul telefono si apre il foglio dal basso.
 export default function InventoryManager() {
   const [view, setView] = useState('prodotti')
+  usePaginaPiena()
+  useSottosezioni(
+    INV_VIEWS.map(([id, icona, label]) => ({ id, icona, label })),
+    view,
+    setView
+  )
   return (
-    <div>
-      <div className="chips-row" style={{ marginBottom: 8 }}>
-        {INV_VIEWS.map(([id, label]) => (
-          <button
-            key={id}
-            className={`chip ${view === id ? 'active' : ''}`}
-            onClick={() => setView(id)}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+    <div className="pagina-inventario">
       {view === 'prodotti' && <ProductsPanel />}
       {view === 'conta' && <StockCountPanel />}
       {view === 'ordini' && <PurchaseOrdersPanel />}
       {view === 'scadenzario' && <SupplierInvoicesPanel />}
+      {view === 'categorie' && <CategoriePanel />}
+      {view === 'macro' && <MacroPanel />}
+      {view === 'fornitori' && <FornitoriPanel />}
+      {view === 'movimenti' && <MovimentiPanel />}
     </div>
+  )
+}
+
+// Le tre anagrafiche: si tirano su i dati che servono e basta. Prima
+// stavano dentro il pannello dei prodotti, che li aveva già in mano per
+// altri motivi — e infatti erano finite lì.
+function CategoriePanel() {
+  const [categories, setCategories] = useState([])
+  const ricarica = async () => setCategories(await fetchInventoryCategories())
+  useEffect(() => {
+    ricarica()
+  }, [])
+  return <InvCategoryManager categories={categories} onChange={ricarica} />
+}
+
+function MacroPanel() {
+  const [macros, setMacros] = useState([])
+  const [categories, setCategories] = useState([])
+  // Le macro del MENÙ servono qui solo per l'aggancio: su ogni macro di
+  // spesa si sceglie a quale macro di vendita corrisponde.
+  const [macroMenu, setMacroMenu] = useState([])
+  const ricarica = async () => {
+    const [macs, cats, menu] = await Promise.all([
+      fetchMacroCategories('magazzino'),
+      fetchInventoryCategories(),
+      fetchMacroCategories('menu').catch(() => []),
+    ])
+    setMacros(macs)
+    setCategories(cats)
+    setMacroMenu(menu)
+  }
+  useEffect(() => {
+    ricarica()
+  }, [])
+  return (
+    <MacroCategoryManager
+      ambito="magazzino"
+      macros={macros}
+      categories={categories}
+      onChange={ricarica}
+      aggiornaCategoria={updateInventoryCategory}
+      creaCategoria={createInventoryCategory}
+      macroDiVendita={macroMenu}
+    />
+  )
+}
+
+// I MOVIMENTI HANNO UNA SEZIONE LORO. Stavano in fondo alla lista dei
+// prodotti dietro un tasto largo quanto lo schermo: fuori contesto (non
+// sono un prodotto), e in mezzo ai piedi a chi cercava una bottiglia.
+function MovimentiPanel() {
+  const [movements, setMovements] = useState([])
+  const [loading, setLoading] = useState(true)
+  useEffect(() => {
+    fetchStockMovements({ limit: 100 })
+      .then(setMovements)
+      .catch(() => setMovements([]))
+      .finally(() => setLoading(false))
+  }, [])
+  if (loading) return <div className="empty">Carico i movimenti…</div>
+  if (movements.length === 0) return <div className="empty">Ancora nessun movimento.</div>
+  return (
+    <div className="card inv-movimenti">
+      {movements.map((m) => (
+        <div className="row between" key={m.id}>
+          <span className="muted small">
+            {m.type === 'load' ? '⬆' : '⬇'} {m.item_name} · {m.reason}
+          </span>
+          <span className="muted small">
+            {m.type === 'load' ? '+' : '−'}
+            {formatQty(m.qty, m.unit)}
+          </span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function FornitoriPanel() {
+  const [suppliers, setSuppliers] = useState([])
+  const ricarica = async () => setSuppliers(await fetchSuppliers())
+  useEffect(() => {
+    ricarica()
+  }, [])
+  return <SupplierManager suppliers={suppliers} onChange={ricarica} />
+}
+
+// LA CELLA «A FINE SERATA». Si legge con le stesse regole della giacenza —
+// pezzi per le bottiglie, unità per il resto — perché è la stessa cosa
+// guardata più avanti nel tempo: due modi di scrivere lo stesso numero
+// farebbero sembrare due dati diversi. Senza impegno resta un trattino:
+// vuol dire che nessun conto aperto ha chiesto quel prodotto.
+function CellaFineSerata({ item, impegnato }) {
+  const previsto = articoloPrevisto(item, impegnato)
+  if (!previsto) return <span className="inv-cell-num muted">—</span>
+  const bs = bottleSummary(previsto)
+  const finito = (Number(previsto.stock) || 0) <= 0
+  return (
+    <span className={`inv-cell-num inv-row-previsto${finito ? ' finito' : ''}`}>
+      {bs ? `${formatPezzi(bs.pezzi)} pz` : fmtItem(previsto.stock, previsto)}
+    </span>
+  )
+}
+
+// La stessa previsione nella vista a CARD, dove non ci sono colonne: si
+// scrive per esteso sotto la giacenza, e solo se quel prodotto è in ballo.
+function PrevisioneCard({ item, impegnato }) {
+  const previsto = articoloPrevisto(item, impegnato)
+  if (!previsto) return null
+  const bs = bottleSummary(previsto)
+  const finito = (Number(previsto.stock) || 0) <= 0
+  return (
+    <span
+      className={`small${finito ? ' inv-row-previsto finito' : ' muted'}`}
+      style={{ display: 'block' }}
+    >
+      a fine serata {bs ? `${formatPezzi(bs.pezzi)} pz` : fmtItem(previsto.stock, previsto)}
+    </span>
   )
 }
 
@@ -180,13 +331,13 @@ function ProductsPanel() {
   const [items, setItems] = useState([])
   const [categories, setCategories] = useState([])
   const [suppliers, setSuppliers] = useState([])
-  const [movements, setMovements] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
   const [editing, setEditing] = useState(null) // null | 'new' | item
-  const [macros, setMacros] = useState([])
-  const [showMovs, setShowMovs] = useState(false)
+  // Aperta la scheda, «indietro» torna al magazzino invece di uscire dalla
+  // pagina: vedi lib/schermate.js.
+  useChiudiConIndietro(!!editing, () => setEditing(null))
 
   // Filtri
   const [query, setQuery] = useState('')
@@ -209,6 +360,40 @@ function ProductsPanel() {
   const [caricoFor, setCaricoFor] = useState(null)
   const [rettificaFor, setRettificaFor] = useState(null)
 
+  // QUELLO CHE TI RITROVI A FINE SERATA. I conti ancora aperti hanno già
+  // promesso degli ingredienti: si guardano gli ordini e il listino e si
+  // toglie dalla giacenza quello che il magazzino non ha ancora scalato.
+  // A cassa chiusa la colonna non c'è: non c'è una serata in corso di cui
+  // dire come finirà.
+  const { open: cassaAperta } = useCashSession()
+  // Con gli stati del servizio un conto pagato ma non servito è ancora
+  // aperto, e i suoi ingredienti sono ancora in ballo; senza, il pagamento
+  // chiude e il magazzino è già stato scalato.
+  const [workflowOn, setWorkflowOn] = useState(DEFAULT_SETTINGS.workflow_enabled !== false)
+  const [ordiniVivi, setOrdiniVivi] = useState([])
+  const [drinksById, setDrinksById] = useState({})
+  useEffect(() => subscribeActiveOrders(setOrdiniVivi, () => {}), [])
+  useEffect(
+    () =>
+      subscribeDrinks(
+        {},
+        (ds) => setDrinksById(Object.fromEntries(ds.map((d) => [d.id, d]))),
+        () => {}
+      ),
+    []
+  )
+  const itemsById = useMemo(() => Object.fromEntries(items.map((i) => [i.id, i])), [items])
+  const impegnato = useMemo(
+    () =>
+      cassaAperta
+        ? impegnatoPerArticolo(ordiniVivi, drinksById, itemsById, { workflowOn })
+        : {},
+    [cassaAperta, ordiniVivi, drinksById, itemsById, workflowOn]
+  )
+  // La colonna compare solo se c'è davvero qualcosa in ballo: a serata
+  // ferma sarebbe una colonna di trattini.
+  const mostraPrevisione = Object.keys(impegnato).length > 0
+
   // Ricarico (×N) per il prezzo consigliato mostrato accanto al costo.
   const [markup, setMarkup] = useState(DEFAULT_SETTINGS.price_markup)
   // IVA di ACQUISTO (fatture fornitore, 22%): è il default dei prodotti qui.
@@ -216,6 +401,7 @@ function ProductsPanel() {
   useEffect(
     () =>
       subscribeSettings((s) => {
+        setWorkflowOn(s.workflow_enabled !== false)
         setMarkup(s.price_markup)
         setPurchaseVat(s.purchase_vat ?? DEFAULT_SETTINGS.purchase_vat)
       }, () => {}),
@@ -228,18 +414,14 @@ function ProductsPanel() {
   async function load() {
     setLoading(true)
     try {
-      const [its, cats, macs, sups, movs] = await Promise.all([
+      const [its, cats, sups] = await Promise.all([
         fetchInventoryItems(),
         fetchInventoryCategories().catch(() => []),
-        fetchMacroCategories().catch(() => []),
         fetchSuppliers().catch(() => []),
-        fetchStockMovements({ limit: 30 }).catch(() => []),
       ])
       setItems(its)
       setCategories(cats)
-      setMacros(macs)
       setSuppliers(sups)
-      setMovements(movs)
     } catch (e) {
       setError(e.message)
     } finally {
@@ -251,6 +433,60 @@ function ProductsPanel() {
     load()
   }, [])
 
+  // ── A CHE PUNTO STA IL TRAVASO ────────────────────────────────────
+  // Non è un flag scritto da qualche parte: si guarda se esistono ancora
+  // articoli nella forma vecchia. Se non ce ne sono — e può succedere, i
+  // dati possono arrivare già sistemati — di tutta questa faccenda non si
+  // vede niente, e la schermata è quella normale di sempre.
+  const travaso = useMemo(() => statoTravaso(items), [items])
+  const [passoTravaso, setPassoTravaso] = useState(null) // 'prova' | 'corso' | 'fatto'
+  const [avanzamento, setAvanzamento] = useState({ fatti: 0, totale: 0 })
+  const [esitoTravaso, setEsitoTravaso] = useState(null)
+  // Finché il magazzino non è aggiornato si può toccare SOLO quello che va
+  // sistemato per farlo partire: è l'unica strada per sbloccarlo. Tutto il
+  // resto è in sola lettura — battere una comanda e scaricare le scorte
+  // continua a funzionare, che quella è la serata e non aspetta noi.
+  const bloccato = !travaso.fatto
+  const daSistemare = useMemo(
+    () => new Set(travaso.daSistemare.map((it) => it.id)),
+    [travaso.daSistemare]
+  )
+  const modificabile = (it) => !bloccato || daSistemare.has(it.id)
+
+  // LA PROVA A VUOTO RILEGGE, SEMPRE. È quella che si guarda per decidere:
+  // non può parlare di prodotti visti dieci minuti fa, e il magazzino qui si
+  // legge una volta sola (non è la coda, non serve stare in ascolto). Il
+  // caso vero: un altro terminale cambia i prodotti, e questa schermata
+  // continuerebbe a contare i vecchi.
+  async function apriProva() {
+    setPassoTravaso('rileggo')
+    await load()
+    setPassoTravaso('prova')
+  }
+
+  async function avviaTravaso() {
+    setPassoTravaso('corso')
+    try {
+      const esito = await travasaMagazzinoAPezzi({
+        onAvanzamento: (fatti, totale) => setAvanzamento({ fatti, totale }),
+      })
+      setEsitoTravaso(esito)
+      setPassoTravaso('fatto')
+    } catch (e) {
+      // A CHI STA AL BANCO NON SI FA LEGGERE LA LINGUA DEL DATABASE. Il
+      // motivo tecnico va nella console; a schermo si dice cosa è successo e
+      // che si può riprovare — perché è vero: quello che è passato resta
+      // scritto e il giro riprende da dove stava.
+      console.error('[travaso] aggiornamento interrotto', e)
+      setEsitoTravaso(null)
+      setPassoTravaso('interrotto')
+    }
+    // In ogni caso si rilegge: il cartello e i conteggi devono dire come
+    // stanno le cose ADESSO, e sparire da soli quando non c'è più niente da
+    // fare, senza che nessuno ricarichi la pagina a mano.
+    await load()
+  }
+
   const summary = useMemo(() => inventorySummary(items), [items])
   const totalValue = useMemo(() => inventoryTotalValue(items), [items])
   // Blocco azioni espanse di un item, condiviso dalla vista a CARD e dalla
@@ -258,6 +494,10 @@ function ProductsPanel() {
   const itemActions = (it, bd) => (
     <div className="grid-card-actions">
       <dl className="inv-info">
+        {/* QUANTO CE N'È, PER PRIMO — è la ragione per cui un prodotto si
+            apre. Dove si conta a pezzi lo dice la riga «Pezzi», che è più
+            precisa (quante piene, quella aperta, quanto fa una): una riga
+            «Giacenza» sopra ripeteva lo stesso numero due volte. */}
         {bd ? (
           <div className="inv-info-row">
             <dt>Pezzi</dt>
@@ -269,22 +509,51 @@ function ProductsPanel() {
               {bd.finished > 0 && ` · ${bd.finished} finite`}
               {/* Il contenuto in cl (o g): un pezzo è la bottiglia, dentro
                   non ci sono pezzi. */}
-              <span className="muted"> · 1 pz = {fmtContenuto(it.package_size, it)}</span>
+              <span className="muted"> · 1 pz = {contenutoDelPezzo(it)}</span>
             </dd>
           </div>
         ) : (
-          Number(it.package_size) > 0 && (
+          <>
             <div className="inv-info-row">
-              <dt>Confezione</dt>
+              <dt>Giacenza</dt>
               <dd>
-                {it.unit === 'pz' ? (
-                  <>1 pz = {formatIn(it.package_size, it.content_unit === 'g' ? 'g' : 'cl')}</>
-                ) : (
-                  <>1 conf. = {fmtItem(it.package_size, it)}</>
-                )}
+                <strong>{fmtItem(it.stock, it)}</strong>
               </dd>
             </div>
-          )
+            {Number(it.package_size) > 0 && (
+              <div className="inv-info-row">
+                <dt>Confezione</dt>
+                <dd>
+                  {it.unit === 'pz' ? (
+                    <>1 pz = {contenutoDelPezzo(it) ?? `${it.package_size} (misura non detta)`}</>
+                  ) : (
+                    <>1 conf. = {fmtItem(it.package_size, it)}</>
+                  )}
+                </dd>
+              </div>
+            )}
+          </>
+        )}
+        {impegnato[it.id] > 0 && (
+          <div className="inv-info-row">
+            <dt>A fine serata</dt>
+            <dd>
+              {/* Il numero da solo non basta: chi legge vuole sapere
+                  QUANTO è promesso, per capire se vale la pena aprire
+                  un'altra bottiglia adesso o aspettare. */}
+              <strong>
+                {(() => {
+                  const p = articoloPrevisto(it, impegnato[it.id])
+                  const bs = bottleSummary(p)
+                  return bs ? `${formatPezzi(bs.pezzi)} pz` : fmtItem(p.stock, p)
+                })()}
+              </strong>
+              <span className="muted">
+                {' · '}
+                {fmtItem(impegnato[it.id], it)} sui conti ancora aperti
+              </span>
+            </dd>
+          </div>
         )}
         {Number(it.low_threshold) > 0 && (
           <div className="inv-info-row">
@@ -297,7 +566,7 @@ function ProductsPanel() {
             <div className="inv-info-row">
               <dt>💶 Costo</dt>
               <dd>
-                {formatPrice(it.cost)}/conf. <span className="muted">(+IVA {formatPrice(costWithVat(it.cost, it.vat))})</span>
+                {formatPrice(it.cost)}/pz <span className="muted">(+IVA {formatPrice(costWithVat(it.cost, it.vat))})</span>
                 {' · valore '}<strong>{formatPrice(stockValue(it))}</strong>
               </dd>
             </div>
@@ -316,27 +585,41 @@ function ProductsPanel() {
         />
       ) : (
         <>
-          <button className="btn small block" style={{ marginTop: 8 }} onClick={() => setCaricoFor(it.id)}>
-            ⬆ Carico
-          </button>
-          <button
-            className="btn secondary small block"
-            style={{ marginTop: 6 }}
-            onClick={() => {
-              setCaricoFor(null)
-              setRettificaFor(it.id)
-            }}
-          >
-            Contenuto reale
-          </button>
+          {/* MAGAZZINO IN SOLA LETTURA finché non è aggiornato: caricare o
+              contare adesso vorrebbe dire scrivere pezzi su una giacenza
+              ancora contata in centilitri. Chi va sistemato si apre lo
+              stesso, che è l'unico modo di far partire l'aggiornamento. */}
+          {bloccato ? (
+            <p className="muted small" style={{ margin: '8px 0 0' }}>
+              {daSistemare.has(it.id)
+                ? '✏️ Questo prodotto va sistemato: aprilo e scrivi a quanto corrisponde un pezzo.'
+                : '🔒 Carico e conta tornano appena il magazzino è aggiornato.'}
+            </p>
+          ) : (
+            <>
+              <button className="btn small block" style={{ marginTop: 8 }} onClick={() => setCaricoFor(it.id)}>
+                ⬆ Carico
+              </button>
+              <button
+                className="btn secondary small block"
+                style={{ marginTop: 6 }}
+                onClick={() => {
+                  setCaricoFor(null)
+                  setRettificaFor(it.id)
+                }}
+              >
+                Contenuto reale
+              </button>
+            </>
+          )}
           {/* Tre azioni sulla stessa riga: si modifica, si duplica, si
               elimina. DUPLICA sta in mezzo perché è la via di mezzo — un
               prodotto quasi uguale a questo — e a fianco dell'elimina si
               ragiona due volte prima di premere. */}
           <div className="inv-azioni" style={{ marginTop: 6 }}>
-            <button className="btn ghost small" onClick={() => setEditing(it)}>✏️ Modifica</button>
-            <button className="btn ghost small" onClick={() => duplica(it)}>⧉ Duplica</button>
-            <button className="btn ghost small" onClick={() => remove(it)}>🗑 Elimina</button>
+            <button className="btn ghost small" disabled={!modificabile(it)} onClick={() => setEditing(it)}>✏️ Modifica</button>
+            <button className="btn ghost small" disabled={bloccato} onClick={() => duplica(it)}>⧉ Duplica</button>
+            <button className="btn ghost small" disabled={bloccato} onClick={() => remove(it)}>🗑 Elimina</button>
           </div>
         </>
       )}
@@ -365,6 +648,7 @@ function ProductsPanel() {
         case 'gross': return it.cost != null ? costWithVat(it.cost, it.vat) : null
         case 'percl': return costPerUnit(it, 'cl')
         case 'stock': return Number(it.stock) || 0
+        case 'previsto': return (Number(it.stock) || 0) - (impegnato[it.id] || 0)
         default: return it.name || ''
       }
     }
@@ -381,7 +665,7 @@ function ProductsPanel() {
       return String(x).localeCompare(String(y), 'it') * mul
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible, sort, categories])
+  }, [visible, sort, categories, impegnato])
 
   // Conteggi per categoria (su tutto l'inventario) per la barra a sinistra.
   const catItems = useMemo(() => {
@@ -398,6 +682,15 @@ function ProductsPanel() {
     ]
   }, [items, categories])
 
+  // Un fornitore creato dalla scheda di un prodotto: basta il nome, e
+  // l'elenco si aggiorna subito senza ricaricare tutto il magazzino — la
+  // scheda che lo aspetta è aperta, e ricaricare la chiuderebbe.
+  async function creaFornitoreAlVolo(nome) {
+    const creato = await createSupplier({ name: nome, sort_order: suppliers.length })
+    setSuppliers((prev) => [...prev, creato])
+    return creato
+  }
+
   async function handleSave(payload) {
     setError(null)
     try {
@@ -413,13 +706,14 @@ function ProductsPanel() {
     }
   }
 
-  async function doCarico(item, { count, open, newCost }) {
+  async function doCarico(item, { count, unit, newCost }) {
     setError(null)
     try {
-      if (count > 0 || open > 0) {
-        if (item.unit === 'pz') await loadStock(item.id, count)
-        else await receiveBottles(item.id, count, open)
-      }
+      // Quello che si scrive è nell'unità che si ha in mano; in giacenza va
+      // in pezzi, con lo stesso conto che fa lo scarico. Gli articoli
+      // arrivano qui sempre nella forma nuova (REQ-MAG-018, la lettura
+      // tollerante sta in api.js), quindi non c'è nessun altro caso.
+      if (count > 0) await loadStock(item.id, qtyInStockUnit(count, unit, item))
       // Prezzo aggiornato al carico (il fornitore ha cambiato tariffa).
       if (newCost != null) await updateInventoryItem(item.id, { cost: newCost })
       setCaricoFor(null)
@@ -481,103 +775,46 @@ function ProductsPanel() {
         defaultVat={purchaseVat}
         onCancel={() => setEditing(null)}
         onSave={handleSave}
+        onCreateSupplier={creaFornitoreAlVolo}
       />
     )
   }
 
-  function toggleStatus(s) {
-    setStatusFilter((cur) => (cur === s ? 'all' : s))
+  // Cosa dice il tasto della tendina: una tendina che non dice cosa è
+  // scelto costringe ad aprirla per ricordarselo.
+  const nomiStato = {
+    all: null,
+    in_scorta: 'In scorta',
+    low: 'In esaurimento',
+    empty: 'Esauriti',
   }
+  const sceltiOra = [nomiStato[statusFilter], ...assortimenti.map((k) => ASSORTIMENTO_NOME[k])]
+    .filter(Boolean)
+  const riassuntoFiltri =
+    sceltiOra.length === 0
+      ? '⚗️ Filtra'
+      : sceltiOra.length === 1
+        ? `⚗️ ${sceltiOra[0]}`
+        : `⚗️ ${sceltiOra.length} filtri`
 
   return (
-    <div>
-      {/* Sottosezioni dell'inventario: sotto al titolo, come nelle altre
-          pagine. Erano tre tasti in mezzo alla lista e i pannelli si
-          aprivano dove capitava. */}
-      <SectionPanels
-        panels={[
-          {
-            id: 'cats',
-            label: <><IconTag /> Categorie</>,
-            render: () => (
-              <InvCategoryManager
-                categories={categories}
-                onChange={async () => setCategories(await fetchInventoryCategories())}
-              />
-            ),
-          },
-          {
-            id: 'macro',
-            label: <><IconCartelle /> Macro-categorie</>,
-            render: () => (
-              <MacroCategoryManager
-                macros={macros}
-                categories={categories}
-                onChange={async () => {
-                  const [macs, cats] = await Promise.all([
-                    fetchMacroCategories(),
-                    fetchInventoryCategories(),
-                  ])
-                  setMacros(macs)
-                  setCategories(cats)
-                }}
-              />
-            ),
-          },
-          {
-            id: 'forn',
-            label: <><IconFornitore /> Fornitori</>,
-            render: () => (
-              <SupplierManager
-                suppliers={suppliers}
-                onChange={async () => setSuppliers(await fetchSuppliers())}
-              />
-            ),
-          },
-        ]}
+    <div className="inv-panel">
+      <PannelloTravaso
+        travaso={travaso}
+        passo={passoTravaso}
+        avanzamento={avanzamento}
+        esito={esitoTravaso}
+        onProva={apriProva}
+        onChiudi={() => setPassoTravaso(null)}
+        onConferma={avviaTravaso}
       />
-
-      {/* Riepilogo a colpo d'occhio (anche filtri di stato) */}
-      <div className="inv-summary">
-        <button className={`chip ${statusFilter === 'all' ? 'active' : ''}`} onClick={() => setStatusFilter('all')}>
-          Totale <strong>{summary.total}</strong>
-        </button>
-        <button className={`chip warn ${statusFilter === 'low' ? 'active' : ''}`} onClick={() => toggleStatus('low')}>
-          In esaurimento <strong>{summary.low}</strong>
-        </button>
-        <button className={`chip danger ${statusFilter === 'empty' ? 'active' : ''}`} onClick={() => toggleStatus('empty')}>
-          Esauriti <strong>{summary.empty}</strong>
-        </button>
-      </div>
-
-      {/* ASSORTIMENTO: filtro a più scelte. "Nessuno acceso" vuol dire tutto,
-          così deselezionando non si resta con la lista vuota. */}
-      <div className="chips-row" style={{ marginBottom: 8 }}>
-        {ASSORTIMENTI.map((k) => {
-          const quanti = items.filter((it) => assortimentoDi(it) === k).length
-          return (
-            <button
-              key={k}
-              className={`chip ${assortimenti.includes(k) ? 'active' : ''}`}
-              onClick={() => toggleAssortimento(k)}
-              title={ASSORTIMENTO_TITOLO[k]}
-            >
-              {ASSORTIMENTO_LABEL[k]} <strong>{quanti}</strong>
-            </button>
-          )
-        })}
-        {assortimenti.length > 0 && (
-          <button className="chip" onClick={() => setAssortimenti([])}>
-            ✕ Tutti
-          </button>
-        )}
-      </div>
-
-      <div className="chip" style={{ width: '100%', justifyContent: 'center', marginBottom: 8, cursor: 'default' }}>
-        💶 Valore magazzino <strong>{formatPrice(totalValue)}</strong>
-      </div>
-
-      {/* Ricerca */}
+      {/* LA TESTATA: ricerca, e sotto le scelte che stanno ferme quasi
+          sempre. I filtri erano sette pastiglie sempre aperte — una riga di
+          schermo occupata tutto il giorno per una scelta che si cambia due
+          volte a sera — più una riga per i fornitori, una per il tasto
+          nuovo prodotto e una per card/lista: quattro righe prima di vedere
+          un prodotto. Ora stanno in due tendine e due icone, su una riga, e
+          il tasto dice cosa è scelto senza doverlo aprire. */}
       <input
         className="inv-search"
         type="search"
@@ -586,50 +823,161 @@ function ProductsPanel() {
         placeholder="🔍 Cerca prodotto…"
       />
 
-      {/* Categorie a SINISTRA (come il POS), il resto a destra. */}
-      <CategoryRail items={catItems} selected={categoryFilter} onSelect={setCategoryFilter}>
-
-      {/* Filtro fornitori */}
-      {suppliers.length > 0 && (
-        <div className="chips-row">
-          <button className={`chip ${supplierFilter === 'all' ? 'active' : ''}`} onClick={() => setSupplierFilter('all')}>
-            🏭 Tutti
-          </button>
-          {suppliers.map((s) => (
+      <div className="inv-testa">
+        <Tendina
+          etichetta="Filtra i prodotti"
+          attivo={statusFilter !== 'all' || assortimenti.length > 0}
+          riassunto={riassuntoFiltri}
+        >
+          <div className="tendina-titolo">Come stanno a scorta</div>
+          {[
+            ['all', 'Tutti', summary.total],
+            // «In scorta» prima delle altre due: è la domanda che ci si fa
+            // per prima — cosa c'è — e le altre sono lenti più strette.
+            ['in_scorta', 'In scorta', summary.inScorta],
+            ['low', 'In esaurimento', summary.low],
+            ['empty', 'Esauriti', summary.empty],
+          ].map(([k, label, n]) => (
             <button
-              key={s.id}
-              className={`chip ${supplierFilter === s.id ? 'active' : ''}`}
-              onClick={() => setSupplierFilter(s.id)}
+              key={k}
+              type="button"
+              className={`tendina-voce${statusFilter === k ? ' scelta' : ''}`}
+              onClick={() => setStatusFilter(k)}
             >
-              {s.name}
+              <span>{label}</span>
+              <strong>{n}</strong>
+            </button>
+          ))}
+          <div className="tendina-titolo">Assortimento</div>
+          {ASSORTIMENTI.map((k) => {
+            const quanti = items.filter((it) => assortimentoDi(it) === k).length
+            return (
+              <button
+                key={k}
+                type="button"
+                className={`tendina-voce${assortimenti.includes(k) ? ' scelta' : ''}`}
+                onClick={() => toggleAssortimento(k)}
+                title={ASSORTIMENTO_TITOLO[k]}
+              >
+                <span>{ASSORTIMENTO_LABEL[k]}</span>
+                <strong>{quanti}</strong>
+              </button>
+            )
+          })}
+          {(assortimenti.length > 0 || statusFilter !== 'all') && (
+            <button
+              type="button"
+              className="btn ghost small block"
+              style={{ marginTop: 6 }}
+              onClick={() => {
+                setAssortimenti([])
+                setStatusFilter('all')
+              }}
+            >
+              ✕ Togli i filtri
+            </button>
+          )}
+        </Tendina>
+
+        {suppliers.length > 0 && (
+          <Tendina
+            etichetta="Fornitore"
+            attivo={supplierFilter !== 'all'}
+            riassunto={
+              supplierFilter === 'all'
+                ? '🏭 Fornitore'
+                : `🏭 ${suppliers.find((x) => x.id === supplierFilter)?.name || 'Fornitore'}`
+            }
+          >
+            {(chiudi) => (
+              <>
+                <button
+                  type="button"
+                  className={`tendina-voce${supplierFilter === 'all' ? ' scelta' : ''}`}
+                  onClick={() => {
+                    setSupplierFilter('all')
+                    chiudi()
+                  }}
+                >
+                  <span>Tutti i fornitori</span>
+                </button>
+                {suppliers.map((sup) => (
+                  <button
+                    key={sup.id}
+                    type="button"
+                    className={`tendina-voce${supplierFilter === sup.id ? ' scelta' : ''}`}
+                    onClick={() => {
+                      setSupplierFilter(sup.id)
+                      chiudi()
+                    }}
+                  >
+                    <span>{sup.name}</span>
+                  </button>
+                ))}
+              </>
+            )}
+          </Tendina>
+        )}
+
+        {/* Un numero senza nome non vuol dire niente: si legge «6.823,82 €»
+            e ci si chiede di cosa. */}
+        <span className="inv-valore" title="Somma del costo di tutto quello che c'è in magazzino">
+          💶 <span className="inv-valore-eti">Valore magazzino</span>{' '}
+          <strong>{formatPrice(totalValue)}</strong>
+        </span>
+
+        <span className="inv-testa-spinta" />
+
+        {/* Card o lista: due icone, non due tasti con su scritto cosa fanno.
+            È una scelta che si fa una volta e resta. */}
+        <div className="inv-vista" role="group" aria-label="Come mostrare i prodotti">
+          {[
+            ['card', '▦', 'A card'],
+            ['lista', '☰', 'A lista'],
+          ].map(([k, icona, titolo]) => (
+            <button
+              key={k}
+              type="button"
+              className={`chip${invView === k ? ' active' : ''}`}
+              onClick={() => setInvView(k)}
+              title={titolo}
+              aria-label={titolo}
+              aria-pressed={invView === k}
+            >
+              {icona}
             </button>
           ))}
         </div>
-      )}
 
-      <button className="btn block" onClick={() => setEditing('new')}>+ Nuovo prodotto</button>
+        <button
+          className="btn small"
+          disabled={bloccato}
+          title={bloccato ? 'Prima va aggiornato il magazzino alla nuova gestione' : undefined}
+          onClick={() => setEditing('new')}
+        >
+          + Nuovo prodotto
+        </button>
+      </div>
+
+      {/* Categorie a SINISTRA (come il POS), il resto a destra. Si prende
+          quello che resta dell'altezza: a scorrere è la lista dei prodotti,
+          non la pagina — prima, per tornare alla ricerca dopo aver guardato
+          in fondo, si risaliva da capo. */}
+      <CategoryRail
+        items={catItems}
+        selected={categoryFilter}
+        onSelect={setCategoryFilter}
+        pieno
+        chiave="inv-categorie"
+      >
 
       {error && <div className="banner" style={{ marginTop: 8 }}>Errore: {error}</div>}
       {loading && <div className="empty">Carico l’inventario…</div>}
 
-      {/* Come visualizzare: card in griglia o lista condensata. */}
-      {!loading && items.length > 0 && (
-        <div className="chips-row" style={{ margin: '8px 0' }}>
-          {[
-            ['card', '▦ Card'],
-            ['lista', '☰ Lista'],
-          ].map(([k, label]) => (
-            <button key={k} className={`chip ${invView === k ? 'active' : ''}`} onClick={() => setInvView(k)}>
-              {label}
-            </button>
-          ))}
-        </div>
-      )}
-
       {/* TABELLA: colonne allineate (stato · prodotto · categoria · netto ·
           +IVA · scorte), riga cliccabile per aprire le azioni. */}
       {invView === 'lista' && (
-        <div className="inv-list inv-table">
+        <div className={`inv-list inv-table${mostraPrevisione ? ' con-previsione' : ''}`}>
           <div className="inv-thead">
             <span aria-hidden />
             <SortTh label="Prodotto" col="name" sort={sort} onSort={toggleSort} />
@@ -638,6 +986,9 @@ function ProductsPanel() {
             <SortTh label="IVA inclusa" col="gross" sort={sort} onSort={toggleSort} num />
             <SortTh label="€/cl" col="percl" sort={sort} onSort={toggleSort} num />
             <SortTh label="Scorte" col="stock" sort={sort} onSort={toggleSort} num />
+            {mostraPrevisione && (
+              <SortTh label="A fine serata" col="previsto" sort={sort} onSort={toggleSort} num />
+            )}
           </div>
           {sortedVisible.map((it) => {
             const st = stockStatus(it)
@@ -645,7 +996,15 @@ function ProductsPanel() {
             const bs = bottleSummary(it)
             const perCl = costPerUnit(it, 'cl') // già IVA inclusa
             return (
-              <div className={`inv-row inv-${st}${expanded ? ' open' : ''}`} key={it.id}>
+              /* DUE SEGNI, DUE COSE. Il PALLINO dice quanta roba c'è
+                 (verde/arancione/rosso), la STRISCIA che assortimento è —
+                 in linea, premium, in assortimento, fuori. Prima dicevano
+                 tutti e due la stessa cosa, e l'assortimento si leggeva
+                 solo dai bollini accanto al nome. */
+              <div
+                className={`inv-row ass-${assortimentoDi(it)}${expanded ? ' open' : ''}`}
+                key={it.id}
+              >
                 <button
                   type="button"
                   className="inv-row-main"
@@ -678,6 +1037,7 @@ function ProductsPanel() {
                       fmtItem(it.stock, it)
                     )}
                   </span>
+                  {mostraPrevisione && <CellaFineSerata item={it} impegnato={impegnato[it.id]} />}
                 </button>
                 {expanded && itemActions(it, bottleBreakdown(it))}
               </div>
@@ -694,7 +1054,7 @@ function ProductsPanel() {
           const st = stockStatus(it)
           const expanded = expandedId === it.id
           return (
-            <div className={`card grid-card admin-card inv-${st}`} key={it.id}>
+            <div className={`card grid-card admin-card ass-${assortimentoDi(it)}`} key={it.id}>
               <div
                 className="grid-card-main"
                 role="button"
@@ -729,6 +1089,7 @@ function ProductsPanel() {
                             {bs.total}
                           </span>
                         )}
+                        <PrevisioneCard item={it} impegnato={impegnato[it.id]} />
                       </span>
                     )
                   })()}
@@ -761,26 +1122,6 @@ function ProductsPanel() {
 
       </CategoryRail>
 
-      {/* Movimenti (collassabile) */}
-      {movements.length > 0 && (
-        <div className="card" style={{ marginTop: 12 }}>
-          <button className="btn ghost small block" onClick={() => setShowMovs((v) => !v)}>
-            {showMovs ? 'Nascondi movimenti' : '📜 Ultimi movimenti'}
-          </button>
-          {showMovs &&
-            movements.map((m) => (
-              <div className="row between" key={m.id} style={{ marginTop: 6 }}>
-                <span className="muted small">
-                  {m.type === 'load' ? '⬆' : '⬇'} {m.item_name} · {m.reason}
-                </span>
-                <span className="muted small">
-                  {m.type === 'load' ? '+' : '−'}
-                  {formatQty(m.qty, m.unit)}
-                </span>
-              </div>
-            ))}
-        </div>
-      )}
     </div>
   )
 }
@@ -845,170 +1186,6 @@ function InvCategoryManager({ categories, onChange }) {
           </span>
         </div>
       ))}
-    </div>
-  )
-}
-
-// --- Macro-categorie -----------------------------------------------------
-// Raggruppano le categorie d'inventario (Distillati, Birre+Bibite, Vino,
-// Food+Moka…) per i conti aggregati di acquisti/fatturato. Si creano/
-// modificano/eliminano, e a ciascuna si collegano categorie esistenti (o se
-// ne creano di nuove dentro la macro). Una categoria sta in al più una macro.
-
-function MacroCategoryManager({ macros, categories, onChange }) {
-  const [name, setName] = useState('')
-  const [busy, setBusy] = useState(false)
-  const { groups, unassigned } = groupCategoriesByMacro(macros, categories)
-
-  async function addMacro() {
-    if (!name.trim()) return
-    setBusy(true)
-    try {
-      await createMacroCategory({ name: name.trim(), sort_order: macros.length })
-      setName('')
-      await onChange()
-    } finally {
-      setBusy(false)
-    }
-  }
-  async function renameMacro(m) {
-    const n = prompt('Nuovo nome macro-categoria:', m.name)
-    if (n == null || !n.trim()) return
-    await updateMacroCategory(m.id, { name: n.trim() })
-    await onChange()
-  }
-  async function removeMacro(m) {
-    if (!confirm(`Eliminare la macro “${m.name}”? Le sue categorie restano, senza macro.`)) return
-    await deleteMacroCategory(m.id)
-    await onChange()
-  }
-  async function moveMacro(idx, dir) {
-    const j = idx + dir
-    if (j < 0 || j >= groups.length) return
-    const a = groups[idx]
-    const b = groups[j]
-    await Promise.all([
-      updateMacroCategory(a.id, { sort_order: b.sort_order }),
-      updateMacroCategory(b.id, { sort_order: a.sort_order }),
-    ])
-    await onChange()
-  }
-  // Aggancia/sgancia una categoria a una macro (scrive macro_id sulla categoria).
-  const setCatMacro = async (catId, macroId) => {
-    await updateInventoryCategory(catId, { macro_id: macroId })
-    await onChange()
-  }
-
-  return (
-    <div className="card" style={{ marginTop: 8 }}>
-      <p className="muted small" style={{ margin: '0 0 8px' }}>
-        Le macro-categorie raggruppano le categorie del magazzino per i conti di
-        acquisti e fatturato. Una categoria può stare in una sola macro.
-      </p>
-      <div className="row" style={{ gap: 8 }}>
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nuova macro (es. Distillati)" />
-        <button className="btn small" onClick={addMacro} disabled={busy}>Aggiungi</button>
-      </div>
-
-      {groups.length === 0 && (
-        <div className="muted small" style={{ marginTop: 8 }}>Nessuna macro-categoria.</div>
-      )}
-
-      {groups.map((g, idx) => (
-        <div key={g.id} className="macro-group">
-          <div className="row between" style={{ alignItems: 'center' }}>
-            <strong>🗂 {g.name}</strong>
-            <span className="row" style={{ gap: 4 }}>
-              <button className="btn ghost small" onClick={() => moveMacro(idx, -1)} disabled={idx === 0}>↑</button>
-              <button className="btn ghost small" onClick={() => moveMacro(idx, 1)} disabled={idx === groups.length - 1}>↓</button>
-              <button className="btn ghost small" onClick={() => renameMacro(g)}>✏️</button>
-              <button className="btn ghost small" onClick={() => removeMacro(g)}>🗑</button>
-            </span>
-          </div>
-          {g.categories.length === 0 ? (
-            <div className="muted small" style={{ margin: '4px 0' }}>Nessuna categoria collegata.</div>
-          ) : (
-            <div className="chips-row" style={{ margin: '6px 0' }}>
-              {g.categories.map((c) => (
-                <span key={c.id} className="chip" style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
-                  {c.name}
-                  <button
-                    type="button"
-                    aria-label={`Togli ${c.name} da ${g.name}`}
-                    className="chip-x"
-                    onClick={() => setCatMacro(c.id, null)}
-                  >
-                    ✕
-                  </button>
-                </span>
-              ))}
-            </div>
-          )}
-          <AddCategoryToMacro macro={g} unassigned={unassigned} onChange={onChange} />
-        </div>
-      ))}
-
-      {unassigned.length > 0 && (
-        <div style={{ marginTop: 10, borderTop: '1px solid var(--line)', paddingTop: 8 }}>
-          <span className="muted small">Categorie senza macro: </span>
-          <span className="small">{unassigned.map((c) => c.name).join(', ')}</span>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// Aggancio di una categoria a una macro: sceglie una categoria "libera" già
-// esistente, oppure ne crea una nuova direttamente dentro la macro.
-function AddCategoryToMacro({ macro, unassigned, onChange }) {
-  const [pick, setPick] = useState('')
-  const [newName, setNewName] = useState('')
-  const [busy, setBusy] = useState(false)
-
-  async function attach() {
-    if (!pick) return
-    setBusy(true)
-    try {
-      await updateInventoryCategory(pick, { macro_id: macro.id })
-      setPick('')
-      await onChange()
-    } finally {
-      setBusy(false)
-    }
-  }
-  async function createInto() {
-    if (!newName.trim()) return
-    setBusy(true)
-    try {
-      await createInventoryCategory({ name: newName.trim(), macro_id: macro.id })
-      setNewName('')
-      await onChange()
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  return (
-    <div className="row" style={{ gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-      {unassigned.length > 0 && (
-        <>
-          <select value={pick} onChange={(e) => setPick(e.target.value)} style={{ maxWidth: 180 }}>
-            <option value="">+ collega categoria…</option>
-            {unassigned.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
-          <button className="btn ghost small" onClick={attach} disabled={!pick || busy}>Collega</button>
-          <span className="muted small">oppure</span>
-        </>
-      )}
-      <input
-        value={newName}
-        onChange={(e) => setNewName(e.target.value)}
-        placeholder="nuova categoria…"
-        style={{ maxWidth: 160 }}
-      />
-      <button className="btn ghost small" onClick={createInto} disabled={!newName.trim() || busy}>+ Crea</button>
     </div>
   )
 }
@@ -1127,25 +1304,218 @@ function SupplierManager({ suppliers, onChange }) {
   )
 }
 
+// --- IL TRAVASO AL MODELLO A PEZZI, IN MANO A CHI LAVORA ----------------
+//
+// «Quando entra in magazzino un banner gli dice che deve iniziare la
+// migrazione dei dati alla nuova gestione magazzino. Quando preme ok, parte
+// prima un dry run che lo avvisa dei prodotti che devono essere sistemati
+// prima, e poi, se tutto è come se lo aspetta, allora chiede conferma e
+// migra i dati» (18/08). Niente di automatico: il database lo cambia un
+// gesto, e prima di quel gesto si vede cosa cambia.
+//
+// Se non c'è niente da fare qui non compare NIENTE: la schermata è quella
+// normale, senza traccia di tutta questa faccenda.
+function PannelloTravaso({ travaso, passo, avanzamento, esito, onProva, onChiudi, onConferma }) {
+  if (travaso.fatto && passo !== 'fatto' && passo !== 'interrotto') return null
+  const { daMigrare, daSistemare } = travaso
+  const pronti = daSistemare.length === 0
+
+  return (
+    <>
+      {!travaso.fatto && (
+        <div className="banner" style={{ marginBottom: 10 }}>
+          <strong>Il magazzino va aggiornato.</strong> Da questa versione tutto
+          si conta a <strong>pezzi</strong>: {daMigrare.length > 0 && `${daMigrare.length} prodotti`}
+          {daMigrare.length > 0 && daSistemare.length > 0 && ' e '}
+          {daSistemare.length > 0 && `${daSistemare.length} da sistemare a mano`}
+          {' '}
+          {daMigrare.length + daSistemare.length === 1 ? 'aspetta' : 'aspettano'} il passaggio.
+          Fino ad allora i numeri si leggono già giusti, ma non si può caricare,
+          contare né aggiungere prodotti.
+          <div style={{ marginTop: 8 }}>
+            <button type="button" className="btn small" onClick={onProva}>
+              Guarda cosa cambia
+            </button>
+          </div>
+        </div>
+      )}
+
+      {passo === 'prova' && (
+        <div className="overlay confirm-overlay" onClick={onChiudi}>
+          <div
+            className="confirm-box"
+            role="dialog"
+            aria-label="Cosa cambia aggiornando il magazzino"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ marginTop: 0 }}>Cosa cambia</h3>
+            {/* PRIMA UNA PROVA A VUOTO: qui non si scrive niente. */}
+            <p className="small" style={{ marginTop: 0 }}>
+              Per adesso non cambia niente: questo è solo l&apos;elenco.
+            </p>
+
+            {daSistemare.length > 0 ? (
+              <>
+                <h4 style={{ margin: '14px 0 2px' }}>
+                  ⚠️ Da sistemare prima ({daSistemare.length})
+                </h4>
+                <p className="small" style={{ margin: '0 0 6px' }}>
+                  Di questi non si sa a quanto corrisponde un pezzo, e nessuno
+                  può indovinarlo. Aprili, scrivilo, e poi torna qui.
+                </p>
+                <ul className="small" style={{ margin: 0, paddingLeft: 18 }}>
+                  {daSistemare.map((it) => (
+                    <li key={it.id}>
+                      <strong>{it.name}</strong>{' '}
+                      <span className="muted">{motivoNonMigrabile(it)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : (
+              <>
+                <h4 style={{ margin: '14px 0 2px' }}>
+                  ✅ Si aggiornano {daMigrare.length} prodotti
+                </h4>
+                <p className="small" style={{ margin: '0 0 6px' }}>
+                  Le giacenze passano a pezzi: quello che oggi si legge sullo
+                  schermo è già il numero giusto, e resterà scritto così.
+                  Prezzi, ricette e menù non si toccano.
+                </p>
+                <ul className="small" style={{ margin: 0, paddingLeft: 18 }}>
+                  {daMigrare.slice(0, 8).map((it) => (
+                    <li key={it.id}>
+                      {it.name}{' '}
+                      <span className="muted">
+                        {formatQty(it.formaVecchia.stock, baseUnit(it.formaVecchia.unit))} →{' '}
+                        {formatPezzi(it.stock)} pz
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                {daMigrare.length > 8 && (
+                  <p className="muted small" style={{ margin: '4px 0 0' }}>
+                    … e altri {daMigrare.length - 8}.
+                  </p>
+                )}
+              </>
+            )}
+
+            <div className="grid-2" style={{ marginTop: 16 }}>
+              <button type="button" className="btn ghost" onClick={onChiudi}>
+                {pronti ? 'Non adesso' : 'Chiudi'}
+              </button>
+              {pronti && (
+                <button type="button" className="btn" onClick={onConferma}>
+                  Aggiorna {daMigrare.length} prodotti
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {passo === 'rileggo' && (
+        <div className="overlay confirm-overlay">
+          <div className="confirm-box" role="dialog" aria-label="Sto guardando il magazzino">
+            <h3 style={{ marginTop: 0 }}>Sto guardando…</h3>
+            <p className="small" style={{ margin: 0 }}>
+              Un momento: rileggo i prodotti, così l&apos;elenco dice come
+              stanno le cose adesso.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {(passo === 'corso' || passo === 'fatto' || passo === 'interrotto') && (
+        <div className="overlay confirm-overlay">
+          <div className="confirm-box" role="dialog" aria-label="Aggiornamento del magazzino">
+            {passo === 'corso' && (
+              <>
+                <h3 style={{ marginTop: 0 }}>Sto aggiornando…</h3>
+                {/* A LOTTI, e si vede: una schermata ferma al banco vuol dire
+                    «è bloccata». Se si interrompe si può ricominciare, che
+                    ogni giro guarda cos'è rimasto da fare. */}
+                <p className="small" style={{ margin: 0 }}>
+                  {avanzamento.fatti} di {avanzamento.totale}. Puoi ricominciare
+                  da qui se si interrompe: riprende da dov&apos;era.
+                </p>
+              </>
+            )}
+            {passo === 'fatto' && (
+              <>
+                <h3 style={{ marginTop: 0 }}>✅ Magazzino aggiornato</h3>
+                <p className="small" style={{ margin: 0 }}>
+                  {esito?.travasati ?? avanzamento.totale} prodotti si contano a
+                  pezzi. Carico, conta e prodotti nuovi sono di nuovo a posto.
+                </p>
+                {/* CHI NON C'È PIÙ NON È UN ERRORE, ma va detto: un prodotto
+                    cancellato da un altro terminale mentre l'aggiornamento
+                    girava semplicemente non c'è, e si va avanti. */}
+                {esito?.saltati > 0 && (
+                  <p className="small" style={{ margin: '8px 0 0' }}>
+                    {esito.saltati === 1
+                      ? 'Un prodotto non c’è più: è stato saltato.'
+                      : `${esito.saltati} prodotti non ci sono più: sono stati saltati.`}{' '}
+                    Gli altri sono a posto.
+                  </p>
+                )}
+                {esito?.bloccati > 0 && (
+                  <p className="small" style={{ margin: '8px 0 0' }}>
+                    {esito.bloccati === 1
+                      ? 'Un prodotto non si è aggiornato'
+                      : `${esito.bloccati} prodotti non si sono aggiornati`}
+                    : riprova fra un momento, non fa danni — quelli già
+                    aggiornati restano come sono.
+                  </p>
+                )}
+                <button type="button" className="btn block" style={{ marginTop: 16 }} onClick={onChiudi}>
+                  Chiudi
+                </button>
+              </>
+            )}
+            {passo === 'interrotto' && (
+              <>
+                <h3 style={{ marginTop: 0 }}>L&apos;aggiornamento si è fermato</h3>
+                <p className="small" style={{ margin: 0 }}>
+                  {avanzamento.fatti > 0
+                    ? `${avanzamento.fatti} prodotti sono stati aggiornati e restano così.`
+                    : 'Non è stato aggiornato niente.'}{' '}
+                  Il resto è rimasto com&apos;era: puoi riprovare quando vuoi,
+                  non fa danni — riprende da dove si era fermato.
+                </p>
+                <button type="button" className="btn block" style={{ marginTop: 16 }} onClick={onChiudi}>
+                  Chiudi
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
 // --- Contenuto reale (rettifica giacenza) -------------------------------
-// Si lavora nell'unità con cui si conta davvero: CL per i liquidi (non ml),
-// g per i solidi, pz per i pezzi. Il valore si converte in unità base solo
-// al salvataggio.
+// Anche la rettifica è una movimentazione, e come tutte chiede in che unità
+// si sta contando: a PEZZI, che è come si conta la giacenza, o nell'unità
+// del contenuto (i cl rimasti nella bottiglia aperta). Il valore si converte
+// nell'unità della giacenza solo al salvataggio.
 function RettificaForm({ item, onCancel, onConfirm }) {
-  const units = smallUnits(item)
+  const units = unitaMovimento(item)
   const [unit, setUnit] = useState(units[0])
-  const [val, setVal] = useState(() => String(fromBaseQty(Number(item.stock) || 0, units[0])))
+  const [val, setVal] = useState(() => String(fromStockUnit(item.stock, units[0], item)))
 
   function changeUnit(u) {
     // Mantiene la quantità reale, cambiando solo come la si esprime.
-    const base = toBaseQty(Number(String(val).replace(',', '.')) || 0, unit)
+    const inGiacenza = qtyInStockUnit(Number(String(val).replace(',', '.')) || 0, unit, item)
     setUnit(u)
-    setVal(String(fromBaseQty(base, u)))
+    setVal(String(fromStockUnit(inGiacenza, u, item)))
   }
   function confirm() {
     const n = Number(String(val).replace(',', '.'))
     if (Number.isNaN(n) || n < 0) return
-    onConfirm(toBaseQty(n, unit))
+    onConfirm(qtyInStockUnit(n, unit, item))
   }
 
   return (
@@ -1163,9 +1533,14 @@ function RettificaForm({ item, onCancel, onConfirm }) {
           style={{ flex: 1 }}
         />
         {units.length > 1 ? (
-          <select value={unit} onChange={(e) => changeUnit(e.target.value)} style={{ width: 80 }}>
+          <select
+            value={unit}
+            onChange={(e) => changeUnit(e.target.value)}
+            aria-label="Unità della conta"
+            style={{ width: 80 }}
+          >
             {units.map((u) => (
-              <option key={u} value={u}>{u}</option>
+              <option key={u} value={u}>{UNIT_LABEL[u.toLowerCase()] || u}</option>
             ))}
           </select>
         ) : (
@@ -1186,10 +1561,14 @@ function RettificaForm({ item, onCancel, onConfirm }) {
 // --- Form di carico -----------------------------------------------------
 
 function CaricoForm({ item, onCancel, onConfirm }) {
+  // OGNI MOVIMENTO CHIEDE IN CHE UNITÀ. La cassetta di limoni si carica a
+  // chili — nessuno li conta a uno a uno — e la stessa cassetta in magazzino
+  // sono pezzi: la conversione la fa il contenuto di un pezzo, non chi
+  // scrive. Con un'unità sola non c'è niente da chiedere e il campo resta
+  // com'era (REQ-MAG-016).
+  const unita = unitaMovimento(item)
+  const [unit, setUnit] = useState(unita[0])
   const [count, setCount] = useState('')
-  const [open, setOpen] = useState('')
-  const isPz = item.unit === 'pz'
-  const size = Number(item.package_size) || 0
 
   // Costo al carico (bidirezionale): il fornitore spesso scarica il prezzo del
   // COLLO/CARTONE. Si inserisce l'unitario OPPURE il totale del collo (sapendo
@@ -1202,6 +1581,11 @@ function CaricoForm({ item, onCancel, onConfirm }) {
   const [colloTot, setColloTot] = useState('')
   // Quanti cartoni si stanno caricando: i pezzi li riempie lui.
   const [cartoni, setCartoni] = useState('')
+  // IL COLLO E' UN'ECCEZIONE, NON LA REGOLA. Chi carica due bottiglie prese
+  // dal fornitore sotto casa non ha nessun cartone da dichiarare, e si
+  // trovava tre campi in piu' da capire. Sta dietro un interruttore: da
+  // spento la scheda e' quella di sempre — quanti pezzi, e il prezzo.
+  const [aColli, setAColli] = useState(false)
 
   const onUnit = (v) => {
     setUnitCost(v)
@@ -1231,27 +1615,59 @@ function CaricoForm({ item, onCancel, onConfirm }) {
 
   const unitN = num(unitCost)
   const perN = num(perCollo)
+  // A colli si contano PEZZI, sempre: un cartone ha dentro pezzi, non
+  // centilitri. Cambiare unità mentre il conto lo fa il collo darebbe una
+  // quantità che non torna con quello che è arrivato.
+  const unitEffettiva = aColli ? 'pz' : unit
+  const etichettaUnita = UNIT_LABEL[String(unitEffettiva).toLowerCase()] || unitEffettiva
 
   function confirm() {
     const n = num(count)
-    const openQty = num(open)
-    const hasQty = isPz ? n > 0 : n > 0 || openQty > 0
     const newCost = unitCost !== '' && unitN >= 0 && r2(unitN) !== Number(item.cost) ? r2(unitN) : null
-    if (!hasQty && newCost == null) return
-    onConfirm({ count: n, open: isPz ? 0 : openQty, newCost })
+    if (!(n > 0) && newCost == null) return
+    onConfirm({ count: n, unit: unitEffettiva, newCost })
   }
 
   return (
     <div style={{ marginTop: 8 }}>
-      {isPz ? (
-        <>
-          {/* CARTONI → PEZZI. Il fornitore consegna cartoni, il magazzino
-              conta bottiglie: dicendo quanti pezzi ha un cartone, i pezzi
-              si riempiono da sé. Chi carica bottiglie sfuse lascia il
-              cartone vuoto e scrive i pezzi, come sempre. */}
-          {perN > 0 && (
-            <>
-              <label htmlFor="cf-cartoni">Quanti cartoni? (1 cartone = {perN} pz)</label>
+      {/* IL COLLO STA SOPRA, perché è da lì che si parte: si guarda il
+          cartone, si scrive quanti pezzi ha e quanti ne sono arrivati, e la
+          quantità si riempie da sé. Prima i suoi campi stavano in fondo,
+          dentro il riquadro del prezzo, e i pezzi andavano scritti a mano
+          sperando che il conto tornasse. */}
+      <label className="row between" style={{ alignItems: 'center', gap: 8 }}>
+        <span>
+          Carico a colli
+          <span className="muted small"> — un cartone, una cassa</span>
+        </span>
+        <input
+          type="checkbox"
+          className="toggle"
+          checked={aColli}
+          onChange={(e) => {
+            setAColli(e.target.checked)
+            if (!e.target.checked) setCartoni('')
+          }}
+        />
+      </label>
+
+      {aColli && (
+        <div className="card" style={{ marginTop: 8, padding: 10 }}>
+          <div className="grid-2">
+            <div>
+              <label htmlFor="cf-collo">Pezzi per collo</label>
+              <input
+                id="cf-collo"
+                type="number"
+                step="any"
+                min="0"
+                value={perCollo}
+                onChange={(e) => onCollo(e.target.value)}
+                placeholder="Es. 24"
+              />
+            </div>
+            <div>
+              <label htmlFor="cf-cartoni">Quanti colli arrivano?</label>
               <input
                 id="cf-cartoni"
                 type="number"
@@ -1261,44 +1677,78 @@ function CaricoForm({ item, onCancel, onConfirm }) {
                 onChange={(e) => onCartoni(e.target.value)}
                 placeholder="Es. 2"
               />
-            </>
-          )}
-          <label style={perN > 0 ? { marginTop: 8 } : undefined}>Quanti pezzi aggiungi?</label>
-          <input type="number" step="1" min="0" value={count} onChange={(e) => setCount(e.target.value)} autoFocus />
+            </div>
+          </div>
+          <label htmlFor="cf-tot" style={{ marginTop: 6 }}>Totale collo (€, netto)</label>
+          <input
+            id="cf-tot"
+            type="number"
+            step="any"
+            min="0"
+            value={colloTot}
+            onChange={(e) => onTot(e.target.value)}
+            placeholder="Prezzo del cartone dal fornitore"
+          />
           {perN > 0 && num(cartoni) > 0 && (
             <div className="muted small" style={{ marginTop: 4 }}>
               {num(cartoni)} × {perN} = <strong>{num(cartoni) * perN} pz</strong>
             </div>
           )}
-        </>
-      ) : (
-        <>
-          <label>Quante confezioni piene? (1 conf. = {formatQty(size, item.unit)})</label>
-          <input type="number" step="1" min="0" value={count} onChange={(e) => setCount(e.target.value)} autoFocus />
-          <label style={{ marginTop: 8 }}>Bottiglia aperta — contenuto ({item.unit}) — opzionale</label>
-          <input type="number" step="any" min="0" value={open} onChange={(e) => setOpen(e.target.value)} placeholder="Es. 400 se ne aggiungi una già aperta" />
-        </>
+        </div>
+      )}
+
+      {/* A colli la quantità la fa il conto: si legge, non si scrive.
+          Cambiarla a mano vorrebbe dire caricare un numero che non torna
+          con quello che è arrivato. */}
+      <label htmlFor="cf-pezzi" style={{ marginTop: 8 }}>Quanto aggiungi?</label>
+      <div className="row" style={{ gap: 6 }}>
+        <input
+          id="cf-pezzi"
+          type="number"
+          step="any"
+          min="0"
+          className="grow"
+          value={count}
+          onChange={(e) => setCount(e.target.value)}
+          readOnly={aColli}
+          aria-readonly={aColli}
+          autoFocus={!aColli}
+        />
+        {unita.length > 1 && !aColli ? (
+          <select
+            value={unit}
+            onChange={(e) => setUnit(e.target.value)}
+            aria-label="Unità del carico"
+            style={{ width: 80 }}
+          >
+            {unita.map((u) => (
+              <option key={u} value={u}>{UNIT_LABEL[u.toLowerCase()] || u}</option>
+            ))}
+          </select>
+        ) : (
+          <span className="chip" style={{ cursor: 'default' }}>{etichettaUnita}</span>
+        )}
+      </div>
+      {/* Quanto entra davvero in giacenza, quando non si carica a pezzi:
+          la merce a peso si conta in pezzi per stima, e il numero va visto
+          PRIMA di confermare. */}
+      {unitEffettiva !== 'pz' && num(count) > 0 && (
+        <div className="muted small" style={{ marginTop: 4 }}>
+          In magazzino entrano{' '}
+          <strong>{formatPezzi(qtyInStockUnit(num(count), unitEffettiva, item))} pz</strong>
+          {(item.content_unit || item.unit) === 'g' && ' (stima: il peso non fa pezzi esatti)'}
+        </div>
       )}
 
       {/* Prezzo: unitario ↔ totale collo (per confrontare col fornitore) */}
       <div className="card" style={{ marginTop: 10, padding: 10 }}>
         <div className="muted small">💶 Prezzo — aggiorna se il fornitore l'ha cambiato</div>
-        <div className="grid-2" style={{ marginTop: 6 }}>
-          <div>
-            <label htmlFor="cf-unit">Costo unitario (€, netto)</label>
-            <input id="cf-unit" type="number" step="any" min="0" value={unitCost} onChange={(e) => onUnit(e.target.value)} />
-          </div>
-          <div>
-            <label htmlFor="cf-collo">Pezzi per collo/cartone</label>
-            <input id="cf-collo" type="number" step="any" min="0" value={perCollo} onChange={(e) => onCollo(e.target.value)} placeholder="Es. 24" />
-          </div>
-        </div>
-        <label htmlFor="cf-tot" style={{ marginTop: 6 }}>Totale collo (€, netto)</label>
-        <input id="cf-tot" type="number" step="any" min="0" value={colloTot} onChange={(e) => onTot(e.target.value)} placeholder="Prezzo del cartone dal fornitore" />
+        <label htmlFor="cf-unit" style={{ marginTop: 6 }}>Costo unitario (€, netto)</label>
+        <input id="cf-unit" type="number" step="any" min="0" value={unitCost} onChange={(e) => onUnit(e.target.value)} />
         {unitN > 0 && (
           <div className="muted small" style={{ marginTop: 4 }}>
             Unitario +IVA {formatPrice(costWithVat(unitN, item.vat))}
-            {perN > 0 && ` · Totale collo +IVA ${formatPrice(costWithVat(unitN * perN, item.vat))}`}
+            {aColli && perN > 0 && ` · Totale collo +IVA ${formatPrice(costWithVat(unitN * perN, item.vat))}`}
           </div>
         )}
       </div>
@@ -1313,162 +1763,330 @@ function CaricoForm({ item, onCancel, onConfirm }) {
 
 // --- Form prodotto (creazione + modifica) -------------------------------
 
-function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, onSave }) {
+// ── L'UNITÀ È SEMPRE IL PEZZO ────────────────────────────────────────
+//
+// La scheda ha fatto due giri di troppo: prima chiedeva l'unità d'acquisto a
+// famiglie (litri, chili, unità generiche), poi «che tipo di prodotto è?» con
+// quattro card. Tutte e due le domande facevano la stessa cosa sbagliata:
+// costringevano a dichiarare, una volta per tutte, come si vende una cosa che
+// si vende in più modi — il Jägermeister va nel Jägerbombo E si serve a
+// cicchetto, mai la bottiglia intera (Flavio, 18/08).
+//
+// Adesso non si sceglie più niente: l'unità è il PEZZO, fissa e bloccata, e
+// la sola domanda che resta è «a quanto corrisponde un pezzo» — una capacità
+// (l, cl, ml), un peso (kg, g) o la «U» non definita. Le unità sono queste e
+// basta: «potremmo caricare tantissime cose con tantissime unità di misura
+// che non sappiamo, e non ce le possiamo mettere a creare ogni volta».
+//
+// A dire come si usa la merce è la RICETTA, che dosa a pezzi o nell'unità del
+// contenuto; la giacenza invece non cambia mai unità, resta in pezzi.
+const CONTENUTO_UNITA = [
+  ['l', 'L'],
+  ['cl', 'cl'],
+  ['ml', 'ml'],
+  ['kg', 'kg'],
+  ['g', 'g'],
+  ['U', 'U'],
+]
+
+// ── COME SI COMPILA UNA SCHEDA PRODOTTO ──────────────────────────────
+//
+// I tre livelli, che sono il modello intero: il PEZZO è quello che si prende
+// in mano, il CONTENUTO dice a quanto corrisponde, il COLLO quanti pezzi ci
+// sono nella confezione che si compra. Il testo è asciutto di proposito: chi
+// lo apre sta compilando, non leggendo (REQ-MAG-016).
+function AiutoProdotto({ onClose }) {
+  return (
+    <div className="overlay confirm-overlay" onClick={onClose}>
+      <div
+        className="confirm-box"
+        role="dialog"
+        aria-label="Come si compila questa scheda"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 style={{ marginTop: 0 }}>Come si compila questa scheda</h3>
+
+        <h4 style={{ margin: '14px 0 2px' }}>Si conta sempre a pezzi</h4>
+        <p className="small" style={{ margin: 0 }}>
+          Il pezzo è quello che si prende in mano: un cubetto, un limone, una
+          bottiglia, un barattolo. La giacenza è in pezzi per tutti, e non si
+          sceglie: così l&apos;inventario si fa contando quello che c&apos;è
+          sullo scaffale.
+        </p>
+
+        <h4 style={{ margin: '14px 0 2px' }}>A quanto corrisponde un pezzo</h4>
+        <p className="small" style={{ margin: 0 }}>
+          Quanto contiene: una bottiglia 70 cl, un cubetto 8 g, una confezione
+          10 U. Da qui escono il costo al cl e lo scarico di quello che si
+          versa. Si può lasciare vuoto: allora in ricetta si dosa solo a pezzi.
+        </p>
+
+        <h4 style={{ margin: '14px 0 2px' }}>Il collo si dichiara al carico</h4>
+        <p className="small" style={{ margin: 0 }}>
+          Quanti pezzi ci sono nella confezione che si compra — 24 birre, 30
+          cubetti, una cassetta di limoni — si scrive quando la merce arriva,
+          col prezzo del cartone: il conto al pezzo lo fa la scheda del carico.
+        </p>
+
+        <h4 style={{ margin: '14px 0 2px' }}>La merce a peso si stima</h4>
+        <p className="small" style={{ margin: 0 }}>
+          Comprando a chili si carica a chili, e i pezzi si ricavano dal
+          contenuto: un limone non pesa sempre uguale, quindi «47 pz» è una
+          stima. Va benissimo finché quello che conta davvero è il peso.
+        </p>
+
+        <button type="button" className="btn block" style={{ marginTop: 16 }} onClick={onClose}>
+          Chiudi
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// I prezzi si tengono ai centesimi: dividere e rimoltiplicare per il
+// contenuto lasciava code di decimali che a schermo si vedevano.
+const arrotonda = (n) => Math.round((Number(n) || 0) * 10000) / 10000
+
+// ── COSA VUOL DIRE IL CONTENUTO DI UN PEZZO ──────────────────────────
+//
+// La domanda si legge facilmente per un'altra: «quanto ne va in un drink?».
+// Sono due cose diverse — quella la decide la ricetta, drink per drink — e
+// confonderle vuol dire riempire il campo con la dose di un cocktail e
+// scaricare il magazzino con numeri che non tornano.
+function AiutoPezzo({ onClose }) {
+  return (
+    <div className="overlay confirm-overlay" onClick={onClose}>
+      <div
+        className="confirm-box"
+        role="dialog"
+        aria-label="A quanto corrisponde un pezzo"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 style={{ marginTop: 0 }}>A quanto corrisponde un pezzo</h3>
+        <p className="small" style={{ marginTop: 0 }}>
+          È <strong>quanto contiene</strong> un pezzo: un pz da 100 cl, un
+          cubetto da 8 g, una confezione da 10 U. Non è quanto ne va in un
+          drink: quello si decide nella ricetta, drink per drink.
+        </p>
+
+        <h4 style={{ margin: '14px 0 2px' }}>Se lo scrivi</h4>
+        <p className="small" style={{ margin: 0 }}>
+          Nelle ricette puoi scegliere l&apos;unità: a <strong>pezzi</strong>
+          (una lattina intera) o nell&apos;unità del contenuto —{' '}
+          <strong>cl</strong>, g, U. Versando 4 cl da un pz da 100 cl il
+          magazzino scala 0,04 pezzi, e si sa quanto costa al cl.
+        </p>
+
+        <h4 style={{ margin: '14px 0 2px' }}>Se lo lasci vuoto</h4>
+        <p className="small" style={{ margin: 0 }}>
+          Nelle ricette si dosa <strong>solo a pezzi</strong>: è il caso della
+          birra che si serve intera. Il costo resta quello del pezzo, e non
+          c&apos;è nessun costo al cl da calcolare.
+        </p>
+
+        <button type="button" className="btn block" style={{ marginTop: 16 }} onClick={onClose}>
+          Chiudi
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, onSave, onCreateSupplier }) {
   const isEdit = !!initial
-  // Unità scelta dall'utente (L/cl/ml, g/mg, pz). Lo stock è salvato in
-  // base (ml/g/pz); i campi si inseriscono e si mostrano nell'unità scelta.
-  // Default dei LIQUIDI in cl (non ml): al banco le bottiglie si dosano in cl,
-  // quindi contenuto e soglia si inseriscono in cl. Vale anche per gli item
-  // vecchi salvati in ml senza unità di visualizzazione.
-  const defaultUnit = (base) => (base === 'g' ? 'g' : base === 'pz' ? 'pz' : 'cl')
-  const initUnit = initial?.display_unit ?? defaultUnit(initial?.unit)
+  // L'articolo arriva SEMPRE nella forma nuova, anche quando sul database è
+  // ancora scritto a litri o a «U»: a rimetterlo in riga è la lettura
+  // tollerante (REQ-MAG-018). Che sia da migrare o no non si dice QUI: lo
+  // dice il banner in cima al magazzino, una volta sola. Un messaggio per
+  // prodotto, moltiplicato per 388, è rumore che nasconde la cosa da fare.
+  //
+  // DA SISTEMARE A MANO è un'altra cosa, e va detta: di questo prodotto non
+  // si sa abbastanza per portarlo a pezzi, e finché non lo si scrive qui
+  // l'aggiornamento del magazzino non parte. È l'unico che si può ancora
+  // aprire a magazzino bloccato, perché è così che si sblocca.
+  const motivoDaSistemare = isEdit ? motivoNonMigrabile(initial) : null
+  // Contato ancora a volume, a peso o a «U»: oltre al contenuto va convertita
+  // la giacenza, che altrimenti resterebbe scritta come se fossero pezzi.
+  const daConvertire = isEdit && (initial.unit || 'pz') !== 'pz'
+  const baseVecchia = daConvertire ? baseUnit(initial.unit) : 'pz'
+  const [aiuto, setAiuto] = useState(false)
+  const [aiutoPezzo, setAiutoPezzo] = useState(false)
+  // ── IL FORNITORE CHE MANCA SI AGGIUNGE DA QUI ──────────────────────
+  // Accorgersi che il fornitore non c'è mentre si compila la scheda voleva
+  // dire uscire, andare in Fornitori, crearlo e tornare a ricominciare da
+  // capo. Il modello ce l'abbiamo già nel modulo del drink («➕ Nuova
+  // categoria…»): basta il nome, il resto dei dati aziendali si mette dopo,
+  // con calma, dalla sezione Fornitori (REQ-MAG-017).
+  const [nuovoFornitore, setNuovoFornitore] = useState(null) // null = tendina normale
+  const [salvandoFornitore, setSalvandoFornitore] = useState(false)
+  // Il salvataggio bloccato si spiega QUI, sopra i tasti, e resta finché
+  // non si corregge: un toast passa e chi stava guardando la tastiera non
+  // lo vede.
+  const [avviso, setAvviso] = useState(null)
+
+  // Il contenuto com'era salvato, nell'unità in cui si legge (un pezzo è
+  // «70 cl», non 700 ml).
+  const contFamiglia = daConvertire ? initial.unit : initial?.content_unit
+  const contUnita = unitaGenerica(contFamiglia) ? 'U' : contFamiglia === 'g' ? 'g' : 'cl'
+  const packIniziale = Number(initial?.package_size) || 0
   const [form, setForm] = useState({
     name: initial?.name ?? '',
-    unit: initUnit,
     category_id: initial?.category_id ?? '',
     supplier_id: initial?.supplier_id ?? '',
+    // IL COSTO È SEMPRE QUELLO DI UN PEZZO. Sotto resta salvato nel campo
+    // `cost`, che il resto dell'app legge come «costo della confezione» da
+    // sempre: con l'unità bloccata sul pezzo le due cose coincidono.
     cost: initial?.cost ?? '',
     vat: initial?.vat ?? defaultVat,
     status: initial?.status ?? 'assortimento',
-    package_size:
-      initial?.package_size != null && initial?.package_size !== ''
-        ? String(fromBaseQty(initial.package_size, initUnit))
-        : '',
-    // Contenuto di UN pezzo, per gli articoli contati a pezzo: la bottiglia
-    // si conta a bottiglie, ma 33 cl li contiene lo stesso — e senza quel
-    // numero non esiste un costo al cl.
-    content_size:
-      initial?.unit === 'pz' && Number(initial?.package_size) > 0
-        ? String(fromBaseQty(initial.package_size, initial?.content_unit === 'g' ? 'g' : 'cl'))
-        : '',
-    content_unit: initial?.content_unit === 'g' ? 'g' : 'cl',
-    low_threshold: initial?.low_threshold ? String(fromBaseQty(initial.low_threshold, initUnit)) : '',
+    content_size: packIniziale > 0 ? String(fromBaseQty(packIniziale, contUnita)) : '',
+    content_unit: contUnita,
+    // La soglia si è sempre scritta in quello che si compra: adesso quello
+    // che si compra è il pezzo, quindi si legge e si riscrive in pezzi.
+    low_threshold: (() => {
+      const soglia = Number(initial?.low_threshold) || 0
+      if (!(soglia > 0)) return ''
+      // Su un prodotto da sistemare la soglia è ancora nella misura vecchia:
+      // riscriverla tale e quale vorrebbe dire «avvisami sotto le 700
+      // bottiglie», e mezzo magazzino risulterebbe in esaurimento.
+      if (daConvertire) return packIniziale > 0 ? String(soglia / packIniziale) : ''
+      return String(soglia)
+    })(),
     bottles: '',
     open_content: '',
   })
+  // SI SCARICA DAL MAGAZZINO? Lo decide il prodotto, non la sua unità: il
+  // ghiaccio si conta a unità e finisce eccome, il tempo di lavorazione sta
+  // a listino ma non su nessuno scaffale. Se rispondesse sempre «sì», al
+  // primo drink la manodopera andrebbe a zero e il menù direbbe
+  // «Ingrediente esaurito», facendo sparire il drink dalla carta.
+  const [scorta, setScorta] = useState(initial ? eScorta(initial) : true)
   const [saving, setSaving] = useState(false)
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
   const num = (v) => Number(String(v).replace(',', '.')) || 0
-  const isPz = baseUnit(form.unit) === 'pz'
-  // ARTICOLO IN UNITÀ GENERICHE (il «Tempo di Lavorazione»): non ha contenuto,
-  // non ha confezione e non è una scorta. Di suo serve solo il COSTO PER
-  // UNITÀ — è il motivo per cui la voce esiste, mettere il lavoro nel costo
-  // del drink. Chiedere confezione, giacenza iniziale e soglia di avviso
-  // vorrebbe dire far riempire campi che non vogliono dire niente.
-  const isGenerico = unitaGenerica(baseUnit(form.unit))
   const costNum = num(form.cost)
-  // Contenuto per confezione nell'unità scelta (per il costo unitario).
-  const packInUnit = !isPz && !isGenerico ? num(form.package_size) : 0
-  const initialBase = baseUnit(initUnit)
-  const baseChanged = isEdit && baseUnit(form.unit) !== initialBase
-  // Conversione possibile solo con il contenuto per confezione: verso i pezzi
-  // serve quello salvato, dai pezzi quello appena inserito nel form.
-  const convertible = (() => {
-    if (!baseChanged) return true
-    const toPz = baseUnit(form.unit) === 'pz'
-    const fromPz = initialBase === 'pz'
-    if (toPz && !fromPz) return Number(initial?.package_size) > 0
-    if (fromPz && !toPz) return num(form.package_size) > 0
-    return true // liquidi ↔ solidi: nessuna conversione, il numero resta
-  })()
-  // Giacenza convertita quando si cambia il modo di gestire l'articolo:
-  //   liquido/peso → pezzi  : quante confezioni sono (stock / contenuto conf.)
-  //   pezzi → liquido/peso  : contenuto totale (pezzi × contenuto conf.)
-  // Fra liquidi e pesi non c'è conversione sensata: il numero resta com'è
-  // (è una ri-catalogazione, non un travaso).
-  const convertedStock = () => {
-    const cur = Number(initial?.stock) || 0
-    const toPz = baseUnit(form.unit) === 'pz'
-    const fromPz = initialBase === 'pz'
-    if (toPz && !fromPz) {
-      const size = Number(initial?.package_size) || 0
-      return size > 0 ? Math.round((cur / size) * 100) / 100 : cur
+  // Il contenuto di un pezzo, in unità base della sua famiglia.
+  const contenutoPezzo = toBaseQty(num(form.content_size), form.content_unit)
+  const contenutoBase = baseUnit(form.content_unit)
+  // I pezzi si contano davvero solo per quello che si prende in mano: se il
+  // contenuto è un peso, il numero è una stima e va detto (un limone non
+  // pesa sempre uguale).
+  const aPeso = contenutoPezzo > 0 && contenutoBase === 'g'
+  const num0 = (v) => Number(v) || 0
+  // Quanto vale un pezzo nella misura in cui il prodotto è ancora scritto:
+  // solo così la giacenza vecchia si può contare in pezzi. Se il contenuto
+  // che si sta scrivendo è di un'altra famiglia (comprato a chili, scritto
+  // in cl) non c'è conversione possibile, e il salvataggio si ferma.
+  const convertibile = daConvertire && contenutoBase === baseVecchia ? contenutoPezzo : 0
+
+  // Il fornitore appena creato resta SELEZIONATO sul prodotto che si stava
+  // compilando: se toccasse riselezionarlo a mano il giro non si sarebbe
+  // accorciato di niente.
+  async function creaFornitore() {
+    const nome = String(nuovoFornitore || '').trim()
+    if (!nome || salvandoFornitore) return
+    setSalvandoFornitore(true)
+    try {
+      const creato = await onCreateSupplier(nome)
+      if (creato?.id) setForm((f) => ({ ...f, supplier_id: creato.id }))
+      setNuovoFornitore(null)
+    } catch (e) {
+      setAvviso(`Il fornitore non si è salvato: ${e.message}`)
+    } finally {
+      setSalvandoFornitore(false)
     }
-    if (fromPz && !toPz) {
-      const size = toBaseQty(num(form.package_size), form.unit) || 0
-      return size > 0 ? cur * size : cur
-    }
-    return cur
   }
 
   async function submit(e) {
     e.preventDefault()
     if (!form.name.trim()) return
+    setAvviso(null)
     setSaving(true)
     try {
-      // A pezzo il contenuto arriva dal suo campo (33 cl), altrimenti dal
-      // contenuto per confezione nell'unità scelta. In unità generiche non
-      // c'è nessun contenuto: dentro una unità di lavoro non c'è niente.
-      const packBase = isGenerico
-        ? null
-        : isPz
-          ? toBaseQty(num(form.content_size), form.content_unit) || null
-          : toBaseQty(num(form.package_size), form.unit) || null
+      const packBase = contenutoPezzo > 0 ? contenutoPezzo : null
       const base = {
         name: form.name.trim(),
-        unit: baseUnit(form.unit), // base in cui è salvato lo stock
-        display_unit: form.unit, // unità scelta per inserimento/visualizzazione
+        // L'unità non si sceglie più: è il pezzo, sempre. `display_unit`
+        // resta perché il resto dell'app la legge, ma dice la stessa cosa.
+        unit: 'pz',
+        display_unit: 'pz',
+        // Il campo `tipo` della scheda a quattro card non esiste più: si
+        // azzera anche sui prodotti che l'avevano, per non lasciare in giro
+        // un dato che non vuol dire più niente.
+        tipo: null,
         category_id: form.category_id || null,
         supplier_id: form.supplier_id || null,
-        cost: form.cost === '' ? null : costNum,
+        cost: form.cost === '' ? null : arrotonda(costNum),
         vat: Number(form.vat) || 0,
         status: form.status || 'assortimento',
         package_size: packBase,
-        // Serve solo a pezzo: dice se quel contenuto è un volume o un peso.
-        content_unit: isPz && packBase ? baseUnit(form.content_unit) : null,
-        low_threshold: toBaseQty(num(form.low_threshold), form.unit),
-      }
-      // ARTICOLO IN UNITÀ GENERICHE: non è una scorta, quindi non c'è nessuna
-      // giacenza da salvare né bottiglie da contare — e nessuna conversione da
-      // fare passando da un'altra unità, perché non c'è niente da convertire.
-      if (isGenerico) {
-        await onSave({ ...base, stock: 0, bottles_total: 0 })
-        return
-      }
-      // Cambio del modo di gestire l'articolo SENZA il contenuto per confezione:
-      // la conversione non è calcolabile e si salverebbe una giacenza falsa
-      // (24 pezzi → 24 ml). Meglio fermarsi e chiederlo.
-      if (baseChanged && !convertible) {
-        setSaving(false)
-        toastError('Indica il contenuto per confezione: senza, la giacenza non si può convertire.')
-        return
+        // Dice se quel contenuto è un volume, un peso o delle unità.
+        content_unit: packBase ? contenutoBase : null,
+        // La resa serviva a legare due unità d'acquisto diverse: con il pezzo
+        // fisso quel legame lo dice già il contenuto, e tenerla vorrebbe dire
+        // due risposte alla stessa domanda (resaUso preferisce la resa).
+        resa: null,
+        resa_unit: null,
+        scorta,
+        // La soglia si scrive in pezzi, come la giacenza.
+        low_threshold: scorta ? num(form.low_threshold) : 0,
       }
       if (isEdit) {
-        // In modifica la giacenza NON si tocca... a meno che si cambi il modo di
-        // gestire l'articolo (es. da centilitri a pezzi): allora si converte,
-        // altrimenti il numero salvato vorrebbe dire un'altra cosa.
-        if (baseChanged) {
-          const stock = convertedStock()
-          await onSave({
-            ...base,
-            stock,
-            bottles_total: baseUnit(form.unit) === 'pz' ? Math.round(stock) : Math.floor(stock / (packBase || 1)),
-          })
-        } else {
-          await onSave(base)
+        // In modifica la giacenza non si tocca: quella la muovono il carico e
+        // la conta. Due eccezioni, tutte e due sulla stessa cosa — il
+        // passaggio ai pezzi:
+        if (daConvertire) {
+          // Prodotto ancora nella misura vecchia: la giacenza va convertita
+          // adesso, se no «5000» resterebbe scritto come se fossero pezzi.
+          if (!(convertibile > 0)) {
+            setAvviso(
+              `Scrivi a quanto corrisponde un pezzo in ${UNIT_LABEL[baseVecchia] || baseVecchia}: senza, la giacenza (${fmtItem(initial.stock, initial)}) non si può contare in pezzi.`
+            )
+            return
+          }
+          const stock = Math.round((num0(initial.stock) / convertibile) * 100) / 100
+          await onSave({ ...base, stock, bottles_total: Math.round(stock) })
+          return
         }
+        // La giacenza letta è già quella giusta anche per un prodotto
+        // ancora da migrare: si salva com'è.
+        await onSave({ ...base, stock: Number(initial?.stock) || 0 })
       } else {
-        const n = Number(form.bottles) || 0
-        let stock
-        let bottles_total = 0
-        if (isPz) {
-          stock = n
-        } else {
-          const size = packBase || 0
-          const open = toBaseQty(num(form.open_content), form.unit)
-          stock = n * size + open
-          bottles_total = n + (open > 0 ? 1 : 0)
-        }
-        await onSave({ ...base, stock, bottles_total })
+        // In creazione la giacenza è quello che si scrive: i pezzi interi più
+        // la frazione della confezione già aperta, che non è né zero né uno.
+        const pieni = Math.max(0, num(form.bottles))
+        const apertaBase = toBaseQty(num(form.open_content), form.content_unit)
+        const stock =
+          pieni + (apertaBase > 0 && contenutoPezzo > 0 ? apertaBase / contenutoPezzo : 0)
+        await onSave({ ...base, stock, bottles_total: 0 })
       }
     } finally {
       setSaving(false)
     }
   }
 
+  const etichettaContenuto =
+    UNIT_LABEL[String(form.content_unit).toLowerCase()] || form.content_unit
+
   return (
-    <form className="card" onSubmit={submit}>
-      <h3 style={{ marginTop: 0 }}>{isEdit ? 'Modifica prodotto' : 'Nuovo prodotto'}</h3>
+    <form className="card inv-scheda" onSubmit={submit}>
+      <div className="row between" style={{ alignItems: 'center', gap: 8 }}>
+        <h3 style={{ margin: 0 }}>{isEdit ? 'Modifica prodotto' : 'Nuovo prodotto'}</h3>
+        {/* IL PUNTO INTERROGATIVO. Questa scheda decide come si scala il
+            magazzino e quanto costa un drink: chi la compila la prima volta
+            non deve indovinare cosa vogliono dire le domande. La spiegazione
+            sta dietro un tasto, non in pagina: a chi la sa già non serve. */}
+        <button
+          type="button"
+          className="inv-aiuto"
+          aria-label="Come si compila questa scheda"
+          title="Come si compila questa scheda"
+          onClick={() => setAiuto(true)}
+        >
+          ?
+        </button>
+      </div>
+      {aiuto && <AiutoProdotto onClose={() => setAiuto(false)} />}
 
       <label htmlFor="iname">Nome *</label>
       <input id="iname" value={form.name} onChange={set('name')} placeholder="Es. Rum Zacapa" required />
@@ -1482,30 +2100,49 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
       </select>
 
       <label htmlFor="isup">Fornitore</label>
-      <select id="isup" value={form.supplier_id || ''} onChange={set('supplier_id')}>
-        <option value="">— Nessuno —</option>
-        {(suppliers || []).map((s) => (
-          <option key={s.id} value={s.id}>{s.name}</option>
-        ))}
-      </select>
-
-      <div className="grid-2">
-        <div>
-          {/* In unità generiche il costo è PER UNITÀ: è tutto quello che
-              serve sapere di una voce come il tempo di lavorazione. */}
-          <label htmlFor="icost">Costo €/{isGenerico ? 'U' : 'pz'} (netto)</label>
-          <input id="icost" type="number" step="any" min="0" value={form.cost} onChange={set('cost')} placeholder="Es. 12,9" />
+      {nuovoFornitore != null ? (
+        <div className="row" style={{ gap: 8 }}>
+          <input
+            aria-label="Nome nuovo fornitore"
+            value={nuovoFornitore}
+            onChange={(e) => setNuovoFornitore(e.target.value)}
+            placeholder="Nome nuovo fornitore"
+            autoFocus
+          />
+          <button
+            type="button"
+            className="btn small"
+            disabled={salvandoFornitore || !nuovoFornitore.trim()}
+            onClick={creaFornitore}
+          >
+            OK
+          </button>
+          <button
+            type="button"
+            className="btn ghost small"
+            onClick={() => setNuovoFornitore(null)}
+          >
+            ✕
+          </button>
         </div>
-        <div>
-          <label htmlFor="ivat">IVA acquisto %</label>
-          <input id="ivat" type="number" step="any" min="0" value={form.vat} onChange={set('vat')} />
-        </div>
-      </div>
-      {costNum > 0 && (
-        <div className="muted small">
-          +IVA {formatPrice(costWithVat(costNum, form.vat))}
-          {packInUnit > 0 && ` · ${formatPrice(costWithVat(costNum, form.vat) / packInUnit)}/${form.unit}`}
-        </div>
+      ) : (
+        <select
+          id="isup"
+          value={form.supplier_id || ''}
+          onChange={(e) => {
+            if (e.target.value === '__new__') {
+              setNuovoFornitore('')
+              return
+            }
+            setForm((f) => ({ ...f, supplier_id: e.target.value }))
+          }}
+        >
+          <option value="">— Nessuno —</option>
+          {(suppliers || []).map((s) => (
+            <option key={s.id} value={s.id}>{s.name}</option>
+          ))}
+          {onCreateSupplier && <option value="__new__">➕ Nuovo fornitore…</option>}
+        </select>
       )}
 
       <label htmlFor="istatus">Stato</label>
@@ -1515,126 +2152,166 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
         ))}
       </select>
 
-      <label htmlFor="iunit">Unità di misura</label>
-      <select id="iunit" value={form.unit} onChange={set('unit')}>
-        {[
-          ['Liquidi', [['l', 'Litri (L)'], ['cl', 'Centilitri (cl)'], ['ml', 'Millilitri (ml)']]],
-          ['Solidi', [['g', 'Grammi (g)'], ['mg', 'Milligrammi (mg)']]],
-          ['Pezzi', [['pz', 'Pezzi / unità (bottiglie, lattine, confezioni…)']]],
-          // GENERICO: quello che non si versa, non si pesa e non è una
-          // bottiglia — il tempo di lavorazione messo a listino. Senza,
-          // l'unica scelta possibile era il grammo, e nella ricetta si
-          // leggeva «Tempo di Lavorazione 1 g».
-          ['Generico', [['U', 'Unità generiche (U) — es. tempo di lavorazione']]],
-        ].map(([grp, units]) => (
-          <optgroup key={grp} label={grp}>
-            {units.map(([u, label]) => (
-              // Ogni articolo può essere gestito come si vuole (litri, peso o
-              // pezzi): cambiando base in modifica la giacenza viene CONVERTITA
-              // (vedi l'avviso qui sotto), non reinterpretata a caso.
-              <option key={u} value={u}>
-                {label}
-              </option>
-            ))}
-          </optgroup>
-        ))}
-      </select>
+      <div className="grid-2">
+        <div>
+          {/* Il prezzo è quello di un pezzo: l'unità non si sceglie più, e
+              quello che arriva a colli si scompone al carico. */}
+          <label htmlFor="icost">Costo €/pz (netto)</label>
+          <input id="icost" type="number" step="any" min="0" value={form.cost} onChange={set('cost')} placeholder="Es. 12,9" />
+        </div>
+        <div>
+          <label htmlFor="ivat">IVA acquisto %</label>
+          <input id="ivat" type="number" step="any" min="0" value={form.vat} onChange={set('vat')} />
+        </div>
+      </div>
+      {costNum > 0 && (
+        <div className="muted small">+IVA {formatPrice(costWithVat(costNum, form.vat))}/pz</div>
+      )}
 
-      {/* Cambio del modo di gestire l'articolo: si dice CHIARAMENTE come
-          finisce la giacenza, prima di salvare. Passando alle unità generiche
-          la giacenza sparisce del tutto: quella voce non è una scorta. */}
-      {baseChanged && (
+      {/* ── LA SOLA DOMANDA ───────────────────────────────────────
+          A quanto corrisponde un pezzo: una capacità, un peso o delle
+          unità non definite. È facoltativa — vuota vuol dire che in
+          ricetta si dosa solo a pezzi. */}
+      <div className="row" style={{ gap: 6, alignItems: 'center', marginTop: 8 }}>
+        <label htmlFor="icontent" style={{ margin: 0 }}>
+          A quanto corrisponde un pezzo? (facoltativo)
+        </label>
+        <button
+          type="button"
+          className="inv-aiuto piccolo"
+          aria-label="Come funziona il contenuto di un pezzo"
+          title="Come funziona"
+          onClick={() => setAiutoPezzo(true)}
+        >
+          ?
+        </button>
+      </div>
+      {aiutoPezzo && <AiutoPezzo onClose={() => setAiutoPezzo(false)} />}
+      <div className="row" style={{ gap: 6 }}>
+        <span className="muted small" style={{ whiteSpace: 'nowrap' }}>1 pz =</span>
+        <input
+          id="icontent"
+          type="number"
+          step="any"
+          min="0"
+          className="grow"
+          value={form.content_size}
+          onChange={set('content_size')}
+          placeholder="Es. 70 per un pz da 70 cl"
+        />
+        <select
+          value={form.content_unit}
+          onChange={set('content_unit')}
+          aria-label="Unità del contenuto"
+          style={{ width: 90 }}
+        >
+          {CONTENUTO_UNITA.map(([u, label]) => (
+            <option key={u} value={u}>{label}</option>
+          ))}
+        </select>
+      </div>
+      <p className="muted small" style={{ margin: '2px 0 8px' }}>
+        {contenutoPezzo > 0
+          ? 'Da qui escono il costo al cl e lo scarico: 4 cl da un pz da 70 scalano la loro frazione.'
+          : 'Vuoto: in ricetta si dosa solo a pezzi, e non c’è nessun costo al cl da calcolare.'}
+      </p>
+      {/* L'AVVERTENZA ONESTA: chi legge «47 pz» di limoni deve sapere che
+          nessuno li ha contati uno per uno. */}
+      {aPeso && (
+        <p className="muted small" style={{ margin: '-4px 0 8px' }}>
+          ⚖️ Comprato a peso, il conteggio in pezzi è una <strong>stima</strong>:
+          un pezzo non pesa sempre uguale. Quello che conta davvero resta il peso.
+        </p>
+      )}
+
+      {/* IL TRAVASO NON DEVE ESSERE SILENZIOSO SU UNA GIACENZA. Questo
+          articolo sul database è ancora scritto col modello vecchio: si
+          legge già in pezzi, e qui c'è scritto da dove viene quel numero,
+          prima di salvarlo per sempre. */}
+      {motivoDaSistemare && (
         <div className="banner" style={{ marginTop: 8 }}>
-          ⚠️ Cambi la gestione da <strong>{GESTIONE_LABEL[initialBase]}</strong>{' '}
-          a <strong>{GESTIONE_LABEL[baseUnit(form.unit)]}</strong>:{' '}
-          {isGenerico ? (
+          ⚠️ Questo prodotto <strong>blocca l&apos;aggiornamento</strong> del
+          magazzino: {motivoDaSistemare}.
+          {daConvertire && (
             <>
-              la giacenza attuale ({fmtItem(initial?.stock, initial)}) non serve più e
-              viene <strong>azzerata</strong> — le unità generiche non sono una scorta.
+              {' '}La giacenza ({fmtItem(initial.stock, initial)})
+              {convertibile > 0 ? (
+                <>
+                  {' '}diventa{' '}
+                  <strong>{formatPezzi(num0(initial.stock) / convertibile)} pz</strong>.
+                </>
+              ) : (
+                <> si conterà da lì.</>
+              )}
             </>
-          ) : (
-            <>
-              la giacenza attuale ({fmtItem(initial?.stock, initial)}) diventerà{' '}
-              <strong>{formatQty(convertedStock(), baseUnit(form.unit))}</strong>.
-            </>
-          )}
-          {!convertible && !isGenerico && (
-            <div style={{ marginTop: 6 }}>
-              ⛔ Indica prima il <strong>contenuto per confezione</strong>: senza,
-              la giacenza non si può convertire.
-            </div>
           )}
         </div>
       )}
 
-      {isGenerico ? (
-        <p className="muted small" style={{ margin: '2px 0 8px' }}>
-          Si conta a unità, senza contenuto e senza conversioni: serve per quello che
-          non si versa e non si pesa — il tempo di lavorazione, per dire. Non è una
-          scorta: non si scarica quando il drink si fa e non è mai esaurito. Nella
-          ricetta di un drink entra col suo <strong>costo per unità</strong>, e in
-          carta al cliente non compare.
-        </p>
-      ) : !isPz ? (
+      {/* SI SCARICA DAL MAGAZZINO? Lo decide il prodotto: il ghiaccio finisce,
+          il tempo di lavorazione no. */}
+      <label className="row between" style={{ alignItems: 'center', gap: 8, marginTop: 8 }}>
+        <span>
+          È una scorta: si scarica quando si usa
+          <span className="muted small"> — spegnilo per il lavoro a servizio</span>
+        </span>
+        <input
+          type="checkbox"
+          className="toggle"
+          checked={scorta}
+          onChange={(e) => setScorta(e.target.checked)}
+        />
+      </label>
+
+      {!isEdit && scorta && (
         <>
-          <label htmlFor="ipkg">Contenuto per confezione ({form.unit})</label>
-          <input id="ipkg" type="number" step="any" min="0" value={form.package_size} onChange={set('package_size')} placeholder={`Es. ${form.unit === 'l' ? '1' : form.unit === 'cl' ? '100' : '1000'} per una bottiglia da 1 L`} />
+          <label htmlFor="ibottles">Quantità iniziale (pz)</label>
+          <input id="ibottles" type="number" step="any" min="0" value={form.bottles} onChange={set('bottles')} />
+          {contenutoPezzo > 0 && (
+            <>
+              {/* Il pezzo già aperto al momento del censimento: mezzo gin non
+                  è né zero né uno, è la sua frazione di pezzo. */}
+              <label htmlFor="iopen">
+                Confezione aperta — contenuto ({etichettaContenuto}) — opzionale
+              </label>
+              <input
+                id="iopen"
+                type="number"
+                step="any"
+                min="0"
+                value={form.open_content}
+                onChange={set('open_content')}
+                placeholder="Es. 40 se una è aperta a metà"
+              />
+            </>
+          )}
         </>
-      ) : (
+      )}
+
+      {/* Niente soglia per quello che non è una scorta: non finisce, quindi
+          non c'è niente da avvisare e niente da riordinare al fornitore. */}
+      {scorta && (
         <>
-          <label htmlFor="icontent">Contenuto di un pezzo</label>
-          <div className="row" style={{ gap: 6 }}>
-            <input
-              id="icontent"
-              type="number"
-              step="any"
-              min="0"
-              className="grow"
-              value={form.content_size}
-              onChange={set('content_size')}
-              placeholder="Es. 33 per una bottiglia da 33 cl"
-            />
-            <select
-              value={form.content_unit}
-              onChange={set('content_unit')}
-              aria-label="Unità del contenuto"
-              style={{ width: 90 }}
-            >
-              <option value="cl">cl</option>
-              <option value="ml">ml</option>
-              <option value="g">g</option>
-            </select>
-          </div>
+          <label htmlFor="ithr">Soglia di avviso (pz)</label>
+          <input
+            id="ithr"
+            type="number"
+            step="any"
+            min="0"
+            value={form.low_threshold}
+            onChange={set('low_threshold')}
+            placeholder="Es. 2 se vuoi l’avviso quando ne restano due"
+          />
           <p className="muted small" style={{ margin: '2px 0 8px' }}>
-            La giacenza si conta a pezzi. Il contenuto serve solo a sapere quanto costa
-            al cl (o al grammo) quello che c&apos;è dentro.
+            Sotto questo livello l’articolo compare fra quelli in esaurimento.
           </p>
         </>
       )}
 
-      {!isEdit && !isGenerico && (
-        isPz ? (
-          <>
-            <label htmlFor="ibottles">Quantità iniziale (pezzi)</label>
-            <input id="ibottles" type="number" step="1" min="0" value={form.bottles} onChange={set('bottles')} />
-          </>
-        ) : (
-          <>
-            <label htmlFor="ibottles">Numero di confezioni piene</label>
-            <input id="ibottles" type="number" step="1" min="0" value={form.bottles} onChange={set('bottles')} placeholder="Es. 3" />
-            <label htmlFor="iopen">Bottiglia aperta — contenuto ({form.unit}) — opzionale</label>
-            <input id="iopen" type="number" step="any" min="0" value={form.open_content} onChange={set('open_content')} placeholder={`Es. ${form.unit === 'l' ? '0,35' : form.unit === 'ml' ? '350' : '35'} se ne hai una già aperta`} />
-          </>
-        )
-      )}
-
-      {/* Niente soglia in unità generiche: non finisce, quindi non c'è niente
-          da avvisare e niente da riordinare al fornitore. */}
-      {!isGenerico && (
-        <>
-          <label htmlFor="ithr">Soglia di avviso ({form.unit})</label>
-          <input id="ithr" type="number" step="any" min="0" value={form.low_threshold} onChange={set('low_threshold')} placeholder={`Es. ${form.unit === 'l' ? '0,2' : form.unit === 'cl' ? '20' : form.unit === 'mg' ? '2000' : form.unit === 'g' ? '100' : form.unit === 'pz' ? '2' : '200'}`} />
-        </>
+      {avviso && (
+        <div className="banner" role="alert" style={{ marginTop: 8 }}>
+          {avviso}
+        </div>
       )}
 
       <div className="grid-2" style={{ marginTop: 16 }}>
@@ -1642,6 +2319,34 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
         <button type="submit" className="btn" disabled={saving}>{saving ? 'Salvataggio…' : 'Salva'}</button>
       </div>
     </form>
+  )
+}
+
+// LA SCELTA DELL'UNITÀ accanto a un campo. Le opzioni sono quelle
+// compatibili con come si conta l'articolo (litri, cl, ml per un liquido;
+// kg e grammi per un peso) più i PEZZI dove ha senso: la soglia di avviso
+// di un liquido si pensa in bottiglie — «avvisami quando ne resta una» —
+// e nessuno la vuole scrivere in 700 ml.
+const UNITA_COMPATIBILI = {
+  ml: ['l', 'cl', 'ml'],
+  g: ['kg', 'g'],
+  pz: ['pz'],
+}
+
+function ScegliUnita({ valore, unita, onChange, etichetta, conPezzi = false }) {
+  const base = baseUnit(unita)
+  const opzioni = [...(UNITA_COMPATIBILI[base] || [unita])]
+  // Per un articolo contato a pezzi il «pezzo» c'è già; per un liquido lo si
+  // aggiunge solo dove la conversione ha senso.
+  if (conPezzi && base !== 'pz') opzioni.push('pz')
+  return (
+    <select value={valore} onChange={onChange} aria-label={etichetta} style={{ width: 90 }}>
+      {opzioni.map((u) => (
+        <option key={u} value={u}>
+          {u}
+        </option>
+      ))}
+    </select>
   )
 }
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   fetchOrdersBetween,
   fetchDrinks,
@@ -24,6 +24,7 @@ import {
   DEFAULT_HOUR_RANGE,
 } from '../lib/stats.js'
 import MacroMonthlyTab from './MacroMonthlyTab.jsx'
+import { Sottosezioni } from '../lib/sottosezioni.js'
 
 const fmtMin = (m) => (m == null ? '—' : `${Math.round(m * 10) / 10} min`)
 // Prezzo compatto per le etichette dei grafici (niente centesimi).
@@ -54,20 +55,21 @@ const etichettaSerata = (s) => {
 
 // Le Statistiche hanno due viste: il giornaliero (finestra a giornate) e il
 // mensile per macro-categoria (Dashboard A).
+// Le due viste sono SOTTOSEZIONI della pagina, come in Magazzino e
+// Impostazioni: stanno nel menu (che su queste pagine resta aperto a
+// lato) invece che in una riga di chip sopra il contenuto. Erano l'unica
+// pagina con le sue sezioni in pagina, e una riga costa altezza a una
+// schermata che è già fatta di tabelle.
+const SEZIONI_STATS = [
+  { id: 'giornaliero', icona: '📊', label: 'Giornaliero' },
+  { id: 'mensile', icona: '🗂', label: 'Mensile per macro' },
+]
+
 export default function StatsTab() {
   const [sub, setSub] = useState('giornaliero') // 'giornaliero' | 'mensile'
   return (
     <div>
-      <div className="chips-row" style={{ marginBottom: 10 }}>
-        {[
-          ['giornaliero', '📊 Giornaliero'],
-          ['mensile', '🗂 Mensile per macro'],
-        ].map(([k, label]) => (
-          <button key={k} className={`chip ${sub === k ? 'active' : ''}`} onClick={() => setSub(k)}>
-            {label}
-          </button>
-        ))}
-      </div>
+      <Sottosezioni voci={SEZIONI_STATS} attiva={sub} scegli={setSub} />
       {sub === 'giornaliero' ? <DailyStats /> : <MacroMonthlyTab />}
     </div>
   )
@@ -97,10 +99,23 @@ function DailyStats() {
   // mezzanotte.
   const [sessions, setSessions] = useState([])
   const [sessionId, setSessionId] = useState(null)
+  // Si apre sull'ULTIMA CHIUSURA, non su sette giorni: la domanda del
+  // mattino dopo è «com'è andata ieri sera». Solo la prima volta — se poi
+  // si sceglie un altro periodo, quella scelta resta.
+  const primaScelta = useRef(true)
   useEffect(() => {
     let vivo = true
     fetchCashSessions({ limit: 60 })
-      .then((list) => vivo && setSessions(list.filter((x) => x.opened_at)))
+      .then((list) => {
+        if (!vivo) return
+        const utili = list.filter((x) => x.opened_at)
+        setSessions(utili)
+        const ultimaChiusa = utili.find((x) => x.status !== 'open')
+        if (primaScelta.current && ultimaChiusa) {
+          primaScelta.current = false
+          setSessionId(ultimaChiusa.id)
+        }
+      })
       .catch(() => {})
     return () => {
       vivo = false
@@ -220,6 +235,21 @@ function DailyStats() {
   return (
     <div>
       <div className="chips-row" style={{ marginBottom: 6 }}>
+        {/* LA SERATA PER PRIMA, ED È QUELLA DI PARTENZA. La domanda del
+            mattino dopo è «com'è andata ieri sera», non «com'è andata la
+            settimana»: era in fondo alla riga e si apriva sempre su sette
+            giorni, che è un'altra domanda. */}
+        {sessions.length > 0 && (
+          <button
+            className={`chip${serata ? ' active' : ''}`}
+            onClick={() => {
+              setCustom(false)
+              setSessionId(serata ? null : (sessions.find((x) => x.status !== 'open') || sessions[0]).id)
+            }}
+          >
+            🧾 Ultima chiusura
+          </button>
+        )}
         {PERIOD_PRESETS.map((v) => (
           <button
             key={v}
@@ -242,20 +272,6 @@ function DailyStats() {
         >
           Personalizzato
         </button>
-        {/* SERATA: le stesse statistiche, ma sulla finestra di una chiusura
-            di cassa. Di default l'ultima chiusa; dall'elenco si sceglie
-            un'altra serata. */}
-        {sessions.length > 0 && (
-          <button
-            className={`chip${serata ? ' active' : ''}`}
-            onClick={() => {
-              setCustom(false)
-              setSessionId(serata ? null : (sessions.find((x) => x.status !== 'open') || sessions[0]).id)
-            }}
-          >
-            🧾 Ultima chiusura
-          </button>
-        )}
         {serata && (
           <select
             className="setting-amount"

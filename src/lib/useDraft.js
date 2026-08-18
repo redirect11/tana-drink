@@ -84,5 +84,15 @@ export function useDraft(key) {
 
   const clearDraft = useCallback(() => setDraft([]), [setDraft])
 
-  return [draft, setDraft, clearDraft]
+  // DIMENTICARE LA COPIA SALVATA, SENZA TOGLIERE LE RIGHE DA SCHERMO.
+  // Sono due cose diverse: quello che si vede e quello che si ritrova
+  // riaprendo. Mentre l'ordine sta nascendo le righe devono restare lì —
+  // toglierle fa lampeggiare la schermata come se si fosse resettata — ma la
+  // copia salvata va via subito, altrimenti il conto DOPO si apre con dentro
+  // la roba di questo.
+  const dimenticaSalvata = useCallback(() => {
+    saveDraft(keyRef.current, [])
+  }, [])
+
+  return [draft, setDraft, clearDraft, dimenticaSalvata]
 }

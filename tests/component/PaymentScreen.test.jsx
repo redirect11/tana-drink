@@ -6,7 +6,7 @@
 // "Riscuotere" al CENTRO, metodi di pagamento e Sconto a DESTRA.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, within, waitFor } from '@testing-library/react'
+import { render, screen, within, waitFor, cleanup } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom/vitest'
 
@@ -245,6 +245,53 @@ describe('metodi di pagamento', () => {
       { drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 },
     ] }] }))
     expect(screen.getByText(/Comande non ancora servite/)).toBeInTheDocument()
+  })
+
+  // IL CONTO SI RISCUOTE SEMPRE, SI CHIUDE SOLO SE SERVITO. Ma al banco si
+  // consegna e si incassa spesso nello stesso gesto: il locale può
+  // accendere il tasto che fa le due cose insieme.
+  const conComandaDaServire = () =>
+    baseOrder({
+      comande: [
+        {
+          id: 'c1',
+          seq: 1,
+          status: 'in_preparazione',
+          items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 }],
+        },
+      ],
+    })
+
+  it('«Riscuoti e servi» c’è solo se il locale lo ha chiesto', () => {
+    mount(conComandaDaServire())
+    expect(screen.queryByRole('button', { name: /Riscuoti e servi/ })).toBeNull()
+    cleanup()
+    mount(conComandaDaServire(), { ...noReader, riscuoti_e_servi: true })
+    expect(screen.getByRole('button', { name: /Riscuoti e servi/ })).toBeInTheDocument()
+  })
+
+  it('«Riscuoti e servi» incassa E serve; «Riscuotere» da solo no', async () => {
+    const user = userEvent.setup()
+    mount(conComandaDaServire(), { ...noReader, riscuoti_e_servi: true })
+    await user.click(screen.getByRole('button', { name: /Riscuoti e servi/ }))
+    expect(registerPayment).toHaveBeenCalledWith(
+      'ord1',
+      expect.objectContaining({ autoServe: true })
+    )
+    cleanup()
+    vi.clearAllMocks()
+    mount(conComandaDaServire(), { ...noReader, riscuoti_e_servi: true })
+    await user.click(screen.getByRole('button', { name: /Riscuotere/ }))
+    expect(registerPayment).toHaveBeenCalledWith(
+      'ord1',
+      expect.objectContaining({ autoServe: false })
+    )
+  })
+
+  it('senza gli stati del servizio il tasto in più non serve', () => {
+    // Lì incassare serve già tutto: due tasti direbbero la stessa cosa.
+    mount(conComandaDaServire(), { ...noReader, workflow_enabled: false, riscuoti_e_servi: true })
+    expect(screen.queryByRole('button', { name: /Riscuoti e servi/ })).toBeNull()
   })
 
   it('lettore NON configurato: SumUp spento, senza sottotitolo sul tasto', () => {
@@ -530,5 +577,90 @@ describe('due prodotti liberi uguali, come nel conto #45', () => {
     expect(payAmount()).toHaveTextContent('10,00')
     await user.click(screen.getAllByRole('button', { name: /Togli Extra dal pagamento/ })[0])
     expect(payAmount()).toHaveTextContent('5,00')
+  })
+})
+
+// «Separa uguali» mostra le unità come le altre righe: nome, prezzo e il
+// contatore −/+. Prima erano caselline da spuntare, e nella stessa colonna
+// convivevano due modi diversi di dire la stessa cosa.
+describe('vista separata: righe come tutte le altre', () => {
+  it('separando due Mojito si vedono due righe col contatore, non caselle', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder()) // Mojito 2× + Gin Tonic
+    await user.click(screen.getByRole('button', { name: /Separa uguali/ }))
+    // Due unità di Mojito, ognuna col suo −/+ e il suo 1/1.
+    expect(screen.getAllByRole('button', { name: /Togli Mojito dal pagamento/ })).toHaveLength(2)
+    expect(screen.getAllByText('1/1').length).toBeGreaterThanOrEqual(3)
+    expect(screen.queryByText(/☑/)).toBeNull()
+  })
+
+  it('togliendo una sola unità si incassa solo l’altra', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.click(screen.getByRole('button', { name: /Separa uguali/ }))
+    // La seconda unità di Mojito esce dal pagamento: 22 − 7 = 15.
+    await user.click(screen.getAllByRole('button', { name: /Togli Mojito dal pagamento/ })[1])
+    expect(payAmount()).toHaveTextContent('15,00')
+  })
+})
+
+// DUE MODI DI INCASSARE, E VANNO DISTINTI. Scegliere le righe compone il
+// totale e copre esattamente quelle; battere un importo a mano è un
+// ACCONTO, che resta sul conto e non copre niente in particolare. Il
+// meccanismo c'era, ma le righe col −/+ sembravano un riepilogo: chi non lo
+// sapeva batteva l'importo a mano e poi non capiva cosa fosse stato pagato.
+describe('righe scelte o importo a mano', () => {
+  it('scegliendo le righe il totale si compone, e si vede da dove viene', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    // Si toglie una unità di Mojito dalla selezione (parte tutto scelto):
+    // il totale cala di 7 e l'etichetta dice che sono righe.
+    await user.click(screen.getByRole('button', { name: /Togli Mojito dal pagamento/ }))
+    expect(await screen.findByText(/RIGHE SCELTE/)).toBeInTheDocument()
+    expect(payAmount()).toHaveTextContent('15,00')
+  })
+
+  it('un importo a mano si chiama col suo nome, e dice che resta sul conto', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.click(screen.getByRole('button', { name: '1' }))
+    await user.click(screen.getByRole('button', { name: '0' }))
+    await user.click(screen.getByRole('button', { name: '0' }))
+    await user.click(screen.getByRole('button', { name: '0' }))
+    expect(screen.getByText('IMPORTO A MANO')).toBeInTheDocument()
+    expect(screen.getByText(/Acconto: resta sul conto/)).toBeInTheDocument()
+  })
+})
+
+// SEPARANDO LE UGUALI SI TOGLIE UNA UNITÀ ALLA VOLTA. Il «−» scriveva la
+// nuova quantità come «tutte quelle prima di questa»: premuto sulla PRIMA
+// di tre le spegneva tutte e tre insieme, e chi stava dividendo il conto si
+// ritrovava da capo.
+describe('separa uguali: ognuna ha la sua quantità', () => {
+  it('si spegne QUELLA che si tocca, non le altre', async () => {
+    const user = userEvent.setup()
+    // Due Mojito sulla stessa riga: separandoli diventano due unità.
+    mount(baseOrder())
+    await user.click(screen.getByRole('button', { name: /Separa uguali/ }))
+    const meno = screen.getAllByRole('button', { name: /Togli Mojito dal pagamento/ })
+    expect(meno).toHaveLength(2)
+    await user.click(meno[0])
+    // Una sola unità è uscita: il totale cala di 7, non di 14.
+    expect(payAmount()).toHaveTextContent('15,00')
+    // E la spenta è la PRIMA: il suo «−» ora è disabilitato, quello della
+    // seconda no. Con un contatore che scende sarebbe stato il contrario.
+    const dopo = screen.getAllByRole('button', { name: /Togli Mojito dal pagamento/ })
+    expect(dopo[0]).toBeDisabled()
+    expect(dopo[1]).not.toBeDisabled()
+  })
+
+  it('e si rimette dentro una alla volta', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.click(screen.getByRole('button', { name: /Separa uguali/ }))
+    await user.click(screen.getAllByRole('button', { name: /Togli Mojito dal pagamento/ })[0])
+    // Si rimette dentro proprio quella: il «+» della prima riga.
+    await user.click(screen.getAllByRole('button', { name: /Paga Mojito/ })[0])
+    expect(payAmount()).toHaveTextContent('22,00')
   })
 })

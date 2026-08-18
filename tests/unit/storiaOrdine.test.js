@@ -6,7 +6,12 @@
 // misteri, a fine serata, diventano una cassa che non torna.
 
 import { describe, it, expect } from 'vitest'
-import { storiaOrdine, ultimaRiapertura, ripristinabile } from '../../src/lib/storiaOrdine.js'
+import {
+  storiaOrdine,
+  ultimaRiapertura,
+  ripristinabile,
+  attore,
+} from '../../src/lib/storiaOrdine.js'
 
 const conto = (over = {}) => ({
   id: 'o1',
@@ -143,5 +148,115 @@ describe('la riapertura racconta anche i soldi', () => {
       riaperture: [{ at: '2026-08-15T21:30:00.000Z', motivo: 'errore', incassi_tolti: 0 }],
     })
     expect(eventi.find((e) => e.tipo === 'riaperto').dettaglio).toBe('errore')
+  })
+})
+
+// LA STORIA NON PERDE PEZZI. Due cose la bucavano:
+// — l'apertura veniva dall'orologio del SERVER (`created_at`), che sul conto
+//   appena battuto non c'è ancora: la riga «Conto aperto» mancava proprio sul
+//   conto che si sta guardando;
+// — i tempi del conto tengono solo l'ULTIMA chiusura, quindi chiudendo e
+//   riaprendo due volte la prima spariva, e restavano riaperture che non
+//   riaprivano niente.
+describe('la storia del conto non perde pezzi', () => {
+  it('«Conto aperto» c’è anche prima che il server risponda', () => {
+    const eventi = storiaOrdine({
+      created_at: null, // il server non ha ancora risposto
+      status_times: { aperto: '2026-08-17T20:00:00.000Z' },
+      placed_by: { name: 'Peppe' },
+    })
+    expect(eventi[0]).toMatchObject({ tipo: 'aperto', chi: 'Peppe' })
+  })
+
+  it('anche le chiusure passate restano, non solo l’ultima', () => {
+    const eventi = storiaOrdine({
+      created_at: '2026-08-17T20:00:00.000Z',
+      status_times: { pagato: '2026-08-17T22:30:00.000Z' },
+      tempi_conto: { pagato: '2026-08-17T22:30:00.000Z' },
+      riaperture: [
+        {
+          at: '2026-08-17T21:10:00.000Z',
+          chi: 'banco',
+          chiudeva: 'pagato',
+          chiudeva_at: '2026-08-17T21:00:00.000Z',
+        },
+        {
+          at: '2026-08-17T22:00:00.000Z',
+          chi: 'banco',
+          chiudeva: 'annullato',
+          chiudeva_at: '2026-08-17T21:50:00.000Z',
+        },
+      ],
+    })
+    const riga = eventi.map((e) => `${e.tipo}@${e.at.slice(11, 16)}`)
+    expect(riga).toEqual([
+      'aperto@20:00',
+      'chiuso@21:00',
+      'riaperto@21:10',
+      'annullato@21:50',
+      'riaperto@22:00',
+      'chiuso@22:30',
+    ])
+  })
+
+  it('la chiusura corrente non si conta due volte', () => {
+    const eventi = storiaOrdine({
+      created_at: '2026-08-17T20:00:00.000Z',
+      tempi_conto: { pagato: '2026-08-17T22:30:00.000Z' },
+      riaperture: [
+        { at: '2026-08-17T22:40:00.000Z', chiudeva: 'pagato', chiudeva_at: '2026-08-17T22:30:00.000Z' },
+      ],
+    })
+    expect(eventi.filter((e) => e.tipo === 'chiuso')).toHaveLength(1)
+  })
+})
+
+// LA STESSA PERSONA, SCRITTA SEMPRE ALLO STESSO MODO. Nella stessa storia
+// compariva tre volte con tre etichette diverse: «banco@tana.local»
+// all'apertura (l'email), «bartender» all'annullo (il ruolo, l'unica cosa
+// che quella strada scriveva) e «banco» alla riapertura. Chi legge deve
+// poter dire «è stato lui» a colpo d'occhio.
+describe('chi ha fatto la cosa', () => {
+  it('si scrive il nome, non l’email', () => {
+    expect(attore({ email: 'banco@tana.local' })).toBe('banco')
+    expect(attore('banco@tana.local')).toBe('banco')
+  })
+
+  it('il ruolo sta fra parentesi, se si sa', () => {
+    expect(attore({ name: 'Flavio', email: 'f@tana.local', role: 'bartender' })).toBe(
+      'Flavio (bartender)'
+    )
+  })
+
+  it('e non si ripete quando nome e ruolo sono la stessa parola', () => {
+    expect(attore({ name: 'banco', role: 'banco' })).toBe('banco')
+  })
+
+  it('sui conti vecchi resta il ruolo: è quello che c’era', () => {
+    expect(attore('bartender')).toBe('bartender')
+  })
+
+  it('senza niente, niente', () => {
+    expect(attore(null)).toBe(null)
+    expect(attore({})).toBe(null)
+    expect(attore('  ')).toBe(null)
+  })
+
+  it('nella storia le tre righe dicono lo stesso nome', () => {
+    const eventi = storiaOrdine({
+      created_at: '2026-08-17T10:00:00.000Z',
+      status_times: { aperto: '2026-08-17T10:00:00.000Z', annullato: '2026-08-17T10:03:00.000Z' },
+      placed_by: { email: 'banco@tana.local', name: 'banco@tana.local', role: 'admin' },
+      cancelled_by: 'bartender',
+      cancelled_persona: { email: 'banco@tana.local', name: null, role: 'admin' },
+      riaperture: [
+        { at: '2026-08-17T10:04:00.000Z', chi: { name: 'banco', role: 'admin' } },
+      ],
+    })
+    expect(eventi.map((e) => e.chi)).toEqual([
+      'banco (admin)',
+      'banco (admin)',
+      'banco (admin)',
+    ])
   })
 })

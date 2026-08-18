@@ -13,7 +13,7 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
-import { isAdmin, isGestore, isPersonale, normalizzaRuolo, RUOLI } from '../../src/lib/ruoli.js'
+import { isAdmin, isBanco, isGestore, isPersonale, normalizzaRuolo, RUOLI } from '../../src/lib/ruoli.js'
 
 describe('chi può cosa', () => {
   it("l'admin fa tutto quello che fa il bartender", () => {
@@ -23,6 +23,16 @@ describe('chi può cosa', () => {
     }
     expect(isAdmin('admin')).toBe(true)
     expect(isAdmin('bartender')).toBe(false)
+  })
+
+  it('il BANCO è il bartender, e l’admin non lo è', () => {
+    // Possono le stesse cose, ma non guardano le stesse: le corsie della
+    // coda mostrano le COMANDE a chi prepara e i CONTI a chi guarda come
+    // sta andando la serata.
+    expect(isBanco('bartender')).toBe(true)
+    for (const r of ['admin', 'staff', 'cliente', null, undefined]) {
+      expect(isBanco(r)).toBe(false)
+    }
   })
 
   it('lo staff è personale ma non gestisce', () => {
@@ -50,7 +60,7 @@ const RADICI = ['src', 'functions/lib']
 const CONFRONTO = /([A-Za-z_$][\w$.?[\]]*)\s*[=!]==\s*['"](admin|bartender|staff)['"]/g
 // Stesse parole, ma non sono ruoli: il nome di una scheda, chi ha annullato
 // un ordine, il tipo di una notifica.
-const OMONIMI = ['tab', 'sub', 'cancelled_by', 'cancel_phrase', 'kind', 'by', 'phrase']
+const OMONIMI = ['tab', 'tabEffettivo', 'sub', 'cancelled_by', 'cancel_phrase', 'kind', 'by', 'phrase']
 // Dove i confronti CI VOGLIONO: è il modulo che li definisce, e i due
 // elenchi lato Functions (non possono importare i moduli del client).
 const AMMESSI = ['src/lib/ruoli.js', 'functions/lib/push-core.js', 'functions/lib/staff-service.js', 'functions/lib/payment-service.js']

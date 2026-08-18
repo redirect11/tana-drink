@@ -17,6 +17,11 @@ import {
 // proprio profilo, la lista ordini, il menù per gli ordini manuali; chi
 // ordina vede il suo. Per questo le etichette dicono a chi tocca cosa: da
 // sole, "Gestionale" e "Vista cliente" sembravano due pagine.
+// I DUE TEMI STANNO DOVE STA LA COSA CHE COLORANO: quello del gestionale
+// in «Aspetto», quello del menù dei clienti in «Menù clienti», insieme a
+// tutto il resto di quella schermata. Messi uno sotto l'altro sembravano
+// due varianti della stessa cosa, e non si capiva quale delle due si stesse
+// toccando.
 export default function ThemeSettings({ settings, onSave }) {
   return (
     <div className="card settings-section">
@@ -29,13 +34,19 @@ export default function ThemeSettings({ settings, onSave }) {
         livePreview
         onSave={(t) => onSave({ theme_staff: t })}
       />
-      <ThemeEditor
-        title="Vista cliente — come lo vedono i clienti"
-        hint="I colori del menù sul telefono di chi ordina. Per provarli: menu ▸ Vista cliente."
-        value={settings.theme_client}
-        onSave={(t) => onSave({ theme_client: t })}
-      />
     </div>
+  )
+}
+
+// Il tema del menù dei clienti, da mostrare nella sua sezione.
+export function TemaMenuClienti({ settings, onSave }) {
+  return (
+    <ThemeEditor
+      title="Colori del menù"
+      hint="Come lo vedono i clienti sul telefono. Per provarlo: menu ▸ Vista cliente."
+      value={settings.theme_client}
+      onSave={(t) => onSave({ theme_client: t })}
+    />
   )
 }
 
@@ -95,17 +106,19 @@ function ThemeEditor({ title, hint, value, onSave, livePreview = false }) {
         </p>
       )}
 
-      <div className="chips-row">
+      {/* A TENDINA, non a chip: con otto preset (e cresceranno) la fila
+          di bottoni si mangiava la pagina due volte, gestionale e cliente. */}
+      <select
+        value={current.preset || DEFAULT_THEME}
+        onChange={(e) => pickPreset(e.target.value)}
+        style={{ width: '100%', margin: '2px 0 8px', padding: '10px 12px', fontSize: '1rem' }}
+      >
         {Object.entries(THEME_PRESETS).map(([id, p]) => (
-          <button
-            key={id}
-            className={`chip ${current.preset === id && !hasCustom ? 'active' : ''}`}
-            onClick={() => pickPreset(id)}
-          >
+          <option key={id} value={id}>
             {p.label}
-          </button>
+          </option>
         ))}
-      </div>
+      </select>
 
       {!customizing ? (
         <button className="btn ghost small" onClick={startCustomize}>

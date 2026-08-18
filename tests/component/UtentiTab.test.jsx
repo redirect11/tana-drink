@@ -91,3 +91,22 @@ describe('pagina utenti — bartender', () => {
     expect(screen.getByText(/I ruoli li assegna/)).toBeInTheDocument()
   })
 })
+
+// TRE SEZIONI, come nelle altre pagine: l'elenco delle utenze è quella che
+// si apre — è il motivo per cui si viene qui — mentre «Nuovo account» e
+// «Buoni VIP» erano pannelli a scomparsa in cima, e aprirli spingeva giù
+// l'elenco. Chi non è amministratore ha solo l'elenco: le altre due non
+// sono cose sue.
+describe('le sezioni di Utenti e ruoli', () => {
+  it('si apre sull’elenco delle utenze', async () => {
+    render(<UtentiTab role="admin" />)
+    expect(await screen.findByText(/Personale \(/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Crea account/ })).toBeNull()
+  })
+
+  it('«Nuovo account» è una sezione a sé', async () => {
+    render(<UtentiTab role="admin" sezioneIniziale="nuovo" />)
+    expect(await screen.findByRole('button', { name: /Crea account/ })).toBeInTheDocument()
+    expect(screen.queryByText(/Personale \(/)).toBeNull()
+  })
+})

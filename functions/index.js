@@ -21,6 +21,7 @@ const { getFirestore, FieldValue } = require('firebase-admin/firestore')
 const { getMessaging } = require('firebase-admin/messaging')
 const { getAuth } = require('firebase-admin/auth')
 
+const { numeroDaRiassegnare } = require('./lib/numerazione')
 const { buildSumupHeaders, buildSumupUrl } = require('./lib/sumup-core')
 const { syncProducts, createSale, updateSaleStatus, handleWebhook } = require('./lib/sumup-service')
 const {
@@ -29,6 +30,7 @@ const {
   decideStaffServePush,
   decideNewOrderStaffPush,
   destinatariPush,
+  terminaliDi,
 } = require('./lib/push-core')
 const { staffAdmin } = require('./lib/staff-service')
 const {
@@ -243,6 +245,60 @@ exports.notifyNewOrder = onDocumentCreated({ ...OPTS, document: 'orders/{orderId
   })
 })
 
+// ── DUE TERMINALI, LO STESSO NUMERO: LA DISPUTA LA CHIUDE IL SERVER ──────────
+//
+// Il numero del conto lo assegna il dispositivo, senza chiedere niente a
+// nessuno: è l'unico modo perché battere un conto sia immediato e funzioni
+// offline. Il prezzo è che il telefono della sala e il tablet del banco, che
+// battono nello stesso istante, possono prendersi lo stesso #15.
+//
+// Qui, dove esiste un «prima» e un «dopo» veri, si decide: tiene il numero
+// chi è arrivato prima, e chi arriva dopo prende il primo libero. Automatico:
+// al banco non si ferma una serata per un numero.
+//
+// Il numero cambia SOLO a chi ha perso, e resta scritto da dove veniva
+// (`daily_number_precedente`): la comanda può essere già uscita dalla
+// stampante col numero vecchio, e chi la tiene in mano deve ritrovarlo.
+exports.risolviNumeroDuplicato = onDocumentCreated(
+  { ...OPTS, document: 'orders/{orderId}' },
+  async (event) => {
+    const nuovo = event.data?.data()
+    if (!nuovo || !(Number(nuovo.daily_number) > 0)) return
+    // I conti si contendono il numero dentro la stessa CASSA; senza cassa
+    // aperta, dentro la stessa giornata commerciale.
+    const campo = nuovo.cash_session_id ? 'cash_session_id' : 'order_date'
+    const valore = nuovo.cash_session_id || nuovo.order_date
+    if (!valore) return
+
+    const snap = await db.collection('orders').where(campo, '==', valore).get()
+    const fratelli = snap.docs.map((d) => ({
+      id: d.id,
+      created_at: d.get('created_at'),
+      daily_number: d.get('daily_number'),
+    }))
+    const conto = {
+      id: event.params.orderId,
+      created_at: nuovo.created_at,
+      daily_number: nuovo.daily_number,
+    }
+    const numero = numeroDaRiassegnare(conto, fratelli)
+    if (numero == null) return
+
+    await db.collection('orders').doc(conto.id).update({
+      daily_number: numero,
+      daily_number_precedente: nuovo.daily_number,
+      numero_riassegnato_at: FieldValue.serverTimestamp(),
+    })
+    // Il contatore si allinea, così il prossimo conto non ripesca il numero
+    // appena assegnato.
+    const contatore = nuovo.cash_session_id ? `cash-${nuovo.cash_session_id}` : nuovo.order_date
+    await db
+      .collection('counters')
+      .doc(contatore)
+      .set({ last: FieldValue.increment(1) }, { merge: true })
+  }
+)
+
 // ── Push cerca-persone allo staff (FCM) ───────────────────────────────────────
 // Quando il bartender crea una chiamata, invia una push al dispositivo del
 // membro dello staff chiamato (token in staff_tokens/{uid}, registrato
@@ -254,13 +310,25 @@ exports.notifyStaffCall = onDocumentCreated({ ...OPTS, document: 'staff_calls/{c
   const msg = decideStaffCallPush(call)
   if (!msg) return
 
-  const tokenSnap = await db.doc(`staff_tokens/${call.to_uid}`).get()
-  const token = tokenSnap.get('token')
-  if (!token) return
+  // TUTTI I TERMINALI DI QUELLA PERSONA, non uno solo. La riga del token è
+  // del DISPOSITIVO (`staff_tokens/<device>`, col campo `uid` dentro): da
+  // quando è così, cercarla all'indirizzo `staff_tokens/<uid>` non trovava
+  // niente e la chiamata non partiva — il telefono di chi veniva cercato
+  // non vibrava mai. E chi lavora ha spesso due terminali accesi: la
+  // chiamata deve suonare su entrambi, perché non si sa quale ha in mano.
+  const tokensSnap = await db.collection('staff_tokens').get()
+  const suoi = new Set(
+    terminaliDi(
+      tokensSnap.docs.map((d) => ({ id: d.id, uid: d.get('uid'), token: d.get('token') })),
+      call.to_uid
+    ).map((r) => r.token)
+  )
+  const docs = tokensSnap.docs.filter((d) => suoi.has(d.get('token')))
+  if (docs.length === 0) return
 
   try {
-    await getMessaging().send({
-      token,
+    const res = await getMessaging().sendEachForMulticast({
+      tokens: docs.map((d) => d.get('token')),
       data: {
         kind: 'staff_call',
         title: msg.title,
@@ -272,12 +340,17 @@ exports.notifyStaffCall = onDocumentCreated({ ...OPTS, document: 'staff_calls/{c
         headers: { Urgency: 'high', TTL: '180' },
       },
     })
+    // I terminali che non esistono più si tolgono dalla rubrica: se no
+    // restano lì a far fallire ogni chiamata successiva.
+    await Promise.all(
+      res.responses.map((r, i) =>
+        r.error?.code === 'messaging/registration-token-not-registered'
+          ? docs[i].ref.delete().catch(() => {})
+          : null
+      )
+    )
   } catch (e) {
-    if (e?.code === 'messaging/registration-token-not-registered') {
-      await db.doc(`staff_tokens/${call.to_uid}`).delete().catch(() => {})
-    } else {
-      console.error('[push staff] invio fallito:', e?.message || e)
-    }
+    console.error('[push staff] invio fallito:', e?.message || e)
   }
 })
 

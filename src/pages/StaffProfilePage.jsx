@@ -5,7 +5,9 @@ import { auth } from '../lib/firebaseClient.js'
 import { logoutStaff } from '../lib/logout.js'
 import { updateDisplayName } from '../lib/customerAuth.js'
 import PasswordChanger from '../components/PasswordChanger.jsx'
-import { RUOLO_ETICHETTA, isPersonale } from '../lib/ruoli.js'
+import { RUOLO_ETICHETTA, isPersonale, isGestore } from '../lib/ruoli.js'
+import AvvisiPanel from '../components/AvvisiPanel.jsx'
+import StoricoNotifiche from '../components/StoricoNotifiche.jsx'
 
 // Profilo dello staff/bartender registrato: modifica del nome
 // visualizzato (usato in «Ciao, …» e nell'attribuzione degli ordini) e
@@ -89,7 +91,17 @@ export default function StaffProfilePage() {
 
       <PasswordChanger />
 
-      <Link className="btn secondary block" to="/bar">← Torna al gestionale</Link>
+      {/* GLI AVVISI STANNO QUI, non nelle impostazioni del locale: sono una
+          scelta di chi guarda quello schermo — per persona e per
+          dispositivo — non una regola del bar. E nelle impostazioni non ci
+          entra chi è in sala, cioè proprio chi ha bisogno di sapere quando
+          un drink è pronto. */}
+      <AvvisiPanel gestore={isGestore(role)} />
+      <StoricoNotifiche />
+
+      {/* Per tornare al gestionale c'è l'«← Indietro» nella barra in alto,
+          come in ogni altra schermata: un tasto in fondo alla pagina lo si
+          trova solo scorrendo, e diceva una cosa diversa dagli altri. */}
       <button
         className="btn ghost block"
         style={{ marginTop: 8 }}

@@ -36,7 +36,12 @@ describe('submitPosOrder', () => {
     const p = stato.pending.at(-1)
     expect(p.state).toBe('sending')
     expect(p.order.customer_name).toBe('Marco')
-    expect(p.order.workflow_status).toBe('in_preparazione')
+    // IL PLACEHOLDER NASCE COME NASCERÀ L'ORDINE VERO. Qui c'era scritto
+    // «in preparazione», ma era una terza copia a mano della regola: la
+    // card in coda diceva «Al banco» e appena arrivava dal server saltava
+    // in «Da fare» da sola. Adesso lo dice statoComandaNuova, che è l'unico
+    // posto dove si decide, e di suo una comanda nasce «da fare».
+    expect(p.order.workflow_status).toBe('ricevuto')
     expect(p.order.total).toBe(14)
     // in background: crea l'ordine (nessuna serata da risolvere)
     await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1))

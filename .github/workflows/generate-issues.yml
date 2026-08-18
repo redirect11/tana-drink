@@ -18,10 +18,27 @@ on:
   # loro etichetta `hotfix` — prima che qualcuno tocchi il codice. Così chi
   # corregge lavora su un'issue vera, e quello che è stato raccontato a voce
   # dal banco resta scritto anche se la correzione slitta.
+  #
+  # E SUI RAMI DI RILASCIO, che è dove si lavora tutti i giorni. Aspettare
+  # `main` voleva dire che una richiesta arrivata a voce restava scritta solo
+  # in un file: chi guardava le issue non la vedeva per giorni, e nel
+  # frattempo la si raccontava di nuovo. Lo script è idempotente — cerca per
+  # titolo esatto fra le issue aperte E chiuse — quindi spingere dieci volte
+  # lo stesso registro non crea dieci issue: nascono solo quelle che mancano.
+  # TRE LINEE, TRE COSE DIVERSE sulla stessa voce del registro:
+  #   feature/** e release/** -> si scrive e si riallinea; una voce finita
+  #                 porta la scheda su «Implemented»: e' scritta, sta su un
+  #                 ramo, non l'ha ancora provata nessuno
+  #   develop    -> si mette IN PROVA: e' finita, ma al banco non l'ha vista
+  #                 ancora nessuno
+  #   main       -> si chiude: adesso e' davvero in mano a chi lavora
   push:
     branches:
       - main
+      - develop
       - "hotfix/**"
+      - "release/**"
+      - "feature/**"
     paths:
       - "requirements/requirements.yaml"
       - "requirements/bugs.yaml"
@@ -50,9 +67,24 @@ jobs:
           GITHUB_REPO: ${{ github.repository }}
           # Su push automatico crea le issue; su run manuale rispetta la scelta dry_run.
           DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || 'false' }}
-          # Le issue si CHIUDONO solo da main, la linea della produzione. Sul
-          # ramo di hotfix la voce passa a `fixed` appena la correzione è
-          # scritta, ma al banco l'app sbaglia ancora: chiudere lì vuol dire
-          # dire a chi ha segnalato il guaio che è sistemato quando non lo è.
+          # Le issue si CHIUDONO solo da main, la linea della produzione. Su
+          # un ramo di hotfix o di rilascio la voce passa a `fixed` appena la
+          # correzione è scritta, ma al banco l'app sbaglia ancora: chiudere
+          # lì vuol dire dire a chi ha segnalato il guaio che è sistemato
+          # quando non lo è. Da quei rami le issue si aprono soltanto.
           CHIUDE_RISOLTI: ${{ github.ref == 'refs/heads/main' }}
+          # Su develop la voce finita prende l'etichetta «in-test»: e' il pezzo
+          # di mezzo che prima non si vedeva da nessuna parte — una correzione
+          # scritta e non ancora provata era indistinguibile da una da fare.
+          SEGNA_IN_TEST: ${{ github.ref == 'refs/heads/develop' }}
+          # Sui rami di lavoro la voce finita muove la scheda su «Implemented»:
+          # sulla bacheca era indistinguibile da una ancora da fare.
+          SEGNA_IMPLEMENTATA: ${{ startsWith(github.ref, 'refs/heads/feature/') || startsWith(github.ref, 'refs/heads/release/') }}
+          # LA BACHECA vuole un token suo: i Projects v2 vivono sull'account,
+          # non nel repository, e il token che Actions da' da se' non li vede.
+          # Se il segreto manca non si rompe niente: le issue si aggiornano
+          # lo stesso e le schede restano come le muove una persona.
+          PROJECT_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+          PROGETTO_OWNER: redirect11
+          PROGETTO_NUMERO: "3"
         run: node scripts/generate-issues.mjs

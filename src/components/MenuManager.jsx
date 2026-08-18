@@ -11,15 +11,21 @@ import {
   fetchInventoryItems,
   subscribePosPrefs,
   savePosColors,
+  subscribeSettings,
+  fetchMacroCategories,
+  DEFAULT_SETTINGS,
+  settingsIniziali,
 } from '../lib/api.js'
+import { coloreStriscia } from '../lib/strisce.js'
+import { Sottosezioni } from '../lib/sottosezioni.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import { deleteDrinkImageByUrl } from '../lib/storage.js'
 import { formatQty, stockStatus } from '../lib/inventory.js'
 import MarginList from './MarginList.jsx'
+import MacroCategoryManager from './MacroCategoryManager.jsx'
 import DrinkForm from './DrinkForm.jsx'
 import { saveDrinkFromForm } from '../lib/saveDrink.js'
 import CategoryRail from './CategoryRail.jsx'
-import { IconTag, IconGrafico } from './Icons.jsx'
 import {
   CATEGORY_ICONS,
   catColor,
@@ -39,12 +45,20 @@ const EMPTY = {
 }
 
 export default function MenuManager() {
+  // Cosa dice la striscia delle schede: lo sceglie il locale, in
+  // Impostazioni → Vista ordine (vedi lib/strisce.js).
+  const [settings, setSettings] = useState(settingsIniziali)
+  useEffect(() => subscribeSettings(setSettings, () => {}), [])
+  const [sezione, setSezione] = useState('catalogo') // catalogo | categorie | margini
+  const modoStriscia = settings.stripe_menu || 'scorte'
+  const scorteVerdi = !!settings.stripe_menu_ok_verde
   const [drinks, setDrinks] = useState([])
   const [categories, setCategories] = useState([])
   const [inventory, setInventory] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [editing, setEditing] = useState(null) // null | 'new' | drink object
+  const [copiaDa, setCopiaDa] = useState(null) // il drink duplicato, prima di salvarlo
   // Filtri della lista (catalogo grande: ricerca + categoria + disponibilità).
   const [search, setSearch] = useState('')
   const [catFilter, setCatFilter] = useState('all') // 'all' | 'none' | categoryId
@@ -114,7 +128,7 @@ export default function MenuManager() {
         inventory,
         categories,
       })
-      setEditing(null)
+      chiudiForm()
       await load()
     } catch (e) {
       setError(e.message)
@@ -131,6 +145,36 @@ export default function MenuManager() {
     } catch (e) {
       setError(e.message)
     }
+  }
+
+  // ── DUPLICARE UN DRINK ───────────────────────────────────────────
+  //
+  // Mezzo listino sono variazioni: lo stesso drink col gin diverso, la
+  // versione analcolica, il formato grande. Rifare a mano prezzo,
+  // categoria, descrizione e soprattutto la RICETTA — che è la parte
+  // lunga, ingrediente per ingrediente — è dove si sbaglia una dose e poi
+  // il magazzino scala storto.
+  //
+  // La copia NON si salva da sola: si apre il form già pieno, così il nome
+  // e quello che cambia si sistemano PRIMA che il drink esista. Un
+  // doppione salvato di nascosto finirebbe in carta al cliente.
+  function duplica(d) {
+    setCopiaDa({
+      ...d,
+      id: undefined,
+      name: `${d.name} (copia)`,
+      // La foto resta all'originale: il file è agganciato al drink che
+      // l'ha caricata e cancellandolo sparirebbe anche dalla copia
+      // (handleDelete cancella l'immagine insieme al drink).
+      image_url: null,
+      recipe_items: (d.recipe_items || []).map((r) => ({ ...r })),
+    })
+    setEditing('new')
+  }
+
+  function chiudiForm() {
+    setEditing(null)
+    setCopiaDa(null)
   }
 
   async function handleDelete(d) {
@@ -202,8 +246,12 @@ export default function MenuManager() {
     () => Object.fromEntries((inventory || []).map((i) => [i.id, i])),
     [inventory]
   )
+  // QUATTRO STATI, QUATTRO COLORI SULLA STRISCIA. Il rosso diceva due cose
+  // opposte: «l'ho tolto io dal menu» e «è finito l'ingrediente» — la prima
+  // si riaccende, la seconda si compra. Ora chi è fuori menu è GRIGIO:
+  // spento, non rotto.
   const statoMenu = (d) => {
-    if (!d.available) return { dot: 'empty', testo: 'Non disponibile' }
+    if (!d.available) return { dot: 'nascosto', testo: 'Non in menu' }
     const ingredienti = (d.recipe_items || [])
       .map((r) => scorteById[r.inventory_item_id])
       .filter(Boolean)
@@ -249,11 +297,11 @@ export default function MenuManager() {
   if (editing) {
     return (
       <DrinkForm
-        initial={editing === 'new' ? EMPTY : editing}
+        initial={editing === 'new' ? copiaDa || EMPTY : editing}
         categories={categories}
         inventory={inventory}
         onCreateCategory={handleCreateCategory}
-        onCancel={() => setEditing(null)}
+        onCancel={chiudiForm}
         onSave={handleSave}
       />
     )
@@ -262,37 +310,72 @@ export default function MenuManager() {
   const searching = search.trim().length > 0
   const availCount = drinks.filter((d) => d.available).length
 
+  // LE SOTTOSEZIONI, nel menu laterale come nelle altre pagine. Categorie
+  // e marginalità erano due pannelli a scomparsa in cima al catalogo: si
+  // aprivano spingendo giù la griglia, e chi voleva solo guardare i
+  // margini si portava dietro tutto il listino sotto.
+  const sezioni = [
+    { id: 'catalogo', icona: '🍸', label: 'Modifica menù' },
+    { id: 'categorie', icona: '🏷', label: `Categorie (${categories.length})` },
+    { id: 'macro', icona: '🗂', label: 'Macro-categorie' },
+    { id: 'margini', icona: '📈', label: 'Marginalità listino' },
+  ]
+
+  if (sezione === 'macro') {
+    return (
+      <div>
+        <Sottosezioni voci={sezioni} attiva={sezione} scegli={setSezione} />
+        <MacroMenuPanel
+          categories={categories}
+          onChange={async () => setCategories(await fetchCategories())}
+        />
+      </div>
+    )
+  }
+
+  if (sezione === 'categorie') {
+    return (
+      <div>
+        <Sottosezioni voci={sezioni} attiva={sezione} scegli={setSezione} />
+        <CategoryManager
+          categories={categories}
+          onChange={async () => setCategories(await fetchCategories())}
+        />
+      </div>
+    )
+  }
+
+  if (sezione === 'margini') {
+    return (
+      <div>
+        <Sottosezioni voci={sezioni} attiva={sezione} scegli={setSezione} />
+        <p className="muted small" style={{ margin: '0 0 8px' }}>
+          Quali drink rendono meno di quanto dovrebbero.
+        </p>
+        <MarginList
+          drinks={drinks}
+          inventory={inventory}
+          onEdit={(id) => {
+            setSezione('catalogo')
+            setEditing(drinks.find((d) => d.id === id) || null)
+          }}
+        />
+      </div>
+    )
+  }
+
   return (
     <div>
-      {/* Sottosezioni del menù: sotto al titolo, come nelle altre pagine. */}
-      <SectionPanels
-        panels={[
-          {
-            id: 'cats',
-            label: <><IconTag /> Categorie ({categories.length})</>,
-            render: () => (
-              <CategoryManager
-                categories={categories}
-                onChange={async () => setCategories(await fetchCategories())}
-              />
-            ),
-          },
-          {
-            id: 'margini',
-            label: <><IconGrafico /> Marginalità del listino</>,
-            desc: 'Quali drink rendono meno di quanto dovrebbero.',
-            render: () => (
-              <MarginList
-                drinks={drinks}
-                inventory={inventory}
-                onEdit={(id) => setEditing(drinks.find((d) => d.id === id) || null)}
-              />
-            ),
-          },
-        ]}
-      />
+      <Sottosezioni voci={sezioni} attiva={sezione} scegli={setSezione} />
 
-      <button className="btn block" onClick={() => setEditing('new')}>
+      <button
+        className="btn block"
+        onClick={() => {
+          // Da capo: un drink nuovo non eredita la copia rimasta in giro.
+          setCopiaDa(null)
+          setEditing('new')
+        }}
+      >
         + Aggiungi prodotto
       </button>
 
@@ -357,17 +440,39 @@ export default function MenuManager() {
                   const open = openId === d.id
                   return (
                     <div
+                      /* DUE SEGNI, DUE COSE DIVERSE, dove uno se le aspetta.
+                         La STRISCIA A SINISTRA dice come sta il prodotto —
+                         come sulle card della coda, dove la striscia dice
+                         com'è messo il conto. La LINGUETTA nell'angolo è il
+                         colore che il prodotto ha al banco, disegnata come
+                         sulle tile del POS: là quel segno vuol dire già
+                         quello, e qui si tocca per cambiarlo.
+                         Prima erano un quadratino (che sembrava un'etichetta
+                         e invece era un tasto) e un pallino il cui rosso
+                         diceva due cose opposte: «l'ho spento io» e «è finito
+                         il rum». */
+                      /* La striscia dice quello che il locale ha scelto
+                         (Impostazioni → Vista ordine): il colore del
+                         prodotto, quello della categoria, le scorte, o
+                         niente. La regola sta in lib/strisce.js, la stessa
+                         che usa la griglia del conto. */
                       className={`card grid-card admin-card menu-card${d.available ? '' : ' off'}`}
                       key={d.id}
-                      /* Il colore con cui il prodotto appare al banco sta
-                         ADDOSSO alla card, non nascosto in un pannello: è
-                         così che lo si riconosce sul POS. */
-                      style={{ '--menu-colore': tileColors[d.id] || drinkCategoryColor(d, categories) }}
+                      style={{
+                        '--menu-colore': tileColors[d.id] || drinkCategoryColor(d, categories),
+                        borderLeftColor: coloreStriscia({
+                          modo: modoStriscia,
+                          coloreProdotto: tileColors[d.id] || null,
+                          coloreCategoria: drinkCategoryColor(d, categories),
+                          scorte: statoMenu(d).dot,
+                          verdeQuandoOk: scorteVerdi,
+                        }),
+                      }}
                     >
                       <button
                         type="button"
                         className="menu-colore-spia"
-                        title="Cambia il colore al banco"
+                        title="Colore al banco: tocca per cambiarlo"
                         aria-label={`Colore di ${d.name}`}
                         aria-expanded={coloreId === d.id}
                         onClick={() => setColoreId(coloreId === d.id ? null : d.id)}
@@ -405,14 +510,6 @@ export default function MenuManager() {
                       >
                         <div className="row between" style={{ alignItems: 'flex-start', gap: 6 }}>
                           <strong style={{ fontSize: '0.92rem', lineHeight: 1.25 }}>{d.name}</strong>
-                          {/* Stato col pallino dell'inventario: prima si
-                              distingueva solo dal grigio della card, che a
-                              colpo d'occhio su una griglia piena non si vede. */}
-                          <span
-                            className={`dot dot-${statoMenu(d).dot}`}
-                            title={statoMenu(d).testo}
-                            style={{ marginTop: 4 }}
-                          />
                         </div>
                         <div className="row between" style={{ alignItems: 'baseline' }}>
                           <span className="muted small">{statoMenu(d).testo}</span>
@@ -436,6 +533,13 @@ export default function MenuManager() {
                           )}
                           <button className="btn secondary small block" onClick={() => setEditing(d)}>
                             ✏️ Modifica
+                          </button>
+                          <button
+                            className="btn ghost small block"
+                            style={{ marginTop: 6 }}
+                            onClick={() => duplica(d)}
+                          >
+                            📋 Duplica
                           </button>
                           <button
                             className="btn ghost small block"
@@ -469,6 +573,34 @@ export default function MenuManager() {
         <div className="empty">Nessun drink nel menù. Aggiungine uno!</div>
       )}
     </div>
+  )
+}
+
+// ── MACRO-CATEGORIE DEL MENÙ ─────────────────────────────────────────
+//
+// Le stesse macro del magazzino, ma dall'altro lato del banco: qui si
+// raggruppa quello che si VENDE. Servono per sapere quanto è entrato su
+// «Cocktail classici» e confrontarlo con quanto è uscito sulla macro di
+// spesa corrispondente — l'aggancio si sceglie in Magazzino, dove stanno
+// le macro di acquisto.
+function MacroMenuPanel({ categories, onChange }) {
+  const [macros, setMacros] = useState([])
+  const ricarica = async () => {
+    setMacros(await fetchMacroCategories('menu'))
+    await onChange()
+  }
+  useEffect(() => {
+    fetchMacroCategories('menu').then(setMacros).catch(() => {})
+  }, [])
+  return (
+    <MacroCategoryManager
+      ambito="menu"
+      macros={macros}
+      categories={categories}
+      onChange={ricarica}
+      aggiornaCategoria={updateCategory}
+      creaCategoria={createCategory}
+    />
   )
 }
 

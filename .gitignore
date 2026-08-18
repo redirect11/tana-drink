@@ -47,3 +47,34 @@ costi-inventario.json
 backup/
 # Roba di passaggio (catture del markup, prove): non è codice.
 tmp/
+
+# VOCALI E FOTO DAL BANCO. Sono segnalazioni arrivate su WhatsApp: la voce
+# di persone vere e le foto del locale. Restano sul computer di chi lavora,
+# non nel repository — un repository si clona, si specchia e si condivide,
+# e quella roba non deve seguirlo.
+registrazioni/
+
+# I workspace di lavoro (git worktree) creati qui dentro: sono copie del
+# repository, non contenuto del repository.
+.claude/worktrees/
+
+# /design-sync: script di appoggio e output rigenerabile (la parte durevole
+# di .design-sync/ resta versionata: config, note, convenzioni, anteprime).
+.ds-sync/
+ds-bundle/
+.design-sync/.cache/
+.design-sync/learnings/
+.design-sync/node_modules
+
+# Dati degli emulatori locali: si salvano uscendo e si ricaricano al via
+# successivo (--import/--export-on-exit). Sono la SANDBOX di chi sviluppa,
+# non dati del locale: fuori dal repo.
+.emulatori/
+
+# Log degli emulatori: crescono senza freno (visti a 34 GB) e non servono a
+# nessuno fuori da qui.
+*-debug.log
+
+# Esportazioni degli emulatori (`firebase emulators:export`): fotografie del
+# database di prova, a volte mezzo giga. Restano sul computer di chi le fa.
+firebase-export-*/

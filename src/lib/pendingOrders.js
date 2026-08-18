@@ -7,7 +7,8 @@
 import { createOrder } from './api.js'
 import { isPersonale } from './ruoli.js'
 import { printComanda } from './printer.js'
-import { ORDER_STATUSES } from './orderStatus.js'
+import { statoComandaNuova } from './comande.js'
+import { impostazioniRicordate } from './impostazioniLocali.js'
 import { rememberOrderId } from './cart.js'
 import { toastSync, toastSuccess, toastError } from './toast.js'
 
@@ -54,9 +55,14 @@ export function submitPosOrder({
   printNow = false,
   group_id = null, // conto di gruppo: l'ordine ci nasce già dentro
   group_name_snapshot = null,
-  // Senza gestione della preparazione l'ordine nasce e resta "ricevuto":
-  // non c'è un ciclo di lavorazione da far avanzare.
-  status = ORDER_STATUSES.IN_PREPARAZIONE,
+  // In che passo nasce la comanda lo dice il locale, e lo dice in un posto
+  // solo (statoComandaNuova in comande.js). Qui c'era una TERZA copia della
+  // regola, scritta a mano e diversa dalle altre due: il placeholder in
+  // coda diceva «in preparazione» mentre l'ordine vero nasceva «da fare»,
+  // e la card cambiava colonna da sola appena arrivava dal server. Chi
+  // chiama passa lo stato che ha già in mano; qui c'è solo il valore di
+  // riserva, letto dalla stessa regola.
+  status = statoComandaNuova(impostazioniRicordate()),
   service_mode = null,
 }) {
   const tempId = `tmp${++seq}`

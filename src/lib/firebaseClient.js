@@ -70,14 +70,31 @@ if (recaptchaKey) {
 // sole al ritorno online. Le transazioni e le Cloud Functions richiedono
 // comunque connessione. Se IndexedDB non è disponibile (es. navigazione
 // privata su alcuni browser) si degrada alla cache in memoria.
+//
+// SUGLI EMULATORI, DA UN ALTRO DISPOSITIVO, SI PARLA IN LONG-POLLING.
+// Il canale veloce di Firestore (WebChannel) con l'emulatore raggiunto da
+// un'altra macchina della rete a volte si apre e non consegna mai niente:
+// la pagina si carica, le connessioni ci sono — si vedono aperte — ma i
+// dati non arrivano e l'SDK ritenta in silenzio. Al banco si legge «il wifi
+// risulta collegato ma non sta passando niente», che è esattamente quello
+// che succede. Col long-polling la stessa cosa funziona.
+// Solo in locale: in produzione il canale veloce va benissimo, ed è più
+// leggero.
 function makeDb() {
+  const suEmulatore = import.meta.env.VITE_USE_FIREBASE_EMULATOR === 'true'
+  const opzioni = suEmulatore ? { experimentalForceLongPolling: true } : {}
   try {
     return initializeFirestore(app, {
+      ...opzioni,
       localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
     })
   } catch (e) {
     console.warn('[Firestore] persistenza offline non disponibile:', e?.message)
-    return getFirestore(app)
+    try {
+      return initializeFirestore(app, opzioni)
+    } catch {
+      return getFirestore(app)
+    }
   }
 }
 

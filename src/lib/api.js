@@ -20,18 +20,24 @@ import {
   writeBatch,
   Timestamp,
 } from 'firebase/firestore'
-import { db } from './firebaseClient.js'
+import { db, auth } from './firebaseClient.js'
 import { ORDER_STATUSES } from './orderStatus.js'
 import { splitAmounts } from './groups.js'
 import { createSumUpSale, updateSumUpSaleStatus, toSumUpStatus } from './sumupApi.js'
 import {
   computeConsumption,
+  eScorta,
   formatQty,
   qtyInStockUnit,
   scaricoPossibile,
   giacenzaPerCarico,
+  articoloNormalizzato,
+  patchNormalizza,
 } from './inventory.js'
 import { consumptionDiff } from './warehouse.js'
+import { cambioModoPermesso, supplementiPerModo } from './consegna.js'
+import { idDispositivo } from './dispositivo.js'
+import { leggiAvvisi, avvisoAttivo, idAvvisoScorta } from './preferenzeNotifiche.js'
 import { patchRipristino, buoniDaRestituire, segnaBuoniRestituiti } from './ripristino.js'
 import { riaddebitoBuono } from './vouchers.js'
 import {
@@ -42,6 +48,12 @@ import {
   serveAllComande,
   aggregateItems,
   comandeStatuses,
+  comandaDaScaricare,
+  comandaDivisibile,
+  dividiComanda,
+  statiDopoLaDivisione,
+  statoComandaNuova,
+  ANNULLATA_PER_DIVISIONE,
   itemsTotal as sumItems,
 } from './comande.js'
 import {
@@ -58,11 +70,17 @@ import { recentDrinkIds } from './posCatalog.js'
 import { DEFAULT_MARKUP, DEFAULT_ROUND_STEP } from './pricing.js'
 import { notify } from './notify.js'
 import { bgWrite } from './sync.js'
+import { ricordaImpostazioni, impostazioniRicordate } from './impostazioniLocali.js'
+import {
+  cassaCorrente,
+  prendiNumero,
+  numeroPrevisto,
+  contatoreCorrente,
+} from './progressivi.js'
 
 const drinksCol = collection(db, 'drinks')
 const ordersCol = collection(db, 'orders')
 // Progressivo assoluto degli ordini (id interno che non riparte mai).
-const serialCounterRef = doc(db, 'counters', 'serial')
 const categoriesCol = collection(db, 'categories')
 const inventoryCol = collection(db, 'inventory_items')
 const inventoryCategoriesCol = collection(db, 'inventory_categories')
@@ -118,9 +136,16 @@ function mapCategory(snap) {
 }
 
 // Mappa un item di inventario.
+//
+// QUI PASSA IL TRAVASO AL MODELLO A PEZZI (REQ-MAG-018). I prodotti scritti
+// coi modelli di ieri — liquidi in cl, sacchi in «U», la resa fra due unità —
+// arrivano al resto dell'app già nella forma nuova, senza che nessuno abbia
+// lanciato niente contro il database: si aggiorna il bundle e i prodotti si
+// leggono adeguati. È lo stesso trucco degli ordini vecchi, che nessuno ha
+// mai migrato (normalizeOrderDoc, REQ-ORD-002).
 function mapItem(snap) {
   const i = snap.data() || {}
-  return {
+  return articoloNormalizzato({
     id: snap.id,
     name: i.name ?? '',
     unit: i.unit ?? 'pz',
@@ -129,6 +154,16 @@ function mapItem(snap) {
     // Famiglia del contenuto per gli articoli contati a pezzo: senza, una
     // bottiglia da 33 cl non ha un costo al cl (vedi contentBase).
     content_unit: i.content_unit ?? null,
+    display_unit: i.display_unit ?? null,
+    // La resa dei prodotti scritti col modello vecchio: la legge solo il
+    // travaso, che la riassorbe nel contenuto del pezzo.
+    resa: i.resa != null ? Number(i.resa) : null,
+    resa_unit: i.resa_unit ?? null,
+    // SI SCARICA DAL MAGAZZINO? Lo dice il PRODOTTO, non la sua unità: senza
+    // questo campo il «Tempo di Lavorazione», appena l'unità passa al pezzo,
+    // ridiventerebbe merce — a zero al primo drink, e il menù farebbe
+    // sparire dalla carta i drink che lo usano.
+    scorta: typeof i.scorta === 'boolean' ? i.scorta : null,
     bottles_total: Number(i.bottles_total) || 0,
     low_threshold: Number(i.low_threshold) || 0,
     category_id: i.category_id ?? null,
@@ -139,7 +174,7 @@ function mapItem(snap) {
     // scelta esplicita (i prodotti che non devono mancare), non il default.
     status: i.status ?? 'assortimento',
     created_at: toIso(i.created_at),
-  }
+  })
 }
 
 function mapMovement(snap) {
@@ -203,6 +238,8 @@ function mapOrder(snap) {
     tempi_conto: o.status_times ?? {},
     riaperture: (o.riaperture || []).map((r) => ({ ...r, at: toIso(r.at) })),
     cancelled_by: o.cancelled_by ?? null,
+    cancelled_persona: o.cancelled_persona ?? null,
+    cancelled_device: o.cancelled_device ?? null,
     cancel_kind: o.cancel_kind ?? null,
     cancel_phrase: o.cancel_phrase ?? null,
     cancel_message: o.cancel_message ?? null,
@@ -385,25 +422,42 @@ export async function deleteInventoryCategory(id) {
 // i conti aggregati di acquisti/fatturato. Il legame vive sulla categoria
 // (campo macro_id), così una categoria sta in al più una macro.
 
+// DUE ELENCHI, NON UNO. Le macro nascono sul MAGAZZINO — raggruppano quello
+// che si compra — ma servono anche sul MENÙ, sulle categorie dei drink che
+// si vendono: sono due mestieri diversi (si compra «Distillati», si vende
+// «Cocktail classici») e mescolarli farebbe due somme sbagliate.
+// Stessa collezione, campo `ambito`: le righe vecchie non ce l'hanno e sono
+// tutte di magazzino, che è come stavano prima.
+export const AMBITI_MACRO = ['magazzino', 'menu']
+
 function mapMacro(snap) {
   const m = snap.data() || {}
   return {
     id: snap.id,
     name: m.name ?? '',
     sort_order: m.sort_order ?? 0,
+    ambito: m.ambito === 'menu' ? 'menu' : 'magazzino',
+    // Solo sulle macro di magazzino: a quale macro di VENDITA corrisponde
+    // questa spesa. È l'aggancio che fa il confronto speso/incassato.
+    macro_menu_id: m.macro_menu_id ?? null,
     created_at: toIso(m.created_at),
   }
 }
 
-export async function fetchMacroCategories() {
+export async function fetchMacroCategories(ambito = 'magazzino') {
   const snap = await getDocs(macroCategoriesCol)
-  const list = snap.docs.map(mapMacro)
+  const list = snap.docs.map(mapMacro).filter((m) => m.ambito === ambito)
   list.sort((a, b) => (a.sort_order - b.sort_order) || (a.name || '').localeCompare(b.name || ''))
   return list
 }
 
-export async function createMacroCategory({ name, sort_order = 0 }) {
-  const ref = await addDoc(macroCategoriesCol, { name, sort_order, created_at: serverTimestamp() })
+export async function createMacroCategory({ name, sort_order = 0, ambito = 'magazzino' }) {
+  const ref = await addDoc(macroCategoriesCol, {
+    name,
+    sort_order,
+    ambito: ambito === 'menu' ? 'menu' : 'magazzino',
+    created_at: serverTimestamp(),
+  })
   return mapMacro(await getDoc(ref))
 }
 
@@ -414,10 +468,18 @@ export async function updateMacroCategory(id, patch) {
 }
 
 // Eliminando una macro, le sue categorie tornano "senza macro" (non si
-// perdono): si azzera macro_id su quelle che la puntano.
-export async function deleteMacroCategory(id) {
-  const cats = await getDocs(query(inventoryCategoriesCol, where('macro_id', '==', id)))
+// perdono): si azzera macro_id su quelle che la puntano — quelle del
+// magazzino o quelle del menù, secondo l'ambito. E si sgancia da chi la
+// indicava come macro di vendita, altrimenti resterebbe un aggancio a un
+// gruppo che non esiste più e il confronto mostrerebbe una riga vuota.
+export async function deleteMacroCategory(id, ambito = 'magazzino') {
+  const collezione = ambito === 'menu' ? categoriesCol : inventoryCategoriesCol
+  const cats = await getDocs(query(collezione, where('macro_id', '==', id)))
   await Promise.all(cats.docs.map((d) => updateDoc(d.ref, { macro_id: null })))
+  if (ambito === 'menu') {
+    const agganciate = await getDocs(query(macroCategoriesCol, where('macro_menu_id', '==', id)))
+    await Promise.all(agganciate.docs.map((d) => updateDoc(d.ref, { macro_menu_id: null })))
+  }
   await deleteDoc(doc(db, 'macro_categories', id))
 }
 
@@ -477,6 +539,110 @@ export async function deleteInventoryItem(id) {
   await deleteDoc(doc(db, 'inventory_items', id))
 }
 
+// ── IL TRAVASO DEL MAGAZZINO AL MODELLO A PEZZI (REQ-MAG-018) ────────
+//
+// Lo lancia l'utente da un tasto, dopo aver visto cosa cambia. Qui si
+// rileggono i documenti COM'È SCRITTO SUL DATABASE — non come li legge
+// l'app, che li vede già a pezzi — e si scrive la forma nuova.
+//
+// A LOTTI, e ripetibile. Sono centinaia di documenti: scriverli tutti in una
+// volta blocca la schermata, e se la rete cade a metà bisogna poter
+// ricominciare. Ogni giro guarda cos'è ancora da fare, quindi ripartire
+// riprende da dove stava e nessuno viene scritto due volte.
+//
+// `onAvanzamento(fatti, totale)` serve a far vedere che si sta muovendo: al
+// banco una schermata ferma vuol dire «è bloccata».
+export const ATTESA_TRAVASO =
+  'Prima va aggiornato il magazzino alla nuova gestione (Magazzino → il banner in alto).'
+
+export async function travasaMagazzinoAPezzi({ onAvanzamento, lotto = 25 } = {}) {
+  // UN GIRO PER LOTTO, E OGNI GIRO RILEGGE. Fidarsi della lista di partenza
+  // vuol dire scrivere su prodotti che nel frattempo qualcuno ha cancellato
+  // da un altro terminale — succede, ed è successo — e non accorgersi di
+  // quelli nati mentre l'aggiornamento girava, che resterebbero indietro
+  // senza che nessuno lo sappia. Rileggere costa una lettura per lotto e
+  // toglie tutti e due i guai.
+  let scritti = 0
+  let saltati = 0
+  // Chi è sparito e chi non si è lasciato scrivere: senza tenerli da parte
+  // tornerebbero nella lista a ogni giro, e il giro non finirebbe mai.
+  const spariti = new Set()
+  const bloccati = new Set()
+  // Chi è già stato scritto: la lista in memoria porta ancora i dati di
+  // prima, e senza questo lo si riconoscerebbe «da fare» a ogni giro.
+  const fatti = new Set()
+  // SI RILEGGE, MA NON A OGNI LOTTO. La rilettura serve a prendere chi è
+  // nato o cambiato mentre l'aggiornamento gira — e a non riscrivere chi
+  // nel frattempo è sparito — ma rifarla per ognuno dei sedici lotti vuol
+  // dire leggere quattrocento articoli sedici volte: soldi veri e sedici
+  // attese in fila, con chi sta al banco che guarda la barra. Si legge
+  // all'inizio, si lavora dalla lista, e si rilegge quando la lista finisce
+  // — che è l'unico momento in cui la risposta può cambiare qualcosa.
+  let elenco = null
+  for (;;) {
+    if (!elenco) {
+      const snap = await getDocs(inventoryCol)
+      elenco = snap.docs.map((d) => ({ id: d.id, dati: d.data() }))
+    }
+    const daFare = []
+    for (const d of elenco) {
+      if (spariti.has(d.id) || bloccati.has(d.id) || fatti.has(d.id)) continue
+      const patch = patchNormalizza({ id: d.id, ...d.dati })
+      if (patch) daFare.push({ id: d.id, patch })
+    }
+    onAvanzamento?.(scritti, scritti + daFare.length)
+    if (daFare.length === 0) {
+      // Finita la lista in mano: si rilegge una volta sola per vedere se
+      // nel frattempo è arrivato altro. Se non c'è più niente, è finita
+      // davvero.
+      if (elenco === null) break
+      elenco = null
+      const snap = await getDocs(inventoryCol)
+      const ancora = snap.docs.filter(
+        (d) =>
+          !spariti.has(d.id) &&
+          !bloccati.has(d.id) &&
+          patchNormalizza({ id: d.id, ...d.data() })
+      )
+      if (ancora.length === 0) break
+      elenco = snap.docs.map((d) => ({ id: d.id, dati: d.data() }))
+      continue
+    }
+    const gruppo = daFare.slice(0, lotto)
+    // allSettled e non all: uno che va storto non si porta dietro gli altri
+    // ventiquattro del lotto, che sono a posto.
+    const esiti = await Promise.allSettled(
+      gruppo.map(({ id, patch }) => updateDoc(doc(db, 'inventory_items', id), patch))
+    )
+    esiti.forEach((esito, i) => {
+      const { id } = gruppo[i]
+      if (esito.status === 'fulfilled') {
+        scritti += 1
+        fatti.add(id)
+        return
+      }
+      if (nonEsistePiu(esito.reason)) {
+        spariti.add(id)
+        saltati += 1
+        return
+      }
+      // Il motivo tecnico serve a noi, non a chi sta al banco: finisce nella
+      // console, e a schermo va una frase in italiano (vedi InventoryManager).
+      console.error('[travaso] prodotto non aggiornato', id, esito.reason)
+      bloccati.add(id)
+    })
+  }
+  return { travasati: scritti, saltati, bloccati: bloccati.size }
+}
+
+// Il documento non c'è più: qualcuno l'ha cancellato mentre giravamo, o la
+// lista da cui eravamo partiti era di dieci minuti fa. Non è un errore da
+// fermare tutto — quel prodotto semplicemente non c'è.
+function nonEsistePiu(errore) {
+  if (errore?.code === 'not-found') return true
+  return /not[_\s-]?found|no entity to update/i.test(String(errore?.message || ''))
+}
+
 // Carico merce: incrementa lo stock e registra un movimento (atomico).
 // `qty` è già in unità base; può essere negativo per uno scarico manuale.
 export async function loadStock(itemId, qty, { reason = 'carico' } = {}) {
@@ -487,6 +653,13 @@ export async function loadStock(itemId, qty, { reason = 'carico' } = {}) {
   // Un carico parte da quello che c'è, e quello che c'è non è mai negativo:
   // una bottiglia caricata su −0,04 deve valere una bottiglia. Lo scarico a
   // mano, dall'altra parte, non può scavare sotto lo zero.
+  // IL TRAVASO NON SI FA DI NASCOSTO (REQ-MAG-018): lo fa l'utente, con un
+  // gesto suo. Qui però la quantità arriva già in PEZZI — è quello che la
+  // schermata ha letto — e sommarla a una giacenza ancora scritta in
+  // centilitri darebbe un numero senza senso. Finché il travaso non è fatto
+  // il carico si ferma e lo dice; la schermata comunque non ci arriva, che
+  // il magazzino è in sola lettura.
+  if (patchNormalizza(cur)) throw new Error(ATTESA_TRAVASO)
   const partenza = giacenzaPerCarico(cur.stock)
   const nuovo = qty >= 0 ? partenza + qty : partenza - scaricoPossibile(partenza, -qty)
   await updateDoc(ref, { stock: nuovo })
@@ -542,10 +715,16 @@ export async function adjustStock(itemId, newStock) {
   const s = await getDoc(ref)
   if (!s.exists()) throw new Error('Prodotto non trovato')
   const cur = s.data()
+  // Come nel carico: la conta arriva in pezzi, e su una giacenza ancora
+  // scritta alla vecchia maniera vorrebbe dire un'altra cosa.
+  if (patchNormalizza(cur)) throw new Error(ATTESA_TRAVASO)
   const delta = newStock - (Number(cur.stock) || 0)
   const size = Number(cur.package_size) || 0
   // Mantieni coerente il numero totale di bottiglie con la nuova giacenza.
-  const minTotal = size ? Math.ceil(newStock / size) : 0
+  // Contando a pezzi le bottiglie SONO i pezzi: dividerle per il contenuto
+  // darebbe «1» su venti lattine da 33 cl.
+  const minTotal =
+    (cur.unit || 'pz') === 'pz' ? Math.ceil(newStock) : size ? Math.ceil(newStock / size) : 0
   const patch = { stock: newStock }
   if (minTotal > (Number(cur.bottles_total) || 0)) patch.bottles_total = minTotal
   await updateDoc(ref, patch)
@@ -847,6 +1026,32 @@ export function subscribeServiceStats(onChange, onError) {
 // la coda ci sta sopra con un listener, quindi la copia locale e' quella
 // dell'ultimo aggiornamento arrivato.
 // Si legge da li'; solo se in cache non c'e' si va a chiedere.
+// TUTTO QUELLO CHE TOCCA UN CONTO PASSA DA QUI, e parte dalla CACHE. Ogni
+// azione — incassare, annullare, avanzare, aggiungere righe — leggeva prima
+// il documento dal SERVER: da lì il mezzo secondo (o i due secondi) fra il
+// tocco e la coda che si muove, e il riepilogo in cima che sembrava
+// aggiornarsi «solo quando risponde il server». Perché in effetti era così.
+//
+// La cache è già allineata: la coda tiene un ascolto vivo su quei conti, e
+// le scritture locali ci finiscono dentro subito. Leggendo da lì, l'azione
+// si vede all'istante e la scrittura va per conto suo.
+//
+// Il rischio: si lavora su una fotografia di un istante fa, come prima
+// (anche il server dà una fotografia). Se nel frattempo ha scritto un altro
+// terminale, l'ultimo che scrive vince — ed è il comportamento che c'era già.
+// Come leggiOrdine, per qualunque documento: cache se c'è, server solo se
+// manca. Lo scarico di magazzino legge ricette e articoli — roba che l'app
+// ha già in cache perché il listino e il magazzino sono sottoscritti.
+async function leggiDoc(ref) {
+  try {
+    const c = await getDocFromCache(ref)
+    if (c.exists()) return c
+  } catch {
+    /* niente cache: si chiede al server */
+  }
+  return getDoc(ref)
+}
+
 async function leggiOrdine(ref) {
   try {
     const c = await getDocFromCache(ref)
@@ -857,13 +1062,25 @@ async function leggiOrdine(ref) {
   return getDoc(ref)
 }
 
-export function subscribeActiveOrders(onChange, onError, { cutoffHour = DEFAULT_CUTOFF_HOUR } = {}) {
+export function subscribeActiveOrders(
+  onChange,
+  onError,
+  { cutoffHour = DEFAULT_CUTOFF_HOUR, cashSessionId = null } = {}
+) {
   let aperti = []
   let recenti = []
+  // CHIUSI O ANNULLATI IN QUESTA CASSA, anche se il conto era di ieri.
+  // Senza questo terzo ascolto un conto vecchio rimasto aperto spariva
+  // dallo schermo nell'istante in cui lo si annullava: usciva dalla query
+  // dei conti aperti e non entrava in quella di oggi, che guarda la data di
+  // APERTURA. Si agisce su un conto e quello svanisce, senza sapere se
+  // l'operazione è andata a buon fine.
+  let chiusiQui = []
   const emit = () => {
     const byId = new Map()
     for (const o of aperti) byId.set(o.id, o)
     for (const o of recenti) byId.set(o.id, o)
+    for (const o of chiusiQui) byId.set(o.id, o)
     const list = [...byId.values()]
     list.sort((a, b) => String(a.created_at || '').localeCompare(String(b.created_at || '')))
     onChange(list)
@@ -935,7 +1152,21 @@ export function subscribeActiveOrders(onChange, onError, { cutoffHour = DEFAULT_
     fail
   )
 
+  // Il terzo ascolto c'è solo a cassa aperta: senza una cassa non c'è
+  // «questa serata» a cui appartenere.
+  const unsubChiusi = cashSessionId
+    ? onSnapshot(
+        query(ordersCol, where('closed_in_session', '==', cashSessionId)),
+        (snap) => {
+          chiusiQui = snap.docs.map(mapOrder)
+          emit()
+        },
+        fail
+      )
+    : () => {}
+
   return () => {
+    unsubChiusi()
     unsubAperti()
     unsubRecenti()
   }
@@ -982,6 +1213,24 @@ export async function resetOpenOrdersToReceived() {
   return toccati
 }
 
+// IL TIMBRO DI CHIUSURA. Quando un conto si chiude — incassato o annullato
+// — si scrive in quale cassa è successo: è così che la coda sa tenerlo a
+// schermo per questa serata, anche se il conto era stato aperto giorni
+// prima (vedi subscribeActiveOrders). Senza cassa aperta non si scrive
+// niente: non c'è una serata a cui riferirsi.
+// Il timbro si mette solo se il conto si sta davvero CHIUDENDO: un incasso
+// parziale, o un pagamento che lascia il conto aperto perché non è ancora
+// servito, non è una chiusura.
+function conTimbro(chiusura, nowIso) {
+  if (chiusura?.status !== ORDER_STATUSES.PAGATO) return chiusura
+  return { ...chiusura, ...timbroChiusura(nowIso) }
+}
+
+function timbroChiusura(nowIso) {
+  const cassa = cassaCorrente()
+  return cassa ? { closed_in_session: cassa, closed_at: nowIso } : { closed_at: nowIso }
+}
+
 // CHIUDE SUBITO un conto già pagato: serve tutte le comande e porta
 // l'ordine a "pagato", senza far avanzare gli stati uno per uno. È la
 // scorciatoia per quando si è incassato in anticipo e poi si consegna
@@ -989,19 +1238,25 @@ export async function resetOpenOrdersToReceived() {
 // magazzino adesso (una sola volta, come sempre).
 export async function closePaidOrder(id) {
   const ref = doc(db, 'orders', id)
-  const snap = await getDoc(ref)
+  const snap = await leggiOrdine(ref)
   if (!snap.exists()) throw new Error('Ordine non trovato')
   const data = snap.data()
   if (data.payment_status !== 'pagato') {
     throw new Error('Il conto non è ancora pagato.')
   }
   const nowIso = new Date().toISOString()
-  const chiusura = chiusuraPagamento(data, nowIso, { autoServe: true })
-  const lowStock = chiusura.comande
-    ? await depleteComandeInventory(unappliedEntries(id, chiusura.comande))
-    : []
+  const chiusura = conTimbro(chiusuraPagamento(data, nowIso, { autoServe: true }), nowIso)
+  // PRIMA SI CHIUDE IL CONTO. Lo scarico di magazzino ha bisogno di leggere
+  // ricette e articoli, e finché quelle letture non tornavano il conto non
+  // risultava chiuso: si incassava e la coda si muoveva mezzo secondo dopo
+  // — di più, con la linea del locale. Il magazzino si allinea subito dopo,
+  // per conto suo (vedi scaricaInSottofondo, stessa idea).
   bgWrite(() => updateDoc(ref, chiusura), 'chiusura conto')
-  notifyLowStock(lowStock)
+  if (chiusura.comande) {
+    depleteComandeInventory(unappliedEntries(id, chiusura.comande))
+      .then(notifyLowStock)
+      .catch(() => {})
+  }
 }
 
 // PREFERENZE POS condivise (ordine card e preferiti): stanno sul server
@@ -1040,11 +1295,11 @@ export async function fetchRecentDrinkIds(limit = 20) {
 // PROSSIMO numero d'ordine (senza consumarlo): serve al POS per mostrare il
 // progressivo già all'apertura della schermata, prima ancora del primo item.
 // Segue lo stesso contatore di createOrder (sessione di cassa, o giornata).
-export async function peekNextDailyNumber({ cutoffHour = DEFAULT_CUTOFF_HOUR } = {}) {
-  const cashSessionId = await currentCashSessionId()
-  const key = cashSessionId ? `cash-${cashSessionId}` : businessDayKey(new Date(), cutoffHour)
-  const snap = await getDoc(doc(db, 'counters', key))
-  return ((snap.exists() ? snap.data().last : 0) || 0) + 1
+export function peekNextDailyNumber({ cutoffHour = DEFAULT_CUTOFF_HOUR } = {}) {
+  // Anche questo senza chiedere niente a nessuno: il numero si sa già (vedi
+  // lib/progressivi.js). Aprire il POS non deve aspettare due risposte dal
+  // server per scrivere «#21» in cima.
+  return Promise.resolve(numeroPrevisto(contatoreCorrente(cutoffHour)))
 }
 
 // STORICO ordini in ordine cronologico (più recenti prima), qualunque sia lo
@@ -1075,6 +1330,34 @@ export function subscribeOrdersHistory(cb, onError, { limit = 300 } = {}) {
     stopMain()
     if (stopFallback) stopFallback()
   }
+}
+
+// ORDINI DI UN PERIODO, per la ricerca nella lista ordini. La lista in
+// tempo reale tiene gli ultimi conti: per ritrovare una serata di due
+// settimane fa serve andarla a prendere. Si legge una finestra larga
+// attorno alle date e si taglia con la giornata commerciale, come per la
+// singola giornata qui sotto.
+export async function fetchOrdersRange(daKey, aKey, cutoffHour = DEFAULT_CUTOFF_HOUR) {
+  if (!daKey) return []
+  const fine = aKey || daKey
+  const from = new Date(`${daKey}T00:00:00Z`)
+  from.setUTCDate(from.getUTCDate() - 1)
+  const to = new Date(`${fine}T00:00:00Z`)
+  to.setUTCDate(to.getUTCDate() + 2)
+  const snap = await getDocs(
+    query(
+      ordersCol,
+      where('created_at', '>=', Timestamp.fromDate(from)),
+      where('created_at', '<', Timestamp.fromDate(to))
+    )
+  )
+  return snap.docs
+    .map(mapOrder)
+    .filter((o) => {
+      const g = o.order_date || businessDayKey(o.created_at, cutoffHour)
+      return g && g >= daKey && g <= fine
+    })
+    .sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')))
 }
 
 // Ordini di una giornata commerciale (per statistiche e storico).
@@ -1264,16 +1547,32 @@ export function subscribeRecentGroups(onChange, onError, limitN = 20) {
 
 // --- PAGAMENTI DI GRUPPO (contanti) + ledger ---
 
+// ── INCASSARE NON VUOL DIRE AVER SERVITO ─────────────────────
+//
+// Il pagamento NON può portare avanti nel flusso una comanda che sta a «da
+// fare», «in preparazione» o «pronto»: quei drink vanno fatti lo stesso.
+// Una comanda che risulta servita senza esserlo fa due danni, tutti e due
+// silenziosi — sparisce dagli occhi di chi doveva prepararla, e scarica il
+// magazzino per roba mai uscita. Pagare in anticipo è normale: il conto
+// resta APERTO finché non è uscito tutto.
+//
+// A servire c'è UNA strada sola, ed è un gesto esplicito: «Riscuoti e
+// servi» nella schermata di pagamento, cioè qualcuno che dice «è tutto
+// fuori, prendo i soldi». Senza gli stati del servizio i passi non
+// esistono e il pagamento chiude, come ha sempre fatto: lì `autoServe`
+// arriva acceso da chi chiama.
+//
+// IL VALORE DI PARTENZA È «NON SERVIRE», e non per pignoleria: era acceso,
+// e ogni strada che si dimenticava di dirlo — il pagamento di un gruppo, per
+// esempio — serviva tutto in silenzio. Sbagliando in questo verso resta un
+// conto aperto, e si chiude; sbagliando nell'altro si perde un drink e si
+// scarica una scorta che non è mai uscita, e da lì non si torna indietro.
+//
 // Incassa in contanti un insieme di ordini (un (sotto)gruppo o una sua
 // quota). In un'unica transazione: marca pagati gli ordini non ancora
 // saldati e scrive nel ledger `payments` (1 documento, o N se diviso per
 // N). `split` = { count } per il conto diviso. Restituisce settlement_id.
-// Il pagamento CHIUDE il conto solo se non resta nulla da consegnare.
-// Con la gestione della preparazione attiva, incassare non significa aver
-// servito: pagare in anticipo è normale, e marcare tutto "servito" farebbe
-// sparire dalla coda un ordine ancora da preparare. Senza quella gestione
-// non esistono stati di consegna, quindi il pagamento chiude e basta.
-function chiusuraPagamento(rawOrder, nowIso, { autoServe = true } = {}) {
+function chiusuraPagamento(rawOrder, nowIso, { autoServe = false } = {}) {
   const norm = normalizeOrderDoc(rawOrder)
   if (!autoServe && !allServed(norm)) {
     // Resta APERTO: pagato, ma ancora da consegnare.
@@ -1321,27 +1620,36 @@ export async function payGroupCash({
   })
   if (covered.length === 0) return null
 
-  // Il pagamento chiude i conti: tutte le comande risultano SERVITE e quelle
-  // mai prese in carico si scaricano a magazzino ora.
-  const served = covered.map(({ ref, raw }) => ({
+  // PAGARE UN GRUPPO NON SERVE I DRINK. Qui si serviva tutto, sempre, senza
+  // guardare a che punto stessero le comande: un tavolo di sei che paga
+  // insieme mentre due giri sono ancora al banco faceva sparire dalla coda
+  // quei due giri, già «serviti», e ne scaricava gli ingredienti. Adesso
+  // passa dalla regola di tutti (chiusuraPagamento): il conto si chiude solo
+  // se non resta niente da consegnare, e in un gruppo non c'è nessuno che
+  // possa dire è tutto fuori — quel gesto sta nella schermata del conto.
+  const chiusure = covered.map(({ ref, raw }) => ({
     ref,
-    comande: serveAllComande(normalizeOrderDoc(raw).comande, nowIso),
+    chiusura: chiusuraPagamento(raw, nowIso, { autoServe: false }),
   }))
-  const lowStock = await depleteComandeInventory(
-    served.flatMap(({ ref, comande }) => unappliedEntries(ref.id, comande))
-  )
-  for (const { ref, comande } of served) {
+  const timbro = timbroChiusura(nowIso)
+  for (const { ref, chiusura } of chiusure) {
     bgWrite(() => updateDoc(ref, {
-      payment_status: 'pagato',
+      ...chiusura,
       payment_method: method,
-      paid_at: nowIso,
       payment_id: settlementId,
-      status: ORDER_STATUSES.PAGATO,
-      [`status_times.${ORDER_STATUSES.PAGATO}`]: nowIso,
-      comande,
-      comande_statuses: comandeStatuses(comande),
+      ...timbro,
     }), 'pagamento gruppo')
   }
+  // Il magazzino dopo, per conto suo: vedi closePaidOrder. Si scarica solo
+  // quello che è davvero risultato servito — cioè niente, se è rimasta
+  // roba da preparare.
+  depleteComandeInventory(
+    chiusure.flatMap(({ ref, chiusura }) =>
+      chiusura.comande ? unappliedEntries(ref.id, chiusura.comande) : []
+    )
+  )
+    .then(notifyLowStock)
+    .catch(() => {})
 
   const orderIdsCovered = covered.map((c) => c.ref.id)
   const baseDoc = {
@@ -1370,7 +1678,6 @@ export async function payGroupCash({
   } else {
     bgWrite(() => addDoc(paymentsCol, { ...baseDoc, amount: Math.round(total * 100) / 100, split_count: null, split_index: null }), 'ledger pagamento')
   }
-  notifyLowStock(lowStock)
   return settlementId
 }
 
@@ -1470,35 +1777,13 @@ function mapCashSession(snap) {
 }
 
 // Id della sessione di cassa APERTA (o null). Letta anche dalla cache offline.
-// Serve al progressivo degli ordini, che segue la CASSA e non il giorno.
-// Puntatore PUBBLICO alla sessione di cassa aperta. Serve perché `cash_sessions`
-// è leggibile solo dallo staff (contiene incassi e nomi), ma il progressivo
-// dev'essere lo stesso ANCHE per gli ordini che arrivano dai clienti: senza
-// questo, i loro ordini userebbero il contatore del giorno e si avrebbero
-// numeri duplicati in coda.
+// Puntatore PUBBLICO alla sessione di cassa aperta: `cash_sessions` è
+// leggibile solo dallo staff (dentro ci sono incassi e nomi), ma il
+// progressivo dev'essere lo stesso ANCHE per gli ordini dei clienti. Chi lo
+// legge è lib/progressivi.js, che lo tiene aggiornato con un ascolto: qui lo
+// si scrive e basta.
 const activeCashRef = doc(db, 'counters', '_active_cash')
 
-async function currentCashSessionId() {
-  // 1) puntatore pubblico (funziona per tutti, cliente compreso)
-  try {
-    const snap = await getDoc(activeCashRef)
-    if (snap.exists()) return snap.data().session_id ?? null
-  } catch {
-    /* si prova con la lettura diretta qui sotto */
-  }
-  // 2) fallback per lo staff: sessioni aperte prima che esistesse il puntatore
-  try {
-    const snap = await getDocs(query(cashSessionsCol, where('status', '==', 'open')))
-    if (snap.empty) return null
-    const list = snap.docs.map((d) => ({ id: d.id, opened_at: toIso(d.data().opened_at) }))
-    list.sort((a, b) => String(b.opened_at || '').localeCompare(String(a.opened_at || '')))
-    // Riallinea il puntatore, così anche i clienti prendono il numero giusto.
-    setDoc(activeCashRef, { session_id: list[0].id }, { merge: true }).catch(() => {})
-    return list[0].id
-  } catch {
-    return null
-  }
-}
 
 // Sessione di cassa attualmente aperta (una sola alla volta), in realtime.
 // Niente orderBy nella query (eviterebbe un indice composito e, soprattutto,
@@ -1569,10 +1854,36 @@ export async function fetchCashSessions({ limit = 30 } = {}) {
 
 // --- ORDERS ---
 
+// Conti già creati in questa sessione dell'app, per chiave di battuta: vedi
+// createOrder. Serve a non far nascere due conti dalla stessa battuta.
+const creazioniInCorso = new Map()
+
 // Crea un ordine con i relativi item. Il numero progressivo riparte ad ogni
 // giornata commerciale: è assegnato da un contatore per giornata
 // (counters/{YYYY-MM-DD}), che riparte a ogni nuova giornata.
-export async function createOrder({
+// UNA BATTUTA, UN CONTO. La schermata può chiedere la creazione due volte —
+// l'auto-creazione che scatta mentre si preme «Paga», un doppio tocco, due
+// copie della schermata aperte — e ogni chiamata creava un conto suo: sono
+// nati due #15 nella stessa serata, con dentro le stesse quattro righe. La
+// chiave della battuta dice che è la stessa cosa: la seconda volta si
+// restituisce il conto che sta già nascendo, invece di farne un altro.
+export function createOrder(params) {
+  const chiave = params?.client_temp_id
+  if (!chiave) return creaOrdine(params)
+  const gia = creazioniInCorso.get(chiave)
+  if (gia) return gia
+  const nascita = creaOrdine(params)
+  creazioniInCorso.set(chiave, nascita)
+  // Non si tiene per sempre: è una guardia contro il doppio scatto, non una
+  // cronologia. Mezz'ora copre qualunque doppione ravvicinato.
+  setTimeout(() => creazioniInCorso.delete(chiave), 30 * 60 * 1000)
+  // Se la creazione fallisce, la chiave si libera subito: al secondo
+  // tentativo il conto deve nascere davvero.
+  nascita.catch(() => creazioniInCorso.delete(chiave))
+  return nascita
+}
+
+async function creaOrdine({
   table_label,
   note,
   items,
@@ -1590,7 +1901,11 @@ export async function createOrder({
   payment_required = false, // fotografa l'impostazione alla creazione
   group_id = null, // gruppo a cui associare l'ordine (null = nessuno)
   group_name_snapshot = null, // nome gruppo al momento dell'ordine (storico)
-  status = ORDER_STATUSES.RICEVUTO, // stato iniziale (il POS lo crea già in preparazione)
+  // In che passo nasce la prima comanda: lo dice il locale, e lo dice in un
+  // posto solo (statoComandaNuova). Resta un parametro perché chi crea
+  // l'ordine ha già le impostazioni in mano e le passa; qui c'è il valore
+  // di riserva, che è la stessa regola letta dalla cache.
+  status = statoComandaNuova(impostazioni()),
   client_temp_id = null, // id del placeholder POS: la griglia scambia SENZA doppioni
   cutoff_hour = DEFAULT_CUTOFF_HOUR, // ora di taglio della giornata commerciale
 }) {
@@ -1615,32 +1930,19 @@ export async function createOrder({
   // Giornata commerciale: raggruppa e fa ripartire il progressivo #N. La
   // nottata oltre la mezzanotte resta nella giornata in cui è cominciata.
   const orderDate = businessDayKey(new Date(), cutoff_hour)
-  // PROGRESSIVO legato alla SESSIONE DI CASSA: finché la cassa resta aperta i
-  // numeri continuano (anche a cavallo di più giorni) e riprendono da 1 solo
-  // alla nuova apertura. Senza cassa aperta si ricade sulla giornata
-  // commerciale, come prima.
-  const cashSessionId = await currentCashSessionId()
-  const counterRef = doc(db, 'counters', cashSessionId ? `cash-${cashSessionId}` : orderDate)
+  // I NUMERI CI SONO GIÀ: nessuna lettura, nessuna attesa. Stanno in memoria,
+  // tenuti aggiornati dagli ascolti che partono all'avvio (lib/progressivi.js).
+  // Prima si aspettavano TRE risposte dal server prima di scrivere l'ordine —
+  // il mezzo secondo fra «Conferma» e il conto che compare — e due creazioni
+  // ravvicinate leggevano lo stesso numero: sono nati due conti #15 nella
+  // stessa serata.
+  const cashSessionId = cassaCorrente()
+  const idContatore = cashSessionId ? `cash-${cashSessionId}` : orderDate
   const newOrderRef = doc(ordersCol)
-
-  // Numero giornaliero: letto dalla cache (offline compreso) e incrementato.
-  // Su un singolo dispositivo resta univoco anche offline (la cache riflette
-  // subito le scritture in coda); su più dispositivi offline in contemporanea
-  // può collidere, si riconcilia al sync.
-  const counterSnap = await getDoc(counterRef)
-  const last = counterSnap.exists() ? counterSnap.data().last || 0 : 0
-  const dailyNumber = last + 1
-  // LOCAL-FIRST: la scrittura è già applicata alla cache in modo sincrono, non
-  // si attende l'ack del server (offline `await setDoc` non si risolverebbe mai
-  // e bloccherebbe la creazione dell'ordine). Il sync va in background.
-  setDoc(counterRef, { last: dailyNumber }, { merge: true }).catch(() => {})
-
+  const dailyNumber = prendiNumero(idContatore)
   // Progressivo ASSOLUTO del sistema: non riparte mai, identifica l'ordine
-  // per sempre (id interno mostrato in piccolo nel dettaglio). Stessa
-  // lettura da cache del progressivo giornaliero.
-  const serialSnap = await getDoc(serialCounterRef)
-  const serial = (serialSnap.exists() ? serialSnap.data().last || 0 : 0) + 1
-  setDoc(serialCounterRef, { last: serial }, { merge: true }).catch(() => {})
+  // per sempre (id interno mostrato in piccolo nel dettaglio).
+  const serial = prendiNumero('serial')
 
   const nowIso = new Date().toISOString()
   const mappedItems = items.map((i) => ({
@@ -1674,6 +1976,11 @@ export async function createOrder({
     daily_number: dailyNumber, // progressivo della SESSIONE DI CASSA (o del giorno se la cassa è chiusa)
     serial, // progressivo assoluto di sistema (non riparte mai)
     order_date: orderDate, // giornata commerciale (YYYY-MM-DD)
+    // QUANDO È STATO APERTO, secondo l'orologio di qui. `created_at` è un
+    // orario del SERVER e finché la scrittura non arriva vale null: la
+    // storia del conto restava senza la riga «Conto aperto» — proprio sul
+    // conto appena battuto, che è quello che si guarda.
+    status_times: { [ORDER_OPEN]: nowIso },
     cash_session_id: cashSessionId, // sessione di cassa che numera l'ordine
     table_label: table_label || null,
     note: note || null,
@@ -1687,7 +1994,10 @@ export async function createOrder({
     tip_amount,
     service_mode,
     push_token,
-    placed_by,
+    // DA QUALE DISPOSITIVO. Lo stesso account sta su più terminali: senza
+    // questo, avvisare «tutti tranne chi l'ha battuto» non si può fare, e
+    // infatti prima non si avvisava nessuno (vedi BartenderPage).
+    placed_by: placed_by ? { ...placed_by, device: idDispositivo() } : null,
     customer_name,
     customer_uid,
     payment_method,
@@ -1977,7 +2287,7 @@ export async function applyVoucherDiscount(orderId, voucherId, requestedAmount) 
 // lo si ristorna prima (il buono torna al beneficiario).
 export async function setOrderDiscount(id, discount) {
   const ref = doc(db, 'orders', id)
-  const snap = await getDoc(ref)
+  const snap = await leggiOrdine(ref)
   if (!snap.exists()) throw new Error('Ordine non trovato')
   const o = snap.data()
   if (o.payment_status === 'pagato') throw new Error('Ordine già pagato')
@@ -1999,10 +2309,19 @@ export async function setOrderDiscount(id, discount) {
 // pagamento e, se il residuo va a zero, chiude il conto come "pagato" —
 // anche con comande non servite (l'avviso sta nella UI, come concordato).
 // `items` è la selezione pagata (null = importo sul residuo, senza dettaglio).
-export async function registerPayment(id, { amount, method = 'banco', items = null, autoServe = true } = {}) {
+// CHI STA INCASSANDO, per il rendiconto: in una serata si alternano in due
+// o tre alla cassa, e se il contante non torna è la prima domanda che ci si
+// fa. Si scrive sul pagamento, che è la riga a cui la domanda si riferisce.
+function chiIncassa() {
+  const u = auth.currentUser
+  if (!u) return null
+  return { uid: u.uid, email: u.email || null, name: u.displayName || null }
+}
+
+export async function registerPayment(id, { amount, method = 'banco', items = null, autoServe = false } = {}) {
   const ref = doc(db, 'orders', id)
   const nowIso = new Date().toISOString()
-  const snap = await getDoc(ref)
+  const snap = await leggiOrdine(ref)
   if (!snap.exists()) throw new Error('Ordine non trovato')
   const o = snap.data()
   if (o.status === ORDER_STATUSES.ANNULLATO) throw new Error('Ordine annullato')
@@ -2018,42 +2337,49 @@ export async function registerPayment(id, { amount, method = 'banco', items = nu
       method,
       items: items?.length ? items : null,
       at: nowIso,
+      by: chiIncassa(),
     },
   ]
   const closed = paymentCloses(o, paid)
-  let lowStock = []
-  const chiusura = closed ? chiusuraPagamento(o, nowIso, { autoServe }) : null
-  if (chiusura?.comande) {
-    // Conto saldato E servito ⇒ le comande mai prese in carico vengono
-    // scaricate a magazzino adesso.
-    lowStock = await depleteComandeInventory(unappliedEntries(id, chiusura.comande))
-  }
+  const chiusura = closed ? conTimbro(chiusuraPagamento(o, nowIso, { autoServe }), nowIso) : null
+  // PRIMA L'INCASSO, POI IL MAGAZZINO. Lo scarico legge ricette e articoli:
+  // aspettarlo voleva dire che il conto risultava pagato solo dopo quelle
+  // letture, e nella coda compariva fra i chiusi mezzo secondo più tardi.
   bgWrite(() => updateDoc(ref, {
     payments,
     ...(closed
       ? { ...chiusura, payment_method: summaryMethod(payments) }
       : { payment_status: 'parziale' }),
   }), 'incasso ordine')
-  notifyLowStock(lowStock)
+  if (chiusura?.comande) {
+    // Conto saldato E servito ⇒ le comande mai prese in carico vengono
+    // scaricate a magazzino adesso, in sottofondo.
+    depleteComandeInventory(unappliedEntries(id, chiusura.comande))
+      .then(notifyLowStock)
+      .catch(() => {})
+  }
   return { closed }
 }
 
 // Chiude definitivamente l'ordine come pagato, registrando il metodo
 // d'incasso ('banco' per contanti/POS esterno, 'lettore', 'online').
 // Conto pagato. Con `autoServe` le comande risultano anche SERVITE (e
-// quelle mai prese in carico vengono scaricate a magazzino); seguendo la
-// preparazione invece il conto resta aperto finché non si consegna.
-export async function markOrderPaid(id, method, { autoServe = true } = {}) {
+// quelle mai prese in carico vengono scaricate a magazzino): lo dice solo
+// chi sa che è uscito tutto — gli stati del servizio spenti, o il gesto
+// «Riscuoti e servi». Di suo NO: vedi chiusuraPagamento.
+export async function markOrderPaid(id, method, { autoServe = false } = {}) {
   const ref = doc(db, 'orders', id)
   const nowIso = new Date().toISOString()
   const snap = await leggiOrdine(ref)
   if (!snap.exists()) throw new Error('Ordine non trovato')
-  const chiusura = chiusuraPagamento(snap.data(), nowIso, { autoServe })
-  const lowStock = chiusura.comande
-    ? await depleteComandeInventory(unappliedEntries(id, chiusura.comande))
-    : []
+  const chiusura = conTimbro(chiusuraPagamento(snap.data(), nowIso, { autoServe }), nowIso)
+  // Prima il conto, poi il magazzino: vedi closePaidOrder.
   bgWrite(() => updateDoc(ref, { ...chiusura, payment_method: method }), 'pagamento ordine')
-  notifyLowStock(lowStock)
+  if (chiusura.comande) {
+    depleteComandeInventory(unappliedEntries(id, chiusura.comande))
+      .then(notifyLowStock)
+      .catch(() => {})
+  }
 }
 
 // Avanza lo stato di UNA COMANDA (il ticket di lavorazione). È qui che vive
@@ -2079,18 +2405,59 @@ export async function markOrderPaid(id, method, { autoServe = true } = {}) {
 // Qui l'ordine è già scritto. Se lo scarico non riesce, la comanda resta
 // `inventory_applied: false` e viene ripresa al pagamento (unappliedEntries):
 // le scorte si allineano più tardi, la vendita non si perde mai.
+// ── UNA SCRITTURA IN SOTTOFONDO TOCCA SOLO I CAMPI CHE LE COMPETONO ──
+//
+// `comande` è un ARRAY, e Firestore un array lo riscrive intero: non
+// esiste un percorso tipo `comande.2.inventory_applied`. Chi scrive in
+// sottofondo si rilegge quindi il documento — ma la rilettura NON può
+// stare all'inizio del lavoro, perché in mezzo ci sono le letture di
+// ricette e articoli, che vanno in rete e ci mettono quello che ci mettono.
+// Con l'array letto prima di tutto quello, il magazzino riscriveva sopra
+// gli avanzamenti fatti nel frattempo: si premeva «Ritirato/Servito», la
+// card tornava indietro, e bisognava premere due volte.
+//
+// Quindi: si rilegge NELL'ISTANTE PRIMA DI SCRIVERE, e si cambiano solo i
+// due campi del magazzino — tutto il resto della comanda resta com'è
+// arrivato dalla rilettura, stato compreso. La finestra fra rilettura e
+// scrittura resta di microsecondi, invece che lunga quanto la rete.
+function scriviCampiComanda(ref, comandaId, campi, etichetta) {
+  // La rilettura sta DENTRO la scrittura in sottofondo, non prima: cosi'
+  // fra il leggere e lo scrivere non passa niente, nemmeno il giro di coda
+  // che separa le due cose. E se la scrittura viene ritentata, si rilegge
+  // — un tentativo con l'array di dieci secondi fa rimetterebbe indietro
+  // quello che nel frattempo e' stato fatto al banco.
+  bgWrite(async () => {
+    const snap = await leggiOrdine(ref)
+    if (!snap.exists()) return
+    const comande = normalizeOrderDoc(snap.data()).comande.map((c) =>
+      c.id === comandaId ? { ...c, ...campi } : { ...c }
+    )
+    await updateDoc(ref, { comande })
+  }, etichetta)
+}
+
 function scaricaInSottofondo(orderId, comandaId) {
   ;(async () => {
     try {
       const ref = doc(db, 'orders', orderId)
-      const snap = await getDoc(ref)
+      const snap = await leggiOrdine(ref)
       if (!snap.exists()) return
       const norm = normalizeOrderDoc(snap.data())
-      const comande = norm.comande.map((c) => ({ ...c }))
-      const comanda = comande.find((c) => c.id === comandaId)
+      const comanda = norm.comande.find((c) => c.id === comandaId)
       if (!comanda || comanda.inventory_applied === true) return
-      const lowStock = await depleteComandeInventory([{ orderId, comanda }])
-      bgWrite(() => updateDoc(ref, { comande }), 'scarico scorte')
+      // depleteComandeInventory segna sulla copia che le si passa cosa ha
+      // scaricato: si prende quello, e si scrive solo quello.
+      const copia = { ...comanda }
+      const lowStock = await depleteComandeInventory([{ orderId, comanda: copia }])
+      await scriviCampiComanda(
+        ref,
+        comandaId,
+        {
+          inventory_applied: copia.inventory_applied === true,
+          inventory_consumption: copia.inventory_consumption ?? null,
+        },
+        'scarico scorte'
+      )
       notifyLowStock(lowStock)
     } catch {
       /* si riprende al pagamento */
@@ -2106,15 +2473,14 @@ function riallineaInSottofondo(orderId, comandaId) {
   ;(async () => {
     try {
       const ref = doc(db, 'orders', orderId)
-      const snap = await getDoc(ref)
+      const snap = await leggiOrdine(ref)
       if (!snap.exists()) return
       const norm = normalizeOrderDoc(snap.data())
-      const comande = norm.comande.map((c) => ({ ...c }))
-      const comanda = comande.find((c) => c.id === comandaId)
+      const comanda = norm.comande.find((c) => c.id === comandaId)
       if (!comanda) return
       const items = Array.isArray(comanda.items) ? comanda.items : []
       const drinkIds = [...new Set(items.filter((i) => !i.custom).map((i) => i.drink_id).filter(Boolean))]
-      const drinkSnaps = await Promise.all(drinkIds.map((d) => getDoc(doc(db, 'drinks', d))))
+      const drinkSnaps = await Promise.all(drinkIds.map((d) => leggiDoc(doc(db, 'drinks', d))))
       const drinksById = {}
       drinkSnaps.forEach((sn, idx) => {
         drinksById[drinkIds[idx]] = sn.exists() ? sn.data() : null
@@ -2130,6 +2496,10 @@ function riallineaInSottofondo(orderId, comandaId) {
         const sn = invSnaps[idx]
         if (!sn.exists()) continue
         const curItem = sn.data()
+        // QUELLO CHE NON È UNA SCORTA NON SI TOCCA: la manodopera entra nel
+        // costo del drink, non nel magazzino. Lo dice il prodotto, non la sua
+        // unità — il ghiaccio si conta a unità e si scarica eccome.
+        if (!eScorta(curItem)) continue
         // Anche qui non si scende sotto zero: una comanda modificata al rialzo
         // su un prodotto già finito toglieva l'aggiunta comunque.
         const scarico = scaricoPossibile(curItem.stock, qtyInStockUnit(d.delta, d.unit, curItem))
@@ -2147,8 +2517,10 @@ function riallineaInSottofondo(orderId, comandaId) {
           created_at: serverTimestamp(),
         }), 'movimento scorta')
       }
-      comanda.inventory_consumption = newCons
-      bgWrite(() => updateDoc(ref, { comande }), 'consumo comanda')
+      // Stesso motivo dello scarico: fin qui si è andati in rete a leggere
+      // ricette e articoli, e l'array letto all'inizio è vecchio. Si
+      // rilegge adesso e si scrive SOLO il consumo.
+      await scriviCampiComanda(ref, comandaId, { inventory_consumption: newCons }, 'consumo comanda')
     } catch {
       /* il magazzino si riallinea alla prossima occasione */
     }
@@ -2161,7 +2533,7 @@ async function depleteComandeInventory(entries) {
   for (const { orderId, comanda } of entries) {
     const items = Array.isArray(comanda.items) ? comanda.items : []
     const drinkIds = [...new Set(items.filter((i) => !i.custom).map((i) => i.drink_id).filter(Boolean))]
-    const drinkSnaps = await Promise.all(drinkIds.map((d) => getDoc(doc(db, 'drinks', d))))
+    const drinkSnaps = await Promise.all(drinkIds.map((d) => leggiDoc(doc(db, 'drinks', d))))
     const drinksById = {}
     drinkSnaps.forEach((sn, idx) => {
       drinksById[drinkIds[idx]] = sn.exists() ? sn.data() : null
@@ -2169,7 +2541,7 @@ async function depleteComandeInventory(entries) {
     plans.push({ orderId, comanda, consumption: computeConsumption(items, drinksById) })
   }
   const itemIds = [...new Set(plans.flatMap((p) => p.consumption.map((c) => c.inventory_item_id)))]
-  const itemSnaps = await Promise.all(itemIds.map((id) => getDoc(doc(db, 'inventory_items', id))))
+  const itemSnaps = await Promise.all(itemIds.map((id) => leggiDoc(doc(db, 'inventory_items', id))))
   const itemsById = {}
   itemSnaps.forEach((sn, idx) => {
     if (sn.exists()) itemsById[itemIds[idx]] = sn.data()
@@ -2203,6 +2575,8 @@ async function depleteComandeInventory(entries) {
   const lowStock = []
   for (const [id, qty] of Object.entries(delta)) {
     const cur = itemsById[id]
+    // Come sopra: si scarica solo quello che sta davvero su uno scaffale.
+    if (!eScorta(cur)) continue
     // NON SI SCENDE SOTTO ZERO. Si toglie al massimo quello che risulta in
     // giacenza: continuando a battere un prodotto finito si arrivava a
     // −0,04 pz, e il carico successivo ripartiva da quel buco. L'increment
@@ -2224,10 +2598,17 @@ const unappliedEntries = (orderId, comande) =>
     .map((comanda) => ({ orderId, comanda }))
 
 // Notifica scorte basse/finite (da chiamare fuori dalla transazione).
+// Chi non tiene il magazzino può spegnerle dalle impostazioni: in sala un
+// avviso su un ingrediente sotto soglia è solo una riga da chiudere.
 function notifyLowStock(lowStock) {
+  const preferenze = leggiAvvisi(auth.currentUser?.uid)
   for (const it of lowStock) {
-    const stato = it.stock <= 0 ? 'esaurito' : 'in esaurimento'
-    notify(`⚠️ Scorta ${stato}`, `${it.name}: rimasti ${formatQty(it.stock, it.unit)}`)
+    const finito = it.stock <= 0
+    if (!avvisoAttivo(preferenze, idAvvisoScorta(finito ? 'empty' : 'low'))) continue
+    notify(
+      `⚠️ Scorta ${finito ? 'esaurita' : 'in esaurimento'}`,
+      `${it.name}: rimasti ${formatQty(it.stock, it.unit)}`
+    )
   }
 }
 
@@ -2237,7 +2618,7 @@ export async function advanceComanda(orderId, comandaId, newStatus) {
   let lowStock = []
   let statComanda = null
 
-  const orderSnap = await getDoc(orderRef)
+  const orderSnap = await leggiOrdine(orderRef)
   if (!orderSnap.exists()) throw new Error('Ordine non trovato')
   const raw = orderSnap.data()
   const norm = normalizeOrderDoc(raw)
@@ -2247,10 +2628,15 @@ export async function advanceComanda(orderId, comandaId, newStatus) {
     : activeComanda({ comande })
   if (!comanda) throw new Error('Comanda non trovata')
 
-  // Scarico inventario alla presa in carico della comanda (una volta sola),
-  // ma DOPO aver salvato l'avanzamento: vedi scaricaInSottofondo.
-  const daScaricare =
-    newStatus === ORDER_STATUSES.IN_PREPARAZIONE && comanda.inventory_applied !== true
+  // IL MAGAZZINO SI SCALA QUANDO LA COMANDA È SERVITA, non quando la si
+  // prende in carico. Prima si scaricava allo «in preparazione»: un drink
+  // iniziato e poi non fatto — riga tolta, cliente che cambia idea, comanda
+  // annullata — aveva già portato via gli ingredienti. Servito vuol dire
+  // che quel drink è uscito davvero, ed è l'unico momento in cui gli
+  // ingredienti se ne sono andati per certo. Fino a lì sono IMPEGNATI, e si
+  // leggono in magazzino nella colonna «a fine serata» (lib/impegnato.js).
+  // Sempre una volta sola, e DOPO aver salvato l'avanzamento.
+  const daScaricare = comandaDaScaricare(comanda, newStatus)
 
   comanda.status = newStatus
   comanda.status_times = { ...(comanda.status_times || {}), [newStatus]: nowIso }
@@ -2291,7 +2677,7 @@ export async function advanceComanda(orderId, comandaId, newStatus) {
       .catch((e) => console.error('[SumUp] updateStatus failed:', e))
   }
 
-  return mapOrder(await getDoc(orderRef))
+  return mapOrder(await leggiOrdine(orderRef))
 }
 
 // Retrocompatibilità: avanza la comanda ATTIVA dell'ordine (le viste che
@@ -2366,7 +2752,7 @@ export async function updateOrderPushToken(id, token) {
 // e l'aggregato dell'ordine, ricalcolando il totale.
 export async function updateOrderItems(id, items) {
   const ref = doc(db, 'orders', id)
-  const snap = await getDoc(ref)
+  const snap = await leggiOrdine(ref)
   if (!snap.exists()) throw new Error('Ordine non trovato')
   const cur = snap.data()
   const norm = normalizeOrderDoc(cur)
@@ -2405,7 +2791,7 @@ export async function updateOrderItems(id, items) {
     total: nuovoTotale,
     ...(nuovoSconto != null ? { discount_amount: nuovoSconto } : {}),
   }), 'modifica ordine')
-  return mapOrder(await getDoc(ref))
+  return mapOrder(await leggiOrdine(ref))
 }
 
 // Campi "anagrafici" del conto (nome, tavolo, note): modificabili dal
@@ -2429,7 +2815,7 @@ export async function setOrderGroup(id, groupId) {
     () => updateDoc(ref, { group_id: groupId || null, group_name_snapshot: nome }),
     'gruppo del conto'
   )
-  return mapOrder(await getDoc(ref))
+  return mapOrder(await leggiOrdine(ref))
 }
 
 export async function updateOrderInfo(id, { table_label, note, customer_name }) {
@@ -2441,6 +2827,61 @@ export async function updateOrderInfo(id, { table_label, note, customer_name }) 
   return mapOrder(await getDoc(doc(db, 'orders', id)))
 }
 
+// ── SERVIZIO O RITIRO, SU QUESTO CONTO ───────────────────────
+//
+// L'impostazione del locale dice come NASCONO i conti; qui si cambia
+// quello che si ha in mano. Un tavolo che viene a ritirare al banco
+// succede tutte le sere.
+//
+// E CAMBIA I SOLDI: il ritiro azzera coperto e servizio, il servizio li
+// rimette coi valori del locale. Le regole — chi può cambiare e cosa
+// succede ai supplementi — stanno in lib/consegna.js, che è dove si
+// provano; qui si scrive.
+export async function setOrderServiceMode(orderId, modo) {
+  const ref = doc(db, 'orders', orderId)
+  const snap = await leggiOrdine(ref)
+  if (!snap.exists()) throw new Error('Ordine non trovato')
+  const cur = snap.data()
+  const permesso = cambioModoPermesso(cur)
+  if (permesso === 'no') {
+    throw new Error('Conto chiuso: per cambiarlo riaprilo prima')
+  }
+  const patch = { service_mode: modo || null }
+
+  // Coi soldi già in cassa i supplementi non si toccano: erano stati
+  // calcolati sul totale su cui si è incassato. Si cambia solo il modo.
+  if (permesso === 'si') {
+    const norm = normalizeOrderDoc(cur)
+    const subtotale = sumItems(aggregateItems(norm.comande))
+    const supplementi = supplementiPerModo({
+      modo,
+      // Quante persone erano state contate: passando a ritiro il coperto
+      // si azzera, ma il numero resta scritto per quando si torna indietro.
+      persone: Number(cur.coperto_persons) || Number(cur.coperto_persons_scelti) || 0,
+      subtotale,
+      settings: impostazioni(),
+    })
+    Object.assign(patch, supplementi)
+    // Il numero di persone si ricorda a parte: tornando al servizio il
+    // coperto deve poter tornare quello di prima, e `coperto_persons` nel
+    // frattempo è stato azzerato.
+    if (Number(cur.coperto_persons) > 0) {
+      patch.coperto_persons_scelti = Number(cur.coperto_persons)
+    }
+    const nuovoTotale =
+      subtotale +
+      supplementi.coperto_amount +
+      supplementi.service_charge_amount +
+      (Number(cur.tip_amount) || 0)
+    patch.total = nuovoTotale
+    const nuovoSconto = scontoRicalcolato(cur, nuovoTotale)
+    if (nuovoSconto != null) patch.discount_amount = nuovoSconto
+  }
+
+  bgWrite(() => updateDoc(ref, patch), 'modo consegna')
+  return mapOrder(await leggiOrdine(ref))
+}
+
 // AGGIUNTA a un conto aperto: crea una NUOVA COMANDA con i soli item
 // aggiunti (come "aggiungi un ordine" nei POS) e aggiorna aggregato+totale.
 // La comanda nasce già IN PREPARAZIONE (l'aggiunta la fa il banco, che la
@@ -2450,13 +2891,14 @@ export async function updateOrderInfo(id, { table_label, note, customer_name }) 
 export async function addComanda(orderId, items, { note = null } = {}) {
   const ref = doc(db, 'orders', orderId)
   const nowIso = new Date().toISOString()
-  const snap = await getDoc(ref)
+  const snap = await leggiOrdine(ref)
   if (!snap.exists()) throw new Error('Ordine non trovato')
   const cur = snap.data()
   const norm = normalizeOrderDoc(cur)
   if (norm.status !== ORDER_OPEN) throw new Error('Conto chiuso: non più modificabile')
   const comande = norm.comande.map((c) => ({ ...c }))
   const seq = comande.reduce((m, c) => Math.max(m, c.seq || 0), 0) + 1
+  const statoNuova = statoComandaNuova(impostazioni())
   const nuova = {
     id: `c${seq}`,
     seq,
@@ -2470,10 +2912,14 @@ export async function addComanda(orderId, items, { note = null } = {}) {
       ...(i.custom ? { custom: true, recipe_items: i.recipe_items ?? [] } : {}),
       ...(i.note ? { note: i.note } : {}),
     })),
-    status: ORDER_STATUSES.IN_PREPARAZIONE,
+    // In che passo nasce lo dice il locale, e lo dice in un posto solo
+    // (statoComandaNuova). L'ora del «ricevuto» c'è comunque: la comanda è
+    // arrivata adesso anche se il banco la prende in carico nello stesso
+    // istante, e senza quell'orario i tempi di servizio non tornano.
+    status: statoNuova,
     status_times: {
       [ORDER_STATUSES.RICEVUTO]: nowIso,
-      [ORDER_STATUSES.IN_PREPARAZIONE]: nowIso,
+      ...(statoNuova === ORDER_STATUSES.RICEVUTO ? {} : { [statoNuova]: nowIso }),
     },
     note: note || null,
     inventory_applied: false,
@@ -2499,9 +2945,130 @@ export async function addComanda(orderId, items, { note = null } = {}) {
     // più il significato che aveva quando è stato deciso.
     ...(nuovoSconto != null ? { discount_amount: nuovoSconto } : {}),
   }), 'aggiunta al conto')
-  // Le scorte si scalano DOPO: la vendita non deve aspettare il magazzino.
-  scaricaInSottofondo(orderId, nuova.id)
-  return mapOrder(await getDoc(ref))
+  // LE SCORTE NON SI SCALANO QUI. Aggiungere una riga al conto non vuol
+  // dire aver versato niente: la riga si toglie, il conto si annulla, il
+  // cliente cambia idea. Da adesso quegli ingredienti sono IMPEGNATI — si
+  // vedono in magazzino, colonna «a fine serata» — e se ne vanno davvero
+  // quando la comanda risulta servita (o, senza gli stati del servizio,
+  // alla riscossione, che è il momento in cui tutto risulta servito).
+  return mapOrder(await leggiOrdine(ref))
+}
+
+// ── PREPARAZIONE PARZIALE DI UNA COMANDA ─────────────────────
+//
+// Al banco capita di vedere tre gin tonic in una comanda e due in
+// un'altra e prepararli insieme, per farli uscire in una volta. Non
+// andrebbe fatto — un ticket si lavora intero — ma si fa, e l'app non lo
+// impedisce: lo registra, così il conto resta giusto e la coda dice
+// davvero cosa è al banco e cosa aspetta ancora.
+//
+// La comanda di partenza NON si modifica in silenzio: si ANNULLA e al suo
+// posto ne nascono due — le righe scelte, già in preparazione, e il resto,
+// che resta «da fare». Così la copia già stampata al banco ha ancora un
+// riscontro nella storia del conto, invece di parlare di una comanda che
+// nel frattempo è cambiata sotto le mani.
+//
+// UNA SOLA SCRITTURA. Le tre operazioni toccano lo stesso array `comande`:
+// farle con tre chiamate separate vorrebbe dire tre letture e tre
+// riscritture dello stesso documento, e chi arriva secondo cancella il
+// primo. Le quantità le conta dividiComanda (logica pura, provata a
+// unità); qui si scrive e basta.
+export async function preparazioneParziale(orderId, comandaId, righeScelte) {
+  const ref = doc(db, 'orders', orderId)
+  const nowIso = new Date().toISOString()
+  const snap = await leggiOrdine(ref)
+  if (!snap.exists()) throw new Error('Ordine non trovato')
+  const cur = snap.data()
+  const norm = normalizeOrderDoc(cur)
+  if (norm.status !== ORDER_OPEN) throw new Error('Conto chiuso: non più modificabile')
+  const comande = norm.comande.map((c) => ({ ...c }))
+  const comanda = comande.find((c) => c.id === comandaId)
+  if (!comanda) throw new Error('Comanda non trovata')
+  // Finché il drink non è uscito dal banco: da «pronto» in poi è roba sul
+  // vassoio, e su una comanda servita gli ingredienti sono già stati
+  // scalati. La regola sta in comande.js, che è dove si prova.
+  if (!comandaDivisibile(comanda)) {
+    throw new Error('Questa comanda non si divide più')
+  }
+
+  const divisa = dividiComanda(comanda, righeScelte)
+  if (!divisa) throw new Error('Non hai scelto niente da preparare')
+  // In che passo nascono le due parti lo dice quella di partenza: da «da
+  // fare» la parte scelta è quella che si comincia adesso; da «in
+  // preparazione» sono tutte e due già al banco.
+  const passi = statiDopoLaDivisione(comanda.status)
+  // Prese tutte le righe non c'è niente da dividere: la comanda avanza e
+  // basta — e se è già dove dovrebbe andare non si tocca niente.
+  // Annullarla per rifarla identica lascerebbe in giro una comanda annullata
+  // che non racconta niente.
+  if (divisa.tutta) {
+    return comanda.status === passi.nuova
+      ? mapOrder(snap)
+      : advanceComanda(orderId, comandaId, passi.nuova)
+  }
+
+  comanda.status = ORDER_STATUSES.ANNULLATO
+  comanda.status_times = {
+    ...(comanda.status_times || {}),
+    [ORDER_STATUSES.ANNULLATO]: nowIso,
+  }
+  // PERCHÉ È ANNULLATA. Questo annullamento è contabilità interna, non un
+  // fatto della serata: quei drink non sono spariti, sono diventati le due
+  // comande qui sotto. Senza il motivo scritto finirebbe negli elenchi
+  // degli annullati insieme a quelli veri, e la stessa roba si vedrebbe due
+  // volte (vedi annullataPerDivisione in comande.js).
+  comanda.annullata_per = ANNULLATA_PER_DIVISIONE
+  comanda.divisa_in = [] // i figli, riempiti sotto: così la storia si legge
+
+  // I numeri delle comande nuove partono dopo l'ultimo usato nel conto:
+  // riusare il numero di quella annullata vorrebbe dire due «comanda 2».
+  let seq = comande.reduce((m, c) => Math.max(m, c.seq || 0), 0)
+  const figlia = (items, stato) => {
+    seq += 1
+    const tempi = { [ORDER_STATUSES.RICEVUTO]: comanda.status_times?.[ORDER_STATUSES.RICEVUTO] || nowIso }
+    if (stato === ORDER_STATUSES.IN_PREPARAZIONE) tempi[ORDER_STATUSES.IN_PREPARAZIONE] = nowIso
+    return {
+      id: `c${seq}`,
+      seq,
+      items,
+      status: stato,
+      status_times: tempi,
+      note: comanda.note || null,
+      // Le scorte non sono state toccate: si scalano alla comanda SERVITA, e
+      // questa non lo è mai stata.
+      inventory_applied: false,
+      inventory_consumption: null,
+      // L'ORARIO RESTA QUELLO DI PARTENZA: il cliente aspetta da quando ha
+      // ordinato, non da quando qualcuno ha diviso la comanda. Con l'ora di
+      // adesso «da quanto sta lì» sulla card sarebbe ripartito da zero.
+      created_at: comanda.created_at || nowIso,
+      divisa_da: comanda.id,
+    }
+  }
+  const inPreparazione = figlia(divisa.nuova, passi.nuova)
+  const daFare = figlia(divisa.resta, passi.resta)
+  comanda.divisa_in = [inPreparazione.id, daFare.id]
+  comande.push(inPreparazione, daFare)
+
+  // Il totale del conto non cambia — le stesse unità stanno solo in due
+  // ticket invece che in uno — ma si ricalcola con la regola di sempre:
+  // scriverlo a mano qui sarebbe il punto in cui un giorno divergerebbe.
+  const agg = aggregateItems(comande)
+  const extras =
+    Number(cur.coperto_amount || 0) +
+    Number(cur.service_charge_amount || 0) +
+    Number(cur.tip_amount || 0)
+  const nuovoTotale = sumItems(agg) + extras
+  const nuovoSconto = scontoRicalcolato(cur, nuovoTotale)
+  bgWrite(() => updateDoc(ref, {
+    status: ORDER_OPEN,
+    comande,
+    comande_statuses: comandeStatuses(comande),
+    items: agg,
+    total: nuovoTotale,
+    ...(nuovoSconto != null ? { discount_amount: nuovoSconto } : {}),
+  }), 'preparazione parziale')
+  return mapOrder(await leggiOrdine(ref))
 }
 
 // Modifica di UNA COMANDA da parte del bartender (quantità, rimozioni,
@@ -2569,7 +3136,7 @@ export async function bartenderUpdateComanda(orderId, comandaId, { items }) {
   }), 'modifica comanda')
   // Scorte dopo: se erano già state scalate si applica solo la differenza.
   if (daRiallineare) riallineaInSottofondo(orderId, comandaId)
-  return mapOrder(await getDoc(ref))
+  return mapOrder(await leggiOrdine(ref))
 }
 
 // Annulla un ordine. Se lo stock era già stato scalato lo ripristina dallo
@@ -2598,16 +3165,81 @@ export async function cancelOrder(id, opts = {}) {
     .filter((c) => c.inventory_applied === true && Array.isArray(c.inventory_consumption))
     .flatMap((c) => c.inventory_consumption)
   const restoreStock = kind !== 'non_ritirato'
-  if (restoreStock && consumption.length > 0) {
-    const itemSnaps = await Promise.all(
-      consumption.map((c) => getDoc(doc(db, 'inventory_items', c.inventory_item_id)))
+
+  // Le comande non servite diventano annullate (le servite restano a storico).
+  const nowIso = new Date().toISOString()
+  // I BUONI TORNANO AL LORO POSTO, MA DOPO. Annullando, il conto non si
+  // incassa più: se il saldo restasse scalato il cliente avrebbe perso il
+  // credito per un conto mai pagato. Le righe restituite si segnano
+  // (`restituito_at`), così riaprendo il conto non tornano una seconda
+  // volta — sarebbe credito inventato.
+  const buoniIncasso = buoniDaRestituire(order)
+  for (const c of comande) {
+    if (c.status !== ORDER_STATUSES.RITIRATO && c.status !== ORDER_STATUSES.ANNULLATO) {
+      c.status = ORDER_STATUSES.ANNULLATO
+      c.status_times = { ...(c.status_times || {}), [ORDER_STATUSES.ANNULLATO]: nowIso }
+    }
+    if (restoreStock) c.inventory_applied = false
+  }
+  // PRIMA SI ANNULLA IL CONTO. Storni di magazzino e buoni hanno bisogno di
+  // leggere altri documenti, e finché quelle letture non tornavano il conto
+  // non risultava annullato: si annullava e nella tab «Annullati» compariva
+  // mezzo secondo dopo — chi guarda, in quel mezzo secondo, non sa se
+  // l'operazione è andata. Il resto si sistema subito dopo, per conto suo.
+  const timbro = timbroChiusura(nowIso)
+  bgWrite(() => updateDoc(orderRef, {
+    status: ORDER_STATUSES.ANNULLATO,
+    ...timbro,
+    comande,
+    comande_statuses: comandeStatuses(comande),
+    ...(buoniIncasso.length
+      ? { payments: segnaBuoniRestituiti(order.payments, nowIso) }
+      : {}),
+    [`status_times.${ORDER_STATUSES.ANNULLATO}`]: nowIso,
+    cancelled_by: by,
+    // E CHI, di persona: `cancelled_by` dice solo se è stato il cliente o il
+    // banco, e nella storia del conto compariva «bartender» mentre le altre
+    // righe dicevano il nome. Tre etichette diverse per la stessa persona.
+    cancelled_persona: chiIncassa(),
+    // DA QUALE TERMINALE. Serve a non ripetere l'avviso a chi ha appena
+    // annullato: lo sa già. Stesso metro degli ordini (placed_by.device).
+    cancelled_device: idDispositivo(),
+    cancel_kind: kind,
+    cancel_phrase: phrase,
+    cancel_message: message || null,
+    cancel_notify: !!notifyClient,
+  }), 'annullo ordine')
+
+  // E ADESSO IL RESTO, per conto suo: le scorte tornano dentro e i buoni
+  // tornano al loro posto. Sono letture di altri documenti, e aspettarle
+  // teneva il conto «non ancora annullato» a schermo.
+  if (restoreStock && consumption.length > 0) stornaScorte(id, consumption)
+  if (order.discount && order.discount.type === 'buono' && order.discount.voucher_id) {
+    refundVoucher(order.discount.voucher_id, order.discount.value, id, nowIso).catch(() => {})
+  }
+  for (const b of buoniIncasso) {
+    refundVoucher(b.voucher_id, b.amount, id, nowIso).catch(() => {})
+  }
+  return mapOrder(await leggiOrdine(orderRef))
+}
+
+// Rimette dentro quello che era stato scalato, dallo snapshot del consumo.
+// Con `increment(+qty)`: commutativo, si accoda offline e non litiga con le
+// altre scritture sullo stesso articolo.
+async function stornaScorte(orderId, consumption) {
+  try {
+    const snaps = await Promise.all(
+      consumption.map((c) => leggiDoc(doc(db, 'inventory_items', c.inventory_item_id)))
     )
-    // Ripristino stock con increment(+qty): commutativo, si accoda offline.
     for (let idx = 0; idx < consumption.length; idx++) {
       const c = consumption[idx]
-      const s = itemSnaps[idx]
+      const s = snaps[idx]
       if (!s.exists()) continue
       const cur = s.data()
+      // Si rimette a posto solo quello che era stato tolto: se non è una
+      // scorta non era mai uscito dal magazzino, e rimetterlo dentro
+      // regalerebbe giacenza dal nulla.
+      if (!eScorta(cur)) continue
       bgWrite(() => updateDoc(doc(db, 'inventory_items', c.inventory_item_id), {
         stock: increment(qtyInStockUnit(c.qty, c.unit, cur)),
       }), 'storno scorta')
@@ -2618,49 +3250,13 @@ export async function cancelOrder(id, opts = {}) {
         qty: c.qty,
         unit: cur.unit ?? null,
         reason: 'storno',
-        order_id: id,
+        order_id: orderId,
         created_at: serverTimestamp(),
       }), 'movimento scorta')
     }
+  } catch {
+    /* il magazzino si riallinea alla prossima occasione */
   }
-
-  // Le comande non servite diventano annullate (le servite restano a storico).
-  const nowIso = new Date().toISOString()
-  // Buono-sconto applicato: il saldo torna al beneficiario (l'ordine salta).
-  if (order.discount && order.discount.type === 'buono' && order.discount.voucher_id) {
-    await refundVoucher(order.discount.voucher_id, order.discount.value, id, nowIso)
-  }
-  // E ANCHE I BUONI USATI PER PAGARE. Annullando, il conto non si incassa
-  // più: se il saldo restasse scalato, il cliente avrebbe perso il credito
-  // per un conto che non è mai stato pagato. Le righe restituite si segnano
-  // (`restituito_at`), così riaprendo il conto non tornano una seconda
-  // volta — sarebbe credito inventato.
-  const buoniIncasso = buoniDaRestituire(order)
-  for (const b of buoniIncasso) {
-    await refundVoucher(b.voucher_id, b.amount, id, nowIso)
-  }
-  for (const c of comande) {
-    if (c.status !== ORDER_STATUSES.RITIRATO && c.status !== ORDER_STATUSES.ANNULLATO) {
-      c.status = ORDER_STATUSES.ANNULLATO
-      c.status_times = { ...(c.status_times || {}), [ORDER_STATUSES.ANNULLATO]: nowIso }
-    }
-    if (restoreStock) c.inventory_applied = false
-  }
-  bgWrite(() => updateDoc(orderRef, {
-    status: ORDER_STATUSES.ANNULLATO,
-    comande,
-    comande_statuses: comandeStatuses(comande),
-    ...(buoniIncasso.length
-      ? { payments: segnaBuoniRestituiti(order.payments, nowIso) }
-      : {}),
-    [`status_times.${ORDER_STATUSES.ANNULLATO}`]: nowIso,
-    cancelled_by: by,
-    cancel_kind: kind,
-    cancel_phrase: phrase,
-    cancel_message: message || null,
-    cancel_notify: !!notifyClient,
-  }), 'annullo ordine')
-  return mapOrder(await getDoc(orderRef))
 }
 
 // RIPRISTINO DI UN CONTO CHIUSO O ANNULLATO. Capita: si chiude un conto sul
@@ -2690,6 +3286,7 @@ export async function restoreOrder(id, { motivo = null, chi = null } = {}) {
   }
   const nowIso = new Date().toISOString()
   const norm = normalizeOrderDoc(data)
+
 
   // BUONO VIP: annullando, il saldo era tornato al beneficiario. Riaprendo,
   // lo sconto è ancora sul conto: se non lo si ri-addebita diventa un regalo
@@ -2724,6 +3321,7 @@ export async function restoreOrder(id, { motivo = null, chi = null } = {}) {
     }
   }
 
+
   // PAGATO COL BUONO: il saldo torna. La riga di incasso sparisce insieme
   // alle altre (il conto è di nuovo da incassare) e lasciare il saldo
   // scalato vorrebbe dire farlo pagare due volte: una col buono che non
@@ -2747,7 +3345,7 @@ export async function restoreOrder(id, { motivo = null, chi = null } = {}) {
     // identico a com'era.
     ...(scontoRiscritto || {}),
   }), 'ripristino conto')
-  return mapOrder(await getDoc(orderRef))
+  return mapOrder(await leggiOrdine(orderRef))
 }
 
 // --- REALTIME ---
@@ -3100,6 +3698,27 @@ export async function saveStaffToken(uid, token, role = null, device = null) {
   }
 }
 
+// USCENDO SI SPENGONO GLI AVVISI DI QUESTO DISPOSITIVO. Il token resta
+// valido anche dopo il logout — è del browser, non della persona — e chi si
+// era scollegato continuava a sentire suonare gli ordini del locale sul
+// telefono di casa. Al prossimo accesso il dispositivo si registra di
+// nuovo, quindi non si perde niente.
+// Si toglie sia la riga del dispositivo sia quella vecchia intestata alla
+// persona, se e' rimasta in giro.
+export async function rimuoviStaffToken(uid, device) {
+  for (const id of [device, uid].filter(Boolean)) {
+    try {
+      const snap = await getDoc(doc(db, 'staff_tokens', id))
+      if (snap.exists() && (!uid || snap.get('uid') === uid)) {
+        await deleteDoc(doc(db, 'staff_tokens', id))
+      }
+    } catch {
+      /* non si riesce: peggio che vada, restano gli avvisi finche' il
+         token non scade. Non e' un motivo per non far uscire nessuno. */
+    }
+  }
+}
+
 // Questo dispositivo è registrato per ricevere gli avvisi? Serve alla
 // campanella per rispondere alla domanda che al banco si fa per prima.
 export async function staffTokenRegistrato(uid, device) {
@@ -3178,7 +3797,18 @@ export const DEFAULT_SETTINGS = {
   // tutto ciò che ne dipende: avanzamenti di stato, tempi di servizio,
   // stima ETA e notifiche di "pronto". Disattivata di default: la si accende
   // solo se si vuole tracciare la preparazione.
+  // LA ⓘ CON LA RICETTA sulle card della griglia: accesa di suo. Dove il
+  // listino lo sanno tutti a memoria si spegne, e le card restano pulite.
+  pos_ricetta_info: true,
   workflow_enabled: false,
+  // RISCUOTI E SERVI: col servizio seguito, incassare non chiude il conto —
+  // si può pagare in anticipo con tre drink ancora da fare. Ma al banco
+  // capita spessissimo il contrario: si consegna e si incassa nello stesso
+  // gesto, e in quel caso due passaggi sono uno di troppo. Acceso, nella
+  // schermata di pagamento compare anche «Riscuoti e servi», che chiude
+  // tutto in un colpo. Spento di default: chi segue il servizio di solito
+  // lo segue apposta.
+  riscuoti_e_servi: false,
   price_markup: DEFAULT_MARKUP,
   price_round_step: DEFAULT_ROUND_STEP,
   // IVA di vendita (somministrazione bar = 10%): serve a scorporare l'IVA dal
@@ -3200,7 +3830,17 @@ export const DEFAULT_SETTINGS = {
   // Modalità di consegna: 'tavolo' (servizio), 'banco' (ritiro) o 'entrambi'
   // (sceglie il cliente all'ordine). Il ritiro al banco azzera coperto e
   // costo di servizio.
+  // I DUE MONDI: 'tavolo' (solo servizio) o 'entrambi' (ritiro e servizio
+  // convivono). Non è un vincolo — lo staff cambia il modo sul singolo
+  // conto — ma dice cosa esiste nel locale. I vecchi valori si leggono
+  // ancora: la traduzione sta in lib/consegna.js, in un posto solo.
   service_mode: 'tavolo',
+  // Dentro «ritiro e servizio»: con che modo NASCONO i conti battuti dallo
+  // staff. Un valore di partenza, non una regola.
+  consegna_default: 'tavolo',
+  // Dentro «ritiro e servizio»: il cliente sceglie il suo ordinando dal
+  // telefono. Parla di CHI sceglie, quindi vuole le ordinazioni accese.
+  cliente_sceglie_consegna: false,
   // Tempo stimato di servizio mostrato ai clienti: parte dal tempo base e si
   // raffina con i tempi reali del servizio.
   eta_enabled: false,
@@ -3222,6 +3862,22 @@ export const DEFAULT_SETTINGS = {
   // Coda ordini bartender: 'tabs' (schede per stato) o 'lista' (lista unica
   // con stato indicato da colore/etichetta sulla card).
   queue_view: 'griglia',
+  // LA VISTA DEL BANCO. Chi sta allo shaker non guarda la stessa cosa di chi
+  // tiene la cassa: a lui servono le COMANDE, nei passi del servizio. Ad
+  // accenderla sono gli stati del servizio — senza quei passi non ci
+  // sarebbe niente da mostrare — e questa impostazione dice soltanto COME
+  // disegnarla. È una lista di viste possibili, non un interruttore: per
+  // ora ce n'è una sola, ma quando se ne aggiungerà un'altra il valore che
+  // c'è già scritto su settings/bar resta buono — con un booleano si
+  // sarebbe dovuto migrare.
+  bartender_view: 'corsie',
+  // LE COMANDE NASCONO GIÀ IN PREPARAZIONE? Di suo no: si battono tre conti
+  // di fila e poi si comincia a versare, ed è «Lo preparo io» a dire quando
+  // si comincia — e chi. Dove invece si prepara nell'istante in cui si
+  // batte, quel passo è un tocco in più per ogni comanda, tutta la sera.
+  // A leggerla è statoComandaNuova (comande.js), che è l'unico posto dove
+  // si decide in che passo nasce una comanda.
+  comande_in_preparazione: false,
   // Cosa fa la ricerca nella coda: 'filtra' lascia in pagina solo i conti
   // che rispondono (come è sempre stato), 'evidenzia' non toglie niente —
   // accende il primo conto trovato e ce lo porta sotto gli occhi. Il
@@ -3234,6 +3890,10 @@ export const DEFAULT_SETTINGS = {
   // Dove finisce l'item appena aggiunto nella lista ordine: in fondo (default,
   // e la lista scorre a mostrarlo) o in cima (subito visibile senza scorrere).
   pos_add_top: false,
+  // Il MINIMO della scala del testo nelle righe del conto (il testo segue
+  // la larghezza del pannello, ma sotto questa soglia non scende): 1.1 è
+  // com'era da sempre; chi lo trova un manifesto lo abbassa.
+  pos_testo_min: 1.1,
   // Come mostrare le categorie nel POS: 'dot' (pallino + testo, come ora),
   // 'icon_text' (icona + testo) o 'icon' (solo icona).
   category_display: 'dot',
@@ -3242,6 +3902,21 @@ export const DEFAULT_SETTINGS = {
   // niente — accende la prima card trovata e ci porta sopra la griglia. Chi
   // lavora a memoria di posizione la griglia la vuole sempre uguale.
   pos_search: 'filtra',
+  // COSA DICE LA STRISCIA A SINISTRA DELLE CARD (vedi lib/strisce.js):
+  // 'spenta' | 'prodotto' | 'categoria' | 'scorte'. Due scelte separate —
+  // la griglia del conto e le schede del menù si guardano per motivi
+  // diversi — e una terza per il colore del «ce n'è abbastanza»: grigio
+  // (discreto) o verde. La scelta è del LOCALE: la griglia dev'essere la
+  // stessa su tutti i terminali, o due persone parlano di due schermate
+  // diverse.
+  stripe_pos: 'prodotto',
+  stripe_menu: 'scorte',
+  // «Ce n'è abbastanza» in verde o in grigio: SEPARATO per le due
+  // schermate. Nel conto si batte di corsa e una griglia tutta verde è
+  // rumore — lì interessano i guai; nel catalogo invece si guarda con
+  // calma cosa si può fare, e il verde è un'informazione.
+  stripe_ok_verde: false,
+  stripe_menu_ok_verde: false,
   // Pagamenti: online (SumUp Checkout) e lettore Solo (Cloud API).
   payments_online_enabled: false,
   payments_online_required: false,
@@ -3266,6 +3941,11 @@ export const DEFAULT_SETTINGS = {
 // (che il gestionale tiene sempre aperto); se nessuno l'ha ancora aperto si
 // legge una volta sola, dalla cache offline se serve.
 let settingsCache = null
+
+// I valori con cui disegnare la prima volta, prima che il server risponda:
+// l'ultima risposta ricordata, o i default. Serve dove l'impostazione
+// decide un colore — se no si vede il lampo.
+export const settingsIniziali = () => impostazioniRicordate(DEFAULT_SETTINGS)
 
 // SUBITO, senza aspettare NIENTE. Una preferenza non deve poter ritardare —
 // né tantomeno impedire — il salvataggio di un ordine: se la cache non c'è
@@ -3307,6 +3987,9 @@ export function subscribeSettings(onChange, onError) {
       if (!snap.exists()) return onChange({ ...DEFAULT_SETTINGS })
       const data = snap.data()
       settingsCache = data
+      // Per la PROSSIMA apertura: si disegna con l'ultima verità nota
+      // invece che coi valori di partenza (vedi impostazioniLocali.js).
+      ricordaImpostazioni(data)
       const merged = { ...DEFAULT_SETTINGS, ...data }
       // Retrocompatibilità col vecchio flag booleano della scelta consegna.
       if (!data.service_mode && data.service_mode_choice_enabled) {

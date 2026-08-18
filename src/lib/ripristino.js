@@ -57,7 +57,21 @@ export function patchRipristino(order, { comande, nowIso, motivo = null, chi = n
     comande: comandeRiaperte(comande, nowIso),
     riaperture: [
       ...(Array.isArray(order?.riaperture) ? order.riaperture : []),
-      { at: nowIso, motivo: motivo || null, chi: chi || null, incassi_tolti: incassato },
+      {
+        at: nowIso,
+        motivo: motivo || null,
+        chi: chi || null,
+        incassi_tolti: incassato,
+        // COSA STAVA ANNULLANDO. I tempi del conto tengono solo l'ULTIMA
+        // chiusura: chiudendo e riaprendo due volte, la prima chiusura
+        // spariva dalla storia — restavano due riaperture che non
+        // riaprivano niente. Qui resta scritto cosa c'era prima.
+        chiudeva: order?.status === 'annullato' ? 'annullato' : 'pagato',
+        chiudeva_at:
+          (order?.status === 'annullato'
+            ? order?.status_times?.annullato
+            : order?.status_times?.pagato || order?.paid_at) || null,
+      },
     ],
   }
 }

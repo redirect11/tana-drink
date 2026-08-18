@@ -5,7 +5,7 @@
 // Richiede la chiave VAPID (Firebase Console → Cloud Messaging → Web Push
 // certificates) in VITE_FIREBASE_VAPID_KEY. Solo in produzione: in sviluppo
 // non c'è emulatore FCM e il service worker non è registrato.
-import { getMessaging, getToken, isSupported } from 'firebase/messaging'
+import { getMessaging, getToken, deleteToken, isSupported } from 'firebase/messaging'
 import { app } from './firebaseClient.js'
 
 const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY
@@ -51,4 +51,28 @@ export async function statoPush() {
   if (Notification.permission === 'denied') return 'negato'
   if (Notification.permission !== 'granted') return 'da-permettere'
   return (await getPushToken()) ? 'ok' : 'non-supportato'
+}
+
+// ── SPEGNERE GLI AVVISI SU QUESTO BROWSER ────────────────────────────
+//
+// Togliere la riga da `staff_tokens` non basta: quella è solo la RUBRICA
+// dello staff. Il token è del browser e resta valido, e chi lo conosce può
+// ancora suonare qui — le Functions che avvisano il cliente («il tuo drink
+// è pronto», «ordine annullato») lo tengono scritto sull'ORDINE, non nella
+// rubrica. Chi si era scollegato continuava a sentire suonare il telefono.
+//
+// Cancellando il token non resta nessun indirizzo a cui bussare, chiunque
+// sia il mittente. Al prossimo accesso se ne fa uno nuovo e il dispositivo
+// si registra da sé: non si perde niente.
+export async function spegniPush() {
+  try {
+    if (!import.meta.env.PROD || !vapidKey) return false
+    if (!('Notification' in window)) return false
+    if (!(await isSupported())) return false
+    return await deleteToken(getMessaging(app))
+  } catch {
+    // Nessun token da spegnere, o il browser non collabora: si esce lo
+    // stesso. Restare dentro per un avviso è peggio.
+    return false
+  }
 }
