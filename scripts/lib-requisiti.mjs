@@ -257,3 +257,30 @@ export function deveNascere(req, esisteGia) {
 }
 
 export const STATI_CHIUSI = new Set(['fixed', 'implemented', 'done'])
+
+// LE ISSUE PER IDENTIFICATIVO. Il legame col registro è l'id fra parentesi
+// quadre in testa al titolo: è l'unica cosa che non cambia quando una voce
+// viene riscritta.
+//
+// Se per lo stesso identificativo ce n'è più di una — capita, e a noi è
+// capitato — si tiene quella APERTA: è quella su cui si lavora. Fra due
+// aperte vince la più vecchia, che è quella con la storia dentro. Il doppione
+// si segnala, perché va chiuso a mano da una persona: chiuderlo da uno script
+// vorrebbe dire cancellare commenti che non ha scritto lui.
+export function indicizzaPerId(issues, avvisa = () => {}) {
+  const per = new Map()
+  for (const i of issues || []) {
+    const m = String(i?.title || '').match(/^\[([^\]]+)\]/)
+    if (!m) continue
+    const id = m[1]
+    const gia = per.get(id)
+    if (!gia) { per.set(id, i); continue }
+    const apertaOra = i.state === 'open'
+    const apertaGia = gia.state === 'open'
+    const vince = apertaOra !== apertaGia ? (apertaOra ? i : gia)
+      : (i.number < gia.number ? i : gia)
+    per.set(id, vince)
+    avvisa(`Due issue per ${id}: #${gia.number} e #${i.number}. Tengo la #${vince.number}.`)
+  }
+  return per
+}
