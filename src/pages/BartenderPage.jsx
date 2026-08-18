@@ -79,6 +79,7 @@ import {
 } from '../lib/preferenzeNotifiche.js'
 import {
   allServed,
+  comandaDivisibile,
   contoChiuso,
   nextComandaStatus,
   statiPrimaComanda,
@@ -817,9 +818,12 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // esattamente quello che questa vista serve a far vedere. La strada è
   // quella di sempre: si vede subito, si scrive in sottofondo, e cosa
   // viene dopo lo dice comande.js, come nel dettaglio del conto.
-  function avanzaComanda(order, comanda) {
+  // `stato` esplicito serve a TORNARE INDIETRO: si segna «pronto» il ticket
+  // sbagliato, e senza una strada per rimetterlo dov'era l'unica sarebbe
+  // annullare la comanda e rifarla, perdendo orari e storia.
+  function avanzaComanda(order, comanda, stato = null) {
     if (!comanda) return
-    const ns = nextComandaStatus(comanda.status)
+    const ns = stato || nextComandaStatus(comanda.status)
     if (!ns) return
     const adesso = new Date().toISOString()
     comandeLocali.applica(order, (comande) =>
@@ -2206,6 +2210,41 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
           )}
           {corsieBanco ? (
             <CorsieComande
+              // IL ⋯ DELLA CARD. Le cose che si fanno di rado ma proprio
+              // da lì: rimandare indietro una comanda toccata per sbaglio,
+              // dividerla, ristamparla. Le decide qui la pagina, che sa le
+              // impostazioni del locale e come si scrive sul database; la
+              // card le disegna e basta.
+              vociComanda={(s) => {
+                const c = s?.comanda
+                if (!c) return []
+                const o = s.ordine
+                const indietro = statiPrimaComanda(c.status, passoDiNascita)
+                return [
+                  ...indietro.map((st) => ({
+                    id: `indietro-${st}`,
+                    icon: '↩︎',
+                    label: `Torna a «${statoAlBanco(st, o?.service_mode)}»`,
+                    hint: 'Segnata per sbaglio: si rimette dov\'era',
+                    onClick: () => avanzaComanda(o, c, st),
+                  })),
+                  comandaDivisibile(c) && {
+                    id: 'dividi',
+                    icon: '✂️',
+                    label: 'Preparazione parziale',
+                    hint: 'Ne preparo una parte adesso, il resto dopo',
+                    onClick: () => navigate(`/ordine/${o.id}/comanda/${c.id}?dividi=1`),
+                  },
+                  {
+                    id: 'ristampa',
+                    icon: '🖨',
+                    label: 'Ristampa la comanda',
+                    hint: 'Se il foglio si è perso o è illeggibile',
+                    onClick: () =>
+                      printComanda(o, c).catch((e) => setError(`Stampa: ${e.message}`)),
+                  },
+                ].filter(Boolean)
+              }}
               corsie={corsieMostrate}
               mostraModo={ritiroEsiste && !prontoSeparato}
               idAcceso={idAcceso}

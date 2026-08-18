@@ -11,6 +11,15 @@
 
 ### Al banco
 
+- **Il ⋯ sulla card di una comanda**: da lì si rimanda indietro un ticket
+  segnato per sbaglio, si apre la preparazione parziale e si ristampa —
+  senza aprire il ticket. Il tasto grande resta uno solo, quello che si
+  preme di corsa.
+- **Il dettaglio di una comanda si allarga sul tablet**: da uno schermo
+  largo in su le righe stanno a sinistra e le azioni a destra, ferme in
+  alto, invece di far scorrere fino in fondo per trovare il tasto. Sul
+  telefono non cambia niente.
+
 - **Servizio o ritiro si sceglie anche dal ticket**: nel dettaglio di una
   comanda ancora da fare o in preparazione ci sono «🍸 Servizio» e «🚶
   Ritiro», con scritto accanto che valgono per tutto il conto — perché il
