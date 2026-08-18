@@ -938,7 +938,10 @@ bugs:
       comparivano lo stesso.
       RISOLTO: `gruppiDelConto` sa se il servizio è acceso; a spento resta
       la sola divisione dei PAGATI, che c'era da prima e riguarda i soldi,
-      non il lavoro.
+      non il lavoro — e quella si vede SEMPRE, appena c'è una riga pagata:
+      senza i passi del servizio è l'unica cosa che divide le righe, e
+      toglierla sarebbe stato peggio del difetto. Le righe ancora da pagare
+      restano prima, i pagati in fondo.
     in_produzione: false
     status: fixed
     generate_issue: false

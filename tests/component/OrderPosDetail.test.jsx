@@ -1821,6 +1821,46 @@ describe('le righe del conto dicono a che punto sono', () => {
     }
   })
 
+  // MA I PAGATI SI VEDONO SEMPRE. Quella divisione non parla di lavoro,
+  // parla di soldi: dice cosa è già stato incassato e cosa no, e serve
+  // esattamente quanto prima — anzi di più, perché senza i passi del
+  // servizio è l'unica cosa che divide le righe.
+  it('col servizio spento i pagati restano separati, e in fondo', () => {
+    mockSettings.workflow_enabled = false
+    try {
+      mount(
+        baseOrder({
+          payment_status: 'parziale',
+          payments: [
+            {
+              amount: 7,
+              method: 'banco',
+              at: '2026-07-11T21:30:00.000Z',
+              items: [{ drink_id: 'mojito', name: 'Mojito', qty: 1 }],
+            },
+          ],
+          comande: [
+            {
+              id: 'c1', seq: 1, status: 'in_preparazione', status_times: {},
+              items: [
+                { drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 },
+                { drink_id: 'gin', name: 'Gin Tonic', unit_price: 8, qty: 1 },
+              ],
+            },
+          ],
+        })
+      )
+      // un titolo solo, quello dei pagati: nessun passo del servizio
+      expect(titoli()).toEqual(['💳 Pagati'])
+      // e sta in fondo: le righe ancora da pagare vengono prima
+      const righe = [...document.querySelectorAll('.posd-gruppo, .draft-line')]
+      expect(righe.at(-1).className).toContain('draft-line')
+      expect(righe.findIndex((n) => n.className.includes('posd-gruppo'))).toBeGreaterThan(0)
+    } finally {
+      delete mockSettings.workflow_enabled
+    }
+  })
+
   it('divisa la comanda, le righe si raggruppano per passo', () => {
     mount(
       baseOrder({

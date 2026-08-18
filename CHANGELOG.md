@@ -31,8 +31,8 @@ con una prova a vuoto che dice cosa cambierebbe prima di toccare niente.
 
 - **Senza gli stati del servizio, il conto non parla di passi**: le righe si
   intestavano «In preparazione» anche in un locale che non segue la
-  preparazione. Resta la divisione dei pagati, che riguarda i soldi e non il
-  lavoro.
+  preparazione. La divisione dei pagati invece resta sempre — quella parla di
+  soldi, non di lavoro — con le righe da pagare prima e i pagati in fondo.
 
 - **Il ⋯ sulla card di una comanda**: da lì si rimanda indietro un ticket
   segnato per sbaglio, si apre la preparazione parziale e si ristampa —
