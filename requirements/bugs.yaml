@@ -615,3 +615,27 @@ bugs:
     generate_issue: false
     labels: [bug, ui, coda]
     test_cases: [tests/unit/css.test.js]
+
+  - id: BUG-022
+    title: "«Ritirato/Servito» andava premuto due volte"
+    area: "src/lib/api.js"
+    description: >
+      Al banco si premeva «Ritirato/Servito» su una comanda, la card tornava
+      indietro da sola e bisognava premere una seconda volta.
+      CAUSA: `comande` è un ARRAY, e Firestore un array lo riscrive intero —
+      non esiste un percorso tipo `comande.2.inventory_applied`. Lo scarico
+      del magazzino (scaricaInSottofondo) si rileggeva il documento
+      all'INIZIO del suo lavoro, poi andava in rete a leggere ricette e
+      articoli, e alla fine riscriveva quell'array vecchio: l'avanzamento
+      scritto nel frattempo ci finiva sotto. Stessa forma in
+      riallineaInSottofondo, dopo una modifica di comanda già scaricata.
+      RISOLTO: chi scrive in sottofondo si rilegge il documento
+      NELL'ISTANTE PRIMA DI SCRIVERE e cambia solo i campi che le competono
+      (scriviCampiComanda). La finestra fra rilettura e scrittura resta di
+      microsecondi invece che lunga quanto la rete, e tutto il resto della
+      comanda — lo stato compreso — resta com'è arrivato.
+    in_produzione: false
+    status: fixed
+    generate_issue: false
+    labels: [bug, coda, magazzino]
+    test_cases: [tests/unit/scritturaComande.test.js]

@@ -45,6 +45,7 @@ import {
   orderIsClosed,
   comandaEditable,
   comandaDivisibile,
+  STATO_COMANDA_NUOVA,
   annullataPerDivisione,
   ANNULLATA_PER_DIVISIONE,
   dividiComanda,
@@ -67,6 +68,7 @@ import { toastSuccess, toastError } from '../lib/toast.js'
 import { printComanda, printScontrino } from '../lib/printer.js'
 import PosProductPicker from './PosProductPicker.jsx'
 import PreparazioneParziale from './PreparazioneParziale.jsx'
+import { useComandeLocali, comandaProvvisoria } from '../lib/comandeLocali.js'
 import { IconPrinter, IconReceipt, IconCard, IconRefresh, IconX, IconCheck, IconClose, IconGruppo, IconPersona, IconTag } from './Icons.jsx'
 import {
   DndContext,
@@ -685,25 +687,33 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     return () => Object.values(timers).forEach(clearTimeout)
   }, [])
 
-  // Comande appena mandate al server e non ancora tornate indietro: si
-  // vedono come tutte le altre finché lo snapshot non porta la vera.
-  const [nuoveInVolo, setNuoveInVolo] = useState([])
-  const contatoreVolo = useRef(0)
+  // QUELLO CHE HO APPENA FATTO IO: avanzamenti, comande appena nate,
+  // divisioni. Erano tre pezzi separati qui dentro — statusOverrides,
+  // nuoveInVolo, divise — e ognuno aveva la sua pulizia: adesso è un array
+  // `comande` solo, quello di lib/comandeLocali.js, lo stesso che usano la
+  // coda e il dettaglio della comanda.
+  const contoPerLocali = useMemo(() => ({ id: order?.id ?? '__nuovo', comande }), [order?.id, comande])
+  const comandeLocali = useComandeLocali([contoPerLocali])
 
-  // ── Avanzamenti di stato OTTIMISTICI (modifica) ──
-  const [statusOverrides, setStatusOverrides] = useState({})
   const advance = (comandaId, ns) => {
-    setStatusOverrides((o) => ({ ...o, [comandaId]: ns }))
+    const adesso = new Date().toISOString()
+    comandeLocali.applica(contoPerLocali, (arr) =>
+      arr.map((c) =>
+        c.id === comandaId
+          ? { ...c, status: ns, status_times: { ...(c.status_times || {}), [ns]: adesso } }
+          : c
+      )
+    )
     ;(async () => {
       try {
         await flushAll()
         await advanceComanda(order.id, comandaId, ns)
-        // L'override NON si toglie qui: la scrittura risponde prima che
-        // arrivi lo snapshot, e toglierlo subito farebbe riapparire per un
-        // istante lo stato precedente. Lo toglie l'effetto sotto.
+        // La copia locale NON si toglie qui: la scrittura risponde prima
+        // che arrivi lo snapshot, e toglierla subito farebbe riapparire
+        // per un istante lo stato precedente. La toglie la firma.
       } catch (e) {
         setError(e.message)
-        setStatusOverrides((o) => omit(o, comandaId))
+        comandeLocali.scarta(contoPerLocali.id)
       }
     })()
   }
@@ -721,75 +731,76 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   // anche dal dettaglio della comanda: due schermate che dividono in due
   // modi diversi sarebbero due modi diversi di sbagliare il conto.
   const [parziale, setParziale] = useState(null)
-  // Quali comande sono state divise DA QUI, in attesa che lo dica il
-  // server: senza, per un istante si leggerebbe «Annullato» al posto di
-  // «Divisa», cioè «un drink è saltato» invece di «è diventato quei due».
-  const [divise, setDivise] = useState([])
   const confermaParziale = (c, scelte) => {
     const divisa = dividiComanda(c, scelte)
     if (!divisa) return
     setParziale(null)
+    const adesso = new Date().toISOString()
     // SI VEDE SUBITO. La comanda di partenza risulta annullata e al suo
     // posto compaiono le due nuove: chi ha appena scelto tre gin tonic su
     // cinque deve vederli al banco nell'istante in cui tocca, non quando
-    // risponde il server. Le provvisorie se ne vanno da sole quando dallo
-    // snapshot arrivano quelle vere (stesse righe, stesse quantità).
-    if (!divisa.tutta) {
-      setStatusOverrides((o) => ({ ...o, [c.id]: ORDER_STATUSES.ANNULLATO }))
-      setDivise((v) => [...v, c.id])
-      const base = contatoreVolo.current
-      contatoreVolo.current += 2
+    // risponde il server. Se ne vanno da sé quando dallo snapshot arriva
+    // la stessa cosa.
+    comandeLocali.applica(contoPerLocali, (arr) => {
+      if (divisa.tutta) {
+        return arr.map((x) =>
+          x.id === c.id
+            ? {
+                ...x,
+                status: ORDER_STATUSES.IN_PREPARAZIONE,
+                status_times: {
+                  ...(x.status_times || {}),
+                  [ORDER_STATUSES.IN_PREPARAZIONE]: adesso,
+                },
+              }
+            : x
+        )
+      }
       // I NUMERI CHE PRENDERANNO DAVVERO. Le comande nuove nascono dopo
       // l'ultima del conto: mostrarle senza numero (o tutte «comanda 0»)
       // vorrebbe dire vederle rinumerarsi sotto gli occhi appena risponde
       // il server, proprio mentre si legge quale preparare.
-      const prossimo = effComandeRef.current.reduce((m, x) => Math.max(m, x.seq || 0), 0)
-      setNuoveInVolo((v) => [
-        ...v,
-        {
-          id: `__volo-${base}`,
+      const prossimo = arr.reduce((m, x) => Math.max(m, x.seq || 0), 0)
+      return [
+        // UNA COMANDA DIVISA NON È UNA COMANDA ANNULLATA: nel dato lo è,
+        // ma leggere «Annullato» qui farebbe pensare a un drink saltato,
+        // mentre quei drink sono nelle due sotto. Il motivo si scrive
+        // subito, non quando risponde il server.
+        ...arr.map((x) =>
+          x.id === c.id
+            ? {
+                ...x,
+                status: ORDER_STATUSES.ANNULLATO,
+                annullata_per: ANNULLATA_PER_DIVISIONE,
+                status_times: {
+                  ...(x.status_times || {}),
+                  [ORDER_STATUSES.ANNULLATO]: adesso,
+                },
+              }
+            : x
+        ),
+        comandaProvvisoria({
           seq: prossimo + 1,
           status: ORDER_STATUSES.IN_PREPARAZIONE,
           items: divisa.nuova,
           created_at: c.created_at || null,
-        },
-        {
-          id: `__volo-${base + 1}`,
+        }),
+        comandaProvvisoria({
           seq: prossimo + 2,
           status: ORDER_STATUSES.RICEVUTO,
           items: divisa.resta,
           created_at: c.created_at || null,
-        },
-      ])
-    } else {
-      setStatusOverrides((o) => ({ ...o, [c.id]: ORDER_STATUSES.IN_PREPARAZIONE }))
-    }
+        }),
+      ]
+    })
     preparazioneParziale(order.id, c.id, scelte).catch((e) => {
-      // Non è passata: si torna a quello che c'era, o al banco si prepara
-      // una divisione che sul conto non esiste.
-      setStatusOverrides((o) => omit(o, c.id))
-      setDivise((v) => v.filter((x) => x !== c.id))
-      setNuoveInVolo((v) => v.filter((x) => !x.id.startsWith('__volo-')))
+      // Non è passata: si torna a quello che dice il server, che è l'unica
+      // cosa vera — o al banco si prepara una divisione che sul conto non
+      // esiste.
+      comandeLocali.scarta(contoPerLocali.id)
       toastError(`Divisione non riuscita: ${e.message}`)
     })
   }
-
-  // Allineamento col server: l'override sparisce quando la comanda arriva
-  // davvero con lo stato atteso.
-  useEffect(() => {
-    setStatusOverrides((o) => {
-      if (Object.keys(o).length === 0) return o
-      const next = { ...o }
-      let changed = false
-      for (const c of comande) {
-        if (next[c.id] && c.status === next[c.id]) {
-          delete next[c.id]
-          changed = true
-        }
-      }
-      return changed ? next : o
-    })
-  }, [comande])
 
   // Stessa logica per gli item: l'override (aggiunte/decrementi ottimistici) si
   // toglie SOLO quando la comanda dal server combacia — così l'item non
@@ -810,39 +821,30 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     })
   }, [comande])
 
-  // La provvisoria se ne va quando dal server arriva una comanda con le
-  // stesse righe: si toglie SOLO allora, se no le righe sparirebbero e
-  // riapparirebbero (il "ricaricamento" alla sincronizzazione).
-  useEffect(() => {
-    if (nuoveInVolo.length === 0) return
-    const sig = (arr) =>
-      (arr || []).map((i) => `${i.drink_id}~${i.qty}~${i.unit_price}`).sort().join('|')
-    const arrivate = new Set(comande.map((c) => sig(c.items)))
-    setNuoveInVolo((v) => {
-      const resta = v.filter((c) => !arrivate.has(sig(c.items)))
-      return resta.length === v.length ? v : resta
-    })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [comande])
-
-  // Comande "effettive": server + override locali in volo (le modifiche
-  // ottimistiche e le comande appena nate che il server non ha ancora
-  // rimandato indietro).
+  // Comande "effettive": quelle come le vede chi sta qui adesso, con sopra
+  // le modifiche alle RIGHE non ancora inviate.
+  //
+  // `pendingEdits` resta un pezzo a sé apposta: non è «l'ho già scritto»
+  // ma «lo scriverò fra mezzo secondo» — le quantità si aggiustano a
+  // raffica e la scrittura aspetta che le dita si fermino. Ha una pulizia
+  // sua, sulle RIGHE, perché quello che aspetta è che tornino indietro
+  // quelle. Metterlo nello stesso posto vorrebbe dire non sapere più quali
+  // comande hanno una scrittura ancora da mandare.
   const effComande = useMemo(
-    () => [
-      ...comande.map((c) => {
-        let x = pendingEdits[c.id] ? { ...c, items: pendingEdits[c.id] } : c
-        if (statusOverrides[c.id]) x = { ...x, status: statusOverrides[c.id] }
-        if (divise.includes(c.id)) x = { ...x, annullata_per: ANNULLATA_PER_DIVISIONE }
-        return x
-      }),
-      ...nuoveInVolo,
-    ],
-    [comande, pendingEdits, statusOverrides, nuoveInVolo, divise]
+    () =>
+      comandeLocali
+        .comandeDi(contoPerLocali)
+        .map((c) => (pendingEdits[c.id] ? { ...c, items: pendingEdits[c.id] } : c)),
+    [comandeLocali, contoPerLocali, pendingEdits]
   )
   // Riferimenti sempre aggiornati per l'auto-conferma e la conferma all'uscita.
   const effComandeRef = useRef(effComande)
   effComandeRef.current = effComande
+  // L'aggiunta parte da un callback che nasce una volta sola (dipende dalla
+  // bozza, non dal render): senza un ref si porterebbe dietro la copia
+  // locale di quando è stato creato.
+  const comandeLocaliRef = useRef(comandeLocali)
+  comandeLocaliRef.current = comandeLocali
 
   // LA STESSA RIGA NON SI CONTA DUE VOLTE. Nell'attimo in cui il conto
   // nasce, le righe inviate stanno già nelle comande ma la bozza non ha
@@ -1375,14 +1377,19 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
       // giusto solo dopo la sincronizzazione. Qui non si aspetta niente:
       // vedi docs/architettura.md.
       clearDraft()
-      contatoreVolo.current += 1
-      const provvisoria = {
-        id: `__volo-${contatoreVolo.current}`,
-        seq: 0,
-        status: ORDER_STATUSES.RICEVUTO,
+      // NASCE COME NASCERÀ DAVVERO: stesso passo e stesso numero che le
+      // darà il server (STATO_COMANDA_NUOVA). Prima la provvisoria diceva
+      // «da fare» e «comanda 0», e un istante dopo cambiava tutte e due le
+      // cose da sé, sotto gli occhi di chi stava leggendo quale preparare.
+      const inVolo = comandaProvvisoria({
+        seq: effComandeRef.current.reduce((m, x) => Math.max(m, x.seq || 0), 0) + 1,
+        status: STATO_COMANDA_NUOVA,
         items: additions,
-      }
-      setNuoveInVolo((v) => [...v, provvisoria])
+      })
+      comandeLocaliRef.current.applica({ id: oid, comande: effComandeRef.current }, (arr) => [
+        ...arr,
+        inVolo,
+      ])
       ;(async () => {
         try {
           await flushAll()
@@ -1390,7 +1397,9 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
         } catch (e) {
           // Non è arrivata: le righe tornano in bozza, così si vedono ancora
           // e si può riprovare. Sparire in silenzio sarebbe peggio.
-          setNuoveInVolo((v) => v.filter((c) => c.id !== provvisoria.id))
+          comandeLocaliRef.current.applica({ id: oid, comande: [] }, (arr) =>
+            arr.filter((c) => c.id !== inVolo.id)
+          )
           saveDraft(oid, additions)
           toastError(`Aggiunte non inviate: ${e.message}`)
         }
