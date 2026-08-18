@@ -7225,10 +7225,21 @@ body.pagina-piena .inv-scheda {
 
 /* Le azioni aperte respirano: attaccate al piede sembravano la continuazione
    del tasto sopra, e si premeva quella sbagliata. */
+/* LE AZIONI APERTE RESPIRANO. Attaccate al piede sembravano la
+   continuazione del tasto sopra, e i tasti fra loro sembravano un blocco
+   unico: con le mani di corsa si preme quello sbagliato, e qui uno dei due
+   rimanda indietro una comanda. Impilate, con aria fra l'una e l'altra e
+   uno stacco netto da quello che c'è sopra. */
 .corsia-azioni-aperte {
-  margin-top: 10px;
-  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 12px;
   border-top: 1px solid var(--line);
+}
+.corsia-azioni-aperte > .btn {
+  margin: 0;
 }
 
 /* «✂️ Preparazione parziale» respira: attaccato al tasto grande sembrava
