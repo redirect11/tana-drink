@@ -68,6 +68,13 @@
   misura e usati in un'altra (i limoni al chilo, spremuti in centilitri):
   lì cosa sia un pezzo lo deve decidere una persona, e finché non lo fa
   quel prodotto funziona come prima.
+- **«pz» al posto di «bottiglie», dappertutto.** Qui dentro ci sono cubetti,
+  limoni, barattoli e ore di lavoro: la parola che vale per tutti è il pezzo.
+  Il costo di un prodotto si legge «€/pz» e non più «€/conf.», il segno dei
+  prodotti buoni non parla più di bottiglie, e nel generatore ordini la riga
+  che diceva «1 conf. = 700 pz» — il contenuto letto nell'unità sbagliata —
+  adesso dice «1 pz = 70 cl». Restano le «piene, aperta, finite» del
+  dettaglio: quelle raccontano cosa c'è sullo scaffale, non come si misura.
 - **Carico e conta si scrivono nell'unità che si ha in mano.** Accanto alla
   quantità c'è la scelta fra pezzi e contenuto: la cassetta di limoni si
   carica a chili, i centilitri rimasti in una bottiglia si contano in

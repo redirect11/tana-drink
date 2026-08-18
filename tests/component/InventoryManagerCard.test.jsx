@@ -613,3 +613,38 @@ describe('il dettaglio del prodotto dice quanto ce n’è', () => {
     expect(prima.textContent).toMatch(/[\d.,]+\s*(pz|cl|ml|L|g|kg|U)/)
   })
 })
+
+// ── «PZ» AL POSTO DI «BOTTIGLIE», DAPPERTUTTO (REQ-MAG-019) ──────────
+// «Non dobbiamo vincolarci troppo a un gestionale per un bar. "Bottiglie"
+// non è generico per un gestionale che in qualche modo deve essere generico»
+// (Flavio, 18/08). Qui dentro ci sono cubetti, limoni, barattoli e ore di
+// lavoro: la parola che vale per tutti è «pz». Restano le «piene / aperta /
+// finite» del dettaglio, che descrivono l'oggetto sullo scaffale e non
+// l'unità di misura.
+describe('le parole a schermo non danno per scontata la bottiglia', () => {
+  it('il costo si legge al pezzo, non «alla confezione»', async () => {
+    const user = userEvent.setup()
+    render(<InventoryManager />)
+    await user.click(await screen.findByText('Campari'))
+    const costo = await screen.findByText(/€\/pz/)
+    expect(costo).toBeInTheDocument()
+    expect(screen.queryByText(/\/conf\./)).toBeNull()
+  })
+
+  it('e il segno dell’assortimento non parla di bottiglie', async () => {
+    // Il file si legge com'è: l'etichetta sta in un `title`, e cercarla a
+    // schermo vorrebbe dire montare mezza schermata per una parola.
+    const sorgente = readFileSync('src/components/InventoryManager.jsx', 'utf8')
+    const titoli = sorgente
+      .slice(
+        sorgente.indexOf('const ASSORTIMENTO_TITOLO'),
+        sorgente.indexOf('function SegnoAssortimento')
+      )
+      .split(String.fromCharCode(10))
+      // I commenti raccontano il perché del cambio, e la parola vecchia ci
+      // sta dentro apposta: qui si guarda quello che si legge a schermo.
+      .filter((r) => !r.trim().startsWith('//'))
+      .join(String.fromCharCode(10))
+    expect(titoli).not.toMatch(/ottigli/)
+  })
+})
