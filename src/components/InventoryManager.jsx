@@ -139,15 +139,18 @@ function UnitPrice({ item, markup }) {
   const guadagno = consigliato - cost
   return (
     <div className="inv-info-row">
-      <dt>
+      <dt className="inv-unita">
         Al {unit}
         {units.length > 1 &&
           units.map((u) => (
             <button
               key={u}
               type="button"
-              className={`chip ${u === unit ? 'active' : ''}`}
-              style={{ padding: '0 6px', fontSize: '0.68rem' }}
+              // Pastiglia MINUTA: sta dentro una riga di testo, non in una
+              // barra di filtri. Con la misura piena (40px d'altezza) la
+              // terza unità andava a capo da sola, e «ml» restava appeso
+              // sotto il resto della riga.
+              className={`chip mini ${u === unit ? 'active' : ''}`}
               onClick={(e) => {
                 e.stopPropagation()
                 setUnit(u)
