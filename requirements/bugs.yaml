@@ -783,3 +783,142 @@ bugs:
     generate_issue: false
     labels: [bug, coda]
     test_cases: [tests/unit/coda.test.js, tests/component/CodaCorsie.test.jsx]
+
+  - id: BUG-027
+    title: "Col salto acceso, «in attesa del pagamento» smette di proteggere l'incasso"
+    area: "src/pages/BartenderPage.jsx, src/lib/api.js, firestore.rules, src/pages/OrderStatusPage.jsx, src/lib/ripristino.js"
+    description: >
+      Trovato dalla rilettura del diff della 1.5.0, non ancora visto al
+      banco. Il passo in cui nasce una comanda adesso è una scelta del
+      locale (`statoComandaNuova`), ma «ricevuto» è rimasto scritto a mano
+      in cinque punti che lo davano per scontato. Il più grave: il blocco
+      «In attesa del pagamento: non si prepara» chiede
+      `workflow_status === RICEVUTO`. Con l'impostazione «la comanda nasce
+      già in preparazione» quel confronto non è mai vero, e il blocco NON
+      SCATTA: si prepara un ordine con pagamento obbligatorio non pagato.
+      Gli altri quattro, stessa causa: il cliente non può più modificare il
+      proprio ordine (api.js), e la regola Firestore lo rifiuta comunque;
+      la pagina del cliente non aggancia più il token per le notifiche e
+      non mostra il tasto «modifica»; riaprendo un conto annullato le sue
+      comande tornano in una colonna che quel locale non guarda.
+      Nessun test lo vede, perché girano tutti col default.
+      COME SI SISTEMA: il confronto si fa col passo di nascita, non con la
+      costante — e il predicato «in attesa del pagamento» va scritto una
+      volta in coda.js invece che copiato cinque volte nella pagina.
+    in_produzione: false
+    status: todo
+    generate_issue: true
+    labels: [bug, coda, pagamenti]
+    test_cases: []
+
+  - id: BUG-028
+    title: "Due memorie di «l'ho appena fatto io» sulla stessa schermata"
+    area: "src/pages/BartenderPage.jsx, src/lib/comandeLocali.js"
+    description: >
+      Trovato dalla rilettura del diff della 1.5.0. `comandeLocali` (nato
+      proprio per unificare tre copie sparse) convive con `queueOverrides`,
+      il meccanismo vecchio: uno tiene le comande, l'altro lo stato del
+      conto, e ogni vista ne legge uno solo. La vista dei conti avanza con
+      `queueOverrides` e le sue comande restano quelle del server; la vista
+      del banco avanza con `comandeLocali` e lo stato del conto resta
+      quello del server.
+      Prima non si notava. Adesso la pastiglia «🍸 Comande / 🧾 Ordini» —
+      nuova in questa versione — mette le due viste a un tocco di distanza
+      sullo stesso terminale: si avanza un ticket, si gira la pastiglia, e
+      il conto è ancora dov'era finché non arriva lo snapshot. Offline non
+      arriva. È il rimbalzo che `comandeLocali` è stato scritto per
+      togliere, spostato di una vista.
+      COME SI SISTEMA: far derivare lo stato del conto dalle comande locali
+      (`activeComanda`) e togliere `queueOverrides`. Non è un refactoring
+      di comodo: finché sono due, ogni gesto nuovo va ricordato in due
+      posti.
+    in_produzione: false
+    status: todo
+    generate_issue: true
+    labels: [bug, coda, local-first]
+    test_cases: []
+
+  - id: BUG-029
+    title: "Il magazzino si legge da una porta e si scrive da sette finestre"
+    area: "src/lib/api.js, src/components/PurchaseOrdersPanel.jsx"
+    description: >
+      Trovato dalla rilettura del diff della 1.5.0. La lettura tollerante
+      del modello vecchio (`articoloNormalizzato`) è applicata in un punto
+      solo, `mapItem`. Tutti i percorsi di SCRITTURA rileggono il documento
+      grezzo e ragionano ancora col modello vecchio, e il controllo «prima
+      aggiorna il magazzino» (`ATTESA_TRAVASO`) è stato copiato a mano in
+      due casi su sette: ce l'hanno il carico e la conta, non ce l'hanno
+      `receiveBottles`, `receivePurchaseOrder`, l'allineamento d'ordine e
+      lo scarico delle comande.
+      Il buco concreto: da Acquisti → «ricevi ordine» si scrive su un
+      magazzino non ancora aggiornato, e quella schermata non è bloccata
+      perché il blocco vive dentro `InventoryManager`.
+      COME SI SISTEMA: una `leggiArticoloPerScrittura(ref)` sola, che
+      rilegge, controlla e restituisce l'articolo — e il blocco «in sola
+      lettura» derivato dallo stato del travaso, non ricostruito nella
+      schermata che se lo ricorda. Finché è una riga da ricopiare, ogni
+      percorso nuovo nasce senza.
+    in_produzione: false
+    status: todo
+    generate_issue: true
+    labels: [bug, magazzino]
+    test_cases: []
+
+  - id: BUG-030
+    title: "Il menù del cliente decide da solo come si consegna"
+    area: "src/pages/MenuPage.jsx"
+    description: >
+      Trovato dalla rilettura del diff della 1.5.0. `consegna.js` dice che
+      i mondi sono due e che `'banco'` è un valore vecchio da leggere con
+      tolleranza; il conto, le impostazioni e il riepilogo sono stati
+      portati lì, il MENÙ DEL CLIENTE no: legge ancora `service_mode`
+      grezzo in quattro punti (tabellone, ETA, etichette).
+      Conseguenza: un locale storicamente `'banco'` mostra una colonna
+      sola; basta che un admin apra Impostazioni → Consegna e tocchi
+      qualunque cosa perché il valore diventi quello nuovo e il tabellone
+      del menù passi a due colonne, senza che nessuno abbia deciso niente
+      sul menù. La migrazione del valore vecchio funziona in tre schermate
+      su quattro, e la quarta è quella che vede il cliente.
+    in_produzione: false
+    status: todo
+    generate_issue: true
+    labels: [bug, clienti, menu]
+    test_cases: []
+
+  - id: BUG-031
+    title: "Aprire una comanda dal banco aspetta il ruolo dal server"
+    area: "src/pages/ComandaPage.jsx"
+    description: >
+      Trovato dalla rilettura del diff della 1.5.0. La schermata della
+      comanda resta su «Apro la comanda…» finché non arrivano DUE cose: lo
+      snapshot dell'ordine (che la coda aveva già in mano un istante prima)
+      e il ruolo, ricavato da capo con `getIdTokenResult()`. Il token dura
+      un'ora: quando scade, quella chiamata va in rete — e con la linea del
+      locale che non passa, il tocco resta sotto lo spinner.
+      È il divieto scritto in docs/architettura.md (niente letture al
+      server nel percorso di un gesto), su un gesto che si fa 300-450 volte
+      a sera.
+      COME SI SISTEMA: il ruolo è già noto altrove (App, BartenderPage):
+      tenerlo dove si legge senza rete e disegnare subito con l'ultimo
+      valore noto; l'ordine può arrivare dalla card che l'ha già in mano.
+    in_produzione: false
+    status: todo
+    generate_issue: true
+    labels: [bug, local-first, banco]
+    test_cases: []
+
+  - id: BUG-032
+    title: "Il logo dello scontrino si ritenta a ogni stampa se manca"
+    area: "src/lib/printer.js"
+    description: >
+      Trovato dalla rilettura del diff della 1.5.0. La cache del logo usa
+      `null` per dire due cose diverse — «mai provato» e «provato, non
+      c'è» — quindi se `logo.png` manca o non è nella cache del service
+      worker, ogni scontrino rifà il caricamento e aspetta l'errore prima
+      di stampare. La carta esce dopo, ogni volta.
+      Si sistema con un terzo valore (o un flag «già tentato»): due righe.
+    in_produzione: false
+    status: todo
+    generate_issue: true
+    labels: [bug, stampa]
+    test_cases: []
