@@ -25,7 +25,12 @@
 #                   metterla «in prova» su develop ne' chiuderle l'issue da
 #                   main. Si mette false solo per quello che su GitHub non
 #                   deve comparire affatto.
-#   labels:         Label GitHub
+#   labels:         Label GitHub dell'AREA (pos, magazzino, stampa...) e
+#                   «hotfix» se va sistemato d'urgenza. La FAMIGLIA non si
+#                   scrive a mano: «requirements» o «bug» si ricava dal file da
+#                   cui la voce arriva, cosi' non se ne dimentica una e non
+#                   finisce «requirements» su un bug. Anche P0..P3 e
+#                   severity-* si ricavano dai loro campi.
 #   severity:       Quanto fa male QUANDO SUCCEDE, e non dipende da noi:
 #                   bloccante (il servizio si ferma) | grave (i numeri
 #                   sbagliano, o lo vede il cliente) | media (si aggira) |
@@ -1849,7 +1854,7 @@ requirements:
       a uno perché era già una cosa che si conta. Il travaso in blocco resta
       REQ-MAG-018.
     status: implemented
-    generate_issue: false
+    generate_issue: true
     labels: [magazzino, ux]
     priority: P1
     test_cases: [tests/unit/inventory.test.js, tests/component/InventoryManagerCard.test.jsx]
@@ -2020,7 +2025,7 @@ requirements:
       cos'è un pezzo — un limone, e quanto pesa — e sono pochi: la diagnosi
       li elenca per nome.
     status: implemented
-    generate_issue: false
+    generate_issue: true
     labels: [magazzino, dati]
     priority: P1
     test_cases: [tests/unit/travasoInventario.test.js, tests/unit/travasoScrittura.test.js, tests/component/TravasoMagazzino.test.jsx]
@@ -2075,7 +2080,7 @@ requirements:
       MAGAZZINO, non del menù) è ancora un elenco semplice. Vale lo stesso
       trattamento anche lì?
     status: implemented
-    generate_issue: false
+    generate_issue: true
     labels: [magazzino, fornitori, ux]
     priority: P2
     test_cases: [tests/component/InventoryManagerCard.test.jsx]
@@ -2140,7 +2145,7 @@ requirements:
       una bottiglia, un barattolo») — lì la bottiglia è un esempio fra
       altri, non l'unità di misura.
     status: implemented
-    generate_issue: false
+    generate_issue: true
     labels: [magazzino, ux]
     priority: P2
     test_cases: [tests/component/InventoryManagerCard.test.jsx]
@@ -2745,7 +2750,7 @@ requirements:
       Resta da fare una volta, su ogni telefono, l'accettazione del
       certificato della stampante: è REQ-STAMPA-003.
     status: implemented
-    generate_issue: false
+    generate_issue: true
     labels: [stampa, ruoli, sala]
     test_cases: [tests/component/MenuPage.test.jsx]
 
