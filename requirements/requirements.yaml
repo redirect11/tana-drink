@@ -4249,6 +4249,7 @@ requirements:
     status: todo
     generate_issue: true
     labels: [magazzino, statistiche]
+    priority: P3
     test_cases: []
 
   - id: REQ-DEV-006
@@ -4271,6 +4272,7 @@ requirements:
     status: todo
     generate_issue: true
     labels: [manutenzione, coda]
+    priority: P3
     test_cases: []
 
   - id: REQ-DEV-007
@@ -4292,6 +4294,7 @@ requirements:
     status: todo
     generate_issue: true
     labels: [manutenzione, prestazioni, coda]
+    priority: P1
     test_cases: []
 
   - id: REQ-DEV-008
@@ -4312,6 +4315,7 @@ requirements:
     status: todo
     generate_issue: true
     labels: [manutenzione, prestazioni, local-first]
+    priority: P2
     test_cases: []
 
   - id: REQ-DEV-009
@@ -4330,6 +4334,7 @@ requirements:
     status: todo
     generate_issue: true
     labels: [manutenzione, pagamenti]
+    priority: P2
     test_cases: []
 
   - id: REQ-DEV-010
@@ -4352,6 +4357,7 @@ requirements:
     status: todo
     generate_issue: true
     labels: [manutenzione, coda]
+    priority: P2
     test_cases: []
 
   - id: REQ-DEV-011
@@ -4379,6 +4385,7 @@ requirements:
     status: todo
     generate_issue: true
     labels: [manutenzione]
+    priority: P2
     test_cases: []
 
   - id: REQ-UI-021
@@ -4398,4 +4405,5 @@ requirements:
     status: todo
     generate_issue: true
     labels: [ui, comande]
+    priority: P2
     test_cases: []
