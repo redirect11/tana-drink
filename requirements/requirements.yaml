@@ -3997,3 +3997,163 @@ requirements:
     generate_issue: false
     labels: [sumup, webhook, functions]
     test_cases: [TC-HOOK-001, TC-HOOK-002, TC-HOOK-003, TC-HOOK-004, TC-HOOK-005, tests/bdd/webhook.test.js]
+
+  - id: REQ-ORD-021
+    title: "Le comande annullate: o si rifanno, o si stornano dal conto"
+    area: "src/lib/comande.js, src/components/OrderPosDetail.jsx, src/lib/printer.js, src/components/PaymentScreen.jsx"
+    description: >
+      Chiesto dall'utente il 18/08. Annullare una comanda ferma la
+      PREPARAZIONE, non tocca i soldi: quei drink restano sul conto finché
+      qualcuno non decide cosa farne. Oggi invece spariscono dal totale in
+      silenzio (aggregateItems salta le annullate), e nessuno se ne accorge.
+      LA REGOLA, una sola, di cui la divisione è il caso particolare. Ogni
+      unità di una comanda annullata sta in uno di tre posti:
+      SOSTITUITA (è finita in una o più comande nuove nate al suo posto),
+      STORNATA (tolta dal conto per davvero, e scritta come storno),
+      DA DECIDERE (nessuna delle due: pesa ancora sul conto e si vede nel
+      dettaglio, in attesa che qualcuno scelga).
+      L'INVARIANTE, che è quello che tiene in piedi i soldi: per ogni
+      comanda annullata `sostituite + stornate + da_decidere` fa sempre la
+      quantità di partenza, e sul totale del conto pesa SOLO la parte da
+      decidere — le sostituite pesano attraverso le comande nuove (se
+      contassero entrambe il conto raddoppierebbe), le stornate non pesano
+      più. Da qui la divisione smette di essere un'eccezione: è il caso in
+      cui tutto è sostituito, il residuo è zero e il totale non si muove di
+      un centesimo.
+      COSA SI VEDE E COSA SI FA. Nel dettaglio del conto, fra i gruppi per
+      passo del servizio, c'è anche il gruppo delle voci in comande
+      annullate, distinto dagli altri: non sono lavoro in corso, sono roba
+      da decidere. Da lì due strade: RIFARE (si stampa una comanda uguale,
+      per tutto o per una parte, che nasce come una comanda qualsiasi — il
+      bicchiere rotto si rifà) e STORNARE (col «−» si tolgono le voci, che
+      escono dal conto segnate come stornate: non spariscono, restano
+      scritte come storno).
+      LO STORNO SI VEDE E SI STAMPA: nella colonna di sinistra della
+      schermata di pagamento e sul preconto/scontrino, come riga propria
+      con l'importo in negativo. Chi legge lo scontrino deve capire cosa è
+      stato tolto e quanto, se no un conto che non torna diventa una
+      discussione al tavolo.
+      TRE DECISIONI PRESE (18/08, confermate dall'utente):
+      1) la regola vale solo per le comande annullate DA QUI IN AVANTI —
+      quelle nuove portano i campi del rendiconto, le vecchie no e si
+      comportano come oggi. Nessuna migrazione, e nessun conto già chiuso
+      che cambia importo;
+      2) se il CONTO è annullato non pesa niente: eccezione esplicita,
+      prima di ogni altro calcolo;
+      3) il gesto per annullare una singola comanda su un conto vivo oggi
+      NON esiste (lo fanno solo la divisione e l'annullamento del conto) e
+      va aggiunto nel dettaglio comanda: solo a conto aperto e solo se non
+      è ancora stata servita — servita vuol dire che il drink è uscito, e
+      lì la strada resta «Riapri conto».
+      Vale solo con gli stati del servizio accesi.
+    status: todo
+    generate_issue: true
+    labels: [ordini, comande, pagamenti]
+    priority: P1
+    test_cases: [tests/unit/comande.test.js, tests/component/OrderPosDetail.test.jsx]
+
+  - id: REQ-PAG-011
+    title: "Il pagamento si legge per comanda, e dalla card servita si incassa quella"
+    area: "src/components/PaymentScreen.jsx, src/components/CorsieComande.jsx"
+    description: >
+      Chiesto dall'utente il 18/08. Quando un conto ha più di una comanda,
+      nella colonna di sinistra della schermata di pagamento le righe si
+      raggruppano per comanda — stessa forma dei gruppi che ci sono già,
+      intestazione e sotto le sue righe — e ogni gruppo ha i suoi due tasti,
+      TUTTO e NIENTE, per prendere o lasciare in un colpo quello che
+      contiene. Con una comanda sola non cambia niente: nessuna
+      intestazione, nessun tasto in più, che non serve un titolo per dire
+      una cosa sola. La selezione per riga e quantità che c'è oggi resta e
+      non si rifà: quei tasti la muovono, non la sostituiscono.
+      E dal banco: sulla card di una comanda SERVITA il tasto porta in
+      cassa CON QUELLA COMANDA GIÀ SELEZIONATA. È quello che rende sensata
+      la cosa: tre comande servite dello stesso tavolo non chiedono tre
+      volte l'intero — ognuna porta in cassa la sua parte, e chi vuole
+      incassare tutto tocca «tutto» sugli altri gruppi o parte dal conto.
+    status: todo
+    generate_issue: true
+    labels: [pagamenti, comande]
+    priority: P1
+    test_cases: [tests/component/PaymentScreen.test.jsx]
+
+  - id: REQ-CLI-006
+    title: "Il cliente sa che il suo drink è pronto da ritirare"
+    area: "src/lib/push-core.js, functions/index.js, src/pages/OrderStatusPage.jsx, src/pages/MenuPage.jsx"
+    description: >
+      Chiesto dall'utente il 18/08. Su un conto da RITIRO, quando la
+      comanda passa a «pronto» il cliente va avvisato: da lì in poi la
+      palla è sua — deve alzarsi e venire al banco. Sul servizio al tavolo
+      non serve: ci pensa chi porta il vassoio.
+      PARTE DA SOLA, al passaggio di stato: non è un tasto che qualcuno
+      deve ricordarsi di premere.
+      TRE STRADE, e non si escludono: chi ha ordinato dal telefono segue
+      l'ordine con la pagina del QR (c'è già) e riceve la notifica se ha
+      dato il permesso; chi ha ordinato al banco non ha né l'una né
+      l'altra, e per lui c'è il TABELLONE «stiamo servendo» (già in
+      Impostazioni → Menù clienti) coi numeri pronti al ritiro, mentre il
+      numero del conto è già stampato sullo scontrino.
+      DA VERIFICARE PRIMA DI SCRIVERE: cosa fa già la pagina di stato, come
+      il cliente viene registrato per le notifiche, e se serve un deploy
+      delle Cloud Functions — che va chiesto, non deciso.
+      DETTAGLI CHE FANNO LA DIFFERENZA: una volta sola per comanda (se
+      qualcuno riporta indietro lo stato e lo rimette «pronto», il cliente
+      non deve ricevere due squilli); senza permesso alle notifiche
+      l'avviso non arriva e la pagina col QR resta la strada che funziona
+      sempre; con gli stati di servizio spenti quel passaggio non esiste, e
+      va detto cosa succede invece di lasciare il caso scoperto.
+    status: todo
+    generate_issue: true
+    labels: [clienti, notifiche, comande]
+    priority: P2
+    test_cases: [tests/unit/push-comande.test.js]
+
+  - id: REQ-UI-020
+    title: "Ogni conto ha il suo colore, e le sue comande lo portano"
+    area: "src/lib/api.js, src/components/CorsieComande.jsx, src/components/CorsieStato.jsx, src/components/SettingsTab.jsx"
+    description: >
+      Chiesto dall'utente il 18/08. Un conto con tre comande sparse in tre
+      colonne diverse non si riconosce a colpo d'occhio: il colore serve a
+      quello. Due cose distinte:
+      1) un'impostazione del LOCALE che accende i colori automatici: ogni
+      conto nuovo nasce con un colore preso da una tavolozza, e quello è il
+      suo — sta sulla card del conto e su TUTTE le card delle sue comande;
+      2) il colore si può scegliere A MANO, sempre, che l'automatico sia
+      acceso o spento, e vale anche per i conti nati prima.
+      VINCOLI: il colore va SCRITTO sul conto, non ricalcolato dall'id —
+      dev'essere lo stesso su ogni terminale e non deve cambiare se domani
+      cambia la tavolozza. E dev'essere leggibile su tutti i temi, chiaro e
+      scuro: non un fondo pieno sotto il testo, ma dove i colori già stanno
+      in questa app (la striscia a sinistra, un pallino). Va deciso e
+      scritto chi vince fra colore del conto e colore dello stato, invece
+      di lasciarlo all'ordine delle regole CSS.
+    status: todo
+    generate_issue: true
+    labels: [ui, coda, impostazioni]
+    priority: P2
+    test_cases: [tests/component/CodaCorsie.test.jsx]
+
+  - id: REQ-MAG-020
+    title: "La resa di un prodotto sta dietro un interruttore"
+    area: "src/components/InventoryManager.jsx"
+    description: >
+      Chiesto dall'utente il 18/08. Il blocco «Si usa in un'altra misura?
+      (facoltativo)» sta sempre aperto nella scheda del prodotto, coi campi
+      vuoti in grigio: occupa mezza scheda per una cosa che riguarda pochi
+      prodotti, e chi apre la scheda per cambiare un prezzo se la trova
+      davanti come se dovesse compilarla. Va dietro un interruttore, spento
+      di suo, con l'etichetta in parole da locale e sotto la riga di
+      spiegazione che c'è già (quella dei limoni).
+      DUE COSE DA NON SBAGLIARE: se il prodotto ha già una resa impostata
+      l'interruttore nasce ACCESO e i campi si vedono — se no chi apre un
+      prodotto già configurato crede di aver perso il dato, o peggio non si
+      accorge che c'è e ragiona su numeri sbagliati; e spegnendolo con una
+      resa dentro non deve sparire in silenzio, perché quel numero cambia
+      come si scala il magazzino.
+      Stessa forma dell'interruttore che c'è già in quella scheda: due
+      interruttori scritti in due modi nella stessa schermata sembrano fare
+      cose diverse.
+    status: todo
+    generate_issue: true
+    labels: [magazzino, ui]
+    priority: P3
+    test_cases: [tests/component/InventoryManagerCard.test.jsx]
