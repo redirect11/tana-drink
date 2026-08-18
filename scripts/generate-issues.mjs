@@ -33,7 +33,7 @@
  */
 
 import { readFileSync } from 'node:fs'
-import { STATI_CHIUSI, parseRequirementsYaml, etichetteClassificazione, riconciliaEtichette, corpoGenerato, IN_TEST, prossimoStato, deveNascere, STATO_IMPLEMENTATA, STATO_IN_TEST, STATO_FATTO } from './lib-requisiti.mjs'
+import { STATI_CHIUSI, parseRequirementsYaml, etichetteClassificazione, riconciliaEtichette, corpoGenerato, IN_TEST, indicizzaPerId, prossimoStato, deveNascere, STATO_IMPLEMENTATA, STATO_IN_TEST, STATO_FATTO } from './lib-requisiti.mjs'
 import { bachecaAttiva, schedaDellaIssue, spostaScheda } from './bacheca.mjs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -88,21 +88,33 @@ async function githubFetch(path, options = {}) {
   return { status: res.status, ok: res.ok, body }
 }
 
-async function cercaIssue(id) {
-  // SI CERCA PER IDENTIFICATIVO, non per titolo. Cercando il titolo intero,
-  // bastava rinominare un requisito perche' l'issue non venisse piu'
-  // riconosciuta: nasceva un DOPPIONE e la vecchia restava li' orfana. L'id
-  // fra parentesi quadre e' l'unica cosa che non cambia mai.
-  //
-  // Le chiuse sono incluse di proposito: un requisito gia' risolto e chiuso
-  // non si ricrea. Il filtro finale e' nostro perche' la ricerca di GitHub
-  // ignora le parentesi quadre e restituirebbe anche i vicini di casa
-  // (REQ-MAG-1 pesca REQ-MAG-10).
-  const q = encodeURIComponent(`repo:${OWNER}/${REPO} is:issue in:title "${id}"`)
-  const { ok, body } = await githubFetch(`/search/issues?q=${q}&per_page=10`)
-  if (!ok) return []
-  return (body.items || []).filter((i) => i.title.startsWith(`[${id}]`))
+// UN ELENCO SOLO, NON VENTINOVE RICERCHE.
+//
+// Prima si cercava ogni voce con la API di ricerca, e da lì è nato un
+// doppione vero: la #55 per BUG-005, che esisteva già come #14 col titolo
+// identico. La ricerca aveva risposto «niente» — quasi certamente per il suo
+// limite di trenta chiamate al minuto, con due run a un minuto di distanza e
+// ventinove ricerche ciascuna — e il codice, che trattava una ricerca
+// FALLITA come «l'issue non esiste», ne ha aperta una nuova.
+//
+// Adesso l'elenco delle issue si chiede UNA volta (API core: cinquemila
+// chiamate l'ora, non trenta al minuto) e il confronto si fa in casa,
+// sull'identificativo fra parentesi quadre. Se l'elenco non arriva, il giro
+// si ferma: meglio non fare niente che aprire doppioni.
+async function elencoIssue() {
+  const issues = []
+  for (let pagina = 1; pagina <= 20; pagina++) {
+    const { ok, status, body } = await githubFetch(
+      `/repos/${OWNER}/${REPO}/issues?state=all&per_page=100&page=${pagina}`,
+    )
+    if (!ok) throw new Error(`elenco delle issue non disponibile (${status})`)
+    // L'endpoint delle issue restituisce anche le pull request: si scartano.
+    issues.push(...body.filter((i) => !i.pull_request))
+    if (body.length < 100) break
+  }
+  return issues
 }
+
 
 // Il dettaglio serve per corpo ed etichette: la ricerca li tronca.
 async function leggiIssue(numero) {
@@ -210,6 +222,8 @@ async function main() {
     { rel: 'requirements/bugs.yaml', obbligatorio: false },
   ]
 
+  const indice = indicizzaPerId(await elencoIssue(), (m) => console.error(`  ⚠️  ${m}`))
+
   const toGenerate = []
   for (const s of sorgenti) {
     const yamlPath = join(ROOT, ...s.rel.split('/'))
@@ -257,7 +271,8 @@ async function main() {
 
 
     // Check idempotenza: esiste già un'issue con questo titolo?
-    const existing = await cercaIssue(req.id)
+    const trovata = indice.get(req.id)
+    const existing = trovata ? [trovata] : []
 
     // SU DEVELOP: la voce e' finita ma non provata. Non si chiude — in
     // produzione non c'e' ancora niente — si segna «in prova», che e' l'unica
