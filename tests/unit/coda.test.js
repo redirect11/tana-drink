@@ -1144,3 +1144,42 @@ describe('il tasto di una card di comanda', () => {
     expect(azioneComanda(null, conto())).toMatchObject({ tipo: 'incassa' })
   })
 })
+
+// ── NON SI PREPARA QUELLO CHE NON È STATO PAGATO (BUG-027) ───────────
+//
+// Il blocco valeva finché il conto stava a «ricevuto», scritto a mano. In un
+// locale che fa nascere le comande già «in preparazione» quel confronto non
+// era mai vero: il blocco non scattava e si preparava un ordine con
+// pagamento obbligatorio non pagato. Nessun test lo vedeva, perché giravano
+// tutti col passo di nascita di default.
+import { attesaPagamento } from '../../src/lib/coda.js'
+
+describe('il blocco del pagamento obbligatorio', () => {
+  const conto = (patch = {}) => ({
+    payment_required: true,
+    payment_status: 'in_attesa',
+    workflow_status: 'ricevuto',
+    ...patch,
+  })
+
+  it('blocca finché la comanda non è stata presa in carico', () => {
+    expect(attesaPagamento(conto())).toBe(true)
+    // preso in carico: il drink lo sta già facendo qualcuno, e toglierglielo
+    // di sotto sarebbe peggio che aspettare i soldi.
+    expect(attesaPagamento(conto({ workflow_status: 'in_preparazione' }))).toBe(false)
+  })
+
+  it('col salto acceso il passo di nascita è un altro, e il blocco scatta lì', () => {
+    // È il difetto: qui il conto NASCE in preparazione, e prima il blocco
+    // non scattava mai.
+    expect(attesaPagamento(conto({ workflow_status: 'in_preparazione' }), 'in_preparazione')).toBe(
+      true
+    )
+    expect(attesaPagamento(conto({ workflow_status: 'pronto' }), 'in_preparazione')).toBe(false)
+  })
+
+  it('senza pagamento obbligatorio non blocca niente', () => {
+    expect(attesaPagamento(conto({ payment_required: false }))).toBe(false)
+    expect(attesaPagamento(conto({ payment_status: 'pagato' }))).toBe(false)
+  })
+})

@@ -45,6 +45,7 @@ import {
   schedeCoda,
   corsieDiStato,
   corsieComande,
+  attesaPagamento,
   corsieDaMostrare,
   corsieSceglibili,
   corsieDelPronto,
@@ -1337,7 +1338,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
       )
     }
     const ns = nextStatus(o.workflow_status)
-    const awaiting = isAwaitingPayment(o) && o.workflow_status === ORDER_STATUSES.RICEVUTO
+    const awaiting = attesaPagamento(o, passoDiNascita)
     const readerReady = settings.payments_reader_enabled && settings.sumup_reader_id
     const readerPending = o.payment_method === 'lettore' && o.payment_status === 'in_attesa'
     // Senza gestione della preparazione l'ordine resta "ricevuto": legare
@@ -1497,7 +1498,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // numero, cliente/tavolo, stato, n° prodotti e subtotale. I tasti sono a
   // scomparsa: nascosti di default, compaiono toccando la card.
   const renderGridCard = (o) => {
-    const awaiting = isAwaitingPayment(o) && o.workflow_status === ORDER_STATUSES.RICEVUTO
+    const awaiting = attesaPagamento(o, passoDiNascita)
     const count = (o.order_items || []).reduce((s, i) => s + i.qty, 0)
     const open = openCards.has(o.id)
     return (
@@ -1640,7 +1641,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   }
 
   const renderCard = (o) => {
-        const awaiting = isAwaitingPayment(o) && o.workflow_status === ORDER_STATUSES.RICEVUTO
+        const awaiting = attesaPagamento(o, passoDiNascita)
         return (
           <div
             className={`card order-card ${o.workflow_status}${
@@ -2280,7 +2281,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
               espansa={corsiaEspansa}
               onEspandi={setCorsiaEspansa}
               attesaPagamento={(o) =>
-                isAwaitingPayment(o) && o.workflow_status === ORDER_STATUSES.RICEVUTO
+                attesaPagamento(o, passoDiNascita)
               }
             />
           ) : (
@@ -2308,7 +2309,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             // in modo diverso.
             onIncassa={(o) => navigate(`/ordine/${o.id}?pagamento=1`)}
             attesaPagamento={(o) =>
-              isAwaitingPayment(o) && o.workflow_status === ORDER_STATUSES.RICEVUTO
+              attesaPagamento(o, passoDiNascita)
             }
           />
           )}

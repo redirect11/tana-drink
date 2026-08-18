@@ -7,6 +7,7 @@ import { ORDER_STATUSES, STATUS_LABELS, ritiratoLabel } from './orderStatus.js'
 // in pagamento.js e non si riscrive qui, o le corsie direbbero una cifra e
 // la card un'altra.
 import { orderTotal, round2 } from './pagamento.js'
+import { isAwaitingPayment } from './payments.js'
 // Le comande sono il LAVORO del banco: le corsie del bartender le mostrano
 // una per una, e le regole su cosa è servito e quanto vale una riga stanno
 // in comande.js — qui non si riscrivono.
@@ -240,6 +241,22 @@ export function haLavoroDaFare(o) {
   return (o?.comande || []).some(
     (c) => c.status !== ORDER_STATUSES.RITIRATO && c.status !== ORDER_STATUSES.ANNULLATO
   )
+}
+
+// ── NON SI PREPARA QUELLO CHE NON È STATO PAGATO ──────────────
+//
+// Dove il pagamento è obbligatorio (l'ordine del cliente dal telefono), il
+// lavoro non comincia finché i soldi non ci sono. Il blocco vale finché la
+// comanda NON È ANCORA STATA PRESA IN CARICO: da lì in poi qualcuno ci ha
+// già messo le mani, e togliergli il drink di sotto sarebbe peggio.
+//
+// «Ancora da prendere in carico» è il passo IN CUI IL LAVORO NASCE, che il
+// locale sceglie (statoComandaNuova) — non la costante «ricevuto». Era
+// scritta a mano, e in un locale che fa nascere le comande già «in
+// preparazione» quel confronto non era mai vero: il blocco non scattava, e
+// si preparava un ordine con pagamento obbligatorio non pagato (BUG-027).
+export function attesaPagamento(o, passoDiNascita = ORDER_STATUSES.RICEVUTO) {
+  return isAwaitingPayment(o) && o?.workflow_status === passoDiNascita
 }
 
 export function comandeDaServire(ordini) {
