@@ -432,13 +432,32 @@ bugs:
       nella seconda domanda, «a quanto corrisponde un pezzo». Il caso del
       limone resta senza risposta anche nei nuovi vocali: vedi il punto
       aperto in REQ-MAG-016.
+      RISOLTO (1.5.0) rifacendo il modello, non rattoppando il form
+      (REQ-MAG-016 e REQ-MAG-018). Delle due segnalazioni:
+      1) la «U» non sta più nella domanda sbagliata perché QUELLA DOMANDA
+      NON C'È PIÙ: l'unità è sempre il pezzo, e cl/ml/l, kg/g e U vivono
+      solo nella seconda — «a quanto corrisponde un pezzo», che si può
+      anche lasciare vuota. Gli articoli fatti alla vecchia maniera non si
+      sono persi: si leggono giusti da subito e si riscrivono con
+      l'aggiornamento del magazzino, che l'utente fa quando vuole (banner,
+      prova a vuoto, conferma);
+      2) il form non chiede più «il contenuto per confezione» a chi non ha
+      pezzi: la domanda è una sola e parla di un pezzo.
+      RESTA IL CASO DEL LIMONE — comprato al chilo, usato in cl — e resta
+      aperto APPOSTA: un pezzo può corrispondere a una cosa sola, e
+      sceglierla al posto di chi lavora farebbe scaricare un chilo a una
+      ricetta che voleva un grammo. Quei prodotti non si travasano da soli:
+      l'aggiornamento del magazzino li elenca per nome fra quelli «da
+      sistemare», e si decide a mano quanto pesa un limone. Sui dati veri
+      della produzione non ce n'è nessuno (388 articoli, 378 già a pezzi,
+      10 travasati alla lettura, 0 da sistemare).
     in_produzione: true
-    status: todo
-    generate_issue: true
+    status: fixed
+    generate_issue: false
     labels: [bug, magazzino]
     severity: lieve
     priority: P3
-    test_cases: [tests/unit/inventory.test.js]
+    test_cases: [tests/unit/inventory.test.js, tests/unit/travasoInventario.test.js]
 
   - id: BUG-015
     title: "Battendo di corsa, il pagamento non vede le ultime righe"
