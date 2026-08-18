@@ -1,29 +1,22 @@
 # Cosa è cambiato
 
-## 1.5.1 — 19 agosto 2026
+## Non ancora rilasciata — 1.5.1
 
-Correzione urgente su una cosa sola: **chiudere un conto con lo sconto**.
+### Al banco
 
-- **Riscuotere di nuovo un conto riaperto ristampa lo scontrino** — quello
-  nuovo, con le cifre corrette — da qualunque terminale, anche se la coda
-  non ha visto la riapertura. E l'interruttore in Impostazioni → Stampante
-  ora dice il vero: la stampa parte **alla riscossione**, non «quando
-  l'ordine è pronto».
+- **Nel pagamento si vede subito di chi è il conto**: tavolo e nome stanno in
+  testata accanto al numero, non più in mezzo alle righe dei drink dove
+  sembravano una voce del conto.
 
-- **Il conto scontato si chiude davvero, e lo scontrino esce.** Lo sconto si
-  applica un attimo prima di riscuotere, e la sua scrittura parte in
-  sottofondo: l'app rileggeva il conto per decidere se l'incasso lo saldava e
-  ci trovava la versione di prima, quella senza sconto. Il conto restava
-  aperto a metà — chiuso a schermo, «parziale» sul database — e lo scontrino
-  automatico, che guarda proprio quello, non usciva mai. Adesso quanto resta
-  da incassare lo dice la schermata, che ha davanti il conto com'è adesso.
+- **Il facsimile dello scontrino è largo quanto la carta**: le righe andavano
+  a capo dove la stampante vera non le manda, e si leggeva «La Tana del
+  Conigli / o». Adesso quello che si vede è quello che esce.
 
-- **Uno scontrino che non è uscito si può ristampare.** Ogni conto veniva
-  segnato come «già stampato» PRIMA di mandarlo alla stampante, e non veniva
-  più liberato: se la carta non usciva, quel conto non stampava più lo
-  scontrino automatico — nemmeno riaperto e richiuso. Ora la prenotazione
-  torna libera quando la stampa fallisce e quando il conto viene riaperto. La
-  guardia contro la doppia copia resta.
+- **«In attesa del pagamento: non si prepara» funziona anche col salto
+  acceso**: dove il pagamento è obbligatorio il blocco valeva solo per i conti
+  fermi a «da fare», e in un locale che fa nascere le comande già in
+  preparazione non scattava mai. Adesso guarda il passo in cui il lavoro
+  nasce, comunque sia messo il locale.
 
 ## 1.5.0 — 18 agosto 2026
 
@@ -53,20 +46,6 @@ con una prova a vuoto che dice cosa cambierebbe prima di toccare niente.
   password `collaudo123`.
 
 ### Al banco
-
-- **Nel pagamento si vede subito di chi è il conto**: tavolo e nome stanno in
-  testata accanto al numero, non più in mezzo alle righe dei drink dove
-  sembravano una voce del conto.
-
-- **Il facsimile dello scontrino è largo quanto la carta**: le righe andavano
-  a capo dove la stampante vera non le manda, e si leggeva «La Tana del
-  Conigli / o». Adesso quello che si vede è quello che esce.
-
-- **«In attesa del pagamento: non si prepara» funziona anche col salto
-  acceso**: dove il pagamento è obbligatorio il blocco valeva solo per i conti
-  fermi a «da fare», e in un locale che fa nascere le comande già in
-  preparazione non scattava mai. Adesso guarda il passo in cui il lavoro
-  nasce, comunque sia messo il locale.
 
 - **Senza gli stati del servizio, il conto non parla di passi**: le righe si
   intestavano «In preparazione» anche in un locale che non segue la
