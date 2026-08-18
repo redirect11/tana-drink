@@ -33,7 +33,7 @@
  */
 
 import { readFileSync } from 'node:fs'
-import { parseRequirementsYaml, etichetteClassificazione, riconciliaEtichette, corpoGenerato } from './lib-requisiti.mjs'
+import { parseRequirementsYaml, etichetteClassificazione, riconciliaEtichette, corpoGenerato, IN_TEST } from './lib-requisiti.mjs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -56,6 +56,13 @@ const DRY_RUN = process.env.DRY_RUN === 'true' || process.argv.includes('--dry-r
 // su `main` (la linea della produzione), a mano si scrive
 // `CHIUDE_RISOLTI=true node scripts/generate-issues.mjs`.
 const CHIUDE_RISOLTI = process.env.CHIUDE_RISOLTI === 'true'
+
+// TRE LINEE, TRE COSE DIVERSE sulla stessa voce: su release/** si scrive e si
+// riallinea, su develop si mette IN PROVA (e' finita, ma al banco non l'ha
+// ancora vista nessuno), su main si chiude. Prima il pezzo di mezzo non
+// esisteva: una correzione scritta e non ancora provata era indistinguibile
+// da una ancora da fare.
+const SEGNA_IN_TEST = process.env.SEGNA_IN_TEST === 'true'
 
 const [OWNER, REPO] = GITHUB_REPO.split('/')
 const GITHUB_API = 'https://api.github.com'
@@ -221,16 +228,42 @@ async function main() {
 
     const risolto = STATI_CHIUSI.has(String(req.status || '').toLowerCase())
 
-    // Risolto sul ramo di lavoro non vuol dire risolto per chi sta al banco:
-    // l'issue si chiude quando la correzione arriva in produzione.
-    if (risolto && !CHIUDE_RISOLTI) {
-      console.log(`  ⏭  Risolto (${req.status}) — l'issue si chiude da main, non da qui.`)
-      skipped++
-      continue
-    }
 
     // Check idempotenza: esiste già un'issue con questo titolo?
     const existing = await cercaIssue(req.id)
+
+    // SU DEVELOP: la voce e' finita ma non provata. Non si chiude — in
+    // produzione non c'e' ancora niente — si segna «in prova», che e' l'unica
+    // informazione che mancava a chi guarda l'elenco delle issue.
+    if (risolto && !CHIUDE_RISOLTI) {
+      const aperta = existing.find((i) => i.state === 'open')
+      if (!SEGNA_IN_TEST || !aperta) {
+        console.log(`  ⏭  Risolto (${req.status}) — l'issue si chiude da main, non da qui.`)
+        skipped++
+        continue
+      }
+      const attuali = (aperta.labels || []).map((l) => (typeof l === 'string' ? l : l.name))
+      if (attuali.includes(IN_TEST)) {
+        console.log(`  ⏭  Gia' in prova: ${aperta.html_url}`)
+        skipped++
+        continue
+      }
+      if (DRY_RUN) {
+        console.log(`  [DRY RUN] Da mettere in prova (+${IN_TEST}): ${aperta.html_url}`)
+        updated++
+        continue
+      }
+      const esito = await aggiornaIssue(aperta.number, { labels: [...attuali, IN_TEST] })
+      if (esito.ok) {
+        console.log(`  🧪 In prova (+${IN_TEST}): ${aperta.html_url}`)
+        updated++
+      } else {
+        console.error(`  ❌ Errore ${esito.status} su #${aperta.number}:`, esito.body.message || '')
+        errors++
+      }
+      await new Promise((r) => setTimeout(r, 200))
+      continue
+    }
 
     if (risolto) {
       const aperta = existing.find((i) => i.state === 'open')
@@ -250,6 +283,13 @@ async function main() {
 
 ${req.description}`
       )
+      // Chiusa: «in prova» non vuol dire piu' niente, e lasciarla vorrebbe
+      // dire che nell'elenco filtrato per in-test resta roba gia' in
+      // produzione.
+      const conProva = (aperta.labels || []).map((l) => (typeof l === 'string' ? l : l.name))
+      if (conProva.includes(IN_TEST)) {
+        await aggiornaIssue(aperta.number, { labels: conProva.filter((l) => l !== IN_TEST) })
+      }
       const { ok, status, body } = await closeIssue(aperta.number)
       if (ok) {
         console.log(`  ✅ Issue chiusa: ${aperta.html_url}`)
