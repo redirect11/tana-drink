@@ -579,10 +579,18 @@ export default function MenuManager() {
 // ── MACRO-CATEGORIE DEL MENÙ ─────────────────────────────────────────
 //
 // Le stesse macro del magazzino, ma dall'altro lato del banco: qui si
-// raggruppa quello che si VENDE. Servono per sapere quanto è entrato su
-// «Cocktail classici» e confrontarlo con quanto è uscito sulla macro di
-// spesa corrispondente — l'aggancio si sceglie in Magazzino, dove stanno
-// le macro di acquisto.
+// raggruppa quello che si VENDE. Sono queste le righe di «Statistiche →
+// Mensile per macro»: ogni vendita ci conta INTERA, incasso e costo dei
+// suoi ingredienti insieme (REQ-MAG-015).
+//
+// L'aggancio «a quale macro di spesa corrisponde» sta ancora in Magazzino,
+// e da quella tabella non lo guarda più nessuno. Resta lì solo perché è
+// l'altra metà di una domanda ancora aperta — se gli elenchi debbano
+// restare due o tornare uno solo (REQ-MAG-015): si toglie con la
+// risposta, non prima. Di lavoro da salvaguardare non ce n'è: al 18/08
+// `macro_categories` è vuota, zero documenti in produzione e in test, e
+// finché non se ne crea una il mensile per macro mostra il suo messaggio
+// invece dei numeri.
 function MacroMenuPanel({ categories, onChange }) {
   const [macros, setMacros] = useState([])
   const ricarica = async () => {
