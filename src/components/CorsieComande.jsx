@@ -3,6 +3,8 @@ import { paidAmount } from '../lib/pagamento.js'
 import { azioneComanda, daQuanto, destinazioneConto } from '../lib/coda.js'
 import { ETICHETTA_ANNULLO } from '../lib/comande.js'
 import RigheCorsia from './RigheCorsia.jsx'
+import ActionSheet from './ActionSheet.jsx'
+import { useState } from 'react'
 
 // ── LE CORSIE DEL BANCO: UNA CARD PER COMANDA ────────────────────────
 //
@@ -43,6 +45,9 @@ export default function CorsieComande({
   onAvanza,
   onIncassa,
   onScarta,
+  // Le voci del ⋯ di una card: le decide la pagina, che sa le
+  // impostazioni e come si scrive sul database. Qui si disegnano e basta.
+  vociComanda = null,
   inArrivo = [],
   attesaPagamento = () => false,
   espansa = null,
@@ -51,6 +56,8 @@ export default function CorsieComande({
   // Un solo «adesso» per tutta la vista: card diverse non devono dire tempi
   // diversi solo perché sono state disegnate a un secondo di distanza.
   const adesso = Date.now()
+  // Quale card ha il ⋯ aperto: una alla volta, come le altre finestrelle.
+  const [azioniDi, setAzioniDi] = useState(null)
 
   return (
     <div className="corsie" style={{ '--corsie-n': corsie.length }}>
@@ -203,6 +210,24 @@ export default function CorsieComande({
                             🧾 Conto
                           </button>
                         )}
+                        {/* IL ⋯ DELLA COMANDA. Riportarla a uno stato di
+                            prima, ristamparla, dividerla: cose che si fanno
+                            di rado ma proprio dalla card, senza aprire il
+                            ticket. Il tasto grande resta uno solo — quello
+                            che si preme di corsa — e tutto il resto sta
+                            qui dietro. */}
+                        {s.comanda && vociComanda && vociComanda(s).length > 0 && (
+                          <button
+                            className="btn ghost small corsia-azioni"
+                            aria-label={`Azioni della comanda #${s.numero ?? ''}`}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setAzioniDi(s.id)
+                            }}
+                          >
+                            ⋯
+                          </button>
+                        )}
                         {azione && (
                           <button
                             className="btn small corsia-azione"
@@ -228,6 +253,24 @@ export default function CorsieComande({
           </section>
         )
       })}
+      {/* Una sola finestrella per tutta la vista: le voci sono quelle
+          della card che ha chiesto il ⋯. */}
+      <ActionSheet
+        open={!!azioniDi}
+        onClose={() => setAzioniDi(null)}
+        titolo="Azioni della comanda"
+        voci={(
+          vociComanda?.(
+            corsie.flatMap((c) => c.schede).find((x) => x.id === azioniDi) || null
+          ) || []
+        ).map((v) => ({
+          ...v,
+          onClick: () => {
+            setAzioniDi(null)
+            v.onClick?.()
+          },
+        }))}
+      />
     </div>
   )
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Navigate, useNavigate, useParams } from 'react-router-dom'
+import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { onAuthStateChanged } from 'firebase/auth'
 import { auth } from '../lib/firebaseClient.js'
 import {
@@ -38,6 +38,9 @@ import ComandaDetail from '../components/ComandaDetail.jsx'
 export default function ComandaPage() {
   const { id, comandaId } = useParams()
   const navigate = useNavigate()
+  // «?dividi=1» arriva dal ⋯ della card: apre subito il riquadro delle
+  // quantità, che chi ha scelto quella voce ha già deciso.
+  const [cerca] = useSearchParams()
   const [order, setOrder] = useState(undefined) // undefined = si carica
   const [error, setError] = useState(null)
   // Quello che si è appena premuto, finché il server non lo racconta: al
@@ -196,6 +199,7 @@ export default function ComandaPage() {
       onDividi={dividi}
       onApriConto={() => navigate(`/ordine/${order.id}`)}
       onIndietro={() => navigate('/bar')}
+      dividiSubito={cerca.get('dividi') === '1'}
       onStampa={() =>
         printComanda(order, comanda).catch((e) =>
           showToast(`⚠️ Stampa non riuscita: ${e.message}`, { kind: 'error' })

@@ -54,11 +54,15 @@ export default function ComandaDetail({
   onApriConto,
   onStampa,
   onIndietro,
+  // Arrivando dal ⋯ della card («✂️ Preparazione parziale») il riquadro
+  // delle quantità è già aperto: chi ha scelto quella voce ha già deciso,
+  // e ritrovarsi a doverla premere una seconda volta è un tocco a vuoto.
+  dividiSubito = false,
 }) {
   // Il riquadro delle quantità è aperto? Sta chiuso di suo: dividere è la
   // deroga, non la regola, e sei tastini +/− sempre aperti sotto il tasto
   // grande sono sei modi di toccare quello sbagliato di corsa.
-  const [dividendo, setDividendo] = useState(false)
+  const [dividendo, setDividendo] = useState(dividiSubito)
   const righe = comanda.items || []
   const prossimo = nextComandaStatus(comanda.status)
   const chiusa =
@@ -134,6 +138,7 @@ export default function ComandaDetail({
       {/* QUESTA COMANDA, non il conto: le sue righe e il suo totale. Il
           conto intero — con coperto, sconto e quello che è già stato
           incassato — sta dietro il tasto in alto, che è il suo posto. */}
+      <div className="comanda-det-corpo">
       <div className="card comanda-det-righe">
         <h3 className="comanda-det-titolo">Cosa c’è da fare</h3>
         {righe.length === 0 && <p className="muted small">Questa comanda è vuota.</p>}
@@ -242,6 +247,7 @@ export default function ComandaDetail({
         <button className="btn ghost small block comanda-det-stampa" onClick={onStampa}>
           🖨 Ristampa la comanda
         </button>
+      </div>
       </div>
     </div>
   )

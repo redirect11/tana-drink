@@ -6948,6 +6948,35 @@ body.pagina-piena .inv-scheda {
   text-align: center;
 }
 
+/* SU UNO SCHERMO LARGO NON SI SCORRE. Al banco il tablet sta in
+   orizzontale: una colonna sola lasciava due terzi di schermo vuoti a
+   destra e mandava il tasto grande sotto la piega, da raggiungere
+   scorrendo — proprio quello che si preme di corsa. Da 640px di
+   contenitore in su, le righe stanno a sinistra (larghe: è quello che si
+   legge mentre si versa) e le azioni a destra, sempre a vista.
+   La soglia è sul CONTENITORE e non sulla finestra: questa schermata può
+   aprirsi in spazi diversi, e la finestra larga non vuol dire che la sia
+   anche lei. */
+.comanda-det {
+  container-type: inline-size;
+}
+.comanda-det-corpo {
+  display: grid;
+  gap: 10px;
+}
+@container (min-width: 640px) {
+  .comanda-det-corpo {
+    grid-template-columns: minmax(0, 1.6fr) minmax(260px, 1fr);
+    align-items: start;
+  }
+  /* Le azioni restano in cima alla loro colonna mentre le righe scorrono:
+     il tasto grande non deve mai andarsene dallo schermo. */
+  .comanda-det-corpo > .comanda-det-azioni {
+    position: sticky;
+    top: 8px;
+  }
+}
+
 .comanda-det-riga1 {
   align-items: center;
   gap: 8px;
@@ -7197,3 +7226,8 @@ body.pagina-piena .inv-scheda {
   border-top: 1px solid var(--line);
 }
 
+/* «✂️ Preparazione parziale» respira: attaccato al tasto grande sembrava
+   la sua seconda riga, e si premeva quello sbagliato di corsa. */
+.comanda-det-dividi {
+  margin-top: 12px;
+}
