@@ -33,7 +33,7 @@
  */
 
 import { readFileSync } from 'node:fs'
-import { parseRequirementsYaml, etichetteClassificazione } from './lib-requisiti.mjs'
+import { parseRequirementsYaml, etichetteClassificazione, riconciliaEtichette, corpoGenerato } from './lib-requisiti.mjs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -75,14 +75,34 @@ async function githubFetch(path, options = {}) {
   return { status: res.status, ok: res.ok, body }
 }
 
-async function searchIssues(title) {
-  // Cerca issue esistenti (aperte o chiuse) con questo titolo esatto, per idempotenza.
-  // Le chiuse sono incluse di proposito: se un'issue di requisito è già stata risolta
-  // e chiusa, NON vogliamo ricrearla automaticamente.
-  const q = encodeURIComponent(`repo:${OWNER}/${REPO} is:issue in:title "${title}"`)
-  const { ok, body } = await githubFetch(`/search/issues?q=${q}&per_page=5`)
+async function cercaIssue(id) {
+  // SI CERCA PER IDENTIFICATIVO, non per titolo. Cercando il titolo intero,
+  // bastava rinominare un requisito perche' l'issue non venisse piu'
+  // riconosciuta: nasceva un DOPPIONE e la vecchia restava li' orfana. L'id
+  // fra parentesi quadre e' l'unica cosa che non cambia mai.
+  //
+  // Le chiuse sono incluse di proposito: un requisito gia' risolto e chiuso
+  // non si ricrea. Il filtro finale e' nostro perche' la ricerca di GitHub
+  // ignora le parentesi quadre e restituirebbe anche i vicini di casa
+  // (REQ-MAG-1 pesca REQ-MAG-10).
+  const q = encodeURIComponent(`repo:${OWNER}/${REPO} is:issue in:title "${id}"`)
+  const { ok, body } = await githubFetch(`/search/issues?q=${q}&per_page=10`)
   if (!ok) return []
-  return body.items || []
+  return (body.items || []).filter((i) => i.title.startsWith(`[${id}]`))
+}
+
+// Il dettaglio serve per corpo ed etichette: la ricerca li tronca.
+async function leggiIssue(numero) {
+  const { ok, body } = await githubFetch(`/repos/${OWNER}/${REPO}/issues/${numero}`)
+  return ok ? body : null
+}
+
+async function aggiornaIssue(numero, patch) {
+  return githubFetch(`/repos/${OWNER}/${REPO}/issues/${numero}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(patch),
+  })
 }
 
 // Un bug risolto nel registro è un'issue da chiudere: così non si aggiorna la
@@ -192,6 +212,7 @@ async function main() {
   let created = 0
   let skipped = 0
   let closed = 0
+  let updated = 0
   let errors = 0
 
   for (const req of toGenerate) {
@@ -208,26 +229,16 @@ async function main() {
       continue
     }
 
-    if (DRY_RUN) {
-      if (risolto) {
-        console.log(`  [DRY RUN] Risolto (${req.status}) — l'issue, se aperta, verrebbe chiusa.
-`)
-        closed++
-        continue
-      }
-      console.log('  [DRY RUN] Payload:')
-      console.log('  Title:', issueTitle)
-      console.log('  Labels:', [...new Set([...req.labels, ...etichetteClassificazione(req)])].join(', ') || '(nessuna)')
-      console.log('  Body (anteprima):', buildIssueBody(req).slice(0, 200) + '...\n')
-      created++
-      continue
-    }
-
     // Check idempotenza: esiste già un'issue con questo titolo?
-    const existing = await searchIssues(issueTitle)
+    const existing = await cercaIssue(req.id)
 
     if (risolto) {
       const aperta = existing.find((i) => i.state === 'open')
+      if (DRY_RUN) {
+        console.log(aperta ? `  [DRY RUN] Risolto (${req.status}) — chiuderebbe ${aperta.html_url}` : `  [DRY RUN] Risolto — nessuna issue aperta.`)
+        aperta ? closed++ : skipped++
+        continue
+      }
       if (!aperta) {
         console.log(`  ⏭  Risolto (${req.status}) — nessuna issue aperta da chiudere.`)
         skipped++
@@ -251,9 +262,60 @@ ${req.description}`
       continue
     }
 
+    // L'ISSUE C'E' GIA': si riallinea, non si salta. Prima si saltava e basta,
+    // e una voce che cambiava — un titolo riscritto, una priorita' nuova —
+    // restava scritta solo nel registro: su GitHub, dove la gente guarda, non
+    // arrivava mai.
     if (existing.length > 0) {
-      console.log(`  ⏭  Saltato — issue già esistente: ${existing[0].html_url}`)
-      skipped++
+      const numero = existing[0].number
+      const issue = (await leggiIssue(numero)) || existing[0]
+      const attuali = (issue.labels || []).map((l) => (typeof l === 'string' ? l : l.name))
+      const { daAggiungere, daTogliere, finali } = riconciliaEtichette(attuali, req)
+      const corpo = buildIssueBody(req)
+      // Il corpo si riscrive solo se e' ancora il nostro: se qualcuno ci ha
+      // scritto dentro un'analisi, quella vale piu' del testo generato.
+      const corpoDaRiscrivere = corpoGenerato(issue.body) && (issue.body || '').trim() !== corpo.trim()
+      const titoloDaCambiare = issue.title !== issueTitle
+
+      const patch = {}
+      if (titoloDaCambiare) patch.title = issueTitle
+      if (corpoDaRiscrivere) patch.body = corpo
+      if (daAggiungere.length || daTogliere.length) patch.labels = finali
+
+      if (Object.keys(patch).length === 0) {
+        console.log(`  ⏭  Gia' allineata: ${issue.html_url}`)
+        skipped++
+        continue
+      }
+
+      const cambiamenti = [
+        titoloDaCambiare ? 'titolo' : null,
+        corpoDaRiscrivere ? 'testo' : null,
+        daAggiungere.length ? `+${daAggiungere.join(' +')}` : null,
+        daTogliere.length ? `-${daTogliere.join(' -')}` : null,
+      ].filter(Boolean).join(', ')
+
+      if (DRY_RUN) {
+        console.log(`  [DRY RUN] Da riallineare (${cambiamenti}): ${issue.html_url}`)
+        updated++
+        continue
+      }
+
+      const esito = await aggiornaIssue(numero, patch)
+      if (esito.ok) {
+        console.log(`  ♻️  Riallineata (${cambiamenti}): ${issue.html_url}`)
+        updated++
+      } else {
+        console.error(`  ❌ Errore ${esito.status} riallineando #${numero}:`, esito.body.message || '')
+        errors++
+      }
+      await new Promise((r) => setTimeout(r, 200))
+      continue
+    }
+
+    if (DRY_RUN) {
+      console.log('  [DRY RUN] Nuova. Labels:', [...new Set([...req.labels, ...etichetteClassificazione(req)])].join(', ') || '(nessuna)')
+      created++
       continue
     }
 
@@ -275,7 +337,7 @@ ${req.description}`
     await new Promise((r) => setTimeout(r, 200))
   }
 
-  console.log(`\n📊 Riepilogo: ${created} create, ${closed} chiuse, ${skipped} saltate, ${errors} errori`)
+  console.log(`\n📊 Riepilogo: ${created} create, ${updated} riallineate, ${closed} chiuse, ${skipped} saltate, ${errors} errori`)
   if (errors > 0) process.exit(1)
 }
 
