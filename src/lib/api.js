@@ -539,6 +539,43 @@ export async function deleteInventoryItem(id) {
   await deleteDoc(doc(db, 'inventory_items', id))
 }
 
+// ── IL TRAVASO DEL MAGAZZINO AL MODELLO A PEZZI (REQ-MAG-018) ────────
+//
+// Lo lancia l'utente da un tasto, dopo aver visto cosa cambia. Qui si
+// rileggono i documenti COM'È SCRITTO SUL DATABASE — non come li legge
+// l'app, che li vede già a pezzi — e si scrive la forma nuova.
+//
+// A LOTTI, e ripetibile. Sono centinaia di documenti: scriverli tutti in una
+// volta blocca la schermata, e se la rete cade a metà bisogna poter
+// ricominciare. Ogni giro guarda cos'è ancora da fare, quindi ripartire
+// riprende da dove stava e nessuno viene scritto due volte.
+//
+// `onAvanzamento(fatti, totale)` serve a far vedere che si sta muovendo: al
+// banco una schermata ferma vuol dire «è bloccata».
+export const ATTESA_TRAVASO =
+  'Prima va aggiornato il magazzino alla nuova gestione (Magazzino → il banner in alto).'
+
+export async function travasaMagazzinoAPezzi({ onAvanzamento, lotto = 25 } = {}) {
+  const snap = await getDocs(inventoryCol)
+  const daFare = []
+  for (const d of snap.docs) {
+    const patch = patchNormalizza({ id: d.id, ...d.data() })
+    if (patch) daFare.push({ id: d.id, patch })
+  }
+  const totale = daFare.length
+  onAvanzamento?.(0, totale)
+  let fatti = 0
+  for (let i = 0; i < daFare.length; i += lotto) {
+    const gruppo = daFare.slice(i, i + lotto)
+    await Promise.all(
+      gruppo.map(({ id, patch }) => updateDoc(doc(db, 'inventory_items', id), patch))
+    )
+    fatti += gruppo.length
+    onAvanzamento?.(fatti, totale)
+  }
+  return { travasati: fatti }
+}
+
 // Carico merce: incrementa lo stock e registra un movimento (atomico).
 // `qty` è già in unità base; può essere negativo per uno scarico manuale.
 export async function loadStock(itemId, qty, { reason = 'carico' } = {}) {
@@ -549,21 +586,22 @@ export async function loadStock(itemId, qty, { reason = 'carico' } = {}) {
   // Un carico parte da quello che c'è, e quello che c'è non è mai negativo:
   // una bottiglia caricata su −0,04 deve valere una bottiglia. Lo scarico a
   // mano, dall'altra parte, non può scavare sotto lo zero.
-  // IL TRAVASO SUCCEDE QUI, la prima volta che qualcuno tocca l'articolo per
-  // un motivo suo (REQ-MAG-018): la quantità arriva già nell'unità del
-  // modello nuovo — i pezzi — perché è quello che la schermata ha letto.
-  // Sommarla alla giacenza scritta col modello vecchio darebbe pezzi sommati
-  // a centilitri.
-  const norm = articoloNormalizzato(cur)
-  const partenza = giacenzaPerCarico(norm.stock)
+  // IL TRAVASO NON SI FA DI NASCOSTO (REQ-MAG-018): lo fa l'utente, con un
+  // gesto suo. Qui però la quantità arriva già in PEZZI — è quello che la
+  // schermata ha letto — e sommarla a una giacenza ancora scritta in
+  // centilitri darebbe un numero senza senso. Finché il travaso non è fatto
+  // il carico si ferma e lo dice; la schermata comunque non ci arriva, che
+  // il magazzino è in sola lettura.
+  if (patchNormalizza(cur)) throw new Error(ATTESA_TRAVASO)
+  const partenza = giacenzaPerCarico(cur.stock)
   const nuovo = qty >= 0 ? partenza + qty : partenza - scaricoPossibile(partenza, -qty)
-  await updateDoc(ref, { ...(patchNormalizza(cur) || {}), stock: nuovo })
+  await updateDoc(ref, { stock: nuovo })
   await addDoc(movementsCol, {
     item_id: itemId,
     item_name: cur.name,
     type: qty >= 0 ? 'load' : 'unload',
     qty: Math.abs(qty),
-    unit: norm.unit ?? null,
+    unit: cur.unit ?? null,
     reason,
     created_at: serverTimestamp(),
   })
@@ -610,17 +648,17 @@ export async function adjustStock(itemId, newStock) {
   const s = await getDoc(ref)
   if (!s.exists()) throw new Error('Prodotto non trovato')
   const cur = s.data()
-  // Come nel carico: la conta arriva nell'unità del modello nuovo, e
-  // l'articolo si riscrive lì per lì nella forma nuova (REQ-MAG-018).
-  const norm = articoloNormalizzato(cur)
-  const delta = newStock - (Number(norm.stock) || 0)
-  const size = Number(norm.package_size) || 0
+  // Come nel carico: la conta arriva in pezzi, e su una giacenza ancora
+  // scritta alla vecchia maniera vorrebbe dire un'altra cosa.
+  if (patchNormalizza(cur)) throw new Error(ATTESA_TRAVASO)
+  const delta = newStock - (Number(cur.stock) || 0)
+  const size = Number(cur.package_size) || 0
   // Mantieni coerente il numero totale di bottiglie con la nuova giacenza.
   // Contando a pezzi le bottiglie SONO i pezzi: dividerle per il contenuto
   // darebbe «1» su venti lattine da 33 cl.
   const minTotal =
-    (norm.unit || 'pz') === 'pz' ? Math.ceil(newStock) : size ? Math.ceil(newStock / size) : 0
-  const patch = { ...(patchNormalizza(cur) || {}), stock: newStock }
+    (cur.unit || 'pz') === 'pz' ? Math.ceil(newStock) : size ? Math.ceil(newStock / size) : 0
+  const patch = { stock: newStock }
   if (minTotal > (Number(cur.bottles_total) || 0)) patch.bottles_total = minTotal
   await updateDoc(ref, patch)
   if (delta !== 0) {

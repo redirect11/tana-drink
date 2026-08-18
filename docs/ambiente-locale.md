@@ -155,12 +155,13 @@ node scripts/seed-magazzino-vecchio.js --pulisci # li toglie
 node scripts/diagnosi-travaso.js                 # come si leggono adesso
 ```
 
-Dal 1.5 il magazzino si conta solo a **pezzi**, e i prodotti scritti coi
-modelli di ieri si adeguano da soli **alla lettura**: non c'è nessuno
-script che migra il database, è l'app che legge tollerante e riscrive
-l'articolo la prima volta che qualcuno lo tocca (REQ-MAG-018). Il rischio
-è scoprire al primo aggiornamento che una forma vecchia non l'avevamo
-prevista — e scoprirlo sulle giacenze vere del locale.
+Dal 1.5 il magazzino si conta solo a **pezzi**. I prodotti scritti coi
+modelli di ieri si **leggono** già a pezzi, ma il database lo cambia solo
+un gesto esplicito di chi lavora: entrando in Magazzino compare un avviso,
+si guarda cosa cambia senza scrivere niente, e solo allora si aggiorna
+(REQ-MAG-018). Il rischio è scoprire al primo aggiornamento che una forma
+vecchia non l'avevamo prevista — e scoprirlo sulle giacenze vere del
+locale: per questo il giro si prova qui, con dati come quelli veri.
 
 `seed:vecchi` riempie l'emulatore con **tutte** le forme che esistono
 davvero: a pezzo con e senza contenuto, a volume, a peso, a volume senza

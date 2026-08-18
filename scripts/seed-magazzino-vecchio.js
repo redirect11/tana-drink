@@ -102,6 +102,19 @@ const PRODOTTI = [
     vat: 10,
   },
   {
+    // IL CASO DELLA «BIRRA PILS (SPINA)» vista in test: contata a pezzi, con
+    // scritto che un pezzo contiene 330 — ma 330 di cosa? cl, ml, grammi?
+    // Nessuno lo sa, e indovinare sbaglia il costo di un drink di dieci
+    // volte: deve finire fra quelli da sistemare a mano.
+    id: 'vecchio-contenuto-senza-misura',
+    name: 'Birra Pils — contenuto senza misura',
+    unit: 'pz',
+    package_size: 330,
+    stock: 1.94,
+    cost: 1.4,
+    vat: 22,
+  },
+  {
     id: 'vecchio-sciroppo-senza-confezione',
     name: 'Sciroppo — a volume, senza confezione',
     unit: 'ml',

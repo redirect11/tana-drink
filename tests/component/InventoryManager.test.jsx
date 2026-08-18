@@ -32,14 +32,17 @@ vi.mock('../../src/lib/toast.js', () => ({
 }))
 
 // Il magazzino di prova: quattro prodotti che coprono i casi che contano.
-// Le giacenze sono in unità BASE (ml), come da REQ-MAG-001.
+// Tutto si conta a PEZZI (REQ-MAG-016) e il contenuto dice a quanto
+// corrisponde un pezzo: è la forma in cui gli articoli arrivano dalle api,
+// che rimettono in riga anche quelli scritti alla vecchia maniera.
 const ITEMS = [
   {
     id: 'i1',
     name: 'Gin Mare',
-    unit: 'ml',
+    unit: 'pz',
     package_size: 1000, // bottiglia da 100 cl…
-    stock: 500, // …piena a metà → 0,5 pz
+    content_unit: 'ml',
+    stock: 0.5, // …piena a metà → 0,5 pz
     category_id: 'c1',
     supplier_id: 's1',
     cost: 20,
@@ -50,9 +53,10 @@ const ITEMS = [
   {
     id: 'i2',
     name: 'Rum Diplomatico',
-    unit: 'ml',
+    unit: 'pz',
     package_size: 700,
-    stock: 1750, // 2 piene + mezza → 2,5 pz
+    content_unit: 'ml',
+    stock: 2.5, // 2 piene + mezza → 2,5 pz
     category_id: 'c1',
     supplier_id: 's2',
     cost: 30,
@@ -62,8 +66,9 @@ const ITEMS = [
   {
     id: 'i3',
     name: 'Vodka Vecchia',
-    unit: 'ml',
+    unit: 'pz',
     package_size: 700,
+    content_unit: 'ml',
     stock: 0, // esaurita → 0 pz
     category_id: 'c1',
     status: 'out',

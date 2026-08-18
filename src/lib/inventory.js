@@ -382,6 +382,74 @@ export function articoloNormalizzato(item) {
   }
 }
 
+// ── IL TRAVASO LO FA L'UTENTE, CON UN GESTO ──────────────────────────
+//
+// La lettura tollerante qui sopra serve a far funzionare il magazzino su un
+// database non ancora aggiornato: senza, i numeri non si potrebbero nemmeno
+// mostrare. Ma il DATABASE non lo cambia da sola, e nemmeno lo cambia di
+// nascosto quando qualcuno tocca un articolo per un motivo suo: «il travaso
+// dovrebbe farlo l'utente. Quando entra in magazzino un banner gli dice che
+// deve iniziare la migrazione» (18/08).
+//
+// Lo stato non è un flag scritto da qualche parte — un cartello acceso su un
+// database già a posto è peggio di nessun cartello: si guarda se esistono
+// ancora articoli nella forma vecchia. Così resta vero anche se i dati
+// arrivano sistemati da un'altra strada.
+
+// Perché questo articolo non si può portare a pezzi da solo, detto a chi
+// deve sistemarlo. Null se invece si può.
+export function motivoNonMigrabile(item) {
+  const unit = String(item?.unit || 'pz').toLowerCase()
+  const eti = (u) => UNIT_LABEL[String(u).toLowerCase()] || u
+  if (unit === 'pz') {
+    // UN CONTENUTO SENZA MISURA NON È UN CONTENUTO. Sulla «Birra Pils
+    // (spina)» c'è scritto 330 e basta: cl? ml? grammi? Nessuno lo sa, e
+    // indovinare vuol dire sbagliare il costo di un drink di dieci volte.
+    // Contando a pezzi la giacenza regge lo stesso, ma il costo al cl e lo
+    // scarico frazionato non esistono finché non lo dice una persona.
+    const size = Number(item?.package_size) || 0
+    if (size > 0 && !contentBase(item)) {
+      return `c'è scritto che un pezzo contiene ${size}, ma non di che misura: va detto se sono cl, grammi o U`
+    }
+    return null
+  }
+  const resa = Number(item?.resa) || 0
+  const resaBase = item?.resa_unit ? baseUnit(item.resa_unit) : null
+  if (resa > 0 && resaBase && resaBase !== unit) {
+    return `si compra a ${eti(unit)} e si usa in ${eti(resaBase)}: va detto a quanto corrisponde un pezzo`
+  }
+  // Una «U» era già una cosa che si conta — il sacco, la confezione — quindi
+  // un pezzo è una U e non serve nessuna confezione dichiarata. Per volumi e
+  // pesi invece la confezione È il pezzo: senza, non si sa quanti pezzi
+  // siano quei millilitri.
+  if (!unitaGenerica(unit) && !(Number(item?.package_size) > 0)) {
+    return `si conta a ${eti(unit)} e non si sa quanto contiene una confezione: va detto a quanto corrisponde un pezzo`
+  }
+  return null
+}
+
+// A che punto sta il travaso, guardando gli articoli COSÌ COME LI LEGGE
+// L'APP (quindi già passati da articoloNormalizzato):
+//   daMigrare   → si leggono già a pezzi ma sul database sono ancora scritti
+//                 alla vecchia maniera: basta salvarli
+//   daSistemare → nemmeno la lettura li sa portare a pezzi, e prima che il
+//                 travaso parta li deve aprire una persona
+//   fatto       → non c'è niente da fare, e la schermata non ne parla
+export function statoTravaso(items) {
+  const daMigrare = []
+  const daSistemare = []
+  for (const it of items || []) {
+    if (motivoNonMigrabile(it)) daSistemare.push(it)
+    else if (it?.formaVecchia) daMigrare.push(it)
+  }
+  return {
+    daMigrare,
+    daSistemare,
+    totale: (items || []).length,
+    fatto: daMigrare.length === 0 && daSistemare.length === 0,
+  }
+}
+
 // Stato scorta di un item: 'empty' (≤0), 'low' (≤ soglia), 'ok'.
 export function stockStatus(item) {
   // Quello che non è una scorta non finisce mai: la manodopera non sta su
@@ -758,6 +826,21 @@ export function fmtContenuto(qty, item) {
   if ((item?.unit || 'pz') !== 'pz') return fmtItem(qty, item)
   if (unitaGenerica(c.base)) return formatQty(qty, UNITA_GENERICA)
   return formatIn(qty, c.base === 'g' ? 'g' : 'cl')
+}
+
+// QUANTO CONTIENE UN PEZZO, nell'unità in cui quel numero si legge.
+//
+// Un fusto da venti litri si leggeva «2000 cl», e chi lo guarda si chiede se
+// qualcuno se lo sia inventato. Normalizzare sempre in centilitri va bene
+// per le bottiglie e male per tutto il resto: qui l'unità la sceglie il
+// numero — 20 L, 70 cl, 33 cl, 8 g, 1 kg — mentre il residuo della
+// confezione aperta resta in cl, che è come si conta quello che è rimasto
+// dentro (vedi fmtContenuto).
+// Null quando il contenuto non c'è, o c'è ma senza dire di che misura.
+export function contenutoDelPezzo(item) {
+  const c = contentBase(item)
+  if (!c || !(c.size > 0)) return null
+  return formatQty(c.size, c.base)
 }
 
 // ── DUPLICARE UN PRODOTTO ────────────────────────────────────────────
