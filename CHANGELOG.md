@@ -69,17 +69,21 @@
   dosa solo a pezzi). Lo stesso prodotto si vende in più modi — il
   Jägermeister va nel Jägerbombo e si serve a cicchetto — e dichiararlo una
   volta per tutte non funzionava.
-- **I prodotti che c'erano già si adeguano da soli, aggiornando l'app.** Le
-  388 schede scritte con le unità di ieri — litri, chili, «U», la resa fra
-  due misure — si leggono da subito in pezzi, con giacenze, costi e ricette
-  che dicono esattamente quello che dicevano prima: nessuno deve riaprire
-  niente. La scheda di un prodotto ancora da riscrivere lo dice a chiare
-  lettere («era scritto a litri: la giacenza si legge come 0,92 pz»), e la
-  forma nuova si salva la prima volta che qualcuno lo tocca — una modifica,
-  un carico, una conta. Restano indietro solo i prodotti comprati in una
-  misura e usati in un'altra (i limoni al chilo, spremuti in centilitri):
-  lì cosa sia un pezzo lo deve decidere una persona, e finché non lo fa
-  quel prodotto funziona come prima.
+- **I prodotti che c'erano già si aggiornano quando lo dici tu.** Entrando in
+  Magazzino, se ci sono ancora schede scritte con le unità di ieri — litri,
+  chili, «U» — un avviso lo dice e resta lì finché non è fatto. «Guarda cosa
+  cambia» mostra prima, senza toccare niente, quanti prodotti si aggiornano e
+  con che giacenza; se qualcuno non si può aggiornare da solo lo elenca per
+  nome, con scritto cosa gli manca (i limoni comprati al chilo e spremuti in
+  centilitri, o un contenuto scritto «330» senza dire se sono cl o grammi).
+  Solo quando sono tutti a posto compare il tasto per aggiornare, e da lì si
+  scrive un pezzo per volta, con l'avanzamento a vista: se si interrompe si
+  ricomincia e riprende da dov'era.
+  Nel frattempo i numeri si leggono già giusti — giacenze, costi e ricette
+  dicono quello che dicevano prima — ma non si può caricare, contare né
+  aggiungere prodotti: si possono aprire solo quelli da sistemare, che è
+  l'unico modo di sbloccare. E se i dati arrivano già a posto, di tutta
+  questa faccenda non si vede niente.
 - **Il fornitore che manca si aggiunge dalla scheda del prodotto.** In fondo
   alla tendina Fornitore c'è «➕ Nuovo fornitore…»: basta il nome, e resta
   già selezionato sul prodotto che si stava compilando. Prima bisognava

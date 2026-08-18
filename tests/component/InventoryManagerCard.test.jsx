@@ -31,8 +31,8 @@ vi.mock('../../src/lib/api.js', () => {
     { id: 'ichnusa', name: 'Ichnusa', unit: 'pz', stock: 12, cost: 1.2, vat: 22 },
     // Gli articoli arrivano dalle api SEMPRE nella forma nuova, anche quando
     // sul database sono ancora scritti a «U»: a rimetterli in riga è la
-    // lettura tollerante (REQ-MAG-018, mapItem). Il ghiaccio si porta dietro
-    // `formaVecchia`, che è quello che la scheda usa per dirlo.
+    // lettura tollerante (REQ-MAG-018, mapItem). Qui il magazzino è già
+    // aggiornato — il giro del travaso ha il suo file di test.
     {
       id: 'ghiaccio',
       name: 'Ghiaccio',
@@ -43,7 +43,6 @@ vi.mock('../../src/lib/api.js', () => {
       stock: 6,
       cost: 2,
       vat: 22,
-      formaVecchia: { unit: 'U', stock: 6 },
     },
     {
       id: 'lavoro',
@@ -468,15 +467,6 @@ describe('un prodotto storico si legge già a pezzi', () => {
     expect(screen.queryByText(/era scritto a/)).toBeNull()
   })
 
-  it('quello ancora scritto a «U» dice da dove viene la sua giacenza', async () => {
-    // Una U era già una cosa che si conta — il sacco, la confezione — quindi
-    // sei U fanno sei pezzi: qui non c'è niente da dividere. Il travaso però
-    // non deve essere silenzioso su una giacenza, e la scheda lo scrive.
-    const user = userEvent.setup()
-    await apriModifica(user, 'Ghiaccio')
-    expect(screen.getByText(/era scritto a/)).toBeInTheDocument()
-    expect(screen.getByText('6 pz')).toBeInTheDocument()
-  })
 })
 
 // ── IL CARICO A COLLI È UN'ECCEZIONE ─────────────────────────────────

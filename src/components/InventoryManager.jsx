@@ -6,6 +6,7 @@ import {
   deleteInventoryItem,
   loadStock,
   adjustStock,
+  travasaMagazzinoAPezzi,
   fetchStockMovements,
   fetchInventoryCategories,
   createInventoryCategory,
@@ -31,6 +32,8 @@ import {
   toBaseQty,
   qtyInStockUnit,
   unitaMovimento,
+  statoTravaso,
+  motivoNonMigrabile,
   fromStockUnit,
   eScorta,
   stockStatus,
@@ -40,9 +43,9 @@ import {
   formatPezzi,
   copiaProdotto,
   fmtContenuto,
+  contenutoDelPezzo,
   inventorySummary,
   filterItems,
-  formatIn,
   ASSORTIMENTI,
   assortimentoDi,
   costWithVat,
@@ -427,6 +430,40 @@ function ProductsPanel() {
     load()
   }, [])
 
+  // ── A CHE PUNTO STA IL TRAVASO ────────────────────────────────────
+  // Non è un flag scritto da qualche parte: si guarda se esistono ancora
+  // articoli nella forma vecchia. Se non ce ne sono — e può succedere, i
+  // dati possono arrivare già sistemati — di tutta questa faccenda non si
+  // vede niente, e la schermata è quella normale di sempre.
+  const travaso = useMemo(() => statoTravaso(items), [items])
+  const [passoTravaso, setPassoTravaso] = useState(null) // 'prova' | 'corso' | 'fatto'
+  const [avanzamento, setAvanzamento] = useState({ fatti: 0, totale: 0 })
+  // Finché il magazzino non è aggiornato si può toccare SOLO quello che va
+  // sistemato per farlo partire: è l'unica strada per sbloccarlo. Tutto il
+  // resto è in sola lettura — battere una comanda e scaricare le scorte
+  // continua a funzionare, che quella è la serata e non aspetta noi.
+  const bloccato = !travaso.fatto
+  const daSistemare = useMemo(
+    () => new Set(travaso.daSistemare.map((it) => it.id)),
+    [travaso.daSistemare]
+  )
+  const modificabile = (it) => !bloccato || daSistemare.has(it.id)
+
+  async function avviaTravaso() {
+    setPassoTravaso('corso')
+    try {
+      const { travasati } = await travasaMagazzinoAPezzi({
+        onAvanzamento: (fatti, totale) => setAvanzamento({ fatti, totale }),
+      })
+      setAvanzamento({ fatti: travasati, totale: travasati })
+      setPassoTravaso('fatto')
+      await load()
+    } catch (e) {
+      setError(`Il magazzino non si è aggiornato: ${e.message}`)
+      setPassoTravaso(null)
+    }
+  }
+
   const summary = useMemo(() => inventorySummary(items), [items])
   const totalValue = useMemo(() => inventoryTotalValue(items), [items])
   // Blocco azioni espanse di un item, condiviso dalla vista a CARD e dalla
@@ -449,7 +486,7 @@ function ProductsPanel() {
               {bd.finished > 0 && ` · ${bd.finished} finite`}
               {/* Il contenuto in cl (o g): un pezzo è la bottiglia, dentro
                   non ci sono pezzi. */}
-              <span className="muted"> · 1 pz = {fmtContenuto(it.package_size, it)}</span>
+              <span className="muted"> · 1 pz = {contenutoDelPezzo(it)}</span>
             </dd>
           </div>
         ) : (
@@ -465,7 +502,7 @@ function ProductsPanel() {
                 <dt>Confezione</dt>
                 <dd>
                   {it.unit === 'pz' ? (
-                    <>1 pz = {formatIn(it.package_size, it.content_unit === 'g' ? 'g' : 'cl')}</>
+                    <>1 pz = {contenutoDelPezzo(it) ?? `${it.package_size} (misura non detta)`}</>
                   ) : (
                     <>1 conf. = {fmtItem(it.package_size, it)}</>
                   )}
@@ -525,27 +562,41 @@ function ProductsPanel() {
         />
       ) : (
         <>
-          <button className="btn small block" style={{ marginTop: 8 }} onClick={() => setCaricoFor(it.id)}>
-            ⬆ Carico
-          </button>
-          <button
-            className="btn secondary small block"
-            style={{ marginTop: 6 }}
-            onClick={() => {
-              setCaricoFor(null)
-              setRettificaFor(it.id)
-            }}
-          >
-            Contenuto reale
-          </button>
+          {/* MAGAZZINO IN SOLA LETTURA finché non è aggiornato: caricare o
+              contare adesso vorrebbe dire scrivere pezzi su una giacenza
+              ancora contata in centilitri. Chi va sistemato si apre lo
+              stesso, che è l'unico modo di far partire l'aggiornamento. */}
+          {bloccato ? (
+            <p className="muted small" style={{ margin: '8px 0 0' }}>
+              {daSistemare.has(it.id)
+                ? '✏️ Questo prodotto va sistemato: aprilo e scrivi a quanto corrisponde un pezzo.'
+                : '🔒 Carico e conta tornano appena il magazzino è aggiornato.'}
+            </p>
+          ) : (
+            <>
+              <button className="btn small block" style={{ marginTop: 8 }} onClick={() => setCaricoFor(it.id)}>
+                ⬆ Carico
+              </button>
+              <button
+                className="btn secondary small block"
+                style={{ marginTop: 6 }}
+                onClick={() => {
+                  setCaricoFor(null)
+                  setRettificaFor(it.id)
+                }}
+              >
+                Contenuto reale
+              </button>
+            </>
+          )}
           {/* Tre azioni sulla stessa riga: si modifica, si duplica, si
               elimina. DUPLICA sta in mezzo perché è la via di mezzo — un
               prodotto quasi uguale a questo — e a fianco dell'elimina si
               ragiona due volte prima di premere. */}
           <div className="inv-azioni" style={{ marginTop: 6 }}>
-            <button className="btn ghost small" onClick={() => setEditing(it)}>✏️ Modifica</button>
-            <button className="btn ghost small" onClick={() => duplica(it)}>⧉ Duplica</button>
-            <button className="btn ghost small" onClick={() => remove(it)}>🗑 Elimina</button>
+            <button className="btn ghost small" disabled={!modificabile(it)} onClick={() => setEditing(it)}>✏️ Modifica</button>
+            <button className="btn ghost small" disabled={bloccato} onClick={() => duplica(it)}>⧉ Duplica</button>
+            <button className="btn ghost small" disabled={bloccato} onClick={() => remove(it)}>🗑 Elimina</button>
           </div>
         </>
       )}
@@ -720,6 +771,14 @@ function ProductsPanel() {
 
   return (
     <div className="inv-panel">
+      <PannelloTravaso
+        travaso={travaso}
+        passo={passoTravaso}
+        avanzamento={avanzamento}
+        onProva={() => setPassoTravaso('prova')}
+        onChiudi={() => setPassoTravaso(null)}
+        onConferma={avviaTravaso}
+      />
       {/* LA TESTATA: ricerca, e sotto le scelte che stanno ferme quasi
           sempre. I filtri erano sette pastiglie sempre aperte — una riga di
           schermo occupata tutto il giorno per una scelta che si cambia due
@@ -858,7 +917,12 @@ function ProductsPanel() {
           ))}
         </div>
 
-        <button className="btn small" onClick={() => setEditing('new')}>
+        <button
+          className="btn small"
+          disabled={bloccato}
+          title={bloccato ? 'Prima va aggiornato il magazzino alla nuova gestione' : undefined}
+          onClick={() => setEditing('new')}
+        >
           + Nuovo prodotto
         </button>
       </div>
@@ -1205,6 +1269,150 @@ function SupplierManager({ suppliers, onChange }) {
         </div>
       ))}
     </div>
+  )
+}
+
+// --- IL TRAVASO AL MODELLO A PEZZI, IN MANO A CHI LAVORA ----------------
+//
+// «Quando entra in magazzino un banner gli dice che deve iniziare la
+// migrazione dei dati alla nuova gestione magazzino. Quando preme ok, parte
+// prima un dry run che lo avvisa dei prodotti che devono essere sistemati
+// prima, e poi, se tutto è come se lo aspetta, allora chiede conferma e
+// migra i dati» (18/08). Niente di automatico: il database lo cambia un
+// gesto, e prima di quel gesto si vede cosa cambia.
+//
+// Se non c'è niente da fare qui non compare NIENTE: la schermata è quella
+// normale, senza traccia di tutta questa faccenda.
+function PannelloTravaso({ travaso, passo, avanzamento, onProva, onChiudi, onConferma }) {
+  if (travaso.fatto && passo !== 'fatto') return null
+  const { daMigrare, daSistemare } = travaso
+  const pronti = daSistemare.length === 0
+
+  return (
+    <>
+      {!travaso.fatto && (
+        <div className="banner" style={{ marginBottom: 10 }}>
+          <strong>Il magazzino va aggiornato.</strong> Da questa versione tutto
+          si conta a <strong>pezzi</strong>: {daMigrare.length > 0 && `${daMigrare.length} prodotti`}
+          {daMigrare.length > 0 && daSistemare.length > 0 && ' e '}
+          {daSistemare.length > 0 && `${daSistemare.length} da sistemare a mano`}
+          {' '}
+          {daMigrare.length + daSistemare.length === 1 ? 'aspetta' : 'aspettano'} il passaggio.
+          Fino ad allora i numeri si leggono già giusti, ma non si può caricare,
+          contare né aggiungere prodotti.
+          <div style={{ marginTop: 8 }}>
+            <button type="button" className="btn small" onClick={onProva}>
+              Guarda cosa cambia
+            </button>
+          </div>
+        </div>
+      )}
+
+      {passo === 'prova' && (
+        <div className="overlay confirm-overlay" onClick={onChiudi}>
+          <div
+            className="confirm-box"
+            role="dialog"
+            aria-label="Cosa cambia aggiornando il magazzino"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ marginTop: 0 }}>Cosa cambia</h3>
+            {/* PRIMA UNA PROVA A VUOTO: qui non si scrive niente. */}
+            <p className="small" style={{ marginTop: 0 }}>
+              Per adesso non cambia niente: questo è solo l&apos;elenco.
+            </p>
+
+            {daSistemare.length > 0 ? (
+              <>
+                <h4 style={{ margin: '14px 0 2px' }}>
+                  ⚠️ Da sistemare prima ({daSistemare.length})
+                </h4>
+                <p className="small" style={{ margin: '0 0 6px' }}>
+                  Di questi non si sa a quanto corrisponde un pezzo, e nessuno
+                  può indovinarlo. Aprili, scrivilo, e poi torna qui.
+                </p>
+                <ul className="small" style={{ margin: 0, paddingLeft: 18 }}>
+                  {daSistemare.map((it) => (
+                    <li key={it.id}>
+                      <strong>{it.name}</strong>{' '}
+                      <span className="muted">{motivoNonMigrabile(it)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : (
+              <>
+                <h4 style={{ margin: '14px 0 2px' }}>
+                  ✅ Si aggiornano {daMigrare.length} prodotti
+                </h4>
+                <p className="small" style={{ margin: '0 0 6px' }}>
+                  Le giacenze passano a pezzi: quello che oggi si legge sullo
+                  schermo è già il numero giusto, e resterà scritto così.
+                  Prezzi, ricette e menù non si toccano.
+                </p>
+                <ul className="small" style={{ margin: 0, paddingLeft: 18 }}>
+                  {daMigrare.slice(0, 8).map((it) => (
+                    <li key={it.id}>
+                      {it.name}{' '}
+                      <span className="muted">
+                        {formatQty(it.formaVecchia.stock, baseUnit(it.formaVecchia.unit))} →{' '}
+                        {formatPezzi(it.stock)} pz
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                {daMigrare.length > 8 && (
+                  <p className="muted small" style={{ margin: '4px 0 0' }}>
+                    … e altri {daMigrare.length - 8}.
+                  </p>
+                )}
+              </>
+            )}
+
+            <div className="grid-2" style={{ marginTop: 16 }}>
+              <button type="button" className="btn ghost" onClick={onChiudi}>
+                {pronti ? 'Non adesso' : 'Chiudi'}
+              </button>
+              {pronti && (
+                <button type="button" className="btn" onClick={onConferma}>
+                  Aggiorna {daMigrare.length} prodotti
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {(passo === 'corso' || passo === 'fatto') && (
+        <div className="overlay confirm-overlay">
+          <div className="confirm-box" role="dialog" aria-label="Aggiornamento del magazzino">
+            {passo === 'corso' ? (
+              <>
+                <h3 style={{ marginTop: 0 }}>Sto aggiornando…</h3>
+                {/* A LOTTI, e si vede: una schermata ferma al banco vuol dire
+                    «è bloccata». Se si interrompe si può ricominciare, che
+                    ogni giro guarda cos'è rimasto da fare. */}
+                <p className="small" style={{ margin: 0 }}>
+                  {avanzamento.fatti} di {avanzamento.totale}. Puoi ricominciare
+                  da qui se si interrompe: riprende da dov&apos;era.
+                </p>
+              </>
+            ) : (
+              <>
+                <h3 style={{ marginTop: 0 }}>✅ Magazzino aggiornato</h3>
+                <p className="small" style={{ margin: 0 }}>
+                  {avanzamento.totale} prodotti si contano a pezzi. Carico,
+                  conta e prodotti nuovi sono di nuovo a posto.
+                </p>
+                <button type="button" className="btn block" style={{ marginTop: 16 }} onClick={onChiudi}>
+                  Chiudi
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </>
   )
 }
 
@@ -1608,9 +1816,19 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
   const isEdit = !!initial
   // L'articolo arriva SEMPRE nella forma nuova, anche quando sul database è
   // ancora scritto a litri o a «U»: a rimetterlo in riga è la lettura
-  // tollerante (REQ-MAG-018). Qui resta solo da dirlo a chi guarda —
-  // `formaVecchia` c'è finché quella riscrittura non è stata salvata.
-  const daTravasare = initial?.formaVecchia || null
+  // tollerante (REQ-MAG-018). Che sia da migrare o no non si dice QUI: lo
+  // dice il banner in cima al magazzino, una volta sola. Un messaggio per
+  // prodotto, moltiplicato per 388, è rumore che nasconde la cosa da fare.
+  //
+  // DA SISTEMARE A MANO è un'altra cosa, e va detta: di questo prodotto non
+  // si sa abbastanza per portarlo a pezzi, e finché non lo si scrive qui
+  // l'aggiornamento del magazzino non parte. È l'unico che si può ancora
+  // aprire a magazzino bloccato, perché è così che si sblocca.
+  const motivoDaSistemare = isEdit ? motivoNonMigrabile(initial) : null
+  // Contato ancora a volume, a peso o a «U»: oltre al contenuto va convertita
+  // la giacenza, che altrimenti resterebbe scritta come se fossero pezzi.
+  const daConvertire = isEdit && (initial.unit || 'pz') !== 'pz'
+  const baseVecchia = daConvertire ? baseUnit(initial.unit) : 'pz'
   const [aiuto, setAiuto] = useState(false)
   const [aiutoPezzo, setAiutoPezzo] = useState(false)
   // ── IL FORNITORE CHE MANCA SI AGGIUNGE DA QUI ──────────────────────
@@ -1628,7 +1846,7 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
 
   // Il contenuto com'era salvato, nell'unità in cui si legge (un pezzo è
   // «70 cl», non 700 ml).
-  const contFamiglia = initial?.content_unit
+  const contFamiglia = daConvertire ? initial.unit : initial?.content_unit
   const contUnita = unitaGenerica(contFamiglia) ? 'U' : contFamiglia === 'g' ? 'g' : 'cl'
   const packIniziale = Number(initial?.package_size) || 0
   const [form, setForm] = useState({
@@ -1645,7 +1863,15 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
     content_unit: contUnita,
     // La soglia si è sempre scritta in quello che si compra: adesso quello
     // che si compra è il pezzo, quindi si legge e si riscrive in pezzi.
-    low_threshold: initial?.low_threshold ? String(initial.low_threshold) : '',
+    low_threshold: (() => {
+      const soglia = Number(initial?.low_threshold) || 0
+      if (!(soglia > 0)) return ''
+      // Su un prodotto da sistemare la soglia è ancora nella misura vecchia:
+      // riscriverla tale e quale vorrebbe dire «avvisami sotto le 700
+      // bottiglie», e mezzo magazzino risulterebbe in esaurimento.
+      if (daConvertire) return packIniziale > 0 ? String(soglia / packIniziale) : ''
+      return String(soglia)
+    })(),
     bottles: '',
     open_content: '',
   })
@@ -1666,6 +1892,12 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
   // contenuto è un peso, il numero è una stima e va detto (un limone non
   // pesa sempre uguale).
   const aPeso = contenutoPezzo > 0 && contenutoBase === 'g'
+  const num0 = (v) => Number(v) || 0
+  // Quanto vale un pezzo nella misura in cui il prodotto è ancora scritto:
+  // solo così la giacenza vecchia si può contare in pezzi. Se il contenuto
+  // che si sta scrivendo è di un'altra famiglia (comprato a chili, scritto
+  // in cl) non c'è conversione possibile, e il salvataggio si ferma.
+  const convertibile = daConvertire && contenutoBase === baseVecchia ? contenutoPezzo : 0
 
   // Il fornitore appena creato resta SELEZIONATO sul prodotto che si stava
   // compilando: se toccasse riselezionarlo a mano il giro non si sarebbe
@@ -1721,10 +1953,24 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
       }
       if (isEdit) {
         // In modifica la giacenza non si tocca: quella la muovono il carico e
-        // la conta. Se l'articolo era ancora scritto col modello vecchio, la
-        // giacenza che si salva è quella già letta in pezzi — ed è quella che
-        // il banner qui sopra ha mostrato prima di premere Salva.
-        await onSave(daTravasare ? { ...base, stock: Number(initial?.stock) || 0 } : base)
+        // la conta. Due eccezioni, tutte e due sulla stessa cosa — il
+        // passaggio ai pezzi:
+        if (daConvertire) {
+          // Prodotto ancora nella misura vecchia: la giacenza va convertita
+          // adesso, se no «5000» resterebbe scritto come se fossero pezzi.
+          if (!(convertibile > 0)) {
+            setAvviso(
+              `Scrivi a quanto corrisponde un pezzo in ${UNIT_LABEL[baseVecchia] || baseVecchia}: senza, la giacenza (${fmtItem(initial.stock, initial)}) non si può contare in pezzi.`
+            )
+            return
+          }
+          const stock = Math.round((num0(initial.stock) / convertibile) * 100) / 100
+          await onSave({ ...base, stock, bottles_total: Math.round(stock) })
+          return
+        }
+        // La giacenza letta è già quella giusta anche per un prodotto
+        // ancora da migrare: si salva com'è.
+        await onSave({ ...base, stock: Number(initial?.stock) || 0 })
       } else {
         // In creazione la giacenza è quello che si scrive: i pezzi interi più
         // la frazione della confezione già aperta, che non è né zero né uno.
@@ -1902,14 +2148,23 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
           articolo sul database è ancora scritto col modello vecchio: si
           legge già in pezzi, e qui c'è scritto da dove viene quel numero,
           prima di salvarlo per sempre. */}
-      {daTravasare && (
+      {motivoDaSistemare && (
         <div className="banner" style={{ marginTop: 8 }}>
-          ⚠️ Questo prodotto era scritto a{' '}
-          <strong>{GESTIONE_LABEL[baseUnit(daTravasare.unit)]}</strong>: adesso si
-          conta in <strong>pezzi</strong>. La giacenza (
-          {formatQty(daTravasare.stock, baseUnit(daTravasare.unit))}) si legge come{' '}
-          <strong>{formatPezzi(initial?.stock)} pz</strong>, e salvando resta
-          scritta così.
+          ⚠️ Questo prodotto <strong>blocca l&apos;aggiornamento</strong> del
+          magazzino: {motivoDaSistemare}.
+          {daConvertire && (
+            <>
+              {' '}La giacenza ({fmtItem(initial.stock, initial)})
+              {convertibile > 0 ? (
+                <>
+                  {' '}diventa{' '}
+                  <strong>{formatPezzi(num0(initial.stock) / convertibile)} pz</strong>.
+                </>
+              ) : (
+                <> si conterà da lì.</>
+              )}
+            </>
+          )}
         </div>
       )}
 

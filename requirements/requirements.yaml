@@ -1871,51 +1871,91 @@ requirements:
       altrove. Il travaso è dell'APP, e si fa come si è sempre fatto con gli
       ordini vecchi, che nessuno ha mai migrato: li rimette in riga
       `normalizeOrderDoc` alla lettura (REQ-ORD-002).
-      FATTO (1.5.0), in due pezzi.
-      1) LETTURA TOLLERANTE: `articoloNormalizzato` (src/lib/inventory.js)
-      prende un articolo com'è scritto sul database e ne restituisce la forma
-      nuova; ci passa `mapItem` in src/lib/api.js, che è il punto da cui
-      entrano nell'app tutti gli articoli — magazzino, ricette, menù, costi.
-      Da lì in poi il resto del codice non sa più che esistono due forme.
-      Chi è già a posto torna identico (stessa identità: sta sulla strada di
-      ogni lettura).
-      2) RISCRITTURA QUANDO CAPITA: l'articolo si salva nella forma nuova la
-      prima volta che qualcuno lo tocca per un motivo suo — una modifica
-      (la scheda salva già la forma nuova), un carico (`loadStock`), una
-      conta (`adjustStock`). Nessuno deve aprire 388 schede, e non si
-      scrivono 388 documenti tutti insieme.
+      E POI RIPENSATO, sempre il 18/08, guardando l'app: «il travaso
+      dovrebbe farlo l'utente. Quando entra in magazzino un banner gli dice
+      che deve iniziare la migrazione dei dati alla nuova gestione magazzino.
+      Quando preme ok, parte prima un dry run che lo avvisa dei prodotti che
+      devono essere sistemati prima, e poi, se tutto è come se lo aspetta e
+      tutti i prodotti possono essere migrati, allora chiede conferma e migra
+      i dati. Niente di automatico. Se non ha migrato i dati, una notifica
+      fissa che non scompare finché non fa la migrazione deve ricordargli di
+      fare la migrazione prima di inserire nuovi prodotti o modificare i
+      prodotti (può modificare solo quelli da sistemare prima della
+      migrazione)». E: «ovviamente se è già tutto migrato questa cosa non
+      vale» — i dati possono arrivare già a posto da un'altra strada.
+      FATTO (1.5.0), in quattro pezzi.
+      1) LETTURA TOLLERANTE, che resta: senza, un database non ancora
+      aggiornato non si legge nemmeno. `articoloNormalizzato`
+      (src/lib/inventory.js) prende un articolo com'è scritto e ne
+      restituisce la forma nuova; ci passa `mapItem` in src/lib/api.js, che è
+      il punto da cui entrano nell'app tutti gli articoli — magazzino,
+      ricette, menù, costi. Chi è già a posto torna identico.
+      2) NIENTE RISCRITTURA SILENZIOSA: il database lo cambia solo un gesto
+      esplicito. `loadStock` e `adjustStock` non riscrivono più niente di
+      nascosto e anzi si fermano (`ATTESA_TRAVASO`) se l'articolo è ancora
+      nella forma vecchia, che sommare pezzi a centilitri fa un numero senza
+      senso. Lo scarico automatico delle comande NON passa di lì: lavora sul
+      documento grezzo, nella sua unità, e la serata non aspetta nessuno.
+      3) IL GIRO IN MANO A CHI LAVORA (`PannelloTravaso` in
+      InventoryManager.jsx): entrando in Magazzino un banner dice che i
+      prodotti vanno aggiornati e cosa non si può fare nel frattempo; «Guarda
+      cosa cambia» apre la PROVA A VUOTO, che non scrive niente ed elenca per
+      NOME i prodotti da sistemare prima — chi legge deve sapere quali aprire
+      — oppure, se non ce n'è nessuno, quanti prodotti si aggiornano e con
+      quale giacenza prima/dopo. Solo allora compare «Aggiorna N prodotti».
+      La scrittura (`travasaMagazzinoAPezzi` in api.js) va a LOTTI da 25 con
+      l'avanzamento a schermo, ed è ripetibile: ogni giro rilegge cos'è
+      rimasto da fare, quindi interrompersi e ricominciare non tocca due
+      volte lo stesso prodotto.
+      4) FINCHÉ NON È FATTO il magazzino è in sola lettura: niente carico,
+      niente conta, niente prodotti nuovi, e si possono aprire SOLO i
+      prodotti da sistemare — è l'unico modo di sbloccare. La loro scheda
+      dice cosa manca e a quanto diventa la giacenza.
+      LO STATO NON È UN FLAG: `statoTravaso` guarda se esistono ancora
+      articoli nella forma vecchia. Così resta vero anche se i dati arrivano
+      sistemati da un'altra strada, e su un database a posto non compare
+      niente — né banner né avviso.
+      COSA FINISCE FRA I «DA SISTEMARE», e perché non si indovina: chi si
+      compra in una misura e si usa in un'altra (i limoni al chilo, spremuti
+      in cl: un pezzo può corrispondere a una cosa sola, e sceglierla al
+      posto di chi lavora vuol dire buttare via l'altra — una ricetta che la
+      usava scaricherebbe un chilo dove voleva un grammo); chi si conta a
+      volume o a peso senza dire quanto contiene una confezione; e chi ha un
+      contenuto SENZA MISURA — la «Birra Pils (spina)» vista in test dice che
+      un pezzo contiene 330, ma 330 di cosa? cl, ml, grammi? Indovinare
+      sbaglia il costo di un drink di dieci volte.
       LE REGOLE DELLA CONVERSIONE, e il perché di ognuna. Il PEZZO è la
       confezione che si comprava: una bottiglia da 70 cl era già «una
-      confezione da 700 ml», e la giacenza in ml diventa pezzi frazionati,
+      confezione da 700 ml», e la giacenza in ml diventa pezzi frazionati —
       senza stime. Per la «U» il pezzo è l'unità: un sacco di ghiaccio era
-      uno, resta uno. La RESA diventa il contenuto, ma solo quando le due
-      misure sono della stessa famiglia (il fusto comprato a litri e versato
-      a cl): chi si comprava a chili e si dosava in cl di succo — i limoni —
-      nel modello nuovo può corrispondere a una cosa sola, e sceglierla al
-      posto di chi lavora vuol dire buttare via l'altra; se una ricetta
-      dosava nella misura buttata, da quel momento scarica un chilo dove
-      voleva un grammo. Quelli restano come sono. `scorta` va scritta nero su
-      bianco: «si scarica dal magazzino?» aveva un valore di partenza legato
-      all'unità, e portando tutto a pezzi il «Tempo di Lavorazione»
-      diventerebbe merce — a zero al primo drink, e il menù farebbe sparire
-      dalla carta i drink che lo usano.
-      IL TRAVASO NON È SILENZIOSO SU UNA GIACENZA: l'articolo letto si porta
-      dietro `formaVecchia` (solo in memoria, non si salva), e la scheda
-      scrive «era scritto a litri: la giacenza (18,4 L) si legge come 0,92 pz
-      e salvando resta scritta così».
+      uno, resta uno. La RESA diventa il contenuto solo quando le due misure
+      sono della stessa famiglia (il fusto comprato a litri e versato a cl).
+      `scorta` va scritta nero su bianco: «si scarica dal magazzino?» aveva
+      un valore di partenza legato all'unità, e portando tutto a pezzi il
+      «Tempo di Lavorazione» diventerebbe merce — a zero al primo drink, e il
+      menù farebbe sparire dalla carta i drink che lo usano.
+      IL CONTENUTO SI LEGGE NELL'UNITÀ IN CUI IL NUMERO SI CAPISCE
+      (`contenutoDelPezzo`): un fusto da venti litri si leggeva «2000 cl» e
+      sembrava un numero inventato; adesso dice «1 pz = 20 L», mentre una
+      bottiglia resta «70 cl» e un cubetto «8 g».
       SI PROVA IN LOCALE PRIMA, con dati come quelli veri: «dobbiamo fare
       degli script di seeding da provare in locale» (Flavio, 18/08).
       `npm run seed:vecchi` (scripts/seed-magazzino-vecchio.js) riempie
       l'emulatore di prodotti scritti in TUTTE le forme vecchie che esistono
-      davvero — a pezzo con e senza contenuto, a volume, a peso, a volume
-      senza confezione, «U» con e senza scorta, con la resa della stessa
-      famiglia e di due famiglie, col campo `tipo` delle quattro card, con la
-      giacenza sotto zero — più una ricetta che li usa. Gira solo
-      sull'emulatore, su progetto `demo-`, e sta fuori da `seed:tutto`:
-      sporca il magazzino di prova con roba che serve per una verifica
-      precisa. `node scripts/diagnosi-travaso.js` dice a che punto sta il
-      travaso e, soprattutto, se leggerli a pezzi muove valore, pezzi o
+      davvero — a pezzo con e senza contenuto, contenuto senza misura, a
+      volume, a peso, a volume senza confezione, «U» con e senza scorta, con
+      la resa della stessa famiglia e di due famiglie, col campo `tipo` delle
+      quattro card, con la giacenza sotto zero — più una ricetta che li usa.
+      Gira solo sull'emulatore, su progetto `demo-`, e sta fuori da
+      `seed:tutto`. `node scripts/diagnosi-travaso.js` dice a che punto sta
+      il travaso e, soprattutto, se leggerli a pezzi muove valore, pezzi o
       costi: non scrive niente, mai, da nessuna parte.
+      VERIFICATO SUI DATI VERI (18/08, sola lettura): su `tana-drink-test`
+      354 articoli, 350 già nella forma nuova, 4 che si leggono travasati
+      (la mano d'opera in «U», due succhi fatti in casa e lo sciroppo),
+      NESSUNO da sistemare a mano, e valore, pezzi e costi identici a prima.
+      Sull'emulatore col seed dei vecchi: 34 travasati e 3 da sistemare, che
+      sono esattamente i tre casi messi lì apposta.
       QUATTRO VINCOLI DEL MESTIERE, che qui si dimenticano facile:
       1) GLI SCRIPT NON TOCCANO LA PRODUZIONE DI PROPRIA INIZIATIVA
       (CLAUDE.md). Con il travaso fatto dall'app il problema non si pone
@@ -1946,7 +1986,7 @@ requirements:
     generate_issue: false
     labels: [magazzino, dati]
     priority: P1
-    test_cases: [tests/unit/travasoInventario.test.js]
+    test_cases: [tests/unit/travasoInventario.test.js, tests/component/TravasoMagazzino.test.jsx]
 
   - id: REQ-MAG-017
     title: "Il fornitore si aggiunge dalla tendina del prodotto, come già la categoria nel menù"

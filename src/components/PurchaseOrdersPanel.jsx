@@ -7,7 +7,7 @@ import {
   receivePurchaseOrder,
   deletePurchaseOrder,
 } from '../lib/api.js'
-import { formatQty, fmtContenuto, stockStatus } from '../lib/inventory.js'
+import { formatQty, contenutoDelPezzo, stockStatus } from '../lib/inventory.js'
 import { purchaseOrderTotals, suggestedPackages, purchaseOrderText } from '../lib/warehouse.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import { printOrdineFornitore } from '../lib/printer.js'
@@ -192,7 +192,7 @@ export default function PurchaseOrdersPanel() {
                       contata a pezzi «1 conf. = 700 pz» era il contenuto letto
                       nell'unità sbagliata. E la parola è «pz», che vale anche
                       per quello che bottiglia non è (REQ-MAG-016, REQ-MAG-019). */}
-                  {it.package_size ? ` · 1 pz = ${fmtContenuto(it.package_size, it)}` : ''}
+                  {contenutoDelPezzo(it) ? ` · 1 pz = ${contenutoDelPezzo(it)}` : ''}
                   {suggestedPackages(it) > 0 ? ` · sugg. ${suggestedPackages(it)} pz` : ''}
                 </div>
               </div>

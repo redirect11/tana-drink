@@ -22,11 +22,12 @@ import { trovaEmulatore } from './lib-emulatore.js'
 import {
   articoloNormalizzato,
   patchNormalizza,
+  motivoNonMigrabile,
+  contenutoDelPezzo,
   stockValue,
   pezziInGiacenza,
   costPerUnit,
   entryUnits,
-  formatQty,
 } from '../src/lib/inventory.js'
 
 const PROGETTO = arg('project', null)
@@ -101,13 +102,16 @@ const vecchi = []
 const fermi = []
 const bugie = []
 for (const a of articoli) {
-  const daFare = patchNormalizza(a)
-  if (!daFare) {
-    // Nella forma nuova, oppure in una forma vecchia che non si può leggere
-    // a pezzi senza inventare (e allora resta com'è, ed è giusto così).
-    if ((a.unit || 'pz') !== 'pz') fermi.push(a)
+  // Prima di tutto: c'è qualcosa che una persona deve dire? Un contenuto
+  // senza misura («330» e basta) o due misure di famiglie diverse non si
+  // indovinano, e finire nell'elenco da sistemare è la risposta giusta.
+  const motivo = motivoNonMigrabile(a)
+  if (motivo) {
+    fermi.push({ ...a, motivo })
     continue
   }
+  const daFare = patchNormalizza(a)
+  if (!daFare) continue
   vecchi.push(a)
   const letto = articoloNormalizzato(a)
   // Gli stessi conti da tutte e due le parti: chiederli in due modi diversi
@@ -133,8 +137,8 @@ if (vecchi.length > 0) {
   console.log('\n  COME SI LEGGONO ADESSO')
   for (const a of vecchi.slice(0, 30)) {
     const letto = articoloNormalizzato(a)
-    const contenuto = letto.package_size
-      ? `1 pz = ${formatQty(letto.package_size, letto.content_unit)}`
+    const contenuto = contenutoDelPezzo(letto)
+      ? `1 pz = ${contenutoDelPezzo(letto)}`
       : 'senza contenuto'
     console.log(
       `   ~ ${(a.name || '(senza nome)').padEnd(30).slice(0, 30)} ${a.unit} → pz · ${contenuto}` +
@@ -145,12 +149,9 @@ if (vecchi.length > 0) {
 }
 
 if (fermi.length > 0) {
-  console.log('\n  RESTANO NELLA FORMA VECCHIA (cosa sia un pezzo lo deve dire una persona)')
+  console.log('\n  DA SISTEMARE PRIMA (cosa sia un pezzo lo deve dire una persona)')
   for (const a of fermi.slice(0, 30)) {
-    console.log(
-      `   ! ${(a.name || '(senza nome)').padEnd(30).slice(0, 30)} ${a.unit}` +
-        (a.resa ? ` · usato in ${a.resa_unit}` : ' · senza confezione dichiarata')
-    )
+    console.log(`   ! ${(a.name || '(senza nome)').padEnd(30).slice(0, 30)} ${a.motivo}`)
   }
   if (fermi.length > 30) console.log(`   … e altri ${fermi.length - 30}`)
 }
