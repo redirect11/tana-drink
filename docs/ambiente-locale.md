@@ -176,6 +176,21 @@ sono ancora nella forma vecchia e se leggerli a pezzi muove valore, pezzi
 o costi. Con `--project tana-drink-test` (o `tana-drink`) guarda gli
 stessi numeri sui dati veri, sempre in sola lettura.
 
+**Il magazzino vero, per provare il travaso.** I prodotti finti servono a
+provare una schermata, non una migrazione: le stranezze che contano — il
+contenuto scritto senza misura, il prodotto comprato al chilo e versato in
+centilitri, le giacenze sotto zero — si sono accumulate in due anni e
+stanno nei dati veri.
+
+```sh
+node scripts/copia-magazzino-da-test.js --pulisci   # articoli, categorie, fornitori
+```
+
+Legge `tana-drink-test` in **sola lettura** e scrive **solo** sull'emulatore
+(la destinazione è cablata: la produzione non compare in quel file). Con
+`--movimenti` porta anche lo storico dei carichi, che è grosso e serve di
+rado.
+
 **Le chiusure servono più di quanto sembri**: le statistiche si aprono
 sull'ultima serata chiusa, e senza nemmeno una chiusura ripiegano sulle
 «ultime 10 giornate» — sembra un difetto e invece è un database a metà.
