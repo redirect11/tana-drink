@@ -5,7 +5,6 @@ import {
   updateInventoryItem,
   deleteInventoryItem,
   loadStock,
-  receiveBottles,
   adjustStock,
   fetchStockMovements,
   fetchInventoryCategories,
@@ -625,14 +624,11 @@ function ProductsPanel() {
   async function doCarico(item, { count, unit, newCost }) {
     setError(null)
     try {
-      if (count > 0) {
-        // Caricare CONFEZIONI di un articolo storico contato a volume o a
-        // peso passa da receiveBottles, che tiene anche il conto delle
-        // bottiglie caricate; tutto il resto è una quantità e basta, portata
-        // nell'unità della giacenza dallo stesso conto che fa lo scarico.
-        if (unit === 'pz' && item.unit !== 'pz') await receiveBottles(item.id, count, 0)
-        else await loadStock(item.id, qtyInStockUnit(count, unit, item))
-      }
+      // Quello che si scrive è nell'unità che si ha in mano; in giacenza va
+      // in pezzi, con lo stesso conto che fa lo scarico. Gli articoli
+      // arrivano qui sempre nella forma nuova (REQ-MAG-018, la lettura
+      // tollerante sta in api.js), quindi non c'è nessun altro caso.
+      if (count > 0) await loadStock(item.id, qtyInStockUnit(count, unit, item))
       // Prezzo aggiornato al carico (il fornitore ha cambiato tariffa).
       if (newCost != null) await updateInventoryItem(item.id, { cost: newCost })
       setCaricoFor(null)
@@ -1598,10 +1594,11 @@ function AiutoPezzo({ onClose }) {
 
 function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, onSave }) {
   const isEdit = !!initial
-  // Com'era gestito il prodotto prima: le schede storiche stanno ancora in
-  // ml, g o U finché non passa il travaso (REQ-MAG-018). Riaprendone una e
-  // salvandola la si porta a pezzi, e la giacenza si converte con l'avviso.
-  const initialBase = initial ? baseUnit(initial.unit) : 'pz'
+  // L'articolo arriva SEMPRE nella forma nuova, anche quando sul database è
+  // ancora scritto a litri o a «U»: a rimetterlo in riga è la lettura
+  // tollerante (REQ-MAG-018). Qui resta solo da dirlo a chi guarda —
+  // `formaVecchia` c'è finché quella riscrittura non è stata salvata.
+  const daTravasare = initial?.formaVecchia || null
   const [aiuto, setAiuto] = useState(false)
   const [aiutoPezzo, setAiutoPezzo] = useState(false)
   // Il salvataggio bloccato si spiega QUI, sopra i tasti, e resta finché
@@ -1610,21 +1607,10 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
   const [avviso, setAvviso] = useState(null)
 
   // Il contenuto com'era salvato, nell'unità in cui si legge (un pezzo è
-  // «70 cl», non 700 ml). Per le schede storiche a volume o a peso il
-  // contenuto è la confezione: è proprio quello che diventa il pezzo.
-  const contFamiglia = (initial?.unit || 'pz') === 'pz' ? initial?.content_unit : initial?.unit
+  // «70 cl», non 700 ml).
+  const contFamiglia = initial?.content_unit
   const contUnita = unitaGenerica(contFamiglia) ? 'U' : contFamiglia === 'g' ? 'g' : 'cl'
   const packIniziale = Number(initial?.package_size) || 0
-  // Da unità base dell'articolo salvato ai PEZZI. Chi era già a pezzi non si
-  // tocca; a volume o a peso si divide per quanto contiene un pezzo; la «U»
-  // vale uno a uno, perché una U era già una cosa che si conta (il sacco di
-  // ghiaccio, la confezione).
-  const inPezzi = (baseQty, contenuto = packIniziale) => {
-    const q = Number(baseQty) || 0
-    if (!(q > 0)) return 0
-    if (initialBase === 'pz' || unitaGenerica(initialBase)) return q
-    return contenuto > 0 ? Math.round((q / contenuto) * 100) / 100 : q
-  }
   const [form, setForm] = useState({
     name: initial?.name ?? '',
     category_id: initial?.category_id ?? '',
@@ -1639,7 +1625,7 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
     content_unit: contUnita,
     // La soglia si è sempre scritta in quello che si compra: adesso quello
     // che si compra è il pezzo, quindi si legge e si riscrive in pezzi.
-    low_threshold: initial?.low_threshold ? String(inPezzi(initial.low_threshold)) : '',
+    low_threshold: initial?.low_threshold ? String(initial.low_threshold) : '',
     bottles: '',
     open_content: '',
   })
@@ -1660,20 +1646,6 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
   // contenuto è un peso, il numero è una stima e va detto (un limone non
   // pesa sempre uguale).
   const aPeso = contenutoPezzo > 0 && contenutoBase === 'g'
-
-  // Riaprire una scheda storica la porta a pezzi: la giacenza va convertita,
-  // e senza sapere quanto contiene un pezzo non si può fare (24 → 24 ml).
-  const baseChanged = isEdit && initialBase !== 'pz'
-  const convertible =
-    !baseChanged || unitaGenerica(initialBase) || contenutoPezzo > 0 || packIniziale > 0
-  const convertedStock = () => inPezzi(initial?.stock, contenutoPezzo > 0 ? contenutoPezzo : packIniziale)
-  // Quanto contiene un pezzo, scritto com'è leggibile: è il numero su cui si
-  // fa la conversione, ed è la prima domanda di chi legge l'avviso.
-  const contenutoDiRiferimento = (() => {
-    const base = contenutoPezzo > 0 ? contenutoPezzo : packIniziale
-    if (!(base > 0)) return null
-    return formatQty(base, contenutoPezzo > 0 ? contenutoBase : initialBase)
-  })()
 
   async function submit(e) {
     e.preventDefault()
@@ -1709,22 +1681,12 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
         // La soglia si scrive in pezzi, come la giacenza.
         low_threshold: scorta ? num(form.low_threshold) : 0,
       }
-      // Cambio di gestione SENZA sapere quanto contiene un pezzo: la
-      // conversione non è calcolabile e si salverebbe una giacenza falsa.
-      if (baseChanged && !convertible) {
-        setAvviso('Scrivi prima a quanto corrisponde un pezzo: senza, la giacenza non si può convertire.')
-        return
-      }
       if (isEdit) {
-        // In modifica la giacenza NON si tocca, a meno che il prodotto stesse
-        // ancora in ml/g/U: allora si converte, altrimenti il numero salvato
-        // vorrebbe dire un'altra cosa.
-        if (baseChanged) {
-          const stock = convertedStock()
-          await onSave({ ...base, stock, bottles_total: Math.round(stock) })
-        } else {
-          await onSave(base)
-        }
+        // In modifica la giacenza non si tocca: quella la muovono il carico e
+        // la conta. Se l'articolo era ancora scritto col modello vecchio, la
+        // giacenza che si salva è quella già letta in pezzi — ed è quella che
+        // il banner qui sopra ha mostrato prima di premere Salva.
+        await onSave(daTravasare ? { ...base, stock: Number(initial?.stock) || 0 } : base)
       } else {
         // In creazione la giacenza è quello che si scrive: i pezzi interi più
         // la frazione della confezione già aperta, che non è né zero né uno.
@@ -1860,26 +1822,18 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
         </p>
       )}
 
-      {/* Riaprire una scheda storica la porta a pezzi: si dice CHIARAMENTE
-          come finisce la giacenza, prima di salvare. */}
-      {baseChanged && (
+      {/* IL TRAVASO NON DEVE ESSERE SILENZIOSO SU UNA GIACENZA. Questo
+          articolo sul database è ancora scritto col modello vecchio: si
+          legge già in pezzi, e qui c'è scritto da dove viene quel numero,
+          prima di salvarlo per sempre. */}
+      {daTravasare && (
         <div className="banner" style={{ marginTop: 8 }}>
-          ⚠️ Questo prodotto era gestito a <strong>{GESTIONE_LABEL[initialBase]}</strong>:
-          salvando passa ai <strong>pezzi</strong> e la giacenza attuale (
-          {fmtItem(initial?.stock, initial)}) diventerà{' '}
-          <strong>{formatPezzi(convertedStock())} pz</strong>.
-          {contenutoDiRiferimento && (
-            <span className="muted">
-              {' '}
-              Il conto si fa sul contenuto di un pezzo ({contenutoDiRiferimento}).
-            </span>
-          )}
-          {!convertible && (
-            <div style={{ marginTop: 6 }}>
-              ⛔ Scrivi prima <strong>a quanto corrisponde un pezzo</strong>: senza,
-              la giacenza non si può convertire.
-            </div>
-          )}
+          ⚠️ Questo prodotto era scritto a{' '}
+          <strong>{GESTIONE_LABEL[baseUnit(daTravasare.unit)]}</strong>: adesso si
+          conta in <strong>pezzi</strong>. La giacenza (
+          {formatQty(daTravasare.stock, baseUnit(daTravasare.unit))}) si legge come{' '}
+          <strong>{formatPezzi(initial?.stock)} pz</strong>, e salvando resta
+          scritta così.
         </div>
       )}
 

@@ -28,12 +28,34 @@ vi.mock('../../src/lib/api.js', () => {
       cost: 12,
       vat: 22,
     },
-    // I quattro modi in cui una scheda vecchia (senza campo `tipo`) si
-    // riapre nel tipo giusto: il Campari qui sopra è il pezzo CON
-    // contenuto (versato); questi coprono gli altri tre casi.
     { id: 'ichnusa', name: 'Ichnusa', unit: 'pz', stock: 12, cost: 1.2, vat: 22 },
-    { id: 'ghiaccio', name: 'Ghiaccio', unit: 'U', scorta: true, stock: 6, cost: 2, vat: 22 },
-    { id: 'lavoro', name: 'Tempo di Lavorazione', unit: 'U', stock: 0, cost: 0.5, vat: 22 },
+    // Gli articoli arrivano dalle api SEMPRE nella forma nuova, anche quando
+    // sul database sono ancora scritti a «U»: a rimetterli in riga è la
+    // lettura tollerante (REQ-MAG-018, mapItem). Il ghiaccio si porta dietro
+    // `formaVecchia`, che è quello che la scheda usa per dirlo.
+    {
+      id: 'ghiaccio',
+      name: 'Ghiaccio',
+      unit: 'pz',
+      package_size: 1,
+      content_unit: 'U',
+      scorta: true,
+      stock: 6,
+      cost: 2,
+      vat: 22,
+      formaVecchia: { unit: 'U', stock: 6 },
+    },
+    {
+      id: 'lavoro',
+      name: 'Tempo di Lavorazione',
+      unit: 'pz',
+      package_size: 1,
+      content_unit: 'U',
+      scorta: false,
+      stock: 0,
+      cost: 0.5,
+      vat: 22,
+    },
   ]
   return {
     fetchInventoryItems: vi.fn(() => Promise.resolve(items)),
@@ -428,7 +450,7 @@ describe('la casella «è una scorta»', () => {
 // I prodotti salvati prima stanno ancora in ml, g o U finché non passa il
 // travaso (REQ-MAG-018). Riaprendone uno e salvandolo lo si porta a pezzi:
 // la giacenza si converte, e come finisce si legge PRIMA di salvare.
-describe('un prodotto storico si riapre a pezzi', () => {
+describe('un prodotto storico si legge già a pezzi', () => {
   async function apriModifica(user, nome) {
     render(<InventoryManager />)
     await screen.findByText('Campari')
@@ -443,15 +465,16 @@ describe('un prodotto storico si riapre a pezzi', () => {
     expect(screen.getByLabelText('Unità del contenuto')).toHaveValue('cl')
     // Il costo è quello di un pezzo: la bottiglia costa 12 €.
     expect(screen.getByLabelText(/Costo €\/pz/)).toHaveValue(12)
-    expect(screen.queryByText(/passa ai/)).toBeNull()
+    expect(screen.queryByText(/era scritto a/)).toBeNull()
   })
 
-  it('il ghiaccio a unità generiche diventa pezzi uno a uno, e lo dice', async () => {
+  it('quello ancora scritto a «U» dice da dove viene la sua giacenza', async () => {
     // Una U era già una cosa che si conta — il sacco, la confezione — quindi
-    // sei U fanno sei pezzi: qui non c'è niente da dividere.
+    // sei U fanno sei pezzi: qui non c'è niente da dividere. Il travaso però
+    // non deve essere silenzioso su una giacenza, e la scheda lo scrive.
     const user = userEvent.setup()
     await apriModifica(user, 'Ghiaccio')
-    expect(screen.getByText(/passa ai/)).toBeInTheDocument()
+    expect(screen.getByText(/era scritto a/)).toBeInTheDocument()
     expect(screen.getByText('6 pz')).toBeInTheDocument()
   })
 })
