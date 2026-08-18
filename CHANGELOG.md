@@ -1,5 +1,23 @@
 # Cosa è cambiato
 
+## Non ancora rilasciata — 1.5.1
+
+### Al banco
+
+- **Nel pagamento si vede subito di chi è il conto**: tavolo e nome stanno in
+  testata accanto al numero, non più in mezzo alle righe dei drink dove
+  sembravano una voce del conto.
+
+- **Il facsimile dello scontrino è largo quanto la carta**: le righe andavano
+  a capo dove la stampante vera non le manda, e si leggeva «La Tana del
+  Conigli / o». Adesso quello che si vede è quello che esce.
+
+- **«In attesa del pagamento: non si prepara» funziona anche col salto
+  acceso**: dove il pagamento è obbligatorio il blocco valeva solo per i conti
+  fermi a «da fare», e in un locale che fa nascere le comande già in
+  preparazione non scattava mai. Adesso guarda il passo in cui il lavoro
+  nasce, comunque sia messo il locale.
+
 ## 1.5.0 — 18 agosto 2026
 
 Questa versione porta al banco una coda tutta sua. Chi prepara non lavora un
@@ -28,20 +46,6 @@ con una prova a vuoto che dice cosa cambierebbe prima di toccare niente.
   password `collaudo123`.
 
 ### Al banco
-
-- **Nel pagamento si vede subito di chi è il conto**: tavolo e nome stanno in
-  testata accanto al numero, non più in mezzo alle righe dei drink dove
-  sembravano una voce del conto.
-
-- **Il facsimile dello scontrino è largo quanto la carta**: le righe andavano
-  a capo dove la stampante vera non le manda, e si leggeva «La Tana del
-  Conigli / o». Adesso quello che si vede è quello che esce.
-
-- **«In attesa del pagamento: non si prepara» funziona anche col salto
-  acceso**: dove il pagamento è obbligatorio il blocco valeva solo per i conti
-  fermi a «da fare», e in un locale che fa nascere le comande già in
-  preparazione non scattava mai. Adesso guarda il passo in cui il lavoro
-  nasce, comunque sia messo il locale.
 
 - **Senza gli stati del servizio, il conto non parla di passi**: le righe si
   intestavano «In preparazione» anche in un locale che non segue la
