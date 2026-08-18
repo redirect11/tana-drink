@@ -1687,7 +1687,8 @@ describe('preparazione parziale di una comanda', () => {
     expect(testo[1]).toMatch(/In preparazione/)
     expect(testo[1]).toMatch(/2× Gin Tonic/)
     expect(testo[2]).toMatch(/COMANDA 3/)
-    expect(testo[2]).toMatch(/Ordine ricevuto/)
+    // «Da fare»: al banco il passo si chiama come la colonna.
+    expect(testo[2]).toMatch(/Da fare/)
     expect(testo[2]).toMatch(/3× Gin Tonic/)
   })
 

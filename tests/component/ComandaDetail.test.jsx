@@ -179,8 +179,40 @@ describe('il dettaglio di una comanda', () => {
     const utente = userEvent.setup()
     monta()
     await screen.findByText(/Cosa c’è da fare/)
-    await utente.click(screen.getByRole('button', { name: /Ordine ricevuto/ }))
+    // «Da fare», non «Ordine ricevuto»: al banco la colonna si chiama
+    // così, e due nomi per lo stesso passo fanno chiedere se siano due cose.
+    await utente.click(screen.getByRole('button', { name: /Da fare/ }))
     expect(advanceComanda).toHaveBeenCalledWith('o41', 'c2', 'ricevuto')
+  })
+
+  // COL SALTO ACCESO «da fare» non esiste: nessuna comanda ci nasce,
+  // nessuno guarda quella colonna, e rimandarcene una a mano vuol dire
+  // nasconderla dove non la cerca più nessuno.
+  it('col salto acceso non si può riportare a «da fare»', async () => {
+    impostazioni = { workflow_enabled: true, comande_in_preparazione: true }
+    monta('c2') // è in preparazione: senza salto si tornerebbe a «da fare»
+    await screen.findByText(/Cosa c’è da fare/)
+    expect(screen.queryByRole('button', { name: /↩︎/ })).not.toBeInTheDocument()
+  })
+
+  it('e da una comanda pronta si torna al banco, non più indietro', async () => {
+    impostazioni = { workflow_enabled: true, comande_in_preparazione: true }
+    ordine = conto({
+      comande: [
+        {
+          id: 'c2',
+          seq: 2,
+          status: 'pronto',
+          created_at: ORA,
+          status_times: { ricevuto: ORA, in_preparazione: POI, pronto: POI },
+          items: [{ drink_id: 'negroni', name: 'Negroni', qty: 1, unit_price: 9 }],
+        },
+      ],
+    })
+    monta('c2')
+    await screen.findByText(/Cosa c’è da fare/)
+    expect(screen.getByRole('button', { name: /In preparazione/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Da fare/ })).not.toBeInTheDocument()
   })
 
   it('DA QUI SI RISALE AL CONTO: è lì che si incassa e si aggiunge', async () => {

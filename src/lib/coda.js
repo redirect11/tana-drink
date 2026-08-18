@@ -665,6 +665,32 @@ export function corsieVisibili(corsie, nascoste = []) {
   return restano.length > 0 ? restano : corsie || []
 }
 
+// ── LA COLONNA CHE IL LOCALE NON USA ──────────────────────────
+//
+// Col locale che fa nascere le comande già in preparazione, «Da fare» non
+// si riempie: nessuna comanda ci nasce. Sparisce dall'elenco delle colonne
+// che si accendono e spengono a mano — poter accendere una colonna che
+// resterà sempre vuota è un tasto che non fa niente — ma NON è vietata:
+// se una comanda ci finisce lo stesso (riportata indietro prima che il
+// salto fosse acceso, un conto di ieri, una comanda che qualcuno ha
+// rimandato a mano) la colonna compare da sé. IL LAVORO NON SI NASCONDE
+// MAI, e a mostrarlo è l'app — non una voce di menu che l'utente deve
+// trovare.
+export function corsieSceglibili(corsie, { passoDiNascita = null } = {}) {
+  if (passoDiNascita !== ORDER_STATUSES.IN_PREPARAZIONE) return corsie || []
+  return (corsie || []).filter((c) => c.id !== 'da-fare')
+}
+
+export function corsieDaMostrare(corsie, nascoste = [], { passoDiNascita = null } = {}) {
+  const via = new Set(nascoste || [])
+  if (passoDiNascita === ORDER_STATUSES.IN_PREPARAZIONE) {
+    const daFare = (corsie || []).find((c) => c.id === 'da-fare')
+    if (daFare && (daFare.schede || []).length === 0) via.add('da-fare')
+    else via.delete('da-fare')
+  }
+  return corsieVisibili(corsie, [...via])
+}
+
 // DA QUANTO STA LÌ. Sulla card conta l'ordine di grandezza, non l'orologio:
 // «appena ora» per i secondi appena passati, i secondi finché sono pochi,
 // poi i minuti — e dopo un'ora le ore, perché a quel punto la domanda non è

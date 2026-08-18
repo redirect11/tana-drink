@@ -32,6 +32,28 @@ export const STATUS_LABELS = {
   [ORDER_STATUSES.ANNULLATO]: 'Annullato',
 }
 
+// ── LE PAROLE DEL BANCO E QUELLE DEL CLIENTE ───────────────────
+//
+// Lo stesso passo si chiama in due modi, e sono due parole diverse perché
+// rispondono a due domande diverse.
+//
+// AL CLIENTE, che guarda la pagina del suo ordine, «Ordine ricevuto» dice
+// quello che gli serve: l'abbiamo preso, è in lista. «Da fare» non gli
+// direbbe niente — non è lui che lo deve fare.
+//
+// AL BANCO è il contrario: la colonna si chiama «Da fare», e ogni altro
+// nome per lo stesso passo fa chiedere se siano due cose diverse. Succedeva
+// davvero: la pastiglia diceva «↩︎ Ordine ricevuto» accanto a una colonna
+// intitolata «Da fare».
+//
+// Quindi due etichette, non una sola «corretta»: chi scrive per il banco
+// passa di qui, chi scrive per il cliente usa STATUS_LABELS.
+export function statoAlBanco(stato, serviceMode) {
+  if (stato === ORDER_STATUSES.RICEVUTO) return 'Da fare'
+  if (stato === ORDER_STATUSES.RITIRATO) return ritiratoLabel(serviceMode)
+  return STATUS_LABELS[stato]
+}
+
 // Etichetta specifica per lo stato finale, in base alla modalità di consegna.
 export function ritiratoLabel(serviceMode) {
   if (serviceMode === 'banco') return 'Ritirato'

@@ -9,7 +9,11 @@ import {
   subscribeOrder,
   subscribeSettings,
 } from '../lib/api.js'
-import { comandaNataDallaDivisione, dividiComanda } from '../lib/comande.js'
+import {
+  comandaNataDallaDivisione,
+  dividiComanda,
+  statoComandaNuova,
+} from '../lib/comande.js'
 import { useComandeLocali } from '../lib/comandeLocali.js'
 import { ORDER_STATUSES } from '../lib/orderStatus.js'
 import { isGestore } from '../lib/ruoli.js'
@@ -177,6 +181,7 @@ export default function ComandaPage() {
       order={order}
       comanda={comanda}
       workflowOn={settings.workflow_enabled !== false}
+      passoDiNascita={statoComandaNuova(settings)}
       onAvanza={porta}
       onTornaA={porta}
       onDividi={dividi}

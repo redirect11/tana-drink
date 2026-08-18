@@ -8,6 +8,7 @@ import {
   nextComandaStatus,
   statoComandaNuova,
   comandaPerLeAggiunte,
+  statiPrimaComanda,
   activeComanda,
   serveAllComande,
   comandeSummary,
@@ -40,6 +41,39 @@ const c = (seq, status, items = []) => ({ id: `c${seq}`, seq, status, items })
 // l'impostazione, e non se ne sarebbe accorto nessuno. Era già successo
 // tre volte — il conto nuovo, le aggiunte, il placeholder in coda — e le
 // tre risposte non combaciavano.
+// ── FIN DOVE SI PUÒ TORNARE INDIETRO ─────────────────────────
+//
+// Col locale che fa nascere le comande già in preparazione, «da fare» non
+// esiste: nessuna comanda ci nasce, nessuno guarda quella colonna, e
+// rimandarci una comanda a mano vuol dire nasconderla dove non la cerca
+// più nessuno.
+describe('fin dove si torna indietro', () => {
+  it('di suo si torna a tutti i passi già fatti', () => {
+    expect(statiPrimaComanda('pronto', 'ricevuto')).toEqual(['ricevuto', 'in_preparazione'])
+    expect(statiPrimaComanda('in_preparazione', 'ricevuto')).toEqual(['ricevuto'])
+    expect(statiPrimaComanda('ricevuto', 'ricevuto')).toEqual([])
+  })
+
+  it('COL SALTO ACCESO «da fare» non si propone più', () => {
+    expect(statiPrimaComanda('pronto', 'in_preparazione')).toEqual(['in_preparazione'])
+    expect(statiPrimaComanda('in_preparazione', 'in_preparazione')).toEqual([])
+  })
+
+  it('ma una comanda già ferma a «da fare» non si tocca', () => {
+    // Non si rimanda indietro nessuno: si toglie solo la strada per
+    // andarci. Da «da fare» si va avanti come sempre.
+    expect(statiPrimaComanda('ricevuto', 'in_preparazione')).toEqual([])
+    expect(nextComandaStatus('ricevuto')).toBe('in_preparazione')
+  })
+
+  it('da una comanda servita si torna comunque solo fin dove si può', () => {
+    expect(statiPrimaComanda('ritirato', 'in_preparazione')).toEqual([
+      'in_preparazione',
+      'pronto',
+    ])
+  })
+})
+
 // ── DOVE FINISCONO LE RIGHE AGGIUNTE A UN CONTO APERTO ────────────
 //
 // Nel passo in cui NASCE il lavoro nuovo, non in quello della comanda che

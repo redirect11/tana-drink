@@ -11,6 +11,16 @@
 
 ### Al banco
 
+- **Col salto «nascono già in preparazione», il passo «da fare» sparisce dove
+  non serve**: niente pastiglia «↩︎ Da fare» per rimandarci una comanda — in
+  quel locale nessuno guarda quella colonna — e niente voce nel filtro
+  «▦ Colonne», che accenderebbe una colonna sempre vuota. Se però una comanda
+  ci si trova lo stesso, la colonna compare da sé: il lavoro non si nasconde
+  mai.
+- **Al banco il passo si chiama «Da fare» ovunque**, come la colonna. Le
+  pastiglie dicevano «Ordine ricevuto» accanto a una colonna intitolata «Da
+  fare», e sembravano due cose diverse. Al cliente resta «Ordine ricevuto»,
+  che è quello che serve a lui.
 - **Le righe aggiunte a un conto nascono «da fare»**, non «in preparazione».
   Aggiungendo un giro a un conto che aveva già qualcosa al banco, quelle righe
   risultavano già prese in carico da qualcuno: sparivano dalla colonna «Da
