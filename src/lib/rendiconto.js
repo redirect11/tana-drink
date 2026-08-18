@@ -46,11 +46,14 @@ const recipeOf = (line, drink) =>
 // Costo di UNA riga (già moltiplicato per la quantità).
 // `noto: false` quando la ricetta manca del tutto: il costo è 0 ma non è un
 // costo, è un "non lo so" — chi mostra il dato deve poterli distinguere.
-export function lineCost(line, drink, itemsById) {
+// `gross: false` per il costo al NETTO dell'IVA d'acquisto: serve dove il
+// costo si confronta con un incasso già scorporato (il mensile per macro),
+// altrimenti il margine esce falsato di un'aliquota.
+export function lineCost(line, drink, itemsById, { gross = true } = {}) {
   const qty = Number(line?.qty) || 0
   const recipe = recipeOf(line, drink)
   if (qty <= 0 || recipe.length === 0) return { costo: 0, noto: false, mancanti: [] }
-  const { cost, missing } = recipeCost(recipe, itemsById)
+  const { cost, missing } = recipeCost(recipe, itemsById, { gross })
   return { costo: round2(cost * qty), noto: cost > 0, mancanti: missing }
 }
 

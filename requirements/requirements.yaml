@@ -2295,11 +2295,63 @@ requirements:
       `macro_menu_id` non serve piu' e le due sottosezioni tornano una.
       IN QUALE MESE cade quello che si e' comprato e' un'altra domanda
       ancora, e sta a parte in REQ-MAG-021 (vocali del 18/08 sera).
-    status: todo
+      FATTO (1.5.x) il confronto, con la regola decisa il 18/08. La tabella
+      «Statistiche → Mensile per macro» adesso ha per righe le macro del
+      MENÙ, e ogni vendita ci conta INTERA: incasso della voce e costo di
+      tutti i suoi ingredienti insieme, sulla macro della voce. La Schweppes
+      versata in un Gin Tonic conta su «alcolici e distillati» con il suo
+      costo; in «birre e bibite» resta solo quello venduto COME bibita.
+      L'anagrafica del prodotto non si tocca: la sua macro di magazzino
+      resta quella che è, e il magazzino si scala come prima.
+      TOLTA, non affiancata, la scomposizione: `splitLineRevenueByMacro`
+      non esiste più. Al suo posto `lineByMacro` (dove va una vendita,
+      quanto ha incassato, quanto è costata) e `venditeByMacro`.
+      LE RIGHE DELLA TABELLA sono cambiate di conseguenza: dove c'era
+      «Acquisti / Fatturato / Utile / Fat-Acq» adesso c'è «Incassato / Costo
+      del venduto / Margine / Inc-Costo». La riga «Acquisti» è la colonna
+      che non doveva esserci: parlava di merce entrata dalla porta, non di
+      merce venduta, e in mezzo a un margine rendeva ambiguo tutto il
+      resto. «Quanto ho speso in bibite» resta una domanda vera e vive con
+      gli acquisti: `purchasesByMacro` è rimasta lì, sulle macro di
+      MAGAZZINO, per quando le si darà una schermata.
+      NUMERI PIÙ ONESTI, come effetto collaterale: il costo del venduto è
+      al netto dell'IVA d'acquisto (l'incasso era già scorporato: due
+      numeri con dentro cose diverse non si sottraggono), e lo sconto
+      abbassa l'incasso ma non il costo — un drink regalato è costato lo
+      stesso.
+      L'IVA DELL'INCASSO È QUELLA DEL LOCALE, e non più quella di ogni
+      prodotto: si scorpora con `sale_vat` (Impostazioni). DECISO dall'utente
+      (18/08), che ha chiuso la domanda con il caso vero: «Flavio compra al
+      22 e rivende al 10, sulle sue vendite c'è solo il 10% di IVA. Deve
+      essere l'IVA del locale sul drink, quella indicata nelle
+      impostazioni». Il per-prodotto era nato solo perché l'incasso veniva
+      spezzato per ingrediente: senza scomposizione una vendita è una
+      vendita sola, con una aliquota sola — e l'aliquota del PRODOTTO è
+      quella con cui lo si compra, non quella con cui lo si rivende. Dove
+      erano state messe aliquote diverse per prodotto i netti cambiano di
+      qualche punto, ed è il verso giusto.
+      RESTA APERTA la domanda sui due elenchi — uno solo, come dice il
+      vocale delle 15:47, oppure due con l'aggancio, come chiesto il giorno
+      prima. L'aggancio `macro_menu_id` è rimasto dov'era e non lo guarda
+      più nessun conto: si toglierà quando la risposta arriva, non prima,
+      perché è l'altra metà della stessa decisione.
+      E NON C'È NIENTE DA SALVAGUARDARE, verificato il 18/08: la collezione
+      `macro_categories` è VUOTA — zero documenti sia in produzione sia su
+      `tana-drink-test`. Nessuno ha mai creato una macro, né di magazzino
+      né di menù, quindi l'aggancio non è «compilato a mano» da nessuno.
+      CONSEGUENZA DA DIRE A CHI GUARDA: finché le macro di menù non
+      vengono create, «Mensile per macro» non mostra numeri — mostra il
+      suo messaggio, che dice dove crearle (Menù → Macro-categorie) e che
+      vanno collegate alle categorie dei drink. Non è un guasto ed è lo
+      stesso comportamento di prima; cambia solo il posto dove si va a
+      crearle, che adesso è il menù e non il magazzino.
+    status: implemented
     generate_issue: true
     labels: [magazzino, menu, statistiche]
     priority: P1
-    test_cases: [tests/component/MacroCategoryManager.test.jsx]
+    test_cases:
+      - tests/unit/macroStats.test.js
+      - tests/component/MacroCategoryManager.test.jsx
 
   - id: REQ-MENU-011
     title: "Un drink si duplica: la ricetta non si riscrive a mano"
@@ -4289,6 +4341,20 @@ requirements:
       a quale MACRO va attribuita una vendita, questa dice in quale MESE va
       attribuito un acquisto. Vivono nella stessa tabella e vanno pensate
       insieme.
+      NON SI LAVORA finché le cinque domande qui sopra non hanno risposta
+      (quale carico si consuma per primo, la merce mai venduta, i mesi
+      passati che cambiano, il perimetro della regola): indovinarle
+      significa scrivere il codice dei lotti — il lavoro grosso — su una
+      regola che poi cambia.
+      E UNA COSA È GIÀ CAMBIATA SOTTO: con REQ-MAG-015 la tabella
+      «Mensile per macro» non mostra più gli acquisti del mese, mostra il
+      COSTO DEL VENDUTO — che per costruzione cade nel mese in cui la
+      merce è stata venduta, che è esattamente quello che questo requisito
+      chiedeva PER QUELLA TABELLA. Il rum comprato il 20 febbraio e servito
+      il 3 marzo pesa già su marzo. Quello che resta scoperto è il resto:
+      il registro delle fatture e la valorizzazione dell'inventario, dove
+      l'acquisto è un fatto con la sua data. Da riportare a chi ha
+      parlato: forse la domanda vera adesso è un'altra, e più piccola.
     status: todo
     generate_issue: true
     labels: [magazzino, statistiche]
