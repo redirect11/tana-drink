@@ -2022,11 +2022,27 @@ requirements:
       sullo scaffale — quella non è la dicitura da cambiare, è un'altra
       cosa: lì «bottiglia» descrive l'oggetto fisico, non l'unità di
       misura.
-    status: todo
-    generate_issue: true
+      FATTO (1.5.0). I punti 1-6 dell'elenco qui sopra vivevano tutti nella
+      scheda prodotto e nella schermata a quattro card, che REQ-MAG-016 ha
+      riscritto: quel testo non esiste più, e al suo posto c'è «a quanto
+      corrisponde un pezzo» — la parola giusta e anche il verbo giusto.
+      Restano corretti qui i tre punti che erano fuori da quella scheda: il
+      titolo dell'assortimento «Bottiglie premium» (ora «I prodotti buoni»),
+      il costo nel dettaglio di un articolo, che si legge «€/pz» e non più
+      «€/conf.», e la riga del generatore ordini, che diceva «1 conf. = 700
+      pz» — il contenuto letto nell'unità sbagliata, che con la giacenza
+      contata a pezzi era anche un numero falso — e adesso dice «1 pz = 70
+      cl», con il suggerimento e il campo in pz.
+      Restano volutamente com'erano: le «piene / aperta / finite» del
+      dettaglio, che descrivono l'oggetto sullo scaffale, e le due righe
+      d'aiuto che elencano cosa può essere un pezzo («un cubetto, un limone,
+      una bottiglia, un barattolo») — lì la bottiglia è un esempio fra
+      altri, non l'unità di misura.
+    status: implemented
+    generate_issue: false
     labels: [magazzino, ux]
     priority: P2
-    test_cases: []
+    test_cases: [tests/component/InventoryManagerCard.test.jsx]
 
   - id: REQ-MAG-015
     title: "Macro-categorie di magazzino e di menù, per incrociare speso e incassato"

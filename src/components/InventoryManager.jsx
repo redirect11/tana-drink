@@ -107,7 +107,9 @@ const ASSORTIMENTO_NOME = {
 const ASSORTIMENTO_TITOLO = {
   assortimento: 'Si tiene, senza niente di speciale',
   linea: 'I primi da controllare prima di una serata',
-  premium: 'Bottiglie premium',
+  // «Bottiglie premium» dava per scontato che qui dentro ci fossero solo
+  // bottiglie: un gestionale deve restare generico (REQ-MAG-019).
+  premium: 'I prodotti buoni',
   out: 'Fuori assortimento: non si ricompra',
 }
 function SegnoAssortimento({ item }) {
@@ -504,7 +506,7 @@ function ProductsPanel() {
             <div className="inv-info-row">
               <dt>💶 Costo</dt>
               <dd>
-                {formatPrice(it.cost)}/conf. <span className="muted">(+IVA {formatPrice(costWithVat(it.cost, it.vat))})</span>
+                {formatPrice(it.cost)}/pz <span className="muted">(+IVA {formatPrice(costWithVat(it.cost, it.vat))})</span>
                 {' · valore '}<strong>{formatPrice(stockValue(it))}</strong>
               </dd>
             </div>
