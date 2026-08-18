@@ -39,6 +39,7 @@ vi.mock('../../src/lib/api.js', () => ({
   DEFAULT_SETTINGS: {},
   settingsIniziali: () => ({}),
   peekNextDailyNumber: vi.fn(() => Promise.resolve(5)),
+  setOrderServiceMode: vi.fn(() => Promise.resolve({})),
   preparazioneParziale: vi.fn(() => Promise.resolve()),
   subscribeSettings: vi.fn((cb) => {
     cb(mockSettings)
@@ -86,15 +87,20 @@ import {
   createOrder,
   restoreOrder,
   preparazioneParziale,
+  setOrderServiceMode,
 } from '../../src/lib/api.js'
 import { readerCheckout } from '../../src/lib/paymentsApi.js'
 import { printComanda } from '../../src/lib/printer.js'
 
+// IL CONTO DI PROVA NASCE «DA FARE», come nasce davvero: si battono tre
+// conti di fila e poi si comincia a versare. Era «in preparazione» da
+// quando le righe aggiunte confluivano nella prima comanda toccabile,
+// qualunque passo avesse — la regola che ha causato BUG-024.
 const baseOrder = (over = {}) => ({
   id: 'ord1',
   daily_number: 4,
   status: 'aperto',
-  workflow_status: 'in_preparazione',
+  workflow_status: 'ricevuto',
   payment_status: 'non_richiesto',
   customer_name: 'iole',
   table_label: '3',
@@ -110,7 +116,7 @@ const baseOrder = (over = {}) => ({
     {
       id: 'c1',
       seq: 1,
-      status: 'in_preparazione',
+      status: 'ricevuto',
       status_times: {},
       created_at: '2026-07-11T21:00:00.000Z',
       items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 }],
@@ -247,7 +253,7 @@ describe('aggiunte: la nuova comanda è gestita internamente', () => {
           {
             id: 'c1',
             seq: 1,
-            status: 'in_preparazione',
+            status: 'ricevuto',
             status_times: {},
             items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 4 }],
           },
@@ -321,8 +327,9 @@ describe('diminuzioni: solo dalle comande ancora modificabili', () => {
     const user = userEvent.setup()
     mount(baseOrder())
     await user.click(screen.getByRole('button', { name: /Stato servizio/ }))
-    await user.click(screen.getByRole('button', { name: /Segna “Pronto al servizio”/ }))
-    expect(advanceComanda).toHaveBeenCalledWith('ord1', 'c1', 'pronto')
+    // Il conto di prova nasce «da fare», quindi il passo dopo è il banco.
+    await user.click(screen.getByRole('button', { name: /Segna “In preparazione”/ }))
+    expect(advanceComanda).toHaveBeenCalledWith('ord1', 'c1', 'in_preparazione')
   })
 
   it('il − scala la comanda modificabile con sync in background (debounce)', async () => {
@@ -402,11 +409,11 @@ describe('modifiche ottimistiche (UX istantanea)', () => {
     advanceComanda.mockImplementationOnce(() => new Promise(() => {})) // in volo
     mount(baseOrder())
     await user.click(screen.getByRole('button', { name: /Stato servizio/ }))
-    await user.click(screen.getByRole('button', { name: /Segna “Pronto al servizio”/ }))
-    // lo stato passa subito a "Pronto al servizio" senza attendere la transazione
-    expect(screen.getAllByText(/Pronto al servizio/).length).toBeGreaterThan(0)
+    await user.click(screen.getByRole('button', { name: /Segna “In preparazione”/ }))
+    // lo stato passa subito al passo dopo senza attendere la transazione
+    expect(screen.getAllByText(/In preparazione/).length).toBeGreaterThan(0)
     expect(
-      screen.queryByRole('button', { name: /Segna “Pronto al servizio”/ })
+      screen.queryByRole('button', { name: /Segna “In preparazione”/ })
     ).not.toBeInTheDocument()
   })
 
@@ -540,6 +547,73 @@ describe('ricerca prodotti', () => {
 // salvataggio stava solo sul tasto in fondo al popup: chiudendo con la ✕,
 // toccando fuori dal riquadro o premendo Invio — che chiude la tastiera e
 // sembra confermare — quello che si era appena scritto spariva in silenzio.
+// ── SERVIZIO O RITIRO, SU QUESTO CONTO ─────────────────────
+//
+// L'impostazione del locale diceva come nascono i conti ed era finita per
+// essere un VINCOLO: `service_mode` si scriveva alla creazione e non
+// c'era nessun posto in cui cambiarlo. Ma un tavolo che viene a ritirare
+// al banco succede tutte le sere, e cambia anche i soldi.
+describe('servizio o ritiro, conto per conto', () => {
+  const apri = async (user) => user.click(screen.getByRole('button', { name: /Dati conto/ }))
+
+  it('lo staff cambia il modo del conto che ha in mano', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder({ service_mode: 'tavolo' }))
+    await apri(user)
+    await user.click(screen.getByRole('button', { name: /Ritiro/ }))
+    expect(setOrderServiceMode).toHaveBeenCalledWith('ord1', 'banco')
+  })
+
+  it('quello di adesso si vede acceso, e non si riscrive toccandolo', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder({ service_mode: 'banco' }))
+    await apri(user)
+    expect(screen.getByRole('button', { name: /Ritiro/ })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    )
+    await user.click(screen.getByRole('button', { name: /Ritiro/ }))
+    expect(setOrderServiceMode).not.toHaveBeenCalled()
+  })
+
+  it('DICE CHE TOCCA I SOLDI prima di premere, non dopo', async () => {
+    const user = userEvent.setup()
+    mockSettings.coperto_enabled = true
+    try {
+      mount(baseOrder({ service_mode: 'tavolo' }))
+      await apri(user)
+      expect(screen.getByText(/coperto e servizio si azzerano/i)).toBeInTheDocument()
+    } finally {
+      mockSettings.coperto_enabled = false
+    }
+  })
+
+  it('con un acconto si cambia il modo, ma i soldi restano quelli', async () => {
+    const user = userEvent.setup()
+    mount(
+      baseOrder({
+        service_mode: 'tavolo',
+        payment_status: 'parziale',
+        payments: [{ amount: 10, method: 'banco' }],
+      })
+    )
+    await apri(user)
+    // la frase sta accanto ai due tasti, non altrove nella schermata
+    const riquadro = screen.getByRole('button', { name: /Ritiro/ }).closest('div').parentElement
+    expect(within(riquadro).getByText(/coperto e servizio restano quelli/i)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /Ritiro/ }))
+    expect(setOrderServiceMode).toHaveBeenCalledWith('ord1', 'banco')
+  })
+
+  it('su un conto chiuso non si tocca: la strada è «Riapri conto»', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder({ status: 'pagato', payment_status: 'pagato' }))
+    await apri(user)
+    expect(screen.getByRole('button', { name: /Ritiro/ })).toBeDisabled()
+    expect(screen.getByText(/riaprilo prima/i)).toBeInTheDocument()
+  })
+})
+
 describe('dati conto: il nome si salva comunque si chiuda', () => {
   // Il conto di prova un nome ce l'ha già: si svuota il campo, altrimenti
   // quello nuovo si accoda al vecchio.
@@ -800,6 +874,60 @@ describe('totale sul tasto Pagamento', () => {
 // Lo decide il locale, e vale allo stesso modo per la prima comanda di un
 // conto nuovo e per le aggiunte a metà serata: prima erano due regole
 // diverse in due posti, e nessuno l'aveva deciso.
+// ── LE RIGHE AGGIUNTE NON SI ACCODANO A QUELLO CHE È GIÀ AL BANCO ────
+//
+// Difetto visto al banco (BUG-024): conto con una comanda in preparazione,
+// si aggiungono due righe, e quelle risultavano già prese in carico da
+// qualcuno — sparivano dalla colonna «Da fare» e non le cominciava
+// nessuno. Le righe nuove nascono nel passo che dice l'impostazione, non
+// nel passo della comanda che sta lì accanto.
+describe('dove finiscono le righe aggiunte a un conto', () => {
+  const conUnaComandaAlBanco = () =>
+    baseOrder({
+      workflow_status: 'in_preparazione',
+      comande: [
+        {
+          id: 'c1',
+          seq: 1,
+          status: 'in_preparazione',
+          status_times: {},
+          items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 }],
+        },
+      ],
+    })
+
+  it('IL DIFETTO: con una comanda al banco, le righe nuove nascono «da fare»', async () => {
+    const user = userEvent.setup()
+    mount(conUnaComandaAlBanco())
+    await user.click(screen.getAllByText('Gin Tonic')[0])
+    await user.click(screen.getAllByText('Gin Tonic')[0])
+
+    // niente si accoda alla comanda in preparazione…
+    await waitFor(() => expect(addComanda).toHaveBeenCalled(), { timeout: 3000 })
+    expect(bartenderUpdateComanda).not.toHaveBeenCalled()
+    // …e la comanda nuova le porta tutte e due
+    const [id, items] = addComanda.mock.calls.at(-1)
+    expect(id).toBe('ord1')
+    expect(items.filter((i) => i.drink_id === 'gin')).toHaveLength(2)
+  })
+
+  it('con l’interruttore acceso confluiscono nella comanda in preparazione', async () => {
+    const user = userEvent.setup()
+    mockSettings.comande_in_preparazione = true
+    try {
+      mount(conUnaComandaAlBanco())
+      await user.click(screen.getAllByText('Gin Tonic')[0])
+      await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalled(), { timeout: 3000 })
+      const [, comandaId, payload] = bartenderUpdateComanda.mock.calls.at(-1)
+      expect(comandaId).toBe('c1')
+      expect(payload.items.filter((i) => i.drink_id === 'gin')).toHaveLength(1)
+      expect(addComanda).not.toHaveBeenCalled()
+    } finally {
+      mockSettings.comande_in_preparazione = false
+    }
+  })
+})
+
 describe('il passo in cui nasce una comanda lo dice il locale', () => {
   it('di suo un conto nuovo nasce «da fare»', async () => {
     const user = userEvent.setup()
@@ -871,7 +999,9 @@ describe('creazione: niente si perde mentre l’ordine nasce', () => {
                 {
                   id: 'c1',
                   seq: 1,
-                  status: 'in_preparazione',
+                  // Come nasce davvero: createOrder riceve il passo di
+                  // partenza del locale, che di suo è «da fare».
+                  status: 'ricevuto',
                   status_times: {},
                   items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1 }],
                 },

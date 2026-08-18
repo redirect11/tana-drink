@@ -1,4 +1,4 @@
-import { formatPrice } from '../lib/orderStatus.js'
+import { ORDER_STATUSES, formatPrice } from '../lib/orderStatus.js'
 import { paidAmount } from '../lib/pagamento.js'
 import { AZIONI_CORSIA, daQuanto, destinazioneConto } from '../lib/coda.js'
 import { ETICHETTA_ANNULLO } from '../lib/comande.js'
@@ -27,8 +27,16 @@ import RigheCorsia from './RigheCorsia.jsx'
 // Le corsie e cosa ci sta dentro arrivano già fatte da lib/coda.js
 // (corsieComande): qui non si decide niente, si disegna soltanto.
 
+// Un conto senza modo scelto è roba da portare finché non si dice altro:
+// è la stessa regola con cui lo smista la colonna (lib/coda.js).
+const modoDi = (o) => (o?.service_mode === 'banco' ? 'banco' : 'tavolo')
+
 export default function CorsieComande({
   corsie,
+  // Il badge «come va consegnato» serve solo quando il pronto è una
+  // colonna sola: dividendola, la colonna dice già quello che direbbe il
+  // badge, e ripeterlo è rumore su una card già piena.
+  mostraModo = false,
   idAcceso = null,
   onApri,
   onApriConto,
@@ -145,7 +153,21 @@ export default function CorsieComande({
                         </span>
                       )}
                     </div>
-                    <div className="muted small corsia-dove">{destinazioneConto(o)}</div>
+                    <div className="muted small corsia-dove">
+                      {destinazioneConto(o)}
+                      {/* COME VA CONSEGNATO, sulla card del PRONTO. È lì che
+                          la domanda si pone: quella colonna tiene due
+                          lavori diversi — roba da portare a un tavolo e
+                          roba che aspetta il cliente al bancone — e senza
+                          dirlo si guarda il tavolo per indovinarlo. Dove le
+                          colonne sono già due il badge non serve: lo dice
+                          la colonna. */}
+                      {mostraModo && s.comanda?.status === ORDER_STATUSES.PRONTO && (
+                        <span className={`pill small consegna-${modoDi(o)}`}>
+                          {modoDi(o) === 'banco' ? '🚶 Ritiro' : '🍸 Servizio'}
+                        </span>
+                      )}
+                    </div>
                     <RigheCorsia
                       items={s.items}
                       aperto={espansa === s.id}

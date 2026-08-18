@@ -40,11 +40,13 @@ import {
   ordiniInCoda,
   voceCassa,
   comandeDaServire,
+  haLavoroDaFare,
   gruppiInCoda,
   schedeCoda,
   corsieDiStato,
   corsieComande,
   corsieVisibili,
+  corsieDelPronto,
   CORSIE_SPENTE_ALL_INIZIO,
   SOTTOFILTRI_CHIUSI,
 } from '../lib/coda.js'
@@ -55,7 +57,15 @@ import ActionSheet from '../components/ActionSheet.jsx'
 import { isBanco, isGestore, isPersonale } from '../lib/ruoli.js'
 import { senzaNascosti, subscribeNascosti, mostraOrdine } from '../lib/ordiniNascosti.js'
 import { battutoDaQui, annullatoDaQui, idDispositivo } from '../lib/dispositivo.js'
-import { corsieNascoste, ricordaCorsieNascoste, vistaCorsie, ricordaVistaCorsie } from '../lib/impostazioniLocali.js'
+import {
+  corsieNascoste,
+  ricordaCorsieNascoste,
+  vistaCorsie,
+  ricordaVistaCorsie,
+  prontoDiviso,
+  ricordaProntoDiviso,
+} from '../lib/impostazioniLocali.js'
+import { mondoConsegna } from '../lib/consegna.js'
 import {
   leggiAvvisi,
   subscribeAvvisi,
@@ -459,8 +469,13 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // anche sotto «Chiusi» e in «Tutti»: si chiudeva un conto e nello storico
   // non c'era, fino a ricaricare la pagina. E riaprendolo non tornava fra
   // quelli in corso, perché era ancora nell'elenco dei nascosti.
+  // ...E UN CONTO INCASSATO CON DEI DRINK ANCORA DA FARE NON SI NASCONDE
+  // AFFATTO. Nascondere serve a togliere di mezzo un conto su cui non c'è
+  // più niente da fare; ma si paga in anticipo tutte le sere, e sparendo
+  // si portava dietro le sue comande — al banco i drink appena pagati si
+  // volatilizzavano, e tornavano solo ricaricando la pagina (BUG-023).
   const orders = useMemo(
-    () => (boardFilter === 'attivi' ? senzaNascosti(ordersRaw) : ordersRaw),
+    () => (boardFilter === 'attivi' ? senzaNascosti(ordersRaw, haLavoroDaFare) : ordersRaw),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [ordersRaw, chiusiQui, boardFilter]
   )
@@ -485,6 +500,10 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   const [nascoste, setNascoste] = useState(() => corsieNascoste() ?? CORSIE_SPENTE_ALL_INIZIO)
   const [vista, setVista] = useState(vistaCorsie)
   const [scegliCorsie, setScegliCorsie] = useState(false) // il pannellino è aperto?
+  // La colonna del pronto: una sola col badge, o due (da servire / da
+  // ritirare). Scelta di QUESTO terminale — il tablet della sala e quello
+  // del banco non guardano lo stesso lavoro.
+  const [prontoSeparato, setProntoSeparato] = useState(prontoDiviso)
   // Barra stretta o larga: da questo dipende se le azioni della testata
   // stanno dietro il ⋯ o a vista come icone.
   const telefono = useTelefono()
@@ -1104,7 +1123,13 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // c'è: lì non c'è niente da scegliere.
   const puoScegliere = workflowOn && !vistaBanco
   const corsieBanco = bancoCorsie || guardaComande
-  const corsieDelBanco = corsieBanco ? corsieComande(contiInCorsia, { isChiuso: isClosed }) : []
+  // Il ritiro esiste solo dove il locale lo fa: col solo servizio non c'è
+  // niente da separare, e la scelta non si propone nemmeno.
+  const ritiroEsiste = mondoConsegna(settings) === 'entrambi'
+  const divisioneP = corsieDelPronto({ divise: prontoSeparato, ritiroEsiste })
+  const corsieDelBanco = corsieBanco
+    ? corsieComande(contiInCorsia, { isChiuso: isClosed, prontoDiviso: divisioneP })
+    : []
   // LE CORSIE DEI CONTI PARLANO DEL CONTO, non del lavoro: «In corso»,
   // «Chiusi», «Annullati» sono le tre cose che un CONTO può essere, e per
   // un conto chiuso vuol dire incassato — la stessa regola di tutta la coda
@@ -1116,6 +1141,11 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // state riempite: così i conteggi non cambiano a seconda di cosa si
   // guarda, e riaccendendone una la si trova già piena.
   const corsieMostrate = corsieBanco ? corsieVisibili(corsieDelBanco, nascoste) : corsie
+  const cambiaPronto = () => {
+    const nuovo = !prontoSeparato
+    setProntoSeparato(nuovo)
+    ricordaProntoDiviso(nuovo)
+  }
   const cambiaCorsia = (id) => {
     const via = nascoste.includes(id) ? nascoste.filter((x) => x !== id) : [...nascoste, id]
     setNascoste(via)
@@ -2135,11 +2165,31 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                   {c.titolo}
                 </button>
               ))}
+              {/* IL PRONTO, UNITO O DIVISO. Sta qui perché è una domanda
+                  sulle colonne, e qui si risponde alle altre. Solo dove il
+                  ritiro esiste: col solo servizio non c'è niente da
+                  separare, e un tasto che non fa niente è peggio di un
+                  tasto che non c'è. */}
+              {ritiroEsiste && (
+                <button
+                  className={`chip ${prontoSeparato ? 'active' : ''}`}
+                  onClick={cambiaPronto}
+                  aria-pressed={prontoSeparato}
+                  title={
+                    prontoSeparato
+                      ? 'Adesso il pronto è in due colonne — tocca per riunirle'
+                      : 'Adesso il pronto è una colonna sola, col badge — tocca per dividere servizio e ritiro'
+                  }
+                >
+                  ✂️ Dividi il pronto
+                </button>
+              )}
             </div>
           )}
           {corsieBanco ? (
             <CorsieComande
               corsie={corsieMostrate}
+              mostraModo={ritiroEsiste && !prontoSeparato}
               idAcceso={idAcceso}
               inArrivo={pend.pending}
               onScarta={dismissPending}

@@ -736,6 +736,19 @@ a.btn.block {
    scorre in orizzontale (vedi .chips-row) e la pastiglia resta l'ultima,
    raggiungibile scorrendo, invece di restare da sola su una seconda riga
    mezza vuota. */
+/* Un rimando dentro una frase: è un tasto (porta da un'altra parte
+   nell'app) ma si legge come una parola sottolineata, perché sta in mezzo
+   a un testo e un bottone lì dentro spezzerebbe la riga. */
+.link-inline {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: var(--accent);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 .chip-vista {
   margin-left: auto;
   flex-shrink: 0;
@@ -7008,6 +7021,23 @@ body.pagina-piena .inv-scheda {
 
 .comanda-det-stampa {
   margin-top: 12px;
+}
+
+/* COME VA CONSEGNATO, sulla card del pronto. Due colori che non
+   competono con quelli degli stati: quelli dicono a che punto è il
+   lavoro, questo dice dove va a finire. */
+.pill.consegna-tavolo {
+  background: rgba(52, 152, 219, 0.16);
+  color: #9ecbf0;
+}
+
+.pill.consegna-banco {
+  background: rgba(155, 155, 168, 0.18);
+  color: var(--muted);
+}
+
+:root[data-luma='light'] .pill.consegna-tavolo {
+  color: #0b5cad;
 }
 
 /* IL NUMERO DELLA COMANDA accanto a quello del conto, nelle corsie del

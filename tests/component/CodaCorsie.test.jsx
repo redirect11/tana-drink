@@ -27,7 +27,7 @@
 //     servono, e al ricarico le ritrova come le aveva lasciate.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, within, waitFor } from '@testing-library/react'
+import { act, render, screen, within, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import '@testing-library/jest-dom/vitest'
@@ -43,6 +43,7 @@ vi.mock('react-router-dom', async (orig) => {
 let impostazioni = {}
 // Gli ordini che il server manda alla coda.
 let ordini = []
+let mandaOrdini = null
 // I conti battuti al POS e non ancora arrivati dal server.
 let inVolo = []
 
@@ -73,7 +74,11 @@ vi.mock('../../src/lib/api.js', () => ({
     cb({ ...impostazioni })
     return () => {}
   },
+  // La sottoscrizione resta in mano al test: dopo un gesto si può far
+  // arrivare lo snapshot successivo, come fa la CACHE di Firestore — che
+  // risponde subito, senza rete.
   subscribeActiveOrders: (cb) => {
+    mandaOrdini = cb
     cb(ordini)
     return () => {}
   },
@@ -148,6 +153,7 @@ vi.mock('../../src/components/PallinoStampante.jsx', () => ({ default: () => <di
 vi.mock('../../src/components/StatusBell.jsx', () => ({ default: () => <div>campanella</div> }))
 
 import BartenderPage from '../../src/pages/BartenderPage.jsx'
+import { nascondiOrdine, mostraOrdine } from '../../src/lib/ordiniNascosti.js'
 import { updateOrderStatus, advanceComanda } from '../../src/lib/api.js'
 
 const ORA = '2026-08-16T21:00:00.000Z'
@@ -249,7 +255,11 @@ beforeEach(() => {
   localStorage.clear()
   ordini = CODA
   inVolo = []
+  mandaOrdini = null
   ruolo = 'admin'
+  // L'elenco dei conti «appena chiusi qui» vive in memoria: senza pulirlo
+  // un test si porterebbe dietro quello di prima.
+  for (const o of CODA) mostraOrdine(o.id)
   impostazioni = {
     queue_view: 'corsie',
     queue_search: 'filtra',
@@ -503,6 +513,122 @@ describe('le corsie del banco: una card per comanda', () => {
   beforeEach(() => {
     ruolo = 'bartender'
   })
+
+  // ── INCASSARE NON FA SPARIRE I DRINK DA FARE (BUG-023) ───────────
+  //
+  // Si incassa un conto che ha ancora comande «da fare» o «in
+  // preparazione» e quelle sparivano dalla coda; ricaricando la pagina
+  // tornavano. Non erano i dati — il pagamento non le serve (BUG-019) —
+  // era la VISTA: chiudendo un conto lo si nasconde all'istante dalla coda
+  // (ordiniNascosti, un elenco che vive in memoria, ed è per questo che il
+  // ricaricamento «aggiustava»), e sparendo il conto sparivano anche le
+  // sue comande. Al banco vuol dire non vedere più dei drink già pagati.
+  //
+  // Qui si ripercorre la sequenza SENZA rete: si incassa (il conto viene
+  // nascosto e la cache rimanda il conto saldato) e subito dopo le due
+  // comande devono essere ancora nelle loro corsie, col bollo «Pagato».
+  it('incassando un conto, le comande ancora da fare restano al banco col bollo', async () => {
+    const conDueComande = (pagato) => ({
+      ...CODA[0],
+      id: 'o90',
+      daily_number: 90,
+      payment_status: pagato ? 'pagato' : 'non_richiesto',
+      workflow_status: 'ricevuto',
+      comande: [
+        { id: 'c1', seq: 1, status: 'ricevuto', created_at: ORA, items: [] },
+        { id: 'c2', seq: 2, status: 'in_preparazione', created_at: ORA, items: [] },
+      ],
+    })
+    ordini = [conDueComande(false)]
+    montaCoda()
+    await screen.findByText('Da fare')
+    expect(within(corsia('da-fare')).getByText('#90')).toBeInTheDocument()
+
+    // L'INCASSO, come lo vede la coda: il conto si nasconde subito e la
+    // cache rimanda il conto saldato. Nessuna attesa di rete.
+    act(() => {
+      nascondiOrdine('o90')
+      mandaOrdini([conDueComande(true)])
+    })
+
+    const daFare = corsia('da-fare')
+    const alBanco = corsia('al-banco')
+    expect(within(daFare).getByText('#90')).toBeInTheDocument()
+    expect(within(alBanco).getByText('#90')).toBeInTheDocument()
+    // e si vede che sono già pagate: i soldi ci sono, il drink no
+    expect(within(daFare).getByText('Pagato')).toBeInTheDocument()
+    expect(within(alBanco).getByText('Pagato')).toBeInTheDocument()
+  })
+
+  it('ma un conto senza più niente da fare si nasconde eccome', async () => {
+    // È il motivo per cui il nascondere esiste: chiuso un conto servito,
+    // resta a schermo per un attimo e chi guarda si chiede se sia andata.
+    const servito = {
+      ...CODA[0],
+      id: 'o91',
+      daily_number: 91,
+      workflow_status: 'ritirato',
+      comande: [{ id: 'c1', seq: 1, status: 'ritirato', created_at: ORA, items: [] }],
+    }
+    ordini = [servito]
+    montaCoda()
+    await screen.findByText('Da fare')
+    act(() => nascondiOrdine('o91'))
+    expect(screen.queryByText('#91')).not.toBeInTheDocument()
+  })
+
+  // ── IL PRONTO, UNITO O DIVISO ────────────────────────────────────
+  //
+  // Quella colonna tiene due lavori diversi: roba da portare a un tavolo e
+  // roba che aspetta il cliente al bancone. Chi è in sala guarda i primi,
+  // chi sta al banco i secondi.
+  const contoPronto = (id, numero, modo) => ({
+    ...CODA[0],
+    id,
+    daily_number: numero,
+    service_mode: modo,
+    workflow_status: 'pronto',
+    comande: [{ id: 'c1', seq: 1, status: 'pronto', created_at: ORA, items: [] }],
+  })
+
+  it('di suo il pronto è una colonna sola, e la card dice come va consegnato', async () => {
+    impostazioni = { ...impostazioni, service_mode: 'entrambi' }
+    ordini = [contoPronto('o80', 80, 'banco')]
+    montaCoda()
+    await screen.findByText('Da fare')
+    const pronto = corsia('al-ritiro')
+    expect(within(pronto).getByText('#80')).toBeInTheDocument()
+    // il badge sulla card: quella colonna tiene due lavori diversi, e
+    // senza dirlo si guarda il tavolo per indovinarlo
+    expect(pronto.querySelector('.pill.consegna-banco')).toBeTruthy()
+    expect(corsia('al-ritiro-banco')).toBeFalsy()
+  })
+
+  it('dividendolo diventano due colonne, e il badge non serve più', async () => {
+    const utente = userEvent.setup()
+    impostazioni = { ...impostazioni, service_mode: 'entrambi' }
+    ordini = [contoPronto('o80', 80, 'banco'), contoPronto('o81', 81, 'tavolo')]
+    montaCoda()
+    await screen.findByText('Da fare')
+
+    await utente.click(screen.getByRole('button', { name: /Colonne/ }))
+    await utente.click(screen.getByRole('button', { name: /Dividi il pronto/ }))
+
+    expect(within(corsia('al-ritiro')).getByText('#81')).toBeInTheDocument()
+    expect(within(corsia('al-ritiro-banco')).getByText('#80')).toBeInTheDocument()
+    // la colonna dice già quello che direbbe il badge
+    expect(corsia('al-ritiro-banco').querySelector('.pill.consegna-banco')).toBe(null)
+  })
+
+  it('col SOLO SERVIZIO non c’è niente da dividere, e il tasto non c’è', async () => {
+    const utente = userEvent.setup()
+    impostazioni = { ...impostazioni, service_mode: 'tavolo' }
+    montaCoda()
+    await screen.findByText('Da fare')
+    await utente.click(screen.getByRole('button', { name: /Colonne/ }))
+    expect(screen.queryByRole('button', { name: /Dividi il pronto/ })).not.toBeInTheDocument()
+  })
+
 
   it('mostra le corsie del banco, con una card per COMANDA e i totali di ognuna', async () => {
     montaCoda()

@@ -6,6 +6,12 @@ import {
   resetOpenOrdersToReceived,
 } from '../lib/api.js'
 import { CANCEL_PHRASES } from '../lib/orderStatus.js'
+import {
+  MODI_CONSEGNA,
+  clienteSceglie,
+  modoAllaNascita,
+  mondoConsegna,
+} from '../lib/consegna.js'
 import { parseCarteCsv, decodeCsvBuffer } from '../lib/carteImport.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import ThemeSettings, { TemaMenuClienti } from './ThemeSettings.jsx'
@@ -250,23 +256,84 @@ export default function SettingsTab({ role = null }) {
             <div className="card settings-section">
               <h3>Consegna ordine</h3>
               <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
-                Il ritiro al banco azzera coperto e costo di servizio.
+                Come lavora il locale. NON è un vincolo: qualunque cosa si
+                scelga qui, il banco e la sala possono sempre mettere
+                servizio o ritiro sul singolo conto, da «Dati conto». Qui si
+                decide come NASCONO i conti.
               </p>
-              <div className="mode-choice" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
+              <div className="mode-choice">
                 {[
-                  ['tavolo', '🍸 Servizio'],
-                  ['banco', '🚶 Ritiro'],
-                  ['entrambi', '🤝 Sceglie il cliente'],
-                ].map(([value, label]) => (
+                  ['tavolo', '🍸 Solo servizio', 'Si porta tutto al tavolo.'],
+                  [
+                    'entrambi',
+                    '🤝 Ritiro e servizio',
+                    'Chi si siede si fa servire, chi ha fretta ritira al banco.',
+                  ],
+                ].map(([value, label, hint]) => (
                   <button
                     key={value}
-                    className={`mode-option${settings.service_mode === value ? ' active' : ''}`}
+                    className={`mode-option${mondoConsegna(settings) === value ? ' active' : ''}`}
                     onClick={() => save({ service_mode: value })}
+                    title={hint}
                   >
                     {label}
                   </button>
                 ))}
               </div>
+
+              {/* DENTRO IL SECONDO MONDO, e solo lì: col solo servizio non
+                  c'è niente da scegliere e niente da far scegliere. */}
+              {mondoConsegna(settings) === 'entrambi' && (
+                <>
+                  <h4 style={{ margin: '16px 0 4px' }}>Come nascono i conti</h4>
+                  <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
+                    Il valore di partenza di un conto battuto al banco o in
+                    sala. Si cambia conto per conto in un tocco: il ritiro
+                    azzera coperto e costo di servizio.
+                  </p>
+                  <div className="mode-choice">
+                    {MODI_CONSEGNA.map(([value, label]) => (
+                      <button
+                        key={value}
+                        className={`mode-option${
+                          modoAllaNascita(settings) === value ? ' active' : ''
+                        }`}
+                        onClick={() => save({ consegna_default: value })}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* CHI SCEGLIE, non cosa si sceglie: senza ordinazioni dei
+                      clienti non c'è nessuno a cui chiederlo, e la voce si
+                      spegne dicendo perché invece di restare lì a mentire. */}
+                  <ToggleRow
+                    label="Lo sceglie il cliente"
+                    desc={
+                      settings.menu_only ? (
+                        <>
+                          Adesso non si può: i clienti vedono il menù ma non
+                          ordinano, e senza ordinazioni non c’è nessuno a cui
+                          chiederlo.{' '}
+                          <button
+                            type="button"
+                            className="link-inline"
+                            onClick={() => scegliSezione('menu-clienti')}
+                          >
+                            Vai a Menù clienti
+                          </button>
+                        </>
+                      ) : (
+                        'Ordinando dal telefono il cliente sceglie se farsi servire al tavolo o ritirare al banco. Spenta: decide il locale, e lo staff può cambiarlo sul conto.'
+                      )
+                    }
+                    checked={clienteSceglie(settings)}
+                    disabled={settings.menu_only === true}
+                    onChange={(v) => save({ cliente_sceglie_consegna: v })}
+                  />
+                </>
+              )}
             </div>
       ),
     },

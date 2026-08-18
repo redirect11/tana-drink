@@ -346,7 +346,12 @@ requirements:
       subito dopo la scrittura: quella risponde PRIMA dello snapshot, e
       toglierla lì farebbe riapparire per un battito lo stato di prima.
       Erano tre copie della stessa idea (la coda, il conto, il dettaglio
-      della comanda) e si comportavano già in modo diverso. Una comanda
+      della comanda) e si comportavano già in modo diverso.
+      DOVE FINISCONO LE RIGHE AGGIUNTE a un conto aperto lo dice
+      `comandaPerLeAggiunte` (comande.js), un punto solo per tutte le
+      strade: nella comanda che sta già nel passo di nascita, o in una
+      nuova. Non nella prima «toccabile», che vuol dire un'altra cosa
+      (BUG-024). Una comanda
       provvisoria nasce col passo e il numero che avrà DAVVERO, o si
       vedrebbe cambiare da sé un istante dopo.
       IN CHE PASSO NASCE UNA COMANDA lo decide il locale
@@ -529,6 +534,61 @@ requirements:
     generate_issue: false
     labels: [ordini, ux]
     test_cases: [tests/unit/coda.test.js]
+
+  - id: REQ-ORD-020
+    title: "Servizio o ritiro: il locale dice come nascono i conti, lo staff cambia il suo"
+    area: "src/lib/consegna.js, src/components/SettingsTab.jsx, src/components/OrderPosDetail.jsx, src/components/OrderSummary.jsx, src/lib/coda.js, src/lib/api.js"
+    description: >
+      Un conto è servito al tavolo o ritirato al banco. Chi decide, in
+      ordine: il LOCALE dice come NASCONO i conti — non quali modi
+      esistono; il CLIENTE sceglie il suo, ma solo se glielo si lascia
+      scegliere e solo se ordina da sé; lo STAFF può sempre cambiare quello
+      che ha in mano. La scelta sta sul CONTO (`order.service_mode`), non
+      sul terminale e non sul locale: due conti battuti dallo stesso tablet
+      possono essere uno servito e uno da ritirare, ed è tutto il punto.
+      Prima l'impostazione era un VINCOLO: finiva sull'ordine alla
+      creazione e non c'era nessun posto in cui cambiarla.
+
+      I DUE MONDI (Impostazioni → Consegna ordine): «Solo servizio» (il
+      ritiro non esiste) oppure «Ritiro e servizio» (convivono, ed è il
+      caso normale di un bar). Non esiste un mondo «solo ritiro»: quel
+      vecchio valore non descriveva un locale, descriveva un DEFAULT — un
+      posto che fa solo asporto non ha bisogno che l'app gli vieti il
+      servizio, ha bisogno che i conti nascano «ritiro». Dentro il secondo
+      mondo ci sono «come nascono i conti» (`consegna_default`) e «lo
+      sceglie il cliente» (`cliente_sceglie_consegna`), quest'ultima spenta
+      col motivo e il rimando quando i clienti non ordinano (menu_only): la
+      voce parla di CHI sceglie, e senza ordinazioni non c'è nessuno a cui
+      chiederlo. I vecchi valori si leggono ancora senza migrazioni — la
+      traduzione sta in lib/consegna.js, in un posto solo.
+
+      SUL CONTO si cambia da «Dati conto», dove ci sono già nome, tavolo e
+      note. E CAMBIA I SOLDI: il ritiro azzera coperto e costo di servizio,
+      il servizio li rimette coi valori del locale (supplementiPerModo). Tre
+      casi (cambioModoPermesso): conto aperto e nessun incasso → si cambia
+      e i supplementi si rifanno; conto con un ACCONTO → il modo si cambia
+      ma i supplementi NON si toccano, perché erano stati calcolati sul
+      totale su cui si è già incassato e muoverlo sotto un acconto è come
+      cambiare il prezzo dopo aver preso i soldi (per quello c'è «Riapri
+      conto», che lascia traccia); conto chiuso o annullato → non si tocca
+      niente. Quello che succede ai soldi si legge PRIMA di premere.
+
+      IN CODA, la colonna del PRONTO tiene due lavori diversi: roba da
+      portare a un tavolo e roba che aspetta il cliente al bancone. Di suo
+      resta una colonna sola col badge sulla card («Servizio» /
+      «Ritiro»); da «▦ Colonne» si divide in «Da servire» e «Da
+      ritirare», ed è una scelta del TERMINALE — il tablet della sala e
+      quello del banco non guardano lo stesso lavoro. Si propone solo dove
+      il ritiro esiste. «Ritirato/Servito» NON si divide: lì il drink è
+      già uscito e come sia uscito non cambia più niente da fare — è il
+      traguardo, non una destinazione.
+    status: implemented
+    generate_issue: false
+    labels: [ordini, pos, impostazioni]
+    test_cases:
+      - tests/unit/consegna.test.js
+      - tests/component/OrderPosDetail.test.jsx
+      - tests/component/CodaCorsie.test.jsx
 
   - id: REQ-ORD-009
     title: "Un ordine battuto altrove si vede su tutti gli altri terminali"

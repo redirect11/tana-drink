@@ -33,6 +33,7 @@ import {
   giacenzaPerCarico,
 } from './inventory.js'
 import { consumptionDiff } from './warehouse.js'
+import { cambioModoPermesso, supplementiPerModo } from './consegna.js'
 import { idDispositivo } from './dispositivo.js'
 import { leggiAvvisi, avvisoAttivo, idAvvisoScorta } from './preferenzeNotifiche.js'
 import { patchRipristino, buoniDaRestituire, segnaBuoniRestituiti } from './ripristino.js'
@@ -2688,6 +2689,61 @@ export async function updateOrderInfo(id, { table_label, note, customer_name }) 
   return mapOrder(await getDoc(doc(db, 'orders', id)))
 }
 
+// ── SERVIZIO O RITIRO, SU QUESTO CONTO ───────────────────────
+//
+// L'impostazione del locale dice come NASCONO i conti; qui si cambia
+// quello che si ha in mano. Un tavolo che viene a ritirare al banco
+// succede tutte le sere.
+//
+// E CAMBIA I SOLDI: il ritiro azzera coperto e servizio, il servizio li
+// rimette coi valori del locale. Le regole — chi può cambiare e cosa
+// succede ai supplementi — stanno in lib/consegna.js, che è dove si
+// provano; qui si scrive.
+export async function setOrderServiceMode(orderId, modo) {
+  const ref = doc(db, 'orders', orderId)
+  const snap = await leggiOrdine(ref)
+  if (!snap.exists()) throw new Error('Ordine non trovato')
+  const cur = snap.data()
+  const permesso = cambioModoPermesso(cur)
+  if (permesso === 'no') {
+    throw new Error('Conto chiuso: per cambiarlo riaprilo prima')
+  }
+  const patch = { service_mode: modo || null }
+
+  // Coi soldi già in cassa i supplementi non si toccano: erano stati
+  // calcolati sul totale su cui si è incassato. Si cambia solo il modo.
+  if (permesso === 'si') {
+    const norm = normalizeOrderDoc(cur)
+    const subtotale = sumItems(aggregateItems(norm.comande))
+    const supplementi = supplementiPerModo({
+      modo,
+      // Quante persone erano state contate: passando a ritiro il coperto
+      // si azzera, ma il numero resta scritto per quando si torna indietro.
+      persone: Number(cur.coperto_persons) || Number(cur.coperto_persons_scelti) || 0,
+      subtotale,
+      settings: impostazioni(),
+    })
+    Object.assign(patch, supplementi)
+    // Il numero di persone si ricorda a parte: tornando al servizio il
+    // coperto deve poter tornare quello di prima, e `coperto_persons` nel
+    // frattempo è stato azzerato.
+    if (Number(cur.coperto_persons) > 0) {
+      patch.coperto_persons_scelti = Number(cur.coperto_persons)
+    }
+    const nuovoTotale =
+      subtotale +
+      supplementi.coperto_amount +
+      supplementi.service_charge_amount +
+      (Number(cur.tip_amount) || 0)
+    patch.total = nuovoTotale
+    const nuovoSconto = scontoRicalcolato(cur, nuovoTotale)
+    if (nuovoSconto != null) patch.discount_amount = nuovoSconto
+  }
+
+  bgWrite(() => updateDoc(ref, patch), 'modo consegna')
+  return mapOrder(await leggiOrdine(ref))
+}
+
 // AGGIUNTA a un conto aperto: crea una NUOVA COMANDA con i soli item
 // aggiunti (come "aggiungi un ordine" nei POS) e aggiorna aggregato+totale.
 // La comanda nasce già IN PREPARAZIONE (l'aggiunta la fa il banco, che la
@@ -3627,7 +3683,17 @@ export const DEFAULT_SETTINGS = {
   // Modalità di consegna: 'tavolo' (servizio), 'banco' (ritiro) o 'entrambi'
   // (sceglie il cliente all'ordine). Il ritiro al banco azzera coperto e
   // costo di servizio.
+  // I DUE MONDI: 'tavolo' (solo servizio) o 'entrambi' (ritiro e servizio
+  // convivono). Non è un vincolo — lo staff cambia il modo sul singolo
+  // conto — ma dice cosa esiste nel locale. I vecchi valori si leggono
+  // ancora: la traduzione sta in lib/consegna.js, in un posto solo.
   service_mode: 'tavolo',
+  // Dentro «ritiro e servizio»: con che modo NASCONO i conti battuti dallo
+  // staff. Un valore di partenza, non una regola.
+  consegna_default: 'tavolo',
+  // Dentro «ritiro e servizio»: il cliente sceglie il suo ordinando dal
+  // telefono. Parla di CHI sceglie, quindi vuole le ordinazioni accese.
+  cliente_sceglie_consegna: false,
   // Tempo stimato di servizio mostrato ai clienti: parte dal tempo base e si
   // raffina con i tempi reali del servizio.
   eta_enabled: false,

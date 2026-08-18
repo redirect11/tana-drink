@@ -130,3 +130,32 @@ export function ricordaAzioniContoRidotte(ridotte) {
     /* niente memoria: la scelta vale per questa sessione */
   }
 }
+
+// ── IL PRONTO, UNITO O DIVISO, SU QUESTO TERMINALE ───────────────────
+//
+// Dove ritiro e servizio convivono, la colonna del pronto tiene due lavori
+// diversi: quello da portare a un tavolo e quello che aspetta il cliente
+// al bancone. Chi è in sala guarda i primi, chi sta al banco i secondi —
+// due persone, due schermi, due risposte. Per questo sta qui e non su
+// settings/bar: dividerla al banco non deve dividerla anche in sala.
+//
+// Di suo UNITE: una colonna in più costa larghezza a tutte le altre, e
+// dove il ritiro è l'eccezione resterebbe quasi sempre vuota.
+
+const CHIAVE_PRONTO = 'tana:corsie:pronto-diviso'
+
+export function prontoDiviso() {
+  try {
+    return localStorage.getItem(CHIAVE_PRONTO) === '1'
+  } catch {
+    return false
+  }
+}
+
+export function ricordaProntoDiviso(diviso) {
+  try {
+    localStorage.setItem(CHIAVE_PRONTO, diviso ? '1' : '0')
+  } catch {
+    /* niente memoria: vale per questa sessione */
+  }
+}

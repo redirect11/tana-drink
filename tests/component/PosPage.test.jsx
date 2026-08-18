@@ -33,7 +33,9 @@ vi.mock('../../src/lib/api.js', () => ({
         {
           id: 'c1',
           seq: 1,
-          status: 'in_preparazione',
+          // Come nasce davvero un conto: nel passo di partenza del locale,
+          // che di suo è «da fare» (statoComandaNuova).
+          status: 'ricevuto',
           items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1 }],
         },
       ],
