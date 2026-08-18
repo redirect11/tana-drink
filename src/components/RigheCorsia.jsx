@@ -8,7 +8,11 @@ import { formatPrice } from '../lib/orderStatus.js'
 // fila fanno una card lunga il doppio delle altre, e la colonna dello stato
 // si svuota di sotto. Sotto le dieci no — due colonnine da tre righe sono
 // peggio di una lista. Lo spazio ce l'ha solo uno schermo largo: il CSS
-// tiene la seconda colonna solo dove ci sta (vedi .corsia-righe-due).
+// tiene la seconda colonna solo dove ci sta davvero (vedi
+// .corsia-righe-due: la soglia si misura sulla CARD, non sulla finestra —
+// con sei corsie accese la finestra è larga e la card è una striscia).
+// Qui si dice solo SE CONVIENE: due righe spezzate in due colonne sono
+// peggio di due righe in fila. Se ci sta lo decide il CSS.
 const RIGHE_A_VISTA = 6
 
 // LE RIGHE DI UNA CARD, dove che sia. Le usano tutte e due le viste a

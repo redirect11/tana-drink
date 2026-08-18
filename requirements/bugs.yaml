@@ -570,3 +570,48 @@ bugs:
     generate_issue: false
     labels: [bug, pagamenti, coda]
     test_cases: [tests/unit/pagamentoNonServe.test.js]
+
+  - id: BUG-020
+    title: "Sul tema chiaro la striscia di stato spariva dalle card spente"
+    area: "src/index.css, DESIGN.md"
+    description: >
+      Corsie del banco su un tema chiaro: nelle colonne «Ritirato/Servito»,
+      «Chiuse» e «Annullate» le card non avevano più il bordo a sinistra.
+      CAUSA: `.order-card.ritirato` (e `.grid-card-pending`) coloravano la
+      striscia con un bianco trasparente — nato per il fondo scuro, e sul
+      chiaro bianco su bianco. Il bordo c'era, non si vedeva. In più
+      l'opacità 0.75 della card sbiadiva anche la striscia.
+      RISOLTO: un token solo, `--strip-spenta` (segue `--muted`, quindi il
+      tema), per tutti gli stati «spenti» — servito, in invio, conto
+      annullato — e la card servita sbiadisce meno (0.85). Una striscia
+      invisibile è una card senza stato, ed è così che si riconosce lo stato
+      scorrendo trenta card uguali.
+    in_produzione: false
+    status: fixed
+    generate_issue: false
+    labels: [bug, ui, tema]
+    test_cases: [tests/unit/css.test.js]
+
+  - id: BUG-021
+    title: "Con molte corsie il contenuto della card sbordava su due colonne"
+    area: "src/index.css, src/components/RigheCorsia.jsx"
+    description: >
+      Sei corsie accese, quindi colonne strette: nelle card lunghe le righe
+      andavano su due colonne di testo, i nomi si spezzavano a metà e i
+      prezzi finivano fuori dal riquadro. Peggiorava con lo zoom del browser.
+      CAUSA: la seconda colonna si accendeva con una media query sulla
+      FINESTRA (min-width 1200px) più un conteggio di righe. Ma con sei
+      corsie la finestra è larga e la CARD è una striscia: il criterio non
+      misurava lo spazio che c'era davvero.
+      RISOLTO: il blocco delle righe è un contenitore
+      (`container-type: inline-size`) e la soglia si misura su di lui
+      (`@container min-width 360px`). Così la card si adatta da sé al numero
+      di corsie accese, alla larghezza dello schermo e allo zoom. Il
+      conteggio delle righe resta, ma dice solo se CONVIENE dividere, non se
+      ci sta. In più: nome che si accorcia (`overflow-wrap: anywhere`,
+      `min-width: 0`) e prezzo che non va mai a capo.
+    in_produzione: false
+    status: fixed
+    generate_issue: false
+    labels: [bug, ui, coda]
+    test_cases: [tests/unit/css.test.js]

@@ -7,6 +7,7 @@ import {
   bucketByStatus,
   ordersRecap,
   voceCassa,
+  comandeDaServire,
   openOrdersCount,
   ordineCorrisponde,
   primoCorrispondente,
@@ -328,6 +329,84 @@ describe('la voce della cassa nel menu della coda', () => {
       'Prima chiudi 1 conto'
     )
   })
+
+  // DUE MOTIVI PER NON CHIUDERE. Il secondo è arrivato con gli stati del
+  // servizio: un conto può essere già incassato e avere ancora drink da
+  // fare, quindi «zero conti aperti» non vuol più dire «niente in ballo».
+  // Chiudere con tre comande al banco vuol dire mandare a casa la serata
+  // con tre drink pagati e mai usciti.
+  it('con comande ancora da servire la cassa non si chiude', () => {
+    const v = voceCassa({ gestore: true, cassaAperta: true, contiAperti: 0, daServire: 3 })
+    expect(v.disabled).toBe(true)
+    expect(v.hint).toBe('Prima servi 3 comande')
+  })
+
+  it('una comanda sola si dice al singolare', () => {
+    expect(
+      voceCassa({ gestore: true, cassaAperta: true, contiAperti: 0, daServire: 1 }).hint
+    ).toBe('Prima servi 1 comanda')
+  })
+
+  it('tutti e due i motivi stanno in UNA riga', () => {
+    // Sotto il tasto, in cima alla coda: due frasi incolonnate non si
+    // leggono in un'occhiata, e quello che serve capire è «non si chiude,
+    // e perché».
+    expect(
+      voceCassa({ gestore: true, cassaAperta: true, contiAperti: 2, daServire: 3 }).hint
+    ).toBe('Prima chiudi 2 conti e servi 3 comande')
+  })
+
+  it('niente in ballo: si chiude, e lo dice', () => {
+    const v = voceCassa({ gestore: true, cassaAperta: true, contiAperti: 0, daServire: 0 })
+    expect(v.disabled).toBe(false)
+    expect(v.hint).toBe('Conta il contante e chiudi la serata.')
+  })
+})
+
+// Quanti ticket sono ancora al banco. Non si conta guardando i CONTI: uno
+// già incassato può avere ancora comande da fare, e sono proprio quelle che
+// non devono restare indietro.
+describe('quante comande sono ancora da servire', () => {
+  const conto = (comande, patch = {}) => ({ status: 'aperto', comande, ...patch })
+
+  it('conta i ticket non serviti, non i conti', () => {
+    const lista = [
+      conto([
+        { id: 'c1', status: 'ricevuto' },
+        { id: 'c2', status: 'in_preparazione' },
+      ]),
+      conto([{ id: 'c1', status: 'pronto' }]),
+    ]
+    expect(comandeDaServire(lista)).toBe(3)
+  })
+
+  it('le servite e le annullate non contano', () => {
+    const lista = [
+      conto([
+        { id: 'c1', status: 'ritirato' },
+        { id: 'c2', status: 'annullato' },
+        { id: 'c3', status: 'ricevuto' },
+      ]),
+    ]
+    expect(comandeDaServire(lista)).toBe(1)
+  })
+
+  it('UN CONTO INCASSATO PUÒ AVERE ANCORA DA FARE, e conta', () => {
+    // È il caso per cui esiste questa regola: si paga in anticipo, il
+    // conto è chiuso, e il drink è ancora al banco.
+    const pagato = conto([{ id: 'c1', status: 'in_preparazione' }], {
+      status: 'pagato',
+      payment_status: 'pagato',
+    })
+    expect(comandeDaServire([pagato])).toBe(1)
+  })
+
+  it('un conto annullato non ha niente da servire', () => {
+    const morto = conto([{ id: 'c1', status: 'ricevuto' }], { status: 'annullato' })
+    expect(comandeDaServire([morto])).toBe(0)
+    expect(comandeDaServire([])).toBe(0)
+    expect(comandeDaServire()).toBe(0)
+  })
 })
 
 // ── I GRUPPI IN CODA ─────────────────────────────────────────────────
@@ -540,6 +619,82 @@ describe('da quanto è lì', () => {
   it('senza data non si inventa niente', () => {
     expect(daQuanto(null, adesso)).toBe('')
     expect(daQuanto('boh', adesso)).toBe('')
+  })
+})
+
+// ── DENTRO I CHIUSI: SERVITI E DA SERVIRE ─────────────────────
+//
+// Un conto chiuso è un conto INCASSATO: i soldi sono presi. Ma incassato
+// non vuol dire uscito — si paga in anticipo tutte le sere — e prima quei
+// conti restavano in mezzo a quelli in corso, con un tasto «nascondi
+// pagati» per toglierseli dagli occhi. Adesso stanno fra i chiusi, e
+// «quali hanno ancora roba da portare» si chiede qui dentro.
+import { passaSottofiltroChiusi, SOTTOFILTRI_CHIUSI } from '../../src/lib/coda.js'
+
+describe('dentro i conti chiusi: serviti e da servire', () => {
+  const con = (comande, patch = {}) => ({ status: 'pagato', payment_status: 'pagato', comande, ...patch })
+  const servito = con([{ id: 'c1', status: 'ritirato' }])
+  const daServire = con([
+    { id: 'c1', status: 'ritirato' },
+    { id: 'c2', status: 'in_preparazione' },
+  ])
+
+  it('le tre voci sono quelle, in quest’ordine', () => {
+    expect(SOTTOFILTRI_CHIUSI.map(([k]) => k)).toEqual(['tutti', 'serviti', 'non-serviti'])
+  })
+
+  it('«tutti» non toglie niente', () => {
+    for (const o of [servito, daServire]) {
+      expect(passaSottofiltroChiusi(o, 'tutti')).toBe(true)
+      expect(passaSottofiltroChiusi(o)).toBe(true)
+    }
+  })
+
+  it('serviti: solo quelli usciti per intero', () => {
+    expect(passaSottofiltroChiusi(servito, 'serviti')).toBe(true)
+    expect(passaSottofiltroChiusi(daServire, 'serviti')).toBe(false)
+  })
+
+  it('da servire: quelli con ancora qualcosa da portare', () => {
+    expect(passaSottofiltroChiusi(daServire, 'non-serviti')).toBe(true)
+    expect(passaSottofiltroChiusi(servito, 'non-serviti')).toBe(false)
+  })
+
+  it('LE COMANDE ANNULLATE NON CONTANO', () => {
+    // Se contassero, un conto con dentro un drink annullato non
+    // risulterebbe servito mai più — e resterebbe per sempre nella lista
+    // di quelli «da portare», mandando qualcuno a cercare un drink che
+    // nessuno ha ordinato.
+    const conAnnullata = con([
+      { id: 'c1', status: 'ritirato' },
+      { id: 'c2', status: 'annullato' },
+    ])
+    expect(passaSottofiltroChiusi(conAnnullata, 'serviti')).toBe(true)
+    expect(passaSottofiltroChiusi(conAnnullata, 'non-serviti')).toBe(false)
+  })
+
+  it('un conto ANNULLATO non è né servito né da servire', () => {
+    // Non c'è più niente da portare a nessuno: sta sotto la sua tab.
+    const morto = con([{ id: 'c1', status: 'annullato' }], { status: 'annullato' })
+    expect(passaSottofiltroChiusi(morto, 'serviti')).toBe(false)
+    expect(passaSottofiltroChiusi(morto, 'non-serviti')).toBe(false)
+  })
+
+  it('il sottofiltro vale SOLO dentro i chiusi', () => {
+    // Fuori di lì non vuol dire niente: un conto in corso non è né servito
+    // né da servire, è da fare.
+    const inCorso = { status: 'aperto', comande: [{ id: 'c1', status: 'ricevuto' }] }
+    const incassato = (o) => contoChiuso(o, { workflowOn: false })
+    const lista = [inCorso, daServire, servito]
+    const soloServiti = ordiniInCoda(lista, {
+      filtro: 'attivi',
+      sottoChiusi: 'serviti',
+      isChiuso: incassato,
+    })
+    expect(soloServiti).toEqual([inCorso])
+    expect(
+      ordiniInCoda(lista, { filtro: 'chiusi', sottoChiusi: 'serviti', isChiuso: incassato })
+    ).toEqual([servito])
   })
 })
 

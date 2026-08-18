@@ -162,6 +162,19 @@ Regole:
   order-card` compatta con **un** tasto (`btn small block`, mai sotto i 44px):
   toccando il tasto si avanza, toccando la card si apre il conto. Le colonne
   ci sono tutte anche vuote: la loro posizione si impara a memoria.
+- **Uno stato spento ha comunque la sua striscia.** Servito, chiuso,
+  annullato, in invio: la striscia a sinistra usa `--strip-spenta` (che
+  segue `--muted`, quindi il tema), non un bianco o un nero trasparente.
+  Un rgba bianco nasce per il fondo scuro e sul tema chiaro sparisce — e
+  una striscia invisibile è una card senza stato, proprio quando se ne
+  stanno scorrendo trenta uguali. Più sobria degli stati vivi (quelli sono
+  il lavoro di adesso e restano i più forti), ma **presente**.
+- **Quando il contenuto va su due colonne lo decide il contenitore**, non
+  la finestra: `container-type: inline-size` sul blocco e soglia in
+  `@container`. Con sei corsie accese la finestra è larga e la card è una
+  striscia: una media query sulla finestra spezzava i nomi e mandava i
+  prezzi fuori dal riquadro. Il conteggio delle righe può dire se
+  *conviene*, mai se *ci sta*.
 - **Le card di una griglia hanno tutte lo stesso vestito** — magazzino,
   menù e griglia del conto. Due segni, sempre gli stessi due: la **striscia
   a sinistra** (4px) dice come sta la cosa; il **colore** (lo stato delle

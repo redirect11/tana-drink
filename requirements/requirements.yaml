@@ -988,10 +988,23 @@ requirements:
       aprire il banco. Un tasto che risponde «non puoi» è peggio di un tasto
       che non c'è. Andarle a cercare nel flusso di cassa vuol dire uscire dalla
       coda proprio mentre la si sta guardando.
-      «Chiudi cassa» è spento finché ci sono conti aperti, e lo dice: un
-      conto aperto è un incasso che manca, e chiudere così vorrebbe dire far
-      quadrare una serata con dentro un buco. Acceso, porta al flusso di
-      cassa, dove si conta il contante.
+      «Chiudi cassa» è spento per DUE motivi, e lo dice in una riga sola.
+      Il primo è di sempre: finché ci sono conti aperti — un conto aperto è
+      un incasso che manca, e chiudere così vorrebbe dire far quadrare una
+      serata con dentro un buco. Il secondo è arrivato con gli stati del
+      servizio: finché ci sono COMANDE ancora da servire. Un conto può
+      essere già incassato e avere drink al banco — si paga in anticipo
+      tutte le sere — quindi «zero conti aperti» non vuol più dire «niente
+      in ballo», e chiudere lì vorrebbe dire mandare a casa la serata con
+      dei drink pagati e mai usciti. Il conteggio dei ticket lo fa
+      comandeDaServire (coda.js): non serviti, non annullati, dei conti che
+      esistono ancora — e vale solo con gli stati del servizio accesi,
+      perché senza le comande risultano servite alla riscossione.
+      Il motivo è corto e sta sotto il tasto: «Prima chiudi 2 conti»,
+      «Prima servi 3 comande», o tutti e due in una riga — «Prima chiudi 2
+      conti e servi 3 comande». Due frasi incolonnate non si leggono in
+      un'occhiata, e quello che serve capire è «non si chiude, e perché».
+      Acceso, porta al flusso di cassa, dove si conta il contante.
       «Apri cassa» — dal menu o dal banner della cassa chiusa — apre un box
       che chiede il fondo, facoltativo perché non tutti lo mettono, con
       «Apri» e «Annulla». Annulla lascia la cassa chiusa: premere per sbaglio
@@ -1003,6 +1016,7 @@ requirements:
     test_cases:
       - tests/component/ApriCassaBox.test.jsx
       - tests/unit/coda.test.js
+      - tests/component/CodaCorsie.test.jsx
 
   - id: REQ-CASSA-003
     title: "La carta non finisce mai nei contanti"
@@ -2809,8 +2823,28 @@ requirements:
       conto. LA CODA DI CHI GUARDA LA SERATA NON CAMBIA: con
       `queue_view === 'corsie'` l'admin (e la sala) vede le corsie dei
       CONTI — in corso, chiusi, annullati — esattamente come prima, e con
-      la pastiglia «Comande» può andare a guardare il lavoro come il
-      bartender: è un passaggio a mano di quel terminale (vistaCorsie), non
+      UN CONTO CHIUSO È UN CONTO INCASSATO, in tutta la coda dei conti —
+      griglia, lista, schede, conteggi e corsie. Con gli stati del servizio
+      ne servivano due, pagato E servito, e un conto appena riscosso restava
+      fra quelli «in corso»: chi aveva appena preso i soldi lo cercava fra i
+      chiusi e non lo trovava (BUG-018). Per lo stesso motivo è sparito il
+      tasto «Nascondi pagati», che serviva a togliersi dagli occhi i conti
+      incassati e non ancora serviti quando stavano in mezzo a quelli in
+      corso. La regola stretta (pagato E servito) resta viva dove serve: il
+      magazzino, che deve sapere che un conto pagato e non servito ha ancora
+      ingredienti in ballo.
+      Dentro i chiusi c'è un SOTTOFILTRO — tutti · serviti · da servire —
+      perché si paga in anticipo tutte le sere e «quali dei chiusi hanno
+      ancora roba da portare» è una domanda vera. Guarda le COMANDE
+      (allServed), non lo stato del conto, e le comande annullate non
+      contano: se contassero, un conto con dentro un drink annullato non
+      risulterebbe servito mai più. Un conto annullato non è né servito né
+      da servire: sta sotto la sua tab. Il sottofiltro compare solo dentro
+      i chiusi e solo con gli stati del servizio accesi — senza, tutto
+      quello che è stato pagato è uscito per definizione.
+
+      Chi guarda la serata, con la pastiglia «Comande», può andare a
+      guardare il lavoro come il bartender: è un passaggio a mano di quel terminale (vistaCorsie), non
       il suo default. La pastiglia c'è con QUALUNQUE vista della coda —
       griglia, lista, schede, corsie — perché la vista del banco è una vista
       a sé, non una variante delle corsie: chi tiene la cassa lavora in

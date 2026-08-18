@@ -2797,7 +2797,7 @@ body.drawer-open .status-bell-float { display: none; }
    poi sparisce e compare l'ordine reale colorato. */
 .grid-card-pending {
   opacity: 0.5;
-  border-left-color: rgba(255, 255, 255, 0.3);
+  border-left-color: var(--strip-spenta);
   animation: pending-pulse 1.2s ease-in-out infinite;
 }
 
@@ -2833,8 +2833,10 @@ body.drawer-open .status-bell-float { display: none; }
 }
 
 .order-card.ritirato {
-  border-left-color: rgba(255, 255, 255, 0.25);
-  opacity: 0.75;
+  border-left-color: var(--strip-spenta);
+  /* Lo sbiadito si mangiava anche la striscia: il contenuto resta più
+     quieto degli altri, ma il bordo si deve vedere lo stesso. */
+  opacity: 0.85;
 }
 
 .order-card.pagato {
@@ -2863,7 +2865,7 @@ body.drawer-open .status-bell-float { display: none; }
   border-left-color: #2ecc71;
 }
 .order-card.pay-annullato {
-  border-left-color: #8a8a8a;
+  border-left-color: var(--strip-spenta);
 }
 
 /* IL CONTO ACCESO DALLA RICERCA (impostazione "accendi e porta lì"). La
@@ -4354,6 +4356,16 @@ body.fullbleed,
   /* Superfici/linee POS: seguono il tema (variante chiara sotto). */
   --line: rgba(255, 255, 255, 0.1);
   --tile-bg: rgba(255, 255, 255, 0.05);
+  /* LA STRISCIA DI UNO STATO SPENTO — servito, chiuso, annullato, in
+     invio. Era un bianco trasparente: nato per il fondo scuro, sul tema
+     chiaro diventava bianco su bianco e la striscia spariva. Una striscia
+     invisibile è una card senza stato, e la striscia è come si riconosce
+     lo stato scorrendo trenta card uguali.
+     Un neutro dei token, quindi, che si vede su tutti e due i fondi: più
+     sobrio degli stati vivi — quelli sono il lavoro di adesso e devono
+     restare i più forti — ma PRESENTE. Definito qui una volta sola: segue
+     il tema perché segue --muted. */
+  --strip-spenta: var(--muted);
 }
 :root[data-luma='light'] {
   --line: rgba(0, 0, 0, 0.14);
@@ -6816,6 +6828,9 @@ body.pagina-piena .inv-scheda {
 }
 .corsia-riga-nome {
   min-width: 0;
+  /* Un nome lungo («Tana Detox Spritz al sambuco») allargava la colonna
+     invece di andare a capo, e spingeva il prezzo fuori dalla card. */
+  overflow-wrap: anywhere;
 }
 .corsia-riga-prezzo {
   color: var(--muted);
@@ -7006,11 +7021,22 @@ body.pagina-piena .inv-scheda {
    elenco che finisce con una riga a metà si legge come «continua», ed è
    quello che vogliamo dire. Il tasto per aprirle sta SOPRA la sfumatura,
    piccolo: è un dettaglio, non un'azione della serata. */
-/* DIECI RIGHE O PIÙ: DUE COLONNE, dove lo schermo le regge. Un conto lungo
-   faceva una card alta il doppio delle altre e svuotava la colonna sotto;
-   affiancate, le stesse righe stanno in metà altezza. Sotto i 1200px no:
-   in una corsia stretta due colonnine si spezzerebbero a metà parola. */
-@media (min-width: 1200px) {
+/* DUE COLONNE DI RIGHE: LO DECIDE LA CARD, NON LA FINESTRA. Un conto lungo
+   fa una card alta il doppio delle altre e svuota la colonna sotto;
+   affiancate, le stesse righe stanno in metà altezza. Ma quando accendere
+   la seconda colonna lo sapeva la MEDIA QUERY, cioè la larghezza della
+   FINESTRA: con sei corsie accese la finestra è larga e la card è una
+   striscia, e lì dentro due colonnine spezzavano i nomi a metà e
+   mandavano i prezzi fuori dal riquadro. Lo stesso succedeva col browser
+   allo zoom.
+   Adesso la card è un CONTENITORE e la soglia si misura su di lei: si
+   adatta da sola al numero di corsie accese, alla larghezza dello schermo
+   e allo zoom, senza che nessuno tenga il conto di quante colonne sono
+   aperte.
+   La larghezza dice SE si può, il numero di righe (>= 10, vedi
+   RigheCorsia.jsx) dice SE conviene: due righe spezzate in due colonne
+   sono peggio di due righe in fila. */
+@container (min-width: 360px) {
   .corsia-righe-due {
     columns: 2;
     column-gap: 14px;
@@ -7021,9 +7047,13 @@ body.pagina-piena .inv-scheda {
 }
 
 /* Il blocco che tiene insieme righe e tasto: la sfumatura sta sulle RIGHE,
-   il tasto le sta sopra e resta leggibile. */
+   il tasto le sta sopra e resta leggibile. Ed è il CONTENITORE su cui si
+   misura la soglia delle due colonne (vedi sopra): la card sa quanto
+   spazio ha, la finestra no. */
 .corsia-righe-box {
   position: relative;
+  min-width: 0;
+  container-type: inline-size;
 }
 .corsia-righe-sfuma {
   padding-bottom: 12px;
