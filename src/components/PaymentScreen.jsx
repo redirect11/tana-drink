@@ -176,6 +176,12 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   // aprendo il pagamento con quindici righe si vedevano le prime — quelle di
   // mezz'ora prima — e per controllare l'ultimo giro bisognava scorrere.
   const listaRef = useRef(null)
+  // Di chi è questo conto: il tavolo se c'è, se no il nome. È la stessa
+  // riga che la coda mette sulle card (destinazioneConto), e qui serve in
+  // testata perché è così che si chiama un conto quando lo si incassa.
+  const dove = [order.table_label ? `Tavolo ${order.table_label}` : '', order.customer_name]
+    .filter(Boolean)
+    .join(' · ')
   useEffect(() => {
     const el = listaRef.current
     if (el) el.scrollTop = el.scrollHeight
@@ -487,7 +493,14 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
           flexShrink: 0,
         }}
       >
-        <h3 style={{ margin: 0 }}>💳 Pagamento · #{order.daily_number ?? '—'}</h3>
+        {/* CHI PAGA STA IN TESTATA, accanto al numero: quando si incassa
+            si chiama il tavolo per nome («Lele», «tavolo 4»), e quel nome
+            era in mezzo alle righe dei drink, dove sembrava una voce del
+            conto. Qui sta dove si guarda per sapere di chi è il conto. */}
+        <h3 style={{ margin: 0 }}>
+          💳 Pagamento · #{order.daily_number ?? '—'}
+          {dove && <span className="muted"> · {dove}</span>}
+        </h3>
         <button className="btn ghost small" onClick={onClose}>✕ Chiudi</button>
       </div>
 
@@ -497,9 +510,6 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
         {/* ── SINISTRA: articoli del conto (split) + riepilogo ── */}
         <div className="payscreen-items">
           <div ref={listaRef} style={{ flex: 1, overflowY: 'auto', paddingRight: 4 }}>
-            {order.customer_name && (
-              <p style={{ margin: '10px 0 2px', fontWeight: 600 }}>{order.customer_name}</p>
-            )}
             {/* Niente istruzioni sopra le righe: chi incassa le tocca e vede
                 il totale muoversi. A dire da dove viene il numero ci pensa
                 l'etichetta sopra l'importo — «RIGHE SCELTE» o «IMPORTO A
