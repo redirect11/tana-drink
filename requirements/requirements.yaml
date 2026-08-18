@@ -18,7 +18,13 @@
 #   area:           File o modulo che lo implementa
 #   description:    Cosa deve fare, e possibilmente perché
 #   status:         implemented | partial | todo | deprecated
-#   generate_issue: true per creare l'issue GitHub (i todo)
+#   generate_issue: true se questa voce e' SEGUITA su GitHub. Non vuol dire
+#                   «creane una adesso»: l'issue NUOVA nasce solo finche' la
+#                   voce e' da fare. Quando viene finita il flag RESTA true,
+#                   altrimenti la voce esce dal giro e nessuno puo' piu'
+#                   metterla «in prova» su develop ne' chiuderle l'issue da
+#                   main. Si mette false solo per quello che su GitHub non
+#                   deve comparire affatto.
 #   labels:         Label GitHub
 #   severity:       Quanto fa male QUANDO SUCCEDE, e non dipende da noi:
 #                   bloccante (il servizio si ferma) | grave (i numeri

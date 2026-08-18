@@ -223,3 +223,18 @@ export function prossimoStato(attuale, { chiuso = false } = {}) {
   if (PIU_AVANTI.includes(attuale)) return null
   return STATO_IN_TEST
 }
+
+// `generate_issue` vuol dire «questa voce e' SEGUITA su GitHub», non «creane
+// una adesso». Le due cose erano la stessa, e si mordevano la coda: appena un
+// requisito veniva finito gli si metteva false, e da quel momento usciva dal
+// giro — nessuno poteva piu' metterlo «in prova» ne' chiudergli l'issue.
+// Adesso: finche' e' da fare l'issue nasce; quando e' finito la voce resta
+// seguita, ma un'issue NUOVA non si apre piu' — aprirla vorrebbe dire
+// chiedere a qualcuno un lavoro gia' fatto.
+export function deveNascere(req, esisteGia) {
+  if (esisteGia) return false
+  if (!req?.generate_issue) return false
+  return !STATI_CHIUSI.has(String(req?.status || '').toLowerCase())
+}
+
+export const STATI_CHIUSI = new Set(['fixed', 'implemented', 'done'])
