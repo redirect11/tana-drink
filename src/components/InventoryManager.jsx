@@ -438,6 +438,7 @@ function ProductsPanel() {
   const travaso = useMemo(() => statoTravaso(items), [items])
   const [passoTravaso, setPassoTravaso] = useState(null) // 'prova' | 'corso' | 'fatto'
   const [avanzamento, setAvanzamento] = useState({ fatti: 0, totale: 0 })
+  const [esitoTravaso, setEsitoTravaso] = useState(null)
   // Finché il magazzino non è aggiornato si può toccare SOLO quello che va
   // sistemato per farlo partire: è l'unica strada per sbloccarlo. Tutto il
   // resto è in sola lettura — battere una comanda e scaricare le scorte
@@ -449,19 +450,38 @@ function ProductsPanel() {
   )
   const modificabile = (it) => !bloccato || daSistemare.has(it.id)
 
+  // LA PROVA A VUOTO RILEGGE, SEMPRE. È quella che si guarda per decidere:
+  // non può parlare di prodotti visti dieci minuti fa, e il magazzino qui si
+  // legge una volta sola (non è la coda, non serve stare in ascolto). Il
+  // caso vero: un altro terminale cambia i prodotti, e questa schermata
+  // continuerebbe a contare i vecchi.
+  async function apriProva() {
+    setPassoTravaso('rileggo')
+    await load()
+    setPassoTravaso('prova')
+  }
+
   async function avviaTravaso() {
     setPassoTravaso('corso')
     try {
-      const { travasati } = await travasaMagazzinoAPezzi({
+      const esito = await travasaMagazzinoAPezzi({
         onAvanzamento: (fatti, totale) => setAvanzamento({ fatti, totale }),
       })
-      setAvanzamento({ fatti: travasati, totale: travasati })
+      setEsitoTravaso(esito)
       setPassoTravaso('fatto')
-      await load()
     } catch (e) {
-      setError(`Il magazzino non si è aggiornato: ${e.message}`)
-      setPassoTravaso(null)
+      // A CHI STA AL BANCO NON SI FA LEGGERE LA LINGUA DEL DATABASE. Il
+      // motivo tecnico va nella console; a schermo si dice cosa è successo e
+      // che si può riprovare — perché è vero: quello che è passato resta
+      // scritto e il giro riprende da dove stava.
+      console.error('[travaso] aggiornamento interrotto', e)
+      setEsitoTravaso(null)
+      setPassoTravaso('interrotto')
     }
+    // In ogni caso si rilegge: il cartello e i conteggi devono dire come
+    // stanno le cose ADESSO, e sparire da soli quando non c'è più niente da
+    // fare, senza che nessuno ricarichi la pagina a mano.
+    await load()
   }
 
   const summary = useMemo(() => inventorySummary(items), [items])
@@ -775,7 +795,8 @@ function ProductsPanel() {
         travaso={travaso}
         passo={passoTravaso}
         avanzamento={avanzamento}
-        onProva={() => setPassoTravaso('prova')}
+        esito={esitoTravaso}
+        onProva={apriProva}
         onChiudi={() => setPassoTravaso(null)}
         onConferma={avviaTravaso}
       />
@@ -1283,8 +1304,8 @@ function SupplierManager({ suppliers, onChange }) {
 //
 // Se non c'è niente da fare qui non compare NIENTE: la schermata è quella
 // normale, senza traccia di tutta questa faccenda.
-function PannelloTravaso({ travaso, passo, avanzamento, onProva, onChiudi, onConferma }) {
-  if (travaso.fatto && passo !== 'fatto') return null
+function PannelloTravaso({ travaso, passo, avanzamento, esito, onProva, onChiudi, onConferma }) {
+  if (travaso.fatto && passo !== 'fatto' && passo !== 'interrotto') return null
   const { daMigrare, daSistemare } = travaso
   const pronti = daSistemare.length === 0
 
@@ -1383,10 +1404,22 @@ function PannelloTravaso({ travaso, passo, avanzamento, onProva, onChiudi, onCon
         </div>
       )}
 
-      {(passo === 'corso' || passo === 'fatto') && (
+      {passo === 'rileggo' && (
+        <div className="overlay confirm-overlay">
+          <div className="confirm-box" role="dialog" aria-label="Sto guardando il magazzino">
+            <h3 style={{ marginTop: 0 }}>Sto guardando…</h3>
+            <p className="small" style={{ margin: 0 }}>
+              Un momento: rileggo i prodotti, così l&apos;elenco dice come
+              stanno le cose adesso.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {(passo === 'corso' || passo === 'fatto' || passo === 'interrotto') && (
         <div className="overlay confirm-overlay">
           <div className="confirm-box" role="dialog" aria-label="Aggiornamento del magazzino">
-            {passo === 'corso' ? (
+            {passo === 'corso' && (
               <>
                 <h3 style={{ marginTop: 0 }}>Sto aggiornando…</h3>
                 {/* A LOTTI, e si vede: una schermata ferma al banco vuol dire
@@ -1397,12 +1430,48 @@ function PannelloTravaso({ travaso, passo, avanzamento, onProva, onChiudi, onCon
                   da qui se si interrompe: riprende da dov&apos;era.
                 </p>
               </>
-            ) : (
+            )}
+            {passo === 'fatto' && (
               <>
                 <h3 style={{ marginTop: 0 }}>✅ Magazzino aggiornato</h3>
                 <p className="small" style={{ margin: 0 }}>
-                  {avanzamento.totale} prodotti si contano a pezzi. Carico,
-                  conta e prodotti nuovi sono di nuovo a posto.
+                  {esito?.travasati ?? avanzamento.totale} prodotti si contano a
+                  pezzi. Carico, conta e prodotti nuovi sono di nuovo a posto.
+                </p>
+                {/* CHI NON C'È PIÙ NON È UN ERRORE, ma va detto: un prodotto
+                    cancellato da un altro terminale mentre l'aggiornamento
+                    girava semplicemente non c'è, e si va avanti. */}
+                {esito?.saltati > 0 && (
+                  <p className="small" style={{ margin: '8px 0 0' }}>
+                    {esito.saltati === 1
+                      ? 'Un prodotto non c’è più: è stato saltato.'
+                      : `${esito.saltati} prodotti non ci sono più: sono stati saltati.`}{' '}
+                    Gli altri sono a posto.
+                  </p>
+                )}
+                {esito?.bloccati > 0 && (
+                  <p className="small" style={{ margin: '8px 0 0' }}>
+                    {esito.bloccati === 1
+                      ? 'Un prodotto non si è aggiornato'
+                      : `${esito.bloccati} prodotti non si sono aggiornati`}
+                    : riprova fra un momento, non fa danni — quelli già
+                    aggiornati restano come sono.
+                  </p>
+                )}
+                <button type="button" className="btn block" style={{ marginTop: 16 }} onClick={onChiudi}>
+                  Chiudi
+                </button>
+              </>
+            )}
+            {passo === 'interrotto' && (
+              <>
+                <h3 style={{ marginTop: 0 }}>L&apos;aggiornamento si è fermato</h3>
+                <p className="small" style={{ margin: 0 }}>
+                  {avanzamento.fatti > 0
+                    ? `${avanzamento.fatti} prodotti sono stati aggiornati e restano così.`
+                    : 'Non è stato aggiornato niente.'}{' '}
+                  Il resto è rimasto com&apos;era: puoi riprovare quando vuoi,
+                  non fa danni — riprende da dove si era fermato.
                 </p>
                 <button type="button" className="btn block" style={{ marginTop: 16 }} onClick={onChiudi}>
                   Chiudi

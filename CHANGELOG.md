@@ -84,6 +84,13 @@
   aggiungere prodotti: si possono aprire solo quelli da sistemare, che è
   l'unico modo di sbloccare. E se i dati arrivano già a posto, di tutta
   questa faccenda non si vede niente.
+  L'elenco dice sempre come stanno le cose adesso, non dieci minuti fa: lo
+  rilegge ogni volta che lo apri, e a fine aggiornamento il cartello sparisce
+  da solo. Se qualcuno cancella un prodotto da un altro terminale mentre
+  l'aggiornamento gira, quel prodotto si salta e te lo dice («2 prodotti non
+  ci sono più: sono stati saltati»); se ne nasce uno nuovo, se lo prende. E
+  se proprio si ferma, dice quanti ne ha aggiornati e che si può riprovare
+  senza fare danni — invece del messaggio del database.
 - **Il fornitore che manca si aggiunge dalla scheda del prodotto.** In fondo
   alla tendina Fornitore c'è «➕ Nuovo fornitore…»: basta il nome, e resta
   già selezionato sul prodotto che si stava compilando. Prima bisognava

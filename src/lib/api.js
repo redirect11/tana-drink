@@ -556,24 +556,60 @@ export const ATTESA_TRAVASO =
   'Prima va aggiornato il magazzino alla nuova gestione (Magazzino → il banner in alto).'
 
 export async function travasaMagazzinoAPezzi({ onAvanzamento, lotto = 25 } = {}) {
-  const snap = await getDocs(inventoryCol)
-  const daFare = []
-  for (const d of snap.docs) {
-    const patch = patchNormalizza({ id: d.id, ...d.data() })
-    if (patch) daFare.push({ id: d.id, patch })
-  }
-  const totale = daFare.length
-  onAvanzamento?.(0, totale)
-  let fatti = 0
-  for (let i = 0; i < daFare.length; i += lotto) {
-    const gruppo = daFare.slice(i, i + lotto)
-    await Promise.all(
+  // UN GIRO PER LOTTO, E OGNI GIRO RILEGGE. Fidarsi della lista di partenza
+  // vuol dire scrivere su prodotti che nel frattempo qualcuno ha cancellato
+  // da un altro terminale — succede, ed è successo — e non accorgersi di
+  // quelli nati mentre l'aggiornamento girava, che resterebbero indietro
+  // senza che nessuno lo sappia. Rileggere costa una lettura per lotto e
+  // toglie tutti e due i guai.
+  let scritti = 0
+  let saltati = 0
+  // Chi è sparito e chi non si è lasciato scrivere: senza tenerli da parte
+  // tornerebbero nella lista a ogni giro, e il giro non finirebbe mai.
+  const spariti = new Set()
+  const bloccati = new Set()
+  for (;;) {
+    const snap = await getDocs(inventoryCol)
+    const daFare = []
+    for (const d of snap.docs) {
+      if (spariti.has(d.id) || bloccati.has(d.id)) continue
+      const patch = patchNormalizza({ id: d.id, ...d.data() })
+      if (patch) daFare.push({ id: d.id, patch })
+    }
+    onAvanzamento?.(scritti, scritti + daFare.length)
+    if (daFare.length === 0) break
+    const gruppo = daFare.slice(0, lotto)
+    // allSettled e non all: uno che va storto non si porta dietro gli altri
+    // ventiquattro del lotto, che sono a posto.
+    const esiti = await Promise.allSettled(
       gruppo.map(({ id, patch }) => updateDoc(doc(db, 'inventory_items', id), patch))
     )
-    fatti += gruppo.length
-    onAvanzamento?.(fatti, totale)
+    esiti.forEach((esito, i) => {
+      const { id } = gruppo[i]
+      if (esito.status === 'fulfilled') {
+        scritti += 1
+        return
+      }
+      if (nonEsistePiu(esito.reason)) {
+        spariti.add(id)
+        saltati += 1
+        return
+      }
+      // Il motivo tecnico serve a noi, non a chi sta al banco: finisce nella
+      // console, e a schermo va una frase in italiano (vedi InventoryManager).
+      console.error('[travaso] prodotto non aggiornato', id, esito.reason)
+      bloccati.add(id)
+    })
   }
-  return { travasati: fatti }
+  return { travasati: scritti, saltati, bloccati: bloccati.size }
+}
+
+// Il documento non c'è più: qualcuno l'ha cancellato mentre giravamo, o la
+// lista da cui eravamo partiti era di dieci minuti fa. Non è un errore da
+// fermare tutto — quel prodotto semplicemente non c'è.
+function nonEsistePiu(errore) {
+  if (errore?.code === 'not-found') return true
+  return /not[_\s-]?found|no entity to update/i.test(String(errore?.message || ''))
 }
 
 // Carico merce: incrementa lo stock e registra un movimento (atomico).
