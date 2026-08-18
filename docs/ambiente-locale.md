@@ -186,6 +186,20 @@ stanno nei dati veri.
 node scripts/copia-magazzino-da-test.js --pulisci   # articoli, categorie, fornitori
 ```
 
+**Dalla produzione, e solo magazzino e menù.** Quando serve provare sui dati
+veri veri, si scarica un backup PARZIALE — mai tutto: gli ordini, i clienti,
+le ore e le paghe non servono a provare il magazzino, e portarli in giro
+sposta dati di persone.
+
+```sh
+node scripts/backup-db.js --project tana-drink   --solo inventory_items,inventory_categories,suppliers,drinks,categories   --out backup/produzione-magazzino-menu.json
+node scripts/carica-su-emulatore.js --file backup/produzione-magazzino-menu.json --pulisci
+```
+
+Il file finisce in `backup/`, che git ignora: dentro ci sono i dati del
+locale e non vanno su GitHub. `carica-su-emulatore.js` scrive **solo**
+sull'emulatore — la destinazione è cablata.
+
 Legge `tana-drink-test` in **sola lettura** e scrive **solo** sull'emulatore
 (la destinazione è cablata: la produzione non compare in quel file). Con
 `--movimenti` porta anche lo storico dei carichi, che è grosso e serve di
