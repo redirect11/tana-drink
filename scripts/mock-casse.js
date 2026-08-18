@@ -26,12 +26,11 @@
 //  si ferma. Le casse in produzione sono soldi veri.
 // =====================================================================
 import admin from 'firebase-admin'
+import { puntaAllEmulatore } from './lib-emulatore.js'
 
-process.env.FIRESTORE_EMULATOR_HOST =
-  process.env.FIRESTORE_EMULATOR_HOST ||
-  `${process.env.VITE_FIRESTORE_EMULATOR_HOST || 'localhost'}:${
-    process.env.VITE_FIRESTORE_EMULATOR_PORT || '8080'
-  }`
+// Dove sta l'emulatore lo cerca lib-emulatore: la porta scritta a mano
+// mandava lo script a bussare a una porta vuota.
+await puntaAllEmulatore('casse')
 
 const progetto = process.env.VITE_FIREBASE_PROJECT_ID || 'demo-tana-drink'
 if (!progetto.startsWith('demo-')) {
