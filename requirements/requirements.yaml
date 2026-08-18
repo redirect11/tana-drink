@@ -20,6 +20,17 @@
 #   status:         implemented | partial | todo | deprecated
 #   generate_issue: true per creare l'issue GitHub (i todo)
 #   labels:         Label GitHub
+#   severity:       Quanto fa male QUANDO SUCCEDE, e non dipende da noi:
+#                   bloccante (il servizio si ferma) | grave (i numeri
+#                   sbagliano, o lo vede il cliente) | media (si aggira) |
+#                   lieve (estetica e comodita'). Sulle funzioni si lascia
+#                   vuota: una cosa che non c'e' non fa male.
+#   priority:       QUANDO lo sistemiamo, ed e' una decisione nostra:
+#                   P0 (adesso; in produzione e' un hotfix) | P1 (questa
+#                   versione) | P2 (la prossima) | P3 (quando capita).
+#                   Da severity e priority scendono da se' le etichette
+#                   dell'issue (P1, severity-grave): non si riscrivono in
+#                   `labels`, che si terrebbero allineate in due posti.
 #   test_cases:     Test che lo coprono (file o id)
 #
 # Per generare le issue da questo file:
