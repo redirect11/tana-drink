@@ -75,6 +75,8 @@ bugs:
     status: todo
     generate_issue: true
     labels: [bug, produzione, sicurezza]
+    severity: bloccante
+    priority: P1
     test_cases: []
 
   - id: BUG-002
@@ -111,6 +113,8 @@ bugs:
     status: todo
     generate_issue: true
     labels: [bug, notifiche, staff]
+    severity: lieve
+    priority: P2
     test_cases: []
 
   - id: BUG-004
@@ -150,6 +154,8 @@ bugs:
     status: todo
     generate_issue: true
     labels: [bug, comande, ui]
+    severity: grave
+    priority: P1
     test_cases: []
 
   - id: BUG-006
@@ -415,6 +421,8 @@ bugs:
     status: todo
     generate_issue: true
     labels: [bug, magazzino]
+    severity: lieve
+    priority: P3
     test_cases: [tests/unit/inventory.test.js]
 
   - id: BUG-015

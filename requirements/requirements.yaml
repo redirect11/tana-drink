@@ -780,6 +780,7 @@ requirements:
     status: todo
     generate_issue: true
     labels: [pos, ux]
+    priority: P2
     test_cases: []
 
   # ══════════════════════════════════════════════════════════════════════
@@ -905,6 +906,7 @@ requirements:
     status: todo
     generate_issue: true
     labels: [pagamenti, ui]
+    priority: P1
     test_cases: []
 
   # ══════════════════════════════════════════════════════════════════════
@@ -1179,6 +1181,8 @@ requirements:
     status: todo
     generate_issue: true
     labels: [magazzino, menu, dati]
+    severity: grave
+    priority: P2
     test_cases: []
 
   - id: REQ-UI-015
@@ -1467,6 +1471,7 @@ requirements:
     status: todo
     generate_issue: true
     labels: [menu, magazzino, ux]
+    priority: P2
     test_cases: []
 
   - id: REQ-MAG-016
@@ -1566,6 +1571,7 @@ requirements:
     status: todo
     generate_issue: true
     labels: [magazzino, ux]
+    priority: P1
     test_cases: [tests/unit/inventory.test.js, tests/component/InventoryManagerCard.test.jsx]
 
   - id: REQ-MAG-015
@@ -1600,6 +1606,7 @@ requirements:
     status: todo
     generate_issue: true
     labels: [magazzino, menu, statistiche]
+    priority: P2
     test_cases: [tests/component/MacroCategoryManager.test.jsx]
 
   - id: REQ-MENU-011
@@ -1924,6 +1931,7 @@ requirements:
     status: todo
     generate_issue: true
     labels: [tavoli, clienti, qr]
+    priority: P2
     test_cases: []
 
   - id: REQ-TAVOLI-002
@@ -1939,6 +1947,7 @@ requirements:
     status: todo
     generate_issue: true
     labels: [tavoli, clienti, pos]
+    priority: P2
     test_cases: []
 
   # ══════════════════════════════════════════════════════════════════════
@@ -2044,6 +2053,8 @@ requirements:
     status: todo
     generate_issue: true
     labels: [stampa, infrastruttura]
+    severity: media
+    priority: P2
     test_cases: []
 
   - id: REQ-STAMPA-005
@@ -2540,6 +2551,7 @@ requirements:
     status: todo
     generate_issue: true
     labels: [sicurezza, infrastruttura]
+    priority: P3
     test_cases: []
 
   # ══════════════════════════════════════════════════════════════════════
@@ -2927,6 +2939,7 @@ requirements:
     status: todo
     generate_issue: true
     labels: [ai, fatture, magazzino]
+    priority: P3
     test_cases: []
 
   - id: REQ-MAG-009
@@ -3040,6 +3053,7 @@ requirements:
     status: todo
     generate_issue: true
     labels: [pos, pagamenti]
+    priority: P1
     test_cases: []
 
   - id: REQ-POS-018
@@ -3056,6 +3070,7 @@ requirements:
     status: todo
     generate_issue: true
     labels: [pos, ux]
+    priority: P3
     test_cases: []
 
   # ══════════════════════════════════════════════════════════════════════
@@ -3153,6 +3168,7 @@ requirements:
     status: todo
     generate_issue: true
     labels: [metodo, qualita]
+    priority: P3
     test_cases: []
 
   # ══════════════════════════════════════════════════════════════════════
