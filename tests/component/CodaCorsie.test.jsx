@@ -293,6 +293,29 @@ describe('le corsie di chi guarda la serata (admin)', () => {
     expect(dentro.getByText(/Prima chiudi \d+ cont/)).toBeInTheDocument()
   })
 
+  // LA CASSA NON SI CHIUDE CON DRINK ANCORA DA FARE. Un conto può essere
+  // già incassato e avere comande al banco: chiudere lì vorrebbe dire
+  // mandare a casa la serata con dei drink pagati e mai usciti.
+  it('con comande ancora da servire il tasto è spento, e lo dice', async () => {
+    ordini = [
+      {
+        ...CODA[0],
+        id: 'o70',
+        daily_number: 70,
+        payment_status: 'pagato',
+        workflow_status: 'in_preparazione',
+        comande: [{ id: 'c1', seq: 1, status: 'in_preparazione', created_at: ORA, items: [] }],
+      },
+    ]
+    montaCoda()
+    await screen.findByText('In corso')
+    const tasto = screen.getByRole('button', { name: /Chiudi cassa/ })
+    expect(tasto).toBeDisabled()
+    // il conto è incassato — nessun conto aperto — ma il drink no
+    const dentro = within(tasto.closest('.board-cassa-box'))
+    expect(dentro.getByText('Prima servi 1 comanda')).toBeInTheDocument()
+  })
+
   // UN CONTO RISCOSSO È UN CONTO CHIUSO. Con gli stati del servizio accesi
   // la coda considera chiuso solo quello pagato E servito — così un drink
   // pagato in anticipo non sparisce dal banco — ma queste corsie parlano
@@ -313,6 +336,60 @@ describe('le corsie di chi guarda la serata (admin)', () => {
     await screen.findByText('In corso')
     expect(within(corsia('chiusi')).getByText('#48')).toBeInTheDocument()
     expect(within(corsia('attivi')).queryByText('#48')).not.toBeInTheDocument()
+  })
+
+  // DENTRO I CHIUSI: SERVITI E DA SERVIRE. Un conto chiuso è un conto
+  // incassato, e basta — si paga in anticipo tutte le sere. Prima quei
+  // conti restavano in mezzo a quelli in corso, con un tasto «nascondi
+  // pagati» per toglierseli dagli occhi; adesso stanno fra i chiusi, e
+  // «quali hanno ancora roba da portare» si chiede lì dentro.
+  it('nei chiusi si separano i serviti da quelli ancora da portare', async () => {
+    const utente = userEvent.setup()
+    ordini = [
+      // incassato e tutto uscito
+      {
+        ...CODA[0],
+        id: 'o60',
+        daily_number: 60,
+        payment_status: 'pagato',
+        workflow_status: 'ritirato',
+        comande: [{ id: 'c1', seq: 1, status: 'ritirato', created_at: ORA, items: [] }],
+      },
+      // incassato, ma un giro è ancora al banco
+      {
+        ...CODA[0],
+        id: 'o61',
+        daily_number: 61,
+        payment_status: 'pagato',
+        workflow_status: 'in_preparazione',
+        comande: [
+          { id: 'c1', seq: 1, status: 'ritirato', created_at: ORA, items: [] },
+          { id: 'c2', seq: 2, status: 'in_preparazione', created_at: ORA, items: [] },
+        ],
+      },
+    ]
+    montaCoda()
+    await screen.findByText('In corso')
+    // tutti e due sono CHIUSI: i soldi sono presi
+    expect(within(corsia('chiusi')).getByText('#60')).toBeInTheDocument()
+    expect(within(corsia('chiusi')).getByText('#61')).toBeInTheDocument()
+
+    await utente.click(screen.getByRole('button', { name: /Da servire/ }))
+    expect(within(corsia('chiusi')).getByText('#61')).toBeInTheDocument()
+    expect(within(corsia('chiusi')).queryByText('#60')).not.toBeInTheDocument()
+
+    await utente.click(screen.getByRole('button', { name: /Serviti/ }))
+    expect(within(corsia('chiusi')).getByText('#60')).toBeInTheDocument()
+    expect(within(corsia('chiusi')).queryByText('#61')).not.toBeInTheDocument()
+
+    // e vale SOLO dentro i chiusi: gli altri conti non si muovono
+    expect(corsia('attivi')).toBeTruthy()
+  })
+
+  it('«Nascondi pagati» non c’è più: quei conti stanno fra i chiusi', async () => {
+    montaCoda()
+    await screen.findByText('In corso')
+    expect(screen.queryByRole('button', { name: /Nascondi pagati/ })).not.toBeInTheDocument()
   })
 
   // ABBIAMO CAMBIATO IDEA: prima la pastiglia c'era solo se la coda era
