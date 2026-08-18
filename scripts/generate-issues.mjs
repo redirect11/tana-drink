@@ -33,7 +33,7 @@
  */
 
 import { readFileSync } from 'node:fs'
-import { STATI_CHIUSI, parseRequirementsYaml, etichetteClassificazione, riconciliaEtichette, corpoGenerato, IN_TEST, prossimoStato, deveNascere } from './lib-requisiti.mjs'
+import { STATI_CHIUSI, parseRequirementsYaml, etichetteClassificazione, riconciliaEtichette, corpoGenerato, IN_TEST, prossimoStato, deveNascere, STATO_IMPLEMENTATA, STATO_IN_TEST, STATO_FATTO } from './lib-requisiti.mjs'
 import { bachecaAttiva, schedaDellaIssue, spostaScheda } from './bacheca.mjs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -64,6 +64,11 @@ const CHIUDE_RISOLTI = process.env.CHIUDE_RISOLTI === 'true'
 // esisteva: una correzione scritta e non ancora provata era indistinguibile
 // da una ancora da fare.
 const SEGNA_IN_TEST = process.env.SEGNA_IN_TEST === 'true'
+
+// I RAMI DI LAVORO — feature/** e release/** — dicono una cosa sola: e'
+// scritta, ed e' su un ramo. Non e' ancora integrata e nessuno l'ha provata,
+// ma sulla bacheca non era distinguibile da una ancora da fare.
+const SEGNA_IMPLEMENTATA = process.env.SEGNA_IMPLEMENTATA === 'true'
 
 const [OWNER, REPO] = GITHUB_REPO.split('/')
 const GITHUB_API = 'https://api.github.com'
@@ -144,16 +149,16 @@ async function createIssue({ title, body, labels }) {
 // nell'issue; il progetto e' una vista comoda, e si muove di conseguenza.
 // Se manca PROJECT_TOKEN non si rompe niente: si salta, e le schede restano
 // come le muove una persona.
-async function seguiSullaBacheca(numeroIssue, { chiuso }) {
+async function seguiSullaBacheca(numeroIssue, destinazione) {
   if (!bachecaAttiva()) return null
   try {
     const scheda = await schedaDellaIssue(GITHUB_REPO, numeroIssue)
     if (!scheda) return null
-    const destinazione = prossimoStato(scheda.stato, { chiuso })
-    if (!destinazione) return null
-    if (DRY_RUN) return `bacheca: ${scheda.stato || 'senza stato'} -> ${destinazione}`
-    await spostaScheda(scheda.id, destinazione)
-    return `bacheca: ${destinazione}`
+    const dove = prossimoStato(scheda.stato, destinazione)
+    if (!dove) return null
+    if (DRY_RUN) return `bacheca: ${scheda.stato || 'senza stato'} -> ${dove}`
+    await spostaScheda(scheda.id, dove)
+    return `bacheca: ${dove}`
   } catch (e) {
     // Un guaio sulla bacheca non deve far fallire il giro delle issue: quella
     // e' la sostanza, questa e' la vetrina.
@@ -260,7 +265,10 @@ async function main() {
     if (risolto && !CHIUDE_RISOLTI) {
       const aperta = existing.find((i) => i.state === 'open')
       if (!SEGNA_IN_TEST || !aperta) {
-        console.log(`  ⏭  Risolto (${req.status}) — l'issue si chiude da main, non da qui.`)
+        const mossa = aperta && SEGNA_IMPLEMENTATA
+          ? await seguiSullaBacheca(aperta.number, STATO_IMPLEMENTATA)
+          : null
+        console.log(`  ⏭  Risolto (${req.status})${mossa ? ' — ' + mossa : " — l'issue si chiude da main, non da qui."}`)
         skipped++
         continue
       }
@@ -271,14 +279,14 @@ async function main() {
         continue
       }
       if (DRY_RUN) {
-        const mossa = await seguiSullaBacheca(aperta.number, { chiuso: false })
+        const mossa = await seguiSullaBacheca(aperta.number, STATO_IN_TEST)
         console.log(`  [DRY RUN] Da mettere in prova (+${IN_TEST}${mossa ? ', ' + mossa : ''}): ${aperta.html_url}`)
         updated++
         continue
       }
       const esito = await aggiornaIssue(aperta.number, { labels: [...attuali, IN_TEST] })
       if (esito.ok) {
-        const mossa = await seguiSullaBacheca(aperta.number, { chiuso: false })
+        const mossa = await seguiSullaBacheca(aperta.number, STATO_IN_TEST)
         console.log(`  🧪 In prova (+${IN_TEST}${mossa ? ', ' + mossa : ''}): ${aperta.html_url}`)
         updated++
       } else {
@@ -316,7 +324,7 @@ ${req.description}`
       }
       const { ok, status, body } = await closeIssue(aperta.number)
       if (ok) {
-        const mossa = await seguiSullaBacheca(aperta.number, { chiuso: true })
+        const mossa = await seguiSullaBacheca(aperta.number, STATO_FATTO)
         console.log(`  ✅ Issue chiusa${mossa ? ' (' + mossa + ')' : ''}: ${aperta.html_url}`)
         closed++
       } else {
