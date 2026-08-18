@@ -77,6 +77,13 @@ sotto i 44px si sbaglia. Si **toglie**, in quest'ordine:
   ordini → «La vista del banco», accanto alla vista della coda — stessa
   regola di sempre: come si guarda una pagina non è navigazione, si decide
   una volta e si lavora. La coda di chi guarda la serata non cambia.
+- **Una card che apre qualcosa apre la cosa che rappresenta.** Nella coda del
+  banco le card sono comande, e toccarle apre il dettaglio della comanda
+  (`/ordine/:id/comanda/:comandaId`); nelle corsie dei conti sono conti, e
+  aprono il conto. Quello che sta un livello sopra — il conto, per una
+  comanda — si raggiunge con un tasto scritto, mai rubando il gesto
+  principale: il tasto grande della card resta quello che porta avanti il
+  lavoro.
 - **Quello che si cambia nel mezzo del servizio sta sopra le corsie**, nella
   riga dei filtri, e vale per QUESTO terminale: la pastiglia «🍸 Comande»
   (con cui chi non è al banco va a guardare il lavoro) e «▦ Colonne» (che

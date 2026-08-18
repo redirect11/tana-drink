@@ -2,6 +2,7 @@ import { Routes, Route, Link, Navigate, useLocation, useNavigate } from 'react-r
 import LandingPage from './pages/LandingPage.jsx'
 import MenuPage from './pages/MenuPage.jsx'
 import OrderStatusPage from './pages/OrderStatusPage.jsx'
+import ComandaPage from './pages/ComandaPage.jsx'
 import MyOrdersPage from './pages/MyOrdersPage.jsx'
 import BartenderPage from './pages/BartenderPage.jsx'
 import { AccediPage, RegistratiPage, ProfiloPage } from './pages/AccountPages.jsx'
@@ -580,6 +581,10 @@ export default function App() {
           <Route path="/menu" element={<MenuPage />} />
           <Route path="/ordini" element={<MyOrdersPage />} />
           <Route path="/ordine/:id" element={<OrderStatusPage />} />
+          {/* Il dettaglio di una COMANDA: ci si arriva dalla card in
+              coda, nella vista del banco. Sta sotto il conto perché è lì
+              che vive, e da lì ci si risale. */}
+          <Route path="/ordine/:id/comanda/:comandaId" element={<ComandaPage />} />
           <Route path="/accedi" element={<AccediPage />} />
           <Route path="/registrati" element={<RegistratiPage />} />
           <Route path="/profilo" element={<ProfiloPage />} />
