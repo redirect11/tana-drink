@@ -45,6 +45,11 @@
   dice la stessa parola — «In preparazione», non «Lo preparo io». Al banco c'è
   in più la colonna **«Ritirato/Servito»**: il lavoro finito si deve vedere
   finito, anche quando il conto è ancora da incassare.
+- **Un conto appena incassato passa fra i chiusi**, anche se al banco c'è
+  ancora da servire: prima restava «in corso» e chi aveva appena preso i
+  soldi lo cercava fra i chiusi senza trovarlo. Quelle corsie parlano del
+  conto; il lavoro rimasto si guarda nelle corsie delle comande, dove la
+  comanda pagata e non ancora fatta resta al suo posto col bollo «Pagato».
 - **Un acconto si vede dalla card**: il bollo «💳 Acconto» e la striscia
   arancione, come nella griglia. Senza, chi porta il conto al tavolo chiede
   l'intero — ed è già successo.
