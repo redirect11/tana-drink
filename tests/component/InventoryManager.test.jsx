@@ -32,14 +32,17 @@ vi.mock('../../src/lib/toast.js', () => ({
 }))
 
 // Il magazzino di prova: quattro prodotti che coprono i casi che contano.
-// Le giacenze sono in unità BASE (ml), come da REQ-MAG-001.
+// Tutto si conta a PEZZI (REQ-MAG-016) e il contenuto dice a quanto
+// corrisponde un pezzo: è la forma in cui gli articoli arrivano dalle api,
+// che rimettono in riga anche quelli scritti alla vecchia maniera.
 const ITEMS = [
   {
     id: 'i1',
     name: 'Gin Mare',
-    unit: 'ml',
+    unit: 'pz',
     package_size: 1000, // bottiglia da 100 cl…
-    stock: 500, // …piena a metà → 0,5 pz
+    content_unit: 'ml',
+    stock: 0.5, // …piena a metà → 0,5 pz
     category_id: 'c1',
     supplier_id: 's1',
     cost: 20,
@@ -50,9 +53,10 @@ const ITEMS = [
   {
     id: 'i2',
     name: 'Rum Diplomatico',
-    unit: 'ml',
+    unit: 'pz',
     package_size: 700,
-    stock: 1750, // 2 piene + mezza → 2,5 pz
+    content_unit: 'ml',
+    stock: 2.5, // 2 piene + mezza → 2,5 pz
     category_id: 'c1',
     supplier_id: 's2',
     cost: 30,
@@ -62,8 +66,9 @@ const ITEMS = [
   {
     id: 'i3',
     name: 'Vodka Vecchia',
-    unit: 'ml',
+    unit: 'pz',
     package_size: 700,
+    content_unit: 'ml',
     stock: 0, // esaurita → 0 pz
     category_id: 'c1',
     status: 'out',
@@ -242,6 +247,22 @@ describe('la schermata del magazzino (REQ-MAG-010)', () => {
     expect(screen.getByText('Gin Mare')).toBeInTheDocument()
   })
 
+  it('«In scorta» lascia quello che c’è, esaurimento compreso', async () => {
+    // Mancava la domanda più ovvia di tutte: al banco c'erano 232 esauriti
+    // su 388, e per vedere cosa c'era davvero bisognava guardare «Tutti» e
+    // saltare a occhio due terzi di righe.
+    const user = userEvent.setup()
+    mostra()
+    await aspettaLista()
+    await user.click(screen.getByRole('button', { name: /⚗️ Filtra/ }))
+    const voce = screen.getByRole('button', { name: /In scorta/ })
+    // Il conteggio c'è come sulle altre voci: Gin Mare, Rum e Ichnusa.
+    expect(voce).toHaveTextContent('3')
+    await user.click(voce)
+    expect(screen.getByText('Gin Mare')).toBeInTheDocument()
+    expect(screen.queryByText('Vodka Vecchia')).toBeNull()
+  })
+
   it('l’assortimento filtra a più valori insieme (linea + premium)', async () => {
     // REQ-MAG-007 visto dalla schermata: la domanda vera è quasi sempre
     // combinata («linea e premium, senza gli out»).
@@ -379,25 +400,21 @@ describe('la colonna «a fine serata» (REQ-MAG-014)', () => {
 // ── I NUMERI SI SCRIVONO COME LI SI PENSA (REQ-MAG-013) ──────────────
 //
 // «Avvisami quando resta una bottiglia» è il modo in cui la domanda si fa al
-// banco: nessuno la pensa in 700 ml. Dal 1.4.8 la soglia non ha più una
-// tendina per l'unità — è SEMPRE quella d'acquisto, perché è il prodotto
-// comprato che sta finendo ed è quello che si va a ricomprare.
+// banco: nessuno la pensa in 700 ml. La soglia non ha più una tendina per
+// l'unità, e dal 1.5 non ha nemmeno più un'unità che cambia: si conta a
+// PEZZI come la giacenza (REQ-MAG-016), perché il pezzo è quello che si va a
+// ricomprare.
 describe('le unità nel modulo del prodotto (REQ-MAG-013)', () => {
-  it('la soglia si scrive nell’unità in cui si compra, e lo dice', async () => {
+  it('la soglia si scrive in pezzi, e non si sceglie', async () => {
     const user = userEvent.setup()
     mostra()
     await aspettaLista()
     await user.click(screen.getByRole('button', { name: /Nuovo prodotto/ }))
-    // La scheda parte dal tipo (REQ-MAG-016): lo sfuso compra a chili di
-    // suo, e la soglia lo dice nell'etichetta.
-    await user.click(screen.getByRole('radio', { name: /Sfuso/ }))
-    expect(screen.getByLabelText(/Soglia di avviso \(kg\)/)).toBeInTheDocument()
-    expect(screen.queryByLabelText('Unità della soglia di avviso')).toBeNull()
-    // Cambiando come si compra, cambia anche lei.
-    await user.selectOptions(screen.getByLabelText('Come lo compri'), 'l')
-    expect(screen.getByLabelText(/Soglia di avviso \(L\)/)).toBeInTheDocument()
-    // E coi tipi a pezzo la soglia è in pezzi, senza chiederlo.
-    await user.click(screen.getByRole('radio', { name: /Lo vendo intero/ }))
     expect(screen.getByLabelText(/Soglia di avviso \(pz\)/)).toBeInTheDocument()
+    expect(screen.queryByLabelText('Unità della soglia di avviso')).toBeNull()
+    // E non c'è nessuna domanda prima: né il tipo di prodotto né l'unità
+    // d'acquisto: il costo è già lì, al pezzo.
+    expect(screen.queryByLabelText('Come lo compri')).toBeNull()
+    expect(screen.getByLabelText(/Costo €\/pz/)).toBeInTheDocument()
   })
 })

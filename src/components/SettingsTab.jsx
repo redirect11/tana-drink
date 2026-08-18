@@ -6,6 +6,14 @@ import {
   resetOpenOrdersToReceived,
 } from '../lib/api.js'
 import { CANCEL_PHRASES } from '../lib/orderStatus.js'
+import {
+  MODI_CONSEGNA,
+  clienteSceglie,
+  fraseAnnulloDefault,
+  fraseAnnulloPossibile,
+  modoAllaNascita,
+  mondoConsegna,
+} from '../lib/consegna.js'
 import { parseCarteCsv, decodeCsvBuffer } from '../lib/carteImport.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import ThemeSettings, { TemaMenuClienti } from './ThemeSettings.jsx'
@@ -250,23 +258,84 @@ export default function SettingsTab({ role = null }) {
             <div className="card settings-section">
               <h3>Consegna ordine</h3>
               <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
-                Il ritiro al banco azzera coperto e costo di servizio.
+                Come lavora il locale. NON è un vincolo: qualunque cosa si
+                scelga qui, il banco e la sala possono sempre mettere
+                servizio o ritiro sul singolo conto, da «Dati conto». Qui si
+                decide come NASCONO i conti.
               </p>
-              <div className="mode-choice" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
+              <div className="mode-choice">
                 {[
-                  ['tavolo', '🍸 Servizio'],
-                  ['banco', '🚶 Ritiro'],
-                  ['entrambi', '🤝 Sceglie il cliente'],
-                ].map(([value, label]) => (
+                  ['tavolo', '🍸 Solo servizio', 'Si porta tutto al tavolo.'],
+                  [
+                    'entrambi',
+                    '🤝 Ritiro e servizio',
+                    'Chi si siede si fa servire, chi ha fretta ritira al banco.',
+                  ],
+                ].map(([value, label, hint]) => (
                   <button
                     key={value}
-                    className={`mode-option${settings.service_mode === value ? ' active' : ''}`}
+                    className={`mode-option${mondoConsegna(settings) === value ? ' active' : ''}`}
                     onClick={() => save({ service_mode: value })}
+                    title={hint}
                   >
                     {label}
                   </button>
                 ))}
               </div>
+
+              {/* DENTRO IL SECONDO MONDO, e solo lì: col solo servizio non
+                  c'è niente da scegliere e niente da far scegliere. */}
+              {mondoConsegna(settings) === 'entrambi' && (
+                <>
+                  <h4 style={{ margin: '16px 0 4px' }}>Come nascono i conti</h4>
+                  <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
+                    Il valore di partenza di un conto battuto al banco o in
+                    sala. Si cambia conto per conto in un tocco: il ritiro
+                    azzera coperto e costo di servizio.
+                  </p>
+                  <div className="mode-choice">
+                    {MODI_CONSEGNA.map(([value, label]) => (
+                      <button
+                        key={value}
+                        className={`mode-option${
+                          modoAllaNascita(settings) === value ? ' active' : ''
+                        }`}
+                        onClick={() => save({ consegna_default: value })}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* CHI SCEGLIE, non cosa si sceglie: senza ordinazioni dei
+                      clienti non c'è nessuno a cui chiederlo, e la voce si
+                      spegne dicendo perché invece di restare lì a mentire. */}
+                  <ToggleRow
+                    label="Lo sceglie il cliente"
+                    desc={
+                      settings.menu_only ? (
+                        <>
+                          Adesso non si può: i clienti vedono il menù ma non
+                          ordinano, e senza ordinazioni non c’è nessuno a cui
+                          chiederlo.{' '}
+                          <button
+                            type="button"
+                            className="link-inline"
+                            onClick={() => scegliSezione('menu-clienti')}
+                          >
+                            Vai a Menù clienti
+                          </button>
+                        </>
+                      ) : (
+                        'Ordinando dal telefono il cliente sceglie se farsi servire al tavolo o ritirare al banco. Spenta: decide il locale, e lo staff può cambiarlo sul conto.'
+                      )
+                    }
+                    checked={clienteSceglie(settings)}
+                    disabled={settings.menu_only === true}
+                    onChange={(v) => save({ cliente_sceglie_consegna: v })}
+                  />
+                </>
+              )}
             </div>
       ),
     },
@@ -400,6 +469,18 @@ export default function SettingsTab({ role = null }) {
                   desc="Nella schermata di pagamento compare anche «Riscuoti e servi»: chiude il conto in un colpo, per quando si consegna e si incassa nello stesso gesto."
                   checked={settings.riscuoti_e_servi === true}
                   onChange={(v) => save({ riscuoti_e_servi: v })}
+                />
+              )}
+              {/* Vale per TUTTE le comande allo stesso modo — la prima di un
+                  conto nuovo e le aggiunte a metà serata — perché il passo in
+                  cui nasce una comanda si decide in un posto solo
+                  (statoComandaNuova in lib/comande.js). */}
+              {settings.workflow_enabled !== false && (
+                <ToggleRow
+                  label="Le comande nascono già in preparazione"
+                  desc="Spenta: una comanda nuova sta in «Da fare» finché qualcuno non tocca «Lo preparo io» — che dice anche chi. Accesa: nasce già al banco, per chi versa nell'istante in cui batte e non vuole un tocco in più a ogni comanda."
+                  checked={settings.comande_in_preparazione === true}
+                  onChange={(v) => save({ comande_in_preparazione: v })}
                 />
               )}
               {esitoReset != null && (
@@ -750,13 +831,16 @@ export default function SettingsTab({ role = null }) {
               <h3>Coda ordini</h3>
               <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
                 Come visualizzare gli ordini nel gestionale: <strong>griglia</strong> a
-                tutto schermo (card affiancate, ideale su tablet), schede separate per
-                stato, oppure un&apos;unica lista (in corso + evasi). Lo stato è sempre
-                indicato dal colore e dall&apos;etichetta sulla card.
+                tutto schermo (card affiancate, ideale su tablet), <strong>corsie</strong>
+                di stato (una colonna per passo del lavoro, un tasto per card che manda
+                l&apos;ordine al passo dopo), schede separate per stato, oppure
+                un&apos;unica lista (in corso + evasi). Lo stato è sempre indicato dal
+                colore e dall&apos;etichetta sulla card.
               </p>
               <div className="mode-choice">
                 {[
                   ['griglia', '🔲 Griglia (schermo intero)'],
+                  ['corsie', '🚦 Corsie di stato'],
                   ['tabs', '🗂 Schede per stato'],
                   ['lista', '📋 Lista unica'],
                 ].map(([value, label]) => (
@@ -764,6 +848,43 @@ export default function SettingsTab({ role = null }) {
                     key={value}
                     className={`mode-option${settings.queue_view === value ? ' active' : ''}`}
                     onClick={() => save({ queue_view: value })}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {/* LA VISTA DEL BANCO. Non è un'altra vista della coda: è
+                  un'altra coda, quella di chi prepara. Ad accenderla sono
+                  gli STATI DEL SERVIZIO — senza quei passi non c'è niente
+                  da mostrare — e qui si sceglie solo come disegnarla. Per
+                  ora la scelta è una sola: si tiene lo stesso una fila di
+                  voci, così quando se ne aggiunge un'altra non cambia
+                  niente né qui né sui dati già salvati. */}
+              <h4 style={{ margin: '16px 0 4px' }}>La vista del banco</h4>
+              <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
+                Chi sta al banco non guarda i conti, guarda il lavoro: le{' '}
+                <strong>comande</strong>, una card per ticket, nel passo in cui stanno.
+                {settings.workflow_enabled !== false ? (
+                  <> Si apre da sé a chi ha il ruolo bartender.</>
+                ) : (
+                  <>
+                    {' '}
+                    Adesso non c’è: la accendono <strong>gli stati del servizio</strong>,
+                    che sono spenti — senza quei passi non ci sarebbe niente da mostrare,
+                    e al banco si vede la coda come la vedono tutti.
+                  </>
+                )}
+              </p>
+              <div className="mode-choice">
+                {[['corsie', '🚦 Corsie di stato']].map(([value, label]) => (
+                  <button
+                    key={value}
+                    className={`mode-option${
+                      (settings.bartender_view || 'corsie') === value ? ' active' : ''
+                    }`}
+                    disabled={settings.workflow_enabled === false}
+                    onClick={() => save({ bartender_view: value })}
                   >
                     {label}
                   </button>
@@ -939,17 +1060,49 @@ export default function SettingsTab({ role = null }) {
                 Frase proposta di default quando annulli un ordine (modificabile di
                 volta in volta nel dialog di annullamento).
               </p>
+              {/* LA FRASE SEGUE IL MONDO DELLA CONSEGNA. «Prego recarsi al
+                  bancone» ha senso solo dove il RITIRO esiste: in un locale a
+                  solo servizio manda una persona a un bancone dove nessuno
+                  la aspetta. La voce impossibile si spegne col motivo, non
+                  sparisce — sparire fa dubitare di averla immaginata — e
+                  quella evidenziata è quella che si applica davvero
+                  (fraseAnnulloDefault), non l'impostazione impossibile
+                  rimasta scritta. */}
               <div className="mode-choice">
-                {Object.entries(CANCEL_PHRASES).map(([key, text]) => (
-                  <button
-                    key={key}
-                    className={`mode-option${settings.cancel_phrase_default === key ? ' active' : ''}`}
-                    onClick={() => save({ cancel_phrase_default: key })}
-                  >
-                    {text}
-                  </button>
-                ))}
+                {Object.entries(CANCEL_PHRASES).map(([key, text]) => {
+                  const possibile = fraseAnnulloPossibile(key, settings)
+                  return (
+                    <button
+                      key={key}
+                      className={`mode-option${
+                        fraseAnnulloDefault(settings) === key ? ' active' : ''
+                      }`}
+                      disabled={!possibile}
+                      title={
+                        possibile
+                          ? undefined
+                          : 'Qui non si ritira al banco: la frase manderebbe il cliente dove nessuno lo aspetta.'
+                      }
+                      onClick={() => save({ cancel_phrase_default: key })}
+                    >
+                      {text}
+                    </button>
+                  )
+                })}
               </div>
+              {!fraseAnnulloPossibile('bancone', settings) && (
+                <p className="muted small" style={{ margin: '8px 0 0' }}>
+                  «Prego recarsi al bancone» non si può usare: il locale è a solo
+                  servizio.{' '}
+                  <button
+                    type="button"
+                    className="link-inline"
+                    onClick={() => scegliSezione('consegna')}
+                  >
+                    Vai a Consegna ordine
+                  </button>
+                </p>
+              )}
             </div>
       ),
     },

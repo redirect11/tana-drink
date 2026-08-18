@@ -75,7 +75,12 @@ export default function CashFlow() {
   }
 
   return (
-    <div>
+    // A COLONNA SOLA CI STA UN TELEFONO, non un monitor. Su schermi larghi
+    // le stesse tessere si dispongono in griglia — quello che serve a chi
+    // guarda la cassa si legge in un colpo, senza scorrere — e le due che
+    // vogliono spazio (l'andamento per ora e la chiusura) restano larghe
+    // tutta la riga. Il CSS sta in .cassa-flusso: qui non si decide niente.
+    <div className="cassa-flusso">
       <div className="card cassa-open">
         <div className="row between" style={{ alignItems: 'center' }}>
           <div>
@@ -88,27 +93,32 @@ export default function CashFlow() {
         </div>
       </div>
 
-      {/* Incassato della serata + metodi */}
-      <div className="card row between" style={{ alignItems: 'center' }}>
-        <div>
-          <strong>💶 Incassato serata</strong>
-          <div className="muted small">{recap.nPagati} conti chiusi</div>
+      {/* INCASSATO DELLA SERATA, coi metodi DENTRO la sua tessera: erano
+          una riga a sé, e in griglia diventavano un riquadro orfano che non
+          si capiva a quale numero appartenesse. */}
+      <div className="card">
+        <div className="row between" style={{ alignItems: 'center' }}>
+          <div>
+            <strong>💶 Incassato serata</strong>
+            <div className="muted small">{recap.nPagati} conti chiusi</div>
+          </div>
+          <strong className="price" style={{ fontSize: '1.4rem' }}>{formatPrice(recap.incassato)}</strong>
         </div>
-        <strong className="price" style={{ fontSize: '1.4rem' }}>{formatPrice(recap.incassato)}</strong>
+        {/* Un chip per ogni metodo BATTUTO, anche uno mai visto prima:
+            l'elenco si costruisce dagli incassi, non da una lista scritta a
+            mano. */}
+        {cashMethodKeys(recap.byMethod).some((k) => recap.byMethod[k] > 0) && (
+          <div className="chips-row" style={{ marginTop: 8 }}>
+            {cashMethodKeys(recap.byMethod)
+              .filter((k) => recap.byMethod[k] > 0)
+              .map((k) => (
+                <span className="chip" key={k}>
+                  {paymentMethodLabel(k)} {formatPrice(recap.byMethod[k])}
+                </span>
+              ))}
+          </div>
+        )}
       </div>
-      {/* Un chip per ogni metodo BATTUTO, anche uno mai visto prima: l'elenco
-          si costruisce dagli incassi, non da una lista scritta a mano. */}
-      {cashMethodKeys(recap.byMethod).some((k) => recap.byMethod[k] > 0) && (
-        <div className="chips-row" style={{ marginBottom: 8 }}>
-          {cashMethodKeys(recap.byMethod)
-            .filter((k) => recap.byMethod[k] > 0)
-            .map((k) => (
-              <span className="chip" key={k}>
-                {paymentMethodLabel(k)} {formatPrice(recap.byMethod[k])}
-              </span>
-            ))}
-        </div>
-      )}
 
       {/* QUANTO DEVE ESSERCI IN CASSA ADESSO. Il conto lo si faceva solo alla
           chiusura, quando ormai è un verdetto: durante la serata serve per
@@ -182,9 +192,15 @@ export default function CashFlow() {
       )}
 
       {/* Andamento per ora */}
-      {recap.perOra.length > 0 && <OraBars perOra={recap.perOra} />}
+      {recap.perOra.length > 0 && (
+        <div className="cassa-larga">
+          <OraBars perOra={recap.perOra} />
+        </div>
+      )}
 
-      <ChiudiCassa session={session} recap={recap} by={by} />
+      <div className="cassa-larga">
+        <ChiudiCassa session={session} recap={recap} by={by} />
+      </div>
 
     </div>
   )
@@ -291,21 +307,39 @@ function ChiudiCassa({ session, recap, by }) {
 }
 
 // Barre dell'andamento incassi per ora.
+// L'ANDAMENTO SI LEGGE NEL TEMPO, e il tempo va da sinistra a destra. Era
+// una riga per ora, una sotto l'altra: una serata lunga diventava una
+// colonna da scorrere, e «com'è andata stasera?» — che è una domanda sulla
+// FORMA della serata, il picco, la coda — non si vedeva più. Sono le stesse
+// barre delle statistiche (.vbars), che quel mestiere lo fanno già.
 function OraBars({ perOra }) {
   const max = Math.max(...perOra.map((x) => x.importo), 1)
   return (
     <div className="card">
       <strong className="small">📈 Andamento per ora</strong>
-      <div style={{ marginTop: 8, display: 'grid', gap: 4 }}>
-        {perOra.map((x) => (
-          <div key={x.ora} className="row" style={{ gap: 8, alignItems: 'center' }}>
-            <span className="muted small" style={{ width: 34 }}>{x.ora}:00</span>
-            <div style={{ flex: 1, background: 'var(--line)', borderRadius: 4, height: 14, overflow: 'hidden' }}>
-              <div style={{ width: `${(x.importo / max) * 100}%`, background: 'var(--accent-2, #f5b94a)', height: '100%' }} />
+      <div className="vbars" style={{ marginTop: 8 }}>
+        {perOra.map((x) => {
+          // Il giorno si scrive solo se la serata ne tocca due: «08:00» del
+          // mattino dopo, in fondo al grafico, senza data si legge come un
+          // errore. Giorno e mese bastano — l'anno lo sa chi sta contando.
+          const giorno = x.giorno ? x.giorno.slice(8, 10) + '/' + x.giorno.slice(5, 7) : null
+          return (
+            <div
+              className="vbar-col"
+              key={x.giorno ? `${x.giorno}-${x.ora}` : x.ora}
+              title={`${giorno ? `${giorno} ` : ''}${x.ora}:00 — ${formatPrice(x.importo)}`}
+            >
+              <div className="vbar-value">{formatPrice(x.importo)}</div>
+              <div className="vbar-track">
+                <div className="vbar-fill" style={{ height: `${(x.importo / max) * 100}%` }} />
+              </div>
+              <div className="vbar-label">
+                {x.ora}:00
+                {giorno && <span className="vbar-giorno">{giorno}</span>}
+              </div>
             </div>
-            <span className="small" style={{ width: 64, textAlign: 'right' }}>{formatPrice(x.importo)}</span>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )

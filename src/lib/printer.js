@@ -392,6 +392,67 @@ export async function printComanda(order, comanda = null) {
 // Per il cliente: intestazione locale, articoli con prezzi, IVA, totale.
 // Formato ispirato al template fotografato di SumUp POS Pro.
 
+// ── IL LOGO IN CIMA ALLO SCONTRINO ───────────────────────────────────
+//
+// Il preconto è il pezzo di carta che resta in mano al cliente: senza segno
+// del locale è un tabulato, e non si distingue da quello del bar accanto.
+//
+// La testina stampa immagini in bianco e nero, riga per riga: l'immagine va
+// portata su un canvas e passata come contesto 2D (è l'unica forma che
+// l'SDK Epson accetta). Si tiene STRETTA — 220 punti, meno di metà della
+// carta da 80 mm — perché una testina termica disegna a puntini e un logo
+// grande esce sporco e mangia carta a ogni conto.
+//
+// Se non si carica non se ne fa niente: uno scontrino senza logo è ancora
+// uno scontrino, uno scontrino che non esce è un cliente che aspetta.
+const LARGHEZZA_LOGO = 220
+
+let _logoCanvas = null
+
+async function logoPerStampa() {
+  if (typeof document === 'undefined') return null
+  if (_logoCanvas !== null) return _logoCanvas
+  try {
+    const url = `${import.meta.env.BASE_URL || '/'}logo.png`
+    const img = await new Promise((ok, ko) => {
+      const i = new Image()
+      i.onload = () => ok(i)
+      i.onerror = ko
+      i.src = url
+    })
+    const h = Math.round((img.height / img.width) * LARGHEZZA_LOGO)
+    const canvas = document.createElement('canvas')
+    canvas.width = LARGHEZZA_LOGO
+    canvas.height = h
+    const ctx = canvas.getContext('2d')
+    // Fondo bianco: la carta è bianca, e un PNG trasparente diventerebbe
+    // una macchia nera.
+    ctx.fillStyle = '#fff'
+    ctx.fillRect(0, 0, LARGHEZZA_LOGO, h)
+    ctx.drawImage(img, 0, 0, LARGHEZZA_LOGO, h)
+    _logoCanvas = { ctx, larghezza: LARGHEZZA_LOGO, altezza: h, url }
+  } catch {
+    _logoCanvas = null
+  }
+  return _logoCanvas
+}
+
+// Mette il logo in cima, se la stampante sa farlo e l'immagine c'è.
+async function stampaLogo(prn) {
+  const logo = await logoPerStampa()
+  if (!logo) return
+  try {
+    prn.addTextAlign(prn.ALIGN_CENTER)
+    // La stampante finta vuole solo l'indirizzo: lo mostra nel facsimile.
+    if (typeof prn.addImageUrl === 'function') prn.addImageUrl(logo.url)
+    else if (typeof prn.addImage === 'function') {
+      prn.addImage(logo.ctx, 0, 0, logo.larghezza, logo.altezza, prn.COLOR_1)
+    }
+  } catch {
+    /* la carta esce lo stesso: il logo è un di più */
+  }
+}
+
 export async function printScontrino(order, opts = {}) {
   const prn = await getPrinter()
   const s = loadPrinterSettings()
@@ -409,6 +470,7 @@ export async function printScontrino(order, opts = {}) {
   prn.addTextSmooth(true)
 
   // ── Intestazione ──
+  await stampaLogo(prn)
   prn.addTextAlign(prn.ALIGN_CENTER)
   prn.addTextSize(2, 2)
   prn.addTextStyle(false, false, true, prn.COLOR_1)

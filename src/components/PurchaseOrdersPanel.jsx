@@ -7,7 +7,7 @@ import {
   receivePurchaseOrder,
   deletePurchaseOrder,
 } from '../lib/api.js'
-import { formatQty, stockStatus } from '../lib/inventory.js'
+import { formatQty, contenutoDelPezzo, stockStatus } from '../lib/inventory.js'
 import { purchaseOrderTotals, suggestedPackages, purchaseOrderText } from '../lib/warehouse.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import { printOrdineFornitore } from '../lib/printer.js'
@@ -188,8 +188,12 @@ export default function PurchaseOrdersPanel() {
                 )}
                 <div className="muted small">
                   In casa: {formatQty(it.stock, it.unit)}
-                  {it.package_size ? ` · 1 conf. = ${formatQty(it.package_size, it.unit)}` : ''}
-                  {suggestedPackages(it) > 0 ? ` · sugg. ${suggestedPackages(it)} conf.` : ''}
+                  {/* Il contenuto non si misura mai in pezzi: con la giacenza
+                      contata a pezzi «1 conf. = 700 pz» era il contenuto letto
+                      nell'unità sbagliata. E la parola è «pz», che vale anche
+                      per quello che bottiglia non è (REQ-MAG-016, REQ-MAG-019). */}
+                  {contenutoDelPezzo(it) ? ` · 1 pz = ${contenutoDelPezzo(it)}` : ''}
+                  {suggestedPackages(it) > 0 ? ` · sugg. ${suggestedPackages(it)} pz` : ''}
                 </div>
               </div>
               <input
@@ -197,7 +201,7 @@ export default function PurchaseOrdersPanel() {
                 step="1"
                 min="0"
                 value={qtys[it.id] ?? ''}
-                placeholder="conf."
+                placeholder="pz"
                 onChange={(e) => setQtys((q) => ({ ...q, [it.id]: e.target.value }))}
                 style={{ width: 76, textAlign: 'right' }}
               />

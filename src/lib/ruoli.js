@@ -50,6 +50,16 @@ export function isGestore(role) {
   return role === 'admin' || role === 'bartender'
 }
 
+// BANCO: chi sta allo shaker. Può quanto l'admin, ma non guarda le stesse
+// cose: all'admin interessa com'è messo il CONTO — in corso, chiuso,
+// annullato — mentre a chi prepara interessa il LAVORO, cioè le COMANDE,
+// una per una, nel passo in cui stanno. È questa distinzione a decidere
+// cosa mostrano le corsie della coda, e sta qui perché i ruoli si
+// confrontano in un posto solo.
+export function isBanco(role) {
+  return role === 'bartender'
+}
+
 // SALA: chi serve ai tavoli e basta. Vede solo i drink pronti da portare,
 // non la cassa.
 export function isSala(role) {

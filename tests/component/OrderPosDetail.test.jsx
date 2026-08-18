@@ -39,6 +39,8 @@ vi.mock('../../src/lib/api.js', () => ({
   DEFAULT_SETTINGS: {},
   settingsIniziali: () => ({}),
   peekNextDailyNumber: vi.fn(() => Promise.resolve(5)),
+  setOrderServiceMode: vi.fn(() => Promise.resolve({})),
+  preparazioneParziale: vi.fn(() => Promise.resolve()),
   subscribeSettings: vi.fn((cb) => {
     cb(mockSettings)
     return () => {}
@@ -84,15 +86,21 @@ import {
   cancelOrder,
   createOrder,
   restoreOrder,
+  preparazioneParziale,
+  setOrderServiceMode,
 } from '../../src/lib/api.js'
 import { readerCheckout } from '../../src/lib/paymentsApi.js'
 import { printComanda } from '../../src/lib/printer.js'
 
+// IL CONTO DI PROVA NASCE «DA FARE», come nasce davvero: si battono tre
+// conti di fila e poi si comincia a versare. Era «in preparazione» da
+// quando le righe aggiunte confluivano nella prima comanda toccabile,
+// qualunque passo avesse — la regola che ha causato BUG-024.
 const baseOrder = (over = {}) => ({
   id: 'ord1',
   daily_number: 4,
   status: 'aperto',
-  workflow_status: 'in_preparazione',
+  workflow_status: 'ricevuto',
   payment_status: 'non_richiesto',
   customer_name: 'iole',
   table_label: '3',
@@ -108,7 +116,7 @@ const baseOrder = (over = {}) => ({
     {
       id: 'c1',
       seq: 1,
-      status: 'in_preparazione',
+      status: 'ricevuto',
       status_times: {},
       created_at: '2026-07-11T21:00:00.000Z',
       items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 }],
@@ -245,7 +253,7 @@ describe('aggiunte: la nuova comanda è gestita internamente', () => {
           {
             id: 'c1',
             seq: 1,
-            status: 'in_preparazione',
+            status: 'ricevuto',
             status_times: {},
             items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 4 }],
           },
@@ -290,12 +298,18 @@ describe('aggiunte: la nuova comanda è gestita internamente', () => {
     expect(screen.getByRole('button', { name: /🔗 Unisci/ })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /⑃ Separa/ })).toBeNull()
 
-    // Separa non è persa: dal menu ⋯ il Mojito da 4 diventa 4 righe da 1
+    // ANCHE NEL ⋯ LA VOCE È UNA SOLA, e dice la stessa cosa del tasto:
+    // erano due righe di menu con una sempre spenta. Qui c'è da unire,
+    // quindi si legge «Unisci» e basta.
     await user.click(screen.getByRole('button', { name: 'Azioni del conto' }))
-    await user.click(screen.getByRole('button', { name: /Separa le quantità/ }))
+    expect(screen.getByRole('button', { name: /Unisci le righe uguali/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Separa le quantità/ })).toBeNull()
+
+    // Unito quello che c'era da unire, la stessa voce diventa «Separa».
+    await user.click(screen.getByRole('button', { name: /Unisci le righe uguali/ }))
     await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalled())
     const dopo = bartenderUpdateComanda.mock.calls.at(-1)[2].items
-    expect(dopo.filter((i) => i.drink_id === 'mojito')).toHaveLength(4)
+    expect(dopo.filter((i) => i.drink_id === 'gin')).toHaveLength(1)
   })
 
   it("il + su un item del conto è un'aggiunta che si conferma da sola", async () => {
@@ -313,8 +327,9 @@ describe('diminuzioni: solo dalle comande ancora modificabili', () => {
     const user = userEvent.setup()
     mount(baseOrder())
     await user.click(screen.getByRole('button', { name: /Stato servizio/ }))
-    await user.click(screen.getByRole('button', { name: /Segna “Pronto al servizio”/ }))
-    expect(advanceComanda).toHaveBeenCalledWith('ord1', 'c1', 'pronto')
+    // Il conto di prova nasce «da fare», quindi il passo dopo è il banco.
+    await user.click(screen.getByRole('button', { name: /Segna “In preparazione”/ }))
+    expect(advanceComanda).toHaveBeenCalledWith('ord1', 'c1', 'in_preparazione')
   })
 
   it('il − scala la comanda modificabile con sync in background (debounce)', async () => {
@@ -394,11 +409,11 @@ describe('modifiche ottimistiche (UX istantanea)', () => {
     advanceComanda.mockImplementationOnce(() => new Promise(() => {})) // in volo
     mount(baseOrder())
     await user.click(screen.getByRole('button', { name: /Stato servizio/ }))
-    await user.click(screen.getByRole('button', { name: /Segna “Pronto al servizio”/ }))
-    // lo stato passa subito a "Pronto al servizio" senza attendere la transazione
-    expect(screen.getAllByText(/Pronto al servizio/).length).toBeGreaterThan(0)
+    await user.click(screen.getByRole('button', { name: /Segna “In preparazione”/ }))
+    // lo stato passa subito al passo dopo senza attendere la transazione
+    expect(screen.getAllByText(/In preparazione/).length).toBeGreaterThan(0)
     expect(
-      screen.queryByRole('button', { name: /Segna “Pronto al servizio”/ })
+      screen.queryByRole('button', { name: /Segna “In preparazione”/ })
     ).not.toBeInTheDocument()
   })
 
@@ -532,6 +547,73 @@ describe('ricerca prodotti', () => {
 // salvataggio stava solo sul tasto in fondo al popup: chiudendo con la ✕,
 // toccando fuori dal riquadro o premendo Invio — che chiude la tastiera e
 // sembra confermare — quello che si era appena scritto spariva in silenzio.
+// ── SERVIZIO O RITIRO, SU QUESTO CONTO ─────────────────────
+//
+// L'impostazione del locale diceva come nascono i conti ed era finita per
+// essere un VINCOLO: `service_mode` si scriveva alla creazione e non
+// c'era nessun posto in cui cambiarlo. Ma un tavolo che viene a ritirare
+// al banco succede tutte le sere, e cambia anche i soldi.
+describe('servizio o ritiro, conto per conto', () => {
+  const apri = async (user) => user.click(screen.getByRole('button', { name: /Dati conto/ }))
+
+  it('lo staff cambia il modo del conto che ha in mano', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder({ service_mode: 'tavolo' }))
+    await apri(user)
+    await user.click(screen.getByRole('button', { name: /Ritiro/ }))
+    expect(setOrderServiceMode).toHaveBeenCalledWith('ord1', 'banco')
+  })
+
+  it('quello di adesso si vede acceso, e non si riscrive toccandolo', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder({ service_mode: 'banco' }))
+    await apri(user)
+    expect(screen.getByRole('button', { name: /Ritiro/ })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    )
+    await user.click(screen.getByRole('button', { name: /Ritiro/ }))
+    expect(setOrderServiceMode).not.toHaveBeenCalled()
+  })
+
+  it('DICE CHE TOCCA I SOLDI prima di premere, non dopo', async () => {
+    const user = userEvent.setup()
+    mockSettings.coperto_enabled = true
+    try {
+      mount(baseOrder({ service_mode: 'tavolo' }))
+      await apri(user)
+      expect(screen.getByText(/coperto e servizio si azzerano/i)).toBeInTheDocument()
+    } finally {
+      mockSettings.coperto_enabled = false
+    }
+  })
+
+  it('con un acconto si cambia il modo, ma i soldi restano quelli', async () => {
+    const user = userEvent.setup()
+    mount(
+      baseOrder({
+        service_mode: 'tavolo',
+        payment_status: 'parziale',
+        payments: [{ amount: 10, method: 'banco' }],
+      })
+    )
+    await apri(user)
+    // la frase sta accanto ai due tasti, non altrove nella schermata
+    const riquadro = screen.getByRole('button', { name: /Ritiro/ }).closest('div').parentElement
+    expect(within(riquadro).getByText(/coperto e servizio restano quelli/i)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /Ritiro/ }))
+    expect(setOrderServiceMode).toHaveBeenCalledWith('ord1', 'banco')
+  })
+
+  it('su un conto chiuso non si tocca: la strada è «Riapri conto»', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder({ status: 'pagato', payment_status: 'pagato' }))
+    await apri(user)
+    expect(screen.getByRole('button', { name: /Ritiro/ })).toBeDisabled()
+    expect(screen.getByText(/riaprilo prima/i)).toBeInTheDocument()
+  })
+})
+
 describe('dati conto: il nome si salva comunque si chiuda', () => {
   // Il conto di prova un nome ce l'ha già: si svuota il campo, altrimenti
   // quello nuovo si accoda al vecchio.
@@ -685,15 +767,15 @@ describe('menu azioni del telefono', () => {
     const user = userEvent.setup()
     mount(baseOrder())
     const menu = await apriMenu(user)
-    for (const voce of [
-      /Comande \(1\)/,
-      /Prodotto libero/,
-      /Dati conto/,
-      /Unisci le righe uguali/,
-      /Separa le quantità/,
-    ]) {
+    for (const voce of [/Comande \(1\)/, /Prodotto libero/, /Dati conto/]) {
       expect(menu.getByRole('button', { name: voce })).toBeInTheDocument()
     }
+    // Unisci/Separa è UNA voce che cambia secondo quello che si può fare
+    // (qui il conto ha 2 Mojito su una riga: c'è da separare), e il
+    // «svuota» sta qui perché sul telefono in barra non ci sta.
+    expect(menu.getByRole('button', { name: /Separa le quantità/ })).toBeInTheDocument()
+    expect(menu.queryByRole('button', { name: /Unisci le righe uguali/ })).toBeNull()
+    expect(menu.getByRole('button', { name: /Svuota il conto/ })).toBeInTheDocument()
   })
 
   it('quello che si usa sempre NON è nel menu: sta in fondo, su una riga', async () => {
@@ -787,6 +869,119 @@ describe('totale sul tasto Pagamento', () => {
 // l'acqua. La creazione dura qualche decimo di secondo; in quei decimi si
 // continua a battere, e chi svuotava la bozza a creazione finita portava
 // via anche le righe arrivate nel frattempo.
+// ── IN CHE PASSO NASCE UNA COMANDA, DAL POS ───────────────────
+//
+// Lo decide il locale, e vale allo stesso modo per la prima comanda di un
+// conto nuovo e per le aggiunte a metà serata: prima erano due regole
+// diverse in due posti, e nessuno l'aveva deciso.
+// ── LE RIGHE AGGIUNTE NON SI ACCODANO A QUELLO CHE È GIÀ AL BANCO ────
+//
+// Difetto visto al banco (BUG-024): conto con una comanda in preparazione,
+// si aggiungono due righe, e quelle risultavano già prese in carico da
+// qualcuno — sparivano dalla colonna «Da fare» e non le cominciava
+// nessuno. Le righe nuove nascono nel passo che dice l'impostazione, non
+// nel passo della comanda che sta lì accanto.
+describe('dove finiscono le righe aggiunte a un conto', () => {
+  const conUnaComandaAlBanco = () =>
+    baseOrder({
+      workflow_status: 'in_preparazione',
+      comande: [
+        {
+          id: 'c1',
+          seq: 1,
+          status: 'in_preparazione',
+          status_times: {},
+          items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 }],
+        },
+      ],
+    })
+
+  it('IL DIFETTO: con una comanda al banco, le righe nuove nascono «da fare»', async () => {
+    const user = userEvent.setup()
+    mount(conUnaComandaAlBanco())
+    await user.click(screen.getAllByText('Gin Tonic')[0])
+    await user.click(screen.getAllByText('Gin Tonic')[0])
+
+    // niente si accoda alla comanda in preparazione…
+    await waitFor(() => expect(addComanda).toHaveBeenCalled(), { timeout: 3000 })
+    expect(bartenderUpdateComanda).not.toHaveBeenCalled()
+    // …e la comanda nuova le porta tutte e due
+    const [id, items] = addComanda.mock.calls.at(-1)
+    expect(id).toBe('ord1')
+    expect(items.filter((i) => i.drink_id === 'gin')).toHaveLength(2)
+  })
+
+  it('con l’interruttore acceso confluiscono nella comanda in preparazione', async () => {
+    const user = userEvent.setup()
+    mockSettings.comande_in_preparazione = true
+    try {
+      mount(conUnaComandaAlBanco())
+      await user.click(screen.getAllByText('Gin Tonic')[0])
+      await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalled(), { timeout: 3000 })
+      const [, comandaId, payload] = bartenderUpdateComanda.mock.calls.at(-1)
+      expect(comandaId).toBe('c1')
+      expect(payload.items.filter((i) => i.drink_id === 'gin')).toHaveLength(1)
+      expect(addComanda).not.toHaveBeenCalled()
+    } finally {
+      mockSettings.comande_in_preparazione = false
+    }
+  })
+})
+
+describe('il passo in cui nasce una comanda lo dice il locale', () => {
+  it('di suo un conto nuovo nasce «da fare»', async () => {
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter>
+        <OrderPosDetail order={null} />
+      </MemoryRouter>
+    )
+    await user.click(screen.getAllByText('Mojito')[0])
+    await waitFor(() => expect(createOrder).toHaveBeenCalled())
+    expect(createOrder.mock.calls[0][0].status).toBe('ricevuto')
+  })
+
+  it('acceso, nasce già in preparazione — e lo dice anche la comanda aggiunta', async () => {
+    const user = userEvent.setup()
+    mockSettings.comande_in_preparazione = true
+    try {
+      // conto nuovo
+      const { unmount } = render(
+        <MemoryRouter>
+          <OrderPosDetail order={null} />
+        </MemoryRouter>
+      )
+      await user.click(screen.getAllByText('Mojito')[0])
+      await waitFor(() => expect(createOrder).toHaveBeenCalled())
+      expect(createOrder.mock.calls[0][0].status).toBe('in_preparazione')
+      unmount()
+
+      // aggiunta a un conto già servito: nasce una comanda nuova, e la
+      // provvisoria che si vede deve dire lo stesso passo di quella vera —
+      // se no la card cambia colonna da sola un istante dopo.
+      mount(
+        baseOrder({
+          comande: [
+            {
+              id: 'c1', seq: 1, status: 'ritirato', status_times: {},
+              items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1 }],
+            },
+          ],
+        })
+      )
+      await user.click(screen.getAllByText('Gin Tonic')[0])
+      await user.click(screen.getByRole('button', { name: /Comande/ }))
+      await waitFor(() =>
+        expect(
+          [...document.querySelectorAll('.confirm-box .card')].at(-1).textContent
+        ).toMatch(/In preparazione/)
+      )
+    } finally {
+      mockSettings.comande_in_preparazione = false
+    }
+  })
+})
+
 describe('creazione: niente si perde mentre l’ordine nasce', () => {
   it('gli item battuti durante la creazione finiscono nell’ordine', async () => {
     const user = userEvent.setup()
@@ -804,7 +999,9 @@ describe('creazione: niente si perde mentre l’ordine nasce', () => {
                 {
                   id: 'c1',
                   seq: 1,
-                  status: 'in_preparazione',
+                  // Come nasce davvero: createOrder riceve il passo di
+                  // partenza del locale, che di suo è «da fare».
+                  status: 'ricevuto',
                   status_times: {},
                   items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1 }],
                 },
@@ -964,6 +1161,36 @@ describe('Pagamento premuto mentre l’ordine sta ancora nascendo', () => {
 // Capita: si chiude un conto sul tavolo sbagliato, si annulla per un
 // malinteso, il cliente torna. Finora l'unica strada era ribatterlo da capo
 // e il conto vero restava lì a sporcare la serata.
+// I TASTI SOPRA LA LISTA SI RIDUCONO. «Unisci», «Dati conto» e «Prodotto
+// libero» sono tre righe di schermo prese alla lista dei drink: a chi batte
+// conti complicati servono sotto il dito, a chi fa solo drink no. Ridotti
+// non spariscono — sono tutti nel ⋯ — e la scelta e' di questo terminale,
+// quindi deve sopravvivere all'uscita dalla schermata.
+describe('i tasti del conto si riducono', () => {
+  it('il tasto li nasconde, restano nel ⋯, e la scelta si ricorda', async () => {
+    const user = userEvent.setup()
+    const vista = mount(baseOrder())
+    expect(screen.getByRole('button', { name: /Dati conto/ })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Nascondi i tasti del conto' }))
+    expect(screen.queryByRole('button', { name: /Dati conto/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Prodotto libero/ })).not.toBeInTheDocument()
+    // «Comande» resta: e' quello che si apre di continuo
+    expect(screen.getByRole('button', { name: /Comande/ })).toBeInTheDocument()
+
+    // e nel ⋯ ci sono tutte, come sempre
+    await user.click(screen.getByRole('button', { name: 'Azioni del conto' }))
+    expect(screen.getByRole('button', { name: /Dati conto/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Prodotto libero/ })).toBeInTheDocument()
+
+    vista.unmount()
+    mount(baseOrder())
+    expect(screen.queryByRole('button', { name: /Dati conto/ })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Mostra i tasti del conto' }))
+    expect(screen.getByRole('button', { name: /Dati conto/ })).toBeInTheDocument()
+  })
+})
+
 describe('rimettere in corso un conto', () => {
   const chiuso = () =>
     baseOrder({
@@ -975,10 +1202,13 @@ describe('rimettere in corso un conto', () => {
       payments: [{ amount: 14, method: 'banco', at: '2026-08-12T21:30:00.000Z' }],
     })
 
+  // La storia si apre dal ⋯: era un'icona in testata, in mezzo ai tasti che
+  // si premono di corsa, per una cosa che si guarda una volta a serata.
   it('la storia del conto racconta apertura e chiusura', async () => {
     const user = userEvent.setup()
     mount(chiuso())
-    await user.click(screen.getByRole('button', { name: /Storia/ }))
+    await user.click(screen.getByRole('button', { name: 'Azioni del conto' }))
+    await user.click(screen.getByRole('button', { name: /Storia del conto/ }))
     const box = within(screen.getByRole('dialog', { name: 'Storia del conto' }))
     expect(box.getByText('Conto aperto')).toBeInTheDocument()
     expect(box.getByText('Conto chiuso')).toBeInTheDocument()
@@ -990,7 +1220,7 @@ describe('rimettere in corso un conto', () => {
     await user.click(azioni().getByRole('button', { name: /Riapri conto/ }))
     const box = within(screen.getByRole('dialog', { name: 'Ripristina il conto' }))
     await user.type(box.getByLabelText(/Perché lo riapri/), 'tavolo sbagliato')
-    await user.click(box.getByRole('button', { name: /Rimetti in corso/ }))
+    await user.click(box.getByRole('button', { name: /Riapri/ }))
     expect(restoreOrder).toHaveBeenCalledWith('ord1', expect.objectContaining({ motivo: 'tavolo sbagliato' }))
   })
 
@@ -999,7 +1229,7 @@ describe('rimettere in corso un conto', () => {
     mount(chiuso())
     await user.click(azioni().getByRole('button', { name: /Riapri conto/ }))
     const box = within(screen.getByRole('dialog', { name: 'Ripristina il conto' }))
-    await user.click(box.getByRole('button', { name: /Rimetti in corso/ }))
+    await user.click(box.getByRole('button', { name: /Riapri/ }))
     expect(restoreOrder).toHaveBeenCalledWith('ord1', expect.objectContaining({ motivo: null }))
   })
 
@@ -1394,5 +1624,290 @@ describe('la riga modificata a mano resta modificata', () => {
     await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalled())
     const items = bartenderUpdateComanda.mock.calls.at(-1)[2].items || []
     expect(items.some((i) => Number(i.unit_price) === 12)).toBe(true)
+  })
+})
+
+
+// ── LA PREPARAZIONE PARZIALE ───────────────────────────────
+//
+// Al banco capita di vedere tre gin tonic in una comanda e due in
+// un'altra e prepararli insieme, per farli uscire in una volta sola. Non
+// andrebbe fatto — un ticket si lavora intero — ma si fa: l'app non lo
+// impedisce, lo REGISTRA, così il conto resta giusto e la coda dice
+// davvero cosa è al banco e cosa aspetta ancora.
+//
+// La comanda di partenza si ANNULLA (resta come storia: la copia già
+// stampata ha ancora un riscontro) e al suo posto ne nascono due — quella
+// che si prepara adesso e il resto, che resta da fare.
+describe('preparazione parziale di una comanda', () => {
+  const daFare = (over = {}) =>
+    baseOrder({
+      workflow_status: 'ricevuto',
+      comande: [
+        {
+          id: 'c1',
+          seq: 1,
+          status: 'ricevuto',
+          status_times: {},
+          created_at: '2026-08-16T21:00:00.000Z',
+          items: [{ drink_id: 'gin', name: 'Gin Tonic', unit_price: 8, qty: 5 }],
+        },
+      ],
+      ...over,
+    })
+
+  const apriComande = async (user) =>
+    user.click(screen.getByRole('button', { name: /Comande \(1\)/ }))
+
+  it('cinque da fare, se ne preparano due: due al banco e tre ancora da fare', async () => {
+    const user = userEvent.setup()
+    mount(daFare())
+    await apriComande(user)
+
+    await user.click(screen.getByRole('button', { name: /Preparazione parziale/ }))
+    await user.click(screen.getByRole('button', { name: 'Uno in più di Gin Tonic' }))
+    await user.click(screen.getByRole('button', { name: 'Uno in più di Gin Tonic' }))
+    await user.click(screen.getByRole('button', { name: 'Preparo questi' }))
+
+    // le unità scelte, riga per riga: due dei cinque
+    expect(preparazioneParziale).toHaveBeenCalledWith('ord1', 'c1', [2])
+
+    // E SI VEDE SUBITO, senza aspettare il server: la comanda di partenza
+    // è annullata, e al suo posto ce ne sono due — due gin tonic al banco
+    // e tre ancora da fare. Il totale delle unità non è cambiato.
+    const cards = [...document.querySelectorAll('.confirm-box .card')]
+    const testo = cards.map((c) => c.textContent)
+    expect(testo[0]).toMatch(/COMANDA 1/)
+    // «Divisa», non «Annullato»: nel dato è annullata — serve a tenere la
+    // storia — ma leggerlo qui farebbe pensare a un drink saltato, mentre
+    // quei drink sono nelle due comande sotto.
+    expect(testo[0]).toMatch(/Divisa/)
+    expect(testo[0]).not.toMatch(/Annullato/)
+    expect(testo[1]).toMatch(/COMANDA 2/)
+    expect(testo[1]).toMatch(/In preparazione/)
+    expect(testo[1]).toMatch(/2× Gin Tonic/)
+    expect(testo[2]).toMatch(/COMANDA 3/)
+    // «Da fare»: al banco il passo si chiama come la colonna.
+    expect(testo[2]).toMatch(/Da fare/)
+    expect(testo[2]).toMatch(/3× Gin Tonic/)
+  })
+
+  it('prese tutte le unità non si divide niente: la comanda avanza e basta', async () => {
+    const user = userEvent.setup()
+    mount(daFare())
+    await apriComande(user)
+
+    await user.click(screen.getByRole('button', { name: /Preparazione parziale/ }))
+    for (let i = 0; i < 5; i++) {
+      await user.click(screen.getByRole('button', { name: 'Uno in più di Gin Tonic' }))
+    }
+    await user.click(screen.getByRole('button', { name: 'Preparo questi' }))
+
+    expect(preparazioneParziale).toHaveBeenCalledWith('ord1', 'c1', [5])
+    // niente comande in più: quella che c'era è passata al banco
+    const cards = [...document.querySelectorAll('.confirm-box .card')]
+    expect(cards.length).toBe(1)
+    expect(cards[0].textContent).toMatch(/In preparazione/)
+    expect(cards[0].textContent).not.toMatch(/Annullato|Divisa/)
+  })
+
+  it('senza scegliere niente non si può confermare', async () => {
+    const user = userEvent.setup()
+    mount(daFare())
+    await apriComande(user)
+    await user.click(screen.getByRole('button', { name: /Preparazione parziale/ }))
+    expect(screen.getByRole('button', { name: 'Preparo questi' })).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: 'Lascia stare' }))
+    expect(screen.queryByRole('button', { name: 'Preparo questi' })).not.toBeInTheDocument()
+    expect(preparazioneParziale).not.toHaveBeenCalled()
+  })
+
+  it('UNA COMANDA IN PREPARAZIONE SI DIVIDE, e le due parti restano al banco', async () => {
+    // È il caso vero: sto preparando cinque gin tonic, ne faccio uscire
+    // tre adesso e due dopo. Nessuna delle due parti torna indietro.
+    const user = userEvent.setup()
+    mount(daFare({ comande: [
+      {
+        id: 'c1', seq: 1, status: 'in_preparazione', status_times: {},
+        items: [{ drink_id: 'gin', name: 'Gin Tonic', unit_price: 8, qty: 5 }],
+      },
+    ] }))
+    await apriComande(user)
+    await user.click(screen.getByRole('button', { name: /Preparazione parziale/ }))
+    for (let i = 0; i < 3; i++) {
+      await user.click(screen.getByRole('button', { name: 'Uno in più di Gin Tonic' }))
+    }
+    await user.click(screen.getByRole('button', { name: 'Preparo questi' }))
+    expect(preparazioneParziale).toHaveBeenCalledWith('ord1', 'c1', [3])
+
+    // e si vede subito: la vecchia divisa, le due nuove TUTTE E DUE al
+    // banco, cinque unità in totale
+    const cards = [...document.querySelectorAll('.confirm-box .card')]
+    const testo = cards.map((c) => c.textContent)
+    expect(testo[0]).toMatch(/Divisa/)
+    expect(testo[1]).toMatch(/In preparazione/)
+    expect(testo[1]).toMatch(/3× Gin Tonic/)
+    expect(testo[2]).toMatch(/In preparazione/)
+    expect(testo[2]).toMatch(/2× Gin Tonic/)
+    // nessuna delle due torna indietro: sono due pill «In preparazione»,
+    // non una in preparazione e una da fare
+    expect(cards.filter((c) => c.querySelector('.pill.in_preparazione')).length).toBe(2)
+  })
+
+  it('non si propone su quello che è già sul vassoio, né su un drink solo', async () => {
+    const user = userEvent.setup()
+    const { unmount } = mount(daFare({ comande: [
+      {
+        id: 'c1', seq: 1, status: 'pronto', status_times: {},
+        items: [{ drink_id: 'gin', name: 'Gin Tonic', unit_price: 8, qty: 5 }],
+      },
+    ] }))
+    await apriComande(user)
+    expect(screen.queryByRole('button', { name: /Preparazione parziale/ })).not.toBeInTheDocument()
+    unmount()
+
+    mount(daFare({ comande: [
+      {
+        id: 'c1', seq: 1, status: 'ricevuto', status_times: {},
+        items: [{ drink_id: 'gin', name: 'Gin Tonic', unit_price: 8, qty: 1 }],
+      },
+    ] }))
+    await apriComande(user)
+    expect(screen.queryByRole('button', { name: /Preparazione parziale/ })).not.toBeInTheDocument()
+  })
+})
+
+// ── A CHE PUNTO È QUESTO CONTO, RIGA PER RIGA ───────────────────
+//
+// Gli stati del servizio stanno sulle COMANDE, non sul conto: di base la
+// comanda è una sola ed esce tutta per l'intero ordine, e allora tutti i
+// drink sono nello stesso passo — non c'è niente da intestare. Appena il
+// banco ne divide una per prepararne una parte, invece, aprendo il conto si
+// deve vedere cosa è al banco e cosa è già uscito.
+describe('le righe del conto dicono a che punto sono', () => {
+  const titoli = () =>
+    [...document.querySelectorAll('.posd-gruppo')].map((n) => n.textContent)
+
+  it('con una comanda sola non c’è nessun titolo: sarebbe un titolo per dire una cosa sola', () => {
+    mount(baseOrder())
+    expect(titoli()).toEqual([])
+  })
+
+  // SENZA GLI STATI DEL SERVIZIO QUEI TITOLI NON ESISTONO. Il locale che
+  // non segue la preparazione non ha un «in preparazione» da nessuna parte:
+  // vederselo comparire in mezzo alle righe di un conto è una parola che
+  // parla di una cosa che lì non si fa (BUG-033). Resta la divisione dei
+  // pagati, che c'era da prima e riguarda i soldi, non il lavoro.
+  it('col servizio spento i passi non si vedono, i pagati sì', () => {
+    mockSettings.workflow_enabled = false
+    try {
+      mount(
+        baseOrder({
+          comande: [
+            {
+              id: 'c1', seq: 1, status: 'in_preparazione', status_times: {},
+              items: [{ drink_id: 'gin', name: 'Gin Tonic', unit_price: 8, qty: 2 }],
+            },
+            {
+              id: 'c2', seq: 2, status: 'ricevuto', status_times: {},
+              items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1 }],
+            },
+          ],
+        })
+      )
+      expect(titoli()).toEqual([])
+    } finally {
+      delete mockSettings.workflow_enabled
+    }
+  })
+
+  // MA I PAGATI SI VEDONO SEMPRE. Quella divisione non parla di lavoro,
+  // parla di soldi: dice cosa è già stato incassato e cosa no, e serve
+  // esattamente quanto prima — anzi di più, perché senza i passi del
+  // servizio è l'unica cosa che divide le righe.
+  it('col servizio spento i pagati restano separati, e in fondo', () => {
+    mockSettings.workflow_enabled = false
+    try {
+      mount(
+        baseOrder({
+          payment_status: 'parziale',
+          payments: [
+            {
+              amount: 7,
+              method: 'banco',
+              at: '2026-07-11T21:30:00.000Z',
+              items: [{ drink_id: 'mojito', name: 'Mojito', qty: 1 }],
+            },
+          ],
+          comande: [
+            {
+              id: 'c1', seq: 1, status: 'in_preparazione', status_times: {},
+              items: [
+                { drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 },
+                { drink_id: 'gin', name: 'Gin Tonic', unit_price: 8, qty: 1 },
+              ],
+            },
+          ],
+        })
+      )
+      // un titolo solo, quello dei pagati: nessun passo del servizio
+      expect(titoli()).toEqual(['💳 Pagati'])
+      // e sta in fondo: le righe ancora da pagare vengono prima
+      const righe = [...document.querySelectorAll('.posd-gruppo, .draft-line')]
+      expect(righe.at(-1).className).toContain('draft-line')
+      expect(righe.findIndex((n) => n.className.includes('posd-gruppo'))).toBeGreaterThan(0)
+    } finally {
+      delete mockSettings.workflow_enabled
+    }
+  })
+
+  it('divisa la comanda, le righe si raggruppano per passo', () => {
+    mount(
+      baseOrder({
+        comande: [
+          {
+            id: 'c1', seq: 1, status: 'in_preparazione', status_times: {},
+            items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 }],
+          },
+          {
+            id: 'c2', seq: 2, status: 'pronto', status_times: {},
+            items: [{ drink_id: 'gin', name: 'Gin Tonic', unit_price: 8, qty: 1 }],
+          },
+        ],
+      })
+    )
+    expect(titoli()).toEqual(['🍹 In preparazione', '🔔 Pronto'])
+    // e le righe stanno sotto il titolo giusto, in ordine di lavorazione
+    const righe = [...document.querySelectorAll('.posd-gruppo, .draft-line')].map((n) =>
+      n.textContent.replace(/\s+/g, ' ').trim()
+    )
+    expect(righe[0]).toContain('In preparazione')
+    expect(righe[1]).toContain('Mojito')
+    expect(righe[2]).toContain('Pronto')
+    expect(righe[3]).toContain('Gin Tonic')
+  })
+
+  it('PAGATO IN CASSA E IN PREPARAZIONE AL BANCO: si dicono tutte e due', () => {
+    // Un conto si incassa in qualunque stato di servizio: dalla cassa è
+    // chiuso, dal banco magari no. Se il gruppo «Pagati» scacciasse quello
+    // del servizio, aprendo il conto si leggerebbe che è tutto sistemato
+    // mentre un drink è ancora da fare.
+    mount(
+      baseOrder({
+        payment_status: 'parziale',
+        payments: [{ items: [{ drink_id: 'gin', qty: 1 }] }],
+        comande: [
+          {
+            id: 'c1', seq: 1, status: 'in_preparazione', status_times: {},
+            items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 }],
+          },
+          {
+            id: 'c2', seq: 2, status: 'ritirato', status_times: {},
+            items: [{ drink_id: 'gin', name: 'Gin Tonic', unit_price: 8, qty: 1 }],
+          },
+        ],
+      })
+    )
+    expect(titoli()).toEqual(['🍹 In preparazione', '💳 Pagati'])
   })
 })

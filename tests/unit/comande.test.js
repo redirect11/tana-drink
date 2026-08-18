@@ -6,6 +6,10 @@ import { describe, it, expect } from 'vitest'
 import {
   ORDER_OPEN,
   nextComandaStatus,
+  statoComandaNuova,
+  comandaPerLeAggiunte,
+  statiPrimaComanda,
+  statiDopoLaDivisione,
   activeComanda,
   serveAllComande,
   comandeSummary,
@@ -25,6 +29,110 @@ import {
 } from '../../src/lib/comande.js'
 
 const c = (seq, status, items = []) => ({ id: `c${seq}`, seq, status, items })
+
+// ── IN CHE PASSO NASCE UNA COMANDA ──────────────────────────
+//
+// Di suo «da fare»: si battono tre conti di fila e poi si comincia a
+// versare, ed è «Lo preparo io» a dire quando si comincia — e chi. Dove
+// invece si prepara nell'istante in cui si batte, quel passo è un tocco in
+// più per ogni comanda, tutta la sera: lo decide il locale.
+//
+// È UNA FUNZIONE E NON UNA COSTANTE apposta: con un valore da copiare
+// bastava che una strada scrivesse un «ricevuto» a mano per non seguire
+// l'impostazione, e non se ne sarebbe accorto nessuno. Era già successo
+// tre volte — il conto nuovo, le aggiunte, il placeholder in coda — e le
+// tre risposte non combaciavano.
+// ── FIN DOVE SI PUÒ TORNARE INDIETRO ─────────────────────────
+//
+// Col locale che fa nascere le comande già in preparazione, «da fare» non
+// esiste: nessuna comanda ci nasce, nessuno guarda quella colonna, e
+// rimandarci una comanda a mano vuol dire nasconderla dove non la cerca
+// più nessuno.
+describe('fin dove si torna indietro', () => {
+  it('di suo si torna a tutti i passi già fatti', () => {
+    expect(statiPrimaComanda('pronto', 'ricevuto')).toEqual(['ricevuto', 'in_preparazione'])
+    expect(statiPrimaComanda('in_preparazione', 'ricevuto')).toEqual(['ricevuto'])
+    expect(statiPrimaComanda('ricevuto', 'ricevuto')).toEqual([])
+  })
+
+  it('COL SALTO ACCESO «da fare» non si propone più', () => {
+    expect(statiPrimaComanda('pronto', 'in_preparazione')).toEqual(['in_preparazione'])
+    expect(statiPrimaComanda('in_preparazione', 'in_preparazione')).toEqual([])
+  })
+
+  it('ma una comanda già ferma a «da fare» non si tocca', () => {
+    // Non si rimanda indietro nessuno: si toglie solo la strada per
+    // andarci. Da «da fare» si va avanti come sempre.
+    expect(statiPrimaComanda('ricevuto', 'in_preparazione')).toEqual([])
+    expect(nextComandaStatus('ricevuto')).toBe('in_preparazione')
+  })
+
+  it('da una comanda servita si torna comunque solo fin dove si può', () => {
+    expect(statiPrimaComanda('ritirato', 'in_preparazione')).toEqual([
+      'in_preparazione',
+      'pronto',
+    ])
+  })
+})
+
+// ── DOVE FINISCONO LE RIGHE AGGIUNTE A UN CONTO APERTO ────────────
+//
+// Nel passo in cui NASCE il lavoro nuovo, non in quello della comanda che
+// sta lì accanto. Lo decideva `comandaEditable`, che vuol dire «si può
+// ancora toccare» ed è vera sia per «da fare» sia per «in preparazione»:
+// le righe aggiunte a un conto con una comanda già al banco ci finivano
+// dentro, e al banco risultavano prese in carico da qualcuno (BUG-024).
+describe('dove finiscono le righe aggiunte', () => {
+  const c = (id, status) => ({ id, status, items: [] })
+
+  it('nella comanda che sta già in quel passo', () => {
+    const comande = [c('c1', 'in_preparazione'), c('c2', 'ricevuto')]
+    // è lo stesso giro da fare, non due ticket per la stessa cosa
+    expect(comandaPerLeAggiunte(comande, 'ricevuto').id).toBe('c2')
+    expect(comandaPerLeAggiunte(comande, 'in_preparazione').id).toBe('c1')
+  })
+
+  it('SE IN QUEL PASSO NON C’È NIENTE, non ci si accontenta di quella accanto', () => {
+    // È il difetto: con una sola comanda in preparazione, le righe nuove
+    // finivano lì e sparivano dalla colonna «Da fare».
+    expect(comandaPerLeAggiunte([c('c1', 'in_preparazione')], 'ricevuto')).toBe(null)
+    expect(comandaPerLeAggiunte([c('c1', 'ricevuto')], 'in_preparazione')).toBe(null)
+  })
+
+  it('una comanda PRONTA o SERVITA non accoglie mai niente', () => {
+    // Non è nel passo di nascita, quindi viene da sé: nessuna seconda
+    // strada che decide per conto suo.
+    for (const stato of ['pronto', 'ritirato', 'annullato']) {
+      expect(comandaPerLeAggiunte([c('c1', stato)], 'ricevuto')).toBe(null)
+      expect(comandaPerLeAggiunte([c('c1', stato)], 'in_preparazione')).toBe(null)
+    }
+  })
+
+  it('conto vuoto: non c’è niente da accogliere', () => {
+    expect(comandaPerLeAggiunte([], 'ricevuto')).toBe(null)
+    expect(comandaPerLeAggiunte(undefined, 'ricevuto')).toBe(null)
+  })
+})
+
+describe('in che passo nasce una comanda', () => {
+  it('di suo nasce DA FARE', () => {
+    expect(statoComandaNuova({})).toBe('ricevuto')
+    expect(statoComandaNuova()).toBe('ricevuto')
+    expect(statoComandaNuova({ comande_in_preparazione: false })).toBe('ricevuto')
+  })
+
+  it('col locale che lo chiede, nasce già in preparazione', () => {
+    expect(statoComandaNuova({ comande_in_preparazione: true })).toBe('in_preparazione')
+  })
+
+  it('solo il vero acceso conta', () => {
+    // Un valore storto letto da Firestore non deve far nascere le comande
+    // in un posto a caso.
+    for (const v of ['si', 1, 'true', null, undefined]) {
+      expect(statoComandaNuova({ comande_in_preparazione: v })).toBe('ricevuto')
+    }
+  })
+})
 
 describe('nextComandaStatus', () => {
   it('flusso ricevuto→in_preparazione→pronto→ritirato→null', () => {
@@ -270,5 +378,326 @@ describe('conto chiuso: non c’è più niente da fare', () => {
 
   it('un conto servito ma non incassato resta aperto: mancano i soldi', () => {
     expect(contoChiuso(servito(), { workflowOn: true })).toBe(false)
+  })
+})
+
+// ── LA PREPARAZIONE PARZIALE ─────────────────────────────────────────
+//
+// Al banco capita di vedere tre gin tonic in una comanda e due in un'altra
+// e prepararli insieme, per farli uscire in una volta sola. Non andrebbe
+// fatto — un ticket si lavora intero — ma si fa: l'app non lo impedisce,
+// lo registra, e queste sono le regole con cui lo registra.
+//
+// IL CONTROLLO CHE CONTA È L'ULTIMO: la somma delle unità prima e dopo la
+// divisione deve essere identica. Se una divisione fa sparire un drink, al
+// banco non se ne accorge nessuno finché non lo reclama il cliente.
+import {
+  dividiComanda,
+  comandaDivisibile,
+  firmaLavoro,
+  annullataPerDivisione,
+} from '../../src/lib/comande.js'
+
+describe('dividere una comanda', () => {
+  const riga = (name, qty) => ({ drink_id: name, name, qty, unit_price: 8 })
+  const comanda = { id: 'c1', seq: 1, status: 'ricevuto', items: [riga('Gin tonic', 5)] }
+  const unità = (righe) => (righe || []).reduce((s, i) => s + i.qty, 0)
+
+  it('due di cinque: due partono, tre restano da fare', () => {
+    const { tutta, nuova, resta } = dividiComanda(comanda, [2])
+    expect(tutta).toBe(false)
+    expect(nuova).toEqual([{ ...riga('Gin tonic', 2), unit_price: 8 }])
+    expect(resta).toEqual([{ ...riga('Gin tonic', 3), unit_price: 8 }])
+  })
+
+  it('righe intere: quella scelta se ne va tutta, le altre restano', () => {
+    const c = { ...comanda, items: [riga('Gin tonic', 3), riga('Negroni', 2)] }
+    const { nuova, resta } = dividiComanda(c, [3, 0])
+    expect(nuova.map((i) => [i.name, i.qty])).toEqual([['Gin tonic', 3]])
+    expect(resta.map((i) => [i.name, i.qty])).toEqual([['Negroni', 2]])
+  })
+
+  it('prese TUTTE le righe non si divide niente: la comanda avanza e basta', () => {
+    // Annullarla per rifarla identica lascerebbe in giro una comanda
+    // annullata che non racconta niente a nessuno.
+    const c = { ...comanda, items: [riga('Gin tonic', 3), riga('Negroni', 2)] }
+    const esito = dividiComanda(c, [3, 2])
+    expect(esito.tutta).toBe(true)
+    expect(esito.resta).toEqual([])
+    expect(unità(esito.nuova)).toBe(5)
+  })
+
+  it('non si è scelto niente: non succede niente', () => {
+    expect(dividiComanda(comanda, [0])).toBe(null)
+    expect(dividiComanda(comanda, [])).toBe(null)
+    expect(dividiComanda(comanda, undefined)).toBe(null)
+  })
+
+  it('quantità impossibili non fanno danni', () => {
+    // Un −1 o un «boh» arrivati da un tocco storto valgono zero; chiederne
+    // più di quante ce ne sono vale tutte quelle che ci sono.
+    expect(dividiComanda(comanda, [-3])).toBe(null)
+    expect(dividiComanda(comanda, ['boh'])).toBe(null)
+    const troppe = dividiComanda(comanda, [99])
+    expect(troppe.tutta).toBe(true)
+    expect(unità(troppe.nuova)).toBe(5)
+  })
+
+  it('IL TOTALE DELLE UNITÀ SI CONSERVA SEMPRE', () => {
+    const c = {
+      ...comanda,
+      items: [riga('Gin tonic', 5), riga('Negroni', 2), riga('Spritz', 3)],
+    }
+    const prima = unità(c.items)
+    for (const scelte of [[1, 0, 0], [5, 2, 3], [2, 1, 1], [0, 2, 0], [4, 9, 1]]) {
+      const esito = dividiComanda(c, scelte)
+      expect(unità(esito.nuova) + unità(esito.resta)).toBe(prima)
+    }
+  })
+})
+
+// I DUE ANNULLAMENTI. Uno è un fatto della serata (il conto è saltato),
+// l'altro è contabilità interna (la comanda è stata divisa). Nel dato sono
+// tutti e due «annullato»: a distinguerli è il motivo scritto sulla comanda,
+// ed è su quello che si filtra — non sullo stato.
+describe('annullata davvero o annullata perché divisa', () => {
+  it('solo la divisione porta il suo motivo', () => {
+    expect(annullataPerDivisione({ status: 'annullato', annullata_per: 'divisione' })).toBe(true)
+    expect(annullataPerDivisione({ status: 'annullato' })).toBe(false)
+    expect(annullataPerDivisione({ status: 'ricevuto', annullata_per: 'divisione' })).toBe(false)
+    expect(annullataPerDivisione(null)).toBe(false)
+  })
+})
+
+describe('su quali comande si propone la preparazione parziale', () => {
+  const riga = (qty) => ({ drink_id: 'gin', name: 'Gin tonic', qty, unit_price: 8 })
+  const con = (status, qty = 2) => ({ status, items: [riga(qty)] })
+
+  it('FINCHÉ IL DRINK NON È USCITO DAL BANCO', () => {
+    // Dividere una comanda già al banco è il caso vero: sto preparando
+    // cinque gin tonic, ne faccio uscire tre adesso e due dopo.
+    expect(comandaDivisibile(con('ricevuto'))).toBe(true)
+    expect(comandaDivisibile(con('in_preparazione'))).toBe(true)
+  })
+
+  it('da «pronto» in poi no: è roba sul vassoio', () => {
+    for (const st of ['pronto', 'ritirato', 'annullato']) {
+      expect(comandaDivisibile(con(st))).toBe(false)
+    }
+    expect(comandaDivisibile(null)).toBe(false)
+  })
+
+  it('e solo se c’è più di un drink: su uno solo la scelta è tutto o niente', () => {
+    expect(comandaDivisibile(con('ricevuto', 1))).toBe(false)
+    expect(comandaDivisibile(con('in_preparazione', 1))).toBe(false)
+    expect(comandaDivisibile({ status: 'ricevuto', items: [] })).toBe(false)
+    expect(comandaDivisibile({ status: 'ricevuto', items: [riga(1), riga(1)] })).toBe(true)
+  })
+})
+
+// ── IN CHE PASSO NASCONO LE DUE PARTI ──────────────────────────
+//
+// Lo dice quella di partenza, e non è fisso.
+describe('gli stati dopo una divisione', () => {
+  it('da «da fare»: la parte scelta parte, il resto resta da fare', () => {
+    expect(statiDopoLaDivisione('ricevuto')).toEqual({
+      nuova: 'in_preparazione',
+      resta: 'ricevuto',
+    })
+  })
+
+  it('da «in preparazione»: TUTTE E DUE in preparazione', () => {
+    // Il lavoro è cominciato su entrambe: mandarne indietro una a «da
+    // fare» direbbe che quei drink non li ha ancora presi in mano nessuno.
+    expect(statiDopoLaDivisione('in_preparazione')).toEqual({
+      nuova: 'in_preparazione',
+      resta: 'in_preparazione',
+    })
+  })
+})
+
+// LA FIRMA DEL LAVORO dice se il server ha ormai recepito il gesto fatto
+// qui: serve a buttare via la copia locale senza far «rimbalzare» la card
+// allo stato di prima.
+describe('la firma del lavoro di un conto', () => {
+  const c = (id, status, qty) => ({ id, status, items: [{ drink_id: 'x', qty }] })
+
+  it('cambia quando cambia il passo o quante unità ci sono', () => {
+    expect(firmaLavoro([c('c1', 'ricevuto', 2)])).not.toBe(
+      firmaLavoro([c('c1', 'in_preparazione', 2)])
+    )
+    expect(firmaLavoro([c('c1', 'ricevuto', 2)])).not.toBe(firmaLavoro([c('c1', 'ricevuto', 3)]))
+  })
+
+  it('non cambia per i campi che non si vedono', () => {
+    // Dal server le comande tornano con orari e snapshot del magazzino in
+    // più: confrontando gli oggetti interi la copia locale non se ne
+    // andrebbe mai.
+    const dalServer = {
+      ...c('c1', 'ricevuto', 2),
+      status_times: { ricevuto: '2026-08-16T21:00:00.000Z' },
+      inventory_consumption: [{ id: 'gin', qty: 40 }],
+    }
+    expect(firmaLavoro([dalServer])).toBe(firmaLavoro([c('c1', 'ricevuto', 2)]))
+  })
+
+  it('NON GUARDA GLI ID, ed è il punto', () => {
+    // Una comanda appena creata qui non ha ancora il nome che le darà il
+    // server: confrontando gli id, la copia locale di una divisione non se
+    // ne sarebbe andata mai più. Quello che conta è se a schermo cambia
+    // qualcosa.
+    expect(firmaLavoro([c('__volo-1', 'in_preparazione', 2)])).toBe(
+      firmaLavoro([c('c3', 'in_preparazione', 2)])
+    )
+  })
+
+  it('non guarda nemmeno l’ordine in cui stanno', () => {
+    // Il server appende le comande nate da una divisione nell'ordine suo.
+    expect(firmaLavoro([c('c1', 'ricevuto', 3), c('c2', 'in_preparazione', 2)])).toBe(
+      firmaLavoro([c('c2', 'in_preparazione', 2), c('c1', 'ricevuto', 3)])
+    )
+  })
+
+  it('una divisione: la firma combacia quando arrivano le comande vere', () => {
+    // Locale: la vecchia annullata più due provvisorie. Server: la stessa
+    // cosa, con gli id veri e i campi in più.
+    const locale = [
+      c('c1', 'annullato', 5),
+      c('__volo-1', 'in_preparazione', 2),
+      c('__volo-2', 'ricevuto', 3),
+    ]
+    const server = [
+      { ...c('c1', 'annullato', 5), annullata_per: 'divisione', divisa_in: ['c2', 'c3'] },
+      { ...c('c2', 'in_preparazione', 2), divisa_da: 'c1' },
+      { ...c('c3', 'ricevuto', 3), divisa_da: 'c1' },
+    ]
+    expect(firmaLavoro(locale)).toBe(firmaLavoro(server))
+  })
+})
+
+
+// ── I GRUPPI DELLE RIGHE DENTRO IL CONTO ───────────────────────
+//
+// Gli stati del servizio stanno sulle COMANDE, non sul conto: con una
+// comanda sola tutti i drink sono nello stesso passo e non c'è niente da
+// intestare. Appena il banco ne divide una, aprendo il conto si deve
+// vedere cosa è al banco e cosa è già uscito.
+import { gruppoDiRiga, gruppiDelConto, titoloGruppo } from '../../src/lib/comande.js'
+
+describe('a che punto sta ogni riga del conto', () => {
+  const daComanda = (status) => ({ source: 'comanda', status })
+  const bozza = { source: 'draft' }
+
+  it('una riga sta nel passo della sua comanda; quella pagata sta fra i pagati', () => {
+    expect(gruppoDiRiga(daComanda('in_preparazione'))).toBe('in_preparazione')
+    expect(gruppoDiRiga({ ...daComanda('pronto'), paid: true })).toBe('pagati')
+    // le righe della bozza non sono ancora lavoro di nessuno
+    expect(gruppoDiRiga(bozza)).toBe(null)
+  })
+
+  it('con una comanda sola c’è UN gruppo: niente titoli', () => {
+    // Di base la comanda esce tutta per l'intero ordine, e un titolo per
+    // dire una cosa sola è rumore.
+    const righe = [daComanda('ricevuto'), daComanda('ricevuto'), bozza]
+    expect(gruppiDelConto(righe)).toEqual(['ricevuto'])
+  })
+
+  it('divisa la comanda i gruppi sono in ordine di lavorazione, coi pagati in fondo', () => {
+    const righe = [
+      { ...daComanda('pronto'), paid: true },
+      daComanda('pronto'),
+      daComanda('ricevuto'),
+      daComanda('in_preparazione'),
+    ]
+    expect(gruppiDelConto(righe)).toEqual([
+      'ricevuto',
+      'in_preparazione',
+      'pronto',
+      'pagati',
+    ])
+  })
+
+  it('PAGATO IN CASSA E IN PREPARAZIONE AL BANCO: due titoli, nessuna contraddizione', () => {
+    // Un conto si incassa in qualunque stato di servizio. Se il gruppo
+    // «Pagati» scacciasse quello del servizio, aprendo il conto si
+    // leggerebbe che è tutto sistemato mentre un drink è ancora da fare.
+    const righe = [daComanda('in_preparazione'), { ...daComanda('ritirato'), paid: true }]
+    expect(gruppiDelConto(righe)).toEqual(['in_preparazione', 'pagati'])
+    expect(titoloGruppo('in_preparazione')).toBe('🍹 In preparazione')
+    expect(titoloGruppo('pagati')).toBe('💳 Pagati')
+  })
+
+  it('un gruppo che non esiste non ha titolo', () => {
+    expect(titoloGruppo(null)).toBe(null)
+    expect(titoloGruppo('boh')).toBe(null)
+  })
+})
+
+
+// ── I PASSI DI UNA COMANDA, CON L'ORA ────────────────────────
+//
+// Sulla card basta «da quanto sta lì»; aperta la comanda le domande
+// diventano altre — quando è entrata, quando qualcuno l'ha presa in
+// carico, quanto è rimasta pronta prima di partire. Al banco quei minuti
+// sono la differenza fra «siamo indietro» e «questo ticket è stato
+// dimenticato».
+import { tappeComanda } from '../../src/lib/comande.js'
+
+describe('i passi di una comanda', () => {
+  const ORA = '2026-08-18T21:00:00.000Z'
+  const POI = '2026-08-18T21:04:00.000Z'
+
+  it('quelli già toccati portano l’ora, quelli davanti no', () => {
+    const tappe = tappeComanda({
+      status: 'in_preparazione',
+      status_times: { ricevuto: ORA, in_preparazione: POI },
+    })
+    expect(tappe.map((t) => [t.stato, t.fatta, t.adesso, t.quando])).toEqual([
+      ['ricevuto', true, false, ORA],
+      ['in_preparazione', true, true, POI],
+      ['pronto', false, false, null],
+      ['ritirato', false, false, null],
+    ])
+  })
+
+  it('appena entrata: un passo solo alle spalle', () => {
+    const tappe = tappeComanda({ status: 'ricevuto', status_times: { ricevuto: ORA } })
+    expect(tappe.filter((t) => t.fatta).map((t) => t.stato)).toEqual(['ricevuto'])
+    expect(tappe.find((t) => t.adesso).stato).toBe('ricevuto')
+  })
+
+  it('servita: sono tutti fatti, e nessuno resta davanti', () => {
+    const tappe = tappeComanda({ status: 'ritirato', status_times: { ritirato: POI } })
+    expect(tappe.every((t) => t.fatta)).toBe(true)
+    expect(tappe.at(-1).adesso).toBe(true)
+  })
+
+  it('ANNULLATA: tiene gli orari che aveva e si porta in fondo il passo che l’ha chiusa', () => {
+    // Fuori dal flusso l'unica prova di essere passati di lì è l'orario
+    // segnato: contando i passi, una comanda che al banco c'era stata
+    // davvero risulterebbe «mai arrivata».
+    const tappe = tappeComanda({
+      status: 'annullato',
+      status_times: { ricevuto: ORA, in_preparazione: POI, annullato: POI },
+    })
+    expect(tappe.map((t) => t.stato)).toEqual([
+      'ricevuto',
+      'in_preparazione',
+      'pronto',
+      'ritirato',
+      'annullato',
+    ])
+    expect(tappe.filter((t) => t.fatta).map((t) => t.stato)).toEqual([
+      'ricevuto',
+      'in_preparazione',
+      'annullato',
+    ])
+    expect(tappe.at(-1).adesso).toBe(true)
+  })
+
+  it('senza orari non si inventa niente', () => {
+    const tappe = tappeComanda({ status: 'ricevuto' })
+    expect(tappe.every((t) => t.quando === null)).toBe(true)
+    expect(tappeComanda(null).length).toBe(4)
   })
 })

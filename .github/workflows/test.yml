@@ -1,20 +1,35 @@
 name: Tests
 
-# QUESTO GIRA SEMPRE, a ogni push su qualunque ramo. Da quando si pubblica
-# solo coi tag, il push su un ramo non fa più partire nessun deploy: resta
-# questo, che dice se il lavoro regge. Il verde qui non pubblica niente —
-# per pubblicare si tagga (firebase-hosting.yml).
+# GIRA A OGNI PUSH, TRANNE SULLA LINEA DI RILASCIO. Da quando si pubblica
+# solo coi tag, un push non fa partire nessun deploy: resta questo, che dice
+# se il lavoro regge, e su un ramo di lavoro qualunque e' comodo averlo.
 #
-# Sulle pull request gira lo stesso, e in più la copertura: lì c'è il tempo
-# di guardarla, mentre in mezzo al lavoro sarebbe solo attesa.
+# L'eccezione e' release/**, che qui e' il posto di lavoro QUOTIDIANO: ci si
+# spinge dieci volte al giorno, e far girare tutta la suite a ogni gesto vuol
+# dire pagare minuti di macchina per un verde che nessuno sta guardando —
+# chi lavora i test se li fa girare in locale, ed e' li' che scopre le cose.
+#
+# Quello che conta non resta scoperto lo stesso:
+#
+#   pull request verso develop  -> il cancello del merge; la CI qui e'
+#                                  obbligatoria (ruleset «linee-permanenti»)
+#   pull request verso main     -> ci passa l'hotfix, e lo stesso ruleset
+#                                  pretende il check anche li'
+#   prima di pubblicare         -> firebase-hosting.yml lint e test se li
+#                                  rifa' da se', per il test e per la
+#                                  produzione
+#
+# Sulle pull request gira anche la copertura: li c'e' il tempo di guardarla,
+# mentre in mezzo al lavoro sarebbe solo attesa.
 on:
   push:
     branches:
       - '**'
+      - '!release/**'
   pull_request:
     branches:
-      - main
       - develop
+      - main
   workflow_dispatch:
 
 permissions:

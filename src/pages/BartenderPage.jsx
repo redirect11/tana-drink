@@ -15,6 +15,7 @@ import {
   settingsIniziali,
   saveStaffToken,
   restoreOrder,
+  advanceComanda,
 } from '../lib/api.js'
 import { getPushToken } from '../lib/push.js'
 import { logoutStaff } from '../lib/logout.js'
@@ -25,6 +26,7 @@ import {
   ritiratoLabel,
   formatPrice,
   nextStatus,
+  statoAlBanco,
   placedByName,
   placedByLetter,
 } from '../lib/orderStatus.js'
@@ -37,23 +39,53 @@ import {
   restaInCoda,
   ordiniInCoda,
   voceCassa,
+  comandeDaServire,
+  haLavoroDaFare,
   gruppiInCoda,
   schedeCoda,
+  corsieDiStato,
+  corsieComande,
+  corsieDaMostrare,
+  corsieSceglibili,
+  corsieDelPronto,
+  CORSIE_SPENTE_ALL_INIZIO,
+  SOTTOFILTRI_CHIUSI,
 } from '../lib/coda.js'
-import { ripristinabile } from '../lib/storiaOrdine.js'
 import { StoriaOrdineDialog, RipristinaOrdineDialog } from '../components/StoriaOrdine.jsx'
+import { useTelefono } from '../lib/useTelefono.js'
 import StatusBell from '../components/StatusBell.jsx'
 import ActionSheet from '../components/ActionSheet.jsx'
-import { isGestore, isPersonale } from '../lib/ruoli.js'
+import { isBanco, isGestore, isPersonale } from '../lib/ruoli.js'
 import { senzaNascosti, subscribeNascosti, mostraOrdine } from '../lib/ordiniNascosti.js'
 import { battutoDaQui, annullatoDaQui, idDispositivo } from '../lib/dispositivo.js'
+import {
+  corsieNascoste,
+  ricordaCorsieNascoste,
+  vistaCorsie,
+  ricordaVistaCorsie,
+  prontoDiviso,
+  ricordaProntoDiviso,
+} from '../lib/impostazioniLocali.js'
+import {
+  fraseAnnulloDefault,
+  fraseAnnulloPossibile,
+  mondoConsegna,
+} from '../lib/consegna.js'
 import {
   leggiAvvisi,
   subscribeAvvisi,
   avvisoAttivo,
   idAvvisoStato,
 } from '../lib/preferenzeNotifiche.js'
-import { allServed, contoChiuso } from '../lib/comande.js'
+import {
+  allServed,
+  comandaDivisibile,
+  contoChiuso,
+  nextComandaStatus,
+  statiPrimaComanda,
+  statoComandaNuova,
+} from '../lib/comande.js'
+import { useComandeLocali } from '../lib/comandeLocali.js'
 import { paidAmount, orderTotal } from '../lib/pagamento.js'
 import { businessDayKey, businessDayLabel, businessDayShort } from '../lib/businessDay.js'
 import { isAwaitingPayment } from '../lib/payments.js'
@@ -76,6 +108,9 @@ import VipTab from '../components/VipTab.jsx'
 import ServiceQueue from '../components/ServiceQueue.jsx'
 import StaffCallList from '../components/StaffCallList.jsx'
 import Caricamento from '../components/Caricamento.jsx'
+import CorsieStato from '../components/CorsieStato.jsx'
+import CorsieComande from '../components/CorsieComande.jsx'
+import OrderBy from '../components/OrderBy.jsx'
 import FumettoAvvisi from '../components/FumettoAvvisi.jsx'
 import CampoPassword from '../components/CampoPassword.jsx'
 import ApriCassaBox from '../components/ApriCassaBox.jsx'
@@ -105,15 +140,6 @@ function orderStripClass(o) {
   if (o.payment_status === 'pagato') return 'pay-pagato'
   if (o.payment_status === 'parziale') return 'pay-parziale'
   return 'pay-aperto'
-}
-
-function OrderBy({ order }) {
-  const L = placedByLetter(order?.placed_by)
-  return L ? (
-    <span className="order-by staff" title={`Aperto da ${placedByName(order.placed_by)}`}>{L}</span>
-  ) : (
-    <span className="order-by client" title="Aperto dal cliente (app)">🌐</span>
-  )
 }
 
 export default function BartenderPage() {
@@ -254,7 +280,7 @@ export default function BartenderPage() {
         {/* L'«indietro» sta nella barra in alto, fra il ☰ e il marchio
             (vedi App.jsx): dentro la pagina si mangiava la prima riga di
             contenuto in ogni sezione. */}
-        {tabEffettivo === 'coda' && <OrderQueue mieiIniziale={salaMiei} gestore={isGestore(role)} />}
+        {tabEffettivo === 'coda' && <OrderQueue mieiIniziale={salaMiei} gestore={isGestore(role)} ruolo={role} />}
         {/* «Da servire»: la sezione della sala (drink pronti da portare). */}
         {tabEffettivo === 'servizio' && <ServiceQueue />}
         {tabEffettivo === 'pagamenti' && <CassaTab />}
@@ -433,7 +459,7 @@ function PortaInVista({ id }) {
   return null
 }
 
-function OrderQueue({ mieiIniziale = false, gestore = false }) {
+function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   const [ordersReady, setOrdersReady] = useState(false) // primo snapshot arrivato
   const [ordersRaw, setOrders] = useState([])
   // CONTI APPENA CHIUSI QUI: fuori dalla lista all'istante. La scrittura
@@ -444,13 +470,24 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
   const [chiusiQui, setChiusiQui] = useState([])
   useEffect(() => subscribeNascosti(setChiusiQui), [])
   const [boardFilter, setBoardFilter] = useState('attivi') // 'attivi' | 'chiusi' | 'tutti'
+  // DENTRO I CHIUSI: tutti, quelli usciti per intero, quelli con ancora
+  // qualcosa da portare. Un conto chiuso è un conto incassato — si paga in
+  // anticipo tutte le sere — e «quali dei chiusi hanno ancora roba da
+  // consegnare» è una domanda vera, che prima si rispondeva tenendo quei
+  // conti in mezzo a quelli aperti.
+  const [sottoChiusi, setSottoChiusi] = useState('tutti')
   // NASCONDERE VALE SOLO PER I CONTI IN CORSO. Un conto chiuso da qui
   // sparisce subito da «In corso» — è il suo mestiere — ma restava nascosto
   // anche sotto «Chiusi» e in «Tutti»: si chiudeva un conto e nello storico
   // non c'era, fino a ricaricare la pagina. E riaprendolo non tornava fra
   // quelli in corso, perché era ancora nell'elenco dei nascosti.
+  // ...E UN CONTO INCASSATO CON DEI DRINK ANCORA DA FARE NON SI NASCONDE
+  // AFFATTO. Nascondere serve a togliere di mezzo un conto su cui non c'è
+  // più niente da fare; ma si paga in anticipo tutte le sere, e sparendo
+  // si portava dietro le sue comande — al banco i drink appena pagati si
+  // volatilizzavano, e tornavano solo ricaricando la pagina (BUG-023).
   const orders = useMemo(
-    () => (boardFilter === 'attivi' ? senzaNascosti(ordersRaw) : ordersRaw),
+    () => (boardFilter === 'attivi' ? senzaNascosti(ordersRaw, haLavoroDaFare) : ordersRaw),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [ordersRaw, chiusiQui, boardFilter]
   )
@@ -459,8 +496,30 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
   // La scheda attiva quando gli stati di servizio sono SPENTI: in corso,
   // chiusi o annullati — le stesse voci della griglia.
   const [tabSemplice, setTabSemplice] = useState('attivi')
+  // Quale card delle corsie ha le azioni aperte: una alla volta, se no la
+  // colonna diventa un muro di tasti.
+  const [corsiaAperta, setCorsiaAperta] = useState(null)
+  // Quale card mostra tutte le righe (i conti lunghi si aprono a richiesta).
+  const [corsiaEspansa, setCorsiaEspansa] = useState(null)
+  // Le comande come le vede chi sta qui adesso: il gesto è sulla singola
+  // comanda e deve vedersi nell'istante in cui si tocca. La copia locale e
+  // la sua pulizia stanno in lib/comandeLocali.js, uguali per la coda, il
+  // conto e il dettaglio della comanda.
+  const comandeLocali = useComandeLocali(orders)
+  // Quali colonne chi sta a QUESTO terminale ha spento, e se guarda i conti
+  // o le comande: preferenze del dispositivo, non del locale — al banco e
+  // alla cassa non si guardano le stesse cose.
+  const [nascoste, setNascoste] = useState(() => corsieNascoste() ?? CORSIE_SPENTE_ALL_INIZIO)
+  const [vista, setVista] = useState(vistaCorsie)
+  const [scegliCorsie, setScegliCorsie] = useState(false) // il pannellino è aperto?
+  // La colonna del pronto: una sola col badge, o due (da servire / da
+  // ritirare). Scelta di QUESTO terminale — il tablet della sala e quello
+  // del banco non guardano lo stesso lavoro.
+  const [prontoSeparato, setProntoSeparato] = useState(prontoDiviso)
+  // Barra stretta o larga: da questo dipende se le azioni della testata
+  // stanno dietro il ⋯ o a vista come icone.
+  const telefono = useTelefono()
   const [soloOggi, setSoloOggi] = useState(false) // nasconde i conti dei giorni scorsi
-  const [nascondiPagati, setNascondiPagati] = useState(false) // pagati non ancora serviti
   // «Miei»: solo i conti inseriti da chi è collegato. Ha preso il posto
   // della pagina «I miei ordini» della sala: stessa coda per tutti, e chi
   // vuole ritrovare i propri accende il filtro.
@@ -527,15 +586,48 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
   // problema di filtri e invece era questa riga.
   const { session: cassaAperta, loading: cassaLoading } = useCashSession()
 
-  // Vista a griglia: a tutto schermo. Aggiunge `fullbleed` al body così la
-  // pagina esce dal contenitore centrato (.app, max 760px) e riempie larghezza
-  // e altezza. Rimosso quando si lascia la griglia o si smonta la coda.
-  const gridView = settings.queue_view === 'griglia'
+  // Gestione preparazione: se spenta spariscono stati e avanzamenti.
+  const workflowOn = settings.workflow_enabled !== false
+  // In che passo nasce il lavoro in questo locale: lo dice comande.js, in
+  // un posto solo. Serve a sapere fin dove si può tornare indietro — sotto
+  // quel passo non c'è niente da guardare — e quali colonne ha senso
+  // accendere.
+  const passoDiNascita = statoComandaNuova(settings)
+
+  // GLI STATI DEL SERVIZIO ACCENDONO LA VISTA DEL BANCO. Chi sta allo
+  // shaker non guarda i conti, guarda il lavoro: le comande, nei passi in
+  // cui stanno. Quei passi sono esattamente ciò che dà senso a questa
+  // vista — spenti gli stati del servizio non esiste proprio, e al banco
+  // si vede la coda come la vedono tutti gli altri.
+  //
+  // COME disegnarla lo dice `settings.bartender_view`, un'impostazione del
+  // LOCALE sorella di `queue_view`: per ora l'unica voce è «corsie di
+  // stato», ma è scritta come una lista di viste possibili proprio perché
+  // è il posto dove le prossime andranno ad aggiungersi.
+  const vistaBanco = workflowOn && isBanco(ruolo)
+  const bancoCorsie = vistaBanco && (settings.bartender_view || 'corsie') === 'corsie'
+
+  // Le viste a LAVAGNA — la griglia, le corsie di stato, la vista del banco
+  // — stanno a tutto schermo: aggiungono `fullbleed` al body così la pagina
+  // esce dal contenitore centrato (.app, max 760px) e riempie larghezza e
+  // altezza. Rimosso quando si lascia la lavagna o si smonta la coda.
+  // CHI NON È AL BANCO PUÒ ANDARE A GUARDARE IL LAVORO, da qualunque vista
+  // della coda: è una pastiglia sopra le corsie (vedi puoScegliere), e la
+  // scelta è di questo terminale. Tornando indietro la coda si ritrova
+  // com'era — griglia compresa — perché quella resta l'impostazione del
+  // locale e nessuno l'ha toccata.
+  const guardaComande = workflowOn && !vistaBanco && vista === 'comande'
+  const gridView = !vistaBanco && !guardaComande && settings.queue_view === 'griglia'
+  // LA CODA DELL'ADMIN NON CAMBIA: con «corsie di stato» continua a vedere
+  // i CONTI — in corso, chiusi, annullati — come ha sempre fatto.
+  const corsieView =
+    bancoCorsie || guardaComande || (!vistaBanco && settings.queue_view === 'corsie')
+  const lavagna = gridView || corsieView
   useEffect(() => {
-    if (!gridView) return undefined
+    if (!lavagna) return undefined
     document.body.classList.add('fullbleed')
     return () => document.body.classList.remove('fullbleed')
-  }, [gridView])
+  }, [lavagna])
 
   // Se dopo 8s gli ordini non sono arrivati, probabilmente il database non è
   // raggiungibile (l'SDK ritenta in silenzio): mostra un suggerimento.
@@ -561,8 +653,6 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
 
   // Osserva la CODA: conti aperti (sempre, per sempre) + chiusi di oggi.
   const cutoffHour = settings.business_day_cutoff_hour
-  // Gestione preparazione: se spenta spariscono stati e avanzamenti.
-  const workflowOn = settings.workflow_enabled !== false
   useEffect(() => {
     let primed = false
     const awaiting = new Set() // ordini in attesa di pagamento obbligatorio
@@ -693,9 +783,13 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
   // restano aperti finché non li si chiude a mano; la giornata commerciale
   // serve solo a raggruppare (statistiche e progressivo #N).
 
-  function advance(order) {
-    const ns = nextStatus(order.workflow_status)
-    if (!ns) return
+  // Porta il conto a uno stato: quello dopo, se non si dice altro, oppure
+  // uno preciso — anche INDIETRO, per chi ha toccato «pronto» sul conto
+  // sbagliato. La strada è la stessa (override ottimistico + scrittura in
+  // sottofondo): non c'è un modo per andare avanti e uno per tornare.
+  function advance(order, stato = null) {
+    const ns = stato || nextStatus(order.workflow_status)
+    if (!ns || ns === order.workflow_status) return
     setQueueOverrides((m) => ({ ...m, [order.id]: ns }))
     avanzatiDaMe.current.add(`${order.id}:${ns}`)
     ;(async () => {
@@ -715,6 +809,35 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
         })
       }
     })()
+  }
+
+  // Porta AVANTI UNA COMANDA, non tutto il conto: è il gesto delle corsie
+  // del banco, dove ogni card è un ticket. Gli stati del servizio sono
+  // SOTTOSTATI dell'ordine — stanno sulle comande, non sul conto — e con
+  // una comanda sola le due cose coincidono; con più di una no, ed è
+  // esattamente quello che questa vista serve a far vedere. La strada è
+  // quella di sempre: si vede subito, si scrive in sottofondo, e cosa
+  // viene dopo lo dice comande.js, come nel dettaglio del conto.
+  // `stato` esplicito serve a TORNARE INDIETRO: si segna «pronto» il ticket
+  // sbagliato, e senza una strada per rimetterlo dov'era l'unica sarebbe
+  // annullare la comanda e rifarla, perdendo orari e storia.
+  function avanzaComanda(order, comanda, stato = null) {
+    if (!comanda) return
+    const ns = stato || nextComandaStatus(comanda.status)
+    if (!ns) return
+    const adesso = new Date().toISOString()
+    comandeLocali.applica(order, (comande) =>
+      comande.map((c) =>
+        c.id === comanda.id
+          ? { ...c, status: ns, status_times: { ...(c.status_times || {}), [ns]: adesso } }
+          : c
+      )
+    )
+    advanceComanda(order.id, comanda.id, ns).catch((e) => {
+      setError(e.message)
+      showToast(`⚠️ Avanzamento non riuscito: ${e.message}`, { kind: 'error' })
+      comandeLocali.scarta(order.id)
+    })
   }
 
   // L'override ottimistico vive finché il server non è allineato: appena
@@ -806,13 +929,24 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
   // servito. Un ordine pagato in anticipo ma non ancora consegnato è
   // lavoro ancora da fare, e sparire sarebbe il modo migliore per
   // dimenticarselo. Senza la preparazione, invece, il pagamento chiude.
+  // UN CONTO CHIUSO È UN CONTO INCASSATO. Punto: i soldi sono presi, e per
+  // la coda dei CONTI — griglia, lista, schede, conteggi e corsie — non
+  // c'è altro da chiedersi. Prima con gli stati del servizio ne servivano
+  // due, pagato E servito, e un conto appena riscosso restava fra quelli
+  // «in corso» finché qualcuno non lo serviva: chi aveva appena preso i
+  // soldi lo cercava fra i chiusi e non lo trovava. Il lavoro ancora da
+  // fare si guarda dove è il suo posto — le corsie delle COMANDE — e,
+  // dentro i chiusi, col sottofiltro «Da servire».
+  // La regola con gli stati resta viva altrove: il magazzino (impegnato.js)
+  // deve sapere che un conto pagato e non servito ha ancora ingredienti in
+  // ballo, e lì `contoChiuso` si chiama col workflow acceso.
+  const isChiuso = (o) => contoChiuso(o, { workflowOn: false })
+  // PAGATO MA NON ANCORA USCITO: non cambia dove sta il conto — sta fra i
+  // chiusi, coi soldi presi — ma la card lo dice lo stesso, che è il caso
+  // strano e non deve sfuggire a chi ci passa sopra gli occhi.
   const pagato = (o) =>
     o.payment_status === 'pagato' || o.workflow_status === ORDER_STATUSES.PAGATO
   const servito = (o) => allServed(o) || o.workflow_status === ORDER_STATUSES.RITIRATO
-  // La regola sta in comande.js: la usano anche il riepilogo e il magazzino.
-  const isChiuso = (o) => contoChiuso(o, { workflowOn })
-  // Pagati ma non ancora serviti: restano in coda, si possono nascondere.
-  const pagatiDaServire = effOrders.filter((o) => workflowOn && pagato(o) && !servito(o))
   const arretrati = effOrders
     .filter((o) => !isChiuso(o) && dayOf(o) && dayOf(o) !== oggiKey)
     .sort((a, b) => String(dayOf(a)).localeCompare(String(dayOf(b))))
@@ -867,6 +1001,11 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
     })
   )
   const recap = ordersRecap(inCoda, isChiuso)
+  // Quanti ticket sono ancora al banco, fra i conti di questa apertura di
+  // cassa. Senza gli stati del servizio non vuol dire niente: lì le comande
+  // risultano servite alla riscossione, e a bloccare la chiusura basta e
+  // avanza il conto ancora aperto.
+  const ticketDaServire = workflowOn ? comandeDaServire(inCoda) : 0
 
   // Leggenda "chi ha aperto l'ordine": lettera → nome per lo staff che ha
   // battuto ordini oggi, più l'eventuale voce Cliente (ordini dall'app).
@@ -917,7 +1056,6 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
   // Vista a griglia: di default gli ordini in corso; col filtro si vedono
   // anche i chiusi/pagati o TUTTI gli ordini in vista.
   const isClosed = isChiuso
-  const nascosti = new Set(nascondiPagati ? pagatiDaServire.map((o) => o.id) : [])
   // Chiusi e annullati di prima dell'ultima chiusura di cassa non sono coda:
   // stanno in Cassa. La composizione sta in coda.js, ed è quella provata dai
   // test.
@@ -934,9 +1072,10 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
       oggi: oggiKey,
     })
   const boardOrders = ordiniInCoda(
-    visibleOrders.filter((o) => !nascosti.has(o.id)),
+    visibleOrders,
     {
       filtro: boardFilter,
+      sottoChiusi,
       isChiuso: isClosed,
       cassa: cassaAperta?.id ?? null,
       apertaDa: cassaAperta?.opened_at ?? null,
@@ -958,17 +1097,158 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
       !(o.client_temp_id && pendingTempIds.has(o.client_temp_id))
   )
   const boardGroups = groupByDay(visibleBoard)
+  // LE CORSIE DI STATO: partono dalla stessa lista delle altre viste —
+  // quello che resta in coda per questa apertura di cassa, già passato per
+  // ricerca e «Miei» — e la smistano. Le regole di cosa sta dove stanno in
+  // lib/coda.js, che è dove si provano.
+  // ORDINATE COME LE ALTRE VISTE. Il tasto «↕» girava solo la griglia: qui
+  // la lista arrivava com'era, e premerlo non faceva niente di visibile —
+  // un tasto che non risponde fa dubitare dell'app, non del tasto. L'ordine
+  // vale per TUTTE le corsie insieme: si guarda la coda, non una colonna.
+  const contiInCorsia = contiScheda('tutti')
+    .slice()
+    .sort((a, b) => ((a.daily_number || 0) - (b.daily_number || 0)) * (ordineDesc ? -1 : 1))
+    // Le comande come le vede questo terminale: quelle del server con sopra
+    // l'ultimo gesto fatto da qui, finché lo snapshot non lo racconta.
+    .map(comandeLocali.conComande)
+
+  // CHI GUARDA DECIDE COSA VEDE. Sono due domande diverse davanti allo
+  // stesso schermo, e rispondere a tutti e due con la stessa vista vuol
+  // dire darla sbagliata a uno dei due:
+  //
+  //   AL BANCO interessa il LAVORO — le COMANDE, una per una, nel passo in
+  //   cui stanno: chi sta allo shaker prepara un ticket per volta, non un
+  //   conto, e un conto con tre comande in tre passi diversi disegnato come
+  //   una card sola racconta una bugia comunque la si metta.
+  //
+  //   A CHI GUARDA LA SERATA interessa com'è messo il CONTO: in corso,
+  //   chiuso, annullato. Sono le tre cose che un conto può essere, le
+  //   stesse della griglia e delle schede.
+  //
+  // Al banco la vista è già quella: la accendono gli stati del servizio
+  // (vistaBanco), e non c'è niente da scegliere — un tasto che porta
+  // altrove è solo un modo per perdersi la coda a metà serata. Chi guarda
+  // la serata parte dai CONTI, come ha sempre fatto, e con la pastiglia
+  // può andare a vedere il lavoro: è un passaggio a mano, di questo
+  // terminale (vistaCorsie), non il suo default.
+  //
+  // Senza gli stati del servizio i passi non esistono per nessuno — un
+  // conto è solo aperto, chiuso o annullato — e restano le tre corsie.
+  // LA PASTIGLIA C'È CON QUALUNQUE VISTA DELLA CODA, non solo a corsie: la
+  // vista del banco è una vista a sé, non una variante delle corsie. Chi
+  // tiene la cassa lavora in griglia perché è quella che gli serve per i
+  // conti, ma a metà serata vuole dare un'occhiata a com'è messa la
+  // preparazione: senza questo tasto doveva cambiare vista in Impostazioni,
+  // guardare, e tornare a rimetterla com'era. Al banco la pastiglia non
+  // c'è: lì non c'è niente da scegliere.
+  const puoScegliere = workflowOn && !vistaBanco
+  const corsieBanco = bancoCorsie || guardaComande
+  // Il ritiro esiste solo dove il locale lo fa: col solo servizio non c'è
+  // niente da separare, e la scelta non si propone nemmeno.
+  const ritiroEsiste = mondoConsegna(settings) === 'entrambi'
+  const divisioneP = corsieDelPronto({ divise: prontoSeparato, ritiroEsiste })
+  const corsieDelBanco = corsieBanco
+    ? corsieComande(contiInCorsia, { isChiuso: isClosed, prontoDiviso: divisioneP })
+    : []
+  // LE CORSIE DEI CONTI PARLANO DEL CONTO, non del lavoro: «In corso»,
+  // «Chiusi», «Annullati» sono le tre cose che un CONTO può essere, e per
+  // un conto chiuso vuol dire incassato — la stessa regola di tutta la coda
+  // dei conti (isChiuso, qui sopra).
+  const corsie = corsieBanco
+    ? []
+    : corsieDiStato(contiInCorsia, { isChiuso, workflowOn: false, sottoChiusi })
+  // Le colonne spente su questo terminale si tolgono qui, DOPO che sono
+  // state riempite: così i conteggi non cambiano a seconda di cosa si
+  // guarda, e riaccendendone una la si trova già piena.
+  const corsieMostrate = corsieBanco
+    ? corsieDaMostrare(corsieDelBanco, nascoste, { passoDiNascita })
+    : corsie
+  const cambiaPronto = () => {
+    const nuovo = !prontoSeparato
+    setProntoSeparato(nuovo)
+    ricordaProntoDiviso(nuovo)
+  }
+  const cambiaCorsia = (id) => {
+    const via = nascoste.includes(id) ? nascoste.filter((x) => x !== id) : [...nascoste, id]
+    setNascoste(via)
+    ricordaCorsieNascoste(via)
+  }
+  // LE DUE DOMANDE, in una pastiglia sola. Chi guarda la serata vuole
+  // sapere sia come sta andando (i CONTI) sia a che punto è la preparazione
+  // (le COMANDE): l'interruttore passa dall'una all'altra e si ricorda su
+  // questo terminale. Sta in tutte le viste della coda — griglia, lista,
+  // schede, corsie — perché la vista del banco è una vista A SÉ, non una
+  // variante delle corsie: chi tiene la cassa lavora in griglia, e per dare
+  // un'occhiata al banco non deve passare dalle Impostazioni e poi tornare
+  // a rimettere tutto com'era. È scritta qui una volta e appesa dove serve.
+  // Al banco non c'è: lì la risposta è sempre il lavoro, e un tasto che
+  // porta altrove è solo un modo per perdersi la coda a metà serata.
+  const cambiaVista = () => {
+    const nuova = corsieBanco ? 'conti' : 'comande'
+    setVista(nuova)
+    ricordaVistaCorsie(nuova)
+  }
+  // I SOTTOFILTRI DEI CHIUSI. Compaiono solo dentro «Chiusi»: sono una
+  // domanda su quei conti, e fuori di lì non vogliono dire niente. Senza
+  // gli stati del servizio nemmeno: se non si segue la preparazione, tutto
+  // quello che è stato pagato è uscito per definizione.
+  const righeSottoChiusi = (attivo) =>
+    workflowOn && attivo ? (
+      <div className="chips-row chips-sotto" style={{ margin: '-8px 0 16px' }}>
+        <span className="muted small">Dei chiusi:</span>
+        {SOTTOFILTRI_CHIUSI.map(([k, label]) => (
+          <button
+            key={k}
+            className={`chip small ${sottoChiusi === k ? 'active' : ''}`}
+            onClick={() => setSottoChiusi(k)}
+            aria-pressed={sottoChiusi === k}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+    ) : null
+
+  // IL TASTO DICE DOVE PORTA, non dove si è. Era una pastiglia «Comande»
+  // che si accendeva quando le comande le stavi già guardando: un
+  // interruttore che si legge solo sapendo com'è messo adesso, e per
+  // saperlo bisognava guardare le colonne. Un tasto si legge da sé — c'è
+  // scritto quello che succede a premerlo — e vale anche per chi arriva
+  // davanti allo schermo senza sapere chi c'è stato prima.
+  //
+  // STA NELLA RIGA DEI FILTRI, MA A DESTRA. È stato provato sotto il «+»:
+  // lì restava appeso nel vuoto, rettangolare sotto un tondo, disallineato
+  // da tutto. Nella riga dei filtri ha la forma e il peso delle pastiglie
+  // che ci sono già, e ci sta senza inventare geometrie. Ma non è un
+  // filtro: a sinistra c'è quello che RESTRINGE la lista, a destra quello
+  // che CAMBIA VISTA — stessa riga, staccati, così nessuno lo legge come
+  // un filtro in più.
+  const pastigliaComande = puoScegliere ? (
+    <button className="chip chip-vista" onClick={cambiaVista}>
+      {corsieBanco ? '🧾 Ordini' : '🍸 Comande'}
+    </button>
+  ) : null
 
   // IL CONTO ACCESO. Solo nel modo "evidenzia": è il primo che risponde
   // NELL'ORDINE IN CUI STA SULLO SCHERMO — non nell'ordine in cui arrivano
   // dal database, altrimenti si accende un conto e lo scorrimento va da
   // un'altra parte. Ogni vista ha il suo ordine, quindi si guarda la lista
   // che quella vista sta davvero disegnando.
-  const ordiniComeSiVedono = gridView
-    ? boardGroups.flatMap((g) => g.orders)
-    : listView
-      ? [...inCorso, ...evasi]
-      : list
+  // La lista si appiattisce SOLO quando serve davvero: senza la guardia,
+  // ogni disegno costruiva un array di tutta la coda per una ricerca che
+  // il piu' delle volte non e' nemmeno accesa.
+  const ordiniComeSiVedono =
+    ricercaEvidenzia && q
+      ? gridView
+        ? boardGroups.flatMap((g) => g.orders)
+        : corsieView
+          ? corsieBanco
+            ? corsieMostrate.flatMap((c) => c.schede.map((s) => s.ordine))
+            : corsieMostrate.flatMap((c) => c.ordini)
+          : listView
+            ? [...inCorso, ...evasi]
+            : list
+      : []
   const acceso = ricercaEvidenzia ? primoCorrispondente(ordiniComeSiVedono, q) : null
   const idAcceso = acceso?.id || null
   // Toccando un conto qualsiasi la ricerca si azzera: si è trovato quello
@@ -1026,7 +1306,30 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
 
   // Pulsanti azione di un ordine (avanza stato, incasso, stampe, annullo).
   // Condivisi dalla card piena (liste) e dalla card-griglia (a scomparsa).
-  const orderActions = (o) => {
+  const orderActions = (o, { senzaAvanzamento = false } = {}) => {
+    // CONTO CHIUSO O ANNULLATO: due cose sole. Non c'è più niente da
+    // preparare né da incassare, e i tasti spenti in fila — «Contanti» e
+    // «Carta» grigi su un conto già pagato — sono solo rumore addosso a chi
+    // cerca l'unica cosa che serve: ristampare lo scontrino a chi lo chiede,
+    // o riaprire il conto quando ci si accorge di un errore.
+    if (isChiuso(o) || annullato(o)) {
+      return (
+        <div className="grid-2" style={{ marginTop: 8 }}>
+          <button
+            className="btn ghost small"
+            onClick={() => printScontrino(o).catch((e) => setError(`Stampa: ${e.message}`))}
+          >
+            🧾 Scontrino
+          </button>
+          <button
+            className="btn ghost small"
+            onClick={() => setRipristinoTarget(o)}
+          >
+            ♻️ Riapri conto
+          </button>
+        </div>
+      )
+    }
     const ns = nextStatus(o.workflow_status)
     const awaiting = isAwaitingPayment(o) && o.workflow_status === ORDER_STATUSES.RICEVUTO
     const readerReady = settings.payments_reader_enabled && settings.sumup_reader_id
@@ -1041,7 +1344,27 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
         {/* Coi tasti che compaiono e spariscono, quello che cercavi non è più
             dove l'avevi visto un attimo prima. Ci sono sempre: spenti quando
             l'azione non è possibile, con il perché nel titolo. */}
-        {workflowOn && (
+        {/* UN PASSO INDIETRO. Si segna «pronto» il conto sbagliato, si tocca
+            «consegnato» mentre il drink è ancora sul vassoio: senza questo
+            l'unica strada era annullare e ribattere, perdendo orario e
+            storia. Sta accanto al passo avanti, più piccolo: si sbaglia meno
+            spesso di quanto si lavori. */}
+        {workflowOn && statiPrimaComanda(o.workflow_status, passoDiNascita).length > 0 && (
+          <div className="row" style={{ gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
+            <span className="muted small">Torna a</span>
+            {statiPrimaComanda(o.workflow_status, passoDiNascita).map((st) => (
+              <button
+                key={st}
+                className="chip"
+                onClick={() => advance(o, st)}
+                title={`Riporta il conto a «${statoAlBanco(st, o.service_mode)}»`}
+              >
+                ↩︎ {statoAlBanco(st, o.service_mode)}
+              </button>
+            ))}
+          </div>
+        )}
+        {workflowOn && !senzaAvanzamento && (
           <button
             className="btn block"
             disabled={!ns || o.workflow_status === ORDER_STATUSES.RITIRATO || awaiting}
@@ -1154,22 +1477,12 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
             🚫 {o.service_mode === 'tavolo' ? 'Non servito' : 'Non ritirato'}
           </button>
         )}
-        {/* La storia c'è per tutti i conti: è come si spiega, un'ora dopo,
-            un conto che qualcuno ha riaperto. Il ripristino compare solo
-            dove ha senso — su un conto chiuso o annullato. */}
-        <div className="grid-2" style={{ marginTop: 8 }}>
-          <button className="btn ghost small" onClick={() => setStoriaTarget(o)}>
-            🕘 Storia
-          </button>
-          <button
-            className="btn ghost small"
-            disabled={!ripristinabile(o)}
-            title={ripristinabile(o) ? undefined : 'Il conto è già in corso'}
-            onClick={() => setRipristinoTarget(o)}
-          >
-            ♻️ Ripristina
-          </button>
-        </div>
+        {/* STORIA E RIPRISTINA NON STANNO QUI. Sono due cose che si fanno
+            una volta ogni tanto — «com'è che questo conto è stato
+            riaperto?» — e in coda occupavano una riga intera su ogni card,
+            per tutta la serata, sul telefono dove lo spazio è quello che
+            serve agli ordini. Si trovano dentro il conto (⋯ Azioni), che è
+            dove si va quando quella domanda ce la si fa davvero. */}
       </>
     )
   }
@@ -1433,12 +1746,12 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
   }
 
   return (
-    <div className={gridView ? 'queue-board' : undefined}>
+    <div className={lavagna ? `queue-board${corsieView ? ' corsie-board' : ''}` : undefined}>
       <PortaInVista id={idAcceso} />
       {/* A tutto schermo la topbar non c'è, e con lei sparivano campanella,
           notifiche e stato della sincronizzazione: torna come tasto tondo in
           basso a destra (il CSS la mostra solo quando serve). */}
-      {gridView && <StatusBell floating />}
+      {lavagna && <StatusBell floating />}
       {/* L'avviso a fumetto, se il locale ha scelto quello: sta SOLO qui,
           nella coda, che è il posto dove gli ordini si aspettano. Toccandolo
           si aprono gli avvisi (la campanella ascolta l'evento). */}
@@ -1467,9 +1780,11 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
         </div>
       )}
 
-      {gridView ? (
-        // Testata compatta della griglia: info giornata, ricerca e, in alto a
-        // destra, il «+» per battere un nuovo ordine (apre il POS cassa).
+      {lavagna ? (
+        // Testata compatta della lavagna — griglia o corsie che sia: info
+        // giornata, ricerca e, in alto a destra, il «+» per battere un nuovo
+        // ordine (apre il POS cassa). È una sola per tutte e due le viste:
+        // cambiare vista non deve cambiare i comandi.
         <div className="board-head">
           <div className="board-title">
             <strong>In servizio</strong>
@@ -1486,17 +1801,84 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
                 l'ordine, non nelle impostazioni — e in sala le
                 impostazioni non ci sono affatto. */}
             <PallinoStampante gestore={gestore} />
-            {/* Un tasto solo per le cose che si fanno ogni tanto: i
-                pannelli (chiamate e gruppi) e il verso della lista. Erano
-                parole in fila in una riga che serve alla ricerca. */}
-            <button
-              className={`btn ghost small board-pannelli${showPanels ? ' active' : ''}`}
-              onClick={() => setMenuBoard(true)}
-              title="Altro: pannelli e ordinamento"
-              aria-label="Altro"
-            >
-              ⋯
-            </button>
+            {/* SUL TELEFONO IL ⋯, SUGLI SCHERMI LARGHI LE ICONE. In una
+                barra stretta le azioni che si fanno ogni tanto stanno
+                dietro un tasto solo; su tablet e computer lo spazio accanto
+                alla ricerca c'è, e nasconderle dietro un menu vuol dire due
+                gesti per una cosa che ne vale uno — e non vedere nemmeno se
+                i pannelli sono accesi. Stesse azioni, stessi handler: qui
+                cambia solo dove stanno. */}
+            {telefono ? (
+              <button
+                className={`btn ghost small board-pannelli${showPanels ? ' active' : ''}`}
+                onClick={() => setMenuBoard(true)}
+                title="Altro: pannelli e ordinamento"
+                aria-label="Altro"
+              >
+                ⋯
+              </button>
+            ) : (
+              <>
+                <button
+                  className={`btn ghost small board-icona${showPanels ? ' active' : ''}`}
+                  onClick={() => setShowPanels((v) => !v)}
+                  title={showPanels ? 'Nascondi i pannelli' : 'Chiamate staff e gruppi'}
+                  aria-label={showPanels ? 'Nascondi i pannelli' : 'Chiamate staff e gruppi'}
+                  aria-pressed={showPanels}
+                >
+                  📟
+                </button>
+                <button
+                  className="btn ghost small board-icona"
+                  onClick={cambiaOrdine}
+                  title={
+                    ordineDesc
+                      ? 'Adesso: prima gli ultimi — tocca per partire dai primi'
+                      : 'Adesso: prima i primi della serata — tocca per partire dagli ultimi'
+                  }
+                  aria-label={ordineDesc ? 'Ordina dal meno recente' : 'Ordina dal più recente'}
+                >
+                  ↕
+                </button>
+                {(() => {
+                  // La voce della cassa (apri/chiudi, o niente per la sala)
+                  // la decide coda.js: è una regola, e le regole si provano.
+                  const v = voceCassa({
+                    gestore,
+                    cassaAperta: !!cassaAperta,
+                    contiAperti: recap.aperti,
+                    daServire: ticketDaServire,
+                  })
+                  if (!v) return null
+                  return (
+                    // QUESTA NON È UN'ICONA. Le altre due — i pannelli,
+                    // l'ordinamento — si capiscono e si annullano con un
+                    // secondo tocco; la cassa è la cosa che chiude la serata,
+                    // e un lucchetto grigio in fondo a una barra non dice a
+                    // nessuno che cos'è. Si scrive per esteso.
+                    //
+                    // E IL MOTIVO STA ATTACCATO AL TASTO. Messo in fondo alla
+                    // riga finiva accanto al «+», e si leggeva come una nota
+                    // del «nuovo ordine», che non c'entra niente: la frase
+                    // spiega perché QUEL tasto è grigio, e deve stare dove
+                    // guarda l'occhio quando lo trova spento.
+                    <span className="board-cassa-box">
+                      <button
+                        className="btn ghost small board-cassa"
+                        disabled={v.disabled}
+                        title={v.hint}
+                        onClick={() => (v.id === 'apri-cassa' ? setApriCassa(true) : setChiudiCassa(true))}
+                      >
+                        {v.icon} {v.label}
+                      </button>
+                      {v.disabled && v.hint && (
+                        <span className="board-cassa-perche muted small">{v.hint}</span>
+                      )}
+                    </span>
+                  )
+                })()}
+              </>
+            )}
             {cassaAperta || cassaLoading ? (
               <Link className="btn board-add" to="/pos" aria-label="Nuovo ordine" title="Nuovo ordine" />
             ) : (
@@ -1591,6 +1973,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
               gestore,
               cassaAperta: !!cassaAperta,
               contiAperti: recap.aperti,
+              daServire: ticketDaServire,
             })
             if (!v) return null
             return {
@@ -1616,9 +1999,9 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
         />
       )}
 
-      {/* Pannelli chiamate/gruppi: nella griglia compaiono solo col toggle
+      {/* Pannelli chiamate/gruppi: sulle lavagne compaiono solo col toggle
           «Pannelli»; nelle altre viste restano sempre visibili. */}
-      {(!gridView || showPanels) && (
+      {(!lavagna || showPanels) && (
         <>
           {/* Aperti APPOSTA dal menu ⋯: se non c'è niente da mostrare lo
               si dice. Prima si toccava «Chiamate staff e gruppi» e non
@@ -1647,7 +2030,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
         </>
       )}
 
-      {!gridView && (
+      {!lavagna && (
         <>
           <input
             type="search"
@@ -1670,6 +2053,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
             >
               ✍️ Miei
             </button>
+            {pastigliaComande}
           </div>
         </>
       )}
@@ -1710,17 +2094,15 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
             >
               ✍️ Miei
             </button>
+            {/* C'ERA UN «NASCONDI PAGATI», E NON SERVE PIÙ. Serviva a togliere
+                dagli occhi i conti già incassati ma non ancora serviti,
+                perché restavano in mezzo a quelli in corso: adesso un conto
+                pagato è chiuso, sta fra i chiusi, e chi vuole sapere quali
+                hanno ancora roba da portare lo chiede lì dentro («Da
+                servire»). Un tasto per nascondere una cosa che non c'è più
+                in mezzo ai piedi è solo un tasto in più. */}
             {/* Conti dei giorni scorsi: di default sono in coda, sotto la
                 loro data. Questo tasto li nasconde e lascia solo oggi. */}
-            {(pagatiDaServire.length > 0 || nascondiPagati) && (
-              <button
-                className={`chip ${nascondiPagati ? 'active' : ''}`}
-                onClick={() => setNascondiPagati((v) => !v)}
-                title="Nascondi i conti già pagati ma non ancora serviti"
-              >
-                💶 Nascondi pagati{pagatiDaServire.length ? ` (${pagatiDaServire.length})` : ''}
-              </button>
-            )}
             {(arretrati.length > 0 || soloOggi) && (
               <button
                 className={`chip ${soloOggi ? 'active' : ''}`}
@@ -1730,7 +2112,9 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
                 📅 Solo oggi{arretrati.length ? ` (${arretrati.length} da chiudere)` : ''}
               </button>
             )}
+            {pastigliaComande}
           </div>
+          {righeSottoChiusi(boardFilter === 'chiusi')}
           {/* Griglia: ordini in invio (grigi) + ordini secondo il filtro */}
           {pend.pending.length === 0 && visibleBoard.length === 0 && (
             <div className="empty">
@@ -1765,6 +2149,163 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
               </div>
             </div>
           ))}
+        </>
+      ) : corsieView ? (
+        <>
+          {/* CORSIE DI STATO: una colonna per passo del lavoro, un tasto per
+              card. Le azioni sono le STESSE della griglia — «avanti di uno»
+              è `advance`, l'incasso è il pagamento del conto — perché una
+              vista è un modo di guardare, non un secondo modo di lavorare. */}
+          <div className="chips-row" style={{ margin: '8px 0 12px' }}>
+            <button
+              className={`chip ${soloMiei ? 'active' : ''}`}
+              onClick={() => setSoloMiei((v) => !v)}
+              title="Solo i conti inseriti da te"
+            >
+              ✍️ Miei
+            </button>
+            {/* QUALI COLONNE TENERE A SCHERMO. A metà serata chi sta allo
+                shaker guarda «Da fare» e «Al banco», e le altre due gli
+                mangiano mezzo schermo per roba che in quel momento non lo
+                riguarda. È una scelta di QUESTO terminale e si ricorda. */}
+            {corsieBanco && (
+              <button
+                className={`chip ${nascoste.length > 0 ? 'active' : ''}`}
+                onClick={() => setScegliCorsie((v) => !v)}
+                aria-expanded={scegliCorsie}
+                title="Scegli quali colonne tenere a schermo"
+              >
+                ▦ Colonne
+              </button>
+            )}
+            {pastigliaComande}
+          </div>
+          {righeSottoChiusi(!corsieBanco)}
+          {corsieBanco && scegliCorsie && (
+            <div className="chips-row corsie-scelta" style={{ margin: '0 0 12px' }}>
+              {corsieSceglibili(corsieDelBanco, { passoDiNascita }).map((c) => (
+                <button
+                  key={c.id}
+                  className={`chip ${nascoste.includes(c.id) ? '' : 'active'}`}
+                  onClick={() => cambiaCorsia(c.id)}
+                  aria-pressed={!nascoste.includes(c.id)}
+                >
+                  {c.titolo}
+                </button>
+              ))}
+              {/* IL PRONTO, UNITO O DIVISO. Sta qui perché è una domanda
+                  sulle colonne, e qui si risponde alle altre. Solo dove il
+                  ritiro esiste: col solo servizio non c'è niente da
+                  separare, e un tasto che non fa niente è peggio di un
+                  tasto che non c'è. */}
+              {ritiroEsiste && (
+                <button
+                  className={`chip ${prontoSeparato ? 'active' : ''}`}
+                  onClick={cambiaPronto}
+                  aria-pressed={prontoSeparato}
+                  title={
+                    prontoSeparato
+                      ? 'Adesso il pronto è in due colonne — tocca per riunirle'
+                      : 'Adesso il pronto è una colonna sola, col badge — tocca per dividere servizio e ritiro'
+                  }
+                >
+                  ✂️ Dividi il pronto
+                </button>
+              )}
+            </div>
+          )}
+          {corsieBanco ? (
+            <CorsieComande
+              // IL ⋯ DELLA CARD. Le cose che si fanno di rado ma proprio
+              // da lì: rimandare indietro una comanda toccata per sbaglio,
+              // dividerla, ristamparla. Le decide qui la pagina, che sa le
+              // impostazioni del locale e come si scrive sul database; la
+              // card le disegna e basta.
+              vociComanda={(s) => {
+                const c = s?.comanda
+                if (!c) return []
+                const o = s.ordine
+                const indietro = statiPrimaComanda(c.status, passoDiNascita)
+                return [
+                  ...indietro.map((st) => ({
+                    id: `indietro-${st}`,
+                    icon: '↩︎',
+                    label: `Torna a «${statoAlBanco(st, o?.service_mode)}»`,
+                    hint: 'Segnata per sbaglio: si rimette dov\'era',
+                    onClick: () => avanzaComanda(o, c, st),
+                  })),
+                  comandaDivisibile(c) && {
+                    id: 'dividi',
+                    icon: '✂️',
+                    label: 'Preparazione parziale',
+                    hint: 'Ne preparo una parte adesso, il resto dopo',
+                    onClick: () => navigate(`/ordine/${o.id}/comanda/${c.id}?dividi=1`),
+                  },
+                  {
+                    id: 'ristampa',
+                    icon: '🖨',
+                    label: 'Ristampa la comanda',
+                    hint: 'Se il foglio si è perso o è illeggibile',
+                    onClick: () =>
+                      printComanda(o, c).catch((e) => setError(`Stampa: ${e.message}`)),
+                  },
+                ].filter(Boolean)
+              }}
+              corsie={corsieMostrate}
+              mostraModo={ritiroEsiste && !prontoSeparato}
+              idAcceso={idAcceso}
+              inArrivo={pend.pending}
+              onScarta={dismissPending}
+              // TOCCANDO LA CARD SI APRE LA COMANDA, non il conto: dal
+              // banco la prima domanda è «cosa devo fare qui», e la
+              // risposta è il ticket. Nella colonna dei soldi la card è
+              // già il conto (non c'è una comanda sola da aprire) e allora
+              // si va lì, come prima.
+              onApri={(o, comanda) => {
+                contoToccato()
+                navigate(comanda ? `/ordine/${o.id}/comanda/${comanda.id}` : `/ordine/${o.id}`)
+              }}
+              onApriConto={(o) => {
+                contoToccato()
+                navigate(`/ordine/${o.id}`)
+              }}
+              onAvanza={avanzaComanda}
+              onIncassa={(o) => navigate(`/ordine/${o.id}?pagamento=1`)}
+              espansa={corsiaEspansa}
+              onEspandi={setCorsiaEspansa}
+              attesaPagamento={(o) =>
+                isAwaitingPayment(o) && o.workflow_status === ORDER_STATUSES.RICEVUTO
+              }
+            />
+          ) : (
+          <CorsieStato
+            corsie={corsieMostrate}
+            idAcceso={idAcceso}
+            // I conti appena battuti al POS, ancora in volo: in cima alla
+            // prima corsia. Sono già ordini a tutti gli effetti per chi
+            // lavora — la sincronizzazione è affar nostro, non suo.
+            inArrivo={pend.pending}
+            onScarta={dismissPending}
+            onApri={(o) => {
+              contoToccato()
+              navigate(`/ordine/${o.id}`)
+            }}
+            onAvanza={advance}
+            azioni={orderActions}
+            aperta={corsiaAperta}
+            onApriAzioni={setCorsiaAperta}
+            espansa={corsiaEspansa}
+            onEspandi={setCorsiaEspansa}
+            // «Incassa» apre il pagamento del conto, quello vero: sconto,
+            // conto diviso, contanti, carta e lettore stanno lì. Rifarne una
+            // versione ridotta qui vorrebbe dire due casse che si comportano
+            // in modo diverso.
+            onIncassa={(o) => navigate(`/ordine/${o.id}?pagamento=1`)}
+            attesaPagamento={(o) =>
+              isAwaitingPayment(o) && o.workflow_status === ORDER_STATUSES.RICEVUTO
+            }
+          />
+          )}
         </>
       ) : listView ? (
         <>
@@ -1859,7 +2400,11 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
         <CancelOrderDialog
           order={cancelTarget.order}
           kind={cancelTarget.kind}
-          defaultPhrase={settings.cancel_phrase_default}
+          // La frase che si applica DAVVERO: se il locale è a solo servizio,
+          // quella del bancone non si propone nemmeno qui — manderebbe il
+          // cliente dove nessuno lo aspetta.
+          defaultPhrase={fraseAnnulloDefault(settings)}
+          ritiroPossibile={fraseAnnulloPossibile('bancone', settings)}
           onCancel={() => setCancelTarget(null)}
           onConfirm={confirmCancel}
         />

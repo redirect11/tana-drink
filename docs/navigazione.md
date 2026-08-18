@@ -67,6 +67,40 @@ sotto i 44px si sbaglia. Si **toglie**, in quest'ordine:
   verticale, il tablet del banco — restano 500px e la scelta ha senso. Fino
   ai 900px la colonna si stringe a 200px.
 
+- **Come si guarda una pagina non è navigazione**: le quattro viste della coda
+  (griglia, corsie di stato, schede, lista) si scelgono in Impostazioni → Coda
+  ordini e restano. Niente riga di schede sopra la coda per cambiarle: si
+  decide una volta e si lavora, e quella riga sarebbe altezza tolta ai conti
+  per una cosa che si tocca due volte l'anno.
+- **Il banco ha una coda sua, e si apre da sé.** Ad accenderla sono gli
+  stati del servizio; come disegnarla si sceglie in Impostazioni → Coda
+  ordini → «La vista del banco», accanto alla vista della coda — stessa
+  regola di sempre: come si guarda una pagina non è navigazione, si decide
+  una volta e si lavora. La coda di chi guarda la serata non cambia.
+- **Una card che apre qualcosa apre la cosa che rappresenta.** Nella coda del
+  banco le card sono comande, e toccarle apre il dettaglio della comanda
+  (`/ordine/:id/comanda/:comandaId`); nelle corsie dei conti sono conti, e
+  aprono il conto. Quello che sta un livello sopra — il conto, per una
+  comanda — si raggiunge con un tasto scritto, mai rubando il gesto
+  principale: il tasto grande della card resta quello che porta avanti il
+  lavoro.
+- **Quello che si cambia nel mezzo del servizio sta nella riga dei filtri**,
+  sopra la lista, e vale per QUESTO terminale: «▦ Colonne» (che spegne le
+  corsie che in quel momento non servono) e il tasto con cui chi non è al
+  banco va a guardare il lavoro. Non stanno in Impostazioni perché si
+  toccano con l'ordine in mano, e non su `settings/bar` perché al banco e
+  alla cassa non si guardano le stesse cose.
+- **Nella riga dei filtri, il cambio vista sta A DESTRA.** A sinistra c'è
+  quello che RESTRINGE la lista («Miei», «Solo oggi», «Colonne»), a destra
+  quello che CAMBIA VISTA: stessa forma e stesso peso, perché si toccano
+  allo stesso modo, ma staccati da un margine automatico — non da uno
+  spazio messo a occhio — così nessuno lo legge come un filtro in più.
+  Sotto il «+» era stato provato e non va: rettangolare sotto un tondo,
+  appeso nel vuoto e disallineato da tutto.
+- **Un tasto dice DOVE PORTA, non dove si è.** «🍸 Comande» guardando i
+  conti, «🧾 Ordini» guardando le comande. Un interruttore che si accende
+  quando sei già di là si legge solo sapendo com'è messo adesso — e per
+  saperlo bisogna guardare la lista sotto.
 - **I filtri** stanno in una tendina sopra il contenuto, e il tasto dice cosa
   è scelto senza doverla aprire.
 - **Il contenuto non porta navigazione**: niente tasti «vai a…» in mezzo a una

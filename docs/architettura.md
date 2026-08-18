@@ -56,6 +56,33 @@ conosciuti tutti e cinque.
    updater, allo smontaggio del componente React lo scarta e la
    cancellazione non avviene (successo davvero).
 
+### Quello che ho appena fatto io
+
+Il terzo attrezzo ha un posto solo, ed è `src/lib/comandeLocali.js`:
+l'array `comande` come lo vede QUESTO terminale, per conto, che se ne va
+da sé quando il server racconta la stessa cosa. Lo usano la coda, il
+conto e il dettaglio della comanda — prima erano tre copie della stessa
+idea e si comportavano già in modo diverso.
+
+Due regole che sembrano dettagli e non lo sono:
+
+- **La pulizia si fa per FIRMA** (`firmaLavoro` in `comande.js`): i passi
+  e le quantità, **senza gli id**. Una comanda appena creata qui non ha
+  ancora il nome che le darà il server, e confrontando gli id la copia
+  locale di una divisione non se ne sarebbe andata mai più. E si toglie
+  solo quando il server combacia, **mai** subito dopo la scrittura:
+  quella risponde PRIMA dello snapshot, e toglierla lì fa riapparire per
+  un battito lo stato di prima (il tasto «rimbalza»).
+- **Una scrittura in sottofondo tocca solo i campi che le competono.**
+  `comande` è un array, e Firestore un array lo riscrive intero: non
+  esiste un percorso tipo `comande.2.inventory_applied`. Chi scrive si
+  rilegge quindi il documento — ma **nell'istante prima di scrivere**,
+  non all'inizio del lavoro. Lo scarico del magazzino leggeva l'array,
+  poi andava in rete a prendere ricette e articoli, e alla fine
+  riscriveva quell'array vecchio: gli avanzamenti fatti nel frattempo ci
+  finivano sotto, e «Ritirato/Servito» andava premuto due volte
+  (BUG-022). Vedi `scriviCampiComanda` in `api.js`.
+
 Al contorno, stessa logica: i conti chiusi spariscono dalla coda
 all'istante (`ordiniNascosti.js`, memoria locale in attesa dello
 snapshot), le notifiche in-app vivono in un registro locale

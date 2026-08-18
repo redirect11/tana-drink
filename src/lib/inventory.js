@@ -285,6 +285,171 @@ export function eScorta(item) {
   return !unitaGenerica(item?.unit)
 }
 
+// ── LEGGERE UN ARTICOLO SCRITTO COL MODELLO VECCHIO ──────────────────
+//
+// I 388 prodotti in magazzino sono stati scritti con i modelli di ieri:
+// liquidi in cl, solidi in grammi, sacchi e manodopera in «U», qualcuno con
+// la resa fra unità d'acquisto e unità d'uso. Il modello di oggi li vuole
+// tutti a PEZZO con una corrispondenza sola (REQ-MAG-016).
+//
+// NON si travasano con uno script lanciato contro il database: «il travaso
+// deve avvenire in fase di aggiornamento — quando si aggiorna il bundle si
+// aggiornano i prodotti» (18/08). Si fa come con gli ordini vecchi, che
+// nessuno ha mai migrato: `normalizeOrderDoc` li rimette in riga alla
+// lettura (REQ-ORD-002), e da lì in poi il resto del codice non sa nemmeno
+// che esistono due forme. Qui vale lo stesso: si legge tollerante, e
+// l'articolo si riscrive nella forma nuova la prima volta che qualcuno lo
+// tocca per un motivo suo — una modifica, un carico, una conta.
+//
+// LE REGOLE, e il perché di ognuna:
+//   IL PEZZO È LA CONFEZIONE CHE SI COMPRAVA. Una bottiglia da 70 cl era già
+//   «una confezione da 700 ml»: diventa un pezzo, e la giacenza in ml
+//   diventa pezzi frazionati — senza stime, senza inventare niente. Per la
+//   «U» il pezzo è l'unità: un sacco di ghiaccio era uno, resta uno.
+//   LA RESA DIVENTA IL CONTENUTO, ma solo quando le due misure sono della
+//   stessa famiglia (il fusto comprato a litri e versato a cl). Chi si
+//   comprava a chili e si dosava in cl di succo — i limoni — nel modello
+//   nuovo può corrispondere a una cosa sola, e sceglierla al posto di chi
+//   lavora vuol dire buttare via l'altra: se una ricetta dosava nella misura
+//   buttata, da quel momento scarica un chilo dove voleva un grammo. Quelli
+//   restano come sono, e li si sistema a mano.
+//   `scorta` VA SCRITTA. «Si scarica dal magazzino?» aveva un valore di
+//   partenza legato all'unità: quello che si contava a «U» non era una
+//   scorta. Portando tutto a pezzi quel valore cambierebbe risposta da solo,
+//   e il «Tempo di Lavorazione» diventerebbe merce: andrebbe a zero al primo
+//   drink e il menù farebbe sparire dalla carta i drink che lo usano.
+//
+// NIENTE ALTRO SI TOCCA: prezzi, ricette e voci di menù restano dove sono —
+// in produzione sono stati sistemati a mano, uno per uno.
+
+// Cosa andrebbe riscritto per portare l'articolo alla forma nuova, o null se
+// è già a posto (o se non si può convertire senza inventare). Serve sia alla
+// lettura tollerante sia a chi lo riscrive davvero.
+export function patchNormalizza(item) {
+  if (!item) return null
+  const unit = String(item.unit || 'pz').toLowerCase()
+  const stock = Number(item.stock) || 0
+  const soglia = Number(item.low_threshold) || 0
+  const pack = Number(item.package_size) || 0
+  const resa = Number(item.resa) || 0
+  const resaBase = item.resa_unit ? baseUnit(item.resa_unit) : null
+  const resaValida = resa > 0 && !!resaBase
+
+  if (unit === 'pz') {
+    // Già a pezzi: resta solo la resa da riassorbire nel contenuto, che dice
+    // la stessa cosa (resaUso preferisce la resa, quindi i numeri non si
+    // muovono).
+    if (!resaValida) return null
+    return { package_size: resa, content_unit: resaBase, resa: null, resa_unit: null }
+  }
+
+  // Quante unità base d'acquisto fa un pezzo: la confezione. Per la «U»,
+  // quando non c'è confezione, il pezzo è la unità stessa.
+  const basePerPezzo = unitaGenerica(unit) ? pack || 1 : pack
+  if (!(basePerPezzo > 0)) return null // non si sa cosa sia un pezzo: si lascia stare
+  if (resaValida && resaBase !== unit) return null // due famiglie: decide una persona
+
+  return {
+    unit: 'pz',
+    display_unit: 'pz',
+    stock: arrotondaPezzi(stock / basePerPezzo),
+    low_threshold: arrotondaPezzi(soglia / basePerPezzo),
+    package_size: resaValida ? resa * basePerPezzo : basePerPezzo,
+    content_unit: resaValida ? resaBase : unitaGenerica(unit) ? UNITA_GENERICA : unit,
+    resa: null,
+    resa_unit: null,
+    scorta: eScorta(item),
+  }
+}
+
+// I pezzi si scrivono con qualche decimale e basta: 2,0200000000000005 è la
+// coda della divisione, e se la porterebbe dietro ogni conto successivo.
+const arrotondaPezzi = (n) => Math.round((Number(n) || 0) * 1e6) / 1e6
+
+// L'articolo come lo vede il resto dell'app: sempre nella forma nuova. Chi è
+// già a posto torna com'è — stessa identità, che questa funzione sta sulla
+// strada di ogni lettura.
+// `formaVecchia` resta attaccato a quelli convertiti al volo: serve alla
+// scheda per dire che quella giacenza si sta leggendo tradotta, e non si
+// salva da nessuna parte.
+export function articoloNormalizzato(item) {
+  const patch = patchNormalizza(item)
+  if (!patch) return item
+  return {
+    ...item,
+    ...patch,
+    formaVecchia: { unit: item.unit || 'pz', stock: Number(item.stock) || 0 },
+  }
+}
+
+// ── IL TRAVASO LO FA L'UTENTE, CON UN GESTO ──────────────────────────
+//
+// La lettura tollerante qui sopra serve a far funzionare il magazzino su un
+// database non ancora aggiornato: senza, i numeri non si potrebbero nemmeno
+// mostrare. Ma il DATABASE non lo cambia da sola, e nemmeno lo cambia di
+// nascosto quando qualcuno tocca un articolo per un motivo suo: «il travaso
+// dovrebbe farlo l'utente. Quando entra in magazzino un banner gli dice che
+// deve iniziare la migrazione» (18/08).
+//
+// Lo stato non è un flag scritto da qualche parte — un cartello acceso su un
+// database già a posto è peggio di nessun cartello: si guarda se esistono
+// ancora articoli nella forma vecchia. Così resta vero anche se i dati
+// arrivano sistemati da un'altra strada.
+
+// Perché questo articolo non si può portare a pezzi da solo, detto a chi
+// deve sistemarlo. Null se invece si può.
+export function motivoNonMigrabile(item) {
+  const unit = String(item?.unit || 'pz').toLowerCase()
+  const eti = (u) => UNIT_LABEL[String(u).toLowerCase()] || u
+  if (unit === 'pz') {
+    // UN CONTENUTO SENZA MISURA NON È UN CONTENUTO. Sulla «Birra Pils
+    // (spina)» c'è scritto 330 e basta: cl? ml? grammi? Nessuno lo sa, e
+    // indovinare vuol dire sbagliare il costo di un drink di dieci volte.
+    // Contando a pezzi la giacenza regge lo stesso, ma il costo al cl e lo
+    // scarico frazionato non esistono finché non lo dice una persona.
+    const size = Number(item?.package_size) || 0
+    if (size > 0 && !contentBase(item)) {
+      return `c'è scritto che un pezzo contiene ${size}, ma non di che misura: va detto se sono cl, grammi o U`
+    }
+    return null
+  }
+  const resa = Number(item?.resa) || 0
+  const resaBase = item?.resa_unit ? baseUnit(item.resa_unit) : null
+  if (resa > 0 && resaBase && resaBase !== unit) {
+    return `si compra a ${eti(unit)} e si usa in ${eti(resaBase)}: va detto a quanto corrisponde un pezzo`
+  }
+  // Una «U» era già una cosa che si conta — il sacco, la confezione — quindi
+  // un pezzo è una U e non serve nessuna confezione dichiarata. Per volumi e
+  // pesi invece la confezione È il pezzo: senza, non si sa quanti pezzi
+  // siano quei millilitri.
+  if (!unitaGenerica(unit) && !(Number(item?.package_size) > 0)) {
+    return `si conta a ${eti(unit)} e non si sa quanto contiene una confezione: va detto a quanto corrisponde un pezzo`
+  }
+  return null
+}
+
+// A che punto sta il travaso, guardando gli articoli COSÌ COME LI LEGGE
+// L'APP (quindi già passati da articoloNormalizzato):
+//   daMigrare   → si leggono già a pezzi ma sul database sono ancora scritti
+//                 alla vecchia maniera: basta salvarli
+//   daSistemare → nemmeno la lettura li sa portare a pezzi, e prima che il
+//                 travaso parta li deve aprire una persona
+//   fatto       → non c'è niente da fare, e la schermata non ne parla
+export function statoTravaso(items) {
+  const daMigrare = []
+  const daSistemare = []
+  for (const it of items || []) {
+    if (motivoNonMigrabile(it)) daSistemare.push(it)
+    else if (it?.formaVecchia) daMigrare.push(it)
+  }
+  return {
+    daMigrare,
+    daSistemare,
+    totale: (items || []).length,
+    fatto: daMigrare.length === 0 && daSistemare.length === 0,
+  }
+}
+
 // Stato scorta di un item: 'empty' (≤0), 'low' (≤ soglia), 'ok'.
 export function stockStatus(item) {
   // Quello che non è una scorta non finisce mai: la manodopera non sta su
@@ -300,18 +465,42 @@ export function stockStatus(item) {
   return 'ok'
 }
 
-// Conteggi per i chip di riepilogo: totale prodotti, in esaurimento, esauriti.
+// ── C'È O NON C'È ────────────────────────────────────────────────────
+//
+// La domanda più ovvia di tutte — cosa c'è davvero sullo scaffale — nel
+// filtro non c'era: si poteva chiedere solo cosa sta finendo e cosa è
+// finito, e per vedere il resto bisognava guardare «Tutti» e saltare a
+// occhio due terzi di righe esaurite (232 su 388, al banco, il 18/08).
+//
+// GLI «IN ESAURIMENTO» CI STANNO DENTRO: sono in magazzino, solo pochi.
+// «In esaurimento» è una lente più stretta dentro la stessa famiglia, non
+// un'altra famiglia — e chi guarda cosa c'è vuole vedere anche l'ultima
+// bottiglia di gin, che è proprio quella che gli serve sapere.
+//
+// Quello che NON È UNA SCORTA — il tempo di lavorazione, il lavoro a
+// servizio — non sta né di qua né di là: non ha giacenza, non è né
+// disponibile né esaurito. Metterlo fra i disponibili vorrebbe dire dire
+// che c'è sullo scaffale una cosa che sullo scaffale non ci va.
+export function haGiacenza(item) {
+  return eScorta(item) && (Number(item?.stock) || 0) > 0
+}
+
+// Conteggi per i chip di riepilogo: totale prodotti, in scorta, in
+// esaurimento, esauriti. In scorta ed esauriti si dividono tutte le scorte,
+// e in esaurimento è un sottoinsieme del primo.
 export function inventorySummary(items) {
   let total = 0
+  let inScorta = 0
   let low = 0
   let empty = 0
   for (const it of items || []) {
     total += 1
+    if (haGiacenza(it)) inScorta += 1
     const st = stockStatus(it)
     if (st === 'low') low += 1
     else if (st === 'empty') empty += 1
   }
-  return { total, low, empty }
+  return { total, inScorta, low, empty }
 }
 
 // Filtra/ordina la lista inventario per ricerca (nome), categoria, fornitore e stato.
@@ -351,7 +540,11 @@ export function filterItems(
     } else if (supplierId !== 'all') {
       if (it.supplier_id !== supplierId) return false
     }
-    if (status !== 'all' && stockStatus(it) !== status) return false
+    // «In scorta» non è uno stato di stockStatus: è la domanda «c'è?», e
+    // comprende anche quello che sta finendo (vedi haGiacenza).
+    if (status === 'in_scorta') {
+      if (!haGiacenza(it)) return false
+    } else if (status !== 'all' && stockStatus(it) !== status) return false
     // null o lista vuota = nessun filtro: si vede tutto (non "niente", che
     // farebbe sparire l'inventario a chi deseleziona per sbaglio).
     if (Array.isArray(assortimenti) && assortimenti.length > 0) {
@@ -561,6 +754,50 @@ export function qtyInStockUnit(qty, unit, item) {
   return base / r.per
 }
 
+// ── OGNI MOVIMENTO CHIEDE IN CHE UNITÀ ───────────────────────────────
+//
+// «Se facciamo un carico, uno scarico, qualsiasi cosa esso sia di
+// movimentazione» si sceglie se muovere a PEZZI o nell'unità che compone il
+// pezzo (Flavio, 18/08). I limoni si comprano a chili e si contano a pezzi:
+// chi carica una cassetta scrive 5 kg, non «47 limoni» contati a uno a uno.
+//
+// Il primo della lista è come si conta la giacenza — i pezzi — perché è la
+// risposta giusta quasi sempre; il secondo è il contenuto, quando c'è.
+const UNITA_PARLATA = { ml: 'cl', g: 'g', pz: 'pz', [UNITA_GENERICA]: UNITA_GENERICA }
+export function unitaMovimento(item) {
+  const stockUnit = item?.unit || 'pz'
+  const c = contentBase(item)
+  if (stockUnit === 'pz') {
+    if (!c || !(c.size > 0)) return ['pz']
+    const seconda = UNITA_PARLATA[c.base] || c.base
+    return seconda === 'pz' ? ['pz'] : ['pz', seconda]
+  }
+  // Schede storiche a volume, peso o unità, finché non passano dal travaso
+  // (REQ-MAG-018): si muovono nella loro unità, più la confezione quando ce
+  // n'è una — sono le «confezioni piene» di sempre.
+  const propria = UNITA_PARLATA[stockUnit] || stockUnit
+  return Number(item?.package_size) > 0 ? ['pz', propria] : [propria]
+}
+
+// L'INVERSO di qtyInStockUnit: da quello che c'è in giacenza al numero
+// nell'unità scelta. Serve a scrivere nel campo la quantità che c'è già
+// (la rettifica parte da lì) e a cambiare unità senza cambiare la quantità.
+export function fromStockUnit(stockQty, unit, item) {
+  const q = Number(stockQty) || 0
+  if (!(q > 0)) return 0
+  const u = String(unit || 'pz').toLowerCase()
+  const stockUnit = item?.unit || 'pz'
+  if (u === stockUnit) return q
+  if (u === 'pz') {
+    const size = Number(item?.package_size) || 0
+    return size > 0 ? q / size : q
+  }
+  if (baseUnit(u) === stockUnit) return fromBaseQty(q, u)
+  const r = resaUso(item)
+  if (!r || baseUnit(u) !== r.base || !(r.per > 0)) return q
+  return fromBaseQty(q * r.per, u)
+}
+
 // Calcola il consumo totale per ingrediente da una lista di order_items.
 //   orderItems: [{ drink_id, qty, recipe_items? }]
 //   drinksById: { [drinkId]: { recipe_items: [{ inventory_item_id, name, unit, qty }] } }
@@ -617,6 +854,21 @@ export function fmtContenuto(qty, item) {
   if ((item?.unit || 'pz') !== 'pz') return fmtItem(qty, item)
   if (unitaGenerica(c.base)) return formatQty(qty, UNITA_GENERICA)
   return formatIn(qty, c.base === 'g' ? 'g' : 'cl')
+}
+
+// QUANTO CONTIENE UN PEZZO, nell'unità in cui quel numero si legge.
+//
+// Un fusto da venti litri si leggeva «2000 cl», e chi lo guarda si chiede se
+// qualcuno se lo sia inventato. Normalizzare sempre in centilitri va bene
+// per le bottiglie e male per tutto il resto: qui l'unità la sceglie il
+// numero — 20 L, 70 cl, 33 cl, 8 g, 1 kg — mentre il residuo della
+// confezione aperta resta in cl, che è come si conta quello che è rimasto
+// dentro (vedi fmtContenuto).
+// Null quando il contenuto non c'è, o c'è ma senza dire di che misura.
+export function contenutoDelPezzo(item) {
+  const c = contentBase(item)
+  if (!c || !(c.size > 0)) return null
+  return formatQty(c.size, c.base)
 }
 
 // ── DUPLICARE UN PRODOTTO ────────────────────────────────────────────

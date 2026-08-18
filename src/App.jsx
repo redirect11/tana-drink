@@ -2,6 +2,7 @@ import { Routes, Route, Link, Navigate, useLocation, useNavigate } from 'react-r
 import LandingPage from './pages/LandingPage.jsx'
 import MenuPage from './pages/MenuPage.jsx'
 import OrderStatusPage from './pages/OrderStatusPage.jsx'
+import ComandaPage from './pages/ComandaPage.jsx'
 import MyOrdersPage from './pages/MyOrdersPage.jsx'
 import BartenderPage from './pages/BartenderPage.jsx'
 import { AccediPage, RegistratiPage, ProfiloPage } from './pages/AccountPages.jsx'
@@ -183,12 +184,17 @@ export default function App() {
   // mostra il ruolo ed «Esci» al posto di «Accedi».
   const [staffRole, setStaffRole] = useState(null)
   const [staffName, setStaffName] = useState('')
+  // C'È QUALCUNO DENTRO? Serve a decidere cosa mostrare a chi non è
+  // entrato: da sloggati si è un cliente qualunque, e la campanella degli
+  // avvisi non lo riguarda.
+  const [collegato, setCollegato] = useState(false)
   useEffect(() => {
     if (!isFirebaseConfigured) return
     return onAuthStateChanged(auth, async (u) => {
       // Le impostazioni della stampante sono di chi è collegato su QUESTO
       // dispositivo: cambiando persona cambia la scheda.
       impostaUtenteStampante(u?.uid || null)
+      setCollegato(!!u)
       if (!u) return setStaffRole(null)
       try {
         const token = await u.getIdTokenResult()
@@ -425,7 +431,13 @@ export default function App() {
           </span>
         )}
         <nav className="row">
-          <StatusBell />
+          {/* NIENTE CAMPANELLA A CHI NON È ENTRATO. Da sloggati si è un
+              cliente qualunque sulla parte pubblica del sito: gli avvisi
+              parlano di ordini che non ha ancora fatto, e «registra questo
+              terminale» è una domanda del gestionale — a un cliente non
+              vuol dire niente e non deve nemmeno comparire. Chi ordina o
+              scansiona il QR li riavrà, e saranno i suoi. */}
+          {collegato && <StatusBell />}
           {/* A tutto schermo ci va chi LAVORA sull'app per ore (banco, sala):
               al cliente che apre il menù dal telefono non serve, e in mezzo
               ai tasti era solo un'icona in più da capire. */}
@@ -569,6 +581,10 @@ export default function App() {
           <Route path="/menu" element={<MenuPage />} />
           <Route path="/ordini" element={<MyOrdersPage />} />
           <Route path="/ordine/:id" element={<OrderStatusPage />} />
+          {/* Il dettaglio di una COMANDA: ci si arriva dalla card in
+              coda, nella vista del banco. Sta sotto il conto perché è lì
+              che vive, e da lì ci si risale. */}
+          <Route path="/ordine/:id/comanda/:comandaId" element={<ComandaPage />} />
           <Route path="/accedi" element={<AccediPage />} />
           <Route path="/registrati" element={<RegistratiPage />} />
           <Route path="/profilo" element={<ProfiloPage />} />
