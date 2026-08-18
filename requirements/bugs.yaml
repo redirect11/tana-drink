@@ -985,3 +985,25 @@ bugs:
     generate_issue: false
     labels: [bug, stampa]
     test_cases: [tests/unit/stampanteFinta.test.js]
+
+  - id: BUG-035
+    title: "Nel facsimile dello scontrino l'intestazione non è centrata come sulla carta"
+    area: "src/lib/stampanteFinta.js"
+    description: >
+      Segnalato dall'utente il 18/08 dopo BUG-034: le righe non vanno più a
+      capo, ma l'intestazione (il nome del locale spaziato, l'indirizzo, il
+      totale in grande) non risulta centrata come esce dalla stampante — il
+      blocco è spostato di qualche carattere.
+      Sospetto: il centraggio del testo lo fa la stampante con un suo
+      comando (`addTextAlign`), mentre nel facsimile il testo arriva già
+      impaginato e viene messo in un `pre` allineato a sinistra: le righe
+      che la stampante centrerebbe da sé restano dove sono.
+      Non urgente e detto dall'utente stesso: è una finestra di prova, la
+      carta vera esce giusta. Si sistema quando si passa di lì.
+    in_produzione: false
+    status: todo
+    generate_issue: true
+    labels: [bug, stampa]
+    severity: lieve
+    priority: P3
+    test_cases: []
