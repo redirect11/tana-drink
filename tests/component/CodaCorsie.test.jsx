@@ -929,6 +929,29 @@ describe('le corsie del banco: una card per comanda', () => {
 
   // ACCONTO: una parte incassata e il conto ancora aperto. Se la card non
   // lo dice, chi la porta al tavolo chiede l'intero — e succede.
+  // LE AZIONI DI UNA COMANDA SI APRONO NELLA CARD, come per i conti: una
+  // finestrella a tutto schermo per un «torna a in preparazione» fa perdere
+  // di vista la colonna proprio mentre si lavora.
+  it('il ⋯ della comanda apre le sue azioni dentro la card', async () => {
+    const utente = userEvent.setup()
+    montaCoda()
+    await screen.findByText('Da fare')
+
+    const card = corsia('al-banco').querySelector('.corsia-card')
+    await utente.click(within(card).getByRole('button', { name: /Azioni/ }))
+
+    // stanno DENTRO la card, non in una finestrella sopra la pagina
+    const aperte = card.querySelector('.corsia-azioni-aperte')
+    expect(aperte).toBeTruthy()
+    expect(within(aperte).getByRole('button', { name: /Torna a/ })).toBeInTheDocument()
+    expect(within(aperte).getByRole('button', { name: /Ristampa/ })).toBeInTheDocument()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+
+    // e si richiude dallo stesso tasto
+    await utente.click(within(card).getByRole('button', { name: /Chiudi/ }))
+    expect(card.querySelector('.corsia-azioni-aperte')).toBeFalsy()
+  })
+
   it('il conto con un acconto lo dice, e la card cambia colore', async () => {
     ordini = [
       {
