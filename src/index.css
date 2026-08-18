@@ -4385,6 +4385,10 @@ body.fullbleed,
 :root[data-luma='light'] .pill.pagato {
   background: rgba(180, 130, 20, 0.15);
 }
+:root[data-luma='light'] .pill.acconto {
+  background: rgba(243, 156, 18, 0.18);
+  color: #8a5200;
+}
 :root[data-luma='light'] .badge-low {
   background: rgba(255, 193, 7, 0.22);
   color: #7a5c00;
@@ -6834,6 +6838,19 @@ body.pagina-piena .inv-scheda {
   border-left-color: var(--accent-2);
   box-shadow: inset 3px 0 0 var(--accent-2);
   opacity: 1;
+}
+
+/* ACCONTO: una parte è già stata incassata e il conto è ancora aperto. È
+   l'arancio che la griglia usa già per lo stesso caso (.pay-parziale), così
+   il colore vuol dire la stessa cosa in tutte e due le viste — e chi porta
+   il conto al tavolo vede da lontano che non deve chiedere l'intero. */
+.corsia-card.acconto {
+  border-left-color: #f39c12;
+  box-shadow: inset 3px 0 0 #f39c12;
+}
+.pill.acconto {
+  background: rgba(243, 156, 18, 0.2);
+  color: #ffd591;
 }
 
 /* Il titolo di un gruppo di righe nel conto: «In preparazione», «Pronto»,

@@ -1,4 +1,5 @@
 import { formatPrice } from '../lib/orderStatus.js'
+import { paidAmount } from '../lib/pagamento.js'
 import { AZIONI_CORSIA, daQuanto, destinazioneConto } from '../lib/coda.js'
 import RigheCorsia from './RigheCorsia.jsx'
 
@@ -89,8 +90,10 @@ export default function CorsieComande({
                 const attesa = azione?.tipo === 'avanza' && attesaPagamento(o)
                 return (
                   <article
-                    className={`card order-card corsia-card ${s.comanda?.status || o.workflow_status}${
-                      s.pagatoDaServire ? ' pagato-da-servire' : ''
+                    className={`card order-card corsia-card ${
+                      s.comanda?.status || o.workflow_status
+                    }${s.pagatoDaServire ? ' pagato-da-servire' : ''}${
+                      o.payment_status === 'parziale' ? ' acconto' : ''
                     }${o.id === idAcceso ? ' conto-acceso' : ''}`}
                     key={s.id}
                     id={`comanda-${s.id}`}
@@ -107,6 +110,17 @@ export default function CorsieComande({
                           <span className="corsia-comanda"> · comanda {s.seq}</span>
                         )}
                       </span>
+                      {/* ACCONTO: qualcosa è già stato incassato, ma il conto
+                          non è chiuso. Senza dirlo qui, chi porta il conto al
+                          tavolo chiede l'intero — ed è successo. */}
+                      {o.payment_status === 'parziale' && (
+                        <span
+                          className="pill acconto small"
+                          title={`Già incassati ${formatPrice(paidAmount(o))}`}
+                        >
+                          💳 Acconto
+                        </span>
+                      )}
                       {s.pagatoDaServire ? (
                         <span className="pill pagato small">Pagato</span>
                       ) : (

@@ -972,6 +972,36 @@ describe('Pagamento premuto mentre l’ordine sta ancora nascendo', () => {
 // Capita: si chiude un conto sul tavolo sbagliato, si annulla per un
 // malinteso, il cliente torna. Finora l'unica strada era ribatterlo da capo
 // e il conto vero restava lì a sporcare la serata.
+// I TASTI SOPRA LA LISTA SI RIDUCONO. «Unisci», «Dati conto» e «Prodotto
+// libero» sono tre righe di schermo prese alla lista dei drink: a chi batte
+// conti complicati servono sotto il dito, a chi fa solo drink no. Ridotti
+// non spariscono — sono tutti nel ⋯ — e la scelta e' di questo terminale,
+// quindi deve sopravvivere all'uscita dalla schermata.
+describe('i tasti del conto si riducono', () => {
+  it('il tasto li nasconde, restano nel ⋯, e la scelta si ricorda', async () => {
+    const user = userEvent.setup()
+    const vista = mount(baseOrder())
+    expect(screen.getByRole('button', { name: /Dati conto/ })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Nascondi i tasti del conto' }))
+    expect(screen.queryByRole('button', { name: /Dati conto/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Prodotto libero/ })).not.toBeInTheDocument()
+    // «Comande» resta: e' quello che si apre di continuo
+    expect(screen.getByRole('button', { name: /Comande/ })).toBeInTheDocument()
+
+    // e nel ⋯ ci sono tutte, come sempre
+    await user.click(screen.getByRole('button', { name: 'Azioni del conto' }))
+    expect(screen.getByRole('button', { name: /Dati conto/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Prodotto libero/ })).toBeInTheDocument()
+
+    vista.unmount()
+    mount(baseOrder())
+    expect(screen.queryByRole('button', { name: /Dati conto/ })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Mostra i tasti del conto' }))
+    expect(screen.getByRole('button', { name: /Dati conto/ })).toBeInTheDocument()
+  })
+})
+
 describe('rimettere in corso un conto', () => {
   const chiuso = () =>
     baseOrder({
@@ -983,10 +1013,13 @@ describe('rimettere in corso un conto', () => {
       payments: [{ amount: 14, method: 'banco', at: '2026-08-12T21:30:00.000Z' }],
     })
 
+  // La storia si apre dal ⋯: era un'icona in testata, in mezzo ai tasti che
+  // si premono di corsa, per una cosa che si guarda una volta a serata.
   it('la storia del conto racconta apertura e chiusura', async () => {
     const user = userEvent.setup()
     mount(chiuso())
-    await user.click(screen.getByRole('button', { name: /Storia/ }))
+    await user.click(screen.getByRole('button', { name: 'Azioni del conto' }))
+    await user.click(screen.getByRole('button', { name: /Storia del conto/ }))
     const box = within(screen.getByRole('dialog', { name: 'Storia del conto' }))
     expect(box.getByText('Conto aperto')).toBeInTheDocument()
     expect(box.getByText('Conto chiuso')).toBeInTheDocument()

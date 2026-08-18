@@ -87,6 +87,7 @@ import ActionSheet from './ActionSheet.jsx'
 import { StoriaOrdineDialog, RipristinaOrdineDialog } from './StoriaOrdine.jsx'
 import { ripristinabile, ultimaRiapertura, quando } from '../lib/storiaOrdine.js'
 import PaymentScreen from './PaymentScreen.jsx'
+import { azioniContoRidotte, ricordaAzioniContoRidotte } from '../lib/impostazioniLocali.js'
 
 // ── Schermata UNICA POS creazione/modifica ordine (stile SumUp) ───────────
 // UN SOLO componente: con `order` è la MODIFICA di un ordine esistente,
@@ -265,6 +266,9 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   // Menu delle azioni: esiste solo sul telefono, dove i tasti non ci stanno
   // tutti in pagina senza mangiarsi le righe del conto.
   const [showAzioni, setShowAzioni] = useState(false)
+  // I tasti sopra la lista si possono ridurre: chi fa solo drink si
+  // riprende tre righe di schermo, e li ritrova tutti nel ⋯.
+  const [azioniRidotte, setAzioniRidotte] = useState(azioniContoRidotte)
   // Il menu delle azioni vale SOLO sul telefono: altrove i tasti stanno in
   // pagina, e un ⋯ in più sarebbe solo un doppione da capire.
   const telefono = useTelefono()
@@ -2031,19 +2035,11 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
               <strong className="posd-title" style={{ display: 'block', flex: 1, minWidth: 0 }}>
                 {panelTitle}
               </strong>
-              {/* La storia sta qui, in alto, come SOLA ICONA: da tasto largo
-                  si prendeva una riga intera accanto a Unisci/Separa/Comande,
-                  per una cosa che si guarda ogni tanto. */}
-              {!isNew && (
-                <button
-                  className="btn ghost small posd-storia"
-                  onClick={() => setShowStoria(true)}
-                  aria-label="Storia del conto"
-                  title="Storia del conto: aperto, chiuso, annullato, riaperto"
-                >
-                  🕘
-                </button>
-              )}
+              {/* LA STORIA E LO SVUOTA STANNO NEL ⋯. Erano due icone qui in
+                  alto, in mezzo a quelle che si usano davvero: la storia si
+                  guarda una volta a serata, e svuotare un conto è la cosa
+                  più irreversibile della schermata — non deve stare a un
+                  dito dai tasti che si premono di corsa. */}
               {/* ORGANIZZA: come nella griglia dei prodotti, un interruttore
                   che fa comparire le maniglie. Fuori di lì toccare una riga
                   la apre — è quello che si fa mille volte a sera — e niente
@@ -2062,24 +2058,33 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                   {organizzaLista ? '✓' : '↕'}
                 </button>
               )}
-              {/* SVUOTA TUTTO, una icona sola. Togliere venti righe una per
-                  una col «−» è il modo peggiore di ricominciare: capita di
-                  battere il conto sbagliato e accorgersene alla fine. Chiede
-                  conferma, che è irreversibile. */}
-              {righeDaSvuotare > 0 && !closed && !telefono && (
-                <button
-                  className="btn ghost small"
-                  onClick={() => setConfirmSvuota(true)}
-                  aria-label="Svuota il conto"
-                  title="Svuota il conto: toglie tutte le righe"
-                >
-                  🧹
-                </button>
-              )}
               {/* Il ⋯ c'è a TUTTE le taglie: era solo da telefono, ma le
                   azioni che non meritano un tasto sempre visibile (i
                   calcoli delle righe, la storia) servono anche su tablet
                   e desktop. */}
+              {/* RIDUCI I TASTI. «Unisci», «Dati conto» e «Prodotto libero»
+                  sono tre righe di schermo prese alla lista: a chi batte
+                  conti complicati servono a portata di dito, a chi fa solo
+                  drink no. Ridotti non spariscono — sono tutti nel ⋯ qui
+                  accanto — e «Comande» resta comunque a vista. */}
+              <button
+                className={`btn ghost small${azioniRidotte ? ' active' : ''}`}
+                onClick={() =>
+                  setAzioniRidotte((v) => {
+                    ricordaAzioniContoRidotte(!v)
+                    return !v
+                  })
+                }
+                aria-expanded={!azioniRidotte}
+                aria-label={azioniRidotte ? 'Mostra i tasti del conto' : 'Nascondi i tasti del conto'}
+                title={
+                  azioniRidotte
+                    ? 'Mostra Unisci, Dati conto e Prodotto libero'
+                    : 'Nascondi Unisci, Dati conto e Prodotto libero: restano nel ⋯'
+                }
+              >
+                {azioniRidotte ? '▾' : '▴'}
+              </button>
               <button
                 className="btn ghost small"
                 onClick={() => setShowAzioni(true)}
@@ -2098,20 +2103,22 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                     faccia da sé (se c'è da unire, unisce; altrimenti
                     separa). Quando servono entrambe vince Unisci, e Separa
                     resta comunque raggiungibile dal ⋯. */}
-                <button
-                  className="btn ghost small"
-                  onClick={canMerge ? mergeDraft : splitAllDraft}
-                  disabled={!canMerge && !canSplit}
-                  title={
-                    canMerge
-                      ? 'Unisci le righe uguali'
-                      : canSplit
-                        ? 'Separa le quantità'
-                        : 'Niente da unire o separare'
-                  }
-                >
-                  {canMerge ? '🔗 Unisci' : '⑃ Separa'}
-                </button>
+                {!azioniRidotte && (
+                  <button
+                    className="btn ghost small"
+                    onClick={canMerge ? mergeDraft : splitAllDraft}
+                    disabled={!canMerge && !canSplit}
+                    title={
+                      canMerge
+                        ? 'Unisci le righe uguali'
+                        : canSplit
+                          ? 'Separa le quantità'
+                          : 'Niente da unire o separare'
+                    }
+                  >
+                    {canMerge ? '🔗 Unisci' : '⑃ Separa'}
+                  </button>
+                )}
                 <button
                   className="btn secondary small"
                   onClick={() => setShowComande(true)}
@@ -2179,19 +2186,22 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
 
             {/* Azioni FISSE in testata, una sotto l'altra: prima Dati conto,
                 poi Prodotto libero. Con la lista lunga scorrevano via insieme
-                al nome del conto. */}
-            <div className="posd-azioni-fisse">
-              <button className="btn ghost small block" onClick={() => setShowInfo(true)}>
-                👤 Dati conto
-              </button>
-              <button
-                className="btn ghost small block"
-                disabled={closed}
-                onClick={() => setShowCustom(true)}
-              >
-                <IconTag /> Prodotto libero
-              </button>
-            </div>
+                al nome del conto. Chi ha ridotto i tasti (il ▴ qui sopra) non
+                le vede: le trova nel ⋯, dove ci sono sempre state. */}
+            {!azioniRidotte && (
+              <div className="posd-azioni-fisse">
+                <button className="btn ghost small block" onClick={() => setShowInfo(true)}>
+                  👤 Dati conto
+                </button>
+                <button
+                  className="btn ghost small block"
+                  disabled={closed}
+                  onClick={() => setShowCustom(true)}
+                >
+                  <IconTag /> Prodotto libero
+                </button>
+              </div>
+            )}
           </div>
 
           <div ref={listRef} className="posd-list" style={{ flex: 1, overflowY: 'auto', padding: '6px 12px 10px' }}>

@@ -363,11 +363,23 @@ describe('le corsie del banco: una card per comanda', () => {
     ruolo = 'bartender'
   })
 
-  it('mostra le quattro corsie, con una card per COMANDA e i totali di ognuna', async () => {
+  it('mostra le corsie del banco, con una card per COMANDA e i totali di ognuna', async () => {
     montaCoda()
     await screen.findByText('Da fare')
-    for (const titolo of ['Da fare', 'Al banco', 'Al ritiro', 'Da incassare']) {
-      expect(screen.getByText(titolo)).toBeInTheDocument()
+    // I nomi sono gli STATI del servizio, non dove sta il drink: la stessa
+    // parola sul tasto che ci porta e sulla colonna dove finisce.
+    // Il titolo si cerca nella TESTA della colonna: «In preparazione» è
+    // anche il tasto della colonna accanto, ed e' voluto — il tasto dice
+    // dove va a finire il conto.
+    const titoli = [...document.querySelectorAll('.corsia-titolo')].map((n) => n.textContent)
+    for (const titolo of [
+      'Da fare',
+      'In preparazione',
+      'Ritiro/Servizio',
+      'Ritirato/Servito',
+      'Da incassare',
+    ]) {
+      expect(titoli.some((t) => t.startsWith(titolo))).toBe(true)
     }
 
     // Da fare: le due comande appena arrivate, col totale della colonna —
@@ -381,7 +393,7 @@ describe('le corsie del banco: una card per comanda', () => {
     expect(within(daFare).queryByText(/comanda 1/)).not.toBeInTheDocument()
     expect(within(daFare).getByText('33,00 €')).toBeInTheDocument()
 
-    // Al ritiro: il pronto e quello già pagato, che resta lì col bollo
+    // Ritiro/Servizio: il pronto e quello già pagato, che resta lì col bollo
     const alRitiro = corsia('al-ritiro')
     expect(within(alRitiro).getByText('#36')).toBeInTheDocument()
     expect(within(alRitiro).getByText('Pagato')).toBeInTheDocument()
@@ -399,7 +411,7 @@ describe('le corsie del banco: una card per comanda', () => {
     await screen.findByText('Da fare')
 
     const daFare = corsia('da-fare')
-    await utente.click(within(daFare).getAllByRole('button', { name: 'Lo preparo io' })[0])
+    await utente.click(within(daFare).getAllByRole('button', { name: 'In preparazione' })[0])
     // advanceComanda, con l'id della comanda: è la stessa strada del
     // dettaglio del conto, non una scorciatoia di questa vista.
     expect(advanceComanda).toHaveBeenCalledWith('o41', 'c-o41', 'in_preparazione')
@@ -414,7 +426,7 @@ describe('le corsie del banco: una card per comanda', () => {
       within(corsia('al-banco')).getAllByRole('button', { name: 'È pronto' })[0]
     ).toBeInTheDocument()
     expect(
-      within(corsia('al-ritiro')).getAllByRole('button', { name: 'Consegnato' })[0]
+      within(corsia('al-ritiro')).getAllByRole('button', { name: 'Ritirato/Servito' })[0]
     ).toBeInTheDocument()
     expect(
       within(corsia('da-incassare')).getByRole('button', { name: 'Incassa' })
@@ -445,10 +457,11 @@ describe('le corsie del banco: una card per comanda', () => {
     expect(screen.getByText('#41')).toBeInTheDocument()
     expect(screen.queryByText('#42')).not.toBeInTheDocument()
     expect(screen.queryByText('#33')).not.toBeInTheDocument()
-    // le colonne restano tutte e quattro, anche svuotate: la loro
-    // posizione si impara a memoria
-    for (const titolo of ['Da fare', 'Al banco', 'Al ritiro', 'Da incassare']) {
-      expect(screen.getByText(titolo)).toBeInTheDocument()
+    // le colonne restano tutte, anche svuotate: la loro posizione si
+    // impara a memoria
+    const titoli = [...document.querySelectorAll('.corsia-titolo')].map((n) => n.textContent)
+    for (const titolo of ['Da fare', 'In preparazione', 'Ritiro/Servizio', 'Da incassare']) {
+      expect(titoli.some((t) => t.startsWith(titolo))).toBe(true)
     }
   })
 
@@ -489,7 +502,7 @@ describe('le corsie del banco: una card per comanda', () => {
   })
 
   // CHI STA AL BANCO SPEGNE LE COLONNE CHE NON GLI SERVONO. A metà serata
-  // guarda «Da fare» e «Al banco»: le altre due gli mangiano mezzo schermo
+  // guarda «Da fare» e «In preparazione»: le altre gli mangiano mezzo schermo
   // per roba che in quel momento non lo riguarda. La scelta è di QUESTO
   // terminale — al banco e alla cassa non si guardano le stesse cose — e
   // deve sopravvivere a un ricaricamento della pagina.
@@ -499,7 +512,7 @@ describe('le corsie del banco: una card per comanda', () => {
     await screen.findByText('Da fare')
 
     await utente.click(screen.getByRole('button', { name: /Colonne/ }))
-    await utente.click(screen.getByRole('button', { name: 'Al ritiro', pressed: true }))
+    await utente.click(screen.getByRole('button', { name: 'Ritiro/Servizio', pressed: true }))
     expect(corsia('al-ritiro')).toBeFalsy()
     expect(corsia('da-fare')).toBeTruthy()
 
@@ -512,7 +525,7 @@ describe('le corsie del banco: una card per comanda', () => {
 
     // e si riaccende dallo stesso posto
     await utente.click(screen.getByRole('button', { name: /Colonne/ }))
-    await utente.click(screen.getByRole('button', { name: 'Al ritiro', pressed: false }))
+    await utente.click(screen.getByRole('button', { name: 'Ritiro/Servizio', pressed: false }))
     expect(corsia('al-ritiro')).toBeTruthy()
   })
 
@@ -563,11 +576,11 @@ describe('le corsie del banco: una card per comanda', () => {
     // e non chiede soldi a nessuno: è già saldato
     expect(within(corsia('da-incassare')).queryByText('#45')).not.toBeInTheDocument()
 
-    // «Chiusi» non ingombra il banco, ma si accende dal filtro — e lì
+    // «Chiuse» non ingombra il banco, ma si accende dal filtro — e lì
     // dentro questo conto NON c'è: il drink è ancora da fare.
     expect(corsia('chiusi')).toBeFalsy()
     await utente.click(screen.getByRole('button', { name: /Colonne/ }))
-    await utente.click(screen.getByRole('button', { name: '💶 Chiusi', pressed: false }))
+    await utente.click(screen.getByRole('button', { name: '💶 Chiuse', pressed: false }))
     expect(within(corsia('chiusi')).queryByText('#45')).not.toBeInTheDocument()
   })
 
@@ -585,7 +598,27 @@ describe('le corsie del banco: una card per comanda', () => {
     expect(corsia('da-fare')).toBeTruthy()
   })
 
-  it('le comande di un conto annullato si ritrovano sotto «Annullati»', async () => {
+  // ACCONTO: una parte incassata e il conto ancora aperto. Se la card non
+  // lo dice, chi la porta al tavolo chiede l'intero — e succede.
+  it('il conto con un acconto lo dice, e la card cambia colore', async () => {
+    ordini = [
+      {
+        ...CODA[0],
+        id: 'o47',
+        daily_number: 47,
+        payment_status: 'parziale',
+        payments: [{ amount: 10, method: 'banco', at: ORA }],
+      },
+    ]
+    montaCoda()
+    await screen.findByText('Da fare')
+
+    const daFare = corsia('da-fare')
+    expect(within(daFare).getByText('💳 Acconto')).toBeInTheDocument()
+    expect(daFare.querySelector('.corsia-card')).toHaveClass('acconto')
+  })
+
+  it('le comande di un conto annullato si ritrovano sotto «Annullate»', async () => {
     const utente = userEvent.setup()
     ordini = [
       {
@@ -611,7 +644,7 @@ describe('le corsie del banco: una card per comanda', () => {
     expect(within(corsia('da-fare')).queryByText('#46')).not.toBeInTheDocument()
 
     await utente.click(screen.getByRole('button', { name: /Colonne/ }))
-    await utente.click(screen.getByRole('button', { name: '✖️ Annullati', pressed: false }))
+    await utente.click(screen.getByRole('button', { name: '✖️ Annullate', pressed: false }))
     expect(within(corsia('annullati')).getByText('#46')).toBeInTheDocument()
   })
 
@@ -626,7 +659,7 @@ describe('le corsie del banco: una card per comanda', () => {
     expect(screen.queryByText('Da fare')).not.toBeInTheDocument()
     // Niente avanzamenti: senza gli stati l'unica cosa da fare a un conto
     // in corso è incassarlo.
-    expect(screen.queryByRole('button', { name: 'Lo preparo io' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'In preparazione' })).not.toBeInTheDocument()
     expect(
       within(corsia('attivi')).getAllByRole('button', { name: 'Incassa' })[0]
     ).toBeInTheDocument()

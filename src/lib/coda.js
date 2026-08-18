@@ -259,10 +259,15 @@ export function schedeCoda(workflowOn) {
 // della griglia. Chi chiama passa la lista già ripulita da ordiniInCoda —
 // cioè quello che resta in coda per QUESTA apertura di cassa — e qui si
 // smista soltanto.
+// I NOMI DELLE CORSIE SONO GLI STATI, non delle perifrasi. «Al banco» e
+// «Al ritiro» raccontavano DOVE sta il drink; lo stato del servizio dice a
+// che punto è, ed è quello che si cerca quando si guarda la colonna e
+// quando si legge la storia del conto. Gli id restano quelli di prima: se
+// li cambiassimo, chi ha nascosto una colonna se la ritroverebbe accesa.
 const CORSIE_LAVORO = [
   { id: 'da-fare', titolo: 'Da fare', stato: ORDER_STATUSES.RICEVUTO },
-  { id: 'al-banco', titolo: 'Al banco', stato: ORDER_STATUSES.IN_PREPARAZIONE },
-  { id: 'al-ritiro', titolo: 'Al ritiro', stato: ORDER_STATUSES.PRONTO },
+  { id: 'al-banco', titolo: 'In preparazione', stato: ORDER_STATUSES.IN_PREPARAZIONE },
+  { id: 'al-ritiro', titolo: 'Ritiro/Servizio', stato: ORDER_STATUSES.PRONTO },
   { id: 'da-incassare', titolo: 'Da incassare', stato: ORDER_STATUSES.RITIRATO },
 ]
 
@@ -311,9 +316,13 @@ export function corsieDiStato(ordini, { isChiuso = () => false, workflowOn = tru
 // e «Annullati», che compaiono solo a stati di servizio spenti — non hanno
 // tasto: su un conto già chiuso non c'è niente da far avanzare.
 export const AZIONI_CORSIA = {
-  'da-fare': { etichetta: 'Lo preparo io', tipo: 'avanza' },
+  // Il tasto dice DOVE VA il conto, non chi lo prende in carico: «Lo
+  // preparo io» era una promessa, e la colonna accanto si chiama con lo
+  // stato in cui il conto finisce. Stessa parola sul tasto e sulla
+  // colonna: si vede dove va a finire prima di premere.
+  'da-fare': { etichetta: 'In preparazione', tipo: 'avanza' },
   'al-banco': { etichetta: 'È pronto', tipo: 'avanza' },
-  'al-ritiro': { etichetta: 'Consegnato', tipo: 'avanza' },
+  'al-ritiro': { etichetta: 'Ritirato/Servito', tipo: 'avanza' },
   'da-incassare': { etichetta: 'Incassa', tipo: 'incassa' },
   // Stati di servizio spenti: l'unica cosa che resta da fare a un conto in
   // corso è incassarlo, come sulla griglia.
@@ -347,10 +356,12 @@ export function destinazioneConto(o) {
 // conto ne ha più di una: «#41 · comanda 2» su un conto con un ticket solo
 // sarebbe un numero da leggere per non sapere niente.
 //
-// LE CORSIE SONO SEI, ma le ultime due si guardano di rado e stanno spente
-// finché non si chiedono (vedi CORSIE_SPENTE_ALL_INIZIO):
+// LE CORSIE SONO SETTE, ma le ultime due si guardano di rado e stanno
+// spente finché non si chiedono (vedi CORSIE_SPENTE_ALL_INIZIO):
 //
-//   Da fare · Al banco · Al ritiro   i passi del lavoro, una card per comanda
+//   Da fare · In preparazione ·       i passi del lavoro, una card per
+//   Ritiro/Servizio ·                 comanda
+//   Ritirato/Servito
 //   Da incassare                      i CONTI con roba già servita e non
 //                                     ancora saldati. Si incassa un conto,
 //                                     non un ticket: tre comande servite
@@ -368,16 +379,26 @@ export function destinazioneConto(o) {
 //                                     Nessuna delle due ha tasti.
 //
 // QUANDO UNA COMANDA È CHIUSA: dopo essere stata SERVITA, non prima. Da lì,
-// se il conto è pagato va fra i chiusi, se no il conto compare in cassa.
+// se il conto è pagato va fra le chiuse; se no la comanda resta in
+// «Ritirato/Servito» — il lavoro è finito — e il CONTO compare in cassa,
+// che i soldi si chiedono una volta sola, sul conto intero.
 // PAGATA MA NON ANCORA SERVITA NON È CHIUSA: il drink va fatto lo stesso,
 // e quella comanda resta nella corsia del suo passo — col bollo «Pagato»,
 // perché è il caso strano (i soldi presi, il drink ancora da fare) ed è
 // quello che non deve sfuggire. Lì e basta: mostrarla anche fra i chiusi
 // vorrebbe dire farla contare due volte.
+//
+// «Ritirato/Servito» è il passo che nella vista dei conti non ha una
+// colonna sua — lì un conto servito è solo roba da incassare — e al banco
+// invece serve: chi ha appena servito deve vedere dov'è finito quello che
+// ha fatto. E i nomi delle ultime due sono al femminile — chiuse,
+// annullate — perché qui dentro non ci sono conti: ci sono comande.
 const CORSIE_COMANDE = [
-  ...CORSIE_LAVORO,
-  { id: 'chiusi', titolo: '💶 Chiusi', stato: null },
-  { id: 'annullati', titolo: '✖️ Annullati', stato: null },
+  ...CORSIE_LAVORO.filter((c) => c.id !== 'da-incassare'),
+  { id: 'ritirati', titolo: 'Ritirato/Servito', stato: ORDER_STATUSES.RITIRATO },
+  ...CORSIE_LAVORO.filter((c) => c.id === 'da-incassare'),
+  { id: 'chiusi', titolo: '💶 Chiuse', stato: null },
+  { id: 'annullati', titolo: '✖️ Annullate', stato: null },
 ]
 
 // Le due corsie dello sguardo all'indietro partono spente: al banco lo
@@ -388,12 +409,11 @@ export const CORSIE_SPENTE_ALL_INIZIO = ['chiusi', 'annullati']
 
 export function corsieComande(ordini, { isChiuso = () => false } = {}) {
   const secchi = Object.fromEntries(CORSIE_COMANDE.map((c) => [c.id, []]))
-  // Dove va una comanda, per il passo in cui sta. L'ULTIMA CORSIA DI LAVORO
-  // NON C'È: «Da incassare» è dei conti, non delle comande, e una comanda
-  // servita non ha una colonna sua — il lavoro è finito, resta solo da
-  // farsi pagare, e lo dice la card del conto.
+  // Dove va una comanda, per il passo in cui sta. «Da incassare» resta
+  // fuori: è dei conti, non delle comande — si incassa un conto intero,
+  // non un ticket — e infatti lì la card torna a essere il conto.
   const perStato = Object.fromEntries(
-    CORSIE_LAVORO.filter((c) => c.id !== 'da-incassare').map((c) => [c.stato, c.id])
+    CORSIE_COMANDE.filter((c) => c.stato && c.id !== 'da-incassare').map((c) => [c.stato, c.id])
   )
 
   for (const o of ordini || []) {
@@ -435,9 +455,12 @@ export function corsieComande(ordini, { isChiuso = () => false } = {}) {
     for (const c of comande) {
       if (c.status === ORDER_STATUSES.RITIRATO) {
         servite += 1
-        // SERVITA. Se il conto è pagato non resta più niente: chiusa. Se no
-        // i soldi sono ancora da prendere, e a chiederli è il conto — sotto.
-        if (saldato) secchi.chiusi.push(scheda(c))
+        // SERVITA. Col conto pagato non resta più niente da fare né da
+        // chiedere: chiusa. Se no il lavoro è finito ma i soldi no, e
+        // restano due cose diverse da guardare — la comanda in
+        // «Ritirato/Servito», che dice che è uscita, e il CONTO fra quelli
+        // da incassare, che è quello che si porta al tavolo.
+        secchi[saldato ? 'chiusi' : 'ritirati'].push(scheda(c))
         continue
       }
       const corsia = perStato[c.status]

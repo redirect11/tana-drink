@@ -26,9 +26,17 @@
   lavoro come il bartender — a mano, e solo su quel terminale.
 - **Al banco le colonne si scelgono**: «▦ Colonne» spegne quelle che in quel
   momento non servono — «Da incassare» compresa, che chi sta allo shaker non
-  incassa — e ne accende due per guardare indietro, «Chiusi» e «Annullati».
+  incassa — e ne accende due per guardare indietro, «Chiuse» e «Annullate».
   È una scelta di quel terminale: al banco e alla cassa non si guardano le
   stesse cose, e si ritrova al ricarico.
+- **Le colonne si chiamano come gli stati**: «In preparazione» al posto di «Al
+  banco», «Ritiro/Servizio» al posto di «Al ritiro», e il tasto che ci porta
+  dice la stessa parola — «In preparazione», non «Lo preparo io». Al banco c'è
+  in più la colonna **«Ritirato/Servito»**: il lavoro finito si deve vedere
+  finito, anche quando il conto è ancora da incassare.
+- **Un acconto si vede dalla card**: il bollo «💳 Acconto» e la striscia
+  arancione, come nella griglia. Senza, chi porta il conto al tavolo chiede
+  l'intero — ed è già successo.
 - **Un conto pagato in anticipo non sparisce dal banco**: la sua comanda resta
   nella colonna del suo passo, col bollo «Pagato» e la card accesa, perché i
   soldi ci sono ma il drink è ancora da fare. Una comanda risulta chiusa solo
@@ -46,15 +54,22 @@
   raggruppano sotto «In preparazione», «Pronto», «Servito», come già accade
   per quelle pagate. Con una comanda sola — il caso normale — non cambia
   niente: nessun titolo per dire una cosa sola.
+- **I tasti sopra la lista si possono ridurre**: «Unisci», «Dati conto» e
+  «Prodotto libero» sono tre righe di schermo prese alla lista dei drink, e col
+  «▴» accanto ai ⋯ si tolgono di mezzo — restano tutti nel ⋯, e «Comande» resta
+  comunque a vista. La scelta è di quel terminale e si ritrova al ritorno. Nel
+  ⋯ sono finite anche la storia del conto e «Svuota», che stavano fra i tasti
+  che si premono di corsa: svuotare un conto è la cosa più irreversibile della
+  schermata.
 - **Il lucchetto della cassa adesso ha un nome.** Sugli schermi larghi era
   un'icona grigia in fondo alla barra e nessuno sapeva cosa fosse: adesso c'è
   scritto «🔒 Chiudi cassa» (o «🟢 Apri cassa»), e quando non si può chiudere
   il perché sta sotto quel tasto: «Prima chiudi 2 conti».
 - **La coda ordini si può guardare a «Corsie di stato»** (Impostazioni → Coda
-  ordini): quattro colonne — da fare, al banco, al ritiro, da incassare — con
-  in testa quanti conti ci sono e quanto fanno, e ognuna che scorre per conto
-  suo. Su ogni card un tasto solo, quello del passo dopo: «Lo preparo io», «È
-  pronto», «Consegnato», «Incassa». Il conto già pagato ma non ancora
+  ordini): quattro colonne — da fare, in preparazione, ritiro/servizio, da
+  incassare — con in testa quanti conti ci sono e quanto fanno, e ognuna che
+  scorre per conto suo. Su ogni card un tasto solo, quello del passo dopo: «In
+  preparazione», «È pronto», «Ritirato/Servito», «Incassa». Il conto già pagato ma non ancora
   consegnato resta al ritiro col bollo «Pagato» — non sparisce prima di essere
   servito — e quelli da incassare mostrano la cifra in grande. Toccando la card
   si apre il conto, come sempre. Con gli stati di servizio spenti le corsie
@@ -66,8 +81,8 @@
   venivano prima delle 23 della sera, perché contava l'orologio e non la
   nottata. Quando una serata tocca due giorni, ogni colonna porta la data.
 - **Un conto nuovo nasce «da fare»**, non già «in preparazione»: si battono
-  tre conti di fila e poi si comincia a versare. È «Lo preparo io» a dire
-  quando si comincia — e chi.
+  tre conti di fila e poi si comincia a versare. È il tasto «In preparazione»
+  a dire quando si comincia.
 - **Un ordine può tornare indietro**: nelle azioni della card e nel dettaglio
   ci sono le pastiglie «↩︎ Torna a…» con tutti gli stati già passati — non
   solo il precedente. Prima, se si segnava «pronto» il conto sbagliato,
