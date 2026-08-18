@@ -110,6 +110,27 @@ export function nextStatus(status) {
   return STATUS_FLOW[idx + 1]
 }
 
+// ── TORNARE INDIETRO ─────────────────────────────────────────────────
+//
+// Al banco si sbaglia in avanti: si segna «pronto» il conto sbagliato, si
+// tocca «consegnato» mentre il drink è ancora sul vassoio. Senza un modo di
+// tornare indietro l'unica strada era annullare il conto e ribatterlo —
+// perdendo l'orario, la storia e la voglia.
+//
+// `statoPrecedente` dà il passo indietro nel flusso; `statiPrima` dà tutti
+// quelli già passati, per chi deve saltare più indietro di uno (capita:
+// «questo non era nemmeno in preparazione»).
+export function statoPrecedente(status) {
+  const idx = STATUS_FLOW.indexOf(status)
+  if (idx <= 0) return null
+  return STATUS_FLOW[idx - 1]
+}
+
+export function statiPrima(status) {
+  const idx = STATUS_FLOW.indexOf(status)
+  return idx <= 0 ? [] : STATUS_FLOW.slice(0, idx)
+}
+
 export function formatPrice(value) {
   const n = Number(value || 0)
   // `useGrouping: 'always'`: il punto delle migliaia dipende da quanto è

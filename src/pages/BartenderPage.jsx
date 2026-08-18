@@ -25,6 +25,7 @@ import {
   ritiratoLabel,
   formatPrice,
   nextStatus,
+  statiPrima,
   placedByName,
   placedByLetter,
 } from '../lib/orderStatus.js'
@@ -698,9 +699,13 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
   // restano aperti finché non li si chiude a mano; la giornata commerciale
   // serve solo a raggruppare (statistiche e progressivo #N).
 
-  function advance(order) {
-    const ns = nextStatus(order.workflow_status)
-    if (!ns) return
+  // Porta il conto a uno stato: quello dopo, se non si dice altro, oppure
+  // uno preciso — anche INDIETRO, per chi ha toccato «pronto» sul conto
+  // sbagliato. La strada è la stessa (override ottimistico + scrittura in
+  // sottofondo): non c'è un modo per andare avanti e uno per tornare.
+  function advance(order, stato = null) {
+    const ns = stato || nextStatus(order.workflow_status)
+    if (!ns || ns === order.workflow_status) return
     setQueueOverrides((m) => ({ ...m, [order.id]: ns }))
     avanzatiDaMe.current.add(`${order.id}:${ns}`)
     ;(async () => {
@@ -1047,7 +1052,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
 
   // Pulsanti azione di un ordine (avanza stato, incasso, stampe, annullo).
   // Condivisi dalla card piena (liste) e dalla card-griglia (a scomparsa).
-  const orderActions = (o) => {
+  const orderActions = (o, { senzaAvanzamento = false } = {}) => {
     // CONTO CHIUSO O ANNULLATO: due cose sole. Non c'è più niente da
     // preparare né da incassare, e i tasti spenti in fila — «Contanti» e
     // «Carta» grigi su un conto già pagato — sono solo rumore addosso a chi
@@ -1085,7 +1090,27 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
         {/* Coi tasti che compaiono e spariscono, quello che cercavi non è più
             dove l'avevi visto un attimo prima. Ci sono sempre: spenti quando
             l'azione non è possibile, con il perché nel titolo. */}
-        {workflowOn && (
+        {/* UN PASSO INDIETRO. Si segna «pronto» il conto sbagliato, si tocca
+            «consegnato» mentre il drink è ancora sul vassoio: senza questo
+            l'unica strada era annullare e ribattere, perdendo orario e
+            storia. Sta accanto al passo avanti, più piccolo: si sbaglia meno
+            spesso di quanto si lavori. */}
+        {workflowOn && statiPrima(o.workflow_status).length > 0 && (
+          <div className="row" style={{ gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
+            <span className="muted small">Torna a</span>
+            {statiPrima(o.workflow_status).map((st) => (
+              <button
+                key={st}
+                className="chip"
+                onClick={() => advance(o, st)}
+                title={`Riporta il conto a «${STATUS_LABELS[st]}»`}
+              >
+                ↩︎ {STATUS_LABELS[st]}
+              </button>
+            ))}
+          </div>
+        )}
+        {workflowOn && !senzaAvanzamento && (
           <button
             className="btn block"
             disabled={!ns || o.workflow_status === ORDER_STATUSES.RITIRATO || awaiting}

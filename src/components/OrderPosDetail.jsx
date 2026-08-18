@@ -30,6 +30,7 @@ import { useMenu } from '../lib/menuCache.js'
 import {
   ORDER_STATUSES,
   STATUS_LABELS,
+  statiPrima,
   STATUS_EMOJI,
   ritiratoLabel,
   formatPrice,
@@ -2564,6 +2565,26 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                       <span />
                     )}
                   </div>
+                  {/* TORNARE INDIETRO, anche di più di un passo. Si segna
+                      «pronto» la comanda sbagliata, o «servito» mentre il
+                      vassoio è ancora al banco: senza questo restava solo
+                      annullare il conto e ribatterlo. Gli stati già passati
+                      sono lì, in fila: si sceglie quello giusto. */}
+                  {workflowOn && !closed && statiPrima(c.status).length > 0 && (
+                    <div className="row" style={{ gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+                      <span className="muted small">Torna a</span>
+                      {statiPrima(c.status).map((st) => (
+                        <button
+                          key={st}
+                          className="chip"
+                          onClick={() => advance(c.id, st)}
+                          title={`Riporta la comanda ${c.seq} a «${STATUS_LABELS[st]}»`}
+                        >
+                          ↩︎ {STATUS_LABELS[st]}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )
             })}

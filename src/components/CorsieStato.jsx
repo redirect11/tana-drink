@@ -250,9 +250,14 @@ export default function CorsieStato({
                       </div>
                     )}
                     {azioni && aperta === o.id && (
-                      // Le azioni sono quelle della coda, disegnate qui:
-                      // una regola sola, in un posto solo.
-                      <div onClick={(e) => e.stopPropagation()}>{azioni(o)}</div>
+                      // Le azioni sono quelle della coda, disegnate qui: una
+                      // regola sola, in un posto solo. L'avanzamento no —
+                      // «Segna come Ritirato/Servito» e il tasto grande della
+                      // corsia sono la STESSA cosa scritta due volte, a un
+                      // dito di distanza. Qui comanda il tasto della corsia.
+                      <div className="corsia-azioni-aperte" onClick={(e) => e.stopPropagation()}>
+                        {azioni(o, { senzaAvanzamento: !!azione })}
+                      </div>
                     )}
                   </article>
                 )

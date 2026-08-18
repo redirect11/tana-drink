@@ -6875,3 +6875,11 @@ body.pagina-piena .inv-scheda {
   margin: 0;
 }
 
+/* Le azioni aperte respirano: attaccate al piede sembravano la continuazione
+   del tasto sopra, e si premeva quella sbagliata. */
+.corsia-azioni-aperte {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
