@@ -39,6 +39,7 @@ vi.mock('../../src/lib/api.js', () => ({
   DEFAULT_SETTINGS: {},
   settingsIniziali: () => ({}),
   peekNextDailyNumber: vi.fn(() => Promise.resolve(5)),
+  preparazioneParziale: vi.fn(() => Promise.resolve()),
   subscribeSettings: vi.fn((cb) => {
     cb(mockSettings)
     return () => {}
@@ -84,6 +85,7 @@ import {
   cancelOrder,
   createOrder,
   restoreOrder,
+  preparazioneParziale,
 } from '../../src/lib/api.js'
 import { readerCheckout } from '../../src/lib/paymentsApi.js'
 import { printComanda } from '../../src/lib/printer.js'
@@ -1400,5 +1402,193 @@ describe('la riga modificata a mano resta modificata', () => {
     await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalled())
     const items = bartenderUpdateComanda.mock.calls.at(-1)[2].items || []
     expect(items.some((i) => Number(i.unit_price) === 12)).toBe(true)
+  })
+})
+
+
+// ── LA PREPARAZIONE PARZIALE ───────────────────────────────
+//
+// Al banco capita di vedere tre gin tonic in una comanda e due in
+// un'altra e prepararli insieme, per farli uscire in una volta sola. Non
+// andrebbe fatto — un ticket si lavora intero — ma si fa: l'app non lo
+// impedisce, lo REGISTRA, così il conto resta giusto e la coda dice
+// davvero cosa è al banco e cosa aspetta ancora.
+//
+// La comanda di partenza si ANNULLA (resta come storia: la copia già
+// stampata ha ancora un riscontro) e al suo posto ne nascono due — quella
+// che si prepara adesso e il resto, che resta da fare.
+describe('preparazione parziale di una comanda', () => {
+  const daFare = (over = {}) =>
+    baseOrder({
+      workflow_status: 'ricevuto',
+      comande: [
+        {
+          id: 'c1',
+          seq: 1,
+          status: 'ricevuto',
+          status_times: {},
+          created_at: '2026-08-16T21:00:00.000Z',
+          items: [{ drink_id: 'gin', name: 'Gin Tonic', unit_price: 8, qty: 5 }],
+        },
+      ],
+      ...over,
+    })
+
+  const apriComande = async (user) =>
+    user.click(screen.getByRole('button', { name: /Comande \(1\)/ }))
+
+  it('cinque da fare, se ne preparano due: due al banco e tre ancora da fare', async () => {
+    const user = userEvent.setup()
+    mount(daFare())
+    await apriComande(user)
+
+    await user.click(screen.getByRole('button', { name: /Preparazione parziale/ }))
+    await user.click(screen.getByRole('button', { name: 'Uno in più di Gin Tonic' }))
+    await user.click(screen.getByRole('button', { name: 'Uno in più di Gin Tonic' }))
+    await user.click(screen.getByRole('button', { name: 'Preparo questi' }))
+
+    // le unità scelte, riga per riga: due dei cinque
+    expect(preparazioneParziale).toHaveBeenCalledWith('ord1', 'c1', [2])
+
+    // E SI VEDE SUBITO, senza aspettare il server: la comanda di partenza
+    // è annullata, e al suo posto ce ne sono due — due gin tonic al banco
+    // e tre ancora da fare. Il totale delle unità non è cambiato.
+    const cards = [...document.querySelectorAll('.confirm-box .card')]
+    const testo = cards.map((c) => c.textContent)
+    expect(testo[0]).toMatch(/COMANDA 1/)
+    // «Divisa», non «Annullato»: nel dato è annullata — serve a tenere la
+    // storia — ma leggerlo qui farebbe pensare a un drink saltato, mentre
+    // quei drink sono nelle due comande sotto.
+    expect(testo[0]).toMatch(/Divisa/)
+    expect(testo[0]).not.toMatch(/Annullato/)
+    expect(testo[1]).toMatch(/COMANDA 2/)
+    expect(testo[1]).toMatch(/In preparazione/)
+    expect(testo[1]).toMatch(/2× Gin Tonic/)
+    expect(testo[2]).toMatch(/COMANDA 3/)
+    expect(testo[2]).toMatch(/Ordine ricevuto/)
+    expect(testo[2]).toMatch(/3× Gin Tonic/)
+  })
+
+  it('prese tutte le unità non si divide niente: la comanda avanza e basta', async () => {
+    const user = userEvent.setup()
+    mount(daFare())
+    await apriComande(user)
+
+    await user.click(screen.getByRole('button', { name: /Preparazione parziale/ }))
+    for (let i = 0; i < 5; i++) {
+      await user.click(screen.getByRole('button', { name: 'Uno in più di Gin Tonic' }))
+    }
+    await user.click(screen.getByRole('button', { name: 'Preparo questi' }))
+
+    expect(preparazioneParziale).toHaveBeenCalledWith('ord1', 'c1', [5])
+    // niente comande in più: quella che c'era è passata al banco
+    const cards = [...document.querySelectorAll('.confirm-box .card')]
+    expect(cards.length).toBe(1)
+    expect(cards[0].textContent).toMatch(/In preparazione/)
+    expect(cards[0].textContent).not.toMatch(/Annullato|Divisa/)
+  })
+
+  it('senza scegliere niente non si può confermare', async () => {
+    const user = userEvent.setup()
+    mount(daFare())
+    await apriComande(user)
+    await user.click(screen.getByRole('button', { name: /Preparazione parziale/ }))
+    expect(screen.getByRole('button', { name: 'Preparo questi' })).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: 'Lascia stare' }))
+    expect(screen.queryByRole('button', { name: 'Preparo questi' })).not.toBeInTheDocument()
+    expect(preparazioneParziale).not.toHaveBeenCalled()
+  })
+
+  it('non si propone su quello che è già al banco, né su un drink solo', async () => {
+    // Dividere una comanda già presa in carico non vuol dire niente: il
+    // lavoro è cominciato. E su una riga da uno la scelta sarebbe fra
+    // tutto e niente, cioè il tasto che c'è già.
+    const user = userEvent.setup()
+    const { unmount } = mount(daFare({ comande: [
+      {
+        id: 'c1', seq: 1, status: 'in_preparazione', status_times: {},
+        items: [{ drink_id: 'gin', name: 'Gin Tonic', unit_price: 8, qty: 5 }],
+      },
+    ] }))
+    await apriComande(user)
+    expect(screen.queryByRole('button', { name: /Preparazione parziale/ })).not.toBeInTheDocument()
+    unmount()
+
+    mount(daFare({ comande: [
+      {
+        id: 'c1', seq: 1, status: 'ricevuto', status_times: {},
+        items: [{ drink_id: 'gin', name: 'Gin Tonic', unit_price: 8, qty: 1 }],
+      },
+    ] }))
+    await apriComande(user)
+    expect(screen.queryByRole('button', { name: /Preparazione parziale/ })).not.toBeInTheDocument()
+  })
+})
+
+
+// ── A CHE PUNTO È QUESTO CONTO, RIGA PER RIGA ───────────────────
+//
+// Gli stati del servizio stanno sulle COMANDE, non sul conto: di base la
+// comanda è una sola ed esce tutta per l'intero ordine, e allora tutti i
+// drink sono nello stesso passo — non c'è niente da intestare. Appena il
+// banco ne divide una per prepararne una parte, invece, aprendo il conto si
+// deve vedere cosa è al banco e cosa è già uscito.
+describe('le righe del conto dicono a che punto sono', () => {
+  const titoli = () =>
+    [...document.querySelectorAll('.posd-gruppo')].map((n) => n.textContent)
+
+  it('con una comanda sola non c’è nessun titolo: sarebbe un titolo per dire una cosa sola', () => {
+    mount(baseOrder())
+    expect(titoli()).toEqual([])
+  })
+
+  it('divisa la comanda, le righe si raggruppano per passo', () => {
+    mount(
+      baseOrder({
+        comande: [
+          {
+            id: 'c1', seq: 1, status: 'in_preparazione', status_times: {},
+            items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 }],
+          },
+          {
+            id: 'c2', seq: 2, status: 'pronto', status_times: {},
+            items: [{ drink_id: 'gin', name: 'Gin Tonic', unit_price: 8, qty: 1 }],
+          },
+        ],
+      })
+    )
+    expect(titoli()).toEqual(['🍹 In preparazione', '🔔 Pronto'])
+    // e le righe stanno sotto il titolo giusto, in ordine di lavorazione
+    const righe = [...document.querySelectorAll('.posd-gruppo, .draft-line')].map((n) =>
+      n.textContent.replace(/\s+/g, ' ').trim()
+    )
+    expect(righe[0]).toContain('In preparazione')
+    expect(righe[1]).toContain('Mojito')
+    expect(righe[2]).toContain('Pronto')
+    expect(righe[3]).toContain('Gin Tonic')
+  })
+
+  it('PAGATO IN CASSA E IN PREPARAZIONE AL BANCO: si dicono tutte e due', () => {
+    // Un conto si incassa in qualunque stato di servizio: dalla cassa è
+    // chiuso, dal banco magari no. Se il gruppo «Pagati» scacciasse quello
+    // del servizio, aprendo il conto si leggerebbe che è tutto sistemato
+    // mentre un drink è ancora da fare.
+    mount(
+      baseOrder({
+        payment_status: 'parziale',
+        payments: [{ items: [{ drink_id: 'gin', qty: 1 }] }],
+        comande: [
+          {
+            id: 'c1', seq: 1, status: 'in_preparazione', status_times: {},
+            items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 }],
+          },
+          {
+            id: 'c2', seq: 2, status: 'ritirato', status_times: {},
+            items: [{ drink_id: 'gin', name: 'Gin Tonic', unit_price: 8, qty: 1 }],
+          },
+        ],
+      })
+    )
+    expect(titoli()).toEqual(['🍹 In preparazione', '💳 Pagati'])
   })
 })
