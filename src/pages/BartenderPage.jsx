@@ -15,6 +15,7 @@ import {
   settingsIniziali,
   saveStaffToken,
   restoreOrder,
+  advanceComanda,
 } from '../lib/api.js'
 import { getPushToken } from '../lib/push.js'
 import { logoutStaff } from '../lib/logout.js'
@@ -41,21 +42,25 @@ import {
   gruppiInCoda,
   schedeCoda,
   corsieDiStato,
+  corsieComande,
+  corsieVisibili,
+  CORSIE_SPENTE_ALL_INIZIO,
 } from '../lib/coda.js'
 import { StoriaOrdineDialog, RipristinaOrdineDialog } from '../components/StoriaOrdine.jsx'
 import { useTelefono } from '../lib/useTelefono.js'
 import StatusBell from '../components/StatusBell.jsx'
 import ActionSheet from '../components/ActionSheet.jsx'
-import { isGestore, isPersonale } from '../lib/ruoli.js'
+import { isBanco, isGestore, isPersonale } from '../lib/ruoli.js'
 import { senzaNascosti, subscribeNascosti, mostraOrdine } from '../lib/ordiniNascosti.js'
 import { battutoDaQui, annullatoDaQui, idDispositivo } from '../lib/dispositivo.js'
+import { corsieNascoste, ricordaCorsieNascoste, vistaCorsie, ricordaVistaCorsie } from '../lib/impostazioniLocali.js'
 import {
   leggiAvvisi,
   subscribeAvvisi,
   avvisoAttivo,
   idAvvisoStato,
 } from '../lib/preferenzeNotifiche.js'
-import { allServed, contoChiuso } from '../lib/comande.js'
+import { allServed, contoChiuso, firmaComande, nextComandaStatus } from '../lib/comande.js'
 import { paidAmount, orderTotal } from '../lib/pagamento.js'
 import { businessDayKey, businessDayLabel, businessDayShort } from '../lib/businessDay.js'
 import { isAwaitingPayment } from '../lib/payments.js'
@@ -79,6 +84,7 @@ import ServiceQueue from '../components/ServiceQueue.jsx'
 import StaffCallList from '../components/StaffCallList.jsx'
 import Caricamento from '../components/Caricamento.jsx'
 import CorsieStato from '../components/CorsieStato.jsx'
+import CorsieComande from '../components/CorsieComande.jsx'
 import OrderBy from '../components/OrderBy.jsx'
 import FumettoAvvisi from '../components/FumettoAvvisi.jsx'
 import CampoPassword from '../components/CampoPassword.jsx'
@@ -249,7 +255,7 @@ export default function BartenderPage() {
         {/* L'«indietro» sta nella barra in alto, fra il ☰ e il marchio
             (vedi App.jsx): dentro la pagina si mangiava la prima riga di
             contenuto in ogni sezione. */}
-        {tabEffettivo === 'coda' && <OrderQueue mieiIniziale={salaMiei} gestore={isGestore(role)} />}
+        {tabEffettivo === 'coda' && <OrderQueue mieiIniziale={salaMiei} gestore={isGestore(role)} ruolo={role} />}
         {/* «Da servire»: la sezione della sala (drink pronti da portare). */}
         {tabEffettivo === 'servizio' && <ServiceQueue />}
         {tabEffettivo === 'pagamenti' && <CassaTab />}
@@ -428,7 +434,7 @@ function PortaInVista({ id }) {
   return null
 }
 
-function OrderQueue({ mieiIniziale = false, gestore = false }) {
+function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   const [ordersReady, setOrdersReady] = useState(false) // primo snapshot arrivato
   const [ordersRaw, setOrders] = useState([])
   // CONTI APPENA CHIUSI QUI: fuori dalla lista all'istante. La scrittura
@@ -459,6 +465,18 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
   const [corsiaAperta, setCorsiaAperta] = useState(null)
   // Quale card mostra tutte le righe (i conti lunghi si aprono a richiesta).
   const [corsiaEspansa, setCorsiaEspansa] = useState(null)
+  // LE COMANDE COME LE VEDE CHI STA QUI, ADESSO. Nelle corsie del banco il
+  // gesto è sulla singola comanda — la si prende in carico — e deve
+  // vedersi nell'istante in cui si tocca: la scrittura parte in sottofondo
+  // e lo snapshot arriva dopo. Qui sta la copia locale, id del conto →
+  // comande, e se ne va appena il server racconta la stessa cosa.
+  const [comandeLocali, setComandeLocali] = useState({})
+  // Quali colonne chi sta a QUESTO terminale ha spento, e se guarda i conti
+  // o le comande: preferenze del dispositivo, non del locale — al banco e
+  // alla cassa non si guardano le stesse cose.
+  const [nascoste, setNascoste] = useState(() => corsieNascoste() ?? CORSIE_SPENTE_ALL_INIZIO)
+  const [vista, setVista] = useState(vistaCorsie)
+  const [scegliCorsie, setScegliCorsie] = useState(false) // il pannellino è aperto?
   // Barra stretta o larga: da questo dipende se le azioni della testata
   // stanno dietro il ⋯ o a vista come icone.
   const telefono = useTelefono()
@@ -530,12 +548,30 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
   // problema di filtri e invece era questa riga.
   const { session: cassaAperta, loading: cassaLoading } = useCashSession()
 
-  // Le due viste a LAVAGNA — la griglia e le corsie di stato — stanno a
-  // tutto schermo: aggiungono `fullbleed` al body così la pagina esce dal
-  // contenitore centrato (.app, max 760px) e riempie larghezza e altezza.
-  // Rimosso quando si lascia la lavagna o si smonta la coda.
-  const gridView = settings.queue_view === 'griglia'
-  const corsieView = settings.queue_view === 'corsie'
+  // Gestione preparazione: se spenta spariscono stati e avanzamenti.
+  const workflowOn = settings.workflow_enabled !== false
+
+  // GLI STATI DEL SERVIZIO ACCENDONO LA VISTA DEL BANCO. Chi sta allo
+  // shaker non guarda i conti, guarda il lavoro: le comande, nei passi in
+  // cui stanno. Quei passi sono esattamente ciò che dà senso a questa
+  // vista — spenti gli stati del servizio non esiste proprio, e al banco
+  // si vede la coda come la vedono tutti gli altri.
+  //
+  // COME disegnarla lo dice `settings.bartender_view`, un'impostazione del
+  // LOCALE sorella di `queue_view`: per ora l'unica voce è «corsie di
+  // stato», ma è scritta come una lista di viste possibili proprio perché
+  // è il posto dove le prossime andranno ad aggiungersi.
+  const vistaBanco = workflowOn && isBanco(ruolo)
+  const bancoCorsie = vistaBanco && (settings.bartender_view || 'corsie') === 'corsie'
+
+  // Le viste a LAVAGNA — la griglia, le corsie di stato, la vista del banco
+  // — stanno a tutto schermo: aggiungono `fullbleed` al body così la pagina
+  // esce dal contenitore centrato (.app, max 760px) e riempie larghezza e
+  // altezza. Rimosso quando si lascia la lavagna o si smonta la coda.
+  const gridView = !vistaBanco && settings.queue_view === 'griglia'
+  // LA CODA DELL'ADMIN NON CAMBIA: con «corsie di stato» continua a vedere
+  // i CONTI — in corso, chiusi, annullati — come ha sempre fatto.
+  const corsieView = bancoCorsie || (!vistaBanco && settings.queue_view === 'corsie')
   const lavagna = gridView || corsieView
   useEffect(() => {
     if (!lavagna) return undefined
@@ -567,8 +603,6 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
 
   // Osserva la CODA: conti aperti (sempre, per sempre) + chiusi di oggi.
   const cutoffHour = settings.business_day_cutoff_hour
-  // Gestione preparazione: se spenta spariscono stati e avanzamenti.
-  const workflowOn = settings.workflow_enabled !== false
   useEffect(() => {
     let primed = false
     const awaiting = new Set() // ordini in attesa di pagamento obbligatorio
@@ -726,6 +760,55 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
       }
     })()
   }
+
+  // Porta AVANTI UNA COMANDA, non tutto il conto: è il gesto delle corsie
+  // del banco, dove ogni card è un ticket. Gli stati del servizio sono
+  // SOTTOSTATI dell'ordine — stanno sulle comande, non sul conto — e con
+  // una comanda sola le due cose coincidono; con più di una no, ed è
+  // esattamente quello che questa vista serve a far vedere. La strada è
+  // quella di sempre: si vede subito, si scrive in sottofondo, e cosa
+  // viene dopo lo dice comande.js, come nel dettaglio del conto.
+  function avanzaComanda(order, comanda) {
+    if (!comanda) return
+    const ns = nextComandaStatus(comanda.status)
+    if (!ns) return
+    const adesso = new Date().toISOString()
+    const comande = (comandeLocali[order.id] || order.comande || []).map((c) =>
+      c.id === comanda.id
+        ? { ...c, status: ns, status_times: { ...(c.status_times || {}), [ns]: adesso } }
+        : c
+    )
+    setComandeLocali((m) => ({ ...m, [order.id]: comande }))
+    advanceComanda(order.id, comanda.id, ns).catch((e) => {
+      setError(e.message)
+      showToast(`⚠️ Avanzamento non riuscito: ${e.message}`, { kind: 'error' })
+      setComandeLocali((m) => {
+        const n = { ...m }
+        delete n[order.id]
+        return n
+      })
+    })
+  }
+
+  // La copia locale delle comande se ne va quando il server racconta la
+  // stessa cosa. Si confronta la FIRMA e non gli oggetti interi: dal server
+  // tornano con campi in più — orari, snapshot del magazzino — che non
+  // cambiano niente di quello che si vede, e che terrebbero la copia
+  // locale attaccata per sempre.
+  useEffect(() => {
+    setComandeLocali((m) => {
+      if (Object.keys(m).length === 0) return m
+      const next = { ...m }
+      let cambiato = false
+      for (const o of orders) {
+        if (next[o.id] && firmaComande(o.comande) === firmaComande(next[o.id])) {
+          delete next[o.id]
+          cambiato = true
+        }
+      }
+      return cambiato ? next : m
+    })
+  }, [orders])
 
   // L'override ottimistico vive finché il server non è allineato: appena
   // l'ordine arriva con lo stato atteso (o più avanti), si toglie.
@@ -976,12 +1059,55 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
   // la lista arrivava com'era, e premerlo non faceva niente di visibile —
   // un tasto che non risponde fa dubitare dell'app, non del tasto. L'ordine
   // vale per TUTTE le corsie insieme: si guarda la coda, non una colonna.
-  const corsie = corsieDiStato(
-    contiScheda('tutti')
-      .slice()
-      .sort((a, b) => ((a.daily_number || 0) - (b.daily_number || 0)) * (ordineDesc ? -1 : 1)),
-    { isChiuso: isClosed, workflowOn }
-  )
+  const contiInCorsia = contiScheda('tutti')
+    .slice()
+    .sort((a, b) => ((a.daily_number || 0) - (b.daily_number || 0)) * (ordineDesc ? -1 : 1))
+    // Le comande come le vede questo terminale: quelle del server con sopra
+    // l'ultimo gesto fatto da qui, finché lo snapshot non lo racconta.
+    .map((o) => (comandeLocali[o.id] ? { ...o, comande: comandeLocali[o.id] } : o))
+
+  // CHI GUARDA DECIDE COSA VEDE. Sono due domande diverse davanti allo
+  // stesso schermo, e rispondere a tutti e due con la stessa vista vuol
+  // dire darla sbagliata a uno dei due:
+  //
+  //   AL BANCO interessa il LAVORO — le COMANDE, una per una, nel passo in
+  //   cui stanno: chi sta allo shaker prepara un ticket per volta, non un
+  //   conto, e un conto con tre comande in tre passi diversi disegnato come
+  //   una card sola racconta una bugia comunque la si metta.
+  //
+  //   A CHI GUARDA LA SERATA interessa com'è messo il CONTO: in corso,
+  //   chiuso, annullato. Sono le tre cose che un conto può essere, le
+  //   stesse della griglia e delle schede.
+  //
+  // Al banco la vista è già quella: la accendono gli stati del servizio
+  // (vistaBanco), e non c'è niente da scegliere — un tasto che porta
+  // altrove è solo un modo per perdersi la coda a metà serata. Chi guarda
+  // la serata parte dai CONTI, come ha sempre fatto, e con la pastiglia
+  // può andare a vedere il lavoro: è un passaggio a mano, di questo
+  // terminale (vistaCorsie), non il suo default.
+  //
+  // Senza gli stati del servizio i passi non esistono per nessuno — un
+  // conto è solo aperto, chiuso o annullato — e restano le tre corsie.
+  const puoScegliere = corsieView && workflowOn && !vistaBanco
+  const corsieBanco = bancoCorsie || (puoScegliere && vista === 'comande')
+  const corsieDelBanco = corsieBanco ? corsieComande(contiInCorsia, { isChiuso: isClosed }) : []
+  const corsie = corsieBanco
+    ? []
+    : corsieDiStato(contiInCorsia, { isChiuso: isClosed, workflowOn: false })
+  // Le colonne spente su questo terminale si tolgono qui, DOPO che sono
+  // state riempite: così i conteggi non cambiano a seconda di cosa si
+  // guarda, e riaccendendone una la si trova già piena.
+  const corsieMostrate = corsieBanco ? corsieVisibili(corsieDelBanco, nascoste) : corsie
+  const cambiaCorsia = (id) => {
+    const via = nascoste.includes(id) ? nascoste.filter((x) => x !== id) : [...nascoste, id]
+    setNascoste(via)
+    ricordaCorsieNascoste(via)
+  }
+  const cambiaVista = () => {
+    const nuova = corsieBanco ? 'conti' : 'comande'
+    setVista(nuova)
+    ricordaVistaCorsie(nuova)
+  }
 
   // IL CONTO ACCESO. Solo nel modo "evidenzia": è il primo che risponde
   // NELL'ORDINE IN CUI STA SULLO SCHERMO — non nell'ordine in cui arrivano
@@ -991,7 +1117,9 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
   const ordiniComeSiVedono = gridView
     ? boardGroups.flatMap((g) => g.orders)
     : corsieView
-      ? corsie.flatMap((c) => c.ordini)
+      ? corsieBanco
+        ? corsieMostrate.flatMap((c) => c.schede.map((s) => s.ordine))
+        : corsieMostrate.flatMap((c) => c.ordini)
       : listView
         ? [...inCorso, ...evasi]
         : list
@@ -1596,15 +1724,30 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
                   })
                   if (!v) return null
                   return (
-                    <button
-                      className="btn ghost small board-icona"
-                      disabled={v.disabled}
-                      title={`${v.label} — ${v.hint}`}
-                      aria-label={v.label}
-                      onClick={() => (v.id === 'apri-cassa' ? setApriCassa(true) : setChiudiCassa(true))}
-                    >
-                      {v.icon}
-                    </button>
+                    // QUESTA NON È UN'ICONA. Le altre due — i pannelli,
+                    // l'ordinamento — si capiscono e si annullano con un
+                    // secondo tocco; la cassa è la cosa che chiude la serata,
+                    // e un lucchetto grigio in fondo a una barra non dice a
+                    // nessuno che cos'è. Si scrive per esteso.
+                    //
+                    // E IL MOTIVO STA ATTACCATO AL TASTO. Messo in fondo alla
+                    // riga finiva accanto al «+», e si leggeva come una nota
+                    // del «nuovo ordine», che non c'entra niente: la frase
+                    // spiega perché QUEL tasto è grigio, e deve stare dove
+                    // guarda l'occhio quando lo trova spento.
+                    <span className="board-cassa-box">
+                      <button
+                        className="btn ghost small board-cassa"
+                        disabled={v.disabled}
+                        title={v.hint}
+                        onClick={() => (v.id === 'apri-cassa' ? setApriCassa(true) : setChiudiCassa(true))}
+                      >
+                        {v.icon} {v.label}
+                      </button>
+                      {v.disabled && v.hint && (
+                        <span className="board-cassa-perche muted small">{v.hint}</span>
+                      )}
+                    </span>
                   )
                 })()}
               </>
@@ -1892,9 +2035,76 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
             >
               ✍️ Miei
             </button>
+            {/* LE DUE DOMANDE. Chi guarda la serata vuole sapere sia come
+                sta andando (i conti) sia a che punto è la preparazione (le
+                comande): l'interruttore passa dall'una all'altra e si
+                ricorda. Al banco non c'è: lì la risposta è sempre il
+                lavoro, e un tasto che porta altrove è solo un modo per
+                perdersi la coda a metà serata. */}
+            {puoScegliere && (
+              <button
+                className={`chip ${corsieBanco ? 'active' : ''}`}
+                onClick={cambiaVista}
+                aria-pressed={corsieBanco}
+                title={
+                  corsieBanco
+                    ? 'Adesso: le comande, nei passi del servizio — tocca per tornare ai conti'
+                    : 'Adesso: i conti — tocca per vedere a che punto sta la preparazione'
+                }
+              >
+                🍸 Comande
+              </button>
+            )}
+            {/* QUALI COLONNE TENERE A SCHERMO. A metà serata chi sta allo
+                shaker guarda «Da fare» e «Al banco», e le altre due gli
+                mangiano mezzo schermo per roba che in quel momento non lo
+                riguarda. È una scelta di QUESTO terminale e si ricorda. */}
+            {corsieBanco && (
+              <button
+                className={`chip ${nascoste.length > 0 ? 'active' : ''}`}
+                onClick={() => setScegliCorsie((v) => !v)}
+                aria-expanded={scegliCorsie}
+                title="Scegli quali colonne tenere a schermo"
+              >
+                ▦ Colonne
+              </button>
+            )}
           </div>
+          {corsieBanco && scegliCorsie && (
+            <div className="chips-row corsie-scelta" style={{ margin: '0 0 12px' }}>
+              {corsieDelBanco.map((c) => (
+                <button
+                  key={c.id}
+                  className={`chip ${nascoste.includes(c.id) ? '' : 'active'}`}
+                  onClick={() => cambiaCorsia(c.id)}
+                  aria-pressed={!nascoste.includes(c.id)}
+                >
+                  {c.titolo}
+                </button>
+              ))}
+            </div>
+          )}
+          {corsieBanco ? (
+            <CorsieComande
+              corsie={corsieMostrate}
+              idAcceso={idAcceso}
+              inArrivo={pend.pending}
+              onScarta={dismissPending}
+              onApri={(o) => {
+                contoToccato()
+                navigate(`/ordine/${o.id}`)
+              }}
+              onAvanza={avanzaComanda}
+              onIncassa={(o) => navigate(`/ordine/${o.id}?pagamento=1`)}
+              espansa={corsiaEspansa}
+              onEspandi={setCorsiaEspansa}
+              attesaPagamento={(o) =>
+                isAwaitingPayment(o) && o.workflow_status === ORDER_STATUSES.RICEVUTO
+              }
+            />
+          ) : (
           <CorsieStato
-            corsie={corsie}
+            corsie={corsieMostrate}
             idAcceso={idAcceso}
             // I conti appena battuti al POS, ancora in volo: in cima alla
             // prima corsia. Sono già ordini a tutti gli effetti per chi
@@ -1920,6 +2130,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
               isAwaitingPayment(o) && o.workflow_status === ORDER_STATUSES.RICEVUTO
             }
           />
+          )}
         </>
       ) : listView ? (
         <>
