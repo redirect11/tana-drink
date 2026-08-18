@@ -416,13 +416,22 @@ describe('le corsie di chi guarda la serata (admin)', () => {
     expect(screen.queryByText('Da fare')).not.toBeInTheDocument()
   })
 
-  it('sta sotto il «+», che è dove l’occhio va a cercare i tasti della coda', async () => {
+  // ERA STATO PROVATO SOTTO IL «+»: rettangolare sotto un tondo, appeso
+  // nel vuoto e disallineato da tutto. Sta nella riga dei filtri, che è
+  // fatta di pastiglie della stessa forma — ma A DESTRA, staccato: a
+  // sinistra c'è quello che restringe la lista, a destra quello che cambia
+  // vista, e nessuno lo deve leggere come un filtro in più.
+  it('sta nella riga dei filtri, in fondo a destra e non fra i filtri', async () => {
     montaCoda()
     await screen.findByText('In corso')
-    const colonna = document.querySelector('.board-nuovo')
-    expect(colonna).toBeTruthy()
-    expect(within(colonna).getByRole('button', { name: /Comande/ })).toBeInTheDocument()
-    expect(colonna.querySelector('.board-add')).toBeTruthy()
+    const tasto = screen.getByRole('button', { name: /Comande/ })
+    const riga = tasto.closest('.chips-row')
+    expect(riga).toBeTruthy()
+    // stessa forma delle altre pastiglie
+    expect(tasto).toHaveClass('chip')
+    // ultimo della riga, e staccato dal gruppo dei filtri
+    expect(riga.lastElementChild).toBe(tasto)
+    expect(within(riga).getByRole('button', { name: /Miei/ })).toBeInTheDocument()
   })
 
   it('niente tasto «Colonne»: tre corsie ci stanno tutte, non c’è niente da spegnere', async () => {

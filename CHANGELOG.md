@@ -18,10 +18,11 @@
   Vale allo stesso modo per il primo giro di un conto nuovo e per le aggiunte a
   metà serata: prima erano due regole diverse, e la card in coda cambiava
   colonna da sola appena arrivava dal server.
-- **Il tasto per guardare il lavoro sta sotto il «+»**, dove l'occhio va a
-  cercare i comandi della coda, invece che in mezzo ai filtri sotto la ricerca.
-  E dice dove porta: «🍸 Comande» guardando i conti, «🧾 Ordini» guardando le
-  comande.
+- **Il tasto per guardare il lavoro dice dove porta**: «🍸 Comande» guardando
+  i conti, «🧾 Ordini» guardando le comande. Prima era un interruttore che si
+  accendeva quando le comande le stavi già guardando, e per capirlo bisognava
+  guardare le colonne. Sta nella riga dei filtri, in fondo a destra e staccato
+  dagli altri: quelli restringono la lista, questo cambia vista.
 - **«Ritirato/Servito» si preme una volta sola.** La card tornava indietro da
   sé e bisognava ripremere: lo scarico del magazzino, che lavora in
   sottofondo, riscriveva le comande com'erano prima di partire e si portava

@@ -726,6 +726,21 @@ a.btn.block {
   -webkit-overflow-scrolling: touch;
 }
 
+/* IL CAMBIO VISTA STA NELLA RIGA DEI FILTRI, MA A DESTRA. A sinistra c'è
+   quello che RESTRINGE la lista — «Miei», «Solo oggi», «Colonne» — a
+   destra quello che CAMBIA VISTA: stessa forma e stesso peso, perché si
+   toccano allo stesso modo, ma staccati, così nessuno lo legge come un
+   filtro in più. Lo stacco è un margine automatico, non uno spazio messo
+   a occhio: si prende quello che avanza, quanto ne avanza.
+   Quando lo spazio finisce non va a capo e non si schiaccia — la riga
+   scorre in orizzontale (vedi .chips-row) e la pastiglia resta l'ultima,
+   raggiungibile scorrendo, invece di restare da sola su una seconda riga
+   mezza vuota. */
+.chip-vista {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
 .chip {
   display: inline-flex;
   align-items: center;
@@ -1726,23 +1741,6 @@ body.fullbleed .bar-content {
   flex-shrink: 0;
 }
 
-/* IL «+» E IL CAMBIO VISTA, IN COLONNA. Sono i due tasti che si toccano
-   di più guardando la coda, e l'occhio li cerca in alto a destra: stanno
-   incolonnati, il «+» sopra perché è quello di corsa. Il secondo si
-   allarga quanto il primo, o due tasti sovrapposti di larghezza diversa
-   sembrano un errore di disegno. */
-.board-nuovo {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-.board-vista {
-  white-space: nowrap;
-  text-align: center;
-}
 
 /* Testata COMPATTA su smartphone: riga 1 = titolo + azioni (Pannelli e «+»
    ridimensionati), riga 2 = ricerca a tutta larghezza. Niente più tasti

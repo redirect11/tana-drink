@@ -84,12 +84,23 @@ sotto i 44px si sbaglia. Si **toglie**, in quest'ordine:
   comanda — si raggiunge con un tasto scritto, mai rubando il gesto
   principale: il tasto grande della card resta quello che porta avanti il
   lavoro.
-- **Quello che si cambia nel mezzo del servizio sta sopra le corsie**, nella
-  riga dei filtri, e vale per QUESTO terminale: la pastiglia «🍸 Comande»
-  (con cui chi non è al banco va a guardare il lavoro) e «▦ Colonne» (che
-  spegne le corsie che in quel momento non servono). Non stanno in
-  Impostazioni perché si toccano con l'ordine in mano, e non su
-  `settings/bar` perché al banco e alla cassa non si guardano le stesse cose.
+- **Quello che si cambia nel mezzo del servizio sta nella riga dei filtri**,
+  sopra la lista, e vale per QUESTO terminale: «▦ Colonne» (che spegne le
+  corsie che in quel momento non servono) e il tasto con cui chi non è al
+  banco va a guardare il lavoro. Non stanno in Impostazioni perché si
+  toccano con l'ordine in mano, e non su `settings/bar` perché al banco e
+  alla cassa non si guardano le stesse cose.
+- **Nella riga dei filtri, il cambio vista sta A DESTRA.** A sinistra c'è
+  quello che RESTRINGE la lista («Miei», «Solo oggi», «Colonne»), a destra
+  quello che CAMBIA VISTA: stessa forma e stesso peso, perché si toccano
+  allo stesso modo, ma staccati da un margine automatico — non da uno
+  spazio messo a occhio — così nessuno lo legge come un filtro in più.
+  Sotto il «+» era stato provato e non va: rettangolare sotto un tondo,
+  appeso nel vuoto e disallineato da tutto.
+- **Un tasto dice DOVE PORTA, non dove si è.** «🍸 Comande» guardando i
+  conti, «🧾 Ordini» guardando le comande. Un interruttore che si accende
+  quando sei già di là si legge solo sapendo com'è messo adesso — e per
+  saperlo bisogna guardare la lista sotto.
 - **I filtri** stanno in una tendina sopra il contenuto, e il tasto dice cosa
   è scelto senza doverla aprire.
 - **Il contenuto non porta navigazione**: niente tasti «vai a…» in mezzo a una

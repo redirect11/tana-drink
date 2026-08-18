@@ -2879,10 +2879,11 @@ requirements:
       il suo default. IL TASTO DICE DOVE PORTA, non dove si è —
       «🍸 Comande» guardando i conti, «🧾 Ordini» guardando le comande —
       perché un interruttore che si legge solo sapendo com'è messo adesso
-      obbliga a guardare le colonne per capirlo. E sta SOTTO IL «+», in
-      colonna: sono i due tasti che si toccano di più e l'occhio li cerca in
-      alto a destra, mentre prima bisognava scendere a cercarlo in mezzo ai
-      filtri. C'è con QUALUNQUE vista della coda —
+      obbliga a guardare le colonne per capirlo. Sta nella RIGA DEI FILTRI,
+      con la forma delle pastiglie che ci sono già, ma spinto A DESTRA da un
+      margine automatico: a sinistra quello che restringe la lista, a destra
+      quello che cambia vista — stessa riga, staccati, così non lo si legge
+      come un filtro in più. C'è con QUALUNQUE vista della coda —
       griglia, lista, schede, corsie — perché la vista del banco è una vista
       a sé, non una variante delle corsie: chi tiene la cassa lavora in
       griglia e a metà serata vuole dare un'occhiata alla preparazione senza
