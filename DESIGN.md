@@ -155,6 +155,13 @@ Regole:
 - **Card ordine**: bordo colorato per stato, contenuto essenziale
   (numero, cliente/tavolo, righe, totale). Le note (📝 conto, ↳ riga)
   si mostrano sempre dove si prepara o si serve.
+- **Le corsie di stato** (una vista della coda): colonne uguali, in testa il
+  nome dello stato col conteggio e il totale, sotto un filo di 2px del colore
+  dello stato — gli stessi tre della striscia sulle card (`#f39c12`,
+  `#3498db`, `#2ecc71`) più `--accent-2` per l'incasso. La card è una `card
+  order-card` compatta con **un** tasto (`btn small block`, mai sotto i 44px):
+  toccando il tasto si avanza, toccando la card si apre il conto. Le colonne
+  ci sono tutte anche vuote: la loro posizione si impara a memoria.
 - **Le card di una griglia hanno tutte lo stesso vestito** — magazzino,
   menù e griglia del conto. Due segni, sempre gli stessi due: la **striscia
   a sinistra** (4px) dice come sta la cosa; il **colore** (lo stato delle

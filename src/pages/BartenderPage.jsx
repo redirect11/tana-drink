@@ -39,6 +39,7 @@ import {
   voceCassa,
   gruppiInCoda,
   schedeCoda,
+  corsieDiStato,
 } from '../lib/coda.js'
 import { StoriaOrdineDialog, RipristinaOrdineDialog } from '../components/StoriaOrdine.jsx'
 import StatusBell from '../components/StatusBell.jsx'
@@ -75,6 +76,8 @@ import VipTab from '../components/VipTab.jsx'
 import ServiceQueue from '../components/ServiceQueue.jsx'
 import StaffCallList from '../components/StaffCallList.jsx'
 import Caricamento from '../components/Caricamento.jsx'
+import CorsieStato from '../components/CorsieStato.jsx'
+import OrderBy from '../components/OrderBy.jsx'
 import FumettoAvvisi from '../components/FumettoAvvisi.jsx'
 import CampoPassword from '../components/CampoPassword.jsx'
 import ApriCassaBox from '../components/ApriCassaBox.jsx'
@@ -104,15 +107,6 @@ function orderStripClass(o) {
   if (o.payment_status === 'pagato') return 'pay-pagato'
   if (o.payment_status === 'parziale') return 'pay-parziale'
   return 'pay-aperto'
-}
-
-function OrderBy({ order }) {
-  const L = placedByLetter(order?.placed_by)
-  return L ? (
-    <span className="order-by staff" title={`Aperto da ${placedByName(order.placed_by)}`}>{L}</span>
-  ) : (
-    <span className="order-by client" title="Aperto dal cliente (app)">🌐</span>
-  )
 }
 
 export default function BartenderPage() {
@@ -526,15 +520,18 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
   // problema di filtri e invece era questa riga.
   const { session: cassaAperta, loading: cassaLoading } = useCashSession()
 
-  // Vista a griglia: a tutto schermo. Aggiunge `fullbleed` al body così la
-  // pagina esce dal contenitore centrato (.app, max 760px) e riempie larghezza
-  // e altezza. Rimosso quando si lascia la griglia o si smonta la coda.
+  // Le due viste a LAVAGNA — la griglia e le corsie di stato — stanno a
+  // tutto schermo: aggiungono `fullbleed` al body così la pagina esce dal
+  // contenitore centrato (.app, max 760px) e riempie larghezza e altezza.
+  // Rimosso quando si lascia la lavagna o si smonta la coda.
   const gridView = settings.queue_view === 'griglia'
+  const corsieView = settings.queue_view === 'corsie'
+  const lavagna = gridView || corsieView
   useEffect(() => {
-    if (!gridView) return undefined
+    if (!lavagna) return undefined
     document.body.classList.add('fullbleed')
     return () => document.body.classList.remove('fullbleed')
-  }, [gridView])
+  }, [lavagna])
 
   // Se dopo 8s gli ordini non sono arrivati, probabilmente il database non è
   // raggiungibile (l'SDK ritenta in silenzio): mostra un suggerimento.
@@ -957,6 +954,11 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
       !(o.client_temp_id && pendingTempIds.has(o.client_temp_id))
   )
   const boardGroups = groupByDay(visibleBoard)
+  // LE CORSIE DI STATO: partono dalla stessa lista delle altre viste —
+  // quello che resta in coda per questa apertura di cassa, già passato per
+  // ricerca e «Miei» — e la smistano. Le regole di cosa sta dove stanno in
+  // lib/coda.js, che è dove si provano.
+  const corsie = corsieDiStato(contiScheda('tutti'), { isChiuso: isClosed, workflowOn })
 
   // IL CONTO ACCESO. Solo nel modo "evidenzia": è il primo che risponde
   // NELL'ORDINE IN CUI STA SULLO SCHERMO — non nell'ordine in cui arrivano
@@ -965,9 +967,11 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
   // che quella vista sta davvero disegnando.
   const ordiniComeSiVedono = gridView
     ? boardGroups.flatMap((g) => g.orders)
-    : listView
-      ? [...inCorso, ...evasi]
-      : list
+    : corsieView
+      ? corsie.flatMap((c) => c.ordini)
+      : listView
+        ? [...inCorso, ...evasi]
+        : list
   const acceso = ricercaEvidenzia ? primoCorrispondente(ordiniComeSiVedono, q) : null
   const idAcceso = acceso?.id || null
   // Toccando un conto qualsiasi la ricerca si azzera: si è trovato quello
@@ -1422,12 +1426,12 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
   }
 
   return (
-    <div className={gridView ? 'queue-board' : undefined}>
+    <div className={lavagna ? `queue-board${corsieView ? ' corsie-board' : ''}` : undefined}>
       <PortaInVista id={idAcceso} />
       {/* A tutto schermo la topbar non c'è, e con lei sparivano campanella,
           notifiche e stato della sincronizzazione: torna come tasto tondo in
           basso a destra (il CSS la mostra solo quando serve). */}
-      {gridView && <StatusBell floating />}
+      {lavagna && <StatusBell floating />}
       {/* L'avviso a fumetto, se il locale ha scelto quello: sta SOLO qui,
           nella coda, che è il posto dove gli ordini si aspettano. Toccandolo
           si aprono gli avvisi (la campanella ascolta l'evento). */}
@@ -1456,9 +1460,11 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
         </div>
       )}
 
-      {gridView ? (
-        // Testata compatta della griglia: info giornata, ricerca e, in alto a
-        // destra, il «+» per battere un nuovo ordine (apre il POS cassa).
+      {lavagna ? (
+        // Testata compatta della lavagna — griglia o corsie che sia: info
+        // giornata, ricerca e, in alto a destra, il «+» per battere un nuovo
+        // ordine (apre il POS cassa). È una sola per tutte e due le viste:
+        // cambiare vista non deve cambiare i comandi.
         <div className="board-head">
           <div className="board-title">
             <strong>In servizio</strong>
@@ -1605,9 +1611,9 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
         />
       )}
 
-      {/* Pannelli chiamate/gruppi: nella griglia compaiono solo col toggle
+      {/* Pannelli chiamate/gruppi: sulle lavagne compaiono solo col toggle
           «Pannelli»; nelle altre viste restano sempre visibili. */}
-      {(!gridView || showPanels) && (
+      {(!lavagna || showPanels) && (
         <>
           {/* Aperti APPOSTA dal menu ⋯: se non c'è niente da mostrare lo
               si dice. Prima si toccava «Chiamate staff e gruppi» e non
@@ -1636,7 +1642,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
         </>
       )}
 
-      {!gridView && (
+      {!lavagna && (
         <>
           <input
             type="search"
@@ -1754,6 +1760,44 @@ function OrderQueue({ mieiIniziale = false, gestore = false }) {
               </div>
             </div>
           ))}
+        </>
+      ) : corsieView ? (
+        <>
+          {/* CORSIE DI STATO: una colonna per passo del lavoro, un tasto per
+              card. Le azioni sono le STESSE della griglia — «avanti di uno»
+              è `advance`, l'incasso è il pagamento del conto — perché una
+              vista è un modo di guardare, non un secondo modo di lavorare. */}
+          <div className="chips-row" style={{ margin: '8px 0 12px' }}>
+            <button
+              className={`chip ${soloMiei ? 'active' : ''}`}
+              onClick={() => setSoloMiei((v) => !v)}
+              title="Solo i conti inseriti da te"
+            >
+              ✍️ Miei
+            </button>
+          </div>
+          <CorsieStato
+            corsie={corsie}
+            idAcceso={idAcceso}
+            // I conti appena battuti al POS, ancora in volo: in cima alla
+            // prima corsia. Sono già ordini a tutti gli effetti per chi
+            // lavora — la sincronizzazione è affar nostro, non suo.
+            inArrivo={pend.pending}
+            onScarta={dismissPending}
+            onApri={(o) => {
+              contoToccato()
+              navigate(`/ordine/${o.id}`)
+            }}
+            onAvanza={advance}
+            // «Incassa» apre il pagamento del conto, quello vero: sconto,
+            // conto diviso, contanti, carta e lettore stanno lì. Rifarne una
+            // versione ridotta qui vorrebbe dire due casse che si comportano
+            // in modo diverso.
+            onIncassa={(o) => navigate(`/ordine/${o.id}?pagamento=1`)}
+            attesaPagamento={(o) =>
+              isAwaitingPayment(o) && o.workflow_status === ORDER_STATUSES.RICEVUTO
+            }
+          />
         </>
       ) : listView ? (
         <>

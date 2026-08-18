@@ -11,6 +11,15 @@
 
 ### Al banco
 
+- **La coda ordini si può guardare a «Corsie di stato»** (Impostazioni → Coda
+  ordini): quattro colonne — da fare, al banco, al ritiro, da incassare — con
+  in testa quanti conti ci sono e quanto fanno, e ognuna che scorre per conto
+  suo. Su ogni card un tasto solo, quello del passo dopo: «Lo preparo io», «È
+  pronto», «Consegnato», «Incassa». Il conto già pagato ma non ancora
+  consegnato resta al ritiro col bollo «Pagato» — non sparisce prima di essere
+  servito — e quelli da incassare mostrano la cifra in grande. Toccando la card
+  si apre il conto, come sempre. Con gli stati di servizio spenti le corsie
+  diventano le tre di sempre: in corso, chiusi, annullati.
 - **Il flusso di cassa si allarga sugli schermi grandi**: le tessere si
   affiancano invece di incolonnarsi in una striscia da scorrere, e restano
   larghe solo l'andamento per ora e la chiusura. Sul telefono niente cambia.

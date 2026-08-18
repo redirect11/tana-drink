@@ -3,6 +3,10 @@
 // restano aperti finché non li si chiude a mano. Testabile a unità.
 
 import { ORDER_STATUSES } from './orderStatus.js'
+// Il totale di un conto è quello EFFETTIVO (sconto già tolto): la regola sta
+// in pagamento.js e non si riscrive qui, o le corsie direbbero una cifra e
+// la card un'altra.
+import { orderTotal } from './pagamento.js'
 
 // Smista gli ordini negli stati di lavorazione della COMANDA ATTIVA
 // (workflow_status; esclude gli annullati).
@@ -235,3 +239,78 @@ export function schedeCoda(workflowOn) {
   ]
 }
 
+
+// ── LE CORSIE DI STATO ───────────────────────────────────────────────
+//
+// La quarta vista della coda: una colonna per passo del lavoro, e su ogni
+// card UN tasto solo, quello che porta l'ordine al passo dopo. Al banco si
+// preme col pollice, di corsa: la domanda a cui risponde è «cosa c'è da
+// fare adesso?», non «com'è messo questo conto».
+//
+// Le corsie NON sono un elenco di stati scritto qui dentro: sono gli stessi
+// che usa il resto dell'app (ORDER_STATUSES), riempiti con le stesse regole
+// della griglia. Chi chiama passa la lista già ripulita da ordiniInCoda —
+// cioè quello che resta in coda per QUESTA apertura di cassa — e qui si
+// smista soltanto.
+const CORSIE_LAVORO = [
+  { id: 'da-fare', titolo: 'Da fare', stato: ORDER_STATUSES.RICEVUTO },
+  { id: 'al-banco', titolo: 'Al banco', stato: ORDER_STATUSES.IN_PREPARAZIONE },
+  { id: 'al-ritiro', titolo: 'Al ritiro', stato: ORDER_STATUSES.PRONTO },
+  { id: 'da-incassare', titolo: 'Da incassare', stato: ORDER_STATUSES.RITIRATO },
+]
+
+// Il conto è già saldato? (il pagamento sta sul CONTO, non sulla comanda:
+// un ordine può essere pagato in anticipo e non essere ancora uscito)
+const contoSaldato = (o) =>
+  o?.payment_status === 'pagato' || o?.workflow_status === ORDER_STATUSES.PAGATO
+
+const arrotonda = (n) => Math.round(n * 100) / 100
+
+// Totale di una corsia: il totale EFFETTIVO dei conti (sconto già tolto),
+// perché è la cifra che si incassa davvero.
+const totaleCorsia = (ordini) =>
+  arrotonda(ordini.reduce((s, o) => s + orderTotal(o), 0))
+
+export function corsieDiStato(ordini, { isChiuso = () => false, workflowOn = true } = {}) {
+  const lista = ordini || []
+
+  // STATI DI SERVIZIO SPENTI: i quattro passi non esistono proprio, e
+  // quattro colonne vuote non sono una vista — sono un malinteso. Restano
+  // le tre cose che un conto può essere, con le etichette e le regole già
+  // usate dalla griglia e dalle schede (schedeCoda + passaFiltroCoda), così
+  // le viste non raccontano mai due storie diverse.
+  if (!workflowOn) {
+    return schedeCoda(false).map(([id, titolo]) => {
+      const dentro = lista.filter((o) => passaFiltroCoda(o, id, isChiuso))
+      return { id, titolo, stato: null, ordini: dentro, totale: totaleCorsia(dentro) }
+    })
+  }
+
+  const secchi = bucketByStatus(lista) // gli annullati restano fuori da sé
+  return CORSIE_LAVORO.map(({ id, titolo, stato }) => {
+    const dentro = (secchi[stato] || [])
+      // «Da incassare» sono i conti CONSEGNATI e non ancora saldati: quello
+      // già pagato non ha più niente da chiedere e lascia la coda.
+      .filter((o) => !isChiuso(o) && !(stato === ORDER_STATUSES.RITIRATO && contoSaldato(o)))
+      // PAGATO MA NON ANCORA CONSEGNATO: resta dov'è, con un bollo. Sono i
+      // conti saldati in anticipo — il drink è pagato ma non è ancora
+      // uscito — e sparire sarebbe il modo migliore per dimenticarseli.
+      .map((o) => (contoSaldato(o) ? { ...o, pagatoDaServire: true } : o))
+    return { id, titolo, stato, ordini: dentro, totale: totaleCorsia(dentro) }
+  })
+}
+
+// DA QUANTO STA LÌ. Sulla card conta l'ordine di grandezza, non l'orologio:
+// «appena ora» per i secondi appena passati, i secondi finché sono pochi,
+// poi i minuti — e dopo un'ora le ore, perché a quel punto la domanda non è
+// più «quanto manca» ma «questo perché è ancora qui?».
+export function daQuanto(quando, adesso = Date.now()) {
+  const t = Date.parse(quando || '')
+  if (!Number.isFinite(t)) return ''
+  const sec = Math.max(0, Math.round((adesso - t) / 1000))
+  if (sec < 10) return 'appena ora'
+  if (sec < 60) return `${sec} s`
+  const min = Math.floor(sec / 60)
+  if (min < 60) return `${min} min`
+  return `${Math.floor(min / 60)} h`
+}
