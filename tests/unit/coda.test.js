@@ -402,8 +402,8 @@ describe('le corsie di stato', () => {
     const corsie = corsieDiStato(coda, { isChiuso: chiusoConStati })
     expect(corsie.map((c) => [c.id, c.titolo, c.stato])).toEqual([
       ['da-fare', 'Da fare', 'ricevuto'],
-      ['al-banco', 'Al banco', 'in_preparazione'],
-      ['al-ritiro', 'Al ritiro', 'pronto'],
+      ['al-banco', 'In preparazione', 'in_preparazione'],
+      ['al-ritiro', 'Ritiro/Servizio', 'pronto'],
       ['da-incassare', 'Da incassare', 'ritirato'],
     ])
     expect(corsie.map((c) => c.ordini.map((o) => o.id))).toEqual([
@@ -586,11 +586,15 @@ describe('le corsie delle comande', () => {
     // sono stati dell'ordine — le comande ci finiscono dentro anche qui.
     expect(corsie.map((c) => [c.id, c.titolo])).toEqual([
       ['da-fare', 'Da fare'],
-      ['al-banco', 'Al banco'],
-      ['al-ritiro', 'Al ritiro'],
+      ['al-banco', 'In preparazione'],
+      ['al-ritiro', 'Ritiro/Servizio'],
+      // Il lavoro finito ha una colonna sua, che nella vista dei conti non
+      // c'è: lì un conto servito è solo roba da incassare.
+      ['ritirati', 'Ritirato/Servito'],
       ['da-incassare', 'Da incassare'],
-      ['chiusi', '💶 Chiusi'],
-      ['annullati', '✖️ Annullati'],
+      // Al femminile: qui dentro non ci sono conti, ci sono comande.
+      ['chiusi', '💶 Chiuse'],
+      ['annullati', '✖️ Annullate'],
     ])
     const dove = Object.fromEntries(corsie.map((c) => [c.id, c.schede.map((s) => s.id)]))
     expect(dove['da-fare']).toEqual(['o41:c2'])
@@ -651,7 +655,7 @@ describe('le corsie delle comande', () => {
     // non ha niente da chiedere a nessuno.
     const corsie = corsieComande([contoC('o60', 60, [])], { isChiuso: chiusoConStati })
     expect(corsie.flatMap((c) => c.schede)).toEqual([])
-    expect(corsie.length).toBe(6)
+    expect(corsie.length).toBe(7)
   })
 
   it('con UNA comanda sola il numero del ticket non si scrive', () => {
@@ -770,6 +774,11 @@ describe('le corsie delle comande', () => {
     // volta sola anche quando le comande servite sono tre
     expect(dove['da-incassare']).toEqual(['o92'])
     expect(corsie.find((c) => c.id === 'da-incassare').totale).toBe(10)
+    // IL LAVORO FINITO SI VEDE FINITO: la comanda servita e non ancora
+    // pagata sta in «Ritirato/Servito». Chi ha appena servito deve sapere
+    // dov'e' andato quello che ha fatto — i soldi sono un'altra domanda, e
+    // se la fa la colonna accanto, sul conto intero.
+    expect(dove.ritirati).toEqual(['o92:c1'])
   })
 
   it('pagato ma non ancora uscito: la comanda resta dov’è, col bollo', () => {
