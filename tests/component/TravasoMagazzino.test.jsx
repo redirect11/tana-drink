@@ -113,7 +113,13 @@ const daSistemare = {
 }
 
 beforeEach(() => {
-  travasaMagazzinoAPezzi.mockClear()
+  travasaMagazzinoAPezzi.mockReset()
+  travasaMagazzinoAPezzi.mockImplementation(({ onAvanzamento } = {}) => {
+    onAvanzamento?.(0, 2)
+    onAvanzamento?.(2, 2)
+    return Promise.resolve({ travasati: 2, saltati: 0, bloccati: 0 })
+  })
+  vi.spyOn(console, 'error').mockImplementation(() => {})
 })
 
 describe('quando il magazzino è già a posto', () => {
@@ -207,5 +213,73 @@ describe('quando c’è roba da sistemare prima', () => {
     await user.clear(contenuto)
     await user.type(contenuto, '100')
     expect(document.querySelector('.banner').textContent).toMatch(/50 pz/)
+  })
+})
+
+// ── IL CARTELLO E LA PROVA A VUOTO NON MENTONO MAI ───────────────────
+// Il magazzino si legge una volta sola (non è la coda, e va benissimo così),
+// ma qualcuno può cambiare i prodotti da un altro terminale. Successo
+// davvero il 18/08: la schermata contava ancora la lista di dieci minuti
+// prima, e l'aggiornamento è andato a scrivere su documenti spariti.
+describe('la prova a vuoto rilegge sempre', () => {
+  it('conta i prodotti di adesso, non quelli visti prima', async () => {
+    ITEMS = [aPosto, daMigrare]
+    const user = userEvent.setup()
+    render(<InventoryManager />)
+    await screen.findByText('Campari')
+
+    // Nel frattempo il magazzino cambia sotto: quello da aggiornare non c'è
+    // più, ne è arrivato un altro.
+    ITEMS = [aPosto, { ...daMigrare, id: 'altro', name: 'Vermut della casa' }]
+    await user.click(screen.getByRole('button', { name: /Guarda cosa cambia/ }))
+    const box = await screen.findByRole('dialog', { name: /Cosa cambia/ })
+    expect(within(box).getByText('Vermut della casa')).toBeInTheDocument()
+    expect(within(box).queryByText('Birra alla spina')).toBeNull()
+  })
+
+  it('e se nel frattempo è già tutto a posto, il cartello sparisce da solo', async () => {
+    ITEMS = [aPosto, daMigrare]
+    const user = userEvent.setup()
+    render(<InventoryManager />)
+    await screen.findByText('Campari')
+    ITEMS = [aPosto]
+    await user.click(screen.getByRole('button', { name: /Guarda cosa cambia/ }))
+    await waitFor(() =>
+      expect(screen.queryByText(/Il magazzino va aggiornato/)).toBeNull()
+    )
+  })
+})
+
+// ── LA LINGUA DEL DATABASE NON ARRIVA AL BANCO ───────────────────────
+// «NOT_FOUND: no entity to update: app dev~demo-tana-drink path < Element
+// {...} >» è finito davvero in mezzo alla schermata. Chi ha in mano un
+// vassoio deve leggere cos'è successo e cosa può fare, non il nome interno
+// di un documento.
+describe('quello che si legge quando qualcosa va storto', () => {
+  it('i prodotti spariti si contano e si dicono in italiano', async () => {
+    ITEMS = [aPosto, daMigrare]
+    travasaMagazzinoAPezzi.mockResolvedValueOnce({ travasati: 3, saltati: 2, bloccati: 0 })
+    const user = userEvent.setup()
+    render(<InventoryManager />)
+    await screen.findByText('Campari')
+    await user.click(screen.getByRole('button', { name: /Guarda cosa cambia/ }))
+    await user.click(await screen.findByRole('button', { name: /Aggiorna/ }))
+    expect(await screen.findByText(/2 prodotti non ci sono più/)).toBeInTheDocument()
+    expect(screen.getByText(/Gli altri sono a posto/)).toBeInTheDocument()
+  })
+
+  it('e se si ferma davvero, dice cosa è passato e che si può riprovare', async () => {
+    ITEMS = [aPosto, daMigrare]
+    travasaMagazzinoAPezzi.mockRejectedValueOnce(
+      new Error('NOT_FOUND: no entity to update: app: "dev~demo-tana-drink" path < Element {…} >')
+    )
+    const user = userEvent.setup()
+    render(<InventoryManager />)
+    await screen.findByText('Campari')
+    await user.click(screen.getByRole('button', { name: /Guarda cosa cambia/ }))
+    await user.click(await screen.findByRole('button', { name: /Aggiorna/ }))
+    expect(await screen.findByText(/si è fermato/)).toBeInTheDocument()
+    expect(screen.getByText(/puoi riprovare/)).toBeInTheDocument()
+    expect(document.body.textContent).not.toMatch(/NOT_FOUND|Element|dev~/)
   })
 })

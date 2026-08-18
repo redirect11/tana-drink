@@ -1950,12 +1950,43 @@ requirements:
       `seed:tutto`. `node scripts/diagnosi-travaso.js` dice a che punto sta
       il travaso e, soprattutto, se leggerli a pezzi muove valore, pezzi o
       costi: non scrive niente, mai, da nessuna parte.
+      DUE DIFETTI VISTI AL PRIMO GIRO VERO (18/08), tutti e due sistemati.
+      Il primo: mentre l'aggiornamento girava, il magazzino dell'emulatore è
+      stato sostituito da un'altra parte; la schermata aveva in mano la lista
+      di un minuto prima, ha provato a scrivere su documenti spariti e il
+      lotto è morto lì. Adesso OGNI LOTTO RILEGGE invece di fidarsi della
+      lista di partenza, e chi non c'è più si salta e si conta a parte («2
+      prodotti non ci sono più: sono stati saltati. Gli altri sono a posto»).
+      Vale anche al contrario: un prodotto NATO mentre l'aggiornamento gira
+      viene preso dallo stesso giro, invece di restare indietro senza che
+      nessuno lo sappia. E uno che proprio non si lascia scrivere si mette da
+      parte, se no tornerebbe nella lista a ogni giro e la schermata
+      resterebbe lì per sempre.
+      Il secondo: a schermo è finito «NOT_FOUND: no entity to update: app
+      dev~demo-tana-drink path < Element {…} >», in mezzo alla schermata di
+      chi al banco deve solo capire cosa fare. Il motivo tecnico adesso va
+      nella console; a schermo si legge cosa è passato, cosa no, e che si può
+      riprovare senza fare danni — perché è vero, il giro riprende da dove si
+      era fermato.
+      E DA LÌ UNA REGOLA IN PIÙ: il cartello e la prova a vuoto non mentono
+      mai. Il magazzino si legge una volta sola (non è la coda, e va bene
+      così), ma la PROVA A VUOTO rilegge sempre prima di elencare — è quella
+      che si guarda per decidere, e non può parlare di prodotti visti dieci
+      minuti fa — e dopo l'aggiornamento la lista si ricarica, così il
+      cartello sparisce da solo senza ricaricare la pagina a mano. Se nel
+      frattempo è già tutto a posto, il cartello sparisce e basta.
       VERIFICATO SUI DATI VERI (18/08, sola lettura): su `tana-drink-test`
       354 articoli, 350 già nella forma nuova, 4 che si leggono travasati
       (la mano d'opera in «U», due succhi fatti in casa e lo sciroppo),
       NESSUNO da sistemare a mano, e valore, pezzi e costi identici a prima.
       Sull'emulatore col seed dei vecchi: 34 travasati e 3 da sistemare, che
       sono esattamente i tre casi messi lì apposta.
+      E IL GIRO INTERO SUI DATI VERI (18/08), col magazzino di test copiato
+      nell'emulatore (`scripts/copia-magazzino-da-test.js`): 354 articoli, il
+      cartello dice «4 da aggiornare, 0 da sistemare», l'aggiornamento scrive
+      quei 4, il cartello sparisce da solo, e il valore di magazzino resta
+      6806,16 € prima e dopo — con nessun numero mosso, articolo per
+      articolo, né in valore né in pezzi né nel costo per unità.
       QUATTRO VINCOLI DEL MESTIERE, che qui si dimenticano facile:
       1) GLI SCRIPT NON TOCCANO LA PRODUZIONE DI PROPRIA INIZIATIVA
       (CLAUDE.md). Con il travaso fatto dall'app il problema non si pone
@@ -1986,7 +2017,7 @@ requirements:
     generate_issue: false
     labels: [magazzino, dati]
     priority: P1
-    test_cases: [tests/unit/travasoInventario.test.js, tests/component/TravasoMagazzino.test.jsx]
+    test_cases: [tests/unit/travasoInventario.test.js, tests/unit/travasoScrittura.test.js, tests/component/TravasoMagazzino.test.jsx]
 
   - id: REQ-MAG-017
     title: "Il fornitore si aggiunge dalla tendina del prodotto, come già la categoria nel menù"
