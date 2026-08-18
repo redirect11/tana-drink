@@ -100,3 +100,33 @@ export function ricordaVistaCorsie(vista) {
     /* niente memoria: la scelta vale per questa sessione */
   }
 }
+
+// ── I TASTI DEL CONTO: aperti o ridotti ──────────────────────────────
+//
+// Sopra la lista delle righe stanno «Unisci», «Dati conto» e «Prodotto
+// libero»: comodi a chi batte conti complicati, tre righe di schermo
+// rubate alla lista a chi fa solo drink. Chi li riduce li ritrova tutti
+// nel ⋯ — non spariscono, si spostano — e «Comande» resta comunque a
+// vista, che è la cosa che si apre di continuo.
+//
+// È una scelta del dispositivo, come le altre qui sopra: il tablet del
+// banco e il telefono di chi gira in sala vogliono cose diverse.
+
+const CHIAVE_AZIONI_CONTO = 'tana:conto:azioni-ridotte'
+
+export function azioniContoRidotte() {
+  try {
+    return localStorage.getItem(CHIAVE_AZIONI_CONTO) === '1'
+  } catch {
+    return false
+  }
+}
+
+export function ricordaAzioniContoRidotte(ridotte) {
+  try {
+    if (ridotte) localStorage.setItem(CHIAVE_AZIONI_CONTO, '1')
+    else localStorage.removeItem(CHIAVE_AZIONI_CONTO)
+  } catch {
+    /* niente memoria: la scelta vale per questa sessione */
+  }
+}

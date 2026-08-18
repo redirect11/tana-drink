@@ -1,5 +1,5 @@
 import { formatPrice } from '../lib/orderStatus.js'
-import { orderTotal } from '../lib/pagamento.js'
+import { orderTotal, paidAmount } from '../lib/pagamento.js'
 import { AZIONI_CORSIA, daQuanto, destinazioneConto } from '../lib/coda.js'
 import OrderBy from './OrderBy.jsx'
 import RigheCorsia from './RigheCorsia.jsx'
@@ -97,7 +97,9 @@ export default function CorsieStato({
                   <article
                     className={`card order-card corsia-card ${o.workflow_status}${
                       o.pagatoDaServire ? ' pagato-da-servire' : ''
-                    }${o.id === idAcceso ? ' conto-acceso' : ''}`}
+                    }${o.payment_status === 'parziale' ? ' acconto' : ''}${
+                      o.id === idAcceso ? ' conto-acceso' : ''
+                    }`}
                     key={o.id}
                     id={`ordine-${o.id}`}
                     onClick={() => onApri?.(o)}
@@ -106,6 +108,17 @@ export default function CorsieStato({
                       <span className="corsia-num">
                         #{o.daily_number ?? '—'} <OrderBy order={o} />
                       </span>
+                      {/* ACCONTO: qualcosa è già stato incassato, ma il conto
+                          non è chiuso. Senza dirlo qui, chi porta il conto al
+                          tavolo chiede l'intero — ed è successo. */}
+                      {o.payment_status === 'parziale' && (
+                        <span
+                          className="pill acconto small"
+                          title={`Già incassati ${formatPrice(paidAmount(o))}`}
+                        >
+                          💳 Acconto
+                        </span>
+                      )}
                       {/* Già pagato ma ancora da consegnare: al posto del
                           tempo il bollo, perché è quello che cambia il gesto
                           (si consegna e si chiude, non si incassa). */}
