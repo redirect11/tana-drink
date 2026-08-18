@@ -166,8 +166,22 @@ export function caricaRequisiti(file = FILE_REQUISITI) {
 // e' l'unico posto dove GitHub sa filtrarle. Scriverle anche a mano in
 // `labels` vorrebbe dire tenerle allineate in due posti, cioe' non tenerle
 // allineate.
+// DA QUALE REGISTRO VIENE. Un requisito e un bug si guardano in modo
+// diverso — «cosa manca» contro «cosa non va» — e sull'elenco delle issue si
+// distinguono solo dall'etichetta. Si ricava dal file da cui la voce arriva,
+// non si scrive a mano: cosi' non se ne dimentica una, e non finisce
+// «requirements» su un bug.
+export function famigliaDi(req) {
+  const da = String(req?.source_file || '')
+  if (da.includes('bugs')) return 'bug'
+  if (da.includes('requirements')) return 'requirements'
+  return null
+}
+
 export function etichetteClassificazione(req) {
   const e = []
+  const famiglia = famigliaDi(req)
+  if (famiglia) e.push(famiglia)
   if (req.priority) e.push(req.priority)
   if (req.severity) e.push(`severity-${req.severity}`)
   return e
@@ -177,7 +191,7 @@ export function etichetteClassificazione(req) {
 // classificazione. Le altre — l'area, «hotfix», quelle messe a mano da chi
 // guarda le issue — non le tocca nessuno: toglierle vorrebbe dire cancellare
 // il lavoro di una persona a ogni push.
-const MIA = (l) => /^P[0-3]$/.test(l) || l.startsWith('severity-') || l === IN_TEST
+const MIA = (l) => /^P[0-3]$/.test(l) || l.startsWith('severity-') || l === IN_TEST || l === 'bug' || l === 'requirements'
 
 // «E' su develop, va provato al banco». Le tre linee dicono tre cose diverse
 // della stessa voce: release la scrive, develop la mette in prova, main la
