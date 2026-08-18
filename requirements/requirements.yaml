@@ -914,11 +914,23 @@ requirements:
       unificati in un comando unico che fa la cosa sensata a seconda delle righe:
       accorpa se ci sono righe uguali, separa se c'è una riga con quantità
       multipla.
-    status: todo
+      FATTO (1.5.0). Sopra la lista del conto c'è UN tasto solo, che cambia
+      faccia secondo quello che si può fare: «🔗 Unisci» se ci sono righe
+      uguali da accorpare, «⑃ Separa» se c'è una riga con più pezzi.
+      Quando servirebbero tutte e due vince «Unisci» — la rimessa in
+      gruppo è quella che si cerca su un conto lungo — e l'altra resta a
+      portata nel «⋯», che è sempre una voce sola e cambia etichetta con
+      lo stesso criterio.
+      Il tasto c'è SEMPRE, anche quando non c'è niente da unire né da
+      separare: spento, non sparito. Un tasto che va e viene sposta gli
+      altri sotto il dito di chi sta battendo un ordine.
+    status: implemented
     generate_issue: true
     labels: [pos, ux]
     priority: P2
-    test_cases: []
+    test_cases:
+      - tests/component/OrderPosDetail.test.jsx
+      - tests/unit/orderLines.test.js
 
   # ══════════════════════════════════════════════════════════════════════
   #  PAGAMENTI
