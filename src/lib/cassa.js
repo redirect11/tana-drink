@@ -70,8 +70,11 @@ export function cashRecap(orders, session, nowIso) {
     const m = method || 'banco'
     byMethod[m] = round2((byMethod[m] || 0) + amt)
     if (ts) {
-      const h = String(ts).slice(11, 13)
-      perOra.set(h, round2((perOra.get(h) || 0) + amt))
+      // LA CHIAVE PORTA ANCHE IL GIORNO. Una serata scavalca la mezzanotte:
+      // con la sola ora, le 8 del mattino dopo si mettevano PRIMA delle 23
+      // della sera prima — l'incasso della chiusura in cima al grafico, e la
+      // serata raccontata al contrario.
+      perOra.set(String(ts).slice(0, 13), round2((perOra.get(String(ts).slice(0, 13)) || 0) + amt))
     }
   }
 
@@ -115,9 +118,16 @@ export function cashRecap(orders, session, nowIso) {
     }
   }
 
-  const perOraArr = [...perOra.entries()]
-    .sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([ora, importo]) => ({ ora, importo }))
+  // Ordinate per giorno E ora, che e' l'ordine in cui la serata e' successa.
+  // `giorno` viene fuori solo quando la serata ne tocca due: scrivere la data
+  // su ogni colonna di una serata che sta in un giorno solo sarebbe rumore.
+  const chiavi = [...perOra.entries()].sort((a, b) => a[0].localeCompare(b[0]))
+  const giorniToccati = new Set(chiavi.map(([k]) => k.slice(0, 10)))
+  const perOraArr = chiavi.map(([k, importo]) => ({
+    ora: k.slice(11, 13),
+    giorno: giorniToccati.size > 1 ? k.slice(0, 10) : null,
+    importo,
+  }))
 
   return {
     incassato,
