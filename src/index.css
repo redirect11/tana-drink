@@ -6966,12 +6966,17 @@ body.pagina-piena .inv-scheda {
 }
 @container (min-width: 640px) {
   .comanda-det-corpo {
-    grid-template-columns: minmax(0, 1.6fr) minmax(260px, 1fr);
+    grid-template-columns: minmax(260px, 1fr) minmax(0, 1.6fr);
     align-items: start;
   }
-  /* Le azioni restano in cima alla loro colonna mentre le righe scorrono:
-     il tasto grande non deve mai andarsene dallo schermo. */
+  /* LE AZIONI A SINISTRA. In ordine di lettura vengono dopo le righe — sul
+     telefono prima si legge cosa c'è da fare, poi si tocca — ma su uno
+     schermo largo il pollice sta a sinistra, dove il tablet lo si regge, e
+     il tasto grande deve capitare sotto quello. Si sposta solo il disegno,
+     non l'ordine del documento: chi legge con la voce sente sempre prima i
+     drink. */
   .comanda-det-corpo > .comanda-det-azioni {
+    order: -1;
     position: sticky;
     top: 8px;
   }
