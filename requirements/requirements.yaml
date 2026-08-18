@@ -2734,7 +2734,7 @@ requirements:
 
   - id: REQ-CODA-001
     title: "La coda a «Corsie di stato»: una colonna per passo, un tasto per card"
-    area: "src/lib/coda.js, src/components/CorsieStato.jsx, src/pages/BartenderPage.jsx, src/components/SettingsTab.jsx"
+    area: "src/lib/coda.js, src/lib/comande.js, src/lib/ruoli.js, src/lib/impostazioniLocali.js, src/components/CorsieStato.jsx, src/components/CorsieComande.jsx, src/components/RigheCorsia.jsx, src/components/OrderPosDetail.jsx, src/pages/BartenderPage.jsx, src/components/SettingsTab.jsx"
     description: >
       Quarta vista della coda ordini, si sceglie in Impostazioni → Coda ordini
       accanto a griglia, schede e lista. Gli ordini aperti stanno in quattro
@@ -2763,10 +2763,74 @@ requirements:
       la lista è la stessa (ordiniInCoda). Un conto appena battuto al POS
       compare in cima alla prima corsia già mentre parte verso il server:
       chi non lo vede lo ribatte.
+
+      LA VISTA DEL BANCO È UN'ALTRA CODA, non un'altra vista della stessa.
+      Ad accenderla sono GLI STATI DEL SERVIZIO: quei passi sono ciò che le
+      dà senso, e spenti la vista non esiste proprio — chi è al banco vede
+      la coda come tutti gli altri (queue_view). Accesi, chi ha il ruolo
+      bartender (isBanco in lib/ruoli.js) apre già lì, senza scegliere
+      niente. COME disegnarla lo dice `settings.bartender_view`, una
+      impostazione del LOCALE sorella di `queue_view` (default in api.js,
+      scelta in SettingsTab → Coda ordini): è scritta come una lista di
+      viste possibili, per ora con la sola voce «corsie di stato», così
+      quando se ne aggiungerà un'altra il valore già salvato resta buono.
+
+      Gli stati del servizio riguardano le COMANDE, che fanno parte
+      dell'ordine: l'ordine ha i suoi stati, le comande ne hanno dei
+      sottostati. Nella vista del banco le corsie mostrano quindi le
+      COMANDE — una card per ticket, col numero del conto e, solo se il
+      conto ne ha più d'una, il numero della comanda («#41 · comanda 2») —
+      e il tasto fa avanzare QUELLA comanda (advanceComanda), non tutto il
+      conto. LA CODA DI CHI GUARDA LA SERATA NON CAMBIA: con
+      `queue_view === 'corsie'` l'admin (e la sala) vede le corsie dei
+      CONTI — in corso, chiusi, annullati — esattamente come prima, e con
+      la pastiglia «Comande» può andare a guardare il lavoro come il
+      bartender: è un passaggio a mano di quel terminale (vistaCorsie), non
+      il suo default.
+
+      Nella vista a comande le corsie sono sei: i tre passi del lavoro (una
+      card per comanda), «Da incassare» (una card per CONTO — si incassa un
+      conto, non un ticket — quando ha roba servita e non è saldato),
+      «Chiusi» (comande SERVITE di conti pagati) e «Annullati» (comande dei
+      conti annullati); le ultime due nascono spente. Una comanda è chiusa
+      solo dopo essere stata servita: pagata ma non ancora servita resta
+      nella corsia del suo passo col bollo «Pagato» e la card accesa, perché
+      il drink va fatto lo stesso. Un tasto «▦ Colonne» spegne e riaccende
+      le corsie, «Da incassare» compresa (chi sta allo shaker non incassa);
+      la scelta e la vista sono del DISPOSITIVO, non del locale
+      (impostazioniLocali.js: corsieNascoste, vistaCorsie).
+
+      PREPARAZIONE PARZIALE. Di base la comanda è una sola ed esce tutta per
+      l'intero ordine; dividerla è la deroga, per quando al banco si
+      preparano insieme i drink uguali di comande diverse. Dal dettaglio del
+      conto → Comande, su una comanda ancora «da fare», la voce
+      «Preparazione parziale» fa scegliere quante unità per riga si preparano
+      adesso: la comanda di partenza si ANNULLA (resta come storia, la copia
+      già stampata ha un riscontro) e nascono due comande nuove — quella
+      scelta, già in preparazione, e il resto, ancora da fare — col
+      progressivo giusto e senza perdere una sola unità. Prese tutte le
+      righe non si divide niente: la comanda avanza e basta. Quell'annullo
+      è contabilità interna, non un fatto della serata: la comanda porta
+      `annullata_per: 'divisione'` e su quel motivo — non sullo stato — si
+      filtra, così non compare fra gli annullati (né nella corsia né nel
+      conto annullato) e nel dettaglio si legge «Divisa»: quei drink non
+      sono spariti, sono le due comande nate al loro posto, e mostrarli
+      due volte farebbe pensare a un guaio che non c'è. Aprendo il
+      conto le righe si raggruppano per passo del servizio («In
+      preparazione», «Pronto», «Servito») come già accade per le righe
+      «Pagati», e i titoli compaiono solo quando i gruppi sono più d'uno. Un
+      conto si incassa in qualunque stato di servizio: pagato in cassa e in
+      preparazione al banco si dicono insieme, senza contraddirsi.
     status: implemented
     generate_issue: false
     labels: [ux, coda]
-    test_cases: [tests/unit/coda.test.js, tests/component/CodaCorsie.test.jsx]
+    test_cases:
+      - tests/unit/coda.test.js
+      - tests/unit/comande.test.js
+      - tests/unit/ruoli.test.js
+      - tests/component/CodaCorsie.test.jsx
+      - tests/component/OrderPosDetail.test.jsx
+      - tests/component/SettingsTab.test.jsx
 
   - id: REQ-UI-012
     title: "Dove la pagina ha sezioni sue, il menu resta aperto nella pagina"

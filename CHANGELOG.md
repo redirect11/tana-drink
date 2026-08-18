@@ -11,6 +11,45 @@
 
 ### Al banco
 
+- **Chi ha il ruolo bartender ha una coda sua: quella del LAVORO.** Chi prepara
+  non lavora un conto per volta, lavora un ticket per volta — e adesso ogni
+  card è una comanda, col numero del conto e (solo se il conto ne ha più d'una)
+  il numero della comanda, e il tasto fa avanzare quella lì, non tutto il
+  conto. Si apre da sé: ad accenderla sono **gli stati del servizio** — se
+  sono spenti quella coda non esiste, perché non ci sarebbe niente da mostrare,
+  e al banco si vede la coda come la vedono tutti. Come disegnarla si sceglie in
+  Impostazioni → Coda ordini → «La vista del banco», accanto alla vista della
+  coda: per ora c'è «🚦 Corsie di stato», e da lì passeranno le prossime.
+- **La coda di chi guarda la serata non cambia**: con «corsie di stato» l'admin
+  vede sempre i conti in corso, chiusi e annullati. Se vuole sapere a che punto
+  è la preparazione c'è la pastiglia «🍸 Comande», che porta a guardare il
+  lavoro come il bartender — a mano, e solo su quel terminale.
+- **Al banco le colonne si scelgono**: «▦ Colonne» spegne quelle che in quel
+  momento non servono — «Da incassare» compresa, che chi sta allo shaker non
+  incassa — e ne accende due per guardare indietro, «Chiusi» e «Annullati».
+  È una scelta di quel terminale: al banco e alla cassa non si guardano le
+  stesse cose, e si ritrova al ricarico.
+- **Un conto pagato in anticipo non sparisce dal banco**: la sua comanda resta
+  nella colonna del suo passo, col bollo «Pagato» e la card accesa, perché i
+  soldi ci sono ma il drink è ancora da fare. Una comanda risulta chiusa solo
+  dopo essere stata servita.
+- **Si può preparare mezza comanda.** Capita di vedere tre gin tonic in una
+  comanda e due in un'altra e prepararli insieme, per farli uscire in una
+  volta: nel conto → Comande, su una comanda ancora «da fare», c'è
+  «✂️ Preparazione parziale». Si sceglie quanti se ne fanno adesso: quelli
+  vanno al banco in una comanda nuova, il resto resta da fare, e la comanda di
+  prima resta nella storia del conto, segnata «divisa» — così la copia già
+  stampata ha ancora un riscontro e non si perde per strada un drink. Fra gli
+  annullati non compare: quei drink non sono saltati, sono le due comande
+  nate al loro posto.
+- **Aprendo il conto si vede cosa è al banco e cosa è già uscito**: le righe si
+  raggruppano sotto «In preparazione», «Pronto», «Servito», come già accade
+  per quelle pagate. Con una comanda sola — il caso normale — non cambia
+  niente: nessun titolo per dire una cosa sola.
+- **Il lucchetto della cassa adesso ha un nome.** Sugli schermi larghi era
+  un'icona grigia in fondo alla barra e nessuno sapeva cosa fosse: adesso c'è
+  scritto «🔒 Chiudi cassa» (o «🟢 Apri cassa»), e quando non si può chiudere
+  il perché sta sotto quel tasto: «Prima chiudi 2 conti».
 - **La coda ordini si può guardare a «Corsie di stato»** (Impostazioni → Coda
   ordini): quattro colonne — da fare, al banco, al ritiro, da incassare — con
   in testa quanti conti ci sono e quanto fanno, e ognuna che scorre per conto

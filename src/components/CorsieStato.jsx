@@ -1,7 +1,8 @@
 import { formatPrice } from '../lib/orderStatus.js'
 import { orderTotal } from '../lib/pagamento.js'
-import { daQuanto } from '../lib/coda.js'
+import { AZIONI_CORSIA, daQuanto, destinazioneConto } from '../lib/coda.js'
 import OrderBy from './OrderBy.jsx'
+import RigheCorsia from './RigheCorsia.jsx'
 
 // ── LA VISTA «CORSIE DI STATO» ───────────────────────────────────────
 //
@@ -13,42 +14,7 @@ import OrderBy from './OrderBy.jsx'
 // Le corsie e i loro conti arrivano già fatti da lib/coda.js: qui non si
 // decide niente su cosa sta dove, si disegna soltanto.
 
-// Cosa fa il tasto, corsia per corsia. Le corsie senza voce qui — «Chiusi»
-// e «Annullati», che compaiono solo a stati di servizio spenti — non hanno
-// tasto: su un conto già chiuso non c'è niente da far avanzare.
-const AZIONI = {
-  'da-fare': { etichetta: 'Lo preparo io', tipo: 'avanza' },
-  'al-banco': { etichetta: 'È pronto', tipo: 'avanza' },
-  'al-ritiro': { etichetta: 'Consegnato', tipo: 'avanza' },
-  'da-incassare': { etichetta: 'Incassa', tipo: 'incassa' },
-  // Stati di servizio spenti: l'unica cosa che resta da fare a un conto in
-  // corso è incassarlo, come sulla griglia.
-  attivi: { etichetta: 'Incassa', tipo: 'incassa' },
-}
-
-// Dove va il drink e per chi: «Tavolo 4», «Bancone · Giulia». È la riga che
-// serve a riconoscere il conto quando si urla un numero da dietro il banco.
-function destinazione(o) {
-  const dove = o.table_label
-    ? `Tavolo ${o.table_label}`
-    : o.service_mode === 'banco'
-      ? 'Bancone'
-      : ''
-  return [dove, o.customer_name].filter(Boolean).join(' · ')
-}
-
 const quantiDrink = (o) => (o.order_items || []).reduce((s, i) => s + (Number(i.qty) || 0), 0)
-
-// Quante righe si vedono senza chiedere. Sei: è quello che ci sta in una
-// card senza far scomparire le corsie accanto, ed è anche più di quanto ha
-// un conto normale — chi ne ha venti è l'eccezione, e la apre.
-const RIGHE_A_VISTA = 6
-
-// Da qui in su il conto si legge meglio su DUE colonne: dieci righe in fila
-// fanno una card lunga il doppio delle altre, e la colonna dello stato si
-// svuota di sotto. Sotto le dieci no — due colonnine da tre righe sono
-// peggio di una lista. Lo spazio ce l'ha solo uno schermo largo: il CSS
-// tiene la seconda colonna solo dove ci sta (vedi .corsia-righe-due).
 
 export default function CorsieStato({
   corsie,
@@ -80,7 +46,7 @@ export default function CorsieStato({
     // schiacciate a sinistra, con un quarto di schermo vuoto a destra.
     <div className="corsie" style={{ '--corsie-n': corsie.length }}>
       {corsie.map((corsia) => {
-        const azione = AZIONI[corsia.id] || null
+        const azione = AZIONI_CORSIA[corsia.id] || null
         // «Da incassare» non mostra i drink ma la cifra: lì la domanda è una
         // sola — quanto devo chiedere — e leggerla in mezzo alle righe
         // dell'ordine, col cliente davanti, è un secondo perso ogni volta.
@@ -111,7 +77,7 @@ export default function CorsieStato({
                         {p.state === 'error' ? 'non inviato' : 'in invio…'}
                       </span>
                     </div>
-                    <div className="muted small corsia-dove">{destinazione(p.order || {})}</div>
+                    <div className="muted small corsia-dove">{destinazioneConto(p.order || {})}</div>
                     {p.state === 'error' && (
                       <>
                         <div className="small corsia-righe">{p.error}</div>
@@ -150,66 +116,17 @@ export default function CorsieStato({
                       )}
                     </div>
                     <div className="muted small corsia-dove">
-                      {destinazione(o)}
+                      {destinazioneConto(o)}
                       {soloCifra && ` · ${quantiDrink(o)} drink`}
                     </div>
                     {soloCifra ? (
                       <div className="bignum corsia-cifra">{formatPrice(orderTotal(o))}</div>
                     ) : (
-                      <div className="corsia-righe-box">
-                      <div
-                        className={`small corsia-righe${
-                          (o.order_items || []).length > RIGHE_A_VISTA && espansa !== o.id
-                            ? ' corsia-righe-sfuma'
-                            : ''
-                        }${(o.order_items || []).length >= 10 ? ' corsia-righe-due' : ''}`}
-                      >
-                        {(espansa === o.id
-                          ? o.order_items || []
-                          : (o.order_items || []).slice(0, RIGHE_A_VISTA)
-                        ).map((i, idx) => (
-                          <div key={i.id ?? `${i.drink_id}-${i.name}-${idx}`} className="corsia-riga">
-                            <span className="corsia-riga-nome">
-                              {i.qty}× {i.name}
-                            </span>
-                            {/* IL PREZZO DELLA RIGA: chi guarda la card sta
-                                spesso rispondendo a «quanto viene?», e
-                                doveva aprire il conto per saperlo. */}
-                            <span className="corsia-riga-prezzo">
-                              {formatPrice((Number(i.qty) || 0) * (Number(i.unit_price) || 0))}
-                            </span>
-                            {/* La nota della RIGA — «senza ghiaccio» — è
-                                quella che cambia come si prepara: sta
-                                attaccata alla riga, non in fondo al conto. */}
-                            {i.note && <span className="corsia-riga-nota">{i.note}</span>}
-                          </div>
-                        ))}
-                        {/* UN CONTO LUNGO NON DEVE MANGIARSI LA COLONNA. Con
-                            venti righe la card diventava una pagina, e le
-                            altre corsie sparivano sotto: si vedono le prime,
-                            e chi vuole il resto lo chiede. */}
-                      </div>
-                      {/* IL TASTO NON SFUMA. Stava dentro il blocco velato e
-                          si sbiadiva insieme al testo: proprio la cosa da
-                          leggere. E aperto spariva — non c'era modo di
-                          richiudere la card. Adesso è fratello dell'elenco:
-                          sopra la sfumatura quando è chiuso, in fondo alle
-                          righe quando è aperto. */}
-                      {(o.order_items || []).length > RIGHE_A_VISTA && (
-                        <button
-                          className={`corsia-piu${espansa === o.id ? ' aperto' : ''}`}
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            onEspandi?.(espansa === o.id ? null : o.id)
-                          }}
-                          aria-expanded={espansa === o.id}
-                        >
-                          {espansa === o.id
-                            ? '▴ mostra meno'
-                            : `▾ altre ${(o.order_items || []).length - RIGHE_A_VISTA}`}
-                        </button>
-                      )}
-                      </div>
+                      <RigheCorsia
+                        items={o.order_items}
+                        aperto={espansa === o.id}
+                        onApri={() => onEspandi?.(espansa === o.id ? null : o.id)}
+                      />
                     )}
                     {o.note && <div className="order-note small corsia-nota">{o.note}</div>}
                     {/* IL PIEDE DELLA CARD, IN UNA RIGA SOLA. «⋯ Azioni» e

@@ -773,6 +773,43 @@ export default function SettingsTab({ role = null }) {
                 ))}
               </div>
 
+              {/* LA VISTA DEL BANCO. Non è un'altra vista della coda: è
+                  un'altra coda, quella di chi prepara. Ad accenderla sono
+                  gli STATI DEL SERVIZIO — senza quei passi non c'è niente
+                  da mostrare — e qui si sceglie solo come disegnarla. Per
+                  ora la scelta è una sola: si tiene lo stesso una fila di
+                  voci, così quando se ne aggiunge un'altra non cambia
+                  niente né qui né sui dati già salvati. */}
+              <h4 style={{ margin: '16px 0 4px' }}>La vista del banco</h4>
+              <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
+                Chi sta al banco non guarda i conti, guarda il lavoro: le{' '}
+                <strong>comande</strong>, una card per ticket, nel passo in cui stanno.
+                {settings.workflow_enabled !== false ? (
+                  <> Si apre da sé a chi ha il ruolo bartender.</>
+                ) : (
+                  <>
+                    {' '}
+                    Adesso non c’è: la accendono <strong>gli stati del servizio</strong>,
+                    che sono spenti — senza quei passi non ci sarebbe niente da mostrare,
+                    e al banco si vede la coda come la vedono tutti.
+                  </>
+                )}
+              </p>
+              <div className="mode-choice">
+                {[['corsie', '🚦 Corsie di stato']].map(([value, label]) => (
+                  <button
+                    key={value}
+                    className={`mode-option${
+                      (settings.bartender_view || 'corsie') === value ? ' active' : ''
+                    }`}
+                    disabled={settings.workflow_enabled === false}
+                    onClick={() => save({ bartender_view: value })}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
               <h4 style={{ margin: '16px 0 4px' }}>La ricerca</h4>
               <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
                 Cercando un numero, un nome, un tavolo o un drink: si può{' '}

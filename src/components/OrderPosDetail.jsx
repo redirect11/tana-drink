@@ -15,6 +15,7 @@ import {
   subscribeOrder,
   subscribeSettings,
   peekNextDailyNumber,
+  preparazioneParziale,
   DEFAULT_SETTINGS,
   settingsIniziali,
 } from '../lib/api.js'
@@ -43,6 +44,13 @@ import {
   activeComanda,
   orderIsClosed,
   comandaEditable,
+  comandaDivisibile,
+  annullataPerDivisione,
+  ANNULLATA_PER_DIVISIONE,
+  dividiComanda,
+  gruppoDiRiga,
+  gruppiDelConto,
+  titoloGruppo,
   ORDER_OPEN,
 } from '../lib/comande.js'
 import { paidAmount, dettaglioIncassi } from '../lib/pagamento.js'
@@ -695,6 +703,79 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     })()
   }
 
+  // ── PREPARAZIONE PARZIALE ────────────────────────────────
+  //
+  // Al banco capita di vedere tre gin tonic in una comanda e due in
+  // un'altra e prepararli insieme, per farli uscire in una volta sola. Non
+  // andrebbe fatto — un ticket si lavora intero — ma si fa: l'app non lo
+  // impedisce, lo REGISTRA, così il conto resta giusto e la coda dice
+  // davvero cosa è al banco e cosa aspetta ancora.
+  //
+  // Quale comanda si sta dividendo e quante unità per riga:
+  // { comandaId, scelte: { indice della riga → quante se ne fanno adesso } }.
+  const [parziale, setParziale] = useState(null)
+  // Quali comande sono state divise DA QUI, in attesa che lo dica il
+  // server: senza, per un istante si leggerebbe «Annullato» al posto di
+  // «Divisa», cioè «un drink è saltato» invece di «è diventato quei due».
+  const [divise, setDivise] = useState([])
+  const sceltaRiga = (i) => Number(parziale?.scelte?.[i]) || 0
+  const cambiaScelta = (i, delta, massimo) =>
+    setParziale((p) => {
+      if (!p) return p
+      const ora = Math.min(massimo, Math.max(0, (Number(p.scelte[i]) || 0) + delta))
+      return { ...p, scelte: { ...p.scelte, [i]: ora } }
+    })
+
+  const confermaParziale = (c) => {
+    const scelte = (c.items || []).map((_, i) => sceltaRiga(i))
+    const divisa = dividiComanda(c, scelte)
+    if (!divisa) return
+    setParziale(null)
+    // SI VEDE SUBITO. La comanda di partenza risulta annullata e al suo
+    // posto compaiono le due nuove: chi ha appena scelto tre gin tonic su
+    // cinque deve vederli al banco nell'istante in cui tocca, non quando
+    // risponde il server. Le provvisorie se ne vanno da sole quando dallo
+    // snapshot arrivano quelle vere (stesse righe, stesse quantità).
+    if (!divisa.tutta) {
+      setStatusOverrides((o) => ({ ...o, [c.id]: ORDER_STATUSES.ANNULLATO }))
+      setDivise((v) => [...v, c.id])
+      const base = contatoreVolo.current
+      contatoreVolo.current += 2
+      // I NUMERI CHE PRENDERANNO DAVVERO. Le comande nuove nascono dopo
+      // l'ultima del conto: mostrarle senza numero (o tutte «comanda 0»)
+      // vorrebbe dire vederle rinumerarsi sotto gli occhi appena risponde
+      // il server, proprio mentre si legge quale preparare.
+      const prossimo = effComandeRef.current.reduce((m, x) => Math.max(m, x.seq || 0), 0)
+      setNuoveInVolo((v) => [
+        ...v,
+        {
+          id: `__volo-${base}`,
+          seq: prossimo + 1,
+          status: ORDER_STATUSES.IN_PREPARAZIONE,
+          items: divisa.nuova,
+          created_at: c.created_at || null,
+        },
+        {
+          id: `__volo-${base + 1}`,
+          seq: prossimo + 2,
+          status: ORDER_STATUSES.RICEVUTO,
+          items: divisa.resta,
+          created_at: c.created_at || null,
+        },
+      ])
+    } else {
+      setStatusOverrides((o) => ({ ...o, [c.id]: ORDER_STATUSES.IN_PREPARAZIONE }))
+    }
+    preparazioneParziale(order.id, c.id, scelte).catch((e) => {
+      // Non è passata: si torna a quello che c'era, o al banco si prepara
+      // una divisione che sul conto non esiste.
+      setStatusOverrides((o) => omit(o, c.id))
+      setDivise((v) => v.filter((x) => x !== c.id))
+      setNuoveInVolo((v) => v.filter((x) => !x.id.startsWith('__volo-')))
+      toastError(`Divisione non riuscita: ${e.message}`)
+    })
+  }
+
   // Allineamento col server: l'override sparisce quando la comanda arriva
   // davvero con lo stato atteso.
   useEffect(() => {
@@ -754,11 +835,12 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
       ...comande.map((c) => {
         let x = pendingEdits[c.id] ? { ...c, items: pendingEdits[c.id] } : c
         if (statusOverrides[c.id]) x = { ...x, status: statusOverrides[c.id] }
+        if (divise.includes(c.id)) x = { ...x, annullata_per: ANNULLATA_PER_DIVISIONE }
         return x
       }),
       ...nuoveInVolo,
     ],
-    [comande, pendingEdits, statusOverrides, nuoveInVolo]
+    [comande, pendingEdits, statusOverrides, nuoveInVolo, divise]
   )
   // Riferimenti sempre aggiornati per l'auto-conferma e la conferma all'uscita.
   const effComandeRef = useRef(effComande)
@@ -806,6 +888,11 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     for (const c of effComande) {
       const comandaAnnullata = c.status === ORDER_STATUSES.ANNULLATO
       if (comandaAnnullata && !contoAnnullato) continue
+      // Su un conto annullato si elencano anche le comande annullate: è il
+      // modo per capire cosa c'era dentro. Ma non quelle sparite in una
+      // DIVISIONE: quei drink non sono spariti, sono nelle due comande
+      // nate al loro posto, e comparirebbero due volte.
+      if (annullataPerDivisione(c)) continue
       ;(c.items || []).forEach((it, idx) => {
         const base = {
           source: 'comanda',
@@ -873,12 +960,35 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   }, [draftKey, layout])
   // Nasconde/mostra le righe già pagate (che stanno comunque in fondo).
   const [hidePaid, setHidePaid] = useState(false)
+  // I GRUPPI DEL CONTO: «In preparazione», «Pronto», «Servito», «Pagati».
+  // Ci sono solo quando c'è più di una cosa da dire — e nel caso normale
+  // non c'è: la comanda è una sola ed esce tutta per l'intero ordine, tutti
+  // i drink stanno nello stesso passo, e un titolo per dire una cosa sola
+  // è rumore. Dividere una comanda è la deroga, ed è lì che questi titoli
+  // servono davvero.
+  const gruppiVisibili = useMemo(
+    () => gruppiDelConto([...allByKey.values()]).length > 1,
+    [allByKey]
+  )
   const orderedLines = useMemo(() => {
     const arr = layout.map((k) => allByKey.get(k)).filter(Boolean)
     const unpaid = arr.filter((l) => !l.paid)
     const paid = arr.filter((l) => l.paid)
-    return hidePaid ? unpaid : [...unpaid, ...paid]
-  }, [layout, allByKey, hidePaid])
+    const lista = hidePaid ? unpaid : [...unpaid, ...paid]
+    if (!gruppiVisibili) return lista
+    // L'ORDINE A MANO CEDE SOLO QUANDO SERVE. Con i gruppi in vista le
+    // righe si mettono in fila per passo del servizio, o i titoli si
+    // ripeterebbero tre volte lungo la lista; senza gruppi (il caso
+    // normale) resta esattamente com'è stata sistemata.
+    const ordine = gruppiDelConto(lista)
+    return lista
+      .map((l, i) => [l, i])
+      .sort(
+        (a, b) =>
+          ordine.indexOf(gruppoDiRiga(a[0])) - ordine.indexOf(gruppoDiRiga(b[0])) || a[1] - b[1]
+      )
+      .map(([l]) => l)
+  }, [layout, allByKey, hidePaid, gruppiVisibili])
   const paidCount = useMemo(
     () => [...allByKey.values()].filter((l) => l.paid).reduce((s, l) => s + l.qty, 0),
     [allByKey]
@@ -2123,16 +2233,28 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
               const isDraft = l.source === 'draft'
               const isPaid = !!l.paid
               const canMinus = !closed && !isPaid && (isDraft || l.removable)
-              const firstPaid = isPaid && !orderedLines[idx - 1]?.paid
+              // A CHE PUNTO È QUESTA RIGA. Gli stati del servizio stanno sulle
+              // COMANDE, non sul conto: con una comanda sola tutti i drink
+              // sono nello stesso passo e non c'è niente da intestare — un
+              // titolo per dire una cosa sola è rumore. Appena il banco
+              // divide una comanda per prepararne una parte, invece, aprendo
+              // il conto si deve vedere cosa è al banco e cosa è già uscito:
+              // le righe si raggruppano come già si fa con quelle pagate.
+              // E le due cose convivono: un conto si incassa in qualunque
+              // passo del servizio — dalla cassa è chiuso, dal banco magari
+              // no — e i due titoli lo dicono insieme senza contraddirsi.
+              const gruppo = gruppoDiRiga(l)
+              const titolo =
+                gruppiVisibili && gruppo && gruppo !== gruppoDiRiga(orderedLines[idx - 1])
+                  ? titoloGruppo(gruppo)
+                  : null
               return (
-                // La riga «💳 Pagati» sta FUORI dal riquadro trascinabile:
-                // dentro finiva sulla stessa linea della prima riga pagata,
-                // perché quel riquadro è una fila.
+                // Il titolo del gruppo sta FUORI dal riquadro trascinabile:
+                // dentro finiva sulla stessa linea della prima riga, perché
+                // quel riquadro è una fila.
                 <Fragment key={l.key}>
-                  {firstPaid && (
-                    <div className="muted small" style={{ margin: '10px 0 2px', borderTop: '1px dashed var(--line)', paddingTop: 6 }}>
-                      💳 Pagati
-                    </div>
+                  {titolo && (
+                    <div className="posd-gruppo muted small">{titolo}</div>
                   )}
                   <RigaOrdinabile id={l.key} attiva={organizzaLista} bloccata={isPaid || closed}>
                   <div
@@ -2539,11 +2661,23 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                       COMANDA {c.seq}
                       {c.created_at ? ` · ${String(c.created_at).slice(11, 16)}` : ''}
                     </span>
+                    {/* UNA COMANDA DIVISA NON È UNA COMANDA ANNULLATA. Nel
+                        dato è annullata — serve a tenere la storia, e la
+                        copia già stampata ha un riscontro — ma qui dentro
+                        leggere «Annullato» farebbe pensare a un drink
+                        saltato, mentre quei drink sono nelle due comande
+                        sotto. */}
                     <span className={`pill ${c.status}`} style={{ fontSize: '0.7rem' }}>
-                      {STATUS_EMOJI[c.status]}{' '}
-                      {c.status === ORDER_STATUSES.RITIRATO
-                        ? ritiratoLabel(order.service_mode)
-                        : STATUS_LABELS[c.status]}
+                      {annullataPerDivisione(c) ? (
+                        '✂️ Divisa'
+                      ) : (
+                        <>
+                          {STATUS_EMOJI[c.status]}{' '}
+                          {c.status === ORDER_STATUSES.RITIRATO
+                            ? ritiratoLabel(order.service_mode)
+                            : STATUS_LABELS[c.status]}
+                        </>
+                      )}
                     </span>
                   </div>
                   {(c.items || []).map((i, idx) => (
@@ -2570,6 +2704,75 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                       <span />
                     )}
                   </div>
+                  {/* ── PREPARAZIONE PARZIALE ─────────────────────
+                      Tre gin tonic qui e due nella comanda del tavolo
+                      accanto si preparano insieme, per farli uscire in una
+                      volta. Non andrebbe fatto — un ticket si lavora
+                      intero — ma si fa, e l'app non lo impedisce: si
+                      scelgono le unità che si preparano ADESSO, quelle
+                      partono in una comanda nuova e il resto resta «da
+                      fare», così il conto non perde niente per strada.
+                      Solo su una comanda ancora DA FARE: quello che è già
+                      al banco non si divide, il lavoro è cominciato. */}
+                  {workflowOn && !closed && comandaDivisibile(c) && (
+                    parziale?.comandaId === c.id ? (
+                      <div className="comanda-parziale">
+                        <div className="muted small" style={{ marginBottom: 4 }}>
+                          Quanti ne prepari adesso?
+                        </div>
+                        {(c.items || []).map((i, idx) => (
+                          <div className="row between comanda-parziale-riga" key={idx}>
+                            <span className="small">
+                              {i.custom ? '✨ ' : ''}
+                              {i.name}{' '}
+                              <span className="muted">di {i.qty}</span>
+                            </span>
+                            <span className="row" style={{ gap: 6, alignItems: 'center' }}>
+                              <button
+                                className="btn ghost small"
+                                aria-label={`Uno in meno di ${i.name}`}
+                                disabled={sceltaRiga(idx) === 0}
+                                onClick={() => cambiaScelta(idx, -1, i.qty)}
+                              >
+                                −
+                              </button>
+                              <strong style={{ minWidth: '1.5em', textAlign: 'center' }}>
+                                {sceltaRiga(idx)}
+                              </strong>
+                              <button
+                                className="btn ghost small"
+                                aria-label={`Uno in più di ${i.name}`}
+                                disabled={sceltaRiga(idx) >= i.qty}
+                                onClick={() => cambiaScelta(idx, +1, i.qty)}
+                              >
+                                +
+                              </button>
+                            </span>
+                          </div>
+                        ))}
+                        <div className="grid-2" style={{ marginTop: 8, gap: 6 }}>
+                          <button className="btn ghost small" onClick={() => setParziale(null)}>
+                            Lascia stare
+                          </button>
+                          <button
+                            className="btn small"
+                            disabled={(c.items || []).every((_, idx) => sceltaRiga(idx) === 0)}
+                            onClick={() => confermaParziale(c)}
+                          >
+                            Preparo questi
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        className="btn ghost small block"
+                        style={{ marginTop: 6 }}
+                        onClick={() => setParziale({ comandaId: c.id, scelte: {} })}
+                      >
+                        ✂️ Preparazione parziale
+                      </button>
+                    )
+                  )}
                   {/* TORNARE INDIETRO, anche di più di un passo. Si segna
                       «pronto» la comanda sbagliata, o «servito» mentre il
                       vassoio è ancora al banco: senza questo restava solo

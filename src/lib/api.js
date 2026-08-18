@@ -46,6 +46,8 @@ import {
   aggregateItems,
   comandeStatuses,
   comandaDaScaricare,
+  dividiComanda,
+  ANNULLATA_PER_DIVISIONE,
   itemsTotal as sumItems,
 } from './comande.js'
 import {
@@ -2683,6 +2685,114 @@ export async function addComanda(orderId, items, { note = null } = {}) {
   return mapOrder(await leggiOrdine(ref))
 }
 
+// ── PREPARAZIONE PARZIALE DI UNA COMANDA ─────────────────────
+//
+// Al banco capita di vedere tre gin tonic in una comanda e due in
+// un'altra e prepararli insieme, per farli uscire in una volta. Non
+// andrebbe fatto — un ticket si lavora intero — ma si fa, e l'app non lo
+// impedisce: lo registra, così il conto resta giusto e la coda dice
+// davvero cosa è al banco e cosa aspetta ancora.
+//
+// La comanda di partenza NON si modifica in silenzio: si ANNULLA e al suo
+// posto ne nascono due — le righe scelte, già in preparazione, e il resto,
+// che resta «da fare». Così la copia già stampata al banco ha ancora un
+// riscontro nella storia del conto, invece di parlare di una comanda che
+// nel frattempo è cambiata sotto le mani.
+//
+// UNA SOLA SCRITTURA. Le tre operazioni toccano lo stesso array `comande`:
+// farle con tre chiamate separate vorrebbe dire tre letture e tre
+// riscritture dello stesso documento, e chi arriva secondo cancella il
+// primo. Le quantità le conta dividiComanda (logica pura, provata a
+// unità); qui si scrive e basta.
+export async function preparazioneParziale(orderId, comandaId, righeScelte) {
+  const ref = doc(db, 'orders', orderId)
+  const nowIso = new Date().toISOString()
+  const snap = await leggiOrdine(ref)
+  if (!snap.exists()) throw new Error('Ordine non trovato')
+  const cur = snap.data()
+  const norm = normalizeOrderDoc(cur)
+  if (norm.status !== ORDER_OPEN) throw new Error('Conto chiuso: non più modificabile')
+  const comande = norm.comande.map((c) => ({ ...c }))
+  const comanda = comande.find((c) => c.id === comandaId)
+  if (!comanda) throw new Error('Comanda non trovata')
+  // Solo su una comanda ANCORA DA FARE: dividere quello che è già al banco
+  // non vuol dire niente, e su una comanda già servita gli ingredienti sono
+  // già stati scalati.
+  if (comanda.status !== ORDER_STATUSES.RICEVUTO) {
+    throw new Error('La comanda è già in lavorazione: non si divide')
+  }
+
+  const divisa = dividiComanda(comanda, righeScelte)
+  if (!divisa) throw new Error('Non hai scelto niente da preparare')
+  // Prese tutte le righe non c'è niente da dividere: la comanda avanza e
+  // basta. Annullarla per rifarla identica lascerebbe in giro una comanda
+  // annullata che non racconta niente.
+  if (divisa.tutta) return advanceComanda(orderId, comandaId, ORDER_STATUSES.IN_PREPARAZIONE)
+
+  comanda.status = ORDER_STATUSES.ANNULLATO
+  comanda.status_times = {
+    ...(comanda.status_times || {}),
+    [ORDER_STATUSES.ANNULLATO]: nowIso,
+  }
+  // PERCHÉ È ANNULLATA. Questo annullamento è contabilità interna, non un
+  // fatto della serata: quei drink non sono spariti, sono diventati le due
+  // comande qui sotto. Senza il motivo scritto finirebbe negli elenchi
+  // degli annullati insieme a quelli veri, e la stessa roba si vedrebbe due
+  // volte (vedi annullataPerDivisione in comande.js).
+  comanda.annullata_per = ANNULLATA_PER_DIVISIONE
+  comanda.divisa_in = [] // i figli, riempiti sotto: così la storia si legge
+
+  // I numeri delle comande nuove partono dopo l'ultimo usato nel conto:
+  // riusare il numero di quella annullata vorrebbe dire due «comanda 2».
+  let seq = comande.reduce((m, c) => Math.max(m, c.seq || 0), 0)
+  const figlia = (items, stato) => {
+    seq += 1
+    const tempi = { [ORDER_STATUSES.RICEVUTO]: comanda.status_times?.[ORDER_STATUSES.RICEVUTO] || nowIso }
+    if (stato === ORDER_STATUSES.IN_PREPARAZIONE) tempi[ORDER_STATUSES.IN_PREPARAZIONE] = nowIso
+    return {
+      id: `c${seq}`,
+      seq,
+      items,
+      status: stato,
+      status_times: tempi,
+      note: comanda.note || null,
+      // Le scorte non sono state toccate: si scalano alla comanda SERVITA, e
+      // questa non lo è mai stata.
+      inventory_applied: false,
+      inventory_consumption: null,
+      // L'ORARIO RESTA QUELLO DI PARTENZA: il cliente aspetta da quando ha
+      // ordinato, non da quando qualcuno ha diviso la comanda. Con l'ora di
+      // adesso «da quanto sta lì» sulla card sarebbe ripartito da zero.
+      created_at: comanda.created_at || nowIso,
+      divisa_da: comanda.id,
+    }
+  }
+  const inPreparazione = figlia(divisa.nuova, ORDER_STATUSES.IN_PREPARAZIONE)
+  const daFare = figlia(divisa.resta, ORDER_STATUSES.RICEVUTO)
+  comanda.divisa_in = [inPreparazione.id, daFare.id]
+  comande.push(inPreparazione, daFare)
+
+  // Il totale del conto non cambia — le stesse unità stanno solo in due
+  // ticket invece che in uno — ma si ricalcola con la regola di sempre:
+  // scriverlo a mano qui sarebbe il punto in cui un giorno divergerebbe.
+  const agg = aggregateItems(comande)
+  const extras =
+    Number(cur.coperto_amount || 0) +
+    Number(cur.service_charge_amount || 0) +
+    Number(cur.tip_amount || 0)
+  const nuovoTotale = sumItems(agg) + extras
+  const nuovoSconto = scontoRicalcolato(cur, nuovoTotale)
+  bgWrite(() => updateDoc(ref, {
+    status: ORDER_OPEN,
+    comande,
+    comande_statuses: comandeStatuses(comande),
+    items: agg,
+    total: nuovoTotale,
+    ...(nuovoSconto != null ? { discount_amount: nuovoSconto } : {}),
+  }), 'preparazione parziale')
+  return mapOrder(await leggiOrdine(ref))
+}
+
 // Modifica di UNA COMANDA da parte del bartender (quantità, rimozioni,
 // aggiunte, custom) finché non è servita. Se lo scarico era già stato
 // applicato, l'inventario viene riallineato con la DIFFERENZA tra il
@@ -3464,6 +3574,15 @@ export const DEFAULT_SETTINGS = {
   // Coda ordini bartender: 'tabs' (schede per stato) o 'lista' (lista unica
   // con stato indicato da colore/etichetta sulla card).
   queue_view: 'griglia',
+  // LA VISTA DEL BANCO. Chi sta allo shaker non guarda la stessa cosa di chi
+  // tiene la cassa: a lui servono le COMANDE, nei passi del servizio. Ad
+  // accenderla sono gli stati del servizio — senza quei passi non ci
+  // sarebbe niente da mostrare — e questa impostazione dice soltanto COME
+  // disegnarla. È una lista di viste possibili, non un interruttore: per
+  // ora ce n'è una sola, ma quando se ne aggiungerà un'altra il valore che
+  // c'è già scritto su settings/bar resta buono — con un booleano si
+  // sarebbe dovuto migrare.
+  bartender_view: 'corsie',
   // Cosa fa la ricerca nella coda: 'filtra' lascia in pagina solo i conti
   // che rispondono (come è sempre stato), 'evidenzia' non toglie niente —
   // accende il primo conto trovato e ce lo porta sotto gli occhi. Il

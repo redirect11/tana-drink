@@ -72,6 +72,17 @@ sotto i 44px si sbaglia. Si **toglie**, in quest'ordine:
   ordini e restano. Niente riga di schede sopra la coda per cambiarle: si
   decide una volta e si lavora, e quella riga sarebbe altezza tolta ai conti
   per una cosa che si tocca due volte l'anno.
+- **Il banco ha una coda sua, e si apre da sé.** Ad accenderla sono gli
+  stati del servizio; come disegnarla si sceglie in Impostazioni → Coda
+  ordini → «La vista del banco», accanto alla vista della coda — stessa
+  regola di sempre: come si guarda una pagina non è navigazione, si decide
+  una volta e si lavora. La coda di chi guarda la serata non cambia.
+- **Quello che si cambia nel mezzo del servizio sta sopra le corsie**, nella
+  riga dei filtri, e vale per QUESTO terminale: la pastiglia «🍸 Comande»
+  (con cui chi non è al banco va a guardare il lavoro) e «▦ Colonne» (che
+  spegne le corsie che in quel momento non servono). Non stanno in
+  Impostazioni perché si toccano con l'ordine in mano, e non su
+  `settings/bar` perché al banco e alla cassa non si guardano le stesse cose.
 - **I filtri** stanno in una tendina sopra il contenuto, e il tasto dice cosa
   è scelto senza doverla aprire.
 - **Il contenuto non porta navigazione**: niente tasti «vai a…» in mezzo a una

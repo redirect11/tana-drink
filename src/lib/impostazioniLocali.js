@@ -37,3 +37,66 @@ export function impostazioniRicordate(defaults = {}) {
   }
   return { ...defaults }
 }
+
+// ── LE CORSIE SPENTE SU QUESTO TERMINALE ─────────────────────────────
+//
+// Quali colonne della coda a corsie chi sta a questo schermo non vuole
+// vedere. È una preferenza del DISPOSITIVO, non del locale: il tablet del
+// banco guarda «Da fare» e «Al banco», quello della cassa «Da incassare»,
+// e sono due persone diverse davanti a due schermi diversi. Metterla sulle
+// impostazioni del bar vorrebbe dire che accendendo una colonna al banco
+// si spegne alla cassa.
+
+const CHIAVE_CORSIE = 'tana:corsie:nascoste'
+
+// Torna null quando su questo terminale non si è ancora scelto niente:
+// quali colonne convenga tenere spente all'inizio è una decisione del
+// dominio, e sta in coda.js con le corsie.
+export function corsieNascoste() {
+  try {
+    const salvate = JSON.parse(localStorage.getItem(CHIAVE_CORSIE) || 'null')
+    return Array.isArray(salvate) ? salvate.filter((x) => typeof x === 'string') : null
+  } catch {
+    /* roba illeggibile: decide il default */
+    return null
+  }
+}
+
+export function ricordaCorsieNascoste(ids) {
+  try {
+    localStorage.setItem(CHIAVE_CORSIE, JSON.stringify([...new Set(ids || [])]))
+  } catch {
+    /* niente memoria: la scelta vale per questa sessione */
+  }
+}
+
+// ── COSA GUARDA QUESTO TERMINALE: I CONTI O LE COMANDE ───────────────
+//
+// Chi sta al banco vede sempre le comande — è il suo lavoro — ma chi
+// guarda la serata vuole tutte e due le cose: «come sta andando» (i conti:
+// in corso, chiusi, annullati) e «a che punto è la preparazione» (le
+// comande, nei passi del servizio). Sono due domande diverse sullo stesso
+// schermo, e quale delle due si sta facendo lo sa solo chi ci sta davanti:
+// per questo la scelta è del dispositivo, come le altre qui sopra.
+//
+// Torna null quando non si è scelto niente: decide il ruolo.
+
+const CHIAVE_VISTA = 'tana:corsie:vista'
+
+export function vistaCorsie() {
+  try {
+    const v = localStorage.getItem(CHIAVE_VISTA)
+    return v === 'conti' || v === 'comande' ? v : null
+  } catch {
+    return null
+  }
+}
+
+export function ricordaVistaCorsie(vista) {
+  try {
+    if (vista) localStorage.setItem(CHIAVE_VISTA, vista)
+    else localStorage.removeItem(CHIAVE_VISTA)
+  } catch {
+    /* niente memoria: la scelta vale per questa sessione */
+  }
+}
