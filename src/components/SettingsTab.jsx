@@ -402,6 +402,18 @@ export default function SettingsTab({ role = null }) {
                   onChange={(v) => save({ riscuoti_e_servi: v })}
                 />
               )}
+              {/* Vale per TUTTE le comande allo stesso modo — la prima di un
+                  conto nuovo e le aggiunte a metà serata — perché il passo in
+                  cui nasce una comanda si decide in un posto solo
+                  (statoComandaNuova in lib/comande.js). */}
+              {settings.workflow_enabled !== false && (
+                <ToggleRow
+                  label="Le comande nascono già in preparazione"
+                  desc="Spenta: una comanda nuova sta in «Da fare» finché qualcuno non tocca «Lo preparo io» — che dice anche chi. Accesa: nasce già al banco, per chi versa nell'istante in cui batte e non vuole un tocco in più a ogni comanda."
+                  checked={settings.comande_in_preparazione === true}
+                  onChange={(v) => save({ comande_in_preparazione: v })}
+                />
+              )}
               {esitoReset != null && (
                 <div className="muted small" style={{ marginTop: 6 }}>
                   ✅ {esitoReset === 0

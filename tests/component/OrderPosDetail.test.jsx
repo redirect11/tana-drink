@@ -795,6 +795,65 @@ describe('totale sul tasto Pagamento', () => {
 // l'acqua. La creazione dura qualche decimo di secondo; in quei decimi si
 // continua a battere, e chi svuotava la bozza a creazione finita portava
 // via anche le righe arrivate nel frattempo.
+// ── IN CHE PASSO NASCE UNA COMANDA, DAL POS ───────────────────
+//
+// Lo decide il locale, e vale allo stesso modo per la prima comanda di un
+// conto nuovo e per le aggiunte a metà serata: prima erano due regole
+// diverse in due posti, e nessuno l'aveva deciso.
+describe('il passo in cui nasce una comanda lo dice il locale', () => {
+  it('di suo un conto nuovo nasce «da fare»', async () => {
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter>
+        <OrderPosDetail order={null} />
+      </MemoryRouter>
+    )
+    await user.click(screen.getAllByText('Mojito')[0])
+    await waitFor(() => expect(createOrder).toHaveBeenCalled())
+    expect(createOrder.mock.calls[0][0].status).toBe('ricevuto')
+  })
+
+  it('acceso, nasce già in preparazione — e lo dice anche la comanda aggiunta', async () => {
+    const user = userEvent.setup()
+    mockSettings.comande_in_preparazione = true
+    try {
+      // conto nuovo
+      const { unmount } = render(
+        <MemoryRouter>
+          <OrderPosDetail order={null} />
+        </MemoryRouter>
+      )
+      await user.click(screen.getAllByText('Mojito')[0])
+      await waitFor(() => expect(createOrder).toHaveBeenCalled())
+      expect(createOrder.mock.calls[0][0].status).toBe('in_preparazione')
+      unmount()
+
+      // aggiunta a un conto già servito: nasce una comanda nuova, e la
+      // provvisoria che si vede deve dire lo stesso passo di quella vera —
+      // se no la card cambia colonna da sola un istante dopo.
+      mount(
+        baseOrder({
+          comande: [
+            {
+              id: 'c1', seq: 1, status: 'ritirato', status_times: {},
+              items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1 }],
+            },
+          ],
+        })
+      )
+      await user.click(screen.getAllByText('Gin Tonic')[0])
+      await user.click(screen.getByRole('button', { name: /Comande/ }))
+      await waitFor(() =>
+        expect(
+          [...document.querySelectorAll('.confirm-box .card')].at(-1).textContent
+        ).toMatch(/In preparazione/)
+      )
+    } finally {
+      mockSettings.comande_in_preparazione = false
+    }
+  })
+})
+
 describe('creazione: niente si perde mentre l’ordine nasce', () => {
   it('gli item battuti durante la creazione finiscono nell’ordine', async () => {
     const user = userEvent.setup()

@@ -47,7 +47,7 @@ import {
   comandeStatuses,
   comandaDaScaricare,
   dividiComanda,
-  STATO_COMANDA_NUOVA,
+  statoComandaNuova,
   ANNULLATA_PER_DIVISIONE,
   itemsTotal as sumItems,
 } from './comande.js'
@@ -1762,7 +1762,11 @@ async function creaOrdine({
   payment_required = false, // fotografa l'impostazione alla creazione
   group_id = null, // gruppo a cui associare l'ordine (null = nessuno)
   group_name_snapshot = null, // nome gruppo al momento dell'ordine (storico)
-  status = ORDER_STATUSES.RICEVUTO, // stato iniziale (il POS lo crea già in preparazione)
+  // In che passo nasce la prima comanda: lo dice il locale, e lo dice in un
+  // posto solo (statoComandaNuova). Resta un parametro perché chi crea
+  // l'ordine ha già le impostazioni in mano e le passa; qui c'è il valore
+  // di riserva, che è la stessa regola letta dalla cache.
+  status = statoComandaNuova(impostazioni()),
   client_temp_id = null, // id del placeholder POS: la griglia scambia SENZA doppioni
   cutoff_hour = DEFAULT_CUTOFF_HOUR, // ora di taglio della giornata commerciale
 }) {
@@ -2700,6 +2704,7 @@ export async function addComanda(orderId, items, { note = null } = {}) {
   if (norm.status !== ORDER_OPEN) throw new Error('Conto chiuso: non più modificabile')
   const comande = norm.comande.map((c) => ({ ...c }))
   const seq = comande.reduce((m, c) => Math.max(m, c.seq || 0), 0) + 1
+  const statoNuova = statoComandaNuova(impostazioni())
   const nuova = {
     id: `c${seq}`,
     seq,
@@ -2713,10 +2718,14 @@ export async function addComanda(orderId, items, { note = null } = {}) {
       ...(i.custom ? { custom: true, recipe_items: i.recipe_items ?? [] } : {}),
       ...(i.note ? { note: i.note } : {}),
     })),
-    status: STATO_COMANDA_NUOVA,
+    // In che passo nasce lo dice il locale, e lo dice in un posto solo
+    // (statoComandaNuova). L'ora del «ricevuto» c'è comunque: la comanda è
+    // arrivata adesso anche se il banco la prende in carico nello stesso
+    // istante, e senza quell'orario i tempi di servizio non tornano.
+    status: statoNuova,
     status_times: {
       [ORDER_STATUSES.RICEVUTO]: nowIso,
-      [STATO_COMANDA_NUOVA]: nowIso,
+      ...(statoNuova === ORDER_STATUSES.RICEVUTO ? {} : { [statoNuova]: nowIso }),
     },
     note: note || null,
     inventory_applied: false,
@@ -3649,6 +3658,13 @@ export const DEFAULT_SETTINGS = {
   // c'è già scritto su settings/bar resta buono — con un booleano si
   // sarebbe dovuto migrare.
   bartender_view: 'corsie',
+  // LE COMANDE NASCONO GIÀ IN PREPARAZIONE? Di suo no: si battono tre conti
+  // di fila e poi si comincia a versare, ed è «Lo preparo io» a dire quando
+  // si comincia — e chi. Dove invece si prepara nell'istante in cui si
+  // batte, quel passo è un tocco in più per ogni comanda, tutta la sera.
+  // A leggerla è statoComandaNuova (comande.js), che è l'unico posto dove
+  // si decide in che passo nasce una comanda.
+  comande_in_preparazione: false,
   // Cosa fa la ricerca nella coda: 'filtra' lascia in pagina solo i conti
   // che rispondono (come è sempre stato), 'evidenzia' non toglie niente —
   // accende il primo conto trovato e ce lo porta sotto gli occhi. Il
