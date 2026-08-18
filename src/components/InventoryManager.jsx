@@ -782,7 +782,12 @@ function ProductsPanel() {
 
   // Cosa dice il tasto della tendina: una tendina che non dice cosa è
   // scelto costringe ad aprirla per ricordarselo.
-  const nomiStato = { all: null, low: 'In esaurimento', empty: 'Esauriti' }
+  const nomiStato = {
+    all: null,
+    in_scorta: 'In scorta',
+    low: 'In esaurimento',
+    empty: 'Esauriti',
+  }
   const sceltiOra = [nomiStato[statusFilter], ...assortimenti.map((k) => ASSORTIMENTO_NOME[k])]
     .filter(Boolean)
   const riassuntoFiltri =
@@ -827,6 +832,9 @@ function ProductsPanel() {
           <div className="tendina-titolo">Come stanno a scorta</div>
           {[
             ['all', 'Tutti', summary.total],
+            // «In scorta» prima delle altre due: è la domanda che ci si fa
+            // per prima — cosa c'è — e le altre sono lenti più strette.
+            ['in_scorta', 'In scorta', summary.inScorta],
             ['low', 'In esaurimento', summary.low],
             ['empty', 'Esauriti', summary.empty],
           ].map(([k, label, n]) => (

@@ -1511,11 +1511,29 @@ requirements:
       scorta e assortimento, fornitore), il valore di magazzino, card/lista
       come due icone e il tasto per un prodotto nuovo. Il tasto di una tendina
       dice cosa è scelto senza doverla aprire.
-      I filtri (tutti, in esaurimento, esauriti, e i quattro di assortimento)
-      stanno su UNA RIGA sola, con scritto che sono filtri: sembravano un
-      riepilogo, si leggevano i numeri senza capire che toccandoli la lista si
-      restringeva. Il valore di magazzino è lì accanto ma non si tocca: è un
-      numero da leggere, non un filtro.
+      I filtri (tutti, in scorta, in esaurimento, esauriti, e i quattro di
+      assortimento) stanno su UNA RIGA sola, con scritto che sono filtri:
+      sembravano un riepilogo, si leggevano i numeri senza capire che
+      toccandoli la lista si restringeva. Il valore di magazzino è lì accanto
+      ma non si tocca: è un numero da leggere, non un filtro.
+      «IN SCORTA» È LA DOMANDA CHE MANCAVA (segnalato al banco il 18/08, coi
+      388 articoli veri sotto gli occhi: «al filtro manca quelli in
+      magazzino»). Si poteva chiedere solo cosa sta finendo e cosa è finito;
+      per vedere cosa c'è davvero sullo scaffale bisognava guardare «Tutti» e
+      saltare a occhio due terzi di righe esaurite — 232 su 388. Sta per
+      prima delle tre, che è l'ordine in cui ci si fa le domande, e ha il suo
+      conteggio come le altre.
+      GLI «IN ESAURIMENTO» CI STANNO DENTRO: sono in magazzino, solo pochi.
+      «In esaurimento» è una lente più stretta dentro la stessa famiglia, non
+      un'altra famiglia — e chi guarda cosa c'è vuole vedere anche l'ultima
+      bottiglia di gin, che è proprio quella che gli serve sapere. Così il
+      conto torna a vista: in scorta più esauriti fa il totale, e chi somma
+      le voci non trova numeri che non tornano.
+      QUELLO CHE NON È UNA SCORTA non sta né di qua né di là: il «Tempo di
+      Lavorazione» non ha giacenza, e non è né disponibile né esaurito (vedi
+      REQ-MAG-012). Metterlo fra i disponibili vorrebbe dire dire che c'è
+      sullo scaffale una cosa che sullo scaffale non ci va; fra gli esauriti,
+      mandare a comprare il tempo.
       Tutto sta nella finestra: filtri, ricerca e categorie restano fermi, a
       scorrere è solo l'elenco dei prodotti — prima, per tornare alla ricerca
       dopo aver guardato in fondo, si risaliva da capo. Anche i MOVIMENTI sono

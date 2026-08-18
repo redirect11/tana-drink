@@ -91,6 +91,13 @@
   ci sono più: sono stati saltati»); se ne nasce uno nuovo, se lo prende. E
   se proprio si ferma, dice quanti ne ha aggiornati e che si può riprovare
   senza fare danni — invece del messaggio del database.
+- **Nel filtro del magazzino c'è «In scorta»**, cioè quello che sullo scaffale
+  c'è davvero. Prima si poteva chiedere solo cosa sta finendo e cosa è finito:
+  per vedere il resto bisognava guardare «Tutti» e saltare a occhio due terzi
+  di righe esaurite. Sta per prima delle tre e ha il suo conteggio, e dentro ci
+  sono anche gli articoli in esaurimento — sono in magazzino, solo pochi, e
+  l'ultima bottiglia di gin è proprio quella che serve sapere. Così il conto
+  torna: in scorta più esauriti fa il totale.
 - **Il fornitore che manca si aggiunge dalla scheda del prodotto.** In fondo
   alla tendina Fornitore c'è «➕ Nuovo fornitore…»: basta il nome, e resta
   già selezionato sul prodotto che si stava compilando. Prima bisognava
