@@ -58,8 +58,10 @@ describe('formato dei prezzi', () => {
 // no. Chiesto da chi quegli scontrini li conta davvero.
 describe('nomi dei metodi di pagamento sulla stampante', () => {
   it('la carta si scrive per esteso, il contante resta contante', () => {
-    expect(PAYMENT_METHOD_PRINT.carta).toBe('Carta di credito')
-    expect(PAYMENT_METHOD_PRINT.lettore).toMatch(/^Carta di credito/)
+    expect(PAYMENT_METHOD_PRINT.carta).toBe('Carta di Credito')
+    // Il lettore si chiama col NOME DELL'APPARECCHIO: chi confronta la
+    // chiusura con l'estratto conto cerca «SumUp», non una descrizione.
+    expect(PAYMENT_METHOD_PRINT.lettore).toBe('SumUp')
     expect(PAYMENT_METHOD_PRINT.banco).toBe('Contante')
   })
 

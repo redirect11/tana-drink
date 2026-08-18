@@ -26,6 +26,10 @@
 - **Le ore della serata sono in ordine di serata**: le 8 del mattino dopo
   venivano prima delle 23 della sera, perché contava l'orologio e non la
   nottata. Quando una serata tocca due giorni, ogni colonna porta la data.
+- **Sulla stampa il lettore si chiama «SumUp»** e la carta «Carta di
+  Credito»: chi confronta la chiusura con l'estratto conto cerca quel nome.
+- **I conti lunghi si leggono su due colonne** (da dieci righe in su, dove lo
+  schermo lo regge): stessa roba in metà altezza.
 - **Le card delle corsie non crescono più a dismisura**: si vedono sei
   righe, le altre sfumano e un piccolo «▾ altre 12» le apre. Ogni riga porta
   il suo prezzo e la sua nota, e la nota del conto respira.
