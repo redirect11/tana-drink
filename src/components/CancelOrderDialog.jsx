@@ -4,9 +4,18 @@ import { CANCEL_PHRASES } from '../lib/orderStatus.js'
 // Dialog di annullamento ordine lato bartender: scelta della frase mostrata
 // al cliente, motivazione facoltativa e notifica opzionale.
 // kind: 'ordine' | 'preparazione' | 'non_ritirato'
-export default function CancelOrderDialog({ order, kind, defaultPhrase = 'bancone', onConfirm, onCancel }) {
+export default function CancelOrderDialog({
+  order,
+  kind,
+  defaultPhrase = 'bancone',
+  // «Prego recarsi al bancone» ha senso solo dove il ritiro esiste: in un
+  // locale a solo servizio manderebbe il cliente dove nessuno lo aspetta.
+  ritiroPossibile = true,
+  onConfirm,
+  onCancel,
+}) {
   const [phrase, setPhrase] = useState(
-    CANCEL_PHRASES[defaultPhrase] ? defaultPhrase : 'bancone'
+    CANCEL_PHRASES[defaultPhrase] ? defaultPhrase : 'staff'
   )
   const [message, setMessage] = useState('')
   const [notifyClient, setNotifyClient] = useState(true)
@@ -36,15 +45,20 @@ export default function CancelOrderDialog({ order, kind, defaultPhrase = 'bancon
           Messaggio per il cliente:
         </p>
         <div className="mode-choice">
-          {Object.entries(CANCEL_PHRASES).map(([key, text]) => (
-            <button
-              key={key}
-              className={`mode-option${phrase === key ? ' active' : ''}`}
-              onClick={() => setPhrase(key)}
-            >
-              {text}
-            </button>
-          ))}
+          {Object.entries(CANCEL_PHRASES)
+            // Dove non si ritira al banco quella frase non si propone
+            // affatto: qui c'è il cliente davanti, e sceglierla per sbaglio
+            // vuol dire mandarlo a un bancone dove nessuno lo aspetta.
+            .filter(([key]) => key !== 'bancone' || ritiroPossibile)
+            .map(([key, text]) => (
+              <button
+                key={key}
+                className={`mode-option${phrase === key ? ' active' : ''}`}
+                onClick={() => setPhrase(key)}
+              >
+                {text}
+              </button>
+            ))}
         </div>
 
         <textarea

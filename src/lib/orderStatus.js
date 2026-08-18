@@ -32,6 +32,28 @@ export const STATUS_LABELS = {
   [ORDER_STATUSES.ANNULLATO]: 'Annullato',
 }
 
+// ── LE PAROLE DEL BANCO E QUELLE DEL CLIENTE ───────────────────
+//
+// Lo stesso passo si chiama in due modi, e sono due parole diverse perché
+// rispondono a due domande diverse.
+//
+// AL CLIENTE, che guarda la pagina del suo ordine, «Ordine ricevuto» dice
+// quello che gli serve: l'abbiamo preso, è in lista. «Da fare» non gli
+// direbbe niente — non è lui che lo deve fare.
+//
+// AL BANCO è il contrario: la colonna si chiama «Da fare», e ogni altro
+// nome per lo stesso passo fa chiedere se siano due cose diverse. Succedeva
+// davvero: la pastiglia diceva «↩︎ Ordine ricevuto» accanto a una colonna
+// intitolata «Da fare».
+//
+// Quindi due etichette, non una sola «corretta»: chi scrive per il banco
+// passa di qui, chi scrive per il cliente usa STATUS_LABELS.
+export function statoAlBanco(stato, serviceMode) {
+  if (stato === ORDER_STATUSES.RICEVUTO) return 'Da fare'
+  if (stato === ORDER_STATUSES.RITIRATO) return ritiratoLabel(serviceMode)
+  return STATUS_LABELS[stato]
+}
+
 // Etichetta specifica per lo stato finale, in base alla modalità di consegna.
 export function ritiratoLabel(serviceMode) {
   if (serviceMode === 'banco') return 'Ritirato'
@@ -64,8 +86,12 @@ export const STATUS_EMOJI = {
 export const PAYMENT_METHOD_PRINT = {
   banco: 'Contante',
   contanti: 'Contante',
-  carta: 'Carta di credito',
-  lettore: 'Carta di credito (POS)',
+  carta: 'Carta di Credito',
+  // IL NOME DEL LETTORE È QUELLO SCRITTO SULL'APPARECCHIO. «Carta di
+  // credito (POS)» era una descrizione: chi confronta la chiusura con
+  // l'estratto conto di SumUp cerca «SumUp», e due parole diverse per la
+  // stessa cosa costringono a tradurre a mente mentre si contano i soldi.
+  lettore: 'SumUp',
   online: 'Online',
   buono: 'Buono VIP',
 }
@@ -105,6 +131,12 @@ export function nextStatus(status) {
   if (idx === -1 || idx === STATUS_FLOW.length - 1) return null
   return STATUS_FLOW[idx + 1]
 }
+
+// TORNARE INDIETRO sta in comande.js (`statiPrimaComanda`), non qui: al
+// banco si torna indietro su una COMANDA, e i passi da mostrare dipendono
+// da dove nasce il lavoro in quel locale — cosa che il flusso dell'ordine
+// non sa. Qui c'erano due funzioni gemelle senza chiamanti: due modi di
+// rispondere alla stessa domanda sono il primo passo perché divergano.
 
 export function formatPrice(value) {
   const n = Number(value || 0)

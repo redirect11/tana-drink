@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   fetchOrder,
   subscribeOrder,
@@ -57,7 +57,11 @@ export default function OrderStatusPage() {
   const [modificaPos, setModificaPos] = useState(false)
   // Stessa schermata, aperta però sul pagamento: chi serve al tavolo incassa
   // lì, e non deve passare dal conto per premere un secondo tasto.
-  const [pagamentoPos, setPagamentoPos] = useState(false)
+  // Ci si arriva anche da fuori, con «?pagamento=1»: è il tasto «Incassa»
+  // delle corsie di stato in coda, che porta dritto qui invece di far
+  // aprire il conto e cercare un secondo tasto col cliente davanti.
+  const [ricerca] = useSearchParams()
+  const [pagamentoPos, setPagamentoPos] = useState(ricerca.get('pagamento') === '1')
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   const [serviceStats, setServiceStats] = useState({})
   const [queue, setQueue] = useState([])

@@ -99,3 +99,28 @@ function leggiSnapshot(mod) {
   stop()
   return snap
 }
+
+// ── USCENDO SI DIMENTICA TUTTO ───────────────────────────────────────
+// Gli avvisi sono di chi li ha ricevuti: parlano dei suoi ordini, dei conti
+// del suo locale. Restando in memoria dopo il logout, il telefono passato a
+// un altro — o il tablet ripreso da un cliente — mostrava la serata di prima
+// dentro la campanella.
+describe('uscendo, la campanella si svuota davvero', () => {
+  it('se ne vanno anche quelle ancora da leggere', async () => {
+    vi.resetModules()
+    const mod = await import('../../src/lib/notifyStore.js')
+    mod.recordNotif('Ordine pronto', 'il #12 è al banco')
+    mod.recordNotif('Scorta esaurita', 'Aperol: rimasti 0 pz')
+    mod.segnaTutteLette()
+    mod.recordNotif('Nuovo ordine', 'tavolo 4') // ancora da leggere
+    expect(leggiSnapshot(mod).items.length + leggiSnapshot(mod).archivio.length).toBeGreaterThan(0)
+
+    mod.dimenticaTutto()
+    const snap = leggiSnapshot(mod)
+    expect(snap.items).toEqual([])
+    expect(snap.archivio).toEqual([])
+    expect(snap.unseen).toBe(0)
+    // E non torna al prossimo avvio: la memoria del browser è pulita.
+    expect(JSON.parse(localStorage.getItem('tana:notifs') || '[]')).toEqual([])
+  })
+})

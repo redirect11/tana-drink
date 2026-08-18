@@ -1,6 +1,380 @@
 # Cosa è cambiato
 
-## Non ancora rilasciata — 1.4.8
+## 1.5.0 — 18 agosto 2026
+
+Questa versione porta al banco una coda tutta sua. Chi prepara non lavora un
+conto per volta, lavora un ticket per volta: le comande diventano le card,
+si dividono quando si prepara mezza ordinazione, hanno una schermata loro e
+si portano avanti con un tocco. Il magazzino cambia modello — si conta
+sempre a pezzi — e i prodotti di prima si aggiornano quando lo decidi tu,
+con una prova a vuoto che dice cosa cambierebbe prima di toccare niente.
+
+
+### Sotto il cofano
+
+- **Un giro di rilettura sul lavoro di questa versione** (riuso,
+  semplificazione, efficienza, profondità): la stessa regola adesso sta in un
+  posto solo dove prima era scritta due o tre volte, e sono spariti due pezzi
+  di codice nati qui e mai usati. Il travaso del magazzino non rilegge più
+  tutti i prodotti a ogni lotto — con quattrocento articoli erano sedici
+  letture complete, in fila, mentre chi sta al banco guarda la barra — e la
+  coda fa meno lavoro a vuoto a ogni disegno. Quello che è emerso e non si
+  poteva sistemare senza cambiare comportamento è finito nel registro come
+  lavoro da fare, con scritto cosa costa non farlo.
+
+- **Il database di prova nasce completo**: ogni articolo ha costo e IVA
+  d'acquisto (così margini e prezzo consigliato hanno da lavorare) e ci sono
+  quattro utenze, una per ruolo — admin, bartender, sala, cliente — con
+  password `collaudo123`.
+
+### Al banco
+
+- **Senza gli stati del servizio, il conto non parla di passi**: le righe si
+  intestavano «In preparazione» anche in un locale che non segue la
+  preparazione. La divisione dei pagati invece resta sempre — quella parla di
+  soldi, non di lavoro — con le righe da pagare prima e i pagati in fondo.
+
+- **Il ⋯ sulla card di una comanda**: da lì si rimanda indietro un ticket
+  segnato per sbaglio, si apre la preparazione parziale e si ristampa —
+  senza aprire il ticket. Il tasto grande resta uno solo, quello che si
+  preme di corsa.
+- **Il dettaglio di una comanda si allarga sul tablet**: da uno schermo
+  largo in su le righe stanno a sinistra e le azioni a destra, ferme in
+  alto, invece di far scorrere fino in fondo per trovare il tasto. Sul
+  telefono non cambia niente.
+
+- **Servizio o ritiro si sceglie anche dal ticket**: nel dettaglio di una
+  comanda ancora da fare o in preparazione ci sono «🍸 Servizio» e «🚶
+  Ritiro», con scritto accanto che valgono per tutto il conto — perché il
+  modo è del conto, e da un ticket non sarebbe ovvio. Da «pronto» in poi
+  non si cambia più: il drink è già uscito.
+- **Con le colonne del pronto divise, «Da ritirare» aveva perso il suo
+  tasto**: la card mostrava solo «Conto» e la comanda non si poteva far
+  avanzare. Adesso il tasto dipende dallo stato della comanda e non dalla
+  colonna, quindi è lo stesso comunque si guardi la coda.
+
+- **In un locale a solo servizio non si propone più «Prego recarsi al
+  bancone»** quando si annulla un ordine: manderebbe il cliente dove nessuno
+  lo aspetta. In Impostazioni la voce resta visibile ma spenta, col perché e
+  il rimando; nel dialogo di annullo non compare, e la frase proposta è
+  quella dello staff.
+- **La comanda si divide anche mentre la stai preparando.** «✂️ Preparazione
+  parziale» era sparita del tutto nei locali che fanno nascere le comande già
+  in preparazione, e comunque non si poteva dividere un giro già al banco —
+  che è proprio il caso vero: sto facendo cinque gin tonic, ne mando fuori tre
+  adesso e due dopo. Adesso si divide finché il drink non è uscito dal banco, e
+  le due parti restano tutte e due in preparazione. Da «pronto» in poi il tasto
+  non c'è: quella è roba sul vassoio.
+- **Col salto «nascono già in preparazione», il passo «da fare» sparisce dove
+  non serve**: niente pastiglia «↩︎ Da fare» per rimandarci una comanda — in
+  quel locale nessuno guarda quella colonna — e niente voce nel filtro
+  «▦ Colonne», che accenderebbe una colonna sempre vuota. Se però una comanda
+  ci si trova lo stesso, la colonna compare da sé: il lavoro non si nasconde
+  mai.
+- **Al banco il passo si chiama «Da fare» ovunque**, come la colonna. Le
+  pastiglie dicevano «Ordine ricevuto» accanto a una colonna intitolata «Da
+  fare», e sembravano due cose diverse. Al cliente resta «Ordine ricevuto»,
+  che è quello che serve a lui.
+- **Le righe aggiunte a un conto nascono «da fare»**, non «in preparazione».
+  Aggiungendo un giro a un conto che aveva già qualcosa al banco, quelle righe
+  risultavano già prese in carico da qualcuno: sparivano dalla colonna «Da
+  fare» e non le cominciava nessuno. Se una comanda «da fare» c'è già ci
+  confluiscono — è lo stesso giro — se no ne nasce una. Con
+  «Le comande nascono già in preparazione» acceso, tutto come prima.
+- **Lo stato del conto è in testata**, accanto al numero, invece che in fondo
+  sopra il Totale: è la domanda con cui si apre un conto, e ora si legge dove
+  la si fa — nello stesso posto dei bolli sulle card della coda.
+- **Incassare non fa più sparire i drink ancora da fare.** Si prendeva i soldi
+  di un conto con dei giri ancora al banco e quelli si volatilizzavano dalla
+  coda — tornavano solo ricaricando la pagina. I soldi erano già presi e i
+  drink ancora da versare: adesso restano nella loro colonna, col bollo
+  «Pagato».
+- **Servizio o ritiro si decide sul conto**, non più una volta per tutte nelle
+  impostazioni. Un tavolo che viene a ritirare al banco succede tutte le sere:
+  adesso si cambia da «Dati conto» in un tocco. Occhio che tocca i soldi — il
+  ritiro azzera coperto e costo di servizio — e la schermata lo dice prima che
+  si prema. Su un conto con un acconto il modo si cambia ma i supplementi
+  restano quelli su cui si è incassato; su un conto chiuso serve prima
+  «Riapri conto».
+- **L'impostazione del locale adesso dice come NASCONO i conti**, e si sceglie
+  fra due mondi: «Solo servizio» oppure «Ritiro e servizio». Dentro il
+  secondo si dice con che modo nascono e se lo può scegliere il cliente
+  ordinando dal telefono — voce spenta, col motivo, se i clienti non ordinano.
+- **La colonna del pronto si può dividere in due**: «Da servire» e «Da
+  ritirare», da «▦ Colonne». Di suo resta una sola, col badge sulla card che
+  dice come va consegnato. È una scelta di quel terminale: il tablet della
+  sala e quello del banco non guardano lo stesso lavoro.
+- **In magazzino si conta sempre a pezzi.** La scheda di un prodotto non
+  chiede più che tipo è né in che unità si compra: l'unità è il pezzo — un
+  cubetto, un limone, una bottiglia — e la sola domanda che resta è «a quanto
+  corrisponde un pezzo», che si può anche lasciare vuota (allora in ricetta si
+  dosa solo a pezzi). Lo stesso prodotto si vende in più modi — il
+  Jägermeister va nel Jägerbombo e si serve a cicchetto — e dichiararlo una
+  volta per tutte non funzionava.
+- **I prodotti che c'erano già si aggiornano quando lo dici tu.** Entrando in
+  Magazzino, se ci sono ancora schede scritte con le unità di ieri — litri,
+  chili, «U» — un avviso lo dice e resta lì finché non è fatto. «Guarda cosa
+  cambia» mostra prima, senza toccare niente, quanti prodotti si aggiornano e
+  con che giacenza; se qualcuno non si può aggiornare da solo lo elenca per
+  nome, con scritto cosa gli manca (i limoni comprati al chilo e spremuti in
+  centilitri, o un contenuto scritto «330» senza dire se sono cl o grammi).
+  Solo quando sono tutti a posto compare il tasto per aggiornare, e da lì si
+  scrive un pezzo per volta, con l'avanzamento a vista: se si interrompe si
+  ricomincia e riprende da dov'era.
+  Nel frattempo i numeri si leggono già giusti — giacenze, costi e ricette
+  dicono quello che dicevano prima — ma non si può caricare, contare né
+  aggiungere prodotti: si possono aprire solo quelli da sistemare, che è
+  l'unico modo di sbloccare. E se i dati arrivano già a posto, di tutta
+  questa faccenda non si vede niente.
+  L'elenco dice sempre come stanno le cose adesso, non dieci minuti fa: lo
+  rilegge ogni volta che lo apri, e a fine aggiornamento il cartello sparisce
+  da solo. Se qualcuno cancella un prodotto da un altro terminale mentre
+  l'aggiornamento gira, quel prodotto si salta e te lo dice («2 prodotti non
+  ci sono più: sono stati saltati»); se ne nasce uno nuovo, se lo prende. E
+  se proprio si ferma, dice quanti ne ha aggiornati e che si può riprovare
+  senza fare danni — invece del messaggio del database.
+- **Nel filtro del magazzino c'è «In scorta»**, cioè quello che sullo scaffale
+  c'è davvero. Prima si poteva chiedere solo cosa sta finendo e cosa è finito:
+  per vedere il resto bisognava guardare «Tutti» e saltare a occhio due terzi
+  di righe esaurite. Sta per prima delle tre e ha il suo conteggio, e dentro ci
+  sono anche gli articoli in esaurimento — sono in magazzino, solo pochi, e
+  l'ultima bottiglia di gin è proprio quella che serve sapere. Così il conto
+  torna: in scorta più esauriti fa il totale.
+- **Il fornitore che manca si aggiunge dalla scheda del prodotto.** In fondo
+  alla tendina Fornitore c'è «➕ Nuovo fornitore…»: basta il nome, e resta
+  già selezionato sul prodotto che si stava compilando. Prima bisognava
+  uscire, andare in Fornitori, crearlo e ricominciare la scheda da capo —
+  proprio nel momento in cui ci si accorgeva che mancava. Gli altri dati
+  (indirizzo, contatti, email per gli ordini) si mettono dopo, con calma.
+- **«pz» al posto di «bottiglie», dappertutto.** Qui dentro ci sono cubetti,
+  limoni, barattoli e ore di lavoro: la parola che vale per tutti è il pezzo.
+  Il costo di un prodotto si legge «€/pz» e non più «€/conf.», il segno dei
+  prodotti buoni non parla più di bottiglie, e nel generatore ordini la riga
+  che diceva «1 conf. = 700 pz» — il contenuto letto nell'unità sbagliata —
+  adesso dice «1 pz = 70 cl». Restano le «piene, aperta, finite» del
+  dettaglio: quelle raccontano cosa c'è sullo scaffale, non come si misura.
+- **Carico e conta si scrivono nell'unità che si ha in mano.** Accanto alla
+  quantità c'è la scelta fra pezzi e contenuto: la cassetta di limoni si
+  carica a chili, i centilitri rimasti in una bottiglia si contano in
+  centilitri, e i pezzi li ricava il contenuto. Sotto la quantità si legge
+  quanto entra davvero in magazzino, prima di confermare — e per la merce
+  comprata a peso c'è scritto che il conteggio in pezzi è una stima: un limone
+  non pesa sempre uguale.
+
+- **Le comande possono nascere già in preparazione** (Impostazioni → Gestione
+  preparazione). Di suo una comanda nuova sta in «Da fare» finché qualcuno non
+  tocca «Lo preparo io» — che dice anche chi — ma dove si versa nell'istante
+  in cui si batte quel passo è un tocco in più a ogni comanda, tutta la sera.
+  Vale allo stesso modo per il primo giro di un conto nuovo e per le aggiunte a
+  metà serata: prima erano due regole diverse, e la card in coda cambiava
+  colonna da sola appena arrivava dal server.
+- **Il tasto per guardare il lavoro dice dove porta**: «🍸 Comande» guardando
+  i conti, «🧾 Ordini» guardando le comande. Prima era un interruttore che si
+  accendeva quando le comande le stavi già guardando, e per capirlo bisognava
+  guardare le colonne. Sta nella riga dei filtri, in fondo a destra e staccato
+  dagli altri: quelli restringono la lista, questo cambia vista.
+- **«Ritirato/Servito» si preme una volta sola.** La card tornava indietro da
+  sé e bisognava ripremere: lo scarico del magazzino, che lavora in
+  sottofondo, riscriveva le comande com'erano prima di partire e si portava
+  via l'avanzamento appena fatto.
+- **Quello che si tocca si vede subito, dappertutto allo stesso modo.** La
+  coda, il conto e il dettaglio della comanda tenevano ognuno una copia sua
+  di «questo l'ho appena fatto io», e si comportavano già in modo diverso:
+  adesso è una sola. Una comanda aggiunta a metà serata compare col numero e
+  nel passo che avrà davvero, invece di cambiare tutti e due un istante dopo.
+- **La cassa non si chiude con dei drink ancora da fare.** Prima bastava non
+  avere conti aperti — ma un conto si paga in anticipo e resta con le sue
+  comande al banco: si poteva chiudere la serata con tre drink pagati e mai
+  usciti. Adesso il tasto resta spento e dice cosa manca, in una riga:
+  «Prima servi 3 comande», o «Prima chiudi 2 conti e servi 3 comande».
+- **La striscia di stato si vede anche sui temi chiari.** Nelle colonne
+  «Ritirato/Servito», «Chiuse» e «Annullate» il bordo a sinistra delle card
+  era bianco trasparente: sul fondo chiaro spariva, e una card senza
+  striscia è una card senza stato.
+- **La card non si spacca più con tante colonne aperte.** Con sei corsie
+  accese le righe andavano su due colonne di testo anche dove non ci
+  stavano, spezzando i nomi e mandando i prezzi fuori dal riquadro: adesso
+  è la card a sapere quanto spazio ha, e si adatta da sé al numero di
+  corsie, alla larghezza dello schermo e allo zoom.
+- **Un conto incassato è un conto chiuso.** Prima, con gli stati del servizio,
+  restava fra quelli «in corso» finché qualcuno non lo serviva: si prendevano
+  i soldi e il conto non si trovava fra i chiusi. Adesso ci va subito — in
+  griglia, in lista, a schede, nei conteggi e nelle corsie — e dentro
+  «💶 Chiusi» c'è un filtro in più: **tutti · ✅ Serviti · ⏳ Da servire**,
+  per sapere quali hanno ancora qualcosa da portare al tavolo. Le comande
+  annullate non contano: un drink annullato non deve tenere un conto «da
+  servire» per sempre.
+- **Via «Nascondi pagati»**: serviva a togliersi dagli occhi i conti già
+  incassati quando restavano in mezzo a quelli in corso. Adesso non ci sono
+  più in mezzo ai piedi, e un tasto per nascondere una cosa che non c'è è
+  solo un tasto in più.
+- **Incassare non vuol dire aver servito.** Si segnava pagato un ordine e
+  alcune comande ancora in preparazione risultavano servite: quei drink
+  sparivano dagli occhi di chi doveva farli, e il magazzino veniva scaricato
+  per roba mai uscita. Succedeva soprattutto pagando un tavolo intero. Adesso
+  il pagamento non tocca il servizio: il conto resta aperto finché non è
+  uscito tutto, e a chiudere è solo chi lo dice — «Riscuoti e servi», o gli
+  stati del servizio spenti.
+- **Dal ticket si divide.** «✂️ Preparazione parziale» adesso c'è anche nel
+  dettaglio della comanda: preparare tre gin tonic su cinque si decide
+  guardando il ticket, ed è lì che sta chi lo guarda. Dopo la divisione la
+  schermata porta da sé sul pezzo che si è detto di preparare adesso, che è
+  quello che si ha in mano.
+- **Le comande annullate si ritrovano.** Se ne separava una e quella di
+  partenza si volatilizzava: adesso la colonna «Annullate» le raccoglie
+  tutte — tolte a mano, divise in due, o cadute con un conto annullato — e
+  sulla card c'è scritto quale delle tre è stata, perché una divisione non è
+  un drink saltato.
+- **Una colonna in meno al banco.** «Da incassare» conteneva gli stessi drink
+  di «Ritirato/Servito», solo raggruppati per conto invece che per ticket:
+  due colonne per la stessa cosa. Resta «Ritirato/Servito», con le comande
+  come le altre; se il conto è ancora da pagare lo dice il bollo sulla card,
+  e il tasto porta in cassa.
+- **«🍸 Comande» si trova anche in griglia.** Chi tiene la cassa lavora in
+  griglia perché è quella che gli serve per i conti: adesso può dare
+  un'occhiata a com'è messa la preparazione senza passare dalle Impostazioni
+  a cambiare vista e poi tornare a rimetterla com'era.
+- **La comanda ha una schermata sua.** Toccando una card nella coda del banco
+  si apre il ticket: le sue righe per intero con prezzi e note, i quattro
+  passi del servizio con l’ORA in cui sono stati toccati — così si vede se
+  siamo indietro o se quella comanda è stata dimenticata — il tavolo, il
+  nome, e il tasto grande per portarla avanti (o le pastiglie per riportarla
+  indietro, anche di più di un passo). Prima toccando la card si apriva il
+  conto: dal banco quella è la seconda domanda, non la prima.
+- **Al conto si risale sempre**: c’è un tasto in cima alla comanda («Apri il
+  conto #41») e uno piccolo sulla card in coda («🧾 Conto»), accanto a quello
+  dell’avanzamento e non al suo posto — quello si preme di corsa. Incassare,
+  aggiungere righe e dividere restano cose del conto.
+- **Chi ha il ruolo bartender ha una coda sua: quella del LAVORO.** Chi prepara
+  non lavora un conto per volta, lavora un ticket per volta — e adesso ogni
+  card è una comanda, col numero del conto e (solo se il conto ne ha più d'una)
+  il numero della comanda, e il tasto fa avanzare quella lì, non tutto il
+  conto. Si apre da sé: ad accenderla sono **gli stati del servizio** — se
+  sono spenti quella coda non esiste, perché non ci sarebbe niente da mostrare,
+  e al banco si vede la coda come la vedono tutti. Come disegnarla si sceglie in
+  Impostazioni → Coda ordini → «La vista del banco», accanto alla vista della
+  coda: per ora c'è «🚦 Corsie di stato», e da lì passeranno le prossime.
+- **La coda di chi guarda la serata non cambia**: con «corsie di stato» l'admin
+  vede sempre i conti in corso, chiusi e annullati. Se vuole sapere a che punto
+  è la preparazione c'è la pastiglia «🍸 Comande», che porta a guardare il
+  lavoro come il bartender — a mano, e solo su quel terminale.
+- **Al banco le colonne si scelgono**: «▦ Colonne» spegne quelle che in quel
+  momento non servono — «Da incassare» compresa, che chi sta allo shaker non
+  incassa — e ne accende due per guardare indietro, «Chiuse» e «Annullate».
+  È una scelta di quel terminale: al banco e alla cassa non si guardano le
+  stesse cose, e si ritrova al ricarico.
+- **Le colonne si chiamano come gli stati**: «In preparazione» al posto di «Al
+  banco», «Ritiro/Servizio» al posto di «Al ritiro», e il tasto che ci porta
+  dice la stessa parola — «In preparazione», non «Lo preparo io». Al banco c'è
+  in più la colonna **«Ritirato/Servito»**: il lavoro finito si deve vedere
+  finito, anche quando il conto è ancora da incassare.
+- **Un conto appena incassato passa fra i chiusi**, anche se al banco c'è
+  ancora da servire: prima restava «in corso» e chi aveva appena preso i
+  soldi lo cercava fra i chiusi senza trovarlo. Quelle corsie parlano del
+  conto; il lavoro rimasto si guarda nelle corsie delle comande, dove la
+  comanda pagata e non ancora fatta resta al suo posto col bollo «Pagato».
+- **Un acconto si vede dalla card**: il bollo «💳 Acconto» e la striscia
+  arancione, come nella griglia. Senza, chi porta il conto al tavolo chiede
+  l'intero — ed è già successo.
+- **Un conto pagato in anticipo non sparisce dal banco**: la sua comanda resta
+  nella colonna del suo passo, col bollo «Pagato» e la card accesa, perché i
+  soldi ci sono ma il drink è ancora da fare. Una comanda risulta chiusa solo
+  dopo essere stata servita.
+- **Si può preparare mezza comanda.** Capita di vedere tre gin tonic in una
+  comanda e due in un'altra e prepararli insieme, per farli uscire in una
+  volta: nel conto → Comande, su una comanda ancora «da fare», c'è
+  «✂️ Preparazione parziale». Si sceglie quanti se ne fanno adesso: quelli
+  vanno al banco in una comanda nuova, il resto resta da fare, e la comanda di
+  prima resta nella storia del conto, segnata «divisa» — così la copia già
+  stampata ha ancora un riscontro e non si perde per strada un drink. Fra gli
+  annullati non compare: quei drink non sono saltati, sono le due comande
+  nate al loro posto.
+- **Aprendo il conto si vede cosa è al banco e cosa è già uscito**: le righe si
+  raggruppano sotto «In preparazione», «Pronto», «Servito», come già accade
+  per quelle pagate. Con una comanda sola — il caso normale — non cambia
+  niente: nessun titolo per dire una cosa sola.
+- **I tasti sopra la lista si possono ridurre**: «Unisci», «Dati conto» e
+  «Prodotto libero» sono tre righe di schermo prese alla lista dei drink, e col
+  «▴» accanto ai ⋯ si tolgono di mezzo — restano tutti nel ⋯, e «Comande» resta
+  comunque a vista. La scelta è di quel terminale e si ritrova al ritorno. Nel
+  ⋯ sono finite anche la storia del conto e «Svuota», che stavano fra i tasti
+  che si premono di corsa: svuotare un conto è la cosa più irreversibile della
+  schermata.
+- **Il lucchetto della cassa adesso ha un nome.** Sugli schermi larghi era
+  un'icona grigia in fondo alla barra e nessuno sapeva cosa fosse: adesso c'è
+  scritto «🔒 Chiudi cassa» (o «🟢 Apri cassa»), e quando non si può chiudere
+  il perché sta sotto quel tasto: «Prima chiudi 2 conti».
+- **La coda ordini si può guardare a «Corsie di stato»** (Impostazioni → Coda
+  ordini): quattro colonne — da fare, in preparazione, ritiro/servizio, da
+  incassare — con in testa quanti conti ci sono e quanto fanno, e ognuna che
+  scorre per conto suo. Su ogni card un tasto solo, quello del passo dopo: «In
+  preparazione», «È pronto», «Ritirato/Servito», «Incassa». Il conto già pagato ma non ancora
+  consegnato resta al ritiro col bollo «Pagato» — non sparisce prima di essere
+  servito — e quelli da incassare mostrano la cifra in grande. Toccando la card
+  si apre il conto, come sempre. Con gli stati di servizio spenti le corsie
+  diventano le tre di sempre: in corso, chiusi, annullati.
+- **Il flusso di cassa si allarga sugli schermi grandi**: le tessere si
+  affiancano invece di incolonnarsi in una striscia da scorrere, e restano
+  larghe solo l'andamento per ora e la chiusura. Sul telefono niente cambia.
+- **Le ore della serata sono in ordine di serata**: le 8 del mattino dopo
+  venivano prima delle 23 della sera, perché contava l'orologio e non la
+  nottata. Quando una serata tocca due giorni, ogni colonna porta la data.
+- **Un conto nuovo nasce «da fare»**, non già «in preparazione»: si battono
+  tre conti di fila e poi si comincia a versare. È il tasto «In preparazione»
+  a dire quando si comincia.
+- **Un ordine può tornare indietro**: nelle azioni della card e nel dettaglio
+  ci sono le pastiglie «↩︎ Torna a…» con tutti gli stati già passati — non
+  solo il precedente. Prima, se si segnava «pronto» il conto sbagliato,
+  restava solo annullarlo e ribatterlo.
+- **Niente più doppione «Consegnato» / «Segna come Ritirato-Servito»** nelle
+  corsie: erano lo stesso gesto a un dito di distanza.
+- **Sulla stampa il lettore si chiama «SumUp»** e la carta «Carta di
+  Credito»: chi confronta la chiusura con l'estratto conto cerca quel nome.
+- **I conti lunghi si leggono su due colonne** (da dieci righe in su, dove lo
+  schermo lo regge): stessa roba in metà altezza.
+- **Le card delle corsie non crescono più a dismisura**: si vedono sei
+  righe, le altre sfumano e un piccolo «▾ altre 12» le apre. Ogni riga porta
+  il suo prezzo e la sua nota, e la nota del conto respira.
+- **Sulle card «⋯ Azioni» e il tasto della corsia stanno sulla stessa riga**,
+  invece di occupare due fasce larghe tutta la card.
+- **Le note del conto si scrivono in un riquadro grande**: in una casella da
+  una riga una frase si scriveva alla cieca.
+- **Nella coda, su tablet e computer i tasti stanno fuori dal ⋯**: pannelli,
+  verso della lista e cassa sono icone accanto alla ricerca, e si vede quando
+  i pannelli sono accesi. Sul telefono restano nel menu, che lì lo spazio non
+  c'è.
+- **Su un conto chiuso o annullato ci sono due sole azioni**: ristampare lo
+  scontrino e riaprire il conto. Prima c'erano anche «Contanti» e «Carta»
+  spenti, che sono solo rumore addosso a chi cerca l'unica cosa che serve.
+- **Nelle corsie il tasto «↕» inverte davvero l'ordine**, in tutte le
+  colonne insieme: prima girava solo la griglia e lì non faceva niente.
+- **Nel riquadro di riapertura i tasti dicono «Annulla» e «Riapri»**, due
+  parole invece di due frasi che andavano a capo.
+- **Nelle corsie di stato le card hanno «⋯ Azioni»**: incassare, stampare
+  comanda o scontrino, annullare — le stesse azioni della coda, senza
+  cambiare vista.
+- **Le corsie prendono tutta la larghezza**: con gli stati di servizio
+  spenti sono tre, e restavano schiacciate a sinistra.
+- **L'andamento per ora è un grafico nel tempo**: una colonna per ora, da
+  sinistra a destra, così si vede la forma della serata — il picco, la coda.
+  Era una riga per ora, una sotto l'altra.
+- **I metodi di pagamento stanno dentro «Incassato serata»**, non più in un
+  riquadro a sé che non si capiva a quale numero appartenesse.
+- **Da sloggati la campanella non c'è**: chi non è entrato è un cliente
+  qualunque sulla parte pubblica, e gli avvisi parlano di ordini che non ha
+  fatto. Spariscono anche «registra questo terminale» e lo storico, che sono
+  cose del gestionale.
+- **In coda le card non hanno più «Storia» e «Ripristina»**: una riga intera
+  su ogni conto, tutta la sera, per due cose che si fanno ogni tanto. Si
+  trovano dentro il conto, in «⋯ Azioni».
+- **Unisci e separa sono una voce sola** anche nel menu ⋯, come il tasto in
+  barra: mostra quella che si può fare adesso.
+- **Sul telefono «svuota il conto» sta nel ⋯**, dove c'è posto per dirlo a
+  parole invece che con la sola icona.
+- **Uscendo, gli avvisi si cancellano**: erano di chi li ha ricevuti, e il
+  telefono passato a un altro mostrava la serata di prima.
+
+## 1.4.8 — in collaudo
 
 ### Sotto il cofano
 

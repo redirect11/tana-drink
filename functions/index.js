@@ -30,6 +30,7 @@ const {
   decideStaffServePush,
   decideNewOrderStaffPush,
   destinatariPush,
+  terminaliDi,
 } = require('./lib/push-core')
 const { staffAdmin } = require('./lib/staff-service')
 const {
@@ -309,13 +310,25 @@ exports.notifyStaffCall = onDocumentCreated({ ...OPTS, document: 'staff_calls/{c
   const msg = decideStaffCallPush(call)
   if (!msg) return
 
-  const tokenSnap = await db.doc(`staff_tokens/${call.to_uid}`).get()
-  const token = tokenSnap.get('token')
-  if (!token) return
+  // TUTTI I TERMINALI DI QUELLA PERSONA, non uno solo. La riga del token è
+  // del DISPOSITIVO (`staff_tokens/<device>`, col campo `uid` dentro): da
+  // quando è così, cercarla all'indirizzo `staff_tokens/<uid>` non trovava
+  // niente e la chiamata non partiva — il telefono di chi veniva cercato
+  // non vibrava mai. E chi lavora ha spesso due terminali accesi: la
+  // chiamata deve suonare su entrambi, perché non si sa quale ha in mano.
+  const tokensSnap = await db.collection('staff_tokens').get()
+  const suoi = new Set(
+    terminaliDi(
+      tokensSnap.docs.map((d) => ({ id: d.id, uid: d.get('uid'), token: d.get('token') })),
+      call.to_uid
+    ).map((r) => r.token)
+  )
+  const docs = tokensSnap.docs.filter((d) => suoi.has(d.get('token')))
+  if (docs.length === 0) return
 
   try {
-    await getMessaging().send({
-      token,
+    const res = await getMessaging().sendEachForMulticast({
+      tokens: docs.map((d) => d.get('token')),
       data: {
         kind: 'staff_call',
         title: msg.title,
@@ -327,12 +340,17 @@ exports.notifyStaffCall = onDocumentCreated({ ...OPTS, document: 'staff_calls/{c
         headers: { Urgency: 'high', TTL: '180' },
       },
     })
+    // I terminali che non esistono più si tolgono dalla rubrica: se no
+    // restano lì a far fallire ogni chiamata successiva.
+    await Promise.all(
+      res.responses.map((r, i) =>
+        r.error?.code === 'messaging/registration-token-not-registered'
+          ? docs[i].ref.delete().catch(() => {})
+          : null
+      )
+    )
   } catch (e) {
-    if (e?.code === 'messaging/registration-token-not-registered') {
-      await db.doc(`staff_tokens/${call.to_uid}`).delete().catch(() => {})
-    } else {
-      console.error('[push staff] invio fallito:', e?.message || e)
-    }
+    console.error('[push staff] invio fallito:', e?.message || e)
   }
 })
 

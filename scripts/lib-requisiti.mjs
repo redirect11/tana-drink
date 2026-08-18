@@ -40,7 +40,7 @@ export function parseRequirementsYaml(text) {
         requirements.push(current)
       }
       inTestCases = false
-      current = { id: '', title: '', area: '', description: '', status: 'todo', generate_issue: false, labels: [], test_cases: [], in_produzione: null }
+      current = { id: '', title: '', area: '', description: '', status: 'todo', generate_issue: false, labels: [], test_cases: [], in_produzione: null, severity: null, priority: null }
       current.id = line.replace(/^  - id:\s*/, '').trim()
       continue
     }
@@ -107,6 +107,16 @@ export function parseRequirementsYaml(text) {
       // Solo per i bug: dice se succede sull'installazione che sta
       // lavorando. Assente = non si sa, e l'issue non dichiara niente
       // invece di dare per scontato che sia roba di test.
+      // QUANTO FA MALE, e QUANDO lo sistemiamo. Due cose diverse: la
+      // severity e' una proprieta' del guaio (la misura chi lo vede al
+      // banco), la priority e' una decisione nostra. Un difetto grave puo'
+      // stare in P2, e uno lieve in P0 se lo vedono tutti i clienti.
+      case 'severity':
+        current.severity = value.trim() || null
+        break
+      case 'priority':
+        current.priority = value.trim() || null
+        break
       case 'in_produzione':
         current.in_produzione = value.trim() === 'true'
         break
@@ -149,4 +159,128 @@ export const FILE_REQUISITI = join(
 
 export function caricaRequisiti(file = FILE_REQUISITI) {
   return parseRequirementsYaml(readFileSync(file, 'utf8'))
+}
+
+// DAL REGISTRO ALLE ETICHETTE. severity e priority stanno nei loro campi —
+// il registro e' la fonte — e da li' scendono sull'issue come etichette, che
+// e' l'unico posto dove GitHub sa filtrarle. Scriverle anche a mano in
+// `labels` vorrebbe dire tenerle allineate in due posti, cioe' non tenerle
+// allineate.
+// DA QUALE REGISTRO VIENE. Un requisito e un bug si guardano in modo
+// diverso — «cosa manca» contro «cosa non va» — e sull'elenco delle issue si
+// distinguono solo dall'etichetta. Si ricava dal file da cui la voce arriva,
+// non si scrive a mano: cosi' non se ne dimentica una, e non finisce
+// «requirements» su un bug.
+export function famigliaDi(req) {
+  const da = String(req?.source_file || '')
+  if (da.includes('bugs')) return 'bug'
+  if (da.includes('requirements')) return 'requirements'
+  return null
+}
+
+export function etichetteClassificazione(req) {
+  const e = []
+  const famiglia = famigliaDi(req)
+  if (famiglia) e.push(famiglia)
+  if (req.priority) e.push(req.priority)
+  if (req.severity) e.push(`severity-${req.severity}`)
+  return e
+}
+
+// LE ETICHETTE CHE QUESTO SCRIPT POSSIEDE sono solo le due famiglie della
+// classificazione. Le altre — l'area, «hotfix», quelle messe a mano da chi
+// guarda le issue — non le tocca nessuno: toglierle vorrebbe dire cancellare
+// il lavoro di una persona a ogni push.
+const MIA = (l) => /^P[0-3]$/.test(l) || l.startsWith('severity-') || l === IN_TEST || l === 'bug' || l === 'requirements'
+
+// «E' su develop, va provato al banco». Le tre linee dicono tre cose diverse
+// della stessa voce: release la scrive, develop la mette in prova, main la
+// chiude. Questa etichetta e' il pezzo di mezzo, quello che prima non si
+// vedeva da nessuna parte.
+export const IN_TEST = 'in-test'
+
+// Cosa manca e cosa avanza, confrontando le etichette di un'issue col
+// registro. Serve a riallineare le issue che ESISTONO GIA': prima si
+// saltavano, e la classificazione non arrivava mai dove si guarda.
+export function riconciliaEtichette(attuali, req, { inTest = false } = {}) {
+  const presenti = [...new Set(attuali || [])]
+  const volute = [...new Set([
+    ...(req.labels || []),
+    ...etichetteClassificazione(req),
+    ...(inTest ? [IN_TEST] : []),
+  ])]
+  const daAggiungere = volute.filter((l) => !presenti.includes(l))
+  const daTogliere = presenti.filter((l) => MIA(l) && !volute.includes(l))
+  const finali = [...presenti.filter((l) => !daTogliere.includes(l)), ...daAggiungere]
+  return { daAggiungere, daTogliere, finali }
+}
+
+// Il corpo lo riscriviamo solo se e' ancora quello che avevamo generato noi:
+// se qualcuno ci ha scritto dentro a mano — un'analisi, una diagnosi — quel
+// testo vale piu' del nostro, e si lascia stare.
+export const corpoGenerato = (corpo) =>
+  typeof corpo === 'string' && corpo.includes('Issue generata automaticamente')
+
+// DOVE VA LA SCHEDA SULLA BACHECA, e soprattutto quando NON si tocca.
+// L'ordine e' quello delle colonne del progetto, e ogni linea di lavoro ha la
+// sua tappa: un ramo di lavoro la scrive (Implemented), develop la manda a
+// provare (In test), main la chiude (Done).
+export const COLONNE = ['To triage', 'Backlog', 'Ready', 'Implemented', 'In test', 'In review', 'Done']
+export const STATO_IMPLEMENTATA = 'Implemented'
+export const STATO_IN_TEST = 'In test'
+export const STATO_FATTO = 'Done'
+
+// Si va AVANTI, mai indietro: se qualcuno ha portato una scheda piu' in la'
+// l'ha fatto guardandola in faccia, e un automatismo che gliela riporta
+// indietro a ogni push glielo fa smettere di usare. Se e' gia' arrivata dove
+// la manderemmo, non si tocca niente: cosi' il giro e' ripetibile senza
+// riscrivere venticinque volte la stessa cosa.
+export function prossimoStato(attuale, destinazione) {
+  const arrivo = COLONNE.indexOf(destinazione)
+  if (arrivo < 0) return null
+  const partenza = COLONNE.indexOf(attuale)
+  if (partenza >= arrivo) return null
+  return destinazione
+}
+
+// `generate_issue` vuol dire «questa voce e' SEGUITA su GitHub», non «creane
+// una adesso». Le due cose erano la stessa, e si mordevano la coda: appena un
+// requisito veniva finito gli si metteva false, e da quel momento usciva dal
+// giro — nessuno poteva piu' metterlo «in prova» ne' chiudergli l'issue.
+// Adesso: finche' e' da fare l'issue nasce; quando e' finito la voce resta
+// seguita, ma un'issue NUOVA non si apre piu' — aprirla vorrebbe dire
+// chiedere a qualcuno un lavoro gia' fatto.
+export function deveNascere(req, esisteGia) {
+  if (esisteGia) return false
+  if (!req?.generate_issue) return false
+  return !STATI_CHIUSI.has(String(req?.status || '').toLowerCase())
+}
+
+export const STATI_CHIUSI = new Set(['fixed', 'implemented', 'done'])
+
+// LE ISSUE PER IDENTIFICATIVO. Il legame col registro è l'id fra parentesi
+// quadre in testa al titolo: è l'unica cosa che non cambia quando una voce
+// viene riscritta.
+//
+// Se per lo stesso identificativo ce n'è più di una — capita, e a noi è
+// capitato — si tiene quella APERTA: è quella su cui si lavora. Fra due
+// aperte vince la più vecchia, che è quella con la storia dentro. Il doppione
+// si segnala, perché va chiuso a mano da una persona: chiuderlo da uno script
+// vorrebbe dire cancellare commenti che non ha scritto lui.
+export function indicizzaPerId(issues, avvisa = () => {}) {
+  const per = new Map()
+  for (const i of issues || []) {
+    const m = String(i?.title || '').match(/^\[([^\]]+)\]/)
+    if (!m) continue
+    const id = m[1]
+    const gia = per.get(id)
+    if (!gia) { per.set(id, i); continue }
+    const apertaOra = i.state === 'open'
+    const apertaGia = gia.state === 'open'
+    const vince = apertaOra !== apertaGia ? (apertaOra ? i : gia)
+      : (i.number < gia.number ? i : gia)
+    per.set(id, vince)
+    avvisa(`Due issue per ${id}: #${gia.number} e #${i.number}. Tengo la #${vince.number}.`)
+  }
+  return per
 }

@@ -8,10 +8,9 @@
 // =====================================================================
 import admin from 'firebase-admin'
 import { generateMockHistory } from '../src/dev/mockData.js'
+import { puntaAllEmulatore } from './lib-emulatore.js'
 
-process.env.FIRESTORE_EMULATOR_HOST =
-  process.env.FIRESTORE_EMULATOR_HOST ||
-  `${process.env.VITE_FIRESTORE_EMULATOR_HOST || 'localhost'}:${process.env.VITE_FIRESTORE_EMULATOR_PORT || '8080'}`
+await puntaAllEmulatore('storico')
 
 admin.initializeApp({
   projectId: process.env.VITE_FIREBASE_PROJECT_ID || 'demo-tana-drink',

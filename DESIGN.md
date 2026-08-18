@@ -155,6 +155,26 @@ Regole:
 - **Card ordine**: bordo colorato per stato, contenuto essenziale
   (numero, cliente/tavolo, righe, totale). Le note (📝 conto, ↳ riga)
   si mostrano sempre dove si prepara o si serve.
+- **Le corsie di stato** (una vista della coda): colonne uguali, in testa il
+  nome dello stato col conteggio e il totale, sotto un filo di 2px del colore
+  dello stato — gli stessi tre della striscia sulle card (`#f39c12`,
+  `#3498db`, `#2ecc71`) più `--accent-2` per l'incasso. La card è una `card
+  order-card` compatta con **un** tasto (`btn small block`, mai sotto i 44px):
+  toccando il tasto si avanza, toccando la card si apre il conto. Le colonne
+  ci sono tutte anche vuote: la loro posizione si impara a memoria.
+- **Uno stato spento ha comunque la sua striscia.** Servito, chiuso,
+  annullato, in invio: la striscia a sinistra usa `--strip-spenta` (che
+  segue `--muted`, quindi il tema), non un bianco o un nero trasparente.
+  Un rgba bianco nasce per il fondo scuro e sul tema chiaro sparisce — e
+  una striscia invisibile è una card senza stato, proprio quando se ne
+  stanno scorrendo trenta uguali. Più sobria degli stati vivi (quelli sono
+  il lavoro di adesso e restano i più forti), ma **presente**.
+- **Quando il contenuto va su due colonne lo decide il contenitore**, non
+  la finestra: `container-type: inline-size` sul blocco e soglia in
+  `@container`. Con sei corsie accese la finestra è larga e la card è una
+  striscia: una media query sulla finestra spezzava i nomi e mandava i
+  prezzi fuori dal riquadro. Il conteggio delle righe può dire se
+  *conviene*, mai se *ci sta*.
 - **Le card di una griglia hanno tutte lo stesso vestito** — magazzino,
   menù e griglia del conto. Due segni, sempre gli stessi due: la **striscia
   a sinistra** (4px) dice come sta la cosa; il **colore** (lo stato delle
@@ -185,6 +205,17 @@ Regole:
 - Aria tra i blocchi funzionali (i chip non devono sembrare la prima
   riga delle card); dentro le card la densità è alta: è un POS, i dati
   contano più del bianco.
+- **Le pastiglie** (`.chip`: filtri della coda, periodi, sezioni) misurano
+  `font-size: 0.95rem`, `padding: 8px 14px`, `min-height: 40px`. Sono
+  numeri tarati **a zoom 100**: prima erano stati guardati col browser al
+  110 e alla dimensione vera risultavano piccoli, testo e bersaglio.
+  L'altezza minima è esplicita e non lasciata all'imbottitura, o balla da
+  una pastiglia all'altra a seconda di quanto è lungo il testo.
+- **La pastiglia minuta** (`.chip.mini`: le unità dentro una riga di testo,
+  come «Al pz · pz · cl · ml» nella scheda di un prodotto) resta a
+  `min-height: 22px` e `0.68rem`. Non è un bersaglio da barra: sta dentro
+  una riga, e con la misura piena mandava a capo l'ultima unità, che
+  restava appesa da sola sotto il resto.
 - La topbar è sticky, traslucida sul tema (`color-mix` su `--bg-2`),
   e rispetta le safe-area dei tablet.
 
@@ -200,7 +231,10 @@ sole per contrasto: non aggiungerne di dedicate.
    soglia di comodità; le informazioni critiche mai affidate solo a
    `--muted` o solo al colore.
 2. **Si tocca col pollice**: bersagli ≥ 44px, azioni distruttive lontane
-   da quelle frequenti.
+   da quelle frequenti. Unica deroga scritta: le **pastiglie** dei filtri
+   stanno a 40px — sono secondarie e vivono in una riga che scorre, e a 44
+   quella riga diventa una fascia. Tutto il resto (tasti del conto, della
+   card, della testata) resta ≥ 44px.
 3. **Le parole sono da vassoio**: comuni, brevi, in italiano; nessun
    gergo tecnico; nessun messaggio che scarichi la colpa su chi legge.
 4. **Niente aspetta la rete**: ogni interazione risponde subito; spinner

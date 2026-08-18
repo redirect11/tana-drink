@@ -80,3 +80,24 @@ describe('i colori dell’azione vengono dal tema, non dal foglio', () => {
     })
   }
 })
+
+// ── LE VISTE LARGHE NON SONO UNA COLONNA SOLA ────────────────────────
+// Il flusso di cassa era una striscia verticale: giusta sul telefono, da
+// scorrere all'infinito su un monitor mentre si conta la cassa.
+describe('il flusso di cassa si dispone in griglia sugli schermi larghi', () => {
+  const foglio = () => readFileSync(join(CARTELLA, 'index.css'), 'utf8')
+
+  it('a schermo stretto resta una colonna, e la griglia scatta dopo', () => {
+    const css = foglio()
+    const i = css.indexOf('.cassa-flusso')
+    expect(i).toBeGreaterThan(-1)
+    // La griglia vive dentro una media query: senza, il telefono si
+    // ritroverebbe due colonne da 160px.
+    const dopo = css.slice(i)
+    expect(dopo).toMatch(/@media \(min-width: 760px\)[\s\S]{0,400}grid-template-columns/)
+  })
+
+  it('l’andamento e la chiusura restano larghi tutta la riga', () => {
+    expect(foglio()).toMatch(/\.cassa-larga[\s\S]{0,200}grid-column: 1 \/ -1/)
+  })
+})
