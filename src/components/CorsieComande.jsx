@@ -3,7 +3,6 @@ import { paidAmount } from '../lib/pagamento.js'
 import { azioneComanda, daQuanto, destinazioneConto } from '../lib/coda.js'
 import { ETICHETTA_ANNULLO } from '../lib/comande.js'
 import RigheCorsia from './RigheCorsia.jsx'
-import ActionSheet from './ActionSheet.jsx'
 import { useState } from 'react'
 
 // ── LE CORSIE DEL BANCO: UNA CARD PER COMANDA ────────────────────────
@@ -219,13 +218,18 @@ export default function CorsieComande({
                         {s.comanda && vociComanda && vociComanda(s).length > 0 && (
                           <button
                             className="btn ghost small corsia-azioni"
-                            aria-label={`Azioni della comanda #${s.numero ?? ''}`}
+                            aria-expanded={azioniDi === s.id}
+                            // Il nome del tasto è quello che c'è scritto, e
+                            // cambia con lo stato: con un'etichetta fissa
+                            // chi legge con la voce sentiva «Azioni» anche
+                            // a pannello già aperto.
+                            title={`Azioni della comanda #${s.numero ?? ''}`}
                             onClick={(e) => {
                               e.stopPropagation()
-                              setAzioniDi(s.id)
+                              setAzioniDi(azioniDi === s.id ? null : s.id)
                             }}
                           >
-                            ⋯
+                            {azioniDi === s.id ? '▴ Chiudi' : '⋯ Azioni'}
                           </button>
                         )}
                         {azione && (
@@ -246,6 +250,28 @@ export default function CorsieComande({
                         )}
                       </div>
                     )}
+                    {/* LE AZIONI SI APRONO NELLA CARD, come per i conti: una
+                        finestrella che copre lo schermo per un «torna a in
+                        preparazione» è un sipario per un tocco, e al banco
+                        fa perdere di vista la colonna. */}
+                    {azioniDi === s.id && (
+                      <div className="corsia-azioni-aperte" onClick={(e) => e.stopPropagation()}>
+                        {vociComanda(s).map((v) => (
+                          <button
+                            key={v.id}
+                            className="btn ghost small block"
+                            disabled={v.disabled}
+                            title={v.hint || undefined}
+                            onClick={() => {
+                              setAzioniDi(null)
+                              v.onClick?.()
+                            }}
+                          >
+                            {v.icon} {v.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </article>
                 )
               })}
@@ -253,24 +279,6 @@ export default function CorsieComande({
           </section>
         )
       })}
-      {/* Una sola finestrella per tutta la vista: le voci sono quelle
-          della card che ha chiesto il ⋯. */}
-      <ActionSheet
-        open={!!azioniDi}
-        onClose={() => setAzioniDi(null)}
-        titolo="Azioni della comanda"
-        voci={(
-          vociComanda?.(
-            corsie.flatMap((c) => c.schede).find((x) => x.id === azioniDi) || null
-          ) || []
-        ).map((v) => ({
-          ...v,
-          onClick: () => {
-            setAzioniDi(null)
-            v.onClick?.()
-          },
-        }))}
-      />
     </div>
   )
 }
