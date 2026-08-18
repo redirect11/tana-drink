@@ -2624,11 +2624,17 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
               </div>
               <div>
                 <label htmlFor="pd-note">Note</label>
-                <input
+                {/* UNA NOTA È UNA FRASE, non una parola. In una casella da
+                    una riga «tavolo fuori, portare due bicchieri in più e
+                    il ghiaccio a parte» si scriveva alla cieca, vedendone
+                    tre parole per volta. E qui l'Invio va a capo: a chiudere
+                    ci sono i tasti sotto. */}
+                <textarea
                   id="pd-note"
+                  rows={3}
                   value={info.note}
                   disabled={closed}
-                  onKeyDown={infoOnEnter}
+                  placeholder="Es. tavolo fuori, ghiaccio a parte"
                   onChange={(e) => setInfo((v) => ({ ...v, note: e.target.value }))}
                 />
               </div>
