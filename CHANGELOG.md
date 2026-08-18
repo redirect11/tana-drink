@@ -11,6 +11,21 @@
 
 ### Al banco
 
+- **In magazzino si conta sempre a pezzi.** La scheda di un prodotto non
+  chiede più che tipo è né in che unità si compra: l'unità è il pezzo — un
+  cubetto, un limone, una bottiglia — e la sola domanda che resta è «a quanto
+  corrisponde un pezzo», che si può anche lasciare vuota (allora in ricetta si
+  dosa solo a pezzi). Lo stesso prodotto si vende in più modi — il
+  Jägermeister va nel Jägerbombo e si serve a cicchetto — e dichiararlo una
+  volta per tutte non funzionava.
+- **Carico e conta si scrivono nell'unità che si ha in mano.** Accanto alla
+  quantità c'è la scelta fra pezzi e contenuto: la cassetta di limoni si
+  carica a chili, i centilitri rimasti in una bottiglia si contano in
+  centilitri, e i pezzi li ricava il contenuto. Sotto la quantità si legge
+  quanto entra davvero in magazzino, prima di confermare — e per la merce
+  comprata a peso c'è scritto che il conteggio in pezzi è una stima: un limone
+  non pesa sempre uguale.
+
 - **Le comande possono nascere già in preparazione** (Impostazioni → Gestione
   preparazione). Di suo una comanda nuova sta in «Da fare» finché qualcuno non
   tocca «Lo preparo io» — che dice anche chi — ma dove si versa nell'istante
