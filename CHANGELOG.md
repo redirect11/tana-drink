@@ -29,6 +29,11 @@ con una prova a vuoto che dice cosa cambierebbe prima di toccare niente.
 
 ### Al banco
 
+- **Senza gli stati del servizio, il conto non parla di passi**: le righe si
+  intestavano «In preparazione» anche in un locale che non segue la
+  preparazione. Resta la divisione dei pagati, che riguarda i soldi e non il
+  lavoro.
+
 - **Il ⋯ sulla card di una comanda**: da lì si rimanda indietro un ticket
   segnato per sbaglio, si apre la preparazione parziale e si ristampa —
   senza aprire il ticket. Il tasto grande resta uno solo, quello che si
