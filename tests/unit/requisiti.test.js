@@ -15,7 +15,7 @@
 import { describe, it, expect } from 'vitest'
 import { readdirSync, statSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
-import { caricaRequisiti, parseRequirementsYaml, etichetteClassificazione, riconciliaEtichette, corpoGenerato, IN_TEST, prossimoStato, deveNascere } from '../../scripts/lib-requisiti.mjs'
+import { caricaRequisiti, parseRequirementsYaml, etichetteClassificazione, riconciliaEtichette, corpoGenerato, IN_TEST, prossimoStato, deveNascere, famigliaDi } from '../../scripts/lib-requisiti.mjs'
 
 const requisiti = caricaRequisiti()
 const STATI = ['implemented', 'partial', 'todo', 'deprecated']
@@ -155,6 +155,24 @@ describe('le issue che esistono gia’ si riallineano', () => {
     const tolta = riconciliaEtichette(['bug', 'P1', IN_TEST], { labels: ['bug'], priority: 'P1' })
     expect(tolta.daTogliere).toEqual([IN_TEST])
     expect(tolta.finali).toEqual(['bug', 'P1'])
+  })
+
+  it('la famiglia si ricava dal registro, non si scrive a mano', () => {
+    // Un requisito e un bug si guardano in modo diverso — «cosa manca» contro
+    // «cosa non va» — e nell'elenco delle issue si distinguono solo
+    // dall'etichetta. Scrivendola a mano prima o poi se ne dimentica una.
+    expect(famigliaDi({ source_file: 'requirements/requirements.yaml' })).toBe('requirements')
+    expect(famigliaDi({ source_file: 'requirements/bugs.yaml' })).toBe('bug')
+    expect(famigliaDi({})).toBeNull()
+    expect(etichetteClassificazione({ source_file: 'requirements/requirements.yaml', priority: 'P2' }))
+      .toEqual(['requirements', 'P2'])
+    // E le due famiglie restano esclusive: su un'issue di requisito che aveva
+    // «bug» per sbaglio, quella se ne va.
+    const r = riconciliaEtichette(['bug', 'pos'], {
+      source_file: 'requirements/requirements.yaml', labels: ['pos'], priority: 'P2',
+    })
+    expect(r.daTogliere).toEqual(['bug'])
+    expect(r.finali).toEqual(['pos', 'requirements', 'P2'])
   })
 
   it('la scheda segue la linea, e non si tira mai indietro', () => {

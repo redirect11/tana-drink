@@ -25,7 +25,12 @@
 #                   metterla «in prova» su develop ne' chiuderle l'issue da
 #                   main. Si mette false solo per quello che su GitHub non
 #                   deve comparire affatto.
-#   labels:         Label GitHub
+#   labels:         Label GitHub dell'AREA (pos, magazzino, stampa...) e
+#                   «hotfix» se va sistemato d'urgenza. La FAMIGLIA non si
+#                   scrive a mano: «requirements» o «bug» si ricava dal file da
+#                   cui la voce arriva, cosi' non se ne dimentica una e non
+#                   finisce «requirements» su un bug. Anche P0..P3 e
+#                   severity-* si ricavano dai loro campi.
 #   severity:       Quanto fa male QUANDO SUCCEDE, e non dipende da noi:
 #                   bloccante (il servizio si ferma) | grave (i numeri
 #                   sbagliano, o lo vede il cliente) | media (si aggira) |
