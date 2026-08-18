@@ -109,6 +109,12 @@ export default function CorsieComande({
                 // colonna: la stessa comanda pronta ha lo stesso tasto sia
                 // che le colonne siano unite sia che siano divise.
                 const azione = azioneComanda(s.comanda, o)
+                // Le voci del ⋯ si costruiscono UNA volta per card: prima
+                // se ne facevano due giri — uno per contarle e uno per
+                // disegnarle — e ogni giro allocava fino a cinque oggetti
+                // con dentro altrettante chiusure, per ognuna delle
+                // cinquanta card a vista.
+                const voci = s.comanda && vociComanda ? vociComanda(s) : []
                 const attesa = azione?.tipo === 'avanza' && attesaPagamento(o)
                 return (
                   <article
@@ -215,7 +221,7 @@ export default function CorsieComande({
                             ticket. Il tasto grande resta uno solo — quello
                             che si preme di corsa — e tutto il resto sta
                             qui dietro. */}
-                        {s.comanda && vociComanda && vociComanda(s).length > 0 && (
+                        {voci.length > 0 && (
                           <button
                             className="btn ghost small corsia-azioni"
                             aria-expanded={azioniDi === s.id}
@@ -256,7 +262,7 @@ export default function CorsieComande({
                         fa perdere di vista la colonna. */}
                     {azioniDi === s.id && (
                       <div className="corsia-azioni-aperte" onClick={(e) => e.stopPropagation()}>
-                        {vociComanda(s).map((v) => (
+                        {voci.map((v) => (
                           <button
                             key={v.id}
                             className="btn ghost small block"

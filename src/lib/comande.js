@@ -216,7 +216,10 @@ export function comandaDaScaricare(comanda, nuovoStato) {
 }
 
 export function comandaEditable(c) {
-  return c.status === ORDER_STATUSES.RICEVUTO || c.status === ORDER_STATUSES.IN_PREPARAZIONE
+  // Regge anche il niente: da quando la usa comandaDivisibile le arriva
+  // qualunque cosa abbia in mano la schermata, comprese le comande che non
+  // ci sono (una card in volo, un id che non risponde piu').
+  return c?.status === ORDER_STATUSES.RICEVUTO || c?.status === ORDER_STATUSES.IN_PREPARAZIONE
 }
 
 // ── DOVE FINISCONO LE RIGHE AGGIUNTE A UN CONTO APERTO ────────────
@@ -394,9 +397,10 @@ export function annullataPerDivisione(c) {
 // Più la soglia di sempre: più di un'unità dentro, o la scelta sarebbe fra
 // tutto e niente, cioè il tasto grande.
 export function comandaDivisibile(c) {
-  if (c?.status !== ORDER_STATUSES.RICEVUTO && c?.status !== ORDER_STATUSES.IN_PREPARAZIONE) {
-    return false
-  }
+  // La soglia «finché il drink non è uscito dal banco» è UNA, e sta in
+  // comandaEditable: riscriverla qui è come è nato BUG-025 — la si cambia
+  // in un posto e resta vecchia nell'altro.
+  if (!comandaEditable(c)) return false
   return (c.items || []).reduce((s, i) => s + (Number(i.qty) || 0), 0) > 1
 }
 
@@ -563,7 +567,9 @@ export function comandaNataDallaDivisione(order, comandaId) {
 // quella comanda. Il motivo si legge dai dati, non si indovina: il marchio
 // della divisione sulla comanda, lo stato sul conto.
 export const MOTIVO_ANNULLO = {
-  DIVISIONE: 'divisione',
+  // Lo stesso valore che si scrive sul dato (`annullata_per`): due
+  // costanti con la stessa stringa sono due modi di sbagliarne una.
+  DIVISIONE: ANNULLATA_PER_DIVISIONE,
   CONTO: 'conto',
   MANO: 'mano',
 }

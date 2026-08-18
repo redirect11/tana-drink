@@ -11,8 +11,6 @@ import { formatPrice,
   nextStatus,
   PAYMENT_METHOD_PRINT,
   CASH_METHOD_ORDER,
-  statoPrecedente,
-  statiPrima,
 } from '../../src/lib/orderStatus.js'
 
 describe('flusso stati con «pagato»', () => {
@@ -82,22 +80,3 @@ describe('nomi dei metodi di pagamento sulla stampante', () => {
 
 // ── SI SBAGLIA IN AVANTI ─────────────────────────────────────────────
 // Si segna «pronto» il conto sbagliato, si tocca «consegnato» mentre il
-// drink è ancora sul vassoio. Senza un modo di tornare indietro l'unica
-// strada era annullare il conto e ribatterlo, perdendo orario e storia.
-describe('tornare indietro nel flusso', () => {
-  it('il passo indietro è quello prima nel flusso', () => {
-    expect(statoPrecedente('pronto')).toBe('in_preparazione')
-    expect(statoPrecedente('in_preparazione')).toBe('ricevuto')
-  })
-
-  it('dal primo stato non si torna indietro', () => {
-    expect(statoPrecedente('ricevuto')).toBe(null)
-    expect(statoPrecedente('boh')).toBe(null)
-  })
-
-  it('e si può saltare più indietro di un passo', () => {
-    // «Questo non era nemmeno in preparazione»: capita, e la strada c'è.
-    expect(statiPrima('ritirato')).toEqual(['ricevuto', 'in_preparazione', 'pronto'])
-    expect(statiPrima('ricevuto')).toEqual([])
-  })
-})

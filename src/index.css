@@ -5832,14 +5832,6 @@ body.pagina-piena .pagina-inventario .inv-scroll {
   background: color-mix(in srgb, var(--accent) 14%, transparent);
 }
 
-/* La storia del conto: sola icona in alto, accanto al numero. Da tasto
-   largo si prendeva una riga intera accanto a Unisci/Separa/Comande, per
-   una cosa che si guarda ogni tanto. */
-.posd-storia {
-  flex-shrink: 0;
-  min-width: 34px;
-  padding-inline: 8px;
-}
 /* IL SECONDO LIVELLO NEL MENU: le sezioni della pagina aperta, rientrate
    sotto di lei. Un posto solo per navigare, uguale sul telefono e sul
    computer. */
@@ -6734,6 +6726,19 @@ body.pagina-piena .inv-scheda {
 
 .corsia-da-incassare {
   border-bottom-color: var(--accent-2);
+}
+
+/* Il lavoro finito e la colonna del ritiro, quando il pronto si divide:
+   nate dopo le altre, erano rimaste senza il filo colorato in testata — e
+   una colonna senza colore, in mezzo a cinque che ce l'hanno, sembra
+   spenta. Il ritiro prende il verde del pronto da cui nasce, il finito il
+   grigio di quello che non chiede piu' niente. */
+.corsia-al-ritiro-banco {
+  border-bottom-color: #2ecc71;
+}
+
+.corsia-ritirati {
+  border-bottom-color: #8a8a8a;
 }
 
 /* Stati di servizio spenti: le tre corsie sono quelle della griglia, coi

@@ -11,8 +11,10 @@ import { destinazioneConto, daQuanto } from '../lib/coda.js'
 import {
   annullataPerDivisione,
   comandaDivisibile,
+  comandaEditable,
   itemsTotal,
   nextComandaStatus,
+  orderIsClosed,
   statiPrimaComanda,
   tappeComanda,
 } from '../lib/comande.js'
@@ -35,7 +37,6 @@ import ScegliConsegna from './ScegliConsegna.jsx'
 // Le parole del BANCO: «Da fare» e non «Ordine ricevuto», e la parola
 // giusta per come si consegna. Stanno in lib/orderStatus.js (statoAlBanco)
 // perché le usano tutte le schermate di chi lavora.
-const nomeStato = statoAlBanco
 
 export default function ComandaDetail({
   order,
@@ -65,15 +66,13 @@ export default function ComandaDetail({
   const [dividendo, setDividendo] = useState(dividiSubito)
   const righe = comanda.items || []
   const prossimo = nextComandaStatus(comanda.status)
-  const chiusa =
-    order.status === ORDER_STATUSES.PAGATO || order.status === ORDER_STATUSES.ANNULLATO
+  const chiusa = orderIsClosed(order)
   const divisa = annullataPerDivisione(comanda)
   // Il modo si cambia finché il drink non è uscito dal banco: da «pronto»
-  // in poi la decisione è presa. Stessa soglia della divisione, e per lo
-  // stesso motivo.
-  const cambiabileIlModo =
-    comanda.status === ORDER_STATUSES.RICEVUTO ||
-    comanda.status === ORDER_STATUSES.IN_PREPARAZIONE
+  // in poi la decisione è presa. È la STESSA soglia della divisione, e la
+  // si chiede alla stessa funzione invece di riscriverla — è così che è
+  // nato BUG-025.
+  const cambiabileIlModo = comandaEditable(comanda)
   // Fin dove si può tornare: sotto il passo in cui nasce il lavoro non c'è
   // niente da guardare in questo locale.
   const indietro = statiPrimaComanda(comanda.status, passoDiNascita)
@@ -103,7 +102,7 @@ export default function ComandaDetail({
         </div>
         <div className="row comanda-det-bolli">
           <span className={`pill ${comanda.status}`}>
-            {divisa ? '✂️ Divisa' : `${STATUS_EMOJI[comanda.status]} ${nomeStato(comanda.status, order.service_mode)}`}
+            {divisa ? '✂️ Divisa' : `${STATUS_EMOJI[comanda.status]} ${statoAlBanco(comanda.status, order.service_mode)}`}
           </span>
           {/* ACCONTO: qualcosa è già stato incassato ma il conto è aperto.
               Serve saperlo anche da qui: chi finisce la comanda spesso è
@@ -128,7 +127,7 @@ export default function ComandaDetail({
           <div className={`step${t.fatta ? ' done' : ''}${t.adesso ? ' active' : ''}`} key={t.stato}>
             {STATUS_EMOJI[t.stato]}
             <br />
-            {nomeStato(t.stato, order.service_mode)}
+            {statoAlBanco(t.stato, order.service_mode)}
             <br />
             <span className="muted small">{t.quando ? hhmm(t.quando) : '—'}</span>
           </div>
@@ -173,7 +172,7 @@ export default function ComandaDetail({
       <div className="comanda-det-azioni">
         {prossimo && !chiusa && (
           <button className="btn block comanda-det-avanti" onClick={() => onAvanza?.(prossimo)}>
-            {nomeStato(prossimo, order.service_mode)}
+            {statoAlBanco(prossimo, order.service_mode)}
           </button>
         )}
         {!chiusa && indietro.length > 0 && (
@@ -184,9 +183,9 @@ export default function ComandaDetail({
                 key={st}
                 className="chip"
                 onClick={() => onTornaA?.(st)}
-                title={`Riporta la comanda a «${nomeStato(st, order.service_mode)}»`}
+                title={`Riporta la comanda a «${statoAlBanco(st, order.service_mode)}»`}
               >
-                ↩︎ {nomeStato(st, order.service_mode)}
+                ↩︎ {statoAlBanco(st, order.service_mode)}
               </button>
             ))}
           </div>

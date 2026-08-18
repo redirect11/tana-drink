@@ -13,6 +13,7 @@ import {
 import {
   comandaNataDallaDivisione,
   dividiComanda,
+  statiDopoLaDivisione,
   statoComandaNuova,
 } from '../lib/comande.js'
 import { useComandeLocali } from '../lib/comandeLocali.js'
@@ -130,7 +131,10 @@ export default function ComandaPage() {
       </div>
     )
   }
-  const porta = (stato) => {
+  // «Si vede subito»: la comanda risulta al passo nuovo qui, e la scrittura
+  // viaggia dietro. Sta in una funzione perché lo fanno in due — il tasto e
+  // la divisione — e due copie della stessa riga divergono.
+  const segna = (stato) => {
     const adesso = new Date().toISOString()
     comandeLocali.applica(order, (comande) =>
       comande.map((c) =>
@@ -139,6 +143,10 @@ export default function ComandaPage() {
           : c
       )
     )
+  }
+
+  const porta = (stato) => {
+    segna(stato)
     advanceComanda(order.id, comanda.id, stato).catch((e) => {
       comandeLocali.scarta(order.id)
       showToast(`⚠️ Avanzamento non riuscito: ${e.message}`, { kind: 'error' })
@@ -153,27 +161,13 @@ export default function ComandaPage() {
     const esito = dividiComanda(comanda, scelte)
     if (!esito) return
     // Prese TUTTE le unità non c'è niente da dividere: la comanda avanza e
-    // basta, e resta questa. Si vede subito, come col tasto grande.
-    // Prese TUTTE le unità non c'è niente da dividere: la comanda avanza e
     // basta, e resta questa. La scrittura la fa preparazioneParziale qui
-    // sotto — qui si segna solo quello che si deve già vedere.
-    if (esito.tutta) {
-      const adesso = new Date().toISOString()
-      comandeLocali.applica(order, (comande) =>
-        comande.map((c) =>
-          c.id === comanda.id
-            ? {
-                ...c,
-                status: ORDER_STATUSES.IN_PREPARAZIONE,
-                status_times: {
-                  ...(c.status_times || {}),
-                  [ORDER_STATUSES.IN_PREPARAZIONE]: adesso,
-                },
-              }
-            : c
-        )
-      )
-    } else setDivisa(comanda.id)
+    // sotto — qui si segna solo quello che si deve già vedere. E dove
+    // arriva lo dice `statiDopoLaDivisione`, la stessa funzione che usa chi
+    // scrive: cablarlo qui vorrebbe dire tenere allineate a mano due copie
+    // della stessa regola.
+    if (esito.tutta) segna(statiDopoLaDivisione(comanda.status).nuova)
+    else setDivisa(comanda.id)
     preparazioneParziale(order.id, comanda.id, scelte).catch((e) => {
       comandeLocali.scarta(order.id)
       setDivisa(null)

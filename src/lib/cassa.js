@@ -74,7 +74,8 @@ export function cashRecap(orders, session, nowIso) {
       // con la sola ora, le 8 del mattino dopo si mettevano PRIMA delle 23
       // della sera prima — l'incasso della chiusura in cima al grafico, e la
       // serata raccontata al contrario.
-      perOra.set(String(ts).slice(0, 13), round2((perOra.get(String(ts).slice(0, 13)) || 0) + amt))
+      const chiave = String(ts).slice(0, 13)
+    perOra.set(chiave, round2((perOra.get(chiave) || 0) + amt))
     }
   }
 

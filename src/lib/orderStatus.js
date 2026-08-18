@@ -132,26 +132,11 @@ export function nextStatus(status) {
   return STATUS_FLOW[idx + 1]
 }
 
-// ── TORNARE INDIETRO ─────────────────────────────────────────────────
-//
-// Al banco si sbaglia in avanti: si segna «pronto» il conto sbagliato, si
-// tocca «consegnato» mentre il drink è ancora sul vassoio. Senza un modo di
-// tornare indietro l'unica strada era annullare il conto e ribatterlo —
-// perdendo l'orario, la storia e la voglia.
-//
-// `statoPrecedente` dà il passo indietro nel flusso; `statiPrima` dà tutti
-// quelli già passati, per chi deve saltare più indietro di uno (capita:
-// «questo non era nemmeno in preparazione»).
-export function statoPrecedente(status) {
-  const idx = STATUS_FLOW.indexOf(status)
-  if (idx <= 0) return null
-  return STATUS_FLOW[idx - 1]
-}
-
-export function statiPrima(status) {
-  const idx = STATUS_FLOW.indexOf(status)
-  return idx <= 0 ? [] : STATUS_FLOW.slice(0, idx)
-}
+// TORNARE INDIETRO sta in comande.js (`statiPrimaComanda`), non qui: al
+// banco si torna indietro su una COMANDA, e i passi da mostrare dipendono
+// da dove nasce il lavoro in quel locale — cosa che il flusso dell'ordine
+// non sa. Qui c'erano due funzioni gemelle senza chiamanti: due modi di
+// rispondere alla stessa domanda sono il primo passo perché divergano.
 
 export function formatPrice(value) {
   const n = Number(value || 0)

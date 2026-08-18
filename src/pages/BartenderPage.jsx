@@ -1234,15 +1234,21 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // dal database, altrimenti si accende un conto e lo scorrimento va da
   // un'altra parte. Ogni vista ha il suo ordine, quindi si guarda la lista
   // che quella vista sta davvero disegnando.
-  const ordiniComeSiVedono = gridView
-    ? boardGroups.flatMap((g) => g.orders)
-    : corsieView
-      ? corsieBanco
-        ? corsieMostrate.flatMap((c) => c.schede.map((s) => s.ordine))
-        : corsieMostrate.flatMap((c) => c.ordini)
-      : listView
-        ? [...inCorso, ...evasi]
-        : list
+  // La lista si appiattisce SOLO quando serve davvero: senza la guardia,
+  // ogni disegno costruiva un array di tutta la coda per una ricerca che
+  // il piu' delle volte non e' nemmeno accesa.
+  const ordiniComeSiVedono =
+    ricercaEvidenzia && q
+      ? gridView
+        ? boardGroups.flatMap((g) => g.orders)
+        : corsieView
+          ? corsieBanco
+            ? corsieMostrate.flatMap((c) => c.schede.map((s) => s.ordine))
+            : corsieMostrate.flatMap((c) => c.ordini)
+          : listView
+            ? [...inCorso, ...evasi]
+            : list
+      : []
   const acceso = ricercaEvidenzia ? primoCorrispondente(ordiniComeSiVedono, q) : null
   const idAcceso = acceso?.id || null
   // Toccando un conto qualsiasi la ricerca si azzera: si è trovato quello
