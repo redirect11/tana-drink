@@ -7,6 +7,7 @@ import {
   ORDER_OPEN,
   nextComandaStatus,
   statoComandaNuova,
+  comandaPerLeAggiunte,
   activeComanda,
   serveAllComande,
   comandeSummary,
@@ -39,6 +40,45 @@ const c = (seq, status, items = []) => ({ id: `c${seq}`, seq, status, items })
 // l'impostazione, e non se ne sarebbe accorto nessuno. Era già successo
 // tre volte — il conto nuovo, le aggiunte, il placeholder in coda — e le
 // tre risposte non combaciavano.
+// ── DOVE FINISCONO LE RIGHE AGGIUNTE A UN CONTO APERTO ────────────
+//
+// Nel passo in cui NASCE il lavoro nuovo, non in quello della comanda che
+// sta lì accanto. Lo decideva `comandaEditable`, che vuol dire «si può
+// ancora toccare» ed è vera sia per «da fare» sia per «in preparazione»:
+// le righe aggiunte a un conto con una comanda già al banco ci finivano
+// dentro, e al banco risultavano prese in carico da qualcuno (BUG-024).
+describe('dove finiscono le righe aggiunte', () => {
+  const c = (id, status) => ({ id, status, items: [] })
+
+  it('nella comanda che sta già in quel passo', () => {
+    const comande = [c('c1', 'in_preparazione'), c('c2', 'ricevuto')]
+    // è lo stesso giro da fare, non due ticket per la stessa cosa
+    expect(comandaPerLeAggiunte(comande, 'ricevuto').id).toBe('c2')
+    expect(comandaPerLeAggiunte(comande, 'in_preparazione').id).toBe('c1')
+  })
+
+  it('SE IN QUEL PASSO NON C’È NIENTE, non ci si accontenta di quella accanto', () => {
+    // È il difetto: con una sola comanda in preparazione, le righe nuove
+    // finivano lì e sparivano dalla colonna «Da fare».
+    expect(comandaPerLeAggiunte([c('c1', 'in_preparazione')], 'ricevuto')).toBe(null)
+    expect(comandaPerLeAggiunte([c('c1', 'ricevuto')], 'in_preparazione')).toBe(null)
+  })
+
+  it('una comanda PRONTA o SERVITA non accoglie mai niente', () => {
+    // Non è nel passo di nascita, quindi viene da sé: nessuna seconda
+    // strada che decide per conto suo.
+    for (const stato of ['pronto', 'ritirato', 'annullato']) {
+      expect(comandaPerLeAggiunte([c('c1', stato)], 'ricevuto')).toBe(null)
+      expect(comandaPerLeAggiunte([c('c1', stato)], 'in_preparazione')).toBe(null)
+    }
+  })
+
+  it('conto vuoto: non c’è niente da accogliere', () => {
+    expect(comandaPerLeAggiunte([], 'ricevuto')).toBe(null)
+    expect(comandaPerLeAggiunte(undefined, 'ricevuto')).toBe(null)
+  })
+})
+
 describe('in che passo nasce una comanda', () => {
   it('di suo nasce DA FARE', () => {
     expect(statoComandaNuova({})).toBe('ricevuto')

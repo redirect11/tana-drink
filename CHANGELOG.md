@@ -11,6 +11,35 @@
 
 ### Al banco
 
+- **Le righe aggiunte a un conto nascono «da fare»**, non «in preparazione».
+  Aggiungendo un giro a un conto che aveva già qualcosa al banco, quelle righe
+  risultavano già prese in carico da qualcuno: sparivano dalla colonna «Da
+  fare» e non le cominciava nessuno. Se una comanda «da fare» c'è già ci
+  confluiscono — è lo stesso giro — se no ne nasce una. Con
+  «Le comande nascono già in preparazione» acceso, tutto come prima.
+- **Lo stato del conto è in testata**, accanto al numero, invece che in fondo
+  sopra il Totale: è la domanda con cui si apre un conto, e ora si legge dove
+  la si fa — nello stesso posto dei bolli sulle card della coda.
+- **Incassare non fa più sparire i drink ancora da fare.** Si prendeva i soldi
+  di un conto con dei giri ancora al banco e quelli si volatilizzavano dalla
+  coda — tornavano solo ricaricando la pagina. I soldi erano già presi e i
+  drink ancora da versare: adesso restano nella loro colonna, col bollo
+  «Pagato».
+- **Servizio o ritiro si decide sul conto**, non più una volta per tutte nelle
+  impostazioni. Un tavolo che viene a ritirare al banco succede tutte le sere:
+  adesso si cambia da «Dati conto» in un tocco. Occhio che tocca i soldi — il
+  ritiro azzera coperto e costo di servizio — e la schermata lo dice prima che
+  si prema. Su un conto con un acconto il modo si cambia ma i supplementi
+  restano quelli su cui si è incassato; su un conto chiuso serve prima
+  «Riapri conto».
+- **L'impostazione del locale adesso dice come NASCONO i conti**, e si sceglie
+  fra due mondi: «Solo servizio» oppure «Ritiro e servizio». Dentro il
+  secondo si dice con che modo nascono e se lo può scegliere il cliente
+  ordinando dal telefono — voce spenta, col motivo, se i clienti non ordinano.
+- **La colonna del pronto si può dividere in due**: «Da servire» e «Da
+  ritirare», da «▦ Colonne». Di suo resta una sola, col badge sulla card che
+  dice come va consegnato. È una scelta di quel terminale: il tablet della
+  sala e quello del banco non guardano lo stesso lavoro.
 - **In magazzino si conta sempre a pezzi.** La scheda di un prodotto non
   chiede più che tipo è né in che unità si compra: l'unità è il pezzo — un
   cubetto, un limone, una bottiglia — e la sola domanda che resta è «a quanto

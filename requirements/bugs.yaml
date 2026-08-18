@@ -645,3 +645,61 @@ bugs:
     generate_issue: false
     labels: [bug, coda, magazzino]
     test_cases: [tests/unit/scritturaComande.test.js]
+
+  - id: BUG-023
+    title: "Incassando un conto sparivano dal banco i drink ancora da fare"
+    area: "src/lib/ordiniNascosti.js, src/pages/BartenderPage.jsx"
+    description: >
+      Si incassa un conto che ha ancora comande «da fare» o «in
+      preparazione» e quelle spariscono dalla coda del banco. Ricaricando la
+      pagina tornano al loro posto.
+      CAUSA: NON è quella di BUG-019 — il pagamento non le serve più, e
+      infatti dal server tornano giuste. È la vista. Chiudendo un conto lo
+      si nasconde dalla coda all'istante (`ordiniNascosti`), per non
+      vederselo lì mentre la scrittura viaggia; ma quel filtro toglie il
+      CONTO, e con lui le sue comande. Nella vista del banco le card sono i
+      ticket, e un conto pagato in anticipo ha ancora lavoro da fare.
+      L'elenco dei nascosti vive in memoria: per questo il ricaricamento
+      «aggiustava» tutto, ed era il sintomo che diceva dove guardare.
+      RISOLTO: nascondere un conto non vuol dire nascondere il suo lavoro.
+      `senzaNascosti` accetta cosa TENERE comunque, e la coda le passa
+      `haLavoroDaFare` (coda.js): un conto con una comanda non servita e non
+      annullata resta a schermo. Un conto annullato, o servito per intero,
+      si nasconde come prima — che è il motivo per cui il nascondere esiste.
+    in_produzione: false
+    status: fixed
+    generate_issue: false
+    labels: [bug, coda, pagamenti]
+    test_cases: [tests/component/CodaCorsie.test.jsx]
+
+  - id: BUG-024
+    title: "Le righe aggiunte a un conto nascevano già «in preparazione»"
+    area: "src/lib/comande.js, src/components/OrderPosDetail.jsx"
+    description: >
+      Conto con una comanda in preparazione, si aggiungono altre righe:
+      quelle risultavano anche loro in preparazione, cioè già prese in
+      carico da qualcuno. Al banco sparivano dalla colonna «Da fare» e non
+      le cominciava nessuno — lo stesso danno del ticket che non compare, ma
+      più subdolo, perché la card c'è: sta nella colonna sbagliata.
+      CAUSA: la comanda che accoglieva le righe nuove si sceglieva con
+      `comandaEditable`, che vuol dire «si può ancora toccare» ed è vera sia
+      per «da fare» sia per «in preparazione» — quindi le righe finivano
+      nella prima toccabile, qualunque passo avesse. Era la regola di prima,
+      di quando non c'era una risposta sola alla domanda «in che passo nasce
+      il lavoro nuovo»; da quando c'è (`statoComandaNuova`) quella strada
+      decideva per conto suo.
+      RISOLTO: `comandaPerLeAggiunte(comande, passo)` in comande.js, un
+      punto solo, usato da tutte e due le strade che aggiungono righe (il
+      tocco sulla griglia e l'auto-conferma della bozza). Le righe vanno
+      nella comanda che sta già in quel passo; se non c'è, ne nasce una —
+      anche con una comanda in preparazione accanto. Una comanda pronta o
+      servita non risponde mai, quindi il vecchio caso «ordine già servito →
+      nuova comanda» viene da sé, senza una seconda regola.
+      In più: senza una comanda in quel passo, i tocchi sulla griglia
+      passano ora dalla BOZZA invece di chiamare `addComanda` uno per uno —
+      tre tocchi di fila facevano tre ticket da una riga per lo stesso giro.
+    in_produzione: false
+    status: fixed
+    generate_issue: false
+    labels: [bug, pos, coda]
+    test_cases: [tests/unit/comande.test.js, tests/component/OrderPosDetail.test.jsx]

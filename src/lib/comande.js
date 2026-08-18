@@ -219,6 +219,25 @@ export function comandaEditable(c) {
   return c.status === ORDER_STATUSES.RICEVUTO || c.status === ORDER_STATUSES.IN_PREPARAZIONE
 }
 
+// ── DOVE FINISCONO LE RIGHE AGGIUNTE A UN CONTO APERTO ────────────
+//
+// Nel passo in cui NASCE il lavoro nuovo (statoComandaNuova), non nel passo
+// in cui si trova la comanda che sta lì accanto. Chiedeva `comandaEditable`,
+// che dice «si può ancora toccare» ed è vera sia per «da fare» sia per «in
+// preparazione»: le righe aggiunte a un conto con una comanda già al banco
+// ci finivano dentro e risultavano prese in carico da qualcuno. Al banco
+// sparivano dalla colonna «Da fare» e non le cominciava nessuno — lo
+// stesso danno del ticket che non compare, ma più subdolo, perché la card
+// c'è: sta nella colonna sbagliata.
+//
+// Se una comanda in quel passo c'è già, ci confluiscono: è lo stesso giro
+// da fare, non due ticket per la stessa cosa. Se non c'è, ne nasce una —
+// anche con una comanda in preparazione accanto. Una comanda PRONTA o
+// SERVITA non risponde mai: non è nel passo di nascita, e viene da sé.
+export function comandaPerLeAggiunte(comande, passo) {
+  return (comande || []).find((c) => c.status === passo) || null
+}
+
 // Quantità per item bloccate (comande pronte/servite): sotto questa soglia
 // l'aggregato non può scendere.
 export function lockedQtyByItem(comande) {

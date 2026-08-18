@@ -230,6 +230,17 @@ export function passaSottofiltroChiusi(o, sotto = 'tutti') {
 // indietro. Si contano i TICKET: quelli non ancora serviti e non annullati,
 // dei conti che esistono ancora. Chi chiama passa la lista che ha in coda
 // per questa apertura di cassa.
+// QUESTO CONTO HA ANCORA QUALCOSA DA FARE? Non guarda i soldi: un conto
+// può essere già incassato e avere comande al banco — si paga in anticipo
+// tutte le sere — e sono proprio quelle che non devono sparire da nessuna
+// parte. Un conto annullato non ha lavoro: quella roba non si fa.
+export function haLavoroDaFare(o) {
+  if (annullato(o)) return false
+  return (o?.comande || []).some(
+    (c) => c.status !== ORDER_STATUSES.RITIRATO && c.status !== ORDER_STATUSES.ANNULLATO
+  )
+}
+
 export function comandeDaServire(ordini) {
   let quante = 0
   for (const o of ordini || []) {
@@ -496,18 +507,67 @@ const CORSIE_COMANDE = [
   { id: 'annullati', titolo: '✖️ Annullate', stato: null },
 ]
 
+// ── IL PRONTO, UNITO O DIVISO ───────────────────────────────
+//
+// Dove ritiro e servizio convivono, la colonna del PRONTO tiene due lavori
+// diversi: quello che qualcuno deve portare a un tavolo e quello che
+// aspetta che il cliente venga a prenderselo. Chi è in sala guarda solo i
+// primi, chi sta al bancone solo i secondi.
+//
+// UNITE DI SUO, col badge sulla card che dice quale delle due è: una
+// colonna in più costa larghezza a tutte le altre, e in un locale dove il
+// ritiro è l'eccezione sarebbe una colonna quasi sempre vuota. Chi ha le
+// due cose a metà e metà le divide, ed è una scelta del TERMINALE (sta nel
+// filtro «▦ Colonne»): il tablet della sala e quello del banco non
+// guardano lo stesso lavoro.
+//
+// «RITIRATO/SERVITO» NON SI DIVIDE, ed è voluto: lì il drink è già uscito
+// e come sia uscito non cambia più niente da fare. È il traguardo, non una
+// destinazione.
+export const CORSIE_PRONTO_DIVISO = [
+  { id: 'al-ritiro', titolo: 'Da servire', modo: 'tavolo' },
+  { id: 'al-ritiro-banco', titolo: 'Da ritirare', modo: 'banco' },
+]
+
+// Le corsie del banco come vanno disegnate: la colonna del pronto resta
+// una, oppure diventa due. Dividere ha senso solo dove il ritiro esiste —
+// col solo servizio non c'è niente da separare.
+export function corsieDelPronto({ divise = false, ritiroEsiste = true } = {}) {
+  if (!divise || !ritiroEsiste) return null
+  return CORSIE_PRONTO_DIVISO
+}
+
 // Le due corsie dello sguardo all'indietro partono spente: al banco lo
 // schermo serve al lavoro di adesso, e sei colonne su un tablet vogliono
 // dire sei colonne strette. Chi le vuole le accende dal filtro, e da lì in
 // poi è una scelta di questo terminale.
 export const CORSIE_SPENTE_ALL_INIZIO = ['chiusi', 'annullati']
 
-export function corsieComande(ordini, { isChiuso = () => false } = {}) {
-  const secchi = Object.fromEntries(CORSIE_COMANDE.map((c) => [c.id, []]))
-  // Dove va una comanda, per il passo in cui sta.
+export function corsieComande(ordini, { isChiuso = () => false, prontoDiviso = null } = {}) {
+  // La colonna del pronto può diventare due: al suo posto, nello stesso
+  // punto della fila, così le altre non si spostano sotto gli occhi.
+  const corsie = prontoDiviso
+    ? CORSIE_COMANDE.flatMap((c) =>
+        c.id === 'al-ritiro'
+          ? prontoDiviso.map((d) => ({ ...d, stato: ORDER_STATUSES.PRONTO }))
+          : [c]
+      )
+    : CORSIE_COMANDE
+  const secchi = Object.fromEntries(corsie.map((c) => [c.id, []]))
+  // Dove va una comanda, per il passo in cui sta. Col pronto diviso il
+  // passo da solo non basta: serve anche come si consegna quel conto, e a
+  // dirlo è la corsia che porta il `modo`.
   const perStato = Object.fromEntries(
-    CORSIE_COMANDE.filter((c) => c.stato).map((c) => [c.stato, c.id])
+    corsie.filter((c) => c.stato && !c.modo).map((c) => [c.stato, c.id])
   )
+  const corsiaDelPronto = (o) => {
+    if (!prontoDiviso) return perStato[ORDER_STATUSES.PRONTO]
+    // Un conto senza modo scelto è lavoro da portare finché non si dice
+    // altro: sparire da tutte e due le colonne sarebbe il modo migliore
+    // per dimenticarselo.
+    const modo = o?.service_mode === 'banco' ? 'banco' : 'tavolo'
+    return prontoDiviso.find((c) => c.modo === modo)?.id
+  }
 
   for (const o of ordini || []) {
     const comande = o.comande || []
@@ -560,7 +620,8 @@ export function corsieComande(ordini, { isChiuso = () => false } = {}) {
         secchi[saldato ? 'chiusi' : 'ritirati'].push(scheda(c))
         continue
       }
-      const corsia = perStato[c.status]
+      const corsia =
+        c.status === ORDER_STATUSES.PRONTO ? corsiaDelPronto(o) : perStato[c.status]
       if (!corsia) continue
       // Pagata ma non servita: resta qui, col bollo. Non è chiusa — il
       // drink va fatto lo stesso.
@@ -569,7 +630,7 @@ export function corsieComande(ordini, { isChiuso = () => false } = {}) {
 
   }
 
-  return CORSIE_COMANDE.map(({ id, titolo, stato }) => ({
+  return corsie.map(({ id, titolo, stato }) => ({
     id,
     titolo,
     stato,

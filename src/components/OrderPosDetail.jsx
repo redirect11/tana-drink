@@ -16,6 +16,7 @@ import {
   subscribeSettings,
   peekNextDailyNumber,
   preparazioneParziale,
+  setOrderServiceMode,
   DEFAULT_SETTINGS,
   settingsIniziali,
 } from '../lib/api.js'
@@ -39,11 +40,13 @@ import {
   paymentMethodLabel,
 } from '../lib/orderStatus.js'
 import { idDispositivo } from '../lib/dispositivo.js'
+import { MODI_CONSEGNA, cambioModoPermesso, modoAllaNascita } from '../lib/consegna.js'
 import {
   nextComandaStatus,
   activeComanda,
   orderIsClosed,
   comandaEditable,
+  comandaPerLeAggiunte,
   comandaDivisibile,
   statoComandaNuova,
   annullataPerDivisione,
@@ -1108,14 +1111,22 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     return m
   }, [confirmedLines, bozzaViva, drinks, idPerNome])
 
-  // MODIFICA: l'item entra DIRETTAMENTE nella comanda modificabile (modifica
-  // ottimistica, chiave riga stabile) e si sincronizza in background — così NON
-  // si vede la riga "ricaricarsi" (niente swap bozza→comanda). Se non c'è una
-  // comanda modificabile (ordine già servito), si crea una nuova comanda.
+  // MODIFICA: l'item entra DIRETTAMENTE nella comanda che accoglie il lavoro
+  // nuovo (modifica ottimistica, chiave riga stabile) e si sincronizza in
+  // background — così NON si vede la riga "ricaricarsi" (niente swap
+  // bozza→comanda). Se in quel passo non c'è ancora una comanda, ne nasce
+  // una: dove finiscono le righe nuove lo dice comandaPerLeAggiunte, in un
+  // posto solo.
   const addToEditableComanda = (item) => {
-    const target = effComandeRef.current.find(comandaEditable)
+    const target = comandaPerLeAggiunte(effComandeRef.current, statoNuovaRef.current)
     if (!target) {
-      addComanda(order.id, [item]).catch((e) => toastError(`Aggiunta non inviata: ${e.message}`))
+      // NIENTE COMANDA IN QUEL PASSO: le righe passano dalla BOZZA, che le
+      // raccoglie e le manda tutte insieme (flushAdditions, poco dopo
+      // l'ultimo tocco). Prima ogni tocco chiamava addComanda per conto
+      // suo: tre tocchi di fila facevano tre ticket per lo stesso giro, e
+      // al banco arrivavano tre comande da una riga. Le righe si vedono
+      // subito lo stesso — la bozza sta nella lista come le altre.
+      setDraft((items) => [...items, { line_id: makeLineId(), ...item }])
       return
     }
     // Dalla GRIGLIA ogni tocco è una riga a sé (due Spritz sono due righe, così
@@ -1338,12 +1349,10 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   // già stato creato.
   const statoNuovaRef = useRef(statoIniziale)
   statoNuovaRef.current = statoIniziale
-  // Il POS eredita la modalità di consegna del locale (se non è "sceglie
-  // il cliente"), così l'ordine sa se sarà servito o ritirato.
-  const modoConsegna =
-    settings.service_mode === 'tavolo' || settings.service_mode === 'banco'
-      ? settings.service_mode
-      : null
+  // Con che modo NASCE un conto battuto qui: lo dice l'impostazione del
+  // locale, che è un valore di partenza e non un vincolo — da «Dati conto»
+  // si cambia sempre, conto per conto (vedi lib/consegna.js).
+  const modoConsegna = modoAllaNascita(settings)
 
   // MODIFICA: manda al server le aggiunte in sospeso (senza navigare). Gli
   // item confluiscono nella comanda in preparazione; una NUOVA comanda si crea
@@ -1359,7 +1368,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
       if (draftRef.current.length > 0) clearDraft()
       return
     }
-    const target = effComandeRef.current.find(comandaEditable)
+    const target = comandaPerLeAggiunte(effComandeRef.current, statoNuovaRef.current)
     const oid = order.id
     if (target) {
       // OTTIMISTICO: gli item entrano SUBITO nella comanda (stesso render in cui
@@ -1369,7 +1378,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
       clearDraft()
       segnaModifica(target.id, merged, 250)
     } else {
-      // NESSUNA COMANDA MODIFICABILE → NE NASCE UNA. E resta a schermo
+      // NESSUNA COMANDA IN QUEL PASSO → NE NASCE UNA. E resta a schermo
       // mentre vola al server: prima si svuotava la bozza e si aspettava la
       // risposta, quindi per un attimo — o per tutto il tempo che la rete si
       // prendeva — quelle righe non esistevano da nessuna parte. Chi in
@@ -1737,6 +1746,25 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     chiudiInfo()
   }
 
+  // ── SERVIZIO O RITIRO SU QUESTO CONTO ──────────────────────
+  //
+  // L'impostazione del locale dice come NASCONO i conti; qui si cambia
+  // quello che si ha in mano. E cambia i SOLDI: il ritiro azzera coperto e
+  // servizio. Le regole stanno in lib/consegna.js.
+  const modoDelConto = isNew ? modoConsegna : order?.service_mode || null
+  const cambioModo = isNew ? 'si' : cambioModoPermesso(order)
+  // Cosa succede ai soldi premendo: si legge PRIMA, non si scopre dopo.
+  const avvisoSupplementi =
+    settings.coperto_enabled || settings.service_charge_enabled
+      ? 'Col ritiro al banco coperto e servizio si azzerano.'
+      : 'Cambia solo come arriva il drink: qui non ci sono coperto né servizio.'
+  const cambiaModoConsegna = (modo) => {
+    if (isNew || modo === modoDelConto || cambioModo === 'no') return
+    setOrderServiceMode(order.id, modo).catch((e) =>
+      toastError(`Modo non cambiato: ${e.message}`)
+    )
+  }
+
   const chiudiInfo = () => {
     setShowInfo(false)
     if (isNew || !order?.id || closed || !infoDirty) return
@@ -2039,6 +2067,24 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
               <strong className="posd-title" style={{ display: 'block', flex: 1, minWidth: 0 }}>
                 {panelTitle}
               </strong>
+              {/* A CHE PUNTO STA, TUTTO INSIEME. È la domanda con cui si
+                  apre un conto, e la risposta sta accanto al numero — dove
+                  in coda stanno i bolli delle card, così le due schermate si
+                  leggono allo stesso modo. Stava in fondo, sopra il Totale:
+                  lì diceva una cosa che i gruppi delle righe hanno già detto
+                  tre volte più su, e la diceva nel punto dove si leggono i
+                  soldi.
+                  CON PIÙ COMANDE IN PASSI DIVERSI il conto non ha UN solo
+                  stato: si mostra quello della comanda ATTIVA, cioè il passo
+                  PIÙ INDIETRO fra quelle aperte (activeComanda). Chi apre un
+                  conto vuole sapere quanto MANCA, non quanto è già uscito —
+                  ed è la stessa regola con cui la coda decide lo stato di un
+                  conto, quindi le due schermate non possono discordare. */}
+              {!isNew && workflowOn && active && !closed && (
+                <span className={`pill ${active.status} posd-stato`}>
+                  {STATUS_EMOJI[active.status]} {STATUS_LABELS[active.status]}
+                </span>
+              )}
               {/* LA STORIA E LO SVUOTA STANNO NEL ⋯. Erano due icone qui in
                   alto, in mezzo a quelle che si usano davvero: la storia si
                   guarda una volta a serata, e svuotare un conto è la cosa
@@ -2367,23 +2413,21 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
               Ridimensionabile dalla maniglia in cima: font e tasti scalano. */}
           <div className="posd-comanda-foot" style={{ '--foot-scale': footRz.width / 100 }}>
             <div className="posd-foot-handle" title="Trascina per ingrandire/rimpicciolire" {...footRz.handleProps} />
-            {!isNew && workflowOn && active && !closed && (
-              <div className="row between" style={{ alignItems: 'center' }}>
-                <span className={`pill ${active.status}`}>
-                  {STATUS_EMOJI[active.status]} {STATUS_LABELS[active.status]}
-                </span>
-                {/* Conto già pagato: si può chiudere di netto senza far avanzare
-                    gli stati uno per uno (l'avanzamento vero è nel popup Servizio). */}
-                {order.payment_status === 'pagato' && (
-                  <button
-                    className="btn small"
-                    onClick={() =>
-                      closePaidOrder(order.id).catch((e) => toastError(`Chiusura non riuscita: ${e.message}`))
-                    }
-                  >
-                    <IconCheck /> Chiudi conto
-                  </button>
-                )}
+            {/* IL BOLLO DELLO STATO SE N'È ANDATO IN TESTATA (vedi sopra);
+                qui resta il tasto, che è un'altra cosa: chiudere un conto
+                già pagato senza far avanzare gli stati uno per uno. Sta
+                accanto ai soldi perché è lì che si guarda quando si finisce
+                un conto, e l'avanzamento vero resta nel popup Servizio. */}
+            {!isNew && workflowOn && active && !closed && order.payment_status === 'pagato' && (
+              <div className="row" style={{ justifyContent: 'flex-end' }}>
+                <button
+                  className="btn small"
+                  onClick={() =>
+                    closePaidOrder(order.id).catch((e) => toastError(`Chiusura non riuscita: ${e.message}`))
+                  }
+                >
+                  <IconCheck /> Chiudi conto
+                </button>
               </div>
             )}
 
@@ -2839,6 +2883,37 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                   onChange={(e) => setInfo((v) => ({ ...v, note: e.target.value }))}
                 />
               </div>
+            </div>
+            {/* ── SERVIZIO O RITIRO ─────────────────────────────
+                Sta qui, coi dati del conto, perché è di quel conto — come
+                il tavolo e il nome. Ma tocca i SOLDI (il ritiro azzera
+                coperto e servizio), quindi l'importo si vede prima di
+                premere e non si scopre dopo. */}
+            <div style={{ marginTop: 12 }}>
+              <label style={{ display: 'block' }}>Come lo prende</label>
+              <div className="chips-row" style={{ marginTop: 4 }}>
+                {MODI_CONSEGNA.map(([valore, etichetta]) => (
+                  <button
+                    key={valore}
+                    type="button"
+                    className={`chip ${modoDelConto === valore ? 'active' : ''}`}
+                    disabled={isNew || cambioModo === 'no'}
+                    aria-pressed={modoDelConto === valore}
+                    onClick={() => cambiaModoConsegna(valore)}
+                  >
+                    {etichetta}
+                  </button>
+                ))}
+              </div>
+              <p className="muted small" style={{ margin: '4px 0 0' }}>
+                {isNew
+                  ? 'Si sceglie appena il conto esiste.'
+                  : cambioModo === 'no'
+                    ? 'Conto chiuso: per cambiarlo riaprilo prima.'
+                    : cambioModo === 'senza-soldi'
+                      ? 'C’è già un acconto: il modo si cambia, coperto e servizio restano quelli su cui hai incassato.'
+                      : avvisoSupplementi}
+              </p>
             </div>
             {!closed && (
               <button
