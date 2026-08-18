@@ -88,7 +88,7 @@ vi.mock('../../src/components/SupplierInvoicesPanel.jsx', () => ({
 }))
 
 import InventoryManager from '../../src/components/InventoryManager.jsx'
-import { createInventoryItem } from '../../src/lib/api.js'
+import { createInventoryItem, loadStock, adjustStock } from '../../src/lib/api.js'
 
 // Apre la vista a CARD (il default è la lista) e aspetta il prodotto.
 // Card e lista sono DUE ICONE, e si cercano dalla loro etichetta: sulla linea
@@ -256,278 +256,179 @@ describe('la fila dei tasti dentro una card', () => {
   })
 })
 
-// ── LA SCHEDA PRODOTTO PARTE DA UNA DOMANDA: CHE TIPO È? ─────────────
-// Quattro card — intero, versato, sfuso, lavoro — e ognuna porta i suoi
-// campi: il tipo decide unità e scorta, e sono spariti il selettore delle
-// unità a famiglie e la casella «è una scorta». Vedi REQ-MAG-016.
-describe('la scheda prodotto parte dal tipo', () => {
+// ── L'UNITÀ È SEMPRE IL PEZZO ────────────────────────────────────────
+//
+// La scheda ha fatto due giri di troppo: prima chiedeva l'unità d'acquisto a
+// famiglie, poi «che tipo di prodotto è?» con quattro card. Tutte e due
+// costringevano a dichiarare come si vende una cosa che si vende in più modi
+// (il Jägermeister va nel Jägerbombo E si serve a cicchetto). Dal 18/08
+// l'unità non si sceglie: è il pezzo, e la sola domanda è a quanto
+// corrisponde (REQ-MAG-016). I test delle quattro card sono spariti con
+// loro: descrivevano un comportamento che abbiamo deciso di cambiare.
+describe('la scheda prodotto: l’unità è sempre il pezzo', () => {
   async function apriForm(user) {
     render(<InventoryManager />)
     await screen.findByText('Campari')
     await user.click(screen.getByRole('button', { name: '+ Nuovo prodotto' }))
   }
 
-  it('le quattro card ci sono, e i campi seguono la scelta', async () => {
+  it('non chiede né il tipo né l’unità: i campi ci sono da subito', async () => {
     const user = userEvent.setup()
     await apriForm(user)
-    // Prima si risponde: senza tipo, niente campi delle unità.
-    expect(screen.getAllByRole('radio')).toHaveLength(4)
-    expect(screen.queryByLabelText(/Costo €\//)).toBeNull()
-
-    await user.click(screen.getByRole('radio', { name: /Lo vendo intero/ }))
+    expect(screen.queryAllByRole('radio')).toHaveLength(0)
+    expect(screen.queryByLabelText('Come lo compri')).toBeNull()
     expect(screen.getByLabelText(/Costo €\/pz/)).toBeInTheDocument()
-    expect(screen.getByLabelText(/Dentro c.è/)).toBeInTheDocument()
+    expect(screen.getByLabelText(/A quanto corrisponde un pezzo/)).toBeInTheDocument()
+    expect(screen.getByLabelText(/Quantità iniziale \(pz\)/)).toBeInTheDocument()
     expect(screen.getByLabelText(/Soglia di avviso \(pz\)/)).toBeInTheDocument()
-
-    await user.click(screen.getByRole('radio', { name: /Sfuso/ }))
-    expect(screen.getByLabelText('Come lo compri')).toBeInTheDocument()
-    expect(screen.getByLabelText(/Costo €\/kg/)).toBeInTheDocument()
-    expect(screen.getByLabelText(/Si usa in un.altra misura/)).toBeInTheDocument()
-
-    await user.click(screen.getByRole('radio', { name: /Lavoro o servizio/ }))
-    expect(screen.getByLabelText(/Costo €\/U/)).toBeInTheDocument()
-    expect(screen.queryByLabelText(/Soglia di avviso/)).toBeNull()
-    expect(screen.queryByLabelText(/Quantità iniziale/)).toBeNull()
   })
 
-  it('senza rispondere non si salva, e la scheda spiega perché', async () => {
+  it('col contenuto scritto si salva a pezzi, e il contenuto va in unità base', async () => {
     const user = userEvent.setup()
     createInventoryItem.mockClear()
     await apriForm(user)
-    await user.type(screen.getByLabelText('Nome *'), 'Senza tipo')
-    await user.click(screen.getByRole('button', { name: /^Salva/ }))
-    expect(createInventoryItem).not.toHaveBeenCalled()
-    expect(screen.getByRole('alert')).toHaveTextContent(/che tipo di prodotto/i)
-  })
-
-  it('il «?» racconta i quattro tipi, con un esempio l’uno', async () => {
-    const user = userEvent.setup()
-    await apriForm(user)
-    await user.click(screen.getByRole('button', { name: /Come si compila/ }))
-    const box = await screen.findByRole('dialog', { name: /Come si compila/ })
-    expect(within(box).getByText('🍺 Lo vendo intero')).toBeInTheDocument()
-    expect(within(box).getByText(/Una bottiglia fa 70 cl/)).toBeInTheDocument()
-    expect(within(box).getByText(/1 kg di limoni fa 50 cl/)).toBeInTheDocument()
-    expect(within(box).getByText(/Il tempo di lavorazione/)).toBeInTheDocument()
-  })
-})
-
-// ── IL LAVORO NON È MERCE ────────────────────────────────────────────
-// «Tempo di Lavorazione» si crea per mettere il lavoro a listino: ha un
-// costo per unità e niente altro — niente giacenza, niente soglia, mai
-// esaurito. Prima bisognava scegliere «unità generiche» in una tendina di
-// unità di misura e capire da soli la casella della scorta.
-describe('il tipo «lavoro o servizio»', () => {
-  async function nuovoLavoro(user) {
-    render(<InventoryManager />)
-    await screen.findByText('Campari')
-    await user.click(screen.getByRole('button', { name: '+ Nuovo prodotto' }))
-    await user.click(screen.getByRole('radio', { name: /Lavoro o servizio/ }))
-  }
-
-  it('chiede solo il costo per unità', async () => {
-    const user = userEvent.setup()
-    await nuovoLavoro(user)
-    expect(screen.getByLabelText(/Costo €\/U/)).toBeInTheDocument()
-    // Niente contenuto, niente giacenza iniziale, niente soglia e niente
-    // casella «è una scorta»: lo dice il tipo.
-    expect(screen.queryByLabelText(/Una bottiglia fa/)).toBeNull()
-    expect(screen.queryByLabelText(/Quantità iniziale/)).toBeNull()
-    expect(screen.queryByLabelText(/Soglia di avviso/)).toBeNull()
-    expect(screen.queryByRole('checkbox', { name: /È una scorta/ })).toBeNull()
-  })
-
-  it('e si salva come U non-scorta, senza giacenza', async () => {
-    const user = userEvent.setup()
-    await nuovoLavoro(user)
-    await user.type(screen.getByLabelText('Nome *'), 'Tempo di Lavorazione')
-    await user.type(screen.getByLabelText(/Costo €\/U/), '0.5')
-    await user.click(screen.getByRole('button', { name: 'Salva' }))
-    await waitFor(() => expect(createInventoryItem).toHaveBeenCalled())
-    expect(createInventoryItem.mock.calls.at(-1)[0]).toMatchObject({
-      name: 'Tempo di Lavorazione',
-      tipo: 'lavoro',
-      unit: 'U',
-      display_unit: 'U',
-      scorta: false,
-      package_size: null,
-      stock: 0,
-      low_threshold: 0,
-    })
-  })
-})
-
-// ── IL «VERSATO» SENZA CONTENUTO NON SI SALVA ────────────────────────
-// Una bottiglia che si versa senza sapere quanto fa: niente costo al cl e
-// niente scarico frazionato. Salvare comunque vorrebbe dire un magazzino
-// che non scala; meglio fermarsi e spiegare.
-describe('il tipo «lo verso nei drink»', () => {
-  async function nuovoVersato(user) {
-    render(<InventoryManager />)
-    await screen.findByText('Campari')
-    await user.click(screen.getByRole('button', { name: '+ Nuovo prodotto' }))
-    await user.click(screen.getByRole('radio', { name: /Lo verso nei drink/ }))
-  }
-
-  it('senza «una bottiglia fa…» il salvataggio si ferma e spiega perché', async () => {
-    const user = userEvent.setup()
-    createInventoryItem.mockClear()
-    await nuovoVersato(user)
     await user.type(screen.getByLabelText('Nome *'), 'Gin Bosford')
     await user.type(screen.getByLabelText(/Costo €\/pz/), '12')
-    await user.click(screen.getByRole('button', { name: 'Salva' }))
-    expect(createInventoryItem).not.toHaveBeenCalled()
-    expect(screen.getByRole('alert')).toHaveTextContent(/quanto fa una bottiglia/i)
-
-    // Scritto il contenuto, passa: 70 cl = 700 ml in base.
-    await user.type(screen.getByLabelText(/Una bottiglia fa/), '70')
+    await user.type(screen.getByLabelText(/A quanto corrisponde un pezzo/), '70')
+    await user.type(screen.getByLabelText(/Quantità iniziale \(pz\)/), '3')
+    await user.type(screen.getByLabelText(/Soglia di avviso \(pz\)/), '2')
     await user.click(screen.getByRole('button', { name: 'Salva' }))
     await waitFor(() => expect(createInventoryItem).toHaveBeenCalled())
     expect(createInventoryItem.mock.calls.at(-1)[0]).toMatchObject({
-      tipo: 'versato',
+      name: 'Gin Bosford',
       unit: 'pz',
-      package_size: 700,
+      display_unit: 'pz',
+      package_size: 700, // 70 cl in unità base
       content_unit: 'ml',
+      // Il campo delle quattro card non si scrive più: era l'unica cosa che
+      // quella schermata lasciava nei dati.
+      tipo: null,
+      // La resa legava due unità d'acquisto diverse: adesso lo stesso legame
+      // lo dice il contenuto, e due risposte alla stessa domanda litigano.
+      resa: null,
+      resa_unit: null,
       scorta: true,
+      cost: 12,
+      stock: 3,
+      low_threshold: 2,
     })
   })
 
-  it('in creazione la bottiglia già aperta vale la sua frazione', async () => {
+  it('il contenuto è facoltativo: senza, in ricetta si dosa solo a pezzi', async () => {
     const user = userEvent.setup()
-    await nuovoVersato(user)
+    createInventoryItem.mockClear()
+    await apriForm(user)
+    await user.type(screen.getByLabelText('Nome *'), 'Acqua tonica')
+    await user.click(screen.getByRole('button', { name: 'Salva' }))
+    await waitFor(() => expect(createInventoryItem).toHaveBeenCalled())
+    expect(createInventoryItem.mock.calls.at(-1)[0]).toMatchObject({
+      unit: 'pz',
+      package_size: null,
+      content_unit: null,
+    })
+    expect(screen.queryByText(/dosa solo a pezzi/)).toBeNull() // la scheda è chiusa
+  })
+
+  it('la confezione già aperta vale la sua frazione di pezzo', async () => {
+    const user = userEvent.setup()
+    createInventoryItem.mockClear()
+    await apriForm(user)
     await user.type(screen.getByLabelText('Nome *'), 'Vermut')
-    await user.type(screen.getByLabelText(/Una bottiglia fa/), '100')
-    await user.type(screen.getByLabelText(/Quantità iniziale \(pezzi\)/), '2')
+    await user.type(screen.getByLabelText(/A quanto corrisponde un pezzo/), '100')
+    await user.type(screen.getByLabelText(/Quantità iniziale \(pz\)/), '2')
     await user.type(screen.getByLabelText(/Confezione aperta/), '50')
     await user.click(screen.getByRole('button', { name: 'Salva' }))
     await waitFor(() => expect(createInventoryItem).toHaveBeenCalled())
     // 2 piene + mezza da 100 cl = 2,5 pezzi.
     expect(createInventoryItem.mock.calls.at(-1)[0]).toMatchObject({ stock: 2.5 })
   })
-})
 
-// ── «LO VENDO INTERO»: PEZZI, SENZA RESA ─────────────────────────────
-// La birra si compra e si serve a bottiglia: il magazzino conta pezzi e
-// il contenuto è solo il confronto del costo al cl con le altre.
-describe('il tipo «lo vendo intero»', () => {
-  async function nuovoIntero(user) {
-    render(<InventoryManager />)
-    await screen.findByText('Campari')
-    await user.click(screen.getByRole('button', { name: '+ Nuovo prodotto' }))
-    await user.click(screen.getByRole('radio', { name: /Lo vendo intero/ }))
-  }
-
-  it('salva a pezzi, col contenuto solo per il costo al cl', async () => {
+  it('le unità del contenuto sono queste e basta: capacità, peso, U', async () => {
+    // «Non ce le possiamo mettere a creare ogni volta» (Flavio, 18/08):
+    // niente unità inventate dall'utente, mai.
     const user = userEvent.setup()
-    await nuovoIntero(user)
-    await user.type(screen.getByLabelText('Nome *'), 'Ichnusa 33')
-    await user.type(screen.getByLabelText(/Costo €\/pz/), '1.2')
-    await user.type(screen.getByLabelText(/Dentro c.è/), '33')
-    await user.type(screen.getByLabelText(/Quantità iniziale \(pezzi\)/), '24')
-    await user.type(screen.getByLabelText(/Soglia di avviso \(pz\)/), '6')
+    await apriForm(user)
+    const scelta = screen.getByLabelText('Unità del contenuto')
+    expect([...scelta.options].map((o) => o.value)).toEqual(['l', 'cl', 'ml', 'kg', 'g', 'U'])
+  })
+
+  it('a peso il conteggio in pezzi è una stima, e la scheda lo dice', async () => {
+    // Un limone non pesa sempre uguale: chi legge «47 pz» deve sapere che
+    // nessuno li ha contati uno per uno.
+    const user = userEvent.setup()
+    createInventoryItem.mockClear()
+    await apriForm(user)
+    await user.type(screen.getByLabelText('Nome *'), 'Ghiaccio')
+    await user.type(screen.getByLabelText(/A quanto corrisponde un pezzo/), '8')
+    await user.selectOptions(screen.getByLabelText('Unità del contenuto'), 'g')
+    expect(screen.getByText(/stima/)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Salva' }))
     await waitFor(() => expect(createInventoryItem).toHaveBeenCalled())
     expect(createInventoryItem.mock.calls.at(-1)[0]).toMatchObject({
-      tipo: 'intero',
       unit: 'pz',
-      package_size: 330, // 33 cl: serve solo al €/cl di confronto
-      content_unit: 'ml',
-      resa: null,
-      scorta: true,
-      stock: 24,
-      low_threshold: 6,
+      package_size: 8,
+      content_unit: 'g',
     })
   })
 
-  it('e il contenuto si può lasciare vuoto: si dosa a pezzi', async () => {
+  it('il «?» spiega i tre livelli: pezzo, contenuto, collo', async () => {
     const user = userEvent.setup()
-    await nuovoIntero(user)
-    await user.type(screen.getByLabelText('Nome *'), 'Acqua tonica')
+    await apriForm(user)
+    await user.click(screen.getByRole('button', { name: /Come si compila/ }))
+    const box = await screen.findByRole('dialog', { name: /Come si compila/ })
+    expect(within(box).getByText('Si conta sempre a pezzi')).toBeInTheDocument()
+    expect(within(box).getByText('A quanto corrisponde un pezzo')).toBeInTheDocument()
+    expect(within(box).getByText('Il collo si dichiara al carico')).toBeInTheDocument()
+    expect(within(box).getByText(/La merce a peso si stima/)).toBeInTheDocument()
+  })
+})
+
+// ── QUELLO CHE NON È MERCE NON SI SCARICA ────────────────────────────
+// «Tempo di Lavorazione» sta a listino per mettere il lavoro nel costo del
+// drink, ma non sta su nessuno scaffale. Se si scaricasse, al primo Daiquiri
+// andrebbe a zero, il menù direbbe «Ingrediente esaurito» e il drink
+// sparirebbe dalla carta. Con l'unità bloccata sul pezzo a dirlo non può più
+// essere l'unità di misura: lo dice il prodotto, con una casella.
+describe('la casella «è una scorta»', () => {
+  it('spenta, il prodotto non ha giacenza iniziale né soglia', async () => {
+    const user = userEvent.setup()
+    createInventoryItem.mockClear()
+    render(<InventoryManager />)
+    await screen.findByText('Campari')
+    await user.click(screen.getByRole('button', { name: '+ Nuovo prodotto' }))
+    await user.type(screen.getByLabelText('Nome *'), 'Tempo di Lavorazione')
+    await user.type(screen.getByLabelText(/Costo €\/pz/), '0.5')
+    await user.click(screen.getByRole('checkbox', { name: /È una scorta/ }))
+    expect(screen.queryByLabelText(/Quantità iniziale/)).toBeNull()
+    expect(screen.queryByLabelText(/Soglia di avviso/)).toBeNull()
     await user.click(screen.getByRole('button', { name: 'Salva' }))
     await waitFor(() => expect(createInventoryItem).toHaveBeenCalled())
     expect(createInventoryItem.mock.calls.at(-1)[0]).toMatchObject({
-      tipo: 'intero',
+      name: 'Tempo di Lavorazione',
       unit: 'pz',
-      package_size: null,
-      content_unit: null,
+      scorta: false,
+      stock: 0,
+      low_threshold: 0,
     })
   })
-})
 
-// ── IL GHIACCIO È SFUSO, E SI SCARICA ────────────────────────────────
-// Prima andava spiegato con una casella «è una scorta» dentro le unità
-// generiche; adesso lo dice il tipo: lo sfuso si scarica sempre, il
-// lavoro mai. La casella non esiste più.
-describe('sfuso a unità: il ghiaccio', () => {
-  it('si compra a U, si scarica, e nessuna casella da capire', async () => {
+  it('riaprendo il lavoro già a listino resta spenta', async () => {
+    // Il «Tempo di Lavorazione» salvato prima (unità generiche, senza campo
+    // `scorta`) non deve diventare merce solo perché si riapre la scheda.
     const user = userEvent.setup()
     render(<InventoryManager />)
     await screen.findByText('Campari')
-    await user.click(screen.getByRole('button', { name: '+ Nuovo prodotto' }))
-    await user.click(screen.getByRole('radio', { name: /Sfuso/ }))
-    expect(screen.queryByRole('checkbox', { name: /È una scorta/ })).toBeNull()
-    await user.selectOptions(screen.getByLabelText('Come lo compri'), 'U')
-    await user.type(screen.getByLabelText('Nome *'), 'Ghiaccio a sacchi')
-    await user.type(screen.getByLabelText(/Quantità iniziale \(U\)/), '6')
-    await user.click(screen.getByRole('button', { name: /^Salva/ }))
-    await waitFor(() => expect(createInventoryItem).toHaveBeenCalled())
-    expect(createInventoryItem.mock.calls.at(-1)[0]).toMatchObject({
-      name: 'Ghiaccio a sacchi',
-      tipo: 'sfuso',
-      unit: 'U',
-      scorta: true,
-      stock: 6,
-    })
+    await user.click(screen.getByRole('button', { name: /Tempo di Lavorazione/ }))
+    await user.click(screen.getByRole('button', { name: '✏️ Modifica' }))
+    expect(screen.getByRole('checkbox', { name: /È una scorta/ })).not.toBeChecked()
   })
 })
 
-// ── IL PREZZO SI SCRIVE COM'È SULLA FATTURA ──────────────────────────
-// «2 € al chilo», non «10 € la cassetta da 5». L'etichetta segue il tipo
-// e, per lo sfuso, l'unità con cui si compra.
-describe('il costo segue come si compra', () => {
-  async function apri(user) {
-    render(<InventoryManager />)
-    await screen.findByText('Campari')
-    await user.click(screen.getByRole('button', { name: '+ Nuovo prodotto' }))
-  }
-
-  it('l’etichetta cambia col tipo e con l’unità dello sfuso', async () => {
-    const user = userEvent.setup()
-    await apri(user)
-    await user.click(screen.getByRole('radio', { name: /Lo vendo intero/ }))
-    expect(screen.getByLabelText(/Costo €\/pz/)).toBeInTheDocument()
-    await user.click(screen.getByRole('radio', { name: /Sfuso/ }))
-    expect(screen.getByLabelText(/Costo €\/kg/)).toBeInTheDocument()
-    await user.selectOptions(screen.getByLabelText('Come lo compri'), 'cl')
-    expect(screen.getByLabelText(/Costo €\/cl/)).toBeInTheDocument()
-  })
-
-  it('per lo sfuso una confezione è una unità', async () => {
-    // Non si chiede quanto contiene una confezione: comprando a cl, la
-    // confezione È un cl. Il prezzo scritto vale per quello.
-    const user = userEvent.setup()
-    await apri(user)
-    await user.click(screen.getByRole('radio', { name: /Sfuso/ }))
-    expect(screen.queryByLabelText(/Quanto contiene una confezione/)).toBeNull()
-    await user.selectOptions(screen.getByLabelText('Come lo compri'), 'cl')
-    await user.type(screen.getByLabelText('Nome *'), 'Gin sfuso')
-    await user.type(screen.getByLabelText(/Costo €\/cl/), '0.2')
-    await user.click(screen.getByRole('button', { name: /^Salva/ }))
-    await waitFor(() => expect(createInventoryItem).toHaveBeenCalled())
-    expect(createInventoryItem.mock.calls.at(-1)[0]).toMatchObject({
-      name: 'Gin sfuso',
-      cost: 0.2,
-      package_size: 10, // un cl, in unità base
-    })
-  })
-})
-
-// ── UNA SCHEDA VECCHIA SI RIAPRE NEL TIPO GIUSTO ─────────────────────
-// I prodotti salvati prima delle card non hanno il campo `tipo`: si
-// deduce da com'erano configurati, senza nessuna migrazione. Le quattro
-// regole: U non-scorta è lavoro, U con scorta è sfuso, pezzo con
-// contenuto è versato, pezzo senza è intero.
-describe('un prodotto esistente si riapre nel suo tipo', () => {
+// ── UNA SCHEDA VECCHIA SI RIAPRE, E PASSA AI PEZZI ───────────────────
+// I prodotti salvati prima stanno ancora in ml, g o U finché non passa il
+// travaso (REQ-MAG-018). Riaprendone uno e salvandolo lo si porta a pezzi:
+// la giacenza si converte, e come finisce si legge PRIMA di salvare.
+describe('un prodotto storico si riapre a pezzi', () => {
   async function apriModifica(user, nome) {
     render(<InventoryManager />)
     await screen.findByText('Campari')
@@ -535,18 +436,23 @@ describe('un prodotto esistente si riapre nel suo tipo', () => {
     await user.click(screen.getByRole('button', { name: '✏️ Modifica' }))
   }
 
-  it.each([
-    ['Campari', 'Lo verso nei drink'], // pz con contenuto
-    ['Ichnusa', 'Lo vendo intero'], // pz senza contenuto
-    ['Ghiaccio', 'Sfuso, a peso o volume'], // U ma scorta: si scarica
-    ['Tempo di Lavorazione', 'Lavoro o servizio'], // U non scorta
-  ])('%s si riapre come «%s»', async (nome, titolo) => {
+  it('chi era già a pezzi non cambia niente, e rilegge il suo contenuto', async () => {
     const user = userEvent.setup()
-    await apriModifica(user, nome)
-    expect(screen.getByRole('radio', { name: new RegExp(titolo) })).toHaveAttribute(
-      'aria-checked',
-      'true'
-    )
+    await apriModifica(user, 'Campari')
+    expect(screen.getByLabelText(/A quanto corrisponde un pezzo/)).toHaveValue(100)
+    expect(screen.getByLabelText('Unità del contenuto')).toHaveValue('cl')
+    // Il costo è quello di un pezzo: la bottiglia costa 12 €.
+    expect(screen.getByLabelText(/Costo €\/pz/)).toHaveValue(12)
+    expect(screen.queryByText(/passa ai/)).toBeNull()
+  })
+
+  it('il ghiaccio a unità generiche diventa pezzi uno a uno, e lo dice', async () => {
+    // Una U era già una cosa che si conta — il sacco, la confezione — quindi
+    // sei U fanno sei pezzi: qui non c'è niente da dividere.
+    const user = userEvent.setup()
+    await apriModifica(user, 'Ghiaccio')
+    expect(screen.getByText(/passa ai/)).toBeInTheDocument()
+    expect(screen.getByText('6 pz')).toBeInTheDocument()
   })
 })
 
@@ -563,12 +469,12 @@ describe('carico: il collo dietro un interruttore', () => {
     await user.click(await screen.findByRole('button', { name: /Carico/ }))
   }
 
-  it('di suo non si vede: si scrivono i pezzi e basta', async () => {
+  it('di suo non si vede: si scrive la quantità e basta', async () => {
     const user = userEvent.setup()
     await apriCarico(user)
     expect(screen.getByRole('checkbox', { name: /Carico a colli/ })).not.toBeChecked()
     expect(screen.queryByLabelText(/per collo/)).toBeNull()
-    expect(screen.getByLabelText(/Quanti pezzi aggiungi/)).not.toHaveAttribute('readonly')
+    expect(screen.getByLabelText(/Quanto aggiungi/)).not.toHaveAttribute('readonly')
   })
 
   it('acceso, il collo sta SOPRA e i pezzi si contano da soli', async () => {
@@ -580,7 +486,7 @@ describe('carico: il collo dietro un interruttore', () => {
     const colli = screen.getByLabelText(/Quanti colli arrivano/)
     // Il riquadro del collo viene prima della quantità, che è l'ordine in cui
     // si guarda il cartone.
-    const pezzi = screen.getByLabelText(/Quanti pezzi aggiungi/)
+    const pezzi = screen.getByLabelText(/Quanto aggiungi/)
     expect(perCollo.compareDocumentPosition(pezzi) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 
     await user.type(perCollo, '24')
@@ -589,38 +495,58 @@ describe('carico: il collo dietro un interruttore', () => {
     // E non si corregge a mano: sarebbe un numero che non torna con quello
     // che è arrivato.
     expect(pezzi).toHaveAttribute('readonly')
+    // A colli si contano pezzi e basta: un cartone ha dentro pezzi, non
+    // centilitri, e l'unità non si può più cambiare.
+    expect(screen.queryByLabelText('Unità del carico')).toBeNull()
   })
 })
 
-// ── «CINQUE CHILI DI LIMONI FANNO UN LITRO E MEZZO» ──────────────────
-// Si scrive come si dice, con la quantità su tutti e due i lati. Sotto
-// resta un rapporto, ed è quello che usa lo scarico: la proporzione vale
-// per qualunque quantità si versi.
-describe('la resa dello sfuso si scrive con le quantità sui due lati', () => {
-  it('5 kg fanno 1,5 l diventa il rapporto giusto, e il carico resta in chili', async () => {
-    const user = userEvent.setup()
+// ── OGNI MOVIMENTO CHIEDE IN CHE UNITÀ ───────────────────────────────
+// «Se facciamo un carico, uno scarico, qualsiasi cosa esso sia di
+// movimentazione» si sceglie se muovere a pezzi o nell'unità che compone il
+// pezzo (Flavio, 18/08): la cassetta di limoni si carica a chili, e i pezzi
+// li ricava il contenuto. Prima il carico di un articolo a pezzi accettava
+// solo pezzi, e per due bottiglie da mezzo litro non c'era modo di dirlo.
+describe('carico e rettifica si scrivono nell’unità che si ha in mano', () => {
+  async function apriCarico(user) {
     render(<InventoryManager />)
-    await screen.findByText('Campari')
-    await user.click(screen.getByRole('button', { name: '+ Nuovo prodotto' }))
-    await user.click(screen.getByRole('radio', { name: /Sfuso/ }))
-    await user.type(screen.getByLabelText('Nome *'), 'Limoni')
-    // «Come lo compri» parte già dal chilo: è il caso dei limoni.
-    expect(screen.getByLabelText('Come lo compri')).toHaveValue('kg')
+    await user.click(await screen.findByText('Campari'))
+    await user.click(await screen.findByRole('button', { name: /Carico/ }))
+  }
 
-    const daQty = screen.getByLabelText('Quanto ne prendi')
-    await user.clear(daQty)
-    await user.type(daQty, '5')
-    await user.type(screen.getByLabelText(/Si usa in un.altra misura/), '1.5')
-    await user.selectOptions(screen.getByLabelText(/Unità d.uso/), 'l')
-    await user.click(screen.getByRole('button', { name: /^Salva/ }))
+  it('il carico offre pezzi e contenuto, e dice quanto entra davvero', async () => {
+    const user = userEvent.setup()
+    loadStock.mockClear()
+    await apriCarico(user)
+    const unita = screen.getByLabelText('Unità del carico')
+    expect([...unita.options].map((o) => o.value)).toEqual(['pz', 'cl'])
 
-    await waitFor(() => expect(createInventoryItem).toHaveBeenCalled())
-    const salvato = createInventoryItem.mock.calls.at(-1)[0]
-    // 1500 ml ogni 5000 g = 0,3 ml per grammo.
-    expect(salvato.tipo).toBe('sfuso')
-    expect(salvato.resa).toBeCloseTo(0.3, 6)
-    expect(salvato.resa_unit).toBe('ml')
-    expect(salvato.unit).toBe('g') // la giacenza resta quella che si compra
+    await user.selectOptions(unita, 'cl')
+    await user.type(screen.getByLabelText(/Quanto aggiungi/), '250')
+    // Il Campari è una bottiglia da 100 cl: 250 cl sono due pezzi e mezzo, e
+    // il numero si legge PRIMA di confermare.
+    expect(screen.getByText('2,5 pz')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /Conferma carico/ }))
+    await waitFor(() => expect(loadStock).toHaveBeenCalled())
+    expect(loadStock.mock.calls.at(-1)[1]).toBeCloseTo(2.5, 6)
+  })
+
+  it('anche la rettifica: si conta quello che resta nella bottiglia', async () => {
+    const user = userEvent.setup()
+    adjustStock.mockClear()
+    render(<InventoryManager />)
+    await user.click(await screen.findByText('Campari'))
+    await user.click(await screen.findByRole('button', { name: /Contenuto reale/ }))
+    const campo = screen.getByLabelText(/Contenuto effettivo/)
+    // Si parte da quello che risulta, in pezzi.
+    expect(Number(campo.value)).toBeCloseTo(7.49, 6)
+    // Contando i centilitri rimasti la quantità non cambia: cambia come la
+    // si scrive. Una bottiglia da 100 cl, 7,49 pezzi, fa 749 cl.
+    await user.selectOptions(screen.getByLabelText('Unità della conta'), 'cl')
+    expect(Number(campo.value)).toBeCloseTo(749, 6)
+    await user.click(screen.getByRole('button', { name: /Salva contenuto/ }))
+    await waitFor(() => expect(adjustStock).toHaveBeenCalled())
+    expect(adjustStock.mock.calls.at(-1)[1]).toBeCloseTo(7.49, 6)
   })
 })
 
@@ -628,16 +554,17 @@ describe('la resa dello sfuso si scrive con le quantità sui due lati', () => {
 // La domanda si legge facilmente per un'altra — «quanto ne va in un
 // drink?» — e quella la decide la ricetta. Chi le confonde riempie il campo
 // con la dose di un cocktail e scarica il magazzino con numeri sbagliati.
-// Il «?» resta accanto al contenuto per i tipi a pezzo (intero e versato).
 describe('il contenuto di un pezzo, spiegato', () => {
   it('la didascalia dice a cosa serve, e il «?» distingue contenuto e dose', async () => {
     const user = userEvent.setup()
     render(<InventoryManager />)
     await screen.findByText('Campari')
     await user.click(screen.getByRole('button', { name: '+ Nuovo prodotto' }))
-    await user.click(screen.getByRole('radio', { name: /Lo vendo intero/ }))
 
-    expect(screen.getByText(/si vende intero e il magazzino conta pezzi/)).toBeInTheDocument()
+    // A vuoto la didascalia dice cosa succede a lasciarlo vuoto.
+    expect(screen.getByText(/in ricetta si dosa solo a pezzi/)).toBeInTheDocument()
+    await user.type(screen.getByLabelText(/A quanto corrisponde un pezzo/), '70')
+    expect(screen.getByText(/scalano la loro frazione/)).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: /Come funziona il contenuto di un pezzo/ }))
     const box = await screen.findByRole('dialog', { name: /A quanto corrisponde un pezzo/ })
@@ -645,6 +572,7 @@ describe('il contenuto di un pezzo, spiegato', () => {
     expect(within(box).getByText(/solo a pezzi/)).toBeInTheDocument()
   })
 })
+
 
 // ── «QUANTE NE HO?» È LA PRIMA DOMANDA ───────────────────────────────
 // Aprendo un prodotto si leggevano soglia, costo e prezzo consigliato, ma

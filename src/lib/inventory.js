@@ -561,6 +561,50 @@ export function qtyInStockUnit(qty, unit, item) {
   return base / r.per
 }
 
+// ── OGNI MOVIMENTO CHIEDE IN CHE UNITÀ ───────────────────────────────
+//
+// «Se facciamo un carico, uno scarico, qualsiasi cosa esso sia di
+// movimentazione» si sceglie se muovere a PEZZI o nell'unità che compone il
+// pezzo (Flavio, 18/08). I limoni si comprano a chili e si contano a pezzi:
+// chi carica una cassetta scrive 5 kg, non «47 limoni» contati a uno a uno.
+//
+// Il primo della lista è come si conta la giacenza — i pezzi — perché è la
+// risposta giusta quasi sempre; il secondo è il contenuto, quando c'è.
+const UNITA_PARLATA = { ml: 'cl', g: 'g', pz: 'pz', [UNITA_GENERICA]: UNITA_GENERICA }
+export function unitaMovimento(item) {
+  const stockUnit = item?.unit || 'pz'
+  const c = contentBase(item)
+  if (stockUnit === 'pz') {
+    if (!c || !(c.size > 0)) return ['pz']
+    const seconda = UNITA_PARLATA[c.base] || c.base
+    return seconda === 'pz' ? ['pz'] : ['pz', seconda]
+  }
+  // Schede storiche a volume, peso o unità, finché non passano dal travaso
+  // (REQ-MAG-018): si muovono nella loro unità, più la confezione quando ce
+  // n'è una — sono le «confezioni piene» di sempre.
+  const propria = UNITA_PARLATA[stockUnit] || stockUnit
+  return Number(item?.package_size) > 0 ? ['pz', propria] : [propria]
+}
+
+// L'INVERSO di qtyInStockUnit: da quello che c'è in giacenza al numero
+// nell'unità scelta. Serve a scrivere nel campo la quantità che c'è già
+// (la rettifica parte da lì) e a cambiare unità senza cambiare la quantità.
+export function fromStockUnit(stockQty, unit, item) {
+  const q = Number(stockQty) || 0
+  if (!(q > 0)) return 0
+  const u = String(unit || 'pz').toLowerCase()
+  const stockUnit = item?.unit || 'pz'
+  if (u === stockUnit) return q
+  if (u === 'pz') {
+    const size = Number(item?.package_size) || 0
+    return size > 0 ? q / size : q
+  }
+  if (baseUnit(u) === stockUnit) return fromBaseQty(q, u)
+  const r = resaUso(item)
+  if (!r || baseUnit(u) !== r.base || !(r.per > 0)) return q
+  return fromBaseQty(q * r.per, u)
+}
+
 // Calcola il consumo totale per ingrediente da una lista di order_items.
 //   orderItems: [{ drink_id, qty, recipe_items? }]
 //   drinksById: { [drinkId]: { recipe_items: [{ inventory_item_id, name, unit, qty }] } }

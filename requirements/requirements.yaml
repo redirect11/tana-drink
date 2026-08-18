@@ -1729,8 +1729,39 @@ requirements:
       Tanqueray, ma la trascrizione non è chiara; 2) nel vocale delle 15:17
       (min 2:01) un prodotto suona come «la maro del capo», trascrizione
       poco chiara — non si capisce a cosa si riferisse l'esempio.
-    status: todo
-    generate_issue: true
+      FATTO (1.5.0). La scheda prodotto non ha più né le quattro card né il
+      selettore dell'unità d'acquisto: si salva sempre `unit: 'pz'` e
+      `display_unit: 'pz'`, e la sola domanda è «a quanto corrisponde un
+      pezzo» — numero più unità fra l, cl, ml, kg, g, U, e nient'altro (le
+      unità non sono personalizzabili, mai). Vuota vuol dire che in ricetta
+      si dosa solo a pezzi. Il campo `tipo` non si scrive più e si azzera su
+      chi l'aveva; la `resa` idem, perché con il pezzo fisso lo stesso legame
+      lo dice già il contenuto e due risposte alla stessa domanda litigano
+      (resaUso preferisce la resa). Il modello dati resta quello di sempre:
+      `package_size` è il contenuto in unità base e `content_unit` dice di che
+      famiglia è.
+      SI SCARICA DAL MAGAZZINO? Resta una casella sulla scheda («È una
+      scorta: si scarica quando si usa», accesa di suo). NON è la domanda
+      tolta il 18/08 — quella diceva come si VENDE — ma la decisione che
+      questo stesso requisito aveva già messo sul prodotto: senza, con
+      l'unità bloccata sul pezzo, il «Tempo di Lavorazione» diventerebbe
+      merce, andrebbe a zero al primo drink e il menù farebbe sparire dalla
+      carta i drink che lo usano.
+      OGNI MOVIMENTO CHIEDE L'UNITÀ: carico e conta hanno accanto alla
+      quantità la scelta fra pezzi e contenuto (`unitaMovimento`), la
+      conversione la fa `qtyInStockUnit` — lo stesso conto dello scarico — e
+      sotto si legge quanto entra davvero prima di confermare. A colli si
+      contano pezzi e basta: un cartone ha dentro pezzi, non centilitri.
+      La giacenza NON cambia mai unità: resta in pezzi.
+      L'AVVERTENZA ONESTA c'è: col contenuto a peso la scheda dice che il
+      conteggio in pezzi è una stima, e il carico lo ripete.
+      Le schede storiche (ml, g, U) si riaprono e passano ai pezzi al
+      salvataggio, con l'avviso di conversione della giacenza di sempre: a
+      volume o a peso si divide per il contenuto di un pezzo, la «U» vale uno
+      a uno perché era già una cosa che si conta. Il travaso in blocco resta
+      REQ-MAG-018.
+    status: implemented
+    generate_issue: false
     labels: [magazzino, ux]
     priority: P1
     test_cases: [tests/unit/inventory.test.js, tests/component/InventoryManagerCard.test.jsx]
