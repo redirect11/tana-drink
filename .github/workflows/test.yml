@@ -1,32 +1,31 @@
 name: Tests
 
-# DOVE SERVE, E NON A OGNI PUSH. Qui lavora una persona sola, e il lavoro
-# quotidiano sta su release/x.y.z: far girare tutta la suite a ogni push
-# voleva dire pagare venti minuti di macchina al giorno per un verde che
-# nessuno guardava — mentre chi lavora i test se li fa girare in locale,
-# ed e' li' che scopre le cose, non dieci minuti dopo su GitHub.
+# GIRA A OGNI PUSH, TRANNE SULLA LINEA DI RILASCIO. Da quando si pubblica
+# solo coi tag, un push non fa partire nessun deploy: resta questo, che dice
+# se il lavoro regge, e su un ramo di lavoro qualunque e' comodo averlo.
 #
-# Adesso gira dove una risposta cambia una decisione:
+# L'eccezione e' release/**, che qui e' il posto di lavoro QUOTIDIANO: ci si
+# spinge dieci volte al giorno, e far girare tutta la suite a ogni gesto vuol
+# dire pagare minuti di macchina per un verde che nessuno sta guardando —
+# chi lavora i test se li fa girare in locale, ed e' li' che scopre le cose.
 #
-#   pull request verso develop  -> e' il cancello del merge: la CI qui e'
+# Quello che conta non resta scoperto lo stesso:
+#
+#   pull request verso develop  -> il cancello del merge; la CI qui e'
 #                                  obbligatoria (ruleset «linee-permanenti»)
-#   pull request verso main     -> l'hotfix passa di qui, e lo stesso
-#                                  ruleset pretende il check anche su main:
-#                                  senza, quelle PR non si potrebbero
-#                                  mergiare mai
-#   push su develop             -> quello che e' entrato regge davvero
-#   a mano (workflow_dispatch)  -> quando lo si vuole
+#   pull request verso main     -> ci passa l'hotfix, e lo stesso ruleset
+#                                  pretende il check anche li'
+#   prima di pubblicare         -> firebase-hosting.yml lint e test se li
+#                                  rifa' da se', per il test e per la
+#                                  produzione
 #
-# Sui rami di lavoro NON gira piu'. Non resta scoperto niente di
-# pubblicato: chi pubblica e' firebase-hosting.yml, che lint e test se li
-# rifa' da se' prima di mandare online qualunque cosa.
-#
-# Sulle pull request gira anche la copertura: li c'e' il tempo di
-# guardarla, mentre in mezzo al lavoro sarebbe solo attesa.
+# Sulle pull request gira anche la copertura: li c'e' il tempo di guardarla,
+# mentre in mezzo al lavoro sarebbe solo attesa.
 on:
   push:
     branches:
-      - develop
+      - '**'
+      - '!release/**'
   pull_request:
     branches:
       - develop
