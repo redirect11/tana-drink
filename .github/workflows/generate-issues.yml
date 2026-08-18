@@ -74,4 +74,11 @@ jobs:
           # di mezzo che prima non si vedeva da nessuna parte — una correzione
           # scritta e non ancora provata era indistinguibile da una da fare.
           SEGNA_IN_TEST: ${{ github.ref == 'refs/heads/develop' }}
+          # LA BACHECA vuole un token suo: i Projects v2 vivono sull'account,
+          # non nel repository, e il token che Actions da' da se' non li vede.
+          # Se il segreto manca non si rompe niente: le issue si aggiornano
+          # lo stesso e le schede restano come le muove una persona.
+          PROJECT_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+          PROGETTO_OWNER: redirect11
+          PROGETTO_NUMERO: "3"
         run: node scripts/generate-issues.mjs
