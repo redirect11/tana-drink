@@ -67,6 +67,11 @@ sotto i 44px si sbaglia. Si **toglie**, in quest'ordine:
   verticale, il tablet del banco — restano 500px e la scelta ha senso. Fino
   ai 900px la colonna si stringe a 200px.
 
+- **Come si guarda una pagina non è navigazione**: le quattro viste della coda
+  (griglia, corsie di stato, schede, lista) si scelgono in Impostazioni → Coda
+  ordini e restano. Niente riga di schede sopra la coda per cambiarle: si
+  decide una volta e si lavora, e quella riga sarebbe altezza tolta ai conti
+  per una cosa che si tocca due volte l'anno.
 - **I filtri** stanno in una tendina sopra il contenuto, e il tasto dice cosa
   è scelto senza doverla aprire.
 - **Il contenuto non porta navigazione**: niente tasti «vai a…» in mezzo a una
