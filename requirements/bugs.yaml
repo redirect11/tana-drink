@@ -520,3 +520,26 @@ bugs:
     generate_issue: false
     labels: [bug, pos, pagamenti]
     test_cases: [tests/component/PosPage.test.jsx, tests/component/OrderPosDetail.test.jsx]
+
+  - id: BUG-018
+    title: "Un conto appena incassato restava fra quelli «in corso»"
+    area: "src/pages/BartenderPage.jsx"
+    description: >
+      Coda a corsie di stato, con gli stati del servizio accesi: si preme
+      «Incassa» sul conto #2 e la card resta in «In corso», mentre «Chiusi»
+      segna 0. Chi ha appena preso i soldi cerca il conto fra i chiusi e non
+      lo trova.
+      CAUSA: le corsie usavano la chiusura della CODA, che con gli stati
+      accesi chiede pagato E servito — una regola che esiste per non far
+      sparire dal banco un drink pagato in anticipo. Ma quelle corsie
+      parlano del CONTO — in corso, chiuso, annullato — e per un conto
+      chiuso vuol dire incassato: il lavoro ancora da fare si guarda nelle
+      corsie delle comande, che è il loro mestiere.
+      RISOLTO: le corsie dei conti usano contoChiuso senza stati di
+      servizio. Le corsie delle comande non cambiano: la comanda pagata e
+      non ancora servita resta nel suo passo, col bollo «Pagato».
+    in_produzione: false
+    status: fixed
+    generate_issue: false
+    labels: [bug, coda]
+    test_cases: [tests/component/CodaCorsie.test.jsx]

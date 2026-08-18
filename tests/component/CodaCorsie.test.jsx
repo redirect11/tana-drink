@@ -293,6 +293,28 @@ describe('le corsie di chi guarda la serata (admin)', () => {
     expect(dentro.getByText(/Prima chiudi \d+ cont/)).toBeInTheDocument()
   })
 
+  // UN CONTO RISCOSSO È UN CONTO CHIUSO. Con gli stati del servizio accesi
+  // la coda considera chiuso solo quello pagato E servito — così un drink
+  // pagato in anticipo non sparisce dal banco — ma queste corsie parlano
+  // del CONTO, non del lavoro: chi aveva appena incassato lo cercava fra i
+  // chiusi e lo trovava ancora «in corso». Il lavoro rimasto si vede dove
+  // è il suo posto, nelle corsie delle comande.
+  it('un conto appena incassato passa fra i chiusi, anche se c’è ancora da servire', async () => {
+    ordini = [
+      {
+        ...CODA[0],
+        id: 'o48',
+        daily_number: 48,
+        payment_status: 'pagato',
+        payments: [{ amount: 24, method: 'banco', at: ORA }],
+      },
+    ]
+    montaCoda()
+    await screen.findByText('In corso')
+    expect(within(corsia('chiusi')).getByText('#48')).toBeInTheDocument()
+    expect(within(corsia('attivi')).queryByText('#48')).not.toBeInTheDocument()
+  })
+
   it('niente tasto «Colonne»: tre corsie ci stanno tutte, non c’è niente da spegnere', async () => {
     montaCoda()
     await screen.findByText('In corso')
