@@ -1091,9 +1091,19 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   const puoScegliere = corsieView && workflowOn && !vistaBanco
   const corsieBanco = bancoCorsie || (puoScegliere && vista === 'comande')
   const corsieDelBanco = corsieBanco ? corsieComande(contiInCorsia, { isChiuso: isClosed }) : []
+  // LE CORSIE DEI CONTI PARLANO DEL CONTO, non del lavoro: «In corso»,
+  // «Chiusi», «Annullati» sono le tre cose che un CONTO può essere, e per
+  // un conto chiuso vuol dire incassato. Qui non si usa la chiusura della
+  // coda (che con gli stati accesi chiede anche che sia stato servito, per
+  // non far sparire dal banco un drink pagato in anticipo): con quella un
+  // conto appena riscosso restava fra quelli in corso finché il bartender
+  // non serviva, e chi aveva appena incassato non lo trovava fra i chiusi.
+  // Il lavoro ancora da fare si vede dove è il suo posto: nelle corsie
+  // delle comande.
+  const contoIncassato = (o) => contoChiuso(o, { workflowOn: false })
   const corsie = corsieBanco
     ? []
-    : corsieDiStato(contiInCorsia, { isChiuso: isClosed, workflowOn: false })
+    : corsieDiStato(contiInCorsia, { isChiuso: contoIncassato, workflowOn: false })
   // Le colonne spente su questo terminale si tolgono qui, DOPO che sono
   // state riempite: così i conteggi non cambiano a seconda di cosa si
   // guarda, e riaccendendone una la si trova già piena.
