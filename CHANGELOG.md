@@ -61,6 +61,10 @@ con una prova a vuoto che dice cosa cambierebbe prima di toccare niente.
 
 ### Al banco
 
+- **Nel pagamento si vede subito di chi è il conto**: tavolo e nome stanno in
+  testata accanto al numero, non più in mezzo alle righe dei drink dove
+  sembravano una voce del conto.
+
 - **Il facsimile dello scontrino è largo quanto la carta**: le righe andavano
   a capo dove la stampante vera non le manda, e si leggeva «La Tana del
   Conigli / o». Adesso quello che si vede è quello che esce.
