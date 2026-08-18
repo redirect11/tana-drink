@@ -208,20 +208,25 @@ export const corpoGenerato = (corpo) =>
   typeof corpo === 'string' && corpo.includes('Issue generata automaticamente')
 
 // DOVE VA LA SCHEDA SULLA BACHECA, e soprattutto quando NON si tocca.
-// L'ordine delle colonne e' quello del progetto: To triage, Backlog, Ready,
-// In progress, In test, In review, Done.
+// L'ordine e' quello delle colonne del progetto, e ogni linea di lavoro ha la
+// sua tappa: un ramo di lavoro la scrive (Implemented), develop la manda a
+// provare (In test), main la chiude (Done).
+export const COLONNE = ['To triage', 'Backlog', 'Ready', 'Implemented', 'In test', 'In review', 'Done']
+export const STATO_IMPLEMENTATA = 'Implemented'
 export const STATO_IN_TEST = 'In test'
 export const STATO_FATTO = 'Done'
-const PIU_AVANTI = [STATO_IN_TEST, 'In review', STATO_FATTO]
 
-export function prossimoStato(attuale, { chiuso = false } = {}) {
-  if (chiuso) return attuale === STATO_FATTO ? null : STATO_FATTO
-  // Non si tira MAI indietro una scheda che sta gia' piu' avanti: se qualcuno
-  // l'ha spostata in «In review» o in «Done» l'ha fatto guardandola in faccia,
-  // e un automatismo che gliela riporta indietro a ogni push glielo fa
-  // smettere di usare.
-  if (PIU_AVANTI.includes(attuale)) return null
-  return STATO_IN_TEST
+// Si va AVANTI, mai indietro: se qualcuno ha portato una scheda piu' in la'
+// l'ha fatto guardandola in faccia, e un automatismo che gliela riporta
+// indietro a ogni push glielo fa smettere di usare. Se e' gia' arrivata dove
+// la manderemmo, non si tocca niente: cosi' il giro e' ripetibile senza
+// riscrivere venticinque volte la stessa cosa.
+export function prossimoStato(attuale, destinazione) {
+  const arrivo = COLONNE.indexOf(destinazione)
+  if (arrivo < 0) return null
+  const partenza = COLONNE.indexOf(attuale)
+  if (partenza >= arrivo) return null
+  return destinazione
 }
 
 // `generate_issue` vuol dire «questa voce e' SEGUITA su GitHub», non «creane
