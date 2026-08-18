@@ -417,6 +417,12 @@ bugs:
       RESTA APERTO: la «U» nella prima domanda (ci sono articoli in
       produzione fatti così) e il caso del limone — comprato al chilo, usato
       in cl. Vedi REQ-MAG-016, che rifà il modello invece di rattopparlo.
+      CONFERMATO (18/08, tre vocali su REQ-MAG-016): la prima domanda sparisce
+      del tutto, non solo la «U» — l'unità iniziale è sempre e sola il
+      pezzo, fisso e bloccato, e la «U» (insieme a cl/ml/l e kg/g) sta solo
+      nella seconda domanda, «a quanto corrisponde un pezzo». Il caso del
+      limone resta senza risposta anche nei nuovi vocali: vedi il punto
+      aperto in REQ-MAG-016.
     in_produzione: true
     status: todo
     generate_issue: true

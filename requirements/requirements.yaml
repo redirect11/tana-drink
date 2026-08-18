@@ -1533,7 +1533,7 @@ requirements:
     test_cases: []
 
   - id: REQ-MAG-016
-    title: "Un prodotto si compra in un modo e si usa in un altro: due unità e una resa"
+    title: "L'unità è sempre il pezzo: si sceglie solo a cosa corrisponde"
     area: "src/lib/inventory.js, src/components/InventoryManager.jsx"
     description: >
       Da tre note di Flavio (17/08, 21:11-21:14). Il modello delle unità
@@ -1626,11 +1626,112 @@ requirements:
       contenuto → versato, pezzo senza → intero, il resto → sfuso), senza
       migrazione. Cambiando tipo su un prodotto esistente valgono gli
       avvisi di conversione della giacenza di sempre.
+      RIPENSATO (18/08, tre vocali di Flavio uno via l'altro — 14:53, 15:17,
+      15:22 — vince l'ultimo, che è la sintesi e decide). Prima idea (14:53):
+      «l'unità di misura sono i pezzi, poi dopo i pezzi vengono divisi in
+      cl, grammi e unità di misura non definita» — non più la resa fra
+      unità d'acquisto e unità d'uso di sopra: sempre e solo PEZZO,
+      frazionato da una seconda unità.
+      Guardando l'app (15:17), Flavio boccia la domanda RIVISTA qui sopra
+      («che tipo di prodotto è?», le quattro card): «questa cosa non è
+      male, però secondo me non è molto corretta per un gestionale, cioè va
+      un po' troppo nello specifico». Lo stesso articolo si vende in più
+      modi — il Jägermeister va nel Jägerbombo E si vende a cicchetto da
+      solo, mai la bottiglia intera — e una card sola per prodotto non lo
+      permette. Segnala anche diciture da rivedere: «una bottiglia fa»
+      (100 cl) «non credo sia molto italiana» — la scheda va riletta con
+      questo in mente, non solo quella frase.
+      DECISO (15:22, l'ultima parola: qui non è più una proposta da
+      confermare). «L'unità di misura iniziale deve scomparire, perché non
+      è più selezionabile, in automatico è il pezzo» — FISSO E BLOCCATO, non
+      un campo `tipo` né una scelta fra famiglie. Il campo `tipo` previsto
+      nella revisione qui sopra NON si aggiunge più, e con lui cadono il
+      selettore a quattro card e ogni distinzione fra «lo vendo intero / lo
+      verso nel drink / sfuso / lavoro». La SOLA domanda che il modulo fa è
+      «a quanto corrisponde un pezzo», con tre risposte possibili: unità di
+      CAPACITÀ (l, cl, ml), di PESO (kg, g), o «U» non definita — mai una
+      quarta a piacere: «potremmo caricare tantissime cose con tantissime
+      unità di misura che non sappiamo, e non ce le possiamo mettere a
+      creare ogni volta» — la U resta volutamente generica, il significato
+      sta in testa a chi la usa («lo so io che sono minuti, ma non fa
+      niente»). NESSUN REQUISITO deve prevedere unità di misura
+      personalizzabili dall'utente.
+      La scelta pezzo-o-frazione non è solo del CARICO, come diceva il
+      primo vocale: vale per QUALUNQUE movimento — «se farmo un carico, uno
+      scarico, qualsiasi cosa esso sia di movimentazione» — chiedendo ogni
+      volta se muovere a pezzi o nell'unità che compone il pezzo. Casi-prova
+      citati a voce: un distillato codificato «1 pezzo = X cl» chiede se
+      caricare a pezzi o a centilitri; il ghiaccio codificato «1 pezzo = X
+      grammi» chiede pezzi o grammi (il numero detto a voce, «8 grammi», non
+      sta in piedi per un pezzo di ghiaccio — è un esempio buttato lì, non
+      una specifica: da chiarire, non da ricopiare); il tempo di
+      lavorazione, pezzi o «U» (minuti, nella testa di chi lo carica).
+      IL CARICO A CARTONE RESTA (vedi REQ-MAG-011): comprando a cartoni
+      interi — 24 birre, per dire — si scrive il prezzo totale del cartone e
+      si scompone da sé, prima al singolo pezzo, poi al singolo cl (una
+      bottiglia a 33 cl, non gli «8 cl» della trascrizione del vocale delle
+      15:17 — il senso è quello della birra da 33, ripetuto poco prima nella
+      stessa frase).
+      Con questo si scioglie anche il punto rimasto aperto in BUG-014 (la
+      «U» nella prima domanda): la prima domanda non c'è più, è sempre
+      pezzo, e la «U» sta sempre — e solo — nella seconda.
+      DA CHIARIRE (AskUserQuestion non disponibile in questo passaggio,
+      quindi non deciso qui): 1) il caso dei LIMONI di cui parlava la
+      proposta qui sopra (comprati al chilo, usati in cl) — nel modello
+      «sempre pezzo» con una sola corrispondenza (capacità O peso O U, non
+      le due insieme) non è detto a voce se un pezzo di limoni corrisponda a
+      un peso (si contano pesando) o a una capacità (si dosano in cl): i tre
+      vocali di oggi non toccano più questo esempio, che pure aveva aperto
+      tutto il ripensamento; 2) nel vocale delle 15:22 (min 1:00) il
+      distillato d'esempio suona come «il Tangerai» — quasi certamente
+      Tanqueray, ma la trascrizione non è chiara; 3) nel vocale delle 15:17
+      (min 2:01) un prodotto suona come «la maro del capo», trascrizione
+      poco chiara — non si capisce a cosa si riferisse l'esempio.
     status: todo
     generate_issue: true
     labels: [magazzino, ux]
     priority: P1
     test_cases: [tests/unit/inventory.test.js, tests/component/InventoryManagerCard.test.jsx]
+
+  - id: REQ-MAG-017
+    title: "Il fornitore si aggiunge dalla tendina del prodotto, come già la categoria nel menù"
+    area: "src/components/InventoryManager.jsx (select #isup, form prodotto), src/components/DrinkForm.jsx onCategoryChange (il comportamento da copiare)"
+    description: >
+      Scritto da Flavio (18/08, due messaggi di seguito, 15:33 e 15:34 — il
+      secondo semplifica il primo e vince), commentando il modulo «Modifica
+      prodotto» del magazzino in test («Acqua Brillante Tonica»). La tendina
+      Fornitore elenca solo i fornitori che esistono già: se manca quello
+      giusto, oggi bisogna uscire dal prodotto, andare in Fornitori, crearlo,
+      e tornare indietro a ricominciare la scheda — proprio nel momento in
+      cui ci si accorge che manca.
+      Sue parole (15:33): «nella tendina deve comparire il tab AGGIUNGI
+      FORNITORE ed aggiungerlo direttamente da una finestra di info dove
+      basterà confermare solo il nome per poi aggiungere in un secondo
+      momento altre info aziendali».
+      Come deve comportarsi (15:34) non è da inventare: il modello esiste
+      già nell'app, e lui lo indica come esempio — «proprio come succede nel
+      MENU che quando apri la tendina appare NUOVA CATEGORIA». Nel modulo
+      del drink (src/components/DrinkForm.jsx) la tendina Categoria ha in
+      fondo la voce «➕ Nuova categoria…», che apre al volo una finestra dove
+      basta il nome per confermare (onCategoryChange, valore `__new__`). La
+      tendina Fornitore del prodotto di magazzino deve comportarsi allo
+      stesso modo: ultima voce che apre la creazione al volo, basta il nome
+      — il resto dei dati aziendali (indirizzo, contatti…) si compila dopo,
+      con tempo, dalla sezione Fornitori — e il fornitore appena creato resta
+      SELEZIONATO sul prodotto che si stava compilando, senza doverlo
+      riselezionare a mano: se toccasse rifarlo, il giro non si sarebbe
+      accorciato.
+      DA CHIEDERE (segnalato, non deciso qui — per esplicita richiesta di
+      Flavio di non allargare la richiesta da soli): nello stesso modulo, la
+      tendina Categoria del prodotto di MAGAZZINO (non quella del menù, che
+      il comportamento ce l'ha già) è oggi un elenco semplice, senza
+      «+ Nuova categoria» — la stessa mancanza del fornitore, mai segnalata
+      a voce finora. Vale lo stesso trattamento anche lì?
+    status: todo
+    generate_issue: true
+    labels: [magazzino, fornitori, ux]
+    priority: P2
+    test_cases: []
 
   - id: REQ-MAG-015
     title: "Macro-categorie di magazzino e di menù, per incrociare speso e incassato"
@@ -2386,9 +2487,20 @@ requirements:
       mai una card stretta su un monitor grande — e nel caso peggiore la parola
       si tronca invece di sfondare il bordo. Nella vista a Lista, dove lo
       spazio c'è, non cambia niente.
-    status: implemented
-    generate_issue: false
+      DA FARE (chiesto da Flavio a voce, 18/08 ore 15:17): la scala
+      cartone → pezzi → contenuto vale anche per il PREZZO, non solo per la
+      quantità. Comprando a cartoni interi — 24 birre, per dire, con un
+      pezzo codificato «1 pezzo = 33 cl» — si scrive il prezzo TOTALE del
+      cartone e l'app lo scompone da sé, prima al singolo pezzo («mi deve
+      dare la possibilità di mettere il prezzo totale di 24 e poi scompormi
+      al singolo pezzo quanto costa»), poi al singolo cl («per poi dopo
+      riscompormi al singolo cl quanto costa»). Vedi anche REQ-MAG-016
+      (ripensamento 18/08), che descrive lo stesso carico a cartone dal lato
+      delle quantità.
+    status: partial
+    generate_issue: true
     labels: [magazzino, ux]
+    priority: P2
     test_cases: [tests/unit/inventory.test.js, tests/component/InventoryManager.test.jsx]
 
   # ══════════════════════════════════════════════════════════════════════
