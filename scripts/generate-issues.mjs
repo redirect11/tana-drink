@@ -33,7 +33,8 @@
  */
 
 import { readFileSync } from 'node:fs'
-import { parseRequirementsYaml } from './lib-requisiti.mjs'
+import { STATI_CHIUSI, parseRequirementsYaml, etichetteClassificazione, riconciliaEtichette, corpoGenerato, IN_TEST, indicizzaPerId, prossimoStato, deveNascere, STATO_IMPLEMENTATA, STATO_IN_TEST, STATO_FATTO } from './lib-requisiti.mjs'
+import { bachecaAttiva, schedaDellaIssue, spostaScheda } from './bacheca.mjs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -57,6 +58,18 @@ const DRY_RUN = process.env.DRY_RUN === 'true' || process.argv.includes('--dry-r
 // `CHIUDE_RISOLTI=true node scripts/generate-issues.mjs`.
 const CHIUDE_RISOLTI = process.env.CHIUDE_RISOLTI === 'true'
 
+// TRE LINEE, TRE COSE DIVERSE sulla stessa voce: su release/** si scrive e si
+// riallinea, su develop si mette IN PROVA (e' finita, ma al banco non l'ha
+// ancora vista nessuno), su main si chiude. Prima il pezzo di mezzo non
+// esisteva: una correzione scritta e non ancora provata era indistinguibile
+// da una ancora da fare.
+const SEGNA_IN_TEST = process.env.SEGNA_IN_TEST === 'true'
+
+// I RAMI DI LAVORO — feature/** e release/** — dicono una cosa sola: e'
+// scritta, ed e' su un ramo. Non e' ancora integrata e nessuno l'ha provata,
+// ma sulla bacheca non era distinguibile da una ancora da fare.
+const SEGNA_IMPLEMENTATA = process.env.SEGNA_IMPLEMENTATA === 'true'
+
 const [OWNER, REPO] = GITHUB_REPO.split('/')
 const GITHUB_API = 'https://api.github.com'
 
@@ -75,19 +88,50 @@ async function githubFetch(path, options = {}) {
   return { status: res.status, ok: res.ok, body }
 }
 
-async function searchIssues(title) {
-  // Cerca issue esistenti (aperte o chiuse) con questo titolo esatto, per idempotenza.
-  // Le chiuse sono incluse di proposito: se un'issue di requisito è già stata risolta
-  // e chiusa, NON vogliamo ricrearla automaticamente.
-  const q = encodeURIComponent(`repo:${OWNER}/${REPO} is:issue in:title "${title}"`)
-  const { ok, body } = await githubFetch(`/search/issues?q=${q}&per_page=5`)
-  if (!ok) return []
-  return body.items || []
+// UN ELENCO SOLO, NON VENTINOVE RICERCHE.
+//
+// Prima si cercava ogni voce con la API di ricerca, e da lì è nato un
+// doppione vero: la #55 per BUG-005, che esisteva già come #14 col titolo
+// identico. La ricerca aveva risposto «niente» — quasi certamente per il suo
+// limite di trenta chiamate al minuto, con due run a un minuto di distanza e
+// ventinove ricerche ciascuna — e il codice, che trattava una ricerca
+// FALLITA come «l'issue non esiste», ne ha aperta una nuova.
+//
+// Adesso l'elenco delle issue si chiede UNA volta (API core: cinquemila
+// chiamate l'ora, non trenta al minuto) e il confronto si fa in casa,
+// sull'identificativo fra parentesi quadre. Se l'elenco non arriva, il giro
+// si ferma: meglio non fare niente che aprire doppioni.
+async function elencoIssue() {
+  const issues = []
+  for (let pagina = 1; pagina <= 20; pagina++) {
+    const { ok, status, body } = await githubFetch(
+      `/repos/${OWNER}/${REPO}/issues?state=all&per_page=100&page=${pagina}`,
+    )
+    if (!ok) throw new Error(`elenco delle issue non disponibile (${status})`)
+    // L'endpoint delle issue restituisce anche le pull request: si scartano.
+    issues.push(...body.filter((i) => !i.pull_request))
+    if (body.length < 100) break
+  }
+  return issues
+}
+
+
+// Il dettaglio serve per corpo ed etichette: la ricerca li tronca.
+async function leggiIssue(numero) {
+  const { ok, body } = await githubFetch(`/repos/${OWNER}/${REPO}/issues/${numero}`)
+  return ok ? body : null
+}
+
+async function aggiornaIssue(numero, patch) {
+  return githubFetch(`/repos/${OWNER}/${REPO}/issues/${numero}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(patch),
+  })
 }
 
 // Un bug risolto nel registro è un'issue da chiudere: così non si aggiorna la
 // stessa cosa in due posti (e non restano aperte issue di roba già sistemata).
-const STATI_CHIUSI = new Set(['fixed', 'implemented', 'done'])
 
 async function commentIssue(number, body) {
   return githubFetch(`/repos/${OWNER}/${REPO}/issues/${number}/comments`, {
@@ -113,6 +157,28 @@ async function createIssue({ title, body, labels }) {
   })
 }
 
+// LA BACHECA SEGUE L'ETICHETTA. L'informazione vera sta nel registro e
+// nell'issue; il progetto e' una vista comoda, e si muove di conseguenza.
+// Se manca PROJECT_TOKEN non si rompe niente: si salta, e le schede restano
+// come le muove una persona.
+async function seguiSullaBacheca(numeroIssue, destinazione) {
+  if (!bachecaAttiva()) return null
+  try {
+    const scheda = await schedaDellaIssue(GITHUB_REPO, numeroIssue)
+    if (!scheda) return null
+    const dove = prossimoStato(scheda.stato, destinazione)
+    if (!dove) return null
+    if (DRY_RUN) return `bacheca: ${scheda.stato || 'senza stato'} -> ${dove}`
+    await spostaScheda(scheda.id, dove)
+    return `bacheca: ${dove}`
+  } catch (e) {
+    // Un guaio sulla bacheca non deve far fallire il giro delle issue: quella
+    // e' la sostanza, questa e' la vetrina.
+    console.error(`  ⚠️  Bacheca non aggiornata per #${numeroIssue}: ${e.message}`)
+    return null
+  }
+}
+
 // ── Issue body builder ────────────────────────────────────────────────────────
 
 function buildIssueBody(req) {
@@ -133,6 +199,8 @@ function buildIssueBody(req) {
   return `## ${req.id} — ${req.title}
 ${dove}
 **Area**: \`${req.area}\`
+${req.severity || req.priority ? `**Quanto fa male**: ${req.severity || '—'} · **Quando si fa**: ${req.priority || 'da decidere'}
+` : ''}
 **Status**: ${req.status}
 
 ## Descrizione
@@ -153,6 +221,8 @@ async function main() {
     { rel: 'requirements/requirements.yaml', obbligatorio: true },
     { rel: 'requirements/bugs.yaml', obbligatorio: false },
   ]
+
+  const indice = indicizzaPerId(await elencoIssue(), (m) => console.error(`  ⚠️  ${m}`))
 
   const toGenerate = []
   for (const s of sorgenti) {
@@ -190,6 +260,7 @@ async function main() {
   let created = 0
   let skipped = 0
   let closed = 0
+  let updated = 0
   let errors = 0
 
   for (const req of toGenerate) {
@@ -198,34 +269,56 @@ async function main() {
 
     const risolto = STATI_CHIUSI.has(String(req.status || '').toLowerCase())
 
-    // Risolto sul ramo di lavoro non vuol dire risolto per chi sta al banco:
-    // l'issue si chiude quando la correzione arriva in produzione.
-    if (risolto && !CHIUDE_RISOLTI) {
-      console.log(`  ⏭  Risolto (${req.status}) — l'issue si chiude da main, non da qui.`)
-      skipped++
-      continue
-    }
-
-    if (DRY_RUN) {
-      if (risolto) {
-        console.log(`  [DRY RUN] Risolto (${req.status}) — l'issue, se aperta, verrebbe chiusa.
-`)
-        closed++
-        continue
-      }
-      console.log('  [DRY RUN] Payload:')
-      console.log('  Title:', issueTitle)
-      console.log('  Labels:', req.labels.join(', ') || '(nessuna)')
-      console.log('  Body (anteprima):', buildIssueBody(req).slice(0, 200) + '...\n')
-      created++
-      continue
-    }
 
     // Check idempotenza: esiste già un'issue con questo titolo?
-    const existing = await searchIssues(issueTitle)
+    const trovata = indice.get(req.id)
+    const existing = trovata ? [trovata] : []
+
+    // SU DEVELOP: la voce e' finita ma non provata. Non si chiude — in
+    // produzione non c'e' ancora niente — si segna «in prova», che e' l'unica
+    // informazione che mancava a chi guarda l'elenco delle issue.
+    if (risolto && !CHIUDE_RISOLTI) {
+      const aperta = existing.find((i) => i.state === 'open')
+      if (!SEGNA_IN_TEST || !aperta) {
+        const mossa = aperta && SEGNA_IMPLEMENTATA
+          ? await seguiSullaBacheca(aperta.number, STATO_IMPLEMENTATA)
+          : null
+        console.log(`  ⏭  Risolto (${req.status})${mossa ? ' — ' + mossa : " — l'issue si chiude da main, non da qui."}`)
+        skipped++
+        continue
+      }
+      const attuali = (aperta.labels || []).map((l) => (typeof l === 'string' ? l : l.name))
+      if (attuali.includes(IN_TEST)) {
+        console.log(`  ⏭  Gia' in prova: ${aperta.html_url}`)
+        skipped++
+        continue
+      }
+      if (DRY_RUN) {
+        const mossa = await seguiSullaBacheca(aperta.number, STATO_IN_TEST)
+        console.log(`  [DRY RUN] Da mettere in prova (+${IN_TEST}${mossa ? ', ' + mossa : ''}): ${aperta.html_url}`)
+        updated++
+        continue
+      }
+      const esito = await aggiornaIssue(aperta.number, { labels: [...attuali, IN_TEST] })
+      if (esito.ok) {
+        const mossa = await seguiSullaBacheca(aperta.number, STATO_IN_TEST)
+        console.log(`  🧪 In prova (+${IN_TEST}${mossa ? ', ' + mossa : ''}): ${aperta.html_url}`)
+        updated++
+      } else {
+        console.error(`  ❌ Errore ${esito.status} su #${aperta.number}:`, esito.body.message || '')
+        errors++
+      }
+      await new Promise((r) => setTimeout(r, 200))
+      continue
+    }
 
     if (risolto) {
       const aperta = existing.find((i) => i.state === 'open')
+      if (DRY_RUN) {
+        console.log(aperta ? `  [DRY RUN] Risolto (${req.status}) — chiuderebbe ${aperta.html_url}` : `  [DRY RUN] Risolto — nessuna issue aperta.`)
+        aperta ? closed++ : skipped++
+        continue
+      }
       if (!aperta) {
         console.log(`  ⏭  Risolto (${req.status}) — nessuna issue aperta da chiudere.`)
         skipped++
@@ -237,9 +330,17 @@ async function main() {
 
 ${req.description}`
       )
+      // Chiusa: «in prova» non vuol dire piu' niente, e lasciarla vorrebbe
+      // dire che nell'elenco filtrato per in-test resta roba gia' in
+      // produzione.
+      const conProva = (aperta.labels || []).map((l) => (typeof l === 'string' ? l : l.name))
+      if (conProva.includes(IN_TEST)) {
+        await aggiornaIssue(aperta.number, { labels: conProva.filter((l) => l !== IN_TEST) })
+      }
       const { ok, status, body } = await closeIssue(aperta.number)
       if (ok) {
-        console.log(`  ✅ Issue chiusa: ${aperta.html_url}`)
+        const mossa = await seguiSullaBacheca(aperta.number, STATO_FATTO)
+        console.log(`  ✅ Issue chiusa${mossa ? ' (' + mossa + ')' : ''}: ${aperta.html_url}`)
         closed++
       } else {
         console.error(`  ❌ Errore ${status} chiudendo #${aperta.number}:`, body.message || '')
@@ -249,16 +350,73 @@ ${req.description}`
       continue
     }
 
+    // L'ISSUE C'E' GIA': si riallinea, non si salta. Prima si saltava e basta,
+    // e una voce che cambiava — un titolo riscritto, una priorita' nuova —
+    // restava scritta solo nel registro: su GitHub, dove la gente guarda, non
+    // arrivava mai.
     if (existing.length > 0) {
-      console.log(`  ⏭  Saltato — issue già esistente: ${existing[0].html_url}`)
+      const numero = existing[0].number
+      const issue = (await leggiIssue(numero)) || existing[0]
+      const attuali = (issue.labels || []).map((l) => (typeof l === 'string' ? l : l.name))
+      const { daAggiungere, daTogliere, finali } = riconciliaEtichette(attuali, req)
+      const corpo = buildIssueBody(req)
+      // Il corpo si riscrive solo se e' ancora il nostro: se qualcuno ci ha
+      // scritto dentro un'analisi, quella vale piu' del testo generato.
+      const corpoDaRiscrivere = corpoGenerato(issue.body) && (issue.body || '').trim() !== corpo.trim()
+      const titoloDaCambiare = issue.title !== issueTitle
+
+      const patch = {}
+      if (titoloDaCambiare) patch.title = issueTitle
+      if (corpoDaRiscrivere) patch.body = corpo
+      if (daAggiungere.length || daTogliere.length) patch.labels = finali
+
+      if (Object.keys(patch).length === 0) {
+        console.log(`  ⏭  Gia' allineata: ${issue.html_url}`)
+        skipped++
+        continue
+      }
+
+      const cambiamenti = [
+        titoloDaCambiare ? 'titolo' : null,
+        corpoDaRiscrivere ? 'testo' : null,
+        daAggiungere.length ? `+${daAggiungere.join(' +')}` : null,
+        daTogliere.length ? `-${daTogliere.join(' -')}` : null,
+      ].filter(Boolean).join(', ')
+
+      if (DRY_RUN) {
+        console.log(`  [DRY RUN] Da riallineare (${cambiamenti}): ${issue.html_url}`)
+        updated++
+        continue
+      }
+
+      const esito = await aggiornaIssue(numero, patch)
+      if (esito.ok) {
+        console.log(`  ♻️  Riallineata (${cambiamenti}): ${issue.html_url}`)
+        updated++
+      } else {
+        console.error(`  ❌ Errore ${esito.status} riallineando #${numero}:`, esito.body.message || '')
+        errors++
+      }
+      await new Promise((r) => setTimeout(r, 200))
+      continue
+    }
+
+    if (!deveNascere(req, existing.length > 0)) {
+      console.log(`  ⏭  Gia' fatta e senza issue: non se ne apre una nuova.`)
       skipped++
+      continue
+    }
+
+    if (DRY_RUN) {
+      console.log('  [DRY RUN] Nuova. Labels:', [...new Set([...req.labels, ...etichetteClassificazione(req)])].join(', ') || '(nessuna)')
+      created++
       continue
     }
 
     const { ok, status, body } = await createIssue({
       title: issueTitle,
       body: buildIssueBody(req),
-      labels: req.labels,
+      labels: [...new Set([...req.labels, ...etichetteClassificazione(req)])],
     })
 
     if (ok) {
@@ -273,7 +431,7 @@ ${req.description}`
     await new Promise((r) => setTimeout(r, 200))
   }
 
-  console.log(`\n📊 Riepilogo: ${created} create, ${closed} chiuse, ${skipped} saltate, ${errors} errori`)
+  console.log(`\n📊 Riepilogo: ${created} create, ${updated} riallineate, ${closed} chiuse, ${skipped} saltate, ${errors} errori`)
   if (errors > 0) process.exit(1)
 }
 

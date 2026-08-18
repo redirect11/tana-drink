@@ -10,9 +10,18 @@ import { qtyBtnStyle } from '../lib/posStyles.js'
 export function DrinkTile({
   drink,
   qty,
+  onInfo,
   onAdd,
   onSetQty,
+  // DUE SEGNI, DUE COSE. `color` è il colore del PRODOTTO e sta nella
+  // linguetta in alto a sinistra: si tocca per cambiarlo. `striscia` è
+  // quello del bordo sinistro, che dice quello che il locale ha scelto —
+  // colore, categoria, scorte o niente (lib/strisce.js).
+  // Erano lo stesso valore, e scegliendo «categoria» per la striscia anche
+  // la linguetta diventava della categoria: il colore scelto a mano
+  // spariva dalla vista, pur essendo ancora lì.
   color = null,
+  striscia = null,
   favorite = false,
   onToggleFav = null,
   acceso = false, // acceso dalla ricerca: è la card che si sta cercando
@@ -24,14 +33,19 @@ export function DrinkTile({
       onClick={onAdd}
       // Serve alla ricerca per ritrovare la card e portarcisi sopra.
       data-drink-id={drink.id}
-      className={acceso ? 'prodotto-acceso' : undefined}
+      // Le tile hanno lo stesso vestito delle card della coda — sfumatura
+      // leggera e ombra — invece di essere riquadri piatti: in una griglia
+      // piena il rilievo è quello che fa leggere le colonne.
+      className={`pos-tile-striscia${acceso ? ' prodotto-acceso' : ''}${
+        inCart ? ' in-carrello' : ''
+      }`}
       style={{
-        background: inCart
-          ? 'rgba(var(--accent-rgb, 180, 120, 60), 0.18)'
-          : 'var(--tile-bg)',
         border: inCart
           ? '2px solid rgba(var(--accent-rgb, 180, 120, 60), 0.7)'
           : '1px solid var(--line)',
+        // La striscia a sinistra col colore del prodotto: lo stesso segno
+        // delle card della coda e del menù (il CSS la ispessisce).
+        borderLeftColor: striscia || color || 'var(--line)',
         borderRadius: 12,
         padding: '0.5em 0.62em 0.38em',
         cursor: 'pointer',
@@ -81,24 +95,49 @@ export function DrinkTile({
         </button>
       )}
 
-      {/* SEGNALIBRO colorato della categoria (come sulle tile di SumUp POS).
-          Era una linguetta da 1em: a colpo d'occhio, su una griglia piena, non
-          si distingueva. Ora è quasi il doppio — deve essere il primo segno
-          che si vede, non un dettaglio da cercare. */}
+      {/* LA ⓘ: com'è fatto questo drink. La domanda «quanto gin ci va?» al
+          banco si fa a voce e a voce si perde — chi entra a dare una mano
+          il sabato non ha le dosi in testa. Sta in basso a destra, lontana
+          dai +/− e dalla stella: si guarda, non si preme per sbaglio. */}
+      {onInfo && (
+        <button
+          type="button"
+          aria-label={`Come si fa ${drink.name}`}
+          title={`Come si fa ${drink.name}`}
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation()
+            onInfo()
+          }}
+          style={{
+            position: 'absolute',
+            bottom: 2,
+            right: 4,
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: '0.8em',
+            lineHeight: 1,
+            padding: 2,
+            opacity: 0.4,
+            zIndex: 2,
+          }}
+        >
+          ⓘ
+        </button>
+      )}
+
+      {/* IL COLORE DELLA CATEGORIA, UN PALLINO IN ALTO A DESTRA — lo stesso
+          segno, nello stesso posto, delle card del magazzino e del menù.
+          Era un nastro d'angolo copiato dalle tile di SumUp: con trenta
+          tile a schermo erano trenta bandiere, e su un tema sobrio non
+          restava altro. La forma sta nel CSS (.pos-tile-nastro), qui c'è
+          solo il colore. */}
       {color && (
         <div
           aria-hidden
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: 0,
-            height: 0,
-            // in em: il segnalibro scala con la dimensione della card
-            borderTop: `1.9em solid ${color}`,
-            borderRight: '1.9em solid transparent',
-            borderTopLeftRadius: 14,
-          }}
+          className="pos-tile-nastro"
+          style={{ position: 'absolute', '--pastiglia': color }}
         />
       )}
 

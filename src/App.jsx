@@ -2,6 +2,7 @@ import { Routes, Route, Link, Navigate, useLocation, useNavigate } from 'react-r
 import LandingPage from './pages/LandingPage.jsx'
 import MenuPage from './pages/MenuPage.jsx'
 import OrderStatusPage from './pages/OrderStatusPage.jsx'
+import ComandaPage from './pages/ComandaPage.jsx'
 import MyOrdersPage from './pages/MyOrdersPage.jsx'
 import BartenderPage from './pages/BartenderPage.jsx'
 import { AccediPage, RegistratiPage, ProfiloPage } from './pages/AccountPages.jsx'
@@ -11,8 +12,17 @@ import { useCustomer, useHasOrders } from './lib/customerAuth.js'
 import { isFirebaseConfigured, auth } from './lib/firebaseClient.js'
 import { isPersonale, isSala } from './lib/ruoli.js'
 import { onAuthStateChanged } from 'firebase/auth'
-import { subscribeSettings, DEFAULT_SETTINGS, clockIn, subscribePrinterConfig } from './lib/api.js'
-import { savePrinterSettings } from './lib/printer.js'
+import {
+  subscribeSettings,
+  DEFAULT_SETTINGS,
+  clockIn,
+  subscribePrinterConfig,
+  saveStaffToken,
+} from './lib/api.js'
+import { getPushToken } from './lib/push.js'
+import { idDispositivo } from './lib/dispositivo.js'
+import { savePrinterSettings, impostaUtenteStampante } from './lib/printer.js'
+import AvvisiSpenti from './components/AvvisiSpenti.jsx'
 import { dismissKeyboard } from './lib/keyboard.js'
 import StatusBell from './components/StatusBell.jsx'
 import ActionSheet from './components/ActionSheet.jsx'
@@ -22,14 +32,29 @@ import { useTelefono } from './lib/useTelefono.js'
 import { useSchermoIntero } from './lib/useSchermoIntero.js'
 import { logoutStaff } from './lib/logout.js'
 import { resolveThemeVars, applyTheme } from './lib/themes.js'
+import { applicaNomeApp } from './lib/nomeApp.js'
 import { envLabel } from './dev/devActions.js'
 import { openCookiePreferences } from './lib/cookieConsent.js'
 import { subscribeUpdateAvailable } from './lib/appVersion.js'
+import { cosaFareAllAvvio, versioneVista, segnaVersioneVista } from './lib/novita.js'
+import { leggiAvvisi, avvisoAttivo } from './lib/preferenzeNotifiche.js'
+import { titoloPagina } from './lib/sezioni.js'
+import { subscribeSottosezioni } from './lib/sottosezioni.js'
+import Tendina from './components/Tendina.jsx'
+import { recordNotif } from './lib/notifyStore.js'
+import NovitaDialog from './components/NovitaDialog.jsx'
 import { useOnline } from './lib/useOnline.js'
 import { toastSuccess } from './lib/toast.js'
 import Toasts from './components/Toasts.jsx'
 import ZoomControl from './components/ZoomControl.jsx'
+import { zoomDove } from './lib/zoomDove.js'
 import { useEffect, useRef, useState } from 'react'
+
+/* global __APP_VERSION__, __BUILD_ID__ */
+const VERSIONE = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : ''
+// A cambiare a ogni pubblicazione è la BUILD, non il numero di versione:
+// è lei che dice "questa è un'altra app rispetto a quella di prima".
+const BUILD = typeof __BUILD_ID__ !== 'undefined' ? __BUILD_ID__ : ''
 
 export default function App() {
   const location = useLocation()
@@ -47,6 +72,38 @@ export default function App() {
   // "tocca per aggiornare" invece di aspettare un reload manuale.
   const [updateReady, setUpdateReady] = useState(false)
   useEffect(() => subscribeUpdateAvailable(() => setUpdateReady(true)), [])
+
+  // COSA È CAMBIATO. Dopo un aggiornamento chi lavora si ritrova qualcosa
+  // spostato di posto senza sapere perché: le note vanno portate davanti una
+  // volta. Se l'aggiornamento l'ha chiesto lui (ha toccato il banner) esce il
+  // box; se è arrivato da sé — l'app riaperta il giorno dopo — resta una
+  // notifica nella campanella, che porta alle Informazioni. Alla prima
+  // apertura su un dispositivo nuovo non succede niente: un box di benvenuto
+  // con le note di rilascio non lo vuole nessuno.
+  const [novitaAperte, setNovitaAperte] = useState(false)
+  useEffect(() => {
+    // Chi non le vuole le spegne (Impostazioni → Notifiche, per questo
+    // dispositivo): la build si segna comunque vista, se no il box salterebbe
+    // fuori tutto insieme il giorno in cui le riaccende.
+    const vuoleSaperlo = avvisoAttivo(leggiAvvisi(auth.currentUser?.uid), 'nuova_versione')
+    const cosa = vuoleSaperlo
+      ? cosaFareAllAvvio({ build: BUILD, vista: versioneVista() })
+      : 'niente'
+    if (cosa !== 'niente') {
+      // La notifica si registra SEMPRE: di un aggiornamento deve restare
+      // traccia anche dopo aver chiuso il box. Se il box esce adesso, la
+      // notifica nasce già letta — è appena stata mostrata.
+      recordNotif(
+        '🎉 L’app è stata aggiornata',
+        'Tocca per rivedere cosa è cambiato',
+        { href: '/bar?tab=impostazioni&sezione=informazioni', letta: cosa === 'box' }
+      )
+    }
+    if (cosa === 'box') setNovitaAperte(true)
+    // Segnata subito: il box può anche restare aperto, ma questa build
+    // l'abbiamo annunciata e non va annunciata due volte.
+    segnaVersioneVista(BUILD)
+  }, [])
 
   // Tastiera virtuale: premendo Invio su un campo a riga singola FUORI da un
   // form (es. nome tavolo/note, che si salvano con un bottone) la si chiude,
@@ -127,9 +184,17 @@ export default function App() {
   // mostra il ruolo ed «Esci» al posto di «Accedi».
   const [staffRole, setStaffRole] = useState(null)
   const [staffName, setStaffName] = useState('')
+  // C'È QUALCUNO DENTRO? Serve a decidere cosa mostrare a chi non è
+  // entrato: da sloggati si è un cliente qualunque, e la campanella degli
+  // avvisi non lo riguarda.
+  const [collegato, setCollegato] = useState(false)
   useEffect(() => {
     if (!isFirebaseConfigured) return
     return onAuthStateChanged(auth, async (u) => {
+      // Le impostazioni della stampante sono di chi è collegato su QUESTO
+      // dispositivo: cambiando persona cambia la scheda.
+      impostaUtenteStampante(u?.uid || null)
+      setCollegato(!!u)
       if (!u) return setStaffRole(null)
       try {
         const token = await u.getIdTokenResult()
@@ -141,6 +206,16 @@ export default function App() {
         // Badge virtuale: timbra l'entrata (idempotente, non duplica al
         // refresh). Best-effort: se fallisce non blocca l'accesso.
         if (isStaff) clockIn({ uid: u.uid, name: nome }).catch(() => {})
+        // E GLI AVVISI SI RIACCENDONO. Uscendo, il dispositivo viene tolto
+        // dai destinatari (vedi logoutStaff): rientrando va rimesso, senza
+        // aspettare che si passi dalla coda.
+        if (isStaff) {
+          getPushToken()
+            .then((token) => {
+              if (token) saveStaffToken(u.uid, token, role, idDispositivo()).catch(() => {})
+            })
+            .catch(() => {})
+        }
       } catch {
         setStaffRole(null)
       }
@@ -173,6 +248,14 @@ export default function App() {
     rottaIniziale.current = true
     if (location.pathname.startsWith('/pos')) navigate('/bar', { replace: true })
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [staffRole])
+
+  // IL NOME DELL'APP SEGUE CHI LA USA: «La Tana del Coniglio» per il
+  // cliente, col suffisso del ruolo per chi lavora. Vale per la linguetta
+  // del browser e per il nome che il telefono propone all'installazione
+  // (vedi src/lib/nomeApp.js: il nome dell'icona si congela lì).
+  useEffect(() => {
+    applicaNomeApp(staffRole)
   }, [staffRole])
 
   // Tema: SEGUE CHI GUARDA, non l'indirizzo. Prima era un elenco di
@@ -208,6 +291,25 @@ export default function App() {
   // quando ci sta lavorando qualcuno dello staff. Altrove — e nell'anteprima
   // vista cliente, dove il menù dello staff non c'entra — lo monta l'app,
   // perché il ☰ non resti a premere nel vuoto.
+  // L'«INDIETRO» IN BARRA. Ce l'ha ogni schermata di lavoro tranne il punto
+  // di partenza — la coda — da cui non si torna da nessuna parte. Vale per le
+  // sezioni del gestionale e per le pagine che stanno fuori (il proprio
+  // profilo), dove prima c'era un tasto in fondo alla pagina che diceva
+  // «Torna al gestionale»: lo si trovava solo scorrendo, ed era l'unico a
+  // chiamarsi in un altro modo.
+  const tabGestionale = new URLSearchParams(location.search).get('tab') || 'coda'
+  const indietroQui =
+    !!staffRole &&
+    ((onBackoffice && tabGestionale !== 'coda') || location.pathname.startsWith('/profilo-staff'))
+  // Che pagina si sta guardando: il titolo va nella barra, non dentro.
+  const pagina = titoloPagina(location.pathname, location.search)
+  // …e se la pagina ha delle SOTTOSEZIONI, il titolo diventa il comando per
+  // cambiarle: in pagina costavano una riga (o una colonna) tutto il giorno
+  // per una scelta che si fa ogni tanto. Qui costano zero.
+  const [sotto, setSotto] = useState({ voci: [], attiva: null, scegli: null })
+  useEffect(() => subscribeSottosezioni(setSotto), [])
+  const vociSotto = sotto.voci || []
+  const sezioneAttiva = vociSotto.find((v) => v.id === sotto.attiva)
   const drawerDellaPagina =
     (onBackoffice && !!staffRole) ||
     (location.pathname.startsWith('/menu') && !!staffRole && !anteprimaCliente)
@@ -239,14 +341,28 @@ export default function App() {
         </div>
       )}
       {updateReady && (
-        <button className="update-banner" onClick={() => window.location.reload()}>
+        <button
+          className="update-banner"
+          onClick={() => window.location.reload()}
+        >
           🔄 Nuova versione disponibile — tocca per aggiornare
         </button>
       )}
+      {novitaAperte && (
+        <NovitaDialog
+          onClose={() => {
+            setNovitaAperte(false)
+            segnaVersioneVista(BUILD)
+          }}
+        />
+      )}
       {/* Notifiche IN APP (sync, ordini da staff/clienti, errori) */}
       <Toasts />
-      {/* Zoom della pagina: nella PWA a tutto schermo il browser non lo offre */}
-      <ZoomControl />
+      {/* Zoom della pagina: nella PWA a tutto schermo il browser non lo
+          offre. Solo dove serve davvero (vedi lib/zoomDove.js): altrove
+          erano due tasti nell'angolo che coprono il contenuto per una cosa
+          che lì nessuno usa. */}
+      {zoomDove(location.pathname, location.search, !!staffRole) && <ZoomControl />}
       {/* IL MENU CHE RISPONDE AL ☰. Le pagine che hanno una sezione attiva da
           evidenziare (gestionale, menù) montano il proprio; altrove lo monta
           l'app, perché il tasto in barra non resti a premere nel vuoto.
@@ -273,6 +389,24 @@ export default function App() {
             ☰
           </button>
         )}
+        {/* INDIETRO, NELLA BARRA. Nelle sezioni del gestionale stava dentro
+            la pagina e si mangiava una riga in cima al contenuto — proprio
+            dove le Impostazioni hanno bisogno di tutta l'altezza per stare
+            in uno schermo. Qui sta fra il ☰ e il marchio, sempre nello
+            stesso posto, e non ruba niente a quello che si sta guardando. */}
+        {indietroQui && (
+          <button
+            className="topbar-back"
+            aria-label="Indietro"
+            title="Indietro"
+            onClick={() => {
+              if (window.history.length > 1) navigate(-1)
+              else navigate('/bar')
+            }}
+          >
+            ←
+          </button>
+        )}
         {/* Nel gestionale il logo non porta al menu: resta sugli ordini. */}
         <Link
           to={onBackoffice ? '/bar' : '/'}
@@ -282,8 +416,28 @@ export default function App() {
           <img src={`${import.meta.env.BASE_URL}logo.png`} alt="" />
           <span className="brand-nome">La Tana del Coniglio</span>
         </Link>
+        {/* IL TITOLO DELLA PAGINA STA QUI, attaccato al marchio: dentro la
+            pagina si prendeva una riga in cima al contenuto, e su un tablet
+            al banco quella riga è roba che si vede. */}
+        {/* IL TITOLO DICE DOVE SEI, e basta: a navigare si va nel menu (☰),
+            che porta le pagine e — sotto quella aperta — le sue sezioni. Le
+            schede in barra reggono cinque voci, non ventidue; e una tendina
+            costringe ad aprirla per sapere cosa c'è dentro. Un posto solo,
+            uguale sul telefono e sul computer. */}
+        {pagina && (
+          <span className="topbar-pagina">
+            <span aria-hidden>·</span> {(sezioneAttiva?.icona) || pagina.icona}{' '}
+            {(sezioneAttiva?.label) || pagina.titolo}
+          </span>
+        )}
         <nav className="row">
-          <StatusBell />
+          {/* NIENTE CAMPANELLA A CHI NON È ENTRATO. Da sloggati si è un
+              cliente qualunque sulla parte pubblica del sito: gli avvisi
+              parlano di ordini che non ha ancora fatto, e «registra questo
+              terminale» è una domanda del gestionale — a un cliente non
+              vuol dire niente e non deve nemmeno comparire. Chi ordina o
+              scansiona il QR li riavrà, e saranno i suoi. */}
+          {collegato && <StatusBell />}
           {/* A tutto schermo ci va chi LAVORA sull'app per ore (banco, sala):
               al cliente che apre il menù dal telefono non serve, e in mezzo
               ai tasti era solo un'icona in più da capire. */}
@@ -388,8 +542,9 @@ export default function App() {
           },
           isSala(staffRole) && {
             id: 'servizio',
-            icon: '🫱',
-            label: 'Torna al servizio',
+            icon: '🧾',
+            label: 'Torna alla coda',
+            hint: 'La coda ordini, la stessa del banco',
             onClick: () => navigate('/bar'),
           },
           schermoIntero.disponibile && {
@@ -415,12 +570,21 @@ export default function App() {
         </div>
       )}
 
+      {/* Gli avvisi spenti si dicono a chi lavora, su ogni schermata: è
+          l'unico modo perché chi ha scartato la finestrella del browser lo
+          scopra prima di perdere un ordine. */}
+      <AvvisiSpenti ruolo={staffRole} />
+
       <main>
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/menu" element={<MenuPage />} />
           <Route path="/ordini" element={<MyOrdersPage />} />
           <Route path="/ordine/:id" element={<OrderStatusPage />} />
+          {/* Il dettaglio di una COMANDA: ci si arriva dalla card in
+              coda, nella vista del banco. Sta sotto il conto perché è lì
+              che vive, e da lì ci si risale. */}
+          <Route path="/ordine/:id/comanda/:comandaId" element={<ComandaPage />} />
           <Route path="/accedi" element={<AccediPage />} />
           <Route path="/registrati" element={<RegistratiPage />} />
           <Route path="/profilo" element={<ProfiloPage />} />

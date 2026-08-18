@@ -33,7 +33,12 @@ describe('cashRecap', () => {
     expect(r.byMethod.banco).toBe(20)
     expect(r.byMethod.lettore).toBe(15)
     expect(r.nPagati).toBe(2)
-    expect(r.perOra).toEqual([{ ora: '19', importo: 20 }, { ora: '20', importo: 15 }])
+    // `giorno` è null finché la serata sta in un giorno solo: scrivere la
+    // data su ogni colonna sarebbe rumore.
+    expect(r.perOra).toEqual([
+      { ora: '19', giorno: null, importo: 20 },
+      { ora: '20', giorno: null, importo: 15 },
+    ])
     // contante atteso = fondo 50 + contanti 20
     expect(r.contanteAtteso).toBe(70)
   })
@@ -160,5 +165,103 @@ describe('gli annullati non contano', () => {
     const r = cashRecap([annullato], session, '2026-08-10T02:00:00.000Z')
     expect(r.apertoDaIncassare).toBe(0)
     expect(r.nAperti).toBe(0)
+  })
+})
+
+// COSA SERVE VEDERE DURANTE LA SERATA, non solo alla chiusura: quanto deve
+// esserci in cassa adesso, quanto lascia un conto, chi ha incassato e come
+// sta andando l'ultima ora. Alla chiusura sono un verdetto; durante il
+// servizio sono decisioni — cambio turno, un'altra cassa, una pausa.
+describe('il flusso cassa durante la serata', () => {
+  const sessione = { opened_at: '2026-08-16T18:00:00.000Z', fondo_cassa: 100 }
+  const adesso = '2026-08-16T23:00:00.000Z'
+  const conti = [
+    {
+      payment_status: 'pagato',
+      coperto_persons: 4,
+      paid_at: '2026-08-16T19:00:00.000Z',
+      payments: [
+        {
+          amount: 40,
+          method: 'banco',
+          at: '2026-08-16T19:00:00.000Z',
+          by: { name: 'Flavio' },
+        },
+      ],
+    },
+    {
+      payment_status: 'pagato',
+      coperto_persons: 2,
+      paid_at: '2026-08-16T22:30:00.000Z',
+      payments: [
+        {
+          amount: 20,
+          method: 'carta',
+          at: '2026-08-16T22:30:00.000Z',
+          by: { email: 'sara@tana.local' },
+        },
+      ],
+    },
+  ]
+
+  it('quanto deve esserci in cassa: fondo più i contanti', () => {
+    const r = cashRecap(conti, sessione, adesso)
+    expect(r.contanteAtteso).toBe(140)
+  })
+
+  it('il conto medio, e quanto lascia una persona', () => {
+    const r = cashRecap(conti, sessione, adesso)
+    expect(r.contoMedio).toBe(30)
+    expect(r.coperti).toBe(6)
+    expect(r.perCoperto).toBe(10)
+  })
+
+  it('niente conti chiusi, niente media: non è una media di zero', () => {
+    expect(cashRecap([], sessione, adesso).contoMedio).toBe(null)
+  })
+
+  it('chi ha incassato, dal più grosso al più piccolo', () => {
+    const r = cashRecap(conti, sessione, adesso)
+    expect(r.perChi).toEqual([
+      { chi: 'Flavio', importo: 40, n: 1 },
+      { chi: 'sara', importo: 20, n: 1 },
+    ])
+  })
+
+  it('l’ultima ora è solo l’ultima ora', () => {
+    const r = cashRecap(conti, sessione, adesso)
+    expect(r.ultimaOra).toBe(20)
+    expect(r.nUltimaOra).toBe(1)
+  })
+
+  it('sui conti vecchi, senza chi ha incassato, vale chi ha aperto il conto', () => {
+    const vecchio = [
+      {
+        payment_status: 'pagato',
+        paid_at: '2026-08-16T20:00:00.000Z',
+        placed_by: { name: 'Peppe' },
+        payments: [{ amount: 15, method: 'banco', at: '2026-08-16T20:00:00.000Z' }],
+      },
+    ]
+    expect(cashRecap(vecchio, sessione, adesso).perChi[0].chi).toBe('Peppe')
+  })
+})
+
+// ── UNA SERATA SCAVALCA LA MEZZANOTTE ────────────────────────────────
+// Le 8 del mattino dopo venivano PRIMA delle 23 della sera prima: l'ordine
+// era quello dell'orologio, non quello della serata, e il grafico
+// raccontava la nottata al contrario.
+describe('le ore di una serata che passa la mezzanotte', () => {
+  it('vanno in ordine di serata, e portano il giorno', () => {
+    const session = { opened_at: '2026-07-21T20:00:00.000Z', fondo_cassa: 0 }
+    const orders = [
+      { status: 'pagato', payments: [{ amount: 42.5, method: 'banco', at: '2026-07-21T23:10:00.000Z' }] },
+      { status: 'pagato', payments: [{ amount: 47, method: 'banco', at: '2026-07-22T08:05:00.000Z' }] },
+    ]
+    const r = cashRecap(orders, session, '2026-07-22T09:00:00.000Z')
+    expect(r.perOra.map((x) => x.ora)).toEqual(['23', '08'])
+    // Toccando due giorni, ognuna dice il suo: «08:00» in fondo, senza data,
+    // si legge come un errore.
+    expect(r.perOra.map((x) => x.giorno)).toEqual(['2026-07-21', '2026-07-22'])
   })
 })

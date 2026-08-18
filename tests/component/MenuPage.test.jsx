@@ -6,10 +6,12 @@
 // Quelli si battono al POS, e chi apriva il menù dal gestionale si trovava
 // una pagina diversa da quella che stava mostrando al tavolo. Ora chi lavora
 // vede lo stesso menù del cliente — e ci può ordinare, se le impostazioni lo
-// consentono.
+// consentono. La RICERCA è tornata, ma dentro la stessa pagina e solo per lo
+// staff: la sala prende l'ordine col cliente davanti e non può scorrere otto
+// categorie; il cliente invece sfoglia la vetrina, senza barra.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import '@testing-library/jest-dom/vitest'
@@ -23,12 +25,21 @@ vi.mock('../../src/lib/api.js', () => ({
     cb({ service_mode: 'tavolo', menu_only: false, ...mockSettings })
     return () => {}
   }),
-  subscribeOrder: vi.fn(() => () => {}),
+  subscribeOrder: vi.fn((id, cb) => {
+    cb(ordineRicordato)
+    return () => {}
+  }),
   subscribeReadyOrders: vi.fn(() => () => {}),
   subscribeOpenGroups: vi.fn(() => () => {}),
   subscribeRecentGroups: vi.fn(() => () => {}),
-  createOrder: vi.fn(() => Promise.resolve({ id: 'o1' })),
+  createOrder: vi.fn(() => Promise.resolve({
+    id: 'o1',
+    daily_number: 7,
+    order_items: [{ drink_id: 'd1', name: 'Mojito', qty: 1, unit_price: 7 }],
+    comande: [{ id: 'c1', seq: 1, items: [{ drink_id: 'd1', name: 'Mojito', qty: 1, unit_price: 7 }] }],
+  })),
   DEFAULT_SETTINGS: { service_mode: 'tavolo' },
+  settingsIniziali: () => ({ service_mode: 'tavolo' }),
 }))
 
 const DRINKS = [
@@ -48,6 +59,16 @@ vi.mock('../../src/lib/menuCache.js', () => ({
     drinks: mockDrinks,
   }),
 }))
+
+// L'ordine che questo dispositivo si ricorda (il cliente lo ritrova in cima
+// al menù; chi lavora no).
+const ordineRicordato = {
+  id: 'o-mio',
+  daily_number: 7,
+  workflow_status: 'ricevuto',
+  total: 8,
+  order_items: [{ drink_id: 'd1', name: 'Negroni', qty: 1, unit_price: 8 }],
+}
 
 vi.mock('../../src/lib/firebaseClient.js', () => ({
   isFirebaseConfigured: true,
@@ -78,6 +99,15 @@ vi.mock('../../src/lib/push.js', () => ({ getPushToken: vi.fn(() => Promise.reso
 vi.mock('../../src/lib/notify.js', () => ({ ensureNotificationPermission: vi.fn() }))
 vi.mock('../../src/components/StaffDrawer.jsx', () => ({ default: () => null }))
 
+// La stampa non si prova davvero (non c'è nessuna Epson qui): si guarda se
+// l'ordine preso al tavolo chiede la sua comanda, e a chi.
+let stampaSala = 'ip'
+const stampata = vi.fn(() => Promise.resolve())
+vi.mock('../../src/lib/printer.js', () => ({
+  printComanda: (...a) => stampata(...a),
+  salaStampaDaSe: () => stampaSala !== 'rimbalzo',
+}))
+
 import MenuPage from '../../src/pages/MenuPage.jsx'
 
 function mostra(percorso = '/menu') {
@@ -96,6 +126,8 @@ beforeEach(() => {
   mockSettings = {}
   mockDrinks = DRINKS
   ruoloClaim = 'bartender'
+  stampaSala = 'ip'
+  stampata.mockClear()
   localStorage.clear()
   // Al primo accesso il menù mostra il benvenuto a tutta pagina.
   localStorage.setItem('tana_welcome_v1', '1')
@@ -110,7 +142,32 @@ describe('il menù è uno solo, quello del cliente', () => {
     expect(voci()).toEqual(['Mojito', 'Negroni', 'Ichnusa'])
     expect(document.querySelector('.staff-menu')).toBeNull()
     expect(document.querySelector('.staff-cats')).toBeNull()
-    expect(screen.queryByPlaceholderText(/Cerca drink/)).toBeNull()
+  })
+
+  it('lo staff ha la ricerca: filtra per nome e svuota le categorie mute', async () => {
+    const user = userEvent.setup()
+    mostra()
+    await screen.findByText(/Inserimento ordine da/)
+    await user.type(screen.getByPlaceholderText(/Cerca nel menù/), 'moj')
+    expect(voci()).toEqual(['Mojito'])
+    // La categoria rimasta senza voci sparisce con tutta la sua testata.
+    expect(screen.queryByRole('heading', { name: 'Birre' })).toBeNull()
+  })
+
+  it('la ricerca a vuoto lo dice, senza lasciare la pagina muta', async () => {
+    const user = userEvent.setup()
+    mostra()
+    await screen.findByText(/Inserimento ordine da/)
+    await user.type(screen.getByPlaceholderText(/Cerca nel menù/), 'ramazzotti')
+    expect(voci()).toEqual([])
+    expect(screen.getByText(/Niente nel menù che risponda/)).toBeInTheDocument()
+  })
+
+  it('il cliente la barra di ricerca non ce l’ha: per lui resta la vetrina', async () => {
+    ruoloClaim = null
+    mostra()
+    await screen.findByText('Mojito')
+    expect(screen.queryByPlaceholderText(/Cerca nel menù/)).toBeNull()
   })
 
   it('lo stesso menù per il cliente', async () => {
@@ -191,5 +248,67 @@ describe('il menù è uno solo, quello del cliente', () => {
     await screen.findByText('Mojito')
     expect(screen.queryByRole('button', { name: /Aggiungi/ })).toBeNull()
     expect(screen.getByText(/Rivolgersi allo staff per ordinare/)).toBeInTheDocument()
+  })
+})
+
+// ── LA COMANDA DI CHI PRENDE L'ORDINE AL TAVOLO ──────────────────────
+// Prima non usciva niente: si sperava che al banco qualcuno tenesse aperta
+// la coda con la stampa automatica accesa. Se quella schermata non era
+// aperta, l'ordine restava solo a schermo e al banco non lo sapeva nessuno.
+describe('la comanda dell’ordine preso in sala', () => {
+  // Il giro vero: prodotto nel carrello, riepilogo, nome del cliente
+  // (senza non si conferma) e conferma.
+  async function ordina(user) {
+    await user.click(screen.getAllByRole('button', { name: /Aggiungi/ })[0])
+    await user.click(screen.getByRole('button', { name: /Rivedi ordine/ }))
+    await user.type(await screen.findByPlaceholderText('es. Mario'), 'Anna')
+    await user.click(screen.getByRole('button', { name: /Conferma ordine/ }))
+  }
+
+  it('la stampa il telefono che ha preso l’ordine', async () => {
+    const user = userEvent.setup()
+    mostra()
+    await screen.findByText(/Inserimento ordine da/)
+    await ordina(user)
+    expect(stampata).toHaveBeenCalledTimes(1)
+    expect(stampata.mock.calls[0][0].id).toBe('o1')
+  })
+
+  it('col rimbalzo il telefono non stampa: esce al banco', async () => {
+    stampaSala = 'rimbalzo'
+    const user = userEvent.setup()
+    mostra()
+    await screen.findByText(/Inserimento ordine da/)
+    await ordina(user)
+    expect(stampata).not.toHaveBeenCalled()
+  })
+
+  it('l’ordine del cliente non stampa dal telefono del cliente', async () => {
+    ruoloClaim = null
+    const user = userEvent.setup()
+    mostra()
+    await screen.findByText('Mojito')
+    await ordina(user)
+    expect(stampata).not.toHaveBeenCalled()
+  })
+})
+
+// LA VISTA MENÙ, PER CHI LAVORA, SERVE A UNA COSA: battere un ordine. La
+// coda è un'altra pagina — vedersi in mezzo i propri ordini attivi
+// mescolava due mestieri. Al cliente invece servono: è l'unico posto dove
+// ritrova quello che ha ordinato.
+describe('gli ordini in cima al menù', () => {
+  it('il cliente ritrova il suo', async () => {
+    localStorage.setItem('tana_my_orders_v1', JSON.stringify(['o-mio']))
+    ruoloClaim = null
+    mostra()
+    expect(await screen.findByText(/Ordine #7/)).toBeInTheDocument()
+  })
+
+  it('chi lavora no: gli ordini stanno in coda', async () => {
+    localStorage.setItem('tana_my_orders_v1', JSON.stringify(['o-mio']))
+    ruoloClaim = 'bartender'
+    mostra()
+    await waitFor(() => expect(screen.queryByText(/Ordine #7/)).toBeNull())
   })
 })

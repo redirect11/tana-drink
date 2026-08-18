@@ -4,6 +4,7 @@ import { subscribeQueue, createManualGroup } from '../lib/api.js'
 import { auth } from '../lib/firebaseClient.js'
 import { queueEtaMinutes } from '../lib/eta.js'
 import { paymentOptions } from '../lib/payments.js'
+import { clienteSceglie, modoAllaNascita } from '../lib/consegna.js'
 
 // Riepilogo ordine in stile scontrino, mostrato prima della conferma.
 // Calcola coperto (per persona), costo di servizio (percentuale) o mancia
@@ -23,9 +24,11 @@ export default function OrderSummary({ cart, settings, serviceStats = {}, tableL
   // Precompilati dal profilo per i clienti con account, o dal nome gruppo.
   const [nome, setNome] = useState(customerProfile?.nome || '')
   const [cognome, setCognome] = useState(customerProfile?.cognome || '')
-  const [mode, setMode] = useState(() =>
-    settings.service_mode === 'banco' ? 'banco' : 'tavolo'
-  )
+  // Da cosa parte la scelta del cliente: dal valore con cui il locale fa
+  // nascere i conti. Le regole stanno in lib/consegna.js, uguali per lui e
+  // per lo staff — se no il cliente sceglie una cosa e il banco ne vede
+  // un'altra.
+  const [mode, setMode] = useState(() => modoAllaNascita(settings) || 'tavolo')
 
   const subtotal = cart.total
 
@@ -41,14 +44,11 @@ export default function OrderSummary({ cart, settings, serviceStats = {}, tableL
   // Modalità di consegna: fissata dalle impostazioni oppure scelta dal
   // cliente ('entrambi'). Il ritiro al banco azzera coperto e costo di
   // servizio; la mancia resta sempre facoltativa.
-  const modeChoice = settings.service_mode === 'entrambi'
-  const effectiveMode = forceBanco
-    ? 'banco'
-    : modeChoice
-      ? mode
-      : settings.service_mode === 'banco'
-        ? 'banco'
-        : 'tavolo'
+  // SCEGLIE LUI SOLO SE GLIELO SI LASCIA SCEGLIERE: dove i due modi
+  // convivono e il locale ha acceso la voce. Se no il conto nasce col
+  // valore di partenza del locale, e a cambiarlo è lo staff dal conto.
+  const modeChoice = clienteSceglie(settings)
+  const effectiveMode = forceBanco ? 'banco' : modeChoice ? mode : modoAllaNascita(settings) || 'tavolo'
   const atTable = effectiveMode === 'tavolo'
 
   // Coda attiva: il nuovo ordine andrà dopo tutti gli ordini in corso, quindi

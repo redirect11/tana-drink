@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
 import {
   subscribeActiveOrders,
   subscribeOpenCashSession,
@@ -11,10 +10,8 @@ import {
 import { auth } from '../lib/firebaseClient.js'
 import { cashRecap } from '../lib/cassa.js'
 import { formatPrice, cashMethodKeys, paymentMethodLabel } from '../lib/orderStatus.js'
-import CashSessionsList from './CashSessionsList.jsx'
 import { printChiusuraCassa } from '../lib/printer.js'
 import { toastError } from '../lib/toast.js'
-import StaffBadgePanel from './StaffBadgePanel.jsx'
 
 // FLUSSO CASSA: apertura/chiusura della serata e andamento in tempo reale
 // degli incassi della sessione aperta. I numeri vengono dagli ordini nella
@@ -37,7 +34,7 @@ const durata = (fromIso, toIso) => {
   return h > 0 ? `${h}h ${min % 60}m` : `${min}m`
 }
 
-export default function CashFlow({ canManageStaff = false }) {
+export default function CashFlow() {
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   const [session, setSession] = useState(null)
   const [orders, setOrders] = useState([])
@@ -46,7 +43,17 @@ export default function CashFlow({ canManageStaff = false }) {
 
   useEffect(() => subscribeSettings(setSettings, () => {}), [])
   useEffect(() => subscribeOpenCashSession(setSession, () => {}), [])
-  useEffect(() => subscribeActiveOrders(setOrders, () => {}, { cutoffHour: cutoff }), [cutoff])
+  // Anche i conti CHIUSI IN QUESTA CASSA: un tavolo aperto ieri e incassato
+  // stasera è incasso di stasera, e senza questo non entrava nel rendiconto
+  // (le altre due letture guardano i conti aperti e quelli nati oggi).
+  useEffect(
+    () =>
+      subscribeActiveOrders(setOrders, () => {}, {
+        cutoffHour: cutoff,
+        cashSessionId: session?.id ?? null,
+      }),
+    [cutoff, session?.id]
+  )
   // Tick per aggiornare durata e finestra "fino ad ora".
   useEffect(() => {
     const t = setInterval(() => setNow(new Date().toISOString()), 60000)
@@ -55,34 +62,25 @@ export default function CashFlow({ canManageStaff = false }) {
 
   const recap = useMemo(() => cashRecap(orders, session, now), [orders, session, now])
   const by = { email: auth.currentUser?.email ?? null }
-  const [showChiusure, setShowChiusure] = useState(false)
 
   if (!session) {
     return (
       <>
         <ApriCassa cutoff={cutoff} by={by} />
-        {canManageStaff && <StaffBadgePanel />}
-      {/* Lista ordini: sezione a sé (menu laterale), qui solo la scorciatoia. */}
-      <Link className="btn ghost small block" style={{ marginTop: 12 }} to="/bar?tab=storico">
-        📋 Lista ordini
-      </Link>
-
-      {/* Storico delle serate: da apertura a chiusura, col venduto di ognuna. */}
-      <button
-        className="btn ghost small block"
-        style={{ marginTop: 8 }}
-        onClick={() => setShowChiusure((v) => !v)}
-      >
-        {showChiusure ? '▴ Nascondi chiusure di cassa' : '📒 Chiusure di cassa'}
-      </button>
-      {showChiusure && <CashSessionsList />}
+      {/* Lista ordini e chiusure sono SOTTOSEZIONI della cassa (menu
+          laterale): erano due tasti in fondo alla pagina, che si trovano
+          solo scorrendo fino in fondo. */}
       </>
     )
   }
 
   return (
-    <div>
-      {canManageStaff && <StaffBadgePanel />}
+    // A COLONNA SOLA CI STA UN TELEFONO, non un monitor. Su schermi larghi
+    // le stesse tessere si dispongono in griglia — quello che serve a chi
+    // guarda la cassa si legge in un colpo, senza scorrere — e le due che
+    // vogliono spazio (l'andamento per ora e la chiusura) restano larghe
+    // tutta la riga. Il CSS sta in .cassa-flusso: qui non si decide niente.
+    <div className="cassa-flusso">
       <div className="card cassa-open">
         <div className="row between" style={{ alignItems: 'center' }}>
           <div>
@@ -95,25 +93,94 @@ export default function CashFlow({ canManageStaff = false }) {
         </div>
       </div>
 
-      {/* Incassato della serata + metodi */}
+      {/* INCASSATO DELLA SERATA, coi metodi DENTRO la sua tessera: erano
+          una riga a sé, e in griglia diventavano un riquadro orfano che non
+          si capiva a quale numero appartenesse. */}
+      <div className="card">
+        <div className="row between" style={{ alignItems: 'center' }}>
+          <div>
+            <strong>💶 Incassato serata</strong>
+            <div className="muted small">{recap.nPagati} conti chiusi</div>
+          </div>
+          <strong className="price" style={{ fontSize: '1.4rem' }}>{formatPrice(recap.incassato)}</strong>
+        </div>
+        {/* Un chip per ogni metodo BATTUTO, anche uno mai visto prima:
+            l'elenco si costruisce dagli incassi, non da una lista scritta a
+            mano. */}
+        {cashMethodKeys(recap.byMethod).some((k) => recap.byMethod[k] > 0) && (
+          <div className="chips-row" style={{ marginTop: 8 }}>
+            {cashMethodKeys(recap.byMethod)
+              .filter((k) => recap.byMethod[k] > 0)
+              .map((k) => (
+                <span className="chip" key={k}>
+                  {paymentMethodLabel(k)} {formatPrice(recap.byMethod[k])}
+                </span>
+              ))}
+          </div>
+        )}
+      </div>
+
+      {/* QUANTO DEVE ESSERCI IN CASSA ADESSO. Il conto lo si faceva solo alla
+          chiusura, quando ormai è un verdetto: durante la serata serve per
+          controllare il cassetto quando si cambia turno, o quando due numeri
+          non tornano e si vuole capirlo subito. */}
       <div className="card row between" style={{ alignItems: 'center' }}>
         <div>
-          <strong>💶 Incassato serata</strong>
-          <div className="muted small">{recap.nPagati} conti chiusi</div>
+          <strong>💰 In cassa adesso</strong>
+          <div className="muted small">
+            fondo {formatPrice(recap.fondo)} + contanti {formatPrice(recap.byMethod.banco || 0)}
+          </div>
         </div>
-        <strong className="price" style={{ fontSize: '1.4rem' }}>{formatPrice(recap.incassato)}</strong>
+        <strong className="price">{formatPrice(recap.contanteAtteso)}</strong>
       </div>
-      {/* Un chip per ogni metodo BATTUTO, anche uno mai visto prima: l'elenco
-          si costruisce dagli incassi, non da una lista scritta a mano. */}
-      {cashMethodKeys(recap.byMethod).some((k) => recap.byMethod[k] > 0) && (
-        <div className="chips-row" style={{ marginBottom: 8 }}>
-          {cashMethodKeys(recap.byMethod)
-            .filter((k) => recap.byMethod[k] > 0)
-            .map((k) => (
-              <span className="chip" key={k}>
-                {paymentMethodLabel(k)} {formatPrice(recap.byMethod[k])}
+
+      {/* COM'È ANDATA L'ULTIMA ORA. La curva racconta la serata; questo dice
+          come sta andando adesso — se vale la pena aprire un'altra cassa o
+          mandare qualcuno in pausa. */}
+      {recap.nUltimaOra > 0 && (
+        <div className="card row between" style={{ alignItems: 'center' }}>
+          <span className="muted">
+            ⏱ Nell'ultima ora · {recap.nUltimaOra} incass{recap.nUltimaOra === 1 ? 'o' : 'i'}
+          </span>
+          <strong>{formatPrice(recap.ultimaOra)}</strong>
+        </div>
+      )}
+
+      {/* IL CONTO MEDIO, e quanto lascia una persona: in un cocktail bar il
+          secondo dice più del primo, perché un tavolo da sei e uno da due
+          fanno due serate diverse con lo stesso «conto medio». */}
+      {recap.contoMedio != null && (
+        <div className="card row between" style={{ alignItems: 'center' }}>
+          <div>
+            <strong>🧾 Conto medio</strong>
+            <div className="muted small">
+              {recap.nPagati} cont{recap.nPagati === 1 ? 'o' : 'i'} chius{recap.nPagati === 1 ? 'o' : 'i'}
+              {recap.coperti > 0 && ` · ${recap.coperti} copert${recap.coperti === 1 ? 'o' : 'i'}`}
+            </div>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <strong className="price">{formatPrice(recap.contoMedio)}</strong>
+            {recap.perCoperto != null && (
+              <div className="muted small">{formatPrice(recap.perCoperto)} a testa</div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* CHI HA INCASSATO. Se il contante non torna è la prima domanda che ci
+          si fa; e a fine turno ognuno sa cosa ha battuto. Una persona sola
+          alla cassa non ha bisogno di leggerlo. */}
+      {recap.perChi.length > 1 && (
+        <div className="card">
+          <strong>👤 Chi ha incassato</strong>
+          {recap.perChi.map((r) => (
+            <div className="row between" key={r.chi} style={{ marginTop: 4 }}>
+              <span className="muted">
+                {r.chi} · {r.n} incass{r.n === 1 ? 'o' : 'i'}
               </span>
-            ))}
+              <strong>{formatPrice(r.importo)}</strong>
+            </div>
+          ))}
         </div>
       )}
 
@@ -125,24 +192,15 @@ export default function CashFlow({ canManageStaff = false }) {
       )}
 
       {/* Andamento per ora */}
-      {recap.perOra.length > 0 && <OraBars perOra={recap.perOra} />}
+      {recap.perOra.length > 0 && (
+        <div className="cassa-larga">
+          <OraBars perOra={recap.perOra} />
+        </div>
+      )}
 
-      <ChiudiCassa session={session} recap={recap} by={by} />
-
-      {/* Lista ordini: sezione a sé (menu laterale), qui solo la scorciatoia. */}
-      <Link className="btn ghost small block" style={{ marginTop: 12 }} to="/bar?tab=storico">
-        📋 Lista ordini
-      </Link>
-
-      {/* Storico delle serate: da apertura a chiusura, col venduto di ognuna. */}
-      <button
-        className="btn ghost small block"
-        style={{ marginTop: 8 }}
-        onClick={() => setShowChiusure((v) => !v)}
-      >
-        {showChiusure ? '▴ Nascondi chiusure di cassa' : '📒 Chiusure di cassa'}
-      </button>
-      {showChiusure && <CashSessionsList />}
+      <div className="cassa-larga">
+        <ChiudiCassa session={session} recap={recap} by={by} />
+      </div>
 
     </div>
   )
@@ -249,21 +307,39 @@ function ChiudiCassa({ session, recap, by }) {
 }
 
 // Barre dell'andamento incassi per ora.
+// L'ANDAMENTO SI LEGGE NEL TEMPO, e il tempo va da sinistra a destra. Era
+// una riga per ora, una sotto l'altra: una serata lunga diventava una
+// colonna da scorrere, e «com'è andata stasera?» — che è una domanda sulla
+// FORMA della serata, il picco, la coda — non si vedeva più. Sono le stesse
+// barre delle statistiche (.vbars), che quel mestiere lo fanno già.
 function OraBars({ perOra }) {
   const max = Math.max(...perOra.map((x) => x.importo), 1)
   return (
     <div className="card">
       <strong className="small">📈 Andamento per ora</strong>
-      <div style={{ marginTop: 8, display: 'grid', gap: 4 }}>
-        {perOra.map((x) => (
-          <div key={x.ora} className="row" style={{ gap: 8, alignItems: 'center' }}>
-            <span className="muted small" style={{ width: 34 }}>{x.ora}:00</span>
-            <div style={{ flex: 1, background: 'var(--line)', borderRadius: 4, height: 14, overflow: 'hidden' }}>
-              <div style={{ width: `${(x.importo / max) * 100}%`, background: 'var(--accent-2, #f5b94a)', height: '100%' }} />
+      <div className="vbars" style={{ marginTop: 8 }}>
+        {perOra.map((x) => {
+          // Il giorno si scrive solo se la serata ne tocca due: «08:00» del
+          // mattino dopo, in fondo al grafico, senza data si legge come un
+          // errore. Giorno e mese bastano — l'anno lo sa chi sta contando.
+          const giorno = x.giorno ? x.giorno.slice(8, 10) + '/' + x.giorno.slice(5, 7) : null
+          return (
+            <div
+              className="vbar-col"
+              key={x.giorno ? `${x.giorno}-${x.ora}` : x.ora}
+              title={`${giorno ? `${giorno} ` : ''}${x.ora}:00 — ${formatPrice(x.importo)}`}
+            >
+              <div className="vbar-value">{formatPrice(x.importo)}</div>
+              <div className="vbar-track">
+                <div className="vbar-fill" style={{ height: `${(x.importo / max) * 100}%` }} />
+              </div>
+              <div className="vbar-label">
+                {x.ora}:00
+                {giorno && <span className="vbar-giorno">{giorno}</span>}
+              </div>
             </div>
-            <span className="small" style={{ width: 64, textAlign: 'right' }}>{formatPrice(x.importo)}</span>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )

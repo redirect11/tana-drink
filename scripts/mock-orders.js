@@ -12,9 +12,9 @@ import admin from 'firebase-admin'
 import { generateMockOrders } from '../src/dev/mockData.js'
 import { businessDayKey } from '../src/lib/businessDay.js'
 
-process.env.FIRESTORE_EMULATOR_HOST =
-  process.env.FIRESTORE_EMULATOR_HOST ||
-  `${process.env.VITE_FIRESTORE_EMULATOR_HOST || 'localhost'}:${process.env.VITE_FIRESTORE_EMULATOR_PORT || '8080'}`
+import { puntaAllEmulatore } from './lib-emulatore.js'
+
+await puntaAllEmulatore('ordini')
 
 admin.initializeApp({
   projectId: process.env.VITE_FIREBASE_PROJECT_ID || 'demo-tana-drink',

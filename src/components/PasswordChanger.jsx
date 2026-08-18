@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import CampoPassword from './CampoPassword.jsx'
 import { changePassword, authError } from '../lib/customerAuth.js'
 
 // Form di cambio password riutilizzabile (clienti e staff). Richiede la
@@ -35,11 +36,11 @@ export default function PasswordChanger() {
     <form className="card settings-section" onSubmit={submit}>
       <h3 style={{ marginTop: 0 }}>🔑 Cambia password</h3>
       <label htmlFor="pw-cur">Password attuale</label>
-      <input id="pw-cur" type="password" value={current} onChange={(e) => setCurrent(e.target.value)} required autoComplete="current-password" />
+      <CampoPassword id="pw-cur" value={current} onChange={(e) => setCurrent(e.target.value)} required autoComplete="current-password" />
       <label htmlFor="pw-new">Nuova password</label>
-      <input id="pw-new" type="password" value={next} onChange={(e) => setNext(e.target.value)} required autoComplete="new-password" />
+      <CampoPassword id="pw-new" value={next} onChange={(e) => setNext(e.target.value)} required autoComplete="new-password" />
       <label htmlFor="pw-confirm">Conferma nuova password</label>
-      <input id="pw-confirm" type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required autoComplete="new-password" />
+      <CampoPassword id="pw-confirm" value={confirm} onChange={(e) => setConfirm(e.target.value)} required autoComplete="new-password" />
       {err && <div className="banner" style={{ marginTop: 10 }}>{err}</div>}
       {msg && <p className="muted small" style={{ marginTop: 10 }}>✓ {msg}</p>}
       <button className="btn block" style={{ marginTop: 12 }} type="submit" disabled={busy}>

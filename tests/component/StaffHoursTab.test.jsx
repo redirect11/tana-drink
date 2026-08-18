@@ -44,16 +44,17 @@ beforeEach(() => vi.clearAllMocks())
 describe('registro Ore staff', () => {
   it('si apre e valorizza le ore con la paga della persona', async () => {
     render(<StaffHoursTab />)
-    expect(screen.getByText('👥 Staff')).toBeInTheDocument()
+    // Il titolo della pagina non sta più qui dentro: è nella barra in alto
+    // (lib/sezioni.js), per non mangiarsi una riga di contenuto.
+    expect(screen.queryByText('👥 Staff')).toBeNull()
     // 5 h × 10 €/h = 50 € di costo del personale
     await waitFor(() => expect(screen.getByText('50,00 €')).toBeInTheDocument())
   })
 
   it('il turno si assegna scegliendo un MEMBRO, non digitando un nome', async () => {
     const user = userEvent.setup()
-    render(<StaffHoursTab />)
-    // Il form sta nel pannello "Nuovo turno", sotto al titolo.
-    await user.click(screen.getByRole('button', { name: /Nuovo turno/ }))
+    // Il form sta nella sezione «Nuovo turno», nel menu laterale.
+    render(<StaffHoursTab sezioneIniziale="turno" />)
     await waitFor(() => expect(screen.getByLabelText('Chi *')).toBeInTheDocument())
     const chi = screen.getByLabelText('Chi *')
     expect(chi.tagName).toBe('SELECT') // niente campo libero
@@ -69,8 +70,7 @@ describe('registro Ore staff', () => {
 
   it('le paghe si impostano sui membri dello staff, uid compreso', async () => {
     const user = userEvent.setup()
-    render(<StaffHoursTab />)
-    await user.click(screen.getByRole('button', { name: /Paghe orarie/ }))
+    render(<StaffHoursTab sezioneIniziale="paghe" />)
     await waitFor(() => expect(screen.getByLabelText('Chi')).toBeInTheDocument())
     await user.selectOptions(screen.getByLabelText('Chi'), 'u2')
     await user.type(screen.getByLabelText('€/ora'), '12')
@@ -79,5 +79,21 @@ describe('registro Ore staff', () => {
     const [membro, list] = saveStaffRates.mock.calls[0]
     expect(membro).toMatchObject({ uid: 'u2', name: 'Marco' })
     expect(list[0].rate).toBe(12)
+  })
+})
+
+// LE TIMBRATURE HANNO LA LORO VOCE. Sono il gesto d'inizio e fine turno —
+// «chi c'è adesso» — e stavano in cima al calendario: per battere
+// l'ingresso di chi arriva bisognava passare dalla schermata dei turni, che
+// con quel gesto non c'entra.
+describe('le sezioni di Staff', () => {
+  it('il calendario si apre senza il pannello delle timbrature', async () => {
+    render(<StaffHoursTab />)
+    await waitFor(() => expect(screen.queryByText(/Timbrature/i)).toBeNull())
+  })
+
+  it('le timbrature stanno nella loro sezione', async () => {
+    render(<StaffHoursTab sezioneIniziale="timbrature" />)
+    expect(await screen.findByText(/Timbrature/i)).toBeInTheDocument()
   })
 })

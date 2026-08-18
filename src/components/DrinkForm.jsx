@@ -165,6 +165,28 @@ export default function DrinkForm({ initial, categories, inventory, onCreateCate
 
       <label htmlFor="description">Descrizione</label>
       <input id="description" value={form.description} onChange={set('description')} />
+      <p className="muted small" style={{ margin: '2px 0 0' }}>
+        Quello che legge il cliente sul menù.
+      </p>
+
+      {/* COME SI PREPARA, a parole. La ricetta strutturata qui sotto dice
+          COSA ci va e quanto — serve al magazzino — ma non dice il gesto:
+          shakerato o mescolato, il ghiaccio, l'ordine, il bicchiere. Chi
+          entra a dare una mano il sabato quel gesto non ce l'ha in testa, e
+          finora se lo doveva far dire ogni volta. */}
+      <label htmlFor="recipe" style={{ marginTop: 12 }}>
+        Come si prepara
+      </label>
+      <textarea
+        id="recipe"
+        rows={4}
+        value={form.recipe || ''}
+        onChange={set('recipe')}
+        placeholder="Es. Shakerare con ghiaccio, filtrare in coppetta, scorza di limone."
+      />
+      <p className="muted small" style={{ margin: '2px 0 0' }}>
+        Lo legge chi sta al banco, dalla ⓘ sulla scheda del prodotto.
+      </p>
 
       {/* Ricetta strutturata: ingredienti collegati all'inventario (usata per
           lo scarico automatico e per mostrare gli ingredienti nel menù). */}

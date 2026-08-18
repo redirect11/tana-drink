@@ -28,20 +28,41 @@ function daGit(comando, fallback = '') {
     return fallback
   }
 }
-const branch =
-  process.env.GITHUB_REF_NAME || process.env.GIT_BRANCH || daGit('git rev-parse --abbrev-ref HEAD')
+// IL RAMO, NON IL TAG. Da quando si pubblica taggando, in CI
+// `GITHUB_REF_NAME` è il nome del TAG: preso così, in fondo al menu si
+// leggeva «v1.4.3 · v1.4.3 · 11783f5» — la versione due volte e il ramo da
+// nessuna parte, proprio l'informazione che serve per sapere cosa si sta
+// guardando. `GITHUB_REF_TYPE` dice se quel nome è un ramo o un tag; il
+// ramo che contiene il commit taggato lo passa la pipeline in `GIT_BRANCH`
+// (vedi .github/workflows/deploy.yml).
+// In locale resta il ramo su cui si sta lavorando; con HEAD staccata non
+// c'è un ramo da dire, e allora meglio niente che una bugia.
+const ramoDetto =
+  process.env.GIT_BRANCH ||
+  (process.env.GITHUB_REF_TYPE === 'branch' ? process.env.GITHUB_REF_NAME : '') ||
+  daGit('git rev-parse --abbrev-ref HEAD')
+const branch = ramoDetto === 'HEAD' ? '' : ramoDetto
 const commit = (
   process.env.GITHUB_SHA ||
   process.env.GIT_COMMIT ||
   daGit('git rev-parse HEAD')
 ).slice(0, 7)
-// VERSIONE: l'ultimo tag raggiungibile. In produzione è l'unica cosa che
-// serve sapere. Se i tag non ci sono (checkout superficiale, cartella
-// senza git) si ripiega su package.json, che al rilascio viene allineato.
+// VERSIONE: la dice package.json, che al rilascio viene allineato.
+//
+// Prima veniva dall'ultimo TAG RAGGIUNGIBILE, e non funzionava: il tag di
+// rilascio si mette sul merge in `main`, che non è antenato di `develop` né
+// dei rami di lavoro — quindi lì `git describe` risaliva al tag PRECEDENTE e
+// l'ambiente di test diceva «v1.2.0» mentre ci girava sopra la 1.3.0. Un
+// numero di versione sbagliato è peggio di nessun numero: chi segnala un
+// problema dice una versione che non è quella che ha davanti.
+//
+// package.json invece sta su OGNI ramo e porta sempre l'ultima versione
+// rilasciata (vedi docs/gitflow.md: si allinea insieme alle note di
+// rilascio). Il tag resta come ripiego, per una cartella senza package.json.
 const versione =
   process.env.APP_VERSION ||
-  daGit('git describe --tags --abbrev=0') ||
   JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')).version ||
+  daGit('git describe --tags --abbrev=0') ||
   ''
 
 // https://vitejs.dev/config/

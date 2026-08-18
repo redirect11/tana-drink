@@ -47,11 +47,40 @@ qui c'è il quadro completo, bug e non solo.
 - [ ] **Pulizia segreti dal repo** (da fare comunque, a prescindere):
       API key di produzione in `scripts/diagnostica-permessi.js:32`,
       client id/secret in `scripts/set-role.js` e `scripts/lib-firestore.js`.
+- [ ] **Segreti di produzione nell'environment `production`** con deployment
+      branch = `main` (si sposa con REQ-SIC-003, già nel registro): dieci
+      minuti nel browser, ma da fare con attenzione — un nome sbagliato
+      significa deploy di produzione rotto al primo giro, e ce ne si accorge
+      quando non pubblica più niente.
 - [ ] **Accendere l'export fatturazione Google Cloud → BigQuery** sull'account
       di fatturazione: gratis e **non retroattivo** — prima si accende,
       prima esistono i dati per il futuro backoffice (Fase 6).
 - [ ] Decidere i nomi: prodotto/dominio, progetto demo (`drink-demo`?),
       progetto regia (`drink-fleet`?).
+- [ ] **Fase 4 con Terraform** (deciso 15/08): modulo `cliente` in
+      `infra/` (progetto, API, IAM, Secret Manager, budget), stato in un
+      bucket GCS della regia. Terraform per l'infrastruttura, la CI
+      esistente per gli artefatti. Primo collaudo: `import` del progetto
+      demo. Dettagli nel piano, Fase 4.
+
+## Notifiche: da riprendere qui, dove ci sono le preferenze
+
+- [ ] **Interruttore «notifica di sistema anche col gestionale aperto»**.
+      Sulla 1.3.2 la push del nuovo ordine esce sempre, anche con la coda in
+      primo piano: la regola cablata «non mostrare, tanto suona l'app»
+      lasciava muto il tablet del banco. Con le preferenze per dispositivo —
+      che stanno su questa linea — diventa una scelta di chi lavora invece
+      di una regola nostra.
+- [ ] **Push per il passaggio «in preparazione»** (e per gli altri stati):
+      oggi quegli avvisi esistono solo dentro l'app. Per mandarli come
+      notifica di sistema la Cloud Function deve conoscere le preferenze del
+      dispositivo: si salvano accanto al token in `staff_tokens`, che ora è
+      una riga per dispositivo.
+- [ ] **Portare qui le correzioni della 1.3.2**: token per dispositivo,
+      avviso per terminale e non per ruolo, comande «da fare» (un ordine
+      battuto al POS nasce in preparazione), regole Firestore di
+      `staff_tokens`. Arrivano col merge di main in develop, ma vanno
+      ricontrollate insieme alle preferenze.
 
 ## Metodo e strumenti
 

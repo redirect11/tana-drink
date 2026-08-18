@@ -57,6 +57,7 @@ const TEMA_STAFF = { preset: 'notte-blu', custom: null }
 const TEMA_CLIENTE = { preset: 'crema', custom: null }
 vi.mock('../../src/lib/api.js', () => ({
   DEFAULT_SETTINGS: {},
+  settingsIniziali: () => ({}),
   subscribeSettings: (cb) => {
     cb({
       customer_accounts_enabled: true,
@@ -76,12 +77,17 @@ vi.mock('../../src/lib/api.js', () => ({
   subscribePrinterConfig: () => () => {},
 }))
 
-vi.mock('../../src/lib/printer.js', () => ({ savePrinterSettings: vi.fn() }))
+vi.mock('../../src/lib/printer.js', () => ({
+  savePrinterSettings: vi.fn(),
+  impostaUtenteStampante: vi.fn(),
+}))
 vi.mock('../../src/lib/appVersion.js', () => ({ subscribeUpdateAvailable: () => () => {} }))
 vi.mock('../../src/lib/cookieConsent.js', () => ({ openCookiePreferences: vi.fn() }))
 vi.mock('../../src/dev/devActions.js', () => ({ envLabel: '', devToolsEnabled: false }))
 vi.mock('../../src/lib/logout.js', () => ({ logoutStaff: vi.fn() }))
-vi.mock('../../src/components/StatusBell.jsx', () => ({ default: () => null }))
+vi.mock('../../src/components/StatusBell.jsx', () => ({
+  default: () => <div data-testid="campanella" />,
+}))
 vi.mock('../../src/components/VersionBadge.jsx', () => ({ default: () => null }))
 vi.mock('../../src/components/ZoomControl.jsx', () => ({ default: () => null }))
 vi.mock('../../src/components/Toasts.jsx', () => ({ default: () => null }))
@@ -121,13 +127,19 @@ beforeEach(() => {
   ruoloClaim = null
   clienteLoggato = null
   document.documentElement.removeAttribute('style')
+  localStorage.clear()
 })
 
 describe('la barra in cima è la stessa su tutte le schermate', () => {
   it('logo, nome e ☰ ci sono anche fuori dal gestionale', async () => {
     ruoloClaim = 'admin'
     apri('/profilo-staff')
-    await waitFor(() => expect(burger()).not.toBeNull())
+    // Si aspetta il CHIP di chi è collegato, non il ☰: quello c'è anche
+    // prima che arrivi il ruolo, e in quell'attimo è montato il menu del
+    // CLIENTE — che porta anche lui il nome del locale. Aspettando il ☰ il
+    // nome si trovava due volte, ogni tanto: una prova ballerina è peggio di
+    // una prova che manca, perché la si impara a ignorare.
+    await waitFor(() => expect(document.querySelector('.topbar-io')).not.toBeNull())
     expect(screen.getByText('La Tana del Coniglio')).toBeInTheDocument()
     // A destra una cosa sola: chi è collegato, che apre il suo profilo.
     const io = document.querySelector('.topbar-io')
@@ -266,5 +278,122 @@ describe('il tema segue chi guarda, non l’indirizzo', () => {
     ruoloClaim = 'admin'
     apri('/menu?vista=cliente')
     await waitFor(() => expect(accento()).toBe(THEME_PRESETS[TEMA_CLIENTE.preset].vars['--accent']))
+  })
+})
+
+// L'«indietro» delle sezioni del gestionale stava dentro la pagina e si
+// mangiava la prima riga di contenuto: nelle Impostazioni, che hanno bisogno
+// di tutta l'altezza per stare in uno schermo, era una riga di troppo.
+describe('l’indietro sta nella barra, non dentro la pagina', () => {
+  const nastro = () => [...document.querySelector('.topbar').children].map((e) => e.className)
+
+  it('in una sezione del gestionale c’è, fra il ☰ e il marchio', async () => {
+    ruoloClaim = 'admin'
+    apri('/bar?tab=impostazioni')
+    await waitFor(() => expect(document.querySelector('.topbar-back')).not.toBeNull())
+    const ordine = nastro()
+    expect(ordine.indexOf('topbar-burger')).toBeLessThan(ordine.indexOf('topbar-back'))
+    expect(ordine.indexOf('topbar-back')).toBeLessThan(ordine.indexOf('brand'))
+  })
+
+  it('anche nel proprio profilo, dove prima c’era un tasto in fondo alla pagina', async () => {
+    ruoloClaim = 'bartender'
+    apri('/profilo-staff')
+    await waitFor(() => expect(document.querySelector('.topbar-back')).not.toBeNull())
+    expect(screen.queryByText(/Torna al gestionale/)).toBeNull()
+  })
+
+  it('nella coda non c’è: da lì non si torna da nessuna parte', async () => {
+    ruoloClaim = 'admin'
+    apri('/bar')
+    await screen.findByText('PAGINA CODA')
+    expect(document.querySelector('.topbar-back')).toBeNull()
+  })
+
+  it('al cliente non compare mai', async () => {
+    apri('/menu')
+    await screen.findByText('PAGINA MENU')
+    expect(document.querySelector('.topbar-back')).toBeNull()
+  })
+})
+
+// ── Cosa è cambiato, dopo un aggiornamento ───────────────────────────
+// L'app si aggiorna da sé mentre la si usa: chi lavora si ritrova qualcosa
+// spostato di posto e non sa perché. Le note ci sono sempre state, ma in
+// fondo alle impostazioni, dove nessuno va a cercarle.
+describe('le novità dopo un aggiornamento', () => {
+  const CHANGELOG = `# Note
+
+## 0.0.0-test — oggi
+
+- La cosa nuova.
+`
+
+  beforeEach(() => {
+    global.fetch = vi.fn(() =>
+      Promise.resolve({ ok: true, text: () => Promise.resolve(CHANGELOG) })
+    )
+  })
+
+  it('build nuova: il box con le note esce da sé', async () => {
+    // Una build già vista diversa da questa: è lo stato di chi riapre l'app
+    // dopo un aggiornamento, comunque ci sia arrivato.
+    localStorage.setItem('tana:novita:vista', 'build-vecchia')
+    apri('/menu')
+    expect(await screen.findByRole('dialog', { name: 'Novità di questa versione' })).toBeInTheDocument()
+    expect(await screen.findByText(/La cosa nuova/)).toBeInTheDocument()
+  })
+
+  it('chiuso il box, la build risulta vista e non torna più', async () => {
+    const user = userEvent.setup()
+    localStorage.setItem('tana:novita:vista', 'build-vecchia')
+    const { unmount } = apri('/menu')
+    await user.click(await screen.findByRole('button', { name: 'Ho capito' }))
+    expect(localStorage.getItem('tana:novita:vista')).not.toBe('build-vecchia')
+    unmount()
+    apri('/menu')
+    expect(screen.queryByRole('dialog', { name: 'Novità di questa versione' })).toBeNull()
+  })
+
+  // Del box, dopo averlo chiuso, non resterebbe niente: l'avviso si registra
+  // comunque — già letto, perché è appena stato mostrato — così l'aggiornamento
+  // si ritrova nello storico della campanella.
+  it('resta traccia in campanella, come notifica già letta', async () => {
+    localStorage.setItem('tana:novita:vista', 'build-vecchia')
+    apri('/menu')
+    await screen.findByRole('dialog', { name: 'Novità di questa versione' })
+    const notifiche = JSON.parse(localStorage.getItem('tana:notifs') || '[]')
+    expect(notifiche[0].title).toMatch(/aggiornata/i)
+    expect(notifiche[0].href).toMatch(/tab=impostazioni/)
+    expect(notifiche[0].letta).toBe(true)
+  })
+
+  it('prima apertura su un dispositivo nuovo: nessun box, nessuna notifica', async () => {
+    apri('/menu')
+    await screen.findByText('PAGINA MENU')
+    expect(screen.queryByRole('dialog', { name: 'Novità di questa versione' })).toBeNull()
+    expect(JSON.parse(localStorage.getItem('tana:notifs') || '[]')).toEqual([])
+  })
+})
+
+// ── DA SLOGGATI NON C'È NESSUNA CAMPANELLA ───────────────────────────
+// Chi non è entrato è un cliente qualunque sulla parte pubblica: gli avvisi
+// parlano di ordini che non ha fatto, e «registra questo terminale» è una
+// domanda del gestionale. Sulla schermata d'accesso comparivano tutte e
+// due, sopra al modulo.
+describe('la campanella e chi non è entrato', () => {
+  it('non c’è finché nessuno è collegato', async () => {
+    ruoloClaim = null
+    clienteLoggato = null
+    apri('/')
+    expect(await screen.findByText('PAGINA HOME')).toBeInTheDocument()
+    expect(screen.queryByTestId('campanella')).toBeNull()
+  })
+
+  it('c’è per chi lavora', async () => {
+    ruoloClaim = 'bartender'
+    clienteLoggato = null
+    apri('/')
+    expect(await screen.findByTestId('campanella')).toBeInTheDocument()
   })
 })

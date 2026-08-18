@@ -64,9 +64,16 @@ export function elencoNascosti() {
 }
 
 // Toglie dalla lista i conti appena chiusi qui.
-export function senzaNascosti(ordini) {
+//
+// MA NASCONDERE UN CONTO NON VUOL DIRE NASCONDERE IL SUO LAVORO. Incassando
+// un conto con dei drink ancora da fare, quello spariva dalla coda e con
+// lui le sue comande: al banco i drink appena pagati si volatilizzavano, e
+// ricaricando la pagina tornavano — perché questo elenco vive in memoria e
+// il ricaricamento lo azzera. Chi chiama passa cosa TENERE comunque
+// (`tieni`): la regola è del dominio, non di questo cassetto.
+export function senzaNascosti(ordini, tieni = () => false) {
   if (!nascosti.size) return ordini
-  return ordini.filter((o) => !ordineNascosto(o.id))
+  return ordini.filter((o) => !ordineNascosto(o.id) || tieni(o))
 }
 
 export function subscribeNascosti(cb) {

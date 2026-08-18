@@ -1,0 +1,130 @@
+// ── LA STAMPANTE FINTA, SOLO IN LOCALE ───────────────────────────────
+//
+// Al banco la stampante è un apparecchio sulla rete del locale: da un
+// computer di sviluppo non si raggiunge, e ogni modifica a comande e
+// scontrini si provava a occhio nel codice — oppure andando al bar.
+//
+// Qui la stampante c'è, ma è di carta finta: raccoglie le righe che l'app
+// le manda e le apre in una finestra col FACSIMILE dello scontrino. Si
+// prova quello che ESCE, che è la domanda vera («questa comanda si
+// legge?»), non il collegamento.
+//
+// La finestra si guarda e si chiude: prima partiva da sola la stampa in
+// PDF, e per leggere una comanda bisognava passare ogni volta da una
+// finestra di sistema — con un file da buttare a ogni prova. Chi la stampa
+// davvero la vuole ha il suo tasto.
+//
+// SOLO IN LOCALE. Sull'ambiente di test non si accende, perché lì ci si
+// collega alla stampante VERA per provarla davvero; in produzione, va da
+// sé, nemmeno si pone. Il segnale è l'ambiente di sviluppo o gli
+// emulatori: entrambi vogliono dire «questo computer non è il bar».
+
+const COL = 48 // colonne della testina 80 mm, come la stampante vera
+
+export function stampanteFintaAttiva(env = import.meta.env) {
+  if (env?.VITE_STAMPANTE_FINTA === 'false') return false
+  // Forzabile a mano, per provarla dove serve.
+  if (env?.VITE_STAMPANTE_FINTA === 'true') return true
+  if (env?.DEV) return true
+  if (env?.MODE === 'locale') return true
+  // Gli emulatori Firebase: se il database è finto, lo è anche il bar.
+  return env?.VITE_USE_FIREBASE_EMULATOR === 'true'
+}
+
+// Le righe come le vedrebbe la testina: testo grande raddoppiato, allineato
+// nelle 48 colonne. Non è una simulazione fedele — è quanto basta per
+// leggere la comanda com'è, invece di immaginarsela.
+function componi(pezzi) {
+  const out = []
+  let allineamento = 'left'
+  let doppio = false
+  for (const p of pezzi) {
+    if (p.tipo === 'align') allineamento = p.valore
+    else if (p.tipo === 'size') doppio = p.doppio
+    else if (p.tipo === 'feed') out.push(...Array(p.righe).fill(''))
+    else if (p.tipo === 'cut') out.push('─'.repeat(COL))
+    else if (p.tipo === 'text') {
+      for (const riga of String(p.testo).split('\n')) {
+        if (riga === '' && p.testo.endsWith('\n')) continue
+        const t = doppio ? riga.split('').join(' ') : riga
+        const largh = COL
+        if (allineamento === 'center') out.push(t.trim().padStart(Math.floor((largh + t.trim().length) / 2)))
+        else if (allineamento === 'right') out.push(t.trim().padStart(largh))
+        else out.push(t)
+      }
+    }
+  }
+  return out
+}
+
+// Apre la finestra di stampa del browser con lo scontrino dentro: da lì
+// «Salva come PDF». Se il browser blocca la finestra (succede), il testo
+// finisce in console — meglio che perderlo.
+function mostra(righe, titolo, logo) {
+  const testo = righe.join('\n')
+  const w = typeof window !== 'undefined' ? window.open('', '_blank', 'width=420,height=700') : null
+  if (!w) {
+    console.info(`[stampante finta] ${titolo}\n${testo}`)
+    return
+  }
+  const scampato = (t) => String(t).replace(/[<&]/g, (c) => (c === '<' ? '&lt;' : '&amp;'))
+  // Lo scontrino come esce dalla testina: carta stretta, fondo bianco,
+  // monospaziato. Il logo, se c'è, sta in cima come sulla carta vera.
+  w.document.write(
+    `<!doctype html><meta charset="utf-8"><title>${scampato(titolo)}</title>` +
+      '<style>' +
+      'body{margin:0;padding:16px;background:#e8e8ee;font-family:system-ui,sans-serif}' +
+      '.scontrino{width:80mm;max-width:100%;margin:0 auto;background:#fff;padding:6mm 4mm;' +
+      'box-shadow:0 2px 10px rgba(0,0,0,.18)}' +
+      '.scontrino img{display:block;margin:0 auto 6px;max-width:40mm}' +
+      'pre{font:12px/1.35 "Courier New",monospace;color:#000;white-space:pre-wrap;margin:0}' +
+      '.barra{max-width:80mm;margin:0 auto 10px;display:flex;gap:8px;align-items:center;' +
+      'font:13px system-ui,sans-serif;color:#333}' +
+      '.barra button{font:inherit;padding:6px 12px;border-radius:8px;border:1px solid #bbb;' +
+      'background:#fff;cursor:pointer}' +
+      '@media print{body{background:#fff;padding:0}.barra{display:none}' +
+      '.scontrino{width:auto;box-shadow:none;padding:0}}' +
+      '@page{size:80mm auto;margin:4mm}</style>' +
+      `<div class="barra"><span>${scampato(titolo)} — facsimile</span>` +
+      '<button onclick="window.print()">🖨 Stampa</button>' +
+      '<button onclick="window.close()">Chiudi</button></div>' +
+      `<div class="scontrino">${logo ? `<img src="${logo}" alt="">` : ''}<pre>${scampato(testo)}</pre></div>`
+  )
+  w.document.close()
+  w.focus()
+}
+
+// L'oggetto che l'app crede una stampante: gli stessi metodi dell'SDK
+// Epson, per la parte che usiamo (vedi lib/printer.js).
+export function creaStampanteFinta(titolo = 'Stampa') {
+  const pezzi = []
+  const finta = {
+    ALIGN_LEFT: 'left',
+    ALIGN_CENTER: 'center',
+    ALIGN_RIGHT: 'right',
+    COLOR_1: 'color1',
+    CUT_FEED: 'cut',
+    addTextLang: () => finta,
+    addTextSmooth: () => finta,
+    addTextAlign: (v) => (pezzi.push({ tipo: 'align', valore: v }), finta),
+    addTextSize: (w) => (pezzi.push({ tipo: 'size', doppio: Number(w) > 1 }), finta),
+    addTextStyle: () => finta,
+    addText: (t) => (pezzi.push({ tipo: 'text', testo: t }), finta),
+    addFeedLine: (n) => (pezzi.push({ tipo: 'feed', righe: Number(n) || 1 }), finta),
+    addCut: () => (pezzi.push({ tipo: 'cut' }), finta),
+    // Il logo: la stampante vera riceve un'immagine, qui basta l'indirizzo
+    // per rimetterlo in cima al facsimile.
+    addImageUrl: (url) => (pezzi.push({ tipo: 'logo', url }), finta),
+    send: () => {
+      const logo = pezzi.find((p) => p.tipo === 'logo')?.url || null
+      mostra(componi(pezzi), titolo, logo)
+      pezzi.length = 0
+      // L'SDK vero avvisa così: qualcuno guarda `onreceive`.
+      finta.onreceive?.({ success: true, code: '', status: 0 })
+      return finta
+    },
+    onreceive: null,
+    ondisconnect: null,
+  }
+  return finta
+}

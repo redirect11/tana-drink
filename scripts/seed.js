@@ -8,6 +8,7 @@
 // =====================================================================
 import { readFileSync } from 'node:fs'
 import admin from 'firebase-admin'
+import { puntaAllEmulatore } from './lib-emulatore.js'
 
 function loadEnv() {
   try {
@@ -30,16 +31,21 @@ const firebaseConfig = {
   appId: process.env.VITE_FIREBASE_APP_ID,
 }
 
-const useEmulator = process.env.VITE_USE_FIREBASE_EMULATOR === 'true'
+// «--dev» = riempi l'EMULATORE, senza dover mettere variabili d'ambiente
+// davanti al comando: su Windows npm passa gli script a cmd, che quella
+// forma non la capisce — «VITE_...=true non è riconosciuto come comando»,
+// ed è il motivo per cui questi comandi non partivano.
+const dev = process.argv.includes('--dev')
+const useEmulator = dev || process.env.VITE_USE_FIREBASE_EMULATOR === 'true'
 const force = process.argv.includes('--force')
 
-const projectId = firebaseConfig.projectId
+const projectId = firebaseConfig.projectId || (dev ? 'demo-tana-drink' : null)
 if (!projectId || (!useEmulator && !firebaseConfig.apiKey)) {
   console.error('[seed] Configurazione Firebase mancante.')
   process.exit(1)
 }
 
-import { INV_CATS, INV_ITEMS, DRINK_CATS, DRINKS, DRINK_IMAGES, SEED_SETTINGS } from '../src/dev/seedData.js'
+import { INV_CATS, INV_ITEMS, DRINK_CATS, DRINKS, DRINK_IMAGES, SEED_SETTINGS, SEED_UTENTI } from '../src/dev/seedData.js'
 
 
 async function clearCollection(db, name) {
@@ -52,10 +58,14 @@ async function clearCollection(db, name) {
 
 async function main() {
   if (useEmulator) {
-    const host = process.env.VITE_FIRESTORE_EMULATOR_HOST || 'localhost'
-    const port = Number(process.env.VITE_FIRESTORE_EMULATOR_PORT) || 8080
-    process.env.FIRESTORE_EMULATOR_HOST = `${host}:${port}`
-    console.log(`[seed] Emulatore Firestore: ${host}:${port}`)
+    // La porta non si dà per scontata: si cerca (vedi lib-emulatore.js).
+    const dove = await puntaAllEmulatore('seed')
+    const host = dove.split(':')[0]
+    // Anche Auth: senza, le utenze di prova finirebbero (o proverebbero ad
+    // andare) sul progetto vero.
+    process.env.FIREBASE_AUTH_EMULATOR_HOST =
+      process.env.FIREBASE_AUTH_EMULATOR_HOST || `${host}:9099`
+    console.log(`[seed] Emulatore Firestore: ${dove}`)
   }
 
   // Admin SDK bypassa le security rules — perfetto per seed e migrazioni.
@@ -94,6 +104,10 @@ async function main() {
       name: item.name,
       unit: item.unit,
       package_size: item.package_size ?? null,
+      // Costo (netto, per confezione) e IVA: da qui escono costo al cl,
+      // valore di magazzino, margine del drink e prezzo consigliato.
+      cost: item.cost ?? null,
+      vat: item.vat ?? 22,
       stock: item.stock,
       bottles_total: item.package_size ? Math.ceil(item.stock / item.package_size) : 0,
       low_threshold: item.low_threshold,
@@ -148,7 +162,43 @@ async function main() {
   }, { merge: true })
   console.log('  + settings/bar')
 
-  console.log(`\n[seed] ✓ Completato: ${INV_CATS.length} cat. inventario, ${INV_ITEMS.length} ingredienti, ${DRINK_CATS.length} cat. drink, ${DRINKS.length} drink.`)
+  // 6. Utenze di prova, UNA PER RUOLO — solo sull'emulatore.
+  //
+  // Quello che vede l'admin non è quello che vede la sala, e i guai peggiori
+  // nascono lì: un tasto che c'è per chi comanda e non per chi serve. Senza
+  // utenze pronte si prova sempre da una sola, e quelle differenze non le
+  // vede nessuno.
+  //
+  // Sul progetto VERO non si tocca niente: creare account con password
+  // scritte in un file versionato sarebbe una porta aperta.
+  let utenti = 0
+  if (useEmulator) {
+    console.log('\n[seed] Utenze di prova…')
+    const auth = admin.auth()
+    for (const u of SEED_UTENTI) {
+      try {
+        let utente = await auth.getUserByEmail(u.email).catch(() => null)
+        if (!utente) {
+          utente = await auth.createUser({
+            email: u.email,
+            password: u.password,
+            displayName: u.nome,
+          })
+        }
+        // Il ruolo è un custom claim: è quello che l'app legge (lib/ruoli.js).
+        // Il «cliente» non ne ha bisogno — è il valore di partenza — ma
+        // scriverlo lo stesso rende esplicito com'è fatta l'utenza.
+        await auth.setCustomUserClaims(utente.uid, { role: u.role })
+        utenti += 1
+        console.log(`  + ${u.email} (${u.role})`)
+      } catch (e) {
+        console.log(`  ! ${u.email}: ${e.message}`)
+      }
+    }
+    console.log(`  password per tutte: ${SEED_UTENTI[0].password}`)
+  }
+
+  console.log(`\n[seed] ✓ Completato: ${INV_CATS.length} cat. inventario, ${INV_ITEMS.length} ingredienti, ${DRINK_CATS.length} cat. drink, ${DRINKS.length} drink${utenti ? `, ${utenti} utenze` : ''}.`)
   process.exit(0)
 }
 

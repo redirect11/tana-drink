@@ -1,7 +1,31 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import Caricamento from './Caricamento.jsx'
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  rectSortingStrategy,
+  sortableKeyboardCoordinates,
+  useSortable,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { DrinkTile } from './PosBits.jsx'
 import { catBtnStyle } from '../lib/posStyles.js'
 import { catColor, drinkCategoryColor, CATEGORY_PALETTE } from '../lib/categoryColors.js'
+import {
+  coloreStriscia,
+  scorteDelDrink,
+  striscaGuardaLeScorte,
+  MODO_STRISCIA_DEFAULT,
+} from '../lib/strisce.js'
+import { stockStatus } from '../lib/inventory.js'
 import {
   applyOrder,
   moveInOrder,
@@ -33,11 +57,93 @@ import DrinkForm from './DrinkForm.jsx'
 // bartender fissa in alto) e 🕘 Recenti (gli ultimi item ordinati, passati
 // via `recentIds`). In "Tutti" le card si RIORDINANO col drag (attivando la
 // modalità riordino) e l'ordine è ricordato per dispositivo.
+// Il guscio del trascinamento. STA SEMPRE, anche fuori da «organizza»:
+// montarlo solo lì significava spostare la griglia in un altro posto
+// dell'albero, e React a quel punto butta il riquadro e ne fa uno nuovo.
+// Si vedeva: per un attimo le card cambiavano misura e poi tornavano —
+// il tempo di rifare il riquadro, rimisurarlo e ridisegnare. Senza gesti
+// attivi (sensori spenti) e senza niente di trascinabile dentro, qui non
+// fa nulla: è solo un contenitore che resta al suo posto.
+const SENSORI_SPENTI = []
+
+// LA CARD IN MANO NON ESCE DALLA GRIGLIA.
+//
+// Trascinandola verso destra finiva oltre il bordo: lì fuori non c'è
+// niente da riordinare, ma la griglia — che scorre — si allargava per
+// contenerla e partiva uno scorrimento orizzontale senza fine. Per
+// tornare a vedere le card bisognava riportare indietro la barra a mano.
+//
+// Qui il movimento si ferma ai bordi del riquadro che scorre: si può
+// prendere una card e portarla dove ha senso lasciarla, e basta. È un
+// «modifier» di dnd-kit, cioè una funzione che corregge lo spostamento
+// prima che venga applicato.
+function dentroLaGriglia({ transform, draggingNodeRect, containerNodeRect }) {
+  if (!draggingNodeRect || !containerNodeRect) return transform
+  const minX = containerNodeRect.left - draggingNodeRect.left
+  const maxX = containerNodeRect.right - draggingNodeRect.right
+  const minY = containerNodeRect.top - draggingNodeRect.top
+  const maxY = containerNodeRect.bottom - draggingNodeRect.bottom
+  return {
+    ...transform,
+    x: Math.min(Math.max(transform.x, minX), maxX),
+    y: Math.min(Math.max(transform.y, minY), maxY),
+  }
+}
+
+function Riordinabile({ attiva, sensori, ids, onFine, children }) {
+  return (
+    <DndContext
+      sensors={attiva ? sensori : SENSORI_SPENTI}
+      collisionDetection={closestCenter}
+      modifiers={[dentroLaGriglia]}
+      onDragEnd={onFine}
+    >
+      <SortableContext items={ids} strategy={rectSortingStrategy}>
+        {children}
+      </SortableContext>
+    </DndContext>
+  )
+}
+
+// Una cella della griglia in modalità organizza: la maniglia porta i
+// gesti, la card dentro resta com'è. Il movimento — la card che segue il
+// dito e le altre che fanno spazio — lo mette dnd-kit.
+function CellaOrdinabile({ drink, qty, color, striscia, onApri }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: drink.id })
+  return (
+    <div
+      ref={setNodeRef}
+      className={`reorder-cell${isDragging ? ' dragging' : ''}`}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+    >
+      <div
+        className="reorder-grip"
+        title="Trascina per spostare"
+        aria-label={`Trascina ${drink.name}`}
+        {...attributes}
+        {...listeners}
+      >
+        ⠿
+      </div>
+      <DrinkTile
+        drink={drink}
+        qty={qty}
+        color={color}
+        striscia={striscia}
+        onAdd={onApri}
+        onSetQty={() => {}}
+      />
+    </div>
+  )
+}
+
 export default function PosProductPicker({
   drinks,
   cats,
   loading,
   qtyByDrink,
+  onInfo,
   onAdd,
   onSetQty,
   onInteract = null, // notifica il parent quando si lavora sulla griglia (scroll/ricerca)
@@ -48,6 +154,9 @@ export default function PosProductPicker({
   // Cosa fa la ricerca: filtrare le card (come è sempre stato) oppure
   // lasciarle tutte in griglia e accendere la prima che risponde.
   ricercaEvidenzia = false,
+  // Cosa dice la striscia a sinistra delle tile (vedi lib/strisce.js).
+  modoStriscia = MODO_STRISCIA_DEFAULT,
+  scorteVerdi = false,
 }) {
   const [selectedCat, setSelectedCat] = useState(null)
   const [query, setQuery] = useState('')
@@ -65,12 +174,27 @@ export default function PosProductPicker({
   // cambia quando si ridimensionano le colonne laterali. Vale in creazione e in
   // modifica (stesso picker).
   const [gridW, setGridW] = useState(0)
-  useEffect(() => {
-    const el = gridRef.current
+  // IL METRO VA RIATTACCATO QUANDO LA GRIGLIA RINASCE. Entrando in
+  // «organizza» la griglia finisce dentro il contesto di trascinamento: per
+  // React è un altro posto nell'albero, quindi butta via il riquadro e ne
+  // fa uno nuovo. Il misuratore restava attaccato a quello vecchio, ormai
+  // staccato dalla pagina, che misura zero: le card tornavano alla misura
+  // di partenza e i testi si rimpicciolivano di colpo, appena si toccava
+  // «Organizza». Con un ref-funzione lo si riaggancia al riquadro nuovo.
+  const osservatore = useRef(null)
+  const agganciaGriglia = useCallback((el) => {
+    gridRef.current = el
+    osservatore.current?.disconnect()
+    osservatore.current = null
     if (!el || typeof ResizeObserver === 'undefined') return
-    const ro = new ResizeObserver((entries) => setGridW(Math.round(entries[0].contentRect.width)))
+    const ro = new ResizeObserver((entries) =>
+      setGridW(Math.round(entries[0].contentRect.width))
+    )
     ro.observe(el)
-    return () => ro.disconnect()
+    osservatore.current = ro
+    // La prima misura senza aspettare il giro dell'osservatore: se no per
+    // un disegno le card sono della misura sbagliata.
+    setGridW(Math.round(el.getBoundingClientRect().width))
   }, [])
   const GRID_GAP = 8
   // Centro stretto (smartphone): barra alta compatta e font più piccoli.
@@ -78,22 +202,37 @@ export default function PosProductPicker({
   // Base più grande su tablet/desktop (leggibile su iPad); su smartphone il
   // floor è più basso, così le card non escono enormi.
   const tileScale = gridW ? Math.max(compact ? 0.9 : 1.05, Math.min(1.5, gridW / 440)) : 1
-  // Card più grandi ma SEMPRE almeno 3 per riga: la min-width non supera mai un
-  // terzo della larghezza disponibile.
-  const tileMin = gridW
-    ? Math.max(112, Math.min(Math.round(172 * tileScale), Math.floor((gridW - 2 * GRID_GAP) / 3)))
-    : 172
+  // Card più grandi ma SEMPRE almeno 3 per riga (finché ci stanno: sotto
+  // una certa misura si toccano col dito e basta, e allora meglio due
+  // grandi che tre inservibili).
+  //
+  // IL TERZO DI LARGHEZZA LO CALCOLA IL BROWSER, non noi. Prima lo si
+  // faceva in JS con la larghezza misurata, che arriva SEMPRE in ritardo:
+  // trascinando la maniglia di fianco alla griglia, per qualche fotogramma
+  // la misura era ancora quella di prima — più larga — e il browser ci
+  // faceva stare due colonne invece di tre, fino a quando la misura non
+  // arrivava. Con min()/max() dentro il CSS il conto si rifà a ogni
+  // fotogramma insieme al ridimensionamento, e le colonne non ballano.
+  const tileBase = Math.max(112, Math.round(172 * tileScale))
+  const colonne = `repeat(auto-fill, minmax(max(112px, min(${tileBase}px, calc((100% - ${2 * GRID_GAP}px) / 3))), 1fr))`
 
   useEffect(() => {
     if (cats.length > 0 && selectedCat === null) setSelectedCat('__all__')
   }, [cats, selectedCat])
 
-  // Inventario: serve solo alla scheda prodotto (ricetta). Si carica alla
-  // prima apertura del menu prodotto, non all'avvio del POS.
+  // Inventario: serve alla scheda prodotto (ricetta) e, se la striscia
+  // dice le scorte, a disegnare la griglia. Si carica alla prima apertura
+  // del menu prodotto — o subito, ma SOLO quando le scorte servono
+  // davvero: sono ricette e giacenze, non si leggono per niente.
+  const serveMagazzino = striscaGuardaLeScorte(modoStriscia)
   useEffect(() => {
-    if (!menuDrink || inventory.length > 0) return
+    if ((!menuDrink && !serveMagazzino) || inventory.length > 0) return
     fetchInventoryItems().then((inv) => setInventory(inv || [])).catch(() => setInventory([]))
-  }, [menuDrink, inventory.length])
+  }, [menuDrink, serveMagazzino, inventory.length])
+  const scorteById = useMemo(
+    () => Object.fromEntries((inventory || []).map((i) => [i.id, i])),
+    [inventory]
+  )
   // localStorage = cache locale immediata (funziona offline al primo avvio).
   useEffect(() => saveOrder(order), [order])
   useEffect(() => saveFavorites(favorites), [favorites])
@@ -130,7 +269,20 @@ export default function PosProductPicker({
     setTileColors(next)
     savePosColors(next).catch(() => {})
   }
-  const tileColor = (d) => tileColors[d.id] || drinkCategoryColor(d, cats)
+  // Il colore del PRODOTTO: la linguetta in alto a sinistra, che si tocca
+  // per cambiarlo. Non dipende dall'impostazione della striscia — un
+  // colore scelto a mano deve restare visibile.
+  const coloreProdotto = (d) => tileColors[d.id] || drinkCategoryColor(d, cats)
+  // Il colore della STRISCIA: la regola sta in lib/strisce.js, così la
+  // stessa striscia significa la stessa cosa anche nelle schede del menù.
+  const tileColor = (d) =>
+    coloreStriscia({
+      modo: modoStriscia,
+      coloreProdotto: tileColors[d.id] || null,
+      coloreCategoria: drinkCategoryColor(d, cats),
+      scorte: serveMagazzino ? scorteDelDrink(d, scorteById, stockStatus) : null,
+      verdeQuandoOk: scorteVerdi,
+    })
   const catKey = (c) => c.id ?? c.name
   const favSet = useMemo(() => new Set(favorites), [favorites])
   const byId = useMemo(() => new Map((drinks || []).map((d) => [d.id, d])), [drinks])
@@ -191,75 +343,29 @@ export default function PosProductPicker({
   // MANIGLIA dedicata (touch-action:none): il resto della card scorre
   // normalmente. Il riordino agisce sull'ordine GLOBALE, valido anche
   // filtrando per categoria.
-  const [dragId, setDragId] = useState(null)
-  const dragRef = useRef({ id: null, lastX: 0, lastY: 0, raf: 0, vy: 0 })
-  // Dati sempre freschi per il ciclo di auto-scroll (che gira su una
-  // closure vecchia): li legge da qui, non dalle variabili di render.
-  const latest = useRef({})
-  latest.current = { orderedAllIds, commitOrder }
-
-  // Sposta l'item trascinato sopra la card che sta sotto al punto (x,y).
-  const reorderAt = (x, y) => {
-    const st = dragRef.current
-    if (!st.id) return
-    const el = document.elementFromPoint(x, y)
-    const overId = el?.closest('[data-drink-id]')?.dataset.drinkId
-    if (!overId || overId === st.id) return
-    latest.current.commitOrder(moveInOrder(latest.current.orderedAllIds, st.id, overId))
+  // ── RIORDINO DELLA GRIGLIA (modalità organizza) ────────────────────
+  // Lo fa dnd-kit, non noi. La versione scritta a mano — cattura del
+  // puntatore, ciclo di auto-scroll, animazioni a mano — aveva un difetto
+  // dopo l'altro: lo scorrimento che non si fermava, le card che si
+  // spostavano solo mentre la griglia scorreva, il rilascio fuori area.
+  // Trascinare col dito è un problema risolto da altri, con dieci casi
+  // limite che non si vedono finché non capitano al banco.
+  //
+  // Quello che resta nostro è la REGOLA: l'ordine è uno solo e globale
+  // (`moveInOrder` su tutti gli id), anche quando a schermo c'è una sola
+  // categoria — se no spostare una birra dentro «Birre» la lascerebbe al suo
+  // posto in «Tutti».
+  const sensori = useSensors(
+    // Col dito: si parte dopo un attimo di pressione, se no scorrere la
+    // griglia trascinerebbe le card. Col mouse basta uno spostamento.
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 180, tolerance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  )
+  const fineRiordino = ({ active, over }) => {
+    if (!over || active.id === over.id) return
+    commitOrder(moveInOrder(orderedAllIds, String(active.id), String(over.id)))
   }
-
-  // Ciclo di AUTO-SCROLL: mentre si trascina vicino a un bordo, la griglia
-  // scorre da sola (così si può portare un item dal fondo alla cima). Legge
-  // tutto da ref, quindi la closure "vecchia" resta valida.
-  const autoScrollTick = () => {
-    const st = dragRef.current
-    if (!st.id) return
-    const grid = gridRef.current
-    if (grid && st.vy) {
-      grid.scrollTop += st.vy
-      reorderAt(st.lastX, st.lastY)
-    }
-    st.raf = requestAnimationFrame(autoScrollTick)
-  }
-
-  const startDrag = (e, id) => {
-    e.preventDefault()
-    try { e.currentTarget.setPointerCapture(e.pointerId) } catch { /* ok */ }
-    const st = dragRef.current
-    st.id = id
-    st.lastX = e.clientX
-    st.lastY = e.clientY
-    st.vy = 0
-    setDragId(id)
-    cancelAnimationFrame(st.raf)
-    st.raf = requestAnimationFrame(autoScrollTick)
-  }
-  const moveDrag = (e) => {
-    const st = dragRef.current
-    if (!st.id) return
-    e.preventDefault()
-    st.lastX = e.clientX
-    st.lastY = e.clientY
-    // Velocità di scroll in base a quanto si entra nella fascia di bordo.
-    const grid = gridRef.current
-    if (grid) {
-      const r = grid.getBoundingClientRect()
-      const EDGE = 72
-      if (e.clientY < r.top + EDGE) st.vy = -Math.ceil((r.top + EDGE - e.clientY) / 5)
-      else if (e.clientY > r.bottom - EDGE) st.vy = Math.ceil((e.clientY - (r.bottom - EDGE)) / 5)
-      else st.vy = 0
-    }
-    reorderAt(e.clientX, e.clientY)
-  }
-  const endDrag = () => {
-    const st = dragRef.current
-    cancelAnimationFrame(st.raf)
-    st.id = null
-    st.vy = 0
-    st.raf = 0
-    setDragId(null)
-  }
-  useEffect(() => () => cancelAnimationFrame(dragRef.current.raf), [])
 
   const toggleFav = (id) => commitFavorites(toggleFavorite(favorites, id))
   // Riordino disponibile ovunque tranne Recenti (ordine per recenza) e in
@@ -390,8 +496,17 @@ export default function PosProductPicker({
             🔍 Nessun prodotto per «{query.trim()}».
           </p>
         )}
+        {/* In «organizza» la griglia sta dentro il contesto di
+            trascinamento; fuori da quella modalità non c'è niente da
+            trascinare e non serve. */}
+        <Riordinabile
+          attiva={canReorder}
+          sensori={sensori}
+          ids={visibleDrinks.map((d) => d.id)}
+          onFine={fineRiordino}
+        >
         <div
-          ref={gridRef}
+          ref={agganciaGriglia}
           onScroll={() => onInteract?.()}
           style={{
             flex: 1,
@@ -400,11 +515,22 @@ export default function PosProductPicker({
             // Arrivati in cima, il trascinamento si ferma qui: non passa al
             // documento, dove Android farebbe partire il ricaricamento
             // della pagina in mezzo a un ordine.
+            // Niente scorrimento LATERALE: la griglia va a capo, non di
+            // lato. Restava aperto perché `overflow-y: auto` porta con sé
+            // l'orizzontale, e bastava una card trascinata oltre il bordo
+            // per allargare tutto.
+            overflowX: 'hidden',
             overscrollBehavior: 'contain',
             WebkitOverflowScrolling: 'touch',
             padding: '10px 8px',
+            // LA BARRA DI SCORRIMENTO NON DEVE SPOSTARE LE COLONNE. Compare
+            // e sparisce a seconda di quanti prodotti ha la categoria, e
+            // con lei cambiava la larghezza utile: al confine fra tre e
+            // quattro card per riga la griglia si riassestava da sola
+            // mentre la si guardava. Lo spazio è sempre riservato.
+            scrollbarGutter: 'stable',
             display: 'grid',
-            gridTemplateColumns: `repeat(auto-fill, minmax(${tileMin}px, 1fr))`,
+            gridTemplateColumns: colonne,
             alignContent: 'start',
             gap: GRID_GAP,
             // il font-size della griglia guida i testi em delle card
@@ -413,7 +539,11 @@ export default function PosProductPicker({
             pointerEvents: disabled ? 'none' : 'auto',
           }}
         >
-          {loading && <div className="empty" style={{ gridColumn: '1/-1' }}>Carico…</div>}
+          {loading && (
+            <div style={{ gridColumn: '1/-1' }}>
+              <Caricamento testo="Preparo il listino…" />
+            </div>
+          )}
           {!loading && visibleDrinks.length === 0 && (
             <div className="empty" style={{ gridColumn: '1/-1' }}>
               {selectedCat === '__fav__'
@@ -425,38 +555,24 @@ export default function PosProductPicker({
           )}
           {visibleDrinks.map((d) =>
             canReorder ? (
-              // Modalità ORGANIZZA: si trascina dalla MANIGLIA in alto per
-              // spostare; toccando la card si apre il MENU del prodotto (colore).
-              <div
+              // Modalità ORGANIZZA: si trascina dalla MANIGLIA; toccando la
+              // card si apre il menu del prodotto (colore).
+              <CellaOrdinabile
                 key={d.id}
-                data-drink-id={d.id}
-                className={`reorder-cell${dragId === d.id ? ' dragging' : ''}`}
-              >
-                <div
-                  className="reorder-grip"
-                  onPointerDown={(e) => startDrag(e, d.id)}
-                  onPointerMove={moveDrag}
-                  onPointerUp={endDrag}
-                  onPointerCancel={endDrag}
-                  title="Trascina per spostare"
-                  aria-label={`Trascina ${d.name}`}
-                >
-                  ⠿
-                </div>
-                <DrinkTile
-                  drink={d}
-                  qty={qtyByDrink[d.id] ?? 0}
-                  color={tileColor(d)}
-                  onAdd={() => setMenuDrink(d)}
-                  onSetQty={() => {}}
-                />
-              </div>
+                drink={d}
+                qty={qtyByDrink[d.id] ?? 0}
+                color={coloreProdotto(d)}
+                striscia={tileColor(d)}
+                onApri={() => setMenuDrink(d)}
+              />
             ) : (
               <DrinkTile
                 key={d.id}
                 drink={d}
                 qty={qtyByDrink[d.id] ?? 0}
-                color={tileColor(d)}
+                onInfo={onInfo ? () => onInfo(d) : undefined}
+                color={coloreProdotto(d)}
+                striscia={tileColor(d)}
                 acceso={d.id === idAcceso}
                 favorite={favSet.has(d.id)}
                 onToggleFav={() => toggleFav(d.id)}
@@ -472,6 +588,7 @@ export default function PosProductPicker({
             )
           )}
         </div>
+        </Riordinabile>
       </div>
 
       {/* ── MENU del singolo prodotto (in Organizza): cambio colore del tab ── */}

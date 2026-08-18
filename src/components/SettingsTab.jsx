@@ -6,27 +6,47 @@ import {
   resetOpenOrdersToReceived,
 } from '../lib/api.js'
 import { CANCEL_PHRASES } from '../lib/orderStatus.js'
+import {
+  MODI_CONSEGNA,
+  clienteSceglie,
+  fraseAnnulloDefault,
+  fraseAnnulloPossibile,
+  modoAllaNascita,
+  mondoConsegna,
+} from '../lib/consegna.js'
 import { parseCarteCsv, decodeCsvBuffer } from '../lib/carteImport.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
-import ThemeSettings from './ThemeSettings.jsx'
-import CategoryRail from './CategoryRail.jsx'
+import ThemeSettings, { TemaMenuClienti } from './ThemeSettings.jsx'
 import PrinterSetup from './PrinterSetup.jsx'
+
 import BackupPanel from './BackupPanel.jsx'
 import InfoTab from './InfoTab.jsx'
 import { pairSumUpReader, unpairSumUpReader } from '../lib/paymentsApi.js'
+import { Link } from 'react-router-dom'
 import { devToolsEnabled } from '../dev/devActions.js'
+import { Sottosezioni } from '../lib/sottosezioni.js'
+import { MODI_STRISCIA, MODO_STRISCIA_DEFAULT } from '../lib/strisce.js'
+import { usePaginaPiena } from '../lib/paginaPiena.js'
 
 // Impostazioni del bar (documento settings/bar). Ogni modifica viene salvata
 // subito; le pagine cliente le ricevono in tempo reale via subscribeSettings.
 export default function SettingsTab({ role = null }) {
+  // La schermata sta tutta nella finestra: scorre la sezione aperta, non la
+  // pagina con dentro la testata.
+  usePaginaPiena()
   const [settings, setSettings] = useState(null)
   const [error, setError] = useState(null)
   const [confermaSpegni, setConfermaSpegni] = useState(false) // gestione preparazione
   const [esitoReset, setEsitoReset] = useState(null)
   // Sezione aperta: si ricorda, perché a impostazioni si torna sempre per
   // lo stesso motivo (di solito gli orari o i pagamenti).
+  // …ma un collegamento può chiedere una sezione precisa (?sezione=…): ci
+  // arriva la notifica «l'app è cambiata», che deve aprire le Informazioni e
+  // non l'ultima sezione guardata.
   const [sezione, setSezione] = useState(() => {
     try {
+      const chiesta = new URLSearchParams(window.location.search).get('sezione')
+      if (chiesta) return chiesta
       return localStorage.getItem('tana:impostazioni:sezione') || 'aspetto'
     } catch {
       return 'aspetto'
@@ -69,22 +89,6 @@ export default function SettingsTab({ role = null }) {
   const sezioni = [
     { id: 'aspetto', icona: '🎨', label: 'Aspetto', nodo: <ThemeSettings settings={settings} onSave={save} /> },
     {
-      id: 'modalita-menu',
-      icona: '📖',
-      label: 'Modalità menù',
-      nodo: (
-            <div className="card settings-section">
-              <h3>Modalità menù</h3>
-              <ToggleRow
-                label="Solo menù (consultazione)"
-                desc="I clienti vedono il menù ma non possono ordinare."
-                checked={settings.menu_only}
-                onChange={(v) => save({ menu_only: v })}
-              />
-            </div>
-      ),
-    },
-    {
       id: 'vista-ordine',
       icona: '🧾',
       label: 'Vista ordine',
@@ -110,6 +114,39 @@ export default function SettingsTab({ role = null }) {
                     key={String(value)}
                     className={`mode-option${!!settings.pos_add_top === value ? ' active' : ''}`}
                     onClick={() => save({ pos_add_top: value })}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {/* LA ⓘ DELLE RICETTE. Dove il listino lo sanno tutti a memoria
+                  è un segno in più su ogni card, e le card sono cento. Dove
+                  invece cambia spesso, o si dà una mano il sabato, è la
+                  differenza fra saper fare un drink e doverlo chiedere. */}
+              <ToggleRow
+                label="La ⓘ con la ricetta sulle card"
+                desc="Apre ingredienti, quantità e come si prepara. Spenta, le card restano pulite."
+                checked={settings.pos_ricetta_info !== false}
+                onChange={(v) => save({ pos_ricetta_info: v })}
+              />
+
+              <p className="muted" style={{ margin: '12px 0 6px', fontSize: '0.85rem' }}>
+                Quanto è grande, come minimo, il testo delle righe del conto.
+                Il testo segue la larghezza del pannello, ma sotto questa
+                soglia non scende.
+              </p>
+              <div className="mode-choice" style={{ gridTemplateColumns: '1fr 1fr 1fr 1fr' }}>
+                {[
+                  [0.85, 'Piccolo'],
+                  [1, 'Medio'],
+                  [1.1, 'Grande'],
+                  [1.25, 'Extra'],
+                ].map(([value, label]) => (
+                  <button
+                    key={value}
+                    className={`mode-option${(Number(settings.pos_testo_min) || 1.1) === value ? ' active' : ''}`}
+                    onClick={() => save({ pos_testo_min: value })}
                   >
                     {label}
                   </button>
@@ -163,6 +200,53 @@ export default function SettingsTab({ role = null }) {
                   </button>
                 ))}
               </div>
+
+              {/* LA STRISCIA A SINISTRA DELLE CARD. È lo stesso segno in due
+                  schermate e finora diceva una cosa decisa da noi: dipende
+                  invece da come si lavora. */}
+              {/* SOLO LA DOMANDA. Il perché — chi conosce il listino a
+                  memoria vuole i colori, chi sta finendo le bottiglie
+                  vuole vedere cosa non si può più fare — sta nel requisito
+                  e in lib/strisce.js. E dove sta l'altra impostazione lo
+                  si scopre andandoci: scriverlo qui è una nota per noi,
+                  non per chi sceglie. */}
+              <h4 style={{ margin: '16px 0 4px' }}>
+                Cosa dice la riga a sinistra di ogni scheda della griglia?
+              </h4>
+              <div className="mode-choice" style={{ gridTemplateColumns: '1fr 1fr' }}>
+                {MODI_STRISCIA.map((m) => (
+                  <button
+                    key={m.id}
+                    className={`mode-option${
+                      (settings.stripe_pos || MODO_STRISCIA_DEFAULT) === m.id ? ' active' : ''
+                    }`}
+                    onClick={() => save({ stripe_pos: m.id })}
+                    title={m.desc}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+
+              <p className="muted small" style={{ margin: '12px 0 4px' }}>
+                Quale colore per «ci sono abbastanza scorte»?
+              </p>
+              <div className="mode-choice">
+                {[
+                  [false, '⚪ Grigio'],
+                  [true, '🟢 Verde'],
+                ].map(([value, label]) => (
+                  <button
+                    key={String(value)}
+                    className={`mode-option${
+                      !!settings.stripe_ok_verde === value ? ' active' : ''
+                    }`}
+                    onClick={() => save({ stripe_ok_verde: value })}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
       ),
     },
@@ -174,23 +258,84 @@ export default function SettingsTab({ role = null }) {
             <div className="card settings-section">
               <h3>Consegna ordine</h3>
               <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
-                Il ritiro al banco azzera coperto e costo di servizio.
+                Come lavora il locale. NON è un vincolo: qualunque cosa si
+                scelga qui, il banco e la sala possono sempre mettere
+                servizio o ritiro sul singolo conto, da «Dati conto». Qui si
+                decide come NASCONO i conti.
               </p>
-              <div className="mode-choice" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
+              <div className="mode-choice">
                 {[
-                  ['tavolo', '🍸 Servizio'],
-                  ['banco', '🚶 Ritiro'],
-                  ['entrambi', '🤝 Sceglie il cliente'],
-                ].map(([value, label]) => (
+                  ['tavolo', '🍸 Solo servizio', 'Si porta tutto al tavolo.'],
+                  [
+                    'entrambi',
+                    '🤝 Ritiro e servizio',
+                    'Chi si siede si fa servire, chi ha fretta ritira al banco.',
+                  ],
+                ].map(([value, label, hint]) => (
                   <button
                     key={value}
-                    className={`mode-option${settings.service_mode === value ? ' active' : ''}`}
+                    className={`mode-option${mondoConsegna(settings) === value ? ' active' : ''}`}
                     onClick={() => save({ service_mode: value })}
+                    title={hint}
                   >
                     {label}
                   </button>
                 ))}
               </div>
+
+              {/* DENTRO IL SECONDO MONDO, e solo lì: col solo servizio non
+                  c'è niente da scegliere e niente da far scegliere. */}
+              {mondoConsegna(settings) === 'entrambi' && (
+                <>
+                  <h4 style={{ margin: '16px 0 4px' }}>Come nascono i conti</h4>
+                  <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
+                    Il valore di partenza di un conto battuto al banco o in
+                    sala. Si cambia conto per conto in un tocco: il ritiro
+                    azzera coperto e costo di servizio.
+                  </p>
+                  <div className="mode-choice">
+                    {MODI_CONSEGNA.map(([value, label]) => (
+                      <button
+                        key={value}
+                        className={`mode-option${
+                          modoAllaNascita(settings) === value ? ' active' : ''
+                        }`}
+                        onClick={() => save({ consegna_default: value })}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* CHI SCEGLIE, non cosa si sceglie: senza ordinazioni dei
+                      clienti non c'è nessuno a cui chiederlo, e la voce si
+                      spegne dicendo perché invece di restare lì a mentire. */}
+                  <ToggleRow
+                    label="Lo sceglie il cliente"
+                    desc={
+                      settings.menu_only ? (
+                        <>
+                          Adesso non si può: i clienti vedono il menù ma non
+                          ordinano, e senza ordinazioni non c’è nessuno a cui
+                          chiederlo.{' '}
+                          <button
+                            type="button"
+                            className="link-inline"
+                            onClick={() => scegliSezione('menu-clienti')}
+                          >
+                            Vai a Menù clienti
+                          </button>
+                        </>
+                      ) : (
+                        'Ordinando dal telefono il cliente sceglie se farsi servire al tavolo o ritirare al banco. Spenta: decide il locale, e lo staff può cambiarlo sul conto.'
+                      )
+                    }
+                    checked={clienteSceglie(settings)}
+                    disabled={settings.menu_only === true}
+                    onChange={(v) => save({ cliente_sceglie_consegna: v })}
+                  />
+                </>
+              )}
             </div>
       ),
     },
@@ -318,6 +463,26 @@ export default function SettingsTab({ role = null }) {
                 checked={settings.workflow_enabled !== false}
                 onChange={(v) => (v ? save({ workflow_enabled: true }) : setConfermaSpegni(true))}
               />
+              {settings.workflow_enabled !== false && (
+                <ToggleRow
+                  label="Un tasto per incassare e servire insieme"
+                  desc="Nella schermata di pagamento compare anche «Riscuoti e servi»: chiude il conto in un colpo, per quando si consegna e si incassa nello stesso gesto."
+                  checked={settings.riscuoti_e_servi === true}
+                  onChange={(v) => save({ riscuoti_e_servi: v })}
+                />
+              )}
+              {/* Vale per TUTTE le comande allo stesso modo — la prima di un
+                  conto nuovo e le aggiunte a metà serata — perché il passo in
+                  cui nasce una comanda si decide in un posto solo
+                  (statoComandaNuova in lib/comande.js). */}
+              {settings.workflow_enabled !== false && (
+                <ToggleRow
+                  label="Le comande nascono già in preparazione"
+                  desc="Spenta: una comanda nuova sta in «Da fare» finché qualcuno non tocca «Lo preparo io» — che dice anche chi. Accesa: nasce già al banco, per chi versa nell'istante in cui batte e non vuole un tocco in più a ogni comanda."
+                  checked={settings.comande_in_preparazione === true}
+                  onChange={(v) => save({ comande_in_preparazione: v })}
+                />
+              )}
               {esitoReset != null && (
                 <div className="muted small" style={{ marginTop: 6 }}>
                   ✅ {esitoReset === 0
@@ -570,25 +735,91 @@ export default function SettingsTab({ role = null }) {
       ),
     },
     {
-      id: 'menu',
-      icona: '🍹',
-      label: 'Menù',
+      // MENÙ CLIENTI: tutto quello che riguarda la schermata di chi ordina —
+      // cosa può fare, cosa vede, di che colore. Stava sparso fra «Modalità
+      // menù», «Menù» e «Aspetto», e davanti a un interruttore non si
+      // capiva se parlasse del menù dei clienti o della schermata con cui
+      // si modifica il listino.
+      id: 'menu-clienti',
+      icona: '📖',
+      label: 'Menù clienti',
       nodo: (
-            <div className="card settings-section">
-              <h3>Menù</h3>
-              <ToggleRow
-                label="Mostra quantità ingredienti"
-                desc="Es. «Gin 50 ml» invece di solo «Gin» nelle voci del menù."
-                checked={settings.show_ingredient_quantities}
-                onChange={(v) => save({ show_ingredient_quantities: v })}
-              />
-              <ToggleRow
-                label="Tabellone «stiamo servendo»"
-                desc="Mostra nel menù i numeri degli ordini pronti al servizio/ritiro. Nascosto in modalità solo menù."
-                checked={settings.show_serving_board}
-                onChange={(v) => save({ show_serving_board: v })}
-              />
-            </div>
+        <div className="card settings-section">
+          <h3>Menù clienti</h3>
+          <p className="muted small" style={{ margin: '0 0 10px' }}>
+            La schermata che vedono i clienti sul telefono.
+          </p>
+          <ToggleRow
+            label="Solo menù (consultazione)"
+            desc="I clienti vedono il menù ma non possono ordinare."
+            checked={settings.menu_only}
+            onChange={(v) => save({ menu_only: v })}
+          />
+          <ToggleRow
+            label="Mostra quantità ingredienti"
+            desc="Es. «Gin 50 ml» invece di solo «Gin» nelle voci del menù."
+            checked={settings.show_ingredient_quantities}
+            onChange={(v) => save({ show_ingredient_quantities: v })}
+          />
+          <ToggleRow
+            label="Tabellone «stiamo servendo»"
+            desc="Mostra nel menù i numeri degli ordini pronti al servizio/ritiro. Nascosto in modalità solo menù."
+            checked={settings.show_serving_board}
+            onChange={(v) => save({ show_serving_board: v })}
+          />
+          <TemaMenuClienti settings={settings} onSave={save} />
+        </div>
+      ),
+    },
+    {
+      // GESTIONE MENÙ: la schermata con cui si lavora il listino. Le sue
+      // impostazioni non c'entrano niente con quello che vede il cliente.
+      id: 'gestione-menu',
+      icona: '🍹',
+      label: 'Gestione menù',
+      nodo: (
+        <div className="card settings-section">
+          <h3>Gestione menù</h3>
+          <p className="muted small" style={{ margin: '0 0 10px' }}>
+            La schermata con cui si modifica il listino, non quella dei clienti.
+          </p>
+          <h4 style={{ margin: '4px 0' }}>
+            Cosa dice la riga a sinistra di ogni scheda?
+          </h4>
+          <div className="mode-choice" style={{ gridTemplateColumns: '1fr 1fr' }}>
+            {MODI_STRISCIA.map((m) => (
+              <button
+                key={m.id}
+                className={`mode-option${
+                  (settings.stripe_menu || 'scorte') === m.id ? ' active' : ''
+                }`}
+                onClick={() => save({ stripe_menu: m.id })}
+                title={m.desc}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
+          <p className="muted small" style={{ margin: '8px 0 4px' }}>
+            Quale colore per «ci sono abbastanza scorte»?
+          </p>
+          <div className="mode-choice">
+            {[
+              [false, '⚪ Grigio'],
+              [true, '🟢 Verde'],
+            ].map(([value, label]) => (
+              <button
+                key={String(value)}
+                className={`mode-option${
+                  !!settings.stripe_menu_ok_verde === value ? ' active' : ''
+                }`}
+                onClick={() => save({ stripe_menu_ok_verde: value })}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
       ),
     },
     {
@@ -600,13 +831,16 @@ export default function SettingsTab({ role = null }) {
               <h3>Coda ordini</h3>
               <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
                 Come visualizzare gli ordini nel gestionale: <strong>griglia</strong> a
-                tutto schermo (card affiancate, ideale su tablet), schede separate per
-                stato, oppure un&apos;unica lista (in corso + evasi). Lo stato è sempre
-                indicato dal colore e dall&apos;etichetta sulla card.
+                tutto schermo (card affiancate, ideale su tablet), <strong>corsie</strong>
+                di stato (una colonna per passo del lavoro, un tasto per card che manda
+                l&apos;ordine al passo dopo), schede separate per stato, oppure
+                un&apos;unica lista (in corso + evasi). Lo stato è sempre indicato dal
+                colore e dall&apos;etichetta sulla card.
               </p>
               <div className="mode-choice">
                 {[
                   ['griglia', '🔲 Griglia (schermo intero)'],
+                  ['corsie', '🚦 Corsie di stato'],
                   ['tabs', '🗂 Schede per stato'],
                   ['lista', '📋 Lista unica'],
                 ].map(([value, label]) => (
@@ -614,6 +848,43 @@ export default function SettingsTab({ role = null }) {
                     key={value}
                     className={`mode-option${settings.queue_view === value ? ' active' : ''}`}
                     onClick={() => save({ queue_view: value })}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {/* LA VISTA DEL BANCO. Non è un'altra vista della coda: è
+                  un'altra coda, quella di chi prepara. Ad accenderla sono
+                  gli STATI DEL SERVIZIO — senza quei passi non c'è niente
+                  da mostrare — e qui si sceglie solo come disegnarla. Per
+                  ora la scelta è una sola: si tiene lo stesso una fila di
+                  voci, così quando se ne aggiunge un'altra non cambia
+                  niente né qui né sui dati già salvati. */}
+              <h4 style={{ margin: '16px 0 4px' }}>La vista del banco</h4>
+              <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
+                Chi sta al banco non guarda i conti, guarda il lavoro: le{' '}
+                <strong>comande</strong>, una card per ticket, nel passo in cui stanno.
+                {settings.workflow_enabled !== false ? (
+                  <> Si apre da sé a chi ha il ruolo bartender.</>
+                ) : (
+                  <>
+                    {' '}
+                    Adesso non c’è: la accendono <strong>gli stati del servizio</strong>,
+                    che sono spenti — senza quei passi non ci sarebbe niente da mostrare,
+                    e al banco si vede la coda come la vedono tutti.
+                  </>
+                )}
+              </p>
+              <div className="mode-choice">
+                {[['corsie', '🚦 Corsie di stato']].map(([value, label]) => (
+                  <button
+                    key={value}
+                    className={`mode-option${
+                      (settings.bartender_view || 'corsie') === value ? ' active' : ''
+                    }`}
+                    disabled={settings.workflow_enabled === false}
+                    onClick={() => save({ bartender_view: value })}
                   >
                     {label}
                   </button>
@@ -746,6 +1017,30 @@ export default function SettingsTab({ role = null }) {
             </div>
       ),
     },
+    {
+      id: 'notifiche',
+      icona: '🔔',
+      label: 'Notifiche',
+      // CARTELLO, non una seconda casa. Gli avvisi sono scelti per persona
+      // e per dispositivo, quindi stanno nel profilo — dove ci arriva
+      // anche chi è in sala, che qui dentro non entra proprio. Qui resta
+      // l'indicazione, perché chi li cercava li cercava qui.
+      nodo: (
+        <div className="card settings-section">
+          <h3>🔔 Notifiche</h3>
+          <p className="muted" style={{ margin: '0 0 12px', fontSize: '0.9rem' }}>
+            Gli avvisi sono una scelta <strong>tua e di questo dispositivo</strong> —
+            il tablet della cassa e il telefono in sala vogliono cose diverse,
+            anche con lo stesso accesso — quindi stanno nel tuo profilo,
+            insieme allo storico di quelli arrivati qui.
+          </p>
+          <Link className="btn small" to="/profilo-staff">
+            👤 Vai al mio profilo
+          </Link>
+
+        </div>
+      ),
+    },
     { id: 'stampante', icona: '🖨️', label: 'Stampante', nodo: <PrinterSetup /> },
     { id: 'backup', icona: '💾', label: 'Backup e ripristino', nodo: <BackupPanel role={role} /> },
     {
@@ -765,26 +1060,118 @@ export default function SettingsTab({ role = null }) {
                 Frase proposta di default quando annulli un ordine (modificabile di
                 volta in volta nel dialog di annullamento).
               </p>
+              {/* LA FRASE SEGUE IL MONDO DELLA CONSEGNA. «Prego recarsi al
+                  bancone» ha senso solo dove il RITIRO esiste: in un locale a
+                  solo servizio manda una persona a un bancone dove nessuno
+                  la aspetta. La voce impossibile si spegne col motivo, non
+                  sparisce — sparire fa dubitare di averla immaginata — e
+                  quella evidenziata è quella che si applica davvero
+                  (fraseAnnulloDefault), non l'impostazione impossibile
+                  rimasta scritta. */}
               <div className="mode-choice">
-                {Object.entries(CANCEL_PHRASES).map(([key, text]) => (
-                  <button
-                    key={key}
-                    className={`mode-option${settings.cancel_phrase_default === key ? ' active' : ''}`}
-                    onClick={() => save({ cancel_phrase_default: key })}
-                  >
-                    {text}
-                  </button>
-                ))}
+                {Object.entries(CANCEL_PHRASES).map(([key, text]) => {
+                  const possibile = fraseAnnulloPossibile(key, settings)
+                  return (
+                    <button
+                      key={key}
+                      className={`mode-option${
+                        fraseAnnulloDefault(settings) === key ? ' active' : ''
+                      }`}
+                      disabled={!possibile}
+                      title={
+                        possibile
+                          ? undefined
+                          : 'Qui non si ritira al banco: la frase manderebbe il cliente dove nessuno lo aspetta.'
+                      }
+                      onClick={() => save({ cancel_phrase_default: key })}
+                    >
+                      {text}
+                    </button>
+                  )
+                })}
               </div>
+              {!fraseAnnulloPossibile('bancone', settings) && (
+                <p className="muted small" style={{ margin: '8px 0 0' }}>
+                  «Prego recarsi al bancone» non si può usare: il locale è a solo
+                  servizio.{' '}
+                  <button
+                    type="button"
+                    className="link-inline"
+                    onClick={() => scegliSezione('consegna')}
+                  >
+                    Vai a Consegna ordine
+                  </button>
+                </p>
+              )}
             </div>
       ),
     },
   ]
-  const attiva = sezioni.find((s) => s.id === sezione) ?? sezioni[0]
+
+  // LE VOCI DEL SOTTOMENU SONO DIECI, NON VENTITRÉ. Ogni riquadro resta
+  // com'è, ma appartiene a un GRUPPO — accorpati per «a cosa afferisce»
+  // l'impostazione, non per la storia di come è nata: con ventitré voci
+  // l'elenco era più lungo delle impostazioni.
+  const GRUPPO_DI = {
+    aspetto: 'aspetto',
+    // Tre cose diverse, tre voci: quello che vedono i clienti, la
+    // schermata con cui si lavora il listino, e l'importazione del
+    // catalogo. Messe insieme, davanti a un interruttore non si capiva a
+    // quale delle tre appartenesse.
+    'menu-clienti': 'menu-clienti',
+    'gestione-menu': 'gestione-menu',
+    catalogo: 'catalogo',
+    coda: 'banco',
+    'vista-ordine': 'banco',
+    consegna: 'servizio',
+    preparazione: 'servizio',
+    tempi: 'servizio',
+    annullamenti: 'servizio',
+    pagamenti: 'cassa',
+    giornata: 'cassa',
+    prezzo: 'prezzi',
+    sconto: 'prezzi',
+    coperto: 'prezzi',
+    'servizio-mancia': 'prezzi',
+    gruppi: 'gruppi',
+    'account-clienti': 'clienti',
+    posizione: 'clienti',
+    notifiche: 'clienti',
+    stampante: 'stampante',
+    backup: 'sistema',
+    informazioni: 'sistema',
+  }
+  const GRUPPI = [
+    { id: 'aspetto', icona: '🎨', label: 'Aspetto' },
+    { id: 'menu-clienti', icona: '📖', label: 'Menù clienti' },
+    { id: 'gestione-menu', icona: '🍹', label: 'Gestione menù' },
+    { id: 'catalogo', icona: '📥', label: 'Catalogo prodotti' },
+    { id: 'banco', icona: '🧾', label: 'Banco: coda e ordine' },
+    { id: 'servizio', icona: '🛎', label: 'Servizio' },
+    { id: 'cassa', icona: '💳', label: 'Cassa e giornata' },
+    { id: 'prezzi', icona: '🏷', label: 'Prezzi e supplementi' },
+    { id: 'gruppi', icona: '👥', label: 'Gruppi di ordini' },
+    { id: 'clienti', icona: '🙋', label: 'Clienti' },
+    { id: 'stampante', icona: '🖨️', label: 'Stampante' },
+    { id: 'sistema', icona: '💾', label: 'Sistema' },
+  ]
+  // Compat coi collegamenti vecchi (?sezione=coperto): l'id di un riquadro
+  // porta al gruppo che lo contiene.
+  const attiva =
+    GRUPPI.find((g) => g.id === sezione) ??
+    GRUPPI.find((g) => g.id === GRUPPO_DI[sezione]) ??
+    GRUPPI[0]
+  const riquadri = sezioni.filter((s) => GRUPPO_DI[s.id] === attiva.id)
 
   return (
-    <div>
-      <h2>⚙️ Impostazioni</h2>
+    <div className="pagina-impostazioni">
+      {/* Il titolo sta nella barra in alto (vedi lib/sezioni.js), e con lui
+          l'elenco delle sezioni: in pagina costava una colonna intera. */}
+      <Sottosezioni
+        voci={GRUPPI.map((x) => ({ id: x.id, icona: x.icona, label: x.label }))}
+        attiva={attiva.id}
+        scegli={scegliSezione}
+      />
       {error && <div className="banner">Errore: {error}</div>}
 
       {confermaSpegni && (
@@ -813,13 +1200,14 @@ export default function SettingsTab({ role = null }) {
         />
       )}
 
-      <CategoryRail
-        items={sezioni.map((s) => ({ key: s.id, label: s.label, icon: s.icona }))}
-        selected={attiva.id}
-        onSelect={scegliSezione}
-      >
-        {attiva.nodo}
-      </CategoryRail>
+      {/* Le sezioni stanno nella barra in alto (il titolo è il comando):
+          a sinistra costavano una colonna tutto il giorno per una scelta che
+          si fa ogni tanto. I riquadri del gruppo scelto si impilano. */}
+      <div className="tab-corpo">
+        {riquadri.map((s) => (
+          <div key={s.id}>{s.nodo}</div>
+        ))}
+      </div>
     </div>
   )
 }
@@ -1016,6 +1404,13 @@ function ReaderPairing({ settings }) {
   )
 }
 
+// ── QUALI AVVISI VOGLIO, SU QUESTO SCHERMO ───────────────────────────
+// Le notifiche non servono a tutti allo stesso modo: al banco «nuovo
+// ordine» è la cosa più importante della serata, in sala serve «pronto», e
+// chi tiene il portatile nel retro non vuole niente. La scelta è di chi
+// guarda QUESTO schermo — non una regola del bar — quindi resta sul
+// dispositivo e vale per la persona collegata: due che si passano lo stesso
+// tablet nei cambi turno non si sovrascrivono a vicenda.
 function ToggleRow({ label, desc, checked, onChange, disabled }) {
   return (
     <div className="toggle-row">

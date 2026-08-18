@@ -115,33 +115,122 @@ Ci finisce dentro tutto quello che si fa; ogni push lo pubblica su test,
 quindi si prova sempre l'insieme e non il pezzo singolo. Quando la
 versione è pronta si mergia su `develop`, si tagga e si va in `main`.
 
+## Il cancello di qualità: prima di ogni merge in `develop`
+
+Il merge in `develop` non è un gesto tecnico, è la promessa che quel
+lavoro è finito. **E si chiede con una pull request**: `develop` e `main`
+sono rami protetti — niente push diretti, niente merge fatti in locale e
+spinti su. La PR è il posto dove la CI fa rispettare il cancello da sola
+(il check «Lint, test e build», con la coverage e le sue soglie, è
+obbligatorio per il merge). I rami `release/**` restano scrivibili
+direttamente — sono il posto di lavoro quotidiano — e protetti dalla sola
+cancellazione: **si devono poter ribasare**. Un ramo di lavoro che nasce
+da `develop` va tenuto allineato riscrivendogli sotto la base
+(`git rebase origin/develop`), non impilandoci merge che poi finiscono in
+`develop` a raccontare un giro che non interessa a nessuno. Chi lavora
+sullo stesso ramo lo riallinea con `git pull --rebase`.
+
+Prima di aprire la PR si passa il cancello, tutto quanto:
+
+1. **Requisiti allineati.** Ogni richiesta lavorata ha il suo requisito
+   (`REQ-*` in `requirements/requirements.yaml`) o la sua voce nel
+   registro bug (`BUG-*` in `requirements/bugs.yaml`), aggiornati nello
+   stesso giro, coi **test citati** nei `test_cases`. Il test dei
+   requisiti verifica il legame; `node scripts/requisiti.mjs` dice a che
+   punto siamo.
+2. **Lint, test, build**: `npm run lint` pulito (attenzione: qui il lint
+   può uscire con codice 1 senza stampare nulla — si guarda l'esito, non
+   l'output), `npm test` verde, `npm run build` che compila.
+3. **Coverage**: `npm run test:coverage` deve passare. Le soglie stanno
+   in `vitest.config.mjs`, una per area (functions, `src/lib`,
+   componenti, pagine), e sono un **cricchetto**: tarate appena sotto il
+   misurato di quell'area, si alzano quando la copertura cresce e non si
+   abbassano mai per far passare un merge. Le pagine partono basse
+   perché così stanno: la soglia non certifica qualità, impedisce di
+   peggiorare — alzarle è REQ-DEV-005.
+4. **Un giro di refactoring sul diff.** Prima del merge si rilegge il
+   *diff intero* cercando: duplicazioni da riusare, funzioni cresciute
+   oltre lo scopo, complessità che si può togliere, commenti che
+   spiegano il "cosa" invece del "perché". Con Claude: `/simplify` fa
+   questo giro e applica; le trovate si trattano come il resto — codice,
+   test e requisiti insieme.
+
+La CI ripete 2 e 3 sulle pull request verso `develop` e `main` (la
+coverage gira solo lì: in mezzo al lavoro sarebbe solo attesa). Il punto
+1 lo ripete il test dei requisiti. Il punto 4 non lo può fare nessuna
+macchina da sola: è la parte del mestiere.
+
 ## I rilasci
 
-Ogni rilascio su `develop` ha una versione **x.y.z** semantica:
+Ogni rilascio ha una versione **x.y.z** semantica:
 
 - **x** cambia quando si rompe qualcosa di come si lavorava prima;
 - **y** quando si aggiunge una funzione;
-- **z** per correzioni.
+- **z** per le correzioni.
 
-Il tag si mette **su `develop`, subito prima del merge su `main`**; poi,
-per pubblicare in produzione, se ne mette uno **sul commit di `main`** — è
-quello a far partire il deploy, che aspetta l'approvazione.
+### Come si susseguono i rami
+
+Il ramo di lavoro porta il nome della **linea** su cui si sta: `release/1.4.x`
+è la linea della 1.4 — lì dentro finiscono correzioni e ritocchi, che alzano
+la **z** (1.4.1, 1.4.2…). Quando arriva una **funzione nuova** quella linea si
+chiude e se ne apre un'altra: `release/1.5.x`.
+
+```
+develop  ──●(v1.4.0)────────────────●(v1.4.1)──────────●(v1.5.0)──▶
+            \                      /                  /
+             release/1.4.x ──●──●──                   /
+                                    \               /
+                                     release/1.5.x ─
+```
+
+1. **Si rilascia su `develop`**: si allinea `package.json`, si datano le note
+   in `CHANGELOG.md`, si mergia il ramo di lavoro in `develop` e si **tagga
+   `develop`**.
+2. **Si apre subito la linea successiva** da `develop`: `release/1.4.x` per
+   continuare con le correzioni, `release/1.5.x` se si sta per aggiungere una
+   funzione. Su `develop` non si lavora mai: è il posto dove le cose arrivano
+   già fatte.
+3. **La produzione è una decisione a sé**, e adesso sono due: prima
+   `develop` → `main`, poi il **tag su `main`** che fa partire il deploy —
+   che a sua volta aspetta l'approvazione. Mergiare non pubblica niente.
 
 ```sh
-git checkout develop && git pull
-git tag -a v1.3.2 -m "Descrizione del rilascio"
-git push origin v1.3.2                 # → pubblica sul TEST
-git checkout main && git merge develop --no-ff
-git push origin main                   # → non pubblica niente
-git tag -a v1.3.2-prod -m "In produzione la 1.3.2"
-git push origin v1.3.2-prod            # → produzione, da approvare
+# 1. sul ramo di lavoro: package.json + CHANGELOG datato
+git commit -am "release: versione 1.4.0"
+
+# 2. in develop, e si tagga lì (il tag pubblica sul TEST)
+git checkout develop && git pull && git merge --no-ff release/1.4.x
+git tag -a v1.4.0 -m "Descrizione del rilascio"
+git push origin develop && git push origin v1.4.0
+
+# 3. la linea successiva parte da develop
+git checkout -b release/1.4.x   # correzioni
+git checkout -b release/1.5.x   # oppure: funzione nuova
+
+# 4. quando si va in produzione: prima il merge, POI il tag su main
+git checkout main && git merge --no-ff develop && git push origin main
+git tag -a v1.4.0-prod -m "In produzione la 1.4.0" && git push origin v1.4.0-prod
+# → su GitHub, Actions: il deploy aspetta l'approvazione
 ```
+
+**Mentre si lavora, `package.json` porta il numero della PROSSIMA versione
+col suffisso `-beta`** (es. `1.4.2-beta`): così l'app in test dice
+`v1.4.2-beta · release/1.4.x · <commit>` e non si confonde con quello che è
+davvero uscito. Al rilascio (passo 1) si toglie il `-beta`. Se le note in
+`CHANGELOG.md` parlano di una versione e l'app ne dice un'altra, chi segnala
+un problema dichiara un numero che non esiste.
+
+**Il numero di versione che l'app mostra lo dice `package.json`, non il
+tag.** Il tag può stare dove capita nella storia; `package.json` invece sta su
+ogni ramo e viene allineato al passo 1. Se si salta quel passo, tutti gli
+ambienti mentono sul numero — è già successo, e chi segnalava un problema
+dichiarava una versione che non era quella che aveva davanti.
 
 **Prima di ogni merge su `develop` e su `main` si chiede conferma**, e lo
 stesso vale per i **tag**: sono loro a pubblicare. Il push di un branch
 `feature/` invece è libero — non pubblica niente, fa solo girare i test.
 
-**Un tag per la produzione non si riusa.** Se `v1.3.2` è già stato spinto
+**Un tag per la produzione non si riusa.** Se `v1.4.0` è già stato spinto
 su `develop` (e ha pubblicato sul test), per la produzione serve un tag
 nuovo sul commit di `main`: un tag esiste una volta sola, e spostarlo a
 forza vuol dire non sapere più cosa è stato pubblicato quando.
@@ -187,6 +276,23 @@ manda in produzione), la sua approvazione e la seconda pull request verso
 `generate-issues.mjs` chiude solo quando gira su `main` (`CHIUDE_RISOLTI`).
 Chiuderle prima vuol dire dire a chi ha segnalato il guaio che è sistemato
 quando non lo è — è successo il 17 agosto 2026 con tre issue.
+
+### Le issue nascono anche dai rami di rilascio
+
+Lo stesso vale per **`release/**`**, che è dove si lavora tutti i giorni: un
+push che tocca `requirements/requirements.yaml` o `requirements/bugs.yaml`
+apre le issue che mancano. Aspettare `main` voleva dire che una richiesta
+arrivata a voce restava scritta solo dentro un file: chi guardava le issue
+non la vedeva per giorni, e nel frattempo la si raccontava di nuovo.
+
+Due cose lo rendono innocuo:
+
+- **non si duplica.** Lo script cerca per titolo esatto fra le issue aperte
+  *e* chiuse prima di crearne una: spingere dieci volte lo stesso registro
+  non fa dieci issue, nascono solo quelle che mancano;
+- **non si chiude niente.** Come per l'hotfix, `CHIUDE_RISOLTI` vale solo su
+  `main`: da un ramo di rilascio le issue si aprono e basta. In produzione la
+  correzione non c'è ancora.
 
 ### Quando l'hotfix riporta indietro una funzione già scritta
 

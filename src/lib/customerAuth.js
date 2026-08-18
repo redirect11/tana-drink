@@ -24,6 +24,8 @@ import { auth, db } from './firebaseClient.js'
 import { isPersonale } from './ruoli.js'
 import { getMyOrderIds } from './cart.js'
 import { fetchOrdersByCustomer } from './api.js'
+import { spegniPush } from './push.js'
+import { dimenticaTutto } from './notifyStore.js'
 
 const customerDoc = (uid) => doc(db, 'customers', uid)
 
@@ -73,7 +75,14 @@ export function resendVerification() {
   return sendEmailVerification(auth.currentUser)
 }
 
-export function logoutCustomer() {
+export async function logoutCustomer() {
+  // Anche al cliente si spegne il token: gli avvisi dei suoi ordini sono
+  // agganciati al BROWSER (il token sta scritto sull'ordine), e senza
+  // questo continuavano ad arrivare a chi si era scollegato — magari su un
+  // telefono prestato. Rientrando se ne fa uno nuovo.
+  await spegniPush().catch(() => {})
+  // Come per lo staff: gli avvisi dei suoi ordini se ne vanno con lui.
+  dimenticaTutto()
   return signOut(auth)
 }
 

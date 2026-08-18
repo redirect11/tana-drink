@@ -16,6 +16,7 @@ import {
   formatIn,
   fmtItem,
   inventorySummary,
+  haGiacenza,
   filterItems,
   qtyInStockUnit,
   entryUnits,
@@ -37,6 +38,10 @@ import {
   BASE_UNITS,
   contentBase,
   unitaGenerica,
+  resaUso,
+  eScorta,
+  unitaMovimento,
+  fromStockUnit,
 } from '../../src/lib/inventory.js'
 
 describe('toBaseQty', () => {
@@ -129,11 +134,41 @@ describe('inventorySummary', () => {
     { stock: 0, low_threshold: 10 }, // empty
     { stock: 8, low_threshold: 10 }, // low
   ]
-  it('conta totale, low e empty', () => {
-    expect(inventorySummary(items)).toEqual({ total: 4, low: 2, empty: 1 })
+  it('conta totale, in scorta, low e empty', () => {
+    // In scorta sono i tre che ci sono davvero: gli «in esaurimento» ci
+    // stanno dentro, perché sono in magazzino, solo pochi.
+    expect(inventorySummary(items)).toEqual({ total: 4, inScorta: 3, low: 2, empty: 1 })
   })
   it('lista vuota', () => {
-    expect(inventorySummary([])).toEqual({ total: 0, low: 0, empty: 0 })
+    expect(inventorySummary([])).toEqual({ total: 0, inScorta: 0, low: 0, empty: 0 })
+  })
+  it('in scorta ed esauriti si dividono tutte le scorte', () => {
+    // È il conto che chi guarda fa a occhio: se non torna, i numeri del
+    // menu sembrano sbagliati anche quando non lo sono.
+    const r = inventorySummary(items)
+    expect(r.inScorta + r.empty).toBe(r.total)
+  })
+})
+
+// ── QUELLO CHE NON STA SU NESSUNO SCAFFALE ───────────────────────────
+// Il «Tempo di Lavorazione» è a listino per mettere il lavoro nel costo di
+// un drink: non ha giacenza, e non è né disponibile né esaurito. Contarlo
+// fra i disponibili vorrebbe dire dire che c'è sullo scaffale una cosa che
+// sullo scaffale non ci va; fra gli esauriti, mandare a comprare il tempo.
+describe('haGiacenza', () => {
+  it('c’è quello che sta sopra zero, esaurimento compreso', () => {
+    expect(haGiacenza({ stock: 100, low_threshold: 10 })).toBe(true)
+    expect(haGiacenza({ stock: 5, low_threshold: 10 })).toBe(true)
+    expect(haGiacenza({ stock: 0 })).toBe(false)
+    // Una giacenza andata sotto zero è un errore da correggere, non merce.
+    expect(haGiacenza({ stock: -0.04 })).toBe(false)
+  })
+
+  it('e quello che non è una scorta non c’è né manca', () => {
+    const lavoro = { name: 'Tempo di Lavorazione', unit: 'pz', scorta: false, stock: 12 }
+    expect(haGiacenza(lavoro)).toBe(false)
+    expect(stockStatus(lavoro)).toBe('ok') // e non risulta nemmeno esaurito
+    expect(inventorySummary([lavoro])).toEqual({ total: 1, inScorta: 0, low: 0, empty: 0 })
   })
 })
 
@@ -807,7 +842,9 @@ describe('articolo in unità generiche (U)', () => {
     expect(stockStatus(tempo)).toBe('ok')
     expect(stockStatus({ ...tempo, stock: 0, low_threshold: 10 })).toBe('ok')
     expect(stockStatus({ ...tempo, stock: -5 })).toBe('ok')
-    expect(inventorySummary([tempo])).toEqual({ total: 1, low: 0, empty: 0 })
+    // E nemmeno «in scorta»: non sta su nessuno scaffale, quindi non è né
+    // disponibile né esaurito.
+    expect(inventorySummary([tempo])).toEqual({ total: 1, inScorta: 0, low: 0, empty: 0 })
   })
 
   it('e non vale niente in magazzino: il lavoro non sta sullo scaffale', () => {
@@ -815,7 +852,12 @@ describe('articolo in unità generiche (U)', () => {
     expect(stockValue({ ...tempo, stock: 100 })).toBe(0)
   })
 
-  it('non si scarica: la manodopera non si consuma', () => {
+  // LA REGOLA STA SUL PRODOTTO, NON SULL'UNITÀ. Il consumo conta tutto
+  // quello che la ricetta chiede — manodopera compresa, che serve al costo
+  // del drink — e chi scrive la giacenza toglie solo quello che è una
+  // scorta. Prima si filtrava qui, sull'unità: e il GHIACCIO, contato a
+  // unità ma scorta vera, non si scaricava mai.
+  it('la manodopera si conta nel consumo, ma non è una scorta', () => {
     const drinks = {
       daiquiri: {
         recipe_items: [
@@ -825,11 +867,26 @@ describe('articolo in unità generiche (U)', () => {
       },
     }
     const cons = computeConsumption([{ drink_id: 'daiquiri', qty: 2 }], drinks)
-    expect(cons).toEqual([{ inventory_item_id: 'rum', name: 'Rum', unit: 'ml', qty: 100 }])
-    expect(cons.some((c) => c.inventory_item_id === 'tempo')).toBe(false)
+    expect(cons).toContainEqual({ inventory_item_id: 'rum', name: 'Rum', unit: 'ml', qty: 100 })
+    expect(cons.some((c) => c.inventory_item_id === 'tempo')).toBe(true)
+    // È `eScorta` a dire chi tocca la giacenza: il tempo no, il rum sì.
+    expect(eScorta(tempo)).toBe(false)
+    expect(eScorta({ unit: 'ml' })).toBe(true)
   })
 
-  it('e nemmeno quando la ricetta è incorporata in un drink al volo', () => {
+  it('ma un prodotto a unità PUÒ essere una scorta: il ghiaccio finisce', () => {
+    // Si conta a unità come la manodopera, ma sta in un freezer e a
+    // mezzanotte è finito: chi lo usa vuole vederlo scendere.
+    const ghiaccio = { unit: 'U', scorta: true, stock: 40, low_threshold: 10 }
+    expect(eScorta(ghiaccio)).toBe(true)
+    expect(stockStatus(ghiaccio)).toBe('ok')
+    expect(stockStatus({ ...ghiaccio, stock: 5 })).toBe('low')
+    expect(stockStatus({ ...ghiaccio, stock: 0 })).toBe('empty')
+    // E vale qualcosa in magazzino, al contrario del tempo di lavoro.
+    expect(unitsInStock({ ...ghiaccio, stock: 40 })).toBe(40)
+  })
+
+  it('e la ricetta al volo conta il tempo come tutto il resto', () => {
     const cons = computeConsumption(
       [
         {
@@ -841,7 +898,9 @@ describe('articolo in unità generiche (U)', () => {
       ],
       {}
     )
-    expect(cons).toEqual([])
+    expect(cons).toEqual([
+      { inventory_item_id: 'tempo', name: 'Tempo', unit: 'U', qty: 1 },
+    ])
   })
 })
 
@@ -891,5 +950,225 @@ describe('la giacenza non scende sotto zero', () => {
     expect(stockValue(jager)).toBe(0)
     // Anche a volume: mezzo litro in meno di zero non vale meno di zero.
     expect(stockValue({ unit: 'ml', package_size: 700, stock: -350, cost: 18, vat: 22 })).toBe(0)
+  })
+})
+
+// LA SOGLIA DI AVVISO SI SCRIVE COME LA SI PENSA. «Avvisami quando resta
+// una bottiglia» è il modo in cui la domanda si fa al banco: nessuno la
+// pensa in 700 ml. Nel modulo si sceglie l'unità accanto al campo, e la
+// conversione è la stessa che usa lo scarico dalla ricetta — se fosse
+// un'altra, la soglia direbbe una cosa e il magazzino un'altra.
+describe('la soglia di avviso, scritta in pezzi o nell’unità', () => {
+  const gin = { unit: 'ml', package_size: 700 } // bottiglia da 70 cl, contata a volume
+  const birra = { unit: 'pz', package_size: 330, content_unit: 'ml' } // contata a pezzi
+
+  it('due bottiglie di un liquido sono il loro contenuto', () => {
+    expect(qtyInStockUnit(2, 'pz', gin)).toBe(1400)
+  })
+
+  it('e in litri resta quello che è', () => {
+    expect(qtyInStockUnit(0.7, 'l', gin)).toBe(700)
+  })
+
+  it('su un articolo a pezzi, i pezzi restano pezzi', () => {
+    expect(qtyInStockUnit(2, 'pz', birra)).toBe(2)
+  })
+
+  it('e un contenuto diventa la frazione di pezzo che è', () => {
+    expect(qtyInStockUnit(33, 'cl', birra)).toBeCloseTo(1, 5)  })
+})
+
+// ── UN PEZZO PUÒ CONTENERE UNITÀ ─────────────────────────────────────
+// «Vorrei che il tempo lavoro fosse in pezzi e dopo unità» (Flavio, 17/08).
+// Una confezione da 10 U, che in ricetta si dosa a U: le unità non si
+// convertono in niente e non si scaricano dal magazzino — servono al costo.
+describe('pezzi con dentro unità generiche', () => {
+  const conUnita = {
+    unit: 'pz',
+    package_size: 10,
+    content_unit: 'U',
+    cost: 20,
+    vat: 0,
+    stock: 3,
+  }
+
+  it('il contenuto si riconosce, e resta in unità', () => {
+    expect(contentBase(conUnita)).toEqual({ size: 10, base: 'U' })
+  })
+
+  it('in ricetta si dosa a unità, o a pezzo intero', () => {
+    expect(entryUnits(conUnita)).toEqual(['U', 'pz'])
+  })
+
+  it('la singola unità costa la confezione diviso quante ne fa', () => {
+    expect(costPerUnit(conUnita, 'U')).toBeCloseTo(2, 6) // 20 € / 10 U
+    expect(costPerUnit(conUnita, 'pz')).toBe(20)
+    // Quanto costa al cl una confezione di unità non vuol dire niente.
+    expect(costPerUnit(conUnita, 'cl')).toBe(null)
+  })
+
+  it('il contenuto si legge in unità, non in centilitri', () => {
+    expect(fmtContenuto(10, conUnita)).toMatch(/10\s*U/)
+  })
+})
+
+// ── SI COMPRA IN UN MODO, SI USA IN UN ALTRO ─────────────────────────
+//
+// «Io i limoni li compro al chilo, ma li spremo e ci faccio i cl: da un
+// chilo esce mezzo litro di succo» (Flavio, 17/08). Peso e volume non si
+// convertono l'uno nell'altro — e infatti questa non è una conversione, è
+// la RESA, e la sa chi spreme. La giacenza resta quella che si conta sullo
+// scaffale: i chili.
+describe('la resa: dal chilo di limoni ai cl di succo', () => {
+  // 1 kg = 1000 g di giacenza, e rende 500 ml di succo → 0,5 ml per grammo.
+  const limoni = {
+    unit: 'g',
+    package_size: 1000, // si compra a cassette da 1 kg
+    cost: 2, // 2 € al chilo
+    vat: 0,
+    stock: 5000, // 5 kg
+    resa: 0.5,
+    resa_unit: 'ml',
+  }
+
+  it('la resa si legge come l’ha scritta chi compra', () => {
+    expect(resaUso(limoni)).toEqual({ base: 'ml', per: 0.5 })
+  })
+
+  it('in ricetta si dosa in cl, non in grammi di limone', () => {
+    expect(entryUnits(limoni)).toContain('cl')
+    expect(entryUnits(limoni)[0]).toBe('cl') // il caso normale viene per primo
+  })
+
+  it('4 cl di succo scalano 80 g di limoni', () => {
+    // 4 cl = 40 ml di succo; a 0,5 ml per grammo servono 80 g di limoni.
+    expect(qtyInStockUnit(4, 'cl', limoni)).toBeCloseTo(80, 6)
+  })
+
+  it('e il cl di succo costa quanto i limoni che ci vogliono', () => {
+    // 2 €/kg = 0,002 €/g; un ml di succo costa 0,002/0,5 = 0,004 €;
+    // un cl dieci volte tanto.
+    expect(costPerUnit(limoni, 'cl')).toBeCloseTo(0.04, 6)
+    // E il grammo di limoni resta quello che è.
+    expect(costPerUnit(limoni, 'g')).toBeCloseTo(0.002, 6)
+  })
+
+  it('senza resa dichiarata non si inventa niente', () => {
+    // Meglio «non lo so» che un numero uscito da una moltiplicazione a caso.
+    const senzaResa = { ...limoni, resa: null, resa_unit: null }
+    expect(resaUso(senzaResa)).toBe(null)
+    expect(costPerUnit(senzaResa, 'cl')).toBe(null)
+    expect(qtyInStockUnit(4, 'cl', senzaResa)).toBe(4)
+  })
+
+  it('la bottiglia continua a funzionare come prima: è la stessa regola', () => {
+    // 40 ml da una bottiglia da 700 restano 0,057 pezzi, come sempre.
+    const gin = { unit: 'pz', package_size: 700, content_unit: 'ml', cost: 14, vat: 0 }
+    expect(resaUso(gin)).toEqual({ base: 'ml', per: 700 })
+    expect(qtyInStockUnit(40, 'ml', gin)).toBeCloseTo(40 / 700, 6)
+    expect(costPerUnit(gin, 'cl')).toBeCloseTo(14 / 70, 6)
+  })
+})
+
+// ── IL CONTENUTO DECIDE COME SI DOSA IN RICETTA ──────────────────────
+// Scritto, la ricetta può dosare a pezzo o nell'unità del contenuto;
+// lasciato vuoto si dosa solo a pezzi — la birra si serve intera. Quanto ne
+// va in un drink lo decide la ricetta, non questo campo.
+describe('cosa si può scrivere in ricetta, secondo il contenuto', () => {
+  it('col contenuto scritto: pezzo o unità del contenuto', () => {
+    const gin = { unit: 'pz', package_size: 1000, content_unit: 'ml' }
+    expect(entryUnits(gin)).toEqual(['cl', 'ml', 'pz'])
+  })
+
+  it('senza contenuto: solo a pezzi', () => {
+    expect(entryUnits({ unit: 'pz' })).toEqual(['pz'])
+    expect(entryUnits({ unit: 'pz', package_size: 0, content_unit: 'ml' })).toEqual(['pz'])
+  })
+
+  it('e le unità d’uso vengono per prime: è il caso normale', () => {
+    // Comprato al chilo e usato in cl: nella ricetta si scrive 4 cl, non
+    // 0,08 chili.
+    const limoni = { unit: 'g', resa: 0.5, resa_unit: 'ml' }
+    expect(entryUnits(limoni)[0]).toBe('cl')
+    expect(entryUnits(limoni)).toContain('g')
+  })
+})
+
+// ── OGNI MOVIMENTO CHIEDE IN CHE UNITÀ ───────────────────────────────
+// «Se facciamo un carico, uno scarico, qualsiasi cosa esso sia di
+// movimentazione» si sceglie se muovere a pezzi o nell'unità che compone il
+// pezzo (Flavio, 18/08): la cassetta di limoni si carica a chili, e i pezzi
+// li ricava il contenuto. Prima il carico di un articolo a pezzi accettava
+// solo pezzi, e i 40 cl rimasti in una bottiglia non c'era modo di dirli.
+describe('le unità in cui si può muovere un articolo', () => {
+  it('col contenuto scritto: pezzi e contenuto', () => {
+    expect(unitaMovimento({ unit: 'pz', package_size: 700, content_unit: 'ml' })).toEqual([
+      'pz',
+      'cl',
+    ])
+    expect(unitaMovimento({ unit: 'pz', package_size: 8, content_unit: 'g' })).toEqual(['pz', 'g'])
+    expect(unitaMovimento({ unit: 'pz', package_size: 10, content_unit: 'U' })).toEqual(['pz', 'U'])
+  })
+
+  it('senza contenuto: solo pezzi, che non c’è niente con cui convertire', () => {
+    expect(unitaMovimento({ unit: 'pz' })).toEqual(['pz'])
+    expect(unitaMovimento(null)).toEqual(['pz'])
+  })
+
+  it('le schede storiche restano nella loro unità, più la confezione', () => {
+    // Finché non passano dal travaso (REQ-MAG-018) i prodotti a volume o a
+    // peso si caricano come sempre: quante confezioni piene, o il contenuto.
+    expect(unitaMovimento({ unit: 'ml', package_size: 700 })).toEqual(['pz', 'cl'])
+    expect(unitaMovimento({ unit: 'g' })).toEqual(['g'])
+    expect(unitaMovimento({ unit: 'U' })).toEqual(['U'])
+  })
+})
+
+// fromStockUnit è l'inverso di qtyInStockUnit: serve a scrivere nel campo
+// quello che c'è già, e a cambiare unità senza cambiare la quantità.
+describe('dalla giacenza all’unità scelta', () => {
+  const gin = { unit: 'pz', package_size: 1000, content_unit: 'ml' }
+
+  it('una bottiglia da 100 cl: 7,49 pezzi sono 749 cl', () => {
+    expect(fromStockUnit(7.49, 'cl', gin)).toBeCloseTo(749, 6)
+    expect(fromStockUnit(7.49, 'pz', gin)).toBe(7.49)
+  })
+
+  it('e torna indietro senza perdere niente', () => {
+    expect(qtyInStockUnit(fromStockUnit(2.5, 'cl', gin), 'cl', gin)).toBeCloseTo(2.5, 6)
+  })
+
+  it('sulle schede storiche il pezzo è la confezione', () => {
+    const storico = { unit: 'ml', package_size: 700 }
+    expect(fromStockUnit(1400, 'pz', storico)).toBe(2)
+    expect(fromStockUnit(1400, 'cl', storico)).toBe(140)
+  })
+
+  it('senza niente con cui convertire la quantità resta com’è', () => {
+    // Meglio il numero vero che uno inventato con una moltiplicazione a caso.
+    expect(fromStockUnit(5, 'cl', { unit: 'pz' })).toBe(5)
+    expect(fromStockUnit(0, 'cl', gin)).toBe(0)
+  })
+})
+
+// Il filtro che mancava: «cosa c'è davvero sullo scaffale». Prima si poteva
+// chiedere solo cosa sta finendo e cosa è finito.
+describe('filterItems: in scorta', () => {
+  const items = [
+    { id: 'a', name: 'Gin', stock: 100, low_threshold: 10 },
+    { id: 'b', name: 'Vodka', stock: 5, low_threshold: 10 },
+    { id: 'c', name: 'Rum', stock: 0, low_threshold: 10 },
+    { id: 'd', name: 'Tempo di Lavorazione', scorta: false, stock: 3 },
+  ]
+
+  it('lascia quello che c’è, con dentro anche quello che sta finendo', () => {
+    const out = filterItems(items, { status: 'in_scorta' }).map((i) => i.id)
+    expect(out).toEqual(['a', 'b'])
+  })
+
+  it('e le altre lenti restano quelle di prima', () => {
+    expect(filterItems(items, { status: 'low' }).map((i) => i.id)).toEqual(['b'])
+    expect(filterItems(items, { status: 'empty' }).map((i) => i.id)).toEqual(['c'])
+    expect(filterItems(items, { status: 'all' })).toHaveLength(4)
   })
 })
