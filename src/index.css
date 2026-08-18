@@ -6773,6 +6773,30 @@ body.pagina-piena .inv-scheda {
   font-size: 1.05rem;
   line-height: 1;
 }
+/* LA VOCE DELLA CASSA È SCRITTA, non un'icona: apre e chiude la serata, e
+   un lucchetto grigio in fondo a una barra non dice a nessuno che cos'è.
+   Resta l'ultima prima del «+», e non si stringe. */
+.board-cassa {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Perché la cassa non si può chiudere: SOTTO IL SUO TASTO, non in fondo
+   alla riga. Messo lì finiva accanto al «+» e sembrava una nota del
+   «nuovo ordine». Il tasto e la sua spiegazione sono una cosa sola. */
+.board-cassa-box {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.board-cassa-perche {
+  text-align: center;
+  line-height: 1.2;
+}
+
 .board-icona.active {
   border-color: var(--accent-2);
   color: var(--accent-2);
@@ -6799,6 +6823,56 @@ body.pagina-piena .inv-scheda {
   font-size: 0.92em;
   padding-left: 10px;
   border-left: 2px solid var(--line);
+}
+
+/* PAGATO MA ANCORA DA FARE: la card che si deve notare. È il caso strano
+   — i soldi li hai già presi, il drink lo devi ancora fare — e con lo
+   sbiadito da voce archiviata era proprio quella che spariva. Il filo
+   dell'azione e un velo dello stesso colore: si legge come tutte le altre,
+   ma si vede da lontano che ha qualcosa di diverso. */
+.corsia-card.pagato-da-servire {
+  border-left-color: var(--accent-2);
+  box-shadow: inset 3px 0 0 var(--accent-2);
+  opacity: 1;
+}
+
+/* Il titolo di un gruppo di righe nel conto: «In preparazione», «Pronto»,
+   «Pagati». Una riga smorta con un filo sopra: separa senza pesare, e non
+   deve competere coi nomi dei drink che sta introducendo. */
+.posd-gruppo {
+  margin: 10px 0 2px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--line);
+}
+
+/* IL NUMERO DELLA COMANDA accanto a quello del conto, nelle corsie del
+   banco. Più smorto del numero del conto perché il primo colpo d'occhio
+   va lì — è il numero che si urla — ma c'è, perché due comande dello
+   stesso tavolo sono due card e senza sembrerebbero un doppione. */
+.corsia-comanda {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+/* La riga di tasti che sceglie quali colonne restano a schermo: sta sotto
+   quella dei filtri e si apre solo quando la si chiede. */
+.corsie-scelta {
+  padding-left: 2px;
+}
+
+/* LA SCELTA DELLE UNITÀ DA PREPARARE ADESSO, dentro la comanda: un
+   riquadro staccato dalle righe che sta leggendo, o non si capisce dove
+   finisce l'elenco e dove comincia la domanda. */
+.comanda-parziale {
+  margin-top: 8px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.comanda-parziale-riga {
+  align-items: center;
+  margin-top: 4px;
 }
 
 /* La nota del CONTO respira: appiccicata alle righe si leggeva come

@@ -5,6 +5,19 @@
 // Ogni invio di articoli è una COMANDA: è la comanda ad avere il ciclo di
 // lavorazione (ricevuto → in_preparazione → pronto → ritirato), come i
 // kitchen ticket dei POS di ristorazione.
+//
+// DETTO IN UNA RIGA: gli stati del SERVIZIO riguardano le COMANDE, che fanno
+// parte dell'ordine. L'ordine ha i suoi stati; le comande ne hanno dei
+// SOTTOSTATI, che sono quelli del servizio. Se un conto è gestito come una
+// comanda sola — e DI BASE è così, la comanda esce tutta per l'intero
+// ordine — tutti i suoi drink si trovano sempre nello stesso passo. Succede
+// il contrario solo quando il bartender divide la comanda per prepararne una
+// parte: è la deroga, non la regola, e quasi tutto quello che c'è qui sotto
+// esiste per farla tornare senza perdere niente per strada.
+//
+// E il pagamento non è uno di quei passi: un conto si incassa in qualunque
+// stato di servizio. Dalla cassa è chiuso, dal banco magari no — una comanda
+// può essere ancora in preparazione — e le due cose vanno dette insieme.
 
 import { ORDER_STATUSES } from './orderStatus.js'
 
@@ -238,4 +251,135 @@ export function normalizeOrderDoc(o) {
     status: isPagato || isAnnullato ? legacy : ORDER_OPEN,
     comande: [comanda],
   }
+}
+
+// ── LA PREPARAZIONE PARZIALE ─────────────────────────────────────────
+//
+// Succede tutte le sere: nella comanda del tavolo 4 ci sono tre gin tonic,
+// in quella del banco altri due, e chi sta allo shaker li prepara insieme
+// per farli uscire in una volta sola. Non andrebbe fatto — una comanda è
+// un ticket, e un ticket si lavora intero — ma si fa, e l'app non lo
+// impedisce: lo REGISTRA, così il conto resta giusto e chi guarda la coda
+// vede davvero cosa c'è al banco e cosa aspetta ancora.
+//
+// La divisione non tocca la comanda di partenza: quella si ANNULLA (resta
+// come storia — la copia già stampata ha ancora un riscontro, e niente
+// sparisce dal conto) e al suo posto nascono le righe scelte, che vanno in
+// preparazione, e il resto, che torna in «Da fare».
+//
+// Qui c'è solo il conto delle unità, che è la parte che si può sbagliare
+// in silenzio: se una divisione fa sparire un drink al banco non se ne
+// accorge nessuno finché non lo reclama il cliente. Chi chiama passa le
+// quantità scelte riga per riga — `righeScelte[i]` è quanto di
+// `comanda.items[i]` si prepara adesso — e riceve le DUE liste di righe.
+//
+//   null                              → non si è scelto niente
+//   { tutta: true,  nuova, resta: [] } → si prende tutto: non c'è niente
+//                                        da dividere, la comanda avanza
+//   { tutta: false, nuova, resta }     → si divide
+//
+// Le quantità fuori misura non fanno danni: sotto zero, non numeriche o
+// più grandi di quello che c'è valgono rispettivamente zero e il massimo
+// disponibile. La somma delle unità di `nuova` e `resta` è sempre uguale a
+// quella di partenza.
+export function dividiComanda(comanda, righeScelte) {
+  const righe = comanda?.items || []
+  const nuova = []
+  const resta = []
+  let prese = 0
+  righe.forEach((riga, i) => {
+    const avevo = Math.max(0, Number(riga.qty) || 0)
+    const chiesto = Number(righeScelte?.[i])
+    const presa = Math.min(avevo, Number.isFinite(chiesto) ? Math.max(0, Math.trunc(chiesto)) : 0)
+    prese += presa
+    if (presa > 0) nuova.push({ ...riga, qty: presa })
+    if (avevo - presa > 0) resta.push({ ...riga, qty: avevo - presa })
+  })
+  if (prese === 0) return null
+  return { tutta: resta.length === 0, nuova, resta }
+}
+
+// DUE ANNULLAMENTI CHE NON SONO LA STESSA COSA. Dividere una comanda la
+// annulla — resta come storia, e la copia già stampata ha un riscontro —
+// ma quello è CONTABILITÀ INTERNA, non un fatto della serata: quei drink
+// non sono spariti, sono diventati le due comande lì accanto. Mostrarla in
+// un elenco di annullati vorrebbe dire far vedere due volte la stessa roba
+// e far sembrare che qualcosa sia andato storto. Si distingue col motivo
+// scritto sulla comanda, non guardando lo stato: «annullata» lo sono tutte
+// e due.
+export const ANNULLATA_PER_DIVISIONE = 'divisione'
+
+export function annullataPerDivisione(c) {
+  return c?.status === ORDER_STATUSES.ANNULLATO && c?.annullata_per === ANNULLATA_PER_DIVISIONE
+}
+
+// Su quali comande ha senso proporre la preparazione parziale: solo quelle
+// ANCORA DA FARE e con più di una unità dentro. Su una comanda già presa in
+// carico dividere non vuol dire niente (il lavoro è già cominciato), e su
+// una riga singola la scelta sarebbe fra «tutto» e «niente».
+export function comandaDivisibile(c) {
+  if (!c || c.status !== ORDER_STATUSES.RICEVUTO) return false
+  return (c.items || []).reduce((s, i) => s + (Number(i.qty) || 0), 0) > 1
+}
+
+// LA FIRMA DELLE COMANDE DI UN CONTO: id, passo e quante unità, in una
+// riga. Serve a capire se il server ha ormai recepito il gesto fatto qui —
+// un avanzamento, una divisione — per poter buttare via la copia locale
+// senza far «rimbalzare» la card allo stato di prima. Confrontare gli
+// oggetti interi non va: dal server tornano con campi in più (orari,
+// snapshot del magazzino) che non cambiano quello che si vede.
+export function firmaComande(comande) {
+  return (comande || [])
+    .map(
+      (c) =>
+        `${c.id}:${c.status}:${(c.items || []).reduce((s, i) => s + (Number(i.qty) || 0), 0)}`
+    )
+    .join('|')
+}
+
+// ── COSA È IN PREPARAZIONE E COSA È GIÀ USCITO, DENTRO IL CONTO ──────
+//
+// IL MODELLO, detto una volta per tutte: gli stati del SERVIZIO riguardano
+// le COMANDE, che fanno parte dell'ordine. L'ordine ha i suoi stati
+// (aperto, pagato, annullato); le comande ne hanno dei SOTTOSTATI, che sono
+// i passi del servizio. Se un conto è gestito come una comanda sola, tutti
+// i suoi drink stanno sempre nello stesso passo — a meno che il bartender
+// non divida la comanda per prepararne una parte.
+//
+// Da lì in poi «a che punto è questo conto» non ha più una risposta sola, e
+// aprendolo si deve vedere cosa è al banco e cosa è già uscito. Si fa come
+// si fa già con le righe pagate: un titolo, e sotto le sue.
+//
+// E le due cose non si contraddicono: un conto si può incassare in
+// qualunque passo del servizio — dalla cassa è chiuso, dal banco magari no,
+// perché una comanda è ancora in preparazione. Il gruppo «Pagati» dice la
+// prima cosa, i gruppi del servizio la seconda.
+export const SERVIZIO_ETICHETTA = {
+  [ORDER_STATUSES.RICEVUTO]: '🧾 Da fare',
+  [ORDER_STATUSES.IN_PREPARAZIONE]: '🍹 In preparazione',
+  [ORDER_STATUSES.PRONTO]: '🔔 Pronto',
+  [ORDER_STATUSES.RITIRATO]: '✅ Servito',
+  [ORDER_STATUSES.ANNULLATO]: '✖️ Annullato',
+}
+
+// A quale gruppo appartiene una riga del conto. Le righe della BOZZA — non
+// ancora inviate al banco — non ne hanno uno: non sono ancora lavoro di
+// nessuno, e intestarle direbbe una cosa che non è.
+export function gruppoDiRiga(riga) {
+  if (riga?.paid) return 'pagati'
+  if (riga?.source !== 'comanda') return null
+  return riga.status || null
+}
+
+// I gruppi presenti nella lista, in ordine di lavorazione e coi pagati in
+// fondo. Serve a decidere se intestarli: con UN gruppo solo non si mette un
+// titolo per dire una cosa sola.
+export function gruppiDelConto(righe) {
+  const visti = new Set((righe || []).map(gruppoDiRiga).filter(Boolean))
+  return [...COMANDA_FLOW, ORDER_STATUSES.ANNULLATO, 'pagati'].filter((g) => visti.has(g))
+}
+
+export function titoloGruppo(gruppo) {
+  if (gruppo === 'pagati') return '💳 Pagati'
+  return SERVIZIO_ETICHETTA[gruppo] || null
 }
