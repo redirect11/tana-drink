@@ -2240,13 +2240,29 @@ requirements:
       «Mensile per macro» descritta qui sopra, che spalma l'incasso di ogni
       drink sugli ingredienti in proporzione al costo: quella scomposizione
       va tolta, non affiancata.
-      Resta aperta una sola domanda, e va posta a lui: gli ACQUISTI restano
-      contati sulla macro del prodotto (la Schweppes comprata resta una
-      spesa di «birre e bibite») mentre le VENDITE vanno sulla macro della
-      voce di menu. Se il costo del consumo segue la vendita — com'e'
-      necessario perche' il margine per macro torni — allora «birre e
-      bibite» mostrera' una spesa d'acquisto che non ritrova nel venduto, e
-      va spiegato a chi legge il numero invece di lasciarlo scoprire.
+      DECISO (18/08, dall'utente): il COSTO DEL VENDUTO segue la vendita.
+      La porzione di Schweppes finita in un Gin Tonic conta su «alcolici e
+      distillati» insieme al suo incasso; in «birre e bibite» resta solo
+      quello che e' stato venduto COME bibita, incasso e costo. Cosi' il
+      margine per macro torna: ogni macro confronta soldi entrati e costo
+      di quello che ha venduto davvero, senza pezzi che arrivano da
+      un'altra parte.
+      IL ROVESCIO NON E' UN COMPROMESSO, E' LA COSA GIUSTA. Da questa
+      tabella non si legge piu' «quanto ho speso in bibite», e va bene
+      cosi' (parole sue: «ed e' giusto che non sia piu' leggibile da li'»).
+      Questa tabella risponde a UNA domanda — quanto rende ogni macro di
+      quello che vendo — e un numero che parla d'altro, in mezzo, la
+      renderebbe ambigua invece che piu' ricca. «Quanto ho speso in
+      bibite» resta una domanda vera, ma e' degli ACQUISTI — le fatture,
+      quello che e' entrato dalla porta — e vive dove stanno gli acquisti,
+      non qui. Non serve nemmeno spiegarlo sotto la tabella: non c'e'
+      niente da giustificare, c'e' una colonna che non deve esserci.
+      DA TOGLIERE, non affiancare: la scomposizione di `splitLineRevenueByMacro`
+      (src/lib/macroStats.js), che spalma l'incasso di ogni drink sugli
+      ingredienti in proporzione al costo. Con la regola qui sopra non
+      serve piu' a nessuno, e due letture diverse della stessa serata
+      convivendo sono il modo migliore per non fidarsi di nessuna delle
+      due.
     status: todo
     generate_issue: true
     labels: [magazzino, menu, statistiche]
