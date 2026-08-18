@@ -4250,3 +4250,152 @@ requirements:
     generate_issue: true
     labels: [magazzino, statistiche]
     test_cases: []
+
+  - id: REQ-DEV-006
+    title: "Le due lavagne a corsie sono lo stesso componente scritto due volte"
+    area: "src/components/CorsieStato.jsx, src/components/CorsieComande.jsx"
+    description: >
+      Trovato da due revisioni indipendenti del diff della 1.5.0. Le viste
+      a corsie dei conti e delle comande condividono, riga per riga: il
+      guscio della colonna, la testata con conteggio e totale, la card dei
+      conti «in arrivo» (22 righe identiche), il bollo dell'acconto e il
+      piede con il ⋯ e il tasto grande. Sono circa 90 righe scritte due
+      volte: oggi una modifica alla testata va fatta in due posti.
+      COME: estrarre `Corsia` (guscio + testata + lista + card in arrivo) e
+      il piede, come si è già fatto con `RigheCorsia`,
+      `PreparazioneParziale` e `ScegliConsegna`, lasciando a ogni file solo
+      il corpo della propria card.
+      NON fondere del tutto i due componenti: una vista lavora sui conti e
+      l'altra sulle comande, e solo quella dei conti ha la colonna della
+      cifra grande. Fonderle cambierebbe comportamento.
+    status: todo
+    generate_issue: true
+    labels: [manutenzione, coda]
+    test_cases: []
+
+  - id: REQ-DEV-007
+    title: "La coda ricalcola tutte e tre le viste a ogni disegno, e ne mostra una"
+    area: "src/pages/BartenderPage.jsx"
+    description: >
+      Trovato dalla rilettura del diff della 1.5.0, coi numeri. Nel corpo
+      della coda non c'è nessuna memoria fra un disegno e l'altro: griglia,
+      lista e corsie vengono ricalcolate tutte, sempre, e se ne mostra una.
+      Con 120 conti sono circa 18 passate complete sulla lista e 4
+      ordinamenti a ogni ridisegno — e ridisegnare capita a ogni tasto
+      premuto nella ricerca, a ogni card aperta e a ogni snapshot dal
+      server, che in una serata piena sono centinaia.
+      Nello stesso posto: `contiScheda` viene chiamata sei volte per
+      disegno sulla stessa lista (tre per i conteggi delle schede, due
+      identiche a due righe di distanza), e ognuna è tre filtri in fila.
+      COME: memorizzare le tre catene e smistare le schede una volta sola.
+      Non cambia niente di quello che si vede.
+    status: todo
+    generate_issue: true
+    labels: [manutenzione, prestazioni, coda]
+    test_cases: []
+
+  - id: REQ-DEV-008
+    title: "Scritture che rileggono l'ordine per un valore che nessuno guarda"
+    area: "src/lib/api.js"
+    description: >
+      Trovato dalla rilettura del diff della 1.5.0. `advanceComanda`,
+      `preparazioneParziale` e `setOrderServiceMode` rileggono l'ordine
+      dopo aver scritto, per restituirlo — e nessuno dei loro chiamanti
+      (verificati tutti e otto) usa quel valore: gli interessa solo
+      l'eventuale errore. Ogni tocco su una card costa così due letture
+      dello stesso documento invece di una, più una normalizzazione intera
+      buttata via: con ~150 comande a sera sono ~450 letture a vuoto.
+      Nella stessa famiglia: `notifyLowStock([])` legge comunque il
+      localStorage in modo sincrono prima di ciclare su zero elementi.
+      COME: comporre l'esito in memoria da quello che si è appena scritto,
+      o non restituire niente.
+    status: todo
+    generate_issue: true
+    labels: [manutenzione, prestazioni, local-first]
+    test_cases: []
+
+  - id: REQ-DEV-009
+    title: "Quattro copie del ricalcolo del totale di un conto"
+    area: "src/lib/api.js"
+    description: >
+      Trovato dalla rilettura del diff della 1.5.0. Le stesse cinque righe
+      — aggrega le righe delle comande, somma coperto/servizio/mancia,
+      ricalcola lo sconto — e la stessa scrittura compaiono in quattro
+      funzioni di `api.js`, di cui una aggiunta da questa versione.
+      COME: una funzione privata che salva le comande e ne ricalcola il
+      totale, chiamata dalle quattro.
+      DA FARE CON CALMA E CON I TEST DAVANTI: è il punto in cui si scrivono
+      i soldi di un conto. Non si tocca a ridosso di un rilascio, ed è il
+      motivo per cui questa voce esiste invece della modifica.
+    status: todo
+    generate_issue: true
+    labels: [manutenzione, pagamenti]
+    test_cases: []
+
+  - id: REQ-DEV-010
+    title: "Metà di «corsie di stato» non la chiama più nessuno"
+    area: "src/lib/coda.js, src/pages/BartenderPage.jsx"
+    description: >
+      Trovato dalla rilettura del diff della 1.5.0. `corsieDiStato` viene
+      chiamata da un solo punto, con `workflowOn` cablato a `false`: il
+      ramo con i quattro passi del servizio, le sue voci in
+      `AZIONI_CORSIA`, il bollo «pagato ma non servito» sui conti e la
+      classe CSS che lo disegna sono irraggiungibili. A tenerli in vita
+      sono solo i test.
+      Il costo non è lo spazio: i test sono la specifica, e chi legge
+      «Da incassare sono i consegnati non saldati» crede che quella colonna
+      esista. Nella stessa riga: la vista dei conti sceglie ancora l'azione
+      della card per ID DI CORSIA — è esattamente da lì che è nato BUG-026
+      nella vista comande, dove ora si guarda lo stato.
+      COME: togliere il ramo morto (e i suoi test) o dire chi lo accenderà,
+      e portare anche la vista dei conti su `azioneCorsia(stato)`.
+    status: todo
+    generate_issue: true
+    labels: [manutenzione, coda]
+    test_cases: []
+
+  - id: REQ-DEV-011
+    title: "Ripetizioni che si tolgono in mezz'ora, tutte insieme"
+    area: "src/lib/impostazioniLocali.js, src/components/SettingsTab.jsx, src/components/InventoryManager.jsx, scripts/generate-issues.mjs, scripts/lib-firestore.js"
+    description: >
+      Raccolta dalla rilettura del diff della 1.5.0: cose piccole, nessuna
+      urgente, che conviene fare in un colpo solo perché toccano file
+      appena scritti — è il momento in cui costano meno.
+      - `impostazioniLocali.js`: cinque coppie leggi/scrivi con lo stesso
+        try/catch. Due funzioni private e restano cinque righe a
+        preferenza. I commenti lunghi che spiegano perché ognuna è del
+        DISPOSITIVO vanno tenuti tutti: sono la parte che vale.
+      - `SettingsTab.jsx`: cinque volte lo stesso gruppo di pastiglie
+        «scegli un modo» → un componente solo.
+      - `InventoryManager.jsx`: il riquadro del travaso scrive tre volte lo
+        stesso overlay e chiede due volte la stessa condizione; `CarcoForm`
+        tiene uno stato che è ricavabile; due componenti gemelli calcolano
+        la stessa previsione di fine serata.
+      - `generate-issues.mjs`: rilegge una per una le issue che ha appena
+        scaricato tutte insieme — fino a 190 chiamate in più per giro di CI.
+      - i tre script nuovi dell'emulatore riscrivono il client REST che
+        `lib-firestore.js` ha già: basta fargli accettare indirizzo e
+        intestazioni.
+    status: todo
+    generate_issue: true
+    labels: [manutenzione]
+    test_cases: []
+
+  - id: REQ-UI-021
+    title: "Tre nomi per lo stesso passo del servizio"
+    area: "src/lib/comande.js, src/lib/orderStatus.js"
+    description: >
+      Trovato dalla rilettura del diff della 1.5.0. Lo stesso passo si
+      chiama in tre modi a seconda di dove lo si legge: «Pronto» nella
+      tabella del servizio, «Pronto al servizio» nell'etichetta di stato,
+      «Ritiro/Servizio» in testa alla colonna. Chi lavora vede tre parole
+      per una cosa sola, ed è lo stesso guaio — più piccolo — della
+      pastiglia che diceva «Ordine ricevuto» accanto alla colonna «Da
+      fare».
+      DA DECIDERE, non da semplificare in silenzio: si sceglie la parola e
+      si aggiornano le tabelle e il loro test, oppure si tiene la
+      differenza e si scrive nel commento perché lì serve più corta.
+    status: todo
+    generate_issue: true
+    labels: [ui, comande]
+    test_cases: []

@@ -12,6 +12,16 @@ con una prova a vuoto che dice cosa cambierebbe prima di toccare niente.
 
 ### Sotto il cofano
 
+- **Un giro di rilettura sul lavoro di questa versione** (riuso,
+  semplificazione, efficienza, profondità): la stessa regola adesso sta in un
+  posto solo dove prima era scritta due o tre volte, e sono spariti due pezzi
+  di codice nati qui e mai usati. Il travaso del magazzino non rilegge più
+  tutti i prodotti a ogni lotto — con quattrocento articoli erano sedici
+  letture complete, in fila, mentre chi sta al banco guarda la barra — e la
+  coda fa meno lavoro a vuoto a ogni disegno. Quello che è emerso e non si
+  poteva sistemare senza cambiare comportamento è finito nel registro come
+  lavoro da fare, con scritto cosa costa non farlo.
+
 - **Il database di prova nasce completo**: ogni articolo ha costo e IVA
   d'acquisto (così margini e prezzo consigliato hanno da lavorare) e ci sono
   quattro utenze, una per ruolo — admin, bartender, sala, cliente — con
