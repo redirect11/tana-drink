@@ -44,6 +44,12 @@ const quantiDrink = (o) => (o.order_items || []).reduce((s, i) => s + (Number(i.
 // un conto normale — chi ne ha venti è l'eccezione, e la apre.
 const RIGHE_A_VISTA = 6
 
+// Da qui in su il conto si legge meglio su DUE colonne: dieci righe in fila
+// fanno una card lunga il doppio delle altre, e la colonna dello stato si
+// svuota di sotto. Sotto le dieci no — due colonnine da tre righe sono
+// peggio di una lista. Lo spazio ce l'ha solo uno schermo largo: il CSS
+// tiene la seconda colonna solo dove ci sta (vedi .corsia-righe-due).
+
 export default function CorsieStato({
   corsie,
   idAcceso = null,
@@ -150,12 +156,13 @@ export default function CorsieStato({
                     {soloCifra ? (
                       <div className="bignum corsia-cifra">{formatPrice(orderTotal(o))}</div>
                     ) : (
+                      <div className="corsia-righe-box">
                       <div
                         className={`small corsia-righe${
                           (o.order_items || []).length > RIGHE_A_VISTA && espansa !== o.id
                             ? ' corsia-righe-sfuma'
                             : ''
-                        }`}
+                        }${(o.order_items || []).length >= 10 ? ' corsia-righe-due' : ''}`}
                       >
                         {(espansa === o.id
                           ? o.order_items || []
@@ -181,20 +188,27 @@ export default function CorsieStato({
                             venti righe la card diventava una pagina, e le
                             altre corsie sparivano sotto: si vedono le prime,
                             e chi vuole il resto lo chiede. */}
-                        {(o.order_items || []).length > RIGHE_A_VISTA && (
-                          <button
-                            className="corsia-piu"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              onEspandi?.(espansa === o.id ? null : o.id)
-                            }}
-                            aria-expanded={espansa === o.id}
-                          >
-                            {espansa === o.id
-                              ? '▴ meno'
-                              : `▾ altre ${(o.order_items || []).length - RIGHE_A_VISTA}`}
-                          </button>
-                        )}
+                      </div>
+                      {/* IL TASTO NON SFUMA. Stava dentro il blocco velato e
+                          si sbiadiva insieme al testo: proprio la cosa da
+                          leggere. E aperto spariva — non c'era modo di
+                          richiudere la card. Adesso è fratello dell'elenco:
+                          sopra la sfumatura quando è chiuso, in fondo alle
+                          righe quando è aperto. */}
+                      {(o.order_items || []).length > RIGHE_A_VISTA && (
+                        <button
+                          className={`corsia-piu${espansa === o.id ? ' aperto' : ''}`}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onEspandi?.(espansa === o.id ? null : o.id)
+                          }}
+                          aria-expanded={espansa === o.id}
+                        >
+                          {espansa === o.id
+                            ? '▴ mostra meno'
+                            : `▾ altre ${(o.order_items || []).length - RIGHE_A_VISTA}`}
+                        </button>
+                      )}
                       </div>
                     )}
                     {o.note && <div className="order-note small corsia-nota">{o.note}</div>}

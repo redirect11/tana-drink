@@ -6811,16 +6811,34 @@ body.pagina-piena .inv-scheda {
    elenco che finisce con una riga a metà si legge come «continua», ed è
    quello che vogliamo dire. Il tasto per aprirle sta SOPRA la sfumatura,
    piccolo: è un dettaglio, non un'azione della serata. */
-.corsia-righe-sfuma {
+/* DIECI RIGHE O PIÙ: DUE COLONNE, dove lo schermo le regge. Un conto lungo
+   faceva una card alta il doppio delle altre e svuotava la colonna sotto;
+   affiancate, le stesse righe stanno in metà altezza. Sotto i 1200px no:
+   in una corsia stretta due colonnine si spezzerebbero a metà parola. */
+@media (min-width: 1200px) {
+  .corsia-righe-due {
+    columns: 2;
+    column-gap: 14px;
+  }
+  .corsia-righe-due .corsia-riga {
+    break-inside: avoid;
+  }
+}
+
+/* Il blocco che tiene insieme righe e tasto: la sfumatura sta sulle RIGHE,
+   il tasto le sta sopra e resta leggibile. */
+.corsia-righe-box {
   position: relative;
-  padding-bottom: 14px;
-  -webkit-mask-image: linear-gradient(to bottom, #000 62%, transparent 100%);
-  mask-image: linear-gradient(to bottom, #000 62%, transparent 100%);
+}
+.corsia-righe-sfuma {
+  padding-bottom: 12px;
+  -webkit-mask-image: linear-gradient(to bottom, #000 60%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 60%, transparent 100%);
 }
 .corsia-piu {
   position: absolute;
   left: 50%;
-  bottom: -2px;
+  bottom: -4px;
   transform: translateX(-50%);
   border: none;
   background: none;
@@ -6829,6 +6847,14 @@ body.pagina-piena .inv-scheda {
   line-height: 1;
   color: var(--muted);
   cursor: pointer;
+}
+/* Aperta la card, il tasto torna nel flusso in fondo alle righe: sospeso
+   sopra l'ultima riga si perdeva, e non si sapeva più come richiudere. */
+.corsia-piu.aperto {
+  position: static;
+  transform: none;
+  display: block;
+  margin: 4px auto 0;
 }
 .corsia-piu:hover {
   color: var(--accent-2);
