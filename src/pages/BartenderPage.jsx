@@ -1736,6 +1736,11 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                 <div className="row between" key={i.id}>
                   <span>
                     {i.qty}× {i.name}
+                    {/* La nota della RIGA — «senza ghiaccio», «per Anna» — è
+                        quella che cambia come si prepara. Si vedeva solo nel
+                        conto e sulla comanda stampata: chi lavora guardando
+                        lo schermo invece della stampante non la leggeva mai. */}
+                    {i.note && <span className="riga-nota">↳ {i.note}</span>}
                   </span>
                   <span className="muted">{formatPrice(i.qty * i.unit_price)}</span>
                 </div>

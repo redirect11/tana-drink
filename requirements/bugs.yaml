@@ -159,13 +159,19 @@ bugs:
       lo schermo invece della stampante non la vede mai. Comportamento
       atteso: la nota dell'item compare sotto la riga anche nelle card
       delle code, come già avviene per la nota del conto.
+      RISOLTO (1.5.x). La nota della riga va a capo sotto il nome del
+      prodotto — non a fianco, dove il prezzo a destra la tagliava a metà —
+      in tutte e due le card: quella della coda del gestionale e quella
+      della coda di sala. Le viste a corsie e il dettaglio della comanda la
+      mostravano già; mancavano proprio le due card citate qui. La griglia
+      compatta resta senza righe, come da disegno: non elenca i prodotti.
     in_produzione: true
-    status: todo
+    status: fixed
     generate_issue: true
     labels: [bug, comande, ui]
     severity: grave
     priority: P1
-    test_cases: []
+    test_cases: [tests/component/NoteRigheCoda.test.jsx]
 
   - id: BUG-006
     title: "Nel pagamento a righe separate il meno spegne anche quelle sotto"
