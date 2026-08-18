@@ -11,6 +11,15 @@
 
 ### Al banco
 
+- **«Ritirato/Servito» si preme una volta sola.** La card tornava indietro da
+  sé e bisognava ripremere: lo scarico del magazzino, che lavora in
+  sottofondo, riscriveva le comande com'erano prima di partire e si portava
+  via l'avanzamento appena fatto.
+- **Quello che si tocca si vede subito, dappertutto allo stesso modo.** La
+  coda, il conto e il dettaglio della comanda tenevano ognuno una copia sua
+  di «questo l'ho appena fatto io», e si comportavano già in modo diverso:
+  adesso è una sola. Una comanda aggiunta a metà serata compare col numero e
+  nel passo che avrà davvero, invece di cambiare tutti e due un istante dopo.
 - **La cassa non si chiude con dei drink ancora da fare.** Prima bastava non
   avere conti aperti — ma un conto si paga in anticipo e resta con le sue
   comande al banco: si poteva chiudere la serata con tre drink pagati e mai

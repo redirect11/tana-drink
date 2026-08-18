@@ -32,6 +32,18 @@ export const COMANDA_FLOW = [
   ORDER_STATUSES.RITIRATO,
 ]
 
+// IN CHE PASSO NASCE UNA COMANDA NUOVA aggiunta a un conto già aperto: in
+// preparazione. Le righe aggiunte a metà serata sono roba che il banco sta
+// già facendo — le si batte mentre si versa — e farle nascere «da fare»
+// vorrebbe dire un passo in più da premere per ogni aggiunta.
+//
+// STA QUI PERCHÉ LO DEVONO SAPERE IN DUE: chi scrive (api.js/addComanda) e
+// chi disegna la comanda provvisoria mentre la scrittura vola (il conto).
+// Quando erano due valori scritti a mano non combaciavano: la card
+// compariva «da fare» e un istante dopo diventava «in preparazione» da
+// sola, sotto gli occhi di chi stava leggendo quale preparare.
+export const STATO_COMANDA_NUOVA = ORDER_STATUSES.IN_PREPARAZIONE
+
 export function nextComandaStatus(status) {
   const idx = COMANDA_FLOW.indexOf(status)
   if (idx === -1 || idx === COMANDA_FLOW.length - 1) return null
@@ -322,18 +334,28 @@ export function comandaDivisibile(c) {
   return (c.items || []).reduce((s, i) => s + (Number(i.qty) || 0), 0) > 1
 }
 
-// LA FIRMA DELLE COMANDE DI UN CONTO: id, passo e quante unità, in una
-// riga. Serve a capire se il server ha ormai recepito il gesto fatto qui —
-// un avanzamento, una divisione — per poter buttare via la copia locale
-// senza far «rimbalzare» la card allo stato di prima. Confrontare gli
-// oggetti interi non va: dal server tornano con campi in più (orari,
-// snapshot del magazzino) che non cambiano quello che si vede.
-export function firmaComande(comande) {
+// ── LA FIRMA DEL LAVORO DI UN CONTO ─────────────────────────
+//
+// A che punto sta il lavoro di un conto, in una riga: per ogni comanda il
+// passo e quante unità, messe in ordine. Serve a capire se il server ha
+// ormai recepito il gesto fatto qui — un avanzamento, una divisione — per
+// poter buttare via la copia locale senza far «rimbalzare» la card allo
+// stato di prima.
+//
+// GLI ID NON CI SONO, ed è il punto: una comanda appena creata da qui non
+// ha ancora il nome che le darà il server («c3» lo decide chi scrive), e
+// confrontando gli id la copia locale di una divisione non se ne sarebbe
+// andata mai più. Quello che conta è se a schermo cambia qualcosa: due
+// comande in preparazione da tre unità sono la stessa cosa comunque si
+// chiamino.
+//
+// E non ci sono nemmeno i campi che il server aggiunge per conto suo —
+// orari, snapshot del magazzino — che non cambiano niente di quello che si
+// vede e terrebbero la copia locale attaccata per sempre.
+export function firmaLavoro(comande) {
   return (comande || [])
-    .map(
-      (c) =>
-        `${c.id}:${c.status}:${(c.items || []).reduce((s, i) => s + (Number(i.qty) || 0), 0)}`
-    )
+    .map((c) => `${c.status}:${(c.items || []).reduce((s, i) => s + (Number(i.qty) || 0), 0)}`)
+    .sort()
     .join('|')
 }
 

@@ -10,6 +10,7 @@ import {
   subscribeSettings,
 } from '../lib/api.js'
 import { comandaNataDallaDivisione, dividiComanda } from '../lib/comande.js'
+import { useComandeLocali } from '../lib/comandeLocali.js'
 import { ORDER_STATUSES } from '../lib/orderStatus.js'
 import { isGestore } from '../lib/ruoli.js'
 import { showToast } from '../lib/toast.js'
@@ -33,11 +34,13 @@ export default function ComandaPage() {
   const navigate = useNavigate()
   const [order, setOrder] = useState(undefined) // undefined = si carica
   const [error, setError] = useState(null)
-  // Lo stato appena premuto, finché il server non lo racconta: al banco un
-  // gesto che non si vede subito è un gesto che si ripete.
-  const [statoLocale, setStatoLocale] = useState(null)
-  // La comanda che si è appena divisa: si aspetta che dalla divisione nasca
-  // il pezzo da preparare, e ci si va sopra. Vedi sotto.
+  // Quello che si è appena premuto, finché il server non lo racconta: al
+  // banco un gesto che non si vede subito è un gesto che si ripete. La
+  // copia locale è quella di tutti (lib/comandeLocali.js).
+  const comandeLocali = useComandeLocali(order ? [order] : [])
+  // La comanda che si è appena divisa: NON è una copia locale, è una
+  // navigazione in attesa — si aspetta che dalla divisione nasca il pezzo
+  // da preparare, e ci si va sopra. Vedi sotto.
   const [divisa, setDivisa] = useState(null)
   const [settings, setSettings] = useState(settingsIniziali)
   // Chi sta guardando: la comanda è il lavoro del banco, e chi non lo
@@ -70,13 +73,9 @@ export default function ComandaPage() {
     )
   }, [id])
 
-  // QUELLO CHE VEDE È QUELLO CHE HA APPENA FATTO. L'override se ne va
-  // quando dal server arriva lo stesso stato: toglierlo subito farebbe
-  // riapparire per un istante quello di prima (il tasto «rimbalza»).
-  const comandaVera = (order?.comande || []).find((c) => c.id === comandaId) || null
-  useEffect(() => {
-    if (statoLocale && comandaVera?.status === statoLocale) setStatoLocale(null)
-  }, [comandaVera?.status, statoLocale])
+  // QUELLO CHE VEDE È QUELLO CHE HA APPENA FATTO: la comanda si pesca
+  // dall'array come lo vede questo terminale, non da quello del server.
+  const comanda = comandeLocali.comandeDi(order).find((c) => c.id === comandaId) || null
 
   // DOPO UNA DIVISIONE, QUESTA COMANDA NON ESISTE PIÙ: al suo posto ne
   // nascono due, e chi ha appena diviso ha in mano la prima — quella che ha
@@ -108,9 +107,9 @@ export default function ComandaPage() {
   // finché non arriva lo snapshot, ma se sparisse del tutto non si sbatte
   // in faccia «non c'è più» a chi ha appena premuto — si aspetta il
   // pezzo nuovo, che sta arrivando.
-  if (!comandaVera && divisa) return <Caricamento testo="Divido la comanda…" />
+  if (!comanda && divisa) return <Caricamento testo="Divido la comanda…" />
 
-  if (!comandaVera) {
+  if (!comanda) {
     // Comanda sparita (conto rifatto, divisione): non si lascia una pagina
     // vuota, si manda dove la risposta c'è di sicuro.
     return (
@@ -122,12 +121,17 @@ export default function ComandaPage() {
       </div>
     )
   }
-  const comanda = statoLocale ? { ...comandaVera, status: statoLocale } : comandaVera
-
   const porta = (stato) => {
-    setStatoLocale(stato)
+    const adesso = new Date().toISOString()
+    comandeLocali.applica(order, (comande) =>
+      comande.map((c) =>
+        c.id === comanda.id
+          ? { ...c, status: stato, status_times: { ...(c.status_times || {}), [stato]: adesso } }
+          : c
+      )
+    )
     advanceComanda(order.id, comanda.id, stato).catch((e) => {
-      setStatoLocale(null)
+      comandeLocali.scarta(order.id)
       showToast(`⚠️ Avanzamento non riuscito: ${e.message}`, { kind: 'error' })
     })
   }
@@ -141,10 +145,28 @@ export default function ComandaPage() {
     if (!esito) return
     // Prese TUTTE le unità non c'è niente da dividere: la comanda avanza e
     // basta, e resta questa. Si vede subito, come col tasto grande.
-    if (esito.tutta) setStatoLocale(ORDER_STATUSES.IN_PREPARAZIONE)
-    else setDivisa(comanda.id)
+    // Prese TUTTE le unità non c'è niente da dividere: la comanda avanza e
+    // basta, e resta questa. La scrittura la fa preparazioneParziale qui
+    // sotto — qui si segna solo quello che si deve già vedere.
+    if (esito.tutta) {
+      const adesso = new Date().toISOString()
+      comandeLocali.applica(order, (comande) =>
+        comande.map((c) =>
+          c.id === comanda.id
+            ? {
+                ...c,
+                status: ORDER_STATUSES.IN_PREPARAZIONE,
+                status_times: {
+                  ...(c.status_times || {}),
+                  [ORDER_STATUSES.IN_PREPARAZIONE]: adesso,
+                },
+              }
+            : c
+        )
+      )
+    } else setDivisa(comanda.id)
     preparazioneParziale(order.id, comanda.id, scelte).catch((e) => {
-      setStatoLocale(null)
+      comandeLocali.scarta(order.id)
       setDivisa(null)
       showToast(`⚠️ Divisione non riuscita: ${e.message}`, { kind: 'error' })
     })
