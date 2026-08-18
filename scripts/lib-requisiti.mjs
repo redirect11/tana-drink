@@ -177,14 +177,24 @@ export function etichetteClassificazione(req) {
 // classificazione. Le altre — l'area, «hotfix», quelle messe a mano da chi
 // guarda le issue — non le tocca nessuno: toglierle vorrebbe dire cancellare
 // il lavoro di una persona a ogni push.
-const MIA = (l) => /^P[0-3]$/.test(l) || l.startsWith('severity-')
+const MIA = (l) => /^P[0-3]$/.test(l) || l.startsWith('severity-') || l === IN_TEST
+
+// «E' su develop, va provato al banco». Le tre linee dicono tre cose diverse
+// della stessa voce: release la scrive, develop la mette in prova, main la
+// chiude. Questa etichetta e' il pezzo di mezzo, quello che prima non si
+// vedeva da nessuna parte.
+export const IN_TEST = 'in-test'
 
 // Cosa manca e cosa avanza, confrontando le etichette di un'issue col
 // registro. Serve a riallineare le issue che ESISTONO GIA': prima si
 // saltavano, e la classificazione non arrivava mai dove si guarda.
-export function riconciliaEtichette(attuali, req) {
+export function riconciliaEtichette(attuali, req, { inTest = false } = {}) {
   const presenti = [...new Set(attuali || [])]
-  const volute = [...new Set([...(req.labels || []), ...etichetteClassificazione(req)])]
+  const volute = [...new Set([
+    ...(req.labels || []),
+    ...etichetteClassificazione(req),
+    ...(inTest ? [IN_TEST] : []),
+  ])]
   const daAggiungere = volute.filter((l) => !presenti.includes(l))
   const daTogliere = presenti.filter((l) => MIA(l) && !volute.includes(l))
   const finali = [...presenti.filter((l) => !daTogliere.includes(l)), ...daAggiungere]

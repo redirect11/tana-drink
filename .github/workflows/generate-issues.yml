@@ -25,9 +25,15 @@ on:
   # frattempo la si raccontava di nuovo. Lo script è idempotente — cerca per
   # titolo esatto fra le issue aperte E chiuse — quindi spingere dieci volte
   # lo stesso registro non crea dieci issue: nascono solo quelle che mancano.
+  # TRE LINEE, TRE COSE DIVERSE sulla stessa voce del registro:
+  #   release/** -> si scrive e si riallinea (l'issue nasce, o si aggiorna)
+  #   develop    -> si mette IN PROVA: e' finita, ma al banco non l'ha vista
+  #                 ancora nessuno
+  #   main       -> si chiude: adesso e' davvero in mano a chi lavora
   push:
     branches:
       - main
+      - develop
       - "hotfix/**"
       - "release/**"
     paths:
@@ -64,4 +70,8 @@ jobs:
           # lì vuol dire dire a chi ha segnalato il guaio che è sistemato
           # quando non lo è. Da quei rami le issue si aprono soltanto.
           CHIUDE_RISOLTI: ${{ github.ref == 'refs/heads/main' }}
+          # Su develop la voce finita prende l'etichetta «in-test»: e' il pezzo
+          # di mezzo che prima non si vedeva da nessuna parte — una correzione
+          # scritta e non ancora provata era indistinguibile da una da fare.
+          SEGNA_IN_TEST: ${{ github.ref == 'refs/heads/develop' }}
         run: node scripts/generate-issues.mjs
