@@ -5470,3 +5470,68 @@ requirements:
       - tests/unit/macros.test.js
       - tests/component/InventoryManager.test.jsx
       - tests/component/MenuManager.test.jsx
+
+  - id: REQ-MAG-025
+    title: "Ordini e fatture: una pagina sola, e una fattura paga un ordine"
+    area: "src/components/PurchaseOrdersPanel.jsx, src/components/SupplierInvoicesPanel.jsx, src/components/InventoryManager.jsx, src/lib/api.js, src/lib/ruoli.js, src/components/StaffDrawer.jsx"
+    description: >
+      Chiesto dall'utente il 19/08. Oggi ordini fornitore e documenti stanno
+      dentro Magazzino, in due sottosezioni che non si parlano: si ordina di
+      la', si segna la fattura di qua, e nessuno sa quale fattura paghi quale
+      ordine. Devono diventare UNA PAGINA LORO, «Ordini e fatture», nel menu
+      laterale e visibile SOLO ALL'ADMIN, con due sottosezioni: «Ordini» e
+      «Fatture». Sono i soldi che escono dal locale, e non e' roba da turno.
+      IL LEGAME, che e' il cuore della richiesta: UNA FATTURA PAGA UN ORDINE.
+      Dall'ordine si arriva alla sua fattura e viceversa; un ordine senza
+      fattura si vede a colpo d'occhio (la merce e' arrivata ma il documento
+      no), e una fattura senza ordine pure — sono le due cose che a fine mese
+      fanno tornare o non tornare i conti con il commercialista.
+      DA DECIDERE PRIMA DI SCRIVERE (non e' stato detto, e non si indovina):
+      se il legame e' uno-a-uno stretto o se una fattura puo' coprire piu'
+      ordini dello stesso fornitore — nei fogli di Flavio un giro d'ordini
+      mette insieme piu' documenti (REQ-MAG-023), quindi il caso esiste
+      davvero.
+      IL CARICO AL RICEVIMENTO C'E' GIA' e non va rifatto: receivePurchaseOrder
+      in api.js, quando l'ordine passa a «ricevuto», alza la giacenza riga per
+      riga (confezioni x contenuto, o pezzi), aggiorna le bottiglie totali e
+      scrive un movimento «ordine fornitore». Questa voce ci aggiunge il pezzo
+      che manca.
+      IL PRODOTTO NUOVO, che oggi si perde in silenzio. Quel ciclo salta le
+      righe il cui articolo non esiste in anagrafica (`if (!s.exists())
+      continue`): se il fornitore manda una referenza nuova, la riga non
+      carica niente e nessuno se ne accorge. Deve invece NASCERE il prodotto,
+      inventariato con quello che l'ordine sa gia' (nome, fornitore, prezzo,
+      confezione) e marcato come DA SISTEMARE — perche' quello che l'ordine
+      non sa e' proprio cio' che serve al resto del sistema: la categoria (e
+      quindi la macro d'acquisto), l'unita' di misura vera, la soglia di
+      riordino.
+      ATTENZIONE AL NOME: nel magazzino esiste gia' una lista «da sistemare»,
+      ma e' del travaso a pezzi (i prodotti che la migrazione non sa
+      convertire da sola) ed e' una cosa diversa. O si riusa quella stessa
+      strada — e allora si dice perche' le due situazioni sono la stessa — o
+      il nuovo stato ha un nome suo. Due liste omonime che vogliono dire cose
+      diverse, sulla stessa schermata, sono un guaio che si paga dopo.
+      COME SI INCASTRA COL RESTO, ed e' la parte da non sbagliare:
+      1) MACRO-CATEGORIE. Un prodotto nuovo senza categoria non ha macro
+      d'acquisto, quindi la sua spesa non compare in «Bilancio → Acquisti x
+      Fatturato» (REQ-MAG-022): sparisce dai conti invece di risultare
+      sbagliata, che e' peggio. Il prodotto da sistemare va quindi mostrato
+      insieme alle categorie senza macro (REQ-UI-022): sono lo stesso buco
+      visto da due lati.
+      2) SCARICO. La giacenza caricata da un ordine si scala con le regole di
+      sempre — snapshot della ricetta, unita' base, scarico a «pronto»: qui
+      non cambia niente, e non deve cambiare.
+      3) IVA. L'ordine porta il prezzo d'acquisto; l'IVA d'acquisto ha gia' il
+      suo default (22%) e il campo per prodotto. Un prodotto nato da un ordine
+      eredita il default finche' qualcuno non lo corregge.
+      4) SPESE DEL MESE (REQ-CASSA-012): le fatture fornitore sono spesa
+      registrata. Va deciso — e scritto — se entrano da sole nel netto del
+      mese o se restano due elenchi separati, altrimenti la stessa uscita si
+      conta due volte.
+      ATTENZIONE, DUE «FATTURE» NEL CODICE: `supplier_invoices` sono i
+      documenti dei FORNITORI (quello di cui parla questa voce), `invoices`
+      sono le fatture di VENDITA ai clienti. Nomi vicini, mestieri opposti.
+    status: todo
+    generate_issue: true
+    labels: [magazzino, fornitori, admin]
+    test_cases: []
