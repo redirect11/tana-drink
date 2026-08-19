@@ -3034,7 +3034,10 @@ body.drawer-open .status-bell-float { display: none; }
 .order-card.conto-acceso {
   position: relative;
   z-index: 1;
-  box-shadow: 0 0 0 2px var(--accent), 0 0 18px color-mix(in srgb, var(--accent) 45%, transparent);
+  box-shadow:
+    0 0 0 2px var(--accent),
+    0 0 18px color-mix(in srgb, var(--accent) 45%, transparent),
+    var(--ombra-card);
   animation: conto-acceso 0.9s ease-out 2;
 }
 
@@ -6907,11 +6910,25 @@ body.pagina-piena .inv-scheda {
   border-bottom-color: #8a8a8a;
 }
 
+/* LO SPAZIO ATTORNO ALLE CARD NON È DECORAZIONE: SERVE ALL'OMBRA.
+   Questa lista SCORRE (overflow-y: auto da 900px in su), e un contenitore
+   che scorre taglia tutto quello che esce dai suoi bordi — l'ombra
+   compresa. Senza margine le card risultavano mozzate a destra e in basso,
+   e nelle colonne strette sembravano piatte, come se l'ombra non ci fosse.
+   Le misure vengono dall'ombra stessa (--ombra-card: 0 4px 18px): 16px
+   sotto perché ci stia lo scostamento più la sfocatura, 6 ai lati come
+   compromesso — di più stringerebbe la card, che in una corsia stretta è
+   già poca roba. In cima ne bastano 2: lì l'ombra non arriva.
+   `overflow-x: clip` invece del taglio implicito: `auto` su un asse rende
+   l'altro `auto` a sua volta, e comparivano barre orizzontali per i pochi
+   pixel dell'ombra. `clip` taglia e basta, senza far scorrere niente. */
 .corsia-lista {
   display: flex;
   flex-direction: column;
   gap: 8px;
   min-height: 0;
+  padding: 2px 6px 16px;
+  overflow-x: clip;
 }
 
 .corsia-card {
@@ -7089,9 +7106,14 @@ body.pagina-piena .inv-scheda {
    sbiadito da voce archiviata era proprio quella che spariva. Il filo
    dell'azione e un velo dello stesso colore: si legge come tutte le altre,
    ma si vede da lontano che ha qualcosa di diverso. */
+/* IL FILO SI AGGIUNGE ALL'OMBRA, NON LA SOSTITUISCE. `box-shadow` non si
+   somma: chi lo riscrive cancella quello di prima, e queste card
+   perdevano l'ombra restando piatte proprio dopo il pagamento — con in
+   più un filo da 3px che sembrava un bordo ingrossato. L'ombra della
+   casa va rimessa in coda ogni volta. */
 .corsia-card.pagato-da-servire {
   border-left-color: var(--accent-2);
-  box-shadow: inset 3px 0 0 var(--accent-2);
+  box-shadow: inset 3px 0 0 var(--accent-2), var(--ombra-card);
   opacity: 1;
 }
 
@@ -7101,7 +7123,7 @@ body.pagina-piena .inv-scheda {
    il conto al tavolo vede da lontano che non deve chiedere l'intero. */
 .corsia-card.acconto {
   border-left-color: #f39c12;
-  box-shadow: inset 3px 0 0 #f39c12;
+  box-shadow: inset 3px 0 0 #f39c12, var(--ombra-card);
 }
 .pill.acconto {
   background: rgba(243, 156, 18, 0.2);

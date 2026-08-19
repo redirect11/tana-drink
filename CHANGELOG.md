@@ -79,6 +79,10 @@
 
 ### Al banco
 
+- **Le card della lavagna hanno di nuovo la loro ombra.** Nelle colonne
+  erano tagliate ai bordi, e dopo il pagamento sparivano del tutto
+  lasciando un bordino più spesso al loro posto.
+
 - **Le card del banco si leggono da lontano.** Numero del conto e nome del
   tavolo ora stanno sulla stessa riga e sono grandi uguali — «il ventidue,
   quello di Peppe» si legge in un colpo invece di cercare il nome in
