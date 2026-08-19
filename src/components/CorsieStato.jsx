@@ -1,30 +1,29 @@
 import { formatPrice } from '../lib/orderStatus.js'
-import { orderTotal, paidAmount } from '../lib/pagamento.js'
-import { AZIONI_CORSIA, daQuanto, destinazioneConto } from '../lib/coda.js'
+import { paidAmount } from '../lib/pagamento.js'
+import { azioneCorsia, daQuanto, destinazioneConto } from '../lib/coda.js'
 import OrderBy from './OrderBy.jsx'
 import RigheCorsia from './RigheCorsia.jsx'
 
-// ── LA VISTA «CORSIE DI STATO» ───────────────────────────────────────
+// ── LA VISTA A CORSIE DEI CONTI ───────────────────────────────────────
 //
-// Una colonna per passo del lavoro e UN tasto per card: quello che porta
-// l'ordine al passo dopo. Chi guarda questa schermata ha in mano uno
-// shaker e non ha tempo di leggere: la colonna dice cosa c'è da fare, la
-// card dice per chi, il tasto lo fa.
+// Tre colonne — in corso, chiusi, annullati — e su ogni card in corso un
+// tasto solo: «Incassa». Chi guarda questa schermata ha in mano uno shaker
+// e non ha tempo di leggere: la colonna dice come sta il conto, la card
+// dice per chi, il tasto lo fa.
+//
+// I PASSI DEL SERVIZIO stanno nella vista del BANCO (CorsieComande), che
+// ragiona per comande: qui la card è il conto, e un conto con tre comande
+// in tre passi diversi non sta in una colonna sola.
 //
 // Le corsie e i loro conti arrivano già fatti da lib/coda.js: qui non si
 // decide niente su cosa sta dove, si disegna soltanto.
-
-const quantiDrink = (o) => (o.order_items || []).reduce((s, i) => s + (Number(i.qty) || 0), 0)
-
 export default function CorsieStato({
   corsie,
   idAcceso = null,
   onApri,
-  onAvanza,
   onIncassa,
   onScarta,
   inArrivo = [],
-  attesaPagamento = () => false,
   // TUTTO IL RESTO CHE SI FA SU UN CONTO — incassare in contanti, stampare
   // la comanda, annullare — sta dietro un «⋯ Azioni» come nelle altre
   // viste. Il tasto grande resta uno, quello che porta avanti il lavoro;
@@ -46,11 +45,9 @@ export default function CorsieStato({
     // schiacciate a sinistra, con un quarto di schermo vuoto a destra.
     <div className="corsie" style={{ '--corsie-n': corsie.length }}>
       {corsie.map((corsia) => {
-        const azione = AZIONI_CORSIA[corsia.id] || null
-        // «Da incassare» non mostra i drink ma la cifra: lì la domanda è una
-        // sola — quanto devo chiedere — e leggerla in mezzo alle righe
-        // dell'ordine, col cliente davanti, è un secondo perso ogni volta.
-        const soloCifra = corsia.id === 'da-incassare'
+        // Il tasto dipende dallo STATO che la colonna rappresenta, non dal
+        // suo id: vedi azioneCorsia, e BUG-026 per il perché.
+        const azione = azioneCorsia(corsia.stato)
         const prima = corsie[0]?.id === corsia.id
         return (
           <section className="corsia" key={corsia.id}>
@@ -92,14 +89,11 @@ export default function CorsieStato({
                   </article>
                 ))}
               {corsia.ordini.map((o) => {
-                const attesa = azione?.tipo === 'avanza' && attesaPagamento(o)
                 return (
                   <article
                     className={`card order-card corsia-card ${o.workflow_status}${
-                      o.pagatoDaServire ? ' pagato-da-servire' : ''
-                    }${o.payment_status === 'parziale' ? ' acconto' : ''}${
-                      o.id === idAcceso ? ' conto-acceso' : ''
-                    }`}
+                      o.payment_status === 'parziale' ? ' acconto' : ''
+                    }${o.id === idAcceso ? ' conto-acceso' : ''}`}
                     key={o.id}
                     id={`ordine-${o.id}`}
                     onClick={() => onApri?.(o)}
@@ -119,28 +113,14 @@ export default function CorsieStato({
                           💳 Acconto
                         </span>
                       )}
-                      {/* Già pagato ma ancora da consegnare: al posto del
-                          tempo il bollo, perché è quello che cambia il gesto
-                          (si consegna e si chiude, non si incassa). */}
-                      {o.pagatoDaServire ? (
-                        <span className="pill pagato small">Pagato</span>
-                      ) : (
-                        <span className="muted small">{daQuanto(o.created_at, adesso)}</span>
-                      )}
+                      <span className="muted small">{daQuanto(o.created_at, adesso)}</span>
                     </div>
-                    <div className="muted small corsia-dove">
-                      {destinazioneConto(o)}
-                      {soloCifra && ` · ${quantiDrink(o)} drink`}
-                    </div>
-                    {soloCifra ? (
-                      <div className="bignum corsia-cifra">{formatPrice(orderTotal(o))}</div>
-                    ) : (
-                      <RigheCorsia
-                        items={o.order_items}
-                        aperto={espansa === o.id}
-                        onApri={() => onEspandi?.(espansa === o.id ? null : o.id)}
-                      />
-                    )}
+                    <div className="muted small corsia-dove">{destinazioneConto(o)}</div>
+                    <RigheCorsia
+                      items={o.order_items}
+                      aperto={espansa === o.id}
+                      onApri={() => onEspandi?.(espansa === o.id ? null : o.id)}
+                    />
                     {o.note && <div className="order-note small corsia-nota">{o.note}</div>}
                     {/* IL PIEDE DELLA CARD, IN UNA RIGA SOLA. «⋯ Azioni» e
                         il tasto che porta avanti il lavoro erano due blocchi
@@ -164,14 +144,11 @@ export default function CorsieStato({
                         {azione && (
                           <button
                             className="btn small corsia-azione"
-                            disabled={attesa}
-                            title={attesa ? 'In attesa del pagamento: non si prepara' : undefined}
                             onClick={(e) => {
                               // Il tasto non è la card: toccandolo si fa
                               // quello che c'è scritto, non si apre il conto.
                               e.stopPropagation()
-                              if (azione.tipo === 'avanza') onAvanza?.(o)
-                              else onIncassa?.(o)
+                              onIncassa?.(o)
                             }}
                           >
                             {azione.etichetta}

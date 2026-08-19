@@ -4591,11 +4591,24 @@ requirements:
       nella vista comande, dove ora si guarda lo stato.
       COME: togliere il ramo morto (e i suoi test) o dire chi lo accenderà,
       e portare anche la vista dei conti su `azioneCorsia(stato)`.
-    status: todo
+      FATTO (19/08): il ramo è stato TOLTO, coi suoi test. Nessuno lo
+      accenderà: i passi del servizio si guardano dalla vista del BANCO, che
+      ragiona per COMANDE — un conto con tre comande in tre passi diversi non
+      sta in una colonna sola, ed è il motivo per cui quella vista è nata.
+      `corsieDiStato` adesso fa una cosa sola: le tre colonne dei conti (in
+      corso, chiusi, annullati), con le voci e le regole della griglia.
+      `AZIONI_CORSIA` è diventata `azioneCorsia(stato)`: il tasto della card
+      segue lo STATO che la colonna rappresenta, non il suo id — la stessa
+      lezione di BUG-026, dove un id nuovo faceva sparire il tasto. Con il
+      ramo se ne sono andati anche il bollo «pagato ma non servito» sulle card
+      dei conti, la colonna «Da incassare» con la cifra grande e la sua
+      `.corsia-cifra`, che da quella parte non si potevano vedere. Il bollo
+      resta dov'è vivo: sulla vista delle comande e sulla griglia.
+    status: implemented
     generate_issue: true
     labels: [manutenzione, coda]
     priority: P2
-    test_cases: []
+    test_cases: [tests/unit/coda.test.js]
 
   - id: REQ-DEV-011
     title: "Ripetizioni che si tolgono in mezz'ora, tutte insieme"

@@ -188,6 +188,15 @@ con una prova a vuoto che dice cosa cambierebbe prima di toccare niente.
 
 ### Sotto il cofano
 
+- **Via una vista che non esisteva.** Nel codice della coda c'erano ancora le
+  quattro colonne del servizio sui CONTI — con tanto di «Da incassare» — e
+  non le accendeva più niente: a tenerle in piedi erano soltanto i loro test,
+  che le raccontavano come se ci fossero. I passi del servizio si guardano
+  dalla vista del banco, che è fatta per quello. E il tasto sulla card di un
+  conto adesso dipende da com'è messo il conto, non da come si chiama la
+  colonna: è la lezione della colonna del pronto divisa in due, dove un nome
+  nuovo aveva fatto sparire il tasto.
+
 - **Il totale di un conto si rifà in un posto solo.** Modificare le righe dal
   telefono del cliente, aggiungere al conto, dividere una comanda e
   correggerla dal banco rifacevano tutti e quattro lo stesso conto — righe,

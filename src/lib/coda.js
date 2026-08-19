@@ -21,6 +21,7 @@ import {
   itemsTotal,
   MOTIVO_ANNULLO,
   motivoAnnullo,
+  ORDER_OPEN,
 } from './comande.js'
 
 // Smista gli ordini negli stati di lavorazione della COMANDA ATTIVA
@@ -358,18 +359,28 @@ export function schedeCoda(workflowOn) {
 }
 
 
-// ── LE CORSIE DI STATO ───────────────────────────────────────────────
+// ── LE CORSIE DEI CONTI ───────────────────────────────────────────────
 //
-// La quarta vista della coda: una colonna per passo del lavoro, e su ogni
-// card UN tasto solo, quello che porta l'ordine al passo dopo. Al banco si
-// preme col pollice, di corsa: la domanda a cui risponde è «cosa c'è da
-// fare adesso?», non «com'è messo questo conto».
+// La quarta vista della coda, per i CONTI: tre colonne — in corso, chiusi,
+// annullati — che sono le tre cose che un conto può essere. Le stesse voci
+// della griglia e delle schede, con le stesse regole (schedeCoda +
+// passaFiltroCoda), così le viste non raccontano mai due storie diverse.
+// Chi chiama passa la lista già ripulita da ordiniInCoda — cioè quello che
+// resta in coda per QUESTA apertura di cassa — e qui si smista soltanto.
 //
-// Le corsie NON sono un elenco di stati scritto qui dentro: sono gli stessi
-// che usa il resto dell'app (ORDER_STATUSES), riempiti con le stesse regole
-// della griglia. Chi chiama passa la lista già ripulita da ordiniInCoda —
-// cioè quello che resta in coda per QUESTA apertura di cassa — e qui si
-// smista soltanto.
+// I PASSI DEL LAVORO NON STANNO QUI. C'era anche un ramo con le quattro
+// colonne del servizio (da fare → in preparazione → pronto → da incassare),
+// e non lo chiamava più nessuno: l'unico chiamante passava
+// `workflowOn: false`, e a tenerlo in vita erano soltanto i suoi test — che
+// raccontavano una colonna «Da incassare» che al banco non ha mai visto
+// nessuno. Costava più dello spazio: i test sono la specifica, e leggere
+// «Da incassare sono i consegnati non saldati» faceva credere che quella
+// colonna ci fosse davvero.
+//
+// I passi del servizio si guardano dalla vista del BANCO, che ragiona per
+// COMANDE (corsieComande, qui sotto): un conto con tre comande in tre passi
+// diversi non sta in una colonna sola, ed è il motivo per cui quella vista
+// è nata.
 // I NOMI DELLE CORSIE SONO GLI STATI, non delle perifrasi. «Al banco» e
 // «Al ritiro» raccontavano DOVE sta il drink; lo stato del servizio dice a
 // che punto è, ed è quello che si cerca quando si guarda la colonna e
@@ -393,59 +404,48 @@ const contoSaldato = (o) =>
 const totaleCorsia = (ordini) =>
   round2(ordini.reduce((s, o) => s + orderTotal(o), 0))
 
-export function corsieDiStato(
-  ordini,
-  { isChiuso = () => false, workflowOn = true, sottoChiusi = 'tutti' } = {}
-) {
+// LO STATO CHE OGNI COLONNA RAPPRESENTA. Serve al tasto della card: cosa si
+// può fare su un conto dipende da com'è messo, non da come si chiama la
+// colonna in cui sta (vedi azioneCorsia).
+const STATO_CORSIA_CONTI = {
+  attivi: ORDER_OPEN,
+  chiusi: ORDER_STATUSES.PAGATO,
+  annullati: ORDER_STATUSES.ANNULLATO,
+}
+
+export function corsieDiStato(ordini, { isChiuso = () => false, sottoChiusi = 'tutti' } = {}) {
   const lista = ordini || []
-
-  // STATI DI SERVIZIO SPENTI: i quattro passi non esistono proprio, e
-  // quattro colonne vuote non sono una vista — sono un malinteso. Restano
-  // le tre cose che un conto può essere, con le etichette e le regole già
-  // usate dalla griglia e dalle schede (schedeCoda + passaFiltroCoda), così
-  // le viste non raccontano mai due storie diverse.
-  if (!workflowOn) {
-    return schedeCoda(false).map(([id, titolo]) => {
-      const dentro = lista.filter(
-        (o) =>
-          passaFiltroCoda(o, id, isChiuso) &&
-          // Il sottofiltro vale solo dentro i chiusi: è una domanda su
-          // quelli, e sugli altri non vuol dire niente.
-          (id !== 'chiusi' || passaSottofiltroChiusi(o, sottoChiusi))
-      )
-      return { id, titolo, stato: null, ordini: dentro, totale: totaleCorsia(dentro) }
-    })
-  }
-
-  const secchi = bucketByStatus(lista) // gli annullati restano fuori da sé
-  return CORSIE_LAVORO.map(({ id, titolo, stato }) => {
-    const dentro = (secchi[stato] || [])
-      // «Da incassare» sono i conti CONSEGNATI e non ancora saldati: quello
-      // già pagato non ha più niente da chiedere e lascia la coda.
-      .filter((o) => !isChiuso(o) && !(stato === ORDER_STATUSES.RITIRATO && contoSaldato(o)))
-      // PAGATO MA NON ANCORA CONSEGNATO: resta dov'è, con un bollo. Sono i
-      // conti saldati in anticipo — il drink è pagato ma non è ancora
-      // uscito — e sparire sarebbe il modo migliore per dimenticarseli.
-      .map((o) => (contoSaldato(o) ? { ...o, pagatoDaServire: true } : o))
-    return { id, titolo, stato, ordini: dentro, totale: totaleCorsia(dentro) }
+  return schedeCoda(false).map(([id, titolo]) => {
+    const dentro = lista.filter(
+      (o) =>
+        passaFiltroCoda(o, id, isChiuso) &&
+        // Il sottofiltro vale solo dentro i chiusi: è una domanda su
+        // quelli, e sugli altri non vuol dire niente.
+        (id !== 'chiusi' || passaSottofiltroChiusi(o, sottoChiusi))
+    )
+    return {
+      id,
+      titolo,
+      stato: STATO_CORSIA_CONTI[id],
+      ordini: dentro,
+      totale: totaleCorsia(dentro),
+    }
   })
 }
 
-// Cosa fa il tasto, corsia per corsia. Le corsie senza voce qui — «Chiusi»
-// e «Annullati», che compaiono solo a stati di servizio spenti — non hanno
-// tasto: su un conto già chiuso non c'è niente da far avanzare.
-export const AZIONI_CORSIA = {
-  // Il tasto dice DOVE VA il conto, non chi lo prende in carico: «Lo
-  // preparo io» era una promessa, e la colonna accanto si chiama con lo
-  // stato in cui il conto finisce. Stessa parola sul tasto e sulla
-  // colonna: si vede dove va a finire prima di premere.
-  'da-fare': { etichetta: 'In preparazione', tipo: 'avanza' },
-  'al-banco': { etichetta: 'È pronto', tipo: 'avanza' },
-  'al-ritiro': { etichetta: 'Ritirato/Servito', tipo: 'avanza' },
-  'da-incassare': { etichetta: 'Incassa', tipo: 'incassa' },
-  // Stati di servizio spenti: l'unica cosa che resta da fare a un conto in
-  // corso è incassarlo, come sulla griglia.
-  attivi: { etichetta: 'Incassa', tipo: 'incassa' },
+// ── COSA FA IL TASTO DI UNA CARD DI CONTO ────────────────────
+//
+// DIPENDE DALLO STATO, NON DALL'ID DELLA COLONNA. Prima era una mappa per id
+// (`AZIONI_CORSIA`), ed è esattamente da lì che è nato BUG-026 nella vista
+// delle comande: dividendo la colonna del pronto nascevano id nuovi, che in
+// quella mappa non c'erano — niente voce, niente tasto, e una funzione
+// spariva a seconda di come uno guardava la coda. Lì si è già passati allo
+// stato (azioneComanda); qui si fa lo stesso.
+//
+// Su un conto in corso l'unica cosa da fare è incassarlo, come sulla
+// griglia. Su uno chiuso o annullato non c'è più niente da chiedere.
+export function azioneCorsia(stato) {
+  return stato === ORDER_OPEN ? { etichetta: 'Incassa', tipo: 'incassa' } : null
 }
 
 // Dove va il drink e per chi: «Tavolo 4», «Bancone · Giulia». È la riga che
