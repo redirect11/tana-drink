@@ -5211,11 +5211,27 @@ requirements:
       punto in cui se lo chiede.
       NON DIPENDE DA NIENTE, ed è il contenitore: finché la pagina non
       esiste le tre sottosezioni non hanno dove stare. Si parte da qui.
-    status: todo
+      FATTO (19/08). La pagina c'è, con le sue tre sottosezioni nel menu
+      («Mesi», «Acquisti × Fatturato», «Venduto × Incassato») e la
+      didascalia di ognuna già scritta: le TABELLE arrivano con le voci
+      loro (REQ-CASSA-011, REQ-MAG-022, REQ-CASSA-009), qui c'è il posto
+      dove andranno e le parole con cui si leggeranno.
+      COM'È RISOLTO IL PERMESSO: le voci del menu portano, dove serve, la
+      funzione di `ruoli.js` che dice chi le vede (`isAdmin` per il
+      Bilancio), e il filtro sta in `lib/sezioni.js` — `vociPerRuolo` per
+      il menu, `sezioneConsentita` per l'indirizzo. Il filtro è uno solo
+      perché il menu non è l'unico che deve saperlo: `?tab=bilancio` si
+      batte a mano, e un bartender che ci arriva finisce sulla coda con
+      l'indirizzo rimesso in pari, senza una schermata che si apre per
+      dirgli «non puoi».
+    status: implemented
     generate_issue: true
     labels: [statistiche, navigazione, ruoli]
     priority: P1
-    test_cases: []
+    test_cases:
+      - tests/component/BilancioTab.test.jsx
+      - tests/unit/sezioni.test.js
+      - tests/component/StaffDrawer.test.jsx
 
   - id: REQ-CASSA-011
     title: "Bilancio → Mesi: minimo, incassato e differenza, giorno per giorno"

@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 138 | fatto e coperto dai test |
+| ✅ | 139 | fatto e coperto dai test |
 | ⚠️  | 16 | fatto ma nessun test lo verifica |
-| ⬜ | 33 | da fare |
+| ⬜ | 32 | da fare |
 | 🗑 | 1 | non più valido |
 
-**188 voci** in tutto. **154** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **33** sono lavori
+**188 voci** in tutto. **155** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **32** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **9** difetti noti sono ancora aperti.
 
@@ -48,7 +48,7 @@ come «vero oggi», non come «garantito».
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
 | [Menù e catalogo](#menù-e-catalogo) | 8 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
 | [Magazzino](#magazzino) | 18 | 6 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
-| [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 8 | 4 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
+| [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 9 | 3 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 9 | 2 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
 | [Vista cliente](#vista-cliente) | 5 | 1 | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
 | [Notifiche](#notifiche) | 4 | — | Le notifiche push: a chi arrivano, quando, e quando invece non devono arrivare. |
@@ -822,6 +822,26 @@ SI APRONO SULL'ULTIMA CHIUSURA di cassa, e quel periodo sta PRIMA degli altri ne
 
 **Dove**: `src/lib/stats.js, src/lib/eta.js, src/components/StatsTab.jsx` · **Lo dimostrano**: `tests/unit/stats.test.js`, `tests/unit/eta.test.js`, `tests/component/StatsTab.test.jsx`
 
+#### REQ-CASSA-010 — «Bilancio»: i conti del locale hanno una pagina loro, e la vede solo l'admin
+
+DECISO (19/08, dall'utente che riporta Flavio). Nasce una pagina «Bilancio» nel menu laterale, e la vede SOLO l'admin. Dentro ci stanno i conti del locale — quello che Flavio teneva su ANALISI DATI.xlsx — e sono un'altra cosa dalle STATISTICHE, che restano dove sono col solo Giornaliero e le guarda chi lavora.
+
+PERCHÉ SEPARATE: incassi, stipendi, spese e netto del mese sono i conti di chi il locale lo paga; quanto ci mette un drink a uscire e cosa si è venduto ieri sera sono il lavoro di chi sta al banco. Oggi stanno nella stessa pagina solo perché sono tutti e due «numeri», e non è un motivo.
+
+TRE SOTTOSEZIONI, nel menu laterale rientrate sotto la pagina aperta, come vuole docs/navigazione.md — le sottosezioni stanno nel menu, non in una riga di schede sopra il contenuto, che su una schermata fatta di tabelle costa altezza tutto il giorno: «Mesi» (REQ-CASSA-011), «Acquisti × Fatturato» (REQ-MAG-022) e «Venduto × Incassato» (REQ-CASSA-009, che trasloca qui dalle Statistiche). I RUOLI SI CONFRONTANO CON `src/lib/ruoli.js`, e qui serve `isAdmin`. Attenzione a dove: oggi il menu si costruisce da `NAV_GESTIONALE` (src/lib/sezioni.js) e lo filtra `isGestore` in StaffDrawer.jsx, che tiene dentro anche il bartender — «Bilancio» è la prima voce che vuole un filtro più stretto. Va tolta di lì, non nascosta dentro la pagina: una pagina che si apre e poi dice «non puoi» si è già fatta vedere.
+
+DA DEFINIRE IN IMPLEMENTAZIONE: dopo il trasloco le Statistiche restano con una sottosezione sola (Giornaliero), e una pagina con una sezione sola non ha niente da far scegliere. L'elenco si toglie invece di lasciarne una spuntata da sé.
+
+OGNI TABELLA HA LA SUA DIDASCALIA, e vale per tutte e tre le sottosezioni:
+
+SENZA DIDASCALIE LA SCHERMATA NON È FINITA (deciso dall'utente il 19/08). Una tabella di conti è piena di parole che a chi non fa il contabile non dicono niente — utile, rapporto fat/acq, incidenza, prime cost, costo del venduto — e qui vale la regola di sempre: si spiega a chi ha in mano un vassoio, parole comuni, niente gergo. Sotto o accanto a ogni tabella e a ogni riga di sintesi va una frase corta che dica CHE NUMERO È e DA DOVE VIENE. Il tono (sono proposte, non testi definitivi): «Utile: quello che resta dopo aver pagato la merce»; «Rapporto: quante volte rientra quello che hai speso»; «Incidenza: quanto pesa questa macro sull'utile del mese»; «Prime cost: merce versata + personale, in centesimi per ogni euro incassato». E DOVE UN NUMERO HA UN'AVVERTENZA che cambia come si legge — gli acquisti che partono da oggi e non hanno storico 2026, il lordo e il netto commutabili, il costo del venduto calcolato dalle ricette che non torna col foglio — l'avvertenza sta LÌ, nella didascalia, sotto il numero a cui si riferisce. Non in un manuale, non in una nota a fondo pagina: chi guarda un totale che non torna deve trovare il perché nel punto in cui se lo chiede.
+
+NON DIPENDE DA NIENTE, ed è il contenitore: finché la pagina non esiste le tre sottosezioni non hanno dove stare. Si parte da qui.
+
+FATTO (19/08). La pagina c'è, con le sue tre sottosezioni nel menu («Mesi», «Acquisti × Fatturato», «Venduto × Incassato») e la didascalia di ognuna già scritta: le TABELLE arrivano con le voci loro (REQ-CASSA-011, REQ-MAG-022, REQ-CASSA-009), qui c'è il posto dove andranno e le parole con cui si leggeranno. COM'È RISOLTO IL PERMESSO: le voci del menu portano, dove serve, la funzione di `ruoli.js` che dice chi le vede (`isAdmin` per il Bilancio), e il filtro sta in `lib/sezioni.js` — `vociPerRuolo` per il menu, `sezioneConsentita` per l'indirizzo. Il filtro è uno solo perché il menu non è l'unico che deve saperlo: `?tab=bilancio` si batte a mano, e un bartender che ci arriva finisce sulla coda con l'indirizzo rimesso in pari, senza una schermata che si apre per dirgli «non puoi».
+
+**Dove**: `src/lib/sezioni.js, src/components/StaffDrawer.jsx, src/lib/ruoli.js, src/components/BilancioTab.jsx (nuovo)` · **Lo dimostrano**: `tests/component/BilancioTab.test.jsx`, `tests/unit/sezioni.test.js`, `tests/component/StaffDrawer.test.jsx`
+
 ### Stampa
 
 La stampante termica al banco: comande, scontrini, chiusure di cassa.
@@ -1517,24 +1537,6 @@ PERCHÉ SI SPOSTA: quanto ha reso ogni macro è una domanda da conti di fine mes
 DIPENDE DA REQ-CASSA-010: il trasloco ha bisogno della pagina «Bilancio» dove andare, quindi si fa dopo — o nello stesso giro. Le due incidenze invece non dipendono da niente: sono due divisioni su numeri che la tabella ha già in mano, e si possono aggiungere anche prima.
 
 **Dove**: `src/lib/macroStats.js, src/components/MacroMonthlyTab.jsx, src/components/BilancioTab.jsx (nuovo)`
-
-#### REQ-CASSA-010 — «Bilancio»: i conti del locale hanno una pagina loro, e la vede solo l'admin
-
-DECISO (19/08, dall'utente che riporta Flavio). Nasce una pagina «Bilancio» nel menu laterale, e la vede SOLO l'admin. Dentro ci stanno i conti del locale — quello che Flavio teneva su ANALISI DATI.xlsx — e sono un'altra cosa dalle STATISTICHE, che restano dove sono col solo Giornaliero e le guarda chi lavora.
-
-PERCHÉ SEPARATE: incassi, stipendi, spese e netto del mese sono i conti di chi il locale lo paga; quanto ci mette un drink a uscire e cosa si è venduto ieri sera sono il lavoro di chi sta al banco. Oggi stanno nella stessa pagina solo perché sono tutti e due «numeri», e non è un motivo.
-
-TRE SOTTOSEZIONI, nel menu laterale rientrate sotto la pagina aperta, come vuole docs/navigazione.md — le sottosezioni stanno nel menu, non in una riga di schede sopra il contenuto, che su una schermata fatta di tabelle costa altezza tutto il giorno: «Mesi» (REQ-CASSA-011), «Acquisti × Fatturato» (REQ-MAG-022) e «Venduto × Incassato» (REQ-CASSA-009, che trasloca qui dalle Statistiche). I RUOLI SI CONFRONTANO CON `src/lib/ruoli.js`, e qui serve `isAdmin`. Attenzione a dove: oggi il menu si costruisce da `NAV_GESTIONALE` (src/lib/sezioni.js) e lo filtra `isGestore` in StaffDrawer.jsx, che tiene dentro anche il bartender — «Bilancio» è la prima voce che vuole un filtro più stretto. Va tolta di lì, non nascosta dentro la pagina: una pagina che si apre e poi dice «non puoi» si è già fatta vedere.
-
-DA DEFINIRE IN IMPLEMENTAZIONE: dopo il trasloco le Statistiche restano con una sottosezione sola (Giornaliero), e una pagina con una sezione sola non ha niente da far scegliere. L'elenco si toglie invece di lasciarne una spuntata da sé.
-
-OGNI TABELLA HA LA SUA DIDASCALIA, e vale per tutte e tre le sottosezioni:
-
-SENZA DIDASCALIE LA SCHERMATA NON È FINITA (deciso dall'utente il 19/08). Una tabella di conti è piena di parole che a chi non fa il contabile non dicono niente — utile, rapporto fat/acq, incidenza, prime cost, costo del venduto — e qui vale la regola di sempre: si spiega a chi ha in mano un vassoio, parole comuni, niente gergo. Sotto o accanto a ogni tabella e a ogni riga di sintesi va una frase corta che dica CHE NUMERO È e DA DOVE VIENE. Il tono (sono proposte, non testi definitivi): «Utile: quello che resta dopo aver pagato la merce»; «Rapporto: quante volte rientra quello che hai speso»; «Incidenza: quanto pesa questa macro sull'utile del mese»; «Prime cost: merce versata + personale, in centesimi per ogni euro incassato». E DOVE UN NUMERO HA UN'AVVERTENZA che cambia come si legge — gli acquisti che partono da oggi e non hanno storico 2026, il lordo e il netto commutabili, il costo del venduto calcolato dalle ricette che non torna col foglio — l'avvertenza sta LÌ, nella didascalia, sotto il numero a cui si riferisce. Non in un manuale, non in una nota a fondo pagina: chi guarda un totale che non torna deve trovare il perché nel punto in cui se lo chiede.
-
-NON DIPENDE DA NIENTE, ed è il contenitore: finché la pagina non esiste le tre sottosezioni non hanno dove stare. Si parte da qui.
-
-**Dove**: `src/lib/sezioni.js, src/components/StaffDrawer.jsx, src/lib/ruoli.js, src/components/BilancioTab.jsx (nuovo)`
 
 #### REQ-CASSA-011 — Bilancio → Mesi: minimo, incassato e differenza, giorno per giorno
 

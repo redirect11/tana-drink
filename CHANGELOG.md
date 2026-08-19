@@ -2,6 +2,17 @@
 
 ## Non ancora rilasciata — 1.5.1
 
+### Per chi gestisce
+
+- **«Bilancio»: i conti del locale hanno una pagina loro** — nel menu, e la
+  vede solo l'admin. Dentro ci sono le tre tabelle di fine mese: «Mesi»
+  (quanto doveva fare e quanto ha fatto, giorno per giorno), «Acquisti ×
+  Fatturato» e «Venduto × Incassato». I numeri arrivano una tabella per
+  volta; il posto e le parole per leggerli ci sono già — sotto ognuna c'è
+  scritto che numero è e da dove viene. Le Statistiche restano dove sono e
+  le guarda chi lavora: com'è andata ieri sera è un'altra domanda da com'è
+  andato il mese.
+
 ### Al banco
 
 - **Il magazzino si scala quando il drink è pronto, non quando arriva al
