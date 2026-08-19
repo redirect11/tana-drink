@@ -33,6 +33,7 @@ import {
   qtyInStockUnit,
   unitaMovimento,
   statoTravaso,
+  magazzinoBloccato,
   motivoNonMigrabile,
   fromStockUnit,
   eScorta,
@@ -468,7 +469,10 @@ function ProductsPanel() {
   // sistemato per farlo partire: è l'unica strada per sbloccarlo. Tutto il
   // resto è in sola lettura — battere una comanda e scaricare le scorte
   // continua a funzionare, che quella è la serata e non aspetta noi.
-  const bloccato = !travaso.fatto
+  // La regola sta in inventory.js, con lo stato del travaso: è la stessa che
+  // vale per Acquisti, e finché era una riga scritta qui quella schermata ne
+  // restava fuori (BUG-029).
+  const bloccato = magazzinoBloccato(items)
   const daSistemare = useMemo(
     () => new Set(travaso.daSistemare.map((it) => it.id)),
     [travaso.daSistemare]

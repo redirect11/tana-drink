@@ -555,6 +555,40 @@ export async function deleteInventoryItem(id) {
 export const ATTESA_TRAVASO =
   'Prima va aggiornato il magazzino alla nuova gestione (Magazzino → il banner in alto).'
 
+// ── UNA PORTA SOLA PER SCRIVERE IN MAGAZZINO ─────────────────────────
+//
+// In LETTURA il modello vecchio si legge con tolleranza — `articoloNormalizzato`,
+// applicato in `mapItem` — e quello che si vede a schermo è già a pezzi. In
+// SCRITTURA no: si rilegge il documento com'è scritto sul database, e sommare
+// pezzi a una giacenza ancora in centilitri dà un numero senza senso. Un
+// numero storto in magazzino sembra plausibile a chi lo legge.
+//
+// Il controllo «prima va aggiornato il magazzino» era stato copiato a mano in
+// due casi su sette: ce l'avevano il carico e la rettifica, non ce l'avevano
+// `receiveBottles`, `receivePurchaseOrder`, l'allineamento della conta e lo
+// scarico delle comande. Il buco concreto: da Acquisti → «ricevi ordine» si
+// scriveva su un magazzino non ancora aggiornato, e quella schermata non era
+// bloccata perché il blocco viveva dentro `InventoryManager`.
+//
+// Finché è una riga da ricopiare, ogni percorso nuovo nasce senza.
+
+// Da uno snapshot già letto: torna null se il prodotto non c'è più (chi cicla
+// su una lista lo salta e va avanti), e si ferma se è ancora nella forma
+// vecchia.
+function articoloScrivibile(snap) {
+  if (!snap?.exists()) return null
+  const cur = snap.data()
+  if (patchNormalizza(cur)) throw new Error(ATTESA_TRAVASO)
+  return cur
+}
+
+// Per chi ne scrive uno solo: rilegge, controlla, e restituisce l'articolo.
+async function leggiArticoloPerScrittura(ref) {
+  const cur = articoloScrivibile(await getDoc(ref))
+  if (!cur) throw new Error('Prodotto non trovato')
+  return cur
+}
+
 export async function travasaMagazzinoAPezzi({ onAvanzamento, lotto = 25 } = {}) {
   // UN GIRO PER LOTTO, E OGNI GIRO RILEGGE. Fidarsi della lista di partenza
   // vuol dire scrivere su prodotti che nel frattempo qualcuno ha cancellato
@@ -647,19 +681,10 @@ function nonEsistePiu(errore) {
 // `qty` è già in unità base; può essere negativo per uno scarico manuale.
 export async function loadStock(itemId, qty, { reason = 'carico' } = {}) {
   const ref = doc(db, 'inventory_items', itemId)
-  const s = await getDoc(ref)
-  if (!s.exists()) throw new Error('Prodotto non trovato')
-  const cur = s.data()
   // Un carico parte da quello che c'è, e quello che c'è non è mai negativo:
   // una bottiglia caricata su −0,04 deve valere una bottiglia. Lo scarico a
   // mano, dall'altra parte, non può scavare sotto lo zero.
-  // IL TRAVASO NON SI FA DI NASCOSTO (REQ-MAG-018): lo fa l'utente, con un
-  // gesto suo. Qui però la quantità arriva già in PEZZI — è quello che la
-  // schermata ha letto — e sommarla a una giacenza ancora scritta in
-  // centilitri darebbe un numero senza senso. Finché il travaso non è fatto
-  // il carico si ferma e lo dice; la schermata comunque non ci arriva, che
-  // il magazzino è in sola lettura.
-  if (patchNormalizza(cur)) throw new Error(ATTESA_TRAVASO)
+  const cur = await leggiArticoloPerScrittura(ref)
   const partenza = giacenzaPerCarico(cur.stock)
   const nuovo = qty >= 0 ? partenza + qty : partenza - scaricoPossibile(partenza, -qty)
   await updateDoc(ref, { stock: nuovo })
@@ -680,9 +705,7 @@ export async function loadStock(itemId, qty, { reason = 'carico' } = {}) {
 // bottiglie, scartando le vuote accumulate (al riassortimento si buttano).
 export async function receiveBottles(itemId, count, openQty = 0) {
   const ref = doc(db, 'inventory_items', itemId)
-  const s = await getDoc(ref)
-  if (!s.exists()) throw new Error('Prodotto non trovato')
-  const cur = s.data()
+  const cur = await leggiArticoloPerScrittura(ref)
   const size = Number(cur.package_size) || 0
   // Il carico riparte da zero se la giacenza era andata sotto: altrimenti la
   // bottiglia appena comprata copre il buco e in magazzino ne risulta meno
@@ -712,12 +735,9 @@ export async function receiveBottles(itemId, count, openQty = 0) {
 // Rettifica: imposta lo stock a un valore assoluto e registra il delta.
 export async function adjustStock(itemId, newStock) {
   const ref = doc(db, 'inventory_items', itemId)
-  const s = await getDoc(ref)
-  if (!s.exists()) throw new Error('Prodotto non trovato')
-  const cur = s.data()
   // Come nel carico: la conta arriva in pezzi, e su una giacenza ancora
   // scritta alla vecchia maniera vorrebbe dire un'altra cosa.
-  if (patchNormalizza(cur)) throw new Error(ATTESA_TRAVASO)
+  const cur = await leggiArticoloPerScrittura(ref)
   const delta = newStock - (Number(cur.stock) || 0)
   const size = Number(cur.package_size) || 0
   // Mantieni coerente il numero totale di bottiglie con la nuova giacenza.
@@ -825,9 +845,8 @@ export async function closeStockCount(id, { lines, totals, align = true }) {
 
   for (let idx = 0; idx < toAlign.length; idx++) {
     const l = toAlign[idx]
-    const s = itemSnaps[idx]
-    if (!s.exists()) continue
-    const cur = s.data()
+    const cur = articoloScrivibile(itemSnaps[idx])
+    if (!cur) continue
     const rim = Number(l.rim) || 0
     const delta = rim - (Number(cur.stock) || 0)
     if (delta === 0) continue
@@ -920,9 +939,8 @@ export async function receivePurchaseOrder(id) {
 
   for (let idx = 0; idx < lines.length; idx++) {
     const l = lines[idx]
-    const s = itemSnaps[idx]
-    if (!s.exists()) continue
-    const cur = s.data()
+    const cur = articoloScrivibile(itemSnaps[idx])
+    if (!cur) continue
     const qty = Number(l.qty_packages) || 0
     const size = Number(cur.package_size) || 0
     const stock = Number(cur.stock) || 0
@@ -2573,7 +2591,13 @@ async function depleteComandeInventory(entries) {
   const itemSnaps = await Promise.all(itemIds.map((id) => leggiDoc(doc(db, 'inventory_items', id))))
   const itemsById = {}
   itemSnaps.forEach((sn, idx) => {
-    if (sn.exists()) itemsById[itemIds[idx]] = sn.data()
+    // ARTICOLO ANCORA NELLA FORMA VECCHIA: si SALTA. Qui si è in sottofondo,
+    // dietro un gesto che deve andare avanti comunque — la comanda è pronta,
+    // il drink è uscito — e fermarlo per un numero vorrebbe dire fermare il
+    // servizio. Scalare su una giacenza scritta in centilitri, invece,
+    // scriverebbe un numero sbagliato: e in magazzino un numero sbagliato
+    // sembra plausibile a chi lo legge.
+    if (sn.exists() && !patchNormalizza(sn.data())) itemsById[itemIds[idx]] = sn.data()
   })
   // Un movimento per comanda/ingrediente; la giacenza cala una volta per
   // ingrediente con il delta cumulato (increment: sicuro anche offline).
@@ -3250,7 +3274,9 @@ async function stornaScorte(orderId, consumption) {
     for (let idx = 0; idx < consumption.length; idx++) {
       const c = consumption[idx]
       const s = snaps[idx]
-      if (!s.exists()) continue
+      // Come lo scarico: un articolo ancora nella forma vecchia si salta,
+      // che rimetterci dentro pezzi darebbe un numero senza senso.
+      if (!s.exists() || patchNormalizza(s.data())) continue
       const cur = s.data()
       // Si rimette a posto solo quello che era stato tolto: se non è una
       // scorta non era mai uscito dal magazzino, e rimetterlo dentro

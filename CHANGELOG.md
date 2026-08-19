@@ -188,6 +188,16 @@ con una prova a vuoto che dice cosa cambierebbe prima di toccare niente.
 
 ### Per chi gestisce
 
+- **Finché il magazzino non è aggiornato, non lo scrive più nessuno.** Il
+  blocco c'era, ma solo in due strade su sette: da **Acquisti → «Ricevuto»**
+  si caricava la merce su giacenze ancora scritte alla vecchia maniera, e i
+  numeri uscivano storti senza che niente lo dicesse. Adesso tutte le strade
+  che caricano o correggono una giacenza si fermano allo stesso modo, e
+  Acquisti lo dice prima: gli ordini si preparano e si mandano lo stesso — è
+  carta — ma la merce si carica dopo l'aggiornamento. Battere comande e
+  scaricare le scorte continua a funzionare: quella è la serata, e non
+  aspetta noi.
+
 - **La comanda si apre subito, anche con la rete che fa i capricci.** Toccando
   una card al banco la schermata restava su «Apro la comanda…» finché non
   rispondevano il server e il controllo di chi sei — e con il wifi del locale
