@@ -6644,10 +6644,16 @@ body.pagina-piena .inv-scheda {
 .cassa-flusso > .card {
   margin: 12px 0;
 }
+/* LE TESSERE DELLA CASSA STANNO SU UNA RIGA FINCHÉ CI STANNO. Con due
+   colonne fisse la quarta — «ancora da incassare» — finiva da sola su una
+   riga sua, larga un quarto e circondata di vuoto: sembrava un avanzo,
+   mentre è uno dei numeri che si guardano insieme agli altri. `auto-fit`
+   le mette in fila dove c'è spazio e le impila dove non ce n'è, senza che
+   nessuno debba contare quante sono. */
 @media (min-width: 760px) {
   .cassa-flusso {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
     gap: 12px;
     /* Tessere alte uguali riga per riga: `start` le lasciava a scalini, e
        una fila di numeri disallineati si legge peggio di una in riga. */
