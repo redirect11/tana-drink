@@ -181,6 +181,13 @@ con una prova a vuoto che dice cosa cambierebbe prima di toccare niente.
 
 ### Sotto il cofano
 
+- **Toccare una card costa la metà**: avanzare una comanda, dividerla o
+  cambiare il modo di consegna si rileggevano il conto dal server subito dopo
+  averlo scritto, per restituire un valore che nessuna schermata guardava. Con
+  centocinquanta comande a sera erano centinaia di letture buttate, tutte
+  dentro il momento in cui si preme il tasto. Sulla linea del locale che va e
+  viene, è il momento in cui si nota.
+
 - **Le ripetizioni segnate al giro di rilettura sono state tolte**, tutte
   insieme: le preferenze di questo terminale hanno un solo posto in cui
   leggere e scrivere, le pastiglie «sceglie un modo» delle Impostazioni sono
