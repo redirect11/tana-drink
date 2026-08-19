@@ -122,7 +122,7 @@ import VipTab from '../components/VipTab.jsx'
 import ServiceQueue from '../components/ServiceQueue.jsx'
 import StaffCallList from '../components/StaffCallList.jsx'
 import Caricamento from '../components/Caricamento.jsx'
-import { PallinoConto, SceltaColoreConto } from '../components/Corsia.jsx'
+import { coloreCardConto, SceltaColoreConto } from '../components/Corsia.jsx'
 import CorsieStato from '../components/CorsieStato.jsx'
 import CorsieComande from '../components/CorsieComande.jsx'
 import OrderBy from '../components/OrderBy.jsx'
@@ -1640,15 +1640,16 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
     const awaiting = attesaPagamento(o, passoDiNascita)
     const count = (o.order_items || []).reduce((s, i) => s + i.qty, 0)
     const open = openCards.has(o.id)
+    const colore = coloreCardConto(o)
     return (
       <div
         className={`card order-card grid-card ${o.workflow_status} ${orderStripClass(o)}${
           workflowOn && pagato(o) && !servito(o) ? ' pagato-da-servire' : ''
-        }${o.id === idAcceso ? ' conto-acceso' : ''}`}
+        }${o.id === idAcceso ? ' conto-acceso' : ''}${colore ? ' ' + colore.className : ''}`}
         key={o.id}
         id={`ordine-${o.id}`}
         onClick={contoToccato}
-        style={awaiting ? { opacity: 0.55 } : undefined}
+        style={{ ...colore?.style, ...(awaiting ? { opacity: 0.55 } : null) }}
       >
         {/* Corpo: click → dettaglio ordine */}
         <div
@@ -1659,7 +1660,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
         >
           <div className="row between">
             <span className="bignum">
-              <PallinoConto order={o} />#{o.daily_number ?? '—'} <OrderBy order={o} />
+              #{o.daily_number ?? '—'} <OrderBy order={o} />
             </span>
             {/* Il badge di preparazione compare solo se si tracciano gli stati:
                 a gestione preparazione spenta l'ordine è solo ricevuto→pagato. */}
@@ -1781,15 +1782,16 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
 
   const renderCard = (o) => {
         const awaiting = attesaPagamento(o, passoDiNascita)
+        const colore = coloreCardConto(o)
         return (
           <div
             className={`card order-card ${o.workflow_status}${
               workflowOn && pagato(o) && !servito(o) ? ' pagato-da-servire' : ''
-            }${o.id === idAcceso ? ' conto-acceso' : ''}`}
+            }${o.id === idAcceso ? ' conto-acceso' : ''}${colore ? ' ' + colore.className : ''}`}
             key={o.id}
             id={`ordine-${o.id}`}
             onClick={contoToccato}
-            style={awaiting ? { opacity: 0.55 } : undefined}
+            style={{ ...colore?.style, ...(awaiting ? { opacity: 0.55 } : null) }}
           >
             <div className="row between">
               <div>

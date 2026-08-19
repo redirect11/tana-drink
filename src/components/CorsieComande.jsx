@@ -6,7 +6,7 @@ import {
   BolloAcconto,
   Corsia,
   Lavagna,
-  PallinoConto,
+  coloreCardConto,
   PiedeCorsia,
   TastoAzioni,
   TastoCorsia,
@@ -97,24 +97,26 @@ export default function CorsieComande({
             // cinquanta card a vista.
             const voci = s.comanda && vociComanda ? vociComanda(s) : []
             const attesa = azione?.tipo === 'avanza' && attesaPagamento(o)
+            // IL COLORE È DEL CONTO, e la comanda se lo porta dietro: da
+            // tre colonne di distanza è così che si riconosce che questa e
+            // quella sono lo stesso tavolo.
+            const colore = coloreCardConto(o)
             return (
               <article
                 className={`card order-card corsia-card ${
                   s.comanda?.status || o.workflow_status
                 }${s.pagatoDaServire ? ' pagato-da-servire' : ''}${
                   o.payment_status === 'parziale' ? ' acconto' : ''
-                }${o.id === idAcceso ? ' conto-acceso' : ''}`}
+                }${o.id === idAcceso ? ' conto-acceso' : ''}${
+                  colore ? ' ' + colore.className : ''
+                }`}
+                style={colore?.style}
                 key={s.id}
                 id={`comanda-${s.id}`}
                 onClick={() => onApri?.(o, s.comanda)}
               >
                 <div className="row between">
                   <span className="corsia-num">
-                    {/* IL COLORE È DEL CONTO, e la comanda se lo porta
-                        dietro: è così che si riconosce, da tre colonne di
-                        distanza, che questa e quella sono lo stesso
-                        tavolo. */}
-                    <PallinoConto order={o} />
                     <span className="corsia-conto">#{s.numero ?? '—'}</span>
                     {/* IL NUMERO DELLA COMANDA sta accanto a quello del
                         conto, non al suo posto: due comande dello stesso
