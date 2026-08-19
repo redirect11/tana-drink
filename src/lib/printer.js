@@ -84,6 +84,23 @@ export function claimReceiptPrint(orderId) {
   }
 }
 
+// LA PRENOTAZIONE SI RESTITUISCE SE LA CARTA NON È USCITA (BUG-047).
+// `claimReceiptPrint` segna il conto PRIMA di stampare — deve, se no due
+// schermate stampano la stessa cosa — ma se poi la stampa non riesce quel
+// segno restava lì per sempre: quel conto non stampava più lo scontrino
+// automatico nemmeno riaperto e richiuso, e chi stava al banco non aveva modo
+// di capire perché. Si chiama quando la stampa fallisce e quando un conto
+// torna aperto: da lì in poi la prossima chiusura ristampa.
+export function releaseReceiptPrint(orderId) {
+  if (!orderId) return
+  try {
+    const list = JSON.parse(localStorage.getItem(PRINTED_KEY) || '[]')
+    localStorage.setItem(PRINTED_KEY, JSON.stringify(list.filter((id) => id !== orderId)))
+  } catch {
+    /* niente memoria: la guardia non c'è e si stampa comunque */
+  }
+}
+
 // La sala stampa da sé? Una domanda sola, in un posto solo: la fanno la
 // schermata che prende l'ordine e il pallino che dice se si stamperà.
 export function salaStampaDaSe(s = loadPrinterSettings()) {

@@ -1,5 +1,24 @@
 # Cosa è cambiato
 
+## 1.5.1 — 19 agosto 2026
+
+Correzione urgente su una cosa sola: **chiudere un conto con lo sconto**.
+
+- **Il conto scontato si chiude davvero, e lo scontrino esce.** Lo sconto si
+  applica un attimo prima di riscuotere, e la sua scrittura parte in
+  sottofondo: l'app rileggeva il conto per decidere se l'incasso lo saldava e
+  ci trovava la versione di prima, quella senza sconto. Il conto restava
+  aperto a metà — chiuso a schermo, «parziale» sul database — e lo scontrino
+  automatico, che guarda proprio quello, non usciva mai. Adesso quanto resta
+  da incassare lo dice la schermata, che ha davanti il conto com'è adesso.
+
+- **Uno scontrino che non è uscito si può ristampare.** Ogni conto veniva
+  segnato come «già stampato» PRIMA di mandarlo alla stampante, e non veniva
+  più liberato: se la carta non usciva, quel conto non stampava più lo
+  scontrino automatico — nemmeno riaperto e richiuso. Ora la prenotazione
+  torna libera quando la stampa fallisce e quando il conto viene riaperto. La
+  guardia contro la doppia copia resta.
+
 ## 1.5.0 — 18 agosto 2026
 
 Questa versione porta al banco una coda tutta sua. Chi prepara non lavora un
