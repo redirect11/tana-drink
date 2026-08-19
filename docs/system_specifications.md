@@ -30,7 +30,7 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 **188 voci** in tutto. **159** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **28** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
-cosa che l'app fa; **9** difetti noti sono ancora aperti.
+cosa che l'app fa; **8** difetti noti sono ancora aperti.
 
 Le voci ⚠️ sono la parte scomoda: funzionano, ma **nessun test le tiene**.
 Sono quelle che si rompono senza che nessuno se ne accorga, e vanno lette
@@ -1779,7 +1779,6 @@ della correzione è il test citato nel requisito della sua area.
 | | Cosa non va | Quanto fa male | Quando |
 |---|---|---|---|
 | 🔴 | [BUG-001](#bug-001--in-produzione-ladmin-vede-missing-or-insufficient-permissions-sulla-coda) — In produzione l'admin vede «Missing or insufficient permissions» sulla coda | bloccante | P1 |
-| 🔴 | [BUG-003](#bug-003--lannullamento-fatto-da-un-collega-manda-allo-staff-la-notifica-del-cliente) — L'annullamento fatto da un collega manda allo staff la notifica del cliente | lieve | P2 |
 | · | [BUG-028](#bug-028--due-memorie-di-lho-appena-fatto-io-sulla-stessa-schermata) — Due memorie di «l'ho appena fatto io» sulla stessa schermata | media | P1 |
 | · | [BUG-029](#bug-029--il-magazzino-si-legge-da-una-porta-e-si-scrive-da-sette-finestre) — Il magazzino si legge da una porta e si scrive da sette finestre | grave | P1 |
 | · | [BUG-030](#bug-030--il-menù-del-cliente-decide-da-solo-come-si-consegna) — Il menù del cliente decide da solo come si consegna | grave | P1 |
@@ -1797,14 +1796,6 @@ della correzione è il test citato nel requisito della sua area.
 Banner giallo d'errore in cima alla coda «In servizio» e coda vuota (0 aperti · 0 chiusi) per l'utente admin. Analisi del 14/08: il banner ha una sola sorgente, l'onError di subscribeActiveOrders — ma la collection orders è in lettura pubblica, quindi con le regole del repo quel deny è impossibile. Candidati, in ordine: (1) App Check/reCAPTCHA che non rilascia il gettone (incidente identico già documentato nei commenti di scripts/appcheck.js e scripts/recaptcha-domini.js: nega tutto, anche le collection pubbliche, e dipende dal dispositivo o dal dominio, non dal ruolo); (2) regole live in produzione diverse dal repo (prima del commit f8cd5ed il ruolo admin era rifiutato ovunque tranne che su orders); (3) banner che non si azzera mai una volta comparso, quindi basta una scrittura fallita per tenerlo fisso tutta la sessione. Verifiche in sola lettura: diagnostica-permessi.js (non passa da App Check: se lì è verde e il browser no, è App Check), appcheck.js e recaptcha-domini.js, confronto rules live/repo. Da chiedere: succede su tutti i dispositivi o solo su uno? Comunque vada, la fix collaterale è azzerare il banner al primo snapshot buono e loggare gli errori dei listener oggi silenziati.
 
 **Dove**: `src/lib/firebaseClient.js (App Check), firestore.rules, src/pages/BartenderPage.jsx`
-
-#### BUG-003 — L'annullamento fatto da un collega manda allo staff la notifica del cliente
-
-Un admin che apre un ordine annullato da un altro admin su un altro dispositivo riceve la notifica pensata per il cliente («c'è un problema con il tuo ordine»), che per chi lavora al banco non ha senso. Comportamento atteso per admin, bartender e staff: testo dedicato allo staff;
-
-NESSUNA notifica push sul dispositivo; l'evento compare solo nella lista notifiche in-app (ordini annullati e ricevuti), e la si vede entrando nell'app, non aprendo l'ordine. Il cliente continua a ricevere la sua push come oggi.
-
-**Dove**: `functions/lib/push-core.js, src/lib/notify.js, src/lib/preferenzeNotifiche.js`
 
 #### BUG-028 — Due memorie di «l'ho appena fatto io» sulla stessa schermata
 
