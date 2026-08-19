@@ -3355,9 +3355,27 @@ export async function restoreOrder(id, { motivo = null, chi = null } = {}) {
 // Ascolta in tempo reale un singolo ordine. Restituisce una funzione di
 // disiscrizione. `onChange` riceve l'ordine mappato (o null se eliminato).
 export function subscribeOrder(id, onChange, onError) {
+  const ref = doc(db, 'orders', id)
+  // PRIMA DI TUTTO, LA CACHE. Il conto lo si apre dalla card che lo sta già
+  // mostrando: è in cache di sicuro. Ma onSnapshot risponde subito col dato
+  // locale solo quando SA di essere offline — con la rete collegata e muta
+  // (wifi del locale, portale captive, DNS che non risponde) crede di essere
+  // online e ASPETTA il server, e la schermata resta sullo spinner con il
+  // conto già in tasca. È la stessa medicina della coda (subscribeActiveOrders).
+  let arrivato = false
+  getDocFromCache(ref)
+    .then((snap) => {
+      if (!arrivato && snap.exists()) onChange(mapOrder(snap))
+    })
+    .catch(() => {
+      // Cache vuota: si aspetta il listener, come prima.
+    })
   return onSnapshot(
-    doc(db, 'orders', id),
-    (snap) => onChange(snap.exists() ? mapOrder(snap) : null),
+    ref,
+    (snap) => {
+      arrivato = true
+      onChange(snap.exists() ? mapOrder(snap) : null)
+    },
     onError
   )
 }

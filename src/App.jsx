@@ -11,6 +11,7 @@ import PosPage from './pages/PosPage.jsx'
 import { useCustomer, useHasOrders } from './lib/customerAuth.js'
 import { isFirebaseConfigured, auth } from './lib/firebaseClient.js'
 import { isPersonale, isSala } from './lib/ruoli.js'
+import { ricordaRuolo } from './lib/ruoloLocale.js'
 import { onAuthStateChanged } from 'firebase/auth'
 import {
   subscribeSettings,
@@ -200,6 +201,10 @@ export default function App() {
       try {
         const token = await u.getIdTokenResult()
         const role = token.claims.role
+        // Si ricorda su questo dispositivo: chi deve disegnare in fretta
+        // (la schermata di una comanda) parte da qui invece di rileggere il
+        // token, che a token scaduto vuol dire andare in rete.
+        ricordaRuolo(u.uid, role)
         const isStaff = isPersonale(role)
         setStaffRole(isStaff ? role : null)
         const nome = u.displayName || String(u.email || '').split('@')[0]
