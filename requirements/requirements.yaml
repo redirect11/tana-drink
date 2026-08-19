@@ -2336,16 +2336,23 @@ requirements:
       serve piu' a nessuno, e due letture diverse della stessa serata
       convivendo sono il modo migliore per non fidarsi di nessuna delle
       due.
-      RESTA APERTA UNA COSA del vocale delle 15:47, e qui non e' decisa:
-      lui dice che le macro-categorie «sono indissolubilmente legate»,
-      che magazzino e menu «convogliano insieme nelle macro categorie che
-      sono le stesse, non sono separabili». Oggi invece gli elenchi sono
-      DUE (campo `ambito`, magazzino e menu) con un aggancio dall'uno
-      all'altro, e sono due perche' il 17/08 aveva chiesto di tenerli
-      distinti. Le due frasi possono voler dire la stessa cosa — stessa
-      famiglia di nomi, guardata da due parti — oppure che l'elenco
-      dev'essere uno solo: da chiedere, perche' se e' uno solo l'aggancio
-      `macro_menu_id` non serve piu' e le due sottosezioni tornano una.
+      GLI ELENCHI SONO DUE, E NON ERA UNA DOMANDA APERTA (chiuso il 19/08
+      dall'utente): «Le macro-categorie sono macro-categorie per gli
+      ACQUISTI e macro-categorie per le VENDITE». Cioe' com'e' gia' fatto
+      dalla 1.4.8, ed e' la stessa cosa chiesta il 17/08.
+      La frase del vocale delle 15:47 — «sono le stesse, non sono
+      separabili» — era stata segnata come possibile contraddizione, e non
+      lo e': dice che le due famiglie si GUARDANO INSIEME, che e'
+      esattamente quello che fanno stando in due elenchi agganciati. Un
+      elenco solo non funzionerebbe: si compra «birre e bibite» e si vende
+      «alcolici e distillati», e sono due tagli diversi della stessa merce.
+      PERCHE' `macro_menu_id` RESTA anche se oggi nessun conto lo legge:
+      e' l'aggancio fra una macro d'acquisto e la macro di vendita
+      corrispondente, e serve il giorno in cui gli acquisti avranno la loro
+      schermata — «quanto ho speso in bibite» vive li' (vedi
+      `purchasesByMacro`, rimasta apposta). Senza quel campo, mettere le due
+      colonne una accanto all'altra vorrebbe dire richiedere a mano un
+      lavoro gia' fatto.
       IN QUALE MESE cade quello che si e' comprato e' un'altra domanda
       ancora, e sta a parte in REQ-MAG-021 (vocali del 18/08 sera).
       FATTO (1.5.x) il confronto, con la regola decisa il 18/08. La tabella
@@ -2383,11 +2390,10 @@ requirements:
       quella con cui lo si compra, non quella con cui lo si rivende. Dove
       erano state messe aliquote diverse per prodotto i netti cambiano di
       qualche punto, ed è il verso giusto.
-      RESTA APERTA la domanda sui due elenchi — uno solo, come dice il
-      vocale delle 15:47, oppure due con l'aggancio, come chiesto il giorno
-      prima. L'aggancio `macro_menu_id` è rimasto dov'era e non lo guarda
-      più nessun conto: si toglierà quando la risposta arriva, non prima,
-      perché è l'altra metà della stessa decisione.
+      LA DOMANDA SUI DUE ELENCHI È CHIUSA (19/08): sono due — acquisti e
+      vendite — come già sono. L'aggancio `macro_menu_id` resta e ha una
+      ragione, scritta qui sopra: serve quando gli acquisti avranno la loro
+      schermata, per mettere speso e incassato uno accanto all'altro.
       E NON C'È NIENTE DA SALVAGUARDARE, verificato il 18/08: la collezione
       `macro_categories` è VUOTA — zero documenti sia in produzione sia su
       `tana-drink-test`. Nessuno ha mai creato una macro, né di magazzino
