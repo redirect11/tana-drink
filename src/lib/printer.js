@@ -101,6 +101,19 @@ export function releaseReceiptPrint(orderId) {
   }
 }
 
+// L'INCASSO È UNA CHIUSURA NUOVA, sempre: chi sta incassando adesso deve
+// avere lo scontrino di adesso, anche se per questo conto ne era già
+// uscito uno prima di una riapertura. «Se riapro il conto e cambio
+// qualcosa e riscuoto di nuovo, deve ristampare il nuovo conto. Non ha
+// senso che stampi solo una volta» (l'utente, 19/08). Si restituisce la
+// pretesa vecchia e si prende quella nuova in un colpo: la coda, che
+// vedrà il conto pagato fra un istante, troverà la pretesa già presa e
+// non farà la seconda copia.
+export function reclaimReceiptPrint(orderId) {
+  releaseReceiptPrint(orderId)
+  return claimReceiptPrint(orderId)
+}
+
 // La sala stampa da sé? Una domanda sola, in un posto solo: la fanno la
 // schermata che prende l'ordine e il pallino che dice se si stamperà.
 export function salaStampaDaSe(s = loadPrinterSettings()) {

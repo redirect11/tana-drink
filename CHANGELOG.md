@@ -4,6 +4,12 @@
 
 Correzione urgente su una cosa sola: **chiudere un conto con lo sconto**.
 
+- **Riscuotere di nuovo un conto riaperto ristampa lo scontrino** — quello
+  nuovo, con le cifre corrette — da qualunque terminale, anche se la coda
+  non ha visto la riapertura. E l'interruttore in Impostazioni → Stampante
+  ora dice il vero: la stampa parte **alla riscossione**, non «quando
+  l'ordine è pronto».
+
 - **Il conto scontato si chiude davvero, e lo scontrino esce.** Lo sconto si
   applica un attimo prima di riscuotere, e la sua scrittura parte in
   sottofondo: l'app rileggeva il conto per decidere se l'incasso lo saldava e

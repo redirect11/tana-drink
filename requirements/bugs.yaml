@@ -1016,3 +1016,37 @@ bugs:
     test_cases:
       - tests/unit/scontrinoUnaVolta.test.js
       - tests/component/PaymentScreen.test.jsx
+
+  - id: BUG-048
+    title: "Il conto riaperto e riscosso di nuovo non ristampava lo scontrino"
+    area: "src/lib/printer.js (reclaimReceiptPrint), src/components/PaymentScreen.jsx, src/components/PrinterSetup.jsx"
+    description: >
+      Deciso dall'utente il 19/08, chiudendo il cerchio aperto da BUG-046 e
+      BUG-047: «l'autostampa deve ristampare lo scontrino anche se e' gia'
+      stato stampato. Se riapro il conto e cambio qualcosa e riscuoto di
+      nuovo, deve ristampare il nuovo conto. Non ha senso che stampi solo
+      una volta».
+      COSA MANCAVA ANCORA, dopo BUG-047: la riapertura libera la pretesa
+      (releaseReceiptPrint, gia' in quel fix), ma il rilascio dipende dal
+      fatto che un terminale VEDA il conto riaperto. Se non lo vede — la
+      coda chiusa in quel momento, un altro terminale — l'incasso
+      successivo trovava la pretesa ancora presa e il nuovo scontrino non
+      usciva.
+      LA CURA: l'incasso FORZA la pretesa (reclaimReceiptPrint = release +
+      claim in un colpo). Un incasso vero e' per definizione una chiusura
+      nuova: chi sta incassando adesso deve avere lo scontrino di adesso.
+      La coda, che vedra' il conto pagato un istante dopo, trova la pretesa
+      gia' presa e non fa la seconda copia — la guardia sulle doppie copie
+      resta intatta. Le chiusure d'ufficio (senza incasso in mano) usano la
+      pretesa normale.
+      SISTEMATA ANCHE L'ETICHETTA che mentiva: l'interruttore in
+      Impostazioni -> Stampante diceva «stampa quando l'ordine e' pronto»,
+      ma la stampa parte alla riscossione da due versioni. Ora dice quello
+      che fa.
+    in_produzione: true
+    status: fixed
+    generate_issue: true
+    labels: [bug, stampa, pagamenti]
+    severity: media
+    priority: P2
+    test_cases: [tests/unit/ristampaScontrino.test.js]
