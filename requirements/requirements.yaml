@@ -4597,6 +4597,45 @@ requirements:
     priority: P2
     test_cases: []
 
+  - id: REQ-DEV-012
+    title: "docs/requisiti.md e' la specifica di sistema, e si genera"
+    area: "scripts/lib-specifica.mjs, scripts/requisiti.mjs, docs/requisiti.md"
+    description: >
+      Chiesto dall'utente il 19/08: «requisiti.md dovrebbe diventare la
+      specifica di sistema dato che i requisiti li abbiamo in
+      requirements.yaml e su GitHub». Il documento era lo specchio del
+      registro — le stesse voci, nello stesso ordine, con dentro meno cose —
+      e come tutti gli specchi scritti a mano era rimasto indietro: 94 voci
+      raccontate su 187 esistenti, per mesi, senza che nessuno se ne
+      accorgesse.
+      COSA E' ADESSO: un documento che si legge come una specifica. Le aree
+      nell'ordine della serata (si prende un ordine, si compone il conto, si
+      incassa, e solo dopo menu', magazzino e il resto), ognuna presentata da
+      una riga che dice di cosa parla; in testa la data di generazione, i
+      conteggi e l'avviso che il file e' generato, con il comando per
+      rifarlo.
+      TRE CAPITOLI, E LA DIVISIONE E' IL PUNTO. «Cosa fa il sistema» tiene le
+      voci implemented e la parte fatta delle partial: e' quello a cui uno si
+      affida. «Lavori previsti» tiene le todo, che sono un impegno e non una
+      descrizione — mescolarle al resto farebbe leggere come esistente della
+      roba che non esiste. «Difetti noti» tiene i bug ancora aperti
+      (requirements/bugs.yaml): sono i punti in cui il sistema NON fa quello
+      che c'e' scritto sopra, e tacerli renderebbe bugiarda tutta la parte
+      precedente. I deprecated restano in fondo, col solo titolo.
+      OGNI COMPORTAMENTO CITA I TEST CHE LO DIMOSTRANO, e chi non ne ha lo
+      dichiara. E' il patto del progetto: i test sono la specifica
+      eseguibile, il documento e' la sua faccia leggibile, e quando le due si
+      scollano e' il documento ad avere torto.
+      RESTA GENERATO, ed e' l'unica cosa che lo tiene vivo: scritto a mano
+      tornerebbe vecchio in una settimana, e la prova e' come stava prima.
+      La resa vive in un modulo suo (`lib-specifica.mjs`) perche' cosi' si
+      prova con un registro finto di sette voci, invece che coi 187 veri —
+      un test che legge il registro vero prova il registro, non il documento.
+    status: implemented
+    generate_issue: false
+    labels: [metodo, documentazione]
+    test_cases: [tests/unit/specifica.test.js]
+
   - id: REQ-UI-021
     title: "Tre nomi per lo stesso passo del servizio"
     area: "src/lib/comande.js, src/lib/orderStatus.js"
