@@ -45,6 +45,11 @@
 
 ### Al banco
 
+- **Lo scontrino non aspetta più un logo che non c'è**: se `logo.png` manca
+  o non è nella memoria dell'app, ogni stampa rifaceva il caricamento e
+  aspettava l'errore prima di far uscire la carta. Adesso ci prova una volta
+  sola: dalla seconda in poi lo scontrino esce subito.
+
 - **Aprendo un conto annullato da un collega non arriva più l'avviso del
   cliente**: «⚠️ Problema con il tuo ordine — prego recarsi al bancone»
   spuntava addosso a chi sta *dietro* al bancone. Adesso a chi lavora non
