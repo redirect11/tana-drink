@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 144 | fatto e coperto dai test |
+| ✅ | 145 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
-| ⬜ | 30 | da fare |
+| ⬜ | 29 | da fare |
 | 🗑 | 1 | non più valido |
 
-**190 voci** in tutto. **159** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **30** sono lavori
+**190 voci** in tutto. **160** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **29** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **7** difetti noti sono ancora aperti.
 
@@ -60,7 +60,7 @@ come «vero oggi», non come «garantito».
 | [Integrazione SumUp](#integrazione-sumup) | 6 | — | Il dialogo con il terminale SumUp, dalle Cloud Functions. |
 | [Intelligenza artificiale](#intelligenza-artificiale) | — | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
 | [Interfaccia](#interfaccia) | 19 | 2 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
-| [Come si lavora al progetto](#come-si-lavora-al-progetto) | 5 | 7 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
+| [Come si lavora al progetto](#come-si-lavora-al-progetto) | 6 | 6 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 
 ## Cosa fa il sistema
 
@@ -1414,6 +1414,14 @@ Il merge in develop passa un cancello, descritto in docs/gitflow.md: requisiti e
 
 **Dove**: `docs/gitflow.md, vitest.config.mjs, .github/workflows/test.yml` · ⚠️ **Nessun test lo verifica.**
 
+#### REQ-DEV-011 — Ripetizioni che si tolgono in mezz'ora, tutte insieme
+
+Raccolta dalla rilettura del diff della 1.5.0: cose piccole, nessuna urgente, che conviene fare in un colpo solo perché toccano file appena scritti — è il momento in cui costano meno. - `impostazioniLocali.js`: cinque coppie leggi/scrivi con lo stesso try/catch. Due funzioni private e restano cinque righe a preferenza. I commenti lunghi che spiegano perché ognuna è del DISPOSITIVO vanno tenuti tutti: sono la parte che vale. - `SettingsTab.jsx`: cinque volte lo stesso gruppo di pastiglie «scegli un modo» → un componente solo. - `InventoryManager.jsx`: il riquadro del travaso scrive tre volte lo stesso overlay e chiede due volte la stessa condizione; `CarcoForm` tiene uno stato che è ricavabile; due componenti gemelli calcolano la stessa previsione di fine serata. - `generate-issues.mjs`: rilegge una per una le issue che ha appena scaricato tutte insieme — fino a 190 chiamate in più per giro di CI. - i tre script nuovi dell'emulatore riscrivono il client REST che `lib-firestore.js` ha già: basta fargli accettare indirizzo e intestazioni.
+
+FATTO (19/08), tutte e cinque, senza cambiare niente di quello che si vede. `impostazioniLocali.js`: due funzioni private (`leggi`, `scrivi`) e il try/catch sta in un posto solo — i commenti sul perché ogni preferenza è del DISPOSITIVO sono rimasti tutti. `SettingsTab.jsx`: un `SceltaModo` al posto di QUATTORDICI gruppi di pastiglie scritti a mano (erano cinque a occhio, quattordici a contarli), con la voce spenta che resta a vista col motivo nel titolo. `InventoryManager.jsx`: un `RiquadroTravaso` al posto di tre overlay uguali, ogni passo con la sua condizione una volta sola; la previsione di fine serata la fa `previstoFineSerata` per tutte e due le viste; nel carico a colli la quantità non è più uno stato da tenere allineato a mano ma il conto cartoni × pezzi (e tornando a mano il numero calcolato resta scritto, che ricontare i pezzi già contati non lo vuole nessuno). `generate-issues.mjs`: l'elenco porta già corpo ed etichette — la rilettura una per una era un'abitudine rimasta dai tempi della ricerca, ed erano fino a 190 chiamate in più a giro. `lib-firestore.js`: il client prende un `host`, e `clientEmulatore` è lo stesso client che punta all'emulatore — i tre script hanno smesso di riscriversi commit, elenco e paginazione, e il limite dei 200 per commit adesso sta in un posto solo.
+
+**Dove**: `src/lib/impostazioniLocali.js, src/components/SettingsTab.jsx, src/components/InventoryManager.jsx, scripts/generate-issues.mjs, scripts/lib-firestore.js` · **Lo dimostrano**: `tests/unit/clientFirestore.test.js`
+
 #### REQ-DEV-012 — docs/system_specifications.md e' la specifica di sistema, e si genera
 
 Chiesto dall'utente il 19/08: «requisiti.md dovrebbe diventare la specifica di sistema dato che i requisiti li abbiamo in requirements.yaml e su GitHub» — e a stretto giro, sempre lui, il file e' stato rinominato in system_specifications.md, perche' il nome dicesse cos'e' (la specifica) e non da dove nasce (i requisiti). Il documento era lo specchio del registro — le stesse voci, nello stesso ordine, con dentro meno cose — e come tutti gli specchi scritti a mano era rimasto indietro: 94 voci raccontate su 187 esistenti, per mesi, senza che nessuno se ne accorgesse.
@@ -1811,12 +1819,6 @@ DA FARE CON CALMA E CON I TEST DAVANTI: è il punto in cui si scrivono i soldi d
 Trovato dalla rilettura del diff della 1.5.0. `corsieDiStato` viene chiamata da un solo punto, con `workflowOn` cablato a `false`: il ramo con i quattro passi del servizio, le sue voci in `AZIONI_CORSIA`, il bollo «pagato ma non servito» sui conti e la classe CSS che lo disegna sono irraggiungibili. A tenerli in vita sono solo i test. Il costo non è lo spazio: i test sono la specifica, e chi legge «Da incassare sono i consegnati non saldati» crede che quella colonna esista. Nella stessa riga: la vista dei conti sceglie ancora l'azione della card per ID DI CORSIA — è esattamente da lì che è nato BUG-026 nella vista comande, dove ora si guarda lo stato. COME: togliere il ramo morto (e i suoi test) o dire chi lo accenderà, e portare anche la vista dei conti su `azioneCorsia(stato)`.
 
 **Dove**: `src/lib/coda.js, src/pages/BartenderPage.jsx`
-
-#### REQ-DEV-011 — Ripetizioni che si tolgono in mezz'ora, tutte insieme
-
-Raccolta dalla rilettura del diff della 1.5.0: cose piccole, nessuna urgente, che conviene fare in un colpo solo perché toccano file appena scritti — è il momento in cui costano meno. - `impostazioniLocali.js`: cinque coppie leggi/scrivi con lo stesso try/catch. Due funzioni private e restano cinque righe a preferenza. I commenti lunghi che spiegano perché ognuna è del DISPOSITIVO vanno tenuti tutti: sono la parte che vale. - `SettingsTab.jsx`: cinque volte lo stesso gruppo di pastiglie «scegli un modo» → un componente solo. - `InventoryManager.jsx`: il riquadro del travaso scrive tre volte lo stesso overlay e chiede due volte la stessa condizione; `CarcoForm` tiene uno stato che è ricavabile; due componenti gemelli calcolano la stessa previsione di fine serata. - `generate-issues.mjs`: rilegge una per una le issue che ha appena scaricato tutte insieme — fino a 190 chiamate in più per giro di CI. - i tre script nuovi dell'emulatore riscrivono il client REST che `lib-firestore.js` ha già: basta fargli accettare indirizzo e intestazioni.
-
-**Dove**: `src/lib/impostazioniLocali.js, src/components/SettingsTab.jsx, src/components/InventoryManager.jsx, scripts/generate-issues.mjs, scripts/lib-firestore.js`
 
 ## Difetti noti
 

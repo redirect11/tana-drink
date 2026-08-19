@@ -15,26 +15,51 @@
 // decidendo niente di importante su questa copia (gli ordini leggono
 // sempre il documento vero).
 
+// ── LEGGERE E SCRIVERE, SENZA RIPETERE IL TRY/CATCH ──────────────────
+//
+// `localStorage` sa dire di no: memoria piena, oppure negata dal browser in
+// navigazione privata. La risposta è sempre la stessa — in lettura si
+// riparte dal default, in scrittura la scelta vale solo per questa sessione
+// — e scriverla preferenza per preferenza faceva cinque try/catch identici.
+// Il PERCHÉ di ognuna (perché è del DISPOSITIVO e non del locale) resta
+// scritto sopra la sua coppia: è quella la parte che vale.
+
+// `interpreta` riceve il testo grezzo; se non c'è niente scritto, o se la
+// memoria non risponde, torna `seNonSiSa` — quale sia lo decide la
+// preferenza, non questo aiuto.
+function leggi(chiave, interpreta, seNonSiSa) {
+  try {
+    const grezzo = localStorage.getItem(chiave)
+    return grezzo == null ? seNonSiSa : interpreta(grezzo)
+  } catch {
+    /* roba illeggibile o memoria negata: decide il default */
+    return seNonSiSa
+  }
+}
+
+// `null` cancella la preferenza. Quello che non è testo si serializza qui
+// dentro, dove un JSON impossibile finisce nello stesso catch.
+function scrivi(chiave, valore) {
+  try {
+    if (valore == null) localStorage.removeItem(chiave)
+    else localStorage.setItem(chiave, typeof valore === 'string' ? valore : JSON.stringify(valore))
+  } catch {
+    /* niente memoria: la scelta vale per questa sessione */
+  }
+}
+
 const CHIAVE = 'tana:impostazioni'
 
 export function ricordaImpostazioni(data) {
   if (!data || typeof data !== 'object') return
-  try {
-    localStorage.setItem(CHIAVE, JSON.stringify(data))
-  } catch {
-    /* memoria piena o negata: si riparte dai default, come prima */
-  }
+  scrivi(CHIAVE, data)
 }
 
 // I valori con cui disegnare la PRIMA volta: i default con sopra l'ultima
 // risposta del server, se la si ricorda.
 export function impostazioniRicordate(defaults = {}) {
-  try {
-    const salvate = JSON.parse(localStorage.getItem(CHIAVE) || 'null')
-    if (salvate && typeof salvate === 'object') return { ...defaults, ...salvate }
-  } catch {
-    /* roba illeggibile: meglio i default che un errore */
-  }
+  const salvate = leggi(CHIAVE, JSON.parse, null)
+  if (salvate && typeof salvate === 'object') return { ...defaults, ...salvate }
   return { ...defaults }
 }
 
@@ -53,21 +78,12 @@ const CHIAVE_CORSIE = 'tana:corsie:nascoste'
 // quali colonne convenga tenere spente all'inizio è una decisione del
 // dominio, e sta in coda.js con le corsie.
 export function corsieNascoste() {
-  try {
-    const salvate = JSON.parse(localStorage.getItem(CHIAVE_CORSIE) || 'null')
-    return Array.isArray(salvate) ? salvate.filter((x) => typeof x === 'string') : null
-  } catch {
-    /* roba illeggibile: decide il default */
-    return null
-  }
+  const salvate = leggi(CHIAVE_CORSIE, JSON.parse, null)
+  return Array.isArray(salvate) ? salvate.filter((x) => typeof x === 'string') : null
 }
 
 export function ricordaCorsieNascoste(ids) {
-  try {
-    localStorage.setItem(CHIAVE_CORSIE, JSON.stringify([...new Set(ids || [])]))
-  } catch {
-    /* niente memoria: la scelta vale per questa sessione */
-  }
+  scrivi(CHIAVE_CORSIE, [...new Set(ids || [])])
 }
 
 // ── COSA GUARDA QUESTO TERMINALE: I CONTI O LE COMANDE ───────────────
@@ -84,21 +100,12 @@ export function ricordaCorsieNascoste(ids) {
 const CHIAVE_VISTA = 'tana:corsie:vista'
 
 export function vistaCorsie() {
-  try {
-    const v = localStorage.getItem(CHIAVE_VISTA)
-    return v === 'conti' || v === 'comande' ? v : null
-  } catch {
-    return null
-  }
+  const v = leggi(CHIAVE_VISTA, (grezzo) => grezzo, null)
+  return v === 'conti' || v === 'comande' ? v : null
 }
 
 export function ricordaVistaCorsie(vista) {
-  try {
-    if (vista) localStorage.setItem(CHIAVE_VISTA, vista)
-    else localStorage.removeItem(CHIAVE_VISTA)
-  } catch {
-    /* niente memoria: la scelta vale per questa sessione */
-  }
+  scrivi(CHIAVE_VISTA, vista || null)
 }
 
 // ── I TASTI DEL CONTO: aperti o ridotti ──────────────────────────────
@@ -115,20 +122,11 @@ export function ricordaVistaCorsie(vista) {
 const CHIAVE_AZIONI_CONTO = 'tana:conto:azioni-ridotte'
 
 export function azioniContoRidotte() {
-  try {
-    return localStorage.getItem(CHIAVE_AZIONI_CONTO) === '1'
-  } catch {
-    return false
-  }
+  return leggi(CHIAVE_AZIONI_CONTO, (v) => v === '1', false)
 }
 
 export function ricordaAzioniContoRidotte(ridotte) {
-  try {
-    if (ridotte) localStorage.setItem(CHIAVE_AZIONI_CONTO, '1')
-    else localStorage.removeItem(CHIAVE_AZIONI_CONTO)
-  } catch {
-    /* niente memoria: la scelta vale per questa sessione */
-  }
+  scrivi(CHIAVE_AZIONI_CONTO, ridotte ? '1' : null)
 }
 
 // ── IL PRONTO, UNITO O DIVISO, SU QUESTO TERMINALE ───────────────────
@@ -145,17 +143,12 @@ export function ricordaAzioniContoRidotte(ridotte) {
 const CHIAVE_PRONTO = 'tana:corsie:pronto-diviso'
 
 export function prontoDiviso() {
-  try {
-    return localStorage.getItem(CHIAVE_PRONTO) === '1'
-  } catch {
-    return false
-  }
+  return leggi(CHIAVE_PRONTO, (v) => v === '1', false)
 }
 
 export function ricordaProntoDiviso(diviso) {
-  try {
-    localStorage.setItem(CHIAVE_PRONTO, diviso ? '1' : '0')
-  } catch {
-    /* niente memoria: vale per questa sessione */
-  }
+  // Qui lo '0' si scrive davvero: «unite» è una scelta, non un'assenza di
+  // scelta, e cancellare la chiave la renderebbe indistinguibile dal
+  // terminale che non ha mai deciso.
+  scrivi(CHIAVE_PRONTO, diviso ? '1' : '0')
 }

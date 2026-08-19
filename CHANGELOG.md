@@ -181,6 +181,19 @@ con una prova a vuoto che dice cosa cambierebbe prima di toccare niente.
 
 ### Sotto il cofano
 
+- **Le ripetizioni segnate al giro di rilettura sono state tolte**, tutte
+  insieme: le preferenze di questo terminale hanno un solo posto in cui
+  leggere e scrivere, le pastiglie «sceglie un modo» delle Impostazioni sono
+  un pezzo solo invece di quattordici copie, il riquadro dell'aggiornamento
+  magazzino è uno invece di tre, e il numero «a fine serata» lo calcola una
+  funzione sola per la tabella e per le card. Non cambia niente di quello che
+  si vede al banco: cambia che d'ora in poi si corregge in un posto.
+
+- **Il carico a colli non può più restare indietro**: la quantità è sempre
+  cartoni × pezzi per collo, calcolata sul momento. Prima era un numero
+  tenuto a parte, da rifare a ogni campo toccato — e chi cambiava i pezzi per
+  collo dopo aver scritto i cartoni caricava quello di prima.
+
 - **Un giro di rilettura sul lavoro di questa versione** (riuso,
   semplificazione, efficienza, profondità): la stessa regola adesso sta in un
   posto solo dove prima era scritta due o tre volte, e sono spariti due pezzi
