@@ -9,7 +9,7 @@
 // non poter più aggiungere un drink al conto.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import '@testing-library/jest-dom/vitest'
@@ -58,6 +58,9 @@ vi.mock('../../src/lib/api.js', async () => {
     fetchOrder: vi.fn(() => Promise.resolve(ORDINE)),
     subscribeOrder: vi.fn((id, cb) => {
       cb(ORDINE)
+      // Il filo per consegnare a mano, dal test, quello che il server
+      // manderebbe mentre la pagina è aperta.
+      filo.aggiorna = cb
       return () => {}
     }),
     subscribeSettings: vi.fn((cb) => {
@@ -84,6 +87,7 @@ vi.mock('../../src/lib/notify.js', () => ({
   ensureNotificationPermission: vi.fn(() => Promise.resolve(false)),
   notify: vi.fn(),
 }))
+vi.mock('../../src/lib/notifyStore.js', () => ({ recordNotif: vi.fn() }))
 vi.mock('../../src/lib/toast.js', () => ({
   toastSuccess: vi.fn(),
   toastError: vi.fn(),
@@ -98,8 +102,11 @@ vi.mock('../../src/components/OrderPosDetail.jsx', () => ({
 import OrderStatusPage from '../../src/pages/OrderStatusPage.jsx'
 import { updateOrderItems } from '../../src/lib/api.js'
 import { toastSuccess, toastError } from '../../src/lib/toast.js'
+import { notify } from '../../src/lib/notify.js'
+import { recordNotif } from '../../src/lib/notifyStore.js'
 
 let impostazioniCorrenti = {}
+const filo = { aggiorna: null }
 
 // `query` serve per la VISTA CLIENTE («?cliente=1»): la stessa pagina che
 // chi lavora usa come conto, chiesta apposta nella forma da girare al
@@ -228,5 +235,65 @@ describe('la vista da girare al cliente', () => {
     expect(await screen.findByRole('button', { name: /Salva modifiche/ })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Modifica ordine/ })).toBeNull()
     expect(screen.queryByRole('button', { name: /💳 Pagamento/ })).toBeNull()
+  })
+})
+
+// ── L'ANNULLAMENTO FATTO DA UN COLLEGA (BUG-003) ─────────────────────
+// Un admin che apriva un conto annullato da un altro admin, su un altro
+// dispositivo, si vedeva arrivare «⚠️ Problema con il tuo ordine — prego
+// recarsi al bancone»: il messaggio scritto per il CLIENTE, che a chi sta
+// dietro al bancone non vuol dire niente. Questa pagina cambia mestiere a
+// seconda di chi guarda, e quel messaggio era di una sola delle due
+// persone.
+describe('un conto annullato altrove', () => {
+  const annullato = {
+    ...ORDINE,
+    workflow_status: 'annullato',
+    status: 'annullato',
+    cancelled_by: 'bartender',
+    cancel_notify: true,
+    cancel_phrase: 'bancone',
+  }
+
+  async function apriEAnnulla(ruolo) {
+    ruoloCorrente = ruolo
+    apri()
+    await waitFor(() => expect(filo.aggiorna).toBeTruthy())
+    // Il ruolo arriva dal token, che è una promessa: prima si aspetta che
+    // la pagina sappia chi la sta guardando.
+    if (ruolo) await waitFor(() => expect(screen.getByTestId('pos')).toBeInTheDocument())
+    act(() => filo.aggiorna(annullato))
+  }
+
+  it('a chi lavora non arriva più il messaggio del cliente', async () => {
+    await apriEAnnulla('admin')
+    expect(notify).not.toHaveBeenCalled()
+  })
+
+  // NIENTE CHE INTERROMPA, MA NON NIENTE. L'annullamento non è una cosa da
+  // fare, è una cosa successa: si trova nella lista della campanella
+  // entrando nell'app, invece di trovarselo addosso aprendo un conto.
+  it('ma l’evento finisce nella lista della campanella, con parole da banco', async () => {
+    await apriEAnnulla('admin')
+    expect(recordNotif).toHaveBeenCalledWith('✖️ Conto annullato', expect.stringContaining('#7'))
+  })
+
+  // Vale per tutti quelli che lavorano, non solo per l'admin: al banco e in
+  // sala quel messaggio è ugualmente fuori posto.
+  it.each(['bartender', 'staff'])('lo stesso per il %s', async (ruolo) => {
+    await apriEAnnulla(ruolo)
+    expect(notify).not.toHaveBeenCalled()
+    expect(recordNotif).toHaveBeenCalled()
+  })
+
+  // IL CLIENTE CONTINUA A RICEVERE LA SUA, com'era: è a lui che serve
+  // sapere che deve alzarsi e andare al bancone.
+  it('il cliente la riceve come prima', async () => {
+    await apriEAnnulla(null)
+    expect(notify).toHaveBeenCalledWith(
+      '⚠️ Problema con il tuo ordine',
+      'Prego recarsi al bancone.'
+    )
+    expect(recordNotif).not.toHaveBeenCalled()
   })
 })

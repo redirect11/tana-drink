@@ -45,6 +45,13 @@
 
 ### Al banco
 
+- **Aprendo un conto annullato da un collega non arriva più l'avviso del
+  cliente**: «⚠️ Problema con il tuo ordine — prego recarsi al bancone»
+  spuntava addosso a chi sta *dietro* al bancone. Adesso a chi lavora non
+  arriva niente che interrompa: l'annullamento finisce nella lista della
+  campanella, dove lo si trova entrando nell'app. Il cliente riceve il suo
+  avviso come sempre.
+
 - **Il magazzino si scala quando il drink è pronto, non quando arriva al
   tavolo**: è lì che il fatto succede — fra «pronto» e «servito» il gin è già
   nel bicchiere — e a segnarlo è chi l'ha fatto. Prima si aspettava la
