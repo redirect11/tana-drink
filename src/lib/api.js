@@ -2786,6 +2786,46 @@ export async function updateOrderPushToken(id, token) {
   await updateDoc(doc(db, 'orders', id), { push_token: token })
 }
 
+// ── SALVARE LE COMANDE E RIFARE IL TOTALE ────────────────────────
+//
+// È IL PUNTO IN CUI SI SCRIVONO I SOLDI DI UN CONTO, e stava scritto quattro
+// volte: la modifica del cliente, l'aggiunta al conto, la divisione di una
+// comanda e la modifica dal banco. Quattro copie delle stesse cinque righe —
+// aggrega, somma coperto/servizio/mancia, ricalcola lo sconto, scrivi —
+// vogliono dire che basta che una resti indietro perché lo stesso conto
+// valga due cifre diverse a seconda del gesto che l'ha toccato.
+//
+// `righe` si passa solo dove le righe da scrivere sono già in mano e NON
+// coincidono con l'aggregato: la modifica del cliente riscrive la sua unica
+// comanda riga per riga, e `aggregateItems` invece fonde due righe dello
+// stesso drink — due Mojito battuti separati diventerebbero uno da due, e
+// una nota o un prezzo cambiato a mano su una delle due sparirebbe.
+function salvaComandeERifaiTotale(ref, cur, comande, etichetta, righe = null) {
+  const items = righe || aggregateItems(comande)
+  const extras =
+    Number(cur.coperto_amount || 0) +
+    Number(cur.service_charge_amount || 0) +
+    Number(cur.tip_amount || 0)
+  const total = sumItems(items) + extras
+  // Lo sconto segue il conto secondo la strategia scelta (vedi
+  // discountAfterChange): un importo fisso su un conto cambiato non ha più
+  // il significato che aveva quando è stato deciso.
+  const sconto = scontoRicalcolato(cur, total)
+  bgWrite(
+    () =>
+      updateDoc(ref, {
+        status: ORDER_OPEN,
+        comande,
+        comande_statuses: comandeStatuses(comande),
+        items,
+        total,
+        ...(sconto != null ? { discount_amount: sconto } : {}),
+      }),
+    etichetta
+  )
+  return { items, total }
+}
+
 // Modifica del CLIENTE: consentita solo finché il conto ha la sola prima
 // comanda ancora "ricevuta" (prima della preparazione). Aggiorna la comanda
 // e l'aggregato dell'ordine, ricalcolando il totale.
@@ -2816,20 +2856,9 @@ export async function updateOrderItems(id, items) {
     ...(i.note ? { note: i.note } : {}),
   }))
   comande[0] = { ...comande[0], items: mapped }
-  const extras =
-    Number(cur.coperto_amount || 0) +
-    Number(cur.service_charge_amount || 0) +
-    Number(cur.tip_amount || 0)
-  const nuovoTotale = sumItems(mapped) + extras
-  const nuovoSconto = scontoRicalcolato(cur, nuovoTotale)
-  bgWrite(() => updateDoc(ref, {
-    status: ORDER_OPEN,
-    comande,
-    comande_statuses: comandeStatuses(comande),
-    items: mapped,
-    total: nuovoTotale,
-    ...(nuovoSconto != null ? { discount_amount: nuovoSconto } : {}),
-  }), 'modifica ordine')
+  // Le righe si scrivono come sono arrivate: qui la comanda è una sola
+  // (lo garantisce il controllo qui sopra) e fonderle sarebbe una perdita.
+  salvaComandeERifaiTotale(ref, cur, comande, 'modifica ordine', mapped)
   return mapOrder(await leggiOrdine(ref))
 }
 
@@ -2965,24 +2994,7 @@ export async function addComanda(orderId, items, { note = null } = {}) {
     created_at: nowIso,
   }
   comande.push(nuova)
-  const agg = aggregateItems(comande)
-  const extras =
-    Number(cur.coperto_amount || 0) +
-    Number(cur.service_charge_amount || 0) +
-    Number(cur.tip_amount || 0)
-  const nuovoTotale = sumItems(agg) + extras
-  const nuovoSconto = scontoRicalcolato(cur, nuovoTotale)
-  bgWrite(() => updateDoc(ref, {
-    status: ORDER_OPEN,
-    comande,
-    comande_statuses: comandeStatuses(comande),
-    items: agg,
-    total: nuovoTotale,
-    // Lo sconto segue il conto secondo la strategia scelta (vedi
-    // discountAfterChange): un importo fisso su un conto cambiato non ha
-    // più il significato che aveva quando è stato deciso.
-    ...(nuovoSconto != null ? { discount_amount: nuovoSconto } : {}),
-  }), 'aggiunta al conto')
+  salvaComandeERifaiTotale(ref, cur, comande, 'aggiunta al conto')
   // LE SCORTE NON SI SCALANO QUI. Aggiungere una riga al conto non vuol
   // dire aver versato niente: la riga si toglie, il conto si annulla, il
   // cliente cambia idea. Da adesso quegli ingredienti sono IMPEGNATI — si
@@ -3090,21 +3102,7 @@ export async function preparazioneParziale(orderId, comandaId, righeScelte) {
   // Il totale del conto non cambia — le stesse unità stanno solo in due
   // ticket invece che in uno — ma si ricalcola con la regola di sempre:
   // scriverlo a mano qui sarebbe il punto in cui un giorno divergerebbe.
-  const agg = aggregateItems(comande)
-  const extras =
-    Number(cur.coperto_amount || 0) +
-    Number(cur.service_charge_amount || 0) +
-    Number(cur.tip_amount || 0)
-  const nuovoTotale = sumItems(agg) + extras
-  const nuovoSconto = scontoRicalcolato(cur, nuovoTotale)
-  bgWrite(() => updateDoc(ref, {
-    status: ORDER_OPEN,
-    comande,
-    comande_statuses: comandeStatuses(comande),
-    items: agg,
-    total: nuovoTotale,
-    ...(nuovoSconto != null ? { discount_amount: nuovoSconto } : {}),
-  }), 'preparazione parziale')
+  salvaComandeERifaiTotale(ref, cur, comande, 'preparazione parziale')
 }
 
 // Modifica di UNA COMANDA da parte del bartender (quantità, rimozioni,
@@ -3155,21 +3153,7 @@ export async function bartenderUpdateComanda(orderId, comandaId, { items }) {
   const daRiallineare = comanda.inventory_applied === true
 
   comanda.items = newItems
-  const agg = aggregateItems(comande)
-  const extras =
-    Number(cur.coperto_amount || 0) +
-    Number(cur.service_charge_amount || 0) +
-    Number(cur.tip_amount || 0)
-  const nuovoTotale = sumItems(agg) + extras
-  const nuovoSconto = scontoRicalcolato(cur, nuovoTotale)
-  bgWrite(() => updateDoc(ref, {
-    status: ORDER_OPEN,
-    comande,
-    comande_statuses: comandeStatuses(comande),
-    items: agg,
-    total: nuovoTotale,
-    ...(nuovoSconto != null ? { discount_amount: nuovoSconto } : {}),
-  }), 'modifica comanda')
+  salvaComandeERifaiTotale(ref, cur, comande, 'modifica comanda')
   // Scorte dopo: se erano già state scalate si applica solo la differenza.
   if (daRiallineare) riallineaInSottofondo(orderId, comandaId)
   return mapOrder(await leggiOrdine(ref))
