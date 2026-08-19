@@ -192,6 +192,39 @@ export function ordiniInCoda(
     .filter((o) => filtro !== 'chiusi' || passaSottofiltroChiusi(o, sottoChiusi))
 }
 
+// ── LE TRE SCHEDE IN UNA PASSATA SOLA ────────────────────
+//
+// Le schede della coda sono una DIVISIONE della stessa lista: ogni conto sta
+// in una e una sola — in corso, chiuso, annullato. Chiederle una per una
+// vuol dire ripassare la lista da capo ogni volta, e la coda lo faceva sei
+// volte per disegno (tre per i conteggi delle linguette, due identiche a due
+// righe di distanza, una per le corsie) su una lista che con 120 conti è
+// già lunga.
+//
+// Qui si passa una volta e si smista. Le regole sono le stesse di
+// `ordiniInCoda` — sono proprio le sue, chiamate qui — perché due modi di
+// decidere dove sta un conto sono un modo di farli divergere.
+export function contiPerScheda(orders, opzioni = {}) {
+  const { isChiuso = () => false, sottoChiusi = 'tutti' } = opzioni
+  const dentro = ordiniInCoda(orders, { ...opzioni, filtro: 'tutti' })
+  const per = { tutti: dentro, attivi: [], chiusi: [], annullati: [] }
+  for (const o of dentro) {
+    for (const id of ['attivi', 'chiusi', 'annullati']) {
+      if (
+        passaFiltroCoda(o, id, isChiuso) &&
+        (id !== 'chiusi' || passaSottofiltroChiusi(o, sottoChiusi))
+      ) {
+        per[id].push(o)
+      }
+    }
+  }
+  return per
+}
+
+// Le stesse schede quando non c'è niente da smistare: la vista che non è in
+// pagina non paga la passata, ma non deve nemmeno accorgersene.
+export const SCHEDE_VUOTE = { tutti: [], attivi: [], chiusi: [], annullati: [] }
+
 // ── DENTRO I CHIUSI: SERVITI E NON SERVITI ──────────────────────
 //
 // Un conto chiuso è un conto INCASSATO, e basta: i soldi sono presi. Ma

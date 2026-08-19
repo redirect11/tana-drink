@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 148 | fatto e coperto dai test |
+| ✅ | 149 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
-| ⬜ | 26 | da fare |
+| ⬜ | 25 | da fare |
 | 🗑 | 1 | non più valido |
 
-**190 voci** in tutto. **163** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **26** sono lavori
+**190 voci** in tutto. **164** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **25** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **7** difetti noti sono ancora aperti.
 
@@ -60,7 +60,7 @@ come «vero oggi», non come «garantito».
 | [Integrazione SumUp](#integrazione-sumup) | 6 | — | Il dialogo con il terminale SumUp, dalle Cloud Functions. |
 | [Intelligenza artificiale](#intelligenza-artificiale) | — | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
 | [Interfaccia](#interfaccia) | 19 | 2 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
-| [Come si lavora al progetto](#come-si-lavora-al-progetto) | 9 | 3 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
+| [Come si lavora al progetto](#come-si-lavora-al-progetto) | 10 | 2 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 
 ## Cosa fa il sistema
 
@@ -1414,6 +1414,16 @@ Il merge in develop passa un cancello, descritto in docs/gitflow.md: requisiti e
 
 **Dove**: `docs/gitflow.md, vitest.config.mjs, .github/workflows/test.yml` · ⚠️ **Nessun test lo verifica.**
 
+#### REQ-DEV-007 — La coda ricalcola tutte e tre le viste a ogni disegno, e ne mostra una
+
+Trovato dalla rilettura del diff della 1.5.0, coi numeri. Nel corpo della coda non c'è nessuna memoria fra un disegno e l'altro: griglia, lista e corsie vengono ricalcolate tutte, sempre, e se ne mostra una. Con 120 conti sono circa 18 passate complete sulla lista e 4 ordinamenti a ogni ridisegno — e ridisegnare capita a ogni tasto premuto nella ricerca, a ogni card aperta e a ogni snapshot dal server, che in una serata piena sono centinaia. Nello stesso posto: `contiScheda` viene chiamata sei volte per disegno sulla stessa lista (tre per i conteggi delle schede, due identiche a due righe di distanza), e ognuna è tre filtri in fila. COME: memorizzare le tre catene e smistare le schede una volta sola. Non cambia niente di quello che si vede.
+
+FATTO (19/08), e in un modo diverso da quello scritto qui: ogni catena ha la sua GUARDIA sulla vista che è in pagina, invece di un `useMemo`. Il risultato è lo stesso — si prepara la vista che si guarda, non tutte e quattro — e le schede si smistano in una passata sola con `contiPerScheda` (una divisione della stessa lista: prima erano sei giri di tre filtri per disegno).
+
+PERCHÉ NON `useMemo`: sarebbe stato un hook dopo l'uscita anticipata del caricamento (regola dei hook), e soprattutto le corsie leggono `comandeLocali`, un magazzino locale che cambia SENZA che cambi nessuno degli ingressi che un `useMemo` guarderebbe. Una corsia rimasta indietro al banco costa più di una passata rifatta: chi ha appena avanzato un ticket lo rivedrebbe dov'era. Se un giorno serve davvero la memoria fra un disegno e l'altro, prima va reso osservabile quel magazzino.
+
+**Dove**: `src/pages/BartenderPage.jsx` · **Lo dimostrano**: `tests/unit/schedeCoda.test.js`
+
 #### REQ-DEV-008 — Scritture che rileggono l'ordine per un valore che nessuno guarda
 
 Trovato dalla rilettura del diff della 1.5.0. `advanceComanda`, `preparazioneParziale` e `setOrderServiceMode` rileggono l'ordine dopo aver scritto, per restituirlo — e nessuno dei loro chiamanti (verificati tutti e otto) usa quel valore: gli interessa solo l'eventuale errore. Ogni tocco su una card costa così due letture dello stesso documento invece di una, più una normalizzazione intera buttata via: con ~150 comande a sera sono ~450 letture a vuoto. Nella stessa famiglia: `notifyLowStock([])` legge comunque il localStorage in modo sincrono prima di ciclare su zero elementi. COME: comporre l'esito in memoria da quello che si è appena scritto, o non restituire niente.
@@ -1819,12 +1829,6 @@ Il cancello ora misura TUTTO il codice di prodotto, con una soglia per area tara
 Trovato da due revisioni indipendenti del diff della 1.5.0. Le viste a corsie dei conti e delle comande condividono, riga per riga: il guscio della colonna, la testata con conteggio e totale, la card dei conti «in arrivo» (22 righe identiche), il bollo dell'acconto e il piede con il ⋯ e il tasto grande. Sono circa 90 righe scritte due volte: oggi una modifica alla testata va fatta in due posti. COME: estrarre `Corsia` (guscio + testata + lista + card in arrivo) e il piede, come si è già fatto con `RigheCorsia`, `PreparazioneParziale` e `ScegliConsegna`, lasciando a ogni file solo il corpo della propria card. NON fondere del tutto i due componenti: una vista lavora sui conti e l'altra sulle comande, e solo quella dei conti ha la colonna della cifra grande. Fonderle cambierebbe comportamento.
 
 **Dove**: `src/components/CorsieStato.jsx, src/components/CorsieComande.jsx`
-
-#### REQ-DEV-007 — La coda ricalcola tutte e tre le viste a ogni disegno, e ne mostra una
-
-Trovato dalla rilettura del diff della 1.5.0, coi numeri. Nel corpo della coda non c'è nessuna memoria fra un disegno e l'altro: griglia, lista e corsie vengono ricalcolate tutte, sempre, e se ne mostra una. Con 120 conti sono circa 18 passate complete sulla lista e 4 ordinamenti a ogni ridisegno — e ridisegnare capita a ogni tasto premuto nella ricerca, a ogni card aperta e a ogni snapshot dal server, che in una serata piena sono centinaia. Nello stesso posto: `contiScheda` viene chiamata sei volte per disegno sulla stessa lista (tre per i conteggi delle schede, due identiche a due righe di distanza), e ognuna è tre filtri in fila. COME: memorizzare le tre catene e smistare le schede una volta sola. Non cambia niente di quello che si vede.
-
-**Dove**: `src/pages/BartenderPage.jsx`
 
 ## Difetti noti
 
