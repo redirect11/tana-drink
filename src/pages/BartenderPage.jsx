@@ -17,6 +17,8 @@ import {
   restoreOrder,
   advanceComanda,
   setOrderColore,
+  segnalaPresenza,
+  subscribePresenze,
 } from '../lib/api.js'
 import { getPushToken } from '../lib/push.js'
 import { logoutStaff } from '../lib/logout.js'
@@ -123,6 +125,7 @@ import ServiceQueue from '../components/ServiceQueue.jsx'
 import StaffCallList from '../components/StaffCallList.jsx'
 import Caricamento from '../components/Caricamento.jsx'
 import { coloreCardConto, SceltaColoreConto } from '../components/Corsia.jsx'
+import { legendaConPresenze, BATTITO_PRESENZA_MS } from '../lib/presenza.js'
 import CorsieStato from '../components/CorsieStato.jsx'
 import CorsieComande from '../components/CorsieComande.jsx'
 import OrderBy from '../components/OrderBy.jsx'
@@ -578,6 +581,49 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
     () => subscribeAvvisi(auth.currentUser?.uid, (p) => { avvisi.current = p }),
     []
   )
+  // ── CHI È COLLEGATO ─────────────────────────────────────────────────
+  // Due cose separate: si DICE che ci siamo (un colpo ogni tanto) e si
+  // GUARDA chi c'è. Chi guarda sono solo admin e bartender — il filtro sta
+  // in presenza.js — ma il colpo lo dà chiunque sia personale: anche chi
+  // non può vedere l'elenco deve comparirci per gli altri.
+  const [presenze, setPresenze] = useState([])
+  useEffect(() => {
+    if (!isPersonale(ruolo)) return
+    const u = auth.currentUser
+    if (!u) return
+    const battito = () =>
+      // Il nome si ricava con placedByName, la STESSA funzione che dà il
+      // nome sulle card: se i due divergessero, uno comparirebbe in legenda
+      // con una lettera e sui suoi conti con un'altra.
+      segnalaPresenza({
+        uid: u.uid,
+        name: placedByName({ name: u.displayName, email: u.email }),
+        role: ruolo,
+      })
+    battito()
+    // SOLO MENTRE LA PAGINA È DAVANTI. Un tablet in tasca con l'app aperta
+    // continuerebbe a dire «ci sono» tutta la notte: si smette quando la
+    // pagina va via, e la presenza scade da sola. Al ritorno si ricomincia
+    // con un colpo subito, che è quello che rimette la lettera in legenda.
+    const timer = setInterval(() => {
+      if (document.visibilityState === 'visible') battito()
+    }, BATTITO_PRESENZA_MS)
+    const alRitorno = () => {
+      if (document.visibilityState === 'visible') battito()
+    }
+    document.addEventListener('visibilitychange', alRitorno)
+    return () => {
+      clearInterval(timer)
+      document.removeEventListener('visibilitychange', alRitorno)
+    }
+  }, [ruolo])
+  useEffect(() => {
+    // L'elenco lo legge solo chi può vederlo: senza questo, un terminale
+    // di sala terrebbe aperto un ascolto per un dato che non mostrerà mai.
+    if (!isGestore(ruolo)) return
+    return subscribePresenze(setPresenze, () => {})
+  }, [ruolo])
+
   // Gli avanzamenti fatti DA QUI non si annunciano: l'ho appena premuto io.
   const avanzatiDaMe = useRef(new Set())
   const statoPrec = useRef(new Map())
@@ -1067,6 +1113,13 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
     }
     return { staff: [...staff.entries()].sort((a, b) => a[0].localeCompare(b[0])), hasClient }
   })()
+  // CHI È COLLEGATO si unisce alla legenda, ma solo per chi ha diritto di
+  // saperlo: la regola sta in lib/presenza.js, che è dove si decide cosa
+  // mostrare a chi. Qui si passa il ruolo e si disegna quello che torna.
+  const vociLegenda = legendaConPresenze(legenda.staff, presenze, {
+    ruolo,
+    uidMio: auth.currentUser?.uid || null,
+  })
 
   // Ricerca rapida: numero, cliente, tavolo, drink, chi ha inserito.
   const q = search.trim().toLowerCase()
@@ -2039,10 +2092,17 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                 trova niente, senza scritta non succede proprio nulla e si
                 resta a chiedersi se abbia capito. */}
             {avvisoRicerca && <span className="muted">{avvisoRicerca}</span>}
-            {(legenda.staff.length > 0 || legenda.hasClient) && (
+            {(vociLegenda.length > 0 || legenda.hasClient) && (
               <div className="order-legend">
-                {legenda.staff.map(([L, name]) => (
-                  <span key={L}><span className="order-by staff">{L}</span> {name}</span>
+                {vociLegenda.map((v) => (
+                  <span key={v.lettera} className={v.soloOnline ? 'legenda-online' : undefined}>
+                    <span className="order-by staff">{v.lettera}</span> {v.nome}
+                    {/* «SEI TU» è metà del motivo per cui la cosa è stata
+                        chiesta: chi si collega deve sapere con che lettera
+                        si riconoscerà sulle card, prima di battere il primo
+                        conto. */}
+                    {v.mio && <span className="muted small"> · sei tu</span>}
+                  </span>
                 ))}
                 {legenda.hasClient && (
                   <span><span className="order-by client">🌐</span> Cliente</span>
