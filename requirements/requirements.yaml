@@ -2606,10 +2606,14 @@ requirements:
 
   - id: REQ-STAFF-007
     title: "Cerca-persone: chiamare un collega dal gestionale"
-    area: "src/components/StaffCallList.jsx, functions/lib/push-core.js"
+    area: "src/components/StaffCallList.jsx, src/components/ChiamataInArrivo.jsx, functions/lib/push-core.js"
     description: >
       Dal gestionale si chiama un membro dello staff con un messaggio: il suo
       dispositivo vibra con insistenza finché non risponde.
+      LA CHIAMATA SI PRESENTA DOVUNQUE si stia guardando — coda, conto,
+      cassa — e c'è già al rientro nell'app: il riquadro è montato in cima
+      (App.jsx), non dentro una sezione. Vale per chiunque sia dello staff,
+      banco o sala.
       Il pannello si apre dal menu ⋯ della coda, e APERTO APPOSTA non resta
       mai muto: se non c'è nessun altro da chiamare lo dice, e dice dove si
       creano gli account. Prima spariva da sé — con un solo account l'elenco
@@ -2622,6 +2626,7 @@ requirements:
     test_cases:
       - tests/bdd/notify-staff-call.test.js
       - tests/component/StaffCallList.test.jsx
+      - tests/component/ChiamataInArrivo.test.jsx
 
   - id: REQ-STAFF-013
     title: "Per chi lavora, la vista menù serve a battere un ordine"
