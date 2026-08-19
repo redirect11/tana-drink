@@ -1269,23 +1269,68 @@ requirements:
       - tests/component/InventoryManager.test.jsx
 
   - id: REQ-MAG-003
-    title: "Le scorte si scalano quando il drink è servito"
+    title: "Le scorte si scalano quando il drink è pronto"
     area: "src/lib/inventory.js computeConsumption, src/lib/comande.js, src/lib/api.js"
     description: >
-      Il magazzino si scala quando la comanda risulta SERVITA: allora quel
-      drink è uscito per certo. Prima si scaricava alla presa in carico, e un
-      drink iniziato e poi non fatto — riga tolta, cliente che cambia idea,
-      comanda annullata — aveva già portato via gli ingredienti.
-      Con gli stati del servizio spenti non esistono comande da servire:
-      risultano servite alla riscossione, ed è lì che si scala. Incassare, di
-      per sé, non scala niente: seguendo il servizio si paga anche in
-      anticipo, con tre drink ancora da fare.
-      Fra l'una e l'altra cosa gli ingredienti sono IMPEGNATI e si leggono in
-      magazzino (REQ-MAG-014).
-      Si scala una volta sola, salvando lo snapshot del consumo sulla
-      comanda: serve per stornare in caso di annullo e per non scalare due
-      volte. Il magazzino che non risponde non blocca la comanda: resta
-      segnata come non scaricata e si recupera dopo.
+      Il magazzino si scala quando la comanda è PRONTA: lì il drink è fatto —
+      il gin è già nel bicchiere — e a segnarlo è chi l'ha fatto, il banco.
+      «Servito» è un'altra cosa, è il drink arrivato al tavolo, e fra i due
+      passi in magazzino non si muove più niente.
+      PRIMA SI SCARICAVA AL SERVITO, e non andava per due ragioni. Di
+      sostanza: si aspettava la consegna per registrare un consumo già
+      avvenuto, e un drink pronto sul banco restava fra gli «impegnati» come
+      se potesse ancora non farsi. Pratica, ed è quella che ha deciso:
+      «servito» lo segna la SALA (REQ-STAFF-014), e la sala sul magazzino non
+      scrive — le regole glielo negano, ed è giusto così. Lo scarico falliva
+      in silenzio e la giacenza restava ferma (BUG-040). Spostandolo a
+      «pronto» il difetto sparisce da sé, e non perché si sia allargato un
+      permesso.
+      Non si scala PRIMA, alla presa in carico: un drink iniziato e poi non
+      fatto — riga tolta, cliente che cambia idea, comanda annullata —
+      avrebbe già portato via gli ingredienti.
+      Con gli stati del servizio spenti non esiste nessun «pronto»: le
+      comande risultano servite alla riscossione, ed è lì che si scala, e
+      quella strada non è cambiata. Incassare, di per sé, non scala niente:
+      seguendo il servizio si paga anche in anticipo, con tre drink ancora da
+      fare.
+      PRIMA DI «PRONTO» gli ingredienti sono IMPEGNATI e si leggono in
+      magazzino (REQ-MAG-014). Il metro dell'impegnato non è lo stato ma
+      `inventory_applied`, ed è per questo che spostare lo scarico non ha
+      richiesto di toccare `impegnato.js`: nell'istante in cui una comanda
+      viene scaricata esce dai promessi ed entra nella giacenza, senza
+      contarsi due volte e senza sparire per un battito.
+      AVANTI E INDIETRO NON SCALA DUE VOLTE: si scala una volta sola,
+      salvando lo snapshot del consumo sulla comanda (serve anche per
+      stornare in caso di annullo). Una comanda riportata da «pronto» a «in
+      preparazione» si porta dietro lo scarico già fatto e non lo disfa —
+      resta fuori dall'impegnato, perché quegli ingredienti sono nella
+      giacenza — e ripassando a «pronto» non si scala di nuovo.
+      TORNARE INDIETRO NON RISTORNA, ED È UNA SCELTA — decisa il 19/08
+      spostando lo scarico, e scritta qui perché è la domanda che si rifarà
+      il prossimo che passa. Tre ragioni:
+      1) I DUE CASI NON SI DISTINGUONO. «Ho segnato pronto il ticket
+         sbagliato» (il drink non è fatto) e «lo rimetto in lavorazione
+         perché manca qualcosa» (il gin è già versato) sono la STESSA
+         transizione: ristornare sarebbe giusto nel primo caso e sbagliato
+         nel secondo, e l'app non può sapere quale dei due sia.
+      2) RISTORNARE VUOL DIRE RIAPPLICARE. Servirebbe lo storno
+         all'indietro E il riscarico in avanti: due scritture di magazzino
+         per ogni andata e ritorno, che devono nettare a zero anche quando
+         una delle due non parte (offline, app chiusa a metà). È lo stesso
+         tipo di macchina che `impegnato.js` evita apposta, per non lasciare
+         in giro impegni fantasma che nessuno sa più togliere.
+      3) IL GESTO GIUSTO ESISTE GIÀ. Per un drink che davvero non è stato
+         fatto si annulla la comanda, che reintegra dallo snapshot di
+         consumo (REQ-MAG-005).
+      Lo stato intanto resta COERENTE: quegli ingredienti stanno nella
+      giacenza scalata e fuori dall'impegnato, contati una volta e una sola,
+      e «quello che ti ritrovi a fine serata» non si muove.
+      Se un domani si decidesse di ristornare davvero, la strada è riusare il
+      riallineo per DIFFERENZA che c'è già (`riallineaInSottofondo` /
+      `consumptionDiff`, REQ-MAG-004), non scrivere un percorso nuovo.
+      Il magazzino che non risponde non blocca la comanda: resta segnata come
+      non scaricata e si recupera alla riscossione (`unappliedEntries`), che
+      resta la rete di sicurezza anche con gli stati accesi.
       SOTTO ZERO NON SI SCENDE: si toglie al massimo quello che risulta in
       giacenza, e un carico su una giacenza negativa riparte da zero. La
       vendita passa comunque (il conto è già scritto) e il magazzino si ferma
@@ -1298,6 +1343,8 @@ requirements:
       - tests/unit/inventory.test.js
       - tests/unit/incassoOffline.test.js
       - tests/unit/comande.test.js
+      - tests/unit/scritturaComande.test.js
+      - tests/unit/impegnato.test.js
 
   - id: REQ-MAG-004
     title: "Modificare un ordine già scalato riallinea le scorte alla differenza"
@@ -4613,12 +4660,35 @@ requirements:
       spegnerli per un istante al banco vuol dire premere a vuoto.
       LATO SERVER `firestore.rules` nega alla sala le due cose che il
       database sa vedere da sé: portare un conto ad «annullato» e far
-      scendere il numero delle comande. Il resto è il confronto di due array
-      elemento per elemento e le regole non hanno cicli: resta validato in
-      app, come tutto il flusso fine delle comande, e con la stessa ragione
-      di sempre — una regola che rifiuta il lavoro buono quando la cache del
-      terminale è indietro di un battito farebbe più danno del permesso che
-      chiude.
+      scendere il numero delle comande.
+      PERCHÉ LÌ CI SI FERMA, e non è pigrizia — questa è la parte che
+      altrimenti il prossimo rifà da capo. Il controllo fine («ha solo
+      aggiunto una comanda in fondo», «ha solo portato quella comanda da
+      pronto a servito») è un confronto fra due array ELEMENTO PER ELEMENTO,
+      e le regole Firestore non hanno cicli: l'unica strada sarebbe
+      srotolare gli indici a mano — `dopo[0:n] == prima`, più un ramo per
+      ogni posizione possibile — con un tetto arbitrario al numero di
+      comande oltre il quale alla sala verrebbe rifiutato il lavoro buono.
+      E soprattutto quel confronto NON REGGE come lavora l'app: `leggiOrdine`
+      (api.js) legge il documento DALLA CACHE e riscrive l'array `comande`
+      per intero, perché Firestore un array lo riscrive tutto — non esiste
+      un percorso `comande.2.status`. Basta che la cache del terminale sia
+      indietro di un battito, o che la normalizzazione (`normalizeOrderDoc`)
+      completi un campo mancante su una comanda vecchia, e il prefisso non
+      combacia più: il server rifiuterebbe una scrittura giusta. Al banco
+      vuol dire un ordine che non parte, che è un danno peggiore del
+      permesso che quella regola chiuderebbe.
+      SE UN GIORNO SERVE DAVVERO, la strada non è una regola più furba: è
+      spostare l'avanzamento di stato dietro una Cloud Function (Admin SDK),
+      che legge il documento fresco e applica la sola transizione consentita
+      a chi chiama. Avvertenza: un deploy delle Functions lo autorizza
+      l'utente, non noi. (BUG-040 sembrava chiedere la stessa medicina e
+      invece no: quello si è curato spostando il MOMENTO dello scarico, non
+      aggiungendo una macchina — vedi REQ-MAG-003.)
+      Le regole si compilano con l'emulatore Firestore
+      (`firebase emulators:exec --only firestore`): non c'è un test
+      automatico che le esegua, `@firebase/rules-unit-testing` non è fra le
+      dipendenze e non è stato aggiunto per questo.
     status: implemented
     generate_issue: true
     labels: [ruoli, comande, sala]

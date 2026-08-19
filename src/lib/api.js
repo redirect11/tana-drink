@@ -2620,7 +2620,12 @@ async function depleteComandeInventory(entries) {
   return lowStock
 }
 
-// Comande di un conto pagato ancora da scaricare a magazzino.
+// LA RETE DI SICUREZZA. Comande di un conto pagato ancora da scaricare a
+// magazzino: è la strada dei locali che NON seguono la preparazione — lì
+// non esiste nessun «pronto», le comande risultano servite alla riscossione
+// (serveAllComande) e il consumo entra tutto qui. E resta anche con gli
+// stati accesi, per quello che a «pronto» non è passato: una scrittura
+// persa, o una comanda vecchia di prima che lo scarico si spostasse.
 const unappliedEntries = (orderId, comande) =>
   comande
     .filter((c) => c.status === ORDER_STATUSES.RITIRATO && c.inventory_applied !== true)
@@ -2657,13 +2662,10 @@ export async function advanceComanda(orderId, comandaId, newStatus) {
     : activeComanda({ comande })
   if (!comanda) throw new Error('Comanda non trovata')
 
-  // IL MAGAZZINO SI SCALA QUANDO LA COMANDA È SERVITA, non quando la si
-  // prende in carico. Prima si scaricava allo «in preparazione»: un drink
-  // iniziato e poi non fatto — riga tolta, cliente che cambia idea, comanda
-  // annullata — aveva già portato via gli ingredienti. Servito vuol dire
-  // che quel drink è uscito davvero, ed è l'unico momento in cui gli
-  // ingredienti se ne sono andati per certo. Fino a lì sono IMPEGNATI, e si
+  // IL MAGAZZINO SI SCALA A «PRONTO»: lì il drink è fatto, e a segnarlo è
+  // chi l'ha fatto. Prima e dopo gli ingredienti sono IMPEGNATI, e si
   // leggono in magazzino nella colonna «a fine serata» (lib/impegnato.js).
+  // La regola sta tutta in comandaDaScaricare (comande.js), col perché.
   // Sempre una volta sola, e DOPO aver salvato l'avanzamento.
   const daScaricare = comandaDaScaricare(comanda, newStatus)
 
