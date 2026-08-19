@@ -959,10 +959,16 @@ requirements:
       devono sempre scorporare lo sconto, mai mostrare il prezzo di listino come
       venduto. Il tastierino dello sconto ha le cifre nell'ordine di sempre
       (7 8 9 / 4 5 6 / 1 2 3 / C 0 ←), su tre colonne: si batte a memoria.
+      E un conto scontato si chiude come chiuso: quanto resta da incassare lo
+      sa la schermata che ha il conto davanti, non una rilettura che può
+      arrivare prima dello sconto (BUG-046).
     status: implemented
     generate_issue: false
     labels: [pagamenti, sconti]
-    test_cases: [tests/unit/pricing.test.js, tests/component/PaymentScreen.test.jsx]
+    test_cases:
+      - tests/unit/pricing.test.js
+      - tests/component/PaymentScreen.test.jsx
+      - tests/unit/contoScontatoSiChiude.test.js
 
   - id: REQ-PAG-004
     title: "Lettore SumUp: pairing e incasso con carta"
@@ -2697,11 +2703,14 @@ requirements:
     description: >
       Si stampa la comanda in lavorazione (con dentro le aggiunte appena fatte) e
       lo scontrino non fiscale del conto, con i metodi di pagamento davvero usati.
-      Entrambe possono essere automatiche.
+      Entrambe possono essere automatiche. Lo scontrino automatico esce UNA
+      volta sola per conto, da qualunque schermata si chiuda — ma la
+      prenotazione torna libera se la carta non è uscita e quando un conto
+      viene riaperto, se no quel conto non stampa più (BUG-047).
     status: implemented
     generate_issue: false
     labels: [stampa]
-    test_cases: []
+    test_cases: [tests/unit/scontrinoUnaVolta.test.js, tests/unit/ristampaScontrino.test.js]
 
   - id: REQ-STAMPA-002
     title: "La stampante non deve smettere di funzionare a metà serata"

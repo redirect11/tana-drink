@@ -70,7 +70,7 @@ import {
   reconcileLayout,
 } from '../lib/orderLines.js'
 import { toastSuccess, toastError } from '../lib/toast.js'
-import { printComanda, printScontrino } from '../lib/printer.js'
+import { printComanda, printScontrino, releaseReceiptPrint } from '../lib/printer.js'
 import PosProductPicker from './PosProductPicker.jsx'
 import PreparazioneParziale from './PreparazioneParziale.jsx'
 import { useComandeLocali, comandaProvvisoria } from '../lib/comandeLocali.js'
@@ -3069,6 +3069,9 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
           onConferma={(motivo) => {
             setShowRipristino(false)
             mostraOrdine(order.id)
+            // Riaperto: alla prossima chiusura lo scontrino deve uscire di
+            // nuovo, e la prenotazione di stampa va restituita (BUG-047).
+            releaseReceiptPrint(order.id)
             restoreOrder(order.id, { motivo, chi: chiSonoIo() }).catch((e) =>
               setError(`Conto non ripristinato: ${e.message}`)
             )

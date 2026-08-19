@@ -947,3 +947,106 @@ bugs:
     generate_issue: false
     labels: [bug, pos, comande]
     test_cases: [tests/component/OrderPosDetail.test.jsx, tests/unit/comande.test.js]
+
+  - id: BUG-046
+    title: "Chiudendo un conto con lo sconto, lo scontrino non esce"
+    area: "src/lib/api.js (registerPayment), src/components/PaymentScreen.jsx"
+    description: >
+      Segnalato dal locale la sera del 19/08, in due vocali di fila.
+      Il primo: «quando chiudi un tavolo con lo sconto non stampa lo
+      scontrino; stampa lo scontrino solo ed esclusivamente se si chiude
+      senza sconto».
+      DOVE SI FERMAVA. Lo sconto si applica un attimo prima di riscuotere e
+      la sua scrittura parte in sottofondo, com'è giusto. Ma
+      `registerPayment` RILEGGEVA il conto per decidere se l'incasso lo
+      saldava — e la rilettura prende la versione di PRIMA, quella senza
+      sconto: è la regola di casa, «non si rilegge mai quello che si è
+      appena scritto». Il residuo riletto risultava più alto dell'incasso
+      battuto (22,00 contro 19,80), `paymentCloses` diceva di no e il conto
+      veniva scritto `payment_status: 'parziale'` invece che `'pagato'`: a
+      schermo chiuso, sul database aperto a metà. Lo scontrino automatico
+      della coda guarda proprio `payment_status`, e non usciva mai.
+      L'incasso, per giunta, veniva TAGLIATO al residuo vecchio.
+      RISOLTO CHIEDENDOLO A CHI LO SA: la schermata del pagamento ha davanti
+      il conto com'è adesso e passa `chiude` — «con questo incasso il conto è
+      saldato». Chi non lo dichiara (la coda, il cliente, un acconto vero)
+      mantiene il comportamento di prima, tetto sul residuo compreso: un
+      acconto resta un acconto.
+      NON È SOLO LO SCONTRINO: un conto rimasto «parziale» resta nella coda
+      e blocca la chiusura di cassa. Lo sconto era solo il modo più facile
+      per farlo succedere.
+    in_produzione: true
+    status: fixed
+    generate_issue: true
+    labels: [bug, hotfix, pagamenti, stampa, local-first]
+    severity: grave
+    priority: P1
+    test_cases:
+      - tests/unit/contoScontatoSiChiude.test.js
+      - tests/component/PaymentScreen.test.jsx
+
+  - id: BUG-047
+    title: "Uno scontrino che non è uscito non esce mai più, nemmeno riaprendo il conto"
+    area: "src/lib/printer.js (claimReceiptPrint), src/components/PaymentScreen.jsx, src/pages/BartenderPage.jsx, src/components/OrderPosDetail.jsx"
+    description: >
+      Secondo vocale della stessa sera, ed è la parte che si vedeva peggio:
+      «succede anche se chiudo un conto, non l'ha stampato perché ho fatto lo
+      sconto, dopo lo riapro, non gli applico lo sconto, lo chiudo, neanche
+      lo stampa: è come se registra che ho fatto lo sconto in precedenza e
+      quello sconto non fa la stampa».
+      NON ERA LO SCONTO A RICORDARSENE. `claimReceiptPrint` tiene in
+      `localStorage` l'elenco dei conti già stampati, e serve: la chiusura
+      passa da più strade (schermata pagamento, coda, incasso di gruppo) e
+      senza guardia lo stesso scontrino uscirebbe due volte. Ma il conto
+      veniva segnato PRIMA di stampare e non veniva liberato mai: se la carta
+      non usciva — la stampa fallita finiva in un `console.warn`, e il
+      messaggio a schermo spariva con la schermata che si chiudeva — quel
+      conto non stampava più lo scontrino automatico. Riaprirlo e richiuderlo
+      non serviva a niente, e chi sta al banco non aveva modo di capirlo.
+      RISOLTO con `releaseReceiptPrint`: la prenotazione si restituisce
+      quando la stampa fallisce (nelle due strade automatiche) e quando un
+      conto viene riaperto. La guardia contro la doppia copia resta intatta —
+      cambia solo che smette di valere per una stampa che non c'è stata.
+    in_produzione: true
+    status: fixed
+    generate_issue: true
+    labels: [bug, hotfix, stampa]
+    severity: media
+    priority: P1
+    test_cases:
+      - tests/unit/scontrinoUnaVolta.test.js
+      - tests/component/PaymentScreen.test.jsx
+
+  - id: BUG-048
+    title: "Il conto riaperto e riscosso di nuovo non ristampava lo scontrino"
+    area: "src/lib/printer.js (reclaimReceiptPrint), src/components/PaymentScreen.jsx, src/components/PrinterSetup.jsx"
+    description: >
+      Deciso dall'utente il 19/08, chiudendo il cerchio aperto da BUG-046 e
+      BUG-047: «l'autostampa deve ristampare lo scontrino anche se e' gia'
+      stato stampato. Se riapro il conto e cambio qualcosa e riscuoto di
+      nuovo, deve ristampare il nuovo conto. Non ha senso che stampi solo
+      una volta».
+      COSA MANCAVA ANCORA, dopo BUG-047: la riapertura libera la pretesa
+      (releaseReceiptPrint, gia' in quel fix), ma il rilascio dipende dal
+      fatto che un terminale VEDA il conto riaperto. Se non lo vede — la
+      coda chiusa in quel momento, un altro terminale — l'incasso
+      successivo trovava la pretesa ancora presa e il nuovo scontrino non
+      usciva.
+      LA CURA: l'incasso FORZA la pretesa (reclaimReceiptPrint = release +
+      claim in un colpo). Un incasso vero e' per definizione una chiusura
+      nuova: chi sta incassando adesso deve avere lo scontrino di adesso.
+      La coda, che vedra' il conto pagato un istante dopo, trova la pretesa
+      gia' presa e non fa la seconda copia — la guardia sulle doppie copie
+      resta intatta. Le chiusure d'ufficio (senza incasso in mano) usano la
+      pretesa normale.
+      SISTEMATA ANCHE L'ETICHETTA che mentiva: l'interruttore in
+      Impostazioni -> Stampante diceva «stampa quando l'ordine e' pronto»,
+      ma la stampa parte alla riscossione da due versioni. Ora dice quello
+      che fa.
+    in_produzione: true
+    status: fixed
+    generate_issue: true
+    labels: [bug, stampa, pagamenti]
+    severity: media
+    priority: P2
+    test_cases: [tests/unit/ristampaScontrino.test.js]
