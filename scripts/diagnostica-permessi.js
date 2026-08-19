@@ -27,11 +27,16 @@ const RUOLO = arg('ruolo', 'bartender')
 let EMAIL = arg('email')
 let PASSWORD = arg('password')
 
-// Chiavi web pubbliche (stanno già nel bundle dell'app: non sono segreti).
-const API_KEY = {
-  'tana-drink': 'AIzaSyDFqH3ZZ8dVVWAm73rrMDgKpzI6cP3xDmk',
-  'tana-drink-test': arg('apikey'),
-}[PROGETTO]
+// La chiave web si passa con --apikey (è quella del blocco VITE_FIREBASE_
+// API_KEY nel .env, o in console Firebase → impostazioni progetto).
+// È una chiave PUBBLICA — sta nel bundle dell'app — ma scritta qui faceva
+// scattare il secret scanning di GitHub a ogni scansione, e un allarme
+// che grida al lupo per finta insegna a ignorare quello vero.
+const API_KEY = arg('apikey')
+if (!API_KEY) {
+  console.error('Manca --apikey: la chiave web del progetto (VITE_FIREBASE_API_KEY nel .env, o console Firebase).')
+  process.exit(1)
+}
 
 const admin = { Authorization: `Bearer ${await accessToken()}`, 'Content-Type': 'application/json' }
 const IT = 'https://identitytoolkit.googleapis.com/v1'
