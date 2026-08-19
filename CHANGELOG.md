@@ -4,6 +4,10 @@
 
 ### Per chi gestisce
 
+- **Sul tema chiaro i tasti delle impostazioni hanno di nuovo il contorno.**
+  Le scelte a pulsanti e i filtri non selezionati erano senza bordo — bianco
+  su bianco — e sembravano scritte, non tasti.
+
 - **Nella lavagna delle comande ci sta una comanda in più.** I filtri
   («✍️ Miei», «▦ Colonne», e il tasto che passa agli ordini) non hanno più
   una riga tutta loro fra i conteggi e le colonne: stanno **sulla riga dei

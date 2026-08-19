@@ -167,3 +167,33 @@ ${nome} {`)
     expect(regola('.corsia-lista')).toMatch(/overflow-x:\s*clip/)
   })
 })
+
+// ── I COLORI STRUTTURALI STANNO NEI GETTONI, NON IN BIANCHI FISSI ────
+//
+// Un bianco trasparente scritto a mano (rgba(255,255,255,…)) nasce per il
+// fondo scuro e sul tema chiaro sparisce: è successo alla striscia degli
+// stati spenti, poi ai tasti delle impostazioni e ai filtri — «hai
+// aggiunto il bordo solo sul tema scuro» (l'utente, 20/08). I gettoni
+// --line e --tile-bg hanno già la variante chiara (data-luma): bordo e
+// fondo di un controllo si scrivono con quelli.
+// Qui si sorvegliano i due controlli già corretti, non tutto il foglio:
+// i bianchi fissi rimasti altrove si bonificano quando si tocca la loro
+// schermata, non a tappeto.
+describe('i controlli delle impostazioni seguono il tema', () => {
+  const css = readFileSync(join(CARTELLA, 'index.css'), 'utf8')
+  const regola = (nome) => {
+    const i = css.indexOf(`
+${nome} {`)
+    expect(i, `${nome} non c'è più`).toBeGreaterThan(-1)
+    return css.slice(i, css.indexOf('}', i))
+  }
+
+  it.each(['.mode-option', '.chip'])('%s non usa bianchi fissi per bordo e fondo', (sel) => {
+    const r = regola(sel)
+    expect(r, `${sel}: bordo/fondo vanno sui gettoni --line/--tile-bg`).not.toMatch(
+      /rgba\(255,\s*255,\s*255/
+    )
+    expect(r).toMatch(/var\(--line\)/)
+    expect(r).toMatch(/var\(--tile-bg\)/)
+  })
+})

@@ -774,8 +774,10 @@ a.btn.block {
   min-height: 40px;
   padding: 8px 14px;
   border-radius: var(--raggio-pill);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.05);
+  /* Come .mode-option: gettoni, non bianchi fissi — sul tema chiaro i
+     filtri non scelti erano senza contorno. */
+  border: 1px solid var(--line);
+  background: var(--tile-bg);
   color: var(--text, #fff);
   font-size: 0.95rem;
   cursor: pointer;
@@ -3367,9 +3369,15 @@ body.drawer-open .status-bell-float { display: none; }
 
 .mode-option {
   appearance: none;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  /* BORDO E FONDO SEGUONO IL TEMA (--line/--tile-bg), non un bianco fisso:
+     il bianco trasparente era nato per il fondo scuro, e sul tema chiaro
+     diventava bianco su bianco — i tasti non scelti sembravano testo
+     appoggiato, senza contorno. Stessa lezione della striscia spenta
+     (--strip-spenta, più giù): i colori "strutturali" stanno nei gettoni,
+     che hanno già la variante chiara. */
+  border: 1px solid var(--line);
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--tile-bg);
   color: var(--text);
   padding: 11px 8px;
   font-size: 0.9rem;

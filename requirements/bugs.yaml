@@ -1579,3 +1579,31 @@ bugs:
     severity: media
     priority: P2
     test_cases: [tests/unit/ristampaScontrino.test.js]
+  - id: BUG-049
+    title: "Sul tema chiaro i tasti delle impostazioni non hanno contorno"
+    area: "src/index.css (.mode-option, .chip)"
+    description: >
+      Segnalato dall'utente il 20/08: «i bordi dei tasti dei settings — hai
+      aggiunto il bordo solo sul tema scuro. Su quello chiaro non ci sono i
+      bordi sugli switch non selezionati».
+      LA CAUSA, la stessa gia' vista sulla striscia degli stati spenti
+      (--strip-spenta): bordo e fondo di `.mode-option` (le scelte a
+      pulsanti delle impostazioni) e di `.chip` (i filtri) erano BIANCHI
+      FISSI — rgba(255,255,255,…) — nati per il fondo scuro. Sul tema
+      chiaro diventano bianco su bianco: i tasti non scelti sembravano
+      testo appoggiato, senza contorno, e non si capiva che fossero
+      tasti.
+      LA CURA: i gettoni. --line e --tile-bg esistono apposta e hanno gia'
+      la variante chiara (data-luma='light'): bordo e fondo dei controlli
+      si scrivono con quelli, mai con un colore assoluto.
+      NEL FOGLIO RESTANO ALTRI BIANCHI FISSI (una cinquantina): si
+      bonificano quando si tocca la loro schermata, non a tappeto — la
+      regola di casa vieta le riscritture di massa. Il test sorveglia i
+      due controlli corretti e la regola e' scritta nel commento del CSS.
+    in_produzione: true
+    status: fixed
+    generate_issue: true
+    labels: [bug, ui, temi]
+    severity: lieve
+    priority: P3
+    test_cases: [tests/unit/css.test.js]
