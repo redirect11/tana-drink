@@ -193,6 +193,27 @@ service cloud.firestore {
         (request.auth.uid == docId || resource.data.uid == request.auth.uid);
     }
 
+    // CHI È COLLEGATO ADESSO: una riga per PERSONA, che il suo terminale
+    // riscrive ogni tanto («ci sono»). Serve alla legenda della coda, dove
+    // chi si collega compare fra le iniziali prima ancora di battere un
+    // conto.
+    //
+    // SCRIVE SOLO SE STESSO, chiunque sia del personale: anche chi non può
+    // LEGGERE l'elenco deve comparirci per gli altri — un cameriere non sa
+    // chi c'è, ma gli altri sanno che c'è lui.
+    //
+    // LEGGE SOLO CHI MANDA AVANTI IL LOCALE (admin e bartender). Sapere chi
+    // è collegato è un'informazione sulle persone, non sul lavoro: la sala
+    // vede la legenda di chi ha battuto i conti, che si ricava dai conti
+    // stessi, e il cliente non vede niente. Il lucchetto sta anche qui e non
+    // solo nella schermata: un permesso che esiste solo nell'interfaccia non
+    // è un permesso.
+    match /presenze/{uid} {
+      allow read: if isBartender();
+      allow create, update: if isStaffMember() && request.auth.uid == uid;
+      allow delete: if isBartender() || (isSignedIn() && request.auth.uid == uid);
+    }
+
     // CUSTOMERS — profilo del cliente registrato: solo il proprietario
     // (e il bartender in lettura).
     match /customers/{uid} {

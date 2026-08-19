@@ -5961,3 +5961,66 @@ requirements:
     generate_issue: true
     labels: [metodo, issue]
     test_cases: [tests/unit/issueScartate.test.js]
+
+  - id: REQ-CODA-005
+    title: "Nella legenda della coda c'e' anche chi e' collegato adesso"
+    area: "src/lib/presenza.js, src/lib/api.js, src/pages/BartenderPage.jsx, firestore.rules"
+    description: >
+      Chiesto dall'utente il 19/08: «quando un utente si logga ed e' nel
+      sistema deve uscire nella legenda nella coda ordini, dove vengono
+      indicate le iniziali di chi apre un ordine».
+      COM'ERA: la legenda si costruiva SOLO dai conti gia' battuti oggi
+      (`placedByLetter` su ordersOggi). Chi si collegava e non aveva ancora
+      aperto niente non compariva da nessuna parte — nemmeno per se' stesso,
+      e quindi non sapeva con che lettera si sarebbe riconosciuto sulle
+      card.
+      CHI VEDE COSA, deciso dall'utente il 19/08 e questa e' la parte da non
+      sbagliare: «tutti quelli collegati, ma solo admin e bartender possono
+      vedere chi e' collegato; staff puo' solo vedere chi ha aggiunto ordine
+      con legenda, non vede chi e' online. I clienti non vedono niente».
+      Quindi: chi e' collegato lo leggono solo ADMIN e BARTENDER
+      (`isGestore`); la SALA vede la legenda di sempre, quella che nasce dai
+      conti battuti; il CLIENTE non vede niente. E' riservatezza, non
+      dettaglio: sapere chi e' collegato e' un'informazione sulle PERSONE,
+      non sul lavoro, e non deve servire a controllare i colleghi.
+      MA IL COLPO DI VITA LO DA' CHIUNQUE sia del personale, sala compresa:
+      un cameriere non sa chi c'e', ma gli altri sanno che c'e' lui.
+      COME SI SA CHI C'E'. Non esiste un logout affidabile — si chiude
+      l'app, si blocca il tablet, finisce la batteria — quindi la presenza
+      non si spegne: SCADE. Ogni terminale scrive «ci sono» ogni tre minuti
+      mentre la pagina e' davanti, e chi tace da piu' di dieci minuti esce
+      dall'elenco. Due colpi persi si sopportano (rete che va e viene, il
+      tablet che dorme un momento) senza far sparire chi sta lavorando. Non
+      serve nessuna pulizia: il tempo fa da solo.
+      SOLO MENTRE LA PAGINA E' DAVANTI: un tablet in tasca con l'app aperta
+      direbbe «ci sono» tutta la notte. Al ritorno in primo piano parte
+      subito un colpo, che e' quello che rimette la lettera in legenda.
+      DETTAGLI CHE FANNO LA DIFFERENZA:
+      - UNA RIGA PER PERSONA, non per dispositivo: la legenda mostra
+      PERSONE, e lo stesso Marco su tablet e telefono e' un Marco solo. E'
+      il contrario di `staff_tokens`, che e' per dispositivo perche' li' si
+      deve far squillare ogni apparecchio;
+      - IL NOME si ricava con `placedByName`, la STESSA funzione che da' il
+      nome sulle card: se i due divergessero, uno comparirebbe in legenda
+      con una lettera e sui suoi conti con un'altra;
+      - CHI HA GIA' BATTUTO NON SI DUPLICA: la sua voce nasce dai conti — il
+      dato piu' vecchio e piu' sicuro — e resta com'e';
+      - «SEI TU» accanto alla propria voce: e' meta' del motivo per cui la
+      cosa e' stata chiesta;
+      - un CLIENTE collegato non e' mai una voce della legenda: quella dice
+      chi lavora, e la riga «Cliente» nasce dagli ordini, non da chi ha
+      l'app aperta;
+      - L'ORARIO E' QUELLO DEL CLIENT (`last_seen` ISO, non
+      `serverTimestamp`): la finestra si misura con lo stesso orologio che
+      poi la legge, se no due terminali con l'ora storta si vedrebbero
+      sempre online o mai;
+      - LA SCRITTURA NON SI ASPETTA MAI: e' un colpo di vita, non un gesto.
+      Se fallisce non deve rompere niente e non deve dire niente a nessuno.
+      IL LUCCHETTO STA ANCHE LATO SERVER (`firestore.rules`): legge solo
+      `isBartender()` (che li' vuol dire admin+bartender), scrive solo se
+      stesso chi e' del personale. Un permesso che esiste solo
+      nell'interfaccia non e' un permesso.
+    status: implemented
+    generate_issue: true
+    labels: [coda, ruoli, ui]
+    test_cases: [tests/unit/presenza.test.js, tests/component/CodaCorsie.test.jsx]

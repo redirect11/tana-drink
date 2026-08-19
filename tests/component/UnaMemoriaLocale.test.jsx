@@ -62,6 +62,10 @@ vi.mock('firebase/auth', () => ({
 }))
 
 vi.mock('../../src/lib/api.js', () => ({
+  // La coda dice «ci sono» e guarda chi c'è (legenda con le presenze):
+  // qui non serve a niente, ma senza queste due la pagina non si monta.
+  segnalaPresenza: () => {},
+  subscribePresenze: () => () => {},
   DEFAULT_SETTINGS: {},
   settingsIniziali: () => ({ ...impostazioni }),
   subscribeSettings: (cb) => {
