@@ -435,6 +435,12 @@ export function motivoNonMigrabile(item) {
 //   daSistemare → nemmeno la lettura li sa portare a pezzi, e prima che il
 //                 travaso parta li deve aprire una persona
 //   fatto       → non c'è niente da fare, e la schermata non ne parla
+// IL MAGAZZINO È IN SOLA LETTURA finché il travaso non è fatto: si può
+// toccare soltanto quello che serve a farlo partire. Non è una regola della
+// SCHERMATA del magazzino — vale per chiunque scriva — e Acquisti → «ricevi
+// ordine» ne era fuori solo perché il blocco viveva dentro InventoryManager.
+export const magazzinoBloccato = (items) => !statoTravaso(items).fatto
+
 export function statoTravaso(items) {
   const daMigrare = []
   const daSistemare = []

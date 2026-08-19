@@ -2143,7 +2143,7 @@ requirements:
     generate_issue: true
     labels: [magazzino, dati]
     priority: P1
-    test_cases: [tests/unit/travasoInventario.test.js, tests/unit/travasoScrittura.test.js, tests/component/TravasoMagazzino.test.jsx]
+    test_cases: [tests/unit/travasoInventario.test.js, tests/unit/travasoScrittura.test.js, tests/component/TravasoMagazzino.test.jsx, tests/unit/scritturaMagazzino.test.js]
 
   - id: REQ-MAG-017
     title: "Il fornitore si aggiunge dalla tendina del prodotto, come già la categoria nel menù"
