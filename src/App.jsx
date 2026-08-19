@@ -23,6 +23,7 @@ import { getPushToken } from './lib/push.js'
 import { idDispositivo } from './lib/dispositivo.js'
 import { savePrinterSettings, impostaUtenteStampante } from './lib/printer.js'
 import AvvisiSpenti from './components/AvvisiSpenti.jsx'
+import ChiamataInArrivo from './components/ChiamataInArrivo.jsx'
 import { dismissKeyboard } from './lib/keyboard.js'
 import StatusBell from './components/StatusBell.jsx'
 import ActionSheet from './components/ActionSheet.jsx'
@@ -574,6 +575,13 @@ export default function App() {
           l'unico modo perché chi ha scartato la finestrella del browser lo
           scopra prima di perdere un ordine. */}
       <AvvisiSpenti ruolo={staffRole} />
+
+      {/* E LA CHIAMATA DAL BANCONE ARRIVA DOVUNQUE. Stava dentro la sola
+          sezione «Da servire»: chi la riceveva con l'app chiusa riapriva
+          il telefono sulla coda e non trovava niente (BUG-037). Sta qui
+          perche' un cerca-persone che si vede solo in una schermata non e'
+          un cerca-persone. */}
+      <ChiamataInArrivo ruolo={staffRole} />
 
       <main>
         <Routes>

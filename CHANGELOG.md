@@ -4,6 +4,12 @@
 
 ### Al banco
 
+- **La chiamata dal bancone si presenta dovunque sei**: chi veniva chiamato
+  sentiva il telefono, riapriva l'app e non trovava niente — la chiamata
+  compariva solo andando a mano su «Da servire». Adesso il riquadro salta
+  fuori su qualunque schermata, coda o conto o cassa, ed è già lì quando
+  riapri l'app: si risponde e si torna al lavoro.
+
 - **«Mensile per macro» dice quanto rende davvero ogni gruppo del menù**: le
   righe sono le macro-categorie del **menù**, e ogni drink venduto ci conta
   intero — incasso e costo di tutti i suoi ingredienti insieme. La Schweppes
