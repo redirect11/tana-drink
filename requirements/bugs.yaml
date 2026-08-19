@@ -1036,21 +1036,31 @@ bugs:
 
   - id: BUG-037
     title: "Aprendo l'app la chiamata dello staff non compare finché non si naviga"
-    area: "src/components/StatusBell.jsx, src/lib/notifyStore.js, src/App.jsx"
+    area: "src/components/ChiamataInArrivo.jsx, src/App.jsx, src/components/ServiceQueue.jsx"
     description: >
       Segnalato dall'utente il 19/08. Con l'app in secondo piano o lo
       schermo spento la notifica della chiamata arriva; ma riaprendo l'app
       la chiamata vera e propria non si presenta finché non si naviga da
       qualche parte. Chi è stato chiamato apre il telefono e non trova
       niente: il gesto di chi ha chiamato si perde.
-      Va sistemata l'esperienza, non solo il dato: al ritorno in primo
-      piano l'app deve ripescare le chiamate in sospeso e mostrarle
-      subito, dove si sta guardando.
+      DOVE SI FERMAVA: arrivava e non si vedeva. L'ascolto delle chiamate
+      (`subscribeMyCalls`) e il riquadro stavano DENTRO ServiceQueue, cioè
+      la sola sezione «Da servire» del gestionale, montata solo con quella
+      scheda aperta. La scheda di partenza è la coda, e la notifica di
+      sistema porta anch'essa su /bar (public/sw.js, notificationclick):
+      riaprendo si finiva sempre dove la chiamata non era neanche
+      ascoltata. Andando su «Da servire» il componente si montava, la
+      sottoscrizione partiva e la chiamata saltava fuori — da qui il
+      «finché non si naviga».
+      CORREZIONE: l'ascolto e il riquadro sono diventati un componente a
+      sé (ChiamataInArrivo) montato in App.jsx per tutto il tempo in cui
+      c'è qualcuno dello staff collegato. La chiamata in sospeso è già lì
+      al rientro, su qualunque schermata, e non serve navigare.
     in_produzione: true
-    status: todo
+    status: fixed
     generate_issue: true
     labels: [bug, notifiche, sala]
-    test_cases: []
+    test_cases: [tests/component/ChiamataInArrivo.test.jsx]
 
   - id: BUG-038
     title: "Sulla PWA Android le notifiche arrivano solo accendendo lo schermo"
