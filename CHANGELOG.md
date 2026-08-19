@@ -4,6 +4,21 @@
 
 ### Per chi gestisce
 
+- **Al cliente si promette solo quello che succede davvero.** Il tasto
+  **«🔔 Avvisami quando è pronto»** compare soltanto sui conti da **ritiro
+  al banco**: è l'unico caso in cui, quando il drink è pronto, deve alzarsi
+  lui. Chi è servito al tavolo legge invece che non deve fare niente, e chi
+  non ha dato il permesso alle notifiche legge che **la pagina si aggiorna
+  da sola** — è la strada che funziona sempre. Con **gli stati del servizio
+  spenti** non si promette nessun avviso: si dice di ritirare al banco
+  quando il drink è pronto. E l'avviso parte **una volta sola per comanda**:
+  se qualcuno riporta indietro lo stato e lo rimette «pronto», niente
+  secondo squillo.
+  ⚠️ **Quest'ultimo pezzo gira sul server e resta senza effetto finché non
+  si autorizza il deploy delle Cloud Functions** — come per le notifiche di
+  ritiro e servizio allo staff, corrette giorni fa e ancora ferme per lo
+  stesso motivo.
+
 - **Ogni conto può avere il suo colore, e le sue comande se lo portano
   dietro.** Un pallino colorato accanto al numero, sulla card del conto e su
   tutte le card delle sue comande: un conto battuto in tre volte finisce in
