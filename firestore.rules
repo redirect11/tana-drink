@@ -25,6 +25,13 @@ service cloud.firestore {
         && 'role' in request.auth.token
         && request.auth.token.role in ['admin', 'bartender', 'staff'];
     }
+    // LA SALA: chi porta i drink al tavolo. Serve, non prepara — e quello
+    // che non può fare va scritto anche qui, non solo nell'interfaccia.
+    function isSala() {
+      return isSignedIn()
+        && 'role' in request.auth.token
+        && request.auth.token.role == 'staff';
+    }
 
     // DRINKS — lettura pubblica (clienti vedono il menù), scrittura solo bartender.
     match /drinks/{drinkId} {
@@ -59,11 +66,28 @@ service cloud.firestore {
         || request.resource.data.payment_status in ['non_richiesto', 'in_attesa'];
       // Modello conto/comande: il flusso di lavorazione vive sulle comande
       // (array nel doc), quindi le transizioni fini sono validate in app.
-      // Lo staff (ruolo fidato via claims) può aggiornare gli ordini
-      // (serve/incassa le comande); il cliente anonimo solo finché il conto
-      // ha la sola prima comanda ancora "ricevuta", senza toccare i campi
-      // di pagamento, e può al più annullare.
-      allow update: if isStaffMember()
+      // Il banco aggiorna qualunque cosa; il cliente anonimo solo finché il
+      // conto ha la sola prima comanda ancora "ricevuta", senza toccare i
+      // campi di pagamento, e può al più annullare.
+      // LA SALA SERVE, NON PREPARA (REQ-STAFF-014). Lavora sugli ORDINI —
+      // aggiunge righe a un conto, incassa al tavolo, segna «servito» —
+      // ma non butta il lavoro del banco. Due cose il server le sa vedere
+      // da sé, e sono quelle che qui si negano:
+      //   · ANNULLARE il conto: è il lavoro di chi versa che si straccia;
+      //   · far SPARIRE una comanda: le sue aggiunte ne fanno nascere una
+      //     nuova, e il numero di comande non scende mai.
+      // Il resto — prendere in carico, segnare pronto, tornare indietro,
+      // dividere — è il confronto di due array elemento per elemento, e le
+      // regole non hanno cicli. Resta validato in app (src/lib/ruoli.js),
+      // come tutto il flusso fine delle comande. Una regola che rifiuta il
+      // lavoro buono quando la cache del terminale è indietro di un battito
+      // farebbe più danno del permesso che chiude: al banco vuol dire un
+      // ordine che non parte.
+      allow update: if isBartender()
+        || (isSala()
+            && request.resource.data.status != 'annullato'
+            && request.resource.data.get('comande', []).size()
+               >= resource.data.get('comande', []).size())
         || (resource.data.status in ['aperto', 'ricevuto']
             && (!('comande' in resource.data)
                 || (resource.data.comande.size() == 1

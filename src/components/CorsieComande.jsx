@@ -47,6 +47,9 @@ export default function CorsieComande({
   // Le voci del ⋯ di una card: le decide la pagina, che sa le
   // impostazioni e come si scrive sul database. Qui si disegnano e basta.
   vociComanda = null,
+  // Chi guarda: alla sala il tasto che porta avanti la preparazione non
+  // compare (vedi azioneComanda). Vede lo stato, e segna quello che serve.
+  ruolo = null,
   inArrivo = [],
   attesaPagamento = () => false,
   espansa = null,
@@ -108,7 +111,7 @@ export default function CorsieComande({
                 // IL TASTO DIPENDE DALLO STATO DELLA COMANDA, non dalla
                 // colonna: la stessa comanda pronta ha lo stesso tasto sia
                 // che le colonne siano unite sia che siano divise.
-                const azione = azioneComanda(s.comanda, o)
+                const azione = azioneComanda(s.comanda, o, { ruolo })
                 // Le voci del ⋯ si costruiscono UNA volta per card: prima
                 // se ne facevano due giri — uno per contarle e uno per
                 // disegnarle — e ogni giro allocava fino a cinque oggetti

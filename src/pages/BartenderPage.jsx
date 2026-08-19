@@ -57,7 +57,13 @@ import { StoriaOrdineDialog, RipristinaOrdineDialog } from '../components/Storia
 import { useTelefono } from '../lib/useTelefono.js'
 import StatusBell from '../components/StatusBell.jsx'
 import ActionSheet from '../components/ActionSheet.jsx'
-import { isBanco, isGestore, isPersonale } from '../lib/ruoli.js'
+import {
+  isBanco,
+  isGestore,
+  isPersonale,
+  puoGestireComande,
+  puoSegnare,
+} from '../lib/ruoli.js'
 import { senzaNascosti, subscribeNascosti, mostraOrdine } from '../lib/ordiniNascosti.js'
 import { battutoDaQui, annullatoDaQui, idDispositivo } from '../lib/dispositivo.js'
 import {
@@ -607,6 +613,12 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // stato», ma è scritta come una lista di viste possibili proprio perché
   // è il posto dove le prossime andranno ad aggiungersi.
   const vistaBanco = workflowOn && isBanco(ruolo)
+  // LA SALA SERVE, NON PREPARA (REQ-STAFF-014). Vede a che punto sono le
+  // comande — le serve per sapere cosa portare — ma i passi del banco non
+  // li tocca: qui si spengono i tasti che li segnano, la strada per tornare
+  // indietro, la divisione e l'annullo. Il metro sta in `ruoli.js`, in un
+  // posto solo.
+  const comandaIlLavoro = puoGestireComande(ruolo)
   const bancoCorsie = vistaBanco && (settings.bartender_view || 'corsie') === 'corsie'
 
   // Le viste a LAVAGNA — la griglia, le corsie di stato, la vista del banco
@@ -1380,7 +1392,10 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             l'unica strada era annullare e ribattere, perdendo orario e
             storia. Sta accanto al passo avanti, più piccolo: si sbaglia meno
             spesso di quanto si lavori. */}
-        {workflowOn && statiPrimaComanda(o.workflow_status, passoDiNascita).length > 0 && (
+        {/* Tornare indietro è di chi prepara: la sala non l'ha mai fatto —
+            e un tasto che non le serve mai è meglio non averlo, non averlo
+            spento (i ruoli non cambiano a metà serata). */}
+        {comandaIlLavoro && workflowOn && statiPrimaComanda(o.workflow_status, passoDiNascita).length > 0 && (
           <div className="row" style={{ gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
             <span className="muted small">Torna a</span>
             {statiPrimaComanda(o.workflow_status, passoDiNascita).map((st) => (
@@ -1395,7 +1410,9 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             ))}
           </div>
         )}
-        {workflowOn && !senzaAvanzamento && (
+        {/* L'UNICO PASSO DELLA SALA È «SERVITO»: è lei a portare il drink al
+            tavolo. Prendere in carico e segnare pronto sono del banco. */}
+        {workflowOn && !senzaAvanzamento && puoSegnare(ruolo, ns) && (
           <button
             className="btn block"
             disabled={!ns || o.workflow_status === ORDER_STATUSES.RITIRATO || awaiting}
@@ -1481,7 +1498,8 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             🧾 Scontrino
           </button>
         </div>
-        {o.workflow_status === ORDER_STATUSES.RICEVUTO && (
+        {/* Annullare è di chi versa: è il suo lavoro che si butta. */}
+        {comandaIlLavoro && o.workflow_status === ORDER_STATUSES.RICEVUTO && (
           <button
             className="btn ghost small block"
             style={{ marginTop: 8 }}
@@ -1490,7 +1508,8 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             ✖️ Annulla ordine
           </button>
         )}
-        {o.workflow_status === ORDER_STATUSES.IN_PREPARAZIONE && (
+        {/* Annullare è di chi versa: è il suo lavoro che si butta. */}
+        {comandaIlLavoro && o.workflow_status === ORDER_STATUSES.IN_PREPARAZIONE && (
           <button
             className="btn ghost small block"
             style={{ marginTop: 8 }}
@@ -1499,7 +1518,8 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             ✖️ Annulla preparazione
           </button>
         )}
-        {o.workflow_status === ORDER_STATUSES.PRONTO && (
+        {/* Annullare è di chi versa: è il suo lavoro che si butta. */}
+        {comandaIlLavoro && o.workflow_status === ORDER_STATUSES.PRONTO && (
           <button
             className="btn ghost small block"
             style={{ marginTop: 8 }}
@@ -2263,14 +2283,16 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                 const o = s.ordine
                 const indietro = statiPrimaComanda(c.status, passoDiNascita)
                 return [
-                  ...indietro.map((st) => ({
+                  // Tornare indietro e dividere sono di chi prepara: alla
+                  // sala restano lo stato che vede e la ristampa.
+                  ...(comandaIlLavoro ? indietro : []).map((st) => ({
                     id: `indietro-${st}`,
                     icon: '↩︎',
                     label: `Torna a «${statoAlBanco(st, o?.service_mode)}»`,
                     hint: 'Segnata per sbaglio: si rimette dov\'era',
                     onClick: () => avanzaComanda(o, c, st),
                   })),
-                  comandaDivisibile(c) && {
+                  comandaIlLavoro && comandaDivisibile(c) && {
                     id: 'dividi',
                     icon: '✂️',
                     label: 'Preparazione parziale',
@@ -2288,6 +2310,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                 ].filter(Boolean)
               }}
               corsie={corsieMostrate}
+              ruolo={ruolo}
               mostraModo={ritiroEsiste && !prontoSeparato}
               idAcceso={idAcceso}
               inArrivo={pend.pending}

@@ -8,6 +8,9 @@ import { ORDER_STATUSES, STATUS_LABELS, ritiratoLabel } from './orderStatus.js'
 // la card un'altra.
 import { orderTotal, round2 } from './pagamento.js'
 import { isAwaitingPayment } from './payments.js'
+// La sala serve e non prepara: quale passo può segnare lo dice ruoli.js,
+// che è l'unico posto dove i ruoli si confrontano.
+import { puoSegnare } from './ruoli.js'
 // Le comande sono il LAVORO del banco: le corsie del bartender le mostrano
 // una per una, e le regole su cosa è servito e quanto vale una riga stanno
 // in comande.js — qui non si riscrivono.
@@ -676,7 +679,7 @@ export function corsieComande(ordini, { isChiuso = () => false, prontoDiviso = n
 //
 // Chi non ha niente da fare resta senza tasto: le annullate, e le servite
 // di un conto già saldato — niente da preparare, niente da chiedere.
-export function azioneComanda(comanda, order) {
+export function azioneComanda(comanda, order, { ruolo = null } = {}) {
   // Card del CONTO (la colonna dei soldi): lì non c'è un ticket da far
   // avanzare, c'è un conto da incassare.
   if (!comanda) return { etichetta: 'Incassa', tipo: 'incassa' }
@@ -690,6 +693,12 @@ export function azioneComanda(comanda, order) {
   }
   const dopo = nextComandaStatus(comanda.status)
   if (!dopo) return null
+  // LA SALA SERVE, NON PREPARA. Portare avanti una comanda è di chi versa;
+  // alla sala resta l'ultimo passo — «servito» — perché è lei che porta il
+  // drink al tavolo. Senza un ruolo dichiarato non si toglie niente: qui si
+  // disegna una coda, il permesso vero sta in `ruoli.js` e nelle regole del
+  // database.
+  if (ruolo && !puoSegnare(ruolo, dopo)) return null
   return { etichetta: etichettaAvanzamento(dopo, order?.service_mode), tipo: 'avanza' }
 }
 

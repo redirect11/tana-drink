@@ -479,6 +479,52 @@ describe('le corsie di chi guarda la serata (admin)', () => {
 // SERVIZIO, non la vista scelta per la coda: quei passi sono ciò che dà
 // senso alla vista del banco, e senza non c'è niente da mostrare. COME
 // disegnarla lo dice `settings.bartender_view`, sorella di `queue_view`.
+// LA SALA SERVE, NON PREPARA (REQ-STAFF-014). Chi porta i vassoi va a
+// guardare il lavoro per sapere cosa portare — la pastiglia «Comande» c'è
+// anche per lui — ma quei passi non li segna: l'unico tasto che gli resta è
+// quello dell'ultimo, «servito», perché è lui a portare il drink al tavolo.
+describe('le corsie viste dalla sala', () => {
+  beforeEach(() => {
+    ruolo = 'staff'
+  })
+
+  it('guarda il lavoro, ma prendere in carico e segnare pronto non sono suoi', async () => {
+    const utente = userEvent.setup()
+    montaCoda()
+    await screen.findByText('In corso')
+    await utente.click(screen.getByRole('button', { name: /Comande/ }))
+    await screen.findByText('Da fare')
+
+    // Le colonne ci sono tutte: gli servono per sapere a che punto è il
+    // lavoro. I tasti che lo fanno avanzare no.
+    expect(within(corsia('da-fare')).queryByRole('button', { name: 'In preparazione' })).toBeNull()
+    expect(within(corsia('al-banco')).queryByRole('button', { name: 'È pronto' })).toBeNull()
+
+    // L'ultimo passo invece è il suo mestiere.
+    expect(
+      within(corsia('al-ritiro')).getAllByRole('button', { name: 'Ritirato/Servito' })[0]
+    ).toBeInTheDocument()
+    // E il conto che ha appena servito lo incassa: quelli sono soldi, non
+    // lavoro del banco.
+    expect(within(corsia('ritirati')).getByRole('button', { name: 'Incassa' })).toBeInTheDocument()
+  })
+
+  it('e dal ⋯ della card non torna indietro né divide', async () => {
+    const utente = userEvent.setup()
+    montaCoda()
+    await screen.findByText('In corso')
+    await utente.click(screen.getByRole('button', { name: /Comande/ }))
+    await screen.findByText('Da fare')
+
+    // Resta la ristampa: un foglio perso capita anche a chi serve.
+    const azioni = within(corsia('al-banco')).getAllByRole('button', { name: /Azioni/ })[0]
+    await utente.click(azioni)
+    expect(screen.getByRole('button', { name: /Ristampa la comanda/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Torna a/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: /Preparazione parziale/ })).toBeNull()
+  })
+})
+
 describe('la vista del banco si accende da sé', () => {
   beforeEach(() => {
     ruolo = 'bartender'
