@@ -2,7 +2,7 @@
 // riepilogo. Il servizio è perpetuo: non esistono più "serate", i conti
 // restano aperti finché non li si chiude a mano. Testabile a unità.
 
-import { ORDER_STATUSES, STATUS_LABELS, ritiratoLabel } from './orderStatus.js'
+import { ORDER_STATUSES, STATUS_LABELS, statoAlBanco } from './orderStatus.js'
 // Il totale di un conto è quello EFFETTIVO (sconto già tolto): la regola sta
 // in pagamento.js e non si riscrive qui, o le corsie direbbero una cifra e
 // la card un'altra.
@@ -422,7 +422,8 @@ export function schedeCoda(workflowOn) {
 const CORSIE_LAVORO = [
   { id: 'da-fare', titolo: 'Da fare', stato: ORDER_STATUSES.RICEVUTO },
   { id: 'al-banco', titolo: 'In preparazione', stato: ORDER_STATUSES.IN_PREPARAZIONE },
-  { id: 'al-ritiro', titolo: 'Ritiro/Servizio', stato: ORDER_STATUSES.PRONTO },
+  // La stessa parola del tasto e dell'etichetta di stato: vedi statoAlBanco.
+  { id: 'al-ritiro', titolo: 'Pronto', stato: ORDER_STATUSES.PRONTO },
   { id: 'da-incassare', titolo: 'Da incassare', stato: ORDER_STATUSES.RITIRATO },
 ]
 
@@ -736,14 +737,12 @@ export function azioneComanda(comanda, order, { ruolo = null } = {}) {
 }
 
 // La parola sul tasto è quella dello STATO IN CUI IL DRINK FINISCE: si vede
-// dove va a finire prima di premere. Sull'ultimo passo dipende da come si
-// consegna — «Ritirato» al banco, «Servito» al tavolo — perché è la parola
-// che si usa davvero: nessuno dice «ritirato» di un drink portato al tavolo.
-function etichettaAvanzamento(stato, serviceMode) {
-  if (stato === ORDER_STATUSES.RITIRATO) return ritiratoLabel(serviceMode)
-  if (stato === ORDER_STATUSES.PRONTO) return 'È pronto'
-  return STATUS_LABELS[stato]
-}
+// dove va a finire prima di premere — ed è la STESSA che intitola la colonna
+// in cui finirà, e la stessa dell'etichetta di stato. Per questo passa da
+// `statoAlBanco`: le parole del banco stanno in un posto solo, e prima
+// «pronto» ne aveva quattro («Pronto», «Pronto al servizio»,
+// «Ritiro/Servizio», «È pronto»).
+const etichettaAvanzamento = (stato, serviceMode) => statoAlBanco(stato, serviceMode)
 
 // ── QUALI CORSIE SI VEDONO ──────────────────────────────────
 //

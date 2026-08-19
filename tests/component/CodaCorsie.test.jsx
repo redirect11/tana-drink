@@ -498,7 +498,7 @@ describe('le corsie viste dalla sala', () => {
     // Le colonne ci sono tutte: gli servono per sapere a che punto è il
     // lavoro. I tasti che lo fanno avanzare no.
     expect(within(corsia('da-fare')).queryByRole('button', { name: 'In preparazione' })).toBeNull()
-    expect(within(corsia('al-banco')).queryByRole('button', { name: 'È pronto' })).toBeNull()
+    expect(within(corsia('al-banco')).queryByRole('button', { name: 'Pronto' })).toBeNull()
 
     // L'ultimo passo invece è il suo mestiere.
     expect(
@@ -734,7 +734,7 @@ describe('le corsie del banco: una card per comanda', () => {
     for (const titolo of [
       'Da fare',
       'In preparazione',
-      'Ritiro/Servizio',
+      'Pronto',
       'Ritirato/Servito',
     ]) {
       expect(titoli.some((t) => t.startsWith(titolo))).toBe(true)
@@ -751,7 +751,7 @@ describe('le corsie del banco: una card per comanda', () => {
     expect(within(daFare).queryByText(/comanda 1/)).not.toBeInTheDocument()
     expect(within(daFare).getByText('33,00 €')).toBeInTheDocument()
 
-    // Ritiro/Servizio: il pronto e quello già pagato, che resta lì col bollo
+    // Pronto: il pronto e quello già pagato, che resta lì col bollo
     const alRitiro = corsia('al-ritiro')
     expect(within(alRitiro).getByText('#36')).toBeInTheDocument()
     expect(within(alRitiro).getByText('Pagato')).toBeInTheDocument()
@@ -786,7 +786,7 @@ describe('le corsie del banco: una card per comanda', () => {
 
     // ogni corsia ha il verbo del suo passo
     expect(
-      within(corsia('al-banco')).getAllByRole('button', { name: 'È pronto' })[0]
+      within(corsia('al-banco')).getAllByRole('button', { name: 'Pronto' })[0]
     ).toBeInTheDocument()
     expect(
       within(corsia('al-ritiro')).getAllByRole('button', { name: 'Ritirato/Servito' })[0]
@@ -837,7 +837,7 @@ describe('le corsie del banco: una card per comanda', () => {
     // le colonne restano tutte, anche svuotate: la loro posizione si
     // impara a memoria
     const titoli = [...document.querySelectorAll('.corsia-titolo')].map((n) => n.textContent)
-    for (const titolo of ['Da fare', 'In preparazione', 'Ritiro/Servizio', 'Ritirato/Servito']) {
+    for (const titolo of ['Da fare', 'In preparazione', 'Pronto', 'Ritirato/Servito']) {
       expect(titoli.some((t) => t.startsWith(titolo))).toBe(true)
     }
   })
@@ -889,7 +889,7 @@ describe('le corsie del banco: una card per comanda', () => {
     await screen.findByText('Da fare')
 
     await utente.click(screen.getByRole('button', { name: /Colonne/ }))
-    await utente.click(screen.getByRole('button', { name: 'Ritiro/Servizio', pressed: true }))
+    await utente.click(screen.getByRole('button', { name: 'Pronto', pressed: true }))
     expect(corsia('al-ritiro')).toBeFalsy()
     expect(corsia('da-fare')).toBeTruthy()
 
@@ -902,7 +902,7 @@ describe('le corsie del banco: una card per comanda', () => {
 
     // e si riaccende dallo stesso posto
     await utente.click(screen.getByRole('button', { name: /Colonne/ }))
-    await utente.click(screen.getByRole('button', { name: 'Ritiro/Servizio', pressed: false }))
+    await utente.click(screen.getByRole('button', { name: 'Pronto', pressed: false }))
     expect(corsia('al-ritiro')).toBeTruthy()
   })
 

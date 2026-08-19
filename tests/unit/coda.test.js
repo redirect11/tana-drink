@@ -722,7 +722,7 @@ describe('le corsie delle comande', () => {
     expect(corsie.map((c) => [c.id, c.titolo])).toEqual([
       ['da-fare', 'Da fare'],
       ['al-banco', 'In preparazione'],
-      ['al-ritiro', 'Ritiro/Servizio'],
+      ['al-ritiro', 'Pronto'],
       // Il lavoro finito ha una colonna sua, che nella vista dei conti non
       // c'è: lì un conto servito è solo roba da incassare. E qui NON c'è
       // una colonna «Da incassare»: conteneva gli stessi drink di questa,

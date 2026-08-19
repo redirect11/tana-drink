@@ -32,7 +32,7 @@ import {
   splitAmounts,
   canNest,
 } from '../lib/groups.js'
-import { formatPrice, STATUS_LABELS, STATUS_EMOJI } from '../lib/orderStatus.js'
+import { formatPrice, STATUS_EMOJI, statoAlBanco } from '../lib/orderStatus.js'
 import { IconGruppo, IconPersona } from './Icons.jsx'
 
 // Vista di un gruppo (modale) con drill-down ricorsivo: per un contenitore
@@ -284,7 +284,7 @@ export default function GroupView({ groupId, onClose }) {
                 #{o.daily_number ?? '—'} {o.customer_name ? `· ${o.customer_name}` : ''}{' '}
                 {workflowOn && (
                   <span className="muted small">
-                    {STATUS_EMOJI[o.workflow_status]} {STATUS_LABELS[o.workflow_status]}
+                    {STATUS_EMOJI[o.workflow_status]} {statoAlBanco(o.workflow_status, o.service_mode)}
                   </span>
                 )}
               </span>

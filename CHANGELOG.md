@@ -188,6 +188,14 @@ con una prova a vuoto che dice cosa cambierebbe prima di toccare niente.
 
 ### Per chi gestisce
 
+- **Il drink pronto si chiama «Pronto», e basta.** Lo stesso passo si leggeva
+  in quattro modi a seconda di dove guardavi: «Pronto» nel conto, «Pronto al
+  servizio» sulla pastiglia, «Ritiro/Servizio» in testa alla colonna, «È
+  pronto» sul tasto. Quattro parole per una cosa sola fanno chiedere se siano
+  quattro cose. Adesso al banco è una: sul tasto, sulla colonna, sulla
+  pastiglia e nel conto. Al cliente continua a dire «Pronto al servizio», che
+  a lui serve a capire se deve alzarsi.
+
 - **Finché il magazzino non è aggiornato, non lo scrive più nessuno.** Il
   blocco c'era, ma solo in due strade su sette: da **Acquisti → «Ricevuto»**
   si caricava la merce su giacenze ancora scritte alla vecchia maniera, e i
