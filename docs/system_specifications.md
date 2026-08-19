@@ -528,6 +528,8 @@ NON RIAPRE UNA COSA CHIUSA, LA COMPLETA. Il 18/08 si è deciso che l'incasso si 
 
 PERCHÉ SERVE, per quel che si vede dai dati (non è una sua parola): nel menù esiste una categoria BOTTIGLIE, e una bottiglia intera non è la stessa cosa di un drink servito al banco. Mettere tutto al 10% gonfia il netto, e il netto è il numero da cui scendono margine, prime cost e il conto di fine mese.
 
+LA REGOLA È CONFERMATA E NON VA PIÙ CHIESTA (utente, 19/08): «di default lui rivende al 10% di IVA, che è quello di default globale, e può essere modificato dalla relativa voce di menù». Quindi il 10% resta il generale e le eccezioni le mette lui, voce per voce, quando servono: non c'è nessuna aliquota da farsi dire prima: il campo esiste ed è dove uno la scriverebbe.
+
 NON DIPENDE DA NIENTE: il lato acquisto è già fatto e `sale_vat` c'è. Conviene però che arrivi PRIMA delle tabelle del Bilancio: finché tutto si scorpora al 10% il netto di quello che si rivende con un'altra aliquota è gonfiato, e da quel netto scendono margine, incidenze e prime cost.
 
 FATTO (19/08). La scheda del prodotto ha il campo «IVA vendita %» accanto al prezzo, e vuoto vuol dire «quella del locale»: chi non ha eccezioni non compila niente. Sotto c'è scritto quale aliquota vale lasciandolo vuoto, col numero.
@@ -1716,9 +1718,11 @@ COSA FA L'APP OGGI. Il generatore ordini fa un ordine per UN fornitore, coi soli
 
 LE DIFFERENZE, in ordine di quanto pesano: (1) l'app parte da una SOGLIA scritta a mano sull'articolo, il foglio dal CONSUMO e dalla giacenza; (2) l'app fa un ordine per fornitore, il foglio ne mette insieme quanti ne servono in un giro solo; (3) l'app non sa cosa sia un consumo settimanale, vedi REQ-MAG-024; (4) nella schermata dell'ordine non si vede il costo per unità di misura, che nel foglio c'è su ogni riga ed è il numero con cui si decide se un prodotto conviene. PROPOSTA. Proporre la quantità dal CONSUMO invece che dalla soglia — «coprire N settimane al ritmo delle ultime conte», con la soglia che resta come rete per i prodotti senza storico — e un giro d'ordini che tenga dentro più fornitori insieme, spezzandosi in un ordine per fornitore solo al momento dell'invio.
 
-DA CHIEDERE A FLAVIO: quante settimane si vogliono coprire (l'indizio dice tre), e se il numero è uguale per tutti o cambia per fornitore — chi consegna una volta al mese e chi due volte a settimana non si ordinano con la stessa regola.
+DA CHIEDERE A FLAVIO, e la domanda va posta così, perché scritta «quante settimane deve coprire un ordine» non si capisce (l'utente, 19/08: «un ordine è un ordine, non capisco la domanda»).
 
-DIPENDE DA REQ-MAG-024: la quantità da proporre nasce dal consumo a settimana, che oggi l'app non calcola. E dipende da una risposta che non è ancora arrivata — quante settimane si vogliono coprire, e se il numero vale per tutti i fornitori: è il numero che decide quanta merce entra dalla porta, e indovinarlo si paga in magazzino.
+LA DOMANDA VERA: quando l'app propone da sola le quantità, QUANTA ROBA CI METTE DENTRO? Il calcolo parte dal consumo — «di questo gin se ne vanno tre bottiglie a settimana» — e per farne una quantità da ordinare serve sapere PER QUANTO TEMPO DEVE BASTARE. Due settimane fanno sei bottiglie, un mese dodici. Nei fogli l'indizio dice tre settimane (`ORD / 3` in INV.xlsx), ma è una riga sola: non basta. E LA METÀ CHE CONTA DI PIÙ: vale lo stesso numero per tutti i fornitori? Chi passa due volte a settimana e chi consegna una volta al mese non si ordinano con la stessa regola — col primo ci si può tenere corti, col secondo no.
+
+DIPENDE DA REQ-MAG-024: la quantità da proporre nasce dal consumo a settimana, che l'app ora calcola. E dipende dalla risposta qui sopra — per quanto tempo deve bastare un ordine, e se il numero vale per tutti i fornitori: è quello che decide quanta merce entra dalla porta, e indovinarlo si paga in magazzino.
 
 **Dove**: `src/lib/warehouse.js suggestedPackages, src/components/PurchaseOrdersPanel.jsx`
 
@@ -1850,9 +1854,15 @@ QUELLO CHE NON C'È, e che non va inventato. Nessun foglio calcola il minimo dal
 
 DECISO (19/08, dall'utente che riporta Flavio):
 
-LA FORMULA È QUESTA — minimo del giorno = somma delle paghe di chi lavora quel giorno (ore × €/h, persona per persona) + un EXTRA messo a mano. Non è più un'ipotesi, è la regola con cui il minimo si calcola: la domanda scritta qui sopra è chiusa, e l'ipotesi era quella giusta. Il primo addendo l'app ce l'ha già per intero (REQ-STAFF-006), quindi non si ricopia da nessuna parte — nel foglio invece si ricopia, ed è già capitato che non torni.
+LA FORMULA È QUESTA — minimo del giorno = somma delle paghe di chi lavora quel giorno (ore × €/h, persona per persona) + un EXTRA messo a mano. Non è più un'ipotesi, è la regola con cui il minimo si calcola: la domanda scritta qui sopra è chiusa, e l'ipotesi era quella giusta. Il primo addendo l'app ce l'ha già per intero (REQ-STAFF-006), quindi non si ricopia da nessuna parte — nel foglio invece si ricopia, ed è già capitato che non torni. L'EXTRA:
 
-DA DEFINIRE IN IMPLEMENTAZIONE, e non è una domanda sulla formula: con che passo si mette l'extra — uno per giorno, uno per mese, o un valore di partenza per giorno della settimana che sul singolo giorno si corregge. Sul foglio l'extra sta dentro un numero solo e non si vede, quindi non c'è un fatto da leggere: si sceglie il modo meno faticoso da tenere aggiornato e lo si prova con Flavio.
+COME SI METTE, deciso dall'utente il 19/08. «Un valore che può inserire l'admin per ogni giorno, o una serie che può essere impostata su tutte le settimane del mese». Quindi DUE STRADE, e la seconda è quella che si userà quasi sempre:
+
+1) SUL SINGOLO GIORNO — l'admin scrive l'extra di quel giorno, e vince su tutto il resto. È il sabato della festa, la sera dell'evento;
+
+2) UNA SERIE SETTIMANALE stesa su tutto il mese — sette valori, uno per giorno della settimana, che si applicano a tutte le settimane del mese in un colpo. È come ragiona il foglio, dove i minimi cambiano per giorno della settimana e restano uguali di settimana in settimana (gen 26: gio 300, ven 600, sab 600, dom 300, lun 100, mar 100, mer 150).
+
+CHI VINCE: il valore del giorno sulla serie, sempre. Uno si prende la briga di scrivere il singolo giorno solo quando quel giorno è diverso, e se la serie lo sovrascrivesse quel gesto sarebbe inutile. Va scritto dove si calcola, non lasciato all'ordine in cui si leggono i dati. E SOLO L'ADMIN LO TOCCA: è un numero su cui si misura il lavoro di chi sta in sala, e non è roba da turno.
 
 COSA HA GIÀ L'APP: le ore e le paghe per intero, storicizzate (REQ-STAFF-006), e l'incasso per giornata commerciale (REQ-CASSA-005). Manca il minimo, manca il confronto, manca l'obiettivo settimanale, e mancano le spese del mese — che nel foglio sono una riga sola battuta a mano, non un elenco.
 
