@@ -22,12 +22,12 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 155 | fatto e coperto dai test |
+| ✅ | 156 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | ⬜ | 21 | da fare |
 | 🗑 | 1 | non più valido |
 
-**192 voci** in tutto. **170** descrivono il sistema com'è oggi e
+**193 voci** in tutto. **171** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **21** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **6** difetti noti sono ancora aperti.
@@ -59,7 +59,7 @@ come «vero oggi», non come «garantito».
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
 | [Integrazione SumUp](#integrazione-sumup) | 6 | — | Il dialogo con il terminale SumUp, dalle Cloud Functions. |
 | [Intelligenza artificiale](#intelligenza-artificiale) | — | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
-| [Interfaccia](#interfaccia) | 21 | — | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
+| [Interfaccia](#interfaccia) | 22 | — | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 12 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 
 ## Cosa fa il sistema
@@ -1479,6 +1479,24 @@ SCELTO IL SECONDO DEI DUE MODI: nessun campo «apposta» sulla categoria. L'elen
 UNA MACRO CANCELLATA VALE COME NESSUNA MACRO, esatto come in `groupCategoriesByMacro`: il `macro_id` resta attaccato alla categoria, ma il gruppo non esiste più.
 
 **Dove**: `src/components/MacroCategoryManager.jsx, src/components/InventoryManager.jsx (InvCategoryManager), src/components/MenuManager.jsx (CategoryManager)` · **Lo dimostrano**: `tests/unit/macros.test.js`, `tests/component/InventoryManager.test.jsx`, `tests/component/MenuManager.test.jsx`
+
+#### REQ-UI-023 — La card della comanda si legge da lontano: numero e nome grandi, meno righe
+
+Chiesto dall'utente il 19/08 guardando la lavagna del banco: «il badge servizio non serve. E poi il nome deve apparire piu' grande vicino all'id della comanda. Anche l'id piu' grande. Nome del tavolo e id stesse dimensioni e piu' grandi, come quelle degli ordini. Diminuisci il numero di item visibile nella card a 4».
+
+TRE COSE, e vanno insieme: quella card si guarda DA LONTANO, mentre si versa, e ogni cosa che non risponde a «di chi e' questo giro» ruba spazio a quelle che rispondono.
+
+1) NUMERO E NOME INSIEME, DELLA STESSA MISURA (1,35rem, grassetto). Prima il numero stava in corpo normale e il nome sotto, piccolo e smorzato — ma quando si chiama un tavolo si dice «il ventidue, quello di Peppe»: sono due meta' della stessa risposta, e una era scritta come una nota a pie' di pagina. Il nome NON prende il colore d'accento: due cose accese sulla stessa riga si contendono l'occhio, e il numero resta il modo in cui il conto si chiama.
+
+2) VIA IL BADGE «Ritiro / Servizio». Diceva come va consegnato, ma la card lo dice gia' senza pastiglie — un conto con un tavolo si porta, uno al bancone si ritira — e col tavolo scritto in grande si legge prima di prima. Una pastiglia su ogni card pronta costava una riga a tutte per una cosa che si capisce dal nome.
+
+3) QUATTRO RIGHE A VISTA, non sei. Una card da sei righe piu' testata piu' tasti si mangiava mezza colonna: con due card la corsia era gia' finita e le altre comande stavano sotto il bordo. Quattro dicono lo stesso — di che ordine e', e piu' o meno quanto c'e' da fare — in due terzi dello spazio, e chi ne ha di piu' tocca «altre N».
+
+ANCHE LE CORSIE DEI CONTI, non solo quelle delle comande: e' la stessa lavagna, e due viste della stessa cosa non devono leggersi in due modi. Non era stato chiesto per quella vista, ma la classe della testata e' la stessa e lasciarne una a meta' sarebbe stato peggio. «· comanda 2»
+
+RESTA PICCOLO: con la testata cresciuta, scritto della stessa misura sembrerebbe importante quanto il numero del conto, e non lo e' — serve solo a non confondere due card dello stesso tavolo.
+
+**Dove**: `src/components/CorsieComande.jsx, src/components/CorsieStato.jsx, src/components/RigheCorsia.jsx, src/index.css` · **Lo dimostrano**: `tests/component/CodaCorsie.test.jsx`
 
 ### Come si lavora al progetto
 

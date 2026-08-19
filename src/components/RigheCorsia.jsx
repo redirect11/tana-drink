@@ -1,8 +1,11 @@
 import { formatPrice } from '../lib/orderStatus.js'
 
-// Quante righe si vedono senza chiedere. Sei: è quello che ci sta in una
-// card senza far scomparire le corsie accanto, ed è anche più di quanto ha
-// un conto normale — chi ne ha venti è l'eccezione, e la apre.
+// Quante righe si vedono senza chiedere. QUATTRO: erano sei, e una card
+// da sei righe più la testata più i tasti arrivava a mangiarsi mezza
+// colonna — con due card la corsia era già finita, e le altre comande
+// stavano sotto il bordo dello schermo. Quattro righe dicono lo stesso
+// («di che ordine è, e più o meno quanto c'è da fare») in due terzi dello
+// spazio, e chi ne ha di più tocca «altre N».
 //
 // Da dieci in su il conto si legge meglio su DUE colonne: dieci righe in
 // fila fanno una card lunga il doppio delle altre, e la colonna dello stato
@@ -13,7 +16,7 @@ import { formatPrice } from '../lib/orderStatus.js'
 // con sei corsie accese la finestra è larga e la card è una striscia).
 // Qui si dice solo SE CONVIENE: due righe spezzate in due colonne sono
 // peggio di due righe in fila. Se ci sta lo decide il CSS.
-const RIGHE_A_VISTA = 6
+const RIGHE_A_VISTA = 4
 
 // LE RIGHE DI UNA CARD, dove che sia. Le usano tutte e due le viste a
 // corsie — quella dei conti e quella delle comande — e sono la parte che
