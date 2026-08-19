@@ -10,10 +10,16 @@ import {
 } from '../lib/api.js'
 import { categoryToMacro } from '../lib/macros.js'
 import { macroMonthlyReport } from '../lib/macroStats.js'
+import Didascalia from './Didascalia.jsx'
 
-// ANDAMENTO MENSILE PER MACRO-CATEGORIA DI MENÙ: quanto ha incassato ogni
-// gruppo di voci del menù, quanto è costata la merce che ha venduto, che
-// margine ne resta.
+// BILANCIO → VENDUTO × INCASSATO: quanto ha incassato ogni gruppo di voci
+// del menù, quanto è costata la merce che ha venduto, che margine ne resta.
+//
+// Stava nelle STATISTICHE e ha traslocato qui: quanto ha reso ogni macro è
+// una domanda da conti di fine mese, non da serata. Chi apre le Statistiche
+// vuole sapere com'è andata ieri, chi apre il Bilancio com'è andato il mese
+// — due mestieri diversi, anche se i numeri escono dalla stessa cassa. Il
+// contenuto non è cambiato: sono cambiate la casa e due righe in più.
 //
 // La vendita di una voce va INTERA alla macro di quella voce, incasso e
 // costo insieme (vedi lib/macroStats.js): la Schweppes versata in un Gin
@@ -25,6 +31,9 @@ const MESI = ['GEN', 'FEB', 'MAR', 'APR', 'MAG', 'GIU', 'LUG', 'AGO', 'SET', 'OT
 const monthsOfYear = (year) => MESI.map((_, i) => `${year}-${String(i + 1).padStart(2, '0')}`)
 const eur0 = (v) =>
   `${Math.round(Number(v) || 0).toLocaleString('it-IT', { useGrouping: 'always' })} €`
+// Un'incidenza che non si può calcolare (mese in perdita, anno vuoto) resta
+// un trattino: un numero inventato lì si legge come vero.
+const perc = (v) => (v == null ? '—' : `${String(v).replace('.', ',')}%`)
 
 export default function MacroMonthlyTab() {
   const [year, setYear] = useState(() => new Date().getFullYear())
@@ -114,8 +123,41 @@ export default function MacroMonthlyTab() {
             <MacroBlock key={r.id} row={r} months={report.months} />
           ))}
           <TotalBlock report={report} />
+          <SpiegazioneTabella saleVat={settings.sale_vat} />
         </>
       )}
+    </div>
+  )
+}
+
+// COSA VUOL DIRE OGNI RIGA, in parole da banco. Sono quattro parole da
+// contabile — margine, inc/costo, le due incidenze — e senza una frase che
+// le spieghi la tabella la sa leggere solo chi l'ha scritta.
+//
+// E LA DIFFERENZA COL FOGLIO VA DETTA QUI, perché è la prima cosa che si
+// chiede chi mette i due numeri accanto: non torneranno mai identici, e non
+// perché uno dei due sbaglia.
+function SpiegazioneTabella({ saleVat }) {
+  return (
+    <div className="card">
+      <Didascalia>
+        <strong>Margine</strong>: quello che resta dell’incasso dopo aver
+        pagato la merce che è uscita per farlo.{' '}
+        <strong>Inc/Costo</strong>: quante volte rientra quello che hai speso
+        — ×4 vuol dire che ogni euro di merce ne ha incassati quattro.{' '}
+        <strong>Incidenza</strong>: quanto pesa questo gruppo sul margine di
+        tutto il mese — se i quattro gruppi fanno 100, questo quanto ne
+        prende. <strong>Incidenza sull’anno</strong> (in fondo, sui totali):
+        quanto pesa questo mese sull’incassato dell’anno.
+      </Didascalia>
+      <Didascalia>
+        <strong>Se lo confronti col foglio non torna, ed è giusto così.</strong>{' '}
+        Qui l’incassato si confronta con il costo della merce{' '}
+        <strong>venduta</strong>, tutti e due al netto dell’IVA (l’incasso
+        scorporato al {saleVat}%). Il foglio confronta il fatturato con la
+        merce <strong>entrata dalla porta</strong>, al lordo. Le percentuali
+        si somigliano, gli importi no.
+      </Didascalia>
     </div>
   )
 }
@@ -131,7 +173,12 @@ function MacroBlock({ row, months }) {
           <strong>{row.tot.rapporto != null ? `×${row.tot.rapporto}` : '—'}</strong>
         </span>
       </div>
-      <MonthTable months={months} byMonth={row.byMonth} tot={row.tot} />
+      <MonthTable
+        months={months}
+        byMonth={row.byMonth}
+        tot={row.tot}
+        ultima={RIGA_INCIDENZA}
+      />
     </div>
   )
 }
@@ -142,15 +189,31 @@ function TotalBlock({ report }) {
     <div className="card macro-total" style={{ marginBottom: 12 }}>
       <strong>Σ Totale ({report.rows.length} macro)</strong>
       <div style={{ marginTop: 6 }}>
-        <MonthTable months={report.months} byMonth={report.totByMonth} tot={report.grand} />
+        <MonthTable
+          months={report.months}
+          byMonth={report.totByMonth}
+          tot={report.grand}
+          ultima={RIGA_INCIDENZA_ANNO}
+        />
       </div>
     </div>
   )
 }
 
+// LE DUE INCIDENZE non stanno sulle stesse righe: quella sul margine ha
+// senso per una macro (quanto pesa fra le altre), quella sull'anno solo per
+// i totali (quanto pesa un mese sull'anno). Una riga sola che cambia
+// significato a seconda del blocco sarebbe la stessa parola per due
+// domande diverse.
+const RIGA_INCIDENZA = { label: 'Incidenza', valore: (c) => perc(c.incidenza) }
+const RIGA_INCIDENZA_ANNO = {
+  label: 'Incidenza sull’anno',
+  valore: (c) => perc(c.incidenzaAnno),
+}
+
 // Tabella mesi × metriche (incasso/costo del venduto/margine/rapporto) con
-// colonna TOT.
-function MonthTable({ months, byMonth, tot }) {
+// colonna TOT, più la riga di incidenza che il blocco le passa.
+function MonthTable({ months, byMonth, tot, ultima = null }) {
   const cell = (m) => byMonth.get(m) || { incasso: 0, costo: 0, margine: 0, rapporto: null }
   return (
     <div className="table-scroll">
@@ -189,6 +252,15 @@ function MonthTable({ months, byMonth, tot }) {
             ))}
             <td className="tot">{tot.rapporto != null ? `×${tot.rapporto}` : '—'}</td>
           </tr>
+          {ultima && (
+            <tr className="r-inci">
+              <th className="rowhead">{ultima.label}</th>
+              {months.map((m) => (
+                <td key={m}>{ultima.valore(cell(m))}</td>
+              ))}
+              <td className="tot">{ultima.valore(tot)}</td>
+            </tr>
+          )}
         </tbody>
       </table>
     </div>

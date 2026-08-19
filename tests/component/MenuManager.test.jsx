@@ -206,11 +206,14 @@ describe('le icone delle sottosezioni', () => {
   // 🏷 o 🗂 NON seguiti da U+FE0F: l'emoji nuda, quella che si vede male.
   const NUDA = /[\u{1F3F7}\u{1F5C2}](?!\u{FE0F})/u
 
-  it('menù, magazzino, statistiche e impostazioni le scrivono a colori', () => {
+  // Le Statistiche non hanno più un elenco di sezioni: il «Mensile per
+  // macro» ha traslocato in Bilancio, e con una vista sola non c'è niente
+  // da far scegliere. L'elenco col 🗂️ dentro adesso è quello del Bilancio.
+  it('menù, magazzino, bilancio e impostazioni le scrivono a colori', () => {
     for (const [file, nome] of [
       ['MenuManager.jsx', 'sezioni'],
       ['InventoryManager.jsx', 'INV_VIEWS'],
-      ['StatsTab.jsx', 'SEZIONI_STATS'],
+      ['BilancioTab.jsx', 'SEZIONI_BILANCIO'],
       ['SettingsTab.jsx', 'GRUPPI'],
     ]) {
       expect(elenco(file, nome), `${nome} in ${file}`).not.toMatch(NUDA)
