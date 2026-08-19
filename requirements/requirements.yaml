@@ -1347,6 +1347,7 @@ requirements:
       - tests/unit/comande.test.js
       - tests/unit/scritturaComande.test.js
       - tests/unit/impegnato.test.js
+      - tests/unit/salaEMagazzino.test.js
 
   - id: REQ-MAG-004
     title: "Modificare un ordine già scalato riallinea le scorte alla differenza"
