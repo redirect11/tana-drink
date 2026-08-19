@@ -563,6 +563,48 @@ describe('le corsie del banco: una card per comanda', () => {
     ruolo = 'bartender'
   })
 
+  // ── I FILTRI STANNO SULLA RIGA DEI CONTEGGI (BUG-042) ────────────
+  //
+  // Erano una riga a sé fra i conteggi e le testate delle colonne: 64px
+  // — 8 di stacco, 40 di pastiglia, 4 di imbottitura, 12 sotto — per due
+  // pastiglie corte, e tre livelli prima di vedere la prima comanda.
+  // Questa lavagna si guarda da lontano mentre si versa: ogni riga
+  // sprecata sopra è una comanda in meno sotto.
+  it('i filtri non hanno più una riga loro: stanno sui conteggi', async () => {
+    montaCoda()
+    await screen.findByText('Da fare')
+
+    const riga = screen.getByRole('button', { name: /Miei/ }).closest('.chips-row')
+    const conteggi = riga.closest('.board-sotto')
+    // Sulla riga dei conteggi, in testata — non un livello suo fra i
+    // conteggi e le colonne.
+    expect(conteggi).toBeTruthy()
+    expect(within(conteggi).getByText(/apert/)).toBeInTheDocument()
+    // Anche «Colonne» è lì con loro: la riga è una sola. (Il cambio vista
+    // al banco non c'è: lì la risposta è sempre il lavoro.)
+    expect(within(conteggi).getByRole('button', { name: /Colonne/ })).toBeInTheDocument()
+    // E fuori dalla testata non resta nessuna riga di pastiglie: era
+    // quella che costava il livello in più.
+    const testata = document.querySelector('.board-head')
+    expect(
+      [...document.querySelectorAll('.chips-row')].filter((r) => !testata.contains(r))
+    ).toHaveLength(0)
+  })
+
+  it('e fanno esattamente quello che facevano prima', async () => {
+    // Si è spostato DOVE stanno, non cosa fanno.
+    const utente = userEvent.setup()
+    montaCoda()
+    await screen.findByText('Da fare')
+
+    await utente.click(screen.getByRole('button', { name: /Miei/ }))
+    expect(screen.getByRole('button', { name: /Miei/ })).toHaveClass('active')
+    // «Colonne» apre ancora la scelta delle colonne, che è una riga a sé
+    // ma solo finché è aperta — si tocca e si richiude.
+    await utente.click(screen.getByRole('button', { name: /Colonne/ }))
+    expect(document.querySelector('.corsie-scelta')).toBeTruthy()
+  })
+
   // ── INCASSARE NON FA SPARIRE I DRINK DA FARE (BUG-023) ───────────
   //
   // Si incassa un conto che ha ancora comande «da fare» o «in
