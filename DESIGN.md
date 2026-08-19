@@ -197,6 +197,16 @@ Regole:
   c'è la stella dei preferiti — un tasto, che non si copre.
   In magazzino è sempre un pallino: lì il segno è uno STATO, non un colore
   scelto a mano.
+- **Il colore del conto è un pallino, e lo stato vince sempre.** Un conto
+  può avere un colore suo (campo `colore` sul documento, tavolozza delle
+  categorie): serve a riconoscere che tre comande finite in tre colonne
+  diverse sono lo stesso tavolo. Sta in un **pallino da 10px accanto al
+  numero**, sulla card del conto e su tutte le card delle sue comande —
+  mai un fondo pieno sotto il testo (dodici tinte sature diventano
+  illeggibili su un tema o sull'altro) e **mai la striscia a sinistra**:
+  quella dice a che punto sta il lavoro, ed è quello che si legge di
+  corsa. Due segni, due domande. Il colore non informa mai da solo: il
+  numero del conto gli sta accanto. Le regole in `src/lib/coloriConto.js`.
 - **Chip e filtri**: pillole compatte, stato attivo con `--accent`;
   i filtri della coda stanno su una riga sola.
 - **Toast e banner**: brevi, in linguaggio comune, mai colpevolizzanti.
