@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 140 | fatto e coperto dai test |
+| ✅ | 141 | fatto e coperto dai test |
 | ⚠️  | 16 | fatto ma nessun test lo verifica |
-| ⬜ | 31 | da fare |
+| ⬜ | 30 | da fare |
 | 🗑 | 1 | non più valido |
 
-**188 voci** in tutto. **156** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **31** sono lavori
+**188 voci** in tutto. **157** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **30** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **9** difetti noti sono ancora aperti.
 
@@ -59,7 +59,7 @@ come «vero oggi», non come «garantito».
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
 | [Integrazione SumUp](#integrazione-sumup) | 6 | — | Il dialogo con il terminale SumUp, dalle Cloud Functions. |
 | [Intelligenza artificiale](#intelligenza-artificiale) | — | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
-| [Interfaccia](#interfaccia) | 18 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
+| [Interfaccia](#interfaccia) | 19 | 2 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 5 | 7 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 
 ## Cosa fa il sistema
@@ -1322,6 +1322,34 @@ L'app installata si chiama «La Tana del Coniglio», non con la sigla del proget
 
 **Dove**: `src/lib/nomeApp.js, public/manifest.webmanifest` · **Lo dimostrano**: `tests/unit/nomeApp.test.js`
 
+#### REQ-UI-022 — Le categorie senza macro si vedono a colpo d'occhio, in magazzino e nel menù
+
+DECISO (19/08, dall'utente che riporta Flavio).
+
+ALTRO (magazzino) e BOTTIGLIE (menù) restano SENZA macro, ed è una scelta: non vanno forzate dentro un gruppo per far tornare un elenco. Da lì nasce il bisogno opposto — si deve capire in un attimo quali categorie sono fuori, perché una fuori APPOSTA e una dimenticata oggi si somigliano troppo.
+
+COSA C'È GIÀ, verificato nel codice il 19/08. `groupCategoriesByMacro` (src/lib/macros.js) torna già `unassigned`, e il pannello «🗂 Macro-categorie» — lo stesso per magazzino e menù, MacroCategoryManager.jsx — le scrive in fondo su una riga sola: «Categorie senza macro: …», i nomi separati da virgola. Quindi LÌ IL «SENZA MACRO»
+
+SI VEDE, ma debolmente: è testo piccolo in coda alla schermata, e con venticinque categorie diventa una riga da leggere parola per parola per sapere se la tua c'è dentro.
+
+DOVE NON SI VEDE AFFATTO: negli ELENCHI delle categorie, che sono l'altro posto dove uno le guarda. Magazzino → 🏷 Categorie (InvCategoryManager) mostra il solo nome; Menù → 🏷 Categorie (CategoryManager in MenuManager.jsx) mostra nome, icona e colore. Nessuno dei due dice a quale macro appartiene la categoria, né che non ne ha nessuna — e sono le stesse liste da cui si esce convinti di aver sistemato tutto.
+
+DA FARE: nell'elenco delle categorie, da tutte e due le parti, si legge la macro di ogni categoria e si distingue quella che non ce l'ha.
+
+PROPOSTA sulla forma (non è una sua parola): accanto al nome un'etichetta con la macro, e dove manca due parole — «senza macro» — con lo stesso peso, non un avviso. Non è un errore, e il rosso qui non c'entra: in questa app vuol dire annullato o sbagliato (DESIGN.md).
+
+DA DEFINIRE IN IMPLEMENTAZIONE: se «apposta» sia un segno da mettere sulla categoria (un campo in più, e una spiegazione da scrivere) o basti che l'elenco si legga bene. Il secondo costa zero ma lascia il dubbio ogni volta che qualcuno di nuovo guarda quella lista.
+
+NON DIPENDE DA NIENTE: `groupCategoriesByMacro` torna già `unassigned`, il lavoro sta negli elenchi delle categorie. Piccolo, e utile proprio adesso che le macro si stanno mappando.
+
+FATTO (19/08). In tutti e due gli elenchi — Magazzino → 🏷 Categorie e Menù → 🏷 Categorie — accanto al nome c'è un'etichetta con la macro, e dove non c'è si legge «senza macro» con lo STESSO PESO: niente rosso, niente punto esclamativo. Non è un errore, è un fatto, e chi ha lasciato ALTRO fuori apposta non deve vedersi rimproverare ogni volta che apre la lista. L'unica differenza è il corsivo, che dice «questa è una constatazione, non un nome».
+
+SCELTO IL SECONDO DEI DUE MODI: nessun campo «apposta» sulla categoria. L'elenco che si legge bene costa zero e non chiede a nessuno di compilare niente; il segno esplicito si potrà aggiungere il giorno in cui il dubbio si presenta davvero, e allora sarà una decisione presa su un caso vero invece che su un'ipotesi.
+
+UNA MACRO CANCELLATA VALE COME NESSUNA MACRO, esatto come in `groupCategoriesByMacro`: il `macro_id` resta attaccato alla categoria, ma il gruppo non esiste più.
+
+**Dove**: `src/components/MacroCategoryManager.jsx, src/components/InventoryManager.jsx (InvCategoryManager), src/components/MenuManager.jsx (CategoryManager)` · **Lo dimostrano**: `tests/unit/macros.test.js`, `tests/component/InventoryManager.test.jsx`, `tests/component/MenuManager.test.jsx`
+
 ### Come si lavora al progetto
 
 Non è comportamento dell’app: è il metodo con cui la si costruisce.
@@ -1685,28 +1713,6 @@ Trovato dalla rilettura del diff della 1.5.0. Lo stesso passo si chiama in tre m
 DA DECIDERE, non da semplificare in silenzio: si sceglie la parola e si aggiornano le tabelle e il loro test, oppure si tiene la differenza e si scrive nel commento perché lì serve più corta.
 
 **Dove**: `src/lib/comande.js, src/lib/orderStatus.js`
-
-#### REQ-UI-022 — Le categorie senza macro si vedono a colpo d'occhio, in magazzino e nel menù
-
-DECISO (19/08, dall'utente che riporta Flavio).
-
-ALTRO (magazzino) e BOTTIGLIE (menù) restano SENZA macro, ed è una scelta: non vanno forzate dentro un gruppo per far tornare un elenco. Da lì nasce il bisogno opposto — si deve capire in un attimo quali categorie sono fuori, perché una fuori APPOSTA e una dimenticata oggi si somigliano troppo.
-
-COSA C'È GIÀ, verificato nel codice il 19/08. `groupCategoriesByMacro` (src/lib/macros.js) torna già `unassigned`, e il pannello «🗂 Macro-categorie» — lo stesso per magazzino e menù, MacroCategoryManager.jsx — le scrive in fondo su una riga sola: «Categorie senza macro: …», i nomi separati da virgola. Quindi LÌ IL «SENZA MACRO»
-
-SI VEDE, ma debolmente: è testo piccolo in coda alla schermata, e con venticinque categorie diventa una riga da leggere parola per parola per sapere se la tua c'è dentro.
-
-DOVE NON SI VEDE AFFATTO: negli ELENCHI delle categorie, che sono l'altro posto dove uno le guarda. Magazzino → 🏷 Categorie (InvCategoryManager) mostra il solo nome; Menù → 🏷 Categorie (CategoryManager in MenuManager.jsx) mostra nome, icona e colore. Nessuno dei due dice a quale macro appartiene la categoria, né che non ne ha nessuna — e sono le stesse liste da cui si esce convinti di aver sistemato tutto.
-
-DA FARE: nell'elenco delle categorie, da tutte e due le parti, si legge la macro di ogni categoria e si distingue quella che non ce l'ha.
-
-PROPOSTA sulla forma (non è una sua parola): accanto al nome un'etichetta con la macro, e dove manca due parole — «senza macro» — con lo stesso peso, non un avviso. Non è un errore, e il rosso qui non c'entra: in questa app vuol dire annullato o sbagliato (DESIGN.md).
-
-DA DEFINIRE IN IMPLEMENTAZIONE: se «apposta» sia un segno da mettere sulla categoria (un campo in più, e una spiegazione da scrivere) o basti che l'elenco si legga bene. Il secondo costa zero ma lascia il dubbio ogni volta che qualcuno di nuovo guarda quella lista.
-
-NON DIPENDE DA NIENTE: `groupCategoriesByMacro` torna già `unassigned`, il lavoro sta negli elenchi delle categorie. Piccolo, e utile proprio adesso che le macro si stanno mappando.
-
-**Dove**: `src/components/MacroCategoryManager.jsx, src/components/InventoryManager.jsx (InvCategoryManager), src/components/MenuManager.jsx (CategoryManager)`
 
 ### Come si lavora al progetto
 

@@ -23,6 +23,8 @@ import { deleteDrinkImageByUrl } from '../lib/storage.js'
 import { formatQty, stockStatus } from '../lib/inventory.js'
 import MarginList from './MarginList.jsx'
 import MacroCategoryManager from './MacroCategoryManager.jsx'
+import EtichettaMacro from './EtichettaMacro.jsx'
+import { indiceMacro, macroDiCategoria } from '../lib/macros.js'
 import DrinkForm from './DrinkForm.jsx'
 import { saveDrinkFromForm } from '../lib/saveDrink.js'
 import CategoryRail from './CategoryRail.jsx'
@@ -628,6 +630,18 @@ function MacroMenuPanel({ categories }) {
 function CategoryManager({ categories }) {
   const [name, setName] = useState('')
   const [busy, setBusy] = useState(false)
+  // LE MACRO SERVONO ANCHE QUI. Questo elenco mostrava nome, icona e
+  // colore: a quale gruppo appartenesse una categoria — o che non ne
+  // avesse nessuno — si scopriva solo aprendo il pannello delle macro.
+  // Solo le macro: le categorie le tiene aggiornate la sottoscrizione
+  // della pagina.
+  const [macros, setMacros] = useState([])
+  useEffect(() => {
+    fetchMacroCategories('menu')
+      .then(setMacros)
+      .catch(() => {})
+  }, [])
+  const indice = useMemo(() => indiceMacro(macros), [macros])
 
   async function add() {
     if (!name.trim()) return
@@ -688,6 +702,7 @@ function CategoryManager({ categories }) {
                 {c.icon || '•'}
               </span>
               {c.name}
+              <EtichettaMacro macro={macroDiCategoria(c, indice)} />
             </span>
             <span className="row" style={{ gap: 4 }}>
               <button className="btn ghost small" onClick={() => move(idx, -1)} disabled={idx === 0}>↑</button>

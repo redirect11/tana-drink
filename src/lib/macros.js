@@ -56,3 +56,23 @@ export function macroOfDrink(drink, menuCatToMacro) {
   if (!catId) return null
   return menuCatToMacro?.get?.(catId) ?? null
 }
+
+// ── DI CHE MACRO È QUESTA CATEGORIA ──────────────────────────────────
+// Serve agli ELENCHI delle categorie (Magazzino → 🏷 Categorie, Menù → 🏷
+// Categorie), che sono l'altro posto dove uno le guarda e dove finora la
+// macro non si vedeva affatto: si usciva da lì convinti di aver sistemato
+// tutto, e intanto una categoria era rimasta fuori.
+//
+// Una macro_id che punta a una macro CANCELLATA vale come niente, esatto
+// come in `groupCategoriesByMacro`: il dato è rimasto attaccato alla
+// categoria, ma il gruppo non esiste più e dire il contrario sarebbe
+// peggio del vuoto.
+export function indiceMacro(macros) {
+  return new Map((macros || []).map((m) => [m.id, m]))
+}
+
+export function macroDiCategoria(categoria, indice) {
+  const id = categoria?.macro_id
+  if (!id) return null
+  return indice?.get?.(id) ?? null
+}

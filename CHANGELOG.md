@@ -4,6 +4,12 @@
 
 ### Per chi gestisce
 
+- **Nell'elenco delle categorie si vede a quale gruppo appartengono** — in
+  magazzino e nel menù. Accanto al nome c'è la macro, e dove non ce n'è si
+  legge «senza macro». Non è un rimprovero: ALTRO e BOTTIGLIE stanno fuori
+  apposta. Serve a distinguerle da quelle che ci sono finite per
+  dimenticanza, che prima si somigliavano troppo.
+
 - **Il «Mensile per macro» è diventato «Venduto × Incassato», e sta nel
   Bilancio**: quanto ha reso ogni gruppo del menù è una domanda di fine
   mese, non di serata — le Statistiche restano com'erano andate ieri sera,

@@ -59,6 +59,8 @@ import {
 import { formatPrice } from '../lib/orderStatus.js'
 import { parseSupplierList } from '../lib/warehouse.js'
 import MacroCategoryManager from './MacroCategoryManager.jsx'
+import EtichettaMacro from './EtichettaMacro.jsx'
+import { indiceMacro, macroDiCategoria } from '../lib/macros.js'
 import { useChiudiConIndietro } from '../lib/schermate.js'
 import { toastSuccess, toastError } from '../lib/toast.js'
 import StockCountPanel from './StockCountPanel.jsx'
@@ -214,11 +216,23 @@ export default function InventoryManager() {
 // altri motivi — e infatti erano finite lì.
 function CategoriePanel() {
   const [categories, setCategories] = useState([])
-  const ricarica = async () => setCategories(await fetchInventoryCategories())
+  // LE MACRO SERVONO ANCHE QUI. Finora questo elenco mostrava il solo
+  // nome, e a quale gruppo appartenesse una categoria si andava a vedere
+  // nel pannello delle macro — cioè da un'altra parte, dopo essersi
+  // chiesti se valeva la pena.
+  const [macros, setMacros] = useState([])
+  const ricarica = async () => {
+    const [cats, macs] = await Promise.all([
+      fetchInventoryCategories(),
+      fetchMacroCategories('magazzino').catch(() => []),
+    ])
+    setCategories(cats)
+    setMacros(macs)
+  }
   useEffect(() => {
     ricarica()
   }, [])
-  return <InvCategoryManager categories={categories} onChange={ricarica} />
+  return <InvCategoryManager categories={categories} macros={macros} onChange={ricarica} />
 }
 
 function MacroPanel() {
@@ -1128,9 +1142,10 @@ function ProductsPanel() {
 
 // --- Gestione categorie inventario --------------------------------------
 
-function InvCategoryManager({ categories, onChange }) {
+function InvCategoryManager({ categories, macros = [], onChange }) {
   const [name, setName] = useState('')
   const [busy, setBusy] = useState(false)
+  const indice = useMemo(() => indiceMacro(macros), [macros])
 
   async function add() {
     if (!name.trim()) return
@@ -1177,7 +1192,10 @@ function InvCategoryManager({ categories, onChange }) {
       )}
       {categories.map((c, idx) => (
         <div className="row between" key={c.id} style={{ marginTop: 8 }}>
-          <span>{c.name}</span>
+          <span className="row" style={{ gap: 8, alignItems: 'center' }}>
+            {c.name}
+            <EtichettaMacro macro={macroDiCategoria(c, indice)} />
+          </span>
           <span className="row" style={{ gap: 4 }}>
             <button className="btn ghost small" onClick={() => move(idx, -1)} disabled={idx === 0}>↑</button>
             <button className="btn ghost small" onClick={() => move(idx, 1)} disabled={idx === categories.length - 1}>↓</button>
