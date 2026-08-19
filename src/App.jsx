@@ -213,7 +213,7 @@ export default function App() {
         if (isStaff) {
           getPushToken()
             .then((token) => {
-              if (token) saveStaffToken(u.uid, token, role, idDispositivo()).catch(() => {})
+              if (token) saveStaffToken(u.uid, token, idDispositivo()).catch(() => {})
             })
             .catch(() => {})
         }
