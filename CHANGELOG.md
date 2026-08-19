@@ -4,6 +4,13 @@
 
 ### Per chi gestisce
 
+- **Nella conta di magazzino si legge quanto se ne va a settimana**, accanto
+  al consumo del periodo — ed è diviso per le settimane **vere**, contate
+  dalle date della conta, non per un numero fisso da tenere aggiornato a
+  mano. È il numero su cui si decide quanto ordinare. Finché la conta è
+  troppo fresca per dire qualcosa non compare: meglio niente che un numero
+  inventato, che manda a comprare merce che non serve.
+
 - **L'IVA di vendita si cambia sulla singola voce di menù**: nella scheda
   del prodotto, accanto al prezzo. Lasciala vuota e vale quella del locale —
   si compila solo dove fa eccezione. Serve perché una bottiglia intera non
