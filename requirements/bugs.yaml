@@ -1016,7 +1016,7 @@ bugs:
 
   - id: BUG-036
     title: "Lo staff non riceve le notifiche di ritiro e servizio"
-    area: "functions/lib/push-core.js, functions/index.js, src/lib/preferenzeNotifiche.js"
+    area: "functions/lib/push-core.js, functions/index.js, src/lib/api.js, public/sw.js"
     description: >
       Segnalato dall'utente il 19/08: «lo staff non riceve le notifiche del
       ritiro/servizio, quelle devono assolutamente arrivare».
@@ -1024,39 +1024,39 @@ bugs:
       portare o da consegnare: senza, la comanda resta ferma sul banco
       finché qualcuno non guarda lo schermo — che è esattamente quello che
       le corsie dovevano evitare.
-      DIAGNOSI (19/08): NON PARTONO. Sono due guasti distinti, tutti e due
-      nelle Cloud Functions, e nessuno dei due si corregge dall'app.
-      1) SERVIZIO (ordine pronto da portare al tavolo). Il messaggio viene
-      costruito — decideStaffServePush — ma `pushToStaff` lo manda con
-      `roles: ['staff']` (functions/index.js), e `destinatariPush` tiene
-      solo le righe di `staff_tokens` col campo `role` uguale a 'staff'.
-      Quel campo però non è il RUOLO DELLA PERSONA: è quello che ci scrive
-      sopra l'ultima schermata che registra il dispositivo, e la schermata
-      dove si finisce sempre è la coda — BartenderPage lo scrive a mano
-      'bartender' (src/pages/BartenderPage.jsx), e App.jsx ci porta dritto
-      chiunque sia dello staff. Risultato: nessuna riga è mai 'staff',
-      l'elenco dei destinatari resta vuoto e la funzione esce senza
-      mandare niente. PROVA: su tana-drink-test tutte e quattro le righe di
-      `staff_tokens` (lette in sola lettura il 19/08) hanno role
-      'bartender'; nessuna 'staff'.
-      2) RITIRO (drink da consegnare al banco). Non parte NESSUN messaggio
-      per lo staff: decideStaffServePush esce subito con
-      `if (after.service_mode === 'banco') return null`
-      (functions/lib/push-core.js). L'unica push prevista per il ritiro è
-      quella al CLIENTE, e vuole `after.push_token`, che ce l'hanno solo
-      gli ordini fatti dal menù: un conto battuto al POS non avvisa
-      nessuno, né staff né cliente.
-      CORREZIONE PROPOSTA (richiede un DEPLOY DELLE FUNCTIONS, da chiedere
-      all'utente): togliere il filtro per ruolo dal «pronto» — chi porta i
-      drink non è un ruolo, è chi è in piedi — e far nascere il messaggio
-      anche per il ritiro, saltando solo il terminale che ha premuto
-      «pronto» (dispositivoOrigine), che già sa. Lato app resta da smettere
-      di scrivere un `role` finto in staff_tokens.
+      DOVE SI FERMAVA: NON PARTIVA. Due guasti distinti.
+      1) SERVIZIO. Il messaggio nasceva (decideStaffServePush) ma
+      `pushToStaff` lo mandava con `roles: ['staff']`, e `destinatariPush`
+      teneva solo le righe di `staff_tokens` col campo `role` a 'staff'.
+      Quel campo non era il ruolo della persona: era il nome della
+      SCHERMATA che aveva registrato il dispositivo, e la schermata dove
+      si finisce tutti è la coda, che ci scriveva 'bartender'. Elenco
+      vuoto, uscita silenziosa. PROVA: su tana-drink-test tutte e quattro
+      le righe di `staff_tokens` avevano role 'bartender', nessuna 'staff'.
+      2) RITIRO. Nessun messaggio nasceva affatto: decideStaffServePush
+      usciva su `service_mode === 'banco'`, dando per scontato che ci
+      pensasse il cliente — che però riceve la push solo se ha ordinato
+      dal menù (il `push_token` sul conto), e un conto battuto al POS non
+      ce l'ha. Su quei conti non partiva niente per nessuno.
+      CORREZIONE: via il filtro per ruolo (chi porta i drink non è un
+      ruolo, è chi è in piedi); il messaggio nasce anche per il ritiro,
+      con parole sue; a non riceverlo è solo il terminale che ha premuto
+      «pronto», che ora lascia scritto `avanzamento_device` sul conto. Il
+      campo `role` in `staff_tokens` non lo scrive né lo legge più
+      nessuno: mentiva, ed è stato tolto. Corretto nello stesso giro l'OR
+      troppo largo del service worker (`focused ||`), che avrebbe fatto
+      sparire l'avviso appena riattivato su un tablet a schermo spento.
+      RESTA DA FARE: il DEPLOY delle Cloud Functions. Finché non si
+      deploya, in produzione gira ancora il codice vecchio.
     in_produzione: true
-    status: todo
+    status: fixed
     generate_issue: true
     labels: [bug, notifiche, banco]
-    test_cases: []
+    test_cases:
+      - tests/bdd/notify-staff-call.test.js
+      - tests/bdd/notify-order.test.js
+      - tests/unit/scritturaComande.test.js
+      - tests/unit/serviceWorkerAvvisi.test.js
 
   - id: BUG-037
     title: "Aprendo l'app la chiamata dello staff non compare finché non si naviga"
@@ -1116,6 +1116,11 @@ bugs:
       condizione, la visibilità.
       NON RIPRODOTTO: in locale le push non si provano (niente emulatore
       FCM, service worker non registrato in sviluppo).
+      19/08 — il difetto del service worker è CORRETTO (è andato con
+      BUG-036: si guarda la visibilità, non il fuoco, e ora public/sw.js
+      ha i suoi test). Resta aperto solo quello che non dipende da noi:
+      il risparmio energetico di Android. Da chiudere con l'utente dopo
+      il deploy, provando col telefono in mano.
     in_produzione: true
     status: todo
     generate_issue: true

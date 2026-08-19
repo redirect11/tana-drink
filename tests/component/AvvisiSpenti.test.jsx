@@ -64,7 +64,7 @@ describe('l’avviso «gli avvisi sono spenti»', () => {
     stato = 'ok'
     await user.click(tasto)
     await waitFor(() => expect(screen.queryByText(/avvisi sono spenti/i)).toBeNull())
-    expect(saveStaffToken).toHaveBeenCalledWith('u1', 'tok', 'bartender', 'dev1')
+    expect(saveStaffToken).toHaveBeenCalledWith('u1', 'tok', 'dev1')
   })
 
   it('se il browser li ha bloccati si spiega dove riaccenderli, senza tasto', async () => {

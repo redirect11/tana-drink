@@ -4,6 +4,20 @@
 
 ### Al banco
 
+- **Un drink pronto fa squillare i telefoni degli altri**: l’avviso «pronto
+  da servire» non arrivava a nessuno, e per i drink da ritirare al banco non
+  partiva proprio. Adesso parte per tutti e due — «da servire» al tavolo,
+  «da consegnare» al banco — e va a **tutti i terminali accesi tranne quello
+  che ha appena premuto il tasto**, che sa già. Prima si smistava per ruolo,
+  e il ruolo scritto sul telefono non diceva chi fosse la persona: diceva da
+  quale schermata si era registrato. Un drink pronto che nessuno viene a
+  prendere è il modo più veloce per far aspettare un tavolo.
+
+- **L’avviso non sparisce più col telefono in tasca**: se il gestionale era
+  rimasto aperto, la notifica dei drink pronti veniva saltata anche a
+  schermo spento — cioè proprio quando serviva. Adesso si tace solo se la
+  coda è davvero sotto gli occhi.
+
 - **La chiamata dal bancone si presenta dovunque sei**: chi veniva chiamato
   sentiva il telefono, riapriva l'app e non trovava niente — la chiamata
   compariva solo andando a mano su «Da servire». Adesso il riquadro salta

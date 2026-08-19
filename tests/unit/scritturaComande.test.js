@@ -94,6 +94,7 @@ vi.mock('firebase/firestore', () => ({
 }))
 
 const { advanceComanda } = await import('../../src/lib/api.js')
+const { idDispositivo } = await import('../../src/lib/dispositivo.js')
 
 const conto = () => ({
   status: 'aperto',
@@ -158,5 +159,28 @@ describe('lo scarico del magazzino non riscrive lo stato delle comande', () => {
     const c1 = stato.ordine.comande.find((c) => c.id === 'c1')
     expect(c1.status).toBe('ritirato')
     expect(c1.inventory_applied).toBe(true)
+  })
+})
+
+// DA QUALE TERMINALE E' PARTITO IL «PRONTO» (BUG-036).
+//
+// La Cloud Function avvisa tutti gli altri quando un drink e' pronto, e
+// per saltare chi ha appena premuto il tasto le serve saperlo dal
+// documento: la push nasce dal cambio dell’ordine, non dal gesto. Senza
+// questo campo o si avvisava anche chi aveva premuto — il telefono che
+// squilla in mano — o non si avvisava nessuno.
+describe('l’avanzamento lascia scritto da dove e’ partito', () => {
+  it('portando una comanda a pronto, il conto porta il dispositivo', async () => {
+    await advanceComanda('ord-1', 'c1', 'pronto')
+    await respira()
+    expect(stato.ordine.avanzamento_device).toBe(idDispositivo())
+  })
+
+  it('sta nella stessa scrittura dello stato, non in una a parte', async () => {
+    // Se arrivasse dopo, la Function leggerebbe il documento senza il
+    // dispositivo e non saprebbe chi saltare.
+    await advanceComanda('ord-1', 'c1', 'pronto')
+    const conStato = stato.scritture.find((w) => w.patch?.comande)
+    expect(conStato.patch.avanzamento_device).toBe(idDispositivo())
   })
 })
