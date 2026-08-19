@@ -2744,6 +2744,23 @@ body.drawer-open .status-bell-float { display: none; }
   opacity: 1;
 }
 
+/* A QUALE MACRO APPARTIENE UNA CATEGORIA, negli elenchi delle categorie
+   (magazzino e menù). «Senza macro» ha lo STESSO PESO del nome di un
+   gruppo: non è un errore — ALTRO e BOTTIGLIE restano fuori apposta — e
+   qui il rosso vuol dire annullato o sbagliato. Cambia solo il corsivo,
+   che dice «questa è una constatazione, non un nome». */
+.etichetta-macro {
+  font-size: 0.72rem;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 1px 8px;
+  white-space: nowrap;
+}
+.etichetta-macro.senza {
+  font-style: italic;
+}
+
 /* Dashboard mensile per macro: tabella mesi × metriche, scrollabile in orizz. */
 .table-scroll {
   overflow-x: auto;

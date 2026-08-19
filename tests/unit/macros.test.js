@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { groupCategoriesByMacro, categoryToMacro, macroOfItem } from '../../src/lib/macros.js'
+import {
+  groupCategoriesByMacro,
+  categoryToMacro,
+  macroOfItem,
+  indiceMacro,
+  macroDiCategoria,
+} from '../../src/lib/macros.js'
 
 const macros = [
   { id: 'm2', name: 'Vino', sort_order: 1 },
@@ -40,5 +46,40 @@ describe('categoryToMacro / macroOfItem', () => {
     expect(macroOfItem({ category_id: 'c4' }, map)).toBeNull() // categoria senza macro
     expect(macroOfItem({ category_id: 'ignota' }, map)).toBeNull()
     expect(macroOfItem({}, map)).toBeNull() // item senza categoria
+  })
+})
+
+// ── DI CHE MACRO È QUESTA CATEGORIA (REQ-UI-022) ─────────────────────
+// Serve agli ELENCHI delle categorie — magazzino e menù — che sono l'altro
+// posto dove uno le guarda e dove la macro non si vedeva affatto: si
+// usciva da lì convinti di aver sistemato tutto, e intanto una categoria
+// era rimasta fuori.
+describe('la macro di una categoria', () => {
+  const indice = indiceMacro([
+    { id: 'm1', name: 'Alcolici' },
+    { id: 'm2', name: 'Birre e bibite' },
+  ])
+
+  it('torna la macro, col suo nome', () => {
+    expect(macroDiCategoria({ id: 'c1', macro_id: 'm2' }, indice).name).toBe('Birre e bibite')
+  })
+
+  it('senza macro torna niente — e non è un errore', () => {
+    // ALTRO (magazzino) e BOTTIGLIE (menù) stanno fuori APPOSTA.
+    expect(macroDiCategoria({ id: 'c2' }, indice)).toBeNull()
+    expect(macroDiCategoria({ id: 'c2', macro_id: null }, indice)).toBeNull()
+    expect(macroDiCategoria(null, indice)).toBeNull()
+  })
+
+  // Stessa regola di groupCategoriesByMacro: il dato è rimasto attaccato
+  // alla categoria, ma il gruppo non esiste più. Dire il contrario sarebbe
+  // peggio del vuoto — si andrebbe a cercare una macro che non c'è.
+  it('una macro cancellata vale come nessuna macro', () => {
+    expect(macroDiCategoria({ id: 'c3', macro_id: 'sparita' }, indice)).toBeNull()
+  })
+
+  it('senza macro in giro non si rompe niente', () => {
+    expect(macroDiCategoria({ macro_id: 'm1' }, indiceMacro(null))).toBeNull()
+    expect(macroDiCategoria({ macro_id: 'm1' }, undefined)).toBeNull()
   })
 })
