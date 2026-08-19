@@ -2937,23 +2937,35 @@ body.drawer-open .status-bell-float { display: none; }
 }
 
 /* Card ordine: lo stato è leggibile dal bordo/tinta oltre che dalla pill */
+/* IL FONDO DELLA CARD PORTA DUE COSE INSIEME, e per questo passa da due
+   variabili invece che da un `background` riscritto per ogni stato.
+   A SINISTRA, il passo del lavoro (--tinta-stato): l'alone che sfuma nel
+   primo terzo, insieme alla striscia da 4px. È il segno che chi sta allo
+   shaker legge per sapere cosa fare adesso, e non si tocca.
+   SU TUTTA LA CARD, il colore del CONTO (--conto-colore): serve a
+   riconoscere che tre card in tre colonne diverse sono lo stesso tavolo.
+   Prima erano due `background` che si sovrascrivevano a vicenda — l'ultima
+   regola letta vinceva e l'altra spariva. */
 .order-card {
   border-left: 4px solid transparent;
+  background:
+    linear-gradient(90deg, var(--tinta-stato, transparent), transparent 35%),
+    var(--card);
 }
 
 .order-card.ricevuto {
   border-left-color: #f39c12;
-  background: linear-gradient(90deg, rgba(243, 156, 18, 0.08), transparent 35%), var(--card);
+  --tinta-stato: rgba(243, 156, 18, 0.08);
 }
 
 .order-card.in_preparazione {
   border-left-color: #3498db;
-  background: linear-gradient(90deg, rgba(52, 152, 219, 0.1), transparent 35%), var(--card);
+  --tinta-stato: rgba(52, 152, 219, 0.1);
 }
 
 .order-card.pronto {
   border-left-color: #2ecc71;
-  background: linear-gradient(90deg, rgba(46, 204, 113, 0.1), transparent 35%), var(--card);
+  --tinta-stato: rgba(46, 204, 113, 0.1);
 }
 
 .order-card.ritirato {
@@ -7059,23 +7071,37 @@ body.pagina-piena .inv-scheda {
   color: #ffd591;
 }
 
-/* IL COLORE DEL CONTO: UN PALLINO ACCANTO AL NUMERO.
-   Non la striscia a sinistra e non il fondo — quelli dicono a che punto sta
-   il lavoro, e chi vince fra i due sta scritto in lib/coloriConto.js. Un
-   pallino da 10px con un filo chiaro attorno: la tavolozza è la stessa
-   delle categorie, tinte sature che su fondo scuro reggono da sole e su
-   fondo chiaro avrebbero rischiato di sparire nel bordo della card.
-   L'anello è un color-mix col testo, quindi segue il tema invece di essere
-   un bianco che sul chiaro non si vede. */
-.pallino-conto {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  margin-right: 6px;
-  border-radius: 50%;
-  vertical-align: baseline;
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--text) 30%, transparent);
-  flex-shrink: 0;
+/* IL COLORE DEL CONTO TINGE LA CARD INTERA, sfumato e leggero.
+   Provato prima come pallino accanto al numero, e non serviva a niente: il
+   colore qui deve rispondere da LONTANO — «quelle tre card sparse sono lo
+   stesso tavolo» — e dieci pixel da lontano non si vedono. Un fondo, sì.
+
+   PERCHÉ COSÌ POCO COLORE (16% in alto a sinistra, 5% a metà, niente in
+   fondo): la tavolozza è di dodici tinte sature, nate per pallini e
+   striscioline; stese piene sotto al testo lo renderebbero illeggibile su
+   un tema o sull'altro, e coprirebbero l'alone del passo di lavoro, che
+   è l'unica cosa che non si può perdere. Diluite in `color-mix` con la
+   trasparenza restano un'ombra colorata: si riconosce a colpo d'occhio e
+   non litiga con niente.
+
+   IN DIAGONALE, non da sinistra: da sinistra c'è già l'alone dello stato,
+   e due sfumature dallo stesso lato si sarebbero impastate. Così i due
+   segni si leggono separati — il passo del lavoro entra da sinistra, il
+   colore del conto scende dall'angolo.
+
+   E il colore non è mai l'unica cosa che dice qualcosa: il numero del
+   conto è sulla card, e resta la risposta per chi i colori non li
+   distingue. */
+.order-card.conto-colorato {
+  background:
+    linear-gradient(90deg, var(--tinta-stato, transparent), transparent 35%),
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--conto-colore) 16%, transparent),
+      color-mix(in srgb, var(--conto-colore) 5%, transparent) 55%,
+      transparent 85%
+    ),
+    var(--card);
 }
 
 /* LA TAVOLOZZA DEL CONTO, dentro il ⋯ della card. Stessi gettoni del menù
