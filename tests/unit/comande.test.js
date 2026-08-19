@@ -329,7 +329,7 @@ describe('vista aggregata: aumenti/diminuzioni gestite internamente', () => {
 // l'ha fatto, il banco. «Servito» è il drink arrivato al tavolo, e fra i
 // due passi in magazzino non si muove più niente.
 // Prima si scaricava al servito, e lì il tasto ormai lo preme la SALA, che
-// sul magazzino non scrive: lo scarico falliva in silenzio (BUG-039). E non
+// sul magazzino non scrive: lo scarico falliva in silenzio (BUG-040). E non
 // si scala prima, alla presa in carico: un drink iniziato e poi non fatto
 // avrebbe già portato via gli ingredienti.
 describe('quando si scala il magazzino', () => {

@@ -572,7 +572,7 @@ TORNARE INDIETRO NON RISTORNA, ED È UNA SCELTA — decisa il 19/08 spostando lo
 
 SOTTO ZERO NON SI SCENDE: si toglie al massimo quello che risulta in giacenza, e un carico su una giacenza negativa riparte da zero. La vendita passa comunque (il conto è già scritto) e il magazzino si ferma a zero: altrimenti il buco resta, il carico dopo conta meno di una bottiglia e il valore in euro va in negativo.
 
-**Dove**: `src/lib/inventory.js computeConsumption, src/lib/comande.js, src/lib/api.js` · **Lo dimostrano**: `tests/unit/inventory.test.js`, `tests/unit/incassoOffline.test.js`, `tests/unit/comande.test.js`, `tests/unit/scritturaComande.test.js`, `tests/unit/impegnato.test.js`
+**Dove**: `src/lib/inventory.js computeConsumption, src/lib/comande.js, src/lib/api.js` · **Lo dimostrano**: `tests/unit/inventory.test.js`, `tests/unit/incassoOffline.test.js`, `tests/unit/comande.test.js`, `tests/unit/scritturaComande.test.js`, `tests/unit/impegnato.test.js`, `tests/unit/salaEMagazzino.test.js`
 
 #### REQ-MAG-004 — Modificare un ordine già scalato riallinea le scorte alla differenza
 
