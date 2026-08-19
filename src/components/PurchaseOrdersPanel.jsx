@@ -7,7 +7,12 @@ import {
   receivePurchaseOrder,
   deletePurchaseOrder,
 } from '../lib/api.js'
-import { formatQty, contenutoDelPezzo, stockStatus } from '../lib/inventory.js'
+import {
+  formatQty,
+  contenutoDelPezzo,
+  magazzinoBloccato,
+  stockStatus,
+} from '../lib/inventory.js'
 import { purchaseOrderTotals, suggestedPackages, purchaseOrderText } from '../lib/warehouse.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import { printOrdineFornitore } from '../lib/printer.js'
@@ -46,6 +51,13 @@ export default function PurchaseOrdersPanel() {
   useEffect(() => {
     load()
   }, [])
+
+  // IL MAGAZZINO IN SOLA LETTURA VALE ANCHE QUI. Finché il travaso non è
+  // fatto, «ricevuto» scriverebbe pezzi su giacenze ancora in centilitri: il
+  // buco di BUG-029, che questa schermata aveva perché il blocco viveva
+  // dentro la schermata del magazzino. La regola sta in inventory.js, e la si
+  // chiede — non la si riscrive.
+  const bloccato = useMemo(() => magazzinoBloccato(items), [items])
 
   const supplierItems = useMemo(
     () => items.filter((i) => i.supplier_id === supplierId && i.status !== 'out'),
@@ -138,6 +150,20 @@ export default function PurchaseOrdersPanel() {
   return (
     <div>
       {error && <div className="banner">Errore: {error}</div>}
+
+      {/* Gli ordini si scrivono lo stesso — sono carta, non giacenze — ma la
+          merce non si può ancora caricare. Dirlo qui, e non solo sul tasto:
+          un tasto spento su un tablet non ha nessun posto dove far leggere
+          il perché. */}
+      {bloccato && (
+        <div className="banner">
+          <strong>Il magazzino va aggiornato.</strong> Gli ordini si possono
+          preparare e mandare; per <strong>caricare la merce</strong> serve
+          prima l’aggiornamento, dal <strong>Magazzino</strong> (il banner in
+          alto). Se no si sommerebbero pezzi a giacenze scritte alla vecchia
+          maniera, e i numeri non tornerebbero più.
+        </div>
+      )}
 
       <div className="card">
         <strong>Nuovo ordine</strong>
@@ -237,7 +263,19 @@ export default function PurchaseOrdersPanel() {
                 </div>
                 <span className="row" style={{ gap: 4 }}>
                   {o.status !== 'ricevuto' && (
-                    <button className="btn small" onClick={() => setConfirmReceive(o)} disabled={busy}>
+                    <button
+                      className="btn small"
+                      onClick={() => setConfirmReceive(o)}
+                      // Spento col perché, non sparito: un tasto che non c'è
+                      // fa dubitare di averlo immaginato, e chi aspetta la
+                      // merce lo cerca.
+                      disabled={busy || bloccato}
+                      title={
+                        bloccato
+                          ? 'Prima va aggiornato il magazzino alla nuova gestione (Magazzino → il banner in alto).'
+                          : undefined
+                      }
+                    >
                       📦 Ricevuto
                     </button>
                   )}
