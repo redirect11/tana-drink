@@ -20,25 +20,61 @@ function countComande(o, status) {
   return o.status === status ? 1 : 0
 }
 
+// QUALI comande sono pronte, non quante. Serve a squillare UNA VOLTA SOLA
+// per comanda: contarle non basta, perché una comanda riportata indietro e
+// rimessa «pronto» fa risalire il totale, e il cliente si prenderebbe il
+// secondo squillo per un drink che ha già in mano.
+// I conti vecchi non hanno l'elenco delle comande: valgono per uno solo.
+function idsPronte(o) {
+  if (!o) return []
+  if (Array.isArray(o.comande)) {
+    return o.comande.filter((c) => c && c.status === 'pronto').map((c, i) => c.id || `#${i}`)
+  }
+  return o.status === 'pronto' ? ['#legacy'] : []
+}
+
 // Dati (before, after) di un documento ordine. Restituisce il messaggio da
 // inviare ({ title, body }) oppure null se non va notificato nulla.
+//
+// Sul «pronto» il messaggio porta anche `comande`: gli identificativi che
+// chi invia deve segnare in `pronto_avvisate` sull'ordine, così quello
+// squillo non si ripete più per quelle comande.
 function decideOrderPush(before, after) {
   if (!after || !after.push_token) return null
 
-  // Una comanda in più è passata a "pronto" (vale anche per le aggiunte
-  // a un conto aperto: ogni comanda pronta notifica il cliente).
-  // SOLO col RITIRO AL BANCO: è l'unico caso in cui il cliente deve fare
-  // qualcosa (alzarsi e venire a prendere il drink). Al tavolo ci pensa il
-  // servizio, quindi avvisarlo sarebbe un disturbo inutile.
+  // Una comanda è appena passata a "pronto" (vale anche per le aggiunte a
+  // un conto aperto: ogni comanda pronta avvisa il cliente).
+  //
+  // SOLO COL RITIRO AL BANCO: è l'unico caso in cui il cliente deve fare
+  // qualcosa — alzarsi e venire a prendere il drink. Al tavolo ci pensa chi
+  // porta il vassoio, e avvisarlo sarebbe un disturbo inutile.
+  //
+  // UNA VOLTA SOLA PER COMANDA. Al banco succede: si segna «pronto» la
+  // comanda sbagliata, la si riporta indietro, la si rimette pronta un
+  // minuto dopo. Il cliente non deve ricevere due squilli per lo stesso
+  // drink — al secondo si smette di credere al primo. Le comande già
+  // annunciate stanno scritte sull'ordine (`pronto_avvisate`); finché quel
+  // campo non c'è, l'avviso resta legato al solo passaggio di stato, che è
+  // come si comportava prima.
+  //
+  // CON GLI STATI DI SERVIZIO SPENTI questo passaggio non esiste — nessuna
+  // comanda arriva mai a «pronto» — e non parte niente. Non è un caso
+  // scoperto: è che non c'è niente da annunciare, perché chi batte l'ordine
+  // lo prepara e lo consegna sul momento. La pagina del QR resta comunque
+  // aggiornata, ed è quella che il cliente guarda.
+  //
   // Il push arriva comunque solo a chi ha ordinato dal menù: gli ordini
-  // battuti dallo staff nascono senza push_token (vedi sopra).
-  if (
-    after.service_mode === 'banco' &&
-    countComande(after, 'pronto') > countComande(before, 'pronto')
-  ) {
-    return {
-      title: '🔔 Il tuo drink è pronto!',
-      body: `Ordine #${after.daily_number ?? '—'} pronto al ritiro.`,
+  // battuti dallo staff nascono senza push_token.
+  if (after.service_mode === 'banco') {
+    const prima = idsPronte(before)
+    const gia = Array.isArray(after.pronto_avvisate) ? after.pronto_avvisate : []
+    const nuove = idsPronte(after).filter((id) => !prima.includes(id) && !gia.includes(id))
+    if (nuove.length > 0) {
+      return {
+        title: '🔔 Il tuo drink è pronto!',
+        body: `Ordine #${after.daily_number ?? '—'} pronto al ritiro.`,
+        comande: nuove,
+      }
     }
   }
 
@@ -231,6 +267,7 @@ function destinatariPush(tokens, { dispositivoOrigine = null } = {}) {
 module.exports = {
   terminaliDi,
   countComande,
+  idsPronte,
   comandeDaFare,
   idsDaFare,
   destinatariPush,

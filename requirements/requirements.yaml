@@ -4354,11 +4354,52 @@ requirements:
       l'avviso non arriva e la pagina col QR resta la strada che funziona
       sempre; con gli stati di servizio spenti quel passaggio non esiste, e
       va detto cosa succede invece di lasciare il caso scoperto.
-    status: todo
+      VERIFICATO PRIMA DI SCRIVERE (19/08). L'avviso al cliente c'era già:
+      decideOrderPush manda «🔔 Il tuo drink è pronto!» quando una comanda
+      di un conto `service_mode: 'banco'` passa a «pronto», e parte da sola
+      dal trigger notifyOrderUpdate. Il token si aggancia al conto dalla
+      pagina di stato («🔔 Avvisami quando è pronto», o da solo se il
+      permesso c'era già e si è scansionato il QR). Mancavano i tre
+      dettagli, e uno era una promessa falsa.
+      FATTO COSI'.
+      1) UNA VOLTA SOLA PER COMANDA: si guardava se le comande pronte
+      erano AUMENTATE, e una comanda riportata indietro e rimessa pronta
+      faceva risalire il conteggio — secondo squillo per un drink già in
+      mano, e al secondo non si crede più al primo. Ora si guardano gli
+      IDENTIFICATIVI: il messaggio dice quali comande annuncia
+      (`msg.comande`) e il trigger le segna sull'ordine (`pronto_avvisate`,
+      arrayUnion, solo dopo un invio riuscito). Quella scrittura fa
+      ripartire il trigger, che con le comande ormai segnate non manda più
+      niente: si ferma da sé.
+      2) SENZA PERMESSO ALLE NOTIFICHE non c'è token e non parte niente:
+      resta la pagina del QR, che si aggiorna da sola, e ora lo DICE
+      invece di lasciar aspettare uno squillo che non arriva.
+      3) COL SERVIZIO AL TAVOLO il tasto «Avvisami quando è pronto» non
+      compare più: la push non è mai partita per quel modo, e il tasto
+      prometteva una cosa che non succedeva — peggio di nessun tasto, che
+      la volta dopo non ci si fida più dell'app. Al suo posto la verità:
+      «te lo portiamo al tavolo».
+      4) CON GLI STATI DI SERVIZIO SPENTI nessuna comanda arriva mai a
+      «pronto»: non è un caso scoperto, è che non c'è niente da annunciare
+      — chi batte l'ordine lo prepara e lo consegna sul momento. La pagina
+      lo dice («ritira al banco quando il drink è pronto») invece di
+      offrire un tasto muto.
+      IL TABELLONE «stiamo servendo» resta la terza strada, per chi ha
+      ordinato al banco: c'è già e non è stato toccato.
+      DEPLOY DELLE CLOUD FUNCTIONS NON AUTORIZZATO. Il punto 1 vive in
+      functions/ e resta INEFFICACE in produzione finché non si deploya:
+      fino ad allora l'avviso continua a partire sul passaggio di stato,
+      cioè come prima — nessuna regressione, ma il doppio squillo resta
+      possibile. Stesso caso di BUG-036, mergiato da giorni e ancora senza
+      effetto in produzione per lo stesso motivo. I punti 2, 3 e 4 sono
+      lato sito e vanno in produzione col normale rilascio.
+    status: implemented
     generate_issue: true
     labels: [clienti, notifiche, comande]
     priority: P2
-    test_cases: [tests/unit/push-comande.test.js]
+    test_cases:
+      - tests/unit/push-comande.test.js
+      - tests/component/OrderStatusPage.test.jsx
 
   - id: REQ-UI-020
     title: "Ogni conto ha il suo colore, e le sue comande lo portano"

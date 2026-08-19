@@ -297,3 +297,63 @@ describe('un conto annullato altrove', () => {
     expect(recordNotif).not.toHaveBeenCalled()
   })
 })
+// ── «AVVISAMI QUANDO È PRONTO»: SOLO A CHI DEVE ALZARSI (REQ-CLI-006) ─
+//
+// Su un conto da RITIRO, quando il drink è pronto la palla passa al
+// cliente: deve alzarsi e venire al banco, e senza un avviso resta a
+// fissare il telefono. Al tavolo non deve fare niente — ci pensa chi porta
+// il vassoio — e un tasto che promette uno squillo che non arriverà mai è
+// peggio di nessun tasto: la volta dopo non ci si fida più dell'app.
+//
+// E la pagina resta la strada che funziona SEMPRE: le notifiche mancano per
+// mille motivi che il cliente non controlla, e senza dirlo si aspetta
+// qualcosa che non arriva.
+describe('il cliente e l’avviso «è pronto»', () => {
+  // Il browser di prova non ha le notifiche: senza fingerle il tasto non
+  // comparirebbe mai e la prova direbbe di sì per il motivo sbagliato.
+  beforeEach(() => {
+    window.Notification = { permission: 'default' }
+  })
+
+  const apriDaCliente = async (patch) => {
+    ruoloCorrente = undefined
+    const { fetchOrder, subscribeOrder } = await import('../../src/lib/api.js')
+    const o = { ...ORDINE, ...patch }
+    fetchOrder.mockResolvedValue(o)
+    subscribeOrder.mockImplementation((id, cb) => {
+      cb(o)
+      return () => {}
+    })
+    apri()
+    await screen.findByText(/Negroni/)
+  }
+
+  it('col RITIRO il tasto c’è: da lì in poi tocca a lui', async () => {
+    await apriDaCliente({ service_mode: 'banco' })
+    expect(screen.getByRole('button', { name: /Avvisami quando è pronto/ })).toBeInTheDocument()
+  })
+
+  it('AL TAVOLO no, e glielo si dice: non deve fare niente', async () => {
+    await apriDaCliente({ service_mode: 'tavolo' })
+    expect(screen.queryByRole('button', { name: /Avvisami quando è pronto/ })).toBeNull()
+    expect(screen.getByText(/te lo portiamo al tavolo/i)).toBeInTheDocument()
+  })
+
+  it('senza notifiche non si perde niente: la pagina si aggiorna da sola', async () => {
+    // È la strada che funziona sempre — permesso negato, telefono che le
+    // blocca, browser che le ignora — e va detta, o si resta a fissare uno
+    // schermo aspettando uno squillo che non arriva.
+    await apriDaCliente({ service_mode: 'banco' })
+    expect(screen.getByText(/questa pagina si aggiorna da sola/i)).toBeInTheDocument()
+  })
+
+  it('con gli stati del servizio spenti non si promette nessun avviso', async () => {
+    // Senza quei passi non c'è nessun momento in cui il drink è «pronto e
+    // fermo sul banco»: non è un caso scoperto, è che non c'è niente da
+    // annunciare. Si dice quello, invece di offrire un tasto muto.
+    impostazioniCorrenti = { workflow_enabled: false }
+    await apriDaCliente({ service_mode: 'banco' })
+    expect(screen.queryByRole('button', { name: /Avvisami quando è pronto/ })).toBeNull()
+    expect(screen.getByText(/ritira al banco quando il drink è pronto/i)).toBeInTheDocument()
+  })
+})

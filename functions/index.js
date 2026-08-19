@@ -154,6 +154,18 @@ exports.notifyOrderUpdate = onDocumentUpdated({ ...OPTS, document: 'orders/{orde
           notification: { icon: '/logo.png', badge: '/logo.png' },
         },
       })
+      // SEGNARE CHE È PARTITO. Le comande annunciate si scrivono
+      // sull'ordine: se qualcuno riporta indietro lo stato e lo rimette
+      // «pronto», il cliente non riceve un secondo squillo per un drink che
+      // ha già in mano — al secondo si smette di credere al primo.
+      // Si segna DOPO l'invio riuscito: un avviso mai partito non deve
+      // risultare dato. La scrittura fa ripartire questo stesso trigger,
+      // che con la comanda ormai segnata non manda più niente.
+      if (msg.comande?.length) {
+        await event.data.after.ref
+          .update({ pronto_avvisate: FieldValue.arrayUnion(...msg.comande) })
+          .catch((e) => console.error('[push] pronto_avvisate:', e?.message || e))
+      }
     } catch (e) {
       // Token scaduto/non valido: rimuovilo dall'ordine, niente retry.
       if (e?.code === 'messaging/registration-token-not-registered') {
