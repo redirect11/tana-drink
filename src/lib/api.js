@@ -3722,6 +3722,50 @@ export async function deleteStaffShift(id) {
   await deleteDoc(doc(staffShiftsCol, id))
 }
 
+// ── CHI È COLLEGATO ADESSO ───────────────────────────────────────────
+//
+// Serve alla legenda della coda: chi si collega compare fra le iniziali
+// anche prima di battere il primo conto. Le regole di chi può vederlo, e
+// quando uno «c'è ancora», stanno in lib/presenza.js.
+//
+// UNA RIGA PER PERSONA, non per dispositivo: la legenda mostra PERSONE, e
+// lo stesso Marco su tablet e telefono è un Marco solo. È il contrario di
+// `staff_tokens`, che è per dispositivo perché lì si deve far squillare
+// ogni apparecchio.
+//
+// LA SCRITTURA NON SI ASPETTA MAI. È un colpo di vita, non un gesto: se
+// fallisce — rete che manca, regole vecchie su un terminale — non deve
+// rompere niente e non deve dire niente a nessuno. Al banco un `await` su
+// una scrittura offline non torna mai, e per una cosa che si ripete ogni
+// tre minuti sarebbe l'app ferma.
+export function segnalaPresenza({ uid, name, role }) {
+  if (!uid) return
+  setDoc(
+    doc(db, 'presenze', uid),
+    {
+      uid,
+      name: name || '',
+      role: role || null,
+      // Orologio DEL CLIENT, non `serverTimestamp`: la finestra si misura
+      // con lo stesso orologio che poi la legge, se no due terminali con
+      // l'ora storta si vedrebbero l'un l'altro sempre online o mai.
+      last_seen: new Date().toISOString(),
+    },
+    { merge: true }
+  ).catch(() => {})
+}
+
+// Chi risulta collegato. Si legge tutto e si filtra a valle (presenza.js):
+// sono poche righe — quante sono le persone che lavorano — e la finestra
+// va confrontata con l'orologio di chi guarda, non con una query.
+export function subscribePresenze(onChange, onError) {
+  return onSnapshot(
+    collection(db, 'presenze'),
+    (snap) => onChange(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+    onError ?? (() => {})
+  )
+}
+
 // Token push del dispositivo di un membro dello staff: la Cloud Function
 // lo usa per recapitare la chiamata cerca-persone anche quando l'app è
 // in background o chiusa.

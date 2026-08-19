@@ -2122,6 +2122,25 @@ body.fullbleed .bar-content {
   gap: 4px;
 }
 
+/* CHI È COLLEGATO MA NON HA ANCORA BATTUTO NIENTE. La lettera è la stessa
+   — è così che si riconoscerà sulle card fra un minuto — ma la voce è più
+   quieta: un pallino verde davanti e il nome smorzato. Le altre voci
+   rispondono a «di chi è questo conto», questa a «chi c'è stasera», e
+   sono due domande diverse.
+   Il pallino non è l'unica cosa che lo dice: la voce è più chiara del
+   resto, e chi non distingue i colori legge lo stesso l'elenco. */
+.order-legend .legenda-online {
+  opacity: 0.75;
+}
+.order-legend .legenda-online::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #2ecc71;
+  flex-shrink: 0;
+}
+
 /* Griglia delle card ordine: si adatta da sola a 1/2/3/4+ colonne. */
 .order-grid {
   display: grid;

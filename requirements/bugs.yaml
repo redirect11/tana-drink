@@ -1354,3 +1354,34 @@ bugs:
     severity: lieve
     priority: P2
     test_cases: [tests/component/CodaCorsie.test.jsx]
+
+  - id: BUG-043
+    title: "Due nomi con la stessa iniziale, e in legenda ne resta uno solo"
+    area: "src/pages/BartenderPage.jsx (legenda), src/lib/presenza.js, src/lib/orderStatus.js (placedByLetter)"
+    description: >
+      Trovato il 19/08 scrivendo i test di REQ-CODA-005: il caso e' saltato
+      fuori da solo perche' nei dati di prova c'era gia' una MARTA, e il
+      MARCO che stavo aggiungendo non compariva.
+      IL DIFETTO E' VECCHIO QUANTO LA LEGENDA e non nasce dalle presenze:
+      la legenda raccoglie le iniziali in una mappa lettera -> nome, e se
+      due persone hanno la stessa iniziale la seconda non entra. Marta batte
+      un conto, Marco ne batte un altro: in legenda c'e' solo «M — Marta»,
+      e i conti di Marco portano una M che dice il nome sbagliato.
+      QUANTO FA MALE: non si perde nessun dato — sulla card resta scritto
+      chi ha battuto — ma la legenda MENTE, e mente proprio su «di chi e'
+      questo conto», che e' l'unica domanda a cui serve rispondere. In una
+      sera con Marco e Marta, o con Sara e Simone, chi guarda attribuisce
+      conti alla persona sbagliata.
+      NON L'HO RISOLTO IN QUEL GIRO perche' non era quello che si stava
+      facendo, e perche' la cura tocca anche la lettera SULLE CARD
+      (placedByLetter): metterne una in legenda e un'altra sulle card
+      sarebbe peggio del difetto.
+      TRE STRADE, da pesare quando si lavora: due lettere quando la prima
+      collide (Ma / Mo), il nome intero in legenda con la sola lettera sulle
+      card, oppure un colore per persona come si e' fatto per i conti. La
+      prima e' la piu' piccola e la piu' vicina a come si legge oggi.
+    in_produzione: true
+    status: todo
+    generate_issue: true
+    labels: [bug, coda, ui]
+    test_cases: []
