@@ -1288,9 +1288,9 @@ Il merge in develop passa un cancello, descritto in docs/gitflow.md: requisiti e
 
 **Dove**: `docs/gitflow.md, vitest.config.mjs, .github/workflows/test.yml` · ⚠️ **Nessun test lo verifica.**
 
-#### REQ-DEV-012 — docs/requisiti.md e' la specifica di sistema, e si genera
+#### REQ-DEV-012 — docs/system_specifications.md e' la specifica di sistema, e si genera
 
-Chiesto dall'utente il 19/08: «requisiti.md dovrebbe diventare la specifica di sistema dato che i requisiti li abbiamo in requirements.yaml e su GitHub». Il documento era lo specchio del registro — le stesse voci, nello stesso ordine, con dentro meno cose — e come tutti gli specchi scritti a mano era rimasto indietro: 94 voci raccontate su 187 esistenti, per mesi, senza che nessuno se ne accorgesse.
+Chiesto dall'utente il 19/08: «requisiti.md dovrebbe diventare la specifica di sistema dato che i requisiti li abbiamo in requirements.yaml e su GitHub» — e a stretto giro, sempre lui, il file e' stato rinominato in system_specifications.md, perche' il nome dicesse cos'e' (la specifica) e non da dove nasce (i requisiti). Il documento era lo specchio del registro — le stesse voci, nello stesso ordine, con dentro meno cose — e come tutti gli specchi scritti a mano era rimasto indietro: 94 voci raccontate su 187 esistenti, per mesi, senza che nessuno se ne accorgesse.
 
 COSA E' ADESSO: un documento che si legge come una specifica. Le aree nell'ordine della serata (si prende un ordine, si compone il conto, si incassa, e solo dopo menu', magazzino e il resto), ognuna presentata da una riga che dice di cosa parla; in testa la data di generazione, i conteggi e l'avviso che il file e' generato, con il comando per rifarlo.
 
@@ -1300,7 +1300,7 @@ OGNI COMPORTAMENTO CITA I TEST CHE LO DIMOSTRANO, e chi non ne ha lo dichiara. E
 
 RESTA GENERATO, ed e' l'unica cosa che lo tiene vivo: scritto a mano tornerebbe vecchio in una settimana, e la prova e' come stava prima. La resa vive in un modulo suo (`lib-specifica.mjs`) perche' cosi' si prova con un registro finto di sette voci, invece che coi 187 veri — un test che legge il registro vero prova il registro, non il documento.
 
-**Dove**: `scripts/lib-specifica.mjs, scripts/requisiti.mjs, docs/requisiti.md` · **Lo dimostrano**: `tests/unit/specifica.test.js`
+**Dove**: `scripts/lib-specifica.mjs, scripts/requisiti.mjs, docs/system_specifications.md` · **Lo dimostrano**: `tests/unit/specifica.test.js`
 
 ## Lavori previsti
 
