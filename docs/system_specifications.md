@@ -30,7 +30,7 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 **190 voci** in tutto. **165** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **24** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
-cosa che l'app fa; **6** difetti noti sono ancora aperti.
+cosa che l'app fa; **5** difetti noti sono ancora aperti.
 
 Le voci ⚠️ sono la parte scomoda: funzionano, ma **nessun test le tiene**.
 Sono quelle che si rompono senza che nessuno se ne accorga, e vanno lette
@@ -170,7 +170,7 @@ LA SCHERMATA DEL CONTO NUOVO SI APRE PULITA, senza pulizie all'apertura: uscendo
 
 LE MODIFICHE CHE NON PASSERANNO MAI si dicono e si scartano. «Il documento non esiste più» o «non hai i permessi» non cambiano al secondo tentativo — succede quando qualcuno cancella un prodotto mentre tu ne stavi scalando la scorta — quindi non si riprovano da sole, si spiegano a parole («una scheda del magazzino non esiste più») e si tolgono dalla lista con un tasto. Senza, la campanella resta rossa per sempre su roba che non si può salvare. E QUELLO CHE SI SCRIVE ARRIVA AGLI ALTRI DA SÉ. Ogni modifica entra prima nella memoria locale e parte per il server in sottofondo: gli altri terminali la vedono comparire senza che nessuno prema niente. Offline le scritture non falliscono — restano in coda dentro Firestore, che le conserva anche a app chiusa, e partono appena c'è linea. Quelle RIFIUTATE (un errore vero, la rete che si chiude a metà) si riprovano da sole al ritorno della rete, fino a tre volte: oltre, restano lì e lo dice la campanella, perché una scrittura che continua a essere rifiutata ha bisogno di una persona, non di un altro tentativo. E NIENTE ASPETTA IL SERVER. Ogni azione su un conto — incassare, annullare, avanzare, aggiungere righe — leggeva il documento dal SERVER prima di scrivere: da lì il ritardo fra il tocco e la coda che si muove, e il riepilogo in cima che sembrava aggiornarsi solo alla risposta del server. Si legge dalla cache, che l'ascolto della coda tiene già allineata. E USCIRE DAL CONTO NON ASPETTA NIENTE. Il box del nome aspettava che il conto fosse nato per sapere se chiederlo — ma il nome si sa già dalla schermata: l'unica cosa che quell'attesa produceva era il box in ritardo. Il conto nasce per conto suo, e il nome lo raggiunge appena c'è.
 
-**Dove**: `src/lib/progressivi.js, src/lib/api.js, src/components/OrderPosDetail.jsx` · **Lo dimostrano**: `tests/unit/progressivi.test.js`, `tests/bdd/numerazione.test.js`, `tests/component/PosPage.test.jsx`, `tests/unit/sync.test.js`, `tests/unit/scritturaComande.test.js`, `tests/component/UnaMemoriaLocale.test.jsx`
+**Dove**: `src/lib/progressivi.js, src/lib/api.js, src/components/OrderPosDetail.jsx` · **Lo dimostrano**: `tests/unit/progressivi.test.js`, `tests/bdd/numerazione.test.js`, `tests/component/PosPage.test.jsx`, `tests/unit/sync.test.js`, `tests/unit/scritturaComande.test.js`, `tests/component/UnaMemoriaLocale.test.jsx`, `tests/component/ComandaSenzaAttesa.test.jsx`
 
 #### REQ-ORD-008 — Un conto chiuso o annullato si può rimettere in corso
 
@@ -1851,7 +1851,6 @@ della correzione è il test citato nel requisito della sua area.
 | 🔴 | [BUG-001](#bug-001--in-produzione-ladmin-vede-missing-or-insufficient-permissions-sulla-coda) — In produzione l'admin vede «Missing or insufficient permissions» sulla coda | bloccante | P1 |
 | · | [BUG-029](#bug-029--il-magazzino-si-legge-da-una-porta-e-si-scrive-da-sette-finestre) — Il magazzino si legge da una porta e si scrive da sette finestre | grave | P1 |
 | · | [BUG-030](#bug-030--il-menù-del-cliente-decide-da-solo-come-si-consegna) — Il menù del cliente decide da solo come si consegna | grave | P1 |
-| · | [BUG-031](#bug-031--aprire-una-comanda-dal-banco-aspetta-il-ruolo-dal-server) — Aprire una comanda dal banco aspetta il ruolo dal server | media | P1 |
 | · | [BUG-035](#bug-035--nel-facsimile-dello-scontrino-lintestazione-non-è-centrata-come-sulla-carta) — Nel facsimile dello scontrino l'intestazione non è centrata come sulla carta | lieve | P3 |
 | 🔴 | [BUG-038](#bug-038--sulla-pwa-android-le-notifiche-arrivano-solo-accendendo-lo-schermo) — Sulla PWA Android le notifiche arrivano solo accendendo lo schermo | media | P2 |
 
@@ -1878,14 +1877,6 @@ COME SI SISTEMA: una `leggiArticoloPerScrittura(ref)` sola, che rilegge, control
 Trovato dalla rilettura del diff della 1.5.0. `consegna.js` dice che i mondi sono due e che `'banco'` è un valore vecchio da leggere con tolleranza; il conto, le impostazioni e il riepilogo sono stati portati lì, il MENÙ DEL CLIENTE no: legge ancora `service_mode` grezzo in quattro punti (tabellone, ETA, etichette). Conseguenza: un locale storicamente `'banco'` mostra una colonna sola; basta che un admin apra Impostazioni → Consegna e tocchi qualunque cosa perché il valore diventi quello nuovo e il tabellone del menù passi a due colonne, senza che nessuno abbia deciso niente sul menù. La migrazione del valore vecchio funziona in tre schermate su quattro, e la quarta è quella che vede il cliente.
 
 **Dove**: `src/pages/MenuPage.jsx`
-
-#### BUG-031 — Aprire una comanda dal banco aspetta il ruolo dal server
-
-Trovato dalla rilettura del diff della 1.5.0. La schermata della comanda resta su «Apro la comanda…» finché non arrivano DUE cose: lo snapshot dell'ordine (che la coda aveva già in mano un istante prima) e il ruolo, ricavato da capo con `getIdTokenResult()`. Il token dura un'ora: quando scade, quella chiamata va in rete — e con la linea del locale che non passa, il tocco resta sotto lo spinner. È il divieto scritto in docs/architettura.md (niente letture al server nel percorso di un gesto), su un gesto che si fa 300-450 volte a sera.
-
-COME SI SISTEMA: il ruolo è già noto altrove (App, BartenderPage): tenerlo dove si legge senza rete e disegnare subito con l'ultimo valore noto; l'ordine può arrivare dalla card che l'ha già in mano.
-
-**Dove**: `src/pages/ComandaPage.jsx`
 
 #### BUG-035 — Nel facsimile dello scontrino l'intestazione non è centrata come sulla carta
 
