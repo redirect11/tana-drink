@@ -186,6 +186,16 @@ sempre a pezzi — e i prodotti di prima si aggiornano quando lo decidi tu,
 con una prova a vuoto che dice cosa cambierebbe prima di toccare niente.
 
 
+### Per chi gestisce
+
+- **Girando fra «Comande» e «Ordini» non si torna indietro nel tempo.**
+  Avanzavi un ticket al banco, giravi la pastiglia, e il conto era ancora
+  dov'era — finché non arrivava la risposta del server, che offline non
+  arriva mai. Adesso le due viste raccontano sempre la stessa cosa: il gesto
+  si vede da tutte e due le parti nell'istante in cui lo fai. E un conto con
+  due comande in due passi diversi si legge dal passo più indietro — se una
+  comanda è ancora da fare, il conto è ancora da fare.
+
 ### Sotto il cofano
 
 - **Le due lavagne a colonne hanno smesso di essere scritte due volte.** La

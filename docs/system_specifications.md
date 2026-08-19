@@ -30,7 +30,7 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 **190 voci** in tutto. **165** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **24** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
-cosa che l'app fa; **7** difetti noti sono ancora aperti.
+cosa che l'app fa; **6** difetti noti sono ancora aperti.
 
 Le voci ⚠️ sono la parte scomoda: funzionano, ma **nessun test le tiene**.
 Sono quelle che si rompono senza che nessuno se ne accorga, e vanno lette
@@ -170,7 +170,7 @@ LA SCHERMATA DEL CONTO NUOVO SI APRE PULITA, senza pulizie all'apertura: uscendo
 
 LE MODIFICHE CHE NON PASSERANNO MAI si dicono e si scartano. «Il documento non esiste più» o «non hai i permessi» non cambiano al secondo tentativo — succede quando qualcuno cancella un prodotto mentre tu ne stavi scalando la scorta — quindi non si riprovano da sole, si spiegano a parole («una scheda del magazzino non esiste più») e si tolgono dalla lista con un tasto. Senza, la campanella resta rossa per sempre su roba che non si può salvare. E QUELLO CHE SI SCRIVE ARRIVA AGLI ALTRI DA SÉ. Ogni modifica entra prima nella memoria locale e parte per il server in sottofondo: gli altri terminali la vedono comparire senza che nessuno prema niente. Offline le scritture non falliscono — restano in coda dentro Firestore, che le conserva anche a app chiusa, e partono appena c'è linea. Quelle RIFIUTATE (un errore vero, la rete che si chiude a metà) si riprovano da sole al ritorno della rete, fino a tre volte: oltre, restano lì e lo dice la campanella, perché una scrittura che continua a essere rifiutata ha bisogno di una persona, non di un altro tentativo. E NIENTE ASPETTA IL SERVER. Ogni azione su un conto — incassare, annullare, avanzare, aggiungere righe — leggeva il documento dal SERVER prima di scrivere: da lì il ritardo fra il tocco e la coda che si muove, e il riepilogo in cima che sembrava aggiornarsi solo alla risposta del server. Si legge dalla cache, che l'ascolto della coda tiene già allineata. E USCIRE DAL CONTO NON ASPETTA NIENTE. Il box del nome aspettava che il conto fosse nato per sapere se chiederlo — ma il nome si sa già dalla schermata: l'unica cosa che quell'attesa produceva era il box in ritardo. Il conto nasce per conto suo, e il nome lo raggiunge appena c'è.
 
-**Dove**: `src/lib/progressivi.js, src/lib/api.js, src/components/OrderPosDetail.jsx` · **Lo dimostrano**: `tests/unit/progressivi.test.js`, `tests/bdd/numerazione.test.js`, `tests/component/PosPage.test.jsx`, `tests/unit/sync.test.js`, `tests/unit/scritturaComande.test.js`
+**Dove**: `src/lib/progressivi.js, src/lib/api.js, src/components/OrderPosDetail.jsx` · **Lo dimostrano**: `tests/unit/progressivi.test.js`, `tests/bdd/numerazione.test.js`, `tests/component/PosPage.test.jsx`, `tests/unit/sync.test.js`, `tests/unit/scritturaComande.test.js`, `tests/component/UnaMemoriaLocale.test.jsx`
 
 #### REQ-ORD-008 — Un conto chiuso o annullato si può rimettere in corso
 
@@ -1855,7 +1855,6 @@ della correzione è il test citato nel requisito della sua area.
 | | Cosa non va | Quanto fa male | Quando |
 |---|---|---|---|
 | 🔴 | [BUG-001](#bug-001--in-produzione-ladmin-vede-missing-or-insufficient-permissions-sulla-coda) — In produzione l'admin vede «Missing or insufficient permissions» sulla coda | bloccante | P1 |
-| · | [BUG-028](#bug-028--due-memorie-di-lho-appena-fatto-io-sulla-stessa-schermata) — Due memorie di «l'ho appena fatto io» sulla stessa schermata | media | P1 |
 | · | [BUG-029](#bug-029--il-magazzino-si-legge-da-una-porta-e-si-scrive-da-sette-finestre) — Il magazzino si legge da una porta e si scrive da sette finestre | grave | P1 |
 | · | [BUG-030](#bug-030--il-menù-del-cliente-decide-da-solo-come-si-consegna) — Il menù del cliente decide da solo come si consegna | grave | P1 |
 | · | [BUG-031](#bug-031--aprire-una-comanda-dal-banco-aspetta-il-ruolo-dal-server) — Aprire una comanda dal banco aspetta il ruolo dal server | media | P1 |
@@ -1871,14 +1870,6 @@ della correzione è il test citato nel requisito della sua area.
 Banner giallo d'errore in cima alla coda «In servizio» e coda vuota (0 aperti · 0 chiusi) per l'utente admin. Analisi del 14/08: il banner ha una sola sorgente, l'onError di subscribeActiveOrders — ma la collection orders è in lettura pubblica, quindi con le regole del repo quel deny è impossibile. Candidati, in ordine: (1) App Check/reCAPTCHA che non rilascia il gettone (incidente identico già documentato nei commenti di scripts/appcheck.js e scripts/recaptcha-domini.js: nega tutto, anche le collection pubbliche, e dipende dal dispositivo o dal dominio, non dal ruolo); (2) regole live in produzione diverse dal repo (prima del commit f8cd5ed il ruolo admin era rifiutato ovunque tranne che su orders); (3) banner che non si azzera mai una volta comparso, quindi basta una scrittura fallita per tenerlo fisso tutta la sessione. Verifiche in sola lettura: diagnostica-permessi.js (non passa da App Check: se lì è verde e il browser no, è App Check), appcheck.js e recaptcha-domini.js, confronto rules live/repo. Da chiedere: succede su tutti i dispositivi o solo su uno? Comunque vada, la fix collaterale è azzerare il banner al primo snapshot buono e loggare gli errori dei listener oggi silenziati.
 
 **Dove**: `src/lib/firebaseClient.js (App Check), firestore.rules, src/pages/BartenderPage.jsx`
-
-#### BUG-028 — Due memorie di «l'ho appena fatto io» sulla stessa schermata
-
-Trovato dalla rilettura del diff della 1.5.0. `comandeLocali` (nato proprio per unificare tre copie sparse) convive con `queueOverrides`, il meccanismo vecchio: uno tiene le comande, l'altro lo stato del conto, e ogni vista ne legge uno solo. La vista dei conti avanza con `queueOverrides` e le sue comande restano quelle del server; la vista del banco avanza con `comandeLocali` e lo stato del conto resta quello del server. Prima non si notava. Adesso la pastiglia «🍸 Comande / 🧾 Ordini» — nuova in questa versione — mette le due viste a un tocco di distanza sullo stesso terminale: si avanza un ticket, si gira la pastiglia, e il conto è ancora dov'era finché non arriva lo snapshot. Offline non arriva. È il rimbalzo che `comandeLocali` è stato scritto per togliere, spostato di una vista.
-
-COME SI SISTEMA: far derivare lo stato del conto dalle comande locali (`activeComanda`) e togliere `queueOverrides`. Non è un refactoring di comodo: finché sono due, ogni gesto nuovo va ricordato in due posti.
-
-**Dove**: `src/pages/BartenderPage.jsx, src/lib/comandeLocali.js`
 
 #### BUG-029 — Il magazzino si legge da una porta e si scrive da sette finestre
 

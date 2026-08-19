@@ -44,6 +44,7 @@ import {
   ORDER_OPEN,
   normalizeOrderDoc,
   activeComanda,
+  statoDiLavoro,
   allServed,
   serveAllComande,
   aggregateItems,
@@ -205,14 +206,9 @@ function mapOrder(snap) {
   const norm = normalizeOrderDoc(o)
   const comande = norm.comande.map((c) => ({ ...c, created_at: toIso(c.created_at) }))
   const active = activeComanda({ comande })
-  const workflow =
-    norm.status === ORDER_STATUSES.PAGATO || norm.status === ORDER_STATUSES.ANNULLATO
-      ? norm.status
-      : active
-        ? active.status
-        : comande.length > 0
-          ? ORDER_STATUSES.RITIRATO
-          : ORDER_STATUSES.RICEVUTO
+  // La stessa regola che usa la coda quando lo ricalcola in locale: due
+  // strade per lo stesso stato sono due strade per farle divergere.
+  const workflow = statoDiLavoro({ status: norm.status, comande })
   return {
     id: snap.id,
     daily_number: o.daily_number ?? null,

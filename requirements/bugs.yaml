@@ -860,13 +860,24 @@ bugs:
       (`activeComanda`) e togliere `queueOverrides`. Non è un refactoring
       di comodo: finché sono due, ogni gesto nuovo va ricordato in due
       posti.
+      RISOLTO (19/08) così: `queueOverrides` non c'è più. La memoria è una
+      sola — `comandeLocali` — e lo stato del conto si RICAVA dalle sue
+      comande con `statoDiLavoro` (comande.js), la stessa funzione che usa
+      la lettura da Firestore: due strade per lo stesso stato sono due
+      strade per farle divergere. Avanzare dalla griglia adesso muove la
+      comanda attiva, come fa già il server, e le due viste raccontano la
+      stessa cosa anche offline.
+      IN PIÙ, ed è la parte che prima sbagliava di suo: con due comande in
+      due passi diversi il conto segue quella più indietro invece dello
+      stato premuto. È quello che scriverà il server un istante dopo, ed è
+      quello che è vero al banco.
     in_produzione: false
-    status: todo
+    status: fixed
     generate_issue: true
     labels: [bug, coda, local-first]
     severity: media
     priority: P1
-    test_cases: []
+    test_cases: [tests/component/UnaMemoriaLocale.test.jsx]
 
   - id: BUG-029
     title: "Il magazzino si legge da una porta e si scrive da sette finestre"
