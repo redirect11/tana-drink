@@ -14,7 +14,7 @@ import { formatPrice, PAYMENT_METHOD_LABELS } from '../lib/orderStatus.js'
 import { useOnline } from '../lib/useOnline.js'
 import { allServed } from '../lib/comande.js'
 import { activeVouchers } from '../lib/vouchers.js'
-import { printScontrino, printFattura, loadPrinterSettings, claimReceiptPrint, releaseReceiptPrint } from '../lib/printer.js'
+import { printScontrino, printFattura, loadPrinterSettings, claimReceiptPrint, reclaimReceiptPrint, releaseReceiptPrint } from '../lib/printer.js'
 import { toastError } from '../lib/toast.js'
 import {
   remainingItems,
@@ -79,7 +79,16 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
       // apre su un ordine locale senza id né numero, e ne uscirebbe uno
       // scontrino con "#-". In quel caso stampa la coda quando l'ordine vero
       // risulta pagato (claimReceiptPrint garantisce una copia sola).
-      if (order.id && order.daily_number != null && loadPrinterSettings().autoPrintScontrino && claimReceiptPrint(order.id)) {
+      // Con un INCASSO in mano la pretesa si FORZA (reclaim): questo è un
+      // pagamento che sta succedendo adesso, e se il conto era stato chiuso
+      // e riaperto la copia vecchia non conta più. Senza incasso (chiusure
+      // d'ufficio) vale la pretesa normale: una copia e basta.
+      if (
+        order.id &&
+        order.daily_number != null &&
+        loadPrinterSettings().autoPrintScontrino &&
+        (incasso ? reclaimReceiptPrint(order.id) : claimReceiptPrint(order.id))
+      ) {
         printScontrino(perStampa).catch((e) => {
           console.warn('[printer] scontrino:', e.message)
           // La carta non è uscita: la prenotazione torna libera, così la
