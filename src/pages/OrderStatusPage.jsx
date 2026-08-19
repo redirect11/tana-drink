@@ -30,6 +30,7 @@ import { auth } from '../lib/firebaseClient.js'
 import { queueEtaMinutes } from '../lib/eta.js'
 import { toastSuccess, toastError } from '../lib/toast.js'
 import { ensureNotificationPermission, notify } from '../lib/notify.js'
+import { recordNotif } from '../lib/notifyStore.js'
 import { rememberOrderId } from '../lib/cart.js'
 import { isPersonale } from '../lib/ruoli.js'
 import ConfirmDialog from '../components/ConfirmDialog.jsx'
@@ -141,17 +142,39 @@ export default function OrderStatusPage() {
             `Ordine #${updated.daily_number} pronto al ritiro.`
           )
         }
-        // Annullamento da parte del bartender con notifica richiesta.
+        // ANNULLAMENTO: DUE MESSAGGI DIVERSI, PERCHÉ SONO DUE PERSONE.
+        //
+        // Il DIFETTO (BUG-003): un admin che apriva un conto annullato da un
+        // collega su un altro dispositivo si vedeva arrivare «⚠️ Problema
+        // con il tuo ordine — prego recarsi al bancone», che a chi sta
+        // dietro al bancone non vuol dire niente. Questa pagina cambia
+        // mestiere a seconda di chi guarda, e quel messaggio era scritto per
+        // una sola delle due persone.
+        //
+        // AL CLIENTE resta la sua, com'era. A CHI LAVORA niente che
+        // interrompa: nessun avviso a schermo e nessuna notifica di sistema
+        // — l'annullamento non è una cosa da fare, è una cosa successa — ma
+        // l'evento si scrive nella lista della campanella, dove lo si trova
+        // entrando nell'app invece di trovarselo addosso aprendo un conto.
         if (
           prevStatus.current !== updated.workflow_status &&
           updated.workflow_status === ORDER_STATUSES.ANNULLATO &&
           updated.cancelled_by === 'bartender' &&
           updated.cancel_notify
         ) {
-          notify(
-            '⚠️ Problema con il tuo ordine',
-            CANCEL_PHRASES[updated.cancel_phrase] || CANCEL_PHRASES.bancone
-          )
+          if (viewerRoleRef.current) {
+            recordNotif(
+              '✖️ Conto annullato',
+              `Ordine #${updated.daily_number ?? '—'}${
+                updated.customer_name ? ` · ${updated.customer_name}` : ''
+              }`
+            )
+          } else {
+            notify(
+              '⚠️ Problema con il tuo ordine',
+              CANCEL_PHRASES[updated.cancel_phrase] || CANCEL_PHRASES.bancone
+            )
+          }
         }
         prevStatus.current = updated.workflow_status
       },

@@ -118,13 +118,27 @@ bugs:
       compare solo nella lista notifiche in-app (ordini annullati e
       ricevuti), e la si vede entrando nell'app, non aprendo l'ordine.
       Il cliente continua a ricevere la sua push come oggi.
+      CAUSA (trovata il 19/08). Il messaggio non veniva dal server: la push
+      delle Functions va al `push_token` scritto sull'ORDINE, che è del
+      telefono del cliente. Veniva da OrderStatusPage, che è la STESSA
+      pagina per tutti e due — chi lavora ci trova il conto, il cliente lo
+      stato del suo ordine — e mostrava l'avviso dell'annullamento senza
+      guardare chi stesse davanti allo schermo. Il gemello «drink pronto»
+      quel controllo ce l'aveva già.
+      RISOLTO: a chi lavora niente che interrompa — nessun avviso a schermo
+      e nessuna notifica di sistema — ma l'evento si scrive nella lista
+      della campanella con parole da banco («✖️ Conto annullato», numero e
+      nome del conto). Un annullamento non è una cosa da fare, è una cosa
+      successa: la si trova entrando nell'app, non addosso aprendo un conto.
+      Al cliente resta la sua, identica.
     in_produzione: true
-    status: todo
+    status: fixed
     generate_issue: true
     labels: [bug, notifiche, staff]
     severity: lieve
     priority: P2
-    test_cases: []
+    test_cases:
+      - tests/component/OrderStatusPage.test.jsx
 
   - id: BUG-004
     title: "Nel dettaglio ordine il subtotale di riga non segue la quantità"
