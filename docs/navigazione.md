@@ -34,6 +34,12 @@ sotto i 44px si sbaglia. Si **toglie**, in quest'ordine:
 ## Le gerarchie: una per volta, e ognuna al suo posto
 
 - **Le pagine** stanno nel menu laterale (☰). Punto.
+- **Una pagina che non è di tutti si TOGLIE dal menu**, non si apre per dire
+  «non puoi»: una schermata che si è già fatta vedere ha già risposto alla
+  domanda. Chi vede quale voce sta accanto alla voce stessa
+  (`src/lib/sezioni.js`), con la funzione di `src/lib/ruoli.js` che lo
+  decide — `isAdmin` per «Bilancio». Lo stesso filtro vale per l'indirizzo
+  battuto a mano (`?tab=…`): togliere la voce dal menu non basta.
 - **Le sottosezioni di una pagina** (Inventario: Prodotti, Conta, Ordini…;
   Impostazioni: Aspetto, Pagamenti…) stanno **nel menu a scomparsa**,
   rientrate sotto la pagina aperta. Un posto solo per navigare, uguale sul
