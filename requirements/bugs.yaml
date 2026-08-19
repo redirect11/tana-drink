@@ -1013,3 +1013,59 @@ bugs:
     severity: lieve
     priority: P3
     test_cases: []
+
+  - id: BUG-036
+    title: "Lo staff non riceve le notifiche di ritiro e servizio"
+    area: "functions/lib/push-core.js, functions/index.js, src/lib/preferenzeNotifiche.js"
+    description: >
+      Segnalato dall'utente il 19/08: «lo staff non riceve le notifiche del
+      ritiro/servizio, quelle devono assolutamente arrivare».
+      Sono le notifiche che dicono a chi lavora che c'è un drink pronto da
+      portare o da consegnare: senza, la comanda resta ferma sul banco
+      finché qualcuno non guarda lo schermo — che è esattamente quello che
+      le corsie dovevano evitare.
+      DA CAPIRE PRIMA DI SCRIVERE: se non partono affatto (Functions), se
+      partono e non arrivano (token dello staff, permessi del browser), o
+      se arrivano e non si vedono. Le tre cose si sistemano in tre posti
+      diversi.
+    in_produzione: true
+    status: todo
+    generate_issue: true
+    labels: [bug, notifiche, banco]
+    test_cases: []
+
+  - id: BUG-037
+    title: "Aprendo l'app la chiamata dello staff non compare finché non si naviga"
+    area: "src/components/StatusBell.jsx, src/lib/notifyStore.js, src/App.jsx"
+    description: >
+      Segnalato dall'utente il 19/08. Con l'app in secondo piano o lo
+      schermo spento la notifica della chiamata arriva; ma riaprendo l'app
+      la chiamata vera e propria non si presenta finché non si naviga da
+      qualche parte. Chi è stato chiamato apre il telefono e non trova
+      niente: il gesto di chi ha chiamato si perde.
+      Va sistemata l'esperienza, non solo il dato: al ritorno in primo
+      piano l'app deve ripescare le chiamate in sospeso e mostrarle
+      subito, dove si sta guardando.
+    in_produzione: true
+    status: todo
+    generate_issue: true
+    labels: [bug, notifiche, sala]
+    test_cases: []
+
+  - id: BUG-038
+    title: "Sulla PWA Android le notifiche arrivano solo accendendo lo schermo"
+    area: "public/sw.js, functions/lib/push-core.js"
+    description: >
+      Segnalato dall'utente il 19/08: sull'app installata su Android le
+      notifiche non arrivano in tempo reale — restano ferme finché non si
+      accende lo schermo. Al banco vuol dire che una chiamata dalla sala
+      arriva quando ormai non serve più.
+      DA GUARDARE: la priorità del messaggio inviato (una notifica «alta»
+      sveglia il dispositivo, una normale aspetta), il risparmio energetico
+      di Android sull'app, e cosa fa il service worker quando riceve il
+      messaggio. Anche qui: prima capire dove si ferma, poi correggere.
+    in_produzione: true
+    status: todo
+    generate_issue: true
+    labels: [bug, notifiche, pwa]
+    test_cases: []

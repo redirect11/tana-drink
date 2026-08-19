@@ -1657,8 +1657,14 @@ requirements:
       (ricetta con un solo ingrediente in quantità «1 pz» = prodotto); e
       cosa succede a chi oggi ha già scritto le ricette a un ingrediente —
       la conversione dovrebbe essere automatica e senza perdite.
-    status: todo
-    generate_issue: true
+      SCARTATA (19/08, dall'utente): «REQ-MENU-012 non va più implementata
+      e va scartata». Il testo resta qui perché fra sei mesi serve a capire
+      perché a un certo punto sembrava una buona idea — e perché non lo è
+      più: il magazzino nel frattempo è passato al modello «tutto a pezzi»,
+      dove un prodotto che si vende com'è non ha bisogno di essere anche
+      una voce di ricetta.
+    status: deprecated
+    generate_issue: false
     labels: [menu, magazzino, ux]
     priority: P2
     test_cases: []
@@ -4515,4 +4521,89 @@ requirements:
     generate_issue: true
     labels: [ui, comande]
     priority: P2
+    test_cases: []
+
+  - id: REQ-CODA-004
+    title: "Sul telefono le corsie si impilano, non si stringono"
+    area: "src/index.css, src/components/CorsieComande.jsx, src/components/CorsieStato.jsx"
+    description: >
+      Chiesto dall'utente il 19/08. La vista a corsie del banco su uno
+      schermo di telefono mette cinque o sei colonne una accanto all'altra:
+      non ci stanno, e ognuna diventa una striscia dove non entra nemmeno
+      il nome di un drink. Su telefono le corsie vanno IMPILATE una sotto
+      l'altra — la colonna diventa una sezione, col suo titolo e il suo
+      totale — e si scorre in verticale, che è come si tiene il telefono.
+      La soglia si decide sulla larghezza vera del contenitore (container
+      query), non sul numero di corsie accese: è la stessa lezione delle
+      card, dove contare gli elementi al posto dello spazio disponibile
+      aveva spaccato il disegno.
+    status: todo
+    generate_issue: true
+    labels: [coda, ui, mobile]
+    test_cases: []
+
+  - id: REQ-STAFF-014
+    title: "La sala serve, non prepara: gli stati delle comande non li tocca"
+    area: "src/lib/ruoli.js, src/pages/BartenderPage.jsx, src/components/ComandaDetail.jsx, src/components/OrderPosDetail.jsx, firestore.rules"
+    description: >
+      Chiesto dall'utente il 19/08. Chi sta in sala VEDE a che punto sono
+      le preparazioni — gli serve per sapere cosa portare — ma non le
+      comanda: l'unico passo che può segnare è «servito», perché è lui a
+      portare il drink al tavolo. Tutto il resto (prendere in carico,
+      segnare pronto, tornare indietro, dividere una comanda, annullarla)
+      è del banco.
+      SUGLI ORDINI invece la sala lavora: può aggiornare un conto —
+      aggiungere righe, cambiare quantità — e quelle modifiche generano una
+      NUOVA comanda, che il banco vedrà arrivare nella sua coda. Non tocca
+      le comande esistenti: quelle sono il lavoro di chi versa.
+      DOVE VA SCRITTA la regola: in `src/lib/ruoli.js`, insieme alle altre —
+      c'è un test che boccia i confronti di ruolo sparsi nel codice. E vale
+      anche lato server (`firestore.rules`): un permesso che esiste solo
+      nell'interfaccia non è un permesso.
+    status: todo
+    generate_issue: true
+    labels: [ruoli, comande, sala]
+    test_cases: []
+
+  - id: REQ-ORD-022
+    title: "Lo staff che tocca un conto entra nel conto, non nella pagina del cliente"
+    area: "src/pages/OrderStatusPage.jsx, src/pages/BartenderPage.jsx"
+    description: >
+      Chiesto dall'utente il 19/08. Con gli stati del servizio accesi, lo
+      staff che tocca un ordine finisce sulla pagina di stato del CLIENTE —
+      quella col riquadro «Il tuo numero» — che per chi lavora non vuol
+      dire niente: lui deve entrare nella MODIFICA del conto.
+      Due cose, e la seconda è una funzione che manca:
+      1) toccando un ordine lo staff va sempre nella schermata del conto,
+         con o senza stati di servizio;
+      2) resta utile una schermata da mostrare al cliente col QR per
+         seguire l'ordine — quella va bene, ma senza il riquadro «Il tuo
+         numero», che è scritto per chi ordina e non per chi serve — e con
+         un tasto «Modifica» che porta al conto.
+      In pratica: la stessa pagina cambia di mestiere a seconda di chi
+      guarda, e oggi non lo fa.
+    status: todo
+    generate_issue: true
+    labels: [ordini, staff, clienti]
+    test_cases: []
+
+  - id: REQ-STAMPA-011
+    title: "Il logo sugli scontrini si sceglie: quale, e su quali stampe"
+    area: "src/lib/printer.js, src/components/SettingsTab.jsx, src/lib/api.js"
+    description: >
+      Chiesto dall'utente il 19/08. Oggi il logo viene stampato in cima allo
+      scontrino e basta: nessuno può spegnerlo, e per cambiarlo bisogna
+      sostituire un file nel codice.
+      Serve un'impostazione del locale con tre cose: se stampare il logo,
+      SU QUALI stampe (comanda, preconto, scontrino, chiusura di cassa —
+      sulla comanda al banco per esempio è solo carta consumata), e la
+      possibilità di CARICARE l'immagine invece di cambiarla nel codice.
+      Solo l'admin può toccarla: è l'identità del locale, non una
+      preferenza del terminale.
+      Da tenere a mente: la stampante termica vuole un'immagine in bianco e
+      nero di una larghezza precisa, e il caricamento deve dire subito se
+      quella scelta non va bene invece di stampare un rettangolo nero.
+    status: todo
+    generate_issue: true
+    labels: [stampa, impostazioni]
     test_cases: []
