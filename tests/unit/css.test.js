@@ -134,3 +134,36 @@ describe('le corsie della coda si impilano quando lo spazio manca', () => {
     expect(media.slice(0, 400)).not.toMatch(/grid-template-columns/)
   })
 })
+
+// ── UN CONTENITORE CHE SCORRE TAGLIA LE OMBRE ────────────────────────
+//
+// Le corsie della lavagna scorrono ognuna per conto suo (overflow-y: auto).
+// Ma un contenitore che scorre taglia tutto quello che esce dai suoi bordi,
+// e l'ombra della card esce: senza spazio attorno, le card risultavano
+// mozzate a destra e in basso, e nelle colonne strette sembravano
+// addirittura piatte — come se l'ombra non ci fosse mai stata.
+//
+// Lo spazio va DENTRO il contenitore che scorre, quindi è un `padding`
+// della lista, non un margine delle card: un margine sarebbe finito fuori
+// dal riquadro di scorrimento e sarebbe stato tagliato come l'ombra.
+describe('le ombre delle card hanno spazio per esistere', () => {
+  const css = readFileSync(join(CARTELLA, 'index.css'), 'utf8')
+  const regola = (nome) => {
+    const i = css.indexOf(`
+${nome} {`)
+    expect(i, `${nome} non c'è più`).toBeGreaterThan(-1)
+    return css.slice(i, css.indexOf('}', i))
+  }
+
+  it('la lista di una corsia lascia spazio sotto e ai lati', () => {
+    const r = regola('.corsia-lista')
+    expect(r, 'la lista scorre e taglierebbe l’ombra: serve un padding').toMatch(/padding:/)
+  })
+
+  it('e non fa comparire una barra orizzontale per quei pochi pixel', () => {
+    // `overflow-y: auto` rende l'asse X `auto` a sua volta: senza dirlo
+    // esplicitamente, lo spazio dell'ombra diventa una barra di
+    // scorrimento orizzontale in fondo a ogni colonna.
+    expect(regola('.corsia-lista')).toMatch(/overflow-x:\s*clip/)
+  })
+})

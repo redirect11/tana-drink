@@ -1387,3 +1387,42 @@ bugs:
     severity: lieve
     priority: P3
     test_cases: []
+
+  - id: BUG-044
+    title: "Le ombre delle card tagliate nelle corsie, e sparite dopo il pagamento"
+    area: "src/index.css (.corsia-lista, .corsia-card.pagato-da-servire, .corsia-card.acconto, .order-card.conto-acceso)"
+    description: >
+      Segnalato dall'utente il 19/08 guardando la lavagna: «qualcosa non va
+      con le ombre, su da fare sono tagliate, su ritirato/servito non c'e'
+      nulla», e poco dopo: «l'ombra scompare dopo il pagamento e il bordino
+      diventa piu' spesso».
+      DUE CAUSE DIVERSE, e la seconda spiega la prima meta' della frase.
+      UNO: la lista di ogni corsia SCORRE (`overflow-y: auto` da 900px in
+      su) e non aveva spazio attorno alle card. Un contenitore che scorre
+      taglia quello che esce dai suoi bordi, e l'ombra esce: 18px di
+      sfocatura piu' 4 di scostamento. Le card risultavano mozzate a destra
+      e in basso, e nelle colonne strette sembravano piatte.
+      RISOLTO con un padding sulla lista (2px sopra, 6 ai lati, 16 sotto):
+      lo spazio va DENTRO il contenitore che scorre, quindi un margine sulle
+      card non sarebbe servito — sarebbe finito fuori dal riquadro e tagliato
+      come l'ombra. In piu' `overflow-x: clip`, se no i pochi pixel
+      dell'ombra facevano comparire una barra di scorrimento orizzontale in
+      fondo a ogni colonna (`auto` su un asse rende `auto` anche l'altro).
+      DUE, ed e' un difetto piu' serio perche' toglieva l'ombra del tutto:
+      TRE REGOLE RISCRIVEVANO `box-shadow` invece di aggiungersi. La
+      proprieta' non si somma — chi la riscrive cancella quella di prima — e
+      `.corsia-card.pagato-da-servire`, `.corsia-card.acconto` e
+      `.order-card.conto-acceso` mettevano il loro filo interno buttando via
+      `var(--ombra-card)`. Da qui i due sintomi insieme: card piatta e
+      «bordino piu' spesso», che era il filo da 3px rimasto solo.
+      RISOLTO rimettendo `var(--ombra-card)` in coda a ognuna delle tre.
+      LA REGOLA, per chi tocchera' un'altra card: se aggiungi un'ombra a una
+      card, l'ombra della casa va rimessa in fondo alla lista. Sorvegliata
+      da tests/unit/css.test.js.
+    in_produzione: false
+    status: fixed
+    generate_issue: true
+    labels: [bug, ui, coda]
+    severity: lieve
+    priority: P3
+    test_cases: [tests/unit/css.test.js]
