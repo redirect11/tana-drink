@@ -4,6 +4,12 @@
 // separati, prima o poi uno dei due dice «Lista ordini» e l'altro
 // «Storico» — e chi legge si chiede se siano due posti diversi.
 
+import { isAdmin, isGestore } from './ruoli.js'
+
+// Il QUARTO elemento di una voce dice CHI LA VEDE, ed è una funzione di
+// `ruoli.js`: dove manca, la voce è di tutto il gestionale. Un flag di
+// testo («solo admin») avrebbe rimesso il confronto sul ruolo qui dentro,
+// che è la cosa che ruoli.js esiste per evitare.
 export const NAV_GESTIONALE = [
   ['coda', '🧾', 'Coda ordini'],
   // La cassa è una sola: dentro ci sono flusso, lista ordini e chiusure
@@ -12,6 +18,12 @@ export const NAV_GESTIONALE = [
   ['pagamenti', '💶', 'Cassa'],
   ['fatture', '📄', 'Fatture'],
   ['stats', '📊', 'Statistiche'],
+  // BILANCIO: i conti del locale — incassi, stipendi, spese, netto del
+  // mese. Li guarda chi il locale lo paga, non chi ci lavora: è la prima
+  // voce che non basta essere gestori per vedere. Si TOGLIE dal menu, non
+  // si nasconde dentro la pagina — una pagina che si apre e poi dice «non
+  // puoi» si è già fatta vedere.
+  ['bilancio', '⚖️', 'Bilancio', isAdmin],
   ['menu', '🍸', 'Menù'],
   ['inventario', '📦', 'Magazzino'],
   ['staff', '👥', 'Staff'],
@@ -59,4 +71,22 @@ export function titoloPagina(pathname = '', search = '') {
   }
   const voce = FUORI.find(([p]) => pathname === p || pathname.startsWith(`${p}/`))
   return voce ? { icona: voce[1], titolo: voce[2] } : null
+}
+
+// ── CHI VEDE COSA ────────────────────────────────────────────────────
+// Le voci del menu per un ruolo. Il filtro sta QUI e non in StaffDrawer:
+// il menu non è l'unico posto che deve saperlo — l'indirizzo `?tab=…` si
+// scrive anche a mano — e due filtri scritti in due punti diversi prima o
+// poi dicono cose diverse.
+export function vociPerRuolo(role) {
+  if (!isGestore(role)) return NAV_SALA
+  return NAV_GESTIONALE.filter(([, , , vede]) => !vede || vede(role))
+}
+
+// Una sezione del gestionale si può aprire con questo ruolo? Togliere la
+// voce dal menu non basta: `?tab=bilancio` battuto a mano, o un
+// collegamento salvato quando si era admin, ci arriverebbero lo stesso.
+export function sezioneConsentita(id, role) {
+  const voce = NAV_GESTIONALE.find(([v]) => v === id)
+  return !voce?.[3] || voce[3](role)
 }
