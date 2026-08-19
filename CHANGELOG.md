@@ -83,6 +83,12 @@
   erano tagliate ai bordi, e dopo il pagamento sparivano del tutto
   lasciando un bordino più spesso al loro posto.
 
+- **Senza connessione l'app mostra subito quello che hai fatto.** Aggiungere
+  righe a un conto, annullarlo, riaprirlo: il totale e le voci si vedono
+  aggiornati nell'istante del gesto, non «quando sincronizza». Prima, con la
+  rete lenta o assente, la card restava indietro e il conto sembrava
+  sbagliato.
+
 - **Le card del banco si leggono da lontano.** Numero del conto e nome del
   tavolo ora stanno sulla stessa riga e sono grandi uguali — «il ventidue,
   quello di Peppe» si legge in un colpo invece di cercare il nome in

@@ -104,17 +104,47 @@ flusso di un conto, sicurezza — sta in
 [docs/architettura.md](docs/architettura.md): **da leggere prima di
 toccare coda, conto, pagamento o il modello dati.** Qui i vincoli secchi:
 
-- **Coda, conto e pagamento lavorano in locale.** Quelle tre schermate
-  fanno tutto sui dati che hanno già: leggono dalla cache, scrivono in
-  sottofondo, e si aggiornano da sole quando il server manda qualcosa di
-  nuovo. Niente `await` su una lettura prima di far vedere l'esito di un
-  gesto — un conto incassato, annullato, una riga aggiunta si devono
-  vedere nell'istante in cui si tocca. Se un dato serve e non c'è, si
-  precarica (vedi `src/lib/progressivi.js`), non si va a chiederlo al
-  momento del bisogno.
-- **Niente aspetta la rete.** Le scritture partono in sottofondo; le
-  schermate si aggiornano subito. Un `await` su una scrittura Firestore
-  offline non torna mai: al banco significa l'app bloccata.
+### Il local-first è la prima regola, e non si negozia
+
+Questa è la regola che viene prima di tutte le altre, per chi lavora qui —
+persone e agenti. È già stata violata più volte, sempre per distrazione e
+sempre con lo stesso danno: si aggiungono tre drink a un conto, si torna
+alla coda, e la card mostra ancora il totale di prima «finché non
+sincronizza». Al banco quello è un conto sbagliato.
+
+**Coda ordini, comande, nuovo ordine, modifica ordine, contanti e
+pagamenti lavorano SOLO in locale.** Tutto il giro di una serata con la
+cassa aperta deve funzionare con la rete staccata: le card si aggiornano
+subito, le liste anche quando un conto cambia stato, i pagamenti pure. La
+sincronizzazione è una cosa che succede dopo, in sottofondo, e nessuno la
+aspetta.
+
+Da qui scendono quattro cose pratiche:
+
+- **Niente `await` prima di mostrare l'esito di un gesto.** Un conto
+  incassato, annullato, una riga aggiunta si vedono nell'istante in cui si
+  tocca. Un `await` su una scrittura Firestore offline non torna mai: è
+  l'app bloccata col locale pieno.
+- **Non si rilegge quello che si è appena scritto: si compone.** La
+  scrittura parte in sottofondo, quindi nell'istante della rilettura la
+  cache contiene ancora la versione di prima — chi rilegge, rilegge il
+  passato. Il risultato si costruisce in memoria dal documento di partenza
+  più la patch appena mandata (`ordineDopo` in `src/lib/api.js`). Questo è
+  stato il difetto di BUG-045, ed è tornato più di una volta.
+- **Se un dato serve e non c'è, si precarica** (vedi
+  `src/lib/progressivi.js`): non lo si va a chiedere nel mezzo di un gesto.
+- **Le scritture partono in sottofondo** (`bgWrite`), con l'indicatore di
+  sincronizzazione che dice come sta andando.
+
+**E i test lo devono dimostrare, non darlo per buono.** Chi tocca queste
+schermate scrive un test che gira **senza rete**: si mocka `firebase/firestore`
+in modo che ogni scrittura resti appesa per sempre e ogni lettura risponda
+con quello che c'era prima — che è quello che fa davvero una cache mentre
+la scrittura è in coda. Non si mocka `src/lib/api.js`, se no si prova il
+mock e non il codice. Il modello è
+[`tests/unit/giroInLocale.test.js`](tests/unit/giroInLocale.test.js), che è
+scritto apposta per essere copiato. I test con la rete che risponde si
+fanno **in più**, non al posto di quelli.
 - **Il magazzino si scala con lo snapshot**, non ricalcolando la ricetta:
   la ricetta cambia, il drink già fatto no.
 - **I ruoli si confrontano solo con `src/lib/ruoli.js`.** C'è un test che
