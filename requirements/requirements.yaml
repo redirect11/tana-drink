@@ -5775,6 +5775,7 @@ requirements:
     status: todo
     generate_issue: true
     labels: [magazzino, fornitori, admin]
+    priority: P2
     test_cases: []
 
   - id: REQ-MAG-026
@@ -5916,6 +5917,7 @@ requirements:
     status: todo
     generate_issue: true
     labels: [magazzino, fornitori]
+    priority: P2
     test_cases: []
 
   - id: REQ-DEV-013
