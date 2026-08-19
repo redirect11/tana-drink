@@ -5564,3 +5564,60 @@ requirements:
     generate_issue: true
     labels: [magazzino, fornitori, admin]
     test_cases: []
+
+  - id: REQ-MAG-026
+    title: "Gli ordini nascono dalle giacenze: chi e' in esaurimento entra da solo"
+    area: "src/lib/warehouse.js, src/components/PurchaseOrdersPanel.jsx, src/lib/api.js"
+    description: >
+      Chiesto dall'utente il 19/08: «gli ordini andrebbero creati dalle
+      giacenze di magazzino. Se un articolo e' in esaurimento dovrebbe essere
+      aggiunto automaticamente all'ordine per quel fornitore».
+      OGGI E' AL CONTRARIO, ed e' il punto. Il generatore chiede PRIMA il
+      fornitore: si apre un ordine per Nova, e solo dentro quell'ordine il
+      tasto «Precompila i sotto scorta» propone le quantita' per i prodotti
+      di Nova (`suggestedPackages`: sotto soglia si riporta la giacenza a due
+      volte la soglia, minimo una confezione). Chi ordina deve quindi
+      RICORDARSI da solo quali fornitori guardare: se non apre l'ordine di
+      Piccolo, il prodotto di Piccolo sotto scorta non lo vede nessuno. E'
+      esattamente il modo in cui si dimentica qualcosa.
+      COME DEVE ANDARE: si parte dal MAGAZZINO, non dal fornitore. Una
+      passata su tutte le giacenze raccoglie chi e' in esaurimento e lo mette
+      nell'ordine del SUO fornitore — il fornitore e' gia' scritto
+      sull'articolo (`supplier_id` su `inventory_items`), quindi il
+      raggruppamento non chiede niente a nessuno. Da una passata escono N
+      ordini gia' compilati, uno per fornitore.
+      E QUESTO E' IL GIRO di REQ-MAG-025: la seduta in cui si guarda il
+      fabbisogno una volta sola e ne nascono piu' ordini. Con questa voce il
+      giro smette di essere un contenitore e diventa il gesto: si guardano le
+      giacenze, escono gli ordini, ognuno prende la sua strada (arriva, si
+      carica, si fattura).
+      LA QUANTITA' NON LA DECIDE QUESTA VOCE: quanto ordinare e' REQ-MAG-023
+      (soglia scritta a mano contro consumo reale, con la domanda aperta su
+      quante settimane coprire). Qui si decide CHI entra nell'ordine e in
+      QUALE ordine; la quantita' resta quella che il calcolo di turno
+      propone. Le due voci si incastrano ma non si sovrappongono.
+      COSA VA DECISO PRIMA DI SCRIVERE, e non si indovina:
+      1) «IN ESAURIMENTO» OGGI VUOL DIRE `stock <= low_threshold`, e senza
+      soglia impostata il prodotto non entra mai — silenziosamente. Su un
+      magazzino dove le soglie non sono tutte compilate, «crea l'ordine dalle
+      giacenze» produrrebbe un ordine che sembra completo e non lo e'. O si
+      mostra chiaro quanti prodotti sono rimasti fuori per soglia mancante, o
+      si trova una regola che non dipenda solo da quella (il consumo, appunto
+      — REQ-MAG-023).
+      2) COSA SUCCEDE AGLI ORDINI GIA' APERTI per lo stesso fornitore: si
+      aggiunge la riga a quello aperto o se ne fa un altro? Ordinare due
+      volte la stessa cassa e' un errore che si paga in magazzino.
+      3) CHI NON HA FORNITORE: un prodotto senza `supplier_id` sotto scorta
+      non ha un ordine dove andare. Va mostrato a parte, non lasciato cadere
+      — e' lo stesso buco delle categorie senza macro (REQ-UI-022) e dei
+      prodotti nuovi da sistemare (REQ-MAG-025).
+      4) LA PROPOSTA SI CORREGGE SEMPRE: quello che esce e' un ordine da
+      guardare e ritoccare prima di mandarlo, non da spedire al buio. Chi sta
+      al banco sa cose che la giacenza non sa — la festa di sabato, il
+      fornitore che salta la consegna.
+      NON TOCCA LO SCARICO: le giacenze restano quelle che sono, con le regole
+      di sempre. Questa voce le LEGGE soltanto.
+    status: todo
+    generate_issue: true
+    labels: [magazzino, fornitori]
+    test_cases: []
