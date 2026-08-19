@@ -79,6 +79,14 @@
 
 ### Al banco
 
+- **Le card del banco si leggono da lontano.** Numero del conto e nome del
+  tavolo ora stanno sulla stessa riga e sono grandi uguali — «il ventidue,
+  quello di Peppe» si legge in un colpo invece di cercare il nome in
+  piccolo sotto. È sparita la pastiglia «Ritiro / Servizio», che diceva una
+  cosa già scritta nel nome, e le righe dei drink a vista sono **quattro**
+  invece di sei: così in colonna ci stanno più comande, e chi ne ha di più
+  tocca «altre N».
+
 - **Nella legenda della coda c'è anche chi è collegato adesso**, non solo
   chi ha già battuto un conto: chi apre l'app trova subito la sua iniziale —
   con scritto «sei tu» — e sa come si riconoscerà sulle card. La riga di chi

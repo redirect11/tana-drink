@@ -78,14 +78,20 @@ export default function CorsieStato({
                 id={`ordine-${o.id}`}
                 onClick={() => onApri?.(o)}
               >
+                {/* NUMERO E NOME INSIEME, come sulle card delle comande:
+                    è la stessa lavagna, e due viste della stessa cosa non
+                    devono leggersi in due modi. */}
                 <div className="row between">
                   <span className="corsia-num">
-                    #{o.daily_number ?? '—'} <OrderBy order={o} />
+                    #{o.daily_number ?? '—'}
+                    {destinazioneConto(o) && (
+                      <span className="corsia-chi"> {destinazioneConto(o)}</span>
+                    )}{' '}
+                    <OrderBy order={o} />
                   </span>
                   <BolloAcconto order={o} />
                   <span className="muted small">{daQuanto(o.created_at, adesso)}</span>
                 </div>
-                <div className="muted small corsia-dove">{destinazioneConto(o)}</div>
                 <RigheCorsia
                   items={o.order_items}
                   aperto={espansa === o.id}

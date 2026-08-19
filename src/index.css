@@ -6934,8 +6934,26 @@ body.pagina-piena .inv-scheda {
   opacity: 1;
 }
 
+/* LA TESTATA DELLA CARD: numero del conto e nome, insieme e della stessa
+   misura. Prima il numero stava qui in corpo normale e il nome sotto,
+   piccolo e smorzato — ma quando si chiama un tavolo si dice «il ventidue,
+   quello di Peppe»: sono due metà della stessa risposta, e una delle due
+   era scritta come una nota a piè di pagina.
+   1,35rem è la misura delle card della griglia scalata a una colonna
+   stretta: il numerone da 3,4rem lì sta perché la card è larga, qui
+   manderebbe il nome a capo da solo. */
 .corsia-num {
-  font-weight: 600;
+  font-weight: 700;
+  font-size: 1.35rem;
+  line-height: 1.2;
+}
+
+/* Il nome del tavolo pesa quanto il numero — è quello che si cerca per
+   primo — ma non prende il colore d'accento: due cose accese sulla stessa
+   riga si contendono l'occhio, e il numero resta il modo in cui il conto
+   si chiama. */
+.corsia-chi {
+  font-weight: 700;
 }
 
 .corsia-dove {
@@ -7347,9 +7365,14 @@ body.pagina-piena .inv-scheda {
    banco. Più smorto del numero del conto perché il primo colpo d'occhio
    va lì — è il numero che si urla — ma c'è, perché due comande dello
    stesso tavolo sono due card e senza sembrerebbero un doppione. */
+/* «· comanda 2» resta un dettaglio, non un titolo: con la testata
+   cresciuta, scritto della stessa misura sembrerebbe importante quanto il
+   numero del conto, e non lo è — serve solo a non confondere due card
+   dello stesso tavolo. */
 .corsia-comanda {
   color: var(--muted);
   font-weight: 400;
+  font-size: 0.8rem;
 }
 
 /* La riga di tasti che sceglie quali colonne restano a schermo: sta sotto

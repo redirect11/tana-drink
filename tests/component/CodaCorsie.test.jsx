@@ -736,16 +736,20 @@ describe('le corsie del banco: una card per comanda', () => {
     comande: [{ id: 'c1', seq: 1, status: 'pronto', created_at: ORA, items: [] }],
   })
 
-  it('di suo il pronto è una colonna sola, e la card dice come va consegnato', async () => {
+  // IL BADGE «Ritiro / Servizio» È STATO TOLTO (19/08, chiesto dall'utente:
+  // «il badge servizio non serve»). Diceva come va consegnato, ma la card
+  // lo dice già senza pastiglie — un conto con un tavolo si porta, uno al
+  // bancone si ritira — e da quando il tavolo è scritto in grande accanto
+  // al numero si legge prima di prima. Una pastiglia su ogni card pronta
+  // costava una riga a tutte per una cosa che si capisce dal nome.
+  it('di suo il pronto è una colonna sola, senza pastiglie in più', async () => {
     impostazioni = { ...impostazioni, service_mode: 'entrambi' }
     ordini = [contoPronto('o80', 80, 'banco')]
     montaCoda()
     await screen.findByText('Da fare')
     const pronto = corsia('al-ritiro')
-    expect(within(pronto).getByText('#80')).toBeInTheDocument()
-    // il badge sulla card: quella colonna tiene due lavori diversi, e
-    // senza dirlo si guarda il tavolo per indovinarlo
-    expect(pronto.querySelector('.pill.consegna-banco')).toBeTruthy()
+    expect(within(pronto).getByText(/#80/)).toBeInTheDocument()
+    expect(pronto.querySelector('.pill.consegna-banco')).toBeFalsy()
     expect(corsia('al-ritiro-banco')).toBeFalsy()
   })
 
