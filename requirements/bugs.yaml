@@ -1235,7 +1235,22 @@ bugs:
     status: fixed
     generate_issue: true
     labels: [bug, magazzino, ruoli, sala]
-    test_cases: []
+      VERIFICATO E COPERTO (19/08, chiesto dall'utente: «vanno scritti i
+      test, si e' verificato che e' implementato davvero»). Il codice fa
+      quello che questa voce dice: `comandaDaScaricare` risponde solo a
+      PRONTO, e nessun passo della sala fa partire uno scarico.
+      I TEST GUARDANO IL DANNO, NON LA FUNZIONE: rimettendo lo scarico su
+      «servito» ne falliscono tre, ed e' stato provato davvero prima di
+      chiudere la voce. Coperta anche l'altra meta' del difetto — gli
+      ingredienti che restavano IMPEGNATI invece che consumati — con la
+      guardia sul metro che regge tutto: il conto degli impegnati si fa su
+      `inventory_applied`, non sullo stato, ed e' la ragione per cui
+      spostare lo scarico non ha richiesto di cambiare una riga li' dentro.
+      CORRETTO ANCHE UN RIMANDO SBAGLIATO: il commento in
+      `tests/unit/comande.test.js` attribuiva questo difetto a BUG-039, che
+      e' un'altra cosa (i bolli dei passi col servizio spento). Residuo del
+      giorno in cui due id si sono accavallati.
+    test_cases: [tests/unit/salaEMagazzino.test.js, tests/unit/comande.test.js, tests/unit/impegnato.test.js]
 
   - id: BUG-041
     title: "Icone storte nel menu a lato, e il numero delle categorie fermo"
