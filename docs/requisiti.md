@@ -8,8 +8,8 @@ Alla data di generazione: **172 requisiti**.
 
 | | Quanti | Cosa vuol dire |
 |---|---|---|
-| ✅ | 130 | fatto e coperto dai test |
-| ⚠️  | 16 | fatto ma nessun test lo verifica |
+| ✅ | 131 | fatto e coperto dai test |
+| ⚠️  | 15 | fatto ma nessun test lo verifica |
 | ⬜ | 26 | da fare |
 
 Un requisito può essere dimostrato da più test; un test appartiene a
@@ -190,11 +190,11 @@ Sul tasto è scritta la cifra da incassare al netto di sconti e acconti già pre
 
 ### ✅ REQ-PAG-003 — Sconto sul conto, con tre strategie a scelta
 
-Lo sconto si applica dal tastierino e si può impostare come tetto al totale, come proporzione sulle righe o come semplice avviso; la strategia si sceglie nelle impostazioni (default: tetto al totale). Le statistiche e il rendiconto devono sempre scorporare lo sconto, mai mostrare il prezzo di listino come venduto. Il tastierino dello sconto ha le cifre nell'ordine di sempre (7 8 9 / 4 5 6 / 1 2 3 / C 0 ←), su tre colonne: si batte a memoria.
+Lo sconto si applica dal tastierino e si può impostare come tetto al totale, come proporzione sulle righe o come semplice avviso; la strategia si sceglie nelle impostazioni (default: tetto al totale). Le statistiche e il rendiconto devono sempre scorporare lo sconto, mai mostrare il prezzo di listino come venduto. Il tastierino dello sconto ha le cifre nell'ordine di sempre (7 8 9 / 4 5 6 / 1 2 3 / C 0 ←), su tre colonne: si batte a memoria. E un conto scontato si chiude come chiuso: quanto resta da incassare lo sa la schermata che ha il conto davanti, non una rilettura che può arrivare prima dello sconto (BUG-046).
 
 *Dove*: `src/lib/pricing.js, src/components/SettingsTab.jsx`
 
-*Lo dimostrano*: `tests/unit/pricing.test.js`, `tests/component/PaymentScreen.test.jsx`
+*Lo dimostrano*: `tests/unit/pricing.test.js`, `tests/component/PaymentScreen.test.jsx`, `tests/unit/contoScontatoSiChiude.test.js`
 
 ### ✅ REQ-PAG-004 — Lettore SumUp: pairing e incasso con carta
 
@@ -1074,13 +1074,13 @@ Chiesto dall'utente il 18/08. Su un conto da RITIRO, quando la comanda passa a �
 
 ## Stampa
 
-### ⚠️  REQ-STAMPA-001 — Comanda al banco e scontrino al cliente
+### ✅ REQ-STAMPA-001 — Comanda al banco e scontrino al cliente
 
-Si stampa la comanda in lavorazione (con dentro le aggiunte appena fatte) e lo scontrino non fiscale del conto, con i metodi di pagamento davvero usati. Entrambe possono essere automatiche.
+Si stampa la comanda in lavorazione (con dentro le aggiunte appena fatte) e lo scontrino non fiscale del conto, con i metodi di pagamento davvero usati. Entrambe possono essere automatiche. Lo scontrino automatico esce UNA volta sola per conto, da qualunque schermata si chiuda — ma la prenotazione torna libera se la carta non è uscita e quando un conto viene riaperto, se no quel conto non stampa più (BUG-047).
 
 *Dove*: `src/lib/printer.js`
 
-*Nessun test lo verifica.*
+*Lo dimostrano*: `tests/unit/scontrinoUnaVolta.test.js`, `tests/unit/ristampaScontrino.test.js`
 
 ### ⚠️  REQ-STAMPA-002 — La stampante non deve smettere di funzionare a metà serata
 

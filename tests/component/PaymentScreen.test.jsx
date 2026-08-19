@@ -40,6 +40,7 @@ vi.mock('../../src/lib/printer.js', () => ({
   loadPrinterSettings: vi.fn(() => ({ ivaRate: 10, businessName: 'La Tana' })),
   // Guardia "una copia sola per conto": nei test lascia sempre passare.
   claimReceiptPrint: vi.fn(() => true),
+  reclaimReceiptPrint: vi.fn(() => true),
   releaseReceiptPrint: vi.fn(),
 }))
 vi.mock('../../src/lib/toast.js', () => ({ toastError: vi.fn() }))
