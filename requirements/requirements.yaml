@@ -5548,6 +5548,27 @@ requirements:
       SIAE, il commercialista, le utenze — quello che esce e non entra in
       magazzino. Se le due cose si mescolano la merce viene contata due
       volte, e il netto del mese sbaglia in silenzio.
+      ATTENZIONE, IL NUMERO DI FLAVIO NON SARÀ LO STESSO — misurato sui
+      fogli il 19/08, e va saputo prima che qualcuno confronti i totali.
+      La sua riga SPESE è più grande degli acquisti di quel mese, sempre:
+      gen 2.380 contro 1.809 · apr 5.005 contro 2.884 · giu 12.726 contro
+      8.673. Quindi nel foglio le spese CONTENGONO la merce, più altro (da
+      570 a 4.050 € al mese, e la forbice cresce col volume).
+      NELL'APP LE DUE COSE RESTANO SEPARATE, ed è giusto così: la merce
+      arriva dalle fatture fornitore e si conta da sola, qui ci va solo il
+      resto. Ma vuol dire che «spese» nell'app varrà MENO del suo numero, e
+      va scritto in schermata — se no al primo confronto sembra che l'app
+      sbagli, e si torna al foglio.
+      IL NETTO DEL MESE si compone quindi di quattro pezzi, non di tre:
+      incassi − stipendi (calcolati dalle ore) − fatture fornitore (dagli
+      ordini ricevuti) − altre spese (queste, a mano).
+      COSA C'È IN QUELL'«ALTRO» NON SI SA: la cella SPESE del foglio è un
+      numero battuto a mano, senza dettaglio né formula — non c'è niente da
+      leggere. DA CHIEDERE A FLAVIO, ed è la domanda che decide se questa
+      voce basta: affitto, utenze, SIAE, commercialista sono i sospetti, ma
+      se lì dentro ci fosse anche merce comprata fuori dagli ordini
+      (il volo al cash and carry, il ghiaccio preso al volo) servirebbe un
+      modo di segnarla che non passi dagli ordini fornitore.
       DA DEFINIRE IN IMPLEMENTAZIONE: se una spesa che si ripete (l'affitto è
       lo stesso tutti i mesi) si possa riportare sul mese dopo invece di
       riscriverla. Non è stato chiesto: si guarda dopo aver visto quante
