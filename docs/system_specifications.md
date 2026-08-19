@@ -1718,13 +1718,13 @@ COSA FA L'APP OGGI. Il generatore ordini fa un ordine per UN fornitore, coi soli
 
 LE DIFFERENZE, in ordine di quanto pesano: (1) l'app parte da una SOGLIA scritta a mano sull'articolo, il foglio dal CONSUMO e dalla giacenza; (2) l'app fa un ordine per fornitore, il foglio ne mette insieme quanti ne servono in un giro solo; (3) l'app non sa cosa sia un consumo settimanale, vedi REQ-MAG-024; (4) nella schermata dell'ordine non si vede il costo per unità di misura, che nel foglio c'è su ogni riga ed è il numero con cui si decide se un prodotto conviene. PROPOSTA. Proporre la quantità dal CONSUMO invece che dalla soglia — «coprire N settimane al ritmo delle ultime conte», con la soglia che resta come rete per i prodotti senza storico — e un giro d'ordini che tenga dentro più fornitori insieme, spezzandosi in un ordine per fornitore solo al momento dell'invio.
 
-DA CHIEDERE A FLAVIO, e la domanda va posta così, perché scritta «quante settimane deve coprire un ordine» non si capisce (l'utente, 19/08: «un ordine è un ordine, non capisco la domanda»).
+LA DOMANDA SULLE SETTIMANE È STATA RITIRATA (19/08). Era nata da un indizio dei fogli (`ORD / 3` in INV.xlsx, che parrebbe dire «tre settimane di consumo») e l'avevo girata come una cosa da chiedere: per quanto tempo deve bastare un ordine. Non serve, e la risposta dell'utente chiude il discorso: «non c'entra quanto deve bastare o deve durare. Non lo sappiamo e non lo sapremo».
 
-LA DOMANDA VERA: quando l'app propone da sola le quantità, QUANTA ROBA CI METTE DENTRO? Il calcolo parte dal consumo — «di questo gin se ne vanno tre bottiglie a settimana» — e per farne una quantità da ordinare serve sapere PER QUANTO TEMPO DEVE BASTARE. Due settimane fanno sei bottiglie, un mese dodici. Nei fogli l'indizio dice tre settimane (`ORD / 3` in INV.xlsx), ma è una riga sola: non basta. E LA METÀ CHE CONTA DI PIÙ: vale lo stesso numero per tutti i fornitori? Chi passa due volte a settimana e chi consegna una volta al mese non si ordinano con la stessa regola — col primo ci si può tenere corti, col secondo no.
+SI ORDINA PER DIFFERENZA, non per previsione: ogni prodotto ha una quantità minima da tenere in magazzino, scritta dall'admin, e si ordina quello che manca per tornarci (REQ-MAG-026). Due numeri che esistono, invece di una stima che nessuno sa fare.
 
-NON BLOCCA PIÙ NIENTE (19/08). REQ-MAG-026 ha deciso che la quantità prepopolata è la «quantità minima d'ordine» scritta sull'articolo dall'admin, non un calcolo su consumo × settimane: il generatore si può fare senza aspettare questa risposta.
+COSA RESTA DI QUESTA VOCE. Il generatore vero è REQ-MAG-026, e non aspetta niente da qui. Qui resta il CONFRONTO COL FOGLIO — cosa fa lui che l'app non fa — e due cose ancora utili: il giro che tiene insieme più fornitori, e il costo per unità di misura sulla riga dell'ordine, che nel foglio c'è ed è il numero con cui si decide se un prodotto conviene.
 
-QUESTA VOCE RESTA per la proposta più fine — dimensionare al ritmo reale invece che a un numero fisso — e allora la domanda qui sopra torna a servire: è quella che decide quanta merce entra dalla porta, e indovinarla si paga in magazzino. Il consumo a settimana intanto l'app lo calcola (REQ-MAG-024), quindi il dato c'è già.
+IL CONSUMO A SETTIMANA (REQ-MAG-024) l'app ora lo calcola, ma non serve a proporre le quantità: serve a chi guarda, per accorgersi che una minima è tarata male.
 
 **Dove**: `src/lib/warehouse.js suggestedPackages, src/components/PurchaseOrdersPanel.jsx`
 
@@ -1786,13 +1786,17 @@ COME FUNZIONA IL GESTO, deciso dall'utente il 19/08 e da qui si implementa. «L'
 
 IN ORDINE, cosa succede: 1) CHI: admin o bartender (mai la sala). Il confronto si fa con src/lib/ruoli.js, che e' l'unico posto dove i ruoli si guardano.
 
-2) SI PARTE DAL MAGAZZINO: si guarda chi e' esaurito o in esaurimento, e ogni prodotto va nell'ordine del SUO fornitore — che e' gia' scritto sull'articolo. Una passata, N ordini.
+2) SI PARTE DAL MAGAZZINO, MA SOLO QUANDO LO SI CHIEDE. Parole dell'utente (19/08): «ovviamente lo fai solo quando admin crea un nuovo ordine e clicca, calcola da magazzino». Non e' una cosa che gira da sola ne' che si aggiorna mentre si guarda: e' un tasto, e quello che ne esce e' una proposta ferma su cui si lavora. Si guarda chi e' esaurito o in esaurimento, e ogni prodotto va nell'ordine del SUO fornitore — che e' gia' scritto sull'articolo. Una passata, N ordini.
 
 3) SI VEDE TUTTO L'INVENTARIO, non solo i sotto scorta: la schermata mostra l'intero elenco e il prepopolato e' solo un punto di partenza. Chi ordina aggiunge quello che sa lui — la festa di sabato, il fornitore che salta la consegna — e toglie quello che non serve. 4) NELL'ORDINE FINISCE SOLO QUELLO CHE DECIDE CHI ORDINA. La proposta non parte mai da sola.
 
-5) LA QUANTITA' PREPOPOLATA E' LA «QUANTITA' MINIMA D'ORDINE» del prodotto, decisa dall'admin sull'anagrafica. NON e' un calcolo su consumo per settimane: e' un numero scritto sull'articolo, e questo chiude anche la domanda aperta in REQ-MAG-023 su quante settimane coprire — non serve piu' saperlo per far partire la cosa.
+5) LA QUANTITA' SI CALCOLA PER DIFFERENZA, e non si stima niente. Precisato dall'utente il 19/08, dopo che avevo capito male: «non c'entra quanto deve bastare o deve durare. Non lo sappiamo e non lo sapremo». Ogni prodotto ha una QUANTITA' MINIMA DA TENERE IN MAGAZZINO, decisa dall'admin sull'anagrafica del prodotto; l'ordine propone quello che manca per tornarci: da ordinare = quantita' minima - giacenza attuale Nessuna previsione di consumo, nessun orizzonte di settimane: due numeri che l'app ha gia' o che l'admin scrive una volta.
 
-CAMPO NUOVO da aggiungere all'articolo di magazzino (verificato il 19/08: oggi non esiste, nessuno dei 388 prodotti di test ce l'ha). Chi lo scrive e' l'admin, come per la soglia.
+CAMPO NUOVO da aggiungere all'articolo di magazzino (verificato il 19/08: oggi non esiste, nessuno dei 388 prodotti di test ce l'ha).
+
+NON E' LA SOGLIA CHE C'E' GIA': `low_threshold` dice QUANDO avvisare («questo sta finendo»), la quantita' minima dice QUANTO deve essercene quando si e' a posto. Sono due numeri diversi e servono a due momenti diversi — oggi il generatore usa la soglia moltiplicata per due, che e' un modo di indovinare il secondo numero dal primo.
+
+SENZA QUEL NUMERO non si sa quanto ordinare: e' l'unica cosa che l'admin deve scrivere perche' il resto funzioni, e va detto chiaro in schermata invece di proporre zero in silenzio.
 
 6) CHI ENTRA NEL PREPOPOLATO: solo i prodotti IN LINEA o PREMIUM. Gli altri no. Il campo esiste gia' — `status` sull'articolo, valori in ASSORTIMENTI (src/lib/inventory.js): 'assortimento' (il default, «si tiene senza niente di speciale»), 'linea' (i cavalli di battaglia che non devono mancare), 'premium' (le bottiglie buone), 'out' (fuori assortimento, non si ricompra).
 
