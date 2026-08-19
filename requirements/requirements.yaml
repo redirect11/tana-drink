@@ -6108,3 +6108,44 @@ requirements:
     generate_issue: true
     labels: [coda, ruoli, ui]
     test_cases: [tests/unit/presenza.test.js, tests/component/CodaCorsie.test.jsx]
+
+  - id: REQ-UI-023
+    title: "La card della comanda si legge da lontano: numero e nome grandi, meno righe"
+    area: "src/components/CorsieComande.jsx, src/components/CorsieStato.jsx, src/components/RigheCorsia.jsx, src/index.css"
+    description: >
+      Chiesto dall'utente il 19/08 guardando la lavagna del banco: «il badge
+      servizio non serve. E poi il nome deve apparire piu' grande vicino
+      all'id della comanda. Anche l'id piu' grande. Nome del tavolo e id
+      stesse dimensioni e piu' grandi, come quelle degli ordini. Diminuisci
+      il numero di item visibile nella card a 4».
+      TRE COSE, e vanno insieme: quella card si guarda DA LONTANO, mentre si
+      versa, e ogni cosa che non risponde a «di chi e' questo giro» ruba
+      spazio a quelle che rispondono.
+      1) NUMERO E NOME INSIEME, DELLA STESSA MISURA (1,35rem, grassetto).
+      Prima il numero stava in corpo normale e il nome sotto, piccolo e
+      smorzato — ma quando si chiama un tavolo si dice «il ventidue, quello
+      di Peppe»: sono due meta' della stessa risposta, e una era scritta
+      come una nota a pie' di pagina. Il nome NON prende il colore
+      d'accento: due cose accese sulla stessa riga si contendono l'occhio, e
+      il numero resta il modo in cui il conto si chiama.
+      2) VIA IL BADGE «Ritiro / Servizio». Diceva come va consegnato, ma la
+      card lo dice gia' senza pastiglie — un conto con un tavolo si porta,
+      uno al bancone si ritira — e col tavolo scritto in grande si legge
+      prima di prima. Una pastiglia su ogni card pronta costava una riga a
+      tutte per una cosa che si capisce dal nome.
+      3) QUATTRO RIGHE A VISTA, non sei. Una card da sei righe piu' testata
+      piu' tasti si mangiava mezza colonna: con due card la corsia era gia'
+      finita e le altre comande stavano sotto il bordo. Quattro dicono lo
+      stesso — di che ordine e', e piu' o meno quanto c'e' da fare — in due
+      terzi dello spazio, e chi ne ha di piu' tocca «altre N».
+      ANCHE LE CORSIE DEI CONTI, non solo quelle delle comande: e' la stessa
+      lavagna, e due viste della stessa cosa non devono leggersi in due
+      modi. Non era stato chiesto per quella vista, ma la classe della
+      testata e' la stessa e lasciarne una a meta' sarebbe stato peggio.
+      «· comanda 2» RESTA PICCOLO: con la testata cresciuta, scritto della
+      stessa misura sembrerebbe importante quanto il numero del conto, e non
+      lo e' — serve solo a non confondere due card dello stesso tavolo.
+    status: implemented
+    generate_issue: true
+    labels: [ui, coda, banco]
+    test_cases: [tests/component/CodaCorsie.test.jsx]

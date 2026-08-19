@@ -2436,7 +2436,6 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
               }}
               corsie={corsieMostrate}
               ruolo={ruolo}
-              mostraModo={ritiroEsiste && !prontoSeparato}
               idAcceso={idAcceso}
               inArrivo={pend.pending}
               onScarta={dismissPending}
