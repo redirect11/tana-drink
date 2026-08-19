@@ -2398,6 +2398,23 @@ requirements:
       `macro_categories` è VUOTA — zero documenti sia in produzione sia su
       `tana-drink-test`. Nessuno ha mai creato una macro, né di magazzino
       né di menù, quindi l'aggancio non è «compilato a mano» da nessuno.
+      SU TEST NON È PIÙ VERO (19/08): le macro adesso ci sono, create a mano
+      su `tana-drink-test` — quattro d'ACQUISTO e quattro di VENDITA, con
+      gli agganci `macro_menu_id` compilati. Le categorie collegate sono 24
+      su 25 in magazzino e 13 su 14 nel menù: restano fuori ALTRO
+      (magazzino) e BOTTIGLIE (menù), e ci restano APPOSTA — è la ragione
+      per cui «senza macro» deve vedersi a colpo d'occhio invece di sembrare
+      una dimenticanza (REQ-UI-022).
+      IN PRODUZIONE `macro_categories` È ANCORA VUOTA, e ci resta finché non
+      arriva il via libera esplicito: si semina a mano, come su test, e la
+      produzione non si tocca di propria iniziativa.
+      DA SISTEMARE QUANDO SI TOCCA QUEL CODICE (non è un requisito nuovo, è
+      un commento che ha smesso di essere vero): in `MenuManager.jsx`, sopra
+      `MacroMenuPanel`, c'è scritto che l'aggancio «resta lì solo perché è
+      l'altra metà di una domanda ancora aperta» e che «al 18/08
+      `macro_categories` è vuota, zero documenti in produzione e in test».
+      La domanda è chiusa dal 19/08 — gli elenchi sono due — e su test le
+      macro esistono.
       CONSEGUENZA DA DIRE A CHI GUARDA: finché le macro di menù non
       vengono create, «Mensile per macro» non mostra numeri — mostra il
       suo messaggio, che dice dove crearle (Menù → Macro-categorie) e che
@@ -4743,4 +4760,502 @@ requirements:
     generate_issue: true
     labels: [stampa, impostazioni]
     priority: P2
+    test_cases: []
+
+  # ══════════════════════════════════════════════════════════════════════
+  #  DAI FOGLI DI FLAVIO — letti il 19/08 (ANALISI DATI.xlsx, RAPP ORE.xlsx,
+  #  GEN ORD REC.xlsx, INV.xlsx, FORNITORI REC.xlsx).
+  #  Ogni voce dice PRIMA cosa fa il foglio — fatto verificato, formule alla
+  #  mano — e POI cosa si propone, che è una proposta e va confermata. Le
+  #  due cose non si mescolano: un requisito che descrive un calcolo
+  #  inventato è peggio di uno che manca, perché sembra deciso.
+  # ══════════════════════════════════════════════════════════════════════
+
+  - id: REQ-CASSA-009
+    title: "Bilancio → Venduto × Incassato: la tabella trasloca, con le due incidenze"
+    area: "src/lib/macroStats.js, src/components/MacroMonthlyTab.jsx, src/components/BilancioTab.jsx (nuovo)"
+    description: >
+      COSA FA IL FOGLIO (verificato: «ANALISI DATI.xlsx» → foglio «RAPPORTI
+      ACQUISTI 2026»). Quattro blocchi — DISTILLATI, BIRRE + BIBITE, VINO,
+      FOOD + MOKA — dodici colonne di mese più una colonna TOT. Le formule
+      vere, lette con le formule e non coi valori, sono queste:
+      ACQUISTI e FATTURATO NON SONO CALCOLATI, sono numeri battuti a mano e
+      nessuna formula li lega a nessun altro foglio;
+      UTILE GENERATO = FATTURATO − ACQUISTI;
+      RAPPORTO FAT/ACQ = FATTURATO / ACQUISTI;
+      INCIDENZA SOMMA UTILI = utile della macro / somma degli utili delle
+      quattro macro in quel mese;
+      ACQ TOT, UTILE TOT, FATT TOT = somma delle quattro macro del mese;
+      INCIDENZA ANNO = fatturato totale del mese / fatturato totale
+      dell'anno (una riga sola, sotto i totali, non per macro);
+      la colonna TOT di ogni riga è la somma dei dodici mesi.
+      QUANTO DISTA DALLA TABELLA CHE C'È GIÀ («Statistiche → Mensile per
+      macro», REQ-MAG-015). Tre righe su sei hanno già il loro posto:
+      FATTURATO sta a «Incassato», UTILE GENERATO a «Margine», RAPPORTO
+      FAT/ACQ a «Inc-Costo», e la colonna TOT dell'anno c'è per ogni macro.
+      Ne mancano due, ed è tutto quello che manca su questo fronte:
+      l'INCIDENZA SOMMA UTILI (quanto pesa una macro sul margine del mese) e
+      l'INCIDENZA ANNO (quanto pesa un mese sull'incassato dell'anno). La
+      riga ACQUISTI è un'altra domanda e vive per conto suo, in REQ-MAG-022.
+      PROPOSTA, poi CONFERMATA il 19/08 insieme al trasloco (vedi in fondo).
+      Nella tabella mensile per macro, due percentuali in più:
+      sulla riga di ogni macro, quanto pesa il suo margine sul margine di
+      tutte le macro in quel mese; sotto i totali, quanto pesa l'incassato
+      del mese sull'incassato dell'anno mostrato. Sono due divisioni su
+      numeri che la tabella ha già in mano: non servono altri dati.
+      DA SAPERE, e da dire a chi guarda, perché i due fogli non torneranno
+      mai identici: il foglio confronta il fatturato con la merce ENTRATA e
+      lavora al LORDO dell'IVA; la tabella dell'app confronta l'incassato
+      col COSTO DEL VENDUTO e lavora al NETTO su tutti e due i lati
+      (REQ-MAG-015). Le percentuali quindi si somigliano, i valori assoluti
+      no.
+      DECISO (19/08, dall'utente che riporta Flavio): QUESTA TABELLA CAMBIA
+      CASA. Non sta più nelle Statistiche — che restano col solo
+      Giornaliero, e le guarda chi lavora — ma nella pagina «Bilancio»
+      (REQ-CASSA-010), dove stanno i conti del locale e che vede il solo
+      admin. Lì si chiama «Venduto × Incassato», accanto alle altre due
+      sottosezioni: «Mesi» (REQ-CASSA-011) e «Acquisti × Fatturato»
+      (REQ-MAG-022).
+      IL TRASLOCO È UN CAMBIO DI POSTO, NON DI CONTENUTO: quello che la
+      tabella calcola oggi — incassato, costo del venduto, margine,
+      inc-costo, per macro di MENÙ, con la regola decisa il 18/08 e scritta
+      in REQ-MAG-015 — non si tocca. Le due incidenze descritte qui sopra
+      restano le uniche due righe che le mancano, e traslocano con lei.
+      PERCHÉ SI SPOSTA: quanto ha reso ogni macro è una domanda da conti di
+      fine mese, non da serata. Chi apre le Statistiche vuole sapere com'è
+      andata ieri, chi apre il Bilancio com'è andato il mese — due mestieri
+      diversi, anche se i numeri escono dalla stessa cassa.
+    status: todo
+    generate_issue: true
+    labels: [statistiche, metodo]
+    test_cases: []
+
+  - id: REQ-MAG-022
+    title: "Bilancio → Acquisti × Fatturato: gli acquisti per macro, mese per mese"
+    area: "src/lib/macroStats.js purchasesByMacro, src/components/BilancioTab.jsx (nuovo)"
+    description: >
+      COSA FA IL FOGLIO. La riga ACQUISTI del rapporto per macro è battuta a
+      mano, mese per mese e macro per macro: nessuna formula dice da dove
+      viene. DA DOVE ARRIVANO QUEI NUMERI NON È DIMOSTRABILE dai file, e non
+      va inventato. Due indizi, verificati tutti e due, e nessuno dei due
+      torna al centesimo.
+      (a) Il registro fatture (FORNITORI REC.xlsx), sommato per mese del
+      2026, dà 1180 / 1129 / 1680 / 2448 / 4400 / 9081 / 761 da gennaio a
+      luglio, contro gli ACQ TOT del rapporto 1809 / 1063 / 1697 / 2884 /
+      4526 / 8673 / 2369: stesso ordine di grandezza, marzo e maggio quasi
+      uguali, gennaio e luglio lontani. Il registro però tiene solo cinque
+      fornitori, e negli ordini ne compaiono una decina.
+      (b) GEN ORD REC.xlsx valorizza ogni fattura riga per riga (quantità ×
+      prezzo ivato) e ogni riga porta il suo TIPO, quindi da lì una somma
+      per macro si può fare a mano. È il modo più plausibile, ma è una
+      ricostruzione: nel rapporto non c'è nessun collegamento che lo provi.
+      QUELLO CHE È CERTO: gli ACQUISTI del foglio sono merce ENTRATA dalla
+      porta, al LORDO dell'IVA (nel generatore il prezzo di riga è sempre
+      «€/pz × 1,22»).
+      COSA HA GIÀ L'APP. `purchasesByMacro` (src/lib/macroStats.js) somma
+      gli ordini fornitore RICEVUTI per macro di MAGAZZINO, al netto IVA.
+      Nessuna schermata la chiama, e non ha il taglio per mese. È rimasta lì
+      apposta: REQ-MAG-015 dice che «quanto ho speso in bibite» è una
+      domanda vera che vive con gli acquisti e non nella tabella del
+      venduto, e che l'aggancio `macro_menu_id` esiste per il giorno in cui
+      gli acquisti avranno la loro schermata. Quel giorno è questo.
+      PROPOSTA, poi DECISA il 19/08 (vedi in fondo). Una vista «Acquisti
+      per macro» con le macro di MAGAZZINO
+      per riga e i mesi per colonna, e — dove la macro d'acquisto è
+      agganciata a una macro di vendita (`macro_menu_id`) — l'incassato di
+      quella accanto, che è il confronto che il locale fa a fine mese.
+      ERANO TRE DOMANDE, E DUE SONO CHIUSE (19/08, dall'utente che riporta
+      Flavio).
+      (1) L'ACQUISTO È L'ORDINE FORNITORE RICEVUTO: la merce conta quando
+      entra dalla porta, non quando arriva la fattura — che in app è
+      un'altra cosa e segue tempi suoi.
+      (2) LORDO E NETTO SI VEDONO TUTTI E DUE: i fogli di Flavio sono al
+      lordo ed è come lui legge da sempre, il resto dell'app ragiona al
+      netto, e obbligare a sceglierne uno vorrebbe dire dare torto a lui o
+      dare torto alle statistiche. Servono tutti e due sulla stessa tabella;
+      quale dei due si apre per primo lo si sceglie provandolo con lui.
+      (3) RESTA APERTA: in quale mese cade un acquisto è REQ-MAG-021 — la
+      quota consumata che migra da un mese all'altro — e questa tabella va
+      pensata insieme a quella.
+      DECISO ANCHE DOVE VIVE (19/08): nella pagina «Bilancio»
+      (REQ-CASSA-010), sottosezione «Acquisti × Fatturato», accanto a «Mesi»
+      e «Venduto × Incassato». È la tabella dell'Excel rifatta: per riga le
+      macro d'ACQUISTO, per colonna i mesi, e in ogni cella acquisti,
+      fatturato, utile (fatturato − acquisti), rapporto fat/acq e incidenza
+      sull'utile del mese; in fondo i totali dell'anno e l'incidenza
+      dell'anno.
+      IL FATTURATO DI UNA MACRO D'ACQUISTO è l'incassato della macro di
+      VENDITA agganciata con `macro_menu_id`, l'aggancio che REQ-MAG-015 ha
+      tenuto in vita apposta per questo giorno. Dove l'aggancio non c'è, la
+      colonna fatturato resta vuota e si dice perché: uno zero lì dentro si
+      legge come «non ho incassato niente», che è un'altra cosa.
+      GLI ACQUISTI SENZA MACRO NON SPARISCONO. `purchasesByMacro` li
+      raccoglie già sotto UNASSIGNED, e adesso quella riga serve davvero:
+      ALTRO è una categoria di magazzino che resta fuori dalle macro APPOSTA
+      (REQ-UI-022). Va mostrata, non nascosta — un totale che non torna con
+      le fatture non lo guarda più nessuno.
+      E UNA COSA VA DETTA SUBITO: dello storico non si ricostruisce niente.
+      Gli ordini fornitore in app nascono da oggi, i numeri 2026 del foglio
+      non hanno un corrispondente in banca dati. La tabella si riempie da
+      quando gli ordini passano per l'app, e i primi mesi saranno mezzi
+      vuoti: è la verità, e va scritta sulla schermata invece di lasciarla
+      scoprire a chi guarda.
+    status: todo
+    generate_issue: true
+    labels: [magazzino, statistiche, fornitori]
+    test_cases: []
+
+  - id: REQ-STAFF-015
+    title: "Il minimo della serata: quanto deve fare stasera, e quanto ha fatto"
+    area: "src/lib/stats.js, src/components/StatsTab.jsx, src/components/StaffHoursTab.jsx"
+    description: >
+      COSA FANNO I FOGLI (verificato). In ANALISI DATI.xlsx ogni mese ha un
+      foglio suo, diviso in settimane, e per ogni giorno tre righe: MINIMO
+      (quanto quel giorno deve fare), REALE (quanto ha fatto), RAPP. = REALE
+      − MINIMO. In fondo al mese: STIPENDI, SPESE, INCASSI (somma dei REALE
+      delle cinque settimane), il netto = INCASSI − SPESE − STIPENDI, e la
+      somma degli scarti.
+      IL MINIMO NON È CALCOLATO. Tutte le celle MINIMO sono numeri battuti a
+      mano: in nessuno dei diciotto fogli mensili c'è una formula. Cambia
+      per giorno della settimana (gennaio 2026: giovedì 300, venerdì 600,
+      sabato 600, domenica 300, lunedì 100, martedì 100, mercoledì 150) e
+      cambia da mese a mese. Accanto c'è un'etichetta di testo — «MEDIA 2450
+      €/w» — che è l'obiettivo settimanale: nei mesi vecchi coincide con la
+      somma dei minimi della settimana (feb, mar, apr, set, ott 2025 e feb
+      2026), nei mesi recenti no (gen, apr, mag, giu, lug 2026), segno che
+      l'etichetta non viene aggiornata insieme ai minimi.
+      DA DOVE VIENE LA RIGA STIPENDI: da RAPP ORE.xlsx, dove ogni persona ha
+      le ore del mese × la paga oraria, e il totale finisce a mano in
+      ANALISI DATI. Torna in quasi tutti i mesi provati (gen 26 800 + 700 =
+      1500; dic 25 650 + 750 + 160 = 1560; apr 26 650 + 800 + 170 = 1620;
+      mag 26 850 + 750 + 575 = 2175) e NON torna in giugno 26, dove il
+      foglio ore dà 3335 e ANALISI DATI dice 3500: qualcuno ha arrotondato.
+      COME SONO FATTE LE ORE E LE PAGHE: una griglia con le ore in riga
+      (dalle 9-10 alle 04-05) e i giorni in colonna, una casella per ogni
+      ora lavorata; in fondo, per persona, giorni = ore / 8, ore totali,
+      €/h, totale = ore × €/h. Le tariffe viste: 6,25 €/h quasi per tutti,
+      5 €/h per gli extra, in passato 7,50 / 8,75 / 5,625 / 4,375. Sono
+      tutte tariffe GIORNALIERE divise per 8 (50, 40, 60, 70, 45, 35 € al
+      giorno): il locale ragiona a giornate, non a ore.
+      QUELLO CHE NON C'È, e che non va inventato. Nessun foglio calcola il
+      minimo dalle paghe. L'ipotesi di chi ha chiesto questo lavoro — «i
+      minimi dipendono dalle paghe orarie, più un extra che credo decida
+      Flavio» — non è né confermata né smentita dai file: quella relazione
+      non esiste in nessuna cella. Nei fogli il minimo resta un numero
+      scritto a mano, e questo non cambia: cambia da dove lo prende l'app.
+      DECISO (19/08, dall'utente che riporta Flavio): LA FORMULA È QUESTA —
+      minimo del giorno = somma delle paghe di chi lavora quel giorno (ore
+      × €/h, persona per persona) + un EXTRA messo a mano. Non è più
+      un'ipotesi, è la regola con cui il minimo si calcola: la domanda
+      scritta qui sopra è chiusa, e l'ipotesi era quella giusta. Il primo
+      addendo l'app ce l'ha già per intero (REQ-STAFF-006), quindi non si
+      ricopia da nessuna parte — nel foglio invece si ricopia, ed è già
+      capitato che non torni.
+      DA DEFINIRE IN IMPLEMENTAZIONE, e non è una domanda sulla formula: con
+      che passo si mette l'extra — uno per giorno, uno per mese, o un valore
+      di partenza per giorno della settimana che sul singolo giorno si
+      corregge. Sul foglio l'extra sta dentro un numero solo e non si vede,
+      quindi non c'è un fatto da leggere: si sceglie il modo meno faticoso
+      da tenere aggiornato e lo si prova con Flavio.
+      COSA HA GIÀ L'APP: le ore e le paghe per intero, storicizzate
+      (REQ-STAFF-006), e l'incasso per giornata commerciale (REQ-CASSA-005).
+      Manca il minimo, manca il confronto, manca l'obiettivo settimanale, e
+      mancano le spese del mese — che nel foglio sono una riga sola battuta
+      a mano, non un elenco.
+      DOVE SI VEDE. Il minimo e il confronto con quello che si è fatto
+      stanno nella tabella «Mesi» della pagina Bilancio (REQ-CASSA-011),
+      giorno per giorno: minimo, incassato, differenza. Nella schermata
+      della serata, accanto all'incasso, quanto manca o quanto avanza.
+      L'obiettivo settimanale si somma dai minimi dei sette giorni invece di
+      essere scritto a parte, così non può più restare indietro come
+      l'etichetta «MEDIA 2450 €/w» del foglio.
+      PROPOSTA (non è una sua parola): siccome il minimo nasce dalle ore, un
+      giorno futuro ha un minimo solo dove i turni sono già programmati.
+      Dove non lo sono il numero non si mostra, invece di mostrarne uno
+      finto: un obiettivo inventato non lo insegue nessuno.
+      LE SPESE DEL MESE, che nel foglio sono una riga sola battuta a mano,
+      vivono per conto loro in REQ-CASSA-012: senza quelle il netto del mese
+      non esiste.
+    status: todo
+    generate_issue: true
+    labels: [statistiche, staff, ore, serata]
+    test_cases: []
+
+  - id: REQ-MAG-023
+    title: "Quanto ordinare: il foglio guarda la giacenza, l'app guarda una soglia"
+    area: "src/lib/warehouse.js suggestedPackages, src/components/PurchaseOrdersPanel.jsx"
+    description: >
+      COSA FA IL FOGLIO (GEN ORD REC.xlsx, verificato). Centotrenta fogli,
+      uno per giro d'ordini, coi numeri dei documenti nel nome
+      («1410+1438+AGO+PAD+PIC»). Ogni foglio è il CATALOGO INTERO ricopiato
+      — circa 380 righe — con: articolo, formato in cl, TIPO (la categoria:
+      GIN, BIRRE, VINO, Z APE…), classe LINEA o PREM, una marca «OUT» per
+      quello che non si tiene più, DEP (la giacenza), TRE colonne di
+      quantità (A, B, C), il prezzo netto al pezzo, il prezzo ivato = netto
+      × 1,22, l'importo di riga = quantità × prezzo ivato, il costo al cl =
+      prezzo ivato / formato, e il fornitore. Il totale del giro è la somma
+      delle tre colonne.
+      IL FORNITORE STA SULL'ARTICOLO, non sull'ordine: un foglio solo tiene
+      dentro più fornitori insieme, e i nomi dei fogli lo dicono (NOVA +
+      AGOSTINO + PICCOLO). Le tre colonne A/B/C servono a tenere separati i
+      pezzi del giro dentro lo stesso foglio.
+      LO STESSO MODELLO SERVE PER LE RIMANENZE: i fogli «RES …» e
+      «rimanenza giugno» sono lo stesso catalogo con le quantità CONTATE al
+      posto di quelle ordinate, valorizzate dalle stesse colonne. Comprare e
+      contare, per il foglio, sono lo stesso gesto.
+      QUANTO ORDINARE NON È CALCOLATO: nessuna formula lega le quantità a
+      DEP o al consumo. Si guarda la giacenza e si scrive un numero.
+      L'UNICA REGOLA NUMERICA che compare in tutti i file sta in INV.xlsx,
+      foglio «ORD»: la colonna CONS/w è «= ORD / 3», cioè l'ordine è
+      dimensionato su circa TRE settimane di consumo. Quel foglio però oggi
+      ha una riga sola compilata: è un indizio, non una prova, e va chiesto.
+      COSA FA L'APP OGGI. Il generatore ordini fa un ordine per UN fornitore,
+      coi soli prodotti di quel fornitore; «⚡ Precompila i sotto scorta»
+      propone `suggestedPackages`, che riporta la giacenza a DUE VOLTE la
+      soglia di avviso (`low_threshold`), minimo una confezione, e non
+      propone niente se la soglia non è impostata. Al ricevimento la merce
+      entra in magazzino in un colpo (REQ-MAG-006).
+      LE DIFFERENZE, in ordine di quanto pesano: (1) l'app parte da una
+      SOGLIA scritta a mano sull'articolo, il foglio dal CONSUMO e dalla
+      giacenza; (2) l'app fa un ordine per fornitore, il foglio ne mette
+      insieme quanti ne servono in un giro solo; (3) l'app non sa cosa sia
+      un consumo settimanale, vedi REQ-MAG-024; (4) nella schermata
+      dell'ordine non si vede il costo per unità di misura, che nel foglio
+      c'è su ogni riga ed è il numero con cui si decide se un prodotto
+      conviene.
+      PROPOSTA. Proporre la quantità dal CONSUMO invece che dalla soglia —
+      «coprire N settimane al ritmo delle ultime conte», con la soglia che
+      resta come rete per i prodotti senza storico — e un giro d'ordini che
+      tenga dentro più fornitori insieme, spezzandosi in un ordine per
+      fornitore solo al momento dell'invio.
+      DA CHIEDERE A FLAVIO: quante settimane si vogliono coprire (l'indizio
+      dice tre), e se il numero è uguale per tutti o cambia per fornitore —
+      chi consegna una volta al mese e chi due volte a settimana non si
+      ordinano con la stessa regola.
+    status: todo
+    generate_issue: true
+    labels: [magazzino, fornitori]
+    test_cases: []
+
+  - id: REQ-MAG-024
+    title: "Il consumo a settimana si divide per le settimane vere"
+    area: "src/lib/warehouse.js stockCountCompute, src/components/InventoryManager.jsx"
+    description: >
+      COSA FA IL FOGLIO (INV.xlsx, verificato). Ogni conta è un foglio con
+      l'intervallo nel nome («07-06 01-07») e, per riga: DEP (giacenza
+      iniziale), ACQ (comprato nel periodo), RIM (contato alla fine), CONS =
+      DEP + ACQ − RIM, CONS/w, prezzo netto, prezzo ivato, VALORE € = RIM ×
+      prezzo, costo al cl, costo alla porzione (prezzo / (cl × 0,34)).
+      IL CONSUMO A SETTIMANA È DIVISO PER UNA COSTANTE, non per le settimane
+      vere del periodo: nei primi due fogli è «÷ 3», poi «÷ 2» per cinque
+      fogli, poi «÷ 1,5» per quindici, poi «÷ 4» negli ultimi nove. Il
+      divisore lo si aggiorna a mano ogni tanto, e nel frattempo sbaglia di
+      quanto è lontano dalla realtà: «16-02 02-04» sono sei settimane e
+      vengono divise per 4, «07-06 01-07» sono tre settimane e mezzo e
+      vengono divise per 4 anche loro. È il numero su cui si decide quanto
+      ordinare (REQ-MAG-023), quindi l'errore non resta dov'è.
+      COSA FA L'APP: `stockCountCompute` calcola DEP + ACQ − RIM e la
+      valorizzazione (REQ-MAG-005), ma non calcola nessun consumo a
+      settimana — quella colonna non esiste.
+      PROPOSTA. Il consumo per settimana si ricava dai GIORNI VERI fra due
+      conte, che l'app conosce perché le conte hanno una data: consumo /
+      giorni × 7. Nessun divisore da tenere aggiornato, e nessun modo di
+      sbagliarlo dimenticandosene. Dove le conte sono meno di due, o troppo
+      vicine per dire qualcosa, il numero non si mostra invece di mostrarne
+      uno finto: un consumo inventato manda a ordinare merce che non serve.
+    status: todo
+    generate_issue: true
+    labels: [magazzino, metodo]
+    test_cases: []
+
+  # ══════════════════════════════════════════════════════════════════════
+  #  LE DECISIONI DEL 19/08 — nasce «Bilancio», e quello che le serve.
+  #  Le ha prese l'utente riportando Flavio, dopo aver letto i fogli (le
+  #  cinque voci qui sopra). Sono FATTI: dove c'è scritto DECISO la domanda
+  #  è chiusa e non si torna a chiederla. Quello che resta da scegliere è
+  #  segnato «DA DEFINIRE IN IMPLEMENTAZIONE», ed è un'altra cosa — non si
+  #  chiede a nessuno, si sceglie scrivendo il codice.
+  # ══════════════════════════════════════════════════════════════════════
+
+  - id: REQ-CASSA-010
+    title: "«Bilancio»: i conti del locale hanno una pagina loro, e la vede solo l'admin"
+    area: "src/lib/sezioni.js, src/components/StaffDrawer.jsx, src/lib/ruoli.js, src/components/BilancioTab.jsx (nuovo)"
+    description: >
+      DECISO (19/08, dall'utente che riporta Flavio). Nasce una pagina
+      «Bilancio» nel menu laterale, e la vede SOLO l'admin. Dentro ci stanno
+      i conti del locale — quello che Flavio teneva su ANALISI DATI.xlsx — e
+      sono un'altra cosa dalle STATISTICHE, che restano dove sono col solo
+      Giornaliero e le guarda chi lavora.
+      PERCHÉ SEPARATE: incassi, stipendi, spese e netto del mese sono i conti
+      di chi il locale lo paga; quanto ci mette un drink a uscire e cosa si è
+      venduto ieri sera sono il lavoro di chi sta al banco. Oggi stanno nella
+      stessa pagina solo perché sono tutti e due «numeri», e non è un motivo.
+      TRE SOTTOSEZIONI, nel menu laterale rientrate sotto la pagina aperta,
+      come vuole docs/navigazione.md — le sottosezioni stanno nel menu, non
+      in una riga di schede sopra il contenuto, che su una schermata fatta di
+      tabelle costa altezza tutto il giorno:
+      «Mesi» (REQ-CASSA-011), «Acquisti × Fatturato» (REQ-MAG-022) e
+      «Venduto × Incassato» (REQ-CASSA-009, che trasloca qui dalle
+      Statistiche).
+      I RUOLI SI CONFRONTANO CON `src/lib/ruoli.js`, e qui serve `isAdmin`.
+      Attenzione a dove: oggi il menu si costruisce da `NAV_GESTIONALE`
+      (src/lib/sezioni.js) e lo filtra `isGestore` in StaffDrawer.jsx, che
+      tiene dentro anche il bartender — «Bilancio» è la prima voce che vuole
+      un filtro più stretto. Va tolta di lì, non nascosta dentro la pagina:
+      una pagina che si apre e poi dice «non puoi» si è già fatta vedere.
+      DA DEFINIRE IN IMPLEMENTAZIONE: dopo il trasloco le Statistiche restano
+      con una sottosezione sola (Giornaliero), e una pagina con una sezione
+      sola non ha niente da far scegliere. L'elenco si toglie invece di
+      lasciarne una spuntata da sé.
+    status: todo
+    generate_issue: true
+    labels: [statistiche, navigazione, ruoli]
+    test_cases: []
+
+  - id: REQ-CASSA-011
+    title: "Bilancio → Mesi: minimo, incassato e differenza, giorno per giorno"
+    area: "src/components/BilancioTab.jsx (nuovo), src/lib/stats.js, src/lib/paghe.js, src/lib/ore.js"
+    description: >
+      DECISO (19/08, dall'utente che riporta Flavio). È la versione navigabile
+      dei fogli mensili di ANALISI DATI (com'erano fatti sta scritto per
+      intero in REQ-STAFF-015). Si sceglie il mese; la tabella è divisa per
+      SETTIMANE come il foglio, e ogni giorno porta tre numeri: MINIMO
+      (quanto doveva fare), INCASSATO (quanto ha fatto), DIFFERENZA.
+      SOTTO, I TOTALI DEL MESE: incassi, stipendi, spese, netto = incassi −
+      spese − stipendi. Come nel foglio, con una differenza che pesa: GLI
+      STIPENDI SI CALCOLANO dalle ore già registrate nell'app (REQ-STAFF-006,
+      ore × paga in vigore quel giorno), NON si ricopiano. Nel foglio quel
+      numero viene battuto a mano da RAPP ORE, ed è già capitato che non
+      torni: giugno 26, il foglio ore dà 3335 e ANALISI DATI dice 3500.
+      DUE RIGHE DI SINTESI che nel foglio non c'erano: PRIME COST = costo del
+      venduto + costo del lavoro, in percentuale sugli incassi; e COSTO DEL
+      LAVORO %, il solo lavoro sugli incassi. Sono i due numeri con cui si
+      capisce in mezzo secondo se il mese è andato.
+      DA DOVE ARRIVANO GLI ALTRI PEZZI: il MINIMO dalla formula decisa lo
+      stesso giorno (REQ-STAFF-015 — somma delle paghe di chi lavora quel
+      giorno più un extra a mano); le SPESE da REQ-CASSA-012, e senza quelle
+      il netto del mese non esiste; l'INCASSATO per GIORNATA COMMERCIALE
+      (REQ-CASSA-005), così la nottata che finisce alle tre resta la serata
+      di ieri e non fa saltare il giorno dopo.
+      LA DIFFERENZA SI COLORA, MA NON DI ROSSO. In questa app il rosso vuol
+      dire annullato o errore (DESIGN.md), e un giorno sotto il minimo non è
+      né l'uno né l'altro: il verso lo dicono il segno e i colori di stato
+      (--ok, --warn), che sono fuori tema apposta.
+      DA DEFINIRE IN IMPLEMENTAZIONE: quale «costo del venduto» entra nella
+      prime cost. L'app ne calcola già uno dalle ricette, macro per macro
+      (REQ-MAG-015), mentre nei fogli di Flavio al suo posto ci sono gli
+      ACQUISTI del mese, che è un altro numero — e finché REQ-MAG-021 non è
+      risolto i due mesi non si somigliano nemmeno. Proposta (non è una sua
+      parola): quello calcolato, perché è l'unico che sta in pari con
+      l'incassato dello stesso mese; e scritto sotto la tabella, così chi
+      confronta col foglio sa in partenza perché non torna.
+    status: todo
+    generate_issue: true
+    labels: [statistiche, serata, staff]
+    test_cases: []
+
+  - id: REQ-CASSA-012
+    title: "Le spese del mese si scrivono nell'app, non su un foglio a parte"
+    area: "src/lib/api.js (collezione `spese`, nuova), src/components/BilancioTab.jsx (nuovo)"
+    description: >
+      DECISO (19/08, dall'utente che riporta Flavio). Nei fogli mensili le
+      SPESE sono una riga sola, battuta a mano, e senza quel numero il netto
+      del mese non esiste: incassi − spese − stipendi. Serve un posto
+      nell'app dove inserirle, altrimenti la tabella «Mesi» (REQ-CASSA-011)
+      arriva fino a metà strada e poi si torna al foglio.
+      COM'È FATTA UNA SPESA: voci semplici — descrizione, importo, mese.
+      Niente categorie, niente allegati, niente partita doppia: quello che
+      c'è nel foglio e non di più. Il totale del mese finisce nella riga
+      «spese» di Bilancio → Mesi.
+      COSA NON SONO: non sono gli acquisti di merce, che vivono negli ordini
+      fornitore e si contano da soli (REQ-MAG-022). Qui ci va l'affitto, la
+      SIAE, il commercialista, le utenze — quello che esce e non entra in
+      magazzino. Se le due cose si mescolano la merce viene contata due
+      volte, e il netto del mese sbaglia in silenzio.
+      DA DEFINIRE IN IMPLEMENTAZIONE: se una spesa che si ripete (l'affitto è
+      lo stesso tutti i mesi) si possa riportare sul mese dopo invece di
+      riscriverla. Non è stato chiesto: si guarda dopo aver visto quante
+      spese si scrivono davvero in un mese.
+    status: todo
+    generate_issue: true
+    labels: [statistiche, cassa]
+    test_cases: []
+
+  - id: REQ-MENU-013
+    title: "L'IVA di vendita si cambia sulla singola voce di menù"
+    area: "src/components/MenuManager.jsx, src/lib/api.js, src/lib/macroStats.js, src/components/SettingsTab.jsx"
+    description: >
+      DECISO (19/08, dall'utente che riporta Flavio). L'IVA ha DUE LATI e
+      vanno tenuti distinti: quella con cui si COMPRA e quella con cui si
+      VENDE. Su tutti e due il valore generale sta nelle Impostazioni, e su
+      tutti e due si deve poter fare l'eccezione sulla singola riga.
+      IL LATO ACQUISTO È GIÀ FATTO, verificato nel codice il 19/08:
+      `purchase_vat` nelle impostazioni vale 22% di default (DEFAULT_SETTINGS
+      in src/lib/api.js), la scheda del prodotto ha il campo «IVA acquisto %»
+      che parte da quel default e si cambia per prodotto
+      (InventoryManager.jsx, `vat` sull'articolo), e i conti al lordo passano
+      da `costWithVat` (src/lib/inventory.js). Su questo lato non c'è niente
+      da fare: è già come lo si voleva.
+      IL LATO VENDITA È QUELLO CHE MANCA: `sale_vat` nelle impostazioni vale
+      10% (somministrazione bar) ed è generale per tutto il locale; la voce
+      di menù NON ha un campo suo, quindi una cosa che si rivende con
+      un'aliquota diversa oggi non si può dire. DA FARE: un campo IVA sulla
+      voce di menù, vuoto = si usa quella del locale — così le eccezioni si
+      scrivono dove sono, una per una, e chi non ne ha non deve compilare
+      niente.
+      NON RIAPRE UNA COSA CHIUSA, LA COMPLETA. Il 18/08 si è deciso che
+      l'incasso si scorpora con l'IVA di VENDITA e non con quella del
+      prodotto d'acquisto (REQ-MAG-015: «Flavio compra al 22 e rivende al
+      10»). Resta così: cambia solo che alcune vendite hanno un'aliquota
+      loro invece di quella generale. `macroStats.js` oggi prende `saleVat`
+      una volta sola per tutto il report e andrà preso per voce, con quella
+      delle impostazioni come ripiego.
+      PERCHÉ SERVE, per quel che si vede dai dati (non è una sua parola): nel
+      menù esiste una categoria BOTTIGLIE, e una bottiglia intera non è la
+      stessa cosa di un drink servito al banco. Mettere tutto al 10% gonfia
+      il netto, e il netto è il numero da cui scendono margine, prime cost e
+      il conto di fine mese.
+    status: todo
+    generate_issue: true
+    labels: [menu, prezzi, impostazioni]
+    test_cases: []
+
+  - id: REQ-UI-022
+    title: "Le categorie senza macro si vedono a colpo d'occhio, in magazzino e nel menù"
+    area: "src/components/MacroCategoryManager.jsx, src/components/InventoryManager.jsx (InvCategoryManager), src/components/MenuManager.jsx (CategoryManager)"
+    description: >
+      DECISO (19/08, dall'utente che riporta Flavio). ALTRO (magazzino) e
+      BOTTIGLIE (menù) restano SENZA macro, ed è una scelta: non vanno
+      forzate dentro un gruppo per far tornare un elenco. Da lì nasce il
+      bisogno opposto — si deve capire in un attimo quali categorie sono
+      fuori, perché una fuori APPOSTA e una dimenticata oggi si somigliano
+      troppo.
+      COSA C'È GIÀ, verificato nel codice il 19/08. `groupCategoriesByMacro`
+      (src/lib/macros.js) torna già `unassigned`, e il pannello «🗂
+      Macro-categorie» — lo stesso per magazzino e menù,
+      MacroCategoryManager.jsx — le scrive in fondo su una riga sola:
+      «Categorie senza macro: …», i nomi separati da virgola. Quindi LÌ IL
+      «SENZA MACRO» SI VEDE, ma debolmente: è testo piccolo in coda alla
+      schermata, e con venticinque categorie diventa una riga da leggere
+      parola per parola per sapere se la tua c'è dentro.
+      DOVE NON SI VEDE AFFATTO: negli ELENCHI delle categorie, che sono
+      l'altro posto dove uno le guarda. Magazzino → 🏷 Categorie
+      (InvCategoryManager) mostra il solo nome; Menù → 🏷 Categorie
+      (CategoryManager in MenuManager.jsx) mostra nome, icona e colore.
+      Nessuno dei due dice a quale macro appartiene la categoria, né che non
+      ne ha nessuna — e sono le stesse liste da cui si esce convinti di aver
+      sistemato tutto.
+      DA FARE: nell'elenco delle categorie, da tutte e due le parti, si legge
+      la macro di ogni categoria e si distingue quella che non ce l'ha.
+      PROPOSTA sulla forma (non è una sua parola): accanto al nome
+      un'etichetta con la macro, e dove manca due parole — «senza macro» —
+      con lo stesso peso, non un avviso. Non è un errore, e il rosso qui non
+      c'entra: in questa app vuol dire annullato o sbagliato (DESIGN.md).
+      DA DEFINIRE IN IMPLEMENTAZIONE: se «apposta» sia un segno da mettere
+      sulla categoria (un campo in più, e una spiegazione da scrivere) o
+      basti che l'elenco si legga bene. Il secondo costa zero ma lascia il
+      dubbio ogni volta che qualcuno di nuovo guarda quella lista.
+    status: todo
+    generate_issue: true
+    labels: [ux, magazzino, menu]
     test_cases: []
