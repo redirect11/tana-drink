@@ -5424,8 +5424,26 @@ requirements:
       NON DIPENDE DA NIENTE: `groupCategoriesByMacro` torna già
       `unassigned`, il lavoro sta negli elenchi delle categorie. Piccolo, e
       utile proprio adesso che le macro si stanno mappando.
-    status: todo
+      FATTO (19/08). In tutti e due gli elenchi — Magazzino → 🏷 Categorie e
+      Menù → 🏷 Categorie — accanto al nome c'è un'etichetta con la macro, e
+      dove non c'è si legge «senza macro» con lo STESSO PESO: niente rosso,
+      niente punto esclamativo. Non è un errore, è un fatto, e chi ha
+      lasciato ALTRO fuori apposta non deve vedersi rimproverare ogni volta
+      che apre la lista. L'unica differenza è il corsivo, che dice «questa è
+      una constatazione, non un nome».
+      SCELTO IL SECONDO DEI DUE MODI: nessun campo «apposta» sulla
+      categoria. L'elenco che si legge bene costa zero e non chiede a
+      nessuno di compilare niente; il segno esplicito si potrà aggiungere il
+      giorno in cui il dubbio si presenta davvero, e allora sarà una
+      decisione presa su un caso vero invece che su un'ipotesi.
+      UNA MACRO CANCELLATA VALE COME NESSUNA MACRO, esatto come in
+      `groupCategoriesByMacro`: il `macro_id` resta attaccato alla
+      categoria, ma il gruppo non esiste più.
+    status: implemented
     generate_issue: true
     labels: [ux, magazzino, menu]
     priority: P3
-    test_cases: []
+    test_cases:
+      - tests/unit/macros.test.js
+      - tests/component/InventoryManager.test.jsx
+      - tests/component/MenuManager.test.jsx
