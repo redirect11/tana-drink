@@ -25,6 +25,7 @@ import { pairSumUpReader, unpairSumUpReader } from '../lib/paymentsApi.js'
 import { Link } from 'react-router-dom'
 import { devToolsEnabled } from '../dev/devActions.js'
 import { Sottosezioni } from '../lib/sottosezioni.js'
+import { IconTag } from './Icons.jsx'
 import { MODI_STRISCIA, MODO_STRISCIA_DEFAULT } from '../lib/strisce.js'
 import { usePaginaPiena } from '../lib/paginaPiena.js'
 
@@ -1149,7 +1150,7 @@ export default function SettingsTab({ role = null }) {
     { id: 'banco', icona: '🧾', label: 'Banco: coda e ordine' },
     { id: 'servizio', icona: '🛎', label: 'Servizio' },
     { id: 'cassa', icona: '💳', label: 'Cassa e giornata' },
-    { id: 'prezzi', icona: '🏷', label: 'Prezzi e supplementi' },
+    { id: 'prezzi', icona: <IconTag />, label: 'Prezzi e supplementi' },
     { id: 'gruppi', icona: '👥', label: 'Gruppi di ordini' },
     { id: 'clienti', icona: '🙋', label: 'Clienti' },
     { id: 'stampante', icona: '🖨️', label: 'Stampante' },
