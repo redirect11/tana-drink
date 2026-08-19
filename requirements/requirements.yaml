@@ -4565,10 +4565,29 @@ requirements:
       c'è un test che boccia i confronti di ruolo sparsi nel codice. E vale
       anche lato server (`firestore.rules`): un permesso che esiste solo
       nell'interfaccia non è un permesso.
-    status: todo
+      FATTO. In `ruoli.js`: `puoSegnare` (alla sala solo «servito»),
+      `puoGestireComande` (tornare indietro, dividere, annullare, riscrivere
+      una comanda già mandata) e `aggiunteInComandaNuova` (quello che la
+      sala aggiunge nasce come comanda a sé, anche col «+» su una riga già
+      confermata). Le due prime sono scritte al contrario — «non è la sala»
+      — apposta: spengono dei tasti mentre il ruolo torna dal server, e
+      spegnerli per un istante al banco vuol dire premere a vuoto.
+      LATO SERVER `firestore.rules` nega alla sala le due cose che il
+      database sa vedere da sé: portare un conto ad «annullato» e far
+      scendere il numero delle comande. Il resto è il confronto di due array
+      elemento per elemento e le regole non hanno cicli: resta validato in
+      app, come tutto il flusso fine delle comande, e con la stessa ragione
+      di sempre — una regola che rifiuta il lavoro buono quando la cache del
+      terminale è indietro di un battito farebbe più danno del permesso che
+      chiude.
+    status: implemented
     generate_issue: true
     labels: [ruoli, comande, sala]
-    test_cases: []
+    test_cases:
+      - tests/unit/ruoli.test.js
+      - tests/unit/coda.test.js
+      - tests/component/OrderPosDetail.test.jsx
+      - tests/component/CodaCorsie.test.jsx
 
   - id: REQ-ORD-022
     title: "Lo staff che tocca un conto entra nel conto, non nella pagina del cliente"

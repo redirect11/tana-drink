@@ -48,7 +48,21 @@ vi.mock('../../src/lib/api.js', () => ({
 }))
 vi.mock('../../src/lib/pendingOrders.js', () => ({ submitPosOrder: vi.fn() }))
 vi.mock('../../src/lib/firebaseClient.js', () => ({ auth: {} }))
-vi.mock('firebase/auth', () => ({ onAuthStateChanged: vi.fn(() => () => {}) }))
+// CHI GUARDA IL CONTO lo decide il singolo test. Di suo è il banco, che è
+// il caso di quasi tutti i test qui sotto; la sala ha una schermata più
+// stretta (REQ-STAFF-014) e ha il suo blocco in fondo.
+let ruoloCorrente = 'bartender'
+vi.mock('firebase/auth', () => ({
+  onAuthStateChanged: vi.fn((a, cb) => {
+    cb({
+      uid: 'u1',
+      email: 'chi@tana.local',
+      displayName: 'Chi lavora',
+      getIdTokenResult: () => Promise.resolve({ claims: { role: ruoloCorrente } }),
+    })
+    return () => {}
+  }),
+}))
 vi.mock('../../src/lib/paymentsApi.js', () => ({
   readerCheckout: vi.fn(() => Promise.resolve({})),
 }))
@@ -140,6 +154,7 @@ const azioni = () => within(document.querySelector('.posd-foot-azioni'))
 
 beforeEach(() => {
   vi.clearAllMocks()
+  ruoloCorrente = 'bartender'
   // La bozza è persistita in localStorage per ordine: pulisco tra i test.
   localStorage.clear()
 })
@@ -1909,5 +1924,114 @@ describe('le righe del conto dicono a che punto sono', () => {
       })
     )
     expect(titoli()).toEqual(['🍹 In preparazione', '💳 Pagati'])
+  })
+})
+
+// ── LA SALA SERVE, NON PREPARA (REQ-STAFF-014) ────────────────────────
+//
+// Chi sta in sala vede a che punto è il lavoro — gli serve per sapere cosa
+// portare — ma non lo comanda: l'unico passo che segna è «servito», perché
+// è lui a portare il drink al tavolo. Sul CONTO invece lavora, e quello che
+// aggiunge arriva al banco come un ticket NUOVO: infilarlo in una comanda
+// che qualcuno sta già preparando vuol dire cambiargli il lavoro sotto le
+// mani.
+describe('la sala e il conto', () => {
+  const inSala = (order = baseOrder()) => {
+    ruoloCorrente = 'staff'
+    return mount(order)
+  }
+
+  it('quello che aggiunge fa una comanda NUOVA, non entra in quella del banco', async () => {
+    const user = userEvent.setup()
+    inSala()
+    await user.click(screen.getAllByText('Gin Tonic')[0])
+    await waitFor(() => expect(addComanda).toHaveBeenCalled())
+    // La comanda c1 del conto di prova è ancora «da fare»: al banco le righe
+    // ci sarebbero confluite dentro. Alla sala no.
+    expect(bartenderUpdateComanda).not.toHaveBeenCalled()
+    const [orderId, items] = addComanda.mock.calls.at(-1)
+    expect(orderId).toBe('ord1')
+    expect(items.some((i) => i.drink_id === 'gin')).toBe(true)
+  })
+
+  it('anche il «+» su una riga già mandata: un drink in più, in un ticket nuovo', async () => {
+    const user = userEvent.setup()
+    inSala()
+    await user.click(screen.getByRole('button', { name: 'Aumenta Mojito' }))
+    await waitFor(() => expect(addComanda).toHaveBeenCalled())
+    expect(bartenderUpdateComanda).not.toHaveBeenCalled()
+  })
+
+  // Il ruolo arriva dal token, cioè un battito dopo il primo disegno: fino a
+  // lì la schermata resta quella del banco, apposta (vedi ruoli.js).
+  it('le righe già mandate al banco non le toglie', async () => {
+    inSala()
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Riduci Mojito' })).toBeDisabled()
+    )
+  })
+
+  it('non prende in carico: «Segna “In preparazione”» non c’è', async () => {
+    const user = userEvent.setup()
+    inSala()
+    await user.click(screen.getByRole('button', { name: /Stato servizio/ }))
+    expect(screen.queryByRole('button', { name: /Segna “In preparazione”/ })).toBeNull()
+  })
+
+  it('ma quello che porta al tavolo lo segna servito', async () => {
+    const user = userEvent.setup()
+    inSala(
+      baseOrder({
+        workflow_status: 'pronto',
+        comande: [
+          {
+            id: 'c1',
+            seq: 1,
+            status: 'pronto',
+            status_times: {},
+            items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 }],
+          },
+        ],
+      })
+    )
+    await user.click(screen.getByRole('button', { name: /Stato servizio/ }))
+    await user.click(screen.getByRole('button', { name: /Segna “Ritirato\/Servito”/ }))
+    expect(advanceComanda).toHaveBeenCalledWith('ord1', 'c1', 'ritirato')
+  })
+
+  it('non divide e non torna indietro', async () => {
+    const user = userEvent.setup()
+    inSala(
+      baseOrder({
+        comande: [
+          {
+            id: 'c1',
+            seq: 1,
+            status: 'in_preparazione',
+            status_times: {},
+            items: [{ drink_id: 'gin', name: 'Gin Tonic', unit_price: 8, qty: 5 }],
+          },
+        ],
+      })
+    )
+    await user.click(screen.getByRole('button', { name: /Stato servizio/ }))
+    expect(screen.queryByRole('button', { name: /Preparazione parziale/ })).toBeNull()
+    expect(screen.queryByText('Torna a')).toBeNull()
+  })
+
+  it('e non butta il conto: annullare è di chi versa', async () => {
+    inSala()
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /Annulla ordine/ })).toBeDisabled()
+    )
+  })
+
+  it('al banco invece non cambia niente', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.click(screen.getAllByText('Gin Tonic')[0])
+    await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalled())
+    expect(addComanda).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: /Annulla ordine/ })).toBeEnabled()
   })
 })

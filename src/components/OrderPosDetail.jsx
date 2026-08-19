@@ -60,7 +60,7 @@ import {
   ORDER_OPEN,
 } from '../lib/comande.js'
 import { paidAmount, dettaglioIncassi } from '../lib/pagamento.js'
-import { isPersonale } from '../lib/ruoli.js'
+import { aggiunteInComandaNuova, isPersonale, puoGestireComande, puoSegnare } from '../lib/ruoli.js'
 import {
   makeLineId,
   mergeLines,
@@ -460,25 +460,47 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     return () => cancelAnimationFrame(t)
   }, [panelCollapsed])
 
-  // Staff loggato (per l'attribuzione dell'ordine creato dal POS).
+  // Staff loggato: serve per l'attribuzione dell'ordine creato dal POS e —
+  // sempre, anche in modifica — per sapere CHI sta guardando. La sala serve
+  // e non prepara (REQ-STAFF-014): senza il ruolo qui, questa schermata le
+  // offrirebbe i passi del banco.
   const [staff, setStaff] = useState(null)
+  const [ruolo, setRuolo] = useState(null)
   useEffect(() => {
-    if (!isNew) return
     return onAuthStateChanged(auth, async (u) => {
-      if (!u) return setStaff(null)
+      if (!u) {
+        setRuolo(null)
+        return setStaff(null)
+      }
       try {
         const token = await u.getIdTokenResult()
         const role = token.claims.role
+        setRuolo(isPersonale(role) ? role : null)
         if (isPersonale(role)) {
           const io = { email: u.email, name: u.displayName || u.email, role }
           staffRef.current = io
           setStaff(io)
         }
       } catch {
+        setRuolo(null)
         setStaff(null)
       }
     })
-  }, [isNew])
+  }, [])
+
+  // LA SALA SERVE, NON PREPARA. Vede il conto e ci lavora sopra — aggiunge
+  // righe, corregge quello che ha appena battuto — ma le comande già mandate
+  // al banco non le riscrive, e i passi della preparazione non li segna.
+  const comandaIlLavoro = puoGestireComande(ruolo)
+  // Le aggiunte della sala non entrano in una comanda che qualcuno sta già
+  // preparando: nasce un ticket nuovo. Il ruolo passa da un ref perché
+  // queste funzioni vivono fuori dal ciclo di render (vedi flushAdditions).
+  const ruoloRef = useRef(null)
+  ruoloRef.current = ruolo
+  const bersaglioAggiunte = () =>
+    aggiunteInComandaNuova(ruoloRef.current)
+      ? null
+      : comandaPerLeAggiunte(effComandeRef.current, statoNuovaRef.current)
 
   // Ordine auto-creato in place: lo si tiene aggiornato dal server (comande,
   // pagamenti…) senza rimontare la pagina. Si aggiorna lo stato SOLO se cambia
@@ -930,7 +952,10 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
             ...base,
             key: chiave,
             qty: unpaidQty,
-            removable: !comandaAnnullata && (comandaEditable(c) || riaperto),
+            // Alla sala le comande già mandate al banco restano da leggere:
+            // toccarle vuol dire cambiare il lavoro sotto le mani di chi versa.
+            removable:
+              comandaIlLavoro && !comandaAnnullata && (comandaEditable(c) || riaperto),
             annullata: comandaAnnullata,
           })
         if (paidHere > 0)
@@ -938,7 +963,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
       })
     }
     return out
-  }, [effComande, order?.payments, riaperto, contoAnnullato])
+  }, [effComande, order?.payments, riaperto, contoAnnullato, comandaIlLavoro])
 
   const draftLines = useMemo(
     () => bozzaViva.map((l) => ({ ...l, key: `d:${l.line_id}`, source: 'draft', status: 'draft', removable: true })),
@@ -1138,7 +1163,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   // una: dove finiscono le righe nuove lo dice comandaPerLeAggiunte, in un
   // posto solo.
   const addToEditableComanda = (item) => {
-    const target = comandaPerLeAggiunte(effComandeRef.current, statoNuovaRef.current)
+    const target = bersaglioAggiunte()
     if (!target) {
       // NIENTE COMANDA IN QUEL PASSO: le righe passano dalla BOZZA, che le
       // raccoglie e le manda tutte insieme (flushAdditions, poco dopo
@@ -1225,6 +1250,19 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     if (closed || l.paid) return
     if (l.source === 'draft') {
       setDraftLineQty(l.line_id, l.qty + 1)
+      return
+    }
+    // LA SALA NON RISCRIVE UNA COMANDA GIÀ MANDATA: il suo «+» è un drink in
+    // più sul conto, e va al banco come un ticket nuovo — la stessa strada
+    // di un tocco sulla griglia.
+    if (aggiunteInComandaNuova(ruoloRef.current)) {
+      addToEditableComanda({
+        drink_id: l.drink_id,
+        name: l.name,
+        unit_price: l.unit_price,
+        qty: 1,
+        ...(l.custom ? { custom: true, recipe_items: l.recipe_items ?? [] } : {}),
+      })
       return
     }
     const c = effComandeRef.current.find((x) => x.id === l.comandaId)
@@ -1387,7 +1425,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
       if (draftRef.current.length > 0) clearDraft()
       return
     }
-    const target = comandaPerLeAggiunte(effComandeRef.current, statoNuovaRef.current)
+    const target = bersaglioAggiunte()
     const oid = order.id
     if (target) {
       // OTTIMISTICO: gli item entrano SUBITO nella comanda (stesso render in cui
@@ -1616,7 +1654,10 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   // I tasti «annulla» sono due (il pannello e la barra azioni) e avevano due
   // regole diverse — quello della barra era spento per tutta la creazione,
   // anche a righe battute. Da qui in poi la regola è una sola.
-  const annullaSpento = isNew ? false : closed
+  // ANNULLARE UN CONTO GIÀ APERTO butta il lavoro del banco: è di chi versa.
+  // In creazione invece si annulla sempre — lì non c'è niente di nessuno,
+  // solo la bozza che si sta battendo.
+  const annullaSpento = isNew ? false : closed || !comandaIlLavoro
   const annullaOrdine = () => {
     // Senza righe non c'è niente da buttare né da annullare: si torna in
     // coda e basta, senza far confermare una cosa che non succede.
@@ -2774,7 +2815,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                     >
                       <IconPrinter /> Stampa
                     </button>
-                    {ns && workflowOn && !closed ? (
+                    {ns && workflowOn && !closed && puoSegnare(ruolo, ns) ? (
                       <button className="btn small" onClick={() => advance(c.id, ns)}>
                         Segna “{statoAlBanco(ns, order.service_mode)}”
                       </button>
@@ -2793,7 +2834,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                       Finché il drink non è uscito dal banco: a «da fare» e
                       a «in preparazione». Da «pronto» in poi è roba sul
                       vassoio. */}
-                  {workflowOn && !closed && comandaDivisibile(c) && (
+                  {comandaIlLavoro && workflowOn && !closed && comandaDivisibile(c) && (
                     parziale === c.id ? (
                       <PreparazioneParziale
                         comanda={c}
@@ -2815,7 +2856,8 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                       vassoio è ancora al banco: senza questo restava solo
                       annullare il conto e ribatterlo. Gli stati già passati
                       sono lì, in fila: si sceglie quello giusto. */}
-                  {workflowOn &&
+                  {comandaIlLavoro &&
+                    workflowOn &&
                     !closed &&
                     statiPrimaComanda(c.status, statoIniziale).length > 0 && (
                       <div className="row" style={{ gap: 6, marginTop: 6, flexWrap: 'wrap' }}>

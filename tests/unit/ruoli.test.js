@@ -13,7 +13,17 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
-import { isAdmin, isBanco, isGestore, isPersonale, normalizzaRuolo, RUOLI } from '../../src/lib/ruoli.js'
+import {
+  aggiunteInComandaNuova,
+  isAdmin,
+  isBanco,
+  isGestore,
+  isPersonale,
+  normalizzaRuolo,
+  puoGestireComande,
+  puoSegnare,
+  RUOLI,
+} from '../../src/lib/ruoli.js'
 
 describe('chi può cosa', () => {
   it("l'admin fa tutto quello che fa il bartender", () => {
@@ -51,6 +61,48 @@ describe('chi può cosa', () => {
 
   it('ogni ruolo dichiarato è riconosciuto', () => {
     for (const r of RUOLI) expect(normalizzaRuolo(r)).toBe(r)
+  })
+})
+
+// LA SALA SERVE, NON PREPARA. Vede a che punto sono le comande — le serve
+// per sapere cosa portare — ma il solo passo che segna è «servito», perché
+// è lei a portare il drink al tavolo.
+describe('la sala serve, non prepara', () => {
+  it('l’unico passo della sala è «servito»', () => {
+    expect(puoSegnare('staff', 'ritirato')).toBe(true)
+    for (const passo of ['in_preparazione', 'pronto', 'ricevuto', 'pagato']) {
+      expect(puoSegnare('staff', passo)).toBe(false)
+    }
+  })
+
+  it('al banco non si toglie niente', () => {
+    for (const r of ['admin', 'bartender']) {
+      for (const passo of ['in_preparazione', 'pronto', 'ritirato']) {
+        expect(puoSegnare(r, passo)).toBe(true)
+      }
+      expect(puoGestireComande(r)).toBe(true)
+    }
+  })
+
+  // IL METRO È AL CONTRARIO — «non è la sala» — apposta: queste funzioni
+  // spengono dei tasti mentre il ruolo sta ancora tornando dal server, e
+  // spegnerli per un istante a chi sta al banco vuol dire premere a vuoto
+  // proprio nell'attimo in cui si apre un conto.
+  it('col ruolo non ancora noto la schermata resta com’è', () => {
+    for (const r of [null, undefined]) {
+      expect(puoSegnare(r, 'pronto')).toBe(true)
+      expect(puoGestireComande(r)).toBe(true)
+      expect(aggiunteInComandaNuova(r)).toBe(false)
+    }
+  })
+
+  it('tornare indietro, dividere e annullare non sono della sala', () => {
+    expect(puoGestireComande('staff')).toBe(false)
+  })
+
+  it('quello che la sala aggiunge fa una comanda NUOVA', () => {
+    expect(aggiunteInComandaNuova('staff')).toBe(true)
+    for (const r of ['admin', 'bartender']) expect(aggiunteInComandaNuova(r)).toBe(false)
   })
 })
 
