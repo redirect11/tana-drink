@@ -99,6 +99,7 @@ import {
   statoDiLavoro,
 } from '../lib/comande.js'
 import { useComandeLocali } from '../lib/comandeLocali.js'
+import { ricordaRuolo } from '../lib/ruoloLocale.js'
 import { paidAmount, orderTotal } from '../lib/pagamento.js'
 import { businessDayKey, businessDayLabel, businessDayShort } from '../lib/businessDay.js'
 import { isAwaitingPayment } from '../lib/payments.js'
@@ -229,9 +230,11 @@ export default function BartenderPage() {
       try {
         const ruolo = (await u.getIdTokenResult()).claims.role ?? 'cliente'
         setRole(ruolo)
+        ricordaRuolo(u.uid, ruolo)
         u.getIdTokenResult(true)
           .then((t) => {
             const aggiornato = t.claims.role ?? 'cliente'
+            ricordaRuolo(u.uid, aggiornato)
             if (aggiornato !== ruolo) setRole(aggiornato)
           })
           .catch(() => {
