@@ -17,7 +17,7 @@ import { Sottosezioni } from '../lib/sottosezioni.js'
 // corso.
 const SEZIONI = [
   { id: 'flusso', icona: '💶', label: 'Flusso' },
-  { id: 'ordini', icona: '📋', label: 'Lista ordini' },
+  { id: 'ordini', icona: '📋', label: 'Storico ordini' },
   { id: 'chiusure', icona: '📒', label: 'Chiusure' },
 ]
 

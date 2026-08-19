@@ -1126,3 +1126,22 @@ bugs:
     generate_issue: true
     labels: [bug, notifiche, pwa]
     test_cases: []
+
+  - id: BUG-039
+    title: "Col servizio spento i bolli dei passi comparivano lo stesso"
+    area: "src/components/OrderPosDetail.jsx, src/components/GroupView.jsx"
+    description: >
+      Segnalato dall'utente il 19/08, dopo BUG-033: nel riquadro «Comande»
+      del conto la comanda portava il bollo «🍹 In preparazione» anche in un
+      locale che non segue la preparazione, e lo stesso capitava nella vista
+      di un gruppo. È lo stesso difetto dei titoli delle righe, in altri due
+      punti: le comande uno stato ce l'hanno comunque — è il dato — ma
+      scriverlo a schermo vuol dire parlare di una cosa che lì non si fa.
+      RISOLTO: i bolli seguono l'impostazione del servizio. Resta «✂️
+      Divisa», che non è un passo del servizio ma cosa ne è stato di quel
+      ticket, e vale anche a preparazione spenta.
+    in_produzione: false
+    status: fixed
+    generate_issue: false
+    labels: [bug, pos, comande]
+    test_cases: [tests/component/OrderPosDetail.test.jsx]

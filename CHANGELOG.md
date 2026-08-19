@@ -4,6 +4,16 @@
 
 ### Al banco
 
+- **Col servizio spento non si vedono più i passi**: il bollo «In
+  preparazione» spuntava nel riquadro delle comande e nella vista di un
+  gruppo anche dove la preparazione non si segue.
+- **Lo «Storico ordini» è una pagina, non un riquadro** — e si chiama così
+  anche nel menu, dove prima era «Lista ordini».
+- **Il rendiconto si chiama «Rendiconto chiusura cassa»**, che è quello che
+  è: il conto di una cassa aperta e chiusa, non di una serata.
+- **Nel flusso di cassa le tessere stanno in fila**: «ancora da incassare»
+  finiva da sola su una riga sua, larga un quarto e circondata di vuoto.
+
 - **Un drink pronto fa squillare i telefoni degli altri**: l’avviso «pronto
   da servire» non arrivava a nessuno, e per i drink da ritirare al banco non
   partiva proprio. Adesso parte per tutti e due — «da servire» al tavolo,

@@ -2801,16 +2801,24 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                         leggere «Annullato» farebbe pensare a un drink
                         saltato, mentre quei drink sono nelle due comande
                         sotto. */}
-                    <span className={`pill ${c.status}`} style={{ fontSize: '0.7rem' }}>
-                      {annullataPerDivisione(c) ? (
-                        '✂️ Divisa'
-                      ) : (
-                        <>
-                          {STATUS_EMOJI[c.status]}{' '}
-                          {statoAlBanco(c.status, order.service_mode)}
-                        </>
-                      )}
-                    </span>
+                    {/* IL PASSO DEL SERVIZIO SI MOSTRA SOLO SE ESISTE. In un
+                        locale che non segue la preparazione le comande uno
+                        stato ce l'hanno lo stesso — è il dato — ma dirlo a
+                        schermo vuol dire parlare di una cosa che lì non si
+                        fa. Resta «✂️ Divisa», che non è un passo del
+                        servizio: è cosa ne è stato di quel ticket. */}
+                    {(workflowOn || annullataPerDivisione(c)) && (
+                      <span className={`pill ${c.status}`} style={{ fontSize: '0.7rem' }}>
+                        {annullataPerDivisione(c) ? (
+                          '✂️ Divisa'
+                        ) : (
+                          <>
+                            {STATUS_EMOJI[c.status]}{' '}
+                            {statoAlBanco(c.status, order.service_mode)}
+                          </>
+                        )}
+                      </span>
+                    )}
                   </div>
                   {(c.items || []).map((i, idx) => (
                     <div className="row between" key={idx} style={{ marginTop: 4 }}>

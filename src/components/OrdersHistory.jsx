@@ -143,13 +143,12 @@ export default function OrdersHistory() {
     })
   }, [lista, filtro, origine, q])
 
+  // NON È UN RIQUADRO, È UNA PAGINA. Lo storico si apre da una voce del
+  // menu: mettergli attorno una card — con dentro di nuovo il suo nome, che
+  // è già scritto nel menu e in cima alla pagina — vuol dire un titolo
+  // ripetuto due volte e una cornice attorno a tutto lo schermo.
   return (
-    <div className="card" style={{ marginTop: 12 }}>
-      <strong>🧾 Storico ordini</strong>
-      <div className="muted small" style={{ margin: '2px 0 8px' }}>
-        Tutti i conti in ordine di tempo, dal più recente.
-      </div>
-
+    <div className="storico-ordini">
       <SelettorePeriodo periodo={periodo} onChange={setPeriodo} oggi={oggi} />
 
       <input

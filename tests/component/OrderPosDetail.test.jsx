@@ -1865,6 +1865,24 @@ describe('le righe del conto dicono a che punto sono', () => {
   // parla di soldi: dice cosa è già stato incassato e cosa no, e serve
   // esattamente quanto prima — anzi di più, perché senza i passi del
   // servizio è l'unica cosa che divide le righe.
+  // I BOLLI DEL SERVIZIO SEGUONO LA STESSA REGOLA DEI TITOLI: se il locale
+  // non segue la preparazione, «In preparazione» non va scritto da nessuna
+  // parte — nemmeno nel riquadro delle comande, che è il posto dove si
+  // guarda cosa è stato battuto.
+  it('col servizio spento il riquadro Comande non mostra i passi', async () => {
+    mockSettings.workflow_enabled = false
+    try {
+      const user = userEvent.setup()
+      mount(baseOrder())
+      await user.click(screen.getByRole('button', { name: /Comande/ }))
+      const box = document.querySelector('.confirm-box')
+      expect(box).toBeTruthy()
+      expect(box.textContent).not.toMatch(/In preparazione|Da fare|Pronto/)
+    } finally {
+      delete mockSettings.workflow_enabled
+    }
+  })
+
   it('col servizio spento i pagati restano separati, e in fondo', () => {
     mockSettings.workflow_enabled = false
     try {
