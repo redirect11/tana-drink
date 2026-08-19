@@ -40,16 +40,8 @@ import { useState } from 'react'
 // Le corsie e cosa ci sta dentro arrivano già fatte da lib/coda.js
 // (corsieComande): qui non si decide niente, si disegna soltanto.
 
-// Un conto senza modo scelto è roba da portare finché non si dice altro:
-// è la stessa regola con cui lo smista la colonna (lib/coda.js).
-const modoDi = (o) => (o?.service_mode === 'banco' ? 'banco' : 'tavolo')
-
 export default function CorsieComande({
   corsie,
-  // Il badge «come va consegnato» serve solo quando il pronto è una
-  // colonna sola: dividendola, la colonna dice già quello che direbbe il
-  // badge, e ripeterlo è rumore su una card già piena.
-  mostraModo = false,
   idAcceso = null,
   onApri,
   onApriConto,
@@ -116,8 +108,16 @@ export default function CorsieComande({
                 onClick={() => onApri?.(o, s.comanda)}
               >
                 <div className="row between">
+                  {/* NUMERO E NOME INSIEME, E DELLA STESSA MISURA. Il nome
+                      stava sotto, piccolo e smorzato, mentre è la cosa che
+                      si cerca per prima quando si chiama un tavolo: «il
+                      ventidue, quello di Peppe». Ora stanno sulla stessa
+                      riga e pesano uguale, come sulle card della griglia. */}
                   <span className="corsia-num">
                     <span className="corsia-conto">#{s.numero ?? '—'}</span>
+                    {destinazioneConto(o) && (
+                      <span className="corsia-chi"> {destinazioneConto(o)}</span>
+                    )}
                     {/* IL NUMERO DELLA COMANDA sta accanto a quello del
                         conto, non al suo posto: due comande dello stesso
                         tavolo sono due card, e senza il secondo numero
@@ -142,21 +142,13 @@ export default function CorsieComande({
                     </span>
                   )}
                 </div>
-                <div className="muted small corsia-dove">
-                  {destinazioneConto(o)}
-                  {/* COME VA CONSEGNATO, sulla card del PRONTO. È lì che
-                      la domanda si pone: quella colonna tiene due
-                      lavori diversi — roba da portare a un tavolo e
-                      roba che aspetta il cliente al bancone — e senza
-                      dirlo si guarda il tavolo per indovinarlo. Dove le
-                      colonne sono già due il badge non serve: lo dice
-                      la colonna. */}
-                  {mostraModo && s.comanda?.status === ORDER_STATUSES.PRONTO && (
-                    <span className={`pill small consegna-${modoDi(o)}`}>
-                      {modoDi(o) === 'banco' ? '🚶 Ritiro' : '🍸 Servizio'}
-                    </span>
-                  )}
-                </div>
+                {/* IL BADGE «Ritiro / Servizio» NON C'È PIÙ (19/08, chiesto
+                    dall'utente: «il badge servizio non serve»). Diceva come
+                    va consegnato, ma la card lo dice già senza pastiglie: un
+                    conto con un tavolo si porta, uno al bancone si ritira, e
+                    il tavolo adesso è scritto in grande accanto al numero.
+                    Una pastiglia in più su ogni card pronta costava una riga
+                    a tutte per una cosa che si legge dal nome. */}
                 <RigheCorsia
                   items={s.items}
                   aperto={espansa === s.id}
