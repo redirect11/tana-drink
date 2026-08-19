@@ -24,7 +24,6 @@ import {
   ORDER_STATUSES,
   STATUS_LABELS,
   STATUS_EMOJI,
-  ritiratoLabel,
   formatPrice,
   nextStatus,
   statoAlBanco,
@@ -815,9 +814,8 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             // Il metro è il terminale, come per gli ordini nuovi.
             if (ora === ORDER_STATUSES.ANNULLATO && annullatoDaQui(o)) continue
             if (!avvisoAttivo(avvisi.current, idAvvisoStato(ora))) continue
-            const nome = ora === ORDER_STATUSES.RITIRATO
-              ? ritiratoLabel(o.service_mode)
-              : STATUS_LABELS[ora]
+            // Le parole del banco stanno in un posto solo: statoAlBanco.
+            const nome = statoAlBanco(ora, o.service_mode)
             if (!nome) continue
             notify(
               `${STATUS_EMOJI[ora] || '•'} ${nome}`,
@@ -1472,7 +1470,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             onClick={() => advance(o)}
           >
             {ns && o.workflow_status !== ORDER_STATUSES.RITIRATO
-              ? `Segna come “${STATUS_LABELS[ns]}”`
+              ? `Segna come “${statoAlBanco(ns, o.service_mode)}”`
               : 'Servito'}
           </button>
         )}
@@ -1615,9 +1613,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             {workflowOn && (
               <span className={`pill ${o.workflow_status}`}>
                 {STATUS_EMOJI[o.workflow_status]}{' '}
-                {o.workflow_status === ORDER_STATUSES.RITIRATO
-                  ? ritiratoLabel(o.service_mode)
-                  : STATUS_LABELS[o.workflow_status]}
+                {statoAlBanco(o.workflow_status, o.service_mode)}
               </span>
             )}
           </div>
@@ -1699,7 +1695,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             <span className={`pill ${isError ? '' : o.workflow_status}`}>
               {isError
                 ? '⚠️ Errore invio'
-                : `${STATUS_EMOJI[o.workflow_status]} ${STATUS_LABELS[o.workflow_status]}`}
+                : `${STATUS_EMOJI[o.workflow_status]} ${statoAlBanco(o.workflow_status, o.service_mode)}`}
             </span>
           </div>
           <div className="grid-card-sub">
@@ -1791,9 +1787,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
               {workflowOn && (
                 <span className={`pill ${o.workflow_status}`}>
                   {STATUS_EMOJI[o.workflow_status]}{' '}
-                  {o.workflow_status === ORDER_STATUSES.RITIRATO
-                    ? ritiratoLabel(o.service_mode)
-                    : STATUS_LABELS[o.workflow_status]}
+                  {statoAlBanco(o.workflow_status, o.service_mode)}
                 </span>
               )}
             </div>
@@ -2471,7 +2465,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                 className={`tab ${statusTab === s ? 'active' : ''}`}
                 onClick={() => setStatusTab(s)}
               >
-                {STATUS_EMOJI[s]} {STATUS_LABELS[s]} ({(buckets[s] || []).length})
+                {STATUS_EMOJI[s]} {statoAlBanco(s)} ({(buckets[s] || []).length})
               </div>
             ))}
           </div>
