@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { Sottosezioni } from '../lib/sottosezioni.js'
+import Didascalia from './Didascalia.jsx'
+import MacroMonthlyTab from './MacroMonthlyTab.jsx'
 
 // ── BILANCIO: I CONTI DEL LOCALE ─────────────────────────────────────
 // Qui sta quello che Flavio teneva su ANALISI DATI.xlsx: incassi, stipendi,
@@ -29,22 +31,6 @@ export default function BilancioTab() {
       {sub === 'acquisti' && <AcquistiFatturato />}
       {sub === 'venduto' && <VendutoIncassato />}
     </div>
-  )
-}
-
-// ── LE DIDASCALIE NON SONO UN ABBELLIMENTO ───────────────────────────
-// Una tabella di conti è piena di parole che a chi non fa il contabile non
-// dicono niente — utile, rapporto, incidenza, prime cost, costo del
-// venduto. Ogni tabella e ogni riga di sintesi porta sotto una frase corta
-// che dice CHE NUMERO È e DA DOVE VIENE, e dove un numero ha
-// un'avvertenza che cambia come si legge, l'avvertenza sta lì: chi guarda
-// un totale che non torna deve trovare il perché nel punto in cui se lo
-// chiede, non in un manuale.
-export function Didascalia({ children }) {
-  return (
-    <p className="muted small bilancio-didascalia" style={{ margin: '8px 0 0' }}>
-      {children}
-    </p>
   )
 }
 
@@ -101,17 +87,11 @@ function AcquistiFatturato() {
   )
 }
 
+// «Venduto × Incassato» è la tabella che stava nelle Statistiche: il
+// TRASLOCO è un cambio di posto, non di contenuto. Quanto ha reso ogni
+// macro è una domanda da conti di fine mese, non da serata — chi apre le
+// Statistiche vuole sapere com'è andata ieri, chi apre il Bilancio com'è
+// andato il mese.
 function VendutoIncassato() {
-  return (
-    <InArrivo
-      titolo="🗂️ Venduto × Incassato"
-      cosa="La tabella arriva dalle Statistiche."
-      didascalia={
-        <>
-          Quanto ha incassato ogni gruppo del menù, quanto è costata la merce
-          che ha venduto e quanto <strong>margine</strong> ne resta.
-        </>
-      }
-    />
-  )
+  return <MacroMonthlyTab />
 }
