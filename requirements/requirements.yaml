@@ -4527,11 +4527,19 @@ requirements:
       localStorage in modo sincrono prima di ciclare su zero elementi.
       COME: comporre l'esito in memoria da quello che si è appena scritto,
       o non restituire niente.
-    status: todo
+      FATTO (19/08): non restituiscono niente. Chi tocca una card guarda
+      l'errore, non l'ordine — la schermata si è già aggiornata con la copia
+      locale — e un tocco adesso costa una lettura sola. Nella stessa
+      passata: `notifyLowStock` esce prima se non c'è niente da segnalare (le
+      scorte le annuncia lo scarico quando ha finito davvero), e in
+      `advanceComanda` sono spariti `lowStock`, che nessuno riempiva mai, e
+      `statComanda`, che era l'ordine appena letto messo in una variabile per
+      poi chiedersi se ci fosse.
+    status: implemented
     generate_issue: true
     labels: [manutenzione, prestazioni, local-first]
     priority: P2
-    test_cases: []
+    test_cases: [tests/unit/lettureSuUnGesto.test.js]
 
   - id: REQ-DEV-009
     title: "Quattro copie del ricalcolo del totale di un conto"
