@@ -4,6 +4,15 @@
 
 ### Per chi gestisce
 
+- **Nella lavagna delle comande ci sta una comanda in più.** I filtri
+  («✍️ Miei», «▦ Colonne», e il tasto che passa agli ordini) non hanno più
+  una riga tutta loro fra i conteggi e le colonne: stanno **sulla riga dei
+  conteggi**, a destra. Sono **44px guadagnati** e un livello in meno prima
+  di vedere la prima comanda — quella lavagna si guarda da lontano mentre
+  si versa, e ogni riga sprecata sopra è una comanda in meno sotto. I
+  filtri fanno esattamente quello che facevano: è cambiato solo dove
+  stanno. Sul **telefono** restano com'erano, sotto e scorrevoli.
+
 - **Al cliente si promette solo quello che succede davvero.** Il tasto
   **«🔔 Avvisami quando è pronto»** compare soltanto sui conti da **ritiro
   al banco**: è l'unico caso in cui, quando il drink è pronto, deve alzarsi

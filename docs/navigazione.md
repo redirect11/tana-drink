@@ -103,6 +103,21 @@ sotto i 44px si sbaglia. Si **toglie**, in quest'ordine:
   spazio messo a occhio — così nessuno lo legge come un filtro in più.
   Sotto il «+» era stato provato e non va: rettangolare sotto un tondo,
   appeso nel vuoto e disallineato da tutto.
+- **Sulla lavagna a corsie la riga dei filtri È la riga dei conteggi.** Non
+  è un'eccezione alla regola qui sopra: è la stessa riga di filtri, messa
+  dove non costa niente. Lì i filtri sono due pastiglie corte, e una riga
+  tutta per loro valeva 64px — un terzo livello fra i conteggi e la prima
+  comanda, su una lavagna che si guarda da lontano mentre si versa. La riga
+  dei conteggi è corta e ha spazio a destra: ci stanno accanto, con la
+  regola di sempre (a sinistra chi restringe, a destra chi cambia vista,
+  staccati da un margine automatico).
+  **Sul telefono no**: lì quella riga è già piena — conti, avviso della
+  ricerca, legenda degli autori — e i filtri tornano sotto, a filo a
+  sinistra, e scorrono in orizzontale. A dire da dove in su è la
+  **lavagna** (container query `corsie`, la stessa soglia delle due
+  colonne), non la finestra: col menu agganciato ha 200-250px in meno.
+  **La griglia resta com'è**: lì le pastiglie sono sette, e una riga se la
+  merita.
 - **Un tasto dice DOVE PORTA, non dove si è.** «🍸 Comande» guardando i
   conti, «🧾 Ordini» guardando le comande. Un interruttore che si accende
   quando sei già di là si legge solo sapendo com'è messo adesso — e per

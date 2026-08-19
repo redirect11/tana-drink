@@ -1296,3 +1296,46 @@ bugs:
     severity: lieve
     priority: P2
     test_cases: [tests/component/MenuManager.test.jsx]
+
+  - id: BUG-042
+    title: "Nelle corsie i filtri costano una riga intera, e le comande scendono"
+    area: "src/pages/BartenderPage.jsx, src/index.css"
+    description: >
+      Segnalato dall'utente il 19/08: «rispetto alla lista ordini, i filtri
+      qua nella vista comande occupano troppo spazio insieme agli header.
+      Dovrebbe stare più in alto come per gli ordini».
+      PERCHÉ È UN DIFETTO E NON UN GUSTO. La lavagna delle comande si
+      guarda da lontano mentre si versa: quello che non entra nello schermo
+      non esiste, e ogni riga sprecata sopra è una comanda in meno sotto.
+      Prima della prima card c'erano TRE livelli: la testata, la riga dei
+      conteggi, la riga dei filtri — e solo dopo le testate delle colonne.
+      La riga dei filtri costava 64px (8 di stacco + 40 di pastiglia + 4 di
+      imbottitura + 12 sotto) per DUE pastiglie corte: «✍️ Miei» e
+      «▦ Colonne», più la pastiglia «🧾 Ordini» a destra.
+      RISOLTO portando i filtri sulla RIGA DEI CONTEGGI (.board-sotto), che
+      è corta — «12 aperti · 40 chiusi · 380,00 €» — e ha spazio a destra.
+      La riga in più sparisce; quella dei conteggi cresce di 20px, perché
+      la pastiglia è più alta del testo e NON si rimpicciolisce (sotto i
+      44px, con le dita bagnate, si sbaglia). PRIMA/DOPO: 64px spesi
+      diventano 20px, 44px guadagnati, e sopra la prima comanda restano due
+      livelli invece di tre.
+      SUL TELEFONO RESTA COM'ERA. Lì la riga dei conteggi è già piena
+      (conti, avviso della ricerca, legenda degli autori) e i filtri
+      tornano sotto, a filo a sinistra, e scorrono in orizzontale come
+      hanno sempre fatto. A dire da dove in su è la LAVAGNA e non la
+      finestra — container query `corsie`, la stessa soglia delle due
+      colonne: col menu agganciato la lavagna ha 200-250px in meno.
+      COSA NON È CAMBIATO: quello che i filtri FANNO. Stessi tasti, stesso
+      comportamento, stessa regola di docs/navigazione.md — a sinistra
+      quello che restringe la lista, a destra quello che cambia vista,
+      staccati da un margine automatico. È cambiato solo dove stanno.
+      LA GRIGLIA NON SI TOCCA: lì le pastiglie sono sette (In corso,
+      Chiusi, Annullati, Tutti, Miei, Solo oggi, Comande) e una riga se la
+      merita — sulla riga dei conteggi non ci starebbero.
+    in_produzione: false
+    status: fixed
+    generate_issue: true
+    labels: [bug, interfaccia, coda]
+    severity: lieve
+    priority: P2
+    test_cases: [tests/component/CodaCorsie.test.jsx]
