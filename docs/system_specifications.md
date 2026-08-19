@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 141 | fatto e coperto dai test |
+| ✅ | 142 | fatto e coperto dai test |
 | ⚠️  | 16 | fatto ma nessun test lo verifica |
-| ⬜ | 30 | da fare |
+| ⬜ | 29 | da fare |
 | 🗑 | 1 | non più valido |
 
-**188 voci** in tutto. **157** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **30** sono lavori
+**188 voci** in tutto. **158** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **29** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **9** difetti noti sono ancora aperti.
 
@@ -46,7 +46,7 @@ come «vero oggi», non come «garantito».
 | [La coda del banco](#la-coda-del-banco) | 4 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
-| [Menù e catalogo](#menù-e-catalogo) | 8 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
+| [Menù e catalogo](#menù-e-catalogo) | 9 | — | Il listino: drink, categorie, disponibilità, prezzi. |
 | [Magazzino](#magazzino) | 18 | 6 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 10 | 2 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 9 | 2 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
@@ -513,6 +513,30 @@ Si importa il listino da un CSV di SumUp: prodotti, categorie in ordine di appar
 Il colore di una categoria è stabile (dipende dall'id, non dal nome) e lo stesso nel POS, nel menù e nelle statistiche: una categoria si riconosce a colpo d'occhio ovunque la si incontri.
 
 **Dove**: `src/lib/categoryColors.js` · **Lo dimostrano**: `tests/unit/categoryColors.test.js`
+
+#### REQ-MENU-013 — L'IVA di vendita si cambia sulla singola voce di menù
+
+DECISO (19/08, dall'utente che riporta Flavio). L'IVA ha DUE LATI e vanno tenuti distinti: quella con cui si COMPRA e quella con cui si VENDE. Su tutti e due il valore generale sta nelle Impostazioni, e su tutti e due si deve poter fare l'eccezione sulla singola riga.
+
+IL LATO ACQUISTO È GIÀ FATTO, verificato nel codice il 19/08: `purchase_vat` nelle impostazioni vale 22% di default (DEFAULT_SETTINGS in src/lib/api.js), la scheda del prodotto ha il campo «IVA acquisto %» che parte da quel default e si cambia per prodotto (InventoryManager.jsx, `vat` sull'articolo), e i conti al lordo passano da `costWithVat` (src/lib/inventory.js). Su questo lato non c'è niente da fare: è già come lo si voleva.
+
+IL LATO VENDITA È QUELLO CHE MANCA: `sale_vat` nelle impostazioni vale 10% (somministrazione bar) ed è generale per tutto il locale; la voce di menù NON ha un campo suo, quindi una cosa che si rivende con un'aliquota diversa oggi non si può dire.
+
+DA FARE: un campo IVA sulla voce di menù, vuoto = si usa quella del locale — così le eccezioni si scrivono dove sono, una per una, e chi non ne ha non deve compilare niente.
+
+NON RIAPRE UNA COSA CHIUSA, LA COMPLETA. Il 18/08 si è deciso che l'incasso si scorpora con l'IVA di VENDITA e non con quella del prodotto d'acquisto (REQ-MAG-015: «Flavio compra al 22 e rivende al 10»). Resta così: cambia solo che alcune vendite hanno un'aliquota loro invece di quella generale. `macroStats.js` oggi prende `saleVat` una volta sola per tutto il report e andrà preso per voce, con quella delle impostazioni come ripiego.
+
+PERCHÉ SERVE, per quel che si vede dai dati (non è una sua parola): nel menù esiste una categoria BOTTIGLIE, e una bottiglia intera non è la stessa cosa di un drink servito al banco. Mettere tutto al 10% gonfia il netto, e il netto è il numero da cui scendono margine, prime cost e il conto di fine mese.
+
+NON DIPENDE DA NIENTE: il lato acquisto è già fatto e `sale_vat` c'è. Conviene però che arrivi PRIMA delle tabelle del Bilancio: finché tutto si scorpora al 10% il netto di quello che si rivende con un'altra aliquota è gonfiato, e da quel netto scendono margine, incidenze e prime cost.
+
+FATTO (19/08). La scheda del prodotto ha il campo «IVA vendita %» accanto al prezzo, e vuoto vuol dire «quella del locale»: chi non ha eccezioni non compila niente. Sotto c'è scritto quale aliquota vale lasciandolo vuoto, col numero.
+
+UNO ZERO È UN'ALIQUOTA VERA (esente) e non «campo non compilato»: solo `null` ripiega sul generale. Se i due casi finissero in un falsy, una voce esente si scorporerebbe al 10% e il netto sarebbe più basso del vero — un errore che non si vede.
+
+NEL CALCOLO: `aliquotaDiVendita` (macroStats.js) sceglie per riga quella della VOCE se c'è, quella del locale se no; una riga libera, che la voce di catalogo non ce l'ha, usa il generale. Le didascalie del Bilancio e la nota nelle Impostazioni lo dicono.
+
+**Dove**: `src/components/MenuManager.jsx, src/lib/api.js, src/lib/macroStats.js, src/components/SettingsTab.jsx` · **Lo dimostrano**: `tests/unit/macroStats.test.js`, `tests/unit/ricetteUnita.test.js`, `tests/component/MenuManager.test.jsx`
 
 ### Magazzino
 
@@ -1453,26 +1477,6 @@ Nasce l'anagrafica dei tavoli: un tavolo ha un NOME e/o un NUMERO — almeno uno
 Nella vista «Nuovo ordine dal menù» dello staff si possono inserire NOME e numero del tavolo: il nome deve poterci stare (oggi c'è solo il tavolo) e il numero è opzionale. Nella vista cliente: se si arriva dal QR del tavolo (REQ-TAVOLI-001) il tavolo è prepopolato e NON modificabile; senza QR il tavolo non serve, ma il nome sì — è quello che permette al banco di chiamare l'ordine.
 
 **Dove**: `src/pages/MenuPage.jsx, src/components/OrderSummary.jsx`
-
-### Menù e catalogo
-
-#### REQ-MENU-013 — L'IVA di vendita si cambia sulla singola voce di menù
-
-DECISO (19/08, dall'utente che riporta Flavio). L'IVA ha DUE LATI e vanno tenuti distinti: quella con cui si COMPRA e quella con cui si VENDE. Su tutti e due il valore generale sta nelle Impostazioni, e su tutti e due si deve poter fare l'eccezione sulla singola riga.
-
-IL LATO ACQUISTO È GIÀ FATTO, verificato nel codice il 19/08: `purchase_vat` nelle impostazioni vale 22% di default (DEFAULT_SETTINGS in src/lib/api.js), la scheda del prodotto ha il campo «IVA acquisto %» che parte da quel default e si cambia per prodotto (InventoryManager.jsx, `vat` sull'articolo), e i conti al lordo passano da `costWithVat` (src/lib/inventory.js). Su questo lato non c'è niente da fare: è già come lo si voleva.
-
-IL LATO VENDITA È QUELLO CHE MANCA: `sale_vat` nelle impostazioni vale 10% (somministrazione bar) ed è generale per tutto il locale; la voce di menù NON ha un campo suo, quindi una cosa che si rivende con un'aliquota diversa oggi non si può dire.
-
-DA FARE: un campo IVA sulla voce di menù, vuoto = si usa quella del locale — così le eccezioni si scrivono dove sono, una per una, e chi non ne ha non deve compilare niente.
-
-NON RIAPRE UNA COSA CHIUSA, LA COMPLETA. Il 18/08 si è deciso che l'incasso si scorpora con l'IVA di VENDITA e non con quella del prodotto d'acquisto (REQ-MAG-015: «Flavio compra al 22 e rivende al 10»). Resta così: cambia solo che alcune vendite hanno un'aliquota loro invece di quella generale. `macroStats.js` oggi prende `saleVat` una volta sola per tutto il report e andrà preso per voce, con quella delle impostazioni come ripiego.
-
-PERCHÉ SERVE, per quel che si vede dai dati (non è una sua parola): nel menù esiste una categoria BOTTIGLIE, e una bottiglia intera non è la stessa cosa di un drink servito al banco. Mettere tutto al 10% gonfia il netto, e il netto è il numero da cui scendono margine, prime cost e il conto di fine mese.
-
-NON DIPENDE DA NIENTE: il lato acquisto è già fatto e `sale_vat` c'è. Conviene però che arrivi PRIMA delle tabelle del Bilancio: finché tutto si scorpora al 10% il netto di quello che si rivende con un'altra aliquota è gonfiato, e da quel netto scendono margine, incidenze e prime cost.
-
-**Dove**: `src/components/MenuManager.jsx, src/lib/api.js, src/lib/macroStats.js, src/components/SettingsTab.jsx`
 
 ### Magazzino
 
