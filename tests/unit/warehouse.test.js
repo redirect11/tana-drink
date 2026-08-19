@@ -11,6 +11,8 @@ import {
   countLineCons,
   qtyValue,
   stockCountCompute,
+  giorniDiConta,
+  consumoSettimanale,
   purchaseOrderTotals,
   invoiceTotals,
   consumptionDiff,
@@ -57,6 +59,83 @@ describe('stockCountCompute', () => {
     expect(lines[1].cons).toBeNull()
     expect(totals.counted).toBe(1)
     expect(totals.cons_value).toBeCloseTo(15, 3)
+  })
+})
+
+// ── IL CONSUMO A SETTIMANA, SULLE SETTIMANE VERE (REQ-MAG-024) ───────
+// Nel foglio INV il divisore è una costante battuta a mano — «÷ 3», poi
+// «÷ 2», poi «÷ 1,5», poi «÷ 4» — e nel frattempo sbaglia di quanto è
+// lontana dalla realtà: «16-02 02-04» sono sei settimane e vengono divise
+// per 4, «07-06 01-07» sono tre settimane e mezzo e vengono divise per 4
+// anche loro. È il numero su cui si decide quanto ordinare.
+describe('i giorni veri di una conta', () => {
+  it('sono la distanza fra apertura e chiusura', () => {
+    // Le due date dell'esempio del foglio: 25 giorni, non «un mese».
+    expect(giorniDiConta('2026-06-07T00:00:00Z', '2026-07-01T00:00:00Z')).toBeCloseTo(24, 3)
+  })
+
+  it('la conta ancora aperta arriva fino ad ADESSO', () => {
+    const dieciGiorniFa = new Date(Date.now() - 10 * 86400000).toISOString()
+    expect(giorniDiConta(dieciGiorniFa)).toBeCloseTo(10, 1)
+  })
+
+  // Una conta aperta e chiusa in tre ore darebbe un consumo settimanale di
+  // otto volte quello vero, e su quel numero si decide quanto ordinare.
+  it('sotto un giorno pieno non si dice niente', () => {
+    expect(giorniDiConta('2026-06-07T00:00:00Z', '2026-06-07T03:00:00Z')).toBeNull()
+    expect(giorniDiConta('2026-06-07T00:00:00Z', '2026-06-07T00:00:00Z')).toBeNull()
+  })
+
+  it('senza date, o con date storte, niente numero', () => {
+    expect(giorniDiConta(null, '2026-07-01T00:00:00Z')).toBeNull()
+    expect(giorniDiConta('boh', '2026-07-01T00:00:00Z')).toBeNull()
+  })
+})
+
+describe('il consumo a settimana', () => {
+  // SI ARROTONDA: 1500 / 14 × 7 in virgola mobile fa 749,9999999999999, e
+  // chi scrive le quantità su quel numero non riconosce più i 75 cl tondi
+  // e stampa «750 ml» — lo stesso consumo scritto in due modi diversi.
+  it('esce tondo, non con la coda della virgola mobile', () => {
+    expect(consumoSettimanale(1500, 14)).toBe(750)
+  })
+
+  it('è il consumo diviso i giorni veri, per sette', () => {
+    // 1400 ml in 14 giorni = 700 a settimana.
+    expect(consumoSettimanale(1400, 14)).toBeCloseTo(700, 3)
+    // Sei settimane divise per la costante 4 darebbero il 50% in più.
+    expect(consumoSettimanale(4200, 42)).toBeCloseTo(700, 3)
+  })
+
+  // UN CONSUMO INVENTATO MANDA A ORDINARE MERCE CHE NON SERVE: dove non si
+  // può calcolare, il numero non si mostra.
+  it('senza giorni o senza consumo non si inventa niente', () => {
+    expect(consumoSettimanale(1400, null)).toBeNull()
+    expect(consumoSettimanale(null, 14)).toBeNull()
+    expect(consumoSettimanale(1400, 0)).toBeNull()
+  })
+
+  it('e la conta lo porta riga per riga', () => {
+    const { lines, giorni } = stockCountCompute(
+      [
+        { item_id: 'a', unit: 'ml', package_size: 1000, cost: 10, vat: 0, dep: 2000, acq: 1000, rim: 1500 },
+        { item_id: 'b', unit: 'pz', cost: 1, vat: 0, dep: 24, acq: 0, rim: null },
+      ],
+      { dal: '2026-06-07T00:00:00Z', al: '2026-06-21T00:00:00Z' }
+    )
+    expect(giorni).toBeCloseTo(14, 3)
+    expect(lines[0].cons_week).toBeCloseTo(750, 3) // 1500 in 14 giorni
+    // Riga non contata: niente consumo, quindi niente consumo a settimana.
+    expect(lines[1].cons_week).toBeNull()
+  })
+
+  it('senza periodo la conta resta com’era, senza colonna finta', () => {
+    const { lines, giorni } = stockCountCompute([
+      { item_id: 'a', unit: 'pz', cost: 1, vat: 0, dep: 10, acq: 0, rim: 4 },
+    ])
+    expect(lines[0].cons).toBe(6)
+    expect(lines[0].cons_week).toBeNull()
+    expect(giorni).toBeNull()
   })
 })
 

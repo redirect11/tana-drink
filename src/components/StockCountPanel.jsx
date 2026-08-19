@@ -9,7 +9,7 @@ import {
   fetchLoadMovementsSince,
 } from '../lib/api.js'
 import { formatQty } from '../lib/inventory.js'
-import { stockCountCompute } from '../lib/warehouse.js'
+import { stockCountCompute, giorniDiConta, consumoSettimanale } from '../lib/warehouse.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
 
@@ -54,7 +54,10 @@ export default function StockCountPanel() {
   const computed = useMemo(() => {
     if (!open) return null
     const lines = open.lines.map((l) => ({ ...l, rim: rims[l.item_id] === '' ? null : Number(rims[l.item_id]) }))
-    return stockCountCompute(lines)
+    // La conta è APERTA: il suo periodo finisce adesso e si allunga mentre
+    // la si compila. Il consumo a settimana si divide per i giorni veri,
+    // non per una costante da tenere aggiornata a mano.
+    return stockCountCompute(lines, { dal: open.started_at })
   }, [open, rims])
 
   async function start() {
@@ -124,7 +127,9 @@ export default function StockCountPanel() {
             <div>
               <strong>Conta aperta</strong>
               <div className="muted small">
-                dal {open.started_at?.slice(0, 10)} · contati {computed.totals.counted}/{open.lines.length}
+                dal {open.started_at?.slice(0, 10)}
+                {computed.giorni != null && ` · ${giorniScritti(computed.giorni)}`} · contati{' '}
+                {computed.totals.counted}/{open.lines.length}
               </div>
               <div className="muted small">
                 Consumo: <strong>{formatPrice(computed.totals.cons_value)}</strong>
@@ -145,6 +150,9 @@ export default function StockCountPanel() {
                         <>
                           {' · '}CONS <strong>{formatQty(l.cons, l.unit)}</strong>
                           {l.cons_value > 0 && ` (${formatPrice(l.cons_value)})`}
+                          {l.cons_week != null && (
+                            <> · {formatQty(l.cons_week, l.unit)} a settimana</>
+                          )}
                         </>
                       )}
                     </div>
@@ -195,21 +203,7 @@ export default function StockCountPanel() {
         </div>
       )}
 
-      {viewing && (
-        <div className="card" style={{ marginTop: 8 }}>
-          <strong>Dettaglio conta {viewing.started_at?.slice(0, 10)}</strong>
-          {viewing.lines
-            .filter((l) => l.cons != null && l.cons !== 0)
-            .map((l) => (
-              <div className="row between" key={l.item_id} style={{ marginTop: 4 }}>
-                <span className="muted small">{l.name}</span>
-                <span className="muted small">
-                  −{formatQty(l.cons, l.unit)} ({formatPrice(l.cons_value || 0)})
-                </span>
-              </div>
-            ))}
-        </div>
-      )}
+      {viewing && <DettaglioConta conta={viewing} />}
 
       {confirmClose && computed && (
         <ConfirmDialog
@@ -220,6 +214,46 @@ export default function StockCountPanel() {
           onConfirm={doClose}
         />
       )}
+    </div>
+  )
+}
+
+// «tre settimane e mezzo» invece di «24,5 giorni»: al banco si ragiona a
+// settimane, ed è la misura in cui si legge il consumo qui sotto.
+function giorniScritti(giorni) {
+  const g = Math.round(giorni)
+  if (g < 14) return `${g} ${g === 1 ? 'giorno' : 'giorni'}`
+  const settimane = Math.round((giorni / 7) * 10) / 10
+  return `${String(settimane).replace('.', ',')} settimane`
+}
+
+// IL DETTAGLIO DI UNA CONTA CHIUSA. Il periodo qui è finito, quindi i
+// giorni sono quelli veri fra apertura e chiusura — e il consumo a
+// settimana si ricalcola da quelli, non da un divisore salvato: le conte
+// vecchie non l'hanno mai avuto.
+function DettaglioConta({ conta }) {
+  const giorni = giorniDiConta(conta.started_at, conta.closed_at)
+  return (
+    <div className="card" style={{ marginTop: 8 }}>
+      <strong>Dettaglio conta {conta.started_at?.slice(0, 10)}</strong>
+      {giorni != null && (
+        <div className="muted small">
+          {giorniScritti(giorni)} di consumo: il «a settimana» qui sotto è
+          diviso per i giorni veri del periodo.
+        </div>
+      )}
+      {(conta.lines || [])
+        .filter((l) => l.cons != null && l.cons !== 0)
+        .map((l) => (
+          <div className="row between" key={l.item_id} style={{ marginTop: 4 }}>
+            <span className="muted small">{l.name}</span>
+            <span className="muted small">
+              −{formatQty(l.cons, l.unit)} ({formatPrice(l.cons_value || 0)})
+              {giorni != null &&
+                ` · ${formatQty(consumoSettimanale(l.cons, giorni), l.unit)} a settimana`}
+            </span>
+          </div>
+        ))}
     </div>
   )
 }
