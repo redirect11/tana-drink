@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { groupCategoriesByMacro } from '../lib/macros.js'
-import { IconCartelle } from './Icons.jsx'
 import {
   createMacroCategory,
   updateMacroCategory,
@@ -99,7 +98,7 @@ export default function MacroCategoryManager({
       {groups.map((g, idx) => (
         <div key={g.id} className="macro-group">
           <div className="row between" style={{ alignItems: 'center' }}>
-            <strong><IconCartelle /> {g.name}</strong>
+            <strong>🗂️ {g.name}</strong>
             <span className="row" style={{ gap: 4 }}>
               <button className="btn ghost small" onClick={() => moveMacro(idx, -1)} disabled={idx === 0}>↑</button>
               <button className="btn ghost small" onClick={() => moveMacro(idx, 1)} disabled={idx === groups.length - 1}>↓</button>

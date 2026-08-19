@@ -1206,11 +1206,24 @@ bugs:
       per quello che in src/components/Icons.jsx esistevano già IconTag e
       IconCartelle, disegni SVG che seguono il colore del testo e vengono
       uguali su ogni sistema — nati apposta e mai messi in opera.
-      RISOLTO usando quei due disegni ovunque la voce sia una sottosezione
-      (menù, magazzino, statistiche, impostazioni) e nei due titoli delle
-      macro-categorie. Nelle due frasi di MacroMonthlyTab che citano «Menù →
-      Macro-categorie» l'emoji è stato tolto e basta: è prosa, e nomina una
-      voce di menu che quell’emoji non ce l’ha più.
+      RISOLTO IN DUE TEMPI, e il primo era sbagliato. Prima si erano messi
+      quei due disegni ovunque la voce fosse una sottosezione: il glifo si
+      vedeva, ma l'utente ha subito notato il perché sbagliato — «perché
+      sono diverse dallo stile delle altre icone?». In una fila fatta di
+      emoji a colori (scatola, carrello, fabbrica) due sagome monocrome al
+      tratto stonavano, e lo stacco dava più fastidio del rettangolino.
+      RISOLTO DAVVERO tenendo le emoji di sempre e scrivendole a colori: in
+      coda va il selettore di variante U+FE0F, un carattere invisibile che
+      dice al font «questa disegnala a colori». Stessa emoji, stesso senso,
+      stessa fila — e il difetto di partenza sparisce lo stesso, perché
+      quello che si vedeva storto era proprio la resa monocroma di serie.
+      Nelle due frasi di MacroMonthlyTab che citano «Menù → Macro-categorie»
+      l'emoji è stato tolto e basta: è prosa, e non ha bisogno del bollo.
+      LA LEZIONE, che vale oltre queste due icone: un difetto di resa si
+      cura al livello della resa. Cambiare famiglia di icone per aggirarlo
+      sposta il problema sull'insieme, e l'insieme si vede tutto insieme.
+      I disegni IconTag e IconCartelle restano in Icons.jsx: serviranno il
+      giorno in cui le icone si uniformeranno per scelta, non per rattoppo.
       SECONDO: la scritta «Categorie (N)» contava un numero vecchio. Due
       cause, una dietro l’altra. Le categorie si leggevano UNA VOLTA SOLA
       all’apertura della pagina (fetchCategories dentro load), quindi una
