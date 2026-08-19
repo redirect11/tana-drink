@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 19 agosto 2026.
+> Generato il 20 agosto 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -22,8 +22,8 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 157 | fatto e coperto dai test |
-| ⚠️  | 15 | fatto ma nessun test lo verifica |
+| ✅ | 158 | fatto e coperto dai test |
+| ⚠️  | 14 | fatto ma nessun test lo verifica |
 | ⬜ | 21 | da fare |
 | 🗑 | 1 | non più valido |
 
@@ -340,27 +340,21 @@ In fondo al conto c'era una riga sola: «Sconto e acconti già incassati −15,0
 
 #### REQ-PAG-001 — Incasso in contanti, carta o acconto, anche senza rete
 
-*Dove*: `src/lib/posCatalog.js, src/components/PosProductPicker.jsx, src/components/SettingsTab.jsx`
+Il conto si chiude subito a schermo e la scrittura va in coda: contanti, carta e acconti non aspettano il server. Un conto già pagato viene rifiutato subito, non dopo un timeout di rete. Il metodo scelto resta scritto sull'incasso: serve alla chiusura di cassa e allo scontrino.
 
 **Dove**: `src/components/PaymentScreen.jsx, src/lib/api.js` · **Lo dimostrano**: `tests/unit/incassoOffline.test.js`, `tests/component/PaymentScreen.test.jsx`, `tests/unit/pagamento.test.js`, `tests/unit/payments.test.js`, `tests/unit/payment-core.test.js`
 
 #### REQ-PAG-002 — Il tasto Pagamento dice quanto resta da incassare
 
-*Dove*: `src/components/OrderPosDetail.jsx, src/components/SettingsTab.jsx`
-
-*Lo dimostrano*: `tests/component/OrderPosDetail.test.jsx`
-
-### ✅ REQ-POS-015 — Unisci e Separa sono un tasto solo
-
-Dei due, alla volta ne serve uno: il tasto mostra l'azione possibile e cambia faccia da sé — se c'è da unire, unisce; altrimenti separa. Quando servirebbero entrambe vince Unisci, e Separa resta raggiungibile dal menù ⋯ (dove le due voci esplicite restano comunque). Spento, non sparito, quando non c'è niente da fare: i tasti non ballano.
+Sul tasto è scritta la cifra da incassare al netto di sconti e acconti già presi, e resta scritta anche dopo che l'ordine è stato creato. A conto saldato la cifra sparisce, perché non c'è più niente da incassare.
 
 **Dove**: `src/components/OrderPosDetail.jsx` · **Lo dimostrano**: `tests/component/OrderPosDetail.test.jsx`
 
 #### REQ-PAG-003 — Sconto sul conto, con tre strategie a scelta
 
-Lo sconto si applica dal tastierino e si può impostare come tetto al totale, come proporzione sulle righe o come semplice avviso; la strategia si sceglie nelle impostazioni (default: tetto al totale). Le statistiche e il rendiconto devono sempre scorporare lo sconto, mai mostrare il prezzo di listino come venduto. Il tastierino dello sconto ha le cifre nell'ordine di sempre (7 8 9 / 4 5 6 / 1 2 3 / C 0 ←), su tre colonne: si batte a memoria.
+Lo sconto si applica dal tastierino e si può impostare come tetto al totale, come proporzione sulle righe o come semplice avviso; la strategia si sceglie nelle impostazioni (default: tetto al totale). Le statistiche e il rendiconto devono sempre scorporare lo sconto, mai mostrare il prezzo di listino come venduto. Il tastierino dello sconto ha le cifre nell'ordine di sempre (7 8 9 / 4 5 6 / 1 2 3 / C 0 ←), su tre colonne: si batte a memoria. E un conto scontato si chiude come chiuso: quanto resta da incassare lo sa la schermata che ha il conto davanti, non una rilettura che può arrivare prima dello sconto (BUG-046).
 
-**Dove**: `src/lib/pricing.js, src/components/SettingsTab.jsx` · **Lo dimostrano**: `tests/unit/pricing.test.js`, `tests/component/PaymentScreen.test.jsx`
+**Dove**: `src/lib/pricing.js, src/components/SettingsTab.jsx` · **Lo dimostrano**: `tests/unit/pricing.test.js`, `tests/component/PaymentScreen.test.jsx`, `tests/unit/contoScontatoSiChiude.test.js`
 
 #### REQ-PAG-004 — Lettore SumUp: pairing e incasso con carta
 
@@ -370,7 +364,7 @@ Il lettore si associa con un codice di pairing (riservato a chi sta al banco); d
 
 #### REQ-PAG-005 — Pagamento online con link o QR
 
-Una modalità «organizza» per i comandi del dettaglio conto, come la barra di Firefox o Chrome: si decide QUALI comandi stanno in vista (Unisci/Separa, Dati conto, Prodotto libero, le voci oggi nascoste nel ⋯) e DOVE, con posizionamento libero, e COME si mostrano — icona e testo, solo testo o sola icona. Anche il riquadro del tavolo è un elemento posizionabile. Il precedente è la griglia POS organizzabile (REQ-POS-011): stessa filosofia, qui applicata ai comandi.
+Si può creare un checkout online per un conto e verificarne lo stato; il webhook salda il conto quando il pagamento arriva. Vale anche per i conti di gruppo, dove il pagamento chiude tutti gli ordini del gruppo.
 
 **Dove**: `functions/lib/payment-service.js` · **Lo dimostrano**: `tests/bdd/payment-checkout.test.js`, `tests/bdd/payment-group.test.js`
 
@@ -962,7 +956,7 @@ La stampante termica al banco: comande, scontrini, chiusure di cassa.
 
 #### REQ-STAMPA-001 — Comanda al banco e scontrino al cliente
 
-Si stampa la comanda in lavorazione (con dentro le aggiunte appena fatte) e lo scontrino non fiscale del conto, con i metodi di pagamento davvero usati. Entrambe possono essere automatiche. Lo scontrino automatico esce UNA volta sola per conto, da qualunque schermata si chiuda — ma la prenotazione torna libera se la carta non è uscita e quando un conto viene riaperto, se no quel conto non stampa più (BUG-047).
+Si stampa la comanda in lavorazione (con dentro le aggiunte appena fatte) e lo scontrino non fiscale del conto, con i metodi di pagamento davvero usati. Entrambe possono essere automatiche.
 
 IL LOGO IN CIMA è un di più: se non si carica, la carta esce lo stesso — uno scontrino senza logo è ancora uno scontrino, uno scontrino che non esce è un cliente che aspetta. E si tenta UNA VOLTA SOLA per sessione (BUG-032): prima ogni stampa rifaceva il caricamento e aspettava l'errore, e la carta usciva dopo ogni volta.
 
@@ -972,7 +966,7 @@ IL LOGO IN CIMA è un di più: se non si carica, la carta esce lo stesso — uno
 
 La connessione alla stampante viene tenuta viva e ricontrollata quando l'app torna in primo piano: non si deve uscire dal programma per farla ripartire.
 
-**Dove**: `src/lib/printer.js` · ⚠️ **Nessun test lo verifica.**
+**Dove**: `src/lib/printer.js` · **Lo dimostrano**: `tests/unit/ristampaScontrino.test.js`, `tests/unit/scontrinoUnaVolta.test.js`
 
 #### REQ-STAMPA-005 — Sullo scontrino il metodo si legge per esteso
 

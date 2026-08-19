@@ -655,6 +655,9 @@ describe('il pagamento si apre con le righe già separate', () => {
       method: 'banco',
       items: null,
       autoServe: false,
+      // L'incasso dell'intero dichiara che il conto si chiude (hotfix
+      // BUG-046): senza, il conto scontato restava «parziale».
+      chiude: true,
     })
   })
 })

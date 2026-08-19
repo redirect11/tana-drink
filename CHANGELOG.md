@@ -79,6 +79,16 @@
 
 ### Al banco
 
+- **Il conto con lo sconto si chiude davvero, e lo scontrino esce** (i due
+  vocali del 19 agosto). Chiudendo un tavolo scontato il conto risultava
+  pagato «a metà» — restava in coda e bloccava la chiusura di cassa — e lo
+  scontrino non usciva; e se una stampa falliva, quel conto restava muto
+  per sempre. Adesso il conto scontato si chiude, la stampa fallita si
+  ritenta alla chiusura successiva, e **riscuotere di nuovo un conto
+  riaperto ristampa lo scontrino** — quello nuovo, con le cifre corrette.
+  L'interruttore in Impostazioni → Stampante ora dice il vero: la stampa
+  parte **alla riscossione**, non «quando l'ordine è pronto».
+
 - **Le card della lavagna hanno di nuovo la loro ombra.** Nelle colonne
   erano tagliate ai bordi, e dopo il pagamento sparivano del tutto
   lasciando un bordino più spesso al loro posto.
