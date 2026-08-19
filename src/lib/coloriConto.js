@@ -26,15 +26,24 @@ export const COLORI_CONTO = CATEGORY_PALETTE
 // regole CSS: sulla card c'è già una striscia colorata a sinistra, e dice
 // A CHE PUNTO STA il lavoro (da fare, al banco, pronto, da incassare).
 //
-// VINCE LO STATO, sempre. La striscia non si tocca: è quella che chi sta
-// allo shaker legge per sapere cosa fare adesso, ed è la stessa in tutte
-// le viste della coda. Il colore del conto è un'ALTRA informazione — «di
-// chi è questa comanda» — e prende un segno suo: il PALLINO accanto al
-// numero. Due segni, due domande, nessuno dei due che copre l'altro.
+// VINCE LO STATO, sempre. La striscia non si tocca: è un vocabolario
+// chiuso di sei tinte — arancio da fare, azzurro al banco, verde pronto,
+// grigio uscito, ambra pagato — ed è quella che chi sta allo shaker legge
+// per sapere cosa fare adesso. Il colore del conto è un'ALTRA informazione
+// — «di chi è questa comanda» — e prende il FONDO della card, che era
+// libero. Due segni, due domande, nessuno dei due che copre l'altro.
 //
-// E non è mai un fondo pieno sotto il testo: dodici tinte sature dietro
-// alle scritte sarebbero illeggibili su un tema e sull'altro, e la card
-// del conto pagato non si distinguerebbe più da quella da fare.
+// IL FONDO, NON UN PALLINO. Provato prima come pallino da 10px accanto al
+// numero, e non rispondeva alla domanda: il colore qui serve da LONTANO,
+// guardando la lavagna mentre si versa, e dieci pixel da lontano non ci
+// sono. Serve una superficie.
+//
+// MA TENUE E SFUMATO, non un fondo pieno: dodici tinte sature stese sotto
+// alle scritte le renderebbero illeggibili su un tema o sull'altro, e
+// coprirebbero l'alone del passo di lavoro. Diluite in trasparenza
+// restano un'ombra colorata — si riconosce a colpo d'occhio e non litiga
+// con niente. Le proporzioni stanno nel CSS (.order-card.conto-colorato),
+// che è il posto dove si guardano insieme al resto.
 
 // IL COLORE AUTOMATICO, dal numero del conto. Il resto della divisione
 // per la tavolozza: due conti battuti di fila non prendono mai lo stesso

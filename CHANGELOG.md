@@ -29,10 +29,10 @@
   stesso motivo.
 
 - **Ogni conto può avere il suo colore, e le sue comande se lo portano
-  dietro.** Un pallino colorato accanto al numero, sulla card del conto e su
-  tutte le card delle sue comande: un conto battuto in tre volte finisce in
-  tre colonne diverse della lavagna, e da lontano il pallino è l'unica cosa
-  che dice che sono lo stesso tavolo. In **Impostazioni → Coda ordini → «Il
+  dietro.** La card si tinge — un velo di colore sfumato dall'angolo, sulla
+  card del conto e su tutte le card delle sue comande: un conto battuto in
+  tre volte finisce in tre colonne diverse della lavagna, e da lontano quel
+  colore è l'unica cosa che dice che sono lo stesso tavolo. In **Impostazioni → Coda ordini → «Il
   colore del conto»** si accende «ogni conto nuovo nasce col suo colore»;
   acceso o spento che sia, il colore si sceglie e si toglie a mano dal
   **«⋯ Azioni»** della card — anche sui conti già aperti. La striscia a

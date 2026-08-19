@@ -5,7 +5,7 @@ import {
   BolloAcconto,
   Corsia,
   Lavagna,
-  PallinoConto,
+  coloreCardConto,
   PiedeCorsia,
   TastoAzioni,
   TastoCorsia,
@@ -70,14 +70,17 @@ export default function CorsieStato({
               <article
                 className={`card order-card corsia-card ${o.workflow_status}${
                   o.payment_status === 'parziale' ? ' acconto' : ''
-                }${o.id === idAcceso ? ' conto-acceso' : ''}`}
+                }${o.id === idAcceso ? ' conto-acceso' : ''}${
+                  coloreCardConto(o) ? ' conto-colorato' : ''
+                }`}
+                style={coloreCardConto(o)?.style}
                 key={o.id}
                 id={`ordine-${o.id}`}
                 onClick={() => onApri?.(o)}
               >
                 <div className="row between">
                   <span className="corsia-num">
-                    <PallinoConto order={o} />#{o.daily_number ?? '—'} <OrderBy order={o} />
+                    #{o.daily_number ?? '—'} <OrderBy order={o} />
                   </span>
                   <BolloAcconto order={o} />
                   <span className="muted small">{daQuanto(o.created_at, adesso)}</span>
