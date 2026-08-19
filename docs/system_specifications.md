@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 149 | fatto e coperto dai test |
+| ✅ | 150 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
-| ⬜ | 25 | da fare |
+| ⬜ | 24 | da fare |
 | 🗑 | 1 | non più valido |
 
-**190 voci** in tutto. **164** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **25** sono lavori
+**190 voci** in tutto. **165** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **24** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **7** difetti noti sono ancora aperti.
 
@@ -60,7 +60,7 @@ come «vero oggi», non come «garantito».
 | [Integrazione SumUp](#integrazione-sumup) | 6 | — | Il dialogo con il terminale SumUp, dalle Cloud Functions. |
 | [Intelligenza artificiale](#intelligenza-artificiale) | — | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
 | [Interfaccia](#interfaccia) | 19 | 2 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
-| [Come si lavora al progetto](#come-si-lavora-al-progetto) | 10 | 2 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
+| [Come si lavora al progetto](#come-si-lavora-al-progetto) | 11 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 
 ## Cosa fa il sistema
 
@@ -1414,6 +1414,14 @@ Il merge in develop passa un cancello, descritto in docs/gitflow.md: requisiti e
 
 **Dove**: `docs/gitflow.md, vitest.config.mjs, .github/workflows/test.yml` · ⚠️ **Nessun test lo verifica.**
 
+#### REQ-DEV-006 — Le due lavagne a corsie sono lo stesso componente scritto due volte
+
+Trovato da due revisioni indipendenti del diff della 1.5.0. Le viste a corsie dei conti e delle comande condividono, riga per riga: il guscio della colonna, la testata con conteggio e totale, la card dei conti «in arrivo» (22 righe identiche), il bollo dell'acconto e il piede con il ⋯ e il tasto grande. Sono circa 90 righe scritte due volte: oggi una modifica alla testata va fatta in due posti. COME: estrarre `Corsia` (guscio + testata + lista + card in arrivo) e il piede, come si è già fatto con `RigheCorsia`, `PreparazioneParziale` e `ScegliConsegna`, lasciando a ogni file solo il corpo della propria card. NON fondere del tutto i due componenti: una vista lavora sui conti e l'altra sulle comande, e solo quella dei conti ha la colonna della cifra grande. Fonderle cambierebbe comportamento.
+
+FATTO (19/08): il contorno sta in `src/components/Corsia.jsx` — `Lavagna` (quante colonne), `Corsia` (guscio, testata, lista, card dei conti in arrivo), `BolloAcconto`, `PiedeCorsia`, `TastoAzioni`, `TastoCorsia`. Alle due viste resta il corpo della propria card: CorsieStato da 178 righe a 112, CorsieComande da 293 a 226. NON sono state fuse, come diceva la voce. La colonna della cifra grande nel frattempo era già sparita con REQ-DEV-010 (viveva nel ramo morto), ma la ragione resta: un conto e una comanda non sono la stessa cosa, ed è esattamente l'errore che la vista del banco è nata per correggere. L'unica differenza rimasta nella testata — il conteggio (conti di là, comande di qua) — si passa da fuori.
+
+**Dove**: `src/components/CorsieStato.jsx, src/components/CorsieComande.jsx` · **Lo dimostrano**: `tests/component/Corsia.test.jsx`
+
 #### REQ-DEV-007 — La coda ricalcola tutte e tre le viste a ogni disegno, e ne mostra una
 
 Trovato dalla rilettura del diff della 1.5.0, coi numeri. Nel corpo della coda non c'è nessuna memoria fra un disegno e l'altro: griglia, lista e corsie vengono ricalcolate tutte, sempre, e se ne mostra una. Con 120 conti sono circa 18 passate complete sulla lista e 4 ordinamenti a ogni ridisegno — e ridisegnare capita a ogni tasto premuto nella ricerca, a ogni card aperta e a ogni snapshot dal server, che in una serata piena sono centinaia. Nello stesso posto: `contiScheda` viene chiamata sei volte per disegno sulla stessa lista (tre per i conteggi delle schede, due identiche a due righe di distanza), e ognuna è tre filtri in fila. COME: memorizzare le tre catene e smistare le schede una volta sola. Non cambia niente di quello che si vede.
@@ -1823,12 +1831,6 @@ DA DECIDERE, non da semplificare in silenzio: si sceglie la parola e si aggiorna
 Il cancello ora misura TUTTO il codice di prodotto, con una soglia per area tarata sul misurato del 16/08: functions/lib 92/76/88, src/lib 64/74/62, componenti 40/72/43, pagine 17/52/16 (src/dev è fuori: attrezzi, non prodotto). Le soglie basse — pagine su tutte — non certificano qualità: impediscono di peggiorare. Questo requisito è il lavoro di ALZARLE: coprire la logica delle pagine (BartenderPage e MenuPage in testa) e portare il cricchetto su. Insieme, gli standard di complessità nel lint (complexity, max-depth, dimensione delle funzioni): prima come avvisi per vedere dove siamo, poi come errori — i numeri esatti si decidono guardando il misurato, non a tavolino.
 
 **Dove**: `vitest.config.mjs, eslint.config.js`
-
-#### REQ-DEV-006 — Le due lavagne a corsie sono lo stesso componente scritto due volte
-
-Trovato da due revisioni indipendenti del diff della 1.5.0. Le viste a corsie dei conti e delle comande condividono, riga per riga: il guscio della colonna, la testata con conteggio e totale, la card dei conti «in arrivo» (22 righe identiche), il bollo dell'acconto e il piede con il ⋯ e il tasto grande. Sono circa 90 righe scritte due volte: oggi una modifica alla testata va fatta in due posti. COME: estrarre `Corsia` (guscio + testata + lista + card in arrivo) e il piede, come si è già fatto con `RigheCorsia`, `PreparazioneParziale` e `ScegliConsegna`, lasciando a ogni file solo il corpo della propria card. NON fondere del tutto i due componenti: una vista lavora sui conti e l'altra sulle comande, e solo quella dei conti ha la colonna della cifra grande. Fonderle cambierebbe comportamento.
-
-**Dove**: `src/components/CorsieStato.jsx, src/components/CorsieComande.jsx`
 
 ## Difetti noti
 
