@@ -437,11 +437,19 @@ export async function printComanda(order, comanda = null) {
 // uno scontrino, uno scontrino che non esce è un cliente che aspetta.
 const LARGHEZZA_LOGO = 220
 
-let _logoCanvas = null
+// TRE STATI, NON DUE. Qui c'era `null` a dire due cose diverse — «mai
+// provato» e «provato, non c'è» — e la seconda non veniva mai ricordata:
+// se `logo.png` manca, o non è nella cache del service worker, OGNI
+// scontrino rifaceva il caricamento e aspettava l'errore prima di stampare.
+// La carta usciva dopo, ogni volta. `undefined` vuol dire «mai provato»,
+// `null` vuol dire «provato e non c'è»: si tenta una volta sola.
+let _logoCanvas // undefined = mai provato
 
-async function logoPerStampa() {
+// Esportata per la prova: dall'esterno non la chiama nessuno, ma il
+// «si tenta una volta sola» si dimostra solo contando i tentativi.
+export async function logoPerStampa() {
   if (typeof document === 'undefined') return null
-  if (_logoCanvas !== null) return _logoCanvas
+  if (_logoCanvas !== undefined) return _logoCanvas
   try {
     const url = `${import.meta.env.BASE_URL || '/'}logo.png`
     const img = await new Promise((ok, ko) => {
