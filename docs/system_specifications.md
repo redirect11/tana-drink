@@ -22,15 +22,15 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 154 | fatto e coperto dai test |
+| ✅ | 155 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | ⬜ | 21 | da fare |
 | 🗑 | 1 | non più valido |
 
-**191 voci** in tutto. **169** descrivono il sistema com'è oggi e
+**192 voci** in tutto. **170** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **21** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
-cosa che l'app fa; **5** difetti noti sono ancora aperti.
+cosa che l'app fa; **6** difetti noti sono ancora aperti.
 
 Le voci ⚠️ sono la parte scomoda: funzionano, ma **nessun test le tiene**.
 Sono quelle che si rompono senza che nessuno se ne accorga, e vanno lette
@@ -43,7 +43,7 @@ come «vero oggi», non come «garantito».
 | [Ordini e comande](#ordini-e-comande) | 18 | 1 | Il conto e le sue comande: come nascono, come cambiano stato, come arrivano al banco. |
 | [Cassa e POS](#cassa-e-pos) | 17 | 2 | La schermata più usata della serata: si compone un conto, si corregge, si chiude. |
 | [Pagamenti](#pagamenti) | 10 | 1 | Come si incassa: contanti, carta, SumUp, pagamenti parziali e separati. |
-| [La coda del banco](#la-coda-del-banco) | 4 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
+| [La coda del banco](#la-coda-del-banco) | 5 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
 | [Menù e catalogo](#menù-e-catalogo) | 9 | — | Il listino: drink, categorie, disponibilità, prezzi. |
@@ -423,6 +423,24 @@ Chiesto dall'utente il 19/08. La vista a corsie del banco su uno schermo di tele
 FATTO in CSS, senza toccare i componenti: la testata di ogni corsia era già titolo + totale, e impilarle basta a farne sezioni. La lavagna (`.queue-board.corsie-board`) è il contenitore — `container: corsie / inline-size` — e le soglie stanno in `@container`: una colonna sola fino a 560px, due fino a 900px, tutte oltre. La finestra mente in due modi che al banco capitano ogni sera: col menu agganciato alla pagina la lavagna ha 200-250px in meno, e lo stesso col browser allo zoom. Della vecchia `@media (min-width: 901px)` resta solo l'altezza della lavagna, che è un'altra domanda (un elemento non può interrogare sé stesso con una @container).
 
 **Dove**: `src/index.css, src/components/CorsieComande.jsx, src/components/CorsieStato.jsx` · **Lo dimostrano**: `tests/unit/css.test.js`
+
+#### REQ-CODA-005 — Nella legenda della coda c'e' anche chi e' collegato adesso
+
+Chiesto dall'utente il 19/08: «quando un utente si logga ed e' nel sistema deve uscire nella legenda nella coda ordini, dove vengono indicate le iniziali di chi apre un ordine». COM'ERA: la legenda si costruiva SOLO dai conti gia' battuti oggi (`placedByLetter` su ordersOggi). Chi si collegava e non aveva ancora aperto niente non compariva da nessuna parte — nemmeno per se' stesso, e quindi non sapeva con che lettera si sarebbe riconosciuto sulle card.
+
+CHI VEDE COSA, deciso dall'utente il 19/08 e questa e' la parte da non sbagliare: «tutti quelli collegati, ma solo admin e bartender possono vedere chi e' collegato; staff puo' solo vedere chi ha aggiunto ordine con legenda, non vede chi e' online. I clienti non vedono niente». Quindi: chi e' collegato lo leggono solo ADMIN e BARTENDER (`isGestore`); la SALA vede la legenda di sempre, quella che nasce dai conti battuti; il CLIENTE non vede niente. E' riservatezza, non dettaglio: sapere chi e' collegato e' un'informazione sulle PERSONE, non sul lavoro, e non deve servire a controllare i colleghi.
+
+MA IL COLPO DI VITA LO DA' CHIUNQUE sia del personale, sala compresa: un cameriere non sa chi c'e', ma gli altri sanno che c'e' lui.
+
+COME SI SA CHI C'E'. Non esiste un logout affidabile — si chiude l'app, si blocca il tablet, finisce la batteria — quindi la presenza non si spegne: SCADE. Ogni terminale scrive «ci sono» ogni tre minuti mentre la pagina e' davanti, e chi tace da piu' di dieci minuti esce dall'elenco. Due colpi persi si sopportano (rete che va e viene, il tablet che dorme un momento) senza far sparire chi sta lavorando. Non serve nessuna pulizia: il tempo fa da solo.
+
+SOLO MENTRE LA PAGINA E' DAVANTI: un tablet in tasca con l'app aperta direbbe «ci sono» tutta la notte. Al ritorno in primo piano parte subito un colpo, che e' quello che rimette la lettera in legenda.
+
+DETTAGLI CHE FANNO LA DIFFERENZA: - UNA RIGA PER PERSONA, non per dispositivo: la legenda mostra PERSONE, e lo stesso Marco su tablet e telefono e' un Marco solo. E' il contrario di `staff_tokens`, che e' per dispositivo perche' li' si deve far squillare ogni apparecchio; - IL NOME si ricava con `placedByName`, la STESSA funzione che da' il nome sulle card: se i due divergessero, uno comparirebbe in legenda con una lettera e sui suoi conti con un'altra; - CHI HA GIA' BATTUTO NON SI DUPLICA: la sua voce nasce dai conti — il dato piu' vecchio e piu' sicuro — e resta com'e'; - «SEI TU» accanto alla propria voce: e' meta' del motivo per cui la cosa e' stata chiesta; - un CLIENTE collegato non e' mai una voce della legenda: quella dice chi lavora, e la riga «Cliente» nasce dagli ordini, non da chi ha l'app aperta; - L'ORARIO E' QUELLO DEL CLIENT (`last_seen` ISO, non `serverTimestamp`): la finestra si misura con lo stesso orologio che poi la legge, se no due terminali con l'ora storta si vedrebbero sempre online o mai; - LA SCRITTURA NON SI ASPETTA MAI: e' un colpo di vita, non un gesto. Se fallisce non deve rompere niente e non deve dire niente a nessuno.
+
+IL LUCCHETTO STA ANCHE LATO SERVER (`firestore.rules`): legge solo `isBartender()` (che li' vuol dire admin+bartender), scrive solo se stesso chi e' del personale. Un permesso che esiste solo nell'interfaccia non e' un permesso.
+
+**Dove**: `src/lib/presenza.js, src/lib/api.js, src/pages/BartenderPage.jsx, firestore.rules` · **Lo dimostrano**: `tests/unit/presenza.test.js`, `tests/component/CodaCorsie.test.jsx`
 
 ### Gruppi di conti
 
@@ -1935,6 +1953,7 @@ della correzione è il test citato nel requisito della sua area.
 | · | [BUG-030](#bug-030--il-menù-del-cliente-decide-da-solo-come-si-consegna) — Il menù del cliente decide da solo come si consegna | grave | P1 |
 | · | [BUG-035](#bug-035--nel-facsimile-dello-scontrino-lintestazione-non-è-centrata-come-sulla-carta) — Nel facsimile dello scontrino l'intestazione non è centrata come sulla carta | lieve | P3 |
 | 🔴 | [BUG-038](#bug-038--sulla-pwa-android-le-notifiche-arrivano-solo-accendendo-lo-schermo) — Sulla PWA Android le notifiche arrivano solo accendendo lo schermo | media | P2 |
+| 🔴 | [BUG-043](#bug-043--due-nomi-con-la-stessa-iniziale-e-in-legenda-ne-resta-uno-solo) — Due nomi con la stessa iniziale, e in legenda ne resta uno solo | — | — |
 
 🔴 succede **in produzione**, cioè al banco. `·` no. `?` non si sa ancora.
 
@@ -1977,6 +1996,20 @@ LA PRIORITÀ È GIÀ ALTA: tutte le push allo staff partono con `webpush: { head
 NON RIPRODOTTO: in locale le push non si provano (niente emulatore FCM, service worker non registrato in sviluppo). 19/08 — il difetto del service worker è CORRETTO (è andato con BUG-036: si guarda la visibilità, non il fuoco, e ora public/sw.js ha i suoi test). Resta aperto solo quello che non dipende da noi: il risparmio energetico di Android. Da chiudere con l'utente dopo il deploy, provando col telefono in mano.
 
 **Dove**: `public/sw.js, functions/lib/push-core.js`
+
+#### BUG-043 — Due nomi con la stessa iniziale, e in legenda ne resta uno solo
+
+Trovato il 19/08 scrivendo i test di REQ-CODA-005: il caso e' saltato fuori da solo perche' nei dati di prova c'era gia' una MARTA, e il MARCO che stavo aggiungendo non compariva.
+
+IL DIFETTO E' VECCHIO QUANTO LA LEGENDA e non nasce dalle presenze: la legenda raccoglie le iniziali in una mappa lettera -> nome, e se due persone hanno la stessa iniziale la seconda non entra. Marta batte un conto, Marco ne batte un altro: in legenda c'e' solo «M — Marta», e i conti di Marco portano una M che dice il nome sbagliato.
+
+QUANTO FA MALE: non si perde nessun dato — sulla card resta scritto chi ha battuto — ma la legenda MENTE, e mente proprio su «di chi e' questo conto», che e' l'unica domanda a cui serve rispondere. In una sera con Marco e Marta, o con Sara e Simone, chi guarda attribuisce conti alla persona sbagliata.
+
+NON L'HO RISOLTO IN QUEL GIRO perche' non era quello che si stava facendo, e perche' la cura tocca anche la lettera SULLE CARD (placedByLetter): metterne una in legenda e un'altra sulle card sarebbe peggio del difetto.
+
+TRE STRADE, da pesare quando si lavora: due lettere quando la prima collide (Ma / Mo), il nome intero in legenda con la sola lettera sulle card, oppure un colore per persona come si e' fatto per i conti. La prima e' la piu' piccola e la piu' vicina a come si legge oggi.
+
+**Dove**: `src/pages/BartenderPage.jsx (legenda), src/lib/presenza.js, src/lib/orderStatus.js (placedByLetter)`
 
 ## Non più valido
 
