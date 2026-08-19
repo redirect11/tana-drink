@@ -583,14 +583,23 @@ export default function MenuManager() {
 // Mensile per macro»: ogni vendita ci conta INTERA, incasso e costo dei
 // suoi ingredienti insieme (REQ-MAG-015).
 //
-// L'aggancio «a quale macro di spesa corrisponde» sta ancora in Magazzino,
-// e da quella tabella non lo guarda più nessuno. Resta lì solo perché è
-// l'altra metà di una domanda ancora aperta — se gli elenchi debbano
-// restare due o tornare uno solo (REQ-MAG-015): si toglie con la
-// risposta, non prima. Di lavoro da salvaguardare non ce n'è: al 18/08
-// `macro_categories` è vuota, zero documenti in produzione e in test, e
-// finché non se ne crea una il mensile per macro mostra il suo messaggio
-// invece dei numeri.
+// GLI ELENCHI SONO DUE APPOSTA, e la domanda è chiusa (19/08, REQ-MAG-015):
+// uno per quello che si COMPRA, uno per quello che si VENDE. Un elenco solo
+// non reggerebbe — la Schweppes si compra in «birre e bibite» e si vende
+// dentro un Gin Tonic, che sta in «alcolici e distillati»: sono due tagli
+// diversi della stessa merce, non due nomi per la stessa cosa.
+//
+// L'aggancio «a quale macro di spesa corrisponde» (`macro_menu_id`) sta in
+// Magazzino, e questa tabella non lo legge: serve il giorno in cui gli
+// acquisti avranno la loro schermata, per mettere speso e incassato uno
+// accanto all'altro. Toglierlo adesso vorrebbe dire richiedere a mano un
+// lavoro già fatto, e chi l'ha compilato lo ha fatto una volta sola.
+//
+// Su `tana-drink-test` le macro ci sono (quattro d'acquisto e quattro di
+// vendita, con gli agganci); in produzione `macro_categories` è ancora
+// vuota e ci resta finché non arriva il via libera. Lì «Mensile per macro»
+// non mostra numeri ma il suo messaggio, che dice dove crearle: non è un
+// guasto, è un elenco che nessuno ha ancora riempito.
 function MacroMenuPanel({ categories, onChange }) {
   const [macros, setMacros] = useState([])
   const ricarica = async () => {
