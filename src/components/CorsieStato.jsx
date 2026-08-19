@@ -1,7 +1,15 @@
 import { azioneCorsia, daQuanto, destinazioneConto } from '../lib/coda.js'
 import OrderBy from './OrderBy.jsx'
 import RigheCorsia from './RigheCorsia.jsx'
-import { BolloAcconto, Corsia, Lavagna, PiedeCorsia, TastoAzioni, TastoCorsia } from './Corsia.jsx'
+import {
+  BolloAcconto,
+  Corsia,
+  Lavagna,
+  PallinoConto,
+  PiedeCorsia,
+  TastoAzioni,
+  TastoCorsia,
+} from './Corsia.jsx'
 
 // ── LA VISTA A CORSIE DEI CONTI ───────────────────────────────────────
 //
@@ -69,7 +77,7 @@ export default function CorsieStato({
               >
                 <div className="row between">
                   <span className="corsia-num">
-                    #{o.daily_number ?? '—'} <OrderBy order={o} />
+                    <PallinoConto order={o} />#{o.daily_number ?? '—'} <OrderBy order={o} />
                   </span>
                   <BolloAcconto order={o} />
                   <span className="muted small">{daQuanto(o.created_at, adesso)}</span>

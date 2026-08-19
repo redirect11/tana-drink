@@ -65,6 +65,7 @@ import {
   paymentCloses,
   summaryMethod,
 } from './pagamento.js'
+import { coloreAutomatico, coloreValido } from './coloriConto.js'
 import { hoursBetweenIso } from './ore.js'
 import { businessDayKey, coverageStart, DEFAULT_CUTOFF_HOUR } from './businessDay.js'
 import { recentDrinkIds } from './posCatalog.js'
@@ -226,6 +227,12 @@ function mapOrder(snap) {
     service_charge_amount: o.service_charge_amount ?? 0,
     tip_amount: o.tip_amount ?? 0,
     service_mode: o.service_mode ?? null,
+    // IL COLORE DEL CONTO. Sta scritto sul documento e non si ricalcola
+    // qui: il perché — tavolozza che cambia, terminali che devono vedere
+    // lo stesso colore — sta in lib/coloriConto.js. Un conto nato coi
+    // colori automatici spenti non ce l'ha, e resta senza finché qualcuno
+    // non gliene dà uno a mano.
+    colore: o.colore ?? null,
     placed_by: o.placed_by ?? null,
     customer_name: o.customer_name ?? null,
     customer_uid: o.customer_uid ?? null,
@@ -1924,6 +1931,10 @@ async function creaOrdine({
   // l'ordine ha già le impostazioni in mano e le passa; qui c'è il valore
   // di riserva, che è la stessa regola letta dalla cache.
   status = statoComandaNuova(impostazioni()),
+  // COLORI AUTOMATICI: se il locale li ha accesi, il conto nasce col suo,
+  // scritto sul documento. Come per lo stato qui sopra, il valore di
+  // riserva è la stessa impostazione letta dalla cache.
+  conti_colorati = impostazioni().conti_colorati === true,
   client_temp_id = null, // id del placeholder POS: la griglia scambia SENZA doppioni
   cutoff_hour = DEFAULT_CUTOFF_HOUR, // ora di taglio della giornata commerciale
 }) {
@@ -2002,6 +2013,10 @@ async function creaOrdine({
     cash_session_id: cashSessionId, // sessione di cassa che numera l'ordine
     table_label: table_label || null,
     note: note || null,
+    // Il colore si decide QUI, una volta sola, e si scrive: dal numero del
+    // conto, così due conti battuti di fila non sono mai dello stesso
+    // colore (vedi lib/coloriConto.js).
+    colore: conti_colorati ? coloreAutomatico(dailyNumber) : null,
     status: ORDER_OPEN,
     comande: [comanda1],
     comande_statuses: [status],
@@ -2913,6 +2928,20 @@ export async function updateOrderInfo(id, { table_label, note, customer_name }) 
   if (customer_name !== undefined) patch.customer_name = customer_name || null
   if (Object.keys(patch).length) bgWrite(() => updateDoc(doc(db, 'orders', id), patch), 'dati conto')
   return mapOrder(await getDoc(doc(db, 'orders', id)))
+}
+
+// ── IL COLORE DI QUESTO CONTO, SCELTO A MANO ──────────────────────────
+//
+// Vale sempre: che i colori automatici siano accesi o spenti, e anche sui
+// conti nati prima che l'impostazione esistesse. `null` toglie il colore.
+//
+// La scrittura parte in sottofondo come tutte le altre: il pallino sulla
+// card cambia nell'istante in cui si tocca, la rete arriva quando arriva.
+export function setOrderColore(id, colore) {
+  // Solo tinte della tavolozza: una stringa qualunque finirebbe dentro
+  // uno `style` senza che nessuno l'abbia mai guardata.
+  const c = coloreValido(colore) ? colore || null : null
+  bgWrite(() => updateDoc(doc(db, 'orders', id), { colore: c }), 'colore del conto')
 }
 
 // ── SERVIZIO O RITIRO, SU QUESTO CONTO ───────────────────────
@@ -3954,6 +3983,13 @@ export const DEFAULT_SETTINGS = {
   // secondo modo serve a chi vuole tenere davanti tutta la coda mentre
   // cerca un nome.
   queue_search: 'filtra',
+  // OGNI CONTO NUOVO NASCE COL SUO COLORE? Di suo no: è un segno in più
+  // sulla card, e dove i conti sono pochi non serve a niente. Dove invece
+  // un conto si spezza in tre comande che finiscono in tre colonne
+  // diverse, il pallino colorato è l'unica cosa che da lontano dice che
+  // sono lo stesso tavolo. Il colore a mano si può dare comunque, acceso
+  // o spento che sia questo (vedi lib/coloriConto.js).
+  conti_colorati: false,
   // Vista ordine: raggruppamento di default degli item aggiunti —
   // 'separati' (ogni tocco una riga a sé) o 'uniti' (item uguali sommati).
   // Si può comunque unire/separare al volo dal riepilogo ordine.

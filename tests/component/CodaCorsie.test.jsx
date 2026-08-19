@@ -92,6 +92,7 @@ vi.mock('../../src/lib/api.js', () => ({
   cancelOrder: vi.fn(() => Promise.resolve()),
   restoreOrder: vi.fn(() => Promise.resolve()),
   createOrder: vi.fn(() => Promise.resolve({})),
+  setOrderColore: vi.fn(),
   saveStaffToken: vi.fn(() => Promise.resolve()),
   rimuoviStaffToken: vi.fn(() => Promise.resolve()),
   clockOut: vi.fn(() => Promise.resolve()),
@@ -156,7 +157,7 @@ vi.mock('../../src/components/StatusBell.jsx', () => ({ default: () => <div>camp
 
 import BartenderPage from '../../src/pages/BartenderPage.jsx'
 import { nascondiOrdine, mostraOrdine } from '../../src/lib/ordiniNascosti.js'
-import { updateOrderStatus, advanceComanda } from '../../src/lib/api.js'
+import { updateOrderStatus, advanceComanda, setOrderColore } from '../../src/lib/api.js'
 
 const ORA = '2026-08-16T21:00:00.000Z'
 
@@ -1085,5 +1086,102 @@ describe('le corsie del banco: una card per comanda', () => {
     await user.click(screen.getByRole('button', { name: /Ordina dal/ }))
     await waitFor(() => expect(perCorsia()).not.toEqual(prima))
     expect(perCorsia()).toEqual(prima.map((col) => [...col].reverse()))
+  })
+})
+// ── IL COLORE DEL CONTO (REQ-UI-020) ─────────────────────────────────
+//
+// Un conto battuto in tre volte diventa tre comande, e le tre comande
+// finiscono in tre colonne diverse della lavagna: da due metri nessuno vede
+// più che sono lo stesso tavolo. Il pallino colorato è il segno che li tiene
+// insieme, ed è il colore del CONTO — la comanda se lo porta dietro.
+//
+// Le due cose che qui costano un drink sbagliato:
+//   · lo stesso conto ha lo stesso pallino in TUTTE le colonne;
+//   · la striscia a sinistra resta quella dello STATO. Fra i due colori
+//     vince lo stato, sempre: è quello che dice cosa fare adesso, e se il
+//     colore del conto se lo mangiasse la lavagna diventerebbe muta.
+describe('il colore del conto, e le comande che se lo portano dietro', () => {
+  const pallini = (nodo) => [...nodo.querySelectorAll('.pallino-conto')]
+
+  it('lo stesso conto ha lo stesso pallino in tutte le colonne', async () => {
+    ruolo = 'bartender'
+    ordini = [
+      {
+        ...CODA[0],
+        id: 'o44',
+        daily_number: 44,
+        colore: '#9b59b6',
+        comande: [
+          { id: 'c1', seq: 1, status: 'pronto', created_at: ORA, items: [{ id: 'a', name: 'Negroni', qty: 1, unit_price: 9 }] },
+          { id: 'c2', seq: 2, status: 'ricevuto', created_at: ORA, items: [{ id: 'b', name: 'Gin tonic', qty: 1, unit_price: 6 }] },
+        ],
+      },
+    ]
+    montaCoda()
+    await screen.findByText('Da fare')
+
+    const daFare = pallini(corsia('da-fare'))
+    const alRitiro = pallini(corsia('al-ritiro'))
+    expect(daFare).toHaveLength(1)
+    expect(alRitiro).toHaveLength(1)
+    // Lo stesso colore, non «uno a testa»: è tutto il punto.
+    expect(daFare[0].style.background).toBe('#9b59b6')
+    expect(alRitiro[0].style.background).toBe('#9b59b6')
+  })
+
+  it('un conto senza colore non ha pallino: non se ne inventa uno', async () => {
+    // I conti nati prima dell'impostazione restano com'erano. Se il colore
+    // si ricalcolasse dall'id, accendere l'interruttore colorerebbe di
+    // colpo tutta la coda — e domani, cambiata la tavolozza, la
+    // colorerebbe di nuovo diversa.
+    ruolo = 'bartender'
+    ordini = [{ ...CODA[0], id: 'o45', daily_number: 45 }]
+    montaCoda()
+    await screen.findByText('Da fare')
+
+    expect(pallini(document.body)).toHaveLength(0)
+  })
+
+  it('vince lo stato: la striscia della card non cambia per il colore', async () => {
+    ordini = [{ ...CODA[0], id: 'o46', daily_number: 46, colore: '#e74c3c' }]
+    montaCoda()
+    await screen.findByText('In corso')
+
+    const card = document.querySelector('.corsia-card')
+    // La striscia a sinistra è dello STATO, e resta dov'era: il pallino è
+    // un segno in più, non un segno al posto di quello.
+    expect(card).toHaveClass('ricevuto')
+    expect(card.style.borderLeftColor).toBe('')
+    expect(pallini(card)).toHaveLength(1)
+  })
+
+  it('dal ⋯ della comanda si dà il colore, ed è quello del CONTO', async () => {
+    ruolo = 'bartender'
+    const utente = userEvent.setup()
+    ordini = [{ ...CODA[0], id: 'o47', daily_number: 47 }]
+    montaCoda()
+    await screen.findByText('Da fare')
+
+    const card = corsia('da-fare').querySelector('.corsia-card')
+    await utente.click(within(card).getByRole('button', { name: /Azioni/ }))
+    const aperte = card.querySelector('.corsia-azioni-aperte')
+    await utente.click(within(aperte).getByRole('button', { name: 'Colore #2ecc71' }))
+
+    // Si scrive sul CONTO (o47), non sulla comanda: è il conto ad avere un
+    // colore, e le sue comande lo mostrano.
+    expect(setOrderColore).toHaveBeenCalledWith('o47', '#2ecc71')
+  })
+
+  it('e si toglie, per un conto colorato per sbaglio', async () => {
+    const utente = userEvent.setup()
+    ordini = [{ ...CODA[0], id: 'o48', daily_number: 48, colore: '#e74c3c' }]
+    montaCoda()
+    await screen.findByText('In corso')
+
+    const card = document.querySelector('.corsia-card')
+    await utente.click(within(card).getByRole('button', { name: /Azioni/ }))
+    await utente.click(within(card).getByRole('button', { name: 'Nessun colore' }))
+
+    expect(setOrderColore).toHaveBeenCalledWith('o48', null)
   })
 })

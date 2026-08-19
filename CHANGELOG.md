@@ -4,6 +4,16 @@
 
 ### Per chi gestisce
 
+- **Ogni conto può avere il suo colore, e le sue comande se lo portano
+  dietro.** Un pallino colorato accanto al numero, sulla card del conto e su
+  tutte le card delle sue comande: un conto battuto in tre volte finisce in
+  tre colonne diverse della lavagna, e da lontano il pallino è l'unica cosa
+  che dice che sono lo stesso tavolo. In **Impostazioni → Coda ordini → «Il
+  colore del conto»** si accende «ogni conto nuovo nasce col suo colore»;
+  acceso o spento che sia, il colore si sceglie e si toglie a mano dal
+  **«⋯ Azioni»** della card — anche sui conti già aperti. La striscia a
+  sinistra non cambia: quella continua a dire a che punto sta il lavoro.
+
 - **Nella conta di magazzino si legge quanto se ne va a settimana**, accanto
   al consumo del periodo — ed è diviso per le settimane **vere**, contate
   dalle date della conta, non per un numero fisso da tenere aggiornato a

@@ -1,6 +1,7 @@
 import { formatPrice } from '../lib/orderStatus.js'
 import { paidAmount } from '../lib/pagamento.js'
 import { destinazioneConto } from '../lib/coda.js'
+import { COLORI_CONTO, coloreDelConto } from '../lib/coloriConto.js'
 
 // ── QUELLO CHE LE DUE LAVAGNE A CORSIE HANNO IN COMUNE ───────────────
 //
@@ -86,6 +87,71 @@ function CardInArrivo({ pending, onScarta }) {
         </>
       )}
     </article>
+  )
+}
+
+// ── IL PALLINO DEL CONTO ──────────────────────────────────────────────
+//
+// Sta accanto al numero, sulla card del conto e su TUTTE le card delle sue
+// comande: è il segno che dice «questa e quella sono lo stesso tavolo»
+// anche quando finiscono in tre colonne diverse.
+//
+// È un PALLINO, non un fondo e non la striscia a sinistra: la striscia
+// dice a che punto sta il lavoro e non si tocca — chi vince fra i due è
+// scritto in lib/coloriConto.js — e un fondo pieno con dodici tinte sature
+// diventerebbe illeggibile su un tema o sull'altro.
+//
+// Il colore non è mai l'unica cosa che dice qualcosa: il numero del conto
+// è lì accanto, e resta la risposta per chi i colori non li distingue.
+export function PallinoConto({ order }) {
+  const colore = coloreDelConto(order)
+  if (!colore) return null
+  return (
+    <span
+      className="pallino-conto"
+      style={{ background: colore }}
+      title={`Colore del conto #${order?.daily_number ?? ''}`}
+      aria-hidden="true"
+    />
+  )
+}
+
+// LA TAVOLOZZA, dentro il ⋯ della card. La stessa fila di gettoni del menù
+// e del POS, con la stessa tavolozza. Sta dietro al ⋯ e non sul pallino
+// perché sulla card ogni tocco che non sia il tasto grande è un tocco
+// sbagliato preso di corsa.
+export function SceltaColoreConto({ order, onScegli }) {
+  const attuale = (coloreDelConto(order) || '').toLowerCase()
+  return (
+    <div className="colori-conto">
+      <span className="muted small">Colore del conto</span>
+      <div className="colori-conto-riga">
+        {COLORI_CONTO.map((c) => (
+          <button
+            key={c}
+            type="button"
+            aria-label={`Colore ${c}`}
+            aria-pressed={attuale === c.toLowerCase()}
+            className={`colore-conto${attuale === c.toLowerCase() ? ' active' : ''}`}
+            style={{ background: c }}
+            onClick={() => onScegli?.(c)}
+          />
+        ))}
+        {/* Togliere il colore dev'essere facile quanto darlo: un conto
+            colorato per sbaglio, o un tavolo che se n'è andato e il colore
+            adesso confonde con quello nuovo. */}
+        <button
+          type="button"
+          className={`colore-conto niente${attuale ? '' : ' active'}`}
+          title="Nessun colore"
+          aria-label="Nessun colore"
+          aria-pressed={!attuale}
+          onClick={() => onScegli?.(null)}
+        >
+          ✕
+        </button>
+      </div>
+    </div>
   )
 }
 

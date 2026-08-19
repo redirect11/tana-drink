@@ -2,7 +2,15 @@ import { ORDER_STATUSES } from '../lib/orderStatus.js'
 import { azioneComanda, daQuanto, destinazioneConto } from '../lib/coda.js'
 import { ETICHETTA_ANNULLO } from '../lib/comande.js'
 import RigheCorsia from './RigheCorsia.jsx'
-import { BolloAcconto, Corsia, Lavagna, PiedeCorsia, TastoAzioni, TastoCorsia } from './Corsia.jsx'
+import {
+  BolloAcconto,
+  Corsia,
+  Lavagna,
+  PallinoConto,
+  PiedeCorsia,
+  TastoAzioni,
+  TastoCorsia,
+} from './Corsia.jsx'
 import { useState } from 'react'
 
 // ── LE CORSIE DEL BANCO: UNA CARD PER COMANDA ────────────────────────
@@ -102,6 +110,11 @@ export default function CorsieComande({
               >
                 <div className="row between">
                   <span className="corsia-num">
+                    {/* IL COLORE È DEL CONTO, e la comanda se lo porta
+                        dietro: è così che si riconosce, da tre colonne di
+                        distanza, che questa e quella sono lo stesso
+                        tavolo. */}
+                    <PallinoConto order={o} />
                     <span className="corsia-conto">#{s.numero ?? '—'}</span>
                     {/* IL NUMERO DELLA COMANDA sta accanto a quello del
                         conto, non al suo posto: due comande dello stesso
@@ -200,20 +213,27 @@ export default function CorsieComande({
                     fa perdere di vista la colonna. */}
                 {azioniDi === s.id && (
                   <div className="corsia-azioni-aperte" onClick={(e) => e.stopPropagation()}>
-                    {voci.map((v) => (
-                      <button
-                        key={v.id}
-                        className="btn ghost small block"
-                        disabled={v.disabled}
-                        title={v.hint || undefined}
-                        onClick={() => {
-                          setAzioniDi(null)
-                          v.onClick?.()
-                        }}
-                      >
-                        {v.icon} {v.label}
-                      </button>
-                    ))}
+                    {voci.map((v) =>
+                      // Una voce può essere un pezzo di schermata invece
+                      // di un tasto — la tavolozza del conto è una fila di
+                      // gettoni, non una cosa che si fa in un tocco solo.
+                      v.nodo ? (
+                        <div key={v.id}>{v.nodo}</div>
+                      ) : (
+                        <button
+                          key={v.id}
+                          className="btn ghost small block"
+                          disabled={v.disabled}
+                          title={v.hint || undefined}
+                          onClick={() => {
+                            setAzioniDi(null)
+                            v.onClick?.()
+                          }}
+                        >
+                          {v.icon} {v.label}
+                        </button>
+                      )
+                    )}
                   </div>
                 )}
               </article>
