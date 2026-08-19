@@ -115,6 +115,10 @@ function mapDrink(snap) {
     recipe: d.recipe ?? null,
     recipe_items: Array.isArray(d.recipe_items) ? d.recipe_items : [],
     price: d.price ?? 0,
+    // IVA DI VENDITA DELLA SINGOLA VOCE, e `null` vuol dire «quella del
+    // locale» (settings.sale_vat). Un ZERO invece è un'aliquota vera —
+    // esente — quindi i due casi non si possono confondere in un falsy.
+    sale_vat: d.sale_vat ?? null,
     available: d.available ?? true,
     image_url: d.image_url ?? null,
     created_at: toIso(d.created_at),
