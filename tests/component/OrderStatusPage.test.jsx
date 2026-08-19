@@ -101,9 +101,12 @@ import { toastSuccess, toastError } from '../../src/lib/toast.js'
 
 let impostazioniCorrenti = {}
 
-const apri = () =>
+// `query` serve per la VISTA CLIENTE («?cliente=1»): la stessa pagina che
+// chi lavora usa come conto, chiesta apposta nella forma da girare al
+// cliente.
+const apri = (query = '') =>
   render(
-    <MemoryRouter initialEntries={['/ordine/o1']}>
+    <MemoryRouter initialEntries={[`/ordine/o1${query}`]}>
       <OrderStatusPage />
     </MemoryRouter>
   )
@@ -126,10 +129,14 @@ describe('dettaglio ordine: a ciascuno la sua schermata', () => {
     await waitFor(() => expect(screen.getByTestId('pos')).toBeInTheDocument())
   })
 
-  it('lo staff di sala vede lo stato, non la cassa', async () => {
+  // CHI LAVORA ENTRA NEL CONTO, chiunque sia. La sala finiva sulla pagina
+  // del CLIENTE — quella col riquadro «Il tuo numero» — che per chi serve
+  // non vuol dire niente: per aggiungere una birra doveva prima trovare un
+  // tasto «Modifica ordine» in fondo alla pagina.
+  it('anche la sala entra nel conto, non nella pagina del cliente', async () => {
     ruoloCorrente = 'staff'
     apri()
-    await waitFor(() => expect(screen.queryByTestId('pos')).toBeNull())
+    await waitFor(() => expect(screen.getByTestId('pos')).toBeInTheDocument())
   })
 
   it('il cliente vede lo stato', async () => {
@@ -147,14 +154,14 @@ describe('il QR per il cliente', () => {
   it('con gli stati del servizio, la sala lo può mostrare', async () => {
     ruoloCorrente = 'staff'
     impostazioniCorrenti = { workflow_enabled: true }
-    apri()
+    apri('?cliente=1')
     expect(await screen.findByRole('button', { name: /Mostra QR/ })).toBeInTheDocument()
   })
 
   it('senza stati del servizio non compare: non ci sarebbe niente da seguire', async () => {
     ruoloCorrente = 'staff'
     impostazioniCorrenti = { workflow_enabled: false }
-    apri()
+    apri('?cliente=1')
     await waitFor(() => expect(screen.queryByRole('button', { name: /Mostra QR/ })).toBeNull())
   })
 })
@@ -188,33 +195,34 @@ describe('salvare le modifiche a un ordine', () => {
   })
 })
 
-// MODIFICARE VUOL DIRE POTER AGGIUNGERE. Nel dettaglio si cambiavano solo
-// le quantità di quello che c'era già: chi ha preso l'ordine e si sente
-// dire «aggiungi anche una birra» doveva battere un secondo conto.
-describe('la sala modifica l’ordine', () => {
-  it('«Modifica ordine» apre la schermata del conto, quella con la griglia', async () => {
+// LA SCHERMATA DA GIRARE AL CLIENTE. Resta utile — il QR con cui il cliente
+// segue l'ordine dal suo telefono — ma è di chi serve, non di chi ordina:
+// il riquadro «Il tuo numero» lì dentro prendeva mezzo schermo per dire
+// una cosa che chi lavora sa già. E da lì si torna al conto con un tasto.
+describe('la vista da girare al cliente', () => {
+  it('niente riquadro «Il tuo numero»: quello è scritto per chi ordina', async () => {
+    ruoloCorrente = 'staff'
+    apri('?cliente=1')
+    await waitFor(() => expect(screen.queryByTestId('pos')).toBeNull())
+    expect(screen.queryByText('Il tuo numero')).toBeNull()
+    expect(screen.getByText(/Ordine #7/)).toBeInTheDocument()
+  })
+
+  it('«Modifica» riporta al conto', async () => {
     const user = userEvent.setup()
     ruoloCorrente = 'staff'
-    apri()
-    await user.click(await screen.findByRole('button', { name: /Modifica ordine/ }))
+    apri('?cliente=1')
+    await user.click(await screen.findByRole('button', { name: /Modifica/ }))
     expect(await screen.findByTestId('pos')).toBeInTheDocument()
   })
 
-  it('e «Salva modifiche» resta: le quantità si correggono anche da qui', async () => {
-    ruoloCorrente = 'staff'
-    apri()
-    expect(await screen.findByRole('button', { name: /Salva modifiche/ })).toBeInTheDocument()
+  it('al cliente resta la sua pagina, numero compreso', async () => {
+    ruoloCorrente = undefined
+    apri('?cliente=1')
+    expect(await screen.findByText('Il tuo numero')).toBeInTheDocument()
   })
 
-  it('e il «Pagamento» apre la stessa schermata, già sul pagamento', async () => {
-    const user = userEvent.setup()
-    ruoloCorrente = 'staff'
-    apri()
-    await user.click(await screen.findByRole('button', { name: /Pagamento/ }))
-    expect(await screen.findByTestId('pos')).toBeInTheDocument()
-  })
-
-  it('al cliente la griglia non si offre: modifica le quantità e basta', async () => {
+  it('e le quantità le corregge lui: la griglia dei prodotti non gli si offre', async () => {
     ruoloCorrente = undefined
     apri()
     expect(await screen.findByRole('button', { name: /Salva modifiche/ })).toBeInTheDocument()
