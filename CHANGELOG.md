@@ -102,6 +102,14 @@
   a capo dove la stampante vera non le manda, e si leggeva «La Tana del
   Conigli / o». Adesso quello che si vede è quello che esce.
 
+- **Nel menu a lato le icone si vedono, e il numero delle categorie è quello
+  vero**: «Categorie» e «Macro-categorie» avevano due disegnini che su Windows
+  uscivano come rettangolini storti, come un’immagine che non si carica. Ora
+  sono disegni veri, uguali su ogni schermo. E la scritta «Categorie (7)»
+  contava le categorie di quando avevi aperto la pagina: una aggiunta
+  dall’altro terminale si vedeva solo entrando nella sezione. Adesso il
+  numero si aggiorna da solo.
+
 - **«In attesa del pagamento: non si prepara» funziona anche col salto
   acceso**: dove il pagamento è obbligatorio il blocco valeva solo per i conti
   fermi a «da fare», e in un locale che fa nascere le comande già in

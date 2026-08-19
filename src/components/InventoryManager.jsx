@@ -176,8 +176,8 @@ const INV_VIEWS = [
   ['conta', '📋', 'Conta'],
   ['ordini', '🛒', 'Ordini'],
   ['scadenzario', '📄', 'Scadenzario'],
-  ['categorie', '🏷', 'Categorie'],
-  ['macro', '🗂', 'Macro-categorie'],
+  ['categorie', <IconTag />, 'Categorie'],
+  ['macro', <IconCartelle />, 'Macro-categorie'],
   ['fornitori', '🏭', 'Fornitori'],
   ['movimenti', '📜', 'Movimenti'],
 ]

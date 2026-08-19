@@ -1191,3 +1191,50 @@ bugs:
     generate_issue: true
     labels: [bug, magazzino, ruoli, sala]
     test_cases: []
+
+  - id: BUG-041
+    title: "Icone storte nel menu a lato, e il numero delle categorie fermo"
+    area: "src/lib/sottosezioni.js, src/components/MenuManager.jsx, src/components/InventoryManager.jsx, src/components/StatsTab.jsx, src/components/SettingsTab.jsx, src/components/MacroCategoryManager.jsx, src/components/MacroMonthlyTab.jsx"
+    description: >
+      Segnalati dall'utente il 19/08, due difetti del menu a lato delle
+      pagine (le sottosezioni, roba di 1.5.x).
+      PRIMO: le voci «Categorie» e «Macro-categorie» avevano per icona gli
+      emoji lumaca e cartelle. Sono emoji a presentazione TESTUALE: Windows
+      non ci mette la faccina colorata, li disegna come glifi monocromi
+      storti, e nella fila del menu sembravano immagini non caricate. Non
+      era la prima volta: lo stesso era successo al bollo dei gruppi, ed è
+      per quello che in src/components/Icons.jsx esistevano già IconTag e
+      IconCartelle, disegni SVG che seguono il colore del testo e vengono
+      uguali su ogni sistema — nati apposta e mai messi in opera.
+      RISOLTO usando quei due disegni ovunque la voce sia una sottosezione
+      (menù, magazzino, statistiche, impostazioni) e nei due titoli delle
+      macro-categorie. Nelle due frasi di MacroMonthlyTab che citano «Menù →
+      Macro-categorie» l'emoji è stato tolto e basta: è prosa, e nomina una
+      voce di menu che quell’emoji non ce l’ha più.
+      SECONDO: la scritta «Categorie (N)» contava un numero vecchio. Due
+      cause, una dietro l’altra. Le categorie si leggevano UNA VOLTA SOLA
+      all’apertura della pagina (fetchCategories dentro load), quindi una
+      creata dall’altro terminale — o al volo dalla scheda di un drink —
+      non si contava. E anche quando il numero cambiava, la barra non lo
+      sapeva: useSottosezioni rideclarava le voci solo se cambiavano gli id
+      o la sezione attiva, mai la scritta. Ecco perché il numero si
+      sistemava entrando nella sezione: era il cambio di sezione a far
+      ripartire l’effetto, non il dato.
+      RISOLTO su tutt’e due: la pagina del menù ora sta in ascolto con
+      subscribeCategories finché è aperta (e le ricariche a mano dopo ogni
+      scrittura, che la sottoscrizione rende inutili, sono sparite), e
+      useSottosezioni guarda anche le scritte delle voci — non le icone,
+      che sono elementi nuovi a ogni disegno e lo farebbero girare in
+      tondo.
+      RESTANO EMOJI, fuori da questa voce perché non sono sottosezioni:
+      il titolo «Prodotto libero» (CustomDrinkForm, MenuPage), il bollo dei
+      gruppi in OrderSummary, la scheda «Schede per stato» e il titolo del
+      grafico per categoria. In SettingsTab il campo icona dei riquadri
+      (id prezzo) non lo disegna nessuno: è metadato morto.
+    in_produzione: false
+    status: fixed
+    generate_issue: true
+    labels: [bug, interfaccia, menu]
+    severity: lieve
+    priority: P2
+    test_cases: [tests/component/MenuManager.test.jsx]
