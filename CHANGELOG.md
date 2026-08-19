@@ -103,9 +103,9 @@
   Conigli / o». Adesso quello che si vede è quello che esce.
 
 - **Nel menu a lato le icone si vedono, e il numero delle categorie è quello
-  vero**: «Categorie» e «Macro-categorie» avevano due disegnini che su Windows
+  vero**: «Categorie» e «Macro-categorie» avevano due icone che su Windows
   uscivano come rettangolini storti, come un’immagine che non si carica. Ora
-  sono disegni veri, uguali su ogni schermo. E la scritta «Categorie (7)»
+  si vedono a colori, come tutte le altre della fila. E la scritta «Categorie (7)»
   contava le categorie di quando avevi aperto la pagina: una aggiunta
   dall’altro terminale si vedeva solo entrando nella sezione. Adesso il
   numero si aggiorna da solo.
