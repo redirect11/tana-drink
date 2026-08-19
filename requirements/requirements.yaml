@@ -4373,11 +4373,32 @@ requirements:
       in questa app (la striscia a sinistra, un pallino). Va deciso e
       scritto chi vince fra colore del conto e colore dello stato, invece
       di lasciarlo all'ordine delle regole CSS.
-    status: todo
+      FATTO COSI'. Il colore sta nel campo `colore` del documento ordine,
+      scelto UNA VOLTA alla nascita dal progressivo del conto (resto della
+      divisione per la tavolozza: due conti battuti di fila non sono mai
+      dello stesso colore) e da lì non si ricalcola più — cambiare
+      tavolozza o aggiornare un solo terminale non sposta i colori dei
+      conti già aperti. La tavolozza è quella delle categorie
+      (CATEGORY_PALETTE, dodici tinte): una sola da tenere in pari.
+      L'impostazione del locale `conti_colorati` (Impostazioni → Coda
+      ordini → «Il colore del conto») accende i colori automatici, di suo
+      spenta; il colore a mano si dà dal «⋯ Azioni» della card — sia dalle
+      corsie dei conti sia dal ⋯ della comanda, dove si scrive comunque
+      sul CONTO — e vale anche sui conti nati prima.
+      CHI VINCE: LO STATO. La striscia a sinistra resta quella della
+      preparazione, sempre, ed è quella che dice cosa fare adesso; il
+      colore del conto è un PALLINO da 10px accanto al numero, sulla card
+      del conto (corsie e griglia) e su tutte le card delle sue comande.
+      Niente fondo pieno: dodici tinte sature sotto al testo sarebbero
+      illeggibili su un tema o sull'altro. Il pallino non è mai l'unica
+      cosa che informa — il numero del conto gli sta accanto.
+      Le regole stanno in src/lib/coloriConto.js, che è dove è scritto il
+      perché.
+    status: implemented
     generate_issue: true
     labels: [ui, coda, impostazioni]
     priority: P2
-    test_cases: [tests/component/CodaCorsie.test.jsx]
+    test_cases: [tests/unit/coloriConto.test.js, tests/component/CodaCorsie.test.jsx]
 
   - id: REQ-MAG-020
     title: "La resa di un prodotto sta dietro un interruttore"

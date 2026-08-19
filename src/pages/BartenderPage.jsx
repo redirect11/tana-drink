@@ -16,6 +16,7 @@ import {
   saveStaffToken,
   restoreOrder,
   advanceComanda,
+  setOrderColore,
 } from '../lib/api.js'
 import { getPushToken } from '../lib/push.js'
 import { logoutStaff } from '../lib/logout.js'
@@ -121,6 +122,7 @@ import VipTab from '../components/VipTab.jsx'
 import ServiceQueue from '../components/ServiceQueue.jsx'
 import StaffCallList from '../components/StaffCallList.jsx'
 import Caricamento from '../components/Caricamento.jsx'
+import { PallinoConto, SceltaColoreConto } from '../components/Corsia.jsx'
 import CorsieStato from '../components/CorsieStato.jsx'
 import CorsieComande from '../components/CorsieComande.jsx'
 import OrderBy from '../components/OrderBy.jsx'
@@ -1542,6 +1544,11 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             🚫 {o.service_mode === 'tavolo' ? 'Non servito' : 'Non ritirato'}
           </button>
         )}
+        {/* IL COLORE DEL CONTO, A MANO. Sempre disponibile, che i colori
+            automatici siano accesi o spenti, e anche sui conti nati prima
+            che l'impostazione esistesse: è il caso per cui serve di più —
+            due tavoli che si somigliano, e uno dei due lo si segna. */}
+        <SceltaColoreConto order={o} onScegli={(c) => setOrderColore(o.id, c)} />
         {/* STORIA E RIPRISTINA NON STANNO QUI. Sono due cose che si fanno
             una volta ogni tanto — «com'è che questo conto è stato
             riaperto?» — e in coda occupavano una riga intera su ogni card,
@@ -1577,7 +1584,9 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
           onClick={() => navigate(`/ordine/${o.id}`)}
         >
           <div className="row between">
-            <span className="bignum">#{o.daily_number ?? '—'} <OrderBy order={o} /></span>
+            <span className="bignum">
+              <PallinoConto order={o} />#{o.daily_number ?? '—'} <OrderBy order={o} />
+            </span>
             {/* Il badge di preparazione compare solo se si tracciano gli stati:
                 a gestione preparazione spenta l'ordine è solo ricevuto→pagato. */}
             {workflowOn && (
@@ -2316,6 +2325,20 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                     hint: 'Se il foglio si è perso o è illeggibile',
                     onClick: () =>
                       printComanda(o, c).catch((e) => setError(`Stampa: ${e.message}`)),
+                  },
+                  // IL COLORE SI DÀ ANCHE DA QUI, ed è il colore del CONTO:
+                  // cambiandolo cambia il pallino di tutte le sue comande,
+                  // che è esattamente il punto. Il ⋯ è già aperto sulla card
+                  // sbagliata da riconoscere: chiudere, aprire il conto e
+                  // tornare indietro sarebbero tre gesti per un tocco.
+                  {
+                    id: 'colore',
+                    nodo: (
+                      <SceltaColoreConto
+                        order={o}
+                        onScegli={(col) => setOrderColore(o.id, col)}
+                      />
+                    ),
                   },
                 ].filter(Boolean)
               }}

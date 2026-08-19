@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 152 | fatto e coperto dai test |
+| ✅ | 153 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
-| ⬜ | 23 | da fare |
+| ⬜ | 22 | da fare |
 | 🗑 | 1 | non più valido |
 
-**191 voci** in tutto. **167** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **23** sono lavori
+**191 voci** in tutto. **168** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **22** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **5** difetti noti sono ancora aperti.
 
@@ -59,7 +59,7 @@ come «vero oggi», non come «garantito».
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
 | [Integrazione SumUp](#integrazione-sumup) | 6 | — | Il dialogo con il terminale SumUp, dalle Cloud Functions. |
 | [Intelligenza artificiale](#intelligenza-artificiale) | — | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
-| [Interfaccia](#interfaccia) | 20 | 1 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
+| [Interfaccia](#interfaccia) | 21 | — | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 12 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 
 ## Cosa fa il sistema
@@ -1364,6 +1364,20 @@ L'app installata si chiama «La Tana del Coniglio», non con la sigla del proget
 
 **Dove**: `src/lib/nomeApp.js, public/manifest.webmanifest` · **Lo dimostrano**: `tests/unit/nomeApp.test.js`
 
+#### REQ-UI-020 — Ogni conto ha il suo colore, e le sue comande lo portano
+
+Chiesto dall'utente il 18/08. Un conto con tre comande sparse in tre colonne diverse non si riconosce a colpo d'occhio: il colore serve a quello. Due cose distinte: 1) un'impostazione del LOCALE che accende i colori automatici: ogni conto nuovo nasce con un colore preso da una tavolozza, e quello è il suo — sta sulla card del conto e su TUTTE le card delle sue comande; 2) il colore si può scegliere A MANO, sempre, che l'automatico sia acceso o spento, e vale anche per i conti nati prima.
+
+VINCOLI: il colore va SCRITTO sul conto, non ricalcolato dall'id — dev'essere lo stesso su ogni terminale e non deve cambiare se domani cambia la tavolozza. E dev'essere leggibile su tutti i temi, chiaro e scuro: non un fondo pieno sotto il testo, ma dove i colori già stanno in questa app (la striscia a sinistra, un pallino). Va deciso e scritto chi vince fra colore del conto e colore dello stato, invece di lasciarlo all'ordine delle regole CSS.
+
+FATTO COSI'. Il colore sta nel campo `colore` del documento ordine, scelto UNA VOLTA alla nascita dal progressivo del conto (resto della divisione per la tavolozza: due conti battuti di fila non sono mai dello stesso colore) e da lì non si ricalcola più — cambiare tavolozza o aggiornare un solo terminale non sposta i colori dei conti già aperti. La tavolozza è quella delle categorie (CATEGORY_PALETTE, dodici tinte): una sola da tenere in pari. L'impostazione del locale `conti_colorati` (Impostazioni → Coda ordini → «Il colore del conto») accende i colori automatici, di suo spenta; il colore a mano si dà dal «⋯ Azioni» della card — sia dalle corsie dei conti sia dal ⋯ della comanda, dove si scrive comunque sul CONTO — e vale anche sui conti nati prima.
+
+CHI VINCE:
+
+LO STATO. La striscia a sinistra resta quella della preparazione, sempre, ed è quella che dice cosa fare adesso; il colore del conto è un PALLINO da 10px accanto al numero, sulla card del conto (corsie e griglia) e su tutte le card delle sue comande. Niente fondo pieno: dodici tinte sature sotto al testo sarebbero illeggibili su un tema o sull'altro. Il pallino non è mai l'unica cosa che informa — il numero del conto gli sta accanto. Le regole stanno in src/lib/coloriConto.js, che è dove è scritto il perché.
+
+**Dove**: `src/lib/api.js, src/components/CorsieComande.jsx, src/components/CorsieStato.jsx, src/components/SettingsTab.jsx` · **Lo dimostrano**: `tests/unit/coloriConto.test.js`, `tests/component/CodaCorsie.test.jsx`
+
 #### REQ-UI-021 — Tre nomi per lo stesso passo del servizio
 
 Trovato dalla rilettura del diff della 1.5.0. Lo stesso passo si chiama in tre modi a seconda di dove lo si legge: «Pronto» nella tabella del servizio, «Pronto al servizio» nell'etichetta di stato, «Ritiro/Servizio» in testa alla colonna. Chi lavora vede tre parole per una cosa sola, ed è lo stesso guaio — più piccolo — della pastiglia che diceva «Ordine ricevuto» accanto alla colonna «Da fare».
@@ -1843,16 +1857,6 @@ Oggi test gira senza App Check e con la chiave reCAPTCHA della produzione, che p
 Da una foto o un PDF della fattura fornitore ricavare righe, quantità, costi e IVA, da rivedere prima di registrare. Nelle impostazioni si abilita la scansione e si sceglie il servizio (Claude, ChatGPT, Gemini): o il nostro backend, o la propria API key, con le barre dei limiti di utilizzo. Si parte da Claude e ChatGPT. Il carico automatico in magazzino si valuta dopo.
 
 **Dove**: `functions/, src/components/InvoicesTab.jsx`
-
-### Interfaccia
-
-#### REQ-UI-020 — Ogni conto ha il suo colore, e le sue comande lo portano
-
-Chiesto dall'utente il 18/08. Un conto con tre comande sparse in tre colonne diverse non si riconosce a colpo d'occhio: il colore serve a quello. Due cose distinte: 1) un'impostazione del LOCALE che accende i colori automatici: ogni conto nuovo nasce con un colore preso da una tavolozza, e quello è il suo — sta sulla card del conto e su TUTTE le card delle sue comande; 2) il colore si può scegliere A MANO, sempre, che l'automatico sia acceso o spento, e vale anche per i conti nati prima.
-
-VINCOLI: il colore va SCRITTO sul conto, non ricalcolato dall'id — dev'essere lo stesso su ogni terminale e non deve cambiare se domani cambia la tavolozza. E dev'essere leggibile su tutti i temi, chiaro e scuro: non un fondo pieno sotto il testo, ma dove i colori già stanno in questa app (la striscia a sinistra, un pallino). Va deciso e scritto chi vince fra colore del conto e colore dello stato, invece di lasciarlo all'ordine delle regole CSS.
-
-**Dove**: `src/lib/api.js, src/components/CorsieComande.jsx, src/components/CorsieStato.jsx, src/components/SettingsTab.jsx`
 
 ### Come si lavora al progetto
 
