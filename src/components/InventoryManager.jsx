@@ -66,7 +66,7 @@ import PurchaseOrdersPanel from './PurchaseOrdersPanel.jsx'
 import SupplierInvoicesPanel from './SupplierInvoicesPanel.jsx'
 import CategoryRail from './CategoryRail.jsx'
 import SectionPanels from './SectionPanels.jsx'
-import { IconTag, IconCartelle, IconFornitore } from './Icons.jsx'
+import { IconFornitore } from './Icons.jsx'
 import Tendina from './Tendina.jsx'
 import { useSottosezioni } from '../lib/sottosezioni.js'
 import { usePaginaPiena } from '../lib/paginaPiena.js'
@@ -176,8 +176,8 @@ const INV_VIEWS = [
   ['conta', '📋', 'Conta'],
   ['ordini', '🛒', 'Ordini'],
   ['scadenzario', '📄', 'Scadenzario'],
-  ['categorie', <IconTag />, 'Categorie'],
-  ['macro', <IconCartelle />, 'Macro-categorie'],
+  ['categorie', '🏷️', 'Categorie'],
+  ['macro', '🗂️', 'Macro-categorie'],
   ['fornitori', '🏭', 'Fornitori'],
   ['movimenti', '📜', 'Movimenti'],
 ]

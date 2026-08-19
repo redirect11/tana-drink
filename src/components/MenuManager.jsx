@@ -26,7 +26,6 @@ import MacroCategoryManager from './MacroCategoryManager.jsx'
 import DrinkForm from './DrinkForm.jsx'
 import { saveDrinkFromForm } from '../lib/saveDrink.js'
 import CategoryRail from './CategoryRail.jsx'
-import { IconTag, IconCartelle } from './Icons.jsx'
 import {
   CATEGORY_ICONS,
   catColor,
@@ -323,8 +322,8 @@ export default function MenuManager() {
   // margini si portava dietro tutto il listino sotto.
   const sezioni = [
     { id: 'catalogo', icona: '🍸', label: 'Modifica menù' },
-    { id: 'categorie', icona: <IconTag />, label: `Categorie (${categories.length})` },
-    { id: 'macro', icona: <IconCartelle />, label: 'Macro-categorie' },
+    { id: 'categorie', icona: '🏷️', label: `Categorie (${categories.length})` },
+    { id: 'macro', icona: '🗂️', label: 'Macro-categorie' },
     { id: 'margini', icona: '📈', label: 'Marginalità listino' },
   ]
 
