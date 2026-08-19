@@ -796,6 +796,31 @@ describe('menu azioni del telefono', () => {
     expect(menu.getByRole('button', { name: /Svuota il conto/ })).toBeInTheDocument()
   })
 
+  // LA SCHERMATA DA GIRARE AL CLIENTE si apre da qui. Il QR con cui il
+  // cliente segue l'ordine dal suo telefono stava sulla pagina di stato, che
+  // adesso chi lavora non apre più: senza questa voce non ci si arriverebbe
+  // da nessuna parte.
+  it('«Mostra al cliente» c’è: è la via al QR', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    const menu = await apriMenu(user)
+    expect(menu.getByRole('button', { name: /Mostra al cliente/ })).toBeInTheDocument()
+  })
+
+  // Senza gli stati del servizio non c'è nessun punto da seguire: offrire il
+  // QR sarebbe promettere una cosa che non succede.
+  it('col servizio spento non c’è: non ci sarebbe niente da seguire', async () => {
+    mockSettings.workflow_enabled = false
+    try {
+      const user = userEvent.setup()
+      mount(baseOrder())
+      const menu = await apriMenu(user)
+      expect(menu.queryByRole('button', { name: /Mostra al cliente/ })).toBeNull()
+    } finally {
+      delete mockSettings.workflow_enabled
+    }
+  })
+
   it('quello che si usa sempre NON è nel menu: sta in fondo, su una riga', async () => {
     const user = userEvent.setup()
     mount(baseOrder())
