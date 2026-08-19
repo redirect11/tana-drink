@@ -522,6 +522,8 @@ NON RIAPRE UNA COSA CHIUSA, LA COMPLETA. Il 18/08 si è deciso che l'incasso si 
 
 PERCHÉ SERVE, per quel che si vede dai dati (non è una sua parola): nel menù esiste una categoria BOTTIGLIE, e una bottiglia intera non è la stessa cosa di un drink servito al banco. Mettere tutto al 10% gonfia il netto, e il netto è il numero da cui scendono margine, prime cost e il conto di fine mese.
 
+LA REGOLA È CONFERMATA E NON VA PIÙ CHIESTA (utente, 19/08): «di default lui rivende al 10% di IVA, che è quello di default globale, e può essere modificato dalla relativa voce di menù». Quindi il 10% resta il generale e le eccezioni le mette lui, voce per voce, quando servono: non c'è nessuna aliquota da farsi dire prima: il campo esiste ed è dove uno la scriverebbe.
+
 NON DIPENDE DA NIENTE: il lato acquisto è già fatto e `sale_vat` c'è. Conviene però che arrivi PRIMA delle tabelle del Bilancio: finché tutto si scorpora al 10% il netto di quello che si rivende con un'altra aliquota è gonfiato, e da quel netto scendono margine, incidenze e prime cost.
 
 FATTO (19/08). La scheda del prodotto ha il campo «IVA vendita %» accanto al prezzo, e vuoto vuol dire «quella del locale»: chi non ha eccezioni non compila niente. Sotto c'è scritto quale aliquota vale lasciandolo vuoto, col numero.
@@ -1710,9 +1712,13 @@ COSA FA L'APP OGGI. Il generatore ordini fa un ordine per UN fornitore, coi soli
 
 LE DIFFERENZE, in ordine di quanto pesano: (1) l'app parte da una SOGLIA scritta a mano sull'articolo, il foglio dal CONSUMO e dalla giacenza; (2) l'app fa un ordine per fornitore, il foglio ne mette insieme quanti ne servono in un giro solo; (3) l'app non sa cosa sia un consumo settimanale, vedi REQ-MAG-024; (4) nella schermata dell'ordine non si vede il costo per unità di misura, che nel foglio c'è su ogni riga ed è il numero con cui si decide se un prodotto conviene. PROPOSTA. Proporre la quantità dal CONSUMO invece che dalla soglia — «coprire N settimane al ritmo delle ultime conte», con la soglia che resta come rete per i prodotti senza storico — e un giro d'ordini che tenga dentro più fornitori insieme, spezzandosi in un ordine per fornitore solo al momento dell'invio.
 
-DA CHIEDERE A FLAVIO: quante settimane si vogliono coprire (l'indizio dice tre), e se il numero è uguale per tutti o cambia per fornitore — chi consegna una volta al mese e chi due volte a settimana non si ordinano con la stessa regola.
+LA DOMANDA SULLE SETTIMANE È STATA RITIRATA (19/08). Era nata da un indizio dei fogli (`ORD / 3` in INV.xlsx, che parrebbe dire «tre settimane di consumo») e l'avevo girata come una cosa da chiedere: per quanto tempo deve bastare un ordine. Non serve, e la risposta dell'utente chiude il discorso: «non c'entra quanto deve bastare o deve durare. Non lo sappiamo e non lo sapremo».
 
-DIPENDE DA REQ-MAG-024: la quantità da proporre nasce dal consumo a settimana, che oggi l'app non calcola. E dipende da una risposta che non è ancora arrivata — quante settimane si vogliono coprire, e se il numero vale per tutti i fornitori: è il numero che decide quanta merce entra dalla porta, e indovinarlo si paga in magazzino.
+SI ORDINA PER DIFFERENZA, non per previsione: ogni prodotto ha una quantità minima da tenere in magazzino, scritta dall'admin, e si ordina quello che manca per tornarci (REQ-MAG-026). Due numeri che esistono, invece di una stima che nessuno sa fare.
+
+COSA RESTA DI QUESTA VOCE. Il generatore vero è REQ-MAG-026, e non aspetta niente da qui. Qui resta il CONFRONTO COL FOGLIO — cosa fa lui che l'app non fa — e due cose ancora utili: il giro che tiene insieme più fornitori, e il costo per unità di misura sulla riga dell'ordine, che nel foglio c'è ed è il numero con cui si decide se un prodotto conviene.
+
+IL CONSUMO A SETTIMANA (REQ-MAG-024) l'app ora lo calcola, ma non serve a proporre le quantità: serve a chi guarda, per accorgersi che una minima è tarata male.
 
 **Dove**: `src/lib/warehouse.js suggestedPackages, src/components/PurchaseOrdersPanel.jsx`
 
@@ -1766,7 +1772,31 @@ OGGI VUOL DIRE `stock <= low_threshold`, e senza soglia impostata il prodotto no
 
 4) LA PROPOSTA SI CORREGGE SEMPRE: quello che esce e' un ordine da guardare e ritoccare prima di mandarlo, non da spedire al buio. Chi sta al banco sa cose che la giacenza non sa — la festa di sabato, il fornitore che salta la consegna.
 
-NON TOCCA LO SCARICO: le giacenze restano quelle che sono, con le regole di sempre. Questa voce le LEGGE soltanto.
+NON TOCCA LO SCARICO: le giacenze restano quelle che sono, con le regole di sempre. Questa voce le LEGGE soltanto. COM'E' FATTO OGGI IL GENERATORE, letto riga per riga il 19/08 (src/components/PurchaseOrdersPanel.jsx, 272 righe): si sceglie PRIMA il fornitore da una tendina; da quel momento la schermata mostra `supplierItems`, cioe' i soli prodotti di quel fornitore che non siano 'out'; un tasto «Precompila i sotto scorta» riempie le quantita' con `suggestedPackages` (riporta la giacenza a DUE VOLTE la soglia di avviso, minimo una confezione, e non propone niente se la soglia manca); si aggiusta a mano e le righe con quantita' maggiore di zero diventano l'ordine, con totale netto e lordo. Da li' l'ordine si stampa, si copia, si manda per email al fornitore (mailto precompilato) e, quando arriva, «ricevuto» carica il magazzino.
+
+LE TRE DIFFERENZE con quello che serve, e sono precise: (a) OGGI SI VEDE UN FORNITORE PER VOLTA, non tutto l'inventario: chi ordina deve ricordarsi da solo quali fornitori aprire, ed e' cosi' che si dimentica qualcosa; (b) LA QUANTITA' PROPOSTA VIENE DALLA SOGLIA (2x), non da una quantita' minima d'ordine scritta sul prodotto — e senza soglia il prodotto non viene proposto MAI, in silenzio; (c) IL FILTRO ESCLUDE SOLO 'out': i prodotti in assortimento entrano nel precompilato come quelli in linea. Il resto della macchina — righe, totali, stampa, email, ricevimento e carico — c'e' gia' e non si rifa'.
+
+COME FUNZIONA IL GESTO, deciso dall'utente il 19/08 e da qui si implementa. «L'ordine lo deve generare l'admin o il bartender, e quando lo genera genera l'ordine per fornitore, e sulla base dei prodotti esauriti o in esaurimento. Quando genero un ordine vedro' tutto l'inventario ma l'ordine generato conterra' solo quello che decide admin/bartender, prepopolato con le quantita' minime (decise da admin per prodotto di inventario) da ordinare».
+
+IN ORDINE, cosa succede: 1) CHI: admin o bartender (mai la sala). Il confronto si fa con src/lib/ruoli.js, che e' l'unico posto dove i ruoli si guardano.
+
+2) SI PARTE DAL MAGAZZINO, MA SOLO QUANDO LO SI CHIEDE. Parole dell'utente (19/08): «ovviamente lo fai solo quando admin crea un nuovo ordine e clicca, calcola da magazzino». Non e' una cosa che gira da sola ne' che si aggiorna mentre si guarda: e' un tasto, e quello che ne esce e' una proposta ferma su cui si lavora. Si guarda chi e' esaurito o in esaurimento, e ogni prodotto va nell'ordine del SUO fornitore — che e' gia' scritto sull'articolo. Una passata, N ordini.
+
+3) SI VEDE TUTTO L'INVENTARIO, non solo i sotto scorta: la schermata mostra l'intero elenco e il prepopolato e' solo un punto di partenza. Chi ordina aggiunge quello che sa lui — la festa di sabato, il fornitore che salta la consegna — e toglie quello che non serve. 4) NELL'ORDINE FINISCE SOLO QUELLO CHE DECIDE CHI ORDINA. La proposta non parte mai da sola.
+
+5) LA QUANTITA' SI CALCOLA PER DIFFERENZA, e non si stima niente. Precisato dall'utente il 19/08, dopo che avevo capito male: «non c'entra quanto deve bastare o deve durare. Non lo sappiamo e non lo sapremo». Ogni prodotto ha una QUANTITA' MINIMA DA TENERE IN MAGAZZINO, decisa dall'admin sull'anagrafica del prodotto; l'ordine propone quello che manca per tornarci: da ordinare = quantita' minima - giacenza attuale Nessuna previsione di consumo, nessun orizzonte di settimane: due numeri che l'app ha gia' o che l'admin scrive una volta.
+
+CAMPO NUOVO da aggiungere all'articolo di magazzino (verificato il 19/08: oggi non esiste, nessuno dei 388 prodotti di test ce l'ha).
+
+NON E' LA SOGLIA CHE C'E' GIA': `low_threshold` dice QUANDO avvisare («questo sta finendo»), la quantita' minima dice QUANTO deve essercene quando si e' a posto. Sono due numeri diversi e servono a due momenti diversi — oggi il generatore usa la soglia moltiplicata per due, che e' un modo di indovinare il secondo numero dal primo.
+
+SENZA QUEL NUMERO non si sa quanto ordinare: e' l'unica cosa che l'admin deve scrivere perche' il resto funzioni, e va detto chiaro in schermata invece di proporre zero in silenzio.
+
+6) CHI ENTRA NEL PREPOPOLATO: solo i prodotti IN LINEA o PREMIUM. Gli altri no. Il campo esiste gia' — `status` sull'articolo, valori in ASSORTIMENTI (src/lib/inventory.js): 'assortimento' (il default, «si tiene senza niente di speciale»), 'linea' (i cavalli di battaglia che non devono mancare), 'premium' (le bottiglie buone), 'out' (fuori assortimento, non si ricompra).
+
+ATTENZIONE, UN FATTO DA GUARDARE PRIMA DI SCRIVERE (misurato su tana-drink-test il 19/08): dei 388 articoli solo 78 sono classificati linea (36) o premium (42). Duecentouno sono in 'assortimento' e centonove 'out'. Siccome 'assortimento' e' il DEFAULT di chi non ha mai dichiarato niente, la regola cosi' com'e' lascerebbe fuori dal prepopolato duecento prodotti — e non si sa se quei duecento sono «tenuti senza niente di speciale» per scelta o solo mai classificati. Se sono la seconda cosa, l'ordine prepopolato salterebbe in silenzio merce che serve, ed e' il tipo di buco di cui ci si accorge quando manca la bottiglia.
+
+DA CHIEDERE A FLAVIO prima di implementare, e nel frattempo la regola resta quella detta: linea e premium.
 
 **Dove**: `src/lib/warehouse.js, src/components/PurchaseOrdersPanel.jsx, src/lib/api.js`
 
@@ -1844,9 +1874,15 @@ QUELLO CHE NON C'È, e che non va inventato. Nessun foglio calcola il minimo dal
 
 DECISO (19/08, dall'utente che riporta Flavio):
 
-LA FORMULA È QUESTA — minimo del giorno = somma delle paghe di chi lavora quel giorno (ore × €/h, persona per persona) + un EXTRA messo a mano. Non è più un'ipotesi, è la regola con cui il minimo si calcola: la domanda scritta qui sopra è chiusa, e l'ipotesi era quella giusta. Il primo addendo l'app ce l'ha già per intero (REQ-STAFF-006), quindi non si ricopia da nessuna parte — nel foglio invece si ricopia, ed è già capitato che non torni.
+LA FORMULA È QUESTA — minimo del giorno = somma delle paghe di chi lavora quel giorno (ore × €/h, persona per persona) + un EXTRA messo a mano. Non è più un'ipotesi, è la regola con cui il minimo si calcola: la domanda scritta qui sopra è chiusa, e l'ipotesi era quella giusta. Il primo addendo l'app ce l'ha già per intero (REQ-STAFF-006), quindi non si ricopia da nessuna parte — nel foglio invece si ricopia, ed è già capitato che non torni. L'EXTRA:
 
-DA DEFINIRE IN IMPLEMENTAZIONE, e non è una domanda sulla formula: con che passo si mette l'extra — uno per giorno, uno per mese, o un valore di partenza per giorno della settimana che sul singolo giorno si corregge. Sul foglio l'extra sta dentro un numero solo e non si vede, quindi non c'è un fatto da leggere: si sceglie il modo meno faticoso da tenere aggiornato e lo si prova con Flavio.
+COME SI METTE, deciso dall'utente il 19/08. «Un valore che può inserire l'admin per ogni giorno, o una serie che può essere impostata su tutte le settimane del mese». Quindi DUE STRADE, e la seconda è quella che si userà quasi sempre:
+
+1) SUL SINGOLO GIORNO — l'admin scrive l'extra di quel giorno, e vince su tutto il resto. È il sabato della festa, la sera dell'evento;
+
+2) UNA SERIE SETTIMANALE stesa su tutto il mese — sette valori, uno per giorno della settimana, che si applicano a tutte le settimane del mese in un colpo. È come ragiona il foglio, dove i minimi cambiano per giorno della settimana e restano uguali di settimana in settimana (gen 26: gio 300, ven 600, sab 600, dom 300, lun 100, mar 100, mer 150).
+
+CHI VINCE: il valore del giorno sulla serie, sempre. Uno si prende la briga di scrivere il singolo giorno solo quando quel giorno è diverso, e se la serie lo sovrascrivesse quel gesto sarebbe inutile. Va scritto dove si calcola, non lasciato all'ordine in cui si leggono i dati. E SOLO L'ADMIN LO TOCCA: è un numero su cui si misura il lavoro di chi sta in sala, e non è roba da turno.
 
 COSA HA GIÀ L'APP: le ore e le paghe per intero, storicizzate (REQ-STAFF-006), e l'incasso per giornata commerciale (REQ-CASSA-005). Manca il minimo, manca il confronto, manca l'obiettivo settimanale, e mancano le spese del mese — che nel foglio sono una riga sola battuta a mano, non un elenco.
 
