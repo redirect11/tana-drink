@@ -1143,6 +1143,27 @@ describe('il tasto di una card di comanda', () => {
     // ticket da far avanzare.
     expect(azioneComanda(null, conto())).toMatchObject({ tipo: 'incassa' })
   })
+
+  // LA SALA SERVE, NON PREPARA. Guarda le corsie per sapere cosa portare,
+  // ma non prende in carico e non segna pronto: quei tasti non le compaiono
+  // nemmeno. Le resta l'ultimo passo — «servito» — che è il suo mestiere.
+  it('alla sala il tasto compare solo sull’ultimo passo', () => {
+    const sala = { ruolo: 'staff' }
+    expect(azioneComanda(com('ricevuto'), conto(), sala)).toBeNull()
+    expect(azioneComanda(com('in_preparazione'), conto(), sala)).toBeNull()
+    expect(azioneComanda(com('pronto'), conto({ service_mode: 'tavolo' }), sala)).toMatchObject({
+      tipo: 'avanza',
+    })
+    // E il conto che ha appena servito lo incassa: quello non è lavoro del
+    // banco, sono soldi.
+    expect(azioneComanda(com('ritirato'), conto(), sala)).toMatchObject({ tipo: 'incassa' })
+  })
+
+  it('al banco non cambia niente', () => {
+    for (const ruolo of ['admin', 'bartender']) {
+      expect(azioneComanda(com('ricevuto'), conto(), { ruolo })).toMatchObject({ tipo: 'avanza' })
+    }
+  })
 })
 
 // ── NON SI PREPARA QUELLO CHE NON È STATO PAGATO (BUG-027) ───────────
