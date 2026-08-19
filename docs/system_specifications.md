@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 145 | fatto e coperto dai test |
+| ✅ | 146 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
-| ⬜ | 29 | da fare |
+| ⬜ | 28 | da fare |
 | 🗑 | 1 | non più valido |
 
-**190 voci** in tutto. **160** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **29** sono lavori
+**190 voci** in tutto. **161** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **28** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **7** difetti noti sono ancora aperti.
 
@@ -60,7 +60,7 @@ come «vero oggi», non come «garantito».
 | [Integrazione SumUp](#integrazione-sumup) | 6 | — | Il dialogo con il terminale SumUp, dalle Cloud Functions. |
 | [Intelligenza artificiale](#intelligenza-artificiale) | — | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
 | [Interfaccia](#interfaccia) | 19 | 2 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
-| [Come si lavora al progetto](#come-si-lavora-al-progetto) | 6 | 6 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
+| [Come si lavora al progetto](#come-si-lavora-al-progetto) | 7 | 5 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 
 ## Cosa fa il sistema
 
@@ -1420,6 +1420,14 @@ Il merge in develop passa un cancello, descritto in docs/gitflow.md: requisiti e
 
 **Dove**: `docs/gitflow.md, vitest.config.mjs, .github/workflows/test.yml` · ⚠️ **Nessun test lo verifica.**
 
+#### REQ-DEV-008 — Scritture che rileggono l'ordine per un valore che nessuno guarda
+
+Trovato dalla rilettura del diff della 1.5.0. `advanceComanda`, `preparazioneParziale` e `setOrderServiceMode` rileggono l'ordine dopo aver scritto, per restituirlo — e nessuno dei loro chiamanti (verificati tutti e otto) usa quel valore: gli interessa solo l'eventuale errore. Ogni tocco su una card costa così due letture dello stesso documento invece di una, più una normalizzazione intera buttata via: con ~150 comande a sera sono ~450 letture a vuoto. Nella stessa famiglia: `notifyLowStock([])` legge comunque il localStorage in modo sincrono prima di ciclare su zero elementi. COME: comporre l'esito in memoria da quello che si è appena scritto, o non restituire niente.
+
+FATTO (19/08): non restituiscono niente. Chi tocca una card guarda l'errore, non l'ordine — la schermata si è già aggiornata con la copia locale — e un tocco adesso costa una lettura sola. Nella stessa passata: `notifyLowStock` esce prima se non c'è niente da segnalare (le scorte le annuncia lo scarico quando ha finito davvero), e in `advanceComanda` sono spariti `lowStock`, che nessuno riempiva mai, e `statComanda`, che era l'ordine appena letto messo in una variabile per poi chiedersi se ci fosse.
+
+**Dove**: `src/lib/api.js` · **Lo dimostrano**: `tests/unit/lettureSuUnGesto.test.js`
+
 #### REQ-DEV-011 — Ripetizioni che si tolgono in mezz'ora, tutte insieme
 
 Raccolta dalla rilettura del diff della 1.5.0: cose piccole, nessuna urgente, che conviene fare in un colpo solo perché toccano file appena scritti — è il momento in cui costano meno. - `impostazioniLocali.js`: cinque coppie leggi/scrivi con lo stesso try/catch. Due funzioni private e restano cinque righe a preferenza. I commenti lunghi che spiegano perché ognuna è del DISPOSITIVO vanno tenuti tutti: sono la parte che vale. - `SettingsTab.jsx`: cinque volte lo stesso gruppo di pastiglie «scegli un modo» → un componente solo. - `InventoryManager.jsx`: il riquadro del travaso scrive tre volte lo stesso overlay e chiede due volte la stessa condizione; `CarcoForm` tiene uno stato che è ricavabile; due componenti gemelli calcolano la stessa previsione di fine serata. - `generate-issues.mjs`: rilegge una per una le issue che ha appena scaricato tutte insieme — fino a 190 chiamate in più per giro di CI. - i tre script nuovi dell'emulatore riscrivono il client REST che `lib-firestore.js` ha già: basta fargli accettare indirizzo e intestazioni.
@@ -1805,12 +1813,6 @@ Trovato da due revisioni indipendenti del diff della 1.5.0. Le viste a corsie de
 Trovato dalla rilettura del diff della 1.5.0, coi numeri. Nel corpo della coda non c'è nessuna memoria fra un disegno e l'altro: griglia, lista e corsie vengono ricalcolate tutte, sempre, e se ne mostra una. Con 120 conti sono circa 18 passate complete sulla lista e 4 ordinamenti a ogni ridisegno — e ridisegnare capita a ogni tasto premuto nella ricerca, a ogni card aperta e a ogni snapshot dal server, che in una serata piena sono centinaia. Nello stesso posto: `contiScheda` viene chiamata sei volte per disegno sulla stessa lista (tre per i conteggi delle schede, due identiche a due righe di distanza), e ognuna è tre filtri in fila. COME: memorizzare le tre catene e smistare le schede una volta sola. Non cambia niente di quello che si vede.
 
 **Dove**: `src/pages/BartenderPage.jsx`
-
-#### REQ-DEV-008 — Scritture che rileggono l'ordine per un valore che nessuno guarda
-
-Trovato dalla rilettura del diff della 1.5.0. `advanceComanda`, `preparazioneParziale` e `setOrderServiceMode` rileggono l'ordine dopo aver scritto, per restituirlo — e nessuno dei loro chiamanti (verificati tutti e otto) usa quel valore: gli interessa solo l'eventuale errore. Ogni tocco su una card costa così due letture dello stesso documento invece di una, più una normalizzazione intera buttata via: con ~150 comande a sera sono ~450 letture a vuoto. Nella stessa famiglia: `notifyLowStock([])` legge comunque il localStorage in modo sincrono prima di ciclare su zero elementi. COME: comporre l'esito in memoria da quello che si è appena scritto, o non restituire niente.
-
-**Dove**: `src/lib/api.js`
 
 #### REQ-DEV-009 — Quattro copie del ricalcolo del totale di un conto
 

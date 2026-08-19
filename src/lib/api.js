@@ -2639,6 +2639,9 @@ const unappliedEntries = (orderId, comande) =>
 // Chi non tiene il magazzino può spegnerle dalle impostazioni: in sala un
 // avviso su un ingrediente sotto soglia è solo una riga da chiudere.
 function notifyLowStock(lowStock) {
+  // Quasi sempre non c'è niente da dire, e leggere le preferenze è comunque
+  // un giro sul localStorage in mezzo a un gesto: si esce prima.
+  if (!lowStock || lowStock.length === 0) return
   const preferenze = leggiAvvisi(auth.currentUser?.uid)
   for (const it of lowStock) {
     const finito = it.stock <= 0
@@ -2653,8 +2656,6 @@ function notifyLowStock(lowStock) {
 export async function advanceComanda(orderId, comandaId, newStatus) {
   const orderRef = doc(db, 'orders', orderId)
   const nowIso = new Date().toISOString()
-  let lowStock = []
-  let statComanda = null
 
   const orderSnap = await leggiOrdine(orderRef)
   if (!orderSnap.exists()) throw new Error('Ordine non trovato')
@@ -2675,7 +2676,7 @@ export async function advanceComanda(orderId, comandaId, newStatus) {
 
   comanda.status = newStatus
   comanda.status_times = { ...(comanda.status_times || {}), [newStatus]: nowIso }
-  statComanda = { ...comanda, order: raw }
+  const comandaScritta = { ...comanda, order: raw }
 
   const patch = {
     status: norm.status,
@@ -2701,24 +2702,21 @@ export async function advanceComanda(orderId, comandaId, newStatus) {
   bgWrite(() => updateDoc(orderRef, patch), 'stato comanda')
 
   // Scorte dopo: se il magazzino non risponde l'avanzamento è comunque salvo.
+  // Gli avvisi di scorta li manda lo scarico quando ha finito davvero
+  // (scaricaInSottofondo): qui non si sa ancora cosa è sceso sotto soglia.
   if (daScaricare) scaricaInSottofondo(orderId, comanda.id)
-  notifyLowStock(lowStock)
 
   // Statistiche tempi del servizio (per ETA cliente), per comanda.
-  if (statComanda) {
-    updateServiceTimeStats(statComanda.order, statComanda, newStatus).catch((e) =>
-      console.error('[eta] aggiornamento statistiche fallito:', e)
-    )
-  }
+  updateServiceTimeStats(raw, comandaScritta, newStatus).catch((e) =>
+    console.error('[eta] aggiornamento statistiche fallito:', e)
+  )
 
   // Sync stato verso SumUp POS Pro in background (fire-and-forget).
   const sumupStatus = toSumUpStatus(newStatus)
-  if (sumupStatus && statComanda?.order?.sumup_sale_id) {
-    updateSumUpSaleStatus(statComanda.order.sumup_sale_id, sumupStatus)
+  if (sumupStatus && raw.sumup_sale_id) {
+    updateSumUpSaleStatus(raw.sumup_sale_id, sumupStatus)
       .catch((e) => console.error('[SumUp] updateStatus failed:', e))
   }
-
-  return mapOrder(await leggiOrdine(orderRef))
 }
 
 // Retrocompatibilità: avanza la comanda ATTIVA dell'ordine (le viste che
@@ -2920,7 +2918,6 @@ export async function setOrderServiceMode(orderId, modo) {
   }
 
   bgWrite(() => updateDoc(ref, patch), 'modo consegna')
-  return mapOrder(await leggiOrdine(ref))
 }
 
 // AGGIUNTA a un conto aperto: crea una NUOVA COMANDA con i soli item
@@ -3043,9 +3040,8 @@ export async function preparazioneParziale(orderId, comandaId, righeScelte) {
   // Annullarla per rifarla identica lascerebbe in giro una comanda annullata
   // che non racconta niente.
   if (divisa.tutta) {
-    return comanda.status === passi.nuova
-      ? mapOrder(snap)
-      : advanceComanda(orderId, comandaId, passi.nuova)
+    if (comanda.status !== passi.nuova) await advanceComanda(orderId, comandaId, passi.nuova)
+    return
   }
 
   comanda.status = ORDER_STATUSES.ANNULLATO
@@ -3109,7 +3105,6 @@ export async function preparazioneParziale(orderId, comandaId, righeScelte) {
     total: nuovoTotale,
     ...(nuovoSconto != null ? { discount_amount: nuovoSconto } : {}),
   }), 'preparazione parziale')
-  return mapOrder(await leggiOrdine(ref))
 }
 
 // Modifica di UNA COMANDA da parte del bartender (quantità, rimozioni,
