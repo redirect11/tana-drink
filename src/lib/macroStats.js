@@ -130,11 +130,31 @@ const withDerived = (c) => {
   return { ...c, margine, rapporto: c.costo > 0 ? round2(c.incasso / c.costo) : null }
 }
 
+// ── LE DUE INCIDENZE ─────────────────────────────────────────────────
+// Sono le due righe che il foglio di Flavio ha e la tabella dell'app no:
+// «quanto pesa questa macro sul margine del mese» e «quanto pesa questo
+// mese sull'incassato dell'anno». Due divisioni su numeri che la tabella ha
+// già in mano — nessun altro dato serve.
+//
+// TORNA UNA PERCENTUALE, non una frazione: è così che si legge e così va
+// scritta, e arrotondata dove si guarda invece che a ogni passaggio.
+//
+// DOVE IL TOTALE NON È POSITIVO NON SI DIVIDE. Un mese in perdita ha la
+// somma dei margini a zero o sotto: la «quota» di una macro su quella somma
+// non vuol dire niente, e stampare un −340% o un ∞ manda a ragionare su un
+// numero inventato. Meglio un trattino: dice «qui non c'è una risposta»,
+// che è la verità.
+const incidenza = (parte, tutto) =>
+  Number(tutto) > 0 ? Math.round((1000 * Number(parte)) / Number(tutto)) / 10 : null
+
 // Costruisce la tabella mensile per macro di menù.
 //   months: elenco di 'YYYY-MM' da mostrare (colonne), es. i 12 mesi dell'anno.
 //   macros: [{ id, name }] — le macro del MENÙ, nell'ordine voluto.
 // Ritorna { months, rows, totByMonth, grand }: rows ha una voce per macro
 // (più «Non attribuito» se ci sono importi orfani), ognuna con byMonth e tot.
+// Ogni cella di una macro porta `incidenza` (quota sul margine di quel
+// mese); ogni cella dei totali porta `incidenzaAnno` (quota sull'incassato
+// dell'anno mostrato).
 export function macroMonthlyReport({
   orders,
   drinksById,
@@ -196,5 +216,26 @@ export function macroMonthlyReport({
     grand.costo = round2(grand.costo + t.costo)
   }
 
-  return { months: months || [], rows, totByMonth, grand: withDerived(grand) }
+  const totale = withDerived(grand)
+
+  // Secondo giro: le incidenze si possono calcolare solo adesso, perché
+  // hanno bisogno del totale della colonna (il margine di tutte le macro in
+  // quel mese) e del totale dell'anno.
+  for (const r of rows) {
+    for (const month of months || []) {
+      const c = r.byMonth.get(month)
+      c.incidenza = incidenza(c.margine, totByMonth.get(month)?.margine)
+    }
+    r.tot.incidenza = incidenza(r.tot.margine, totale.margine)
+  }
+  for (const month of months || []) {
+    const t = totByMonth.get(month)
+    t.incidenzaAnno = incidenza(t.incasso, totale.incasso)
+  }
+  // L'anno su se stesso fa 100: non è una domanda, ma la colonna TOT deve
+  // pur dire qualcosa, e un vuoto lì sembrerebbe un conto che non è tornato.
+  totale.incidenzaAnno = incidenza(totale.incasso, totale.incasso)
+  totale.incidenza = incidenza(totale.margine, totale.margine)
+
+  return { months: months || [], rows, totByMonth, grand: totale }
 }
