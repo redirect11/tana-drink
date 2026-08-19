@@ -2791,6 +2791,12 @@ body.drawer-open .status-bell-float { display: none; }
 .macro-tab td.neg {
   color: #e5484d;
 }
+/* LE INCIDENZE SONO UNA LETTURA, NON UN IMPORTO: percentuali che dicono
+   quanto pesa una riga sul resto. In muted stanno un passo indietro
+   rispetto ai soldi, che sono quello che si cerca. */
+.macro-tab .r-inci td {
+  color: var(--muted);
+}
 .macro-total {
   border: 1px solid var(--accent-2, #f5b94a);
 }
