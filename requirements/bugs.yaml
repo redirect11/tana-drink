@@ -1125,6 +1125,8 @@ bugs:
     status: todo
     generate_issue: true
     labels: [bug, notifiche, pwa]
+    severity: media
+    priority: P2
     test_cases: []
 
   - id: BUG-039
