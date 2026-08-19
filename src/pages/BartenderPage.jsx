@@ -1294,6 +1294,51 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
     </button>
   ) : null
 
+  // ── I FILTRI DELLE CORSIE, SULLA RIGA DEI CONTEGGI ──────────────────
+  //
+  // Erano una riga a sé fra i conteggi e le testate delle colonne: tre
+  // livelli prima di vedere una comanda, per due pastiglie corte. Quella
+  // lavagna si guarda da lontano mentre si versa, e ogni riga sprecata è
+  // una comanda in meno a schermo.
+  //
+  // La riga dei conteggi è corta — «12 aperti · 40 chiusi · 380,00 €» — e
+  // ha spazio a destra: da lì in su i filtri ci stanno accanto, e la riga
+  // sparisce. Sul telefono no: lì la riga dei conteggi è già piena, e i
+  // filtri tornano sotto e scorrono in orizzontale come hanno sempre
+  // fatto. A dire da dove in su è la LAVAGNA (container query `corsie`),
+  // non la finestra: col menu agganciato ha 200-250px in meno.
+  //
+  // La regola della riga dei filtri resta quella di docs/navigazione.md:
+  // a sinistra quello che RESTRINGE la lista, a destra quello che CAMBIA
+  // VISTA, staccati da un margine automatico. Qui non cambia niente di
+  // quello che i filtri fanno: cambia solo dove stanno.
+  const filtriCorsie = (
+    <div className="chips-row chips-lavagna">
+      <button
+        className={`chip ${soloMiei ? 'active' : ''}`}
+        onClick={() => setSoloMiei((v) => !v)}
+        title="Solo i conti inseriti da te"
+      >
+        ✍️ Miei
+      </button>
+      {/* QUALI COLONNE TENERE A SCHERMO. A metà serata chi sta allo
+          shaker guarda «Da fare» e «Al banco», e le altre due gli
+          mangiano mezzo schermo per roba che in quel momento non lo
+          riguarda. È una scelta di QUESTO terminale e si ricorda. */}
+      {corsieBanco && (
+        <button
+          className={`chip ${nascoste.length > 0 ? 'active' : ''}`}
+          onClick={() => setScegliCorsie((v) => !v)}
+          aria-expanded={scegliCorsie}
+          title="Scegli quali colonne tenere a schermo"
+        >
+          ▦ Colonne
+        </button>
+      )}
+      {pastigliaComande}
+    </div>
+  )
+
   // IL CONTO ACCESO. Solo nel modo "evidenzia": è il primo che risponde
   // NELL'ORDINE IN CUI STA SULLO SCHERMO — non nell'ordine in cui arrivano
   // dal database, altrimenti si accende un conto e lo scorrimento va da
@@ -2002,6 +2047,11 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                 )}
               </div>
             )}
+            {/* I FILTRI DELLE CORSIE STANNO QUI, non in una riga loro: due
+                pastiglie corte non valgono un livello in più fra i
+                conteggi e le comande. Solo per le corsie — la griglia ne
+                ha sette, e una riga se la merita. */}
+            {corsieView && filtriCorsie}
           </div>
         </div>
       ) : (
@@ -2236,31 +2286,11 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
           {/* CORSIE DI STATO: una colonna per passo del lavoro, un tasto per
               card. Le azioni sono le STESSE della griglia — «avanti di uno»
               è `advance`, l'incasso è il pagamento del conto — perché una
-              vista è un modo di guardare, non un secondo modo di lavorare. */}
-          <div className="chips-row" style={{ margin: '8px 0 12px' }}>
-            <button
-              className={`chip ${soloMiei ? 'active' : ''}`}
-              onClick={() => setSoloMiei((v) => !v)}
-              title="Solo i conti inseriti da te"
-            >
-              ✍️ Miei
-            </button>
-            {/* QUALI COLONNE TENERE A SCHERMO. A metà serata chi sta allo
-                shaker guarda «Da fare» e «Al banco», e le altre due gli
-                mangiano mezzo schermo per roba che in quel momento non lo
-                riguarda. È una scelta di QUESTO terminale e si ricorda. */}
-            {corsieBanco && (
-              <button
-                className={`chip ${nascoste.length > 0 ? 'active' : ''}`}
-                onClick={() => setScegliCorsie((v) => !v)}
-                aria-expanded={scegliCorsie}
-                title="Scegli quali colonne tenere a schermo"
-              >
-                ▦ Colonne
-              </button>
-            )}
-            {pastigliaComande}
-          </div>
+              vista è un modo di guardare, non un secondo modo di lavorare.
+
+              I FILTRI NON SONO QUI: stanno sulla riga dei conteggi, in
+              testata (vedi `filtriCorsie`). Erano una riga a sé, e fra i
+              conteggi e la prima comanda c'erano tre livelli. */}
           {righeSottoChiusi(!corsieBanco)}
           {corsieBanco && scegliCorsie && (
             <div className="chips-row corsie-scelta" style={{ margin: '0 0 12px' }}>
