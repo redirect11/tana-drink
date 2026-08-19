@@ -145,8 +145,14 @@ test; un test appartiene a un requisito.
 
 ```sh
 node scripts/requisiti.mjs              # a che punto siamo
-node scripts/requisiti.mjs --documento  # scrive docs/requisiti.md
+node scripts/requisiti.mjs --documento  # rigenera la specifica di sistema
 ```
+
+Il documento che ne esce, [docs/requisiti.md](docs/requisiti.md), è **la
+specifica di sistema**: cosa fa l'app, area per area, coi test che lo
+dimostrano, i lavori previsti in un capitolo a parte e i difetti noti in
+fondo. È **generato** e non si tocca a mano — si tocca il registro e si
+rigenera, se no torna vecchio come era già successo (REQ-DEV-012).
 
 Tre stati che contano:
 
@@ -214,5 +220,5 @@ scarta l'updater e la cancellazione non avviene. Si salva in modo sincrono.
 | branch, merge, rilasci, cancello di qualità | [docs/gitflow.md](docs/gitflow.md) |
 | provare in locale | [docs/ambiente-locale.md](docs/ambiente-locale.md) |
 | Cloud Functions / SumUp | [docs/functions.md](docs/functions.md) |
-| capire cosa fa (o non fa) l'app | [requirements/requirements.yaml](requirements/requirements.yaml) + [requirements/bugs.yaml](requirements/bugs.yaml) |
+| capire cosa fa (o non fa) l'app | [docs/requisiti.md](docs/requisiti.md), la specifica — o i registri da cui nasce, [requirements/requirements.yaml](requirements/requirements.yaml) + [requirements/bugs.yaml](requirements/bugs.yaml) |
 | ragionare sul futuro del prodotto (federazione, white-label) | [docs/piano-sbrandizzazione.md](docs/piano-sbrandizzazione.md) |
