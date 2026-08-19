@@ -40,6 +40,9 @@ const EMPTY = {
   description: '',
   category_id: '',
   price: '',
+  // Vuoto = si usa l'IVA di vendita del locale. Un prodotto nuovo non deve
+  // chiedere niente a chi non ha eccezioni da scrivere.
+  sale_vat: '',
   recipe: '',
   available: true,
   image_url: null,
@@ -308,6 +311,7 @@ export default function MenuManager() {
         initial={editing === 'new' ? copiaDa || EMPTY : editing}
         categories={categories}
         inventory={inventory}
+        saleVatLocale={settings.sale_vat}
         onCreateCategory={handleCreateCategory}
         onCancel={chiudiForm}
         onSave={handleSave}

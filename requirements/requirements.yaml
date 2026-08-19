@@ -5371,11 +5371,26 @@ requirements:
       tutto si scorpora al 10% il netto di quello che si rivende con
       un'altra aliquota è gonfiato, e da quel netto scendono margine,
       incidenze e prime cost.
-    status: todo
+      FATTO (19/08). La scheda del prodotto ha il campo «IVA vendita %»
+      accanto al prezzo, e vuoto vuol dire «quella del locale»: chi non ha
+      eccezioni non compila niente. Sotto c'è scritto quale aliquota vale
+      lasciandolo vuoto, col numero.
+      UNO ZERO È UN'ALIQUOTA VERA (esente) e non «campo non compilato»: solo
+      `null` ripiega sul generale. Se i due casi finissero in un falsy, una
+      voce esente si scorporerebbe al 10% e il netto sarebbe più basso del
+      vero — un errore che non si vede.
+      NEL CALCOLO: `aliquotaDiVendita` (macroStats.js) sceglie per riga
+      quella della VOCE se c'è, quella del locale se no; una riga libera,
+      che la voce di catalogo non ce l'ha, usa il generale. Le didascalie
+      del Bilancio e la nota nelle Impostazioni lo dicono.
+    status: implemented
     generate_issue: true
     labels: [menu, prezzi, impostazioni]
     priority: P2
-    test_cases: []
+    test_cases:
+      - tests/unit/macroStats.test.js
+      - tests/unit/ricetteUnita.test.js
+      - tests/component/MenuManager.test.jsx
 
   - id: REQ-UI-022
     title: "Le categorie senza macro si vedono a colpo d'occhio, in magazzino e nel menù"

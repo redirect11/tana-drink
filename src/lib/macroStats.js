@@ -64,9 +64,24 @@ export function lineByMacro(line, drink, itemsById, menuCatToMacro, opts = {}) {
   const { costo } = lineCost(line, drink, itemsById, { gross: false })
   return {
     macro: macroOfDrink(drink, menuCatToMacro) || UNASSIGNED,
-    incasso: round2(lordo / (1 + (Number(saleVat) || 0) / 100)),
+    incasso: round2(lordo / (1 + aliquotaDiVendita(drink, saleVat) / 100)),
     costo: round2(costo),
   }
+}
+
+// QUALE IVA SCORPORA QUESTA RIGA. Quella della VOCE se ce l'ha, quella del
+// locale se no: nel menù c'è una categoria BOTTIGLIE, e una bottiglia
+// intera non si rivende come un drink servito al banco. Mettere tutto al
+// 10% gonfia il netto, e dal netto scendono margine, incidenze e prime
+// cost.
+//
+// UNO ZERO È UN'ALIQUOTA VERA (esente) e non vuol dire «non l'ho
+// compilata»: solo `null`/assente ripiega su quella del locale. Una riga
+// libera, senza voce di catalogo, la voce non ce l'ha e usa il generale.
+export function aliquotaDiVendita(drink, saleVat = 0) {
+  const propria = Number(drink?.sale_vat)
+  if (drink?.sale_vat != null && Number.isFinite(propria)) return propria
+  return Number(saleVat) || 0
 }
 
 // Somma le righe vendute nelle celle di un accumulatore Map → { incasso, costo }.
