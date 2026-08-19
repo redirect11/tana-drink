@@ -658,9 +658,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
     ensureNotificationPermission().then(async (ok) => {
       if (!ok || !uid) return
       const token = await getPushToken()
-      // Ruolo del TOKEN, non della persona: serve solo a distinguere i
-      // dispositivi al banco da quelli di sala quando si smistano le push.
-      if (token) saveStaffToken(uid, token, 'bartender', idDispositivo()).catch(() => {})
+      if (token) saveStaffToken(uid, token, idDispositivo()).catch(() => {})
     })
   }, [])
 

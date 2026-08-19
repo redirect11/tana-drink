@@ -110,23 +110,27 @@ self.addEventListener('push', (event) => {
         )
       }
 
-      // Ordine pronto da servire (push allo staff di sala): saltata solo
-      // se il gestionale è già visibile (lì la lista si aggiorna da sola).
+      // Drink pronto (da servire al tavolo o da consegnare al banco):
+      // saltata solo se il gestionale è DAVVERO sotto gli occhi, che
+      // lì la lista si aggiorna da sola.
+      //
+      // SI GUARDA LA VISIBILITÀ, NON IL FUOCO. Qui c'era un OR: bastava
+      // che la finestra risultasse `focused` per non mostrare niente. Ma
+      // il fuoco resta alla finestra anche a schermo spento, e un
+      // telefono lasciato aperto sulla coda — cioè come sta tutta la
+      // sera — ingoiava l'avviso senza che nessuno lo vedesse mai.
       if (payload.data?.kind === 'staff_serve') {
         const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
         const onBar = wins.some((w) => {
           try {
-            return (
-              (w.focused || w.visibilityState === 'visible') &&
-              new URL(w.url).pathname.startsWith('/bar')
-            )
+            return w.visibilityState === 'visible' && new URL(w.url).pathname.startsWith('/bar')
           } catch {
             return false
           }
         })
         if (onBar) return
         return self.registration.showNotification(
-          payload.data.title || '🫱 Drink pronti da servire',
+          payload.data.title || '🫱 Drink pronti',
           {
             body: payload.data.body || '',
             icon: './logo.png',
