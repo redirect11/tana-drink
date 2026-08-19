@@ -157,6 +157,16 @@ export const FILE_REQUISITI = join(
   'requirements.yaml'
 )
 
+// L'altro registro: i difetti veri. Stesso formato, letto dallo stesso
+// parser — chi vuole tutti e due (il documento della specifica) non deve
+// ricostruirsi il percorso a mano.
+export const FILE_BUGS = join(
+  dirname(fileURLToPath(import.meta.url)),
+  '..',
+  'requirements',
+  'bugs.yaml'
+)
+
 export function caricaRequisiti(file = FILE_REQUISITI) {
   return parseRequirementsYaml(readFileSync(file, 'utf8'))
 }
