@@ -6679,16 +6679,70 @@ body.pagina-piena .inv-scheda {
    pagina sola che scorre, per arrivare in fondo a «Da fare» ci si portava
    via anche le intestazioni delle altre tre, e la vista serve proprio a
    tenerle sott'occhio insieme.
-   Sul telefono no: quattro colonne larghe un pollice non sono usabili, e
-   lì la pagina torna a scorrere tutta insieme su due colonne. */
+
+   SUL TELEFONO LE CORSIE SI IMPILANO. Cinque o sei colonne una accanto
+   all'altra non ci stanno: ognuna diventa una striscia dove non entra
+   nemmeno il nome di un drink. Impilate, la colonna diventa una sezione —
+   col suo titolo e il suo totale — e si scorre in verticale, che è come si
+   tiene il telefono.
+
+   A DECIDERE È LA LARGHEZZA VERA DEL CONTENITORE (@container), non quella
+   della finestra e non il numero di corsie accese. La finestra mente in due
+   modi che al banco capitano tutti i giorni: col menu agganciato alla
+   pagina (da 768px in su, vedi docs/navigazione.md) la lavagna ha 200-250px
+   in meno di quello che dice la finestra, e col browser allo zoom lo stesso.
+   E contare gli elementi al posto dello spazio ha già spaccato il disegno
+   una volta: era BUG-021, le righe delle card su due colonne perché la
+   FINESTRA era larga mentre la card era una striscia. */
 .corsie {
   display: grid;
-  /* Quante colonne quante sono le corsie (--corsie-n, dal componente), ma
-     sul telefono mai più di due: tre o quattro colonne larghe un pollice
-     non si usano. */
-  grid-template-columns: repeat(min(2, var(--corsie-n, 2)), minmax(0, 1fr));
+  /* Di suo IMPILATE: una colonna sola. Le altre le accendono le soglie qui
+     sotto, quando lo spazio c'è davvero. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
   align-items: start;
+}
+
+/* La lavagna è il CONTENITORE su cui si misurano quelle soglie: lei sa
+   quanto spazio le è rimasto, la finestra no. Ha un nome perché dentro le
+   card ce n'è un altro (.corsia-righe-box) e le soglie non si devono
+   confondere. */
+.queue-board.corsie-board {
+  container: corsie / inline-size;
+}
+
+/* Due colonne: da qui in su una card resta larga abbastanza per leggerci
+   dentro un nome e un prezzo. Sotto — i 360-430px di un telefono — due
+   colonne sono due strisce. */
+@container corsie (min-width: 560px) {
+  .corsie {
+    grid-template-columns: repeat(min(2, var(--corsie-n, 2)), minmax(0, 1fr));
+  }
+}
+
+/* Impilate dentro una lavagna alta quanto la finestra (vedi il blocco a
+   901px): a scorrere dev'essere la pila, non la pagina — la pagina lì non
+   scorre, la lavagna è a tutto schermo e taglia quello che esce. */
+@container corsie (max-width: 899.98px) {
+  .corsie {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
+/* Tutte le corsie affiancate, e ognuna col suo scorrimento. */
+@container corsie (min-width: 900px) {
+  .corsie {
+    grid-template-columns: repeat(var(--corsie-n, 4), minmax(0, 1fr));
+    align-items: stretch;
+  }
+  .corsia-lista {
+    flex: 1;
+    overflow-y: auto;
+    /* Lo scorrimento di una corsia resta suo: arrivati in fondo non deve
+       trascinarsi dietro la pagina. */
+    overscroll-behavior: contain;
+  }
 }
 
 .corsia {
@@ -6814,21 +6868,17 @@ body.pagina-piena .inv-scheda {
   min-height: 44px;
 }
 
+/* QUESTA resta una media query, e a ragione: parla dell'ALTEZZA della
+   finestra, non della larghezza del contenitore. La lavagna sta tutta nella
+   finestra e non scorre; quante colonne farci dentro lo decidono le soglie
+   del contenitore, qui sopra. (Un elemento non può interrogare sé stesso
+   con una @container: la sua altezza va decisa da fuori.) */
 @media (min-width: 901px) {
   .corsie {
-    grid-template-columns: repeat(var(--corsie-n, 4), minmax(0, 1fr));
     /* La griglia prende quello che resta sotto la testata e non un pixel
-       di più: è dentro quell'altezza che le colonne scorrono. */
+       di più: è dentro quell'altezza che si scorre. */
     flex: 1;
     min-height: 0;
-    align-items: stretch;
-  }
-  .corsia-lista {
-    flex: 1;
-    overflow-y: auto;
-    /* Lo scorrimento di una corsia resta suo: arrivati in fondo non deve
-       trascinarsi dietro la pagina. */
-    overscroll-behavior: contain;
   }
   .queue-board.corsie-board {
     display: flex;

@@ -4562,10 +4562,20 @@ requirements:
       query), non sul numero di corsie accese: è la stessa lezione delle
       card, dove contare gli elementi al posto dello spazio disponibile
       aveva spaccato il disegno.
-    status: todo
+      FATTO in CSS, senza toccare i componenti: la testata di ogni corsia era
+      già titolo + totale, e impilarle basta a farne sezioni. La lavagna
+      (`.queue-board.corsie-board`) è il contenitore — `container: corsie /
+      inline-size` — e le soglie stanno in `@container`: una colonna sola
+      fino a 560px, due fino a 900px, tutte oltre. La finestra mente in due
+      modi che al banco capitano ogni sera: col menu agganciato alla pagina
+      la lavagna ha 200-250px in meno, e lo stesso col browser allo zoom.
+      Della vecchia `@media (min-width: 901px)` resta solo l'altezza della
+      lavagna, che è un'altra domanda (un elemento non può interrogare sé
+      stesso con una @container).
+    status: implemented
     generate_issue: true
     labels: [coda, ui, mobile]
-    test_cases: []
+    test_cases: [tests/unit/css.test.js]
 
   - id: REQ-STAFF-014
     title: "La sala serve, non prepara: gli stati delle comande non li tocca"
