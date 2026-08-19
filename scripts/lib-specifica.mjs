@@ -4,7 +4,7 @@
 //  QUESTO NON È PIÙ L'ELENCO DEI REQUISITI. L'elenco sta in
 //  requirements/requirements.yaml e su GitHub, che è dove si lavora;
 //  ricopiarlo tale e quale in un markdown non serviva a nessuno, e
-//  infatti docs/requisiti.md era rimasto indietro di quasi cento voci
+//  infatti la specifica (oggi docs/system_specifications.md) era rimasta indietro di quasi cento voci
 //  senza che se ne accorgesse nessuno.
 //
 //  Quello che mancava è una SPECIFICA: un posto dove si legge cosa fa il
