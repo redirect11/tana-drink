@@ -1193,7 +1193,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // dei conti (isChiuso, qui sopra).
   const corsie = corsieBanco
     ? []
-    : corsieDiStato(contiInCorsia, { isChiuso, workflowOn: false, sottoChiusi })
+    : corsieDiStato(contiInCorsia, { isChiuso, sottoChiusi })
   // Le colonne spente su questo terminale si tolgono qui, DOPO che sono
   // state riempite: così i conteggi non cambiano a seconda di cosa si
   // guarda, e riaccendendone una la si trova già piena.
@@ -2343,7 +2343,6 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
               contoToccato()
               navigate(`/ordine/${o.id}`)
             }}
-            onAvanza={advance}
             azioni={orderActions}
             aperta={corsiaAperta}
             onApriAzioni={setCorsiaAperta}
@@ -2354,9 +2353,6 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             // versione ridotta qui vorrebbe dire due casse che si comportano
             // in modo diverso.
             onIncassa={(o) => navigate(`/ordine/${o.id}?pagamento=1`)}
-            attesaPagamento={(o) =>
-              attesaPagamento(o, passoDiNascita)
-            }
           />
           )}
         </>
