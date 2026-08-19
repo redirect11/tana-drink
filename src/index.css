@@ -7023,6 +7023,72 @@ body.pagina-piena .inv-scheda {
   color: #ffd591;
 }
 
+/* IL COLORE DEL CONTO: UN PALLINO ACCANTO AL NUMERO.
+   Non la striscia a sinistra e non il fondo — quelli dicono a che punto sta
+   il lavoro, e chi vince fra i due sta scritto in lib/coloriConto.js. Un
+   pallino da 10px con un filo chiaro attorno: la tavolozza è la stessa
+   delle categorie, tinte sature che su fondo scuro reggono da sole e su
+   fondo chiaro avrebbero rischiato di sparire nel bordo della card.
+   L'anello è un color-mix col testo, quindi segue il tema invece di essere
+   un bianco che sul chiaro non si vede. */
+.pallino-conto {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 6px;
+  border-radius: 50%;
+  vertical-align: baseline;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--text) 30%, transparent);
+  flex-shrink: 0;
+}
+
+/* LA TAVOLOZZA DEL CONTO, dentro il ⋯ della card. Stessi gettoni del menù
+   e del POS (.menu-colore): stessa misura, stesso modo di dire qual è
+   scelto, e sul touch crescono come là. */
+.colori-conto {
+  margin-top: 8px;
+}
+
+.colori-conto-riga {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.colore-conto {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--btn-ink);
+  font-size: 0.7rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.colore-conto.active {
+  border-color: var(--text);
+  box-shadow: 0 0 0 2px rgba(127, 127, 140, 0.35);
+}
+
+/* «Nessun colore»: un gettone come gli altri, ma vuoto — un tasto scritto
+   in mezzo a dodici quadratini avrebbe mandato la fila a capo. */
+.colore-conto.niente {
+  background: transparent;
+  border-color: var(--line);
+  color: var(--muted);
+}
+
+@media (pointer: coarse) {
+  .colore-conto {
+    width: 34px;
+    height: 34px;
+  }
+}
+
 /* Il titolo di un gruppo di righe nel conto: «In preparazione», «Pronto»,
    «Pagati». Una riga smorta con un filo sopra: separa senza pesare, e non
    deve competere coi nomi dei drink che sta introducendo. */

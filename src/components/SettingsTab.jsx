@@ -810,6 +810,19 @@ export default function SettingsTab({ role = null }) {
                 onScegli={(v) => save({ bartender_view: v })}
               />
 
+              {/* IL COLORE DEL CONTO. Serve quando un conto si spezza in
+                  più comande che finiscono in colonne diverse: da lontano
+                  il pallino è l'unica cosa che dice che sono lo stesso
+                  tavolo. Il colore a mano si dà comunque, dal ⋯ della
+                  card, acceso o spento che sia questo interruttore. */}
+              <h4 style={{ margin: '16px 0 4px' }}>Il colore del conto</h4>
+              <ToggleRow
+                label="Ogni conto nuovo nasce col suo colore"
+                desc="Un pallino colorato accanto al numero, sulla card del conto e su tutte le card delle sue comande: due comande dello stesso conto si riconoscono anche da colonne diverse. Il colore si cambia o si toglie sempre dal «⋯ Azioni» della card, anche sui conti già aperti e anche con questo spento."
+                checked={settings.conti_colorati === true}
+                onChange={(v) => save({ conti_colorati: v })}
+              />
+
               <h4 style={{ margin: '16px 0 4px' }}>La ricerca</h4>
               <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
                 Cercando un numero, un nome, un tavolo o un drink: si può{' '}
