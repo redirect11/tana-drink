@@ -4742,4 +4742,5 @@ requirements:
     status: todo
     generate_issue: true
     labels: [stampa, impostazioni]
+    priority: P2
     test_cases: []
