@@ -188,6 +188,15 @@ con una prova a vuoto che dice cosa cambierebbe prima di toccare niente.
 
 ### Sotto il cofano
 
+- **La coda prepara la vista che stai guardando, non tutte e quattro.**
+  Griglia, corsie, lista e schede venivano rifatte a ogni ridisegno e se ne
+  mostrava una: con centoventi conti erano una diciottina di passate sulla
+  lista e quattro ordinamenti buttati, ogni volta che si premeva un tasto
+  nella ricerca, si apriva una card o arrivava qualcosa dal server. In una
+  serata piena sono centinaia. Adesso si calcola quella in pagina, e le tre
+  linguette in corso/chiusi/annullati si contano in un giro solo invece che
+  in sei.
+
 - **Via una vista che non esisteva.** Nel codice della coda c'erano ancora le
   quattro colonne del servizio sui CONTI — con tanto di «Da incassare» — e
   non le accendeva più niente: a tenerle in piedi erano soltanto i loro test,
