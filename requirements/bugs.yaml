@@ -1426,3 +1426,53 @@ bugs:
     severity: lieve
     priority: P3
     test_cases: [tests/unit/css.test.js]
+
+  - id: BUG-045
+    title: "Modificare un conto senza rete mostrava ancora i dati di prima"
+    area: "src/lib/api.js (ordineDopo, updateOrderItems, addComanda, bartenderUpdateComanda, cancelOrder, restoreOrder, setOrderGroup)"
+    description: >
+      Segnalato dall'utente il 19/08, e questa e' la frase che conta: «non
+      voglio aggiungere prodotti in un ordine quando non ho connessione e
+      non vedere i dati perche' non c'e' internet». Sintomo preciso: «gli
+      item dopo che ho aperto il conto non sono tutti e il costo e' errato
+      finche' non sincronizza».
+      LA CAUSA, una sola e ripetuta sei volte: le funzioni che toccano un
+      conto scrivevano in sottofondo (`bgWrite`) e poi RILEGGEVANO il
+      documento per restituirlo (`return mapOrder(await leggiOrdine(ref))`).
+      Ma la scrittura in sottofondo parte dopo — e' fire-and-forget — quindi
+      nell'istante della rilettura la cache contiene ancora la versione di
+      PRIMA. Chi rilegge, rilegge il passato: tre drink aggiunti e il totale
+      fermo, finche' non arriva lo snapshot dal server. Con la rete a terra
+      non arriva mai.
+      QUANTE: sei funzioni, tutte nel giro di una serata — la modifica dal
+      telefono del cliente, l'aggiunta al conto, la modifica dal banco,
+      l'annullo, la riapertura e il gruppo del conto.
+      RISOLTO COMPONENDO, non rileggendo: `ordineDopo(id, cur, patch)` monta
+      il conto aggiornato dal documento di partenza piu' la patch appena
+      mandata, e lo passa da `mapOrder` come se venisse dal server — la
+      forma dev'essere la stessa, chi lo riceve non deve sapere da dove
+      viene. `salvaComandeERifaiTotale` restituisce ora la patch intera
+      invece di due campi, cosi' chi la chiama puo' comporre.
+      IL TEST E' LA PARTE CHE VALE DI PIU', e va copiato per le prossime
+      volte: tests/unit/giroInLocale.test.js gira SENZA RETE nel modo piu'
+      cattivo possibile — ogni scrittura resta appesa per sempre, ogni
+      lettura risponde con quello che c'era prima. Non mocka
+      `src/lib/api.js`, mocka solo Firestore: quello che si prova e' il
+      codice vero. Senza la correzione quattro prove su sei falliscono.
+      E C'E' UNA GUARDIA SULLA REGOLA, non solo sul comportamento: un test
+      legge `api.js` e boccia qualunque `return mapOrder(await
+      leggiOrdine(...))`. Il difetto e' tornato piu' di una volta, sempre
+      per distrazione, e una regola scritta solo nella documentazione non
+      basta a fermarlo.
+      SCOLPITO ANCHE IN CLAUDE.md, in testa alle regole del mestiere: coda,
+      comande, nuovo ordine, modifica ordine, contanti e pagamenti lavorano
+      SOLO in locale, tutto il giro con la cassa aperta deve funzionare a
+      rete staccata, e i test lo devono dimostrare invece di darlo per
+      buono.
+    in_produzione: true
+    status: fixed
+    generate_issue: true
+    labels: [bug, local-first, ordini, pagamenti]
+    severity: grave
+    priority: P1
+    test_cases: [tests/unit/giroInLocale.test.js]

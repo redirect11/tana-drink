@@ -22,12 +22,12 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 156 | fatto e coperto dai test |
+| ✅ | 157 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | ⬜ | 21 | da fare |
 | 🗑 | 1 | non più valido |
 
-**193 voci** in tutto. **171** descrivono il sistema com'è oggi e
+**194 voci** in tutto. **172** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **21** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **6** difetti noti sono ancora aperti.
@@ -55,7 +55,7 @@ come «vero oggi», non come «garantito».
 | [Avvisi a schermo](#avvisi-a-schermo) | 2 | — | I messaggi a schermo dentro l’app — quelli che si leggono col vassoio in mano. |
 | [Persone: ruoli, utenze, ore](#persone-ruoli-utenze-ore) | 10 | 1 | Chi può fare cosa, chi è al banco, quante ore ha fatto e quanto prende. |
 | [Sicurezza](#sicurezza) | 2 | 1 | Regole di accesso, App Check, e cosa protegge cosa. |
-| [Si lavora anche senza rete](#si-lavora-anche-senza-rete) | 4 | — | Cosa continua a funzionare quando la rete non c’è, e come lo si vede. |
+| [Si lavora anche senza rete](#si-lavora-anche-senza-rete) | 5 | — | Cosa continua a funzionare quando la rete non c’è, e come lo si vede. |
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
 | [Integrazione SumUp](#integrazione-sumup) | 6 | — | Il dialogo con il terminale SumUp, dalle Cloud Functions. |
 | [Intelligenza artificiale](#intelligenza-artificiale) | — | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
@@ -1245,6 +1245,20 @@ Un nastro avvisa che si è senza rete e che si può continuare a lavorare; la ca
 La PWA resta aperta per giorni: l'app confronta la propria build con quella pubblicata e propone di aggiornare. Offline non dà falsi allarmi.
 
 **Dove**: `src/lib/appVersion.js` · **Lo dimostrano**: `tests/unit/appVersion.test.js`
+
+#### REQ-OFFLINE-006 — Il giro di una serata funziona a rete staccata, e i test lo dimostrano
+
+LA REGOLA PIU' IMPORTANTE DEL PROGETTO NON AVEVA UNA VOCE, e per questo si perdeva: stava nei commenti del codice e in un paragrafo di CLAUDE.md, ma nessun requisito la teneva ferma e nessun test la sorvegliava. E' stata violata piu' volte, sempre per distrazione, sempre con lo stesso danno (BUG-045 l'ultima).
+
+DETTA DALL'UTENTE il 19/08, e queste sono le sue parole: «coda ordini, comande, nuovo ordine, modifica ordine, contanti devono lavorare solo in locale. Tutto va aggiornato localmente. Le card si devono aggiornare subito, le liste anche quando si passa di stato, i pagamenti pure. Tutto locale e sincronizzazione in background». E ancora: «non voglio aggiungere prodotti in un ordine quando non ho connessione e non vedere i dati perche' non c'e' internet».
+
+COSA VUOL DIRE, in concreto: tutto il giro con la CASSA APERTA deve funzionare con la rete staccata. Si batte un ordine, si aggiungono righe, si avanza una comanda, si annulla, si incassa in contanti — e ogni gesto si vede sullo schermo nell'istante in cui si tocca. La sincronizzazione e' una cosa che succede dopo, in sottofondo, e nessuno la aspetta.
+
+LE QUATTRO REGOLE che ne scendono: 1) niente `await` prima di mostrare l'esito di un gesto — un `await` su una scrittura Firestore offline non torna mai;
+
+2) NON SI RILEGGE QUELLO CHE SI E' APPENA SCRITTO, si compone: la scrittura parte in sottofondo, quindi la rilettura prende la versione di prima. Si monta il risultato in memoria (`ordineDopo`) dal documento di partenza piu' la patch mandata; 3) se un dato serve e non c'e', si PRECARICA (progressivi.js), non lo si chiede in mezzo a un gesto; 4) le scritture partono in sottofondo (`bgWrite`), con l'indicatore di sincronizzazione a dire come sta andando. I TEST LO DEVONO DIMOSTRARE, non darlo per buono. Chi tocca queste schermate scrive un test che gira SENZA RETE: si mocka `firebase/firestore` in modo che ogni scrittura resti appesa per sempre e ogni lettura risponda con quello che c'era prima — che e' quello che fa davvero una cache mentre la scrittura e' in coda. NON si mocka `src/lib/api.js`: si proverebbe il mock invece del codice. Il modello da copiare e' tests/unit/giroInLocale.test.js. I test con la rete che risponde si fanno IN PIU', non al posto di quelli. E C'E' UNA GUARDIA NEL CODICE: un test legge api.js e boccia qualunque `return mapOrder(await leggiOrdine(...))`. Una regola scritta solo nella documentazione non ferma nessuno — questa e' tornata tre volte.
+
+**Dove**: `src/lib/api.js, src/lib/sync.js, tests/unit/giroInLocale.test.js, CLAUDE.md` · **Lo dimostrano**: `tests/unit/giroInLocale.test.js`, `tests/unit/incassoOffline.test.js`, `tests/unit/scritturaComande.test.js`
 
 ### Dati e ambienti
 

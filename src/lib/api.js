@@ -1077,6 +1077,24 @@ async function leggiDoc(ref) {
   return getDoc(ref)
 }
 
+// ── QUELLO CHE ABBIAMO APPENA SCRITTO, SENZA ANDARLO A CHIEDERE ──────
+//
+// Chi tocca un conto deve riavere indietro il conto TOCCATO, e deve
+// riaverlo subito. Rileggerlo non funziona, e non è una questione di
+// velocità: la scrittura parte in sottofondo (bgWrite), quindi nell'istante
+// in cui si rileggerebbe la cache contiene ancora la versione di prima.
+// Chi rilegge, rilegge il passato — e al banco vuol dire aggiungere tre
+// drink e vedere ancora il totale vecchio finché non torna la rete.
+//
+// Il conto nuovo però lo conosciamo già: è quello di partenza con sopra la
+// patch che abbiamo appena mandato. Si compone qui, e si passa da `mapOrder`
+// come se fosse arrivato dal server — perché la forma dev'essere la stessa:
+// chi lo riceve non deve sapere da dove viene.
+function ordineDopo(id, cur, patch) {
+  const dati = { ...cur, ...patch }
+  return mapOrder({ id, exists: () => true, data: () => dati })
+}
+
 async function leggiOrdine(ref) {
   try {
     const c = await getDocFromCache(ref)
@@ -2829,7 +2847,17 @@ function salvaComandeERifaiTotale(ref, cur, comande, etichetta, righe = null) {
       }),
     etichetta
   )
-  return { items, total }
+  // Si restituisce la PATCH INTERA, non i due campi: chi ha chiamato deve
+  // poter comporre il conto aggiornato senza rileggerlo, e per farlo gli
+  // serve tutto quello che è stato scritto.
+  return {
+    status: ORDER_OPEN,
+    comande,
+    comande_statuses: comandeStatuses(comande),
+    items,
+    total,
+    ...(sconto != null ? { discount_amount: sconto } : {}),
+  }
 }
 
 // Modifica del CLIENTE: consentita solo finché il conto ha la sola prima
@@ -2864,8 +2892,8 @@ export async function updateOrderItems(id, items) {
   comande[0] = { ...comande[0], items: mapped }
   // Le righe si scrivono come sono arrivate: qui la comanda è una sola
   // (lo garantisce il controllo qui sopra) e fonderle sarebbe una perdita.
-  salvaComandeERifaiTotale(ref, cur, comande, 'modifica ordine', mapped)
-  return mapOrder(await leggiOrdine(ref))
+  const patch = salvaComandeERifaiTotale(ref, cur, comande, 'modifica ordine', mapped)
+  return ordineDopo(id, cur, patch)
 }
 
 // Campi "anagrafici" del conto (nome, tavolo, note): modificabili dal
@@ -2876,6 +2904,10 @@ export async function updateOrderItems(id, items) {
 // prima del primo drink.
 export async function setOrderGroup(id, groupId) {
   const ref = doc(db, 'orders', id)
+  // Serve il conto com'è adesso per poter restituire quello aggiornato
+  // senza rileggerlo dopo la scrittura: `leggiOrdine` prende dalla cache, e
+  // offline è l'unica copia che c'è.
+  const cur = (await leggiOrdine(ref)).data() || {}
   let nome = null
   if (groupId) {
     try {
@@ -2885,11 +2917,9 @@ export async function setOrderGroup(id, groupId) {
       /* nome non leggibile: resta l'associazione, l'etichetta si rilegge dopo */
     }
   }
-  bgWrite(
-    () => updateDoc(ref, { group_id: groupId || null, group_name_snapshot: nome }),
-    'gruppo del conto'
-  )
-  return mapOrder(await leggiOrdine(ref))
+  const patchGruppo = { group_id: groupId || null, group_name_snapshot: nome }
+  bgWrite(() => updateDoc(ref, patchGruppo), 'gruppo del conto')
+  return ordineDopo(id, cur, patchGruppo)
 }
 
 export async function updateOrderInfo(id, { table_label, note, customer_name }) {
@@ -3014,14 +3044,14 @@ export async function addComanda(orderId, items, { note = null } = {}) {
     created_at: nowIso,
   }
   comande.push(nuova)
-  salvaComandeERifaiTotale(ref, cur, comande, 'aggiunta al conto')
+  const patch = salvaComandeERifaiTotale(ref, cur, comande, 'aggiunta al conto')
   // LE SCORTE NON SI SCALANO QUI. Aggiungere una riga al conto non vuol
   // dire aver versato niente: la riga si toglie, il conto si annulla, il
   // cliente cambia idea. Da adesso quegli ingredienti sono IMPEGNATI — si
   // vedono in magazzino, colonna «a fine serata» — e se ne vanno davvero
   // quando la comanda risulta servita (o, senza gli stati del servizio,
   // alla riscossione, che è il momento in cui tutto risulta servito).
-  return mapOrder(await leggiOrdine(ref))
+  return ordineDopo(orderId, cur, patch)
 }
 
 // ── PREPARAZIONE PARZIALE DI UNA COMANDA ─────────────────────
@@ -3173,10 +3203,10 @@ export async function bartenderUpdateComanda(orderId, comandaId, { items }) {
   const daRiallineare = comanda.inventory_applied === true
 
   comanda.items = newItems
-  salvaComandeERifaiTotale(ref, cur, comande, 'modifica comanda')
+  const patch = salvaComandeERifaiTotale(ref, cur, comande, 'modifica comanda')
   // Scorte dopo: se erano già state scalate si applica solo la differenza.
   if (daRiallineare) riallineaInSottofondo(orderId, comandaId)
-  return mapOrder(await leggiOrdine(ref))
+  return ordineDopo(orderId, cur, patch)
 }
 
 // Annulla un ordine. Se lo stock era già stato scalato lo ripristina dallo
@@ -3227,7 +3257,7 @@ export async function cancelOrder(id, opts = {}) {
   // mezzo secondo dopo — chi guarda, in quel mezzo secondo, non sa se
   // l'operazione è andata. Il resto si sistema subito dopo, per conto suo.
   const timbro = timbroChiusura(nowIso)
-  bgWrite(() => updateDoc(orderRef, {
+  const patchAnnullo = {
     status: ORDER_STATUSES.ANNULLATO,
     ...timbro,
     comande,
@@ -3248,7 +3278,8 @@ export async function cancelOrder(id, opts = {}) {
     cancel_phrase: phrase,
     cancel_message: message || null,
     cancel_notify: !!notifyClient,
-  }), 'annullo ordine')
+  }
+  bgWrite(() => updateDoc(orderRef, patchAnnullo), 'annullo ordine')
 
   // E ADESSO IL RESTO, per conto suo: le scorte tornano dentro e i buoni
   // tornano al loro posto. Sono letture di altri documenti, e aspettarle
@@ -3260,7 +3291,10 @@ export async function cancelOrder(id, opts = {}) {
   for (const b of buoniIncasso) {
     refundVoucher(b.voucher_id, b.amount, id, nowIso).catch(() => {})
   }
-  return mapOrder(await leggiOrdine(orderRef))
+  // Il conto annullato lo conosciamo gia': non si rilegge, si compone.
+  // Sulla coda l'annullo deve vedersi nell'istante del gesto, anche a
+  // rete ferma.
+  return ordineDopo(id, order, patchAnnullo)
 }
 
 // Rimette dentro quello che era stato scalato, dallo snapshot del consumo.
@@ -3379,15 +3413,18 @@ export async function restoreOrder(id, { motivo = null, chi = null } = {}) {
     motivo,
     chi,
   })
-  bgWrite(() => updateDoc(orderRef, {
+  const patchRiapertura = {
     status: ORDER_OPEN,
     ...patch,
     comande_statuses: comandeStatuses(patch.comande),
     // Solo se il buono non copriva più tutto: se copre, il conto resta
     // identico a com'era.
     ...(scontoRiscritto || {}),
-  }), 'ripristino conto')
-  return mapOrder(await leggiOrdine(orderRef))
+  }
+  bgWrite(() => updateDoc(orderRef, patchRiapertura), 'ripristino conto')
+  // Riaperto: si compone, non si rilegge. Riaprire un conto e vederlo
+  // ancora chiuso e' il difetto che questa riga evitava di avere.
+  return ordineDopo(id, data, patchRiapertura)
 }
 
 // --- REALTIME ---
