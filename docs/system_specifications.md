@@ -22,15 +22,15 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 143 | fatto e coperto dai test |
-| ⚠️  | 16 | fatto ma nessun test lo verifica |
+| ✅ | 144 | fatto e coperto dai test |
+| ⚠️  | 15 | fatto ma nessun test lo verifica |
 | ⬜ | 28 | da fare |
 | 🗑 | 1 | non più valido |
 
 **188 voci** in tutto. **159** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **28** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
-cosa che l'app fa; **8** difetti noti sono ancora aperti.
+cosa che l'app fa; **7** difetti noti sono ancora aperti.
 
 Le voci ⚠️ sono la parte scomoda: funzionano, ma **nessun test le tiene**.
 Sono quelle che si rompono senza che nessuno se ne accorga, e vanno lette
@@ -938,7 +938,9 @@ La stampante termica al banco: comande, scontrini, chiusure di cassa.
 
 Si stampa la comanda in lavorazione (con dentro le aggiunte appena fatte) e lo scontrino non fiscale del conto, con i metodi di pagamento davvero usati. Entrambe possono essere automatiche. Lo scontrino automatico esce UNA volta sola per conto, da qualunque schermata si chiuda — ma la prenotazione torna libera se la carta non è uscita e quando un conto viene riaperto, se no quel conto non stampa più (BUG-047).
 
-**Dove**: `src/lib/printer.js` · ⚠️ **Nessun test lo verifica.**
+IL LOGO IN CIMA è un di più: se non si carica, la carta esce lo stesso — uno scontrino senza logo è ancora uno scontrino, uno scontrino che non esce è un cliente che aspetta. E si tenta UNA VOLTA SOLA per sessione (BUG-032): prima ogni stampa rifaceva il caricamento e aspettava l'errore, e la carta usciva dopo ogni volta.
+
+**Dove**: `src/lib/printer.js` · **Lo dimostrano**: `tests/unit/logoScontrino.test.js`
 
 #### REQ-STAMPA-002 — La stampante non deve smettere di funzionare a metà serata
 
@@ -1783,7 +1785,6 @@ della correzione è il test citato nel requisito della sua area.
 | · | [BUG-029](#bug-029--il-magazzino-si-legge-da-una-porta-e-si-scrive-da-sette-finestre) — Il magazzino si legge da una porta e si scrive da sette finestre | grave | P1 |
 | · | [BUG-030](#bug-030--il-menù-del-cliente-decide-da-solo-come-si-consegna) — Il menù del cliente decide da solo come si consegna | grave | P1 |
 | · | [BUG-031](#bug-031--aprire-una-comanda-dal-banco-aspetta-il-ruolo-dal-server) — Aprire una comanda dal banco aspetta il ruolo dal server | media | P1 |
-| · | [BUG-032](#bug-032--il-logo-dello-scontrino-si-ritenta-a-ogni-stampa-se-manca) — Il logo dello scontrino si ritenta a ogni stampa se manca | lieve | P2 |
 | · | [BUG-035](#bug-035--nel-facsimile-dello-scontrino-lintestazione-non-è-centrata-come-sulla-carta) — Nel facsimile dello scontrino l'intestazione non è centrata come sulla carta | lieve | P3 |
 | 🔴 | [BUG-038](#bug-038--sulla-pwa-android-le-notifiche-arrivano-solo-accendendo-lo-schermo) — Sulla PWA Android le notifiche arrivano solo accendendo lo schermo | media | P2 |
 
@@ -1826,12 +1827,6 @@ Trovato dalla rilettura del diff della 1.5.0. La schermata della comanda resta s
 COME SI SISTEMA: il ruolo è già noto altrove (App, BartenderPage): tenerlo dove si legge senza rete e disegnare subito con l'ultimo valore noto; l'ordine può arrivare dalla card che l'ha già in mano.
 
 **Dove**: `src/pages/ComandaPage.jsx`
-
-#### BUG-032 — Il logo dello scontrino si ritenta a ogni stampa se manca
-
-Trovato dalla rilettura del diff della 1.5.0. La cache del logo usa `null` per dire due cose diverse — «mai provato» e «provato, non c'è» — quindi se `logo.png` manca o non è nella cache del service worker, ogni scontrino rifà il caricamento e aspetta l'errore prima di stampare. La carta esce dopo, ogni volta. Si sistema con un terzo valore (o un flag «già tentato»): due righe.
-
-**Dove**: `src/lib/printer.js`
 
 #### BUG-035 — Nel facsimile dello scontrino l'intestazione non è centrata come sulla carta
 

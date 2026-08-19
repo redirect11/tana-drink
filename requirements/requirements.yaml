@@ -2855,14 +2855,17 @@ requirements:
     description: >
       Si stampa la comanda in lavorazione (con dentro le aggiunte appena fatte) e
       lo scontrino non fiscale del conto, con i metodi di pagamento davvero usati.
-      Entrambe possono essere automatiche. Lo scontrino automatico esce UNA
-      volta sola per conto, da qualunque schermata si chiuda — ma la
-      prenotazione torna libera se la carta non è uscita e quando un conto
-      viene riaperto, se no quel conto non stampa più (BUG-047).
+      Entrambe possono essere automatiche.
+      IL LOGO IN CIMA è un di più: se non si carica, la carta esce lo stesso
+      — uno scontrino senza logo è ancora uno scontrino, uno scontrino che
+      non esce è un cliente che aspetta. E si tenta UNA VOLTA SOLA per
+      sessione (BUG-032): prima ogni stampa rifaceva il caricamento e
+      aspettava l'errore, e la carta usciva dopo ogni volta.
     status: implemented
     generate_issue: false
     labels: [stampa]
-    test_cases: [tests/unit/scontrinoUnaVolta.test.js, tests/unit/ristampaScontrino.test.js]
+    test_cases:
+      - tests/unit/logoScontrino.test.js
 
   - id: REQ-STAMPA-002
     title: "La stampante non deve smettere di funzionare a metà serata"

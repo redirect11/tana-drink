@@ -953,13 +953,19 @@ bugs:
       worker, ogni scontrino rifà il caricamento e aspetta l'errore prima
       di stampare. La carta esce dopo, ogni volta.
       Si sistema con un terzo valore (o un flag «già tentato»): due righe.
+      RISOLTO (19/08) col terzo valore: `undefined` vuol dire «mai
+      provato», `null` vuol dire «provato e non c'è». Si tenta una volta
+      sola per sessione, e dal secondo scontrino in poi la carta esce
+      subito. `logoPerStampa` è esportata apposta per la prova: il «una
+      volta sola» si dimostra solo contando i tentativi.
     in_produzione: false
-    status: todo
+    status: fixed
     generate_issue: true
     labels: [bug, stampa]
     severity: lieve
     priority: P2
-    test_cases: []
+    test_cases:
+      - tests/unit/logoScontrino.test.js
 
   - id: BUG-033
     title: "I passi del servizio si vedevano nel conto anche col servizio spento"
