@@ -33,6 +33,15 @@
   **comanda nuova**, invece di infilarsi in una che qualcuno sta già
   preparando. La regola vale anche sul database, non solo a schermo.
 
+- **Chi lavora entra nel conto, non nella pagina del cliente**: toccando un
+  ordine — dal banco o dalla sala, con o senza gli stati del servizio — si
+  apre la schermata del conto, quella con la griglia dei prodotti. Prima la
+  sala si ritrovava il riquadro «Il tuo numero», scritto per chi ordina, e
+  per aggiungere una birra doveva cercare un tasto in fondo alla pagina. La
+  schermata da girare al cliente resta: si apre dal ⋯ del conto, «Mostra al
+  cliente», e ha il QR per seguire l'ordine e un «✏️ Modifica» per tornare
+  al lavoro.
+
 - **«Mensile per macro» dice quanto rende davvero ogni gruppo del menù**: le
   righe sono le macro-categorie del **menù**, e ogni drink venduto ci conta
   intero — incasso e costo di tutti i suoi ingredienti insieme. La Schweppes
