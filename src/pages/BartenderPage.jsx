@@ -88,12 +88,14 @@ import {
   idAvvisoStato,
 } from '../lib/preferenzeNotifiche.js'
 import {
+  activeComanda,
   allServed,
   comandaDivisibile,
   contoChiuso,
   nextComandaStatus,
   statiPrimaComanda,
   statoComandaNuova,
+  statoDiLavoro,
 } from '../lib/comande.js'
 import { useComandeLocali } from '../lib/comandeLocali.js'
 import { paidAmount, orderTotal } from '../lib/pagamento.js'
@@ -560,9 +562,6 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // vuole ritrovare i propri accende il filtro.
   const [soloMiei, setSoloMiei] = useState(mieiIniziale)
 
-  // Avanzamenti OTTIMISTICI dalla card: lo stato cambia al tap, il server
-  // segue in background (in errore si torna allo stato reale).
-  const [queueOverrides, setQueueOverrides] = useState({}) // id -> workflow_status
   const [slowLoad, setSlowLoad] = useState(false)
   const [confirmAction, setConfirmAction] = useState(null) // { title, message, danger, run }
   const [cancelTarget, setCancelTarget] = useState(null) // { order, kind }
@@ -835,25 +834,35 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   function advance(order, stato = null) {
     const ns = stato || nextStatus(order.workflow_status)
     if (!ns || ns === order.workflow_status) return
-    setQueueOverrides((m) => ({ ...m, [order.id]: ns }))
     avanzatiDaMe.current.add(`${order.id}:${ns}`)
-    ;(async () => {
-      try {
-        await updateOrderStatus(order.id, ns)
-        // NIENTE rimozione qui: la scrittura risponde PRIMA che arrivi lo
-        // snapshot aggiornato, quindi togliere subito l'override farebbe
-        // riapparire per un attimo lo stato vecchio (il tasto "rimbalza").
-        // Lo toglie l'effetto sotto, quando il server ha davvero recepito.
-      } catch (e) {
-        setError(e.message)
-        showToast(`⚠️ Avanzamento non riuscito: ${e.message}`, { kind: 'error' })
-        setQueueOverrides((m) => {
-          const n = { ...m }
-          delete n[order.id]
-          return n
-        })
-      }
-    })()
+    // LA MEMORIA DI «L'HO APPENA FATTO IO» STA SULLE COMANDE, una sola per
+    // tutta la schermata. Prima qui c'era `queueOverrides`, che teneva lo
+    // stato del CONTO: si avanzava un conto dalla griglia e le sue comande
+    // restavano quelle del server, si avanzava un ticket dal banco e lo
+    // stato del conto restava quello del server. Con la pastiglia
+    // «🍸 Comande / 🧾 Ordini» le due viste stanno a un tocco di distanza
+    // sullo stesso terminale: si girava la pastiglia e il conto era ancora
+    // dov'era, finché non arrivava lo snapshot. Offline non arriva.
+    const attiva = activeComanda(comandeLocali.conComande(order))
+    if (attiva) {
+      const adesso = new Date().toISOString()
+      comandeLocali.applica(order, (comande) =>
+        comande.map((c) =>
+          c.id === attiva.id
+            ? { ...c, status: ns, status_times: { ...(c.status_times || {}), [ns]: adesso } }
+            : c
+        )
+      )
+    }
+    // La scrittura resta quella di sempre: il server sceglie la comanda
+    // attiva da sé, ed è la stessa che si è appena mossa qui.
+    updateOrderStatus(order.id, ns).catch((e) => {
+      setError(e.message)
+      showToast(`⚠️ Avanzamento non riuscito: ${e.message}`, { kind: 'error' })
+      // Non è passata: si torna a quello che dice il server, che è l'unica
+      // cosa vera.
+      comandeLocali.scarta(order.id)
+    })
   }
 
   // Porta AVANTI UNA COMANDA, non tutto il conto: è il gesto delle corsie
@@ -884,23 +893,6 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
       comandeLocali.scarta(order.id)
     })
   }
-
-  // L'override ottimistico vive finché il server non è allineato: appena
-  // l'ordine arriva con lo stato atteso (o più avanti), si toglie.
-  useEffect(() => {
-    setQueueOverrides((m) => {
-      if (Object.keys(m).length === 0) return m
-      const next = { ...m }
-      let changed = false
-      for (const o of orders) {
-        if (next[o.id] && o.workflow_status === next[o.id]) {
-          delete next[o.id]
-          changed = true
-        }
-      }
-      return changed ? next : m
-    })
-  }, [orders])
 
   // Annullamento bartender: apre il dialog con frase/motivazione/notifica.
   // kind: 'ordine' (ricevuto), 'preparazione' (in_preparazione),
@@ -957,12 +949,19 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
     )
   }
 
-  // Ordini "effettivi" a schermo: stato del server + override ottimistici.
-  const effOrders = orders.map((o) =>
-    queueOverrides[o.id] && o.workflow_status !== queueOverrides[o.id]
-      ? { ...o, workflow_status: queueOverrides[o.id] }
-      : o
-  )
+  // Ordini "effettivi" a schermo: quelli del server con sopra l'ultimo gesto
+  // fatto da questo terminale. Le comande sono la memoria, e lo stato del
+  // conto si RICAVA da quelle (statoDiLavoro): così le due viste — conti e
+  // comande — raccontano sempre la stessa cosa, anche offline.
+  const effOrders = orders.map((o) => {
+    const conLocali = comandeLocali.conComande(o)
+    if (conLocali === o) return o
+    return {
+      ...conLocali,
+      workflow_status: statoDiLavoro(conLocali),
+      active_comanda_id: activeComanda(conLocali)?.id ?? null,
+    }
+  })
   // ── DA CHIUDERE: conti rimasti aperti dalle giornate precedenti ──
   // Restano fuori dalla schermata principale (altrimenti si mescolano agli
   // ordini di oggi e i numeri del giorno sembrano duplicati): stanno nella
@@ -1166,14 +1165,13 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // la lista arrivava com'era, e premerlo non faceva niente di visibile —
   // un tasto che non risponde fa dubitare dell'app, non del tasto. L'ordine
   // vale per TUTTE le corsie insieme: si guarda la coda, non una colonna.
+  // Le comande sono già quelle di questo terminale: le mette effOrders, in
+  // cima alla catena, e da lì scendono a tutte le viste. Prima le rimetteva
+  // anche qui, e la vista dei conti — che stava su un'altra memoria — no.
   const contiInCorsia = corsieView
     ? perScheda.tutti
         .slice()
         .sort((a, b) => ((a.daily_number || 0) - (b.daily_number || 0)) * (ordineDesc ? -1 : 1))
-        // Le comande come le vede questo terminale: quelle del server con
-        // sopra l'ultimo gesto fatto da qui, finché lo snapshot non lo
-        // racconta.
-        .map(comandeLocali.conComande)
     : []
 
   // CHI GUARDA DECIDE COSA VEDE. Sono due domande diverse davanti allo

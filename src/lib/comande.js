@@ -84,6 +84,26 @@ export function activeComanda(order) {
   )
 }
 
+// ── LO STATO DI LAVORO DI UN CONTO ───────────────────────
+//
+// È quello che la coda mostra e fa avanzare, e NON è un campo suo: si
+// ricava dalle comande. Lo dà la comanda ATTIVA — quella al passo più
+// indietro — perché è lì che c'è ancora lavoro. Pagato e annullato invece
+// sono stati del CONTO, e vincono: i soldi presi non li rimette in
+// discussione una comanda.
+//
+// Sta qui, e non nella lettura da Firestore, perché serve anche a chi lo
+// ricalcola in locale: chi avanza un conto dalla coda vede subito l'esito,
+// e deve vedere lo STESSO stato che scriverà il server un istante dopo.
+export function statoDiLavoro(order) {
+  const stato = order?.status
+  if (stato === ORDER_STATUSES.PAGATO || stato === ORDER_STATUSES.ANNULLATO) return stato
+  const attiva = activeComanda(order)
+  if (attiva) return attiva.status
+  // Nessuna comanda aperta: se ce n'erano, sono tutte uscite.
+  return (order?.comande || []).length > 0 ? ORDER_STATUSES.RITIRATO : ORDER_STATUSES.RICEVUTO
+}
+
 // Un conto PAGATO risulta interamente servito: le comande ancora in
 // lavorazione passano a 'ritirato' (le annullate restano annullate, le
 // già servite non vengono toccate).
