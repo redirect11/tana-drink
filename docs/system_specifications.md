@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 151 | fatto e coperto dai test |
+| ✅ | 152 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
-| ⬜ | 24 | da fare |
+| ⬜ | 23 | da fare |
 | 🗑 | 1 | non più valido |
 
-**191 voci** in tutto. **166** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **24** sono lavori
+**191 voci** in tutto. **167** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **23** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **5** difetti noti sono ancora aperti.
 
@@ -59,7 +59,7 @@ come «vero oggi», non come «garantito».
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
 | [Integrazione SumUp](#integrazione-sumup) | 6 | — | Il dialogo con il terminale SumUp, dalle Cloud Functions. |
 | [Intelligenza artificiale](#intelligenza-artificiale) | — | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
-| [Interfaccia](#interfaccia) | 19 | 2 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
+| [Interfaccia](#interfaccia) | 20 | 1 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 12 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 
 ## Cosa fa il sistema
@@ -1364,6 +1364,20 @@ L'app installata si chiama «La Tana del Coniglio», non con la sigla del proget
 
 **Dove**: `src/lib/nomeApp.js, public/manifest.webmanifest` · **Lo dimostrano**: `tests/unit/nomeApp.test.js`
 
+#### REQ-UI-021 — Tre nomi per lo stesso passo del servizio
+
+Trovato dalla rilettura del diff della 1.5.0. Lo stesso passo si chiama in tre modi a seconda di dove lo si legge: «Pronto» nella tabella del servizio, «Pronto al servizio» nell'etichetta di stato, «Ritiro/Servizio» in testa alla colonna. Chi lavora vede tre parole per una cosa sola, ed è lo stesso guaio — più piccolo — della pastiglia che diceva «Ordine ricevuto» accanto alla colonna «Da fare».
+
+DA DECIDERE, non da semplificare in silenzio: si sceglie la parola e si aggiornano le tabelle e il loro test, oppure si tiene la differenza e si scrive nel commento perché lì serve più corta.
+
+DECISO (19/08): i nomi erano QUATTRO, non tre — c'era anche «È pronto» sul tasto della card. Al banco vince la più corta, «Pronto»: una testata di colonna si legge da lontano mentre si versa, e «Ritiro/Servizio» diceva DOVE VA il drink, che è un'altra domanda e ha già le sue due colonne quando il pronto si divide («Da servire» / «Da ritirare»).
+
+LE PAROLE DEL BANCO STANNO IN UN POSTO SOLO: `statoAlBanco` in orderStatus.js, che c'era già per la stessa ragione («Da fare» contro «Ordine ricevuto»). Adesso ci passano anche la testata della colonna, il tasto della card, le pastiglie di stato sulle card, le linguette per stato e la notifica allo staff.
+
+AL CLIENTE resta «Pronto al servizio» (STATUS_LABELS), ed è voluto: a lui «Pronto» da solo non dice se deve alzarsi o aspettare. Le due lingue restano due, e la differenza è scritta dove si legge.
+
+**Dove**: `src/lib/comande.js, src/lib/orderStatus.js` · **Lo dimostrano**: `tests/unit/paroleDelBanco.test.js`
+
 #### REQ-UI-022 — Le categorie senza macro si vedono a colpo d'occhio, in magazzino e nel menù
 
 DECISO (19/08, dall'utente che riporta Flavio).
@@ -1839,14 +1853,6 @@ Chiesto dall'utente il 18/08. Un conto con tre comande sparse in tre colonne div
 VINCOLI: il colore va SCRITTO sul conto, non ricalcolato dall'id — dev'essere lo stesso su ogni terminale e non deve cambiare se domani cambia la tavolozza. E dev'essere leggibile su tutti i temi, chiaro e scuro: non un fondo pieno sotto il testo, ma dove i colori già stanno in questa app (la striscia a sinistra, un pallino). Va deciso e scritto chi vince fra colore del conto e colore dello stato, invece di lasciarlo all'ordine delle regole CSS.
 
 **Dove**: `src/lib/api.js, src/components/CorsieComande.jsx, src/components/CorsieStato.jsx, src/components/SettingsTab.jsx`
-
-#### REQ-UI-021 — Tre nomi per lo stesso passo del servizio
-
-Trovato dalla rilettura del diff della 1.5.0. Lo stesso passo si chiama in tre modi a seconda di dove lo si legge: «Pronto» nella tabella del servizio, «Pronto al servizio» nell'etichetta di stato, «Ritiro/Servizio» in testa alla colonna. Chi lavora vede tre parole per una cosa sola, ed è lo stesso guaio — più piccolo — della pastiglia che diceva «Ordine ricevuto» accanto alla colonna «Da fare».
-
-DA DECIDERE, non da semplificare in silenzio: si sceglie la parola e si aggiornano le tabelle e il loro test, oppure si tiene la differenza e si scrive nel commento perché lì serve più corta.
-
-**Dove**: `src/lib/comande.js, src/lib/orderStatus.js`
 
 ### Come si lavora al progetto
 

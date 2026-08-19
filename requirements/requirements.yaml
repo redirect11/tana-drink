@@ -4751,11 +4751,25 @@ requirements:
       DA DECIDERE, non da semplificare in silenzio: si sceglie la parola e
       si aggiornano le tabelle e il loro test, oppure si tiene la
       differenza e si scrive nel commento perché lì serve più corta.
-    status: todo
+      DECISO (19/08): i nomi erano QUATTRO, non tre — c'era anche «È pronto»
+      sul tasto della card. Al banco vince la più corta, «Pronto»: una
+      testata di colonna si legge da lontano mentre si versa, e
+      «Ritiro/Servizio» diceva DOVE VA il drink, che è un'altra domanda e ha
+      già le sue due colonne quando il pronto si divide («Da servire» / «Da
+      ritirare»).
+      LE PAROLE DEL BANCO STANNO IN UN POSTO SOLO: `statoAlBanco` in
+      orderStatus.js, che c'era già per la stessa ragione («Da fare» contro
+      «Ordine ricevuto»). Adesso ci passano anche la testata della colonna,
+      il tasto della card, le pastiglie di stato sulle card, le linguette
+      per stato e la notifica allo staff.
+      AL CLIENTE resta «Pronto al servizio» (STATUS_LABELS), ed è voluto: a
+      lui «Pronto» da solo non dice se deve alzarsi o aspettare. Le due
+      lingue restano due, e la differenza è scritta dove si legge.
+    status: implemented
     generate_issue: true
     labels: [ui, comande]
     priority: P2
-    test_cases: []
+    test_cases: [tests/unit/paroleDelBanco.test.js]
 
   - id: REQ-CODA-004
     title: "Sul telefono le corsie si impilano, non si stringono"
