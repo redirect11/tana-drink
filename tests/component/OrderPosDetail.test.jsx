@@ -74,6 +74,7 @@ vi.mock('../../src/lib/printer.js', () => ({
   printScontrino: vi.fn(() => Promise.resolve()),
   printFattura: vi.fn(() => Promise.resolve()),
   loadPrinterSettings: vi.fn(() => ({ ivaRate: 10 })),
+  releaseReceiptPrint: vi.fn(),
 }))
 
 import OrderPosDetail from '../../src/components/OrderPosDetail.jsx'
@@ -448,6 +449,7 @@ describe('schermata Pagamento', () => {
       method: 'banco',
       items: null,
       autoServe: false,
+      chiude: true,
     })
   })
 
@@ -475,6 +477,7 @@ describe('schermata Pagamento', () => {
       method: 'banco',
       items: null,
       autoServe: false,
+      chiude: true,
     })
   })
 
