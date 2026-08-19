@@ -10,7 +10,6 @@ import {
 } from '../lib/api.js'
 import { categoryToMacro } from '../lib/macros.js'
 import { macroMonthlyReport } from '../lib/macroStats.js'
-import { IconCartelle } from './Icons.jsx'
 
 // ANDAMENTO MENSILE PER MACRO-CATEGORIA DI MENÙ: quanto ha incassato ogni
 // gruppo di voci del menù, quanto è costata la merce che ha venduto, che
@@ -126,7 +125,7 @@ function MacroBlock({ row, months }) {
   return (
     <div className="card" style={{ marginBottom: 12 }}>
       <div className="row between" style={{ alignItems: 'baseline', marginBottom: 6 }}>
-        <strong><IconCartelle /> {row.name}</strong>
+        <strong>🗂️ {row.name}</strong>
         <span className="muted small">
           Inc/Costo anno:{' '}
           <strong>{row.tot.rapporto != null ? `×${row.tot.rapporto}` : '—'}</strong>
