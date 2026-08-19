@@ -5481,16 +5481,33 @@ requirements:
       ordine. Devono diventare UNA PAGINA LORO, «Ordini e fatture», nel menu
       laterale e visibile SOLO ALL'ADMIN, con due sottosezioni: «Ordini» e
       «Fatture». Sono i soldi che escono dal locale, e non e' roba da turno.
-      IL LEGAME, che e' il cuore della richiesta: UNA FATTURA PAGA UN ORDINE.
+      IL LEGAME, che e' il cuore della richiesta: UNA FATTURA PAGA UN ORDINE
+      (e un ordine e' di UN fornitore solo).
       Dall'ordine si arriva alla sua fattura e viceversa; un ordine senza
       fattura si vede a colpo d'occhio (la merce e' arrivata ma il documento
       no), e una fattura senza ordine pure — sono le due cose che a fine mese
       fanno tornare o non tornare i conti con il commercialista.
-      DA DECIDERE PRIMA DI SCRIVERE (non e' stato detto, e non si indovina):
-      se il legame e' uno-a-uno stretto o se una fattura puo' coprire piu'
-      ordini dello stesso fornitore — nei fogli di Flavio un giro d'ordini
-      mette insieme piu' documenti (REQ-MAG-023), quindi il caso esiste
-      davvero.
+      TRE LIVELLI, NON DUE (precisato dall'utente il 19/08). Non e' una
+      fattura che copre piu' ordini: e' un GIRO D'ORDINI che ne contiene
+      diversi, UNO PER FORNITORE, e ogni fornitore manda la SUA fattura.
+      «Un giro di ordini, non un ordine. Sono piu' fatture perche' ci sono
+      diversi fornitori» — parole sue.
+      Quindi: giro -> N ordini (uno per fornitore) -> N fatture (una per
+      ordine). Il legame fattura-ordine resta uno-a-uno; quello che sta
+      sopra e' il giro, che tiene insieme la serata di ordinazione.
+      LO DICONO ANCHE I FOGLI, e adesso si spiegano: in GEN ORD REC ogni
+      foglio e' un giro e si chiama coi numeri dei documenti che lo compongono
+      («1410+1438+AGO+PAD+PIC», «nova+ago+picc»), col fornitore scritto
+      sull'ARTICOLO e non sull'ordine — un foglio solo, piu' fornitori
+      dentro (REQ-MAG-023).
+      COSA CAMBIA PER L'APP: oggi `purchase_orders` e' gia' UN ORDINE PER
+      FORNITORE, quindi quel livello c'e' e non si tocca. Manca il giro
+      sopra: si guarda il fabbisogno una volta sola e ne escono N ordini
+      insieme, che poi vivono ognuno per conto suo (arriva, si carica, si
+      fattura). Da decidere se il giro e' un dato scritto (una collezione
+      sua, che tiene la data e i suoi ordini) o solo un modo di crearli in
+      blocco: la prima strada permette di chiedersi «quanto e' costato il
+      giro di martedi'», la seconda costa meno.
       IL CARICO AL RICEVIMENTO C'E' GIA' e non va rifatto: receivePurchaseOrder
       in api.js, quando l'ordine passa a «ricevuto», alza la giacenza riga per
       riga (confezioni x contenuto, o pezzi), aggiorna le bottiglie totali e
