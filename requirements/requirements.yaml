@@ -4512,11 +4512,25 @@ requirements:
       identiche a due righe di distanza), e ognuna è tre filtri in fila.
       COME: memorizzare le tre catene e smistare le schede una volta sola.
       Non cambia niente di quello che si vede.
-    status: todo
+      FATTO (19/08), e in un modo diverso da quello scritto qui: ogni catena
+      ha la sua GUARDIA sulla vista che è in pagina, invece di un `useMemo`.
+      Il risultato è lo stesso — si prepara la vista che si guarda, non tutte
+      e quattro — e le schede si smistano in una passata sola con
+      `contiPerScheda` (una divisione della stessa lista: prima erano sei
+      giri di tre filtri per disegno).
+      PERCHÉ NON `useMemo`: sarebbe stato un hook dopo l'uscita anticipata
+      del caricamento (regola dei hook), e soprattutto le corsie leggono
+      `comandeLocali`, un magazzino locale che cambia SENZA che cambi
+      nessuno degli ingressi che un `useMemo` guarderebbe. Una corsia
+      rimasta indietro al banco costa più di una passata rifatta: chi ha
+      appena avanzato un ticket lo rivedrebbe dov'era. Se un giorno serve
+      davvero la memoria fra un disegno e l'altro, prima va reso osservabile
+      quel magazzino.
+    status: implemented
     generate_issue: true
     labels: [manutenzione, prestazioni, coda]
     priority: P1
-    test_cases: []
+    test_cases: [tests/unit/schedeCoda.test.js]
 
   - id: REQ-DEV-008
     title: "Scritture che rileggono l'ordine per un valore che nessuno guarda"

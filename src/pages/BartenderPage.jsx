@@ -39,6 +39,8 @@ import {
   inseritiDa,
   restaInCoda,
   ordiniInCoda,
+  contiPerScheda,
+  SCHEDE_VUOTE,
   voceCassa,
   comandeDaServire,
   haLavoroDaFare,
@@ -1107,19 +1109,34 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // (placed_by): vale per ogni vista della coda, griglia o lista.
   const emailMia = auth.currentUser?.email || ''
   const visibleOrders = soloMiei ? inseritiDa(visibleOrdersTutti, emailMia) : visibleOrdersTutti
-  const buckets = bucketByStatus(visibleOrders)
   const listView = settings.queue_view === 'lista'
+  // ── SI CALCOLA LA VISTA CHE SI GUARDA, NON TUTTE E TRE ─────────
+  //
+  // Qui dentro convivono quattro modi di guardare la stessa coda — griglia,
+  // corsie, lista unica, schede — e se ne mostra UNO. Venivano preparati
+  // tutti a ogni disegno: con 120 conti erano circa diciotto passate
+  // complete sulla lista e quattro ordinamenti, buttati via tre volte su
+  // quattro. E ridisegnare capita a ogni tasto premuto nella ricerca, a
+  // ogni card aperta, a ogni snapshot dal server: in una serata piena sono
+  // centinaia.
+  //
+  // Adesso ogni catena ha la sua guardia. Quella non in pagina resta vuota,
+  // e chi la legge — sempre da dentro il suo ramo di JSX — non se ne
+  // accorge.
+  const vistaSchede = !gridView && !corsieView && !listView
+  const buckets = listView || vistaSchede ? bucketByStatus(visibleOrders) : {}
   const list = buckets[statusTab] || []
   // Vista a lista unica: ordini in corso (per numero) + evasi.
-  const inCorso = [
-    ...(buckets[ORDER_STATUSES.RICEVUTO] || []),
-    ...(buckets[ORDER_STATUSES.IN_PREPARAZIONE] || []),
-    ...(buckets[ORDER_STATUSES.PRONTO] || []),
-  ].sort((a, b) => (a.daily_number || 0) - (b.daily_number || 0))
-  const evasi = [
-    ...(buckets[ORDER_STATUSES.RITIRATO] || []),
-    ...(buckets[ORDER_STATUSES.PAGATO] || []),
-  ]
+  const inCorso = listView
+    ? [
+        ...(buckets[ORDER_STATUSES.RICEVUTO] || []),
+        ...(buckets[ORDER_STATUSES.IN_PREPARAZIONE] || []),
+        ...(buckets[ORDER_STATUSES.PRONTO] || []),
+      ].sort((a, b) => (a.daily_number || 0) - (b.daily_number || 0))
+    : []
+  const evasi = listView
+    ? [...(buckets[ORDER_STATUSES.RITIRATO] || []), ...(buckets[ORDER_STATUSES.PAGATO] || [])]
+    : []
   // Vista a griglia: di default gli ordini in corso; col filtro si vedono
   // anche i chiusi/pagati o TUTTI gli ordini in vista.
   const isClosed = isChiuso
@@ -1129,29 +1146,30 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // Le tre schede della vista a schede SENZA stati di servizio: contate e
   // riempite con le stesse regole della griglia.
   const schedeSemplici = schedeCoda(workflowOn)
-  const contiScheda = (filtro) =>
-    ordiniInCoda(visibleOrders, {
-      filtro,
-      isChiuso: isClosed,
-      cassa: cassaAperta?.id ?? null,
-      apertaDa: cassaAperta?.opened_at ?? null,
-      giornataDi: dayOf,
-      oggi: oggiKey,
-    })
-  const boardOrders = ordiniInCoda(
-    visibleOrders,
-    {
-      filtro: boardFilter,
-      sottoChiusi,
-      isChiuso: isClosed,
-      cassa: cassaAperta?.id ?? null,
-      apertaDa: cassaAperta?.opened_at ?? null,
-      giornataDi: dayOf,
-      oggi: oggiKey,
-    }
-  )
-    .slice()
-    .sort((a, b) => ((a.daily_number || 0) - (b.daily_number || 0)) * (ordineDesc ? -1 : 1))
+  // Cosa resta in coda per QUESTA apertura di cassa: le opzioni sono le
+  // stesse per tutte le viste, e scriverle una volta è anche il modo di non
+  // farle divergere.
+  const restaInCodaOpts = {
+    isChiuso: isClosed,
+    cassa: cassaAperta?.id ?? null,
+    apertaDa: cassaAperta?.opened_at ?? null,
+    giornataDi: dayOf,
+    oggi: oggiKey,
+  }
+  // LE SCHEDE, SMISTATE UNA VOLTA SOLA. Servono alle linguette (tre
+  // conteggi), alla scheda aperta e alle corsie: erano sei giri di tre
+  // filtri sulla stessa lista, adesso è uno.
+  const perScheda =
+    corsieView || vistaSchede ? contiPerScheda(visibleOrders, restaInCodaOpts) : SCHEDE_VUOTE
+  const boardOrders = gridView
+    ? ordiniInCoda(visibleOrders, {
+        ...restaInCodaOpts,
+        filtro: boardFilter,
+        sottoChiusi,
+      })
+        .slice()
+        .sort((a, b) => ((a.daily_number || 0) - (b.daily_number || 0)) * (ordineDesc ? -1 : 1))
+    : []
   // Ordini POS in invio. Finché il placeholder è attivo l'ordine reale
   // resta nascosto: il match usa il client_temp_id scritto sull'ordine
   // (deterministico anche se lo snapshot arriva PRIMA che il placeholder
@@ -1163,7 +1181,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
       !pendingRealIds.has(o.id) &&
       !(o.client_temp_id && pendingTempIds.has(o.client_temp_id))
   )
-  const boardGroups = groupByDay(visibleBoard)
+  const boardGroups = gridView ? groupByDay(visibleBoard) : []
   // LE CORSIE DI STATO: partono dalla stessa lista delle altre viste —
   // quello che resta in coda per questa apertura di cassa, già passato per
   // ricerca e «Miei» — e la smistano. Le regole di cosa sta dove stanno in
@@ -1172,12 +1190,15 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // la lista arrivava com'era, e premerlo non faceva niente di visibile —
   // un tasto che non risponde fa dubitare dell'app, non del tasto. L'ordine
   // vale per TUTTE le corsie insieme: si guarda la coda, non una colonna.
-  const contiInCorsia = contiScheda('tutti')
-    .slice()
-    .sort((a, b) => ((a.daily_number || 0) - (b.daily_number || 0)) * (ordineDesc ? -1 : 1))
-    // Le comande come le vede questo terminale: quelle del server con sopra
-    // l'ultimo gesto fatto da qui, finché lo snapshot non lo racconta.
-    .map(comandeLocali.conComande)
+  const contiInCorsia = corsieView
+    ? perScheda.tutti
+        .slice()
+        .sort((a, b) => ((a.daily_number || 0) - (b.daily_number || 0)) * (ordineDesc ? -1 : 1))
+        // Le comande come le vede questo terminale: quelle del server con
+        // sopra l'ultimo gesto fatto da qui, finché lo snapshot non lo
+        // racconta.
+        .map(comandeLocali.conComande)
+    : []
 
   // CHI GUARDA DECIDE COSA VEDE. Sono due domande diverse davanti allo
   // stesso schermo, e rispondere a tutti e due con la stessa vista vuol
@@ -2423,12 +2444,12 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                 className={`tab ${tabSemplice === k ? 'active' : ''}`}
                 onClick={() => setTabSemplice(k)}
               >
-                {label} ({contiScheda(k).length})
+                {label} ({perScheda[k].length})
               </div>
             ))}
           </div>
 
-          {contiScheda(tabSemplice).length === 0 && (
+          {perScheda[tabSemplice].length === 0 && (
             <div className="empty">
               {tabSemplice === 'attivi'
                 ? 'Nessun conto in corso.'
@@ -2437,7 +2458,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                   : 'Nessun conto annullato in questa cassa.'}
             </div>
           )}
-          {contiScheda(tabSemplice).map(renderCard)}
+          {perScheda[tabSemplice].map(renderCard)}
         </>
         ) : (
         <>
