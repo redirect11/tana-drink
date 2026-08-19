@@ -4607,12 +4607,15 @@ requirements:
     test_cases: []
 
   - id: REQ-DEV-012
-    title: "docs/requisiti.md e' la specifica di sistema, e si genera"
-    area: "scripts/lib-specifica.mjs, scripts/requisiti.mjs, docs/requisiti.md"
+    title: "docs/system_specifications.md e' la specifica di sistema, e si genera"
+    area: "scripts/lib-specifica.mjs, scripts/requisiti.mjs, docs/system_specifications.md"
     description: >
       Chiesto dall'utente il 19/08: «requisiti.md dovrebbe diventare la
       specifica di sistema dato che i requisiti li abbiamo in
-      requirements.yaml e su GitHub». Il documento era lo specchio del
+      requirements.yaml e su GitHub» — e a stretto giro, sempre lui, il
+      file e' stato rinominato in system_specifications.md, perche' il
+      nome dicesse cos'e' (la specifica) e non da dove nasce (i requisiti).
+      Il documento era lo specchio del
       registro — le stesse voci, nello stesso ordine, con dentro meno cose —
       e come tutti gli specchi scritti a mano era rimasto indietro: 94 voci
       raccontate su 187 esistenti, per mesi, senza che nessuno se ne

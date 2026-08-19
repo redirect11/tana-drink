@@ -3,7 +3,7 @@
 //  I REQUISITI, LETTI E RACCONTATI.
 //
 //    node scripts/requisiti.mjs                 # riepilogo a schermo
-//    node scripts/requisiti.mjs --documento     # scrive docs/requisiti.md
+//    node scripts/requisiti.mjs --documento     # scrive docs/system_specifications.md
 //
 //  requirements/requirements.yaml è l'elenco; i test dicono quali di
 //  quei requisiti sono davvero dimostrati. Da qui si vede a colpo
@@ -49,7 +49,7 @@ if (!DOCUMENTO) {
     console.log('\n  Da fare:')
     for (const r of daFare) console.log(`   · ${r.id.padEnd(20)} ${r.title}`)
   }
-  console.log('\n  --documento per scrivere docs/requisiti.md\n')
+  console.log('\n  --documento per scrivere docs/system_specifications.md\n')
   process.exit(0)
 }
 
@@ -63,7 +63,7 @@ try {
   bug = []
 }
 
-const file = 'docs/requisiti.md'
+const file = 'docs/system_specifications.md'
 if (!existsSync(dirname(file))) mkdirSync(dirname(file), { recursive: true })
 writeFileSync(file, costruisciSpecifica(requisiti, { bug }))
 

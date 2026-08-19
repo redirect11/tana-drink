@@ -2,7 +2,7 @@
 
 // LA SPECIFICA DI SISTEMA SI GENERA, E DEVE RESTARE UNA SPECIFICA.
 //
-// docs/requisiti.md era lo specchio del registro, e come tutti gli specchi
+// docs/system_specifications.md (allora docs/requisiti.md) era lo specchio del registro, e come tutti gli specchi
 // scritti a mano era rimasto indietro: 94 voci raccontate su 187 esistenti,
 // per mesi, senza che nessuno se ne accorgesse. Adesso è generato — ma
 // «generato» da solo non basta: la forma è quello che lo rende utile, e la
