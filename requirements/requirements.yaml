@@ -4881,9 +4881,14 @@ requirements:
       fine mese, non da serata. Chi apre le Statistiche vuole sapere com'è
       andata ieri, chi apre il Bilancio com'è andato il mese — due mestieri
       diversi, anche se i numeri escono dalla stessa cassa.
+      DIPENDE DA REQ-CASSA-010: il trasloco ha bisogno della pagina
+      «Bilancio» dove andare, quindi si fa dopo — o nello stesso giro. Le due
+      incidenze invece non dipendono da niente: sono due divisioni su numeri
+      che la tabella ha già in mano, e si possono aggiungere anche prima.
     status: todo
     generate_issue: true
     labels: [statistiche, metodo]
+    priority: P1
     test_cases: []
 
   - id: REQ-MAG-022
@@ -4961,9 +4966,18 @@ requirements:
       banco, e se i numeri che si stanno guardando sono al lordo o al netto
       dell'IVA — con due letture commutabili, sapere quale è aperta non è un
       dettaglio.
+      DIPENDE DA REQ-CASSA-010 (la pagina che la ospita) e, per come si
+      legge, da REQ-MAG-021 (P3, fermo finché non hanno risposta le cinque
+      domande sui lotti): finché quello non è deciso un acquisto pesa sul
+      mese in cui è ENTRATO e non su quello in cui si consuma, e la
+      didascalia deve dirlo. Ma il vincolo che conta non è codice: la tabella
+      resta vuota finché gli ordini fornitore non passano davvero dall'app,
+      e dello storico 2026 non si ricostruisce niente. Per questo non è
+      lavorabile adesso.
     status: todo
     generate_issue: true
     labels: [magazzino, statistiche, fornitori]
+    priority: P2
     test_cases: []
 
   - id: REQ-STAFF-015
@@ -5037,9 +5051,14 @@ requirements:
       LE SPESE DEL MESE, che nel foglio sono una riga sola battuta a mano,
       vivono per conto loro in REQ-CASSA-012: senza quelle il netto del mese
       non esiste.
+      DIPENDE DA REQ-CASSA-011 per il posto dove il minimo si legge giorno
+      per giorno, e quella a sua volta dalla pagina REQ-CASSA-010. La formula
+      invece non aspetta nessuno: è decisa, e ore e paghe l'app le ha già
+      per intero (REQ-STAFF-006).
     status: todo
     generate_issue: true
     labels: [statistiche, staff, ore, serata]
+    priority: P2
     test_cases: []
 
   - id: REQ-MAG-023
@@ -5093,9 +5112,15 @@ requirements:
       dice tre), e se il numero è uguale per tutti o cambia per fornitore —
       chi consegna una volta al mese e chi due volte a settimana non si
       ordinano con la stessa regola.
+      DIPENDE DA REQ-MAG-024: la quantità da proporre nasce dal consumo a
+      settimana, che oggi l'app non calcola. E dipende da una risposta che
+      non è ancora arrivata — quante settimane si vogliono coprire, e se il
+      numero vale per tutti i fornitori: è il numero che decide quanta merce
+      entra dalla porta, e indovinarlo si paga in magazzino.
     status: todo
     generate_issue: true
     labels: [magazzino, fornitori]
+    priority: P2
     test_cases: []
 
   - id: REQ-MAG-024
@@ -5124,9 +5149,14 @@ requirements:
       sbagliarlo dimenticandosene. Dove le conte sono meno di due, o troppo
       vicine per dire qualcosa, il numero non si mostra invece di mostrarne
       uno finto: un consumo inventato manda a ordinare merce che non serve.
+      NON DIPENDE DA NIENTE: le conte hanno già la loro data e
+      `stockCountCompute` calcola già il consumo del periodo — qui si
+      aggiunge una divisione e una colonna. Si può partire subito, ed è il
+      pezzo che serve prima di REQ-MAG-023.
     status: todo
     generate_issue: true
     labels: [magazzino, metodo]
+    priority: P2
     test_cases: []
 
   # ══════════════════════════════════════════════════════════════════════
@@ -5188,9 +5218,12 @@ requirements:
       numero a cui si riferisce. Non in un manuale, non in una nota a fondo
       pagina: chi guarda un totale che non torna deve trovare il perché nel
       punto in cui se lo chiede.
+      NON DIPENDE DA NIENTE, ed è il contenitore: finché la pagina non
+      esiste le tre sottosezioni non hanno dove stare. Si parte da qui.
     status: todo
     generate_issue: true
     labels: [statistiche, navigazione, ruoli]
+    priority: P1
     test_cases: []
 
   - id: REQ-CASSA-011
@@ -5237,9 +5270,14 @@ requirements:
       torna. Gli acquisti del mese restano dove stanno — la tabella
       «Acquisti × Fatturato» (REQ-MAG-022) — e con la prime cost non
       c'entrano.
+      DIPENDE DA REQ-CASSA-010 (la pagina), da REQ-CASSA-012 (senza le spese
+      il netto del mese non esiste) e da REQ-STAFF-015 (senza il minimo
+      restano due colonne su tre). Stipendi e costo del venduto invece ci
+      sono già: REQ-STAFF-006 e REQ-MAG-015.
     status: todo
     generate_issue: true
     labels: [statistiche, serata, staff]
+    priority: P2
     test_cases: []
 
   - id: REQ-CASSA-012
@@ -5264,9 +5302,13 @@ requirements:
       lo stesso tutti i mesi) si possa riportare sul mese dopo invece di
       riscriverla. Non è stato chiesto: si guarda dopo aver visto quante
       spese si scrivono davvero in un mese.
+      DIPENDE DA REQ-CASSA-010 per dove si scrivono e dove si sommano; la
+      collezione e il modulo d'inserimento non aspettano nessun altro. È il
+      primo pezzo da fare dei due che sbloccano REQ-CASSA-011.
     status: todo
     generate_issue: true
     labels: [statistiche, cassa]
+    priority: P2
     test_cases: []
 
   - id: REQ-MENU-013
@@ -5303,9 +5345,15 @@ requirements:
       stessa cosa di un drink servito al banco. Mettere tutto al 10% gonfia
       il netto, e il netto è il numero da cui scendono margine, prime cost e
       il conto di fine mese.
+      NON DIPENDE DA NIENTE: il lato acquisto è già fatto e `sale_vat` c'è.
+      Conviene però che arrivi PRIMA delle tabelle del Bilancio: finché
+      tutto si scorpora al 10% il netto di quello che si rivende con
+      un'altra aliquota è gonfiato, e da quel netto scendono margine,
+      incidenze e prime cost.
     status: todo
     generate_issue: true
     labels: [menu, prezzi, impostazioni]
+    priority: P2
     test_cases: []
 
   - id: REQ-UI-022
@@ -5343,7 +5391,11 @@ requirements:
       sulla categoria (un campo in più, e una spiegazione da scrivere) o
       basti che l'elenco si legga bene. Il secondo costa zero ma lascia il
       dubbio ogni volta che qualcuno di nuovo guarda quella lista.
+      NON DIPENDE DA NIENTE: `groupCategoriesByMacro` torna già
+      `unassigned`, il lavoro sta negli elenchi delle categorie. Piccolo, e
+      utile proprio adesso che le macro si stanno mappando.
     status: todo
     generate_issue: true
     labels: [ux, magazzino, menu]
+    priority: P3
     test_cases: []
