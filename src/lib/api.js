@@ -2675,6 +2675,12 @@ export async function advanceComanda(orderId, comandaId, newStatus) {
     status: norm.status,
     comande,
     comande_statuses: comandeStatuses(comande),
+    // DA QUALE TERMINALE E' PARTITO L'AVANZAMENTO. Serve alla Cloud
+    // Function che avvisa gli altri quando un drink e' pronto: chi ha
+    // appena premuto il tasto non ha bisogno che il telefono gli squilli
+    // in mano. Sta sul conto e non sulla comanda perche' la funzione
+    // guarda il documento, e l'ultimo che l'ha toccato e' quello giusto.
+    avanzamento_device: idDispositivo(),
   }
   // Conto già pagato (online/lettore) e tutte le comande servite: il conto
   // si chiude da solo (c'è anche la cintura lato server).
@@ -3702,8 +3708,18 @@ export async function deleteStaffShift(id) {
 // stesso account sono due righe, e tutti e due vengono avvisati.
 // Senza id dispositivo (memoria locale non disponibile) si ripiega
 // sull'uid, che è meglio di niente.
-export async function saveStaffToken(uid, token, role = null, device = null) {
-  const riga = { uid, token, role, device: device || null, updated_at: serverTimestamp() }
+//
+// NIENTE RUOLO SULLA RIGA. C'era un campo `role`, e chi mandava le push
+// lo usava per smistarle — il «pronto da servire» solo ai dispositivi
+// 'staff'. Ma non era il ruolo di nessuno: era il nome della SCHERMATA
+// che aveva registrato il dispositivo per ultima, e siccome si finisce
+// tutti sulla coda, ci finiva scritto sempre 'bartender'. Il campo
+// mentiva, e per colpa sua le notifiche non partivano (BUG-036).
+// Adesso non lo scrive più nessuno e non lo legge più nessuno: la riga
+// dice chi è collegato e su che apparecchio, che è tutto quello che
+// serve a far squillare la cosa giusta.
+export async function saveStaffToken(uid, token, device = null) {
+  const riga = { uid, token, device: device || null, updated_at: serverTimestamp() }
   try {
     await setDoc(doc(db, 'staff_tokens', device || uid), riga, { merge: true })
     // La riga vecchia, intestata alla persona, va tolta se e' dello stesso
