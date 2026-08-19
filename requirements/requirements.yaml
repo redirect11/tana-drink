@@ -2895,7 +2895,7 @@ requirements:
     status: implemented
     generate_issue: false
     labels: [stampa]
-    test_cases: [, tests/unit/stampaComande.test.js]
+    test_cases: [, tests/unit/ristampaScontrino.test.js, tests/unit/scontrinoUnaVolta.test.js]
 
   - id: REQ-STAMPA-003
     title: "Il certificato della stampante non deve scadere ogni volta"
