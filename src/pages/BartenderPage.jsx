@@ -110,7 +110,7 @@ import { showToast } from '../lib/toast.js'
 import { beep, installAudioUnlock } from '../lib/beep.js'
 import { subscribePending, dismissPending, dismissBanner } from '../lib/pendingOrders.js'
 import { syncSumUpProducts, isSumUpEnabled } from '../lib/sumupApi.js'
-import { printComanda, printScontrino, loadPrinterSettings, claimReceiptPrint } from '../lib/printer.js'
+import { printComanda, printScontrino, loadPrinterSettings, claimReceiptPrint, releaseReceiptPrint } from '../lib/printer.js'
 import MenuManager from '../components/MenuManager.jsx'
 import PrinterSetup from '../components/PrinterSetup.jsx'
 import InventoryManager from '../components/InventoryManager.jsx'
@@ -800,6 +800,14 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             for (const o of data) {
               if (o.payment_status === 'pagato' && claimReceiptPrint(o.id)) {
                 printScontrino(o).catch((e) => console.warn('[printer] auto-scontrino:', e.message))
+              }
+              // CONTO RIAPERTO: la copia stampata era della chiusura di
+              // prima. Si restituisce la pretesa, così alla prossima
+              // riscossione lo scontrino — quello NUOVO, col conto
+              // corretto — esce di nuovo. «Non ha senso che stampi solo
+              // una volta» (l'utente, 19/08).
+              if (o.status === 'aperto' && o.payment_status !== 'pagato') {
+                releaseReceiptPrint(o.id)
               }
             }
           }

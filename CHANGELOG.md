@@ -79,6 +79,12 @@
 
 ### Al banco
 
+- **Riscuotere di nuovo un conto riaperto ristampa lo scontrino** — quello
+  nuovo, con le cifre corrette. Prima la copia usciva solo alla prima
+  chiusura e mai piu': riaperto e corretto, il conto si chiudeva muto. E
+  l'interruttore in Impostazioni → Stampante ora dice il vero: la stampa
+  parte **alla riscossione**, non «quando l'ordine e' pronto».
+
 - **Le card della lavagna hanno di nuovo la loro ombra.** Nelle colonne
   erano tagliate ai bordi, e dopo il pagamento sparivano del tutto
   lasciando un bordino più spesso al loro posto.

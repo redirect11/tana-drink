@@ -1426,3 +1426,49 @@ bugs:
     severity: lieve
     priority: P3
     test_cases: [tests/unit/css.test.js]
+
+  - id: BUG-048
+    title: "Il conto riaperto e riscosso di nuovo non ristampava lo scontrino"
+    area: "src/lib/printer.js (claimReceiptPrint), src/components/PaymentScreen.jsx, src/pages/BartenderPage.jsx, src/components/PrinterSetup.jsx"
+    description: >
+      Deciso dall'utente il 19/08: «l'autostampa deve ristampare lo
+      scontrino anche se e' gia' stato stampato. Se riapro il conto e cambio
+      qualcosa e riscuoto di nuovo, deve ristampare il nuovo conto. Non ha
+      senso che stampi solo una volta».
+      LA CAUSA: la guardia contro le doppie copie (claimReceiptPrint) era
+      per CONTO, non per CHIUSURA. Nata per un motivo giusto — la chiusura
+      passa da piu' strade (schermata pagamento, coda, incasso di gruppo) e
+      senza guardia uscivano due copie — ma tarata sulla vita intera del
+      conto: la prima chiusura stampava, e da li' in poi quel conto non
+      stampava MAI piu'. Riaperto, corretto e riscosso: niente scontrino, e
+      nessun avviso.
+      IMPARENTATO CON L'HOTFIX della stessa sera (BUG-046 e BUG-047, ramo
+      hotfix/scontrino-con-sconto): la' il conto scontato non risultava
+      nemmeno pagato (rilettura che prendeva la versione senza sconto) e la
+      prenotazione di stampa non si liberava su stampa fallita. Questa voce
+      copre il terzo caso — il conto RIAPERTO e riscosso di nuovo — e
+      aggiunge il reclaim: un incasso vero stampa comunque. La
+      releaseReceiptPrint esiste in tutti e due i rami, con lo stesso nome e
+      lo stesso significato: al ricongiungimento dei rami si tiene una copia
+      sola.
+      LA CURA, tre pretese con tre significati:
+      - claim: una copia sola per questa chiusura, da qualunque schermata;
+      - release: il conto e' tornato APERTO — la copia stampata era della
+      chiusura di prima, la prossima merita la sua. Lo fa la coda quando
+      vede il conto riaperto, ogni terminale per la sua memoria;
+      - reclaim: sto incassando ADESSO — la mia copia esce comunque, e la
+      coda che vedra' il conto pagato fra un istante trovera' la pretesa
+      gia' presa e non fara' la seconda.
+      La schermata di pagamento usa reclaim quando ha un incasso in mano
+      (un incasso vero e' per definizione una chiusura nuova) e claim
+      normale per le chiusure d'ufficio.
+      SISTEMATA ANCHE L'ETICHETTA che mentiva: l'interruttore diceva
+      «stampa quando l'ordine e' pronto», ma la stampa parte alla
+      riscossione da due versioni. Ora dice quello che fa.
+    in_produzione: true
+    status: fixed
+    generate_issue: true
+    labels: [bug, stampa, pagamenti]
+    severity: media
+    priority: P2
+    test_cases: [tests/unit/ristampaScontrino.test.js]

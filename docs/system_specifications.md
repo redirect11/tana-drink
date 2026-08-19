@@ -22,8 +22,8 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 156 | fatto e coperto dai test |
-| ⚠️  | 15 | fatto ma nessun test lo verifica |
+| ✅ | 157 | fatto e coperto dai test |
+| ⚠️  | 14 | fatto ma nessun test lo verifica |
 | ⬜ | 21 | da fare |
 | 🗑 | 1 | non più valido |
 
@@ -966,7 +966,7 @@ IL LOGO IN CIMA è un di più: se non si carica, la carta esce lo stesso — uno
 
 La connessione alla stampante viene tenuta viva e ricontrollata quando l'app torna in primo piano: non si deve uscire dal programma per farla ripartire.
 
-**Dove**: `src/lib/printer.js` · ⚠️ **Nessun test lo verifica.**
+**Dove**: `src/lib/printer.js` · **Lo dimostrano**: `tests/unit/ristampaScontrino.test.js`
 
 #### REQ-STAMPA-005 — Sullo scontrino il metodo si legge per esteso
 

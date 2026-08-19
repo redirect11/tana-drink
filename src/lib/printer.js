@@ -68,9 +68,15 @@ export const DEFAULT_PRINTER_SETTINGS = {
   businessFooter: 'EFFEVI - SRLS',
 }
 
-// Scontrino automatico UNA SOLA VOLTA per conto: la chiusura può passare da
-// più strade (schermata pagamento, coda, incasso di gruppo) e senza questa
-// guardia lo stesso scontrino uscirebbe due volte.
+// Scontrino automatico UNA SOLA VOLTA per INCASSO — non per conto. La
+// chiusura può passare da più strade (schermata pagamento, coda, incasso di
+// gruppo) e senza questa guardia lo stesso scontrino uscirebbe due volte.
+// Ma il conto si può RIAPRIRE: si corregge una riga, si riscuote di nuovo,
+// e lo scontrino nuovo deve uscire — «non ha senso che stampi solo una
+// volta» (l'utente, 19/08). Per questo la pretesa si può anche RESTITUIRE
+// (releaseReceiptPrint, quando il conto torna aperto) o FORZARE
+// (reclaimReceiptPrint, nel gesto stesso dell'incasso: un incasso vero è
+// per definizione una chiusura nuova).
 const PRINTED_KEY = 'tana_printed_receipts'
 export function claimReceiptPrint(orderId) {
   if (!orderId) return true
@@ -82,6 +88,31 @@ export function claimReceiptPrint(orderId) {
   } catch {
     return true // storage non disponibile: meglio stampare che non stampare
   }
+}
+
+// Il conto è tornato APERTO: la copia stampata apparteneva alla chiusura di
+// prima, e la prossima chiusura merita il suo scontrino. Chiamata dalla coda
+// quando vede il conto riaperto — su ogni terminale, ognuno per la sua
+// memoria.
+export function releaseReceiptPrint(orderId) {
+  if (!orderId) return
+  try {
+    const list = JSON.parse(localStorage.getItem(PRINTED_KEY) || '[]')
+    if (!list.includes(orderId)) return
+    localStorage.setItem(PRINTED_KEY, JSON.stringify(list.filter((id) => id !== orderId)))
+  } catch {
+    /* storage non disponibile: pazienza, claimReceiptPrint stamperà comunque */
+  }
+}
+
+// L'INCASSO È UNA CHIUSURA NUOVA, sempre: chi sta incassando adesso deve
+// avere lo scontrino di adesso, anche se per questo conto ne era già uscito
+// uno prima della riapertura. Si restituisce la pretesa vecchia e si prende
+// quella nuova in un colpo — così la coda, che vedrà il conto pagato fra un
+// istante, troverà la pretesa già presa e non farà la seconda copia.
+export function reclaimReceiptPrint(orderId) {
+  releaseReceiptPrint(orderId)
+  return claimReceiptPrint(orderId)
 }
 
 // La sala stampa da sé? Una domanda sola, in un posto solo: la fanno la

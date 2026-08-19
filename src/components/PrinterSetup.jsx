@@ -158,7 +158,11 @@ export default function PrinterSetup() {
             checked={form.autoPrintScontrino}
             onChange={set('autoPrintScontrino')}
           />
-          <span>Stampa scontrino automaticamente quando l'ordine è "pronto"</span>
+          {/* Diceva «quando l'ordine è pronto», ma la stampa da tempo parte
+              alla CHIUSURA: l'etichetta descriveva il comportamento di due
+              versioni fa, e chi la leggeva si aspettava lo scontrino al
+              momento sbagliato. */}
+          <span>Stampa scontrino automaticamente alla riscossione del conto</span>
         </label>
       </fieldset>
 
