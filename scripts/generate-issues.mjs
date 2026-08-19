@@ -33,7 +33,7 @@
  */
 
 import { readFileSync } from 'node:fs'
-import { STATI_CHIUSI, parseRequirementsYaml, etichetteClassificazione, riconciliaEtichette, corpoGenerato, IN_TEST, indicizzaPerId, prossimoStato, deveNascere, STATO_IMPLEMENTATA, STATO_IN_TEST, STATO_FATTO } from './lib-requisiti.mjs'
+import { STATI_CHIUSI, STATI_SCARTATI, parseRequirementsYaml, etichetteClassificazione, riconciliaEtichette, corpoGenerato, IN_TEST, indicizzaPerId, prossimoStato, deveNascere, STATO_IMPLEMENTATA, STATO_IN_TEST, STATO_FATTO } from './lib-requisiti.mjs'
 import { bachecaAttiva, schedaDellaIssue, spostaScheda } from './bacheca.mjs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -135,11 +135,14 @@ async function commentIssue(number, body) {
   })
 }
 
-async function closeIssue(number) {
+// Chiude un'issue dicendo PERCHE'. GitHub distingue «completed» da «not
+// planned» e lo mostra con due icone diverse: una cosa fatta e una scartata
+// non devono leggersi uguali quando qualcuno riguarda l'elenco fra sei mesi.
+async function closeIssue(number, motivo = 'completed') {
   return githubFetch(`/repos/${OWNER}/${REPO}/issues/${number}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ state: 'closed', state_reason: 'completed' }),
+    body: JSON.stringify({ state: 'closed', state_reason: motivo }),
   })
 }
 
@@ -232,7 +235,12 @@ async function main() {
       continue
     }
     for (const voce of parseRequirementsYaml(yamlText)) {
-      if (voce.generate_issue) toGenerate.push({ ...voce, source_file: s.rel })
+      // Le SCARTATE entrano anche senza `generate_issue`: chi decide di non
+      // fare una cosa spesso spegne pure il flag, e allora la sua issue
+      // resterebbe aperta per sempre a chiedere un lavoro che non faremo.
+      // Entrano solo per essere chiuse: `deveNascere` non ne apre di nuove.
+      const scartata = STATI_SCARTATI.has(String(voce.status || '').toLowerCase())
+      if (voce.generate_issue || scartata) toGenerate.push({ ...voce, source_file: s.rel })
     }
   }
 
@@ -277,7 +285,10 @@ async function main() {
         const mossa = aperta && SEGNA_IMPLEMENTATA
           ? await seguiSullaBacheca(aperta.number, STATO_IMPLEMENTATA)
           : null
-        console.log(`  ⏭  Risolto (${req.status})${mossa ? ' — ' + mossa : " — l'issue si chiude da main, non da qui."}`)
+        const esito = STATI_SCARTATI.has(String(req.status || '').toLowerCase())
+          ? 'Non la faremo'
+          : 'Risolto'
+        console.log(`  ⏭  ${esito} (${req.status})${mossa ? ' — ' + mossa : " — l'issue si chiude da main, non da qui."}`)
         skipped++
         continue
       }
@@ -309,7 +320,10 @@ async function main() {
     if (risolto) {
       const aperta = existing.find((i) => i.state === 'open')
       if (DRY_RUN) {
-        console.log(aperta ? `  [DRY RUN] Risolto (${req.status}) — chiuderebbe ${aperta.html_url}` : `  [DRY RUN] Risolto — nessuna issue aperta.`)
+        const perche = STATI_SCARTATI.has(String(req.status || '').toLowerCase())
+          ? 'Non la faremo'
+          : 'Risolto'
+        console.log(aperta ? `  [DRY RUN] ${perche} (${req.status}) — chiuderebbe ${aperta.html_url}` : `  [DRY RUN] ${perche} — nessuna issue aperta.`)
         aperta ? closed++ : skipped++
         continue
       }
@@ -318,9 +332,16 @@ async function main() {
         skipped++
         continue
       }
+      const scartata = STATI_SCARTATI.has(String(req.status || '').toLowerCase())
       await commentIssue(
         aperta.number,
-        `Risolto: nel registro \`${req.source_file}\` la voce è passata a **${req.status}**.
+        scartata
+          ? `Non la faremo: nel registro \`${req.source_file}\` la voce è passata a **${req.status}**.
+
+La voce RESTA nel registro col suo perché — qui si chiude solo la richiesta di lavoro.
+
+${req.description}`
+          : `Risolto: nel registro \`${req.source_file}\` la voce è passata a **${req.status}**.
 
 ${req.description}`
       )
@@ -331,10 +352,15 @@ ${req.description}`
       if (conProva.includes(IN_TEST)) {
         await aggiornaIssue(aperta.number, { labels: conProva.filter((l) => l !== IN_TEST) })
       }
-      const { ok, status, body } = await closeIssue(aperta.number)
+      const { ok, status, body } = await closeIssue(
+        aperta.number,
+        scartata ? 'not_planned' : 'completed'
+      )
       if (ok) {
         const mossa = await seguiSullaBacheca(aperta.number, STATO_FATTO)
-        console.log(`  ✅ Issue chiusa${mossa ? ' (' + mossa + ')' : ''}: ${aperta.html_url}`)
+        console.log(
+          `  ${scartata ? '🚫 Issue chiusa (non la faremo)' : '✅ Issue chiusa'}${mossa ? ' (' + mossa + ')' : ''}: ${aperta.html_url}`
+        )
         closed++
       } else {
         console.error(`  ❌ Errore ${status} chiudendo #${aperta.number}:`, body.message || '')
