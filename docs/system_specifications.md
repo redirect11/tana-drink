@@ -1890,6 +1890,12 @@ DA DEFINIRE IN IMPLEMENTAZIONE: se una spesa che si ripete (l'affitto è lo stes
 
 DIPENDE DA REQ-CASSA-010 per dove si scrivono e dove si sommano; la collezione e il modulo d'inserimento non aspettano nessun altro. È il primo pezzo da fare dei due che sbloccano REQ-CASSA-011.
 
+NON E' PRONTO DA LAVORARE, e l'utente l'ha detto chiaro il 19/08 dopo aver visto cosa manca: «evidentemente non e' pronto per essere implementato». Rimesso in backlog lo stesso giorno in cui era stato portato in ready — la ragione e' che manca il DATO, non il disegno.
+
+COSA ASPETTA, in una riga: la risposta di Flavio su cosa mette in quel numero. Non e' un dettaglio di implementazione: e' la differenza fra una schermata con due campi e una che deve raggruppare voci di natura diversa, e sbagliarla vuol dire rifarla.
+
+COSA SI PUO' FARE INTANTO, senza aspettare nessuno: la sottosezione «Altre spese» in Ordini e fatture (REQ-MAG-025) e il riepilogo. La forma minima — descrizione, importo, data, comprato si o no — regge qualunque risposta arrivi; quello che cambia e' se serve un modo di raggruppare, e quello si aggiunge dopo.
+
 **Dove**: `src/lib/api.js (collezione `spese`, nuova), src/components/BilancioTab.jsx (nuovo)`
 
 ### Stampa
