@@ -5158,11 +5158,28 @@ requirements:
       `stockCountCompute` calcola già il consumo del periodo — qui si
       aggiunge una divisione e una colonna. Si può partire subito, ed è il
       pezzo che serve prima di REQ-MAG-023.
-    status: todo
+      FATTO (19/08). `giorniDiConta` e `consumoSettimanale`
+      (src/lib/warehouse.js) fanno la divisione sui giorni veri;
+      `stockCountCompute` porta `cons_week` su ogni riga e `giorni` sul
+      risultato. Nella conta APERTA il periodo arriva ad adesso e si
+      allunga mentre la si compila; nel dettaglio di una conta CHIUSA i
+      giorni sono quelli fra apertura e chiusura, e il numero si ricalcola
+      dalle date — le conte vecchie un consumo settimanale salvato non
+      l'hanno mai avuto.
+      SOTTO UN GIORNO PIENO NON SI DIVIDE: una conta aperta e chiusa in tre
+      ore darebbe un settimanale di otto volte quello vero, e su quel numero
+      si decide quanto ordinare. Il numero non si mostra invece di
+      mostrarne uno finto.
+      E SI ARROTONDA: 1500 / 14 × 7 in virgola mobile fa 749,9999999999999,
+      e chi scrive le quantità non riconosce più i 75 cl tondi — lo stesso
+      consumo finirebbe scritto in due modi diversi in due schermate.
+    status: implemented
     generate_issue: true
     labels: [magazzino, metodo]
     priority: P2
-    test_cases: []
+    test_cases:
+      - tests/unit/warehouse.test.js
+      - tests/component/StockCountPanel.test.jsx
 
   # ══════════════════════════════════════════════════════════════════════
   #  LE DECISIONI DEL 19/08 — nasce «Bilancio», e quello che le serve.

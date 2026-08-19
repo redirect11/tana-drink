@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 142 | fatto e coperto dai test |
+| ✅ | 143 | fatto e coperto dai test |
 | ⚠️  | 16 | fatto ma nessun test lo verifica |
-| ⬜ | 29 | da fare |
+| ⬜ | 28 | da fare |
 | 🗑 | 1 | non più valido |
 
-**188 voci** in tutto. **158** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **29** sono lavori
+**188 voci** in tutto. **159** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **28** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **9** difetti noti sono ancora aperti.
 
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
 | [Menù e catalogo](#menù-e-catalogo) | 9 | — | Il listino: drink, categorie, disponibilità, prezzi. |
-| [Magazzino](#magazzino) | 18 | 6 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
+| [Magazzino](#magazzino) | 19 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 10 | 2 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 9 | 2 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
 | [Vista cliente](#vista-cliente) | 5 | 1 | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
@@ -789,6 +789,22 @@ CONFERMATO (18/08, ore 15:17 — Flavio chiedeva a voce che la scala cartone →
 Le categorie di magazzino si raggruppano in macro-categorie (distillati, birre, bibite…): servono a leggere consumi, valore e margini per famiglia invece che articolo per articolo, e a capire dove se ne va il denaro.
 
 **Dove**: `src/lib/macros.js, src/lib/macroStats.js, src/components/MacroCategoryManager.jsx` · **Lo dimostrano**: `tests/unit/macros.test.js`, `tests/unit/macroStats.test.js`
+
+#### REQ-MAG-024 — Il consumo a settimana si divide per le settimane vere
+
+COSA FA IL FOGLIO (INV.xlsx, verificato). Ogni conta è un foglio con l'intervallo nel nome («07-06 01-07») e, per riga: DEP (giacenza iniziale), ACQ (comprato nel periodo), RIM (contato alla fine), CONS = DEP + ACQ − RIM, CONS/w, prezzo netto, prezzo ivato, VALORE € = RIM × prezzo, costo al cl, costo alla porzione (prezzo / (cl × 0,34)).
+
+IL CONSUMO A SETTIMANA È DIVISO PER UNA COSTANTE, non per le settimane vere del periodo: nei primi due fogli è «÷ 3», poi «÷ 2» per cinque fogli, poi «÷ 1,5» per quindici, poi «÷ 4» negli ultimi nove. Il divisore lo si aggiorna a mano ogni tanto, e nel frattempo sbaglia di quanto è lontano dalla realtà: «16-02 02-04» sono sei settimane e vengono divise per 4, «07-06 01-07» sono tre settimane e mezzo e vengono divise per 4 anche loro. È il numero su cui si decide quanto ordinare (REQ-MAG-023), quindi l'errore non resta dov'è.
+
+COSA FA L'APP: `stockCountCompute` calcola DEP + ACQ − RIM e la valorizzazione (REQ-MAG-005), ma non calcola nessun consumo a settimana — quella colonna non esiste. PROPOSTA. Il consumo per settimana si ricava dai GIORNI VERI fra due conte, che l'app conosce perché le conte hanno una data: consumo / giorni × 7. Nessun divisore da tenere aggiornato, e nessun modo di sbagliarlo dimenticandosene. Dove le conte sono meno di due, o troppo vicine per dire qualcosa, il numero non si mostra invece di mostrarne uno finto: un consumo inventato manda a ordinare merce che non serve.
+
+NON DIPENDE DA NIENTE: le conte hanno già la loro data e `stockCountCompute` calcola già il consumo del periodo — qui si aggiunge una divisione e una colonna. Si può partire subito, ed è il pezzo che serve prima di REQ-MAG-023.
+
+FATTO (19/08). `giorniDiConta` e `consumoSettimanale` (src/lib/warehouse.js) fanno la divisione sui giorni veri; `stockCountCompute` porta `cons_week` su ogni riga e `giorni` sul risultato. Nella conta APERTA il periodo arriva ad adesso e si allunga mentre la si compila; nel dettaglio di una conta CHIUSA i giorni sono quelli fra apertura e chiusura, e il numero si ricalcola dalle date — le conte vecchie un consumo settimanale salvato non l'hanno mai avuto.
+
+SOTTO UN GIORNO PIENO NON SI DIVIDE: una conta aperta e chiusa in tre ore darebbe un settimanale di otto volte quello vero, e su quel numero si decide quanto ordinare. Il numero non si mostra invece di mostrarne uno finto. E SI ARROTONDA: 1500 / 14 × 7 in virgola mobile fa 749,9999999999999, e chi scrive le quantità non riconosce più i 75 cl tondi — lo stesso consumo finirebbe scritto in due modi diversi in due schermate.
+
+**Dove**: `src/lib/warehouse.js stockCountCompute, src/components/InventoryManager.jsx` · **Lo dimostrano**: `tests/unit/warehouse.test.js`, `tests/component/StockCountPanel.test.jsx`
 
 ### Cassa di serata e statistiche
 
@@ -1559,18 +1575,6 @@ DA CHIEDERE A FLAVIO: quante settimane si vogliono coprire (l'indizio dice tre),
 DIPENDE DA REQ-MAG-024: la quantità da proporre nasce dal consumo a settimana, che oggi l'app non calcola. E dipende da una risposta che non è ancora arrivata — quante settimane si vogliono coprire, e se il numero vale per tutti i fornitori: è il numero che decide quanta merce entra dalla porta, e indovinarlo si paga in magazzino.
 
 **Dove**: `src/lib/warehouse.js suggestedPackages, src/components/PurchaseOrdersPanel.jsx`
-
-#### REQ-MAG-024 — Il consumo a settimana si divide per le settimane vere
-
-COSA FA IL FOGLIO (INV.xlsx, verificato). Ogni conta è un foglio con l'intervallo nel nome («07-06 01-07») e, per riga: DEP (giacenza iniziale), ACQ (comprato nel periodo), RIM (contato alla fine), CONS = DEP + ACQ − RIM, CONS/w, prezzo netto, prezzo ivato, VALORE € = RIM × prezzo, costo al cl, costo alla porzione (prezzo / (cl × 0,34)).
-
-IL CONSUMO A SETTIMANA È DIVISO PER UNA COSTANTE, non per le settimane vere del periodo: nei primi due fogli è «÷ 3», poi «÷ 2» per cinque fogli, poi «÷ 1,5» per quindici, poi «÷ 4» negli ultimi nove. Il divisore lo si aggiorna a mano ogni tanto, e nel frattempo sbaglia di quanto è lontano dalla realtà: «16-02 02-04» sono sei settimane e vengono divise per 4, «07-06 01-07» sono tre settimane e mezzo e vengono divise per 4 anche loro. È il numero su cui si decide quanto ordinare (REQ-MAG-023), quindi l'errore non resta dov'è.
-
-COSA FA L'APP: `stockCountCompute` calcola DEP + ACQ − RIM e la valorizzazione (REQ-MAG-005), ma non calcola nessun consumo a settimana — quella colonna non esiste. PROPOSTA. Il consumo per settimana si ricava dai GIORNI VERI fra due conte, che l'app conosce perché le conte hanno una data: consumo / giorni × 7. Nessun divisore da tenere aggiornato, e nessun modo di sbagliarlo dimenticandosene. Dove le conte sono meno di due, o troppo vicine per dire qualcosa, il numero non si mostra invece di mostrarne uno finto: un consumo inventato manda a ordinare merce che non serve.
-
-NON DIPENDE DA NIENTE: le conte hanno già la loro data e `stockCountCompute` calcola già il consumo del periodo — qui si aggiunge una divisione e una colonna. Si può partire subito, ed è il pezzo che serve prima di REQ-MAG-023.
-
-**Dove**: `src/lib/warehouse.js stockCountCompute, src/components/InventoryManager.jsx`
 
 ### Cassa di serata e statistiche
 

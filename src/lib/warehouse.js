@@ -26,15 +26,61 @@ export function qtyValue(qty, item, { gross = true } = {}) {
   return size > 0 ? (n / size) * unitCost : 0
 }
 
+// ── IL CONSUMO A SETTIMANA, SULLE SETTIMANE VERE ─────────────────────
+// Nel foglio INV il consumo settimanale è diviso per una COSTANTE scritta
+// a mano — «÷ 3», poi «÷ 2», poi «÷ 1,5», poi «÷ 4» — che si aggiorna ogni
+// tanto e nel frattempo sbaglia di quanto è lontana dalla realtà: sei
+// settimane divise per 4, e tre settimane e mezzo divise per 4 anche loro.
+// È il numero su cui si decide quanto ordinare, quindi l'errore non resta
+// dov'è.
+//
+// Qui il divisore non si tiene aggiornato: sono i GIORNI VERI del periodo,
+// che l'app conosce perché le conte hanno una data.
+const GIORNO_MS = 86400000
+
+// SOTTO UN GIORNO PIENO NON SI DIVIDE. Una conta aperta e chiusa in tre ore
+// darebbe un consumo settimanale di otto volte quello vero, e su quel
+// numero si decide quanto ordinare: meglio non mostrarlo che mostrarne uno
+// finto, che manda a comprare merce che non serve.
+export const MIN_GIORNI_CONTA = 1
+
+// Giorni veri di un periodo di conta. `al` mancante vuol dire ADESSO: la
+// conta ancora aperta ha un periodo che si allunga mentre la si compila.
+// Torna null dove il periodo non c'è o è troppo corto per dire qualcosa.
+export function giorniDiConta(dal, al = null) {
+  const da = dal ? new Date(dal).getTime() : NaN
+  const a = al ? new Date(al).getTime() : Date.now()
+  if (!Number.isFinite(da) || !Number.isFinite(a)) return null
+  const giorni = (a - da) / GIORNO_MS
+  return giorni >= MIN_GIORNI_CONTA ? giorni : null
+}
+
+// Consumo per settimana: consumo / giorni × 7. Niente giorni, niente
+// numero — e un consumo che non si è potuto calcolare resta tale.
+//
+// SI ARROTONDA QUI, e non è un dettaglio: 1500 / 14 × 7 in virgola mobile
+// fa 749,9999999999999, e chi scrive le quantità (formatQty) su quello non
+// riconosce più i 75 cl tondi e stampa «750 ml». Due schermate finirebbero
+// per scrivere lo stesso consumo in due modi diversi.
+export function consumoSettimanale(cons, giorni) {
+  if (cons == null || giorni == null || !(giorni > 0)) return null
+  return Math.round((((Number(cons) || 0) / giorni) * 7 + Number.EPSILON) * 100) / 100
+}
+
 // Completa le righe della conta con consumo e valori e calcola i totali.
 //   lines: [{ item_id, name, unit, dep, acq, rim, cost, vat, package_size }]
-// Ritorna { lines: [...con cons, rim_value, cons_value], totals }.
-export function stockCountCompute(lines) {
+//   dal/al: gli estremi del periodo, per il consumo a settimana (`al`
+//           mancante = adesso, cioè conta ancora aperta).
+// Ritorna { lines: [...con cons, cons_week, rim_value, cons_value], totals,
+// giorni }.
+export function stockCountCompute(lines, { dal = null, al = null } = {}) {
+  const giorni = giorniDiConta(dal, al)
   const out = (lines || []).map((l) => {
     const cons = countLineCons(l)
     return {
       ...l,
       cons,
+      cons_week: consumoSettimanale(cons, giorni),
       rim_value: qtyValue(l.rim, l),
       cons_value: cons != null ? qtyValue(cons, l) : 0,
     }
@@ -47,7 +93,7 @@ export function stockCountCompute(lines) {
     }),
     { rim_value: 0, cons_value: 0, counted: 0 }
   )
-  return { lines: out, totals }
+  return { lines: out, totals, giorni }
 }
 
 // ── Ordini fornitore (GENERATORE ORDINI) ──────────────────────────────
