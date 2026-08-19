@@ -1716,7 +1716,9 @@ DA CHIEDERE A FLAVIO, e la domanda va posta così, perché scritta «quante sett
 
 LA DOMANDA VERA: quando l'app propone da sola le quantità, QUANTA ROBA CI METTE DENTRO? Il calcolo parte dal consumo — «di questo gin se ne vanno tre bottiglie a settimana» — e per farne una quantità da ordinare serve sapere PER QUANTO TEMPO DEVE BASTARE. Due settimane fanno sei bottiglie, un mese dodici. Nei fogli l'indizio dice tre settimane (`ORD / 3` in INV.xlsx), ma è una riga sola: non basta. E LA METÀ CHE CONTA DI PIÙ: vale lo stesso numero per tutti i fornitori? Chi passa due volte a settimana e chi consegna una volta al mese non si ordinano con la stessa regola — col primo ci si può tenere corti, col secondo no.
 
-DIPENDE DA REQ-MAG-024: la quantità da proporre nasce dal consumo a settimana, che l'app ora calcola. E dipende dalla risposta qui sopra — per quanto tempo deve bastare un ordine, e se il numero vale per tutti i fornitori: è quello che decide quanta merce entra dalla porta, e indovinarlo si paga in magazzino.
+NON BLOCCA PIÙ NIENTE (19/08). REQ-MAG-026 ha deciso che la quantità prepopolata è la «quantità minima d'ordine» scritta sull'articolo dall'admin, non un calcolo su consumo × settimane: il generatore si può fare senza aspettare questa risposta.
+
+QUESTA VOCE RESTA per la proposta più fine — dimensionare al ritmo reale invece che a un numero fisso — e allora la domanda qui sopra torna a servire: è quella che decide quanta merce entra dalla porta, e indovinarla si paga in magazzino. Il consumo a settimana intanto l'app lo calcola (REQ-MAG-024), quindi il dato c'è già.
 
 **Dove**: `src/lib/warehouse.js suggestedPackages, src/components/PurchaseOrdersPanel.jsx`
 
@@ -1770,7 +1772,27 @@ OGGI VUOL DIRE `stock <= low_threshold`, e senza soglia impostata il prodotto no
 
 4) LA PROPOSTA SI CORREGGE SEMPRE: quello che esce e' un ordine da guardare e ritoccare prima di mandarlo, non da spedire al buio. Chi sta al banco sa cose che la giacenza non sa — la festa di sabato, il fornitore che salta la consegna.
 
-NON TOCCA LO SCARICO: le giacenze restano quelle che sono, con le regole di sempre. Questa voce le LEGGE soltanto.
+NON TOCCA LO SCARICO: le giacenze restano quelle che sono, con le regole di sempre. Questa voce le LEGGE soltanto. COM'E' FATTO OGGI IL GENERATORE, letto riga per riga il 19/08 (src/components/PurchaseOrdersPanel.jsx, 272 righe): si sceglie PRIMA il fornitore da una tendina; da quel momento la schermata mostra `supplierItems`, cioe' i soli prodotti di quel fornitore che non siano 'out'; un tasto «Precompila i sotto scorta» riempie le quantita' con `suggestedPackages` (riporta la giacenza a DUE VOLTE la soglia di avviso, minimo una confezione, e non propone niente se la soglia manca); si aggiusta a mano e le righe con quantita' maggiore di zero diventano l'ordine, con totale netto e lordo. Da li' l'ordine si stampa, si copia, si manda per email al fornitore (mailto precompilato) e, quando arriva, «ricevuto» carica il magazzino.
+
+LE TRE DIFFERENZE con quello che serve, e sono precise: (a) OGGI SI VEDE UN FORNITORE PER VOLTA, non tutto l'inventario: chi ordina deve ricordarsi da solo quali fornitori aprire, ed e' cosi' che si dimentica qualcosa; (b) LA QUANTITA' PROPOSTA VIENE DALLA SOGLIA (2x), non da una quantita' minima d'ordine scritta sul prodotto — e senza soglia il prodotto non viene proposto MAI, in silenzio; (c) IL FILTRO ESCLUDE SOLO 'out': i prodotti in assortimento entrano nel precompilato come quelli in linea. Il resto della macchina — righe, totali, stampa, email, ricevimento e carico — c'e' gia' e non si rifa'.
+
+COME FUNZIONA IL GESTO, deciso dall'utente il 19/08 e da qui si implementa. «L'ordine lo deve generare l'admin o il bartender, e quando lo genera genera l'ordine per fornitore, e sulla base dei prodotti esauriti o in esaurimento. Quando genero un ordine vedro' tutto l'inventario ma l'ordine generato conterra' solo quello che decide admin/bartender, prepopolato con le quantita' minime (decise da admin per prodotto di inventario) da ordinare».
+
+IN ORDINE, cosa succede: 1) CHI: admin o bartender (mai la sala). Il confronto si fa con src/lib/ruoli.js, che e' l'unico posto dove i ruoli si guardano.
+
+2) SI PARTE DAL MAGAZZINO: si guarda chi e' esaurito o in esaurimento, e ogni prodotto va nell'ordine del SUO fornitore — che e' gia' scritto sull'articolo. Una passata, N ordini.
+
+3) SI VEDE TUTTO L'INVENTARIO, non solo i sotto scorta: la schermata mostra l'intero elenco e il prepopolato e' solo un punto di partenza. Chi ordina aggiunge quello che sa lui — la festa di sabato, il fornitore che salta la consegna — e toglie quello che non serve. 4) NELL'ORDINE FINISCE SOLO QUELLO CHE DECIDE CHI ORDINA. La proposta non parte mai da sola.
+
+5) LA QUANTITA' PREPOPOLATA E' LA «QUANTITA' MINIMA D'ORDINE» del prodotto, decisa dall'admin sull'anagrafica. NON e' un calcolo su consumo per settimane: e' un numero scritto sull'articolo, e questo chiude anche la domanda aperta in REQ-MAG-023 su quante settimane coprire — non serve piu' saperlo per far partire la cosa.
+
+CAMPO NUOVO da aggiungere all'articolo di magazzino (verificato il 19/08: oggi non esiste, nessuno dei 388 prodotti di test ce l'ha). Chi lo scrive e' l'admin, come per la soglia.
+
+6) CHI ENTRA NEL PREPOPOLATO: solo i prodotti IN LINEA o PREMIUM. Gli altri no. Il campo esiste gia' — `status` sull'articolo, valori in ASSORTIMENTI (src/lib/inventory.js): 'assortimento' (il default, «si tiene senza niente di speciale»), 'linea' (i cavalli di battaglia che non devono mancare), 'premium' (le bottiglie buone), 'out' (fuori assortimento, non si ricompra).
+
+ATTENZIONE, UN FATTO DA GUARDARE PRIMA DI SCRIVERE (misurato su tana-drink-test il 19/08): dei 388 articoli solo 78 sono classificati linea (36) o premium (42). Duecentouno sono in 'assortimento' e centonove 'out'. Siccome 'assortimento' e' il DEFAULT di chi non ha mai dichiarato niente, la regola cosi' com'e' lascerebbe fuori dal prepopolato duecento prodotti — e non si sa se quei duecento sono «tenuti senza niente di speciale» per scelta o solo mai classificati. Se sono la seconda cosa, l'ordine prepopolato salterebbe in silenzio merce che serve, ed e' il tipo di buco di cui ci si accorge quando manca la bottiglia.
+
+DA CHIEDERE A FLAVIO prima di implementare, e nel frattempo la regola resta quella detta: linea e premium.
 
 **Dove**: `src/lib/warehouse.js, src/components/PurchaseOrdersPanel.jsx, src/lib/api.js`
 
