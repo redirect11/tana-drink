@@ -1024,10 +1024,34 @@ bugs:
       portare o da consegnare: senza, la comanda resta ferma sul banco
       finché qualcuno non guarda lo schermo — che è esattamente quello che
       le corsie dovevano evitare.
-      DA CAPIRE PRIMA DI SCRIVERE: se non partono affatto (Functions), se
-      partono e non arrivano (token dello staff, permessi del browser), o
-      se arrivano e non si vedono. Le tre cose si sistemano in tre posti
-      diversi.
+      DIAGNOSI (19/08): NON PARTONO. Sono due guasti distinti, tutti e due
+      nelle Cloud Functions, e nessuno dei due si corregge dall'app.
+      1) SERVIZIO (ordine pronto da portare al tavolo). Il messaggio viene
+      costruito — decideStaffServePush — ma `pushToStaff` lo manda con
+      `roles: ['staff']` (functions/index.js), e `destinatariPush` tiene
+      solo le righe di `staff_tokens` col campo `role` uguale a 'staff'.
+      Quel campo però non è il RUOLO DELLA PERSONA: è quello che ci scrive
+      sopra l'ultima schermata che registra il dispositivo, e la schermata
+      dove si finisce sempre è la coda — BartenderPage lo scrive a mano
+      'bartender' (src/pages/BartenderPage.jsx), e App.jsx ci porta dritto
+      chiunque sia dello staff. Risultato: nessuna riga è mai 'staff',
+      l'elenco dei destinatari resta vuoto e la funzione esce senza
+      mandare niente. PROVA: su tana-drink-test tutte e quattro le righe di
+      `staff_tokens` (lette in sola lettura il 19/08) hanno role
+      'bartender'; nessuna 'staff'.
+      2) RITIRO (drink da consegnare al banco). Non parte NESSUN messaggio
+      per lo staff: decideStaffServePush esce subito con
+      `if (after.service_mode === 'banco') return null`
+      (functions/lib/push-core.js). L'unica push prevista per il ritiro è
+      quella al CLIENTE, e vuole `after.push_token`, che ce l'hanno solo
+      gli ordini fatti dal menù: un conto battuto al POS non avvisa
+      nessuno, né staff né cliente.
+      CORREZIONE PROPOSTA (richiede un DEPLOY DELLE FUNCTIONS, da chiedere
+      all'utente): togliere il filtro per ruolo dal «pronto» — chi porta i
+      drink non è un ruolo, è chi è in piedi — e far nascere il messaggio
+      anche per il ritiro, saltando solo il terminale che ha premuto
+      «pronto» (dispositivoOrigine), che già sa. Lato app resta da smettere
+      di scrivere un `role` finto in staff_tokens.
     in_produzione: true
     status: todo
     generate_issue: true
@@ -1070,10 +1094,28 @@ bugs:
       notifiche non arrivano in tempo reale — restano ferme finché non si
       accende lo schermo. Al banco vuol dire che una chiamata dalla sala
       arriva quando ormai non serve più.
-      DA GUARDARE: la priorità del messaggio inviato (una notifica «alta»
-      sveglia il dispositivo, una normale aspetta), il risparmio energetico
-      di Android sull'app, e cosa fa il service worker quando riceve il
-      messaggio. Anche qui: prima capire dove si ferma, poi correggere.
+      DIAGNOSI (19/08), e in buona parte non dipende da noi.
+      LA PRIORITÀ È GIÀ ALTA: tutte le push allo staff partono con
+      `webpush: { headers: { Urgency: 'high' } }` — nuovo ordine e pronto
+      con TTL 600, la chiamata con TTL 180 (functions/index.js). Lì non c'è
+      niente da guadagnare: l'ipotesi «mandiamo una notifica normale» è
+      esclusa.
+      Quello che resta è il risparmio energetico di Android sull'app
+      installata: a schermo spento il sistema sospende la consegna e la
+      rilascia quando il telefono si sveglia. Non è una cosa che si
+      corregge nel codice — si toglie l'ottimizzazione batteria per il
+      browser/la PWA dalle impostazioni del telefono. Da dire all'utente
+      così com'è, invece di inseguire una correzione impossibile.
+      C'È PERÒ UN NOSTRO DIFETTO LATENTE, che si vedrà appena BUG-036 sarà
+      risolto: in public/sw.js la notifica «drink pronti da servire» viene
+      SALTATA se una finestra su /bar risulta
+      `w.focused || w.visibilityState === 'visible'`. È un OR, cioè il
+      controllo più largo possibile: un telefono lasciato aperto sulla coda
+      con lo schermo spento può restare `focused`, e in quel caso la
+      notifica non viene mostrata affatto. Va stretto a una sola
+      condizione, la visibilità.
+      NON RIPRODOTTO: in locale le push non si provano (niente emulatore
+      FCM, service worker non registrato in sviluppo).
     in_produzione: true
     status: todo
     generate_issue: true
