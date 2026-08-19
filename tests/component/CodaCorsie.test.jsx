@@ -55,6 +55,9 @@ vi.mock('../../src/lib/firebaseClient.js', () => ({
 // CHI GUARDA DECIDE COSA VEDE: all'admin le corsie dei CONTI, a chi sta al
 // banco quelle delle COMANDE. Ogni test dice chi è collegato.
 let ruolo = 'admin'
+// Chi risulta collegato, e i colpi di vita partiti: li pilota il test.
+let presenzeFinte = []
+let battiti = []
 vi.mock('firebase/auth', () => ({
   onAuthStateChanged: (_auth, cb) => {
     cb({
@@ -68,6 +71,13 @@ vi.mock('firebase/auth', () => ({
 }))
 
 vi.mock('../../src/lib/api.js', () => ({
+  // La coda dice «ci sono» e guarda chi c'è (legenda con le presenze):
+  // qui non serve a niente, ma senza queste due la pagina non si monta.
+  segnalaPresenza: (r) => battiti.push(r),
+  subscribePresenze: (cb) => {
+    cb(presenzeFinte)
+    return () => {}
+  },
   DEFAULT_SETTINGS: {},
   settingsIniziali: () => ({ ...impostazioni }),
   subscribeSettings: (cb) => {
@@ -1232,5 +1242,66 @@ describe('il colore del conto, e le comande che se lo portano dietro', () => {
     await utente.click(within(card).getByRole('button', { name: 'Nessun colore' }))
 
     expect(setOrderColore).toHaveBeenCalledWith('o48', null)
+  })
+})
+
+// ── CHI È COLLEGATO, NELLA LEGENDA (REQ-CODA-005) ────────────────────
+//
+// La legenda diceva solo chi aveva già battuto un conto: chi si collegava
+// non compariva, e non sapeva con che lettera si sarebbe riconosciuto.
+//
+// La cosa da non sbagliare è CHI PUÒ SAPERLO: admin e bartender sì, la
+// sala no. Sapere chi è collegato è un'informazione sulle persone, non sul
+// lavoro, e non deve servire a controllare i colleghi. Il lucchetto vero è
+// nelle regole di Firestore; qui si controlla che la schermata non chieda
+// nemmeno il dato quando non le spetta.
+describe('chi è collegato, nella legenda', () => {
+  const OGGI = new Date().toISOString()
+
+  // La voce è spezzata fra più elementi (la lettera in uno span, il nome
+  // accanto): si guarda il testo della legenda intera, che è anche il modo
+  // in cui la legge chi sta al banco.
+  const legenda = () => document.querySelector('.order-legend')?.textContent || ''
+
+  it('l’admin vede in legenda anche chi non ha ancora battuto niente', async () => {
+    ruolo = 'admin'
+    // Bruno e non Marco: nei dati di prova c'è già una Marta, e due nomi
+    // con la stessa iniziale si pestano — è un difetto suo della legenda,
+    // vecchio quanto la legenda stessa (BUG-043), non di questa aggiunta.
+    presenzeFinte = [{ uid: 'u-bruno', name: 'Bruno', role: 'staff', last_seen: OGGI }]
+    montaCoda()
+    await screen.findByText('In corso')
+    await waitFor(() => expect(legenda()).toContain('Bruno'))
+  })
+
+  it('alla sala quella riga non arriva', async () => {
+    ruolo = 'staff'
+    presenzeFinte = [{ uid: 'u-bruno', name: 'Bruno', role: 'staff', last_seen: OGGI }]
+    montaCoda()
+    await screen.findByText('In corso')
+
+    expect(legenda()).not.toContain('Bruno')
+  })
+
+  it('ma la sala dice lo stesso che c’è: gli altri devono saperlo', async () => {
+    ruolo = 'staff'
+    battiti = []
+    presenzeFinte = []
+    montaCoda()
+    await screen.findByText('In corso')
+
+    // Un colpo di vita parte comunque — chi è in sala non vede l'elenco,
+    // ma negli elenchi degli altri ci deve stare.
+    expect(battiti.length).toBeGreaterThan(0)
+  })
+
+  it('chi tace da troppo non compare, anche se la riga è rimasta', async () => {
+    ruolo = 'admin'
+    const vecchio = new Date(Date.now() - 60 * 60 * 1000).toISOString()
+    presenzeFinte = [{ uid: 'u-sara', name: 'Sara', role: 'staff', last_seen: vecchio }]
+    montaCoda()
+    await screen.findByText('In corso')
+
+    expect(legenda()).not.toContain('Sara')
   })
 })

@@ -79,6 +79,14 @@
 
 ### Al banco
 
+- **Nella legenda della coda c'è anche chi è collegato adesso**, non solo
+  chi ha già battuto un conto: chi apre l'app trova subito la sua iniziale —
+  con scritto «sei tu» — e sa come si riconoscerà sulle card. La riga di chi
+  è online è più chiara, con un pallino verde davanti. **La vedono solo
+  l'admin e il banco**: chi è in sala continua a vedere le lettere dei conti
+  battuti, e i clienti non vedono niente. Chi chiude l'app sparisce da solo
+  dopo qualche minuto.
+
 - **Lo scontrino non aspetta più un logo che non c'è**: se `logo.png` manca
   o non è nella memoria dell'app, ogni stampa rifaceva il caricamento e
   aspettava l'errore prima di far uscire la carta. Adesso ci prova una volta
