@@ -183,9 +183,15 @@ describe('il conteggio «Categorie (N)» nel menu a lato', () => {
   })
 })
 
-// LE ICONE DELLE SOTTOSEZIONI NON SONO EMOJI. 🏷 e 🗂 hanno presentazione
-// testuale: su Windows escono come rettangolini storti, e nella fila del
-// menu sembravano immagini non caricate. Sono disegni SVG (Icons.jsx).
+// LE ICONE DELLE SOTTOSEZIONI SONO EMOJI, E VANNO SCRITTE A COLORI.
+// 🏷 e 🗂 sono fra i pochi emoji con presentazione TESTUALE di serie:
+// scritti nudi il font li disegna in bianco e nero, e su Windows escono
+// come rettangolini storti. Provammo a sostituirli con disegni SVG: il
+// glifo si vedeva, ma in una fila fatta di emoji a colori due sagome
+// monocrome stonavano, e lo stacco si notava piu' del difetto di prima.
+// La cura e' il selettore di variante U+FE0F in coda, che dice al font
+// «questa disegnala a colori»: stessa emoji, stessa fila. Qui si
+// controlla che non ne resti in giro una NUDA, cioe' senza selettore.
 describe('le icone delle sottosezioni', () => {
   const sorgente = (f) => readFileSync(join(process.cwd(), 'src/components', f), 'utf8')
   // Le righe fra `const NOME = [` e la quadra che lo chiude a inizio riga.
@@ -197,25 +203,23 @@ describe('le icone delle sottosezioni', () => {
     return righe.slice(da, fine + 1).join(' ')
   }
 
-  it('menù, magazzino, statistiche e impostazioni non usano più 🏷 e 🗂', () => {
+  // 🏷 o 🗂 NON seguiti da U+FE0F: l'emoji nuda, quella che si vede male.
+  const NUDA = /[\u{1F3F7}\u{1F5C2}](?!\u{FE0F})/u
+
+  it('menù, magazzino, statistiche e impostazioni le scrivono a colori', () => {
     for (const [file, nome] of [
       ['MenuManager.jsx', 'sezioni'],
       ['InventoryManager.jsx', 'INV_VIEWS'],
       ['StatsTab.jsx', 'SEZIONI_STATS'],
       ['SettingsTab.jsx', 'GRUPPI'],
     ]) {
-      expect(elenco(file, nome), `${nome} in ${file}`).not.toMatch(/🏷|🗂/u)
+      expect(elenco(file, nome), `${nome} in ${file}`).not.toMatch(NUDA)
     }
   })
 
-  it('e nel menù al posto loro c’è un disegno, non del testo', async () => {
-    let ultime = []
-    const stop = subscribeSottosezioni((s) => { ultime = s.voci })
-    render(<MenuManager />)
-    await screen.findByText('Mojito')
-    for (const id of ['categorie', 'macro']) {
-      expect(typeof ultime.find((v) => v.id === id).icona).not.toBe('string')
+  it('e non ne resta una nuda nei pannelli delle macro', () => {
+    for (const f of ['MacroCategoryManager.jsx', 'MacroMonthlyTab.jsx']) {
+      expect(sorgente(f), f).not.toMatch(NUDA)
     }
-    stop()
   })
 })
