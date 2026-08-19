@@ -4603,11 +4603,31 @@ requirements:
       - i tre script nuovi dell'emulatore riscrivono il client REST che
         `lib-firestore.js` ha già: basta fargli accettare indirizzo e
         intestazioni.
-    status: todo
+      FATTO (19/08), tutte e cinque, senza cambiare niente di quello che si
+      vede. `impostazioniLocali.js`: due funzioni private (`leggi`, `scrivi`)
+      e il try/catch sta in un posto solo — i commenti sul perché ogni
+      preferenza è del DISPOSITIVO sono rimasti tutti. `SettingsTab.jsx`:
+      un `SceltaModo` al posto di QUATTORDICI gruppi di pastiglie scritti a
+      mano (erano cinque a occhio, quattordici a contarli), con la voce
+      spenta che resta a vista col motivo nel titolo. `InventoryManager.jsx`:
+      un `RiquadroTravaso` al posto di tre overlay uguali, ogni passo con la
+      sua condizione una volta sola; la previsione di fine serata la fa
+      `previstoFineSerata` per tutte e due le viste; nel carico a colli la
+      quantità non è più uno stato da tenere allineato a mano ma il conto
+      cartoni × pezzi (e tornando a mano il numero calcolato resta scritto,
+      che ricontare i pezzi già contati non lo vuole nessuno).
+      `generate-issues.mjs`: l'elenco porta già corpo ed etichette — la
+      rilettura una per una era un'abitudine rimasta dai tempi della ricerca,
+      ed erano fino a 190 chiamate in più a giro. `lib-firestore.js`: il
+      client prende un `host`, e `clientEmulatore` è lo stesso client che
+      punta all'emulatore — i tre script hanno smesso di riscriversi commit,
+      elenco e paginazione, e il limite dei 200 per commit adesso sta in un
+      posto solo.
+    status: implemented
     generate_issue: true
     labels: [manutenzione]
     priority: P2
-    test_cases: []
+    test_cases: [tests/unit/clientFirestore.test.js]
 
   - id: REQ-DEV-012
     title: "docs/system_specifications.md e' la specifica di sistema, e si genera"

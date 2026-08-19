@@ -116,12 +116,6 @@ async function elencoIssue() {
 }
 
 
-// Il dettaglio serve per corpo ed etichette: la ricerca li tronca.
-async function leggiIssue(numero) {
-  const { ok, body } = await githubFetch(`/repos/${OWNER}/${REPO}/issues/${numero}`)
-  return ok ? body : null
-}
-
 async function aggiornaIssue(numero, patch) {
   return githubFetch(`/repos/${OWNER}/${REPO}/issues/${numero}`, {
     method: 'PATCH',
@@ -355,8 +349,13 @@ ${req.description}`
     // restava scritta solo nel registro: su GitHub, dove la gente guarda, non
     // arrivava mai.
     if (existing.length > 0) {
-      const numero = existing[0].number
-      const issue = (await leggiIssue(numero)) || existing[0]
+      // L'ELENCO BASTA. Prima si rileggeva ogni issue una per una: era
+      // un'abitudine rimasta dai tempi della RICERCA, che tronca corpo ed
+      // etichette. L'elenco no — li porta interi — e con 190 voci quelle
+      // erano 190 chiamate in più a ogni giro di CI, per riavere quello che
+      // si aveva già in mano.
+      const issue = existing[0]
+      const numero = issue.number
       const attuali = (issue.labels || []).map((l) => (typeof l === 'string' ? l : l.name))
       const { daAggiungere, daTogliere, finali } = riconciliaEtichette(attuali, req)
       const corpo = buildIssueBody(req)

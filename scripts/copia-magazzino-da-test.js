@@ -23,7 +23,7 @@
 //  REST (con «Bearer owner», che lì vuol dire «salta le regole»), invece
 //  di passare dall'SDK admin e rimappare i campi a mano.
 // =====================================================================
-import { accessToken, client, arg, flag, idDi } from './lib-firestore.js'
+import { accessToken, client, clientEmulatore, arg, flag, idDi } from './lib-firestore.js'
 import { trovaEmulatore } from './lib-emulatore.js'
 
 const SORGENTE = arg('da', 'tana-drink-test')
@@ -52,45 +52,14 @@ async function main() {
   const token = await accessToken()
   const test = client(SORGENTE, token)
 
-  const radice = `projects/${DESTINAZIONE}/databases/(default)/documents`
-  const base = `http://${dove}/v1/${radice}`
-  // «owner» è la parola che l'emulatore riconosce come «sono l'admin»:
-  // senza, le regole di sicurezza bloccano anche la scrittura di servizio.
-  const intestazioni = { Authorization: 'Bearer owner', 'Content-Type': 'application/json' }
-
-  async function scrivi(writes) {
-    for (let i = 0; i < writes.length; i += 200) {
-      const res = await fetch(`http://${dove}/v1/${radice}:commit`, {
-        method: 'POST',
-        headers: intestazioni,
-        body: JSON.stringify({ writes: writes.slice(i, i + 200) }),
-      })
-      const json = await res.json().catch(() => ({}))
-      if (json.error) throw new Error(`${json.error.status}: ${json.error.message}`)
-    }
-  }
-
-  async function documentiEmulatore(collezione) {
-    const out = []
-    let pageToken = ''
-    do {
-      const res = await fetch(
-        `${base}/${collezione}?pageSize=300${pageToken ? `&pageToken=${pageToken}` : ''}`,
-        { headers: intestazioni }
-      )
-      const json = await res.json().catch(() => ({}))
-      if (json.error) throw new Error(`${json.error.status}: ${json.error.message}`)
-      out.push(...(json.documents || []))
-      pageToken = json.nextPageToken || ''
-    } while (pageToken)
-    return out
-  }
+  const emulatore = clientEmulatore(dove, DESTINAZIONE)
 
   for (const collezione of collezioni) {
     if (flag('pulisci')) {
-      const vecchi = await documentiEmulatore(collezione)
+      // Dei vecchi servono solo gli id: si cancellano, non si leggono.
+      const vecchi = await emulatore.documenti(collezione, { campi: ['__name__'] })
       if (vecchi.length) {
-        await scrivi(vecchi.map((d) => ({ delete: `${radice}/${collezione}/${idDi(d)}` })))
+        await emulatore.commit(vecchi.map((d) => emulatore.cancellaDoc(collezione, idDi(d))))
         console.log(`[copia] ${collezione}: tolti ${vecchi.length} documenti di prima`)
       }
     }
@@ -100,11 +69,7 @@ async function main() {
       console.log(`[copia] ${collezione}: niente da copiare`)
       continue
     }
-    await scrivi(
-      docs.map((d) => ({
-        update: { name: `${radice}/${collezione}/${idDi(d)}`, fields: d.fields || {} },
-      }))
-    )
+    await emulatore.commit(docs.map((d) => emulatore.scriviDoc(collezione, idDi(d), d.fields)))
     console.log(`[copia] ${collezione}: copiati ${docs.length} documenti`)
   }
 

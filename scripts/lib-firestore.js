@@ -39,9 +39,14 @@ export async function accessToken() {
   return res.access_token
 }
 
-export function client(progetto, token) {
+// `host` sta qui perché l'EMULATORE parla la stessa identica REST: cambiano
+// l'indirizzo e la parola d'ordine, non le chiamate. Gli script che scrivono
+// in locale se lo riscrivevano ognuno per conto suo — tre copie di commit,
+// elenco e paginazione — e ogni copia era un posto in cui dimenticarsi il
+// limite dei 200 per commit.
+export function client(progetto, token, host = 'https://firestore.googleapis.com') {
   const radice = `projects/${progetto}/databases/(default)/documents`
-  const BASE = `https://firestore.googleapis.com/v1/${radice}`
+  const BASE = `${host}/v1/${radice}`
   const auth = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
 
   async function chiedi(url, opts = {}) {
@@ -58,7 +63,7 @@ export function client(progetto, token) {
     // Nomi delle collezioni alla radice (o dentro un documento).
     async collezioni(percorsoDoc = '') {
       const url = percorsoDoc
-        ? `https://firestore.googleapis.com/v1/${percorsoDoc}:listCollectionIds`
+        ? `${host}/v1/${percorsoDoc}:listCollectionIds`
         : `${BASE}:listCollectionIds`
       const out = []
       let pageToken
@@ -73,13 +78,16 @@ export function client(progetto, token) {
       return out.sort()
     },
 
-    // Tutti i documenti di una collezione, nel formato nativo.
-    async documenti(collezione) {
+    // Tutti i documenti di una collezione, nel formato nativo. Con `campi`
+    // si chiedono solo quelli: `['__name__']` scarica i soli id, che è quello
+    // che serve per cancellare (e sono megabyte in meno da leggere).
+    async documenti(collezione, { campi } = {}) {
+      const maschera = (campi || []).map((c) => `&mask.fieldPaths=${c}`).join('')
       const out = []
       let pageToken = ''
       do {
         const r = await chiedi(
-          `${BASE}/${collezione}?pageSize=300${pageToken ? `&pageToken=${pageToken}` : ''}`
+          `${BASE}/${collezione}?pageSize=300${maschera}${pageToken ? `&pageToken=${pageToken}` : ''}`
         )
         out.push(...(r.documents || []))
         pageToken = r.nextPageToken || ''
@@ -92,7 +100,7 @@ export function client(progetto, token) {
     // in timeout).
     async commit(writes) {
       for (let i = 0; i < writes.length; i += 200) {
-        await chiedi(`https://firestore.googleapis.com/v1/${radice}:commit`, {
+        await chiedi(`${host}/v1/${radice}:commit`, {
           method: 'POST',
           body: JSON.stringify({ writes: writes.slice(i, i + 200) }),
         })
@@ -107,6 +115,11 @@ export function client(progetto, token) {
     },
   }
 }
+
+// L'emulatore: «owner» è la parola che riconosce come «sono l'admin», e senza
+// quella le regole di sicurezza fermano anche le scritture di servizio.
+export const clientEmulatore = (dove, progetto = 'demo-tana-drink') =>
+  client(progetto, 'owner', `http://${dove}`)
 
 export const idDi = (doc) => doc.name.split('/').pop()
 

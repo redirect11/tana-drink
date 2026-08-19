@@ -105,20 +105,14 @@ export default function SettingsTab({ role = null }) {
               <p className="muted" style={{ margin: '12px 0 6px', fontSize: '0.85rem' }}>
                 Dove finisce l’item appena aggiunto nella lista del conto.
               </p>
-              <div className="mode-choice">
-                {[
+              <SceltaModo
+                valore={!!settings.pos_add_top}
+                opzioni={[
                   [false, '⬇ In fondo (scorre)'],
                   [true, '⬆ In cima'],
-                ].map(([value, label]) => (
-                  <button
-                    key={String(value)}
-                    className={`mode-option${!!settings.pos_add_top === value ? ' active' : ''}`}
-                    onClick={() => save({ pos_add_top: value })}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
+                ]}
+                onScegli={(v) => save({ pos_add_top: v })}
+              />
 
               {/* LA ⓘ DELLE RICETTE. Dove il listino lo sanno tutti a memoria
                   è un segno in più su ogni card, e le card sono cento. Dove
@@ -136,43 +130,33 @@ export default function SettingsTab({ role = null }) {
                 Il testo segue la larghezza del pannello, ma sotto questa
                 soglia non scende.
               </p>
-              <div className="mode-choice" style={{ gridTemplateColumns: '1fr 1fr 1fr 1fr' }}>
-                {[
+              <SceltaModo
+                colonne="1fr 1fr 1fr 1fr"
+                valore={Number(settings.pos_testo_min) || 1.1}
+                opzioni={[
                   [0.85, 'Piccolo'],
                   [1, 'Medio'],
                   [1.1, 'Grande'],
                   [1.25, 'Extra'],
-                ].map(([value, label]) => (
-                  <button
-                    key={value}
-                    className={`mode-option${(Number(settings.pos_testo_min) || 1.1) === value ? ' active' : ''}`}
-                    onClick={() => save({ pos_testo_min: value })}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
+                ]}
+                onScegli={(v) => save({ pos_testo_min: v })}
+              />
 
               <p className="muted" style={{ margin: '12px 0 6px', fontSize: '0.85rem' }}>
                 Come mostrare le categorie nel POS. L’icona e il colore di ogni
                 categoria si impostano nel <strong>Menù → Categorie</strong>: se una
                 categoria non ha un’icona, al suo posto compare il pallino colore.
               </p>
-              <div className="mode-choice" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
-                {[
+              <SceltaModo
+                colonne="1fr 1fr 1fr"
+                valore={settings.category_display || 'dot'}
+                opzioni={[
                   ['dot', '● Pallino + nome'],
                   ['icon_text', '🍸 Icona + nome'],
                   ['icon', '🍸 Solo icona (senza nome)'],
-                ].map(([value, label]) => (
-                  <button
-                    key={value}
-                    className={`mode-option${(settings.category_display || 'dot') === value ? ' active' : ''}`}
-                    onClick={() => save({ category_display: value })}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
+                ]}
+                onScegli={(v) => save({ category_display: v })}
+              />
 
               <h4 style={{ margin: '16px 0 4px' }}>La ricerca nella griglia dei prodotti</h4>
               <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
@@ -184,22 +168,14 @@ export default function SettingsTab({ role = null }) {
                 prodotti mentre si cerca, perché quello giusto può stare in
                 un&apos;altra categoria. Toccando una card la ricerca si azzera da sé.
               </p>
-              <div className="mode-choice">
-                {[
+              <SceltaModo
+                valore={settings.pos_search || 'filtra'}
+                opzioni={[
                   ['filtra', '🔍 Filtra la griglia'],
                   ['evidenzia', '💡 Accendi il prodotto e portami lì'],
-                ].map(([value, label]) => (
-                  <button
-                    key={value}
-                    className={`mode-option${
-                      (settings.pos_search || 'filtra') === value ? ' active' : ''
-                    }`}
-                    onClick={() => save({ pos_search: value })}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
+                ]}
+                onScegli={(v) => save({ pos_search: v })}
+              />
 
               {/* LA STRISCIA A SINISTRA DELLE CARD. È lo stesso segno in due
                   schermate e finora diceva una cosa decisa da noi: dipende
@@ -213,40 +189,24 @@ export default function SettingsTab({ role = null }) {
               <h4 style={{ margin: '16px 0 4px' }}>
                 Cosa dice la riga a sinistra di ogni scheda della griglia?
               </h4>
-              <div className="mode-choice" style={{ gridTemplateColumns: '1fr 1fr' }}>
-                {MODI_STRISCIA.map((m) => (
-                  <button
-                    key={m.id}
-                    className={`mode-option${
-                      (settings.stripe_pos || MODO_STRISCIA_DEFAULT) === m.id ? ' active' : ''
-                    }`}
-                    onClick={() => save({ stripe_pos: m.id })}
-                    title={m.desc}
-                  >
-                    {m.label}
-                  </button>
-                ))}
-              </div>
+              <SceltaModo
+                colonne="1fr 1fr"
+                valore={settings.stripe_pos || MODO_STRISCIA_DEFAULT}
+                opzioni={MODI_STRISCIA.map((m) => [m.id, m.label, m.desc])}
+                onScegli={(v) => save({ stripe_pos: v })}
+              />
 
               <p className="muted small" style={{ margin: '12px 0 4px' }}>
                 Quale colore per «ci sono abbastanza scorte»?
               </p>
-              <div className="mode-choice">
-                {[
+              <SceltaModo
+                valore={!!settings.stripe_ok_verde}
+                opzioni={[
                   [false, '⚪ Grigio'],
                   [true, '🟢 Verde'],
-                ].map(([value, label]) => (
-                  <button
-                    key={String(value)}
-                    className={`mode-option${
-                      !!settings.stripe_ok_verde === value ? ' active' : ''
-                    }`}
-                    onClick={() => save({ stripe_ok_verde: value })}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
+                ]}
+                onScegli={(v) => save({ stripe_ok_verde: v })}
+              />
             </div>
       ),
     },
@@ -263,25 +223,18 @@ export default function SettingsTab({ role = null }) {
                 servizio o ritiro sul singolo conto, da «Dati conto». Qui si
                 decide come NASCONO i conti.
               </p>
-              <div className="mode-choice">
-                {[
+              <SceltaModo
+                valore={mondoConsegna(settings)}
+                opzioni={[
                   ['tavolo', '🍸 Solo servizio', 'Si porta tutto al tavolo.'],
                   [
                     'entrambi',
                     '🤝 Ritiro e servizio',
                     'Chi si siede si fa servire, chi ha fretta ritira al banco.',
                   ],
-                ].map(([value, label, hint]) => (
-                  <button
-                    key={value}
-                    className={`mode-option${mondoConsegna(settings) === value ? ' active' : ''}`}
-                    onClick={() => save({ service_mode: value })}
-                    title={hint}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
+                ]}
+                onScegli={(v) => save({ service_mode: v })}
+              />
 
               {/* DENTRO IL SECONDO MONDO, e solo lì: col solo servizio non
                   c'è niente da scegliere e niente da far scegliere. */}
@@ -293,19 +246,11 @@ export default function SettingsTab({ role = null }) {
                     sala. Si cambia conto per conto in un tocco: il ritiro
                     azzera coperto e costo di servizio.
                   </p>
-                  <div className="mode-choice">
-                    {MODI_CONSEGNA.map(([value, label]) => (
-                      <button
-                        key={value}
-                        className={`mode-option${
-                          modoAllaNascita(settings) === value ? ' active' : ''
-                        }`}
-                        onClick={() => save({ consegna_default: value })}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
+                  <SceltaModo
+                    valore={modoAllaNascita(settings)}
+                    opzioni={MODI_CONSEGNA}
+                    onScegli={(v) => save({ consegna_default: v })}
+                  />
 
                   {/* CHI SCEGLIE, non cosa si sceglie: senza ordinazioni dei
                       clienti non c'è nessuno a cui chiederlo, e la voce si
@@ -789,39 +734,23 @@ export default function SettingsTab({ role = null }) {
           <h4 style={{ margin: '4px 0' }}>
             Cosa dice la riga a sinistra di ogni scheda?
           </h4>
-          <div className="mode-choice" style={{ gridTemplateColumns: '1fr 1fr' }}>
-            {MODI_STRISCIA.map((m) => (
-              <button
-                key={m.id}
-                className={`mode-option${
-                  (settings.stripe_menu || 'scorte') === m.id ? ' active' : ''
-                }`}
-                onClick={() => save({ stripe_menu: m.id })}
-                title={m.desc}
-              >
-                {m.label}
-              </button>
-            ))}
-          </div>
+          <SceltaModo
+            colonne="1fr 1fr"
+            valore={settings.stripe_menu || 'scorte'}
+            opzioni={MODI_STRISCIA.map((m) => [m.id, m.label, m.desc])}
+            onScegli={(v) => save({ stripe_menu: v })}
+          />
           <p className="muted small" style={{ margin: '8px 0 4px' }}>
             Quale colore per «ci sono abbastanza scorte»?
           </p>
-          <div className="mode-choice">
-            {[
+          <SceltaModo
+            valore={!!settings.stripe_menu_ok_verde}
+            opzioni={[
               [false, '⚪ Grigio'],
               [true, '🟢 Verde'],
-            ].map(([value, label]) => (
-              <button
-                key={String(value)}
-                className={`mode-option${
-                  !!settings.stripe_menu_ok_verde === value ? ' active' : ''
-                }`}
-                onClick={() => save({ stripe_menu_ok_verde: value })}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+            ]}
+            onScegli={(v) => save({ stripe_menu_ok_verde: v })}
+          />
         </div>
       ),
     },
@@ -840,22 +769,16 @@ export default function SettingsTab({ role = null }) {
                 un&apos;unica lista (in corso + evasi). Lo stato è sempre indicato dal
                 colore e dall&apos;etichetta sulla card.
               </p>
-              <div className="mode-choice">
-                {[
+              <SceltaModo
+                valore={settings.queue_view}
+                opzioni={[
                   ['griglia', '🔲 Griglia (schermo intero)'],
                   ['corsie', '🚦 Corsie di stato'],
                   ['tabs', '🗂 Schede per stato'],
                   ['lista', '📋 Lista unica'],
-                ].map(([value, label]) => (
-                  <button
-                    key={value}
-                    className={`mode-option${settings.queue_view === value ? ' active' : ''}`}
-                    onClick={() => save({ queue_view: value })}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
+                ]}
+                onScegli={(v) => save({ queue_view: v })}
+              />
 
               {/* LA VISTA DEL BANCO. Non è un'altra vista della coda: è
                   un'altra coda, quella di chi prepara. Ad accenderla sono
@@ -879,20 +802,13 @@ export default function SettingsTab({ role = null }) {
                   </>
                 )}
               </p>
-              <div className="mode-choice">
-                {[['corsie', '🚦 Corsie di stato']].map(([value, label]) => (
-                  <button
-                    key={value}
-                    className={`mode-option${
-                      (settings.bartender_view || 'corsie') === value ? ' active' : ''
-                    }`}
-                    disabled={settings.workflow_enabled === false}
-                    onClick={() => save({ bartender_view: value })}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
+              <SceltaModo
+                valore={settings.bartender_view || 'corsie'}
+                opzioni={[
+                  ['corsie', '🚦 Corsie di stato', undefined, settings.workflow_enabled === false],
+                ]}
+                onScegli={(v) => save({ bartender_view: v })}
+              />
 
               <h4 style={{ margin: '16px 0 4px' }}>La ricerca</h4>
               <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
@@ -903,22 +819,14 @@ export default function SettingsTab({ role = null }) {
                 occhi. Nel secondo modo la ricerca si azzera da sé appena si tocca un
                 conto.
               </p>
-              <div className="mode-choice">
-                {[
+              <SceltaModo
+                valore={settings.queue_search || 'filtra'}
+                opzioni={[
                   ['filtra', '🔍 Filtra la coda'],
                   ['evidenzia', '💡 Accendi il conto e portami lì'],
-                ].map(([value, label]) => (
-                  <button
-                    key={value}
-                    className={`mode-option${
-                      (settings.queue_search || 'filtra') === value ? ' active' : ''
-                    }`}
-                    onClick={() => save({ queue_search: value })}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
+                ]}
+                onScegli={(v) => save({ queue_search: v })}
+              />
             </div>
       ),
     },
@@ -1071,28 +979,18 @@ export default function SettingsTab({ role = null }) {
                   quella evidenziata è quella che si applica davvero
                   (fraseAnnulloDefault), non l'impostazione impossibile
                   rimasta scritta. */}
-              <div className="mode-choice">
-                {Object.entries(CANCEL_PHRASES).map(([key, text]) => {
-                  const possibile = fraseAnnulloPossibile(key, settings)
-                  return (
-                    <button
-                      key={key}
-                      className={`mode-option${
-                        fraseAnnulloDefault(settings) === key ? ' active' : ''
-                      }`}
-                      disabled={!possibile}
-                      title={
-                        possibile
-                          ? undefined
-                          : 'Qui non si ritira al banco: la frase manderebbe il cliente dove nessuno lo aspetta.'
-                      }
-                      onClick={() => save({ cancel_phrase_default: key })}
-                    >
-                      {text}
-                    </button>
-                  )
-                })}
-              </div>
+              <SceltaModo
+                valore={fraseAnnulloDefault(settings)}
+                opzioni={Object.entries(CANCEL_PHRASES).map(([key, text]) => [
+                  key,
+                  text,
+                  fraseAnnulloPossibile(key, settings)
+                    ? undefined
+                    : 'Qui non si ritira al banco: la frase manderebbe il cliente dove nessuno lo aspetta.',
+                  !fraseAnnulloPossibile(key, settings),
+                ])}
+                onScegli={(v) => save({ cancel_phrase_default: v })}
+              />
               {!fraseAnnulloPossibile('bancone', settings) && (
                 <p className="muted small" style={{ margin: '8px 0 0' }}>
                   «Prego recarsi al bancone» non si può usare: il locale è a solo
@@ -1414,6 +1312,32 @@ function ReaderPairing({ settings }) {
 // guarda QUESTO schermo — non una regola del bar — quindi resta sul
 // dispositivo e vale per la persona collegata: due che si passano lo stesso
 // tablet nei cambi turno non si sovrascrivono a vicenda.
+// LE PASTIGLIE «SCEGLI UN MODO». Una fila di scelte che si escludono a
+// vicenda, quella in vigore accesa, un tocco salva: in questa schermata
+// compare quattordici volte, ed era scritta quattordici volte — cambiare
+// una pastiglia voleva dire cambiarla in quattordici posti.
+//
+// Ogni opzione e' `[valore, etichetta, spiegazione?, spenta?]`. Una voce
+// impossibile resta A VISTA, spenta, con il motivo nella spiegazione:
+// sparire fa dubitare di averla immaginata.
+function SceltaModo({ valore, opzioni, onScegli, colonne }) {
+  return (
+    <div className="mode-choice" style={colonne ? { gridTemplateColumns: colonne } : undefined}>
+      {opzioni.map(([id, etichetta, spiegazione, spenta]) => (
+        <button
+          key={String(id)}
+          className={`mode-option${valore === id ? ' active' : ''}`}
+          disabled={spenta}
+          title={spiegazione}
+          onClick={() => onScegli(id)}
+        >
+          {etichetta}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 function ToggleRow({ label, desc, checked, onChange, disabled }) {
   return (
     <div className="toggle-row">
