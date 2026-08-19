@@ -90,30 +90,27 @@ function CardInArrivo({ pending, onScarta }) {
   )
 }
 
-// ── IL PALLINO DEL CONTO ──────────────────────────────────────────────
+// ── IL COLORE DEL CONTO SULLA CARD ────────────────────────────────────
 //
-// Sta accanto al numero, sulla card del conto e su TUTTE le card delle sue
-// comande: è il segno che dice «questa e quella sono lo stesso tavolo»
-// anche quando finiscono in tre colonne diverse.
+// TINGE LA CARD INTERA, sfumata e leggera: è il segno che dice «questa e
+// quella sono lo stesso tavolo» anche quando finiscono in tre colonne
+// diverse. Prima era un pallino accanto al numero, e non serviva: questo
+// colore deve rispondere da LONTANO, guardando la lavagna mentre si versa,
+// e dieci pixel da lontano non ci sono.
 //
-// È un PALLINO, non un fondo e non la striscia a sinistra: la striscia
-// dice a che punto sta il lavoro e non si tocca — chi vince fra i due è
-// scritto in lib/coloriConto.js — e un fondo pieno con dodici tinte sature
-// diventerebbe illeggibile su un tema o sull'altro.
+// NON LA STRISCIA A SINISTRA, che è un vocabolario chiuso di sei tinte —
+// arancio da fare, azzurro al banco, verde pronto, grigio uscito, ambra
+// pagato — e dice a che punto sta il lavoro. Quella non si tocca: chi
+// vince fra i due sta scritto in lib/coloriConto.js. Il fondo invece era
+// libero, e il colore del conto ci sta senza coprire niente.
 //
-// Il colore non è mai l'unica cosa che dice qualcosa: il numero del conto
-// è lì accanto, e resta la risposta per chi i colori non li distingue.
-export function PallinoConto({ order }) {
+// Restituisce le proprietà da mettere sulla card (classe e variabile CSS),
+// non un pezzo di schermata: il colore non è una cosa DENTRO la card, è
+// la card.
+export function coloreCardConto(order) {
   const colore = coloreDelConto(order)
   if (!colore) return null
-  return (
-    <span
-      className="pallino-conto"
-      style={{ background: colore }}
-      title={`Colore del conto #${order?.daily_number ?? ''}`}
-      aria-hidden="true"
-    />
-  )
+  return { className: 'conto-colorato', style: { '--conto-colore': colore } }
 }
 
 // LA TAVOLOZZA, dentro il ⋯ della card. La stessa fila di gettoni del menù

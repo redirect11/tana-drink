@@ -1132,18 +1132,22 @@ describe('le corsie del banco: una card per comanda', () => {
 //
 // Un conto battuto in tre volte diventa tre comande, e le tre comande
 // finiscono in tre colonne diverse della lavagna: da due metri nessuno vede
-// più che sono lo stesso tavolo. Il pallino colorato è il segno che li tiene
-// insieme, ed è il colore del CONTO — la comanda se lo porta dietro.
+// più che sono lo stesso tavolo. Il colore tinge la CARD INTERA, ed è del
+// conto — la comanda se lo porta dietro.
+//
+// Fu provato come pallino accanto al numero e non serviva a niente: questo
+// colore deve rispondere da lontano, e dieci pixel da lontano non ci sono.
 //
 // Le due cose che qui costano un drink sbagliato:
-//   · lo stesso conto ha lo stesso pallino in TUTTE le colonne;
-//   · la striscia a sinistra resta quella dello STATO. Fra i due colori
-//     vince lo stato, sempre: è quello che dice cosa fare adesso, e se il
-//     colore del conto se lo mangiasse la lavagna diventerebbe muta.
+//   · lo stesso conto tinge le sue card allo stesso modo in TUTTE le colonne;
+//   · la striscia a sinistra resta quella dello STATO. Fra i due segni vince
+//     lo stato, sempre: è quello che dice cosa fare adesso, e se il colore
+//     del conto se lo mangiasse la lavagna diventerebbe muta.
 describe('il colore del conto, e le comande che se lo portano dietro', () => {
-  const pallini = (nodo) => [...nodo.querySelectorAll('.pallino-conto')]
+  const colorate = (nodo) => [...nodo.querySelectorAll('.conto-colorato')]
+  const tinta = (card) => card.style.getPropertyValue('--conto-colore')
 
-  it('lo stesso conto ha lo stesso pallino in tutte le colonne', async () => {
+  it('lo stesso conto tinge le sue card in tutte le colonne', async () => {
     ruolo = 'bartender'
     ordini = [
       {
@@ -1160,16 +1164,16 @@ describe('il colore del conto, e le comande che se lo portano dietro', () => {
     montaCoda()
     await screen.findByText('Da fare')
 
-    const daFare = pallini(corsia('da-fare'))
-    const alRitiro = pallini(corsia('al-ritiro'))
+    const daFare = colorate(corsia('da-fare'))
+    const alRitiro = colorate(corsia('al-ritiro'))
     expect(daFare).toHaveLength(1)
     expect(alRitiro).toHaveLength(1)
     // Lo stesso colore, non «uno a testa»: è tutto il punto.
-    expect(daFare[0].style.background).toBe('#9b59b6')
-    expect(alRitiro[0].style.background).toBe('#9b59b6')
+    expect(tinta(daFare[0])).toBe('#9b59b6')
+    expect(tinta(alRitiro[0])).toBe('#9b59b6')
   })
 
-  it('un conto senza colore non ha pallino: non se ne inventa uno', async () => {
+  it('un conto senza colore resta com’è: non se ne inventa uno', async () => {
     // I conti nati prima dell'impostazione restano com'erano. Se il colore
     // si ricalcolasse dall'id, accendere l'interruttore colorerebbe di
     // colpo tutta la coda — e domani, cambiata la tavolozza, la
@@ -1179,7 +1183,7 @@ describe('il colore del conto, e le comande che se lo portano dietro', () => {
     montaCoda()
     await screen.findByText('Da fare')
 
-    expect(pallini(document.body)).toHaveLength(0)
+    expect(colorate(document.body)).toHaveLength(0)
   })
 
   it('vince lo stato: la striscia della card non cambia per il colore', async () => {
@@ -1188,11 +1192,14 @@ describe('il colore del conto, e le comande che se lo portano dietro', () => {
     await screen.findByText('In corso')
 
     const card = document.querySelector('.corsia-card')
-    // La striscia a sinistra è dello STATO, e resta dov'era: il pallino è
-    // un segno in più, non un segno al posto di quello.
+    // La striscia a sinistra è dello STATO, e resta dov'era: il fondo
+    // colorato è un segno in più, non un segno al posto di quello. La
+    // classe dello stato sopravvive accanto a quella del colore, e nessuno
+    // scrive il bordo a mano.
     expect(card).toHaveClass('ricevuto')
+    expect(card).toHaveClass('conto-colorato')
     expect(card.style.borderLeftColor).toBe('')
-    expect(pallini(card)).toHaveLength(1)
+    expect(tinta(card)).toBe('#e74c3c')
   })
 
   it('dal ⋯ della comanda si dà il colore, ed è quello del CONTO', async () => {

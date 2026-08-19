@@ -4411,10 +4411,15 @@ requirements:
       VINCOLI: il colore va SCRITTO sul conto, non ricalcolato dall'id —
       dev'essere lo stesso su ogni terminale e non deve cambiare se domani
       cambia la tavolozza. E dev'essere leggibile su tutti i temi, chiaro e
-      scuro: non un fondo pieno sotto il testo, ma dove i colori già stanno
-      in questa app (la striscia a sinistra, un pallino). Va deciso e
-      scritto chi vince fra colore del conto e colore dello stato, invece
-      di lasciarlo all'ordine delle regole CSS.
+      scuro. Va deciso e scritto chi vince fra colore del conto e colore
+      dello stato, invece di lasciarlo all'ordine delle regole CSS.
+      DOV'E' IL COLORE, precisato dall'utente il 19/08 dopo aver visto la
+      prima versione: «parlavo del colore della card intera, non di un
+      pallino messo li'. Le card devono essere con un colore specifico,
+      magari leggermente trasparente e sfumato». Il primo giro l'aveva
+      messo come pallino da 10px accanto al numero, e non rispondeva alla
+      domanda: questo colore serve da LONTANO — guardando la lavagna
+      mentre si versa — e dieci pixel da lontano non ci sono.
       FATTO COSI'. Il colore sta nel campo `colore` del documento ordine,
       scelto UNA VOLTA alla nascita dal progressivo del conto (resto della
       divisione per la tavolozza: due conti battuti di fila non sono mai
@@ -4428,12 +4433,23 @@ requirements:
       corsie dei conti sia dal ⋯ della comanda, dove si scrive comunque
       sul CONTO — e vale anche sui conti nati prima.
       CHI VINCE: LO STATO. La striscia a sinistra resta quella della
-      preparazione, sempre, ed è quella che dice cosa fare adesso; il
-      colore del conto è un PALLINO da 10px accanto al numero, sulla card
-      del conto (corsie e griglia) e su tutte le card delle sue comande.
-      Niente fondo pieno: dodici tinte sature sotto al testo sarebbero
-      illeggibili su un tema o sull'altro. Il pallino non è mai l'unica
-      cosa che informa — il numero del conto gli sta accanto.
+      preparazione, sempre, ed è quella che dice cosa fare adesso — un
+      vocabolario chiuso di sei tinte (arancio da fare, azzurro al banco,
+      verde pronto, grigio uscito, ambra pagato), dove il colore del conto
+      non poteva entrare senza cancellarlo.
+      IL COLORE DEL CONTO PRENDE IL FONDO DELLA CARD, che era libero:
+      sfumato in diagonale dall'angolo, 16% in alto a sinistra e via via
+      niente. Tenue apposta — dodici tinte sature stese sotto al testo lo
+      renderebbero illeggibile su un tema o sull'altro e coprirebbero
+      l'alone del passo di lavoro. In DIAGONALE perché da sinistra c'è già
+      quell'alone, e due sfumature dallo stesso lato si impastano.
+      Sta sulla card del conto (corsie, griglia e lista) e su tutte le
+      card delle sue comande. E non è mai l'unica cosa che informa: il
+      numero del conto è sulla stessa card.
+      PER ARRIVARCI il fondo della card e' passato da due `background` che
+      si sovrascrivevano a vicenda a due VARIABILI (`--tinta-stato` e
+      `--conto-colore`) composte in una regola sola: prima vinceva l'ultima
+      regola letta e l'altro segno spariva.
       Le regole stanno in src/lib/coloriConto.js, che è dove è scritto il
       perché.
     status: implemented
