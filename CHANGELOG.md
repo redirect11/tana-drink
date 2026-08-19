@@ -181,6 +181,15 @@ con una prova a vuoto che dice cosa cambierebbe prima di toccare niente.
 
 ### Sotto il cofano
 
+- **Le due lavagne a colonne hanno smesso di essere scritte due volte.** La
+  coda dei conti e quella del banco sono viste diverse — una dice come sta
+  andando la serata, l'altra cosa c'è da fare adesso — ma il contorno era lo
+  stesso, copiato: la testata col conteggio e il totale, la card di un conto
+  appena battuto e ancora in volo, il bollo dell'acconto, il piede col ⋯ e il
+  tasto grande. Una novantina di righe in doppio, e una correzione da fare in
+  due posti. Adesso il contorno è uno; le due viste restano due, che un conto
+  e una comanda non sono la stessa cosa.
+
 - **La coda prepara la vista che stai guardando, non tutte e quattro.**
   Griglia, corsie, lista e schede venivano rifatte a ogni ridisegno e se ne
   mostrava una: con centoventi conti erano una diciottina di passate sulla

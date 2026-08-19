@@ -1,8 +1,7 @@
-import { formatPrice } from '../lib/orderStatus.js'
-import { paidAmount } from '../lib/pagamento.js'
 import { azioneCorsia, daQuanto, destinazioneConto } from '../lib/coda.js'
 import OrderBy from './OrderBy.jsx'
 import RigheCorsia from './RigheCorsia.jsx'
+import { BolloAcconto, Corsia, Lavagna, PiedeCorsia, TastoAzioni, TastoCorsia } from './Corsia.jsx'
 
 // ── LA VISTA A CORSIE DEI CONTI ───────────────────────────────────────
 //
@@ -14,6 +13,11 @@ import RigheCorsia from './RigheCorsia.jsx'
 // I PASSI DEL SERVIZIO stanno nella vista del BANCO (CorsieComande), che
 // ragiona per comande: qui la card è il conto, e un conto con tre comande
 // in tre passi diversi non sta in una colonna sola.
+//
+// IL CONTORNO È IN COMUNE con l'altra lavagna e sta in Corsia.jsx: guscio
+// della colonna, testata, card dei conti «in arrivo», bollo dell'acconto,
+// piede. Qui resta il corpo della card del CONTO, che è la parte in cui le
+// due viste differiscono davvero.
 //
 // Le corsie e i loro conti arrivano già fatti da lib/coda.js: qui non si
 // decide niente su cosa sta dove, si disegna soltanto.
@@ -40,139 +44,69 @@ export default function CorsieStato({
   const adesso = Date.now()
 
   return (
-    // QUANTE COLONNE QUANTE SONO LE CORSIE. Erano quattro fisse: con gli
-    // stati di servizio spenti le corsie diventano tre e restavano
-    // schiacciate a sinistra, con un quarto di schermo vuoto a destra.
-    <div className="corsie" style={{ '--corsie-n': corsie.length }}>
+    <Lavagna corsie={corsie}>
       {corsie.map((corsia) => {
         // Il tasto dipende dallo STATO che la colonna rappresenta, non dal
         // suo id: vedi azioneCorsia, e BUG-026 per il perché.
         const azione = azioneCorsia(corsia.stato)
-        const prima = corsie[0]?.id === corsia.id
         return (
-          <section className="corsia" key={corsia.id}>
-            <div className={`row between corsia-testa corsia-${corsia.id}`}>
-              <span className="corsia-titolo">
-                {corsia.titolo} <span className="muted small">{corsia.ordini.length}</span>
-              </span>
-              <span className="price small">{formatPrice(corsia.totale)}</span>
-            </div>
-            {/* Corsia vuota: intestazione a zero e basta. Una scritta di
-                riempimento in ognuna delle quattro colonne è rumore che
-                copre quelle piene. */}
-            <div className="corsia-lista">
-              {/* CONTI APPENA BATTUTI, ancora in volo verso il server: stanno
-                  in cima alla prima corsia perché è lì che nascono. Senza,
-                  chi batte un conto al POS torna in coda e non lo vede — e
-                  lo ribatte. */}
-              {prima &&
-                inArrivo.map((p) => (
-                  <article className="card order-card corsia-card in-arrivo" key={p.tempId}>
-                    <div className="row between">
-                      <span className="corsia-num">#{p.order?.daily_number ?? '…'}</span>
-                      <span className="muted small">
-                        {p.state === 'error' ? 'non inviato' : 'in invio…'}
-                      </span>
-                    </div>
-                    <div className="muted small corsia-dove">{destinazioneConto(p.order || {})}</div>
-                    {p.state === 'error' && (
-                      <>
-                        <div className="small corsia-righe">{p.error}</div>
-                        <button
-                          className="btn small block corsia-azione"
-                          onClick={() => onScarta?.(p.tempId)}
-                        >
-                          Rimuovi
-                        </button>
-                      </>
+          <Corsia
+            key={corsia.id}
+            corsia={corsia}
+            quanti={corsia.ordini.length}
+            prima={corsie[0]?.id === corsia.id}
+            inArrivo={inArrivo}
+            onScarta={onScarta}
+          >
+            {corsia.ordini.map((o) => (
+              <article
+                className={`card order-card corsia-card ${o.workflow_status}${
+                  o.payment_status === 'parziale' ? ' acconto' : ''
+                }${o.id === idAcceso ? ' conto-acceso' : ''}`}
+                key={o.id}
+                id={`ordine-${o.id}`}
+                onClick={() => onApri?.(o)}
+              >
+                <div className="row between">
+                  <span className="corsia-num">
+                    #{o.daily_number ?? '—'} <OrderBy order={o} />
+                  </span>
+                  <BolloAcconto order={o} />
+                  <span className="muted small">{daQuanto(o.created_at, adesso)}</span>
+                </div>
+                <div className="muted small corsia-dove">{destinazioneConto(o)}</div>
+                <RigheCorsia
+                  items={o.order_items}
+                  aperto={espansa === o.id}
+                  onApri={() => onEspandi?.(espansa === o.id ? null : o.id)}
+                />
+                {o.note && <div className="order-note small corsia-nota">{o.note}</div>}
+                {(azioni || azione) && (
+                  <PiedeCorsia>
+                    {azioni && (
+                      <TastoAzioni
+                        aperto={aperta === o.id}
+                        onTocca={() => onApriAzioni?.(aperta === o.id ? null : o.id)}
+                      />
                     )}
-                  </article>
-                ))}
-              {corsia.ordini.map((o) => {
-                return (
-                  <article
-                    className={`card order-card corsia-card ${o.workflow_status}${
-                      o.payment_status === 'parziale' ? ' acconto' : ''
-                    }${o.id === idAcceso ? ' conto-acceso' : ''}`}
-                    key={o.id}
-                    id={`ordine-${o.id}`}
-                    onClick={() => onApri?.(o)}
-                  >
-                    <div className="row between">
-                      <span className="corsia-num">
-                        #{o.daily_number ?? '—'} <OrderBy order={o} />
-                      </span>
-                      {/* ACCONTO: qualcosa è già stato incassato, ma il conto
-                          non è chiuso. Senza dirlo qui, chi porta il conto al
-                          tavolo chiede l'intero — ed è successo. */}
-                      {o.payment_status === 'parziale' && (
-                        <span
-                          className="pill acconto small"
-                          title={`Già incassati ${formatPrice(paidAmount(o))}`}
-                        >
-                          💳 Acconto
-                        </span>
-                      )}
-                      <span className="muted small">{daQuanto(o.created_at, adesso)}</span>
-                    </div>
-                    <div className="muted small corsia-dove">{destinazioneConto(o)}</div>
-                    <RigheCorsia
-                      items={o.order_items}
-                      aperto={espansa === o.id}
-                      onApri={() => onEspandi?.(espansa === o.id ? null : o.id)}
-                    />
-                    {o.note && <div className="order-note small corsia-nota">{o.note}</div>}
-                    {/* IL PIEDE DELLA CARD, IN UNA RIGA SOLA. «⋯ Azioni» e
-                        il tasto che porta avanti il lavoro erano due blocchi
-                        larghi tutta la card, uno sotto l'altro: due righe di
-                        altezza per ogni conto, moltiplicate per una colonna
-                        intera. */}
-                    {(azioni || azione) && (
-                      <div className="corsia-piede">
-                        {azioni && (
-                          <button
-                            className="btn ghost small corsia-azioni"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              onApriAzioni?.(aperta === o.id ? null : o.id)
-                            }}
-                            aria-expanded={aperta === o.id}
-                          >
-                            {aperta === o.id ? '▴ Chiudi' : '⋯ Azioni'}
-                          </button>
-                        )}
-                        {azione && (
-                          <button
-                            className="btn small corsia-azione"
-                            onClick={(e) => {
-                              // Il tasto non è la card: toccandolo si fa
-                              // quello che c'è scritto, non si apre il conto.
-                              e.stopPropagation()
-                              onIncassa?.(o)
-                            }}
-                          >
-                            {azione.etichetta}
-                          </button>
-                        )}
-                      </div>
-                    )}
-                    {azioni && aperta === o.id && (
-                      // Le azioni sono quelle della coda, disegnate qui: una
-                      // regola sola, in un posto solo. L'avanzamento no —
-                      // «Segna come Ritirato/Servito» e il tasto grande della
-                      // corsia sono la STESSA cosa scritta due volte, a un
-                      // dito di distanza. Qui comanda il tasto della corsia.
-                      <div className="corsia-azioni-aperte" onClick={(e) => e.stopPropagation()}>
-                        {azioni(o, { senzaAvanzamento: !!azione })}
-                      </div>
-                    )}
-                  </article>
-                )
-              })}
-            </div>
-          </section>
+                    <TastoCorsia azione={azione} onPremi={() => onIncassa?.(o)} />
+                  </PiedeCorsia>
+                )}
+                {azioni && aperta === o.id && (
+                  // Le azioni sono quelle della coda, disegnate qui: una
+                  // regola sola, in un posto solo. L'avanzamento no —
+                  // «Segna come Ritirato/Servito» e il tasto grande della
+                  // corsia sono la STESSA cosa scritta due volte, a un
+                  // dito di distanza. Qui comanda il tasto della corsia.
+                  <div className="corsia-azioni-aperte" onClick={(e) => e.stopPropagation()}>
+                    {azioni(o, { senzaAvanzamento: !!azione })}
+                  </div>
+                )}
+              </article>
+            ))}
+          </Corsia>
         )
       })}
-    </div>
+    </Lavagna>
   )
 }

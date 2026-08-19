@@ -4506,11 +4506,22 @@ requirements:
       NON fondere del tutto i due componenti: una vista lavora sui conti e
       l'altra sulle comande, e solo quella dei conti ha la colonna della
       cifra grande. Fonderle cambierebbe comportamento.
-    status: todo
+      FATTO (19/08): il contorno sta in `src/components/Corsia.jsx` —
+      `Lavagna` (quante colonne), `Corsia` (guscio, testata, lista, card dei
+      conti in arrivo), `BolloAcconto`, `PiedeCorsia`, `TastoAzioni`,
+      `TastoCorsia`. Alle due viste resta il corpo della propria card:
+      CorsieStato da 178 righe a 112, CorsieComande da 293 a 226.
+      NON sono state fuse, come diceva la voce. La colonna della cifra
+      grande nel frattempo era già sparita con REQ-DEV-010 (viveva nel ramo
+      morto), ma la ragione resta: un conto e una comanda non sono la stessa
+      cosa, ed è esattamente l'errore che la vista del banco è nata per
+      correggere. L'unica differenza rimasta nella testata — il conteggio
+      (conti di là, comande di qua) — si passa da fuori.
+    status: implemented
     generate_issue: true
     labels: [manutenzione, coda]
     priority: P3
-    test_cases: []
+    test_cases: [tests/component/Corsia.test.jsx]
 
   - id: REQ-DEV-007
     title: "La coda ricalcola tutte e tre le viste a ogni disegno, e ne mostra una"
