@@ -109,6 +109,8 @@ vi.mock('../../src/lib/printer.js', () => ({
   printScontrino: vi.fn(async () => {}),
   loadPrinterSettings: vi.fn(() => ({})),
   claimReceiptPrint: vi.fn(() => false),
+  reclaimReceiptPrint: vi.fn(() => false),
+  releaseReceiptPrint: vi.fn(),
 }))
 vi.mock('../../src/lib/paymentsApi.js', () => ({
   readerCheckout: vi.fn(async () => ({})),
