@@ -690,6 +690,12 @@ QUATTRO VINCOLI DEL MESTIERE, che qui si dimenticano facile:
 
 RESTA APERTO: gli articoli comprati in una misura e usati in un'altra (i limoni al chilo, spremuti in cl) non si convertono da soli e si leggono ancora nella forma vecchia. Vanno sistemati a mano, decidendo cos'è un pezzo — un limone, e quanto pesa — e sono pochi: la diagnosi li elenca per nome.
 
+ESEGUITO IN PRODUZIONE il 18/08 con la 1.5.0, dall'utente (detto il 19/08). Da quel momento il magazzino vero e' tutto a pezzi: non e' piu' una cosa che aspetta, e chi legge questa voce non deve piu' chiedersi se il locale ha travasato.
+
+QUINDI IL TRAVASO E' ORMAI UNA MACCHINA A RIPOSO. Il codice resta (`travasaMagazzinoAPezzi`, `statoTravaso`, il banner e il blocco di InventoryManager), e sta li' come un estintore: non serve piu' a nessuno finche' non nasce un'installazione che parte da dati vecchi — caso oggi inesistente, perche' il locale e' uno solo, ma previsto dal piano di sbrandizzazione (docs/piano-sbrandizzazione.md).
+
+VERIFICATO IL 19/08 che dalla 1.5.0 il modello NON e' cambiato di nuovo: l'unico campo aggiunto ai documenti e' `sale_vat` sui drink (REQ-MENU-013), ed e' additivo — vuoto vuol dire «usa l'IVA del locale», quindi nessun dato vecchio da rimettere in riga. Se un giorno il modello cambiera' davvero, questa e' la voce da rileggere: dice come si fa un travaso senza toccare il database a mano.
+
 **Dove**: `src/lib/inventory.js (articoloNormalizzato), src/lib/api.js (mapItem, loadStock, adjustStock)` · **Lo dimostrano**: `tests/unit/travasoInventario.test.js`, `tests/unit/travasoScrittura.test.js`, `tests/component/TravasoMagazzino.test.jsx`
 
 #### REQ-MAG-017 — Il fornitore si aggiunge dalla tendina del prodotto, come già la categoria nel menù
