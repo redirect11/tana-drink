@@ -4554,11 +4554,19 @@ requirements:
       DA FARE CON CALMA E CON I TEST DAVANTI: è il punto in cui si scrivono
       i soldi di un conto. Non si tocca a ridosso di un rilascio, ed è il
       motivo per cui questa voce esiste invece della modifica.
-    status: todo
+      FATTO (19/08) con i test scritti prima: `salvaComandeERifaiTotale` è
+      chiamata dai quattro gesti che riscrivono le comande di un conto aperto
+      — modifica del cliente, aggiunta al conto, divisione di una comanda,
+      modifica dal banco. Una differenza vera fra i quattro c'era, ed è
+      rimasta scritta invece che sparire in un riuso: la modifica del CLIENTE
+      scrive le righe come sono arrivate, perché `aggregateItems` fonde due
+      righe dello stesso drink e con loro se ne andrebbero note e prezzi
+      cambiati a mano. Si passa da un parametro, con scritto perché.
+    status: implemented
     generate_issue: true
     labels: [manutenzione, pagamenti]
     priority: P2
-    test_cases: []
+    test_cases: [tests/unit/totaleDelConto.test.js]
 
   - id: REQ-DEV-010
     title: "Metà di «corsie di stato» non la chiama più nessuno"
