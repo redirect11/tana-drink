@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 139 | fatto e coperto dai test |
+| ✅ | 140 | fatto e coperto dai test |
 | ⚠️  | 16 | fatto ma nessun test lo verifica |
-| ⬜ | 32 | da fare |
+| ⬜ | 31 | da fare |
 | 🗑 | 1 | non più valido |
 
-**188 voci** in tutto. **155** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **32** sono lavori
+**188 voci** in tutto. **156** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **31** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **9** difetti noti sono ancora aperti.
 
@@ -48,7 +48,7 @@ come «vero oggi», non come «garantito».
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
 | [Menù e catalogo](#menù-e-catalogo) | 8 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
 | [Magazzino](#magazzino) | 18 | 6 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
-| [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 9 | 3 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
+| [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 10 | 2 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 9 | 2 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
 | [Vista cliente](#vista-cliente) | 5 | 1 | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
 | [Notifiche](#notifiche) | 4 | — | Le notifiche push: a chi arrivano, quando, e quando invece non devono arrivare. |
@@ -828,6 +828,48 @@ SI APRONO SULL'ULTIMA CHIUSURA di cassa, e quel periodo sta PRIMA degli altri ne
 
 **Dove**: `src/lib/stats.js, src/lib/eta.js, src/components/StatsTab.jsx` · **Lo dimostrano**: `tests/unit/stats.test.js`, `tests/unit/eta.test.js`, `tests/component/StatsTab.test.jsx`
 
+#### REQ-CASSA-009 — Bilancio → Venduto × Incassato: la tabella trasloca, con le due incidenze
+
+COSA FA IL FOGLIO (verificato: «ANALISI DATI.xlsx» → foglio «RAPPORTI ACQUISTI 2026»). Quattro blocchi — DISTILLATI, BIRRE + BIBITE, VINO, FOOD + MOKA — dodici colonne di mese più una colonna TOT. Le formule vere, lette con le formule e non coi valori, sono queste:
+
+ACQUISTI e FATTURATO NON SONO CALCOLATI, sono numeri battuti a mano e nessuna formula li lega a nessun altro foglio;
+
+UTILE GENERATO = FATTURATO − ACQUISTI;
+
+RAPPORTO FAT/ACQ = FATTURATO / ACQUISTI;
+
+INCIDENZA SOMMA UTILI = utile della macro / somma degli utili delle quattro macro in quel mese;
+
+ACQ TOT, UTILE TOT, FATT TOT = somma delle quattro macro del mese;
+
+INCIDENZA ANNO = fatturato totale del mese / fatturato totale dell'anno (una riga sola, sotto i totali, non per macro); la colonna TOT di ogni riga è la somma dei dodici mesi.
+
+QUANTO DISTA DALLA TABELLA CHE C'È GIÀ («Statistiche → Mensile per macro», REQ-MAG-015). Tre righe su sei hanno già il loro posto:
+
+FATTURATO sta a «Incassato», UTILE GENERATO a «Margine», RAPPORTO FAT/ACQ a «Inc-Costo», e la colonna TOT dell'anno c'è per ogni macro. Ne mancano due, ed è tutto quello che manca su questo fronte: l'INCIDENZA SOMMA UTILI (quanto pesa una macro sul margine del mese) e l'INCIDENZA ANNO (quanto pesa un mese sull'incassato dell'anno). La riga ACQUISTI è un'altra domanda e vive per conto suo, in REQ-MAG-022.
+
+PROPOSTA, poi CONFERMATA il 19/08 insieme al trasloco (vedi in fondo). Nella tabella mensile per macro, due percentuali in più: sulla riga di ogni macro, quanto pesa il suo margine sul margine di tutte le macro in quel mese; sotto i totali, quanto pesa l'incassato del mese sull'incassato dell'anno mostrato. Sono due divisioni su numeri che la tabella ha già in mano: non servono altri dati.
+
+DA SAPERE, e da dire a chi guarda, perché i due fogli non torneranno mai identici: il foglio confronta il fatturato con la merce ENTRATA e lavora al LORDO dell'IVA; la tabella dell'app confronta l'incassato col COSTO DEL VENDUTO e lavora al NETTO su tutti e due i lati (REQ-MAG-015). Le percentuali quindi si somigliano, i valori assoluti no.
+
+DECISO (19/08, dall'utente che riporta Flavio):
+
+QUESTA TABELLA CAMBIA CASA. Non sta più nelle Statistiche — che restano col solo Giornaliero, e le guarda chi lavora — ma nella pagina «Bilancio» (REQ-CASSA-010), dove stanno i conti del locale e che vede il solo admin. Lì si chiama «Venduto × Incassato», accanto alle altre due sottosezioni: «Mesi» (REQ-CASSA-011) e «Acquisti × Fatturato» (REQ-MAG-022).
+
+IL TRASLOCO È UN CAMBIO DI POSTO, NON DI CONTENUTO: quello che la tabella calcola oggi — incassato, costo del venduto, margine, inc-costo, per macro di MENÙ, con la regola decisa il 18/08 e scritta in REQ-MAG-015 — non si tocca. Le due incidenze descritte qui sopra restano le uniche due righe che le mancano, e traslocano con lei.
+
+DIDASCALIE, come su tutta la pagina (REQ-CASSA-010): margine, inc-costo e le due incidenze si spiegano sotto la tabella, in parole da banco. E lì va detta anche la differenza col foglio — l'app confronta l'incassato col costo del VENDUTO, al netto dell'IVA su tutti e due i lati, il foglio confronta il fatturato con la merce ENTRATA al lordo — perché è la prima cosa che si chiede chi mette i due numeri accanto.
+
+PERCHÉ SI SPOSTA: quanto ha reso ogni macro è una domanda da conti di fine mese, non da serata. Chi apre le Statistiche vuole sapere com'è andata ieri, chi apre il Bilancio com'è andato il mese — due mestieri diversi, anche se i numeri escono dalla stessa cassa.
+
+DIPENDE DA REQ-CASSA-010: il trasloco ha bisogno della pagina «Bilancio» dove andare, quindi si fa dopo — o nello stesso giro. Le due incidenze invece non dipendono da niente: sono due divisioni su numeri che la tabella ha già in mano, e si possono aggiungere anche prima.
+
+FATTO (19/08). La tabella sta in Bilancio → Venduto × Incassato e le Statistiche sono rimaste col solo Giornaliero — e senza l'elenco delle sottosezioni, che con una sezione sola non ha niente da far scegliere. Il calcolo non è stato toccato: sono arrivate le due incidenze (`incidenza` su ogni cella di macro, `incidenzaAnno` sulle celle dei totali, in `macroMonthlyReport`) e le didascalie sotto la tabella, compresa quella che dice perché col foglio di Flavio non torna.
+
+DOVE IL TOTALE NON È POSITIVO NON SI DIVIDE: un mese in perdita non ha una quota di margine da spartire, e la percentuale che ne uscirebbe — un −340%, un infinito — si legge come vera pur non volendo dire niente. Resta un trattino.
+
+**Dove**: `src/lib/macroStats.js, src/components/MacroMonthlyTab.jsx, src/components/BilancioTab.jsx (nuovo)` · **Lo dimostrano**: `tests/unit/macroStats.test.js`, `tests/component/MacroMonthlyTab.test.jsx`, `tests/component/StatsTab.test.jsx`
+
 #### REQ-CASSA-010 — «Bilancio»: i conti del locale hanno una pagina loro, e la vede solo l'admin
 
 DECISO (19/08, dall'utente che riporta Flavio). Nasce una pagina «Bilancio» nel menu laterale, e la vede SOLO l'admin. Dentro ci stanno i conti del locale — quello che Flavio teneva su ANALISI DATI.xlsx — e sono un'altra cosa dalle STATISTICHE, che restano dove sono col solo Giornaliero e le guarda chi lavora.
@@ -1505,44 +1547,6 @@ NON DIPENDE DA NIENTE: le conte hanno già la loro data e `stockCountCompute` ca
 **Dove**: `src/lib/warehouse.js stockCountCompute, src/components/InventoryManager.jsx`
 
 ### Cassa di serata e statistiche
-
-#### REQ-CASSA-009 — Bilancio → Venduto × Incassato: la tabella trasloca, con le due incidenze
-
-COSA FA IL FOGLIO (verificato: «ANALISI DATI.xlsx» → foglio «RAPPORTI ACQUISTI 2026»). Quattro blocchi — DISTILLATI, BIRRE + BIBITE, VINO, FOOD + MOKA — dodici colonne di mese più una colonna TOT. Le formule vere, lette con le formule e non coi valori, sono queste:
-
-ACQUISTI e FATTURATO NON SONO CALCOLATI, sono numeri battuti a mano e nessuna formula li lega a nessun altro foglio;
-
-UTILE GENERATO = FATTURATO − ACQUISTI;
-
-RAPPORTO FAT/ACQ = FATTURATO / ACQUISTI;
-
-INCIDENZA SOMMA UTILI = utile della macro / somma degli utili delle quattro macro in quel mese;
-
-ACQ TOT, UTILE TOT, FATT TOT = somma delle quattro macro del mese;
-
-INCIDENZA ANNO = fatturato totale del mese / fatturato totale dell'anno (una riga sola, sotto i totali, non per macro); la colonna TOT di ogni riga è la somma dei dodici mesi.
-
-QUANTO DISTA DALLA TABELLA CHE C'È GIÀ («Statistiche → Mensile per macro», REQ-MAG-015). Tre righe su sei hanno già il loro posto:
-
-FATTURATO sta a «Incassato», UTILE GENERATO a «Margine», RAPPORTO FAT/ACQ a «Inc-Costo», e la colonna TOT dell'anno c'è per ogni macro. Ne mancano due, ed è tutto quello che manca su questo fronte: l'INCIDENZA SOMMA UTILI (quanto pesa una macro sul margine del mese) e l'INCIDENZA ANNO (quanto pesa un mese sull'incassato dell'anno). La riga ACQUISTI è un'altra domanda e vive per conto suo, in REQ-MAG-022.
-
-PROPOSTA, poi CONFERMATA il 19/08 insieme al trasloco (vedi in fondo). Nella tabella mensile per macro, due percentuali in più: sulla riga di ogni macro, quanto pesa il suo margine sul margine di tutte le macro in quel mese; sotto i totali, quanto pesa l'incassato del mese sull'incassato dell'anno mostrato. Sono due divisioni su numeri che la tabella ha già in mano: non servono altri dati.
-
-DA SAPERE, e da dire a chi guarda, perché i due fogli non torneranno mai identici: il foglio confronta il fatturato con la merce ENTRATA e lavora al LORDO dell'IVA; la tabella dell'app confronta l'incassato col COSTO DEL VENDUTO e lavora al NETTO su tutti e due i lati (REQ-MAG-015). Le percentuali quindi si somigliano, i valori assoluti no.
-
-DECISO (19/08, dall'utente che riporta Flavio):
-
-QUESTA TABELLA CAMBIA CASA. Non sta più nelle Statistiche — che restano col solo Giornaliero, e le guarda chi lavora — ma nella pagina «Bilancio» (REQ-CASSA-010), dove stanno i conti del locale e che vede il solo admin. Lì si chiama «Venduto × Incassato», accanto alle altre due sottosezioni: «Mesi» (REQ-CASSA-011) e «Acquisti × Fatturato» (REQ-MAG-022).
-
-IL TRASLOCO È UN CAMBIO DI POSTO, NON DI CONTENUTO: quello che la tabella calcola oggi — incassato, costo del venduto, margine, inc-costo, per macro di MENÙ, con la regola decisa il 18/08 e scritta in REQ-MAG-015 — non si tocca. Le due incidenze descritte qui sopra restano le uniche due righe che le mancano, e traslocano con lei.
-
-DIDASCALIE, come su tutta la pagina (REQ-CASSA-010): margine, inc-costo e le due incidenze si spiegano sotto la tabella, in parole da banco. E lì va detta anche la differenza col foglio — l'app confronta l'incassato col costo del VENDUTO, al netto dell'IVA su tutti e due i lati, il foglio confronta il fatturato con la merce ENTRATA al lordo — perché è la prima cosa che si chiede chi mette i due numeri accanto.
-
-PERCHÉ SI SPOSTA: quanto ha reso ogni macro è una domanda da conti di fine mese, non da serata. Chi apre le Statistiche vuole sapere com'è andata ieri, chi apre il Bilancio com'è andato il mese — due mestieri diversi, anche se i numeri escono dalla stessa cassa.
-
-DIPENDE DA REQ-CASSA-010: il trasloco ha bisogno della pagina «Bilancio» dove andare, quindi si fa dopo — o nello stesso giro. Le due incidenze invece non dipendono da niente: sono due divisioni su numeri che la tabella ha già in mano, e si possono aggiungere anche prima.
-
-**Dove**: `src/lib/macroStats.js, src/components/MacroMonthlyTab.jsx, src/components/BilancioTab.jsx (nuovo)`
 
 #### REQ-CASSA-011 — Bilancio → Mesi: minimo, incassato e differenza, giorno per giorno
 

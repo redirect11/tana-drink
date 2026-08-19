@@ -288,3 +288,105 @@ describe('macroMonthlyReport', () => {
     expect(conIva.rows.find((r) => r.id === 'mm-alc').tot.costo).toBeCloseTo(3.8, 2)
   })
 })
+
+// ── LE DUE INCIDENZE ─────────────────────────────────────────────────
+// Sono le due righe che il foglio di Flavio aveva e la tabella dell'app no.
+// Non servono dati nuovi: sono due divisioni su numeri che la tabella ha
+// già in mano.
+describe('le due incidenze', () => {
+  const ordini = [
+    // Luglio: gin tonic 8 € (costo 2, margine 6) e schweppes 3 € (costo
+    // 0,50, margine 2,50). Margine del mese: 8,50.
+    {
+      status: 'aperto',
+      created_at: '2026-07-15T20:00:00Z',
+      order_items: [riga('gintonic', 1, 8), riga('schweppes-sola', 1, 3)],
+    },
+    // Giugno: solo lo jäger bomb, 6 € (costo 1,80, margine 4,20).
+    {
+      status: 'pagato',
+      created_at: '2026-06-10T20:00:00Z',
+      order_items: [riga('jagerbomb', 1, 6)],
+    },
+  ]
+  const rep = macroMonthlyReport({
+    orders: ordini,
+    drinksById,
+    itemsById,
+    menuCatToMacro,
+    macros,
+    months: ['2026-06', '2026-07'],
+  })
+  const alc = rep.rows.find((r) => r.id === 'mm-alc')
+  const bib = rep.rows.find((r) => r.id === 'mm-bib')
+
+  it('quanto pesa una macro sul margine del mese', () => {
+    // Luglio: i distillati fanno 6 sugli 8,50 di margine del mese.
+    expect(alc.byMonth.get('2026-07').incidenza).toBeCloseTo(70.6, 1)
+    expect(bib.byMonth.get('2026-07').incidenza).toBeCloseTo(29.4, 1)
+    // Giugno ha solo distillati: si prendono tutto.
+    expect(alc.byMonth.get('2026-06').incidenza).toBeCloseTo(100, 1)
+    expect(bib.byMonth.get('2026-06').incidenza).toBe(0)
+  })
+
+  it('le incidenze di un mese fanno cento', () => {
+    // Se non tornano, uno dei due numeri sta guardando un totale diverso.
+    for (const mese of ['2026-06', '2026-07']) {
+      const somma = rep.rows.reduce((s, r) => s + (r.byMonth.get(mese).incidenza || 0), 0)
+      expect(somma).toBeCloseTo(100, 0)
+    }
+  })
+
+  it('sulla colonna dell’anno pesa il margine dell’anno', () => {
+    // Distillati 10,20 su 12,70 di margine dell'anno.
+    expect(alc.tot.incidenza).toBeCloseTo(80.3, 1)
+    expect(bib.tot.incidenza).toBeCloseTo(19.7, 1)
+  })
+
+  it('quanto pesa un mese sull’incassato dell’anno', () => {
+    // Luglio 11 € su 17 dell'anno, giugno 6 su 17.
+    expect(rep.totByMonth.get('2026-07').incidenzaAnno).toBeCloseTo(64.7, 1)
+    expect(rep.totByMonth.get('2026-06').incidenzaAnno).toBeCloseTo(35.3, 1)
+    // L'anno su se stesso fa cento: un vuoto lì sembrerebbe un conto non
+    // tornato.
+    expect(rep.grand.incidenzaAnno).toBeCloseTo(100, 1)
+  })
+
+  // UN MESE IN PERDITA non ha una «quota di margine» da spartire: la somma
+  // è zero o sotto, e la percentuale che ne uscirebbe (un −340%, un ∞) si
+  // legge come vera pur non volendo dire niente.
+  it('dove il totale non è positivo non si divide: resta un trattino', () => {
+    const inPerdita = macroMonthlyReport({
+      // Un gin tonic regalato a 1 €: costa 2, margine −1.
+      orders: [
+        {
+          status: 'aperto',
+          created_at: '2026-07-15T20:00:00Z',
+          order_items: [riga('gintonic', 1, 1)],
+        },
+      ],
+      drinksById,
+      itemsById,
+      menuCatToMacro,
+      macros,
+      months: ['2026-07'],
+    })
+    const riga07 = inPerdita.rows.find((r) => r.id === 'mm-alc').byMonth.get('2026-07')
+    expect(riga07.margine).toBeCloseTo(-1, 2)
+    expect(riga07.incidenza).toBeNull()
+  })
+
+  it('un anno senza niente venduto non inventa percentuali', () => {
+    const vuoto = macroMonthlyReport({
+      orders: [],
+      drinksById,
+      itemsById,
+      menuCatToMacro,
+      macros,
+      months: ['2026-07'],
+    })
+    expect(vuoto.rows[0].byMonth.get('2026-07').incidenza).toBeNull()
+    expect(vuoto.totByMonth.get('2026-07').incidenzaAnno).toBeNull()
+    expect(vuoto.grand.incidenzaAnno).toBeNull()
+  })
+})

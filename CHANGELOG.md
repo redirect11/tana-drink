@@ -4,6 +4,17 @@
 
 ### Per chi gestisce
 
+- **Il «Mensile per macro» è diventato «Venduto × Incassato», e sta nel
+  Bilancio**: quanto ha reso ogni gruppo del menù è una domanda di fine
+  mese, non di serata — le Statistiche restano com'erano andate ieri sera,
+  ed è quello che si guarda al banco. La tabella non è cambiata di un
+  centesimo; ha due righe in più. **Incidenza**: quanto pesa un gruppo sul
+  margine del mese, se i gruppi insieme fanno cento. **Incidenza
+  sull'anno**: quanto pesa un mese sull'incassato dell'anno. E sotto c'è
+  scritto cosa vuol dire ogni riga — e perché, se lo confronti col foglio,
+  non tornerà mai: qui si guarda la merce **venduta**, il foglio quella
+  **entrata dalla porta**.
+
 - **«Bilancio»: i conti del locale hanno una pagina loro** — nel menu, e la
   vede solo l'admin. Dentro ci sono le tre tabelle di fine mese: «Mesi»
   (quanto doveva fare e quanto ha fatto, giorno per giorno), «Acquisti ×

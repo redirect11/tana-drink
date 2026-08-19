@@ -77,9 +77,10 @@ vi.mock('../../src/lib/api.js', () => ({
   DEFAULT_SETTINGS: { business_day_cutoff_hour: 5 },
   settingsIniziali: () => ({ business_day_cutoff_hour: 5 }),
 }))
-vi.mock('../../src/components/MacroMonthlyTab.jsx', () => ({ default: () => <div /> }))
-
 const { default: StatsTab } = await import('../../src/components/StatsTab.jsx')
+const { subscribeSottosezioni } = await import('../../src/lib/sottosezioni.js')
+
+let sezioni = { voci: [] }
 
 // La didascalia è composta da più pezzi (numero e parentesi condizionale),
 // quindi si cerca sul testo completo del paragrafo.
@@ -145,11 +146,22 @@ describe('Statistiche per serata', () => {
     expect(screen.queryByText(/999,00/)).toBeNull()
   })
 
-  it('le due viste stanno nel menu, non in una riga sopra il contenuto', async () => {
-    // Erano l'unica pagina con le sue sezioni in pagina: una riga di chip
-    // che costa altezza a una schermata già fatta di tabelle.
+  // IL «MENSILE PER MACRO» HA TRASLOCATO in Bilancio → Venduto × Incassato:
+  // quanto ha reso ogni gruppo del menù è una domanda da conti di fine
+  // mese, e le Statistiche restano i numeri di chi lavora — com'è andata
+  // ieri sera. Con una vista sola non c'è più niente da far scegliere: il
+  // test guardava che le due viste non fossero una riga di chip in pagina,
+  // adesso guarda che di viste ce ne sia una e l'elenco sia sparito.
+  it('resta il solo Giornaliero, e l’elenco delle sezioni non c’è più', async () => {
+    const stop = subscribeSottosezioni((s) => {
+      sezioni = s
+    })
     render(<StatsTab />)
     await screen.findByText(paragrafo(/dall’apertura alla chiusura della cassa/i))
     expect(screen.queryByRole('button', { name: /Mensile per macro/i })).toBeNull()
+    // Niente sottosezioni dichiarate: nel menu non compare una voce sola
+    // spuntata da sé, e il menu non si aggancia per una scelta che non c'è.
+    expect(sezioni.voci).toEqual([])
+    stop()
   })
 })

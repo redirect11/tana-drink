@@ -12,9 +12,17 @@
 // in parole da banco — e dove un numero ha un'avvertenza, l'avvertenza sta
 // lì e non in un manuale.
 
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { act, render, screen } from '@testing-library/react'
 import '@testing-library/jest-dom/vitest'
+
+// La tabella «Venduto × Incassato» ha una prova sua
+// (MacroMonthlyTab.test.jsx): qui si guarda il CONTENITORE — che le tre
+// sottosezioni ci siano, che ognuna porti la sua didascalia e che
+// cambiandole cambi quello che si vede.
+vi.mock('../../src/components/MacroMonthlyTab.jsx', () => ({
+  default: () => <div>TABELLA VENDUTO × INCASSATO</div>,
+}))
 
 import BilancioTab from '../../src/components/BilancioTab.jsx'
 import { subscribeSottosezioni } from '../../src/lib/sottosezioni.js'
@@ -59,8 +67,10 @@ describe('la pagina Bilancio', () => {
     act(() => sotto.scegli('acquisti'))
     expect(await screen.findByText(/dello storico non si ricostruisce niente/i)).toBeInTheDocument()
 
+    // «Venduto × Incassato» la sua didascalia ce l'ha già, e viaggia con la
+    // tabella: è lei a spiegare margine, inc/costo e le due incidenze.
     act(() => sotto.scegli('venduto'))
-    expect(await screen.findByText(/quanto ha incassato ogni gruppo del menù/i)).toBeInTheDocument()
+    expect(await screen.findByText('TABELLA VENDUTO × INCASSATO')).toBeInTheDocument()
     stop()
   })
 
