@@ -2408,13 +2408,12 @@ requirements:
       IN PRODUZIONE `macro_categories` È ANCORA VUOTA, e ci resta finché non
       arriva il via libera esplicito: si semina a mano, come su test, e la
       produzione non si tocca di propria iniziativa.
-      DA SISTEMARE QUANDO SI TOCCA QUEL CODICE (non è un requisito nuovo, è
-      un commento che ha smesso di essere vero): in `MenuManager.jsx`, sopra
-      `MacroMenuPanel`, c'è scritto che l'aggancio «resta lì solo perché è
-      l'altra metà di una domanda ancora aperta» e che «al 18/08
-      `macro_categories` è vuota, zero documenti in produzione e in test».
-      La domanda è chiusa dal 19/08 — gli elenchi sono due — e su test le
-      macro esistono.
+      SISTEMATO (19/08): il commento sopra `MacroMenuPanel` in
+      `MenuManager.jsx` raccontava ancora una «domanda ancora aperta» e una
+      collezione «vuota in produzione e in test». Adesso dice quello che è
+      vero: gli elenchi sono due apposta, `macro_menu_id` resta perché è
+      l'aggancio che servirà agli acquisti, su test le macro ci sono e vuota
+      resta solo la produzione.
       CONSEGUENZA DA DIRE A CHI GUARDA: finché le macro di menù non
       vengono create, «Mensile per macro» non mostra numeri — mostra il
       suo messaggio, che dice dove crearle (Menù → Macro-categorie) e che
@@ -4598,6 +4597,45 @@ requirements:
     priority: P2
     test_cases: []
 
+  - id: REQ-DEV-012
+    title: "docs/requisiti.md e' la specifica di sistema, e si genera"
+    area: "scripts/lib-specifica.mjs, scripts/requisiti.mjs, docs/requisiti.md"
+    description: >
+      Chiesto dall'utente il 19/08: «requisiti.md dovrebbe diventare la
+      specifica di sistema dato che i requisiti li abbiamo in
+      requirements.yaml e su GitHub». Il documento era lo specchio del
+      registro — le stesse voci, nello stesso ordine, con dentro meno cose —
+      e come tutti gli specchi scritti a mano era rimasto indietro: 94 voci
+      raccontate su 187 esistenti, per mesi, senza che nessuno se ne
+      accorgesse.
+      COSA E' ADESSO: un documento che si legge come una specifica. Le aree
+      nell'ordine della serata (si prende un ordine, si compone il conto, si
+      incassa, e solo dopo menu', magazzino e il resto), ognuna presentata da
+      una riga che dice di cosa parla; in testa la data di generazione, i
+      conteggi e l'avviso che il file e' generato, con il comando per
+      rifarlo.
+      TRE CAPITOLI, E LA DIVISIONE E' IL PUNTO. «Cosa fa il sistema» tiene le
+      voci implemented e la parte fatta delle partial: e' quello a cui uno si
+      affida. «Lavori previsti» tiene le todo, che sono un impegno e non una
+      descrizione — mescolarle al resto farebbe leggere come esistente della
+      roba che non esiste. «Difetti noti» tiene i bug ancora aperti
+      (requirements/bugs.yaml): sono i punti in cui il sistema NON fa quello
+      che c'e' scritto sopra, e tacerli renderebbe bugiarda tutta la parte
+      precedente. I deprecated restano in fondo, col solo titolo.
+      OGNI COMPORTAMENTO CITA I TEST CHE LO DIMOSTRANO, e chi non ne ha lo
+      dichiara. E' il patto del progetto: i test sono la specifica
+      eseguibile, il documento e' la sua faccia leggibile, e quando le due si
+      scollano e' il documento ad avere torto.
+      RESTA GENERATO, ed e' l'unica cosa che lo tiene vivo: scritto a mano
+      tornerebbe vecchio in una settimana, e la prova e' come stava prima.
+      La resa vive in un modulo suo (`lib-specifica.mjs`) perche' cosi' si
+      prova con un registro finto di sette voci, invece che coi 187 veri —
+      un test che legge il registro vero prova il registro, non il documento.
+    status: implemented
+    generate_issue: false
+    labels: [metodo, documentazione]
+    test_cases: [tests/unit/specifica.test.js]
+
   - id: REQ-UI-021
     title: "Tre nomi per lo stesso passo del servizio"
     area: "src/lib/comande.js, src/lib/orderStatus.js"
@@ -4821,6 +4859,12 @@ requirements:
       inc-costo, per macro di MENÙ, con la regola decisa il 18/08 e scritta
       in REQ-MAG-015 — non si tocca. Le due incidenze descritte qui sopra
       restano le uniche due righe che le mancano, e traslocano con lei.
+      DIDASCALIE, come su tutta la pagina (REQ-CASSA-010): margine, inc-costo
+      e le due incidenze si spiegano sotto la tabella, in parole da banco. E
+      lì va detta anche la differenza col foglio — l'app confronta
+      l'incassato col costo del VENDUTO, al netto dell'IVA su tutti e due i
+      lati, il foglio confronta il fatturato con la merce ENTRATA al lordo —
+      perché è la prima cosa che si chiede chi mette i due numeri accanto.
       PERCHÉ SI SPOSTA: quanto ha reso ogni macro è una domanda da conti di
       fine mese, non da serata. Chi apre le Statistiche vuole sapere com'è
       andata ieri, chi apre il Bilancio com'è andato il mese — due mestieri
@@ -4899,7 +4943,12 @@ requirements:
       non hanno un corrispondente in banca dati. La tabella si riempie da
       quando gli ordini passano per l'app, e i primi mesi saranno mezzi
       vuoti: è la verità, e va scritta sulla schermata invece di lasciarla
-      scoprire a chi guarda.
+      scoprire a chi guarda — nella DIDASCALIA della tabella, che è il posto
+      dove stanno le avvertenze (REQ-CASSA-010). Lì si dicono anche le altre
+      due: cosa vogliono dire utile, rapporto e incidenza in parole da
+      banco, e se i numeri che si stanno guardando sono al lordo o al netto
+      dell'IVA — con due letture commutabili, sapere quale è aperta non è un
+      dettaglio.
     status: todo
     generate_issue: true
     labels: [magazzino, statistiche, fornitori]
@@ -5107,6 +5156,26 @@ requirements:
       con una sottosezione sola (Giornaliero), e una pagina con una sezione
       sola non ha niente da far scegliere. L'elenco si toglie invece di
       lasciarne una spuntata da sé.
+      OGNI TABELLA HA LA SUA DIDASCALIA, e vale per tutte e tre le
+      sottosezioni: SENZA DIDASCALIE LA SCHERMATA NON È FINITA (deciso
+      dall'utente il 19/08). Una tabella di conti è piena di parole che a chi
+      non fa il contabile non dicono niente — utile, rapporto fat/acq,
+      incidenza, prime cost, costo del venduto — e qui vale la regola di
+      sempre: si spiega a chi ha in mano un vassoio, parole comuni, niente
+      gergo. Sotto o accanto a ogni tabella e a ogni riga di sintesi va una
+      frase corta che dica CHE NUMERO È e DA DOVE VIENE. Il tono (sono
+      proposte, non testi definitivi): «Utile: quello che resta dopo aver
+      pagato la merce»; «Rapporto: quante volte rientra quello che hai
+      speso»; «Incidenza: quanto pesa questa macro sull'utile del mese»;
+      «Prime cost: merce versata + personale, in centesimi per ogni euro
+      incassato».
+      E DOVE UN NUMERO HA UN'AVVERTENZA che cambia come si legge — gli
+      acquisti che partono da oggi e non hanno storico 2026, il lordo e il
+      netto commutabili, il costo del venduto calcolato dalle ricette che
+      non torna col foglio — l'avvertenza sta LÌ, nella didascalia, sotto il
+      numero a cui si riferisce. Non in un manuale, non in una nota a fondo
+      pagina: chi guarda un totale che non torna deve trovare il perché nel
+      punto in cui se lo chiede.
     status: todo
     generate_issue: true
     labels: [statistiche, navigazione, ruoli]
@@ -5137,18 +5206,25 @@ requirements:
       il netto del mese non esiste; l'INCASSATO per GIORNATA COMMERCIALE
       (REQ-CASSA-005), così la nottata che finisce alle tre resta la serata
       di ieri e non fa saltare il giorno dopo.
+      LE DIDASCALIE NON SONO UN ABBELLIMENTO: prime cost e costo del lavoro
+      sono le due righe che questa tabella aggiunge al foglio, e sono anche
+      le due che nessuno sa leggere senza che gliele si spieghi. Ognuna porta
+      la sua frase, come vuole REQ-CASSA-010 — compresa quella che dice che
+      la merce è quella calcolata dalle ricette e non gli acquisti del mese.
       LA DIFFERENZA SI COLORA, MA NON DI ROSSO. In questa app il rosso vuol
       dire annullato o errore (DESIGN.md), e un giorno sotto il minimo non è
       né l'uno né l'altro: il verso lo dicono il segno e i colori di stato
       (--ok, --warn), che sono fuori tema apposta.
-      DA DEFINIRE IN IMPLEMENTAZIONE: quale «costo del venduto» entra nella
-      prime cost. L'app ne calcola già uno dalle ricette, macro per macro
-      (REQ-MAG-015), mentre nei fogli di Flavio al suo posto ci sono gli
-      ACQUISTI del mese, che è un altro numero — e finché REQ-MAG-021 non è
-      risolto i due mesi non si somigliano nemmeno. Proposta (non è una sua
-      parola): quello calcolato, perché è l'unico che sta in pari con
-      l'incassato dello stesso mese; e scritto sotto la tabella, così chi
-      confronta col foglio sa in partenza perché non torna.
+      QUALE COSTO DELLA MERCE ENTRA NELLA PRIME COST: quello CALCOLATO DALLE
+      RICETTE, macro per macro (REQ-MAG-015) — deciso dall'utente il 19/08.
+      Non gli ACQUISTI del mese, che è il numero dei fogli di Flavio: è
+      l'unico dei due che sta in pari con l'incassato dello stesso mese, e
+      finché REQ-MAG-021 non è risolto un mese di acquisti non somiglia
+      nemmeno al mese in cui quella merce è stata venduta. Va scritto sotto
+      la tabella, così chi confronta col foglio sa in partenza perché non
+      torna. Gli acquisti del mese restano dove stanno — la tabella
+      «Acquisti × Fatturato» (REQ-MAG-022) — e con la prime cost non
+      c'entrano.
     status: todo
     generate_issue: true
     labels: [statistiche, serata, staff]
