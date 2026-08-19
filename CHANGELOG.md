@@ -4,6 +4,12 @@
 
 ### Per chi gestisce
 
+- **L'IVA di vendita si cambia sulla singola voce di menù**: nella scheda
+  del prodotto, accanto al prezzo. Lasciala vuota e vale quella del locale —
+  si compila solo dove fa eccezione. Serve perché una bottiglia intera non
+  si rivende come un drink servito al banco: mettere tutto al 10% gonfia il
+  netto, e dal netto scendono margine e conto di fine mese.
+
 - **Nell'elenco delle categorie si vede a quale gruppo appartengono** — in
   magazzino e nel menù. Accanto al nome c'è la macro, e dove non ce n'è si
   legge «senza macro». Non è un rimprovero: ALTRO e BOTTIGLIE stanno fuori

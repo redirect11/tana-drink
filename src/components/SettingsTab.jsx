@@ -571,7 +571,10 @@ export default function SettingsTab({ role = null }) {
               </div>
               <p className="muted small" style={{ margin: '4px 0 0' }}>
                 IVA di rivendita (somministrazione: <strong>10%</strong>) usata per
-                scorporare il fatturato al netto.
+                scorporare il fatturato al netto. Vale per tutto il menù, ma ogni
+                voce può indicarne una diversa (campo <strong>IVA vendita</strong>
+                nella sua scheda): una bottiglia intera non si rivende come un
+                drink servito al banco.
               </p>
               <div className="toggle-row">
                 <span>IVA di acquisto predefinita (%)</span>

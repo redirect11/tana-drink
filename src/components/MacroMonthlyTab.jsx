@@ -96,8 +96,8 @@ export default function MacroMonthlyTab() {
         Ogni voce del menù conta <strong>intera</strong> sulla sua
         macro-categoria: incasso e costo dei suoi ingredienti insieme. Valori
         al <strong>netto IVA</strong> — l’incasso scorporato al{' '}
-        {settings.sale_vat}% di rivendita, il costo al netto dell’IVA
-        d’acquisto.
+        {settings.sale_vat}% di rivendita (o all’aliquota della voce, dove ne
+        ha una sua), il costo al netto dell’IVA d’acquisto.
       </p>
       {report && report.rows.some((r) => r.id === 'none' && r.tot.incasso > 0) && (
         <p className="muted small" style={{ margin: '-4px 0 10px' }}>
@@ -154,7 +154,8 @@ function SpiegazioneTabella({ saleVat }) {
         <strong>Se lo confronti col foglio non torna, ed è giusto così.</strong>{' '}
         Qui l’incassato si confronta con il costo della merce{' '}
         <strong>venduta</strong>, tutti e due al netto dell’IVA (l’incasso
-        scorporato al {saleVat}%). Il foglio confronta il fatturato con la
+        scorporato al {saleVat}%, o all’aliquota della singola voce dove ne ha
+        una sua). Il foglio confronta il fatturato con la
         merce <strong>entrata dalla porta</strong>, al lordo. Le percentuali
         si somigliano, gli importi no.
       </Didascalia>

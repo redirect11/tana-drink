@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
+  aliquotaDiVendita,
   lineByMacro,
   venditeByMacro,
   purchasesByMacro,
@@ -388,5 +389,62 @@ describe('le due incidenze', () => {
     expect(vuoto.rows[0].byMonth.get('2026-07').incidenza).toBeNull()
     expect(vuoto.totByMonth.get('2026-07').incidenzaAnno).toBeNull()
     expect(vuoto.grand.incidenzaAnno).toBeNull()
+  })
+})
+
+// ── L'IVA DI VENDITA STA ANCHE SULLA SINGOLA VOCE (REQ-MENU-013) ─────
+// Nel menù c'è una categoria BOTTIGLIE, e una bottiglia intera non si
+// rivende come un drink servito al banco. Mettere tutto al 10% gonfia il
+// netto, e dal netto scendono margine, incidenze e prime cost.
+describe('l’aliquota di vendita di una voce', () => {
+  it('la voce che ne ha una sua vince sul valore del locale', () => {
+    expect(aliquotaDiVendita({ sale_vat: 22 }, 10)).toBe(22)
+  })
+
+  it('chi non ne ha usa quella del locale', () => {
+    expect(aliquotaDiVendita({ sale_vat: null }, 10)).toBe(10)
+    expect(aliquotaDiVendita({}, 10)).toBe(10)
+    // Una riga libera non ha nemmeno la voce di catalogo.
+    expect(aliquotaDiVendita(undefined, 10)).toBe(10)
+  })
+
+  // UNO ZERO È UN'ALIQUOTA VERA — esente — non «non l'ho compilata». Se
+  // finisse in un falsy, una voce esente si scorporerebbe al 10% e il netto
+  // sarebbe più basso del vero.
+  it('lo zero è un’aliquota, non un campo vuoto', () => {
+    expect(aliquotaDiVendita({ sale_vat: 0 }, 10)).toBe(0)
+  })
+
+  it('una scritta che non è un numero non manda in vacca il conto', () => {
+    expect(aliquotaDiVendita({ sale_vat: 'boh' }, 10)).toBe(10)
+  })
+
+  it('scorpora la riga con l’aliquota della sua voce', () => {
+    const bottiglia = { id: 'bott', category_id: 'menu-alcolici', sale_vat: 22, recipe_items: [] }
+    const r = lineByMacro({ drink_id: 'bott', qty: 1, unit_price: 122 }, bottiglia, itemsById, menuCatToMacro, {
+      saleVat: 10,
+    })
+    // 122 al 22% fa 100 netti; al 10% del locale ne farebbe 110,91.
+    expect(r.incasso).toBeCloseTo(100, 2)
+  })
+
+  it('e nel mensile per macro una voce con aliquota sua non gonfia il netto', () => {
+    const bottiglia = { id: 'bott', category_id: 'menu-alcolici', sale_vat: 22, recipe_items: [] }
+    const rep = macroMonthlyReport({
+      orders: [
+        {
+          status: 'pagato',
+          created_at: '2026-07-15T20:00:00Z',
+          order_items: [{ drink_id: 'bott', qty: 1, unit_price: 122 }],
+        },
+      ],
+      drinksById: { ...drinksById, bott: bottiglia },
+      itemsById,
+      menuCatToMacro,
+      macros,
+      months: ['2026-07'],
+      saleVat: 10,
+    })
+    expect(rep.grand.incasso).toBeCloseTo(100, 2)
   })
 })
