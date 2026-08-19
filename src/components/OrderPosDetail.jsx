@@ -2713,6 +2713,19 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
             hint: 'Nome, tavolo, note',
             onClick: () => setShowInfo(true),
           },
+          // LA SCHERMATA DA GIRARE AL CLIENTE. Il QR con cui segue l'ordine
+          // dal suo telefono stava sulla pagina di stato, che chi lavora non
+          // apre più: senza questa voce non ci si arriverebbe da nessuna
+          // parte. Senza gli stati del servizio non c'è niente da seguire,
+          // e allora non compare.
+          workflowOn && {
+            id: 'cliente',
+            icon: '📲',
+            label: 'Mostra al cliente',
+            hint: "Il QR per seguire l'ordine dal suo telefono",
+            disabled: isNew,
+            onClick: () => navigate(`/ordine/${order.id}?cliente=1`),
+          },
           {
             id: 'storia',
             icon: '🕘',

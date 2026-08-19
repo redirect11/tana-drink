@@ -4606,10 +4606,16 @@ requirements:
          un tasto «Modifica» che porta al conto.
       In pratica: la stessa pagina cambia di mestiere a seconda di chi
       guarda, e oggi non lo fa.
-    status: todo
+      FATTO: chi è personale (admin, banco e sala) che apre `/ordine/:id`
+      entra nel conto; con `?cliente=1` la stessa pagina torna quella da
+      girare al cliente — senza «Il tuo numero», col QR e con «✏️ Modifica»
+      che riporta al conto. Ci si arriva dal ⋯ del conto, voce «Mostra al
+      cliente», che senza gli stati del servizio non compare (non ci
+      sarebbe niente da seguire).
+    status: implemented
     generate_issue: true
     labels: [ordini, staff, clienti]
-    test_cases: []
+    test_cases: [tests/component/OrderStatusPage.test.jsx, tests/component/OrderPosDetail.test.jsx]
 
   - id: REQ-STAMPA-011
     title: "Il logo sugli scontrini si sceglie: quale, e su quali stampe"
