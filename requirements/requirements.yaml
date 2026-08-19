@@ -5568,13 +5568,21 @@ requirements:
       IL NETTO DEL MESE si compone quindi di quattro pezzi, non di tre:
       incassi − stipendi (calcolati dalle ore) − fatture fornitore (dagli
       ordini ricevuti) − altre spese (queste, a mano).
-      COSA C'È IN QUELL'«ALTRO» NON SI SA: la cella SPESE del foglio è un
-      numero battuto a mano, senza dettaglio né formula — non c'è niente da
-      leggere. DA CHIEDERE A FLAVIO, ed è la domanda che decide se questa
-      voce basta: affitto, utenze, SIAE, commercialista sono i sospetti, ma
-      se lì dentro ci fosse anche merce comprata fuori dagli ordini
-      (il volo al cash and carry, il ghiaccio preso al volo) servirebbe un
-      modo di segnarla che non passi dagli ordini fornitore.
+      COSA C'È IN QUELL'«ALTRO», TROVATO (19/08). La cella SPESE del foglio
+      mensile è un numero secco, senza dettaglio — ma il dettaglio esiste
+      altrove: FORNITORI REC.xlsx, foglio «TO BUY». Dentro ci sono tavoli
+      da esterno, sgabelli, divani, una tenda, uno scaffale IKEA e
+      bicchieri di plastica, con quantità, prezzo, totale e DOVE si compra
+      (Amazon, Bricoware, IKEA). Arredi, attrezzature e materiale di
+      consumo: roba che esce dal conto e non entra in magazzino.
+      DOVE VANNO NELL'APP, deciso dall'utente il 19/08: NON qui in Bilancio
+      ma in «Ordini e fatture», come terza sottosezione accanto a Ordini e
+      Fatture (REQ-MAG-025), con un riepilogo che tiene insieme i tre
+      elenchi. È la scelta giusta: i soldi che escono si registrano tutti
+      nello stesso posto, e Bilancio → Mesi ne legge il totale.
+      QUESTA VOCE RESTA quindi come il PONTE: dice che il netto del mese ha
+      quattro pezzi e che il totale delle altre spese arriva da lì, non che
+      le spese si scrivono in Bilancio.
       DA DEFINIRE IN IMPLEMENTAZIONE: se una spesa che si ripete (l'affitto è
       lo stesso tutti i mesi) si possa riportare sul mese dopo invece di
       riscriverla. Non è stato chiesto: si guarda dopo aver visto quante
@@ -5793,6 +5801,35 @@ requirements:
       ATTENZIONE, DUE «FATTURE» NEL CODICE: `supplier_invoices` sono i
       documenti dei FORNITORI (quello di cui parla questa voce), `invoices`
       sono le fatture di VENDITA ai clienti. Nomi vicini, mestieri opposti.
+      TRE SOTTOSEZIONI, NON DUE (utente, 19/08): «Ordini», «Fatture» e
+      «ALTRE SPESE», piu' un RIEPILOGO che le tiene insieme. La terza nasce
+      da una domanda sua — «quelle spese da inserire a mano non sono gli
+      ordini?» — e la risposta, misurata sui fogli, e' che in parte SI':
+      la sua riga SPESE e' sempre piu' grande degli acquisti dello stesso
+      mese (gen 2.380 contro 1.809, giu 12.726 contro 8.673), quindi
+      contiene la merce PIU' altro, da 570 a 4.050 euro al mese.
+      COSA C'E' IN QUELL'ALTRO, trovato il 19/08 e non piu' un'ipotesi:
+      sta in FORNITORI REC.xlsx, foglio «TO BUY» — tavoli da esterno,
+      sgabelli, divani, una tenda, uno scaffale IKEA, bicchieri di
+      plastica in cinque misure. Colonne: articolo, quantita', prezzo,
+      totale, DOVE si compra (Amazon, Bricoware, IKEA, Vente-Unique) e
+      note. Totale del foglio 2.468,59.
+      QUINDI SONO ARREDI, ATTREZZATURE E MATERIALE DI CONSUMO: roba che
+      esce dal conto corrente e non entra in magazzino, e che nessun
+      ordine fornitore intercettera' mai. Da qui la sottosezione, e le sue
+      colonne sono quelle del foglio.
+      IL FOGLIO PERO' E' UNA LISTA DELLA SPESA, non un registro: si chiama
+      «da comprare» e diverse righe hanno prezzo zero, cioe' non ancora
+      prezzate. Serve quindi sapere se una voce e' GIA' STATA COMPRATA:
+      solo quelle comprate pesano sul netto del mese, le altre sono un
+      promemoria. Senza questa distinzione un divano desiderato
+      abbasserebbe l'utile di gennaio.
+      IL RIEPILOGO, quarta voce del menu: mette insieme i tre elenchi in
+      un totale per mese — merce (dalle fatture), altre spese, e quanto
+      resta aperto (ordini senza fattura, fatture non pagate). E' il
+      numero che poi Bilancio -> Mesi usa per il netto, e la ragione per
+      cui sta QUI e non li': i soldi che escono si guardano dove si
+      registrano.
     status: todo
     generate_issue: true
     labels: [magazzino, fornitori, admin]
