@@ -4753,3 +4753,245 @@ requirements:
     labels: [stampa, impostazioni]
     priority: P2
     test_cases: []
+
+  # ══════════════════════════════════════════════════════════════════════
+  #  DAI FOGLI DI FLAVIO — letti il 19/08 (ANALISI DATI.xlsx, RAPP ORE.xlsx,
+  #  GEN ORD REC.xlsx, INV.xlsx, FORNITORI REC.xlsx).
+  #  Ogni voce dice PRIMA cosa fa il foglio — fatto verificato, formule alla
+  #  mano — e POI cosa si propone, che è una proposta e va confermata. Le
+  #  due cose non si mescolano: un requisito che descrive un calcolo
+  #  inventato è peggio di uno che manca, perché sembra deciso.
+  # ══════════════════════════════════════════════════════════════════════
+
+  - id: REQ-CASSA-009
+    title: "Mensile per macro: le due incidenze che Flavio legge nel suo foglio"
+    area: "src/lib/macroStats.js, src/components/MacroMonthlyTab.jsx"
+    description: >
+      COSA FA IL FOGLIO (verificato: «ANALISI DATI.xlsx» → foglio «RAPPORTI
+      ACQUISTI 2026»). Quattro blocchi — DISTILLATI, BIRRE + BIBITE, VINO,
+      FOOD + MOKA — dodici colonne di mese più una colonna TOT. Le formule
+      vere, lette con le formule e non coi valori, sono queste:
+      ACQUISTI e FATTURATO NON SONO CALCOLATI, sono numeri battuti a mano e
+      nessuna formula li lega a nessun altro foglio;
+      UTILE GENERATO = FATTURATO − ACQUISTI;
+      RAPPORTO FAT/ACQ = FATTURATO / ACQUISTI;
+      INCIDENZA SOMMA UTILI = utile della macro / somma degli utili delle
+      quattro macro in quel mese;
+      ACQ TOT, UTILE TOT, FATT TOT = somma delle quattro macro del mese;
+      INCIDENZA ANNO = fatturato totale del mese / fatturato totale
+      dell'anno (una riga sola, sotto i totali, non per macro);
+      la colonna TOT di ogni riga è la somma dei dodici mesi.
+      QUANTO DISTA DALLA TABELLA CHE C'È GIÀ («Statistiche → Mensile per
+      macro», REQ-MAG-015). Tre righe su sei hanno già il loro posto:
+      FATTURATO sta a «Incassato», UTILE GENERATO a «Margine», RAPPORTO
+      FAT/ACQ a «Inc-Costo», e la colonna TOT dell'anno c'è per ogni macro.
+      Ne mancano due, ed è tutto quello che manca su questo fronte:
+      l'INCIDENZA SOMMA UTILI (quanto pesa una macro sul margine del mese) e
+      l'INCIDENZA ANNO (quanto pesa un mese sull'incassato dell'anno). La
+      riga ACQUISTI è un'altra domanda e vive per conto suo, in REQ-MAG-022.
+      PROPOSTA. Nella tabella mensile per macro, due percentuali in più:
+      sulla riga di ogni macro, quanto pesa il suo margine sul margine di
+      tutte le macro in quel mese; sotto i totali, quanto pesa l'incassato
+      del mese sull'incassato dell'anno mostrato. Sono due divisioni su
+      numeri che la tabella ha già in mano: non servono altri dati.
+      DA SAPERE, e da dire a chi guarda, perché i due fogli non torneranno
+      mai identici: il foglio confronta il fatturato con la merce ENTRATA e
+      lavora al LORDO dell'IVA; la tabella dell'app confronta l'incassato
+      col COSTO DEL VENDUTO e lavora al NETTO su tutti e due i lati
+      (REQ-MAG-015). Le percentuali quindi si somigliano, i valori assoluti
+      no.
+    status: todo
+    generate_issue: true
+    labels: [statistiche, metodo]
+    test_cases: []
+
+  - id: REQ-MAG-022
+    title: "Acquisti per macro, mese per mese: la riga del foglio che l'app non ha"
+    area: "src/lib/macroStats.js purchasesByMacro, src/components/StatsTab.jsx"
+    description: >
+      COSA FA IL FOGLIO. La riga ACQUISTI del rapporto per macro è battuta a
+      mano, mese per mese e macro per macro: nessuna formula dice da dove
+      viene. DA DOVE ARRIVANO QUEI NUMERI NON È DIMOSTRABILE dai file, e non
+      va inventato. Due indizi, verificati tutti e due, e nessuno dei due
+      torna al centesimo.
+      (a) Il registro fatture (FORNITORI REC.xlsx), sommato per mese del
+      2026, dà 1180 / 1129 / 1680 / 2448 / 4400 / 9081 / 761 da gennaio a
+      luglio, contro gli ACQ TOT del rapporto 1809 / 1063 / 1697 / 2884 /
+      4526 / 8673 / 2369: stesso ordine di grandezza, marzo e maggio quasi
+      uguali, gennaio e luglio lontani. Il registro però tiene solo cinque
+      fornitori, e negli ordini ne compaiono una decina.
+      (b) GEN ORD REC.xlsx valorizza ogni fattura riga per riga (quantità ×
+      prezzo ivato) e ogni riga porta il suo TIPO, quindi da lì una somma
+      per macro si può fare a mano. È il modo più plausibile, ma è una
+      ricostruzione: nel rapporto non c'è nessun collegamento che lo provi.
+      QUELLO CHE È CERTO: gli ACQUISTI del foglio sono merce ENTRATA dalla
+      porta, al LORDO dell'IVA (nel generatore il prezzo di riga è sempre
+      «€/pz × 1,22»).
+      COSA HA GIÀ L'APP. `purchasesByMacro` (src/lib/macroStats.js) somma
+      gli ordini fornitore RICEVUTI per macro di MAGAZZINO, al netto IVA.
+      Nessuna schermata la chiama, e non ha il taglio per mese. È rimasta lì
+      apposta: REQ-MAG-015 dice che «quanto ho speso in bibite» è una
+      domanda vera che vive con gli acquisti e non nella tabella del
+      venduto, e che l'aggancio `macro_menu_id` esiste per il giorno in cui
+      gli acquisti avranno la loro schermata. Quel giorno è questo.
+      PROPOSTA. Una vista «Acquisti per macro» con le macro di MAGAZZINO
+      per riga e i mesi per colonna, e — dove la macro d'acquisto è
+      agganciata a una macro di vendita (`macro_menu_id`) — l'incassato di
+      quella accanto, che è il confronto che il locale fa a fine mese.
+      DA CHIEDERE A FLAVIO PRIMA DI SCRIVERE CODICE, perché cambia i numeri
+      e non si indovina: (1) l'acquisto è l'ordine fornitore ricevuto o la
+      fattura registrata? in app sono due cose distinte; (2) li vuole al
+      lordo, come li ha sempre letti, o al netto come il resto delle
+      statistiche? (3) in quale mese cade un acquisto è già una domanda
+      aperta per conto suo, in REQ-MAG-021, e le due vanno pensate insieme.
+      E UNA COSA VA DETTA SUBITO: dello storico non si ricostruisce niente.
+      Gli ordini fornitore in app nascono da oggi, i numeri 2026 del foglio
+      non hanno un corrispondente in banca dati.
+    status: todo
+    generate_issue: true
+    labels: [magazzino, statistiche, fornitori]
+    test_cases: []
+
+  - id: REQ-STAFF-015
+    title: "Il minimo della serata: quanto deve fare stasera, e quanto ha fatto"
+    area: "src/lib/stats.js, src/components/StatsTab.jsx, src/components/StaffHoursTab.jsx"
+    description: >
+      COSA FANNO I FOGLI (verificato). In ANALISI DATI.xlsx ogni mese ha un
+      foglio suo, diviso in settimane, e per ogni giorno tre righe: MINIMO
+      (quanto quel giorno deve fare), REALE (quanto ha fatto), RAPP. = REALE
+      − MINIMO. In fondo al mese: STIPENDI, SPESE, INCASSI (somma dei REALE
+      delle cinque settimane), il netto = INCASSI − SPESE − STIPENDI, e la
+      somma degli scarti.
+      IL MINIMO NON È CALCOLATO. Tutte le celle MINIMO sono numeri battuti a
+      mano: in nessuno dei diciotto fogli mensili c'è una formula. Cambia
+      per giorno della settimana (gennaio 2026: giovedì 300, venerdì 600,
+      sabato 600, domenica 300, lunedì 100, martedì 100, mercoledì 150) e
+      cambia da mese a mese. Accanto c'è un'etichetta di testo — «MEDIA 2450
+      €/w» — che è l'obiettivo settimanale: nei mesi vecchi coincide con la
+      somma dei minimi della settimana (feb, mar, apr, set, ott 2025 e feb
+      2026), nei mesi recenti no (gen, apr, mag, giu, lug 2026), segno che
+      l'etichetta non viene aggiornata insieme ai minimi.
+      DA DOVE VIENE LA RIGA STIPENDI: da RAPP ORE.xlsx, dove ogni persona ha
+      le ore del mese × la paga oraria, e il totale finisce a mano in
+      ANALISI DATI. Torna in quasi tutti i mesi provati (gen 26 800 + 700 =
+      1500; dic 25 650 + 750 + 160 = 1560; apr 26 650 + 800 + 170 = 1620;
+      mag 26 850 + 750 + 575 = 2175) e NON torna in giugno 26, dove il
+      foglio ore dà 3335 e ANALISI DATI dice 3500: qualcuno ha arrotondato.
+      COME SONO FATTE LE ORE E LE PAGHE: una griglia con le ore in riga
+      (dalle 9-10 alle 04-05) e i giorni in colonna, una casella per ogni
+      ora lavorata; in fondo, per persona, giorni = ore / 8, ore totali,
+      €/h, totale = ore × €/h. Le tariffe viste: 6,25 €/h quasi per tutti,
+      5 €/h per gli extra, in passato 7,50 / 8,75 / 5,625 / 4,375. Sono
+      tutte tariffe GIORNALIERE divise per 8 (50, 40, 60, 70, 45, 35 € al
+      giorno): il locale ragiona a giornate, non a ore.
+      QUELLO CHE NON C'È, e che non va inventato. Nessun foglio calcola il
+      minimo dalle paghe. L'ipotesi di chi ha chiesto questo lavoro — «i
+      minimi dipendono dalle paghe orarie, più un extra che credo decida
+      Flavio» — non è né confermata né smentita dai file: quella relazione
+      non esiste in nessuna cella. È UNA DOMANDA DA FARE A FLAVIO, e finché
+      non ha risposta la formula non si scrive.
+      COSA HA GIÀ L'APP: le ore e le paghe per intero, storicizzate
+      (REQ-STAFF-006), e l'incasso per giornata commerciale (REQ-CASSA-005).
+      Manca il minimo, manca il confronto, manca l'obiettivo settimanale, e
+      mancano le spese del mese — che nel foglio sono una riga sola battuta
+      a mano, non un elenco.
+      PROPOSTA, tutta da confermare. Un minimo per giornata, impostabile per
+      giorno della settimana e correggibile sul singolo giorno (Natale non è
+      un mercoledì qualsiasi); nella schermata della serata, accanto
+      all'incasso, quanto manca o quanto avanza; nel mese, il totale degli
+      scarti e l'obiettivo settimanale calcolato dai minimi invece che
+      scritto a parte, così non può più restare indietro come nel foglio.
+      SE E QUANDO FLAVIO DIRÀ COME NASCE IL MINIMO, il costo del personale
+      l'app ce l'ha già e non andrebbe ricopiato a mano: sarebbe il primo
+      pezzo della formula. Ma prima la regola, poi il codice.
+    status: todo
+    generate_issue: true
+    labels: [statistiche, staff, ore, serata]
+    test_cases: []
+
+  - id: REQ-MAG-023
+    title: "Quanto ordinare: il foglio guarda la giacenza, l'app guarda una soglia"
+    area: "src/lib/warehouse.js suggestedPackages, src/components/PurchaseOrdersPanel.jsx"
+    description: >
+      COSA FA IL FOGLIO (GEN ORD REC.xlsx, verificato). Centotrenta fogli,
+      uno per giro d'ordini, coi numeri dei documenti nel nome
+      («1410+1438+AGO+PAD+PIC»). Ogni foglio è il CATALOGO INTERO ricopiato
+      — circa 380 righe — con: articolo, formato in cl, TIPO (la categoria:
+      GIN, BIRRE, VINO, Z APE…), classe LINEA o PREM, una marca «OUT» per
+      quello che non si tiene più, DEP (la giacenza), TRE colonne di
+      quantità (A, B, C), il prezzo netto al pezzo, il prezzo ivato = netto
+      × 1,22, l'importo di riga = quantità × prezzo ivato, il costo al cl =
+      prezzo ivato / formato, e il fornitore. Il totale del giro è la somma
+      delle tre colonne.
+      IL FORNITORE STA SULL'ARTICOLO, non sull'ordine: un foglio solo tiene
+      dentro più fornitori insieme, e i nomi dei fogli lo dicono (NOVA +
+      AGOSTINO + PICCOLO). Le tre colonne A/B/C servono a tenere separati i
+      pezzi del giro dentro lo stesso foglio.
+      LO STESSO MODELLO SERVE PER LE RIMANENZE: i fogli «RES …» e
+      «rimanenza giugno» sono lo stesso catalogo con le quantità CONTATE al
+      posto di quelle ordinate, valorizzate dalle stesse colonne. Comprare e
+      contare, per il foglio, sono lo stesso gesto.
+      QUANTO ORDINARE NON È CALCOLATO: nessuna formula lega le quantità a
+      DEP o al consumo. Si guarda la giacenza e si scrive un numero.
+      L'UNICA REGOLA NUMERICA che compare in tutti i file sta in INV.xlsx,
+      foglio «ORD»: la colonna CONS/w è «= ORD / 3», cioè l'ordine è
+      dimensionato su circa TRE settimane di consumo. Quel foglio però oggi
+      ha una riga sola compilata: è un indizio, non una prova, e va chiesto.
+      COSA FA L'APP OGGI. Il generatore ordini fa un ordine per UN fornitore,
+      coi soli prodotti di quel fornitore; «⚡ Precompila i sotto scorta»
+      propone `suggestedPackages`, che riporta la giacenza a DUE VOLTE la
+      soglia di avviso (`low_threshold`), minimo una confezione, e non
+      propone niente se la soglia non è impostata. Al ricevimento la merce
+      entra in magazzino in un colpo (REQ-MAG-006).
+      LE DIFFERENZE, in ordine di quanto pesano: (1) l'app parte da una
+      SOGLIA scritta a mano sull'articolo, il foglio dal CONSUMO e dalla
+      giacenza; (2) l'app fa un ordine per fornitore, il foglio ne mette
+      insieme quanti ne servono in un giro solo; (3) l'app non sa cosa sia
+      un consumo settimanale, vedi REQ-MAG-024; (4) nella schermata
+      dell'ordine non si vede il costo per unità di misura, che nel foglio
+      c'è su ogni riga ed è il numero con cui si decide se un prodotto
+      conviene.
+      PROPOSTA. Proporre la quantità dal CONSUMO invece che dalla soglia —
+      «coprire N settimane al ritmo delle ultime conte», con la soglia che
+      resta come rete per i prodotti senza storico — e un giro d'ordini che
+      tenga dentro più fornitori insieme, spezzandosi in un ordine per
+      fornitore solo al momento dell'invio.
+      DA CHIEDERE A FLAVIO: quante settimane si vogliono coprire (l'indizio
+      dice tre), e se il numero è uguale per tutti o cambia per fornitore —
+      chi consegna una volta al mese e chi due volte a settimana non si
+      ordinano con la stessa regola.
+    status: todo
+    generate_issue: true
+    labels: [magazzino, fornitori]
+    test_cases: []
+
+  - id: REQ-MAG-024
+    title: "Il consumo a settimana si divide per le settimane vere"
+    area: "src/lib/warehouse.js stockCountCompute, src/components/InventoryManager.jsx"
+    description: >
+      COSA FA IL FOGLIO (INV.xlsx, verificato). Ogni conta è un foglio con
+      l'intervallo nel nome («07-06 01-07») e, per riga: DEP (giacenza
+      iniziale), ACQ (comprato nel periodo), RIM (contato alla fine), CONS =
+      DEP + ACQ − RIM, CONS/w, prezzo netto, prezzo ivato, VALORE € = RIM ×
+      prezzo, costo al cl, costo alla porzione (prezzo / (cl × 0,34)).
+      IL CONSUMO A SETTIMANA È DIVISO PER UNA COSTANTE, non per le settimane
+      vere del periodo: nei primi due fogli è «÷ 3», poi «÷ 2» per cinque
+      fogli, poi «÷ 1,5» per quindici, poi «÷ 4» negli ultimi nove. Il
+      divisore lo si aggiorna a mano ogni tanto, e nel frattempo sbaglia di
+      quanto è lontano dalla realtà: «16-02 02-04» sono sei settimane e
+      vengono divise per 4, «07-06 01-07» sono tre settimane e mezzo e
+      vengono divise per 4 anche loro. È il numero su cui si decide quanto
+      ordinare (REQ-MAG-023), quindi l'errore non resta dov'è.
+      COSA FA L'APP: `stockCountCompute` calcola DEP + ACQ − RIM e la
+      valorizzazione (REQ-MAG-005), ma non calcola nessun consumo a
+      settimana — quella colonna non esiste.
+      PROPOSTA. Il consumo per settimana si ricava dai GIORNI VERI fra due
+      conte, che l'app conosce perché le conte hanno una data: consumo /
+      giorni × 7. Nessun divisore da tenere aggiornato, e nessun modo di
+      sbagliarlo dimenticandosene. Dove le conte sono meno di due, o troppo
+      vicine per dire qualcosa, il numero non si mostra invece di mostrarne
+      uno finto: un consumo inventato manda a ordinare merce che non serve.
+    status: todo
+    generate_issue: true
+    labels: [magazzino, metodo]
+    test_cases: []
