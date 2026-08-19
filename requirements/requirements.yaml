@@ -5544,9 +5544,26 @@ requirements:
       c'è nel foglio e non di più. Il totale del mese finisce nella riga
       «spese» di Bilancio → Mesi.
       COSA NON SONO: non sono gli acquisti di merce, che vivono negli ordini
-      fornitore e si contano da soli (REQ-MAG-022). Qui ci va l'affitto, la
-      SIAE, il commercialista, le utenze — quello che esce e non entra in
-      magazzino. Se le due cose si mescolano la merce viene contata due
+      fornitore e si contano da soli (REQ-MAG-022). Qui ci va quello che
+      esce e non entra in magazzino.
+      QUALI SIANO NON LO SAPPIAMO, e va detto invece di riempirlo di
+      esempi: «affitto, SIAE, commercialista, utenze» era una LISTA
+      INVENTATA da chi scriveva questa voce, non una frase di Flavio — lui
+      di queste spese non ha mai parlato, e nei fogli non se ne trova
+      traccia da nessuna parte (cercate per parola il 19/08 in tutti i
+      file: niente affitto, niente SIAE, niente utenze).
+      QUELLO CHE INVECE SI MISURA: fra gennaio e giugno 2026 le sue SPESE
+      superano gli acquisti di 11.243 euro in tutto. Il foglio «TO BUY»
+      (arredi e consumo, REQ-MAG-025) ne spiega 2.469: restano fuori quasi
+      NOVEMILA EURO in sei mesi, che tornano tutti i mesi e crescono col
+      volume. C'è dentro qualcosa di ricorrente che non è né merce né
+      arredi, e nei fogli non è scritto da nessuna parte.
+      DA CHIEDERE A FLAVIO, ed è la domanda che decide la forma di questa
+      voce: cosa metti in quel numero? Le tiene da qualche altra parte (il
+      commercialista, l'home banking) o le somma a mente? Se sono poche e
+      ricorrenti bastano descrizione e importo; se sono tante e di natura
+      diversa serve almeno un modo di raggrupparle, se no il totale del
+      mese non si sa spiegare a chi lo guarda. Se le due cose si mescolano la merce viene contata due
       volte, e il netto del mese sbaglia in silenzio.
       ATTENZIONE, IL NUMERO DI FLAVIO NON SARÀ LO STESSO — misurato sui
       fogli il 19/08, e va saputo prima che qualcuno confronti i totali.
