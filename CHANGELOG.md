@@ -188,6 +188,14 @@ con una prova a vuoto che dice cosa cambierebbe prima di toccare niente.
 
 ### Sotto il cofano
 
+- **Il totale di un conto si rifà in un posto solo.** Modificare le righe dal
+  telefono del cliente, aggiungere al conto, dividere una comanda e
+  correggerla dal banco rifacevano tutti e quattro lo stesso conto — righe,
+  coperto, costo di servizio, mancia, sconto — ognuno con la sua copia delle
+  stesse righe di codice. Adesso è una sola: se un giorno cambia una regola
+  sui soldi, cambia per tutti e quattro insieme, e non c'è il gesto rimasto
+  indietro che fa pagare una cifra diversa.
+
 - **Toccare una card costa la metà**: avanzare una comanda, dividerla o
   cambiare il modo di consegna si rileggevano il conto dal server subito dopo
   averlo scritto, per restituire un valore che nessuna schermata guardava. Con
