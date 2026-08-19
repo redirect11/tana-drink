@@ -25,6 +25,7 @@ import {
 } from '../lib/stats.js'
 import MacroMonthlyTab from './MacroMonthlyTab.jsx'
 import { Sottosezioni } from '../lib/sottosezioni.js'
+import { IconCartelle } from './Icons.jsx'
 
 const fmtMin = (m) => (m == null ? '—' : `${Math.round(m * 10) / 10} min`)
 // Prezzo compatto per le etichette dei grafici (niente centesimi).
@@ -62,7 +63,7 @@ const etichettaSerata = (s) => {
 // schermata che è già fatta di tabelle.
 const SEZIONI_STATS = [
   { id: 'giornaliero', icona: '📊', label: 'Giornaliero' },
-  { id: 'mensile', icona: '🗂', label: 'Mensile per macro' },
+  { id: 'mensile', icona: <IconCartelle />, label: 'Mensile per macro' },
 ]
 
 export default function StatsTab() {
