@@ -2318,7 +2318,16 @@ function chiIncassa() {
   return { uid: u.uid, email: u.email || null, name: u.displayName || null }
 }
 
-export async function registerPayment(id, { amount, method = 'banco', items = null, autoServe = false } = {}) {
+// QUANTO RESTA DA INCASSARE LO SA LA SCHERMATA, NON LA RILETTURA (BUG-046).
+// `chiude` è quello che ha davanti chi incassa nell'istante del gesto: «con
+// questo incasso il conto è saldato». Serve perché lo sconto si applica un
+// attimo prima di riscuotere e la sua scrittura parte in sottofondo: qui si
+// rileggeva il conto per decidere, e la rilettura prende la versione di prima
+// — quella SENZA sconto. Il residuo risultava più alto dell'incasso, il conto
+// veniva scritto «parziale» invece che «pagato» e restava aperto mentre a
+// schermo era chiuso; e lo scontrino automatico, che guarda proprio
+// `payment_status`, non usciva mai.
+export async function registerPayment(id, { amount, method = 'banco', items = null, autoServe = false, chiude = null } = {}) {
   const ref = doc(db, 'orders', id)
   const nowIso = new Date().toISOString()
   const snap = await leggiOrdine(ref)
@@ -2327,7 +2336,13 @@ export async function registerPayment(id, { amount, method = 'banco', items = nu
   if (o.status === ORDER_STATUSES.ANNULLATO) throw new Error('Ordine annullato')
   if (o.payment_status === 'pagato') throw new Error('Ordine già pagato')
   const due = orderDue(o)
-  const paid = Math.min(Number(amount) || 0, due)
+  // Il tetto sul residuo riletto resta per chi non dice niente: non si
+  // registra mai più di quanto risulta dovuto. Chi invece dichiara di star
+  // saldando il conto incassa la cifra che ha battuto.
+  const paid =
+    chiude === true
+      ? Math.round((Number(amount) || 0) * 100) / 100
+      : Math.min(Number(amount) || 0, due)
   if (!(paid > 0)) throw new Error('Importo non valido')
   const payments = [
     ...(o.payments || []),
@@ -2340,7 +2355,7 @@ export async function registerPayment(id, { amount, method = 'banco', items = nu
       by: chiIncassa(),
     },
   ]
-  const closed = paymentCloses(o, paid)
+  const closed = chiude === true || paymentCloses(o, paid)
   const chiusura = closed ? conTimbro(chiusuraPagamento(o, nowIso, { autoServe }), nowIso) : null
   // PRIMA L'INCASSO, POI IL MAGAZZINO. Lo scarico legge ricette e articoli:
   // aspettarlo voleva dire che il conto risultava pagato solo dopo quelle

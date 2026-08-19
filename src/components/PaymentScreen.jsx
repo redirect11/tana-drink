@@ -14,7 +14,7 @@ import { formatPrice, PAYMENT_METHOD_LABELS } from '../lib/orderStatus.js'
 import { useOnline } from '../lib/useOnline.js'
 import { allServed } from '../lib/comande.js'
 import { activeVouchers } from '../lib/vouchers.js'
-import { printScontrino, printFattura, loadPrinterSettings, claimReceiptPrint } from '../lib/printer.js'
+import { printScontrino, printFattura, loadPrinterSettings, claimReceiptPrint, releaseReceiptPrint } from '../lib/printer.js'
 import { toastError } from '../lib/toast.js'
 import {
   remainingItems,
@@ -82,6 +82,9 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
       if (order.id && order.daily_number != null && loadPrinterSettings().autoPrintScontrino && claimReceiptPrint(order.id)) {
         printScontrino(perStampa).catch((e) => {
           console.warn('[printer] scontrino:', e.message)
+          // La carta non è uscita: la prenotazione torna libera, così la
+          // prossima chiusura (o la coda) ci riprova. Vedi BUG-047.
+          releaseReceiptPrint(order.id)
           onError?.(`Scontrino non stampato: ${e.message}`)
         })
       }
@@ -353,7 +356,10 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
     ;(async () => {
       try {
         await onBeforePay?.()
-        await registerPayment(await orderId(), { amount: toPay, method, items, autoServe })
+        // `chiude`: quello che questa schermata ha davanti adesso. Senza,
+        // l'api rilegge il conto per decidere e prende la versione di prima —
+        // quella senza lo sconto appena applicato (BUG-046).
+        await registerPayment(await orderId(), { amount: toPay, method, items, autoServe, chiude: willClose })
       } catch (e) {
         setError(e.message)
         onError?.(`Pagamento non registrato: ${e.message}`)

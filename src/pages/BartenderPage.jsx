@@ -95,7 +95,7 @@ import { showToast } from '../lib/toast.js'
 import { beep, installAudioUnlock } from '../lib/beep.js'
 import { subscribePending, dismissPending, dismissBanner } from '../lib/pendingOrders.js'
 import { syncSumUpProducts, isSumUpEnabled } from '../lib/sumupApi.js'
-import { printComanda, printScontrino, loadPrinterSettings, claimReceiptPrint } from '../lib/printer.js'
+import { printComanda, printScontrino, loadPrinterSettings, claimReceiptPrint, releaseReceiptPrint } from '../lib/printer.js'
 import MenuManager from '../components/MenuManager.jsx'
 import PrinterSetup from '../components/PrinterSetup.jsx'
 import InventoryManager from '../components/InventoryManager.jsx'
@@ -711,7 +711,13 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
           if (printerSettings.autoPrintScontrino) {
             for (const o of data) {
               if (o.payment_status === 'pagato' && claimReceiptPrint(o.id)) {
-                printScontrino(o).catch((e) => console.warn('[printer] auto-scontrino:', e.message))
+                printScontrino(o).catch((e) => {
+                  console.warn('[printer] auto-scontrino:', e.message)
+                  // Carta non uscita: la prenotazione torna libera, se no quel
+                  // conto non stampa più lo scontrino nemmeno riaperto e
+                  // richiuso (BUG-047).
+                  releaseReceiptPrint(o.id)
+                })
               }
             }
           }
@@ -2425,6 +2431,9 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             // chiuso qui: riaprendolo deve tornare a vedersi subito, senza
             // aspettare il giro del server.
             mostraOrdine(o.id)
+            // Un conto riaperto è un conto da richiudere, e alla chiusura lo
+            // scontrino deve poter uscire di nuovo (BUG-047).
+            releaseReceiptPrint(o.id)
             restoreOrder(o.id, { motivo, chi: chiSonoIo() }).catch((e) =>
               setError(`Conto non ripristinato: ${e.message}`)
             )
