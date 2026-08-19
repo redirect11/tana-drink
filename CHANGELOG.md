@@ -4,6 +4,17 @@
 
 ### Al banco
 
+- **Il magazzino si scala quando il drink è pronto, non quando arriva al
+  tavolo**: è lì che il fatto succede — fra «pronto» e «servito» il gin è già
+  nel bicchiere — e a segnarlo è chi l'ha fatto. Prima si aspettava la
+  consegna, e da quando «servito» lo segna la sala quello scarico non
+  arrivava proprio: la sala sul magazzino non scrive, l'errore spariva in
+  silenzio e la giacenza restava ferma. Un drink pronto sul banco adesso è
+  merce consumata, non più «impegnata». Quello che ti ritrovi a fine serata
+  non cambia di un millilitro: cambia solo *quando* il conto passa da una
+  colonna all'altra. Dove gli stati del servizio sono spenti non cambia
+  niente: si scala alla riscossione, come sempre.
+
 - **Col servizio spento non si vedono più i passi**: il bollo «In
   preparazione» spuntava nel riquadro delle comande e nella vista di un
   gruppo anche dove la preparazione non si segue.
