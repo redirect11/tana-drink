@@ -183,6 +183,35 @@ describe('il conteggio «Categorie (N)» nel menu a lato', () => {
   })
 })
 
+// ── L'IVA DI VENDITA SULLA SINGOLA VOCE (REQ-MENU-013) ───────────────
+// Il locale ha la sua aliquota generale, ma nel menù c'è una categoria
+// BOTTIGLIE e una bottiglia intera non si rivende come un drink servito al
+// banco. Mettere tutto al 10% gonfia il netto, e dal netto scendono
+// margine, incidenze e conto di fine mese.
+describe('l’IVA di vendita nella scheda del prodotto', () => {
+  it('c’è un campo suo, e vuoto vale quella del locale', async () => {
+    const user = userEvent.setup()
+    render(<MenuManager />)
+    await user.click(await screen.findByRole('button', { name: /Aggiungi prodotto/ }))
+    const campo = await screen.findByLabelText(/IVA vendita/)
+    // Parte VUOTO: chi non ha eccezioni da scrivere non compila niente.
+    expect(campo).toHaveValue(null)
+    expect(screen.getByText(/vale quella del locale/i)).toBeInTheDocument()
+  })
+
+  it('quello che si scrive lì finisce nel prodotto salvato', async () => {
+    const user = userEvent.setup()
+    render(<MenuManager />)
+    await user.click(await screen.findByRole('button', { name: /Aggiungi prodotto/ }))
+    await user.type(await screen.findByLabelText('Nome *'), 'Bottiglia di gin')
+    await user.type(screen.getByLabelText(/IVA vendita/), '22')
+    await user.click(screen.getByRole('button', { name: /^Salva/ }))
+
+    await waitFor(() => expect(salvaDrink).toHaveBeenCalled())
+    expect(salvaDrink.mock.calls[0][0].form.sale_vat).toBe('22')
+  })
+})
+
 // ── LE CATEGORIE SENZA MACRO SI VEDONO A COLPO D'OCCHIO (REQ-UI-022) ──
 // Questo elenco mostrava nome, icona e colore: a quale gruppo appartenesse
 // una categoria — o che non ne avesse nessuno — si scopriva solo aprendo il
