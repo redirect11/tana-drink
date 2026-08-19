@@ -324,22 +324,48 @@ describe('vista aggregata: aumenti/diminuzioni gestite internamente', () => {
   })
 })
 
-// IL MAGAZZINO SI SCALA QUANDO LA COMANDA È SERVITA. Prima si scaricava
-// alla presa in carico: un drink iniziato e poi non fatto — riga tolta,
-// cliente che cambia idea, comanda annullata — aveva già portato via gli
-// ingredienti. Fino al servito sono impegnati, non consumati.
+// IL MAGAZZINO SI SCALA A «PRONTO». È il momento in cui il fatto succede:
+// lì il drink è fatto — il gin è già nel bicchiere — e a segnarlo è chi
+// l'ha fatto, il banco. «Servito» è il drink arrivato al tavolo, e fra i
+// due passi in magazzino non si muove più niente.
+// Prima si scaricava al servito, e lì il tasto ormai lo preme la SALA, che
+// sul magazzino non scrive: lo scarico falliva in silenzio (BUG-039). E non
+// si scala prima, alla presa in carico: un drink iniziato e poi non fatto
+// avrebbe già portato via gli ingredienti.
 describe('quando si scala il magazzino', () => {
-  it('quando la comanda risulta servita', () => {
-    expect(comandaDaScaricare({ inventory_applied: false }, 'ritirato')).toBe(true)
+  it('quando la comanda è pronta: lì il drink è fatto', () => {
+    expect(comandaDaScaricare({ inventory_applied: false }, 'pronto')).toBe(true)
   })
 
   it('non quando la si prende in carico', () => {
     expect(comandaDaScaricare({ inventory_applied: false }, 'in_preparazione')).toBe(false)
-    expect(comandaDaScaricare({ inventory_applied: false }, 'pronto')).toBe(false)
+  })
+
+  it('e non di nuovo quando esce dal banco: è già stato fatto', () => {
+    expect(comandaDaScaricare({ inventory_applied: true }, 'ritirato')).toBe(false)
+    // Anche la comanda vecchia, di prima che lo scarico si spostasse, non
+    // si scala al servito: a raccoglierla è la rete della riscossione
+    // (unappliedEntries in api.js), che guarda proprio quelle.
+    expect(comandaDaScaricare({ inventory_applied: false }, 'ritirato')).toBe(false)
   })
 
   it('una volta sola', () => {
-    expect(comandaDaScaricare({ inventory_applied: true }, 'ritirato')).toBe(false)
+    expect(comandaDaScaricare({ inventory_applied: true }, 'pronto')).toBe(false)
+  })
+
+  // AVANTI E INDIETRO NON SCALA DUE VOLTE. Si segna «pronto» il ticket
+  // sbagliato e lo si rimette «in preparazione»: quando ripassa a pronto lo
+  // scarico è già stato applicato, e non si ripete. È la guardia su cui sta
+  // in piedi tutto il resto — un magazzino che si scala due volte se ne
+  // accorge qualcuno tre giorni dopo, guardando una giacenza che non torna.
+  it('pronto → indietro → pronto: lo stesso drink si scala una volta sola', () => {
+    const c = { inventory_applied: false }
+    expect(comandaDaScaricare(c, 'pronto')).toBe(true)
+    // Lo scarico è andato: da qui in poi la comanda se lo porta scritto.
+    c.inventory_applied = true
+    expect(comandaDaScaricare(c, 'in_preparazione')).toBe(false)
+    expect(comandaDaScaricare(c, 'pronto')).toBe(false)
+    expect(comandaDaScaricare(c, 'ritirato')).toBe(false)
   })
 })
 

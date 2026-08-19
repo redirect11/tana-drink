@@ -21,8 +21,16 @@
 // invece, non può sbagliarsi: quando l'ultimo conto si chiude torna zero
 // da solo.
 //
-// Lo scarico VERO — il «commit» — resta dov'è: alla comanda presa in
-// carico o alla riscossione. Questo è quello che c'è nel mezzo.
+// Lo scarico VERO — il «commit» — sta altrove: alla comanda segnata
+// PRONTO (comandaDaScaricare in comande.js) o, dove gli stati del servizio
+// sono spenti, alla riscossione. Questo è quello che c'è nel mezzo.
+//
+// E il metro qui NON È LO STATO, è `inventory_applied`: impegnato vuol dire
+// «potrebbe uscire e non è ancora stato scalato». Così i due conti non
+// possono scollarsi — spostando lo scarico da «servito» a «pronto» questo
+// file non ha avuto bisogno di cambiare una riga, e nell'istante in cui una
+// comanda viene scaricata esce di qui ed entra nella giacenza, senza
+// contarsi due volte e senza sparire per un battito.
 
 import { computeConsumption, qtyInStockUnit, eScorta } from './inventory.js'
 import { ORDER_STATUSES } from './orderStatus.js'
@@ -40,7 +48,10 @@ export function contoImpegna(o, opzioni) {
   return !!o && !contoChiuso(o, opzioni)
 }
 
-// Le comande che pesano ancora: non annullate e non già scaricate.
+// Le comande che pesano ancora: non annullate e non già scaricate. Una
+// comanda tornata indietro da «pronto» resta fuori — lo scarico è già stato
+// applicato e non si disfa (vedi comandaDaScaricare): quegli ingredienti
+// sono nella giacenza, non fra i promessi.
 export function comandeImpegnate(o) {
   return (o?.comande || []).filter(
     (c) =>

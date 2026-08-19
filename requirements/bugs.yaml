@@ -1145,3 +1145,47 @@ bugs:
     generate_issue: false
     labels: [bug, pos, comande]
     test_cases: [tests/component/OrderPosDetail.test.jsx]
+
+  - id: BUG-040
+    title: "La sala segna «servito» e il magazzino non si scala"
+    area: "src/lib/comande.js (comandaDaScaricare), src/lib/api.js, firestore.rules"
+    description: >
+      Trovato lavorando REQ-STAFF-014, il 19/08. Non era nuovo, ma da quel
+      giorno era diventato la strada normale: segnare «servito» è il mestiere
+      della SALA — è lei che porta il drink al tavolo — e prima quel tasto lo
+      premeva quasi sempre il banco.
+      DOVE SI FERMAVA. Il magazzino si scalava quando la comanda diventava
+      «servito»: `advanceComanda` salvava l'avanzamento e poi chiamava
+      `scaricaInSottofondo`, che scrive le nuove giacenze su
+      `inventory_items`. Quella collection in `firestore.rules` è
+      `read, write: if isBartender()`: al ruolo `staff` il permesso è negato.
+      La scrittura falliva e il `catch {}` di `scaricaInSottofondo` la
+      ingoiava in silenzio — nessun toast, nessun avviso: l'avanzamento si
+      vedeva, il magazzino no.
+      COSA RESTAVA STORTO. La comanda manteneva `inventory_applied: false`,
+      quindi gli ingredienti di quel drink risultavano ancora IMPEGNATI (la
+      colonna «a fine serata», lib/impegnato.js) invece che consumati. Il
+      recupero c'era — «si riprende al pagamento», `unappliedEntries` — ma
+      valeva solo se a incassare quel conto era poi il banco: se incassava la
+      stessa persona di sala il tentativo falliva di nuovo allo stesso modo.
+      Una serata servita e incassata tutta dalla sala lasciava il magazzino
+      fermo, e se ne sarebbe accorto qualcuno tre giorni dopo guardando una
+      giacenza che non torna.
+      RISOLTO SPOSTANDO IL MOMENTO, non il permesso. Lo scarico è passato a
+      «PRONTO» (`comandaDaScaricare`, REQ-MAG-003), che è dove il fatto
+      succede davvero: lì il drink è fatto — fra «pronto» e «servito» il gin
+      è già nel bicchiere — e a segnarlo è chi l'ha fatto, il BANCO, che sul
+      magazzino scrive. Il difetto dei permessi sparisce da sé, e per la
+      ragione giusta: non si è allargato niente a nessuno.
+      Le due strade scartate, perché non tornino: dare a `staff` la scrittura
+      su `inventory_items` gli darebbe tutto il magazzino, che è esattamente
+      quello che quelle regole tengono chiuso; e una Cloud Function per lo
+      scarico sarebbe stata una macchina nuova per rimettere una toppa a un
+      momento sbagliato.
+      SE QUALCUNO UN DOMANI RIMETTE LO SCARICO SU «SERVITO», questo difetto
+      torna identico. È il motivo per cui la voce resta scritta.
+    in_produzione: true
+    status: fixed
+    generate_issue: true
+    labels: [bug, magazzino, ruoli, sala]
+    test_cases: []

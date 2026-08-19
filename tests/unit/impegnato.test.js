@@ -61,6 +61,40 @@ describe('quali conti impegnano le scorte', () => {
     expect(consumoImpegnato([pagatoDaServire], drinks, { workflowOn: true })).toHaveLength(1)
   })
 
+  // A DIRE LA PAROLA FINE È «PRONTO», non «servito»: lì il drink è fatto e
+  // il magazzino l'ha già scalato. Un drink pronto sul banco, in attesa che
+  // qualcuno lo porti, NON è più un ingrediente promesso.
+  it('la comanda pronta e scaricata è già uscita dall’impegnato', () => {
+    const pronta = conto({
+      comande: [
+        {
+          id: 'c1',
+          status: 'pronto',
+          inventory_applied: true,
+          items: [{ drink_id: 'negroni', qty: 2 }],
+        },
+      ],
+    })
+    expect(consumoImpegnato([pronta], drinks)).toEqual([])
+  })
+
+  // E QUELLA RIMESSA INDIETRO RESTA FUORI. Lo scarico è già stato applicato
+  // e non si disfa: quegli ingredienti stanno nella giacenza, non fra i
+  // promessi. Rimetterceli sarebbe contarli due volte.
+  it('e ci resta anche se torna «in preparazione»: il metro è lo scarico, non lo stato', () => {
+    const tornataIndietro = conto({
+      comande: [
+        {
+          id: 'c1',
+          status: 'in_preparazione',
+          inventory_applied: true,
+          items: [{ drink_id: 'negroni', qty: 2 }],
+        },
+      ],
+    })
+    expect(consumoImpegnato([tornataIndietro], drinks)).toEqual([])
+  })
+
   it('il conto servito e scaricato non impegna più niente', () => {
     const servito = conto({
       payment_status: 'pagato',
@@ -134,5 +168,74 @@ describe('dalla ricetta allo scaffale', () => {
 
   it('un ingrediente che non è in magazzino non fa saltare il conto', () => {
     expect(impegnatoPerArticolo([conto()], drinks, {})).toEqual({})
+  })
+})
+
+// ── IL TOTALE NON DEVE BALLARE ────────────────────────────────────────
+//
+// Questo è il punto dove un errore si vede come un magazzino che salta.
+// Giacenza e impegnato sono due metà della stessa cosa: quello che c'è
+// sullo scaffale, meno quello che è già promesso ai tavoli. Passando a
+// «pronto» il gin cambia metà — esce dai promessi ed entra nello scalato —
+// ma QUELLO CHE TI RITROVI A FINE SERATA dev'essere lo stesso identico
+// numero. Se si muove, o quel drink è stato contato due volte o è sparito
+// per un istante: ed è la cifra su cui si decide se mandare qualcuno a
+// prendere una bottiglia.
+describe('giacenza − impegnato: il numero non cambia passando a «pronto»', () => {
+  // 2 negroni = 60 ml di gin. La bottiglia è da 700 ml contata a pezzi,
+  // quindi 60 ml valgono 60/700 di pezzo.
+  const CONSUMO_PZ = 60 / 700
+  const comanda = (over) => conto({
+    comande: [{ id: 'c1', items: [{ drink_id: 'negroni', qty: 2 }], ...over }],
+  })
+  // Prima: la comanda è al banco, la giacenza è intera, i 60 ml promessi.
+  const daFare = comanda({ status: 'in_preparazione', inventory_applied: false })
+  // Un istante dopo: la comanda è pronta e il magazzino ha scalato.
+  const pronta = comanda({ status: 'pronto', inventory_applied: true })
+  const ginScalato = { ...gin, stock: gin.stock - CONSUMO_PZ }
+
+  // Quello che ti ritrovi a fine serata: la giacenza meno il promesso.
+  const aFineSerata = (ordini, articolo, items) =>
+    articolo.stock -
+    (impegnatoPerArticolo(ordini, drinks, items, { workflowOn: true })[articolo.id] || 0)
+
+  it('prima: giacenza intera, 60 ml promessi', () => {
+    expect(impegnatoPerArticolo([daFare], drinks, itemsById, { workflowOn: true }).gin).toBeCloseTo(
+      CONSUMO_PZ,
+      10
+    )
+    expect(aFineSerata([daFare], gin, itemsById)).toBeCloseTo(4 - CONSUMO_PZ, 10)
+  })
+
+  it('dopo: i 60 ml sono usciti dalla giacenza e non sono più promessi', () => {
+    const items = { gin: ginScalato }
+    // Niente doppio conto: scaricata, la comanda non impegna più.
+    expect(impegnatoPerArticolo([pronta], drinks, items, { workflowOn: true }).gin).toBeUndefined()
+    expect(aFineSerata([pronta], ginScalato, items)).toBeCloseTo(4 - CONSUMO_PZ, 10)
+  })
+
+  it('e sono lo stesso numero: il passaggio a «pronto» non lo muove', () => {
+    expect(aFineSerata([daFare], gin, itemsById)).toBeCloseTo(
+      aFineSerata([pronta], ginScalato, { gin: ginScalato }),
+      10
+    )
+  })
+
+  // E il ritorno indietro non lo rimette in ballo: lo scarico è già stato
+  // applicato, la comanda resta fuori dall'impegnato.
+  it('e nemmeno il ritorno a «in preparazione»', () => {
+    const indietro = comanda({ status: 'in_preparazione', inventory_applied: true })
+    expect(aFineSerata([indietro], ginScalato, { gin: ginScalato })).toBeCloseTo(
+      4 - CONSUMO_PZ,
+      10
+    )
+  })
+
+  it('la colonna «a fine serata» dice la stessa cosa', () => {
+    expect(previstoAFineSerata(gin, CONSUMO_PZ)).toBeCloseTo(4 - CONSUMO_PZ, 10)
+    expect(articoloPrevisto(gin, CONSUMO_PZ).stock).toBeCloseTo(ginScalato.stock, 10)
+    // Scaricata non c'è più niente di promesso, e la colonna si spegne: il
+    // numero da leggere è la giacenza, che vale già lo stesso.
+    expect(previstoAFineSerata(ginScalato, 0)).toBeNull()
   })
 })

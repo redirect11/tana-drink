@@ -204,15 +204,34 @@ export function contoChiuso(o, { workflowOn = false } = {}) {
   return workflowOn ? pagato && servito : pagato
 }
 
-// QUANDO IL MAGAZZINO SI SCALA DAVVERO. Alla comanda SERVITA, non alla
-// presa in carico: un drink iniziato e poi non fatto — riga tolta, cliente
-// che cambia idea, comanda annullata — aveva già portato via gli
-// ingredienti. Servito vuol dire che quel drink è uscito per certo.
-// Una volta sola: se lo scarico è già stato applicato non si ripete.
-// Senza gli stati del servizio le comande risultano servite alla
-// riscossione, ed è lì che si scala (vedi unappliedEntries in api.js).
+// QUANDO IL MAGAZZINO SI SCALA DAVVERO: A «PRONTO».
+//
+// È il momento in cui il fatto succede. A «pronto» il drink è FATTO — il
+// gin è già nel bicchiere — e chi lo segna è chi lo ha fatto: il banco.
+// «Servito» è un'altra cosa, è il drink arrivato al tavolo, e fra i due
+// passi in magazzino non si muove più niente.
+//
+// Prima si scaricava al RITIRATO, e c'erano due guai. Uno di sostanza: si
+// aspettava la consegna per registrare un consumo già avvenuto, e un drink
+// pronto sul banco restava fra gli «impegnati» come se potesse ancora non
+// farsi. Uno pratico, che è quello che ha portato qui: «servito» ormai lo
+// segna la SALA — è lei che porta il vassoio — e la sala sul magazzino non
+// scrive (le regole glielo negano, ed è giusto così). Lo scarico falliva in
+// silenzio e il magazzino restava fermo (BUG-040). Spostandolo a «pronto»
+// il difetto sparisce da sé, e non perché si sia allargato un permesso.
+//
+// Non si scala PRIMA — allo «in preparazione» — perché un drink iniziato e
+// poi non fatto (riga tolta, cliente che cambia idea, comanda annullata)
+// avrebbe già portato via gli ingredienti.
+//
+// Una volta sola: se lo scarico è già stato applicato non si ripete, ed è
+// questa guardia che regge il pronto → indietro → pronto.
+//
+// Senza gli stati del servizio non esiste nessun «pronto»: lì le comande
+// risultano servite alla riscossione, ed è lì che si scala (vedi
+// unappliedEntries in api.js). Quella strada non cambia.
 export function comandaDaScaricare(comanda, nuovoStato) {
-  return nuovoStato === ORDER_STATUSES.RITIRATO && comanda?.inventory_applied !== true
+  return nuovoStato === ORDER_STATUSES.PRONTO && comanda?.inventory_applied !== true
 }
 
 export function comandaEditable(c) {

@@ -26,6 +26,9 @@ const stato = {
   // Si sblocca a mano: serve a tenere lo scarico «a metà lavoro» mentre
   // qualcun altro scrive sull'ordine.
   ricetteAppese: null,
+  // Quante volte lo scarico si è messo al lavoro: la ricetta la va a
+  // leggere solo lui, quindi contarne le letture conta gli scarichi.
+  ricetteLette: 0,
 }
 
 vi.mock('../../src/lib/firebaseClient.js', () => ({
@@ -50,6 +53,7 @@ vi.mock('firebase/firestore', () => ({
   getDoc: vi.fn(async (ref) => {
     // Le ricette sono la lettura lunga: è lì che si apre la finestra.
     if (ref?.col === 'drinks') {
+      stato.ricetteLette += 1
       if (stato.ricetteAppese) await stato.ricetteAppese
       return { exists: () => true, id: ref.id, data: () => ({ recipe_items: [] }) }
     }
@@ -105,7 +109,7 @@ const conto = () => ({
     {
       id: 'c1',
       seq: 1,
-      status: 'pronto',
+      status: 'in_preparazione',
       status_times: {},
       inventory_applied: false,
       items: [{ drink_id: 'gin', name: 'Gin Tonic', qty: 1, unit_price: 8 }],
@@ -120,25 +124,26 @@ beforeEach(() => {
   stato.ordine = conto()
   stato.scritture = []
   stato.ricetteAppese = null
+  stato.ricetteLette = 0
 })
 
 describe('lo scarico del magazzino non riscrive lo stato delle comande', () => {
   it('IL DOPPIO TOCCO: mentre il magazzino lavora, un avanzamento non si perde', async () => {
-    // Lo scarico parte al «ritirato» e si ferma sulle ricette.
+    // Lo scarico parte al «pronto» e si ferma sulle ricette.
     let sblocca
     stato.ricetteAppese = new Promise((r) => {
       sblocca = r
     })
 
-    await advanceComanda('ord-1', 'c1', 'ritirato')
-    await respira()
-    expect(statoDiC1()).toBe('ritirato')
-
-    // Nel frattempo qualcuno riporta indietro la comanda: è il secondo
-    // tocco, o un altro terminale.
     await advanceComanda('ord-1', 'c1', 'pronto')
     await respira()
     expect(statoDiC1()).toBe('pronto')
+
+    // Nel frattempo qualcuno porta avanti la comanda: è il secondo tocco,
+    // o un altro terminale.
+    await advanceComanda('ord-1', 'c1', 'ritirato')
+    await respira()
+    expect(statoDiC1()).toBe('ritirato')
 
     // Adesso il magazzino finisce e scrive. Non deve riportare lo stato a
     // com'era quando ha cominciato.
@@ -147,18 +152,42 @@ describe('lo scarico del magazzino non riscrive lo stato delle comande', () => {
     await respira()
     await respira()
 
-    expect(statoDiC1()).toBe('pronto')
+    expect(statoDiC1()).toBe('ritirato')
     // e il suo lavoro l'ha fatto: la comanda risulta scaricata
     expect(stato.ordine.comande.find((c) => c.id === 'c1').inventory_applied).toBe(true)
   })
 
   it('senza nessuno di mezzo, lo scarico si scrive normalmente', async () => {
-    await advanceComanda('ord-1', 'c1', 'ritirato')
+    await advanceComanda('ord-1', 'c1', 'pronto')
     await respira()
     await respira()
     const c1 = stato.ordine.comande.find((c) => c.id === 'c1')
-    expect(c1.status).toBe('ritirato')
+    expect(c1.status).toBe('pronto')
     expect(c1.inventory_applied).toBe(true)
+  })
+
+  // AVANTI E INDIETRO, DAL VIVO. Il passaggio a «pronto» scala; rimetterla
+  // «in preparazione» e riportarla a «pronto» non scala una seconda volta —
+  // qui si guarda proprio quante volte il magazzino viene toccato, non solo
+  // cosa risponde la regola.
+  it('pronto → indietro → pronto: il magazzino si tocca una volta sola', async () => {
+    await advanceComanda('ord-1', 'c1', 'pronto')
+    await respira()
+    await respira()
+    expect(stato.ricetteLette).toBe(1)
+
+    await advanceComanda('ord-1', 'c1', 'in_preparazione')
+    await respira()
+    await respira()
+    await advanceComanda('ord-1', 'c1', 'pronto')
+    await respira()
+    await respira()
+    await advanceComanda('ord-1', 'c1', 'ritirato')
+    await respira()
+    await respira()
+
+    expect(stato.ricetteLette).toBe(1)
+    expect(stato.ordine.comande.find((c) => c.id === 'c1').inventory_applied).toBe(true)
   })
 })
 
