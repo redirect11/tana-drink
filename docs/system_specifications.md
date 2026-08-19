@@ -1380,6 +1380,8 @@ NON RIAPRE UNA COSA CHIUSA, LA COMPLETA. Il 18/08 si è deciso che l'incasso si 
 
 PERCHÉ SERVE, per quel che si vede dai dati (non è una sua parola): nel menù esiste una categoria BOTTIGLIE, e una bottiglia intera non è la stessa cosa di un drink servito al banco. Mettere tutto al 10% gonfia il netto, e il netto è il numero da cui scendono margine, prime cost e il conto di fine mese.
 
+NON DIPENDE DA NIENTE: il lato acquisto è già fatto e `sale_vat` c'è. Conviene però che arrivi PRIMA delle tabelle del Bilancio: finché tutto si scorpora al 10% il netto di quello che si rivende con un'altra aliquota è gonfiato, e da quel netto scendono margine, incidenze e prime cost.
+
 **Dove**: `src/components/MenuManager.jsx, src/lib/api.js, src/lib/macroStats.js, src/components/SettingsTab.jsx`
 
 ### Magazzino
@@ -1444,6 +1446,8 @@ GLI ACQUISTI SENZA MACRO NON SPARISCONO. `purchasesByMacro` li raccoglie già so
 
 ALTRO è una categoria di magazzino che resta fuori dalle macro APPOSTA (REQ-UI-022). Va mostrata, non nascosta — un totale che non torna con le fatture non lo guarda più nessuno. E UNA COSA VA DETTA SUBITO: dello storico non si ricostruisce niente. Gli ordini fornitore in app nascono da oggi, i numeri 2026 del foglio non hanno un corrispondente in banca dati. La tabella si riempie da quando gli ordini passano per l'app, e i primi mesi saranno mezzi vuoti: è la verità, e va scritta sulla schermata invece di lasciarla scoprire a chi guarda — nella DIDASCALIA della tabella, che è il posto dove stanno le avvertenze (REQ-CASSA-010). Lì si dicono anche le altre due: cosa vogliono dire utile, rapporto e incidenza in parole da banco, e se i numeri che si stanno guardando sono al lordo o al netto dell'IVA — con due letture commutabili, sapere quale è aperta non è un dettaglio.
 
+DIPENDE DA REQ-CASSA-010 (la pagina che la ospita) e, per come si legge, da REQ-MAG-021 (P3, fermo finché non hanno risposta le cinque domande sui lotti): finché quello non è deciso un acquisto pesa sul mese in cui è ENTRATO e non su quello in cui si consuma, e la didascalia deve dirlo. Ma il vincolo che conta non è codice: la tabella resta vuota finché gli ordini fornitore non passano davvero dall'app, e dello storico 2026 non si ricostruisce niente. Per questo non è lavorabile adesso.
+
 **Dove**: `src/lib/macroStats.js purchasesByMacro, src/components/BilancioTab.jsx (nuovo)`
 
 #### REQ-MAG-023 — Quanto ordinare: il foglio guarda la giacenza, l'app guarda una soglia
@@ -1464,6 +1468,8 @@ LE DIFFERENZE, in ordine di quanto pesano: (1) l'app parte da una SOGLIA scritta
 
 DA CHIEDERE A FLAVIO: quante settimane si vogliono coprire (l'indizio dice tre), e se il numero è uguale per tutti o cambia per fornitore — chi consegna una volta al mese e chi due volte a settimana non si ordinano con la stessa regola.
 
+DIPENDE DA REQ-MAG-024: la quantità da proporre nasce dal consumo a settimana, che oggi l'app non calcola. E dipende da una risposta che non è ancora arrivata — quante settimane si vogliono coprire, e se il numero vale per tutti i fornitori: è il numero che decide quanta merce entra dalla porta, e indovinarlo si paga in magazzino.
+
 **Dove**: `src/lib/warehouse.js suggestedPackages, src/components/PurchaseOrdersPanel.jsx`
 
 #### REQ-MAG-024 — Il consumo a settimana si divide per le settimane vere
@@ -1473,6 +1479,8 @@ COSA FA IL FOGLIO (INV.xlsx, verificato). Ogni conta è un foglio con l'interval
 IL CONSUMO A SETTIMANA È DIVISO PER UNA COSTANTE, non per le settimane vere del periodo: nei primi due fogli è «÷ 3», poi «÷ 2» per cinque fogli, poi «÷ 1,5» per quindici, poi «÷ 4» negli ultimi nove. Il divisore lo si aggiorna a mano ogni tanto, e nel frattempo sbaglia di quanto è lontano dalla realtà: «16-02 02-04» sono sei settimane e vengono divise per 4, «07-06 01-07» sono tre settimane e mezzo e vengono divise per 4 anche loro. È il numero su cui si decide quanto ordinare (REQ-MAG-023), quindi l'errore non resta dov'è.
 
 COSA FA L'APP: `stockCountCompute` calcola DEP + ACQ − RIM e la valorizzazione (REQ-MAG-005), ma non calcola nessun consumo a settimana — quella colonna non esiste. PROPOSTA. Il consumo per settimana si ricava dai GIORNI VERI fra due conte, che l'app conosce perché le conte hanno una data: consumo / giorni × 7. Nessun divisore da tenere aggiornato, e nessun modo di sbagliarlo dimenticandosene. Dove le conte sono meno di due, o troppo vicine per dire qualcosa, il numero non si mostra invece di mostrarne uno finto: un consumo inventato manda a ordinare merce che non serve.
+
+NON DIPENDE DA NIENTE: le conte hanno già la loro data e `stockCountCompute` calcola già il consumo del periodo — qui si aggiunge una divisione e una colonna. Si può partire subito, ed è il pezzo che serve prima di REQ-MAG-023.
 
 **Dove**: `src/lib/warehouse.js stockCountCompute, src/components/InventoryManager.jsx`
 
@@ -1512,6 +1520,8 @@ DIDASCALIE, come su tutta la pagina (REQ-CASSA-010): margine, inc-costo e le due
 
 PERCHÉ SI SPOSTA: quanto ha reso ogni macro è una domanda da conti di fine mese, non da serata. Chi apre le Statistiche vuole sapere com'è andata ieri, chi apre il Bilancio com'è andato il mese — due mestieri diversi, anche se i numeri escono dalla stessa cassa.
 
+DIPENDE DA REQ-CASSA-010: il trasloco ha bisogno della pagina «Bilancio» dove andare, quindi si fa dopo — o nello stesso giro. Le due incidenze invece non dipendono da niente: sono due divisioni su numeri che la tabella ha già in mano, e si possono aggiungere anche prima.
+
 **Dove**: `src/lib/macroStats.js, src/components/MacroMonthlyTab.jsx, src/components/BilancioTab.jsx (nuovo)`
 
 #### REQ-CASSA-010 — «Bilancio»: i conti del locale hanno una pagina loro, e la vede solo l'admin
@@ -1527,6 +1537,8 @@ DA DEFINIRE IN IMPLEMENTAZIONE: dopo il trasloco le Statistiche restano con una 
 OGNI TABELLA HA LA SUA DIDASCALIA, e vale per tutte e tre le sottosezioni:
 
 SENZA DIDASCALIE LA SCHERMATA NON È FINITA (deciso dall'utente il 19/08). Una tabella di conti è piena di parole che a chi non fa il contabile non dicono niente — utile, rapporto fat/acq, incidenza, prime cost, costo del venduto — e qui vale la regola di sempre: si spiega a chi ha in mano un vassoio, parole comuni, niente gergo. Sotto o accanto a ogni tabella e a ogni riga di sintesi va una frase corta che dica CHE NUMERO È e DA DOVE VIENE. Il tono (sono proposte, non testi definitivi): «Utile: quello che resta dopo aver pagato la merce»; «Rapporto: quante volte rientra quello che hai speso»; «Incidenza: quanto pesa questa macro sull'utile del mese»; «Prime cost: merce versata + personale, in centesimi per ogni euro incassato». E DOVE UN NUMERO HA UN'AVVERTENZA che cambia come si legge — gli acquisti che partono da oggi e non hanno storico 2026, il lordo e il netto commutabili, il costo del venduto calcolato dalle ricette che non torna col foglio — l'avvertenza sta LÌ, nella didascalia, sotto il numero a cui si riferisce. Non in un manuale, non in una nota a fondo pagina: chi guarda un totale che non torna deve trovare il perché nel punto in cui se lo chiede.
+
+NON DIPENDE DA NIENTE, ed è il contenitore: finché la pagina non esiste le tre sottosezioni non hanno dove stare. Si parte da qui.
 
 **Dove**: `src/lib/sezioni.js, src/components/StaffDrawer.jsx, src/lib/ruoli.js, src/components/BilancioTab.jsx (nuovo)`
 
@@ -1552,6 +1564,8 @@ LA DIFFERENZA SI COLORA, MA NON DI ROSSO. In questa app il rosso vuol dire annul
 
 QUALE COSTO DELLA MERCE ENTRA NELLA PRIME COST: quello CALCOLATO DALLE RICETTE, macro per macro (REQ-MAG-015) — deciso dall'utente il 19/08. Non gli ACQUISTI del mese, che è il numero dei fogli di Flavio: è l'unico dei due che sta in pari con l'incassato dello stesso mese, e finché REQ-MAG-021 non è risolto un mese di acquisti non somiglia nemmeno al mese in cui quella merce è stata venduta. Va scritto sotto la tabella, così chi confronta col foglio sa in partenza perché non torna. Gli acquisti del mese restano dove stanno — la tabella «Acquisti × Fatturato» (REQ-MAG-022) — e con la prime cost non c'entrano.
 
+DIPENDE DA REQ-CASSA-010 (la pagina), da REQ-CASSA-012 (senza le spese il netto del mese non esiste) e da REQ-STAFF-015 (senza il minimo restano due colonne su tre). Stipendi e costo del venduto invece ci sono già: REQ-STAFF-006 e REQ-MAG-015.
+
 **Dove**: `src/components/BilancioTab.jsx (nuovo), src/lib/stats.js, src/lib/paghe.js, src/lib/ore.js`
 
 #### REQ-CASSA-012 — Le spese del mese si scrivono nell'app, non su un foglio a parte
@@ -1561,6 +1575,8 @@ DECISO (19/08, dall'utente che riporta Flavio). Nei fogli mensili le SPESE sono 
 COSA NON SONO: non sono gli acquisti di merce, che vivono negli ordini fornitore e si contano da soli (REQ-MAG-022). Qui ci va l'affitto, la SIAE, il commercialista, le utenze — quello che esce e non entra in magazzino. Se le due cose si mescolano la merce viene contata due volte, e il netto del mese sbaglia in silenzio.
 
 DA DEFINIRE IN IMPLEMENTAZIONE: se una spesa che si ripete (l'affitto è lo stesso tutti i mesi) si possa riportare sul mese dopo invece di riscriverla. Non è stato chiesto: si guarda dopo aver visto quante spese si scrivono davvero in un mese.
+
+DIPENDE DA REQ-CASSA-010 per dove si scrivono e dove si sommano; la collezione e il modulo d'inserimento non aspettano nessun altro. È il primo pezzo da fare dei due che sbloccano REQ-CASSA-011.
 
 **Dove**: `src/lib/api.js (collezione `spese`, nuova), src/components/BilancioTab.jsx (nuovo)`
 
@@ -1626,6 +1642,8 @@ PROPOSTA (non è una sua parola): siccome il minimo nasce dalle ore, un giorno f
 
 LE SPESE DEL MESE, che nel foglio sono una riga sola battuta a mano, vivono per conto loro in REQ-CASSA-012: senza quelle il netto del mese non esiste.
 
+DIPENDE DA REQ-CASSA-011 per il posto dove il minimo si legge giorno per giorno, e quella a sua volta dalla pagina REQ-CASSA-010. La formula invece non aspetta nessuno: è decisa, e ore e paghe l'app le ha già per intero (REQ-STAFF-006).
+
 **Dove**: `src/lib/stats.js, src/components/StatsTab.jsx, src/components/StaffHoursTab.jsx`
 
 ### Sicurezza
@@ -1679,6 +1697,8 @@ DA FARE: nell'elenco delle categorie, da tutte e due le parti, si legge la macro
 PROPOSTA sulla forma (non è una sua parola): accanto al nome un'etichetta con la macro, e dove manca due parole — «senza macro» — con lo stesso peso, non un avviso. Non è un errore, e il rosso qui non c'entra: in questa app vuol dire annullato o sbagliato (DESIGN.md).
 
 DA DEFINIRE IN IMPLEMENTAZIONE: se «apposta» sia un segno da mettere sulla categoria (un campo in più, e una spiegazione da scrivere) o basti che l'elenco si legga bene. Il secondo costa zero ma lascia il dubbio ogni volta che qualcuno di nuovo guarda quella lista.
+
+NON DIPENDE DA NIENTE: `groupCategoriesByMacro` torna già `unassigned`, il lavoro sta negli elenchi delle categorie. Piccolo, e utile proprio adesso che le macro si stanno mappando.
 
 **Dove**: `src/components/MacroCategoryManager.jsx, src/components/InventoryManager.jsx (InvCategoryManager), src/components/MenuManager.jsx (CategoryManager)`
 
