@@ -21,7 +21,7 @@ import {
   DEFAULT_SETTINGS,
 } from '../lib/api.js'
 // Le voci stanno in un posto solo: le stesse fanno il titolo nella barra.
-import { NAV_GESTIONALE as BARTENDER_NAV, NAV_SALA as STAFF_NAV } from '../lib/sezioni.js'
+import { vociPerRuolo } from '../lib/sezioni.js'
 import { subscribeSottosezioni } from '../lib/sottosezioni.js'
 
 // Menu laterale dello staff: usato nel gestionale (onSelect cambia tab)
@@ -178,7 +178,10 @@ export default function StaffDrawer({ role, active = null, onSelect = null }) {
   // Solo gruppi che possono ricevere ordini diretti (no contenitori).
   const groupTiles = groups.filter((g) => !g.has_child_groups)
 
-  const base = isGestore(role) ? BARTENDER_NAV : STAFF_NAV
+  // Chi vede quali voci lo decide sezioni.js: non tutte sono di tutto il
+  // gestionale (il Bilancio è dell'admin), e il filtro sta dove sta
+  // l'elenco.
+  const base = vociPerRuolo(role)
   const items = isGestore(role) && devToolsEnabled ? [...base, ['dev', '🛠', 'Dev']] : base
 
   function go(id) {

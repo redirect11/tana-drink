@@ -64,6 +64,7 @@ import {
   puoGestireComande,
   puoSegnare,
 } from '../lib/ruoli.js'
+import { sezioneConsentita } from '../lib/sezioni.js'
 import { senzaNascosti, subscribeNascosti, mostraOrdine } from '../lib/ordiniNascosti.js'
 import { battutoDaQui, annullatoDaQui, idDispositivo } from '../lib/dispositivo.js'
 import {
@@ -110,6 +111,7 @@ import InventoryManager from '../components/InventoryManager.jsx'
 import SettingsTab from '../components/SettingsTab.jsx'
 import PallinoStampante from '../components/PallinoStampante.jsx'
 import StatsTab from '../components/StatsTab.jsx'
+import BilancioTab from '../components/BilancioTab.jsx'
 import StaffHoursTab from '../components/StaffHoursTab.jsx'
 import UtentiTab from '../components/UtentiTab.jsx'
 import VipTab from '../components/VipTab.jsx'
@@ -179,6 +181,19 @@ export default function BartenderPage() {
     // salta fuori dal gestionale.
     setParams(next)
   }
+
+  // E L'INDIRIZZO SI RIMETTE IN PARI. Il titolo nella barra lo legge dalla
+  // query (lib/sezioni.js) e non conosce il ruolo: senza questo, un
+  // bartender su `?tab=bilancio` vedrebbe la coda con scritto «Bilancio»
+  // sopra. `replace`, non push: il tasto indietro deve uscire dal
+  // gestionale, non rimbalzare su un indirizzo che non si può aprire.
+  useEffect(() => {
+    if (!isGestore(role) || sezioneConsentita(tabParam, role)) return
+    const next = new URLSearchParams(params)
+    next.delete('tab')
+    setParams(next, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tabParam, role])
 
   // L'elenco dello staff passa da una Cloud Function: lo si scalda appena si
   // entra nel gestionale, così quando si aprono i pannelli i nomi ci sono già
@@ -268,7 +283,17 @@ export default function BartenderPage() {
   // resta come sezione. Tutto il resto è roba da gestori: un tab non suo
   // riporta alla coda.
   const salaMiei = !isGestore(role) && tab === 'miei-ordini'
-  const tabEffettivo = isGestore(role) ? tab : tab === 'servizio' ? 'servizio' : 'coda'
+  // Una sezione riservata non si apre nemmeno scrivendo l'indirizzo a mano:
+  // il Bilancio è dell'admin, e un bartender che arriva su `?tab=bilancio`
+  // — collegamento salvato, indirizzo battuto — si ritrova sulla coda,
+  // senza una schermata che si apre per dirgli «non puoi».
+  const tabEffettivo = !isGestore(role)
+    ? tab === 'servizio'
+      ? 'servizio'
+      : 'coda'
+    : sezioneConsentita(tab, role)
+      ? tab
+      : 'coda'
 
   return (
     // La classe serve alla catena delle altezze: da qui in giù, quando la
@@ -300,6 +325,7 @@ export default function BartenderPage() {
         )}
         {tabEffettivo === 'fatture' && <InvoicesTab />}
         {tabEffettivo === 'stats' && <StatsTab />}
+        {tabEffettivo === 'bilancio' && <BilancioTab />}
         {tabEffettivo === 'menu' && <MenuTab />}
         {tabEffettivo === 'inventario' && <InventoryManager />}
         {(tabEffettivo === 'staff' || tabEffettivo === 'ore') && <StaffHoursTab />}
