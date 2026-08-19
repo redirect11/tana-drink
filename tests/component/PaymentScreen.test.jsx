@@ -40,6 +40,8 @@ vi.mock('../../src/lib/printer.js', () => ({
   loadPrinterSettings: vi.fn(() => ({ ivaRate: 10, businessName: 'La Tana' })),
   // Guardia "una copia sola per conto": nei test lascia sempre passare.
   claimReceiptPrint: vi.fn(() => true),
+  reclaimReceiptPrint: vi.fn(() => true),
+  releaseReceiptPrint: vi.fn(),
 }))
 vi.mock('../../src/lib/toast.js', () => ({ toastError: vi.fn() }))
 
@@ -53,7 +55,7 @@ import {
 } from '../../src/lib/api.js'
 import { readerCheckout } from '../../src/lib/paymentsApi.js'
 import { applyVoucherDiscount } from '../../src/lib/api.js'
-import { printScontrino, printFattura, loadPrinterSettings } from '../../src/lib/printer.js'
+import { printScontrino, printFattura, loadPrinterSettings, releaseReceiptPrint } from '../../src/lib/printer.js'
 
 let mockVouchers = []
 
@@ -112,6 +114,7 @@ describe('layout POS: tutto già in pagamento, Riscuotere incassa', () => {
       method: 'banco',
       items: null,
       autoServe: false,
+      chiude: true,
     })
   })
 
@@ -127,6 +130,7 @@ describe('layout POS: tutto già in pagamento, Riscuotere incassa', () => {
       method: 'banco',
       items: [expect.objectContaining({ drink_id: 'mojito', qty: 1 })],
       autoServe: false,
+      chiude: false,
     })
   })
 
@@ -167,6 +171,7 @@ describe('tastierino calcolatrice', () => {
       method: 'banco',
       items: null,
       autoServe: false,
+      chiude: false,
     })
   })
 
@@ -193,6 +198,7 @@ describe('tastierino calcolatrice', () => {
       method: 'banco',
       items: null,
       autoServe: false,
+      chiude: true,
     })
   })
 
@@ -217,6 +223,7 @@ describe('metodi di pagamento', () => {
       method: 'carta',
       items: null,
       autoServe: false,
+      chiude: true,
     })
   })
 
@@ -365,6 +372,20 @@ describe('sconto: modale con tastierino', () => {
     expect(setOrderDiscount).toHaveBeenCalledWith('ord1', { type: 'euro', value: 5 })
   })
 
+  // IL CONTO SCONTATO SI CHIUDE COME CHIUSO (BUG-046). Lo sconto si applica
+  // un attimo prima di riscuotere e la sua scrittura parte in sottofondo:
+  // l'api, rileggendo, prendeva la versione senza sconto e scriveva
+  // «parziale». Quanto resta lo sa questa schermata, e ora glielo dice.
+  it('incassando il residuo scontato dice all’api che il conto è saldato', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder({ discount: { type: 'percent', value: 10 }, discount_amount: 2.2 }))
+    await user.click(screen.getByRole('button', { name: /Riscuotere/ }))
+    expect(registerPayment).toHaveBeenCalledWith(
+      'ord1',
+      expect.objectContaining({ amount: 19.8, chiude: true })
+    )
+  })
+
   it('lo sconto applicato riduce il dovuto e si può rimuovere', async () => {
     const user = userEvent.setup()
     mount(baseOrder({ discount: { type: 'percent', value: 10 }, discount_amount: 2.2 }))
@@ -468,6 +489,17 @@ describe('scontrino: il metodo di pagamento', () => {
     const stampato = printScontrino.mock.calls.at(-1)[0]
     expect(stampato.payment_method).toBe('carta')
     expect(stampato.payments.at(-1).method).toBe('carta')
+  })
+
+  // SE LA CARTA NON ESCE, LA PRENOTAZIONE TORNA LIBERA (BUG-047). Senza,
+  // quel conto non stampava più lo scontrino automatico: né riaperto, né
+  // richiuso, né da un altro terminale.
+  it('stampa fallita: il conto torna stampabile invece di restare bruciato', async () => {
+    const user = userEvent.setup()
+    printScontrino.mockRejectedValueOnce(new Error('stampante spenta'))
+    mount(baseOrder())
+    await user.click(screen.getByRole('button', { name: /Riscuotere/ }))
+    await waitFor(() => expect(releaseReceiptPrint).toHaveBeenCalledWith('ord1'))
   })
 
   it('coi contanti resta contanti', async () => {
