@@ -10,6 +10,7 @@ import {
 } from '../lib/api.js'
 import { categoryToMacro } from '../lib/macros.js'
 import { macroMonthlyReport } from '../lib/macroStats.js'
+import { IconCartelle } from './Icons.jsx'
 
 // ANDAMENTO MENSILE PER MACRO-CATEGORIA DI MENÙ: quanto ha incassato ogni
 // gruppo di voci del menù, quanto è costata la merce che ha venduto, che
@@ -94,7 +95,7 @@ export default function MacroMonthlyTab() {
         <p className="muted small" style={{ margin: '-4px 0 10px' }}>
           ℹ️ In <strong>“Non attribuito”</strong> finisce l’incasso dei drink
           la cui categoria di menù non sta in nessuna macro: assegnala in{' '}
-          <strong>Menù → 🗂 Macro-categorie</strong> e si sposta al posto suo.
+          <strong>Menù → Macro-categorie</strong> e si sposta al posto suo.
         </p>
       )}
 
@@ -103,7 +104,7 @@ export default function MacroMonthlyTab() {
       {!loading && data && data.macros.length === 0 && (
         <div className="empty">
           Nessuna macro-categoria di menù: creale in{' '}
-          <strong>Menù → 🗂 Macro-categorie</strong> e collega le categorie dei
+          <strong>Menù → Macro-categorie</strong> e collega le categorie dei
           drink, poi qui vedrai incasso e costo per macro.
         </div>
       )}
@@ -125,7 +126,7 @@ function MacroBlock({ row, months }) {
   return (
     <div className="card" style={{ marginBottom: 12 }}>
       <div className="row between" style={{ alignItems: 'baseline', marginBottom: 6 }}>
-        <strong>🗂 {row.name}</strong>
+        <strong><IconCartelle /> {row.name}</strong>
         <span className="muted small">
           Inc/Costo anno:{' '}
           <strong>{row.tot.rapporto != null ? `×${row.tot.rapporto}` : '—'}</strong>

@@ -7,9 +7,17 @@
 // si sbaglia una dose e poi il magazzino scala storto.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { render, screen, waitFor, within } from '@testing-library/react'
+import { act } from 'react'
 import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom/vitest'
+
+// Il filo per far arrivare alla pagina, mentre è aperta, quello che il
+// server manderebbe: vi.mock viene issato in cima al file, quindi la
+// scatola va creata con vi.hoisted o dentro il mock sarebbe ancora vuota.
+const filo = vi.hoisted(() => ({ consegnaCategorie: null }))
 
 const DRINKS = [
   {
@@ -32,6 +40,13 @@ vi.mock('../../src/lib/api.js', () => ({
   updateDrink: vi.fn(() => Promise.resolve()),
   deleteDrink: vi.fn(() => Promise.resolve()),
   fetchCategories: vi.fn(() => Promise.resolve(CATEGORIE)),
+  // La pagina sta in ascolto: qui teniamo il filo per consegnare, a mano,
+  // quello che il server manderebbe mentre la pagina è aperta.
+  subscribeCategories: vi.fn((onChange) => {
+    filo.consegnaCategorie = onChange
+    onChange(CATEGORIE)
+    return () => {}
+  }),
   createCategory: vi.fn(() => Promise.resolve({ id: 'c2', name: 'Nuova' })),
   updateCategory: vi.fn(() => Promise.resolve()),
   deleteCategory: vi.fn(() => Promise.resolve()),
@@ -59,6 +74,7 @@ vi.mock('../../src/lib/saveDrink.js', () => ({
 }))
 
 import MenuManager from '../../src/components/MenuManager.jsx'
+import { subscribeSottosezioni } from '../../src/lib/sottosezioni.js'
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -124,5 +140,82 @@ describe('duplicare un drink dalle azioni della card', () => {
     await user.click(screen.getByRole('button', { name: /Annulla/ }))
     await user.click(await screen.findByRole('button', { name: /Aggiungi prodotto/ }))
     expect(await screen.findByLabelText('Nome *')).toHaveValue('')
+  })
+})
+
+// IL CONTEGGIO DELLE CATEGORIE NEL MENU A LATO. Le categorie si leggevano
+// una volta sola all’apertura della pagina: il numero fra parentesi restava
+// quello di allora, e una categoria creata dall’altro terminale (o al volo
+// dalla scheda di un drink) non si contava finché non si entrava nella
+// sezione. Al banco vuol dire fidarsi di un numero sbagliato.
+describe('il conteggio «Categorie (N)» nel menu a lato', () => {
+  // Le voci del menu a lato non le disegna la pagina: le dichiara e basta
+  // (lib/sottosezioni.js), la barra le mostra. Qui le leggiamo da lì.
+  function spiaVoci() {
+    let ultime = []
+    const stop = subscribeSottosezioni((s) => { ultime = s.voci })
+    return { voce: (id) => ultime.find((v) => v.id === id), stop }
+  }
+
+  it('si aggiorna appena ne arriva una nuova, senza entrare nella sezione', async () => {
+    const spia = spiaVoci()
+    render(<MenuManager />)
+    await screen.findByText('Mojito')
+    await waitFor(() => expect(spia.voce('categorie').label).toBe('Categorie (1)'))
+
+    // Un altro terminale aggiunge «Analcolici»: la pagina resta sul catalogo.
+    act(() =>
+      filo.consegnaCategorie([...CATEGORIE, { id: 'c2', name: 'Analcolici', sort_order: 1 }])
+    )
+
+    await waitFor(() => expect(spia.voce('categorie').label).toBe('Categorie (2)'))
+    expect(screen.queryByPlaceholderText('Nuova categoria')).not.toBeInTheDocument()
+    spia.stop()
+  })
+
+  it('e cala quando una categoria viene tolta', async () => {
+    const spia = spiaVoci()
+    render(<MenuManager />)
+    await screen.findByText('Mojito')
+    act(() => filo.consegnaCategorie([]))
+    await waitFor(() => expect(spia.voce('categorie').label).toBe('Categorie (0)'))
+    spia.stop()
+  })
+})
+
+// LE ICONE DELLE SOTTOSEZIONI NON SONO EMOJI. 🏷 e 🗂 hanno presentazione
+// testuale: su Windows escono come rettangolini storti, e nella fila del
+// menu sembravano immagini non caricate. Sono disegni SVG (Icons.jsx).
+describe('le icone delle sottosezioni', () => {
+  const sorgente = (f) => readFileSync(join(process.cwd(), 'src/components', f), 'utf8')
+  // Le righe fra `const NOME = [` e la quadra che lo chiude a inizio riga.
+  const elenco = (f, nome) => {
+    const righe = sorgente(f).split(/\r?\n/)
+    const da = righe.findIndex((riga) => riga.includes(`const ${nome} = [`))
+    expect(da, `${nome} in ${f}`).toBeGreaterThan(-1)
+    const fine = righe.findIndex((riga, i) => i > da && riga.startsWith(']'))
+    return righe.slice(da, fine + 1).join(' ')
+  }
+
+  it('menù, magazzino, statistiche e impostazioni non usano più 🏷 e 🗂', () => {
+    for (const [file, nome] of [
+      ['MenuManager.jsx', 'sezioni'],
+      ['InventoryManager.jsx', 'INV_VIEWS'],
+      ['StatsTab.jsx', 'SEZIONI_STATS'],
+      ['SettingsTab.jsx', 'GRUPPI'],
+    ]) {
+      expect(elenco(file, nome), `${nome} in ${file}`).not.toMatch(/🏷|🗂/u)
+    }
+  })
+
+  it('e nel menù al posto loro c’è un disegno, non del testo', async () => {
+    let ultime = []
+    const stop = subscribeSottosezioni((s) => { ultime = s.voci })
+    render(<MenuManager />)
+    await screen.findByText('Mojito')
+    for (const id of ['categorie', 'macro']) {
+      expect(typeof ultime.find((v) => v.id === id).icona).not.toBe('string')
+    }
+    stop()
   })
 })
