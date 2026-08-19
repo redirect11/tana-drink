@@ -24,11 +24,11 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 |---|---|---|
 | ✅ | 144 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
-| ⬜ | 28 | da fare |
+| ⬜ | 30 | da fare |
 | 🗑 | 1 | non più valido |
 
-**188 voci** in tutto. **159** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **28** sono lavori
+**190 voci** in tutto. **159** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **30** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **7** difetti noti sono ancora aperti.
 
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
 | [Menù e catalogo](#menù-e-catalogo) | 9 | — | Il listino: drink, categorie, disponibilità, prezzi. |
-| [Magazzino](#magazzino) | 19 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
+| [Magazzino](#magazzino) | 19 | 7 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 10 | 2 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 9 | 2 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
 | [Vista cliente](#vista-cliente) | 5 | 1 | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
@@ -1583,6 +1583,60 @@ DA CHIEDERE A FLAVIO: quante settimane si vogliono coprire (l'indizio dice tre),
 DIPENDE DA REQ-MAG-024: la quantità da proporre nasce dal consumo a settimana, che oggi l'app non calcola. E dipende da una risposta che non è ancora arrivata — quante settimane si vogliono coprire, e se il numero vale per tutti i fornitori: è il numero che decide quanta merce entra dalla porta, e indovinarlo si paga in magazzino.
 
 **Dove**: `src/lib/warehouse.js suggestedPackages, src/components/PurchaseOrdersPanel.jsx`
+
+#### REQ-MAG-025 — Ordini e fatture: una pagina sola, e una fattura paga un ordine
+
+Chiesto dall'utente il 19/08. Oggi ordini fornitore e documenti stanno dentro Magazzino, in due sottosezioni che non si parlano: si ordina di la', si segna la fattura di qua, e nessuno sa quale fattura paghi quale ordine. Devono diventare UNA PAGINA LORO, «Ordini e fatture», nel menu laterale e visibile SOLO ALL'ADMIN, con due sottosezioni: «Ordini» e «Fatture». Sono i soldi che escono dal locale, e non e' roba da turno.
+
+IL LEGAME, che e' il cuore della richiesta:
+
+UNA FATTURA PAGA UN ORDINE (e un ordine e' di UN fornitore solo). Dall'ordine si arriva alla sua fattura e viceversa; un ordine senza fattura si vede a colpo d'occhio (la merce e' arrivata ma il documento no), e una fattura senza ordine pure — sono le due cose che a fine mese fanno tornare o non tornare i conti con il commercialista.
+
+TRE LIVELLI, NON DUE (precisato dall'utente il 19/08). Non e' una fattura che copre piu' ordini: e' un GIRO D'ORDINI che ne contiene diversi, UNO PER FORNITORE, e ogni fornitore manda la SUA fattura. «Un giro di ordini, non un ordine. Sono piu' fatture perche' ci sono diversi fornitori» — parole sue. Quindi: giro -> N ordini (uno per fornitore) -> N fatture (una per ordine). Il legame fattura-ordine resta uno-a-uno; quello che sta sopra e' il giro, che tiene insieme la serata di ordinazione.
+
+LO DICONO ANCHE I FOGLI, e adesso si spiegano: in GEN ORD REC ogni foglio e' un giro e si chiama coi numeri dei documenti che lo compongono («1410+1438+AGO+PAD+PIC», «nova+ago+picc»), col fornitore scritto sull'ARTICOLO e non sull'ordine — un foglio solo, piu' fornitori dentro (REQ-MAG-023).
+
+COSA CAMBIA PER L'APP: oggi `purchase_orders` e' gia' UN ORDINE PER FORNITORE, quindi quel livello c'e' e non si tocca. Manca il giro sopra: si guarda il fabbisogno una volta sola e ne escono N ordini insieme, che poi vivono ognuno per conto suo (arriva, si carica, si fattura). Da decidere se il giro e' un dato scritto (una collezione sua, che tiene la data e i suoi ordini) o solo un modo di crearli in blocco: la prima strada permette di chiedersi «quanto e' costato il giro di martedi'», la seconda costa meno.
+
+IL CARICO AL RICEVIMENTO C'E' GIA' e non va rifatto: receivePurchaseOrder in api.js, quando l'ordine passa a «ricevuto», alza la giacenza riga per riga (confezioni x contenuto, o pezzi), aggiorna le bottiglie totali e scrive un movimento «ordine fornitore». Questa voce ci aggiunge il pezzo che manca.
+
+IL PRODOTTO NUOVO, che oggi si perde in silenzio. Quel ciclo salta le righe il cui articolo non esiste in anagrafica (`if (!s.exists()) continue`): se il fornitore manda una referenza nuova, la riga non carica niente e nessuno se ne accorge. Deve invece NASCERE il prodotto, inventariato con quello che l'ordine sa gia' (nome, fornitore, prezzo, confezione) e marcato come DA SISTEMARE — perche' quello che l'ordine non sa e' proprio cio' che serve al resto del sistema: la categoria (e quindi la macro d'acquisto), l'unita' di misura vera, la soglia di riordino.
+
+ATTENZIONE AL NOME: nel magazzino esiste gia' una lista «da sistemare», ma e' del travaso a pezzi (i prodotti che la migrazione non sa convertire da sola) ed e' una cosa diversa. O si riusa quella stessa strada — e allora si dice perche' le due situazioni sono la stessa — o il nuovo stato ha un nome suo. Due liste omonime che vogliono dire cose diverse, sulla stessa schermata, sono un guaio che si paga dopo.
+
+COME SI INCASTRA COL RESTO, ed e' la parte da non sbagliare: 1) MACRO-CATEGORIE. Un prodotto nuovo senza categoria non ha macro d'acquisto, quindi la sua spesa non compare in «Bilancio → Acquisti x Fatturato» (REQ-MAG-022): sparisce dai conti invece di risultare sbagliata, che e' peggio. Il prodotto da sistemare va quindi mostrato insieme alle categorie senza macro (REQ-UI-022): sono lo stesso buco visto da due lati. 2) SCARICO. La giacenza caricata da un ordine si scala con le regole di sempre — snapshot della ricetta, unita' base, scarico a «pronto»: qui non cambia niente, e non deve cambiare. 3) IVA. L'ordine porta il prezzo d'acquisto; l'IVA d'acquisto ha gia' il suo default (22%) e il campo per prodotto. Un prodotto nato da un ordine eredita il default finche' qualcuno non lo corregge.
+
+4) SPESE DEL MESE (REQ-CASSA-012): le fatture fornitore sono spesa registrata. Va deciso — e scritto — se entrano da sole nel netto del mese o se restano due elenchi separati, altrimenti la stessa uscita si conta due volte.
+
+ATTENZIONE, DUE «FATTURE»
+
+NEL CODICE: `supplier_invoices` sono i documenti dei FORNITORI (quello di cui parla questa voce), `invoices` sono le fatture di VENDITA ai clienti. Nomi vicini, mestieri opposti.
+
+**Dove**: `src/components/PurchaseOrdersPanel.jsx, src/components/SupplierInvoicesPanel.jsx, src/components/InventoryManager.jsx, src/lib/api.js, src/lib/ruoli.js, src/components/StaffDrawer.jsx`
+
+#### REQ-MAG-026 — Gli ordini nascono dalle giacenze: chi e' in esaurimento entra da solo
+
+Chiesto dall'utente il 19/08: «gli ordini andrebbero creati dalle giacenze di magazzino. Se un articolo e' in esaurimento dovrebbe essere aggiunto automaticamente all'ordine per quel fornitore».
+
+OGGI E' AL CONTRARIO, ed e' il punto. Il generatore chiede PRIMA il fornitore: si apre un ordine per Nova, e solo dentro quell'ordine il tasto «Precompila i sotto scorta» propone le quantita' per i prodotti di Nova (`suggestedPackages`: sotto soglia si riporta la giacenza a due volte la soglia, minimo una confezione). Chi ordina deve quindi RICORDARSI da solo quali fornitori guardare: se non apre l'ordine di Piccolo, il prodotto di Piccolo sotto scorta non lo vede nessuno. E' esattamente il modo in cui si dimentica qualcosa.
+
+COME DEVE ANDARE: si parte dal MAGAZZINO, non dal fornitore. Una passata su tutte le giacenze raccoglie chi e' in esaurimento e lo mette nell'ordine del SUO fornitore — il fornitore e' gia' scritto sull'articolo (`supplier_id` su `inventory_items`), quindi il raggruppamento non chiede niente a nessuno. Da una passata escono N ordini gia' compilati, uno per fornitore. E QUESTO E' IL GIRO di REQ-MAG-025: la seduta in cui si guarda il fabbisogno una volta sola e ne nascono piu' ordini. Con questa voce il giro smette di essere un contenitore e diventa il gesto: si guardano le giacenze, escono gli ordini, ognuno prende la sua strada (arriva, si carica, si fattura).
+
+LA QUANTITA' NON LA DECIDE QUESTA VOCE: quanto ordinare e' REQ-MAG-023 (soglia scritta a mano contro consumo reale, con la domanda aperta su quante settimane coprire). Qui si decide CHI entra nell'ordine e in QUALE ordine; la quantita' resta quella che il calcolo di turno propone. Le due voci si incastrano ma non si sovrappongono.
+
+COSA VA DECISO PRIMA DI SCRIVERE, e non si indovina: 1) «IN ESAURIMENTO»
+
+OGGI VUOL DIRE `stock <= low_threshold`, e senza soglia impostata il prodotto non entra mai — silenziosamente. Su un magazzino dove le soglie non sono tutte compilate, «crea l'ordine dalle giacenze» produrrebbe un ordine che sembra completo e non lo e'. O si mostra chiaro quanti prodotti sono rimasti fuori per soglia mancante, o si trova una regola che non dipenda solo da quella (il consumo, appunto — REQ-MAG-023).
+
+2) COSA SUCCEDE AGLI ORDINI GIA' APERTI per lo stesso fornitore: si aggiunge la riga a quello aperto o se ne fa un altro? Ordinare due volte la stessa cassa e' un errore che si paga in magazzino.
+
+3) CHI NON HA FORNITORE: un prodotto senza `supplier_id` sotto scorta non ha un ordine dove andare. Va mostrato a parte, non lasciato cadere — e' lo stesso buco delle categorie senza macro (REQ-UI-022) e dei prodotti nuovi da sistemare (REQ-MAG-025).
+
+4) LA PROPOSTA SI CORREGGE SEMPRE: quello che esce e' un ordine da guardare e ritoccare prima di mandarlo, non da spedire al buio. Chi sta al banco sa cose che la giacenza non sa — la festa di sabato, il fornitore che salta la consegna.
+
+NON TOCCA LO SCARICO: le giacenze restano quelle che sono, con le regole di sempre. Questa voce le LEGGE soltanto.
+
+**Dove**: `src/lib/warehouse.js, src/components/PurchaseOrdersPanel.jsx, src/lib/api.js`
 
 ### Cassa di serata e statistiche
 
