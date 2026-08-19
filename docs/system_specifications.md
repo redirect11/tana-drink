@@ -22,12 +22,12 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 150 | fatto e coperto dai test |
+| ✅ | 151 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | ⬜ | 24 | da fare |
 | 🗑 | 1 | non più valido |
 
-**190 voci** in tutto. **165** descrivono il sistema com'è oggi e
+**191 voci** in tutto. **166** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **24** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **5** difetti noti sono ancora aperti.
@@ -60,7 +60,7 @@ come «vero oggi», non come «garantito».
 | [Integrazione SumUp](#integrazione-sumup) | 6 | — | Il dialogo con il terminale SumUp, dalle Cloud Functions. |
 | [Intelligenza artificiale](#intelligenza-artificiale) | — | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
 | [Interfaccia](#interfaccia) | 19 | 2 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
-| [Come si lavora al progetto](#come-si-lavora-al-progetto) | 11 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
+| [Come si lavora al progetto](#come-si-lavora-al-progetto) | 12 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 
 ## Cosa fa il sistema
 
@@ -1491,6 +1491,24 @@ OGNI COMPORTAMENTO CITA I TEST CHE LO DIMOSTRANO, e chi non ne ha lo dichiara. E
 RESTA GENERATO, ed e' l'unica cosa che lo tiene vivo: scritto a mano tornerebbe vecchio in una settimana, e la prova e' come stava prima. La resa vive in un modulo suo (`lib-specifica.mjs`) perche' cosi' si prova con un registro finto di sette voci, invece che coi 187 veri — un test che legge il registro vero prova il registro, non il documento.
 
 **Dove**: `scripts/lib-specifica.mjs, scripts/requisiti.mjs, docs/system_specifications.md` · **Lo dimostrano**: `tests/unit/specifica.test.js`
+
+#### REQ-DEV-013 — Una voce scartata si chiude dicendo che non la faremo, e resta scritta
+
+Chiesto dall'utente il 19/08: «perche' cancelli i requisiti? E non li chiudi? Non devono scomparire da GitHub ne' dal file dei requisiti» — e subito dopo la regola: «se non vengono implementati vengono chiusi come won't do».
+
+VERIFICATO CHE NON SI CANCELLA NIENTE, e il sospetto era infondato: dal rilascio 1.5.0 a oggi il registro requisiti e' passato da 172 a 190 voci e quello dei bug da 33 a 41 — solo aggiunte. Le voci non spariscono mai: cambia lo `status`, e sulla bacheca la card cambia colonna.
+
+MA C'ERA IL PROBLEMA OPPOSTO, ed e' quello che questa voce sistema: una cosa scartata restava aperta per sempre su GitHub. REQ-MENU-012, buttato dall'utente il 19/08, nel registro era gia' `deprecated` e la sua issue #36 era ancora APERTA.
+
+DUE CAUSE, una dietro l'altra: 1) gli stati che chiudevano un'issue erano solo quelli del lavoro finito (`fixed`, `implemented`, `done`): `deprecated` e `wontfix` non chiudevano niente; 2) chi scarta una voce di solito spegne anche `generate_issue`, e il generatore prendeva in mano SOLO le voci col flag acceso — quindi quell'issue non veniva nemmeno guardata. Orfana due volte.
+
+COME FUNZIONA ADESSO. Gli stati di chiusura sono due famiglie tenute distinte: `STATI_FATTI` (fixed, implemented, done) e `STATI_SCARTATI` (deprecated, wontfix). Le scartate entrano nel giro ANCHE senza `generate_issue`, ma solo per essere chiuse — `deveNascere` non ne apre di nuove. E si chiudono con lo stato che GitHub chiama «not planned», non «completed»: sono due icone diverse, e fra sei mesi una cosa fatta e una che abbiamo deciso di non fare non devono leggersi uguali.
+
+IL COMMENTO CHE RESTA SULL'ISSUE lo dice a parole: «Non la faremo», col rimando alla voce del registro e la frase che conta — la voce RESTA nel registro col suo perche', qui si chiude solo la richiesta di lavoro. E' la differenza fra archiviare una decisione e perderla.
+
+QUANDO SUCCEDE: alla chiusura vera si arriva da `main`, come per tutte le altre (la pipeline chiude le issue solo li'). Da un ramo di rilascio il generatore ora lo dice e basta — «Non la faremo (deprecated) — l'issue si chiude da main» — invece di ignorare la voce.
+
+**Dove**: `scripts/lib-requisiti.mjs, scripts/generate-issues.mjs` · **Lo dimostrano**: `tests/unit/issueScartate.test.js`
 
 ## Lavori previsti
 
