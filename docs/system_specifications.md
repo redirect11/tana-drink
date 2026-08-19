@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 153 | fatto e coperto dai test |
+| ✅ | 154 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
-| ⬜ | 22 | da fare |
+| ⬜ | 21 | da fare |
 | 🗑 | 1 | non più valido |
 
-**191 voci** in tutto. **168** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **22** sono lavori
+**191 voci** in tutto. **169** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **21** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **5** difetti noti sono ancora aperti.
 
@@ -50,7 +50,7 @@ come «vero oggi», non come «garantito».
 | [Magazzino](#magazzino) | 19 | 7 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 10 | 2 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 9 | 2 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
-| [Vista cliente](#vista-cliente) | 5 | 1 | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
+| [Vista cliente](#vista-cliente) | 6 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
 | [Notifiche](#notifiche) | 4 | — | Le notifiche push: a chi arrivano, quando, e quando invece non devono arrivare. |
 | [Avvisi a schermo](#avvisi-a-schermo) | 2 | — | I messaggi a schermo dentro l’app — quelli che si leggono col vassoio in mano. |
 | [Persone: ruoli, utenze, ore](#persone-ruoli-utenze-ore) | 10 | 1 | Chi può fare cosa, chi è al banco, quante ore ha fatto e quanto prende. |
@@ -1032,6 +1032,36 @@ Il menù occupa tutta la larghezza del dispositivo; nella vetrina marchio e nome
 
 **Dove**: `src/pages/LandingPage.jsx, src/index.css` · ⚠️ **Nessun test lo verifica.**
 
+#### REQ-CLI-006 — Il cliente sa che il suo drink è pronto da ritirare
+
+Chiesto dall'utente il 18/08. Su un conto da RITIRO, quando la comanda passa a «pronto» il cliente va avvisato: da lì in poi la palla è sua — deve alzarsi e venire al banco. Sul servizio al tavolo non serve: ci pensa chi porta il vassoio.
+
+PARTE DA SOLA, al passaggio di stato: non è un tasto che qualcuno deve ricordarsi di premere.
+
+TRE STRADE, e non si escludono: chi ha ordinato dal telefono segue l'ordine con la pagina del QR (c'è già) e riceve la notifica se ha dato il permesso; chi ha ordinato al banco non ha né l'una né l'altra, e per lui c'è il TABELLONE «stiamo servendo» (già in Impostazioni → Menù clienti) coi numeri pronti al ritiro, mentre il numero del conto è già stampato sullo scontrino.
+
+DA VERIFICARE PRIMA DI SCRIVERE: cosa fa già la pagina di stato, come il cliente viene registrato per le notifiche, e se serve un deploy delle Cloud Functions — che va chiesto, non deciso.
+
+DETTAGLI CHE FANNO LA DIFFERENZA: una volta sola per comanda (se qualcuno riporta indietro lo stato e lo rimette «pronto», il cliente non deve ricevere due squilli); senza permesso alle notifiche l'avviso non arriva e la pagina col QR resta la strada che funziona sempre; con gli stati di servizio spenti quel passaggio non esiste, e va detto cosa succede invece di lasciare il caso scoperto.
+
+VERIFICATO PRIMA DI SCRIVERE (19/08). L'avviso al cliente c'era già: decideOrderPush manda «🔔 Il tuo drink è pronto!» quando una comanda di un conto `service_mode: 'banco'` passa a «pronto», e parte da sola dal trigger notifyOrderUpdate. Il token si aggancia al conto dalla pagina di stato («🔔 Avvisami quando è pronto», o da solo se il permesso c'era già e si è scansionato il QR). Mancavano i tre dettagli, e uno era una promessa falsa.
+
+FATTO COSI'.
+
+1) UNA VOLTA SOLA PER COMANDA: si guardava se le comande pronte erano AUMENTATE, e una comanda riportata indietro e rimessa pronta faceva risalire il conteggio — secondo squillo per un drink già in mano, e al secondo non si crede più al primo. Ora si guardano gli IDENTIFICATIVI: il messaggio dice quali comande annuncia (`msg.comande`) e il trigger le segna sull'ordine (`pronto_avvisate`, arrayUnion, solo dopo un invio riuscito). Quella scrittura fa ripartire il trigger, che con le comande ormai segnate non manda più niente: si ferma da sé.
+
+2) SENZA PERMESSO ALLE NOTIFICHE non c'è token e non parte niente: resta la pagina del QR, che si aggiorna da sola, e ora lo DICE invece di lasciar aspettare uno squillo che non arriva.
+
+3) COL SERVIZIO AL TAVOLO il tasto «Avvisami quando è pronto» non compare più: la push non è mai partita per quel modo, e il tasto prometteva una cosa che non succedeva — peggio di nessun tasto, che la volta dopo non ci si fida più dell'app. Al suo posto la verità: «te lo portiamo al tavolo».
+
+4) CON GLI STATI DI SERVIZIO SPENTI nessuna comanda arriva mai a «pronto»: non è un caso scoperto, è che non c'è niente da annunciare — chi batte l'ordine lo prepara e lo consegna sul momento. La pagina lo dice («ritira al banco quando il drink è pronto») invece di offrire un tasto muto.
+
+IL TABELLONE «stiamo servendo» resta la terza strada, per chi ha ordinato al banco: c'è già e non è stato toccato.
+
+DEPLOY DELLE CLOUD FUNCTIONS NON AUTORIZZATO. Il punto 1 vive in functions/ e resta INEFFICACE in produzione finché non si deploya: fino ad allora l'avviso continua a partire sul passaggio di stato, cioè come prima — nessuna regressione, ma il doppio squillo resta possibile. Stesso caso di BUG-036, mergiato da giorni e ancora senza effetto in produzione per lo stesso motivo. I punti 2, 3 e 4 sono lato sito e vanno in produzione col normale rilascio.
+
+**Dove**: `src/lib/push-core.js, functions/index.js, src/pages/OrderStatusPage.jsx, src/pages/MenuPage.jsx` · **Lo dimostrano**: `tests/unit/push-comande.test.js`, `tests/component/OrderStatusPage.test.jsx`
+
 ### Notifiche
 
 Le notifiche push: a chi arrivano, quando, e quando invece non devono arrivare.
@@ -1795,22 +1825,6 @@ L'avviso di sicurezza che costringe ad accettare a mano il certificato della sta
 Chiesto dall'utente il 19/08. Oggi il logo viene stampato in cima allo scontrino e basta: nessuno può spegnerlo, e per cambiarlo bisogna sostituire un file nel codice. Serve un'impostazione del locale con tre cose: se stampare il logo, SU QUALI stampe (comanda, preconto, scontrino, chiusura di cassa — sulla comanda al banco per esempio è solo carta consumata), e la possibilità di CARICARE l'immagine invece di cambiarla nel codice. Solo l'admin può toccarla: è l'identità del locale, non una preferenza del terminale. Da tenere a mente: la stampante termica vuole un'immagine in bianco e nero di una larghezza precisa, e il caricamento deve dire subito se quella scelta non va bene invece di stampare un rettangolo nero.
 
 **Dove**: `src/lib/printer.js, src/components/SettingsTab.jsx, src/lib/api.js`
-
-### Vista cliente
-
-#### REQ-CLI-006 — Il cliente sa che il suo drink è pronto da ritirare
-
-Chiesto dall'utente il 18/08. Su un conto da RITIRO, quando la comanda passa a «pronto» il cliente va avvisato: da lì in poi la palla è sua — deve alzarsi e venire al banco. Sul servizio al tavolo non serve: ci pensa chi porta il vassoio.
-
-PARTE DA SOLA, al passaggio di stato: non è un tasto che qualcuno deve ricordarsi di premere.
-
-TRE STRADE, e non si escludono: chi ha ordinato dal telefono segue l'ordine con la pagina del QR (c'è già) e riceve la notifica se ha dato il permesso; chi ha ordinato al banco non ha né l'una né l'altra, e per lui c'è il TABELLONE «stiamo servendo» (già in Impostazioni → Menù clienti) coi numeri pronti al ritiro, mentre il numero del conto è già stampato sullo scontrino.
-
-DA VERIFICARE PRIMA DI SCRIVERE: cosa fa già la pagina di stato, come il cliente viene registrato per le notifiche, e se serve un deploy delle Cloud Functions — che va chiesto, non deciso.
-
-DETTAGLI CHE FANNO LA DIFFERENZA: una volta sola per comanda (se qualcuno riporta indietro lo stato e lo rimette «pronto», il cliente non deve ricevere due squilli); senza permesso alle notifiche l'avviso non arriva e la pagina col QR resta la strada che funziona sempre; con gli stati di servizio spenti quel passaggio non esiste, e va detto cosa succede invece di lasciare il caso scoperto.
-
-**Dove**: `src/lib/push-core.js, functions/index.js, src/pages/OrderStatusPage.jsx, src/pages/MenuPage.jsx`
 
 ### Persone: ruoli, utenze, ore
 

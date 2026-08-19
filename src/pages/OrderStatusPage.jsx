@@ -345,6 +345,10 @@ export default function OrderStatusPage() {
   // Tempo stimato personalizzato: tiene conto degli ordini attivi davanti a
   // questo (la coda non viene mostrata, conta solo la posizione).
   const workflowOn = settings.workflow_enabled !== false
+  // CHI DEVE ALZARSI. Il ritiro al banco è l'unico caso in cui, quando il
+  // drink è pronto, la palla passa al cliente: da qui in poi cambia cosa
+  // gli si promette e cosa gli si dice.
+  const ritiroAlBanco = order.service_mode === 'banco'
   const showEta = settings.eta_enabled && workflowOn && orderActive
   const queueAhead = queue.filter(
     (q) => (q.daily_number || 0) < (order.daily_number || 0)
@@ -455,7 +459,16 @@ export default function OrderStatusPage() {
       </div>
       )}
 
-      {workflowOn && 'Notification' in window && !notifOn && (
+      {/* ── «AVVISAMI QUANDO È PRONTO» È SOLO DI CHI RITIRA ────────────
+          Da lì in poi la palla è del cliente: deve alzarsi e venire al
+          banco, e senza un avviso resta a fissare il telefono. Chi è
+          servito al tavolo non deve fare niente — ci pensa chi porta il
+          vassoio — e un tasto che promette uno squillo che non arriverà
+          mai è peggio di nessun tasto: il tasto c'era, l'avviso no, e la
+          prossima volta non ci si fida più di quello che dice l'app.
+          (Anche lato server la push del pronto parte solo col ritiro:
+          functions/lib/push-core.js.) */}
+      {workflowOn && ritiroAlBanco && 'Notification' in window && !notifOn && (
         <button className="btn secondary block" onClick={enableNotifications}>
           🔔 Avvisami quando è pronto
         </button>
@@ -463,6 +476,26 @@ export default function OrderStatusPage() {
       {notifMsg && (
         <p className="muted" style={{ textAlign: 'center', margin: '8px 0 0' }}>
           {notifMsg}
+        </p>
+      )}
+      {/* QUESTA PAGINA È LA STRADA CHE FUNZIONA SEMPRE. Le notifiche
+          possono mancare per mille motivi che il cliente non controlla —
+          permesso negato, telefono che le blocca, browser che le ignora —
+          e senza dirlo si resta a fissare uno schermo aspettando qualcosa
+          che non arriva. La pagina si aggiorna da sola: basta tenerla
+          aperta, e col QR ci si torna quando si vuole.
+          Con gli stati del servizio SPENTI non c'è nessun passaggio a
+          «pronto» da annunciare: qui non si finge il contrario, si dice
+          che il drink si ritira al banco quando è fatto. */}
+      {orderActive && (
+        <p className="muted small" style={{ textAlign: 'center', margin: '8px 0 0' }}>
+          {!workflowOn
+            ? 'Questa pagina resta aggiornata: ritira al banco quando il drink è pronto.'
+            : ritiroAlBanco
+              ? notifOn
+                ? 'Ti avvisiamo appena è pronto. Questa pagina si aggiorna da sola: puoi anche tenerla aperta.'
+                : 'Senza notifiche non si perde niente: questa pagina si aggiorna da sola, tienila aperta o riapri il QR.'
+              : 'Non devi fare niente: te lo portiamo al tavolo. Questa pagina si aggiorna da sola.'}
         </p>
       )}
 
