@@ -447,6 +447,7 @@ requirements:
       - tests/unit/sync.test.js
       - tests/unit/scritturaComande.test.js
       - tests/component/UnaMemoriaLocale.test.jsx
+      - tests/component/ComandaSenzaAttesa.test.jsx
 
   - id: REQ-PAG-010
     title: "Si vede che cosa è stato pagato, e cosa copre"

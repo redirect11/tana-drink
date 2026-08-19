@@ -20,6 +20,7 @@ import { useComandeLocali } from '../lib/comandeLocali.js'
 import { ORDER_STATUSES } from '../lib/orderStatus.js'
 import { mondoConsegna } from '../lib/consegna.js'
 import { isGestore } from '../lib/ruoli.js'
+import { gestoreRicordato, ricordaRuolo } from '../lib/ruoloLocale.js'
 import { showToast } from '../lib/toast.js'
 import { printComanda } from '../lib/printer.js'
 import Caricamento from '../components/Caricamento.jsx'
@@ -53,10 +54,25 @@ export default function ComandaPage() {
   // da preparare, e ci si va sopra. Vedi sotto.
   const [divisa, setDivisa] = useState(null)
   const [settings, setSettings] = useState(settingsIniziali)
-  // Chi sta guardando: la comanda è il lavoro del banco, e chi non lo
-  // gestisce non ci ha niente da fare. `undefined` finché non si sa — non
-  // si manda via nessuno prima di aver letto il ruolo.
-  const [gestore, setGestore] = useState(undefined)
+  // CHI STA GUARDANDO, SENZA ANDARE A CHIEDERLO. La comanda è il lavoro del
+  // banco, e chi non lo gestisce non ci ha niente da fare — ma per saperlo
+  // si leggeva il ruolo dal token, e a token scaduto (dura un'ora) quella
+  // chiamata VA IN RETE. Con la linea del locale che risulta collegata e non
+  // passa, il tocco restava sotto lo spinner: è un gesto che si fa 300-450
+  // volte a sera, ed è il divieto scritto in docs/architettura.md.
+  //
+  // Adesso si parte dall'ULTIMO RUOLO NOTO su questo dispositivo, che si
+  // legge senza rete: se dice «è del banco» la schermata si disegna subito,
+  // e il token la conferma un istante dopo. Se non dice niente — primo
+  // accesso, altro utente — si aspetta come prima.
+  //
+  // Ottimisti in un verso solo: si ENTRA sulla memoria, non si MANDA VIA
+  // nessuno. Allontanare qualcuno per una memoria vecchia sarebbe peggio del
+  // lampo che si sta togliendo, e a difendere i dati ci sono comunque le
+  // regole del database.
+  const [gestore, setGestore] = useState(() =>
+    gestoreRicordato(auth.currentUser?.uid) ? true : undefined
+  )
 
   useEffect(
     () =>
@@ -64,9 +80,12 @@ export default function ComandaPage() {
         if (!u) return setGestore(false)
         try {
           const token = await u.getIdTokenResult()
+          ricordaRuolo(u.uid, token.claims.role)
           setGestore(isGestore(token.claims.role))
         } catch {
-          setGestore(false)
+          // Token non leggibile (offline, token scaduto): se questo
+          // dispositivo si ricorda chi è, si continua a lavorare.
+          setGestore(gestoreRicordato(u.uid))
         }
       }),
     []

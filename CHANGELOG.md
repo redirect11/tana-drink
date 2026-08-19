@@ -188,6 +188,13 @@ con una prova a vuoto che dice cosa cambierebbe prima di toccare niente.
 
 ### Per chi gestisce
 
+- **La comanda si apre subito, anche con la rete che fa i capricci.** Toccando
+  una card al banco la schermata restava su «Apro la comanda…» finché non
+  rispondevano il server e il controllo di chi sei — e con il wifi del locale
+  collegato ma muto quella risposta non arriva. Adesso l'app parte da quello
+  che sa già: chi sei l'ha letto poco fa, e il conto ce l'aveva in mano la
+  coda un istante prima. È un tocco che si fa trecento volte a sera.
+
 - **Girando fra «Comande» e «Ordini» non si torna indietro nel tempo.**
   Avanzavi un ticket al banco, giravi la pastiglia, e il conto era ancora
   dov'era — finché non arrivava la risposta del server, che offline non

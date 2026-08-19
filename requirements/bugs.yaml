@@ -946,13 +946,27 @@ bugs:
       COME SI SISTEMA: il ruolo è già noto altrove (App, BartenderPage):
       tenerlo dove si legge senza rete e disegnare subito con l'ultimo
       valore noto; l'ordine può arrivare dalla card che l'ha già in mano.
+      RISOLTO (19/08), tutte e due le attese.
+      IL RUOLO: `src/lib/ruoloLocale.js` tiene l'ultimo ruolo letto con
+      l'utente a cui apparteneva, e chi legge il token (App, BartenderPage,
+      la comanda stessa) lo scrive. La schermata parte da lì, che si legge
+      senza rete, e il token conferma un istante dopo. OTTIMISTI IN UN VERSO
+      SOLO: si ENTRA sulla memoria, non si MANDA VIA nessuno — allontanare
+      qualcuno per una memoria vecchia sarebbe peggio del lampo che si sta
+      togliendo, e a difendere i dati ci sono le regole del database, che
+      guardano il token e non questa copia. Senza memoria si aspetta come
+      prima, e la memoria di un altro utente non vale.
+      L'ORDINE: `subscribeOrder` legge prima dalla cache, come già fa la coda
+      (`subscribeActiveOrders`). onSnapshot risponde subito col dato locale
+      solo quando SA di essere offline: con la rete collegata e muta crede di
+      essere online e aspetta il server, col conto già in tasca.
     in_produzione: false
-    status: todo
+    status: fixed
     generate_issue: true
     labels: [bug, local-first, banco]
     severity: media
     priority: P1
-    test_cases: []
+    test_cases: [tests/component/ComandaSenzaAttesa.test.jsx]
 
   - id: BUG-032
     title: "Il logo dello scontrino si ritenta a ogni stampa se manca"
