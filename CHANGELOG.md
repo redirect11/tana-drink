@@ -10,6 +10,15 @@
   fuori su qualunque schermata, coda o conto o cassa, ed è già lì quando
   riapri l'app: si risponde e si torna al lavoro.
 
+- **La sala serve, non prepara**: chi porta i vassoi vede a che punto sono le
+  comande — gli serve per sapere cosa portare — ma l'unico passo che segna è
+  «servito». Prendere in carico, segnare pronto, tornare indietro, dividere
+  una comanda e annullare un conto restano di chi versa, e quei tasti alla
+  sala non compaiono più. Sul conto invece lavora come prima: quello che
+  aggiunge — anche col «+» su una riga già mandata — arriva al banco come una
+  **comanda nuova**, invece di infilarsi in una che qualcuno sta già
+  preparando. La regola vale anche sul database, non solo a schermo.
+
 - **«Mensile per macro» dice quanto rende davvero ogni gruppo del menù**: le
   righe sono le macro-categorie del **menù**, e ogni drink venduto ci conta
   intero — incasso e costo di tutti i suoi ingredienti insieme. La Schweppes
