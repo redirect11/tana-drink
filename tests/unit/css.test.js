@@ -101,3 +101,36 @@ describe('il flusso di cassa si dispone in griglia sugli schermi larghi', () => 
     expect(foglio()).toMatch(/\.cassa-larga[\s\S]{0,200}grid-column: 1 \/ -1/)
   })
 })
+
+// ── SUL TELEFONO LE CORSIE SI IMPILANO ───────────────────────────────
+//
+// Cinque o sei colonne su uno schermo di telefono non ci stanno: ognuna
+// diventa una striscia dove non entra nemmeno il nome di un drink. E a
+// dire quando c'è spazio dev'essere la LARGHEZZA VERA DELLA LAVAGNA, non
+// la finestra: col menu agganciato alla pagina la lavagna ha 200-250px in
+// meno di quello che dice la finestra. Contare gli elementi al posto dello
+// spazio ha già spaccato il disegno una volta (BUG-021).
+describe('le corsie della coda si impilano quando lo spazio manca', () => {
+  const foglio = () => readFileSync(join(CARTELLA, 'index.css'), 'utf8')
+
+  it('di suo sono una colonna sola: la pila è il caso normale, non l’eccezione', () => {
+    const css = foglio()
+    const i = css.indexOf('.corsie {')
+    expect(i).toBeGreaterThan(-1)
+    expect(css.slice(i, i + 300)).toMatch(/grid-template-columns:\s*minmax\(0, 1fr\)/)
+  })
+
+  it('la lavagna è il contenitore su cui si misura', () => {
+    expect(foglio()).toMatch(/\.queue-board\.corsie-board \{[\s\S]{0,120}container:\s*corsie \/ inline-size/)
+  })
+
+  it('le soglie sono @container, non @media sulla finestra', () => {
+    const css = foglio()
+    expect(css).toMatch(/@container corsie \(min-width: 560px\)[\s\S]{0,200}grid-template-columns/)
+    expect(css).toMatch(/@container corsie \(min-width: 900px\)[\s\S]{0,200}grid-template-columns/)
+    // E la media query sulla finestra non decide più quante colonne fare:
+    // lì resta solo l'altezza della lavagna, che è un'altra domanda.
+    const media = css.slice(css.indexOf('@media (min-width: 901px)'))
+    expect(media.slice(0, 400)).not.toMatch(/grid-template-columns/)
+  })
+})

@@ -18,6 +18,14 @@
   schermo spento — cioè proprio quando serviva. Adesso si tace solo se la
   coda è davvero sotto gli occhi.
 
+- **Sul telefono le corsie si impilano invece di stringersi**: cinque o sei
+  colonne su uno schermo di telefono diventavano strisce dove non entrava
+  nemmeno il nome di un drink. Adesso, quando lo spazio manca, ogni corsia
+  diventa una sezione — col suo titolo e il suo totale — e si scorre in
+  verticale. A dire quando c'è spazio è la larghezza vera della lavagna, non
+  quella della finestra: col menu agganciato alla pagina la lavagna ha
+  200-250px in meno, e prima nessuno se ne accorgeva.
+
 - **La chiamata dal bancone si presenta dovunque sei**: chi veniva chiamato
   sentiva il telefono, riapriva l'app e non trovava niente — la chiamata
   compariva solo andando a mano su «Da servire». Adesso il riquadro salta

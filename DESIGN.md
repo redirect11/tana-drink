@@ -162,6 +162,12 @@ Regole:
   order-card` compatta con **un** tasto (`btn small block`, mai sotto i 44px):
   toccando il tasto si avanza, toccando la card si apre il conto. Le colonne
   ci sono tutte anche vuote: la loro posizione si impara a memoria.
+  **Sul telefono si impilano**: una sotto l'altra, ognuna con la sua testata,
+  e si scorre in verticale. A dirlo è la larghezza della **lavagna**
+  (`container: corsie / inline-size` su `.queue-board.corsie-board`): una
+  colonna sola fino a 560px, due fino a 900px, tutte oltre. Non la finestra —
+  col menu agganciato la lavagna ha 200-250px in meno — e non il numero di
+  corsie accese.
 - **Uno stato spento ha comunque la sua striscia.** Servito, chiuso,
   annullato, in invio: la striscia a sinistra usa `--strip-spenta` (che
   segue `--muted`, quindi il tema), non un bianco o un nero trasparente.
