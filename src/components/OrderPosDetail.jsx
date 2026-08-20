@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   advanceComanda,
   addComanda,
+  chiudiCreazione,
   bartenderUpdateComanda,
   updateOrderInfo,
   setOrderGroup,
@@ -47,6 +48,7 @@ import {
   orderIsClosed,
   comandaEditable,
   comandaPerLeAggiunte,
+  ultimaComandaViva,
   comandaDivisibile,
   statiDopoLaDivisione,
   statiPrimaComanda,
@@ -248,6 +250,11 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   // vecchia aveva ancora `order` nullo e la scrittura cadeva nel vuoto.
   const orderIdRef = useRef(null)
   if (order?.id) orderIdRef.current = order.id
+  // SESSIONE DI CREAZIONE APERTA: solo per il conto nato in questa
+  // schermata (`selfOrder`) e finché il documento lo dice. Un conto aperto
+  // dalla coda (`orderProp`) è già «creato»: lì vale la regola della presa
+  // in carico.
+  const inCreazione = !orderProp && !!selfOrder && selfOrder.in_creazione === true
   // Ordine appena creato in place e ancora senza nome: all'uscita lo si chiede
   // una volta (poi non più).
   const createdInPlace = !orderProp && !!selfOrder
@@ -497,10 +504,17 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   // queste funzioni vivono fuori dal ciclo di render (vedi flushAdditions).
   const ruoloRef = useRef(null)
   ruoloRef.current = ruolo
+  // LA SESSIONE DI CREAZIONE. Finché chi ha battuto il conto non è uscito,
+  // quella è UNA comanda sola: «se non sono ancora uscito dalla creazione
+  // ordine quella è sempre una sola comanda (anche se da creazione ordine
+  // vado in pagamento)» (l'utente, 20/08). Vale per il conto nato QUI —
+  // `selfOrder` — non per un conto riaperto dalla coda.
+  const inCreazioneRef = useRef(false)
+  inCreazioneRef.current = inCreazione
   const bersaglioAggiunte = () =>
     aggiunteInComandaNuova(ruoloRef.current)
       ? null
-      : comandaPerLeAggiunte(effComandeRef.current)
+      : comandaPerLeAggiunte(effComandeRef.current, { inCreazione: inCreazioneRef.current })
 
   // Ordine auto-creato in place: lo si tiene aggiornato dal server (comande,
   // pagamenti…) senza rimontare la pagina. Si aggiorna lo stato SOLO se cambia
@@ -569,7 +583,15 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     flushAllRef.current?.()
     if (orderProp) return
     ricordaContoInCorso(null)
-    if (draftRef.current.length > 0) createFromDraftRef.current()
+    // LA SESSIONE DI CREAZIONE FINISCE QUI, e solo qui: andare in pagamento
+    // e tornare è ancora la stessa battuta. Da adesso le comande di questo
+    // conto possono uscire dalla stampante — il ticket esce COMPLETO, non a
+    // metà composizione — e le righe che arrivano dopo seguono la regola
+    // della presa in carico.
+    const nato = draftRef.current.length > 0 ? createFromDraftRef.current() : null
+    Promise.resolve(nato)
+      .then((o) => chiudiCreazione(o?.id || orderIdRef.current))
+      .catch(() => {})
     saveDraft('new', [])
   }
   useEffect(
@@ -907,6 +929,26 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   }, [draft, effComande])
   const bozzaVivaRef = useRef(bozzaViva)
   bozzaVivaRef.current = bozzaViva
+
+  // ── DOVE VANNO LE RIGHE NUOVE, QUANDO NON PUÒ DIRLO L'APP ────────────
+  //
+  // Col servizio acceso lo dice la regola: nella comanda finché nessuno
+  // l'ha presa in mano, in una nuova da lì in poi. Col servizio SPENTO
+  // quella regola non ha nessun appiglio — non esistono passi, non esiste
+  // «preso in carico» — e a saperlo è solo chi sta al banco: «se non ci
+  // sono gli stati di servizio, il bartender/admin SCEGLIE, solo in
+  // modifica» (l'utente, 20/08). Quindi si chiede, con due tasti, e solo
+  // qui: non in creazione (lì è una comanda sola per definizione) e non
+  // alla sala, che manda sempre un ticket nuovo.
+  const sceltaAggiunte =
+    !isNew &&
+    !inCreazione &&
+    !workflowOn &&
+    !closed &&
+    comandaIlLavoro &&
+    !aggiunteInComandaNuova(ruolo) &&
+    bozzaViva.length > 0 &&
+    !!ultimaComandaViva(effComande)
 
   // ── LISTA UNICA: item confermati (per-riga, dalle comande) + bozza ──
   // Le quantità già pagate (acconti/split registrati) vengono scorporate in
@@ -1424,7 +1466,12 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   // preparazione» in poi ne nasce una NUOVA (comandaPerLeAggiunte). Usata
   // dall'AUTO-CONFERMA (ogni aggiunta è confermata subito) e all'uscita per
   // non perdere nulla.
-  const flushAdditions = useCallback(() => {
+  // `scelta` la passa una persona, e solo col servizio spento (vedi
+  // `sceltaAggiunte` più sotto): 'comanda' = le righe entrano nell'ultima
+  // comanda del conto, 'nuova' = ne nasce una. Senza scelta decide la
+  // regola (comandaPerLeAggiunte), che è quello che succede sempre col
+  // servizio acceso e durante la creazione.
+  const flushAdditions = useCallback((scelta = null) => {
     if (isNew || !order?.id) return
     // La bozza DEPURATA delle righe che una comanda porta già: un cassetto
     // rimasto sporco (crash, corse alla nascita del conto) non deve battere
@@ -1434,7 +1481,12 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
       if (draftRef.current.length > 0) clearDraft()
       return
     }
-    const target = bersaglioAggiunte()
+    const target =
+      scelta === 'nuova'
+        ? null
+        : scelta === 'comanda'
+          ? ultimaComandaViva(effComandeRef.current)
+          : bersaglioAggiunte()
     const oid = order.id
     if (target) {
       // OTTIMISTICO: gli item entrano SUBITO nella comanda (stesso render in cui
@@ -1495,13 +1547,16 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   // (da lì le aggiunte successive si confermano al volo). Il timer si resetta a
   // ogni aggiunta, così parte solo quando la bozza è "ferma" (batch completo).
   useEffect(() => {
-    if (draft.length === 0) return
+    // Con la scelta a schermo l'auto-conferma non parte: le righe aspettano
+    // che qualcuno dica dove vanno (vedi `sceltaAggiunte`). All'uscita
+    // partono lo stesso, nella comanda — è la strada che non fa carta in più.
+    if (draft.length === 0 || sceltaAggiunte) return
     const t = setTimeout(() => {
       if (isNew) createFromDraftRef.current()
       else flushAdditionsRef.current()
     }, 300)
     return () => clearTimeout(t)
-  }, [draft, isNew])
+  }, [draft, isNew, sceltaAggiunte])
 
   // CREAZIONE: appena si aggiunge il primo item l'ordine viene CREATO IN PLACE
   // (setSelfOrder), SENZA navigare: la schermata resta montata e da lì si
@@ -1558,6 +1613,9 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
           customer_name: info.customer_name.trim() || null,
           items,
           client_temp_id: chiaveBattuta(),
+          // Il conto nasce mentre lo si sta ancora battendo: la sessione di
+          // creazione resta aperta finché non si esce da questa schermata.
+          in_creazione: true,
           placed_by: placedBy(),
           status: statoIniziale,
           service_mode: modoConsegna,
@@ -2593,6 +2651,24 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
             {/* Niente tasto Conferma: gli item si confermano da soli (si torna
                 con "← Ordini"). I tasti azione sono SEMPRE presenti: quelli non
                 applicabili sono disabilitati, non spariscono. */}
+            {/* DOVE VANNO LE RIGHE NUOVE - solo col servizio spento, dove
+                l'app non ha modo di saperlo (vedi `sceltaAggiunte`). Due
+                tasti e una domanda in parole normali: finche' non si
+                risponde, le righe restano dove sono e si vedono. */}
+            {sceltaAggiunte && (
+              <div className="posd-scelta-aggiunte">
+                <span className="muted small">Le righe nuove dove vanno?</span>
+                <div className="grid-2" style={{ marginTop: 6 }}>
+                  <button className="btn small" onClick={() => flushAdditions('comanda')}>
+                    &#10133; Nella comanda
+                  </button>
+                  <button className="btn ghost small" onClick={() => flushAdditions('nuova')}>
+                    <IconPrinter /> Comanda nuova
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="posd-foot-azioni">
             <div className="grid-2">
               <button className="btn ghost small" disabled={!conRighe} onClick={inviaComanda}>

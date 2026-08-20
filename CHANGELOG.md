@@ -4,6 +4,26 @@
 
 ### Per chi gestisce
 
+- **Un ordine appena battuto è UNA comanda sola, e il ticket esce quando si
+  esce.** Battendo un conto nuovo poteva uscire **più di una comanda** — e
+  con l'auto-stampa accesa più di un foglio, uno col primo prodotto da solo.
+  Adesso, finché non si torna agli ordini, il conto **si sta ancora
+  battendo**: tutto quello che si aggiunge entra nella stessa comanda, e la
+  stampante aspetta. Andare in pagamento e tornare indietro **non** chiude
+  la battuta. Quando si esce, esce **un ticket solo, completo**.
+- **Una comanda si allunga finché nessuno l'ha presa in mano.** Non conta
+  più in che passo si trova, ma se qualcuno l'ha **presa in carico**
+  davvero: se il locale fa nascere le comande già «in preparazione», quelle
+  non le ha ancora prese in mano nessuno e le righe nuove ci entrano. Da
+  quando qualcuno segna «la preparo io», le aggiunte fanno un **ticket
+  nuovo**. E se la comanda era **già stampata** e si allunga, **il ticket si
+  ristampa completo**: il foglio vecchio si butta, quello nuovo ha tutto.
+- **Con gli stati del servizio spenti, sceglie chi sta al banco.** Aprendo
+  un conto già creato e aggiungendo righe, sotto il totale compaiono due
+  tasti — **«Nella comanda»** e **«Comanda nuova»** — perché lì l'app non ha
+  modo di saperlo da sola. Finché non si sceglie, le righe restano a
+  schermo; uscendo senza scegliere vanno nella comanda.
+
 - **Battendo in fretta non si perde più niente.** Aggiungendo prodotti uno
   dietro l'altro su uno stesso conto poteva restare **solo il primo**: due
   modifiche partite nello stesso istante scrivevano tutte e due l'elenco

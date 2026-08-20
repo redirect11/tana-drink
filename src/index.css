@@ -3968,6 +3968,14 @@ body.fullbleed,
 .posd-comanda-foot .posd-foot-azioni .grid-2 {
   gap: calc(10px * var(--foot-scale, 1));
 }
+/* La domanda su dove vanno le righe nuove (servizio spento): staccata dai
+   tasti sotto da una riga sottile, cosi' si legge come una domanda e non
+   come un'altra fila di comandi. */
+.posd-comanda-foot .posd-scelta-aggiunte {
+  margin-top: calc(8px * var(--foot-scale, 1));
+  padding-top: calc(8px * var(--foot-scale, 1));
+  border-top: 1px solid var(--line);
+}
 .posd-comanda-foot .price {
   font-size: 1.05em;
 }

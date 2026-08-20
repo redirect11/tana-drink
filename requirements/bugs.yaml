@@ -1924,3 +1924,77 @@ bugs:
     priority: P1
     test_cases:
       - tests/unit/mutazioniInFila.test.js
+
+  - id: BUG-057
+    title: "Un ordine solo, due comande: la creazione non era una battuta sola"
+    area: "src/lib/comande.js (comandaPerLeAggiunte, presaInCarico), src/lib/printer.js (comandeDaStampare), src/lib/api.js, src/components/OrderPosDetail.jsx"
+    description: >
+      Segnalato dall'utente il 20/08 con lo schermo davanti: un conto solo,
+      il #20, battuto in creazione, e DUE facsimili di comanda — un
+      LIMONCELLO da solo, poi JEFFERSON + AMERICANO + MONTENEGRO +
+      JAGERMEISTER. «Mi crea piu' comande quando creo un solo ordine. In
+      fase di creazione deve gestire tutto come UNA comanda».
+      DUE CAUSE INSIEME, e lo screenshot era compatibile con tutte e due.
+      (1) LA REGOLA DI IERI SERA (REQ-ORD-016): le aggiunte non entrano in
+      una comanda «da in preparazione in poi». Nel locale che fa NASCERE le
+      comande gia' in preparazione — l'impostazione «Le comande nascono
+      gia' in preparazione» — quella condizione e' vera dal primo istante:
+      ogni riga battuta dopo la prima faceva per forza un ticket nuovo. E
+      l'esclusione della comanda gia' stampata (`auto_print_at`) faceva lo
+      stesso danno appena l'auto-stampa era accesa.
+      (2) LA CORSA DI BUG-056: due scritture ravvicinate sullo stesso conto
+      componevano dallo stesso passato. Curata a parte, nel suo commit.
+      LA REGOLA, CORRETTA DALL'UTENTE, in due mosse.
+      IL DISCRIMINE E' LA PRESA IN CARICO, NON LO STATO: «devi aggiungere
+      prodotti a una NUOVA comanda solo se lo stato viene PASSATO in
+      preparazione (comanda presa in carico)». Una comanda nata in
+      preparazione per impostazione del locale non l'ha presa in mano
+      nessuno. Serve un segno, ed e' `presa_in_carico`, scritto solo da
+      advanceComanda. Documenti vecchi senza il campo: si guarda lo stato
+      con la regola prudente («in preparazione» senza segno = presa in
+      carico), cosi' i ticket gia' in mano al banco stasera non si gonfiano.
+      LA SESSIONE DI CREAZIONE E' UN SOTTOSTATO DEL CONTO (`in_creazione`).
+      «Se non sono ancora uscito dalla creazione ordine (solo con il tasto
+      indietro agli ordini) quella e' sempre UNA SOLA comanda (anche se da
+      creazione ordine vado in pagamento)». Lo apre il POS alla nascita, lo
+      chiude l'uscita dalla schermata — il pagamento no, e' sempre la
+      stessa battuta. Finche' e' aperto: ogni aggiunta entra nella comanda
+      1, e L'AUTO-STAMPA NON PARTE. E' il facsimile col LIMONCELLO da solo:
+      la carta era uscita a meta' composizione. Il ticket esce quando la
+      sessione si chiude, e allora e' completo.
+      L'ESCLUSIONE `auto_print_at` E' STATA TOLTA come discrimine —
+      contraddiceva la regola nuova — ma la ragione per cui era nata resta
+      vera: una comanda gia' stampata che si gonfia lascia al banco una
+      carta vecchia. LA CURA COERENTE: quando una comanda NON presa in
+      carico riceve aggiunte, il suo `auto_print_at` si AZZERA e la coda
+      RISTAMPA il ticket completo. Il banco butta il foglio vecchio e ha
+      quello giusto. Perche' funzioni anche sul terminale che aveva gia'
+      stampato, la pretesa locale segue le RIGHE della comanda e non solo
+      il suo id.
+      COL SERVIZIO SPENTO NON C'E' NIENTE DA GUARDARE — non esistono passi,
+      non esiste «preso in carico» — e allora sceglie una persona: «se non
+      ci sono gli stati di servizio, il bartender/admin SCEGLIE, solo in
+      modifica». Due tasti sotto il totale, «Nella comanda» e «Comanda
+      nuova»; finche' non si risponde le righe restano a schermo. Uscendo
+      senza scegliere vanno nella comanda, che e' la strada che non fa
+      carta in piu'.
+      IL CASO CHE RESTA SCOPERTO, e non per dimenticanza: se l'app muore a
+      meta' battuta il segno `in_creazione` resta appeso e quella comanda
+      non esce da sola. «Non e' un problema, Flavio puo' ristampare la
+      comanda con l'apposito tasto» (l'utente, 20/08). Niente scadenze a
+      tempo, niente chiusure da altri terminali: un avanzamento di stato la
+      chiude comunque, e il resto ha gia' il suo rimedio a mano.
+      PASSI PER RIPRODURLO (prima della cura): accendere «Le comande
+      nascono gia' in preparazione», aprire un conto nuovo dal POS e
+      battere quattro prodotti con una pausa in mezzo. Escono due comande,
+      e con l'auto-stampa accesa due facsimili.
+    in_produzione: false
+    status: fixed
+    generate_issue: true
+    labels: [bug, comande, stampa, banco]
+    severity: alta
+    priority: P1
+    test_cases:
+      - tests/unit/comande.test.js
+      - tests/unit/stampaComande.test.js
+      - tests/component/OrderPosDetail.test.jsx

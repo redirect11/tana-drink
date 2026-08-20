@@ -8,6 +8,8 @@ import {
   nextComandaStatus,
   statoComandaNuova,
   comandaPerLeAggiunte,
+  presaInCarico,
+  ultimaComandaViva,
   statiPrimaComanda,
   statiDopoLaDivisione,
   activeComanda,
@@ -101,10 +103,45 @@ describe('dove finiscono le righe aggiunte', () => {
     expect(comandaPerLeAggiunte(comande).id).toBe('c2')
   })
 
-  it('una comanda IN PREPARAZIONE non accoglie più niente', () => {
+  it('una comanda PRESA IN CARICO non accoglie più niente', () => {
     // Chi sta già shakerando non deve vedersi allungare il ticket sotto le
     // mani: ne nasce una nuova (qui: nessun bersaglio).
+    expect(comandaPerLeAggiunte([c('c1', 'in_preparazione', { presa_in_carico: true })])).toBe(null)
+  })
+
+  // LA CORREZIONE DEL 20/08, DOPO AVER VISTO IL DANNO. «Devi aggiungere
+  // prodotti a una NUOVA comanda solo se lo stato viene PASSATO in
+  // preparazione (comanda presa in carico)»: una comanda NATA in
+  // preparazione perché il locale ha acceso quell'impostazione non l'ha
+  // presa in mano nessuno, e le aggiunte ci vanno dentro. Il test di prima
+  // diceva il contrario, e faceva nascere un ticket per ogni riga.
+  it('ma una NATA in preparazione (impostazione del locale) sì', () => {
+    const nata = c('c1', 'in_preparazione', { presa_in_carico: false })
+    expect(comandaPerLeAggiunte([nata]).id).toBe('c1')
+    expect(presaInCarico(nata)).toBe(false)
+  })
+
+  it('i documenti vecchi, senza il segno, si danno per presi in carico', () => {
+    // Nessun campo `presa_in_carico`: non si sa, e la risposta prudente è
+    // quella che non allunga un ticket che forse è già al banco.
+    expect(presaInCarico(c('c1', 'in_preparazione'))).toBe(true)
     expect(comandaPerLeAggiunte([c('c1', 'in_preparazione')])).toBe(null)
+  })
+
+  // LA SESSIONE DI CREAZIONE. «Se non sono ancora uscito dalla creazione
+  // ordine quella è sempre una sola comanda (anche se da creazione ordine
+  // vado in pagamento)» (l'utente, 20/08). Qualunque stato, qualunque
+  // impostazione del locale, stampata o no.
+  it('finché il conto si sta creando è UNA comanda sola', () => {
+    const comande = [c('c1', 'in_preparazione', { presa_in_carico: true })]
+    expect(comandaPerLeAggiunte(comande, { inCreazione: true }).id).toBe('c1')
+    expect(
+      comandaPerLeAggiunte([c('c1', 'ricevuto', { auto_print_at: '2026-08-20T21:00:00Z' })], {
+        inCreazione: true,
+      }).id
+    ).toBe('c1')
+    // Una comanda annullata non è un bersaglio nemmeno in creazione.
+    expect(comandaPerLeAggiunte([c('c1', 'annullato')], { inCreazione: true })).toBe(null)
   })
 
   it('una comanda PRONTA, SERVITA o ANNULLATA non accoglie mai niente', () => {
@@ -113,17 +150,25 @@ describe('dove finiscono le righe aggiunte', () => {
     }
   })
 
-  it('e nemmeno una «da fare» GIÀ USCITA DALLA STAMPANTE', () => {
-    // La carta è al banco: una riga aggiunta dopo su quel ticket non c'è, e
-    // non ci comparirà mai. È «presa in carico» vista dall'altro lato.
-    expect(comandaPerLeAggiunte([c('c1', 'ricevuto', { auto_print_at: '2026-08-20T21:00:00Z' })]))
-      .toBe(null)
-    // Quella non ancora stampata accanto invece risponde.
-    const comande = [
-      c('c1', 'ricevuto', { auto_print_at: '2026-08-20T21:00:00Z' }),
-      c('c2', 'ricevuto'),
-    ]
-    expect(comandaPerLeAggiunte(comande).id).toBe('c2')
+  // IERI QUESTA ERA UN'ESCLUSIONE, OGGI NO. «Già uscita dalla stampante»
+  // non c'entra con «l'ha presa in mano qualcuno», e tenerla contraddiceva
+  // la regola nuova: un conto battuto in fretta faceva un ticket per riga.
+  // La ragione per cui era nata resta vera — se una comanda già stampata si
+  // gonfia, la carta al banco è vecchia — e la cura è un'altra: le aggiunte
+  // ci entrano e il ticket si RISTAMPA completo (api.js azzera
+  // `auto_print_at`). Il banco butta il foglio vecchio e ha quello giusto.
+  it('una «da fare» GIÀ STAMPATA accoglie lo stesso: il ticket si rifà', () => {
+    expect(
+      comandaPerLeAggiunte([c('c1', 'ricevuto', { auto_print_at: '2026-08-20T21:00:00Z' })]).id
+    ).toBe('c1')
+  })
+
+  it('l’ultima comanda viva è quella che «Nella comanda» allunga', () => {
+    // Col servizio spento la scelta è di chi sta al banco, e «la comanda» è
+    // quella che ha davanti: l'ultima battuta, non la prima.
+    expect(ultimaComandaViva([c('c1', 'ricevuto'), c('c2', 'ricevuto')]).id).toBe('c2')
+    expect(ultimaComandaViva([c('c1', 'ricevuto'), c('c2', 'annullato')]).id).toBe('c1')
+    expect(ultimaComandaViva([])).toBe(null)
   })
 
   it('conto vuoto: non c’è niente da accogliere', () => {

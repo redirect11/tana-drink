@@ -152,6 +152,10 @@ describe('la comanda nata da un’aggiunta esce da sola', () => {
       // accogliere, quindi le righe nuove fanno una comanda a parte.
       const alBanco = {
         ...nataAdesso('c1', 'in_preparazione'),
+        // PRESA IN MANO DA QUALCUNO, non solo «in preparazione»: dal 20/08
+        // il discrimine e' il gesto, non il passo (una comanda nata in
+        // preparazione per impostazione del locale accoglie eccome).
+        presa_in_carico: true,
         auto_print_at: nataDa(30_000),
       }
       expect(comandaPerLeAggiunte([alBanco])).toBe(null)
@@ -162,6 +166,46 @@ describe('la comanda nata da un’aggiunta esce da sola', () => {
       expect(comandeDaStampare(o).map((c) => c.id)).toEqual(['c2'])
     })
   }
+})
+
+
+// ── IL CONTO CHE SI STA ANCORA BATTENDO NON STAMPA ───────────────────
+//
+// Il facsimile col LIMONCELLO da solo (l'utente, 20/08): la carta era
+// uscita a meta' composizione, mentre chi stava al POS aveva ancora il
+// vassoio da riempire. Finche' la sessione di creazione e' aperta il
+// ticket non esce; esce quando si torna agli ordini, e allora e' completo.
+// Le due regole stanno in due file diversi — dove finiscono le righe
+// (comande.js) e cosa va stampato (printer.js) — e questo test le mette in
+// fila, che e' l'unico modo di sapere che combaciano.
+describe('finche\' si batte il conto, niente carta', () => {
+  const riga = (nome) => ({ drink_id: nome.toLowerCase(), name: nome, qty: 1, unit_price: 5 })
+
+  it('tre aggiunte in creazione: una comanda sola, e nessun ticket', () => {
+    // Il locale fa nascere le comande gia' in preparazione: e' il caso che
+    // faceva un ticket per riga.
+    const passo = statoComandaNuova({ comande_in_preparazione: true })
+    let comande = [
+      { id: 'c1', seq: 1, status: passo, presa_in_carico: false, items: [riga('Limoncello')] },
+    ]
+    for (const nome of ['Jefferson', 'Americano', 'Montenegro']) {
+      const target = comandaPerLeAggiunte(comande, { inCreazione: true })
+      expect(target).not.toBe(null) // se qui e' null, nasce il secondo ticket
+      comande = comande.map((c) =>
+        c.id === target.id ? { ...c, items: [...c.items, riga(nome)] } : c
+      )
+    }
+    expect(comande).toHaveLength(1)
+    expect(comande[0].items).toHaveLength(4)
+
+    const inCorso = { status: 'aperto', in_creazione: true, comande }
+    // Mentre si batte: la stampante tace.
+    expect(comandeDaStampare(inCorso)).toEqual([])
+    // Usciti dalla creazione: esce UN ticket, con tutte e quattro le righe.
+    const finito = { ...inCorso, in_creazione: false }
+    expect(comandeDaStampare(finito).map((c) => c.id)).toEqual(['c1'])
+    expect(comandeDaStampare(finito)[0].items).toHaveLength(4)
+  })
 })
 
 // ── PIÙ COMANDE DELLO STESSO CONTO, IN UN COLPO (REQ-STAMPA-012) ─────
