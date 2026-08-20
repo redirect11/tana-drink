@@ -1431,6 +1431,75 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
     </div>
   )
 
+  // ── I FILTRI DELLA GRIGLIA, SULLA STESSA RIGA DELLE CORSIE ─────────
+  //
+  // «Rispetto alla vista corsie li vorrei nello stesso punto» (l'utente,
+  // 20/08). Erano una riga a sé fra la testata e la prima card, e non c'è
+  // motivo perché due viste della STESSA coda mettano i loro filtri in due
+  // posti diversi: chi passa dall'una all'altra deve ritrovarli dov'erano.
+  //
+  // QUI SONO SETTE, non due come nelle corsie (BUG-042), e sui 1000-1300px
+  // del banco non ci stanno tutte accanto ai conteggi. Non vanno a capo e
+  // non si schiacciano: la riga SCORRE in orizzontale (.chips-row), come
+  // faceva già nelle corsie sul telefono. Una seconda riga di pastiglie
+  // sarebbe esattamente quello che si stava togliendo.
+  // E la più lunga si accorcia: «📅 Solo oggi (3)» invece di «📅 Solo oggi
+  // (3 da chiudere)» — 90px in meno, e cosa siano quei tre lo dice il
+  // titolo, che è dove si va a chiederlo.
+  //
+  // Vale la regola di docs/navigazione.md: a sinistra quello che RESTRINGE
+  // la lista, a destra quello che CAMBIA VISTA, staccati da un margine
+  // automatico.
+  const filtriOrdini = (
+    <div className="chips-row chips-lavagna">
+      {[
+        ['attivi', 'In corso'],
+        ['chiusi', '💶 Chiusi'],
+        // Gli annullati hanno una scheda loro: fra i chiusi facevano numero
+        // senza essere incassi, e per ritrovarne uno da riaprire si cercava
+        // in mezzo a quelli buoni.
+        ['annullati', '✖️ Annullati'],
+        ['tutti', 'Tutti'],
+      ].map(([k, label]) => (
+        <button
+          key={k}
+          className={`chip ${boardFilter === k ? 'active' : ''}`}
+          onClick={() => setBoardFilter(k)}
+        >
+          {label}
+        </button>
+      ))}
+      <button
+        className={`chip ${soloMiei ? 'active' : ''}`}
+        onClick={() => setSoloMiei((v) => !v)}
+        title="Solo i conti inseriti da te"
+      >
+        ✍️ Miei
+      </button>
+      {/* C'ERA UN «NASCONDI PAGATI», E NON SERVE PIÙ. Serviva a togliere
+          dagli occhi i conti già incassati ma non ancora serviti, perché
+          restavano in mezzo a quelli in corso: adesso un conto pagato è
+          chiuso, sta fra i chiusi, e chi vuole sapere quali hanno ancora
+          roba da portare lo chiede lì dentro («Da servire»). */}
+      {/* Conti dei giorni scorsi: di default sono in coda, sotto la loro
+          data. Questo tasto li nasconde e lascia solo oggi. */}
+      {(arretrati.length > 0 || soloOggi) && (
+        <button
+          className={`chip ${soloOggi ? 'active' : ''}`}
+          onClick={() => setSoloOggi((v) => !v)}
+          title={
+            arretrati.length
+              ? `Nascondi i ${arretrati.length} conti rimasti aperti dai giorni scorsi`
+              : 'Nascondi i conti rimasti aperti dai giorni scorsi'
+          }
+        >
+          📅 Solo oggi{arretrati.length ? ` (${arretrati.length})` : ''}
+        </button>
+      )}
+      {pastigliaComande}
+    </div>
+  )
+
   // IL CONTO ACCESO. Solo nel modo "evidenzia": è il primo che risponde
   // NELL'ORDINE IN CUI STA SULLO SCHERMO — non nell'ordine in cui arrivano
   // dal database, altrimenti si accende un conto e lo scorrimento va da
@@ -2181,11 +2250,13 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                 )}
               </div>
             )}
-            {/* I FILTRI DELLE CORSIE STANNO QUI, non in una riga loro: due
-                pastiglie corte non valgono un livello in più fra i
-                conteggi e le comande. Solo per le corsie — la griglia ne
-                ha sette, e una riga se la merita. */}
-            {corsieView && filtriCorsie}
+            {/* I FILTRI DELLA LAVAGNA STANNO QUI, non in una riga loro: un
+                livello in più fra i conteggi e le card costa altezza
+                sempre, e questa lavagna si guarda da lontano mentre si
+                versa. Vale per tutte e due — corsie e griglia — perché
+                sono due modi di guardare la STESSA coda, e chi passa
+                dall'una all'altra deve ritrovare i filtri dov'erano. */}
+            {corsieView ? filtriCorsie : filtriOrdini}
           </div>
         </div>
       ) : (
@@ -2331,54 +2402,9 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
               🖨 {b.msg} <span className="muted">(tocca per chiudere)</span>
             </div>
           ))}
-          {/* Filtro: in corso (default) / chiusi / tutti / da chiudere.
-              Sotto ci vuole aria: attaccati, i chip sembravano la prima riga
-              delle card. */}
-          <div className="chips-row" style={{ margin: '8px 0 16px' }}>
-            {[
-              ['attivi', 'In corso'],
-              ['chiusi', '💶 Chiusi'],
-              // Gli annullati hanno una tab loro: fra i chiusi facevano
-              // numero senza essere incassi, e per ritrovarne uno da
-              // riaprire si cercava in mezzo a quelli buoni.
-              ['annullati', '✖️ Annullati'],
-              ['tutti', 'Tutti'],
-            ].map(([k, label]) => (
-              <button
-                key={k}
-                className={`chip ${boardFilter === k ? 'active' : ''}`}
-                onClick={() => setBoardFilter(k)}
-              >
-                {label}
-              </button>
-            ))}
-            <button
-              className={`chip ${soloMiei ? 'active' : ''}`}
-              onClick={() => setSoloMiei((v) => !v)}
-              title="Solo i conti inseriti da te"
-            >
-              ✍️ Miei
-            </button>
-            {/* C'ERA UN «NASCONDI PAGATI», E NON SERVE PIÙ. Serviva a togliere
-                dagli occhi i conti già incassati ma non ancora serviti,
-                perché restavano in mezzo a quelli in corso: adesso un conto
-                pagato è chiuso, sta fra i chiusi, e chi vuole sapere quali
-                hanno ancora roba da portare lo chiede lì dentro («Da
-                servire»). Un tasto per nascondere una cosa che non c'è più
-                in mezzo ai piedi è solo un tasto in più. */}
-            {/* Conti dei giorni scorsi: di default sono in coda, sotto la
-                loro data. Questo tasto li nasconde e lascia solo oggi. */}
-            {(arretrati.length > 0 || soloOggi) && (
-              <button
-                className={`chip ${soloOggi ? 'active' : ''}`}
-                onClick={() => setSoloOggi((v) => !v)}
-                title="Nascondi i conti rimasti aperti dai giorni scorsi"
-              >
-                📅 Solo oggi{arretrati.length ? ` (${arretrati.length} da chiudere)` : ''}
-              </button>
-            )}
-            {pastigliaComande}
-          </div>
+          {/* I FILTRI NON SONO PIÙ QUI: stanno sulla riga dei conteggi, in
+              testata (vedi `filtriOrdini`). Erano una riga a sé fra la
+              testata e le card. */}
           {righeSottoChiusi(boardFilter === 'chiusi')}
           {/* Griglia: ordini in invio (grigi) + ordini secondo il filtro */}
           {pend.pending.length === 0 && visibleBoard.length === 0 && (
