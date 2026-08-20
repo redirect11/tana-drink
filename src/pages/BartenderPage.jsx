@@ -57,6 +57,8 @@ import {
   corsieSpente,
   soloCorsieVive,
   intestazioneGiornata,
+  giornataDelConto,
+  raggruppaPerGiornata,
   corsieDelPronto,
   CORSIE_SPENTE_ALL_INIZIO,
   SOTTOFILTRI_CHIUSI,
@@ -1044,7 +1046,11 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // ordini di oggi e i numeri del giorno sembrano duplicati): stanno nella
   // loro tab dedicata, con la data ben visibile sulla card.
   const oggiKey = businessDayKey(new Date(), cutoffHour)
-  const dayOf = (o) => o.order_date || businessDayKey(o.created_at, cutoffHour)
+  // DI CHE GIORNATA È UN CONTO. La regola — e tutti i ripieghi sulle date
+  // locali, che ci sono sempre — sta in coda.js: la data si scrive dal
+  // client alla nascita, e un documento monco deve comunque finire sotto
+  // il SUO giorno invece che in un limbo senza etichetta.
+  const dayOf = (o) => giornataDelConto(o, cutoffHour)
   // Un conto è CHIUSO — e quindi esce dalla coda — solo quando non c'è più
   // nulla da fare. Con la preparazione attiva servono DUE cose: pagato E
   // servito. Un ordine pagato in anticipo ma non ancora consegnato è
@@ -1090,18 +1096,10 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
     }
   }
   // Raggruppa una lista per giornata: prima oggi, poi i giorni scorsi dal
-  // più recente. Serve a separare con una riga i conti ancora da chiudere.
-  const groupByDay = (list) => {
-    const map = new Map()
-    for (const o of list) {
-      const k = dayOf(o) || '—'
-      if (!map.has(k)) map.set(k, [])
-      map.get(k).push(o)
-    }
-    return [...map.entries()]
-      .sort((a, b) => (a[0] === oggiKey ? -1 : b[0] === oggiKey ? 1 : b[0].localeCompare(a[0])))
-      .map(([day, orders]) => ({ day, orders }))
-  }
+  // più recente. Sta in coda.js, col segnaposto «—» che non esiste più —
+  // finiva dritto nel formattatore delle date e in cima al gruppo si
+  // leggeva «Invalid Date».
+  const groupByDay = (list) => raggruppaPerGiornata(list, { giornataDi: dayOf, oggi: oggiKey })
   const ordersOggi = effOrders.filter((o) => !arretratiIds.has(o.id))
   const ordersInVista = soloOggi ? ordersOggi : effOrders
   // RIEPILOGO DI TESTATA: conta ESATTAMENTE i conti che si vedono in coda,

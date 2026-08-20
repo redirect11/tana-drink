@@ -1243,3 +1243,84 @@ describe('la riga che separa le giornate in coda', () => {
     expect(intestazioneGiornata('tutti', 'sabato 15 agosto')).toBe('📅 sabato 15 agosto')
   })
 })
+
+// ── LA GIORNATA DI UN CONTO, E «Invalid Date» (BUG-060) ──────────────
+//
+// La data di un conto c'è sempre: la scrive il client alla nascita
+// (`order_date`). Ma un documento può arrivare monco, e allora si ripiega
+// su tutte le altre date locali che quel conto si porta dietro — non su un
+// segnaposto. Il trattino «—» del vecchio raggruppamento finiva dritto nel
+// formattatore delle date e in cima al gruppo si leggeva «Invalid Date».
+import { giornataDelConto, raggruppaPerGiornata } from '../../src/lib/coda.js'
+import { businessDayLabel } from '../../src/lib/businessDay.js'
+
+describe('la giornata di un conto', () => {
+  const CUT = 6
+
+  it('la dice `order_date`, che il client scrive alla nascita', () => {
+    expect(giornataDelConto({ order_date: '2026-08-15' }, CUT)).toBe('2026-08-15')
+  })
+
+  it('senza `order_date` ripiega sull’orario del server', () => {
+    expect(giornataDelConto({ created_at: '2026-08-15T23:30:00.000Z' }, CUT)).toBe('2026-08-15')
+  })
+
+  it('e se il server non ha ancora risposto, sull’apertura scritta dal client', () => {
+    // `created_at` è un serverTimestamp: finché la scrittura è per strada
+    // vale null. L'apertura invece è un ISO dell'orologio di qui, e c'è dal
+    // primo istante — è la data che il conto ha davvero.
+    expect(
+      giornataDelConto(
+        { created_at: null, tempi_conto: { aperto: '2026-08-15T22:00:00.000Z' } },
+        CUT
+      )
+    ).toBe('2026-08-15')
+  })
+
+  it('come ultima spiaggia guarda la nascita della prima comanda', () => {
+    expect(
+      giornataDelConto({ comande: [{ id: 'c1', created_at: '2026-08-15T22:00:00.000Z' }] }, CUT)
+    ).toBe('2026-08-15')
+  })
+
+  it('e la nottata oltre la mezzanotte resta la giornata di prima', () => {
+    // Taglio alle 6: le 2 di notte appartengono ancora alla sera prima.
+    expect(giornataDelConto({ created_at: '2026-08-16T00:30:00.000Z' }, CUT)).toBe('2026-08-15')
+  })
+
+  it('se davvero non c’è niente da leggere, non inventa una data', () => {
+    expect(giornataDelConto({ id: 'monco' }, CUT)).toBe(null)
+    expect(giornataDelConto(null, CUT)).toBe(null)
+  })
+})
+
+describe('i conti raggruppati per giornata', () => {
+  const OGGI = '2026-08-16'
+  const gruppi = (lista) =>
+    raggruppaPerGiornata(lista, { giornataDi: (o) => o.giornata, oggi: OGGI })
+
+  it('mette oggi in cima e i giorni scorsi dal più recente', () => {
+    expect(
+      gruppi([
+        { id: 'a', giornata: '2026-08-14' },
+        { id: 'b', giornata: OGGI },
+        { id: 'c', giornata: '2026-08-15' },
+      ]).map((g) => g.day)
+    ).toEqual([OGGI, '2026-08-15', '2026-08-14'])
+  })
+
+  it('un conto senza data va sotto OGGI, non in un gruppo «—»', () => {
+    // ERA IL DIFETTO: la chiave del gruppo è la stessa cosa che poi va al
+    // formattatore, e `new Date('—T00:00:00')` non è una data.
+    const g = gruppi([{ id: 'monco', giornata: null }, { id: 'ok', giornata: OGGI }])
+    expect(g.map((x) => x.day)).toEqual([OGGI])
+    expect(g[0].orders.map((o) => o.id)).toEqual(['monco', 'ok'])
+  })
+
+  it('e nessuna chiave di gruppo si stampa «Invalid Date»', () => {
+    const oggi = new Date(`${OGGI}T12:00:00Z`)
+    for (const { day } of gruppi([{ id: 'monco', giornata: null }, { id: 'v', giornata: '2026-08-14' }])) {
+      expect(businessDayLabel(day, oggi, 6)).not.toMatch(/Invalid/)
+    }
+  })
+})
