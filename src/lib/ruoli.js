@@ -70,3 +70,41 @@ export function isSala(role) {
 export function isPersonale(role) {
   return isGestore(role) || isSala(role)
 }
+
+// ── LA SALA SERVE, NON PREPARA ─────────────────────────────────────────
+// Chi sta in sala VEDE a che punto sono le preparazioni — gli serve per
+// sapere cosa portare — ma non le comanda. L'unico passo che può segnare è
+// «servito», perché è lui a portare il drink al tavolo: prendere in carico,
+// segnare pronto, tornare indietro, dividere una comanda e annullarla sono
+// di chi versa.
+//
+// Il passo si confronta con la stringa e non con la costante di
+// `orderStatus.js`: quel modulo importa QUESTO, e importarlo di rimando
+// chiuderebbe il giro.
+const SERVITO = 'ritirato'
+
+// IL METRO È AL CONTRARIO — «non è la sala» invece di «è il banco» — e non
+// per pigrizia: queste due servono a spegnere dei tasti mentre il ruolo sta
+// ancora tornando dal server. Finché non si sa chi guarda, la schermata
+// resta com'era; spegnere per un istante i tasti a chi sta al banco vuol
+// dire premere a vuoto proprio nell'istante in cui si apre un conto. A
+// decidere davvero sono le regole del database, non questi due tasti.
+export function puoSegnare(role, passo) {
+  return isSala(role) ? passo === SERVITO : true
+}
+
+// Tornare indietro di un passo, dividere una comanda in due, annullarla,
+// riscrivere una comanda già mandata: si rimette mano al lavoro di chi sta
+// allo shaker, e lo fa lui.
+export function puoGestireComande(role) {
+  return !isSala(role)
+}
+
+// SUGLI ORDINI LA SALA LAVORA — aggiunge righe, corregge quantità — ma
+// quello che aggiunge deve arrivare al banco come un ticket NUOVO. Infilarlo
+// in una comanda che qualcuno sta già preparando vuol dire cambiargli il
+// lavoro sotto le mani: si versa un giro e ne è comparso un altro dentro
+// lo stesso foglio.
+export function aggiunteInComandaNuova(role) {
+  return isSala(role)
+}

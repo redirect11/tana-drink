@@ -11,11 +11,32 @@ import {
   openOrdersCount,
   ordineCorrisponde,
   primoCorrispondente,
-  inseritiDa,
+  conAutori,
+  autoreDi,
+  autoriDeiConti,
+  autoriAttivi,
+  cambiaAutoreScelto,
+  riassuntoAutori,
+  AUTORE_CLIENTE,
   passaFiltroCoda,
+  passaStatiCoda,
+  statiDaFiltro,
+  frasePerCodaVuota,
+  cambiaSottoChiusi,
+  nomiDelServizio,
+  sottofiltriChiusi,
+  nomeSottofiltro,
+  FILTRI_STATO,
+  ID_FILTRI_STATO,
+  STATO_DEFAULT,
   restaInCoda,
   gruppiInCoda,
   schedeCoda,
+  corsieDiverseDalNormale,
+  gruppiColonne,
+  corsieDelPronto,
+  spiegaFiltri,
+  spiegaOrdine,
 } from '../../src/lib/coda.js'
 
 const orders = [
@@ -66,26 +87,344 @@ describe('openOrdersCount', () => {
   })
 })
 
-// Il filtro «Miei» della coda: ha preso il posto della pagina «I miei
-// ordini» della sala, quindi deve rispondere come rispondeva lei — i conti
-// con la propria firma, nient'altro.
-describe('inseritiDa', () => {
+// ── CHI HA APERTO IL CONTO: LA TENDINA DEGLI AUTORI ──────────────────
+//
+// Era `inseritiDa` — il filtro «Miei», acceso o spento — e i suoi test
+// vivono qui sotto, riscritti sul meccanismo nuovo: «il filtro miei
+// dovrebbe diventare un menu a tendina dove di default sono selezionati
+// tutti gli utenti che hanno aperto almeno un ordine […] Poi posso
+// scegliere di deselezionare e vedere solo gli ordini di qualcuno (i miei
+// ad esempio)» (l'utente, 20/08/2026). «Solo i miei» è diventato un caso
+// particolare: un autore solo selezionato.
+describe('chi ha aperto il conto: la tendina «Staff»', () => {
   const firmati = [
-    { id: 'a', placed_by: { email: 'Anna@tana.it' } },
-    { id: 'b', placed_by: { email: 'bruno@tana.it' } },
+    { id: 'a', placed_by: { email: 'Anna@tana.it', name: 'Anna', role: 'bartender' } },
+    { id: 'b', placed_by: { email: 'bruno@tana.it', name: 'Bruno', role: 'bartender' } },
     { id: 'c' }, // ordine del cliente: nessuna firma
+    { id: 'd', placed_by: { email: 'anna@tana.it', name: 'Anna', role: 'bartender' } },
   ]
-  it('tiene solo i conti con la propria firma, maiuscole ignorate', () => {
-    expect(inseritiDa(firmati, 'anna@tana.it').map((o) => o.id)).toEqual(['a'])
-    expect(inseritiDa(firmati, 'BRUNO@tana.it').map((o) => o.id)).toEqual(['b'])
+  const elenco = autoriDeiConti(firmati)
+
+  it('la chiave è l\'email, e le maiuscole non contano', () => {
+    // Sulle card due Anna si distinguono a fatica (stessa lettera); nel
+    // filtro sarebbero proprio la stessa persona, ed è il motivo per cui
+    // qui si guarda l'email e non l'iniziale.
+    expect(autoreDi(firmati[0])).toBe('anna@tana.it')
+    expect(autoreDi(firmati[3])).toBe('anna@tana.it')
   })
-  it('senza email non risponde nulla: mai tutta la coda per sbaglio', () => {
-    expect(inseritiDa(firmati, '')).toEqual([])
-    expect(inseritiDa(firmati, null)).toEqual([])
+
+  it('chi ordina dall\'app finisce sotto una voce sola, in fondo', () => {
+    expect(autoreDi(firmati[2])).toBe(AUTORE_CLIENTE)
+    expect(elenco.map((v) => v.chiave)).toEqual(['anna@tana.it', 'bruno@tana.it', AUTORE_CLIENTE])
+    expect(elenco.at(-1).nome).toBe('Clienti')
   })
+
+  it('dentro c\'è chi ha battuto almeno un conto, una volta sola', () => {
+    expect(elenco).toHaveLength(3)
+    expect(elenco[0].nome).toBe('Anna')
+  })
+
+  it('di suo sono tutti accesi: la coda non nasconde niente', () => {
+    expect(autoriAttivi(null, elenco)).toEqual(elenco.map((v) => v.chiave))
+    expect(conAutori(firmati, null, elenco)).toBe(firmati)
+    // SI CHIAMA STAFF, non «Autori»: «la dropdown che hai chiamato
+    // Autori chiamala Staff» (l'utente, 20/08/2026). I nomi interni
+    // restano `autori*` — un rinomino a tappeto non serve a nessuno.
+    //
+    // SENZA «✍️ »: il testo torna NUDO e l'emoji la mette il JSX della
+    // pastiglia, che è l'unico posto che la vuole. Prima la metteva questa
+    // funzione, e il title del tastino «▾ Filtri» — che il nome lo vuole
+    // pulito — se la toglieva con un `replace`: due posti costretti a
+    // restare d'accordo su una stringa.
+    expect(riassuntoAutori(null, elenco)).toBe('Staff')
+  })
+
+  it('deselezionando restano gli altri: «solo i miei» è un caso di questo', () => {
+    // Si spengono Bruno e i clienti: resta Anna, cioè il vecchio «Miei».
+    let scelti = cambiaAutoreScelto(null, 'bruno@tana.it', elenco)
+    scelti = cambiaAutoreScelto(scelti, AUTORE_CLIENTE, elenco)
+    expect(scelti).toEqual(['anna@tana.it'])
+    expect(conAutori(firmati, scelti, elenco).map((o) => o.id)).toEqual(['a', 'd'])
+    expect(riassuntoAutori(scelti, elenco)).toBe('Anna')
+  })
+
+  it('con più di uno la pastiglia conta, e dice su quanti', () => {
+    // «2 di 3» e non «2 persone»: la tendina si apre per capire QUANTO
+    // stringe, e il denominatore lo dice senza aprirla. Vale anche quando
+    // fra i selezionati c'è la voce «Clienti», che staff non è.
+    const scelti = cambiaAutoreScelto(null, AUTORE_CLIENTE, elenco)
+    expect(riassuntoAutori(scelti, elenco)).toBe('2 di 3')
+  })
+
+  it('la parola «autori» non arriva mai a schermo', () => {
+    // Il registro (REQ-CODA-009) dice Staff; il codice dentro dice autori.
+    // Questo test è la cerniera fra le due cose: se qualcuno rimette la
+    // vecchia parola nella pastiglia, qui si rompe.
+    const uno = cambiaAutoreScelto(null, AUTORE_CLIENTE, elenco)
+    for (const scelti of [null, ['anna@tana.it'], uno]) {
+      expect(riassuntoAutori(scelti, elenco).toLowerCase()).not.toContain('autor')
+    }
+  })
+
+  it('riaccendendo l\'ultimo spento si torna a «tutti», non a una lista', () => {
+    // «Tutti» è uno stato a sé e non una lista che per caso li contiene
+    // tutti: solo così un autore che apre il primo conto a metà serata
+    // entra da solo in una tendina lasciata al default.
+    const senzaBruno = cambiaAutoreScelto(null, 'bruno@tana.it', elenco)
+    expect(cambiaAutoreScelto(senzaBruno, 'bruno@tana.it', elenco)).toBe(null)
+  })
+
+  it('MAI ZERO: spegnendo l\'ultimo rimasto tornano tutti', () => {
+    let scelti = cambiaAutoreScelto(null, 'bruno@tana.it', elenco)
+    scelti = cambiaAutoreScelto(scelti, AUTORE_CLIENTE, elenco)
+    expect(scelti).toEqual(['anna@tana.it'])
+    // Spegnere anche Anna lascerebbe una coda vuota per forza, che a
+    // schermo è indistinguibile da un'app rotta.
+    expect(cambiaAutoreScelto(scelti, 'anna@tana.it', elenco)).toBe(null)
+  })
+
+  it('un autore che non ha più conti non svuota la coda', () => {
+    // La coda vive: chi era selezionato può sparire dall'insieme caricato
+    // (cambio di giornata, cassa chiusa). Filtrare su di lui darebbe zero
+    // conti e nessun modo di capire perché.
+    expect(autoriAttivi(['chi@non-c-e.it'], elenco)).toEqual(elenco.map((v) => v.chiave))
+    expect(conAutori(firmati, ['chi@non-c-e.it'], elenco)).toHaveLength(4)
+  })
+
   it('coda vuota o assente: lista vuota, niente errori', () => {
-    expect(inseritiDa([], 'anna@tana.it')).toEqual([])
-    expect(inseritiDa(null, 'anna@tana.it')).toEqual([])
+    expect(autoriDeiConti([])).toEqual([])
+    expect(autoriDeiConti(null)).toEqual([])
+    expect(conAutori(null, ['anna@tana.it'], elenco)).toEqual([])
+  })
+})
+
+// ── I CHIP DELLE COLONNE, E DOVE STA IL ✂️ ──────────────────────────
+//
+// «Dividi il pronto dobbiamo integrarlo meglio con gli altri due bottoni,
+// in qualche modo non si capisce a che serve. E poi è troppo lungo»
+// (l'utente, 20/08/2026). Era un chip a sé in fondo alla fila: in quella
+// fila ogni chip ACCENDE una colonna, quello lì cambiava come una colonna
+// è FATTA. Adesso il tastino sta nel gruppo del chip del pronto, e questa
+// funzione dice solo chi sta con chi.
+describe('i gruppi dei chip delle colonne', () => {
+  const sceglibili = (diviso, ritiroEsiste = true) =>
+    corsieSceglibili(
+      corsieComande([], {
+        ritiroEsiste,
+        prontoDiviso: corsieDelPronto({ divise: diviso, ritiroEsiste }),
+      })
+    )
+
+  it('unito, il gruppo è il chip della colonna più il suo tastino', () => {
+    const gruppi = gruppiColonne(sceglibili(false), { taglioPossibile: true })
+    const pronto = gruppi.find((g) => g.taglio)
+    // Il chip porta il NOME DELLA COLONNA, e la colonna si chiama col
+    // lavoro che ci sta dentro: «anche la label sopra la lane, non deve
+    // essere Pronto ma Da servire/Ritirare» (l'utente, 20/08/2026).
+    expect(pronto.corsie.map((c) => c.titolo)).toEqual(['Da servire/Ritirare'])
+    // Unito = una corsia sola nel gruppo. Lo dicono le corsie: il campo
+    // `diviso` che stava qui accanto era la stessa cosa scritta due volte.
+    expect(pronto.corsie).toHaveLength(1)
+    // e nessun altro chip si porta dietro un tastino: gli altri accendono
+    // e spengono la loro colonna, e basta.
+    expect(gruppi.filter((g) => g.taglio)).toHaveLength(1)
+    expect(gruppi.every((g) => g.corsie.length === 1)).toBe(true)
+  })
+
+  it('diviso, le due colonne stanno nello STESSO gruppo', () => {
+    const gruppi = gruppiColonne(sceglibili(true), { taglioPossibile: true })
+    const pronto = gruppi.find((g) => g.taglio)
+    // È quello che le fa leggere come una colonna aperta in due, e non
+    // come due colonne qualsiasi in fila.
+    expect(pronto.corsie.map((c) => c.titolo)).toEqual(['Da servire', 'Da ritirare'])
+    expect(pronto.corsie).toHaveLength(2)
+    // e restano al POSTO del pronto, non in fondo: le altre non si
+    // spostano sotto gli occhi.
+    expect(gruppi.map((g) => g.id)).toEqual([
+      'da-fare',
+      'al-banco',
+      'pronto',
+      'ritirati',
+      'chiusi',
+      'annullati',
+    ])
+  })
+
+  it('senza il ritiro al banco il tastino non compare', () => {
+    // «Ovviamente vale solo se è attivo il ritiro al banco» (l'utente,
+    // 20/08/2026): col solo servizio non c'è niente da separare, e un
+    // tasto che non fa niente è peggio di un tasto che non c'è.
+    const gruppi = gruppiColonne(sceglibili(false, false), { taglioPossibile: false })
+    expect(gruppi.some((g) => g.taglio)).toBe(false)
+    // E senza ritiro il nome perde la metà che non esiste: «se il ritiro
+    // non è attivo diventano solo Da servire e Serviti (sia filtri che
+    // label lane)» (l'utente, 20/08/2026).
+    expect(gruppi.find((g) => g.id === 'pronto').corsie.map((c) => c.titolo)).toEqual([
+      'Da servire',
+    ])
+  })
+
+  it('elenco vuoto o assente: nessun gruppo, niente errori', () => {
+    expect(gruppiColonne([], { taglioPossibile: true })).toEqual([])
+    expect(gruppiColonne(null)).toEqual([])
+  })
+})
+
+// ── I TRE FILTRI DI STATO, ESCLUSIVI ─────────────────────────────────
+//
+// PER MEZZA GIORNATA SI SONO COMBINATI. «Se diventano dei filtri io posso
+// vedere quelli aperti, chiusi se seleziono chiuso e annullati se
+// seleziono annullati» (l'utente, 20/08/2026): erano diventati tre
+// interruttori, la coda mostrava l'unione degli accesi, e c'erano la
+// regola del «mai zero» e il ritorno automatico ad «Aperti».
+//
+// PROVATI AL BANCO, SONO TORNATI ESCLUSIVI: «no allora riportiamo aperti,
+// chiusi e annullati come mutuamente esclusivi» (l'utente, stesso giorno).
+// I test dell'unione sono spariti con la regola che descrivevano — sarebbe
+// stata una specifica che racconta un'app che non c'è più. Quello che
+// resta della lezione: sopra la coda si chiede UNA cosa per volta, e la
+// domanda che mancava davvero era come stringere DENTRO i chiusi (il tasto
+// a tre porzioni, più sotto).
+//
+// «TUTTI» NON È TORNATO: nessuno l'ha chiesto, e mescolava gli incassi con
+// gli annullati.
+describe('i filtri di stato della coda', () => {
+  // Come in pagina: `contoChiuso` conta chiuso anche l'annullato — non
+  // c'è più niente da fare su quel conto — e a tenerlo fuori dai chiusi
+  // è `passaFiltroCoda`, che ha un filtro apposta per lui.
+  const chiuso = (o) => o.status === 'pagato' || o.status === 'annullato'
+  const aperto = { id: 'a', status: 'ricevuto' }
+  const pagato = { id: 'p', status: 'pagato' }
+  const annullato = { id: 'x', status: 'annullato' }
+
+  it('sono tre e la scheda «Tutti» non esiste più', () => {
+    expect(FILTRI_STATO.map(([k]) => k)).toEqual(['attivi', 'chiusi', 'annullati'])
+    expect(FILTRI_STATO.map(([, l]) => l)).not.toContain('Tutti')
+  })
+
+  it('«In corso» si chiama «Aperti», come la riga dei conteggi', () => {
+    expect(FILTRI_STATO[0][1]).toBe('Aperti')
+  })
+
+  it('la coda si apre con i soli aperti', () => {
+    expect(STATO_DEFAULT).toBe('attivi')
+    // Che la coda sia «come si apre» adesso è un confronto e basta —
+    // `stato !== STATO_DEFAULT` — e serve al badge del tastino, che conta
+    // le DEVIAZIONI dal default: sugli «Aperti» non c'è niente da contare.
+    // C'era una `statoAlDefault` a dirlo: con gli stati esclusivi non
+    // normalizzava più niente che il chiamante non sapesse già.
+    expect(ID_FILTRI_STATO).toContain(STATO_DEFAULT)
+  })
+
+  // UNO E UNO SOLO — «No allora riportiamo aperti, chiusi e annullati come
+  // mutuamente esclusivi» (l'utente, 20/08/2026) — LO PROVA IL COMPONENT
+  // TEST: qui c'erano tre casi su `cambiaFiltroStato`, che sapeva combinare
+  // gli stati ed era rimasta dai giorni in cui erano interruttori. Con tre
+  // chip esclusivi il tocco È la scelta (`setStato(id)`), e la regola non
+  // vive più in una funzione ma nella coda che si vede: si tocca «Chiusi» e
+  // «Aperti» si spegne, in tests/component/CodaCorsie.test.jsx.
+  //
+  // Gli id sconosciuti li normalizza `statiDaFiltro`, che è dove serve
+  // davvero: una coda che non mostra NIENTE è indistinguibile da un'app
+  // rotta (vedi qui sotto).
+
+  it('la coda mostra lo stato scelto, e nient\'altro', () => {
+    const tutti = [aperto, pagato, annullato]
+    const dentro = (stato) => tutti.filter((o) => passaStatiCoda(o, stato, chiuso)).map((o) => o.id)
+    expect(dentro('attivi')).toEqual(['a'])
+    expect(dentro('chiusi')).toEqual(['p'])
+    expect(dentro('annullati')).toEqual(['x'])
+    // 'tutti' non è un filtro della coda: è come le viste che smistano
+    // l'intera lista in una passata sola (contiPerScheda, le corsie).
+    expect(dentro('tutti')).toEqual(['a', 'p', 'x'])
+  })
+
+  it('le porzioni dei chiusi stringono SOLO i chiusi', () => {
+    // Anche smistando tutto in una passata sola, un conto aperto non è
+    // né servito né da servire: la domanda vale dentro i chiusi.
+    const servito = { id: 's', status: 'pagato', payment_status: 'pagato', comande: [{ id: 'c', status: 'ritirato' }] }
+    const daServire = {
+      id: 'n',
+      status: 'pagato',
+      payment_status: 'pagato',
+      comande: [{ id: 'c', status: 'in_preparazione' }],
+    }
+    const lista = [aperto, servito, daServire]
+    const dentro = (stato, sotto) =>
+      lista.filter((o) => passaStatiCoda(o, stato, chiuso, sotto)).map((o) => o.id)
+    expect(dentro('tutti', 'non-serviti')).toEqual(['a', 'n'])
+    expect(dentro('chiusi', 'serviti')).toEqual(['s'])
+    expect(dentro('chiusi', 'non-serviti')).toEqual(['n'])
+    // NEUTRO = TUTTI I CHIUSI, da servire E serviti: «Chiusi: sia da
+    // servire che serviti» (l'utente, 20/08/2026).
+    expect(dentro('chiusi', 'tutti')).toEqual(['s', 'n'])
+  })
+
+  it('a normalizzare il filtro è un posto solo', () => {
+    // `contiPerScheda` e le corsie chiamano con 'tutti', la coda con un
+    // id secco: due modi di leggere la stessa domanda sarebbero un modo
+    // di farli divergere, e passano tutti da `statiDaFiltro`.
+    expect(statiDaFiltro('chiusi')).toEqual(['chiusi'])
+    expect(statiDaFiltro('tutti')).toEqual(['attivi', 'chiusi', 'annullati'])
+    expect(statiDaFiltro('boh')).toEqual(['attivi'])
+    expect(statiDaFiltro(null)).toEqual(['attivi', 'chiusi', 'annullati'])
+  })
+
+  it('la coda vuota dice com\'è filtrata', () => {
+    expect(frasePerCodaVuota('attivi')).toBe('Nessun ordine aperto.')
+    expect(frasePerCodaVuota('chiusi', true)).toBe('Nessun ordine chiuso oggi.')
+    expect(frasePerCodaVuota('annullati')).toBe('Nessun ordine annullato.')
+    // Con tutto mescolato nessun aggettivo è vero per tutti.
+    expect(frasePerCodaVuota('tutti')).toBe('Nessun ordine.')
+  })
+})
+
+// ── I NOMI DELLE DUE META' DEL SERVIZIO ──────────────────────────────
+//
+// «Diventano Da Servire/Ritirare e Serviti/Ritirati. Anche la label sopra
+// la lane, non deve essere Pronto ma Da servire/Ritirare. [...] se il
+// ritiro non è attivo diventano solo Da servire e Serviti (sia filtri che
+// label lane)» (l'utente, 20/08/2026).
+//
+// Un posto solo per tre usi — le porzioni del tasto dei chiusi, i chip
+// delle colonne al banco, i titoli delle corsie — o al primo ritocco la
+// colonna e il filtro che parlano della STESSA cosa si chiamano in due
+// modi diversi.
+describe('come si chiamano le due metà del servizio', () => {
+  it('col ritiro al banco portano tutti e due i nomi', () => {
+    expect(nomiDelServizio(true)).toEqual({
+      daServire: 'Da servire/Ritirare',
+      serviti: 'Serviti/Ritirati',
+    })
+  })
+
+  it('senza ritiro resta solo il servizio', () => {
+    // «/Ritirare» nominerebbe una cosa che in quel bar non succede, e
+    // manderebbe a cercare una colonna che non c'è.
+    expect(nomiDelServizio(false)).toEqual({ daServire: 'Da servire', serviti: 'Serviti' })
+  })
+
+  it('le due porzioni del tasto dei chiusi portano quegli stessi nomi', () => {
+    expect(sottofiltriChiusi(true)).toEqual([
+      ['non-serviti', 'Da servire/Ritirare'],
+      ['serviti', 'Serviti/Ritirati'],
+    ])
+    expect(sottofiltriChiusi(false)).toEqual([
+      ['non-serviti', 'Da servire'],
+      ['serviti', 'Serviti'],
+    ])
+  })
+
+  it('prima quella da fare, poi quella fatta: è l\'ordine del lavoro', () => {
+    // In un tasto segmentato si legge da sinistra, e quella da guardare
+    // di corsa è la prima: sono drink che qualcuno aspetta ancora.
+    expect(sottofiltriChiusi(true)[0][0]).toBe('non-serviti')
+  })
+
+  it('il title del tastino nomina la porzione accesa, e tace sul neutro', () => {
+    expect(nomeSottofiltro('serviti', true)).toBe('Serviti/Ritirati')
+    expect(nomeSottofiltro('non-serviti', false)).toBe('Da servire')
+    expect(nomeSottofiltro('tutti', true)).toBe(null)
   })
 })
 
@@ -314,19 +653,22 @@ describe('la voce della cassa nel menu della coda', () => {
     })
   })
 
+  // «È scomparsa la label sotto al tasto. Diventa "chiudi X conti e X
+  // comande"» (l'utente, 20/08). La riga sotto il tasto era stata tolta con
+  // BUG-062 perché ALLARGAVA il bottone; torna, ma la frase si accorcia —
+  // via il «Prima» e via il verbo di mezzo — che sotto un tasto in cima
+  // alla coda si legge di sguincio, mentre si versa.
   it('con conti aperti la chiusura è spenta, e dice quanti sono', () => {
     // Un conto aperto è un incasso che manca: chiudere così vorrebbe dire
-    // far quadrare una serata con dentro un buco. La frase sta accanto al
-    // tasto spento, quindi è corta: in cima alla coda lo spazio è quello
-    // che avanza.
+    // far quadrare una serata con dentro un buco.
     const v = voceCassa({ gestore: true, cassaAperta: true, contiAperti: 3 })
     expect(v.disabled).toBe(true)
-    expect(v.hint).toBe('Prima chiudi 3 conti')
+    expect(v.hint).toBe('Chiudi 3 conti')
   })
 
   it('un conto solo si dice al singolare', () => {
     expect(voceCassa({ gestore: true, cassaAperta: true, contiAperti: 1 }).hint).toBe(
-      'Prima chiudi 1 conto'
+      'Chiudi 1 conto'
     )
   })
 
@@ -335,16 +677,18 @@ describe('la voce della cassa nel menu della coda', () => {
   // fare, quindi «zero conti aperti» non vuol più dire «niente in ballo».
   // Chiudere con tre comande al banco vuol dire mandare a casa la serata
   // con tre drink pagati e mai usciti.
+  // E QUANDO UNA DELLE DUE QUANTITÀ È ZERO SI NOMINA SOLO L'ALTRA: «0
+  // conti» sarebbe una riga più lunga per dire che non c'è niente da fare.
   it('con comande ancora da servire la cassa non si chiude', () => {
     const v = voceCassa({ gestore: true, cassaAperta: true, contiAperti: 0, daServire: 3 })
     expect(v.disabled).toBe(true)
-    expect(v.hint).toBe('Prima servi 3 comande')
+    expect(v.hint).toBe('Chiudi 3 comande')
   })
 
   it('una comanda sola si dice al singolare', () => {
     expect(
       voceCassa({ gestore: true, cassaAperta: true, contiAperti: 0, daServire: 1 }).hint
-    ).toBe('Prima servi 1 comanda')
+    ).toBe('Chiudi 1 comanda')
   })
 
   it('tutti e due i motivi stanno in UNA riga', () => {
@@ -353,7 +697,13 @@ describe('la voce della cassa nel menu della coda', () => {
     // e perché».
     expect(
       voceCassa({ gestore: true, cassaAperta: true, contiAperti: 2, daServire: 3 }).hint
-    ).toBe('Prima chiudi 2 conti e servi 3 comande')
+    ).toBe('Chiudi 2 conti e 3 comande')
+  })
+
+  it('e declina bene anche quando è uno e una', () => {
+    expect(
+      voceCassa({ gestore: true, cassaAperta: true, contiAperti: 1, daServire: 1 }).hint
+    ).toBe('Chiudi 1 conto e 1 comanda')
   })
 
   it('niente in ballo: si chiude, e lo dice', () => {
@@ -455,11 +805,19 @@ describe('schede per stato: cosa si mostra', () => {
 // conto pagato in anticipo che NON deve sparire prima di essere
 // consegnato, e il conto di una cassa già chiusa che in coda non ci deve
 // tornare.
-import { corsieDiStato, daQuanto, ordiniInCoda } from '../../src/lib/coda.js'
+import { azioneCorsia, corsieDiStato, daQuanto, ordiniInCoda } from '../../src/lib/coda.js'
+import { ORDER_OPEN } from '../../src/lib/comande.js'
 import { contoChiuso } from '../../src/lib/comande.js'
 
-describe('le corsie di stato', () => {
-  const chiusoConStati = (o) => contoChiuso(o, { workflowOn: true })
+describe('le corsie dei conti', () => {
+  // TRE COLONNE, non quattro. C'era anche un ramo con i quattro passi del
+  // servizio (da fare → in preparazione → pronto → da incassare) e non lo
+  // chiamava più nessuno: l'unico chiamante passava `workflowOn: false`.
+  // A tenerlo in vita erano soltanto i test qui sotto — e i test sono la
+  // specifica: chi leggeva ««Da incassare» sono i consegnati non saldati»
+  // credeva che quella colonna esistesse davvero. I passi del servizio si
+  // guardano dalla vista del BANCO, che ragiona per comande.
+  const senzaStati = (o) => contoChiuso(o, { workflowOn: false })
   const conto = (patch) => ({
     payment_status: 'non_richiesto',
     total: 10,
@@ -473,77 +831,47 @@ describe('le corsie di stato', () => {
     conto({ id: 'd', workflow_status: 'pronto', total: 15 }),
     conto({ id: 'e', workflow_status: 'ritirato', total: 30 }),
     conto({ id: 'f', workflow_status: 'annullato', total: 99 }),
-    // pagato E consegnato: non ha più niente da fare, esce dalla coda
+    // pagato E consegnato: il conto è chiuso
     conto({ id: 'g', workflow_status: 'ritirato', payment_status: 'pagato', total: 40 }),
   ]
+  const corsie = () => corsieDiStato(coda, { isChiuso: senzaStati })
+  const trova = (id) => corsie().find((c) => c.id === id)
 
-  it('sono quattro, in ordine di lavoro, coi conti nella corsia giusta', () => {
-    const corsie = corsieDiStato(coda, { isChiuso: chiusoConStati })
-    expect(corsie.map((c) => [c.id, c.titolo, c.stato])).toEqual([
-      ['da-fare', 'Da fare', 'ricevuto'],
-      ['al-banco', 'In preparazione', 'in_preparazione'],
-      ['al-ritiro', 'Ritiro/Servizio', 'pronto'],
-      ['da-incassare', 'Da incassare', 'ritirato'],
+  it('sono le tre cose che un conto può essere, con le voci della griglia', () => {
+    expect(corsie().map((c) => [c.id, c.titolo])).toEqual([
+      ['attivi', 'In corso'],
+      ['chiusi', '💶 Chiusi'],
+      ['annullati', '✖️ Annullati'],
     ])
-    expect(corsie.map((c) => c.ordini.map((o) => o.id))).toEqual([
-      ['a', 'b'],
-      ['c'],
-      ['d'],
-      ['e'],
-    ])
+    // Le stesse etichette delle schede: due viste non devono raccontare
+    // due storie diverse sugli stessi conti.
+    expect(corsie().map((c) => c.titolo)).toEqual(schedeCoda(false).map(([, t]) => t))
+  })
+
+  it('ogni conto nella sua colonna', () => {
+    expect(trova('attivi').ordini.map((o) => o.id)).toEqual(['a', 'b', 'c', 'd', 'e'])
+    expect(trova('chiusi').ordini.map((o) => o.id)).toEqual(['g'])
+    expect(trova('annullati').ordini.map((o) => o.id)).toEqual(['f'])
   })
 
   it('conteggi e totali sono quelli dei conti che si vedono', () => {
-    const corsie = corsieDiStato(coda, { isChiuso: chiusoConStati })
-    expect(corsie.map((c) => c.ordini.length)).toEqual([2, 1, 1, 1])
-    expect(corsie.map((c) => c.totale)).toEqual([20, 20, 15, 30])
+    expect(corsie().map((c) => c.ordini.length)).toEqual([5, 1, 1])
+    // 12 + 8 + 20 + 15 + 30
+    expect(trova('attivi').totale).toBe(85)
+    expect(trova('chiusi').totale).toBe(40)
   })
 
   it('lo sconto è già tolto dal totale della corsia: è quello che si incassa', () => {
-    const [daFare] = corsieDiStato(
+    const [attivi] = corsieDiStato(
       [conto({ id: 'x', workflow_status: 'ricevuto', total: 30, discount_amount: 5 })],
-      { isChiuso: chiusoConStati }
+      { isChiuso: senzaStati }
     )
-    expect(daFare.totale).toBe(25)
-  })
-
-  it('un conto annullato non sta in nessuna corsia', () => {
-    const corsie = corsieDiStato(coda, { isChiuso: chiusoConStati })
-    expect(corsie.flatMap((c) => c.ordini).some((o) => o.id === 'f')).toBe(false)
-  })
-
-  it('PAGATO MA NON CONSEGNATO: resta al ritiro, col suo bollo', () => {
-    // Pagare in anticipo è normale; farlo sparire vorrebbe dire
-    // dimenticarsi di consegnare il drink.
-    const pagatoDaServire = conto({
-      id: 'p',
-      workflow_status: 'pronto',
-      payment_status: 'pagato',
-      total: 18,
-    })
-    const corsie = corsieDiStato([...coda, pagatoDaServire], { isChiuso: chiusoConStati })
-    const alRitiro = corsie.find((c) => c.id === 'al-ritiro')
-    expect(alRitiro.ordini.map((o) => o.id)).toEqual(['d', 'p'])
-    expect(alRitiro.ordini.find((o) => o.id === 'p').pagatoDaServire).toBe(true)
-    expect(alRitiro.totale).toBe(33)
-    // e non finisce fra quelli da incassare: non c'è più niente da chiedere
-    expect(corsie.find((c) => c.id === 'da-incassare').ordini.some((o) => o.id === 'p')).toBe(
-      false
-    )
-  })
-
-  it('«Da incassare» sono i consegnati non saldati, e basta', () => {
-    const corsie = corsieDiStato(coda, { isChiuso: chiusoConStati })
-    const daIncassare = corsie.find((c) => c.id === 'da-incassare')
-    expect(daIncassare.ordini.map((o) => o.id)).toEqual(['e'])
-    expect(daIncassare.totale).toBe(30)
+    expect(attivi.totale).toBe(25)
   })
 
   it('un conto di una cassa già chiusa in corsia non ci torna', () => {
     // La regola è quella di sempre (ordiniInCoda): le corsie si riempiono
     // con la lista che la coda mostra, non con tutto quello che c'è.
-    const cassa = 'cassa-2'
-    const apertaDa = '2026-08-16T18:00:00.000Z'
     const vecchioIncassato = conto({
       id: 'vecchio',
       workflow_status: 'ritirato',
@@ -554,47 +882,43 @@ describe('le corsie di stato', () => {
     })
     const inCoda = ordiniInCoda([...coda, vecchioIncassato], {
       filtro: 'tutti',
-      isChiuso: chiusoConStati,
-      cassa,
-      apertaDa,
+      isChiuso: senzaStati,
+      cassa: 'cassa-2',
+      apertaDa: '2026-08-16T18:00:00.000Z',
     })
-    const corsie = corsieDiStato(inCoda, { isChiuso: chiusoConStati })
-    expect(corsie.flatMap((c) => c.ordini).some((o) => o.id === 'vecchio')).toBe(false)
-  })
-
-  it('senza stati di servizio le corsie diventano tre: in corso, chiusi, annullati', () => {
-    // I quattro passi non esistono: quattro colonne quasi vuote non sono
-    // una vista. Restano le tre cose che un conto può essere, con le
-    // etichette e le regole già usate dalla griglia e dalle schede.
-    const senzaStati = (o) => contoChiuso(o, { workflowOn: false })
-    const corsie = corsieDiStato(coda, { isChiuso: senzaStati, workflowOn: false })
-    expect(corsie.map((c) => [c.id, c.titolo])).toEqual([
-      ['attivi', 'In corso'],
-      ['chiusi', '💶 Chiusi'],
-      ['annullati', '✖️ Annullati'],
-    ])
-    expect(corsie.map((c) => c.titolo)).toEqual(schedeCoda(false).map(([, t]) => t))
-    expect(corsie.find((c) => c.id === 'chiusi').ordini.map((o) => o.id)).toEqual(['g'])
-    expect(corsie.find((c) => c.id === 'annullati').ordini.map((o) => o.id)).toEqual(['f'])
-    // in corso: tutto quello che non è né chiuso né annullato
-    expect(corsie.find((c) => c.id === 'attivi').ordini.map((o) => o.id)).toEqual([
-      'a',
-      'b',
-      'c',
-      'd',
-      'e',
-    ])
-  })
-
-  it('con gli stati accesi restano quattro', () => {
-    expect(corsieDiStato(coda, { isChiuso: chiusoConStati }).length).toBe(4)
-    expect(corsieDiStato(coda, { isChiuso: chiusoConStati, workflowOn: true }).length).toBe(4)
+    const dopo = corsieDiStato(inCoda, { isChiuso: senzaStati })
+    expect(dopo.flatMap((c) => c.ordini).some((o) => o.id === 'vecchio')).toBe(false)
   })
 
   it('coda vuota: le corsie ci sono lo stesso, a zero', () => {
-    const corsie = corsieDiStato([])
-    expect(corsie.length).toBe(4)
-    expect(corsie.every((c) => c.ordini.length === 0 && c.totale === 0)).toBe(true)
+    // Tre colonne vuote dicono «non c'è niente»; nessuna colonna dice
+    // «qualcosa non ha funzionato».
+    const vuote = corsieDiStato([])
+    expect(vuote.length).toBe(3)
+    expect(vuote.every((c) => c.ordini.length === 0 && c.totale === 0)).toBe(true)
+  })
+})
+
+// IL TASTO DELLA CARD SEGUE LO STATO, NON L'ID DELLA COLONNA.
+// Prima era una mappa per id di corsia, ed è esattamente da lì che è nato
+// BUG-026 nella vista delle comande: dividendo una colonna nascevano id
+// nuovi che nella mappa non c'erano, e la card restava senza tasto. Una
+// funzione che spariva a seconda di come uno guardava la coda.
+describe('cosa fa il tasto di una card di conto', () => {
+  it('su un conto in corso si incassa, come sulla griglia', () => {
+    expect(azioneCorsia(ORDER_OPEN)).toEqual({ etichetta: 'Incassa', tipo: 'incassa' })
+  })
+
+  it('su uno chiuso o annullato non c’è più niente da chiedere', () => {
+    expect(azioneCorsia('pagato')).toBe(null)
+    expect(azioneCorsia('annullato')).toBe(null)
+  })
+
+  it('e una colonna che cambia nome non si porta via il tasto', () => {
+    // È la lezione di BUG-026: il tasto sta sullo stato, e rinominare o
+    // dividere una colonna non lo fa sparire.
+    const [attivi] = corsieDiStato([], { isChiuso: () => false })
+    expect(azioneCorsia(attivi.stato)).toEqual({ etichetta: 'Incassa', tipo: 'incassa' })
   })
 })
 
@@ -629,7 +953,7 @@ describe('da quanto è lì', () => {
 // conti restavano in mezzo a quelli in corso, con un tasto «nascondi
 // pagati» per toglierseli dagli occhi. Adesso stanno fra i chiusi, e
 // «quali hanno ancora roba da portare» si chiede qui dentro.
-import { passaSottofiltroChiusi, SOTTOFILTRI_CHIUSI } from '../../src/lib/coda.js'
+import { passaSottofiltroChiusi } from '../../src/lib/coda.js'
 
 describe('dentro i conti chiusi: serviti e da servire', () => {
   const con = (comande, patch = {}) => ({ status: 'pagato', payment_status: 'pagato', comande, ...patch })
@@ -639,8 +963,16 @@ describe('dentro i conti chiusi: serviti e da servire', () => {
     { id: 'c2', status: 'in_preparazione' },
   ])
 
-  it('le tre voci sono quelle, in quest’ordine', () => {
-    expect(SOTTOFILTRI_CHIUSI.map(([k]) => k)).toEqual(['tutti', 'serviti', 'non-serviti'])
+  // ERANO TRE, E LA TERZA ERA IL NEUTRO. «Tutti» stava acceso quasi
+  // sempre e diceva «nessun filtro» sembrando un filtro. Il neutro adesso
+  // è nessuna delle due porzioni accesa — e da quando le due si sono fuse
+  // col chip «Chiusi» in un tasto solo (sottofiltriChiusi, provata più
+  // sopra) quel neutro è proprio il tasto chiuso su sé stesso.
+
+  it('toccare la porzione accesa la spegne, toccare l\'altra cambia domanda', () => {
+    expect(cambiaSottoChiusi('tutti', 'serviti')).toBe('serviti')
+    expect(cambiaSottoChiusi('serviti', 'serviti')).toBe('tutti')
+    expect(cambiaSottoChiusi('serviti', 'non-serviti')).toBe('non-serviti')
   })
 
   it('«tutti» non toglie niente', () => {
@@ -712,6 +1044,7 @@ import {
   corsieVisibili,
   corsieDaMostrare,
   corsieSceglibili,
+  statoDelRilascio,
   CORSIE_SPENTE_ALL_INIZIO,
 } from '../../src/lib/coda.js'
 
@@ -745,19 +1078,31 @@ describe('le corsie delle comande', () => {
     // Le quattro del lavoro, più le due dello sguardo all'indietro: gli
     // stati del servizio sono SOTTOSTATI dell'ordine, e chiusi e annullati
     // sono stati dell'ordine — le comande ci finiscono dentro anche qui.
+    // I NOMI DELLE DUE COLONNE DEL SERVIZIO SEGUONO IL RITIRO: «anche la
+    // label sopra la lane, non deve essere Pronto ma Da servire/Ritirare
+    // [...] se il ritiro non è attivo diventano solo Da servire e
+    // Serviti» (l'utente, 20/08/2026). Sono le stesse parole delle due
+    // porzioni del tasto dei chiusi in griglia — una colonna e un filtro
+    // che parlano della stessa cosa devono chiamarsi allo stesso modo.
     expect(corsie.map((c) => [c.id, c.titolo])).toEqual([
       ['da-fare', 'Da fare'],
       ['al-banco', 'In preparazione'],
-      ['al-ritiro', 'Ritiro/Servizio'],
+      ['al-ritiro', 'Da servire/Ritirare'],
       // Il lavoro finito ha una colonna sua, che nella vista dei conti non
       // c'è: lì un conto servito è solo roba da incassare. E qui NON c'è
       // una colonna «Da incassare»: conteneva gli stessi drink di questa,
       // solo raggruppati per conto invece che per ticket.
-      ['ritirati', 'Ritirato/Servito'],
+      ['ritirati', 'Serviti/Ritirati'],
       // Al femminile: qui dentro non ci sono conti, ci sono comande.
       ['chiusi', '💶 Chiuse'],
       ['annullati', '✖️ Annullate'],
     ])
+    // Col solo servizio la metà che non esiste sparisce dai titoli.
+    expect(
+      corsieComande(coda, { isChiuso: chiusoConStati, ritiroEsiste: false })
+        .filter((c) => ['al-ritiro', 'ritirati'].includes(c.id))
+        .map((c) => c.titolo)
+    ).toEqual(['Da servire', 'Serviti'])
     const dove = Object.fromEntries(corsie.map((c) => [c.id, c.schede.map((s) => s.id)]))
     expect(dove['da-fare']).toEqual(['o41:c2'])
     expect(dove['al-banco']).toEqual(['o42:c1'])
@@ -1142,5 +1487,387 @@ describe('il tasto di una card di comanda', () => {
     // Nella colonna dei soldi la card è il conto intero: lì non c'è un
     // ticket da far avanzare.
     expect(azioneComanda(null, conto())).toMatchObject({ tipo: 'incassa' })
+  })
+
+  // LA SALA SERVE, NON PREPARA. Guarda le corsie per sapere cosa portare,
+  // ma non prende in carico e non segna pronto: quei tasti non le compaiono
+  // nemmeno. Le resta l'ultimo passo — «servito» — che è il suo mestiere.
+  it('alla sala il tasto compare solo sull’ultimo passo', () => {
+    const sala = { ruolo: 'staff' }
+    expect(azioneComanda(com('ricevuto'), conto(), sala)).toBeNull()
+    expect(azioneComanda(com('in_preparazione'), conto(), sala)).toBeNull()
+    expect(azioneComanda(com('pronto'), conto({ service_mode: 'tavolo' }), sala)).toMatchObject({
+      tipo: 'avanza',
+    })
+    // E il conto che ha appena servito lo incassa: quello non è lavoro del
+    // banco, sono soldi.
+    expect(azioneComanda(com('ritirato'), conto(), sala)).toMatchObject({ tipo: 'incassa' })
+  })
+
+  it('al banco non cambia niente', () => {
+    for (const ruolo of ['admin', 'bartender']) {
+      expect(azioneComanda(com('ricevuto'), conto(), { ruolo })).toMatchObject({ tipo: 'avanza' })
+    }
+  })
+})
+
+// ── NON SI PREPARA QUELLO CHE NON È STATO PAGATO (BUG-027) ───────────
+//
+// Il blocco valeva finché il conto stava a «ricevuto», scritto a mano. In un
+// locale che fa nascere le comande già «in preparazione» quel confronto non
+// era mai vero: il blocco non scattava e si preparava un ordine con
+// pagamento obbligatorio non pagato. Nessun test lo vedeva, perché giravano
+// tutti col passo di nascita di default.
+import { attesaPagamento } from '../../src/lib/coda.js'
+
+describe('il blocco del pagamento obbligatorio', () => {
+  const conto = (patch = {}) => ({
+    payment_required: true,
+    payment_status: 'in_attesa',
+    workflow_status: 'ricevuto',
+    ...patch,
+  })
+
+  it('blocca finché la comanda non è stata presa in carico', () => {
+    expect(attesaPagamento(conto())).toBe(true)
+    // preso in carico: il drink lo sta già facendo qualcuno, e toglierglielo
+    // di sotto sarebbe peggio che aspettare i soldi.
+    expect(attesaPagamento(conto({ workflow_status: 'in_preparazione' }))).toBe(false)
+  })
+
+  it('col salto acceso il passo di nascita è un altro, e il blocco scatta lì', () => {
+    // È il difetto: qui il conto NASCE in preparazione, e prima il blocco
+    // non scattava mai.
+    expect(attesaPagamento(conto({ workflow_status: 'in_preparazione' }), 'in_preparazione')).toBe(
+      true
+    )
+    expect(attesaPagamento(conto({ workflow_status: 'pronto' }), 'in_preparazione')).toBe(false)
+  })
+
+  it('senza pagamento obbligatorio non blocca niente', () => {
+    expect(attesaPagamento(conto({ payment_required: false }))).toBe(false)
+    expect(attesaPagamento(conto({ payment_status: 'pagato' }))).toBe(false)
+  })
+})
+
+// ── LA MEMORIA DELLE COLONNE SPENTE (BUG-058) ────────────────────────
+//
+// Il terminale ricorda quali colonne ha spento, e quella memoria è
+// sopravvissuta a più rimaneggiamenti delle corsie: un id morto restava lì
+// e teneva acceso il badge dei filtri per una colonna che nell'elenco non
+// c'era nemmeno più, quindi non c'era niente da riaccendere per spegnerlo.
+import { soloCorsieVive } from '../../src/lib/coda.js'
+
+describe('le colonne spente a mano', () => {
+  it('la memoria del terminale si ripulisce dagli id che non esistono più', () => {
+    expect(soloCorsieVive(['chiusi', 'inventata', 'al-ritiro-banco', 'annullati'])).toEqual([
+      'chiusi',
+      'al-ritiro-banco',
+      'annullati',
+    ])
+    expect(soloCorsieVive(null)).toEqual([])
+  })
+
+  it('ma le colonne del pronto diviso restano: sono spente solo per ora', () => {
+    // Spegnere «Da ritirare» e poi riunire il pronto non è dimenticarsene:
+    // ridividendolo la scelta dev'essere ancora lì.
+    expect(soloCorsieVive(['al-ritiro-banco'])).toEqual(['al-ritiro-banco'])
+  })
+})
+
+// ── L'INTESTAZIONE DI UNA GIORNATA IN CODA (BUG-059) ─────────────────
+//
+// La riga che separa i giorni scorsi diceva «Da chiudere» in ogni scheda.
+// Fra i CHIUSI è una bugia — quei conti sono pagati e chiusi — e chi legge
+// va a cercare cosa manca. L'etichetta dipende dalla scheda; nella scheda
+// «Tutti», dove i conti sono mescolati, non si può dire altro che la data.
+import { intestazioneGiornata } from '../../src/lib/coda.js'
+
+describe('la riga che separa le giornate in coda', () => {
+  it('dice cosa sono i conti di quel giorno, scheda per scheda', () => {
+    expect(intestazioneGiornata('attivi', 'ieri')).toBe('⏳ Da chiudere · ieri')
+    expect(intestazioneGiornata('chiusi', 'ieri')).toBe('💶 Chiusi · ieri')
+    expect(intestazioneGiornata('annullati', 'ieri')).toBe('✖️ Annullati · ieri')
+  })
+
+  it('nella scheda «Tutti» resta la sola data: lì i conti sono mescolati', () => {
+    expect(intestazioneGiornata('tutti', 'sabato 15 agosto')).toBe('📅 sabato 15 agosto')
+  })
+})
+
+// ── LA GIORNATA DI UN CONTO, E «Invalid Date» (BUG-060) ──────────────
+//
+// La data di un conto c'è sempre: la scrive il client alla nascita
+// (`order_date`). Ma un documento può arrivare monco, e allora si ripiega
+// su tutte le altre date locali che quel conto si porta dietro — non su un
+// segnaposto. Il trattino «—» del vecchio raggruppamento finiva dritto nel
+// formattatore delle date e in cima al gruppo si leggeva «Invalid Date».
+import { giornataDelConto, raggruppaPerGiornata } from '../../src/lib/coda.js'
+import { businessDayLabel } from '../../src/lib/businessDay.js'
+
+describe('la giornata di un conto', () => {
+  const CUT = 6
+
+  it('la dice `order_date`, che il client scrive alla nascita', () => {
+    expect(giornataDelConto({ order_date: '2026-08-15' }, CUT)).toBe('2026-08-15')
+  })
+
+  it('senza `order_date` ripiega sull’orario del server', () => {
+    expect(giornataDelConto({ created_at: '2026-08-15T23:30:00.000Z' }, CUT)).toBe('2026-08-15')
+  })
+
+  it('e se il server non ha ancora risposto, sull’apertura scritta dal client', () => {
+    // `created_at` è un serverTimestamp: finché la scrittura è per strada
+    // vale null. L'apertura invece è un ISO dell'orologio di qui, e c'è dal
+    // primo istante — è la data che il conto ha davvero.
+    expect(
+      giornataDelConto(
+        { created_at: null, tempi_conto: { aperto: '2026-08-15T22:00:00.000Z' } },
+        CUT
+      )
+    ).toBe('2026-08-15')
+  })
+
+  it('come ultima spiaggia guarda la nascita della prima comanda', () => {
+    expect(
+      giornataDelConto({ comande: [{ id: 'c1', created_at: '2026-08-15T22:00:00.000Z' }] }, CUT)
+    ).toBe('2026-08-15')
+  })
+
+  it('e la nottata oltre la mezzanotte resta la giornata di prima', () => {
+    // Taglio alle 6: le 2 di notte appartengono ancora alla sera prima.
+    expect(giornataDelConto({ created_at: '2026-08-16T00:30:00.000Z' }, CUT)).toBe('2026-08-15')
+  })
+
+  it('se davvero non c’è niente da leggere, non inventa una data', () => {
+    expect(giornataDelConto({ id: 'monco' }, CUT)).toBe(null)
+    expect(giornataDelConto(null, CUT)).toBe(null)
+  })
+})
+
+describe('i conti raggruppati per giornata', () => {
+  const OGGI = '2026-08-16'
+  const gruppi = (lista) =>
+    raggruppaPerGiornata(lista, { giornataDi: (o) => o.giornata, oggi: OGGI })
+
+  it('mette oggi in cima e i giorni scorsi dal più recente', () => {
+    expect(
+      gruppi([
+        { id: 'a', giornata: '2026-08-14' },
+        { id: 'b', giornata: OGGI },
+        { id: 'c', giornata: '2026-08-15' },
+      ]).map((g) => g.day)
+    ).toEqual([OGGI, '2026-08-15', '2026-08-14'])
+  })
+
+  it('un conto senza data va sotto OGGI, non in un gruppo «—»', () => {
+    // ERA IL DIFETTO: la chiave del gruppo è la stessa cosa che poi va al
+    // formattatore, e `new Date('—T00:00:00')` non è una data.
+    const g = gruppi([{ id: 'monco', giornata: null }, { id: 'ok', giornata: OGGI }])
+    expect(g.map((x) => x.day)).toEqual([OGGI])
+    expect(g[0].orders.map((o) => o.id)).toEqual(['monco', 'ok'])
+  })
+
+  it('e nessuna chiave di gruppo si stampa «Invalid Date»', () => {
+    const oggi = new Date(`${OGGI}T12:00:00Z`)
+    for (const { day } of gruppi([{ id: 'monco', giornata: null }, { id: 'v', giornata: '2026-08-14' }])) {
+      expect(businessDayLabel(day, oggi, 6)).not.toMatch(/Invalid/)
+    }
+  })
+})
+
+
+// ── TRASCINANDO UNA COMANDA DA UNA COLONNA ALL'ALTRA ─────────────
+//
+// «Le comande nella vista a lane possono essere trascinate da una colonna
+// all'altra per cambiare stato [...] posso spostarla in QUALSIASI lane»
+// (l'utente, 20/08), e la precisazione che dice cos'è: «non è che DEVONO
+// — come modo ALTERNATIVO per cambiare stato». I tasti restano.
+//
+// Qui si prova SOLO dove finisce la comanda: a scriverlo è la strada di
+// sempre (avanzaComanda → advanceComanda), col magazzino e l'ottimismo
+// locale che già ci stanno dentro. Un trascinamento con regole sue sarebbe
+// una seconda verità sugli stati.
+describe('dove finisce una comanda lasciata in un\'altra colonna', () => {
+  const scheda = (status) => ({ comanda: { id: 'c1', status } })
+  const corsia = (id, stato) => ({ id, stato })
+  const DA_FARE = corsia('da-fare', 'ricevuto')
+  const AL_BANCO = corsia('al-banco', 'in_preparazione')
+  const PRONTO = corsia('al-ritiro', 'pronto')
+  const SERVITO = corsia('ritirati', 'ritirato')
+
+  it('nella colonna del passo, in avanti', () => {
+    expect(statoDelRilascio(scheda('ricevuto'), AL_BANCO)).toBe('in_preparazione')
+    expect(statoDelRilascio(scheda('in_preparazione'), PRONTO)).toBe('pronto')
+    expect(statoDelRilascio(scheda('pronto'), SERVITO)).toBe('ritirato')
+  })
+
+  it('e ANCHE ALL\'INDIETRO, che è metà del motivo per cui serve', () => {
+    // Si segna «pronto» il ticket sbagliato: lo si riporta indietro col
+    // dito, invece di aprire il ⋯ e cercare la voce.
+    expect(statoDelRilascio(scheda('pronto'), DA_FARE)).toBe('ricevuto')
+    expect(statoDelRilascio(scheda('ritirato'), AL_BANCO)).toBe('in_preparazione')
+  })
+
+  it('salta anche i passi di mezzo: dalla prima colonna all\'ultima', () => {
+    expect(statoDelRilascio(scheda('ricevuto'), SERVITO)).toBe('ritirato')
+  })
+
+  it('rilasciata dov\'era già: niente da scrivere', () => {
+    expect(statoDelRilascio(scheda('pronto'), PRONTO)).toBe(null)
+  })
+
+  // LE DUE COLONNE DELLO SGUARDO ALL'INDIETRO NON SONO PASSI DEL LAVORO.
+  it('«Chiuse» e «Annullate» non accettano niente', () => {
+    // «Chiuse» è servita + conto pagato: lasciarci cadere una comanda
+    // vorrebbe dire incassare un conto con un dito.
+    expect(statoDelRilascio(scheda('pronto'), corsia('chiusi', null))).toBe(null)
+    // «Annullate» sarebbe un annullo, ed è la cosa giusta — ma la strada
+    // per annullare UNA comanda, coi drink che restano sul conto, non c'è
+    // ancora (REQ-ORD-021). Finché non c'è, la colonna rifiuta invece di
+    // far sparire un ticket senza dire dove sono finiti i suoi drink.
+    expect(statoDelRilascio(scheda('pronto'), corsia('annullati', null))).toBe(null)
+  })
+
+  it('una comanda annullata non si rianima trascinandola', () => {
+    expect(statoDelRilascio(scheda('annullato'), AL_BANCO)).toBe(null)
+  })
+
+  it('la card di un CONTO (la colonna dei soldi) non è una comanda', () => {
+    expect(statoDelRilascio({ comanda: null }, AL_BANCO)).toBe(null)
+    expect(statoDelRilascio(null, AL_BANCO)).toBe(null)
+    expect(statoDelRilascio(scheda('pronto'), null)).toBe(null)
+  })
+
+  // LA SALA SERVE, NON PREPARA: lo stesso metro del tasto (azioneComanda),
+  // o trascinare sarebbe la scorciatoia per aggirare i ruoli.
+  it('alla sala resta l\'ultimo passo, come sul tasto', () => {
+    expect(statoDelRilascio(scheda('pronto'), SERVITO, { ruolo: 'staff' })).toBe('ritirato')
+    expect(statoDelRilascio(scheda('ricevuto'), AL_BANCO, { ruolo: 'staff' })).toBe(null)
+    // Al banco non si toglie niente.
+    expect(statoDelRilascio(scheda('ricevuto'), AL_BANCO, { ruolo: 'bartender' })).toBe(
+      'in_preparazione'
+    )
+  })
+})
+
+// ── IL TASTO «COLONNE» SI ACCENDE SOLO SE TI DISCOSTI DAL NORMALE ────
+//
+// Due corsie nascono spente di serie: contare le spente teneva il tasto
+// arancione su ogni terminale nuovo, per sempre — «continua ad essere
+// sempre attivo» (l'utente, 20/08, dopo il primo giro di BUG-058). Si
+// conta la differenza dal normale, nei due versi.
+describe('corsieDiverseDalNormale', () => {
+  const sceglibili = [
+    { id: 'da-fare', titolo: 'Da fare' },
+    { id: 'al-banco', titolo: 'Al banco' },
+    { id: 'chiusi', titolo: 'Chiusi' },
+    { id: 'annullati', titolo: 'Annullati' },
+  ]
+
+  it('terminale mai toccato: nessuna differenza, tasto spento', () => {
+    expect(corsieDiverseDalNormale(sceglibili, ['chiusi', 'annullati'])).toHaveLength(0)
+  })
+
+  it('nascondo una corsia di serie accesa: una differenza', () => {
+    const d = corsieDiverseDalNormale(sceglibili, ['chiusi', 'annullati', 'da-fare'])
+    expect(d.map((c) => c.id)).toEqual(['da-fare'])
+  })
+
+  it('riaccendo una corsia di serie spenta: anche quella è una differenza', () => {
+    const d = corsieDiverseDalNormale(sceglibili, ['annullati'])
+    expect(d.map((c) => c.id)).toEqual(['chiusi'])
+  })
+
+  it('una memoria su una corsia che oggi non è in elenco non accende niente', () => {
+    const senzaChiusi = sceglibili.filter((c) => c.id !== 'da-fare')
+    expect(corsieDiverseDalNormale(senzaChiusi, ['chiusi', 'annullati', 'da-fare'])).toHaveLength(0)
+  })
+})
+
+// ── IL TASTO DEI FILTRI, CHIUSO, DEVE DIRE COS'È ACCESO (REQ-CODA-008) ─
+//
+// I filtri sono andati a scomparsa perché sette pastiglie si mangiavano la
+// riga («li voglio a scomparsa, con un tasto che non occupi troppo
+// spazio», l'utente 20/08). Ma un filtro acceso e INVISIBILE è una coda
+// che sembra sbagliata: si guardano dodici conti dove ce ne sono quaranta
+// e non c'è niente a schermo che lo dica. Quindi il tasto se lo porta
+// scritto.
+// QUANTI FILTRI SONO ACCESI. Prima il tasto ne SCRIVEVA uno («⚗️ Chiusi»)
+// ed era una pastiglia larga in una riga che, chiusa, esisteva solo per
+// lei: «quando dicevo di nascondere i tasti intendevo tutti e non
+// aggiungere un nuovo tasto» (l'utente, 20/08). Adesso è un tastino in
+// testata, e lì ci sta una cifra — quali siano lo dice il title.
+//
+// LA CIFRA NON HA PIÙ UNA FUNZIONE SUA. C'era una `contaFiltri` che
+// ripuliva l'elenco dai buchi e lo contava, e i suoi tre casi stavano qui:
+// ma chi la chiamava l'elenco pulito ce l'aveva già in mano — lo compone
+// con dei `&&` e lo passa a `spiegaFiltri` — e contarlo è `.length`. Che il
+// badge segni il numero giusto, e resti spento con la coda com'è di suo, lo
+// prova il component test della coda (tests/component/CodaCorsie.test.jsx).
+
+// IL NOME È QUELLO CHE IL TASTO FA. «"Filtra la coda" non va bene, deve
+// essere "mostra filtri"» (l'utente, 20/08): il tasto apre e chiude un
+// pannello, non filtra — a filtrare sono i chip che compaiono, uno per uno.
+describe('spiegaFiltri', () => {
+  it('aperta, dice come si richiude', () => {
+    expect(spiegaFiltri(['Chiusi'], true)).toBe('Nascondi filtri')
+  })
+
+  it('chiusa e pulita, dice il gesto che fa: mostrare i filtri', () => {
+    expect(spiegaFiltri([], false)).toBe('Mostra filtri')
+    expect(spiegaFiltri()).toBe('Mostra filtri')
+  })
+
+  // ARRIVA GIÀ PULITO: l'elenco lo compone il chiamante con dei `&&` e lo
+  // ripulisce una volta. Rifiltrarlo qui dentro era la seconda passata
+  // sulla stessa lista, e faceva credere che i due posti potessero non
+  // essere d'accordo su cosa sia «acceso».
+
+  // PER ESTESO STANNO QUI, che il title larghezza non ne costa — ma DOPO il
+  // nome del tasto, che resta la prima cosa che si legge.
+  it('chiusa con roba accesa, li elenca tutti dopo il nome', () => {
+    const t = spiegaFiltri(['Chiusi', 'Miei'], false)
+    expect(t.startsWith('Mostra filtri')).toBe(true)
+    expect(t).toContain('Chiusi, Miei')
+  })
+})
+
+// ── IL VERSO DELLA CODA: STATO, NON PROMESSA ────────────────────────
+//
+// «Questo testo è completamente insensato [«Adesso: prima gli ultimi —
+// tocca per partire dai primi»]. Cioè basta scrivere Prima i più
+// recenti/vecchi in base all'ordinamento attuale. E cambia anche l'icona
+// (freccia giù freccia sopra)» (l'utente, 20/08).
+//
+// QUI il tasto dice DOVE SEI, ed è voluto: un ordinamento si legge dalla
+// coda stessa, e quello che manca è il nome di com'è messa. La regola
+// opposta di docs/navigazione.md vale per il CAMBIO VISTA, dove le due
+// facce non si distinguono senza guardare la lista sotto.
+describe('spiegaOrdine', () => {
+  it('dal più recente: lo dice, e la freccia scende verso i vecchi', () => {
+    expect(spiegaOrdine(true)).toEqual({ nome: 'Prima i più recenti', icona: '↓' })
+  })
+
+  it('dal più vecchio: lo dice, e la freccia sale verso gli ultimi arrivati', () => {
+    expect(spiegaOrdine(false)).toEqual({ nome: 'Prima i più vecchi', icona: '↑' })
+  })
+
+  // NIENTE «ADESSO:» E NIENTE «TOCCA PER…»: erano due frasi in una, e al
+  // banco non se ne leggeva nessuna.
+  it('è una frase sola, senza premesse e senza promesse', () => {
+    for (const desc of [true, false]) {
+      const { nome } = spiegaOrdine(desc)
+      expect(nome).not.toMatch(/Adesso|tocca per|—/i)
+    }
+  })
+
+  // L'ICONA CAMBIA COL VERSO. Il «↕» di prima era identico nei due stati:
+  // diceva «qui si ordina», non come.
+  it('le due icone sono diverse, e nessuna delle due è il «↕»', () => {
+    const giu = spiegaOrdine(true).icona
+    const su = spiegaOrdine(false).icona
+    expect(giu).not.toBe(su)
+    expect([giu, su]).not.toContain('↕')
   })
 })

@@ -11,6 +11,7 @@ import PosPage from './pages/PosPage.jsx'
 import { useCustomer, useHasOrders } from './lib/customerAuth.js'
 import { isFirebaseConfigured, auth } from './lib/firebaseClient.js'
 import { isPersonale, isSala } from './lib/ruoli.js'
+import { ricordaRuolo } from './lib/ruoloLocale.js'
 import { onAuthStateChanged } from 'firebase/auth'
 import {
   subscribeSettings,
@@ -23,6 +24,7 @@ import { getPushToken } from './lib/push.js'
 import { idDispositivo } from './lib/dispositivo.js'
 import { savePrinterSettings, impostaUtenteStampante } from './lib/printer.js'
 import AvvisiSpenti from './components/AvvisiSpenti.jsx'
+import ChiamataInArrivo from './components/ChiamataInArrivo.jsx'
 import { dismissKeyboard } from './lib/keyboard.js'
 import StatusBell from './components/StatusBell.jsx'
 import ActionSheet from './components/ActionSheet.jsx'
@@ -199,6 +201,10 @@ export default function App() {
       try {
         const token = await u.getIdTokenResult()
         const role = token.claims.role
+        // Si ricorda su questo dispositivo: chi deve disegnare in fretta
+        // (la schermata di una comanda) parte da qui invece di rileggere il
+        // token, che a token scaduto vuol dire andare in rete.
+        ricordaRuolo(u.uid, role)
         const isStaff = isPersonale(role)
         setStaffRole(isStaff ? role : null)
         const nome = u.displayName || String(u.email || '').split('@')[0]
@@ -212,7 +218,7 @@ export default function App() {
         if (isStaff) {
           getPushToken()
             .then((token) => {
-              if (token) saveStaffToken(u.uid, token, role, idDispositivo()).catch(() => {})
+              if (token) saveStaffToken(u.uid, token, idDispositivo()).catch(() => {})
             })
             .catch(() => {})
         }
@@ -574,6 +580,13 @@ export default function App() {
           l'unico modo perché chi ha scartato la finestrella del browser lo
           scopra prima di perdere un ordine. */}
       <AvvisiSpenti ruolo={staffRole} />
+
+      {/* E LA CHIAMATA DAL BANCONE ARRIVA DOVUNQUE. Stava dentro la sola
+          sezione «Da servire»: chi la riceveva con l'app chiusa riapriva
+          il telefono sulla coda e non trovava niente (BUG-037). Sta qui
+          perche' un cerca-persone che si vede solo in una schermata non e'
+          un cerca-persone. */}
+      <ChiamataInArrivo ruolo={staffRole} />
 
       <main>
         <Routes>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { stampanteFintaAttiva, forzaStampanteFinta } from '../lib/stampanteFinta.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import {
   clearDatabase,
@@ -18,6 +19,8 @@ export default function DevTools() {
   const [log, setLog] = useState([])
   const [error, setError] = useState(null)
   const [confirm, setConfirm] = useState(null) // { title, message, run }
+  // La stampante finta com'è ADESSO su questo terminale (ambiente o forzatura).
+  const [fintaAccesa, setFintaAccesa] = useState(() => stampanteFintaAttiva())
 
   // Pagamenti da simulare: in dev non ci sono Cloud Functions, quindi
   // l'esito del checkout SumUp si "recita" da qui.
@@ -67,6 +70,31 @@ export default function DevTools() {
       </div>
 
       {error && <div className="banner">Errore: {error}</div>}
+
+      {/* LA STAMPANTE FINTA SUL SITO DI TEST. In locale è accesa da sé;
+          qui l'ambiente è quello vero e senza la Epson ogni prova di
+          stampa fallirebbe in silenzio. L'interruttore è DEL TERMINALE
+          (localStorage): chi prova da casa accende, il tablet del banco
+          non ne sa niente. */}
+      <div className="card settings-section">
+        <strong>🖨 Stampante simulata</strong>
+        <p className="muted small" style={{ margin: '4px 0 8px' }}>
+          Le stampe escono come facsimile a schermo invece che sulla
+          stampante vera. Vale solo per questo dispositivo.
+        </p>
+        <label className="row" style={{ gap: 10, cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            style={{ width: 'auto' }}
+            checked={fintaAccesa}
+            onChange={(e) => {
+              forzaStampanteFinta(e.target.checked ? true : null)
+              setFintaAccesa(stampanteFintaAttiva())
+            }}
+          />
+          <span>Simula la stampa su questo dispositivo</span>
+        </label>
+      </div>
 
       {/* Azioni distruttive sul database: solo emulatore locale (usano un
           endpoint che sul progetto reale di test non esiste). */}

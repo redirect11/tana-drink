@@ -33,6 +33,7 @@ import {
   qtyInStockUnit,
   unitaMovimento,
   statoTravaso,
+  magazzinoBloccato,
   motivoNonMigrabile,
   fromStockUnit,
   eScorta,
@@ -59,6 +60,8 @@ import {
 import { formatPrice } from '../lib/orderStatus.js'
 import { parseSupplierList } from '../lib/warehouse.js'
 import MacroCategoryManager from './MacroCategoryManager.jsx'
+import EtichettaMacro from './EtichettaMacro.jsx'
+import { indiceMacro, macroDiCategoria } from '../lib/macros.js'
 import { useChiudiConIndietro } from '../lib/schermate.js'
 import { toastSuccess, toastError } from '../lib/toast.js'
 import StockCountPanel from './StockCountPanel.jsx'
@@ -66,7 +69,7 @@ import PurchaseOrdersPanel from './PurchaseOrdersPanel.jsx'
 import SupplierInvoicesPanel from './SupplierInvoicesPanel.jsx'
 import CategoryRail from './CategoryRail.jsx'
 import SectionPanels from './SectionPanels.jsx'
-import { IconTag, IconCartelle, IconFornitore } from './Icons.jsx'
+import { IconFornitore } from './Icons.jsx'
 import Tendina from './Tendina.jsx'
 import { useSottosezioni } from '../lib/sottosezioni.js'
 import { usePaginaPiena } from '../lib/paginaPiena.js'
@@ -79,6 +82,14 @@ const STATUS_ITEM = [
 ]
 
 const STATUS_LABEL = { ok: '', low: 'in esaurimento', empty: 'esaurito' }
+// La striscia a sinistra della riga: si legge anche col dito (title),
+// oltre che dalla legenda sopra la lista.
+const ETICHETTA_ASSORTIMENTO = {
+  assortimento: 'In assortimento',
+  linea: 'In linea: non deve mancare',
+  premium: 'Premium',
+  out: 'Fuori assortimento: non si ricompra',
+}
 
 // Come si chiama, a parole, il modo in cui un articolo è gestito: è quello che
 // si legge nell'avviso quando lo si cambia in modifica.
@@ -176,8 +187,8 @@ const INV_VIEWS = [
   ['conta', '📋', 'Conta'],
   ['ordini', '🛒', 'Ordini'],
   ['scadenzario', '📄', 'Scadenzario'],
-  ['categorie', '🏷', 'Categorie'],
-  ['macro', '🗂', 'Macro-categorie'],
+  ['categorie', '🏷️', 'Categorie'],
+  ['macro', '🗂️', 'Macro-categorie'],
   ['fornitori', '🏭', 'Fornitori'],
   ['movimenti', '📜', 'Movimenti'],
 ]
@@ -214,11 +225,23 @@ export default function InventoryManager() {
 // altri motivi — e infatti erano finite lì.
 function CategoriePanel() {
   const [categories, setCategories] = useState([])
-  const ricarica = async () => setCategories(await fetchInventoryCategories())
+  // LE MACRO SERVONO ANCHE QUI. Finora questo elenco mostrava il solo
+  // nome, e a quale gruppo appartenesse una categoria si andava a vedere
+  // nel pannello delle macro — cioè da un'altra parte, dopo essersi
+  // chiesti se valeva la pena.
+  const [macros, setMacros] = useState([])
+  const ricarica = async () => {
+    const [cats, macs] = await Promise.all([
+      fetchInventoryCategories(),
+      fetchMacroCategories('magazzino').catch(() => []),
+    ])
+    setCategories(cats)
+    setMacros(macs)
+  }
   useEffect(() => {
     ricarica()
   }, [])
-  return <InvCategoryManager categories={categories} onChange={ricarica} />
+  return <InvCategoryManager categories={categories} macros={macros} onChange={ricarica} />
 }
 
 function MacroPanel() {
@@ -293,36 +316,44 @@ function FornitoriPanel() {
   return <SupplierManager suppliers={suppliers} onChange={ricarica} />
 }
 
-// LA CELLA «A FINE SERATA». Si legge con le stesse regole della giacenza —
-// pezzi per le bottiglie, unità per il resto — perché è la stessa cosa
-// guardata più avanti nel tempo: due modi di scrivere lo stesso numero
-// farebbero sembrare due dati diversi. Senza impegno resta un trattino:
-// vuol dire che nessun conto aperto ha chiesto quel prodotto.
-function CellaFineSerata({ item, impegnato }) {
+// QUANTO NE RESTA A FINE SERATA. Si legge con le stesse regole della
+// giacenza — pezzi per le bottiglie, unità per il resto — perché è la stessa
+// cosa guardata più avanti nel tempo: due modi di scrivere lo stesso numero
+// farebbero sembrare due dati diversi.
+//
+// Torna null quando nessun conto aperto ha chiesto quel prodotto: la tabella
+// e le card lo dicono in due modi diversi (un trattino nella colonna, niente
+// sotto la card), e a decidere è chi disegna — il numero è lo stesso, e sta
+// scritto una volta sola.
+function previstoFineSerata(item, impegnato) {
   const previsto = articoloPrevisto(item, impegnato)
-  if (!previsto) return <span className="inv-cell-num muted">—</span>
+  if (!previsto) return null
   const bs = bottleSummary(previsto)
-  const finito = (Number(previsto.stock) || 0) <= 0
-  return (
-    <span className={`inv-cell-num inv-row-previsto${finito ? ' finito' : ''}`}>
-      {bs ? `${formatPezzi(bs.pezzi)} pz` : fmtItem(previsto.stock, previsto)}
-    </span>
-  )
+  return {
+    testo: bs ? `${formatPezzi(bs.pezzi)} pz` : fmtItem(previsto.stock, previsto),
+    finito: (Number(previsto.stock) || 0) <= 0,
+  }
+}
+
+// LA CELLA «A FINE SERATA» nella tabella. Senza impegno resta un trattino:
+// una colonna vuota si legge come un dato mancante.
+function CellaFineSerata({ item, impegnato }) {
+  const p = previstoFineSerata(item, impegnato)
+  if (!p) return <span className="inv-cell-num muted">—</span>
+  return <span className={`inv-cell-num inv-row-previsto${p.finito ? ' finito' : ''}`}>{p.testo}</span>
 }
 
 // La stessa previsione nella vista a CARD, dove non ci sono colonne: si
 // scrive per esteso sotto la giacenza, e solo se quel prodotto è in ballo.
 function PrevisioneCard({ item, impegnato }) {
-  const previsto = articoloPrevisto(item, impegnato)
-  if (!previsto) return null
-  const bs = bottleSummary(previsto)
-  const finito = (Number(previsto.stock) || 0) <= 0
+  const p = previstoFineSerata(item, impegnato)
+  if (!p) return null
   return (
     <span
-      className={`small${finito ? ' inv-row-previsto finito' : ' muted'}`}
+      className={`small${p.finito ? ' inv-row-previsto finito' : ' muted'}`}
       style={{ display: 'block' }}
     >
-      a fine serata {bs ? `${formatPezzi(bs.pezzi)} pz` : fmtItem(previsto.stock, previsto)}
+      a fine serata {p.testo}
     </span>
   )
 }
@@ -446,7 +477,10 @@ function ProductsPanel() {
   // sistemato per farlo partire: è l'unica strada per sbloccarlo. Tutto il
   // resto è in sola lettura — battere una comanda e scaricare le scorte
   // continua a funzionare, che quella è la serata e non aspetta noi.
-  const bloccato = !travaso.fatto
+  // La regola sta in inventory.js, con lo stato del travaso: è la stessa che
+  // vale per Acquisti, e finché era una riga scritta qui quella schermata ne
+  // restava fuori (BUG-029).
+  const bloccato = magazzinoBloccato(items)
   const daSistemare = useMemo(
     () => new Set(travaso.daSistemare.map((it) => it.id)),
     [travaso.daSistemare]
@@ -974,6 +1008,28 @@ function ProductsPanel() {
       {error && <div className="banner" style={{ marginTop: 8 }}>Errore: {error}</div>}
       {loading && <div className="empty">Carico l’inventario…</div>}
 
+      {/* LA LEGENDA DEI DUE SEGNI. È nata da una domanda vera di Flavio
+          (vocale del 20/08): «perché alcune cose hanno questa bacchettina
+          davanti — rossa, blu, oppure non ce l'hanno?». Quattro colori
+          senza spiegazione sono un codice segreto: la spiegazione sta
+          QUI, sotto gli occhi, non in un manuale. Una riga sola, smorzata,
+          che va a capo da sé sul telefono. */}
+      {!loading && (
+        <div className="inv-legenda muted small">
+          <span className="inv-legenda-gruppo">
+            <span className="dot dot-ok" aria-hidden /> c’è
+            <span className="dot dot-low" aria-hidden /> in esaurimento
+            <span className="dot dot-empty" aria-hidden /> esaurito
+          </span>
+          <span className="inv-legenda-gruppo">
+            <span className="tacca tacca-linea" aria-hidden /> in linea
+            <span className="tacca tacca-premium" aria-hidden /> premium
+            <span className="tacca tacca-out" aria-hidden /> fuori (OUT)
+            <span className="tacca tacca-assortimento" aria-hidden /> in assortimento
+          </span>
+        </div>
+      )}
+
       {/* TABELLA: colonne allineate (stato · prodotto · categoria · netto ·
           +IVA · scorte), riga cliccabile per aprire le azioni. */}
       {invView === 'lista' && (
@@ -1004,6 +1060,7 @@ function ProductsPanel() {
               <div
                 className={`inv-row ass-${assortimentoDi(it)}${expanded ? ' open' : ''}`}
                 key={it.id}
+                title={ETICHETTA_ASSORTIMENTO[assortimentoDi(it)]}
               >
                 <button
                   type="button"
@@ -1128,9 +1185,10 @@ function ProductsPanel() {
 
 // --- Gestione categorie inventario --------------------------------------
 
-function InvCategoryManager({ categories, onChange }) {
+function InvCategoryManager({ categories, macros = [], onChange }) {
   const [name, setName] = useState('')
   const [busy, setBusy] = useState(false)
+  const indice = useMemo(() => indiceMacro(macros), [macros])
 
   async function add() {
     if (!name.trim()) return
@@ -1177,7 +1235,10 @@ function InvCategoryManager({ categories, onChange }) {
       )}
       {categories.map((c, idx) => (
         <div className="row between" key={c.id} style={{ marginTop: 8 }}>
-          <span>{c.name}</span>
+          <span className="row" style={{ gap: 8, alignItems: 'center' }}>
+            {c.name}
+            <EtichettaMacro macro={macroDiCategoria(c, indice)} />
+          </span>
           <span className="row" style={{ gap: 4 }}>
             <button className="btn ghost small" onClick={() => move(idx, -1)} disabled={idx === 0}>↑</button>
             <button className="btn ghost small" onClick={() => move(idx, 1)} disabled={idx === categories.length - 1}>↓</button>
@@ -1304,6 +1365,25 @@ function SupplierManager({ suppliers, onChange }) {
   )
 }
 
+// LA SCATOLA DEL TRAVASO: sempre la stessa, cambia solo cosa c'è dentro.
+// `onFuori` c'è soltanto dove si può chiudere toccando accanto — mentre il
+// magazzino si sta aggiornando no, che sarebbe un modo di interromperlo
+// senza volerlo.
+function RiquadroTravaso({ titolo, onFuori, children }) {
+  return (
+    <div className="overlay confirm-overlay" onClick={onFuori}>
+      <div
+        className="confirm-box"
+        role="dialog"
+        aria-label={titolo}
+        onClick={onFuori ? (e) => e.stopPropagation() : undefined}
+      >
+        {children}
+      </div>
+    </div>
+  )
+}
+
 // --- IL TRAVASO AL MODELLO A PEZZI, IN MANO A CHI LAVORA ----------------
 //
 // «Quando entra in magazzino un banner gli dice che deve iniziare la
@@ -1341,156 +1421,143 @@ function PannelloTravaso({ travaso, passo, avanzamento, esito, onProva, onChiudi
       )}
 
       {passo === 'prova' && (
-        <div className="overlay confirm-overlay" onClick={onChiudi}>
-          <div
-            className="confirm-box"
-            role="dialog"
-            aria-label="Cosa cambia aggiornando il magazzino"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 style={{ marginTop: 0 }}>Cosa cambia</h3>
-            {/* PRIMA UNA PROVA A VUOTO: qui non si scrive niente. */}
-            <p className="small" style={{ marginTop: 0 }}>
-              Per adesso non cambia niente: questo è solo l&apos;elenco.
-            </p>
+        <RiquadroTravaso titolo="Cosa cambia aggiornando il magazzino" onFuori={onChiudi}>
+          <h3 style={{ marginTop: 0 }}>Cosa cambia</h3>
+          {/* PRIMA UNA PROVA A VUOTO: qui non si scrive niente. */}
+          <p className="small" style={{ marginTop: 0 }}>
+            Per adesso non cambia niente: questo è solo l&apos;elenco.
+          </p>
 
-            {daSistemare.length > 0 ? (
-              <>
-                <h4 style={{ margin: '14px 0 2px' }}>
-                  ⚠️ Da sistemare prima ({daSistemare.length})
-                </h4>
-                <p className="small" style={{ margin: '0 0 6px' }}>
-                  Di questi non si sa a quanto corrisponde un pezzo, e nessuno
-                  può indovinarlo. Aprili, scrivilo, e poi torna qui.
+          {daSistemare.length > 0 ? (
+            <>
+              <h4 style={{ margin: '14px 0 2px' }}>
+                ⚠️ Da sistemare prima ({daSistemare.length})
+              </h4>
+              <p className="small" style={{ margin: '0 0 6px' }}>
+                Di questi non si sa a quanto corrisponde un pezzo, e nessuno
+                può indovinarlo. Aprili, scrivilo, e poi torna qui.
+              </p>
+              <ul className="small" style={{ margin: 0, paddingLeft: 18 }}>
+                {daSistemare.map((it) => (
+                  <li key={it.id}>
+                    <strong>{it.name}</strong>{' '}
+                    <span className="muted">{motivoNonMigrabile(it)}</span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : (
+            <>
+              <h4 style={{ margin: '14px 0 2px' }}>
+                ✅ Si aggiornano {daMigrare.length} prodotti
+              </h4>
+              <p className="small" style={{ margin: '0 0 6px' }}>
+                Le giacenze passano a pezzi: quello che oggi si legge sullo
+                schermo è già il numero giusto, e resterà scritto così.
+                Prezzi, ricette e menù non si toccano.
+              </p>
+              <ul className="small" style={{ margin: 0, paddingLeft: 18 }}>
+                {daMigrare.slice(0, 8).map((it) => (
+                  <li key={it.id}>
+                    {it.name}{' '}
+                    <span className="muted">
+                      {formatQty(it.formaVecchia.stock, baseUnit(it.formaVecchia.unit))} →{' '}
+                      {formatPezzi(it.stock)} pz
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              {daMigrare.length > 8 && (
+                <p className="muted small" style={{ margin: '4px 0 0' }}>
+                  … e altri {daMigrare.length - 8}.
                 </p>
-                <ul className="small" style={{ margin: 0, paddingLeft: 18 }}>
-                  {daSistemare.map((it) => (
-                    <li key={it.id}>
-                      <strong>{it.name}</strong>{' '}
-                      <span className="muted">{motivoNonMigrabile(it)}</span>
-                    </li>
-                  ))}
-                </ul>
-              </>
-            ) : (
-              <>
-                <h4 style={{ margin: '14px 0 2px' }}>
-                  ✅ Si aggiornano {daMigrare.length} prodotti
-                </h4>
-                <p className="small" style={{ margin: '0 0 6px' }}>
-                  Le giacenze passano a pezzi: quello che oggi si legge sullo
-                  schermo è già il numero giusto, e resterà scritto così.
-                  Prezzi, ricette e menù non si toccano.
-                </p>
-                <ul className="small" style={{ margin: 0, paddingLeft: 18 }}>
-                  {daMigrare.slice(0, 8).map((it) => (
-                    <li key={it.id}>
-                      {it.name}{' '}
-                      <span className="muted">
-                        {formatQty(it.formaVecchia.stock, baseUnit(it.formaVecchia.unit))} →{' '}
-                        {formatPezzi(it.stock)} pz
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-                {daMigrare.length > 8 && (
-                  <p className="muted small" style={{ margin: '4px 0 0' }}>
-                    … e altri {daMigrare.length - 8}.
-                  </p>
-                )}
-              </>
-            )}
-
-            <div className="grid-2" style={{ marginTop: 16 }}>
-              <button type="button" className="btn ghost" onClick={onChiudi}>
-                {pronti ? 'Non adesso' : 'Chiudi'}
-              </button>
-              {pronti && (
-                <button type="button" className="btn" onClick={onConferma}>
-                  Aggiorna {daMigrare.length} prodotti
-                </button>
               )}
-            </div>
+            </>
+          )}
+
+          <div className="grid-2" style={{ marginTop: 16 }}>
+            <button type="button" className="btn ghost" onClick={onChiudi}>
+              {pronti ? 'Non adesso' : 'Chiudi'}
+            </button>
+            {pronti && (
+              <button type="button" className="btn" onClick={onConferma}>
+                Aggiorna {daMigrare.length} prodotti
+              </button>
+            )}
           </div>
-        </div>
+        </RiquadroTravaso>
       )}
 
       {passo === 'rileggo' && (
-        <div className="overlay confirm-overlay">
-          <div className="confirm-box" role="dialog" aria-label="Sto guardando il magazzino">
-            <h3 style={{ marginTop: 0 }}>Sto guardando…</h3>
-            <p className="small" style={{ margin: 0 }}>
-              Un momento: rileggo i prodotti, così l&apos;elenco dice come
-              stanno le cose adesso.
-            </p>
-          </div>
-        </div>
+        <RiquadroTravaso titolo="Sto guardando il magazzino">
+          <h3 style={{ marginTop: 0 }}>Sto guardando…</h3>
+          <p className="small" style={{ margin: 0 }}>
+            Un momento: rileggo i prodotti, così l&apos;elenco dice come
+            stanno le cose adesso.
+          </p>
+        </RiquadroTravaso>
       )}
 
-      {(passo === 'corso' || passo === 'fatto' || passo === 'interrotto') && (
-        <div className="overlay confirm-overlay">
-          <div className="confirm-box" role="dialog" aria-label="Aggiornamento del magazzino">
-            {passo === 'corso' && (
-              <>
-                <h3 style={{ marginTop: 0 }}>Sto aggiornando…</h3>
-                {/* A LOTTI, e si vede: una schermata ferma al banco vuol dire
-                    «è bloccata». Se si interrompe si può ricominciare, che
-                    ogni giro guarda cos'è rimasto da fare. */}
-                <p className="small" style={{ margin: 0 }}>
-                  {avanzamento.fatti} di {avanzamento.totale}. Puoi ricominciare
-                  da qui se si interrompe: riprende da dov&apos;era.
-                </p>
-              </>
-            )}
-            {passo === 'fatto' && (
-              <>
-                <h3 style={{ marginTop: 0 }}>✅ Magazzino aggiornato</h3>
-                <p className="small" style={{ margin: 0 }}>
-                  {esito?.travasati ?? avanzamento.totale} prodotti si contano a
-                  pezzi. Carico, conta e prodotti nuovi sono di nuovo a posto.
-                </p>
-                {/* CHI NON C'È PIÙ NON È UN ERRORE, ma va detto: un prodotto
-                    cancellato da un altro terminale mentre l'aggiornamento
-                    girava semplicemente non c'è, e si va avanti. */}
-                {esito?.saltati > 0 && (
-                  <p className="small" style={{ margin: '8px 0 0' }}>
-                    {esito.saltati === 1
-                      ? 'Un prodotto non c’è più: è stato saltato.'
-                      : `${esito.saltati} prodotti non ci sono più: sono stati saltati.`}{' '}
-                    Gli altri sono a posto.
-                  </p>
-                )}
-                {esito?.bloccati > 0 && (
-                  <p className="small" style={{ margin: '8px 0 0' }}>
-                    {esito.bloccati === 1
-                      ? 'Un prodotto non si è aggiornato'
-                      : `${esito.bloccati} prodotti non si sono aggiornati`}
-                    : riprova fra un momento, non fa danni — quelli già
-                    aggiornati restano come sono.
-                  </p>
-                )}
-                <button type="button" className="btn block" style={{ marginTop: 16 }} onClick={onChiudi}>
-                  Chiudi
-                </button>
-              </>
-            )}
-            {passo === 'interrotto' && (
-              <>
-                <h3 style={{ marginTop: 0 }}>L&apos;aggiornamento si è fermato</h3>
-                <p className="small" style={{ margin: 0 }}>
-                  {avanzamento.fatti > 0
-                    ? `${avanzamento.fatti} prodotti sono stati aggiornati e restano così.`
-                    : 'Non è stato aggiornato niente.'}{' '}
-                  Il resto è rimasto com&apos;era: puoi riprovare quando vuoi,
-                  non fa danni — riprende da dove si era fermato.
-                </p>
-                <button type="button" className="btn block" style={{ marginTop: 16 }} onClick={onChiudi}>
-                  Chiudi
-                </button>
-              </>
-            )}
-          </div>
-        </div>
+      {passo === 'corso' && (
+        <RiquadroTravaso titolo="Aggiornamento del magazzino">
+          <h3 style={{ marginTop: 0 }}>Sto aggiornando…</h3>
+          {/* A LOTTI, e si vede: una schermata ferma al banco vuol dire
+              «è bloccata». Se si interrompe si può ricominciare, che
+              ogni giro guarda cos'è rimasto da fare. */}
+          <p className="small" style={{ margin: 0 }}>
+            {avanzamento.fatti} di {avanzamento.totale}. Puoi ricominciare
+            da qui se si interrompe: riprende da dov&apos;era.
+          </p>
+        </RiquadroTravaso>
+      )}
+
+      {passo === 'fatto' && (
+        <RiquadroTravaso titolo="Aggiornamento del magazzino">
+          <h3 style={{ marginTop: 0 }}>✅ Magazzino aggiornato</h3>
+          <p className="small" style={{ margin: 0 }}>
+            {esito?.travasati ?? avanzamento.totale} prodotti si contano a
+            pezzi. Carico, conta e prodotti nuovi sono di nuovo a posto.
+          </p>
+          {/* CHI NON C'È PIÙ NON È UN ERRORE, ma va detto: un prodotto
+              cancellato da un altro terminale mentre l'aggiornamento
+              girava semplicemente non c'è, e si va avanti. */}
+          {esito?.saltati > 0 && (
+            <p className="small" style={{ margin: '8px 0 0' }}>
+              {esito.saltati === 1
+                ? 'Un prodotto non c’è più: è stato saltato.'
+                : `${esito.saltati} prodotti non ci sono più: sono stati saltati.`}{' '}
+              Gli altri sono a posto.
+            </p>
+          )}
+          {esito?.bloccati > 0 && (
+            <p className="small" style={{ margin: '8px 0 0' }}>
+              {esito.bloccati === 1
+                ? 'Un prodotto non si è aggiornato'
+                : `${esito.bloccati} prodotti non si sono aggiornati`}
+              : riprova fra un momento, non fa danni — quelli già
+              aggiornati restano come sono.
+            </p>
+          )}
+          <button type="button" className="btn block" style={{ marginTop: 16 }} onClick={onChiudi}>
+            Chiudi
+          </button>
+        </RiquadroTravaso>
+      )}
+
+      {passo === 'interrotto' && (
+        <RiquadroTravaso titolo="Aggiornamento del magazzino">
+          <h3 style={{ marginTop: 0 }}>L&apos;aggiornamento si è fermato</h3>
+          <p className="small" style={{ margin: 0 }}>
+            {avanzamento.fatti > 0
+              ? `${avanzamento.fatti} prodotti sono stati aggiornati e restano così.`
+              : 'Non è stato aggiornato niente.'}{' '}
+            Il resto è rimasto com&apos;era: puoi riprovare quando vuoi,
+            non fa danni — riprende da dove si era fermato.
+          </p>
+          <button type="button" className="btn block" style={{ marginTop: 16 }} onClick={onChiudi}>
+            Chiudi
+          </button>
+        </RiquadroTravaso>
       )}
     </>
   )
@@ -1587,22 +1654,19 @@ function CaricoForm({ item, onCancel, onConfirm }) {
   // spento la scheda e' quella di sempre — quanti pezzi, e il prezzo.
   const [aColli, setAColli] = useState(false)
 
+  // A COLLI LA QUANTITÀ NON È UNO STATO: è cartoni × pezzi per collo, e basta.
+  // Quando la si teneva scritta a parte bisognava ricordarsi di rifarla a ogni
+  // campo toccato — e chi si dimenticava caricava il numero di prima.
+  const quantita = aColli ? String(num(cartoni) * num(perCollo) || '') : count
+
   const onUnit = (v) => {
     setUnitCost(v)
     const p = num(perCollo)
     if (p > 0) setColloTot(num(v) > 0 ? String(r2(num(v) * p)) : '')
   }
-  const onCartoni = (v) => {
-    setCartoni(v)
-    const p = num(perCollo)
-    if (p > 0) setCount(num(v) > 0 ? String(num(v) * p) : '')
-  }
   const onCollo = (v) => {
     setPerCollo(v)
     const p = num(v)
-    // Cambiando quanti pezzi ha il cartone, i pezzi si rifanno: se no
-    // resterebbe il conto vecchio, e si caricherebbe la quantità sbagliata.
-    if (p > 0 && num(cartoni) > 0) setCount(String(num(cartoni) * p))
     if (p <= 0) return
     if (num(unitCost) > 0) setColloTot(String(r2(num(unitCost) * p)))
     else if (num(colloTot) > 0) setUnitCost(String(r2(num(colloTot) / p)))
@@ -1622,7 +1686,7 @@ function CaricoForm({ item, onCancel, onConfirm }) {
   const etichettaUnita = UNIT_LABEL[String(unitEffettiva).toLowerCase()] || unitEffettiva
 
   function confirm() {
-    const n = num(count)
+    const n = num(quantita)
     const newCost = unitCost !== '' && unitN >= 0 && r2(unitN) !== Number(item.cost) ? r2(unitN) : null
     if (!(n > 0) && newCost == null) return
     onConfirm({ count: n, unit: unitEffettiva, newCost })
@@ -1646,7 +1710,13 @@ function CaricoForm({ item, onCancel, onConfirm }) {
           checked={aColli}
           onChange={(e) => {
             setAColli(e.target.checked)
-            if (!e.target.checked) setCartoni('')
+            // Tornando a mano il numero calcolato RESTA scritto, e diventa
+            // modificabile: farlo sparire sotto le dita vorrebbe dire
+            // ricontare i pezzi già contati.
+            if (!e.target.checked) {
+              setCount(quantita)
+              setCartoni('')
+            }
           }}
         />
       </label>
@@ -1674,7 +1744,7 @@ function CaricoForm({ item, onCancel, onConfirm }) {
                 step="1"
                 min="0"
                 value={cartoni}
-                onChange={(e) => onCartoni(e.target.value)}
+                onChange={(e) => setCartoni(e.target.value)}
                 placeholder="Es. 2"
               />
             </div>
@@ -1708,7 +1778,7 @@ function CaricoForm({ item, onCancel, onConfirm }) {
           step="any"
           min="0"
           className="grow"
-          value={count}
+          value={quantita}
           onChange={(e) => setCount(e.target.value)}
           readOnly={aColli}
           aria-readonly={aColli}
@@ -1732,10 +1802,10 @@ function CaricoForm({ item, onCancel, onConfirm }) {
       {/* Quanto entra davvero in giacenza, quando non si carica a pezzi:
           la merce a peso si conta in pezzi per stima, e il numero va visto
           PRIMA di confermare. */}
-      {unitEffettiva !== 'pz' && num(count) > 0 && (
+      {unitEffettiva !== 'pz' && num(quantita) > 0 && (
         <div className="muted small" style={{ marginTop: 4 }}>
           In magazzino entrano{' '}
-          <strong>{formatPezzi(qtyInStockUnit(num(count), unitEffettiva, item))} pz</strong>
+          <strong>{formatPezzi(qtyInStockUnit(num(quantita), unitEffettiva, item))} pz</strong>
           {(item.content_unit || item.unit) === 'g' && ' (stima: il peso non fa pezzi esatti)'}
         </div>
       )}

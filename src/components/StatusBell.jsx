@@ -154,7 +154,7 @@ export default function StatusBell({ floating = false }) {
                         const uid = auth.currentUser?.uid
                         const token = await getPushToken()
                         if (uid && token) {
-                          await saveStaffToken(uid, token, 'bartender', idDispositivo()).catch(() => {})
+                          await saveStaffToken(uid, token, idDispositivo()).catch(() => {})
                         }
                         setPush(await statoPush())
                       }}

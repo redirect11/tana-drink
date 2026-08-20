@@ -86,9 +86,12 @@ const ITEMS = [
   },
 ]
 const CATS = [
-  { id: 'c1', name: 'Distillati', sort_order: 0 },
-  { id: 'c2', name: 'Birre', sort_order: 1 },
+  // «Distillati» sta in una macro, ALTRO no — ed è una scelta, non una
+  // dimenticanza: è il caso che REQ-UI-022 deve far vedere a colpo d'occhio.
+  { id: 'c1', name: 'Distillati', sort_order: 0, macro_id: 'mag1' },
+  { id: 'c2', name: 'ALTRO', sort_order: 1 },
 ]
+const MACRO_MAG = [{ id: 'mag1', name: 'Alcolici', sort_order: 0 }]
 const SUPS = [
   { id: 's1', name: 'NOVA' },
   { id: 's2', name: 'ENOFEL' },
@@ -110,7 +113,7 @@ vi.mock('../../src/lib/api.js', () => ({
   fetchInventoryCategories: vi.fn(async () => CATS),
   fetchSuppliers: vi.fn(async () => SUPS),
   fetchStockMovements: vi.fn(async () => []),
-  fetchMacroCategories: vi.fn(async () => []),
+  fetchMacroCategories: vi.fn(async (ambito) => (ambito === 'magazzino' ? MACRO_MAG : [])),
   createInventoryItem: vi.fn(),
   updateInventoryItem: vi.fn(),
   deleteInventoryItem: vi.fn(),
@@ -416,5 +419,51 @@ describe('le unità nel modulo del prodotto (REQ-MAG-013)', () => {
     // d'acquisto: il costo è già lì, al pezzo.
     expect(screen.queryByLabelText('Come lo compri')).toBeNull()
     expect(screen.getByLabelText(/Costo €\/pz/)).toBeInTheDocument()
+  })
+})
+
+// ── LE CATEGORIE SENZA MACRO SI VEDONO A COLPO D'OCCHIO (REQ-UI-022) ──
+// ALTRO resta fuori dalle macro ed è una scelta: non si forza dentro un
+// gruppo per far tornare un elenco. Da lì nasce il bisogno opposto — una
+// categoria fuori APPOSTA e una dimenticata si somigliavano troppo, e
+// questo elenco è proprio quello da cui si esce convinti di aver sistemato
+// tutto. Prima mostrava il solo nome.
+describe('la macro di ogni categoria, nell’elenco delle categorie', () => {
+  it('accanto al nome c’è il suo gruppo, e dove manca lo dice', async () => {
+    const user = userEvent.setup()
+    mostra()
+    await aspettaLista()
+    await user.click(screen.getByRole('button', { name: /Categorie/ }))
+    const distillati = (await screen.findByText('Distillati')).closest('.row')
+    expect(within(distillati).getByText('Alcolici')).toBeInTheDocument()
+    const altro = screen.getByText('ALTRO').closest('.row')
+    expect(within(altro).getByText('senza macro')).toBeInTheDocument()
+  })
+})
+
+// ── LA LEGENDA DEI DUE SEGNI (REQ-MAG-027) ───────────────────────────
+//
+// Nata da una domanda vera di Flavio (vocale del 20/08): «perché alcune
+// cose hanno questa bacchettina davanti — rossa, blu, oppure non ce
+// l'hanno?». Quattro colori senza spiegazione sono un codice segreto: la
+// legenda sta sotto gli occhi, sopra la lista.
+describe('la legenda del magazzino', () => {
+  it('spiega pallini e strisce, con le parole del banco', async () => {
+    render(<InventoryManager />)
+    await screen.findByText(/Prodotto/)
+
+    const legenda = document.querySelector('.inv-legenda')
+    expect(legenda).toBeTruthy()
+    // I pallini: quanta roba c'è.
+    expect(legenda.textContent).toContain('in esaurimento')
+    expect(legenda.textContent).toContain('esaurito')
+    // Le strisce: che assortimento è.
+    expect(legenda.textContent).toContain('in linea')
+    expect(legenda.textContent).toContain('premium')
+    expect(legenda.textContent).toContain('fuori (OUT)')
+    expect(legenda.textContent).toContain('in assortimento')
+    // E i campioncini sono le classi VERE dei segni, non copie.
+    expect(legenda.querySelector('.dot-empty')).toBeTruthy()
+    expect(legenda.querySelector('.tacca-linea')).toBeTruthy()
   })
 })

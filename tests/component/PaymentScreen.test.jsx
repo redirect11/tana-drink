@@ -30,6 +30,7 @@ vi.mock('../../src/lib/api.js', () => ({
     return () => {}
   }),
   applyVoucherDiscount: vi.fn(() => Promise.resolve({ redeemed: 10 })),
+  segnaScontrinoStampato: vi.fn(),
 }))
 vi.mock('../../src/lib/paymentsApi.js', () => ({
   readerCheckout: vi.fn(() => Promise.resolve({})),
@@ -42,6 +43,7 @@ vi.mock('../../src/lib/printer.js', () => ({
   claimReceiptPrint: vi.fn(() => true),
   reclaimReceiptPrint: vi.fn(() => true),
   releaseReceiptPrint: vi.fn(),
+  scontrinoGiaUscito: vi.fn(() => false),
 }))
 vi.mock('../../src/lib/toast.js', () => ({ toastError: vi.fn() }))
 
@@ -52,10 +54,17 @@ import {
   setOrderDiscount,
   setOrderLotteryCode,
   createInvoice,
+  segnaScontrinoStampato,
 } from '../../src/lib/api.js'
 import { readerCheckout } from '../../src/lib/paymentsApi.js'
 import { applyVoucherDiscount } from '../../src/lib/api.js'
-import { printScontrino, printFattura, loadPrinterSettings, releaseReceiptPrint } from '../../src/lib/printer.js'
+import {
+  printScontrino,
+  printFattura,
+  loadPrinterSettings,
+  releaseReceiptPrint,
+  scontrinoGiaUscito,
+} from '../../src/lib/printer.js'
 
 let mockVouchers = []
 
@@ -102,9 +111,11 @@ describe('layout POS: tutto già in pagamento, Riscuotere incassa', () => {
   it('si apre con il residuo intero e Riscuotere lo incassa in Contante', async () => {
     const user = userEvent.setup()
     mount(baseOrder())
-    // sinistra: articoli con selezione piena; centro: importo = dovuto
-    expect(screen.getByText('Mojito')).toBeInTheDocument()
-    expect(screen.getByText('2/2')).toBeInTheDocument()
+    // sinistra: articoli con selezione piena; centro: importo = dovuto.
+    // I due Mojito nascono SEPARATI (REQ-PAG-009): due righe da «1/1», non
+    // una da «2/2».
+    expect(screen.getAllByText('Mojito')).toHaveLength(2)
+    expect(screen.queryByText('2/2')).toBeNull()
     expect(payAmount()).toHaveTextContent('22,00')
     // destra: Contante è il metodo di default
     expect(screen.getByRole('button', { name: /Contante/ })).toHaveAttribute('aria-pressed', 'true')
@@ -121,7 +132,9 @@ describe('layout POS: tutto già in pagamento, Riscuotere incassa', () => {
   it('split per deselezione: si incassa solo la selezione con il dettaglio articoli', async () => {
     const user = userEvent.setup()
     mount(baseOrder())
-    await user.click(screen.getByRole('button', { name: 'Togli Mojito dal pagamento' }))
+    // Partendo separati (REQ-PAG-009) i Mojito sono due righe: se ne toglie
+    // una, e con lei il Gin Tonic.
+    await user.click(screen.getAllByRole('button', { name: 'Togli Mojito dal pagamento' })[0])
     await user.click(screen.getByRole('button', { name: 'Togli Gin Tonic dal pagamento' }))
     expect(payAmount()).toHaveTextContent('7,00')
     await user.click(screen.getByRole('button', { name: /Riscuotere/ }))
@@ -478,6 +491,7 @@ describe('scontrino: il metodo di pagamento', () => {
       businessName: 'La Tana',
       autoPrintScontrino: true,
     })
+    scontrinoGiaUscito.mockReturnValue(false)
   })
 
   it('con la carta lo scontrino esce con la carta', async () => {
@@ -500,6 +514,44 @@ describe('scontrino: il metodo di pagamento', () => {
     mount(baseOrder())
     await user.click(screen.getByRole('button', { name: /Riscuotere/ }))
     await waitFor(() => expect(releaseReceiptPrint).toHaveBeenCalledWith('ord1'))
+  })
+
+  // IL CONTO CHE NON ESISTE ANCORA. Pagando dritto dal POS la schermata si
+  // apre su un guscio locale (id nullo) mentre il conto nasce in sottofondo:
+  // prima la carta la stampava LA CODA quando vedeva l'ordine vero pagato, ed
+  // era l'unico caso legittimo di un blocco che stampava tutto (BUG-055).
+  // Adesso esce da qui, col numero che la testata mostra già, e il segno sul
+  // dato raggiunge il conto appena ha un id.
+  it('pagamento diretto dal POS: la carta esce dal gesto, non dalla coda', async () => {
+    const user = userEvent.setup()
+    const guscio = baseOrder({ id: null, comande: [], order_items: [
+      { drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 },
+    ] })
+    render(
+      <PaymentScreen
+        order={guscio}
+        settings={noReader}
+        onClose={vi.fn()}
+        onBeforePay={vi.fn()}
+        resolveOrderId={() => Promise.resolve('ord-nato')}
+      />
+    )
+    await user.click(screen.getByRole('button', { name: /Riscuotere/ }))
+    await waitFor(() => expect(printScontrino).toHaveBeenCalled())
+    expect(printScontrino.mock.calls.at(-1)[0].daily_number).toBe(4)
+    // E il segno finisce sul conto vero, quello appena nato.
+    await waitFor(() => expect(segnaScontrinoStampato).toHaveBeenCalledWith('ord-nato'))
+  })
+
+  // Il segno sul DATO vale più della memoria di questo browser: se un altro
+  // terminale ha già stampato, qui non esce la seconda copia.
+  it('conto già segnato: niente seconda copia', async () => {
+    const user = userEvent.setup()
+    scontrinoGiaUscito.mockReturnValue(true)
+    mount(baseOrder({ receipt_print_at: '2026-08-20T21:00:00.000Z' }))
+    await user.click(screen.getByRole('button', { name: /Riscuotere/ }))
+    await waitFor(() => expect(registerPayment).toHaveBeenCalled())
+    expect(printScontrino).not.toHaveBeenCalled()
   })
 
   it('coi contanti resta contanti', async () => {
@@ -572,9 +624,10 @@ describe('due prodotti liberi uguali, come nel conto #45', () => {
       ],
     })
 
-  it('il tasto «Separa uguali» non c’è: non c’è niente da separare', () => {
+  it('il tasto unisci/separa non c’è: non c’è niente da unire né da separare', () => {
     mount(comeNelVideo())
     expect(screen.queryByRole('button', { name: /Separa uguali/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: /Unisci uguali/ })).toBeNull()
     // Tre righe distinte, ognuna col suo contatore.
     expect(screen.getAllByRole('button', { name: /Paga NEGRONI/ })).toHaveLength(2)
   })
@@ -612,14 +665,58 @@ describe('due prodotti liberi uguali, come nel conto #45', () => {
   })
 })
 
-// «Separa uguali» mostra le unità come le altre righe: nome, prezzo e il
+// SI PARTE SEPARATI (REQ-PAG-009). Al banco si paga quasi sempre a pezzi —
+// uno paga il suo, un altro offre due birre — e partire dal gruppo «2×
+// Mojito» voleva dire un tocco in più ogni volta, con la fila alla cassa.
+// Il raggruppamento non sparisce: serve a chi ha un conto lungo e
+// illeggibile, e adesso è lui a chiederlo.
+describe('il pagamento si apre con le righe già separate', () => {
+  it('due Mojito sono due righe da «1/1», non una da «2/2»', () => {
+    mount(baseOrder())
+    expect(screen.getAllByRole('button', { name: /Togli Mojito dal pagamento/ })).toHaveLength(2)
+    expect(screen.queryByText('2/2')).toBeNull()
+  })
+
+  it('il tasto offre di UNIRE, che è la cosa che resta da fare', () => {
+    mount(baseOrder())
+    expect(screen.getByRole('button', { name: /Unisci uguali/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Separa uguali/ })).toBeNull()
+  })
+
+  it('unendo si torna al gruppo, e il tasto ripropone di separare', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.click(screen.getByRole('button', { name: /Unisci uguali/ }))
+    expect(screen.getByText('2/2')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Separa uguali/ })).toBeInTheDocument()
+  })
+
+  // Chi incassa tutto non deve toccare niente: separare le righe non
+  // cambia l'importo con cui la schermata si apre.
+  it('chi incassa tutto non paga il prezzo della separazione', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    expect(payAmount()).toHaveTextContent('22,00')
+    await user.click(screen.getByRole('button', { name: /Riscuotere/ }))
+    expect(registerPayment).toHaveBeenCalledWith('ord1', {
+      amount: 22,
+      method: 'banco',
+      items: null,
+      autoServe: false,
+      // L'incasso dell'intero dichiara che il conto si chiude (hotfix
+      // BUG-046): senza, il conto scontato restava «parziale».
+      chiude: true,
+    })
+  })
+})
+
+// La vista separata mostra le unità come le altre righe: nome, prezzo e il
 // contatore −/+. Prima erano caselline da spuntare, e nella stessa colonna
 // convivevano due modi diversi di dire la stessa cosa.
 describe('vista separata: righe come tutte le altre', () => {
-  it('separando due Mojito si vedono due righe col contatore, non caselle', async () => {
-    const user = userEvent.setup()
+  it('due Mojito sono due righe col contatore, non caselle', () => {
     mount(baseOrder()) // Mojito 2× + Gin Tonic
-    await user.click(screen.getByRole('button', { name: /Separa uguali/ }))
+    // Nessun tocco: si NASCE separati (REQ-PAG-009).
     // Due unità di Mojito, ognuna col suo −/+ e il suo 1/1.
     expect(screen.getAllByRole('button', { name: /Togli Mojito dal pagamento/ })).toHaveLength(2)
     expect(screen.getAllByText('1/1').length).toBeGreaterThanOrEqual(3)
@@ -629,7 +726,6 @@ describe('vista separata: righe come tutte le altre', () => {
   it('togliendo una sola unità si incassa solo l’altra', async () => {
     const user = userEvent.setup()
     mount(baseOrder())
-    await user.click(screen.getByRole('button', { name: /Separa uguali/ }))
     // La seconda unità di Mojito esce dal pagamento: 22 − 7 = 15.
     await user.click(screen.getAllByRole('button', { name: /Togli Mojito dal pagamento/ })[1])
     expect(payAmount()).toHaveTextContent('15,00')
@@ -645,9 +741,9 @@ describe('righe scelte o importo a mano', () => {
   it('scegliendo le righe il totale si compone, e si vede da dove viene', async () => {
     const user = userEvent.setup()
     mount(baseOrder())
-    // Si toglie una unità di Mojito dalla selezione (parte tutto scelto):
-    // il totale cala di 7 e l'etichetta dice che sono righe.
-    await user.click(screen.getByRole('button', { name: /Togli Mojito dal pagamento/ }))
+    // Si toglie una unità di Mojito dalla selezione (parte tutto scelto, e
+    // separato): il totale cala di 7 e l'etichetta dice che sono righe.
+    await user.click(screen.getAllByRole('button', { name: /Togli Mojito dal pagamento/ })[0])
     expect(await screen.findByText(/RIGHE SCELTE/)).toBeInTheDocument()
     expect(payAmount()).toHaveTextContent('15,00')
   })
@@ -671,9 +767,8 @@ describe('righe scelte o importo a mano', () => {
 describe('separa uguali: ognuna ha la sua quantità', () => {
   it('si spegne QUELLA che si tocca, non le altre', async () => {
     const user = userEvent.setup()
-    // Due Mojito sulla stessa riga: separandoli diventano due unità.
+    // Due Mojito, che all'apertura sono già due unità.
     mount(baseOrder())
-    await user.click(screen.getByRole('button', { name: /Separa uguali/ }))
     const meno = screen.getAllByRole('button', { name: /Togli Mojito dal pagamento/ })
     expect(meno).toHaveLength(2)
     await user.click(meno[0])
@@ -689,10 +784,34 @@ describe('separa uguali: ognuna ha la sua quantità', () => {
   it('e si rimette dentro una alla volta', async () => {
     const user = userEvent.setup()
     mount(baseOrder())
-    await user.click(screen.getByRole('button', { name: /Separa uguali/ }))
     await user.click(screen.getAllByRole('button', { name: /Togli Mojito dal pagamento/ })[0])
     // Si rimette dentro proprio quella: il «+» della prima riga.
     await user.click(screen.getAllByRole('button', { name: /Paga Mojito/ })[0])
     expect(payAmount()).toHaveTextContent('22,00')
+  })
+})
+// ── RISCUOTI (SENZA STAMPA) ──────────────────────────────────────────
+//
+// Il gesto gemello di «Riscuotere» per il cliente che lo scontrino di
+// cortesia non lo vuole: incassa e chiude uguale, ma la stampante tace.
+// Compare solo se il locale l'ha acceso (riscuoti_senza_stampa), e non
+// prende nemmeno la pretesa di stampa: se il conto verrà riaperto e
+// riscosso normale, lo scontrino esce come sempre.
+describe('riscuoti senza stampa', () => {
+  it('spento di default: il tasto non c’è', () => {
+    mount(baseOrder())
+    expect(screen.queryByRole('button', { name: /senza stampa/ })).toBeNull()
+  })
+
+  it('acceso: incassa come Riscuotere ma la stampante tace', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder(), { ...noReader, riscuoti_senza_stampa: true })
+    await user.click(screen.getByRole('button', { name: /senza stampa/ }))
+    await waitFor(() => expect(registerPayment).toHaveBeenCalled())
+    // Chiude come una riscossione vera…
+    expect(registerPayment.mock.calls[0][1]).toMatchObject({ amount: 22, chiude: true })
+    // …ma niente carta, e nessuna pretesa presa: la prossima riscossione
+    // normale stamperà come sempre.
+    expect(printScontrino).not.toHaveBeenCalled()
   })
 })

@@ -1,11 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { auth } from '../lib/firebaseClient.js'
 import {
   subscribeActiveOrders,
   subscribeSettings,
-  subscribeMyCalls,
-  ackStaffCall,
   saveStaffToken,
   updateOrderStatus,
   DEFAULT_SETTINGS,
@@ -13,7 +11,7 @@ import {
 import { getPushToken } from '../lib/push.js'
 import { idDispositivo } from '../lib/dispositivo.js'
 import { ORDER_STATUSES, formatPrice, placedByName } from '../lib/orderStatus.js'
-import { notify, ensureNotificationPermission } from '../lib/notify.js'
+import { ensureNotificationPermission } from '../lib/notify.js'
 
 // Vista cameriera: SOLO gli ordini pronti da servire ai tavoli, con il
 // tasto per segnarli come serviti. Nessun'altra funzione del gestionale.
@@ -31,14 +29,9 @@ export default function ServiceQueue() {
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   useEffect(() => subscribeSettings(setSettings), [])
 
-  // ── Cerca-persone: chiamate in arrivo dal bancone ───────────────────
-  const [calls, setCalls] = useState([])
-  const vibrateTimer = useRef(null)
-  useEffect(() => {
-    const uid = auth.currentUser?.uid
-    if (!uid) return
-    return subscribeMyCalls(uid, setCalls)
-  }, [])
+  // Il cerca-persone NON sta più qui: la chiamata deve presentarsi su
+  // qualunque schermata, non solo su questa scheda (vedi
+  // components/ChiamataInArrivo.jsx, montato in App.jsx — BUG-037).
 
   // Cintura di sicurezza lato pagina: se il gestionale è sotto gli
   // occhi, le notifiche «da servire» sono rumore — chiudile appena la
@@ -74,51 +67,9 @@ export default function ServiceQueue() {
     ensureNotificationPermission().then(async (ok) => {
       if (!ok) return
       const token = await getPushToken()
-      if (token) saveStaffToken(uid, token, 'staff', idDispositivo()).catch(() => {})
+      if (token) saveStaffToken(uid, token, idDispositivo()).catch(() => {})
     })
   }, [])
-
-  const incoming = calls[0] ?? null
-  useEffect(() => {
-    if (!incoming) {
-      if (vibrateTimer.current) {
-        clearInterval(vibrateTimer.current)
-        vibrateTimer.current = null
-        navigator.vibrate?.(0) // ferma la vibrazione in corso
-      }
-      // Chiudi anche la notifica di sistema della chiamata, se presente.
-      navigator.serviceWorker
-        ?.getRegistration?.()
-        .then((reg) => reg?.getNotifications?.({ tag: 'staff-call' }))
-        .then((ns) => ns?.forEach((n) => n.close()))
-        .catch(() => {})
-      return
-    }
-    // Notifica + vibrazione forte e continua finché non si risponde.
-    // Stesso tag della push FCM: se arrivano entrambe, una sola notifica.
-    notify('📟 Chiamata dal bancone', incoming.message || 'Rispondi sul telefono.', {
-      vibrate: [500, 200, 500, 200, 900],
-      tag: 'staff-call',
-      renotify: true,
-      requireInteraction: true,
-    })
-    const pattern = [500, 200, 500, 200, 900]
-    navigator.vibrate?.(pattern)
-    vibrateTimer.current = setInterval(() => navigator.vibrate?.(pattern), 2600)
-    return () => {
-      clearInterval(vibrateTimer.current)
-      vibrateTimer.current = null
-      navigator.vibrate?.(0)
-    }
-  }, [incoming?.id]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  async function rispondi() {
-    try {
-      await ackStaffCall(incoming.id)
-    } catch (e) {
-      setError(e.message)
-    }
-  }
 
   async function servito(o) {
     setBusyId(o.id)
@@ -193,7 +144,12 @@ export default function ServiceQueue() {
           <div style={{ margin: '8px 0' }}>
             {(o.order_items || []).map((i) => (
               <div className="row between" key={i.id}>
-                <span>{i.qty}× {i.name}</span>
+                <span>
+                  {i.qty}× {i.name}
+                  {/* Chi serve deve sapere che quel drink è «senza ghiaccio» o
+                      «per Anna» PRIMA di posarlo sul tavolo sbagliato. */}
+                  {i.note && <span className="riga-nota">↳ {i.note}</span>}
+                </span>
               </div>
             ))}
           </div>
@@ -213,25 +169,6 @@ export default function ServiceQueue() {
         </div>
       ))}
 
-      {incoming && (
-        <div className="overlay confirm-overlay">
-          <div className="confirm-box pager-call">
-            <div className="pager-icon">📟</div>
-            <h3 style={{ margin: '8px 0' }}>Chiamata dal bancone</h3>
-            {incoming.from_name && (
-              <p className="muted" style={{ margin: 0 }}>da {incoming.from_name}</p>
-            )}
-            {incoming.message && (
-              <p style={{ fontSize: '1.05rem', margin: '12px 0 0' }}>
-                «{incoming.message}»
-              </p>
-            )}
-            <button className="btn block" style={{ marginTop: 18 }} onClick={rispondi}>
-              ✓ Rispondo
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

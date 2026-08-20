@@ -172,7 +172,7 @@ describe('il dettaglio di una comanda', () => {
     monta()
     await screen.findByText(/Cosa c’è da fare/)
 
-    await utente.click(screen.getByRole('button', { name: 'Pronto al servizio' }))
+    await utente.click(screen.getByRole('button', { name: 'Pronto' }))
     expect(advanceComanda).toHaveBeenCalledWith('o41', 'c2', 'pronto')
 
     // senza aspettare il server la schermata è già al passo dopo: al banco
@@ -319,7 +319,7 @@ describe('il dettaglio di una comanda', () => {
     ordine = conto({ status: 'pagato', payment_status: 'pagato' })
     monta()
     await screen.findByText(/Cosa c’è da fare/)
-    expect(screen.queryByRole('button', { name: 'Pronto al servizio' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Pronto' })).not.toBeInTheDocument()
     expect(screen.getByText('💶 Pagato')).toBeInTheDocument()
   })
 
