@@ -772,6 +772,42 @@ export function corsieVisibili(corsie, nascoste = []) {
 // rimandato a mano) la colonna compare da sé. IL LAVORO NON SI NASCONDE
 // MAI, e a mostrarlo è l'app — non una voce di menu che l'utente deve
 // trovare.
+// ── LE COLONNE CHE QUESTO TERMINALE HA SPENTO A MANO ─────────────────
+//
+// Il chip «▦ Colonne» si accende quando qualcuna è spenta. Nasceva acceso e
+// restava acceso per sempre, per due motivi che si sommavano: le due corsie
+// dello sguardo all'indietro partono spente di suo (CORSIE_SPENTE_ALL_INIZIO),
+// quindi l'arancione c'era dal primo avvio e non distingueva niente; e la
+// memoria del terminale poteva tenersi id di colonne che non esistono più —
+// le corsie sono state rimaneggiate più volte — con l'aggravante che
+// nell'elenco non c'era niente da riaccendere per spegnerlo.
+//
+// Qui le due risposte. QUANTE SONO SPENTE si conta solo fra le colonne che
+// in questo momento si possono scegliere: una nascosta che non è nemmeno in
+// elenco non è una scelta, è un residuo.
+export function corsieSpente(sceglibili, nascoste = []) {
+  const via = new Set(nascoste || [])
+  return (sceglibili || []).filter((c) => via.has(c.id))
+}
+
+// Tutti gli id di corsia che l'app conosce, in qualunque assetto: le
+// colonne del banco, quelle dei conti, e le due del pronto diviso — che
+// esistono solo dove il ritiro c'è, ma spegnerne una e poi riunire il
+// pronto è una scelta che va ricordata, non buttata.
+const ID_CORSIE = new Set([
+  ...CORSIE_LAVORO.map((c) => c.id),
+  ...CORSIE_COMANDE.map((c) => c.id),
+  ...CORSIE_PRONTO_DIVISO.map((c) => c.id),
+  ...schedeCoda(false).map(([id]) => id),
+])
+
+// La memoria del terminale, ripulita dagli id morti. Si chiama all'apertura
+// della coda: un id che nessun assetto disegna più non si riaccende da
+// nessuna parte, e restando lì terrebbe acceso il chip per sempre.
+export function soloCorsieVive(nascoste) {
+  return (nascoste || []).filter((id) => ID_CORSIE.has(id))
+}
+
 export function corsieSceglibili(corsie, { passoDiNascita = null } = {}) {
   if (passoDiNascita !== ORDER_STATUSES.IN_PREPARAZIONE) return corsie || []
   return (corsie || []).filter((c) => c.id !== 'da-fare')

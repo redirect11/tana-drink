@@ -972,6 +972,55 @@ describe('le corsie del banco: una card per comanda', () => {
     expect(corsia('al-ritiro')).toBeTruthy()
   })
 
+  // ── IL CHIP «COLONNE» DICE QUANTE NE HA SPENTE (BUG-058) ──────────
+  //
+  // Era acceso sempre, dal primo avvio: la classe `active` guardava solo
+  // «ce n'è almeno una spenta», e le due dello sguardo all'indietro
+  // (Chiuse, Annullate) partono spente di suo. Un arancione che c'è
+  // comunque non dice niente — e chi lo vede va ad aprire l'elenco per
+  // scoprire che non aveva toccato nulla. Adesso il numero è scritto.
+  it('«Colonne» scrive quante ne sono spente, e le conta bene', async () => {
+    const utente = userEvent.setup()
+    montaCoda()
+    await screen.findByText('Da fare')
+
+    // di partenza: Chiuse e Annullate
+    const chip = screen.getByRole('button', { name: /Colonne/ })
+    expect(chip).toHaveTextContent('▦ Colonne (2)')
+    expect(chip).toHaveClass('active')
+
+    // se ne spegne un'altra: il numero sale
+    await utente.click(chip)
+    await utente.click(screen.getByRole('button', { name: 'Pronto', pressed: true }))
+    expect(screen.getByRole('button', { name: /Colonne/ })).toHaveTextContent('▦ Colonne (3)')
+
+    // e riaccendendole tutte il chip si spegne davvero
+    for (const titolo of ['Pronto', '💶 Chiuse', '✖️ Annullate']) {
+      await utente.click(screen.getByRole('button', { name: titolo, pressed: false }))
+    }
+    const spento = screen.getByRole('button', { name: /Colonne/ })
+    expect(spento).toHaveTextContent('▦ Colonne')
+    expect(spento).not.toHaveTextContent('(')
+    expect(spento).not.toHaveClass('active')
+  })
+
+  // UNA COLONNA CHE NON ESISTE PIÙ non deve tenere acceso niente. Gli id
+  // delle corsie sono cambiati coi rimaneggiamenti, e quelli vecchi
+  // restavano nella memoria del terminale: il chip acceso per sempre, e
+  // nell'elenco nessuna colonna da riaccendere per spegnerlo.
+  it('gli id di colonne che non esistono più si buttano all’apertura', async () => {
+    localStorage.setItem(
+      'tana:corsie:nascoste',
+      JSON.stringify(['al-ritiro', 'corsia-fantasma', 'da-incassare-vecchia'])
+    )
+    montaCoda()
+    await screen.findByText('Da fare')
+
+    // resta la sola spenta vera, e la memoria è già ripulita sul disco
+    expect(screen.getByRole('button', { name: /Colonne/ })).toHaveTextContent('▦ Colonne (1)')
+    expect(JSON.parse(localStorage.getItem('tana:corsie:nascoste'))).toEqual(['al-ritiro'])
+  })
+
   it('un conto appena battuto si vede subito, prima ancora del server', async () => {
     // Altrimenti chi batte al POS torna in coda, non lo trova e lo ribatte.
     inVolo = [
