@@ -159,7 +159,7 @@ export default function SettingsTab({ role = null }) {
                 onScegli={(v) => save({ category_display: v })}
               />
 
-              <h4 style={{ margin: '16px 0 4px' }}>La ricerca nella griglia dei prodotti</h4>
+              <h4>La ricerca nella griglia dei prodotti</h4>
               <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
                 Cercando un prodotto nella griglia: si può <strong>filtrare</strong>,
                 lasciando le sole card che rispondono, oppure lasciare la griglia
@@ -187,7 +187,7 @@ export default function SettingsTab({ role = null }) {
                   e in lib/strisce.js. E dove sta l'altra impostazione lo
                   si scopre andandoci: scriverlo qui è una nota per noi,
                   non per chi sceglie. */}
-              <h4 style={{ margin: '16px 0 4px' }}>
+              <h4>
                 Cosa dice la riga a sinistra di ogni scheda della griglia?
               </h4>
               <SceltaModo
@@ -241,7 +241,7 @@ export default function SettingsTab({ role = null }) {
                   c'è niente da scegliere e niente da far scegliere. */}
               {mondoConsegna(settings) === 'entrambi' && (
                 <>
-                  <h4 style={{ margin: '16px 0 4px' }}>Come nascono i conti</h4>
+                  <h4>Come nascono i conti</h4>
                   <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
                     Il valore di partenza di un conto battuto al banco o in
                     sala. Si cambia conto per conto in un tocco: il ritiro
@@ -742,7 +742,7 @@ export default function SettingsTab({ role = null }) {
           <p className="muted small" style={{ margin: '0 0 10px' }}>
             La schermata con cui si modifica il listino, non quella dei clienti.
           </p>
-          <h4 style={{ margin: '4px 0' }}>
+          <h4>
             Cosa dice la riga a sinistra di ogni scheda?
           </h4>
           <SceltaModo
@@ -798,7 +798,7 @@ export default function SettingsTab({ role = null }) {
                   ora la scelta è una sola: si tiene lo stesso una fila di
                   voci, così quando se ne aggiunge un'altra non cambia
                   niente né qui né sui dati già salvati. */}
-              <h4 style={{ margin: '16px 0 4px' }}>La vista del banco</h4>
+              <h4>La vista del banco</h4>
               <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
                 Chi sta al banco non guarda i conti, guarda il lavoro: le{' '}
                 <strong>comande</strong>, una card per ticket, nel passo in cui stanno.
@@ -826,7 +826,7 @@ export default function SettingsTab({ role = null }) {
                   il pallino è l'unica cosa che dice che sono lo stesso
                   tavolo. Il colore a mano si dà comunque, dal ⋯ della
                   card, acceso o spento che sia questo interruttore. */}
-              <h4 style={{ margin: '16px 0 4px' }}>Il colore del conto</h4>
+              <h4>Il colore del conto</h4>
               <ToggleRow
                 label="Ogni conto nuovo nasce col suo colore"
                 desc="Un pallino colorato accanto al numero, sulla card del conto e su tutte le card delle sue comande: due comande dello stesso conto si riconoscono anche da colonne diverse. Il colore si cambia o si toglie sempre dal «⋯ Azioni» della card, anche sui conti già aperti e anche con questo spento."
@@ -834,7 +834,7 @@ export default function SettingsTab({ role = null }) {
                 onChange={(v) => save({ conti_colorati: v })}
               />
 
-              <h4 style={{ margin: '16px 0 4px' }}>La ricerca</h4>
+              <h4>La ricerca</h4>
               <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
                 Cercando un numero, un nome, un tavolo o un drink: si può{' '}
                 <strong>filtrare</strong> la coda, lasciando in pagina solo i conti che

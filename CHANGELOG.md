@@ -334,6 +334,17 @@
   le guarda chi lavora: com'è andata ieri sera è un'altra domanda da com'è
   andato il mese.
 
+- **Basta box bianchi nelle impostazioni e nel menù, e i titoli delle
+  sezioni si leggono.** Sui temi chiari i riquadri che dividono una
+  schermata erano bianchi su fondo quasi bianco, **senza contorno**:
+  adesso hanno un bordo che si vede e si staccano dal fondo, su ogni tema.
+  Stessa cura per le righe fra un'impostazione e l'altra, per le categorie
+  del menù e per le tessere dei gruppi. E il **nome della sezione è
+  diventato un titolo** — grande, ben leggibile, col carattere di casa — invece
+  dell'etichettina grigia in maiuscoletto da dodici pixel: chi cerca
+  «Stampante» o «Coperto» adesso la trova scorrendo, senza andare a
+  tentativi.
+
 ### Al banco
 
 - **Le colonne spente accendono il numerino dei filtri solo se hai cambiato

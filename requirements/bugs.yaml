@@ -2412,3 +2412,59 @@ bugs:
     priority: P2
     test_cases:
       - tests/unit/css.test.js
+
+  - id: BUG-065
+    title: "Box bianchi e titoli minuscoli nelle sezioni di impostazioni e menù"
+    area: "src/index.css, src/components/SettingsTab.jsx, src/components/AvvisiPanel.jsx"
+    description: >
+      SEGNALATO AL BANCO, parole sue: «Un bug è che in alcune voci del menù
+      e impostazioni vengono usati ancora dei box bianchi. E questi box
+      bianchi che rappresentano le sezioni della pagina hanno i titoli
+      troppo piccoli».
+      I BOX BIANCHI. `.card` — il riquadro che fa una sezione di pagina, e
+      che in impostazioni e menù si usa una quarantina di volte come «card
+      settings-section» — era scritta per il tema SCURO: sopra `--card`
+      stendeva un velo bianco (`rgba(255,255,255,0.025)`) e un bordo bianco
+      (`rgba(255,255,255,0.07)`). Sullo scuro quel velo è rilievo; sul
+      tema CHIARO, dove diversi preset hanno `--card: #ffffff`, il velo
+      non si vede e il bordo bianco su fondo chiaro sparisce: resta un
+      rettangolo bianco senza contorno appoggiato su un fondo quasi
+      bianco. Da qui i «box bianchi». Lo stesso errore l'avevano
+      `.toggle-row` (la riga fra un'impostazione e l'altra), `.cat-chip`
+      (le categorie del menù) e `.group-tile` (le tessere dei gruppi nel
+      menù laterale) — la stessa lezione già imparata con `--strip-spenta`
+      e con `.chip`/`.mode-option`.
+      LA CURA: i colori strutturali stanno nei gettoni, che hanno già la
+      variante chiara. Il bordo è `--line`; il rilievo è un gettone nuovo,
+      `--velo-superficie`, che sullo scuro è il velo di luce di sempre
+      (identico a prima: sullo scuro non cambia niente) e sul tema chiaro
+      è `none`. Sul chiaro lo stacco lo fanno il bordo e l'ombra della
+      famiglia di forme (`--ombra-card`), che è quello che fa un riquadro
+      su un fondo chiaro: schiarire una superficie già bianca non si può.
+      I TITOLI TROPPO PICCOLI. `.settings-section h3` era `0.75rem` +
+      `text-transform: uppercase` + `letter-spacing: 1px` + `--muted`:
+      dodici pixel di maiuscoletto grigio slavato. È il titolo che dice
+      cosa c'è dentro il riquadro, e dentro una schermata piena di
+      interruttori chi cercava «Stampante» o «Coperto» andava a tentativi.
+      Adesso è un titolo vero — `1.15rem`, peso 700, colore `--text` —
+      col serif di casa che gli h1-h3 hanno già. Sotto, l'`h4` di sezione
+      diventa una classe (`0.98rem`, peso 600, di sistema) invece dello
+      `style` inline `margin: 16px 0 4px` ripetuto in mezza SettingsTab: è
+      un gradino sotto l'h3 e si distingue anche per il carattere.
+      PASSI PER RIPRODURLO (prima della cura): Impostazioni → Aspetto,
+      tema «☀️ Chiaro» (o «💠 Pico chiaro», `--card: #ffffff`), poi
+      qualsiasi altra scheda delle impostazioni o il menù: i riquadri
+      delle sezioni non hanno contorno e i loro titoli sono etichette
+      grigie di dodici pixel.
+      A SORVEGLIARE È tests/unit/css.test.js: le superfici delle sezioni
+      non dichiarano bianchi fissi per fondo o bordo, il velo ha la sua
+      variante chiara, e il titolo di sezione non scende sotto 1rem né
+      torna maiuscoletto grigio.
+    in_produzione: true
+    status: fixed
+    generate_issue: true
+    labels: [bug, interfaccia, tema]
+    severity: lieve
+    priority: P2
+    test_cases:
+      - tests/unit/css.test.js

@@ -144,6 +144,17 @@ Regole:
 - Numeri che contano (numero ordine, totali): grandi e in evidenza
   (`.bignum`, `.price`); un bartender legge il numero a un metro.
 - Niente maiuscolo urlato, niente corsivi decorativi nel gestionale.
+- **Il titolo di una sezione è un titolo**: `.settings-section h3` sta a
+  `1.15rem`, peso 700, colore `--text` — col serif di casa che gli h1–h3
+  hanno già. Era `0.75rem` in maiuscoletto grigio `--muted`: dodici pixel,
+  e dentro una schermata piena di interruttori chi cercava «Stampante» o
+  «Coperto» andava a tentativi. Il maiuscoletto slavato è per le etichette
+  di servizio, non per il nome di quello che si sta guardando.
+- **Il sottotitolo dentro la sezione** (`.settings-section h4`) sta un
+  gradino sotto: `0.98rem`, peso 600, carattere di sistema. Due misure
+  diverse non bastavano a far vedere la gerarchia quando erano lo stesso
+  carattere; ora l'h3 è serif e l'h4 no. Ha la sua regola nel foglio: era
+  uno `style` inline (`margin: 16px 0 4px`) ripetuto in mezza SettingsTab.
 
 ## Componenti
 
@@ -246,6 +257,17 @@ Regole:
   `tests/unit/css.test.js`.
   Il colore non informa mai da solo: il numero del conto è sulla stessa
   card. Le regole in `src/lib/coloriConto.js`.
+- **Il riquadro di una sezione** (`.card`, e in impostazioni e menù
+  `card settings-section`) non dà per scontato il tema scuro: bordo
+  `--line` e rilievo `--velo-superficie`. Sullo scuro quel velo è la luce
+  che scende dal bordo alto e dà spessore; sul chiaro **si toglie**
+  (`none`), perché la superficie è già il tono più chiaro della pagina e
+  insistere col bianco dava un rettangolo bianco su fondo chiaro col bordo
+  invisibile — i «box bianchi» segnalati al banco. Sul chiaro lo stacco lo
+  fanno il bordo e l'ombra della famiglia di forme (`--ombra-card`).
+  Stessa regola per le superfici minori delle stesse schermate
+  (`.toggle-row`, `.cat-chip`, `.group-tile`, `.chip`, `.mode-option`):
+  fondo `--tile-bg`, bordo `--line`, mai un `rgba(255,255,255,…)` fisso.
 - **Chip e filtri**: pillole compatte, stato attivo con `--accent`;
   i filtri della coda stanno su una riga sola.
 - **Toast e banner**: brevi, in linguaggio comune, mai colpevolizzanti.
@@ -307,6 +329,15 @@ Regole:
 Ombre morbide e rare (bottoni primari, drawer); il resto della gerarchia
 la fanno i tre livelli di fondo. Su temi chiari le ombre si attenuano da
 sole per contrasto: non aggiungerne di dedicate.
+
+I colori "strutturali" — la linea che separa, il velo di una superficie,
+il fondo di una tessera — non si scrivono a mano: sono gettoni dichiarati
+una volta sola, con la variante chiara accanto, e `applyTheme` la accende
+scrivendo `data-luma` sul documento. Oggi sono `--line`, `--tile-bg`,
+`--velo-superficie` e `--strip-spenta`. Un `rgba(255, 255, 255, …)` usato
+come fondo o come bordo nasce per il tema scuro e sul chiaro sparisce: è
+sempre lo stesso difetto, e `tests/unit/css.test.js` lo boccia sulle
+superfici delle sezioni.
 
 ## Guardrail (non negoziabili, per qualsiasi tema)
 
