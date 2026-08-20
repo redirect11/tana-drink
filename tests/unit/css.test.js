@@ -344,4 +344,34 @@ ${nome} {`)
   it('la scelta delle colonne non ha più una riga sua', () => {
     expect(css).not.toMatch(/\n\.corsie-scelta \{/)
   })
+
+  // ── IL PRONTO E IL SUO TASTINO SI TOCCANO ────────────────────
+  //
+  // «Dividi il pronto dobbiamo integrarlo meglio con gli altri due
+  // bottoni, in qualche modo non si capisce a che serve» (l'utente,
+  // 20/08/2026). In quella fila ogni chip è uguale all'altro e fa la
+  // stessa cosa: il taglio del pronto, vestito uguale e messo in fondo,
+  // era indistinguibile. Attaccati e col bordo condiviso si legge «questi
+  // sono una cosa sola» — e a dirlo dev'essere il DISEGNO, non una frase.
+  it('i chip di un gruppo si toccano, con gli angoli tondi solo agli estremi', () => {
+    const r = regola('.chip-gruppo')
+    expect(r).toMatch(/display:\s*inline-flex/)
+    // Niente gap: fra i due c'è la cucitura, non uno spazio.
+    expect(r).not.toMatch(/gap:/)
+    // Il -1px è la cucitura: senza, i bordi si sommano e la giuntura è
+    // spessa il doppio del resto.
+    expect(regola('.chip-gruppo > .chip + .chip')).toMatch(/margin-left:\s*-1px/)
+    expect(regola('.chip-gruppo > .chip')).toMatch(/border-radius:\s*0/)
+    expect(regola('.chip-gruppo > .chip:first-child')).toMatch(/var\(--raggio-pill\)/)
+    expect(regola('.chip-gruppo > .chip:last-child')).toMatch(/var\(--raggio-pill\)/)
+  })
+
+  it('il tastino del gruppo sta stretto: è un segno solo, non una parola', () => {
+    // Attorno a un carattere una pastiglia larga come le altre è tutta
+    // aria, e in una fila di sei o sette chip quell'aria è una riga in più.
+    const laterale = (r) => Number(/padding:\s*[\d.]+px\s+([\d.]+)px/.exec(r)[1])
+    expect(laterale(regola('.chips-filtri .chip-taglio'))).toBeLessThan(
+      laterale(regola('.chips-filtri .chip'))
+    )
+  })
 })

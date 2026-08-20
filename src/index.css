@@ -1824,6 +1824,51 @@ body.fullbleed .bar-content {
   font-size: 0.86rem;
 }
 
+/* ── IL PRONTO E IL SUO ✂️: UN GRUPPO, NON DUE VICINI ────────────────
+   In fila i chip sono tutti uguali e tutti fanno la stessa cosa (accendi
+   o spegni la colonna). Il taglio del pronto NON fa quella cosa: cambia
+   come una colonna è fatta. Da chip a sé, in fondo alla fila, era
+   indistinguibile dai fratelli e lontano dalla colonna di cui parlava —
+   «non si capisce a che serve» (l'utente, 20/08/2026).
+   ATTACCATI SENZA SPAZIO E COL BORDO CONDIVISO si legge «questi tre sono
+   una cosa sola»: la colonna del pronto e l'attrezzo che la apre in due.
+   Il `-1px` è la cucitura — senza, i bordi si sommano e la giuntura è
+   spessa il doppio del resto.
+   NON SCORRE E NON SI SPEZZA: il gruppo va a capo intero, che un ✂️
+   rimasto solo all'inizio della riga sotto sarebbe di nuovo il chip
+   orfano da cui siamo partiti. */
+.chip-gruppo {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+.chip-gruppo > .chip {
+  border-radius: 0;
+}
+.chip-gruppo > .chip + .chip {
+  margin-left: -1px;
+}
+.chip-gruppo > .chip:first-child {
+  border-top-left-radius: var(--raggio-pill);
+  border-bottom-left-radius: var(--raggio-pill);
+}
+.chip-gruppo > .chip:last-child {
+  border-top-right-radius: var(--raggio-pill);
+  border-bottom-right-radius: var(--raggio-pill);
+}
+/* Il tastino è un segno solo: attorno a un carattere una pastiglia larga
+   come le altre è tutta aria, e in una fila di sei o sette chip quell'aria
+   è una riga in più. Il segno un filo più grande del testo dei chip perché
+   deve leggersi da lontano, sulla lavagna. */
+.chip-taglio {
+  padding-inline: 9px;
+  font-size: 1rem;
+}
+.chips-filtri .chip-taglio {
+  padding: 5px 9px;
+  font-size: 0.95rem;
+}
+
 /* ── I DUE TASTINI CHE GOVERNANO LA VISTA ────────────────────────────
    Il tasto dei filtri e la freccia dell'ordinamento stanno IN FONDO A
    DESTRA, su una riga che c'è comunque — i conteggi sulle lavagne, la

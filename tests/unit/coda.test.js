@@ -31,6 +31,8 @@ import {
   gruppiInCoda,
   schedeCoda,
   corsieDiverseDalNormale,
+  gruppiColonne,
+  corsieDelPronto,
   contaFiltri,
   spiegaFiltri,
   spiegaOrdine,
@@ -93,7 +95,7 @@ describe('openOrdersCount', () => {
 // scegliere di deselezionare e vedere solo gli ordini di qualcuno (i miei
 // ad esempio)» (l'utente, 20/08/2026). «Solo i miei» è diventato un caso
 // particolare: un autore solo selezionato.
-describe('gli autori dei conti', () => {
+describe('chi ha aperto il conto: la tendina «Staff»', () => {
   const firmati = [
     { id: 'a', placed_by: { email: 'Anna@tana.it', name: 'Anna', role: 'bartender' } },
     { id: 'b', placed_by: { email: 'bruno@tana.it', name: 'Bruno', role: 'bartender' } },
@@ -124,7 +126,10 @@ describe('gli autori dei conti', () => {
   it('di suo sono tutti accesi: la coda non nasconde niente', () => {
     expect(autoriAttivi(null, elenco)).toEqual(elenco.map((v) => v.chiave))
     expect(conAutori(firmati, null, elenco)).toBe(firmati)
-    expect(riassuntoAutori(null, elenco)).toBe('✍️ Autori')
+    // SI CHIAMA STAFF, non «Autori»: «la dropdown che hai chiamato
+    // Autori chiamala Staff» (l'utente, 20/08/2026). I nomi interni
+    // restano `autori*` — un rinomino a tappeto non serve a nessuno.
+    expect(riassuntoAutori(null, elenco)).toBe('✍️ Staff')
   })
 
   it('deselezionando restano gli altri: «solo i miei» è un caso di questo', () => {
@@ -136,9 +141,22 @@ describe('gli autori dei conti', () => {
     expect(riassuntoAutori(scelti, elenco)).toBe('✍️ Anna')
   })
 
-  it('con più di uno la pastiglia conta invece di nominare', () => {
+  it('con più di uno la pastiglia conta, e dice su quanti', () => {
+    // «2 di 3» e non «2 persone»: la tendina si apre per capire QUANTO
+    // stringe, e il denominatore lo dice senza aprirla. Vale anche quando
+    // fra i selezionati c'è la voce «Clienti», che staff non è.
     const scelti = cambiaAutoreScelto(null, AUTORE_CLIENTE, elenco)
-    expect(riassuntoAutori(scelti, elenco)).toBe('✍️ 2 autori')
+    expect(riassuntoAutori(scelti, elenco)).toBe('✍️ 2 di 3')
+  })
+
+  it('la parola «autori» non arriva mai a schermo', () => {
+    // Il registro (REQ-CODA-009) dice Staff; il codice dentro dice autori.
+    // Questo test è la cerniera fra le due cose: se qualcuno rimette la
+    // vecchia parola nella pastiglia, qui si rompe.
+    const uno = cambiaAutoreScelto(null, AUTORE_CLIENTE, elenco)
+    for (const scelti of [null, ['anna@tana.it'], uno]) {
+      expect(riassuntoAutori(scelti, elenco).toLowerCase()).not.toContain('autor')
+    }
   })
 
   it('riaccendendo l\'ultimo spento si torna a «tutti», non a una lista', () => {
@@ -170,6 +188,65 @@ describe('gli autori dei conti', () => {
     expect(autoriDeiConti([])).toEqual([])
     expect(autoriDeiConti(null)).toEqual([])
     expect(conAutori(null, ['anna@tana.it'], elenco)).toEqual([])
+  })
+})
+
+// ── I CHIP DELLE COLONNE, E DOVE STA IL ✂️ ──────────────────────────
+//
+// «Dividi il pronto dobbiamo integrarlo meglio con gli altri due bottoni,
+// in qualche modo non si capisce a che serve. E poi è troppo lungo»
+// (l'utente, 20/08/2026). Era un chip a sé in fondo alla fila: in quella
+// fila ogni chip ACCENDE una colonna, quello lì cambiava come una colonna
+// è FATTA. Adesso il tastino sta nel gruppo del chip del pronto, e questa
+// funzione dice solo chi sta con chi.
+describe('i gruppi dei chip delle colonne', () => {
+  const sceglibili = (diviso) =>
+    corsieSceglibili(
+      corsieComande([], { prontoDiviso: corsieDelPronto({ divise: diviso, ritiroEsiste: true }) })
+    )
+
+  it('col pronto unito il gruppo è il chip «Pronto» più il suo tastino', () => {
+    const gruppi = gruppiColonne(sceglibili(false), { taglioPossibile: true })
+    const pronto = gruppi.find((g) => g.taglio)
+    expect(pronto.corsie.map((c) => c.titolo)).toEqual(['Pronto'])
+    expect(pronto.diviso).toBe(false)
+    // e nessun altro chip si porta dietro un tastino: gli altri accendono
+    // e spengono la loro colonna, e basta.
+    expect(gruppi.filter((g) => g.taglio)).toHaveLength(1)
+    expect(gruppi.every((g) => g.corsie.length === 1)).toBe(true)
+  })
+
+  it('diviso, le due colonne stanno nello STESSO gruppo', () => {
+    const gruppi = gruppiColonne(sceglibili(true), { taglioPossibile: true })
+    const pronto = gruppi.find((g) => g.taglio)
+    // È quello che le fa leggere come una colonna aperta in due, e non
+    // come due colonne qualsiasi in fila.
+    expect(pronto.corsie.map((c) => c.titolo)).toEqual(['Da servire', 'Da ritirare'])
+    expect(pronto.diviso).toBe(true)
+    // e restano al POSTO del pronto, non in fondo: le altre non si
+    // spostano sotto gli occhi.
+    expect(gruppi.map((g) => g.id)).toEqual([
+      'da-fare',
+      'al-banco',
+      'pronto',
+      'ritirati',
+      'chiusi',
+      'annullati',
+    ])
+  })
+
+  it('senza il ritiro al banco il tastino non compare', () => {
+    // «Ovviamente vale solo se è attivo il ritiro al banco» (l'utente,
+    // 20/08/2026): col solo servizio non c'è niente da separare, e un
+    // tasto che non fa niente è peggio di un tasto che non c'è.
+    const gruppi = gruppiColonne(sceglibili(false), { taglioPossibile: false })
+    expect(gruppi.some((g) => g.taglio)).toBe(false)
+    expect(gruppi.find((g) => g.id === 'pronto').corsie.map((c) => c.titolo)).toEqual(['Pronto'])
+  })
+
+  it('elenco vuoto o assente: nessun gruppo, niente errori', () => {
+    expect(gruppiColonne([], { taglioPossibile: true })).toEqual([])
+    expect(gruppiColonne(null)).toEqual([])
   })
 })
 
