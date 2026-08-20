@@ -2370,3 +2370,45 @@ bugs:
     priority: P2
     test_cases:
       - tests/unit/css.test.js
+
+  - id: BUG-064
+    title: "Nella griglia il conto pagato-ma-da-servire si vede verde come uno concluso"
+    area: "src/index.css (.order-card.pagato-da-servire, .order-card.pay-*), src/pages/BartenderPage.jsx"
+    description: >
+      Trovato il 20/08/2026 lavorando alla striscia colorata delle card
+      (REQ-UI-020), non segnalato: c'era da mesi e in produzione c'e'
+      ancora.
+      COSA SI VEDEVA. Nella coda a GRIGLIA la card di un conto gia'
+      incassato ma non ancora consegnato porta la classe
+      `pagato-da-servire`, che le da' la striscia AMBRA — «i soldi li hai
+      gia' presi, il drink lo devi ancora fare», il caso strano che si
+      deve notare. Non compariva mai: la stessa card porta anche
+      `pay-pagato`, e nel foglio le regole `pay-*` stavano DOPO. A parita'
+      di peso (`.order-card.qualcosa` per tutte) vince l'ultima letta, e
+      vinceva il verde. Risultato: nella griglia un conto pagato e ancora
+      da consegnare si vedeva concluso come tutti gli altri, e chi passava
+      a ritirare non aveva niente che glielo dicesse.
+      NELLE CORSIE IL DIFETTO NON SI VEDE, ed e' il motivo per cui e'
+      passato inosservato: li' la card non ha le classi `pay-*`, e l'ambra
+      restava l'unica a scrivere sulla striscia.
+      LA CURA E' L'ORDINE. `.order-card.pagato-da-servire` e' stata
+      spostata DOPO le quattro `pay-*`, con scritto sopra perche' sta li'.
+      Nessuna specificita' gonfiata a posta (un `!important` o un
+      selettore doppio avrebbero risolto il sintomo e lasciato la trappola
+      al prossimo).
+      PASSI PER RIPRODURLO (prima della cura): coda a griglia, un conto
+      incassato con la preparazione ancora indietro — la striscia e' verde
+      invece che ambra.
+      A SORVEGLIARE E' tests/unit/css.test.js, che misura la POSIZIONE
+      delle regole nel foglio: dal DOM la cascata non si vede, e senza un
+      test il prossimo riordino del foglio se lo rimangia. Lo stesso test
+      tiene fermo anche il gradino sopra, il colore del conto
+      (`.order-card.bordo-conto`), che deve restare l'ultima parola.
+    in_produzione: true
+    status: fixed
+    generate_issue: true
+    labels: [bug, interfaccia, coda]
+    severity: lieve
+    priority: P2
+    test_cases:
+      - tests/unit/css.test.js

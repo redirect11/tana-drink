@@ -5,11 +5,11 @@ import {
   BolloAcconto,
   Corsia,
   Lavagna,
-  coloreCardConto,
   PiedeCorsia,
   TastoAzioni,
   TastoCorsia,
 } from './Corsia.jsx'
+import { coloreCardConto } from '../lib/coloriConto.js'
 
 // ── LA VISTA A CORSIE DEI CONTI ───────────────────────────────────────
 //
@@ -46,6 +46,10 @@ export default function CorsieStato({
   // Quale card mostra TUTTE le righe: una alla volta, come per le azioni.
   espansa = null,
   onEspandi,
+  // L'impostazione del locale: la striscia a sinistra dice il colore del
+  // conto invece dello stato. Arriva dalla pagina, che le impostazioni le
+  // ha già in cache — qui non si legge niente mentre si disegna.
+  bordoColoreConto = false,
 }) {
   // Un solo «adesso» per tutta la vista: card diverse non devono dire tempi
   // diversi solo perché sono state disegnate a un secondo di distanza.
@@ -66,63 +70,66 @@ export default function CorsieStato({
             inArrivo={inArrivo}
             onScarta={onScarta}
           >
-            {corsia.ordini.map((o) => (
-              <article
-                className={`card order-card corsia-card ${o.workflow_status}${
-                  o.payment_status === 'parziale' ? ' acconto' : ''
-                }${o.id === idAcceso ? ' conto-acceso' : ''}${
-                  coloreCardConto(o) ? ' conto-colorato' : ''
-                }`}
-                style={coloreCardConto(o)?.style}
-                key={o.id}
-                id={`ordine-${o.id}`}
-                onClick={() => onApri?.(o)}
-              >
-                {/* NUMERO E NOME INSIEME, come sulle card delle comande:
-                    è la stessa lavagna, e due viste della stessa cosa non
-                    devono leggersi in due modi. */}
-                <div className="row between">
-                  <span className="corsia-num">
-                    #{o.daily_number ?? '—'}
-                    {destinazioneConto(o) && (
-                      <span className="corsia-chi"> {destinazioneConto(o)}</span>
-                    )}{' '}
-                    <OrderBy order={o} />
-                  </span>
-                  <BolloAcconto order={o} />
-                  <span className="muted small corsia-quando">
-                    {daQuanto(o.created_at, adesso)}
-                  </span>
-                </div>
-                <RigheCorsia
-                  items={o.order_items}
-                  aperto={espansa === o.id}
-                  onApri={() => onEspandi?.(espansa === o.id ? null : o.id)}
-                />
-                {o.note && <div className="order-note small corsia-nota">{o.note}</div>}
-                {(azioni || azione) && (
-                  <PiedeCorsia>
-                    {azioni && (
-                      <TastoAzioni
-                        aperto={aperta === o.id}
-                        onTocca={() => onApriAzioni?.(aperta === o.id ? null : o.id)}
-                      />
-                    )}
-                    <TastoCorsia azione={azione} onPremi={() => onIncassa?.(o)} />
-                  </PiedeCorsia>
-                )}
-                {azioni && aperta === o.id && (
-                  // Le azioni sono quelle della coda, disegnate qui: una
-                  // regola sola, in un posto solo. L'avanzamento no —
-                  // «Segna come Ritirato/Servito» e il tasto grande della
-                  // corsia sono la STESSA cosa scritta due volte, a un
-                  // dito di distanza. Qui comanda il tasto della corsia.
-                  <div className="corsia-azioni-aperte" onClick={(e) => e.stopPropagation()}>
-                    {azioni(o, { senzaAvanzamento: !!azione })}
+            {corsia.ordini.map((o) => {
+              const colore = coloreCardConto(o, bordoColoreConto)
+              return (
+                <article
+                  className={`card order-card corsia-card ${o.workflow_status}${
+                    o.payment_status === 'parziale' ? ' acconto' : ''
+                  }${o.id === idAcceso ? ' conto-acceso' : ''}${
+                    colore ? ' ' + colore.className : ''
+                  }`}
+                  style={colore?.style}
+                  key={o.id}
+                  id={`ordine-${o.id}`}
+                  onClick={() => onApri?.(o)}
+                >
+                  {/* NUMERO E NOME INSIEME, come sulle card delle comande:
+                      è la stessa lavagna, e due viste della stessa cosa non
+                      devono leggersi in due modi. */}
+                  <div className="row between">
+                    <span className="corsia-num">
+                      #{o.daily_number ?? '—'}
+                      {destinazioneConto(o) && (
+                        <span className="corsia-chi"> {destinazioneConto(o)}</span>
+                      )}{' '}
+                      <OrderBy order={o} />
+                    </span>
+                    <BolloAcconto order={o} />
+                    <span className="muted small corsia-quando">
+                      {daQuanto(o.created_at, adesso)}
+                    </span>
                   </div>
-                )}
-              </article>
-            ))}
+                  <RigheCorsia
+                    items={o.order_items}
+                    aperto={espansa === o.id}
+                    onApri={() => onEspandi?.(espansa === o.id ? null : o.id)}
+                  />
+                  {o.note && <div className="order-note small corsia-nota">{o.note}</div>}
+                  {(azioni || azione) && (
+                    <PiedeCorsia>
+                      {azioni && (
+                        <TastoAzioni
+                          aperto={aperta === o.id}
+                          onTocca={() => onApriAzioni?.(aperta === o.id ? null : o.id)}
+                        />
+                      )}
+                      <TastoCorsia azione={azione} onPremi={() => onIncassa?.(o)} />
+                    </PiedeCorsia>
+                  )}
+                  {azioni && aperta === o.id && (
+                    // Le azioni sono quelle della coda, disegnate qui: una
+                    // regola sola, in un posto solo. L'avanzamento no —
+                    // «Segna come Ritirato/Servito» e il tasto grande della
+                    // corsia sono la STESSA cosa scritta due volte, a un
+                    // dito di distanza. Qui comanda il tasto della corsia.
+                    <div className="corsia-azioni-aperte" onClick={(e) => e.stopPropagation()}>
+                      {azioni(o, { senzaAvanzamento: !!azione })}
+                    </div>
+                  )}
+                </article>
+              )
+            })}
           </Corsia>
         )
       })}

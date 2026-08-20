@@ -34,6 +34,51 @@ export default function ThemeSettings({ settings, onSave }) {
         livePreview
         onSave={(t) => onSave({ theme_staff: t })}
       />
+      <CardDellaCoda settings={settings} onSave={onSave} />
+    </div>
+  )
+}
+
+// ── LE CARD DELLA CODA ────────────────────────────────────────────────
+//
+// STA QUI, dentro «Aspetto», e non in «Coda ordini»: la regola l'ha data
+// l'utente il 20/08/2026 — «tutto ciò che riguarda l'aspetto degli
+// elementi, di qualsiasi sezione del sito, dovrebbe essere messo sotto
+// Aspetto». Chi cerca "come si vedono le card" adesso ha un posto solo
+// dove guardare, invece di doverlo indovinare dalla sezione.
+//
+// LA DOMANDA È «COSA DICE LA STRISCIA», non «acceso o spento»: sono due
+// risposte con lo stesso peso, e un interruttore avrebbe costretto a
+// scrivere nell'etichetta quale delle due è il "no". Due tasti affiancati
+// dicono le due cose per intero, come per la ricerca nella coda.
+function CardDellaCoda({ settings, onSave }) {
+  const colore = settings.bordo_colore_conto === true
+  return (
+    <div style={{ marginTop: 18 }}>
+      <h4 style={{ margin: '0 0 4px' }}>Le card della coda</h4>
+      <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
+        La <strong>striscia colorata</strong> a sinistra di ogni card, nella coda e
+        sulla lavagna del banco. Può dire <strong>com&apos;è messo il conto</strong> —
+        da incassare, acconto, pagato, annullato — oppure portare il{' '}
+        <strong>colore del conto</strong>, quello scelto dal «⋯ Azioni» della card o
+        assegnato da solo ai conti nuovi. Il colore sul fondo della card resta in
+        ogni caso. Un conto senza colore, e un conto annullato, tengono sempre la
+        striscia dello stato.
+      </p>
+      <div className="mode-choice">
+        <button
+          className={`mode-option${colore ? '' : ' active'}`}
+          onClick={() => onSave({ bordo_colore_conto: false })}
+        >
+          💳 Com&apos;è messo il conto
+        </button>
+        <button
+          className={`mode-option${colore ? ' active' : ''}`}
+          onClick={() => onSave({ bordo_colore_conto: true })}
+        >
+          🎨 Il colore del conto
+        </button>
+      </div>
     </div>
   )
 }

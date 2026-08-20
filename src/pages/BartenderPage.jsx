@@ -150,7 +150,8 @@ import VipTab from '../components/VipTab.jsx'
 import ServiceQueue from '../components/ServiceQueue.jsx'
 import StaffCallList from '../components/StaffCallList.jsx'
 import Caricamento from '../components/Caricamento.jsx'
-import { coloreCardConto, SceltaColoreConto } from '../components/Corsia.jsx'
+import { SceltaColoreConto } from '../components/Corsia.jsx'
+import { coloreCardConto } from '../lib/coloriConto.js'
 import { legendaConPresenze, BATTITO_PRESENZA_MS } from '../lib/presenza.js'
 import CorsieStato from '../components/CorsieStato.jsx'
 import CorsieComande from '../components/CorsieComande.jsx'
@@ -737,6 +738,11 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
 
   // Gestione preparazione: se spenta spariscono stati e avanzamenti.
   const workflowOn = settings.workflow_enabled !== false
+  // COSA DICE LA STRISCIA a sinistra della card: di suo lo stato (com'è
+  // sempre stato), oppure il colore del conto se il locale l'ha scelto.
+  // Chi decide è lib/coloriConto.js: qui si legge solo l'impostazione, che
+  // è già in cache come tutte le altre.
+  const bordoColoreConto = settings.bordo_colore_conto === true
   // In che passo nasce il lavoro in questo locale: lo dice comande.js, in
   // un posto solo. Serve a sapere fin dove si può tornare indietro — sotto
   // quel passo non c'è niente da guardare — e quali colonne ha senso
@@ -2289,7 +2295,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
     const awaiting = attesaPagamento(o, passoDiNascita)
     const count = (o.order_items || []).reduce((s, i) => s + i.qty, 0)
     const open = openCards.has(o.id)
-    const colore = coloreCardConto(o)
+    const colore = coloreCardConto(o, bordoColoreConto)
     return (
       <div
         className={`card order-card grid-card ${o.workflow_status} ${orderStripClass(o)}${
@@ -2431,7 +2437,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
 
   const renderCard = (o) => {
         const awaiting = attesaPagamento(o, passoDiNascita)
-        const colore = coloreCardConto(o)
+        const colore = coloreCardConto(o, bordoColoreConto)
         return (
           <div
             className={`card order-card ${o.workflow_status}${
@@ -3020,6 +3026,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
               attesaPagamento={(o) =>
                 attesaPagamento(o, passoDiNascita)
               }
+              bordoColoreConto={bordoColoreConto}
             />
           ) : (
           <CorsieStato
@@ -3039,6 +3046,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             onApriAzioni={setCorsiaAperta}
             espansa={corsiaEspansa}
             onEspandi={setCorsiaEspansa}
+            bordoColoreConto={bordoColoreConto}
             // «Incassa» apre il pagamento del conto, quello vero: sconto,
             // conto diviso, contanti, carta e lettore stanno lì. Rifarne una
             // versione ridotta qui vorrebbe dire due casse che si comportano

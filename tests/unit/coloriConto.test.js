@@ -20,6 +20,7 @@ import { describe, it, expect } from 'vitest'
 import {
   COLORI_CONTO,
   coloreAutomatico,
+  coloreCardConto,
   coloreDelConto,
   coloreValido,
 } from '../../src/lib/coloriConto.js'
@@ -82,5 +83,77 @@ describe('cosa si accetta di scrivere sul conto', () => {
     // Una stringa arrivata da chissà dove finirebbe dentro uno `style`.
     expect(coloreValido('red; background:url(x)')).toBe(false)
     expect(coloreValido('#123456')).toBe(false)
+  })
+})
+
+// ── COSA DICE LA STRISCIA A SINISTRA DELLA CARD (REQ-UI-020) ─────────
+//
+// La striscia da 4px dice lo STATO — a che punto sta il lavoro, com'è
+// messo il pagamento — ed è stata l'unica risposta possibile finché
+// l'utente non ha chiesto l'altra (20/08/2026): dove un conto si spezza in
+// tante comande sparse, riconoscere il tavolo vale più del passo di
+// lavoro. Adesso lo sceglie chi manda avanti il locale.
+//
+// LA DECISIONE STA QUI, in una funzione sola, e non in tre ternari sparsi
+// nel JSX delle quattro viste della coda: è esattamente così che era nata
+// la striscia ambra del BUG-064, applicata a mano e mangiata dal CSS senza
+// che nessuno se ne accorgesse.
+describe('cosa dice la striscia a sinistra della card', () => {
+  const conto = { id: 'o41', daily_number: 41, colore: '#9b59b6' }
+
+  it('di suo la striscia resta quella dello stato: il colore prende solo il fondo', () => {
+    // È il default, e chi non tocca niente non deve vedere cambiare niente:
+    // la coda di stasera è la stessa di ieri sera.
+    const c = coloreCardConto(conto)
+    expect(c.className).toBe('conto-colorato')
+    expect(c.className).not.toContain('bordo-conto')
+    expect(c.style).toEqual({ '--conto-colore': '#9b59b6' })
+  })
+
+  it('accesa l’impostazione, la striscia porta il colore del conto', () => {
+    const c = coloreCardConto(conto, true)
+    // Il fondo NON si perde: sono due segni, e quello da lontano è il fondo.
+    expect(c.className).toContain('conto-colorato')
+    expect(c.className).toContain('bordo-conto')
+    expect(c.style).toEqual({ '--conto-colore': '#9b59b6' })
+  })
+
+  it('un conto SENZA colore tiene la striscia dello stato, accesa o no', () => {
+    // Se qui si mettesse la classe lo stesso, `var(--conto-colore)` non
+    // sarebbe definita e la striscia diventerebbe trasparente: una card
+    // senza bordo, che non dice più né una cosa né l'altra.
+    expect(coloreCardConto({ id: 'o42', daily_number: 42 }, true)).toBe(null)
+    expect(coloreCardConto({ id: 'o42', colore: null }, true)).toBe(null)
+    expect(coloreCardConto(null, true)).toBe(null)
+  })
+
+  it('un conto ANNULLATO tiene il grigio, impostazione o no', () => {
+    // Lavoro buttato. Una striscia accesa lo rimetterebbe in mezzo ai vivi,
+    // e nella colonna degli annullati sarebbe la card più vistosa di tutte.
+    // L'annullamento arriva in due campi diversi a seconda della vista.
+    const perStatus = { ...conto, status: 'annullato' }
+    const perWorkflow = { ...conto, workflow_status: 'annullato' }
+    expect(coloreCardConto(perStatus, true).className).toBe('conto-colorato')
+    expect(coloreCardConto(perWorkflow, true).className).toBe('conto-colorato')
+    // Il fondo però resta colorato anche lì: è il conto, non il suo stato.
+    expect(coloreCardConto(perStatus, true).style).toEqual({ '--conto-colore': '#9b59b6' })
+  })
+
+  it('pagato-ma-da-servire: con l’impostazione accesa vince il colore del conto', () => {
+    // L'ambra dice «pagato, ancora da consegnare» e a striscia libera resta
+    // sua (BUG-064). Accesa l'impostazione, la striscia è del conto: che sia
+    // già pagato lo dicono il 💳 accanto al nome e, nelle corsie, il filo
+    // ambra dentro la card. Il posto nella cascata CSS è sorvegliato da
+    // tests/unit/css.test.js.
+    const c = coloreCardConto({ ...conto, payment_status: 'pagato' }, true)
+    expect(c.className).toContain('bordo-conto')
+  })
+
+  it('l’impostazione si accende solo se è vera, non se «sembra» vera', () => {
+    // Le impostazioni arrivano da Firestore e un campo mai scritto è
+    // `undefined`: qui dentro non deve diventare «forse».
+    for (const forse of [undefined, null, false, 0, '', 'no']) {
+      expect(coloreCardConto(conto, forse).className).toBe('conto-colorato')
+    }
   })
 })

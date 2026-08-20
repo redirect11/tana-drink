@@ -212,16 +212,40 @@ Regole:
   c'è la stella dei preferiti — un tasto, che non si copre.
   In magazzino è sempre un pallino: lì il segno è uno STATO, non un colore
   scelto a mano.
-- **Il colore del conto è un pallino, e lo stato vince sempre.** Un conto
-  può avere un colore suo (campo `colore` sul documento, tavolozza delle
-  categorie): serve a riconoscere che tre comande finite in tre colonne
-  diverse sono lo stesso tavolo. Sta in un **pallino da 10px accanto al
-  numero**, sulla card del conto e su tutte le card delle sue comande —
-  mai un fondo pieno sotto il testo (dodici tinte sature diventano
-  illeggibili su un tema o sull'altro) e **mai la striscia a sinistra**:
-  quella dice a che punto sta il lavoro, ed è quello che si legge di
-  corsa. Due segni, due domande. Il colore non informa mai da solo: il
-  numero del conto gli sta accanto. Le regole in `src/lib/coloriConto.js`.
+- **Il colore del conto prende il fondo della card.** Un conto può avere un
+  colore suo (campo `colore` sul documento, tavolozza delle categorie):
+  serve a riconoscere che tre comande finite in tre colonne diverse sono lo
+  stesso tavolo. Non è un pallino — quel segno risponde da **lontano**, e
+  dieci pixel da lontano non ci sono: è una **sfumatura in diagonale**
+  dall'angolo in alto a sinistra, **32%** all'angolo, **12%** a metà,
+  finita a 88% (`.order-card.conto-colorato`). In diagonale perché da
+  sinistra c'è già l'alone del passo di lavoro, e due sfumature dallo
+  stesso lato si impastano.
+  **I due numeri non hanno lo stesso peso, e sono misurati** (dodici tinte
+  per otto temi). All'angolo c'è il numero del conto in `--text`: al 32% il
+  peggiore è **4,4:1**, e il 32% è il **tetto** — a 38% scende a 3,9. A
+  metà cade il testo minore in `--muted`, e lì si paga: il peggiore passa
+  da 4,1 a **3,5** (Pico scuro e Catppuccin chiaro, i due temi che
+  partivano stretti già sul fondo nudo). **Il 12% è la soglia**: chi la
+  alza rifà quei conti prima. La tinta si mescola con `--card`, non con la
+  trasparenza: ogni fermata è un colore **opaco**, e il contrasto misurato
+  è quello che si vede davvero.
+- **Cosa dice la striscia a sinistra lo sceglie il locale.** Di suo dice lo
+  **stato** — a che punto sta il lavoro, com'è messo il pagamento — ed è il
+  default: chi non tocca niente vede la coda di ieri sera. Accendendo
+  *Impostazioni ▸ Aspetto ▸ Le card della coda ▸ «🎨 Il colore del conto»*
+  (`bordo_colore_conto`) porta invece il **colore del conto**, in tutte le
+  viste della coda: dove i conti si spezzano in tante comande sparse,
+  riconoscere il tavolo vale più del passo di lavoro. Due eccezioni, e
+  stanno nella funzione che decide, non nel CSS: un conto **senza colore**
+  e un conto **annullato** tengono la striscia dello stato.
+  **La cascata è parte della regola**: sulla striscia scrivono più famiglie
+  con lo stesso peso, e vince l'ultima letta — `pay-*`, poi
+  `pagato-da-servire` (che scritta prima non compariva mai: BUG-064), poi
+  `.order-card.bordo-conto`, ultima di tutte. La sorveglia
+  `tests/unit/css.test.js`.
+  Il colore non informa mai da solo: il numero del conto è sulla stessa
+  card. Le regole in `src/lib/coloriConto.js`.
 - **Chip e filtri**: pillole compatte, stato attivo con `--accent`;
   i filtri della coda stanno su una riga sola.
 - **Toast e banner**: brevi, in linguaggio comune, mai colpevolizzanti.

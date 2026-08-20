@@ -24,11 +24,11 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 |---|---|---|
 | ✅ | 169 | fatto e coperto dai test |
 | ⚠️  | 14 | fatto ma nessun test lo verifica |
-| ⬜ | 20 | da fare |
+| ⬜ | 21 | da fare |
 | 🗑 | 1 | non più valido |
 
-**204 voci** in tutto. **183** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **20** sono lavori
+**205 voci** in tutto. **183** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **21** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **6** difetti noti sono ancora aperti.
 
@@ -59,7 +59,7 @@ come «vero oggi», non come «garantito».
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
 | [Integrazione SumUp](#integrazione-sumup) | 6 | — | Il dialogo con il terminale SumUp, dalle Cloud Functions. |
 | [Intelligenza artificiale](#intelligenza-artificiale) | — | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
-| [Interfaccia](#interfaccia) | 22 | — | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
+| [Interfaccia](#interfaccia) | 22 | 1 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 13 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 
 ## Cosa fa il sistema
@@ -1662,7 +1662,17 @@ IL COLORE DEL CONTO PRENDE IL FONDO DELLA CARD, che era libero: sfumato in diago
 
 PER ARRIVARCI il fondo della card e' passato da due `background` che si sovrascrivevano a vicenda a due VARIABILI (`--tinta-stato` e `--conto-colore`) composte in una regola sola: prima vinceva l'ultima regola letta e l'altro segno spariva. Le regole stanno in src/lib/coloriConto.js, che è dove è scritto il perché.
 
-**Dove**: `src/lib/api.js, src/components/CorsieComande.jsx, src/components/CorsieStato.jsx, src/components/SettingsTab.jsx` · **Lo dimostrano**: `tests/unit/coloriConto.test.js`, `tests/component/CodaCorsie.test.jsx`
+CHI VINCE ADESSO LO SCEGLIE IL LOCALE, dal 20/08/2026. Parole dell'utente: «serve una impostazione che mi permetta di scegliere se il bordino rappresenta gli stati del pagamento ordine o può essere del colore scelto per la card. Possiamo scegliere il colore della card dalle azioni o usare il colore random assegnato se acceso nelle impostazioni. Il colore che viene assegnato al momento è sfumato ma è molto chiaro. Deve essere più visibile. Se attiviamo nelle impostazioni il bordino dello stesso colore scelto/assegnato allora il bordino diventa di quel colore». «VINCE LO STATO, sempre» qui sopra non vale più come regola scritta nel codice: vale come DEFAULT. L'IMPOSTAZIONE è `bordo_colore_conto` (booleana, di suo falsa: chi non la tocca vede la coda di ieri sera). Sta in Impostazioni ▸ Aspetto ▸ «Le card della coda», che è dove vanno le impostazioni d'aspetto per la regola data lo stesso giorno (REQ-UI-024), e non dov'è «Il colore del conto» oggi. Non è un acceso/spento ma DUE RISPOSTE con lo stesso peso — «💳 Com'è messo il conto» e «🎨 Il colore del conto» — perché un interruttore avrebbe costretto a scrivere nell'etichetta quale delle due è il no.
+
+VALE IN TUTTE LE VISTE della coda (corsie di stato, corsie delle comande, griglia, lista): la striscia deve voler dire la stessa cosa ovunque, o non vuol dire niente. E la decisione è UNA funzione pura, `coloreCardConto(order, bordoColoreConto)` in lib/coloriConto.js, non un ternario per vista: è esattamente così che era nata la striscia ambra mai comparsa del BUG-064.
+
+DUE ECCEZIONI, e stanno nella funzione, non nel CSS: un conto SENZA colore tiene la striscia dello stato (con la classe messa lo stesso, `var(--conto-colore)` non sarebbe definita e la striscia diventerebbe trasparente); un conto ANNULLATO tiene il grigio, impostazione o no — è lavoro buttato, e una striscia accesa lo rimetterebbe in mezzo ai vivi, nella colonna dove sarebbe la card più vistosa di tutte. Il fondo colorato, invece, resta anche sugli annullati: è del conto, non del suo stato.
+
+IL FONDO SI VEDE DI PIÙ: «molto chiaro, deve essere più visibile». La sfumatura in diagonale è passata da 16%/5% a 32% all'angolo e 12% a metà, e finisce a 88%. I due numeri non hanno lo stesso peso, e sono MISURATI: dodici tinte per gli otto temi di themes.js. All'angolo c'è il NUMERO del conto, scritto in --text: al 32% il caso peggiore è 4,4:1 (magenta su Catppuccin chiaro) e sui temi di casa si sta fra 7 e 11:1. Il 32% è il tetto — a 38% il peggiore scende a 3,9 (giallo su Pico scuro). A metà cade il testo minore, in --muted, e lì si paga: dal 5% di prima al 12% il peggiore passa da 4,1 a 3,5, sugli stessi due temi, che partivano stretti già sul fondo nudo (4,5 e 4,4). È il prezzo di «deve essere più visibile», pagato dove il testo è secondario e non dal numero del conto; il 12% è la soglia, e chi la alza rifà quei conti prima. E LA TINTA SI MESCOLA CON --card, non con la trasparenza: a schermo cambia poco, ma così ogni fermata della sfumatura è un colore OPACO — il testo sta sempre su un fondo pieno e nessun livello sotto può schiarirlo di sorpresa. Il contrasto misurato è quello che si vede.
+
+LA CASCATA CSS È PARTE DELLA REGOLA: `.order-card.bordo-conto` è l'ultima di tutte quelle che scrivono sulla striscia — dopo le `pay-*`, dopo `pagato-da-servire` e dopo le regole delle corsie, che stanno molto più in basso nel foglio e a parità di peso vincerebbero. La sorveglia tests/unit/css.test.js: dal DOM la cascata non si vede.
+
+**Dove**: `src/lib/api.js, src/components/CorsieComande.jsx, src/components/CorsieStato.jsx, src/components/SettingsTab.jsx` · **Lo dimostrano**: `tests/unit/coloriConto.test.js`, `tests/component/CodaCorsie.test.jsx`, `tests/component/ThemeSettings.test.jsx`, `tests/unit/css.test.js`
 
 #### REQ-UI-021 — Tre nomi per lo stesso passo del servizio
 
@@ -2231,6 +2241,22 @@ Oggi test gira senza App Check e con la chiave reCAPTCHA della produzione, che p
 Da una foto o un PDF della fattura fornitore ricavare righe, quantità, costi e IVA, da rivedere prima di registrare. Nelle impostazioni si abilita la scansione e si sceglie il servizio (Claude, ChatGPT, Gemini): o il nostro backend, o la propria API key, con le barre dei limiti di utilizzo. Si parte da Claude e ChatGPT. Il carico automatico in magazzino si valuta dopo.
 
 **Dove**: `functions/, src/components/InvoicesTab.jsx`
+
+### Interfaccia
+
+#### REQ-UI-024 — Le impostazioni che cambiano l'aspetto stanno tutte sotto «Aspetto»
+
+Regola data dall'utente il 20/08/2026, con parole sue: «una cosa da segnare nei requisiti è che tutto ciò che riguarda l'aspetto degli elementi, di qualsiasi sezione del sito, dovrebbe essere messo sotto Aspetto. Ad esempio tutto ciò che cambia visivamente l'aspetto delle card e qualsiasi cosa cambi/imposti i colori di elementi della UI, andrebbero tutti in Aspetto nelle apposite sotto-sezioni da creare se non esistono». PERCHÉ. Oggi «🎨 Aspetto» contiene solo il tema del gestionale, e le altre impostazioni che cambiano come si VEDONO le cose sono sparse nella sezione della schermata a cui appartengono. Ha una sua logica — «sta dove sta la cosa che colora» — ma costringe chi cerca «perché le card si vedono così» a indovinare da quale schermata si passa. Con la regola c'è un posto solo, e sotto-sezioni che dicono di cosa si parla.
+
+COSA CI STA GIÀ. La scelta di cosa dice la striscia delle card della coda (`bordo_colore_conto`, REQ-UI-020) è nata dentro Aspetto, nella sotto-sezione «Le card della coda»: è il primo pezzo, e il modello per gli altri.
+
+COSA RESTA DA TRASLOCARE — trovato guardando SettingsTab.jsx, e sta qui perché chi farà il lavoro parta da un elenco e non da una caccia: · `conti_colorati` — «Coda ordini» ▸ «Il colore del conto»: ogni conto nuovo nasce col suo colore. Va accanto a `bordo_colore_conto`, nella stessa sotto-sezione: sono la stessa domanda in due tempi. · `category_display` — «Vista ordine»: pallino, icona o solo icona per le categorie nella griglia del POS. · `pos_testo_min` — «Vista ordine»: quanto è grande, come minimo, il testo delle righe del conto. · `stripe_pos` e `stripe_ok_verde` — «Vista ordine»: cosa dice, e di che colore, la striscia a sinistra delle schede della griglia prodotti (vedi lib/strisce.js). · `stripe_menu` e `stripe_menu_ok_verde` — «Menù clienti»: la stessa striscia sulle schede del menù dei clienti. · `theme_client` — «Menù clienti» ▸ «Colori del menù»: il tema della vista cliente.
+
+ATTENZIONE, questo è il caso da discutere prima di muoverlo: sta lì per una scelta scritta (ThemeSettings.jsx) — messo sotto quello del gestionale sembravano due varianti della stessa cosa e non si capiva quale si stesse toccando. Se trasloca, deve traslocare con un'etichetta che lo distingua a colpo d'occhio. · `queue_view` e `bartender_view` — «Coda ordini»: come si dispone la coda (griglia, corsie, schede, lista). Sono il confine della regola: cambiano la FORMA della schermata, non il colore di un elemento. Va deciso, e scritto qui, se la regola li prende o li lascia dove sono.
+
+COME SI FA IL TRASLOCO: da solo, in un commit suo. Muovere mezzo pannello impostazioni dentro un lavoro che parla d'altro rende i due cambiamenti impossibili da rileggere separatamente. Le chiavi non si rinominano (sono già scritte sui documenti dei locali): si sposta solo dove si toccano.
+
+**Dove**: `src/components/SettingsTab.jsx, src/components/ThemeSettings.jsx`
 
 ### Come si lavora al progetto
 

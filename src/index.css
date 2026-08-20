@@ -3250,14 +3250,6 @@ body.drawer-open .status-bell-float { display: none; }
   opacity: 0.7;
 }
 
-/* Conto già PAGATO ma non ancora servito: resta in coda perché c'è ancora
-   da consegnare. Il fondo continua a dire a che punto è la preparazione;
-   qui basta il bordo ambra — che è già pagato lo dice il 💳 accanto al
-   nome, non serve ripeterlo con un'altra icona. */
-.order-card.pagato-da-servire {
-  border-left-color: var(--accent-2, #f5b94a);
-}
-
 /* Striscia laterale per STATO ORDINE (sovrascrive il colore della preparazione):
    aperto · pagato parzialmente · pagato · annullato. Deve venire DOPO le regole
    del workflow per vincere sul border-left-color. */
@@ -3272,6 +3264,22 @@ body.drawer-open .status-bell-float { display: none; }
 }
 .order-card.pay-annullato {
   border-left-color: var(--strip-spenta);
+}
+
+/* Conto già PAGATO ma non ancora servito: resta in coda perché c'è ancora
+   da consegnare. Il fondo continua a dire a che punto è la preparazione;
+   qui basta il bordo ambra — che è già pagato lo dice il 💳 accanto al
+   nome, non serve ripeterlo con un'altra icona.
+
+   STA DOPO LE `pay-*` APPOSTA, ed è il BUG-064: nella griglia la card porta
+   tutte e due le classi, `pay-pagato` e `pagato-da-servire`. Scritta prima,
+   a parità di peso vinceva il verde del pagato e l'ambra non compariva mai —
+   un conto pagato e ancora da consegnare si vedeva concluso come gli altri.
+   Nelle corsie il difetto non si vedeva, perché lì le `pay-*` non ci sono.
+   C'è un test che sorveglia quest'ordine (tests/unit/css.test.js): al
+   prossimo riordino del foglio la regola tornerebbe su da sola. */
+.order-card.pagato-da-servire {
+  border-left-color: var(--accent-2, #f5b94a);
 }
 
 /* IL CONTO ACCESO DALLA RICERCA (impostazione "accendi e porta lì"). La
@@ -7486,18 +7494,36 @@ body.pagina-piena .inv-scheda {
   color: #ffd591;
 }
 
-/* IL COLORE DEL CONTO TINGE LA CARD INTERA, sfumato e leggero.
+/* IL COLORE DEL CONTO TINGE LA CARD INTERA, sfumato in diagonale.
    Provato prima come pallino accanto al numero, e non serviva a niente: il
    colore qui deve rispondere da LONTANO — «quelle tre card sparse sono lo
    stesso tavolo» — e dieci pixel da lontano non si vedono. Un fondo, sì.
 
-   PERCHÉ COSÌ POCO COLORE (16% in alto a sinistra, 5% a metà, niente in
-   fondo): la tavolozza è di dodici tinte sature, nate per pallini e
-   striscioline; stese piene sotto al testo lo renderebbero illeggibile su
-   un tema o sull'altro, e coprirebbero l'alone del passo di lavoro, che
-   è l'unica cosa che non si può perdere. Diluite in `color-mix` con la
-   trasparenza restano un'ombra colorata: si riconosce a colpo d'occhio e
-   non litiga con niente.
+   QUANTO COLORE, e perché proprio questo. Il primo giro era 16% all'angolo
+   e 5% a metà, mescolato con la trasparenza: l'utente l'ha bocciato il
+   20/08/2026 — «il colore che viene assegnato al momento è sfumato ma è
+   molto chiaro, deve essere più visibile». Adesso 32% all'angolo, 12% a
+   metà, e a 88% è finito. Il vincolo che tiene fermi quei numeri non è
+   cambiato: la tavolozza è di dodici tinte sature, nate per pallini e
+   striscioline, e stese piene sotto al testo lo renderebbero illeggibile
+   su un tema o sull'altro.
+   MISURATO, non a occhio: dodici tinte per otto temi di themes.js, il
+   contrasto di --text e --muted sopra ogni mescola.
+   ALL'ANGOLO c'è il NUMERO del conto, scritto in --text: al 32% il caso
+   peggiore è 4,4:1 (magenta su Catppuccin chiaro) e sui temi di casa si sta
+   fra 7 e 11:1. Il 32% è il TETTO, e si vede perché: a 38% il peggiore
+   scende a 3,9 (giallo su Pico scuro) e il numero comincia a sfarinarsi.
+   A METÀ cade il testo minore, in --muted, e lì si paga: dal 5% di prima al
+   12% il peggiore passa da 4,1 a 3,5 — sempre su Pico scuro e Catppuccin
+   chiaro, i due temi che partivano stretti già sul fondo nudo (4,5 e 4,4).
+   Sui temi di casa resta fra 4,8 e 5,5. È il prezzo di «deve essere più
+   visibile», pagato dove il testo è secondario e non dal numero del conto;
+   il 12% è la soglia, e chi la alza rifà questi conti prima.
+
+   MESCOLATO CON --card, NON CON LA TRASPARENZA. Il risultato a schermo è
+   quasi lo stesso, ma così ogni tinta di questa sfumatura è un colore
+   OPACO: il testo sta sempre su un fondo pieno, e nessun livello sotto (né
+   il tema, né una card evidenziata) può schiarirlo o scurirlo di sorpresa.
 
    IN DIAGONALE, non da sinistra: da sinistra c'è già l'alone dello stato,
    e due sfumature dallo stesso lato si sarebbero impastate. Così i due
@@ -7512,11 +7538,35 @@ body.pagina-piena .inv-scheda {
     linear-gradient(90deg, var(--tinta-stato, transparent), transparent 35%),
     linear-gradient(
       135deg,
-      color-mix(in srgb, var(--conto-colore) 16%, transparent),
-      color-mix(in srgb, var(--conto-colore) 5%, transparent) 55%,
-      transparent 85%
-    ),
-    var(--card);
+      color-mix(in srgb, var(--conto-colore) 32%, var(--card)),
+      color-mix(in srgb, var(--conto-colore) 12%, var(--card)) 55%,
+      var(--card) 88%
+    );
+}
+
+/* LA STRISCIA COL COLORE DEL CONTO (impostazione «bordo_colore_conto»,
+   Impostazioni ▸ Aspetto ▸ Le card della coda). Di suo la striscia dice lo
+   STATO; dove i conti si spezzano in tante comande sparse, però,
+   riconoscere il tavolo vale più del passo di lavoro, e chi manda avanti il
+   locale sceglie quale delle due cose leggerci.
+
+   ULTIMA DI TUTTE QUELLE CHE TOCCANO LA STRISCIA — dopo le `pay-*`, dopo
+   `pagato-da-servire` e dopo le regole delle corsie qui sopra — perché
+   quando la classe c'è è una scelta esplicita e deve vincere ovunque. Il
+   posto nella cascata è la regola: c'è un test che lo sorveglia
+   (tests/unit/css.test.js), sennò il prossimo riordino del foglio se lo
+   rimangia come è già successo all'ambra del BUG-064.
+
+   LE ECCEZIONI NON STANNO QUI: un conto senza colore e un conto annullato
+   tengono la striscia dello stato, e a deciderlo è lib/coloriConto.js, che
+   semplicemente non mette la classe. Scritte anche nel CSS sarebbero la
+   stessa regola in due posti.
+
+   IL FILO AMBRA DENTRO (.corsia-card.pagato-da-servire) resta: è un
+   box-shadow, non il bordo, e con la striscia occupata dal colore del conto
+   è l'unica cosa che nelle corsie dice ancora «pagato, ma da consegnare». */
+.order-card.bordo-conto {
+  border-left-color: var(--conto-colore);
 }
 
 /* LA TAVOLOZZA DEL CONTO, dentro il ⋯ della card. Stessi gettoni del menù
