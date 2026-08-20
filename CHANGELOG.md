@@ -4,6 +4,15 @@
 
 ### Per chi gestisce
 
+- **Il tasto «▦ Colonne» adesso dice quante ne sono spente.** Era arancione
+  **sempre**, anche su un tablet appena aperto: «Chiuse» e «Annullate»
+  nascono spente apposta, quindi l'arancione c'era comunque e non
+  distingueva niente. Adesso c'è scritto il numero — **«▦ Colonne (2)»** — e
+  passandoci sopra si legge quali sono. Riaccendendole tutte il tasto torna
+  spento davvero. E le colonne **che non esistono più** (gli id sono
+  cambiati negli anni) non restano più appese nella memoria del terminale a
+  tenerlo acceso senza che si potesse spegnerlo.
+
 - **Un ordine appena battuto è UNA comanda sola, e il ticket esce quando si
   esce.** Battendo un conto nuovo poteva uscire **più di una comanda** — e
   con l'auto-stampa accesa più di un foglio, uno col primo prodotto da solo.

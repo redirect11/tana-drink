@@ -54,6 +54,8 @@ import {
   attesaPagamento,
   corsieDaMostrare,
   corsieSceglibili,
+  corsieSpente,
+  soloCorsieVive,
   corsieDelPronto,
   CORSIE_SPENTE_ALL_INIZIO,
   SOTTOFILTRI_CHIUSI,
@@ -555,7 +557,17 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // Quali colonne chi sta a QUESTO terminale ha spento, e se guarda i conti
   // o le comande: preferenze del dispositivo, non del locale — al banco e
   // alla cassa non si guardano le stesse cose.
-  const [nascoste, setNascoste] = useState(() => corsieNascoste() ?? CORSIE_SPENTE_ALL_INIZIO)
+  const [nascoste, setNascoste] = useState(() => {
+    const salvate = corsieNascoste()
+    if (salvate == null) return CORSIE_SPENTE_ALL_INIZIO
+    // LA MEMORIA SI RIPULISCE ALL'APERTURA. Le corsie sono state
+    // rimaneggiate piu' volte e gli id sono cambiati: un id morto restava
+    // qui dentro, teneva acceso il chip «▦ Colonne» per sempre e
+    // nell'elenco non c'era niente da riaccendere per spegnerlo.
+    const vive = soloCorsieVive(salvate)
+    if (vive.length !== salvate.length) ricordaCorsieNascoste(vive)
+    return vive
+  })
   const [vista, setVista] = useState(vistaCorsie)
   const [scegliCorsie, setScegliCorsie] = useState(false) // il pannellino è aperto?
   // La colonna del pronto: una sola col badge, o due (da servire / da
@@ -1296,6 +1308,13 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   const corsieMostrate = corsieBanco
     ? corsieDaMostrare(corsieDelBanco, nascoste, { passoDiNascita })
     : corsie
+  // Le colonne che si possono accendere e spegnere a mano, e quante di
+  // quelle sono spente adesso: il numero va scritto sul chip (vedi
+  // `filtriCorsie`), perche' l'arancione da solo non dice mai perche' e'
+  // acceso — e acceso lo e' dal primo avvio, che le due corsie dello
+  // sguardo all'indietro partono spente di suo.
+  const sceglibili = corsieBanco ? corsieSceglibili(corsieDelBanco, { passoDiNascita }) : []
+  const spente = corsieSpente(sceglibili, nascoste)
   const cambiaPronto = () => {
     const nuovo = !prontoSeparato
     setProntoSeparato(nuovo)
@@ -1395,12 +1414,18 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
           riguarda. È una scelta di QUESTO terminale e si ricorda. */}
       {corsieBanco && (
         <button
-          className={`chip ${nascoste.length > 0 ? 'active' : ''}`}
+          className={`chip ${spente.length > 0 ? 'active' : ''}`}
           onClick={() => setScegliCorsie((v) => !v)}
           aria-expanded={scegliCorsie}
-          title="Scegli quali colonne tenere a schermo"
+          title={
+            spente.length > 0
+              ? `${spente.length} colonn${spente.length === 1 ? 'a spenta' : 'e spente'}: ${spente
+                  .map((c) => c.titolo)
+                  .join(', ')}`
+              : 'Scegli quali colonne tenere a schermo'
+          }
         >
-          ▦ Colonne
+          ▦ Colonne{spente.length > 0 ? ` (${spente.length})` : ''}
         </button>
       )}
       {pastigliaComande}
@@ -2404,7 +2429,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
           {righeSottoChiusi(!corsieBanco)}
           {corsieBanco && scegliCorsie && (
             <div className="chips-row corsie-scelta" style={{ margin: '0 0 12px' }}>
-              {corsieSceglibili(corsieDelBanco, { passoDiNascita }).map((c) => (
+              {sceglibili.map((c) => (
                 <button
                   key={c.id}
                   className={`chip ${nascoste.includes(c.id) ? '' : 'active'}`}

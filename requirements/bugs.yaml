@@ -1998,3 +1998,53 @@ bugs:
       - tests/unit/comande.test.js
       - tests/unit/stampaComande.test.js
       - tests/component/OrderPosDetail.test.jsx
+
+  - id: BUG-058
+    title: "Il tasto «▦ Colonne» è acceso sempre, e non dice perché"
+    area: "src/pages/BartenderPage.jsx, src/lib/coda.js (corsieSpente, soloCorsieVive)"
+    description: >
+      Segnalato dall'utente il 20/08 con lo screenshot della lavagna: il
+      chip «▦ Colonne» è arancione — cioè «ci sono colonne spente» —
+      SEMPRE, anche su un terminale appena aperto dove nessuno ha toccato
+      niente.
+      LA CAUSA È DOPPIA, e le due cose si sommavano.
+      (1) NON È MEMORIA SPORCA, È IL VALORE DI PARTENZA. Le due corsie
+      dello sguardo all'indietro — «💶 Chiuse» e «✖️ Annullate» — nascono
+      spente apposta (CORSIE_SPENTE_ALL_INIZIO): al banco lo schermo serve
+      al lavoro di adesso, e sei colonne su un tablet vogliono dire sei
+      colonne strette. Ma il chip guardava `nascoste.length > 0`, che è
+      vero dal primo avvio: l'arancione c'era comunque e quindi non
+      distingueva niente. Chi lo vedeva apriva l'elenco per scoprire di non
+      aver toccato nulla.
+      (2) GLI ID MORTI RESTAVANO IN MEMORIA. Le corsie sono state
+      rimaneggiate più volte e gli id sono cambiati; la preferenza è del
+      DISPOSITIVO (localStorage `tana:corsie:nascoste`) e teneva dentro id
+      che nessun assetto disegna più. Quelli tenevano acceso il chip per
+      sempre, con l'aggravante che nell'elenco non c'era niente da
+      riaccendere per spegnerlo: un tasto acceso che non si può spegnere.
+      LA CURA, due mosse.
+      IL NUMERO È SCRITTO SUL TASTO: «▦ Colonne (2)». L'arancione da solo
+      non può dire il perché, il numero sì — e il titolo elenca quali sono,
+      per chi ci passa sopra. Senza nessuna spenta il tasto torna «▦
+      Colonne», senza parentesi e senza arancione.
+      SI CONTANO SOLO LE COLONNE CHE SI POSSONO SCEGLIERE (corsieSpente):
+      una nascosta che non è nemmeno in elenco — «Da fare» col salto
+      acceso, «Da ritirare» col pronto riunito — non è una scelta di
+      nessuno, è un residuo, e non deve accendere niente.
+      LA MEMORIA SI RIPULISCE ALL'APERTURA (soloCorsieVive): gli id che non
+      esistono in NESSUN assetto si buttano e la scelta si riscrive. Quelli
+      che esistono ma in questo momento non si disegnano restano: spegnere
+      «Da ritirare» e poi riunire il pronto non è dimenticarsene, e
+      ridividendolo la scelta dev'essere ancora lì.
+      PASSI PER RIPRODURLO (prima della cura): aprire la coda del banco su
+      un browser nuovo, senza toccare niente. Il chip «▦ Colonne» è
+      arancione.
+    in_produzione: false
+    status: fixed
+    generate_issue: true
+    labels: [bug, interfaccia, coda]
+    severity: lieve
+    priority: P2
+    test_cases:
+      - tests/unit/coda.test.js
+      - tests/component/CodaCorsie.test.jsx
