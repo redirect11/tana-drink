@@ -646,8 +646,20 @@ export async function logoPerStampa() {
     const url = `${import.meta.env.BASE_URL || '/'}logo.png`
     const img = await new Promise((ok, ko) => {
       const i = new Image()
-      i.onload = () => ok(i)
-      i.onerror = ko
+      // TEMPO MASSIMO. Da quando la stampa è una coda (BUG-052), un logo
+      // che non arriva mai non sporca più i ticket — li FERMA: nessuna
+      // stampa esce finché questa promessa non si risolve. Tre secondi e
+      // si stampa senza logo; il risultato finisce in _logoCanvas come
+      // «provato e non c'è», quindi non si riprova a ogni scontrino.
+      const tempoScaduto = setTimeout(() => ko(new Error('logo: tempo scaduto')), 3000)
+      i.onload = () => {
+        clearTimeout(tempoScaduto)
+        ok(i)
+      }
+      i.onerror = (e) => {
+        clearTimeout(tempoScaduto)
+        ko(e)
+      }
       i.src = url
     })
     const h = Math.round((img.height / img.width) * LARGHEZZA_LOGO)
