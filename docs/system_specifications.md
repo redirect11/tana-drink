@@ -22,12 +22,12 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 162 | fatto e coperto dai test |
+| ✅ | 163 | fatto e coperto dai test |
 | ⚠️  | 14 | fatto ma nessun test lo verifica |
 | ⬜ | 21 | da fare |
 | 🗑 | 1 | non più valido |
 
-**198 voci** in tutto. **176** descrivono il sistema com'è oggi e
+**199 voci** in tutto. **177** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **21** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **6** difetti noti sono ancora aperti.
@@ -49,7 +49,7 @@ come «vero oggi», non come «garantito».
 | [Menù e catalogo](#menù-e-catalogo) | 9 | — | Il listino: drink, categorie, disponibilità, prezzi. |
 | [Magazzino](#magazzino) | 19 | 7 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 10 | 2 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
-| [Stampa](#stampa) | 10 | 2 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
+| [Stampa](#stampa) | 11 | 2 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
 | [Vista cliente](#vista-cliente) | 6 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
 | [Notifiche](#notifiche) | 4 | — | Le notifiche push: a chi arrivano, quando, e quando invece non devono arrivare. |
 | [Avvisi a schermo](#avvisi-a-schermo) | 2 | — | I messaggi a schermo dentro l’app — quelli che si leggono col vassoio in mano. |
@@ -1055,6 +1055,18 @@ IL CONFINE, che l'utente ha sottolineato («ma sempre dello stesso ordine!»): u
 LE ANNULLATE RESTANO FUORI da tutte e due: è lavoro buttato, e ristamparlo rimetterebbe al banco un ticket da non preparare. Le SERVITE invece escono: si ristampa per rifare il giro, non per mandare al banco solo quello che manca.
 
 **Dove**: `src/lib/printer.js (printComande, comandeStampabili), src/components/OrderPosDetail.jsx` · **Lo dimostrano**: `tests/unit/stampaComande.test.js`, `tests/unit/stampaSerializzata.test.js`, `tests/component/OrderPosDetail.test.jsx`
+
+#### REQ-STAMPA-013 — La comanda automatica la stampa solo il terminale che ha inserito l'ordine
+
+Deciso dall'utente il 20/08: «solo il terminale che inserisce l'ordine stampa automaticamente la comanda». COM'ERA: l'auto-stampa partiva su QUALUNQUE terminale con l'interruttore acceso. Il segno sul dato (`auto_print_at`) e la pretesa locale evitavano le copie doppie, ma a far uscire la carta era il PRIMO CHE VEDEVA l'ordine: poteva essere il tablet in fondo alla sala mentre chi aveva battuto il conto aspettava al banco.
+
+LA REGOLA: se l'ordine porta il terminale che l'ha inserito (`placed_by.device`), la comanda esce SOLO li' — `battutoDaQui`, lo stesso metro degli avvisi (src/lib/dispositivo.js). Gli altri terminali non stampano nemmeno con l'interruttore acceso. Vale anche per la RISTAMPA delle aggiunte: una comanda ancora «da fare» che accoglie righe nuove azzera `auto_print_at` e torna fra quelle da stampare — dal terminale che l'ha battuta, non da un altro.
+
+NON E' BUG-050 AL CONTRARIO PER SBAGLIO, e va detto perche' la somiglianza inganna: li' il proprio terminale era l'unico che NON stampava (la stampa viveva dentro i filtri dell'avviso «nuovo ordine»), qui e' l'unico che stampa. Stessa riga, verso opposto, e per questo la regola sta in una funzione sola e provata nei due versi.
+
+ASSUNZIONE — DICHIARATA, NON CONFERMATA (comunicata all'utente il 20/08): gli ordini dei CLIENTI dal telefono non hanno un terminale che li ha inseriti (`placed_by` vuoto), e qualcuno la carta la deve far uscire. Quelli restano come oggi: li stampa qualunque terminale con l'interruttore acceso — il banco, di fatto — col segno sul dato a evitare i doppioni. Se l'assunzione cade, cade con una riga sola (stampaQuestoTerminale). L'INCASTRO COL RIMBALZO (REQ-STAMPA-008), che la regola avrebbe spento: li' il locale ha scelto che le comande della sala escono AL BANCO, e il telefono che prende l'ordine non stampa affatto (MenuPage). Col rimbalzo acceso questa regola quindi NON si applica: stampa chi ha l'interruttore, come prima. Se no non stamperebbe nessuno. L'INCASTRO CON LA SESSIONE DI CREAZIONE (BUG-057): mentre si compone il conto la stampante tace (`in_creazione`); si esce, la coda vede la comanda, e la carta esce li'. Il giro «batto → esco → stampa QUI, non sul tablet accanto» e' provato per intero.
+
+**Dove**: `src/lib/printer.js (stampaQuestoTerminale, comandeDaStampare), src/pages/BartenderPage.jsx` · **Lo dimostrano**: `tests/unit/stampaComande.test.js`
 
 ### Vista cliente
 

@@ -1647,6 +1647,15 @@ bugs:
       copie: il secondo vede il segno del primo. La pretesa locale resta
       come primo filtro, per i propri snapshot che arrivano prima che la
       scrittura del segno torni.
+      CAMBIATA LA DECISIONE, sempre il 20/08 e sempre l'utente: «solo il
+      terminale che inserisce l'ordine stampa automaticamente la comanda».
+      Il «chiunque l'abbia battuta» qui sopra vale ancora per il DIFETTO —
+      la stampa non e' un avviso, e il proprio terminale non va tagliato
+      fuori — ma non e' piu' la regola: adesso il proprio terminale e'
+      l'UNICO che stampa. Il verso e' esattamente opposto a quello di questo
+      bug, ed e' la trappola da non rifare distrattamente. La regola nuova,
+      con l'assunzione sugli ordini dei clienti e l'incastro col rimbalzo,
+      sta in REQ-STAMPA-013.
     in_produzione: true
     status: fixed
     generate_issue: true

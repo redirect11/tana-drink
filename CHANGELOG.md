@@ -4,6 +4,16 @@
 
 ### Per chi gestisce
 
+- **La comanda la stampa il terminale che ha battuto l'ordine, e solo
+  lui.** Prima la faceva uscire il primo tablet che vedeva l'ordine fra
+  quelli con la stampa automatica accesa: si batteva un conto al banco e la
+  carta poteva uscire dal terminale in fondo alla sala. Adesso stampa chi
+  l'ha inserito. Gli ordini presi **dai clienti col telefono** non hanno un
+  terminale che li ha battuti e restano come prima — li stampa chi ha
+  l'interruttore acceso, cioè il banco. E se il locale ha scelto **«la
+  stampa il banco»** per le comande della sala, non cambia niente: quella
+  scelta vince.
+
 - **I filtri della coda stanno nello stesso punto in tutte e due le viste.**
   Nella vista a griglia degli ordini occupavano una riga tutta loro, nelle
   corsie no: passando dall'una all'altra bisognava ricercarli. Adesso stanno

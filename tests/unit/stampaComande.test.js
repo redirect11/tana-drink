@@ -15,8 +15,10 @@
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { comandaPerLeAggiunte, statoComandaNuova } from '../../src/lib/comande.js'
+import { idDispositivo } from '../../src/lib/dispositivo.js'
 import {
   comandeDaStampare,
+  stampaQuestoTerminale,
   comandaDelTicket,
   comandeStampabili,
   printComande,
@@ -33,14 +35,22 @@ const comanda = (over = {}) => ({
   ...over,
 })
 const conto = (comande, over = {}) => ({ id: 'o1', status: 'aperto', comande, ...over })
+// Il terminale che sta guardando questa coda: l'id vero, quello che
+// `battutoDaQui` confronta. Chiedendolo qui si prova la regola con la
+// stessa strada dell'app, senza finzioni.
+const QUI = idDispositivo()
+const ALTRO = 'tablet-della-sala'
 
 beforeEach(() => localStorage.clear())
 
 describe('quali comande si stampano', () => {
-  it('quella appena arrivata, chiunque l’abbia battuta: nessun filtro sul terminale', () => {
-    // Il conto è battuto da qui (placed_by con device): per l'avviso conta,
-    // per la stampante no — e infatti qui placed_by non si guarda proprio.
-    const o = conto([comanda()], { placed_by: { name: 'Io', device: 'questo' } })
+  it('quella appena arrivata, battuta da questo terminale', () => {
+    // IL TEST DI PRIMA DICEVA IL CONTRARIO — «chiunque l'abbia battuta» —
+    // ed è cambiata la decisione, non il codice sotto: «solo il terminale
+    // che inserisce l'ordine stampa automaticamente la comanda» (l'utente,
+    // 20/08). Chi stampa adesso è una domanda con una risposta sola, e sta
+    // qui sotto per intero.
+    const o = conto([comanda()], { placed_by: { name: 'Io', device: QUI } })
     expect(comandeDaStampare(o)).toHaveLength(1)
   })
 
@@ -70,6 +80,74 @@ describe('quali comande si stampano', () => {
   it('una comanda già segnata stampata non si ristampa, da nessun terminale', () => {
     const stampata = comanda({ auto_print_at: nataDa(30_000) })
     expect(comandeDaStampare(conto([stampata]))).toHaveLength(0)
+  })
+})
+
+// ── CHI STAMPA: SOLO IL TERMINALE CHE HA BATTUTO L'ORDINE ────────────
+//
+// «Solo il terminale che inserisce l'ordine stampa automaticamente la
+// comanda» (l'utente, 20/08). È l'INVERSO di BUG-050 — lì il proprio
+// terminale era l'unico che NON stampava — e per questo la regola sta in
+// una funzione sola, provata nei due versi: sbagliarne il segno vuol dire
+// o nessuna carta o la carta sul tablet sbagliato.
+describe('quale terminale stampa la comanda', () => {
+  const daStaff = (device) => conto([comanda()], { placed_by: { name: 'Marta', device } })
+
+  it('quello che ha battuto l’ordine: la carta esce qui', () => {
+    expect(stampaQuestoTerminale(daStaff(QUI))).toBe(true)
+    expect(comandeDaStampare(daStaff(QUI))).toHaveLength(1)
+  })
+
+  it('gli altri tacciono, anche con l’interruttore acceso', () => {
+    // L'interruttore non entra in questa funzione apposta: dice SE questo
+    // terminale stampa in automatico, non QUALI ordini gli appartengono.
+    expect(stampaQuestoTerminale(daStaff(ALTRO))).toBe(false)
+    expect(comandeDaStampare(daStaff(ALTRO))).toEqual([])
+  })
+
+  // L'ASSUNZIONE, scritta come tale (REQ-STAMPA-013): un ordine battuto
+  // dal cliente col telefono non ha un terminale che l'ha inserito, e
+  // qualcuno la carta la deve far uscire. La fa uscire chi ha
+  // l'interruttore — il banco — come si è sempre fatto.
+  it('l’ordine del cliente non ha un terminale suo: lo stampa chi ha l’interruttore', () => {
+    expect(comandeDaStampare(conto([comanda()]))).toHaveLength(1)
+    expect(comandeDaStampare(conto([comanda()], { placed_by: { name: 'Cliente' } }))).toHaveLength(1)
+  })
+
+  // COL RIMBALZO la regola si ferma: il locale ha scelto che le comande
+  // della sala escono al banco, e il telefono che prende l'ordine non
+  // stampa affatto (REQ-STAMPA-008). Restringere anche qui vorrebbe dire
+  // che non stampa nessuno.
+  it('col rimbalzo il banco stampa anche gli ordini degli altri', () => {
+    const impostazioni = { stampaSala: 'rimbalzo' }
+    expect(stampaQuestoTerminale(daStaff(ALTRO), { impostazioni })).toBe(true)
+    expect(comandeDaStampare(daStaff(ALTRO), { impostazioni })).toHaveLength(1)
+  })
+
+  // IL GIRO VERO AL BANCO (BUG-057): si batte il conto, e mentre si
+  // compone la sessione di creazione tiene ferma la stampante. Si esce, la
+  // coda vede la comanda — e la carta esce QUI, non sul tablet accanto.
+  it('batto, esco, e la carta esce da questo terminale e non dagli altri', () => {
+    const inCreazione = {
+      ...conto([comanda()], { placed_by: { name: 'Io', device: QUI } }),
+      in_creazione: true,
+    }
+    expect(comandeDaStampare(inCreazione)).toEqual([]) // finché compongo
+    const uscito = { ...inCreazione, in_creazione: false }
+    expect(comandeDaStampare(uscito)).toHaveLength(1)
+    // Lo stesso conto, guardato dal tablet accanto: niente.
+    expect(comandeDaStampare(uscito, { daQui: () => false })).toEqual([])
+  })
+
+  // LA RISTAMPA DELLE AGGIUNTE segue la stessa strada: una comanda ancora
+  // «da fare» che accoglie righe nuove si azzera `auto_print_at` (api.js) e
+  // torna fra quelle da stampare — dal terminale che l'ha battuta.
+  it('la comanda che accoglie aggiunte ristampa dov’è stata battuta', () => {
+    const conAggiunte = conto([comanda({ auto_print_at: null })], {
+      placed_by: { name: 'Marta', device: ALTRO },
+    })
+    expect(comandeDaStampare(conAggiunte)).toEqual([])
+    expect(comandeDaStampare({ ...conAggiunte, placed_by: { device: QUI } })).toHaveLength(1)
   })
 })
 

@@ -819,9 +819,13 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
           // degli avvisi (battutoDaQui, ordine nuovo) tagliavano fuori.
           // La regola di cosa stampare sta in printer.js (comandeDaStampare),
           // la pretesa per non stampare doppio pure (claimComandaPrint).
+          // E DI CHI STAMPA: il terminale che ha battuto l'ordine, e solo
+          // lui (stampaQuestoTerminale, dentro comandeDaStampare). Le
+          // impostazioni si passano già lette: servono a sapere se il
+          // locale è in rimbalzo, e sono le stesse per tutti i conti.
           if (printerSettings.autoPrintComanda) {
             for (const o of data) {
-              for (const c of comandeDaStampare(o)) {
+              for (const c of comandeDaStampare(o, { impostazioni: printerSettings })) {
                 if (claimComandaPrint(o.id, c)) {
                   printComanda(o, c)
                     // Il segno va SUL DATO solo a carta uscita: segnare

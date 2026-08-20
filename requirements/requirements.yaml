@@ -5152,6 +5152,51 @@ requirements:
       - tests/unit/stampaSerializzata.test.js
       - tests/component/OrderPosDetail.test.jsx
 
+  - id: REQ-STAMPA-013
+    title: "La comanda automatica la stampa solo il terminale che ha inserito l'ordine"
+    area: "src/lib/printer.js (stampaQuestoTerminale, comandeDaStampare), src/pages/BartenderPage.jsx"
+    description: >
+      Deciso dall'utente il 20/08: «solo il terminale che inserisce l'ordine
+      stampa automaticamente la comanda».
+      COM'ERA: l'auto-stampa partiva su QUALUNQUE terminale con
+      l'interruttore acceso. Il segno sul dato (`auto_print_at`) e la
+      pretesa locale evitavano le copie doppie, ma a far uscire la carta era
+      il PRIMO CHE VEDEVA l'ordine: poteva essere il tablet in fondo alla
+      sala mentre chi aveva battuto il conto aspettava al banco.
+      LA REGOLA: se l'ordine porta il terminale che l'ha inserito
+      (`placed_by.device`), la comanda esce SOLO li' — `battutoDaQui`, lo
+      stesso metro degli avvisi (src/lib/dispositivo.js). Gli altri
+      terminali non stampano nemmeno con l'interruttore acceso. Vale anche
+      per la RISTAMPA delle aggiunte: una comanda ancora «da fare» che
+      accoglie righe nuove azzera `auto_print_at` e torna fra quelle da
+      stampare — dal terminale che l'ha battuta, non da un altro.
+      NON E' BUG-050 AL CONTRARIO PER SBAGLIO, e va detto perche' la
+      somiglianza inganna: li' il proprio terminale era l'unico che NON
+      stampava (la stampa viveva dentro i filtri dell'avviso «nuovo
+      ordine»), qui e' l'unico che stampa. Stessa riga, verso opposto, e per
+      questo la regola sta in una funzione sola e provata nei due versi.
+      ASSUNZIONE — DICHIARATA, NON CONFERMATA (comunicata all'utente il
+      20/08): gli ordini dei CLIENTI dal telefono non hanno un terminale che
+      li ha inseriti (`placed_by` vuoto), e qualcuno la carta la deve far
+      uscire. Quelli restano come oggi: li stampa qualunque terminale con
+      l'interruttore acceso — il banco, di fatto — col segno sul dato a
+      evitare i doppioni. Se l'assunzione cade, cade con una riga sola
+      (stampaQuestoTerminale).
+      L'INCASTRO COL RIMBALZO (REQ-STAMPA-008), che la regola avrebbe
+      spento: li' il locale ha scelto che le comande della sala escono AL
+      BANCO, e il telefono che prende l'ordine non stampa affatto
+      (MenuPage). Col rimbalzo acceso questa regola quindi NON si applica:
+      stampa chi ha l'interruttore, come prima. Se no non stamperebbe
+      nessuno.
+      L'INCASTRO CON LA SESSIONE DI CREAZIONE (BUG-057): mentre si compone
+      il conto la stampante tace (`in_creazione`); si esce, la coda vede la
+      comanda, e la carta esce li'. Il giro «batto → esco → stampa QUI, non
+      sul tablet accanto» e' provato per intero.
+    status: implemented
+    generate_issue: false
+    labels: [stampa, banco]
+    test_cases: [tests/unit/stampaComande.test.js]
+
   # ══════════════════════════════════════════════════════════════════════
   #  DAI FOGLI DI FLAVIO — letti il 19/08 (ANALISI DATI.xlsx, RAPP ORE.xlsx,
   #  GEN ORD REC.xlsx, INV.xlsx, FORNITORI REC.xlsx).
