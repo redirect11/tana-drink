@@ -4,6 +4,22 @@
 
 ### Per chi gestisce
 
+- **I filtri della coda stanno dietro un tasto solo.** Sopra i conti c'era
+  una fila di pastiglie — In corso, Chiusi, Annullati, Tutti, Miei, Solo
+  oggi — che si mangiava tutta la riga; adesso c'è **«⚗️ Filtri»**, si tocca
+  e la fila compare lì dov'era. **Chiuso, il tasto dice cos'è acceso**
+  («⚗️ Chiusi», «⚗️ Miei +2»), così non capita di guardare una coda filtrata
+  credendola intera. Vale allo stesso modo per gli **ordini** e per le
+  **comande** — dove dentro c'è anche «▦ Colonne» — e **ogni tablet se lo
+  ricorda a modo suo**: chi la tiene aperta la ritrova aperta. Il tasto per
+  passare da ordini a comande e il **«+»** restano fuori, dov'erano.
+
+- **«Chiudi cassa» non occupa più mezza testata.** Era largo quanto la frase
+  che aveva sotto («Prima chiudi 3 conti e servi 2 comande»); ora è un tasto
+  normale. **La spiegazione non è sparita**: si legge passandoci sopra col
+  mouse, e al tablet **esce quando si prova a chiudere** — che è il momento
+  in cui la si vuole sapere.
+
 - **Il magazzino spiega i suoi segni**: sopra la lista c'è la legenda dei
   pallini (quanta roba c'è) e delle strisce colorate (in linea, premium,
   fuori assortimento). Era la domanda di Flavio: «che significa la

@@ -19,6 +19,8 @@ import {
   ricordaAzioniContoRidotte,
   prontoDiviso,
   ricordaProntoDiviso,
+  filtriAperti,
+  ricordaFiltriAperti,
 } from '../../src/lib/impostazioniLocali.js'
 
 const DEFAULTS = { stripe_pos: 'prodotto', queue_view: 'griglia' }
@@ -69,6 +71,8 @@ describe('le preferenze di questo terminale', () => {
     expect(vistaCorsie()).toBe(null)
     expect(azioniContoRidotte()).toBe(false)
     expect(prontoDiviso()).toBe(false)
+    // La fila dei filtri nasce CHIUSA: la coda si guarda, non si filtra.
+    expect(filtriAperti()).toBe(false)
   })
 
   it('quello che si sceglie si ritrova', () => {
@@ -76,6 +80,8 @@ describe('le preferenze di questo terminale', () => {
     ricordaVistaCorsie('comande')
     ricordaAzioniContoRidotte(true)
     ricordaProntoDiviso(true)
+    ricordaFiltriAperti(true)
+    expect(filtriAperti()).toBe(true)
     expect(corsieNascoste()).toEqual(['da-fare', 'al-banco'])
     expect(vistaCorsie()).toBe('comande')
     expect(azioniContoRidotte()).toBe(true)
@@ -87,8 +93,12 @@ describe('le preferenze di questo terminale', () => {
     ricordaAzioniContoRidotte(true)
     ricordaVistaCorsie(null)
     ricordaAzioniContoRidotte(false)
+    ricordaFiltriAperti(true)
+    ricordaFiltriAperti(false)
     expect(vistaCorsie()).toBe(null)
     expect(azioniContoRidotte()).toBe(false)
+    expect(filtriAperti()).toBe(false)
+    expect(localStorage.getItem('tana:coda:filtri-aperti')).toBe(null)
   })
 
   it('«unite» resta scritto: è una scelta, non un silenzio', () => {

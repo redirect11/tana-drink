@@ -6690,6 +6690,59 @@ requirements:
     test_cases:
       - tests/unit/coda.test.js
       - tests/component/CodaCorsie.test.jsx
+  - id: REQ-CODA-008
+    title: "I filtri della coda stanno dietro un tasto solo, che dice cos'e' acceso"
+    area: "src/pages/BartenderPage.jsx (filaFiltri, pastigliaFiltri), src/lib/coda.js (etichettaFiltri, spiegaFiltri, SCHEDE_GRIGLIA), src/lib/impostazioniLocali.js (filtriAperti), src/index.css"
+    description: >
+      Chiesto dall'utente il 20/08, con lo screenshot della coda: «i filtri
+      e tutti i bottoni li voglio a scomparsa, con un tasto che non occupi
+      troppo spazio, sia per ordini sia per comande».
+      DA DOVE NASCE. Con BUG-042 e BUG-061 i filtri erano finiti sulla riga
+      dei conteggi, tutti e due i mondi nello stesso punto: negli ORDINI
+      sono sei o sette pastiglie (In corso, Chiusi, Annullati, Tutti, Miei,
+      Solo oggi) piu' quella del cambio vista, nelle COMANDE sono Miei e
+      «Colonne». Anche compattate e messe a scorrere si mangiano una riga
+      larga, in una lavagna che si guarda da lontano mentre si versa.
+      IL TASTO: una pastiglia sola, «⚗️ Filtri» — lo stesso linguaggio del
+      magazzino, dove filtrare si chiama gia' cosi' — che apre e chiude la
+      fila. Chiusa di suo, e la scelta e' di QUESTO terminale
+      (`tana:coda:filtri-aperti`, come le colonne spente): al banco la fila
+      resta aperta tutta la sera, alla cassa non si tocca mai, e nessuno la
+      vuole riaprire a ogni ricarico.
+      DA CHIUSO NON NASCONDE LO STATO, ed e' la parte che conta. Un filtro
+      acceso e invisibile e' una coda che sembra sbagliata: si guardano
+      dodici conti dove ce ne sono quaranta e non c'e' niente a schermo che
+      lo dica. Il tasto porta scritto quello che e' acceso — «⚗️ Chiusi» —
+      e quando i filtri sono piu' di uno ne nomina UNO e conta gli altri:
+      «⚗️ Miei +2» (`etichettaFiltri`). Nominarli tutti rifarebbe la fila
+      che si stava togliendo, e un numero secco («3 filtri») non dice quale
+      coda si sta guardando. L'elenco per esteso sta nel title
+      (`spiegaFiltri`), che larghezza non ne costa. Con tutto al default
+      resta «⚗️ Filtri», grigio.
+      I CHIP COMPAIONO NELLA STESSA RIGA, non in una tendina: sono pochi,
+      si toccano a raffica mentre si lavora, e un pannello sopra la coda
+      coprirebbe proprio quello che si sta guardando per decidere che
+      filtro serve. La riga va a capo o scorre come ha sempre fatto.
+      COSA STA DENTRO E COSA NO. Dentro tutto quello che RESTRINGE la
+      lista, «▦ Colonne» compreso: spegnere una colonna e' filtrare. Fuori
+      la pastiglia del cambio vista (🍸 Comande / 🧾 Ordini), che non
+      filtra ma cambia quello che si guarda, e il «＋», che crea — e' la
+      regola di docs/navigazione.md, sinistra restringe e destra cambia
+      vista. Dentro seguono la fila anche le due righe che i filtri
+      aprono: i sottofiltri dei chiusi e la scelta delle colonne, che
+      senza il loro tasto resterebbero appese sotto i conteggi.
+      UN MECCANISMO SOLO PER TUTTE E QUATTRO LE VISTE — griglia, corsie dei
+      conti, corsie del banco, lista e schede: `filaFiltri` e' scritta una
+      volta e appesa dove serve. Quattro meccanismi sarebbero quattro cose
+      da imparare per la stessa coda.
+    status: implemented
+    generate_issue: true
+    labels: [coda, ui]
+    test_cases:
+      - tests/unit/coda.test.js
+      - tests/component/CodaCorsie.test.jsx
+      - tests/component/CodaGiornate.test.jsx
+
   - id: REQ-MAG-027
     title: "I segni del magazzino si spiegano da soli: la legenda sopra la lista"
     area: "src/components/InventoryManager.jsx, src/index.css"

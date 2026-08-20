@@ -2244,3 +2244,41 @@ bugs:
     test_cases:
       - tests/unit/css.test.js
       - tests/component/CodaCorsie.test.jsx
+
+  - id: BUG-062
+    title: "Il tasto «Chiudi cassa» e' largo il doppio del suo nome e mangia la testata"
+    area: "src/pages/BartenderPage.jsx (testata della coda), src/index.css (.board-cassa)"
+    description: >
+      Segnalato dall'utente il 20/08, con lo screenshot: «il tasto chiudi
+      cassa nella schermata ordini e' troppo largo e occupa troppo spazio».
+      PERCHE' ERA LARGO. Il tasto stava in un riquadro incolonnato
+      (`.board-cassa-box`) con sotto la riga che spiega perche' non si puo'
+      chiudere — «Prima chiudi 3 conti e servi 2 comande» — e in una
+      colonna la larghezza la fa il figlio piu' largo: il bottone veniva
+      lungo quanto la frase, il doppio del suo nome, in una testata dove lo
+      spazio e' della barra di ricerca. La frase era stata messa li' per un
+      motivo buono (in fondo alla riga finiva accanto al «+» e si leggeva
+      come una nota del «nuovo ordine»): il difetto e' il POSTO, non la
+      frase.
+      LA CURA: il tasto torna un bottone normale, largo quanto «🔒 Chiudi
+      cassa», e la spiegazione NON si butta — e' la sola cosa che dice
+      perche' e' spento. Vive nel `title`, dove chi ha un mouse la trova
+      passandoci sopra, e al banco — dove il mouse non c'e' — esce come
+      avviso (toast) appena si prova a chiudere. Che e' il momento in cui
+      la domanda nasce davvero: prima di allora e' una riga che nessuno
+      legge, pagata da tutti in larghezza.
+      PER QUESTO IL TASTO NON E' PIU' `disabled` MA `aria-disabled`: un
+      tasto spento davvero non riceve il tocco, e chi lo preme non saprebbe
+      mai perche' non succede niente. Resta scolorito (`.board-cassa.spento`)
+      e continua a non chiudere niente. Sul telefono non cambia nulla: li'
+      la cassa e' gia' una voce del ⋯, col suo hint.
+      PASSI PER RIPRODURLO (prima della cura): coda ordini da tablet, con
+      un conto aperto — il tasto «Chiudi cassa» e' largo come la frase che
+      ha sotto.
+    in_produzione: false
+    status: fixed
+    generate_issue: true
+    labels: [bug, interfaccia, coda]
+    severity: lieve
+    priority: P2
+    test_cases: [tests/component/CodaCorsie.test.jsx]

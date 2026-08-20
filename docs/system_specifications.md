@@ -22,12 +22,12 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 167 | fatto e coperto dai test |
+| ✅ | 168 | fatto e coperto dai test |
 | ⚠️  | 14 | fatto ma nessun test lo verifica |
 | ⬜ | 20 | da fare |
 | 🗑 | 1 | non più valido |
 
-**202 voci** in tutto. **181** descrivono il sistema com'è oggi e
+**203 voci** in tutto. **182** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **20** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **6** difetti noti sono ancora aperti.
@@ -43,7 +43,7 @@ come «vero oggi», non come «garantito».
 | [Ordini e comande](#ordini-e-comande) | 18 | 1 | Il conto e le sue comande: come nascono, come cambiano stato, come arrivano al banco. |
 | [Cassa e POS](#cassa-e-pos) | 17 | 2 | La schermata più usata della serata: si compone un conto, si corregge, si chiude. |
 | [Pagamenti](#pagamenti) | 11 | 1 | Come si incassa: contanti, carta, SumUp, pagamenti parziali e separati. |
-| [La coda del banco](#la-coda-del-banco) | 7 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
+| [La coda del banco](#la-coda-del-banco) | 8 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
 | [Menù e catalogo](#menù-e-catalogo) | 9 | — | Il listino: drink, categorie, disponibilità, prezzi. |
@@ -483,6 +483,22 @@ TABLET E DITA BAGNATE: si parte dopo una pressione (260ms col dito, 200 col mous
 COSA RESTA DA PROVARE A MANO, perche' un test senza schermo non ha un dito ne' le misure delle card: che lo scorrimento verticale delle corsie col dito non si rompa, che la card in volo si veda sopra le colonne senza essere ritagliata, e che sull'iPad la pressione lunga non apra la lente d'ingrandimento.
 
 **Dove**: `src/components/CorsieComande.jsx, src/lib/coda.js (statoDelRilascio), src/components/Corsia.jsx, src/index.css` · **Lo dimostrano**: `tests/unit/coda.test.js`, `tests/component/CodaCorsie.test.jsx`
+
+#### REQ-CODA-008 — I filtri della coda stanno dietro un tasto solo, che dice cos'e' acceso
+
+Chiesto dall'utente il 20/08, con lo screenshot della coda: «i filtri e tutti i bottoni li voglio a scomparsa, con un tasto che non occupi troppo spazio, sia per ordini sia per comande».
+
+DA DOVE NASCE. Con BUG-042 e BUG-061 i filtri erano finiti sulla riga dei conteggi, tutti e due i mondi nello stesso punto: negli ORDINI sono sei o sette pastiglie (In corso, Chiusi, Annullati, Tutti, Miei, Solo oggi) piu' quella del cambio vista, nelle COMANDE sono Miei e «Colonne». Anche compattate e messe a scorrere si mangiano una riga larga, in una lavagna che si guarda da lontano mentre si versa.
+
+IL TASTO: una pastiglia sola, «⚗️ Filtri» — lo stesso linguaggio del magazzino, dove filtrare si chiama gia' cosi' — che apre e chiude la fila. Chiusa di suo, e la scelta e' di QUESTO terminale (`tana:coda:filtri-aperti`, come le colonne spente): al banco la fila resta aperta tutta la sera, alla cassa non si tocca mai, e nessuno la vuole riaprire a ogni ricarico.
+
+DA CHIUSO NON NASCONDE LO STATO, ed e' la parte che conta. Un filtro acceso e invisibile e' una coda che sembra sbagliata: si guardano dodici conti dove ce ne sono quaranta e non c'e' niente a schermo che lo dica. Il tasto porta scritto quello che e' acceso — «⚗️ Chiusi» — e quando i filtri sono piu' di uno ne nomina UNO e conta gli altri: «⚗️ Miei +2» (`etichettaFiltri`). Nominarli tutti rifarebbe la fila che si stava togliendo, e un numero secco («3 filtri») non dice quale coda si sta guardando. L'elenco per esteso sta nel title (`spiegaFiltri`), che larghezza non ne costa. Con tutto al default resta «⚗️ Filtri», grigio. I CHIP COMPAIONO NELLA STESSA RIGA, non in una tendina: sono pochi, si toccano a raffica mentre si lavora, e un pannello sopra la coda coprirebbe proprio quello che si sta guardando per decidere che filtro serve. La riga va a capo o scorre come ha sempre fatto.
+
+COSA STA DENTRO E COSA NO. Dentro tutto quello che RESTRINGE la lista, «▦ Colonne» compreso: spegnere una colonna e' filtrare. Fuori la pastiglia del cambio vista (🍸 Comande / 🧾 Ordini), che non filtra ma cambia quello che si guarda, e il «＋», che crea — e' la regola di docs/navigazione.md, sinistra restringe e destra cambia vista. Dentro seguono la fila anche le due righe che i filtri aprono: i sottofiltri dei chiusi e la scelta delle colonne, che senza il loro tasto resterebbero appese sotto i conteggi.
+
+UN MECCANISMO SOLO PER TUTTE E QUATTRO LE VISTE — griglia, corsie dei conti, corsie del banco, lista e schede: `filaFiltri` e' scritta una volta e appesa dove serve. Quattro meccanismi sarebbero quattro cose da imparare per la stessa coda.
+
+**Dove**: `src/pages/BartenderPage.jsx (filaFiltri, pastigliaFiltri), src/lib/coda.js (etichettaFiltri, spiegaFiltri, SCHEDE_GRIGLIA), src/lib/impostazioniLocali.js (filtriAperti), src/index.css` · **Lo dimostrano**: `tests/unit/coda.test.js`, `tests/component/CodaCorsie.test.jsx`, `tests/component/CodaGiornate.test.jsx`
 
 ### Gruppi di conti
 

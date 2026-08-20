@@ -180,6 +180,13 @@ const montaCoda = () =>
 const separatori = () =>
   [...document.querySelectorAll('.day-sep')].map((n) => n.textContent.trim())
 
+// LE SCHEDE STANNO DIETRO «⚗️ Filtri» (REQ-CODA-008): la fila nasce chiusa,
+// e chi vuole cambiare scheda la apre prima — come al banco.
+const scegliScheda = async (utente, nome) => {
+  await utente.click(screen.getByRole('button', { name: 'Filtri' }))
+  await utente.click(screen.getByRole('button', { name: nome }))
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
   localStorage.clear()
@@ -229,7 +236,7 @@ describe('la riga che separa le giornate', () => {
     const utente = userEvent.setup()
     montaCoda()
     await screen.findByText('#11')
-    await utente.click(screen.getByRole('button', { name: /Chiusi/ }))
+    await scegliScheda(utente, /Chiusi/)
     expect(await screen.findByText('#12')).toBeInTheDocument()
     expect(separatori()).toEqual(['💶 Chiusi · ieri'])
   })
@@ -238,7 +245,7 @@ describe('la riga che separa le giornate', () => {
     const utente = userEvent.setup()
     montaCoda()
     await screen.findByText('#11')
-    await utente.click(screen.getByRole('button', { name: /Annullati/ }))
+    await scegliScheda(utente, /Annullati/)
     expect(await screen.findByText('#13')).toBeInTheDocument()
     expect(separatori()).toEqual(['✖️ Annullati · ieri'])
   })
@@ -247,7 +254,7 @@ describe('la riga che separa le giornate', () => {
     const utente = userEvent.setup()
     montaCoda()
     await screen.findByText('#11')
-    await utente.click(screen.getByRole('button', { name: 'Tutti' }))
+    await scegliScheda(utente, 'Tutti')
     expect(await screen.findByText('#12')).toBeInTheDocument()
     expect(separatori()).toEqual(['📅 ieri'])
   })
