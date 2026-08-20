@@ -81,6 +81,7 @@ vi.mock('firebase/firestore', () => ({
 }))
 
 const api = await import('../../src/lib/api.js')
+const { _azzeraMutazioni } = await import('../../src/lib/mutazioniOrdine.js')
 
 // Se una chiamata restasse appesa il test fallirebbe per timeout, che è lo
 // stesso sintomo del banco: il tasto premuto e niente che succede.
@@ -113,6 +114,12 @@ const contoDaVentidue = () => ({
 const ultimaPatch = () => stato.scritture.filter((s) => s.tipo === 'update').at(-1).patch
 
 beforeEach(() => {
+  // LA MEMORIA DEL TERMINALE SI AZZERA FRA UNA PROVA E L'ALTRA. Le mutazioni
+  // di un conto si ricordano quello che hanno appena composto, finché la
+  // cache non lo conferma (lib/mutazioniOrdine.js) — e qui la cache non
+  // conferma MAI, apposta: senza questo, la prova dopo comporrebbe sul conto
+  // della prova prima.
+  _azzeraMutazioni()
   stato.ordine = contoDaVentidue()
   stato.scritture = []
 })

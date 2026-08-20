@@ -1865,3 +1865,62 @@ bugs:
       - tests/unit/scontrinoSegnato.test.js
       - tests/component/CodaCorsie.test.jsx
       - tests/component/PaymentScreen.test.jsx
+
+  - id: BUG-056
+    title: "Aggiunte veloci allo stesso conto: l'ultima scrittura cancellava le altre"
+    area: "src/lib/mutazioniOrdine.js (nuovo), src/lib/api.js"
+    description: >
+      Segnalato dall'utente il 20/08 provando al banco: «ho creato un
+      ordine, ho aggiunto velocemente item, ma ha sincronizzato e mi ha
+      lasciato solo il primo item». E dallo stesso giro, con le aggiunte
+      fatte tutte insieme: due comande separate per un conto solo.
+      LA CAUSA. Ogni mutazione di un conto — `addComanda`,
+      `bartenderUpdateComanda`, `updateOrderItems`, `preparazioneParziale`,
+      `advanceComanda`, l'incasso — LEGGE il documento, ricompone l'array
+      `comande` e lo RISCRIVE INTERO: Firestore un array lo riscrive
+      intero, non esiste un percorso tipo `comande.2.items`. Due gesti
+      ravvicinati sullo stesso conto partono insieme, il secondo legge
+      PRIMA che la scrittura del primo sia comparsa in cache, compone dal
+      passato, e l'ultimo che scrive cancella l'altro. Stessa radice di
+      BUG-022, che era stato curato in un punto solo (`scriviCampiComanda`,
+      che si rilegge dentro la scrittura): le funzioni grosse leggevano
+      ancora all'inizio del lavoro.
+      LA CURA, alla radice, in due pezzi che stanno insieme.
+      (1) LE MUTAZIONI DI UNO STESSO CONTO SI METTONO IN FILA: una catena
+      di promesse per `orderId`, la stessa idea della coda di stampa di
+      BUG-052. Conti DIVERSI non si aspettano fra loro — al banco si lavora
+      su piu' conti insieme, e un conto lento non deve fermare gli altri.
+      Il local-first non si tocca: a mettersi in fila e' il lavoro interno,
+      non chi ha toccato lo schermo, che continua a ricevere subito il
+      conto composto (`ordineDopo`).
+      (2) LA FILA DA SOLA NON BASTA. Il turno finisce quando la scrittura e'
+      PARTITA, non quando la cache l'ha applicata, e fra le due cose passa
+      un giro. Quindi ogni mutazione RICORDA il conto come l'ha appena
+      composto, e la mutazione dopo legge quel ricordo finche' la cache non
+      ha recuperato — si capisce che ha recuperato guardando se i campi
+      scritti sono tornati indietro uguali, senza timer che indovinano. Un
+      tempo massimo di due secondi c'e', ma e' solo la rete di sicurezza
+      per la scrittura che in cache non arrivera' MAI (documento cancellato
+      sotto, rifiuto definitivo).
+      DEADLOCK EVITATO A MANO: `preparazioneParziale` chiama l'avanzamento
+      dentro il proprio turno, e mettersi in fila dietro se stessi vuol
+      dire non ripartire mai. Per quello `advanceComandaOra` esiste
+      separato da `advanceComanda`.
+      IL LIMITE, dichiarato: finche' il ricordo e' vivo, una modifica
+      arrivata da un ALTRO terminale sugli stessi campi si perde. E' la
+      finestra fra la scrittura e la cache — millisecondi — ed e' lo stesso
+      «l'ultimo che scrive vince» che c'era gia', ristretto invece che
+      allargato.
+      PASSI PER RIPRODURLO: due `addComanda` sullo stesso conto partite
+      nello stesso giro. Il test lo fa con una cache che applica le
+      scritture in ritardo, che e' quello che fa davvero: spegnendo una
+      qualunque delle due meta' della cura, cinque prove su sette
+      falliscono.
+    in_produzione: false
+    status: fixed
+    generate_issue: true
+    labels: [bug, ordini, local-first, banco]
+    severity: alta
+    priority: P1
+    test_cases:
+      - tests/unit/mutazioniInFila.test.js

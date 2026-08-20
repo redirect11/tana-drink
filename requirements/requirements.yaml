@@ -456,6 +456,27 @@ requirements:
       schermata: l'unica cosa che quell'attesa produceva era il box in
       ritardo. Il conto nasce per conto suo, e il nome lo raggiunge appena
       c'è.
+      DUE GESTI RAVVICINATI SULLO STESSO CONTO NON SI CANCELLANO PIÙ
+      (BUG-056, lib/mutazioniOrdine.js). Ogni mutazione ricompone l'array
+      `comande` e lo riscrive INTERO — Firestore un array lo riscrive
+      intero — quindi due gesti partiti insieme leggevano lo stesso passato
+      e l'ultimo che scriveva cancellava l'altro: battendo in fretta
+      restava una riga sola, o nascevano due «comanda 2». Adesso le
+      mutazioni di UNO STESSO conto si mettono in fila (una catena di
+      promesse per conto, come la coda di stampa), e conti diversi non si
+      aspettano fra loro: al banco si lavora su più conti insieme.
+      LA FILA DA SOLA NON BASTA, ed è il pezzo meno ovvio: il turno finisce
+      quando la scrittura è PARTITA — local-first, non si aspetta niente —
+      non quando la cache l'ha applicata, e fra le due cose passa un giro.
+      Quindi ogni mutazione RICORDA il conto come l'ha appena composto, e la
+      mutazione dopo legge quello finché la cache non ha recuperato. Come si
+      capisce che ha recuperato: si guarda se i campi scritti sono tornati
+      indietro uguali — nessun timer che indovina. Un tempo massimo c'è, ma
+      è solo la rete di sicurezza per la scrittura che in cache non arriverà
+      mai. Il limite, dichiarato: finché il ricordo è vivo, una modifica di
+      un ALTRO terminale sugli stessi campi si perde — è la finestra fra la
+      scrittura e la cache, millisecondi, ed è lo stesso «l'ultimo che
+      scrive vince» che c'era già, ristretto invece che allargato.
     status: implemented
     generate_issue: false
     labels: [ordini, offline, difetto-risolto]
@@ -468,6 +489,7 @@ requirements:
       - tests/component/UnaMemoriaLocale.test.jsx
       - tests/component/ComandaSenzaAttesa.test.jsx
       - tests/unit/comande.test.js
+      - tests/unit/mutazioniInFila.test.js
       - tests/component/OrderPosDetail.test.jsx
 
   - id: REQ-PAG-010

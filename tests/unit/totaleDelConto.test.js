@@ -77,6 +77,7 @@ vi.mock('firebase/firestore', () => ({
 
 const { updateOrderItems, addComanda, preparazioneParziale, bartenderUpdateComanda } =
   await import('../../src/lib/api.js')
+const { _azzeraMutazioni } = await import('../../src/lib/mutazioniOrdine.js')
 
 const mojito = (qty = 2) => ({ drink_id: 'mojito', name: 'Mojito', unit_price: 8, qty })
 
@@ -111,6 +112,12 @@ const respira = () => new Promise((r) => setTimeout(r, 0))
 const ultima = () => stato.scritture[stato.scritture.length - 1]
 
 beforeEach(() => {
+  // LA MEMORIA DEL TERMINALE SI AZZERA FRA UNA PROVA E L'ALTRA. Le mutazioni
+  // di un conto si ricordano quello che hanno appena composto, finché la
+  // cache non lo conferma (lib/mutazioniOrdine.js) — e qui la cache non
+  // conferma MAI, apposta: senza questo, la prova dopo comporrebbe sul conto
+  // della prova prima.
+  _azzeraMutazioni()
   stato.ordine = conto(unaComanda())
   stato.scritture = []
 })

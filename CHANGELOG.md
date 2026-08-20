@@ -4,6 +4,15 @@
 
 ### Per chi gestisce
 
+- **Battendo in fretta non si perde più niente.** Aggiungendo prodotti uno
+  dietro l'altro su uno stesso conto poteva restare **solo il primo**: due
+  modifiche partite nello stesso istante scrivevano tutte e due l'elenco
+  delle comande, e l'ultima cancellava l'altra. Adesso le modifiche di uno
+  stesso conto si mettono **in fila**, e ognuna parte da quello che ha
+  fatto quella prima. Non si aspetta niente in più: il conto a schermo si
+  aggiorna al tocco come sempre, e **conti diversi non si fanno la coda a
+  vicenda**.
+
 - **Sul sito di test si può provare la stampa senza stampante**: nella
   sezione Dev c'è «Stampante simulata» — le stampe escono come facsimile a
   schermo, solo su quel dispositivo.
