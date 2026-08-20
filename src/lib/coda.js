@@ -772,6 +772,25 @@ export function corsieVisibili(corsie, nascoste = []) {
 // rimandato a mano) la colonna compare da sé. IL LAVORO NON SI NASCONDE
 // MAI, e a mostrarlo è l'app — non una voce di menu che l'utente deve
 // trovare.
+// ── L'INTESTAZIONE DI UNA GIORNATA IN CODA ───────────────────────────
+//
+// La coda separa i conti per giornata: oggi in cima, poi i giorni scorsi
+// con una riga sopra ciascuno. Quella riga diceva «⏳ Da chiudere · ieri»
+// SEMPRE, qualunque scheda fosse aperta — ed è giusta solo dentro «In
+// corso», dove un conto di ieri è davvero roba rimasta da chiudere. Fra i
+// CHIUSI diceva una bugia: quelli sono pagati e chiusi, non c'è più niente
+// da fare. Nella scheda «Tutti», dove i conti sono mescolati, non si può
+// dire niente di più della data — e allora si dice solo quella.
+//
+// La data arriva già scritta da chi chiama (businessDayLabel): qui c'è la
+// regola di cosa dire, non come si formatta un giorno.
+export function intestazioneGiornata(filtro, data) {
+  if (filtro === 'chiusi') return `💶 Chiusi · ${data}`
+  if (filtro === 'annullati') return `✖️ Annullati · ${data}`
+  if (filtro === 'tutti') return `📅 ${data}`
+  return `⏳ Da chiudere · ${data}`
+}
+
 // ── LE COLONNE CHE QUESTO TERMINALE HA SPENTO A MANO ─────────────────
 //
 // Il chip «▦ Colonne» si accende quando qualcuna è spenta. Nasceva acceso e

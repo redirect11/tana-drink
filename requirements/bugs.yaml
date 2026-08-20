@@ -2048,3 +2048,43 @@ bugs:
     test_cases:
       - tests/unit/coda.test.js
       - tests/component/CodaCorsie.test.jsx
+
+  - id: BUG-059
+    title: "Nella scheda dei chiusi l'intestazione del giorno dice «Da chiudere»"
+    area: "src/pages/BartenderPage.jsx, src/lib/coda.js (intestazioneGiornata)"
+    description: >
+      Segnalato dall'utente il 20/08 con lo screenshot della scheda
+      «💶 Chiusi»: sopra i conti dell'altra sera c'era scritto
+      «⏳ Da chiudere · ieri».
+      LA CAUSA. La coda separa i conti per giornata commerciale e mette una
+      riga sopra ogni giorno che non è oggi. Quella riga era scritta a
+      mano, uguale in tutti e due i punti in cui compare (la griglia e la
+      lista), e non guardava quale scheda fosse aperta: una sola etichetta
+      per quattro schede.
+      PERCHÉ FA MALE. Dentro «In corso» l'etichetta è giusta e utile: un
+      conto di ieri ancora aperto è davvero roba rimasta da chiudere, e
+      quella riga è l'unica cosa che dice perché sta ancora lì. Dentro
+      «Chiusi» dice il contrario di quello che è vero: quei conti sono
+      pagati e chiusi, non c'è più niente da fare — e chi legge va a
+      cercare cosa manca su conti a posto. Stessa cosa fra gli annullati.
+      LA CURA: l'etichetta la sceglie la scheda (intestazioneGiornata,
+      logica pura in coda.js). «⏳ Da chiudere · ieri» in corso,
+      «💶 Chiusi · ieri» fra i chiusi, «✖️ Annullati · ieri» fra gli
+      annullati. Nella scheda «Tutti» i conti sono mescolati e non si può
+      dire niente di più della data: resta «📅 ieri», che è tutto quello
+      che si sa con certezza.
+      La LISTA continua a dire «Da chiudere» ed è giusto: lì la sezione è
+      una sola, i conti IN CORSO, e di un conto di ieri ancora aperto c'è
+      una cosa sola da dire.
+      PASSI PER RIPRODURLO (prima della cura): lasciare un conto pagato
+      della sera prima in coda, aprire la scheda «💶 Chiusi». Sopra al
+      gruppo c'è «⏳ Da chiudere».
+    in_produzione: false
+    status: fixed
+    generate_issue: true
+    labels: [bug, interfaccia, coda]
+    severity: lieve
+    priority: P2
+    test_cases:
+      - tests/unit/coda.test.js
+      - tests/component/CodaGiornate.test.jsx
