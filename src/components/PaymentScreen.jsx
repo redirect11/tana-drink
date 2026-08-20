@@ -60,7 +60,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   // la registrazione va in background, quindi in questo istante l'ordine non
   // sa ancora com'è stato pagato — e lo scontrino usciva "Contante" anche per
   // una carta di credito. Qui glielo si dice.
-  const closePaid = (incasso = null) => {
+  const closePaid = (incasso = null, { senzaStampa = false } = {}) => {
     const perStampa = incasso
       ? {
           ...order,
@@ -86,6 +86,11 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
       if (
         order.id &&
         order.daily_number != null &&
+        // «Riscuoti (senza stampa)»: il gesto dice esplicitamente che la
+        // carta non serve — cliente che rifiuta lo scontrino di cortesia,
+        // conto interno. Non si prende nemmeno la pretesa: se il conto
+        // verrà riaperto e riscosso normale, la stampa esce come sempre.
+        !senzaStampa &&
         loadPrinterSettings().autoPrintScontrino &&
         (incasso ? reclaimReceiptPrint(order.id) : claimReceiptPrint(order.id))
       ) {
@@ -211,6 +216,10 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   // Il tasto in più lo decide il locale (Impostazioni → Gestione
   // preparazione): serve dove si consegna e si incassa nello stesso gesto.
   const riscuotiEServi = settings?.riscuoti_e_servi === true
+  // «Riscuoti (senza stampa)»: acceso dalle impostazioni del locale. Serve
+  // dove capita spesso che lo scontrino di cortesia non lo voglia nessuno:
+  // un tasto in più qui vale solo se quel caso è la normalità del locale.
+  const riscuotiSenzaStampa = settings?.riscuoti_senza_stampa === true
   const due = orderDue(order)
   // Sconto più grande del conto: capita solo con la strategia "avvisa"
   // (Impostazioni → Sconto e righe del conto), quando si sconta e poi si
@@ -323,7 +332,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
 
   // «Riscuoti» e «Riscuoti e servi» sono lo stesso incasso: cambia solo se
   // le comande risultano servite — e quindi se il conto si chiude adesso.
-  const riscuoti = ({ servi = false } = {}) => {
+  const riscuoti = ({ servi = false, senzaStampa = false } = {}) => {
     const autoServe = autoServeBase || servi
     const items = !manual && splitting ? selection : null
     // Conto già coperto (sconto totale, buono o acconti): non c'è nulla da
@@ -386,7 +395,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
         onError?.(`Pagamento non registrato: ${e.message}`)
       }
     })()
-    if (willClose) closePaid({ amount: toPay, method })
+    if (willClose) closePaid({ amount: toPay, method }, { senzaStampa })
   }
 
   // ── Sconto dal tastierino della modale ──
@@ -779,6 +788,18 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
               onClick={() => riscuoti()}
             >
               {due <= 0 ? 'Chiudi conto · 0,00 €' : `Riscuotere · ${formatPrice(toPay)}`}
+            </button>
+          )}
+          {/* Lo stesso incasso, ma la stampante tace: per il cliente che
+              lo scontrino di cortesia non lo vuole. Solo dove il locale
+              l'ha acceso, e solo se c'è davvero qualcosa da incassare. */}
+          {!closed && riscuotiSenzaStampa && due > 0 && (
+            <button
+              className="btn block ghost payscreen-collect-muto"
+              disabled={saving || scontoFuoriMisura || !(toPay > 0)}
+              onClick={() => riscuoti({ senzaStampa: true })}
+            >
+              Riscuoti (senza stampa) · {formatPrice(toPay)}
             </button>
           )}
           {/* Consegnato e incassato nello stesso gesto: un tasto solo invece

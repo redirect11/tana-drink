@@ -22,12 +22,12 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 159 | fatto e coperto dai test |
+| ✅ | 160 | fatto e coperto dai test |
 | ⚠️  | 14 | fatto ma nessun test lo verifica |
 | ⬜ | 21 | da fare |
 | 🗑 | 1 | non più valido |
 
-**195 voci** in tutto. **173** descrivono il sistema com'è oggi e
+**196 voci** in tutto. **174** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **21** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **6** difetti noti sono ancora aperti.
@@ -42,7 +42,7 @@ come «vero oggi», non come «garantito».
 |---|---|---|---|
 | [Ordini e comande](#ordini-e-comande) | 18 | 1 | Il conto e le sue comande: come nascono, come cambiano stato, come arrivano al banco. |
 | [Cassa e POS](#cassa-e-pos) | 17 | 2 | La schermata più usata della serata: si compone un conto, si corregge, si chiude. |
-| [Pagamenti](#pagamenti) | 10 | 1 | Come si incassa: contanti, carta, SumUp, pagamenti parziali e separati. |
+| [Pagamenti](#pagamenti) | 11 | 1 | Come si incassa: contanti, carta, SumUp, pagamenti parziali e separati. |
 | [La coda del banco](#la-coda-del-banco) | 5 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
@@ -393,6 +393,14 @@ La schermata di incasso mostra gli item UNO PER RIGA fin da subito, senza dover 
 FATTO (1.5.x). La schermata di incasso nasce con le righe uguali già separate: «2× Mojito» sono due righe da «1/1». Il tasto che c'era resta ed e' lo stesso — cambia solo faccia: adesso all'apertura offre «🔗 Unisci uguali», e unendo ripropone «≣ Separa uguali». Dove non c'e' niente da unire ne' da separare (righe tutte da uno) non compare affatto, come prima. La selezione parte PIENA come sempre: chi incassa tutto preme «Riscuotere» senza toccare niente, e l'incasso pieno continua a partire senza dettaglio articoli.
 
 **Dove**: `src/components/PaymentScreen.jsx, src/lib/pagamento.js` · **Lo dimostrano**: `tests/component/PaymentScreen.test.jsx`
+
+#### REQ-PAG-012 — «Riscuoti (senza stampa)»: incassare senza far uscire lo scontrino
+
+Chiesto dall'utente il 20/08: «aggiungi anche (attivabile dalle impostazioni) il tasto Riscuoti (senza stampa) con la funzione di riscuotere ma senza stampare lo scontrino di chiusura, nella schermata di pagamento». COM'E' FATTO: un tasto gemello di «Riscuotere», sotto di lui, che incassa e chiude identico — stesso importo, stesso metodo, stesso `chiude` — ma la stampante tace. Compare solo se il locale accende `riscuoti_senza_stampa` nelle impostazioni (spento di default) e solo se c'e' davvero qualcosa da incassare.
+
+IL DETTAGLIO CHE CONTA: non prende nemmeno la PRETESA di stampa. Cosi' se quel conto verra' riaperto e riscosso in modo normale, lo scontrino esce come sempre — il «senza stampa» vale per QUEL gesto, non e' un marchio sul conto.
+
+**Dove**: `src/components/PaymentScreen.jsx, src/components/SettingsTab.jsx, src/lib/api.js (riscuoti_senza_stampa)` · **Lo dimostrano**: `tests/component/PaymentScreen.test.jsx`
 
 ### La coda del banco
 

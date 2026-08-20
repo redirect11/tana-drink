@@ -83,6 +83,12 @@
 
 ### Al banco
 
+- **Contanti e Carta dalla card stampano lo scontrino come il pannello dei
+  pagamenti**: al tocco, col metodo scelto scritto sopra. E per chi lo
+  scontrino non lo vuole c'è il nuovo **«Riscuoti (senza stampa)»** nella
+  schermata di pagamento — si accende dalle impostazioni, e vale solo per
+  quel gesto: alla prossima riscossione normale la stampa torna.
+
 - **Un logo che non si carica non tiene più ferma la stampante**: dopo tre
   secondi lo scontrino esce senza logo, e non si riprova a ogni stampa.
 

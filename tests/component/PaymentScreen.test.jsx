@@ -742,3 +742,28 @@ describe('separa uguali: ognuna ha la sua quantità', () => {
     expect(payAmount()).toHaveTextContent('22,00')
   })
 })
+// ── RISCUOTI (SENZA STAMPA) ──────────────────────────────────────────
+//
+// Il gesto gemello di «Riscuotere» per il cliente che lo scontrino di
+// cortesia non lo vuole: incassa e chiude uguale, ma la stampante tace.
+// Compare solo se il locale l'ha acceso (riscuoti_senza_stampa), e non
+// prende nemmeno la pretesa di stampa: se il conto verrà riaperto e
+// riscosso normale, lo scontrino esce come sempre.
+describe('riscuoti senza stampa', () => {
+  it('spento di default: il tasto non c’è', () => {
+    mount(baseOrder())
+    expect(screen.queryByRole('button', { name: /senza stampa/ })).toBeNull()
+  })
+
+  it('acceso: incassa come Riscuotere ma la stampante tace', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder(), { ...noReader, riscuoti_senza_stampa: true })
+    await user.click(screen.getByRole('button', { name: /senza stampa/ }))
+    await waitFor(() => expect(registerPayment).toHaveBeenCalled())
+    // Chiude come una riscossione vera…
+    expect(registerPayment.mock.calls[0][1]).toMatchObject({ amount: 22, chiude: true })
+    // …ma niente carta, e nessuna pretesa presa: la prossima riscossione
+    // normale stamperà come sempre.
+    expect(printScontrino).not.toHaveBeenCalled()
+  })
+})

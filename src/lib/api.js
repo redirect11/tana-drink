@@ -3989,6 +3989,8 @@ export const DEFAULT_SETTINGS = {
   // tutto in un colpo. Spento di default: chi segue il servizio di solito
   // lo segue apposta.
   riscuoti_e_servi: false,
+  // «Riscuoti (senza stampa)» nella schermata di pagamento: spento di suo.
+  riscuoti_senza_stampa: false,
   price_markup: DEFAULT_MARKUP,
   price_round_step: DEFAULT_ROUND_STEP,
   // IVA di vendita (somministrazione bar = 10%): serve a scorporare l'IVA dal
