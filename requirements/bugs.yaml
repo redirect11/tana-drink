@@ -2012,7 +2012,7 @@ bugs:
 
   - id: BUG-058
     title: "Il tasto «▦ Colonne» è acceso sempre, e non dice perché"
-    area: "src/pages/BartenderPage.jsx, src/lib/coda.js (corsieSpente, soloCorsieVive)"
+    area: "src/pages/BartenderPage.jsx, src/lib/coda.js (corsieDiverseDalNormale, soloCorsieVive)"
     description: >
       Segnalato dall'utente il 20/08 con lo screenshot della lavagna: il
       chip «▦ Colonne» è arancione — cioè «ci sono colonne spente» —
@@ -2064,6 +2064,17 @@ bugs:
       l'utente l'ha rivista subito. Ora il padding e' la misura che serve
       (16 ai lati, 24 sotto), e il test non si accontenta piu' che un
       padding esista: pretende le misure dell'ombra.
+      DOVE E' FINITO IL SEGNALE (20/08/2026, stesso giorno). Il chip «▦
+      Colonne» non esiste piu': le colonne sono chip in fila coi filtri, e
+      «▾ Filtri» e' l'unico livello di nascondimento (REQ-CODA-009). Quindi
+      quello che sopra e' scritto sul TASTO — il numero «▦ Colonne (2)», il
+      title che elenca quali, l'arancione — va letto sul BADGE del tastino
+      «▾ Filtri», e solo a fila CHIUSA: a fila aperta i chip delle colonne
+      si vedono da se', spenti o accesi. La cura vera resta identica e
+      resta dov'era: si conta la differenza dal normale
+      (`corsieDiverseDalNormale`) e la memoria si ripulisce dagli id morti
+      (`soloCorsieVive`). E' sparito `corsieSpente`, che serviva solo al
+      title di quel chip.
     in_produzione: false
     status: fixed
     generate_issue: true

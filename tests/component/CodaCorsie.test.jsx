@@ -317,12 +317,15 @@ function montaCoda() {
 // test dicono cosa fanno i filtri, non dove stanno: quello lo dicono i loro.
 const apriFiltri = (utente) => utente.click(screen.getByRole('button', { name: 'Filtri' }))
 
-// «▦ Colonne» è un filtro come gli altri e sta nella fila: si arriva alle
-// colonne aprendo prima la fila, se non è già aperta. Le colonne escono IN
-// CODA ALLA STESSA RIGA, non in una seconda sotto.
+// LE COLONNE SONO CHIP IN FILA COI FILTRI, uno per colonna: per averle a
+// schermo basta aprire «▾ Filtri». C'era davanti un «▦ Colonne» che le
+// apriva — un secondo livello di nascondimento dentro il primo — e non
+// c'è più: «togli il testo colonne e metti tutti i tasti che si aprono
+// cliccando colonne al posto di colonne. Non c'è più bisogno visto che
+// nascondiamo tutto con filtri» (l'utente, 20/08/2026). L'helper resta
+// perché ai punti di chiamata dice cosa serve, non dove si tocca.
 const apriColonne = async (utente) => {
-  if (!screen.queryByRole('button', { name: /Colonne/ })) await apriFiltri(utente)
-  await utente.click(screen.getByRole('button', { name: /Colonne/ }))
+  if (!document.querySelector('.chips-filtri')) await apriFiltri(utente)
 }
 
 beforeEach(() => {
@@ -621,13 +624,17 @@ describe('le corsie di chi guarda la serata (admin)', () => {
     await waitFor(() => expect(screen.getByText('#41')).toBeInTheDocument())
   })
 
-  it('niente tasto «Colonne»: tre corsie ci stanno tutte, non c’è niente da spegnere', async () => {
+  it('nella coda dei conti non si sceglie nessuna colonna: sono tre e ci stanno tutte', async () => {
     const utente = userEvent.setup()
     montaCoda()
     await screen.findByText('In corso')
-    // CON LA FILA APERTA, o mancherebbe solo perché è a scomparsa.
+    // CON LA FILA APERTA, o mancherebbero solo perché sono a scomparsa.
     await apriFiltri(utente)
-    expect(screen.queryByRole('button', { name: /Colonne/ })).not.toBeInTheDocument()
+    const riga = document.querySelector('.chips-filtri')
+    // Nessun chip di colonna: quelli del banco non ci sono, e le tre dei
+    // conti non si spengono — sono la risposta alla domanda «com'è andata».
+    for (const nome of ['In preparazione', 'Pronto', 'Ritirato/Servito', '💶 Chiuse'])
+      expect(within(riga).queryByRole('button', { name: nome })).not.toBeInTheDocument()
   })
 
   // LE DUE DOMANDE. Chi guarda la serata se le fa tutte e due: «come sta
@@ -843,33 +850,39 @@ describe('la fila dei filtri sta dietro il tastino ⚗️, nella riga sotto', ()
   })
 
   // UN MECCANISMO SOLO, non uno per vista: «sia per ordini sia per
-  // comande». Al banco dentro la fila ci va anche «▦ Colonne», che è un
-  // filtro a tutti gli effetti — restringe quello che si vede.
-  it('al banco è lo stesso tastino, e «Colonne» ci sta dentro', async () => {
+  // comande». Al banco dentro la fila ci vanno anche le colonne, che sono
+  // filtri a tutti gli effetti — restringono quello che si vede.
+  it('al banco è lo stesso tastino, e le colonne ci stanno dentro', async () => {
     const utente = userEvent.setup()
     ruolo = 'bartender'
     impostazioni = { ...impostazioni, queue_view: 'corsie' }
     montaCoda()
     await screen.findByText('Da fare')
 
-    expect(screen.queryByRole('button', { name: /Colonne/ })).not.toBeInTheDocument()
+    // Chiusa: né gli autori né le colonne. (Il titolo della colonna è anche
+    // la testata della corsia, che a schermo c'è comunque: si guarda se la
+    // fila esiste, e da chiusa non esiste proprio.)
+    expect(document.querySelector('.chips-filtri')).toBe(null)
     expect(screen.queryByRole('button', { name: /Autori/ })).not.toBeInTheDocument()
 
     await apriFiltri(utente)
-    const riga = screen.getByRole('button', { name: /Colonne/ }).closest('.chips-row')
-    expect(within(riga).getByRole('button', { name: /Colonne/ })).toBeInTheDocument()
+    const riga = document.querySelector('.chips-filtri')
     expect(within(riga).getByRole('button', { name: /Autori/ })).toBeInTheDocument()
+    expect(within(riga).getByRole('button', { name: 'Ritirato/Servito' })).toBeInTheDocument()
   })
 
-  // ── LE COLONNE ESCONO IN CODA ALLA STESSA RIGA ────────────────────
+  // ── UN LIVELLO SOLO DI NASCONDIMENTO ─────────────────────────────
   //
-  // Toccando «▦ Colonne» i suoi chip uscivano in una SECONDA riga sotto
-  // quella dei filtri: chip che aprivano chip, due livelli annidati sopra
-  // le comande. «Quei filtri devono apparire sulla stessa riga degli altri
-  // tasti» (l'utente, 20/08/2026). Adesso si accodano ai fratelli: fila
-  // chiusa = zero righe, fila aperta = UNA (che al limite va a capo da sé,
-  // ed è il capo del flusso, non un secondo livello).
-  it('toccando «Colonne» i suoi chip si accodano alla riga, non escono sotto', async () => {
+  // Le colonne hanno fatto due giri. Prima uscivano in una SECONDA riga
+  // sotto quella dei filtri, e sono state accodate alla stessa — «quei
+  // filtri devono apparire sulla stessa riga degli altri tasti» (l'utente,
+  // 20/08/2026). Restava però un «▦ Colonne» davanti che le apriva: chip
+  // che aprivano chip, un secondo livello dentro il primo. «Togli il testo
+  // colonne e metti tutti i tasti che si aprono cliccando colonne al posto
+  // di colonne. Non c'è più bisogno visto che nascondiamo tutto con
+  // filtri» (20/08/2026). Adesso «▾ Filtri» è l'UNICO livello: aperta la
+  // fila le colonne ci sono già, senza toccare altro.
+  it('aprendo la fila le colonne ci sono già, e nessun tasto le apre', async () => {
     const utente = userEvent.setup()
     ruolo = 'bartender'
     impostazioni = { ...impostazioni, queue_view: 'corsie' }
@@ -880,28 +893,22 @@ describe('la fila dei filtri sta dietro il tastino ⚗️, nella riga sotto', ()
     expect(document.querySelectorAll('.chips-row')).toHaveLength(0)
 
     await apriFiltri(utente)
-    expect(document.querySelectorAll('.chips-row')).toHaveLength(1)
-
-    await utente.click(screen.getByRole('button', { name: /Colonne/ }))
-    // SEMPRE UNA. I chip delle colonne sono comparsi DENTRO quella riga, in
-    // coda a «Colonne», non in una fila tutta loro.
+    // UNA SOLA RIGA, e le colonne sono già lì dentro — senza secondo tocco.
+    // (Se non ci stanno va a capo da sé: è il capo naturale del flusso,
+    // non un livello in più.)
     const righe = document.querySelectorAll('.chips-row')
     expect(righe).toHaveLength(1)
     const riga = righe[0]
-    // (il nome della colonna è anche la testata della corsia: si cerca
-    // dentro la riga, non in tutta la pagina)
-    const colonna = within(riga).getByRole('button', { name: 'Ritirato/Servito' })
-    // e sta DOPO il tasto che l'ha aperta: si accoda, non si infila in mezzo
-    const tasti = [...riga.querySelectorAll('button')]
-    expect(tasti.indexOf(colonna)).toBeGreaterThan(
-      tasti.indexOf(within(riga).getByRole('button', { name: /Colonne/ }))
-    )
+    // Tutte quante, non una: sono i chip che stavano dietro il tasto.
+    for (const nome of ['In preparazione', 'Pronto', 'Ritirato/Servito', '💶 Chiuse', '✖️ Annullate'])
+      expect(within(riga).getByRole('button', { name: nome })).toBeInTheDocument()
+    // e il tasto che le apriva non esiste più
+    expect(screen.queryByRole('button', { name: /Colonne/ })).not.toBeInTheDocument()
   })
 
-  // E QUELLO CHE APRE SI CHIUDE CON LEI: i chip delle colonne senza il loro
-  // tasto resterebbero lì da soli, e per richiuderli toccherebbe riaprire
-  // i filtri.
-  it('chiudendo la fila si chiude anche la scelta delle colonne', async () => {
+  // E SE NE VANNO CON LA FILA: sono chip come gli altri, non un pannello
+  // che sopravvive alla riga che lo conteneva.
+  it('chiudendo la fila se ne vanno anche le colonne', async () => {
     const utente = userEvent.setup()
     ruolo = 'bartender'
     impostazioni = { ...impostazioni, queue_view: 'corsie' }
@@ -1318,9 +1325,9 @@ describe('le corsie del banco: una card per comanda', () => {
     // suo fra i conteggi e le colonne.
     expect(conteggi).toBeTruthy()
     expect(within(conteggi).getByText(/apert/)).toBeInTheDocument()
-    // Anche «Colonne» è lì con loro: la riga è una sola. (Il cambio vista
-    // al banco non c'è: lì la risposta è sempre il lavoro.)
-    expect(within(conteggi).getByRole('button', { name: /Colonne/ })).toBeInTheDocument()
+    // Anche le colonne sono lì con loro: la riga è una sola. (Il cambio
+    // vista al banco non c'è: lì la risposta è sempre il lavoro.)
+    expect(within(riga).getByRole('button', { name: 'Ritirato/Servito' })).toBeInTheDocument()
     // E fuori dalla testata non resta nessuna riga di pastiglie: era
     // quella che costava il livello in più.
     const testata = document.querySelector('.board-head')
@@ -1339,11 +1346,11 @@ describe('le corsie del banco: una card per comanda', () => {
     // La tendina degli autori si apre e mostra chi ha battuto un conto.
     await utente.click(screen.getByRole('button', { name: /Autori/ }))
     expect(screen.getByRole('dialog', { name: /Chi ha aperto il conto/ })).toBeInTheDocument()
-    // «Colonne» apre ancora la scelta delle colonne — che adesso esce in
-    // coda a questa stessa riga, non in una seconda sotto.
-    await apriColonne(utente)
+    // E le colonne si spengono da qui, dalla stessa riga: sono chip come
+    // gli altri, e la riga resta una.
     const fila = document.querySelector('.chips-filtri')
-    expect(within(fila).getByRole('button', { name: 'Ritirato/Servito' })).toBeInTheDocument()
+    await utente.click(within(fila).getByRole('button', { name: 'Ritirato/Servito' }))
+    expect(corsia('ritirati')).toBeFalsy()
     expect(document.querySelectorAll('.chips-row')).toHaveLength(1)
   })
 
@@ -1686,7 +1693,10 @@ describe('le corsie del banco: una card per comanda', () => {
     // di chi sta a questo schermo, non un capriccio di questa sessione
     vista.unmount()
     montaCoda()
-    await screen.findByText('Da fare')
+    // SI ASPETTA LA CORSIA, non il testo: da quando le colonne sono chip in
+    // fila coi filtri — e la fila aperta se lo ricorda al ricarico — «Da
+    // fare» sta a schermo due volte, sulla testata e sul suo chip.
+    await waitFor(() => expect(corsia('da-fare')).toBeTruthy())
     expect(corsia('al-ritiro')).toBeFalsy()
 
     // e si riaccende dallo stesso posto
@@ -1695,53 +1705,63 @@ describe('le corsie del banco: una card per comanda', () => {
     expect(corsia('al-ritiro')).toBeTruthy()
   })
 
-  // ── IL CHIP «COLONNE» DICE QUANTE NE HA SPENTE (BUG-058) ──────────
+  // ── LE COLONNE SPENTE CONTANO SOLO SE SI DISCOSTANO (BUG-058/061) ──
   //
-  // Era acceso sempre, dal primo avvio: la classe `active` guardava solo
-  // «ce n'è almeno una spenta», e le due dello sguardo all'indietro
-  // (Chiuse, Annullate) partono spente di suo. Un arancione che c'è
-  // comunque non dice niente — e chi lo vede va ad aprire l'elenco per
-  // scoprire che non aveva toccato nulla. Adesso il numero è scritto.
-  // REGOLA CAMBIATA IL GIORNO STESSO (BUG-058, seconda cura): questo test
-  // diceva «conta le spente» — ma due corsie nascono spente DI SERIE, e il
-  // tasto partiva arancione su ogni terminale nuovo. «Continua ad essere
-  // sempre attivo» (l'utente, alla seconda occhiata). Ora l'acceso dice
-  // «questo terminale si è discostato dal NORMALE», nei due versi.
-  it('«Colonne» si accende solo discostandosi dal normale', async () => {
+  // Il segnale era acceso sempre, dal primo avvio: guardava «ce n'è almeno
+  // una spenta», e le due dello sguardo all'indietro (Chiuse, Annullate)
+  // partono spente di suo. Un arancione che c'è comunque non dice niente —
+  // e chi lo vede va ad aprire l'elenco per scoprire che non aveva toccato
+  // nulla. «Continua ad essere sempre attivo» (l'utente, alla seconda
+  // occhiata): ora conta la DIFFERENZA dal normale, nei due versi.
+  //
+  // DOV'È FINITO IL SEGNALE. Stava sul chip «▦ Colonne», che non esiste
+  // più (20/08/2026): le colonne sono chip in fila coi filtri, e a fila
+  // aperta si vede da sé quali sono spente. Il conto è rimasto identico e
+  // vive nel BADGE del tastino «▾ Filtri» — che è l'unico posto dove
+  // serve, cioè da fila CHIUSA: lì una colonna spenta è una lavagna che
+  // sembra sbagliata e niente a schermo che lo dica. Le colonne contano
+  // come UN filtro, come gli stati o gli autori: il numero di quante sono
+  // sta nel title, per esteso.
+  it('le colonne spente accendono il badge dei filtri solo discostandosi dal normale', async () => {
     const utente = userEvent.setup()
     montaCoda()
     await screen.findByText('Da fare')
-    await apriFiltri(utente)
 
     // Terminale mai toccato: le due spente di serie NON accendono niente.
-    const chip = screen.getByRole('button', { name: /Colonne/ })
-    expect(chip).toHaveTextContent('▦ Colonne')
-    expect(chip).not.toHaveTextContent('(')
-    expect(chip).not.toHaveClass('active')
+    const tasto = () => screen.getByRole('button', { name: 'Filtri' })
+    expect(tasto()).not.toHaveClass('active')
+    expect(tasto()).toHaveAttribute('title', 'Mostra filtri')
 
     // Spengo una corsia di serie accesa: UNA differenza dal normale.
-    await utente.click(chip)
+    await apriFiltri(utente)
     await utente.click(screen.getByRole('button', { name: 'Pronto', pressed: true }))
-    const acceso = screen.getByRole('button', { name: /Colonne/ })
-    expect(acceso).toHaveTextContent('▦ Colonne (1)')
-    expect(acceso).toHaveClass('active')
+    // A FILA APERTA nessun badge: il chip spento si vede da sé.
+    expect(document.querySelector('.coda-tastino-conta')).toBe(null)
+    await apriFiltri(utente) // richiudo
+    expect(tasto()).toHaveClass('active')
+    expect(tasto()).toHaveTextContent('1')
+    expect(tasto()).toHaveAttribute('title', expect.stringContaining('Colonne (1)'))
 
-    // Riaccendo una di serie spenta: anche quella è una differenza (2).
+    // Riaccendo una di serie spenta: anche quella è una differenza (2) — ma
+    // le colonne restano UN filtro solo, quindi il badge dice ancora 1.
+    await apriFiltri(utente)
     await utente.click(screen.getByRole('button', { name: '💶 Chiuse', pressed: false }))
-    expect(screen.getByRole('button', { name: /Colonne/ })).toHaveTextContent('▦ Colonne (2)')
+    await apriFiltri(utente)
+    expect(tasto()).toHaveTextContent('1')
+    expect(tasto()).toHaveAttribute('title', expect.stringContaining('Colonne (2)'))
 
-    // Torno al normale: tasto grigio, senza numero.
+    // Torno al normale: tastino grigio, senza badge e senza elenco.
+    await apriFiltri(utente)
     await utente.click(screen.getByRole('button', { name: 'Pronto', pressed: false }))
     await utente.click(screen.getByRole('button', { name: '💶 Chiuse', pressed: true }))
-    const spento = screen.getByRole('button', { name: /Colonne/ })
-    expect(spento).toHaveTextContent('▦ Colonne')
-    expect(spento).not.toHaveTextContent('(')
-    expect(spento).not.toHaveClass('active')
+    await apriFiltri(utente)
+    expect(tasto()).not.toHaveClass('active')
+    expect(tasto()).toHaveAttribute('title', 'Mostra filtri')
   })
 
   // UNA COLONNA CHE NON ESISTE PIÙ non deve tenere acceso niente. Gli id
   // delle corsie sono cambiati coi rimaneggiamenti, e quelli vecchi
-  // restavano nella memoria del terminale: il chip acceso per sempre, e
+  // restavano nella memoria del terminale: il badge acceso per sempre, e
   // nell'elenco nessuna colonna da riaccendere per spegnerlo.
   it('gli id di colonne che non esistono più si buttano all’apertura', async () => {
     // La memoria tiene anche le due spente di serie: il terminale aveva
@@ -1750,14 +1770,15 @@ describe('le corsie del banco: una card per comanda', () => {
       'tana:corsie:nascoste',
       JSON.stringify(['al-ritiro', 'chiusi', 'annullati', 'corsia-fantasma', 'da-incassare-vecchia'])
     )
-    const utente = userEvent.setup()
     montaCoda()
     await screen.findByText('Da fare')
-    await apriFiltri(utente)
 
     // resta la sola spenta vera — «al-ritiro», che di serie è accesa,
     // quindi UNA differenza dal normale — e la memoria è ripulita sul disco
-    expect(screen.getByRole('button', { name: /Colonne/ })).toHaveTextContent('▦ Colonne (1)')
+    expect(screen.getByRole('button', { name: 'Filtri' })).toHaveAttribute(
+      'title',
+      expect.stringContaining('Colonne (1)')
+    )
     expect(JSON.parse(localStorage.getItem('tana:corsie:nascoste'))).toEqual([
       'al-ritiro',
       'chiusi',

@@ -1807,11 +1807,11 @@ body.fullbleed .bar-content {
 }
 
 /* PIÙ PICCOLI DI UN FILO, TUTTI QUANTI — gli stati, la tendina degli
-   autori, «▦ Colonne», i sottofiltri dei chiusi, «Solo oggi» e le colonne
-   che escono in coda alla riga. «E i tasti dei filtri, tutti, devono
-   essere leggermente più piccoli» (l'utente, 20/08/2026): in griglia sono
-   sei o sette e alla misura piena si mangiavano la riga, e da quando la
-   scelta delle colonne si accoda qui la fila si è allungata ancora.
+   autori, i sottofiltri dei chiusi, «Solo oggi» e — al banco — un chip per
+   ogni colonna. «E i tasti dei filtri, tutti, devono essere leggermente
+   più piccoli» (l'utente, 20/08/2026): in griglia sono sei o sette e alla
+   misura piena si mangiavano la riga, e al banco le colonne stanno in fila
+   coi filtri (non più dietro un «▦ Colonne»), quindi sono altrettanti.
    È UNA DEROGA AI 44px di docs/navigazione.md, chiesta e circoscritta:
    vale SOLO dentro la fila dei filtri — che si tocca quando si decide
    cosa guardare, non con l'ordine in mano — e non arriva ai tasti che

@@ -1392,35 +1392,15 @@ describe('il blocco del pagamento obbligatorio', () => {
   })
 })
 
-// ── QUANTE COLONNE HA SPENTO QUESTO TERMINALE (BUG-058) ──────────────
+// ── LA MEMORIA DELLE COLONNE SPENTE (BUG-058) ────────────────────────
 //
-// Il chip «▦ Colonne» si accende quando qualcuna è spenta, e nasceva
-// acceso: le due dello sguardo all'indietro partono spente di suo. Un
-// arancione che c'è dal primo avvio non distingue niente, e il numero
-// serve proprio a dire perché. Si conta solo fra le colonne che in quel
-// momento si possono scegliere — una nascosta che non è nemmeno in elenco
-// non è una scelta, è un residuo.
-import { corsieSpente, soloCorsieVive } from '../../src/lib/coda.js'
+// Il terminale ricorda quali colonne ha spento, e quella memoria è
+// sopravvissuta a più rimaneggiamenti delle corsie: un id morto restava lì
+// e teneva acceso il badge dei filtri per una colonna che nell'elenco non
+// c'era nemmeno più, quindi non c'era niente da riaccendere per spegnerlo.
+import { soloCorsieVive } from '../../src/lib/coda.js'
 
 describe('le colonne spente a mano', () => {
-  const sceglibili = [
-    { id: 'da-fare', titolo: 'Da fare' },
-    { id: 'al-banco', titolo: 'In preparazione' },
-    { id: 'chiusi', titolo: '💶 Chiuse' },
-  ]
-
-  it('conta quelle spente, e restituisce quali sono', () => {
-    expect(corsieSpente(sceglibili, ['chiusi'])).toEqual([{ id: 'chiusi', titolo: '💶 Chiuse' }])
-    expect(corsieSpente(sceglibili, [])).toEqual([])
-    expect(corsieSpente(sceglibili)).toEqual([])
-  })
-
-  it('una spenta che non è in elenco non conta: non è una scelta da spegnere', () => {
-    // Es. «Da fare» col salto acceso: sparisce dalle scelte, e continuare a
-    // contarla terrebbe acceso il chip per una colonna che non c'è.
-    expect(corsieSpente(sceglibili, ['annullati', 'corsia-morta'])).toEqual([])
-  })
-
   it('la memoria del terminale si ripulisce dagli id che non esistono più', () => {
     expect(soloCorsieVive(['chiusi', 'inventata', 'al-ritiro-banco', 'annullati'])).toEqual([
       'chiusi',
