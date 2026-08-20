@@ -1053,25 +1053,36 @@ describe('le corsie del banco: una card per comanda', () => {
   // (Chiuse, Annullate) partono spente di suo. Un arancione che c'è
   // comunque non dice niente — e chi lo vede va ad aprire l'elenco per
   // scoprire che non aveva toccato nulla. Adesso il numero è scritto.
-  it('«Colonne» scrive quante ne sono spente, e le conta bene', async () => {
+  // REGOLA CAMBIATA IL GIORNO STESSO (BUG-058, seconda cura): questo test
+  // diceva «conta le spente» — ma due corsie nascono spente DI SERIE, e il
+  // tasto partiva arancione su ogni terminale nuovo. «Continua ad essere
+  // sempre attivo» (l'utente, alla seconda occhiata). Ora l'acceso dice
+  // «questo terminale si è discostato dal NORMALE», nei due versi.
+  it('«Colonne» si accende solo discostandosi dal normale', async () => {
     const utente = userEvent.setup()
     montaCoda()
     await screen.findByText('Da fare')
 
-    // di partenza: Chiuse e Annullate
+    // Terminale mai toccato: le due spente di serie NON accendono niente.
     const chip = screen.getByRole('button', { name: /Colonne/ })
-    expect(chip).toHaveTextContent('▦ Colonne (2)')
-    expect(chip).toHaveClass('active')
+    expect(chip).toHaveTextContent('▦ Colonne')
+    expect(chip).not.toHaveTextContent('(')
+    expect(chip).not.toHaveClass('active')
 
-    // se ne spegne un'altra: il numero sale
+    // Spengo una corsia di serie accesa: UNA differenza dal normale.
     await utente.click(chip)
     await utente.click(screen.getByRole('button', { name: 'Pronto', pressed: true }))
-    expect(screen.getByRole('button', { name: /Colonne/ })).toHaveTextContent('▦ Colonne (3)')
+    const acceso = screen.getByRole('button', { name: /Colonne/ })
+    expect(acceso).toHaveTextContent('▦ Colonne (1)')
+    expect(acceso).toHaveClass('active')
 
-    // e riaccendendole tutte il chip si spegne davvero
-    for (const titolo of ['Pronto', '💶 Chiuse', '✖️ Annullate']) {
-      await utente.click(screen.getByRole('button', { name: titolo, pressed: false }))
-    }
+    // Riaccendo una di serie spenta: anche quella è una differenza (2).
+    await utente.click(screen.getByRole('button', { name: '💶 Chiuse', pressed: false }))
+    expect(screen.getByRole('button', { name: /Colonne/ })).toHaveTextContent('▦ Colonne (2)')
+
+    // Torno al normale: tasto grigio, senza numero.
+    await utente.click(screen.getByRole('button', { name: 'Pronto', pressed: false }))
+    await utente.click(screen.getByRole('button', { name: '💶 Chiuse', pressed: true }))
     const spento = screen.getByRole('button', { name: /Colonne/ })
     expect(spento).toHaveTextContent('▦ Colonne')
     expect(spento).not.toHaveTextContent('(')
@@ -1083,16 +1094,23 @@ describe('le corsie del banco: una card per comanda', () => {
   // restavano nella memoria del terminale: il chip acceso per sempre, e
   // nell'elenco nessuna colonna da riaccendere per spegnerlo.
   it('gli id di colonne che non esistono più si buttano all’apertura', async () => {
+    // La memoria tiene anche le due spente di serie: il terminale aveva
+    // nascosto al-ritiro e basta. Il fantasma non deve contare niente.
     localStorage.setItem(
       'tana:corsie:nascoste',
-      JSON.stringify(['al-ritiro', 'corsia-fantasma', 'da-incassare-vecchia'])
+      JSON.stringify(['al-ritiro', 'chiusi', 'annullati', 'corsia-fantasma', 'da-incassare-vecchia'])
     )
     montaCoda()
     await screen.findByText('Da fare')
 
-    // resta la sola spenta vera, e la memoria è già ripulita sul disco
+    // resta la sola spenta vera — «al-ritiro», che di serie è accesa,
+    // quindi UNA differenza dal normale — e la memoria è ripulita sul disco
     expect(screen.getByRole('button', { name: /Colonne/ })).toHaveTextContent('▦ Colonne (1)')
-    expect(JSON.parse(localStorage.getItem('tana:corsie:nascoste'))).toEqual(['al-ritiro'])
+    expect(JSON.parse(localStorage.getItem('tana:corsie:nascoste'))).toEqual([
+      'al-ritiro',
+      'chiusi',
+      'annullati',
+    ])
   })
 
   it('un conto appena battuto si vede subito, prima ancora del server', async () => {

@@ -162,7 +162,14 @@ ${nome} {`)
 
   it('la lista di una corsia lascia spazio sotto e ai lati', () => {
     const r = regola('.corsia-lista')
-    expect(r, 'la lista scorre e taglierebbe l’ombra: serve un padding').toMatch(/padding:/)
+    // Non basta che un padding ESISTA: il primo giro ne aveva messo uno
+    // da 6px e l'ombra usciva tagliata lo stesso. La misura viene
+    // dall'ombra (0 4px 18px): almeno la sfocatura ai lati, sfocatura più
+    // scostamento in basso.
+    const m = r.match(/padding:\s*\d+px (\d+)px (\d+)px/)
+    expect(m, 'la lista scorre e taglierebbe l’ombra: serve un padding').toBeTruthy()
+    expect(Number(m[1]), 'ai lati ci sta la sfocatura intera (18px)').toBeGreaterThanOrEqual(16)
+    expect(Number(m[2]), 'sotto ci stanno sfocatura più scostamento (22px)').toBeGreaterThanOrEqual(22)
   })
 
   it('e non fa comparire una barra orizzontale per quei pochi pixel', () => {
