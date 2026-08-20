@@ -1584,10 +1584,18 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // devono uscire sotto. Come il tasto che mostra/nasconde i prodotti da
   // una card delle comande» (l'utente, 20/08/2026).
   //
-  // Quindi NON è più un tastino quadrato da 44px con bordo (`board-icona`,
-  // la famiglia di 📟 e ＋): è il pattern di `.corsia-piu` — chevron ▾/▴,
-  // niente riquadro, colore attenuato, poche parole. Un tasto che governa
-  // la vista non deve pesare come un tasto che fa qualcosa alla serata.
+  // COSA MOSTRA È GIUSTO COSÌ: chevron ▾/▴ e la parola «Filtri». COM'È
+  // VESTITO no, ed è cambiato due volte in un giorno. Era un tastino
+  // quadrato da 44px (`board-icona`, la famiglia di 📟 e ＋); è diventato
+  // il pattern di `.corsia-piu` — niente riquadro, colore attenuato — e da
+  // lì l'utente l'ha rimandato indietro a metà strada: «Ok, così com'è
+  // filtri, aggiungi un bordo e rendilo un bottone ma lascia la freccetta
+  // e la scritta filtri. Il tasto non farlo troppo alto come gli altri»
+  // (20/08/2026).
+  //
+  // Quindi: BOTTONE VERO, col riquadro, ma BASSO — non i 44px dei tasti che
+  // fanno qualcosa alla serata. Un tasto che governa come si guarda la coda
+  // si deve vedere che è un tasto, e non deve pesare come «Incassa».
   //
   // A DESTRA, INSIEME ALL'ORDINAMENTO: «il tasto dei filtri deve essere
   // sulla destra insieme a quello dell'ordinamento non a sinistra dei
@@ -1616,9 +1624,20 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
     </button>
   )
 
-  // IL VERSO DELLA CODA. Stessa famiglia del tastino dei filtri: sono i due
-  // tasti che governano COME si guarda la coda, stanno insieme in fondo a
-  // destra e si somigliano perché fanno la stessa specie di cosa.
+  // IL VERSO DELLA CODA. È UN BOTTONE, GEMELLO DEL TASTO DEI FILTRI: stesso
+  // riquadro, stessa altezza, uno accanto all'altro. «Non ti avevo chiesto
+  // di farlo per il tasto dell'ordinamento. Il tasto dell'ordinamento deve
+  // essere come gli altri, solo i filtri si nascondono in quel modo» — e
+  // poi, sulla misura di tutti e due: «Il tasto non farlo troppo alto come
+  // gli altri, stessa cosa per la freccetta dell'ordinamento. Stessa
+  // dimensione dei filtri» (l'utente, 20/08/2026).
+  //
+  // NON SI NASCONDE MAI, e questa è la differenza vera: non è un filtro, è
+  // il verso in cui si legge la coda. Il tasto accanto apre e chiude i
+  // chip; questo gira la lista e resta a schermo sempre.
+  //
+  // SOLO L'ICONA, quindi il riquadro si fa quadrato (`solo-icona`): una
+  // pastiglia lunga attorno a una freccia sola è tutta aria.
   //
   // NOME E ICONA VENGONO DA `spiegaOrdine`, insieme: erano due ternari
   // scritti a mano in due punti — la testata e il ⋯ — e già divergevano.
@@ -1627,7 +1646,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   const verso = spiegaOrdine(ordineDesc)
   const tastoOrdine = (
     <button
-      className="coda-tastino"
+      className="coda-tastino solo-icona"
       onClick={cambiaOrdine}
       title={verso.nome}
       aria-label={verso.nome}
@@ -1728,6 +1747,43 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
           }
         >
           ▦ Colonne{diverse.length > 0 ? ` (${diverse.length})` : ''}
+        </button>
+      )}
+      {/* E LE COLONNE ESCONO QUI, IN CODA ALLA STESSA RIGA. Erano una
+          riga a parte sotto i conteggi: chip che aprivano chip, due
+          livelli annidati — «quei filtri devono apparire sulla stessa
+          riga degli altri tasti» (l'utente, 20/08/2026). Adesso si
+          accodano ai fratelli e basta: la riga va a capo da sé se non ci
+          stanno, che è il capo naturale del flusso, non un secondo
+          livello. Fila chiusa = zero righe, fila aperta = una. */}
+      {corsieBanco &&
+        scegliCorsie &&
+        sceglibili.map((c) => (
+          <button
+            key={c.id}
+            className={`chip ${nascoste.includes(c.id) ? '' : 'active'}`}
+            onClick={() => cambiaCorsia(c.id)}
+            aria-pressed={!nascoste.includes(c.id)}
+          >
+            {c.titolo}
+          </button>
+        ))}
+      {/* IL PRONTO, UNITO O DIVISO. Sta con le colonne perché è una
+          domanda sulle colonne. Solo dove il ritiro esiste: col solo
+          servizio non c'è niente da separare, e un tasto che non fa
+          niente è peggio di un tasto che non c'è. */}
+      {corsieBanco && scegliCorsie && ritiroEsiste && (
+        <button
+          className={`chip ${prontoSeparato ? 'active' : ''}`}
+          onClick={cambiaPronto}
+          aria-pressed={prontoSeparato}
+          title={
+            prontoSeparato
+              ? 'Adesso il pronto è in due colonne — tocca per riunirle'
+              : 'Adesso il pronto è una colonna sola, col badge — tocca per dividere servizio e ritiro'
+          }
+        >
+          ✂️ Dividi il pronto
         </button>
       )}
     </>
@@ -2751,44 +2807,14 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
               è `advance`, l'incasso è il pagamento del conto — perché una
               vista è un modo di guardare, non un secondo modo di lavorare.
 
-              I FILTRI NON SONO QUI: stanno sulla riga dei conteggi, in
-              testata (vedi `filtriCorsie`). Erano una riga a sé, e fra i
-              conteggi e la prima comanda c'erano tre livelli — e i
-              sottofiltri dei chiusi ne aggiungevano un quarto: adesso
-              sono chip in riga con gli altri. */}
-          {corsieBanco && filtriVisibili && scegliCorsie && (
-            <div className="chips-row corsie-scelta" style={{ margin: '0 0 12px' }}>
-              {sceglibili.map((c) => (
-                <button
-                  key={c.id}
-                  className={`chip ${nascoste.includes(c.id) ? '' : 'active'}`}
-                  onClick={() => cambiaCorsia(c.id)}
-                  aria-pressed={!nascoste.includes(c.id)}
-                >
-                  {c.titolo}
-                </button>
-              ))}
-              {/* IL PRONTO, UNITO O DIVISO. Sta qui perché è una domanda
-                  sulle colonne, e qui si risponde alle altre. Solo dove il
-                  ritiro esiste: col solo servizio non c'è niente da
-                  separare, e un tasto che non fa niente è peggio di un
-                  tasto che non c'è. */}
-              {ritiroEsiste && (
-                <button
-                  className={`chip ${prontoSeparato ? 'active' : ''}`}
-                  onClick={cambiaPronto}
-                  aria-pressed={prontoSeparato}
-                  title={
-                    prontoSeparato
-                      ? 'Adesso il pronto è in due colonne — tocca per riunirle'
-                      : 'Adesso il pronto è una colonna sola, col badge — tocca per dividere servizio e ritiro'
-                  }
-                >
-                  ✂️ Dividi il pronto
-                </button>
-              )}
-            </div>
-          )}
+              QUI NON C'È PIÙ NIENTE PRIMA DELLE COLONNE. I filtri stanno
+              sulla riga dei conteggi, in testata (vedi `filtriCorsie`), e
+              da questo giro ci sta dentro anche la SCELTA DELLE COLONNE:
+              era rimasta l'ultima riga annidata — chip che aprivano chip
+              su un secondo livello — e l'utente l'ha bocciata («quei
+              filtri devono apparire sulla stessa riga degli altri tasti»,
+              20/08/2026). Fra i conteggi e la prima comanda adesso non c'è
+              più nessun livello. */}
           {corsieBanco ? (
             <CorsieComande
               // IL ⋯ DELLA CARD. Le cose che si fanno di rado ma proprio

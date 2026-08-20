@@ -21,6 +21,12 @@
   --ok: #2ecc71;
   --warn: #f39c12;
   --radius: 16px;
+  /* L'ALTEZZA DEI COMANDI DELLA FILA DEI FILTRI: i chip e i due tasti che
+     la governano (filtri e verso della coda). Una misura sola perché in
+     riga si devono somigliare — sono la stessa specie di comando — e più
+     bassa dei 44px di chi si preme di corsa: «e i tasti dei filtri, tutti,
+     devono essere leggermente più piccoli» (l'utente, 20/08/2026). */
+  --tastino-alto: 34px;
   /* ── LE FORME DEL TEMA ──────────────────────────────────────────
      Un tema non è solo una tavolozza: Pico e Catppuccin hanno un modo
      di fare gli angoli, i tasti e le ombre (vedi lib/themes.js, FORME).
@@ -1800,6 +1806,24 @@ body.fullbleed .bar-content {
   row-gap: 6px;
 }
 
+/* PIÙ PICCOLI DI UN FILO, TUTTI QUANTI — gli stati, la tendina degli
+   autori, «▦ Colonne», i sottofiltri dei chiusi, «Solo oggi» e le colonne
+   che escono in coda alla riga. «E i tasti dei filtri, tutti, devono
+   essere leggermente più piccoli» (l'utente, 20/08/2026): in griglia sono
+   sei o sette e alla misura piena si mangiavano la riga, e da quando la
+   scelta delle colonne si accoda qui la fila si è allungata ancora.
+   È UNA DEROGA AI 44px di docs/navigazione.md, chiesta e circoscritta:
+   vale SOLO dentro la fila dei filtri — che si tocca quando si decide
+   cosa guardare, non con l'ordine in mano — e non arriva ai tasti che
+   fanno qualcosa alla serata. Il bersaglio resta comodo: 34px di altezza
+   e l'imbottitura ai fianchi, che su una pastiglia scritta è il grosso
+   della superficie. */
+.chips-filtri .chip {
+  min-height: var(--tastino-alto);
+  padding: 5px 11px;
+  font-size: 0.86rem;
+}
+
 /* ── I DUE TASTINI CHE GOVERNANO LA VISTA ────────────────────────────
    Il tasto dei filtri e la freccia dell'ordinamento stanno IN FONDO A
    DESTRA, su una riga che c'è comunque — i conteggi sulle lavagne, la
@@ -1808,44 +1832,74 @@ body.fullbleed .bar-content {
    20/08/2026). Costo verticale a filtri chiusi: zero, in tutte le viste e
    anche sul telefono.
    `align-self: center` perché la riga dei conteggi allinea alla BASE del
-   testo, e un tastino allineato alla base pende. */
+   testo, e un tastino allineato alla base pende.
+   I MARGINI NEGATIVI NON SONO UN TRUCCO, sono il conto: i due tasti sono
+   alti `--tastino-alto`, la riga dei conteggi è alta quanto il suo testo
+   (una ventina di pixel). Appesi così alzerebbero la riga, e su una
+   lavagna che si guarda da lontano ogni pixel in testata è una comanda in
+   meno sotto. Togliendo dall'altezza di riga quello che sporge, i tasti
+   escono di qualche pixel sopra e sotto — dentro il `gap: 10px` della
+   testata, che c'è comunque — e la riga resta alta come il testo. */
 .coda-tastini {
   display: inline-flex;
-  gap: 10px;
+  align-items: center;
+  gap: 8px;
   flex-shrink: 0;
   margin-left: auto;
   align-self: center;
+  margin-block: -5px;
 }
 
-/* NON È UN TASTO DA 44px. È il pattern di `.corsia-piu` — il «▾ altre 3»
-   che apre le righe di una card delle comande: niente riquadro, colore
-   attenuato, chevron davanti. «Il tasto per mostrare/nascondere i filtri
-   deve essere un tasto piccolo […] come il tasto che mostra/nasconde i
-   prodotti da una card delle comande» (l'utente, 20/08/2026). Un tasto
-   che governa COME si guarda la coda non deve pesare come un tasto che fa
-   qualcosa alla serata, e in una riga di testo un rettangolo bordato è
-   uno scalino.
-   LA REGOLA DEI 44px NON È VIOLATA: quella vale per i tasti che si
-   premono di corsa con le dita bagnate (Avanti, Incassa). Questi si
-   premono quando si decide cosa guardare, e restano comunque comodi —
-   padding e interlinea fanno una ventina di pixel su una manciata di
-   caratteri larghi. */
+/* DUE GEMELLI: il tasto dei filtri e la freccia dell'ordinamento sono
+   BOTTONI VERI — riquadro, fondo, la stessa misura — ma BASSI, non i 44px
+   della famiglia che fa qualcosa alla serata.
+   Ci si è arrivati per correzioni. Erano tastini quadrati da 44px; sono
+   diventati testo senza riquadro («un tasto piccolo […] come il tasto che
+   mostra/nasconde i prodotti da una card delle comande»); e da lì
+   l'utente li ha rimandati a metà strada: «Ok, così com'è filtri, aggiungi
+   un bordo e rendilo un bottone ma lascia la freccetta e la scritta
+   filtri. Il tasto non farlo troppo alto come gli altri, stessa cosa per
+   la freccetta dell'ordinamento. Stessa dimensione dei filtri»
+   (20/08/2026). Senza riquadro non si vedeva che erano tasti; alti 44 in
+   una riga di testo erano uno scalino.
+   L'ALTEZZA STA IN UNA VARIABILE perché è la stessa dei chip della fila:
+   sono la stessa specie di comando e devono somigliarsi in riga.
+   LA REGOLA DEI 44px NON È VIOLATA: quella vale per i tasti che si premono
+   di corsa con le dita bagnate (Avanti, Incassa). Questi si premono quando
+   si decide cosa guardare. */
 .coda-tastino {
-  border: none;
-  background: none;
-  padding: 4px 2px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: var(--tastino-alto);
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--raggio-pill);
+  background: var(--tile-bg);
   font-size: 0.82rem;
   line-height: 1.2;
   color: var(--muted);
   cursor: pointer;
   white-space: nowrap;
 }
+/* Il verso della coda è una freccia sola: una pastiglia lunga attorno a un
+   carattere è tutta aria. Quadrata, e larga quanto è alta. */
+.coda-tastino.solo-icona {
+  min-width: var(--tastino-alto);
+  padding: 4px 6px;
+  justify-content: center;
+  font-size: 0.95rem;
+}
 .coda-tastino:hover {
   color: var(--accent-2);
+  border-color: var(--accent-2);
 }
-/* Acceso = c'è un filtro che sta lavorando e la fila è chiusa. */
+/* Acceso = c'è un filtro che sta lavorando e la fila è chiusa. Adesso che
+   il riquadro c'è, si accende anche quello: il colore del solo testo, su
+   un bottone bordato, si perdeva. */
 .coda-tastino.active {
   color: var(--accent-2);
+  border-color: var(--accent-2);
   font-weight: 600;
 }
 
@@ -7272,8 +7326,8 @@ body.pagina-piena .inv-scheda {
 }
 
 /* IL BADGE DEL CONTEGGIO NON STA PIÙ QUI. Era nell'angolo del tastino
-   quadrato ⚗️ (`.board-icona-conta`); il tasto dei filtri adesso è di
-   testo e piccolo, e il numero gli sta accanto — vedi
+   quadrato ⚗️ (`.board-icona-conta`); il tasto dei filtri adesso è un
+   bottone basso e scritto, e il numero gli sta accanto — vedi
    `.coda-tastino-conta`. */
 
 .board-icona.active {
@@ -7614,11 +7668,12 @@ body.pagina-piena .inv-scheda {
   font-size: 0.8rem;
 }
 
-/* La riga di tasti che sceglie quali colonne restano a schermo: sta sotto
-   quella dei filtri e si apre solo quando la si chiede. */
-.corsie-scelta {
-  padding-left: 2px;
-}
+/* LA SCELTA DELLE COLONNE NON HA PIÙ UNA RIGA SUA (`.corsie-scelta`, tolta
+   il 20/08/2026). Era una seconda fila sotto quella dei filtri: chip che
+   aprivano chip, due livelli annidati — «quei filtri devono apparire sulla
+   stessa riga degli altri tasti» (l'utente). Adesso quei tasti si accodano
+   ai fratelli dentro `.chips-filtri` e non hanno bisogno di niente di
+   loro: se non ci stanno, la riga va a capo da sé. */
 
 /* LA SCELTA DELLE UNITÀ DA PREPARARE ADESSO, dentro la comanda: un
    riquadro staccato dalle righe che sta leggendo, o non si capisce dove

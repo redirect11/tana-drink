@@ -24,14 +24,23 @@
   tocchi. Anche qui non si resta mai senza nessuno: spegnendo l'ultimo
   tornano tutti.
 
-- **Il tasto dei filtri è piccolo e sta a destra, e i filtri escono sotto.**
-  È diventato un **«▾ Filtri»** discreto — come il «▾ altre 3» che apre le
-  righe di una comanda — in **fondo a destra**, accanto alla freccia
-  dell'ordinamento, **sulla riga dei conteggi che c'era già**. A filtri
-  chiusi la coda **non perde nemmeno una riga**; toccandolo compaiono i chip
-  in una riga sotto, che richiudendo **sparisce del tutto**. **Serviti / Da
-  servire** stanno adesso **in riga con gli altri**, non più in una riga
-  «Dei chiusi:» tutta loro.
+- **Il tasto dei filtri sta a destra, e i filtri escono sotto in UNA riga
+  sola.** È un **«▾ Filtri»** in **fondo a destra**, accanto alla freccia
+  dell'ordinamento, **sulla riga dei conteggi che c'era già**: a filtri
+  chiusi la coda **non perde nemmeno una riga**. Toccandolo compaiono i
+  chip, **tutti sulla stessa riga** — anche quelli che si aprono da un
+  altro chip: **▦ Colonne**, al banco, adesso mette le sue colonne **in
+  coda alla fila**, non più in una seconda riga sotto. Richiudendo la fila
+  **sparisce del tutto**. **Serviti / Da servire** stanno anche loro **in
+  riga con gli altri**, non più in una riga «Dei chiusi:» tutta loro.
+
+- **Filtri e ordinamento sono due bottoni bassi, gemelli.** Si vede che sono
+  tasti — hanno il loro riquadro — ma sono **più bassi** di quelli che si
+  premono di corsa: in mezzo a una riga di testo un tasto alto è uno
+  scalino, e la riga dei conteggi **non è cresciuta di un pixel**. Il tasto
+  dei filtri tiene la freccetta e la scritta; l'ordinamento è un quadratino
+  con la sua freccia, della stessa misura. E **tutti i tasti dei filtri sono
+  un filo più piccoli**, così in una riga sola ce ne sta di più.
 
 - **Il numerino sul tasto dei filtri conta solo quello che hai cambiato.**
   Prima segnava sempre almeno uno, e non distingueva niente: adesso compare
@@ -51,8 +60,9 @@
   successo a premere, e non se ne leggeva nessuna delle due. Anche l'icona
   lo dice: una **freccia sola** — **↓** quando si parte dai più recenti,
   **↑** quando si parte dai più vecchi — dove il «↕» era uguale nei due
-  casi. Sta **in riga col tastino dei filtri**, sotto la testata, sul
-  tablet come sul telefono.
+  casi. Sta **in riga col tasto dei filtri**, sotto la testata, sul tablet
+  come sul telefono, e **non si nasconde mai**: non è un filtro, è il verso
+  in cui si legge la coda.
 
 - **Il tasto per passare da ordini a comande è salito in alto**, ed è
   diventato un'icona piccola accanto agli altri: **🧾** quando porta ai

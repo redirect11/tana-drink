@@ -317,8 +317,9 @@ function montaCoda() {
 // test dicono cosa fanno i filtri, non dove stanno: quello lo dicono i loro.
 const apriFiltri = (utente) => utente.click(screen.getByRole('button', { name: 'Filtri' }))
 
-// «▦ Colonne» è un filtro come gli altri e sta nella fila: si arriva al suo
-// pannellino aprendo prima la fila, se non è già aperta.
+// «▦ Colonne» è un filtro come gli altri e sta nella fila: si arriva alle
+// colonne aprendo prima la fila, se non è già aperta. Le colonne escono IN
+// CODA ALLA STESSA RIGA, non in una seconda sotto.
 const apriColonne = async (utente) => {
   if (!screen.queryByRole('button', { name: /Colonne/ })) await apriFiltri(utente)
   await utente.click(screen.getByRole('button', { name: /Colonne/ }))
@@ -696,15 +697,20 @@ describe('la fila dei filtri sta dietro il tastino ⚗️, nella riga sotto', ()
     expect(tasto.closest('.board-actions')).toBe(null)
     const tastini = tasto.closest('.coda-tastini')
     expect(tastini.closest('.board-sotto')).toBeTruthy()
-    // PICCOLO, come il «▾ altre 3» di una card delle comande: niente
-    // riquadro da 44px.
+    // UN BOTTONE COL RIQUADRO, MA BASSO — non la famiglia da 44px di 📟 e
+    // ＋. «Aggiungi un bordo e rendilo un bottone ma lascia la freccetta e
+    // la scritta filtri. Il tasto non farlo troppo alto come gli altri»
+    // (l'utente, 20/08/2026): il riquadro lo mette `.coda-tastino`, e le
+    // misure stanno nel foglio (tests/unit/css.test.js).
     expect(tasto).toHaveClass('coda-tastino')
     expect(tasto).not.toHaveClass('board-icona')
     expect(tasto).toHaveTextContent('▾ Filtri')
-    // e con lui, A DESTRA, l'altro tastino: l'ordinamento
-    expect(
-      within(tastini).getByRole('button', { name: /Prima i più/ })
-    ).toBeInTheDocument()
+    // E CON LUI, A DESTRA, IL SUO GEMELLO: il verso della coda, stesso
+    // vestito e stessa misura — «stessa dimensione dei filtri» — ma solo
+    // l'icona, quindi il riquadro si fa quadrato.
+    const ordine = within(tastini).getByRole('button', { name: /Prima i più/ })
+    expect(ordine).toHaveClass('coda-tastino')
+    expect(ordine).toHaveClass('solo-icona')
     // Col terminale al suo posto non c'è nessun conteggio da portare.
     expect(tasto).not.toHaveClass('active')
     expect(document.querySelector('.coda-tastino-conta')).toBe(null)
@@ -855,9 +861,46 @@ describe('la fila dei filtri sta dietro il tastino ⚗️, nella riga sotto', ()
     expect(within(riga).getByRole('button', { name: /Autori/ })).toBeInTheDocument()
   })
 
-  // E QUELLO CHE APRE SI CHIUDE CON LEI: il pannellino delle colonne senza
-  // il suo tasto resterebbe appeso sotto i conteggi, che è proprio
-  // l'altezza che la scomparsa serve a restituire ai conti.
+  // ── LE COLONNE ESCONO IN CODA ALLA STESSA RIGA ────────────────────
+  //
+  // Toccando «▦ Colonne» i suoi chip uscivano in una SECONDA riga sotto
+  // quella dei filtri: chip che aprivano chip, due livelli annidati sopra
+  // le comande. «Quei filtri devono apparire sulla stessa riga degli altri
+  // tasti» (l'utente, 20/08/2026). Adesso si accodano ai fratelli: fila
+  // chiusa = zero righe, fila aperta = UNA (che al limite va a capo da sé,
+  // ed è il capo del flusso, non un secondo livello).
+  it('toccando «Colonne» i suoi chip si accodano alla riga, non escono sotto', async () => {
+    const utente = userEvent.setup()
+    ruolo = 'bartender'
+    impostazioni = { ...impostazioni, queue_view: 'corsie' }
+    montaCoda()
+    await screen.findByText('Da fare')
+
+    // Chiusa: nessuna riga di pastiglie, come prima.
+    expect(document.querySelectorAll('.chips-row')).toHaveLength(0)
+
+    await apriFiltri(utente)
+    expect(document.querySelectorAll('.chips-row')).toHaveLength(1)
+
+    await utente.click(screen.getByRole('button', { name: /Colonne/ }))
+    // SEMPRE UNA. I chip delle colonne sono comparsi DENTRO quella riga, in
+    // coda a «Colonne», non in una fila tutta loro.
+    const righe = document.querySelectorAll('.chips-row')
+    expect(righe).toHaveLength(1)
+    const riga = righe[0]
+    // (il nome della colonna è anche la testata della corsia: si cerca
+    // dentro la riga, non in tutta la pagina)
+    const colonna = within(riga).getByRole('button', { name: 'Ritirato/Servito' })
+    // e sta DOPO il tasto che l'ha aperta: si accoda, non si infila in mezzo
+    const tasti = [...riga.querySelectorAll('button')]
+    expect(tasti.indexOf(colonna)).toBeGreaterThan(
+      tasti.indexOf(within(riga).getByRole('button', { name: /Colonne/ }))
+    )
+  })
+
+  // E QUELLO CHE APRE SI CHIUDE CON LEI: i chip delle colonne senza il loro
+  // tasto resterebbero lì da soli, e per richiuderli toccherebbe riaprire
+  // i filtri.
   it('chiudendo la fila si chiude anche la scelta delle colonne', async () => {
     const utente = userEvent.setup()
     ruolo = 'bartender'
@@ -866,10 +909,12 @@ describe('la fila dei filtri sta dietro il tastino ⚗️, nella riga sotto', ()
     await screen.findByText('Da fare')
 
     await apriColonne(utente)
-    expect(document.querySelector('.corsie-scelta')).toBeTruthy()
+    const riga = document.querySelector('.chips-filtri')
+    expect(within(riga).getByRole('button', { name: 'Ritirato/Servito' })).toBeInTheDocument()
 
+    // chiusa la fila se ne va tutto: chip dei filtri E chip delle colonne
     await apriFiltri(utente)
-    expect(document.querySelector('.corsie-scelta')).toBe(null)
+    expect(document.querySelectorAll('.chips-row')).toHaveLength(0)
   })
 
   // ── SUL TELEFONO NON FINISCONO DENTRO IL ⋯ ──────────────────────
@@ -1294,10 +1339,12 @@ describe('le corsie del banco: una card per comanda', () => {
     // La tendina degli autori si apre e mostra chi ha battuto un conto.
     await utente.click(screen.getByRole('button', { name: /Autori/ }))
     expect(screen.getByRole('dialog', { name: /Chi ha aperto il conto/ })).toBeInTheDocument()
-    // «Colonne» apre ancora la scelta delle colonne, che è una riga a sé
-    // ma solo finché è aperta — si tocca e si richiude.
+    // «Colonne» apre ancora la scelta delle colonne — che adesso esce in
+    // coda a questa stessa riga, non in una seconda sotto.
     await apriColonne(utente)
-    expect(document.querySelector('.corsie-scelta')).toBeTruthy()
+    const fila = document.querySelector('.chips-filtri')
+    expect(within(fila).getByRole('button', { name: 'Ritirato/Servito' })).toBeInTheDocument()
+    expect(document.querySelectorAll('.chips-row')).toHaveLength(1)
   })
 
   // ── INCASSARE NON FA SPARIRE I DRINK DA FARE (BUG-023) ───────────

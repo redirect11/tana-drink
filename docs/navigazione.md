@@ -140,7 +140,7 @@ sotto i 44px si sbaglia. Si **toglie**, in quest'ordine:
   all'ordinamento attuale» (l'utente, 20/08/2026). L'icona è **una freccia
   sola che segue il verso** — ↓ si parte dai recenti e si scende verso i
   vecchi, ↑ il contrario — non il «↕» di prima, uguale nei due stati.
-- **Il tasto dei filtri è piccolo, sta a DESTRA, e i filtri escono SOTTO.**
+- **Il tasto dei filtri sta a DESTRA, e i filtri escono SOTTO.**
   Accanto a lui la freccia dell'ordinamento: sono i due tasti che governano
   COME si guarda la pagina, stanno insieme in fondo a destra, e si
   appoggiano a **una riga che esiste comunque** — i conteggi sulle lavagne,
@@ -148,13 +148,29 @@ sotto i 44px si sbaglia. Si **toglie**, in quest'ordine:
   a nessuno**, in tutte le viste e anche sul telefono: «devi rivedere la UX
   e migliorarla sempre tenendo presente il fatto che ci serve spazio
   verticale» (l'utente, 20/08/2026).
-  Sono tasti di **testo**, senza riquadro — «▾ Filtri», «↓» — sul modello
-  del «▾ altre 3» che apre le righe di una card delle comande: «il tasto
-  per mostrare/nascondere i filtri deve essere un tasto piccolo»
-  (20/08/2026). Un tasto che governa la vista non deve pesare come un tasto
-  che fa qualcosa alla serata, e in una riga di testo un rettangolo bordato
-  è uno scalino. La regola dei 44px non c'entra: vale per i tasti che si
-  premono di corsa con le dita bagnate.
+  Sono **due bottoni gemelli**: riquadro sì — senza, non si vedeva che
+  erano tasti — ma **bassi**, non i 44px della famiglia che fa qualcosa
+  alla serata. «Aggiungi un bordo e rendilo un bottone ma lascia la
+  freccetta e la scritta filtri. Il tasto non farlo troppo alto come gli
+  altri, stessa cosa per la freccetta dell'ordinamento. Stessa dimensione
+  dei filtri» (20/08/2026). Il tasto dei filtri è scritto «▾ Filtri»;
+  l'ordinamento è la sola freccia, quindi il riquadro si fa quadrato.
+  L'altezza è una sola (`--tastino-alto`) ed è quella dei chip della fila:
+  sono la stessa specie di comando e in riga si devono somigliare. In mezzo
+  a una riga di testo un tasto alto è uno scalino, e **la riga dei conteggi
+  non deve crescere** — i due tasti sporgono dentro il `gap` della testata
+  invece di alzarla.
+  **La regola dei 44px vale, ma non qui**: è dei tasti che si premono di
+  corsa con le dita bagnate (Avanti, Incassa). Dentro la fila dei filtri
+  — che si tocca quando si decide cosa guardare, non con l'ordine in mano
+  — c'è una **deroga chiesta e circoscritta**: «e i tasti dei filtri,
+  tutti, devono essere leggermente più piccoli» (20/08/2026). Leggermente:
+  il bersaglio resta comodo.
+  **L'ORDINAMENTO NON SI NASCONDE MAI**, e non condivide il destino dei
+  filtri: «non ti avevo chiesto di farlo per il tasto dell'ordinamento. Il
+  tasto dell'ordinamento deve essere come gli altri solo i filtri si
+  nascondono in quel modo» (20/08/2026). Non è un filtro — non restringe
+  niente, gira la lista — e resta a schermo sempre.
   **Prima stavano DENTRO la fila dei chip**, a sinistra, e la fila doveva
   quindi esistere sempre per contenerli. Adesso la riga dei chip esiste
   **solo da aperta**: richiudendo se ne va del tutto, margini compresi.
@@ -176,10 +192,16 @@ sotto i 44px si sbaglia. Si **toglie**, in quest'ordine:
   scelto senza aprirla (REQ-CODA-009).
   La scelta aperta/chiusa vale per QUESTO terminale
   (`tana:coda:filtri-aperti`). Dentro ci va tutto quello che restringe la
-  lista — «▦ Colonne» compreso, e i sottofiltri dei chiusi, che stanno in
-  riga con gli altri e non in una riga loro; fuori il cambio vista, che non
-  filtra, e il «＋», che crea. Un meccanismo solo per tutte le viste della
-  coda.
+  lista — «▦ Colonne» compreso, e i sottofiltri dei chiusi; fuori il
+  cambio vista, che non filtra, e il «＋», che crea. Un meccanismo solo per
+  tutte le viste della coda.
+  **E LA FILA È UNA SOLA, MAI DUE ANNIDATE.** Un chip che ne apre altri —
+  «▦ Colonne» al banco — li mette **in coda alla stessa riga**, non in una
+  seconda sotto: «quei filtri devono apparire sulla stessa riga degli altri
+  tasti» (l'utente, 20/08/2026). Che la riga vada a capo da sé quando non ci
+  sta va benissimo: quello è il capo naturale del flusso, non un livello in
+  più. Il conto è sempre lo stesso: fila chiusa **zero righe**, fila aperta
+  **una**.
 - **Nel ⋯ del telefono ci va quello che si fa OGNI TANTO**, non quello che
   si fa durante il servizio. Pannelli e cassa stanno lì dentro; il cambio
   vista resta fuori, accanto al ⋯, perché nel menu sarebbero due tocchi
