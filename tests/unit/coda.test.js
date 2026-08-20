@@ -20,15 +20,14 @@ import {
   AUTORE_CLIENTE,
   passaFiltroCoda,
   passaStatiCoda,
-  cambiaFiltroStato,
   statiDaFiltro,
-  statoAlDefault,
   frasePerCodaVuota,
   cambiaSottoChiusi,
   nomiDelServizio,
   sottofiltriChiusi,
   nomeSottofiltro,
   FILTRI_STATO,
+  ID_FILTRI_STATO,
   STATO_DEFAULT,
   restaInCoda,
   gruppiInCoda,
@@ -36,7 +35,6 @@ import {
   corsieDiverseDalNormale,
   gruppiColonne,
   corsieDelPronto,
-  contaFiltri,
   spiegaFiltri,
   spiegaOrdine,
 } from '../../src/lib/coda.js'
@@ -132,7 +130,13 @@ describe('chi ha aperto il conto: la tendina «Staff»', () => {
     // SI CHIAMA STAFF, non «Autori»: «la dropdown che hai chiamato
     // Autori chiamala Staff» (l'utente, 20/08/2026). I nomi interni
     // restano `autori*` — un rinomino a tappeto non serve a nessuno.
-    expect(riassuntoAutori(null, elenco)).toBe('✍️ Staff')
+    //
+    // SENZA «✍️ »: il testo torna NUDO e l'emoji la mette il JSX della
+    // pastiglia, che è l'unico posto che la vuole. Prima la metteva questa
+    // funzione, e il title del tastino «▾ Filtri» — che il nome lo vuole
+    // pulito — se la toglieva con un `replace`: due posti costretti a
+    // restare d'accordo su una stringa.
+    expect(riassuntoAutori(null, elenco)).toBe('Staff')
   })
 
   it('deselezionando restano gli altri: «solo i miei» è un caso di questo', () => {
@@ -141,7 +145,7 @@ describe('chi ha aperto il conto: la tendina «Staff»', () => {
     scelti = cambiaAutoreScelto(scelti, AUTORE_CLIENTE, elenco)
     expect(scelti).toEqual(['anna@tana.it'])
     expect(conAutori(firmati, scelti, elenco).map((o) => o.id)).toEqual(['a', 'd'])
-    expect(riassuntoAutori(scelti, elenco)).toBe('✍️ Anna')
+    expect(riassuntoAutori(scelti, elenco)).toBe('Anna')
   })
 
   it('con più di uno la pastiglia conta, e dice su quanti', () => {
@@ -149,7 +153,7 @@ describe('chi ha aperto il conto: la tendina «Staff»', () => {
     // stringe, e il denominatore lo dice senza aprirla. Vale anche quando
     // fra i selezionati c'è la voce «Clienti», che staff non è.
     const scelti = cambiaAutoreScelto(null, AUTORE_CLIENTE, elenco)
-    expect(riassuntoAutori(scelti, elenco)).toBe('✍️ 2 di 3')
+    expect(riassuntoAutori(scelti, elenco)).toBe('2 di 3')
   })
 
   it('la parola «autori» non arriva mai a schermo', () => {
@@ -218,7 +222,9 @@ describe('i gruppi dei chip delle colonne', () => {
     // lavoro che ci sta dentro: «anche la label sopra la lane, non deve
     // essere Pronto ma Da servire/Ritirare» (l'utente, 20/08/2026).
     expect(pronto.corsie.map((c) => c.titolo)).toEqual(['Da servire/Ritirare'])
-    expect(pronto.diviso).toBe(false)
+    // Unito = una corsia sola nel gruppo. Lo dicono le corsie: il campo
+    // `diviso` che stava qui accanto era la stessa cosa scritta due volte.
+    expect(pronto.corsie).toHaveLength(1)
     // e nessun altro chip si porta dietro un tastino: gli altri accendono
     // e spengono la loro colonna, e basta.
     expect(gruppi.filter((g) => g.taglio)).toHaveLength(1)
@@ -231,7 +237,7 @@ describe('i gruppi dei chip delle colonne', () => {
     // È quello che le fa leggere come una colonna aperta in due, e non
     // come due colonne qualsiasi in fila.
     expect(pronto.corsie.map((c) => c.titolo)).toEqual(['Da servire', 'Da ritirare'])
-    expect(pronto.diviso).toBe(true)
+    expect(pronto.corsie).toHaveLength(2)
     // e restano al POSTO del pronto, non in fondo: le altre non si
     // spostano sotto gli occhi.
     expect(gruppi.map((g) => g.id)).toEqual([
@@ -302,34 +308,25 @@ describe('i filtri di stato della coda', () => {
 
   it('la coda si apre con i soli aperti', () => {
     expect(STATO_DEFAULT).toBe('attivi')
-    expect(statoAlDefault(STATO_DEFAULT)).toBe(true)
-    expect(statoAlDefault('chiusi')).toBe(false)
-    expect(statoAlDefault('annullati')).toBe(false)
+    // Che la coda sia «come si apre» adesso è un confronto e basta —
+    // `stato !== STATO_DEFAULT` — e serve al badge del tastino, che conta
+    // le DEVIAZIONI dal default: sugli «Aperti» non c'è niente da contare.
+    // C'era una `statoAlDefault` a dirlo: con gli stati esclusivi non
+    // normalizzava più niente che il chiamante non sapesse già.
+    expect(ID_FILTRI_STATO).toContain(STATO_DEFAULT)
   })
 
-  it('UNO E UNO SOLO: toccarne uno spegne gli altri', () => {
-    // «No allora riportiamo aperti, chiusi e annullati come mutuamente
-    // esclusivi» (l'utente, 20/08/2026).
-    expect(cambiaFiltroStato('attivi', 'chiusi')).toBe('chiusi')
-    expect(cambiaFiltroStato('chiusi', 'annullati')).toBe('annullati')
-    expect(cambiaFiltroStato('annullati', 'attivi')).toBe('attivi')
-  })
-
-  it('ritoccare quello acceso non lo spegne: senza filtro la coda sarebbe vuota', () => {
-    // Rifiuto silenzioso, come ai tempi degli interruttori: la coda non
-    // cambia di una riga, e un avviso per un tocco che non doveva fare
-    // niente al banco è rumore.
-    for (const id of ['attivi', 'chiusi', 'annullati']) {
-      expect(cambiaFiltroStato(id, id)).toBe(id)
-    }
-  })
-
-  it('un id sconosciuto non cambia niente, e da uno sconosciuto si ripiega su Aperti', () => {
-    expect(cambiaFiltroStato('chiusi', 'tutti')).toBe('chiusi')
-    expect(cambiaFiltroStato('chiusi', undefined)).toBe('chiusi')
-    expect(cambiaFiltroStato('boh', undefined)).toBe('attivi')
-    expect(cambiaFiltroStato(undefined, undefined)).toBe('attivi')
-  })
+  // UNO E UNO SOLO — «No allora riportiamo aperti, chiusi e annullati come
+  // mutuamente esclusivi» (l'utente, 20/08/2026) — LO PROVA IL COMPONENT
+  // TEST: qui c'erano tre casi su `cambiaFiltroStato`, che sapeva combinare
+  // gli stati ed era rimasta dai giorni in cui erano interruttori. Con tre
+  // chip esclusivi il tocco È la scelta (`setStato(id)`), e la regola non
+  // vive più in una funzione ma nella coda che si vede: si tocca «Chiusi» e
+  // «Aperti» si spegne, in tests/component/CodaCorsie.test.jsx.
+  //
+  // Gli id sconosciuti li normalizza `statiDaFiltro`, che è dove serve
+  // davvero: una coda che non mostra NIENTE è indistinguibile da un'app
+  // rotta (vedi qui sotto).
 
   it('la coda mostra lo stato scelto, e nient\'altro', () => {
     const tutti = [aperto, pagato, annullato]
@@ -1799,23 +1796,15 @@ describe('corsieDiverseDalNormale', () => {
 // QUANTI FILTRI SONO ACCESI. Prima il tasto ne SCRIVEVA uno («⚗️ Chiusi»)
 // ed era una pastiglia larga in una riga che, chiusa, esisteva solo per
 // lei: «quando dicevo di nascondere i tasti intendevo tutti e non
-// aggiungere un nuovo tasto» (l'utente, 20/08). Adesso è un tastino da 44px
-// in testata, e lì ci sta una cifra — quali siano lo dice il title.
-describe('contaFiltri', () => {
-  it('tutto al suo posto: nessun filtro acceso', () => {
-    expect(contaFiltri([])).toBe(0)
-    expect(contaFiltri()).toBe(0)
-  })
-
-  it('li conta', () => {
-    expect(contaFiltri(['Chiusi'])).toBe(1)
-    expect(contaFiltri(['Miei', 'Chiusi', 'Solo oggi'])).toBe(3)
-  })
-
-  it('i buchi non contano: sono i filtri spenti di chi lo chiama', () => {
-    expect(contaFiltri([false, 'Miei', null, undefined])).toBe(1)
-  })
-})
+// aggiungere un nuovo tasto» (l'utente, 20/08). Adesso è un tastino in
+// testata, e lì ci sta una cifra — quali siano lo dice il title.
+//
+// LA CIFRA NON HA PIÙ UNA FUNZIONE SUA. C'era una `contaFiltri` che
+// ripuliva l'elenco dai buchi e lo contava, e i suoi tre casi stavano qui:
+// ma chi la chiamava l'elenco pulito ce l'aveva già in mano — lo compone
+// con dei `&&` e lo passa a `spiegaFiltri` — e contarlo è `.length`. Che il
+// badge segni il numero giusto, e resti spento con la coda com'è di suo, lo
+// prova il component test della coda (tests/component/CodaCorsie.test.jsx).
 
 // IL NOME È QUELLO CHE IL TASTO FA. «"Filtra la coda" non va bene, deve
 // essere "mostra filtri"» (l'utente, 20/08): il tasto apre e chiude un
@@ -1827,7 +1816,13 @@ describe('spiegaFiltri', () => {
 
   it('chiusa e pulita, dice il gesto che fa: mostrare i filtri', () => {
     expect(spiegaFiltri([], false)).toBe('Mostra filtri')
+    expect(spiegaFiltri()).toBe('Mostra filtri')
   })
+
+  // ARRIVA GIÀ PULITO: l'elenco lo compone il chiamante con dei `&&` e lo
+  // ripulisce una volta. Rifiltrarlo qui dentro era la seconda passata
+  // sulla stessa lista, e faceva credere che i due posti potessero non
+  // essere d'accordo su cosa sia «acceso».
 
   // PER ESTESO STANNO QUI, che il title larghezza non ne costa — ma DOPO il
   // nome del tasto, che resta la prima cosa che si legge.
