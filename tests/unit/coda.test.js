@@ -1223,3 +1223,23 @@ describe('le colonne spente a mano', () => {
     expect(soloCorsieVive(['al-ritiro-banco'])).toEqual(['al-ritiro-banco'])
   })
 })
+
+// ── L'INTESTAZIONE DI UNA GIORNATA IN CODA (BUG-059) ─────────────────
+//
+// La riga che separa i giorni scorsi diceva «Da chiudere» in ogni scheda.
+// Fra i CHIUSI è una bugia — quei conti sono pagati e chiusi — e chi legge
+// va a cercare cosa manca. L'etichetta dipende dalla scheda; nella scheda
+// «Tutti», dove i conti sono mescolati, non si può dire altro che la data.
+import { intestazioneGiornata } from '../../src/lib/coda.js'
+
+describe('la riga che separa le giornate in coda', () => {
+  it('dice cosa sono i conti di quel giorno, scheda per scheda', () => {
+    expect(intestazioneGiornata('attivi', 'ieri')).toBe('⏳ Da chiudere · ieri')
+    expect(intestazioneGiornata('chiusi', 'ieri')).toBe('💶 Chiusi · ieri')
+    expect(intestazioneGiornata('annullati', 'ieri')).toBe('✖️ Annullati · ieri')
+  })
+
+  it('nella scheda «Tutti» resta la sola data: lì i conti sono mescolati', () => {
+    expect(intestazioneGiornata('tutti', 'sabato 15 agosto')).toBe('📅 sabato 15 agosto')
+  })
+})

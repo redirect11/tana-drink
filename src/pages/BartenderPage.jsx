@@ -56,6 +56,7 @@ import {
   corsieSceglibili,
   corsieSpente,
   soloCorsieVive,
+  intestazioneGiornata,
   corsieDelPronto,
   CORSIE_SPENTE_ALL_INIZIO,
   SOTTOFILTRI_CHIUSI,
@@ -2406,7 +2407,13 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             <div key={day}>
               {day !== oggiKey && (
                 <div className="day-sep">
-                  ⏳ Da chiudere · {businessDayLabel(day, new Date(), cutoffHour)}
+                  {/* L'ETICHETTA DIPENDE DALLA SCHEDA (BUG-059). Fra i
+                      chiusi «Da chiudere» era una bugia: quei conti sono
+                      pagati e chiusi. */}
+                  {intestazioneGiornata(
+                    boardFilter,
+                    businessDayLabel(day, new Date(), cutoffHour)
+                  )}
                 </div>
               )}
               <div className="order-grid">
@@ -2574,7 +2581,13 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             <div key={day}>
               {day !== oggiKey && (
                 <div className="day-sep">
-                  ⏳ Da chiudere · {businessDayLabel(day, new Date(), cutoffHour)}
+                  {/* Qui la scheda è una sola — i conti IN CORSO — e di un
+                      conto di ieri ancora aperto c'è una cosa sola da
+                      dire: è rimasto da chiudere. */}
+                  {intestazioneGiornata(
+                    'attivi',
+                    businessDayLabel(day, new Date(), cutoffHour)
+                  )}
                 </div>
               )}
               {gOrders.map(renderCard)}

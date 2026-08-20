@@ -4,6 +4,13 @@
 
 ### Per chi gestisce
 
+- **Fra i conti chiusi non c'è più scritto «Da chiudere».** La riga che
+  separa i giorni scorsi diceva **«⏳ Da chiudere · ieri»** in ogni scheda,
+  anche sopra conti pagati e chiusi — e si andava a cercare cosa mancasse su
+  conti a posto. Adesso l'etichetta dice quello che quei conti sono davvero:
+  **«💶 Chiusi · ieri»**, **«✖️ Annullati · ieri»**, e nella scheda «Tutti»,
+  dove sono mescolati, la sola data.
+
 - **Il tasto «▦ Colonne» adesso dice quante ne sono spente.** Era arancione
   **sempre**, anche su un tablet appena aperto: «Chiuse» e «Annullate»
   nascono spente apposta, quindi l'arancione c'era comunque e non
