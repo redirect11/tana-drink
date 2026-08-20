@@ -363,27 +363,26 @@ export default function CorsieComande({
                           onClick={(e) => e.stopPropagation()}
                           onPointerDown={(e) => e.stopPropagation()}
                         >
-                          {voci.map((v) =>
-                            // Una voce può essere un pezzo di schermata invece
-                            // di un tasto — la tavolozza del conto è una fila di
-                            // gettoni, non una cosa che si fa in un tocco solo.
-                            v.nodo ? (
-                              <div key={v.id}>{v.nodo}</div>
-                            ) : (
-                              <button
-                                key={v.id}
-                                className="btn ghost small block"
-                                disabled={v.disabled}
-                                title={v.hint || undefined}
-                                onClick={() => {
-                                  setAzioniDi(null)
-                                  v.onClick?.()
-                                }}
-                              >
-                                {v.icon} {v.label}
-                              </button>
-                            )
-                          )}
+                          {/* Ogni voce è un tasto, e toccarne uno CHIUDE il
+                              menu: qui dentro non si fa che una cosa per
+                              volta, e quella fatta lascia il posto alla
+                              card. Anche il colore, che era l'unica voce
+                              disegnata a mano — dodici gettoni in fila — e
+                              adesso è un tasto che apre la sua modale. */}
+                          {voci.map((v) => (
+                            <button
+                              key={v.id}
+                              className="btn ghost small block"
+                              disabled={v.disabled}
+                              title={v.hint || undefined}
+                              onClick={() => {
+                                setAzioniDi(null)
+                                v.onClick?.()
+                              }}
+                            >
+                              {v.icon} {v.label}
+                            </button>
+                          ))}
                         </div>
                       )}
                     </article>

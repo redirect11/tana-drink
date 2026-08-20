@@ -4690,6 +4690,50 @@ requirements:
       `pay-*`, dopo `pagato-da-servire` e dopo le regole delle corsie, che
       stanno molto più in basso nel foglio e a parità di peso vincerebbero.
       La sorveglia tests/unit/css.test.js: dal DOM la cascata non si vede.
+      LA TAVOLOZZA ESCE DAL MENU, dal 20/08/2026. Parole dell'utente: «i
+      colori del conto e della comanda andrebbero messi in una modale che
+      si apre con un bottone. I tasti della card avvicinali in verticale
+      1/2 pixel (comunque di pochissimo)». Dentro il «⋯ Azioni» erano
+      dodici gettoni da 26px in due file più il «✕»: tre righe di menu, e
+      le azioni vere — torna indietro, dividi, ristampa — finivano sopra
+      una macchia di quadratini, su una card che in corsia è larga un dito.
+      NEL MENU RESTA UN TASTO SOLO, uguale agli altri, e PORTA ADDOSSO IL
+      COLORE DI ADESSO (un pallino accanto al testo): senza, per rispondere
+      alla domanda che ci si fa più spesso — «di che colore è questo
+      conto?» — bisognerebbe aprire la modale ogni volta.
+      LA MODALE È QUELLA DI CASA: `overlay confirm-overlay` +
+      `confirm-box`, la stessa del colore del prodotto nel POS, con Esc,
+      tocco fuori e ✕. I gettoni salgono a 48px — 26 erano stretti perché
+      dovevano stare in una fila dentro un menu, e sotto i 44px di
+      docs/navigazione.md un colore si prende male: due tavoli che si
+      confondono. Cade con loro la deroga `pointer: coarse`, che era due
+      misure per la stessa cosa.
+      SCEGLIERE APPLICA E CHIUDE, la modale E il menu sotto: il gesto
+      finisce lì, e un menu rimasto aperto dietro terrebbe la card alta il
+      doppio proprio mentre si torna a guardare la colonna. Il menu della
+      comanda si chiudeva già da sé per ogni voce; quello del conto lo fa
+      la pagina, e solo se era aperto su QUEL conto.
+      LOCAL-FIRST: la modale sparisce prima che la scrittura parta. Nessun
+      `await` — con la rete che balla resterebbe ferma sopra la coda.
+      VALE PER TUTTI E DUE I MENU, il ⋯ del conto (corsie di stato,
+      griglia, lista) e il ⋯ della comanda: sono gli unici due posti dove
+      la tavolozza esisteva, e in tutti e due si scrive comunque sul CONTO.
+      Una comanda un colore suo non ce l'ha, e non gliene è stato inventato
+      uno.
+      È UNA COSA SCRITTA IN UN POSTO SOLO: `voceColoreConto(order, onApri)`
+      in components/Corsia.jsx fa la voce (pallino, parole, cosa fa), e il
+      tasto del menu del conto la disegna. Il menu della comanda è un
+      elenco di oggetti, quello del conto è JSX: senza la voce condivisa
+      erano le stesse parole in due posti.
+      I TASTI DELLA CARD, «di pochissimo»: lo spazio fra loro era due
+      numeri battuti a mano — 8px nel menu aperto, 6px nel piede — e adesso
+      è un gettone solo, `--gap-tasti-card: 6px`, per tutti e due. Si
+      stringe lo SPAZIO, non i tasti: i bersagli restano quelli di
+      docs/navigazione.md. Lo stacco dal contenuto sopra
+      (`.corsia-azioni-aperte`: margin-top 14px, padding-top 12px e il
+      filo) NON è quel gap e non si tocca — sta lì perché il primo tasto
+      del menu non sembri la seconda riga di quello del piede, e lì sotto
+      ce n'è uno che rimanda indietro una comanda.
     status: implemented
     generate_issue: true
     labels: [ui, coda, impostazioni]
