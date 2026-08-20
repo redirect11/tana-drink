@@ -2451,6 +2451,20 @@ function scriviCampiComanda(ref, comandaId, campi, etichetta) {
   }, etichetta)
 }
 
+// La comanda è uscita dalla stampante: si segna SUL DATO, così ogni
+// terminale lo sa — un browser nuovo non ristampa la serata, e il secondo
+// tablet con l'auto-stampa accesa vede il segno del primo. Scrittura in
+// sottofondo come tutto il resto: la carta è già fuori, il segno la segue.
+export function segnaComandaStampata(orderId, comandaId) {
+  if (!orderId || !comandaId) return
+  scriviCampiComanda(
+    doc(db, 'orders', orderId),
+    comandaId,
+    { auto_print_at: new Date().toISOString() },
+    'comanda stampata'
+  )
+}
+
 function scaricaInSottofondo(orderId, comandaId) {
   ;(async () => {
     try {

@@ -29,7 +29,8 @@ Correzione urgente su una cosa sola: **chiudere un conto con lo sconto**.
   terminale, anche per la seconda comanda di un conto già aperto.** Prima la
   stampa seguiva le regole degli avvisi — e «non avvisare chi l'ha battuto»
   lasciava il banco senza carta proprio sui suoi ordini. Una copia sola per
-  comanda: tornare agli ordini non ristampa.
+  comanda **in tutto il locale**: il segno «stampata» sta sul conto, quindi
+  tornare agli ordini non ristampa e un secondo tablet non fa il doppione.
 
 ## 1.5.0 — 18 agosto 2026
 

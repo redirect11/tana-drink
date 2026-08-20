@@ -1077,10 +1077,18 @@ bugs:
       `claimComandaPrint` in localStorage, come gli scontrini: una copia
       per comanda per terminale, chiunque l'abbia battuta, da qualunque
       vista, e tornare agli ordini non ristampa.
-      LA FINESTRA DEI DIECI MINUTI e' la scelta da capire: senza, il primo
-      terminale con la memoria vuota stamperebbe in raffica tutte le
-      comande vive della serata. Il banco con la stampante tiene la coda
-      aperta tutta la sera: la finestra non gli toglie niente.
+      RIVISTO SUBITO (20/08, l'utente): la prima versione usava una
+      finestra di dieci minuti per non far ristampare la serata a un
+      browser con la memoria vuota. Domanda sua, giusta: «semplicemente non
+      puoi segnare le comande stampate gia'?». Si': IL SEGNO STA SUL DATO —
+      `auto_print_at` sulla comanda, scritto in sottofondo A CARTA USCITA
+      (segnare prima vorrebbe dire che una stampa fallita mette a tacere
+      tutti i terminali per sempre; fallita, la pretesa locale si libera e
+      al prossimo snapshot si riprova). Cosi' un browser nuovo non
+      ristampa niente, e DUE TABLET con l'auto-stampa accesa non fanno due
+      copie: il secondo vede il segno del primo. La pretesa locale resta
+      come primo filtro, per i propri snapshot che arrivano prima che la
+      scrittura del segno torni.
     in_produzione: true
     status: fixed
     generate_issue: true
