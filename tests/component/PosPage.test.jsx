@@ -92,9 +92,14 @@ vi.mock('../../src/lib/pendingOrders.js', () => ({
 vi.mock('../../src/lib/paymentsApi.js', () => ({
   readerCheckout: vi.fn(() => Promise.resolve({})),
 }))
-vi.mock('../../src/lib/printer.js', () => ({
+// Mock PARZIALE: le regole di printer.js (quali comande si stampano) sono
+// logica pura e la schermata le usa per davvero — a finte restano solo le
+// funzioni che vorrebbero una stampante.
+vi.mock('../../src/lib/printer.js', async (originale) => ({
+  ...(await originale()),
   printScontrino: vi.fn(() => Promise.resolve()),
   printComanda: vi.fn(() => Promise.resolve()),
+  printComande: vi.fn(() => Promise.resolve(0)),
   printFattura: vi.fn(() => Promise.resolve()),
   loadPrinterSettings: vi.fn(() => ({ ivaRate: 10 })),
 }))

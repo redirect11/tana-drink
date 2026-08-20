@@ -100,6 +100,13 @@
   sembrava una comanda e ne conteneva due. Adesso, se non si dice quale,
   esce **l'ultima**. Per averle tutte c'è il tasto apposta (qui sotto).
 
+- **Le comande di un conto si stampano tutte in un colpo.** Un conto
+  battuto in tre riprese ha tre ticket: in **«Comande»**, sopra l'elenco,
+  c'è **«Stampa tutte»** — compare solo quando ce n'è più d'una. Escono
+  **separate**, una per comanda, identiche a come uscirebbero da sole: al
+  banco un ticket è un giro di lavoro. Le comande **annullate** restano
+  fuori.
+
 - **Il conto con lo sconto si chiude davvero, e lo scontrino esce** (i due
   vocali del 19 agosto). Chiudendo un tavolo scontato il conto risultava
   pagato «a metà» — restava in coda e bloccava la chiusura di cassa — e lo

@@ -83,8 +83,13 @@ vi.mock('../../src/lib/menuCache.js', () => ({
     loading: false,
   }),
 }))
-vi.mock('../../src/lib/printer.js', () => ({
+// La stampante è finta ma le REGOLE sono quelle vere: `comandeStampabili`
+// e `printComande` arrivano dal modulo autentico (printComande gira sopra
+// il printComanda finto, che è quello che si conta).
+vi.mock('../../src/lib/printer.js', async (originale) => ({
+  ...(await originale()),
   printComanda: vi.fn(() => Promise.resolve()),
+  printComande: vi.fn(() => Promise.resolve(2)),
   printScontrino: vi.fn(() => Promise.resolve()),
   printFattura: vi.fn(() => Promise.resolve()),
   loadPrinterSettings: vi.fn(() => ({ ivaRate: 10 })),
@@ -105,7 +110,7 @@ import {
   setOrderServiceMode,
 } from '../../src/lib/api.js'
 import { readerCheckout } from '../../src/lib/paymentsApi.js'
-import { printComanda } from '../../src/lib/printer.js'
+import { printComanda, printComande } from '../../src/lib/printer.js'
 
 // IL CONTO DI PROVA NASCE «DA FARE», come nasce davvero: si battono tre
 // conti di fila e poi si comincia a versare. Era «in preparazione» da
@@ -406,6 +411,45 @@ describe('modale comande: consultazione, avanzamento e stampa', () => {
     const [printedOrder, printedComanda] = printComanda.mock.calls[0]
     expect(printedOrder.id).toBe('ord1')
     expect(printedComanda.id).toBe('c2')
+  })
+
+  // «Se ho più di una comanda (dello stesso ordine!) devo poterle stampare
+  // insieme» (l'utente, 20/08). Un conto battuto in tre riprese ha tre
+  // ticket, e rifarli uno per uno col conto in mano è tempo perso al banco.
+  it('con più di una comanda si stampano tutte in un colpo', async () => {
+    const user = userEvent.setup()
+    mount(
+      baseOrder({
+        comande: [
+          {
+            id: 'c1', seq: 1, status: 'ritirato', status_times: {},
+            items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 }],
+          },
+          {
+            id: 'c2', seq: 2, status: 'annullato', status_times: {},
+            items: [{ drink_id: 'neg', name: 'Negroni', unit_price: 9, qty: 1 }],
+          },
+          {
+            id: 'c3', seq: 3, status: 'ricevuto', status_times: {},
+            items: [{ drink_id: 'gin', name: 'Gin Tonic', unit_price: 8, qty: 1 }],
+          },
+        ],
+      })
+    )
+    await user.click(screen.getByRole('button', { name: /Comande \(3\)/ }))
+    // Il conto ne ha tre, ma l'annullata è lavoro buttato: il tasto conta due.
+    await user.click(screen.getByRole('button', { name: /Stampa tutte \(2\)/ }))
+    expect(printComande).toHaveBeenCalledTimes(1)
+    const [ordine, comande] = printComande.mock.calls[0]
+    expect(ordine.id).toBe('ord1')
+    expect(comande.map((c) => c.id)).toEqual(['c1', 'c3'])
+  })
+
+  it('con una comanda sola il tasto non c’è: non c’è niente da mettere insieme', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.click(screen.getByRole('button', { name: /Comande/ }))
+    expect(screen.queryByRole('button', { name: /Stampa tutte/ })).toBeNull()
   })
 })
 

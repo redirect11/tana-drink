@@ -22,12 +22,12 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 158 | fatto e coperto dai test |
+| ✅ | 159 | fatto e coperto dai test |
 | ⚠️  | 14 | fatto ma nessun test lo verifica |
 | ⬜ | 21 | da fare |
 | 🗑 | 1 | non più valido |
 
-**194 voci** in tutto. **172** descrivono il sistema com'è oggi e
+**195 voci** in tutto. **173** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **21** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **6** difetti noti sono ancora aperti.
@@ -49,7 +49,7 @@ come «vero oggi», non come «garantito».
 | [Menù e catalogo](#menù-e-catalogo) | 9 | — | Il listino: drink, categorie, disponibilità, prezzi. |
 | [Magazzino](#magazzino) | 19 | 7 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 10 | 2 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
-| [Stampa](#stampa) | 9 | 2 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
+| [Stampa](#stampa) | 10 | 2 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
 | [Vista cliente](#vista-cliente) | 6 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
 | [Notifiche](#notifiche) | 4 | — | Le notifiche push: a chi arrivano, quando, e quando invece non devono arrivare. |
 | [Avvisi a schermo](#avvisi-a-schermo) | 2 | — | I messaggi a schermo dentro l’app — quelli che si leggono col vassoio in mano. |
@@ -1011,6 +1011,16 @@ Indirizzo della stampante, stampa automatica di comande e scontrini, dati del lo
 In Impostazioni → Stampante si sceglie, sul terminale del banco, fra due modi (le impostazioni sono del dispositivo e di chi ci lavora: REQ-STAMPA-010): «la stampa il telefono», cioè chi prende l'ordine al tavolo stampa dal suo, e «la stampa il banco», cioè la comanda esce al bancone all'arrivo dell'ordine. Di partenza stampa il telefono, anche per le configurazioni salvate prima che la scelta esistesse. Scegliendo il banco con la stampa automatica spenta non stamperebbe nessuno: l'impostazione lo dice, invece di lasciarlo scoprire a servizio iniziato. E col rimbalzo il pallino della sala non finge di sapere: dice che a stampare è il banco.
 
 **Dove**: `src/components/PrinterSetup.jsx, src/lib/printer.js` · **Lo dimostrano**: `tests/component/MenuPage.test.jsx`, `tests/unit/statoStampante.test.js`
+
+#### REQ-STAMPA-012 — Più comande dello stesso conto si stampano insieme
+
+Chiesto dall'utente il 20/08: «se ho più di una comanda (dello stesso ordine!) devo poterle stampare insieme». Un conto battuto in tre riprese ha tre ticket, e rifarli uno per uno col conto in mano è tempo perso al banco. DOVE: nel dettaglio del conto, dentro «Comande» — dove ogni comanda ha già il suo tasto di stampa. Sopra l'elenco compare «Stampa tutte (n)», e solo quando ce n'è davvero più d'una: con una sola non c'è niente da mettere insieme.
+
+INSIEME COME GESTO, NON COME TICKET. Escono SEPARATE, una per comanda, identiche a come uscirebbero da sole — stesso formato, stesso taglio in fondo. Al banco un ticket è un giro di lavoro: due giri su una striscia sola sarebbero BUG-051 rifatto apposta. Si aspetta ogni stampa prima della successiva, perché il builder della stampante è uno solo e due stampe che si accavallano si scriverebbero addosso.
+
+LE ANNULLATE RESTANO FUORI: è lavoro buttato, e ristamparlo rimetterebbe al banco un ticket da non preparare. Le SERVITE invece escono: si ristampa per rifare il giro, non per mandare al banco solo quello che manca.
+
+**Dove**: `src/lib/printer.js (printComande, comandeStampabili), src/components/OrderPosDetail.jsx` · **Lo dimostrano**: `tests/unit/stampaComande.test.js`, `tests/component/OrderPosDetail.test.jsx`
 
 ### Vista cliente
 

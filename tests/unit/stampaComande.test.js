@@ -13,11 +13,13 @@
 // Ora la regola è per COMANDA: esce quello che è ancora al banco, nato da
 // poco, una volta sola per terminale. Chiunque l'abbia battuto.
 
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { comandaPerLeAggiunte, statoComandaNuova } from '../../src/lib/comande.js'
 import {
   comandeDaStampare,
   comandaDelTicket,
+  comandeStampabili,
+  printComande,
   claimComandaPrint,
   releaseComandaPrint,
 } from '../../src/lib/printer.js'
@@ -160,4 +162,80 @@ describe('la comanda nata da un’aggiunta esce da sola', () => {
       expect(comandeDaStampare(o).map((c) => c.id)).toEqual(['c2'])
     })
   }
+})
+
+// ── PIÙ COMANDE DELLO STESSO CONTO, IN UN COLPO (REQ-STAMPA-012) ─────
+//
+// «Se ho più di una comanda (dello stesso ordine!) devo poterle stampare
+// insieme» (l'utente, 20/08). Insieme come GESTO, non come ticket: ognuna
+// resta la sua, o sarebbe BUG-051 rifatto apposta.
+describe('quali comande si ristampano tutte insieme', () => {
+  const c = (id, status = 'ricevuto') => ({ id, status, items: [] })
+
+  it('tutte quelle del conto, in che passo siano', () => {
+    // Anche le servite: si ristampa per ricostruire il giro, non per
+    // rimandare al banco solo quello che manca.
+    const o = conto([c('c1', 'ritirato'), c('c2', 'in_preparazione'), c('c3')])
+    expect(comandeStampabili(o).map((x) => x.id)).toEqual(['c1', 'c2', 'c3'])
+  })
+
+  it('tranne le annullate: è lavoro buttato', () => {
+    const o = conto([c('c1'), c('c2', 'annullato')])
+    expect(comandeStampabili(o).map((x) => x.id)).toEqual(['c1'])
+  })
+
+  it('un conto senza comande non ne stampa nessuna', () => {
+    expect(comandeStampabili(conto([]))).toEqual([])
+    expect(comandeStampabili(undefined)).toEqual([])
+  })
+})
+
+// ── E CHE ESCANO DAVVERO SEPARATE ────────────────────────────────────
+//
+// Qui non si guarda una lista: si guarda LA CARTA. In locale la stampante
+// è finta (stampanteFinta.js) e ogni lavoro apre la sua finestra col
+// facsimile: contarle e leggerle è l'unico modo di dire che tre comande
+// hanno fatto tre ticket e non uno con dentro tutto — che è esattamente il
+// difetto da cui è partito tutto (BUG-051).
+describe('le comande stampate insieme restano ticket separati', () => {
+  let finestre
+  let apriOriginale
+
+  beforeEach(() => {
+    finestre = []
+    apriOriginale = window.open
+    window.open = vi.fn(() => {
+      const scritto = []
+      finestre.push(scritto)
+      return {
+        document: { write: (html) => scritto.push(html), close: () => {} },
+        focus: () => {},
+      }
+    })
+  })
+  afterEach(() => {
+    window.open = apriOriginale
+  })
+
+  it('tre comande, tre ticket, ognuno con le SUE righe', async () => {
+    const order = {
+      daily_number: 7,
+      comande: [
+        { id: 'c1', status: 'ritirato', items: [{ qty: 1, name: 'Mojito' }] },
+        { id: 'c2', status: 'annullato', items: [{ qty: 9, name: 'Negroni' }] },
+        { id: 'c3', status: 'ricevuto', items: [{ qty: 2, name: 'Gin Tonic' }] },
+      ],
+    }
+    // L'annullata resta fuori: due ticket, non tre.
+    expect(await printComande(order)).toBe(2)
+    expect(finestre).toHaveLength(2)
+
+    const carta = finestre.map((f) => f.join(''))
+    expect(carta[0]).toContain('MOJITO')
+    expect(carta[0]).not.toContain('GIN TONIC') // il difetto sarebbe qui
+    expect(carta[1]).toContain('GIN TONIC')
+    expect(carta[1]).not.toContain('MOJITO')
+    // E il lavoro buttato non torna al banco.
+    for (const c of carta) expect(c).not.toContain('NEGRONI')
+  })
 })

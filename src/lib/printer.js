@@ -503,6 +503,35 @@ export async function printComanda(order, comanda = null) {
   prn.send()
 }
 
+// ── PIÙ COMANDE DELLO STESSO CONTO, IN UN COLPO ──────────────────────
+//
+// «Se ho più di una comanda (dello stesso ordine!) devo poterle stampare
+// insieme» (l'utente, 20/08). Un conto battuto in tre riprese ha tre
+// ticket, e ristamparli uno per uno col conto in mano è tempo perso al
+// banco.
+//
+// IN SEQUENZA, NON FUSE. Ogni comanda resta il SUO ticket, identico a
+// quello che esce da solo — stesso formato, stesso taglio in fondo: al
+// banco un ticket è un giro di lavoro, e due giri su una striscia sola
+// sarebbero il difetto di BUG-051 rifatto apposta. Si aspetta ogni stampa
+// prima della successiva: il builder della stampante è UNO SOLO
+// (getPrinter tiene la connessione viva fra una stampa e l'altra), e due
+// stampe che si accavallano si scriverebbero addosso.
+//
+// Le annullate restano fuori: è lavoro buttato, e ristamparlo rimetterebbe
+// al banco un ticket che non si deve preparare.
+export function comandeStampabili(order) {
+  return (order?.comande || []).filter((c) => c && c.status !== 'annullato')
+}
+
+export async function printComande(order, comande) {
+  const lista = comande?.length ? comande : comandeStampabili(order)
+  for (const c of lista) {
+    await printComanda(order, c)
+  }
+  return lista.length
+}
+
 // ── SCONTRINO NON FISCALE ─────────────────────────────────────────────────────
 // Per il cliente: intestazione locale, articoli con prezzi, IVA, totale.
 // Formato ispirato al template fotografato di SumUp POS Pro.
