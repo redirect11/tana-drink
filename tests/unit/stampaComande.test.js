@@ -17,7 +17,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import {
   comandeDaStampare,
   claimComandaPrint,
-  FINESTRA_STAMPA_COMANDA_MS,
+  releaseComandaPrint,
 } from '../../src/lib/printer.js'
 
 const ORA = Date.parse('2026-08-20T21:00:00.000Z')
@@ -37,7 +37,7 @@ describe('quali comande si stampano', () => {
     // Il conto è battuto da qui (placed_by con device): per l'avviso conta,
     // per la stampante no — e infatti qui placed_by non si guarda proprio.
     const o = conto([comanda()], { placed_by: { name: 'Io', device: 'questo' } })
-    expect(comandeDaStampare(o, ORA)).toHaveLength(1)
+    expect(comandeDaStampare(o)).toHaveLength(1)
   })
 
   it('anche la seconda comanda di un conto già aperto', () => {
@@ -45,27 +45,27 @@ describe('quali comande si stampano', () => {
       comanda({ id: 'c1', status: 'pronto' }), // la prima è già avanti
       comanda({ id: 'c2', created_at: nataDa(5_000) }), // questa è appena nata
     ])
-    const da = comandeDaStampare(o, ORA)
+    const da = comandeDaStampare(o)
     expect(da.map((c) => c.id)).toEqual(['c2'])
   })
 
   it('una comanda già pronta o uscita non si stampa: è tardi', () => {
     for (const status of ['pronto', 'ritirato']) {
-      expect(comandeDaStampare(conto([comanda({ status })]), ORA)).toHaveLength(0)
+      expect(comandeDaStampare(conto([comanda({ status })]))).toHaveLength(0)
     }
   })
 
   it('le annullate e i conti annullati non stampano niente', () => {
-    expect(comandeDaStampare(conto([comanda({ status: 'annullato' })]), ORA)).toHaveLength(0)
-    expect(comandeDaStampare(conto([comanda()], { status: 'annullato' }), ORA)).toHaveLength(0)
+    expect(comandeDaStampare(conto([comanda({ status: 'annullato' })]))).toHaveLength(0)
+    expect(comandeDaStampare(conto([comanda()], { status: 'annullato' }))).toHaveLength(0)
   })
 
-  // LA FINESTRA: senza, un terminale con la memoria vuota (browser nuovo,
-  // dati cancellati) stamperebbe in raffica tutte le comande vive della
-  // serata al primo sguardo sulla coda.
-  it('una comanda vecchia non si ristampa: o è già uscita altrove, o è tardi comunque', () => {
-    const vecchia = comanda({ created_at: nataDa(FINESTRA_STAMPA_COMANDA_MS + 1000) })
-    expect(comandeDaStampare(conto([vecchia]), ORA)).toHaveLength(0)
+  // IL SEGNO STA SUL DATO: un browser con la memoria vuota vede
+  // `auto_print_at` e non ristampa la serata; il secondo tablet con
+  // l'auto-stampa accesa vede il segno del primo e non fa la seconda copia.
+  it('una comanda già segnata stampata non si ristampa, da nessun terminale', () => {
+    const stampata = comanda({ auto_print_at: nataDa(30_000) })
+    expect(comandeDaStampare(conto([stampata]))).toHaveLength(0)
   })
 })
 
@@ -81,5 +81,11 @@ describe('una copia per comanda, per terminale', () => {
   it('comande diverse dello stesso conto sono pretese diverse', () => {
     expect(claimComandaPrint('o1', 'c1')).toBe(true)
     expect(claimComandaPrint('o1', 'c2')).toBe(true)
+  })
+
+  it('la stampa fallita restituisce la pretesa: al prossimo giro si riprova', () => {
+    claimComandaPrint('o1', 'c1')
+    releaseComandaPrint('o1', 'c1') // carta finita, stampante spenta
+    expect(claimComandaPrint('o1', 'c1')).toBe(true)
   })
 })

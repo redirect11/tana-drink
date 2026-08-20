@@ -16,6 +16,7 @@ import {
   saveStaffToken,
   restoreOrder,
   advanceComanda,
+  segnaComandaStampata,
 } from '../lib/api.js'
 import { getPushToken } from '../lib/push.js'
 import { logoutStaff } from '../lib/logout.js'
@@ -95,7 +96,7 @@ import { showToast } from '../lib/toast.js'
 import { beep, installAudioUnlock } from '../lib/beep.js'
 import { subscribePending, dismissPending, dismissBanner } from '../lib/pendingOrders.js'
 import { syncSumUpProducts, isSumUpEnabled } from '../lib/sumupApi.js'
-import { printComanda, printScontrino, loadPrinterSettings, claimReceiptPrint, releaseReceiptPrint, comandeDaStampare, claimComandaPrint } from '../lib/printer.js'
+import { printComanda, printScontrino, loadPrinterSettings, claimReceiptPrint, releaseReceiptPrint, comandeDaStampare, claimComandaPrint, releaseComandaPrint } from '../lib/printer.js'
 import MenuManager from '../components/MenuManager.jsx'
 import PrinterSetup from '../components/PrinterSetup.jsx'
 import InventoryManager from '../components/InventoryManager.jsx'
@@ -715,7 +716,18 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             for (const o of data) {
               for (const c of comandeDaStampare(o)) {
                 if (claimComandaPrint(o.id, c.id)) {
-                  printComanda(o, c).catch((e) => console.warn('[printer] auto-comanda:', e.message))
+                  printComanda(o, c)
+                    // Il segno va SUL DATO solo a carta uscita: segnare
+                    // prima vorrebbe dire che una stampa fallita mette a
+                    // tacere tutti i terminali per sempre.
+                    .then(() => segnaComandaStampata(o.id, c.id))
+                    .catch((e) => {
+                      console.warn('[printer] auto-comanda:', e.message)
+                      // Pretesa locale libera: al prossimo snapshot si
+                      // riprova — carta finita, stampante spenta, si
+                      // sistema e la comanda esce da sola.
+                      releaseComandaPrint(o.id, c.id)
+                    })
                 }
               }
             }
