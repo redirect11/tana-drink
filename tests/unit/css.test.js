@@ -308,16 +308,39 @@ ${nome} {`)
     // lontano ogni pixel di testata è una comanda in meno sotto: i margini
     // negativi tolgono dall'altezza di riga quello che sporge, e i tasti
     // escono dentro il `gap` della testata, che c'è comunque.
-    expect(regola('.coda-tastini')).toMatch(/margin-block:\s*-\d/)
+    //
+    // ED È UN CONTO, NON UN NUMERO BATTUTO A MANO. Era un `-5px` — il
+    // risultato della sottrazione copiato nel foglio — e ritoccando
+    // `--tastino-alto` i tasti tornavano ad alzare la riga senza che da
+    // quel numero si capisse perché. Adesso l'altezza del tastino è
+    // l'unico numero e la compensazione lo segue.
+    const r = regola('.board-sotto .coda-tastini')
+    expect(r).toMatch(/margin-block:\s*calc\(\(1lh - var\(--tastino-alto\)\) \/ 2\)/)
+    // `1lh` si legge dall'altezza di riga di QUESTA regola: lasciata a
+    // `normal` dipenderebbe dal font di ogni browser.
+    expect(r).toMatch(/line-height:\s*[\d.]+/)
+    // E SOLO LÌ: la stessa classe sta anche in riga col campo di ricerca
+    // (lista e schede), che è alto quanto i tastini — lì non c'è niente da
+    // compensare.
+    expect(regola('.coda-tastini')).not.toMatch(/margin-block/)
   })
 
   it('la fila dei chip va a capo invece di scorrere, o taglierebbe la tendina', () => {
-    // `.chips-row` scorre in orizzontale, e dentro un contenitore che
-    // scorre un pannello in `position: absolute` viene TAGLIATO: la
-    // tendina degli autori si aprirebbe dentro una riga alta 40px.
+    // Dentro un contenitore che scorre in orizzontale un pannello in
+    // `position: absolute` viene TAGLIATO: la tendina dello staff si
+    // aprirebbe dentro una riga alta 40px.
+    //
+    // E LA FILA DICHIARA IL SUO. Indossava `.chips-row` — che scorre e non
+    // va a capo — per poi disdirne metà: `overflow: visible` e
+    // `flex-wrap: wrap` erano lì solo per annullare quello che la classe
+    // di sopra aveva appena messo. Nel JSX adesso c'è `chips-filtri` da
+    // sola, e quello che le serve si legge tutto in una regola.
     const r = regola('.chips-filtri')
+    expect(r).toMatch(/display:\s*flex/)
     expect(r).toMatch(/flex-wrap:\s*wrap/)
-    expect(r).toMatch(/overflow:\s*visible/)
+    expect(r).toMatch(/gap:\s*6px/)
+    expect(r).not.toMatch(/overflow/)
+    expect(css).not.toMatch(/chips-row chips-filtri/)
   })
 
   // «E i tasti dei filtri, tutti, devono essere leggermente più piccoli»
@@ -373,6 +396,11 @@ ${nome} {`)
     expect(laterale(regola('.chips-filtri .chip-taglio'))).toBeLessThan(
       laterale(regola('.chips-filtri .chip'))
     )
+    // E UNA REGOLA SOLA: c'era anche un `.chip-taglio` nudo che non ha mai
+    // colorato un pixel — il tastino esiste solo dentro la fila, e lì
+    // questa lo sovrascriveva per intero. Due regole di cui una morta
+    // fanno ritoccare il valore sbagliato.
+    expect(css).not.toMatch(/\n\.chip-taglio \{/)
   })
 })
 

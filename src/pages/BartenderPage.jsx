@@ -60,6 +60,7 @@ import {
   giornataDelConto,
   raggruppaPerGiornata,
   corsieDelPronto,
+  CORSIE_PRONTO_DIVISO,
   CORSIE_SPENTE_ALL_INIZIO,
   sottofiltriChiusi,
   nomiDelServizio,
@@ -67,8 +68,6 @@ import {
   STATO_DEFAULT,
   NOME_FILTRO_STATO,
   nomeSottofiltro,
-  cambiaFiltroStato,
-  statoAlDefault,
   frasePerCodaVuota,
   autoriDeiConti,
   autoriAttivi,
@@ -77,7 +76,6 @@ import {
   riassuntoAutori,
   cambiaSottoChiusi,
   AUTORE_CLIENTE,
-  contaFiltri,
   spiegaFiltri,
   spiegaOrdine,
 } from '../lib/coda.js'
@@ -548,8 +546,9 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // una coda mista costringe a rileggere ogni card per sapere in quale dei
   // tre mondi sta. La regola sta in coda.js (REQ-CODA-009), che è dove si
   // prova; qui si tiene solo la scelta.
+  // Esclusivi vuol dire che il tocco È la scelta: `setStato(id)`, senza
+  // nessuna regola di combinazione in mezzo.
   const [stato, setStato] = useState(STATO_DEFAULT)
-  const toccaStato = (id) => setStato((attuale) => cambiaFiltroStato(attuale, id))
   // DENTRO I CHIUSI: tutti, quelli usciti per intero, quelli con ancora
   // qualcosa da portare. Un conto chiuso è un conto incassato — si paga in
   // anticipo tutte le sere — e «quali dei chiusi hanno ancora roba da
@@ -598,8 +597,9 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
     if (salvate == null) return CORSIE_SPENTE_ALL_INIZIO
     // LA MEMORIA SI RIPULISCE ALL'APERTURA. Le corsie sono state
     // rimaneggiate piu' volte e gli id sono cambiati: un id morto restava
-    // qui dentro, teneva acceso il chip «▦ Colonne» per sempre e
-    // nell'elenco non c'era niente da riaccendere per spegnerlo.
+    // qui dentro, contava come colonna spenta — quindi teneva acceso il
+    // badge del tastino dei filtri per sempre — e nell'elenco non c'era
+    // niente da riaccendere per spegnerlo (BUG-058).
     const vive = soloCorsieVive(salvate)
     if (vive.length !== salvate.length) ricordaCorsieNascoste(vive)
     return vive
@@ -1214,8 +1214,22 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // vista. È la stessa domanda della legenda qui sopra, ma la chiave è
   // l'email e non la lettera — due Marco sulle card si distinguono a
   // fatica, nel filtro sarebbero proprio la stessa persona.
-  const autori = autoriDeiConti(ordersInVista)
+  //
+  // SI PAGA SOLO SE SERVE. È una passata su tutta la coda, e a fila chiusa
+  // con lo staff non filtrato il risultato lo si butta: la tendina non si
+  // disegna, `conAutori` con `autoriScelti == null` torna la lista intera
+  // senza guardare l'elenco, e il riassunto non lo chiede nessuno. Con 120
+  // conti quella passata rifatta a ogni tasto della ricerca e a ogni
+  // snapshot dal server è tempo regalato.
+  const autori = filtriVisibili || autoriScelti != null ? autoriDeiConti(ordersInVista) : []
   const autoriAccesi = autoriAttivi(autoriScelti, autori)
+  // LO STAFF STA STRINGENDO? e come si chiama quello che è scelto. Servono
+  // in due posti lontani — la pastiglia della tendina, che li porta addosso,
+  // e l'elenco dei filtri accesi per il title del tastino — e stavano
+  // scritti a mano in tutti e due, col secondo che si toglieva l'emoji del
+  // primo con un `replace`. Una volta qui, letti da tutti e due.
+  const staffFiltra = autoriAccesi.length !== autori.length
+  const riassuntoStaff = riassuntoAutori(autoriScelti, autori)
   // La stessa chiave che usa `autoreDi`: serve solo a scrivere «sei tu»
   // accanto al proprio nome nella tendina.
   const emailMia = auth.currentUser?.email?.trim().toLowerCase() || ''
@@ -1316,8 +1330,8 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   const boardGroups = gridView ? groupByDay(visibleBoard) : []
   // LE CORSIE DI STATO: partono dalla stessa lista delle altre viste —
   // quello che resta in coda per questa apertura di cassa, già passato per
-  // ricerca e «Miei» — e la smistano. Le regole di cosa sta dove stanno in
-  // lib/coda.js, che è dove si provano.
+  // ricerca e tendina dello staff — e la smistano. Le regole di cosa sta
+  // dove stanno in lib/coda.js, che è dove si provano.
   // ORDINATE COME LE ALTRE VISTE. Il tasto «↕» girava solo la griglia: qui
   // la lista arrivava com'era, e premerlo non faceva niente di visibile —
   // un tasto che non risponde fa dubitare dell'app, non del tasto. L'ordine
@@ -1370,6 +1384,11 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // li prendono tutti da qui (nomiDelServizio), o divergono al primo
   // ritocco.
   const nomiServizio = nomiDelServizio(ritiroEsiste)
+  // E come si chiamano le due colonne che nascono dividendo il pronto: sono
+  // i titoli delle corsie stesse (CORSIE_PRONTO_DIVISO), non due parole
+  // ribattute nell'annuncio del ✂️ — rinominarne una lasciava lo screen
+  // reader a dire il nome vecchio.
+  const [meta1, meta2] = CORSIE_PRONTO_DIVISO.map((c) => c.titolo)
   const divisioneP = corsieDelPronto({ divise: prontoSeparato, ritiroEsiste })
   const corsieDelBanco = corsieBanco
     ? corsieComande(contiInCorsia, {
@@ -1451,20 +1470,34 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // esiste. E i NOMI seguono il ritiro (nomiDelServizio): dove al banco
   // non si ritira, «/Ritirare» nominerebbe una cosa che nel bar non
   // succede.
+  //
+  // Il ternario `workflowOn ? … : null` che stava qui dentro non serviva:
+  // tutti e due i chiamanti sono già dietro `workflowOn`, e una guardia che
+  // non può essere falsa fa credere che il caso esista.
   const porzioniChiusi = () =>
-    workflowOn
-      ? sottofiltriChiusi(ritiroEsiste).map(([k, label]) => (
-          <button
-            key={k}
-            className={`chip ${sottoChiusi === k ? 'active' : ''}`}
-            onClick={() => setSottoChiusi((s) => cambiaSottoChiusi(s, k))}
-            aria-pressed={sottoChiusi === k}
-            title={`Dei conti chiusi, solo quelli ${k === 'serviti' ? 'usciti per intero' : 'con ancora qualcosa da portare'}`}
-          >
-            {label}
-          </button>
-        ))
-      : null
+    sottofiltriChiusi(ritiroEsiste).map(([k, label]) => (
+      <button
+        key={k}
+        className={`chip ${sottoChiusi === k ? 'active' : ''}`}
+        onClick={() => setSottoChiusi((s) => cambiaSottoChiusi(s, k))}
+        aria-pressed={sottoChiusi === k}
+        title={`Dei conti chiusi, solo quelli ${k === 'serviti' ? 'usciti per intero' : 'con ancora qualcosa da portare'}`}
+      >
+        {label}
+      </button>
+    ))
+
+  // IL GRUPPO CHE LE TIENE INSIEME, scritto una volta. Erano due
+  // `<div className="chip-gruppo">` battuti a mano nei due rami — in
+  // griglia col chip «Chiusi» dentro, nelle corsie senza — e i due
+  // `aria-label` avevano già preso strade diverse: «Dei conti chiusi» e
+  // «Conti chiusi». Chi non vede lo schermo sentiva due nomi per lo stesso
+  // tasto a seconda della vista.
+  const gruppoChiusi = (dentro, chiave) => (
+    <div key={chiave} className="chip-gruppo" role="group" aria-label="Conti chiusi">
+      {dentro}
+    </div>
+  )
 
   // IL TASTO DICE DOVE PORTA, non dove si è. Era una pastiglia «Comande»
   // che si accendeva quando le comande le stavi già guardando: un
@@ -1521,33 +1554,47 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // Si riusa `Tendina`, che sa già chiudersi al tocco fuori e con Esc:
   // scriverne un'altra qui vuol dire scrivere di nuovo quei due ascolti, e
   // sbagliarne uno.
+  //
+  // L'EMOJI STA QUI, non dentro `riassuntoAutori`: è il vestito della
+  // pastiglia, e questo è l'unico posto che lo vuole — il title del
+  // tastino «▾ Filtri» vuole il nome nudo, e prima se la toglieva con un
+  // `replace` (un secondo posto da tenere d'accordo su una stringa).
+  //
+  // LE VOCI SI COSTRUISCONO ALL'APERTURA. `Tendina` accetta un
+  // figlio-funzione e lo chiama solo quando il pannello è aperto: la
+  // tendina sta chiusa quasi sempre, e quei bottoni sono quanti sono i
+  // turni della serata.
   const tendinaStaff =
     autori.length > 0 ? (
       <Tendina
         etichetta="Chi ha aperto il conto"
-        riassunto={riassuntoAutori(autoriScelti, autori)}
-        attivo={autoriAccesi.length !== autori.length}
+        riassunto={`✍️ ${riassuntoStaff}`}
+        attivo={staffFiltra}
         largo={240}
       >
-        {/* NON SI CHIUDE AL PRIMO TOCCO: qui si deselezionano più persone
-            di fila, e una tendina che sparisce a ogni scelta va riaperta
-            ogni volta. Si chiude fuori, o con Esc. */}
-        <div className="tendina-titolo">Chi ha aperto il conto</div>
-        {autori.map((v) => (
-          <button
-            key={v.chiave}
-            type="button"
-            className={`tendina-voce${autoriAccesi.includes(v.chiave) ? ' scelta' : ''}`}
-            onClick={() => setAutoriScelti((s) => cambiaAutoreScelto(s, v.chiave, autori))}
-            aria-pressed={autoriAccesi.includes(v.chiave)}
-          >
-            <span>
-              {v.chiave === AUTORE_CLIENTE ? '🌐 ' : ''}
-              {v.nome}
-              {v.chiave === emailMia && <span className="muted small"> · sei tu</span>}
-            </span>
-          </button>
-        ))}
+        {() => (
+          <>
+            {/* NON SI CHIUDE AL PRIMO TOCCO: qui si deselezionano più
+                persone di fila, e una tendina che sparisce a ogni scelta va
+                riaperta ogni volta. Si chiude fuori, o con Esc. */}
+            <div className="tendina-titolo">Chi ha aperto il conto</div>
+            {autori.map((v) => (
+              <button
+                key={v.chiave}
+                type="button"
+                className={`tendina-voce${autoriAccesi.includes(v.chiave) ? ' scelta' : ''}`}
+                onClick={() => setAutoriScelti((s) => cambiaAutoreScelto(s, v.chiave, autori))}
+                aria-pressed={autoriAccesi.includes(v.chiave)}
+              >
+                <span>
+                  {v.chiave === AUTORE_CLIENTE ? '🌐 ' : ''}
+                  {v.nome}
+                  {v.chiave === emailMia && <span className="muted small"> · sei tu</span>}
+                </span>
+              </button>
+            ))}
+          </>
+        )}
       </Tendina>
     ) : null
 
@@ -1570,8 +1617,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // stati e i giorni scorsi, il banco le colonne spente, la lista e le
   // schede solo lo staff.
   const sottoAcceso = workflowOn ? nomeSottofiltro(sottoChiusi, ritiroEsiste) : null
-  const staffFiltra = autoriAccesi.length !== autori.length
-  const nomeStaff = staffFiltra ? riassuntoAutori(autoriScelti, autori).replace('✍️ ', '') : null
+  const nomeStaff = staffFiltra ? riassuntoStaff : null
   const filtriAccesi = (
     corsieView
       ? [
@@ -1583,7 +1629,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
         ? [
             // Gli stati si nominano solo quando NON sono il default: al
             // default il badge deve restare spento.
-            ...(statoAlDefault(stato) ? [] : [NOME_FILTRO_STATO[stato]]),
+            stato !== STATO_DEFAULT && NOME_FILTRO_STATO[stato],
             stato === 'chiusi' && sottoAcceso,
             nomeStaff,
             soloOggi && 'Solo oggi',
@@ -1625,7 +1671,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // conti dove ce ne sono quaranta, e niente a schermo che lo dica. Aperta
   // la fila il badge sparisce: i chip accesi si vedono da sé, e ripetere
   // col numero quello che è già a schermo è rumore.
-  const quantiFiltri = filtriVisibili ? 0 : contaFiltri(filtriAccesi)
+  const quantiFiltri = filtriVisibili ? 0 : filtriAccesi.length
   const tastoFiltri = (
     <button
       className={`coda-tastino${quantiFiltri > 0 ? ' active' : ''}`}
@@ -1714,12 +1760,19 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // I TASTINI NON STANNO PIÙ QUI DENTRO: sono in fondo alla riga sopra
   // (`tastini`), a destra. Prima aprivano la fila da dentro la fila stessa,
   // e la fila doveva quindi esistere sempre.
-  const filaFiltri = (filtri, style) =>
-    filtriVisibili ? (
-      <div className="chips-row chips-filtri" style={style}>
-        {filtri}
-      </div>
-    ) : null
+  //
+  // PRENDE UNA FUNZIONE, non i chip già fatti. Riceverli fatti vuol dire
+  // costruirli PRIMA di sapere se la fila si disegna: a filtri chiusi —
+  // com'è quasi sempre, ed è tutto il punto della scomparsa — erano un
+  // albero di elementi costruito e buttato a ogni disegno. Così la fila
+  // chiusa non costa niente davvero, non solo a schermo.
+  //
+  // DOVE STA LA RIGA lo dice il CSS del contesto (`.board-sotto
+  // .chips-filtri` sulle lavagne, la riga di lista e schede sotto la
+  // ricerca): i margini erano un `style` inline passato da un chiamante
+  // solo, cioè una regola di foglio scritta in JavaScript.
+  const filaFiltri = (chip) =>
+    filtriVisibili ? <div className="chips-filtri">{chip()}</div> : null
 
   // Il chip di una colonna: acceso = la colonna è a schermo. Scritto una
   // volta sola perché lo disegnano due rami — dentro il gruppo del pronto
@@ -1751,88 +1804,100 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   //
   // Qui dentro c'è SOLO quello che restringe la lista: il cambio vista è
   // salito in testata coi tastini delle azioni (docs/navigazione.md).
-  const filtriCorsie = filaFiltri(
-    <>
-      {tendinaStaff}
-      {/* LE DUE PORZIONI DEI CHIUSI stanno qui, in riga con gli altri:
-          nelle corsie dei conti la colonna «Chiusi» c'è sempre, quindi la
-          domanda ha sempre senso e non c'è nessun «Chiusi» da accendere a
-          cui attaccarle — restano un tasto a due porzioni, con lo stesso
-          vestito che hanno in griglia. Al banco no: lì si guardano le
-          comande, e i conti chiusi non hanno una colonna. */}
-      {!corsieBanco && workflowOn && (
-        <div className="chip-gruppo" role="group" aria-label="Dei conti chiusi">
-          {porzioniChiusi()}
-        </div>
-      )}
-      {/* QUALI COLONNE TENERE A SCHERMO. A metà serata chi sta allo
-          shaker guarda «Da fare» e «Al banco», e le altre due gli
-          mangiano mezzo schermo per roba che in quel momento non lo
-          riguarda. È una scelta di QUESTO terminale e si ricorda.
-          ED È UN FILTRO a tutti gli effetti — restringe quello che si
-          vede — quindi sta dentro la scomparsa con gli altri.
+  //
+  // SI COSTRUISCE SOLO SE È LA VISTA CHE SI GUARDA — è la stessa guardia
+  // che hanno già `boardOrders`, `perScheda` e `buckets` («SI CALCOLA LA
+  // VISTA CHE SI GUARDA», più sopra): prima si costruivano tutte e due le
+  // file, corsie e griglia, e una delle due finiva sempre nel cestino.
+  const filtriCorsie = corsieView
+    ? filaFiltri(() => (
+      <>
+        {tendinaStaff}
+        {/* LE DUE PORZIONI DEI CHIUSI stanno qui, in riga con gli altri:
+            nelle corsie dei conti la colonna «Chiusi» c'è sempre, quindi la
+            domanda ha sempre senso e non c'è nessun «Chiusi» da accendere a
+            cui attaccarle — restano un tasto a due porzioni, con lo stesso
+            vestito che hanno in griglia. Al banco no: lì si guardano le
+            comande, e i conti chiusi non hanno una colonna. */}
+        {!corsieBanco && workflowOn && gruppoChiusi(porzioniChiusi())}
+        {/* QUALI COLONNE TENERE A SCHERMO. A metà serata chi sta allo
+            shaker guarda «Da fare» e «Al banco», e le altre due gli
+            mangiano mezzo schermo per roba che in quel momento non lo
+            riguarda. È una scelta di QUESTO terminale e si ricorda.
+            ED È UN FILTRO a tutti gli effetti — restringe quello che si
+            vede — quindi sta dentro la scomparsa con gli altri.
 
-          UN CHIP PER COLONNA, IN FILA COI FRATELLI. C'era davanti un
-          «▦ Colonne» che apriva i loro chip: due livelli di nascondimento
-          uno dentro l'altro, e da quando la fila intera sta dietro
-          «▾ Filtri» il primo non serviva più a niente — «togli il testo
-          colonne e metti tutti i tasti che si aprono cliccando colonne al
-          posto di colonne. Non c'è più bisogno visto che nascondiamo tutto
-          con filtri» (l'utente, 20/08/2026). Adesso sono sei o sette in
-          fila: la riga va a capo da sé, che è il capo naturale del flusso.
-          Quante ne sono spente lo dice il badge del tastino a fila chiusa,
-          dove la cosa serve davvero — a fila aperta si vede dai chip. */}
-      {/* IL TAGLIO DEL PRONTO STA ATTACCATO AL SUO CHIP. Era un chip a sé
-          in fondo alla fila, «✂️ Dividi il pronto»: «dobbiamo integrarlo
-          meglio con gli altri due bottoni, in qualche modo non si capisce
-          a che serve. E poi è troppo lungo» (l'utente, 20/08/2026).
-          Adesso è un tastino appeso al chip della colonna che divide —
-          «Da servire/Ritirare ✂️» — e premendolo, NELLO STESSO POSTO,
-          compaiono «Da servire» e «Da ritirare» accoppiati col loro 🔗
-          per riunirli. L'interruttore
-          sta dove agisce, e il suo effetto si vede lì: niente frase da
-          leggere, niente chip orfano lontano dalla colonna di cui parla.
-          Come si raggruppano lo dice `gruppiColonne` in coda.js. */}
-      {corsieBanco &&
-        gruppiColonne(sceglibili, { taglioPossibile: ritiroEsiste }).map((g) =>
-          g.taglio ? (
-            <div key={g.id} className="chip-gruppo">
-              {g.corsie.map(chipColonna)}
-              {/* UN BOTTONE SUO, non un'icona cliccabile dentro un altro
-                  bottone: accende una colonna e dividerla sono due cose
-                  diverse, e chi naviga da tastiera o con lo screen reader
-                  deve poterle distinguere. Il gruppo le tiene insieme
-                  solo agli occhi.
-                  IL SEGNO DICE COSA FA, NON COM'È MESSO: ✂️ da unito,
-                  🔗 da diviso. Un ✂️ «acceso» direbbe comunque «taglia»
-                  mentre l'unica cosa che può fare è ricucire — e da
-                  lontano, sulla lavagna, si legge il segno, non il
-                  colore. Com'è messo adesso lo dicono i chip accanto, che
-                  è tutto il punto di averlo messo lì. */}
-              <button
-                type="button"
-                className={`chip chip-taglio${g.diviso ? ' active' : ''}`}
-                onClick={cambiaPronto}
-                aria-label={
-                  g.diviso
-                    ? `Riunisci «Da servire» e «Da ritirare» in una colonna «${nomiServizio.daServire}»`
-                    : `Dividi «${nomiServizio.daServire}» in «Da servire» e «Da ritirare»`
-                }
-                title={
-                  g.diviso
-                    ? 'Riunisci «Da servire» e «Da ritirare» in una colonna sola, col badge sulla card'
-                    : `Dividi «${nomiServizio.daServire}» in «Da servire» e «Da ritirare»`
-                }
-              >
-                <span aria-hidden>{g.diviso ? '🔗' : '✂️'}</span>
-              </button>
-            </div>
-          ) : (
-            g.corsie.map(chipColonna)
-          )
-        )}
-    </>
-  )
+            UN CHIP PER COLONNA, IN FILA COI FRATELLI. C'era davanti un
+            «▦ Colonne» che apriva i loro chip: due livelli di nascondimento
+            uno dentro l'altro, e da quando la fila intera sta dietro
+            «▾ Filtri» il primo non serviva più a niente — «togli il testo
+            colonne e metti tutti i tasti che si aprono cliccando colonne al
+            posto di colonne. Non c'è più bisogno visto che nascondiamo tutto
+            con filtri» (l'utente, 20/08/2026). Adesso sono sei o sette in
+            fila: la riga va a capo da sé, che è il capo naturale del flusso.
+            Quante ne sono spente lo dice il badge del tastino a fila chiusa,
+            dove la cosa serve davvero — a fila aperta si vede dai chip. */}
+        {/* IL TAGLIO DEL PRONTO STA ATTACCATO AL SUO CHIP. Era un chip a sé
+            in fondo alla fila, «✂️ Dividi il pronto»: «dobbiamo integrarlo
+            meglio con gli altri due bottoni, in qualche modo non si capisce
+            a che serve. E poi è troppo lungo» (l'utente, 20/08/2026).
+            Adesso è un tastino appeso al chip della colonna che divide —
+            «Da servire/Ritirare ✂️» — e premendolo, NELLO STESSO POSTO,
+            compaiono «Da servire» e «Da ritirare» accoppiati col loro 🔗
+            per riunirli. L'interruttore
+            sta dove agisce, e il suo effetto si vede lì: niente frase da
+            leggere, niente chip orfano lontano dalla colonna di cui parla.
+            Come si raggruppano lo dice `gruppiColonne` in coda.js. */}
+        {corsieBanco &&
+          gruppiColonne(sceglibili, { taglioPossibile: ritiroEsiste }).map((g) => {
+            // Diviso = il gruppo tiene due corsie invece di una. Lo dicono le
+            // corsie stesse: un campo `diviso` accanto a loro era la stessa
+            // cosa scritta due volte, e due scritture si contraddicono.
+            const diviso = g.corsie.length > 1
+            return g.taglio ? (
+              <div key={g.id} className="chip-gruppo">
+                {g.corsie.map(chipColonna)}
+                {/* UN BOTTONE SUO, non un'icona cliccabile dentro un altro
+                    bottone: accende una colonna e dividerla sono due cose
+                    diverse, e chi naviga da tastiera o con lo screen reader
+                    deve poterle distinguere. Il gruppo le tiene insieme
+                    solo agli occhi.
+                    IL SEGNO DICE COSA FA, NON COM'È MESSO: ✂️ da unito,
+                    🔗 da diviso. Un ✂️ «acceso» direbbe comunque «taglia»
+                    mentre l'unica cosa che può fare è ricucire — e da
+                    lontano, sulla lavagna, si legge il segno, non il
+                    colore. Com'è messo adesso lo dicono i chip accanto, che
+                    è tutto il punto di averlo messo lì. */}
+                {/* I NOMI DELLE DUE META' SONO QUELLI DELLE CORSIE
+                    (`CORSIE_PRONTO_DIVISO`), non due parole ribattute qui:
+                    scritti a mano, rinominare una colonna divisa lasciava
+                    l'annuncio a dire il nome vecchio — e chi non vede lo
+                    schermo è proprio chi non può accorgersene. */}
+                <button
+                  type="button"
+                  className={`chip chip-taglio${diviso ? ' active' : ''}`}
+                  onClick={cambiaPronto}
+                  aria-label={
+                    diviso
+                      ? `Riunisci «${meta1}» e «${meta2}» in una colonna «${nomiServizio.daServire}»`
+                      : `Dividi «${nomiServizio.daServire}» in «${meta1}» e «${meta2}»`
+                  }
+                  title={
+                    diviso
+                      ? `Riunisci «${meta1}» e «${meta2}» in una colonna sola, col badge sulla card`
+                      : `Dividi «${nomiServizio.daServire}» in «${meta1}» e «${meta2}»`
+                  }
+                >
+                  <span aria-hidden>{diviso ? '🔗' : '✂️'}</span>
+                </button>
+              </div>
+            ) : (
+              g.corsie.map(chipColonna)
+            )
+          })}
+      </>
+      ))
+    : null
 
   // ── I FILTRI DELLA GRIGLIA, SULLA STESSA RIGA DELLE CORSIE ─────────
   //
@@ -1843,65 +1908,75 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   //
   // QUI SONO CINQUE, non due come nelle corsie (BUG-042), e sui 1000-1300px
   // del banco non ci stavano accanto ai conteggi nemmeno scorrendo: per
-  // questo escono in una riga tutta loro, che SCORRE in orizzontale invece
-  // di andare a capo — una seconda riga di pastiglie sarebbe l'altezza che
-  // si sta risparmiando. E la più lunga resta accorciata: «📅 Solo oggi
-  // (3)» invece di «📅 Solo oggi (3 da chiudere)», e cosa siano quei tre
-  // lo dice il titolo.
-  const filtriOrdini = filaFiltri(
-    <>
-      {/* I TRE STATI, ESCLUSIVI. Uno acceso vuol dire «sto guardando
-          quello», e gli altri due si spengono: «riportiamo aperti, chiusi
-          e annullati come mutuamente esclusivi» (l'utente, 20/08/2026).
-          Restano `aria-pressed` e non delle linguette — sono filtri di
-          questa coda, non tre code diverse (REQ-CODA-009).
-          E «CHIUSI» NON È UN CHIP SOLO: è un tasto a tre porzioni, che si
-          apre quando lo si accende. Da spento si vede solo lui; acceso,
-          accanto compaiono «Da servire/Ritirare» e «Serviti/Ritirati»,
-          attaccate nello stesso gruppo perché sono una domanda DENTRO i
-          chiusi e non due filtri fratelli. */}
-      {FILTRI_STATO.map(([k, label]) => {
-        const chip = (
+  // questo escono in una riga tutta loro. VA A CAPO, NON SCORRE, e non è un
+  // gusto: dentro un contenitore che scorre in orizzontale il pannello
+  // della tendina dello staff — che è `position: absolute` — verrebbe
+  // TAGLIATO, e si aprirebbe dentro una riga alta 40px. La riga esiste solo
+  // da aperta e per scelta di chi guarda: se sul telefono i chip vanno su
+  // due righe, sono due righe che qualcuno ha chiesto, e si tolgono
+  // richiudendo. E la più lunga resta accorciata: «📅 Solo oggi (3)»
+  // invece di «📅 Solo oggi (3 da chiudere)», e cosa siano quei tre lo dice
+  // il titolo.
+  //
+  // Anche questa si costruisce SOLO se è la vista che si guarda (vedi
+  // `filtriCorsie`).
+  const filtriOrdini = gridView
+    ? filaFiltri(() => (
+      <>
+        {/* I TRE STATI, ESCLUSIVI. Uno acceso vuol dire «sto guardando
+            quello», e gli altri due si spengono: «riportiamo aperti, chiusi
+            e annullati come mutuamente esclusivi» (l'utente, 20/08/2026).
+            Restano `aria-pressed` e non delle linguette — sono filtri di
+            questa coda, non tre code diverse (REQ-CODA-009).
+            E «CHIUSI» NON È UN CHIP SOLO: è un tasto a tre porzioni, che si
+            apre quando lo si accende. Da spento si vede solo lui; acceso,
+            accanto compaiono «Da servire/Ritirare» e «Serviti/Ritirati»,
+            attaccate nello stesso gruppo perché sono una domanda DENTRO i
+            chiusi e non due filtri fratelli. */}
+        {FILTRI_STATO.map(([k, label]) => {
+          const chip = (
+            <button
+              key={k}
+              className={`chip ${stato === k ? 'active' : ''}`}
+              onClick={() => setStato(k)}
+              aria-pressed={stato === k}
+            >
+              {label}
+            </button>
+          )
+          if (k !== 'chiusi' || stato !== 'chiusi' || !workflowOn) return chip
+          return gruppoChiusi(
+            <>
+              {chip}
+              {porzioniChiusi()}
+            </>,
+            k
+          )
+        })}
+        {tendinaStaff}
+        {/* C'ERA UN «NASCONDI PAGATI», E NON SERVE PIÙ. Serviva a togliere
+            dagli occhi i conti già incassati ma non ancora serviti, perché
+            restavano in mezzo a quelli in corso: adesso un conto pagato è
+            chiuso, sta fra i chiusi, e chi vuole sapere quali hanno ancora
+            roba da portare lo chiede lì dentro («Da servire»). */}
+        {/* Conti dei giorni scorsi: di default sono in coda, sotto la loro
+            data. Questo tasto li nasconde e lascia solo oggi. */}
+        {(arretrati.length > 0 || soloOggi) && (
           <button
-            key={k}
-            className={`chip ${stato === k ? 'active' : ''}`}
-            onClick={() => toccaStato(k)}
-            aria-pressed={stato === k}
+            className={`chip ${soloOggi ? 'active' : ''}`}
+            onClick={() => setSoloOggi((v) => !v)}
+            title={
+              arretrati.length
+                ? `Nascondi i ${arretrati.length} conti rimasti aperti dai giorni scorsi`
+                : 'Nascondi i conti rimasti aperti dai giorni scorsi'
+            }
           >
-            {label}
+            📅 Solo oggi{arretrati.length ? ` (${arretrati.length})` : ''}
           </button>
-        )
-        if (k !== 'chiusi' || stato !== 'chiusi' || !workflowOn) return chip
-        return (
-          <div key={k} className="chip-gruppo" role="group" aria-label="Conti chiusi">
-            {chip}
-            {porzioniChiusi()}
-          </div>
-        )
-      })}
-      {tendinaStaff}
-      {/* C'ERA UN «NASCONDI PAGATI», E NON SERVE PIÙ. Serviva a togliere
-          dagli occhi i conti già incassati ma non ancora serviti, perché
-          restavano in mezzo a quelli in corso: adesso un conto pagato è
-          chiuso, sta fra i chiusi, e chi vuole sapere quali hanno ancora
-          roba da portare lo chiede lì dentro («Da servire»). */}
-      {/* Conti dei giorni scorsi: di default sono in coda, sotto la loro
-          data. Questo tasto li nasconde e lascia solo oggi. */}
-      {(arretrati.length > 0 || soloOggi) && (
-        <button
-          className={`chip ${soloOggi ? 'active' : ''}`}
-          onClick={() => setSoloOggi((v) => !v)}
-          title={
-            arretrati.length
-              ? `Nascondi i ${arretrati.length} conti rimasti aperti dai giorni scorsi`
-              : 'Nascondi i conti rimasti aperti dai giorni scorsi'
-          }
-        >
-          📅 Solo oggi{arretrati.length ? ` (${arretrati.length})` : ''}
-        </button>
-      )}
-    </>
-  )
+        )}
+      </>
+      ))
+    : null
 
   // IL CONTO ACCESO. Solo nel modo "evidenzia": è il primo che risponde
   // NELL'ORDINE IN CUI STA SULLO SCHERMO — non nell'ordine in cui arrivano
@@ -2600,7 +2675,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                   // motivo, per chi la frase l'ha letta di sguincio.
                   <span className="board-cassa-box">
                     <button
-                      className={`btn ghost small board-cassa${v.disabled ? ' spento' : ''}`}
+                      className="btn ghost small board-cassa"
                       aria-disabled={v.disabled || undefined}
                       title={v.hint}
                       onClick={() => {
@@ -2815,7 +2890,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
               li fanno le linguette di questa vista — ma un meccanismo che
               vale in tre viste su quattro è una cosa da imparare due
               volte. */}
-          {filaFiltri(tendinaStaff, { margin: '8px 0 12px' })}
+          {filaFiltri(() => tendinaStaff)}
         </>
       )}
 
@@ -2996,8 +3071,9 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
               tutti i conti sotto «Ordine ricevuto». Restano le tre cose che
               un conto può essere — in corso, chiuso, annullato — con le
               stesse regole della griglia (ordiniInCoda), così le due viste
-              raccontano la stessa storia. Ricerca e «Miei» valgono qui
-              come dappertutto: filtrano dentro la scheda in cui si sta. */}
+              raccontano la stessa storia. Ricerca e tendina dello staff
+              valgono qui come dappertutto: filtrano dentro la scheda in cui
+              si sta. */}
           <div className="tabs" style={{ marginTop: 8 }}>
             {schedeSemplici.map(([k, label]) => (
               <div

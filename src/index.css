@@ -516,6 +516,17 @@ body.schermo-intero {
   cursor: not-allowed;
 }
 
+/* SPENTO MA TOCCABILE. Dove il tocco deve ARRIVARE — è quello che fa uscire
+   l'avviso col motivo — il tasto porta `aria-disabled` e non `disabled`, e
+   `:disabled` non scatta. Lo scolorito però è lo stesso: è la stessa cosa
+   detta a chi guarda, e ogni tasto che se la rifaceva per conto suo la
+   scriveva un po' diversa — la cassa spenta stava a 0.55, per una
+   differenza che nessuno ha mai deciso. */
+.btn[aria-disabled='true'] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .btn.secondary {
   background: rgba(255, 255, 255, 0.1);
   color: var(--text);
@@ -1793,17 +1804,30 @@ body.fullbleed .bar-content {
   min-width: 0;
 }
 
-/* VA A CAPO, NON SCORRE, E QUESTA VOLTA È OBBLIGATORIO. `.chips-row`
-   scorre in orizzontale (`overflow-x: auto`), e dentro un contenitore che
-   scorre un pannello in `position: absolute` viene TAGLIATO: la tendina
-   degli autori si aprirebbe dentro la riga alta 40px e non si vedrebbe
-   nulla. Qui la riga esiste solo da aperta e per scelta di chi guarda: se
-   sul telefono i chip vanno su due righe, sono due righe che qualcuno ha
-   chiesto — e si tolgono richiudendo. */
+/* VA A CAPO, NON SCORRE, E QUESTA VOLTA È OBBLIGATORIO. Dentro un
+   contenitore che scorre in orizzontale un pannello in `position: absolute`
+   viene TAGLIATO: la tendina dello staff si aprirebbe dentro la riga alta
+   40px e non si vedrebbe nulla. Qui la riga esiste solo da aperta e per
+   scelta di chi guarda: se sul telefono i chip vanno su due righe, sono due
+   righe che qualcuno ha chiesto — e si tolgono richiudendo.
+   PER QUESTO NON INDOSSA PIÙ `.chips-row`. Se la metteva addosso e poi ne
+   annullava metà — lo scorrimento, il non-andare-a-capo — tenendosi solo
+   il `display: flex` e il `gap`: una classe indossata per disdirla. Adesso
+   dichiara il suo, e quello che le serve si legge tutto qui. */
 .chips-filtri {
+  display: flex;
   flex-wrap: wrap;
-  overflow: visible;
-  row-gap: 6px;
+  gap: 6px;
+  padding-bottom: 4px;
+  margin-bottom: 8px;
+}
+
+/* LISTA E SCHEDE: la fila esce sotto la riga della ricerca, e si stacca da
+   tutte e due — sopra il campo, sotto la prima card. Erano gli stessi
+   margini scritti come `style` inline sull'unica chiamata che li voleva,
+   cioè una regola di foglio battuta in JavaScript. */
+.coda-cerca-riga ~ .chips-filtri {
+  margin: 8px 0 12px;
 }
 
 /* PIÙ PICCOLI DI UN FILO, TUTTI QUANTI — gli stati, la tendina degli
@@ -1859,11 +1883,11 @@ body.fullbleed .bar-content {
 /* Il tastino è un segno solo: attorno a un carattere una pastiglia larga
    come le altre è tutta aria, e in una fila di sei o sette chip quell'aria
    è una riga in più. Il segno un filo più grande del testo dei chip perché
-   deve leggersi da lontano, sulla lavagna. */
-.chip-taglio {
-  padding-inline: 9px;
-  font-size: 1rem;
-}
+   deve leggersi da lontano, sulla lavagna.
+   UNA REGOLA SOLA, E COL CONTESTO ADDOSSO: c'era anche un `.chip-taglio`
+   nudo, che non ha mai colorato un pixel — il tastino esiste solo dentro
+   la fila dei filtri, e lì questa lo sovrascriveva per intero. Due regole
+   di cui una morta fanno cercare il valore sbagliato quando si ritocca. */
 .chips-filtri .chip-taglio {
   padding: 5px 9px;
   font-size: 0.95rem;
@@ -1878,13 +1902,10 @@ body.fullbleed .bar-content {
    anche sul telefono.
    `align-self: center` perché la riga dei conteggi allinea alla BASE del
    testo, e un tastino allineato alla base pende.
-   I MARGINI NEGATIVI NON SONO UN TRUCCO, sono il conto: i due tasti sono
-   alti `--tastino-alto`, la riga dei conteggi è alta quanto il suo testo
-   (una ventina di pixel). Appesi così alzerebbero la riga, e su una
-   lavagna che si guarda da lontano ogni pixel in testata è una comanda in
-   meno sotto. Togliendo dall'altezza di riga quello che sporge, i tasti
-   escono di qualche pixel sopra e sotto — dentro il `gap: 10px` della
-   testata, che c'è comunque — e la riga resta alta come il testo. */
+   LA COMPENSAZIONE NON STA QUI: vale solo sulla riga dei conteggi delle
+   lavagne (vedi `.board-sotto .coda-tastini`). In lista e schede questi due
+   stanno in riga col campo di ricerca, che è alto quanto loro: lì non c'è
+   niente da compensare. */
 .coda-tastini {
   display: inline-flex;
   align-items: center;
@@ -1892,7 +1913,25 @@ body.fullbleed .bar-content {
   flex-shrink: 0;
   margin-left: auto;
   align-self: center;
-  margin-block: -5px;
+}
+
+/* I MARGINI NEGATIVI NON SONO UN TRUCCO, SONO IL CONTO. I due tasti sono
+   alti `--tastino-alto`; la riga dei conteggi è alta quanto il suo testo,
+   cioè una riga (`1lh`). Appesi così alzerebbero la riga, e su una lavagna
+   che si guarda da lontano ogni pixel in testata è una comanda in meno
+   sotto. Togliendo metà e metà di quello che sporge — `(1lh -
+   --tastino-alto) / 2` — i tasti escono sopra e sotto dentro il `gap: 10px`
+   della testata, che c'è comunque, e la riga resta alta come il testo.
+   ERA UN -5px BATTUTO A MANO, cioè il risultato di quella sottrazione
+   copiato nel foglio: ritoccando `--tastino-alto` i tasti tornavano ad
+   alzare la riga, e in un numero da solo non c'è scritto da dove viene.
+   Adesso quell'altezza è l'unico numero e la compensazione lo segue.
+   L'ALTEZZA DI RIGA È DICHIARATA perché `1lh` la legge da qui: lasciata a
+   `normal` dipenderebbe dal font di ogni browser, e la stessa sottrazione
+   darebbe un risultato diverso a ogni macchina. */
+.board-sotto .coda-tastini {
+  line-height: 1.5;
+  margin-block: calc((1lh - var(--tastino-alto)) / 2);
 }
 
 /* DUE GEMELLI: il tasto dei filtri e la freccia dell'ordinamento sono
@@ -7371,13 +7410,6 @@ body.pagina-piena .inv-scheda {
   white-space: nowrap;
 }
 
-/* SPENTO MA TOCCABILE: `aria-disabled`, non `disabled`, perché il tocco
-   deve arrivare — è quello che fa uscire l'avviso col motivo. Quindi lo
-   scolorito se lo prende da una classe, che :disabled qui non scatta. */
-.board-cassa.spento {
-  opacity: 0.55;
-}
-
 /* IL BADGE DEL CONTEGGIO NON STA PIÙ QUI. Era nell'angolo del tastino
    quadrato ⚗️ (`.board-icona-conta`); il tasto dei filtri adesso è un
    bottone basso e scritto, e il numero gli sta accanto — vedi
@@ -7721,13 +7753,6 @@ body.pagina-piena .inv-scheda {
   font-size: 0.8rem;
 }
 
-/* LA SCELTA DELLE COLONNE NON HA PIÙ UNA RIGA SUA (`.corsie-scelta`, tolta
-   il 20/08/2026). Era una seconda fila sotto quella dei filtri: chip che
-   aprivano chip, due livelli annidati — «quei filtri devono apparire sulla
-   stessa riga degli altri tasti» (l'utente). Adesso quei tasti si accodano
-   ai fratelli dentro `.chips-filtri` e non hanno bisogno di niente di
-   loro: se non ci stanno, la riga va a capo da sé. */
-
 /* LA SCELTA DELLE UNITÀ DA PREPARARE ADESSO, dentro la comanda: un
    riquadro staccato dalle righe che sta leggendo, o non si capisce dove
    finisce l'elenco e dove comincia la domanda. */
@@ -7768,7 +7793,7 @@ body.pagina-piena .inv-scheda {
    La larghezza dice SE si può, il numero di righe (>= 10, vedi
    RigheCorsia.jsx) dice SE conviene: due righe spezzate in due colonne
    sono peggio di due righe in fila. */
-@container (min-width: 360px) {
+@container card-corsia (min-width: 380px) {
   .corsia-righe-due {
     columns: 2;
     column-gap: 14px;
@@ -7779,13 +7804,16 @@ body.pagina-piena .inv-scheda {
 }
 
 /* Il blocco che tiene insieme righe e tasto: la sfumatura sta sulle RIGHE,
-   il tasto le sta sopra e resta leggibile. Ed è il CONTENITORE su cui si
-   misura la soglia delle due colonne (vedi sopra): la card sa quanto
-   spazio ha, la finestra no. */
+   il tasto le sta sopra e resta leggibile.
+   NON È PIÙ UN CONTENITORE SUO. Ne aveva uno anonimo, dentro la card che è
+   già `card-corsia`: due contenitori annidati per la stessa domanda, con la
+   query sopra — anonima anche lei — agganciata al più vicino senza dirlo.
+   Adesso la soglia porta il nome della card e vale 380px invece di 360:
+   sono gli stessi pixel di righe, più i 20 di imbottitura che la card ha ai
+   fianchi. */
 .corsia-righe-box {
   position: relative;
   min-width: 0;
-  container-type: inline-size;
 }
 .corsia-righe-sfuma {
   padding-bottom: 12px;

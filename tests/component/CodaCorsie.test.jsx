@@ -391,7 +391,12 @@ describe('le corsie di chi guarda la serata (admin)', () => {
     // Spento a vedersi, ma il tocco deve arrivare: è quello che fa uscire
     // il motivo. `disabled` lo mangerebbe.
     expect(tasto).toHaveAttribute('aria-disabled', 'true')
-    expect(tasto).toHaveClass('spento')
+    // LO SCOLORITO SE LO PRENDE DA `aria-disabled`, non da una classe sua:
+    // `.btn[aria-disabled="true"]` vale per tutta la famiglia dei bottoni,
+    // e una `.spento` per la sola cassa era la stessa cosa detta un'altra
+    // volta e con un'opacità diversa (0.55 invece di 0.5), differenza che
+    // nessuno aveva mai deciso.
+    expect(tasto).not.toHaveClass('spento')
     expect(tasto).toHaveAttribute('title', expect.stringMatching(/^Chiudi \d+ cont/))
 
     // LA RIGA C'È, ED È SOTTO QUEL TASTO: nella stessa colonna, non in
@@ -556,7 +561,7 @@ describe('le corsie di chi guarda la serata (admin)', () => {
     montaCoda()
     await screen.findByText('In corso')
     const tasto = screen.getByRole('button', { name: 'Comande' })
-    expect(tasto.closest('.chips-row')).toBe(null)
+    expect(tasto.closest('.chips-filtri')).toBe(null)
     expect(tasto.closest('.board-actions')).toBeTruthy()
     // stessa famiglia di 📟 e ↕: quadrato piccolo, solo icona
     expect(tasto).toHaveClass('board-icona')
@@ -591,7 +596,7 @@ describe('le corsie di chi guarda la serata (admin)', () => {
     await screen.findByText(/In servizio/)
     await apriFiltri(utente)
 
-    const riga = screen.getByRole('button', { name: 'Aperti' }).closest('.chips-row')
+    const riga = screen.getByRole('button', { name: 'Aperti' }).closest('.chips-filtri')
     const conteggi = riga.closest('.board-sotto')
     expect(conteggi).toBeTruthy()
     expect(within(conteggi).getByText(/apert/)).toBeInTheDocument()
@@ -603,7 +608,7 @@ describe('le corsie di chi guarda la serata (admin)', () => {
     // e fuori dalla testata non resta nessuna riga di pastiglie
     const testata = document.querySelector('.board-head')
     expect(
-      [...document.querySelectorAll('.chips-row')].filter((r) => !testata.contains(r))
+      [...document.querySelectorAll('.chips-row, .chips-filtri')].filter((r) => !testata.contains(r))
     ).toHaveLength(0)
   })
 
@@ -753,7 +758,7 @@ describe('la fila dei filtri sta dietro il tastino ⚗️, nella riga sotto', ()
     await screen.findByText(/In servizio/)
 
     await apriFiltri(utente)
-    const riga = screen.getByRole('button', { name: 'Aperti' }).closest('.chips-row')
+    const riga = screen.getByRole('button', { name: 'Aperti' }).closest('.chips-filtri')
     for (const nome of ['Aperti', /Chiusi/, /Annullati/, /Staff/]) {
       // IN UNA RIGA, non in una tendina sopra la coda: si toccano a raffica
       // mentre si lavora, e un pannello coprirebbe quello che si guarda
@@ -768,7 +773,7 @@ describe('la fila dei filtri sta dietro il tastino ⚗️, nella riga sotto', ()
     // e la coda sotto non ha guadagnato una riga di pastiglie tutta sua
     const testata = document.querySelector('.board-head')
     expect(
-      [...document.querySelectorAll('.chips-row')].filter((r) => !testata.contains(r))
+      [...document.querySelectorAll('.chips-row, .chips-filtri')].filter((r) => !testata.contains(r))
     ).toHaveLength(0)
 
     await apriFiltri(utente)
@@ -903,13 +908,13 @@ describe('la fila dei filtri sta dietro il tastino ⚗️, nella riga sotto', ()
     await screen.findByText('Da fare')
 
     // Chiusa: nessuna riga di pastiglie, come prima.
-    expect(document.querySelectorAll('.chips-row')).toHaveLength(0)
+    expect(document.querySelectorAll('.chips-row, .chips-filtri')).toHaveLength(0)
 
     await apriFiltri(utente)
     // UNA SOLA RIGA, e le colonne sono già lì dentro — senza secondo tocco.
     // (Se non ci stanno va a capo da sé: è il capo naturale del flusso,
     // non un livello in più.)
-    const righe = document.querySelectorAll('.chips-row')
+    const righe = document.querySelectorAll('.chips-row, .chips-filtri')
     expect(righe).toHaveLength(1)
     const riga = righe[0]
     // Tutte quante, non una: sono i chip che stavano dietro il tasto.
@@ -940,7 +945,7 @@ describe('la fila dei filtri sta dietro il tastino ⚗️, nella riga sotto', ()
 
     // chiusa la fila se ne va tutto: chip dei filtri E chip delle colonne
     await apriFiltri(utente)
-    expect(document.querySelectorAll('.chips-row')).toHaveLength(0)
+    expect(document.querySelectorAll('.chips-row, .chips-filtri')).toHaveLength(0)
   })
 
   // ── SUL TELEFONO NON FINISCONO DENTRO IL ⋯ ──────────────────────
@@ -1433,7 +1438,7 @@ describe('le corsie del banco: una card per comanda', () => {
     await screen.findByText('Da fare')
     await apriFiltri(utente)
 
-    const riga = screen.getByRole('button', { name: /Staff/ }).closest('.chips-row')
+    const riga = screen.getByRole('button', { name: /Staff/ }).closest('.chips-filtri')
     const conteggi = riga.closest('.board-sotto')
     // Dentro la testata, appesi alla riga dei conteggi — non un livello
     // suo fra i conteggi e le colonne.
@@ -1446,7 +1451,7 @@ describe('le corsie del banco: una card per comanda', () => {
     // quella che costava il livello in più.
     const testata = document.querySelector('.board-head')
     expect(
-      [...document.querySelectorAll('.chips-row')].filter((r) => !testata.contains(r))
+      [...document.querySelectorAll('.chips-row, .chips-filtri')].filter((r) => !testata.contains(r))
     ).toHaveLength(0)
   })
 
@@ -1465,7 +1470,7 @@ describe('le corsie del banco: una card per comanda', () => {
     const fila = document.querySelector('.chips-filtri')
     await utente.click(within(fila).getByRole('button', { name: 'Serviti/Ritirati' }))
     expect(corsia('ritirati')).toBeFalsy()
-    expect(document.querySelectorAll('.chips-row')).toHaveLength(1)
+    expect(document.querySelectorAll('.chips-row, .chips-filtri')).toHaveLength(1)
   })
 
   // ── INCASSARE NON FA SPARIRE I DRINK DA FARE (BUG-023) ───────────
