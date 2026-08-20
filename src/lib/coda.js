@@ -300,13 +300,44 @@ export function contaFiltri(attivi = []) {
   return (attivi || []).filter(Boolean).length
 }
 
-// Il perché per esteso, che sta nel `title` e non ruba larghezza: da chiuso
-// dice cosa c'è acceso, da aperto come si richiude.
+// IL NOME DEL TASTO È QUELLO CHE IL TASTO FA. «"Filtra la coda" non va bene,
+// deve essere "mostra filtri"» (l'utente, 20/08). Il tasto non filtra: apre
+// e chiude la fila dei filtri, e si chiama con quel gesto — a filtrare sono
+// le pastiglie che compaiono, una per una.
+//
+// L'ELENCO DI COSA È ACCESO resta accodato al nome, da chiuso: chiusa la
+// fila è l'unica cosa che dice QUALI filtri stanno lavorando. Sul tastino ci
+// sta solo il numero (`contaFiltri`, 44px); qui i nomi, che nel title
+// larghezza non ne costano.
 export function spiegaFiltri(attivi = [], aperti = false) {
   const accesi = (attivi || []).filter(Boolean)
-  if (aperti) return 'Nascondi i filtri'
-  if (accesi.length === 0) return 'Filtra la coda'
-  return `Filtri accesi: ${accesi.join(', ')} — tocca per cambiarli`
+  if (aperti) return 'Nascondi filtri'
+  if (accesi.length === 0) return 'Mostra filtri'
+  return `Mostra filtri — accesi: ${accesi.join(', ')}`
+}
+
+// ── IL VERSO DELLA CODA, IN UNA FRECCIA E TRE PAROLE ─────────────────
+//
+// «Questo testo è completamente insensato. Cioè basta scrivere Prima i più
+// recenti/vecchi in base all'ordinamento attuale. E cambia anche l'icona
+// (freccia giù freccia sopra)» (l'utente, 20/08). Diceva «Adesso: prima gli
+// ultimi — tocca per partire dai primi»: due frasi in una — com'è messa la
+// coda e cosa succede a premere — e al banco non se ne legge nessuna.
+//
+// QUI IL TASTO DICE DOVE SEI, NON DOVE PORTA, ed è una scelta esplicita.
+// La regola opposta (docs/navigazione.md) vale per il cambio vista, dove
+// «Comande» acceso e «Comande» spento si distinguono solo guardando la
+// lista sotto. Un ordinamento invece si legge dalla coda stessa: quello che
+// manca è il nome di com'è messa adesso, e quello ci si scrive.
+//
+// LA FRECCIA SEGUE IL VERSO IN CUI SI SCORRE LA CODA: giù si parte dai più
+// recenti e si scende verso i vecchi, su si parte dai più vecchi e si sale
+// verso gli ultimi arrivati. Il «↕» di prima era identico nei due stati —
+// diceva «qui si ordina», non come.
+export function spiegaOrdine(desc = true) {
+  return desc
+    ? { nome: 'Prima i più recenti', icona: '↓' }
+    : { nome: 'Prima i più vecchi', icona: '↑' }
 }
 
 // ── LA VOCE DELLA CASSA NEL MENU DELLA CODA ──────────────────────────

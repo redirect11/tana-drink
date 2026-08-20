@@ -1790,6 +1790,27 @@ body.fullbleed .bar-content {
   min-width: 0;
 }
 
+/* ── I DUE TASTINI DELLA FILA DEI FILTRI ─────────────────────────────
+   «⚗️» e la freccia dell'ordinamento stanno QUI, non in testata: «spostala
+   da lì, mettila sotto dove stavano i vecchi bottoni. Rimetti lì giù anche
+   il tasto dei filtri» (l'utente, 20/08). Da chiusa la fila è solo loro
+   due — bassa quanto un tastino — e aprendola i chip compaiono di fianco,
+   nella stessa riga.
+   NON SCORRONO VIA COI CHIP: la fila scorre in orizzontale quando le
+   pastiglie non ci stanno (in griglia sono sei), e il tasto che l'ha
+   aperta finirebbe fuori schermo insieme a loro — per richiuderla si
+   dovrebbe prima riportare indietro la riga. Restano incollati a sinistra
+   col fondo della pagina sotto, o i chip si vedrebbero passare dietro. */
+.chips-tastini {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  display: inline-flex;
+  gap: 6px;
+  flex-shrink: 0;
+  background: var(--bg);
+}
+
 /* SUL TELEFONO NO. Lì la riga dei conteggi è già piena — conti, avviso
    della ricerca, legenda — e infilarci anche i filtri li spingerebbe a
    capo appiccicati al testo, oppure a destra, dove nessuno li cerca.

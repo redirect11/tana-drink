@@ -68,6 +68,7 @@ import {
   NOME_SOTTOFILTRO,
   contaFiltri,
   spiegaFiltri,
+  spiegaOrdine,
 } from '../lib/coda.js'
 import { StoriaOrdineDialog, RipristinaOrdineDialog } from '../components/StoriaOrdine.jsx'
 import { useTelefono } from '../lib/useTelefono.js'
@@ -1480,12 +1481,18 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // aggiungere un nuovo tasto. Lo spazio da risparmiare è in altezza non in
   // larghezza» (l'utente, 20/08): la pastiglia «⚗️ Filtri» teneva in piedi
   // da sola una riga intera che, a filtri chiusi, non aveva altro da
-  // mostrare. Adesso è un'icona quadrata in testata — la famiglia di 📟 e
-  // ↕ — e la riga dei chip, da chiusa, sparisce del tutto.
+  // mostrare. Adesso è un'icona quadrata, solo icona, e i chip stanno
+  // dietro di lei.
   //
-  // MA LO STATO RESTA VISIBILE: quando c'è qualcosa di acceso il tastino si
-  // accende e porta il NUMERO dei filtri. In 44px non ci sta un nome, ci
-  // sta una cifra — e quali siano lo dice il title, dove il posto c'è.
+  // STA NELLA RIGA SOTTO, NON IN TESTATA. C'era salita col giro di prima, e
+  // l'utente l'ha rimandata giù: «Rimetti lì giù anche il tasto dei filtri»
+  // (20/08). È il posto dove stavano i vecchi bottoni, ed è il posto dove
+  // compaiono i chip che apre: tasto e sua fila nella stessa riga, invece di
+  // un tasto in una zona e il suo effetto in un'altra.
+  //
+  // LO STATO RESTA VISIBILE ANCHE DA CHIUSO: quando c'è qualcosa di acceso
+  // il tastino si accende e porta il NUMERO dei filtri. In 44px non ci sta
+  // un nome, ci sta una cifra — e quali siano lo dice il title.
   const quantiFiltri = contaFiltri(filtriAccesi)
   const tastoFiltri = (
     <button
@@ -1503,6 +1510,26 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
     </button>
   )
 
+  // IL VERSO DELLA CODA. Anche lui è sceso dalla testata: «cambia anche
+  // l'icona (freccia giù freccia sopra) e spostala da lì, mettila sotto
+  // dove stavano i vecchi bottoni» (l'utente, 20/08).
+  //
+  // NOME E ICONA VENGONO DA `spiegaOrdine`, insieme: erano due ternari
+  // scritti a mano in due punti — la testata e il ⋯ — e già divergevano.
+  // Adesso è una regola sola, provata a unità, e dice DOVE SEI: «Prima i
+  // più recenti» / «Prima i più vecchi» (il perché sta in coda.js).
+  const verso = spiegaOrdine(ordineDesc)
+  const tastoOrdine = (
+    <button
+      className="btn ghost small board-icona"
+      onClick={cambiaOrdine}
+      title={verso.nome}
+      aria-label={verso.nome}
+    >
+      {verso.icona}
+    </button>
+  )
+
   // ── LA FILA DEI FILTRI: UNA SOLA, PER TUTTE E QUATTRO LE VISTE ───────
   //
   // «I filtri e tutti i bottoni li voglio a scomparsa, con un tasto che non
@@ -1516,22 +1543,33 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // mentre si lavora, e un pannello sopra la coda coprirebbe proprio quello
   // che si sta guardando per decidere che filtro serve.
   //
-  // DENTRO CI VA SOLO QUELLO CHE RESTRINGE LA LISTA. Il cambio vista sta
-  // FUORI, in testata (docs/navigazione.md): non filtra, cambia quello che
-  // si guarda — e nasconderlo vorrebbe dire due tocchi per una cosa che ne
-  // vale uno. Il «＋» sta nella testata e non c'entra affatto: crea.
+  // DENTRO CI VA SOLO QUELLO CHE RESTRINGE LA LISTA, più i due tastini che
+  // la governano. Il cambio vista sta FUORI, in testata
+  // (docs/navigazione.md): non filtra, cambia quello che si guarda — e
+  // l'utente non ha chiesto di spostarlo. Il «＋» sta nella testata e non
+  // c'entra affatto: crea.
   //
-  // DA CHIUSA LA RIGA NON C'È PROPRIO. «Lo spazio da risparmiare è in
-  // altezza non in larghezza» (l'utente, 20/08): una riga con dentro la
-  // sola pastiglia «Filtri» costava tutta l'altezza di prima per non
-  // mostrare niente. Adesso il tasto che la apre sta in testata, e qui —
-  // chiusa — non resta nemmeno il contenitore.
-  const filaFiltri = (filtri, style) =>
-    filtriVisibili ? (
-      <div className="chips-row chips-lavagna" style={style}>
-        {filtri}
-      </div>
-    ) : null
+  // DA CHIUSA LA RIGA C'È LO STESSO, ED È PICCOLA. Il giro di prima l'aveva
+  // fatta sparire del tutto portando i tastini in testata; l'utente li ha
+  // rimandati giù — «spostala da lì, mettila sotto dove stavano i vecchi
+  // bottoni. Rimetti lì giù anche il tasto dei filtri» (20/08). Quindi da
+  // chiusa resta una riga di DUE tastini, non la fila di pastiglie di
+  // prima: sulla lavagna è la riga dei conteggi, che c'era comunque, e i
+  // tastini ci si appoggiano a destra senza aggiungerne una.
+  //
+  // I DUE TASTINI STANNO IN UN GRUPPO SUO, che non scorre via: la fila
+  // scorre in orizzontale quando i chip non ci stanno (in griglia sono sei),
+  // e il tasto che l'ha aperta se ne andrebbe fuori schermo con loro — per
+  // richiuderla toccherebbe prima riportare indietro la riga.
+  const filaFiltri = (filtri, style) => (
+    <div className="chips-row chips-lavagna" style={style}>
+      <span className="chips-tastini">
+        {tastoFiltri}
+        {tastoOrdine}
+      </span>
+      {filtriVisibili ? filtri : null}
+    </div>
+  )
 
   // ── I FILTRI DELLE CORSIE, SULLA RIGA DEI CONTEGGI ──────────────
   //
@@ -2261,42 +2299,31 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
               <button
                 className={`btn ghost small board-pannelli${showPanels ? ' active' : ''}`}
                 onClick={() => setMenuBoard(true)}
-                title="Altro: pannelli e ordinamento"
+                title="Altro: pannelli e cassa"
                 aria-label="Altro"
               >
                 ⋯
               </button>
             ) : (
-              <>
-                <button
-                  className={`btn ghost small board-icona${showPanels ? ' active' : ''}`}
-                  onClick={() => setShowPanels((v) => !v)}
-                  title={showPanels ? 'Nascondi i pannelli' : 'Chiamate staff e gruppi'}
-                  aria-label={showPanels ? 'Nascondi i pannelli' : 'Chiamate staff e gruppi'}
-                  aria-pressed={showPanels}
-                >
-                  📟
-                </button>
-                <button
-                  className="btn ghost small board-icona"
-                  onClick={cambiaOrdine}
-                  title={
-                    ordineDesc
-                      ? 'Adesso: prima gli ultimi — tocca per partire dai primi'
-                      : 'Adesso: prima i primi della serata — tocca per partire dagli ultimi'
-                  }
-                  aria-label={ordineDesc ? 'Ordina dal meno recente' : 'Ordina dal più recente'}
-                >
-                  ↕
-                </button>
-              </>
+              <button
+                className={`btn ghost small board-icona${showPanels ? ' active' : ''}`}
+                onClick={() => setShowPanels((v) => !v)}
+                title={showPanels ? 'Nascondi i pannelli' : 'Chiamate staff e gruppi'}
+                aria-label={showPanels ? 'Nascondi i pannelli' : 'Chiamate staff e gruppi'}
+                aria-pressed={showPanels}
+              >
+                📟
+              </button>
             )}
-            {/* QUESTI DUE RESTANO IN TESTATA ANCHE SUL TELEFONO, accanto al
-                ⋯ e non dentro: filtrare la coda e passare dai conti alle
-                comande si fanno DURANTE il servizio, decine di volte, e non
-                sono «cose che si fanno ogni tanto». Dentro il ⋯ sarebbero
-                due tocchi ciascuno. */}
-            {tastoFiltri}
+            {/* IL CAMBIO VISTA RESTA QUASSÙ ANCHE SUL TELEFONO, accanto al
+                ⋯ e non dentro: passare dai conti alle comande si fa
+                DURANTE il servizio, decine di volte, e non è una «cosa che
+                si fa ogni tanto». Dentro il ⋯ sarebbero due tocchi.
+                FILTRI E ORDINAMENTO NO, sono scesi nella riga sotto — «e
+                spostala da lì, mettila sotto dove stavano i vecchi
+                bottoni. Rimetti lì giù anche il tasto dei filtri»
+                (l'utente, 20/08) — e lì stanno anche sul telefono, che dal
+                ⋯ sarebbero due posti per la stessa cosa. */}
             {tastoVista}
             {!telefono &&
               (() => {
@@ -2448,13 +2475,11 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             hint: 'Il cerca-persone e i gruppi aperti',
             onClick: () => setShowPanels((v) => !v),
           },
-          {
-            id: 'ordine',
-            icon: '↕',
-            label: ordineDesc ? 'Ordina dal meno recente' : 'Ordina dal più recente',
-            hint: ordineDesc ? 'Adesso: prima gli ultimi' : 'Adesso: prima i primi della serata',
-            onClick: cambiaOrdine,
-          },
+          // L'ORDINAMENTO NON STA PIÙ QUI. È sceso nella riga sotto la
+          // testata, insieme al tastino dei filtri, e ci sta anche sul
+          // telefono: tenerlo pure nel ⋯ sarebbero due posti per la stessa
+          // cosa — e due tocchi, invece di uno, per girare la coda.
+          //
           // La voce della cassa (apri/chiudi, o niente per la sala) sta in
           // coda.js: è una regola, e le regole si provano.
           (() => {
@@ -2521,12 +2546,11 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
 
       {!lavagna && (
         <>
-          {/* I DUE TASTINI STANNO IN RIGA CON LA RICERCA. Nelle lavagne
-              vivono in testata, accanto alla ricerca: qui la testata non
-              c'è, e appenderli a una riga loro costerebbe l'altezza che
-              questo giro serve a restituire alla lista. Stesso posto
-              relativo — a fianco del campo — così chi cambia vista li
-              ritrova dov'erano. */}
+          {/* IL CAMBIO VISTA STA IN RIGA CON LA RICERCA. Nelle lavagne vive
+              in testata accanto al campo; qui la testata non c'è, e questa
+              è la riga che le somiglia di più — così chi cambia vista lo
+              ritrova nello stesso posto relativo. Filtri e ordinamento
+              stanno invece nella riga sotto, come sulle lavagne. */}
           <div className="coda-cerca-riga">
             <input
               type="search"
@@ -2535,7 +2559,6 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-            {tastoFiltri}
             {tastoVista}
           </div>
           {avvisoRicerca && (
@@ -2543,7 +2566,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
               {avvisoRicerca}
             </p>
           )}
-          {/* STESSA FILA DELLE LAVAGNE, stesso tastino: qui i filtri sono
+          {/* STESSA FILA DELLE LAVAGNE, stessi due tastini: qui i chip sono
               uno solo, ma un meccanismo che vale in tre viste su quattro
               è una cosa da imparare due volte. */}
           {filaFiltri(pastigliaMiei, { margin: '8px 0 12px' })}

@@ -19,6 +19,7 @@ import {
   corsieDiverseDalNormale,
   contaFiltri,
   spiegaFiltri,
+  spiegaOrdine,
 } from '../../src/lib/coda.js'
 
 const orders = [
@@ -1478,17 +1479,62 @@ describe('contaFiltri', () => {
   })
 })
 
+// IL NOME È QUELLO CHE IL TASTO FA. «"Filtra la coda" non va bene, deve
+// essere "mostra filtri"» (l'utente, 20/08): il tasto apre e chiude un
+// pannello, non filtra — a filtrare sono i chip che compaiono, uno per uno.
 describe('spiegaFiltri', () => {
   it('aperta, dice come si richiude', () => {
-    expect(spiegaFiltri(['Chiusi'], true)).toBe('Nascondi i filtri')
+    expect(spiegaFiltri(['Chiusi'], true)).toBe('Nascondi filtri')
   })
 
-  it('chiusa e pulita, dice a cosa serve', () => {
-    expect(spiegaFiltri([], false)).toBe('Filtra la coda')
+  it('chiusa e pulita, dice il gesto che fa: mostrare i filtri', () => {
+    expect(spiegaFiltri([], false)).toBe('Mostra filtri')
   })
 
-  // PER ESTESO STANNO QUI, che il title larghezza non ne costa.
-  it('chiusa con roba accesa, li elenca tutti', () => {
-    expect(spiegaFiltri(['Chiusi', 'Miei'], false)).toContain('Chiusi, Miei')
+  // PER ESTESO STANNO QUI, che il title larghezza non ne costa — ma DOPO il
+  // nome del tasto, che resta la prima cosa che si legge.
+  it('chiusa con roba accesa, li elenca tutti dopo il nome', () => {
+    const t = spiegaFiltri(['Chiusi', 'Miei'], false)
+    expect(t.startsWith('Mostra filtri')).toBe(true)
+    expect(t).toContain('Chiusi, Miei')
+  })
+})
+
+// ── IL VERSO DELLA CODA: STATO, NON PROMESSA ────────────────────────
+//
+// «Questo testo è completamente insensato [«Adesso: prima gli ultimi —
+// tocca per partire dai primi»]. Cioè basta scrivere Prima i più
+// recenti/vecchi in base all'ordinamento attuale. E cambia anche l'icona
+// (freccia giù freccia sopra)» (l'utente, 20/08).
+//
+// QUI il tasto dice DOVE SEI, ed è voluto: un ordinamento si legge dalla
+// coda stessa, e quello che manca è il nome di com'è messa. La regola
+// opposta di docs/navigazione.md vale per il CAMBIO VISTA, dove le due
+// facce non si distinguono senza guardare la lista sotto.
+describe('spiegaOrdine', () => {
+  it('dal più recente: lo dice, e la freccia scende verso i vecchi', () => {
+    expect(spiegaOrdine(true)).toEqual({ nome: 'Prima i più recenti', icona: '↓' })
+  })
+
+  it('dal più vecchio: lo dice, e la freccia sale verso gli ultimi arrivati', () => {
+    expect(spiegaOrdine(false)).toEqual({ nome: 'Prima i più vecchi', icona: '↑' })
+  })
+
+  // NIENTE «ADESSO:» E NIENTE «TOCCA PER…»: erano due frasi in una, e al
+  // banco non se ne leggeva nessuna.
+  it('è una frase sola, senza premesse e senza promesse', () => {
+    for (const desc of [true, false]) {
+      const { nome } = spiegaOrdine(desc)
+      expect(nome).not.toMatch(/Adesso|tocca per|—/i)
+    }
+  })
+
+  // L'ICONA CAMBIA COL VERSO. Il «↕» di prima era identico nei due stati:
+  // diceva «qui si ordina», non come.
+  it('le due icone sono diverse, e nessuna delle due è il «↕»', () => {
+    const giu = spiegaOrdine(true).icona
+    const su = spiegaOrdine(false).icona
+    expect(giu).not.toBe(su)
+    expect([giu, su]).not.toContain('↕')
   })
 })
