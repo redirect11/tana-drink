@@ -19,6 +19,7 @@ import {
   setOrderColore,
   segnalaPresenza,
   subscribePresenze,
+  segnaComandaStampata,
 } from '../lib/api.js'
 import { getPushToken } from '../lib/push.js'
 import { logoutStaff } from '../lib/logout.js'
