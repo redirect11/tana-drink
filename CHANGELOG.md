@@ -4,6 +4,14 @@
 
 ### Per chi gestisce
 
+- **Niente più «Invalid Date» sopra un gruppo di conti.** Un conto di cui
+  non si riusciva a leggere la data finiva sotto un'intestazione che diceva
+  proprio così. Adesso la data si cerca in **tutte** le date che il conto si
+  porta dietro — quella scritta alla nascita, l'ora del server, l'apertura
+  segnata dal tablet — e il conto finisce sotto **il suo giorno**. Se
+  davvero non ce n'è nessuna, il conto sta **sotto oggi**, dove chi lavora
+  lo vede: nessuna etichetta inventata.
+
 - **Fra i conti chiusi non c'è più scritto «Da chiudere».** La riga che
   separa i giorni scorsi diceva **«⏳ Da chiudere · ieri»** in ogni scheda,
   anche sopra conti pagati e chiusi — e si andava a cercare cosa mancasse su

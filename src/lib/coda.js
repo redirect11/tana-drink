@@ -23,6 +23,9 @@ import {
   motivoAnnullo,
   ORDER_OPEN,
 } from './comande.js'
+// La giornata commerciale di un conto: la regola del taglio delle 5 sta
+// tutta lì dentro, qui si sceglie solo QUALE data guardare.
+import { businessDayKey, DEFAULT_CUTOFF_HOUR } from './businessDay.js'
 
 // Smista gli ordini negli stati di lavorazione della COMANDA ATTIVA
 // (workflow_status; esclude gli annullati).
@@ -772,6 +775,66 @@ export function corsieVisibili(corsie, nascoste = []) {
 // rimandato a mano) la colonna compare da sé. IL LAVORO NON SI NASCONDE
 // MAI, e a mostrarlo è l'app — non una voce di menu che l'utente deve
 // trovare.
+// ── DI CHE GIORNATA È QUESTO CONTO ───────────────────────────────────
+//
+// La data di un conto ESISTE SEMPRE, e la scrive il client: `order_date` è
+// la giornata commerciale calcolata dall'orologio di chi batte, messa sul
+// documento nell'istante in cui il conto nasce (api.js, creaOrdine). Non è
+// mai `null`, non aspetta il server, e vale anche offline.
+//
+// Ma un documento può arrivare monco — importato da un sistema vecchio,
+// nato da una strada che non passava di qui, o semplicemente rimasto
+// indietro di qualche versione — e allora si ripiega su TUTTE le altre
+// date locali che quel conto si porta dietro, in ordine di attendibilità:
+//
+//   1. `order_date`, la giornata scritta alla nascita;
+//   2. `created_at`, l'orario del server (null finché la scrittura è per
+//      strada, quindi non può essere il primo);
+//   3. l'APERTURA scritta dal client (`status_times.aperto` sul conto, che
+//      mapOrder porta in `tempi_conto`): è un ISO dell'orologio di qui,
+//      c'è dal primo istante;
+//   4. la nascita della prima comanda, anch'essa scritta dal client.
+//
+// Così anche un conto monco finisce sotto IL SUO giorno, non in un limbo.
+export function giornataDelConto(o, cutoffHour = DEFAULT_CUTOFF_HOUR) {
+  if (!o) return null
+  // `?? null` NON È DECORAZIONE: businessDayKey ha un valore di riserva —
+  // `new Date()` — e passandogli `undefined` risponderebbe OGGI. Un campo
+  // che manca diventerebbe «oggi» invece di «non lo so», e il ripiego dopo
+  // non verrebbe nemmeno provato.
+  const giorno = (quando) => businessDayKey(quando ?? null, cutoffHour)
+  return (
+    o.order_date ||
+    giorno(o.created_at) ||
+    giorno(o.tempi_conto?.[ORDER_OPEN]) ||
+    giorno(o.status_times?.[ORDER_OPEN]) ||
+    giorno((o.comande || [])[0]?.created_at) ||
+    null
+  )
+}
+
+// Raggruppa i conti per giornata: oggi in cima, poi i giorni scorsi dal più
+// recente. Serve a separare con una riga i conti rimasti indietro.
+//
+// IL SEGNAPOSTO «—» NON ESISTE PIÙ. I conti senza data finivano in un
+// gruppo con quel trattino per chiave, e la chiave del gruppo è la stessa
+// cosa che poi va al formattatore delle date: `new Date('—T00:00:00')` non
+// è una data, e in cima al gruppo si leggeva «Invalid Date». Se dopo tutti
+// i ripieghi la data proprio non c'è — documento monco, caso patologico —
+// il conto va sotto OGGI: lì chi lavora lo vede, e non gli si racconta
+// niente che non sia vero.
+export function raggruppaPerGiornata(lista, { giornataDi, oggi }) {
+  const map = new Map()
+  for (const o of lista || []) {
+    const k = giornataDi(o) || oggi
+    if (!map.has(k)) map.set(k, [])
+    map.get(k).push(o)
+  }
+  return [...map.entries()]
+    .sort((a, b) => (a[0] === oggi ? -1 : b[0] === oggi ? 1 : b[0].localeCompare(a[0])))
+    .map(([day, orders]) => ({ day, orders }))
+}
+
 // ── L'INTESTAZIONE DI UNA GIORNATA IN CODA ───────────────────────────
 //
 // La coda separa i conti per giornata: oggi in cima, poi i giorni scorsi

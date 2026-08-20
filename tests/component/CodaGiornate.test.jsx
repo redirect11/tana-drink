@@ -252,3 +252,50 @@ describe('la riga che separa le giornate', () => {
     expect(separatori()).toEqual(['📅 ieri'])
   })
 })
+
+// «Invalid Date» COME INTESTAZIONE DI GRUPPO (BUG-060).
+//
+// I conti senza data leggibile finivano in un gruppo con un trattino per
+// chiave, e la chiave del gruppo è la stessa cosa che va al formattatore
+// delle date: in cima al gruppo si leggeva «Invalid Date». Adesso la data
+// si cerca in tutte le date locali che il conto si porta dietro, e se
+// proprio non c'è il conto va sotto oggi — senza etichette inventate.
+describe('un conto con la data monca', () => {
+  it('non stampa mai «Invalid Date» in cima a un gruppo', async () => {
+    ordini = [
+      ...ordini,
+      conto({ id: 'monco', daily_number: 99, order_date: null, created_at: null, comande: [] }),
+    ]
+    montaCoda()
+    await screen.findByText('#99')
+    expect(document.body.textContent).not.toMatch(/Invalid Date/)
+  })
+
+  it('senza nessuna data va sotto oggi, dove chi lavora lo vede', async () => {
+    ordini = [
+      conto({ id: 'monco', daily_number: 99, order_date: null, created_at: null, comande: [] }),
+    ]
+    montaCoda()
+    await screen.findByText('#99')
+    // sotto oggi non c'è nessuna riga di separazione: è il gruppo in cima
+    expect(separatori()).toEqual([])
+  })
+
+  it('ma se una data locale c’è, il conto finisce sotto IL SUO giorno', async () => {
+    // `order_date` manca e `created_at` non è ancora arrivato dal server:
+    // resta l'apertura, che l'orologio di qui ha scritto alla nascita.
+    ordini = [
+      conto({
+        id: 'monco',
+        daily_number: 99,
+        order_date: null,
+        created_at: null,
+        comande: [],
+        tempi_conto: { aperto: IERI_SERA },
+      }),
+    ]
+    montaCoda()
+    await screen.findByText('#99')
+    expect(separatori()).toEqual(['⏳ Da chiudere · ieri'])
+  })
+})
