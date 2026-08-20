@@ -1100,6 +1100,18 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // finiva dritto nel formattatore delle date e in cima al gruppo si
   // leggeva «Invalid Date».
   const groupByDay = (list) => raggruppaPerGiornata(list, { giornataDi: dayOf, oggi: oggiKey })
+  // LA RIGA SOPRA UN GIORNO SCORSO. Sotto oggi non ci va: i conti di
+  // stasera sono il caso normale e non hanno bisogno di essere annunciati.
+  // Cosa c'è scritto lo decide la scheda aperta (intestazioneGiornata): fra
+  // i chiusi «Da chiudere» era una bugia. La lista ne ha una sola, i conti
+  // IN CORSO, e passa 'attivi'.
+  const separatoreGiornata = (day, filtro) =>
+    day === oggiKey ? null : (
+      <div className="day-sep">
+        {intestazioneGiornata(filtro, businessDayLabel(day, new Date(), cutoffHour))}
+      </div>
+    )
+
   const ordersOggi = effOrders.filter((o) => !arretratiIds.has(o.id))
   const ordersInVista = soloOggi ? ordersOggi : effOrders
   // RIEPILOGO DI TESTATA: conta ESATTAMENTE i conti che si vedono in coda,
@@ -1380,6 +1392,19 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
     </button>
   ) : null
 
+  // «SOLO I MIEI»: c'è in tutte le viste della coda, ed è sempre la stessa
+  // — scritta tre volte, era già divergente su un titolo. Sta qui una volta
+  // e si appende dove serve, come la pastiglia del cambio vista.
+  const pastigliaMiei = (
+    <button
+      className={`chip ${soloMiei ? 'active' : ''}`}
+      onClick={() => setSoloMiei((v) => !v)}
+      title="Solo i conti inseriti da te"
+    >
+      ✍️ Miei
+    </button>
+  )
+
   // ── I FILTRI DELLE CORSIE, SULLA RIGA DEI CONTEGGI ──────────────────
   //
   // Erano una riga a sé fra i conteggi e le testate delle colonne: tre
@@ -1400,13 +1425,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // quello che i filtri fanno: cambia solo dove stanno.
   const filtriCorsie = (
     <div className="chips-row chips-lavagna">
-      <button
-        className={`chip ${soloMiei ? 'active' : ''}`}
-        onClick={() => setSoloMiei((v) => !v)}
-        title="Solo i conti inseriti da te"
-      >
-        ✍️ Miei
-      </button>
+      {pastigliaMiei}
       {/* QUALI COLONNE TENERE A SCHERMO. A metà serata chi sta allo
           shaker guarda «Da fare» e «Al banco», e le altre due gli
           mangiano mezzo schermo per roba che in quel momento non lo
@@ -1469,13 +1488,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
           {label}
         </button>
       ))}
-      <button
-        className={`chip ${soloMiei ? 'active' : ''}`}
-        onClick={() => setSoloMiei((v) => !v)}
-        title="Solo i conti inseriti da te"
-      >
-        ✍️ Miei
-      </button>
+      {pastigliaMiei}
       {/* C'ERA UN «NASCONDI PAGATI», E NON SERVE PIÙ. Serviva a togliere
           dagli occhi i conti già incassati ma non ancora serviti, perché
           restavano in mezzo a quelli in corso: adesso un conto pagato è
@@ -2382,13 +2395,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             </p>
           )}
           <div className="chips-row" style={{ margin: '8px 0 12px' }}>
-            <button
-              className={`chip ${soloMiei ? 'active' : ''}`}
-              onClick={() => setSoloMiei((v) => !v)}
-              title="Solo i conti inseriti da te"
-            >
-              ✍️ Miei
-            </button>
+            {pastigliaMiei}
             {pastigliaComande}
           </div>
         </>
@@ -2429,17 +2436,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
           )}
           {boardGroups.map(({ day, orders: gOrders }) => (
             <div key={day}>
-              {day !== oggiKey && (
-                <div className="day-sep">
-                  {/* L'ETICHETTA DIPENDE DALLA SCHEDA (BUG-059). Fra i
-                      chiusi «Da chiudere» era una bugia: quei conti sono
-                      pagati e chiusi. */}
-                  {intestazioneGiornata(
-                    boardFilter,
-                    businessDayLabel(day, new Date(), cutoffHour)
-                  )}
-                </div>
-              )}
+              {separatoreGiornata(day, boardFilter)}
               <div className="order-grid">
                 {gOrders.map(renderGridCard)}
                 {day === oggiKey && pend.pending.map(renderPendingCard)}
@@ -2603,17 +2600,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
           {inCorso.length === 0 && <div className="empty">Nessun ordine in corso.</div>}
           {groupByDay(inCorso).map(({ day, orders: gOrders }) => (
             <div key={day}>
-              {day !== oggiKey && (
-                <div className="day-sep">
-                  {/* Qui la scheda è una sola — i conti IN CORSO — e di un
-                      conto di ieri ancora aperto c'è una cosa sola da
-                      dire: è rimasto da chiudere. */}
-                  {intestazioneGiornata(
-                    'attivi',
-                    businessDayLabel(day, new Date(), cutoffHour)
-                  )}
-                </div>
-              )}
+              {separatoreGiornata(day, 'attivi')}
               {gOrders.map(renderCard)}
             </div>
           ))}

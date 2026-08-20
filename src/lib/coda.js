@@ -764,17 +764,6 @@ export function corsieVisibili(corsie, nascoste = []) {
   return restano.length > 0 ? restano : corsie || []
 }
 
-// ── LA COLONNA CHE IL LOCALE NON USA ──────────────────────────
-//
-// Col locale che fa nascere le comande già in preparazione, «Da fare» non
-// si riempie: nessuna comanda ci nasce. Sparisce dall'elenco delle colonne
-// che si accendono e spengono a mano — poter accendere una colonna che
-// resterà sempre vuota è un tasto che non fa niente — ma NON è vietata:
-// se una comanda ci finisce lo stesso (riportata indietro prima che il
-// salto fosse acceso, un conto di ieri, una comanda che qualcuno ha
-// rimandato a mano) la colonna compare da sé. IL LAVORO NON SI NASCONDE
-// MAI, e a mostrarlo è l'app — non una voce di menu che l'utente deve
-// trovare.
 // ── DI CHE GIORNATA È QUESTO CONTO ───────────────────────────────────
 //
 // La data di un conto ESISTE SEMPRE, e la scrive il client: `order_date` è
@@ -890,6 +879,17 @@ export function soloCorsieVive(nascoste) {
   return (nascoste || []).filter((id) => ID_CORSIE.has(id))
 }
 
+// ── LA COLONNA CHE IL LOCALE NON USA ──────────────────────────
+//
+// Col locale che fa nascere le comande già in preparazione, «Da fare» non
+// si riempie: nessuna comanda ci nasce. Sparisce dall'elenco delle colonne
+// che si accendono e spengono a mano — poter accendere una colonna che
+// resterà sempre vuota è un tasto che non fa niente — ma NON è vietata:
+// se una comanda ci finisce lo stesso (riportata indietro prima che il
+// salto fosse acceso, un conto di ieri, una comanda che qualcuno ha
+// rimandato a mano) la colonna compare da sé. IL LAVORO NON SI NASCONDE
+// MAI, e a mostrarlo è l'app — non una voce di menu che l'utente deve
+// trovare.
 export function corsieSceglibili(corsie, { passoDiNascita = null } = {}) {
   if (passoDiNascita !== ORDER_STATUSES.IN_PREPARAZIONE) return corsie || []
   return (corsie || []).filter((c) => c.id !== 'da-fare')
