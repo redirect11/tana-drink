@@ -258,9 +258,9 @@ export function passaSottofiltroChiusi(o, sotto = 'tutti') {
 // ── LE SCHEDE DELLA CODA A GRIGLIA ───────────────────────────────────
 //
 // Le quattro cose che si chiedono a una coda di conti. Stavano scritte a
-// mano dentro la pagina; da quando il riassunto del tasto «Filtri» deve
-// dire QUALE scheda è aperta, i nomi servono in due posti — e due elenchi
-// che devono restare uguali sono un elenco solo.
+// mano dentro la pagina; da quando il tasto dei filtri deve dire QUALE
+// scheda è aperta, i nomi servono in due posti — e due elenchi che devono
+// restare uguali sono un elenco solo.
 export const SCHEDE_GRIGLIA = [
   ['attivi', 'In corso'],
   ['chiusi', '💶 Chiusi'],
@@ -271,9 +271,9 @@ export const SCHEDE_GRIGLIA = [
   ['tutti', 'Tutti'],
 ]
 
-// Come si chiamano sul tasto quando la fila è chiusa: corti e senza emoji,
-// che lì lo spazio è una pastiglia sola. «In corso» non c'è APPOSTA — è il
-// default, e un tasto che ha sempre qualcosa scritto sopra non distingue
+// Come si chiamano nel `title` del tastino quando la fila è chiusa: corti
+// e senza emoji, che lì si legge di corsa. «In corso» non c'è APPOSTA — è
+// il default, e un tastino che conta sempre almeno un filtro non distingue
 // più la coda filtrata da quella intera.
 export const NOME_SCHEDA = { chiusi: 'Chiusi', annullati: 'Annullati', tutti: 'Tutti' }
 export const NOME_SOTTOFILTRO = { serviti: 'Serviti', 'non-serviti': 'Da servire' }
@@ -283,21 +283,21 @@ export const NOME_SOTTOFILTRO = { serviti: 'Serviti', 'non-serviti': 'Da servire
 // «I filtri e tutti i bottoni li voglio a scomparsa, con un tasto che non
 // occupi troppo spazio, sia per ordini sia per comande» (l'utente, 20/08).
 //
-// DA CHIUSO IL TASTO NON DEVE NASCONDERE LO STATO. Un filtro acceso e
-// invisibile è una coda che sembra sbagliata: si guardano dodici conti
-// dove ce ne sono quaranta, e non c'è niente a schermo che lo dica. Quindi
-// il tasto porta scritto quello che è acceso — «⚗️ Chiusi» — e quando i
-// filtri sono più di uno ne nomina UNO e conta gli altri: «⚗️ Miei +2».
-// Nominarli tutti rifarebbe la fila che si stava togliendo, e «⚗️ 3
-// filtri» (il linguaggio del magazzino) non dice quale sia la coda che si
-// sta guardando — che è la sola cosa che serve sapere di colpo.
+// ED ERA DIVENTATO UN TASTO IN PIÙ. Prima stava nella riga dei chip e
+// portava scritto il filtro acceso — «⚗️ Chiusi», «⚗️ Miei +2» — cioè una
+// pastiglia larga in una riga che, da chiusa, esisteva solo per lei.
+// «Quando dicevo di nascondere i tasti intendevo tutti e non aggiungere un
+// nuovo tasto. Lo spazio da risparmiare è in altezza non in larghezza»
+// (l'utente, 20/08). Adesso è un tastino solo icona nella testata, con gli
+// altri, e la riga dei chip da chiusa non c'è proprio.
 //
-// Con tutto al suo posto resta «⚗️ Filtri», e basta.
-export function etichettaFiltri(attivi = []) {
-  const accesi = (attivi || []).filter(Boolean)
-  if (accesi.length === 0) return '⚗️ Filtri'
-  if (accesi.length === 1) return `⚗️ ${accesi[0]}`
-  return `⚗️ ${accesi[0]} +${accesi.length - 1}`
+// LO STATO NON SPARISCE LO STESSO: sul tastino ci sta un numero — quanti
+// filtri sono accesi — perché un filtro acceso e invisibile è una coda che
+// sembra sbagliata (dodici conti dove ce ne sono quaranta, e niente a
+// schermo che lo dica). QUALI siano lo dice il title (`spiegaFiltri`), che
+// larghezza non ne costa: in 44px non ci sta un nome, ci sta una cifra.
+export function contaFiltri(attivi = []) {
+  return (attivi || []).filter(Boolean).length
 }
 
 // Il perché per esteso, che sta nel `title` e non ruba larghezza: da chiuso
@@ -395,18 +395,27 @@ export function voceCassa({
   // comande al banco vuol dire mandare a casa la serata con tre drink
   // pagati e mai usciti.
   //
-  // LA FRASE RESTA UNA RIGA. Sta sotto il tasto, in cima alla coda, dove lo
-  // spazio è quello che avanza: due frasi incolonnate non si leggono in
-  // un'occhiata, e quello che serve capire è «non si chiude, e perché».
+  // LA FRASE RESTA UNA RIGA, E CORTA. Sta sotto il tasto, in cima alla
+  // coda, dove lo spazio è quello che avanza: due frasi incolonnate non si
+  // leggono in un'occhiata, e quello che serve capire è «non si chiude, e
+  // perché».
+  //
+  // «È scomparsa la label sotto al tasto. Diventa "chiudi X conti e X
+  // comande"» (l'utente, 20/08). Era «Prima chiudi 3 conti e servi 2
+  // comande»: il verbo di mezzo era la parte che la faceva lunga, e la
+  // riga sotto un tasto la si legge di sguincio mentre si versa — due
+  // numeri e due nomi bastano. Se una delle due quantità è zero si nomina
+  // solo l'altra: «Chiudi 2 comande» è l'unica cosa che manca, e scrivere
+  // «0 conti» sarebbe una bugia in più da leggere.
   const manca = []
-  if (contiAperti > 0) manca.push(`chiudi ${quantiConti(contiAperti)}`)
-  if (daServire > 0) manca.push(`servi ${quanteComande(daServire)}`)
+  if (contiAperti > 0) manca.push(quantiConti(contiAperti))
+  if (daServire > 0) manca.push(quanteComande(daServire))
   return {
     id: 'chiudi-cassa',
     icon: '🔒',
     label: 'Chiudi cassa',
     disabled: manca.length > 0,
-    hint: manca.length > 0 ? `Prima ${manca.join(' e ')}` : 'Conta il contante e chiudi la serata.',
+    hint: manca.length > 0 ? `Chiudi ${manca.join(' e ')}` : 'Conta il contante e chiudi la serata.',
   }
 }
 

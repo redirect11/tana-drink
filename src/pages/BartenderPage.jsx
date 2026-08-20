@@ -66,7 +66,7 @@ import {
   SCHEDE_GRIGLIA,
   NOME_SCHEDA,
   NOME_SOTTOFILTRO,
-  etichettaFiltri,
+  contaFiltri,
   spiegaFiltri,
 } from '../lib/coda.js'
 import { StoriaOrdineDialog, RipristinaOrdineDialog } from '../components/StoriaOrdine.jsx'
@@ -1402,16 +1402,25 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // scritto quello che succede a premerlo — e vale anche per chi arriva
   // davanti allo schermo senza sapere chi c'è stato prima.
   //
-  // STA NELLA RIGA DEI FILTRI, MA A DESTRA. È stato provato sotto il «+»:
-  // lì restava appeso nel vuoto, rettangolare sotto un tondo, disallineato
-  // da tutto. Nella riga dei filtri ha la forma e il peso delle pastiglie
-  // che ci sono già, e ci sta senza inventare geometrie. Ma non è un
-  // filtro: a sinistra c'è quello che RESTRINGE la lista, a destra quello
-  // che CAMBIA VISTA — stessa riga, staccati, così nessuno lo legge come
-  // un filtro in più.
-  const pastigliaComande = puoScegliere ? (
-    <button className="chip chip-vista" onClick={cambiaVista}>
-      {corsieBanco ? '🧾 Ordini' : '🍸 Comande'}
+  // STA IN TESTATA, COI TASTINI DELLE AZIONI. Prima era una pastiglia in
+  // fondo a destra nella riga dei filtri, ed è dovuta uscire di lì: quella
+  // riga adesso, da chiusa, non esiste proprio (REQ-CODA-008) — e il
+  // cambio vista deve restare a UN tocco sempre, non un tocco per riaprire
+  // la riga e uno per cambiare. Nella testata è già il posto di quello che
+  // «si può fare adesso» (docs/navigazione.md), sta accanto a stampante,
+  // pannelli e ordinamento, e non costa una riga a nessuno.
+  //
+  // SOLO ICONA, e il nome per esteso nel title: qui la larghezza è della
+  // ricerca. «🧾» porta ai conti, «🍸» alle comande — e resta un tasto che
+  // dice DOVE PORTA, non dove si è.
+  const tastoVista = puoScegliere ? (
+    <button
+      className="btn ghost small board-icona"
+      onClick={cambiaVista}
+      title={corsieBanco ? 'Torna ai conti' : 'Guarda le comande al banco'}
+      aria-label={corsieBanco ? 'Ordini' : 'Comande'}
+    >
+      {corsieBanco ? '🧾' : '🍸'}
     </button>
   ) : null
 
@@ -1430,11 +1439,11 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
 
   // ── COSA È ACCESO ADESSO, IN PAROLE ────────────────────────
   //
-  // Serve al tasto quando la fila è chiusa: un filtro acceso e invisibile è
-  // una coda che sembra sbagliata — si guardano dodici conti dove ce ne
-  // sono quaranta, e non c'è niente a schermo che lo dica. Sono i nomi
-  // CORTI, senza emoji: su una pastiglia sola non ci sta altro, e l'elenco
-  // per esteso vive nel title, che larghezza non ne costa.
+  // Serve al tastino quando la fila è chiusa: un filtro acceso e invisibile
+  // è una coda che sembra sbagliata — si guardano dodici conti dove ce ne
+  // sono quaranta, e non c'è niente a schermo che lo dica. Sul tastino ci
+  // sta il NUMERO; questi nomi corti, senza emoji, vivono nel title, che
+  // larghezza non ne costa.
   //
   // Ogni vista ha i suoi filtri, quindi ha il suo elenco: la griglia ha la
   // scheda («Chiusi») e i giorni scorsi, il banco le colonne spente, la
@@ -1467,24 +1476,30 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
     if (!aperti) setScegliCorsie(false)
   }
 
-  // IL TASTO. Una pastiglia come le altre — stessa forma, stesso bersaglio
-  // — perché sta nella loro riga; ma è l'unica che resta quando la fila è
-  // chiusa, e allora porta scritto quello che è acceso.
-  const pastigliaFiltri = (
+  // IL TASTINO. «Quando dicevo di nascondere i tasti intendevo tutti e non
+  // aggiungere un nuovo tasto. Lo spazio da risparmiare è in altezza non in
+  // larghezza» (l'utente, 20/08): la pastiglia «⚗️ Filtri» teneva in piedi
+  // da sola una riga intera che, a filtri chiusi, non aveva altro da
+  // mostrare. Adesso è un'icona quadrata in testata — la famiglia di 📟 e
+  // ↕ — e la riga dei chip, da chiusa, sparisce del tutto.
+  //
+  // MA LO STATO RESTA VISIBILE: quando c'è qualcosa di acceso il tastino si
+  // accende e porta il NUMERO dei filtri. In 44px non ci sta un nome, ci
+  // sta una cifra — e quali siano lo dice il title, dove il posto c'è.
+  const quantiFiltri = contaFiltri(filtriAccesi)
+  const tastoFiltri = (
     <button
-      className={`chip chip-filtri ${filtriAccesi.length > 0 ? 'active' : ''}`}
+      className={`btn ghost small board-icona board-filtri${quantiFiltri > 0 ? ' active' : ''}`}
       onClick={cambiaFiltri}
       aria-expanded={filtriVisibili}
-      // IL NOME NON CAMBIA MAI, la scritta sì. Quello che c'è scritto
-      // sopra è lo STATO — «⚗️ Chiusi» — e uno stato non è il nome di un
-      // tasto: chi lo cerca lo cerca come «Filtri», e un tasto che si
-      // chiama «Chiusi» sarebbe indistinguibile dal filtro omonimo che gli
-      // sta accanto un istante dopo. Lo stato lo dice il title, che è il
-      // posto dove va e non costa larghezza.
+      // IL NOME NON CAMBIA MAI. Chi lo cerca lo cerca come «Filtri»: il
+      // conteggio è STATO, e uno stato non è il nome di un tasto. Sta nel
+      // title insieme all'elenco per esteso.
       aria-label="Filtri"
       title={spiegaFiltri(filtriAccesi, filtriVisibili)}
     >
-      {etichettaFiltri(filtriAccesi)}
+      ⚗️
+      {quantiFiltri > 0 && <span className="board-icona-conta">{quantiFiltri}</span>}
     </button>
   )
 
@@ -1501,18 +1516,22 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // mentre si lavora, e un pannello sopra la coda coprirebbe proprio quello
   // che si sta guardando per decidere che filtro serve.
   //
-  // DENTRO CI VA SOLO QUELLO CHE RESTRINGE LA LISTA. La pastiglia del
-  // cambio vista resta FUORI, a destra come sempre (docs/navigazione.md):
-  // non filtra, cambia quello che si guarda — e nasconderla vorrebbe dire
-  // due tocchi per una cosa che ne vale uno. Il «＋» sta nella testata e
-  // non c'entra affatto: crea.
-  const filaFiltri = (filtri, style) => (
-    <div className="chips-row chips-lavagna" style={style}>
-      {pastigliaFiltri}
-      {filtriVisibili && filtri}
-      {pastigliaComande}
-    </div>
-  )
+  // DENTRO CI VA SOLO QUELLO CHE RESTRINGE LA LISTA. Il cambio vista sta
+  // FUORI, in testata (docs/navigazione.md): non filtra, cambia quello che
+  // si guarda — e nasconderlo vorrebbe dire due tocchi per una cosa che ne
+  // vale uno. Il «＋» sta nella testata e non c'entra affatto: crea.
+  //
+  // DA CHIUSA LA RIGA NON C'È PROPRIO. «Lo spazio da risparmiare è in
+  // altezza non in larghezza» (l'utente, 20/08): una riga con dentro la
+  // sola pastiglia «Filtri» costava tutta l'altezza di prima per non
+  // mostrare niente. Adesso il tasto che la apre sta in testata, e qui —
+  // chiusa — non resta nemmeno il contenitore.
+  const filaFiltri = (filtri, style) =>
+    filtriVisibili ? (
+      <div className="chips-row chips-lavagna" style={style}>
+        {filtri}
+      </div>
+    ) : null
 
   // ── I FILTRI DELLE CORSIE, SULLA RIGA DEI CONTEGGI ──────────────
   //
@@ -1528,9 +1547,8 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // fatto. A dire da dove in su è la LAVAGNA (container query `corsie`),
   // non la finestra: col menu agganciato ha 200-250px in meno.
   //
-  // La regola della riga dei filtri resta quella di docs/navigazione.md:
-  // a sinistra quello che RESTRINGE la lista, a destra quello che CAMBIA
-  // VISTA, staccati da un margine automatico.
+  // Qui dentro c'è SOLO quello che restringe la lista: il cambio vista è
+  // salito in testata coi tastini delle azioni (docs/navigazione.md).
   const filtriCorsie = filaFiltri(
     <>
       {pastigliaMiei}
@@ -2233,7 +2251,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                 impostazioni non ci sono affatto. */}
             <PallinoStampante gestore={gestore} />
             {/* SUL TELEFONO IL ⋯, SUGLI SCHERMI LARGHI LE ICONE. In una
-                barra stretta le azioni che si fanno ogni tanto stanno
+                barra stretta le azioni che si fanno OGNI TANTO stanno
                 dietro un tasto solo; su tablet e computer lo spazio accanto
                 alla ricerca c'è, e nasconderle dietro un menu vuol dire due
                 gesti per una cosa che ne vale uno — e non vedere nemmeno se
@@ -2271,42 +2289,51 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                 >
                   ↕
                 </button>
-                {(() => {
-                  // La voce della cassa (apri/chiudi, o niente per la sala)
-                  // la decide coda.js: è una regola, e le regole si provano.
-                  const v = voceCassa({
-                    gestore,
-                    cassaAperta: !!cassaAperta,
-                    contiAperti: recap.aperti,
-                    daServire: ticketDaServire,
-                  })
-                  if (!v) return null
-                  return (
-                    // QUESTA NON È UN'ICONA. Le altre due — i pannelli,
-                    // l'ordinamento — si capiscono e si annullano con un
-                    // secondo tocco; la cassa è la cosa che chiude la serata,
-                    // e un lucchetto grigio in fondo a una barra non dice a
-                    // nessuno che cos'è. Si scrive per esteso.
-                    //
-                    // MA È UN TASTO NORMALE, NON UN CARTELLO. «Il tasto
-                    // chiudi cassa nella schermata ordini è troppo largo e
-                    // occupa troppo spazio» (l'utente, 20/08): sotto ci
-                    // stava sempre la riga «Prima chiudi 3 conti e servi 2
-                    // comande», e siccome erano incolonnati era QUELLA a
-                    // dare la larghezza — un tasto lungo il doppio del suo
-                    // nome, in una testata dove ogni pixel è ricerca.
-                    //
-                    // LA FRASE NON SI BUTTA: è la sola cosa che dice perché
-                    // il tasto è spento. Vive nel `title` — dove chi ha un
-                    // mouse la trova passandoci sopra — e al banco, dove il
-                    // mouse non c'è, esce come avviso appena si prova a
-                    // chiudere. Che è il momento in cui la domanda nasce:
-                    // prima di allora è una riga che nessuno legge.
-                    //
-                    // Per questo il tasto NON è `disabled` ma
-                    // `aria-disabled`: un tasto spento davvero non riceve il
-                    // tocco, e chi lo preme non saprebbe mai perché non
-                    // succede niente.
+              </>
+            )}
+            {/* QUESTI DUE RESTANO IN TESTATA ANCHE SUL TELEFONO, accanto al
+                ⋯ e non dentro: filtrare la coda e passare dai conti alle
+                comande si fanno DURANTE il servizio, decine di volte, e non
+                sono «cose che si fanno ogni tanto». Dentro il ⋯ sarebbero
+                due tocchi ciascuno. */}
+            {tastoFiltri}
+            {tastoVista}
+            {!telefono &&
+              (() => {
+                // La voce della cassa (apri/chiudi, o niente per la sala)
+                // la decide coda.js: è una regola, e le regole si provano.
+                const v = voceCassa({
+                  gestore,
+                  cassaAperta: !!cassaAperta,
+                  contiAperti: recap.aperti,
+                  daServire: ticketDaServire,
+                })
+                if (!v) return null
+                return (
+                  // QUESTA NON È UN'ICONA. Le altre — i pannelli,
+                  // l'ordinamento, i filtri — si capiscono e si annullano
+                  // con un secondo tocco; la cassa è la cosa che chiude la
+                  // serata, e un lucchetto grigio in fondo a una barra non
+                  // dice a nessuno che cos'è. Si scrive per esteso.
+                  //
+                  // E IL PERCHÉ TORNA SOTTO. «È scomparsa la label sotto al
+                  // tasto» (l'utente, 20/08): tolta con BUG-062, la riga
+                  // che spiega perché la cassa non si chiude è la sola cosa
+                  // che lo dice a chi non ha un mouse da fermare sopra il
+                  // tasto. Torna, più corta — «Chiudi 3 conti e 2 comande».
+                  //
+                  // MA NON RIALLARGA IL TASTO, che era il difetto vero: la
+                  // colonna NON stira i figli (niente `align-items:
+                  // stretch`), quindi il bottone resta largo quanto «🔒
+                  // Chiudi cassa» e la frase — testo leggero, non un
+                  // bersaglio — può sporgere di lato senza che nessuno
+                  // provi a premerla.
+                  //
+                  // Il tasto NON è `disabled` ma `aria-disabled`: un tasto
+                  // spento davvero non riceve il tocco, e al banco il tocco
+                  // deve arrivare — è quello che fa uscire l'avviso col
+                  // motivo, per chi la frase l'ha letta di sguincio.
+                  <span className="board-cassa-box">
                     <button
                       className={`btn ghost small board-cassa${v.disabled ? ' spento' : ''}`}
                       aria-disabled={v.disabled || undefined}
@@ -2318,10 +2345,15 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                     >
                       {v.icon} {v.label}
                     </button>
-                  )
-                })()}
-              </>
-            )}
+                    {/* Solo quando è spento: a cassa chiudibile la riga
+                        direbbe «conta il contante», che è quello che il
+                        tasto fa già e non è un impedimento. */}
+                    {v.disabled && v.hint && (
+                      <span className="board-cassa-perche muted small">{v.hint}</span>
+                    )}
+                  </span>
+                )
+              })()}
             {cassaAperta || cassaLoading ? (
               <Link className="btn board-add" to="/pos" aria-label="Nuovo ordine" title="Nuovo ordine" />
             ) : (
@@ -2489,20 +2521,29 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
 
       {!lavagna && (
         <>
-          <input
-            type="search"
-            className="menu-search"
-            placeholder="🔍 Cerca per numero, cliente, tavolo, drink…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{ marginTop: 8 }}
-          />
+          {/* I DUE TASTINI STANNO IN RIGA CON LA RICERCA. Nelle lavagne
+              vivono in testata, accanto alla ricerca: qui la testata non
+              c'è, e appenderli a una riga loro costerebbe l'altezza che
+              questo giro serve a restituire alla lista. Stesso posto
+              relativo — a fianco del campo — così chi cambia vista li
+              ritrova dov'erano. */}
+          <div className="coda-cerca-riga">
+            <input
+              type="search"
+              className="menu-search"
+              placeholder="🔍 Cerca per numero, cliente, tavolo, drink…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            {tastoFiltri}
+            {tastoVista}
+          </div>
           {avvisoRicerca && (
             <p className="muted small" style={{ margin: '-4px 0 8px' }}>
               {avvisoRicerca}
             </p>
           )}
-          {/* STESSA FILA DELLE LAVAGNE, stesso tasto: qui i filtri sono
+          {/* STESSA FILA DELLE LAVAGNE, stesso tastino: qui i filtri sono
               uno solo, ma un meccanismo che vale in tre viste su quattro
               è una cosa da imparare due volte. */}
           {filaFiltri(pastigliaMiei, { margin: '8px 0 12px' })}

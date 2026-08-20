@@ -209,3 +209,38 @@ ${nome} {`)
     expect(r).toMatch(/var\(--tile-bg\)/)
   })
 })
+
+// ── LA COLONNA DEL «CHIUDI CASSA» NON STIRA IL SUO TASTO (BUG-062) ───
+//
+// Il tasto sta incolonnato con la riga che spiega perché non si può
+// chiudere — «Chiudi 3 conti e 2 comande» — e in una colonna con
+// `align-items: stretch` la larghezza la fa il figlio più largo: il
+// bottone veniva lungo quanto la frase, il doppio del suo nome, in una
+// testata dove lo spazio è della barra di ricerca.
+//
+// La prima cura era stata togliere la frase, e ha tolto anche la sola cosa
+// che diceva perché il tasto è grigio: «è scomparsa la label sotto al
+// tasto» (l'utente, 20/08). La frase è tornata, e a tenere stretto il
+// bottone adesso c'è l'allineamento. Questo test sorveglia quello, che il
+// DOM da solo non lo può dire: jsdom non fa layout.
+describe('il tasto della cassa resta largo quanto il suo nome', () => {
+  const css = readFileSync(join(CARTELLA, 'index.css'), 'utf8')
+  const regola = (nome) => {
+    const i = css.indexOf(`
+${nome} {`)
+    expect(i, `${nome} non c'è più`).toBeGreaterThan(-1)
+    return css.slice(i, css.indexOf('}', i))
+  }
+
+  it('la colonna centra i figli invece di stirarli', () => {
+    const r = regola('.board-cassa-box')
+    expect(r).toMatch(/align-items:\s*center/)
+    expect(r, 'con stretch il bottone torna largo quanto la frase').not.toMatch(
+      /align-items:\s*stretch/
+    )
+  })
+
+  it('e la frase resta una riga sola, o alzerebbe tutta la testata', () => {
+    expect(regola('.board-cassa-perche')).toMatch(/white-space:\s*nowrap/)
+  })
+})

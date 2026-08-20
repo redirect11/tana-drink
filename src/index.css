@@ -726,16 +726,6 @@ a.btn.block {
   -webkit-overflow-scrolling: touch;
 }
 
-/* IL CAMBIO VISTA STA NELLA RIGA DEI FILTRI, MA A DESTRA. A sinistra c'è
-   quello che RESTRINGE la lista — «Miei», «Solo oggi», «Colonne» — a
-   destra quello che CAMBIA VISTA: stessa forma e stesso peso, perché si
-   toccano allo stesso modo, ma staccati, così nessuno lo legge come un
-   filtro in più. Lo stacco è un margine automatico, non uno spazio messo
-   a occhio: si prende quello che avanza, quanto ne avanza.
-   Quando lo spazio finisce non va a capo e non si schiaccia — la riga
-   scorre in orizzontale (vedi .chips-row) e la pastiglia resta l'ultima,
-   raggiungibile scorrendo, invece di restare da sola su una seconda riga
-   mezza vuota. */
 /* Un rimando dentro una frase: è un tasto (porta da un'altra parte
    nell'app) ma si legge come una parola sottolineata, perché sta in mezzo
    a un testo e un bottone lì dentro spezzerebbe la riga. */
@@ -747,18 +737,6 @@ a.btn.block {
   color: var(--accent);
   text-decoration: underline;
   cursor: pointer;
-}
-
-.chip-vista {
-  margin-left: auto;
-  flex-shrink: 0;
-}
-
-/* «⚗️ Filtri» è l'unica pastiglia che resta quando la fila è chiusa, e
-   porta scritto cos'è acceso: non si stringe insieme alle altre quando la
-   riga si riempie, o una coda filtrata finirebbe per sembrare intera. */
-.chip-filtri {
-  flex-shrink: 0;
 }
 
 /* LA PASTIGLIA SI LEGGE E SI PRENDE COL DITO, AL 100%. Era tarata
@@ -1871,6 +1849,25 @@ body.fullbleed .bar-content {
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
+}
+
+/* LISTA E SCHEDE NON HANNO LA TESTATA DELLE LAVAGNE, ma hanno gli stessi
+   due tastini — filtri e cambio vista — e devono stare nello stesso posto
+   relativo: a fianco del campo di ricerca. Su una riga loro costerebbero
+   l'altezza che questo giro serve a restituire alla lista. */
+.coda-cerca-riga {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 10px;
+}
+
+.coda-cerca-riga .menu-search {
+  flex: 1;
+  min-width: 0;
+  /* Il margine sotto lo dà la riga, non il campo: dentro un flex
+     centrato quei 10px spingerebbero i tastini in su di 5. */
+  margin: 0;
 }
 
 
@@ -7172,17 +7169,66 @@ body.pagina-piena .inv-scheda {
   flex-shrink: 0;
 }
 
-/* IL TASTO È LARGO QUANTO IL SUO NOME. Sotto ci stava incolonnata la
-   frase che spiega perché non si può chiudere — «Prima chiudi 3 conti e
-   servi 2 comande» — e in una colonna la larghezza la fa il figlio più
-   largo: il tasto veniva lungo il doppio, in una testata dove lo spazio è
-   della ricerca. Adesso la frase sta nel title e nell'avviso che esce al
-   tocco (BUG-062), e qui non resta niente da allargare.
-   SPENTO MA TOCCABILE: `aria-disabled`, non `disabled`, perché il tocco
-   deve arrivare — è quello che fa uscire il motivo. Quindi lo scolorito se
-   lo prende da una classe, che :disabled qui non scatta. */
+/* IL TASTO RESTA LARGO QUANTO IL SUO NOME, ANCHE COL PERCHÉ SOTTO.
+   Era una colonna con `align-items: stretch`, e lì la larghezza la fa il
+   figlio più largo: la frase «Prima chiudi 3 conti e servi 2 comande»
+   stirava il bottone al doppio del suo nome, in una testata dove lo spazio
+   è della ricerca (BUG-062). Togliendo la frase il tasto era tornato
+   normale, ma spariva la sola cosa che dice perché è spento — e senza si
+   resta a premere un tasto grigio.
+   La cura è `align-items: center`: il bottone tiene la sua larghezza
+   naturale, la frase può essere più larga e sporgere di lato. È testo
+   leggero e non un bersaglio, quindi nessuno prova a premerla; e la
+   colonna, larga quanto lei, non sposta niente perché sta in fondo alla
+   riga delle azioni, prima del solo «+». */
+.board-cassa-box {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+/* Una riga sola: la frase è già corta («Chiudi 3 conti e 2 comande») e
+   andando a capo alzerebbe tutta la testata. */
+.board-cassa-perche {
+  text-align: center;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+/* SPENTO MA TOCCABILE: `aria-disabled`, non `disabled`, perché il tocco
+   deve arrivare — è quello che fa uscire l'avviso col motivo. Quindi lo
+   scolorito se lo prende da una classe, che :disabled qui non scatta. */
 .board-cassa.spento {
   opacity: 0.55;
+}
+
+/* QUANTI FILTRI SONO ACCESI, sul tastino ⚗️ della testata. In 44px non ci
+   sta un nome, ci sta una cifra: quali siano lo dice il title. Senza,
+   chiusa la fila non resterebbe a schermo NIENTE a dire che la coda è
+   filtrata — dodici conti dove ce ne sono quaranta.
+   Va nell'angolo e non accanto all'icona: affiancata allargherebbe il
+   tasto, e la riga delle azioni è la stessa dove sta la ricerca. */
+.board-filtri {
+  position: relative;
+}
+
+.board-icona-conta {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 16px;
+  padding: 0 3px;
+  border-radius: 8px;
+  background: var(--accent-2);
+  /* L'inchiostro sopra un fondo d'accento ha già il suo gettone, e segue
+     il tema: scritto a mano sarebbe nero su nero sul primo tema scuro. */
+  color: var(--btn-ink);
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
 }
 
 .board-icona.active {

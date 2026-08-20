@@ -11,14 +11,14 @@
 // restavano quelle del server; quella del BANCO avanzava con `comandeLocali`
 // e lo stato del conto restava quello del server.
 //
-// Prima non si notava. Poi è arrivata la pastiglia «🍸 Comande / 🧾 Ordini»,
+// Prima non si notava. Poi è arrivato il tastino «🍸 Comande / 🧾 Ordini»,
 // che mette le due viste a un tocco di distanza sullo stesso terminale: si
-// avanza un ticket, si gira la pastiglia, e il conto è ancora dov'era finché
+// avanza un ticket, si gira la vista, e il conto è ancora dov'era finché
 // non arriva lo snapshot. Offline non arriva mai — ed è il rimbalzo che
 // `comandeLocali` era stato scritto per togliere, spostato di una vista.
 //
 // Qui si prova la cosa che conta: si fa un gesto in una vista, si gira la
-// pastiglia SENZA far arrivare niente dal server, e l'altra vista deve
+// vista SENZA far arrivare niente dal server, e l'altra deve
 // raccontare la stessa storia.
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { act, render, screen, within, waitFor } from '@testing-library/react'
@@ -211,19 +211,21 @@ beforeEach(() => {
   }
 })
 
-// La pastiglia che gira fra le due viste. Dice DOVE PORTA, non dove si è:
-// «🍸 Comande» quando si stanno guardando i conti, e viceversa.
+// Il tastino della testata che gira fra le due viste. Dice DOVE PORTA, non
+// dove si è: «Comande» quando si stanno guardando i conti, e viceversa. Da
+// REQ-CODA-008 è solo un'icona (🍸 / 🧾) e il nome vive nell'aria-label,
+// quindi qui si cerca per nome — che è quello che il tasto continua a dire.
 const giraVista = async (utente, verso) =>
   utente.click(screen.getByRole('button', { name: verso }))
 
-describe('avanzo un ticket dal banco e giro la pastiglia', () => {
+describe('avanzo un ticket dal banco e giro la vista', () => {
   it('il conto è già dove l’ho appena messo, senza aspettare il server', async () => {
     const utente = userEvent.setup()
     montaCoda()
     await screen.findByText('In corso')
 
     // Al banco: la card è il ticket, e il tasto grande lo porta al passo dopo.
-    await giraVista(utente, '🍸 Comande')
+    await giraVista(utente, 'Comande')
     await screen.findByText('Da fare')
     await utente.click(
       within(corsia('da-fare')).getByRole('button', { name: 'In preparazione' })
@@ -233,15 +235,15 @@ describe('avanzo un ticket dal banco e giro la pastiglia', () => {
     // Il ticket si è già spostato di colonna: è la memoria locale.
     expect(within(corsia('al-banco')).getByText(/#41/)).toBeInTheDocument()
 
-    // E ADESSO LA PARTE CHE ROMPEVA: si gira la pastiglia, e NIENTE arriva
+    // E ADESSO LA PARTE CHE ROMPEVA: si gira la vista, e NIENTE arriva
     // dal server. Il conto deve raccontare la stessa cosa del suo ticket.
-    await giraVista(utente, '🧾 Ordini')
+    await giraVista(utente, 'Ordini')
     await screen.findByText('In corso')
     expect(cardDi('o41')).toHaveClass('in_preparazione')
   })
 })
 
-describe('avanzo un conto dalla griglia e giro la pastiglia', () => {
+describe('avanzo un conto dalla griglia e giro la vista', () => {
   it('il ticket è già al passo dopo, senza aspettare il server', async () => {
     impostazioni.queue_view = 'griglia'
     const utente = userEvent.setup()
@@ -259,7 +261,7 @@ describe('avanzo un conto dalla griglia e giro la pastiglia', () => {
 
     // E il banco anche: prima la comanda restava «da fare», e chi versava
     // si trovava un ticket in una colonna che il conto aveva già lasciato.
-    await giraVista(utente, '🍸 Comande')
+    await giraVista(utente, 'Comande')
     await screen.findByText('In preparazione')
     expect(within(corsia('al-banco')).getByText(/#41/)).toBeInTheDocument()
     expect(within(corsia('da-fare')).queryByText(/#41/)).not.toBeInTheDocument()
@@ -285,14 +287,14 @@ describe('lo stato del conto si ricava dalle comande, non si tiene a parte', () 
     montaCoda()
     await screen.findByText('In corso')
 
-    await giraVista(utente, '🍸 Comande')
+    await giraVista(utente, 'Comande')
     await screen.findByText('Da fare')
     // Si porta avanti SOLO la prima comanda: l'altra è già pronta.
     await utente.click(
       within(corsia('da-fare')).getByRole('button', { name: 'In preparazione' })
     )
 
-    await giraVista(utente, '🧾 Ordini')
+    await giraVista(utente, 'Ordini')
     await screen.findByText('In corso')
     // Il conto segue la comanda più indietro, che ora è quella in
     // preparazione: non «pronto» solo perché una lo era già.
@@ -307,7 +309,7 @@ describe('se la scrittura non passa si torna a quello che dice il server', () =>
     montaCoda()
     await screen.findByText('In corso')
 
-    await giraVista(utente, '🍸 Comande')
+    await giraVista(utente, 'Comande')
     await screen.findByText('Da fare')
     await utente.click(
       within(corsia('da-fare')).getByRole('button', { name: 'In preparazione' })
@@ -318,7 +320,7 @@ describe('se la scrittura non passa si torna a quello che dice il server', () =>
     await waitFor(() =>
       expect(within(corsia('da-fare')).getByText(/#41/)).toBeInTheDocument()
     )
-    await giraVista(utente, '🧾 Ordini')
+    await giraVista(utente, 'Ordini')
     await screen.findByText('In corso')
     expect(cardDi('o41')).toHaveClass('ricevuto')
   })

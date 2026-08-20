@@ -2275,10 +2275,35 @@ bugs:
       PASSI PER RIPRODURLO (prima della cura): coda ordini da tablet, con
       un conto aperto — il tasto «Chiudi cassa» e' largo come la frase che
       ha sotto.
+      ── CORRETTA LA CURA IL 20/08/2026 ──
+      «E' scomparsa la label sotto al tasto. Diventa "chiudi X conti e X
+      comande"» (l'utente, guardando il risultato). Togliere la frase aveva
+      curato la larghezza portandosi via la sola cosa che dice perche' il
+      tasto e' grigio: il `title` lo vede chi ha un mouse da fermare sopra,
+      e al banco il mouse non c'e'; l'avviso al tocco arriva DOPO aver
+      premuto un tasto che sembrava rotto.
+      LA FRASE TORNA SOTTO IL TASTO, E PIU' CORTA: «Chiudi 3 conti e 2
+      comande» invece di «Prima chiudi 3 conti e servi 2 comande» — via il
+      «Prima» e via il verbo di mezzo, che una riga sotto un tasto in cima
+      alla coda si legge di sguincio mentre si versa. Declinata al singolare
+      («Chiudi 1 conto e 1 comanda») e, se una delle due quantita' e' zero,
+      nomina solo l'altra.
+      E IL TASTO NON SI RIALLARGA, che era il difetto vero: la colonna
+      (`.board-cassa-box`) adesso CENTRA i figli invece di stirarli — niente
+      `align-items: stretch` — quindi il bottone tiene la sua larghezza
+      naturale e la frase, che e' testo leggero e non un bersaglio, puo'
+      sporgere di lato senza che nessuno provi a premerla. A sorvegliare
+      l'allineamento c'e' tests/unit/css.test.js: jsdom non fa layout, e dal
+      DOM quella cosa non si vede.
+      L'AVVISO AL TOCCO RESTA: un tocco che non fa NIENTE si legge come
+      un'app rotta, e chi preme di corsa la riga sotto non l'ha guardata.
     in_produzione: false
     status: fixed
     generate_issue: true
     labels: [bug, interfaccia, coda]
     severity: lieve
     priority: P2
-    test_cases: [tests/component/CodaCorsie.test.jsx]
+    test_cases:
+      - tests/component/CodaCorsie.test.jsx
+      - tests/unit/coda.test.js
+      - tests/unit/css.test.js

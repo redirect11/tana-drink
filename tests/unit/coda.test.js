@@ -17,7 +17,7 @@ import {
   gruppiInCoda,
   schedeCoda,
   corsieDiverseDalNormale,
-  etichettaFiltri,
+  contaFiltri,
   spiegaFiltri,
 } from '../../src/lib/coda.js'
 
@@ -317,19 +317,22 @@ describe('la voce della cassa nel menu della coda', () => {
     })
   })
 
+  // «È scomparsa la label sotto al tasto. Diventa "chiudi X conti e X
+  // comande"» (l'utente, 20/08). La riga sotto il tasto era stata tolta con
+  // BUG-062 perché ALLARGAVA il bottone; torna, ma la frase si accorcia —
+  // via il «Prima» e via il verbo di mezzo — che sotto un tasto in cima
+  // alla coda si legge di sguincio, mentre si versa.
   it('con conti aperti la chiusura è spenta, e dice quanti sono', () => {
     // Un conto aperto è un incasso che manca: chiudere così vorrebbe dire
-    // far quadrare una serata con dentro un buco. La frase sta accanto al
-    // tasto spento, quindi è corta: in cima alla coda lo spazio è quello
-    // che avanza.
+    // far quadrare una serata con dentro un buco.
     const v = voceCassa({ gestore: true, cassaAperta: true, contiAperti: 3 })
     expect(v.disabled).toBe(true)
-    expect(v.hint).toBe('Prima chiudi 3 conti')
+    expect(v.hint).toBe('Chiudi 3 conti')
   })
 
   it('un conto solo si dice al singolare', () => {
     expect(voceCassa({ gestore: true, cassaAperta: true, contiAperti: 1 }).hint).toBe(
-      'Prima chiudi 1 conto'
+      'Chiudi 1 conto'
     )
   })
 
@@ -338,16 +341,18 @@ describe('la voce della cassa nel menu della coda', () => {
   // fare, quindi «zero conti aperti» non vuol più dire «niente in ballo».
   // Chiudere con tre comande al banco vuol dire mandare a casa la serata
   // con tre drink pagati e mai usciti.
+  // E QUANDO UNA DELLE DUE QUANTITÀ È ZERO SI NOMINA SOLO L'ALTRA: «0
+  // conti» sarebbe una riga più lunga per dire che non c'è niente da fare.
   it('con comande ancora da servire la cassa non si chiude', () => {
     const v = voceCassa({ gestore: true, cassaAperta: true, contiAperti: 0, daServire: 3 })
     expect(v.disabled).toBe(true)
-    expect(v.hint).toBe('Prima servi 3 comande')
+    expect(v.hint).toBe('Chiudi 3 comande')
   })
 
   it('una comanda sola si dice al singolare', () => {
     expect(
       voceCassa({ gestore: true, cassaAperta: true, contiAperti: 0, daServire: 1 }).hint
-    ).toBe('Prima servi 1 comanda')
+    ).toBe('Chiudi 1 comanda')
   })
 
   it('tutti e due i motivi stanno in UNA riga', () => {
@@ -356,7 +361,13 @@ describe('la voce della cassa nel menu della coda', () => {
     // e perché».
     expect(
       voceCassa({ gestore: true, cassaAperta: true, contiAperti: 2, daServire: 3 }).hint
-    ).toBe('Prima chiudi 2 conti e servi 3 comande')
+    ).toBe('Chiudi 2 conti e 3 comande')
+  })
+
+  it('e declina bene anche quando è uno e una', () => {
+    expect(
+      voceCassa({ gestore: true, cassaAperta: true, contiAperti: 1, daServire: 1 }).hint
+    ).toBe('Chiudi 1 conto e 1 comanda')
   })
 
   it('niente in ballo: si chiude, e lo dice', () => {
@@ -1446,24 +1457,24 @@ describe('corsieDiverseDalNormale', () => {
 // che sembra sbagliata: si guardano dodici conti dove ce ne sono quaranta
 // e non c'è niente a schermo che lo dica. Quindi il tasto se lo porta
 // scritto.
-describe('etichettaFiltri', () => {
-  it('tutto al suo posto: dice solo «Filtri»', () => {
-    expect(etichettaFiltri([])).toBe('⚗️ Filtri')
-    expect(etichettaFiltri()).toBe('⚗️ Filtri')
+// QUANTI FILTRI SONO ACCESI. Prima il tasto ne SCRIVEVA uno («⚗️ Chiusi»)
+// ed era una pastiglia larga in una riga che, chiusa, esisteva solo per
+// lei: «quando dicevo di nascondere i tasti intendevo tutti e non
+// aggiungere un nuovo tasto» (l'utente, 20/08). Adesso è un tastino da 44px
+// in testata, e lì ci sta una cifra — quali siano lo dice il title.
+describe('contaFiltri', () => {
+  it('tutto al suo posto: nessun filtro acceso', () => {
+    expect(contaFiltri([])).toBe(0)
+    expect(contaFiltri()).toBe(0)
   })
 
-  it('uno acceso: lo nomina', () => {
-    expect(etichettaFiltri(['Chiusi'])).toBe('⚗️ Chiusi')
-  })
-
-  // NE NOMINA UNO E CONTA GLI ALTRI: scriverli tutti rifarebbe la fila che
-  // si stava togliendo, e «3 filtri» non dice QUALE coda si sta guardando.
-  it('più di uno: ne nomina uno e conta gli altri', () => {
-    expect(etichettaFiltri(['Miei', 'Chiusi', 'Solo oggi'])).toBe('⚗️ Miei +2')
+  it('li conta', () => {
+    expect(contaFiltri(['Chiusi'])).toBe(1)
+    expect(contaFiltri(['Miei', 'Chiusi', 'Solo oggi'])).toBe(3)
   })
 
   it('i buchi non contano: sono i filtri spenti di chi lo chiama', () => {
-    expect(etichettaFiltri([false, 'Miei', null, undefined])).toBe('⚗️ Miei')
+    expect(contaFiltri([false, 'Miei', null, undefined])).toBe(1)
   })
 })
 

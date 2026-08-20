@@ -6735,6 +6735,39 @@ requirements:
       conti, corsie del banco, lista e schede: `filaFiltri` e' scritta una
       volta e appesa dove serve. Quattro meccanismi sarebbero quattro cose
       da imparare per la stessa coda.
+      ── CORRETTA LA ROTTA IL 20/08/2026, guardando il risultato ──
+      «Quando dicevo di nascondere i tasti intendevo tutti e non aggiungere
+      un nuovo tasto. Lo spazio da risparmiare e' in altezza non in
+      larghezza. Quindi togli il tasto filtri e metti un tasto piu' piccolo
+      che nasconde i filtri e il tasto comande/ordini diventa solo una icona
+      piu' piccola e mettila in alto insieme agli altri tasti (stampante,
+      staff, ordine)».
+      IL PRIMO GIRO AVEVA SBAGLIATO IL VERSO. La pastiglia «⚗️ Filtri»
+      stava DENTRO la riga dei chip: chiusa, quella riga restava lì — alta
+      come prima, i suoi margini, il suo scorrimento — per contenere una
+      pastiglia sola. In larghezza si guadagnava, in altezza niente, che era
+      la cosa da guadagnare.
+      COSA CAMBIA. Il tasto dei filtri diventa un TASTINO SOLO ICONA (⚗️)
+      nella testata, della famiglia di 📟 e ↕ (`board-icona`), e la riga dei
+      chip a filtri chiusi NON viene proprio disegnata: `filaFiltri` torna
+      null. Anche il cambio vista lascia la riga e diventa un tastino icona
+      accanto agli altri — 🧾 verso i conti, 🍸 verso le comande — perche'
+      quella riga non c'e' piu' quando serve, e il cambio vista deve restare
+      a UN tocco (docs/navigazione.md, la regola «a destra nella riga dei
+      filtri» e' riscritta apposta).
+      LO STATO NON SPARISCE LO STESSO: quando c'e' un filtro acceso il
+      tastino si accende e porta il NUMERO (`contaFiltri`, badge
+      `.board-icona-conta`). In 44px non ci sta un nome, ci sta una cifra —
+      quali siano lo dice il `title` (`spiegaFiltri`), che larghezza non ne
+      costa. `etichettaFiltri` non esiste piu': faceva la scritta lunga che
+      teneva in piedi la pastiglia.
+      SUL TELEFONO I DUE TASTINI RESTANO IN TESTATA, accanto al ⋯ e non
+      dentro: nel menu ci vanno le cose che si fanno OGNI TANTO (pannelli,
+      ordinamento, cassa), e filtrare o passare alle comande si fanno decine
+      di volte a serata — dentro il ⋯ sarebbero due tocchi ciascuno.
+      Lista e schede non hanno la testata delle lavagne: li' i due tastini
+      stanno in riga col campo di ricerca (`.coda-cerca-riga`), che e' lo
+      stesso posto relativo e non costa una riga in piu'.
     status: implemented
     generate_issue: true
     labels: [coda, ui]
