@@ -191,7 +191,11 @@ Regole:
   `@container`. Con sei corsie accese la finestra è larga e la card è una
   striscia: una media query sulla finestra spezzava i nomi e mandava i
   prezzi fuori dal riquadro. Il conteggio delle righe può dire se
-  *conviene*, mai se *ci sta*.
+  *conviene*, mai se *ci sta*. **Nemmeno il numero di colonne accese lo
+  dice**: la card è un contenitore suo (`card-corsia`) e i tasti del piede
+  si impilano su quella misura — il tasto grande scende sotto a tutta
+  larghezza a 300px, e sotto i 200px vanno in colonna tutti e tre. Il
+  bersaglio più premuto **cresce** quando lo spazio manca, non si stringe.
 - **Le card di una griglia hanno tutte lo stesso vestito** — magazzino,
   menù e griglia del conto. Due segni, sempre gli stessi due: la **striscia
   a sinistra** (4px) dice come sta la cosa; il **colore** (lo stato delle
@@ -250,14 +254,22 @@ Regole:
   misura sola da cui scendono tutti.
 - **Le pastiglie in gruppo** (`.chip-gruppo`) si toccano: bordo condiviso
   (`margin-left: -1px`), angoli tondi solo agli estremi. Vuol dire «questi
-  sono una cosa sola» e si usa **solo** dove è vero — in coda: la colonna
-  del pronto col suo tastino ✂️/🔗, che la apre in «Da servire» e «Da
-  ritirare» e la richiude. Restano **bottoni distinti** (ognuno il suo,
-  ognuno il suo nome per lo screen reader): il gruppo unisce gli occhi,
-  non i mestieri. Il tastino di un gruppo (`.chip-taglio`) è un segno solo
-  e sta stretto: attorno a un carattere una pastiglia larga come le altre
-  è tutta aria, e in una fila di sei o sette chip quell'aria è una riga in
-  più.
+  sono una cosa sola» e si usa **solo** dove è vero. Due posti, tutti e due
+  in coda:
+  - la colonna del servizio col suo tastino ✂️/🔗, che la apre in «Da
+    servire» e «Da ritirare» e la richiude;
+  - **il tasto dei chiusi, a tre porzioni**: `[💶 Chiusi]`, e — solo quando
+    è acceso — `[Da servire/Ritirare][Serviti/Ritirati]`. Le due porzioni
+    non sono filtri fratelli di «Chiusi»: sono una domanda **dentro** i
+    chiusi, e in fila come pastiglie sciolte si leggevano come tre stati
+    dello stesso rango. Un gruppo che **cresce** quando lo si accende
+    invece di far comparire chip a metà riga.
+
+  Restano **bottoni distinti** (ognuno il suo, ognuno il suo nome per lo
+  screen reader): il gruppo unisce gli occhi, non i mestieri. Il tastino di
+  un gruppo (`.chip-taglio`) è un segno solo e sta stretto: attorno a un
+  carattere una pastiglia larga come le altre è tutta aria, e in una fila
+  di sei o sette chip quell'aria è una riga in più.
 - **La pastiglia minuta** (`.chip.mini`: le unità dentro una riga di testo,
   come «Al pz · pz · cl · ml» nella scheda di un prodotto) resta a
   `min-height: 22px` e `0.68rem`. Non è un bersaglio da barra: sta dentro

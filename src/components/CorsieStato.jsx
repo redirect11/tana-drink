@@ -90,7 +90,9 @@ export default function CorsieStato({
                     <OrderBy order={o} />
                   </span>
                   <BolloAcconto order={o} />
-                  <span className="muted small">{daQuanto(o.created_at, adesso)}</span>
+                  <span className="muted small corsia-quando">
+                    {daQuanto(o.created_at, adesso)}
+                  </span>
                 </div>
                 <RigheCorsia
                   items={o.order_items}

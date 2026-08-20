@@ -4,15 +4,31 @@
 
 ### Per chi gestisce
 
-- **I filtri della coda sono diventati filtri veri.** Sopra i conti c'erano
-  quattro schede che si escludevano — In corso, Chiusi, Annullati, Tutti —
-  e per vedere gli aperti insieme ai chiusi bisognava chiedere «Tutti», cioè
-  anche gli annullati. Adesso sono **tre interruttori che si combinano**:
-  **Aperti** (si chiamava «In corso»), **💶 Chiusi**, **✖️ Annullati**. Si
-  accendono e si spengono uno per uno e la coda mostra tutto quello che è
-  acceso; **«Tutti» è sparito**, perché è semplicemente accenderli tutti e
-  tre. **Non si resta mai senza**: «Aperti» si spegne solo se c'è dell'altro
-  acceso, e spegnendo l'ultimo fra chiusi e annullati **torna da solo**.
+- **Le card del banco non si sfasciano più con tante colonne accese.**
+  Quando la card diventa stretta — sette colonne su un tablet, ma succede
+  già a quattro — i tasti **si impilano invece di schiacciarsi**: prima
+  scende sotto, **a tutta larghezza**, quello che porta avanti il lavoro
+  («Pronto», «Servito», «Incassa»), che è quello che si preme di corsa;
+  più stretta ancora, vanno in colonna tutti e tre. A decidere è la
+  **larghezza vera della card**, non quante colonne sono accese: la stessa
+  card è stretta con sette corsie e larga con tre, sullo stesso schermo. E
+  il tempo — «5 min» — **non va più a capo una lettera per riga**.
+
+- **Sopra i conti ci sono tre filtri, e se ne guarda uno per volta.**
+  **Aperti** (si chiamava «In corso»), **💶 Chiusi**, **✖️ Annullati**:
+  toccandone uno gli altri si spengono, e ce n'è sempre uno acceso — la
+  coda si apre sugli **Aperti**, che è il lavoro da fare. La scheda
+  **«Tutti» non c'è più**: mescolava gli incassi con gli annullati, e non
+  rispondeva a nessuna domanda vera.
+
+- **«💶 Chiusi» è un tasto solo, con tre porzioni.** Accendendolo, dentro
+  lo stesso tasto compaiono **«Da servire/Ritirare»** e
+  **«Serviti/Ritirati»**: senza toccarle si vedono **tutti i conti
+  chiusi**, accendendone una si vede solo quella — quali hanno ancora
+  qualcosa da portare, o quali sono usciti per intero. Ritoccandola si
+  torna a vederli tutti. Le due porzioni ci sono solo dove si segue la
+  **preparazione**; e dove al banco **non si ritira** si chiamano
+  semplicemente «Da servire» e «Serviti».
 
 - **«✍️ Miei» è diventato la tendina «Staff».** Dentro c'è **chi ha
   aperto almeno un conto** stasera — più una voce **Clienti** per gli ordini
@@ -24,11 +40,19 @@
   tocchi. Anche qui non si resta mai senza nessuno: spegnendo l'ultimo
   tornano tutti.
 
-- **Il pronto si divide dal suo stesso tasto.** Al banco la colonna
-  «Pronto» può aprirsi in due — **«Da servire»** e **«Da ritirare»** — e
+- **Le colonne del banco si chiamano col lavoro che c'è dentro.** Dove
+  c'era **«Pronto»** adesso c'è **«Da servire/Ritirare»**, e dove c'era
+  «Ritirato/Servito» c'è **«Serviti/Ritirati»**: una colonna non dice a che
+  punto sta il drink, dice cosa c'è da farci. Dove al banco **non si
+  ritira** restano «Da servire» e «Serviti». Sono le stesse parole delle
+  porzioni del tasto dei chiusi, così la colonna e il filtro che parlano
+  della stessa cosa si chiamano allo stesso modo.
+
+- **Il pronto si divide dal suo stesso tasto.** Al banco quella colonna
+  può aprirsi in due — **«Da servire»** e **«Da ritirare»** — e
   fino a ieri lo chiedeva un tasto in fondo alla fila dei filtri che diceva
   «✂️ Dividi il pronto»: lungo, e lontano dalla colonna di cui parlava.
-  Adesso il segno **✂️ sta attaccato al chip «Pronto»**, e premendolo
+  Adesso il segno **✂️ sta attaccato al chip della colonna**, e premendolo
   **nello stesso punto** compaiono i due chip «Da servire» e «Da ritirare»,
   con un **🔗** per rimetterli insieme. Si vede a colpo d'occhio a cosa
   serve, perché sta dove agisce. Come sempre è una scelta **di quel
@@ -43,7 +67,7 @@
   una pastiglia per colonna, in fila con gli altri — non più dietro un
   «▦ Colonne» da toccare, e non più in una seconda riga sotto. Un tasto
   solo apre e chiude tutto. Richiudendo la fila **sparisce del tutto**.
-  **Serviti / Da servire** stanno anche loro **in riga con gli altri**, non
+  Le due porzioni dei chiusi stanno **dentro il tasto «💶 Chiusi»**, non
   più in una riga «Dei chiusi:» tutta loro.
 
 - **Filtri e ordinamento sono due bottoni bassi, gemelli.** Si vede che sono

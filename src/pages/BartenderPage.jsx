@@ -61,13 +61,14 @@ import {
   raggruppaPerGiornata,
   corsieDelPronto,
   CORSIE_SPENTE_ALL_INIZIO,
-  SOTTOFILTRI_CHIUSI,
+  sottofiltriChiusi,
+  nomiDelServizio,
   FILTRI_STATO,
-  STATI_DEFAULT,
+  STATO_DEFAULT,
   NOME_FILTRO_STATO,
-  NOME_SOTTOFILTRO,
+  nomeSottofiltro,
   cambiaFiltroStato,
-  statiAlDefault,
+  statoAlDefault,
   frasePerCodaVuota,
   autoriDeiConti,
   autoriAttivi,
@@ -540,15 +541,15 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // andata a buon fine.
   const [chiusiQui, setChiusiQui] = useState([])
   useEffect(() => subscribeNascosti(setChiusiQui), [])
-  // QUALI STATI SONO IN CODA. Erano quattro schede che si escludevano a
-  // vicenda — In corso, Chiusi, Annullati, Tutti — e non erano filtri: per
-  // vedere gli aperti insieme ai chiusi bisognava chiedere «Tutti», cioè
-  // anche gli annullati. Adesso sono tre interruttori e la coda mostra
-  // l'unione di quelli accesi (REQ-CODA-009). Le regole — mai zero, il
-  // ritorno automatico ad «Aperti» — stanno in coda.js, che è dove si
-  // provano; qui si tiene solo l'insieme.
-  const [stati, setStati] = useState(STATI_DEFAULT)
-  const toccaStato = (id) => setStati((attivi) => cambiaFiltroStato(attivi, id))
+  // QUALE STATO È IN CODA. UNO SOLO: «riportiamo aperti, chiusi e
+  // annullati come mutuamente esclusivi» (l'utente, 20/08/2026, dopo
+  // averli provati combinabili). Sopra la coda si chiede una cosa per
+  // volta — cosa c'è da fare, quanto ho incassato, cosa ho annullato — e
+  // una coda mista costringe a rileggere ogni card per sapere in quale dei
+  // tre mondi sta. La regola sta in coda.js (REQ-CODA-009), che è dove si
+  // prova; qui si tiene solo la scelta.
+  const [stato, setStato] = useState(STATO_DEFAULT)
+  const toccaStato = (id) => setStato((attuale) => cambiaFiltroStato(attuale, id))
   // DENTRO I CHIUSI: tutti, quelli usciti per intero, quelli con ancora
   // qualcosa da portare. Un conto chiuso è un conto incassato — si paga in
   // anticipo tutte le sere — e «quali dei chiusi hanno ancora roba da
@@ -560,16 +561,15 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // anche sotto «Chiusi»: si chiudeva un conto e nello storico non c'era,
   // fino a ricaricare la pagina. E riaprendolo non tornava fra quelli
   // aperti, perché era ancora nell'elenco dei nascosti.
-  // Adesso che i filtri si combinano la condizione lo dice per esteso: si
-  // nasconde solo se né «Chiusi» né «Annullati» sono accesi — cioè quando
-  // in coda ci sono soltanto i conti aperti. Con «Chiusi» acceso il conto
-  // appena incassato deve restare a schermo: è lì che si va a cercarlo.
+  // Si nasconde solo mentre si guardano gli APERTI: sotto «Chiusi» il
+  // conto appena incassato deve restare a schermo, è lì che si va a
+  // cercarlo, e sotto «Annullati» vale lo stesso.
   // ...E UN CONTO INCASSATO CON DEI DRINK ANCORA DA FARE NON SI NASCONDE
   // AFFATTO. Nascondere serve a togliere di mezzo un conto su cui non c'è
   // più niente da fare; ma si paga in anticipo tutte le sere, e sparendo
   // si portava dietro le sue comande — al banco i drink appena pagati si
   // volatilizzavano, e tornavano solo ricaricando la pagina (BUG-023).
-  const soloAperti = !stati.includes('chiusi') && !stati.includes('annullati')
+  const soloAperti = stato === 'attivi'
   const orders = useMemo(
     () => (soloAperti ? senzaNascosti(ordersRaw, haLavoroDaFare) : ordersRaw),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1296,7 +1296,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   const boardOrders = gridView
     ? ordiniInCoda(visibleOrders, {
         ...restaInCodaOpts,
-        filtro: stati,
+        filtro: stato,
         sottoChiusi,
       })
         .slice()
@@ -1365,9 +1365,18 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // Il ritiro esiste solo dove il locale lo fa: col solo servizio non c'è
   // niente da separare, e la scelta non si propone nemmeno.
   const ritiroEsiste = mondoConsegna(settings) === 'entrambi'
+  // Come si chiamano le due metà del servizio in QUESTO locale: i titoli
+  // delle corsie, i chip delle colonne e le porzioni del tasto dei chiusi
+  // li prendono tutti da qui (nomiDelServizio), o divergono al primo
+  // ritocco.
+  const nomiServizio = nomiDelServizio(ritiroEsiste)
   const divisioneP = corsieDelPronto({ divise: prontoSeparato, ritiroEsiste })
   const corsieDelBanco = corsieBanco
-    ? corsieComande(contiInCorsia, { isChiuso: isClosed, prontoDiviso: divisioneP })
+    ? corsieComande(contiInCorsia, {
+        isChiuso: isClosed,
+        prontoDiviso: divisioneP,
+        ritiroEsiste,
+      })
     : []
   // LE CORSIE DEI CONTI PARLANO DEL CONTO, non del lavoro: «In corso»,
   // «Chiusi», «Annullati» sono le tre cose che un CONTO può essere, e per
@@ -1415,27 +1424,36 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
     setVista(nuova)
     ricordaVistaCorsie(nuova)
   }
-  // I SOTTOFILTRI DEI CHIUSI, IN RIGA CON GLI ALTRI. Compaiono solo dove i
-  // chiusi si vedono — sono una domanda su quei conti, e fuori di lì non
-  // vogliono dire niente — e senza gli stati del servizio nemmeno: se non
-  // si segue la preparazione, tutto quello che è stato pagato è uscito per
-  // definizione.
+  // ── I CHIUSI SONO UN TASTO SOLO, A TRE PORZIONI ──────────────────
   //
-  // ERANO UNA RIGA A PARTE, sotto, con scritto «Dei chiusi:». «I filtri
-  // serviti/da servire deve stare insieme agli altri» (l'utente,
-  // 20/08/2026): una riga in più costa altezza sempre, e sono filtri come
-  // gli altri.
+  // «La cosa di servire e serviti unisci i tasti con chiusi, quindi tasto
+  // grande con tre selezioni. Se seleziono chiusi, vedo le altre due
+  // porzioni del tasto e posso filtrare Chiusi: sia da servire che
+  // serviti, serviti solo quelli serviti, da servire quelli da servire»
+  // (l'utente, 20/08/2026).
   //
-  // DUE CHIP, NON TRE. La terza era «Tutti», il neutro: acceso quasi
-  // sempre, diceva «nessun filtro» sembrando un filtro — e in riga con gli
-  // altri, subito dopo aver tolto la scheda «Tutti», sarebbe stata la
-  // stessa parola per un'altra cosa. Adesso il neutro è NESSUNO DEI DUE
-  // acceso, che è come si legge una fila di chip: acceso = sto guardando
-  // quello. Restano esclusivi fra loro (la regola sta in coda.js): serviti
-  // E da servire insieme sono tutti i chiusi, cioè il neutro.
-  const chipsSottoChiusi = (attivo) =>
-    workflowOn && attivo
-      ? SOTTOFILTRI_CHIUSI.map(([k, label]) => (
+  // ERANO CHIP FRATELLI IN FILA, indistinguibili dagli stati che stavano
+  // accanto: «Chiusi», «Serviti» e «Da servire» sembravano tre filtri
+  // dello stesso rango, mentre gli ultimi due sono una domanda DENTRO il
+  // primo — e comparivano dal nulla a metà riga, spostando tutto quello
+  // che avevano dopo. Attaccati nello stesso gruppo (`.chip-gruppo`,
+  // DESIGN.md) si legge quello che sono: un tasto solo che si apre.
+  //
+  // IL NEUTRO È NESSUNA DELLE DUE ACCESA — tutti i chiusi — e resta la
+  // semantica di prima: accendere una porzione stringe, ritoccarla torna
+  // al neutro, le due sono esclusive fra loro. Non c'è una porzione
+  // «Tutti»: sarebbe accesa quasi sempre e direbbe «nessun filtro»
+  // sembrando un filtro.
+  //
+  // SOLO COGLI STATI DEL SERVIZIO ACCESI: «sono attivi solo quando sono
+  // attivi gli stati di servizio» (l'utente). Senza la preparazione, tutto
+  // quello che è stato pagato è uscito per definizione e la domanda non
+  // esiste. E i NOMI seguono il ritiro (nomiDelServizio): dove al banco
+  // non si ritira, «/Ritirare» nominerebbe una cosa che nel bar non
+  // succede.
+  const porzioniChiusi = () =>
+    workflowOn
+      ? sottofiltriChiusi(ritiroEsiste).map(([k, label]) => (
           <button
             key={k}
             className={`chip ${sottoChiusi === k ? 'active' : ''}`}
@@ -1551,7 +1569,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // Ogni vista ha i suoi filtri, quindi ha il suo elenco: la griglia ha gli
   // stati e i giorni scorsi, il banco le colonne spente, la lista e le
   // schede solo lo staff.
-  const sottoAcceso = workflowOn && sottoChiusi !== 'tutti' ? NOME_SOTTOFILTRO[sottoChiusi] : null
+  const sottoAcceso = workflowOn ? nomeSottofiltro(sottoChiusi, ritiroEsiste) : null
   const staffFiltra = autoriAccesi.length !== autori.length
   const nomeStaff = staffFiltra ? riassuntoAutori(autoriScelti, autori).replace('✍️ ', '') : null
   const filtriAccesi = (
@@ -1565,8 +1583,8 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
         ? [
             // Gli stati si nominano solo quando NON sono il default: al
             // default il badge deve restare spento.
-            ...(statiAlDefault(stati) ? [] : stati.map((id) => NOME_FILTRO_STATO[id])),
-            stati.includes('chiusi') && sottoAcceso,
+            ...(statoAlDefault(stato) ? [] : [NOME_FILTRO_STATO[stato]]),
+            stato === 'chiusi' && sottoAcceso,
             nomeStaff,
             soloOggi && 'Solo oggi',
           ]
@@ -1736,11 +1754,17 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   const filtriCorsie = filaFiltri(
     <>
       {tendinaStaff}
-      {/* SERVITI / DA SERVIRE stanno qui, in riga con gli altri: nelle
-          corsie dei conti la colonna «Chiusi» c'è sempre, quindi la
-          domanda ha sempre senso. Al banco no: lì si guardano le comande,
-          e i conti chiusi non hanno una colonna. */}
-      {chipsSottoChiusi(!corsieBanco)}
+      {/* LE DUE PORZIONI DEI CHIUSI stanno qui, in riga con gli altri:
+          nelle corsie dei conti la colonna «Chiusi» c'è sempre, quindi la
+          domanda ha sempre senso e non c'è nessun «Chiusi» da accendere a
+          cui attaccarle — restano un tasto a due porzioni, con lo stesso
+          vestito che hanno in griglia. Al banco no: lì si guardano le
+          comande, e i conti chiusi non hanno una colonna. */}
+      {!corsieBanco && workflowOn && (
+        <div className="chip-gruppo" role="group" aria-label="Dei conti chiusi">
+          {porzioniChiusi()}
+        </div>
+      )}
       {/* QUALI COLONNE TENERE A SCHERMO. A metà serata chi sta allo
           shaker guarda «Da fare» e «Al banco», e le altre due gli
           mangiano mezzo schermo per roba che in quel momento non lo
@@ -1762,9 +1786,10 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
           in fondo alla fila, «✂️ Dividi il pronto»: «dobbiamo integrarlo
           meglio con gli altri due bottoni, in qualche modo non si capisce
           a che serve. E poi è troppo lungo» (l'utente, 20/08/2026).
-          Adesso è un tastino appeso al chip del pronto — «Pronto ✂️» —
-          e premendolo, NELLO STESSO POSTO, compaiono «Da servire» e «Da
-          ritirare» accoppiati col loro 🔗 per riunirli. L'interruttore
+          Adesso è un tastino appeso al chip della colonna che divide —
+          «Da servire/Ritirare ✂️» — e premendolo, NELLO STESSO POSTO,
+          compaiono «Da servire» e «Da ritirare» accoppiati col loro 🔗
+          per riunirli. L'interruttore
           sta dove agisce, e il suo effetto si vede lì: niente frase da
           leggere, niente chip orfano lontano dalla colonna di cui parla.
           Come si raggruppano lo dice `gruppiColonne` in coda.js. */}
@@ -1790,13 +1815,13 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                 onClick={cambiaPronto}
                 aria-label={
                   g.diviso
-                    ? 'Riunisci «Da servire» e «Da ritirare» in una colonna «Pronto»'
-                    : 'Dividi «Pronto» in «Da servire» e «Da ritirare»'
+                    ? `Riunisci «Da servire» e «Da ritirare» in una colonna «${nomiServizio.daServire}»`
+                    : `Dividi «${nomiServizio.daServire}» in «Da servire» e «Da ritirare»`
                 }
                 title={
                   g.diviso
                     ? 'Riunisci «Da servire» e «Da ritirare» in una colonna sola, col badge sulla card'
-                    : 'Dividi «Pronto» in «Da servire» e «Da ritirare»'
+                    : `Dividi «${nomiServizio.daServire}» in «Da servire» e «Da ritirare»`
                 }
               >
                 <span aria-hidden>{g.diviso ? '🔗' : '✂️'}</span>
@@ -1825,28 +1850,35 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // lo dice il titolo.
   const filtriOrdini = filaFiltri(
     <>
-      {/* I TRE STATI, COMBINABILI. Uno acceso vuol dire «lo sto
-          guardando», e la coda mostra l'unione: niente più scheda «Tutti»
-          — è tutti e tre accesi, e si vede. `aria-pressed` e non una
-          scheda: sono interruttori, non linguette (REQ-CODA-009). */}
-      {FILTRI_STATO.map(([k, label]) => (
-        <button
-          key={k}
-          className={`chip ${stati.includes(k) ? 'active' : ''}`}
-          onClick={() => toccaStato(k)}
-          aria-pressed={stati.includes(k)}
-          title={
-            k === 'attivi' && stati.length === 1 && stati[0] === 'attivi'
-              ? 'Gli aperti si spengono solo con chiusi o annullati accesi'
-              : undefined
-          }
-        >
-          {label}
-        </button>
-      ))}
-      {/* SERVITI / DA SERVIRE: in riga con gli altri, e solo quando i
-          chiusi sono a schermo — fuori di lì non vogliono dire niente. */}
-      {chipsSottoChiusi(stati.includes('chiusi'))}
+      {/* I TRE STATI, ESCLUSIVI. Uno acceso vuol dire «sto guardando
+          quello», e gli altri due si spengono: «riportiamo aperti, chiusi
+          e annullati come mutuamente esclusivi» (l'utente, 20/08/2026).
+          Restano `aria-pressed` e non delle linguette — sono filtri di
+          questa coda, non tre code diverse (REQ-CODA-009).
+          E «CHIUSI» NON È UN CHIP SOLO: è un tasto a tre porzioni, che si
+          apre quando lo si accende. Da spento si vede solo lui; acceso,
+          accanto compaiono «Da servire/Ritirare» e «Serviti/Ritirati»,
+          attaccate nello stesso gruppo perché sono una domanda DENTRO i
+          chiusi e non due filtri fratelli. */}
+      {FILTRI_STATO.map(([k, label]) => {
+        const chip = (
+          <button
+            key={k}
+            className={`chip ${stato === k ? 'active' : ''}`}
+            onClick={() => toccaStato(k)}
+            aria-pressed={stato === k}
+          >
+            {label}
+          </button>
+        )
+        if (k !== 'chiusi' || stato !== 'chiusi' || !workflowOn) return chip
+        return (
+          <div key={k} className="chip-gruppo" role="group" aria-label="Conti chiusi">
+            {chip}
+            {porzioniChiusi()}
+          </div>
+        )
+      })}
       {tendinaStaff}
       {/* C'ERA UN «NASCONDI PAGATI», E NON SERVE PIÙ. Serviva a togliere
           dagli occhi i conti già incassati ma non ancora serviti, perché
@@ -2801,7 +2833,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
               Erano tutti una riga a sé fra la testata e le card. */}
           {/* Griglia: ordini in invio (grigi) + ordini secondo i filtri */}
           {pend.pending.length === 0 && visibleBoard.length === 0 && (
-            <div className="empty">{frasePerCodaVuota(stati, soloOggi)}</div>
+            <div className="empty">{frasePerCodaVuota(stato, soloOggi)}</div>
           )}
           {/* I nuovi ordini vanno IN FONDO (numeri più alti): il placeholder
               in sync sta già lì, così alla conferma non cambia posizione. */}
@@ -2812,7 +2844,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
           )}
           {boardGroups.map(({ day, orders: gOrders }) => (
             <div key={day}>
-              {separatoreGiornata(day, stati)}
+              {separatoreGiornata(day, stato)}
               <div className="order-grid">
                 {gOrders.map(renderGridCard)}
                 {day === oggiKey && pend.pending.map(renderPendingCard)}

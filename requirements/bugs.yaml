@@ -2318,3 +2318,55 @@ bugs:
       - tests/component/CodaCorsie.test.jsx
       - tests/unit/coda.test.js
       - tests/unit/css.test.js
+
+  - id: BUG-063
+    title: "Con tutte le corsie accese le card si sballano: i tasti si tagliano a vicenda"
+    area: "src/index.css (.corsia-card, .corsia-piede, .corsia-quando), src/components/CorsieComande.jsx, src/components/CorsieStato.jsx"
+    description: >
+      Segnalato dall'utente il 20/08/2026, con lo screenshot: «poi quando
+      sono attive tutte le lane il layout delle card si sballa. Nel caso
+      siano troppo strette per i tasti, li impiliamo verticalmente». E
+      subito dopo, con un secondo screenshot: «anche con 4 corsie succede.
+      Ovviamente dobbiamo farlo in modo che sia dinamico».
+      COSA SI VEDEVA. Al banco, con tutte le colonne accese (sette, col
+      pronto diviso), le card diventano strisce da centoventi pixel: il
+      piede tiene TRE tasti in fila — «🧾 Conto», «⋯ Azioni» e quello che
+      porta avanti il lavoro («Pronto», «Servito», «Incassa») — che in
+      riga ne vogliono quasi trecento. Si schiacciavano fino a tagliare le
+      parole, il terzo usciva dal bordo della card, e nella testata «5
+      min» andava a capo una lettera per riga accanto al numero del conto.
+      LA CURA, IN DUE PASSI, E IL TASTO GRANDE SI DIFENDE PER PRIMO. È il
+      gesto più frequente della serata — si preme di corsa e al buio — e a
+      nessuna larghezza deve diventare piccolo o finire tagliato. Quindi:
+      sotto i 300px di card il tasto grande SCENDE SOTTO a tutta
+      larghezza, e i due piccoli si dividono la riga di sopra (il
+      bersaglio che conta CRESCE, invece di stringersi: è un guadagno
+      prima ancora di essere un ripiego); sotto i 200px nemmeno i due
+      piccoli ci stanno affiancati — «⋯ Azioni» da solo ne vuole più di
+      ottanta — e allora vanno in colonna tutti e tre.
+      LA SOGLIA È LA LARGHEZZA MISURATA DELLA CARD, e non poteva essere
+      altro: «ovviamente dobbiamo farlo in modo che sia dinamico» (parole
+      sue). Niente «se le colonne sono più di N»: la stessa card è stretta
+      con sette corsie e larga con tre, sullo stesso schermo, e col menu
+      agganciato alla pagina o col browser allo zoom la finestra mente di
+      duecentocinquanta pixel. Si fa con una container query sulla card
+      (`container: card-corsia / inline-size`), che è lo stesso attrezzo —
+      e la stessa lezione — di BUG-021 e delle due colonne delle righe.
+      E IL TEMPO NON VA PIÙ A CAPO: «5 min» è testo corto e si tiene
+      intero (`.corsia-quando`, `white-space: nowrap`); a cedere è il nome
+      del tavolo, che a capo ci va bene, e la testata può andare su due
+      righe — meglio due righe che una parola in colonna.
+      PASSI PER RIPRODURLO (prima della cura): coda del banco da tablet,
+      fila dei filtri aperta, tutte le colonne accese e il pronto diviso —
+      le card hanno «⋯ Azioni» tagliato e il tasto di stato fuori dal
+      bordo. Succede già con quattro colonne.
+      A SORVEGLIARE È tests/unit/css.test.js: jsdom non fa layout, e dal
+      DOM una container query non si vede.
+    in_produzione: false
+    status: fixed
+    generate_issue: true
+    labels: [bug, interfaccia, coda]
+    severity: lieve
+    priority: P2
+    test_cases:
+      - tests/unit/css.test.js

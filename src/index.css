@@ -7169,6 +7169,14 @@ body.pagina-piena .inv-scheda {
   padding: 10px;
   margin: 0;
   cursor: pointer;
+  /* LA CARD È UN CONTENITORE, e la sua larghezza decide come si dispone
+     il piede (vedi `@container card-corsia`, più sotto). Deve essere lei e
+     non la finestra: con sette colonne accese la finestra è larga 1280px e
+     la card è una striscia da 120 — «anche con 4 corsie succede. Ovviamente
+     dobbiamo farlo in modo che sia dinamico» (l'utente, 20/08/2026,
+     BUG-063). Stessa lezione di BUG-021, e delle due colonne delle righe
+     qui dentro. */
+  container: card-corsia / inline-size;
   /* SI TIENE PREMUTO PER SPOSTARLA in un'altra colonna, e sull'iPad tenere
      premuto vuol dire di suo lente d'ingrandimento e menu «copia»: qui non
      servono, e coprirebbero proprio la card che si ha in mano.
@@ -7815,6 +7823,7 @@ body.pagina-piena .inv-scheda {
   display: flex;
   gap: 6px;
   margin-top: 8px;
+  flex-wrap: wrap;
 }
 .corsia-piede .corsia-azioni {
   flex: 0 0 auto;
@@ -7822,6 +7831,67 @@ body.pagina-piena .inv-scheda {
 .corsia-piede .corsia-azione {
   flex: 1;
   margin: 0;
+}
+
+/* ── QUANDO LA CARD È STRETTA, I TASTI SI IMPILANO ───────────────────
+   «Quando sono attive tutte le lane il layout delle card si sballa. Nel
+   caso siano troppo strette per i tasti, li impiliamo verticalmente» —
+   e, subito dopo, con un secondo screenshot: «anche con 4 corsie succede.
+   Ovviamente dobbiamo farlo in modo che sia dinamico» (l'utente,
+   20/08/2026, BUG-063).
+   I TASTI SONO TRE: «🧾 Conto», «⋯ Azioni» e quello che porta avanti il
+   lavoro («Pronto», «Servito», «Incassa»). In fila vogliono quasi 280px,
+   e in una colonna su sette ce ne sono 120: si schiacciavano fino a
+   tagliare le parole, e il terzo usciva dal bordo.
+   SI DEGRADA IN DUE PASSI, e il tasto grande è quello che si difende per
+   primo: è il gesto più frequente della serata, si preme di corsa e al
+   buio, e a nessuna larghezza deve diventare piccolo.
+     · sotto i 300px il tasto grande SCENDE SOTTO, a tutta larghezza, e i
+       due piccoli si dividono la riga di sopra. Il bersaglio che conta
+       cresce invece di stringersi, ed è già un guadagno prima ancora di
+       essere un ripiego;
+     · sotto i 200px nemmeno i due piccoli ci stanno affiancati («⋯
+       Azioni» da solo ne vuole più di ottanta), e allora vanno in colonna
+       tutti e tre.
+   LA SOGLIA È LA LARGHEZZA MISURATA DELLA CARD, mai il numero di colonne:
+   la stessa card è stretta con sette corsie e larga con tre, sullo stesso
+   schermo, e col menu agganciato o col browser allo zoom la finestra
+   mente di 250px. */
+@container card-corsia (max-width: 300px) {
+  .corsia-piede .corsia-azione {
+    flex: 1 0 100%;
+  }
+  /* I due piccoli si spartiscono la riga invece di tenere la loro
+     larghezza naturale: affiancati e mezzi vuoti sembrano un tasto
+     rotto. */
+  .corsia-piede .corsia-azioni {
+    flex: 1 1 0;
+  }
+}
+
+@container card-corsia (max-width: 200px) {
+  .corsia-piede {
+    flex-direction: column;
+  }
+  .corsia-piede .corsia-azioni,
+  .corsia-piede .corsia-azione {
+    flex: 0 0 auto;
+    width: 100%;
+  }
+}
+
+/* IL TEMPO NON VA A CAPO UNA LETTERA PER RIGA. In una card stretta
+   «5 min» si spezzava in verticale accanto al numero del conto: è testo
+   corto e va tenuto intero, e a cedere dev'essere il nome del tavolo, che
+   a capo ci va bene. La testata può andare su due righe — meglio due
+   righe che una parola in colonna. */
+.corsia-card > .row.between {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.corsia-quando {
+  white-space: nowrap;
+  margin-left: auto;
 }
 
 /* Le azioni aperte respirano: attaccate al piede sembravano la continuazione

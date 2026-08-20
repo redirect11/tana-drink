@@ -182,19 +182,16 @@ const separatori = () =>
 
 // I FILTRI DI STATO STANNO DIETRO IL TASTINO DEI FILTRI (REQ-CODA-008):
 // la fila nasce chiusa, e chi vuole cambiarli la apre prima — come al
-// banco. Da REQ-CODA-009 non sono più schede che si escludono ma tre
-// interruttori: per vedere SOLO i chiusi bisogna accendere «Chiusi» e
-// spegnere «Aperti», che è esattamente quello che l'utente ha chiesto di
-// poter fare.
+// banco. E SI ESCLUDONO A VICENDA (REQ-CODA-009, sesta correzione del
+// 20/08/2026): per vedere solo i chiusi basta accendere «Chiusi», che
+// spegne «Aperti» da sé. Per mezza giornata sono stati combinabili e ci
+// volevano due tocchi.
 const apriFiltri = async (utente) => {
   await utente.click(screen.getByRole('button', { name: 'Filtri' }))
 }
 const soloStato = async (utente, nome) => {
   await apriFiltri(utente)
   await utente.click(screen.getByRole('button', { name: nome }))
-  // «Aperti» si spegne solo DOPO aver acceso qualcos'altro: se lo si
-  // spegnesse per primo si riaccenderebbe da solo (mai zero filtri).
-  await utente.click(screen.getByRole('button', { name: 'Aperti' }))
 }
 
 beforeEach(() => {
@@ -260,16 +257,22 @@ describe('la riga che separa le giornate', () => {
     expect(separatori()).toEqual(['✖️ Annullati · ieri'])
   })
 
-  it('con più stati accesi resta la sola data: lì i conti sono mescolati', async () => {
-    // Era la scheda «Tutti»; adesso è semplicemente accendere anche i
-    // chiusi. Qualunque etichetta sarebbe giusta per metà dei conti sotto.
+  it('e la riga cambia con lo stato, senza mai mescolarli', async () => {
+    // C'ERA UN CASO IN PIÙ, ed è sparito con la regola: con gli stati
+    // combinabili «Aperti + Chiusi» metteva sotto la stessa riga conti di
+    // due nature e la riga si riduceva alla sola data. Adesso in coda c'è
+    // sempre uno stato solo, quindi la riga ha sempre qualcosa da dire —
+    // e passando da uno all'altro cambia con lui.
     const utente = userEvent.setup()
     montaCoda()
     await screen.findByText('#11')
-    await apriFiltri(utente)
-    await utente.click(screen.getByRole('button', { name: /Chiusi/ }))
+    await soloStato(utente, /Chiusi/)
     expect(await screen.findByText('#12')).toBeInTheDocument()
-    expect(separatori()).toEqual(['📅 ieri'])
+    expect(separatori()).toEqual(['💶 Chiusi · ieri'])
+
+    await utente.click(screen.getByRole('button', { name: 'Aperti' }))
+    await screen.findByText('#11')
+    expect(separatori()).toEqual(['⏳ Da chiudere · ieri'])
   })
 })
 
