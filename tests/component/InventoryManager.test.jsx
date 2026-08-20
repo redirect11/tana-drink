@@ -440,3 +440,30 @@ describe('la macro di ogni categoria, nell’elenco delle categorie', () => {
     expect(within(altro).getByText('senza macro')).toBeInTheDocument()
   })
 })
+
+// ── LA LEGENDA DEI DUE SEGNI (REQ-MAG-027) ───────────────────────────
+//
+// Nata da una domanda vera di Flavio (vocale del 20/08): «perché alcune
+// cose hanno questa bacchettina davanti — rossa, blu, oppure non ce
+// l'hanno?». Quattro colori senza spiegazione sono un codice segreto: la
+// legenda sta sotto gli occhi, sopra la lista.
+describe('la legenda del magazzino', () => {
+  it('spiega pallini e strisce, con le parole del banco', async () => {
+    render(<InventoryManager />)
+    await screen.findByText(/Prodotto/)
+
+    const legenda = document.querySelector('.inv-legenda')
+    expect(legenda).toBeTruthy()
+    // I pallini: quanta roba c'è.
+    expect(legenda.textContent).toContain('in esaurimento')
+    expect(legenda.textContent).toContain('esaurito')
+    // Le strisce: che assortimento è.
+    expect(legenda.textContent).toContain('in linea')
+    expect(legenda.textContent).toContain('premium')
+    expect(legenda.textContent).toContain('fuori (OUT)')
+    expect(legenda.textContent).toContain('in assortimento')
+    // E i campioncini sono le classi VERE dei segni, non copie.
+    expect(legenda.querySelector('.dot-empty')).toBeTruthy()
+    expect(legenda.querySelector('.tacca-linea')).toBeTruthy()
+  })
+})
