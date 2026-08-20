@@ -8,8 +8,8 @@ Alla data di generazione: **172 requisiti**.
 
 | | Quanti | Cosa vuol dire |
 |---|---|---|
-| ✅ | 131 | fatto e coperto dai test |
-| ⚠️  | 15 | fatto ma nessun test lo verifica |
+| ✅ | 132 | fatto e coperto dai test |
+| ⚠️  | 14 | fatto ma nessun test lo verifica |
 | ⬜ | 26 | da fare |
 
 Un requisito può essere dimostrato da più test; un test appartiene a
@@ -1082,13 +1082,13 @@ Si stampa la comanda in lavorazione (con dentro le aggiunte appena fatte) e lo s
 
 *Lo dimostrano*: `tests/unit/scontrinoUnaVolta.test.js`, `tests/unit/ristampaScontrino.test.js`
 
-### ⚠️  REQ-STAMPA-002 — La stampante non deve smettere di funzionare a metà serata
+### ✅ REQ-STAMPA-002 — La stampante non deve smettere di funzionare a metà serata
 
 La connessione alla stampante viene tenuta viva e ricontrollata quando l'app torna in primo piano: non si deve uscire dal programma per farla ripartire.
 
 *Dove*: `src/lib/printer.js`
 
-*Nessun test lo verifica.*
+*Lo dimostrano*: `tests/unit/stampaComande.test.js`
 
 ### ⬜ REQ-STAMPA-003 — Il certificato della stampante non deve scadere ogni volta
 

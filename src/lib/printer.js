@@ -114,6 +114,56 @@ export function reclaimReceiptPrint(orderId) {
   return claimReceiptPrint(orderId)
 }
 
+// ── L'AUTO-STAMPA DELLE COMANDE ──────────────────────────────────────
+//
+// LA STAMPA NON È UN AVVISO. Per anni ha vissuto dentro il blocco della
+// notifica «nuovo ordine», e ne ereditava i filtri: «non avvisare chi l'ha
+// battuto» è sacrosanto per un beep — lo sai già, l'hai appena fatto tu —
+// ma la stampante non è una persona: la comanda serve al banco comunque,
+// anche per l'ordine battuto da questo stesso terminale. E dentro quel
+// blocco stampava solo l'ordine NUOVO: la seconda comanda aggiunta a un
+// conto esistente non usciva mai.
+//
+// Qui la stampa ha la sua regola, per COMANDA e non per ordine, con la
+// stessa pretesa in localStorage degli scontrini: ogni comanda esce UNA
+// volta da questo terminale, chiunque l'abbia battuta, da qualunque vista.
+const COMANDE_KEY = 'tana_printed_comande'
+export function claimComandaPrint(orderId, comandaId) {
+  if (!orderId || !comandaId) return false
+  const chiave = `${orderId}:${comandaId}`
+  try {
+    const list = JSON.parse(localStorage.getItem(COMANDE_KEY) || '[]')
+    if (list.includes(chiave)) return false
+    localStorage.setItem(COMANDE_KEY, JSON.stringify([...list, chiave].slice(-500)))
+    return true
+  } catch {
+    return true // niente memoria: meglio una copia doppia che nessuna
+  }
+}
+
+// QUALI COMANDE DI UN CONTO VANNO STAMPATE ADESSO. Pura, così si prova
+// senza rete e senza schermata.
+//
+// LA FINESTRA DEI DIECI MINUTI, che è la scelta da capire: senza, il primo
+// terminale che apre la coda con la memoria vuota (browser nuovo, dati
+// cancellati) stamperebbe in raffica tutte le comande vive della serata.
+// Una comanda più vecchia di così o è già stata stampata da un altro
+// terminale, o è di un turno in cui l'auto-stampa non c'era: in entrambi i
+// casi ristamparla fa danno. Il banco con la stampante tiene la coda
+// aperta tutta la sera: la finestra non gli toglie niente.
+export const FINESTRA_STAMPA_COMANDA_MS = 10 * 60 * 1000
+export function comandeDaStampare(order, adesso = Date.now()) {
+  if (!order || order.status === 'annullato') return []
+  return (order.comande || []).filter((c) => {
+    if (!c || c.status === 'annullato') return false
+    // Da stampare è la comanda ancora al banco: già pronta o uscita vuol
+    // dire che qualcuno l'ha lavorata senza carta, e stamparla ora è tardi.
+    if (c.status !== 'ricevuto' && c.status !== 'in_preparazione') return false
+    const nata = Date.parse(c.created_at || '')
+    return Number.isFinite(nata) && adesso - nata <= FINESTRA_STAMPA_COMANDA_MS
+  })
+}
+
 // La sala stampa da sé? Una domanda sola, in un posto solo: la fanno la
 // schermata che prende l'ordine e il pallino che dice se si stamperà.
 export function salaStampaDaSe(s = loadPrinterSettings()) {

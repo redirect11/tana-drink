@@ -25,6 +25,12 @@ Correzione urgente su una cosa sola: **chiudere un conto con lo sconto**.
   torna libera quando la stampa fallisce e quando il conto viene riaperto. La
   guardia contro la doppia copia resta.
 
+- **La comanda automatica esce sempre: anche per l'ordine battuto da questo
+  terminale, anche per la seconda comanda di un conto già aperto.** Prima la
+  stampa seguiva le regole degli avvisi — e «non avvisare chi l'ha battuto»
+  lasciava il banco senza carta proprio sui suoi ordini. Una copia sola per
+  comanda: tornare agli ordini non ristampa.
+
 ## 1.5.0 — 18 agosto 2026
 
 Questa versione porta al banco una coda tutta sua. Chi prepara non lavora un
