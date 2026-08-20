@@ -247,16 +247,18 @@ ${nome} {`)
 
 // ── I DUE TASTINI DELLA FILA DEI FILTRI NON SCORRONO VIA ─────────────
 //
-// Sono scesi dalla testata alla riga dei filtri — «spostala da lì, mettila
-// sotto dove stavano i vecchi bottoni. Rimetti lì giù anche il tasto dei
-// filtri» (l'utente, 20/08) — e quella riga SCORRE in orizzontale quando i
-// chip non ci stanno (in griglia sono sei). Senza `sticky` il tasto che
-// l'ha aperta se ne andrebbe fuori schermo insieme ai chip, e per
-// richiuderla bisognerebbe prima riportare indietro la riga.
+// I DUE TASTINI NON STANNO PIÙ DENTRO LA FILA DEI CHIP. Ci stavano, e la
+// fila doveva quindi esistere sempre — anche a filtri chiusi, per
+// contenerli. «Il tasto dei filtri deve essere sulla destra insieme a
+// quello dell'ordinamento non a sinistra dei filtri. […] i filtri devono
+// uscire sotto» (l'utente, 20/08/2026): adesso si appoggiano a una riga che
+// c'è comunque (i conteggi, la ricerca) e la fila dei chip esiste solo da
+// aperta. `.chips-tastini` e il suo `sticky` non servono più: non c'è più
+// una riga che scorre da cui restare fuori.
 //
-// Il DOM da solo non lo può dire: jsdom non fa layout, e i chip e i tastini
-// sono nella stessa riga in ogni caso. Si sorveglia il foglio.
-describe('i tastini dei filtri restano fermi mentre i chip scorrono', () => {
+// Il DOM da solo non lo può dire: jsdom non fa layout. Si sorveglia il
+// foglio.
+describe('i due tastini che governano la vista', () => {
   const css = readFileSync(join(CARTELLA, 'index.css'), 'utf8')
   const regola = (nome) => {
     const i = css.indexOf(`
@@ -265,18 +267,33 @@ ${nome} {`)
     return css.slice(i, css.indexOf('}', i))
   }
 
-  it('sono incollati a sinistra della riga che scorre', () => {
-    const r = regola('.chips-tastini')
-    expect(r).toMatch(/position:\s*sticky/)
-    expect(r).toMatch(/left:\s*0/)
-    // e non si stringono per far posto ai chip: sotto i 44px al banco si
-    // sbaglia, e si tocca con le dita bagnate
+  it('stanno in fondo a destra della riga che li ospita', () => {
+    const r = regola('.coda-tastini')
+    expect(r).toMatch(/margin-left:\s*auto/)
+    // La riga dei conteggi allinea alla BASE del testo: un tastino
+    // allineato alla base pende.
+    expect(r).toMatch(/align-self:\s*center/)
+    // e non si stringono per far posto al testo dei conteggi
     expect(r).toMatch(/flex-shrink:\s*0/)
   })
 
-  it('hanno un fondo sotto, o i chip si vedrebbero passare dietro', () => {
-    const r = regola('.chips-tastini')
-    expect(r).toMatch(/background:\s*var\(--bg\)/)
-    expect(r).toMatch(/z-index:/)
+  it('sono piccoli e senza riquadro, come il «▾ altre 3» di una card', () => {
+    // «Il tasto per mostrare/nascondere i filtri deve essere un tasto
+    // piccolo […] come il tasto che mostra/nasconde i prodotti da una card
+    // delle comande» (l'utente, 20/08/2026). Un rettangolo bordato in mezzo
+    // a una riga di testo è uno scalino.
+    const r = regola('.coda-tastino')
+    expect(r).toMatch(/border:\s*none/)
+    expect(r).toMatch(/background:\s*none/)
+    expect(r).toMatch(/color:\s*var\(--muted\)/)
+  })
+
+  it('la fila dei chip va a capo invece di scorrere, o taglierebbe la tendina', () => {
+    // `.chips-row` scorre in orizzontale, e dentro un contenitore che
+    // scorre un pannello in `position: absolute` viene TAGLIATO: la
+    // tendina degli autori si aprirebbe dentro una riga alta 40px.
+    const r = regola('.chips-filtri')
+    expect(r).toMatch(/flex-wrap:\s*wrap/)
+    expect(r).toMatch(/overflow:\s*visible/)
   })
 })

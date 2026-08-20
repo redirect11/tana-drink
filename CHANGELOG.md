@@ -4,17 +4,46 @@
 
 ### Per chi gestisce
 
-- **I filtri della coda stanno dietro un tastino, e la loro riga si
-  svuota.** Sopra i conti c'era una fila di pastiglie — In corso, Chiusi,
-  Annullati, Tutti, Miei, Solo oggi — che si mangiava tutta la riga. Adesso
-  a quel posto ci sono **due tastini soli**: la **⚗️** che apre e chiude i
-  filtri e la **freccia dell'ordinamento**. Il tasto si chiama **«Mostra
-  filtri»**, e da aperto «Nascondi filtri». Se qualcosa è acceso il tastino
-  **si accende e porta il numero** dei filtri, così non capita di guardare
-  una coda filtrata credendola intera; quali siano lo dice il nome che
-  compare passandoci sopra. Vale allo stesso modo per gli **ordini** e per
-  le **comande** — dove dentro c'è anche «▦ Colonne» — e **ogni tablet se
-  lo ricorda a modo suo**: chi la tiene aperta la ritrova aperta.
+- **I filtri della coda sono diventati filtri veri.** Sopra i conti c'erano
+  quattro schede che si escludevano — In corso, Chiusi, Annullati, Tutti —
+  e per vedere gli aperti insieme ai chiusi bisognava chiedere «Tutti», cioè
+  anche gli annullati. Adesso sono **tre interruttori che si combinano**:
+  **Aperti** (si chiamava «In corso»), **💶 Chiusi**, **✖️ Annullati**. Si
+  accendono e si spengono uno per uno e la coda mostra tutto quello che è
+  acceso; **«Tutti» è sparito**, perché è semplicemente accenderli tutti e
+  tre. **Non si resta mai senza**: «Aperti» si spegne solo se c'è dell'altro
+  acceso, e spegnendo l'ultimo fra chiusi e annullati **torna da solo**.
+
+- **«✍️ Miei» è diventato la tendina degli autori.** Dentro c'è **chi ha
+  aperto almeno un conto** stasera — più una voce **Clienti** per gli ordini
+  arrivati dall'app — e sono **tutti selezionati**: si vede tutto. Da lì si
+  spegne chi non interessa e restano **i conti di chi si vuole**: i propri,
+  come prima, oppure quelli di un collega. Da chiusa la pastiglia lo dice
+  senza aprirla — «✍️ Autori», «✍️ Marta», «✍️ 2 autori» — e si
+  incrocia con gli stati: **i chiusi di una persona sola** si chiedono in due
+  tocchi. Anche qui non si resta mai senza nessuno: spegnendo l'ultimo
+  tornano tutti.
+
+- **Il tasto dei filtri è piccolo e sta a destra, e i filtri escono sotto.**
+  È diventato un **«▾ Filtri»** discreto — come il «▾ altre 3» che apre le
+  righe di una comanda — in **fondo a destra**, accanto alla freccia
+  dell'ordinamento, **sulla riga dei conteggi che c'era già**. A filtri
+  chiusi la coda **non perde nemmeno una riga**; toccandolo compaiono i chip
+  in una riga sotto, che richiudendo **sparisce del tutto**. **Serviti / Da
+  servire** stanno adesso **in riga con gli altri**, non più in una riga
+  «Dei chiusi:» tutta loro.
+
+- **Il numerino sul tasto dei filtri conta solo quello che hai cambiato.**
+  Prima segnava sempre almeno uno, e non distingueva niente: adesso compare
+  **solo se la coda è filtrata diversamente da come si apre**, e **solo a
+  filtri chiusi** — aperti, i chip accesi si vedono da soli.
+
+- **I filtri della coda stanno a scomparsa.** Sopra i conti c'era una fila
+  di pastiglie che si mangiava tutta la riga: adesso stanno dietro il tasto
+  qui sopra, e si aprono quando servono. Vale allo stesso modo per gli
+  **ordini** e per le **comande** — dove dentro c'è anche «▦ Colonne» — e
+  **ogni tablet se lo ricorda a modo suo**: chi la tiene aperta la ritrova
+  aperta.
 
 - **Il tasto dell'ordinamento dice com'è messa la coda adesso**, in tre
   parole: **«Prima i più recenti»** oppure **«Prima i più vecchi»**. Prima

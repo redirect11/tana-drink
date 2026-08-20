@@ -180,11 +180,21 @@ const montaCoda = () =>
 const separatori = () =>
   [...document.querySelectorAll('.day-sep')].map((n) => n.textContent.trim())
 
-// LE SCHEDE STANNO DIETRO «⚗️ Filtri» (REQ-CODA-008): la fila nasce chiusa,
-// e chi vuole cambiare scheda la apre prima — come al banco.
-const scegliScheda = async (utente, nome) => {
+// I FILTRI DI STATO STANNO DIETRO IL TASTINO DEI FILTRI (REQ-CODA-008):
+// la fila nasce chiusa, e chi vuole cambiarli la apre prima — come al
+// banco. Da REQ-CODA-009 non sono più schede che si escludono ma tre
+// interruttori: per vedere SOLO i chiusi bisogna accendere «Chiusi» e
+// spegnere «Aperti», che è esattamente quello che l'utente ha chiesto di
+// poter fare.
+const apriFiltri = async (utente) => {
   await utente.click(screen.getByRole('button', { name: 'Filtri' }))
+}
+const soloStato = async (utente, nome) => {
+  await apriFiltri(utente)
   await utente.click(screen.getByRole('button', { name: nome }))
+  // «Aperti» si spegne solo DOPO aver acceso qualcos'altro: se lo si
+  // spegnesse per primo si riaccenderebbe da solo (mai zero filtri).
+  await utente.click(screen.getByRole('button', { name: 'Aperti' }))
 }
 
 beforeEach(() => {
@@ -232,29 +242,32 @@ describe('la riga che separa le giornate', () => {
     expect(separatori()).toEqual(['⏳ Da chiudere · ieri'])
   })
 
-  it('fra i CHIUSI dice «Chiusi», non «Da chiudere»', async () => {
+  it('coi soli CHIUSI dice «Chiusi», non «Da chiudere»', async () => {
     const utente = userEvent.setup()
     montaCoda()
     await screen.findByText('#11')
-    await scegliScheda(utente, /Chiusi/)
+    await soloStato(utente, /Chiusi/)
     expect(await screen.findByText('#12')).toBeInTheDocument()
     expect(separatori()).toEqual(['💶 Chiusi · ieri'])
   })
 
-  it('fra gli ANNULLATI dice «Annullati»', async () => {
+  it('coi soli ANNULLATI dice «Annullati»', async () => {
     const utente = userEvent.setup()
     montaCoda()
     await screen.findByText('#11')
-    await scegliScheda(utente, /Annullati/)
+    await soloStato(utente, /Annullati/)
     expect(await screen.findByText('#13')).toBeInTheDocument()
     expect(separatori()).toEqual(['✖️ Annullati · ieri'])
   })
 
-  it('nella scheda «Tutti» resta la sola data: lì i conti sono mescolati', async () => {
+  it('con più stati accesi resta la sola data: lì i conti sono mescolati', async () => {
+    // Era la scheda «Tutti»; adesso è semplicemente accendere anche i
+    // chiusi. Qualunque etichetta sarebbe giusta per metà dei conti sotto.
     const utente = userEvent.setup()
     montaCoda()
     await screen.findByText('#11')
-    await scegliScheda(utente, 'Tutti')
+    await apriFiltri(utente)
+    await utente.click(screen.getByRole('button', { name: /Chiusi/ }))
     expect(await screen.findByText('#12')).toBeInTheDocument()
     expect(separatori()).toEqual(['📅 ieri'])
   })
