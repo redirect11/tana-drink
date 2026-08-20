@@ -6298,3 +6298,29 @@ requirements:
     generate_issue: true
     labels: [pagamenti, stampa, impostazioni]
     test_cases: [tests/component/PaymentScreen.test.jsx]
+  - id: REQ-DEV-014
+    title: "La stampa simulata si accende anche sul sito di test, dalla sezione Dev"
+    area: "src/lib/stampanteFinta.js, src/components/DevTools.jsx"
+    description: >
+      Chiesto dall'utente il 20/08: «per la versione sul server di test
+      dobbiamo abilitare la simulazione di stampa delle comande. Se non ho
+      la stampante voglio poter fare le prove di stampa simulata anche
+      sulla versione web».
+      PRIMA la stampante finta si accendeva solo dall'ambiente (dev,
+      locale, emulatori) e sul sito di TEST restava spenta per scelta —
+      «li' si prova la stampante vera». Scelta giusta per il tablet del
+      locale, cieca per chi prova da casa: senza la Epson ogni prova di
+      stampa falliva e basta.
+      ADESSO c'e' l'interruttore DEL TERMINALE, nella sezione Dev
+      («Stampante simulata»): localStorage, vale solo per quel dispositivo,
+      e vince sulla regola d'ambiente nei due versi — «qui simula» sul
+      test, o «qui voglio la stampante vera» in locale. La sezione Dev
+      esiste solo in locale e sul test (devToolsEnabled), quindi in
+      produzione l'interruttore non ha una leva da nessuna parte.
+      IL DEFAULT NON CAMBIA: sul test la finta resta spenta finche'
+      qualcuno non la accende — il tablet del banco che prova la stampante
+      vera non deve trovarsi facsimili a sorpresa.
+    status: implemented
+    generate_issue: true
+    labels: [dev, stampa]
+    test_cases: [tests/unit/stampanteFinta.test.js]

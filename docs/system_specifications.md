@@ -22,12 +22,12 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 160 | fatto e coperto dai test |
+| ✅ | 161 | fatto e coperto dai test |
 | ⚠️  | 14 | fatto ma nessun test lo verifica |
 | ⬜ | 21 | da fare |
 | 🗑 | 1 | non più valido |
 
-**196 voci** in tutto. **174** descrivono il sistema com'è oggi e
+**197 voci** in tutto. **175** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **21** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **6** difetti noti sono ancora aperti.
@@ -60,7 +60,7 @@ come «vero oggi», non come «garantito».
 | [Integrazione SumUp](#integrazione-sumup) | 6 | — | Il dialogo con il terminale SumUp, dalle Cloud Functions. |
 | [Intelligenza artificiale](#intelligenza-artificiale) | — | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
 | [Interfaccia](#interfaccia) | 22 | — | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
-| [Come si lavora al progetto](#come-si-lavora-al-progetto) | 12 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
+| [Come si lavora al progetto](#come-si-lavora-al-progetto) | 13 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 
 ## Cosa fa il sistema
 
@@ -1635,6 +1635,18 @@ IL COMMENTO CHE RESTA SULL'ISSUE lo dice a parole: «Non la faremo», col rimand
 QUANDO SUCCEDE: alla chiusura vera si arriva da `main`, come per tutte le altre (la pipeline chiude le issue solo li'). Da un ramo di rilascio il generatore ora lo dice e basta — «Non la faremo (deprecated) — l'issue si chiude da main» — invece di ignorare la voce.
 
 **Dove**: `scripts/lib-requisiti.mjs, scripts/generate-issues.mjs` · **Lo dimostrano**: `tests/unit/issueScartate.test.js`
+
+#### REQ-DEV-014 — La stampa simulata si accende anche sul sito di test, dalla sezione Dev
+
+Chiesto dall'utente il 20/08: «per la versione sul server di test dobbiamo abilitare la simulazione di stampa delle comande. Se non ho la stampante voglio poter fare le prove di stampa simulata anche sulla versione web».
+
+PRIMA la stampante finta si accendeva solo dall'ambiente (dev, locale, emulatori) e sul sito di TEST restava spenta per scelta — «li' si prova la stampante vera». Scelta giusta per il tablet del locale, cieca per chi prova da casa: senza la Epson ogni prova di stampa falliva e basta.
+
+ADESSO c'e' l'interruttore DEL TERMINALE, nella sezione Dev («Stampante simulata»): localStorage, vale solo per quel dispositivo, e vince sulla regola d'ambiente nei due versi — «qui simula» sul test, o «qui voglio la stampante vera» in locale. La sezione Dev esiste solo in locale e sul test (devToolsEnabled), quindi in produzione l'interruttore non ha una leva da nessuna parte.
+
+IL DEFAULT NON CAMBIA: sul test la finta resta spenta finche' qualcuno non la accende — il tablet del banco che prova la stampante vera non deve trovarsi facsimili a sorpresa.
+
+**Dove**: `src/lib/stampanteFinta.js, src/components/DevTools.jsx` · **Lo dimostrano**: `tests/unit/stampanteFinta.test.js`
 
 ## Lavori previsti
 
