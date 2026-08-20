@@ -97,51 +97,61 @@ sotto i 44px si sbaglia. Si **toglie**, in quest'ordine:
   strada: i tasti restano tutti dov'erano, e chi non proverà mai a
   trascinare non si accorge che si può. Le colonne che non accettano il
   rilascio lo dicono mentre la card è ancora in mano, non dopo.
-- **Quello che si cambia nel mezzo del servizio sta nella riga dei filtri**,
-  sopra la lista, e vale per QUESTO terminale: «▦ Colonne» (che spegne le
-  corsie che in quel momento non servono) e il tasto con cui chi non è al
-  banco va a guardare il lavoro. Non stanno in Impostazioni perché si
+- **Quello che si cambia nel mezzo del servizio sta sopra la lista**, e vale
+  per QUESTO terminale: «▦ Colonne» (che spegne le corsie che in quel
+  momento non servono) fra i filtri, e in testata il tasto con cui chi non è
+  al banco va a guardare il lavoro. Non stanno in Impostazioni perché si
   toccano con l'ordine in mano, e non su `settings/bar` perché al banco e
   alla cassa non si guardano le stesse cose.
-- **Nella riga dei filtri, il cambio vista sta A DESTRA.** A sinistra c'è
-  quello che RESTRINGE la lista («Miei», «Solo oggi», «Colonne»), a destra
-  quello che CAMBIA VISTA: stessa forma e stesso peso, perché si toccano
-  allo stesso modo, ma staccati da un margine automatico — non da uno
-  spazio messo a occhio — così nessuno lo legge come un filtro in più.
+- **Il cambio vista NON sta nella riga dei filtri: sta in testata, coi
+  tastini delle azioni.** Ci stava, a destra e staccato — «a sinistra chi
+  restringe, a destra chi cambia vista» — e la regola era buona finché la
+  riga dei filtri c'era sempre. Adesso quella riga, da chiusa, non esiste
+  proprio: lasciare lì il cambio vista vorrebbe dire due tocchi (aprire i
+  filtri, poi cambiare) per una cosa che se ne merita uno solo, e che si fa
+  venti volte a serata. In testata è già la zona del «cosa posso fare
+  adesso», e non costa altezza a nessuno. **Solo icona** — 🧾 / 🍸, col nome
+  per esteso nel titolo — perché lì la larghezza è della barra di ricerca.
   Sotto il «+» era stato provato e non va: rettangolare sotto un tondo,
   appeso nel vuoto e disallineato da tutto.
-- **Sulla lavagna a corsie la riga dei filtri È la riga dei conteggi.** Non
-  è un'eccezione alla regola qui sopra: è la stessa riga di filtri, messa
-  dove non costa niente. Lì i filtri sono due pastiglie corte, e una riga
-  tutta per loro valeva 64px — un terzo livello fra i conteggi e la prima
-  comanda, su una lavagna che si guarda da lontano mentre si versa. La riga
-  dei conteggi è corta e ha spazio a destra: ci stanno accanto, con la
-  regola di sempre (a sinistra chi restringe, a destra chi cambia vista,
-  staccati da un margine automatico).
+- **Sulla lavagna la riga dei filtri, quando c'è, È la riga dei conteggi.**
+  Una riga tutta per loro valeva 64px — un terzo livello fra i conteggi e
+  la prima comanda, su una lavagna che si guarda da lontano mentre si
+  versa. La riga dei conteggi è corta e ha spazio a destra: i chip ci
+  stanno accanto. Vale per tutte e due le lavagne, corsie e griglia: sono
+  due modi di guardare la STESSA coda, e chi passa dall'una all'altra deve
+  ritrovare i filtri dov'erano.
   **Sul telefono no**: lì quella riga è già piena — conti, avviso della
   ricerca, legenda degli autori — e i filtri tornano sotto, a filo a
   sinistra, e scorrono in orizzontale. A dire da dove in su è la
   **lavagna** (container query `corsie`, la stessa soglia delle due
   colonne), non la finestra: col menu agganciato ha 200-250px in meno.
-  **La griglia resta com'è**: lì le pastiglie sono sette, e una riga se la
-  merita.
 - **Un tasto dice DOVE PORTA, non dove si è.** «🍸 Comande» guardando i
   conti, «🧾 Ordini» guardando le comande. Un interruttore che si accende
   quando sei già di là si legge solo sapendo com'è messo adesso — e per
   saperlo bisogna guardare la lista sotto.
-- **I filtri stanno dietro un tasto solo, e il tasto dice cosa è scelto senza
-  aprirlo.** Nella coda è «⚗️ Filtri» — lo stesso linguaggio del magazzino —
-  e la fila nasce chiusa: sette pastiglie si mangiavano la riga in una
-  lavagna che si guarda da lontano. Da chiuso porta scritto quello che è
-  acceso («⚗️ Chiusi», «⚗️ Miei +2»), perché un filtro acceso e invisibile è
-  una coda che sembra sbagliata; l'elenco per esteso sta nel titolo. Aperta,
-  i chip compaiono NELLA STESSA RIGA e non in una tendina: si toccano a
-  raffica mentre si lavora, e un pannello coprirebbe proprio quello che si
-  sta guardando per decidere che filtro serve. La scelta vale per QUESTO
-  terminale (`tana:coda:filtri-aperti`). Dentro ci va tutto quello che
-  restringe la lista, «▦ Colonne» compreso; fuori il cambio vista, che non
-  filtra, e il «＋», che crea. Un meccanismo solo per tutte le viste della
-  coda.
+- **I filtri stanno dietro un tastino in testata, e da chiusi la loro riga
+  NON esiste.** Nella coda è un'icona ⚗️ accanto a stampante, pannelli e
+  ordinamento, e la fila nasce chiusa: sette pastiglie si mangiavano la
+  riga in una lavagna che si guarda da lontano. Il tasto che le apre non
+  può stare dentro la riga che nasconde — «quando dicevo di nascondere i
+  tasti intendevo tutti e non aggiungere un nuovo tasto: lo spazio da
+  risparmiare è in altezza non in larghezza» (l'utente, 20/08/2026) — o la
+  riga resta lì, alta come prima, per contenere solo lui.
+  **Da chiuso il tastino non nasconde lo stato**: si accende e porta il
+  NUMERO dei filtri accesi, perché un filtro acceso e invisibile è una coda
+  che sembra sbagliata. In 44px non ci sta un nome, ci sta una cifra: quali
+  siano lo dice il titolo. Aperta, i chip compaiono NELLA STESSA RIGA e non
+  in una tendina: si toccano a raffica mentre si lavora, e un pannello
+  coprirebbe proprio quello che si sta guardando per decidere che filtro
+  serve. La scelta vale per QUESTO terminale (`tana:coda:filtri-aperti`).
+  Dentro ci va tutto quello che restringe la lista, «▦ Colonne» compreso;
+  fuori il cambio vista, che non filtra, e il «＋», che crea. Un meccanismo
+  solo per tutte le viste della coda.
+- **Nel ⋯ del telefono ci va quello che si fa OGNI TANTO**, non quello che
+  si fa durante il servizio. Pannelli, ordinamento e cassa stanno lì
+  dentro; filtri e cambio vista restano fuori, accanto al ⋯, perché nel
+  menu sarebbero due tocchi ciascuno, decine di volte a serata.
 - **Il contenuto non porta navigazione**: niente tasti «vai a…» in mezzo a una
   lista, che si trovano solo scorrendo.
 

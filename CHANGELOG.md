@@ -4,21 +4,28 @@
 
 ### Per chi gestisce
 
-- **I filtri della coda stanno dietro un tasto solo.** Sopra i conti c'era
-  una fila di pastiglie — In corso, Chiusi, Annullati, Tutti, Miei, Solo
-  oggi — che si mangiava tutta la riga; adesso c'è **«⚗️ Filtri»**, si tocca
-  e la fila compare lì dov'era. **Chiuso, il tasto dice cos'è acceso**
-  («⚗️ Chiusi», «⚗️ Miei +2»), così non capita di guardare una coda filtrata
-  credendola intera. Vale allo stesso modo per gli **ordini** e per le
-  **comande** — dove dentro c'è anche «▦ Colonne» — e **ogni tablet se lo
-  ricorda a modo suo**: chi la tiene aperta la ritrova aperta. Il tasto per
-  passare da ordini a comande e il **«+»** restano fuori, dov'erano.
+- **I filtri della coda stanno dietro un tastino, e la loro riga sparisce.**
+  Sopra i conti c'era una fila di pastiglie — In corso, Chiusi, Annullati,
+  Tutti, Miei, Solo oggi — che si mangiava tutta la riga. Adesso il tasto
+  che le apre è una **piccola ⚗️ in alto**, insieme a stampante, staff e
+  ordinamento, e **a filtri chiusi quella riga non c'è proprio**: l'altezza
+  torna ai conti. Se qualcosa è acceso il tastino **si accende e porta il
+  numero** dei filtri, così non capita di guardare una coda filtrata
+  credendola intera; quali siano lo dice il nome che compare passandoci
+  sopra. Vale allo stesso modo per gli **ordini** e per le **comande** —
+  dove dentro c'è anche «▦ Colonne» — e **ogni tablet se lo ricorda a modo
+  suo**: chi la tiene aperta la ritrova aperta.
 
-- **«Chiudi cassa» non occupa più mezza testata.** Era largo quanto la frase
-  che aveva sotto («Prima chiudi 3 conti e servi 2 comande»); ora è un tasto
-  normale. **La spiegazione non è sparita**: si legge passandoci sopra col
-  mouse, e al tablet **esce quando si prova a chiudere** — che è il momento
-  in cui la si vuole sapere.
+- **Il tasto per passare da ordini a comande è salito in alto**, ed è
+  diventato un'icona piccola accanto agli altri: **🧾** quando porta ai
+  conti, **🍸** quando porta alle comande. Continua a dire dove porta, non
+  dove sei, e resta a un tocco anche col telefono in mano.
+
+- **«Chiudi cassa» non occupa più mezza testata, e torna a dire perché è
+  spento.** Era largo quanto la frase che aveva sotto; adesso il tasto resta
+  della sua misura e **la riga sotto è tornata, più corta**: «Chiudi 3 conti
+  e 2 comande». Provando a chiuderla lo dice comunque, per chi preme di
+  corsa.
 
 - **Il magazzino spiega i suoi segni**: sopra la lista c'è la legenda dei
   pallini (quanta roba c'è) e delle strisce colorate (in linea, premium,
