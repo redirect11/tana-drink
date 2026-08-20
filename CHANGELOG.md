@@ -83,6 +83,13 @@
 
 ### Al banco
 
+- **Il tasto «Comanda» stampa UNA comanda, non il conto intero.** Su un
+  conto con più comande, quando non ce n'era più nessuna in lavorazione —
+  tutto servito, oppure il conto già incassato — quel tasto faceva uscire
+  un ticket solo con dentro le righe di **tutte** le comande, sommate:
+  sembrava una comanda e ne conteneva due. Adesso, se non si dice quale,
+  esce **l'ultima**. Per averle tutte c'è il tasto apposta (qui sotto).
+
 - **Il conto con lo sconto si chiude davvero, e lo scontrino esce** (i due
   vocali del 19 agosto). Chiudendo un tavolo scontato il conto risultava
   pagato «a metà» — restava in coda e bloccava la chiusura di cassa — e lo

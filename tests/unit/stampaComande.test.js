@@ -16,6 +16,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import {
   comandeDaStampare,
+  comandaDelTicket,
   claimComandaPrint,
   releaseComandaPrint,
 } from '../../src/lib/printer.js'
@@ -87,5 +88,42 @@ describe('una copia per comanda, per terminale', () => {
     claimComandaPrint('o1', 'c1')
     releaseComandaPrint('o1', 'c1') // carta finita, stampante spenta
     expect(claimComandaPrint('o1', 'c1')).toBe(true)
+  })
+})
+
+// ── UN TICKET È UNA COMANDA SOLA (BUG-051) ──────────────────────────
+//
+// «Ho trovato una finestra facsimile con una comanda ma in realtà ne aveva
+// due» (l'utente, 20/08, sull'emulatore). Non era la stampante finta che
+// accorpava: era printComanda che, senza una comanda da stampare, ripiegava
+// sull'AGGREGATO del conto — tutte le comande fuse in un ticket, con le
+// quantità sommate. Ci si arrivava dal tasto «Comanda» della coda, che cerca
+// la comanda ATTIVA: su un conto senza più comande aperte (tutto servito, o
+// pagato) non ne trova nessuna e finiva a stampare l'intero conto.
+describe('quale comanda finisce sul ticket', () => {
+  const c = (id, over = {}) => ({ id, status: 'ricevuto', items: [], ...over })
+
+  it('quella che il chiamante indica, sempre', () => {
+    const o = conto([c('c1'), c('c2')])
+    expect(comandaDelTicket(o, o.comande[0]).id).toBe('c1')
+  })
+
+  it('senza indicazione NON si fondono due comande: si stampa l’ultima', () => {
+    // Il difetto in una riga: qui si tornava `null` e printComanda ripiegava
+    // su order_items, cioè le due comande insieme.
+    const o = conto([c('c1'), c('c2', { status: 'ritirato' })])
+    expect(comandaDelTicket(o, null).id).toBe('c2')
+  })
+
+  it('un’annullata non è mai «l’ultima»: è lavoro buttato', () => {
+    const o = conto([c('c1'), c('c2', { status: 'annullato' })])
+    expect(comandaDelTicket(o, null).id).toBe('c1')
+  })
+
+  it('un conto senza comande non ne inventa una: l’aggregato resta il ripiego', () => {
+    // I doc vecchi e i conti appena nati in locale: lì l'aggregato È la
+    // comanda, non la somma di due.
+    expect(comandaDelTicket(conto([]), null)).toBe(null)
+    expect(comandaDelTicket(undefined, null)).toBe(null)
   })
 })
