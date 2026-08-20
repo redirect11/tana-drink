@@ -70,7 +70,7 @@ import {
   reconcileLayout,
 } from '../lib/orderLines.js'
 import { toastSuccess, toastError } from '../lib/toast.js'
-import { printComanda, printComande, comandeStampabili, printScontrino, releaseReceiptPrint } from '../lib/printer.js'
+import { printComanda, printComande, printComandaUnita, comandeStampabili, printScontrino, releaseReceiptPrint } from '../lib/printer.js'
 import PosProductPicker from './PosProductPicker.jsx'
 import PreparazioneParziale from './PreparazioneParziale.jsx'
 import { useComandeLocali, comandaProvvisoria } from '../lib/comandeLocali.js'
@@ -2795,23 +2795,39 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
               <h3 style={{ margin: 0 }}><IconReceipt /> Comande</h3>
               <button className="btn ghost small" onClick={() => setShowComande(false)}><IconClose /> Chiudi</button>
             </div>
-            {/* PIÙ DI UNA COMANDA: si stampano insieme. Un conto battuto in
-                tre riprese ha tre ticket, e rifarli uno per uno col conto in
-                mano è tempo perso al banco. Escono SEPARATI, uno per
-                comanda: sono tre giri di lavoro, non uno (vedi BUG-051).
-                Il tasto compare solo quando ce n'è davvero più d'una. */}
+            {/* PIÙ DI UNA COMANDA: due modi di ristamparle, e servono
+                tutti e due. «Anche di stampare UNA SOLA comanda con tutti i
+                prodotti di più comande ma sempre dello stesso ordine. Va
+                bene stampare tutte le comande insieme su più ricevute ma
+                serve anche stampare tutto su una sola ricevuta» (l'utente,
+                20/08).
+                Le etichette dicono cosa ESCE dalla stampante — quanti pezzi
+                di carta — perché è quello che chi stampa deve sapere prima
+                di toccare, non come si chiama la funzione dentro.
+                Compaiono solo quando le comande sono davvero più d'una. */}
             {stampabili.length > 1 && (
-              <button
-                className="btn ghost small block"
-                style={{ marginTop: 10 }}
-                onClick={() =>
-                  printComande(order, stampabili)
-                    .then((n) => toastSuccess(`${n} comande in stampa`))
-                    .catch((e) => setError(`Stampa: ${e.message}`))
-                }
-              >
-                <IconPrinter /> Stampa tutte ({stampabili.length})
-              </button>
+              <div className="grid-2" style={{ marginTop: 10, gap: 6 }}>
+                <button
+                  className="btn ghost small"
+                  onClick={() =>
+                    printComande(order, stampabili)
+                      .then((n) => toastSuccess(`${n} comande in stampa`))
+                      .catch((e) => setError(`Stampa: ${e.message}`))
+                  }
+                >
+                  <IconPrinter /> Una per comanda ({stampabili.length})
+                </button>
+                <button
+                  className="btn ghost small"
+                  onClick={() =>
+                    printComandaUnita(order)
+                      .then(() => toastSuccess('Comanda unita in stampa'))
+                      .catch((e) => setError(`Stampa: ${e.message}`))
+                  }
+                >
+                  <IconPrinter /> Tutto su una
+                </button>
+              </div>
             )}
             {effComande.map((c) => {
               const ns = nextComandaStatus(c.status)

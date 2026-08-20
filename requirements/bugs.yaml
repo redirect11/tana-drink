@@ -1657,9 +1657,13 @@ bugs:
     title: "Un facsimile con dentro DUE comande: senza indicazione si stampava il conto intero"
     area: "src/lib/printer.js (printComanda, comandaDelTicket), src/pages/BartenderPage.jsx"
     description: >
-      Segnalato dall'utente il 20/08 provando sull'emulatore, con la
-      stampante finta: «ho trovato una finestra facsimile con una comanda ma
-      in realta' ne aveva due».
+      NON E' QUESTO CHE HA VISTO L'UTENTE. La segnalazione del 20/08 — «ho
+      trovato una finestra facsimile con una comanda ma in realta' ne aveva
+      due» — l'ha poi precisata lui stesso: «il bug era che venivano
+      stampate comande di ordini DIVERSI», ed e' BUG-052, un'altra causa in
+      un altro punto. Questo qui e' un difetto vero trovato guardando la
+      prima pista, e vale la pena averlo chiuso: e' il modo in cui due
+      comande DELLO STESSO conto potevano finire su un ticket solo.
       LA CAUSA. `printComanda(order, comanda)` accetta la comanda come
       parametro OPZIONALE, e senza ripiegava su `order.order_items` — che
       NON e' una comanda: e' l'AGGREGATO del conto, cioe' le righe di tutte
@@ -1697,3 +1701,58 @@ bugs:
     severity: media
     priority: P2
     test_cases: [tests/unit/stampaComande.test.js]
+
+  - id: BUG-052
+    title: "Comande di ORDINI DIVERSI stampate sullo stesso ticket"
+    area: "src/lib/printer.js (lavoroDiStampa), src/lib/stampanteFinta.js"
+    description: >
+      «Il bug era che venivano stampate comande di ordini DIVERSI»
+      (l'utente, 20/08, provando sull'emulatore): un facsimile solo con
+      dentro DUE intestazioni, DUE numeri di conto e le righe di tutti e
+      due. Al banco e' un ticket da buttare, e peggio: due conti sulla
+      stessa carta vuol dire drink portati al tavolo sbagliato.
+      LA CAUSA NON ERA IL FORMATO DEL TICKET, era il BUILDER.
+      `getPrinter()` restituisce sempre lo STESSO oggetto — la connessione
+      si tiene viva fra una stampa e l'altra, ed e' giusto cosi' — ma
+      quell'oggetto ACCUMULA i comandi e li spedisce tutti insieme a
+      `send()`. Chi ci scrive dentro sta scrivendo in un posto condiviso, e
+      finche' non chiama `send()` quel posto e' suo. Due modi di rovinare
+      la carta, tutti e due veri:
+      (1) UNA STAMPA CHE SI FERMA A META'. Se fra il primo comando e
+      `send()` salta un'eccezione — una riga senza nome, un dato storto — i
+      pezzi gia' scritti RESTANO nel builder, e il lavoro dopo se li porta
+      via. Peggiorato dall'auto-stampa, che RIPROVA: `releaseComandaPrint`
+      libera la pretesa, al prossimo snapshot ci si riprova, e il residuo
+      si accumula a ogni giro finche' una stampa riesce e li stampa tutti.
+      (2) DUE STAMPE CHE SI ACCAVALLANO. Ogni print* comincia con un
+      `await` (getPrinter), e `printScontrino` ne ha un altro DENTRO, sul
+      logo (`logoPerStampa`, che aspetta il caricamento dell'immagine e non
+      ha un tempo massimo). La coda ordini stampa comande e scontrini di
+      PIU' conti nello stesso snapshot, in due `for` sincroni senza
+      aspettare: il secondo lavoro scrive nel builder mentre il primo e'
+      sospeso.
+      PASSI PER RIPRODURLO (il primo modo, il piu' facile da vedere): una
+      comanda con una riga senza nome — la stampa si interrompe DOPO aver
+      scritto la prima riga, e non esce niente; poi si stampa la comanda di
+      un ALTRO conto. Esce un facsimile solo, con dentro tutte e due, due
+      intestazioni «DIRETTO» e due numeri.
+      LA CURA STA IN PRINTER.JS, NON NEI CHIAMANTI. Sistemare il `for`
+      dell'auto-stampa avrebbe lasciato la porta aperta a tutti gli altri
+      (il tasto della coda, quello del conto, la sala, il fornitore, e
+      qualunque strada scritta domani). Ogni lavoro passa da una CODA
+      interna (`lavoroDiStampa`, una catena di promesse di modulo): aspetta
+      chi lo precede, parte da un builder PULITO (`clearCommandBuffer`,
+      che c'e' nell'SDK Epson e adesso anche nella stampante finta) e lo
+      lascia pulito anche quando fallisce. La catena non si spezza su un
+      errore: carta finita adesso non vuol dire stampante morta.
+      IL CONFINE CHE NE ESCE, ed e' quello che l'utente ha sottolineato
+      («ma sempre dello stesso ordine!»): un lavoro di stampa contiene
+      SOLO roba di UN conto. Sta nella FIRMA delle funzioni — prendono un
+      ordine, non una lista — e c'e' un test che lo sorveglia.
+    in_produzione: true
+    status: fixed
+    generate_issue: true
+    labels: [bug, stampa, banco]
+    severity: alta
+    priority: P1
+    test_cases: [tests/unit/stampaSerializzata.test.js]

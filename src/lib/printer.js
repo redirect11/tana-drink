@@ -11,6 +11,7 @@
 
 import { CASH_METHOD_ORDER, cashMethodKeys, PAYMENT_METHOD_PRINT } from './orderStatus.js'
 import { stampanteFintaAttiva, creaStampanteFinta } from './stampanteFinta.js'
+import { aggregateItems } from './comande.js'
 
 // Larghezza colonne stamante 80 mm (TM-m30II / TM-m30III): 48 chars std.
 const COL = 48
@@ -409,6 +410,58 @@ function italianDateTime(iso) {
   return { date, time }
 }
 
+// ── UN LAVORO PER VOLTA, E MAI I RESTI DI QUELLO PRIMA (BUG-052) ─────
+//
+// LA STAMPANTE HA UN BUILDER SOLO. `getPrinter()` restituisce sempre lo
+// stesso oggetto — la connessione si tiene viva fra una stampa e l'altra,
+// ed è giusto così — ma quell'oggetto ACCUMULA i comandi e li spedisce
+// tutti insieme a `send()`. Chi ci scrive dentro sta scrivendo in un posto
+// condiviso, e finché non chiama `send()` quel posto è suo.
+//
+// DUE MODI DI ROVINARE LA CARTA, tutti e due visti:
+//
+// 1. UNA STAMPA CHE SI FERMA A METÀ. Se fra il primo comando e `send()`
+//    salta un'eccezione — una riga senza nome, un dato storto — i pezzi già
+//    scritti RESTANO nel builder. Il lavoro dopo ci scrive sopra e se li
+//    porta via: è uscita una comanda con dentro DUE ordini diversi, due
+//    intestazioni e due numeri, e al banco è un ticket da buttare. Peggio
+//    ancora perché l'auto-stampa RIPROVA (releaseComandaPrint), quindi il
+//    residuo si accumula a ogni giro.
+// 2. DUE STAMPE CHE SI ACCAVALLANO. Ogni print* comincia con un `await`
+//    (getPrinter), e `printScontrino` ne ha un altro DENTRO, sul logo:
+//    se due lavori partono nello stesso giro — e partono, la coda ordini
+//    stampa comande e scontrini di più conti nello stesso snapshot — il
+//    secondo scrive nel builder mentre il primo è sospeso.
+//
+// LA CURA STA QUI E NON NEI CHIAMANTI. Sistemare il `for` dell'auto-stampa
+// avrebbe lasciato la porta aperta a tutti gli altri (il tasto della coda,
+// quello del conto, la sala, il fornitore): ogni lavoro passa da questa
+// coda, aspetta chi lo precede, parte da un builder PULITO e lo lascia
+// pulito anche quando fallisce. Nessun chiamante può più intrecciarsi,
+// nemmeno uno scritto domani.
+let _codaStampa = Promise.resolve()
+
+function lavoroDiStampa(componi) {
+  const mio = _codaStampa.then(async () => {
+    const prn = await getPrinter()
+    // Si parte puliti: se chi c'era prima si è fermato a metà, i suoi pezzi
+    // non finiscono sulla nostra carta.
+    prn.clearCommandBuffer?.()
+    try {
+      await componi(prn)
+      prn.send()
+    } catch (e) {
+      // E non si lasciano resti a chi viene dopo.
+      prn.clearCommandBuffer?.()
+      throw e
+    }
+  })
+  // La catena non si spezza su un errore: la stampa dopo deve partire
+  // comunque — carta finita adesso non vuol dire stampante morta.
+  _codaStampa = mio.catch(() => {})
+  return mio
+}
+
 // ── COMANDA ───────────────────────────────────────────────────────────────────
 // Ticket per il barista: numero ordine grande, articoli senza prezzi.
 // Formato ispirato al template fotografato (sfondo nero, orario, sezione BAR).
@@ -437,70 +490,70 @@ export function comandaDelTicket(order, comanda = null) {
 
 // `comanda` opzionale: stampa i soli item di quella comanda (aggiunte a un
 // conto aperto). Senza, la sceglie comandaDelTicket — e mai due insieme.
-export async function printComanda(order, comanda = null) {
-  const prn = await getPrinter()
-  const now = new Date()
-  const hhmm = now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
-  const ticketItems = comandaDelTicket(order, comanda)?.items ?? order.order_items ?? []
-  const totalQty = ticketItems.reduce((s, i) => s + (i.qty || 1), 0)
+export function printComanda(order, comanda = null) {
+  return lavoroDiStampa(async (prn) => {
+    const now = new Date()
+    const hhmm = now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
+    const ticketItems = comandaDelTicket(order, comanda)?.items ?? order.order_items ?? []
+    const totalQty = ticketItems.reduce((s, i) => s + (i.qty || 1), 0)
 
-  prn.addTextLang('it')
-  prn.addTextSmooth(true)
+    prn.addTextLang('it')
+    prn.addTextSmooth(true)
 
-  // ── Header nero: "DIRETTO  22:09" ──
-  prn.addTextAlign(prn.ALIGN_CENTER)
-  prn.addTextStyle(true, false, true, prn.COLOR_1)  // reverse = bianco su nero
-  prn.addTextSize(2, 2)
-  prn.addText(`  DIRETTO  ${hhmm}  \n`)
-  prn.addTextSize(1, 1)
-  prn.addTextStyle(false, false, false, prn.COLOR_1)
-  prn.addText('\n')
-
-  // ── Contatore / sezione ──
-  prn.addTextAlign(prn.ALIGN_LEFT)
-  prn.addText(row('CONTATORIE', `CL: ${totalQty}`))
-  prn.addText(row('BAR', 'Vendeur'))
-  prn.addText('\n')
-
-  // ── Tavolo / numero ordine (grande, centrato) ──
-  prn.addTextAlign(prn.ALIGN_CENTER)
-  prn.addTextSize(2, 2)
-  prn.addTextStyle(false, false, true, prn.COLOR_1)
-  const label = order.customer_name
-    || (order.table_label ? `Tavolo ${order.table_label}` : null)
-    || `#${order.daily_number}`
-  prn.addText(`${label}\n`)
-  prn.addTextSize(1, 1)
-  prn.addTextStyle(false, false, false, prn.COLOR_1)
-  prn.addText('Il tuo menu\n\n')
-
-  // ── Articoli (doppia altezza per leggibilità dal barista) ──
-  prn.addTextAlign(prn.ALIGN_LEFT)
-  prn.addText(line())
-  prn.addTextSize(1, 2)
-  for (const item of ticketItems) {
-    prn.addText(`${item.qty}  ${item.name.toUpperCase()}\n`)
-    // Nota della singola riga (es. "poco ghiaccio", o per chi è): il banco
-    // deve vederla sotto al prodotto, in corpo normale.
-    if (item.note) {
-      prn.addTextSize(1, 1)
-      prn.addText(`     > ${item.note}\n`)
-      prn.addTextSize(1, 2)
-    }
-  }
-  prn.addTextSize(1, 1)
-  prn.addText(line())
-
-  if (order.note) {
-    prn.addTextStyle(false, false, true, prn.COLOR_1)
-    prn.addText(`Nota: ${order.note}\n`)
+    // ── Header nero: "DIRETTO  22:09" ──
+    prn.addTextAlign(prn.ALIGN_CENTER)
+    prn.addTextStyle(true, false, true, prn.COLOR_1)  // reverse = bianco su nero
+    prn.addTextSize(2, 2)
+    prn.addText(`  DIRETTO  ${hhmm}  \n`)
+    prn.addTextSize(1, 1)
     prn.addTextStyle(false, false, false, prn.COLOR_1)
-    prn.addText(line())
-  }
+    prn.addText('\n')
 
-  prn.addFeedLine(3)
-  prn.addCut(prn.CUT_FEED)
-  prn.send()
+    // ── Contatore / sezione ──
+    prn.addTextAlign(prn.ALIGN_LEFT)
+    prn.addText(row('CONTATORIE', `CL: ${totalQty}`))
+    prn.addText(row('BAR', 'Vendeur'))
+    prn.addText('\n')
+
+    // ── Tavolo / numero ordine (grande, centrato) ──
+    prn.addTextAlign(prn.ALIGN_CENTER)
+    prn.addTextSize(2, 2)
+    prn.addTextStyle(false, false, true, prn.COLOR_1)
+    const label = order.customer_name
+      || (order.table_label ? `Tavolo ${order.table_label}` : null)
+      || `#${order.daily_number}`
+    prn.addText(`${label}\n`)
+    prn.addTextSize(1, 1)
+    prn.addTextStyle(false, false, false, prn.COLOR_1)
+    prn.addText('Il tuo menu\n\n')
+
+    // ── Articoli (doppia altezza per leggibilità dal barista) ──
+    prn.addTextAlign(prn.ALIGN_LEFT)
+    prn.addText(line())
+    prn.addTextSize(1, 2)
+    for (const item of ticketItems) {
+      prn.addText(`${item.qty}  ${item.name.toUpperCase()}\n`)
+      // Nota della singola riga (es. "poco ghiaccio", o per chi è): il banco
+      // deve vederla sotto al prodotto, in corpo normale.
+      if (item.note) {
+        prn.addTextSize(1, 1)
+        prn.addText(`     > ${item.note}\n`)
+        prn.addTextSize(1, 2)
+      }
+    }
+    prn.addTextSize(1, 1)
+    prn.addText(line())
+
+    if (order.note) {
+      prn.addTextStyle(false, false, true, prn.COLOR_1)
+      prn.addText(`Nota: ${order.note}\n`)
+      prn.addTextStyle(false, false, false, prn.COLOR_1)
+      prn.addText(line())
+    }
+
+    prn.addFeedLine(3)
+    prn.addCut(prn.CUT_FEED)
+  })
 }
 
 // ── PIÙ COMANDE DELLO STESSO CONTO, IN UN COLPO ──────────────────────
@@ -526,10 +579,35 @@ export function comandeStampabili(order) {
 
 export async function printComande(order, comande) {
   const lista = comande?.length ? comande : comandeStampabili(order)
+  // Uno per volta: ci pensa già la coda delle stampe (lavoroDiStampa), ma
+  // aspettare qui tiene anche l'ORDINE — i ticket escono nella sequenza in
+  // cui il conto è stato battuto, che è come il banco li legge.
   for (const c of lista) {
     await printComanda(order, c)
   }
   return lista.length
+}
+
+// ── TUTTO SU UNA RICEVUTA SOLA, MA DI UN ORDINE SOLO ─────────────────
+//
+// «Avere la possibilità di stampare comande separate se ci sono più
+// comande è giusto, e anche di stampare UNA SOLA comanda con tutti i
+// prodotti di più comande ma sempre dello stesso ordine. Va bene stampare
+// tutte le comande insieme su più ricevute ma serve anche stampare tutto
+// su una sola ricevuta» (l'utente, 20/08).
+//
+// Il ticket è quello di sempre — stesso formato, non c'è un secondo
+// disegno da mantenere: cambia solo cosa ci finisce dentro, cioè le righe
+// di tutte le comande del conto messe insieme (aggregateItems somma le
+// quantità dello stesso drink, gli item personalizzati restano righe loro).
+//
+// È LA STESSA FORMA che in BUG-051 era il ripiego accidentale di
+// `printComanda` senza comanda. La differenza è tutta qui: prima capitava,
+// adesso la sceglie chi stampa. E il confine non si sposta — UN ORDINE:
+// questa funzione prende un ordine, non una lista, e non c'è modo di
+// passarle roba di conti diversi.
+export function printComandaUnita(order) {
+  return printComanda(order, { id: 'unita', items: aggregateItems(comandeStampabili(order)) })
 }
 
 // ── SCONTRINO NON FISCALE ─────────────────────────────────────────────────────
@@ -605,128 +683,128 @@ async function stampaLogo(prn) {
   }
 }
 
-export async function printScontrino(order, opts = {}) {
-  const prn = await getPrinter()
-  const s = loadPrinterSettings()
-  const ivaRate = Number(opts.ivaRate ?? s.ivaRate ?? 10) / 100
-  const { date, time } = italianDateTime(order.created_at)
-  const lordo = Number(order.total ?? 0)
-  const sconto = Number(order.discount_amount ?? 0)
-  // Il totale dello scontrino è quello REALMENTE pagato: prima si stampava il
-  // lordo e lo sconto applicato non compariva da nessuna parte.
-  const total = Math.max(0, Math.round((lordo - sconto) * 100) / 100)
-  const ivaAmount = total - total / (1 + ivaRate)
-  const imponibile = total / (1 + ivaRate)
+export function printScontrino(order, opts = {}) {
+  return lavoroDiStampa(async (prn) => {
+    const s = loadPrinterSettings()
+    const ivaRate = Number(opts.ivaRate ?? s.ivaRate ?? 10) / 100
+    const { date, time } = italianDateTime(order.created_at)
+    const lordo = Number(order.total ?? 0)
+    const sconto = Number(order.discount_amount ?? 0)
+    // Il totale dello scontrino è quello REALMENTE pagato: prima si stampava il
+    // lordo e lo sconto applicato non compariva da nessuna parte.
+    const total = Math.max(0, Math.round((lordo - sconto) * 100) / 100)
+    const ivaAmount = total - total / (1 + ivaRate)
+    const imponibile = total / (1 + ivaRate)
 
-  prn.addTextLang('it')
-  prn.addTextSmooth(true)
+    prn.addTextLang('it')
+    prn.addTextSmooth(true)
 
-  // ── Intestazione ──
-  await stampaLogo(prn)
-  prn.addTextAlign(prn.ALIGN_CENTER)
-  prn.addTextSize(2, 2)
-  prn.addTextStyle(false, false, true, prn.COLOR_1)
-  prn.addText(`${s.businessName}\n`)
-  prn.addTextSize(1, 1)
-  prn.addTextStyle(false, false, false, prn.COLOR_1)
-  prn.addText(`${s.businessAddress}\n`)
-  prn.addText(`${s.businessCity}\n\n`)
-  prn.addTextAlign(prn.ALIGN_LEFT)
+    // ── Intestazione ──
+    await stampaLogo(prn)
+    prn.addTextAlign(prn.ALIGN_CENTER)
+    prn.addTextSize(2, 2)
+    prn.addTextStyle(false, false, true, prn.COLOR_1)
+    prn.addText(`${s.businessName}\n`)
+    prn.addTextSize(1, 1)
+    prn.addTextStyle(false, false, false, prn.COLOR_1)
+    prn.addText(`${s.businessAddress}\n`)
+    prn.addText(`${s.businessCity}\n\n`)
+    prn.addTextAlign(prn.ALIGN_LEFT)
 
-  // ── Numero scontrino + data ──
-  prn.addText(row(`SCONTRINO - ${order.daily_number ?? '-'}`, `${date}, ${time}`))
-  prn.addText('Utente A\n')
-  const totalPers = order.coperto_persons ? `${order.coperto_persons} cliente${order.coperto_persons > 1 ? 'i' : ''}` : '1 cliente'
-  prn.addText(`${totalPers}\n`)
-  const comandaLabel = order.table_label
-    ? `Vendita - Tavolo ${order.table_label}`
-    : `Vendita - Comanda #${order.daily_number}`
-  prn.addText(`${comandaLabel}\n`)
-  prn.addText(line())
-
-  // ── Header colonne ──
-  prn.addTextStyle(false, false, true, prn.COLOR_1)
-  prn.addText(row('QTA  Prodotto', 'PU       Prezzo'))
-  prn.addTextStyle(false, false, false, prn.COLOR_1)
-  prn.addText(line())
-
-  // ── Articoli ──
-  for (const item of (order.order_items || [])) {
-    const pu = `${Number(item.unit_price).toFixed(2)}€`
-    const tot = `${(item.qty * item.unit_price).toFixed(2)}€`
-    const left = `${item.qty}x  ${item.name}`
-    prn.addText(row(left, `${pu.padStart(7)} ${tot.padStart(7)}`))
-  }
-
-  // Coperto (se presente)
-  if (order.coperto_amount > 0) {
-    const cop = `${Number(order.coperto_amount).toFixed(2)}€`
-    prn.addText(row(`${order.coperto_persons}x  Coperto`, `${cop.padStart(7)} ${cop.padStart(7)}`))
-  }
-
-  // ── Sconto applicato ──
-  if (sconto > 0) {
-    prn.addText(row('Subtotale', `${lordo.toFixed(2)}€`))
-    prn.addText(row('Sconto', `-${sconto.toFixed(2)}€`))
-  }
-
-  prn.addText(line())
-
-  // ── IVA ──
-  const ivaLabel = `IVA ${(ivaRate * 100).toFixed(1)}% (A)`
-  prn.addText(row(ivaLabel, `${ivaAmount.toFixed(2)}€`))
-  prn.addText(row('Subtotale', `${imponibile.toFixed(2)}€`))
-  prn.addText('\n')
-
-  // ── Totale grande ──
-  prn.addTextAlign(prn.ALIGN_CENTER)
-  prn.addTextSize(1, 2)
-  prn.addTextStyle(false, false, true, prn.COLOR_1)
-  prn.addText('Totale con IVA\n')
-  prn.addTextSize(3, 3)
-  prn.addText(`${total.toFixed(2)}€\n`)
-  prn.addTextSize(1, 1)
-  prn.addTextStyle(false, false, false, prn.COLOR_1)
-  prn.addText('\n')
-  prn.addTextAlign(prn.ALIGN_LEFT)
-  prn.addText(line())
-
-  // ── Pagamenti ──
-  prn.addTextStyle(false, false, true, prn.COLOR_1)
-  prn.addText('Pagamenti\n')
-  prn.addTextStyle(false, false, false, prn.COLOR_1)
-  // Metodo sconosciuto o assente: si scrive che non è indicato. Prima si
-  // ripiegava su "Contante", e uno scontrino pagato con la carta usciva
-  // con scritto contante — una dichiarazione falsa, non un default.
-  const nomeMetodo = (m) => PAYMENT_METHOD_PRINT[m] || 'Non indicato'
-  // Se ci sono incassi registrati si elencano uno per uno (conti divisi o
-  // acconti): così su ogni scontrino si legge quanto in contanti e quanto in
-  // carta. Altrimenti si usa il metodo di chiusura del conto.
-  const incassi = (order.payments || []).filter((p) => Number(p.amount) > 0)
-  if (incassi.length > 0) {
-    for (const p of incassi) {
-      prn.addText(row(`${nomeMetodo(p.method)} (A)`, `${Number(p.amount).toFixed(2)}€`))
-    }
-  } else {
-    prn.addText(row(`${nomeMetodo(order.payment_method)} (A)`, `${total.toFixed(2)}€`))
-  }
-  prn.addText(line())
-
-  // ── Codice lotteria degli scontrini (se comunicato dal cliente) ──
-  if (order.lottery_code) {
-    prn.addText(row('Codice Lotteria', order.lottery_code))
+    // ── Numero scontrino + data ──
+    prn.addText(row(`SCONTRINO - ${order.daily_number ?? '-'}`, `${date}, ${time}`))
+    prn.addText('Utente A\n')
+    const totalPers = order.coperto_persons ? `${order.coperto_persons} cliente${order.coperto_persons > 1 ? 'i' : ''}` : '1 cliente'
+    prn.addText(`${totalPers}\n`)
+    const comandaLabel = order.table_label
+      ? `Vendita - Tavolo ${order.table_label}`
+      : `Vendita - Comanda #${order.daily_number}`
+    prn.addText(`${comandaLabel}\n`)
     prn.addText(line())
-  }
 
-  // ── Footer ──
-  prn.addTextAlign(prn.ALIGN_CENTER)
-  const shortId = (order.id || '').substring(0, 36)
-  prn.addText(`${shortId}\n`)
-  prn.addText(`${s.businessFooter}\n`)
+    // ── Header colonne ──
+    prn.addTextStyle(false, false, true, prn.COLOR_1)
+    prn.addText(row('QTA  Prodotto', 'PU       Prezzo'))
+    prn.addTextStyle(false, false, false, prn.COLOR_1)
+    prn.addText(line())
 
-  prn.addFeedLine(4)
-  prn.addCut(prn.CUT_FEED)
-  prn.send()
+    // ── Articoli ──
+    for (const item of (order.order_items || [])) {
+      const pu = `${Number(item.unit_price).toFixed(2)}€`
+      const tot = `${(item.qty * item.unit_price).toFixed(2)}€`
+      const left = `${item.qty}x  ${item.name}`
+      prn.addText(row(left, `${pu.padStart(7)} ${tot.padStart(7)}`))
+    }
+
+    // Coperto (se presente)
+    if (order.coperto_amount > 0) {
+      const cop = `${Number(order.coperto_amount).toFixed(2)}€`
+      prn.addText(row(`${order.coperto_persons}x  Coperto`, `${cop.padStart(7)} ${cop.padStart(7)}`))
+    }
+
+    // ── Sconto applicato ──
+    if (sconto > 0) {
+      prn.addText(row('Subtotale', `${lordo.toFixed(2)}€`))
+      prn.addText(row('Sconto', `-${sconto.toFixed(2)}€`))
+    }
+
+    prn.addText(line())
+
+    // ── IVA ──
+    const ivaLabel = `IVA ${(ivaRate * 100).toFixed(1)}% (A)`
+    prn.addText(row(ivaLabel, `${ivaAmount.toFixed(2)}€`))
+    prn.addText(row('Subtotale', `${imponibile.toFixed(2)}€`))
+    prn.addText('\n')
+
+    // ── Totale grande ──
+    prn.addTextAlign(prn.ALIGN_CENTER)
+    prn.addTextSize(1, 2)
+    prn.addTextStyle(false, false, true, prn.COLOR_1)
+    prn.addText('Totale con IVA\n')
+    prn.addTextSize(3, 3)
+    prn.addText(`${total.toFixed(2)}€\n`)
+    prn.addTextSize(1, 1)
+    prn.addTextStyle(false, false, false, prn.COLOR_1)
+    prn.addText('\n')
+    prn.addTextAlign(prn.ALIGN_LEFT)
+    prn.addText(line())
+
+    // ── Pagamenti ──
+    prn.addTextStyle(false, false, true, prn.COLOR_1)
+    prn.addText('Pagamenti\n')
+    prn.addTextStyle(false, false, false, prn.COLOR_1)
+    // Metodo sconosciuto o assente: si scrive che non è indicato. Prima si
+    // ripiegava su "Contante", e uno scontrino pagato con la carta usciva
+    // con scritto contante — una dichiarazione falsa, non un default.
+    const nomeMetodo = (m) => PAYMENT_METHOD_PRINT[m] || 'Non indicato'
+    // Se ci sono incassi registrati si elencano uno per uno (conti divisi o
+    // acconti): così su ogni scontrino si legge quanto in contanti e quanto in
+    // carta. Altrimenti si usa il metodo di chiusura del conto.
+    const incassi = (order.payments || []).filter((p) => Number(p.amount) > 0)
+    if (incassi.length > 0) {
+      for (const p of incassi) {
+        prn.addText(row(`${nomeMetodo(p.method)} (A)`, `${Number(p.amount).toFixed(2)}€`))
+      }
+    } else {
+      prn.addText(row(`${nomeMetodo(order.payment_method)} (A)`, `${total.toFixed(2)}€`))
+    }
+    prn.addText(line())
+
+    // ── Codice lotteria degli scontrini (se comunicato dal cliente) ──
+    if (order.lottery_code) {
+      prn.addText(row('Codice Lotteria', order.lottery_code))
+      prn.addText(line())
+    }
+
+    // ── Footer ──
+    prn.addTextAlign(prn.ALIGN_CENTER)
+    const shortId = (order.id || '').substring(0, 36)
+    prn.addText(`${shortId}\n`)
+    prn.addText(`${s.businessFooter}\n`)
+
+    prn.addFeedLine(4)
+    prn.addCut(prn.CUT_FEED)
+  })
 }
 
 // ── FATTURA DI CORTESIA ──────────────────────────────────────────────────────
@@ -734,110 +812,110 @@ export async function printScontrino(order, opts = {}) {
 // progressivo per anno, articoli, scorporo IVA. (La fattura elettronica
 // vera passa dal commercialista/SDI: questa è la copia di cortesia.)
 
-export async function printFattura(invoice) {
-  const prn = await getPrinter()
-  const s = loadPrinterSettings()
-  const ivaRate = (Number(invoice.iva_rate) || 0) / 100
-  const { date, time } = italianDateTime(invoice.created_at)
-  const total = Number(invoice.total ?? 0)
-  const ivaAmount = total - total / (1 + ivaRate)
-  const imponibile = total / (1 + ivaRate)
-  const c = invoice.customer || {}
+export function printFattura(invoice) {
+  return lavoroDiStampa(async (prn) => {
+    const s = loadPrinterSettings()
+    const ivaRate = (Number(invoice.iva_rate) || 0) / 100
+    const { date, time } = italianDateTime(invoice.created_at)
+    const total = Number(invoice.total ?? 0)
+    const ivaAmount = total - total / (1 + ivaRate)
+    const imponibile = total / (1 + ivaRate)
+    const c = invoice.customer || {}
 
-  prn.addTextLang('it')
-  prn.addTextSmooth(true)
+    prn.addTextLang('it')
+    prn.addTextSmooth(true)
 
-  prn.addTextAlign(prn.ALIGN_CENTER)
-  prn.addTextSize(2, 2)
-  prn.addTextStyle(false, false, true, prn.COLOR_1)
-  prn.addText(`${s.businessName}\n`)
-  prn.addTextSize(1, 1)
-  prn.addTextStyle(false, false, false, prn.COLOR_1)
-  prn.addText(`${s.businessAddress}\n`)
-  prn.addText(`${s.businessCity}\n\n`)
-  prn.addTextSize(1, 2)
-  prn.addTextStyle(false, false, true, prn.COLOR_1)
-  prn.addText(`FATTURA DI CORTESIA n. ${invoice.number}\n`)
-  prn.addTextSize(1, 1)
-  prn.addTextStyle(false, false, false, prn.COLOR_1)
-  prn.addTextAlign(prn.ALIGN_LEFT)
-  prn.addText(`${date}, ${time}\n`)
-  prn.addText(line())
+    prn.addTextAlign(prn.ALIGN_CENTER)
+    prn.addTextSize(2, 2)
+    prn.addTextStyle(false, false, true, prn.COLOR_1)
+    prn.addText(`${s.businessName}\n`)
+    prn.addTextSize(1, 1)
+    prn.addTextStyle(false, false, false, prn.COLOR_1)
+    prn.addText(`${s.businessAddress}\n`)
+    prn.addText(`${s.businessCity}\n\n`)
+    prn.addTextSize(1, 2)
+    prn.addTextStyle(false, false, true, prn.COLOR_1)
+    prn.addText(`FATTURA DI CORTESIA n. ${invoice.number}\n`)
+    prn.addTextSize(1, 1)
+    prn.addTextStyle(false, false, false, prn.COLOR_1)
+    prn.addTextAlign(prn.ALIGN_LEFT)
+    prn.addText(`${date}, ${time}\n`)
+    prn.addText(line())
 
-  // ── Dati del cliente ──
-  prn.addTextStyle(false, false, true, prn.COLOR_1)
-  prn.addText('Intestata a\n')
-  prn.addTextStyle(false, false, false, prn.COLOR_1)
-  prn.addText(`${c.denominazione || '-'}\n`)
-  if (c.piva) prn.addText(`P.IVA: ${c.piva}\n`)
-  if (c.cf) prn.addText(`CF: ${c.cf}\n`)
-  if (c.sdi) prn.addText(`SDI/PEC: ${c.sdi}\n`)
-  if (c.indirizzo) prn.addText(`${c.indirizzo}\n`)
-  prn.addText(line())
+    // ── Dati del cliente ──
+    prn.addTextStyle(false, false, true, prn.COLOR_1)
+    prn.addText('Intestata a\n')
+    prn.addTextStyle(false, false, false, prn.COLOR_1)
+    prn.addText(`${c.denominazione || '-'}\n`)
+    if (c.piva) prn.addText(`P.IVA: ${c.piva}\n`)
+    if (c.cf) prn.addText(`CF: ${c.cf}\n`)
+    if (c.sdi) prn.addText(`SDI/PEC: ${c.sdi}\n`)
+    if (c.indirizzo) prn.addText(`${c.indirizzo}\n`)
+    prn.addText(line())
 
-  // ── Articoli ──
-  prn.addTextStyle(false, false, true, prn.COLOR_1)
-  prn.addText(row('QTA  Prodotto', 'PU       Prezzo'))
-  prn.addTextStyle(false, false, false, prn.COLOR_1)
-  prn.addText(line())
-  for (const item of invoice.items || []) {
-    const pu = `${Number(item.unit_price).toFixed(2)}€`
-    const tot = `${(item.qty * item.unit_price).toFixed(2)}€`
-    prn.addText(row(`${item.qty}x  ${item.name}`, `${pu.padStart(7)} ${tot.padStart(7)}`))
-  }
-  prn.addText(line())
-  if (invoice.discount_amount > 0) {
-    prn.addText(row('Sconto', `-${Number(invoice.discount_amount).toFixed(2)}€`))
-  }
-  prn.addText(row(`IVA ${(ivaRate * 100).toFixed(1)}%`, `${ivaAmount.toFixed(2)}€`))
-  prn.addText(row('Imponibile', `${imponibile.toFixed(2)}€`))
-  prn.addText('\n')
-  prn.addTextAlign(prn.ALIGN_CENTER)
-  prn.addTextSize(2, 2)
-  prn.addTextStyle(false, false, true, prn.COLOR_1)
-  prn.addText(`Totale ${total.toFixed(2)}€\n`)
-  prn.addTextSize(1, 1)
-  prn.addTextStyle(false, false, false, prn.COLOR_1)
-  prn.addText('\nDocumento non fiscale - copia di cortesia\n')
-  prn.addText(`${s.businessFooter}\n`)
+    // ── Articoli ──
+    prn.addTextStyle(false, false, true, prn.COLOR_1)
+    prn.addText(row('QTA  Prodotto', 'PU       Prezzo'))
+    prn.addTextStyle(false, false, false, prn.COLOR_1)
+    prn.addText(line())
+    for (const item of invoice.items || []) {
+      const pu = `${Number(item.unit_price).toFixed(2)}€`
+      const tot = `${(item.qty * item.unit_price).toFixed(2)}€`
+      prn.addText(row(`${item.qty}x  ${item.name}`, `${pu.padStart(7)} ${tot.padStart(7)}`))
+    }
+    prn.addText(line())
+    if (invoice.discount_amount > 0) {
+      prn.addText(row('Sconto', `-${Number(invoice.discount_amount).toFixed(2)}€`))
+    }
+    prn.addText(row(`IVA ${(ivaRate * 100).toFixed(1)}%`, `${ivaAmount.toFixed(2)}€`))
+    prn.addText(row('Imponibile', `${imponibile.toFixed(2)}€`))
+    prn.addText('\n')
+    prn.addTextAlign(prn.ALIGN_CENTER)
+    prn.addTextSize(2, 2)
+    prn.addTextStyle(false, false, true, prn.COLOR_1)
+    prn.addText(`Totale ${total.toFixed(2)}€\n`)
+    prn.addTextSize(1, 1)
+    prn.addTextStyle(false, false, false, prn.COLOR_1)
+    prn.addText('\nDocumento non fiscale - copia di cortesia\n')
+    prn.addText(`${s.businessFooter}\n`)
 
-  prn.addFeedLine(4)
-  prn.addCut(prn.CUT_FEED)
-  prn.send()
+    prn.addFeedLine(4)
+    prn.addCut(prn.CUT_FEED)
+  })
 }
 
 // ── ORDINE FORNITORE ─────────────────────────────────────────────────────────
 // Ticket dell'ordine d'acquisto (GENERATORE ORDINI): righe a confezioni
 // e totali, da allegare/spuntare all'arrivo della merce.
 
-export async function printOrdineFornitore(order) {
-  const prn = await getPrinter()
-  const s = loadPrinterSettings()
+export function printOrdineFornitore(order) {
+  return lavoroDiStampa(async (prn) => {
+    const s = loadPrinterSettings()
 
-  prn.addTextLang('it')
-  prn.addTextSmooth(true)
-  prn.addTextAlign(prn.ALIGN_CENTER)
-  prn.addTextSize(2, 2)
-  prn.addTextStyle(false, false, true, prn.COLOR_1)
-  prn.addText('ORDINE FORNITORE\n')
-  prn.addTextSize(1, 1)
-  prn.addTextStyle(false, false, false, prn.COLOR_1)
-  prn.addText(`${s.businessName}\n\n`)
-  prn.addTextAlign(prn.ALIGN_LEFT)
-  prn.addText(row(order.supplier_name || '-', String(order.created_at || '').slice(0, 10)))
-  prn.addText(line())
-  prn.addTextSize(1, 2)
-  for (const l of order.lines || []) {
-    prn.addText(`${l.qty_packages}  ${String(l.name || '').toUpperCase()}\n`)
-  }
-  prn.addTextSize(1, 1)
-  prn.addText(line())
-  prn.addText(row('Totale netto', `${(Number(order.total_net) || 0).toFixed(2)}€`))
-  prn.addText(row('Totale ivato', `${(Number(order.total_gross) || 0).toFixed(2)}€`))
+    prn.addTextLang('it')
+    prn.addTextSmooth(true)
+    prn.addTextAlign(prn.ALIGN_CENTER)
+    prn.addTextSize(2, 2)
+    prn.addTextStyle(false, false, true, prn.COLOR_1)
+    prn.addText('ORDINE FORNITORE\n')
+    prn.addTextSize(1, 1)
+    prn.addTextStyle(false, false, false, prn.COLOR_1)
+    prn.addText(`${s.businessName}\n\n`)
+    prn.addTextAlign(prn.ALIGN_LEFT)
+    prn.addText(row(order.supplier_name || '-', String(order.created_at || '').slice(0, 10)))
+    prn.addText(line())
+    prn.addTextSize(1, 2)
+    for (const l of order.lines || []) {
+      prn.addText(`${l.qty_packages}  ${String(l.name || '').toUpperCase()}\n`)
+    }
+    prn.addTextSize(1, 1)
+    prn.addText(line())
+    prn.addText(row('Totale netto', `${(Number(order.total_net) || 0).toFixed(2)}€`))
+    prn.addText(row('Totale ivato', `${(Number(order.total_gross) || 0).toFixed(2)}€`))
 
-  prn.addFeedLine(3)
-  prn.addCut(prn.CUT_FEED)
-  prn.send()
+    prn.addFeedLine(3)
+    prn.addCut(prn.CUT_FEED)
+  })
 }
 
 // ── TEST STAMPA ───────────────────────────────────────────────────────────────
@@ -851,101 +929,101 @@ export async function printOrdineFornitore(order) {
 // costringono a tradurre a mente mentre si contano i soldi.
 const scontrinoMetodo = (k) => PAYMENT_METHOD_PRINT[k] || k
 
-export async function printChiusuraCassa(recap, session, opts = {}) {
-  const prn = await getPrinter()
-  const s = loadPrinterSettings()
-  const { date, time } = italianDateTime(new Date().toISOString())
-  const eur = (n) => `${(Number(n) || 0).toFixed(2)}€`
+export function printChiusuraCassa(recap, session, opts = {}) {
+  return lavoroDiStampa(async (prn) => {
+    const s = loadPrinterSettings()
+    const { date, time } = italianDateTime(new Date().toISOString())
+    const eur = (n) => `${(Number(n) || 0).toFixed(2)}€`
 
-  prn.addTextLang('it')
-  prn.addTextSmooth(true)
+    prn.addTextLang('it')
+    prn.addTextSmooth(true)
 
-  prn.addTextAlign(prn.ALIGN_CENTER)
-  prn.addTextSize(2, 2)
-  prn.addTextStyle(false, false, true, prn.COLOR_1)
-  prn.addText(`${s.businessName}\n`)
-  prn.addTextSize(1, 1)
-  prn.addText('CHIUSURA CASSA\n')
-  prn.addTextStyle(false, false, false, prn.COLOR_1)
-  prn.addTextAlign(prn.ALIGN_LEFT)
-  prn.addText(`${date}, ${time}\n`)
-  if (session?.opened_at) {
-    const a = italianDateTime(session.opened_at)
-    prn.addText(`Apertura: ${a.date}, ${a.time}\n`)
-  }
-  if (opts.by) prn.addText(`Operatore: ${opts.by}\n`)
-  prn.addText(line())
-
-  // ── Incassi per metodo ──
-  prn.addTextStyle(false, false, true, prn.COLOR_1)
-  prn.addText('Incassi per metodo\n')
-  prn.addTextStyle(false, false, false, prn.COLOR_1)
-  // Una riga per metodo battuto: i soliti sempre (anche a zero, così la
-  // striscia si legge uguale ogni sera) e in coda quelli nuovi, senza dover
-  // ristampare il codice quando si aggiunge un metodo di pagamento.
-  const m = recap?.byMethod || {}
-  for (const k of cashMethodKeys(m)) {
-    const noto = CASH_METHOD_ORDER.includes(k)
-    if (!noto && !(Number(m[k]) > 0)) continue
-    prn.addText(row(scontrinoMetodo(k), eur(m[k])))
-  }
-  prn.addText(line())
-
-  // ── Sconti concessi (già dedotti dagli incassi) ──
-  // Sempre stampati, anche a zero: è una voce che si controlla ogni sera.
-  prn.addText(row('Sconti concessi', `-${eur(recap?.sconti)}`))
-  prn.addText(line())
-
-  // ── Totale ──
-  prn.addTextAlign(prn.ALIGN_CENTER)
-  prn.addTextSize(1, 2)
-  prn.addTextStyle(false, false, true, prn.COLOR_1)
-  prn.addText('Totale incassato\n')
-  prn.addTextSize(3, 3)
-  prn.addText(`${eur(recap?.incassato)}\n`)
-  prn.addTextSize(1, 1)
-  prn.addTextStyle(false, false, false, prn.COLOR_1)
-  prn.addTextAlign(prn.ALIGN_LEFT)
-  prn.addText(line())
-
-  // ── Cassa ──
-  prn.addText(row('Conti chiusi', String(recap?.nPagati ?? 0)))
-  prn.addText(row('Fondo cassa', eur(recap?.fondo)))
-  prn.addText(row('Contante atteso', eur(recap?.contanteAtteso)))
-  if (opts.countedCash != null && opts.countedCash !== '') {
-    const counted = Number(String(opts.countedCash).replace(',', '.')) || 0
-    prn.addText(row('Contante contato', eur(counted)))
-    const diff = Math.round((counted - (Number(recap?.contanteAtteso) || 0)) * 100) / 100
-    prn.addText(row('Differenza', `${diff > 0 ? '+' : ''}${eur(diff)}`))
-  }
-  if (Number(recap?.apertoDaIncassare) > 0) {
+    prn.addTextAlign(prn.ALIGN_CENTER)
+    prn.addTextSize(2, 2)
+    prn.addTextStyle(false, false, true, prn.COLOR_1)
+    prn.addText(`${s.businessName}\n`)
+    prn.addTextSize(1, 1)
+    prn.addText('CHIUSURA CASSA\n')
+    prn.addTextStyle(false, false, false, prn.COLOR_1)
+    prn.addTextAlign(prn.ALIGN_LEFT)
+    prn.addText(`${date}, ${time}\n`)
+    if (session?.opened_at) {
+      const a = italianDateTime(session.opened_at)
+      prn.addText(`Apertura: ${a.date}, ${a.time}\n`)
+    }
+    if (opts.by) prn.addText(`Operatore: ${opts.by}\n`)
     prn.addText(line())
-    prn.addText(row(`Conti aperti (${recap.nAperti})`, eur(recap.apertoDaIncassare)))
-  }
-  prn.addText(line())
 
-  prn.addTextAlign(prn.ALIGN_CENTER)
-  prn.addText(`${s.businessFooter}\n`)
-  prn.addFeedLine(4)
-  prn.addCut(prn.CUT_FEED)
-  prn.send()
+    // ── Incassi per metodo ──
+    prn.addTextStyle(false, false, true, prn.COLOR_1)
+    prn.addText('Incassi per metodo\n')
+    prn.addTextStyle(false, false, false, prn.COLOR_1)
+    // Una riga per metodo battuto: i soliti sempre (anche a zero, così la
+    // striscia si legge uguale ogni sera) e in coda quelli nuovi, senza dover
+    // ristampare il codice quando si aggiunge un metodo di pagamento.
+    const m = recap?.byMethod || {}
+    for (const k of cashMethodKeys(m)) {
+      const noto = CASH_METHOD_ORDER.includes(k)
+      if (!noto && !(Number(m[k]) > 0)) continue
+      prn.addText(row(scontrinoMetodo(k), eur(m[k])))
+    }
+    prn.addText(line())
+
+    // ── Sconti concessi (già dedotti dagli incassi) ──
+    // Sempre stampati, anche a zero: è una voce che si controlla ogni sera.
+    prn.addText(row('Sconti concessi', `-${eur(recap?.sconti)}`))
+    prn.addText(line())
+
+    // ── Totale ──
+    prn.addTextAlign(prn.ALIGN_CENTER)
+    prn.addTextSize(1, 2)
+    prn.addTextStyle(false, false, true, prn.COLOR_1)
+    prn.addText('Totale incassato\n')
+    prn.addTextSize(3, 3)
+    prn.addText(`${eur(recap?.incassato)}\n`)
+    prn.addTextSize(1, 1)
+    prn.addTextStyle(false, false, false, prn.COLOR_1)
+    prn.addTextAlign(prn.ALIGN_LEFT)
+    prn.addText(line())
+
+    // ── Cassa ──
+    prn.addText(row('Conti chiusi', String(recap?.nPagati ?? 0)))
+    prn.addText(row('Fondo cassa', eur(recap?.fondo)))
+    prn.addText(row('Contante atteso', eur(recap?.contanteAtteso)))
+    if (opts.countedCash != null && opts.countedCash !== '') {
+      const counted = Number(String(opts.countedCash).replace(',', '.')) || 0
+      prn.addText(row('Contante contato', eur(counted)))
+      const diff = Math.round((counted - (Number(recap?.contanteAtteso) || 0)) * 100) / 100
+      prn.addText(row('Differenza', `${diff > 0 ? '+' : ''}${eur(diff)}`))
+    }
+    if (Number(recap?.apertoDaIncassare) > 0) {
+      prn.addText(line())
+      prn.addText(row(`Conti aperti (${recap.nAperti})`, eur(recap.apertoDaIncassare)))
+    }
+    prn.addText(line())
+
+    prn.addTextAlign(prn.ALIGN_CENTER)
+    prn.addText(`${s.businessFooter}\n`)
+    prn.addFeedLine(4)
+    prn.addCut(prn.CUT_FEED)
+  })
 }
 
-export async function printTest() {
-  const prn = await getPrinter()
-  const s = loadPrinterSettings()
+export function printTest() {
+  return lavoroDiStampa(async (prn) => {
+    const s = loadPrinterSettings()
 
-  prn.addTextLang('it')
-  prn.addTextSmooth(true)
-  prn.addTextAlign(prn.ALIGN_CENTER)
-  prn.addTextSize(2, 2)
-  prn.addTextStyle(false, false, true, prn.COLOR_1)
-  prn.addText('Test stampa\n')
-  prn.addTextSize(1, 1)
-  prn.addTextStyle(false, false, false, prn.COLOR_1)
-  prn.addText(`${s.businessName}\n`)
-  prn.addText('Connessione OK\n')
-  prn.addFeedLine(3)
-  prn.addCut(prn.CUT_FEED)
-  prn.send()
+    prn.addTextLang('it')
+    prn.addTextSmooth(true)
+    prn.addTextAlign(prn.ALIGN_CENTER)
+    prn.addTextSize(2, 2)
+    prn.addTextStyle(false, false, true, prn.COLOR_1)
+    prn.addText('Test stampa\n')
+    prn.addTextSize(1, 1)
+    prn.addTextStyle(false, false, false, prn.COLOR_1)
+    prn.addText(`${s.businessName}\n`)
+    prn.addText('Connessione OK\n')
+    prn.addFeedLine(3)
+    prn.addCut(prn.CUT_FEED)
+  })
 }

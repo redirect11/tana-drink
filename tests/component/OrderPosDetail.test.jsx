@@ -90,6 +90,7 @@ vi.mock('../../src/lib/printer.js', async (originale) => ({
   ...(await originale()),
   printComanda: vi.fn(() => Promise.resolve()),
   printComande: vi.fn(() => Promise.resolve(2)),
+  printComandaUnita: vi.fn(() => Promise.resolve()),
   printScontrino: vi.fn(() => Promise.resolve()),
   printFattura: vi.fn(() => Promise.resolve()),
   loadPrinterSettings: vi.fn(() => ({ ivaRate: 10 })),
@@ -110,7 +111,7 @@ import {
   setOrderServiceMode,
 } from '../../src/lib/api.js'
 import { readerCheckout } from '../../src/lib/paymentsApi.js'
-import { printComanda, printComande } from '../../src/lib/printer.js'
+import { printComanda, printComande, printComandaUnita } from '../../src/lib/printer.js'
 
 // IL CONTO DI PROVA NASCE «DA FARE», come nasce davvero: si battono tre
 // conti di fila e poi si comincia a versare. Era «in preparazione» da
@@ -438,18 +439,48 @@ describe('modale comande: consultazione, avanzamento e stampa', () => {
     )
     await user.click(screen.getByRole('button', { name: /Comande \(3\)/ }))
     // Il conto ne ha tre, ma l'annullata è lavoro buttato: il tasto conta due.
-    await user.click(screen.getByRole('button', { name: /Stampa tutte \(2\)/ }))
+    await user.click(screen.getByRole('button', { name: /Una per comanda \(2\)/ }))
     expect(printComande).toHaveBeenCalledTimes(1)
     const [ordine, comande] = printComande.mock.calls[0]
     expect(ordine.id).toBe('ord1')
     expect(comande.map((c) => c.id)).toEqual(['c1', 'c3'])
   })
 
-  it('con una comanda sola il tasto non c’è: non c’è niente da mettere insieme', async () => {
+  // «Va bene stampare tutte le comande insieme su più ricevute ma serve
+  // anche stampare tutto su una sola ricevuta» (l'utente, 20/08). Sono due
+  // gesti diversi e servono tutti e due: il gemello dell'altro tasto.
+  it('e con lo stesso conto si può stampare tutto su un foglio solo', async () => {
+    const user = userEvent.setup()
+    mount(
+      baseOrder({
+        comande: [
+          {
+            id: 'c1', seq: 1, status: 'ritirato', status_times: {},
+            items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 }],
+          },
+          {
+            id: 'c2', seq: 2, status: 'ricevuto', status_times: {},
+            items: [{ drink_id: 'gin', name: 'Gin Tonic', unit_price: 8, qty: 1 }],
+          },
+        ],
+      })
+    )
+    await user.click(screen.getByRole('button', { name: /Comande \(2\)/ }))
+    await user.click(screen.getByRole('button', { name: /Tutto su una/ }))
+    expect(printComandaUnita).toHaveBeenCalledTimes(1)
+    // UN ORDINE, non una lista: è il confine che l'utente ha sottolineato
+    // («ma sempre dello stesso ordine!»).
+    expect(printComandaUnita.mock.calls[0]).toHaveLength(1)
+    expect(printComandaUnita.mock.calls[0][0].id).toBe('ord1')
+    expect(printComande).not.toHaveBeenCalled()
+  })
+
+  it('con una comanda sola i due tasti non ci sono: niente da mettere insieme', async () => {
     const user = userEvent.setup()
     mount(baseOrder())
     await user.click(screen.getByRole('button', { name: /Comande/ }))
-    expect(screen.queryByRole('button', { name: /Stampa tutte/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: /Una per comanda/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: /Tutto su una/ })).toBeNull()
   })
 })
 

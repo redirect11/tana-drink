@@ -93,6 +93,14 @@
   lì non ci sarebbe mai comparsa. La comanda nuova **stampa da sola**, come
   le altre.
 
+- **Mai più due conti sulla stessa comanda.** Capitava che uscisse un
+  ticket solo con dentro le comande di **ordini diversi** — due
+  intestazioni, due numeri di conto, le righe di tutti e due — e al banco è
+  un pezzo di carta da buttare, o peggio un drink portato al tavolo
+  sbagliato. La stampante ha **una coda sola**: adesso ogni stampa aspetta
+  quella prima, parte da un foglio pulito e non lascia niente in giro
+  nemmeno quando non riesce. Una stampa fallita **non blocca** quelle dopo.
+
 - **Il tasto «Comanda» stampa UNA comanda, non il conto intero.** Su un
   conto con più comande, quando non ce n'era più nessuna in lavorazione —
   tutto servito, oppure il conto già incassato — quel tasto faceva uscire
@@ -100,12 +108,15 @@
   sembrava una comanda e ne conteneva due. Adesso, se non si dice quale,
   esce **l'ultima**. Per averle tutte c'è il tasto apposta (qui sotto).
 
-- **Le comande di un conto si stampano tutte in un colpo.** Un conto
+- **Le comande di un conto si stampano insieme, in due modi.** Un conto
   battuto in tre riprese ha tre ticket: in **«Comande»**, sopra l'elenco,
-  c'è **«Stampa tutte»** — compare solo quando ce n'è più d'una. Escono
-  **separate**, una per comanda, identiche a come uscirebbero da sole: al
-  banco un ticket è un giro di lavoro. Le comande **annullate** restano
-  fuori.
+  ci sono due tasti — compaiono solo quando le comande sono più d'una.
+  **«Una per comanda (3)»** fa uscire i ticket separati, identici a come
+  uscirebbero da soli: al banco un ticket è un giro di lavoro.
+  **«Tutto su una»** fa uscire **un foglio solo** con tutti i prodotti del
+  conto, le quantità dello stesso drink sommate. Sempre e solo **di quel
+  conto**: due conti sulla stessa carta non succede più. Le comande
+  **annullate** restano fuori da tutte e due.
 
 - **Il conto con lo sconto si chiude davvero, e lo scontrino esce** (i due
   vocali del 19 agosto). Chiudendo un tavolo scontato il conto risultava
