@@ -116,6 +116,11 @@ export function creaStampanteFinta(titolo = 'Stampa') {
     addTextSize: (w) => (pezzi.push({ tipo: 'size', doppio: Number(w) > 1 }), finta),
     addTextStyle: () => finta,
     addText: (t) => (pezzi.push({ tipo: 'text', testo: t }), finta),
+    // Butta quello che è stato accumulato senza stamparlo. La stampante
+    // vera ce l'ha (clearCommandBuffer dell'SDK) e serve alla coda delle
+    // stampe: un lavoro che si ferma a metà non deve lasciare i suoi pezzi
+    // sulla carta di quello dopo (BUG-052).
+    clearCommandBuffer: () => ((pezzi.length = 0), finta),
     addFeedLine: (n) => (pezzi.push({ tipo: 'feed', righe: Number(n) || 1 }), finta),
     addCut: () => (pezzi.push({ tipo: 'cut' }), finta),
     // Il logo: la stampante vera riceve un'immagine, qui basta l'indirizzo
