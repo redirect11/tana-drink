@@ -238,6 +238,16 @@ Regole:
   110 e alla dimensione vera risultavano piccoli, testo e bersaglio.
   L'altezza minima è esplicita e non lasciata all'imbottitura, o balla da
   una pastiglia all'altra a seconda di quanto è lungo il testo.
+- **Le pastiglie della fila dei filtri della coda** (`.chips-filtri .chip`)
+  stanno un filo sotto: `min-height: var(--tastino-alto)` (34px),
+  `padding: 5px 11px`, `font-size: 0.86rem`. L'ha chiesto l'utente — «e i
+  tasti dei filtri, tutti, devono essere leggermente più piccoli»
+  (20/08/2026) — e in griglia sono sei o sette: alla misura piena si
+  mangiavano la riga, e dev'esserne **una sola**. Alla stessa altezza
+  stanno i due tasti che governano la fila (`.coda-tastino`: «▾ Filtri» e
+  il verso della coda), che sono bottoni bordati ma bassi — sono la stessa
+  specie di comando e in riga si devono somigliare. `--tastino-alto` è la
+  misura sola da cui scendono tutti.
 - **La pastiglia minuta** (`.chip.mini`: le unità dentro una riga di testo,
   come «Al pz · pz · cl · ml» nella scheda di un prodotto) resta a
   `min-height: 22px` e `0.68rem`. Non è un bersaglio da barra: sta dentro
@@ -258,10 +268,14 @@ sole per contrasto: non aggiungerne di dedicate.
    soglia di comodità; le informazioni critiche mai affidate solo a
    `--muted` o solo al colore.
 2. **Si tocca col pollice**: bersagli ≥ 44px, azioni distruttive lontane
-   da quelle frequenti. Unica deroga scritta: le **pastiglie** dei filtri
-   stanno a 40px — sono secondarie e vivono in una riga che scorre, e a 44
-   quella riga diventa una fascia. Tutto il resto (tasti del conto, della
-   card, della testata) resta ≥ 44px.
+   da quelle frequenti. Le deroghe scritte sono due, e sono nello stesso
+   posto: le **pastiglie** dei filtri stanno a 40px — sono secondarie e
+   vivono in una riga che scorre, e a 44 quella riga diventa una fascia —
+   e **dentro la fila dei filtri della coda** scendono a 34px, coi due
+   tasti che la governano, perché l'ha chiesto l'utente e perché quella
+   fila si tocca **quando si decide cosa guardare**, non con l'ordine in
+   mano. Tutto il resto (tasti del conto, della card, della testata) resta
+   ≥ 44px.
 3. **Le parole sono da vassoio**: comuni, brevi, in italiano; nessun
    gergo tecnico; nessun messaggio che scarichi la colpa su chi legge.
 4. **Niente aspetta la rete**: ogni interazione risponde subito; spinner

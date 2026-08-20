@@ -277,15 +277,38 @@ ${nome} {`)
     expect(r).toMatch(/flex-shrink:\s*0/)
   })
 
-  it('sono piccoli e senza riquadro, come il «▾ altre 3» di una card', () => {
-    // «Il tasto per mostrare/nascondere i filtri deve essere un tasto
-    // piccolo […] come il tasto che mostra/nasconde i prodotti da una card
-    // delle comande» (l'utente, 20/08/2026). Un rettangolo bordato in mezzo
-    // a una riga di testo è uno scalino.
+  // ERANO SENZA RIQUADRO PER UN GIRO, e l'utente li ha rimandati indietro a
+  // metà strada: «Ok, così com'è filtri, aggiungi un bordo e rendilo un
+  // bottone ma lascia la freccetta e la scritta filtri. Il tasto non farlo
+  // troppo alto come gli altri, stessa cosa per la freccetta
+  // dell'ordinamento. Stessa dimensione dei filtri» (20/08/2026). Senza
+  // riquadro non si vedeva che erano tasti; a 44px, in una riga di testo,
+  // erano uno scalino.
+  it('sono bottoni col riquadro, ma bassi — non i 44px degli altri', () => {
     const r = regola('.coda-tastino')
-    expect(r).toMatch(/border:\s*none/)
-    expect(r).toMatch(/background:\s*none/)
-    expect(r).toMatch(/color:\s*var\(--muted\)/)
+    expect(r).toMatch(/border:\s*1px solid var\(--line\)/)
+    expect(r).toMatch(/background:\s*var\(--tile-bg\)/)
+    expect(r).toMatch(/border-radius:\s*var\(--raggio-pill\)/)
+    // L'altezza è quella dei chip della fila: sono la stessa specie di
+    // comando e in riga si devono somigliare.
+    expect(r).toMatch(/min-height:\s*var\(--tastino-alto\)/)
+    expect(css).toMatch(/--tastino-alto:\s*34px/)
+  })
+
+  it('e sono gemelli: il verso della coda è quadrato, alto come i filtri', () => {
+    // «Stessa dimensione dei filtri»: stessa altezza, e siccome è una
+    // freccia sola il riquadro si fa quadrato invece che una pastiglia
+    // lunga piena d'aria.
+    const r = regola('.coda-tastino.solo-icona')
+    expect(r).toMatch(/min-width:\s*var\(--tastino-alto\)/)
+  })
+
+  it('non alzano la riga dei conteggi: sporgono, non la spingono', () => {
+    // Sono più alti del testo dei conteggi. Su una lavagna guardata da
+    // lontano ogni pixel di testata è una comanda in meno sotto: i margini
+    // negativi tolgono dall'altezza di riga quello che sporge, e i tasti
+    // escono dentro il `gap` della testata, che c'è comunque.
+    expect(regola('.coda-tastini')).toMatch(/margin-block:\s*-\d/)
   })
 
   it('la fila dei chip va a capo invece di scorrere, o taglierebbe la tendina', () => {
@@ -295,5 +318,30 @@ ${nome} {`)
     const r = regola('.chips-filtri')
     expect(r).toMatch(/flex-wrap:\s*wrap/)
     expect(r).toMatch(/overflow:\s*visible/)
+  })
+
+  // «E i tasti dei filtri, tutti, devono essere leggermente più piccoli»
+  // (l'utente, 20/08/2026). Deroga circoscritta ai 44px di
+  // docs/navigazione.md: vale SOLO dentro la fila dei filtri, che si tocca
+  // quando si decide cosa guardare — non con l'ordine in mano.
+  it('e i chip della fila sono leggermente più piccoli degli altri', () => {
+    const filtri = regola('.chips-filtri .chip')
+    expect(filtri).toMatch(/min-height:\s*var\(--tastino-alto\)/)
+    // «Leggermente», non minuscoli: si resta sopra i 30px e sotto la
+    // misura piena del chip, che è 40.
+    const pieno = regola('.chip')
+    expect(pieno).toMatch(/min-height:\s*40px/)
+    const corpo = Number(/font-size:\s*([\d.]+)rem/.exec(filtri)[1])
+    expect(corpo).toBeLessThan(0.95)
+    expect(corpo).toBeGreaterThan(0.8)
+  })
+
+  // LA SECONDA RIGA NON ESISTE PIÙ. La scelta delle colonne aveva una fila
+  // sua sotto quella dei filtri — chip che aprivano chip — e l'utente l'ha
+  // bocciata: «quei filtri devono apparire sulla stessa riga degli altri
+  // tasti» (20/08/2026). Adesso quei tasti si accodano ai fratelli e non
+  // hanno più bisogno di una classe loro.
+  it('la scelta delle colonne non ha più una riga sua', () => {
+    expect(css).not.toMatch(/\n\.corsie-scelta \{/)
   })
 })
