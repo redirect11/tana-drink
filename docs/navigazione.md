@@ -98,9 +98,9 @@ sotto i 44px si sbaglia. Si **toglie**, in quest'ordine:
   trascinare non si accorge che si può. Le colonne che non accettano il
   rilascio lo dicono mentre la card è ancora in mano, non dopo.
 - **Quello che si cambia nel mezzo del servizio sta sopra la lista**, e vale
-  per QUESTO terminale: «▦ Colonne» (che spegne le corsie che in quel
-  momento non servono) fra i filtri, e in testata il tasto con cui chi non è
-  al banco va a guardare il lavoro. Non stanno in Impostazioni perché si
+  per QUESTO terminale: le colonne (un chip per corsia, che spegne quelle
+  che in quel momento non servono) fra i filtri, e in testata il tasto con
+  cui chi non è al banco va a guardare il lavoro. Non stanno in Impostazioni perché si
   toccano con l'ordine in mano, e non su `settings/bar` perché al banco e
   alla cassa non si guardano le stesse cose.
 - **Il cambio vista NON sta nella riga dei filtri: sta in testata, coi
@@ -192,16 +192,25 @@ sotto i 44px si sbaglia. Si **toglie**, in quest'ordine:
   scelto senza aprirla (REQ-CODA-009).
   La scelta aperta/chiusa vale per QUESTO terminale
   (`tana:coda:filtri-aperti`). Dentro ci va tutto quello che restringe la
-  lista — «▦ Colonne» compreso, e i sottofiltri dei chiusi; fuori il
-  cambio vista, che non filtra, e il «＋», che crea. Un meccanismo solo per
-  tutte le viste della coda.
-  **E LA FILA È UNA SOLA, MAI DUE ANNIDATE.** Un chip che ne apre altri —
-  «▦ Colonne» al banco — li mette **in coda alla stessa riga**, non in una
-  seconda sotto: «quei filtri devono apparire sulla stessa riga degli altri
-  tasti» (l'utente, 20/08/2026). Che la riga vada a capo da sé quando non ci
-  sta va benissimo: quello è il capo naturale del flusso, non un livello in
-  più. Il conto è sempre lo stesso: fila chiusa **zero righe**, fila aperta
-  **una**.
+  lista — le colonne del banco comprese, e i sottofiltri dei chiusi; fuori
+  il cambio vista, che non filtra, e il «＋», che crea. Un meccanismo solo
+  per tutte le viste della coda.
+  **E LA FILA È UNA SOLA, MAI DUE ANNIDATE — E NEMMENO UN CHIP CHE APRE
+  CHIP.** Le colonne del banco hanno provato tutte e due le strade
+  sbagliate: prima una seconda riga sotto, poi un «▦ Colonne» che le apriva
+  dentro la stessa riga. Adesso stanno in fila coi fratelli, una per chip:
+  il tastino «▾ Filtri» è **l'unico livello di nascondimento**, e un
+  secondo dentro il primo sono due tocchi per una riga che a fila chiusa
+  non esisteva comunque — «togli il testo colonne e metti tutti i tasti che
+  si aprono cliccando colonne al posto di colonne. Non c'è più bisogno
+  visto che nascondiamo tutto con filtri» (l'utente, 20/08/2026). Che la
+  riga vada a capo da sé quando non ci sta va benissimo: quello è il capo
+  naturale del flusso, non un livello in più. Il conto è sempre lo stesso:
+  fila chiusa **zero righe**, fila aperta **una**.
+  L'ECCEZIONE, che è un'altra cosa: un filtro che ne IMPLICA altri li fa
+  comparire quando si accende — «Serviti / Da servire» escono con «Chiusi»,
+  perché fuori di lì non vogliono dire niente. Lì i chip in più li chiede
+  la domanda, non un tasto che fa da coperchio.
 - **Nel ⋯ del telefono ci va quello che si fa OGNI TANTO**, non quello che
   si fa durante il servizio. Pannelli e cassa stanno lì dentro; il cambio
   vista resta fuori, accanto al ⋯, perché nel menu sarebbero due tocchi

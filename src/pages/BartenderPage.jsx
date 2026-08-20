@@ -53,7 +53,6 @@ import {
   attesaPagamento,
   corsieDaMostrare,
   corsieSceglibili,
-  corsieSpente,
   corsieDiverseDalNormale,
   soloCorsieVive,
   intestazioneGiornata,
@@ -605,7 +604,6 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
     return vive
   })
   const [vista, setVista] = useState(vistaCorsie)
-  const [scegliCorsie, setScegliCorsie] = useState(false) // il pannellino è aperto?
   // LA FILA DEI FILTRI STA DIETRO UN TASTO. Chiusa di suo, e la scelta è di
   // QUESTO terminale (vedi impostazioniLocali): al banco la fila resta
   // aperta tutta la sera, alla cassa non si tocca mai.
@@ -1383,15 +1381,13 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   const corsieMostrate = corsieBanco
     ? corsieDaMostrare(corsieDelBanco, nascoste, { passoDiNascita })
     : corsie
-  // Le colonne che si possono accendere e spegnere a mano, e quante di
-  // quelle sono spente adesso: il numero va scritto sul chip (vedi
-  // `filtriCorsie`), perche' l'arancione da solo non dice mai perche' e'
-  // acceso — e acceso lo e' dal primo avvio, che le due corsie dello
-  // sguardo all'indietro partono spente di suo.
+  // Le colonne che si possono accendere e spegnere a mano: da qui escono i
+  // chip, uno per colonna, dentro la fila dei filtri.
   const sceglibili = corsieBanco ? corsieSceglibili(corsieDelBanco, { passoDiNascita }) : []
-  const spente = corsieSpente(sceglibili, nascoste)
-  // Il tasto «Colonne» si accende solo se QUESTO terminale si discosta dal
-  // normale (due corsie nascono spente di serie): il perché sta in coda.js.
+  // Quante di quelle stanno diversamente dal normale (due corsie nascono
+  // spente di serie): è il numero che finisce nel badge del tastino «Filtri»
+  // quando la fila è chiusa — il perché di «diverse» e non «spente» sta in
+  // coda.js. Contarle e basta terrebbe il badge acceso dal primo avvio.
   const diverse = corsieDiverseDalNormale(sceglibili, nascoste)
   const cambiaPronto = () => {
     const nuovo = !prontoSeparato
@@ -1573,10 +1569,6 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
     const aperti = !filtriVisibili
     setFiltriVisibili(aperti)
     ricordaFiltriAperti(aperti)
-    // Chiudendo la fila si chiude anche quello che la fila aveva aperto: la
-    // scelta delle colonne senza il suo tasto resterebbe lì da sola, e per
-    // richiuderla toccherebbe riaprire i filtri.
-    if (!aperti) setScegliCorsie(false)
   }
 
   // IL TASTINO CHE APRE I FILTRI. «Non ci siamo capiti: il tasto per
@@ -1732,32 +1724,19 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
           mangiano mezzo schermo per roba che in quel momento non lo
           riguarda. È una scelta di QUESTO terminale e si ricorda.
           ED È UN FILTRO a tutti gli effetti — restringe quello che si
-          vede — quindi sta dentro la scomparsa con gli altri. */}
-      {corsieBanco && (
-        <button
-          className={`chip ${diverse.length > 0 ? 'active' : ''}`}
-          onClick={() => setScegliCorsie((v) => !v)}
-          aria-expanded={scegliCorsie}
-          title={
-            spente.length > 0
-              ? `${spente.length} colonn${spente.length === 1 ? 'a spenta' : 'e spente'}: ${spente
-                  .map((c) => c.titolo)
-                  .join(', ')}`
-              : 'Scegli quali colonne tenere a schermo'
-          }
-        >
-          ▦ Colonne{diverse.length > 0 ? ` (${diverse.length})` : ''}
-        </button>
-      )}
-      {/* E LE COLONNE ESCONO QUI, IN CODA ALLA STESSA RIGA. Erano una
-          riga a parte sotto i conteggi: chip che aprivano chip, due
-          livelli annidati — «quei filtri devono apparire sulla stessa
-          riga degli altri tasti» (l'utente, 20/08/2026). Adesso si
-          accodano ai fratelli e basta: la riga va a capo da sé se non ci
-          stanno, che è il capo naturale del flusso, non un secondo
-          livello. Fila chiusa = zero righe, fila aperta = una. */}
+          vede — quindi sta dentro la scomparsa con gli altri.
+
+          UN CHIP PER COLONNA, IN FILA COI FRATELLI. C'era davanti un
+          «▦ Colonne» che apriva i loro chip: due livelli di nascondimento
+          uno dentro l'altro, e da quando la fila intera sta dietro
+          «▾ Filtri» il primo non serviva più a niente — «togli il testo
+          colonne e metti tutti i tasti che si aprono cliccando colonne al
+          posto di colonne. Non c'è più bisogno visto che nascondiamo tutto
+          con filtri» (l'utente, 20/08/2026). Adesso sono sei o sette in
+          fila: la riga va a capo da sé, che è il capo naturale del flusso.
+          Quante ne sono spente lo dice il badge del tastino a fila chiusa,
+          dove la cosa serve davvero — a fila aperta si vede dai chip. */}
       {corsieBanco &&
-        scegliCorsie &&
         sceglibili.map((c) => (
           <button
             key={c.id}
@@ -1772,7 +1751,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
           domanda sulle colonne. Solo dove il ritiro esiste: col solo
           servizio non c'è niente da separare, e un tasto che non fa
           niente è peggio di un tasto che non c'è. */}
-      {corsieBanco && scegliCorsie && ritiroEsiste && (
+      {corsieBanco && ritiroEsiste && (
         <button
           className={`chip ${prontoSeparato ? 'active' : ''}`}
           onClick={cambiaPronto}

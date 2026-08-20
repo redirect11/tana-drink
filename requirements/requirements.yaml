@@ -6841,7 +6841,10 @@ requirements:
       famiglia da 44px — il dettaglio sta in REQ-CODA-009.
       · I SOTTOFILTRI DEI CHIUSI non hanno piu' una riga «Dei chiusi:»
       tutta loro: sono chip in riga con gli altri. E dal 20/08 nemmeno la
-      scelta delle colonne ne ha una: si accoda alla stessa riga
+      scelta delle colonne ne ha una: si accoda alla stessa riga — e nello
+      stesso giorno, secondo passaggio, ha perso anche il tasto «▦ Colonne»
+      che la apriva. Al banco le colonne SONO chip della fila, uno per
+      colonna: «▾ Filtri» e' l'unico livello di nascondimento
       (REQ-CODA-009).
     status: implemented
     generate_issue: true
@@ -7015,6 +7018,42 @@ requirements:
       l'altezza di riga resta quella del testo e i tasti sporgono dentro il
       `gap` della testata, che c'e' comunque. Su una lavagna guardata da
       lontano ogni pixel di testata e' una comanda in meno sotto.
+      ---
+      QUARTA CORREZIONE, 20/08/2026 — IL CHIP «▦ COLONNE» NON C'E' PIU'.
+      Parole dell'utente: «togli il testo colonne e metti tutti i tasti che
+      si aprono cliccando colonne al posto di colonne. Non c'e' piu'
+      bisogno visto che nascondiamo tutto con filtri».
+      QUELLO CHE SOPRA NON VALE PIU': la PRIMA CORREZIONE aveva accodato i
+      chip delle colonne alla riga «subito dopo il tasto che li apre», e
+      l'elenco dei chip rimpiccioliti nomina «▦ Colonne». Quel tasto non
+      esiste piu'. Al banco, con la fila aperta, i chip delle colonne — le
+      corsie sceglibili e «✂️ Dividi il pronto» — stanno DIRETTAMENTE in
+      fila al suo posto, con la tendina degli autori e gli altri filtri.
+      IL PERCHE' E' UN CONTO DI LIVELLI. Il chip nasceva quando la fila era
+      sempre a schermo: serviva a non tenere sei pastiglie di colonne
+      addosso a chi non le tocca mai. Da quando la fila INTERA sta dietro
+      «▾ Filtri» (REQ-CODA-008) quel lavoro lo fa gia' il tastino, e il
+      chip era diventato un secondo livello dentro il primo: due tocchi per
+      spegnere una colonna, e nessuna riga risparmiata — a fila chiusa non
+      si disegna niente comunque. Un livello solo di nascondimento.
+      LA LUNGHEZZA NON E' UN PROBLEMA: al banco la fila arriva a sei o
+      sette chip piu' la tendina, e va a capo da se' (`flex-wrap`, che
+      serve comunque alla tendina degli autori). E' il capo naturale del
+      flusso, non un livello.
+      MUORE CON LUI lo stato che lo governava (`scegliCorsie`) e la regola
+      «chiudendo la fila si chiude anche la scelta delle colonne», che
+      senza il tasto non ha piu' niente da chiudere. Muore anche
+      `corsieSpente` in coda.js: contava le spente per il TITLE di quel
+      chip, e da aperta la fila lo dicono i chip stessi.
+      IL BADGE NON CAMBIA. Le colonne diverse dal normale
+      (`corsieDiverseDalNormale`) contano come UNA deviazione dal default,
+      esattamente come prima: a fila chiusa il tastino «▾ Filtri» resta
+      acceso col suo numero e il title dice «Colonne (2)». E' l'unico posto
+      dove quel segnale serve ancora — a fila aperta i chip si vedono.
+      RESTA IL PATTERN DEI SOTTOFILTRI DEI CHIUSI, che e' un'altra cosa:
+      «Serviti / Da servire» compaiono quando «Chiusi» e' acceso perche'
+      fuori di li' non vogliono dire niente. Non e' un chip che apre chip,
+      e' un filtro che ne implica altri.
     status: implemented
     generate_issue: true
     labels: [coda, ui]

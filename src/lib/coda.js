@@ -866,9 +866,9 @@ const CORSIE_COMANDE = [
 // UNITE DI SUO, col badge sulla card che dice quale delle due è: una
 // colonna in più costa larghezza a tutte le altre, e in un locale dove il
 // ritiro è l'eccezione sarebbe una colonna quasi sempre vuota. Chi ha le
-// due cose a metà e metà le divide, ed è una scelta del TERMINALE (sta nel
-// filtro «▦ Colonne»): il tablet della sala e quello del banco non
-// guardano lo stesso lavoro.
+// due cose a metà e metà le divide col chip «✂️ Dividi il pronto», ed è
+// una scelta del TERMINALE (sta nella fila dei filtri, con le colonne): il
+// tablet della sala e quello del banco non guardano lo stesso lavoro.
 //
 // «RITIRATO/SERVITO» NON SI DIVIDE, ed è voluto: lì il drink è già uscito
 // e come sia uscito non cambia più niente da fare. È il traguardo, non una
@@ -892,13 +892,16 @@ export function corsieDelPronto({ divise = false, ritiroEsiste = true } = {}) {
 // poi è una scelta di questo terminale.
 export const CORSIE_SPENTE_ALL_INIZIO = ['chiusi', 'annullati']
 
-// ── QUANDO IL TASTO «COLONNE» SI ACCENDE ─────────────────────────────
+// ── QUANDO LE COLONNE CONTANO COME FILTRO ACCESO ─────────────────────
 //
-// L'acceso deve dire «questo terminale ha cambiato qualcosa rispetto al
+// Il numero deve dire «questo terminale ha cambiato qualcosa rispetto al
 // normale», non «esiste uno stato normale». Il primo giro (BUG-058)
-// contava le corsie spente: ma due nascono spente DI SERIE, quindi il
-// tasto partiva arancione su ogni terminale nuovo e non si spegneva mai
+// contava le corsie spente: ma due nascono spente DI SERIE, quindi si
+// partiva col segnale acceso su ogni terminale nuovo e non si spegneva mai
 // — «continua ad essere sempre attivo» (l'utente, 20/08, seconda volta).
+// Nasceva per il chip «▦ Colonne», che poi è sparito (le colonne stanno in
+// fila coi filtri): il conto è rimasto identico, e adesso finisce nel badge
+// del tastino «▾ Filtri» quando la fila è chiusa.
 // Si conta la DIFFERENZA dal normale, nei due versi: nascosta una corsia
 // che di serie è accesa, o riaccesa una che di serie è spenta. Contano
 // solo le corsie oggi sceglibili: una memoria su una corsia che non è in
@@ -1221,24 +1224,13 @@ export function frasePerCodaVuota(filtro, soloOggi = false) {
   return `Nessun ordine${che}${soloOggi ? ' oggi' : ''}.`
 }
 
-// ── LE COLONNE CHE QUESTO TERMINALE HA SPENTO A MANO ─────────────────
+// ── LA MEMORIA DELLE COLONNE SPENTE SI RIPULISCE ─────────────────────
 //
-// Il chip «▦ Colonne» si accende quando qualcuna è spenta. Nasceva acceso e
-// restava acceso per sempre, per due motivi che si sommavano: le due corsie
-// dello sguardo all'indietro partono spente di suo (CORSIE_SPENTE_ALL_INIZIO),
-// quindi l'arancione c'era dal primo avvio e non distingueva niente; e la
-// memoria del terminale poteva tenersi id di colonne che non esistono più —
-// le corsie sono state rimaneggiate più volte — con l'aggravante che
-// nell'elenco non c'era niente da riaccendere per spegnerlo.
+// Il terminale poteva tenersi id di colonne che non esistono più — le
+// corsie sono state rimaneggiate più volte — e un id morto teneva acceso
+// il badge dei filtri per sempre, con l'aggravante che nell'elenco non
+// c'era niente da riaccendere per spegnerlo (BUG-058).
 //
-// Qui le due risposte. QUANTE SONO SPENTE si conta solo fra le colonne che
-// in questo momento si possono scegliere: una nascosta che non è nemmeno in
-// elenco non è una scelta, è un residuo.
-export function corsieSpente(sceglibili, nascoste = []) {
-  const via = new Set(nascoste || [])
-  return (sceglibili || []).filter((c) => via.has(c.id))
-}
-
 // Tutti gli id di corsia che l'app conosce, in qualunque assetto: le
 // colonne del banco, quelle dei conti, e le due del pronto diviso — che
 // esistono solo dove il ritiro c'è, ma spegnerne una e poi riunire il

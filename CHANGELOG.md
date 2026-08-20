@@ -28,11 +28,12 @@
   sola.** È un **«▾ Filtri»** in **fondo a destra**, accanto alla freccia
   dell'ordinamento, **sulla riga dei conteggi che c'era già**: a filtri
   chiusi la coda **non perde nemmeno una riga**. Toccandolo compaiono i
-  chip, **tutti sulla stessa riga** — anche quelli che si aprono da un
-  altro chip: **▦ Colonne**, al banco, adesso mette le sue colonne **in
-  coda alla fila**, non più in una seconda riga sotto. Richiudendo la fila
-  **sparisce del tutto**. **Serviti / Da servire** stanno anche loro **in
-  riga con gli altri**, non più in una riga «Dei chiusi:» tutta loro.
+  chip, **tutti sulla stessa riga**: al banco ci sono anche **le colonne**,
+  una pastiglia per colonna, in fila con gli altri — non più dietro un
+  «▦ Colonne» da toccare, e non più in una seconda riga sotto. Un tasto
+  solo apre e chiude tutto. Richiudendo la fila **sparisce del tutto**.
+  **Serviti / Da servire** stanno anche loro **in riga con gli altri**, non
+  più in una riga «Dei chiusi:» tutta loro.
 
 - **Filtri e ordinamento sono due bottoni bassi, gemelli.** Si vede che sono
   tasti — hanno il loro riquadro — ma sono **più bassi** di quelli che si
@@ -50,9 +51,9 @@
 - **I filtri della coda stanno a scomparsa.** Sopra i conti c'era una fila
   di pastiglie che si mangiava tutta la riga: adesso stanno dietro il tasto
   qui sopra, e si aprono quando servono. Vale allo stesso modo per gli
-  **ordini** e per le **comande** — dove dentro c'è anche «▦ Colonne» — e
-  **ogni tablet se lo ricorda a modo suo**: chi la tiene aperta la ritrova
-  aperta.
+  **ordini** e per le **comande** — dove dentro ci sono anche le colonne da
+  accendere e spegnere — e **ogni tablet se lo ricorda a modo suo**: chi la
+  tiene aperta la ritrova aperta.
 
 - **Il tasto dell'ordinamento dice com'è messa la coda adesso**, in tre
   parole: **«Prima i più recenti»** oppure **«Prima i più vecchi»**. Prima
@@ -146,14 +147,16 @@
   **«💶 Chiusi · ieri»**, **«✖️ Annullati · ieri»**, e nella scheda «Tutti»,
   dove sono mescolati, la sola data.
 
-- **Il tasto «▦ Colonne» adesso dice quante ne sono spente.** Era arancione
-  **sempre**, anche su un tablet appena aperto: «Chiuse» e «Annullate»
-  nascono spente apposta, quindi l'arancione c'era comunque e non
-  distingueva niente. Adesso c'è scritto il numero — **«▦ Colonne (2)»** — e
-  passandoci sopra si legge quali sono. Riaccendendole tutte il tasto torna
-  spento davvero. E le colonne **che non esistono più** (gli id sono
-  cambiati negli anni) non restano più appese nella memoria del terminale a
-  tenerlo acceso senza che si potesse spegnerlo.
+- **Le colonne spente al banco si vedono anche a filtri chiusi.** C'era un
+  tasto «▦ Colonne» arancione **sempre**, anche su un tablet appena aperto:
+  «Chiuse» e «Annullate» nascono spente apposta, quindi l'arancione c'era
+  comunque e non distingueva niente. Adesso quel tasto non c'è più — le
+  colonne sono pastiglie in fila coi filtri, e da aperta si vede da sé
+  quali sono spente — e a filtri **chiusi** lo dice il numerino sul tasto
+  «▾ Filtri», che ci passa sopra e si legge quante e quali. E le colonne
+  **che non esistono più** (gli id sono cambiati negli anni) non restano
+  più appese nella memoria del terminale a tenerlo acceso senza che si
+  potesse spegnerlo.
 
 - **Un ordine appena battuto è UNA comanda sola, e il ticket esce quando si
   esce.** Battendo un conto nuovo poteva uscire **più di una comanda** — e
@@ -204,7 +207,7 @@
   su bianco — e sembravano scritte, non tasti.
 
 - **Nella lavagna delle comande ci sta una comanda in più.** I filtri
-  («✍️ Miei», «▦ Colonne», e il tasto che passa agli ordini) non hanno più
+  («✍️ Miei», le colonne, e il tasto che passa agli ordini) non hanno più
   una riga tutta loro fra i conteggi e le colonne: stanno **sulla riga dei
   conteggi**, a destra. Sono **44px guadagnati** e un livello in meno prima
   di vedere la prima comanda — quella lavagna si guarda da lontano mentre
@@ -278,8 +281,9 @@
 
 ### Al banco
 
-- **Il tasto «Colonne» si accende solo se hai cambiato qualcosa**: prima
-  era sempre arancione, perché due colonne nascono nascoste di serie. Le
+- **Le colonne spente accendono il numerino dei filtri solo se hai cambiato
+  qualcosa**: prima era sempre arancione, perché due colonne nascono
+  nascoste di serie. Le
   ombre delle card hanno il loro spazio pieno (non più tagliate sul
   fianco), e l'interruttore «incassare senza stampare» ora sta dove uno lo
   cerca: **Impostazioni → Pagamenti**.
