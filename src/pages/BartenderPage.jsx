@@ -20,6 +20,7 @@ import {
   segnalaPresenza,
   subscribePresenze,
   segnaComandaStampata,
+  segnaScontrinoStampato,
 } from '../lib/api.js'
 import { getPushToken } from '../lib/push.js'
 import { logoutStaff } from '../lib/logout.js'
@@ -111,7 +112,7 @@ import { showToast } from '../lib/toast.js'
 import { beep, installAudioUnlock } from '../lib/beep.js'
 import { subscribePending, dismissPending, dismissBanner } from '../lib/pendingOrders.js'
 import { syncSumUpProducts, isSumUpEnabled } from '../lib/sumupApi.js'
-import { printComanda, printScontrino, loadPrinterSettings, claimReceiptPrint, reclaimReceiptPrint, releaseReceiptPrint, comandeDaStampare, claimComandaPrint, releaseComandaPrint } from '../lib/printer.js'
+import { printComanda, printScontrino, loadPrinterSettings, reclaimReceiptPrint, releaseReceiptPrint, scontrinoGiaUscito, comandeDaStampare, claimComandaPrint, releaseComandaPrint } from '../lib/printer.js'
 import MenuManager from '../components/MenuManager.jsx'
 import PrinterSetup from '../components/PrinterSetup.jsx'
 import InventoryManager from '../components/InventoryManager.jsx'
@@ -788,11 +789,14 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
               }
             }
           }
-          // Auto-stampa scontrino alla CHIUSURA del conto (prima era al
-          // "pronto": con la gestione preparazione spenta non usciva mai, e con
-          // quella accesa usciva due volte — al pronto e all'incasso).
-          // claimReceiptPrint garantisce una sola copia per conto, da qualunque
-          // schermata sia stato chiuso.
+          // LA CODA STAMPA COMANDE, NON SCONTRINI (BUG-055). Qui viveva
+          // anche l'auto-stampa dello scontrino, «ogni conto pagato che
+          // vedo»: al primo sguardo di un browser nuovo — o dopo una
+          // memoria svuotata — usciva la carta di tutti i conti pagati
+          // della serata. «Deve avvenire solo quando esco dall'ordine e
+          // deve stampare la COMANDA, non lo scontrino» (l'utente, 20/08).
+          // Lo scontrino appartiene al GESTO della riscossione (il pannello
+          // dei pagamenti, i tasti rapidi qui sotto), non allo snapshot.
           // AUTO-STAMPA COMANDE: fuori dal blocco degli avvisi, apposta.
           // La stampa non è un avviso: la comanda serve al banco anche per
           // l'ordine battuto da QUESTO terminale, e serve anche quando è la
@@ -817,19 +821,6 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                       releaseComandaPrint(o.id, c.id)
                     })
                 }
-              }
-            }
-          }
-          if (printerSettings.autoPrintScontrino) {
-            for (const o of data) {
-              if (o.payment_status === 'pagato' && claimReceiptPrint(o.id)) {
-                printScontrino(o).catch((e) => {
-                  console.warn('[printer] auto-scontrino:', e.message)
-                  // Carta non uscita: la prenotazione torna libera, se no quel
-                  // conto non stampa più lo scontrino nemmeno riaperto e
-                  // richiuso (BUG-047).
-                  releaseReceiptPrint(o.id)
-                })
               }
             }
           }
@@ -1626,7 +1617,13 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                   // gesto è già fatto. Lo scontrino porta il residuo
                   // incassato adesso e il metodo appena scelto.
                   try {
-                    if (loadPrinterSettings().autoPrintScontrino && reclaimReceiptPrint(o.id)) {
+                    if (
+                      loadPrinterSettings().autoPrintScontrino &&
+                      // Un altro terminale l'ha già stampato: il segno sta sul
+                      // conto, non nella memoria di questo browser (BUG-055).
+                      !scontrinoGiaUscito(o) &&
+                      reclaimReceiptPrint(o.id)
+                    ) {
                       const residuo = Math.max(0, orderTotal(o) - paidAmount(o))
                       printScontrino({
                         ...o,
@@ -1635,10 +1632,15 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                           { amount: residuo, method: metodo, at: new Date().toISOString() },
                         ],
                         payment_method: metodo,
-                      }).catch((e) => {
-                        setError(`Scontrino non stampato: ${e.message}`)
-                        releaseReceiptPrint(o.id)
                       })
+                        // Il segno va sul dato A CARTA USCITA: segnarlo prima
+                        // vorrebbe dire che una stampa fallita mette a tacere
+                        // tutti i terminali per sempre.
+                        .then(() => segnaScontrinoStampato(o.id))
+                        .catch((e) => {
+                          setError(`Scontrino non stampato: ${e.message}`)
+                          releaseReceiptPrint(o.id)
+                        })
                     }
                   } catch {
                     /* stampante non configurata: si continua */

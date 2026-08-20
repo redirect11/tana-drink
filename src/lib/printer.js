@@ -102,6 +102,16 @@ export function releaseReceiptPrint(orderId) {
   }
 }
 
+// LO SCONTRINO DI CHIUSURA È GIÀ USCITO PER QUESTO CONTO? Il segno sta SUL
+// DATO (`receipt_print_at` sull'ordine), esattamente come per le comande
+// (`auto_print_at`, BUG-050). La pretesa qui sopra vive in localStorage e
+// para solo i doppioni di QUESTO terminale: un browser nuovo, o una memoria
+// svuotata, di pretese non ne ha nessuna — e vedeva i conti pagati della
+// serata come conti da stampare. Il segno sul dato lo sanno tutti.
+export function scontrinoGiaUscito(order) {
+  return !!order?.receipt_print_at
+}
+
 // L'INCASSO È UNA CHIUSURA NUOVA, sempre: chi sta incassando adesso deve
 // avere lo scontrino di adesso, anche se per questo conto ne era già
 // uscito uno prima di una riapertura. «Se riapro il conto e cambio

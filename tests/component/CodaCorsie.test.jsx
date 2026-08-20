@@ -101,6 +101,8 @@ vi.mock('../../src/lib/api.js', () => ({
   markOrderPaid: vi.fn(() => Promise.resolve()),
   cancelOrder: vi.fn(() => Promise.resolve()),
   restoreOrder: vi.fn(() => Promise.resolve()),
+  segnaComandaStampata: vi.fn(),
+  segnaScontrinoStampato: vi.fn(),
   createOrder: vi.fn(() => Promise.resolve({})),
   setOrderColore: vi.fn(),
   saveStaffToken: vi.fn(() => Promise.resolve()),
@@ -122,6 +124,7 @@ vi.mock('../../src/lib/printer.js', () => ({
   claimReceiptPrint: vi.fn(() => false),
   reclaimReceiptPrint: vi.fn(() => false),
   releaseReceiptPrint: vi.fn(),
+  scontrinoGiaUscito: vi.fn(() => false),
 }))
 vi.mock('../../src/lib/paymentsApi.js', () => ({
   readerCheckout: vi.fn(async () => ({})),
@@ -168,7 +171,12 @@ vi.mock('../../src/components/StatusBell.jsx', () => ({ default: () => <div>camp
 import BartenderPage from '../../src/pages/BartenderPage.jsx'
 import { nascondiOrdine, mostraOrdine } from '../../src/lib/ordiniNascosti.js'
 import { updateOrderStatus, advanceComanda, setOrderColore, markOrderPaid } from '../../src/lib/api.js'
-import { loadPrinterSettings, printScontrino, reclaimReceiptPrint } from '../../src/lib/printer.js'
+import {
+  loadPrinterSettings,
+  printScontrino,
+  reclaimReceiptPrint,
+  claimReceiptPrint,
+} from '../../src/lib/printer.js'
 
 const ORA = '2026-08-16T21:00:00.000Z'
 
@@ -1319,6 +1327,32 @@ describe('chi è collegato, nella legenda', () => {
 // snapshot della coda, che con la pretesa normale taceva sui conti già
 // stampati una volta — riscosso, riaperto, richiuso dal tasto rapido:
 // niente carta.
+// ── LA CODA NON STAMPA SCONTRINI ─────────────────────────────────────
+//
+// «Alla prima apertura dell'app ero in inventario. Sono tornato in coda
+// ordini e mi ha stampato tutti gli SCONTRINI. C'era un solo ordine e una
+// sola comanda ma mi ha stampato lo scontrino» (l'utente, 20/08).
+// Qui viveva un blocco che stampava OGNI conto pagato che passava dallo
+// snapshot, e l'unica guardia era una pretesa in localStorage: un browser
+// nuovo — o una memoria svuotata — non ne aveva nessuna, e la serata intera
+// usciva dalla stampante in raffica. Lo scontrino appartiene al GESTO
+// dell'incasso, non a uno sguardo sulla coda (BUG-055).
+describe('tornando in coda, gli scontrini non escono', () => {
+  it('un conto già pagato nella coda non fa uscire nessuna carta', async () => {
+    ruolo = 'admin'
+    // Tutto acceso e tutto permesso: l'auto-stampa dello scontrino c'è, e la
+    // pretesa dice di sì (è la memoria vuota di un browser appena aperto).
+    loadPrinterSettings.mockReturnValue({ autoPrintScontrino: true })
+    claimReceiptPrint.mockReturnValue(true)
+    printScontrino.mockClear()
+    montaCoda()
+    await screen.findByText('In corso')
+    // Nella coda c'è il conto #36, pagato. Prima di questa cura qui usciva
+    // il suo scontrino — e con lui quello di tutti gli altri conti pagati.
+    expect(printScontrino).not.toHaveBeenCalled()
+  })
+})
+
 describe('la chiusura rapida dalla card stampa lo scontrino', () => {
   it('Contanti stampa al gesto, col metodo sullo scontrino', async () => {
     const utente = userEvent.setup()

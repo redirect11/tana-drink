@@ -30,6 +30,7 @@ vi.mock('../../src/lib/api.js', () => ({
     return () => {}
   }),
   applyVoucherDiscount: vi.fn(() => Promise.resolve({ redeemed: 10 })),
+  segnaScontrinoStampato: vi.fn(),
 }))
 vi.mock('../../src/lib/paymentsApi.js', () => ({
   readerCheckout: vi.fn(() => Promise.resolve({})),
@@ -42,6 +43,7 @@ vi.mock('../../src/lib/printer.js', () => ({
   claimReceiptPrint: vi.fn(() => true),
   reclaimReceiptPrint: vi.fn(() => true),
   releaseReceiptPrint: vi.fn(),
+  scontrinoGiaUscito: vi.fn(() => false),
 }))
 vi.mock('../../src/lib/toast.js', () => ({ toastError: vi.fn() }))
 
@@ -52,10 +54,17 @@ import {
   setOrderDiscount,
   setOrderLotteryCode,
   createInvoice,
+  segnaScontrinoStampato,
 } from '../../src/lib/api.js'
 import { readerCheckout } from '../../src/lib/paymentsApi.js'
 import { applyVoucherDiscount } from '../../src/lib/api.js'
-import { printScontrino, printFattura, loadPrinterSettings, releaseReceiptPrint } from '../../src/lib/printer.js'
+import {
+  printScontrino,
+  printFattura,
+  loadPrinterSettings,
+  releaseReceiptPrint,
+  scontrinoGiaUscito,
+} from '../../src/lib/printer.js'
 
 let mockVouchers = []
 
@@ -482,6 +491,7 @@ describe('scontrino: il metodo di pagamento', () => {
       businessName: 'La Tana',
       autoPrintScontrino: true,
     })
+    scontrinoGiaUscito.mockReturnValue(false)
   })
 
   it('con la carta lo scontrino esce con la carta', async () => {
@@ -504,6 +514,44 @@ describe('scontrino: il metodo di pagamento', () => {
     mount(baseOrder())
     await user.click(screen.getByRole('button', { name: /Riscuotere/ }))
     await waitFor(() => expect(releaseReceiptPrint).toHaveBeenCalledWith('ord1'))
+  })
+
+  // IL CONTO CHE NON ESISTE ANCORA. Pagando dritto dal POS la schermata si
+  // apre su un guscio locale (id nullo) mentre il conto nasce in sottofondo:
+  // prima la carta la stampava LA CODA quando vedeva l'ordine vero pagato, ed
+  // era l'unico caso legittimo di un blocco che stampava tutto (BUG-055).
+  // Adesso esce da qui, col numero che la testata mostra già, e il segno sul
+  // dato raggiunge il conto appena ha un id.
+  it('pagamento diretto dal POS: la carta esce dal gesto, non dalla coda', async () => {
+    const user = userEvent.setup()
+    const guscio = baseOrder({ id: null, comande: [], order_items: [
+      { drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 },
+    ] })
+    render(
+      <PaymentScreen
+        order={guscio}
+        settings={noReader}
+        onClose={vi.fn()}
+        onBeforePay={vi.fn()}
+        resolveOrderId={() => Promise.resolve('ord-nato')}
+      />
+    )
+    await user.click(screen.getByRole('button', { name: /Riscuotere/ }))
+    await waitFor(() => expect(printScontrino).toHaveBeenCalled())
+    expect(printScontrino.mock.calls.at(-1)[0].daily_number).toBe(4)
+    // E il segno finisce sul conto vero, quello appena nato.
+    await waitFor(() => expect(segnaScontrinoStampato).toHaveBeenCalledWith('ord-nato'))
+  })
+
+  // Il segno sul DATO vale più della memoria di questo browser: se un altro
+  // terminale ha già stampato, qui non esce la seconda copia.
+  it('conto già segnato: niente seconda copia', async () => {
+    const user = userEvent.setup()
+    scontrinoGiaUscito.mockReturnValue(true)
+    mount(baseOrder({ receipt_print_at: '2026-08-20T21:00:00.000Z' }))
+    await user.click(screen.getByRole('button', { name: /Riscuotere/ }))
+    await waitFor(() => expect(registerPayment).toHaveBeenCalled())
+    expect(printScontrino).not.toHaveBeenCalled()
   })
 
   it('coi contanti resta contanti', async () => {

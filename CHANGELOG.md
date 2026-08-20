@@ -8,6 +8,17 @@
   sezione Dev c'è «Stampante simulata» — le stampe escono come facsimile a
   schermo, solo su quel dispositivo.
 
+- **Tornando in coda ordini non escono più gli scontrini.** Rientrando
+  nella coda — la prima volta della serata, o dopo aver svuotato la memoria
+  del browser — la stampante sfornava lo **scontrino di ogni conto pagato**
+  che vedeva, uno dietro l'altro. Adesso la coda stampa **solo comande**: lo
+  scontrino esce **quando si incassa**, dal pannello dei pagamenti o dai
+  tasti rapidi 💶 Contanti / 💳 Carta, che è il momento in cui serve.
+  E il segno «già stampato» sta **sul conto**, non nella memoria del
+  singolo tablet: due terminali accesi non fanno due copie, e un tablet
+  nuovo non ristampa niente di vecchio. Riaprendo un conto il segno si
+  azzera: riscuotendo di nuovo, la carta esce di nuovo.
+
 - **Sul tema chiaro i tasti delle impostazioni hanno di nuovo il contorno.**
   Le scelte a pulsanti e i filtri non selezionati erano senza bordo — bianco
   su bianco — e sembravano scritte, non tasti.
