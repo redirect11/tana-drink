@@ -27,6 +27,17 @@
      bassa dei 44px di chi si preme di corsa: «e i tasti dei filtri, tutti,
      devono essere leggermente più piccoli» (l'utente, 20/08/2026). */
   --tastino-alto: 34px;
+  /* LO SPAZIO FRA I TASTI DI UNA CARD DELLA CODA: il piede («⋯ Azioni» e
+     il tasto grande, affiancati o impilati quando la card è stretta) e il
+     menu che si apre sotto. Una misura sola, o gli stessi tasti avrebbero
+     due arie diverse a un dito di distanza. «I tasti della card
+     avvicinali in verticale 1/2 pixel» (l'utente, 20/08/2026): il menu
+     stava a 8px, il piede a 6, e adesso stanno insieme a 6. Si stringe lo
+     SPAZIO, non i tasti — restano i bersagli pieni di
+     docs/navigazione.md — e lo stacco dal contenuto sopra
+     (`.corsia-azioni-aperte`) non si tocca: serve a non premere il tasto
+     sbagliato di corsa. */
+  --gap-tasti-card: 6px;
   /* ── LE FORME DEL TEMA ──────────────────────────────────────────
      Un tema non è solo una tavolozza: Pico e Catppuccin hanno un modo
      di fare gli angoli, i tasti e le ombre (vedi lib/themes.js, FORME).
@@ -7610,29 +7621,60 @@ body.pagina-piena .inv-scheda {
   border-left-color: var(--conto-colore);
 }
 
-/* LA TAVOLOZZA DEL CONTO, dentro il ⋯ della card. Stessi gettoni del menù
-   e del POS (.menu-colore): stessa misura, stesso modo di dire qual è
-   scelto, e sul touch crescono come là. */
-.colori-conto {
+/* IL TASTO CHE APRE LA TAVOLOZZA sta staccato da quello sopra come i suoi
+   vicini nel menu del conto, che il margine se lo scrivono a mano. Nel
+   menu delle corsie no: lì lo spazio lo fa il `gap` di
+   `.corsia-azioni-aperte`, che con la sua specificità azzera questo — una
+   misura sola per tutti i tasti di quella card. */
+.tasto-colore-conto {
   margin-top: 8px;
+}
+
+/* IL COLORE ATTUALE SUL TASTO CHE APRE LA TAVOLOZZA. Il tasto ha preso il
+   posto dei dodici gettoni dentro il ⋯: senza il pallino, per sapere di
+   che colore è il conto bisognerebbe aprire la modale ogni volta. Vuoto
+   (solo bordo) quando il conto non ha colore. */
+.pallino-colore-conto {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  vertical-align: -2px;
+}
+.pallino-colore-conto.niente {
+  background: transparent;
+}
+
+/* LA TAVOLOZZA DEL CONTO, nella sua modale. Stava dentro il ⋯ della card,
+   e lì i gettoni erano 26px perché dovevano stare in una fila stretta:
+   due file di quadratini che allungavano il menu di tre righe («i colori
+   del conto e della comanda andrebbero messi in una modale che si apre
+   con un bottone», l'utente, 20/08/2026).
+   Fuori dal menu respirano: 48px, che è il bersaglio pieno di
+   docs/navigazione.md — al banco si tocca col pollice, di corsa, e un
+   colore preso per sbaglio è un tavolo che si confonde con un altro.
+   Niente più deroga per il touch: 48 vale per tutti. */
+.colori-conto-box {
+  width: min(360px, 94vw);
 }
 
 .colori-conto-riga {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 4px;
+  gap: 10px;
+  margin-top: 12px;
 }
 
 .colore-conto {
-  width: 26px;
-  height: 26px;
+  width: 48px;
+  height: 48px;
   padding: 0;
   border: 2px solid transparent;
-  border-radius: 8px;
+  border-radius: var(--raggio-btn);
   cursor: pointer;
   color: var(--btn-ink);
-  font-size: 0.7rem;
+  font-size: 1rem;
   font-weight: 800;
   line-height: 1;
 }
@@ -7648,13 +7690,6 @@ body.pagina-piena .inv-scheda {
   background: transparent;
   border-color: var(--line);
   color: var(--muted);
-}
-
-@media (pointer: coarse) {
-  .colore-conto {
-    width: 34px;
-    height: 34px;
-  }
 }
 
 /* Il titolo di un gruppo di righe nel conto: «In preparazione», «Pronto»,
@@ -7940,7 +7975,7 @@ body.pagina-piena .inv-scheda {
    quella si preme di corsa, l'altra si cerca. */
 .corsia-piede {
   display: flex;
-  gap: 6px;
+  gap: var(--gap-tasti-card);
   margin-top: 8px;
   flex-wrap: wrap;
 }
@@ -8023,7 +8058,7 @@ body.pagina-piena .inv-scheda {
 .corsia-azioni-aperte {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--gap-tasti-card);
   margin-top: 14px;
   padding-top: 12px;
   border-top: 1px solid var(--line);

@@ -303,6 +303,9 @@ const CODA = [
 // La colonna che ha per testata quel titolo.
 const corsia = (titolo) => document.querySelector(`.corsia-${titolo}`)?.closest('.corsia')
 
+// La modale del colore del conto, quando è aperta.
+const tavolozza = () => document.querySelector('.colori-conto-box')
+
 function montaCoda() {
   return render(
     <MemoryRouter>
@@ -2269,7 +2272,8 @@ describe('il colore del conto, e le comande che se lo portano dietro', () => {
     const card = corsia('da-fare').querySelector('.corsia-card')
     await utente.click(within(card).getByRole('button', { name: /Azioni/ }))
     const aperte = card.querySelector('.corsia-azioni-aperte')
-    await utente.click(within(aperte).getByRole('button', { name: 'Colore #2ecc71' }))
+    await utente.click(within(aperte).getByRole('button', { name: /Colore del conto/ }))
+    await utente.click(within(tavolozza()).getByRole('button', { name: 'Colore #2ecc71' }))
 
     // Si scrive sul CONTO (o47), non sulla comanda: è il conto ad avere un
     // colore, e le sue comande lo mostrano.
@@ -2284,9 +2288,125 @@ describe('il colore del conto, e le comande che se lo portano dietro', () => {
 
     const card = document.querySelector('.corsia-card')
     await utente.click(within(card).getByRole('button', { name: /Azioni/ }))
-    await utente.click(within(card).getByRole('button', { name: 'Nessun colore' }))
+    await utente.click(within(card).getByRole('button', { name: /Colore del conto/ }))
+    await utente.click(within(tavolozza()).getByRole('button', { name: 'Nessun colore' }))
 
     expect(setOrderColore).toHaveBeenCalledWith('o48', null)
+  })
+})
+
+// ── LA TAVOLOZZA STA IN UNA MODALE, NON NEL MENU (REQ-UI-020) ────────
+//
+// «I colori del conto e della comanda andrebbero messi in una modale che
+// si apre con un bottone» (l'utente, 20/08/2026). Dentro il ⋯ erano dodici
+// gettoni in due file più il «niente»: tre righe di menu, e le azioni vere
+// — torna indietro, dividi, ristampa — finivano sopra una macchia di
+// quadratini, su una card che in corsia è larga un dito.
+//
+// Quello che qui costa un tocco sbagliato al banco:
+//   · nel menu c'è UN tasto, e dice già di che colore è il conto: sennò per
+//     rispondere alla domanda più frequente («di che colore è questo?»)
+//     bisognerebbe aprire la modale ogni volta;
+//   · scegliere APPLICA E CHIUDE, modale e menu: il gesto finisce lì, e un
+//     menu rimasto aperto dietro tiene la card alta il doppio proprio
+//     mentre si torna a guardare la colonna;
+//   · niente aspetta la rete: la scrittura parte in sottofondo e la modale
+//     è già sparita.
+describe('il colore si sceglie in una modale', () => {
+  const menu = (card) => card.querySelector('.corsia-azioni-aperte')
+
+  const apriIlMenu = async (utente, card) =>
+    utente.click(within(card).getByRole('button', { name: /Azioni/ }))
+
+  it('nel menu c’è un tasto solo, non la fila dei gettoni', async () => {
+    const utente = userEvent.setup()
+    ordini = [{ ...CODA[0], id: 'o60', daily_number: 60 }]
+    montaCoda()
+    await screen.findByText('In corso')
+
+    const card = document.querySelector('.corsia-card')
+    await apriIlMenu(utente, card)
+
+    expect(within(menu(card)).getByRole('button', { name: /Colore del conto/ })).toBeInTheDocument()
+    // I dodici quadratini non stanno più lì dentro, e nemmeno il «✕»:
+    // è tutto dietro il tasto.
+    expect(menu(card).querySelectorAll('.colore-conto')).toHaveLength(0)
+    // E finché non si tocca il tasto la modale non c’è.
+    expect(tavolozza()).toBe(null)
+  })
+
+  it('il tasto porta addosso il colore di adesso', async () => {
+    const utente = userEvent.setup()
+    ordini = [
+      { ...CODA[0], id: 'o61', daily_number: 61, colore: '#9b59b6' },
+      { ...CODA[0], id: 'o62', daily_number: 62 },
+    ]
+    montaCoda()
+    await screen.findByText('In corso')
+
+    // Un menu per volta: aprire il secondo chiude il primo, ed è giusto
+    // così — sono due card della stessa colonna.
+    const [colorato, spento] = [...document.querySelectorAll('.corsia-card')]
+
+    await apriIlMenu(utente, colorato)
+    // Un pallino pieno del colore del conto…
+    const pieno = menu(colorato).querySelector('.pallino-colore-conto')
+    expect(pieno.style.background).toBe('#9b59b6')
+
+    await apriIlMenu(utente, spento)
+    // …e uno vuoto quando il conto un colore non ce l’ha: un cerchio col
+    // solo bordo dice «nessuno», un posto lasciato in bianco sembrerebbe
+    // una cosa non caricata.
+    const vuoto = menu(spento).querySelector('.pallino-colore-conto')
+    expect(vuoto).toHaveClass('niente')
+    expect(vuoto.style.background).toBe('')
+  })
+
+  it('scegliere applica e chiude: la modale e anche il menu sotto', async () => {
+    const utente = userEvent.setup()
+    ordini = [{ ...CODA[0], id: 'o63', daily_number: 63 }]
+    montaCoda()
+    await screen.findByText('In corso')
+
+    const card = document.querySelector('.corsia-card')
+    await apriIlMenu(utente, card)
+    await utente.click(within(menu(card)).getByRole('button', { name: /Colore del conto/ }))
+    await utente.click(within(tavolozza()).getByRole('button', { name: 'Colore #3498db' }))
+
+    expect(setOrderColore).toHaveBeenCalledWith('o63', '#3498db')
+    expect(tavolozza()).toBe(null)
+    // Il menu della card se n’è andato con lei: il gesto è finito.
+    expect(document.querySelector('.corsia-azioni-aperte')).toBe(null)
+  })
+
+  it('si può cambiare idea: la ✕ chiude senza scrivere niente', async () => {
+    const utente = userEvent.setup()
+    ordini = [{ ...CODA[0], id: 'o64', daily_number: 64 }]
+    montaCoda()
+    await screen.findByText('In corso')
+
+    const card = document.querySelector('.corsia-card')
+    await apriIlMenu(utente, card)
+    await utente.click(within(menu(card)).getByRole('button', { name: /Colore del conto/ }))
+    await utente.click(within(tavolozza()).getByRole('button', { name: 'Chiudi' }))
+
+    expect(tavolozza()).toBe(null)
+    expect(setOrderColore).not.toHaveBeenCalled()
+  })
+
+  it('e la modale si chiude con Esc, come tutte le altre', async () => {
+    const utente = userEvent.setup()
+    ordini = [{ ...CODA[0], id: 'o65', daily_number: 65 }]
+    montaCoda()
+    await screen.findByText('In corso')
+
+    const card = document.querySelector('.corsia-card')
+    await apriIlMenu(utente, card)
+    await utente.click(within(menu(card)).getByRole('button', { name: /Colore del conto/ }))
+    await utente.keyboard('{Escape}')
+
+    expect(tavolozza()).toBe(null)
+    expect(setOrderColore).not.toHaveBeenCalled()
   })
 })
 

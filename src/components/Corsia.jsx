@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { formatPrice } from '../lib/orderStatus.js'
 import { paidAmount } from '../lib/pagamento.js'
 import { destinazioneConto } from '../lib/coda.js'
@@ -112,40 +113,121 @@ function CardInArrivo({ pending, onScarta }) {
 // e colore dello stato: è logica pura, la usano tutte e quattro le viste
 // della coda, e nessuna di loro è questo componente.
 
-// LA TAVOLOZZA, dentro il ⋯ della card. La stessa fila di gettoni del menù
-// e del POS, con la stessa tavolozza. Sta dietro al ⋯ e non sul pallino
-// perché sulla card ogni tocco che non sia il tasto grande è un tocco
-// sbagliato preso di corsa.
-export function SceltaColoreConto({ order, onScegli }) {
+// IL COLORE DEL CONTO: UN TASTO NEL MENU, LA TAVOLOZZA IN UNA MODALE.
+//
+// Stava tutta dentro il ⋯ della card — dodici gettoni in due file più il
+// «niente» — e allungava il menu di tre righe: le azioni vere (torna
+// indietro, dividi, ristampa) finivano sopra una macchia di quadratini,
+// e su una card di corsia quella macchia era metà del menu. «I colori del
+// conto e della comanda andrebbero messi in una modale che si apre con un
+// bottone» (l'utente, 20/08/2026).
+//
+// Nel menu resta un tasto solo, uguale agli altri, che PORTA ADDOSSO IL
+// COLORE DI ADESSO: senza il pallino per sapere di che colore è il conto
+// bisognerebbe aprire la modale, e la domanda «di che colore è?» è quella
+// che si fa più spesso.
+
+// Il pallino del colore attuale. Vuoto quando il conto non ne ha: un
+// cerchio col solo bordo dice «nessuno» meglio di un posto lasciato in
+// bianco, che sembra una cosa non caricata.
+export function PallinoColoreConto({ order }) {
+  const attuale = coloreDelConto(order)
+  return (
+    <span
+      aria-hidden
+      className={`pallino-colore-conto${attuale ? '' : ' niente'}`}
+      style={attuale ? { background: attuale } : undefined}
+    />
+  )
+}
+
+// LA VOCE DEL MENU, una sola per tutti e due i menu: quello del conto
+// (⋯ della card in corsia, in griglia e in lista) e quello della comanda,
+// che è un elenco di oggetti e non di JSX. Scritta due volte si sarebbe
+// scollata al primo ritocco — ed è la stessa cosa: anche dal ⋯ della
+// comanda si dà il colore al CONTO.
+export function voceColoreConto(order, onApri) {
+  return {
+    id: 'colore',
+    icon: <PallinoColoreConto order={order} />,
+    label: 'Colore del conto',
+    hint: 'Lo portano anche tutte le sue comande',
+    onClick: onApri,
+  }
+}
+
+// Lo stesso tasto, disegnato: il menu del conto è JSX, non un elenco.
+export function TastoColoreConto({ order, onApri }) {
+  const v = voceColoreConto(order, onApri)
+  return (
+    <button
+      type="button"
+      className="btn ghost small block tasto-colore-conto"
+      title={v.hint}
+      onClick={v.onClick}
+    >
+      {v.icon} {v.label}
+    </button>
+  )
+}
+
+// LA TAVOLOZZA, nella sua modale. Stesso vestito degli altri dialoghi
+// dell'app (`overlay confirm-overlay` + `confirm-box`, come il colore del
+// prodotto nel POS): si chiude con Esc, toccando fuori e con la ✕.
+//
+// Scegliere APPLICA E CHIUDE: è un gesto solo, e una modale che resta
+// aperta dopo la scelta chiede un secondo tocco per niente.
+export function ModaleColoreConto({ order, onScegli, onChiudi }) {
+  useEffect(() => {
+    const esc = (e) => e.key === 'Escape' && onChiudi?.()
+    window.addEventListener('keydown', esc)
+    return () => window.removeEventListener('keydown', esc)
+  }, [onChiudi])
+
   const attuale = (coloreDelConto(order) || '').toLowerCase()
   return (
-    <div className="colori-conto">
-      <span className="muted small">Colore del conto</span>
-      <div className="colori-conto-riga">
-        {COLORI_CONTO.map((c) => (
+    <div className="overlay confirm-overlay" onClick={onChiudi}>
+      <div
+        className="confirm-box colori-conto-box"
+        role="dialog"
+        aria-label="Colore del conto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="row between" style={{ alignItems: 'center' }}>
+          <h3 style={{ margin: 0 }}>Colore del conto</h3>
+          <button className="btn ghost small" onClick={onChiudi} aria-label="Chiudi">
+            ✕
+          </button>
+        </div>
+        <p className="muted small" style={{ margin: '8px 0 0' }}>
+          Lo portano anche tutte le sue comande.
+        </p>
+        <div className="colori-conto-riga">
+          {COLORI_CONTO.map((c) => (
+            <button
+              key={c}
+              type="button"
+              aria-label={`Colore ${c}`}
+              aria-pressed={attuale === c.toLowerCase()}
+              className={`colore-conto${attuale === c.toLowerCase() ? ' active' : ''}`}
+              style={{ background: c }}
+              onClick={() => onScegli?.(c)}
+            />
+          ))}
+          {/* Togliere il colore dev'essere facile quanto darlo: un conto
+              colorato per sbaglio, o un tavolo che se n'è andato e il colore
+              adesso confonde con quello nuovo. */}
           <button
-            key={c}
             type="button"
-            aria-label={`Colore ${c}`}
-            aria-pressed={attuale === c.toLowerCase()}
-            className={`colore-conto${attuale === c.toLowerCase() ? ' active' : ''}`}
-            style={{ background: c }}
-            onClick={() => onScegli?.(c)}
-          />
-        ))}
-        {/* Togliere il colore dev'essere facile quanto darlo: un conto
-            colorato per sbaglio, o un tavolo che se n'è andato e il colore
-            adesso confonde con quello nuovo. */}
-        <button
-          type="button"
-          className={`colore-conto niente${attuale ? '' : ' active'}`}
-          title="Nessun colore"
-          aria-label="Nessun colore"
-          aria-pressed={!attuale}
-          onClick={() => onScegli?.(null)}
-        >
-          ✕
-        </button>
+            className={`colore-conto niente${attuale ? '' : ' active'}`}
+            title="Nessun colore"
+            aria-label="Nessun colore"
+            aria-pressed={!attuale}
+            onClick={() => onScegli?.(null)}
+          >
+            ✕
+          </button>
+        </div>
       </div>
     </div>
   )

@@ -150,7 +150,7 @@ import VipTab from '../components/VipTab.jsx'
 import ServiceQueue from '../components/ServiceQueue.jsx'
 import StaffCallList from '../components/StaffCallList.jsx'
 import Caricamento from '../components/Caricamento.jsx'
-import { SceltaColoreConto } from '../components/Corsia.jsx'
+import { ModaleColoreConto, TastoColoreConto, voceColoreConto } from '../components/Corsia.jsx'
 import { coloreCardConto } from '../lib/coloriConto.js'
 import { legendaConPresenze, BATTITO_PRESENZA_MS } from '../lib/presenza.js'
 import CorsieStato from '../components/CorsieStato.jsx'
@@ -695,6 +695,9 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   const statoPrec = useRef(new Map())
   const [storiaTarget, setStoriaTarget] = useState(null)
   const [ripristinoTarget, setRipristinoTarget] = useState(null)
+  // Il conto a cui si sta dando un colore: la tavolozza è una modale sola
+  // per la pagina, non una per card.
+  const [coloreTarget, setColoreTarget] = useState(null)
   const [search, setSearch] = useState('')
   const [showPanels, setShowPanels] = useState(false) // pannelli (chiamate/gruppi) nella griglia
   const [menuBoard, setMenuBoard] = useState(false) // menu ⋯ della lavagna
@@ -2059,6 +2062,24 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
       return n
     })
 
+  // APRIRE LA TAVOLOZZA CHIUDE IL MENU DELLA CARD. Il gesto finisce nella
+  // modale — si sceglie il colore e si torna a guardare la colonna — e un
+  // menu rimasto aperto dietro chiederebbe un secondo tocco per sparire,
+  // tenendo intanto la card alta il doppio. Il menu della comanda si
+  // chiude da sé (CorsieComande lo fa per ogni voce); qui i menu aperti
+  // sono due, quello delle corsie e quello della griglia, e si chiudono
+  // solo se erano aperti su QUESTO conto.
+  const apriColoreConto = (o) => {
+    setCorsiaAperta((id) => (id === o.id ? null : id))
+    setOpenCards((s) => {
+      if (!s.has(o.id)) return s
+      const n = new Set(s)
+      n.delete(o.id)
+      return n
+    })
+    setColoreTarget(o)
+  }
+
   // Pulsanti azione di un ordine (avanza stato, incasso, stampe, annullo).
   // Condivisi dalla card piena (liste) e dalla card-griglia (a scomparsa).
   const orderActions = (o, { senzaAvanzamento = false } = {}) => {
@@ -2277,7 +2298,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             automatici siano accesi o spenti, e anche sui conti nati prima
             che l'impostazione esistesse: è il caso per cui serve di più —
             due tavoli che si somigliano, e uno dei due lo si segna. */}
-        <SceltaColoreConto order={o} onScegli={(c) => setOrderColore(o.id, c)} />
+        <TastoColoreConto order={o} onApri={() => apriColoreConto(o)} />
         {/* STORIA E RIPRISTINA NON STANNO QUI. Sono due cose che si fanno
             una volta ogni tanto — «com'è che questo conto è stato
             riaperto?» — e in coda occupavano una riga intera su ogni card,
@@ -2990,15 +3011,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                   // che è esattamente il punto. Il ⋯ è già aperto sulla card
                   // sbagliata da riconoscere: chiudere, aprire il conto e
                   // tornare indietro sarebbero tre gesti per un tocco.
-                  {
-                    id: 'colore',
-                    nodo: (
-                      <SceltaColoreConto
-                        order={o}
-                        onScegli={(col) => setOrderColore(o.id, col)}
-                      />
-                    ),
-                  },
+                  voceColoreConto(o, () => apriColoreConto(o)),
                 ].filter(Boolean)
               }}
               corsie={corsieMostrate}
@@ -3157,6 +3170,21 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
 
       {storiaTarget && (
         <StoriaOrdineDialog order={storiaTarget} onClose={() => setStoriaTarget(null)} />
+      )}
+
+      {coloreTarget && (
+        <ModaleColoreConto
+          order={coloreTarget}
+          onChiudi={() => setColoreTarget(null)}
+          // Local-first: si chiude SUBITO e la scrittura parte in
+          // sottofondo. Un `await` qui, con la rete che balla, terrebbe la
+          // modale ferma sopra la coda finché il server non risponde.
+          onScegli={(c) => {
+            const o = coloreTarget
+            setColoreTarget(null)
+            setOrderColore(o.id, c)
+          }}
+        />
       )}
 
       {ripristinoTarget && (

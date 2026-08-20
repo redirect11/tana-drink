@@ -657,3 +657,88 @@ describe('i titoli di sezione sono titoli', () => {
     expect(Number(m[1])).toBeLessThan(Number(titolo[1]))
   })
 })
+
+
+// ── I TASTI DI UNA CARD DELLA CODA STANNO A UNA MISURA SOLA ──────────
+//
+// «I tasti della card avvicinali in verticale 1/2 pixel (comunque di
+// pochissimo)» (l'utente, 20/08/2026). Erano due numeri battuti a mano —
+// 8px nel menu che si apre, 6px nel piede — e gli stessi tasti, a un dito
+// di distanza, avevano due arie diverse.
+//
+// SI STRINGE LO SPAZIO, NON I TASTI: i bersagli restano quelli di
+// docs/navigazione.md. E lo stacco dal contenuto sopra
+// (`margin-top`/`padding-top` di `.corsia-azioni-aperte`) NON si tocca: sta
+// lì perché il primo tasto del menu non sembri la seconda riga di quello
+// del piede, e sotto ce n'è uno che rimanda indietro una comanda.
+//
+// Dal foglio e non dal DOM: happy-dom non applica il CSS, e una misura
+// scritta due volte si scolla al primo ritocco senza che nessun test se ne
+// accorga.
+describe('i tasti di una card della coda hanno un solo respiro', () => {
+  const css = () => readFileSync(join(CARTELLA, 'index.css'), 'utf8')
+
+  const regola = (nome) => {
+    const testo = css().replace(/\/\*[\s\S]*?\*\//g, '')
+    const i = testo.indexOf(A_CAPO + nome + ' {')
+    expect(i, nome + ' non esiste più nel foglio').toBeGreaterThan(-1)
+    return testo.slice(i, testo.indexOf('}', i))
+  }
+
+  it('il gettone c’è, ed è di pochissimo più stretto degli 8px di prima', () => {
+    const m = /--gap-tasti-card:\s*(\d+)px/.exec(css())
+    expect(m, 'il respiro dei tasti della card è un gettone, non un numero sparso').not.toBe(null)
+    const px = Number(m[1])
+    expect(px).toBeLessThan(8)
+    // «Di pochissimo»: uno o due pixel. A 4 i tasti si toccherebbero, e in
+    // un menu dove uno rimanda indietro una comanda è un errore vero.
+    expect(px).toBeGreaterThanOrEqual(6)
+  })
+
+  it('e lo usano tutti e due i posti dove quei tasti stanno', () => {
+    expect(regola('.corsia-piede')).toMatch(/gap:\s*var\(--gap-tasti-card\)/)
+    expect(regola('.corsia-azioni-aperte')).toMatch(/gap:\s*var\(--gap-tasti-card\)/)
+  })
+
+  it('lo stacco dal contenuto sopra resta dov’era', () => {
+    // Il menu non deve attaccarsi alla card: la riga di sopra è
+    // informazione, questi sono tasti, e presi di corsa si confondono.
+    const r = regola('.corsia-azioni-aperte')
+    expect(r).toMatch(/margin-top:\s*14px/)
+    expect(r).toMatch(/padding-top:\s*12px/)
+    expect(r).toMatch(/border-top:/)
+  })
+})
+
+// ── I GETTONI DELLA TAVOLOZZA SI PRENDONO COL POLLICE ────────────────
+//
+// La tavolozza del conto stava dentro il ⋯ della card, e lì i gettoni
+// erano 26px (34 sul touch) perché dovevano stare in una fila stretta:
+// sotto la soglia di docs/navigazione.md, e per un colore preso male due
+// tavoli si confondono. Adesso la tavolozza ha la sua modale e lo spazio
+// c'è: 48px per tutti, senza più la deroga del puntatore grosso.
+describe('la tavolozza del conto ha bersagli pieni', () => {
+  const css = () => readFileSync(join(CARTELLA, 'index.css'), 'utf8')
+
+  const regola = (nome) => {
+    const testo = css().replace(/\/\*[\s\S]*?\*\//g, '')
+    const i = testo.indexOf(A_CAPO + nome + ' {')
+    expect(i, nome + ' non esiste più nel foglio').toBeGreaterThan(-1)
+    return testo.slice(i, testo.indexOf('}', i))
+  }
+
+  it('un gettone non scende sotto i 44px', () => {
+    const r = regola('.colore-conto')
+    const w = /width:\s*(\d+)px/.exec(r)
+    const h = /height:\s*(\d+)px/.exec(r)
+    expect(w, 'il gettone deve dichiarare la sua misura').not.toBe(null)
+    expect(Number(w[1])).toBeGreaterThanOrEqual(44)
+    expect(Number(h[1])).toBeGreaterThanOrEqual(44)
+  })
+
+  it('e non c’è più una misura a parte per il touch', () => {
+    // Era la deroga di quando i gettoni stavano nel menu: due misure per
+    // la stessa cosa, e quella piccola era il caso normale.
+    expect(css()).not.toMatch(/pointer: coarse\)[\s\S]{0,120}\.colore-conto/)
+  })
+})

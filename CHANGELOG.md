@@ -4,6 +4,20 @@
 
 ### Per chi gestisce
 
+- **Il colore del conto si sceglie da una finestrella.** Nel «⋯ Azioni»
+  di una card — del conto come della comanda — c'era la fila dei dodici
+  colori: tre righe di quadratini che coprivano le azioni vere. Adesso c'è
+  **un tasto solo**, «Colore del conto», con accanto **il pallino del
+  colore che il conto ha adesso** — si legge senza aprire niente. A
+  toccarlo si apre la tavolozza con i **gettoni grossi**, comodi da
+  prendere col pollice: scelto il colore, si applica e si richiude tutto,
+  finestrella e menu.
+
+- **I tasti delle card della coda stanno un filo più vicini.** Un paio di
+  pixel in meno fra l'uno e l'altro, dappertutto la stessa misura. I tasti
+  restano grandi come prima, e lo stacco dal contenuto sopra pure: serve a
+  non premere quello sbagliato di corsa.
+
 - **La striscia colorata delle card può dire il colore del conto.** In
   *Impostazioni ▸ 🎨 Aspetto ▸ Le card della coda* si sceglie cosa dice
   quella riga a sinistra: **«💳 Com'è messo il conto»** — da incassare,

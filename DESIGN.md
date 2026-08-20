@@ -223,6 +223,18 @@ Regole:
   c'è la stella dei preferiti — un tasto, che non si copre.
   In magazzino è sempre un pallino: lì il segno è uno STATO, non un colore
   scelto a mano.
+- **La tavolozza del conto sta in una modale, non nel menu.** Dal «⋯
+  Azioni» di una card — del conto e della comanda — il colore si dà da un
+  **tasto solo**, che porta accanto al testo il **pallino del colore di
+  adesso**: senza, per rispondere a «di che colore è questo?» bisognerebbe
+  aprire la modale ogni volta. Toccandolo si apre un dialogo normale
+  (`overlay confirm-overlay` + `confirm-box`, come il colore del prodotto
+  nel POS: Esc, tocco fuori, ✕) con i gettoni a **48px** — fuori dal menu
+  lo spazio c'è, e sotto i 44 un colore si prende male. Scegliere **applica
+  e chiude**, modale e menu sotto: il gesto è finito. Dentro il menu erano
+  dodici quadratini da 26px in due file, tre righe che coprivano le azioni
+  vere («i colori del conto e della comanda andrebbero messi in una modale
+  che si apre con un bottone», l'utente, 20/08/2026).
 - **Il colore del conto prende il fondo della card.** Un conto può avere un
   colore suo (campo `colore` sul documento, tavolozza delle categorie):
   serve a riconoscere che tre comande finite in tre colonne diverse sono lo
@@ -298,6 +310,17 @@ Regole:
   il verso della coda), che sono bottoni bordati ma bassi — sono la stessa
   specie di comando e in riga si devono somigliare. `--tastino-alto` è la
   misura sola da cui scendono tutti.
+- **I tasti di una card della coda respirano di `--gap-tasti-card`**
+  (6px): il piede («⋯ Azioni» e il tasto grande, affiancati o impilati
+  quando la card è stretta) e il menu che si apre sotto. Erano due numeri
+  battuti a mano — 8px nel menu, 6px nel piede — e gli stessi tasti a un
+  dito di distanza avevano due arie diverse; «avvicinali in verticale 1/2
+  pixel, comunque di pochissimo» (l'utente, 20/08/2026). Si stringe lo
+  **spazio**, non i tasti. Lo **stacco dal contenuto sopra**
+  (`.corsia-azioni-aperte`: `margin-top: 14px`, `padding-top: 12px` e il
+  filo) **non è quel gap e non si tocca**: sta lì perché il primo tasto del
+  menu non sembri la seconda riga di quello del piede, e lì sotto ce n'è
+  uno che rimanda indietro una comanda.
 - **Le pastiglie in gruppo** (`.chip-gruppo`) si toccano: bordo condiviso
   (`margin-left: -1px`), angoli tondi solo agli estremi. Vuol dire «questi
   sono una cosa sola» e si usa **solo** dove è vero. Due posti, tutti e due
