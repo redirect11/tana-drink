@@ -88,6 +88,7 @@ vi.mock('firebase/firestore', () => ({
 
 const { registerPayment, markOrderPaid, updateOrderItems, addComanda, advanceComanda } =
   await import('../../src/lib/api.js')
+const { _azzeraMutazioni } = await import('../../src/lib/mutazioniOrdine.js')
 
 const contoDa = (totale, extra = {}) => ({
   status: 'aperto',
@@ -108,6 +109,12 @@ const entroUnSecondo = (p) =>
 
 describe('incasso senza rete', () => {
   beforeEach(() => {
+    // LA MEMORIA DEL TERMINALE SI AZZERA FRA UNA PROVA E L'ALTRA. Le mutazioni
+    // di un conto si ricordano quello che hanno appena composto, finché la
+    // cache non lo conferma (lib/mutazioniOrdine.js) — e qui la cache non
+    // conferma MAI, apposta: senza questo, la prova dopo comporrebbe sul conto
+    // della prova prima.
+    _azzeraMutazioni()
     stato.ordine = contoDa(20)
     stato.scritture = []
     stato.settingsAppese = false
@@ -167,6 +174,12 @@ describe('scrittura degli item', () => {
     })
 
   beforeEach(() => {
+    // LA MEMORIA DEL TERMINALE SI AZZERA FRA UNA PROVA E L'ALTRA. Le mutazioni
+    // di un conto si ricordano quello che hanno appena composto, finché la
+    // cache non lo conferma (lib/mutazioniOrdine.js) — e qui la cache non
+    // conferma MAI, apposta: senza questo, la prova dopo comporrebbe sul conto
+    // della prova prima.
+    _azzeraMutazioni()
     stato.ordine = modificabile()
     stato.scritture = []
     stato.settingsAppese = false
@@ -210,6 +223,12 @@ describe('aggiunte al conto col magazzino che non risponde', () => {
     })
 
   beforeEach(() => {
+    // LA MEMORIA DEL TERMINALE SI AZZERA FRA UNA PROVA E L'ALTRA. Le mutazioni
+    // di un conto si ricordano quello che hanno appena composto, finché la
+    // cache non lo conferma (lib/mutazioniOrdine.js) — e qui la cache non
+    // conferma MAI, apposta: senza questo, la prova dopo comporrebbe sul conto
+    // della prova prima.
+    _azzeraMutazioni()
     stato.ordine = conConto()
     stato.scritture = []
     stato.settingsAppese = false
