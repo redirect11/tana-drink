@@ -271,6 +271,9 @@ function mapOrder(snap) {
     sumup_client_transaction_id: o.sumup_client_transaction_id ?? null,
     sumup_transaction_id: o.sumup_transaction_id ?? null,
     paid_at: o.paid_at ?? null,
+    // Lo scontrino di chiusura è già uscito: il segno sta sul DATO, non
+    // solo nella memoria del terminale che l'ha stampato (BUG-055).
+    receipt_print_at: o.receipt_print_at ?? null,
     payment_after_cancel: o.payment_after_cancel ?? false,
     group_id: o.group_id ?? null,
     group_name_snapshot: o.group_name_snapshot ?? null,
@@ -2516,6 +2519,22 @@ export function segnaComandaStampata(orderId, comandaId) {
   )
 }
 
+// LO SCONTRINO È USCITO DALLA STAMPANTE: si segna SUL CONTO, così ogni
+// terminale lo sa. Stessa idea di `segnaComandaStampata`, e per lo stesso
+// guaio visto al banco: la pretesa vive in localStorage, quindi un browser
+// nuovo — o una memoria svuotata — non sapeva niente e stampava in raffica
+// gli scontrini di tutti i conti pagati che vedeva (BUG-055). Il segno si
+// scrive A CARTA USCITA: segnare prima vorrebbe dire che una stampa fallita
+// mette a tacere tutti i terminali per sempre. Campo singolo, niente array:
+// non serve rileggere niente.
+export function segnaScontrinoStampato(orderId) {
+  if (!orderId) return
+  bgWrite(
+    () => updateDoc(doc(db, 'orders', orderId), { receipt_print_at: new Date().toISOString() }),
+    'scontrino stampato'
+  )
+}
+
 function scaricaInSottofondo(orderId, comandaId) {
   ;(async () => {
     try {
@@ -3449,6 +3468,10 @@ export async function restoreOrder(id, { motivo = null, chi = null } = {}) {
     // Solo se il buono non copriva più tutto: se copre, il conto resta
     // identico a com'era.
     ...(scontoRiscritto || {}),
+    // UN CONTO RIAPERTO È UN CONTO DA RICHIUDERE, e alla chiusura lo
+    // scontrino deve poter uscire di nuovo (BUG-047): il segno sul dato si
+    // azzera qui, insieme alla pretesa locale che libera chi riapre.
+    receipt_print_at: null,
   }
   bgWrite(() => updateDoc(orderRef, patchRiapertura), 'ripristino conto')
   // Riaperto: si compone, non si rilegge. Riaprire un conto e vederlo

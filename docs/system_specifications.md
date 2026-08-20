@@ -968,7 +968,11 @@ Si stampa la comanda in lavorazione (con dentro le aggiunte appena fatte) e lo s
 
 IL LOGO IN CIMA è un di più: se non si carica, la carta esce lo stesso — uno scontrino senza logo è ancora uno scontrino, uno scontrino che non esce è un cliente che aspetta. E si tenta UNA VOLTA SOLA per sessione (BUG-032): prima ogni stampa rifaceva il caricamento e aspettava l'errore, e la carta usciva dopo ogni volta.
 
-**Dove**: `src/lib/printer.js` · **Lo dimostrano**: `tests/unit/logoScontrino.test.js`
+QUANDO ESCE LO SCONTRINO: al GESTO della riscossione, sempre e solo lì — il pannello dei pagamenti, i tasti rapidi Contanti/Carta della card. Mai da uno sguardo sulla coda: la coda stampa comande. «Deve avvenire solo quando esco dall'ordine e deve stampare la COMANDA, non lo scontrino» (l'utente, 20/08, dopo aver visto uscire la carta di tutta la serata rientrando in coda — BUG-055). E IL SEGNO «GIÀ STAMPATO»
+
+STA SUL DATO: `receipt_print_at` sul conto, scritto in sottofondo a carta uscita, come `auto_print_at` sulla comanda. La pretesa in localStorage resta come primo filtro per i doppioni di questo terminale; il segno sul conto lo sanno tutti, e un browser con la memoria vuota non ristampa la serata. Riaprendo un conto il segno si azzera: riscuotendo di nuovo la carta esce di nuovo (BUG-047).
+
+**Dove**: `src/lib/printer.js` · **Lo dimostrano**: `tests/unit/logoScontrino.test.js`, `tests/unit/scontrinoSegnato.test.js`
 
 #### REQ-STAMPA-002 — La stampante non deve smettere di funzionare a metà serata
 

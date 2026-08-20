@@ -95,6 +95,7 @@ vi.mock('../../src/lib/printer.js', async (originale) => ({
   printFattura: vi.fn(() => Promise.resolve()),
   loadPrinterSettings: vi.fn(() => ({ ivaRate: 10 })),
   releaseReceiptPrint: vi.fn(),
+  scontrinoGiaUscito: vi.fn(() => false),
 }))
 
 import OrderPosDetail from '../../src/components/OrderPosDetail.jsx'

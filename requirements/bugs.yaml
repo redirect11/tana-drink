@@ -1811,3 +1811,57 @@ bugs:
     severity: media
     priority: P2
     test_cases: [tests/component/CodaCorsie.test.jsx]
+
+  - id: BUG-055
+    title: "Tornando in coda uscivano gli SCONTRINI di tutti i conti pagati"
+    area: "src/pages/BartenderPage.jsx (snapshot della coda), src/components/PaymentScreen.jsx, src/lib/api.js (segnaScontrinoStampato), src/lib/printer.js"
+    description: >
+      Segnalato dall'utente il 20/08, provando al banco: «alla prima
+      apertura dell'app ero in inventario. Sono tornato in coda ordini e mi
+      ha stampato tutti gli SCONTRINI. C'era un solo ordine e una sola
+      comanda ma mi ha stampato lo scontrino».
+      LA CAUSA e' LA STESSA MALATTIA gia' curata per le comande (BUG-050,
+      rivisto): nello snapshot della coda viveva un blocco che stampava
+      OGNI conto con `payment_status: pagato` che gli passava davanti, e
+      l'unica guardia era una pretesa in localStorage (`claimReceiptPrint`).
+      Un browser nuovo, un'origine diversa, una memoria svuotata: di
+      pretese non ne ha nessuna, e la serata intera esce dalla stampante in
+      raffica al primo sguardo sulla coda.
+      COSA VUOLE CHI STA AL BANCO, parole sue: «deve avvenire solo quando
+      esco dall'ordine e deve stampare la COMANDA, non lo scontrino». Lo
+      scontrino appartiene al GESTO della riscossione, non a uno snapshot.
+      LA CURA, due pezzi.
+      (1) LA CODA STAMPA SOLO COMANDE. Il blocco dell'auto-scontrino se ne
+      va da BartenderPage. Restava li' per un caso solo, ed era vero: nel
+      pagamento diretto dal POS la schermata si apre su un guscio locale
+      senza id, il conto nasce in sottofondo e la stampa veniva delegata
+      alla coda. Quel caso ora se lo prende PaymentScreen, che ha il gesto
+      in mano: la carta esce subito, col numero che la testata mostra gia',
+      e la pretesa e il segno raggiungono il conto appena ha un id. Per
+      tenere in piedi quell'unico caso si stampava tutto il resto.
+      (2) IL SEGNO STA SUL DATO: `receipt_print_at` sul conto, scritto in
+      sottofondo A CARTA USCITA (segnarlo prima vorrebbe dire che una
+      stampa fallita mette a tacere tutti i terminali per sempre). Lo
+      scrivono tutte le strade dell'incasso — il pannello dei pagamenti e i
+      tasti rapidi Contanti/Carta (BUG-054) — e tutte lo guardano prima di
+      stampare: due tablet accesi non fanno due copie, e la pretesa locale
+      resta come primo filtro per i propri doppioni.
+      LA RISTAMPA A NUOVA RISCOSSIONE RESTA (BUG-047 e la richiesta del
+      19/08: «se riapro il conto e cambio qualcosa e riscuoto di nuovo,
+      deve ristampare»). Riaprendo un conto il segno si AZZERA — lo scrive
+      `restoreOrder` insieme alla riapertura — proprio dove si liberava gia'
+      la pretesa locale.
+      PASSI PER RIPRODURLO (prima della cura): accendere l'auto-stampa
+      dello scontrino, incassare qualche conto, svuotare la memoria del
+      browser (o aprire l'app da un'altra origine), entrare in coda ordini.
+      Esce uno scontrino per ogni conto pagato della serata.
+    in_produzione: false
+    status: fixed
+    generate_issue: true
+    labels: [bug, stampa, banco, local-first]
+    severity: alta
+    priority: P1
+    test_cases:
+      - tests/unit/scontrinoSegnato.test.js
+      - tests/component/CodaCorsie.test.jsx
+      - tests/component/PaymentScreen.test.jsx

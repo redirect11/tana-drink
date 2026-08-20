@@ -8,13 +8,14 @@ import {
   markInvoiceSent,
   subscribeVouchers,
   applyVoucherDiscount,
+  segnaScontrinoStampato,
 } from '../lib/api.js'
 import { readerCheckout } from '../lib/paymentsApi.js'
 import { formatPrice, PAYMENT_METHOD_LABELS } from '../lib/orderStatus.js'
 import { useOnline } from '../lib/useOnline.js'
 import { allServed } from '../lib/comande.js'
 import { activeVouchers } from '../lib/vouchers.js'
-import { printScontrino, printFattura, loadPrinterSettings, claimReceiptPrint, reclaimReceiptPrint, releaseReceiptPrint } from '../lib/printer.js'
+import { printScontrino, printFattura, loadPrinterSettings, claimReceiptPrint, reclaimReceiptPrint, releaseReceiptPrint, scontrinoGiaUscito } from '../lib/printer.js'
 import { toastError } from '../lib/toast.js'
 import {
   remainingItems,
@@ -75,16 +76,15 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
     // partiva solo quando l'ordine passava a "pronto", quindi con la gestione
     // preparazione spenta non usciva mai.
     try {
-      // Solo su un ordine REALE: nel pagamento diretto dal POS la schermata si
-      // apre su un ordine locale senza id né numero, e ne uscirebbe uno
-      // scontrino con "#-". In quel caso stampa la coda quando l'ordine vero
-      // risulta pagato (claimReceiptPrint garantisce una copia sola).
+      // LO SCONTRINO ESCE DAL GESTO, SEMPRE E SOLO DA QUI (BUG-055). Non è
+      // più la coda a stamparlo quando vede un conto pagato: quello faceva
+      // uscire la carta di tutta la serata al primo sguardo di un browser
+      // nuovo. Qui c'è il gesto, quindi qui esce.
       // Con un INCASSO in mano la pretesa si FORZA (reclaim): questo è un
       // pagamento che sta succedendo adesso, e se il conto era stato chiuso
       // e riaperto la copia vecchia non conta più. Senza incasso (chiusure
       // d'ufficio) vale la pretesa normale: una copia e basta.
       if (
-        order.id &&
         order.daily_number != null &&
         // «Riscuoti (senza stampa)»: il gesto dice esplicitamente che la
         // carta non serve — cliente che rifiuta lo scontrino di cortesia,
@@ -92,15 +92,48 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
         // verrà riaperto e riscosso normale, la stampa esce come sempre.
         !senzaStampa &&
         loadPrinterSettings().autoPrintScontrino &&
-        (incasso ? reclaimReceiptPrint(order.id) : claimReceiptPrint(order.id))
+        // Il segno sta SUL DATO: un altro terminale l'ha già stampato e qui
+        // non esce la seconda copia.
+        !scontrinoGiaUscito(order)
       ) {
-        printScontrino(perStampa).catch((e) => {
-          console.warn('[printer] scontrino:', e.message)
-          // La carta non è uscita: la prenotazione torna libera, così la
-          // prossima chiusura (o la coda) ci riprova. Vedi BUG-047.
-          releaseReceiptPrint(order.id)
-          onError?.(`Scontrino non stampato: ${e.message}`)
-        })
+        if (order.id) {
+          if (incasso ? reclaimReceiptPrint(order.id) : claimReceiptPrint(order.id)) {
+            printScontrino(perStampa)
+              // Il segno sul conto va scritto A CARTA USCITA: prima vorrebbe
+              // dire che una stampa fallita zittisce tutti i terminali.
+              .then(() => segnaScontrinoStampato(order.id))
+              .catch((e) => {
+                console.warn('[printer] scontrino:', e.message)
+                // La carta non è uscita: la prenotazione torna libera, così la
+                // prossima chiusura ci riprova. Vedi BUG-047.
+                releaseReceiptPrint(order.id)
+                onError?.(`Scontrino non stampato: ${e.message}`)
+              })
+          }
+        } else {
+          // PAGAMENTO DIRETTO DAL POS: la schermata si è aperta su un guscio
+          // locale (id nullo) mentre il conto nasce in sottofondo. La carta
+          // non aspetta che nasca — esce adesso, col numero che la testata
+          // mostra già — e la pretesa e il segno la raggiungono appena c'è
+          // un id da segnare. Prima toccava alla coda stampare questo caso:
+          // era l'unico legittimo, e per tenerlo si stampava tutto il resto.
+          printScontrino(perStampa)
+            .then(() =>
+              Promise.resolve(orderId())
+                .then((id) => {
+                  if (!id) return
+                  claimReceiptPrint(id) // la copia di questo conto è uscita da qui
+                  segnaScontrinoStampato(id)
+                })
+                .catch(() => {
+                  /* il conto non è nato: lo dice già il toast della creazione */
+                })
+            )
+            .catch((e) => {
+              console.warn('[printer] scontrino:', e.message)
+              onError?.(`Scontrino non stampato: ${e.message}`)
+            })
+        }
       }
     } catch {
       /* stampante non configurata: si continua */
