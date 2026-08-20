@@ -152,3 +152,26 @@ export function ricordaProntoDiviso(diviso) {
   // terminale che non ha mai deciso.
   scrivi(CHIAVE_PRONTO, diviso ? '1' : '0')
 }
+
+// ── LA FILA DEI FILTRI: APERTA O CHIUSA, SU QUESTO TERMINALE ─────────
+//
+// «I filtri e tutti i bottoni li voglio a scomparsa, con un tasto che non
+// occupi troppo spazio, sia per ordini sia per comande» (l'utente, 20/08).
+// Sulla riga dei conteggi le pastiglie erano arrivate a sette, e anche
+// compattate si mangiavano tutta la larghezza: adesso stanno dietro un
+// tasto solo, «⚗️ Filtri».
+//
+// CHIUSA DI SUO: la coda si guarda, non si filtra — e chi filtra lo fa una
+// volta a sera. Ma la scelta si ricorda, come le altre qui sopra: chi al
+// banco tiene la fila aperta tutta la serata non deve riaprirla a ogni
+// ricarico, e chi non la usa non se la ritrova.
+
+const CHIAVE_FILTRI = 'tana:coda:filtri-aperti'
+
+export function filtriAperti() {
+  return leggi(CHIAVE_FILTRI, (v) => v === '1', false)
+}
+
+export function ricordaFiltriAperti(aperti) {
+  scrivi(CHIAVE_FILTRI, aperti ? '1' : null)
+}

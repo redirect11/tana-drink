@@ -63,6 +63,11 @@ import {
   corsieDelPronto,
   CORSIE_SPENTE_ALL_INIZIO,
   SOTTOFILTRI_CHIUSI,
+  SCHEDE_GRIGLIA,
+  NOME_SCHEDA,
+  NOME_SOTTOFILTRO,
+  etichettaFiltri,
+  spiegaFiltri,
 } from '../lib/coda.js'
 import { StoriaOrdineDialog, RipristinaOrdineDialog } from '../components/StoriaOrdine.jsx'
 import { useTelefono } from '../lib/useTelefono.js'
@@ -85,6 +90,8 @@ import {
   ricordaVistaCorsie,
   prontoDiviso,
   ricordaProntoDiviso,
+  filtriAperti,
+  ricordaFiltriAperti,
 } from '../lib/impostazioniLocali.js'
 import {
   fraseAnnulloDefault,
@@ -574,6 +581,10 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   })
   const [vista, setVista] = useState(vistaCorsie)
   const [scegliCorsie, setScegliCorsie] = useState(false) // il pannellino è aperto?
+  // LA FILA DEI FILTRI STA DIETRO UN TASTO. Chiusa di suo, e la scelta è di
+  // QUESTO terminale (vedi impostazioniLocali): al banco la fila resta
+  // aperta tutta la sera, alla cassa non si tocca mai.
+  const [filtriVisibili, setFiltriVisibili] = useState(filtriAperti)
   // La colonna del pronto: una sola col badge, o due (da servire / da
   // ritirare). Scelta di QUESTO terminale — il tablet della sala e quello
   // del banco non guardano lo stesso lavoro.
@@ -1363,8 +1374,12 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // domanda su quei conti, e fuori di lì non vogliono dire niente. Senza
   // gli stati del servizio nemmeno: se non si segue la preparazione, tutto
   // quello che è stato pagato è uscito per definizione.
+  //
+  // E SEGUONO LA FILA: chiusi i filtri sparisce anche questa riga, o
+  // resterebbe appesa sotto i conteggi senza il tasto che l'ha aperta —
+  // proprio l'altezza che la scomparsa serve a restituire ai conti.
   const righeSottoChiusi = (attivo) =>
-    workflowOn && attivo ? (
+    workflowOn && attivo && filtriVisibili ? (
       <div className="chips-row chips-sotto" style={{ margin: '-8px 0 16px' }}>
         <span className="muted small">Dei chiusi:</span>
         {SOTTOFILTRI_CHIUSI.map(([k, label]) => (
@@ -1413,7 +1428,93 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
     </button>
   )
 
-  // ── I FILTRI DELLE CORSIE, SULLA RIGA DEI CONTEGGI ──────────────────
+  // ── COSA È ACCESO ADESSO, IN PAROLE ────────────────────────
+  //
+  // Serve al tasto quando la fila è chiusa: un filtro acceso e invisibile è
+  // una coda che sembra sbagliata — si guardano dodici conti dove ce ne
+  // sono quaranta, e non c'è niente a schermo che lo dica. Sono i nomi
+  // CORTI, senza emoji: su una pastiglia sola non ci sta altro, e l'elenco
+  // per esteso vive nel title, che larghezza non ne costa.
+  //
+  // Ogni vista ha i suoi filtri, quindi ha il suo elenco: la griglia ha la
+  // scheda («Chiusi») e i giorni scorsi, il banco le colonne spente, la
+  // lista e le schede solo «Miei».
+  const sottoAcceso = workflowOn && sottoChiusi !== 'tutti' ? NOME_SOTTOFILTRO[sottoChiusi] : null
+  const filtriAccesi = (
+    corsieView
+      ? [
+          soloMiei && 'Miei',
+          corsieBanco && diverse.length > 0 && `Colonne (${diverse.length})`,
+          !corsieBanco && sottoAcceso,
+        ]
+      : gridView
+        ? [
+            NOME_SCHEDA[boardFilter],
+            boardFilter === 'chiusi' && sottoAcceso,
+            soloMiei && 'Miei',
+            soloOggi && 'Solo oggi',
+          ]
+        : [soloMiei && 'Miei']
+  ).filter(Boolean)
+
+  const cambiaFiltri = () => {
+    const aperti = !filtriVisibili
+    setFiltriVisibili(aperti)
+    ricordaFiltriAperti(aperti)
+    // Chiudendo la fila si chiude anche quello che la fila aveva aperto: la
+    // scelta delle colonne senza il suo tasto resterebbe lì da sola, e per
+    // richiuderla toccherebbe riaprire i filtri.
+    if (!aperti) setScegliCorsie(false)
+  }
+
+  // IL TASTO. Una pastiglia come le altre — stessa forma, stesso bersaglio
+  // — perché sta nella loro riga; ma è l'unica che resta quando la fila è
+  // chiusa, e allora porta scritto quello che è acceso.
+  const pastigliaFiltri = (
+    <button
+      className={`chip chip-filtri ${filtriAccesi.length > 0 ? 'active' : ''}`}
+      onClick={cambiaFiltri}
+      aria-expanded={filtriVisibili}
+      // IL NOME NON CAMBIA MAI, la scritta sì. Quello che c'è scritto
+      // sopra è lo STATO — «⚗️ Chiusi» — e uno stato non è il nome di un
+      // tasto: chi lo cerca lo cerca come «Filtri», e un tasto che si
+      // chiama «Chiusi» sarebbe indistinguibile dal filtro omonimo che gli
+      // sta accanto un istante dopo. Lo stato lo dice il title, che è il
+      // posto dove va e non costa larghezza.
+      aria-label="Filtri"
+      title={spiegaFiltri(filtriAccesi, filtriVisibili)}
+    >
+      {etichettaFiltri(filtriAccesi)}
+    </button>
+  )
+
+  // ── LA FILA DEI FILTRI: UNA SOLA, PER TUTTE E QUATTRO LE VISTE ───────
+  //
+  // «I filtri e tutti i bottoni li voglio a scomparsa, con un tasto che non
+  // occupi troppo spazio, sia per ordini sia per comande» (l'utente,
+  // 20/08). In griglia erano arrivati a sette e anche compattati si
+  // mangiavano la riga intera; nelle corsie sono meno, ma è la stessa coda
+  // e un meccanismo per vista sarebbero quattro cose da imparare.
+  //
+  // I CHIP COMPAIONO NELLA STESSA RIGA — che va a capo o scorre come ha
+  // sempre fatto — non in una tendina: sono pochi, si toccano a raffica
+  // mentre si lavora, e un pannello sopra la coda coprirebbe proprio quello
+  // che si sta guardando per decidere che filtro serve.
+  //
+  // DENTRO CI VA SOLO QUELLO CHE RESTRINGE LA LISTA. La pastiglia del
+  // cambio vista resta FUORI, a destra come sempre (docs/navigazione.md):
+  // non filtra, cambia quello che si guarda — e nasconderla vorrebbe dire
+  // due tocchi per una cosa che ne vale uno. Il «＋» sta nella testata e
+  // non c'entra affatto: crea.
+  const filaFiltri = (filtri, style) => (
+    <div className="chips-row chips-lavagna" style={style}>
+      {pastigliaFiltri}
+      {filtriVisibili && filtri}
+      {pastigliaComande}
+    </div>
+  )
+
+  // ── I FILTRI DELLE CORSIE, SULLA RIGA DEI CONTEGGI ──────────────
   //
   // Erano una riga a sé fra i conteggi e le testate delle colonne: tre
   // livelli prima di vedere una comanda, per due pastiglie corte. Quella
@@ -1429,15 +1530,16 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   //
   // La regola della riga dei filtri resta quella di docs/navigazione.md:
   // a sinistra quello che RESTRINGE la lista, a destra quello che CAMBIA
-  // VISTA, staccati da un margine automatico. Qui non cambia niente di
-  // quello che i filtri fanno: cambia solo dove stanno.
-  const filtriCorsie = (
-    <div className="chips-row chips-lavagna">
+  // VISTA, staccati da un margine automatico.
+  const filtriCorsie = filaFiltri(
+    <>
       {pastigliaMiei}
       {/* QUALI COLONNE TENERE A SCHERMO. A metà serata chi sta allo
           shaker guarda «Da fare» e «Al banco», e le altre due gli
           mangiano mezzo schermo per roba che in quel momento non lo
-          riguarda. È una scelta di QUESTO terminale e si ricorda. */}
+          riguarda. È una scelta di QUESTO terminale e si ricorda.
+          ED È UN FILTRO a tutti gli effetti — restringe quello che si
+          vede — quindi sta dentro la scomparsa con gli altri. */}
       {corsieBanco && (
         <button
           className={`chip ${diverse.length > 0 ? 'active' : ''}`}
@@ -1454,8 +1556,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
           ▦ Colonne{diverse.length > 0 ? ` (${diverse.length})` : ''}
         </button>
       )}
-      {pastigliaComande}
-    </div>
+    </>
   )
 
   // ── I FILTRI DELLA GRIGLIA, SULLA STESSA RIGA DELLE CORSIE ─────────
@@ -1465,29 +1566,17 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // motivo perché due viste della STESSA coda mettano i loro filtri in due
   // posti diversi: chi passa dall'una all'altra deve ritrovarli dov'erano.
   //
-  // QUI SONO SETTE, non due come nelle corsie (BUG-042), e sui 1000-1300px
-  // del banco non ci stanno tutte accanto ai conteggi. Non vanno a capo e
-  // non si schiacciano: la riga SCORRE in orizzontale (.chips-row), come
-  // faceva già nelle corsie sul telefono. Una seconda riga di pastiglie
-  // sarebbe esattamente quello che si stava togliendo.
-  // E la più lunga si accorcia: «📅 Solo oggi (3)» invece di «📅 Solo oggi
-  // (3 da chiudere)» — 90px in meno, e cosa siano quei tre lo dice il
-  // titolo, che è dove si va a chiederlo.
-  //
-  // Vale la regola di docs/navigazione.md: a sinistra quello che RESTRINGE
-  // la lista, a destra quello che CAMBIA VISTA, staccati da un margine
-  // automatico.
-  const filtriOrdini = (
-    <div className="chips-row chips-lavagna">
-      {[
-        ['attivi', 'In corso'],
-        ['chiusi', '💶 Chiusi'],
-        // Gli annullati hanno una scheda loro: fra i chiusi facevano numero
-        // senza essere incassi, e per ritrovarne uno da riaprire si cercava
-        // in mezzo a quelli buoni.
-        ['annullati', '✖️ Annullati'],
-        ['tutti', 'Tutti'],
-      ].map(([k, label]) => (
+  // QUI SONO SEI, non due come nelle corsie (BUG-042), e sui 1000-1300px
+  // del banco non ci stavano accanto ai conteggi nemmeno scorrendo: è anche
+  // per questo che adesso stanno tutti dietro «⚗️ Filtri». Aperti fanno e
+  // stanno esattamente dove stavano — la riga SCORRE in orizzontale invece
+  // di andare a capo, che una seconda riga di pastiglie sarebbe quello che
+  // si stava togliendo. E la più lunga resta accorciata: «📅 Solo oggi
+  // (3)» invece di «📅 Solo oggi (3 da chiudere)», e cosa siano quei tre
+  // lo dice il titolo.
+  const filtriOrdini = filaFiltri(
+    <>
+      {SCHEDE_GRIGLIA.map(([k, label]) => (
         <button
           key={k}
           className={`chip ${boardFilter === k ? 'active' : ''}`}
@@ -1517,8 +1606,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
           📅 Solo oggi{arretrati.length ? ` (${arretrati.length})` : ''}
         </button>
       )}
-      {pastigliaComande}
-    </div>
+    </>
   )
 
   // IL CONTO ACCESO. Solo nel modo "evidenzia": è il primo che risponde
@@ -2200,24 +2288,36 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                     // e un lucchetto grigio in fondo a una barra non dice a
                     // nessuno che cos'è. Si scrive per esteso.
                     //
-                    // E IL MOTIVO STA ATTACCATO AL TASTO. Messo in fondo alla
-                    // riga finiva accanto al «+», e si leggeva come una nota
-                    // del «nuovo ordine», che non c'entra niente: la frase
-                    // spiega perché QUEL tasto è grigio, e deve stare dove
-                    // guarda l'occhio quando lo trova spento.
-                    <span className="board-cassa-box">
-                      <button
-                        className="btn ghost small board-cassa"
-                        disabled={v.disabled}
-                        title={v.hint}
-                        onClick={() => (v.id === 'apri-cassa' ? setApriCassa(true) : setChiudiCassa(true))}
-                      >
-                        {v.icon} {v.label}
-                      </button>
-                      {v.disabled && v.hint && (
-                        <span className="board-cassa-perche muted small">{v.hint}</span>
-                      )}
-                    </span>
+                    // MA È UN TASTO NORMALE, NON UN CARTELLO. «Il tasto
+                    // chiudi cassa nella schermata ordini è troppo largo e
+                    // occupa troppo spazio» (l'utente, 20/08): sotto ci
+                    // stava sempre la riga «Prima chiudi 3 conti e servi 2
+                    // comande», e siccome erano incolonnati era QUELLA a
+                    // dare la larghezza — un tasto lungo il doppio del suo
+                    // nome, in una testata dove ogni pixel è ricerca.
+                    //
+                    // LA FRASE NON SI BUTTA: è la sola cosa che dice perché
+                    // il tasto è spento. Vive nel `title` — dove chi ha un
+                    // mouse la trova passandoci sopra — e al banco, dove il
+                    // mouse non c'è, esce come avviso appena si prova a
+                    // chiudere. Che è il momento in cui la domanda nasce:
+                    // prima di allora è una riga che nessuno legge.
+                    //
+                    // Per questo il tasto NON è `disabled` ma
+                    // `aria-disabled`: un tasto spento davvero non riceve il
+                    // tocco, e chi lo preme non saprebbe mai perché non
+                    // succede niente.
+                    <button
+                      className={`btn ghost small board-cassa${v.disabled ? ' spento' : ''}`}
+                      aria-disabled={v.disabled || undefined}
+                      title={v.hint}
+                      onClick={() => {
+                        if (v.disabled) return showToast(v.hint, { kind: 'info' })
+                        return v.id === 'apri-cassa' ? setApriCassa(true) : setChiudiCassa(true)
+                      }}
+                    >
+                      {v.icon} {v.label}
+                    </button>
                   )
                 })()}
               </>
@@ -2402,10 +2502,10 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
               {avvisoRicerca}
             </p>
           )}
-          <div className="chips-row" style={{ margin: '8px 0 12px' }}>
-            {pastigliaMiei}
-            {pastigliaComande}
-          </div>
+          {/* STESSA FILA DELLE LAVAGNE, stesso tasto: qui i filtri sono
+              uno solo, ma un meccanismo che vale in tre viste su quattro
+              è una cosa da imparare due volte. */}
+          {filaFiltri(pastigliaMiei, { margin: '8px 0 12px' })}
         </>
       )}
 
@@ -2463,7 +2563,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
               testata (vedi `filtriCorsie`). Erano una riga a sé, e fra i
               conteggi e la prima comanda c'erano tre livelli. */}
           {righeSottoChiusi(!corsieBanco)}
-          {corsieBanco && scegliCorsie && (
+          {corsieBanco && filtriVisibili && scegliCorsie && (
             <div className="chips-row corsie-scelta" style={{ margin: '0 0 12px' }}>
               {sceglibili.map((c) => (
                 <button

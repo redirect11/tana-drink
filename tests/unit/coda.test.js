@@ -17,6 +17,8 @@ import {
   gruppiInCoda,
   schedeCoda,
   corsieDiverseDalNormale,
+  etichettaFiltri,
+  spiegaFiltri,
 } from '../../src/lib/coda.js'
 
 const orders = [
@@ -1433,5 +1435,49 @@ describe('corsieDiverseDalNormale', () => {
   it('una memoria su una corsia che oggi non è in elenco non accende niente', () => {
     const senzaChiusi = sceglibili.filter((c) => c.id !== 'da-fare')
     expect(corsieDiverseDalNormale(senzaChiusi, ['chiusi', 'annullati', 'da-fare'])).toHaveLength(0)
+  })
+})
+
+// ── IL TASTO DEI FILTRI, CHIUSO, DEVE DIRE COS'È ACCESO (REQ-CODA-008) ─
+//
+// I filtri sono andati a scomparsa perché sette pastiglie si mangiavano la
+// riga («li voglio a scomparsa, con un tasto che non occupi troppo
+// spazio», l'utente 20/08). Ma un filtro acceso e INVISIBILE è una coda
+// che sembra sbagliata: si guardano dodici conti dove ce ne sono quaranta
+// e non c'è niente a schermo che lo dica. Quindi il tasto se lo porta
+// scritto.
+describe('etichettaFiltri', () => {
+  it('tutto al suo posto: dice solo «Filtri»', () => {
+    expect(etichettaFiltri([])).toBe('⚗️ Filtri')
+    expect(etichettaFiltri()).toBe('⚗️ Filtri')
+  })
+
+  it('uno acceso: lo nomina', () => {
+    expect(etichettaFiltri(['Chiusi'])).toBe('⚗️ Chiusi')
+  })
+
+  // NE NOMINA UNO E CONTA GLI ALTRI: scriverli tutti rifarebbe la fila che
+  // si stava togliendo, e «3 filtri» non dice QUALE coda si sta guardando.
+  it('più di uno: ne nomina uno e conta gli altri', () => {
+    expect(etichettaFiltri(['Miei', 'Chiusi', 'Solo oggi'])).toBe('⚗️ Miei +2')
+  })
+
+  it('i buchi non contano: sono i filtri spenti di chi lo chiama', () => {
+    expect(etichettaFiltri([false, 'Miei', null, undefined])).toBe('⚗️ Miei')
+  })
+})
+
+describe('spiegaFiltri', () => {
+  it('aperta, dice come si richiude', () => {
+    expect(spiegaFiltri(['Chiusi'], true)).toBe('Nascondi i filtri')
+  })
+
+  it('chiusa e pulita, dice a cosa serve', () => {
+    expect(spiegaFiltri([], false)).toBe('Filtra la coda')
+  })
+
+  // PER ESTESO STANNO QUI, che il title larghezza non ne costa.
+  it('chiusa con roba accesa, li elenca tutti', () => {
+    expect(spiegaFiltri(['Chiusi', 'Miei'], false)).toContain('Chiusi, Miei')
   })
 })

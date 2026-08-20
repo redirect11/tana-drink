@@ -167,6 +167,12 @@ vi.mock('../../src/lib/sumupApi.js', () => ({
   isSumUpEnabled: false,
 }))
 vi.mock('../../src/lib/staffApi.js', () => ({ preloadStaff: vi.fn() }))
+// Il perché la cassa non si può chiudere esce come avviso al tocco
+// (BUG-062): si spia quello, il resto del modulo resta vero.
+vi.mock('../../src/lib/toast.js', async (orig) => ({
+  ...(await orig()),
+  showToast: vi.fn(),
+}))
 vi.mock('../../src/lib/pendingOrders.js', () => ({
   subscribePending: (cb) => {
     cb({ pending: inVolo, banners: [] })
@@ -203,6 +209,7 @@ vi.mock('../../src/components/StatusBell.jsx', () => ({ default: () => <div>camp
 import BartenderPage from '../../src/pages/BartenderPage.jsx'
 import { nascondiOrdine, mostraOrdine } from '../../src/lib/ordiniNascosti.js'
 import { updateOrderStatus, advanceComanda, setOrderColore, markOrderPaid } from '../../src/lib/api.js'
+import { showToast } from '../../src/lib/toast.js'
 import {
   loadPrinterSettings,
   printScontrino,
@@ -304,6 +311,19 @@ function montaCoda() {
   )
 }
 
+// LA FILA DEI FILTRI NASCE CHIUSA (REQ-CODA-008): tutto quello che
+// restringe la coda sta dietro «⚗️ Filtri». Chi in un test vuole toccare un
+// filtro lo apre prima, come si fa al banco — e questi test dicono cosa
+// fanno i filtri, non dove stanno: quello lo dicono i loro.
+const apriFiltri = (utente) => utente.click(screen.getByRole('button', { name: 'Filtri' }))
+
+// «▦ Colonne» è un filtro come gli altri e sta nella fila: si arriva al suo
+// pannellino aprendo prima la fila, se non è già aperta.
+const apriColonne = async (utente) => {
+  if (!screen.queryByRole('button', { name: /Colonne/ })) await apriFiltri(utente)
+  await utente.click(screen.getByRole('button', { name: /Colonne/ }))
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
   localStorage.clear()
@@ -346,15 +366,40 @@ describe('le corsie di chi guarda la serata (admin)', () => {
   // IL LUCCHETTO SENZA NOME. Sugli schermi larghi la voce della cassa era
   // un'icona grigia in fondo alla barra: nessuno sapeva cosa fosse, e
   // quando era spenta non si capiva perché. È la cosa che chiude la
-  // serata: si scrive, e il motivo sta attaccato al suo tasto — in fondo
-  // alla riga finiva accanto al «+» e sembrava una nota del nuovo ordine.
-  it('la cassa si chiama per nome, e dice perché non si può chiudere', async () => {
+  // serata: si scrive per esteso.
+  //
+  // MA IL PERCHÉ NON STA PIÙ SOTTO IL TASTO (BUG-062). «Il tasto chiudi
+  // cassa nella schermata ordini è troppo largo e occupa troppo spazio»
+  // (l'utente, 20/08): la frase era incolonnata sotto il bottone, e in una
+  // colonna la larghezza la fa il figlio più largo. Adesso vive nel title
+  // — e al banco, dove il mouse non c'è, esce come avviso appena si prova
+  // a chiudere: il momento in cui la domanda nasce davvero.
+  it('la cassa si chiama per nome, e il perché sta nel tasto, non sotto', async () => {
     montaCoda()
     await screen.findByText('In corso')
     const tasto = screen.getByRole('button', { name: /Chiudi cassa/ })
-    expect(tasto).toBeDisabled()
-    const dentro = within(tasto.closest('.board-cassa-box'))
-    expect(dentro.getByText(/Prima chiudi \d+ cont/)).toBeInTheDocument()
+    // Spento a vedersi, ma il tocco deve arrivare: è quello che fa uscire
+    // il motivo. `disabled` lo mangerebbe.
+    expect(tasto).toHaveAttribute('aria-disabled', 'true')
+    expect(tasto).toHaveClass('spento')
+    expect(tasto).toHaveAttribute('title', expect.stringMatching(/Prima chiudi \d+ cont/))
+    // e sotto non c'è più niente ad allargarlo
+    expect(screen.queryByText(/Prima chiudi \d+ cont/)).not.toBeInTheDocument()
+    expect(document.querySelector('.board-cassa-perche')).toBe(null)
+  })
+
+  it('e provando a chiuderla lo dice, invece di non fare niente', async () => {
+    const utente = userEvent.setup()
+    montaCoda()
+    await screen.findByText('In corso')
+
+    await utente.click(screen.getByRole('button', { name: /Chiudi cassa/ }))
+    // niente finestra di chiusura: la cassa non si chiude
+    expect(screen.queryByText('chiudi cassa')).not.toBeInTheDocument()
+    expect(showToast).toHaveBeenCalledWith(
+      expect.stringMatching(/Prima chiudi \d+ cont/),
+      expect.anything()
+    )
   })
 
   // LA CASSA NON SI CHIUDE CON DRINK ANCORA DA FARE. Un conto può essere
@@ -374,10 +419,9 @@ describe('le corsie di chi guarda la serata (admin)', () => {
     montaCoda()
     await screen.findByText('In corso')
     const tasto = screen.getByRole('button', { name: /Chiudi cassa/ })
-    expect(tasto).toBeDisabled()
+    expect(tasto).toHaveAttribute('aria-disabled', 'true')
     // il conto è incassato — nessun conto aperto — ma il drink no
-    const dentro = within(tasto.closest('.board-cassa-box'))
-    expect(dentro.getByText('Prima servi 1 comanda')).toBeInTheDocument()
+    expect(tasto).toHaveAttribute('title', 'Prima servi 1 comanda')
   })
 
   // UN CONTO RISCOSSO È UN CONTO CHIUSO. Con gli stati del servizio accesi
@@ -434,6 +478,7 @@ describe('le corsie di chi guarda la serata (admin)', () => {
     ]
     montaCoda()
     await screen.findByText('In corso')
+    await apriFiltri(utente)
     // tutti e due sono CHIUSI: i soldi sono presi
     expect(within(corsia('chiusi')).getByText('#60')).toBeInTheDocument()
     expect(within(corsia('chiusi')).getByText('#61')).toBeInTheDocument()
@@ -486,6 +531,7 @@ describe('le corsie di chi guarda la serata (admin)', () => {
   // sinistra c'è quello che restringe la lista, a destra quello che cambia
   // vista, e nessuno lo deve leggere come un filtro in più.
   it('sta nella riga dei filtri, in fondo a destra e non fra i filtri', async () => {
+    const utente = userEvent.setup()
     montaCoda()
     await screen.findByText('In corso')
     const tasto = screen.getByRole('button', { name: /Comande/ })
@@ -493,6 +539,13 @@ describe('le corsie di chi guarda la serata (admin)', () => {
     expect(riga).toBeTruthy()
     // stessa forma delle altre pastiglie
     expect(tasto).toHaveClass('chip')
+    // E NON VA A SCOMPARSA CON LORO (REQ-CODA-008): non filtra, cambia
+    // quello che si guarda — a fila chiusa è lì con «⚗️ Filtri», soli due
+    // in riga.
+    expect(within(riga).queryByRole('button', { name: /Miei/ })).not.toBeInTheDocument()
+    expect(within(riga).getByRole('button', { name: 'Filtri' })).toBeInTheDocument()
+
+    await apriFiltri(utente)
     // ultimo della riga, e staccato dal gruppo dei filtri
     expect(riga.lastElementChild).toBe(tasto)
     expect(within(riga).getByRole('button', { name: /Miei/ })).toBeInTheDocument()
@@ -505,9 +558,11 @@ describe('le corsie di chi guarda la serata (admin)', () => {
   // all'altra deve ritrovare i filtri dov'erano, e la riga a sé costava un
   // livello fra la testata e la prima card.
   it('anche a griglia i filtri stanno sulla riga dei conteggi', async () => {
+    const utente = userEvent.setup()
     impostazioni = { ...impostazioni, queue_view: 'griglia' }
     montaCoda()
     await screen.findByText(/In servizio/)
+    await apriFiltri(utente)
 
     const riga = screen.getByRole('button', { name: 'In corso' }).closest('.chips-row')
     const conteggi = riga.closest('.board-sotto')
@@ -530,6 +585,7 @@ describe('le corsie di chi guarda la serata (admin)', () => {
     montaCoda()
     await screen.findByText(/In servizio/)
     expect(screen.getByText('#41')).toBeInTheDocument()
+    await apriFiltri(utente)
 
     await utente.click(screen.getByRole('button', { name: /Chiusi/ }))
     expect(screen.getByRole('button', { name: /Chiusi/ })).toHaveClass('active')
@@ -541,8 +597,11 @@ describe('le corsie di chi guarda la serata (admin)', () => {
   })
 
   it('niente tasto «Colonne»: tre corsie ci stanno tutte, non c’è niente da spegnere', async () => {
+    const utente = userEvent.setup()
     montaCoda()
     await screen.findByText('In corso')
+    // CON LA FILA APERTA, o mancherebbe solo perché è a scomparsa.
+    await apriFiltri(utente)
     expect(screen.queryByRole('button', { name: /Colonne/ })).not.toBeInTheDocument()
   })
 
@@ -566,6 +625,151 @@ describe('le corsie di chi guarda la serata (admin)', () => {
     // e si torna indietro dallo stesso tasto, che adesso dice «Ordini»
     await utente.click(screen.getByRole('button', { name: /Ordini/ }))
     expect(await screen.findByText('In corso')).toBeInTheDocument()
+  })
+})
+
+// ── I FILTRI STANNO DIETRO UN TASTO SOLO (REQ-CODA-008) ─────────────
+//
+// «I filtri e tutti i bottoni li voglio a scomparsa, con un tasto che non
+// occupi troppo spazio, sia per ordini sia per comande» (l'utente, 20/08).
+// Sulla riga dei conteggi erano arrivati a sette e si mangiavano la riga
+// intera, in una lavagna che si guarda da lontano mentre si versa.
+//
+// La parte delicata non è nasconderli: è che DA CHIUSO il tasto non deve
+// nascondere lo STATO. Un filtro acceso e invisibile è una coda che sembra
+// sbagliata — dodici conti dove ce ne sono quaranta, e niente a schermo che
+// lo dica.
+describe('la fila dei filtri sta dietro «⚗️ Filtri»', () => {
+  beforeEach(() => {
+    impostazioni = { ...impostazioni, queue_view: 'griglia' }
+  })
+
+  it('di suo è chiusa: in riga restano il tasto e il cambio vista', async () => {
+    montaCoda()
+    await screen.findByText(/In servizio/)
+
+    const riga = screen.getByRole('button', { name: 'Filtri' }).closest('.chips-row')
+    expect(riga).toBeTruthy()
+    // Le sei pastiglie non ci sono; il cambio vista sì, che non filtra.
+    for (const nome of ['In corso', /Chiusi/, /Annullati/, 'Tutti', /Miei/]) {
+      expect(screen.queryByRole('button', { name: nome })).not.toBeInTheDocument()
+    }
+    expect(within(riga).getByRole('button', { name: /Comande/ })).toBeInTheDocument()
+    // Col terminale al suo posto il tasto non dice altro che «Filtri».
+    expect(screen.getByRole('button', { name: 'Filtri' })).toHaveTextContent('⚗️ Filtri')
+    expect(screen.getByRole('button', { name: 'Filtri' })).not.toHaveClass('active')
+  })
+
+  it('toccandolo i chip compaiono NELLA STESSA RIGA, e si richiudono', async () => {
+    const utente = userEvent.setup()
+    montaCoda()
+    await screen.findByText(/In servizio/)
+
+    await apriFiltri(utente)
+    const riga = screen.getByRole('button', { name: 'Filtri' }).closest('.chips-row')
+    for (const nome of ['In corso', /Chiusi/, /Annullati/, 'Tutti', /Miei/]) {
+      // NELLA RIGA, non in una tendina sopra la coda: si toccano a raffica
+      // mentre si lavora, e un pannello coprirebbe quello che si guarda
+      // per decidere che filtro serve.
+      expect(within(riga).getByRole('button', { name: nome })).toBeInTheDocument()
+    }
+    // e la coda sotto non ha guadagnato una riga di pastiglie tutta sua
+    const testata = document.querySelector('.board-head')
+    expect(
+      [...document.querySelectorAll('.chips-row')].filter((r) => !testata.contains(r))
+    ).toHaveLength(0)
+
+    await apriFiltri(utente)
+    expect(screen.queryByRole('button', { name: 'Tutti' })).not.toBeInTheDocument()
+  })
+
+  // LA COSA PER CUI ESISTE QUESTO TEST. Chiusa la fila, il filtro acceso
+  // deve restare leggibile: è scritto sul tasto.
+  it('da chiuso il tasto porta scritto il filtro acceso', async () => {
+    const utente = userEvent.setup()
+    montaCoda()
+    await screen.findByText(/In servizio/)
+
+    await apriFiltri(utente)
+    await utente.click(screen.getByRole('button', { name: /Chiusi/ }))
+    await apriFiltri(utente) // richiudo
+
+    const tasto = screen.getByRole('button', { name: 'Filtri' })
+    expect(tasto).toHaveTextContent('⚗️ Chiusi')
+    expect(tasto).toHaveClass('active')
+    expect(tasto).toHaveAttribute('title', expect.stringContaining('Chiusi'))
+  })
+
+  // PIÙ DI UNO: se ne nomina uno e si contano gli altri. Scriverli tutti
+  // rifarebbe la fila che si stava togliendo, e un numero secco non dice
+  // quale coda si sta guardando.
+  it('con più filtri accesi ne nomina uno e conta gli altri', async () => {
+    const utente = userEvent.setup()
+    montaCoda()
+    await screen.findByText(/In servizio/)
+
+    await apriFiltri(utente)
+    await utente.click(screen.getByRole('button', { name: /Chiusi/ }))
+    await utente.click(screen.getByRole('button', { name: /Miei/ }))
+    await apriFiltri(utente)
+
+    const tasto = screen.getByRole('button', { name: 'Filtri' })
+    expect(tasto).toHaveTextContent('⚗️ Chiusi +1')
+    // e per esteso stanno nel title, che larghezza non ne costa
+    expect(tasto).toHaveAttribute('title', expect.stringContaining('Chiusi, Miei'))
+  })
+
+  // È UNA SCELTA DI QUESTO TERMINALE, come le colonne spente: al banco la
+  // fila resta aperta tutta la sera, alla cassa non si tocca mai — e
+  // nessuno la vuole riaprire a ogni ricarico.
+  it('aperta o chiusa, se lo ricorda al ricarico', async () => {
+    const utente = userEvent.setup()
+    const vista = montaCoda()
+    await screen.findByText(/In servizio/)
+
+    await apriFiltri(utente)
+    expect(localStorage.getItem('tana:coda:filtri-aperti')).toBe('1')
+
+    vista.unmount()
+    montaCoda()
+    await screen.findByText(/In servizio/)
+    expect(screen.getByRole('button', { name: 'Tutti' })).toBeInTheDocument()
+  })
+
+  // UN MECCANISMO SOLO, non uno per vista: «sia per ordini sia per
+  // comande». Al banco dentro la fila ci va anche «▦ Colonne», che è un
+  // filtro a tutti gli effetti — restringe quello che si vede.
+  it('al banco è lo stesso tasto, e «Colonne» ci sta dentro', async () => {
+    const utente = userEvent.setup()
+    ruolo = 'bartender'
+    impostazioni = { ...impostazioni, queue_view: 'corsie' }
+    montaCoda()
+    await screen.findByText('Da fare')
+
+    expect(screen.queryByRole('button', { name: /Colonne/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Miei/ })).not.toBeInTheDocument()
+
+    await apriFiltri(utente)
+    const riga = screen.getByRole('button', { name: 'Filtri' }).closest('.chips-row')
+    expect(within(riga).getByRole('button', { name: /Colonne/ })).toBeInTheDocument()
+    expect(within(riga).getByRole('button', { name: /Miei/ })).toBeInTheDocument()
+  })
+
+  // E QUELLO CHE APRE SI CHIUDE CON LEI: il pannellino delle colonne senza
+  // il suo tasto resterebbe appeso sotto i conteggi, che è proprio
+  // l'altezza che la scomparsa serve a restituire ai conti.
+  it('chiudendo la fila si chiude anche la scelta delle colonne', async () => {
+    const utente = userEvent.setup()
+    ruolo = 'bartender'
+    impostazioni = { ...impostazioni, queue_view: 'corsie' }
+    montaCoda()
+    await screen.findByText('Da fare')
+
+    await apriColonne(utente)
+    expect(document.querySelector('.corsie-scelta')).toBeTruthy()
+
+    await apriFiltri(utente)
+    expect(document.querySelector('.corsie-scelta')).toBe(null)
   })
 })
 
@@ -664,8 +868,10 @@ describe('le corsie del banco: una card per comanda', () => {
   // Questa lavagna si guarda da lontano mentre si versa: ogni riga
   // sprecata sopra è una comanda in meno sotto.
   it('i filtri non hanno più una riga loro: stanno sui conteggi', async () => {
+    const utente = userEvent.setup()
     montaCoda()
     await screen.findByText('Da fare')
+    await apriFiltri(utente)
 
     const riga = screen.getByRole('button', { name: /Miei/ }).closest('.chips-row')
     const conteggi = riga.closest('.board-sotto')
@@ -689,12 +895,13 @@ describe('le corsie del banco: una card per comanda', () => {
     const utente = userEvent.setup()
     montaCoda()
     await screen.findByText('Da fare')
+    await apriFiltri(utente)
 
     await utente.click(screen.getByRole('button', { name: /Miei/ }))
     expect(screen.getByRole('button', { name: /Miei/ })).toHaveClass('active')
     // «Colonne» apre ancora la scelta delle colonne, che è una riga a sé
     // ma solo finché è aperta — si tocca e si richiude.
-    await utente.click(screen.getByRole('button', { name: /Colonne/ }))
+    await apriColonne(utente)
     expect(document.querySelector('.corsie-scelta')).toBeTruthy()
   })
 
@@ -785,7 +992,7 @@ describe('le corsie del banco: una card per comanda', () => {
 
     // la colonna non c'è, e non si può nemmeno accendere
     expect(corsia('da-fare')).toBeFalsy()
-    await utente.click(screen.getByRole('button', { name: /Colonne/ }))
+    await apriColonne(utente)
     expect(screen.queryByRole('button', { name: 'Da fare' })).not.toBeInTheDocument()
   })
 
@@ -843,7 +1050,7 @@ describe('le corsie del banco: una card per comanda', () => {
     montaCoda()
     await screen.findByText('Da fare')
 
-    await utente.click(screen.getByRole('button', { name: /Colonne/ }))
+    await apriColonne(utente)
     await utente.click(screen.getByRole('button', { name: /Dividi il pronto/ }))
 
     expect(within(corsia('al-ritiro')).getByText('#81')).toBeInTheDocument()
@@ -857,7 +1064,7 @@ describe('le corsie del banco: una card per comanda', () => {
     impostazioni = { ...impostazioni, service_mode: 'tavolo' }
     montaCoda()
     await screen.findByText('Da fare')
-    await utente.click(screen.getByRole('button', { name: /Colonne/ }))
+    await apriColonne(utente)
     expect(screen.queryByRole('button', { name: /Dividi il pronto/ })).not.toBeInTheDocument()
   })
 
@@ -1028,7 +1235,7 @@ describe('le corsie del banco: una card per comanda', () => {
     const vista = montaCoda()
     await screen.findByText('Da fare')
 
-    await utente.click(screen.getByRole('button', { name: /Colonne/ }))
+    await apriColonne(utente)
     await utente.click(screen.getByRole('button', { name: 'Pronto', pressed: true }))
     expect(corsia('al-ritiro')).toBeFalsy()
     expect(corsia('da-fare')).toBeTruthy()
@@ -1041,7 +1248,7 @@ describe('le corsie del banco: una card per comanda', () => {
     expect(corsia('al-ritiro')).toBeFalsy()
 
     // e si riaccende dallo stesso posto
-    await utente.click(screen.getByRole('button', { name: /Colonne/ }))
+    await apriColonne(utente)
     await utente.click(screen.getByRole('button', { name: 'Pronto', pressed: false }))
     expect(corsia('al-ritiro')).toBeTruthy()
   })
@@ -1062,6 +1269,7 @@ describe('le corsie del banco: una card per comanda', () => {
     const utente = userEvent.setup()
     montaCoda()
     await screen.findByText('Da fare')
+    await apriFiltri(utente)
 
     // Terminale mai toccato: le due spente di serie NON accendono niente.
     const chip = screen.getByRole('button', { name: /Colonne/ })
@@ -1100,8 +1308,10 @@ describe('le corsie del banco: una card per comanda', () => {
       'tana:corsie:nascoste',
       JSON.stringify(['al-ritiro', 'chiusi', 'annullati', 'corsia-fantasma', 'da-incassare-vecchia'])
     )
+    const utente = userEvent.setup()
     montaCoda()
     await screen.findByText('Da fare')
+    await apriFiltri(utente)
 
     // resta la sola spenta vera — «al-ritiro», che di serie è accesa,
     // quindi UNA differenza dal normale — e la memoria è ripulita sul disco
@@ -1163,7 +1373,7 @@ describe('le corsie del banco: una card per comanda', () => {
     // «Chiuse» non ingombra il banco, ma si accende dal filtro — e lì
     // dentro questo conto NON c'è: il drink è ancora da fare.
     expect(corsia('chiusi')).toBeFalsy()
-    await utente.click(screen.getByRole('button', { name: /Colonne/ }))
+    await apriColonne(utente)
     await utente.click(screen.getByRole('button', { name: '💶 Chiuse', pressed: false }))
     expect(within(corsia('chiusi')).queryByText('#45')).not.toBeInTheDocument()
   })
@@ -1176,7 +1386,7 @@ describe('le corsie del banco: una card per comanda', () => {
     await screen.findByText('Da fare')
     expect(corsia('ritirati')).toBeTruthy()
 
-    await utente.click(screen.getByRole('button', { name: /Colonne/ }))
+    await apriColonne(utente)
     await utente.click(screen.getByRole('button', { name: 'Ritirato/Servito', pressed: true }))
     expect(corsia('ritirati')).toBeFalsy()
     expect(corsia('da-fare')).toBeTruthy()
@@ -1250,7 +1460,7 @@ describe('le corsie del banco: una card per comanda', () => {
     // quella roba non si fa: non è lavoro
     expect(within(corsia('da-fare')).queryByText('#46')).not.toBeInTheDocument()
 
-    await utente.click(screen.getByRole('button', { name: /Colonne/ }))
+    await apriColonne(utente)
     await utente.click(screen.getByRole('button', { name: '✖️ Annullate', pressed: false }))
     expect(within(corsia('annullati')).getByText('#46')).toBeInTheDocument()
   })
@@ -1505,7 +1715,7 @@ describe('la chiusura rapida dalla card stampa lo scontrino', () => {
     reclaimReceiptPrint.mockReturnValue(true)
     printScontrino.mockClear()
     montaCoda()
-    await screen.findByText('In corso')
+    await screen.findByText(/In servizio/)
 
     const card = document.querySelector('.grid-card')
     await utente.click(within(card).getByRole('button', { name: /Azioni|⋯/ }))
@@ -1524,7 +1734,7 @@ describe('la chiusura rapida dalla card stampa lo scontrino', () => {
     loadPrinterSettings.mockReturnValue({})
     printScontrino.mockClear()
     montaCoda()
-    await screen.findByText('In corso')
+    await screen.findByText(/In servizio/)
 
     const card = document.querySelector('.grid-card')
     await utente.click(within(card).getByRole('button', { name: /Azioni|⋯/ }))

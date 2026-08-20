@@ -255,6 +255,60 @@ export function passaSottofiltroChiusi(o, sotto = 'tutti') {
   return sotto === 'serviti' ? tutto : !tutto
 }
 
+// ── LE SCHEDE DELLA CODA A GRIGLIA ───────────────────────────────────
+//
+// Le quattro cose che si chiedono a una coda di conti. Stavano scritte a
+// mano dentro la pagina; da quando il riassunto del tasto «Filtri» deve
+// dire QUALE scheda è aperta, i nomi servono in due posti — e due elenchi
+// che devono restare uguali sono un elenco solo.
+export const SCHEDE_GRIGLIA = [
+  ['attivi', 'In corso'],
+  ['chiusi', '💶 Chiusi'],
+  // Gli annullati hanno una scheda loro: fra i chiusi facevano numero senza
+  // essere incassi, e per ritrovarne uno da riaprire si cercava in mezzo a
+  // quelli buoni.
+  ['annullati', '✖️ Annullati'],
+  ['tutti', 'Tutti'],
+]
+
+// Come si chiamano sul tasto quando la fila è chiusa: corti e senza emoji,
+// che lì lo spazio è una pastiglia sola. «In corso» non c'è APPOSTA — è il
+// default, e un tasto che ha sempre qualcosa scritto sopra non distingue
+// più la coda filtrata da quella intera.
+export const NOME_SCHEDA = { chiusi: 'Chiusi', annullati: 'Annullati', tutti: 'Tutti' }
+export const NOME_SOTTOFILTRO = { serviti: 'Serviti', 'non-serviti': 'Da servire' }
+
+// ── IL TASTO CHE APRE E CHIUDE LA FILA DEI FILTRI ────────────────────
+//
+// «I filtri e tutti i bottoni li voglio a scomparsa, con un tasto che non
+// occupi troppo spazio, sia per ordini sia per comande» (l'utente, 20/08).
+//
+// DA CHIUSO IL TASTO NON DEVE NASCONDERE LO STATO. Un filtro acceso e
+// invisibile è una coda che sembra sbagliata: si guardano dodici conti
+// dove ce ne sono quaranta, e non c'è niente a schermo che lo dica. Quindi
+// il tasto porta scritto quello che è acceso — «⚗️ Chiusi» — e quando i
+// filtri sono più di uno ne nomina UNO e conta gli altri: «⚗️ Miei +2».
+// Nominarli tutti rifarebbe la fila che si stava togliendo, e «⚗️ 3
+// filtri» (il linguaggio del magazzino) non dice quale sia la coda che si
+// sta guardando — che è la sola cosa che serve sapere di colpo.
+//
+// Con tutto al suo posto resta «⚗️ Filtri», e basta.
+export function etichettaFiltri(attivi = []) {
+  const accesi = (attivi || []).filter(Boolean)
+  if (accesi.length === 0) return '⚗️ Filtri'
+  if (accesi.length === 1) return `⚗️ ${accesi[0]}`
+  return `⚗️ ${accesi[0]} +${accesi.length - 1}`
+}
+
+// Il perché per esteso, che sta nel `title` e non ruba larghezza: da chiuso
+// dice cosa c'è acceso, da aperto come si richiude.
+export function spiegaFiltri(attivi = [], aperti = false) {
+  const accesi = (attivi || []).filter(Boolean)
+  if (aperti) return 'Nascondi i filtri'
+  if (accesi.length === 0) return 'Filtra la coda'
+  return `Filtri accesi: ${accesi.join(', ')} — tocca per cambiarli`
+}
+
 // ── LA VOCE DELLA CASSA NEL MENU DELLA CODA ──────────────────────────
 //
 // Aprire e chiudere la cassa sono le due cose che si fanno a inizio e fine

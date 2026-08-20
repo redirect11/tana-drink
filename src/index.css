@@ -754,6 +754,13 @@ a.btn.block {
   flex-shrink: 0;
 }
 
+/* «⚗️ Filtri» è l'unica pastiglia che resta quando la fila è chiusa, e
+   porta scritto cos'è acceso: non si stringe insieme alle altre quando la
+   riga si riempie, o una coda filtrata finirebbe per sembrare intera. */
+.chip-filtri {
+  flex-shrink: 0;
+}
+
 /* LA PASTIGLIA SI LEGGE E SI PRENDE COL DITO, AL 100%. Era tarata
    guardandola col browser allo zoom 110: alla dimensione vera il testo era
    piccolo e il bersaglio pure (una trentina di pixel d'altezza, sotto
@@ -7165,20 +7172,17 @@ body.pagina-piena .inv-scheda {
   flex-shrink: 0;
 }
 
-/* Perché la cassa non si può chiudere: SOTTO IL SUO TASTO, non in fondo
-   alla riga. Messo lì finiva accanto al «+» e sembrava una nota del
-   «nuovo ordine». Il tasto e la sua spiegazione sono una cosa sola. */
-.board-cassa-box {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 2px;
-  flex-shrink: 0;
-}
-
-.board-cassa-perche {
-  text-align: center;
-  line-height: 1.2;
+/* IL TASTO È LARGO QUANTO IL SUO NOME. Sotto ci stava incolonnata la
+   frase che spiega perché non si può chiudere — «Prima chiudi 3 conti e
+   servi 2 comande» — e in una colonna la larghezza la fa il figlio più
+   largo: il tasto veniva lungo il doppio, in una testata dove lo spazio è
+   della ricerca. Adesso la frase sta nel title e nell'avviso che esce al
+   tocco (BUG-062), e qui non resta niente da allargare.
+   SPENTO MA TOCCABILE: `aria-disabled`, non `disabled`, perché il tocco
+   deve arrivare — è quello che fa uscire il motivo. Quindi lo scolorito se
+   lo prende da una classe, che :disabled qui non scatta. */
+.board-cassa.spento {
+  opacity: 0.55;
 }
 
 .board-icona.active {

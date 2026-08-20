@@ -129,8 +129,19 @@ sotto i 44px si sbaglia. Si **toglie**, in quest'ordine:
   conti, «🧾 Ordini» guardando le comande. Un interruttore che si accende
   quando sei già di là si legge solo sapendo com'è messo adesso — e per
   saperlo bisogna guardare la lista sotto.
-- **I filtri** stanno in una tendina sopra il contenuto, e il tasto dice cosa
-  è scelto senza doverla aprire.
+- **I filtri stanno dietro un tasto solo, e il tasto dice cosa è scelto senza
+  aprirlo.** Nella coda è «⚗️ Filtri» — lo stesso linguaggio del magazzino —
+  e la fila nasce chiusa: sette pastiglie si mangiavano la riga in una
+  lavagna che si guarda da lontano. Da chiuso porta scritto quello che è
+  acceso («⚗️ Chiusi», «⚗️ Miei +2»), perché un filtro acceso e invisibile è
+  una coda che sembra sbagliata; l'elenco per esteso sta nel titolo. Aperta,
+  i chip compaiono NELLA STESSA RIGA e non in una tendina: si toccano a
+  raffica mentre si lavora, e un pannello coprirebbe proprio quello che si
+  sta guardando per decidere che filtro serve. La scelta vale per QUESTO
+  terminale (`tana:coda:filtri-aperti`). Dentro ci va tutto quello che
+  restringe la lista, «▦ Colonne» compreso; fuori il cambio vista, che non
+  filtra, e il «＋», che crea. Un meccanismo solo per tutte le viste della
+  coda.
 - **Il contenuto non porta navigazione**: niente tasti «vai a…» in mezzo a una
   lista, che si trovano solo scorrendo.
 
