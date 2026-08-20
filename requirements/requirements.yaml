@@ -1133,6 +1133,10 @@ requirements:
       E un conto scontato si chiude come chiuso: quanto resta da incassare lo
       sa la schermata che ha il conto davanti, non una rilettura che può
       arrivare prima dello sconto (BUG-046).
+      DAL 20/08/2026 lo sconto non cade più sul totale del conto ma sulle righe
+      che si stanno riscuotendo, e se ne può fare più d'uno: la regola completa
+      sta in REQ-PAG-013, che questo requisito presuppone. Le tre strategie
+      restano quelle, applicate al lordo della selezione invece che al totale.
     status: implemented
     generate_issue: false
     labels: [pagamenti, sconti]
@@ -7407,3 +7411,69 @@ requirements:
     generate_issue: true
     labels: [ui, impostazioni]
     priority: P3
+
+  - id: REQ-PAG-013
+    title: "Lo sconto cade sui prodotti che si stanno riscuotendo, e gli sconti si accumulano"
+    area: "src/lib/pagamento.js, src/components/PaymentScreen.jsx, src/lib/api.js, src/lib/printer.js, functions/lib/payment-core.js"
+    description: >
+      Chiesto dall'utente il 20/08/2026: «Lo sconto va applicato solo sui
+      prodotti selezionati. Nel senso che se tolgo prodotti dalla schermata
+      pagamento, lo sconto va applicato solo sui prodotti che sto riscuotendo.
+      Quindi gli sconti poi si accumulano nello scontrino. Se ho applicato uno
+      sconto a 2 prodotti prima e a tre prodotti dopo, sono due sconti
+      applicati».
+      PRIMA lo sconto era uno solo per conto, calcolato sul totale e poi
+      ripartito in proporzione su chi pagava la sua parte: chi offriva due
+      birre a un amico si vedeva scontare una fetta di tutto il tavolo, e la
+      cifra non tornava con niente di quello che aveva davanti.
+      IL MODELLO. Lo sconto appartiene alla RISCOSSIONE, non al conto.
+      · si calcola sul lordo delle righe selezionate in quel momento; se la
+        selezione è tutto il conto il risultato è quello di prima, e il caso
+        normale non cambia di un centesimo;
+      · se la selezione cambia, l'importo si rifà sulle righe rimaste — in
+        percentuale è la sua definizione, in euro decide la strategia del
+        locale (tetto / proporzione / avviso, REQ-PAG-003), la stessa che
+        governa un conto a cui si tolgono righe;
+      · all'incasso viene CONSUMATO dentro quel pagamento
+        (`payments[].sconto`) e sul conto non resta niente di preparato: da lì
+        in poi è storia e non si ricalcola più, come il prezzo di un drink già
+        bevuto;
+      · due riscossioni scontate sono DUE sconti, ognuno con le sue righe, e il
+        residuo è totale − sconti consumati − sconto in preparazione − pagato.
+      DOVE VIVE LO SCONTO IN PREPARAZIONE: sul documento, come prima
+      (`discount`/`discount_amount`), più il campo nuovo `discount_items` che
+      dice a quali righe si riferisce. Senza quelle righe un altro terminale
+      leggerebbe un importo e non saprebbe di che cosa; e visto che la
+      selezione vive solo dentro la schermata, senza scriverle non
+      sopravviverebbe all'uscita.
+      LO SCONTRINO li elenca uno per uno, dicendo su che cosa cadevano
+      («Sconto 10% su 3 prodotti −6,00 €»). Con UNO SOLO su tutto il conto
+      resta la riga di sempre, «Sconto»: è il caso normale, ed è anche come si
+      stampa un conto vecchio. Lo sconto resta un campo che si può spegnere fra
+      quelli dello scontrino (REQ-STAMPA-014): spegnendolo spariscono tutte le
+      righe insieme, ma il totale resta quello vero.
+      IL BUONO è uno sconto come gli altri: cade sulle righe che si stanno
+      riscuotendo (mai più del loro lordo, se no si brucia credito del
+      beneficiario per niente) e se ne va dentro il pagamento col suo
+      `voucher_id` — che serve a ridare il credito se il conto viene riaperto o
+      annullato (REQ-PAG-006).
+      I CONTI VECCHI NON SI MIGRANO. Nessuno sconto dentro i pagamenti e
+      nessun `discount_items` vogliono dire «uno solo, su tutto il conto»: un
+      conto aperto ieri sera si legge, si chiude e si stampa come prima.
+      CHI SOMMAVA UN NUMERO ADESSO NE SOMMA UNA LISTA: cassa, statistiche,
+      rendiconto, scontrino, fattura, badge della coda e dello storico passano
+      tutti per `scontoTotale()`, che è consumati + in preparazione.
+      E BUG-046 SI RISOLVE ALLA RADICE: lo sconto viaggia insieme all'importo
+      dentro `registerPayment` (e dentro `readerCheckout` per il lettore
+      SumUp), quindi un gesto è una scrittura sola e il residuo si calcola
+      giusto anche su un documento vecchio di un istante. Il parametro `chiude`
+      resta: quanto è dovuto lo sa comunque la schermata, non la rilettura.
+    status: implemented
+    generate_issue: true
+    labels: [pagamenti, sconti, stampa]
+    priority: P1
+    test_cases:
+      - tests/unit/scontiAccumulati.test.js
+      - tests/unit/contoScontatoSiChiude.test.js
+      - tests/component/PaymentScreen.test.jsx
+      - tests/unit/campiDiStampa.test.js

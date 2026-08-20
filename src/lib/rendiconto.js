@@ -24,6 +24,7 @@
 
 import { recipeCost } from './pricing.js'
 import { discountFactor } from './eta.js'
+import { scontoTotale } from './pagamento.js'
 import { ORDER_STATUSES } from './orderStatus.js'
 
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100
@@ -94,7 +95,9 @@ export function orderRecap(order, { drinksById, itemsById } = {}) {
     })
   }
 
-  const sconto = round2(Number(order?.discount_amount) || 0)
+  // TUTTI gli sconti del conto, non uno: da quando ognuno cade sulle righe
+  // che si stanno riscuotendo, un conto ne può portare più d'uno.
+  const sconto = scontoTotale(order)
   const netto = round2(lordo - sconto)
   const pagato = order?.payment_status === 'pagato'
   // Metodi dai pagamenti registrati; per i conti vecchi, chiusi prima che

@@ -127,7 +127,7 @@ import {
 } from '../lib/comande.js'
 import { useComandeLocali } from '../lib/comandeLocali.js'
 import { ricordaRuolo } from '../lib/ruoloLocale.js'
-import { paidAmount, orderTotal } from '../lib/pagamento.js'
+import { paidAmount, orderTotal, scontoTotale } from '../lib/pagamento.js'
 import { businessDayKey, businessDayLabel, businessDayShort } from '../lib/businessDay.js'
 import { isAwaitingPayment } from '../lib/payments.js'
 import { readerCheckout, readerTerminate } from '../lib/paymentsApi.js'
@@ -2377,8 +2377,8 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             <span className="grid-card-meta">
               {count} prodott{count === 1 ? 'o' : 'i'} · {apertoLabel(o)}
               {/* Sconto applicato: si vede, e il totale è già quello scontato. */}
-              {(o.discount_amount || 0) > 0 && (
-                <span className="sconto-badge"> 🎁 −{formatPrice(o.discount_amount)}</span>
+              {scontoTotale(o) > 0 && (
+                <span className="sconto-badge"> 🎁 −{formatPrice(scontoTotale(o))}</span>
               )}
             </span>
             {/* Un conto ANNULLATO non ha incassato niente: il totale si mostra

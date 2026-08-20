@@ -212,8 +212,11 @@ async function unpairReader(deps, auth) {
 // Sveglia il lettore con l'importo dell'ordine: il cliente paga lì,
 // l'esito arriva via webhook (return_url) e viene verificato via API.
 // `amount` (euro) opzionale per gli incassi PARZIALI (split del conto):
-// se assente si incassa tutto il residuo (totale − sconto − già pagato).
-async function readerCheckout(deps, auth, { orderId, amount = null, items = null } = {}) {
+// se assente si incassa tutto il residuo (totale − sconti − già pagato).
+// `sconto` è quello preparato dalla schermata per QUESTE righe: arriva col
+// gesto perché la sua scrittura sul conto parte in sottofondo e qui si
+// leggerebbe il documento di un istante prima — quello senza sconto (BUG-046).
+async function readerCheckout(deps, auth, { orderId, amount = null, items = null, sconto = null } = {}) {
   const { db, paymentsFetch, isConfigured, merchantCode, webhookUrl } = deps
   requireRole(auth, STAFF_ROLES)
   if (!isConfigured()) return { unavailable: true }
@@ -231,7 +234,8 @@ async function readerCheckout(deps, auth, { orderId, amount = null, items = null
     throw err('failed-precondition', 'Ordine già pagato.')
   }
 
-  const due = orderDue(order)
+  const scontoOra = sconto && Number(sconto.amount) > 0 ? sconto : null
+  const due = orderDue(scontoOra ? { ...order, discount_amount: scontoOra.amount } : order)
   if (!(due > 0)) {
     throw err('failed-precondition', 'Niente da incassare: residuo a zero.')
   }
@@ -277,6 +281,9 @@ async function readerCheckout(deps, auth, { orderId, amount = null, items = null
     // (parziale o a saldo) quando la transazione va a buon fine.
     sumup_pending_amount: toCharge,
     sumup_pending_items: Array.isArray(items) && items.length ? items : null,
+    // Lo sconto preparato per QUESTA riscossione viaggia col pagamento: il
+    // webhook lo scrive dentro l'incasso e lo toglie dal conto.
+    sumup_pending_sconto: scontoOra,
   })
   return { clientTransactionId }
 }
@@ -302,6 +309,7 @@ async function readerTerminate(deps, auth, { orderId } = {}) {
       payment_method: null,
       sumup_pending_amount: null,
       sumup_pending_items: null,
+      sumup_pending_sconto: null,
     })
   }
   return { ok: true }

@@ -24,6 +24,10 @@ import {
   scontoEccessivo,
   selectionAmount,
   discountAmount,
+  discountAfterChange,
+  lordoSelezione,
+  scontoInPreparazione,
+  scontiDelConto,
   paymentCloses,
   round2,
   dettaglioIncassi,
@@ -45,6 +49,41 @@ import {
 // stare su più righe, e muoverne una non deve muovere l'altra.
 const fullSelection = (order) =>
   Object.fromEntries(remainingItems(order).map((r) => [r.key, r.qty]))
+
+// SI RIENTRA SULLE RIGHE DELLO SCONTO. Lo sconto in preparazione è stato
+// deciso su certe righe (`discount_items`): riaprendo la schermata con tutto
+// selezionato, il primo sguardo lo ricalcolerebbe su tutto il conto e chi
+// l'aveva preparato non lo riconoscerebbe più. Senza sconto in ballo — che è
+// quasi sempre — si parte da tutto il conto, come si è sempre fatto.
+const selezioneIniziale = (order) => {
+  const righe = order?.discount_items
+  if (!Array.isArray(righe) || righe.length === 0) return fullSelection(order)
+  const sel = {}
+  for (const r of remainingItems(order)) {
+    const s = righe.find((x) => (x.key && r.key ? x.key === r.key : x.drink_id === r.drink_id))
+    sel[r.key] = s ? Math.min(Number(s.qty) || 0, r.qty) : 0
+  }
+  return Object.values(sel).some((q) => q > 0) ? sel : fullSelection(order)
+}
+
+// Le righe come vanno scritte sul conto o dentro un pagamento: il minimo che
+// serve a dire su che cosa cadeva lo sconto.
+const righeSconto = (selection) =>
+  selection.map((r) => ({
+    key: r.key,
+    drink_id: r.drink_id ?? null,
+    name: r.name,
+    qty: r.qty,
+    unit_price: r.unit_price,
+  }))
+
+// Due selezioni sono la stessa? Serve a non riscrivere lo sconto a ogni
+// respiro del componente.
+const firmaRighe = (righe) =>
+  (righe || [])
+    .map((r) => `${r.key ?? r.drink_id}:${r.qty}`)
+    .sort()
+    .join('|')
 
 // Il display del tastierino lavora in CENTESIMI digitati ("350" → 3,50 €).
 const toDigits = (euro) => String(Math.max(0, Math.round(euro * 100)))
@@ -143,24 +182,37 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   }
   const [error, setError] = useState(null)
   // Sconto OTTIMISTICO: applicato subito a schermo, server in background.
-  const [optimisticDisc, setOptimisticDisc] = useState(null) // { disc, amount }
+  const [optimisticDisc, setOptimisticDisc] = useState(null) // { disc, amount, items }
   const order = useMemo(
     () =>
       optimisticDisc == null
         ? orderProp
-        : { ...orderProp, discount: optimisticDisc.disc, discount_amount: optimisticDisc.amount },
+        : {
+            ...orderProp,
+            discount: optimisticDisc.disc,
+            discount_amount: optimisticDisc.amount,
+            discount_items: optimisticDisc.items ?? null,
+          },
     [orderProp, optimisticDisc]
   )
   // Quando il server ha recepito lo sconto, l'override locale si ritira.
+  // ANCHE LE RIGHE DEVONO COMBACIARE, non solo l'importo: uno sconto dello
+  // stesso valore su righe diverse è un altro sconto, e ritirandosi troppo
+  // presto la schermata tornava a quelle di prima — poi il ricalcolo le
+  // rimetteva a posto, e via così a ogni giro (schermata bloccata).
   useEffect(() => {
-    if (optimisticDisc != null && (orderProp.discount_amount || 0) === optimisticDisc.amount) {
+    if (
+      optimisticDisc != null &&
+      (orderProp.discount_amount || 0) === optimisticDisc.amount &&
+      firmaRighe(orderProp.discount_items) === firmaRighe(optimisticDisc.items)
+    ) {
       setOptimisticDisc(null)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orderProp.discount_amount])
+  }, [orderProp.discount_amount, orderProp.discount_items])
   const orderId = async () => (resolveOrderId ? await resolveOrderId() : order.id)
   const [saving, setSaving] = useState(false)
-  const [sel, setSel] = useState(() => fullSelection(order)) // riga -> quante unità pagare ora
+  const [sel, setSel] = useState(() => selezioneIniziale(order)) // riga -> quante unità pagare ora
   // QUALI unità, quando le righe uguali sono separate. Il conteggio dice
   // «due di questi tre»; separandole ognuna è una voce a sé e deve avere la
   // sua quantità — spegnendo la prima si spegne la prima, non le ultime
@@ -216,10 +268,13 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   const vipList = useMemo(() => activeVouchers(vouchers), [vouchers])
   const chosenVoucher = vipList.find((v) => v.id === voucherId) || null
 
-  // Dopo ogni incasso registrato si riparte da "tutto il residuo".
+  // Dopo ogni incasso registrato si riparte da "tutto il residuo" — o dalle
+  // righe dello sconto ancora in preparazione, se ce n'è uno: è quello che
+  // decide su che cosa cade, e ricalcolarlo su tutto il conto vorrebbe dire
+  // cambiarlo alle spalle di chi l'aveva deciso.
   const paymentsCount = (order.payments || []).length
   useEffect(() => {
-    setSel(fullSelection(order))
+    setSel(selezioneIniziale(order))
     setSelUnita({})
     setDisplay(null)
     setAcc(null)
@@ -277,6 +332,68 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   const toPay = Math.min(round2(amount), due)
   const change = Math.max(0, round2(amount - due))
 
+  // ── LO SCONTO SEGUE LE RIGHE CHE SI STANNO RISCUOTENDO ──────────────
+  //
+  // «Se tolgo prodotti dalla schermata pagamento, lo sconto va applicato solo
+  // sui prodotti che sto riscuotendo» (l'utente, 20/08). Quindi togliendo una
+  // riga l'importo si rifà sulle righe rimaste: in percentuale è la sua
+  // definizione, in euro decide la strategia del locale (tetto / proporzione /
+  // avviso) — la stessa che governa un conto a cui si tolgono righe, e non se
+  // ne scrive una seconda.
+  //
+  // Si riscrive anche sul conto, non solo a schermo: la selezione vive solo
+  // qui dentro, mentre l'importo lo leggono la coda, l'altro tablet e il
+  // webhook del lettore. Senza le righe accanto, quell'importo sarebbe un
+  // numero di cui nessuno sa più il perché.
+  const righeSelezionate = splitting ? righeSconto(selection) : null
+  const firmaSelezione = splitting ? firmaRighe(righeSelezionate) : ''
+  // Il lordo su cui cade lo sconto: le righe scelte adesso, o tutto quello che
+  // resta se non se n'è tolta nessuna.
+  const baseSconto = lordoSelezione(order, righeSelezionate)
+  const scontoPreparato = order.discount
+  const scontoOra = scontoInPreparazione(order)
+  useEffect(() => {
+    if (closed || !scontoPreparato || !(scontoOra > 0)) return
+    const righe = righeSelezionate
+    if (firmaRighe(righe) === firmaRighe(order.discount_items)) return
+    const buono = scontoPreparato.type === 'buono'
+    // IL BUONO SI ACCORCIA E BASTA, con qualsiasi strategia: il credito è già
+    // stato scalato al beneficiario, quindi se la selezione scende sotto il
+    // valore del buono la differenza gli va RESTITUITA — e a farlo è
+    // `applyVoucherDiscount`, che sa rimettere a posto il saldo. Lasciandolo
+    // più grande di quello che paga, quel credito sarebbe bruciato per niente.
+    const nuovo = buono
+      ? Math.min(scontoOra, baseSconto)
+      : discountAfterChange(
+          {
+            discount: scontoPreparato,
+            prevAmount: scontoOra,
+            prevTotal: lordoSelezione(order, order.discount_items || null),
+            newTotal: baseSconto,
+          },
+          settings?.discount_policy
+        )
+    // Sotto zero non c'è più uno sconto: si toglie, e il buono torna intero
+    // al beneficiario invece di restare appeso a un importo che non esiste.
+    const aggiorna = async () => {
+      const id = await orderId()
+      if (buono && nuovo > 0) {
+        return applyVoucherDiscount(id, scontoPreparato.voucher_id, nuovo, { items: righe })
+      }
+      return setOrderDiscount(id, nuovo > 0 ? scontoPreparato : null, { items: righe, amount: nuovo })
+    }
+    setOptimisticDisc({
+      disc: nuovo > 0 ? (buono ? { ...scontoPreparato, value: nuovo } : scontoPreparato) : null,
+      amount: nuovo,
+      items: nuovo > 0 ? righe : null,
+    })
+    aggiorna().catch((e) => {
+      setOptimisticDisc(null)
+      toastError(`Sconto non aggiornato: ${e.message}`)
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [firmaSelezione, splitting, scontoPreparato, scontoOra, closed])
+
   // Metodi come nella foto del POS: Contante, Carta di Credito (POS
   // esterno, si registra e basta) e SumUp (il lettore Solo, transazione
   // via Cloud API). SumUp è SEMPRE in lista: senza pairing è spento con
@@ -309,8 +426,10 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   const voucherBalance = chosenVoucher ? round2(chosenVoucher.balance) : 0
   const voucherDefault = round2(Math.min(due, voucherBalance))
   const voucherReq = discDigits ? digitsToEuro(discDigits) : voucherDefault
+  // Il buono non copre più delle righe che sta pagando: scalarne di più
+  // brucerebbe credito del beneficiario per niente.
   const voucherRedeem = chosenVoucher
-    ? round2(Math.min(voucherReq, voucherBalance, Number(order.total) || 0))
+    ? round2(Math.min(voucherReq, voucherBalance, baseSconto))
     : 0
 
   async function run(fn) {
@@ -368,6 +487,27 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   const riscuoti = ({ servi = false, senzaStampa = false } = {}) => {
     const autoServe = autoServeBase || servi
     const items = !manual && splitting ? selection : null
+    // ── LO SCONTO SI CONSUMA QUI ──────────────────────────────────────
+    // Se ne va dentro questo incasso, con le righe su cui cadeva, e sul conto
+    // non resta niente di preparato: il prossimo che paga la sua parte parte
+    // pulito e può farsi scontare le SUE righe. Due riscossioni scontate sono
+    // due sconti, ognuno con le sue righe — è quello che chiedeva il locale.
+    //
+    // Con un importo battuto a mano NO: quello è un acconto, non salda le
+    // righe scelte, e portarsi via tutto lo sconto vorrebbe dire regalarlo a
+    // chi ha messo venti euro sul tavolo. Resta preparato per il saldo.
+    const sconto =
+      !manual && scontoOra > 0 && order.discount
+        ? {
+            type: order.discount.type,
+            value: order.discount.value,
+            amount: scontoOra,
+            items: order.discount_items || null,
+            ...(order.discount.voucher_id
+              ? { voucher_id: order.discount.voucher_id, voucher_name: order.discount.voucher_name ?? null }
+              : {}),
+          }
+        : null
     // Conto già coperto (sconto totale, buono o acconti): non c'è nulla da
     // incassare ma il conto va CHIUSO lo stesso, altrimenti resta aperto per
     // sempre e blocca anche la chiusura di cassa.
@@ -391,7 +531,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
             await onBeforePay?.()
             const oid = await orderId()
             setTimeout(() => {
-              registerPayment(oid, { amount: toPay, method: 'lettore', items, autoServe }).catch((e) =>
+              registerPayment(oid, { amount: toPay, method: 'lettore', items, autoServe, sconto }).catch((e) =>
                 onError?.(`Lettore simulato: ${e.message}`)
               )
             }, 2500)
@@ -404,7 +544,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
       // Il lettore VERO avvia una transazione: qui si aspetta l'esito.
       return run(async () => {
         await onBeforePay?.()
-        const res = await readerCheckout(await orderId(), { amount: toPay, items })
+        const res = await readerCheckout(await orderId(), { amount: toPay, items, sconto })
         if (res?.unavailable) {
           setError('Lettore non disponibile in ambiente di sviluppo: simula dai DevTools.')
           return
@@ -422,7 +562,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
         // `chiude`: quello che questa schermata ha davanti adesso. Senza,
         // l'api rilegge il conto per decidere e prende la versione di prima —
         // quella senza lo sconto appena applicato (BUG-046).
-        await registerPayment(await orderId(), { amount: toPay, method, items, autoServe, chiude: willClose })
+        await registerPayment(await orderId(), { amount: toPay, method, items, autoServe, chiude: willClose, sconto })
       } catch (e) {
         setError(e.message)
         onError?.(`Pagamento non registrato: ${e.message}`)
@@ -438,22 +578,26 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
     discType === 'percent'
       ? Math.min(parseInt(discDigits || '0', 10) || 0, 100)
       : digitsToEuro(discDigits)
-  const discPreview = discountAmount(order.total, { type: discType, value: discValue })
+  // L'ANTEPRIMA È SULLE RIGHE SELEZIONATE, non sul conto: è il numero che chi
+  // incassa confronta con quello che ha davanti sul tavolo.
+  const discPreview = discountAmount(baseSconto, { type: discType, value: discValue })
 
   // Applica SUBITO a schermo (override locale), server in background.
+  // Lo sconto nasce già legato alle righe che si stanno riscuotendo: `items`
+  // null vuol dire «tutto quello che resta», che è il caso di sempre.
   const applyDiscount = () => {
     // BUONO come sconto: attinge al saldo del beneficiario (anche parziale).
     if (discType === 'buono') {
       if (!chosenVoucher || !(voucherRedeem > 0)) return
       const disc = { type: 'buono', value: voucherRedeem, voucher_id: chosenVoucher.id, voucher_name: chosenVoucher.holder_name }
-      setOptimisticDisc({ disc, amount: voucherRedeem })
+      setOptimisticDisc({ disc, amount: voucherRedeem, items: righeSelezionate })
       setShowDiscount(false)
       setDiscDigits('')
       const vid = chosenVoucher.id
       setVoucherId('')
       ;(async () => {
         try {
-          await applyVoucherDiscount(await orderId(), vid, voucherReq)
+          await applyVoucherDiscount(await orderId(), vid, voucherReq, { items: righeSelezionate })
         } catch (e) {
           setOptimisticDisc(null)
           toastError(`Buono non applicato: ${e.message}`)
@@ -462,12 +606,22 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
       return
     }
     const disc = discValue > 0 ? { type: discType, value: discValue } : null
-    setOptimisticDisc({ disc, amount: discountAmount(orderProp.total, disc) })
+    setOptimisticDisc({
+      disc,
+      amount: discountAmount(baseSconto, disc),
+      items: disc ? righeSelezionate : null,
+    })
     setShowDiscount(false)
     setDiscDigits('')
     ;(async () => {
       try {
-        await setOrderDiscount(await orderId(), disc)
+        // L'importo lo detta la schermata, che ha davanti le righe scelte:
+        // rifarlo di là vorrebbe dire calcolarlo su un conto vecchio di un
+        // istante, che è la strada da cui è nato BUG-046.
+        await setOrderDiscount(await orderId(), disc, {
+          items: righeSelezionate,
+          amount: discountAmount(baseSconto, disc),
+        })
       } catch (e) {
         setOptimisticDisc(null)
         toastError(`Sconto non applicato: ${e.message}`)
@@ -693,6 +847,14 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                         {p.cosa.join(' · ')}
                       </div>
                     )}
+                    {/* Lo sconto che quel giro si è portato via, sotto al suo
+                        incasso: è lì che si va a cercare perché quattro birre
+                        hanno fatto quattordici euro invece di sedici. */}
+                    {p.sconto && (
+                      <div className="muted small" style={{ paddingLeft: 10, opacity: 0.8 }}>
+                        🎁 {p.sconto.etichetta} −{formatPrice(p.sconto.importo)}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -701,12 +863,17 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
 
           {/* Riepilogo come nel POS: Pagato (verde) / Dovuto (rosso) / Totale */}
           <div style={{ flexShrink: 0, borderTop: '1px solid var(--line)', paddingTop: 8 }}>
-            {(order.discount_amount || 0) > 0 && (
-              <div className="row between muted small">
-                <span>Sconto</span>
-                <span>−{formatPrice(order.discount_amount)}</span>
+            {/* GLI SCONTI SONO UNA LISTA. Uno per ogni riscossione che se l'è
+                portato via, più quello preparato adesso: sommarli in una riga
+                sola vorrebbe dire tornare alla cifra di cui nessuno sa il
+                perché. Con un solo sconto su tutto il conto la riga è quella
+                di sempre. */}
+            {scontiDelConto(order).map((sc, idx) => (
+              <div className="row between muted small" key={idx}>
+                <span>{sc.etichetta}</span>
+                <span>−{formatPrice(sc.importo)}</span>
               </div>
-            )}
+            ))}
             <div className="row between small">
               <span style={{ color: '#2ecc71' }}>Pagato</span>
               <span style={{ color: '#2ecc71' }}>{formatPrice(paid)}</span>
@@ -809,8 +976,8 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
 
           {scontoFuoriMisura && (
             <div className="banner" style={{ marginTop: 10 }}>
-              Lo sconto ({formatPrice(order.discount_amount)}) supera il totale del conto (
-              {formatPrice(order.total)}): correggilo qui sotto prima di incassare.
+              Lo sconto ({formatPrice(order.discount_amount)}) supera quello che stai
+              riscuotendo ({formatPrice(baseSconto)}): correggilo qui sotto prima di incassare.
             </div>
           )}
 
@@ -985,7 +1152,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                   ? chosenVoucher
                     ? `Dal buono: −${formatPrice(voucherRedeem)}${voucherRedeem < voucherReq ? ' (saldo/totale insufficiente)' : ''}`
                     : 'Scegli un beneficiario'
-                  : `Sconto sul conto: −${formatPrice(discPreview)}`}
+                  : `Sconto su quello che stai riscuotendo: −${formatPrice(discPreview)}`}
               </p>
             </div>
 
@@ -1025,7 +1192,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                 style={{ marginTop: 6 }}
                 disabled={saving}
                 onClick={() => {
-                  setOptimisticDisc({ disc: null, amount: 0 })
+                  setOptimisticDisc({ disc: null, amount: 0, items: null })
                   setShowDiscount(false)
                   setDiscDigits('')
                   ;(async () => {

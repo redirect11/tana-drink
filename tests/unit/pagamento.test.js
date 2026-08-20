@@ -16,6 +16,14 @@ import {
   discountAfterChange,
   scontoEccessivo,
   dettaglioIncassi,
+  scontiConsumati,
+  scontoConsumato,
+  scontoTotale,
+  lordoResiduo,
+  lordoSelezione,
+  scontiDelConto,
+  etichettaSconto,
+  orderTotal,
   unitaDaConteggio,
   conteggioDaUnita,
   toccaUnita,
@@ -97,7 +105,7 @@ describe('remainingItems: aggregato meno quantità già pagate', () => {
   })
 })
 
-describe('selectionAmount: split con sconto ripartito', () => {
+describe('selectionAmount: lo sconto cade sulle righe che si stanno riscuotendo', () => {
   it('selezione vuota = tutto il residuo', () => {
     expect(selectionAmount(order(), [])).toBe(22)
   })
@@ -107,10 +115,21 @@ describe('selectionAmount: split con sconto ripartito', () => {
     ])
     expect(amount).toBe(7)
   })
-  it('lo sconto si ripartisce in proporzione sulla selezione', () => {
-    const o = order({ discount_amount: 2.2 }) // 10% su 22
+  // ERA UNA RIPARTIZIONE, ADESSO NO. Prima lo sconto era uno solo, sul conto
+  // intero, e chi pagava la sua parte se ne portava via una quota in
+  // proporzione: 2,20 € su 22 diventavano 0,80 € sugli 8 € del Gin Tonic.
+  // «Lo sconto va applicato solo sui prodotti che sto riscuotendo» (l'utente,
+  // 20/08/2026): quei 2,20 € sono stati decisi su QUESTE righe, quindi cadono
+  // per intero su queste righe. Chi offre due birre sconta quelle due birre,
+  // non una fetta di tutto il tavolo.
+  it('lo sconto preparato cade tutto sulla selezione, non in proporzione', () => {
+    const o = order({
+      discount: { type: 'euro', value: 2.2 },
+      discount_amount: 2.2,
+      discount_items: [{ drink_id: 'gin', name: 'Gin Tonic', unit_price: 8, qty: 1 }],
+    })
     const amount = selectionAmount(o, [{ drink_id: 'gin', unit_price: 8, qty: 1 }])
-    expect(amount).toBe(7.2) // 8 − 10%
+    expect(amount).toBe(5.8) // 8 − 2,20, non 8 − 0,80
   })
   it('selezione che copre tutto il residuo → residuo esatto (niente derive)', () => {
     const o = order({ discount_amount: 2.2 })

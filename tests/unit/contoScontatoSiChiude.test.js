@@ -164,3 +164,95 @@ describe('un conto scontato si chiude come chiuso', () => {
     expect(ultimaPatch().payments.at(-1).amount).toBe(22)
   })
 })
+
+// ── DUE RISCOSSIONI SCONTATE, SENZA RETE ─────────────────────────────
+//
+// «Se ho applicato uno sconto a 2 prodotti prima e a tre prodotti dopo, sono
+// due sconti applicati» (l'utente, 20/08/2026). Il giro vero è questo: si
+// sconta la parte di uno, si incassa, e chi resta al tavolo si fa scontare la
+// sua — mentre la rete non risponde e ogni rilettura racconta il passato.
+//
+// Lo sconto viaggia DENTRO il pagamento proprio per questo: qui `leggiOrdine`
+// risponde sempre col conto di prima, quindi il residuo lo può sapere solo chi
+// gli passa lo sconto insieme all'importo. È BUG-046 risolto alla radice — un
+// gesto, una scrittura — e `chiude` resta come seconda cintura.
+describe('gli sconti si accumulano, uno per riscossione', () => {
+  const gin = riga('Gin', 1, 8)
+  const mojito = riga('Mojito', 2, 7)
+
+  it('il primo sconto se ne va dentro il primo incasso', async () => {
+    await subito(
+      api.registerPayment('ord-1', {
+        amount: 6,
+        method: 'banco',
+        items: [gin],
+        sconto: { type: 'euro', value: 2, amount: 2, items: [gin] },
+      })
+    )
+    const patch = ultimaPatch()
+    expect(patch.payments.at(-1).sconto).toEqual({
+      type: 'euro',
+      value: 2,
+      amount: 2,
+      items: [gin],
+    })
+    // E sul conto non resta niente di preparato: il prossimo parte pulito.
+    expect(patch.discount_amount).toBe(0)
+    expect(patch.discount).toBeNull()
+    expect(patch.discount_items).toBeNull()
+    // Restano 14 € da incassare: il conto NON si chiude.
+    expect(patch.payment_status).toBe('parziale')
+  })
+
+  it('il secondo sconto è un altro sconto, e il conto si chiude al centesimo', async () => {
+    // Il primo incasso è già scritto sul conto (la rilettura, offline, lo
+    // vedrebbe solo dopo l'ACK del server: qui glielo mettiamo noi, come fa
+    // la cache quando la scrittura finalmente passa).
+    stato.ordine = {
+      ...contoDaVentidue(),
+      payment_status: 'parziale',
+      payments: [
+        {
+          id: 'p1',
+          amount: 6,
+          method: 'banco',
+          items: [gin],
+          sconto: { type: 'euro', value: 2, amount: 2, items: [gin] },
+        },
+      ],
+    }
+    const res = await subito(
+      api.registerPayment('ord-1', {
+        amount: 12.6,
+        method: 'banco',
+        items: [mojito],
+        autoServe: true,
+        chiude: true,
+        sconto: { type: 'percent', value: 10, amount: 1.4, items: [mojito] },
+      })
+    )
+    expect(res.closed).toBe(true)
+    const patch = ultimaPatch()
+    expect(patch.payment_status).toBe('pagato')
+    // Due sconti, non uno: 2 € sul Gin e 1,40 sui due Mojito.
+    expect(patch.payments.map((p) => p.sconto.amount)).toEqual([2, 1.4])
+    // 6 + 12,60 = 18,60 incassati; 22 − 2 − 1,40 = 18,60. Torna al centesimo.
+    expect(patch.payments.reduce((s, p) => s + p.amount, 0)).toBe(18.6)
+  })
+
+  it('il residuo lo decide lo sconto che arriva col gesto, non la rilettura', async () => {
+    // Nessuno sconto scritto sul conto (la sua scrittura è ancora appesa, o
+    // non c'è mai stata): senza il tetto, chi non dichiara niente incasserebbe
+    // 22. Dichiarando lo sconto, il tetto scende a 19,80 — e ci sta dentro.
+    await subito(
+      api.registerPayment('ord-1', {
+        amount: 50,
+        method: 'banco',
+        autoServe: true,
+        sconto: { type: 'percent', value: 10, amount: 2.2, items: null },
+      })
+    )
+    expect(ultimaPatch().payments.at(-1).amount).toBe(19.8)
+    expect(ultimaPatch().payment_status).toBe('pagato')
+  })
+})

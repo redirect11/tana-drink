@@ -61,7 +61,7 @@ import {
   titoloGruppo,
   ORDER_OPEN,
 } from '../lib/comande.js'
-import { paidAmount, dettaglioIncassi } from '../lib/pagamento.js'
+import { paidAmount, dettaglioIncassi, scontoTotale } from '../lib/pagamento.js'
 import { aggiunteInComandaNuova, isPersonale, puoGestireComande, puoSegnare } from '../lib/ruoli.js'
 import {
   makeLineId,
@@ -2009,7 +2009,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     confirmedTotal +
       draftTotal +
       extras -
-      (isNew ? 0 : (order.discount_amount || 0) + paidAmount(order))
+      (isNew ? 0 : scontoTotale(order) + paidAmount(order))
   )
 
   return (
@@ -2618,12 +2618,15 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                 if (d.sconto <= 0 && d.incassi.length === 0) return null
                 return (
                   <div className="posd-incassi">
-                    {d.sconto > 0 && (
-                      <div className="row between muted small">
-                        <span>Sconto</span>
-                        <span>−{formatPrice(d.sconto)}</span>
+                    {/* GLI SCONTI SONO PIÙ D'UNO: ognuno se l'è portato via
+                        la riscossione a cui apparteneva. Sommarli in una riga
+                        sola sarebbe di nuovo la cifra che non spiega niente. */}
+                    {d.sconti.map((sc, idx) => (
+                      <div className="row between muted small" key={`sc-${idx}`}>
+                        <span>{sc.etichetta}</span>
+                        <span>−{formatPrice(sc.importo)}</span>
                       </div>
-                    )}
+                    ))}
                     {d.incassi.map((i, idx) => (
                       <div key={idx} className="posd-incasso">
                         <div className="row between muted small">
@@ -2641,6 +2644,11 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                         </div>
                         {i.cosa && (
                           <div className="muted small posd-incasso-cosa">{i.cosa.join(' · ')}</div>
+                        )}
+                        {i.sconto && (
+                          <div className="muted small posd-incasso-cosa">
+                            🎁 {i.sconto.etichetta} −{formatPrice(i.sconto.importo)}
+                          </div>
                         )}
                       </div>
                     ))}
