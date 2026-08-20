@@ -5021,6 +5021,34 @@ requirements:
     priority: P2
     test_cases: []
 
+  - id: REQ-STAMPA-012
+    title: "Più comande dello stesso conto si stampano insieme"
+    area: "src/lib/printer.js (printComande, comandeStampabili), src/components/OrderPosDetail.jsx"
+    description: >
+      Chiesto dall'utente il 20/08: «se ho più di una comanda (dello stesso
+      ordine!) devo poterle stampare insieme». Un conto battuto in tre
+      riprese ha tre ticket, e rifarli uno per uno col conto in mano è tempo
+      perso al banco.
+      DOVE: nel dettaglio del conto, dentro «Comande» — dove ogni comanda ha
+      già il suo tasto di stampa. Sopra l'elenco compare «Stampa tutte (n)»,
+      e solo quando ce n'è davvero più d'una: con una sola non c'è niente da
+      mettere insieme.
+      INSIEME COME GESTO, NON COME TICKET. Escono SEPARATE, una per comanda,
+      identiche a come uscirebbero da sole — stesso formato, stesso taglio in
+      fondo. Al banco un ticket è un giro di lavoro: due giri su una striscia
+      sola sarebbero BUG-051 rifatto apposta. Si aspetta ogni stampa prima
+      della successiva, perché il builder della stampante è uno solo e due
+      stampe che si accavallano si scriverebbero addosso.
+      LE ANNULLATE RESTANO FUORI: è lavoro buttato, e ristamparlo
+      rimetterebbe al banco un ticket da non preparare. Le SERVITE invece
+      escono: si ristampa per rifare il giro, non per mandare al banco solo
+      quello che manca.
+    status: implemented
+    generate_issue: true
+    labels: [stampa, banco]
+    priority: P2
+    test_cases: [tests/unit/stampaComande.test.js, tests/component/OrderPosDetail.test.jsx]
+
   # ══════════════════════════════════════════════════════════════════════
   #  DAI FOGLI DI FLAVIO — letti il 19/08 (ANALISI DATI.xlsx, RAPP ORE.xlsx,
   #  GEN ORD REC.xlsx, INV.xlsx, FORNITORI REC.xlsx).

@@ -70,7 +70,7 @@ import {
   reconcileLayout,
 } from '../lib/orderLines.js'
 import { toastSuccess, toastError } from '../lib/toast.js'
-import { printComanda, printScontrino, releaseReceiptPrint } from '../lib/printer.js'
+import { printComanda, printComande, comandeStampabili, printScontrino, releaseReceiptPrint } from '../lib/printer.js'
 import PosProductPicker from './PosProductPicker.jsx'
 import PreparazioneParziale from './PreparazioneParziale.jsx'
 import { useComandeLocali, comandaProvvisoria } from '../lib/comandeLocali.js'
@@ -871,6 +871,14 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
         .comandeDi(contoPerLocali)
         .map((c) => (pendingEdits[c.id] ? { ...c, items: pendingEdits[c.id] } : c)),
     [comandeLocali, contoPerLocali, pendingEdits]
+  )
+  // Quelle che si possono ancora ristampare: le annullate no, è lavoro
+  // buttato e rimetterlo al banco sarebbe un ticket da non preparare.
+  // Si guardano quelle a schermo — comprese le appena battute, che qui ci
+  // sono già e sul server magari no.
+  const stampabili = useMemo(
+    () => comandeStampabili({ comande: effComande }),
+    [effComande]
   )
   // Riferimenti sempre aggiornati per l'auto-conferma e la conferma all'uscita.
   const effComandeRef = useRef(effComande)
@@ -2787,6 +2795,24 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
               <h3 style={{ margin: 0 }}><IconReceipt /> Comande</h3>
               <button className="btn ghost small" onClick={() => setShowComande(false)}><IconClose /> Chiudi</button>
             </div>
+            {/* PIÙ DI UNA COMANDA: si stampano insieme. Un conto battuto in
+                tre riprese ha tre ticket, e rifarli uno per uno col conto in
+                mano è tempo perso al banco. Escono SEPARATI, uno per
+                comanda: sono tre giri di lavoro, non uno (vedi BUG-051).
+                Il tasto compare solo quando ce n'è davvero più d'una. */}
+            {stampabili.length > 1 && (
+              <button
+                className="btn ghost small block"
+                style={{ marginTop: 10 }}
+                onClick={() =>
+                  printComande(order, stampabili)
+                    .then((n) => toastSuccess(`${n} comande in stampa`))
+                    .catch((e) => setError(`Stampa: ${e.message}`))
+                }
+              >
+                <IconPrinter /> Stampa tutte ({stampabili.length})
+              </button>
+            )}
             {effComande.map((c) => {
               const ns = nextComandaStatus(c.status)
               return (
