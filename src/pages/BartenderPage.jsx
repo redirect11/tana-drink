@@ -95,7 +95,7 @@ import { showToast } from '../lib/toast.js'
 import { beep, installAudioUnlock } from '../lib/beep.js'
 import { subscribePending, dismissPending, dismissBanner } from '../lib/pendingOrders.js'
 import { syncSumUpProducts, isSumUpEnabled } from '../lib/sumupApi.js'
-import { printComanda, printScontrino, loadPrinterSettings, claimReceiptPrint, releaseReceiptPrint } from '../lib/printer.js'
+import { printComanda, printScontrino, loadPrinterSettings, claimReceiptPrint, releaseReceiptPrint, comandeDaStampare, claimComandaPrint } from '../lib/printer.js'
 import MenuManager from '../components/MenuManager.jsx'
 import PrinterSetup from '../components/PrinterSetup.jsx'
 import InventoryManager from '../components/InventoryManager.jsx'
@@ -697,10 +697,6 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                   renotify: true,
                 })
               }
-              // Auto-stampa comanda se abilitata nelle impostazioni stampante.
-              if (printerSettings.autoPrintComanda) {
-                printComanda(o, o.comande?.find((cc) => cc.id === o.active_comanda_id) ?? null).catch((e) => console.warn('[printer] auto-comanda:', e.message))
-              }
             }
           }
           // Auto-stampa scontrino alla CHIUSURA del conto (prima era al
@@ -708,6 +704,22 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
           // quella accesa usciva due volte — al pronto e all'incasso).
           // claimReceiptPrint garantisce una sola copia per conto, da qualunque
           // schermata sia stato chiuso.
+          // AUTO-STAMPA COMANDE: fuori dal blocco degli avvisi, apposta.
+          // La stampa non è un avviso: la comanda serve al banco anche per
+          // l'ordine battuto da QUESTO terminale, e serve anche quando è la
+          // SECONDA comanda di un conto già aperto — due casi che i filtri
+          // degli avvisi (battutoDaQui, ordine nuovo) tagliavano fuori.
+          // La regola di cosa stampare sta in printer.js (comandeDaStampare),
+          // la pretesa per non stampare doppio pure (claimComandaPrint).
+          if (printerSettings.autoPrintComanda) {
+            for (const o of data) {
+              for (const c of comandeDaStampare(o)) {
+                if (claimComandaPrint(o.id, c.id)) {
+                  printComanda(o, c).catch((e) => console.warn('[printer] auto-comanda:', e.message))
+                }
+              }
+            }
+          }
           if (printerSettings.autoPrintScontrino) {
             for (const o of data) {
               if (o.payment_status === 'pagato' && claimReceiptPrint(o.id)) {
