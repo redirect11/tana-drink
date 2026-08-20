@@ -2240,7 +2240,7 @@ describe('il colore del conto, e le comande che se lo portano dietro', () => {
     expect(colorate(document.body)).toHaveLength(0)
   })
 
-  it('vince lo stato: la striscia della card non cambia per il colore', async () => {
+  it('di suo vince lo stato: la striscia della card non cambia per il colore', async () => {
     ordini = [{ ...CODA[0], id: 'o46', daily_number: 46, colore: '#e74c3c' }]
     montaCoda()
     await screen.findByText('In corso')
@@ -2250,8 +2250,11 @@ describe('il colore del conto, e le comande che se lo portano dietro', () => {
     // colorato è un segno in più, non un segno al posto di quello. La
     // classe dello stato sopravvive accanto a quella del colore, e nessuno
     // scrive il bordo a mano.
+    // È il DEFAULT, e conta che resti tale: chi non tocca l'impostazione
+    // nuova deve vedere la coda di ieri sera.
     expect(card).toHaveClass('ricevuto')
     expect(card).toHaveClass('conto-colorato')
+    expect(card).not.toHaveClass('bordo-conto')
     expect(card.style.borderLeftColor).toBe('')
     expect(tinta(card)).toBe('#e74c3c')
   })
@@ -2284,6 +2287,95 @@ describe('il colore del conto, e le comande che se lo portano dietro', () => {
     await utente.click(within(card).getByRole('button', { name: 'Nessun colore' }))
 
     expect(setOrderColore).toHaveBeenCalledWith('o48', null)
+  })
+})
+
+// ── LA STRISCIA PUÒ DIRE IL COLORE DEL CONTO (REQ-UI-020) ────────────
+//
+// «Serve una impostazione che mi permetta di scegliere se il bordino
+// rappresenta gli stati del pagamento ordine o può essere del colore
+// scelto per la card» (l'utente, 20/08/2026). Dove un conto si spezza in
+// tante comande sparse, riconoscere il tavolo vale più del passo di
+// lavoro — e a deciderlo è chi manda avanti il locale.
+//
+// Quello che qui costa un drink sbagliato:
+//   · l'impostazione vale in TUTTE le viste della coda, non solo in quella
+//     che si è toccata per ultima: la striscia deve voler dire la stessa
+//     cosa ovunque, o non vuol dire niente;
+//   · un conto senza colore, e un conto annullato, tengono la striscia
+//     dello stato: la prima cosa sparirebbe, la seconda tornerebbe viva.
+describe('la striscia della card può portare il colore del conto', () => {
+  const acceso = () => {
+    impostazioni = { ...impostazioni, bordo_colore_conto: true }
+  }
+  const tinta = (card) => card.style.getPropertyValue('--conto-colore')
+
+  it('accesa l’impostazione, la card delle corsie porta il colore sulla striscia', async () => {
+    acceso()
+    ordini = [{ ...CODA[0], id: 'o51', daily_number: 51, colore: '#e74c3c' }]
+    montaCoda()
+    await screen.findByText('In corso')
+
+    const card = document.querySelector('.corsia-card')
+    expect(card).toHaveClass('bordo-conto')
+    // IL FONDO NON SI PERDE: sono due segni, e quello che risponde da
+    // lontano resta il fondo. La classe dello stato resta anche lei —
+    // a spegnerla ci pensa il CSS, non il JSX.
+    expect(card).toHaveClass('conto-colorato')
+    expect(card).toHaveClass('ricevuto')
+    expect(tinta(card)).toBe('#e74c3c')
+  })
+
+  it('e vale anche nella griglia, dove la striscia diceva il pagamento', async () => {
+    acceso()
+    impostazioni = { ...impostazioni, queue_view: 'griglia' }
+    ordini = [{ ...CODA[0], id: 'o52', daily_number: 52, colore: '#1abc9c' }]
+    montaCoda()
+    await screen.findByText('#52')
+
+    const card = document.querySelector('.grid-card')
+    expect(card).toHaveClass('bordo-conto')
+    // La classe del pagamento resta sotto: se domani si spegne
+    // l'impostazione, la griglia torna a dire quello che diceva.
+    expect(card).toHaveClass('pay-aperto')
+    expect(tinta(card)).toBe('#1abc9c')
+  })
+
+  it('un conto senza colore tiene la striscia dello stato: non sparisce', async () => {
+    // Mettendo la classe lo stesso, `var(--conto-colore)` non sarebbe
+    // definita e la striscia diventerebbe trasparente: una card senza
+    // bordo, che non dice più né una cosa né l'altra.
+    acceso()
+    ordini = [{ ...CODA[0], id: 'o53', daily_number: 53 }]
+    montaCoda()
+    await screen.findByText('In corso')
+
+    const card = document.querySelector('.corsia-card')
+    expect(card).not.toHaveClass('bordo-conto')
+    expect(card).toHaveClass('ricevuto')
+  })
+
+  it('un conto annullato tiene il grigio, impostazione o no', async () => {
+    // Lavoro buttato: una striscia accesa lo rimetterebbe in mezzo ai vivi,
+    // e nella colonna degli annullati sarebbe la card più vistosa di tutte.
+    acceso()
+    ordini = [
+      {
+        ...CODA[0],
+        id: 'o54',
+        daily_number: 54,
+        status: 'annullato',
+        workflow_status: 'annullato',
+        colore: '#f1c40f',
+      },
+    ]
+    montaCoda()
+    await screen.findByText('✖️ Annullati')
+
+    const card = document.querySelector('.corsia-card')
+    expect(card).not.toHaveClass('bordo-conto')
+    // Il FONDO resta colorato anche lì: è il conto, non il suo stato.
+    expect(card).toHaveClass('conto-colorato')
   })
 })
 

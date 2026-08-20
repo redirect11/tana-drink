@@ -107,28 +107,10 @@ function CardInArrivo({ pending, onScarta }) {
   )
 }
 
-// ── IL COLORE DEL CONTO SULLA CARD ────────────────────────────────────
-//
-// TINGE LA CARD INTERA, sfumata e leggera: è il segno che dice «questa e
-// quella sono lo stesso tavolo» anche quando finiscono in tre colonne
-// diverse. Prima era un pallino accanto al numero, e non serviva: questo
-// colore deve rispondere da LONTANO, guardando la lavagna mentre si versa,
-// e dieci pixel da lontano non ci sono.
-//
-// NON LA STRISCIA A SINISTRA, che è un vocabolario chiuso di sei tinte —
-// arancio da fare, azzurro al banco, verde pronto, grigio uscito, ambra
-// pagato — e dice a che punto sta il lavoro. Quella non si tocca: chi
-// vince fra i due sta scritto in lib/coloriConto.js. Il fondo invece era
-// libero, e il colore del conto ci sta senza coprire niente.
-//
-// Restituisce le proprietà da mettere sulla card (classe e variabile CSS),
-// non un pezzo di schermata: il colore non è una cosa DENTRO la card, è
-// la card.
-export function coloreCardConto(order) {
-  const colore = coloreDelConto(order)
-  if (!colore) return null
-  return { className: 'conto-colorato', style: { '--conto-colore': colore } }
-}
+// Il colore del conto sulla card — classe e variabile CSS — sta in
+// lib/coloriConto.js insieme alla regola di chi vince fra colore del conto
+// e colore dello stato: è logica pura, la usano tutte e quattro le viste
+// della coda, e nessuna di loro è questo componente.
 
 // LA TAVOLOZZA, dentro il ⋯ della card. La stessa fila di gettoni del menù
 // e del POS, con la stessa tavolozza. Sta dietro al ⋯ e non sul pallino

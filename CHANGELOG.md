@@ -4,6 +4,26 @@
 
 ### Per chi gestisce
 
+- **La striscia colorata delle card può dire il colore del conto.** In
+  *Impostazioni ▸ 🎨 Aspetto ▸ Le card della coda* si sceglie cosa dice
+  quella riga a sinistra: **«💳 Com'è messo il conto»** — da incassare,
+  acconto, pagato, annullato, com'è sempre stato — oppure **«🎨 Il colore
+  del conto»**, quello scelto dal «⋯ Azioni» della card o assegnato da solo
+  ai conti nuovi. Vale in tutte le viste della coda, comprese le corsie del
+  banco. Chi non tocca niente non vede cambiare niente. Un conto **senza
+  colore**, e un conto **annullato**, tengono sempre la striscia dello
+  stato.
+
+- **Il colore del conto si vede molto di più.** Era un velo così tenue da
+  non riconoscersi da due passi: adesso la card è tinta il doppio, e da
+  lontano si vede al volo che tre comande sparse in tre colonne sono lo
+  stesso tavolo. Il testo resta leggibile su tutti i temi, chiaro e scuro.
+
+- **Nella griglia il conto pagato-ma-da-servire torna ambra.** Era verde
+  come uno concluso: la striscia ambra — «i soldi li hai già presi, il
+  drink lo devi ancora fare» — c'era ma non si vedeva mai. Nelle corsie il
+  difetto non c'era.
+
 - **Le card del banco non si sfasciano più con tante colonne accese.**
   Quando la card diventa stretta — sette colonne su un tablet, ma succede
   già a quattro — i tasti **si impilano invece di schiacciarsi**: prima

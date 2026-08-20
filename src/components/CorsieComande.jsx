@@ -6,11 +6,11 @@ import {
   BolloAcconto,
   Corsia,
   Lavagna,
-  coloreCardConto,
   PiedeCorsia,
   TastoAzioni,
   TastoCorsia,
 } from './Corsia.jsx'
+import { coloreCardConto } from '../lib/coloriConto.js'
 import { useMemo, useRef, useState } from 'react'
 import {
   DndContext,
@@ -149,6 +149,10 @@ export default function CorsieComande({
   attesaPagamento = () => false,
   espansa = null,
   onEspandi,
+  // L'impostazione del locale: la striscia a sinistra dice il colore del
+  // conto invece del passo della preparazione. Arriva dalla pagina, che le
+  // impostazioni le ha già in cache — qui non si legge niente.
+  bordoColoreConto = false,
 }) {
   // Un solo «adesso» per tutta la vista: card diverse non devono dire tempi
   // diversi solo perché sono state disegnate a un secondo di distanza.
@@ -233,7 +237,7 @@ export default function CorsieComande({
               // IL COLORE È DEL CONTO, e la comanda se lo porta dietro: da
               // tre colonne di distanza è così che si riconosce che questa e
               // quella sono lo stesso tavolo.
-              const colore = coloreCardConto(o)
+              const colore = coloreCardConto(o, bordoColoreConto)
               return (
                 // SI PRENDE IN MANO SOLO QUELLO CHE SI PUÒ SPOSTARE: le card
                 // della colonna dei soldi non sono comande, e le annullate

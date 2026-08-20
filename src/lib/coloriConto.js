@@ -1,4 +1,5 @@
 import { CATEGORY_PALETTE } from './categoryColors.js'
+import { ORDER_STATUSES } from './orderStatus.js'
 
 // ── IL COLORE DEL CONTO ───────────────────────────────────────────────
 //
@@ -23,27 +24,65 @@ export const COLORI_CONTO = CATEGORY_PALETTE
 // ── CHI VINCE FRA COLORE DEL CONTO E COLORE DELLO STATO ───────────────
 //
 // La domanda è vera e va risposta qui, non lasciata all'ordine delle
-// regole CSS: sulla card c'è già una striscia colorata a sinistra, e dice
-// A CHE PUNTO STA il lavoro (da fare, al banco, pronto, da incassare).
+// regole CSS: sulla card ci sono due segni colorati — la STRISCIA da 4px a
+// sinistra e il FONDO — e le informazioni da dire sono tre (a che punto sta
+// il lavoro, com'è messo il pagamento, di chi è questo conto).
 //
-// VINCE LO STATO, sempre. La striscia non si tocca: è un vocabolario
-// chiuso di sei tinte — arancio da fare, azzurro al banco, verde pronto,
-// grigio uscito, ambra pagato — ed è quella che chi sta allo shaker legge
-// per sapere cosa fare adesso. Il colore del conto è un'ALTRA informazione
-// — «di chi è questa comanda» — e prende il FONDO della card, che era
-// libero. Due segni, due domande, nessuno dei due che copre l'altro.
+// IL FONDO È SEMPRE DEL CONTO. È il segno che risponde da LONTANO —
+// «quelle tre card sparse sono lo stesso tavolo» — e per quello serve una
+// superficie: provato prima come pallino da 10px accanto al numero, e da
+// due metri dieci pixel non ci sono.
 //
-// IL FONDO, NON UN PALLINO. Provato prima come pallino da 10px accanto al
-// numero, e non rispondeva alla domanda: il colore qui serve da LONTANO,
-// guardando la lavagna mentre si versa, e dieci pixel da lontano non ci
-// sono. Serve una superficie.
+// LA STRISCIA LA SCEGLIE CHI COMANDA IL LOCALE, con l'impostazione
+// `bordo_colore_conto`. Di suo dice lo STATO — un vocabolario chiuso di
+// tinte: arancio da fare, azzurro al banco, verde pronto, grigio uscito,
+// ambra pagato-da-servire — ed è quello che chi sta allo shaker legge per
+// sapere cosa fare adesso. Era l'unica risposta possibile finché la
+// domanda non l'ha fatta l'utente (20/08/2026): «serve una impostazione
+// che mi permetta di scegliere se il bordino rappresenta gli stati del
+// pagamento ordine o può essere del colore scelto per la card». Dove i
+// conti si spezzano in tante comande, riconoscere il tavolo vale più del
+// passo di lavoro — che resta scritto sulla pill dello stato e sul 💳 —
+// e quella è una scelta di chi il locale lo manda avanti, non nostra.
 //
-// MA TENUE E SFUMATO, non un fondo pieno: dodici tinte sature stese sotto
-// alle scritte le renderebbero illeggibili su un tema o sull'altro, e
-// coprirebbero l'alone del passo di lavoro. Diluite in trasparenza
-// restano un'ombra colorata — si riconosce a colpo d'occhio e non litiga
-// con niente. Le proporzioni stanno nel CSS (.order-card.conto-colorato),
-// che è il posto dove si guardano insieme al resto.
+// DUE ECCEZIONI, e stanno tutte e due qui dentro invece che nel CSS:
+//   · un conto SENZA colore (nato coi colori spenti, o tolto a mano) tiene
+//     la striscia dello stato: sparire o diventare trasparente sarebbe
+//     peggio di entrambe le risposte;
+//   · un conto ANNULLATO tiene il grigio, impostazione o no. È lavoro
+//     buttato, e una striscia accesa lo rimetterebbe in mezzo ai vivi.
+//
+// LA DECISIONE È UNA SOLA FUNZIONE (`coloreCardConto`), usata da tutte le
+// viste della coda: corsie di stato, corsie delle comande, griglia e
+// lista. Tre ternari nel JSX si sarebbero scollati al primo ritocco, ed è
+// esattamente com'era nata la striscia ambra del BUG-064.
+
+// Un conto (o la sua comanda) è lavoro buttato? Si guarda in tutti e due i
+// posti perché il campo che porta l'annullamento non è sempre lo stesso:
+// sul conto è `status`, sulla card di una corsia arriva in `workflow_status`.
+function contoAnnullato(order) {
+  return (
+    order?.status === ORDER_STATUSES.ANNULLATO ||
+    order?.workflow_status === ORDER_STATUSES.ANNULLATO
+  )
+}
+
+// COSA METTERE SULLA CARD per il colore del conto: la classe e la
+// variabile CSS, non un pezzo di schermata — il colore non è una cosa
+// DENTRO la card, è la card.
+//
+// `bordoColoreConto` è l'impostazione del locale, già in cache come tutte
+// le altre: qui dentro non si legge niente, è una funzione pura e le viste
+// la chiamano mentre disegnano.
+export function coloreCardConto(order, bordoColoreConto = false) {
+  const colore = coloreDelConto(order)
+  if (!colore) return null
+  const striscia = bordoColoreConto === true && !contoAnnullato(order)
+  return {
+    className: striscia ? 'conto-colorato bordo-conto' : 'conto-colorato',
+    style: { '--conto-colore': colore },
+  }
+}
 
 // IL COLORE AUTOMATICO, dal numero del conto. Il resto della divisione
 // per la tavolozza: due conti battuti di fila non prendono mai lo stesso

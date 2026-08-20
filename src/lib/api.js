@@ -4193,6 +4193,15 @@ export const DEFAULT_SETTINGS = {
   // sono lo stesso tavolo. Il colore a mano si può dare comunque, acceso
   // o spento che sia questo (vedi lib/coloriConto.js).
   conti_colorati: false,
+  // COSA DICE LA STRISCIA a sinistra della card, in tutte le viste della
+  // coda: di suo lo STATO — a che punto sta il lavoro e com'è messo il
+  // pagamento — che è com'è sempre stato e resta il default. Acceso,
+  // invece, la striscia porta il COLORE DEL CONTO (quello scelto a mano o
+  // assegnato in automatico): chiesto dall'utente il 20/08/2026, perché
+  // dove un conto si spezza in tante comande sparse riconoscere il tavolo
+  // vale più del passo di lavoro. Chi vince, e le due eccezioni, stanno in
+  // lib/coloriConto.js.
+  bordo_colore_conto: false,
   // Vista ordine: raggruppamento di default degli item aggiunti —
   // 'separati' (ogni tocco una riga a sé) o 'uniti' (item uguali sommati).
   // Si può comunque unire/separare al volo dal riepilogo ordine.

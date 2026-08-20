@@ -469,3 +469,112 @@ ${nome} {`)
     expect(regola('.corsia-card > .row.between')).toMatch(/flex-wrap:\s*wrap/)
   })
 })
+
+// ── L'ORDINE DELLE REGOLE È LA REGOLA (BUG-064, REQ-UI-020) ──────────
+//
+// Sulla striscia da 4px a sinistra della card scrivono cinque famiglie di
+// regole, tutte con lo stesso peso (`.order-card.qualcosa`): a parità di
+// specificità decide chi sta più in basso nel foglio. Non è un dettaglio
+// di stile, è la gerarchia dei significati — e scritta così è invisibile a
+// chi riordina il foglio in buona fede.
+//
+// È già successo: `pagato-da-servire` era stata messa PRIMA delle `pay-*`,
+// e nella griglia — l'unica vista dove la card porta tutte e due le classi
+// — l'ambra non è mai comparsa. Un conto pagato e ancora da consegnare si
+// vedeva verde come uno concluso, e chi passava a ritirare non aveva
+// niente che glielo dicesse. Nelle corsie funzionava, perché lì le `pay-*`
+// non ci sono: il difetto è vissuto mesi in produzione.
+// L'a capo si scrive così e non con la sequenza di escape: il file passa
+// per strumenti che quella sequenza la rimangiano, e una regola cercata
+// senza a capo davanti troverebbe il primo selettore che le somiglia.
+const A_CAPO = String.fromCharCode(10)
+
+describe('la striscia della card: chi vince, e perché sta dove sta', () => {
+  const css = readFileSync(join(CARTELLA, 'index.css'), 'utf8')
+  const dove = (selettore) => {
+    const i = css.indexOf(A_CAPO + selettore + ' {')
+    expect(i, selettore + ' non c’è più').toBeGreaterThan(-1)
+    return i
+  }
+
+  it('l’ambra del pagato-da-servire viene DOPO le regole del pagamento', () => {
+    const ambra = dove('.order-card.pagato-da-servire')
+    for (const pay of ['pay-aperto', 'pay-parziale', 'pay-pagato', 'pay-annullato']) {
+      expect(ambra, `.order-card.${pay} vincerebbe sull’ambra`).toBeGreaterThan(
+        dove('.order-card.' + pay)
+      )
+    }
+  })
+
+  it('e le regole del pagamento vengono dopo quelle della preparazione', () => {
+    // L'ordine di prima non si è rotto sistemando quello dell'ambra.
+    expect(dove('.order-card.pay-aperto')).toBeGreaterThan(dove('.order-card.pronto'))
+  })
+
+  it('il colore del conto sulla striscia è l’ULTIMA parola', () => {
+    // Quando la classe c'è, è una scelta esplicita di chi manda avanti il
+    // locale (impostazione «bordo_colore_conto») e deve vincere ovunque —
+    // comprese le regole delle corsie, che stanno molto più in basso nel
+    // foglio e a parità di peso vincerebbero.
+    const bordo = dove('.order-card.bordo-conto')
+    for (const prima of [
+      '.order-card.pay-pagato',
+      '.order-card.pagato-da-servire',
+      '.corsia-card.pagato-da-servire',
+      '.corsia-card.acconto',
+    ]) {
+      expect(bordo, prima + ' vincerebbe sul colore del conto').toBeGreaterThan(dove(prima))
+    }
+    expect(css.slice(bordo, bordo + 200)).toMatch(/border-left-color:\s*var\(--conto-colore\)/)
+  })
+})
+
+// ── IL FONDO COLORATO SI DEVE VEDERE, E IL TESTO SI DEVE LEGGERE ─────
+//
+// «Il colore che viene assegnato al momento è sfumato ma è molto chiaro.
+// Deve essere più visibile» (l'utente, 20/08/2026). Il fondo è passato da
+// 16%/5% a 32%/12%, e i due numeri non hanno lo stesso peso.
+// All'angolo c'è il NUMERO del conto, in --text: al 32% il caso peggiore
+// delle dodici tinte per gli otto temi di themes.js è 4,4:1, e il 32% è il
+// tetto — a 38% scende a 3,9. A metà cade il testo minore, in --muted, e
+// lì si paga: il peggiore passa da 4,1 a 3,5 (Pico scuro e Catppuccin
+// chiaro, i due temi che partivano stretti già sul fondo nudo). Il 12% è
+// la soglia; chi la alza rifà quei conti prima, tema per tema.
+// QUI SI SORVEGLIANO I NUMERI, non il contrasto: il calcolo sta scritto
+// nel commento della regola in index.css, e un test che rifacesse la
+// misura misurerebbe la propria formula.
+describe('il colore del conto sul fondo della card', () => {
+  const css = readFileSync(join(CARTELLA, 'index.css'), 'utf8')
+  const regola = () => {
+    const i = css.indexOf(A_CAPO + '.order-card.conto-colorato {')
+    expect(i, '.order-card.conto-colorato non c’è più').toBeGreaterThan(-1)
+    return css.slice(i, css.indexOf(A_CAPO + '}', i))
+  }
+
+  it('si vede: la tinta all’angolo è ben oltre il velo di prima', () => {
+    const percentuali = [...regola().matchAll(/var\(--conto-colore\) (\d+)%/g)].map((m) =>
+      Number(m[1])
+    )
+    expect(percentuali.length, 'la sfumatura ha due fermate colorate').toBe(2)
+    expect(percentuali[0], 'all’angolo il colore si deve riconoscere da lontano').toBeGreaterThanOrEqual(28)
+    expect(percentuali[1], 'a metà card ci passa sopra il testo minore').toBeLessThanOrEqual(12)
+  })
+
+  it('il testo sta su un fondo OPACO: si mescola con --card, non con la trasparenza', () => {
+    // Mescolando con `transparent` ogni fermata è mezza trasparente, e
+    // quello che c'è sotto — un altro tema, una card evidenziata — se ne
+    // porta via un pezzo. Mescolata con --card, la tinta è un colore pieno
+    // e il contrasto misurato è quello che si vede davvero.
+    const r = regola()
+    expect(r).toMatch(/color-mix\(in srgb, var\(--conto-colore\) \d+%, var\(--card\)\)/)
+    expect(r).not.toMatch(/var\(--conto-colore\) \d+%, transparent/)
+  })
+
+  it('e l’alone dello stato resta sopra, da sinistra', () => {
+    // Due sfumature, due domande: il passo del lavoro entra da sinistra, il
+    // colore del conto scende dall'angolo. Riscrivendo il `background` è la
+    // prima cosa che si perde.
+    expect(regola()).toMatch(/linear-gradient\(90deg, var\(--tinta-stato/)
+    expect(regola()).toMatch(/linear-gradient\(\s*135deg/)
+  })
+})
