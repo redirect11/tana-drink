@@ -16,6 +16,7 @@ const mockSettings = { payments_reader_enabled: false, sumup_reader_id: null }
 vi.mock('../../src/lib/api.js', () => ({
   advanceComanda: vi.fn(() => Promise.resolve()),
   addComanda: vi.fn(() => Promise.resolve({ comande: [] })),
+  chiudiCreazione: vi.fn(),
   bartenderUpdateComanda: vi.fn(() => Promise.resolve()),
   updateOrderInfo: vi.fn(() => Promise.resolve()),
   registerPayment: vi.fn(() => Promise.resolve({ closed: true })),
@@ -103,6 +104,7 @@ import {
   advanceComanda,
   addComanda,
   bartenderUpdateComanda,
+  chiudiCreazione,
   registerPayment,
   updateOrderInfo,
   cancelOrder,
@@ -1165,6 +1167,102 @@ describe('creazione: niente si perde mentre l’ordine nasce', () => {
     expect(items.filter((i) => i.drink_id === 'gin')).toHaveLength(2)
     expect(screen.getAllByText('Gin Tonic').length).toBeGreaterThan(0)
     expect(createOrder).toHaveBeenCalledTimes(1) // un ordine solo, non due
+  })
+})
+
+
+// -- LA SESSIONE DI CREAZIONE: UN ORDINE, UNA COMANDA --------------------
+//
+// Il danno, visto al banco il 20/08: un conto solo (#20) battuto in
+// creazione, e DUE facsimili di comanda -- un LIMONCELLO da solo, poi tutto
+// il resto. Parole sue: "mi crea piu' comande quando creo un solo ordine.
+// In fase di creazione deve gestire tutto come UNA comanda".
+//
+// Concorrevano due cose: la regola di ieri (una comanda "in preparazione"
+// non accoglie aggiunte -- e col locale che le fa NASCERE in preparazione
+// non le accoglieva mai) e la corsa fra due scritture ravvicinate
+// (BUG-056). Qui si sorveglia la prima, nel caso che l'ha fatta vedere.
+describe('in creazione il conto resta UNA comanda', () => {
+  it('tre aggiunte rapide, col passo di nascita «in preparazione»: una sola', async () => {
+    const user = userEvent.setup()
+    mockSettings.comande_in_preparazione = true
+    try {
+      createOrder.mockImplementationOnce(async () => ({
+        id: 'ord-nuovo',
+        status: 'aperto',
+        // Nasce gia' in preparazione (impostazione del locale) e con la
+        // sessione di creazione APERTA: nessuno l'ha presa in mano.
+        in_creazione: true,
+        comande: [
+          {
+            id: 'c1',
+            seq: 1,
+            status: 'in_preparazione',
+            presa_in_carico: false,
+            status_times: {},
+            items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1 }],
+          },
+        ],
+        order_items: [{ id: 'x', drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1 }],
+        payments: [],
+      }))
+
+      render(
+        <MemoryRouter>
+          <OrderPosDetail order={null} />
+        </MemoryRouter>
+      )
+
+      await user.click(screen.getAllByText('Mojito')[0])
+      await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1), { timeout: 2000 })
+      // La sessione e' aperta: lo dice il conto, non un'impostazione.
+      expect(createOrder.mock.calls[0][0].in_creazione).toBe(true)
+
+      // Altre due righe, subito dopo.
+      await user.click(screen.getAllByText('Gin Tonic')[0])
+      await user.click(screen.getAllByText('Gin Tonic')[0])
+
+      await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalled(), { timeout: 3000 })
+      // NESSUNA comanda nuova: le righe entrano in quella che c'e' gia'.
+      // Prima di questa cura ognuna faceva il suo ticket.
+      expect(addComanda).not.toHaveBeenCalled()
+      expect(bartenderUpdateComanda.mock.calls.at(-1)[1]).toBe('c1')
+      const items = bartenderUpdateComanda.mock.calls.at(-1)[2].items
+      expect(items.filter((i) => i.drink_id === 'gin')).toHaveLength(2)
+    } finally {
+      mockSettings.comande_in_preparazione = false
+    }
+  })
+
+  it('uscendo, la sessione si chiude: da li\' in poi vale la regola normale', async () => {
+    const user = userEvent.setup()
+    createOrder.mockImplementationOnce(async () => ({
+      id: 'ord-nuovo',
+      status: 'aperto',
+      in_creazione: true,
+      comande: [
+        {
+          id: 'c1',
+          seq: 1,
+          status: 'ricevuto',
+          status_times: {},
+          items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1 }],
+        },
+      ],
+      order_items: [{ id: 'x', drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1 }],
+      payments: [],
+    }))
+    const { unmount } = render(
+      <MemoryRouter>
+        <OrderPosDetail order={null} />
+      </MemoryRouter>
+    )
+    await user.click(screen.getAllByText('Mojito')[0])
+    await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1), { timeout: 2000 })
+    unmount()
+    // E' l'uscita a chiudere la composizione: da qui la comanda puo'
+    // uscire dalla stampante, completa.
+    await waitFor(() => expect(chiudiCreazione).toHaveBeenCalledWith('ord-nuovo'))
   })
 })
 

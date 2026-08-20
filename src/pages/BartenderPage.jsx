@@ -807,7 +807,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
           if (printerSettings.autoPrintComanda) {
             for (const o of data) {
               for (const c of comandeDaStampare(o)) {
-                if (claimComandaPrint(o.id, c.id)) {
+                if (claimComandaPrint(o.id, c)) {
                   printComanda(o, c)
                     // Il segno va SUL DATO solo a carta uscita: segnare
                     // prima vorrebbe dire che una stampa fallita mette a
@@ -818,7 +818,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                       // Pretesa locale libera: al prossimo snapshot si
                       // riprova — carta finita, stampante spenta, si
                       // sistema e la comanda esce da sola.
-                      releaseComandaPrint(o.id, c.id)
+                      releaseComandaPrint(o.id, c)
                     })
                 }
               }

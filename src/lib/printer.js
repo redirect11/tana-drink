@@ -138,10 +138,28 @@ export function reclaimReceiptPrint(orderId) {
 // Qui la stampa ha la sua regola, per COMANDA e non per ordine, con la
 // stessa pretesa in localStorage degli scontrini: ogni comanda esce UNA
 // volta da questo terminale, chiunque l'abbia battuta, da qualunque vista.
+//
+// LA PRETESA È SUL CONTENUTO, non solo sul nome della comanda. Una comanda
+// non ancora presa in carico può ACCOGLIERE righe nuove: il ticket già
+// uscito diventa vecchio, e va ristampato completo (il segno sul dato si
+// azzera, vedi api.js). Con una pretesa legata al solo id, il terminale che
+// aveva già stampato sarebbe rimasto zitto per sempre — e il segno sul dato
+// azzerato da un ALTRO terminale non avrebbe potuto liberargliela. Legata
+// alle righe, invece, la comanda cambiata è un lavoro nuovo e la carta esce.
 const COMANDE_KEY = 'tana_printed_comande'
-export function claimComandaPrint(orderId, comandaId) {
+
+// Le righe come sono adesso, in poche lettere: cambia una quantità o
+// arriva un drink, cambia la firma.
+function firmaRighe(comanda) {
+  return (comanda?.items || [])
+    .map((i) => `${i.drink_id || i.name || '?'}x${i.qty ?? 1}`)
+    .join('|')
+}
+
+export function claimComandaPrint(orderId, comanda) {
+  const comandaId = typeof comanda === 'string' ? comanda : comanda?.id
   if (!orderId || !comandaId) return false
-  const chiave = `${orderId}:${comandaId}`
+  const chiave = `${orderId}:${comandaId}:${firmaRighe(comanda)}`
   try {
     const list = JSON.parse(localStorage.getItem(COMANDE_KEY) || '[]')
     if (list.includes(chiave)) return false
@@ -155,9 +173,10 @@ export function claimComandaPrint(orderId, comandaId) {
 // La stampa non è riuscita: la pretesa locale torna libera, così il
 // prossimo snapshot ci riprova — carta finita, stampante spenta, si
 // sistema e la comanda esce da sola.
-export function releaseComandaPrint(orderId, comandaId) {
+export function releaseComandaPrint(orderId, comanda) {
+  const comandaId = typeof comanda === 'string' ? comanda : comanda?.id
   if (!orderId || !comandaId) return
-  const chiave = `${orderId}:${comandaId}`
+  const chiave = `${orderId}:${comandaId}:${firmaRighe(comanda)}`
   try {
     const list = JSON.parse(localStorage.getItem(COMANDE_KEY) || '[]')
     localStorage.setItem(COMANDE_KEY, JSON.stringify(list.filter((k) => k !== chiave)))
@@ -179,6 +198,11 @@ export function releaseComandaPrint(orderId, comandaId) {
 // propri snapshot che arrivano prima che la scrittura del segno torni.
 export function comandeDaStampare(order) {
   if (!order || order.status === 'annullato') return []
+  // IL CONTO SI STA ANCORA COMPONENDO: niente carta. È il facsimile col
+  // LIMONCELLO da solo visto al banco — stampato a metà battuta, mentre chi
+  // stava al POS aveva ancora il vassoio da riempire. Il ticket esce quando
+  // chi lo sta battendo esce dalla creazione (`in_creazione` si azzera lì).
+  if (order.in_creazione) return []
   return (order.comande || []).filter((c) => {
     if (!c || c.status === 'annullato') return false
     // Da stampare è la comanda ancora al banco: già pronta o uscita vuol

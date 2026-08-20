@@ -54,6 +54,7 @@ import {
   dividiComanda,
   statiDopoLaDivisione,
   statoComandaNuova,
+  presaInCarico,
   ANNULLATA_PER_DIVISIONE,
   itemsTotal as sumItems,
 } from './comande.js'
@@ -275,6 +276,10 @@ function mapOrder(snap) {
     // Lo scontrino di chiusura è già uscito: il segno sta sul DATO, non
     // solo nella memoria del terminale che l'ha stampato (BUG-055).
     receipt_print_at: o.receipt_print_at ?? null,
+    // IL CONTO SI STA ANCORA COMPONENDO. Sottostato della creazione: finché
+    // chi l'ha battuto non è uscito, le righe nuove restano nella prima
+    // comanda e il ticket non esce (REQ-ORD-016, 20/08).
+    in_creazione: o.in_creazione === true,
     payment_after_cancel: o.payment_after_cancel ?? false,
     group_id: o.group_id ?? null,
     group_name_snapshot: o.group_name_snapshot ?? null,
@@ -1983,6 +1988,10 @@ async function creaOrdine({
   // riserva è la stessa impostazione letta dalla cache.
   conti_colorati = impostazioni().conti_colorati === true,
   client_temp_id = null, // id del placeholder POS: la griglia scambia SENZA doppioni
+  // SESSIONE DI CREAZIONE APERTA: lo dice il POS quando il conto nasce
+  // mentre si sta ancora battendo. Chi crea da altre strade (il cliente dal
+  // telefono, un import) non ha nessuna sessione da tenere aperta.
+  in_creazione = false,
   cutoff_hour = DEFAULT_CUTOFF_HOUR, // ora di taglio della giornata commerciale
 }) {
   // Cliente registrato senza gruppo esplicito → gruppo-cliente automatico
@@ -2087,6 +2096,7 @@ async function creaOrdine({
     group_name_snapshot: group_name_snapshot || null,
     payment_id: null,
     client_temp_id,
+    in_creazione,
     created_at: serverTimestamp(),
     // Aggregato di tutte le comande (qui solo la prima): usato per totale,
     // scontrino e compatibilità con le viste esistenti.
@@ -2561,6 +2571,20 @@ export function segnaComandaStampata(orderId, comandaId) {
   )
 }
 
+// LA CREAZIONE È FINITA: chi stava battendo il conto è uscito. Da adesso il
+// conto è un conto come gli altri — le aggiunte seguono la regola della
+// presa in carico, e le comande possono uscire dalla stampante.
+//
+// LO TOGLIE SOLO L'USCITA, e va bene così: se l'app muore a metà battuta il
+// segno resta appeso e quella comanda non esce da sé. «Non è un problema,
+// Flavio può ristampare la comanda con l'apposito tasto» (l'utente, 20/08):
+// è una decisione, non un buco. Anche un avanzamento di stato lo toglie —
+// se qualcuno l'ha preso in mano, la composizione è finita comunque.
+export function chiudiCreazione(orderId) {
+  if (!orderId) return
+  bgWrite(() => updateDoc(doc(db, 'orders', orderId), { in_creazione: false }), 'fine creazione')
+}
+
 // LO SCONTRINO È USCITO DALLA STAMPANTE: si segna SUL CONTO, così ogni
 // terminale lo sa. Stessa idea di `segnaComandaStampata`, e per lo stesso
 // guaio visto al banco: la pretesa vive in localStorage, quindi un browser
@@ -2794,6 +2818,11 @@ async function advanceComandaOra(orderId, comandaId, newStatus) {
 
   comanda.status = newStatus
   comanda.status_times = { ...(comanda.status_times || {}), [newStatus]: nowIso }
+  // QUALCUNO L'HA PRESA IN MANO, e da adesso è quello a decidere dove
+  // finiscono le righe che arrivano dopo (comandaPerLeAggiunte). Il segno lo
+  // scrive SOLO il gesto: una comanda NATA in preparazione perché il locale
+  // ha acceso quell'impostazione non l'ha presa in mano nessuno.
+  if (newStatus === ORDER_STATUSES.IN_PREPARAZIONE) comanda.presa_in_carico = true
   const comandaScritta = { ...comanda, order: raw }
 
   const patch = {
@@ -2806,6 +2835,9 @@ async function advanceComandaOra(orderId, comandaId, newStatus) {
     // in mano. Sta sul conto e non sulla comanda perche' la funzione
     // guarda il documento, e l'ultimo che l'ha toccato e' quello giusto.
     avanzamento_device: idDispositivo(),
+    // Se qualcuno fa avanzare una comanda, il conto non lo sta più
+    // componendo nessuno: la sessione di creazione si chiude qui.
+    ...(raw.in_creazione ? { in_creazione: false } : {}),
   }
   // Conto già pagato (online/lettore) e tutte le comande servite: il conto
   // si chiude da solo (c'è anche la cintura lato server).
@@ -2990,7 +3022,9 @@ export const updateOrderItems = perConto(async function updateOrderItems(id, ite
     ...(i.custom ? { custom: true, recipe_items: i.recipe_items ?? [] } : {}),
     ...(i.note ? { note: i.note } : {}),
   }))
-  comande[0] = { ...comande[0], items: mapped }
+  // Come per la modifica dal banco: il ticket già uscito va ristampato
+  // completo (qui la comanda è per forza una sola e ancora «da fare»).
+  comande[0] = { ...comande[0], items: mapped, ...(comande[0].auto_print_at ? { auto_print_at: null } : {}) }
   // Le righe si scrivono come sono arrivate: qui la comanda è una sola
   // (lo garantisce il controllo qui sopra) e fonderle sarebbe una perdita.
   const patch = salvaComandeERifaiTotale(ref, cur, comande, 'modifica ordine', mapped)
@@ -3307,6 +3341,13 @@ export const bartenderUpdateComanda = perConto(async function bartenderUpdateCom
   const daRiallineare = comanda.inventory_applied === true
 
   comanda.items = newItems
+  // IL TICKET CHE ERA USCITO ADESSO È VECCHIO. Una comanda non ancora presa
+  // in carico può accogliere righe nuove (comandaPerLeAggiunte): se era già
+  // stata stampata, la carta al banco non racconta più il conto. Il segno si
+  // azzera e la coda la ristampa COMPLETA — il foglio vecchio si butta.
+  // Su una comanda presa in carico non si tocca niente: quella carta è in
+  // mano a qualcuno che ci sta lavorando.
+  if (comanda.auto_print_at && !presaInCarico(comanda)) comanda.auto_print_at = null
   const patch = salvaComandeERifaiTotale(ref, cur, comande, 'modifica comanda')
   // Scorte dopo: se erano già state scalate si applica solo la differenza.
   if (daRiallineare) riallineaInSottofondo(orderId, comandaId)

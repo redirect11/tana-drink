@@ -269,27 +269,45 @@ export function comandaEditable(c) {
 // successivi che aggiungo all'ordine dovranno creare una NUOVA comanda. Al
 // momento succede solo se da in preparazione passano a da servire. Se sono
 // in preparazione significa che la vecchia comanda è stata già presa in
-// carico» (l'utente, 20/08). È la regola, e il perché sta in quell'ultima
-// riga: chi sta già shakerando non deve vedersi allungare il ticket sotto
-// le mani — quello che ha in mano non è più quello che deve fare.
+// carico» (l'utente, 20/08 sera). Il perché sta in quell'ultima riga: chi
+// sta già shakerando non deve vedersi allungare il ticket sotto le mani.
 //
-// Prima la domanda era «c'è una comanda nel passo dove NASCE il lavoro?»
-// (statoComandaNuova). Rispondeva bene col passo di nascita «da fare», ma
-// nel locale che fa nascere le comande già in preparazione rispondeva «sì»
-// per una comanda presa in carico: le aggiunte ci confluivano, ed è
-// esattamente quello che non deve succedere. Il passo di nascita continua
-// a dire in che stato NASCE una comanda; non dice più dove finiscono le
-// righe che arrivano dopo.
+// POI HA VISTO IL DANNO E HA CORRETTO LA REGOLA (20/08, dopo la prova al
+// banco: un conto solo, DUE facsimili — un LIMONCELLO da solo, e poi tutto
+// il resto). Parole sue: «mi crea più comande quando creo un solo ordine.
+// In fase di creazione deve gestire tutto come UNA comanda. Devi
+// aggiungere prodotti a una NUOVA comanda solo se lo stato viene PASSATO
+// in preparazione (comanda presa in carico)».
 //
-// E NON ACCOGLIE PIÙ NIENTE NEMMENO UNA COMANDA GIÀ USCITA DALLA
-// STAMPANTE (`auto_print_at`, BUG-050): la carta è al banco, e una riga
-// aggiunta dopo su quel ticket non c'è e non ci comparirà mai. È la stessa
-// idea di «presa in carico», vista dall'altro lato: il ticket stampato è
-// preso in carico quanto un barista che ha cominciato.
+// DA QUI DUE COSE, e sono l'una il seguito dell'altra.
 //
-// Una comanda PRONTA, SERVITA o ANNULLATA non rispondeva già prima, e
-// continua a non rispondere. Quando non risponde nessuno, ne nasce una
-// nuova — che è il caso normale da qui in poi.
+// (1) IL DISCRIMINE È LA PRESA IN CARICO, NON LO STATO. Una comanda NATA
+//     «in preparazione» perché il locale ha acceso quell'impostazione non
+//     è presa in carico da nessuno: nessuno l'ha guardata, nessuno ha
+//     premuto niente. Una comanda PORTATA a «in preparazione» da un gesto
+//     — qualcuno ha detto «lo preparo io» — sì. I due casi si distinguono
+//     solo con un segno, ed è `presa_in_carico`, scritto da advanceComanda
+//     e solo da lì (mai alla nascita). Sui documenti vecchi il campo non
+//     c'è: lì si guarda lo stato con la regola prudente — «in
+//     preparazione» senza segno vale come presa in carico, così i ticket
+//     già in mano al banco stasera non si gonfiano.
+//
+// (2) LA SESSIONE DI CREAZIONE È UN'ALTRA COSA ANCORA. Finché chi ha
+//     battuto il conto non è uscito dalla creazione, quella è UNA COMANDA
+//     SOLA: qualunque stato abbia, qualunque impostazione abbia il locale.
+//     «Se non sono ancora uscito dalla creazione ordine quella è sempre
+//     una sola comanda (anche se da creazione ordine vado in pagamento)».
+//     Il segno sta sul conto (`in_creazione`) e lo toglie l'uscita.
+//
+// L'ESCLUSIONE DI IERI SULLA COMANDA GIÀ STAMPATA (`auto_print_at`) NON C'È
+// PIÙ: contraddiceva la regola nuova. La ragione per cui era nata resta
+// vera — se una comanda già stampata si gonfia, la carta al banco è
+// vecchia — e la cura coerente è un'altra: quando una comanda non presa in
+// carico riceve aggiunte, il suo `auto_print_at` si AZZERA e il ticket si
+// RISTAMPA completo. Il banco butta il foglio vecchio e ha quello giusto.
+//
+// Una comanda PRONTA, SERVITA o ANNULLATA non risponde: quando non
+// risponde nessuno, ne nasce una nuova.
 // ── FIN DOVE SI PUÒ TORNARE INDIETRO ─────────────────────────
 //
 // I passi già passati, meno quelli PRIMA di dove nasce il lavoro. Col
@@ -308,10 +326,36 @@ export function statiPrimaComanda(status, passo) {
   return COMANDA_FLOW.slice(daDove, arrivata)
 }
 
-export function comandaPerLeAggiunte(comande) {
-  return (
-    (comande || []).find((c) => c.status === ORDER_STATUSES.RICEVUTO && !c.auto_print_at) || null
-  )
+// QUALCUNO L'HA PRESA IN MANO? Non «in che stato è»: chi l'ha messa in
+// quello stato. Il segno esplicito vince sempre; senza segno (documenti
+// nati prima) si guarda lo stato, e «in preparazione» si dà per preso in
+// carico — è la risposta prudente, quella che non allunga un ticket che
+// forse è già al banco.
+export function presaInCarico(comanda) {
+  if (!comanda) return true
+  if (comanda.presa_in_carico === true) return true
+  if (comanda.status === ORDER_STATUSES.RICEVUTO) return false
+  if (comanda.status === ORDER_STATUSES.IN_PREPARAZIONE) {
+    return comanda.presa_in_carico === undefined
+  }
+  // Pronta, servita, ritirata: fuori dal banco comunque.
+  return true
+}
+
+// L'ULTIMA comanda viva del conto: è quella a cui si riferisce «aggiungi
+// alla comanda» quando a sceglierlo è una persona (servizio spento). Non la
+// prima: quella che si ha davanti è l'ultima battuta.
+export function ultimaComandaViva(comande) {
+  const vive = (comande || []).filter((c) => c && c.status !== ORDER_STATUSES.ANNULLATO)
+  return vive[vive.length - 1] || null
+}
+
+export function comandaPerLeAggiunte(comande, { inCreazione = false } = {}) {
+  const vive = (comande || []).filter((c) => c && c.status !== ORDER_STATUSES.ANNULLATO)
+  // IN CREAZIONE È UNA COMANDA SOLA, sempre: il conto lo si sta ancora
+  // componendo, e chi lo compone non sta mandando ticket al banco.
+  if (inCreazione) return vive[0] || null
+  return vive.find((c) => !presaInCarico(c)) || null
 }
 
 // Quantità per item bloccate (comande pronte/servite): sotto questa soglia
