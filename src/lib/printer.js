@@ -12,6 +12,7 @@
 import { CASH_METHOD_ORDER, cashMethodKeys, PAYMENT_METHOD_PRINT } from './orderStatus.js'
 import { stampanteFintaAttiva, creaStampanteFinta } from './stampanteFinta.js'
 import { aggregateItems } from './comande.js'
+import { battutoDaQui } from './dispositivo.js'
 
 // Larghezza colonne stamante 80 mm (TM-m30II / TM-m30III): 48 chars std.
 const COL = 48
@@ -185,6 +186,43 @@ export function releaseComandaPrint(orderId, comanda) {
   }
 }
 
+// ── CHI STAMPA LA COMANDA: IL TERMINALE CHE HA BATTUTO L'ORDINE ──────
+//
+// «Solo il terminale che inserisce l'ordine stampa automaticamente la
+// comanda» (l'utente, 20/08). Prima stampava CHIUNQUE avesse l'interruttore
+// acceso: il segno sul dato evitava i doppioni, ma a farla uscire era il
+// primo che vedeva l'ordine — e la carta poteva finire sul tablet in fondo
+// alla sala mentre chi aveva battuto il conto aspettava al banco.
+//
+// ATTENZIONE A NON RIFARE BUG-050 AL CONTRARIO: lì il proprio terminale era
+// l'unico che NON stampava (la stampa viveva dentro i filtri dell'avviso, e
+// «non avvisare chi l'ha battuto» tagliava fuori proprio lui). Qui è
+// l'UNICO che stampa. La differenza sta tutta nel verso di questa riga, ed
+// è il motivo per cui è scritta una volta sola e provata.
+//
+// DUE ECCEZIONI, e sono quelle che tengono in piedi il resto:
+//
+//   L'ORDINE DEL CLIENTE dal telefono non ha un terminale che l'ha
+//   inserito: `placed_by` è vuoto. Quelli li stampa chi ha l'interruttore
+//   acceso — il banco, di fatto — come si è sempre fatto, col segno sul
+//   dato a evitare le copie doppie. È un'ASSUNZIONE, non una richiesta
+//   (REQ-STAMPA-013): se cade, cade con questa riga.
+//
+//   IL RIMBALZO (REQ-STAMPA-008): il locale ha scelto che le comande della
+//   sala escono AL BANCO, e il telefono che prende l'ordine non stampa
+//   affatto (MenuPage). Se anche qui si tacesse, non stamperebbe nessuno —
+//   e la regola nuova avrebbe spento una funzione che c'è.
+//
+// Pura: `daQui` e le impostazioni si passano, così si prova senza rete e
+// senza memoria del browser.
+export function stampaQuestoTerminale(order, { daQui = battutoDaQui, impostazioni } = {}) {
+  if (!salaStampaDaSe(impostazioni || loadPrinterSettings())) return true
+  // Ordini vecchi, nati prima che il campo esistesse, e ordini dei clienti:
+  // nessun terminale li rivendica, e la carta deve uscire lo stesso.
+  if (!order?.placed_by?.device) return true
+  return daQui(order.placed_by)
+}
+
 // QUALI COMANDE DI UN CONTO VANNO STAMPATE ADESSO. Pura, così si prova
 // senza rete e senza schermata.
 //
@@ -196,8 +234,12 @@ export function releaseComandaPrint(orderId, comanda) {
 // puoi segnare le comande stampate già?» (l'utente, 20/08). Sì.
 // La pretesa locale (claimComandaPrint) resta come primo filtro: para i
 // propri snapshot che arrivano prima che la scrittura del segno torni.
-export function comandeDaStampare(order) {
+//
+// E LA STAMPA UN TERMINALE SOLO: QUELLO CHE HA BATTUTO L'ORDINE
+// (stampaQuestoTerminale, qui sopra).
+export function comandeDaStampare(order, opzioni = {}) {
   if (!order || order.status === 'annullato') return []
+  if (!stampaQuestoTerminale(order, opzioni)) return []
   // IL CONTO SI STA ANCORA COMPONENDO: niente carta. È il facsimile col
   // LIMONCELLO da solo visto al banco — stampato a metà battuta, mentre chi
   // stava al POS aveva ancora il vassoio da riempire. Il ticket esce quando
