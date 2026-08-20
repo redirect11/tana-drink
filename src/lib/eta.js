@@ -8,6 +8,7 @@
 //                 sugli ordini serviti al tavolo (il ritiro al banco dipende
 //                 dal cliente e falserebbe la stima)
 import { ORDER_STATUSES } from './orderStatus.js'
+import { scontoTotale } from './pagamento.js'
 
 // Peso del tempo base impostato dal bartender: la stima parte dal base e i
 // tempi reali prendono il sopravvento man mano che gli ordini si completano.
@@ -107,12 +108,18 @@ const isCancelled = (o) => o.status === ORDER_STATUSES.ANNULLATO
 // che non è mai entrato in cassa (4 coca cola a 3€ = 12€ anche se il conto è
 // stato chiuso a 9€). Il fattore ripartisce lo sconto in proporzione, così
 // "venduto per prodotto" e "per categoria" tornano col totale incassato.
+//
+// GLI SCONTI SONO PIÙ D'UNO. Da quando ognuno cade sulle righe che si stanno
+// riscuotendo, un conto ne può portare tre: qui conta la loro somma, se no le
+// statistiche dichiarano incassi mai visti — l'errore di prima, moltiplicato.
+// Spalmarli riga per riga sarebbe più preciso, ma il consuntivo di serata
+// guarda i totali e la somma torna comunque al centesimo.
 export function discountFactor(order) {
   const lordo = (order?.order_items || []).reduce(
     (s, i) => s + (Number(i.qty) || 0) * (Number(i.unit_price) || 0),
     0
   )
-  const sconto = Number(order?.discount_amount) || 0
+  const sconto = scontoTotale(order)
   if (!(lordo > 0) || !(sconto > 0)) return 1
   return Math.max(0, 1 - sconto / lordo)
 }
@@ -142,14 +149,14 @@ export function aggregateProducts(orders) {
 // cassa davvero. `total` è il lordo di listino, e usarlo nelle statistiche
 // significa dichiarare incassi mai visti (di sabato erano 22 € su 600).
 export const orderNet = (o) =>
-  Math.max(0, Math.round(((Number(o?.total) || 0) - (Number(o?.discount_amount) || 0)) * 100) / 100)
+  Math.max(0, Math.round(((Number(o?.total) || 0) - scontoTotale(o)) * 100) / 100)
 
 // Incassi, esclusi gli ordini annullati. Tutto al NETTO degli sconti.
 export function ordersFinance(orders) {
   const valid = orders.filter((o) => !isCancelled(o))
   const sum = (fn) => valid.reduce((s, o) => s + (Number(fn(o)) || 0), 0)
   const incasso = sum(orderNet)
-  const sconti = sum((o) => o.discount_amount)
+  const sconti = sum(scontoTotale)
   const coperto = sum((o) => o.coperto_amount)
   const servizio = sum((o) => o.service_charge_amount)
   const mance = sum((o) => o.tip_amount)

@@ -543,6 +543,7 @@ describe('schermata Pagamento', () => {
       items: null,
       autoServe: false,
       chiude: true,
+      sconto: null,
     })
   })
 
@@ -571,6 +572,7 @@ describe('schermata Pagamento', () => {
       items: null,
       autoServe: false,
       chiude: true,
+      sconto: null,
     })
   })
 
@@ -583,7 +585,7 @@ describe('schermata Pagamento', () => {
       await user.click(screen.getByRole('button', { name: /Pagamento/ }))
       await user.click(screen.getByRole('button', { name: /SumUp/ }))
       await user.click(screen.getByRole('button', { name: /Riscuotere/ }))
-      expect(readerCheckout).toHaveBeenCalledWith('ord1', { amount: 14, items: null })
+      expect(readerCheckout).toHaveBeenCalledWith('ord1', { amount: 14, items: null, sconto: null })
       expect(registerPayment).not.toHaveBeenCalled()
     } finally {
       mockSettings.payments_reader_enabled = false

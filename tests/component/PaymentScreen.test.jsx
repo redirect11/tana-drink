@@ -126,6 +126,7 @@ describe('layout POS: tutto già in pagamento, Riscuotere incassa', () => {
       items: null,
       autoServe: false,
       chiude: true,
+      sconto: null,
     })
   })
 
@@ -144,6 +145,7 @@ describe('layout POS: tutto già in pagamento, Riscuotere incassa', () => {
       items: [expect.objectContaining({ drink_id: 'mojito', qty: 1 })],
       autoServe: false,
       chiude: false,
+      sconto: null,
     })
   })
 
@@ -185,6 +187,7 @@ describe('tastierino calcolatrice', () => {
       items: null,
       autoServe: false,
       chiude: false,
+      sconto: null,
     })
   })
 
@@ -212,6 +215,7 @@ describe('tastierino calcolatrice', () => {
       items: null,
       autoServe: false,
       chiude: true,
+      sconto: null,
     })
   })
 
@@ -237,6 +241,7 @@ describe('metodi di pagamento', () => {
       items: null,
       autoServe: false,
       chiude: true,
+      sconto: null,
     })
   })
 
@@ -245,7 +250,7 @@ describe('metodi di pagamento', () => {
     mount(baseOrder(), withReader)
     await user.click(screen.getByRole('button', { name: /SumUp/ }))
     await user.click(screen.getByRole('button', { name: /Riscuotere/ }))
-    expect(readerCheckout).toHaveBeenCalledWith('ord1', { amount: 22, items: null })
+    expect(readerCheckout).toHaveBeenCalledWith('ord1', { amount: 22, items: null, sconto: null })
     expect(registerPayment).not.toHaveBeenCalled()
   })
 
@@ -353,7 +358,7 @@ describe('metodi di pagamento', () => {
     // saldo 10 < dovuto 22 → si applicano 10 di sconto attingendo al buono
     expect(modal.getByText(/Dal buono: −10,00 €/)).toBeInTheDocument()
     await user.click(modal.getByRole('button', { name: /Applica/ }))
-    expect(applyVoucherDiscount).toHaveBeenCalledWith('ord1', 'v1', 10)
+    expect(applyVoucherDiscount).toHaveBeenCalledWith('ord1', 'v1', 10, { items: null })
   })
 })
 
@@ -366,9 +371,10 @@ describe('sconto: modale con tastierino', () => {
     await user.click(modal.getByRole('button', { name: '1' }))
     await user.click(modal.getByRole('button', { name: '0' }))
     expect(modal.getByTestId('disc-amount')).toHaveTextContent('10%')
-    expect(modal.getByText(/Sconto sul conto: −/)).toHaveTextContent('2,20 €') // anteprima su 22 €
+    // L'anteprima è su QUELLO CHE SI STA RISCUOTENDO: qui è tutto il conto.
+    expect(modal.getByText(/Sconto su quello che stai riscuotendo: −/)).toHaveTextContent('2,20 €')
     await user.click(modal.getByRole('button', { name: /Applica/ }))
-    expect(setOrderDiscount).toHaveBeenCalledWith('ord1', { type: 'percent', value: 10 })
+    expect(setOrderDiscount).toHaveBeenCalledWith('ord1', { type: 'percent', value: 10 }, { items: null, amount: 2.2 })
   })
 
   it('in euro: il toggle € interpreta le cifre come centesimi', async () => {
@@ -382,7 +388,7 @@ describe('sconto: modale con tastierino', () => {
     await user.click(modal.getByRole('button', { name: '0' }))
     expect(modal.getByTestId('disc-amount')).toHaveTextContent('5,00')
     await user.click(modal.getByRole('button', { name: /Applica/ }))
-    expect(setOrderDiscount).toHaveBeenCalledWith('ord1', { type: 'euro', value: 5 })
+    expect(setOrderDiscount).toHaveBeenCalledWith('ord1', { type: 'euro', value: 5 }, { items: null, amount: 5 })
   })
 
   // IL CONTO SCONTATO SI CHIUDE COME CHIUSO (BUG-046). Lo sconto si applica
@@ -706,6 +712,7 @@ describe('il pagamento si apre con le righe già separate', () => {
       // L'incasso dell'intero dichiara che il conto si chiude (hotfix
       // BUG-046): senza, il conto scontato restava «parziale».
       chiude: true,
+      sconto: null,
     })
   })
 })
@@ -813,5 +820,166 @@ describe('riscuoti senza stampa', () => {
     // …ma niente carta, e nessuna pretesa presa: la prossima riscossione
     // normale stamperà come sempre.
     expect(printScontrino).not.toHaveBeenCalled()
+  })
+})
+
+// ── LO SCONTO SEGUE QUELLO CHE SI STA RISCUOTENDO ────────────────────
+//
+// «Se tolgo prodotti dalla schermata pagamento, lo sconto va applicato solo
+// sui prodotti che sto riscuotendo. Quindi gli sconti poi si accumulano nello
+// scontrino» (l'utente, 20/08/2026). Prima lo sconto era uno solo, deciso sul
+// totale del conto e poi ripartito in proporzione su chi pagava la sua parte:
+// chi offriva due birre a un amico si vedeva scontare una fetta di tutto il
+// tavolo, e la cifra non tornava con niente.
+describe('lo sconto cade sulle righe selezionate', () => {
+  // Conto da 22 (2 Mojito da 7 + un Gin Tonic da 8). Si parte separati
+  // (REQ-PAG-009), quindi ogni Mojito ha il suo tasto.
+  const togliUnMojito = async (user) =>
+    user.click(screen.getAllByRole('button', { name: /Togli Mojito dal pagamento/ })[0])
+
+  it('l’anteprima è sul lordo delle righe scelte, non sul conto', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await togliUnMojito(user) // restano un Mojito e un Gin Tonic: 15 €
+    await user.click(screen.getByRole('button', { name: /Sconto/ }))
+    const modal = within(screen.getByRole('dialog', { name: 'Sconto' }))
+    await user.click(modal.getByRole('button', { name: '1' }))
+    await user.click(modal.getByRole('button', { name: '0' }))
+    expect(modal.getByText(/Sconto su quello che stai riscuotendo: −/)).toHaveTextContent('1,50 €')
+  })
+
+  it('applicandolo, resta scritto SU QUALI righe cade', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await togliUnMojito(user)
+    await user.click(screen.getByRole('button', { name: /Sconto/ }))
+    const modal = within(screen.getByRole('dialog', { name: 'Sconto' }))
+    await user.click(modal.getByRole('button', { name: '1' }))
+    await user.click(modal.getByRole('button', { name: '0' }))
+    await user.click(modal.getByRole('button', { name: /Applica/ }))
+    // Senza le righe accanto, l'altro tablet leggerebbe 1,50 € e non saprebbe
+    // di che cosa: lo sconto vale per QUESTE due righe.
+    expect(setOrderDiscount).toHaveBeenCalledWith(
+      'ord1',
+      { type: 'percent', value: 10 },
+      {
+        amount: 1.5,
+        items: [
+          expect.objectContaining({ drink_id: 'mojito', qty: 1 }),
+          expect.objectContaining({ drink_id: 'gin', qty: 1 }),
+        ],
+      }
+    )
+  })
+
+  it('togliendo una riga lo sconto si rifà sulle righe rimaste', async () => {
+    const user = userEvent.setup()
+    // 10% su tutto il conto: 2,20 €.
+    mount(baseOrder({ discount: { type: 'percent', value: 10 }, discount_amount: 2.2 }))
+    await togliUnMojito(user)
+    // Restano 15 € di righe: il 10% adesso vale 1,50 €, e si riscrive anche
+    // sul conto perché la selezione vive solo qui dentro.
+    await waitFor(() =>
+      expect(setOrderDiscount).toHaveBeenCalledWith(
+        'ord1',
+        { type: 'percent', value: 10 },
+        expect.objectContaining({ amount: 1.5 })
+      )
+    )
+    expect(payAmount()).toHaveTextContent('13,50')
+  })
+
+  it('riscuotendo, lo sconto se ne va DENTRO il pagamento', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder({ discount: { type: 'euro', value: 2 }, discount_amount: 2 }))
+    await user.click(screen.getByRole('button', { name: /Riscuotere/ }))
+    expect(registerPayment).toHaveBeenCalledWith('ord1', {
+      amount: 20,
+      method: 'banco',
+      items: null,
+      autoServe: false,
+      chiude: true,
+      // Un gesto, una scrittura: lo sconto viaggia con l'incasso e sul conto
+      // non resta niente di preparato — il prossimo che paga parte pulito.
+      sconto: { type: 'euro', value: 2, amount: 2, items: null },
+    })
+  })
+
+  it('un acconto battuto a mano NON si porta via lo sconto', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder({ discount: { type: 'euro', value: 2 }, discount_amount: 2 }))
+    // Dieci euro sul tavolo: non saldano le righe scelte, quindi lo sconto
+    // resta preparato per chi verrà a chiudere.
+    await user.click(screen.getByRole('button', { name: '1' }))
+    await user.click(screen.getByRole('button', { name: '0' }))
+    await user.click(screen.getByRole('button', { name: '00' }))
+    await user.click(screen.getByRole('button', { name: /Riscuotere/ }))
+    expect(registerPayment).toHaveBeenCalledWith(
+      'ord1',
+      expect.objectContaining({ amount: 10, sconto: null })
+    )
+  })
+
+  // ── DOPO IL PRIMO INCASSO, IL SECONDO SCONTO È UN ALTRO SCONTO ──────
+  it('il secondo sconto si calcola su quello che resta, non sul conto intero', async () => {
+    const user = userEvent.setup()
+    // Il Gin Tonic è già stato riscosso a 6 € con 2 € di sconto: restano i due
+    // Mojito, 14 € di listino.
+    mount(
+      baseOrder({
+        payment_status: 'parziale',
+        payments: [
+          {
+            id: 'p1',
+            amount: 6,
+            method: 'banco',
+            items: [{ drink_id: 'gin', name: 'Gin Tonic', unit_price: 8, qty: 1 }],
+            sconto: {
+              type: 'euro',
+              value: 2,
+              amount: 2,
+              items: [{ drink_id: 'gin', name: 'Gin Tonic', unit_price: 8, qty: 1 }],
+            },
+          },
+        ],
+      })
+    )
+    expect(payAmount()).toHaveTextContent('14,00')
+    await user.click(screen.getByRole('button', { name: /Sconto/ }))
+    const modal = within(screen.getByRole('dialog', { name: 'Sconto' }))
+    await user.click(modal.getByRole('button', { name: '1' }))
+    await user.click(modal.getByRole('button', { name: '0' }))
+    // 10% di 14, non di 22: le righe già pagate se ne sono andate col cliente.
+    expect(modal.getByText(/Sconto su quello che stai riscuotendo: −/)).toHaveTextContent('1,40 €')
+  })
+
+  it('e il conto elenca gli sconti uno per uno', () => {
+    mount(
+      baseOrder({
+        payment_status: 'parziale',
+        payments: [
+          {
+            id: 'p1',
+            amount: 6,
+            method: 'banco',
+            items: [{ drink_id: 'gin', name: 'Gin Tonic', unit_price: 8, qty: 1 }],
+            sconto: {
+              type: 'euro',
+              value: 2,
+              amount: 2,
+              items: [{ drink_id: 'gin', name: 'Gin Tonic', unit_price: 8, qty: 1 }],
+            },
+          },
+        ],
+        discount: { type: 'percent', value: 10 },
+        discount_amount: 1.4,
+        discount_items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 }],
+      })
+    )
+    // Il primo diceva su quali righe cadeva; il secondo prende tutto quello
+    // che è rimasto, quindi le righe non servono a distinguerlo — serve il
+    // «10%», che è quello che chi guarda si chiede.
+    expect(screen.getByText('Sconto su 1 prodotto')).toBeInTheDocument()
+    expect(screen.getByText('Sconto 10%')).toBeInTheDocument()
   })
 })

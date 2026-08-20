@@ -4,6 +4,23 @@
 
 ### Per chi gestisce
 
+- **Lo sconto si fa sui prodotti che stai riscuotendo, e se ne può fare
+  più d'uno.** Prima lo sconto era uno solo e stava sul conto intero:
+  se poi si toglievano prodotti dalla schermata di pagamento, chi pagava
+  la sua parte si portava via *una fetta* di quello sconto, e il conto
+  non tornava con niente di quello che aveva sul tavolo. Adesso lo sconto
+  cade **sulle righe che sono accese in quel momento**: togline una e
+  l'importo si rifà su quelle rimaste. Quando riscuoti, quello sconto se
+  ne va **dentro quell'incasso** e il conto riparte pulito — così chi
+  resta al tavolo può farsi scontare le sue, e **sono due sconti**, non
+  uno diviso in due. Sullo scontrino li trovi elencati uno per uno, con
+  scritto su cosa cadevano («Sconto 10% su 3 prodotti −6,00 €»). Se fai
+  **un solo sconto su tutto il conto** — che è quello che si fa quasi
+  sempre — non cambia niente: la riga è «Sconto», come è sempre stata.
+  Vale anche per il **buono**: copre le righe che stai riscuotendo, e mai
+  più di quanto valgono. I conti già aperti stasera restano com'erano e
+  si chiudono come prima.
+
 - **Il colore del conto si sceglie da una finestrella.** Nel «⋯ Azioni»
   di una card — del conto come della comanda — c'era la fila dei dodici
   colori: tre righe di quadratini che coprivano le azioni vere. Adesso c'è

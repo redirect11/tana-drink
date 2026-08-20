@@ -369,3 +369,74 @@ describe('il logo esce dove il locale ha detto', () => {
     expect(finestre[0].join('')).toContain(png)
   })
 })
+
+// ── DUE SCONTI SULLA STESSA CARTA ────────────────────────────────────
+//
+// «Gli sconti poi si accumulano nello scontrino. Se ho applicato uno sconto a
+// 2 prodotti prima e a tre prodotti dopo, sono due sconti applicati»
+// (l'utente, 20/08/2026). Con una riga sola — «Sconto −3,50 €» — il cliente
+// che chiede perché non ha risposta: tre euro e cinquanta di che cosa, e su
+// quali prodotti. Adesso ogni sconto è la sua riga e dice su che cosa cadeva.
+describe('lo scontrino elenca gli sconti uno per uno', () => {
+  const CONTO_A_META = {
+    ...CONTO,
+    coperto_persons: 0,
+    coperto_amount: 0,
+    lottery_code: null,
+    discount: null,
+    discount_amount: 0,
+    payments: [
+      {
+        id: 'p1',
+        amount: 6,
+        method: 'banco',
+        at: '2026-08-20T21:10:00.000Z',
+        items: [{ qty: 1, name: 'Negroni', unit_price: 8 }],
+        sconto: {
+          type: 'euro',
+          value: 2,
+          amount: 2,
+          items: [{ qty: 1, name: 'Negroni', unit_price: 8 }],
+        },
+      },
+      {
+        id: 'p2',
+        amount: 13.5,
+        method: 'carta',
+        at: '2026-08-20T21:20:00.000Z',
+        items: [
+          { qty: 1, name: 'Negroni', unit_price: 8 },
+          { qty: 1, name: 'Spritz', unit_price: 7 },
+        ],
+        sconto: {
+          type: 'percent',
+          value: 10,
+          amount: 1.5,
+          items: [
+            { qty: 1, name: 'Negroni', unit_price: 8 },
+            { qty: 1, name: 'Spritz', unit_price: 7 },
+          ],
+        },
+      },
+    ],
+  }
+
+  it('due riscossioni scontate = due righe, e il totale è quello incassato', async () => {
+    const uscito = await stampa('scontrino', CONTO_A_META)
+    expect(uscito).toContain('Subtotale                                 23.00€')
+    expect(uscito).toContain('Sconto su 1 prodotto                      -2.00€')
+    expect(uscito).toContain('Sconto 10% su 2 prodotti                  -1.50€')
+    // 23 − 2 − 1,50 = 19,50, che è anche la somma dei due incassi.
+    expect(uscito).toContain('1 9 . 5 0 €')
+    expect(uscito).toContain('Contante (A)                               6.00€')
+    expect(uscito).toContain('Carta di Credito (A)                      13.50€')
+  })
+
+  it('e spegnendo il campo Sconto spariscono tutte, come una sola', async () => {
+    impostazioni({ stampa_scontrino: { campi: { sconto: false } } })
+    const uscito = await stampa('scontrino', CONTO_A_META)
+    expect(uscito).not.toContain('Sconto')
+    // Il totale resta quello vero: si toglie la spiegazione, non lo sconto.
+    expect(uscito).toContain('1 9 . 5 0 €')
+  })
+})

@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 20 agosto 2026.
+> Generato il 21 agosto 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -22,12 +22,12 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 169 | fatto e coperto dai test |
+| ✅ | 170 | fatto e coperto dai test |
 | ⚠️  | 14 | fatto ma nessun test lo verifica |
 | ⬜ | 21 | da fare |
 | 🗑 | 1 | non più valido |
 
-**205 voci** in tutto. **183** descrivono il sistema com'è oggi e
+**206 voci** in tutto. **184** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **21** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **6** difetti noti sono ancora aperti.
@@ -42,7 +42,7 @@ come «vero oggi», non come «garantito».
 |---|---|---|---|
 | [Ordini e comande](#ordini-e-comande) | 18 | 1 | Il conto e le sue comande: come nascono, come cambiano stato, come arrivano al banco. |
 | [Cassa e POS](#cassa-e-pos) | 17 | 2 | La schermata più usata della serata: si compone un conto, si corregge, si chiude. |
-| [Pagamenti](#pagamenti) | 11 | 1 | Come si incassa: contanti, carta, SumUp, pagamenti parziali e separati. |
+| [Pagamenti](#pagamenti) | 12 | 1 | Come si incassa: contanti, carta, SumUp, pagamenti parziali e separati. |
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
@@ -362,7 +362,7 @@ Sul tasto è scritta la cifra da incassare al netto di sconti e acconti già pre
 
 #### REQ-PAG-003 — Sconto sul conto, con tre strategie a scelta
 
-Lo sconto si applica dal tastierino e si può impostare come tetto al totale, come proporzione sulle righe o come semplice avviso; la strategia si sceglie nelle impostazioni (default: tetto al totale). Le statistiche e il rendiconto devono sempre scorporare lo sconto, mai mostrare il prezzo di listino come venduto. Il tastierino dello sconto ha le cifre nell'ordine di sempre (7 8 9 / 4 5 6 / 1 2 3 / C 0 ←), su tre colonne: si batte a memoria. E un conto scontato si chiude come chiuso: quanto resta da incassare lo sa la schermata che ha il conto davanti, non una rilettura che può arrivare prima dello sconto (BUG-046).
+Lo sconto si applica dal tastierino e si può impostare come tetto al totale, come proporzione sulle righe o come semplice avviso; la strategia si sceglie nelle impostazioni (default: tetto al totale). Le statistiche e il rendiconto devono sempre scorporare lo sconto, mai mostrare il prezzo di listino come venduto. Il tastierino dello sconto ha le cifre nell'ordine di sempre (7 8 9 / 4 5 6 / 1 2 3 / C 0 ←), su tre colonne: si batte a memoria. E un conto scontato si chiude come chiuso: quanto resta da incassare lo sa la schermata che ha il conto davanti, non una rilettura che può arrivare prima dello sconto (BUG-046). DAL 20/08/2026 lo sconto non cade più sul totale del conto ma sulle righe che si stanno riscuotendo, e se ne può fare più d'uno: la regola completa sta in REQ-PAG-013, che questo requisito presuppone. Le tre strategie restano quelle, applicate al lordo della selezione invece che al totale.
 
 **Dove**: `src/lib/pricing.js, src/components/SettingsTab.jsx` · **Lo dimostrano**: `tests/unit/pricing.test.js`, `tests/component/PaymentScreen.test.jsx`, `tests/unit/contoScontatoSiChiude.test.js`
 
@@ -411,6 +411,24 @@ Chiesto dall'utente il 20/08: «aggiungi anche (attivabile dalle impostazioni) i
 IL DETTAGLIO CHE CONTA: non prende nemmeno la PRETESA di stampa. Cosi' se quel conto verra' riaperto e riscosso in modo normale, lo scontrino esce come sempre — il «senza stampa» vale per QUEL gesto, non e' un marchio sul conto.
 
 **Dove**: `src/components/PaymentScreen.jsx, src/components/SettingsTab.jsx, src/lib/api.js (riscuoti_senza_stampa)` · **Lo dimostrano**: `tests/component/PaymentScreen.test.jsx`
+
+#### REQ-PAG-013 — Lo sconto cade sui prodotti che si stanno riscuotendo, e gli sconti si accumulano
+
+Chiesto dall'utente il 20/08/2026: «Lo sconto va applicato solo sui prodotti selezionati. Nel senso che se tolgo prodotti dalla schermata pagamento, lo sconto va applicato solo sui prodotti che sto riscuotendo. Quindi gli sconti poi si accumulano nello scontrino. Se ho applicato uno sconto a 2 prodotti prima e a tre prodotti dopo, sono due sconti applicati».
+
+PRIMA lo sconto era uno solo per conto, calcolato sul totale e poi ripartito in proporzione su chi pagava la sua parte: chi offriva due birre a un amico si vedeva scontare una fetta di tutto il tavolo, e la cifra non tornava con niente di quello che aveva davanti.
+
+IL MODELLO. Lo sconto appartiene alla RISCOSSIONE, non al conto. · si calcola sul lordo delle righe selezionate in quel momento; se la selezione è tutto il conto il risultato è quello di prima, e il caso normale non cambia di un centesimo; · se la selezione cambia, l'importo si rifà sulle righe rimaste — in percentuale è la sua definizione, in euro decide la strategia del locale (tetto / proporzione / avviso, REQ-PAG-003), la stessa che governa un conto a cui si tolgono righe; · all'incasso viene CONSUMATO dentro quel pagamento (`payments[].sconto`) e sul conto non resta niente di preparato: da lì in poi è storia e non si ricalcola più, come il prezzo di un drink già bevuto; · due riscossioni scontate sono DUE sconti, ognuno con le sue righe, e il residuo è totale − sconti consumati − sconto in preparazione − pagato.
+
+DOVE VIVE LO SCONTO IN PREPARAZIONE: sul documento, come prima (`discount`/`discount_amount`), più il campo nuovo `discount_items` che dice a quali righe si riferisce. Senza quelle righe un altro terminale leggerebbe un importo e non saprebbe di che cosa; e visto che la selezione vive solo dentro la schermata, senza scriverle non sopravviverebbe all'uscita.
+
+LO SCONTRINO li elenca uno per uno, dicendo su che cosa cadevano («Sconto 10% su 3 prodotti −6,00 €»). Con UNO SOLO su tutto il conto resta la riga di sempre, «Sconto»: è il caso normale, ed è anche come si stampa un conto vecchio. Lo sconto resta un campo che si può spegnere fra quelli dello scontrino (REQ-STAMPA-014): spegnendolo spariscono tutte le righe insieme, ma il totale resta quello vero.
+
+IL BUONO è uno sconto come gli altri: cade sulle righe che si stanno riscuotendo (mai più del loro lordo, se no si brucia credito del beneficiario per niente) e se ne va dentro il pagamento col suo `voucher_id` — che serve a ridare il credito se il conto viene riaperto o annullato (REQ-PAG-006). I CONTI VECCHI NON SI MIGRANO. Nessuno sconto dentro i pagamenti e nessun `discount_items` vogliono dire «uno solo, su tutto il conto»: un conto aperto ieri sera si legge, si chiude e si stampa come prima.
+
+CHI SOMMAVA UN NUMERO ADESSO NE SOMMA UNA LISTA: cassa, statistiche, rendiconto, scontrino, fattura, badge della coda e dello storico passano tutti per `scontoTotale()`, che è consumati + in preparazione. E BUG-046 SI RISOLVE ALLA RADICE: lo sconto viaggia insieme all'importo dentro `registerPayment` (e dentro `readerCheckout` per il lettore SumUp), quindi un gesto è una scrittura sola e il residuo si calcola giusto anche su un documento vecchio di un istante. Il parametro `chiude` resta: quanto è dovuto lo sa comunque la schermata, non la rilettura.
+
+**Dove**: `src/lib/pagamento.js, src/components/PaymentScreen.jsx, src/lib/api.js, src/lib/printer.js, functions/lib/payment-core.js` · **Lo dimostrano**: `tests/unit/scontiAccumulati.test.js`, `tests/unit/contoScontatoSiChiude.test.js`, `tests/component/PaymentScreen.test.jsx`, `tests/unit/campiDiStampa.test.js`
 
 ### La coda del banco
 

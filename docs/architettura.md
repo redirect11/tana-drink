@@ -96,7 +96,7 @@ si legge in `firestore.rules` e `src/lib/api.js`.
 
 | Collection | Cosa contiene |
 |---|---|
-| `orders` | il CONTO: `order_items` aggregati, più le `comande[]` (invii in preparazione, ognuno col suo stato) |
+| `orders` | il CONTO: `order_items` aggregati, più le `comande[]` (invii in preparazione, ognuno col suo stato) e i `payments[]` (le riscossioni, ognuna con le sue righe e il suo sconto) |
 | `drinks`, `categories` | il listino e le sue categorie |
 | `inventory_*`, `suppliers`, `stock_*`, `purchase_orders`, `supplier_invoices` | magazzino, fornitori, acquisti |
 | `counters` | progressivi: `serial` (assoluto), per giornata, `fatture-<anno>`, `_active_cash` (la cassa aperta) |
@@ -118,6 +118,16 @@ Regole di sopravvivenza del modello:
   uno solo e sta in `comandaDaScaricare`: a «pronto» il drink è fatto, e a
   segnarlo è chi l'ha fatto — mentre «servito» lo segna la sala, che sul
   magazzino non scrive.
+- **Lo sconto appartiene alla riscossione, non al conto.** Cade sulle
+  righe che si stanno incassando, e all'incasso viene consumato dentro quel
+  pagamento (`payments[].sconto`): due riscossioni scontate sono due sconti,
+  e il residuo è totale − sconti consumati − sconto in preparazione − pagato.
+  Sul documento resta solo quello **in preparazione** (`discount`,
+  `discount_amount`, `discount_items`), perché la selezione vive dentro la
+  schermata e senza le righe scritte un altro terminale leggerebbe un importo
+  senza sapere di che cosa. Chi somma gli sconti passa da `scontoTotale()`
+  (`pagamento.js`), mai da `discount_amount`: su un conto vecchio i due numeri
+  coincidono, su uno di stasera no. Regola completa in REQ-PAG-013.
 - **La giornata è commerciale, non solare** (`businessDay.js`): taglio
   alle 5 del mattino (configurabile), fuso `Europe/Rome` cablato.
 
