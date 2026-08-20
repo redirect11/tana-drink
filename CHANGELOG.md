@@ -4,6 +4,11 @@
 
 ### Per chi gestisce
 
+- **Il magazzino spiega i suoi segni**: sopra la lista c'è la legenda dei
+  pallini (quanta roba c'è) e delle strisce colorate (in linea, premium,
+  fuori assortimento). Era la domanda di Flavio: «che significa la
+  bacchettina davanti?» — ora lo dice da solo.
+
 - **Lo scontrino e la comanda si scelgono campo per campo.** In
   *Impostazioni → Stampante* ci sono due riquadri nuovi, «Cosa c'è sullo
   scontrino» e «Cosa c'è sulla comanda»: un interruttore per ogni riga che

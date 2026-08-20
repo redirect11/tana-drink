@@ -22,12 +22,12 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 166 | fatto e coperto dai test |
+| ✅ | 167 | fatto e coperto dai test |
 | ⚠️  | 14 | fatto ma nessun test lo verifica |
 | ⬜ | 20 | da fare |
 | 🗑 | 1 | non più valido |
 
-**201 voci** in tutto. **180** descrivono il sistema com'è oggi e
+**202 voci** in tutto. **181** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **20** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **6** difetti noti sono ancora aperti.
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
 | [Menù e catalogo](#menù-e-catalogo) | 9 | — | Il listino: drink, categorie, disponibilità, prezzi. |
-| [Magazzino](#magazzino) | 19 | 7 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
+| [Magazzino](#magazzino) | 20 | 7 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 10 | 2 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 13 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
 | [Vista cliente](#vista-cliente) | 6 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
@@ -873,6 +873,14 @@ FATTO (19/08). `giorniDiConta` e `consumoSettimanale` (src/lib/warehouse.js) fan
 SOTTO UN GIORNO PIENO NON SI DIVIDE: una conta aperta e chiusa in tre ore darebbe un settimanale di otto volte quello vero, e su quel numero si decide quanto ordinare. Il numero non si mostra invece di mostrarne uno finto. E SI ARROTONDA: 1500 / 14 × 7 in virgola mobile fa 749,9999999999999, e chi scrive le quantità non riconosce più i 75 cl tondi — lo stesso consumo finirebbe scritto in due modi diversi in due schermate.
 
 **Dove**: `src/lib/warehouse.js stockCountCompute, src/components/InventoryManager.jsx` · **Lo dimostrano**: `tests/unit/warehouse.test.js`, `tests/component/StockCountPanel.test.jsx`
+
+#### REQ-MAG-027 — I segni del magazzino si spiegano da soli: la legenda sopra la lista
+
+Nata da una domanda vera di Flavio (vocale del 20/08, 14:39, con lo screenshot del telefono): «perche' alcune cose all'interno del magazzino hanno questa bacchettina davanti — rossa, blu, oppure non ce l'hanno? Che significa?». Se il titolare deve chiederlo, quattro colori senza spiegazione sono un codice segreto. I DUE SEGNI, che gia' esistevano e ora si spiegano: il PALLINO dice quanta roba c'e' (verde c'e', giallo in esaurimento, rosso esaurito); la STRISCIA a sinistra dice che assortimento e' (blu in linea, ambra premium, rossa fuori/OUT, neutra in assortimento).
+
+LA LEGENDA sta sopra la lista, una riga smorzata che va a capo da se' sul telefono, coi campioncini presi dalle CLASSI VERE dei segni (.dot-*, e le tacche coi colori di .inv-row.ass-*): se un colore cambia la', la legenda lo segue o il test la smaschera. In piu' ogni riga porta il title dell'assortimento, per chi tocca. Chiesta dall'utente: «aggiungi la legenda dei pallini e delle lineette vicino agli item dell'inventario».
+
+**Dove**: `src/components/InventoryManager.jsx, src/index.css` · **Lo dimostrano**: `tests/component/InventoryManager.test.jsx`
 
 ### Cassa di serata e statistiche
 

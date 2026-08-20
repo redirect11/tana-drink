@@ -883,6 +883,42 @@ a.btn.block {
   background: #f44336;
 }
 
+/* LA LEGENDA DEL MAGAZZINO: i due segni spiegati sotto gli occhi.
+   I pallini riusano le classi vere (.dot-*), le tacche sono la striscia
+   della riga in miniatura — stessi colori di .inv-row.ass-* qui sotto:
+   se cambiano là, cambiano anche qua o la legenda mente. */
+.inv-legenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  margin: 8px 2px 2px;
+  align-items: center;
+}
+.inv-legenda-gruppo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.inv-legenda .dot {
+  margin-left: 8px;
+}
+.inv-legenda .dot:first-child {
+  margin-left: 0;
+}
+.tacca {
+  display: inline-block;
+  width: 4px;
+  height: 14px;
+  border-radius: 2px;
+  margin-left: 8px;
+  flex-shrink: 0;
+}
+.tacca-linea { background: #3498db; }
+.tacca-premium { background: #f0b429; }
+.tacca-out { background: #e74c3c; }
+.tacca-assortimento { background: var(--line); }
+
 .price {
   font-weight: 700;
   color: var(--accent-2);

@@ -82,6 +82,14 @@ const STATUS_ITEM = [
 ]
 
 const STATUS_LABEL = { ok: '', low: 'in esaurimento', empty: 'esaurito' }
+// La striscia a sinistra della riga: si legge anche col dito (title),
+// oltre che dalla legenda sopra la lista.
+const ETICHETTA_ASSORTIMENTO = {
+  assortimento: 'In assortimento',
+  linea: 'In linea: non deve mancare',
+  premium: 'Premium',
+  out: 'Fuori assortimento: non si ricompra',
+}
 
 // Come si chiama, a parole, il modo in cui un articolo è gestito: è quello che
 // si legge nell'avviso quando lo si cambia in modifica.
@@ -1000,6 +1008,28 @@ function ProductsPanel() {
       {error && <div className="banner" style={{ marginTop: 8 }}>Errore: {error}</div>}
       {loading && <div className="empty">Carico l’inventario…</div>}
 
+      {/* LA LEGENDA DEI DUE SEGNI. È nata da una domanda vera di Flavio
+          (vocale del 20/08): «perché alcune cose hanno questa bacchettina
+          davanti — rossa, blu, oppure non ce l'hanno?». Quattro colori
+          senza spiegazione sono un codice segreto: la spiegazione sta
+          QUI, sotto gli occhi, non in un manuale. Una riga sola, smorzata,
+          che va a capo da sé sul telefono. */}
+      {!loading && (
+        <div className="inv-legenda muted small">
+          <span className="inv-legenda-gruppo">
+            <span className="dot dot-ok" aria-hidden /> c’è
+            <span className="dot dot-low" aria-hidden /> in esaurimento
+            <span className="dot dot-empty" aria-hidden /> esaurito
+          </span>
+          <span className="inv-legenda-gruppo">
+            <span className="tacca tacca-linea" aria-hidden /> in linea
+            <span className="tacca tacca-premium" aria-hidden /> premium
+            <span className="tacca tacca-out" aria-hidden /> fuori (OUT)
+            <span className="tacca tacca-assortimento" aria-hidden /> in assortimento
+          </span>
+        </div>
+      )}
+
       {/* TABELLA: colonne allineate (stato · prodotto · categoria · netto ·
           +IVA · scorte), riga cliccabile per aprire le azioni. */}
       {invView === 'lista' && (
@@ -1030,6 +1060,7 @@ function ProductsPanel() {
               <div
                 className={`inv-row ass-${assortimentoDi(it)}${expanded ? ' open' : ''}`}
                 key={it.id}
+                title={ETICHETTA_ASSORTIMENTO[assortimentoDi(it)]}
               >
                 <button
                   type="button"

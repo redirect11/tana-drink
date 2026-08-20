@@ -6690,3 +6690,27 @@ requirements:
     test_cases:
       - tests/unit/coda.test.js
       - tests/component/CodaCorsie.test.jsx
+  - id: REQ-MAG-027
+    title: "I segni del magazzino si spiegano da soli: la legenda sopra la lista"
+    area: "src/components/InventoryManager.jsx, src/index.css"
+    description: >
+      Nata da una domanda vera di Flavio (vocale del 20/08, 14:39, con lo
+      screenshot del telefono): «perche' alcune cose all'interno del
+      magazzino hanno questa bacchettina davanti — rossa, blu, oppure non
+      ce l'hanno? Che significa?». Se il titolare deve chiederlo, quattro
+      colori senza spiegazione sono un codice segreto.
+      I DUE SEGNI, che gia' esistevano e ora si spiegano: il PALLINO dice
+      quanta roba c'e' (verde c'e', giallo in esaurimento, rosso esaurito);
+      la STRISCIA a sinistra dice che assortimento e' (blu in linea, ambra
+      premium, rossa fuori/OUT, neutra in assortimento).
+      LA LEGENDA sta sopra la lista, una riga smorzata che va a capo da
+      se' sul telefono, coi campioncini presi dalle CLASSI VERE dei segni
+      (.dot-*, e le tacche coi colori di .inv-row.ass-*): se un colore
+      cambia la', la legenda lo segue o il test la smaschera. In piu' ogni
+      riga porta il title dell'assortimento, per chi tocca.
+      Chiesta dall'utente: «aggiungi la legenda dei pallini e delle
+      lineette vicino agli item dell'inventario».
+    status: implemented
+    generate_issue: true
+    labels: [magazzino, ui]
+    test_cases: [tests/component/InventoryManager.test.jsx]
