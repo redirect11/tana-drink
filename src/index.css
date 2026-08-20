@@ -463,8 +463,17 @@ body.schermo-intero {
 }
 
 .card {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 50%), var(--card);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  /* IL RIQUADRO DI UNA SEZIONE, SU QUALSIASI TEMA. Fondo e bordo erano due
+     bianchi trasparenti: nati per il fondo scuro, sul tema chiaro — dove
+     --card è spesso #ffffff — davano un rettangolo bianco su fondo
+     chiaro col bordo invisibile. Sono i «box bianchi» visti al banco
+     nelle impostazioni e nel menu. Adesso il bordo è --line (che ha già
+     la sua variante chiara) e il rilievo è --velo-superficie, che sullo
+     scuro resta il velo di luce di sempre e sul chiaro si toglie: lì lo
+     stacco lo fanno il bordo e l'ombra. Vedi la dichiarazione dei
+     gettoni, più in basso. */
+  background: var(--velo-superficie), var(--card);
+  border: 1px solid var(--line);
   border-radius: var(--raggio-card);
   padding: 16px;
   margin: 12px 0;
@@ -3428,8 +3437,10 @@ body.drawer-open .status-bell-float { display: none; }
 .cat-chip {
   padding: 7px 16px;
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.13);
+  /* Come .chip e .mode-option: gettoni, non bianchi fissi. Sul tema
+     chiaro le categorie del menu restavano senza contorno. */
+  background: var(--tile-bg);
+  border: 1px solid var(--line);
   color: var(--text);
   text-decoration: none;
   font-size: 0.85rem;
@@ -3671,12 +3682,27 @@ body.drawer-open .status-bell-float { display: none; }
   margin-bottom: 8px;
 }
 
+/* IL NOME DELLA SEZIONE È UN TITOLO, non un'etichetta di servizio. Era
+   12px in maiuscoletto grigio slavato: dentro un riquadro pieno di
+   interruttori non si leggeva, e chi cercava «Stampante» o «Comande»
+   scorreva a tentativi. Ora prende la misura dei titoli — col serif di
+   casa, che gli h1-h3 hanno già — e il colore del testo. */
 .settings-section h3 {
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: var(--muted);
-  margin: 0 0 4px;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 10px;
+}
+
+/* IL SOTTOTITOLO DENTRO LA SEZIONE. Sta un gradino sotto l'h3 e resta di
+   sistema (l'h3 è serif): due misure diverse non bastavano a far vedere
+   la gerarchia quando erano lo stesso carattere. Era uno `style` inline
+   ripetuto in mezza SettingsTab. */
+.settings-section h4 {
+  font-size: 0.98rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 16px 0 4px;
 }
 
 .toggle-row {
@@ -3685,7 +3711,10 @@ body.drawer-open .status-bell-float { display: none; }
   align-items: center;
   gap: 12px;
   padding: 12px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  /* La riga che separa un'impostazione dall'altra: gettone, non bianco
+     fisso — sul tema chiaro spariva e gli interruttori diventavano un
+     elenco senza righe. */
+  border-bottom: 1px solid var(--line);
 }
 
 .toggle-row:last-child {
@@ -4057,8 +4086,10 @@ body.fullbleed,
   gap: 4px;
   padding: 10px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.13);
-  background: rgba(255, 255, 255, 0.05);
+  /* Gettoni, non bianchi fissi: sul tema chiaro le tessere dei gruppi
+     erano bianche su bianco. */
+  border: 1px solid var(--line);
+  background: var(--tile-bg);
   color: var(--text);
   cursor: pointer;
   text-align: left;
@@ -4787,6 +4818,15 @@ body.fullbleed,
   /* Superfici/linee POS: seguono il tema (variante chiara sotto). */
   --line: rgba(255, 255, 255, 0.1);
   --tile-bg: rgba(255, 255, 255, 0.05);
+  /* IL RILIEVO DI UNA SUPERFICIE (.card e chi le somiglia). Sullo scuro è
+     un velo di luce che scende dal bordo alto e dà spessore al riquadro.
+     Sul chiaro quel velo non può esistere — la superficie è già il
+     tono più chiaro della pagina — e insistere col bianco produceva
+     appunto il «box bianco»: lì si toglie, e il riquadro si stacca col
+     bordo (--line) e con l'ombra della famiglia di forme (--ombra-card).
+     Un gettone solo, come --line e --strip-spenta: la variante chiara sta
+     tutta qui sotto e nessuna regola deve più indovinare il tema. */
+  --velo-superficie: linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 50%);
   /* LA STRISCIA DI UNO STATO SPENTO — servito, chiuso, annullato, in
      invio. Era un bianco trasparente: nato per il fondo scuro, sul tema
      chiaro diventava bianco su bianco e la striscia spariva. Una striscia
@@ -4801,6 +4841,7 @@ body.fullbleed,
 :root[data-luma='light'] {
   --line: rgba(0, 0, 0, 0.14);
   --tile-bg: rgba(0, 0, 0, 0.05);
+  --velo-superficie: none;
 }
 :root[data-luma='light'] .pill.aperto {
   background: rgba(46, 204, 113, 0.2);

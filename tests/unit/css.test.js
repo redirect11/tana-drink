@@ -578,3 +578,82 @@ describe('il colore del conto sul fondo della card', () => {
     expect(regola()).toMatch(/linear-gradient\(\s*135deg/)
   })
 })
+
+// ── I RIQUADRI DELLE SEZIONI NON DANNO PER SCONTATO IL TEMA SCURO ─────
+//
+// BUG-065. Segnalato al banco: «in alcune voci del menù e impostazioni vengono
+// usati ancora dei box bianchi». Erano le superfici scritte con bianchi
+// trasparenti — nati per il fondo scuro, dove un velo bianco è rilievo —
+// che sul tema chiaro, con --card a #ffffff, diventavano un rettangolo
+// bianco su fondo chiaro col bordo invisibile. I colori strutturali
+// stanno nei gettoni (--line, --tile-bg, --velo-superficie), che hanno
+// già la loro variante chiara.
+describe('le superfici delle sezioni seguono il tema', () => {
+  const css = () => readFileSync(join(CARTELLA, 'index.css'), 'utf8')
+
+  // Il corpo di una regola, commenti tolti: quello che il browser applica.
+  function regola(nome) {
+    const testo = css().replace(/\/\*[\s\S]*?\*\//g, '')
+    const i = testo.indexOf(A_CAPO + nome + ' {')
+    expect(i, nome + ' non esiste più nel foglio').toBeGreaterThan(-1)
+    return testo.slice(i, testo.indexOf('}', i))
+  }
+
+  const SUPERFICI = ['.card', '.toggle-row', '.cat-chip', '.group-tile', '.mode-option', '.chip']
+
+  for (const nome of SUPERFICI) {
+    it(nome + ': fondo e bordo vengono dai gettoni, non da un bianco fisso', () => {
+      const corpo = regola(nome)
+      const bianchi = corpo
+        .split('\n')
+        .filter((r) => /^\s*(background|border)/.test(r) && /rgba\(\s*255,\s*255,\s*255/.test(r))
+      expect(bianchi).toEqual([])
+    })
+  }
+
+  it('il velo di rilievo è un gettone, e sul tema chiaro si toglie', () => {
+    const testo = css()
+    expect(testo).toMatch(/--velo-superficie:\s*linear-gradient/)
+    // La variante chiara: senza, il velo bianco resterebbe sul bianco.
+    expect(testo).toMatch(/\[data-luma='light'\][\s\S]{0,300}--velo-superficie:\s*none/)
+  })
+})
+
+// ── IL NOME DELLA SEZIONE SI DEVE LEGGERE ────────────────────────────
+//
+// Era `0.75rem` in maiuscoletto grigio: dodici pixel, e dentro un
+// riquadro pieno di interruttori chi cercava «Stampante» andava a
+// tentativi. È il titolo che dice cosa c'è nel riquadro, non
+// un'etichetta di servizio.
+describe('i titoli di sezione sono titoli', () => {
+  const css = () => readFileSync(join(CARTELLA, 'index.css'), 'utf8')
+
+  function regola(nome) {
+    const testo = css().replace(/\/\*[\s\S]*?\*\//g, '')
+    const i = testo.indexOf(A_CAPO + nome + ' {')
+    expect(i, nome + ' non esiste più nel foglio').toBeGreaterThan(-1)
+    return testo.slice(i, testo.indexOf('}', i))
+  }
+
+  it('il titolo di sezione non scende sotto 1rem', () => {
+    const corpo = regola('.settings-section h3')
+    const m = /font-size:\s*([\d.]+)rem/.exec(corpo)
+    expect(m, 'il titolo di sezione deve dichiarare una misura').not.toBe(null)
+    expect(Number(m[1])).toBeGreaterThanOrEqual(1)
+  })
+
+  it('il titolo di sezione non è maiuscoletto slavato', () => {
+    const corpo = regola('.settings-section h3')
+    expect(corpo).not.toMatch(/text-transform:\s*uppercase/)
+    expect(corpo).not.toMatch(/color:\s*var\(--muted\)/)
+    expect(corpo).toMatch(/color:\s*var\(--text\)/)
+  })
+
+  it('il sottotitolo sta un gradino sotto, e non è più uno style inline', () => {
+    const sotto = regola('.settings-section h4')
+    const m = /font-size:\s*([\d.]+)rem/.exec(sotto)
+    expect(m).not.toBe(null)
+    const titolo = /font-size:\s*([\d.]+)rem/.exec(regola('.settings-section h3'))
+    expect(Number(m[1])).toBeLessThan(Number(titolo[1]))
+  })
+})

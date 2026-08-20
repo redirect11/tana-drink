@@ -51,7 +51,7 @@ export default function AvvisiPanel({ gestore }) {
           interrompe: arriva mentre stai battendo un conto o contando la
           cassa. Il fumetto sta solo nella coda ordini — che è il posto dove
           gli ordini si aspettano — e toccandolo apre gli avvisi. */}
-      <h4 style={{ margin: '16px 0 4px' }}>Dove compaiono, ad app aperta</h4>
+      <h4>Dove compaiono, ad app aperta</h4>
       <div className="mode-choice">
         {[
           ['toast', '🔔 In alto, ovunque'],
