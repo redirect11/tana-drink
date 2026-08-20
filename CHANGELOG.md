@@ -4,6 +4,10 @@
 
 ### Per chi gestisce
 
+- **Sul sito di test si può provare la stampa senza stampante**: nella
+  sezione Dev c'è «Stampante simulata» — le stampe escono come facsimile a
+  schermo, solo su quel dispositivo.
+
 - **Sul tema chiaro i tasti delle impostazioni hanno di nuovo il contorno.**
   Le scelte a pulsanti e i filtri non selezionati erano senza bordo — bianco
   su bianco — e sembravano scritte, non tasti.

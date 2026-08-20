@@ -21,7 +21,37 @@
 
 const COL = 48 // colonne della testina 80 mm, come la stampante vera
 
+// L'interruttore DEL TERMINALE, acceso dalla sezione Dev: serve sul sito
+// di TEST, dove l'ambiente è quello vero (niente DEV, niente emulatori) ma
+// la stampante spesso non c'è — chi prova da casa deve poter vedere i
+// facsimili invece di stampe che falliscono in silenzio. È in localStorage
+// perché la stampante è una faccenda del dispositivo, come le sue
+// impostazioni. La sezione Dev esiste solo in locale e sul test
+// (devToolsEnabled), quindi in produzione questo interruttore non ha una
+// leva da nessuna parte.
+const CHIAVE_FINTA = 'tana_stampante_finta'
+export function stampanteFintaForzata() {
+  try {
+    return localStorage.getItem(CHIAVE_FINTA)
+  } catch {
+    return null
+  }
+}
+export function forzaStampanteFinta(attiva) {
+  try {
+    if (attiva === null) localStorage.removeItem(CHIAVE_FINTA)
+    else localStorage.setItem(CHIAVE_FINTA, attiva ? 'true' : 'false')
+  } catch {
+    /* niente memoria: resta la regola d'ambiente */
+  }
+}
+
 export function stampanteFintaAttiva(env = import.meta.env) {
+  // La scelta del terminale vince su tutto: è chi sta provando a dire
+  // «qui la stampante è finta» (o «voglio quella vera anche in locale»).
+  const forzata = stampanteFintaForzata()
+  if (forzata === 'true') return true
+  if (forzata === 'false') return false
   if (env?.VITE_STAMPANTE_FINTA === 'false') return false
   // Forzabile a mano, per provarla dove serve.
   if (env?.VITE_STAMPANTE_FINTA === 'true') return true
