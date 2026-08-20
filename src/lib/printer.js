@@ -413,13 +413,35 @@ function italianDateTime(iso) {
 // Ticket per il barista: numero ordine grande, articoli senza prezzi.
 // Formato ispirato al template fotografato (sfondo nero, orario, sezione BAR).
 
+// ── UN TICKET È UNA COMANDA SOLA (BUG-051) ──────────────────────────
+//
+// Chi chiama la stampa dice QUALE comanda: se non lo dice, qui c'era il
+// ripiego `order.order_items`, cioè l'AGGREGATO del conto — le righe di
+// tutte le comande fuse in una, con le quantità sommate. Su un conto con
+// due comande usciva un ticket solo che sembrava una comanda e ne
+// conteneva due, e dal facsimile non si vedeva nemmeno: la comanda non
+// porta scritto il suo numero. Il chiamante che ci arrivava davvero è il
+// tasto «Comanda» della coda, che cerca la comanda ATTIVA: appena non ce
+// n'è più una aperta (tutto servito, o il conto pagato) la ricerca non
+// trova niente e si stampava l'intero conto.
+//
+// La scelta sta qui e non nei cinque chiamanti: senza comanda si stampa
+// l'ULTIMA del conto — quella che si vuole ristampare quando si chiede
+// «la comanda» senza dire quale. L'aggregato resta solo per un ordine che
+// di comande non ne ha (i doc vecchi, e un conto appena nato in locale).
+export function comandaDelTicket(order, comanda = null) {
+  if (comanda) return comanda
+  const aperte = (order?.comande || []).filter((c) => c && c.status !== 'annullato')
+  return aperte.at(-1) || null
+}
+
 // `comanda` opzionale: stampa i soli item di quella comanda (aggiunte a un
-// conto aperto); senza, stampa l'aggregato dell'ordine (retrocompatibile).
+// conto aperto). Senza, la sceglie comandaDelTicket — e mai due insieme.
 export async function printComanda(order, comanda = null) {
   const prn = await getPrinter()
   const now = new Date()
   const hhmm = now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
-  const ticketItems = comanda?.items ?? order.order_items ?? []
+  const ticketItems = comandaDelTicket(order, comanda)?.items ?? order.order_items ?? []
   const totalQty = ticketItems.reduce((s, i) => s + (i.qty || 1), 0)
 
   prn.addTextLang('it')

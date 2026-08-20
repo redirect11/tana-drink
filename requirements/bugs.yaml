@@ -1652,3 +1652,48 @@ bugs:
     severity: media
     priority: P2
     test_cases: [tests/unit/stampaComande.test.js]
+
+  - id: BUG-051
+    title: "Un facsimile con dentro DUE comande: senza indicazione si stampava il conto intero"
+    area: "src/lib/printer.js (printComanda, comandaDelTicket), src/pages/BartenderPage.jsx"
+    description: >
+      Segnalato dall'utente il 20/08 provando sull'emulatore, con la
+      stampante finta: «ho trovato una finestra facsimile con una comanda ma
+      in realta' ne aveva due».
+      LA CAUSA. `printComanda(order, comanda)` accetta la comanda come
+      parametro OPZIONALE, e senza ripiegava su `order.order_items` — che
+      NON e' una comanda: e' l'AGGREGATO del conto, cioe' le righe di tutte
+      le comande non annullate messe insieme, con le quantita' dello stesso
+      drink SOMMATE. Un ticket solo, che sembra una comanda e ne contiene
+      due, e dal facsimile non si distingue: la comanda non porta scritto il
+      suo numero.
+      CHI CI ARRIVAVA. Non l'auto-stampa (quella passa sempre la comanda,
+      BUG-050) e nemmeno la stampante finta, che non accorpa niente: i lavori
+      arrivano uno per volta e ognuno apre la sua finestra. Ci arrivava il
+      tasto «Comanda» della card in coda (BartenderPage), che cercava la
+      comanda ATTIVA — `o.comande?.find((c) => c.id === o.active_comanda_id)
+      ?? null`. La comanda attiva e' quella al passo piu' indietro fra le
+      APERTE: quando non ce n'e' piu' nessuna aperta — tutto servito, o il
+      conto pagato, che porta tutte le comande a «ritirato» — `find` non
+      trova niente, il `?? null` faceva il resto e usciva il conto intero.
+      PASSI PER RIPRODURLO: conto con due comande (una battuta, poi altre
+      righe aggiunte dopo che la prima e' stata presa in carico); si portano
+      tutte e due a «servito», oppure si incassa il conto; dalla coda si apre
+      la card e si tocca «Comanda». Esce un facsimile solo con dentro le
+      righe di tutte e due, sommate.
+      LA CURA. La scelta di quale comanda finisce sul ticket sta in un posto
+      solo, `comandaDelTicket` (printer.js, pura): quella che il chiamante
+      indica; senza indicazione l'ULTIMA comanda non annullata del conto —
+      che e' quella che si vuole ristampare quando si chiede «la comanda»
+      senza dire quale. L'aggregato resta il ripiego solo per un ordine che
+      di comande non ne ha (i doc vecchi, un conto appena nato in locale):
+      li' l'aggregato E' la comanda, non la somma di due. Serve piu' di un
+      ticket? C'e' il gesto apposta (REQ-STAMPA-012), che le stampa
+      SEPARATE.
+    in_produzione: true
+    status: fixed
+    generate_issue: true
+    labels: [bug, stampa, banco]
+    severity: media
+    priority: P2
+    test_cases: [tests/unit/stampaComande.test.js]
