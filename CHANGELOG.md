@@ -4,6 +4,31 @@
 
 ### Per chi gestisce
 
+- **Lo scontrino e la comanda si scelgono campo per campo.** In
+  *Impostazioni → Stampante* ci sono due riquadri nuovi, «Cosa c'è sullo
+  scontrino» e «Cosa c'è sulla comanda»: un interruttore per ogni riga che
+  la stampa può avere — il numero del conto, chi l'ha battuto, quante
+  persone, l'IVA, il codice lotteria, la fascia nera della comanda, le note
+  dei prodotti — e dove la riga è solo testo si cambiano anche le parole
+  («DIRETTO» sulla fascia, «Il tuo menu» sotto al nome). Si può aggiungere
+  una **riga di saluto** in fondo allo scontrino. **La lista dei prodotti
+  non si tocca** — e sullo scontrino nemmeno il totale: sono la carta, non
+  un di più. Ogni riquadro ha una **prova di stampa** che fa uscire un
+  conto finto coi campi scelti, così si vede prima di stampare quello vero.
+  **Se non si cambia niente, non cambia niente**: le stampe restano
+  identiche a prima, riga per riga.
+
+- **Il logo si carica dall'app, e si sceglie su quali stampe esce.** Prima
+  usciva in cima allo scontrino e basta, e per cambiarlo bisognava toccare
+  il codice. Adesso in *Impostazioni → Stampante → Logo sulle stampe* si
+  decide stampa per stampa — scontrino, preconto, comanda, chiusura di
+  cassa — e si **carica l'immagine** (la cambia solo l'amministratore).
+  L'immagine viene ridotta alla misura che la stampante vuole, e se non va
+  bene **lo si sa subito**: una foto scura, che sulla carta uscirebbe come
+  un rettangolo nero, viene rifiutata spiegando perché, e il logo resta
+  quello di prima. Di suo tutto come sempre: logo su scontrino e preconto,
+  non sulla comanda — al banco è solo carta consumata.
+
 - **Le comande si spostano anche col dito.** Nella lavagna del banco si
   tiene premuto su una comanda, la card si stacca e si lascia nella colonna
   che si vuole: lo stato diventa quello della colonna, avanti o indietro che

@@ -13,6 +13,29 @@ import { CASH_METHOD_ORDER, cashMethodKeys, PAYMENT_METHOD_PRINT } from './order
 import { stampanteFintaAttiva, creaStampanteFinta } from './stampanteFinta.js'
 import { aggregateItems } from './comande.js'
 import { battutoDaQui } from './dispositivo.js'
+import { impostazioniRicordate } from './impostazioniLocali.js'
+import {
+  configStampa,
+  immagineCaricata,
+  logoAcceso,
+  tipoScontrino,
+  LARGHEZZA_LOGO,
+} from './campiStampa.js'
+
+// ── COSA C'È SULLA CARTA LO DECIDE IL LOCALE ─────────────────────────
+//
+// I campi dello scontrino e della comanda stanno in settings/bar
+// (REQ-STAMPA-014): sono l'identità del bar, non una preferenza del
+// tablet che ha stampato. Ma la stampa NON PUÒ ASPETTARE LA RETE — al
+// banco un ticket che arriva dopo la lettura di un documento è un ticket
+// che non arriva — quindi qui si legge la copia locale che
+// `subscribeSettings` riscrive a ogni risposta del server
+// (lib/impostazioniLocali.js).
+//
+// Risposta mai arrivata: nessuna voce, e ogni campo torna al suo valore
+// di partenza, che è il comportamento di sempre. Niente da migrare,
+// niente da aspettare.
+const impostazioniDelLocale = () => impostazioniRicordate({})
 
 // Larghezza colonne stamante 80 mm (TM-m30II / TM-m30III): 48 chars std.
 const COL = 48
@@ -564,10 +587,21 @@ export function comandaDelTicket(order, comanda = null) {
   return aperte.at(-1) || null
 }
 
+// LA FASCIA NERA, IN UNA FUNZIONE SOLA. È il pezzo con più modi di
+// venire storto — la scritta si può cambiare, l'ora si può togliere, e
+// tutte e due insieme vorrebbero dire una striscia nera vuota in cima al
+// ticket — quindi la decide una funzione pura, che si prova senza
+// stampante: torna la riga da scrivere, o niente.
+export function strisciaComanda(cfg, hhmm) {
+  const dentro = [cfg.parole('fascia'), cfg.mostra('ora') ? hhmm : ''].filter(Boolean).join('  ')
+  return cfg.mostra('fascia') && dentro ? `  ${dentro}  ` : null
+}
+
 // `comanda` opzionale: stampa i soli item di quella comanda (aggiunte a un
 // conto aperto). Senza, la sceglie comandaDelTicket — e mai due insieme.
 export function printComanda(order, comanda = null) {
   return lavoroDiStampa(async (prn) => {
+    const cfg = configStampa(impostazioniDelLocale(), 'comanda')
     const now = new Date()
     const hhmm = now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
     const ticketItems = comandaDelTicket(order, comanda)?.items ?? order.order_items ?? []
@@ -576,42 +610,60 @@ export function printComanda(order, comanda = null) {
     prn.addTextLang('it')
     prn.addTextSmooth(true)
 
+    // Di suo il logo sulla comanda non esce: al banco è carta consumata.
+    await stampaLogo(prn, 'comanda')
+
     // ── Header nero: "DIRETTO  22:09" ──
-    prn.addTextAlign(prn.ALIGN_CENTER)
-    prn.addTextStyle(true, false, true, prn.COLOR_1)  // reverse = bianco su nero
-    prn.addTextSize(2, 2)
-    prn.addText(`  DIRETTO  ${hhmm}  \n`)
-    prn.addTextSize(1, 1)
-    prn.addTextStyle(false, false, false, prn.COLOR_1)
-    prn.addText('\n')
+    const striscia = strisciaComanda(cfg, hhmm)
+    if (striscia) {
+      prn.addTextAlign(prn.ALIGN_CENTER)
+      prn.addTextStyle(true, false, true, prn.COLOR_1)  // reverse = bianco su nero
+      prn.addTextSize(2, 2)
+      prn.addText(`${striscia}\n`)
+      prn.addTextSize(1, 1)
+      prn.addTextStyle(false, false, false, prn.COLOR_1)
+      prn.addText('\n')
+    }
 
     // ── Contatore / sezione ──
     prn.addTextAlign(prn.ALIGN_LEFT)
-    prn.addText(row('CONTATORIE', `CL: ${totalQty}`))
-    prn.addText(row('BAR', 'Vendeur'))
-    prn.addText('\n')
+    const conteggio = cfg.mostra('conteggio')
+    const reparto = cfg.mostra('reparto')
+    if (conteggio) prn.addText(row(cfg.testo('conteggio'), `CL: ${totalQty}`))
+    if (reparto) prn.addText(row(cfg.testo('reparto'), 'Vendeur'))
+    // La riga vuota è il respiro DI QUELLE righe: senza di loro non
+    // separerebbe niente, e sarebbe solo carta.
+    if (conteggio || reparto) prn.addText('\n')
 
     // ── Tavolo / numero ordine (grande, centrato) ──
     prn.addTextAlign(prn.ALIGN_CENTER)
-    prn.addTextSize(2, 2)
-    prn.addTextStyle(false, false, true, prn.COLOR_1)
-    const label = order.customer_name
-      || (order.table_label ? `Tavolo ${order.table_label}` : null)
-      || `#${order.daily_number}`
-    prn.addText(`${label}\n`)
-    prn.addTextSize(1, 1)
-    prn.addTextStyle(false, false, false, prn.COLOR_1)
-    prn.addText('Il tuo menu\n\n')
+    const titolo = cfg.mostra('titolo')
+    if (titolo) {
+      prn.addTextSize(2, 2)
+      prn.addTextStyle(false, false, true, prn.COLOR_1)
+      const label = order.customer_name
+        || (order.table_label ? `Tavolo ${order.table_label}` : null)
+        || `#${order.daily_number}`
+      prn.addText(`${label}\n`)
+      prn.addTextSize(1, 1)
+      prn.addTextStyle(false, false, false, prn.COLOR_1)
+    }
+    const sottotitolo = cfg.parole('sottotitolo')
+    if (sottotitolo) prn.addText(`${sottotitolo}\n`)
+    if (titolo || sottotitolo) prn.addText('\n')
 
     // ── Articoli (doppia altezza per leggibilità dal barista) ──
+    // LA LISTA DEI PRODOTTI NON SI TOGLIE: non è fra i campi, e non c'è
+    // impostazione che possa arrivare qui.
     prn.addTextAlign(prn.ALIGN_LEFT)
     prn.addText(line())
     prn.addTextSize(1, 2)
+    const conNote = cfg.mostra('note_riga')
     for (const item of ticketItems) {
       prn.addText(`${item.qty}  ${item.name.toUpperCase()}\n`)
       // Nota della singola riga (es. "poco ghiaccio", o per chi è): il banco
       // deve vederla sotto al prodotto, in corpo normale.
-      if (item.note) {
+      if (item.note && conNote) {
         prn.addTextSize(1, 1)
         prn.addText(`     > ${item.note}\n`)
         prn.addTextSize(1, 2)
@@ -620,11 +672,18 @@ export function printComanda(order, comanda = null) {
     prn.addTextSize(1, 1)
     prn.addText(line())
 
-    if (order.note) {
+    if (order.note && cfg.mostra('nota_conto')) {
       prn.addTextStyle(false, false, true, prn.COLOR_1)
       prn.addText(`Nota: ${order.note}\n`)
       prn.addTextStyle(false, false, false, prn.COLOR_1)
       prn.addText(line())
+    }
+
+    const saluto = cfg.parole('riga_cortesia')
+    if (saluto) {
+      prn.addTextAlign(prn.ALIGN_CENTER)
+      prn.addText(`${saluto}\n`)
+      prn.addTextAlign(prn.ALIGN_LEFT)
     }
 
     prn.addFeedLine(3)
@@ -703,7 +762,10 @@ export function printComandaUnita(order) {
 //
 // Se non si carica non se ne fa niente: uno scontrino senza logo è ancora
 // uno scontrino, uno scontrino che non esce è un cliente che aspetta.
-const LARGHEZZA_LOGO = 220
+//
+// QUALE immagine e SU QUALI stampe lo decide il locale (REQ-STAMPA-011,
+// lib/campiStampa.js). Senza niente di scelto vale quella del programma,
+// `public/logo.png`, e vale dove è sempre valsa: scontrino e preconto.
 
 // TRE STATI, NON DUE. Qui c'era `null` a dire due cose diverse — «mai
 // provato» e «provato, non c'è» — e la seconda non veniva mai ricordata:
@@ -712,14 +774,20 @@ const LARGHEZZA_LOGO = 220
 // La carta usciva dopo, ogni volta. `undefined` vuol dire «mai provato»,
 // `null` vuol dire «provato e non c'è»: si tenta una volta sola.
 let _logoCanvas // undefined = mai provato
+// …ma «una volta sola» vale PER QUELL'IMMAGINE. Da quando il logo si
+// carica dalle impostazioni, cambiarlo cambia l'indirizzo: senza questa
+// riga il locale caricava il logo nuovo e continuava a stampare il
+// vecchio finché non riavviava l'app.
+let _logoUrl
 
 // Esportata per la prova: dall'esterno non la chiama nessuno, ma il
 // «si tenta una volta sola» si dimostra solo contando i tentativi.
-export async function logoPerStampa() {
+export async function logoPerStampa(immagine = null) {
   if (typeof document === 'undefined') return null
-  if (_logoCanvas !== undefined) return _logoCanvas
+  const url = immagine || `${import.meta.env.BASE_URL || '/'}logo.png`
+  if (_logoCanvas !== undefined && _logoUrl === url) return _logoCanvas
+  _logoUrl = url
   try {
-    const url = `${import.meta.env.BASE_URL || '/'}logo.png`
     const img = await new Promise((ok, ko) => {
       const i = new Image()
       // TEMPO MASSIMO. Da quando la stampa è una coda (BUG-052), un logo
@@ -755,9 +823,12 @@ export async function logoPerStampa() {
   return _logoCanvas
 }
 
-// Mette il logo in cima, se la stampante sa farlo e l'immagine c'è.
-async function stampaLogo(prn) {
-  const logo = await logoPerStampa()
+// Mette il logo in cima, se il locale lo vuole SU QUESTA stampa, se la
+// stampante sa farlo e se l'immagine c'è.
+async function stampaLogo(prn, tipo) {
+  const impostazioni = impostazioniDelLocale()
+  if (!logoAcceso(impostazioni, tipo)) return
+  const logo = await logoPerStampa(immagineCaricata(impostazioni))
   if (!logo) return
   try {
     prn.addTextAlign(prn.ALIGN_CENTER)
@@ -774,6 +845,7 @@ async function stampaLogo(prn) {
 export function printScontrino(order, opts = {}) {
   return lavoroDiStampa(async (prn) => {
     const s = loadPrinterSettings()
+    const cfg = configStampa(impostazioniDelLocale(), 'scontrino')
     const ivaRate = Number(opts.ivaRate ?? s.ivaRate ?? 10) / 100
     const { date, time } = italianDateTime(order.created_at)
     const lordo = Number(order.total ?? 0)
@@ -788,35 +860,55 @@ export function printScontrino(order, opts = {}) {
     prn.addTextSmooth(true)
 
     // ── Intestazione ──
-    await stampaLogo(prn)
+    // Preconto o scontrino lo dice il conto, non chi ha premuto: il logo
+    // può stare sull'uno e non sull'altro (REQ-STAMPA-011).
+    await stampaLogo(prn, tipoScontrino(order))
     prn.addTextAlign(prn.ALIGN_CENTER)
-    prn.addTextSize(2, 2)
-    prn.addTextStyle(false, false, true, prn.COLOR_1)
-    prn.addText(`${s.businessName}\n`)
-    prn.addTextSize(1, 1)
-    prn.addTextStyle(false, false, false, prn.COLOR_1)
-    prn.addText(`${s.businessAddress}\n`)
-    prn.addText(`${s.businessCity}\n\n`)
+    const nome = cfg.mostra('nome_locale')
+    const via = cfg.mostra('indirizzo')
+    const citta = cfg.mostra('citta')
+    if (nome) {
+      prn.addTextSize(2, 2)
+      prn.addTextStyle(false, false, true, prn.COLOR_1)
+      prn.addText(`${s.businessName}\n`)
+      prn.addTextSize(1, 1)
+      prn.addTextStyle(false, false, false, prn.COLOR_1)
+    }
+    if (via) prn.addText(`${s.businessAddress}\n`)
+    if (citta) prn.addText(`${s.businessCity}\n`)
+    // Il vuoto sotto l'intestazione la stacca dal conto: senza
+    // intestazione non stacca niente.
+    if (nome || via || citta) prn.addText('\n')
     prn.addTextAlign(prn.ALIGN_LEFT)
 
     // ── Numero scontrino + data ──
-    prn.addText(row(`SCONTRINO - ${order.daily_number ?? '-'}`, `${date}, ${time}`))
-    prn.addText('Utente A\n')
-    const totalPers = order.coperto_persons ? `${order.coperto_persons} cliente${order.coperto_persons > 1 ? 'i' : ''}` : '1 cliente'
-    prn.addText(`${totalPers}\n`)
-    const comandaLabel = order.table_label
-      ? `Vendita - Tavolo ${order.table_label}`
-      : `Vendita - Comanda #${order.daily_number}`
-    prn.addText(`${comandaLabel}\n`)
+    if (cfg.mostra('numero')) {
+      prn.addText(row(`SCONTRINO - ${order.daily_number ?? '-'}`, `${date}, ${time}`))
+    }
+    if (cfg.mostra('operatore')) prn.addText('Utente A\n')
+    if (cfg.mostra('persone')) {
+      const totalPers = order.coperto_persons ? `${order.coperto_persons} cliente${order.coperto_persons > 1 ? 'i' : ''}` : '1 cliente'
+      prn.addText(`${totalPers}\n`)
+    }
+    if (cfg.mostra('riga_vendita')) {
+      const comandaLabel = order.table_label
+        ? `Vendita - Tavolo ${order.table_label}`
+        : `Vendita - Comanda #${order.daily_number}`
+      prn.addText(`${comandaLabel}\n`)
+    }
     prn.addText(line())
 
     // ── Header colonne ──
-    prn.addTextStyle(false, false, true, prn.COLOR_1)
-    prn.addText(row('QTA  Prodotto', 'PU       Prezzo'))
-    prn.addTextStyle(false, false, false, prn.COLOR_1)
-    prn.addText(line())
+    if (cfg.mostra('intestazione_colonne')) {
+      prn.addTextStyle(false, false, true, prn.COLOR_1)
+      prn.addText(row('QTA  Prodotto', 'PU       Prezzo'))
+      prn.addTextStyle(false, false, false, prn.COLOR_1)
+      prn.addText(line())
+    }
 
     // ── Articoli ──
+    // NON SI TOLGONO: le righe e il totale sono lo scontrino. Non stanno
+    // fra i campi, e nessuna impostazione può arrivare qui.
     for (const item of (order.order_items || [])) {
       const pu = `${Number(item.unit_price).toFixed(2)}€`
       const tot = `${(item.qty * item.unit_price).toFixed(2)}€`
@@ -825,13 +917,13 @@ export function printScontrino(order, opts = {}) {
     }
 
     // Coperto (se presente)
-    if (order.coperto_amount > 0) {
+    if (order.coperto_amount > 0 && cfg.mostra('coperto')) {
       const cop = `${Number(order.coperto_amount).toFixed(2)}€`
       prn.addText(row(`${order.coperto_persons}x  Coperto`, `${cop.padStart(7)} ${cop.padStart(7)}`))
     }
 
     // ── Sconto applicato ──
-    if (sconto > 0) {
+    if (sconto > 0 && cfg.mostra('sconto')) {
       prn.addText(row('Subtotale', `${lordo.toFixed(2)}€`))
       prn.addText(row('Sconto', `-${sconto.toFixed(2)}€`))
     }
@@ -839,9 +931,11 @@ export function printScontrino(order, opts = {}) {
     prn.addText(line())
 
     // ── IVA ──
-    const ivaLabel = `IVA ${(ivaRate * 100).toFixed(1)}% (A)`
-    prn.addText(row(ivaLabel, `${ivaAmount.toFixed(2)}€`))
-    prn.addText(row('Subtotale', `${imponibile.toFixed(2)}€`))
+    if (cfg.mostra('iva')) {
+      const ivaLabel = `IVA ${(ivaRate * 100).toFixed(1)}% (A)`
+      prn.addText(row(ivaLabel, `${ivaAmount.toFixed(2)}€`))
+      prn.addText(row('Subtotale', `${imponibile.toFixed(2)}€`))
+    }
     prn.addText('\n')
 
     // ── Totale grande ──
@@ -858,37 +952,43 @@ export function printScontrino(order, opts = {}) {
     prn.addText(line())
 
     // ── Pagamenti ──
-    prn.addTextStyle(false, false, true, prn.COLOR_1)
-    prn.addText('Pagamenti\n')
-    prn.addTextStyle(false, false, false, prn.COLOR_1)
-    // Metodo sconosciuto o assente: si scrive che non è indicato. Prima si
-    // ripiegava su "Contante", e uno scontrino pagato con la carta usciva
-    // con scritto contante — una dichiarazione falsa, non un default.
-    const nomeMetodo = (m) => PAYMENT_METHOD_PRINT[m] || 'Non indicato'
-    // Se ci sono incassi registrati si elencano uno per uno (conti divisi o
-    // acconti): così su ogni scontrino si legge quanto in contanti e quanto in
-    // carta. Altrimenti si usa il metodo di chiusura del conto.
-    const incassi = (order.payments || []).filter((p) => Number(p.amount) > 0)
-    if (incassi.length > 0) {
-      for (const p of incassi) {
-        prn.addText(row(`${nomeMetodo(p.method)} (A)`, `${Number(p.amount).toFixed(2)}€`))
+    if (cfg.mostra('pagamenti')) {
+      prn.addTextStyle(false, false, true, prn.COLOR_1)
+      prn.addText('Pagamenti\n')
+      prn.addTextStyle(false, false, false, prn.COLOR_1)
+      // Metodo sconosciuto o assente: si scrive che non è indicato. Prima si
+      // ripiegava su "Contante", e uno scontrino pagato con la carta usciva
+      // con scritto contante — una dichiarazione falsa, non un default.
+      const nomeMetodo = (m) => PAYMENT_METHOD_PRINT[m] || 'Non indicato'
+      // Se ci sono incassi registrati si elencano uno per uno (conti divisi o
+      // acconti): così su ogni scontrino si legge quanto in contanti e quanto in
+      // carta. Altrimenti si usa il metodo di chiusura del conto.
+      const incassi = (order.payments || []).filter((p) => Number(p.amount) > 0)
+      if (incassi.length > 0) {
+        for (const p of incassi) {
+          prn.addText(row(`${nomeMetodo(p.method)} (A)`, `${Number(p.amount).toFixed(2)}€`))
+        }
+      } else {
+        prn.addText(row(`${nomeMetodo(order.payment_method)} (A)`, `${total.toFixed(2)}€`))
       }
-    } else {
-      prn.addText(row(`${nomeMetodo(order.payment_method)} (A)`, `${total.toFixed(2)}€`))
+      prn.addText(line())
     }
-    prn.addText(line())
 
     // ── Codice lotteria degli scontrini (se comunicato dal cliente) ──
-    if (order.lottery_code) {
+    if (order.lottery_code && cfg.mostra('lotteria')) {
       prn.addText(row('Codice Lotteria', order.lottery_code))
       prn.addText(line())
     }
 
     // ── Footer ──
     prn.addTextAlign(prn.ALIGN_CENTER)
-    const shortId = (order.id || '').substring(0, 36)
-    prn.addText(`${shortId}\n`)
-    prn.addText(`${s.businessFooter}\n`)
+    if (cfg.mostra('codice_conto')) {
+      const shortId = (order.id || '').substring(0, 36)
+      prn.addText(`${shortId}\n`)
+    }
+    if (cfg.mostra('ragione_sociale')) prn.addText(`${s.businessFooter}\n`)
+    const saluto = cfg.parole('riga_cortesia')
+    if (saluto) prn.addText(`${saluto}\n`)
 
     prn.addFeedLine(4)
     prn.addCut(prn.CUT_FEED)
@@ -1026,6 +1126,9 @@ export function printChiusuraCassa(recap, session, opts = {}) {
     prn.addTextLang('it')
     prn.addTextSmooth(true)
 
+    // Di suo il logo qui non c'è: la chiusura è un foglio interno, non
+    // esce dal locale. Chi la allega alla contabilità lo accende.
+    await stampaLogo(prn, 'chiusura')
     prn.addTextAlign(prn.ALIGN_CENTER)
     prn.addTextSize(2, 2)
     prn.addTextStyle(false, false, true, prn.COLOR_1)
@@ -1095,6 +1198,51 @@ export function printChiusuraCassa(recap, session, opts = {}) {
     prn.addFeedLine(4)
     prn.addCut(prn.CUT_FEED)
   })
+}
+
+// ── LA PROVA DI STAMPA COI CAMPI SCELTI ──────────────────────────────
+//
+// Cambiare i campi senza vedere la carta è scegliere alla cieca: il
+// pannello ha un tasto che stampa un conto FINTO — un nome, due drink,
+// uno sconto, un coperto — passando dalle STESSE funzioni della serata.
+// Non c'è un secondo disegno da tenere allineato: se l'anteprima è giusta
+// lo è perché lo è la stampa vera.
+//
+// In locale la stampante è finta e il facsimile si apre in una finestra;
+// al banco esce un pezzo di carta, ed è quello che si voleva.
+const CONTO_DI_PROVA = {
+  id: 'prova-di-stampa',
+  daily_number: 42,
+  status: 'pagato',
+  customer_name: 'Prova',
+  table_label: '4',
+  created_at: '2026-08-20T21:30:00.000Z',
+  total: 23,
+  discount_amount: 3,
+  coperto_persons: 2,
+  coperto_amount: 4,
+  note: 'Tavolo vicino alla finestra',
+  payment_method: 'contanti',
+  order_items: [
+    { qty: 2, name: 'Negroni', unit_price: 8, note: 'poco ghiaccio' },
+    { qty: 1, name: 'Spritz', unit_price: 7 },
+  ],
+  comande: [
+    {
+      id: 'prova-comanda',
+      status: 'ricevuto',
+      items: [
+        { qty: 2, name: 'Negroni', unit_price: 8, note: 'poco ghiaccio' },
+        { qty: 1, name: 'Spritz', unit_price: 7 },
+      ],
+    },
+  ],
+}
+
+export function printAnteprima(quale) {
+  return quale === 'comanda'
+    ? printComanda(CONTO_DI_PROVA)
+    : printScontrino(CONTO_DI_PROVA)
 }
 
 export function printTest() {

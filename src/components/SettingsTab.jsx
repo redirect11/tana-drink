@@ -18,6 +18,7 @@ import { parseCarteCsv, decodeCsvBuffer } from '../lib/carteImport.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import ThemeSettings, { TemaMenuClienti } from './ThemeSettings.jsx'
 import PrinterSetup from './PrinterSetup.jsx'
+import CampiStampa, { LogoStampe } from './CampiStampa.jsx'
 
 import BackupPanel from './BackupPanel.jsx'
 import InfoTab from './InfoTab.jsx'
@@ -976,6 +977,28 @@ export default function SettingsTab({ role = null }) {
       ),
     },
     { id: 'stampante', icona: '🖨️', label: 'Stampante', nodo: <PrinterSetup /> },
+    // I CAMPI DELLA CARTA STANNO COL RESTO DELLA STAMPANTE. Sono
+    // impostazioni del LOCALE (settings/bar) e non del terminale, ma chi
+    // le cerca le cerca dove sta la stampante: nella barra sono un gruppo
+    // solo, e questi riquadri vengono sotto a quello della connessione.
+    {
+      id: 'campi-scontrino',
+      icona: '🧾',
+      label: 'Campi dello scontrino',
+      nodo: <CampiStampa quale="scontrino" settings={settings} onSave={save} />,
+    },
+    {
+      id: 'campi-comanda',
+      icona: '📝',
+      label: 'Campi della comanda',
+      nodo: <CampiStampa quale="comanda" settings={settings} onSave={save} />,
+    },
+    {
+      id: 'logo-stampe',
+      icona: '🖼',
+      label: 'Logo sulle stampe',
+      nodo: <LogoStampe settings={settings} onSave={save} role={role} />,
+    },
     { id: 'backup', icona: '💾', label: 'Backup e ripristino', nodo: <BackupPanel role={role} /> },
     {
       id: 'informazioni',
@@ -1062,6 +1085,9 @@ export default function SettingsTab({ role = null }) {
     posizione: 'clienti',
     notifiche: 'clienti',
     stampante: 'stampante',
+    'campi-scontrino': 'stampante',
+    'campi-comanda': 'stampante',
+    'logo-stampe': 'stampante',
     backup: 'sistema',
     informazioni: 'sistema',
   }
