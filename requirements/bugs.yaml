@@ -1050,3 +1050,41 @@ bugs:
     severity: media
     priority: P2
     test_cases: [tests/unit/ristampaScontrino.test.js]
+
+
+  - id: BUG-050
+    title: "La comanda automatica non stampava per chi l'aveva battuta, ne' per la seconda comanda"
+    area: "src/lib/printer.js (comandeDaStampare, claimComandaPrint), src/pages/BartenderPage.jsx"
+    description: >
+      Segnalato dall'utente il 20/08 provando sull'emulatore: «questo non
+      funziona. La comanda non viene stampata». E il ricordo che ha aperto
+      la pista: «sul main, prima di questo fix, la comanda veniva stampata
+      quando si tornava agli ordini».
+      LA CAUSA: l'auto-stampa viveva DENTRO il blocco della notifica «nuovo
+      ordine» e ne ereditava i filtri. Due danni: (1) `battutoDaQui ->
+      continue` — giusto per un beep («lo sai gia', l'hai appena fatto
+      tu»), sbagliato per la stampante: la comanda serve al banco anche per
+      l'ordine battuto da questo stesso terminale; (2) il blocco scattava
+      solo sull'ordine NUOVO, quindi la seconda comanda aggiunta a un conto
+      gia' aperto non stampava mai.
+      E IL «FUNZIONAVA PRIMA» ERA UN CASO: tornando agli ordini il
+      componente ripartiva, tutto risultava nuovo, e si ristampava cio' che
+      NON era battuto da quel terminale. Non era una funzione: era lo
+      stesso difetto visto da un'angolazione fortunata.
+      LA CURA: la stampa esce dal blocco degli avvisi e ha la sua regola,
+      per COMANDA — `comandeDaStampare` (pura: ancora al banco, non
+      annullata, nata da meno di dieci minuti) piu' la pretesa
+      `claimComandaPrint` in localStorage, come gli scontrini: una copia
+      per comanda per terminale, chiunque l'abbia battuta, da qualunque
+      vista, e tornare agli ordini non ristampa.
+      LA FINESTRA DEI DIECI MINUTI e' la scelta da capire: senza, il primo
+      terminale con la memoria vuota stamperebbe in raffica tutte le
+      comande vive della serata. Il banco con la stampante tiene la coda
+      aperta tutta la sera: la finestra non gli toglie niente.
+    in_produzione: true
+    status: fixed
+    generate_issue: true
+    labels: [bug, stampa, banco]
+    severity: media
+    priority: P2
+    test_cases: [tests/unit/stampaComande.test.js]
