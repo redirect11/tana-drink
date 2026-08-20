@@ -4,22 +4,32 @@
 
 ### Per chi gestisce
 
-- **I filtri della coda stanno dietro un tastino, e la loro riga sparisce.**
-  Sopra i conti c'era una fila di pastiglie — In corso, Chiusi, Annullati,
-  Tutti, Miei, Solo oggi — che si mangiava tutta la riga. Adesso il tasto
-  che le apre è una **piccola ⚗️ in alto**, insieme a stampante, staff e
-  ordinamento, e **a filtri chiusi quella riga non c'è proprio**: l'altezza
-  torna ai conti. Se qualcosa è acceso il tastino **si accende e porta il
-  numero** dei filtri, così non capita di guardare una coda filtrata
-  credendola intera; quali siano lo dice il nome che compare passandoci
-  sopra. Vale allo stesso modo per gli **ordini** e per le **comande** —
-  dove dentro c'è anche «▦ Colonne» — e **ogni tablet se lo ricorda a modo
-  suo**: chi la tiene aperta la ritrova aperta.
+- **I filtri della coda stanno dietro un tastino, e la loro riga si
+  svuota.** Sopra i conti c'era una fila di pastiglie — In corso, Chiusi,
+  Annullati, Tutti, Miei, Solo oggi — che si mangiava tutta la riga. Adesso
+  a quel posto ci sono **due tastini soli**: la **⚗️** che apre e chiude i
+  filtri e la **freccia dell'ordinamento**. Il tasto si chiama **«Mostra
+  filtri»**, e da aperto «Nascondi filtri». Se qualcosa è acceso il tastino
+  **si accende e porta il numero** dei filtri, così non capita di guardare
+  una coda filtrata credendola intera; quali siano lo dice il nome che
+  compare passandoci sopra. Vale allo stesso modo per gli **ordini** e per
+  le **comande** — dove dentro c'è anche «▦ Colonne» — e **ogni tablet se
+  lo ricorda a modo suo**: chi la tiene aperta la ritrova aperta.
+
+- **Il tasto dell'ordinamento dice com'è messa la coda adesso**, in tre
+  parole: **«Prima i più recenti»** oppure **«Prima i più vecchi»**. Prima
+  c'era una frase lunga che metteva insieme com'era messa e cosa sarebbe
+  successo a premere, e non se ne leggeva nessuna delle due. Anche l'icona
+  lo dice: una **freccia sola** — **↓** quando si parte dai più recenti,
+  **↑** quando si parte dai più vecchi — dove il «↕» era uguale nei due
+  casi. Sta **in riga col tastino dei filtri**, sotto la testata, sul
+  tablet come sul telefono.
 
 - **Il tasto per passare da ordini a comande è salito in alto**, ed è
   diventato un'icona piccola accanto agli altri: **🧾** quando porta ai
   conti, **🍸** quando porta alle comande. Continua a dire dove porta, non
-  dove sei, e resta a un tocco anche col telefono in mano.
+  dove sei, e resta a un tocco anche col telefono in mano — è l'unico dei
+  tre rimasto lassù.
 
 - **«Chiudi cassa» non occupa più mezza testata, e torna a dire perché è
   spento.** Era largo quanto la frase che aveva sotto; adesso il tasto resta

@@ -647,54 +647,76 @@ describe('le corsie di chi guarda la serata (admin)', () => {
   })
 })
 
-// ── I FILTRI STANNO DIETRO UN TASTINO IN TESTATA (REQ-CODA-008) ─────
+// ── I FILTRI STANNO DIETRO UN TASTINO, NELLA RIGA SOTTO (REQ-CODA-008) ─
 //
 // «I filtri e tutti i bottoni li voglio a scomparsa, con un tasto che non
 // occupi troppo spazio, sia per ordini sia per comande» (l'utente, 20/08).
 // Sulla riga dei conteggi erano arrivati a sette e si mangiavano la riga
 // intera, in una lavagna che si guarda da lontano mentre si versa.
 //
-// IL PRIMO GIRO AVEVA SBAGLIATO IL VERSO. Il tasto era una pastiglia
-// «⚗️ Filtri» dentro la riga dei chip, e la riga restava lì, alta come
-// prima, per contenere solo lei: «quando dicevo di nascondere i tasti
-// intendevo tutti e non aggiungere un nuovo tasto. Lo spazio da risparmiare
-// è in altezza non in larghezza» (l'utente, 20/08). Adesso il tastino sta
-// in testata coi tastini delle azioni, e la riga dei chip — chiusa — non
-// c'è proprio.
+// IL TASTINO ERA SALITO IN TESTATA, ED È TORNATO GIÙ. Per far sparire del
+// tutto la riga da chiusa era finito coi tastini delle azioni, accanto a
+// stampante e pannelli; l'utente l'ha rimandato al suo posto: «e spostala
+// da lì, mettila sotto dove stavano i vecchi bottoni. Rimetti lì giù anche
+// il tasto dei filtri» (20/08). Adesso la riga sotto c'è sempre, ma da
+// chiusa è DUE TASTINI — ⚗️ e la freccia dell'ordinamento — non le sette
+// pastiglie di partenza: l'altezza guadagnata resta quasi tutta, e il tasto
+// sta insieme a quello che apre.
 //
 // La parte delicata resta: DA CHIUSO non si deve nascondere lo STATO. Un
 // filtro acceso e invisibile è una coda che sembra sbagliata — dodici conti
 // dove ce ne sono quaranta, e niente a schermo che lo dica. In 44px non ci
 // sta un nome, ci sta il NUMERO, e i nomi vanno nel title.
-describe('la fila dei filtri sta dietro il tastino ⚗️ della testata', () => {
+describe('la fila dei filtri sta dietro il tastino ⚗️, nella riga sotto', () => {
   beforeEach(() => {
     impostazioni = { ...impostazioni, queue_view: 'griglia' }
   })
 
-  // LA COSA PER CUI QUESTO GIRO ESISTE: da chiusi la riga non c'è, non è
-  // «una riga con dentro una pastiglia sola». L'altezza torna ai conti.
-  it('di suo è chiusa, e la riga dei chip non è proprio nel DOM', async () => {
+  // DA CHIUSA LA RIGA È SOLO I DUE TASTINI: nessuna pastiglia, e i tastini
+  // NON stanno in testata — è la correzione dell'utente del 20/08.
+  it('di suo è chiusa: nella riga ci sono i due tastini e nessun chip', async () => {
     montaCoda()
     await screen.findByText(/In servizio/)
 
-    expect(document.querySelector('.chips-row')).toBe(null)
     for (const nome of ['In corso', /Chiusi/, /Annullati/, 'Tutti', /Miei/]) {
       expect(screen.queryByRole('button', { name: nome })).not.toBeInTheDocument()
     }
 
-    // Il tastino sta in testata con stampante, pannelli e ordinamento — e
-    // ci sta anche il cambio vista, che non filtra ma non deve costare due
-    // tocchi.
     const tasto = screen.getByRole('button', { name: 'Filtri' })
-    expect(tasto.closest('.board-actions')).toBeTruthy()
+    // GIÙ, NON IN TESTATA: sta nella riga dei chip, insieme a quello che apre.
+    expect(tasto.closest('.board-actions')).toBe(null)
+    const riga = tasto.closest('.chips-row')
+    expect(riga).toBeTruthy()
     expect(tasto).toHaveClass('board-icona')
     expect(tasto).toHaveTextContent('⚗️')
+    // e con lui c'è l'altro tastino sceso dalla testata, l'ordinamento
+    expect(
+      within(riga).getByRole('button', { name: /Prima i più/ })
+    ).toBeInTheDocument()
     // Col terminale al suo posto non c'è nessun conteggio da portare.
     expect(tasto).not.toHaveClass('active')
     expect(document.querySelector('.board-icona-conta')).toBe(null)
   })
 
-  it('toccandolo i chip compaiono NELLA TESTATA, e si richiudono', async () => {
+  // IL NOME DEL TASTO È IL GESTO CHE FA. «"filtra la coda" non va bene, deve
+  // essere "mostra filtri"» (l'utente, 20/08): a filtrare sono i chip.
+  it('si chiama «Mostra filtri», e da aperto «Nascondi filtri»', async () => {
+    const utente = userEvent.setup()
+    montaCoda()
+    await screen.findByText(/In servizio/)
+
+    expect(screen.getByRole('button', { name: 'Filtri' })).toHaveAttribute(
+      'title',
+      'Mostra filtri'
+    )
+    await apriFiltri(utente)
+    expect(screen.getByRole('button', { name: 'Filtri' })).toHaveAttribute(
+      'title',
+      'Nascondi filtri'
+    )
+  })
+
+  it('toccandolo i chip compaiono NELLA STESSA RIGA, e si richiudono', async () => {
     const utente = userEvent.setup()
     montaCoda()
     await screen.findByText(/In servizio/)
@@ -713,9 +735,15 @@ describe('la fila dei filtri sta dietro il tastino ⚗️ della testata', () => 
       [...document.querySelectorAll('.chips-row')].filter((r) => !testata.contains(r))
     ).toHaveLength(0)
 
+    // e i due tastini che l'hanno aperta stanno nella riga con loro
+    expect(within(riga).getByRole('button', { name: 'Filtri' })).toBeInTheDocument()
+    expect(within(riga).getByRole('button', { name: /Prima i più/ })).toBeInTheDocument()
+
     await apriFiltri(utente)
     expect(screen.queryByRole('button', { name: 'Tutti' })).not.toBeInTheDocument()
-    expect(document.querySelector('.chips-row')).toBe(null)
+    // la riga resta, coi due tastini: sparire del tutto la porterebbe via
+    // insieme al tasto per riaprirla
+    expect(screen.getByRole('button', { name: 'Filtri' }).closest('.chips-row')).toBeTruthy()
   })
 
   // Chiusa la fila, il filtro acceso deve restare leggibile: il tastino si
@@ -809,10 +837,15 @@ describe('la fila dei filtri sta dietro il tastino ⚗️ della testata', () => 
 
   // ── SUL TELEFONO NON FINISCONO DENTRO IL ⋯ ──────────────────────
   //
-  // Nel ⋯ ci vanno le cose che si fanno OGNI TANTO: i pannelli,
-  // l'ordinamento, la cassa. Filtrare la coda e passare dai conti alle
-  // comande si fanno durante il servizio, decine di volte — dentro il menu
-  // sarebbero due tocchi ciascuno. Restano in testata, accanto al ⋯.
+  // Nel ⋯ ci vanno le cose che si fanno OGNI TANTO: i pannelli e la cassa.
+  // Passare dai conti alle comande si fa durante il servizio, decine di
+  // volte — dentro il menu sarebbero due tocchi — e resta in testata,
+  // accanto al ⋯.
+  //
+  // FILTRI E ORDINAMENTO STANNO GIÙ, sul telefono come ovunque: sono scesi
+  // dalla testata («mettila sotto dove stavano i vecchi bottoni», l'utente
+  // 20/08) e dal ⋯ l'ordinamento è uscito — in due posti sarebbero due
+  // stati da tenere allineati a mano.
   describe('sul telefono', () => {
     const vero = window.matchMedia
     beforeEach(() => {
@@ -827,17 +860,27 @@ describe('la fila dei filtri sta dietro il tastino ⚗️ della testata', () => 
       window.matchMedia = vero
     })
 
-    it('filtri e cambio vista restano in testata, accanto al ⋯', async () => {
+    it('il cambio vista resta in testata; filtri e ordinamento stanno giù', async () => {
+      const utente = userEvent.setup()
       montaCoda()
       await screen.findByText(/In servizio/)
 
       // il ⋯ c'è: siamo davvero in modo telefono
       const altro = screen.getByRole('button', { name: 'Altro' })
       const azioni = altro.closest('.board-actions')
-      expect(within(azioni).getByRole('button', { name: 'Filtri' })).toBeInTheDocument()
       expect(within(azioni).getByRole('button', { name: 'Comande' })).toBeInTheDocument()
-      // e da chiusi la riga dei chip non c'è nemmeno qui
-      expect(document.querySelector('.chips-row')).toBe(null)
+
+      // i due tastini no: stanno nella riga sotto, come sugli schermi larghi
+      expect(within(azioni).queryByRole('button', { name: 'Filtri' })).not.toBeInTheDocument()
+      const riga = screen.getByRole('button', { name: 'Filtri' }).closest('.chips-row')
+      expect(riga).toBeTruthy()
+      expect(within(riga).getByRole('button', { name: /Prima i più/ })).toBeInTheDocument()
+
+      // e nemmeno dentro il ⋯: niente doppioni, o sarebbero due stati da
+      // tenere allineati a mano
+      await utente.click(altro)
+      expect(await screen.findByText('Coda ordini')).toBeInTheDocument()
+      expect(screen.queryByText(/Ordina dal/)).not.toBeInTheDocument()
     })
   })
 })
@@ -1551,10 +1594,10 @@ describe('le corsie del banco: una card per comanda', () => {
     ).toBeInTheDocument()
   })
 
-  // IL VERSO DELLA CODA VALE PER TUTTE LE CORSIE. Il «↕» girava solo la
+  // IL VERSO DELLA CODA VALE PER TUTTE LE CORSIE. Il tasto girava solo la
   // griglia: nelle corsie premerlo non faceva niente di visibile, e un
   // tasto che non risponde fa dubitare dell'app.
-  it('il tasto «↕» inverte l’ordine delle card in ogni corsia', async () => {
+  it('la freccia dell’ordinamento inverte le card in ogni corsia', async () => {
     const user = userEvent.setup()
     montaCoda()
     // I numeri corsia per corsia: l'ordine si gira DENTRO ogni colonna, non
@@ -1568,9 +1611,21 @@ describe('le corsie del banco: una card per comanda', () => {
       expect(c.some((col) => col.length > 1)).toBe(true)
       return c
     })
-    await user.click(screen.getByRole('button', { name: /Ordina dal/ }))
+    // IL TASTO DICE COM'È MESSA LA CODA, non dove porta: «basta scrivere
+    // Prima i più recenti/vecchi in base all'ordinamento attuale»
+    // (l'utente, 20/08). Quindi il nome CAMBIA col verso, e con lui la
+    // freccia — giù si scende verso i vecchi, su si sale verso gli ultimi.
+    // Di suo la coda parte dal più vecchio, come nasce la serata.
+    const tasto = screen.getByRole('button', { name: 'Prima i più vecchi' })
+    expect(tasto).toHaveTextContent('↑')
+    await user.click(tasto)
     await waitFor(() => expect(perCorsia()).not.toEqual(prima))
     expect(perCorsia()).toEqual(prima.map((col) => [...col].reverse()))
+
+    const girato = screen.getByRole('button', { name: 'Prima i più recenti' })
+    expect(girato).toHaveTextContent('↓')
+    // e non resta traccia della frase di prima, che l'utente ha bocciato
+    expect(girato.getAttribute('title')).not.toMatch(/Adesso|tocca per/i)
   })
 })
 // ── IL COLORE DEL CONTO (REQ-UI-020) ─────────────────────────────────

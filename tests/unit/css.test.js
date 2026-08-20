@@ -244,3 +244,39 @@ ${nome} {`)
     expect(regola('.board-cassa-perche')).toMatch(/white-space:\s*nowrap/)
   })
 })
+
+// ── I DUE TASTINI DELLA FILA DEI FILTRI NON SCORRONO VIA ─────────────
+//
+// Sono scesi dalla testata alla riga dei filtri — «spostala da lì, mettila
+// sotto dove stavano i vecchi bottoni. Rimetti lì giù anche il tasto dei
+// filtri» (l'utente, 20/08) — e quella riga SCORRE in orizzontale quando i
+// chip non ci stanno (in griglia sono sei). Senza `sticky` il tasto che
+// l'ha aperta se ne andrebbe fuori schermo insieme ai chip, e per
+// richiuderla bisognerebbe prima riportare indietro la riga.
+//
+// Il DOM da solo non lo può dire: jsdom non fa layout, e i chip e i tastini
+// sono nella stessa riga in ogni caso. Si sorveglia il foglio.
+describe('i tastini dei filtri restano fermi mentre i chip scorrono', () => {
+  const css = readFileSync(join(CARTELLA, 'index.css'), 'utf8')
+  const regola = (nome) => {
+    const i = css.indexOf(`
+${nome} {`)
+    expect(i, `${nome} non c'è più`).toBeGreaterThan(-1)
+    return css.slice(i, css.indexOf('}', i))
+  }
+
+  it('sono incollati a sinistra della riga che scorre', () => {
+    const r = regola('.chips-tastini')
+    expect(r).toMatch(/position:\s*sticky/)
+    expect(r).toMatch(/left:\s*0/)
+    // e non si stringono per far posto ai chip: sotto i 44px al banco si
+    // sbaglia, e si tocca con le dita bagnate
+    expect(r).toMatch(/flex-shrink:\s*0/)
+  })
+
+  it('hanno un fondo sotto, o i chip si vedrebbero passare dietro', () => {
+    const r = regola('.chips-tastini')
+    expect(r).toMatch(/background:\s*var\(--bg\)/)
+    expect(r).toMatch(/z-index:/)
+  })
+})

@@ -6768,11 +6768,58 @@ requirements:
       Lista e schede non hanno la testata delle lavagne: li' i due tastini
       stanno in riga col campo di ricerca (`.coda-cerca-riga`), che e' lo
       stesso posto relativo e non costa una riga in piu'.
+      ── TERZO GIRO, 20/08/2026: I TASTINI TORNANO GIU', E L'ORDINAMENTO
+      IMPARA A PARLARE ──
+      L'utente ha guardato il risultato e corretto tre cose, sue parole:
+      «Questo testo e' completamente insensato [il title del tasto
+      ordinamento ↕: "Adesso: prima gli ultimi — tocca per partire dai
+      primi"]. Cioe' basta scrivere Prima i piu' recenti/vecchi in base
+      all'ordinamento attuale. E cambia anche l'icona (freccia giu' freccia
+      sopra) e spostala da li', mettila sotto dove stavano i vecchi bottoni.
+      Rimetti li' giu' anche il tasto dei filtri e "filtra la coda" non va
+      bene, deve essere "mostra filtri"».
+      1) IL TASTO DELL'ORDINAMENTO DICE COM'E' MESSA LA CODA, in tre parole:
+      «Prima i piu' recenti» o «Prima i piu' vecchi», nel title e
+      nell'aria-label. Niente «Adesso:», niente «tocca per…»: erano due
+      frasi in una — lo stato e la promessa — e al banco non se ne leggeva
+      nessuna. QUI IL TASTO DICE DOVE SEI, NON DOVE PORTA, in deroga
+      esplicita a docs/navigazione.md: quella regola vale per il CAMBIO
+      VISTA, dove le due facce non si distinguono senza guardare la lista
+      sotto, mentre un ordinamento si legge dalla coda stessa e quello che
+      manca e' solo il nome di com'e' messa.
+      L'ICONA SEGUE IL VERSO: ↓ si parte dai piu' recenti e si scende verso
+      i vecchi, ↑ si parte dai piu' vecchi e si sale verso gli ultimi
+      arrivati. Il «↕» era identico nei due stati — diceva «qui si ordina»,
+      non come. Nome e icona escono insieme da `spiegaOrdine(desc)` in
+      lib/coda.js: erano due ternari scritti a mano in due punti (testata e
+      ⋯) e gia' divergevano.
+      2) FILTRI E ORDINAMENTO SCENDONO NELLA RIGA SOTTO, quella dove
+      stavano le pastiglie dei vecchi filtri (`filaFiltri`, sulla lavagna e'
+      la riga dei conteggi). Il giro di prima li aveva portati in testata
+      per far sparire del tutto la riga da chiusa; adesso la riga c'e'
+      sempre, ma da chiusa e' DUE TASTINI, non le sette pastiglie di
+      partenza — l'altezza guadagnata resta quasi tutta, e il tasto sta
+      insieme a quello che apre invece di governarlo da un'altra zona.
+      Vale per tutte le viste e anche sul telefono: dal ⋯ la voce
+      «ordinamento» sparisce, che in due posti sarebbero due stati da
+      tenere allineati a mano.
+      I DUE TASTINI NON SCORRONO VIA (`.chips-tastini`, `position:
+      sticky`): la riga scorre in orizzontale quando i chip non ci stanno —
+      in griglia sono sei — e il tasto che l'ha aperta finirebbe fuori
+      schermo con loro.
+      LA PASTIGLIA VISTA RESTA IN TESTATA (🧾/🍸): l'utente non ha chiesto
+      di spostarla, e li' e' a un tocco solo.
+      3) IL TASTO DEI FILTRI SI CHIAMA COL GESTO CHE FA: «Mostra filtri» da
+      chiuso, «Nascondi filtri» da aperto. «Filtra la coda» diceva una cosa
+      che il tasto non fa — a filtrare sono i chip, uno per uno. L'elenco
+      dei filtri accesi per esteso resta accodato nel title da chiuso, dopo
+      il nome; il badge col conteggio e la classe `active` non cambiano.
     status: implemented
     generate_issue: true
     labels: [coda, ui]
     test_cases:
       - tests/unit/coda.test.js
+      - tests/unit/css.test.js
       - tests/component/CodaCorsie.test.jsx
       - tests/component/CodaGiornate.test.jsx
 
