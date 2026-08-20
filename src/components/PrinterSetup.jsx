@@ -207,9 +207,14 @@ export default function PrinterSetup() {
         )}
       </fieldset>
 
-      {/* ── IVA ── */}
+      {/* ── I dati del locale che finiscono sulla carta ── */}
+      {/* Si chiamava «Scontrino», ma queste righe escono anche sulla
+          chiusura di cassa e sulla fattura di cortesia — e da quando i
+          CAMPI si scelgono nel riquadro qui sotto, due posti che si
+          chiamano allo stesso modo erano un modo per cercare nel posto
+          sbagliato. Qui ci sono le PAROLE; là si sceglie se stamparle. */}
       <fieldset style={{ border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: 12, marginBottom: 12 }}>
-        <legend className="muted" style={{ fontSize: '0.85rem', padding: '0 6px' }}>Scontrino</legend>
+        <legend className="muted" style={{ fontSize: '0.85rem', padding: '0 6px' }}>Dati del locale</legend>
 
         <div className="grid-2">
           <div>

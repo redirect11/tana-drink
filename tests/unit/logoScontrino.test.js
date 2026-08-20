@@ -104,3 +104,27 @@ describe('il logo ha un tempo massimo', () => {
     }
   })
 })
+
+// ── CAMBIARE IL LOGO LO CAMBIA DAVVERO (REQ-STAMPA-011) ──────────────
+//
+// Da quando l'immagine si carica dalle impostazioni, «si tenta una volta
+// sola» non basta più: vale per QUELL'immagine. Senza, il locale caricava
+// il logo nuovo e la stampante continuava a fare uscire il vecchio
+// finché qualcuno non riavviava l'app.
+describe('il logo che cambia', () => {
+  it('un’immagine diversa si carica davvero, la stessa no', async () => {
+    prove.esito = 'ok'
+    const logoPerStampa = await carica()
+    const primo = await logoPerStampa()
+    expect(prove.tentativi).toBe(1)
+
+    // Il locale ne carica una sua: si va a prenderla.
+    const suo = await logoPerStampa('data:image/png;base64,AAAA')
+    expect(prove.tentativi).toBe(2)
+    expect(suo).not.toBe(primo)
+
+    // Richiesta di nuovo, resta quella pronta: la carta non aspetta.
+    expect(await logoPerStampa('data:image/png;base64,AAAA')).toBe(suo)
+    expect(prove.tentativi).toBe(2)
+  })
+})

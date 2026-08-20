@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 164 | fatto e coperto dai test |
+| ✅ | 166 | fatto e coperto dai test |
 | ⚠️  | 14 | fatto ma nessun test lo verifica |
-| ⬜ | 21 | da fare |
+| ⬜ | 20 | da fare |
 | 🗑 | 1 | non più valido |
 
-**200 voci** in tutto. **178** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **21** sono lavori
+**201 voci** in tutto. **180** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **20** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **6** difetti noti sono ancora aperti.
 
@@ -49,7 +49,7 @@ come «vero oggi», non come «garantito».
 | [Menù e catalogo](#menù-e-catalogo) | 9 | — | Il listino: drink, categorie, disponibilità, prezzi. |
 | [Magazzino](#magazzino) | 19 | 7 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 10 | 2 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
-| [Stampa](#stampa) | 11 | 2 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
+| [Stampa](#stampa) | 13 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
 | [Vista cliente](#vista-cliente) | 6 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
 | [Notifiche](#notifiche) | 4 | — | Le notifiche push: a chi arrivano, quando, e quando invece non devono arrivare. |
 | [Avvisi a schermo](#avvisi-a-schermo) | 2 | — | I messaggi a schermo dentro l’app — quelli che si leggono col vassoio in mano. |
@@ -1058,6 +1058,44 @@ In Impostazioni → Stampante si sceglie, sul terminale del banco, fra due modi 
 
 **Dove**: `src/components/PrinterSetup.jsx, src/lib/printer.js` · **Lo dimostrano**: `tests/component/MenuPage.test.jsx`, `tests/unit/statoStampante.test.js`
 
+#### REQ-STAMPA-011 — Il logo sugli scontrini si sceglie: quale, e su quali stampe
+
+Chiesto dall'utente il 19/08. Prima il logo veniva stampato in cima allo scontrino e basta: nessuno poteva spegnerlo, e per cambiarlo bisognava sostituire un file nel codice.
+
+SU QUALI STAMPE, una per una: scontrino, preconto, comanda, chiusura di cassa. I valori di partenza sono quelli di ieri — il logo esce sullo scontrino e sul preconto, non sulla comanda («al banco è solo carta consumata») né sulla chiusura, che è un foglio interno.
+
+PRECONTO E SCONTRINO SONO LA STESSA STAMPA (printScontrino) e nessun chiamante passa un tipo: la differenza la fa il CONTO — un foglio stampato su un conto ancora aperto È il preconto, chiunque l'abbia chiesto e da qualunque schermata (tipoScontrino). Così la scelta vale anche per lo scontrino stampato dalla coda, non solo per il tasto «Preconto» della schermata di pagamento. L'IMMAGINE SI CARICA, e la carica solo l'admin: è l'identità del locale, non una preferenza del terminale. Sta nelle impostazioni del bar (settings/bar, `stampa_logo.immagine`) come immagine già RIDOTTA alla larghezza della testina — 220 punti, pochi kB.
+
+DOVE STA L'IMMAGINE, e perché non su Storage: la stampa non può aspettare la rete. Le impostazioni del locale ogni terminale se le porta già dietro (subscribeSettings → lib/impostazioniLocali.js), un indirizzo su Storage vorrebbe dire una lettura in più davanti al cliente — ed è la stessa ragione per cui il caricamento del logo ha già un tempo massimo di tre secondi (BUG-053). Ridotta a 220 punti l'immagine pesa quanto poche righe di testo; sopra i 150 kB non si tiene e si dice perché.
+
+SI DICE SUBITO, NON SULLA CARTA: «il caricamento deve dire subito se l'immagine non va bene invece di stampare un rettangolo nero». Si guarda l'immagine GIÀ RIDOTTA — la stessa che finirebbe sulla testina — e si contano i punti scuri: una foto scura verrebbe fuori come un rettangolo nero in cima a ogni scontrino della serata. Si rifiuta anche l'immagine quasi tutta chiara (non si vedrebbe), quella molto più alta che larga (si mangia mezzo scontrino) e quella che resta pesante; quella piccola si può usare, con l'avviso che sgranerà. Se si rifiuta, il logo resta quello di prima.
+
+CAMBIARE IL LOGO LO CAMBIA DAVVERO: la cache in printer.js vale per QUELL'immagine (l'indirizzo), non «una volta e basta» — prima il logo nuovo sarebbe uscito solo dopo un riavvio dell'app.
+
+**Dove**: `src/lib/campiStampa.js, src/lib/printer.js (stampaLogo, logoPerStampa), src/components/CampiStampa.jsx` · **Lo dimostrano**: `tests/unit/campiStampa.test.js`, `tests/unit/campiDiStampa.test.js`, `tests/unit/logoScontrino.test.js`, `tests/component/CampiStampa.test.jsx`
+
+#### REQ-STAMPA-014 — I campi dello scontrino e della comanda si scelgono dalle impostazioni
+
+Chiesto dall'utente il 20/08: «servono delle impostazioni per cambiare/modificare/aggiungere/eliminare i campi dello scontrino. I campi che si possono aggiungere/togliere NON sono campi liberi: sono i campi che in genere si trovano su uno scontrino. La stessa cosa per la comanda. Per i campi che si possono customizzare/eliminare/ aggiungere fai tu in base ai dati che gestiamo. Sicuramente deve andarci la lista dei prodotti, quella è fissa. Magari insieme alle impostazioni per cambiare/visualizzare/nascondere il logo».
+
+UN VOCABOLARIO CHIUSO, non un editor di modelli: i campi sono quelli che le due stampe già maneggiano, elencati in lib/campiStampa.js con l'etichetta da vassoio e il valore di partenza. Ogni campo ha un interruttore; dove il campo è PURO TESTO (la fascia della comanda, la riga sotto al nome, le righe di servizio, la riga di saluto) ha anche le parole, modificabili.
+
+LA LISTA DEI PRODOTTI È FISSA — parole dell'utente — e non compare nemmeno fra le scelte: non c'è modo di spegnerla per sbaglio. Sullo scontrino è fisso anche il TOTALE (scelta nostra, dichiarata): un conto senza totale non è un conto, e chi lo riceve non avrebbe niente da controllare.
+
+SCONTRINO — si possono togliere: nome del locale, indirizzo, CAP e città, numero e data, chi ha battuto il conto, quante persone, tavolo o numero di comanda, intestazione delle colonne, coperto, sconto, IVA e imponibile, come è stato pagato, codice lotteria, codice del conto, ragione sociale in fondo. Si può aggiungere una riga di saluto, spenta di suo. Le PAROLE del nome del locale, dell'indirizzo e della ragione sociale restano dove sono sempre state (impostazioni della stampante, riquadro «Dati del locale»): lì si scrivono, qui si sceglie se stamparle — due posti che scrivono la stessa cosa sarebbero un modo per perderla.
+
+COMANDA — si possono togliere: fascia nera in cima (con le sue parole), ora nella fascia, riga del conteggio, riga del reparto, nome o tavolo in grande, riga sotto al nome, note dei singoli prodotti, nota del conto. Si può aggiungere una riga in fondo, spenta di suo. Fascia e ora spente insieme non lasciano una striscia nera vuota: la fascia non esce proprio (strisciaComanda, funzione pura).
+
+SONO IMPOSTAZIONI DEL LOCALE (settings/bar: `stampa_scontrino`, `stampa_comanda`, `stampa_logo`), non del terminale: lo scontrino è l'identità del bar, non una preferenza del tablet che l'ha stampato. Ma la STAMPA NON ASPETTA LA RETE: printer.js legge la copia locale che subscribeSettings riscrive a ogni risposta del server (lib/impostazioniLocali.js).
+
+NIENTE MIGRAZIONE: impostazione assente vuol dire valore di partenza, e i valori di partenza sono il comportamento di prima. In un locale che questo pannello non l'ha mai aperto la carta esce IDENTICA, carattere per carattere — c'è un facsimile a registro che lo prova, e se cambia o è cambiato il formato di proposito o qualcosa si è spento da solo.
+
+UN CAMPO CHE IL VOCABOLARIO NON CONOSCE SI STAMPA: se domani printer.js scrive un blocco nuovo e qui nessuno l'ha ancora elencato, la carta esce completa. Una riga sparita in silenzio sarebbe il difetto peggiore che questa roba possa avere.
+
+DOVE: Impostazioni → Stampante, sotto la connessione: «Cosa c'è sullo scontrino», «Cosa c'è sulla comanda» e «Logo sulle stampe» (REQ-STAMPA-011). Ogni riquadro ha una PROVA DI STAMPA che stampa un conto finto passando dalle stesse funzioni della serata — in locale apre il facsimile, al banco esce la carta: scegliere i campi senza vedere il risultato è scegliere alla cieca.
+
+**Dove**: `src/lib/campiStampa.js, src/lib/printer.js (printScontrino, printComanda), src/components/CampiStampa.jsx` · **Lo dimostrano**: `tests/unit/campiStampa.test.js`, `tests/unit/campiDiStampa.test.js`, `tests/component/CampiStampa.test.jsx`
+
 #### REQ-STAMPA-012 — Più comande dello stesso conto si stampano insieme
 
 Chiesto dall'utente il 20/08: «se ho più di una comanda (dello stesso ordine!) devo poterle stampare insieme». Un conto battuto in tre riprese ha tre ticket, e rifarli uno per uno col conto in mano è tempo perso al banco. E SERVONO DUE MODI, non uno. Parole sue, sempre del 20/08: «avere la possibilità di stampare comande separate se ci sono più comande è giusto, e anche di stampare UNA SOLA comanda con tutti i prodotti di più comande ma sempre dello stesso ordine. Va bene stampare tutte le comande insieme su più ricevute ma serve anche stampare tutto su una sola ricevuta». DOVE: nel dettaglio del conto, dentro «Comande» — dove ogni comanda ha già il suo tasto di stampa. Sopra l'elenco compaiono due tasti, e solo quando le comande sono davvero più d'una (con una sola non c'è niente da mettere insieme). Le etichette dicono cosa ESCE dalla stampante, quanti pezzi di carta, perché è quello che chi stampa deve sapere prima di toccare: «Una per comanda (n)» e «Tutto su una». «UNA PER COMANDA»: insieme come GESTO, non come ticket. Escono SEPARATE, identiche a come uscirebbero da sole — stesso formato, stesso taglio in fondo. Al banco un ticket è un giro di lavoro, e due giri su una striscia sola sarebbero BUG-051 rifatto apposta. «TUTTO SU UNA»: un ticket solo con tutti i prodotti del conto, le quantità dello stesso drink sommate (aggregateItems; i personalizzati restano righe loro). Il formato è quello di sempre: cambia solo cosa ci finisce dentro, non c'è un secondo disegno da mantenere. È la stessa forma che in BUG-051 era il ripiego ACCIDENTALE di `printComanda` senza comanda: la differenza è tutta qui — prima capitava, adesso la sceglie chi stampa.
@@ -2023,12 +2061,6 @@ COSA SI PUO' FARE INTANTO, senza aspettare nessuno: la sottosezione «Altre spes
 L'avviso di sicurezza che costringe ad accettare a mano il certificato della stampante va eliminato alla radice: certificato con SAN corretto installato come attendibile sul dispositivo, oppure altra strada (Server Direct Print). Serve la verifica dal wifi del locale per decidere.
 
 **Dove**: `scripts/certificato-stampante.js`
-
-#### REQ-STAMPA-011 — Il logo sugli scontrini si sceglie: quale, e su quali stampe
-
-Chiesto dall'utente il 19/08. Oggi il logo viene stampato in cima allo scontrino e basta: nessuno può spegnerlo, e per cambiarlo bisogna sostituire un file nel codice. Serve un'impostazione del locale con tre cose: se stampare il logo, SU QUALI stampe (comanda, preconto, scontrino, chiusura di cassa — sulla comanda al banco per esempio è solo carta consumata), e la possibilità di CARICARE l'immagine invece di cambiarla nel codice. Solo l'admin può toccarla: è l'identità del locale, non una preferenza del terminale. Da tenere a mente: la stampante termica vuole un'immagine in bianco e nero di una larghezza precisa, e il caricamento deve dire subito se quella scelta non va bene invece di stampare un rettangolo nero.
-
-**Dove**: `src/lib/printer.js, src/components/SettingsTab.jsx, src/lib/api.js`
 
 ### Persone: ruoli, utenze, ore
 
