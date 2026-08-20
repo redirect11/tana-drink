@@ -174,15 +174,27 @@ export function conAutori(orders, scelti, elenco = []) {
 
 // COSA DICE LA PASTIGLIA DA CHIUSA. Una tendina che non dice cosa è scelto
 // costringe ad aprirla per ricordarselo (docs/navigazione.md): col nome se
-// l'autore è uno solo — è il caso che si usa, «vedo i miei» — col
+// la persona è una sola — è il caso che si usa, «vedo i miei» — col
 // conteggio se sono di più, che tre nomi in fila non ci stanno.
+//
+// SI CHIAMA «STAFF», NON «AUTORI»: «la dropdown che hai chiamato Autori
+// chiamala Staff» (l'utente, 20/08/2026). «Autore» è una parola da
+// redazione — al banco si dice «chi l'ha battuto», e la squadra della
+// serata è lo staff. I nomi interni restano `autori*` (rinominarli a
+// tappeto costa un diff che non serve a nessuno, CLAUDE.md): a doverlo
+// dire in italiano è lo schermo.
+//
+// COL CONTEGGIO SI DICE ANCHE SU QUANTI: «2 di 5» invece di «2 persone».
+// La tendina si apre per capire QUANTO stringe, e il denominatore lo dice
+// senza aprirla. Vale anche quando fra i selezionati c'è la voce
+// «Clienti», che staff non è: «2 di 5» resta vero, «2 di staff» no.
 export function riassuntoAutori(scelti, elenco = []) {
   const attivi = autoriAttivi(scelti, elenco)
-  if (attivi.length === 0 || attivi.length === elenco.length) return '✍️ Autori'
+  if (attivi.length === 0 || attivi.length === elenco.length) return '✍️ Staff'
   if (attivi.length === 1) {
-    return `✍️ ${elenco.find((v) => v.chiave === attivi[0])?.nome || 'Autori'}`
+    return `✍️ ${elenco.find((v) => v.chiave === attivi[0])?.nome || 'Staff'}`
   }
-  return `✍️ ${attivi.length} autori`
+  return `✍️ ${attivi.length} di ${elenco.length}`
 }
 
 // "Questo conto risponde a quello che sto cercando?" — numero, cliente,
@@ -866,9 +878,9 @@ const CORSIE_COMANDE = [
 // UNITE DI SUO, col badge sulla card che dice quale delle due è: una
 // colonna in più costa larghezza a tutte le altre, e in un locale dove il
 // ritiro è l'eccezione sarebbe una colonna quasi sempre vuota. Chi ha le
-// due cose a metà e metà le divide col chip «✂️ Dividi il pronto», ed è
-// una scelta del TERMINALE (sta nella fila dei filtri, con le colonne): il
-// tablet della sala e quello del banco non guardano lo stesso lavoro.
+// due cose a metà e metà le divide col tastino ✂️ APPESO AL CHIP DEL
+// PRONTO (vedi `gruppiColonne`), ed è una scelta del TERMINALE: il tablet
+// della sala e quello del banco non guardano lo stesso lavoro.
 //
 // «RITIRATO/SERVITO» NON SI DIVIDE, ed è voluto: lì il drink è già uscito
 // e come sia uscito non cambia più niente da fare. È il traguardo, non una
@@ -1263,6 +1275,57 @@ export function soloCorsieVive(nascoste) {
 export function corsieSceglibili(corsie, { passoDiNascita = null } = {}) {
   if (passoDiNascita !== ORDER_STATUSES.IN_PREPARAZIONE) return corsie || []
   return (corsie || []).filter((c) => c.id !== 'da-fare')
+}
+
+// ── I CHIP DELLE COLONNE, E DOVE STA IL ✂️ ─────────────────────────
+//
+// La fila dei filtri, al banco, ha un chip per colonna. Il taglio del
+// pronto ne era un altro — «✂️ Dividi il pronto», in fondo, dopo
+// «✖️ Annullate» — e non funzionava: «Dividi il pronto dobbiamo integrarlo
+// meglio con gli altri due bottoni, in qualche modo non si capisce a che
+// serve. E poi è troppo lungo» (l'utente, 20/08/2026).
+//
+// PERCHÉ NON SI CAPIVA. In quella fila ogni chip ACCENDE O SPEGNE la sua
+// colonna; quello lì cambiava il MODO in cui una colonna è fatta. Stesso
+// vestito, due mestieri diversi, e per giunta lontano dalla colonna di cui
+// parlava: l'unico modo di capirlo era premerlo e guardare cosa succedeva
+// a mezzo schermo di distanza.
+//
+// DOVE AGISCE. Adesso il tastino sta ATTACCATO al chip del pronto, dentro
+// lo stesso gruppo, e il suo effetto si vede lì: da unito c'è «Pronto ✂️»,
+// premuto diventa «Da servire | Da ritirare 🔗». L'interruttore è nel
+// posto della cosa che cambia — niente frase da leggere, niente chip
+// orfano in fondo alla fila.
+//
+// SOLO COL RITIRO ATTIVO: «ovviamente vale solo se è attivo il ritiro al
+// banco» (l'utente, 20/08/2026). Col solo servizio non c'è niente da
+// separare, e un tasto che non fa niente è peggio di un tasto che non c'è.
+//
+// Questa funzione dice SOLO come i chip si raggruppano; il vestito e i
+// nomi dei tasti stanno nella pagina. Il gruppo del pronto tiene una
+// corsia (unito) o due (diviso), e `taglio` dice se il tastino ci va.
+const CORSIE_DEL_PRONTO = new Set(['al-ritiro', ...CORSIE_PRONTO_DIVISO.map((c) => c.id)])
+
+export function gruppiColonne(sceglibili, { taglioPossibile = false } = {}) {
+  const gruppi = []
+  let pronto = null
+  for (const c of sceglibili || []) {
+    if (!CORSIE_DEL_PRONTO.has(c.id)) {
+      gruppi.push({ id: c.id, corsie: [c], taglio: false, diviso: false })
+      continue
+    }
+    // Le due corsie del pronto diviso arrivano una dopo l'altra e stanno
+    // nello STESSO gruppo: è quello che le fa leggere come una colonna
+    // sola aperta in due, e non come due colonne qualsiasi.
+    if (!pronto) {
+      pronto = { id: 'pronto', corsie: [c], taglio: taglioPossibile, diviso: false }
+      gruppi.push(pronto)
+    } else {
+      pronto.corsie.push(c)
+    }
+    pronto.diviso = pronto.corsie.length > 1
+  }
+  return gruppi
 }
 
 export function corsieDaMostrare(corsie, nascoste = [], { passoDiNascita = null } = {}) {

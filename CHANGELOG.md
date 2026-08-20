@@ -14,15 +14,26 @@
   tre. **Non si resta mai senza**: «Aperti» si spegne solo se c'è dell'altro
   acceso, e spegnendo l'ultimo fra chiusi e annullati **torna da solo**.
 
-- **«✍️ Miei» è diventato la tendina degli autori.** Dentro c'è **chi ha
+- **«✍️ Miei» è diventato la tendina «Staff».** Dentro c'è **chi ha
   aperto almeno un conto** stasera — più una voce **Clienti** per gli ordini
   arrivati dall'app — e sono **tutti selezionati**: si vede tutto. Da lì si
   spegne chi non interessa e restano **i conti di chi si vuole**: i propri,
   come prima, oppure quelli di un collega. Da chiusa la pastiglia lo dice
-  senza aprirla — «✍️ Autori», «✍️ Marta», «✍️ 2 autori» — e si
+  senza aprirla — «✍️ Staff», «✍️ Marta», «✍️ 2 di 5» — e si
   incrocia con gli stati: **i chiusi di una persona sola** si chiedono in due
   tocchi. Anche qui non si resta mai senza nessuno: spegnendo l'ultimo
   tornano tutti.
+
+- **Il pronto si divide dal suo stesso tasto.** Al banco la colonna
+  «Pronto» può aprirsi in due — **«Da servire»** e **«Da ritirare»** — e
+  fino a ieri lo chiedeva un tasto in fondo alla fila dei filtri che diceva
+  «✂️ Dividi il pronto»: lungo, e lontano dalla colonna di cui parlava.
+  Adesso il segno **✂️ sta attaccato al chip «Pronto»**, e premendolo
+  **nello stesso punto** compaiono i due chip «Da servire» e «Da ritirare»,
+  con un **🔗** per rimetterli insieme. Si vede a colpo d'occhio a cosa
+  serve, perché sta dove agisce. Come sempre è una scelta **di quel
+  tablet**, e **compare solo se al banco si ritira**: col solo servizio ai
+  tavoli non c'è niente da separare e il segno non c'è.
 
 - **Il tasto dei filtri sta a destra, e i filtri escono sotto in UNA riga
   sola.** È un **«▾ Filtri»** in **fondo a destra**, accanto alla freccia

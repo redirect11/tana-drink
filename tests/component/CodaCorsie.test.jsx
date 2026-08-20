@@ -324,6 +324,11 @@ const apriFiltri = (utente) => utente.click(screen.getByRole('button', { name: '
 // cliccando colonne al posto di colonne. Non c'è più bisogno visto che
 // nascondiamo tutto con filtri» (l'utente, 20/08/2026). L'helper resta
 // perché ai punti di chiamata dice cosa serve, non dove si tocca.
+// I NOMI DEL TASTINO DEL PRONTO, per lo screen reader e per i test. Dicono
+// COSA FA, non com'è messo: da unito taglia, da diviso ricuce.
+const TAGLIA = /^Dividi «Pronto»/
+const UNISCI = /^Riunisci «Da servire»/
+
 const apriColonne = async (utente) => {
   if (!document.querySelector('.chips-filtri')) await apriFiltri(utente)
 }
@@ -591,7 +596,7 @@ describe('le corsie di chi guarda la serata (admin)', () => {
     expect(conteggi).toBeTruthy()
     expect(within(conteggi).getByText(/apert/)).toBeInTheDocument()
     // tutti nella stessa fila; il cambio vista no, sta in testata
-    for (const nome of ['Aperti', /Chiusi/, /Annullati/, /Autori/]) {
+    for (const nome of ['Aperti', /Chiusi/, /Annullati/, /Staff/]) {
       expect(within(riga).getByRole('button', { name: nome })).toBeInTheDocument()
     }
     expect(within(riga).queryByRole('button', { name: 'Comande' })).not.toBeInTheDocument()
@@ -693,7 +698,7 @@ describe('la fila dei filtri sta dietro il tastino ⚗️, nella riga sotto', ()
     montaCoda()
     await screen.findByText(/In servizio/)
 
-    for (const nome of ['Aperti', /Chiusi/, /Annullati/, /Autori/]) {
+    for (const nome of ['Aperti', /Chiusi/, /Annullati/, /Staff/]) {
       expect(screen.queryByRole('button', { name: nome })).not.toBeInTheDocument()
     }
     // NESSUNA riga di pastiglie a schermo: da chiusa non viene disegnata.
@@ -748,11 +753,11 @@ describe('la fila dei filtri sta dietro il tastino ⚗️, nella riga sotto', ()
 
     await apriFiltri(utente)
     const riga = screen.getByRole('button', { name: 'Aperti' }).closest('.chips-row')
-    for (const nome of ['Aperti', /Chiusi/, /Annullati/, /Autori/]) {
+    for (const nome of ['Aperti', /Chiusi/, /Annullati/, /Staff/]) {
       // IN UNA RIGA, non in una tendina sopra la coda: si toccano a raffica
       // mentre si lavora, e un pannello coprirebbe quello che si guarda
       // per decidere che filtro serve. (La sola tendina è quella degli
-      // autori, che sono quanti sono i turni: vedi REQ-CODA-009.)
+      // staff, che sono quanti sono i turni: vedi REQ-CODA-009.)
       expect(within(riga).getByRole('button', { name: nome })).toBeInTheDocument()
     }
     // È UNA RIGA SOTTO, non quella dei tastini: i due tastini restano
@@ -859,15 +864,15 @@ describe('la fila dei filtri sta dietro il tastino ⚗️, nella riga sotto', ()
     montaCoda()
     await screen.findByText('Da fare')
 
-    // Chiusa: né gli autori né le colonne. (Il titolo della colonna è anche
+    // Chiusa: né lo staff né le colonne. (Il titolo della colonna è anche
     // la testata della corsia, che a schermo c'è comunque: si guarda se la
     // fila esiste, e da chiusa non esiste proprio.)
     expect(document.querySelector('.chips-filtri')).toBe(null)
-    expect(screen.queryByRole('button', { name: /Autori/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Staff/ })).not.toBeInTheDocument()
 
     await apriFiltri(utente)
     const riga = document.querySelector('.chips-filtri')
-    expect(within(riga).getByRole('button', { name: /Autori/ })).toBeInTheDocument()
+    expect(within(riga).getByRole('button', { name: /Staff/ })).toBeInTheDocument()
     expect(within(riga).getByRole('button', { name: 'Ritirato/Servito' })).toBeInTheDocument()
   })
 
@@ -1111,7 +1116,7 @@ describe('i filtri di stato della coda a griglia', () => {
 // selezionati tutti gli utenti che hanno aperto almeno un ordine per vedere
 // tutti gli ordini. Poi posso scegliere di deselezionare e vedere solo gli
 // ordini di qualcuno (i miei ad esempio)» (l'utente, 20/08/2026).
-describe('chi ha aperto il conto: la tendina degli autori', () => {
+describe('chi ha aperto il conto: la tendina «Staff»', () => {
   const DI_MARTA = conto({ id: 'm1', daily_number: 41, workflow_status: 'ricevuto' })
   const DEL_CAPO = conto({
     id: 'k1',
@@ -1132,8 +1137,8 @@ describe('chi ha aperto il conto: la tendina degli autori', () => {
     await screen.findByText('#41')
     await apriFiltri(utente)
 
-    const tendina = screen.getByRole('button', { name: /Autori/ })
-    expect(tendina).toHaveTextContent('✍️ Autori')
+    const tendina = screen.getByRole('button', { name: /Staff/ })
+    expect(tendina).toHaveTextContent('✍️ Staff')
     expect(screen.getByText('#41')).toBeInTheDocument()
     expect(screen.getByText('#42')).toBeInTheDocument()
   })
@@ -1144,7 +1149,7 @@ describe('chi ha aperto il conto: la tendina degli autori', () => {
     await screen.findByText('#41')
     await apriFiltri(utente)
 
-    await utente.click(screen.getByRole('button', { name: /Autori/ }))
+    await utente.click(screen.getByRole('button', { name: /Staff/ }))
     const pannello = screen.getByRole('dialog', { name: /Chi ha aperto il conto/ })
     expect(within(pannello).getByText('Marta')).toBeInTheDocument()
     expect(within(pannello).getByText('Capo')).toBeInTheDocument()
@@ -1166,7 +1171,7 @@ describe('chi ha aperto il conto: la tendina degli autori', () => {
     await screen.findByText('#41')
     await apriFiltri(utente)
 
-    await utente.click(screen.getByRole('button', { name: /Autori/ }))
+    await utente.click(screen.getByRole('button', { name: /Staff/ }))
     const pannello = screen.getByRole('dialog', { name: /Chi ha aperto il conto/ })
     await utente.click(within(pannello).getByRole('button', { name: /Marta/ }))
     expect(screen.getByRole('dialog', { name: /Chi ha aperto il conto/ })).toBeInTheDocument()
@@ -1183,7 +1188,7 @@ describe('chi ha aperto il conto: la tendina degli autori', () => {
     await screen.findByText('#41')
     await apriFiltri(utente)
 
-    await utente.click(screen.getByRole('button', { name: /Autori/ }))
+    await utente.click(screen.getByRole('button', { name: /Staff/ }))
     const pannello = screen.getByRole('dialog', { name: /Chi ha aperto il conto/ })
     await utente.click(within(pannello).getByRole('button', { name: /Marta/ }))
     await utente.click(within(pannello).getByRole('button', { name: /Capo/ }))
@@ -1191,7 +1196,7 @@ describe('chi ha aperto il conto: la tendina degli autori', () => {
     // Una coda vuota per forza è indistinguibile da un'app rotta.
     await waitFor(() => expect(screen.getByText('#41')).toBeInTheDocument())
     expect(screen.getByText('#42')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Autori/ })).toHaveTextContent('✍️ Autori')
+    expect(screen.getByRole('button', { name: /Staff/ })).toHaveTextContent('✍️ Staff')
   })
 
   it('si incrocia con gli stati: i chiusi di una persona sola', async () => {
@@ -1209,7 +1214,7 @@ describe('chi ha aperto il conto: la tendina degli autori', () => {
 
     await utente.click(screen.getByRole('button', { name: /Chiusi/ }))
     await utente.click(screen.getByRole('button', { name: 'Aperti' }))
-    await utente.click(screen.getByRole('button', { name: /Autori/ }))
+    await utente.click(screen.getByRole('button', { name: /Staff/ }))
     const pannello = screen.getByRole('dialog', { name: /Chi ha aperto il conto/ })
     await utente.click(within(pannello).getByRole('button', { name: /Marta/ }))
 
@@ -1319,7 +1324,7 @@ describe('le corsie del banco: una card per comanda', () => {
     await screen.findByText('Da fare')
     await apriFiltri(utente)
 
-    const riga = screen.getByRole('button', { name: /Autori/ }).closest('.chips-row')
+    const riga = screen.getByRole('button', { name: /Staff/ }).closest('.chips-row')
     const conteggi = riga.closest('.board-sotto')
     // Dentro la testata, appesi alla riga dei conteggi — non un livello
     // suo fra i conteggi e le colonne.
@@ -1343,8 +1348,8 @@ describe('le corsie del banco: una card per comanda', () => {
     await screen.findByText('Da fare')
     await apriFiltri(utente)
 
-    // La tendina degli autori si apre e mostra chi ha battuto un conto.
-    await utente.click(screen.getByRole('button', { name: /Autori/ }))
+    // La tendina «Staff» si apre e mostra chi ha battuto un conto.
+    await utente.click(screen.getByRole('button', { name: /Staff/ }))
     expect(screen.getByRole('dialog', { name: /Chi ha aperto il conto/ })).toBeInTheDocument()
     // E le colonne si spengono da qui, dalla stessa riga: sono chip come
     // gli altri, e la riga resta una.
@@ -1500,7 +1505,7 @@ describe('le corsie del banco: una card per comanda', () => {
     await screen.findByText('Da fare')
 
     await apriColonne(utente)
-    await utente.click(screen.getByRole('button', { name: /Dividi il pronto/ }))
+    await utente.click(screen.getByRole('button', { name: TAGLIA }))
 
     expect(within(corsia('al-ritiro')).getByText('#81')).toBeInTheDocument()
     expect(within(corsia('al-ritiro-banco')).getByText('#80')).toBeInTheDocument()
@@ -1508,13 +1513,77 @@ describe('le corsie del banco: una card per comanda', () => {
     expect(corsia('al-ritiro-banco').querySelector('.pill.consegna-banco')).toBe(null)
   })
 
-  it('col SOLO SERVIZIO non c’è niente da dividere, e il tasto non c’è', async () => {
+  // ── IL ✂️ STA ATTACCATO AL CHIP DEL PRONTO ────────────────────────
+  //
+  // Era un chip a sé in fondo alla fila, «✂️ Dividi il pronto»: «dobbiamo
+  // integrarlo meglio con gli altri due bottoni, in qualche modo non si
+  // capisce a che serve. E poi è troppo lungo» (l'utente, 20/08/2026).
+  // Il guaio era che in quella fila ogni chip ACCENDE una colonna, e
+  // quello cambiava come una colonna è FATTA — stesso vestito, altro
+  // mestiere, e lontano dalla colonna di cui parlava.
+  it('il tastino che divide sta nel gruppo del chip «Pronto», non in fondo alla fila', async () => {
+    const utente = userEvent.setup()
+    impostazioni = { ...impostazioni, service_mode: 'entrambi' }
+    montaCoda()
+    await screen.findByText('Da fare')
+    await apriColonne(utente)
+
+    // Niente più frase: il vecchio chip non esiste.
+    expect(screen.queryByRole('button', { name: /Dividi il pronto/ })).not.toBeInTheDocument()
+
+    // Il tastino e il chip «Pronto» stanno nello STESSO gruppo: è quello
+    // che dice, senza parole, di cosa si sta parlando.
+    const gruppo = screen.getByRole('button', { name: TAGLIA }).closest('.chip-gruppo')
+    expect(gruppo).toBeTruthy()
+    expect(within(gruppo).getByRole('button', { name: 'Pronto' })).toBeInTheDocument()
+    // ed è un BOTTONE SUO, non un'icona dentro il chip della colonna:
+    // accendere una colonna e dividerla sono due cose diverse, e da
+    // tastiera o con lo screen reader si devono poter distinguere.
+    expect(within(gruppo).getAllByRole('button')).toHaveLength(2)
+  })
+
+  it('diviso, al posto di «Pronto» ci sono le due colonne col segno per riunirle', async () => {
+    const utente = userEvent.setup()
+    impostazioni = { ...impostazioni, service_mode: 'entrambi' }
+    montaCoda()
+    await screen.findByText('Da fare')
+    await apriColonne(utente)
+    await utente.click(screen.getByRole('button', { name: TAGLIA }))
+
+    // L'effetto si vede DOVE si è toccato: al posto di «Pronto», dentro lo
+    // stesso gruppo, i due chip delle due colonne.
+    const gruppo = screen.getByRole('button', { name: UNISCI }).closest('.chip-gruppo')
+    expect(within(gruppo).getByRole('button', { name: 'Da servire' })).toBeInTheDocument()
+    expect(within(gruppo).getByRole('button', { name: 'Da ritirare' })).toBeInTheDocument()
+    expect(within(gruppo).queryByRole('button', { name: 'Pronto' })).toBe(null)
+    // IL SEGNO DICE COSA FA, non com'è messo: da diviso l'unica cosa che
+    // può fare è ricucire, e un ✂️ «acceso» direbbe comunque «taglia».
+    expect(screen.queryByRole('button', { name: TAGLIA })).toBe(null)
+
+    // e si riunisce da lì, tornando a una colonna sola.
+    await utente.click(screen.getByRole('button', { name: UNISCI }))
+    expect(await screen.findByRole('button', { name: TAGLIA })).toBeInTheDocument()
+    expect(corsia('al-ritiro-banco')).toBeFalsy()
+  })
+
+  // «Ovviamente vale solo se è attivo il ritiro al banco» (l'utente,
+  // 20/08/2026): col solo servizio ai tavoli non c'è niente da separare, e
+  // un tasto che non fa niente è peggio di un tasto che non c'è.
+  it('col SOLO SERVIZIO non c’è niente da dividere, e il tastino non c’è', async () => {
     const utente = userEvent.setup()
     impostazioni = { ...impostazioni, service_mode: 'tavolo' }
     montaCoda()
     await screen.findByText('Da fare')
     await apriColonne(utente)
+
+    expect(screen.queryByRole('button', { name: TAGLIA })).toBe(null)
+    expect(screen.queryByRole('button', { name: UNISCI })).toBe(null)
     expect(screen.queryByRole('button', { name: /Dividi il pronto/ })).not.toBeInTheDocument()
+    // il chip della colonna resta, da solo e senza gruppo attorno
+    // («Pronto» è anche il tasto che fa avanzare una comanda: si guarda
+    // dentro la fila dei filtri, non a schermo intero)
+    const riga = document.querySelector('.chips-filtri')
+    expect(within(riga).getByRole('button', { name: 'Pronto' }).closest('.chip-gruppo')).toBe(null)
   })
 
 

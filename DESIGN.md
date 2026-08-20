@@ -248,6 +248,16 @@ Regole:
   il verso della coda), che sono bottoni bordati ma bassi — sono la stessa
   specie di comando e in riga si devono somigliare. `--tastino-alto` è la
   misura sola da cui scendono tutti.
+- **Le pastiglie in gruppo** (`.chip-gruppo`) si toccano: bordo condiviso
+  (`margin-left: -1px`), angoli tondi solo agli estremi. Vuol dire «questi
+  sono una cosa sola» e si usa **solo** dove è vero — in coda: la colonna
+  del pronto col suo tastino ✂️/🔗, che la apre in «Da servire» e «Da
+  ritirare» e la richiude. Restano **bottoni distinti** (ognuno il suo,
+  ognuno il suo nome per lo screen reader): il gruppo unisce gli occhi,
+  non i mestieri. Il tastino di un gruppo (`.chip-taglio`) è un segno solo
+  e sta stretto: attorno a un carattere una pastiglia larga come le altre
+  è tutta aria, e in una fila di sei o sette chip quell'aria è una riga in
+  più.
 - **La pastiglia minuta** (`.chip.mini`: le unità dentro una riga di testo,
   come «Al pz · pz · cl · ml» nella scheda di un prodotto) resta a
   `min-height: 22px` e `0.68rem`. Non è un bersaglio da barra: sta dentro
