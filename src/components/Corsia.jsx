@@ -25,9 +25,12 @@ import { COLORI_CONTO, coloreDelConto } from '../lib/coloriConto.js'
 // La lavagna: quante colonne quante sono le corsie. Erano quattro fisse, e
 // con gli stati di servizio spenti restavano schiacciate a sinistra con un
 // quarto di schermo vuoto a destra.
-export function Lavagna({ corsie, children }) {
+export function Lavagna({ corsie, classe = '', children }) {
   return (
-    <div className="corsie" style={{ '--corsie-n': corsie.length }}>
+    <div
+      className={`corsie${classe ? ' ' + classe : ''}`}
+      style={{ '--corsie-n': corsie.length }}
+    >
       {children}
     </div>
   )
@@ -40,9 +43,23 @@ export function Lavagna({ corsie, children }) {
 // `quanti` è il numero accanto al titolo: nella vista dei conti sono i
 // conti, in quella del banco le comande — due domande diverse sulla stessa
 // colonna, e non si indovinano da qui.
-export function Corsia({ corsia, quanti, prima = false, inArrivo = [], onScarta, children }) {
+//
+// `refCorsia` e `classe` servono a chi la usa come BERSAGLIO DI UN
+// TRASCINAMENTO (la vista del banco: una comanda si sposta di colonna col
+// dito). Qui non entra niente di quella libreria — la colonna riceve un
+// riferimento e una classe, e non sa perché.
+export function Corsia({
+  corsia,
+  quanti,
+  prima = false,
+  inArrivo = [],
+  onScarta,
+  refCorsia = null,
+  classe = '',
+  children,
+}) {
   return (
-    <section className="corsia">
+    <section className={`corsia${classe ? ' ' + classe : ''}`} ref={refCorsia}>
       <div className={`row between corsia-testa corsia-${corsia.id}`}>
         <span className="corsia-titolo">
           {corsia.titolo} <span className="muted small">{quanti}</span>

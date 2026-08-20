@@ -4,6 +4,14 @@
 
 ### Per chi gestisce
 
+- **Le comande si spostano anche col dito.** Nella lavagna del banco si
+  tiene premuto su una comanda, la card si stacca e si lascia nella colonna
+  che si vuole: lo stato diventa quello della colonna, avanti o indietro che
+  sia. **I tasti non cambiano di niente** — questa è solo una seconda
+  strada per lo stesso gesto. Le colonne che non accettano una comanda
+  («Chiuse» e «Annullate») lo dicono mentre la card è ancora in mano, e
+  restano com'erano.
+
 - **La comanda la stampa il terminale che ha battuto l'ordine, e solo
   lui.** Prima la faceva uscire il primo tablet che vedeva l'ordine fra
   quelli con la stampa automatica accesa: si batteva un conto al banco e la

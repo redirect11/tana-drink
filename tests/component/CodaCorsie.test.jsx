@@ -110,6 +110,38 @@ vi.mock('../../src/lib/api.js', () => ({
   clockOut: vi.fn(() => Promise.resolve()),
 }))
 
+// ── TRASCINARE UNA COMANDA IN UN'ALTRA COLONNA ──────────────────────
+//
+// IL GESTO NON SI PROVA QUI, LA REGOLA SÌ. Il dito che tiene premuto, la
+// card che segue, il rilascio: lo fa dnd-kit, ed è provato a casa sua — in
+// un test senza schermo le card non hanno misure e un dito non c'è. Quello
+// che deve reggere è il NOSTRO incastro: su quale colonna è stata mollata
+// la card, quale stato ne viene, e che a scriverlo sia la strada di sempre.
+//
+// Quindi la libreria diventa un guscio che consegna al test la funzione che
+// chiamerebbe al rilascio: `lascia(card, colonna)` è «ho mollato quella
+// comanda su quella colonna». Quello che resta da provare a mano, sul
+// tablet, sta scritto nel requisito (REQ-CODA-007).
+//
+// SI SOSTITUISCE UNA COSA SOLA, il guscio che riceve il gesto: i ganci
+// veri (useDraggable, useDroppable, i sensori) restano quelli della
+// libreria e vengono montati per davvero, o questo test direbbe che la
+// lavagna funziona anche il giorno in cui non si monta piu'.
+let lascia = null
+vi.mock('@dnd-kit/core', async (originale) => {
+  const vera = await originale()
+  return {
+    ...vera,
+    DndContext: ({ children, onDragStart, onDragEnd }) => {
+      lascia = (card, colonna) => {
+        onDragStart({ active: { id: card } })
+        onDragEnd({ active: { id: card }, over: colonna ? { id: colonna } : null })
+      }
+      return <>{children}</>
+    },
+  }
+})
+
 // Hardware e contorno: al banco ci sono, in un test no.
 vi.mock('../../src/lib/push.js', () => ({ getPushToken: vi.fn(async () => null) }))
 vi.mock('../../src/lib/notify.js', () => ({
@@ -1482,5 +1514,68 @@ describe('la chiusura rapida dalla card stampa lo scontrino', () => {
 
     expect(markOrderPaid).toHaveBeenCalled()
     expect(printScontrino).not.toHaveBeenCalled()
+  })
+})
+
+
+// ── SI CAMBIA STATO ANCHE TRASCINANDO ───────────────────────────
+//
+// «Le comande nella vista a lane [possono essere] trascinate da una colonna
+// all'altra per cambiare stato» (l'utente, 20/08), e la precisazione che
+// dice cos'è: «non è che DEVONO — come modo ALTERNATIVO per cambiare
+// stato, le posso trascinare». I tasti restano identici, e ci sono i loro
+// test qui sopra: questi provano la SECONDA strada.
+describe('le comande si spostano anche col dito', () => {
+  beforeEach(() => {
+    ruolo = 'bartender'
+  })
+
+  it('mollata su «In preparazione», la comanda avanza per la strada di sempre', async () => {
+    montaCoda()
+    await screen.findByText('Da fare')
+    expect(within(corsia('da-fare')).getByText('#41')).toBeInTheDocument()
+
+    act(() => lascia('o41:c-o41', 'al-banco'))
+
+    // La stessa scrittura del tasto grande: advanceComanda, col passo
+    // della colonna in cui è stata lasciata. Nessuna scorciatoia.
+    expect(advanceComanda).toHaveBeenCalledWith('o41', 'c-o41', 'in_preparazione')
+    // E LOCAL-FIRST: la card sta già nella colonna nuova, senza che il
+    // server abbia rimandato niente. Al banco un gesto si vede subito.
+    expect(within(corsia('al-banco')).getByText('#41')).toBeInTheDocument()
+    expect(within(corsia('da-fare')).queryByText('#41')).not.toBeInTheDocument()
+  })
+
+  it('e anche all\'indietro: dal pronto si torna a «Da fare»', async () => {
+    montaCoda()
+    await screen.findByText('Da fare')
+    // «Pronto» premuto sul ticket sbagliato: lo si riporta indietro col
+    // dito, invece di aprire il ⋯ e cercare la voce.
+    act(() => lascia('o37:c-o37', 'da-fare'))
+    expect(advanceComanda).toHaveBeenCalledWith('o37', 'c-o37', 'ricevuto')
+  })
+
+  it('sulle colonne che non sono un passo del lavoro non succede niente', async () => {
+    montaCoda()
+    await screen.findByText('Da fare')
+
+    // «Annullate» sarebbe un annullo, e la strada per annullare UNA
+    // comanda coi drink che restano sul conto non c'è ancora
+    // (REQ-ORD-021); «Chiuse» è servita + conto pagato, non un passo.
+    act(() => lascia('o41:c-o41', 'annullati'))
+    act(() => lascia('o41:c-o41', 'chiusi'))
+    // E mollata fuori da ogni colonna: nemmeno.
+    act(() => lascia('o41:c-o41', null))
+
+    expect(advanceComanda).not.toHaveBeenCalled()
+    // La comanda è rimasta dov'era, e nessuna è sparita dalla lavagna.
+    expect(within(corsia('da-fare')).getByText('#41')).toBeInTheDocument()
+  })
+
+  it('rilasciata nella colonna in cui sta gi\u00e0: nessuna scrittura', async () => {
+    montaCoda()
+    await screen.findByText('Da fare')
+    act(() => lascia('o41:c-o41', 'da-fare'))
+    expect(advanceComanda).not.toHaveBeenCalled()
   })
 })
