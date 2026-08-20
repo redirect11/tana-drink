@@ -168,6 +168,17 @@ Regole:
   colonna sola fino a 560px, due fino a 900px, tutte oltre. Non la finestra —
   col menu agganciato la lavagna ha 200-250px in meno — e non il numero di
   corsie accese.
+- **Una comanda in mano, e le colonne che rispondono.** Nella lavagna del
+  banco una card si prende con una pressione lunga e si lascia in un'altra
+  colonna (REQ-CODA-007). Mentre è in mano: la card di partenza resta al suo
+  posto smorzata (`opacity: .35`), quella che segue il dito è un'altra
+  (`.corsia-in-volo`, ombra e un grado di rotazione) e galleggia sopra tutto
+  — dentro la colonna sarebbe ritagliata. Le colonne dicono PRIMA se
+  accettano: chi accoglie prende un tratteggio `--accent-2` («si può agire
+  qui», il suo ruolo), che diventa pieno sotto il dito; chi rifiuta sbiadisce
+  e sotto il dito prende un contorno `--accent`. Il rosso resta per
+  l'errore vero, e qui non c'è nessun errore: c'è un posto dove non si
+  lascia.
 - **Uno stato spento ha comunque la sua striscia.** Servito, chiuso,
   annullato, in invio: la striscia a sinistra usa `--strip-spenta` (che
   segue `--muted`, quindi il tema), non un bianco o un nero trasparente.

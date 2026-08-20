@@ -6960,6 +6960,64 @@ body.pagina-piena .inv-scheda {
   padding: 10px;
   margin: 0;
   cursor: pointer;
+  /* SI TIENE PREMUTO PER SPOSTARLA in un'altra colonna, e sull'iPad tenere
+     premuto vuol dire di suo lente d'ingrandimento e menu «copia»: qui non
+     servono, e coprirebbero proprio la card che si ha in mano.
+     `manipulation` invece dello `none` di rito: `none` toglierebbe anche lo
+     SCORRIMENTO col dito, e le corsie si scorrono in continuazione. */
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* La card mentre è in mano: resta al suo posto, smorzata, così la colonna
+   non si richiude sotto le dita e si vede da dove si è partiti. Quella che
+   segue il dito è un'altra (DragOverlay). */
+.corsia-card.corsia-in-mano {
+  opacity: 0.35;
+}
+
+.corsia-in-volo {
+  cursor: grabbing;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+  transform: rotate(-1.5deg);
+  max-width: 320px;
+}
+
+/* MENTRE SI TRASCINA, UNA COLONNA VUOTA DEVE POTER ACCOGLIERE: senza
+   un'altezza minima sarebbe una striscia di due pixel, impossibile da
+   centrare col dito. */
+.corsie.trascinando .corsia-lista {
+  min-height: 90px;
+}
+
+/* Dove si può lasciare e dove no, detto PRIMA di mollare: il tratteggio
+   invita, lo sbiadito dice «non qui». Il rosso resta per l'errore vero. */
+.corsia-accoglie .corsia-lista {
+  outline: 2px dashed color-mix(in srgb, var(--accent-2) 60%, transparent);
+  outline-offset: -2px;
+  border-radius: var(--raggio-card);
+}
+
+.corsia-accoglie.corsia-sotto .corsia-lista {
+  outline-style: solid;
+  background: color-mix(in srgb, var(--accent-2) 10%, transparent);
+}
+
+.corsia-rifiuta {
+  opacity: 0.4;
+}
+
+.corsia-rifiuta.corsia-sotto {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.corsia-rifiuta.corsia-sotto .corsia-lista {
+  outline: 2px solid color-mix(in srgb, var(--accent) 70%, transparent);
+  outline-offset: -2px;
+  border-radius: var(--raggio-card);
 }
 
 /* Conto appena battuto, ancora in volo: c'è, si legge, ma si vede che non

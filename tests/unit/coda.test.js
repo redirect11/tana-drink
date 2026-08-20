@@ -686,6 +686,7 @@ import {
   corsieVisibili,
   corsieDaMostrare,
   corsieSceglibili,
+  statoDelRilascio,
   CORSIE_SPENTE_ALL_INIZIO,
 } from '../../src/lib/coda.js'
 
@@ -1322,5 +1323,80 @@ describe('i conti raggruppati per giornata', () => {
     for (const { day } of gruppi([{ id: 'monco', giornata: null }, { id: 'v', giornata: '2026-08-14' }])) {
       expect(businessDayLabel(day, oggi, 6)).not.toMatch(/Invalid/)
     }
+  })
+})
+
+
+// ── TRASCINANDO UNA COMANDA DA UNA COLONNA ALL'ALTRA ─────────────
+//
+// «Le comande nella vista a lane possono essere trascinate da una colonna
+// all'altra per cambiare stato [...] posso spostarla in QUALSIASI lane»
+// (l'utente, 20/08), e la precisazione che dice cos'è: «non è che DEVONO
+// — come modo ALTERNATIVO per cambiare stato». I tasti restano.
+//
+// Qui si prova SOLO dove finisce la comanda: a scriverlo è la strada di
+// sempre (avanzaComanda → advanceComanda), col magazzino e l'ottimismo
+// locale che già ci stanno dentro. Un trascinamento con regole sue sarebbe
+// una seconda verità sugli stati.
+describe('dove finisce una comanda lasciata in un\'altra colonna', () => {
+  const scheda = (status) => ({ comanda: { id: 'c1', status } })
+  const corsia = (id, stato) => ({ id, stato })
+  const DA_FARE = corsia('da-fare', 'ricevuto')
+  const AL_BANCO = corsia('al-banco', 'in_preparazione')
+  const PRONTO = corsia('al-ritiro', 'pronto')
+  const SERVITO = corsia('ritirati', 'ritirato')
+
+  it('nella colonna del passo, in avanti', () => {
+    expect(statoDelRilascio(scheda('ricevuto'), AL_BANCO)).toBe('in_preparazione')
+    expect(statoDelRilascio(scheda('in_preparazione'), PRONTO)).toBe('pronto')
+    expect(statoDelRilascio(scheda('pronto'), SERVITO)).toBe('ritirato')
+  })
+
+  it('e ANCHE ALL\'INDIETRO, che è metà del motivo per cui serve', () => {
+    // Si segna «pronto» il ticket sbagliato: lo si riporta indietro col
+    // dito, invece di aprire il ⋯ e cercare la voce.
+    expect(statoDelRilascio(scheda('pronto'), DA_FARE)).toBe('ricevuto')
+    expect(statoDelRilascio(scheda('ritirato'), AL_BANCO)).toBe('in_preparazione')
+  })
+
+  it('salta anche i passi di mezzo: dalla prima colonna all\'ultima', () => {
+    expect(statoDelRilascio(scheda('ricevuto'), SERVITO)).toBe('ritirato')
+  })
+
+  it('rilasciata dov\'era già: niente da scrivere', () => {
+    expect(statoDelRilascio(scheda('pronto'), PRONTO)).toBe(null)
+  })
+
+  // LE DUE COLONNE DELLO SGUARDO ALL'INDIETRO NON SONO PASSI DEL LAVORO.
+  it('«Chiuse» e «Annullate» non accettano niente', () => {
+    // «Chiuse» è servita + conto pagato: lasciarci cadere una comanda
+    // vorrebbe dire incassare un conto con un dito.
+    expect(statoDelRilascio(scheda('pronto'), corsia('chiusi', null))).toBe(null)
+    // «Annullate» sarebbe un annullo, ed è la cosa giusta — ma la strada
+    // per annullare UNA comanda, coi drink che restano sul conto, non c'è
+    // ancora (REQ-ORD-021). Finché non c'è, la colonna rifiuta invece di
+    // far sparire un ticket senza dire dove sono finiti i suoi drink.
+    expect(statoDelRilascio(scheda('pronto'), corsia('annullati', null))).toBe(null)
+  })
+
+  it('una comanda annullata non si rianima trascinandola', () => {
+    expect(statoDelRilascio(scheda('annullato'), AL_BANCO)).toBe(null)
+  })
+
+  it('la card di un CONTO (la colonna dei soldi) non è una comanda', () => {
+    expect(statoDelRilascio({ comanda: null }, AL_BANCO)).toBe(null)
+    expect(statoDelRilascio(null, AL_BANCO)).toBe(null)
+    expect(statoDelRilascio(scheda('pronto'), null)).toBe(null)
+  })
+
+  // LA SALA SERVE, NON PREPARA: lo stesso metro del tasto (azioneComanda),
+  // o trascinare sarebbe la scorciatoia per aggirare i ruoli.
+  it('alla sala resta l\'ultimo passo, come sul tasto', () => {
+    expect(statoDelRilascio(scheda('pronto'), SERVITO, { ruolo: 'staff' })).toBe('ritirato')
+    expect(statoDelRilascio(scheda('ricevuto'), AL_BANCO, { ruolo: 'staff' })).toBe(null)
+    // Al banco non si toglie niente.
+    expect(statoDelRilascio(scheda('ricevuto'), AL_BANCO, { ruolo: 'bartender' })).toBe(
+      'in_preparazione'
+    )
   })
 })

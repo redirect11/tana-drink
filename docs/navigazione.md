@@ -90,6 +90,13 @@ sotto i 44px si sbaglia. Si **toglie**, in quest'ordine:
   comanda — si raggiunge con un tasto scritto, mai rubando il gesto
   principale: il tasto grande della card resta quello che porta avanti il
   lavoro.
+- **Un tocco apre, una pressione lunga sposta.** Sulle card della coda del
+  banco il tocco resta quello di sempre (apre la comanda); tenendo premuto
+  la card si stacca e si lascia in un'altra colonna, e lo stato della
+  comanda diventa quello della colonna. È una strada ALTERNATIVA, non la
+  strada: i tasti restano tutti dov'erano, e chi non proverà mai a
+  trascinare non si accorge che si può. Le colonne che non accettano il
+  rilascio lo dicono mentre la card è ancora in mano, non dopo.
 - **Quello che si cambia nel mezzo del servizio sta nella riga dei filtri**,
   sopra la lista, e vale per QUESTO terminale: «▦ Colonne» (che spegne le
   corsie che in quel momento non servono) e il tasto con cui chi non è al

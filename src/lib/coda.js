@@ -739,6 +739,51 @@ export function azioneComanda(comanda, order, { ruolo = null } = {}) {
   return { etichetta: etichettaAvanzamento(dopo, order?.service_mode), tipo: 'avanza' }
 }
 
+// ── LASCIANDO CADERE UNA COMANDA IN UN'ALTRA COLONNA ──────────────────
+//
+// «Le comande nella vista a lane possono essere trascinate da una colonna
+// all'altra per cambiare stato [...] posso spostarla in QUALSIASI lane,
+// quindi gli stati della comanda cambiano di conseguenza» (l'utente,
+// 20/08). E la precisazione che dice cos'è: «non è che DEVONO — come modo
+// ALTERNATIVO per cambiare stato, le posso trascinare». I tasti restano
+// quelli di prima, questa è una seconda strada per lo stesso gesto.
+//
+// QUI SI DECIDE SOLO DOVE FINISCE. Chi ci scrive è la strada di sempre
+// (avanzaComanda → advanceComanda), la stessa dei tasti: le regole del
+// magazzino — lo scarico che si applica una volta a «pronto» e non si disfa
+// tornando indietro — vivono lì e non si rifanno qui. Un trascinamento che
+// scrivesse lo stato per conto suo sarebbe una seconda verità.
+//
+// VALE IN TUTTE LE DIREZIONI, avanti e indietro: si segna «pronto» il
+// ticket sbagliato e lo si riporta a «da fare» col dito, invece di aprire
+// il ⋯ e cercare la voce. Restituisce lo stato in cui la comanda finisce,
+// oppure null se lì non si può lasciare — e allora la colonna lo dice
+// prima, mentre la card è ancora in mano.
+//
+// LE DUE COLONNE DELLO SGUARDO ALL'INDIETRO NON ACCETTANO NIENTE:
+//   «Chiuse» non è un passo del lavoro ma il risultato di due cose insieme
+//   (servita + conto pagato), e trascinarci una comanda vorrebbe dire
+//   incassare un conto per sbaglio con un dito;
+//   «Annullate» sarebbe un annullo, ed è la cosa giusta — ma la strada per
+//   annullare UNA comanda con quello che ne consegue sui soldi non c'è
+//   ancora (REQ-ORD-021): finché non c'è, quella colonna rifiuta il
+//   rilascio invece di far sparire un ticket senza dire dove sono finiti i
+//   suoi drink.
+export function statoDelRilascio(scheda, corsia, { ruolo = null } = {}) {
+  const c = scheda?.comanda
+  // Senza uno stato la colonna non è un passo: è uno sguardo all'indietro.
+  if (!c || !corsia?.stato) return null
+  // Una comanda annullata è lavoro buttato: rianimarla col dito nasconderebbe
+  // il motivo per cui è finita lì.
+  if (c.status === ORDER_STATUSES.ANNULLATO) return null
+  // Rilasciata dov'era già: niente da scrivere, e nessun errore da mostrare.
+  if (c.status === corsia.stato) return null
+  // LA SALA SERVE, NON PREPARA: lo stesso metro del tasto (azioneComanda),
+  // o il trascinamento sarebbe una scorciatoia per aggirare i ruoli.
+  if (ruolo && !puoSegnare(ruolo, corsia.stato)) return null
+  return corsia.stato
+}
+
 // La parola sul tasto è quella dello STATO IN CUI IL DRINK FINISCE: si vede
 // dove va a finire prima di premere — ed è la STESSA che intitola la colonna
 // in cui finirà, e la stessa dell'etichetta di stato. Per questo passa da

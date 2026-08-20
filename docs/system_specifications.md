@@ -22,12 +22,12 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 163 | fatto e coperto dai test |
+| ✅ | 164 | fatto e coperto dai test |
 | ⚠️  | 14 | fatto ma nessun test lo verifica |
 | ⬜ | 21 | da fare |
 | 🗑 | 1 | non più valido |
 
-**199 voci** in tutto. **177** descrivono il sistema com'è oggi e
+**200 voci** in tutto. **178** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **21** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **6** difetti noti sono ancora aperti.
@@ -43,7 +43,7 @@ come «vero oggi», non come «garantito».
 | [Ordini e comande](#ordini-e-comande) | 18 | 1 | Il conto e le sue comande: come nascono, come cambiano stato, come arrivano al banco. |
 | [Cassa e POS](#cassa-e-pos) | 17 | 2 | La schermata più usata della serata: si compone un conto, si corregge, si chiude. |
 | [Pagamenti](#pagamenti) | 11 | 1 | Come si incassa: contanti, carta, SumUp, pagamenti parziali e separati. |
-| [La coda del banco](#la-coda-del-banco) | 6 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
+| [La coda del banco](#la-coda-del-banco) | 7 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
 | [Menù e catalogo](#menù-e-catalogo) | 9 | — | Il listino: drink, categorie, disponibilità, prezzi. |
@@ -471,6 +471,18 @@ LA RIGA DICE COSA SONO QUEI CONTI, e dipende dalla scheda aperta (`intestazioneG
 SI POSSONO TOGLIERE DAGLI OCCHI col filtro «📅 Solo oggi», che dice anche quanti sono. Non è il default: un conto dimenticato che non si vede più non si chiude mai.
 
 **Dove**: `src/lib/coda.js (giornataDelConto, raggruppaPerGiornata, intestazioneGiornata), src/pages/BartenderPage.jsx` · **Lo dimostrano**: `tests/unit/coda.test.js`, `tests/component/CodaGiornate.test.jsx`
+
+#### REQ-CODA-007 — Le comande si trascinano da una colonna all'altra per cambiare stato
+
+Chiesto dall'utente il 20/08: «le comande nella vista a lane [possono essere] trascinate da una colonna all'altra per cambiare stato. Se tengo premuto su una comanda questa fa come la modalita' organizza della creazione ordine (quindi usa la stessa libreria) e posso spostarla in una delle lane visibili. Posso spostarla in QUALSIASI lane, quindi gli stati della comanda cambiano di conseguenza». E LA PRECISAZIONE CHE DICE COS'E', sua, subito dopo: «non e' che DEVONO — come modo ALTERNATIVO per cambiare stato, le posso trascinare». I tasti restano identici: il tasto grande, il ⋯ col «torna a…», tutto dov'era. Questa e' una seconda strada per lo stesso gesto, per chi al banco preferisce spostare la card con un dito. COME: pressione lunga sulla card (dnd-kit, la stessa libreria della modalita' «Organizza» del POS e delle righe del conto), la card si stacca e segue il dito, si lascia su una colonna visibile e lo stato della comanda diventa quello della colonna. Vale in TUTTE le direzioni, anche indietro, e saltando i passi di mezzo. A SCRIVERE E' LA STRADA DI SEMPRE (`avanzaComanda` → `advanceComanda`), la stessa dei tasti: il rilascio decide solo DOVE finisce (`statoDelRilascio`, pura). Cosi' le regole di sempre valgono da sole — lo scarico del magazzino a «pronto» si applica una volta e non si disfa tornando indietro — e non c'e' una seconda verita' sugli stati. LOCAL-FIRST: al rilascio la card si sposta subito, la scrittura va in sottofondo.
+
+DUE COLONNE NON ACCETTANO IL RILASCIO, e lo dicono mentre la card e' ancora in mano (sbiadite, invece di accettare e non fare niente): «Chiuse» non e' un passo del lavoro ma il risultato di due cose insieme (servita + conto pagato), e trascinarci una comanda vorrebbe dire incassare un conto con un dito; «Annullate» sarebbe un annullo — ed e' la cosa giusta — ma la strada per annullare UNA comanda con quello che ne consegue sui soldi non c'e' ancora (REQ-ORD-021): finche' non c'e', la colonna rifiuta invece di far sparire un ticket senza dire dove sono finiti i suoi drink. Quando REQ-ORD-021 sara' fatto, quella colonna diventa un bersaglio come le altre. I RUOLI VALGONO ANCHE COL DITO: alla sala resta il solo «servito», come sul tasto (puoSegnare), o trascinare sarebbe la scorciatoia per aggirarli. Una comanda annullata non si rianima trascinandola, e le card della colonna dei soldi non sono comande: non si prendono in mano.
+
+TABLET E DITA BAGNATE: si parte dopo una pressione (260ms col dito, 200 col mouse) e non al primo movimento, o scorrere le colonne vorrebbe dire spostare comande per sbaglio; prima della soglia il dito scorre la pagina come sempre. Sulla card `touch-action: manipulation` e niente menu di sistema alla pressione lunga: `none` toglierebbe anche lo scorrimento. I tasti dentro la card fermano la pressione, o tenendo premuto «Incassa» partirebbe il trascinamento.
+
+COSA RESTA DA PROVARE A MANO, perche' un test senza schermo non ha un dito ne' le misure delle card: che lo scorrimento verticale delle corsie col dito non si rompa, che la card in volo si veda sopra le colonne senza essere ritagliata, e che sull'iPad la pressione lunga non apra la lente d'ingrandimento.
+
+**Dove**: `src/components/CorsieComande.jsx, src/lib/coda.js (statoDelRilascio), src/components/Corsia.jsx, src/index.css` · **Lo dimostrano**: `tests/unit/coda.test.js`, `tests/component/CodaCorsie.test.jsx`
 
 ### Gruppi di conti
 
@@ -1708,7 +1720,7 @@ RIFARE (si stampa una comanda uguale, per tutto o per una parte, che nasce come 
 
 LO STORNO SI VEDE E SI STAMPA: nella colonna di sinistra della schermata di pagamento e sul preconto/scontrino, come riga propria con l'importo in negativo. Chi legge lo scontrino deve capire cosa è stato tolto e quanto, se no un conto che non torna diventa una discussione al tavolo.
 
-TRE DECISIONI PRESE (18/08, confermate dall'utente): 1) la regola vale solo per le comande annullate DA QUI IN AVANTI — quelle nuove portano i campi del rendiconto, le vecchie no e si comportano come oggi. Nessuna migrazione, e nessun conto già chiuso che cambia importo; 2) se il CONTO è annullato non pesa niente: eccezione esplicita, prima di ogni altro calcolo; 3) il gesto per annullare una singola comanda su un conto vivo oggi NON esiste (lo fanno solo la divisione e l'annullamento del conto) e va aggiunto nel dettaglio comanda: solo a conto aperto e solo se non è ancora stata servita — servita vuol dire che il drink è uscito, e lì la strada resta «Riapri conto». Vale solo con gli stati del servizio accesi.
+TRE DECISIONI PRESE (18/08, confermate dall'utente): 1) la regola vale solo per le comande annullate DA QUI IN AVANTI — quelle nuove portano i campi del rendiconto, le vecchie no e si comportano come oggi. Nessuna migrazione, e nessun conto già chiuso che cambia importo; 2) se il CONTO è annullato non pesa niente: eccezione esplicita, prima di ogni altro calcolo; 3) il gesto per annullare una singola comanda su un conto vivo oggi NON esiste (lo fanno solo la divisione e l'annullamento del conto) e va aggiunto nel dettaglio comanda: solo a conto aperto e solo se non è ancora stata servita — servita vuol dire che il drink è uscito, e lì la strada resta «Riapri conto». Vale solo con gli stati del servizio accesi. E C'E' UN POSTO CHE ASPETTA QUESTA STRADA: nella vista a corsie del banco le comande si trascinano da una colonna all'altra per cambiare stato (REQ-CODA-007), e la colonna «Annullate» e' l'unica che RIFIUTA il rilascio — lasciarci cadere una comanda sarebbe un annullo, e annullare senza dire dove finiscono i suoi drink e' esattamente il buco che questo requisito chiude. Fatto questo, quella colonna diventa un bersaglio come le altre.
 
 **Dove**: `src/lib/comande.js, src/components/OrderPosDetail.jsx, src/lib/printer.js, src/components/PaymentScreen.jsx`
 
