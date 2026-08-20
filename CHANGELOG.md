@@ -1,6 +1,6 @@
 # Cosa è cambiato
 
-## Non ancora rilasciata — 1.5.1
+## Non ancora rilasciata — 1.5.2
 
 ### Per chi gestisce
 
@@ -571,6 +571,31 @@
   fermi a «da fare», e in un locale che fa nascere le comande già in
   preparazione non scattava mai. Adesso guarda il passo in cui il lavoro
   nasce, comunque sia messo il locale.
+
+## 1.5.1 — 19 agosto 2026
+
+Correzione urgente su una cosa sola: **chiudere un conto con lo sconto**.
+
+- **Riscuotere di nuovo un conto riaperto ristampa lo scontrino** — quello
+  nuovo, con le cifre corrette — da qualunque terminale, anche se la coda
+  non ha visto la riapertura. E l'interruttore in Impostazioni → Stampante
+  ora dice il vero: la stampa parte **alla riscossione**, non «quando
+  l'ordine è pronto».
+
+- **Il conto scontato si chiude davvero, e lo scontrino esce.** Lo sconto si
+  applica un attimo prima di riscuotere, e la sua scrittura parte in
+  sottofondo: l'app rileggeva il conto per decidere se l'incasso lo saldava e
+  ci trovava la versione di prima, quella senza sconto. Il conto restava
+  aperto a metà — chiuso a schermo, «parziale» sul database — e lo scontrino
+  automatico, che guarda proprio quello, non usciva mai. Adesso quanto resta
+  da incassare lo dice la schermata, che ha davanti il conto com'è adesso.
+
+- **Uno scontrino che non è uscito si può ristampare.** Ogni conto veniva
+  segnato come «già stampato» PRIMA di mandarlo alla stampante, e non veniva
+  più liberato: se la carta non usciva, quel conto non stampava più lo
+  scontrino automatico — nemmeno riaperto e richiuso. Ora la prenotazione
+  torna libera quando la stampa fallisce e quando il conto viene riaperto. La
+  guardia contro la doppia copia resta.
 
 - **La comanda automatica esce sempre: anche per l'ordine battuto da questo
   terminale, anche per la seconda comanda di un conto già aperto.** Prima la
