@@ -39,7 +39,6 @@ import {
   ordersRecap,
   ordineCorrisponde,
   primoCorrispondente,
-  inseritiDa,
   restaInCoda,
   ordiniInCoda,
   contiPerScheda,
@@ -63,9 +62,20 @@ import {
   corsieDelPronto,
   CORSIE_SPENTE_ALL_INIZIO,
   SOTTOFILTRI_CHIUSI,
-  SCHEDE_GRIGLIA,
-  NOME_SCHEDA,
+  FILTRI_STATO,
+  STATI_DEFAULT,
+  NOME_FILTRO_STATO,
   NOME_SOTTOFILTRO,
+  cambiaFiltroStato,
+  statiAlDefault,
+  frasePerCodaVuota,
+  autoriDeiConti,
+  autoriAttivi,
+  cambiaAutoreScelto,
+  conAutori,
+  riassuntoAutori,
+  cambiaSottoChiusi,
+  AUTORE_CLIENTE,
   contaFiltri,
   spiegaFiltri,
   spiegaOrdine,
@@ -73,6 +83,7 @@ import {
 import { StoriaOrdineDialog, RipristinaOrdineDialog } from '../components/StoriaOrdine.jsx'
 import { useTelefono } from '../lib/useTelefono.js'
 import StatusBell from '../components/StatusBell.jsx'
+import Tendina from '../components/Tendina.jsx'
 import ActionSheet from '../components/ActionSheet.jsx'
 import {
   isBanco,
@@ -529,27 +540,40 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // andata a buon fine.
   const [chiusiQui, setChiusiQui] = useState([])
   useEffect(() => subscribeNascosti(setChiusiQui), [])
-  const [boardFilter, setBoardFilter] = useState('attivi') // 'attivi' | 'chiusi' | 'tutti'
+  // QUALI STATI SONO IN CODA. Erano quattro schede che si escludevano a
+  // vicenda — In corso, Chiusi, Annullati, Tutti — e non erano filtri: per
+  // vedere gli aperti insieme ai chiusi bisognava chiedere «Tutti», cioè
+  // anche gli annullati. Adesso sono tre interruttori e la coda mostra
+  // l'unione di quelli accesi (REQ-CODA-009). Le regole — mai zero, il
+  // ritorno automatico ad «Aperti» — stanno in coda.js, che è dove si
+  // provano; qui si tiene solo l'insieme.
+  const [stati, setStati] = useState(STATI_DEFAULT)
+  const toccaStato = (id) => setStati((attivi) => cambiaFiltroStato(attivi, id))
   // DENTRO I CHIUSI: tutti, quelli usciti per intero, quelli con ancora
   // qualcosa da portare. Un conto chiuso è un conto incassato — si paga in
   // anticipo tutte le sere — e «quali dei chiusi hanno ancora roba da
   // consegnare» è una domanda vera, che prima si rispondeva tenendo quei
   // conti in mezzo a quelli aperti.
   const [sottoChiusi, setSottoChiusi] = useState('tutti')
-  // NASCONDERE VALE SOLO PER I CONTI IN CORSO. Un conto chiuso da qui
-  // sparisce subito da «In corso» — è il suo mestiere — ma restava nascosto
-  // anche sotto «Chiusi» e in «Tutti»: si chiudeva un conto e nello storico
-  // non c'era, fino a ricaricare la pagina. E riaprendolo non tornava fra
-  // quelli in corso, perché era ancora nell'elenco dei nascosti.
+  // NASCONDERE VALE SOLO PER I CONTI APERTI. Un conto chiuso da qui
+  // sparisce subito da «Aperti» — è il suo mestiere — ma restava nascosto
+  // anche sotto «Chiusi»: si chiudeva un conto e nello storico non c'era,
+  // fino a ricaricare la pagina. E riaprendolo non tornava fra quelli
+  // aperti, perché era ancora nell'elenco dei nascosti.
+  // Adesso che i filtri si combinano la condizione lo dice per esteso: si
+  // nasconde solo se né «Chiusi» né «Annullati» sono accesi — cioè quando
+  // in coda ci sono soltanto i conti aperti. Con «Chiusi» acceso il conto
+  // appena incassato deve restare a schermo: è lì che si va a cercarlo.
   // ...E UN CONTO INCASSATO CON DEI DRINK ANCORA DA FARE NON SI NASCONDE
   // AFFATTO. Nascondere serve a togliere di mezzo un conto su cui non c'è
   // più niente da fare; ma si paga in anticipo tutte le sere, e sparendo
   // si portava dietro le sue comande — al banco i drink appena pagati si
   // volatilizzavano, e tornavano solo ricaricando la pagina (BUG-023).
+  const soloAperti = !stati.includes('chiusi') && !stati.includes('annullati')
   const orders = useMemo(
-    () => (boardFilter === 'attivi' ? senzaNascosti(ordersRaw, haLavoroDaFare) : ordersRaw),
+    () => (soloAperti ? senzaNascosti(ordersRaw, haLavoroDaFare) : ordersRaw),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [ordersRaw, chiusiQui, boardFilter]
+    [ordersRaw, chiusiQui, soloAperti]
   )
   const [error, setError] = useState(null)
   const [statusTab, setStatusTab] = useState(ORDER_STATUSES.RICEVUTO)
@@ -594,10 +618,22 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // stanno dietro il ⋯ o a vista come icone.
   const telefono = useTelefono()
   const [soloOggi, setSoloOggi] = useState(false) // nasconde i conti dei giorni scorsi
-  // «Miei»: solo i conti inseriti da chi è collegato. Ha preso il posto
-  // della pagina «I miei ordini» della sala: stessa coda per tutti, e chi
-  // vuole ritrovare i propri accende il filtro.
-  const [soloMiei, setSoloMiei] = useState(mieiIniziale)
+  // CHI HA APERTO IL CONTO. Era «✍️ Miei», acceso o spento: o tutti o solo
+  // i propri. Adesso è una tendina con dentro chi ha battuto almeno un
+  // conto, tutti selezionati di suo (REQ-CODA-009): «i miei» è una delle
+  // scelte possibili, non l'unica alternativa a «tutti» — al banco capita
+  // di voler vedere i conti di UNA persona che non sei tu.
+  //
+  // `null` VUOL DIRE TUTTI, e non è l'elenco di tutti quelli di adesso: chi
+  // apre il suo primo conto a metà serata entra da solo in una tendina
+  // lasciata al default. La regola sta in coda.js (`autoriAttivi`).
+  //
+  // Arrivando da «I miei ordini» della sala si parte già filtrati su di sé:
+  // è la pagina che quel filtro ha sostituito.
+  const [autoriScelti, setAutoriScelti] = useState(() => {
+    const mia = auth.currentUser?.email?.trim().toLowerCase()
+    return mieiIniziale && mia ? [mia] : null
+  })
 
   const [slowLoad, setSlowLoad] = useState(false)
   const [confirmAction, setConfirmAction] = useState(null) // { title, message, danger, run }
@@ -1175,6 +1211,15 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
     ruolo,
     uidMio: auth.currentUser?.uid || null,
   })
+  // GLI AUTORI DELLA TENDINA: chi ha battuto almeno un conto fra quelli in
+  // vista. È la stessa domanda della legenda qui sopra, ma la chiave è
+  // l'email e non la lettera — due Marco sulle card si distinguono a
+  // fatica, nel filtro sarebbero proprio la stessa persona.
+  const autori = autoriDeiConti(ordersInVista)
+  const autoriAccesi = autoriAttivi(autoriScelti, autori)
+  // La stessa chiave che usa `autoreDi`: serve solo a scrivere «sei tu»
+  // accanto al proprio nome nella tendina.
+  const emailMia = auth.currentUser?.email?.trim().toLowerCase() || ''
 
   // Ricerca rapida: numero, cliente, tavolo, drink, chi ha inserito.
   const q = search.trim().toLowerCase()
@@ -1191,10 +1236,12 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
     q && !ricercaEvidenzia
       ? ordersInVista.filter((o) => ordineCorrisponde(o, q))
       : ordersInVista
-  // Col filtro «Miei» acceso restano solo i conti con la propria firma
-  // (placed_by): vale per ogni vista della coda, griglia o lista.
-  const emailMia = auth.currentUser?.email || ''
-  const visibleOrders = soloMiei ? inseritiDa(visibleOrdersTutti, emailMia) : visibleOrdersTutti
+  // IL FILTRO DEGLI AUTORI si incrocia con tutto il resto: vale per ogni
+  // vista della coda — griglia, corsie, lista, schede — e sta PRIMA degli
+  // stati, che sono l'ultima passata (ordiniInCoda, contiPerScheda). Così
+  // «Chiusi» + «solo i miei» vuol dire i miei chiusi, e i conteggi delle
+  // colonne raccontano la stessa coda che si vede.
+  const visibleOrders = conAutori(visibleOrdersTutti, autoriScelti, autori)
   const listView = settings.queue_view === 'lista'
   // ── SI CALCOLA LA VISTA CHE SI GUARDA, NON TUTTE E TRE ─────────
   //
@@ -1250,7 +1297,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   const boardOrders = gridView
     ? ordiniInCoda(visibleOrders, {
         ...restaInCodaOpts,
-        filtro: boardFilter,
+        filtro: stati,
         sottoChiusi,
       })
         .slice()
@@ -1371,30 +1418,38 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
     setVista(nuova)
     ricordaVistaCorsie(nuova)
   }
-  // I SOTTOFILTRI DEI CHIUSI. Compaiono solo dentro «Chiusi»: sono una
-  // domanda su quei conti, e fuori di lì non vogliono dire niente. Senza
-  // gli stati del servizio nemmeno: se non si segue la preparazione, tutto
-  // quello che è stato pagato è uscito per definizione.
+  // I SOTTOFILTRI DEI CHIUSI, IN RIGA CON GLI ALTRI. Compaiono solo dove i
+  // chiusi si vedono — sono una domanda su quei conti, e fuori di lì non
+  // vogliono dire niente — e senza gli stati del servizio nemmeno: se non
+  // si segue la preparazione, tutto quello che è stato pagato è uscito per
+  // definizione.
   //
-  // E SEGUONO LA FILA: chiusi i filtri sparisce anche questa riga, o
-  // resterebbe appesa sotto i conteggi senza il tasto che l'ha aperta —
-  // proprio l'altezza che la scomparsa serve a restituire ai conti.
-  const righeSottoChiusi = (attivo) =>
-    workflowOn && attivo && filtriVisibili ? (
-      <div className="chips-row chips-sotto" style={{ margin: '-8px 0 16px' }}>
-        <span className="muted small">Dei chiusi:</span>
-        {SOTTOFILTRI_CHIUSI.map(([k, label]) => (
+  // ERANO UNA RIGA A PARTE, sotto, con scritto «Dei chiusi:». «I filtri
+  // serviti/da servire deve stare insieme agli altri» (l'utente,
+  // 20/08/2026): una riga in più costa altezza sempre, e sono filtri come
+  // gli altri.
+  //
+  // DUE CHIP, NON TRE. La terza era «Tutti», il neutro: acceso quasi
+  // sempre, diceva «nessun filtro» sembrando un filtro — e in riga con gli
+  // altri, subito dopo aver tolto la scheda «Tutti», sarebbe stata la
+  // stessa parola per un'altra cosa. Adesso il neutro è NESSUNO DEI DUE
+  // acceso, che è come si legge una fila di chip: acceso = sto guardando
+  // quello. Restano esclusivi fra loro (la regola sta in coda.js): serviti
+  // E da servire insieme sono tutti i chiusi, cioè il neutro.
+  const chipsSottoChiusi = (attivo) =>
+    workflowOn && attivo
+      ? SOTTOFILTRI_CHIUSI.map(([k, label]) => (
           <button
             key={k}
-            className={`chip small ${sottoChiusi === k ? 'active' : ''}`}
-            onClick={() => setSottoChiusi(k)}
+            className={`chip ${sottoChiusi === k ? 'active' : ''}`}
+            onClick={() => setSottoChiusi((s) => cambiaSottoChiusi(s, k))}
             aria-pressed={sottoChiusi === k}
+            title={`Dei conti chiusi, solo quelli ${k === 'serviti' ? 'usciti per intero' : 'con ancora qualcosa da portare'}`}
           >
             {label}
           </button>
-        ))}
-      </div>
-    ) : null
+        ))
+      : null
 
   // IL TASTO DICE DOVE PORTA, non dove si è. Era una pastiglia «Comande»
   // che si accendeva quando le comande le stavi già guardando: un
@@ -1425,18 +1480,54 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
     </button>
   ) : null
 
-  // «SOLO I MIEI»: c'è in tutte le viste della coda, ed è sempre la stessa
-  // — scritta tre volte, era già divergente su un titolo. Sta qui una volta
-  // e si appende dove serve, come la pastiglia del cambio vista.
-  const pastigliaMiei = (
-    <button
-      className={`chip ${soloMiei ? 'active' : ''}`}
-      onClick={() => setSoloMiei((v) => !v)}
-      title="Solo i conti inseriti da te"
-    >
-      ✍️ Miei
-    </button>
-  )
+  // ── CHI HA APERTO IL CONTO: LA TENDINA DEGLI AUTORI ─────────────────
+  //
+  // C'è in tutte le viste della coda ed è sempre la stessa — una
+  // implementazione, appesa dove serve, come il cambio vista. Era «✍️
+  // Miei», acceso o spento; adesso dentro ci sono tutti quelli che hanno
+  // battuto almeno un conto, accesi di suo, e si spegne chi non interessa
+  // (REQ-CODA-009).
+  //
+  // È UNA TENDINA, in deroga a docs/navigazione.md — «i filtri stanno in
+  // riga, non in una tendina, che costringe ad aprirla per sapere cosa c'è
+  // dentro». L'ha chiesta l'utente («il filtro miei dovrebbe diventare un
+  // menu a tendina», 20/08/2026) e qui la deroga si regge da sé: gli autori
+  // sono quanti sono i turni — sei, otto, dieci nomi — e in riga sarebbero
+  // dieci pastiglie che scorrono, cioè la riga che stiamo togliendo. La
+  // pastiglia dice comunque cosa è scelto senza aprirla (`riassuntoAutori`).
+  //
+  // Si riusa `Tendina`, che sa già chiudersi al tocco fuori e con Esc:
+  // scriverne un'altra qui vuol dire scrivere di nuovo quei due ascolti, e
+  // sbagliarne uno.
+  const tendinaAutori =
+    autori.length > 0 ? (
+      <Tendina
+        etichetta="Chi ha aperto il conto"
+        riassunto={riassuntoAutori(autoriScelti, autori)}
+        attivo={autoriAccesi.length !== autori.length}
+        largo={240}
+      >
+        {/* NON SI CHIUDE AL PRIMO TOCCO: qui si deselezionano più persone
+            di fila, e una tendina che sparisce a ogni scelta va riaperta
+            ogni volta. Si chiude fuori, o con Esc. */}
+        <div className="tendina-titolo">Chi ha aperto il conto</div>
+        {autori.map((v) => (
+          <button
+            key={v.chiave}
+            type="button"
+            className={`tendina-voce${autoriAccesi.includes(v.chiave) ? ' scelta' : ''}`}
+            onClick={() => setAutoriScelti((s) => cambiaAutoreScelto(s, v.chiave, autori))}
+            aria-pressed={autoriAccesi.includes(v.chiave)}
+          >
+            <span>
+              {v.chiave === AUTORE_CLIENTE ? '🌐 ' : ''}
+              {v.nome}
+              {v.chiave === emailMia && <span className="muted small"> · sei tu</span>}
+            </span>
+          </button>
+        ))}
+      </Tendina>
+    ) : null
 
   // ── COSA È ACCESO ADESSO, IN PAROLE ────────────────────────
   //
@@ -1446,25 +1537,36 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // sta il NUMERO; questi nomi corti, senza emoji, vivono nel title, che
   // larghezza non ne costa.
   //
-  // Ogni vista ha i suoi filtri, quindi ha il suo elenco: la griglia ha la
-  // scheda («Chiusi») e i giorni scorsi, il banco le colonne spente, la
-  // lista e le schede solo «Miei».
+  // SI CONTANO LE DEVIAZIONI DAL DEFAULT, non i filtri accesi. Da quando
+  // gli stati sono tre interruttori ce n'è sempre almeno uno acceso:
+  // contarli vorrebbe dire un badge perenne, che è esattamente la cosa che
+  // l'utente ha bocciato — «il conteggio dei filtri accesi è inutile sulla
+  // schermata degli ordini» (20/08/2026). Con la coda com'è di suo — solo
+  // «Aperti», tutti gli autori — non c'è niente da segnalare.
+  //
+  // Ogni vista ha i suoi filtri, quindi ha il suo elenco: la griglia ha gli
+  // stati e i giorni scorsi, il banco le colonne spente, la lista e le
+  // schede solo gli autori.
   const sottoAcceso = workflowOn && sottoChiusi !== 'tutti' ? NOME_SOTTOFILTRO[sottoChiusi] : null
+  const autoriFiltrano = autoriAccesi.length !== autori.length
+  const nomeAutori = autoriFiltrano ? riassuntoAutori(autoriScelti, autori).replace('✍️ ', '') : null
   const filtriAccesi = (
     corsieView
       ? [
-          soloMiei && 'Miei',
+          nomeAutori,
           corsieBanco && diverse.length > 0 && `Colonne (${diverse.length})`,
           !corsieBanco && sottoAcceso,
         ]
       : gridView
         ? [
-            NOME_SCHEDA[boardFilter],
-            boardFilter === 'chiusi' && sottoAcceso,
-            soloMiei && 'Miei',
+            // Gli stati si nominano solo quando NON sono il default: al
+            // default il badge deve restare spento.
+            ...(statiAlDefault(stati) ? [] : stati.map((id) => NOME_FILTRO_STATO[id])),
+            stati.includes('chiusi') && sottoAcceso,
+            nomeAutori,
             soloOggi && 'Solo oggi',
           ]
-        : [soloMiei && 'Miei']
+        : [nomeAutori]
   ).filter(Boolean)
 
   const cambiaFiltri = () => {
@@ -1477,26 +1579,30 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
     if (!aperti) setScegliCorsie(false)
   }
 
-  // IL TASTINO. «Quando dicevo di nascondere i tasti intendevo tutti e non
-  // aggiungere un nuovo tasto. Lo spazio da risparmiare è in altezza non in
-  // larghezza» (l'utente, 20/08): la pastiglia «⚗️ Filtri» teneva in piedi
-  // da sola una riga intera che, a filtri chiusi, non aveva altro da
-  // mostrare. Adesso è un'icona quadrata, solo icona, e i chip stanno
-  // dietro di lei.
+  // IL TASTINO CHE APRE I FILTRI. «Non ci siamo capiti: il tasto per
+  // mostrare/nascondere i filtri deve essere un tasto piccolo e i filtri
+  // devono uscire sotto. Come il tasto che mostra/nasconde i prodotti da
+  // una card delle comande» (l'utente, 20/08/2026).
   //
-  // STA NELLA RIGA SOTTO, NON IN TESTATA. C'era salita col giro di prima, e
-  // l'utente l'ha rimandata giù: «Rimetti lì giù anche il tasto dei filtri»
-  // (20/08). È il posto dove stavano i vecchi bottoni, ed è il posto dove
-  // compaiono i chip che apre: tasto e sua fila nella stessa riga, invece di
-  // un tasto in una zona e il suo effetto in un'altra.
+  // Quindi NON è più un tastino quadrato da 44px con bordo (`board-icona`,
+  // la famiglia di 📟 e ＋): è il pattern di `.corsia-piu` — chevron ▾/▴,
+  // niente riquadro, colore attenuato, poche parole. Un tasto che governa
+  // la vista non deve pesare come un tasto che fa qualcosa alla serata.
   //
-  // LO STATO RESTA VISIBILE ANCHE DA CHIUSO: quando c'è qualcosa di acceso
-  // il tastino si accende e porta il NUMERO dei filtri. In 44px non ci sta
-  // un nome, ci sta una cifra — e quali siano lo dice il title.
-  const quantiFiltri = contaFiltri(filtriAccesi)
+  // A DESTRA, INSIEME ALL'ORDINAMENTO: «il tasto dei filtri deve essere
+  // sulla destra insieme a quello dell'ordinamento non a sinistra dei
+  // filtri» (20/08/2026). Stanno in fondo alla riga dei conteggi, che c'è
+  // comunque: da chiusi costano ZERO altezza.
+  //
+  // LO STATO RESTA VISIBILE DA CHIUSO, ed è l'unica ragione del badge: un
+  // filtro acceso e invisibile è una coda che sembra sbagliata — dodici
+  // conti dove ce ne sono quaranta, e niente a schermo che lo dica. Aperta
+  // la fila il badge sparisce: i chip accesi si vedono da sé, e ripetere
+  // col numero quello che è già a schermo è rumore.
+  const quantiFiltri = filtriVisibili ? 0 : contaFiltri(filtriAccesi)
   const tastoFiltri = (
     <button
-      className={`btn ghost small board-icona board-filtri${quantiFiltri > 0 ? ' active' : ''}`}
+      className={`coda-tastino${quantiFiltri > 0 ? ' active' : ''}`}
       onClick={cambiaFiltri}
       aria-expanded={filtriVisibili}
       // IL NOME NON CAMBIA MAI. Chi lo cerca lo cerca come «Filtri»: il
@@ -1505,14 +1611,14 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
       aria-label="Filtri"
       title={spiegaFiltri(filtriAccesi, filtriVisibili)}
     >
-      ⚗️
-      {quantiFiltri > 0 && <span className="board-icona-conta">{quantiFiltri}</span>}
+      {filtriVisibili ? '▴' : '▾'} Filtri
+      {quantiFiltri > 0 && <span className="coda-tastino-conta">{quantiFiltri}</span>}
     </button>
   )
 
-  // IL VERSO DELLA CODA. Anche lui è sceso dalla testata: «cambia anche
-  // l'icona (freccia giù freccia sopra) e spostala da lì, mettila sotto
-  // dove stavano i vecchi bottoni» (l'utente, 20/08).
+  // IL VERSO DELLA CODA. Stessa famiglia del tastino dei filtri: sono i due
+  // tasti che governano COME si guarda la coda, stanno insieme in fondo a
+  // destra e si somigliano perché fanno la stessa specie di cosa.
   //
   // NOME E ICONA VENGONO DA `spiegaOrdine`, insieme: erano due ternari
   // scritti a mano in due punti — la testata e il ⋯ — e già divergevano.
@@ -1521,13 +1627,25 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   const verso = spiegaOrdine(ordineDesc)
   const tastoOrdine = (
     <button
-      className="btn ghost small board-icona"
+      className="coda-tastino"
       onClick={cambiaOrdine}
       title={verso.nome}
       aria-label={verso.nome}
     >
       {verso.icona}
     </button>
+  )
+
+  // I DUE TASTINI, appesi a una riga che esiste già — la riga dei conteggi
+  // sulle lavagne, la riga della ricerca in lista e schede. «Devi rivedere
+  // la UX e migliorarla sempre tenendo presente il fatto che ci serve
+  // spazio verticale» (l'utente, 20/08/2026): a filtri chiusi la coda non
+  // paga NIENTE per averli, né una riga né un margine.
+  const tastini = (
+    <span className="coda-tastini">
+      {tastoFiltri}
+      {tastoOrdine}
+    </span>
   )
 
   // ── LA FILA DEI FILTRI: UNA SOLA, PER TUTTE E QUATTRO LE VISTE ───────
@@ -1549,27 +1667,22 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // l'utente non ha chiesto di spostarlo. Il «＋» sta nella testata e non
   // c'entra affatto: crea.
   //
-  // DA CHIUSA LA RIGA C'È LO STESSO, ED È PICCOLA. Il giro di prima l'aveva
-  // fatta sparire del tutto portando i tastini in testata; l'utente li ha
-  // rimandati giù — «spostala da lì, mettila sotto dove stavano i vecchi
-  // bottoni. Rimetti lì giù anche il tasto dei filtri» (20/08). Quindi da
-  // chiusa resta una riga di DUE tastini, non la fila di pastiglie di
-  // prima: sulla lavagna è la riga dei conteggi, che c'era comunque, e i
-  // tastini ci si appoggiano a destra senza aggiungerne una.
+  // DA CHIUSA LA RIGA NON ESISTE. «I filtri devono uscire sotto» (l'utente,
+  // 20/08/2026): il tastino sta su una riga che c'era comunque, i chip
+  // escono in una riga sotto, e chiudendo quella riga se ne va del tutto —
+  // niente altezza, niente margini, niente riga di due tastini come nel
+  // giro precedente. È il verso giusto per una lavagna che si guarda da
+  // lontano: ogni riga sprecata è una comanda in meno a schermo.
   //
-  // I DUE TASTINI STANNO IN UN GRUPPO SUO, che non scorre via: la fila
-  // scorre in orizzontale quando i chip non ci stanno (in griglia sono sei),
-  // e il tasto che l'ha aperta se ne andrebbe fuori schermo con loro — per
-  // richiuderla toccherebbe prima riportare indietro la riga.
-  const filaFiltri = (filtri, style) => (
-    <div className="chips-row chips-lavagna" style={style}>
-      <span className="chips-tastini">
-        {tastoFiltri}
-        {tastoOrdine}
-      </span>
-      {filtriVisibili ? filtri : null}
-    </div>
-  )
+  // I TASTINI NON STANNO PIÙ QUI DENTRO: sono in fondo alla riga sopra
+  // (`tastini`), a destra. Prima aprivano la fila da dentro la fila stessa,
+  // e la fila doveva quindi esistere sempre.
+  const filaFiltri = (filtri, style) =>
+    filtriVisibili ? (
+      <div className="chips-row chips-filtri" style={style}>
+        {filtri}
+      </div>
+    ) : null
 
   // ── I FILTRI DELLE CORSIE, SULLA RIGA DEI CONTEGGI ──────────────
   //
@@ -1589,7 +1702,12 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // salito in testata coi tastini delle azioni (docs/navigazione.md).
   const filtriCorsie = filaFiltri(
     <>
-      {pastigliaMiei}
+      {tendinaAutori}
+      {/* SERVITI / DA SERVIRE stanno qui, in riga con gli altri: nelle
+          corsie dei conti la colonna «Chiusi» c'è sempre, quindi la
+          domanda ha sempre senso. Al banco no: lì si guardano le comande,
+          e i conti chiusi non hanno una colonna. */}
+      {chipsSottoChiusi(!corsieBanco)}
       {/* QUALI COLONNE TENERE A SCHERMO. A metà serata chi sta allo
           shaker guarda «Da fare» e «Al banco», e le altre due gli
           mangiano mezzo schermo per roba che in quel momento non lo
@@ -1622,26 +1740,38 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // motivo perché due viste della STESSA coda mettano i loro filtri in due
   // posti diversi: chi passa dall'una all'altra deve ritrovarli dov'erano.
   //
-  // QUI SONO SEI, non due come nelle corsie (BUG-042), e sui 1000-1300px
-  // del banco non ci stavano accanto ai conteggi nemmeno scorrendo: è anche
-  // per questo che adesso stanno tutti dietro «⚗️ Filtri». Aperti fanno e
-  // stanno esattamente dove stavano — la riga SCORRE in orizzontale invece
-  // di andare a capo, che una seconda riga di pastiglie sarebbe quello che
-  // si stava togliendo. E la più lunga resta accorciata: «📅 Solo oggi
+  // QUI SONO CINQUE, non due come nelle corsie (BUG-042), e sui 1000-1300px
+  // del banco non ci stavano accanto ai conteggi nemmeno scorrendo: per
+  // questo escono in una riga tutta loro, che SCORRE in orizzontale invece
+  // di andare a capo — una seconda riga di pastiglie sarebbe l'altezza che
+  // si sta risparmiando. E la più lunga resta accorciata: «📅 Solo oggi
   // (3)» invece di «📅 Solo oggi (3 da chiudere)», e cosa siano quei tre
   // lo dice il titolo.
   const filtriOrdini = filaFiltri(
     <>
-      {SCHEDE_GRIGLIA.map(([k, label]) => (
+      {/* I TRE STATI, COMBINABILI. Uno acceso vuol dire «lo sto
+          guardando», e la coda mostra l'unione: niente più scheda «Tutti»
+          — è tutti e tre accesi, e si vede. `aria-pressed` e non una
+          scheda: sono interruttori, non linguette (REQ-CODA-009). */}
+      {FILTRI_STATO.map(([k, label]) => (
         <button
           key={k}
-          className={`chip ${boardFilter === k ? 'active' : ''}`}
-          onClick={() => setBoardFilter(k)}
+          className={`chip ${stati.includes(k) ? 'active' : ''}`}
+          onClick={() => toccaStato(k)}
+          aria-pressed={stati.includes(k)}
+          title={
+            k === 'attivi' && stati.length === 1 && stati[0] === 'attivi'
+              ? 'Gli aperti si spengono solo con chiusi o annullati accesi'
+              : undefined
+          }
         >
           {label}
         </button>
       ))}
-      {pastigliaMiei}
+      {/* SERVITI / DA SERVIRE: in riga con gli altri, e solo quando i
+          chiusi sono a schermo — fuori di lì non vogliono dire niente. */}
+      {chipsSottoChiusi(stati.includes('chiusi'))}
+      {tendinaAutori}
       {/* C'ERA UN «NASCONDI PAGATI», E NON SERVE PIÙ. Serviva a togliere
           dagli occhi i conti già incassati ma non ancora serviti, perché
           restavano in mezzo a quelli in corso: adesso un conto pagato è
@@ -2430,12 +2560,15 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                 )}
               </div>
             )}
-            {/* I FILTRI DELLA LAVAGNA STANNO QUI, non in una riga loro: un
-                livello in più fra i conteggi e le card costa altezza
-                sempre, e questa lavagna si guarda da lontano mentre si
-                versa. Vale per tutte e due — corsie e griglia — perché
-                sono due modi di guardare la STESSA coda, e chi passa
-                dall'una all'altra deve ritrovare i filtri dov'erano. */}
+            {/* I DUE TASTINI IN FONDO A DESTRA, sulla riga dei conteggi —
+                che c'è comunque. Da filtri chiusi la lavagna non paga
+                niente per averli: nessuna riga in più, nessun margine.
+                Vale per tutte e due le lavagne, corsie e griglia, e anche
+                sul telefono: sono due modi di guardare la STESSA coda, e
+                chi passa dall'una all'altra deve ritrovarli dov'erano. */}
+            {tastini}
+            {/* I CHIP ESCONO SOTTO, in una riga che esiste solo da aperti
+                («i filtri devono uscire sotto», l'utente 20/08/2026). */}
             {corsieView ? filtriCorsie : filtriOrdini}
           </div>
         </div>
@@ -2549,8 +2682,11 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
           {/* IL CAMBIO VISTA STA IN RIGA CON LA RICERCA. Nelle lavagne vive
               in testata accanto al campo; qui la testata non c'è, e questa
               è la riga che le somiglia di più — così chi cambia vista lo
-              ritrova nello stesso posto relativo. Filtri e ordinamento
-              stanno invece nella riga sotto, come sulle lavagne. */}
+              ritrova nello stesso posto relativo.
+              E QUI STANNO ANCHE I DUE TASTINI, in fondo a destra: sulle
+              lavagne si appoggiano alla riga dei conteggi, che qui non
+              c'è, e questa è l'unica riga che esiste comunque. Il conto è
+              lo stesso — a filtri chiusi non si spende una riga. */}
           <div className="coda-cerca-riga">
             <input
               type="search"
@@ -2560,16 +2696,18 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
               onChange={(e) => setSearch(e.target.value)}
             />
             {tastoVista}
+            {tastini}
           </div>
           {avvisoRicerca && (
             <p className="muted small" style={{ margin: '-4px 0 8px' }}>
               {avvisoRicerca}
             </p>
           )}
-          {/* STESSA FILA DELLE LAVAGNE, stessi due tastini: qui i chip sono
-              uno solo, ma un meccanismo che vale in tre viste su quattro
-              è una cosa da imparare due volte. */}
-          {filaFiltri(pastigliaMiei, { margin: '8px 0 12px' })}
+          {/* STESSA FILA DELLE LAVAGNE: qui il chip è uno solo — gli stati
+              li fanno le linguette di questa vista — ma un meccanismo che
+              vale in tre viste su quattro è una cosa da imparare due
+              volte. */}
+          {filaFiltri(tendinaAutori, { margin: '8px 0 12px' })}
         </>
       )}
 
@@ -2581,23 +2719,13 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
               🖨 {b.msg} <span className="muted">(tocca per chiudere)</span>
             </div>
           ))}
-          {/* I FILTRI NON SONO PIÙ QUI: stanno sulla riga dei conteggi, in
-              testata (vedi `filtriOrdini`). Erano una riga a sé fra la
-              testata e le card. */}
-          {righeSottoChiusi(boardFilter === 'chiusi')}
-          {/* Griglia: ordini in invio (grigi) + ordini secondo il filtro */}
+          {/* I FILTRI NON SONO PIÙ QUI: stanno sotto la riga dei conteggi,
+              in testata (vedi `filtriOrdini`), e i sottofiltri dei chiusi
+              sono in riga con loro — non più una riga «Dei chiusi:» a sé.
+              Erano tutti una riga a sé fra la testata e le card. */}
+          {/* Griglia: ordini in invio (grigi) + ordini secondo i filtri */}
           {pend.pending.length === 0 && visibleBoard.length === 0 && (
-            <div className="empty">
-              {`Nessun ordine${
-                boardFilter === 'chiusi'
-                  ? ' chiuso'
-                  : boardFilter === 'annullati'
-                    ? ' annullato'
-                    : boardFilter === 'attivi'
-                      ? ' in corso'
-                      : ''
-              }${soloOggi ? ' oggi' : ''}.`}
-            </div>
+            <div className="empty">{frasePerCodaVuota(stati, soloOggi)}</div>
           )}
           {/* I nuovi ordini vanno IN FONDO (numeri più alti): il placeholder
               in sync sta già lì, così alla conferma non cambia posizione. */}
@@ -2608,7 +2736,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
           )}
           {boardGroups.map(({ day, orders: gOrders }) => (
             <div key={day}>
-              {separatoreGiornata(day, boardFilter)}
+              {separatoreGiornata(day, stati)}
               <div className="order-grid">
                 {gOrders.map(renderGridCard)}
                 {day === oggiKey && pend.pending.map(renderPendingCard)}
@@ -2625,8 +2753,9 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
 
               I FILTRI NON SONO QUI: stanno sulla riga dei conteggi, in
               testata (vedi `filtriCorsie`). Erano una riga a sé, e fra i
-              conteggi e la prima comanda c'erano tre livelli. */}
-          {righeSottoChiusi(!corsieBanco)}
+              conteggi e la prima comanda c'erano tre livelli — e i
+              sottofiltri dei chiusi ne aggiungevano un quarto: adesso
+              sono chip in riga con gli altri. */}
           {corsieBanco && filtriVisibili && scegliCorsie && (
             <div className="chips-row corsie-scelta" style={{ margin: '0 0 12px' }}>
               {sceglibili.map((c) => (

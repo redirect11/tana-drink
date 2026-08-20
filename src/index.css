@@ -1764,66 +1764,112 @@ body.fullbleed .bar-content {
   margin-top: 0;
 }
 
-/* ── I FILTRI DELLA LAVAGNA, SULLA RIGA DEI CONTEGGI ──────────────────
-   Vale per tutte e due le lavagne: le corsie (BUG-042) e la GRIGLIA, dove
-   le pastiglie sono sette e la riga scorre in orizzontale invece di
-   andare a capo — «rispetto alla vista corsie li vorrei nello stesso
-   punto» (l'utente, 20/08).
-   Nelle corsie erano una riga a sé fra i conteggi e le testate delle
-   colonne: 64px (8 di stacco + 40 di pastiglia + 4 + 12) per due
-   pastiglie corte, e tre livelli prima di vedere una comanda. Quella
-   lavagna si guarda da lontano mentre si versa, e ogni riga sprecata è
-   una comanda in meno a schermo.
-   La riga dei conteggi è corta e ha spazio a destra: i filtri ci stanno
-   accanto e la riga in più sparisce. Cresce di 20px (la pastiglia è più
-   alta del testo, e non si rimpicciolisce: sotto i 44px al banco si
-   sbaglia), quindi il conto netto è 44px guadagnati — una riga in meno.
-   `align-self: center` perché la riga allinea alla BASE del testo, e una
-   pastiglia allineata alla base pende. */
-.board-sotto .chips-row {
-  margin: 0 0 0 auto;
+/* ── I FILTRI DELLA LAVAGNA: UNA RIGA SOTTO, E SOLO DA APERTI ─────────
+   «Il tasto per mostrare/nascondere i filtri deve essere un tasto piccolo
+   e i filtri devono uscire sotto. Come il tasto che mostra/nasconde i
+   prodotti da una card delle comande. Devi rivedere la UX e migliorarla
+   sempre tenendo presente il fatto che ci serve spazio verticale»
+   (l'utente, 20/08/2026).
+   Da chiusi la riga NON viene disegnata affatto (`filaFiltri` torna
+   null): qui c'è solo come si presenta da aperta — a filo a sinistra,
+   larga quanto la lavagna, e in orizzontale scorre invece di andare a
+   capo, che una seconda riga di pastiglie sarebbe l'altezza che si sta
+   risparmiando.
+   Il giro prima li teneva ACCANTO ai conteggi, a destra: ci stavano
+   quando erano due (corsie), ma in griglia — dove sono cinque più la
+   tendina degli autori — la riga si riempiva e li spingeva a capo
+   appiccicati al testo. */
+.board-sotto .chips-filtri {
+  flex-basis: 100%;
+  margin: 4px 0 0;
   padding-bottom: 0;
-  align-self: center;
-  /* Il pane della scrollata orizzontale: senza questi due, una fila di
-     pastiglie più larga della riga la sfonda invece di scorrere. */
   max-width: 100%;
   min-width: 0;
 }
 
-/* ── I DUE TASTINI DELLA FILA DEI FILTRI ─────────────────────────────
-   «⚗️» e la freccia dell'ordinamento stanno QUI, non in testata: «spostala
-   da lì, mettila sotto dove stavano i vecchi bottoni. Rimetti lì giù anche
-   il tasto dei filtri» (l'utente, 20/08). Da chiusa la fila è solo loro
-   due — bassa quanto un tastino — e aprendola i chip compaiono di fianco,
-   nella stessa riga.
-   NON SCORRONO VIA COI CHIP: la fila scorre in orizzontale quando le
-   pastiglie non ci stanno (in griglia sono sei), e il tasto che l'ha
-   aperta finirebbe fuori schermo insieme a loro — per richiuderla si
-   dovrebbe prima riportare indietro la riga. Restano incollati a sinistra
-   col fondo della pagina sotto, o i chip si vedrebbero passare dietro. */
-.chips-tastini {
-  position: sticky;
-  left: 0;
-  z-index: 1;
-  display: inline-flex;
-  gap: 6px;
-  flex-shrink: 0;
-  background: var(--bg);
+/* VA A CAPO, NON SCORRE, E QUESTA VOLTA È OBBLIGATORIO. `.chips-row`
+   scorre in orizzontale (`overflow-x: auto`), e dentro un contenitore che
+   scorre un pannello in `position: absolute` viene TAGLIATO: la tendina
+   degli autori si aprirebbe dentro la riga alta 40px e non si vedrebbe
+   nulla. Qui la riga esiste solo da aperta e per scelta di chi guarda: se
+   sul telefono i chip vanno su due righe, sono due righe che qualcuno ha
+   chiesto — e si tolgono richiudendo. */
+.chips-filtri {
+  flex-wrap: wrap;
+  overflow: visible;
+  row-gap: 6px;
 }
 
-/* SUL TELEFONO NO. Lì la riga dei conteggi è già piena — conti, avviso
-   della ricerca, legenda — e infilarci anche i filtri li spingerebbe a
-   capo appiccicati al testo, oppure a destra, dove nessuno li cerca.
-   Tornano sotto, a filo a sinistra, e scorrono in orizzontale come hanno
-   sempre fatto. A dire da dove in su è la LAVAGNA e non la finestra: col
-   menu agganciato ha 200-250px in meno (stessa soglia delle due colonne). */
-@container corsie (max-width: 559.98px) {
-  .board-sotto .chips-row {
-    flex-basis: 100%;
-    margin-left: 0;
-    margin-top: 4px;
-  }
+/* ── I DUE TASTINI CHE GOVERNANO LA VISTA ────────────────────────────
+   Il tasto dei filtri e la freccia dell'ordinamento stanno IN FONDO A
+   DESTRA, su una riga che c'è comunque — i conteggi sulle lavagne, la
+   ricerca in lista e schede: «il tasto dei filtri deve essere sulla destra
+   insieme a quello dell'ordinamento non a sinistra dei filtri» (l'utente,
+   20/08/2026). Costo verticale a filtri chiusi: zero, in tutte le viste e
+   anche sul telefono.
+   `align-self: center` perché la riga dei conteggi allinea alla BASE del
+   testo, e un tastino allineato alla base pende. */
+.coda-tastini {
+  display: inline-flex;
+  gap: 10px;
+  flex-shrink: 0;
+  margin-left: auto;
+  align-self: center;
 }
+
+/* NON È UN TASTO DA 44px. È il pattern di `.corsia-piu` — il «▾ altre 3»
+   che apre le righe di una card delle comande: niente riquadro, colore
+   attenuato, chevron davanti. «Il tasto per mostrare/nascondere i filtri
+   deve essere un tasto piccolo […] come il tasto che mostra/nasconde i
+   prodotti da una card delle comande» (l'utente, 20/08/2026). Un tasto
+   che governa COME si guarda la coda non deve pesare come un tasto che fa
+   qualcosa alla serata, e in una riga di testo un rettangolo bordato è
+   uno scalino.
+   LA REGOLA DEI 44px NON È VIOLATA: quella vale per i tasti che si
+   premono di corsa con le dita bagnate (Avanti, Incassa). Questi si
+   premono quando si decide cosa guardare, e restano comunque comodi —
+   padding e interlinea fanno una ventina di pixel su una manciata di
+   caratteri larghi. */
+.coda-tastino {
+  border: none;
+  background: none;
+  padding: 4px 2px;
+  font-size: 0.82rem;
+  line-height: 1.2;
+  color: var(--muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.coda-tastino:hover {
+  color: var(--accent-2);
+}
+/* Acceso = c'è un filtro che sta lavorando e la fila è chiusa. */
+.coda-tastino.active {
+  color: var(--accent-2);
+  font-weight: 600;
+}
+
+/* QUANTI FILTRI DEVIANO DAL DEFAULT, accanto al nome e SOLO a fila chiusa.
+   Senza, chiusa la fila non resterebbe a schermo niente a dire che la coda
+   è filtrata — dodici conti dove ce ne sono quaranta. Aperta non serve: i
+   chip accesi si vedono da sé, e ridirlo con un numero è rumore. */
+.coda-tastino-conta {
+  display: inline-block;
+  min-width: 16px;
+  margin-left: 4px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--accent-2);
+  /* L'inchiostro sopra un fondo d'accento ha già il suo gettone, e segue
+     il tema: scritto a mano sarebbe nero su nero sul primo tema scuro. */
+  color: var(--btn-ink);
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+}
+
+
 
 /* ── Testata della coda sul TELEFONO ──────────────────────────────────
    Il ☰ è fisso nell'angolo: a scostarsi dev'essere solo il TITOLO, non
@@ -7225,32 +7271,10 @@ body.pagina-piena .inv-scheda {
   opacity: 0.55;
 }
 
-/* QUANTI FILTRI SONO ACCESI, sul tastino ⚗️ della testata. In 44px non ci
-   sta un nome, ci sta una cifra: quali siano lo dice il title. Senza,
-   chiusa la fila non resterebbe a schermo NIENTE a dire che la coda è
-   filtrata — dodici conti dove ce ne sono quaranta.
-   Va nell'angolo e non accanto all'icona: affiancata allargherebbe il
-   tasto, e la riga delle azioni è la stessa dove sta la ricerca. */
-.board-filtri {
-  position: relative;
-}
-
-.board-icona-conta {
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  min-width: 16px;
-  padding: 0 3px;
-  border-radius: 8px;
-  background: var(--accent-2);
-  /* L'inchiostro sopra un fondo d'accento ha già il suo gettone, e segue
-     il tema: scritto a mano sarebbe nero su nero sul primo tema scuro. */
-  color: var(--btn-ink);
-  font-size: 0.7rem;
-  font-weight: 700;
-  line-height: 16px;
-  text-align: center;
-}
+/* IL BADGE DEL CONTEGGIO NON STA PIÙ QUI. Era nell'angolo del tastino
+   quadrato ⚗️ (`.board-icona-conta`); il tasto dei filtri adesso è di
+   testo e piccolo, e il numero gli sta accanto — vedi
+   `.coda-tastino-conta`. */
 
 .board-icona.active {
   border-color: var(--accent-2);

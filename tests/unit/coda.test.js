@@ -11,8 +11,22 @@ import {
   openOrdersCount,
   ordineCorrisponde,
   primoCorrispondente,
-  inseritiDa,
+  conAutori,
+  autoreDi,
+  autoriDeiConti,
+  autoriAttivi,
+  cambiaAutoreScelto,
+  riassuntoAutori,
+  AUTORE_CLIENTE,
   passaFiltroCoda,
+  passaStatiCoda,
+  cambiaFiltroStato,
+  statiDaFiltro,
+  statiAlDefault,
+  frasePerCodaVuota,
+  cambiaSottoChiusi,
+  FILTRI_STATO,
+  STATI_DEFAULT,
   restaInCoda,
   gruppiInCoda,
   schedeCoda,
@@ -70,26 +84,197 @@ describe('openOrdersCount', () => {
   })
 })
 
-// Il filtro «Miei» della coda: ha preso il posto della pagina «I miei
-// ordini» della sala, quindi deve rispondere come rispondeva lei — i conti
-// con la propria firma, nient'altro.
-describe('inseritiDa', () => {
+// ── CHI HA APERTO IL CONTO: LA TENDINA DEGLI AUTORI ──────────────────
+//
+// Era `inseritiDa` — il filtro «Miei», acceso o spento — e i suoi test
+// vivono qui sotto, riscritti sul meccanismo nuovo: «il filtro miei
+// dovrebbe diventare un menu a tendina dove di default sono selezionati
+// tutti gli utenti che hanno aperto almeno un ordine […] Poi posso
+// scegliere di deselezionare e vedere solo gli ordini di qualcuno (i miei
+// ad esempio)» (l'utente, 20/08/2026). «Solo i miei» è diventato un caso
+// particolare: un autore solo selezionato.
+describe('gli autori dei conti', () => {
   const firmati = [
-    { id: 'a', placed_by: { email: 'Anna@tana.it' } },
-    { id: 'b', placed_by: { email: 'bruno@tana.it' } },
+    { id: 'a', placed_by: { email: 'Anna@tana.it', name: 'Anna', role: 'bartender' } },
+    { id: 'b', placed_by: { email: 'bruno@tana.it', name: 'Bruno', role: 'bartender' } },
     { id: 'c' }, // ordine del cliente: nessuna firma
+    { id: 'd', placed_by: { email: 'anna@tana.it', name: 'Anna', role: 'bartender' } },
   ]
-  it('tiene solo i conti con la propria firma, maiuscole ignorate', () => {
-    expect(inseritiDa(firmati, 'anna@tana.it').map((o) => o.id)).toEqual(['a'])
-    expect(inseritiDa(firmati, 'BRUNO@tana.it').map((o) => o.id)).toEqual(['b'])
+  const elenco = autoriDeiConti(firmati)
+
+  it('la chiave è l\'email, e le maiuscole non contano', () => {
+    // Sulle card due Anna si distinguono a fatica (stessa lettera); nel
+    // filtro sarebbero proprio la stessa persona, ed è il motivo per cui
+    // qui si guarda l'email e non l'iniziale.
+    expect(autoreDi(firmati[0])).toBe('anna@tana.it')
+    expect(autoreDi(firmati[3])).toBe('anna@tana.it')
   })
-  it('senza email non risponde nulla: mai tutta la coda per sbaglio', () => {
-    expect(inseritiDa(firmati, '')).toEqual([])
-    expect(inseritiDa(firmati, null)).toEqual([])
+
+  it('chi ordina dall\'app finisce sotto una voce sola, in fondo', () => {
+    expect(autoreDi(firmati[2])).toBe(AUTORE_CLIENTE)
+    expect(elenco.map((v) => v.chiave)).toEqual(['anna@tana.it', 'bruno@tana.it', AUTORE_CLIENTE])
+    expect(elenco.at(-1).nome).toBe('Clienti')
   })
+
+  it('dentro c\'è chi ha battuto almeno un conto, una volta sola', () => {
+    expect(elenco).toHaveLength(3)
+    expect(elenco[0].nome).toBe('Anna')
+  })
+
+  it('di suo sono tutti accesi: la coda non nasconde niente', () => {
+    expect(autoriAttivi(null, elenco)).toEqual(elenco.map((v) => v.chiave))
+    expect(conAutori(firmati, null, elenco)).toBe(firmati)
+    expect(riassuntoAutori(null, elenco)).toBe('✍️ Autori')
+  })
+
+  it('deselezionando restano gli altri: «solo i miei» è un caso di questo', () => {
+    // Si spengono Bruno e i clienti: resta Anna, cioè il vecchio «Miei».
+    let scelti = cambiaAutoreScelto(null, 'bruno@tana.it', elenco)
+    scelti = cambiaAutoreScelto(scelti, AUTORE_CLIENTE, elenco)
+    expect(scelti).toEqual(['anna@tana.it'])
+    expect(conAutori(firmati, scelti, elenco).map((o) => o.id)).toEqual(['a', 'd'])
+    expect(riassuntoAutori(scelti, elenco)).toBe('✍️ Anna')
+  })
+
+  it('con più di uno la pastiglia conta invece di nominare', () => {
+    const scelti = cambiaAutoreScelto(null, AUTORE_CLIENTE, elenco)
+    expect(riassuntoAutori(scelti, elenco)).toBe('✍️ 2 autori')
+  })
+
+  it('riaccendendo l\'ultimo spento si torna a «tutti», non a una lista', () => {
+    // «Tutti» è uno stato a sé e non una lista che per caso li contiene
+    // tutti: solo così un autore che apre il primo conto a metà serata
+    // entra da solo in una tendina lasciata al default.
+    const senzaBruno = cambiaAutoreScelto(null, 'bruno@tana.it', elenco)
+    expect(cambiaAutoreScelto(senzaBruno, 'bruno@tana.it', elenco)).toBe(null)
+  })
+
+  it('MAI ZERO: spegnendo l\'ultimo rimasto tornano tutti', () => {
+    let scelti = cambiaAutoreScelto(null, 'bruno@tana.it', elenco)
+    scelti = cambiaAutoreScelto(scelti, AUTORE_CLIENTE, elenco)
+    expect(scelti).toEqual(['anna@tana.it'])
+    // Spegnere anche Anna lascerebbe una coda vuota per forza, che a
+    // schermo è indistinguibile da un'app rotta.
+    expect(cambiaAutoreScelto(scelti, 'anna@tana.it', elenco)).toBe(null)
+  })
+
+  it('un autore che non ha più conti non svuota la coda', () => {
+    // La coda vive: chi era selezionato può sparire dall'insieme caricato
+    // (cambio di giornata, cassa chiusa). Filtrare su di lui darebbe zero
+    // conti e nessun modo di capire perché.
+    expect(autoriAttivi(['chi@non-c-e.it'], elenco)).toEqual(elenco.map((v) => v.chiave))
+    expect(conAutori(firmati, ['chi@non-c-e.it'], elenco)).toHaveLength(4)
+  })
+
   it('coda vuota o assente: lista vuota, niente errori', () => {
-    expect(inseritiDa([], 'anna@tana.it')).toEqual([])
-    expect(inseritiDa(null, 'anna@tana.it')).toEqual([])
+    expect(autoriDeiConti([])).toEqual([])
+    expect(autoriDeiConti(null)).toEqual([])
+    expect(conAutori(null, ['anna@tana.it'], elenco)).toEqual([])
+  })
+})
+
+// ── I TRE FILTRI DI STATO, COMBINABILI ───────────────────────────────
+//
+// «Se diventano dei filtri io posso vedere quelli aperti, chiusi se
+// seleziono chiuso e annullati se seleziono annullati. Posso anche
+// disabilitare In Corso che deve diventare Aperti, non In corso. Il filtro
+// Aperti lo posso deselezionare solo se chiusi, annullati o tutti e due
+// sono attivi. Se disattivo il filtro su chiusi e annullati, si riattiva
+// il filtro aperti» (l'utente, 20/08/2026).
+describe('i filtri di stato della coda', () => {
+  // Come in pagina: `contoChiuso` conta chiuso anche l'annullato — non
+  // c'è più niente da fare su quel conto — e a tenerlo fuori dai chiusi
+  // è `passaFiltroCoda`, che ha un filtro apposta per lui.
+  const chiuso = (o) => o.status === 'pagato' || o.status === 'annullato'
+  const aperto = { id: 'a', status: 'ricevuto' }
+  const pagato = { id: 'p', status: 'pagato' }
+  const annullato = { id: 'x', status: 'annullato' }
+
+  it('sono tre e la scheda «Tutti» non esiste più', () => {
+    // Era una quarta scheda: da quando i filtri si combinano, «tutti» è
+    // tutti e tre accesi — e si vede, invece di doverlo chiedere.
+    expect(FILTRI_STATO.map(([k]) => k)).toEqual(['attivi', 'chiusi', 'annullati'])
+    expect(FILTRI_STATO.map(([, l]) => l)).not.toContain('Tutti')
+  })
+
+  it('«In corso» si chiama «Aperti», come la riga dei conteggi', () => {
+    expect(FILTRI_STATO[0][1]).toBe('Aperti')
+  })
+
+  it('la coda si apre con i soli aperti', () => {
+    expect(STATI_DEFAULT).toEqual(['attivi'])
+    expect(statiAlDefault(STATI_DEFAULT)).toBe(true)
+    expect(statiAlDefault(['attivi', 'chiusi'])).toBe(false)
+  })
+
+  it('accende e spegne, e tiene l\'ordine canonico', () => {
+    expect(cambiaFiltroStato(['attivi'], 'chiusi')).toEqual(['attivi', 'chiusi'])
+    expect(cambiaFiltroStato(['annullati'], 'attivi')).toEqual(['attivi', 'annullati'])
+    expect(cambiaFiltroStato(['attivi', 'chiusi'], 'chiusi')).toEqual(['attivi'])
+  })
+
+  it('«Aperti» si spegne solo se c\'è dell\'altro acceso', () => {
+    expect(cambiaFiltroStato(['attivi', 'chiusi'], 'attivi')).toEqual(['chiusi'])
+    expect(cambiaFiltroStato(['attivi', 'annullati'], 'attivi')).toEqual(['annullati'])
+    // Ultimo acceso: il tocco non fa niente, e non dice niente — la coda
+    // sotto non è cambiata di una riga, un avviso sarebbe solo rumore.
+    expect(cambiaFiltroStato(['attivi'], 'attivi')).toEqual(['attivi'])
+  })
+
+  it('spegnendo l\'ultimo fra chiusi e annullati, «Aperti» si riaccende', () => {
+    expect(cambiaFiltroStato(['chiusi'], 'chiusi')).toEqual(['attivi'])
+    expect(cambiaFiltroStato(['annullati'], 'annullati')).toEqual(['attivi'])
+    expect(cambiaFiltroStato(['chiusi', 'annullati'], 'chiusi')).toEqual(['annullati'])
+    expect(cambiaFiltroStato(['annullati'], 'annullati')).toEqual(['attivi'])
+  })
+
+  it('un id sconosciuto non cambia niente', () => {
+    expect(cambiaFiltroStato(['attivi'], 'tutti')).toEqual(['attivi'])
+    expect(cambiaFiltroStato(['attivi'], undefined)).toEqual(['attivi'])
+  })
+
+  it('la coda mostra l\'UNIONE degli stati accesi', () => {
+    const tutti = [aperto, pagato, annullato]
+    const dentro = (stati) => tutti.filter((o) => passaStatiCoda(o, stati, chiuso)).map((o) => o.id)
+    expect(dentro(['attivi'])).toEqual(['a'])
+    expect(dentro(['attivi', 'chiusi'])).toEqual(['a', 'p'])
+    expect(dentro(['chiusi', 'annullati'])).toEqual(['p', 'x'])
+    expect(dentro(['attivi', 'chiusi', 'annullati'])).toEqual(['a', 'p', 'x'])
+  })
+
+  it('il sottofiltro dei chiusi stringe SOLO i chiusi', () => {
+    // Con «Aperti» e «Chiusi» accesi e «Da servire» scelto, gli aperti
+    // devono restare tutti: serviti o no, sono comunque da chiudere.
+    const servito = { id: 's', status: 'pagato', payment_status: 'pagato', comande: [{ id: 'c', status: 'ritirato' }] }
+    const daServire = {
+      id: 'n',
+      status: 'pagato',
+      payment_status: 'pagato',
+      comande: [{ id: 'c', status: 'in_preparazione' }],
+    }
+    const lista = [aperto, servito, daServire]
+    const dentro = (stati, sotto) =>
+      lista.filter((o) => passaStatiCoda(o, stati, chiuso, sotto)).map((o) => o.id)
+    expect(dentro(['attivi', 'chiusi'], 'non-serviti')).toEqual(['a', 'n'])
+    expect(dentro(['chiusi'], 'serviti')).toEqual(['s'])
+  })
+
+  it('la vecchia forma a stringa continua a rispondere', () => {
+    // `contiPerScheda` e le corsie chiamano ancora con un id secco o con
+    // 'tutti': due modi di leggere la stessa domanda sono un modo di
+    // farli divergere, e infatti passano tutti da `statiDaFiltro`.
+    expect(statiDaFiltro('chiusi')).toEqual(['chiusi'])
+    expect(statiDaFiltro('tutti')).toEqual(['attivi', 'chiusi', 'annullati'])
+    expect(statiDaFiltro([])).toEqual(['attivi'])
+    expect(statiDaFiltro(null)).toEqual(['attivi', 'chiusi', 'annullati'])
+  })
+
+  it('la coda vuota dice com\'è filtrata, e con più stati non inventa', () => {
+    expect(frasePerCodaVuota(['attivi'])).toBe('Nessun ordine aperto.')
+    expect(frasePerCodaVuota(['chiusi'], true)).toBe('Nessun ordine chiuso oggi.')
+    expect(frasePerCodaVuota(['annullati'])).toBe('Nessun ordine annullato.')
+    // Due stati accesi: nessun aggettivo è vero per tutti e due.
+    expect(frasePerCodaVuota(['attivi', 'chiusi'])).toBe('Nessun ordine.')
   })
 })
 
@@ -628,8 +813,20 @@ describe('dentro i conti chiusi: serviti e da servire', () => {
     { id: 'c2', status: 'in_preparazione' },
   ])
 
-  it('le tre voci sono quelle, in quest’ordine', () => {
-    expect(SOTTOFILTRI_CHIUSI.map(([k]) => k)).toEqual(['tutti', 'serviti', 'non-serviti'])
+  // ERANO TRE, E LA TERZA ERA IL NEUTRO. «Tutti» stava acceso quasi
+  // sempre e diceva «nessun filtro» sembrando un filtro; da quando questi
+  // chip stanno in riga con gli altri («i filtri serviti/da servire deve
+  // stare insieme agli altri», l'utente 20/08/2026) sarebbe stata anche la
+  // stessa parola della scheda appena tolta. Il neutro adesso è nessuno
+  // dei due acceso.
+  it('le due voci sono quelle, e il neutro non si disegna', () => {
+    expect(SOTTOFILTRI_CHIUSI.map(([k]) => k)).toEqual(['serviti', 'non-serviti'])
+  })
+
+  it('toccare quello acceso lo spegne, toccare l\'altro cambia domanda', () => {
+    expect(cambiaSottoChiusi('tutti', 'serviti')).toBe('serviti')
+    expect(cambiaSottoChiusi('serviti', 'serviti')).toBe('tutti')
+    expect(cambiaSottoChiusi('serviti', 'non-serviti')).toBe('non-serviti')
   })
 
   it('«tutti» non toglie niente', () => {

@@ -6814,6 +6814,147 @@ requirements:
       che il tasto non fa — a filtrare sono i chip, uno per uno. L'elenco
       dei filtri accesi per esteso resta accodato nel title da chiuso, dopo
       il nome; il badge col conteggio e la classe `active` non cambiano.
+      ── QUARTO GIRO, 20/08/2026: QUELLO CHE QUI SOPRA NON VALE PIU' ──
+      Rimane vero il PERCHE' (i filtri a scomparsa, lo stato leggibile da
+      chiusi, un meccanismo solo per tutte e quattro le viste). Tre cose
+      del COME le ha riscritte REQ-CODA-009, che va letto dopo questo:
+      · LE QUATTRO SCHEDE NON CI SONO PIU'. «In corso / Chiusi / Annullati
+      / Tutti» erano esclusive e non erano filtri; adesso sono tre
+      interruttori combinabili, «In corso» si chiama «Aperti» e «Tutti» e'
+      sparito (`FILTRI_STATO` al posto di `SCHEDE_GRIGLIA`,
+      `NOME_FILTRO_STATO` al posto di `NOME_SCHEDA`).
+      · I DUE TASTINI NON STANNO PIU' DENTRO LA FILA DEI CHIP, e la fila da
+      chiusa non viene proprio disegnata. Stavano dentro, e la riga doveva
+      quindi esistere sempre per contenerli: «il tasto dei filtri deve
+      essere sulla destra insieme a quello dell'ordinamento non a sinistra
+      dei filtri [...] i filtri devono uscire sotto». Adesso si appoggiano
+      a una riga che c'e' comunque (i conteggi sulle lavagne, la ricerca in
+      lista e schede) e la fila dei chip esiste solo da aperta:
+      `.chips-tastini` e il suo `sticky` sono spariti con lei.
+      · IL TASTINO NON E' PIU' UN QUADRATO DA 44px COL BADGE NELL'ANGOLO:
+      e' un tasto di testo piccolo, «▾ Filtri», sul modello del «▾ altre 3»
+      di una card delle comande (`.coda-tastino`, non `.board-icona`), e il
+      conteggio gli sta accanto (`.coda-tastino-conta`) SOLO a fila chiusa.
+      · I SOTTOFILTRI DEI CHIUSI non hanno piu' una riga «Dei chiusi:»
+      tutta loro: sono chip in riga con gli altri.
+    status: implemented
+    generate_issue: true
+    labels: [coda, ui]
+    test_cases:
+      - tests/unit/coda.test.js
+      - tests/unit/css.test.js
+      - tests/component/CodaCorsie.test.jsx
+      - tests/component/CodaGiornate.test.jsx
+
+  - id: REQ-CODA-009
+    title: "I filtri della coda sono combinabili, e gli autori stanno in una tendina"
+    area: "src/lib/coda.js (FILTRI_STATO, cambiaFiltroStato, passaStatiCoda, statiDaFiltro, autoriDeiConti, cambiaAutoreScelto, conAutori, riassuntoAutori, frasePerCodaVuota, cambiaSottoChiusi), src/pages/BartenderPage.jsx, src/components/Tendina.jsx, src/index.css"
+    description: >
+      Chiesto dall'utente il 20/08/2026, guardando la coda in emulatore.
+      Parole sue: «il conteggio dei filtri accesi e' inutile sulla schermata
+      degli ordini. Non esistono veri e propri filtri. A meno che non
+      diventino davvero dei filtri, cosi' togliamo TUTTI. Se diventano dei
+      filtri io posso vedere quelli aperti, chiusi se seleziono chiuso e
+      annullati se seleziono annullati. Posso anche disabilitare In Corso
+      che deve diventare Aperti, non In corso. Il filtro Aperti lo posso
+      deselezionare solo se chiusi, annullati o tutti e due sono attivi. Se
+      disattivo il filtro su chiusi e annullati, si riattiva il filtro
+      aperti. Miei continua a filtrare tra Aperti, chiusi e Annullati solo
+      sui miei. Anzi il filtro miei dovrebbe diventare un menu a tendina
+      dove di default sono selezionati tutti gli utenti che hanno aperto
+      almeno un ordine per vedere tutti gli ordini. Poi posso scegliere di
+      deselezionare e vedere solo gli ordini di qualcuno (i miei ad
+      esempio)».
+      E, nello stesso giro, sul DOVE stanno: «i filtri serviti/da servire
+      deve stare insieme agli altri. E il tasto dei filtri deve essere sulla
+      destra insieme a quello dell'ordinamento non a sinistra dei filtri. E
+      non ci siamo capiti: il tasto per mostrare/nascondere i filtri deve
+      essere un tasto piccolo e i filtri devono uscire sotto. Come il tasto
+      che mostra/nasconde i prodotti da una card delle comande. Devi
+      rivedere la UX e migliorarla sempre tenendo presente il fatto che ci
+      serve spazio verticale».
+      DA DOVE NASCE. Le quattro voci sopra la coda (REQ-CODA-008) erano
+      SCHEDE che si escludevano a vicenda, non filtri: per vedere gli aperti
+      insieme ai chiusi bisognava chiedere «Tutti», cioe' anche gli
+      annullati. E il badge del tastino contava una scheda che c'e' sempre —
+      un numero perenne che non distingueva niente.
+      I TRE STATI, COMBINABILI. «Aperti» (era «In corso»: e' la parola con
+      cui la riga dei conteggi li chiama gia', «12 aperti · 40 chiusi»),
+      «Chiusi», «Annullati». Ognuno si accende e si spegne da solo e la coda
+      mostra l'UNIONE di quelli accesi; «Tutti» non serve piu' — e' tutti e
+      tre accesi, e si vede. Sono `aria-pressed`, non linguette.
+      MAI ZERO STATI, ed e' una regola sola guardata da due lati: quando
+      l'insieme si svuoterebbe torna «Aperti», che e' il lavoro da fare — la
+      risposta giusta quando non se n'e' chiesta nessun'altra. Da li'
+      scendono tutti e due i comportamenti chiesti: spegnere «Aperti» quando
+      e' l'unico acceso non fa niente (RIFIUTO SILENZIOSO: il chip resta
+      acceso, la coda non cambia di una riga, e un avviso per un tocco che
+      non doveva partire e' rumore al banco), e spegnere l'ultimo fra
+      «Chiusi» e «Annullati» riaccende «Aperti» da solo. La regola e' una
+      funzione pura, `cambiaFiltroStato(attivi, tocco)`, provata a unita' su
+      tutti i casi limite: la pagina la chiama e basta.
+      GLI AUTORI IN UNA TENDINA. Era «✍️ Miei», acceso o spento: o tutti o
+      solo i propri. Adesso e' un menu con dentro chi ha aperto almeno un
+      conto nell'insieme caricato — piu' una voce «Clienti» per gli ordini
+      arrivati dall'app — tutti selezionati di suo, e si spegne chi non
+      interessa. «Solo i miei» e' diventato un caso particolare: un autore
+      solo selezionato. La chiave e' l'EMAIL e non la lettera della legenda:
+      due nomi con la stessa iniziale sulle card si distinguono a fatica, nel
+      filtro sarebbero proprio la stessa persona.
+      «TUTTI» E' UNO STATO A SE', non la lista che per caso li contiene
+      tutti (`autoriScelti === null`): la coda vive mentre si lavora, e chi
+      apre il suo primo conto alle undici deve entrare da solo in una
+      tendina lasciata al default. Con l'elenco materializzato resterebbe
+      fuori senza che nessuno l'abbia deciso.
+      MAI ZERO AUTORI: deselezionare l'ultimo rimasto riseleziona tutti.
+      Non l'ha chiesto l'utente — e' una decisione presa qui — ma e' la
+      stessa domanda degli stati: una coda vuota per forza e' a schermo
+      indistinguibile da un'app rotta. Nella tendina si legge da se': tutte
+      le voci tornano accese.
+      DA CHIUSA LA PASTIGLIA DICE COSA E' SCELTO: «✍️ Autori» con tutti
+      dentro, «✍️ Daniele» se ne resta uno, «✍️ 2 autori» se sono di piu'.
+      Il filtro autore si INCROCIA con quelli di stato e vale in tutte e
+      quattro le viste: e' una implementazione sola, appesa dove serve.
+      E' UNA TENDINA IN DEROGA a docs/navigazione.md, che le tendine per i
+      filtri le evita — «costringe ad aprirla per sapere cosa c'e' dentro».
+      L'ha chiesta l'utente, e qui si regge da se': gli autori sono quanti
+      sono i turni (sei, otto, dieci nomi) e in riga sarebbero dieci
+      pastiglie che scorrono, cioe' la riga che si sta togliendo. Si riusa
+      `Tendina`, che sa gia' chiudersi al tocco fuori e con Esc, e NON si
+      chiude al primo tocco: qui si deselezionano piu' persone di fila.
+      DOVE STANNO E COME SI APRONO. I due tastini che governano la vista —
+      «▾ Filtri» e la freccia dell'ordinamento — stanno IN FONDO A DESTRA su
+      una riga che esiste comunque: la riga dei conteggi sulle lavagne, la
+      riga della ricerca in lista e schede. A filtri chiusi la coda non paga
+      NIENTE per averli: nessuna riga, nessun margine, in tutte le viste e
+      anche sul telefono. Il tastino e' piccolo e senza riquadro, sul modello
+      del «▾ altre 3» che apre le righe di una card delle comande
+      (`.coda-tastino`, il pattern di `.corsia-piu`): un tasto che governa
+      COME si guarda la coda non deve pesare come un tasto che fa qualcosa
+      alla serata. I chip escono in una riga SOTTO, che da chiusa non viene
+      disegnata affatto.
+      LA FILA DEI CHIP VA A CAPO invece di scorrere, e qui e' obbligatorio:
+      `.chips-row` scorre in orizzontale, e dentro un contenitore che scorre
+      un pannello in `position: absolute` viene TAGLIATO — la tendina degli
+      autori si aprirebbe dentro una riga alta 40px. La riga esiste solo da
+      aperta e per scelta di chi guarda: se sul telefono i chip vanno su due
+      righe, sono due righe che qualcuno ha chiesto.
+      I SOTTOFILTRI DEI CHIUSI IN RIGA CON GLI ALTRI, non piu' una riga «Dei
+      chiusi:» a parte, e da tre chip diventano DUE: la terza era «Tutti», il
+      neutro, acceso quasi sempre — diceva «nessun filtro» sembrando un
+      filtro, e in riga con gli altri sarebbe stata anche la stessa parola
+      della scheda appena tolta. Adesso il neutro e' nessuno dei due acceso.
+      Restano esclusivi fra loro e il sottofiltro stringe SOLO i chiusi: con
+      «Aperti» e «Chiusi» accesi e «Da servire» scelto, gli aperti restano
+      tutti — serviti o no, sono comunque da chiudere.
+      IL BADGE CONTA LE DEVIAZIONI DAL DEFAULT, non i filtri accesi, e si
+      mostra SOLO a fila chiusa. Con gli stati sempre accesi almeno uno,
+      contarli darebbe il numero perenne che l'utente ha bocciato; e a fila
+      aperta i chip accesi si vedono da se'.
+      TUTTO IN LOCALE: il filtraggio e' client-side sull'insieme gia'
+      caricato, nessuna lettura nuova e nessun await. La persistenza resta
+      quella di prima — la memoria del terminale riguarda solo fila
+      aperta/chiusa e colonne, i filtri sono di sessione.
     status: implemented
     generate_issue: true
     labels: [coda, ui]

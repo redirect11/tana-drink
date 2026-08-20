@@ -140,34 +140,52 @@ sotto i 44px si sbaglia. Si **toglie**, in quest'ordine:
   all'ordinamento attuale» (l'utente, 20/08/2026). L'icona è **una freccia
   sola che segue il verso** — ↓ si parte dai recenti e si scende verso i
   vecchi, ↑ il contrario — non il «↕» di prima, uguale nei due stati.
-- **I filtri stanno dietro un tastino, e il tastino sta nella riga dei
-  filtri.** Nella coda è un'icona ⚗️, e accanto a lei la freccia
-  dell'ordinamento: sono i due tastini che governano quella riga, e ci
-  stanno dentro. Erano saliti in testata per far sparire del tutto la riga
-  da chiusa, e sono tornati giù — «spostala da lì, mettila sotto dove
-  stavano i vecchi bottoni. Rimetti lì giù anche il tasto dei filtri»
-  (l'utente, 20/08/2026): un tasto e quello che apre nella stessa riga si
-  leggono insieme, e da chiusa quella riga costa due tastini, non le sette
-  pastiglie che si mangiavano la lavagna.
+- **Il tasto dei filtri è piccolo, sta a DESTRA, e i filtri escono SOTTO.**
+  Accanto a lui la freccia dell'ordinamento: sono i due tasti che governano
+  COME si guarda la pagina, stanno insieme in fondo a destra, e si
+  appoggiano a **una riga che esiste comunque** — i conteggi sulle lavagne,
+  la ricerca in lista e schede. Così a filtri chiusi **non costano una riga
+  a nessuno**, in tutte le viste e anche sul telefono: «devi rivedere la UX
+  e migliorarla sempre tenendo presente il fatto che ci serve spazio
+  verticale» (l'utente, 20/08/2026).
+  Sono tasti di **testo**, senza riquadro — «▾ Filtri», «↓» — sul modello
+  del «▾ altre 3» che apre le righe di una card delle comande: «il tasto
+  per mostrare/nascondere i filtri deve essere un tasto piccolo»
+  (20/08/2026). Un tasto che governa la vista non deve pesare come un tasto
+  che fa qualcosa alla serata, e in una riga di testo un rettangolo bordato
+  è uno scalino. La regola dei 44px non c'entra: vale per i tasti che si
+  premono di corsa con le dita bagnate.
+  **Prima stavano DENTRO la fila dei chip**, a sinistra, e la fila doveva
+  quindi esistere sempre per contenerli. Adesso la riga dei chip esiste
+  **solo da aperta**: richiudendo se ne va del tutto, margini compresi.
   **Da chiuso il tastino non nasconde lo stato**: si accende e porta il
-  NUMERO dei filtri accesi, perché un filtro acceso e invisibile è una coda
-  che sembra sbagliata. In 44px non ci sta un nome, ci sta una cifra: quali
-  siano lo dice il titolo, dopo il nome del tasto — che è **«Mostra
-  filtri»** e **«Nascondi filtri»**, cioè quello che il tasto fa. Non
-  «filtra la coda»: a filtrare sono i chip, uno per uno.
-  Aperta, i chip compaiono NELLA STESSA RIGA e non in una tendina: si
-  toccano a raffica mentre si lavora, e un pannello coprirebbe proprio
-  quello che si sta guardando per decidere che filtro serve. I due tastini
-  non scorrono via con loro. La scelta vale per QUESTO terminale
+  numero di **quanto la coda è filtrata diversamente da come si apre** —
+  non dei filtri accesi, che con gli stati combinabili è sempre almeno uno
+  e non distinguerebbe niente. Quali siano lo dice il titolo, dopo il nome
+  del tasto — che è **«Mostra filtri»** e **«Nascondi filtri»**, cioè
+  quello che il tasto fa. A fila **aperta** il numero sparisce: i chip
+  accesi si vedono da sé.
+  Aperta, i chip stanno IN RIGA e non in una tendina: si toccano a raffica
+  mentre si lavora, e un pannello coprirebbe proprio quello che si sta
+  guardando per decidere che filtro serve. **L'unica deroga sono gli
+  autori** (chi ha aperto il conto): sono quanti sono i turni — sei, otto,
+  dieci nomi — e in riga sarebbero dieci pastiglie che scorrono, cioè la
+  riga che si sta togliendo. L'ha chiesta l'utente («il filtro miei
+  dovrebbe diventare un menu a tendina», 20/08/2026), si riusa `Tendina` —
+  chiude al tocco fuori e con Esc — e la pastiglia dice comunque cosa è
+  scelto senza aprirla (REQ-CODA-009).
+  La scelta aperta/chiusa vale per QUESTO terminale
   (`tana:coda:filtri-aperti`). Dentro ci va tutto quello che restringe la
-  lista, «▦ Colonne» compreso; fuori il cambio vista, che non filtra, e il
-  «＋», che crea. Un meccanismo solo per tutte le viste della coda.
+  lista — «▦ Colonne» compreso, e i sottofiltri dei chiusi, che stanno in
+  riga con gli altri e non in una riga loro; fuori il cambio vista, che non
+  filtra, e il «＋», che crea. Un meccanismo solo per tutte le viste della
+  coda.
 - **Nel ⋯ del telefono ci va quello che si fa OGNI TANTO**, non quello che
   si fa durante il servizio. Pannelli e cassa stanno lì dentro; il cambio
   vista resta fuori, accanto al ⋯, perché nel menu sarebbero due tocchi
   decine di volte a serata. Filtri e ordinamento non ci sono più nemmeno
-  loro: stanno nella riga sotto, sul telefono come ovunque — in due posti
-  sarebbero due stati da tenere allineati a mano.
+  loro: stanno giù, in fondo alla riga dei conteggi, sul telefono come
+  ovunque — in due posti sarebbero due stati da tenere allineati a mano.
 - **Il contenuto non porta navigazione**: niente tasti «vai a…» in mezzo a una
   lista, che si trovano solo scorrendo.
 

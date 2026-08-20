@@ -2,7 +2,13 @@
 // riepilogo. Il servizio è perpetuo: non esistono più "serate", i conti
 // restano aperti finché non li si chiude a mano. Testabile a unità.
 
-import { ORDER_STATUSES, STATUS_LABELS, statoAlBanco } from './orderStatus.js'
+import {
+  ORDER_STATUSES,
+  STATUS_LABELS,
+  statoAlBanco,
+  placedByLetter,
+  placedByName,
+} from './orderStatus.js'
 // Il totale di un conto è quello EFFETTIVO (sconto già tolto): la regola sta
 // in pagamento.js e non si riscrive qui, o le corsie direbbero una cifra e
 // la card un'altra.
@@ -76,13 +82,107 @@ export function openOrdersCount(orders) {
   ).length
 }
 
-// I conti INSERITI DA una persona (placed_by). È il filtro «Miei» della
-// coda, che ha preso il posto della pagina «I miei ordini» della sala:
-// stessa coda per tutti, e chi vuole ritrovare i propri la filtra.
-export function inseritiDa(orders, email) {
-  const e = String(email || '').trim().toLowerCase()
-  if (!e) return []
-  return (orders || []).filter((o) => o.placed_by?.email?.toLowerCase() === e)
+// ── CHI HA APERTO IL CONTO: IL FILTRO DEGLI AUTORI ───────────────────
+//
+// ERA UNA PASTIGLIA «✍️ Miei», accesa o spenta: o tutti o solo i propri.
+// «Il filtro miei dovrebbe diventare un menu a tendina dove di default
+// sono selezionati tutti gli utenti che hanno aperto almeno un ordine per
+// vedere tutti gli ordini. Poi posso scegliere di deselezionare e vedere
+// solo gli ordini di qualcuno (i miei ad esempio)» (l'utente, 20/08/2026).
+//
+// La chiave di un autore è la sua EMAIL, non la lettera della legenda: due
+// persone con la stessa iniziale sulle card si distinguono a fatica, ma nel
+// filtro sarebbero proprio lo stesso autore.
+export const AUTORE_CLIENTE = '__cliente__'
+
+// Chi ha aperto questo conto. Gli ordini arrivati dall'app del cliente non
+// hanno uno staff dietro: stanno tutti sotto una voce sola, come nella
+// legenda sopra la coda (placedByLetter torna null proprio per loro).
+export function autoreDi(o) {
+  const p = o?.placed_by
+  if (!placedByLetter(p)) return AUTORE_CLIENTE
+  return String(p.email || placedByName(p)).trim().toLowerCase()
+}
+
+// GLI AUTORI CHE LA TENDINA MOSTRA: chi ha aperto almeno un conto fra
+// quelli caricati. Non l'elenco del personale — un filtro con dentro gente
+// che stasera non ha battuto niente è una lista da leggere per niente — e
+// non le presenze, che rispondono a un'altra domanda (chi c'è adesso).
+//
+// In ordine alfabetico, i clienti in fondo: sono una voce sola e non un
+// nome, e in mezzo ai nomi si cercherebbero alla lettera «C».
+export function autoriDeiConti(orders) {
+  const visti = new Map()
+  for (const o of orders || []) {
+    const chiave = autoreDi(o)
+    if (visti.has(chiave)) continue
+    visti.set(chiave, {
+      chiave,
+      nome: chiave === AUTORE_CLIENTE ? 'Clienti' : placedByName(o.placed_by) || chiave,
+    })
+  }
+  const voci = [...visti.values()]
+  return [
+    ...voci.filter((v) => v.chiave !== AUTORE_CLIENTE).sort((a, b) => a.nome.localeCompare(b.nome)),
+    ...voci.filter((v) => v.chiave === AUTORE_CLIENTE),
+  ]
+}
+
+// QUALI AUTORI STANNO FILTRANDO ADESSO. `null` vuol dire TUTTI, e non è
+// la stessa cosa di «l'elenco di tutti quelli di adesso»: la coda vive
+// mentre si lavora, e chi apre il suo primo conto alle undici deve entrare
+// da solo in una tendina lasciata al default — con l'elenco materializzato
+// resterebbe fuori senza che nessuno l'abbia deciso.
+//
+// Una scelta che non esiste più (chi aveva conti e adesso non ne ha) si
+// ignora, e se non ne resta nessuna si torna a tutti: MAI ZERO AUTORI,
+// stessa regola degli stati (una coda vuota per forza è un'app rotta).
+export function autoriAttivi(scelti, elenco = []) {
+  const chiavi = elenco.map((v) => v.chiave)
+  if (scelti == null) return chiavi
+  const vivi = chiavi.filter((k) => scelti.includes(k))
+  return vivi.length > 0 ? vivi : chiavi
+}
+
+// Accendi o spegni un autore. Torna `null` quando la scelta ricopre tutti
+// quelli in elenco: «tutti» è uno stato a sé, non una lista che per caso
+// li contiene tutti — solo così un autore nuovo entra da solo.
+//
+// MAI ZERO: deselezionare l'ultimo rimasto riseleziona tutti. È la stessa
+// risposta della regola sugli stati (l'utente non l'ha chiesto per gli
+// autori, ma è la stessa domanda: una coda vuota non si può mostrare) e
+// nella tendina si legge da sé — tutte le voci tornano accese.
+export function cambiaAutoreScelto(scelti, tocco, elenco = []) {
+  const chiavi = elenco.map((v) => v.chiave)
+  if (!chiavi.includes(tocco)) return scelti
+  const attivi = new Set(autoriAttivi(scelti, elenco))
+  if (attivi.has(tocco)) attivi.delete(tocco)
+  else attivi.add(tocco)
+  if (attivi.size === 0 || attivi.size === chiavi.length) return null
+  return chiavi.filter((k) => attivi.has(k))
+}
+
+// I conti di chi è selezionato. Con tutti selezionati non si tocca niente:
+// non si paga una passata sulla lista per una domanda a cui la risposta è
+// «tutto».
+export function conAutori(orders, scelti, elenco = []) {
+  if (scelti == null) return orders || []
+  const dentro = new Set(autoriAttivi(scelti, elenco))
+  if (dentro.size === elenco.length) return orders || []
+  return (orders || []).filter((o) => dentro.has(autoreDi(o)))
+}
+
+// COSA DICE LA PASTIGLIA DA CHIUSA. Una tendina che non dice cosa è scelto
+// costringe ad aprirla per ricordarselo (docs/navigazione.md): col nome se
+// l'autore è uno solo — è il caso che si usa, «vedo i miei» — col
+// conteggio se sono di più, che tre nomi in fila non ci stanno.
+export function riassuntoAutori(scelti, elenco = []) {
+  const attivi = autoriAttivi(scelti, elenco)
+  if (attivi.length === 0 || attivi.length === elenco.length) return '✍️ Autori'
+  if (attivi.length === 1) {
+    return `✍️ ${elenco.find((v) => v.chiave === attivi[0])?.nome || 'Autori'}`
+  }
+  return `✍️ ${attivi.length} autori`
 }
 
 // "Questo conto risponde a quello che sto cercando?" — numero, cliente,
@@ -164,6 +264,22 @@ export function passaFiltroCoda(o, filtro, isChiuso = () => false) {
   return !isChiuso(o)
 }
 
+// L'UNIONE DEGLI STATI ACCESI, sottofiltro dei chiusi compreso.
+//
+// Il sottofiltro («Serviti» / «Da servire») è una domanda sui CHIUSI e
+// vale solo dentro di loro: con «Aperti» e «Chiusi» accesi insieme deve
+// stringere i chiusi e lasciare stare gli aperti, che serviti o no sono
+// comunque da chiudere. Per questo si prova stato per stato invece di
+// filtrare l'unione dopo: un conto entra se c'è ALMENO UN filtro acceso
+// che lo prende, sottofiltro incluso.
+export function passaStatiCoda(o, filtro, isChiuso = () => false, sottoChiusi = 'tutti') {
+  return statiDaFiltro(filtro).some(
+    (id) =>
+      passaFiltroCoda(o, id, isChiuso) &&
+      (id !== 'chiusi' || passaSottofiltroChiusi(o, sottoChiusi))
+  )
+}
+
 // COSA MOSTRA LA CODA, in una funzione sola: quello che resta in coda per
 // questa apertura di cassa, filtrato per la tab scelta. Sta qui e non nella
 // pagina perché è la cosa da provare — «annullo un conto e lo ritrovo sotto
@@ -172,7 +288,10 @@ export function passaFiltroCoda(o, filtro, isChiuso = () => false) {
 export function ordiniInCoda(
   orders,
   {
-    filtro = 'attivi',
+    // Uno stato solo, l'elenco di quelli accesi o 'tutti': ci pensa
+    // `statiDaFiltro`. La coda passa l'elenco (i filtri si combinano), le
+    // altre chiamate un id secco.
+    filtro = STATI_DEFAULT,
     sottoChiusi = 'tutti',
     isChiuso = () => false,
     cassa = null,
@@ -191,8 +310,7 @@ export function ordiniInCoda(
         oggi,
       })
     )
-    .filter((o) => passaFiltroCoda(o, filtro, isChiuso))
-    .filter((o) => filtro !== 'chiusi' || passaSottofiltroChiusi(o, sottoChiusi))
+    .filter((o) => passaStatiCoda(o, filtro, isChiuso, sottoChiusi))
 }
 
 // ── LE TRE SCHEDE IN UNA PASSATA SOLA ────────────────────
@@ -240,11 +358,22 @@ export const SCHEDE_VUOTE = { tutti: [], attivi: [], chiusi: [], annullati: [] }
 // tutte le sue comande sono uscite (allServed). E le comande ANNULLATE non
 // contano — quella roba non si fa e non si serve — se no un conto con
 // dentro un drink annullato non risulterebbe servito mai più.
+// DUE CHIP E UN NEUTRO CHE NON SI DISEGNA. C'era anche ['tutti', 'Tutti']:
+// acceso quasi sempre, diceva «nessun filtro» sembrando un filtro. Adesso
+// il neutro è nessuno dei due acceso, che è come si legge una fila di chip
+// — acceso vuol dire «sto guardando quello» — e i due sono esclusivi fra
+// loro: serviti E da servire insieme sono tutti i chiusi, cioè il neutro.
 export const SOTTOFILTRI_CHIUSI = [
-  ['tutti', 'Tutti'],
   ['serviti', '✅ Serviti'],
   ['non-serviti', '⏳ Da servire'],
 ]
+
+// Toccare quello acceso lo spegne e torna al neutro; toccare l'altro
+// cambia domanda. Vale la stessa regola dei filtri di stato: quello che si
+// vede acceso è quello che si sta guardando.
+export function cambiaSottoChiusi(sotto, tocco) {
+  return sotto === tocco ? 'tutti' : tocco
+}
 
 export function passaSottofiltroChiusi(o, sotto = 'tutti') {
   if (sotto !== 'serviti' && sotto !== 'non-serviti') return true
@@ -255,28 +384,102 @@ export function passaSottofiltroChiusi(o, sotto = 'tutti') {
   return sotto === 'serviti' ? tutto : !tutto
 }
 
-// ── LE SCHEDE DELLA CODA A GRIGLIA ───────────────────────────────────
+// ── I FILTRI DI STATO DELLA CODA: TRE, E SI COMBINANO ────────────────
 //
-// Le quattro cose che si chiedono a una coda di conti. Stavano scritte a
-// mano dentro la pagina; da quando il tasto dei filtri deve dire QUALE
-// scheda è aperta, i nomi servono in due posti — e due elenchi che devono
-// restare uguali sono un elenco solo.
-export const SCHEDE_GRIGLIA = [
-  ['attivi', 'In corso'],
+// ERANO QUATTRO SCHEDE che si escludevano a vicenda — In corso, Chiusi,
+// Annullati, Tutti — e non erano filtri: erano quattro code diverse, e per
+// vedere gli aperti insieme ai chiusi bisognava chiedere «Tutti», cioè
+// anche gli annullati.
+//
+// «Il conteggio dei filtri accesi è inutile sulla schermata degli ordini.
+// Non esistono veri e propri filtri. A meno che non diventino davvero dei
+// filtri, così togliamo TUTTI. Se diventano dei filtri io posso vedere
+// quelli aperti, chiusi se seleziono chiuso e annullati se seleziono
+// annullati. Posso anche disabilitare In Corso che deve diventare Aperti,
+// non In corso» (l'utente, 20/08/2026).
+//
+// Adesso sono tre interruttori indipendenti e la coda mostra l'UNIONE di
+// quelli accesi. «Tutti» non serve più: è tutti e tre accesi, e si vede.
+//
+// «APERTI» E NON «IN CORSO»: è la parola con cui la riga dei conteggi
+// sopra la coda li chiama già («12 aperti · 40 chiusi»), ed è la parola
+// che l'utente ha chiesto. Cambia SOLO qui, dove è il nome del filtro: le
+// colonne delle corsie e le linguette della vista a schede (schedeCoda)
+// restano «In corso», che lì è il titolo di una colonna, non un filtro.
+export const FILTRI_STATO = [
+  ['attivi', 'Aperti'],
   ['chiusi', '💶 Chiusi'],
-  // Gli annullati hanno una scheda loro: fra i chiusi facevano numero senza
+  // Gli annullati hanno un filtro loro: fra i chiusi facevano numero senza
   // essere incassi, e per ritrovarne uno da riaprire si cercava in mezzo a
   // quelli buoni.
   ['annullati', '✖️ Annullati'],
-  ['tutti', 'Tutti'],
 ]
 
+export const ID_FILTRI_STATO = FILTRI_STATO.map(([id]) => id)
+
+// Come si apre la coda: quello che c'è da fare, e basta.
+export const STATI_DEFAULT = ['attivi']
+
 // Come si chiamano nel `title` del tastino quando la fila è chiusa: corti
-// e senza emoji, che lì si legge di corsa. «In corso» non c'è APPOSTA — è
-// il default, e un tastino che conta sempre almeno un filtro non distingue
-// più la coda filtrata da quella intera.
-export const NOME_SCHEDA = { chiusi: 'Chiusi', annullati: 'Annullati', tutti: 'Tutti' }
+// e senza emoji, che lì si legge di corsa.
+export const NOME_FILTRO_STATO = { attivi: 'Aperti', chiusi: 'Chiusi', annullati: 'Annullati' }
 export const NOME_SOTTOFILTRO = { serviti: 'Serviti', 'non-serviti': 'Da servire' }
+
+// QUALI STATI SONO ACCESI, comunque me li passino. La coda li tiene in un
+// array, ma `ordiniInCoda` e `contiPerScheda` sono chiamate anche con la
+// vecchia forma a stringa singola ('chiusi', 'tutti'): normalizzare qui
+// vuol dire non avere due modi di leggere la stessa domanda.
+//
+// SENZA NESSUNO SI RIPIEGA SUL DEFAULT. Non dovrebbe succedere —
+// `cambiaFiltroStato` non lascia mai il vuoto — ma una coda che non mostra
+// NIENTE è indistinguibile da un'app rotta, e vale la riga di prudenza.
+export function statiDaFiltro(filtro) {
+  if (filtro === 'tutti' || filtro == null) return [...ID_FILTRI_STATO]
+  const dati = Array.isArray(filtro) ? filtro : [filtro]
+  const dentro = ID_FILTRI_STATO.filter((id) => dati.includes(id))
+  return dentro.length > 0 ? dentro : [...STATI_DEFAULT]
+}
+
+// ACCENDI E SPEGNI UN FILTRO DI STATO — e la regola del MAI ZERO.
+//
+// «Il filtro Aperti lo posso deselezionare solo se chiusi, annullati o
+// tutti e due sono attivi. Se disattivo il filtro su chiusi e annullati,
+// si riattiva il filtro aperti» (l'utente, 20/08/2026).
+//
+// Le due frasi sono la STESSA regola guardata da due lati: la coda non
+// resta mai senza stati, e quando si svuoterebbe torna «Aperti» — che è
+// il lavoro da fare, la risposta giusta quando non se n'è chiesta
+// nessun'altra. Da lì scendono tutti e due i comportamenti:
+//   · spegnere «Aperti» quando è l'unico acceso non fa niente (l'insieme
+//     si svuoterebbe e «Aperti» torna dentro): un RIFIUTO SILENZIOSO, che
+//     il tocco non lascia traccia e il chip resta acceso dov'era. Niente
+//     avviso: al banco un messaggio per un tasto che non doveva partire è
+//     rumore, e la coda sotto non è cambiata di una riga;
+//   · spegnere l'ultimo fra «Chiusi» e «Annullati» con «Aperti» spento
+//     riaccende «Aperti» da solo.
+//
+// Torna sempre in ordine canonico (aperti, chiusi, annullati): l'insieme è
+// un insieme, e due liste con lo stesso contenuto in ordine diverso
+// farebbero ridisegnare la coda per niente.
+export function cambiaFiltroStato(attivi = [], tocco) {
+  const dentro = new Set(statiDaFiltro(attivi))
+  if (!ID_FILTRI_STATO.includes(tocco)) return [...dentro].sort(perOrdineDiStato)
+  if (dentro.has(tocco)) dentro.delete(tocco)
+  else dentro.add(tocco)
+  if (dentro.size === 0) dentro.add('attivi')
+  return ID_FILTRI_STATO.filter((id) => dentro.has(id))
+}
+
+const perOrdineDiStato = (a, b) => ID_FILTRI_STATO.indexOf(a) - ID_FILTRI_STATO.indexOf(b)
+
+// La coda è come si apre? Serve al badge del tastino, che conta le
+// DEVIAZIONI dal default: con solo «Aperti» acceso non c'è niente da
+// contare, e un tastino che segna sempre almeno un filtro non distingue
+// più la coda filtrata da quella intera.
+export function statiAlDefault(attivi = []) {
+  const dentro = statiDaFiltro(attivi)
+  return dentro.length === STATI_DEFAULT.length && STATI_DEFAULT.every((id) => dentro.includes(id))
+}
 
 // ── IL TASTO CHE APRE E CHIUDE LA FILA DEI FILTRI ────────────────────
 //
@@ -992,11 +1195,30 @@ export function raggruppaPerGiornata(lista, { giornataDi, oggi }) {
 //
 // La data arriva già scritta da chi chiama (businessDayLabel): qui c'è la
 // regola di cosa dire, non come si formatta un giorno.
+//
+// CON PIÙ FILTRI ACCESI si dice solo la data. Da quando gli stati si
+// combinano, «Aperti + Chiusi» mette sotto la stessa riga conti di due
+// nature: qualunque etichetta si scegliesse sarebbe giusta per metà.
 export function intestazioneGiornata(filtro, data) {
-  if (filtro === 'chiusi') return `💶 Chiusi · ${data}`
-  if (filtro === 'annullati') return `✖️ Annullati · ${data}`
-  if (filtro === 'tutti') return `📅 ${data}`
+  const stati = statiDaFiltro(filtro)
+  if (stati.length > 1) return `📅 ${data}`
+  if (stati[0] === 'chiusi') return `💶 Chiusi · ${data}`
+  if (stati[0] === 'annullati') return `✖️ Annullati · ${data}`
   return `⏳ Da chiudere · ${data}`
+}
+
+// ── LA CODA VUOTA, DETTA COME È FILTRATA ─────────────────────────────
+//
+// «Nessun ordine in corso» era esatto finché la coda era una scheda sola.
+// Con gli stati combinati la frase deve reggere anche «Aperti + Chiusi»,
+// dove nessun aggettivo è vero per tutti: lì si dice solo che non c'è
+// niente, ed è la verità intera.
+const AGGETTIVO_STATO = { attivi: 'aperto', chiusi: 'chiuso', annullati: 'annullato' }
+
+export function frasePerCodaVuota(filtro, soloOggi = false) {
+  const stati = statiDaFiltro(filtro)
+  const che = stati.length === 1 ? ` ${AGGETTIVO_STATO[stati[0]]}` : ''
+  return `Nessun ordine${che}${soloOggi ? ' oggi' : ''}.`
 }
 
 // ── LE COLONNE CHE QUESTO TERMINALE HA SPENTO A MANO ─────────────────
