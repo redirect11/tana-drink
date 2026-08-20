@@ -966,7 +966,7 @@ IL LOGO IN CIMA è un di più: se non si carica, la carta esce lo stesso — uno
 
 La connessione alla stampante viene tenuta viva e ricontrollata quando l'app torna in primo piano: non si deve uscire dal programma per farla ripartire.
 
-**Dove**: `src/lib/printer.js` · **Lo dimostrano**: `tests/unit/ristampaScontrino.test.js`, `tests/unit/scontrinoUnaVolta.test.js`
+**Dove**: `src/lib/printer.js` · **Lo dimostrano**: `tests/unit/ristampaScontrino.test.js`, `tests/unit/scontrinoUnaVolta.test.js`, `tests/unit/stampaComande.test.js`
 
 #### REQ-STAMPA-005 — Sullo scontrino il metodo si legge per esteso
 

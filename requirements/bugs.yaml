@@ -1607,3 +1607,48 @@ bugs:
     severity: lieve
     priority: P3
     test_cases: [tests/unit/css.test.js]
+
+  - id: BUG-050
+    title: "La comanda automatica non stampava per chi l'aveva battuta, ne' per la seconda comanda"
+    area: "src/lib/printer.js (comandeDaStampare, claimComandaPrint), src/pages/BartenderPage.jsx"
+    description: >
+      Segnalato dall'utente il 20/08 provando sull'emulatore: «questo non
+      funziona. La comanda non viene stampata». E il ricordo che ha aperto
+      la pista: «sul main, prima di questo fix, la comanda veniva stampata
+      quando si tornava agli ordini».
+      LA CAUSA: l'auto-stampa viveva DENTRO il blocco della notifica «nuovo
+      ordine» e ne ereditava i filtri. Due danni: (1) `battutoDaQui ->
+      continue` — giusto per un beep («lo sai gia', l'hai appena fatto
+      tu»), sbagliato per la stampante: la comanda serve al banco anche per
+      l'ordine battuto da questo stesso terminale; (2) il blocco scattava
+      solo sull'ordine NUOVO, quindi la seconda comanda aggiunta a un conto
+      gia' aperto non stampava mai.
+      E IL «FUNZIONAVA PRIMA» ERA UN CASO: tornando agli ordini il
+      componente ripartiva, tutto risultava nuovo, e si ristampava cio' che
+      NON era battuto da quel terminale. Non era una funzione: era lo
+      stesso difetto visto da un'angolazione fortunata.
+      LA CURA: la stampa esce dal blocco degli avvisi e ha la sua regola,
+      per COMANDA — `comandeDaStampare` (pura: ancora al banco, non
+      annullata, nata da meno di dieci minuti) piu' la pretesa
+      `claimComandaPrint` in localStorage, come gli scontrini: una copia
+      per comanda per terminale, chiunque l'abbia battuta, da qualunque
+      vista, e tornare agli ordini non ristampa.
+      RIVISTO SUBITO (20/08, l'utente): la prima versione usava una
+      finestra di dieci minuti per non far ristampare la serata a un
+      browser con la memoria vuota. Domanda sua, giusta: «semplicemente non
+      puoi segnare le comande stampate gia'?». Si': IL SEGNO STA SUL DATO —
+      `auto_print_at` sulla comanda, scritto in sottofondo A CARTA USCITA
+      (segnare prima vorrebbe dire che una stampa fallita mette a tacere
+      tutti i terminali per sempre; fallita, la pretesa locale si libera e
+      al prossimo snapshot si riprova). Cosi' un browser nuovo non
+      ristampa niente, e DUE TABLET con l'auto-stampa accesa non fanno due
+      copie: il secondo vede il segno del primo. La pretesa locale resta
+      come primo filtro, per i propri snapshot che arrivano prima che la
+      scrittura del segno torni.
+    in_produzione: true
+    status: fixed
+    generate_issue: true
+    labels: [bug, stampa, banco]
+    severity: media
+    priority: P2
+    test_cases: [tests/unit/stampaComande.test.js]
